@@ -1,22 +1,18 @@
 # SentinelWeb - Painel de Controle Sentinel
 
-O **SentinelWeb** é o dashboard administrativo para visualização em tempo real da saúde de toda a infraestrutura monitorada.
+O **SentinelWeb** é o cockpit administrativo para monitoramento e controle total da infraestrutura.
 
-## Funções Principais
-- **Dashboard em Tempo Real:** Atualização automática de métricas de CPU, RAM e Discos.
-- **Indicadores Visuais:** Gráficos de linha históricos e barras de progresso semânticas.
-- **Dark Mode Enterprise:** Interface moderna inspirada nos padrões da Vercel e Linear.
+## Novas Funcionalidades (v2.0)
+- **Ações Remotas Diretas:** Botões para Reiniciar, Desligar e Suspender máquinas físicas pelo navegador.
+- **Explorador de Inventário:** Modal dedicado com busca em tempo real para visualizar softwares instalados em cada ativo.
+- **Telemetria de Disco Detalhada:** Visualização individual de partições com uso real em GB.
 
 ## Tecnologias
-- React & TypeScript
-- Vite
-- Tailwind CSS
+- React 18 & Vite
+- Tailwind CSS v4
 - Lucide React (Ícones)
-- Recharts (Gráficos)
+- Axios & Recharts
 
 ## Como Rodar
-1. Instale as dependências: `npm install`
-2. Inicie o servidor de desenvolvimento:
-   ```bash
-   npm run dev
-   ```
+1. `npm install`
+2. `npm run dev`
