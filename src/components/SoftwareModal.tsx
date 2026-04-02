@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Search, Package, Box } from 'lucide-react';
+import { X, Search, Package, Box, ChevronRight } from 'lucide-react';
 
 interface SoftwareModalProps {
   isOpen: boolean;
@@ -13,48 +13,55 @@ export default function SoftwareModal({ isOpen, onClose, softwareList, hostname 
 
   if (!isOpen) return null;
 
-  const filteredList = softwareList.filter(item => 
+  const filteredList = softwareList.filter(item =>
     item.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm" 
+      <div
+        className="absolute inset-0 bg-[#080c12]/90 backdrop-blur-md"
         onClick={onClose}
       />
 
-      {/* Modal Content */}
-      <div className="relative w-full max-w-2xl bg-[#111113] border border-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-        
+      {/* Glow blob behind modal */}
+      <div className="absolute pointer-events-none w-[500px] h-[400px] bg-blue-600/10 rounded-full blur-3xl" />
+
+      {/* Modal */}
+      <div className="relative w-full max-w-xl flex flex-col max-h-[85vh] rounded-2xl overflow-hidden border border-white/[0.08] shadow-2xl shadow-blue-500/5"
+           style={{ background: 'linear-gradient(160deg, #111827 0%, #0f1622 100%)' }}>
+
+        {/* Top accent line */}
+        <div className="h-px w-full bg-gradient-to-r from-transparent via-blue-500/60 to-transparent" />
+
         {/* Header */}
-        <div className="p-6 border-b border-gray-800 flex items-center justify-between bg-gray-900/50">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.05]">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg">
-              <Package size={20} />
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-600/20 to-blue-900/10 border border-blue-500/20 flex items-center justify-center">
+              <Package size={18} className="text-blue-400" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white leading-tight">Inventário de Softwares</h2>
-              <p className="text-xs text-gray-500 font-mono uppercase">{hostname}</p>
+              <h2 className="text-sm font-bold text-white leading-tight">Inventário de Software</h2>
+              <p className="text-[10px] font-mono text-gray-600 uppercase mt-0.5">{hostname}</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-800 rounded-full text-gray-500 hover:text-white transition-colors"
+            className="h-8 w-8 rounded-full flex items-center justify-center text-gray-600 hover:text-white hover:bg-white/5 transition-all"
           >
-            <X size={20} />
+            <X size={16} />
           </button>
         </div>
 
-        {/* Search Bar */}
-        <div className="p-4 bg-[#161b22] border-b border-gray-800">
+        {/* Search */}
+        <div className="px-4 py-3 border-b border-white/[0.05] bg-white/[0.01]">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-            <input 
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" size={14} />
+            <input
               type="text"
-              placeholder="Pesquisar por nome do software..."
-              className="w-full bg-gray-900 border border-gray-800 rounded-xl py-2.5 pl-10 pr-4 text-sm text-gray-200 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all"
+              placeholder="Pesquisar software..."
+              className="w-full bg-white/[0.03] border border-white/[0.07] rounded-xl py-2.5 pl-9 pr-4 text-sm text-gray-300 placeholder-gray-700 focus:outline-none focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/20 transition-all font-medium"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               autoFocus
@@ -63,33 +70,54 @@ export default function SoftwareModal({ isOpen, onClose, softwareList, hostname 
         </div>
 
         {/* List */}
-        <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-3">
           {filteredList.length > 0 ? (
-            <ul className="space-y-1">
+            <ul className="space-y-0.5">
               {filteredList.map((software, index) => (
-                <li 
+                <li
                   key={index}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-800/50 group transition-all"
+                  className="group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.04] transition-all cursor-default"
                 >
-                  <Box size={14} className="text-gray-600 group-hover:text-blue-400" />
-                  <span className="text-sm text-gray-300 group-hover:text-white">{software}</span>
+                  <div className="flex-shrink-0 w-6 h-6 rounded-lg bg-white/[0.03] border border-white/[0.05] flex items-center justify-center group-hover:border-blue-500/20 group-hover:bg-blue-500/5 transition-all">
+                    <Box size={11} className="text-gray-700 group-hover:text-blue-500 transition-colors" />
+                  </div>
+                  <span className="text-sm text-gray-400 group-hover:text-gray-200 transition-colors flex-1 leading-tight">
+                    {software}
+                  </span>
+                  <ChevronRight size={12} className="text-gray-800 group-hover:text-gray-600 transition-colors flex-shrink-0" />
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-600">
-              <Package size={48} className="opacity-20 mb-4" />
-              <p className="text-sm font-medium">
-                {softwareList.length === 0 ? 'Nenhum software detectado' : 'Nenhum resultado para a busca'}
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="h-14 w-14 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-center mb-4">
+                <Package size={28} className="text-gray-700" />
+              </div>
+              <p className="text-sm font-medium text-gray-600">
+                {softwareList.length === 0
+                  ? 'Nenhum software detectado'
+                  : 'Nenhum resultado para a busca'}
               </p>
+              {searchTerm && (
+                <p className="text-xs text-gray-700 mt-1">
+                  Tente um termo diferente
+                </p>
+              )}
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-gray-900/30 border-t border-gray-800 flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase tracking-widest px-6">
-          <span>{filteredList.length} Itens Encontrados</span>
-          <span>Sentinel Inventory v2.0</span>
+        <div className="border-t border-white/[0.05] px-6 py-3 bg-white/[0.015] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-700">
+              {filteredList.length}
+              {searchTerm ? ` de ${softwareList.length}` : ''} itens
+            </span>
+          </div>
+          <span className="text-[10px] font-mono text-gray-700 uppercase tracking-widest">
+            Sentinel Inventory v2.0
+          </span>
         </div>
       </div>
     </div>

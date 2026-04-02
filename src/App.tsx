@@ -261,13 +261,17 @@ const AssetCard = ({ asset }: { asset: Asset }) => {
 
 export default function App() {
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchAssets = async () => {
+    setIsRefreshing(true);
     try {
       const response = await axios.get('http://localhost:5000/api/assets');
       setAssets(response.data);
     } catch (error) {
       console.error('API Error:', error);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 600);
     }
   };
 
@@ -279,6 +283,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0d1117] text-gray-300 selection:bg-blue-500/30">
+      
+      {/* Navbar Fixa */}
       <nav className="h-16 border-b border-gray-800 bg-[#0d1117]/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-6">
           <div className="flex items-center gap-3">
@@ -289,11 +295,20 @@ export default function App() {
           </div>
           <div className="flex items-center gap-6">
              <div className="hidden md:flex gap-4 text-[11px] font-black uppercase tracking-widest text-gray-500">
-                <a href="#" className="text-white">Infraestrutura</a>
+                <a href="#" className="text-white border-b border-blue-500">Infraestrutura</a>
                 <a href="#" className="hover:text-gray-300 transition-colors">Alertas</a>
+                <a href="#" className="hover:text-gray-300 transition-colors">Relatórios</a>
              </div>
-             <div className="h-8 w-8 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-500 hover:text-white cursor-pointer transition-colors">
-                <Settings size={16} />
+             <div className="flex items-center gap-2">
+                <button 
+                  onClick={fetchAssets}
+                  className="p-2 hover:bg-gray-800 rounded-lg text-gray-500 hover:text-white transition-colors"
+                >
+                  <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+                </button>
+                <div className="h-8 w-8 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-500">
+                  <Settings size={16} />
+                </div>
              </div>
           </div>
         </div>
@@ -302,31 +317,33 @@ export default function App() {
       <main className="max-w-7xl mx-auto p-8 lg:p-12">
         <header className="mb-12">
           <h2 className="text-4xl font-black text-white tracking-tighter mb-2 italic">Sentinel Core</h2>
-          <p className="text-gray-500 text-lg">Monitoramento e Gestão Remota de Infraestrutura.</p>
+          <p className="text-gray-500 text-lg font-medium">Monitoramento e Gestão Remota de Infraestrutura.</p>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+        {/* Grid Estável */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
           {assets.map((asset) => (
             <AssetCard key={asset.id} asset={asset} />
           ))}
         </div>
 
+        {/* Empty State */}
         {assets.length === 0 && (
           <div className="py-40 flex flex-col items-center text-center">
             <div className="w-24 h-24 bg-gray-900 rounded-full flex items-center justify-center border border-gray-800 mb-6 text-gray-700">
               <Monitor size={40} />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Aguardando Telemetria</h3>
-            <p className="text-gray-500 max-w-xs mx-auto">Os agentes aparecerão aqui assim que estabelecerem conexão com o Sentinel Core.</p>
+            <h3 className="text-xl font-bold text-white mb-2 font-mono">NO_SIGNALS_DETECTED</h3>
+            <p className="text-gray-500 max-w-xs mx-auto text-sm">Escutando portas de entrada para novos handshakes do Sentinel Agente.</p>
           </div>
         )}
       </main>
 
       <footer className="max-w-7xl mx-auto p-12 border-t border-gray-800 text-[10px] font-mono text-gray-600 flex justify-between uppercase tracking-[0.2em]">
-        <span>&copy; 2026 Sentinel Systems v2.0</span>
+        <span>&copy; 2026 Sentinel Systems Defense</span>
         <div className="flex gap-6">
            <span>Status: Active</span>
-           <span>Mode: Enterprise</span>
+           <span>Mode: Enterprise_LTS</span>
         </div>
       </footer>
     </div>
