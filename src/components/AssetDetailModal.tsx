@@ -1,281 +1,186 @@
-import { useState } from 'react';
-import { 
-  X, 
-  Copy, 
-  Check, 
-  RotateCcw, 
-  Moon, 
-  Power, 
-  AlertCircle,
-  HardDrive
-} from 'lucide-react';
-import { LineChart, Line, ResponsiveContainer } from 'recharts';
-import axios from 'axios';
+import React, { useState } from 'react';
+import { X, Cpu, Activity, Network, Terminal, Info, Copy, Power, RefreshCw, Lock, Download, Upload } from 'lucide-react';
+import type { Asset, DiskMetrics, NetworkMetrics, ProcessMetrics } from '../types';
 
-interface Telemetry {
-  cpuUsage: number;
-  ramTotal: string;
-  ramUsed: string;
-  disks: Record<string, { totalGb?: number; usedGb?: number; TotalGb?: number; UsedGb?: number }>;
-  timestamp: string;
-}
-
-interface Asset {
-  id: string;
-  hwid: string;
-  hostname: string;
-  osVersion: string;
-  macAddress?: string;
-  localIp?: string;
-  status: string;
-  telemetries: Telemetry[];
-}
-
-interface AssetDetailModalProps {
-  asset: Asset;
-  onClose: () => void;
-}
-
-const InfoRow = ({ label, value, copyable = false }: { label: string; value: string; copyable?: boolean }) => {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(value);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className="flex items-center justify-between py-2 border-b border-border-sutil last:border-0">
-      <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-tight">{label}</span>
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-mono text-text-primary">{value}</span>
-        {copyable && (
-          <button 
-            onClick={handleCopy}
-            className="p-1 hover:bg-border-sutil rounded transition-colors text-text-tertiary hover:text-text-primary"
-          >
-            {copied ? <Check size={12} className="text-status-success" /> : <Copy size={12} />}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
+interface AssetDetailModalProps { asset: Asset; onClose: () => void; }
 
 export default function AssetDetailModal({ asset, onClose }: AssetDetailModalProps) {
-  const [activeTab, setActiveTab] = useState<'telemetry' | 'actions'>('telemetry');
-  const [confirmAction, setConfirmAction] = useState<string | null>(null);
-  const [isExecuting, setIsExecuting] = useState(false);
-
+  const [activeTab, setActiveTab] = useState<'telemetry' | 'processes' | 'info' | 'actions'>('telemetry');
+  
   const telemetry = asset.telemetries?.[0];
   const isOnline = asset.status === 'ONLINE';
 
-  // RAM Calculation
+  const parseJson = (data: any) => {
+    if (!data) return null;
+    if (typeof data === 'string') { try { return JSON.parse(data); } catch { return null; } }
+    return data;
+  };
+
+  const disks: DiskMetrics[] = parseJson(telemetry?.disks) || [];
+  const network: NetworkMetrics = parseJson(telemetry?.network) || { bytesReceived: 0, bytesSent: 0 };
+  const topProcesses: ProcessMetrics[] = parseJson(telemetry?.topProcesses) || [];
+
   const ramTotalGB = telemetry ? (Number(telemetry.ramTotal) / 1024 / 1024 / 1024) : 0;
   const ramUsedGB = telemetry ? (Number(telemetry.ramUsed) / 1024 / 1024 / 1024) : 0;
+  const cpuUsage = telemetry ? Number(telemetry.cpuUsage) : 0;
 
-  // Mock CPU History for Sparkline (last 15 points)
-  // In a real app, this would come from the API
-  const cpuHistory = asset.telemetries.slice(0, 15).reverse().map((t, i) => ({
-    value: t.cpuUsage,
-    index: i
-  }));
+  const truncateHwid = (hwid: string) => hwid.length > 20 ? `${hwid.substring(0, 15)}...${hwid.substring(hwid.length - 5)}` : hwid;
 
-  const handleRemoteAction = async (action: string) => {
-    if (confirmAction !== action) {
-      setConfirmAction(action);
-      return;
-    }
-
-    setIsExecuting(true);
+  const handleCommand = async (action: string) => {
+    const upperAction = action.toUpperCase();
+    if (!confirm(`CUIDADO: Tem certeza que deseja enviar o comando de ${upperAction} para a máquina?`)) return;
     try {
-      await axios.post(`http://localhost:5000/api/assets/${asset.hwid}/command`, { action });
-      setConfirmAction(null);
-    } catch (error) {
-      console.error('[Sentinel] Command failed:', error);
-      alert('Falha ao executar comando remoto.');
-    } finally {
-      setIsExecuting(false);
+      const res = await fetch(`http://localhost:5000/api/assets/${asset.hwid}/command`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: upperAction })
+      });
+      if (!res.ok) throw new Error('Falha');
+      alert('Comando disparado com sucesso!');
+    } catch (e) {
+      alert('Erro: Não foi possível enviar o comando. O Agente pode estar offline.');
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Overlay */}
-      <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" 
-        onClick={onClose} 
-      />
-
-      {/* Modal */}
-      <div className="relative w-full max-w-lg bg-surface-card border border-border-sutil shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-150 overflow-hidden">
-        
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
+      <div className="relative w-full max-w-2xl bg-surface-card border border-border-sutil shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-sutil bg-bg-base/50">
-          <div className="flex flex-col">
-            <h2 className="text-lg font-mono font-medium text-text-primary tracking-tight">{asset.hostname}</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border-sutil bg-bg-base/50 shrink-0">
+          <div>
+            <h2 className="text-xl font-mono text-text-primary">{asset.hostname}</h2>
             <div className="flex items-center gap-2 mt-1">
-              <div className={`h-1.5 w-1.5 rounded-full ${isOnline ? 'bg-status-success' : 'bg-text-tertiary'}`} />
-              <span className="text-[10px] font-mono text-text-tertiary uppercase tracking-widest">{asset.status}</span>
+              <div className={`h-2 w-2 rounded-full ${isOnline ? 'bg-status-success' : 'bg-text-tertiary'}`} />
+              <span className="text-[10px] font-mono text-text-secondary uppercase tracking-widest">{isOnline ? 'ONLINE' : 'OFFLINE'}</span>
             </div>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-2 hover:bg-border-sutil rounded-md transition-colors text-text-tertiary hover:text-text-primary"
-          >
-            <X size={18} />
-          </button>
+          <button onClick={onClose} className="p-2 text-text-tertiary hover:text-text-primary transition-colors"><X size={20} /></button>
         </div>
 
         {/* Tabs */}
-        <div className="flex px-6 border-b border-border-sutil">
-          <button 
-            onClick={() => setActiveTab('telemetry')}
-            className={`px-4 py-3 text-[11px] font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === 'telemetry' ? 'border-text-primary text-text-primary' : 'border-transparent text-text-tertiary hover:text-text-secondary'}`}
-          >
-            Telemetria
-          </button>
-          <button 
-            onClick={() => setActiveTab('actions')}
-            className={`px-4 py-3 text-[11px] font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === 'actions' ? 'border-text-primary text-text-primary' : 'border-transparent text-text-tertiary hover:text-text-secondary'}`}
-          >
-            Ações Remotas
-          </button>
+        <div className="flex border-b border-border-sutil shrink-0 px-2 bg-surface-card overflow-x-auto">
+          <button onClick={() => setActiveTab('telemetry')} className={`px-4 py-3 text-xs font-mono tracking-widest uppercase transition-colors border-b-2 whitespace-nowrap ${activeTab === 'telemetry' ? 'border-status-success text-status-success' : 'border-transparent text-text-tertiary hover:text-text-secondary'}`}><Activity size={14} className="inline mr-2" />TELEMETRIA</button>
+          <button onClick={() => setActiveTab('processes')} className={`px-4 py-3 text-xs font-mono tracking-widest uppercase transition-colors border-b-2 whitespace-nowrap ${activeTab === 'processes' ? 'border-status-success text-status-success' : 'border-transparent text-text-tertiary hover:text-text-secondary'}`}><Terminal size={14} className="inline mr-2" />PROCESSOS</button>
+          <button onClick={() => setActiveTab('info')} className={`px-4 py-3 text-xs font-mono tracking-widest uppercase transition-colors border-b-2 whitespace-nowrap ${activeTab === 'info' ? 'border-status-success text-status-success' : 'border-transparent text-text-tertiary hover:text-text-secondary'}`}><Info size={14} className="inline mr-2" />INFO</button>
+          <button onClick={() => setActiveTab('actions')} className={`px-4 py-3 text-xs font-mono tracking-widest uppercase transition-colors border-b-2 whitespace-nowrap ${activeTab === 'actions' ? 'border-status-success text-status-success' : 'border-transparent text-text-tertiary hover:text-text-secondary'}`}><Power size={14} className="inline mr-2" />AÇÕES</button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 max-h-[70vh] overflow-y-auto">
-          {activeTab === 'telemetry' ? (
-            <div className="space-y-8">
-              {/* Basic Info */}
-              <div className="space-y-1">
-                <InfoRow label="Hostname" value={asset.hostname} />
-                <InfoRow label="HWID" value={asset.hwid} copyable />
-                <InfoRow label="IP Local" value={asset.localIp || '0.0.0.0'} />
-                <InfoRow label="MAC Address" value={asset.macAddress?.toUpperCase() || 'N/A'} />
-                <InfoRow label="SO" value={asset.osVersion} />
-                <InfoRow label="RAM Total" value={`${ramTotalGB.toFixed(1)} GB`} />
-              </div>
-
-              {/* Storage Units */}
-              <div>
-                <h3 className="text-[10px] font-bold text-text-tertiary uppercase tracking-[0.2em] mb-4">Unidades de Armazenamento</h3>
-                <div className="space-y-4">
-                  {Object.entries(telemetry?.disks || {}).map(([name, data]: [string, any]) => {
-                    const total = data?.totalGb ?? data?.TotalGb ?? 0;
-                    const used = data?.usedGb ?? data?.UsedGb ?? 0;
-                    const pct = total > 0 ? (used / total) * 100 : 0;
-                    
-                    return (
-                      <div key={name} className="space-y-2">
-                        <div className="flex justify-between items-center text-[11px] font-mono">
-                          <span className="text-text-secondary">{name}</span>
-                          <span className="text-text-tertiary">{used.toFixed(1)}GB / {total.toFixed(1)}GB <span className="ml-2 text-text-primary">{Math.round(pct)}%</span></span>
-                        </div>
-                        <div className="h-1.5 w-full bg-border-sutil">
-                          <div 
-                            className={`h-full bg-text-primary transition-all duration-700`}
-                            style={{ width: `${Math.min(pct, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
+        {/* Content Area */}
+        <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-bg-base/20">
+          
+          {/* TAB: TELEMETRY */}
+          {activeTab === 'telemetry' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-surface-card border border-border-sutil">
+                  <div className="flex justify-between items-center mb-2"><span className="text-xs font-mono text-text-secondary">CPU</span><Cpu size={14} className="text-status-success" /></div>
+                  <div className="text-2xl font-mono text-text-primary mb-1">{cpuUsage.toFixed(1)}%</div>
+                  <div className="w-full bg-border-sutil h-1 mt-2"><div className="bg-status-success h-1" style={{ width: `${Math.min(cpuUsage, 100)}%` }} /></div>
+                </div>
+                <div className="p-4 bg-surface-card border border-border-sutil">
+                  <div className="flex justify-between items-center mb-2"><span className="text-xs font-mono text-text-secondary">RAM</span><Activity size={14} className="text-status-success" /></div>
+                  <div className="text-2xl font-mono text-text-primary mb-1">{ramUsedGB.toFixed(1)} <span className="text-sm text-text-tertiary">/ {ramTotalGB.toFixed(1)} GB</span></div>
+                  <div className="w-full bg-border-sutil h-1 mt-2"><div className="bg-status-success h-1" style={{ width: `${ramTotalGB > 0 ? Math.min((ramUsedGB / ramTotalGB) * 100, 100) : 0}%` }} /></div>
                 </div>
               </div>
-
-              {/* CPU Sparkline */}
               <div>
-                <h3 className="text-[10px] font-bold text-text-tertiary uppercase tracking-[0.2em] mb-4">Histórico CPU (últimos 15 pontos)</h3>
-                <div className="h-20 w-full bg-bg-base/50 border border-border-sutil p-2">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={cpuHistory}>
-                      <Line 
-                        type="monotone" 
-                        dataKey="value" 
-                        stroke="#ededed" 
-                        strokeWidth={1.5} 
-                        dot={false}
-                        animationDuration={1000}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                <h3 className="text-[10px] font-mono text-text-secondary mb-3 tracking-widest">TRÁFEGO DE REDE</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3 p-3 bg-surface-card border border-border-sutil">
+                    <div className="p-2 bg-blue-500/10 rounded text-blue-500"><Download size={16} /></div>
+                    <div>
+                      <div className="text-[10px] font-mono text-text-secondary uppercase tracking-widest">Download (RX)</div>
+                      <div className="text-sm font-mono text-text-primary">{(network.bytesReceived / 1048576).toFixed(2)} MB</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-surface-card border border-border-sutil">
+                    <div className="p-2 bg-purple-500/10 rounded text-purple-500"><Upload size={16} /></div>
+                    <div>
+                      <div className="text-[10px] font-mono text-text-secondary uppercase tracking-widest">Upload (TX)</div>
+                      <div className="text-sm font-mono text-text-primary">{(network.bytesSent / 1048576).toFixed(2)} MB</div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="space-y-8 py-4">
-              <div className="flex items-start gap-4 p-4 bg-status-warning/5 border border-status-warning/20">
-                <AlertCircle className="text-status-warning shrink-0" size={20} />
-                <p className="text-xs text-status-warning leading-relaxed">
-                  <span className="font-bold">Atenção:</span> estas ações afetam a máquina imediatamente. Certifique-se de que nenhum trabalho importante esteja pendente no host remoto.
-                </p>
+              <div>
+                <h3 className="text-[10px] font-mono text-text-secondary mb-3 tracking-widest">ARMAZENAMENTO</h3>
+                <div className="space-y-3">
+                  {disks.map((d, i) => (
+                    <div key={i} className="text-xs font-mono">
+                      <div className="flex justify-between mb-1 text-text-primary"><span>{d.name}</span><span>{d.usedGb.toFixed(1)}GB / {d.totalGb.toFixed(1)}GB</span></div>
+                      <div className="w-full bg-border-sutil h-1"><div className="bg-status-success h-1" style={{ width: `${Math.min((d.usedGb / d.totalGb) * 100, 100)}%` }} /></div>
+                    </div>
+                  ))}
+                </div>
               </div>
-
-              <div className="grid grid-cols-1 gap-3">
-                <button 
-                  onClick={() => handleRemoteAction('REBOOT')}
-                  disabled={isExecuting || !isOnline}
-                  className={`flex items-center justify-between p-4 border transition-all text-sm font-medium disabled:opacity-30
-                    ${confirmAction === 'REBOOT' ? 'bg-status-info/10 border-status-info text-status-info' : 'bg-surface-card border-border-sutil text-text-secondary hover:text-text-primary hover:border-text-primary'}
-                  `}
-                >
-                  <div className="flex items-center gap-3">
-                    <RotateCcw size={16} />
-                    <span>{confirmAction === 'REBOOT' ? 'Clique para confirmar reinicialização' : 'Reiniciar Máquina'}</span>
-                  </div>
-                  {confirmAction === 'REBOOT' && <div className="animate-pulse h-2 w-2 rounded-full bg-status-info" />}
-                </button>
-
-                <button 
-                  onClick={() => handleRemoteAction('SUSPEND')}
-                  disabled={isExecuting || !isOnline}
-                  className={`flex items-center justify-between p-4 border transition-all text-sm font-medium disabled:opacity-30
-                    ${confirmAction === 'SUSPEND' ? 'bg-status-warning/10 border-status-warning text-status-warning' : 'bg-surface-card border-border-sutil text-text-secondary hover:text-text-primary hover:border-text-primary'}
-                  `}
-                >
-                  <div className="flex items-center gap-3">
-                    <Moon size={16} />
-                    <span>{confirmAction === 'SUSPEND' ? 'Clique para confirmar suspensão' : 'Suspender Máquina'}</span>
-                  </div>
-                  {confirmAction === 'SUSPEND' && <div className="animate-pulse h-2 w-2 rounded-full bg-status-warning" />}
-                </button>
-
-                <button 
-                  onClick={() => handleRemoteAction('SHUTDOWN')}
-                  disabled={isExecuting || !isOnline}
-                  className={`flex items-center justify-between p-4 border transition-all text-sm font-medium disabled:opacity-30
-                    ${confirmAction === 'SHUTDOWN' ? 'bg-status-danger/10 border-status-danger text-status-danger' : 'bg-surface-card border-border-sutil text-text-secondary hover:text-text-primary hover:border-text-primary'}
-                  `}
-                >
-                  <div className="flex items-center gap-3">
-                    <Power size={16} />
-                    <span>{confirmAction === 'SHUTDOWN' ? 'Clique para confirmar desligamento' : 'Desligar Máquina'}</span>
-                  </div>
-                  {confirmAction === 'SHUTDOWN' && <div className="animate-pulse h-2 w-2 rounded-full bg-status-danger" />}
-                </button>
-              </div>
-
-              {confirmAction && (
-                <button 
-                  onClick={() => setConfirmAction(null)}
-                  className="w-full text-center text-[11px] font-bold uppercase tracking-widest text-text-tertiary hover:text-text-primary"
-                >
-                  Cancelar ação
-                </button>
-              )}
             </div>
           )}
-        </div>
 
-        {/* Footer info */}
-        <div className="px-6 py-3 border-t border-border-sutil bg-bg-base/30 flex justify-between items-center">
-          <span className="text-[9px] font-mono text-text-tertiary uppercase tracking-widest">Sentinel Remote Agent v1.0.4</span>
-          <div className="flex items-center gap-2">
-             <div className={`h-1 w-1 rounded-full ${isOnline ? 'bg-status-success' : 'bg-text-tertiary'}`} />
-             <span className="text-[9px] font-mono text-text-tertiary uppercase">{isOnline ? 'Session Active' : 'Disconnected'}</span>
-          </div>
+          {/* TAB: PROCESSES */}
+          {activeTab === 'processes' && (
+            <div className="overflow-x-auto">
+               <table className="w-full text-left font-mono text-xs">
+                  <thead className="text-text-secondary border-b border-border-sutil">
+                    <tr><th className="py-2 font-normal">PID</th><th className="py-2 font-normal">NOME</th><th className="py-2 font-normal text-right">RAM (MB)</th></tr>
+                  </thead>
+                  <tbody className="text-text-primary">
+                    {topProcesses.map((p, i) => (
+                      <tr key={i} className="border-b border-border-sutil/50 hover:bg-surface-card transition-colors">
+                        <td className="py-2 text-text-tertiary">{p.pid}</td>
+                        <td className="py-2 truncate max-w-[200px]">{p.name}</td>
+                        <td className="py-2 text-right">{p.ramMb.toFixed(1)}</td>
+                      </tr>
+                    ))}
+                    {topProcesses.length === 0 && <tr><td colSpan={3} className="py-4 text-center text-text-tertiary">Aguardando telemetria...</td></tr>}
+                  </tbody>
+               </table>
+            </div>
+          )}
+
+          {/* TAB: INFO */}
+          {activeTab === 'info' && (
+            <div className="space-y-4 font-mono text-xs">
+               <div className="flex justify-between border-b border-border-sutil py-2"><span className="text-text-tertiary">HOSTNAME</span><span className="text-text-primary">{asset.hostname}</span></div>
+               <div className="flex justify-between border-b border-border-sutil py-2">
+                 <span className="text-text-tertiary">HWID</span>
+                 <span 
+                   className="text-text-primary cursor-pointer hover:text-status-success flex items-center gap-2 transition-colors" 
+                   title="Clique para copiar o HWID completo" 
+                   onClick={() => { navigator.clipboard.writeText(asset.hwid); alert('HWID Copiado com sucesso!'); }}
+                 >
+                   {truncateHwid(asset.hwid)} <Copy size={12} />
+                 </span>
+               </div>
+               <div className="flex justify-between border-b border-border-sutil py-2"><span className="text-text-tertiary">S.O.</span><span className="text-text-primary">{asset.osVersion}</span></div>
+               <div className="flex justify-between border-b border-border-sutil py-2"><span className="text-text-tertiary">IP LOCAL</span><span className="text-text-primary">{asset.localIp || 'N/A'}</span></div>
+               <div className="flex justify-between py-2"><span className="text-text-tertiary">MAC ADDRESS</span><span className="text-text-primary uppercase">{asset.macAddress || 'N/A'}</span></div>
+            </div>
+          )}
+
+          {/* TAB: ACTIONS */}
+          {activeTab === 'actions' && (
+            <div className="flex flex-col gap-4">
+              <h3 className="text-[10px] font-mono text-text-secondary tracking-widest mb-2">COMANDOS DO SISTEMA</h3>
+              <button 
+                onClick={() => handleCommand('shutdown')}
+                className="p-3 bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 text-xs font-mono tracking-widest uppercase transition-colors text-left flex items-center justify-between"
+              >
+                <span>Desligar Máquina (Shutdown)</span> <Power size={14} />
+              </button>
+              <button 
+                onClick={() => handleCommand('reboot')}
+                className="p-3 bg-orange-500/10 text-orange-500 border border-orange-500/20 hover:bg-orange-500/20 text-xs font-mono tracking-widest uppercase transition-colors text-left flex items-center justify-between"
+              >
+                <span>Reiniciar (Reboot)</span> <RefreshCw size={14} />
+              </button>
+              <button 
+                onClick={() => handleCommand('suspend')}
+                className="p-3 bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 text-xs font-mono tracking-widest uppercase transition-colors text-left flex items-center justify-between"
+              >
+                <span>Suspender Máquina (Suspend)</span> <Lock size={14} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
