@@ -85,19 +85,48 @@ export default function AssetDetailModal({ asset, onClose }: AssetDetailModalPro
               </div>
               <div>
                 <h3 className="text-[10px] font-mono text-text-secondary mb-3 tracking-widest">TRÁFEGO DE REDE</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3 p-3 bg-surface-card border border-border-sutil">
-                    <div className="p-2 bg-blue-500/10 rounded text-blue-500"><Download size={16} /></div>
+                <div className="grid grid-cols-2 gap-y-6 gap-x-8 p-2">
+                  {/* Recebendo (Atual) */}
+                  <div className="flex gap-3">
+                    <div className="w-[2px] bg-status-success/50 rounded-full"></div>
                     <div>
-                      <div className="text-[10px] font-mono text-text-secondary uppercase tracking-widest">Download (RX)</div>
-                      <div className="text-sm font-mono text-text-primary">{(network.bytesReceived / 1048576).toFixed(2)} MB</div>
+                      <div className="text-[10px] font-mono text-text-secondary uppercase tracking-widest mb-1">Recebendo</div>
+                      <div className="text-xl font-mono font-bold text-text-primary">
+                        {(network as any).rxSpeedKbps || 0} <span className="text-[10px] text-text-tertiary font-normal">Kbps</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-surface-card border border-border-sutil">
-                    <div className="p-2 bg-purple-500/10 rounded text-purple-500"><Upload size={16} /></div>
+
+                  {/* Enviando (Atual) */}
+                  <div className="flex gap-3">
+                    <div className="w-[2px] border-l-[2px] border-dotted border-status-success/50"></div>
                     <div>
-                      <div className="text-[10px] font-mono text-text-secondary uppercase tracking-widest">Upload (TX)</div>
-                      <div className="text-sm font-mono text-text-primary">{(network.bytesSent / 1048576).toFixed(2)} MB</div>
+                      <div className="text-[10px] font-mono text-text-secondary uppercase tracking-widest mb-1">Enviando</div>
+                      <div className="text-xl font-mono font-bold text-text-primary">
+                        {(network as any).txSpeedKbps || 0} <span className="text-[10px] text-text-tertiary font-normal">Kbps</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Total Recebido */}
+                  <div className="flex gap-3">
+                    <div className="w-[2px]"></div> 
+                    <div>
+                      <div className="text-[10px] font-mono text-text-secondary uppercase tracking-widest mb-1">Total Recebido</div>
+                      <div className="text-lg font-mono text-text-primary">
+                        {(network as any).totalRxGb || 0} <span className="text-[10px] text-text-tertiary">Gb</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Total Enviado */}
+                  <div className="flex gap-3">
+                    <div className="w-[2px]"></div>
+                    <div>
+                      <div className="text-[10px] font-mono text-text-secondary uppercase tracking-widest mb-1">Total Enviado</div>
+                      <div className="text-lg font-mono text-text-primary">
+                        {(network as any).totalTxGb || 0} <span className="text-[10px] text-text-tertiary">Gb</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -121,17 +150,16 @@ export default function AssetDetailModal({ asset, onClose }: AssetDetailModalPro
             <div className="overflow-x-auto">
                <table className="w-full text-left font-mono text-xs">
                   <thead className="text-text-secondary border-b border-border-sutil">
-                    <tr><th className="py-2 font-normal">PID</th><th className="py-2 font-normal">NOME</th><th className="py-2 font-normal text-right">RAM (MB)</th></tr>
+                    <tr><th className="py-2 font-normal">NOME DO PROCESSO (AGRUPADO)</th><th className="py-2 font-normal text-right">RAM TOTAL (MB)</th></tr>
                   </thead>
                   <tbody className="text-text-primary">
                     {topProcesses.map((p, i) => (
                       <tr key={i} className="border-b border-border-sutil/50 hover:bg-surface-card transition-colors">
-                        <td className="py-2 text-text-tertiary">{p.pid}</td>
                         <td className="py-2 truncate max-w-[200px]">{p.name}</td>
                         <td className="py-2 text-right">{p.ramMb.toFixed(1)}</td>
                       </tr>
                     ))}
-                    {topProcesses.length === 0 && <tr><td colSpan={3} className="py-4 text-center text-text-tertiary">Aguardando telemetria...</td></tr>}
+                    {topProcesses.length === 0 && <tr><td colSpan={2} className="py-4 text-center text-text-tertiary">Aguardando telemetria...</td></tr>}
                   </tbody>
                </table>
             </div>
