@@ -1,43 +1,39 @@
-# SentinelWeb - Painel de Controle Sentinel (Sentinel v2.0)
+# Sentinel Web Dashboard 📊
+> **Cyber-Industrial Control Panel for Fleet Management**
 
-O **SentinelWeb** é o cockpit administrativo do ecossistema. Ele transforma dados brutos de telemetria em insights acionáveis através de uma interface moderna de alta densidade de informação, permitindo o gerenciamento em tempo real de frotas de ativos.
+![React](https://img.shields.io/badge/React-18.x-61DAFB?logo=react)
+![Tailwind](https://img.shields.io/badge/Tailwind-3.x-38B2AC?logo=tailwind-css)
 
-## 🚀 Funcionalidades Principais
+O **Sentinel Web** fornece a interface visual para o gerenciamento de ativos. É focado em densidade de informação e baixa latência de resposta.
 
-### 1. Interface Enterprise Dark Mode
-- **Design de Alta Performance**: Estética limpa inspirada em ferramentas como Vercel e Linear.
-- **Real-time Updates**: Polling inteligente que atualiza métricas a cada 5 segundos sem recarregar a interface.
-- **Asset Cards**: Visão consolidada por máquina com badges pulsantes de status.
+## 📁 Detalhamento de Componentes e Arquivos
 
-### 2. Monitoramento de Performance Visual
-- **CPU Sparklines**: Gráficos de linha históricos que mostram a tendência de uso dos últimos minutos.
-- **RAM Donuts**: Visualização circular intuitiva do consumo de memória.
-- **Storage Progress**: Barras de progresso semânticas (Verde/Laranja/Vermelho) para cada partição de disco.
+### `src/components/`
+*   **`AssetDetailModal.tsx`**: O componente mais complexo. Realiza o parse profundo dos payloads JSON da API, renderiza os gráficos de telemetria, lista processos agrupados e contém a interface de disparo de comandos (`shutdown`, `lock`).
+*   **`AssetCard.tsx`**: Visualização resumida do status e métricas críticas de cada servidor na lista principal.
 
-### 3. Gestão e Inventário (ITAM/RMM)
-- **Painel de Ações Remotas**: Botões integrados para disparar comandos de `Reboot`, `Shutdown` e `Suspend` diretamente pelo navegador.
-- **Software Inventory Modal**: Explorador de programas instalados com motor de busca e filtragem em tempo real.
-- **System Specs**: Exposição imediata de IP Local, MAC Address e Versão do OS.
+### `src/`
+*   **`App.tsx`**: Orquestrador da UI. Gerencia o polling global de ativos e o estado da lista de máquinas monitoradas.
+*   **`types.ts`**: Contrato de tipos (TypeScript). Define rigorosamente as interfaces `Asset`, `Telemetry`, `NetworkMetrics`, etc., garantindo que o Frontend esteja em sincronia com o Agente C#.
 
-## 🛠️ Stack Tecnológica
-- **Framework**: React 18+
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS v4 (Design utilitário)
-- **Gráficos**: Recharts
-- **Ícones**: Lucide React
-- **Comunicação**: Axios
+### `Styles`
+*   **`index.css`**: Define o tema **Cyber-Industrial** utilizando variáveis CSS do Tailwind para o modo escuro, cores de status (`success`, `warning`, `error`) e fontes monoespaçadas.
 
-## 📁 Estrutura do Projeto
-- `src/App.tsx`: Orquestração principal, gerenciamento de polling e grid de ativos.
-- `src/components/`: Componentes reutilizáveis (Modais, Barras de Progresso, Sparklines).
-- `src/index.css`: Definições globais de Tailwind e temas.
+## 🚀 Funcionalidades da UI
+*   **Grid de Rede 2x2**: Visualização minimalista de tráfego (Velocidade Kbps + Totais GB).
+*   **Lista de Ativos Dinâmica**: Filtros automáticos por status ONLINE/OFFLINE.
+*   **Execução Direta**: Disparo de comandos de nível de Kernel com confirmação de segurança.
 
-## ⚙️ Como Rodar
-1. **Instalação**: `npm install`
-2. **Execução**:
-   ```bash
-   npm run dev
-   ```
+## 📋 Requisitos
+*   Node.js v22.x ou superior
+*   Bun (Gerenciador de pacotes)
 
-## 🛡️ Programação Defensiva (UI)
-A interface possui lógica de resiliência integrada para lidar com variações de dados entre Windows e Linux, suportando chaves de JSON em múltiplos formatos (Pascal/camelCase) e realizando conversões automáticas de unidades (Bytes -> GB).
+## 🛠️ Desenvolvimento
+
+```bash
+# 1. Instalação
+bun install
+
+# 2. Rodar modo dev (Vite)
+bun run dev
+```
