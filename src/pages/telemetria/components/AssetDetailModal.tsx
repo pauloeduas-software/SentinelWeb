@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { X, Cpu, Activity, Network, Terminal, Info, Copy, Power, RefreshCw, Lock, Download, Upload } from 'lucide-react';
-import type { Asset, DiskMetrics, NetworkMetrics, ProcessMetrics } from '../types';
+import { useState } from 'react';
+import { X, Cpu, Activity, Terminal, Info, Copy, Power, RefreshCw, Lock } from 'lucide-react';
+import type { Asset, DiskMetrics, NetworkMetrics, ProcessMetrics } from '../../../types';
 
 interface AssetDetailModalProps { asset: Asset; onClose: () => void; }
 

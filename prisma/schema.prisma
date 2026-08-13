@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Asset {
+  id                String      @id @default(uuid()) @db.Uuid
+  hwid              String      @unique
+  hostname          String
+  osVersion         String
+  status            String      @default("ONLINE")
+  lastSeen          DateTime    @default(now())
+  cpuModel          String?
+  installedSoftware Json?
+  localIp           String?
+  macAddress        String?
+  telemetries       Telemetry[]
+
+  @@map("assets")
+}
+
+model Telemetry {
+  id           String   @id @default(uuid()) @db.Uuid
+  assetId      String   @db.Uuid
+  cpuUsage     Float
+  ramTotal     BigInt
+  ramUsed      BigInt
+  timestamp    DateTime @default(now())
+  disks        Json?
+  network      Json?
+  topProcesses Json?
+  asset        Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@map("telemetries")
+}
+
+model InventoryItem {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  description  String?
+  quantity     Int      @default(1)
+  category     String
+  status       String   @default("AVAILABLE")
+  assignedToId String?  @db.Uuid
+  assignedTo   User?    @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  folderId     String?  @db.Uuid
+  folder       Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("inventory_items")
+}
+
+model User {
+  id             String          @id @default(uuid()) @db.Uuid
+  name           String
+  email          String          @unique
+  department     String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  inventoryItems InventoryItem[]
+
+  @@map("users")
+}
+
+model Folder {
+  id        String          @id @default(uuid()) @db.Uuid
+  name      String          @unique
+  createdAt DateTime        @default(now())
+  items     InventoryItem[]
+
+  @@map("folders")
+}

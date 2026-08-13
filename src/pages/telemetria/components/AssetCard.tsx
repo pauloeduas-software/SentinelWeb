@@ -1,23 +1,6 @@
 import { ArrowRight } from 'lucide-react';
 
-interface Telemetry {
-  cpuUsage: number;
-  ramTotal: string;
-  ramUsed: string;
-  disks: Record<string, { totalGb?: number; usedGb?: number; TotalGb?: number; UsedGb?: number }>;
-  timestamp: string;
-}
-
-interface Asset {
-  id: string;
-  hwid: string;
-  hostname: string;
-  osVersion: string;
-  macAddress?: string;
-  localIp?: string;
-  status: string;
-  telemetries: Telemetry[];
-}
+import type { Asset } from '../../../types';
 
 interface AssetCardProps {
   asset: Asset;
