@@ -1,0 +1,17 @@
+-- CORRIGIDO À MÃO.
+--
+-- O `migrate diff` gerou `ALTER TYPE ... ADD VALUE 'IN_USE'` sem posição, o que
+-- acrescenta o valor no FIM do enum. O `schema.prisma` o declara em segundo
+-- lugar, logo depois de `DEPLOYABLE`, e o Postgres usa a ordem dos valores em
+-- `ORDER BY` sobre a coluna — a listagem de status é ordenável por `type`.
+-- Sem o `AFTER`, a ordem do banco e a do schema divergem para sempre.
+--
+-- Contexto: "Em Uso" era um rótulo `DEPLOYABLE`, o que dizia que um equipamento
+-- na mão de alguém estava disponível para entrega. Virou tipo próprio em vez de
+-- `PENDING` porque "está com um colaborador" e "está na assistência" são a
+-- distinção mais cara do inventário (prisma/schema.prisma).
+--
+-- `ADD VALUE` é aditivo: nenhuma linha existente muda de valor, e nenhum status
+-- já cadastrado é afetado. Quem estiver com o rótulo "Em Uso" continua no tipo
+-- que tinha até alguém movê-lo (ver docs/AUDITORIA-F0-F1.md).
+ALTER TYPE "StatusLabelType" ADD VALUE 'IN_USE' AFTER 'DEPLOYABLE';
