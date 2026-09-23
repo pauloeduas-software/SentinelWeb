@@ -48,6 +48,7 @@ export async function deleteUser(id: string, actorId: string | null): Promise<vo
       // a mensagem em português.
       throw new AppError(motivo, 409, {
         ativosEmPosse: posse.ativosEmPosse,
+        acessoriosEmPosse: posse.acessoriosEmPosse,
         postosOcupados: posse.postosOcupados,
       });
     }

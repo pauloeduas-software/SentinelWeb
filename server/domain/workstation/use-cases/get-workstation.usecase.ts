@@ -4,6 +4,7 @@ import { ASSET_SELECT } from '../../asset/helpers/asset-select.helper';
 import { WORKSTATION_DETAIL_SELECT } from '../helpers/workstation-select.helper';
 import { ehPostoVago } from '../helpers/workstation-row.helper';
 import { resolverCaminhos } from './resolve-location-paths.usecase';
+import { listLocationAccessories } from '../../stock/use-cases/list-location-accessories.usecase';
 
 /**
  * UM posto: quem está nele e o que foi entregue a ele.
@@ -28,7 +29,7 @@ export async function getWorkstation(id: string) {
 
   if (!local) throw new AppError('Posto de trabalho não encontrado.', 404);
 
-  const [ativos, caminhos] = await Promise.all([
+  const [ativos, acessorios, caminhos] = await Promise.all([
     // Consulta em `asset`, e não nas `assignments` do posto, de propósito: no
     // topo da consulta a `softDeleteExtension` age, e o ativo na lixeira fica
     // de fora sozinho. Lido pela relação, ele apareceria como equipamento na
@@ -38,6 +39,11 @@ export async function getWorkstation(id: string) {
       select: ASSET_SELECT,
       orderBy: { assetTag: 'asc' },
     }),
+    // OS ACESSÓRIOS DO POSTO — o "o que este posto tem" do TODO, completado na
+    // F5. Sem eles, a tela da Mesa 1 mostrava o monitor e escondia os 5 mouses
+    // que estão em cima dela, que é justamente o caso que o D33 existe para
+    // modelar.
+    listLocationAccessories(id),
     resolverCaminhos([local.parentId]),
   ]);
 
@@ -56,6 +62,19 @@ export async function getWorkstation(id: string) {
     totalOcupantes: occupants.length,
     ativos,
     totalAtivos: ativos.length,
+
+    // Lista PRÓPRIA, e não somada aos ativos: um acessório não tem etiqueta nem
+    // série, e a tabela de ativos mostra as duas. Misturá-los daria uma tabela
+    // com metade das células vazias e faria "quantos ativos tem esta mesa?"
+    // responder um número que inclui mouse.
+    acessorios,
+    totalAcessorios: acessorios.length,
+
+    // `vago` continua olhando só os ATIVOS, e isso é decisão: o sinal existe
+    // para o equipamento caro parado em mesa sem ninguém. Um posto com um mouse
+    // e nenhum ocupante entra em `/api/stock/alerts` pela categoria própria —
+    // e acender o mesmo selo aqui faria a tela de postos piscar alerta para
+    // toda mesa que tem um teclado na gaveta.
     vago: ehPostoVago(occupants.length, ativos.length),
   };
 }

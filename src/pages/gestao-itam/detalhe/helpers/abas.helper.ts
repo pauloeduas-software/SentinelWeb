@@ -6,7 +6,7 @@ import { Cpu, History, Info, KeyRound, Paperclip, Users, Wrench } from 'lucide-r
 // que exporta componente E constante quebra o fast refresh do Vite (o lint
 // reprova). O componente que as desenha é `components/AssetTabs.tsx`.
 //
-// AS SETE NASCEM TODAS, e as quatro que ainda não existem aparecem
+// AS SETE NASCEM TODAS, e as que ainda não existem aparecem
 // DESABILITADAS dizendo em que fase chegam. Não é enfeite: aba ausente e aba
 // vazia são indistinguíveis de defeito para quem usa o sistema — "cadê os
 // componentes deste notebook?" não tem resposta se a aba não estiver lá. Com a
@@ -29,7 +29,9 @@ export const ABAS: readonly Aba[] = [
   { id: 'detalhes', rotulo: 'Detalhes', icone: Info, fase: null },
   { id: 'posse', rotulo: 'Posse', icone: Users, fase: null },
   { id: 'historico', rotulo: 'Histórico', icone: History, fase: null },
-  { id: 'componentes', rotulo: 'Componentes', icone: Cpu, fase: 'Fase 5' },
+  // Saiu de desabilitada na F5: sumiu o `fase`, entrou o conteúdo — a
+  // moldura da tela não mudou, que era o que a decisão prometia.
+  { id: 'componentes', rotulo: 'Componentes', icone: Cpu, fase: null },
   { id: 'licencas', rotulo: 'Licenças', icone: KeyRound, fase: 'Fase 6' },
   { id: 'manutencoes', rotulo: 'Manutenções', icone: Wrench, fase: 'Fase 8' },
   // Entrou na Leva 2 do docs/FECHAMENTO-F2-F4-PLANO-ITAM.md — era a Etapa G da

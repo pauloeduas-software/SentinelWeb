@@ -1,3 +1,4 @@
+import type { EntregaDeAcessorio } from './stock.types';
 import type { Asset, Referencia } from './asset.types';
 import type { LocationOccupant, PessoaRef } from './posse.types';
 
@@ -72,4 +73,14 @@ export interface PostoDetalhe extends Omit<Posto, 'ocupantes'> {
   ocupantes: LocationOccupant[];
   /** Os ativos entregues ao posto — posse ABERTA com alvo LOCATION. */
   ativos: Asset[];
+  /**
+   * Os ACESSÓRIOS entregues ao posto (F5) — uma linha por UNIDADE.
+   *
+   * Lista própria, e não somada aos ativos: um acessório não tem etiqueta nem
+   * série, e a tabela de ativos mostra as duas. Misturá-los daria uma tabela
+   * com metade das células vazias e faria "quantos ativos tem esta mesa?"
+   * responder um número que inclui mouse.
+   */
+  acessorios: EntregaDeAcessorio[];
+  totalAcessorios: number;
 }

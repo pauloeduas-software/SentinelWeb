@@ -1,3 +1,4 @@
+import type { AcessorioEmPosse } from './stock.types';
 import type { AlvoDaPosse, PosseResolvida } from './posse.types';
 import type { ListParams } from './list.types';
 import type { User } from './user.types';
@@ -157,6 +158,18 @@ export interface PostoDoAtivo {
 export interface UserHoldings {
   diretos: Asset[];
   porPosto: (Asset & { posto: PostoDoAtivo })[];
+  /**
+   * ACESSÓRIOS (F5) — e aqui em lista ÚNICA, com `via` por item, em vez de dois
+   * baldes como os ativos acima.
+   *
+   * Não é inconsistência: um ativo direto e um ativo de posto exigem AÇÕES
+   * diferentes na tela (devolver × sair do posto), e por isso ficam separados.
+   * Uma unidade de acessório se devolve pelo `checkoutId` nos dois casos.
+   *
+   * O que não muda é o D33: `via` por item é justamente o que impede somar 1
+   * direto com 5 compartilhados e dizer "6 mouses da Laura".
+   */
+  acessorios: AcessorioEmPosse[];
 }
 
 /**

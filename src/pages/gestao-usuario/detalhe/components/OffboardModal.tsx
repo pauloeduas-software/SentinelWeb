@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CheckCircle2, LogOut, TriangleAlert, X } from 'lucide-react';
 import ReferenceSelect from '../../../components/ReferenceSelect';
 import type { OffboardInput, ResultadoDesligamento } from '../../../../domain/user/user.queries';
+import type { AcessorioEmPosse } from '../../../../domain/shared/stock.types';
 import type { Asset, PostoDoAtivo } from '../../../../domain/shared/asset.types';
 import type { LocationOccupant } from '../../../../domain/shared/posse.types';
 
@@ -35,6 +36,11 @@ interface OffboardModalProps {
   diretos: readonly Asset[];
   /** Os ativos que ela responde POR OCUPAR um posto — que ficam onde estão. */
   porPosto: readonly (Asset & { posto: PostoDoAtivo })[];
+  /**
+   * Os acessórios (F5), com a `via` em cada um. A operação devolve SÓ os de
+   * `via: 'DIRETO'` — as unidades do posto continuam na mesa, com quem ficou.
+   */
+  acessorios: readonly AcessorioEmPosse[];
   /** As ocupações abertas — todas serão encerradas. */
   ocupacoes: readonly LocationOccupant[];
   onClose: () => void;
@@ -45,11 +51,17 @@ interface OffboardModalProps {
 }
 
 export default function OffboardModal({
-  nome, diretos, porPosto, ocupacoes, onClose, onConfirmar, salvando, resultado,
+  nome, diretos, porPosto, acessorios, ocupacoes, onClose, onConfirmar, salvando, resultado,
 }: OffboardModalProps) {
   const [notes, setNotes] = useState('');
   const [statusId, setStatusId] = useState('');
   const [erro, setErro] = useState('');
+
+  // Cálculo fora do JSX (docs/ARQUITETURA.md). Os dois recortes existem porque
+  // a operação trata os dois grupos de forma OPOSTA: os diretos voltam ao
+  // estoque, os do posto ficam onde estão (D33).
+  const acessoriosDiretos = acessorios.filter((acessorio) => acessorio.via === 'DIRETO');
+  const acessoriosDoPosto = acessorios.filter((acessorio) => acessorio.via === 'POSTO');
 
   const enviar = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -87,7 +99,9 @@ export default function OffboardModal({
             <div className="flex items-start gap-2 text-status-success leading-relaxed">
               <CheckCircle2 size={14} className="mt-0.5 shrink-0" />
               <span>
-                {resultado.devolvidos.length} {resultado.devolvidos.length === 1 ? 'ativo devolvido' : 'ativos devolvidos'} e{' '}
+                {resultado.devolvidos.length} {resultado.devolvidos.length === 1 ? 'ativo devolvido' : 'ativos devolvidos'},{' '}
+                {resultado.acessoriosDevolvidos.length}{' '}
+                {resultado.acessoriosDevolvidos.length === 1 ? 'acessório devolvido' : 'acessórios devolvidos'} e{' '}
                 {resultado.ocupacoesEncerradas.length}{' '}
                 {resultado.ocupacoesEncerradas.length === 1 ? 'posto desocupado' : 'postos desocupados'}, na mesma operação.
               </span>
@@ -96,6 +110,14 @@ export default function OffboardModal({
             <Bloco titulo={`Devolvidos (${resultado.devolvidos.length})`}>
               {resultado.devolvidos.map((item) => (
                 <li key={item.assignmentId} className="px-4 py-2 text-text-primary">{item.assetTag}</li>
+              ))}
+            </Bloco>
+
+            <Bloco titulo={`Acessórios devolvidos (${resultado.acessoriosDevolvidos.length})`}>
+              {resultado.acessoriosDevolvidos.map((item) => (
+                <li key={item.checkoutId} className="px-4 py-2 text-text-primary">
+                  {item.accessoryName}
+                </li>
               ))}
             </Bloco>
 
@@ -141,7 +163,15 @@ export default function OffboardModal({
               ))}
             </Bloco>
 
-            <Bloco titulo={`2. Encerrar ${ocupacoes.length} ${ocupacoes.length === 1 ? 'ocupação de posto' : 'ocupações de posto'}`}>
+            <Bloco titulo={`2. Devolver ${acessoriosDiretos.length} ${acessoriosDiretos.length === 1 ? 'acessório' : 'acessórios'} em nome de ${nome}`}>
+              {acessoriosDiretos.map((acessorio) => (
+                <li key={acessorio.checkoutId} className="px-4 py-2 text-text-primary">
+                  {acessorio.name}
+                </li>
+              ))}
+            </Bloco>
+
+            <Bloco titulo={`3. Encerrar ${ocupacoes.length} ${ocupacoes.length === 1 ? 'ocupação de posto' : 'ocupações de posto'}`}>
               {ocupacoes.map((ocupacao) => (
                 <li key={ocupacao.id} className="px-4 py-2 text-text-primary">
                   {postoComTurno(ocupacao.location?.name ?? 'Posto', ocupacao.shift)}
@@ -150,13 +180,26 @@ export default function OffboardModal({
             </Bloco>
 
             <div className="border border-border-sutil p-4 space-y-2">
-              <div className={ROTULO}>3. Marcar a saída</div>
+              <div className={ROTULO}>4. Marcar a saída</div>
               <p className="text-text-tertiary text-[10px] leading-relaxed">
                 A pessoa deixa de operar e não pode mais receber equipamento. O cadastro NÃO é
                 excluído: desligar e mandar para a lixeira são coisas diferentes, e o histórico de
                 posse precisa continuar apontando para alguém.
               </p>
             </div>
+
+            {acessoriosDoPosto.length > 0 && (
+              <div className="flex items-start gap-2 text-status-warning text-[10px] leading-relaxed border border-status-warning/30 bg-status-warning/10 p-3">
+                <TriangleAlert size={12} className="mt-0.5 shrink-0" />
+                <span>
+                  {acessoriosDoPosto.length}{' '}
+                  {acessoriosDoPosto.length === 1 ? 'acessório continua' : 'acessórios continuam'} no
+                  posto e NÃO {acessoriosDoPosto.length === 1 ? 'volta' : 'voltam'} ao estoque. Eles
+                  estão fisicamente na mesa e continuam lá com quem ficou — devolvê-los faria o
+                  inventário mentir com o saldo batendo.
+                </span>
+              </div>
+            )}
 
             {porPosto.length > 0 && (
               <div className="flex items-start gap-2 text-status-warning text-[10px] leading-relaxed border border-status-warning/30 bg-status-warning/10 p-3">

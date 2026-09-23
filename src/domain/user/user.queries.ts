@@ -3,6 +3,7 @@ import { apiClient } from '../../core/api/apiClient';
 import { assetKeys } from '../asset/asset.queries';
 import { assignmentKeys } from '../assignment/assignment.queries';
 import { occupancyKeys } from '../occupancy/occupancy.queries';
+import { stockKeys } from '../stock/stock.queries';
 import type { EventoDaPessoa, User, UserDetail } from '../shared/user.types';
 import type { ListEnvelope, ListParams } from '../shared/list.types';
 
@@ -105,6 +106,13 @@ export interface AtivoDevolvido {
   assetTag: string;
 }
 
+/** Uma unidade de acessório que voltou ao estoque no desligamento. */
+export interface AcessorioDevolvido {
+  checkoutId: string;
+  accessoryId: string;
+  accessoryName: string;
+}
+
 /** Um posto que o desligamento desocupou. */
 export interface OcupacaoEncerrada {
   id: string;
@@ -122,6 +130,14 @@ export interface OcupacaoEncerrada {
 export interface ResultadoDesligamento {
   user: { id: string; name: string; email: string; isActive: boolean; terminatedAt: string | null };
   devolvidos: AtivoDevolvido[];
+  /**
+   * As unidades de acessório de alvo `USER` que voltaram ao estoque (F5).
+   *
+   * As do POSTO não entram, e a ausência delas aqui é o ponto: os 5 mouses da
+   * Mesa 1 continuam na mesa, com quem ficou. Devolvê-los faria o inventário
+   * mentir com o saldo batendo.
+   */
+  acessoriosDevolvidos: AcessorioDevolvido[];
   ocupacoesEncerradas: OcupacaoEncerrada[];
 }
 
@@ -137,7 +153,9 @@ export interface ResultadoDesligamento {
  * - `assets`      a coluna Responsável da listagem mudou em DOIS lugares — nos
  *   ativos devolvidos e, sem ninguém ter tocado neles, em todo ativo dos postos
  *   que ela deixou: a responsabilidade é derivada (Camada 3), e sair da Mesa 1
- *   muda quem responde por tudo que está lá.
+ *   muda quem responde por tudo que está lá;
+ * - `stock`       as unidades de acessório no nome dela voltaram ao estoque, e
+ *   o disponível de cada item mudou (F5).
  */
 export function useOffboardUser() {
   const queryClient = useQueryClient();
@@ -149,6 +167,7 @@ export function useOffboardUser() {
       void queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
       void queryClient.invalidateQueries({ queryKey: occupancyKeys.all });
       void queryClient.invalidateQueries({ queryKey: assetKeys.all });
+      void queryClient.invalidateQueries({ queryKey: stockKeys.all });
     },
   });
 }

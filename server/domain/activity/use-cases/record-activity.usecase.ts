@@ -35,7 +35,22 @@ import { prisma } from '../../../core/database/prismaClient';
 // aba Histórico quer saber que a nota fiscal daquele notebook foi trocada, e um
 // log pendurado no anexo apagado não apareceria em consulta nenhuma — a linha
 // dele some no `DELETE` físico, o histórico do ativo não.
-export type ActivityAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE' | 'END' | 'CHECKOUT' | 'CHECKIN' | 'RETIRE' | 'UNRETIRE' | 'OFFBOARD' | 'ATTACH' | 'DETACH' | 'ACCEPT' | 'DECLINE' | 'REVOKE';
+// `INSTALL` e `UNINSTALL` são COMPONENTE posto e retirado de dentro de um
+// ativo (F5) — peça, não arquivo. Palavras próprias, e não os `ATTACH`/
+// `DETACH` acima, porque os dois eventos apareceriam na MESMA aba Histórico do
+// mesmo ativo: "anexo posto" para a nota fiscal e para o pente de RAM é uma
+// linha do tempo em que ninguém distingue documento de hardware. São gravados
+// DUAS vezes, em duas entidades — no componente ("para onde foram as
+// unidades") e no ativo ("o que tem dentro dele") —, e nenhuma é cópia da
+// outra: são as duas perguntas que a operação responde.
+export type ActivityAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE' | 'END' | 'CHECKOUT' | 'CHECKIN' | 'RETIRE' | 'UNRETIRE' | 'OFFBOARD' | 'ATTACH' | 'DETACH' | 'ACCEPT' | 'DECLINE' | 'REVOKE' | 'INSTALL' | 'UNINSTALL' | 'ADJUST';
+
+// `ADJUST` é a quantidade NOMINAL de um item de estoque mudando — chegou nota,
+// quebrou, recontagem (F5, Etapa D). Ele convive com o `StockLog`, que grava o
+// mesmo ajuste com `delta` e `reason` tipados: o log responde a pergunta de
+// ESTOQUE ("quanto entrou e por quê") e esta linha põe o evento na trilha de
+// auditoria geral, ao lado das edições do item. Não é duplicação de fonte —
+// é a mesma escolha do CHECKOUT, que está no ActivityLog e em `assignments`.
 
 // `ACCEPT` e `DECLINE` são o termo de entrega respondido. Gravados com
 // `entityType: 'Asset'` como o checkout, e com o SIGNATÁRIO no `actorId` — é o
