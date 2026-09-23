@@ -5,3 +5,8 @@ dist/
 .env
 dist-ssr
 *.local
+
+# Anexos e imagens enviados pela interface (UPLOAD_DIR).
+# Em produção este diretório mora FORA do repositório — aqui é só o padrão de
+# desenvolvimento, e ele nunca entra no versionamento.
+uploads/
