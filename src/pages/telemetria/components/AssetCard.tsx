@@ -1,6 +1,6 @@
 import { ArrowRight } from 'lucide-react';
-
-import type { Asset } from '../../../types';
+import type { Asset } from '../../../domain/shared/asset.types';
+import { readSnapshot } from '../helpers/metrics.helper';
 
 interface AssetCardProps {
   asset: Asset;
@@ -21,8 +21,8 @@ const ProgressBar = ({ label, value }: { label: string; value: number }) => {
         <span className="text-text-primary">{Math.round(value)}%</span>
       </div>
       <div className="h-1.5 w-full bg-border-sutil overflow-hidden">
-        <div 
-          className={`h-full transition-all duration-500 ease-out ${getColor(value)}`} 
+        <div
+          className={`h-full transition-all duration-500 ease-out ${getColor(value)}`}
           style={{ width: `${Math.min(value, 100)}%` }}
         />
       </div>
@@ -31,23 +31,11 @@ const ProgressBar = ({ label, value }: { label: string; value: number }) => {
 };
 
 export default function AssetCard({ asset, onViewDetails }: AssetCardProps) {
-  const telemetry = asset.telemetries?.[0];
   const isOnline = asset.status === 'ONLINE';
-
-  // RAM Calculation
-  const ramTotalGB = telemetry ? (Number(telemetry.ramTotal) / 1024 / 1024 / 1024) : 0;
-  const ramUsedGB = telemetry ? (Number(telemetry.ramUsed) / 1024 / 1024 / 1024) : 0;
-  const ramPercent = ramTotalGB > 0 ? (ramUsedGB / ramTotalGB) * 100 : 0;
-
-  // Disk Calculation (main disk)
-  const diskEntries = Object.entries(telemetry?.disks || {});
-  const mainDisk = diskEntries[0]?.[1] || { totalGb: 0, usedGb: 0 };
-  const mainTotal = (mainDisk as any).totalGb ?? (mainDisk as any).TotalGb ?? 0;
-  const mainUsed = (mainDisk as any).usedGb ?? (mainDisk as any).UsedGb ?? 0;
-  const diskPercent = mainTotal > 0 ? (mainUsed / mainTotal) * 100 : 0;
+  const metrics = readSnapshot(asset.telemetries?.[0]);
 
   return (
-    <div 
+    <div
       className={`
         group relative flex flex-col bg-surface-card border p-5 transition-all duration-200
         ${isOnline ? 'border-border-sutil hover:border-border-hover' : 'border-border-sutil'}
@@ -78,18 +66,18 @@ export default function AssetCard({ asset, onViewDetails }: AssetCardProps) {
 
       {/* Metrics Section */}
       <div className={`space-y-4 mb-8 transition-all duration-500 ${!isOnline ? 'grayscale saturate-50 opacity-80' : ''}`}>
-        <ProgressBar label="CPU" value={telemetry?.cpuUsage || 0} />
-        <ProgressBar label="MEM" value={ramPercent} />
-        <ProgressBar label="DSK" value={diskPercent} />
+        <ProgressBar label="CPU" value={metrics.cpuUsage} />
+        <ProgressBar label="MEM" value={metrics.ramPercent} />
+        <ProgressBar label="DSK" value={metrics.mainDiskPercent} />
       </div>
 
       {/* Footer */}
       <div className="mt-auto pt-4 border-t border-border-sutil/50">
-        <button 
+        <button
           onClick={() => onViewDetails(asset)}
           className="flex items-center gap-1.5 text-[11px] font-medium text-text-secondary hover:text-text-primary transition-colors group/btn"
         >
-          Ver detalhes 
+          Ver detalhes
           <ArrowRight size={12} className="transition-transform group-hover/btn:translate-x-0.5" />
         </button>
       </div>

@@ -1,25 +1,25 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import type { InventoryItem, Folder } from '../../../types';
+import type { InventoryItem } from '../../../domain/shared/inventory.types';
+import type { InventoryItemInput } from '../../../domain/inventory/inventory.queries';
+import { INVENTORY_STATUS_OPTIONS } from '../helpers/status-label.helper';
 
 interface InventoryFormModalProps {
   item?: InventoryItem | null;
-  folders: Folder[];
   onClose: () => void;
-  onSaved: () => void;
+  onSubmit: (data: InventoryItemInput) => Promise<void>;
 }
 
-export default function InventoryFormModal({ item, folders, onClose, onSaved }: InventoryFormModalProps) {
+export default function InventoryFormModal({ item, onClose, onSubmit }: InventoryFormModalProps) {
   const [formData, setFormData] = useState({
     name: item?.name || '',
     description: item?.description || '',
     quantity: item?.quantity || 1,
     category: item?.category || '',
     status: item?.status || 'AVAILABLE',
-    folderId: item?.folderId || '',
-    notes: item?.notes || ''
+    notes: item?.notes || '',
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -29,23 +29,9 @@ export default function InventoryFormModal({ item, folders, onClose, onSaved }: 
     setError('');
 
     try {
-      const url = item ? `http://localhost:5000/api/inventory/${item.id}` : 'http://localhost:5000/api/inventory';
-      const method = item ? 'PUT' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Erro ao salvar');
-      }
-
-      onSaved();
-    } catch (err: any) {
-      setError(err.message);
+      await onSubmit(formData);
+    } catch (err) {
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -65,7 +51,7 @@ export default function InventoryFormModal({ item, folders, onClose, onSaved }: 
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 font-mono text-xs overflow-y-auto max-h-[80vh]">
           {error && <div className="p-3 bg-status-danger/10 text-status-danger border border-status-danger/20 rounded">{error}</div>}
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-text-secondary uppercase tracking-widest text-[10px]">Nome do Item*</label>
@@ -83,28 +69,18 @@ export default function InventoryFormModal({ item, folders, onClose, onSaved }: 
             <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors h-16 resize-none" placeholder="Detalhes técnicos, marca, modelo..." />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-text-secondary uppercase tracking-widest text-[10px]">Quantidade*</label>
               <input required type="number" min="1" value={formData.quantity} onChange={e => setFormData({...formData, quantity: parseInt(e.target.value)})} className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors" />
             </div>
 
             <div className="space-y-1">
-              <label className="text-text-secondary uppercase tracking-widest text-[10px]">Pasta / Filial</label>
-              <select value={formData.folderId} onChange={e => setFormData({...formData, folderId: e.target.value})} className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors">
-                <option value="">-- Nenhuma Pasta --</option>
-                {folders.map(f => (
-                  <option key={f.id} value={f.id}>{f.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1">
               <label className="text-text-secondary uppercase tracking-widest text-[10px]">Status</label>
               <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors">
-                <option value="AVAILABLE">Disponível</option>
-                <option value="DEPLOYED">Em Uso (Deployed)</option>
-                <option value="BROKEN">Danificado/Manutenção</option>
+                {INVENTORY_STATUS_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
               </select>
             </div>
           </div>
