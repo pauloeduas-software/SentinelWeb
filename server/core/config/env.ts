@@ -7,7 +7,20 @@ export const isProduction = process.env.NODE_ENV === 'production';
 
 // Variáveis sem as quais o servidor não funciona: faltou alguma, o boot para
 // aqui com a lista completa (em vez de falhar aos poucos em runtime).
-const REQUIRED_VARS = ['DATABASE_URL'];
+//
+// `JWT_SECRET` entrou na F3: é ele que assina o cookie de sessão. Segredo
+// ausente não pode virar "assina com string vazia" nem 500 na primeira tentativa
+// de login — sem ele NINGUÉM entra, então o boot para aqui.
+const REQUIRED_VARS = ['DATABASE_URL', 'JWT_SECRET'];
+
+// Abaixo disto o segredo é adivinhável por força bruta offline: quem tiver um
+// token assinado consegue descobrir a chave e forjar a sessão de qualquer
+// usuário. 32 caracteres é o tamanho de um `openssl rand -hex 16`.
+const JWT_SECRET_MINIMO = 32;
+
+// Valores que aparecem em tutorial e em .env.example do mundo inteiro. Um
+// segredo público não é segredo, mesmo tendo 64 caracteres.
+const JWT_SECRET_OBVIO = /^(change|changeme|secret|segredo|troque|password|senha|jwt|test)/i;
 
 export function validateEnv(): void {
   const missing = REQUIRED_VARS.filter(name => !process.env[name]?.trim());
@@ -23,6 +36,8 @@ export function validateEnv(): void {
     throw new Error(`PORT inválida: "${port}". Use um número, ex.: PORT=3001`);
   }
 
+  validateJwtSecret();
+
   // O /agent-hub exige AGENT_TOKEN. Em produção, sem token o boot PARA: um aviso
   // no log não protege porta nenhuma, e era exatamente esse o buraco anterior.
   // Em desenvolvimento (localhost) o hub segue aberto, com aviso — exigir
@@ -36,6 +51,33 @@ export function validateEnv(): void {
     }
     logger.warn('[Env] AGENT_TOKEN vazio: /agent-hub aceita qualquer WebSocket. Só faça isso em desenvolvimento.');
   }
+}
+
+// Segredo fraco é a mesma família do AGENT_TOKEN vazio: em produção derruba o
+// boot, em desenvolvimento passa com aviso. Um `JWT_SECRET=dev` publicado deixa
+// qualquer um assinar um cookie de administrador — e nada na tela denuncia isso,
+// porque o sistema continua funcionando perfeitamente.
+function validateJwtSecret(): void {
+  const secret = getJwtSecret();
+  const fraco =
+    secret.length < JWT_SECRET_MINIMO
+      ? `tem ${secret.length} caracteres (mínimo recomendado: ${JWT_SECRET_MINIMO})`
+      : JWT_SECRET_OBVIO.test(secret)
+        ? 'começa com um valor de exemplo conhecido'
+        : null;
+
+  if (!fraco) return;
+
+  const comoGerar = 'Gere um valor forte: `openssl rand -hex 32`.';
+  if (isProduction) {
+    throw new Error(`JWT_SECRET fraco: ${fraco}. Sessão assinada com ele é falsificável. ${comoGerar}`);
+  }
+  logger.warn(`[Env] JWT_SECRET fraco: ${fraco}. Aceito só em desenvolvimento. ${comoGerar}`);
+}
+
+// Chave que assina o JWT da sessão (cookie httpOnly — docs/FASE-3-PLANO-ITAM.md, D22).
+export function getJwtSecret(): string {
+  return (process.env.JWT_SECRET ?? '').replace(/^"|"$/g, '').trim();
 }
 
 // Segredo compartilhado com o Agente Sentinel (C#). Vazio = sem autenticação,
