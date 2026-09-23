@@ -3,7 +3,7 @@ import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { USER_PUBLIC_SELECT } from '../helpers/user-select.helper';
 
-export async function restoreUser(id: string) {
+export async function restoreUser(id: string, actorId: string | null) {
   return prisma.$transaction(async (tx) => {
     const naLixeira = await tx.user.findFirst({
       where: { id, deletedAt: { not: null } },
@@ -19,7 +19,7 @@ export async function restoreUser(id: string) {
     if (emUso) throw new AppError('O e-mail deste usuário já está em uso por outro cadastro.', 409);
 
     await tx.user.updateMany({ where: { id, deletedAt: { not: null } }, data: { deletedAt: null } });
-    await recordActivity(tx, { entityType: 'User', entityId: id, action: 'RESTORE' });
+    await recordActivity(tx, { entityType: 'User', entityId: id, action: 'RESTORE' }, actorId);
 
     return tx.user.findFirstOrThrow({ where: { id }, select: USER_PUBLIC_SELECT });
   });

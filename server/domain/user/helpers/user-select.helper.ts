@@ -18,3 +18,24 @@ export const USER_PUBLIC_SELECT = {
   department: true,
   createdAt: true,
 } as const;
+
+// O MESMO usuário, mais o estado do vínculo com a empresa — para a tela de
+// PERFIL e para a resposta do desligamento.
+//
+// É um select separado, e não duas colunas a mais no de cima, porque o de cima
+// vai EMBUTIDO em toda posse e em toda ocupação (`ASSIGNMENT_SELECT`,
+// `OCCUPANT_SELECT`): dois campos acrescentados lá viajariam em cada linha de
+// histórico de todo ativo, para serem usados em uma tela só.
+//
+// `isActive` e `terminatedAt` andam juntos porque dizem a mesma coisa por dois
+// ângulos — "pode operar?" e "saiu quando?" —, e uma tela que mostrasse só o
+// primeiro não teria como escrever a data no lugar do rótulo "desligado".
+//
+// Continuam de FORA, e não por esquecimento: `username`, `passwordHash`,
+// `failedLoginCount` e `lockedUntil`. Perfil de colaborador não é tela de
+// credencial, e a allowlist é o que garante que a F3 não os vaze por aqui.
+export const USER_DETAIL_SELECT = {
+  ...USER_PUBLIC_SELECT,
+  isActive: true,
+  terminatedAt: true,
+} as const;

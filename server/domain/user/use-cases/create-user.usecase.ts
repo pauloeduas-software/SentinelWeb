@@ -9,7 +9,7 @@ export interface CreateUserData {
   department?: string | null;
 }
 
-export async function createUser(data: CreateUserData) {
+export async function createUser(data: CreateUserData, actorId: string | null) {
   return prisma.$transaction(async (tx) => {
     // `findFirst`, não `findUnique`: `email` deixou de ser @unique no Prisma — a
     // unicidade virou índice PARCIAL (`WHERE deleted_at IS NULL`), para um
@@ -27,12 +27,16 @@ export async function createUser(data: CreateUserData) {
       select: USER_PUBLIC_SELECT,
     });
 
-    await recordActivity(tx, {
-      entityType: 'User',
-      entityId: user.id,
-      action: 'CREATE',
-      changes: { name: user.name, email: user.email, department: user.department },
-    });
+    await recordActivity(
+      tx,
+      {
+        entityType: 'User',
+        entityId: user.id,
+        action: 'CREATE',
+        changes: { name: user.name, email: user.email, department: user.department },
+      },
+      actorId,
+    );
 
     return user;
   });
