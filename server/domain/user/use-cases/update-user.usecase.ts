@@ -15,7 +15,7 @@ export interface UpdateUserData {
 
 const CAMPOS_AUDITADOS = ['name', 'email', 'department'] as const;
 
-export async function updateUser(id: string, data: UpdateUserData) {
+export async function updateUser(id: string, data: UpdateUserData, actorId: string | null) {
   return prisma.$transaction(async (tx) => {
     const antes = await tx.user.findFirst({ where: { id }, select: USER_PUBLIC_SELECT });
     if (!antes) throw new AppError('Registro não encontrado', 404);
@@ -39,7 +39,7 @@ export async function updateUser(id: string, data: UpdateUserData) {
 
     const changes = buildChanges(antes, depois, CAMPOS_AUDITADOS);
     if (Object.keys(changes).length > 0) {
-      await recordActivity(tx, { entityType: 'User', entityId: id, action: 'UPDATE', changes });
+      await recordActivity(tx, { entityType: 'User', entityId: id, action: 'UPDATE', changes }, actorId);
     }
 
     return depois;
