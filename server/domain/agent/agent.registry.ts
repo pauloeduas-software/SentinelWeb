@@ -1,6 +1,6 @@
 import type { WebSocket } from 'ws';
 import type { AgentCommandPacket } from '../shared/agent-protocol.types';
-import { sanitizeHwid, shortHwid } from '../asset/helpers/hwid.helper';
+import { sanitizeHwid, shortHwid } from '../endpoint/helpers/hwid.helper';
 import { createLogger } from '../../core/logger/logger';
 
 const logger = createLogger('agent.registry');
@@ -8,7 +8,7 @@ const logger = createLogger('agent.registry');
 // Conexões vivas com os agentes, NESTE processo (HWID -> WebSocket). É o único
 // lugar que conhece o mapa: quem precisa falar com um agente (ex.: o use-case
 // de comando) usa `sendToAgent`, sem importar o hub inteiro — o que também
-// evita ciclo de import entre os domínios `agent` e `asset`.
+// evita ciclo de import entre os domínios `agent` e `endpoint`.
 //
 // Estado de processo, não de cluster: com mais de uma instância do servidor,
 // isto vira um registro compartilhado (Redis) — hoje o deploy é single-node.

@@ -1,5 +1,5 @@
 import type { AgentEnvelope, AgentMessageType, ParsedAgentMessage } from '../../shared/agent-protocol.types';
-import { sanitizeHwid } from '../../asset/helpers/hwid.helper';
+import { sanitizeHwid } from '../../endpoint/helpers/hwid.helper';
 import { readString } from './payload.helper';
 
 const KNOWN_TYPES: AgentMessageType[] = ['Handshake', 'Telemetry', 'Ping'];
