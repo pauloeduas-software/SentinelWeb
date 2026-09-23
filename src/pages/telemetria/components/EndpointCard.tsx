@@ -1,10 +1,10 @@
 import { ArrowRight } from 'lucide-react';
-import type { Asset } from '../../../domain/shared/asset.types';
+import type { Endpoint } from '../../../domain/shared/endpoint.types';
 import { readSnapshot } from '../helpers/metrics.helper';
 
-interface AssetCardProps {
-  asset: Asset;
-  onViewDetails: (asset: Asset) => void;
+interface EndpointCardProps {
+  endpoint: Endpoint;
+  onViewDetails: (endpoint: Endpoint) => void;
 }
 
 const ProgressBar = ({ label, value }: { label: string; value: number }) => {
@@ -30,9 +30,9 @@ const ProgressBar = ({ label, value }: { label: string; value: number }) => {
   );
 };
 
-export default function AssetCard({ asset, onViewDetails }: AssetCardProps) {
-  const isOnline = asset.status === 'ONLINE';
-  const metrics = readSnapshot(asset.telemetries?.[0]);
+export default function EndpointCard({ endpoint, onViewDetails }: EndpointCardProps) {
+  const isOnline = endpoint.status === 'ONLINE';
+  const metrics = readSnapshot(endpoint.telemetries?.[0]);
 
   return (
     <div
@@ -46,21 +46,21 @@ export default function AssetCard({ asset, onViewDetails }: AssetCardProps) {
         <div className="flex items-center gap-2">
           <div className={`h-2 w-2 rounded-full ${isOnline ? 'bg-status-success animate-pulse' : 'bg-text-tertiary'}`} />
           <span className={`text-[10px] font-mono font-bold tracking-widest uppercase ${isOnline ? 'text-status-success' : 'text-text-secondary'}`}>
-            {asset.status}
+            {endpoint.status}
           </span>
         </div>
         <div className="text-[10px] font-mono text-text-tertiary uppercase">
-          [{asset.osVersion.split(' ')[0] || 'System'}]
+          [{endpoint.osVersion.split(' ')[0] || 'System'}]
         </div>
       </div>
 
       {/* Hostname Section */}
       <div className="mb-8">
-        <h3 className="text-xl font-mono font-medium text-text-primary truncate" title={asset.hostname}>
-          {asset.hostname}
+        <h3 className="text-xl font-mono font-medium text-text-primary truncate" title={endpoint.hostname}>
+          {endpoint.hostname}
         </h3>
         <p className="text-[10px] font-mono text-text-tertiary mt-1">
-          {asset.localIp || '0.0.0.0'}
+          {endpoint.localIp || '0.0.0.0'}
         </p>
       </div>
 
@@ -74,7 +74,7 @@ export default function AssetCard({ asset, onViewDetails }: AssetCardProps) {
       {/* Footer */}
       <div className="mt-auto pt-4 border-t border-border-sutil/50">
         <button
-          onClick={() => onViewDetails(asset)}
+          onClick={() => onViewDetails(endpoint)}
           className="flex items-center gap-1.5 text-[11px] font-medium text-text-secondary hover:text-text-primary transition-colors group/btn"
         >
           Ver detalhes

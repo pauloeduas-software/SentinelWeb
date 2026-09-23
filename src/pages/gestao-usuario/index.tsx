@@ -1,4 +1,5 @@
 import { Users, Plus, Edit2, Trash2, RotateCcw } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import UserFormModal from './components/UserFormModal';
 import ListToolbar from '../components/ListToolbar';
 import { useUsers } from './hooks/useUsers';
@@ -51,7 +52,12 @@ export default function UsersPage() {
           <tbody className="text-text-primary">
             {users.map((user) => (
               <tr key={user.id} className="border-b border-border-sutil/50 hover:bg-bg-base transition-colors group">
-                <td className="px-6 py-4 font-medium text-text-primary">{user.name}</td>
+                {/* O nome é o caminho para o PERFIL: é lá que estão os dois
+                    baldes de posse e o desligamento. A lista não tem como
+                    mostrar isso em uma célula — são três listas. */}
+                <td className="px-6 py-4 font-medium text-text-primary">
+                  <Link to={`/users/${user.id}`} className="hover:underline">{user.name}</Link>
+                </td>
                 <td className="px-6 py-4 text-text-tertiary">{user.email}</td>
                 <td className="px-6 py-4">{user.department || '--'}</td>
                 <td className="px-6 py-4 text-right">

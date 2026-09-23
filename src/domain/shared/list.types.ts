@@ -1,6 +1,6 @@
 /**
- * Envelope de toda listagem da API — mesmo formato em /inventory, /users e
- * /assets (server/core/http/list-query.ts).
+ * Envelope de toda listagem da API — mesmo formato em /assets, /users e nas
+ * sete tabelas de catálogo (server/core/http/list-query.ts).
  *
  * `total` é a contagem da tabela inteira sob o filtro atual, não o tamanho da
  * página: é ele que alimenta o contador do cabeçalho e o número de páginas.
