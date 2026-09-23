@@ -1,19 +1,19 @@
 import { useState } from 'react';
 import { X, Cpu, Activity, Terminal, Info, Copy, Power, RefreshCw, Lock } from 'lucide-react';
-import type { AgentAction, Asset } from '../../../domain/shared/asset.types';
+import type { AgentAction, Endpoint } from '../../../domain/shared/endpoint.types';
 import { readSnapshot, usagePercent } from '../helpers/metrics.helper';
 
-interface AssetDetailModalProps {
-  asset: Asset;
+interface EndpointDetailModalProps {
+  endpoint: Endpoint;
   onClose: () => void;
   onCommand: (action: AgentAction) => void;
 }
 
-export default function AssetDetailModal({ asset, onClose, onCommand }: AssetDetailModalProps) {
+export default function EndpointDetailModal({ endpoint, onClose, onCommand }: EndpointDetailModalProps) {
   const [activeTab, setActiveTab] = useState<'telemetry' | 'processes' | 'info' | 'actions'>('telemetry');
 
-  const isOnline = asset.status === 'ONLINE';
-  const { cpuUsage, ramTotalGb, ramUsedGb, ramPercent, disks, network, processes } = readSnapshot(asset.telemetries?.[0]);
+  const isOnline = endpoint.status === 'ONLINE';
+  const { cpuUsage, ramTotalGb, ramUsedGb, ramPercent, disks, network, processes } = readSnapshot(endpoint.telemetries?.[0]);
 
   const truncateHwid = (hwid: string) =>
     hwid.length > 20 ? `${hwid.substring(0, 15)}...${hwid.substring(hwid.length - 5)}` : hwid;
@@ -24,7 +24,7 @@ export default function AssetDetailModal({ asset, onClose, onCommand }: AssetDet
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border-sutil bg-bg-base/50 shrink-0">
           <div>
-            <h2 className="text-xl font-mono text-text-primary">{asset.hostname}</h2>
+            <h2 className="text-xl font-mono text-text-primary">{endpoint.hostname}</h2>
             <div className="flex items-center gap-2 mt-1">
               <div className={`h-2 w-2 rounded-full ${isOnline ? 'bg-status-success' : 'bg-text-tertiary'}`} />
               <span className="text-[10px] font-mono text-text-secondary uppercase tracking-widest">{isOnline ? 'ONLINE' : 'OFFLINE'}</span>
@@ -144,20 +144,20 @@ export default function AssetDetailModal({ asset, onClose, onCommand }: AssetDet
           {/* TAB: INFO */}
           {activeTab === 'info' && (
             <div className="space-y-4 font-mono text-xs">
-               <div className="flex justify-between border-b border-border-sutil py-2"><span className="text-text-tertiary">HOSTNAME</span><span className="text-text-primary">{asset.hostname}</span></div>
+               <div className="flex justify-between border-b border-border-sutil py-2"><span className="text-text-tertiary">HOSTNAME</span><span className="text-text-primary">{endpoint.hostname}</span></div>
                <div className="flex justify-between border-b border-border-sutil py-2">
                  <span className="text-text-tertiary">HWID</span>
                  <span
                    className="text-text-primary cursor-pointer hover:text-status-success flex items-center gap-2 transition-colors"
                    title="Clique para copiar o HWID completo"
-                   onClick={() => { navigator.clipboard.writeText(asset.hwid); alert('HWID Copiado com sucesso!'); }}
+                   onClick={() => { navigator.clipboard.writeText(endpoint.hwid); alert('HWID Copiado com sucesso!'); }}
                  >
-                   {truncateHwid(asset.hwid)} <Copy size={12} />
+                   {truncateHwid(endpoint.hwid)} <Copy size={12} />
                  </span>
                </div>
-               <div className="flex justify-between border-b border-border-sutil py-2"><span className="text-text-tertiary">S.O.</span><span className="text-text-primary">{asset.osVersion}</span></div>
-               <div className="flex justify-between border-b border-border-sutil py-2"><span className="text-text-tertiary">IP LOCAL</span><span className="text-text-primary">{asset.localIp || 'N/A'}</span></div>
-               <div className="flex justify-between py-2"><span className="text-text-tertiary">MAC ADDRESS</span><span className="text-text-primary uppercase">{asset.macAddress || 'N/A'}</span></div>
+               <div className="flex justify-between border-b border-border-sutil py-2"><span className="text-text-tertiary">S.O.</span><span className="text-text-primary">{endpoint.osVersion}</span></div>
+               <div className="flex justify-between border-b border-border-sutil py-2"><span className="text-text-tertiary">IP LOCAL</span><span className="text-text-primary">{endpoint.localIp || 'N/A'}</span></div>
+               <div className="flex justify-between py-2"><span className="text-text-tertiary">MAC ADDRESS</span><span className="text-text-primary uppercase">{endpoint.macAddress || 'N/A'}</span></div>
             </div>
           )}
 
