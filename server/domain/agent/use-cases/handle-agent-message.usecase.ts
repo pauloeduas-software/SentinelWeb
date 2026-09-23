@@ -1,9 +1,9 @@
 import type { ParsedAgentMessage } from '../../shared/agent-protocol.types';
 import { toHandshakeData, toTelemetryData } from '../helpers/normalize-payload.helper';
-import { registerHandshake } from '../../asset/use-cases/register-handshake.usecase';
-import { saveTelemetry } from '../../asset/use-cases/save-telemetry.usecase';
-import { touchAsset } from '../../asset/use-cases/touch-asset.usecase';
-import { shortHwid } from '../../asset/helpers/hwid.helper';
+import { registerHandshake } from '../../endpoint/use-cases/register-handshake.usecase';
+import { saveTelemetry } from '../../endpoint/use-cases/save-telemetry.usecase';
+import { touchEndpoint } from '../../endpoint/use-cases/touch-endpoint.usecase';
+import { shortHwid } from '../../endpoint/helpers/hwid.helper';
 import { createLogger } from '../../../core/logger/logger';
 
 const logger = createLogger('agent.message');
@@ -14,7 +14,7 @@ const logger = createLogger('agent.message');
 export async function handleAgentMessage(message: ParsedAgentMessage): Promise<void> {
   // Presença primeiro: qualquer mensagem prova que a máquina está viva, mesmo
   // que o tratamento específico abaixo falhe.
-  await touchAsset(message.hwid);
+  await touchEndpoint(message.hwid);
 
   switch (message.type) {
     case 'Handshake':
@@ -26,7 +26,7 @@ export async function handleAgentMessage(message: ParsedAgentMessage): Promise<v
       break;
 
     case 'Ping':
-      // Heartbeat puro: já tratado pelo touchAsset acima
+      // Heartbeat puro: já tratado pelo touchEndpoint acima
       logger.debug(`[Agent] Ping de ${shortHwid(message.hwid)}`);
       break;
   }
