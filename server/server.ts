@@ -1,43 +1,20 @@
-import fs from 'fs';
-import path from 'path';
-import Fastify, { LogController, type FastifyBaseLogger } from 'fastify';
-import cors from '@fastify/cors';
-import rateLimit from '@fastify/rate-limit';
-import websocket from '@fastify/websocket';
-import fastifyStatic from '@fastify/static';
-
-import { getPort, isProduction, validateEnv } from './core/config/env';
-import { getCorsOrigins } from './core/config/cors';
-import { createLogger, rootLogger } from './core/logger/logger';
-import { generateRequestId, registerRequestLogger } from './core/logger/request-logger';
-import { registerErrorHandler } from './core/errors/error-handler';
-import { buildReadinessReport, checkDependencies, isHealthy } from './core/lifecycle/health';
+import { getPort, validateEnv } from './core/config/env';
+import { createLogger } from './core/logger/logger';
+import { checkDependencies, isHealthy } from './core/lifecycle/health';
 import { installProcessHandlers, onShutdown } from './core/lifecycle/shutdown';
 import { closeDatabase } from './core/database/prismaClient';
-
-import { AgentMaestro } from './domain/agent/agent.maestro';
-import { AssetMaestro } from './domain/asset/asset.maestro';
-import { InventoryMaestro } from './domain/inventory/inventory.maestro';
-import { UserMaestro } from './domain/user/user.maestro';
-import { countAgentsOnline, disconnectAllAgents } from './domain/agent/agent.registry';
-import { startZombieCleanerJob, stopZombieCleanerJob } from './domain/asset/jobs/zombie-cleaner.job';
+import { disconnectAllAgents } from './domain/agent/agent.registry';
+import { startZombieCleanerJob, stopZombieCleanerJob } from './domain/endpoint/jobs/zombie-cleaner.job';
+import { startOverdueReminderJob, stopOverdueReminderJob } from './domain/assignment/jobs/overdue-reminder.job';
+import { buildApp } from './app';
 
 const logger = createLogger('server');
 
-const server = Fastify({
-  // Mesma instância de log da aplicação: requisição e domínio saem no mesmo
-  // formato, com o mesmo nível e o mesmo destino.
-  // O `as` fixa o tipo no logger base do Fastify: sem ele, a instância de pino
-  // concreta vaza para o tipo do servidor e nenhum maestro aceitaria um
-  // `FastifyInstance` comum como parâmetro.
-  loggerInstance: rootLogger as FastifyBaseLogger,
-  // O log automático do Fastify são DUAS linhas por requisição; com o painel
-  // consultando a cada 5s isso vira ruído. Quem loga é o nosso hook, uma linha.
-  logController: new LogController({ disableRequestLogging: true }),
-  // Id da requisição (devolvido em X-Request-Id) sempre pelo nosso gerador
-  requestIdHeader: false,
-  genReqId: (req) => generateRequestId(req as unknown as { headers: Record<string, unknown> }),
-});
+// O PROCESSO. Quem monta a aplicação é o `app.ts` — aqui mora só o que existe
+// por ela estar rodando como servidor de verdade: validar o ambiente, recusar
+// subir sem banco, ligar os jobs, abrir a porta e saber morrer.
+//
+// A divisão é o que torna a aplicação testável sem servidor (ver `app.ts`).
 
 async function bootstrap() {
   // Variável obrigatória ausente derruba o boot aqui (catch → log limpo +
@@ -52,82 +29,32 @@ async function bootstrap() {
     throw new Error(`Dependências indisponíveis no boot: ${JSON.stringify(health)}`);
   }
 
-  // Traduz qualquer erro dos handlers em resposta HTTP, num lugar só
-  registerErrorHandler(server);
-  registerRequestLogger(server);
+  const server = await buildApp();
 
-  await server.register(cors, { origin: getCorsOrigins(), credentials: true });
-
-  // Teto de requisições por IP. O painel consulta /api/assets a cada 5s (12/min)
-  // mais as listagens, então 300/min sobra para uso normal e corta repetição
-  // automatizada. Rotas de escrita têm teto próprio, mais baixo, nos maestros.
-  await server.register(rateLimit, {
-    max: 300,
-    timeWindow: '1 minute',
-    // Health check de container bate sem parar e não pode ser barrado: ficar sem
-    // resposta aqui faria o orquestrador reiniciar um servidor saudável.
-    allowList: (request) => request.url.startsWith('/health'),
-    // A resposta do 429 NÃO é montada aqui: o plugin lança o erro e quem traduz
-    // é o core/errors/error-handler, único lugar do sistema que monta resposta
-    // de erro. Com `errorResponseBuilder`, o objeto devolvido chegava ao handler
-    // sem status reconhecível e virava 500.
-  });
-
-  await server.register(websocket);
-
-  logger.info('[Server] Inicializando Maestros de Domínio...');
-  await AssetMaestro.setupRoutes(server);
-  await InventoryMaestro.setupRoutes(server);
-  await UserMaestro.setupRoutes(server);
-  await AgentMaestro.setupRoutes(server);
-
-  // Liveness: o processo está de pé e respondendo. É o health check do
-  // container: falhou, o container é reiniciado.
-  server.get('/health', async () => ({ status: 'ok', time: new Date().toISOString() }));
-
-  // Readiness: o processo consegue ATENDER (banco respondendo). Para
-  // monitoramento — NÃO é o health check do container (reiniciar o servidor
-  // não conserta o banco fora do ar).
-  server.get('/health/ready', async (_request, reply) => {
-    const report = await buildReadinessReport(checkDependencies, countAgentsOnline);
-    return reply.status(report.httpStatus).send(report.body);
-  });
-
-  // Frontend buildado (dist) — arquivos estáticos e fallback SPA
-  if (isProduction) {
-    const distPath = path.join(process.cwd(), 'dist');
-    if (fs.existsSync(distPath)) {
-      await server.register(fastifyStatic, { root: distPath, wildcard: false });
-
-      // Qualquer rota não-API entrega o index.html; o que é API cai no
-      // notFoundHandler e responde JSON.
-      server.get('/*', (request, reply) => {
-        if (request.url.startsWith('/api') || request.url.startsWith('/agent-hub')) {
-          return reply.callNotFound();
-        }
-        return reply.sendFile('index.html');
-      });
-
-      logger.info(`[Server] Frontend estático servido de ${distPath}`);
-    } else {
-      logger.warn(`[Server] NODE_ENV=production mas ${distPath} não existe. Rode "npm run build" antes.`);
-    }
-  }
+  // Encerramento gracioso, NESTA ordem: primeiro para quem gera trabalho novo
+  // (job), depois quem recebe (agentes + HTTP) e só no fim a infraestrutura de
+  // que todos dependem (banco).
+  //
+  // Registrado DEPOIS do `buildApp()` porque o passo do HTTP precisa da
+  // instância. Os handlers de sinal (lá embaixo) já estão instalados desde o
+  // início do processo e consultam esta lista só na hora de encerrar, então um
+  // SIGTERM no meio do boot continua sendo tratado.
+  onShutdown('job de agentes zumbis', stopZombieCleanerJob);
+  onShutdown('job de lembrete de atraso', stopOverdueReminderJob);
+  onShutdown('conexões de agente', disconnectAllAgents);
+  onShutdown('servidor HTTP', () => server.close());
+  onShutdown('banco de dados', closeDatabase);
 
   startZombieCleanerJob();
+  // O lembrete de atraso acorda de hora em hora e executa UMA vez por dia — a
+  // janela diária fica em `job_runs` e sobrevive ao deploy (D79). Sem ela, subir
+  // o servidor três vezes numa manhã mandaria três cobranças do mesmo notebook.
+  startOverdueReminderJob();
 
   const port = getPort();
   await server.listen({ port, host: '0.0.0.0' });
   logger.info(`🚀 [Server] Sentinel API operando em http://localhost:${port}`);
 }
-
-// Encerramento gracioso, NESTA ordem: primeiro para quem gera trabalho novo
-// (job), depois quem recebe (agentes + HTTP) e só no fim a infraestrutura de
-// que todos dependem (banco).
-onShutdown('job de agentes zumbis', stopZombieCleanerJob);
-onShutdown('conexões de agente', disconnectAllAgents);
-onShutdown('servidor HTTP', () => server.close());
-onShutdown('banco de dados', closeDatabase);
 
 installProcessHandlers();
 
