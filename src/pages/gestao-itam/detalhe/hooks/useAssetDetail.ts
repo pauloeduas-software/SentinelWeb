@@ -11,6 +11,9 @@ import {
 import {
   useAssetAttachmentsQuery, useClearImage, useDeleteAttachment, useSetImage, useUploadAttachment,
 } from '../../../../domain/attachment/attachment.queries';
+import {
+  useAssetComponentsQuery, useDetachComponent,
+} from '../../../../domain/stock/stock.queries';
 import type { RetireInput } from '../../../../domain/shared/asset.types';
 import type { AbaId } from '../helpers/abas.helper';
 
@@ -44,6 +47,12 @@ export function useAssetDetail() {
   const entregar = useCheckoutAsset();
   const devolver = useCheckinAsset();
 
+  // COMPONENTES (F5) — "o que está dentro deste ativo". A consulta e a
+  // retirada moram no domínio `stock`, que é quem conhece as tabelas: esta tela
+  // só LÊ e manda retirar, como faz com a posse.
+  const { data: componentes, isPending: componentesPendentes } = useAssetComponentsQuery(id ?? null);
+  const retirarComponente = useDetachComponent();
+
   // ARQUIVO. Quatro mutações e uma consulta, todas do domínio `attachment`:
   // esta tela é a única que os usa hoje, mas o transporte fica lá porque
   // página não fala HTTP (docs/ARQUITETURA.md).
@@ -52,6 +61,46 @@ export function useAssetDetail() {
   const excluirAnexo = useDeleteAttachment();
   const trocarImagem = useSetImage();
   const removerImagem = useClearImage();
+
+  /**
+   * Retirar uma peça — total ou PARCIAL.
+   *
+   * O `prompt` é feio e é deliberado: a retirada parcial é rara (o caso comum é
+   * tirar tudo) e um modal próprio para ela seria uma janela a mais para
+   * manter, usada uma vez a cada cem. Quando a operação ganhar volume, vira
+   * modal — e o servidor não muda, porque a divisão da linha (D38) já está lá.
+   */
+  const handleRetirarComponente = async (instalacaoId: string, assignedQty: number) => {
+    let qty: number | undefined;
+
+    if (assignedQty > 1) {
+      const resposta = window.prompt(
+        `Retirar quantas das ${assignedQty} unidades? (o total é ${assignedQty})`,
+        String(assignedQty),
+      );
+      if (resposta === null) return;
+
+      const pedido = Number(resposta);
+      if (!Number.isInteger(pedido) || pedido < 1 || pedido > assignedQty) return;
+
+      // Retirada TOTAL manda o corpo vazio: `qty` igual ao total daria na mesma
+      // no servidor, mas o corpo vazio é o que diz "tudo" sem depender de a
+      // tela ter lido a quantidade certa.
+      if (pedido !== assignedQty) qty = pedido;
+    }
+
+    // O `try/catch` é obrigatório aqui, e a falta dele era um bug — o mesmo que
+    // o `useEstoque` documenta: esta ação não passa por formulário nenhum (o
+    // clique é direto na linha da aba), então não há campo de erro para a
+    // mensagem subir. Sem o `catch`, o 409 "Esta instalação já foi retirada" —
+    // duas abas abertas na mesma peça — virava *unhandled rejection* no console
+    // e a tela não fazia NADA. O operador clica de novo no mesmo botão.
+    try {
+      await retirarComponente.mutateAsync({ instalacaoId, ...(qty === undefined ? {} : { qty }) });
+    } catch (falha) {
+      alert((falha as Error).message);
+    }
+  };
 
   // O erro do upload SOBE para a aba, e não vira `alert`: o 422 do MIME e o 413
   // do tamanho são recusas que ensinam, e a mensagem vem do servidor.
@@ -144,6 +193,11 @@ export function useAssetDetail() {
 
     assignments: assignments ?? [],
     possePendente,
+
+    // COMPONENTES — a aba que saiu de desabilitada na F5.
+    componentes: componentes ?? [],
+    componentesPendentes,
+    handleRetirarComponente,
 
     // ARQUIVO — a aba Arquivos.
     anexos: anexos ?? [],

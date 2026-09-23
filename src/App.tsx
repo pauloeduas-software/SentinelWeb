@@ -5,6 +5,7 @@ import TelemetryPage from './pages/telemetria';
 import ItamPage from './pages/gestao-itam';
 import AssetDetailPage from './pages/gestao-itam/detalhe';
 import PostosPage from './pages/postos';
+import EstoquePage from './pages/estoque';
 import UsersPage from './pages/gestao-usuario';
 import UserDetailPage from './pages/gestao-usuario/detalhe';
 import ConfiguracoesPage from './pages/configuracoes';
@@ -28,6 +29,11 @@ function Layout() {
               no chamado, se abre em outra aba e se guarda nos favoritos. */}
           <Route path="/itam/assets/:id" element={<AssetDetailPage />} />
           <Route path="/postos" element={<PostosPage />} />
+          {/* O que tem QUANTIDADE: acessório, consumível, componente (F5).
+              Rota irmã de /itam, e não uma aba dentro dela: um mouse não é um
+              ativo, e misturar os dois na mesma tabela daria metade das células
+              vazias (não há etiqueta nem série a mostrar). */}
+          <Route path="/estoque" element={<EstoquePage />} />
           <Route path="/users" element={<UsersPage />} />
           {/* Perfil do colaborador: os dois baldes de posse e o desligamento
               (docs/MODELO-POSSE.md, Camada 3). Depois de `/users` porque o

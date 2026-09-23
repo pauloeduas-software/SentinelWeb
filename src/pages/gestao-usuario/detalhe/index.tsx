@@ -1,4 +1,4 @@
-import { ArrowLeft, HardDrive, History, LogOut, MapPin, UserX } from 'lucide-react';
+import { ArrowLeft, Boxes, HardDrive, History, LogOut, MapPin, UserX } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import HistoryPanel from './components/HistoryPanel';
 import OffboardModal from './components/OffboardModal';
@@ -11,11 +11,12 @@ import type { Asset, PostoDoAtivo } from '../../../domain/shared/asset.types';
 //
 // A tela existe para responder "o que a Laura responde?" e, logo em seguida, "o
 // que acontece quando ela sair?". Por isso ela mostra TRÊS listas, e o fato de
-// serem três é o conteúdo:
+// serem quatro é o conteúdo:
 //
 //   1. ativos no NOME dela        posse direta — some com uma devolução
 //   2. ativos pelos POSTOS        herdados da ocupação — somem com a escala
-//   3. os POSTOS que ela ocupa    inclusive os que não têm ativo nenhum
+//   3. ACESSÓRIOS (F5)            numa lista só, com a `via` em cada linha
+//   4. os POSTOS que ela ocupa    inclusive os que não têm ativo nenhum
 //
 // Juntar 1 e 2 numa lista só é o erro que o MODELO-POSSE.md descreve: devolver
 // um ativo da Mesa 1 pelo perfil da Laura tiraria da Ana junto.
@@ -30,7 +31,7 @@ const CABECALHO = 'px-6 py-3 font-normal';
 
 export default function UserDetailPage() {
   const {
-    user, diretos, porPosto, ocupacoes, carregando, erro,
+    user, diretos, porPosto, acessorios, ocupacoes, carregando, erro,
     historico, totalDoHistorico, carregandoHistorico,
     modalDesligamento, abrirDesligamento, fecharDesligamento,
     handleDesligar, desligando, resultado,
@@ -125,6 +126,65 @@ export default function UserDetailPage() {
         ))}
       </Secao>
 
+      {/* OS ACESSÓRIOS (F5) — uma lista só, com a `via` em cada linha.
+          Os ativos ficam em DUAS listas porque a devolução de cada grupo é uma
+          operação diferente; uma unidade de acessório se devolve do mesmo jeito
+          nos dois casos, e é o `via` que diz de quem ela é. O que não existe
+          nesta tela é um TOTAL: somar direto com compartilhado produz uma frase
+          falsa sobre o patrimônio (D33). */}
+      <div>
+        <div className="flex items-center gap-3 mb-3">
+          <Boxes size={14} className="text-text-tertiary" />
+          <h3 className="font-mono text-xs uppercase tracking-widest text-text-secondary">
+            Acessórios <span className="text-text-tertiary">({acessorios.length})</span>
+          </h3>
+        </div>
+        <p className="font-mono text-[10px] text-text-tertiary mb-3 leading-relaxed">
+          <span className="text-text-secondary">Direto</span> é dela e volta com ela — o
+          desligamento devolve. <span className="text-text-secondary">Posto</span> é da mesa:
+          ela responde junto com os outros ocupantes pela MESMA unidade, e sair do posto basta.
+        </p>
+
+        <div className="bg-surface-card border border-border-sutil overflow-x-auto">
+          <table className="w-full text-left font-mono text-xs whitespace-nowrap">
+            <thead className="bg-bg-base/50 text-text-secondary border-b border-border-sutil uppercase tracking-widest">
+              <tr>
+                <th className={CABECALHO}>Item</th>
+                <th className={CABECALHO}>Categoria</th>
+                <th className={CABECALHO}>Via</th>
+                <th className={CABECALHO}>Desde</th>
+              </tr>
+            </thead>
+            <tbody className="text-text-primary divide-y divide-border-sutil/50">
+              {acessorios.map((acessorio) => (
+                <tr key={acessorio.checkoutId} className="hover:bg-bg-base transition-colors">
+                  <td className={CELULA}>{acessorio.name}</td>
+                  <td className={`${CELULA} text-text-tertiary`}>{acessorio.categoryName ?? '—'}</td>
+                  <td className={CELULA}>
+                    {acessorio.via === 'DIRETO' ? (
+                      <span className="text-text-secondary">Direto</span>
+                    ) : (
+                      <span className="text-text-tertiary">
+                        Posto — {acessorio.posto?.locationName ?? '—'}
+                        {acessorio.posto?.shift && <span> ({acessorio.posto.shift})</span>}
+                      </span>
+                    )}
+                  </td>
+                  <td className={`${CELULA} text-text-tertiary`}>{formatarData(acessorio.checkedOutAt)}</td>
+                </tr>
+              ))}
+              {acessorios.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-10 text-center text-text-tertiary">
+                    Nenhum acessório com esta pessoa.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div>
         <div className="flex items-center gap-3 mb-3">
           <MapPin size={14} className="text-text-tertiary" />
@@ -186,6 +246,7 @@ export default function UserDetailPage() {
           nome={user.name}
           diretos={diretos}
           porPosto={porPosto}
+          acessorios={acessorios}
           ocupacoes={ocupacoes}
           onClose={fecharDesligamento}
           onConfirmar={handleDesligar}

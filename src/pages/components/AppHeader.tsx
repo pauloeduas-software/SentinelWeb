@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Armchair, KeyRound, LayoutDashboard, LogOut, Server, Database, Users, SlidersHorizontal } from 'lucide-react';
+import { Armchair, Boxes, KeyRound, LayoutDashboard, LogOut, Server, Database, Users, SlidersHorizontal } from 'lucide-react';
 import { useAuthStore } from '../../domain/auth/auth.store';
 
 // Navegação do painel. Fica em pages/components porque é interface
@@ -11,6 +11,9 @@ const NAV_ITEMS = [
   // do outro lado: o ativo está na mesa, e a mesa é de quem a ocupa
   // (docs/MODELO-POSSE.md). Fora do menu, ele estava atrás da 6ª aba de Config.
   { to: '/postos', label: 'Postos', icon: Armchair },
+  // Depois de Postos porque a entrega de acessório pende dele: os 5 mouses da
+  // Mesa 1 são do POSTO, e quem responde por eles são os ocupantes (D33).
+  { to: '/estoque', label: 'Estoque', icon: Boxes },
   { to: '/users', label: 'Usuários', icon: Users },
   { to: '/tokens', label: 'Tokens', icon: KeyRound },
   { to: '/configuracoes', label: 'Config', icon: SlidersHorizontal },

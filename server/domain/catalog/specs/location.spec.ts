@@ -38,15 +38,31 @@ export const locationSpec: CatalogSpec = {
   // de localizações continua devolvendo TUDO de propósito: o pai de uma mesa é
   // uma sala, e uma sala não é posto.
 
-  // Filhas na hierarquia E ativos guardados aqui — os da lixeira inclusive: o
-  // ativo aponta com `onDelete: SetNull`, então ignorar a lixeira aqui faria o
-  // banco zerar o `locationId` de uma linha ainda restaurável, em silêncio.
+  // Filhas na hierarquia, ativos guardados aqui, os três de estoque guardados
+  // aqui, e as UNIDADES DE ACESSÓRIO entregues a este posto.
+  //
+  // Os da lixeira inclusive, por dois motivos diferentes que dão no mesmo
+  // número: o ativo aponta com `onDelete: SetNull`, então ignorá-lo faria o
+  // banco zerar o `locationId` de uma linha ainda restaurável, em silêncio; os
+  // de estoque apontam com `Restrict`, e a FK não distingue lixeira de linha
+  // viva — a contagem que os ignora promete um delete que o Postgres recusa com
+  // P2003, e o 409 vira o genérico que não diz por quantos.
+  //
+  // `accessoryCheckout` conta as ABERTAS **e as fechadas**, e isso não é
+  // descuido: `targetLocationId` é `Restrict`, então uma entrega já devolvida
+  // continua segurando o posto no banco. Contar só as abertas daria a mesma
+  // promessa falsa. É também o certo do ponto de vista do histórico — apagar a
+  // Mesa 1 apagaria de onde os 5 mouses estiveram.
   countUsages: async (client, id) => {
-    const [filhas, ativos] = await Promise.all([
+    const [filhas, ativos, acessorios, consumiveis, componentes, entregas] = await Promise.all([
       client.location.count({ where: { parentId: id } }),
       client.asset.count({ where: { locationId: id, ...INCLUINDO_LIXEIRA } }),
+      client.accessory.count({ where: { locationId: id, ...INCLUINDO_LIXEIRA } }),
+      client.consumable.count({ where: { locationId: id, ...INCLUINDO_LIXEIRA } }),
+      client.component.count({ where: { locationId: id, ...INCLUINDO_LIXEIRA } }),
+      client.accessoryCheckout.count({ where: { targetLocationId: id } }),
     ]);
-    return filhas + ativos;
+    return filhas + ativos + acessorios + consumiveis + componentes + entregas;
   },
 
   beforeWrite: (client, id, data) => assertSemCicloDeLocalizacao(client, id, data.parentId),

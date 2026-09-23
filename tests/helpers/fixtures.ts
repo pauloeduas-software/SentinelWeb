@@ -26,11 +26,16 @@ function exigir201<T>(o_que: string, resposta: { status: number; body: unknown }
 
 /** Os ids que o seed deixa prontos. Lidos, nunca criados. */
 export async function idsDoSeed() {
-  const [deployable, emUso, arquivado, categoria] = await Promise.all([
+  const [deployable, emUso, arquivado, categoria, acessorio, consumivel, componente] = await Promise.all([
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'DEPLOYABLE' }, select: { id: true } }),
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'IN_USE' }, select: { id: true } }),
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'ARCHIVED' }, select: { id: true } }),
     prisma.category.findFirstOrThrow({ where: { type: 'ASSET' }, select: { id: true } }),
+    // As três do estoque (F5). O seed cria uma por tipo, e é o TIPO que o
+    // use-case confere: categoria de ASSET num acessório é 422.
+    prisma.category.findFirstOrThrow({ where: { type: 'ACCESSORY' }, select: { id: true } }),
+    prisma.category.findFirstOrThrow({ where: { type: 'CONSUMABLE' }, select: { id: true } }),
+    prisma.category.findFirstOrThrow({ where: { type: 'COMPONENT' }, select: { id: true } }),
   ]);
 
   return {
@@ -38,7 +43,35 @@ export async function idsDoSeed() {
     statusEmUsoId: emUso.id,
     statusArquivadoId: arquivado.id,
     categoriaId: categoria.id,
+    categoriaAcessorioId: acessorio.id,
+    categoriaConsumivelId: consumivel.id,
+    categoriaComponenteId: componente.id,
   };
+}
+
+/**
+ * Um item de estoque, pela API — nunca por `prisma.accessory.create`.
+ *
+ * O motivo é o do topo deste arquivo: criar pelo Prisma pularia o zod da borda,
+ * a guarda de tipo da categoria e o `ActivityLog`, e o teste passaria a provar
+ * coisas sobre um item que nenhum usuário consegue cadastrar.
+ *
+ * O NOME é único por índice parcial nos três tipos, então quem chama passa um
+ * sufixo próprio quando cria mais de um no mesmo arquivo.
+ */
+export async function criarItemDeEstoque(
+  api: ApiDeTeste,
+  slug: 'accessories' | 'consumables' | 'components',
+  opcoes: { name: string; categoryId: string; qty: number; minQty?: number },
+): Promise<{ id: string; qty: number; disponivel: number }> {
+  const corpo: Record<string, unknown> = {
+    name: opcoes.name,
+    categoryId: opcoes.categoryId,
+    qty: opcoes.qty,
+  };
+  if (opcoes.minQty !== undefined) corpo.minQty = opcoes.minQty;
+
+  return exigir201(slug, await api.post(`/api/${slug}`, corpo));
 }
 
 export async function criarFabricante(api: ApiDeTeste, name = 'Fabricante de Teste'): Promise<string> {

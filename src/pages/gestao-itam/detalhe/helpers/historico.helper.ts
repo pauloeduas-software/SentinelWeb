@@ -10,6 +10,12 @@ import { lerEvento, rotuloDaAcao, type LeituraDoEvento } from '../../../helpers/
 const ROTULO_DA_ACAO: Record<string, string> = {
   RETIRE: 'Descomissionado',
   UNRETIRE: 'Voltou ao patrimônio',
+  // Peça de estoque posta e retirada de dentro do ativo (F5). Palavras
+  // próprias, e não os ATTACH/DETACH do anexo: os dois eventos caem nesta
+  // mesma lista, e "anexo posto" para a nota fiscal e para o pente de RAM
+  // seria uma linha do tempo em que ninguém distingue documento de hardware.
+  INSTALL: 'Componente instalado',
+  UNINSTALL: 'Componente retirado',
 };
 
 /** Os nomes de coluna que aparecem no diff, em português. */
@@ -41,6 +47,16 @@ const ROTULO_DO_CAMPO: Record<string, string> = {
   assignmentId: 'Posse',
   targetType: 'Tipo de alvo',
   targetId: 'Alvo',
+  // Estoque (F5). `assetTag` não entra: já está no topo, e a chave é a mesma.
+  instalacaoId: 'Instalação',
+  componentId: 'Componente',
+  componentName: 'Nome do componente',
+  assetId: 'Ativo',
+  qty: 'Unidades',
+  retirada: 'Unidades retiradas',
+  de: 'Instaladas antes',
+  sucessoraId: 'Continua instalado (linha)',
+  disponivel: 'Disponível depois',
 };
 
 export function lerEventoDoAtivo(evento: EventoDoAtivo): LeituraDoEvento {

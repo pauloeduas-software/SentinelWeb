@@ -1,6 +1,9 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { ASSET_SELECT } from '../../asset/helpers/asset-select.helper';
+import {
+  listUserAccessories, type AcessorioEmPosse,
+} from '../../stock/use-cases/list-user-accessories.usecase';
 
 // "Quais ativos a Laura responde?" — a pergunta que o MODELO-POSSE.md diz que
 // passa a existir com as três camadas, e que o `Asset.assignedToId` sozinho
@@ -47,6 +50,21 @@ export interface Holdings {
   diretos: AtivoEmPosse[];
   /** Herdados do posto: entregues às localizações que a pessoa ocupa hoje. */
   porPosto: AtivoPorPosto[];
+  /**
+   * ACESSÓRIOS (F5) — e aqui os dois casos vêm numa LISTA SÓ, com `via` por
+   * item, em vez de dois baldes como acima.
+   *
+   * Não é inconsistência: é que o ativo e o acessório se devolvem de jeitos
+   * diferentes. Um ativo direto e um ativo do posto exigem AÇÕES distintas na
+   * tela (devolver × sair do posto), e por isso ficam em listas separadas — foi
+   * a decisão da F4. Uma unidade de acessório se devolve pelo `checkoutId`,
+   * seja ela direta ou do posto, então a tela é uma tabela com uma coluna
+   * "via" e um botão por linha.
+   *
+   * O que NÃO muda é o D33: os dois números nunca são somados. `via` por item
+   * é justamente o que impede a soma — não existe um total nesta resposta.
+   */
+  acessorios: AcessorioEmPosse[];
 }
 
 export async function listUserHoldings(userId: string): Promise<Holdings> {
@@ -66,9 +84,14 @@ export async function listUserHoldings(userId: string): Promise<Holdings> {
     orderBy: [{ location: { name: 'asc' } }, { shift: 'asc' }],
   });
 
+  // Os acessórios saem do domínio `stock`, que é quem conhece as tabelas deles
+  // — e não uma segunda consulta escrita aqui. A resolução é a mesma (direto +
+  // postos ocupados), e duas implementações dela divergiriam no primeiro ajuste.
+  const acessorios = await listUserAccessories(userId);
+
   // Ninguém ocupa posto nenhum: as duas consultas seguintes não têm o que
-  // perguntar.
-  if (ocupacoes.length === 0) return { diretos, porPosto: [] };
+  // perguntar. Os acessórios DIRETOS já foram buscados acima.
+  if (ocupacoes.length === 0) return { diretos, porPosto: [], acessorios };
 
   const idsDeLocal = [...new Set(ocupacoes.map((ocupacao) => ocupacao.locationId))];
 
@@ -125,5 +148,5 @@ export async function listUserHoldings(userId: string): Promise<Holdings> {
     }
   }
 
-  return { diretos, porPosto };
+  return { diretos, porPosto, acessorios };
 }

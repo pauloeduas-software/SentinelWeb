@@ -3,6 +3,9 @@ import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { assertStatusExiste, escolherStatusPorTipo } from '../../assignment/use-cases/checkout-asset.usecase';
 import { fecharPosse } from '../../assignment/use-cases/close-assignment.usecase';
+import {
+  devolverAcessoriosDoUsuario, type AcessorioDevolvido,
+} from '../../stock/use-cases/checkin-user-accessories.usecase';
 import { USER_DETAIL_SELECT } from '../helpers/user-select.helper';
 import { travarUsuarioOuFalhar } from './lock-user.usecase';
 
@@ -30,7 +33,7 @@ import { travarUsuarioOuFalhar } from './lock-user.usecase';
 // única prova que o inventário tem num inquérito trabalhista.
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// TUDO numa `$transaction` porque os três passos são UM fato. Metade aplicada é
+// TUDO numa `$transaction` porque os quatro passos são UM fato. Metade aplicada é
 // o pior de todos os estados: o desligado sem ativos mas ainda ocupando a Mesa
 // 1 é exatamente o bug que o D32 existe para impedir, e ele nasceria de um
 // `Promise.all` que falhou no meio.
@@ -58,6 +61,8 @@ export interface OcupacaoEncerrada {
 export interface ResultadoDesligamento {
   user: { id: string; name: string; email: string; isActive: boolean; terminatedAt: Date | null };
   devolvidos: AtivoDevolvido[];
+  /** Unidades de acessório de alvo `USER` fechadas — NUNCA as do posto (F5). */
+  acessoriosDevolvidos: AcessorioDevolvido[];
   ocupacoesEncerradas: OcupacaoEncerrada[];
 }
 
@@ -155,7 +160,19 @@ export async function offboardUser(
       }
     }
 
-    // ── 2. ENCERRAR as ocupações de posto ──────────────────────────────────
+    // ── 2. DEVOLVER os ACESSÓRIOS que estão no nome da pessoa (F5) ─────────
+    //
+    // Mesma regra do passo 1, e a mesma armadilha: SÓ os de alvo `USER`. Os 5
+    // mouses entregues à Mesa 1 NÃO voltam — eles continuam fisicamente na
+    // mesa, agora com a Ana, e devolvê-los ao estoque faria o inventário mentir
+    // com o saldo batendo. O `where` que impede isso está em
+    // `stock/use-cases/checkin-user-accessories.usecase.ts`, com o porquê ao
+    // lado.
+    const acessoriosDevolvidos = await devolverAcessoriosDoUsuario(
+      tx, userId, data.notes ?? null, actorId,
+    );
+
+    // ── 3. ENCERRAR as ocupações de posto ──────────────────────────────────
     //
     // O passo com dentes. Marcar a pessoa inativa NÃO a tira da lista de
     // responsáveis da Mesa 1: `resolverResponsaveis()` lê
@@ -202,7 +219,7 @@ export async function offboardUser(
       });
     }
 
-    // ── 3. DESLIGAR a pessoa ───────────────────────────────────────────────
+    // ── 4. DESLIGAR a pessoa ───────────────────────────────────────────────
     //
     // Por último de propósito: se qualquer devolução ou encerramento falhar, a
     // transação volta atrás e a pessoa NÃO fica marcada como desligada com
@@ -225,6 +242,7 @@ export async function offboardUser(
       changes: {
         terminatedAt: saidaEm.toISOString(),
         ativosDevolvidos: devolvidos.length,
+        acessoriosDevolvidos: acessoriosDevolvidos.length,
         ocupacoesEncerradas: ocupacoesEncerradas.length,
         notes: data.notes ?? null,
       },
@@ -239,6 +257,7 @@ export async function offboardUser(
         terminatedAt: desligada.terminatedAt,
       },
       devolvidos,
+      acessoriosDevolvidos,
       ocupacoesEncerradas,
     };
   });

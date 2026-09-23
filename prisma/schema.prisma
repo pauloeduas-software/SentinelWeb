@@ -98,6 +98,11 @@ model User {
   occupancies      LocationOccupant[]
   authEvents       AuthEvent[]
 
+  // ESTOQUE (F5). O acessório entregue à pessoa volta; o consumível não — e é
+  // por isso que os dois são tabelas separadas, não um enum numa só (D37).
+  accessoryCheckouts  AccessoryCheckout[]
+  consumableCheckouts ConsumableCheckout[]
+
   // `email` NÃO é @unique aqui de propósito: a unicidade é um índice parcial
   // (`WHERE deleted_at IS NULL`) criado na migration. Com @unique comum, um
   // usuário na lixeira bloquearia para sempre o recadastro do mesmo e-mail —
@@ -270,6 +275,14 @@ model Category {
   updatedAt   DateTime     @updatedAt
   assetModels AssetModel[]
 
+  // Os três tipos COM QUANTIDADE (F5). Cada um tem a categoria própria, e é o
+  // `type` desta linha que separa: um `Accessory` de categoria `ASSET` é o
+  // mesmo erro que "Em Uso" tipado DEPLOYABLE foi na F1. O banco não impede —
+  // a guarda é do use-case, e o `optionFilter` da spec protege a tela.
+  accessories Accessory[]
+  consumables Consumable[]
+  components  Component[]
+
   // Por (nome, tipo), não só por nome: "Notebook" como categoria de ATIVO e
   // "Notebook" como categoria de LICENÇA são duas coisas diferentes.
   @@unique([name, type])
@@ -309,6 +322,10 @@ model Manufacturer {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   assetModels AssetModel[]
+
+  accessories Accessory[]
+  consumables Consumable[]
+  components  Component[]
 
   @@map("manufacturers")
 }
@@ -365,6 +382,10 @@ model Supplier {
   updatedAt DateTime @updatedAt
   assets    Asset[]
 
+  accessories Accessory[]
+  consumables Consumable[]
+  components  Component[]
+
   @@map("suppliers")
 }
 
@@ -412,6 +433,17 @@ model Location {
   // É a junção das duas que responde "quem é responsável pelo mouse da Mesa 1".
   assignments Assignment[]
   occupants   LocationOccupant[]
+
+  // ONDE O ESTOQUE MORA — o almoxarifado, a gaveta. É `locationId` do item, e
+  // NÃO tem nada a ver com a entrega: quem recebeu está em `accessoryCheckouts`.
+  accessories Accessory[]
+  consumables Consumable[]
+  components  Component[]
+
+  // Acessórios entregues A ESTE POSTO (D33): os 5 mouses da Mesa 1. Quem
+  // responde por eles são os OCUPANTES, resolvidos na leitura — a unidade é
+  // UMA, qualquer que seja o número de pessoas na escala.
+  accessoryCheckouts AccessoryCheckout[]
 
   // DECLARADOS AQUI, e não só na migration que os criou.
   //
@@ -559,6 +591,11 @@ model Asset {
 
   attachments Attachment[]
   acceptances Acceptance[]
+
+  // O QUE ESTÁ DENTRO DESTE ATIVO — a primeira ponte real entre estoque e
+  // ativo (F5). O pente de RAM não tem etiqueta própria, então é `Component`;
+  // a dock tem, então é `Asset` com `Assignment` de alvo `ASSET` (F4).
+  components ComponentAsset[]
 
   @@index([deletedAt])
   @@index([statusId])
@@ -893,4 +930,416 @@ model AppSetting {
   updatedAt DateTime @updatedAt
 
   @@map("app_settings")
+}
+
+// ============================================================================
+// ESTOQUE — os três tipos que TÊM QUANTIDADE (docs/FASE-5-PLANO-ITAM.md)
+//
+// A régua contra o `Asset`: **tem etiqueta própria → é `Asset`**. Lá uma linha
+// é um equipamento com patrimônio e série; aqui uma linha é N unidades
+// INTERCAMBIÁVEIS, e o que separa os três é o que acontece quando uma sai:
+//
+//   `Accessory`   sai para pessoa OU POSTO, e volta  → `checkedInAt`
+//   `Consumable`  sai para pessoa e NÃO volta        → não existe coluna
+//   `Component`   sai para DENTRO de um ativo, volta → `detachedAt`, parcial
+//
+// A dock tem patrimônio, então é `Asset` com `Assignment` de alvo `ASSET` (F4).
+// O pente de RAM não tem, então é `Component`. O mouse avulso da gaveta não
+// tem, então é `Accessory`.
+//
+// NENHUMA DAS TRÊS TEM COLUNA DE SALDO, e isso é o D34. `qty` é *quanto
+// entrou*; o disponível é `COUNT`/`SUM` sobre as linhas de saída, calculado num
+// helper só. Uma coluna `qtyAvailable` mantida por decremento pode DIVERGIR das
+// linhas — basta um INSERT que não passe pelo decremento — e a partir daí ela
+// mente para sempre, porque ela *é* a resposta: não existe ninguém para
+// discordar dela. É o D16 uma camada abaixo.
+//
+// OS TRÊS TÊM LIXEIRA, e aqui o D8 não se aplica (D36). O vazamento que o D8
+// evitou é o de um registro apagado aparecendo como valor ATUAL de outra linha;
+// aqui a leitura aninhada é de HISTÓRICO — o nome do acessório na linha de
+// consumo de março — e mostrar o item apagado ali é o certo. O delete real
+// levaria junto o histórico de consumo, a única coisa da fase que não se
+// reconstrói.
+// ============================================================================
+
+// Para QUEM um acessório foi entregue.
+//
+// Só `USER` e `LOCATION`. `ASSET` NÃO entra: o que vai para dentro de um ativo
+// é `Component`, que tem tabela própria e quantidade por instalação. Um enum
+// que admite valor sem significado é um enum que um dia vai guardar um — foi
+// assim que a auditoria da F1 achou "Em Uso" tipado `DEPLOYABLE`.
+enum AccessoryTarget {
+  USER
+  LOCATION
+}
+
+// O que é entregue e VOLTA: mouse, teclado, headset sem patrimônio.
+//
+// A novidade sobre o Snipe-IT está no alvo: entregar 5 mouses à Mesa 1 é o caso
+// real do docs/MODELO-POSSE.md, e forçar a escolha de uma pessoa faria o
+// acessório mentir do mesmo jeito que `assignedToId` mentiria (D17).
+model Accessory {
+  id   String @id @default(uuid()) @db.Uuid
+  name String
+
+  // QUANTO ENTROU — não quanto sobra. Só muda por `adjust-quantity`, na mesma
+  // transação que grava o `StockLog`; por isso a chave NÃO existe no schema de
+  // edição (`strictObject` devolve 422 a chave desconhecida, e não declarar é a
+  // defesa — o mesmo princípio do D37).
+  qty Int
+
+  // Piso do alerta de estoque baixo. Nulo = não alerta.
+  minQty      Int?
+  modelNumber String?
+
+  categoryId     String  @db.Uuid
+  manufacturerId String? @db.Uuid
+  supplierId     String? @db.Uuid
+  // ONDE o estoque mora (o almoxarifado). NÃO é para quem foi entregue.
+  locationId     String? @db.Uuid
+
+  orderNumber  String?
+  purchaseDate DateTime?
+  // Decimal, nunca Float. Sai no JSON como STRING ("1234.5").
+  purchaseCost Decimal?  @db.Decimal(12, 2)
+
+  notes String?
+
+  // Autoria (D26): a tela de detalhe mostra, e a alternativa era consultar o
+  // `ActivityLog` por linha. Sem FK, como em `Asset` — é carimbo, não vínculo.
+  createdById String? @db.Uuid
+  updatedById String? @db.Uuid
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  // Restrict no catálogo: é o 409 por uso, e a FK é a rede embaixo dele.
+  category     Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
+  supplier     Supplier?     @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  location     Location?     @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  checkouts AccessoryCheckout[]
+
+  // `name` NÃO é @unique aqui: a unicidade é índice PARCIAL
+  // (`WHERE "deletedAt" IS NULL`) na migration — o `unique_undeleted` de novo.
+  // Com @unique comum, um acessório na lixeira travaria para sempre o
+  // recadastro do mesmo nome.
+  @@index([deletedAt])
+  @@index([categoryId])
+  @@map("accessories")
+}
+
+// UMA LINHA POR UNIDADE ENTREGUE. Devolver preenche `checkedInAt` e NUNCA
+// apaga a linha — mesmo princípio do `Assignment` e do `ActivityLog`.
+//
+// Entregar a um posto vale UMA unidade, qualquer que seja o número de ocupantes
+// (D33): o saldo do almoxarifado não pode depender da escala do RH. Quem
+// responde por ela são os ocupantes abertos daquele posto, resolvidos na
+// leitura — e posto sem ocupante resolve para `[]`, que é o *posto vago* do
+// MODELO-POSSE.md aplicado ao estoque, não um bug.
+model AccessoryCheckout {
+  id          String @id @default(uuid()) @db.Uuid
+  accessoryId String @db.Uuid
+
+  // Discriminante + duas FKs nuláveis, como no `Assignment`. A diferença é que
+  // aqui a coerência ENTRE OS DOIS é CHECK constraint do banco, escrita à mão na
+  // migration (`accessory_checkout_alvo_xor`): o Prisma não a expressa, mas o
+  // Postgres a aplica — e `targetType: 'USER'` com `targetLocationId`
+  // preenchido deixa de ser uma linha que o banco aceita em silêncio.
+  targetType       AccessoryTarget
+  targetUserId     String?         @db.Uuid
+  targetLocationId String?         @db.Uuid
+
+  checkedOutAt      DateTime  @default(now())
+  expectedCheckinAt DateTime?
+  /// Nulo = unidade FORA do estoque. É o que o saldo conta.
+  checkedInAt       DateTime?
+
+  checkoutNotes String?
+  checkinNotes  String?
+
+  checkoutById String? @db.Uuid
+  checkinById  String? @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Cascade no item dono da saída; Restrict nos ALVOS: não se apaga uma pessoa
+  // nem um posto que ainda segura unidade — é o 409 por uso do catálogo.
+  accessory      Accessory @relation(fields: [accessoryId], references: [id], onDelete: Cascade)
+  targetUser     User?     @relation(fields: [targetUserId], references: [id], onDelete: Restrict)
+  targetLocation Location? @relation(fields: [targetLocationId], references: [id], onDelete: Restrict)
+
+  @@index([accessoryId, checkedInAt])
+  @@index([targetUserId, checkedInAt])
+  @@index([targetLocationId, checkedInAt])
+  @@map("accessory_checkouts")
+}
+
+// O que sai e NÃO volta: resma de papel, toner, café.
+model Consumable {
+  id   String @id @default(uuid()) @db.Uuid
+  name String
+
+  qty         Int
+  minQty      Int?
+  modelNumber String?
+
+  categoryId     String  @db.Uuid
+  manufacturerId String? @db.Uuid
+  supplierId     String? @db.Uuid
+  locationId     String? @db.Uuid
+
+  orderNumber  String?
+  purchaseDate DateTime?
+  purchaseCost Decimal?  @db.Decimal(12, 2)
+
+  notes String?
+
+  createdById String? @db.Uuid
+  updatedById String? @db.Uuid
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  category     Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
+  supplier     Supplier?     @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  location     Location?     @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  checkouts ConsumableCheckout[]
+
+  @@index([deletedAt])
+  @@index([categoryId])
+  @@map("consumables")
+}
+
+// O CONSUMO. Note o que NÃO existe aqui: coluna de fechamento (D37).
+//
+// A irreversibilidade é ESTRUTURAL, não uma regra a lembrar. A alternativa —
+// aceitar `POST .../checkin` e responder 409 "consumível não volta" — põe a
+// regra na memória de quem escreve o próximo use-case; sem coluna e sem rota, o
+// checkin responde 404 do roteador e implementar a devolução passa a exigir uma
+// migração, que é o tipo de mudança que alguém revisa. Mesmo princípio do D13:
+// a segurança vem da AUSÊNCIA do nome.
+model ConsumableCheckout {
+  id           String @id @default(uuid()) @db.Uuid
+  consumableId String @db.Uuid
+
+  // Nulável e `SetNull`: apagar o cadastro não pode apagar o consumo de março,
+  // que é linha de rateio e de orçamento.
+  userId String? @db.Uuid
+
+  // O NOME COPIADO NO ATO, pelo mesmo motivo do EULA do `Acceptance` (D29): o
+  // consumo precisa continuar legível depois que a pessoa sai da empresa.
+  userNameSnapshot String
+
+  /// Quantas unidades saíram NESTA linha. Sem par de devolução — ver acima.
+  qty        Int      @default(1)
+  consumedAt DateTime @default(now())
+  notes      String?
+
+  consumedById String?  @db.Uuid
+  createdAt    DateTime @default(now())
+
+  consumable Consumable @relation(fields: [consumableId], references: [id], onDelete: Cascade)
+  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // O `COUNT`/`SUM` desta tabela cresce para sempre: cada consumo é linha que
+  // nunca fecha. Com este índice serve folgado à escala de um time interno; se
+  // um dia não servir, a saída é linha de FECHAMENTO DE PERÍODO, não uma coluna
+  // de saldo — coluna reabriria o D34.
+  @@index([consumableId])
+  @@index([userId])
+  @@map("consumable_checkouts")
+}
+
+// O que vai para DENTRO de um ativo: pente de RAM, HD, placa.
+model Component {
+  id   String @id @default(uuid()) @db.Uuid
+  name String
+
+  qty         Int
+  minQty      Int?
+  modelNumber String?
+
+  /// O único campo que os outros dois não têm. Um lote de pentes idênticos com
+  /// uma série só é o caso comum da nota fiscal; série POR UNIDADE seria
+  /// reinventar `Asset` — a régua está no topo desta seção.
+  serial String?
+
+  categoryId     String  @db.Uuid
+  manufacturerId String? @db.Uuid
+  supplierId     String? @db.Uuid
+  locationId     String? @db.Uuid
+
+  orderNumber  String?
+  purchaseDate DateTime?
+  purchaseCost Decimal?  @db.Decimal(12, 2)
+
+  notes String?
+
+  createdById String? @db.Uuid
+  updatedById String? @db.Uuid
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  category     Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
+  supplier     Supplier?     @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  location     Location?     @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  instalacoes ComponentAsset[]
+
+  @@index([deletedAt])
+  @@index([categoryId])
+  @@map("components")
+}
+
+// UMA LINHA POR INSTALAÇÃO, COM QUANTIDADE — a primeira ponte real entre
+// estoque e ativo.
+//
+// DEVOLUÇÃO PARCIAL DIVIDE A LINHA (D38): retirar 2 de 4 pentes fecha a linha
+// de 4 (`detachedAt = now()`) e abre uma com `assignedQty = 2`, que é o que
+// CONTINUA instalado. Decrementar `assignedQty` na linha aberta seria mais
+// curto e apagaria a resposta de "quantos pentes estavam nessa máquina em
+// março?".
+//
+// O preço, declarado: lido cru, o histórico parece dizer "instalou 4, retirou
+// 4, instalou 2". A aba rotula o par como *devolução parcial: 2 de 4*
+// comparando a linha fechada com a sucessora — trabalho de apresentação, não de
+// schema. A soma das linhas ABERTAS continua sendo o estado atual.
+model ComponentAsset {
+  id          String @id @default(uuid()) @db.Uuid
+  componentId String @db.Uuid
+  assetId     String @db.Uuid
+
+  /// Quantas unidades DESTA linha estão instaladas. É o que o saldo soma.
+  assignedQty Int
+
+  attachedAt DateTime  @default(now())
+  /// Nulo = ainda instalado.
+  detachedAt DateTime?
+
+  /// A observação da INSTALAÇÃO — por que a peça entrou.
+  notes String?
+
+  /// A observação da RETIRADA — por que a peça saiu.
+  ///
+  /// COLUNA PRÓPRIA, e não a mesma `notes`, pelo mesmo motivo do par
+  /// `checkoutNotes`/`checkinNotes` do `AccessoryCheckout`: com uma só, a nota
+  /// da saída SOBRESCREVE a da entrada, e "upgrade de 8 para 16 GB" some para
+  /// sempre no dia em que alguém registra "2 pentes com defeito". A linha
+  /// guarda DOIS eventos; duas observações é a forma que corresponde a isso.
+  detachNotes String?
+
+  /// A linha que esta SUCEDE numa retirada parcial (D38).
+  ///
+  /// Retirar 2 de 4 fecha a linha de 4 e abre uma de 2; a sucessora aponta aqui
+  /// para a antecessora. É o que deixa a movimentação rotular o par como
+  /// *"parcial: 2 de 4"* SEM ADIVINHAR POR DATA — o `attachedAt` da sucessora é
+  /// igual ao `detachedAt` da fechada, e casar as duas por timestamp seria uma
+  /// heurística que quebra no primeiro caminho que grave as datas de outro
+  /// jeito.
+  ///
+  /// `@unique` porque uma linha fechada é sucedida NO MÁXIMO UMA VEZ: a divisão
+  /// acontece no ato de fechar, e depois de fechada ela não se divide de novo.
+  /// É essa unicidade que faz a relação ser 1-1 e a sucessora ser consultável
+  /// pelo lado de cá.
+  predecessorId String? @unique @db.Uuid
+
+  attachedById String? @db.Uuid
+  detachedById String? @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Cascade no componente dono; Restrict no ATIVO: não se apaga de verdade um
+  // ativo que ainda tem peça dentro. E o soft delete do ativo é recusado pelo
+  // `deleteAsset`, porque o `Restrict` não alcança um `UPDATE deletedAt`.
+  component Component @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  asset     Asset     @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  // A divisão da retirada parcial, como relação 1-1 consigo mesma. `SetNull` e
+  // não `Cascade`: apagar a antecessora não pode levar junto o que CONTINUA
+  // instalado — são unidades diferentes, e a sucessora é o estado atual.
+  predecessor ComponentAsset? @relation("DivisaoDaInstalacao", fields: [predecessorId], references: [id], onDelete: SetNull)
+  sucessora   ComponentAsset? @relation("DivisaoDaInstalacao")
+
+  @@index([componentId, detachedAt])
+  @@index([assetId, detachedAt])
+  @@map("component_assets")
+}
+
+// ============================================================================
+// MOVIMENTAÇÃO DE ESTOQUE — docs/FASE-5-PLANO-ITAM.md, Etapa D
+// ============================================================================
+
+enum StockItemType {
+  ACCESSORY
+  CONSUMABLE
+  COMPONENT
+}
+
+// POR QUE A QUANTIDADE NOMINAL MUDOU — e só isso.
+//
+// Fechado de propósito, pelo D5: é campo de relatório, e texto livre viraria
+// "compra", "Compra" e "comprado" na mesma coluna.
+enum StockAdjustReason {
+  /// Chegou nota: entrada nova no almoxarifado.
+  COMPRA
+  /// Saiu de volta para o fornecedor (troca, recusa de recebimento).
+  DEVOLUCAO_FORNECEDOR
+  /// Quebrou, vazou, estragou. A unidade existia e não existe mais.
+  QUEBRA
+  /// Sumiu. Diferente de QUEBRA: ninguém sabe onde está.
+  PERDA
+  /// A contagem física não batia com a nominal, e a física venceu.
+  RECONTAGEM
+  OUTRO
+}
+
+// O histórico de por que a QUANTIDADE NOMINAL mudou.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// O QUE ELE NÃO RESPONDE, e isso é a decisão inteira: para ONDE a unidade foi.
+//
+// Isso já está em `accessory_checkouts`, `consumable_checkouts` e
+// `component_assets` — com alvo, data e quem operou. Um `StockLog` que também
+// registrasse as saídas seria uma segunda contagem do mesmo fato, e as duas
+// divergiriam no primeiro caminho que esquecesse de escrever em uma delas. É o
+// D34 visto do outro lado: a saída é LINHA, e o log é só sobre `qty`.
+//
+// A "movimentação completa" que a tela mostra é a UNIÃO das duas fontes na
+// LEITURA (`list-item-movements.usecase.ts`), nunca uma terceira tabela que
+// tentasse guardar as duas.
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// `itemId` é polimórfico e SEM FK, como o `ActivityLog.entityId`: o log é
+// append-only e a integridade dele não pode depender do ciclo de vida da linha
+// do item — inclusive porque o item pode ir para a lixeira e voltar.
+model StockLog {
+  id String @id @default(uuid()) @db.Uuid
+
+  itemType StockItemType
+  itemId   String        @db.Uuid
+
+  /// Quanto foi SOMADO a `qty`. Negativo é baixa. Nunca o valor final: o valor
+  /// final é ler-e-depois-escrever com outro nome, e duas recontagens
+  /// simultâneas se sobrescreveriam sem erro.
+  delta  Int
+  reason StockAdjustReason
+  notes  String?
+
+  /// Quem ajustou. Nulável e sem FK, pelo mesmo motivo do `ActivityLog.actorId`.
+  actorId   String?  @db.Uuid
+  createdAt DateTime @default(now())
+
+  @@index([itemType, itemId, createdAt])
+  @@map("stock_logs")
 }

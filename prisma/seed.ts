@@ -84,6 +84,14 @@ const CATEGORIES = [
   { name: 'Monitor', type: 'ASSET', color: '#888888' },
   { name: 'Periférico', type: 'ASSET', color: '#888888' },
   { name: 'Licença', type: 'LICENSE', color: '#f59e0b' },
+
+  // ESTOQUE (F5). Uma por tipo, e o TIPO é o que decide em qual das três abas a
+  // categoria aparece: o use-case recusa um acessório de categoria `ASSET`, e
+  // sem estas linhas a primeira tela de estoque de um banco novo abriria sem
+  // nenhuma categoria selecionável.
+  { name: 'Acessório', type: 'ACCESSORY', color: '#14b8a6' },
+  { name: 'Consumível', type: 'CONSUMABLE', color: '#a855f7' },
+  { name: 'Componente', type: 'COMPONENT', color: '#0ea5e9' },
 ] as const;
 
 // O ADMINISTRADOR INICIAL — o único jeito de entrar num banco recém-criado.

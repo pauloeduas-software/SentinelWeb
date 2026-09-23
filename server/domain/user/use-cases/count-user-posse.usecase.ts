@@ -1,18 +1,28 @@
 import type { ClientePosse } from '../../assignment/use-cases/resolve-responsibles.usecase';
+import { contarAcessoriosDiretos } from '../../stock/use-cases/count-user-accessories.usecase';
 
 // O QUE AINDA PRENDE UMA PESSOA AO INVENTÁRIO — as duas pontas, contadas juntas.
 //
-// São duas porque a responsabilidade tem duas camadas (docs/MODELO-POSSE.md):
-// o que está no NOME da pessoa (`Assignment` com alvo `USER`) e o que ela
-// responde por OCUPAR um posto (`LocationOccupant`). Contar só a primeira é o
-// erro que o D32 descreve: o desligado continua respondendo por tudo que está
-// na Mesa 1, e nenhuma consulta acusa, porque a Camada 3 é derivada.
+// São TRÊS desde a F5, e as três vêm do mesmo lugar (docs/MODELO-POSSE.md): o
+// que está no NOME da pessoa — ativo (`Assignment` alvo `USER`) e acessório
+// (`AccessoryCheckout` alvo `USER`) — e o que ela responde por OCUPAR um posto
+// (`LocationOccupant`). Contar só a primeira é o erro que o D32 descreve: o
+// desligado continua respondendo por tudo que está na Mesa 1, e nenhuma
+// consulta acusa, porque a Camada 3 é derivada.
 
 export interface PosseAbertaDoUsuario {
   /** `Assignment` abertas com alvo `USER` — o que devolver. */
   ativosEmPosse: number;
   /** `LocationOccupant` abertas — o que encerrar. */
   postosOcupados: number;
+  /**
+   * `AccessoryCheckout` abertas com alvo `USER` — a terceira ponta, da F5.
+   *
+   * SÓ as diretas. As unidades do POSTO não entram pelo mesmo motivo que os
+   * ativos do posto não entram: elas são do posto, e o desligamento não tem o
+   * direito de devolvê-las (`stock/use-cases/count-user-accessories.usecase.ts`).
+   */
+  acessoriosEmPosse: number;
 }
 
 /**
@@ -25,7 +35,7 @@ export async function contarPosseAberta(
   client: ClientePosse,
   userId: string,
 ): Promise<PosseAbertaDoUsuario> {
-  const [ativosEmPosse, postosOcupados] = await Promise.all([
+  const [ativosEmPosse, postosOcupados, acessoriosEmPosse] = await Promise.all([
     client.assignment.count({
       // `asset: { deletedAt: null }` EXPLÍCITO. `assignments` não tem
       // `deletedAt`, então a extension não escopa esta contagem — e ela não
@@ -39,9 +49,10 @@ export async function contarPosseAberta(
       where: { targetType: 'USER', targetUserId: userId, checkinAt: null, asset: { deletedAt: null } },
     }),
     client.locationOccupant.count({ where: { userId, endedAt: null } }),
+    contarAcessoriosDiretos(client, userId),
   ]);
 
-  return { ativosEmPosse, postosOcupados };
+  return { ativosEmPosse, postosOcupados, acessoriosEmPosse };
 }
 
 /** "2 ativos", "1 ativo" — plural à mão porque é uma frase, não um dado. */
@@ -63,9 +74,19 @@ function quantos(total: number, singular: string, plural: string): string {
 export function motivoParaNaoExcluir(posse: PosseAbertaDoUsuario): string | null {
   const partes: string[] = [];
   if (posse.ativosEmPosse > 0) partes.push(`responde por ${quantos(posse.ativosEmPosse, 'ativo', 'ativos')}`);
+  if (posse.acessoriosEmPosse > 0) {
+    partes.push(`está com ${quantos(posse.acessoriosEmPosse, 'acessório', 'acessórios')}`);
+  }
   if (posse.postosOcupados > 0) partes.push(`ocupa ${quantos(posse.postosOcupados, 'posto', 'postos')}`);
 
   if (partes.length === 0) return null;
 
-  return `Este colaborador ainda ${partes.join(' e ')}. Faça o desligamento antes de excluir.`;
+  // Vírgula entre as primeiras e " e " antes da última: com TRÊS pontas desde a
+  // F5, um `join(' e ')` produziria "responde por 1 ativo e está com 2
+  // acessórios e ocupa 1 posto" — uma frase que ninguém lê até o fim.
+  const frase = partes.length === 1
+    ? partes[0]
+    : `${partes.slice(0, -1).join(', ')} e ${partes[partes.length - 1]}`;
+
+  return `Este colaborador ainda ${frase}. Faça o desligamento antes de excluir.`;
 }

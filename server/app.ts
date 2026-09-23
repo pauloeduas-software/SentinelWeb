@@ -28,6 +28,7 @@ import { UserMaestro } from './domain/user/user.maestro';
 import { AssignmentMaestro } from './domain/assignment/assignment.maestro';
 import { OccupancyMaestro } from './domain/occupancy/occupancy.maestro';
 import { WorkstationMaestro } from './domain/workstation/workstation.maestro';
+import { StockMaestro } from './domain/stock/stock.maestro';
 import { AttachmentMaestro } from './domain/attachment/attachment.maestro';
 import { AcceptanceMaestro } from './domain/acceptance/acceptance.maestro';
 import { TAMANHO_MAXIMO_BYTES } from './core/storage/mime';
@@ -187,6 +188,11 @@ export async function buildApp(): Promise<FastifyInstance> {
   // Posto vem por ÚLTIMO da fatia de posse: ele só lê o que os três acima
   // escrevem (localização, posse e ocupação), e nada depende dele.
   await WorkstationMaestro.setupRoutes(server);
+  // ESTOQUE depois de posse: as rotas dele pendem de `/api/assets/:id` (a aba
+  // Componentes) e o `holdings` da F4 passou a listar acessório — os dois
+  // domínios se leem, e registrar na ordem em que o conceito nasce é o que
+  // mantém o arquivo legível (docs/FASE-5-PLANO-ITAM.md).
+  await StockMaestro.setupRoutes(server);
   // Arquivo depois de asset e catálogo: as rotas dele pendem de `/api/assets/:id`
   // e das quatro tabelas com imagem.
   await AttachmentMaestro.setupRoutes(server);

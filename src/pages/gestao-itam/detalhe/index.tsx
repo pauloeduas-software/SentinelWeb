@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import AssetFormModal from '../components/AssetFormModal';
 import CheckoutModal from '../components/CheckoutModal';
 import AssetTabs, { AbaFutura } from './components/AssetTabs';
+import ComponentsTab from './components/ComponentsTab';
 import DetalhesTab from './components/DetalhesTab';
 import FilesTab from './components/FilesTab';
 import HistoryTab from './components/HistoryTab';
@@ -28,6 +29,7 @@ export default function AssetDetailPage() {
     aba, setAba,
     eventos, totalDeEventos, historicoPendente,
     assignments, possePendente,
+    componentes, componentesPendentes, handleRetirarComponente,
     anexos, anexosPendentes, enviandoArquivo, erroDeArquivo, temImagem,
     handleAnexar, handleExcluirAnexo, handleTrocarImagem, handleRemoverImagem,
     modal, abrirEdicao, abrirClone, abrirPosse, abrirDescomissionar, fecharModal,
@@ -129,9 +131,17 @@ export default function AssetDetailPage() {
           <HistoryTab eventos={eventos} total={totalDeEventos} carregando={historicoPendente} />
         )}
 
-        {/* As quatro abas de fase futura são desabilitadas na barra; este ramo
-            existe para a tela continuar íntegra se alguma delas for aberta por
-            outro caminho. */}
+        {aba === 'componentes' && (
+          <ComponentsTab
+            instalacoes={componentes}
+            carregando={componentesPendentes}
+            onRetirar={(instalacaoId, assignedQty) => void handleRetirarComponente(instalacaoId, assignedQty)}
+          />
+        )}
+
+        {/* As abas de fase futura são desabilitadas na barra; este ramo existe
+            para a tela continuar íntegra se alguma delas for aberta por outro
+            caminho. */}
         {aba === 'arquivos' && (
           <FilesTab
             assetId={asset.id}

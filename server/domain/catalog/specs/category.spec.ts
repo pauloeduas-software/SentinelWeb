@@ -5,17 +5,36 @@ import type { CatalogDelegate, CatalogSpec, ClienteCatalogo } from './catalog-sp
 
 // O ativo NÃO tem `categoryId`: a categoria dele é a do modelo. Por isso o uso
 // se conta em dois saltos — modelos desta categoria, e ativos desses modelos.
-// A F5/F6 somam acessórios, consumíveis, componentes e licenças.
 //
-// O ativo na lixeira conta: ele continua preso ao modelo, e trocar o tipo da
-// categoria por baixo dele mudaria a semântica de um registro que ainda pode
-// voltar. `assetModel` não precisa do mesmo cuidado — não tem lixeira.
+// OS TRÊS DE ESTOQUE SÃO O SALTO ÚNICO: `Accessory`, `Consumable` e `Component`
+// apontam direto. Eles entraram aqui na F5, e a ausência deles era um furo de
+// verdade — não uma mensagem feia:
+//
+//   `beforeWrite` deixava passar o tipo de uma categoria usada SÓ por acessórios
+//   indo de `ACCESSORY` para `ASSET`, porque a contagem não os via. O acessório
+//   terminava numa categoria de tipo `ASSET` — exatamente o estado que
+//   `assert-stock-references.usecase.ts` recusa com 422 na criação, e que a tela
+//   evita com o `optionFilter`. A guarda existia na porta do ITEM e não na porta
+//   da CATEGORIA, e a de trás estava aberta.
+//
+// `INCLUINDO_LIXEIRA` nos três: as FKs deles são `Restrict`, e o Postgres não
+// distingue linha viva de linha na lixeira. Sem ele a contagem devolveria 0, o
+// `DELETE` seguiria, e o banco recusaria com P2003 — 409 genérico "Registro está
+// em uso por outro cadastro", sem dizer por quantos nem por quê.
+//
+// O ativo na lixeira conta pelo mesmo motivo — ele continua preso ao modelo, e
+// trocar o tipo da categoria por baixo dele mudaria a semântica de um registro
+// que ainda pode voltar. `assetModel` não precisa do mesmo cuidado: não tem
+// lixeira.
 const contarUsos = async (client: ClienteCatalogo, id: string) => {
-  const [modelos, ativos] = await Promise.all([
+  const [modelos, ativos, acessorios, consumiveis, componentes] = await Promise.all([
     client.assetModel.count({ where: { categoryId: id } }),
     client.asset.count({ where: { model: { categoryId: id }, ...INCLUINDO_LIXEIRA } }),
+    client.accessory.count({ where: { categoryId: id, ...INCLUINDO_LIXEIRA } }),
+    client.consumable.count({ where: { categoryId: id, ...INCLUINDO_LIXEIRA } }),
+    client.component.count({ where: { categoryId: id, ...INCLUINDO_LIXEIRA } }),
   ]);
-  return modelos + ativos;
+  return modelos + ativos + acessorios + consumiveis + componentes;
 };
 
 export const categorySpec: CatalogSpec = {

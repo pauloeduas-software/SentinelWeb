@@ -43,7 +43,8 @@ bundle que vai para o navegador.
 
 ```
 server/
-├── server.ts                    # bootstrap: valida env, checa banco, registra tudo, sobe
+├── server.ts                    # O PROCESSO: valida env, checa banco, liga jobs, abre porta, morre limpo
+├── app.ts                       # A APLICAÇÃO: buildApp() monta tudo e NÃO abre porta (é o que o teste usa)
 ├── core/                        # INFRAESTRUTURA. zero regra de negócio.
 │   ├── config/                  # load-env, env (validateEnv), cors
 │   ├── database/                # prismaClient (+ closeDatabase)
@@ -64,13 +65,56 @@ server/
 | Domínio | O que é | Model do Prisma |
 |---|---|---|
 | `agent` | Conversa WebSocket com o Agente Sentinel (C#). Só transporte. | — |
-| `asset` | Máquina descoberta pelo agente (lado RMM) + telemetria + comandos | `Asset`, `Telemetry` |
-| `inventory` | Ativo cadastrado à mão (lado ITAM) | `InventoryItem` |
+| `endpoint` | Máquina descoberta pelo agente (lado RMM) + telemetria + comandos | `Endpoint`, `Telemetry` |
+| `asset` | Ativo do ITAM — o `Asset` do vocabulário do Snipe-IT | `Asset` |
+| `catalog` | As sete tabelas de catálogo, com UM CRUD genérico dirigido por spec | `Category`, `StatusLabel`, `Manufacturer`, `AssetModel`, `Supplier`, `Location`, `Depreciation` |
+| `settings` | Configuração global (hoje só a etiqueta automática) | `AppSetting` |
+| `activity` | Trilha de auditoria, gravada na transação de quem a origina | `ActivityLog` |
 | `user` | Colaborador da empresa | `User` |
+| `assignment` | **Posse**: entrega e devolução de ativo, com alvo polimórfico (pessoa, posto ou outro ativo) e o histórico de quem teve o quê | `Assignment` |
+| `occupancy` | **Ocupação do posto**: quem trabalha em qual localização, e em que turno | `LocationOccupant` |
+| `stock` | **Estoque**: os três tipos que têm QUANTIDADE, com saldo derivado e trava na linha-pai | `Accessory`, `AccessoryCheckout`, `Consumable`, `ConsumableCheckout`, `Component`, `ComponentAsset`, `StockLog` |
 
-> Quando a decisão **D1** do [`ITAM-TODO.md`](./ITAM-TODO.md) for executada,
-> `asset/` vira `endpoint/` e `inventory/` vira `asset/`. A estrutura já está
-> preparada: é renomear pasta, não reescrever camada.
+> **A decisão D1 foi executada na Fase 1.** `asset/` (RMM) virou `endpoint/`, e o
+> nome `asset/` passou ao ativo do ITAM. O `inventory/` deixou de existir junto
+> com a tabela `inventory_items`.
+>
+> ⚠️ **`Asset` nunca pode ter coluna `status`, `lastSeen` ou `hwid`** — são as do
+> `Endpoint`. É essa ausência que faz o compilador barrar uma query do RMM
+> apontando para a tabela errada (`ITAM-TODO.md`, D13).
+
+### `catalog` e `stock` são as duas exceções à fatia vertical
+
+As sete tabelas de catálogo são o MESMO CRUD: nome, listagem paginada, busca,
+ordenação, `ActivityLog`, 409 quando a linha está em uso. Sete fatias verticais
+completas seriam ~77 arquivos quase idênticos — o que esta mesma página chama de
+cerimônia, não arquitetura.
+
+Então elas compartilham um CRUD genérico, e o que varia mora em `specs/`: um
+arquivo por tabela declarando o slug da rota, o schema de entrada, a allowlist de
+resposta, as colunas ordenáveis e a regra de "em uso". **Acrescentar uma tabela
+de catálogo é escrever a spec e incluí-la em `specs/index.ts`** — nenhuma rota é
+escrita à mão.
+
+O preço, declarado: tipar a união dos sete delegates do Prisma não existe em TS,
+então cada spec faz UM cast, ao lado do nome do model. O cast não atravessa a
+regra: a entrada continua validada pelo `strictObject`, a saída continua limitada
+pelo `select`, e o `countUsages` de cada spec continua totalmente tipado.
+
+**`stock` é a mesma ideia, em menor escala e por outro motivo (D35).** Acessório,
+consumível e componente compartilham UMA invariante — *o saldo é calculado, nunca
+coluna, e toda saída tranca a linha-pai* — e UMA tela. Três fatias verticais
+copiariam a invariante três vezes, e invariante copiada é invariante que um dia
+diverge. O que varia entre eles mora em `helpers/stock-kind.helper.ts`: três
+constantes com slug, rótulo, tipo de categoria e o `select`.
+
+**E ele NÃO usa o motor do catálogo**, apesar de parecer o mesmo problema: a
+coluna principal da listagem de estoque é **derivada** (`disponivel = qty −
+saídas abertas`) e o `select` da `CatalogSpec` é allowlist estática. Ensinar o
+genérico a calcular saldo seria dobrá-lo para atender três clientes — abstração
+que passa a custar mais do que economiza. As *operações* também diferem
+(entregar × consumir × instalar), e operação já é um arquivo por vez em
+`use-cases/`.
 
 ### O caminho de uma requisição
 
@@ -189,14 +233,21 @@ server/domain/licenca/
 1. Escreva o use-case primeiro (é o que tem teste e regra).
 2. O controller só converte requisição ↔ use-case.
 3. O maestro só lista rotas.
-4. Registre em `server.ts`: `await LicencaMaestro.setupRoutes(server);`
+4. Registre em **`app.ts`** (não em `server.ts`): `await LicencaMaestro.setupRoutes(server);`
 5. No front: `src/domain/licenca/licenca.store.ts` + `src/pages/<contexto>/`.
 
 ---
 
 ## Invariantes do bootstrap
 
-Estão em `server/server.ts` e existem para o sistema falhar cedo e limpo:
+Estão em `server/server.ts` e existem para o sistema falhar cedo e limpo.
+
+> **A montagem mora em `server/app.ts`, o processo em `server/server.ts`.** A
+> divisão existe para o teste: `buildApp()` devolve a aplicação inteira sem
+> abrir porta, sem ligar job e sem instalar handler de sinal, e é isso que
+> permite exercitar a API por `app.inject()` — pelo mesmo grafo de plugins de
+> produção. Rota nova se registra em `app.ts` (ver [`TESTES.md`](./TESTES.md)).
+
 
 - **`validateEnv()` antes de tudo.** Variável obrigatória faltando derruba o
   boot com a lista do que falta — não vira erro 500 na primeira requisição.
@@ -215,12 +266,115 @@ Estão em `server/server.ts` e existem para o sistema falhar cedo e limpo:
 
 ## O que ainda não existe
 
-Isto é esqueleto, não sistema pronto. Em ordem de prioridade, do
-[`ITAM-TODO.md`](./ITAM-TODO.md):
+Em ordem de prioridade, do [`ITAM-TODO.md`](./ITAM-TODO.md):
 
-- **Validação de payload (`zod`)** — F0. Os controllers hoje conferem só o
-  obrigatório na mão. O `error-handler` já tem onde encaixar `ZodError` → 422.
-- **Autenticação** — F3. Não existe login, e o `/agent-hub` aceita qualquer
-  WebSocket. Quando entrar, o middleware vai por rota, dentro de cada maestro.
-- **Testes** — não há nenhum. O formato é `*.test.ts` ao lado do código.
-- **Paginação e filtro no servidor** — F0. Todo `findMany` ainda vem inteiro.
+- **Autenticação** — F3. Não existe login. O `/agent-hub` exige `AGENT_TOKEN`
+  desde a F0, mas é segredo compartilhado, não token por agente. Quando o login
+  entrar, o middleware vai por rota, dentro de cada maestro, e o `actorId` do
+  `ActivityLog` — hoje sempre nulo — passa a ser preenchido.
+- **Termo de entrega** — F4. O checkout, o checkin, o histórico de posse e a
+  ocupação de posto **existem** (ver abaixo). Falta o fluxo de aceite: EULA da
+  categoria, assinatura, PDF, e-mail e lembrete de atraso.
+- **Licenças de software** — F6. Nenhuma tabela de licença existe; o que há é o
+  `CategoryType.LICENSE`. O desenho de saldo derivado da F5 se aplica em parte:
+  lá o assento é **materializado** (D40), porque uma licença tem número de
+  assentos conhecido e contrato por trás.
+
+> **Autenticação, termo de entrega e a suíte de testes JÁ EXISTEM** — esta seção
+> os listava como pendentes e estava desatualizada. O login é a F3, o aceite
+> fechou na Leva 4 do `FECHAMENTO-F2-F4-PLANO-ITAM.md`, e `npm test` roda contra
+> Postgres real pelo mesmo Fastify de produção (ver `TESTES.md`).
+
+> Validação com `zod`, paginação, busca, ordenação, soft delete e `ActivityLog`
+> **existem** desde a Fase 0 — esta seção os listava como pendentes e estava
+> desatualizada.
+
+---
+
+## Posse: a regra que atravessa três domínios
+
+Leia [`MODELO-POSSE.md`](./MODELO-POSSE.md) antes de mexer em `assignment`,
+`occupancy` ou no status do ativo. Em três linhas:
+
+1. **`Assignment`** é a fonte de verdade da posse. Alvo polimórfico — pessoa,
+   **posto** ou outro ativo. Uma aberta por ativo, garantida por índice único
+   parcial no banco.
+2. **`LocationOccupant`** é quem ocupa o posto, com turno. É a camada que permite
+   a Mesa 1 ser da Laura de manhã e da Ana à tarde **sem o ativo apontar para
+   duas pessoas**.
+3. **Responsabilidade é derivada** (`resolverResponsaveis`), nunca coluna.
+
+**A F5 estendeu as três camadas ao estoque, sem criar paralelo nenhum:** o
+acessório entregue a um posto é **do posto** (D33), e quem responde por ele são
+os mesmos ocupantes — `holdings`, o 409 do `DELETE` e o desligamento passaram a
+ler as tabelas de estoque em vez de ganharem versões próprias. A linha que
+sustenta isso é o `targetType: 'USER'` do
+`stock/use-cases/checkin-user-accessories.usecase.ts`: sem ele, o desligamento
+devolveria ao estoque as unidades que continuam fisicamente na mesa.
+
+O que isso proíbe, e o lint não pega: **escrever em `Asset.assignedToId` fora do
+checkout/checkin**, e **mudar `qty` de um item de estoque fora do
+`adjust-quantity`** — a defesa do segundo é a chave não existir no schema de
+edição, não uma checagem. Aquela coluna é cache do caso `USER`; um segundo lugar que a
+escreva recria a divergência que o modelo existe para impedir. As invariantes
+estão em [`INVARIANTES.md`](./INVARIANTES.md) e são provadas por
+`tests/invariantes/` (`npm test`) e por `prisma/verificacoes/posse-invariantes.sql`.
+
+---
+
+## Sessão: a porta fechada por padrão
+
+Leia [`AUTENTICACAO.md`](./AUTENTICACAO.md) antes de mexer em rota, cookie ou
+qualquer coisa com "auth" no nome. Em três linhas:
+
+1. **Toda rota exige sessão.** A exceção é a allowlist `ROTAS_PUBLICAS` em
+   `server/app.ts` — quatro linhas, cada uma com o motivo escrito ao lado.
+   Rota nova nasce protegida.
+2. **O JWT nunca é visto pelo JavaScript.** Sai só no cookie `httpOnly`; o corpo
+   da resposta leva o usuário, não o token.
+3. **O usuário é relido do banco a cada requisição**, e o `tokenVersion`
+   assinado no token é conferido contra a coluna — é isso que faz trocar a senha
+   derrubar quem já estava dentro.
+
+O que isso proíbe, e o lint não pega: **devolver o token no corpo de qualquer
+resposta** e **ler usuário fora do `USER_PUBLIC_SELECT`**. Provado por
+`tests/invariantes/sessao.test.ts`.
+
+---
+
+## Migrations: a regra que não pode ser esquecida
+
+**Nunca `prisma migrate dev`.** Ele é interativo, detecta drift e oferece resetar
+o banco. Para cada migração nova:
+
+```bash
+PASTA="prisma/migrations/$(date +%Y%m%d%H%M%S)_nome"
+mkdir -p "$PASTA"
+npx prisma migrate diff --from-url "$DATABASE_URL" \
+  --to-schema-datamodel prisma/schema.prisma --script > "$PASTA/migration.sql"
+# REVISAR o SQL antes de aplicar
+npm run db:migrate && npm run db:generate
+```
+
+**Revisar o SQL não é formalidade.** Já aconteceu duas vezes de o gerador emitir
+algo que destrói dado ou não executa:
+
+- um `DROP INDEX` que o Postgres recusa quando o índice sustenta uma CONSTRAINT;
+- um `DROP TABLE` + `CREATE TABLE` para o que era um **rename** de model, o que
+  teria apagado a frota inteira descoberta pelo agente.
+
+**E o teste que pega o resto:** reconstruir o banco do zero num banco descartável.
+
+```bash
+docker exec sentinel-postgres psql -U sentinel -d postgres \
+  -c "DROP DATABASE IF EXISTS sentinel_audit;" -c "CREATE DATABASE sentinel_audit;"
+AUDIT="postgresql://sentinel:sentinelpassword@localhost:3002/sentinel_audit?schema=public"
+DATABASE_URL="$AUDIT" npx prisma migrate deploy
+DATABASE_URL="$AUDIT" npm run db:seed
+```
+
+Foi assim que se descobriu que a cadeia de migrations **não aplicava do zero**: o
+`0_init` foi adotado com `migrate resolve --applied` e nunca rodou, então ninguém
+notou que ele cria `CREATE UNIQUE INDEX` onde o banco de desenvolvimento — nascido
+de `db push` — tinha uma CONSTRAINT. Rodar a cadeia em banco limpo é o único jeito
+de garantir que um ambiente novo sobe.

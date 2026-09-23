@@ -98,7 +98,8 @@ bun run dev
 | `dev:server` | Só a API |
 | `build` | Typecheck dos 3 projetos TS + build do front |
 | `start` | Produção: a API serve o `dist` |
-| `lint` | ESLint em `src/` e `server/` |
+| `lint` | ESLint em `src/`, `server/` e `tests/` |
+| `test` / `test:watch` | Vitest contra o banco `sentineldb_test` (descartável). Ver [`docs/TESTES.md`](./docs/TESTES.md) |
 | `db:migrate` / `db:generate` / `db:studio` | Prisma |
 
 ### Migrations

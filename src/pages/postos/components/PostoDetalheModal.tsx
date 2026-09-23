@@ -2,6 +2,7 @@ import { Armchair, TriangleAlert, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import OccupantsPanel from '../../components/OccupantsPanel';
 import { caminhoDoPosto, explicacaoDoVago, resumoDeAtivos } from '../helpers/postos.helper';
+import { formatarData } from '../../helpers/format.helper';
 import type { OccupantInput } from '../../../domain/occupancy/occupancy.queries';
 import type { LocationOccupant, OccupantView } from '../../../domain/shared/posse.types';
 import type { Posto, PostoDetalhe } from '../../../domain/shared/workstation.types';
@@ -47,6 +48,10 @@ export default function PostoDetalheModal({
   // Enquanto o detalhe não chega, vale o que a linha já dizia: o cabeçalho e o
   // selo de vago aparecem no primeiro quadro em vez de piscar depois.
   const ativos = detalhe?.ativos ?? [];
+  // OS ACESSÓRIOS DO POSTO (F5) — uma linha por UNIDADE. É o "o que este posto
+  // tem" completo: até aqui a Mesa 1 mostrava o monitor e escondia os 5 mouses
+  // em cima dela, que é justamente o caso que o D33 existe para modelar.
+  const acessorios = detalhe?.acessorios ?? [];
   const vago = detalhe?.vago ?? posto.vago;
   const totalAtivos = detalhe?.totalAtivos ?? posto.totalAtivos;
 
@@ -159,6 +164,74 @@ export default function PostoDetalheModal({
                             <span className="block mt-3 text-[10px] leading-relaxed">
                               A entrega é feita em{' '}
                               <Link to="/itam" className="text-status-success hover:underline">Ativos</Link>
+                              , escolhendo este posto como destino.
+                            </span>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section className="font-mono text-xs space-y-3 border-t border-border-sutil pt-5">
+            <div className="flex items-baseline justify-between gap-4">
+              <h3 className="text-text-secondary uppercase tracking-widest text-[10px]">
+                Acessórios entregues a este posto
+              </h3>
+              <span className="text-text-tertiary tabular-nums">
+                {acessorios.length} {acessorios.length === 1 ? 'unidade' : 'unidades'}
+              </span>
+            </div>
+
+            <p className="text-text-tertiary text-[10px] leading-relaxed">
+              Uma linha por UNIDADE. Quem responde por elas são os ocupantes acima — todos, pela
+              mesma unidade: entregar 5 mouses a esta mesa tira 5 do estoque, não 5 por pessoa.
+            </p>
+
+            <div className="border border-border-sutil overflow-x-auto">
+              <table className="w-full text-left whitespace-nowrap">
+                <thead className="bg-bg-base/50 text-text-secondary border-b border-border-sutil uppercase tracking-widest">
+                  <tr>
+                    <th className="px-4 py-3 font-normal">Item</th>
+                    <th className="px-4 py-3 font-normal">Categoria</th>
+                    <th className="px-4 py-3 font-normal">Entregue em</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-border-sutil/50">
+                  {acessorios.map((unidade) => (
+                    <tr key={unidade.id} className="hover:bg-bg-base transition-colors">
+                      <td className="px-4 py-3 text-text-primary">
+                        {unidade.accessory?.name ?? '—'}
+                        {unidade.accessory?.modelNumber && (
+                          <div className="text-[10px] text-text-tertiary mt-1">
+                            {unidade.accessory.modelNumber}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-text-tertiary">
+                        {unidade.accessory?.category?.name ?? '—'}
+                      </td>
+                      <td className="px-4 py-3 text-text-secondary">
+                        {formatarData(unidade.checkedOutAt)}
+                      </td>
+                    </tr>
+                  ))}
+
+                  {acessorios.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-10 text-center text-text-tertiary">
+                        {carregando ? (
+                          'Carregando...'
+                        ) : (
+                          <>
+                            Nenhum acessório entregue a este posto.
+                            <span className="block mt-3 text-[10px] leading-relaxed">
+                              A entrega é feita em{' '}
+                              <Link to="/estoque" className="text-status-success hover:underline">Estoque</Link>
                               , escolhendo este posto como destino.
                             </span>
                           </>
