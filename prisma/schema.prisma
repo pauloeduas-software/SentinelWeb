@@ -7,7 +7,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Asset {
+// A máquina descoberta pelo Agente Sentinel (C#) — o lado RMM.
+//
+// Chamava-se `Asset` até a Fase 1. O nome foi liberado para o ativo do ITAM, que
+// é o `Asset` do vocabulário do Snipe-IT. Aqui nenhuma coluna pode voltar a se
+// chamar `status`, `lastSeen` ou `hwid` do outro lado: é essa ausência que faz o
+// compilador barrar uma query do RMM que aponte para a tabela errada
+// (docs/FASE-1-PLANO.md, D13).
+model Endpoint {
   id                String      @id @default(uuid()) @db.Uuid
   hwid              String      @unique
   hostname          String
@@ -20,12 +27,12 @@ model Asset {
   macAddress        String?
   telemetries       Telemetry[]
 
-  @@map("assets")
+  @@map("endpoints")
 }
 
 model Telemetry {
   id           String   @id @default(uuid()) @db.Uuid
-  assetId      String   @db.Uuid
+  endpointId   String   @db.Uuid
   cpuUsage     Float
   ramTotal     BigInt
   ramUsed      BigInt
@@ -33,38 +40,63 @@ model Telemetry {
   disks        Json?
   network      Json?
   topProcesses Json?
-  asset        Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  endpoint     Endpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
 
   @@map("telemetries")
 }
 
-model InventoryItem {
-  id           String   @id @default(uuid()) @db.Uuid
-  name         String
-  description  String?
-  quantity     Int      @default(1)
-  category     String
-  status       String   @default("AVAILABLE")
-  assignedToId String?  @db.Uuid
-  assignedTo   User?    @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
-  notes        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  deletedAt    DateTime?
-
-  @@index([deletedAt])
-  @@map("inventory_items")
-}
-
 model User {
-  id             String          @id @default(uuid()) @db.Uuid
-  name           String
-  email          String
-  department     String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  deletedAt      DateTime?
-  inventoryItems InventoryItem[]
+  id         String  @id @default(uuid()) @db.Uuid
+  name       String
+  email      String
+  department String?
+
+  // AUTENTICAÇÃO (F3). Nulável porque a base nasceu sem login: um colaborador
+  // cadastrado para receber equipamento não precisa de acesso ao sistema, e
+  // exigir senha de todo mundo tornaria a carga inicial impossível.
+  //
+  // `username` NÃO é @unique aqui: a unicidade é índice PARCIAL
+  // (`WHERE deleted_at IS NULL`) na migration, o mesmo caso de `email` — um
+  // usuário na lixeira travaria para sempre o recadastro do mesmo login.
+  username     String?
+  passwordHash String?
+
+  // Bloqueio por tentativa. `lockedUntil` no futuro recusa o login mesmo com a
+  // senha certa; quem zera os dois é o login bem-sucedido.
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+
+  // A GERAÇÃO DA SESSÃO — o que faz trocar a senha DERRUBAR quem já está dentro.
+  //
+  // O buraco que isto fecha: a releitura por requisição
+  // (`current-user.usecase.ts`) mata a sessão de quem foi apagado ou desligado,
+  // mas NÃO a de quem continua sendo um usuário válido. Então quem roubasse o
+  // cookie seguia operando por até 8 horas mesmo DEPOIS de a vítima trocar a
+  // senha — que é justamente o que a vítima faz ao desconfiar.
+  //
+  // O número vai assinado dentro do JWT e é conferido contra esta coluna a cada
+  // requisição: incrementar aqui invalida, de uma vez, todo token emitido antes
+  // — sem tabela de sessão e sem lista de revogação.
+  tokenVersion Int @default(0)
+
+  // Último login bem-sucedido. Não é enfeite de perfil: em inventário, "quem
+  // ainda usa o sistema" é a pergunta que antecede a limpeza de acessos.
+  lastLoginAt DateTime?
+
+  // Desligamento (F11) é diferente de lixeira: quem saiu da empresa continua no
+  // histórico de posse e nos relatórios, só não opera mais.
+  isActive         Boolean            @default(true)
+  terminatedAt     DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  deletedAt        DateTime?
+  assets           Asset[]
+  managedLocations Location[]
+  // Posses diretas (alvo USER) e postos de trabalho que esta pessoa ocupa.
+  // Responsabilidade real = as duas somadas (docs/MODELO-POSSE.md, Camada 3).
+  assignments      Assignment[]
+  occupancies      LocationOccupant[]
+  authEvents       AuthEvent[]
 
   // `email` NÃO é @unique aqui de propósito: a unicidade é um índice parcial
   // (`WHERE deleted_at IS NULL`) criado na migration. Com @unique comum, um
@@ -93,4 +125,772 @@ model ActivityLog {
   @@index([entityType, entityId, createdAt])
   @@index([createdAt])
   @@map("activity_logs")
+}
+
+// TRILHA DE AUTENTICAÇÃO — quem tentou entrar, de onde, e no que deu.
+//
+// POR QUE UMA TABELA PRÓPRIA, e não mais um `ActivityLog`: aquele é
+// ENTIDADE-cêntrico (`entityType` + `entityId` + o que mudou nela) e pressupõe
+// um ator identificado. Aqui a linha mais importante é justamente a que NÃO tem
+// usuário: a tentativa contra um login que não existe. Espremer isso no
+// ActivityLog significaria `entityId` nulo, `action: 'LOGIN_FAIL'` e um `changes`
+// carregando IP — três campos mentindo sobre o que são.
+//
+// O `userId` é nulável e `onDelete: SetNull`: apagar o cadastro não pode apagar
+// o histórico de acesso dele, que é exatamente o que uma auditoria vem procurar.
+// O `username` fica gravado em texto ao lado porque é o que foi DIGITADO — pode
+// não corresponder a conta nenhuma, e é esse o dado interessante numa varredura.
+//
+// Nunca, em hipótese alguma, a senha tentada. Log com senha é vazamento
+// permanente, com data e IP anexados.
+model AuthEvent {
+  id        String        @id @default(uuid()) @db.Uuid
+  type      AuthEventType
+  userId    String?       @db.Uuid
+  user      User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  username  String?
+  ip        String?
+  userAgent String?
+  createdAt DateTime      @default(now())
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@index([type, createdAt])
+  @@map("auth_events")
+}
+
+enum AuthEventType {
+  LOGIN_OK
+  // Usuário inexistente, sem senha cadastrada ou senha errada — os três caem
+  // aqui de propósito, pelo mesmo motivo de a resposta HTTP ser uma só: separar
+  // no log é construir o oráculo de enumeração dentro de casa.
+  LOGIN_FAIL
+  // Tentativa recusada porque a conta já estava travada. É o evento que denuncia
+  // ataque em curso: LOGIN_FAIL espalhado é gente esquecendo a senha, uma rajada
+  // de LOGIN_BLOCKED na mesma conta é outra coisa.
+  LOGIN_BLOCKED
+  // Acesso desligado (F11) com a senha CERTA. Merece tipo próprio: alguém que
+  // saiu da empresa ainda sabe a senha e ainda está tentando entrar.
+  LOGIN_DISABLED
+  LOGOUT
+  // Senha redefinida: derruba toda sessão aberta daquele usuário (tokenVersion).
+  PASSWORD_CHANGED
+}
+
+// ============================================================================
+// CATÁLOGO — as tabelas que o Snipe-IT chama de *Settings* (docs/FASE-1-PLANO.md)
+//
+// Nenhuma tem `deletedAt`, e isso é decisão, não esquecimento (D8): a extension
+// de soft delete descobre a lixeira pela PRESENÇA da coluna, então a ausência é
+// o opt-out. A proteção aqui é o 409 por uso — que é o que o Snipe-IT realmente
+// faz ao recusar apagar categoria com item associado. Manter lixeira no catálogo
+// custaria sete índices únicos parciais, o `upsert` do seed e uma camada de
+// apresentação para esconder relação apagada (a extension não alcança leitura
+// aninhada — verificado).
+// ============================================================================
+
+enum CategoryType {
+  ASSET
+  ACCESSORY
+  CONSUMABLE
+  COMPONENT
+  LICENSE
+}
+
+// O tipo do status responde: *o que dá para fazer com este ativo agora?*
+//
+//   DEPLOYABLE   — está no estoque e pode ser entregue. O único que libera o
+//                  checkout da F4.
+//   IN_USE       — está com alguém ou instalado em algum lugar. Fora do estoque
+//                  porque está CUMPRINDO a função dele.
+//   PENDING      — fora do estoque por algum impedimento, e volta: em reparo,
+//                  em diagnóstico, em trânsito, à espera de preparo.
+//   UNDEPLOYABLE — ainda é patrimônio seu, mas não serve mais e não volta:
+//                  danificado sem conserto, perdido, roubado.
+//   ARCHIVED     — saiu da operação (vendido, descartado, doado). Sai das
+//                  listagens do dia a dia.
+//
+// `IN_USE` é tipo PRÓPRIO, e não `PENDING`, porque a diferença entre "está com
+// um colaborador" e "está na assistência" é a distinção mais cara do inventário:
+// um está gerando valor, o outro está custando. Empacotar os dois em `PENDING`
+// torna "quantos ativos estão em uso?" — a métrica principal do módulo —
+// inexpressável pelo tipo.
+//
+// Também não é derivado de `assignedToId`: `statusId` é obrigatório no cadastro,
+// a carga inicial é feita de equipamento que já está com gente, e existe uso SEM
+// responsável (o monitor parafusado na sala de reunião).
+//
+// A ordem dos valores é a do ciclo de vida, e o Postgres a usa em `ORDER BY`
+// sobre a coluna — por isso `IN_USE` entra DEPOIS de `DEPLOYABLE` na migration,
+// e não no fim.
+enum StatusLabelType {
+  DEPLOYABLE
+  IN_USE
+  PENDING
+  ARCHIVED
+  UNDEPLOYABLE
+}
+
+// Por que o ativo saiu do patrimônio. Fechado de propósito: é campo de
+// relatório contábil, e texto livre aqui vira "vendido", "Vendido" e "venda"
+// na mesma coluna (D5).
+enum RetiredReason {
+  VENDIDO
+  DESCARTADO
+  DOADO
+  EXTRAVIADO
+  ROUBADO
+  GARANTIA
+}
+
+enum DepreciationFloorType {
+  PERCENT
+  AMOUNT
+}
+
+model Category {
+  id   String       @id @default(uuid()) @db.Uuid
+  name String
+  type CategoryType
+
+  color String?
+
+  // Inertes até a F4 (fluxo de aceite): a categoria é quem decide se a entrega
+  // exige assinatura e qual EULA é apresentado.
+  requireAcceptance Boolean @default(false)
+  eulaText          String?
+  checkinEmail      Boolean @default(false)
+
+  // Imagem. Só o CAMINHO, nunca os bytes — quem guarda o arquivo é o
+  // `UPLOAD_DIR` (server/core/storage/). BLOB no banco dobra o tamanho do dump
+  // e faz cada leitura carregar megabytes que ninguém pediu.
+  imagePath String?
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  assetModels AssetModel[]
+
+  // Por (nome, tipo), não só por nome: "Notebook" como categoria de ATIVO e
+  // "Notebook" como categoria de LICENÇA são duas coisas diferentes.
+  @@unique([name, type])
+  @@map("categories")
+}
+
+model StatusLabel {
+  id   String          @id @default(uuid()) @db.Uuid
+  name String          @unique
+  type StatusLabelType
+
+  color     String?
+  showInNav Boolean @default(false)
+  notes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  assets    Asset[]
+
+  @@map("status_labels")
+}
+
+model Manufacturer {
+  id   String @id @default(uuid()) @db.Uuid
+  name String @unique
+
+  url          String?
+  supportPhone String?
+  supportEmail String?
+  supportUrl   String?
+
+  // Imagem. Só o CAMINHO, nunca os bytes — quem guarda o arquivo é o
+  // `UPLOAD_DIR` (server/core/storage/). BLOB no banco dobra o tamanho do dump
+  // e faz cada leitura carregar megabytes que ninguém pediu.
+  imagePath String?
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  assetModels AssetModel[]
+
+  @@map("manufacturers")
+}
+
+model AssetModel {
+  id   String @id @default(uuid()) @db.Uuid
+  name String
+
+  // Vida útil em meses. O ativo herda daqui e pode sobrescrever (F1/G).
+  eolMonths   Int?
+  modelNumber String?
+  notes       String?
+
+  manufacturerId String @db.Uuid
+  categoryId     String @db.Uuid
+
+  // Imagem. Só o CAMINHO, nunca os bytes — quem guarda o arquivo é o
+  // `UPLOAD_DIR` (server/core/storage/). BLOB no banco dobra o tamanho do dump
+  // e faz cada leitura carregar megabytes que ninguém pediu.
+  imagePath String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Restrict é a rede embaixo do 409 do `countUsages`: mesmo que a checagem da
+  // aplicação seja esquecida, o banco recusa e o P2003 vira 409 no errorHandler.
+  manufacturer Manufacturer @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
+  category     Category     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  assets Asset[]
+
+  // Vários modelos SEM número convivem: o Postgres trata NULL como distinto,
+  // então não é preciso índice parcial aqui (verificado).
+  @@unique([manufacturerId, modelNumber])
+  @@index([categoryId])
+  @@map("asset_models")
+}
+
+model Supplier {
+  id   String @id @default(uuid()) @db.Uuid
+  name String @unique
+
+  contactName String?
+  phone       String?
+  email       String?
+  url         String?
+  address     String?
+  city        String?
+  state       String?
+  zip         String?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  assets    Asset[]
+
+  @@map("suppliers")
+}
+
+model Location {
+  id   String @id @default(uuid()) @db.Uuid
+  name String @unique
+
+  parentId String? @db.Uuid
+  address  String?
+  city     String?
+  state    String?
+  zip      String?
+  phone    String?
+  notes    String?
+
+  // POSTO DE TRABALHO — a Mesa 1, a bancada, o guichê.
+  //
+  // O posto É uma `Location` (D15): a árvore já existe, o ativo já aponta para
+  // ela, e criar uma `Workstation` paralela duplicaria a hierarquia. Mas uma
+  // bancada NÃO é uma filial: endereço, CEP e telefone não querem dizer nada
+  // numa mesa, e misturar as duas numa lista só foi o que tornou o posto
+  // invisível na interface.
+  //
+  // Esta flag é de APRESENTAÇÃO, não de regra: ela separa as duas coisas nas
+  // telas e habilita a página /postos. Nenhuma invariante depende dela — um
+  // local sem a marca continua podendo receber ativo e ocupante, porque
+  // proibir isso quebraria a sala de reunião que já funciona hoje.
+  isWorkstation Boolean @default(false)
+
+  // Gestor da localidade. SetNull de propósito: desligar o gestor não pode
+  // derrubar a filial junto.
+  managerId String? @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // O banco NÃO impede ciclo (A→B→A foi aceito no teste): a guarda de ciclo é
+  // da aplicação, em helpers/location-cycle.helper.ts.
+  parent   Location?  @relation("LocationTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children Location[] @relation("LocationTree")
+  manager  User?      @relation(fields: [managerId], references: [id], onDelete: SetNull)
+  assets   Asset[]
+
+  // Ativos entregues A ESTE LOCAL (alvo LOCATION) e as pessoas que o ocupam.
+  // É a junção das duas que responde "quem é responsável pelo mouse da Mesa 1".
+  assignments Assignment[]
+  occupants   LocationOccupant[]
+
+  // DECLARADOS AQUI, e não só na migration que os criou.
+  //
+  // Os dois nasceram à mão em `20260923102207_postos_descomissionamento_auth` e
+  // ficaram de fora do schema. Consequência: o `migrate diff` não os via, achava
+  // que eram lixo do banco e emitia `DROP INDEX` em TODA migração seguinte —
+  // derrubando índice útil em silêncio para quem aplicasse o SQL sem ler.
+  //
+  // São índices COMUNS, que o Prisma expressa. Os PARCIAIS (`WHERE …`) continuam
+  // só no SQL porque ele não os expressa, e esses o `migrate diff` ignora em vez
+  // de tentar remover — a diferença é essa, e é o que separa "mora na migration
+  // de propósito" de "ficou para trás".
+  @@index([parentId])
+  @@index([isWorkstation])
+  @@map("locations")
+}
+
+model Depreciation {
+  id     String @id @default(uuid()) @db.Uuid
+  name   String @unique
+  months Int
+
+  // Decimal, NUNCA Float: 0.1 + 0.2 = 0.30000000000000004 em ponto flutuante.
+  // Sai na resposta JSON como STRING ("1234.5") — o frontend tipa como string e
+  // formata com Intl.NumberFormat.
+  floorValue Decimal               @db.Decimal(12, 2)
+  floorType  DepreciationFloorType
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("depreciations")
+}
+
+// ============================================================================
+// O ATIVO — o coração do ITAM (docs/FASE-1-PLANO.md, Etapa G)
+// ============================================================================
+
+// Um ativo = UM equipamento físico, com etiqueta e série próprias.
+//
+// Não existe `quantity` aqui, e é de propósito (D3): quantidade é semântica de
+// `Accessory`, `Consumable` e `Component`, que nascem na F5. O `InventoryItem`
+// achatado com quantidade que existia antes foi removido junto com esta tabela.
+//
+// NÃO há `categoryId`: a categoria do ativo é a do MODELO (`model.category`) —
+// é assim no Snipe-IT, e é o que impede um ativo e o seu modelo divergirem de
+// categoria. Por isso `modelId` é obrigatório.
+//
+// NENHUMA coluna aqui pode se chamar `status`, `lastSeen` ou `hwid`: são os
+// nomes do `Endpoint` (lado RMM), e é a ausência deles que faz o compilador
+// barrar uma query do RMM que aponte para esta tabela (D13). Quando a F7 for
+// registrar o último contato do agente, o campo chama `lastSeenByAgentAt`.
+model Asset {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Unicidade de `assetTag` e `serial` é índice PARCIAL (`WHERE deleted_at IS
+  // NULL`), criado à mão na migration — NÃO `@unique`. Com unique comum, um
+  // ativo na lixeira travaria para sempre o recadastro da mesma etiqueta. É o
+  // `unique_undeleted` do Snipe-IT, o mesmo caso de `User.email` na Fase 0.
+  assetTag String
+  serial   String?
+
+  name  String?
+  notes String?
+
+  byod        Boolean @default(false)
+  requestable Boolean @default(false)
+
+  statusId     String  @db.Uuid
+  modelId      String  @db.Uuid
+  // ONDE o ativo está. NÃO é quem responde por ele — ver `assignedToId` abaixo e
+  // docs/MODELO-POSSE.md: um ativo pode estar EM um lugar sem ser DO lugar (o
+  // mouse reserva na gaveta de uma mesa ocupada).
+  locationId   String? @db.Uuid
+  supplierId   String? @db.Uuid
+  // CACHE do caso `USER`, e só dele. A fonte de verdade da posse é a
+  // `Assignment` aberta (docs/MODELO-POSSE.md, Camada 1).
+  //
+  // Fica `null` quando o detentor é uma LOCALIZAÇÃO (a Mesa 1, cujos
+  // responsáveis são os ocupantes dela) ou OUTRO ATIVO (a dock presa ao
+  // notebook). Quem lê "quem responde por este ativo" chama
+  // `resolverResponsaveis()`, nunca esta coluna sozinha.
+  //
+  // NÃO é editável pelo formulário de ativo — saiu do `createAssetSchema` e do
+  // `updateAssetSchema` na F4. Escrevem aqui SÓ o checkout e o checkin: campo
+  // editável à mão ao lado de uma tabela de posse são duas fontes de verdade
+  // para o mesmo fato, e nada impede divergirem (D14).
+  assignedToId String? @db.Uuid
+
+  orderNumber  String?
+  purchaseDate DateTime?
+  // Decimal, nunca Float. Sai no JSON como string.
+  purchaseCost Decimal?  @db.Decimal(12, 2)
+
+  // `warrantyExpiresAt` e `eolDate` são CALCULADAS no save, a partir dos meses e
+  // da data de compra. `eolExplicit` marca que alguém sobrescreveu a data à mão
+  // e que o cálculo não deve mais mexer nela.
+  warrantyMonths    Int?
+  warrantyExpiresAt DateTime?
+  eolMonths         Int?
+  eolDate           DateTime?
+  eolExplicit       Boolean   @default(false)
+
+  // DESCOMISSIONAMENTO — o ativo saiu do parque, e por quê.
+  //
+  // São TRÊS colunas diferentes e nenhuma substitui a outra (D19):
+  //   `status.type = ARCHIVED` — saiu da operação, some das listagens do dia a dia
+  //   `retiredAt`              — saiu do PATRIMÔNIO: vendido, descartado, roubado
+  //   `deletedAt`              — foi cadastrado errado e está na lixeira
+  // Um ativo vendido é um fato contábil e continua nos relatórios; um ativo na
+  // lixeira é um erro de digitação e não deveria ter existido.
+  retiredAt     DateTime?
+  retiredReason RetiredReason?
+
+  // Foto do equipamento. Só o CAMINHO — ver o mesmo campo no catálogo.
+  imagePath String?
+
+  // QUEM cadastrou e QUEM editou por último.
+  //
+  // Duas colunas AQUI, e não nas catorze tabelas (D26): o `ActivityLog` já
+  // responde "quem criou isto" — a linha `CREATE` está lá, com o ator. A coluna
+  // existe para não fazer essa consulta POR LINHA na tela de detalhe do ativo,
+  // que é a única que mostra o dado.
+  //
+  // SEM relação com `User`, pelo mesmo motivo do `ActivityLog.actorId`: se o
+  // cadastro de quem criou o ativo for excluído, a autoria não pode virar
+  // `SetNull` nem impedir a exclusão. É carimbo, não vínculo.
+  createdById String? @db.Uuid
+  updatedById String? @db.Uuid
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  status     StatusLabel @relation(fields: [statusId], references: [id], onDelete: Restrict)
+  model      AssetModel  @relation(fields: [modelId], references: [id], onDelete: Restrict)
+  location   Location?   @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  supplier   Supplier?   @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  assignedTo User?       @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  // A posse deste ativo, aberta e histórica.
+  assignments     Assignment[] @relation("AssignmentAsset")
+  // As posses em que este ativo é o DETENTOR (a dock que segura o notebook).
+  heldAssignments Assignment[] @relation("AssignmentTargetAsset")
+
+  attachments Attachment[]
+  acceptances Acceptance[]
+
+  @@index([deletedAt])
+  @@index([statusId])
+  @@index([modelId])
+  @@index([locationId])
+  @@index([assignedToId])
+  // Ver a nota em `Location`: declarado aqui para o `migrate diff` parar de
+  // emitir `DROP INDEX` dele a cada migração nova.
+  @@index([retiredAt])
+  @@map("assets")
+}
+
+// ============================================================================
+// POSSE E RESPONSABILIDADE — docs/MODELO-POSSE.md (D14, D15, D16)
+// ============================================================================
+
+// Para QUEM um ativo foi entregue.
+//
+// Polimórfico como no Snipe-IT — pessoa, outro ativo ou localização —, com uma
+// diferença que o Snipe-IT não tem: quando o alvo é `LOCATION`, os responsáveis
+// são os OCUPANTES daquele local, que podem ser vários e em turnos diferentes
+// (`LocationOccupant`). É o que permite a Mesa 1 ser da Laura de manhã e da Ana
+// à tarde sem o ativo precisar apontar para duas pessoas.
+enum AssignmentTarget {
+  USER
+  ASSET
+  LOCATION
+}
+
+// Uma linha por entrega. `checkinAt` nulo = posse ABERTA (a atual).
+//
+// O histórico NUNCA é apagado: a devolução preenche `checkinAt`, não deleta a
+// linha. É o mesmo princípio do `AccessoryCheckout` da F5 e do `ActivityLog`.
+//
+// UMA aberta por ativo, garantida por índice único PARCIAL criado na migration
+// (`WHERE "checkinAt" IS NULL`) — regra do banco, não da aplicação, pelo mesmo
+// motivo de `assets.assetTag`: o esquecimento deixa de ser possível.
+//
+// Esse índice é também a alavanca da decisão: o dia que N detentores simultâneos
+// for necessário, derrubar o índice é a mudança — não reescrever a camada.
+model Assignment {
+  id      String @id @default(uuid()) @db.Uuid
+  assetId String @db.Uuid
+
+  // Discriminante + três FKs nuláveis. A coerência entre o tipo e qual FK está
+  // preenchida é validada no use-case (`assertAlvoCoerente`): CHECK constraint
+  // não é expressável no schema do Prisma e ficaria invisível aqui.
+  targetType       AssignmentTarget
+  targetUserId     String?          @db.Uuid
+  targetAssetId    String?          @db.Uuid
+  targetLocationId String?          @db.Uuid
+
+  checkoutAt        DateTime  @default(now())
+  expectedCheckinAt DateTime?
+  checkinAt         DateTime?
+
+  checkoutNotes String?
+  checkinNotes  String?
+
+  // Quem operou a entrega e a devolução. Nulável e SEM relação com `User` pelo
+  // mesmo motivo do `ActivityLog.actorId`: autenticação é a F3, e esperar por
+  // ela significaria perder o registro de tudo que rodar até lá.
+  checkoutById String? @db.Uuid
+  checkinById  String? @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Cascade no ativo dono da posse: apagar o ativo de verdade leva o histórico
+  // dele junto. Restrict nos ALVOS: não se apaga uma pessoa, um local ou um
+  // ativo que ainda segura alguma coisa — é o 409 por uso do catálogo.
+  asset          Asset     @relation("AssignmentAsset", fields: [assetId], references: [id], onDelete: Cascade)
+  targetUser     User?     @relation(fields: [targetUserId], references: [id], onDelete: Restrict)
+  targetAsset    Asset?    @relation("AssignmentTargetAsset", fields: [targetAssetId], references: [id], onDelete: Restrict)
+  targetLocation Location? @relation(fields: [targetLocationId], references: [id], onDelete: Restrict)
+
+  acceptances Acceptance[]
+
+  @@index([assetId, checkinAt])
+  @@index([targetUserId, checkinAt])
+  @@index([targetLocationId, checkinAt])
+  @@index([targetAssetId, checkinAt])
+  @@map("assignments")
+}
+
+// Quem ocupa um posto de trabalho — a camada que o Snipe-IT não tem.
+//
+// `Location` é a folha da árvore que já existe (`Sede → Andar 2 → Sala 3 →
+// Mesa 1`). NÃO se criou uma entidade `Workstation` paralela: duplicaria a
+// hierarquia e daria ao ativo dois campos de "onde" (D15).
+//
+// `endedAt` nulo = ocupação ABERTA. Mesmo padrão do `Assignment`: a saída
+// preenche a data, não apaga a linha, e "quem respondia pela Mesa 1 em março?"
+// continua respondível.
+// ============================================================================
+// ACEITE DO TERMO DE ENTREGA — F4, Etapas A e B (D27, D29, D30, D87, D88)
+// ============================================================================
+
+// O termo que a pessoa assina ao receber um equipamento.
+//
+// NASCE DENTRO DA TRANSAÇÃO DO CHECKOUT, quando a categoria do modelo exige
+// (`Category.requireAcceptance`). E não bloqueia a entrega (D88): o equipamento
+// já está na mão de quem o recebeu — o fato é do mundo, não do banco. Pendência
+// é linha de relatório, não estado da posse.
+//
+// QUEM ASSINA, pelo alvo da posse:
+//   USER      a própria pessoa.
+//   LOCATION  o GESTOR da localidade (D27). Um termo, não N — e os ocupantes
+//             recebem ciência por e-mail. Assinar NÃO torna o gestor
+//             responsável resolvido; `resolverResponsaveis()` continua
+//             devolvendo só os ocupantes.
+//   ASSET     NINGUÉM, e o termo não é emitido (D87): o detentor é um
+//             equipamento, e o documento segue o ativo que o segura.
+model Acceptance {
+  id           String @id @default(uuid()) @db.Uuid
+  assignmentId String @db.Uuid
+  assetId      String @db.Uuid
+
+  /// O segredo da URL pública `/aceite/:token`. 32 bytes em base64url.
+  token String @unique
+
+  // O EULA COPIADO, não referenciado (D29). Editar o texto da categoria mudaria,
+  // retroativamente, o que centenas de pessoas assinaram — sem log em lugar
+  // nenhum. Um termo que muda depois de assinado não é termo.
+  eulaSnapshot String
+
+  // Quem assina. `signerUserId` é nulável porque o gestor pode ter sido
+  // excluído depois; o NOME e o E-MAIL são cópia, pelo mesmo motivo do EULA —
+  // o documento tem que continuar legível sozinho.
+  signerUserId String? @db.Uuid
+  signerName   String
+  signerEmail  String
+
+  /// Caminho da imagem da assinatura no UPLOAD_DIR. Nulo até assinar.
+  signaturePath String?
+  /// Caminho do PDF gerado NO ACEITE e nunca regenerado (D30).
+  pdfPath       String?
+
+  acceptedAt    DateTime?
+  declinedAt    DateTime?
+  declineReason String?
+
+  /// Depois disto o token não abre mais. Pendência não vira recusa (só expira).
+  expiresAt  DateTime
+  remindedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  asset      Asset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([acceptedAt])
+  @@map("acceptances")
+}
+
+model LocationOccupant {
+  id         String @id @default(uuid()) @db.Uuid
+  locationId String @db.Uuid
+  userId     String @db.Uuid
+
+  // Texto livre de propósito: "Manhã", "Tarde", "12x36 A". Enum engessaria
+  // escalas reais e faixa de horário seria agenda, não inventário (D15).
+  shift String?
+
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  notes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  // A mesma pessoa não ocupa o mesmo posto duas vezes ao mesmo tempo: índice
+  // único PARCIAL (`WHERE "endedAt" IS NULL`) criado na migration.
+  @@index([locationId, endedAt])
+  @@index([userId, endedAt])
+  @@map("location_occupants")
+}
+
+// Configuração global do sistema — uma linha só.
+//
+// O id é fixo (`singleton`) em vez de uuid: é o que impede uma segunda linha de
+// existir sem precisar de trigger nem de constraint de contagem.
+// ============================================================================
+// ARQUIVO — docs/FECHAMENTO-F2-F4-PLANO-ITAM.md (D83, D84)
+// ============================================================================
+
+// Anexo de um ativo: nota fiscal, contrato, foto, laudo.
+//
+// A LINHA mora aqui; os BYTES moram no `UPLOAD_DIR` e quem os grava é
+// `server/core/storage/` (D83) — que não sabe o que é um anexo, e por isso
+// serve também à assinatura e ao PDF do termo, que NÃO são anexos de ativo.
+//
+// FK DIRETA PARA `Asset`, não polimórfica. Quando licença (F6) e manutenção
+// (F8) quiserem anexo, é uma coluna nulável a mais e um discriminante — o
+// padrão do `Assignment`, aditivo. Nascer polimórfico agora é pagar
+// complexidade por dois donos que não existem.
+//
+// `onDelete: Cascade` é o DELETE FÍSICO, que hoje não tem rota: o ativo tem
+// soft delete, e mandá-lo para a lixeira NÃO apaga arquivo nenhum — restaurar
+// tem que devolver a nota fiscal junto.
+model Attachment {
+  id      String @id @default(uuid()) @db.Uuid
+  assetId String @db.Uuid
+
+  // O nome NO DISCO: uuid + extensão da allowlist de MIME. Nunca o nome que o
+  // cliente mandou — `../../` num nome de arquivo é o ataque mais velho que
+  // existe, e `path.join` não protege sozinho.
+  path String
+
+  // O nome que a PESSOA deu, só para exibir e para o download nomear o arquivo.
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+
+  // Quem subiu. Nasce PREENCHIDO — ao contrário do que a Etapa G da F2 previa,
+  // porque quando ela foi escrita a F3 não existia. Sem FK, como `createdById`.
+  uploadedById String?  @db.Uuid
+  createdAt    DateTime @default(now())
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("attachments")
+}
+
+// ============================================================================
+// EXECUÇÃO AGENDADA — D79 (docs/DECISOES-RECONCILIACAO.md)
+// ============================================================================
+
+// Uma LINHA POR JOB, identificada pelo nome.
+//
+// A alternativa que esta tabela substitui era `AppSetting.lastAlertRunAt`, uma
+// coluna só — e ela tinha um defeito que não dá erro: o lembrete de atraso (F4)
+// e os alertas diários (F8) fariam *compare-and-set* na MESMA coluna. O
+// primeiro a acordar venceria e gravaria a data; o segundo receberia `count: 0`,
+// leria isso como "outra instância já rodou hoje" e NÃO executaria. Todo dia,
+// sem erro e sem log de falha — e a explicação estaria numa coluna cujo nome
+// não menciona nenhum dos dois.
+//
+// Com uma linha por job, um nunca bloqueia o outro. Quem faz o CAS é
+// `server/core/jobs/claim-window.ts`, que recebe o nome por parâmetro e não
+// sabe o que é um alerta nem um atraso.
+// ============================================================================
+// TOKEN DE API — D80 (docs/DECISOES-RECONCILIACAO.md)
+// ============================================================================
+
+enum ApiTokenOwner {
+  AGENT
+  USER
+}
+
+// UMA tabela, com uma coluna dizendo quem é o dono.
+//
+// A F3 (Etapa G) criava `ApiToken` com `endpointId` — o token POR AGENTE. A F11
+// (Etapa F) criava `ApiToken` com `userId` — o token PESSOAL. Os dois planos
+// achavam que criavam *"o"* `ApiToken`, e duas tabelas seriam duas cópias da
+// parte mais sensível do sistema: procurar pelo prefixo, comparar o hash em
+// tempo constante, conferir `revokedAt`, carimbar `lastUsedAt`. A segunda cópia
+// esqueceria uma das quatro no primeiro ajuste.
+//
+// O DETALHE QUE MUDA O DESENHO: o token do agente é gerado ANTES de a máquina
+// existir no sistema — no momento em que o agente é instalado. Então
+// `endpointId` nasce NULO e é preenchido no primeiro handshake. A partir daí, o
+// mesmo token chegando de outra máquina é sinal de token copiado, e vira
+// alerta — não um `UPDATE` silencioso do vínculo.
+//
+// O CHECK de coerência do dono vai à mão na migration: o Prisma não o expressa,
+// como os índices parciais deste projeto.
+model ApiToken {
+  id        String        @id @default(uuid()) @db.Uuid
+  name      String
+  ownerType ApiTokenOwner
+
+  /// Só quando ownerType = USER.
+  userId     String? @db.Uuid
+  /// Só quando ownerType = AGENT — e NULO até o primeiro handshake.
+  endpointId String? @db.Uuid
+
+  /// A metade pública do token, e a chave de busca. Viaja como `prefixo.segredo`.
+  prefix String @unique
+
+  // O segredo em SHA-256, não em argon2 — e é decisão, não economia. Argon2 é
+  // caro DE PROPÓSITO: é o que protege senha humana contra força bruta offline.
+  // Um token de 32 bytes aleatórios não tem dicionário a atacar, e pagar 100 ms
+  // de KDF a cada handshake é transformar a defesa da senha em lentidão da frota.
+  tokenHash String
+
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+
+  @@index([ownerType])
+  @@map("api_tokens")
+}
+
+model JobRun {
+  /// 'lembrete-de-atraso', 'alertas-diarios', 'sync-ldap'.
+  name      String    @id
+  lastRunAt DateTime?
+  updatedAt DateTime  @updatedAt
+
+  @@map("job_runs")
+}
+
+model AppSetting {
+  id String @id @default("singleton")
+
+  // Etiqueta automática: ATV- + 00001. `assetTagNext` é incrementado PRIMEIRO e
+  // o valor devolvido é o que vira etiqueta — ler-e-depois-incrementar colide
+  // em READ COMMITTED.
+  assetTagPrefix   String @default("ATV-")
+  assetTagZerofill Int    @default(5)
+  assetTagNext     Int    @default(1)
+
+  // QUAL rótulo a entrega e a devolução aplicam.
+  //
+  // Vazios, vale o comportamento que já existia: o PRIMEIRO status do tipo
+  // (`IN_USE` na entrega, `DEPLOYABLE` na devolução), ordenado por nome. Isso
+  // funciona com os 8 rótulos do seed e vira loteria quando alguém cadastra
+  // "Em uso — home office" e "Em uso — escritório": a escolha passa a depender
+  // da ordem alfabética, e ninguém escreveu isso em lugar nenhum.
+  checkoutStatusId String? @db.Uuid
+  checkinStatusId  String? @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
 }
