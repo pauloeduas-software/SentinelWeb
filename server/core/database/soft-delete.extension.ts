@@ -8,7 +8,7 @@ import { Prisma } from '@prisma/client';
 // na tela — e isso não gera erro nenhum, só um resultado errado em silêncio. O
 // esquecimento deixa de ser possível quando o filtro é do cliente, não da query.
 //
-// POR QUE FICA EM `core`: não sabe o que é um `InventoryItem` nem um `User`. Ele
+// POR QUE FICA EM `core`: não sabe o que é um `Asset` nem um `User`. Ele
 // pergunta ao DMMF do próprio Prisma quais models têm a coluna `deletedAt` e
 // aplica só neles — infraestrutura pura, sem conhecimento de negócio.
 
@@ -37,6 +37,25 @@ const OPERACOES_ESCOPADAS = new Set([
 interface ArgsComWhere {
   where?: Record<string, unknown>;
 }
+
+/**
+ * Espalhe no `where` para a consulta enxergar TAMBÉM a lixeira.
+ *
+ * ```ts
+ * client.asset.count({ where: { supplierId: id, ...INCLUINDO_LIXEIRA } })
+ * ```
+ *
+ * Funciona porque o escape hatch abaixo olha a PRESENÇA da chave `deletedAt`,
+ * e a chave existe mesmo valendo `undefined` — que é justamente o que faz isto
+ * não virar filtro nenhum na consulta final.
+ *
+ * Existe com nome próprio porque `deletedAt: undefined` solto no meio de um
+ * `where` parece código morto e é o oposto disso: quem o apagar por engano faz
+ * a consulta voltar a ignorar a lixeira, em silêncio. É o caso do `countUsages`
+ * do catálogo, onde ignorar a lixeira deixa o `onDelete: SetNull` apagar o
+ * vínculo de um ativo apagado.
+ */
+export const INCLUINDO_LIXEIRA = { deletedAt: undefined } as const;
 
 export const softDeleteExtension = Prisma.defineExtension({
   name: 'softDelete',

@@ -21,6 +21,29 @@ function isNoise(request: FastifyRequest): boolean {
   return request.method === 'GET' && !request.url.startsWith('/api');
 }
 
+// CAMINHOS QUE CARREGAM CREDENCIAL, e o segmento em que ela está.
+//
+// `sanitize.ts` já remove campo sensível do CORPO, mas o token do termo de
+// entrega viaja na URL — `/aceite/<32 bytes>/aceitar` — e a URL é exatamente o
+// que esta função grava. Sem o mascaramento, o `X-Request-Id` sairia no log
+// acompanhado da credencial que ele deveria ajudar a rastrear, e qualquer
+// pessoa com acesso ao log poderia assinar um termo em nome de outra.
+//
+// O prefixo fica legível (dá para achar a requisição); o segredo, não.
+const CAMINHOS_COM_SEGREDO = [{ prefixo: '/api/aceite/', segmento: 3 }];
+
+function mascararCaminho(url: string): string {
+  const caminho = url.split('?')[0];
+  const regra = CAMINHOS_COM_SEGREDO.find((r) => caminho.startsWith(r.prefixo));
+  if (!regra) return caminho;
+
+  const partes = caminho.split('/');
+  if (partes.length <= regra.segmento) return caminho;
+
+  partes[regra.segmento] = '***';
+  return partes.join('/');
+}
+
 export function registerRequestLogger(server: FastifyInstance): void {
   server.addHook('onSend', async (request, reply, payload) => {
     reply.header('X-Request-Id', request.id);
@@ -32,7 +55,7 @@ export function registerRequestLogger(server: FastifyInstance): void {
     const line = {
       reqId: request.id,
       method: request.method,
-      url: request.url.split('?')[0],
+      url: mascararCaminho(request.url),
       statusCode: reply.statusCode,
       responseTime: Math.round(reply.elapsedTime),
     };

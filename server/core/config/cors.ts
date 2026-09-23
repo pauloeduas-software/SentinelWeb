@@ -47,3 +47,23 @@ export function getCorsOrigins(): CorsOrigin {
 
   return cachedOrigins;
 }
+
+/**
+ * Esta origem é uma das nossas?
+ *
+ * Existe para a checagem de `Origin` das rotas de autenticação
+ * (`auth-hardening.helper.ts`), que é anti-CSRF e NÃO é CORS — por isso mora
+ * aqui, ao lado da lista, mas é consultada por outro caminho.
+ *
+ * `true` (desenvolvimento sem `CORS_ORIGIN`) responde `true` para qualquer
+ * origem: é o mesmo "reflete quem chamou" que o CORS aplica ali, e endurecer só
+ * este ponto faria o painel da 3000 parar de logar na API da 3001 — o atrito
+ * sem ganho que a configuração padrão existe para evitar. `false` (produção sem
+ * a variável, ou seja, mesma origem) recusa toda origem cruzada, que é
+ * exatamente a intenção.
+ */
+export function origemPermitida(origin: string): boolean {
+  const origens = getCorsOrigins();
+  if (typeof origens === 'boolean') return origens;
+  return origens.includes(origin);
+}

@@ -44,6 +44,23 @@ export function toHttpError(error: unknown, fallbackMessage = DEFAULT_MESSAGE): 
   // Fastify: schema recusado, corpo grande demais, JSON malformado
   if (errorProp(error, 'validation')) return { status: 400, body: { error: 'Requisição inválida' }, unexpected: false };
   if (code === 'FST_ERR_CTP_BODY_TOO_LARGE') return { status: 413, body: { error: 'Requisição grande demais' }, unexpected: false };
+
+  // Content-Type que a rota não aceita — na prática, JSON mandado para uma rota
+  // de upload. 415 e não o 400 genérico abaixo: o corpo pode estar perfeito, o
+  // que está errado é o ENVELOPE, e a mensagem diz o que trocar. Sem isto, quem
+  // esquece o `FormData` lê "Requisição inválida" e vai procurar defeito no
+  // payload.
+  // `FST_INVALID_MULTIPART_CONTENT_TYPE` é do @fastify/multipart (ele responde
+  // 406 por conta própria); `FST_ERR_CTP_INVALID_MEDIA_TYPE` é do núcleo do
+  // Fastify. Os dois dizem a mesma coisa e viram a mesma resposta.
+  if (code === 'FST_INVALID_MULTIPART_CONTENT_TYPE' || code === 'FST_ERR_CTP_INVALID_MEDIA_TYPE') {
+    return {
+      status: 415,
+      body: { error: 'Tipo de conteúdo não aceito nesta rota. Envie multipart/form-data com o campo "file".' },
+      unexpected: false,
+    };
+  }
+
   if (code?.startsWith('FST_ERR_CTP_')) {
     return { status: 400, body: { error: 'Requisição inválida' }, unexpected: false };
   }
