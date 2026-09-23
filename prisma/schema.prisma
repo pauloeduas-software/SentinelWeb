@@ -47,32 +47,50 @@ model InventoryItem {
   status       String   @default("AVAILABLE")
   assignedToId String?  @db.Uuid
   assignedTo   User?    @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
-  folderId     String?  @db.Uuid
-  folder       Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
   notes        String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
 
+  @@index([deletedAt])
   @@map("inventory_items")
 }
 
 model User {
   id             String          @id @default(uuid()) @db.Uuid
   name           String
-  email          String          @unique
+  email          String
   department     String?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+  deletedAt      DateTime?
   inventoryItems InventoryItem[]
 
+  // `email` NÃO é @unique aqui de propósito: a unicidade é um índice parcial
+  // (`WHERE deleted_at IS NULL`) criado na migration. Com @unique comum, um
+  // usuário na lixeira bloquearia para sempre o recadastro do mesmo e-mail —
+  // é o `unique_undeleted` do Snipe-IT (docs/ITAM-TODO.md, F2).
+  @@index([email])
+  @@index([deletedAt])
   @@map("users")
 }
 
-model Folder {
-  id        String          @id @default(uuid()) @db.Uuid
-  name      String          @unique
-  createdAt DateTime        @default(now())
-  items     InventoryItem[]
+// Trilha de auditoria: o que mudou, quando e por quem.
+//
+// `actorId` é nulável e SEM relação com `User` de propósito. Nulável porque
+// autenticação é a Fase 3 — esperar por ela significaria perder o histórico de
+// tudo que for cadastrado até lá. Sem FK porque log de auditoria é append-only:
+// a integridade dele não pode depender do ciclo de vida da linha do usuário.
+model ActivityLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  entityType String
+  entityId   String   @db.Uuid
+  action     String
+  changes    Json?
+  actorId    String?  @db.Uuid
+  createdAt  DateTime @default(now())
 
-  @@map("folders")
+  @@index([entityType, entityId, createdAt])
+  @@index([createdAt])
+  @@map("activity_logs")
 }

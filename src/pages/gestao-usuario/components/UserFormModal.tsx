@@ -1,20 +1,21 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import type { User } from '../../../types';
+import type { User } from '../../../domain/shared/user.types';
+import type { UserInput } from '../../../domain/user/user.queries';
 
 interface UserFormModalProps {
   user?: User | null;
   onClose: () => void;
-  onSaved: () => void;
+  onSubmit: (data: UserInput) => Promise<void>;
 }
 
-export default function UserFormModal({ user, onClose, onSaved }: UserFormModalProps) {
+export default function UserFormModal({ user, onClose, onSubmit }: UserFormModalProps) {
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
-    department: user?.department || ''
+    department: user?.department || '',
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -24,23 +25,9 @@ export default function UserFormModal({ user, onClose, onSaved }: UserFormModalP
     setError('');
 
     try {
-      const url = user ? `http://localhost:5000/api/users/${user.id}` : 'http://localhost:5000/api/users';
-      const method = user ? 'PUT' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Erro ao salvar');
-      }
-
-      onSaved();
-    } catch (err: any) {
-      setError(err.message);
+      await onSubmit(formData);
+    } catch (err) {
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -60,7 +47,7 @@ export default function UserFormModal({ user, onClose, onSaved }: UserFormModalP
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 font-mono text-xs">
           {error && <div className="p-3 bg-status-danger/10 text-status-danger border border-status-danger/20 rounded">{error}</div>}
-          
+
           <div className="space-y-1">
             <label className="text-text-secondary uppercase tracking-widest text-[10px]">Nome Completo*</label>
             <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors" placeholder="Ex: João da Silva" />
