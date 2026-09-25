@@ -93,6 +93,40 @@ equipamento que o sistema jurava não ter.
 devolve os ativos dele, em vez da lista vazia que a exclusão da vista padrão
 produziria sozinha.
 
+### `licencas/` — a corrida que o `SKIP LOCKED` ganha
+
+Sete arquivos, e cada um prova uma coisa que passaria despercebida:
+
+- **`corridas.test.ts`** — oito entregas numa licença de cinco assentos, sem
+  `await` entre elas. Passam cinco `201` e três `409`, **em assentos distintos**.
+  A asserção dos assentos distintos é o que separa `SKIP LOCKED` de fila: com
+  `FOR UPDATE` puro o placar seria o mesmo e todo mundo teria esperado. O
+  terceiro caso cobre a corrida que o D41 não cita — devolver e entregar em
+  seguida, que só funciona porque o checkin trava a linha do assento.
+- **`reconciliacao.test.ts`** — a invariante 11 (`COUNT(sem retiredAt) =
+  seatsTotal`) através de 5→8→6→8, provando que a numeração usa `MAX+1` e não
+  colide com os aposentados; e a aritmética do D92, que a fórmula do plano
+  prospectivo erraria.
+- **`chave.test.ts`** — as três portas por onde o segredo poderia sair: a
+  resposta, o diff do `ActivityLog` e o `sanitizeForLog`. O último **falharia
+  antes da F6**: o regex de `SENSITIVE_KEY` não casava com `productKey`. Também
+  prova o AAD — chave copiada de outra licença por dentro do banco não é
+  revelada.
+- **`operacoes.test.ts`** — a queima na devolução e o status derivado nas quatro
+  bordas do calendário, onde um `<=` trocado por `<` só apareceria no dia exato.
+- **`historico.test.ts`** — a trilha da licença, `VIEW_KEY` inclusive.
+- **`posse.test.ts`** — o desligamento fecha o assento da PESSOA e **não** o do
+  ATIVO, e os 409 de `DELETE` de pessoa e de ativo citam o assento. E a promessa
+  contra o cumprimento: o conjunto que `GET /users/:id/holdings` devolve é
+  **exatamente** o que o `offboard` fecha, com a queima caindo em quem a tela
+  marcou. É o que impede o modal de desligamento de prometer devolução e
+  entregar destruição.
+- **`canario.test.ts`** — o canário grava no primeiro boot, **derruba** a troca
+  acidental de chave e **se regrava** com a chave ativa numa rotação. O último é
+  o que faz a rotação ter fim: sem ele o canário fica preso ao `kid` da chave
+  que o escreveu, e a antiga nunca pode sair do ambiente — o boot passaria a
+  falhar pedindo de volta uma chave que já não cifra nada.
+
 ### `formularios/` — o corpo literal
 
 A regra do diretório: **copiar o objeto que a tela monta**, campo por campo, e

@@ -8,15 +8,25 @@ export interface User {
 }
 
 /**
- * O que ainda prende a pessoa ao inventário — as DUAS camadas da posse
+ * O que ainda prende a pessoa ao inventário — as QUATRO pontas da posse
  * (docs/MODELO-POSSE.md), contadas separadas.
  *
- * Separadas porque se resolvem de jeitos diferentes: o ativo direto se devolve,
- * o posto se desocupa. Uma soma só diria "5 pendências" e mandaria o operador
- * procurar cinco devoluções que não existem.
+ * Separadas porque se resolvem de jeitos diferentes: o ativo e o acessório se
+ * devolvem, o assento volta ao contrato (ou QUEIMA, D43) e o posto se desocupa.
+ * Uma soma só diria "5 pendências" e mandaria o operador procurar cinco
+ * devoluções que não existem.
+ *
+ * São as mesmas quatro que o 409 do `DELETE` devolve em `details`
+ * (`user/use-cases/delete-user.usecase.ts`) — e é por isso que faltar uma aqui
+ * não é cosmético: a tela que decidir pelo `details` enxergaria zero pendência
+ * em quem só ocupa assento de licença.
  */
 export interface PosseAbertaDoUsuario {
   ativosEmPosse: number;
+  /** Unidades de acessório de alvo `USER` — só as DIRETAS, nunca as do posto (F5). */
+  acessoriosEmPosse: number;
+  /** Assentos de licença de alvo `USER` — nunca os dos ativos dela (F6, D93). */
+  assentosEmPosse: number;
   postosOcupados: number;
 }
 

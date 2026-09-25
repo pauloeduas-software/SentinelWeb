@@ -26,7 +26,7 @@ export class AssetMaestro {
     // parâmetro, mas manter a ordem aqui é o que deixa isso óbvio para quem
     // acrescentar a próxima.
     //
-    // É a rota que a tela de detalhe (/itam/assets/:id) começa fazendo: uma URL
+    // É a rota que a tela de detalhe (/ativos/:id) começa fazendo: uma URL
     // colada no navegador não tem a linha que a listagem tinha em memória.
     server.get('/api/assets/:id', assetController.byId);
 

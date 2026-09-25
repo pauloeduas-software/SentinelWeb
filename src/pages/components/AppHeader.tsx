@@ -1,19 +1,23 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Armchair, Boxes, KeyRound, LayoutDashboard, LogOut, Server, Database, Users, SlidersHorizontal } from 'lucide-react';
+import { Armchair, Boxes, KeyRound, LayoutDashboard, LogOut, Server, Database, ScrollText, Users, SlidersHorizontal } from 'lucide-react';
 import { useAuthStore } from '../../domain/auth/auth.store';
 
 // Navegação do painel. Fica em pages/components porque é interface
 // compartilhada entre as páginas — não pertence a nenhum domínio.
 const NAV_ITEMS = [
   { to: '/', label: 'Telemetria', icon: Server },
-  { to: '/itam', label: 'ITAM', icon: Database },
-  // Logo depois de ITAM, e antes de Usuários, porque é a mesma operação vista
+  { to: '/ativos', label: 'Ativos', icon: Database },
+  // Logo depois de Ativos, e antes de Usuários, porque é a mesma operação vista
   // do outro lado: o ativo está na mesa, e a mesa é de quem a ocupa
   // (docs/MODELO-POSSE.md). Fora do menu, ele estava atrás da 6ª aba de Config.
   { to: '/postos', label: 'Postos', icon: Armchair },
   // Depois de Postos porque a entrega de acessório pende dele: os 5 mouses da
   // Mesa 1 são do POSTO, e quem responde por eles são os ocupantes (D33).
   { to: '/estoque', label: 'Estoque', icon: Boxes },
+  // Depois de Estoque porque é o mesmo desenho um passo adiante: lá o saldo é
+  // calculado sobre unidades intercambiáveis, aqui o assento é uma LINHA que se
+  // trava (D40). E porque licença também é posse — ela entra no desligamento.
+  { to: '/licencas', label: 'Licenças', icon: ScrollText },
   { to: '/users', label: 'Usuários', icon: Users },
   { to: '/tokens', label: 'Tokens', icon: KeyRound },
   { to: '/configuracoes', label: 'Config', icon: SlidersHorizontal },
@@ -39,7 +43,7 @@ export default function AppHeader() {
         <nav className="hidden md:flex items-center gap-1 font-mono text-xs uppercase tracking-widest">
           {NAV_ITEMS.map(({ to, label, icon: Icon }) => {
             // Prefixo, e não igualdade: a tela de detalhe do ativo mora em
-            // `/itam/assets/:id` e precisa manter ITAM aceso — com igualdade, o
+            // `/ativos/:id` e precisa manter Ativos aceso — com igualdade, o
             // menu apagava inteiro assim que se abria um ativo. A raiz é o caso
             // à parte, porque todo caminho começa com "/".
             const isActive = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);

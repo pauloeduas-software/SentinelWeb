@@ -1,4 +1,5 @@
 import type { AcessorioEmPosse } from './stock.types';
+import type { AssentoEmPosse } from './license.types';
 import type { AlvoDaPosse, PosseResolvida } from './posse.types';
 import type { ListParams } from './list.types';
 import type { User } from './user.types';
@@ -9,7 +10,7 @@ import type { User } from './user.types';
 /**
  * Por que um ativo saiu do patrimônio. Espelha o enum `RetiredReason`.
  *
- * Os rótulos em português ficam na tela (pages/gestao-itam/helpers), não aqui:
+ * Os rótulos em português ficam na tela (pages/ativos/helpers), não aqui:
  * este arquivo é o CONTRATO com a API, e o contrato são os valores que viajam.
  */
 export type MotivoDaSaida =
@@ -120,7 +121,7 @@ export interface Asset {
    * calculada pelo servidor para a tela não fazer uma consulta por ativo.
    *
    * Vem no contrato de `GET /api/assets`. Continua sendo lida por
-   * `resumoDaPosse()` (pages/gestao-itam/helpers), que trata a ausência: entre
+   * `resumoDaPosse()` (pages/ativos/helpers), que trata a ausência: entre
    * a subida do frontend e a do backend da F4, o campo simplesmente não chega.
    */
   posse: PosseResolvida | null;
@@ -170,6 +171,14 @@ export interface UserHoldings {
    * direto com 5 compartilhados e dizer "6 mouses da Laura".
    */
   acessorios: AcessorioEmPosse[];
+  /**
+   * ASSENTOS DE LICENÇA (F6, D93) — a quarta ponta, e a única que pode ser
+   * DESTRUÍDA pelo desligamento.
+   *
+   * Só os de alvo `USER`, pela mesma razão que separa `diretos` de `porPosto`:
+   * o assento do desktop da mesa é da máquina, não de quem senta nela.
+   */
+  assentos: AssentoEmPosse[];
 }
 
 /**

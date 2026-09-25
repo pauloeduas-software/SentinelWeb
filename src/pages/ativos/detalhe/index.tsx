@@ -4,6 +4,7 @@ import AssetFormModal from '../components/AssetFormModal';
 import CheckoutModal from '../components/CheckoutModal';
 import AssetTabs, { AbaFutura } from './components/AssetTabs';
 import ComponentsTab from './components/ComponentsTab';
+import LicensesTab from './components/LicensesTab';
 import DetalhesTab from './components/DetalhesTab';
 import FilesTab from './components/FilesTab';
 import HistoryTab from './components/HistoryTab';
@@ -14,7 +15,7 @@ import { seloDaSaida } from '../helpers/descomissionamento.helper';
 import { rotuloDaOperacao } from '../helpers/posse.helper';
 import { useAssetDetail } from './hooks/useAssetDetail';
 
-// A TELA DO ATIVO — `/itam/assets/:id`.
+// A TELA DO ATIVO — `/ativos/:id`.
 //
 // Existe porque uma URL colada no navegador não tem a linha que a listagem
 // tinha em memória: até a F2 o modal recebia o ativo já carregado pela tabela, e
@@ -30,6 +31,7 @@ export default function AssetDetailPage() {
     eventos, totalDeEventos, historicoPendente,
     assignments, possePendente,
     componentes, componentesPendentes, handleRetirarComponente,
+    licencas, licencasPendentes,
     anexos, anexosPendentes, enviandoArquivo, erroDeArquivo, temImagem,
     handleAnexar, handleExcluirAnexo, handleTrocarImagem, handleRemoverImagem,
     modal, abrirEdicao, abrirClone, abrirPosse, abrirDescomissionar, fecharModal,
@@ -45,7 +47,7 @@ export default function AssetDetailPage() {
     return (
       <div className="font-mono text-xs space-y-4">
         <div className="text-status-danger">{erro ?? 'Ativo não encontrado.'}</div>
-        <Link to="/itam" className="flex items-center gap-2 text-text-tertiary hover:text-text-primary transition-colors">
+        <Link to="/ativos" className="flex items-center gap-2 text-text-tertiary hover:text-text-primary transition-colors">
           <ArrowLeft size={14} /> Voltar para os ativos
         </Link>
       </div>
@@ -59,7 +61,7 @@ export default function AssetDetailPage() {
   return (
     <div className="animate-in fade-in duration-300 space-y-6 pb-6">
       <Link
-        to="/itam"
+        to="/ativos"
         className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary transition-colors"
       >
         <ArrowLeft size={13} /> Ativos
@@ -137,6 +139,10 @@ export default function AssetDetailPage() {
             carregando={componentesPendentes}
             onRetirar={(instalacaoId, assignedQty) => void handleRetirarComponente(instalacaoId, assignedQty)}
           />
+        )}
+
+        {aba === 'licencas' && (
+          <LicensesTab licencas={licencas} carregando={licencasPendentes} />
         )}
 
         {/* As abas de fase futura são desabilitadas na barra; este ramo existe

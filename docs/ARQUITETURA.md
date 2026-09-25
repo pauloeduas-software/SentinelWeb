@@ -74,6 +74,7 @@ server/
 | `assignment` | **Posse**: entrega e devolução de ativo, com alvo polimórfico (pessoa, posto ou outro ativo) e o histórico de quem teve o quê | `Assignment` |
 | `occupancy` | **Ocupação do posto**: quem trabalha em qual localização, e em que turno | `LocationOccupant` |
 | `stock` | **Estoque**: os três tipos que têm QUANTIDADE, com saldo derivado e trava na linha-pai | `Accessory`, `AccessoryCheckout`, `Consumable`, `ConsumableCheckout`, `Component`, `ComponentAsset`, `StockLog` |
+| `license` | **Licenças**: o contrato e seus ASSENTOS materializados, com chave de produto cifrada em repouso | `License`, `LicenseSeat`, `LicenseSeatCheckout` |
 
 > **A decisão D1 foi executada na Fase 1.** `asset/` (RMM) virou `endpoint/`, e o
 > nome `asset/` passou ao ativo do ITAM. O `inventory/` deixou de existir junto
@@ -275,10 +276,16 @@ Em ordem de prioridade, do [`ITAM-TODO.md`](./ITAM-TODO.md):
 - **Termo de entrega** — F4. O checkout, o checkin, o histórico de posse e a
   ocupação de posto **existem** (ver abaixo). Falta o fluxo de aceite: EULA da
   categoria, assinatura, PDF, e-mail e lembrete de atraso.
-- **Licenças de software** — F6. Nenhuma tabela de licença existe; o que há é o
-  `CategoryType.LICENSE`. O desenho de saldo derivado da F5 se aplica em parte:
-  lá o assento é **materializado** (D40), porque uma licença tem número de
-  assentos conhecido e contrato por trás.
+- **Convergência RMM × ITAM** — F7. Conformidade de licença alimentada pelo
+  software realmente instalado: `LicenseSeat → Asset → Endpoint →
+  SoftwareInstallation`. É esse join que o D39 protege ao recusar `Location`
+  como alvo de assento — um assento pendurado num móvel não teria caminho até
+  uma instalação.
+
+> **As licenças JÁ EXISTEM** — esta seção as listava como pendentes. A F6
+> fechou: `server/domain/license/`, com assento materializado (D40), escolha sem
+> corrida por `SELECT … FOR UPDATE SKIP LOCKED` (D41) e chave cifrada em
+> `server/core/crypto/` (D91). Ver `docs/FASE-6-PLANO-ITAM.md`.
 
 > **Autenticação, termo de entrega e a suíte de testes JÁ EXISTEM** — esta seção
 > os listava como pendentes e estava desatualizada. O login é a F3, o aceite
@@ -312,9 +319,20 @@ sustenta isso é o `targetType: 'USER'` do
 `stock/use-cases/checkin-user-accessories.usecase.ts`: sem ele, o desligamento
 devolveria ao estoque as unidades que continuam fisicamente na mesa.
 
+**A F6 estendeu as mesmas camadas à licença, sem criar paralelo nenhum (D93):**
+assento é posse pelos mesmos três critérios — alguém responde por ele, ele
+impede o cadastro de sumir, e ele fecha quando a pessoa sai. Então
+`count-user-posse`, o 409 do `DELETE` (de pessoa **e** de ativo) e o `offboard`
+passaram a contar assento, em vez de o domínio de licença ganhar versões
+próprias. A linha que sustenta isso é o `assignedUserId` do
+`license/use-cases/checkin-user-seats.usecase.ts`: sem ele, o desligamento
+devolveria o assento do desktop da Mesa 1 — que continua ligado, agora com outra
+pessoa — e a máquina ficaria rodando software sem licença atribuída.
+
 O que isso proíbe, e o lint não pega: **escrever em `Asset.assignedToId` fora do
-checkout/checkin**, e **mudar `qty` de um item de estoque fora do
-`adjust-quantity`** — a defesa do segundo é a chave não existir no schema de
+checkout/checkin**, **mudar `qty` de um item de estoque fora do
+`adjust-quantity`**, e **ler `License.productKey` fora do
+`reveal-product-key.usecase.ts`** — a defesa do segundo é a chave não existir no schema de
 edição, não uma checagem. Aquela coluna é cache do caso `USER`; um segundo lugar que a
 escreva recria a divergência que o modelo existe para impedir. As invariantes
 estão em [`INVARIANTES.md`](./INVARIANTES.md) e são provadas por

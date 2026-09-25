@@ -18,7 +18,8 @@ import { useUserOccupanciesQuery } from '../../../../domain/occupancy/occupancy.
 //
 //   `useUserQuery`            quem é a pessoa + o placar de posse aberta;
 //   `useUserHoldingsQuery`    os ATIVOS, nos dois baldes (diretos e por posto),
-//                             e os ACESSÓRIOS, em lista única com a `via` (F5);
+//                             os ACESSÓRIOS em lista única com a `via` (F5) e
+//                             os ASSENTOS de licença no nome dela (F6);
 //   `useUserOccupanciesQuery` os POSTOS que ela ocupa, com o turno;
 //   `useUserHistoryQuery`     o que JÁ aconteceu — as três primeiras são o
 //                             estado de hoje, esta é a linha do tempo.
@@ -72,6 +73,10 @@ export function useUserDetail() {
     // ACESSÓRIOS (F5) — lista única com `via` por item. Não somar com nada:
     // 1 direto + 5 do posto não são "6 mouses desta pessoa" (D33).
     acessorios: holdings?.acessorios ?? [],
+    // ASSENTOS de licença (F6) — só os de alvo `USER`. São exatamente os que o
+    // desligamento vai fechar, e alguns deles ele DESTRÓI (D43): é esta lista
+    // que o modal usa para prometer antes o que vai acontecer.
+    assentos: holdings?.assentos ?? [],
     // Só as ABERTAS: a rota responde `?view=current` por padrão.
     ocupacoes: ocupacoes ?? [],
     // `total` vem separado das linhas de propósito: ele conta o universo, e as

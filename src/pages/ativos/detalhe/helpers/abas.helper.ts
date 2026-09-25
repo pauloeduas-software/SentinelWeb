@@ -32,7 +32,9 @@ export const ABAS: readonly Aba[] = [
   // Saiu de desabilitada na F5: sumiu o `fase`, entrou o conteúdo — a
   // moldura da tela não mudou, que era o que a decisão prometia.
   { id: 'componentes', rotulo: 'Componentes', icone: Cpu, fase: null },
-  { id: 'licencas', rotulo: 'Licenças', icone: KeyRound, fase: 'Fase 6' },
+  // Saiu de desabilitada na F6: sumiu o `fase`, entrou o conteúdo — a moldura
+  // da tela não mudou, que era o que a decisão prometia.
+  { id: 'licencas', rotulo: 'Licenças', icone: KeyRound, fase: null },
   { id: 'manutencoes', rotulo: 'Manutenções', icone: Wrench, fase: 'Fase 8' },
   // Entrou na Leva 2 do docs/FECHAMENTO-F2-F4-PLANO-ITAM.md — era a Etapa G da
   // F2, adiada quando `@fastify/multipart` foi instalado e não usado.

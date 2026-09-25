@@ -3,6 +3,7 @@ import { CheckCircle2, LogOut, TriangleAlert, X } from 'lucide-react';
 import ReferenceSelect from '../../../components/ReferenceSelect';
 import type { OffboardInput, ResultadoDesligamento } from '../../../../domain/user/user.queries';
 import type { AcessorioEmPosse } from '../../../../domain/shared/stock.types';
+import type { AssentoEmPosse } from '../../../../domain/shared/license.types';
 import type { Asset, PostoDoAtivo } from '../../../../domain/shared/asset.types';
 import type { LocationOccupant } from '../../../../domain/shared/posse.types';
 
@@ -19,6 +20,19 @@ import type { LocationOccupant } from '../../../../domain/shared/posse.types';
 // dois: o ativo entregue a um POSTO continua com o posto, e a pessoa NÃO vai
 // para a lixeira. Sem dizer isso, quem lê "vai devolver tudo" procura depois o
 // monitor da Mesa 1 na lista de devoluções e não encontra.
+//
+// ═════════════════════════════════════════════════════════════════════════════
+// A QUEIMA DE ASSENTO É O ÚNICO PASSO QUE DESTRÓI VALOR (F6, D43).
+//
+// Devolver ativo, acessório e posto é reversível: entrega-se de novo. Um
+// assento de licença `reassignable = false` devolvido NÃO VOLTA ao contrato —
+// a empresa comprou 50 e passa a ter 49, e não há operação no sistema que
+// desfaça isso, porque o que mudou foi o direito de uso, não uma linha.
+//
+// Por isso ele tem aviso PRÓPRIO, em vermelho e com os nomes das licenças, e
+// não só uma linha no passo 3. É a mesma razão de o modal existir: ele não
+// pergunta "tem certeza?", ele diz o que vai acontecer.
+// ═════════════════════════════════════════════════════════════════════════════
 
 const CLASSE_CAMPO =
   'w-full p-2 bg-bg-base border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors';
@@ -41,6 +55,13 @@ interface OffboardModalProps {
    * `via: 'DIRETO'` — as unidades do posto continuam na mesa, com quem ficou.
    */
   acessorios: readonly AcessorioEmPosse[];
+  /**
+   * Os assentos de licença no NOME da pessoa (F6) — todos serão devolvidos.
+   *
+   * Já vêm filtrados pelo servidor: os assentos dos ATIVOS dela não estão aqui,
+   * porque são da máquina e o desligamento não os toca.
+   */
+  assentos: readonly AssentoEmPosse[];
   /** As ocupações abertas — todas serão encerradas. */
   ocupacoes: readonly LocationOccupant[];
   onClose: () => void;
@@ -51,7 +72,8 @@ interface OffboardModalProps {
 }
 
 export default function OffboardModal({
-  nome, diretos, porPosto, acessorios, ocupacoes, onClose, onConfirmar, salvando, resultado,
+  nome, diretos, porPosto, acessorios, assentos, ocupacoes,
+  onClose, onConfirmar, salvando, resultado,
 }: OffboardModalProps) {
   const [notes, setNotes] = useState('');
   const [statusId, setStatusId] = useState('');
@@ -62,6 +84,16 @@ export default function OffboardModal({
   // estoque, os do posto ficam onde estão (D33).
   const acessoriosDiretos = acessorios.filter((acessorio) => acessorio.via === 'DIRETO');
   const acessoriosDoPosto = acessorios.filter((acessorio) => acessorio.via === 'POSTO');
+
+  // Os assentos que a devolução vai DESTRUIR. Recorte à parte porque o aviso
+  // deles é outro: os demais voltam ao contrato e podem ser reentregues amanhã.
+  const assentosQueQueimam = assentos.filter((assento) => !assento.reassignable);
+
+  // O mesmo recorte do outro lado da operação: o que o servidor REALMENTE
+  // queimou. Sai do `resultado` e não do `assentos` acima porque entre abrir o
+  // modal e confirmar cabe uma devolução feita em outra aba — quem manda é o
+  // que a transação fez, não o que a tela previu.
+  const queimados = resultado?.assentosDevolvidos.filter((assento) => assento.queimado) ?? [];
 
   const enviar = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -101,11 +133,29 @@ export default function OffboardModal({
               <span>
                 {resultado.devolvidos.length} {resultado.devolvidos.length === 1 ? 'ativo devolvido' : 'ativos devolvidos'},{' '}
                 {resultado.acessoriosDevolvidos.length}{' '}
-                {resultado.acessoriosDevolvidos.length === 1 ? 'acessório devolvido' : 'acessórios devolvidos'} e{' '}
+                {resultado.acessoriosDevolvidos.length === 1 ? 'acessório devolvido' : 'acessórios devolvidos'},{' '}
+                {resultado.assentosDevolvidos.length}{' '}
+                {resultado.assentosDevolvidos.length === 1 ? 'assento devolvido' : 'assentos devolvidos'} e{' '}
                 {resultado.ocupacoesEncerradas.length}{' '}
                 {resultado.ocupacoesEncerradas.length === 1 ? 'posto desocupado' : 'postos desocupados'}, na mesma operação.
               </span>
             </div>
+
+            {/* O PLACAR DA PERDA, separado do da devolução e DEPOIS do fato.
+                O aviso antes de confirmar era para decidir; este é o registro
+                do que aconteceu, e ele fica na tela porque é o número que
+                alguém vai precisar repetir para o financeiro. */}
+            {queimados.length > 0 && (
+              <div className="flex items-start gap-2 text-status-danger text-[10px] leading-relaxed border border-status-danger/30 bg-status-danger/10 p-3">
+                <TriangleAlert size={12} className="mt-0.5 shrink-0" />
+                <span>
+                  {queimados.length} {queimados.length === 1 ? 'assento foi QUEIMADO' : 'assentos foram QUEIMADOS'}:{' '}
+                  {queimados.map((item) => `${item.licenseName} #${item.seatNumber}`).join(', ')}.
+                  {queimados.length === 1 ? ' Ele não volta' : ' Eles não voltam'} ao contrato — o
+                  histórico de cada licença registra a perda.
+                </span>
+              </div>
+            )}
 
             <Bloco titulo={`Devolvidos (${resultado.devolvidos.length})`}>
               {resultado.devolvidos.map((item) => (
@@ -117,6 +167,16 @@ export default function OffboardModal({
               {resultado.acessoriosDevolvidos.map((item) => (
                 <li key={item.checkoutId} className="px-4 py-2 text-text-primary">
                   {item.accessoryName}
+                </li>
+              ))}
+            </Bloco>
+
+            <Bloco titulo={`Assentos devolvidos (${resultado.assentosDevolvidos.length})`}>
+              {resultado.assentosDevolvidos.map((item) => (
+                <li key={item.checkoutId} className="px-4 py-2 text-text-primary flex items-center gap-2">
+                  <span>{item.licenseName}</span>
+                  <span className="text-text-tertiary">#{item.seatNumber}</span>
+                  {item.queimado && <span className="text-status-danger">— queimado</span>}
                 </li>
               ))}
             </Bloco>
@@ -171,7 +231,19 @@ export default function OffboardModal({
               ))}
             </Bloco>
 
-            <Bloco titulo={`3. Encerrar ${ocupacoes.length} ${ocupacoes.length === 1 ? 'ocupação de posto' : 'ocupações de posto'}`}>
+            <Bloco titulo={`3. Devolver ${assentos.length} ${assentos.length === 1 ? 'assento de licença' : 'assentos de licença'} em nome de ${nome}`}>
+              {assentos.map((assento) => (
+                <li key={assento.checkoutId} className="px-4 py-2 text-text-primary flex items-center gap-2">
+                  <span>{assento.licenseName}</span>
+                  <span className="text-text-tertiary">#{assento.seatNumber}</span>
+                  {!assento.reassignable && (
+                    <span className="text-status-danger">— queima</span>
+                  )}
+                </li>
+              ))}
+            </Bloco>
+
+            <Bloco titulo={`4. Encerrar ${ocupacoes.length} ${ocupacoes.length === 1 ? 'ocupação de posto' : 'ocupações de posto'}`}>
               {ocupacoes.map((ocupacao) => (
                 <li key={ocupacao.id} className="px-4 py-2 text-text-primary">
                   {postoComTurno(ocupacao.location?.name ?? 'Posto', ocupacao.shift)}
@@ -180,13 +252,33 @@ export default function OffboardModal({
             </Bloco>
 
             <div className="border border-border-sutil p-4 space-y-2">
-              <div className={ROTULO}>4. Marcar a saída</div>
+              <div className={ROTULO}>5. Marcar a saída</div>
               <p className="text-text-tertiary text-[10px] leading-relaxed">
                 A pessoa deixa de operar e não pode mais receber equipamento. O cadastro NÃO é
                 excluído: desligar e mandar para a lixeira são coisas diferentes, e o histórico de
                 posse precisa continuar apontando para alguém.
               </p>
             </div>
+
+            {/* O PRIMEIRO dos avisos, e em vermelho enquanto os outros são
+                amarelos: os outros dois dizem que algo NÃO vai acontecer (o
+                mouse fica na mesa, o ativo fica no posto) e são reversíveis de
+                qualquer forma. Este diz que algo vai acontecer e não tem
+                desfazer. */}
+            {assentosQueQueimam.length > 0 && (
+              <div className="flex items-start gap-2 text-status-danger text-[10px] leading-relaxed border border-status-danger/30 bg-status-danger/10 p-3">
+                <TriangleAlert size={12} className="mt-0.5 shrink-0" />
+                <span>
+                  {assentosQueQueimam.length}{' '}
+                  {assentosQueQueimam.length === 1 ? 'assento será QUEIMADO' : 'assentos serão QUEIMADOS'}{' '}
+                  na devolução: {assentosQueQueimam.map((assento) => `${assento.licenseName} #${assento.seatNumber}`).join(', ')}.
+                  {assentosQueQueimam.length === 1 ? ' Esta licença não é reatribuível' : ' Estas licenças não são reatribuíveis'},
+                  então o assento não volta ao contrato — nem agora, nem depois.
+                  {' '}É perda de patrimônio, e não tem desfazer: se o contrato pode ser
+                  reaproveitado, devolva o assento por fora antes de desligar.
+                </span>
+              </div>
+            )}
 
             {acessoriosDoPosto.length > 0 && (
               <div className="flex items-start gap-2 text-status-warning text-[10px] leading-relaxed border border-status-warning/30 bg-status-warning/10 p-3">

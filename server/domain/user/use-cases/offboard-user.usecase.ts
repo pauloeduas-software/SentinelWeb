@@ -6,6 +6,9 @@ import { fecharPosse } from '../../assignment/use-cases/close-assignment.usecase
 import {
   devolverAcessoriosDoUsuario, type AcessorioDevolvido,
 } from '../../stock/use-cases/checkin-user-accessories.usecase';
+import {
+  devolverAssentosDoUsuario, type AssentoDevolvido,
+} from '../../license/use-cases/checkin-user-seats.usecase';
 import { USER_DETAIL_SELECT } from '../helpers/user-select.helper';
 import { travarUsuarioOuFalhar } from './lock-user.usecase';
 
@@ -63,6 +66,14 @@ export interface ResultadoDesligamento {
   devolvidos: AtivoDevolvido[];
   /** Unidades de acessório de alvo `USER` fechadas — NUNCA as do posto (F5). */
   acessoriosDevolvidos: AcessorioDevolvido[];
+  /**
+   * Assentos de licença da PESSOA fechados — NUNCA os dos ativos dela (F6).
+   *
+   * Cada um diz se foi QUEIMADO: `reassignable = false` mais desligamento é
+   * perda patrimonial acontecendo num fluxo automático, em que ninguém está
+   * olhando para a licença. A tela mostra o placar antes de confirmar.
+   */
+  assentosDevolvidos: AssentoDevolvido[];
   ocupacoesEncerradas: OcupacaoEncerrada[];
 }
 
@@ -172,7 +183,25 @@ export async function offboardUser(
       tx, userId, data.notes ?? null, actorId,
     );
 
-    // ── 3. ENCERRAR as ocupações de posto ──────────────────────────────────
+    // ── 3. DEVOLVER os ASSENTOS DE LICENÇA da pessoa (F6) ──────────────────
+    //
+    // Mesma regra dos passos 1 e 2, e a mesma armadilha com um agravante: SÓ os
+    // de `assignedUserId`. O assento do desktop da Mesa 1 NÃO volta — a máquina
+    // continua ligada com o software instalado. Devolvê-lo faria o inventário
+    // dizer que aquele assento está livre; alguém o entregaria a outra pessoa, e
+    // a máquina ficaria rodando software sem licença atribuída — exposição
+    // DUPLA, pior do que a do acessório, onde a unidade pelo menos fica parada
+    // na mesa. O `where` que impede isso está em
+    // `license/use-cases/checkin-user-seats.usecase.ts`, com o porquê ao lado.
+    //
+    // SEM ESTE PASSO o desligado fica com assento de licença PARA SEMPRE, e o
+    // sintoma não é erro nenhum: é um número de assentos ocupados que nunca
+    // desce, e a empresa comprando licença que já tem.
+    const assentosDevolvidos = await devolverAssentosDoUsuario(
+      tx, userId, data.notes ?? null, actorId,
+    );
+
+    // ── 4. ENCERRAR as ocupações de posto ──────────────────────────────────
     //
     // O passo com dentes. Marcar a pessoa inativa NÃO a tira da lista de
     // responsáveis da Mesa 1: `resolverResponsaveis()` lê
@@ -219,7 +248,7 @@ export async function offboardUser(
       });
     }
 
-    // ── 4. DESLIGAR a pessoa ───────────────────────────────────────────────
+    // ── 5. DESLIGAR a pessoa ───────────────────────────────────────────────
     //
     // Por último de propósito: se qualquer devolução ou encerramento falhar, a
     // transação volta atrás e a pessoa NÃO fica marcada como desligada com
@@ -243,6 +272,11 @@ export async function offboardUser(
         terminatedAt: saidaEm.toISOString(),
         ativosDevolvidos: devolvidos.length,
         acessoriosDevolvidos: acessoriosDevolvidos.length,
+        assentosDevolvidos: assentosDevolvidos.length,
+        // O placar da PERDA, separado do da devolução: assento queimado não
+        // volta ao contrato, e essa é a única linha do desligamento que custa
+        // dinheiro.
+        assentosQueimados: assentosDevolvidos.filter((assento) => assento.queimado).length,
         ocupacoesEncerradas: ocupacoesEncerradas.length,
         notes: data.notes ?? null,
       },
@@ -258,6 +292,7 @@ export async function offboardUser(
       },
       devolvidos,
       acessoriosDevolvidos,
+      assentosDevolvidos,
       ocupacoesEncerradas,
     };
   });

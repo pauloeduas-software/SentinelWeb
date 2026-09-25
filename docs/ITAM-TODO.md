@@ -246,6 +246,11 @@ Gerado a partir dos próprios arquivos. **D1–D13** estão acima nesta página 
 | **D87** | Entrega com alvo ASSET não emite termo | [`FECHAMENTO-F2-F4-PLANO-ITAM.md`](./FECHAMENTO-F2-F4-PLANO-ITAM.md) |
 | **D88** | Aceite pendente não bloqueia a entrega | [`FECHAMENTO-F2-F4-PLANO-ITAM.md`](./FECHAMENTO-F2-F4-PLANO-ITAM.md) |
 | **D89** | A troca do AGENT_TOKEN pelo ApiToken é por convivência, com prazo | [`FECHAMENTO-F2-F4-PLANO-ITAM.md`](./FECHAMENTO-F2-F4-PLANO-ITAM.md) |
+| **D90** | Quem reconcilia trava todos os assentos; quem entrega trava um | [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md) |
+| **D91** | Chaveiro, não chave: o kid vem da própria chave, e o canário derruba o boot | [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md) |
+| **D92** | livres sai das linhas; aposentados não entra na subtração (corrige o D43) | [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md) |
+| **D93** | Assento é posse: entra no holdings, no 409 do DELETE e no offboard | [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md) |
+| **D94** | Anexo de licença sai da fase: exige dono polimórfico em Attachment | [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md) |
 
 ---
 
@@ -329,7 +334,7 @@ Execução detalhada em [`FASE-2-PLANO-ITAM.md`](./FASE-2-PLANO-ITAM.md).
 - [x] **P** EOL: `eolMonths` no modelo, `eolDate` calculada, `eolExplicit` para override manual — **feito na F1** (Etapa G)
 - [x] **M** `Asset.statusId` obrigatório apontando para `StatusLabel`; status vira consequência do checkout, não campo digitado — **feito na F1** (Etapa G)
 - [x] **M** Soft delete com lixeira e restauração (herda F0) — **feito na F1** (Etapa G)
-- [x] **M** ~~**Tela de detalhe do ativo** (`/itam/assets/:id`) com sete abas~~ — feito na F2 ([`FASE-2-PLANO-ITAM.md`](./FASE-2-PLANO-ITAM.md)). As sete nascem juntas: Detalhes, Posse, Histórico e Arquivos com conteúdo; Componentes (F5), Licenças (F6) e Manutenções (F8) desabilitadas dizendo em que fase chegam — aba ausente e aba vazia são indistinguíveis de defeito.
+- [x] **M** ~~**Tela de detalhe do ativo** (`/ativos/:id`, `/itam/assets/:id` até a F6) com sete abas~~ — feito na F2 ([`FASE-2-PLANO-ITAM.md`](./FASE-2-PLANO-ITAM.md)). As sete nascem juntas: Detalhes, Posse, Histórico e Arquivos com conteúdo; Componentes (F5), Licenças (F6) e Manutenções (F8) desabilitadas dizendo em que fase chegam — aba ausente e aba vazia são indistinguíveis de defeito.
 - [x] **M** ~~**Aba Posse** — os responsáveis resolvidos no topo e o histórico de `Assignment` abaixo~~ — feito na F2. É a tela que prova o modelo: quem abre um mouse da Mesa 1 lê "Laura (Manhã), Ana (Tarde)" sem nenhum campo digitado.
 - [x] **M** ~~Aba **Histórico** do ativo, lendo o `ActivityLog`~~ — feito na F2, sem tabela `AssetLog` (D18). `GET /api/assets/:id/history` une o log e a posse numa lista só.
 - [x] **P** ~~Arquivar ativo (status `type = ARCHIVED` sai das listagens por padrão; `?view=archived`)~~ — feito na Leva 1 do [`FECHAMENTO-F2-F4-PLANO-ITAM.md`](./FECHAMENTO-F2-F4-PLANO-ITAM.md) (D85). A vista padrão passou a excluir `ARCHIVED` junto com `retiredAt`, e `?statusId=` explícito vence a exclusão — senão clicar no contador de um status arquivado abriria lista vazia. **A invariante estado × posse continua valendo e já existia** (D16; [`INVARIANTES.md`](./INVARIANTES.md)): ativo com responsável resolvido **não pode** ir para `ARCHIVED` — arquivar é declarar que saiu da operação, e o que está com alguém não saiu. O 409 diz com quem está, não só que falhou. A devolução (checkin) é o pré-requisito, e é a mesma regra que impede `DEPLOYABLE` com detentor. O que faltava era só a VISTA.
@@ -479,22 +484,35 @@ disparam sem `await` entre elas e contam os status — três unidades com cinco 
 
 ---
 
-## Fase 6 — Licenças de Software
+## Fase 6 — Licenças de Software ✅
 
-Módulo inteiro do Snipe-IT que não existe aqui. **Nenhuma tabela de licença foi
-criada na F1** — o que existe é o `CategoryType.LICENSE`, e só.
+**Fechada** — ver [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md), com as etapas
+reescritas contra a árvore real na execução. Decisões novas: **D90–D94**, que corrigem
+D42, D43 e a Etapa E do desenho original.
 
-- [ ] **G** `License` — nome, `seatsTotal`, `reassignable`, `maintained`, `expirationDate`, `terminationDate`, licenciado para (nome/e-mail), fornecedor, fabricante, categoria
-- [ ] **G** `LicenseSeat` materializado — uma linha por assento, com contagem de livres/ocupados
-- [ ] **M** Checkout/checkin de assento para **usuário OU ativo** (XOR validado), com `SELECT ... FOR UPDATE SKIP LOCKED` para pegar o primeiro assento livre sem corrida
-- [ ] **P** `reassignable` / `maintained` com efeito real: licença não reatribuível **queima o assento** na devolução
-- [ ] **M** Product key cifrada em repouso (AES-256-GCM, chave em `APP_ENCRYPTION_KEY`) e mascarada na resposta
-- [ ] **P** Status derivado: ATIVA / VENCENDO / EXPIRADA / ENCERRADA (calculado, não coluna)
-- [ ] **M** Dados de compra da licença + `minAmt` (estoque mínimo de assentos)
-- [ ] **M** Anexos de licença (nota fiscal, contrato, certificado)
-- [ ] **M** Alertas de licença expirando e de assentos abaixo do mínimo
-- [ ] **M** Histórico da licença (quem pegou, quem devolveu, quem viu a chave)
-- [ ] **P** Export CSV de licenças **com a chave mascarada por padrão**
+- [x] **G** ~~`License` — nome, `seatsTotal`, `reassignable`, `maintained`, `expirationDate`, `terminationDate`, licenciado para, fornecedor, fabricante, categoria~~ — feito
+- [x] **G** ~~`LicenseSeat` materializado — uma linha por assento, com contagem de livres/ocupados~~ — feito (D40). `livres` sai das LINHAS, e `aposentados` **não** entra na subtração (D92, que corrige a fórmula do D43)
+- [x] **M** ~~Checkout/checkin de assento para usuário OU ativo (XOR validado), com `SELECT … FOR UPDATE SKIP LOCKED`~~ — feito. **Posto NÃO é alvo** (D39): o computador da mesa é um `Asset`, e é a ele que o assento vai. O XOR é CHECK do banco (invariante 9) e a aplicação recusa antes, com a frase que ensina o modelo
+- [x] **P** ~~`reassignable` queima o assento na devolução~~ — feito, e vale também na devolução automática do desligamento, com o placar da perda separado no log
+- [x] **M** ~~Product key cifrada em repouso e mascarada na resposta~~ — feito em `server/core/crypto/` (D81), com **chaveiro** e `kid` derivado da própria chave (D91). A máscara **não é coluna**: é derivada na leitura de detalhe
+- [x] **P** ~~Status derivado: ATIVA / VENCENDO / EXPIRADA / ENCERRADA~~ — feito (D44), helper puro
+- [x] **M** ~~Dados de compra + estoque mínimo de assentos~~ — feito. O campo chama `minSeats` e não `minAmt`: `minQty` é o nome que a F5 já usa para a mesma ideia, e duas palavras para o mesmo conceito é o que o D5 recusa
+- [x] **M** ~~Alertas de licença expirando e de assentos abaixo do mínimo~~ — feito em `/api/licenses/alerts`, com o tipo como FILTRO (mesma forma do `/api/stock/alerts`)
+- [x] **M** ~~Histórico da licença (quem pegou, quem devolveu, quem viu a chave)~~ — feito. `VIEW_KEY` é a primeira ação do projeto que registra uma LEITURA, e é de propósito: a chave é o único dado cujo simples acesso é o fato auditável
+- [ ] **M** Anexos de licença (nota fiscal, contrato, certificado) — **adiado, D94**: `Attachment.assetId` é `NOT NULL` com FK para `assets`, então isto exige dono polimórfico em `Attachment` (migração, discriminante, CHECK e uma decisão sobre o arquivo quando o dono some). É uma etapa sobre ANEXO, não sobre licença
+- [ ] **P** Export CSV de licenças **com a chave mascarada por padrão** — **não existe export no projeto**; o item é da F10. Anotado lá
+
+**O que a fase costurou fora do próprio domínio (D93):** assento é posse, então
+`count-user-posse`, o `holdings`, o `offboard`, o 409 do `DELETE` — de pessoa **e** de
+ativo — e a tela de perfil passaram a contar assento, em vez de a licença ganhar versões
+próprias. Sem isso o desligado ficaria com assento para sempre, e o sintoma não seria um
+erro: seria um número de assentos ocupados que nunca desce.
+
+**E o `holdings` é o que torna o desligamento honesto:** ninguém tropeça num assento de
+licença como tropeça num notebook em cima da mesa. Se ele não aparecesse na tela de
+perfil, o modal não teria como listá-lo — e a operação fecharia, às vezes QUEIMANDO
+(D43), um assento que nunca foi mostrado. O conjunto da lista é o mesmo que o `offboard`
+fecha, e `tests/licencas/posse.test.ts` prova a igualdade em vez de confiar nela.
 
 ---
 
@@ -557,7 +575,7 @@ criada na F1** — o que existe é o `CategoryType.LICENSE`, e só.
 - [ ] **G** Tela de administração de campos e conjuntos
 - [ ] **P** Flags de visibilidade (`showInListView`, `displayInUserView`, `showInEmail`)
 - [ ] **P** Valor padrão por modelo
-- [ ] **M** Campo customizado cifrado em repouso
+- [ ] **M** Campo customizado cifrado em repouso — **`server/core/crypto/cipher.ts` já existe** (nasceu na F6): `cifrar(claro, aad)` / `decifrar(pacote, aad)`, formato `enc:v1:<kid>:<iv>:<tag>:<ct>` (D81), com chaveiro e canário de boot (D91). Aqui o prefixo `enc:` é obrigatório de verdade — dentro do mesmo `JsonB` convivem valores cifrados e comuns, e sem marca não há como saber qual é qual
 - [ ] **P** Campos customizados no import e no export CSV
 
 ---
@@ -568,6 +586,7 @@ criada na F1** — o que existe é o `CategoryType.LICENSE`, e só.
 - [ ] **G** Impressão de etiquetas em PDF com layout configurável (folha, tamanho, gutters, logo, campos) + **preview antes de gastar a folha**
 - [ ] **M** Busca global otimizada para leitor de código de barras (match exato de asset tag/serial primeiro, depois `ILIKE`)
 - [ ] **P** Export CSV de qualquer listagem — **com BOM UTF-8**, senão o Excel em PT-BR abre acentos quebrados
+- [ ] **P** ⚠️ **A chave de produto da licença NÃO pode entrar no CSV.** É a quarta porta por onde ela poderia sair (as outras três foram fechadas na F6: a allowlist da resposta, o diff do `ActivityLog` e o `sanitize.ts`). O export lê `License` direto; sem uma allowlist explícita aqui, `productKey` viaja no arquivo — cifrada, mas fora do banco, e num arquivo que circula por e-mail. O certo é exportar `productKeyMask`
 - [ ] **G** Importador CSV com mapeamento de colunas, update de existentes e relatório de erros por linha (`Import` + `ImportRow`). **Posse importada passa pelo checkout**, não por `UPDATE` em `assignedToId` (D17): a coluna de responsável do CSV vira uma `Assignment` com `checkoutAt` retroativo
 - [ ] **M** Seção de Relatórios (`/relatorios`) com os relatórios prontos do Snipe-IT, mais os que só existem aqui: *posto vago*, *ativos por posto*, *o que cada pessoa responde (direto × por posto)*
 - [ ] **M** Custom report builder com seleção de colunas — `columns` validado contra **allowlist**, nunca montar `select` do Prisma com string do cliente
@@ -624,7 +643,7 @@ Registrado para não ser reaberto a cada revisão.
 ```
 F0 (base) ✅ → F1 (catálogo + ativo inteiro) ✅ → [MODELO DE POSSE] ✅ schema
    → F2 (ativos) ✅ → F3 (auth) ✅ → F4 (posse: checkout/checkin/posto) ✅
-      → F5 (estoque) ✅ → F6 (licenças) → F7 (convergência RMM)
+      → F5 (estoque) ✅ → F6 (licenças) ✅ → F7 (convergência RMM)
          → F8 (ciclo de vida) → F9 (campos) → F10 (relatórios) → F11 (acesso)
 ```
 
@@ -635,10 +654,18 @@ assinatura e do PDF (Etapas A e B da F4), e o correio servia aos dois lados. Nen
 fase isolada teria visto essa dependência: ela só aparece olhando as três juntas.
 
 **A F5 fechou**: as seis tabelas de estoque, o saldo derivado com trava na linha-pai e a
-integração com a posse da F4 (holdings, desligamento, posto). **O próximo passo é a F6** —
-licenças —, que depende da F1 e reusa o desenho de saldo derivado desta fase, com uma diferença
-declarada no plano dela: lá o assento é **materializado** (D40), porque uma licença tem número de
-assentos conhecido e contrato por trás, enquanto aqui a unidade é intercambiável.
+integração com a posse da F4 (holdings, desligamento, posto).
+
+**A F6 fechou**: as três tabelas de licença, o assento **materializado** (D40) — porque uma
+licença tem número de assentos conhecido e contrato por trás, enquanto no estoque a unidade é
+intercambiável —, a escolha sem corrida por `SELECT … FOR UPDATE SKIP LOCKED` (D41) e a chave de
+produto cifrada em `server/core/crypto/`, que é o mesmo arquivo que a **F9** vai usar para campo
+customizado cifrado (D81).
+
+**O próximo passo é a F7** — convergência RMM × ITAM. Ela depende da F6 num ponto que o D39
+protege: a conformidade alimentada pelo software instalado é o join `LicenseSeat → Asset →
+Endpoint → SoftwareInstallation`, e um assento que pudesse apontar para uma `Location` não teria
+caminho até uma instalação — seria um buraco exatamente no relatório que justifica o módulo.
 
 **F0 → F1 → F2 continua o caminho crítico.** Tudo depende do modelo de dados certo. Começar por
 telas antes disso é retrabalho garantido — foi exatamente o que aconteceu com

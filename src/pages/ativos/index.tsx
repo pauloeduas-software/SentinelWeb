@@ -10,7 +10,7 @@ import { seloDaSaida } from './helpers/descomissionamento.helper';
 import { TRACO, resumoDaPosse, rotuloDaOperacao } from './helpers/posse.helper';
 import { useAssets } from './hooks/useAssets';
 
-export default function ItamPage() {
+export default function AtivosPage() {
   const {
     assets, total, totalCadastrado, porStatus, descomissionados, arquivados, page, perPage, setPage,
     search, changeSearch, view, changeView, relatorio, changeRelatorio,

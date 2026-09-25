@@ -4,6 +4,9 @@ import { ASSET_SELECT } from '../../asset/helpers/asset-select.helper';
 import {
   listUserAccessories, type AcessorioEmPosse,
 } from '../../stock/use-cases/list-user-accessories.usecase';
+import {
+  listUserSeats, type AssentoEmPosse,
+} from '../../license/use-cases/list-user-seats.usecase';
 
 // "Quais ativos a Laura responde?" — a pergunta que o MODELO-POSSE.md diz que
 // passa a existir com as três camadas, e que o `Asset.assignedToId` sozinho
@@ -65,6 +68,19 @@ export interface Holdings {
    * é justamente o que impede a soma — não existe um total nesta resposta.
    */
   acessorios: AcessorioEmPosse[];
+  /**
+   * ASSENTOS DE LICENÇA (F6) — a quarta ponta da posse (D93).
+   *
+   * SÓ os de alvo `USER`, e essa é a mesma linha que separa `diretos` de
+   * `porPosto` aqui em cima: o assento do desktop da Mesa 1 é da MÁQUINA, e
+   * quem o devolve é quem mexer no ativo, não quem desligar a pessoa.
+   *
+   * Sem esta lista o desligamento fecharia assento que a tela nunca mostrou —
+   * e no caso de licença não reatribuível ele DESTRÓI o assento. Prometer antes
+   * o que a operação vai fazer é o que o modal de desligamento existe para
+   * fazer (D32).
+   */
+  assentos: AssentoEmPosse[];
 }
 
 export async function listUserHoldings(userId: string): Promise<Holdings> {
@@ -89,9 +105,14 @@ export async function listUserHoldings(userId: string): Promise<Holdings> {
   // postos ocupados), e duas implementações dela divergiriam no primeiro ajuste.
   const acessorios = await listUserAccessories(userId);
 
+  // Os assentos saem do domínio `license` pelo mesmo motivo — e com uma razão a
+  // mais: o `where` deles tem que ser o MESMO que o desligamento usa para
+  // fechar, senão a tela promete um conjunto e a operação fecha outro.
+  const assentos = await listUserSeats(prisma, userId);
+
   // Ninguém ocupa posto nenhum: as duas consultas seguintes não têm o que
-  // perguntar. Os acessórios DIRETOS já foram buscados acima.
-  if (ocupacoes.length === 0) return { diretos, porPosto: [], acessorios };
+  // perguntar. Os acessórios DIRETOS e os assentos já foram buscados acima.
+  if (ocupacoes.length === 0) return { diretos, porPosto: [], acessorios, assentos };
 
   const idsDeLocal = [...new Set(ocupacoes.map((ocupacao) => ocupacao.locationId))];
 
@@ -148,5 +169,5 @@ export async function listUserHoldings(userId: string): Promise<Holdings> {
     }
   }
 
-  return { diretos, porPosto, acessorios };
+  return { diretos, porPosto, acessorios, assentos };
 }

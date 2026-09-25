@@ -23,7 +23,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 
 ---
 
-## As oito
+## As onze
 
 | # | Invariante | Onde | O que o usuário vê |
 |---|---|---|---|
@@ -32,9 +32,12 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 3 | O tipo de um status em uso não muda | **aplicação** — `status-label.spec.ts` | 409 `Não é possível mudar o tipo: status em uso por 200 registros.` |
 | 4 | Estado × posse: ativo entregue não fica `DEPLOYABLE` nem `ARCHIVED` | **aplicação** — `assert-status-posse.usecase.ts` | 409 `"Pronto p/ Uso" é um status de estoque, e este ativo está entregue. Faça a devolução antes de mudar o status.` |
 | 5 | A forma da posse: um alvo coerente, nunca a si mesmo, devolução depois da entrega | **banco** — três `CHECK` | 409 `Registro já existe` (a API recusa antes, com frase própria) |
-| 6 | Colaborador desligado ou na lixeira não tem posse direta, unidade de acessório direta nem ocupação aberta | **aplicação** — 409 no `DELETE` + trava de linha no `offboard`/`checkout` | 409 `Este colaborador ainda responde por 2 ativos, está com 1 acessório e ocupa 1 posto. Faça o desligamento antes de excluir.` |
+| 6 | Colaborador desligado ou na lixeira não tem posse direta, unidade de acessório direta, **assento de licença** nem ocupação aberta | **aplicação** — 409 no `DELETE` + trava de linha no `offboard`/`checkout` | 409 `Este colaborador ainda responde por 2 ativos, está com 1 acessório, ocupa 1 assento de licença e ocupa 1 posto. Faça o desligamento antes de excluir.` |
 | 7 | O alvo de uma entrega de acessório é UM, e é o que casa com o `targetType` | **banco** — CHECK `accessory_checkout_alvo_xor` | 422 com o campo que falta (a API recusa antes, com frase própria) |
 | 8 | Nenhuma saída de estoque passa do disponível | **aplicação** — `COUNT` + `SELECT … FOR UPDATE` na linha-pai, dentro da transação | 409 `Sem unidade suficiente deste acessório: 0 disponível(is) de 5.` |
+| 9 | O alvo de um assento de licença é UM: pessoa **ou** ativo, nunca os dois, nunca nenhum | **banco** — CHECK `license_seat_alvo_xor` | 422 com o campo que falta (a API recusa antes, com frase própria) |
+| 10 | Um assento de licença não está em duas mãos | **banco** — índice único parcial `license_seat_uma_aberta_por_assento` | 409 `Sem assento livre em "Office 2024": 5 de 5 ocupados.` |
+| 11 | `COUNT(assentos sem retiredAt)` **é** `seatsTotal` | **aplicação** — `reconcile-seats.usecase.ts`, na transação da gravação | 409 `Não há assentos livres suficientes para reduzir o contrato: 2 precisariam ser aposentados e só 1 está livre.` |
 
 ---
 
@@ -327,6 +330,86 @@ Restrict` da FK não alcança — soft delete é `UPDATE`, e o Postgres não vê
 
 ---
 
+### 9 — `license_seat_alvo_xor`
+
+```sql
+ALTER TABLE "license_seat_checkouts" ADD CONSTRAINT "license_seat_alvo_xor"
+  CHECK (num_nonnulls("assignedUserId", "assignedAssetId") = 1);
+```
+
+Duas colunas nuláveis admitem quatro estados, e **dois são mentira**: as duas
+preenchidas ("este assento está com a Laura E com o notebook") e nenhuma
+preenchida ("este assento está ocupado por ninguém"). Nenhum dos dois dá erro
+sozinho — o assento sai da conta de livres sem aparecer em lista nenhuma: pago,
+indisponível e invisível.
+
+É o irmão do 7, com uma diferença: aqui **não há discriminante** para conferir,
+porque com dois alvos possíveis a FK preenchida já diz qual é. Um `targetType`
+ao lado seria uma terceira coisa capaz de discordar das outras duas.
+
+A aplicação recusa antes, com 422 e a frase que ensina o modelo (*"Posto de
+trabalho não é alvo de licença — entregue ao ativo que está na mesa"*, D39); o
+CHECK é a rede para quem não passa pelo use-case.
+
+> **Provado em** `tests/licencas/posse.test.ts` e pelo `psql`: o `INSERT` com as
+> duas FKs e o `INSERT` com nenhuma são recusados pelo banco.
+
+### 10 — `license_seat_uma_aberta_por_assento`
+
+```sql
+CREATE UNIQUE INDEX "license_seat_uma_aberta_por_assento"
+  ON "license_seat_checkouts"("seatId") WHERE "checkinAt" IS NULL;
+```
+
+Mesma forma da invariante 1, um nível abaixo: lá o que não se duplica é a posse
+de um ativo, aqui é a ocupação de um assento.
+
+**Quem a defende no caminho quente não é o índice**, e essa é a diferença: a
+escolha do assento livre é `SELECT … FOR UPDATE OF s SKIP LOCKED` dentro da
+transação (D41), então duas entregas simultâneas pegam assentos **diferentes** e
+nunca disputam esta linha. O índice é a rede para o `psql` à mão, o importador
+de CSV da F10 e qualquer caminho futuro.
+
+Ele também sustenta a contagem: o `LEFT JOIN` de `contarAssentos` só não
+multiplica linhas porque cada assento tem no máximo uma ocupação aberta para
+casar. É a mesma invariante servindo a duas coisas.
+
+> **Provado por corrida.** `tests/licencas/corridas.test.ts` dispara oito
+> entregas numa licença de cinco assentos sem `await` entre elas: passam cinco
+> `201` e três `409`, os cinco em assentos **distintos**, e nenhum assento fica
+> com duas ocupações abertas. Reproduzido contra o servidor real com
+> `xargs -P8`.
+
+### 11 — `COUNT(assentos sem retiredAt)` **é** `seatsTotal`
+
+A única invariante da F6 que o **banco não garante sozinho**: ela atravessa duas
+tabelas, e um CHECK não enxerga a outra. Mora em
+`license/use-cases/reconcile-seats.usecase.ts`, na mesma transação que grava a
+licença.
+
+Mudar `seatsTotal` **cria ou aposenta linhas junto**: aumentar insere assentos
+numerados a partir de `MAX(seatNumber) + 1` — nunca `COUNT + 1`, porque a linha
+aposentada continua na tabela e a contagem colidiria com `license_seats_numero`
+—; diminuir marca `retiredAt` nos **livres de maior número**, e recusa com 409
+quando não há livres suficientes.
+
+Em dois passos, haveria a janela em que o relatório mostra 50 comprados e 40
+existentes. E sem a trava de **todos** os assentos antes de contar (D90), uma
+entrega simultânea levaria o assento que a redução está aposentando — ele
+terminaria ocupado **e** aposentado: fora da conta de livres, fora da conta de
+comprados, e na mão de alguém.
+
+> **A conta que depende dela** é o `livres` (D92), e ela corrige a fórmula do
+> plano prospectivo: `livres = seatsTotal − ocupados − queimados`, com
+> `aposentados` **exibido e nunca subtraído** — ele já saiu de `seatsTotal`
+> quando o contrato encolheu, e subtraí-lo de novo o contaria duas vezes.
+>
+> **Provado em** `tests/licencas/reconciliacao.test.ts`: sobe 5→8, desce 8→6,
+> volta 6→8 (conferindo que a numeração não colide com os aposentados), e tenta
+> descer abaixo do ocupado — 409, com a transação inteira voltando atrás.
+
+---
+
 ## O que **não** é invariante, e por isso não está aqui
 
 - **`Asset.assignedToId` bate com a `Assignment` aberta.** É *cache*, não
@@ -345,6 +428,15 @@ Restrict` da FK não alcança — soft delete é `UPDATE`, e o Postgres não vê
   inconsistência que o alerta existe para mostrar. O que o sistema garante é não
   CRIAR o negativo sozinho — o ajuste recusa baixar abaixo do que já saiu
   (invariante 8, do outro lado).
+- **A máscara da chave de produto bate com a chave.** Ela **não é coluna** — é
+  derivada na leitura de detalhe, decifrando. Guardá-la ao lado da chave cifrada
+  criaria um segundo lugar dizendo o mesmo fato, e ele divergiria no dia em que
+  alguém escrevesse só um. É o D16 aplicado ao segredo.
+- **O status da licença.** `ATIVA/VENCENDO/EXPIRADA/ENCERRADA` sai de um helper
+  puro sobre duas datas e o dia de hoje (D44). Não há linha gravada com que
+  divergir — que é justamente por que ele não é coluna: uma coluna exigiria um
+  job diário para continuar verdadeira, e no dia em que o job falhasse o
+  inventário mentiria sem sintoma.
 - **Só `DEPLOYABLE` libera checkout.** É regra de fluxo do checkout (F4), não
   fato sobre linhas já gravadas.
 - **Validação de formato** (uuid, tamanho, enum) — é do `zod`, na borda.
@@ -356,4 +448,4 @@ Restrict` da FK não alcança — soft delete é `UPDATE`, e o Postgres não vê
    grava, nunca no controller — o controller não é o único caminho até o dado.
 3. Escreva a mensagem antes do código. Se a mensagem não ensina o que fazer em
    seguida, a regra ainda não está entendida.
-4. Acrescente a linha na tabela "As oito".
+4. Acrescente a linha na tabela "As onze".

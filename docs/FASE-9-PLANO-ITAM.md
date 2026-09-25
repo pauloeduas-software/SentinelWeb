@@ -131,7 +131,7 @@ tudo**: não é buscável nem ordenável, não entra no export CSV da F10 por pa
 ## Etapa F — Formulário dinâmico e a tela de administração · **G**
 
 - **Schema:** nada muda.
-- **Nasce:** `src/pages/gestao-itam/components/CustomFieldsSection.tsx` (render por `element`),
+- **Nasce:** `src/pages/ativos/components/CustomFieldsSection.tsx` (render por `element`),
   `src/pages/configuracoes/` ganha as abas Campos e Conjuntos, `src/domain/custom-field/…queries.ts`.
 - **Regra:** a coluna na tabela aparece só com `showInListView`, e o seletor de colunas da **F10**
   herda essas colunas com o mesmo mecanismo das nativas.

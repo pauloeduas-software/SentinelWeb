@@ -38,7 +38,7 @@ afterAll(async () => {
 
 /**
  * CÓPIA FIEL de `valoresIniciais(null)` de
- * `src/pages/gestao-itam/components/AssetFormModal.tsx`.
+ * `src/pages/ativos/components/AssetFormModal.tsx`.
  *
  * Os dois `ReferenceSelect` obrigatórios (modelo e status) chegam preenchidos
  * porque o formulário não envia sem eles. TODO O RESTO vai como a tela monta:

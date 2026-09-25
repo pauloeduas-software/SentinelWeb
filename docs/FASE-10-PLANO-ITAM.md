@@ -53,7 +53,7 @@ do Postgres — versão de cliente menor que a do servidor recusa o dump.
 ## Etapa B — Catálogo de colunas, seletor e combobox com busca · **M**
 
 - **Schema:** nada muda.
-- **Nasce:** `src/pages/gestao-itam/helpers/asset-columns.ts` (catálogo de INTERFACE),
+- **Nasce:** `src/pages/ativos/helpers/asset-columns.ts` (catálogo de INTERFACE),
   `src/domain/asset/asset.store.ts` (zustand + `persist`), busca server-side no
   `ReferenceSelect.tsx` usando o `useDebouncedValue` que já existe.
 - **Regra:** o cliente manda **token** de coluna; o servidor casa contra allowlist e responde 422
@@ -232,7 +232,10 @@ O BOM continua ali: ele resolve **acento**, que é o problema que o TODO nomeia.
 
 ### D70 — QR leva URL. Código de barras leva a etiqueta.
 
-**Decidido:** o QR contém `${APP_URL}/itam/assets/:id`; o Code128 contém o `assetTag`.
+**Decidido:** o QR contém `${APP_URL}/ativos/:id`; o Code128 contém o `assetTag`.
+(A rota era `/itam/assets/:id` quando esta decisão foi escrita; a tela passou a ser
+`/ativos/:id`, e `/itam/assets/:id` continua respondendo por redirecionamento em
+`App.tsx` — uma etiqueta impressa é para durar, então o QR leva o caminho NOVO.)
 **Descartado:** os dois com o mesmo conteúdo. São dois leitores diferentes: a câmera do celular
 abre link, o leitor de mão **digita texto** num campo. QR com a etiqueta obriga a copiar e colar;
 código de barras com URL faz o leitor digitar 60 caracteres no campo de busca. A busca global
@@ -241,7 +244,7 @@ descarta o prefixo conhecido, para quem bipar o QR dentro do campo.
 ### D71 — O catálogo de colunas é declarado duas vezes, de propósito.
 
 **Decidido:** allowlist no servidor (`asset-filters.helper.ts`, onde `ASSET_SORTABLE` já mora) e
-catálogo de interface em `src/pages/gestao-itam/helpers/`. **Descartado:** arquivo compartilhado.
+catálogo de interface em `src/pages/ativos/helpers/`. **Descartado:** arquivo compartilhado.
 O lint impede `src/` importar de `server/`, e a regra existe para não colocar o Prisma no bundle
 do navegador — não vale furá-la por uma lista de strings. A divergência entre as duas é
 **barulhenta**: token que o servidor não conhece vira 422 com a lista dos válidos.

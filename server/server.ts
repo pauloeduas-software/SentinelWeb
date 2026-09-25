@@ -3,6 +3,7 @@ import { createLogger } from './core/logger/logger';
 import { checkDependencies, isHealthy } from './core/lifecycle/health';
 import { installProcessHandlers, onShutdown } from './core/lifecycle/shutdown';
 import { closeDatabase } from './core/database/prismaClient';
+import { verificarCanarioDeCriptografia } from './core/crypto/canary';
 import { disconnectAllAgents } from './domain/agent/agent.registry';
 import { startZombieCleanerJob, stopZombieCleanerJob } from './domain/endpoint/jobs/zombie-cleaner.job';
 import { startOverdueReminderJob, stopOverdueReminderJob } from './domain/assignment/jobs/overdue-reminder.job';
@@ -28,6 +29,12 @@ async function bootstrap() {
   if (!isHealthy(health)) {
     throw new Error(`Dependências indisponíveis no boot: ${JSON.stringify(health)}`);
   }
+
+  // O CANÁRIO (F6, D91). DEPOIS do banco responder e ANTES de abrir a porta:
+  // ele precisa de uma consulta, e o que ele protege — a chave de criptografia
+  // ter mudado por baixo dos valores gravados — é exatamente o tipo de falha
+  // que não pode esperar a primeira requisição para aparecer.
+  await verificarCanarioDeCriptografia();
 
   const server = await buildApp();
 

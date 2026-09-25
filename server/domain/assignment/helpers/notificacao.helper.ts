@@ -64,7 +64,7 @@ function etiqueta(dados: DadosDoAviso): string {
 }
 
 function linkDoAtivo(assetId: string): string {
-  return `${urlDoPainel()}/itam/assets/${assetId}`;
+  return `${urlDoPainel()}/ativos/${assetId}`;
 }
 
 /** Data no formato que o Brasil lê, sem depender de `Intl` no servidor. */

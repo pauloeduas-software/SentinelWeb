@@ -1,7 +1,7 @@
 // A LEITURA DE UM EVENTO DE HISTÓRICO — funções puras, compartilhadas pelas
 // abas Histórico do ativo e da pessoa.
 //
-// Nasceu dentro de `gestao-itam/detalhe/helpers/`, quando o ativo era o único
+// Nasceu dentro de `ativos/detalhe/helpers/`, quando o ativo era o único
 // com linha do tempo, e mudou para cá quando a pessoa ganhou a dela (Leva 1 do
 // docs/FECHAMENTO-F2-F4-PLANO-ITAM.md). O que ficou lá é o que É do ativo — os
 // nomes das colunas dele e a frase do título; o que veio para cá é o que vale

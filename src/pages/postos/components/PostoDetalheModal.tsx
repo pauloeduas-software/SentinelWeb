@@ -163,7 +163,7 @@ export default function PostoDetalheModal({
                             Nenhum ativo entregue a este posto.
                             <span className="block mt-3 text-[10px] leading-relaxed">
                               A entrega é feita em{' '}
-                              <Link to="/itam" className="text-status-success hover:underline">Ativos</Link>
+                              <Link to="/ativos" className="text-status-success hover:underline">Ativos</Link>
                               , escolhendo este posto como destino.
                             </span>
                           </>
