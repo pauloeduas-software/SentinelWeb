@@ -26,7 +26,9 @@ function exigir201<T>(o_que: string, resposta: { status: number; body: unknown }
 
 /** Os ids que o seed deixa prontos. Lidos, nunca criados. */
 export async function idsDoSeed() {
-  const [deployable, emUso, arquivado, categoria, acessorio, consumivel, componente] = await Promise.all([
+  const [
+    deployable, emUso, arquivado, categoria, acessorio, consumivel, componente, licenca,
+  ] = await Promise.all([
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'DEPLOYABLE' }, select: { id: true } }),
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'IN_USE' }, select: { id: true } }),
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'ARCHIVED' }, select: { id: true } }),
@@ -36,6 +38,9 @@ export async function idsDoSeed() {
     prisma.category.findFirstOrThrow({ where: { type: 'ACCESSORY' }, select: { id: true } }),
     prisma.category.findFirstOrThrow({ where: { type: 'CONSUMABLE' }, select: { id: true } }),
     prisma.category.findFirstOrThrow({ where: { type: 'COMPONENT' }, select: { id: true } }),
+    // A da F6. O seed cria "Licença" com `type: 'LICENSE'`, e é o TIPO que o
+    // use-case confere: categoria de ASSET numa licença é 422.
+    prisma.category.findFirstOrThrow({ where: { type: 'LICENSE' }, select: { id: true } }),
   ]);
 
   return {
@@ -46,7 +51,54 @@ export async function idsDoSeed() {
     categoriaAcessorioId: acessorio.id,
     categoriaConsumivelId: consumivel.id,
     categoriaComponenteId: componente.id,
+    categoriaLicencaId: licenca.id,
   };
+}
+
+/**
+ * Uma licença, pela API — nunca por `prisma.license.create`.
+ *
+ * Criar pelo Prisma pularia o zod da borda, a guarda de tipo da categoria, a
+ * CIFRA da chave de produto e — o que mais importa — a criação dos assentos na
+ * mesma transação. O teste passaria a provar coisas sobre uma licença de 5
+ * assentos com zero linhas em `license_seats`, que nenhum usuário consegue
+ * cadastrar.
+ *
+ * O NOME é único por índice parcial, então quem chama passa um sufixo próprio
+ * quando cria mais de uma no mesmo arquivo.
+ */
+export async function criarLicenca(
+  api: ApiDeTeste,
+  opcoes: {
+    name: string;
+    categoryId: string;
+    seatsTotal: number;
+    reassignable?: boolean;
+    minSeats?: number;
+    productKey?: string;
+    expirationDate?: string;
+    terminationDate?: string;
+  },
+): Promise<{ id: string; seatsTotal: number; livres: number; hasProductKey: boolean }> {
+  const corpo: Record<string, unknown> = {
+    name: opcoes.name,
+    categoryId: opcoes.categoryId,
+    seatsTotal: opcoes.seatsTotal,
+  };
+  for (const chave of ['reassignable', 'minSeats', 'productKey', 'expirationDate', 'terminationDate'] as const) {
+    if (opcoes[chave] !== undefined) corpo[chave] = opcoes[chave];
+  }
+
+  return exigir201('licença', await api.post('/api/licenses', corpo));
+}
+
+/** Os assentos de uma licença, como a grade da tela os mostra. */
+export async function assentosDa(api: ApiDeTeste, licenseId: string) {
+  const resposta = await api.get<{
+    id: string; seatNumber: number; burnedAt: string | null; retiredAt: string | null;
+    checkouts: { id: string; assignedUserId: string | null; assignedAssetId: string | null }[];
+  }[]>(`/api/licenses/${licenseId}/seats`);
+  return exigir201<typeof resposta.body>('assentos', resposta);
 }
 
 /**

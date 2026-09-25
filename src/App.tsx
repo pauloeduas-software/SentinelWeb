@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import AppHeader from './pages/components/AppHeader';
 import TelemetryPage from './pages/telemetria';
-import ItamPage from './pages/gestao-itam';
-import AssetDetailPage from './pages/gestao-itam/detalhe';
+import AtivosPage from './pages/ativos';
+import AssetDetailPage from './pages/ativos/detalhe';
 import PostosPage from './pages/postos';
 import EstoquePage from './pages/estoque';
+import LicencasPage from './pages/licencas';
 import UsersPage from './pages/gestao-usuario';
 import UserDetailPage from './pages/gestao-usuario/detalhe';
 import ConfiguracoesPage from './pages/configuracoes';
@@ -13,6 +14,17 @@ import LoginPage from './pages/login';
 import AceitePage from './pages/aceite';
 import TokensPage from './pages/tokens';
 import { useAuthStore } from './domain/auth/auth.store';
+
+/**
+ * `/itam/assets/:id` → `/ativos/:id`, preservando o id.
+ *
+ * Um `Navigate` com caminho literal não serve aqui: o id está na URL, e é ele
+ * que o e-mail antigo carrega.
+ */
+function RedirecionarAtivo() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/ativos/${id ?? ''}`} replace />;
+}
 
 // Só o esqueleto da aplicação: moldura e rotas. Estado, chamada de API e regra
 // de tela ficam nas páginas (pages/<contexto>/hooks) e nos stores de domínio.
@@ -24,16 +36,28 @@ function Layout() {
       <main className="flex-1 p-6 md:p-8">
         <Routes>
           <Route path="/" element={<TelemetryPage />} />
-          <Route path="/itam" element={<ItamPage />} />
+          <Route path="/ativos" element={<AtivosPage />} />
           {/* A tela do ativo. Rota própria, e não modal: é uma URL que se cola
               no chamado, se abre em outra aba e se guarda nos favoritos. */}
-          <Route path="/itam/assets/:id" element={<AssetDetailPage />} />
+          <Route path="/ativos/:id" element={<AssetDetailPage />} />
+          {/* AS ROTAS ANTIGAS, redirecionando. `/itam` era o nome da tela até a
+              F6; ele saiu porque "ITAM" é o nome do ASSUNTO do sistema inteiro,
+              não desta tela — que lista ATIVOS, como /estoque lista estoque e
+              /licencas lista licenças. O redirecionamento fica porque a URL
+              antiga JÁ SAIU daqui: todo e-mail de entrega e de atraso enviado
+              antes desta troca leva `/itam/assets/:id`
+              (`assignment/helpers/notificacao.helper.ts`, que agora emite o
+              caminho novo), e quem clicar num e-mail de mês passado tem que
+              chegar na tela, não num 404. */}
+          <Route path="/itam" element={<Navigate to="/ativos" replace />} />
+          <Route path="/itam/assets/:id" element={<RedirecionarAtivo />} />
           <Route path="/postos" element={<PostosPage />} />
           {/* O que tem QUANTIDADE: acessório, consumível, componente (F5).
-              Rota irmã de /itam, e não uma aba dentro dela: um mouse não é um
+              Rota irmã de /ativos, e não uma aba dentro dela: um mouse não é um
               ativo, e misturar os dois na mesma tabela daria metade das células
               vazias (não há etiqueta nem série a mostrar). */}
           <Route path="/estoque" element={<EstoquePage />} />
+          <Route path="/licencas" element={<LicencasPage />} />
           <Route path="/users" element={<UsersPage />} />
           {/* Perfil do colaborador: os dois baldes de posse e o desligamento
               (docs/MODELO-POSSE.md, Camada 3). Depois de `/users` porque o

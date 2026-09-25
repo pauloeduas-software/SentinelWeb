@@ -4,6 +4,7 @@ import { assetKeys } from '../asset/asset.queries';
 import { assignmentKeys } from '../assignment/assignment.queries';
 import { occupancyKeys } from '../occupancy/occupancy.queries';
 import { stockKeys } from '../stock/stock.queries';
+import type { AssentoDevolvido } from '../shared/license.types';
 import type { EventoDaPessoa, User, UserDetail } from '../shared/user.types';
 import type { ListEnvelope, ListParams } from '../shared/list.types';
 
@@ -138,6 +139,18 @@ export interface ResultadoDesligamento {
    * mentir com o saldo batendo.
    */
   acessoriosDevolvidos: AcessorioDevolvido[];
+  /**
+   * Os assentos de licença de alvo `USER` que voltaram ao contrato (F6).
+   *
+   * Os do ATIVO não entram, pelo mesmo motivo dos acessórios de posto: o
+   * assento do desktop é da máquina, que continua ligada com o software
+   * instalado.
+   *
+   * Cada um diz se foi QUEIMADO. É a única linha do desligamento que custa
+   * dinheiro — `reassignable = false` faz a devolução DESTRUIR o assento —, e
+   * por isso o modal mostra o placar antes e confirma depois.
+   */
+  assentosDevolvidos: AssentoDevolvido[];
   ocupacoesEncerradas: OcupacaoEncerrada[];
 }
 
@@ -155,7 +168,11 @@ export interface ResultadoDesligamento {
  *   que ela deixou: a responsabilidade é derivada (Camada 3), e sair da Mesa 1
  *   muda quem responde por tudo que está lá;
  * - `stock`       as unidades de acessório no nome dela voltaram ao estoque, e
- *   o disponível de cada item mudou (F5).
+ *   o disponível de cada item mudou (F5);
+ * - `licenses`    os assentos no nome dela voltaram ao contrato, e `livres` é
+ *   conta sobre as linhas (F6, D92) — sem isto a grade de assentos e a coluna
+ *   `livres/total` continuam mostrando ocupado o que acabou de ser devolvido,
+ *   e é justamente na tela de licenças que alguém decide comprar assento novo.
  */
 export function useOffboardUser() {
   const queryClient = useQueryClient();
@@ -168,6 +185,11 @@ export function useOffboardUser() {
       void queryClient.invalidateQueries({ queryKey: occupancyKeys.all });
       void queryClient.invalidateQueries({ queryKey: assetKeys.all });
       void queryClient.invalidateQueries({ queryKey: stockKeys.all });
+      // O prefixo LITERAL, e não `licenseKeys.all`: `license.queries.ts` já
+      // importa `userKeys` (entregar assento muda o `holdings` da pessoa), e
+      // importar de volta faria o primeiro ciclo entre dois arquivos de query
+      // do projeto. Um literal com o motivo escrito é mais barato que o ciclo.
+      void queryClient.invalidateQueries({ queryKey: ['licenses'] });
     },
   });
 }

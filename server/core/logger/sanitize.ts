@@ -3,7 +3,14 @@
 
 // Nome de campo que indica credencial: o valor vira "[oculto]", em qualquer
 // profundidade (não depende de listar o caminho exato de cada campo).
-const SENSITIVE_KEY = /senha|password|passwd|token|secret|segredo|apikey|api_key|authorization|cookie|jwt/i;
+//
+// `chave|productkey|product_key` entrou na F6, e a ausência anterior era um
+// buraco real: `productKey` NÃO casava com `apikey` nem com nenhum outro termo
+// da lista, então um `logger.error({ dados })` num caminho de erro do domínio
+// de licenças publicaria a chave de produto EM CLARO no log estruturado —
+// depois de todo o trabalho de cifrá-la em repouso. O segredo vaza pelo elo
+// mais frouxo, e o log era ele.
+const SENSITIVE_KEY = /senha|password|passwd|token|secret|segredo|apikey|api_key|chave|productkey|product_key|authorization|cookie|jwt/i;
 const MAX_DEPTH = 6;
 const MAX_STRING = 1000; // payload de handshake traz a lista de software instalado
 const MAX_ITEMS = 20;

@@ -43,12 +43,15 @@ export async function deleteUser(id: string, actorId: string | null): Promise<vo
     const posse = await contarPosseAberta(tx, id);
     const motivo = motivoParaNaoExcluir(posse);
     if (motivo) {
-      // Os dois números também nos `details`, além da frase: a tela precisa
+      // TODAS as pontas também nos `details`, além da frase: a tela precisa
       // decidir se abre o modal de desligamento (há o que fechar) sem reparsear
-      // a mensagem em português.
+      // a mensagem em português. `assentosEmPosse` entrou com a F6 — sem ele,
+      // quem só ocupa assento de licença recebia um 409 com todos os números em
+      // zero, e a tela concluía que não havia nada a desligar.
       throw new AppError(motivo, 409, {
         ativosEmPosse: posse.ativosEmPosse,
         acessoriosEmPosse: posse.acessoriosEmPosse,
+        assentosEmPosse: posse.assentosEmPosse,
         postosOcupados: posse.postosOcupados,
       });
     }

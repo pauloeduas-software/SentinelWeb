@@ -43,7 +43,17 @@ import { prisma } from '../../../core/database/prismaClient';
 // DUAS vezes, em duas entidades — no componente ("para onde foram as
 // unidades") e no ativo ("o que tem dentro dele") —, e nenhuma é cópia da
 // outra: são as duas perguntas que a operação responde.
-export type ActivityAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE' | 'END' | 'CHECKOUT' | 'CHECKIN' | 'RETIRE' | 'UNRETIRE' | 'OFFBOARD' | 'ATTACH' | 'DETACH' | 'ACCEPT' | 'DECLINE' | 'REVOKE' | 'INSTALL' | 'UNINSTALL' | 'ADJUST';
+// `VIEW_KEY` é a chave de produto de uma licença REVELADA (F6). Ela é a
+// primeira ação do projeto que registra uma LEITURA — todas as outras registram
+// escrita —, e isso é de propósito, não o começo de um padrão: a chave é o
+// único dado do sistema cujo simples acesso é o fato auditável, porque depois
+// de revelada ela não pode ser "des-revelada". Quem a viu passa a poder
+// instalar o software em qualquer máquina, para sempre, e nenhuma coluna do
+// inventário registraria isso.
+//
+// NÃO acrescente `VIEW_*` para outras telas. Auditar leitura de dado comum
+// encheria a trilha de linhas que ninguém lê e afogaria justamente esta.
+export type ActivityAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE' | 'END' | 'CHECKOUT' | 'CHECKIN' | 'RETIRE' | 'UNRETIRE' | 'OFFBOARD' | 'ATTACH' | 'DETACH' | 'ACCEPT' | 'DECLINE' | 'REVOKE' | 'INSTALL' | 'UNINSTALL' | 'ADJUST' | 'VIEW_KEY';
 
 // `ADJUST` é a quantidade NOMINAL de um item de estoque mudando — chegou nota,
 // quebrou, recontagem (F5, Etapa D). Ele convive com o `StockLog`, que grava o

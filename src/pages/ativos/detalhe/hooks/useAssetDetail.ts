@@ -14,6 +14,7 @@ import {
 import {
   useAssetComponentsQuery, useDetachComponent,
 } from '../../../../domain/stock/stock.queries';
+import { useAssetLicensesQuery } from '../../../../domain/license/license.queries';
 import type { RetireInput } from '../../../../domain/shared/asset.types';
 import type { AbaId } from '../helpers/abas.helper';
 
@@ -51,6 +52,9 @@ export function useAssetDetail() {
   // retirada moram no domínio `stock`, que é quem conhece as tabelas: esta tela
   // só LÊ e manda retirar, como faz com a posse.
   const { data: componentes, isPending: componentesPendentes } = useAssetComponentsQuery(id ?? null);
+  // A aba Licenças (F6). Só leitura: devolver assento é operação da tela de
+  // licenças, onde o aviso de queima tem os números para explicar.
+  const { data: licencas, isPending: licencasPendentes } = useAssetLicensesQuery(id ?? null);
   const retirarComponente = useDetachComponent();
 
   // ARQUIVO. Quatro mutações e uma consulta, todas do domínio `attachment`:
@@ -122,7 +126,7 @@ export function useAssetDetail() {
     if (modal === 'clonar') {
       const novo = await criar.mutateAsync(valores);
       fecharModal();
-      navigate(`/itam/assets/${novo.id}`);
+      navigate(`/ativos/${novo.id}`);
       return;
     }
 
@@ -170,7 +174,7 @@ export function useAssetDetail() {
 
     try {
       await excluir.mutateAsync(asset.id);
-      navigate('/itam');
+      navigate('/ativos');
     } catch (falha) {
       alert((falha as Error).message);
     }
@@ -197,6 +201,8 @@ export function useAssetDetail() {
     // COMPONENTES — a aba que saiu de desabilitada na F5.
     componentes: componentes ?? [],
     componentesPendentes,
+    licencas: licencas ?? [],
+    licencasPendentes,
     handleRetirarComponente,
 
     // ARQUIVO — a aba Arquivos.

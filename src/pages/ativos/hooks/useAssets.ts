@@ -115,7 +115,7 @@ export function useAssets() {
   const closePosse = () => setEmPosse(null);
 
   /** A linha inteira abre a tela do ativo — a URL que se cola no chamado. */
-  const abrirDetalhe = (asset: Asset) => navigate(`/itam/assets/${asset.id}`);
+  const abrirDetalhe = (asset: Asset) => navigate(`/ativos/${asset.id}`);
 
   // Como no handleSubmit: o erro SOBE para o modal mostrar a mensagem do
   // servidor — é aqui que aparecem o duplo checkout e o ativo indisponível.

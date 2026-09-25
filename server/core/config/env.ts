@@ -1,5 +1,6 @@
 import './load-env';
 import { createLogger } from '../logger/logger';
+import { diagnosticarChaveiro } from '../crypto/keyring';
 
 const logger = createLogger('env');
 
@@ -37,6 +38,7 @@ export function validateEnv(): void {
   }
 
   validateJwtSecret();
+  validateEncryptionKey();
 
   // O /agent-hub exige AGENT_TOKEN. Em produção, sem token o boot PARA: um aviso
   // no log não protege porta nenhuma, e era exatamente esse o buraco anterior.
@@ -73,6 +75,27 @@ function validateJwtSecret(): void {
     throw new Error(`JWT_SECRET fraco: ${fraco}. Sessão assinada com ele é falsificável. ${comoGerar}`);
   }
   logger.warn(`[Env] JWT_SECRET fraco: ${fraco}. Aceito só em desenvolvimento. ${comoGerar}`);
+}
+
+// A CHAVE DE CRIPTOGRAFIA — mesma família do AGENT_TOKEN e do JWT_SECRET: em
+// produção derruba o boot, em desenvolvimento passa com aviso (F6, D91).
+//
+// A diferença para os outros dois é o que acontece SEM ela. O `/agent-hub` sem
+// token fica aberto; a sessão sem segredo fica falsificável. Aqui o sistema
+// continua íntegro: o campo de chave de produto é RECUSADO com 422 e a licença
+// nasce sem chave. Gravar em claro quando falta configuração seria o buraco —
+// o sistema funcionaria, ninguém perceberia, e o segredo estaria no banco.
+function validateEncryptionKey(): void {
+  const problema = diagnosticarChaveiro();
+  if (!problema) return;
+
+  const comoGerar = 'Gere uma chave: `openssl rand -hex 32`.';
+  if (isProduction) {
+    throw new Error(
+      `${problema}. Sem ela nenhuma chave de licença pode ser gravada nem lida. ${comoGerar}`,
+    );
+  }
+  logger.warn(`[Env] ${problema}. O campo de chave de produto responderá 422. ${comoGerar}`);
 }
 
 // Chave que assina o JWT da sessão (cookie httpOnly — docs/FASE-3-PLANO-ITAM.md, D22).
