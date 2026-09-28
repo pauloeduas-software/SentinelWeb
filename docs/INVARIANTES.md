@@ -23,7 +23,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 
 ---
 
-## As onze
+## As catorze
 
 | # | Invariante | Onde | O que o usuário vê |
 |---|---|---|---|
@@ -38,6 +38,9 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 9 | O alvo de um assento de licença é UM: pessoa **ou** ativo, nunca os dois, nunca nenhum | **banco** — CHECK `license_seat_alvo_xor` | 422 com o campo que falta (a API recusa antes, com frase própria) |
 | 10 | Um assento de licença não está em duas mãos | **banco** — índice único parcial `license_seat_uma_aberta_por_assento` | 409 `Sem assento livre em "Office 2024": 5 de 5 ocupados.` |
 | 11 | `COUNT(assentos sem retiredAt)` **é** `seatsTotal` | **aplicação** — `reconcile-seats.usecase.ts`, na transação da gravação | 409 `Não há assentos livres suficientes para reduzir o contrato: 2 precisariam ser aposentados e só 1 está livre.` |
+| 12 | Uma máquina é no máximo um ativo, e um ativo no máximo uma máquina | **banco** — `@unique` em `Endpoint.assetId` | 409 `Este ativo já está vinculado a outra máquina. Use a fusão se for a mesma máquina reinstalada.` |
+| 13 | A mesma sugestão não empilha na fila | **banco** — índice único parcial `sugestao_pendente_por_alvo` | nada: o job trata o `P2002` como "outro já criou" |
+| 14 | A observação de uso é uma linha por (máquina, conta, dia) | **banco** — índice único `endpoint_user_daily` | nada: o `upsert` incrementa em vez de inserir |
 
 ---
 
@@ -410,6 +413,75 @@ comprados, e na mão de alguém.
 
 ---
 
+### 12 — `endpoints_assetId_key`
+
+```prisma
+assetId String? @unique @db.Uuid
+```
+
+O 1:1 do D45, garantido pelo banco e não pela aplicação. Ele existe porque a
+alternativa não é "duas máquinas no mesmo ativo": é **duas verdades sobre a mesma
+máquina** — dois `hostname`, dois inventários de software, duas datas de último
+contato, e nenhuma forma de saber qual vale.
+
+O caso que ele pega de verdade é a **reimagem**: a máquina volta com `hwid` novo e
+o serial casando com um ativo que já tem endpoint. Sem o índice, o segundo vínculo
+entraria e a tela do ativo passaria a mostrar a máquina errada, escolhida por
+ordem de consulta. Com ele, a operação certa fica evidente — é fusão, não vínculo
+(D103) —, e é isso que a cascata de merge propõe antes de qualquer sugestão de
+vínculo.
+
+> `onDelete: SetNull` é o outro lado: apagar um ativo de verdade **não** leva
+> junto a telemetria da máquina. O preço é que o vínculo se desfaz em silêncio, e
+> é por isso que existe linha de `ActivityLog` para `UNLINK`.
+
+### 13 — `sugestao_pendente_por_alvo`
+
+```sql
+CREATE UNIQUE INDEX "sugestao_pendente_por_alvo"
+  ON "reconciliation_suggestions" ("kind", "endpointId",
+    COALESCE("assetId", '000…'::uuid), COALESCE("targetUserId", '000…'::uuid),
+    COALESCE("targetLocationId", '000…'::uuid), COALESCE("mergeIntoEndpointId", '000…'::uuid))
+  WHERE "state" = 'PENDING';
+```
+
+**PARCIAL porque o histórico PRECISA repetir:** a mesma sugestão pode ter sido
+recusada em março, substituída em abril e aceita em maio, e as três linhas contam
+essa história. O que não pode repetir é o que está **esperando decisão**.
+
+**`COALESCE` porque quatro das FKs de alvo são nuláveis**, e num índice único do
+Postgres `NULL` não colide com `NULL` — sem ele, duas sugestões de vínculo para o
+mesmo par (as duas com `targetUserId` nulo) passariam as duas, e o índice não
+impediria nada.
+
+O que ele protege não é o banco: é a **fila**. O job roda de hora em hora sobre a
+frota inteira e reencontra as mesmas evidências; sem o índice, uma semana de
+operação vira 168 cópias de cada sugestão, e a fila que deveria ser lida por uma
+pessoa vira uma lista que ninguém abre duas vezes.
+
+> **Provado em** `tests/descoberta/fila.test.ts`: três rodadas seguidas do job e a
+> contagem de `PENDING` não cresce.
+
+### 14 — `endpoint_user_daily` único por (máquina, conta, dia)
+
+```prisma
+@@unique([endpointId, userKey, day])
+```
+
+O D49 em forma de índice. A agregação por dia é garantida **pelo banco**, não pelo
+`upsert` lembrar de acertar a chave — e a diferença aparece na fusão de máquinas,
+que é o único lugar que move essas linhas de um endpoint para outro: sem o índice,
+mover cegamente criaria duas linhas do mesmo dia para a mesma pessoa, e a contagem
+de "em quantos dias ela apareceu" — que é o que decide se há posto compartilhado —
+passaria a contar dobrado.
+
+É também a forma do limite de privacidade: **em que dias e em que faixa de hora**,
+nunca um rastro minuto a minuto. Uma linha por handshake seria um histórico de
+presença de pessoa, que este sistema não se propõe a guardar, e teria a retenção de
+90 dias protegendo um dado que não deveria existir nesse formato.
+
+---
+
 ## O que **não** é invariante, e por isso não está aqui
 
 - **`Asset.assignedToId` bate com a `Assignment` aberta.** É *cache*, não
@@ -448,4 +520,6 @@ comprados, e na mão de alguém.
    grava, nunca no controller — o controller não é o único caminho até o dado.
 3. Escreva a mensagem antes do código. Se a mensagem não ensina o que fazer em
    seguida, a regra ainda não está entendida.
-4. Acrescente a linha na tabela "As onze".
+4. Acrescente a linha na tabela do começo do arquivo — e corrija o número no
+   título dela. Referir-se a ela por "As onze" era o que fazia esta instrução
+   apontar para um título que não existia mais a cada fase.

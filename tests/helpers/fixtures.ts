@@ -164,11 +164,16 @@ export async function criarColaborador(
 
 export async function criarAtivo(
   api: ApiDeTeste,
-  opcoes: { statusId: string; modelId: string; assetTag?: string; name?: string },
+  opcoes: { statusId: string; modelId: string; assetTag?: string; name?: string; serial?: string; locationId?: string },
 ): Promise<{ id: string; assetTag: string }> {
   const corpo: Record<string, unknown> = { statusId: opcoes.statusId, modelId: opcoes.modelId };
   if (opcoes.assetTag !== undefined) corpo.assetTag = opcoes.assetTag;
   if (opcoes.name !== undefined) corpo.name = opcoes.name;
+  // `serial` e `locationId` entram na CRIAÇÃO e não por um PUT depois: é o
+  // caminho que o formulário usa, e é pelo serial que a reconciliação da F7
+  // encontra o ativo.
+  if (opcoes.serial !== undefined) corpo.serial = opcoes.serial;
+  if (opcoes.locationId !== undefined) corpo.locationId = opcoes.locationId;
 
   return exigir201<{ id: string; assetTag: string }>('ativo', await api.post('/api/assets', corpo));
 }

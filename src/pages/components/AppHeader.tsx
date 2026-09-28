@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Armchair, Boxes, KeyRound, LayoutDashboard, LogOut, Server, Database, ScrollText, Users, SlidersHorizontal } from 'lucide-react';
+import { Armchair, Boxes, KeyRound, LayoutDashboard, LogOut, Radar, Server, Database, ScrollText, Users, SlidersHorizontal } from 'lucide-react';
 import { useAuthStore } from '../../domain/auth/auth.store';
 
 // Navegação do painel. Fica em pages/components porque é interface
@@ -18,6 +18,10 @@ const NAV_ITEMS = [
   // calculado sobre unidades intercambiáveis, aqui o assento é uma LINHA que se
   // trava (D40). E porque licença também é posse — ela entra no desligamento.
   { to: '/licencas', label: 'Licenças', icon: ScrollText },
+  // Depois de Licenças e antes de Usuários: é a tela que liga os dois lados do
+  // produto — o que o agente VÊ e o que a empresa CADASTROU (F7). Fica perto do
+  // inventário porque é dele que ela fala, não do RMM.
+  { to: '/descobertas', label: 'Descobertas', icon: Radar },
   { to: '/users', label: 'Usuários', icon: Users },
   { to: '/tokens', label: 'Tokens', icon: KeyRound },
   { to: '/configuracoes', label: 'Config', icon: SlidersHorizontal },

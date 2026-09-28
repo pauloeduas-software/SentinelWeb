@@ -21,6 +21,7 @@ import { autenticarRequisicao } from './domain/auth/helpers/authenticate-request
 import { COOKIE_SESSAO, SESSAO_SEGUNDOS } from './domain/auth/helpers/session-cookie.helper';
 import { AgentMaestro } from './domain/agent/agent.maestro';
 import { EndpointMaestro } from './domain/endpoint/endpoint.maestro';
+import { ReconciliationMaestro } from './domain/reconciliation/reconciliation.maestro';
 import { CatalogMaestro } from './domain/catalog/catalog.maestro';
 import { AssetMaestro } from './domain/asset/asset.maestro';
 import { SettingsMaestro } from './domain/settings/settings.maestro';
@@ -201,6 +202,11 @@ export async function buildApp(): Promise<FastifyInstance> {
   await LicenseMaestro.setupRoutes(server);
   // Arquivo depois de asset e catálogo: as rotas dele pendem de `/api/assets/:id`
   // e das quatro tabelas com imagem.
+  // CONVERGÊNCIA depois de licença: a conformidade cruza o software instalado
+  // com o assento da F6, e as rotas de vínculo pendem de `/api/endpoints/:id` e
+  // `/api/assets/:id`. Registrar na ordem em que o conceito nasce é o que mantém
+  // o arquivo legível (docs/FASE-7-PLANO-ITAM.md).
+  await ReconciliationMaestro.setupRoutes(server);
   await AttachmentMaestro.setupRoutes(server);
   // Aceite depois de posse: o termo nasce dentro da transação do checkout, e a
   // leitura pública dele pende de `assignments`.

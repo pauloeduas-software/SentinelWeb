@@ -7,6 +7,7 @@ import AssetDetailPage from './pages/ativos/detalhe';
 import PostosPage from './pages/postos';
 import EstoquePage from './pages/estoque';
 import LicencasPage from './pages/licencas';
+import DescobertasPage from './pages/descobertas';
 import UsersPage from './pages/gestao-usuario';
 import UserDetailPage from './pages/gestao-usuario/detalhe';
 import ConfiguracoesPage from './pages/configuracoes';
@@ -58,6 +59,11 @@ function Layout() {
               vazias (não há etiqueta nem série a mostrar). */}
           <Route path="/estoque" element={<EstoquePage />} />
           <Route path="/licencas" element={<LicencasPage />} />
+          {/* O QUE O AGENTE VÊ E O CADASTRO NÃO SABE (F7). A rota leva o nome
+              do que a tela LISTA — descobertas —, e não o do processo que roda
+              por trás: `/reconciliacao` seria o mesmo erro que `/itam` foi até
+              a F6, nomear a tela pelo assunto em vez de pelo conteúdo. */}
+          <Route path="/descobertas" element={<DescobertasPage />} />
           <Route path="/users" element={<UsersPage />} />
           {/* Perfil do colaborador: os dois baldes de posse e o desligamento
               (docs/MODELO-POSSE.md, Camada 3). Depois de `/users` porque o

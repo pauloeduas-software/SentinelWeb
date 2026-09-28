@@ -15,6 +15,9 @@ import {
   useAssetComponentsQuery, useDetachComponent,
 } from '../../../../domain/stock/stock.queries';
 import { useAssetLicensesQuery } from '../../../../domain/license/license.queries';
+import {
+  useDesvincularMaquina, useMaquinaDoAtivoQuery,
+} from '../../../../domain/reconciliation/reconciliation.queries';
 import type { RetireInput } from '../../../../domain/shared/asset.types';
 import type { AbaId } from '../helpers/abas.helper';
 
@@ -55,6 +58,13 @@ export function useAssetDetail() {
   // A aba Licenças (F6). Só leitura: devolver assento é operação da tela de
   // licenças, onde o aviso de queima tem os números para explicar.
   const { data: licencas, isPending: licencasPendentes } = useAssetLicensesQuery(id ?? null);
+
+  // A MÁQUINA (F7): especificações coletadas, último contato, software instalado
+  // e as trocas de peça que o agente percebeu — tudo do endpoint vinculado. E
+  // desvincular, que é a correção de um vínculo errado — o pior resultado
+  // possível daquela fase, e não pode depender de mexer no banco à mão.
+  const { data: maquina, isPending: maquinaPendente } = useMaquinaDoAtivoQuery(id ?? null);
+  const desvincular = useDesvincularMaquina();
   const retirarComponente = useDetachComponent();
 
   // ARQUIVO. Quatro mutações e uma consulta, todas do domínio `attachment`:
@@ -203,6 +213,15 @@ export function useAssetDetail() {
     componentesPendentes,
     licencas: licencas ?? [],
     licencasPendentes,
+
+    // MÁQUINA — a aba que nasceu pronta na F7.
+    maquina,
+    maquinaPendente,
+    desvinculando: desvincular.isPending,
+    handleDesvincular: () => {
+      if (!maquina?.endpointId) return;
+      desvincular.mutate(maquina.endpointId);
+    },
     handleRetirarComponente,
 
     // ARQUIVO — a aba Arquivos.

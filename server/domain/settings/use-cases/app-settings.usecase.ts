@@ -1,3 +1,4 @@
+import type { DiscoveryMode } from '@prisma/client';
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { APP_SETTING_ID, formatAssetTag } from '../helpers/app-setting.helper';
@@ -91,4 +92,39 @@ export async function peekNextAssetTag(): Promise<{ assetTag: string }> {
   // Sem etiqueta livre à vista, o formulário abre com o campo vazio e o usuário
   // digita — em vez de mostrar um número que o salvamento recusaria.
   return { assetTag: '' };
+}
+
+// ── A CONFIGURAÇÃO DA DESCOBERTA (F7) ───────────────────────────────────────
+
+/**
+ * Salva os botões da convergência RMM × ITAM.
+ *
+ * `discoveryMode` é o mais perigoso dos cinco e por isso vale reler o D51 antes
+ * de mexer: em `ON`, a primeira VM de teste que alguém subir vira patrimônio — e
+ * consome uma etiqueta do contador, que o `nextAssetTag()` acima nunca devolve.
+ * O estrago não é a linha a mais: é a sequência furada para sempre.
+ *
+ * A validação dos limites é do schema, não daqui: `ghostDays: 0` transformaria
+ * a frota inteira em fantasma no dia seguinte, e `shadowHours: 0` faria toda
+ * máquina nova nascer como Shadow IT antes do primeiro handshake terminar.
+ */
+export async function salvarConfiguracaoDaDescoberta(dados: {
+  discoveryMode?: DiscoveryMode;
+  ghostDays?: number;
+  shadowHours?: number;
+  userDailyRetentionDays?: number;
+  ignoredUserKeys?: string[];
+}) {
+  return prisma.appSetting.upsert({
+    where: { id: APP_SETTING_ID },
+    update: dados,
+    create: { id: APP_SETTING_ID, ...dados },
+    select: {
+      discoveryMode: true,
+      ghostDays: true,
+      shadowHours: true,
+      userDailyRetentionDays: true,
+      ignoredUserKeys: true,
+    },
+  });
 }

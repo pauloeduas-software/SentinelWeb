@@ -5,6 +5,7 @@ import CheckoutModal from '../components/CheckoutModal';
 import AssetTabs, { AbaFutura } from './components/AssetTabs';
 import ComponentsTab from './components/ComponentsTab';
 import LicensesTab from './components/LicensesTab';
+import MaquinaTab from './components/MaquinaTab';
 import DetalhesTab from './components/DetalhesTab';
 import FilesTab from './components/FilesTab';
 import HistoryTab from './components/HistoryTab';
@@ -32,6 +33,7 @@ export default function AssetDetailPage() {
     assignments, possePendente,
     componentes, componentesPendentes, handleRetirarComponente,
     licencas, licencasPendentes,
+    maquina, maquinaPendente, desvinculando, handleDesvincular,
     anexos, anexosPendentes, enviandoArquivo, erroDeArquivo, temImagem,
     handleAnexar, handleExcluirAnexo, handleTrocarImagem, handleRemoverImagem,
     modal, abrirEdicao, abrirClone, abrirPosse, abrirDescomissionar, fecharModal,
@@ -143,6 +145,15 @@ export default function AssetDetailPage() {
 
         {aba === 'licencas' && (
           <LicensesTab licencas={licencas} carregando={licencasPendentes} />
+        )}
+
+        {aba === 'maquina' && (
+          <MaquinaTab
+            maquina={maquina}
+            carregando={maquinaPendente}
+            desvinculando={desvinculando}
+            onDesvincular={handleDesvincular}
+          />
         )}
 
         {/* As abas de fase futura são desabilitadas na barra; este ramo existe

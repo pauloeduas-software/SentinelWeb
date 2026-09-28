@@ -251,6 +251,34 @@ Gerado a partir dos próprios arquivos. **D1–D13** estão acima nesta página 
 | **D92** | livres sai das linhas; aposentados não entra na subtração (corrige o D43) | [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md) |
 | **D93** | Assento é posse: entra no holdings, no 409 do DELETE e no offboard | [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md) |
 | **D94** | Anexo de licença sai da fase: exige dono polimórfico em Attachment | [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md) |
+| **D95** | Quem carimba lastSeenByAgentAt é o JOB, não o touchEndpoint | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D96** | Uma tabela de sugestão com discriminante, não cinco | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D97** | A recusa tem memória, e a memória tem chave (evidenceHash) | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D98** | AgentStatus tem dois valores; "nunca visto" é pergunta do ativo | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D99** | O teste do agente entra por WebSocket de verdade, em porta efêmera | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D100** | Chave do pacote derivada; hash do software é do servidor | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D101** | A allowlist de contas ignoradas nasce nesta fase | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D102** | Licença ↔ pacote é vínculo explícito, nunca casamento por nome | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D103** | Merge não apaga: o endpoint perdedor ganha mergedIntoId | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D104** | MAC é sinal de MERGE, não de vínculo (Asset não tem MAC) | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D105** | Dois hashes de software: o que chegou e o que foi normalizado | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D106** | Campo ausente no handshake não APAGA o que já foi coletado | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D107** | O aceite age e depois fecha; a ordem erra para o lado certo | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D108** | A fusão preserva o lastSeen mais recente, não o createdAt | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D109** | O hash da sugestão é da AFIRMAÇÃO, não da evidência que cresce | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D110** | A fila tem três portas de saída; a terceira é o mundo mudar | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D111** | A janela da agregação de uso corta na meia-noite | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D112** | `discoveryMode = OFF` desliga a descoberta de verdade | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D113** | O turno é a MODA dos turnos, não a média das horas (a noite virava "Manhã") | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D114** | O seletor de posto oferece POSTO (`/api/workstations`), não toda localização | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D115** | A rota da aba chama `/machine` e devolve o que a aba mostra | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D116** | A `AssetChange` ganha escritor, e ele mora no handshake | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D117** | A conformidade ganha porta de entrada: o catálogo de pacotes | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D118** | A configuração da descoberta ganha tela, e a allowlist com ela | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D119** | Assinatura na `key`, nunca `setState` em efeito | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D120** | `proporSugestao` não recebe cliente, porque abre transação | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D121** | Casar a conta busca os candidatos, não o cadastro inteiro | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D122** | `Asset.suggestions`, e não o nome que o `prisma format` escreveu | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
 
 ---
 
@@ -516,29 +544,56 @@ fecha, e `tests/licencas/posse.test.ts` prova a igualdade em vez de confiar nela
 
 ---
 
-## Fase 7 — Convergência RMM × ITAM
+## Fase 7 — Convergência RMM × ITAM ✅
 
 **Isto o Snipe-IT não tem.** Ele é um CMDB manual, sem descoberta. Nós temos agente instalado.
 É aqui que o produto deixa de ser um clone.
 
-- [ ] **M** Vínculo `Endpoint` ↔ `Asset` (FK opcional 1:1). **Não fundir as tabelas**: quebraria os ativos sem agente (monitor, cadeira, cabo)
-- [ ] **M** **Agente C# passa a coletar número de série, UUID de sistema, fabricante, modelo e chassi** (`Win32_BIOS.SerialNumber`, `Win32_ComputerSystemProduct.UUID`, `Win32_ComputerSystem.Manufacturer/Model`). Sem serial não existe reconciliação confiável — MAC muda com dock/VPN e hostname é renomeável
-- [ ] **M** Motor de matching em cascata: serial (100) → UUID (100) → MAC normalizado (85) → hostname (60)
-- [ ] **M** `ReconciliationSuggestion` + **fila de reconciliação** na UI (descobertos sem cadastro, sugestões de vínculo, aceitar/recusar)
-- [ ] **M** Auto-provisionamento configurável (OFF / SUGGEST / ON) — default SUGGEST, senão máquina de teste polui o inventário
-- [ ] **M** **Posse sugerida pelo usuário logado na máquina** (`Win32_ComputerSystem.UserName` casando com `User.email`). Com o modelo de posse isso fica mais forte do que "sugerir responsável": o usuário logado sugere **duas coisas diferentes** — a posse do ativo (assignment `USER`) **ou** a ocupação do posto (`LocationOccupant`), quando o ativo já está entregue a uma `Location`. Sugerir ocupação é o que o Snipe-IT não teria como fazer, porque não tem onde guardar
-- [ ] **P** **Dois usuários logados na mesma máquina em turnos diferentes deixa de ser ruído e vira evidência de posto compartilhado.** Hoje seria tratado como conflito ("afinal de quem é?"); com a Camada 2 é exatamente o padrão da Mesa 1 — manhã e tarde — e o sistema pode propor criar o posto e as duas ocupações em vez de escolher um vencedor
-- [ ] **P** **Ativo fantasma**: cadastrado e nunca visto pelo agente (ou visto pela última vez há N dias)
-- [ ] **P** **Shadow IT**: máquina vista pelo agente e não cadastrada há mais de 24h (`reviewState`: UNREVIEWED / ALLOWED / BLOCKED)
-- [ ] **M** Specs de hardware como **atributo do ativo**, não métrica — hoje RAM total e tamanho de disco vivem na tabela de telemetria e somem no expurgo
-- [ ] **M** `AssetChange` — histórico de mudança de hardware detectada automaticamente (trocou o HD, tiraram pente de RAM)
-- [ ] **M** `SoftwarePackage` + `SoftwareInstallation` — normalizar o `installedSoftware`, que hoje é **JSON write-only**: é gravado no handshake e nunca lido por nada
-- [ ] **G** **Conformidade de licença alimentada pelo software realmente instalado**: instalado sem licença, assento pago sem instalação
-- [ ] **P** Separar os dois eixos de status: `AgentStatus` (ONLINE/OFFLINE/NEVER_SEEN) × `LifecycleStatus` (`StatusLabel`). Hoje os dois são `String` livre no `Endpoint` e se confundem. O campo de último contato chama `lastSeenByAgentAt`, **nunca** `lastSeen` (D13)
-- [ ] **P** Auditoria automática: cada handshake é uma auditoria física (`lastAuditMethod = AGENT`)
-- [ ] **M** Detecção e fusão de ativos duplicados (reimagem ou troca de placa muda o `hwid`) — sugerir MERGE em vez de criar registro novo em silêncio
-- [ ] **M** Ativo ocioso detectado por telemetria (`AssetUsageDaily` agregado por dia — sem isso a query varre milhões de linhas). Cruzado com *posto vago* (F2), separa "ninguém usa" de "ninguém responde"
-- [ ] **P** Painel de cobertura: total cadastrado, com agente, sem agente, órfãos, fantasmas, não autorizados
+**Fechada** — ver [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md), com as etapas reescritas
+contra a árvore real e o que só apareceu na execução. Decisões em três levas: **D45–D51**
+(escritas depois da F1), **D95–D103** (desenho da fase, contra a árvore com F2–F6) e
+**D104–D108** (execução) e **D109–D112** (auditoria da fase fechada, quando quatro erros
+de lógica apareceram sob teste).
+
+- [x] **M** ~~Vínculo `Endpoint` ↔ `Asset` (FK opcional 1:1)~~ — feito (D45). A FK mora no `Endpoint`, com `@unique` e `SetNull`: a maioria dos ativos nunca terá agente, e no outro lado a coluna ficaria nula na esmagadora maioria das linhas
+- [x] **M** ~~Agente C# passa a coletar série, UUID, fabricante, modelo e chassi~~ — o CONTRATO do lado do servidor está pronto (`HandshakeData`, oito campos, todos nuláveis). O binário C# vive fora deste repositório e o deploy é coordenado; o servidor atende aos dois formatos por todo o rollout. O campo do modelo chama `hardwareModel` e **nunca** `model` — é o D13 outra vez
+- [x] **M** ~~Motor de matching em cascata~~ — feito, e são **duas** cascatas (D104): serial (100) → UUID (100) → hostname (60) contra o ATIVO; serial → UUID → **MAC (85)** contra outra MÁQUINA. O MAC saiu da primeira porque `Asset` não tem coluna de MAC — não existe lado cadastrado para comparar
+- [x] **M** ~~`ReconciliationSuggestion` + fila na UI~~ — feito. **UMA** tabela para as cinco formas de sugestão (D96), com índice parcial de `PENDING` e memória da recusa com chave de **afirmação** (D97 + D109 — hashear a evidência inteira fazia um dia a mais de presença reoferecer o que já tinha sido recusado). A fila sai por **três** portas, e a terceira é o mundo mudar sozinho (D110). A tela é `/descobertas`
+- [x] **M** ~~Auto-provisionamento configurável (OFF / SUGGEST / ON)~~ — feito, default `SUGGEST` (D51)
+- [x] **M** ~~**Posse sugerida pelo usuário logado**~~ — feito, e são **dois itens distintos** (D47): com o ativo entregue a um POSTO, a sugestão é de `LocationOccupant`, não de checkout. A sugestão de checkout **nem é gerada** nesse caso — aceitá-la fecharia a posse do posto e transformaria um ativo compartilhado em pessoal
+- [x] **M** ~~**Dois usuários = posto compartilhado**~~ — feito (D48). Era **P** no desenho original e é **M**: traz tabela (`EndpointUserDaily`), job, turno inferido em hora local e tela. O sistema propõe o posto e as duas ocupações em vez de escolher um vencedor
+- [x] **P** ~~**Ativo fantasma**~~ — feito, e separado em dois números no painel: *nunca vistos* (`lastSeenByAgentAt IS NULL`) e *fantasmas* (sumiram há mais de `ghostDays`)
+- [x] **P** ~~**Shadow IT** com `reviewState`~~ — feito. A triagem **não mexe** na máquina: ela tira da fila o que já foi olhado, e é isso que impede o alerta de repetir toda semana
+- [x] **M** ~~Specs de hardware~~ — feito, e elas moram no **`Endpoint`**, não no `Asset`. O item pedia "atributo do ativo"; o que ele queria de verdade era que o dado parasse de sumir no expurgo da telemetria, e coluna no lado que DESCOBRE resolve isso sem criar a segunda fonte de verdade que o D16 proíbe
+- [x] **M** ~~`AssetChange`~~ — feito, **com escritor** (D116). A tabela ficou vazia por uma auditoria inteira: FK, índice e nenhuma linha. Hoje o `registerHandshake` devolve a fotografia das specs que ia sobrescrever e o roteador do agente compara — é o único instante em que o antes e o depois existem juntos. Primeira coleta **não** conta como troca de peça, e campo ausente **não** conta como peça removida (D106). A aba Máquina mostra a lista
+- [x] **M** ~~`SoftwarePackage` + `SoftwareInstallation`~~ — feito. A chave do pacote é **derivada** (`normalizedKey`), porque em Postgres dois `NULL` não são iguais num índice único e o pacote sem fabricante não deduplicaria (D100)
+- [x] **G** ~~**Conformidade alimentada pelo software instalado**~~ — feito, e ela exigiu uma ponte que o desenho não previa: `LicenseSoftware`, **explícita** (D102). Casar "Office 365 E3" com "Microsoft 365 Apps for enterprise" por semelhança de nome erra nos dois sentidos, e os dois erros são caros. **Ela passou uma auditoria inteira sem porta de entrada** (D117): as rotas de escrita e de relatório existiam e não havia como LISTAR pacotes, então nenhuma tela chegava a um `packageId`, a ponte nunca recebia linha e o relatório respondia `semVinculoDeSoftware` para sempre. Hoje `GET /api/software-packages` existe e a tela da licença tem o formulário e as duas contas
+- [x] **P** ~~Separar os dois eixos de status~~ — feito, e o `AgentStatus` tem **dois** valores, não três (D98): `NEVER_SEEN` seria um valor que nenhuma linha de `endpoints` pode ter, porque a linha nasce de um handshake. "Cadastrado e nunca visto" é pergunta do ATIVO. O campo de último contato chama `lastSeenByAgentAt` e quem o escreve é o **job** (D95)
+- [ ] **P** Auditoria automática: cada handshake é uma auditoria física — **fica para a F8**, de propósito: ela grava linha de `Audit` com `method = AGENTE`, e `Asset.lastAuditAt` é dela. Duas fases escrevendo a mesma coluna é o começo de duas fontes de verdade
+- [x] **M** ~~Detecção e fusão de duplicados~~ — feito. A fusão **não apaga** o endpoint antigo (D103): ele ganha `mergedIntoId` e sai das listagens, porque o agente pode voltar e o `ApiToken` daquela instalação aponta para ele. E ela consolida as colisões de presença e de software em vez de mover cegamente (D108)
+- [x] **M** ~~Ativo ocioso (`AssetUsageDaily`)~~ — feito, cruzado com *posto vago*: é o cruzamento que separa "ninguém USA" de "ninguém RESPONDE"
+- [x] **P** ~~Painel de cobertura~~ — feito, com os dez números saindo da mesma `$transaction`: contados um a um, um handshake no meio faria a conta não fechar, e painel que não soma é painel em que ninguém confia
+
+**O que a fase costurou fora do próprio domínio:** o `ActivityAction` ganhou `LINK`,
+`UNLINK` e `MERGE` (união fechada, como o `VIEW_KEY` da F6); o `present-endpoint.helper.ts`
+passou a converter os `BigInt` novos, sem o que `/api/endpoints` morreria com *"Do not know
+how to serialize a BigInt"* na tela que o painel consulta a cada 5 segundos; o
+`ASSET_SORTABLE` virou `ENDPOINT_SORTABLE` (nome herdado do D1); e a aba **Máquina** nasceu
+já pronta no detalhe do ativo — a única que não passou por desabilitada, porque o que ela
+mostra não existia em fase nenhuma.
+
+**A fila só serve se ela for lida, e é por isso que três guardas não são opcionais:** o
+índice parcial (não empilhar), a memória da recusa com hash da evidência (não reoferecer,
+sem enterrar para sempre) e a allowlist de contas ignoradas (D101). Sem a terceira, o
+técnico de TI que loga em 40 máquinas geraria 40 "postos compartilhados" no primeiro dia —
+e fila cujo primeiro contato é ruído não é revisada uma segunda vez.
+
+**E a terceira guarda ficou inalcançável até a segunda auditoria** (D118): ela estava
+implementada no servidor, com rota e validação, e a tela nunca desenhou o campo — o hook do
+front já devolvia `configuracao` e `handleSalvarModo`, e a página não desestruturava nenhum
+dos dois. Guarda não opcional que não tem onde ser preenchida é guarda que não existe. Hoje os
+cinco controles da descoberta ficam ao lado do painel de cobertura, porque é lá que os números
+que eles explicam são lidos.
 
 ---
 
@@ -643,7 +698,7 @@ Registrado para não ser reaberto a cada revisão.
 ```
 F0 (base) ✅ → F1 (catálogo + ativo inteiro) ✅ → [MODELO DE POSSE] ✅ schema
    → F2 (ativos) ✅ → F3 (auth) ✅ → F4 (posse: checkout/checkin/posto) ✅
-      → F5 (estoque) ✅ → F6 (licenças) ✅ → F7 (convergência RMM)
+      → F5 (estoque) ✅ → F6 (licenças) ✅ → F7 (convergência RMM) ✅
          → F8 (ciclo de vida) → F9 (campos) → F10 (relatórios) → F11 (acesso)
 ```
 
@@ -662,10 +717,22 @@ intercambiável —, a escolha sem corrida por `SELECT … FOR UPDATE SKIP LOCKE
 produto cifrada em `server/core/crypto/`, que é o mesmo arquivo que a **F9** vai usar para campo
 customizado cifrado (D81).
 
-**O próximo passo é a F7** — convergência RMM × ITAM. Ela depende da F6 num ponto que o D39
-protege: a conformidade alimentada pelo software instalado é o join `LicenseSeat → Asset →
-Endpoint → SoftwareInstallation`, e um assento que pudesse apontar para uma `Location` não teria
-caminho até uma instalação — seria um buraco exatamente no relatório que justifica o módulo.
+**A F7 fechou**: o vínculo `Endpoint ↔ Asset` (D45), as duas cascatas de matching (D104), a
+fila de sugestões com memória de recusa (D96, D97), o software normalizado e a conformidade
+cruzada com o assento da F6 — pelo caminho que o D39 protegeu, e que a execução mostrou ser
+`SoftwareInstallation → Endpoint → Asset → LicenseSeatCheckout → LicenseSeat`, porque quem
+aponta para o ativo é a OCUPAÇÃO do assento, não o assento.
+
+**E é nela que o produto deixa de ser um clone**, num ponto específico: duas pessoas na
+mesma máquina. Num modelo `Asset ⟷ User` isso é contradição — o software escolhe um
+vencedor, erra toda semana e acaba descartando a observação como ruído. Com as três camadas
+do modelo de posse a mesma observação é consistente, e vira cadastro que uma pessoa
+confirma. Não falta dado a quem copia: falta **onde guardar**.
+
+**O próximo passo é a F8** — ciclo de vida. Ela herda da F7 um item declarado: *"cada
+handshake é uma auditoria física"* grava `Audit` com `method = AGENTE`, e `Asset.lastAuditAt`
+é coluna dela. A F7 não a criou de propósito — duas fases escrevendo a mesma coluna é o
+começo de duas fontes de verdade.
 
 **F0 → F1 → F2 continua o caminho crítico.** Tudo depende do modelo de dados certo. Começar por
 telas antes disso é retrabalho garantido — foi exatamente o que aconteceu com

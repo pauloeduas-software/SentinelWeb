@@ -1,12 +1,12 @@
-import { Cpu, History, Info, KeyRound, Paperclip, Users, Wrench } from 'lucide-react';
+import { Cpu, History, Info, KeyRound, MonitorSmartphone, Paperclip, Users, Wrench } from 'lucide-react';
 
-// AS SETE ABAS DA TELA DE DETALHE — dado, não componente.
+// AS OITO ABAS DA TELA DE DETALHE — dado, não componente.
 //
 // Fica em `helpers/` porque é a lista que a tela percorre, e porque um arquivo
 // que exporta componente E constante quebra o fast refresh do Vite (o lint
 // reprova). O componente que as desenha é `components/AssetTabs.tsx`.
 //
-// AS SETE NASCEM TODAS, e as que ainda não existem aparecem
+// TODAS NASCEM, e as que ainda não existem aparecem
 // DESABILITADAS dizendo em que fase chegam. Não é enfeite: aba ausente e aba
 // vazia são indistinguíveis de defeito para quem usa o sistema — "cadê os
 // componentes deste notebook?" não tem resposta se a aba não estiver lá. Com a
@@ -15,7 +15,7 @@ import { Cpu, History, Info, KeyRound, Paperclip, Users, Wrench } from 'lucide-r
 
 export type AbaId =
   | 'detalhes' | 'posse' | 'historico'
-  | 'componentes' | 'licencas' | 'manutencoes' | 'arquivos';
+  | 'componentes' | 'licencas' | 'maquina' | 'manutencoes' | 'arquivos';
 
 export interface Aba {
   id: AbaId;
@@ -35,6 +35,10 @@ export const ABAS: readonly Aba[] = [
   // Saiu de desabilitada na F6: sumiu o `fase`, entrou o conteúdo — a moldura
   // da tela não mudou, que era o que a decisão prometia.
   { id: 'licencas', rotulo: 'Licenças', icone: KeyRound, fase: null },
+  // NASCEU JÁ PRONTA na F7 — é a única das abas que não passou por
+  // desabilitada, porque o que ela mostra não existia em fase nenhuma: até a
+  // convergência, o ativo não sabia que tinha uma máquina.
+  { id: 'maquina', rotulo: 'Máquina', icone: MonitorSmartphone, fase: null },
   { id: 'manutencoes', rotulo: 'Manutenções', icone: Wrench, fase: 'Fase 8' },
   // Entrou na Leva 2 do docs/FECHAMENTO-F2-F4-PLANO-ITAM.md — era a Etapa G da
   // F2, adiada quando `@fastify/multipart` foi instalado e não usado.
