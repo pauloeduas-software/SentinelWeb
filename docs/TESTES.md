@@ -62,6 +62,7 @@ configurar nada (só precisa do Postgres de pé: `docker compose up -d`).
 | `tests/corridas/` | duas requisições simultâneas, e o placar | o que "passa no teste com um usuário" |
 | `tests/listagens/` | o que cada vista e cada leitura DEVOLVE, e o que ela esconde | filtro que esconde demais não dá erro: some linha e ninguém percebe |
 | `tests/estoque/` | o saldo derivado, a trava da linha-pai e o que a F5 não pode perder da F4 | é a única pasta POR DOMÍNIO, e é de propósito: as três asserções que importam (invariante, corrida e operação) contam a mesma história sobre as mesmas seis tabelas, e separá-las em três pastas faria quem investiga um saldo errado abrir três arquivos distantes |
+| `tests/descoberta/` | a borda do agente, a cascata de matching, a fila, o turno inferido, a mudança de hardware detectada e o que o modelo de posse faz com o usuário logado | é a segunda pasta por domínio, pelo mesmo motivo: a história é uma só, do handshake até o cadastro que uma pessoa aceita |
 
 ### `estoque/` — as duas que falhariam em silêncio
 
@@ -126,6 +127,74 @@ Sete arquivos, e cada um prova uma coisa que passaria despercebida:
   o que faz a rotação ter fim: sem ele o canário fica preso ao `kid` da chave
   que o escreveu, e a antiga nunca pode sair do ambiente — o boot passaria a
   falhar pedindo de volta uma chave que já não cifra nada.
+
+
+### `descoberta/` — a única pasta que fala WebSocket
+
+Onze arquivos, e vários deles existem por asserções **negativas** — o que o sistema
+**não** pode fazer:
+
+- **`posse-sugerida.test.ts` › com o ativo entregue a um posto, NENHUMA sugestão
+  de checkout é gerada.** É a asserção mais importante da fase inteira. Se ela
+  cair, o sistema volta a sugerir "atribuir este desktop para a Ana" sobre um
+  ativo da Mesa 1 — e aceitar isso fecha a posse do posto, transformando um ativo
+  compartilhado em pessoal: some a Laura, some o turno, some a responsabilidade
+  solidária. O operador clica achando que está corrigindo o inventário.
+- **`posto-compartilhado.test.ts` › as duas, com turno; nenhum vencedor
+  escolhido.** A outra metade da mesma ideia. Com duas pessoas recorrentes, o
+  `suggest-posse` desiste de propósito — escolher a mais frequente é exatamente
+  o comportamento que a fase existe para não ter.
+
+- **`ciclo-de-vida-da-fila.test.ts` › aceitar uma sugestão já realizada NÃO inventa
+  devolução no histórico.** É a asserção que nasceu de um erro real, e o erro era
+  do tipo que não aparece: o aceite de reatribuição é checkin + checkout, então
+  aceitar "entregar à Ana" um ativo **já entregue à Ana** gravava uma devolução
+  que nunca aconteceu. Um inventário errado alguém contesta; uma afirmação falsa
+  sobre o passado, no razão de posse, ninguém tem como descobrir.
+
+- **`hardware.test.ts` › primeira coleta NÃO é troca de peça.** O rollout do
+  agente C# faz 500 máquinas ganharem `biosSerial` no mesmo dia. Sem esta
+  asserção, cada uma delas entra com nove linhas de "mudança de hardware" e o
+  histórico de todo ativo do parque vira um relatório de deploy (D116). A irmã
+  dela — campo que sumiu **não** é peça que sumiu — é o D106 do lado da detecção:
+  coleta que falhou diz "não sei", e "não sei" não é "removeram".
+
+- **`turno.test.ts` › o plantão que atravessa a meia-noite é Noite.** A entrada é
+  `[22, 23, 0, 1]`, e ela é o defeito inteiro: a versão antiga tirava a média
+  aritmética das horas, chegava a 11,5 e rotulava o turno da noite como
+  **"Manhã"** — todas as noites, com a confiança de quem fez uma conta (D113).
+  Hora é grandeza circular; média de grandeza circular não significa nada. O
+  arquivo é **puro** de propósito: a regra do turno é a que mais vai mexer com
+  dado real de campo, e tem que ser verificável sem banco nem agente.
+
+E o `handshake.test.ts` guarda a regressão mais silenciosa que a F7 podia
+introduzir: `ramTotalBytes` tem que sair como **string** em `/api/endpoints`. Com
+`BigInt` cru, o `JSON.stringify` do Fastify morre com *"Do not know how to
+serialize a BigInt"* — na rota que o painel consulta a cada 5 segundos, ou seja, a
+tela inteira em branco.
+
+**Aqui o `inject` não serve, e é a única exceção da suíte** (D99). O `/agent-hub` é
+WebSocket, e `inject` não faz upgrade: `tests/helpers/agente.ts` sobe a aplicação
+numa porta efêmera (`port: 0`) e fala com ela por um cliente `ws` de verdade. A
+alternativa — chamar `handleAgentMessage()` direto — pularia o parser, a tabela de
+sinônimos PascalCase/camelCase e o `readOptionalBigInt`, ou seja, pularia
+exatamente onde o agente velho e o novo se distinguem. É o mesmo princípio que faz
+os fixtures criarem cenário pela API.
+
+**Dois arquivos provam propriedades que só o TEMPO revela** — e é por isso que eles
+existem separados. O `ciclo-de-vida-da-fila.test.ts` acrescenta um dia de presença
+e roda o job de novo, porque a pergunta é se a memória da recusa sobrevive ao
+calendário (D109); o `uso-agregado.test.ts` roda a mesma agregação com duas
+janelas, porque a pergunta é se "idempotente" quer dizer que a segunda passada
+escreve o **mesmo** valor (D111). Nos dois casos o defeito era invisível numa
+única execução — a suíte só o veria rodando duas vezes, o que nenhum teste faz por
+acidente.
+
+**A única escrita direta por Prisma na suíte que não é leitura nem regra de banco**
+também está aqui, e o comentário do arquivo explica: `observar()` insere linhas de
+`endpoint_user_daily` com data passada. A "API" que escreve essas linhas é o
+agente mandando handshake em dias diferentes, e nenhum teste pode esperar três
+dias — o que se simula é o **calendário**, não um formulário.
 
 ### `formularios/` — o corpo literal
 

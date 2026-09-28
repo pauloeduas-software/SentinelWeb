@@ -31,3 +31,29 @@ export function readBigInt(payload: Record<string, unknown>, ...names: string[])
   const asNumber = Number(value);
   return Number.isFinite(asNumber) ? BigInt(Math.trunc(asNumber)) : 0n;
 }
+
+/**
+ * Bytes que podem simplesmente NÃO TER VINDO — as specs coletadas da F7.
+ *
+ * Separado do `readBigInt` acima porque o zero dele é uma resposta legítima para
+ * uso de RAM ("a máquina está usando 0 bytes agora" é improvável, mas é uma
+ * medida) e é uma MENTIRA para total de RAM: gravar `ramTotalBytes = 0` para um
+ * agente velho afirma que a máquina tem zero bytes de memória, que é diferente
+ * de "esta versão do agente não coleta isso". A diferença aparece na primeira
+ * soma do painel de cobertura.
+ */
+export function readOptionalBigInt(payload: Record<string, unknown>, ...names: string[]): bigint | null {
+  const value = readField(payload, ...names);
+  if (value === undefined) return null;
+  if (typeof value === 'bigint') return value;
+
+  // STRING VAZIA NÃO É ZERO. `Number('')` é `0`, finito e não negativo — sem
+  // esta linha, um agente que manda `"RamTotalBytes": ""` grava "esta máquina
+  // tem zero bytes de RAM", que é exatamente a mentira que esta função existe
+  // para não contar. O mesmo vale para string de espaços.
+  if (typeof value === 'string' && value.trim() === '') return null;
+
+  const asNumber = Number(value);
+  if (!Number.isFinite(asNumber) || asNumber < 0) return null;
+  return BigInt(Math.trunc(asNumber));
+}

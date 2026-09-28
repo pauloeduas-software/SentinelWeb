@@ -18,7 +18,11 @@ export class AssetMaestro {
     // Lista enxuta para o `<select>` da aba "Ativo" do modal de entrega: é assim
     // que se prende um periférico a outro equipamento (docs/MODELO-POSSE.md).
     server.get('/api/assets/options', assetController.options);
-    // Match exato para leitor de código de barras e para a reconciliação da F7.
+    // Match exato para leitor de código de barras. **Não é o caminho da
+    // reconciliação da F7**, como esta linha dizia antes: a cascata de matching
+    // carrega os candidatos e compara em memória, porque ela precisa detectar
+    // COLISÃO (serial que casa com dois ativos vale zero, D46) e uma rota que
+    // devolve um ativo por serial não tem como responder isso.
     server.get('/api/assets/by-serial/:serial', assetController.bySerial);
 
     // A leitura unitária vem DEPOIS das rotas de caminho fixo (`/stats`,

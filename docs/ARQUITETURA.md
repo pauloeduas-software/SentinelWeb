@@ -75,6 +75,7 @@ server/
 | `occupancy` | **Ocupação do posto**: quem trabalha em qual localização, e em que turno | `LocationOccupant` |
 | `stock` | **Estoque**: os três tipos que têm QUANTIDADE, com saldo derivado e trava na linha-pai | `Accessory`, `AccessoryCheckout`, `Consumable`, `ConsumableCheckout`, `Component`, `ComponentAsset`, `StockLog` |
 | `license` | **Licenças**: o contrato e seus ASSENTOS materializados, com chave de produto cifrada em repouso | `License`, `LicenseSeat`, `LicenseSeatCheckout` |
+| `reconciliation` | **Convergência RMM × ITAM**: o vínculo entre a máquina descoberta e o ativo cadastrado, a fila de sugestões, o software normalizado e o uso agregado | `ReconciliationSuggestion`, `EndpointUserDaily`, `AssetChange`, `SoftwarePackage`, `SoftwareInstallation`, `LicenseSoftware`, `AssetUsageDaily` |
 
 > **A decisão D1 foi executada na Fase 1.** `asset/` (RMM) virou `endpoint/`, e o
 > nome `asset/` passou ao ativo do ITAM. O `inventory/` deixou de existir junto

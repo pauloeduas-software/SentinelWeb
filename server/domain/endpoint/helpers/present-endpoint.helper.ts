@@ -12,12 +12,30 @@ export type PresentedTelemetry = Omit<Telemetry, 'ramTotal' | 'ramUsed'> & {
   ramUsed: string;
 };
 
-export type PresentedEndpoint = Endpoint & { telemetries: PresentedTelemetry[] };
+/**
+ * O `Endpoint` na saída do domínio: os dois `BigInt` coletados viram string.
+ *
+ * ISTO NÃO É DETALHE. O `presentEndpoint` devolvia `{ ...endpoint }` inteiro, e
+ * a F7 pôs `ramTotalBytes` e `diskTotalBytes` na tabela: sem a conversão, os
+ * dois iam crus para o `JSON.stringify` e a rota morria com *"Do not know how to
+ * serialize a BigInt"* — na tela que o painel consulta a cada 5 segundos. O tipo
+ * acima é o que faz o compilador cobrar a conversão de qualquer BigInt novo.
+ */
+export type PresentedEndpoint = Omit<Endpoint, 'ramTotalBytes' | 'diskTotalBytes'> & {
+  ramTotalBytes: string | null;
+  diskTotalBytes: string | null;
+  telemetries: PresentedTelemetry[];
+};
 
 export function presentTelemetry(telemetry: Telemetry): PresentedTelemetry {
   return { ...telemetry, ramTotal: telemetry.ramTotal.toString(), ramUsed: telemetry.ramUsed.toString() };
 }
 
 export function presentEndpoint(endpoint: Endpoint & { telemetries: Telemetry[] }): PresentedEndpoint {
-  return { ...endpoint, telemetries: endpoint.telemetries.map(presentTelemetry) };
+  return {
+    ...endpoint,
+    ramTotalBytes: endpoint.ramTotalBytes?.toString() ?? null,
+    diskTotalBytes: endpoint.diskTotalBytes?.toString() ?? null,
+    telemetries: endpoint.telemetries.map(presentTelemetry),
+  };
 }

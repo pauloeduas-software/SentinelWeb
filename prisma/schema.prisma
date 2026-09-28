@@ -15,19 +15,116 @@ datasource db {
 // compilador barrar uma query do RMM que aponte para a tabela errada
 // (docs/FASE-1-PLANO.md, D13).
 model Endpoint {
-  id                String      @id @default(uuid()) @db.Uuid
-  hwid              String      @unique
-  hostname          String
-  osVersion         String
-  status            String      @default("ONLINE")
-  lastSeen          DateTime    @default(now())
+  id       String @id @default(uuid()) @db.Uuid
+  hwid     String @unique
+  hostname String
+
+  osVersion String
+
+  // O EIXO DO AGENTE, e só ele. Enum desde a F7: era `String` livre, e o que
+  // impedia `status = "Em uso"` de entrar aqui era a boa vontade de quem
+  // escrevesse a query. O ciclo de vida do ativo é `StatusLabel`, outra tabela,
+  // outro eixo (docs/FASE-7-PLANO-ITAM.md, D98).
+  //
+  // DOIS VALORES, e não os três que o TODO pedia: `NEVER_SEEN` seria um valor
+  // que NENHUMA linha desta tabela pode ter, porque a linha nasce de um
+  // handshake. "Cadastrado e nunca visto" é pergunta do ATIVO, e quem responde é
+  // `Asset.lastSeenByAgentAt` no painel de cobertura.
+  status   AgentStatus @default(ONLINE)
+  lastSeen DateTime    @default(now())
+
   cpuModel          String?
   installedSoftware Json?
   localIp           String?
   macAddress        String?
-  telemetries       Telemetry[]
 
+  // ── IDENTIDADE COLETADA (F7, Etapa A) ────────────────────────────────────
+  // Tudo nulável: o agente C# vive fora deste repositório e o rollout leva
+  // semanas. Máquina que não manda serial não pontua por serial — não vira erro.
+  biosSerial    String?
+  systemUuid    String?
+  manufacturer  String?
+  /// `hardwareModel`, nunca `model`: `endpoint.model` lê-se como a relação de
+  /// catálogo do ativo, e o compilador não pegaria a confusão (D13).
+  hardwareModel String?
+  chassisType   String?
+
+  // SPECS COLETADAS — e elas moram AQUI, não em `assets`.
+  //
+  // O item do TODO pedia "specs de hardware como atributo do ativo". O que ele
+  // queria de verdade era que o dado parasse de sumir no expurgo da telemetria,
+  // e coluna nesta tabela resolve isso. Copiá-las para `assets` criaria uma
+  // segunda fonte de verdade sobre a MESMA máquina, com um detalhe que a torna
+  // pior que as outras: as duas podem divergir com razão (o pente foi trocado) e
+  // ninguém saberia qual está certa. É o D16 uma camada abaixo.
+  ramTotalBytes  BigInt?
+  diskTotalBytes BigInt?
+
+  /// Último usuário visto logado. Bruto, como veio: "DOMINIO\ana.silva".
+  /// Quem o transforma em `userKey` é o helper da Etapa E.
+  loggedOnUser String?
+
+  /// sha256 da lista de software que o AGENTE mandou no último handshake.
+  /// Calculado no servidor, nunca aceito do agente (D100).
+  softwareHash String?
+
+  /// sha256 da lista que as tabelas `software_installations` REFLETEM.
+  ///
+  /// São duas colunas, e não uma, porque elas respondem perguntas diferentes:
+  /// a de cima é o que chegou, esta é o que foi processado. Com uma só, o job
+  /// teria que re-hashear o JSON de 500 máquinas por hora para descobrir quem
+  /// mudou — e o hash existe justamente para esse trabalho não acontecer.
+  /// Diferentes = há o que normalizar, e a comparação é de duas colunas.
+  softwareNormalizedHash String?
+
+  /// Triagem do Shadow IT: máquina vista pelo agente e sem cadastro.
+  reviewState ReviewState @default(UNREVIEWED)
+
+  // ── O VÍNCULO COM O PATRIMÔNIO (D45) ─────────────────────────────────────
+  //
+  // A FK mora AQUI, e não em `assets`, por duas razões. A maioria dos ativos
+  // nunca terá agente (monitor, cadeira, cabo, switch): no outro lado a coluna
+  // ficaria nula na esmagadora maioria das linhas. E este é o lado que a
+  // reconciliação ESCREVE.
+  //
+  // `@unique` garante o 1:1 sem tabela de junção. `SetNull` garante que apagar
+  // um ativo não leve junto a telemetria da máquina — mas note que ele desfaz o
+  // vínculo EM SILÊNCIO, e é por isso que o `unlink` tem linha no ActivityLog.
+  assetId String? @unique @db.Uuid
+  asset   Asset?  @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  /// Fundido em outro endpoint (reimagem, troca de placa). A linha FICA (D103):
+  /// o agente antigo pode voltar, e o `ApiToken` daquela instalação aponta para
+  /// este id.
+  mergedIntoId String?    @db.Uuid
+  mergedInto   Endpoint?  @relation("EndpointMerge", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  merged       Endpoint[] @relation("EndpointMerge")
+
+  telemetries   Telemetry[]
+  userDays      EndpointUserDaily[]
+  installations SoftwareInstallation[]
+  suggestions   ReconciliationSuggestion[] @relation("SugestaoDoEndpoint")
+  mergeTargetOf ReconciliationSuggestion[] @relation("SugestaoDeMerge")
+  changes       AssetChange[]
+
+  @@index([assetId])
+  @@index([reviewState])
   @@map("endpoints")
+}
+
+// O eixo do AGENTE. Ver a nota em `Endpoint.status` para por que são dois
+// valores e não três (D98).
+enum AgentStatus {
+  ONLINE
+  OFFLINE
+}
+
+// A triagem do Shadow IT: máquina que o agente vê e o cadastro não conhece.
+// `UNREVIEWED` é o estado de quem acabou de aparecer — a fila de trabalho.
+enum ReviewState {
+  UNREVIEWED
+  ALLOWED
+  BLOCKED
 }
 
 model Telemetry {
@@ -105,6 +202,13 @@ model User {
 
   // LICENÇA (F6). Assento vai para pessoa ou ativo, nunca para um posto (D39).
   licenseSeats LicenseSeatCheckout[]
+
+  // CONVERGÊNCIA (F7). O que o agente OBSERVOU sobre esta pessoa e o que o
+  // sistema PROPÔS por causa disso — nenhum dos dois é posse: posse continua
+  // sendo `Assignment` e `LocationOccupant`, e é por lá que a sugestão aceita
+  // passa a existir.
+  endpointDays EndpointUserDaily[]
+  suggestions  ReconciliationSuggestion[]
 
   // `email` NÃO é @unique aqui de propósito: a unicidade é um índice parcial
   // (`WHERE deleted_at IS NULL`) criado na migration. Com @unique comum, um
@@ -462,6 +566,8 @@ model Location {
   // só no SQL porque ele não os expressa, e esses o `migrate diff` ignora em vez
   // de tentar remover — a diferença é essa, e é o que separa "mora na migration
   // de propósito" de "ficou para trás".
+  suggestions ReconciliationSuggestion[]
+
   @@index([parentId])
   @@index([isWorkstation])
   @@map("locations")
@@ -606,6 +712,36 @@ model Asset {
   // Os assentos de licença que esta máquina ocupa (F6).
   licenseSeats LicenseSeatCheckout[]
 
+  // ── A CONVERGÊNCIA COM O RMM (F7) ────────────────────────────────────────
+  //
+  // `lastSeenByAgentAt`, e NUNCA `lastSeen` (D13). Se esta coluna se chamasse
+  // `lastSeen`, o `markStaleEndpointsOffline` apontando para o model errado
+  // COMPILARIA — e marcaria a frota inteira como OFFLINE em silêncio. Com o nome
+  // diferente, o mesmo erro vira erro de compilação.
+  //
+  // QUEM ESCREVE É O JOB, não o handshake (D95). O `touchEndpoint` roda a cada
+  // mensagem de cada máquina; um UPDATE condicional em `assets` ali seria
+  // executado milhões de vezes por dia para quase nunca casar, e acoplaria a
+  // tabela de patrimônio ao caminho de ingestão. A pergunta que esta coluna
+  // responde — "não é visto há quantos dias?" — tolera uma hora de atraso.
+  //
+  // E ela EXISTE, em vez de ser derivada pelo `Endpoint`, porque reimagem cria
+  // endpoint novo (o `hwid` muda) e o histórico de "um agente já viu este ativo"
+  // não pode zerar junto.
+  lastSeenByAgentAt DateTime?
+
+  /// A máquina descoberta que É este ativo. Lado fraco do 1:1 — a FK mora lá (D45).
+  endpoint Endpoint?
+
+  changes     AssetChange[]
+  usageDays   AssetUsageDaily[]
+  // `suggestions`, e não o `ReconciliationSuggestion` que o `prisma format`
+  // escreveu sozinho: o nome gerado não é convenção nenhuma e destoa dos outros
+  // três lados da mesma relação (`Endpoint`, `User` e `Location` todos a chamam
+  // de `suggestions`). Nome de campo de relação não existe no banco, então isto
+  // NÃO pede migração — o que ele muda é o que se lê no `include`.
+  suggestions ReconciliationSuggestion[]
+
   @@index([deletedAt])
   @@index([statusId])
   @@index([modelId])
@@ -614,6 +750,7 @@ model Asset {
   // Ver a nota em `Location`: declarado aqui para o `migrate diff` parar de
   // emitir `DROP INDEX` dele a cada migração nova.
   @@index([retiredAt])
+  @@index([lastSeenByAgentAt])
   @@map("assets")
 }
 
@@ -938,6 +1075,32 @@ model AppSetting {
   // Texto conhecido, cifrado. Decifrado no boot: chave trocada derruba o
   // processo em vez de só falhar semanas depois (F6, D91 — core/crypto/canary.ts).
   cryptoCanary String?
+
+  // ── OS BOTÕES DA DESCOBERTA (F7) ─────────────────────────────────────────
+  //
+  // Moram no singleton que já existe, e não numa tabela de configuração nova:
+  // são cinco valores, não um domínio.
+  //
+  // `SUGGEST` é o padrão e isso é o D51: em `ON`, a primeira VM de teste que
+  // alguém subir vira patrimônio — e consome uma etiqueta do contador, que o
+  // `nextAssetTag()` nunca devolve. O estrago não é a linha a mais, é a
+  // sequência de etiquetas furada para sempre.
+  discoveryMode DiscoveryMode @default(SUGGEST)
+
+  /// Ativo sem contato de agente há mais que isto é FANTASMA.
+  ghostDays   Int @default(30)
+  /// Máquina sem cadastro vista há mais que isto é SHADOW IT.
+  shadowHours Int @default(24)
+
+  /// Expurgo do `EndpointUserDaily` (D49): dado de pessoa, retenção curta.
+  userDailyRetentionDays Int @default(90)
+
+  /// Contas que a detecção de posto compartilhado IGNORA — o técnico de TI que
+  /// loga em 40 máquinas para dar suporte, a conta de serviço (D101).
+  ///
+  /// NASCE VAZIA. Preencher com palpites (`admin`, `administrator`) esconderia
+  /// um administrador que é uma pessoa de verdade usando a máquina dela.
+  ignoredUserKeys String[] @default([])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1427,6 +1590,9 @@ model License {
 
   seats LicenseSeat[]
 
+  /// Os pacotes de software que esta licença cobre. Vínculo explícito (D102).
+  software LicenseSoftware[]
+
   // `name` não é @unique: a unicidade é índice PARCIAL na migration.
   @@index([deletedAt])
   @@index([categoryId])
@@ -1498,4 +1664,291 @@ model LicenseSeatCheckout {
   @@index([assignedUserId, checkinAt])
   @@index([assignedAssetId, checkinAt])
   @@map("license_seat_checkouts")
+}
+
+// ============================================================================
+// CONVERGÊNCIA RMM × ITAM — docs/FASE-7-PLANO-ITAM.md (D45–D51, D95–D103)
+//
+// O `Endpoint` sabe o que a máquina É; o `Asset` sabe o que a empresa COMPROU e
+// de quem cobra. Tudo aqui existe para ligar os dois SEM FUNDI-LOS (D45) e para
+// transformar o que o agente OBSERVA em cadastro que uma pessoa CONFIRMA.
+//
+// A regra que atravessa a fase inteira: nada aqui escreve posse sozinho. A fila
+// propõe, um humano aceita, e quem grava é o use-case da F4 — com o zod da
+// borda, o ActivityLog e as invariantes 1, 2 e 4 que já existem.
+// ============================================================================
+
+/// O que o sistema faz quando descobre máquina sem cadastro. `SUGGEST` por
+/// padrão, e o porquê está no D51.
+enum DiscoveryMode {
+  OFF
+  SUGGEST
+  ON
+}
+
+/// POR QUE o sistema acha que este endpoint é este ativo. O ponto de cada um
+/// está em `helpers/match-cascade.helper.ts`, não aqui: pontuação é regra de
+/// negócio e muda; o nome do sinal é o vocabulário e não muda.
+enum MatchSignal {
+  SERIAL
+  UUID
+  MAC
+  HOSTNAME
+}
+
+/// O QUE a sugestão propõe. Uma fila para as cinco formas (D96) — o que elas
+/// têm em comum é tudo o que dá trabalho (nascer de um job idempotente, não
+/// duplicar, guardar evidência, ser aceita ou recusada, lembrar da recusa).
+enum SuggestionKind {
+  /// Este endpoint é este ativo.
+  LINK
+  /// Este endpoint é o MESMO que aquele outro: reimagem ou troca de placa.
+  MERGE
+  /// O ativo está com esta pessoa (a `Assignment` que falta).
+  CHECKOUT
+  /// A pessoa OCUPA o posto a que o ativo está entregue — o item que só existe
+  /// por causa do modelo de posse (D47).
+  OCCUPANCY
+  /// Duas pessoas em turnos diferentes na mesma máquina: promover a posto (D48).
+  SHARED_POST
+}
+
+enum SuggestionState {
+  PENDING
+  ACCEPTED
+  REJECTED
+  /// A evidência mudou e esta sugestão foi substituída por outra. Não é recusa:
+  /// ninguém disse não, o mundo é que mudou.
+  SUPERSEDED
+}
+
+// A FILA DE RECONCILIAÇÃO — uma tabela para as cinco formas de sugestão (D96).
+//
+// POR QUE UMA SÓ: cinco tabelas seriam cinco cópias do que é caro (idempotência,
+// deduplicação, evidência, aceite, memória da recusa) para variar o que é
+// barato (qual FK está preenchida). Invariante copiada é invariante que um dia
+// diverge — o mesmo argumento que uniu os três tipos de estoque (D35) e as duas
+// naturezas de `ApiToken` (D80).
+//
+// O PREÇO, DECLARADO: a coerência entre `kind` e qual FK está preenchida não é
+// expressável no schema do Prisma. É validada no use-case, como o
+// `assertAlvoCoerente` da `Assignment`.
+model ReconciliationSuggestion {
+  id   String         @id @default(uuid()) @db.Uuid
+  kind SuggestionKind
+
+  endpointId String @db.Uuid
+
+  // Os alvos. Qual deles está preenchido depende do `kind`.
+  assetId             String? @db.Uuid
+  targetUserId        String? @db.Uuid
+  targetLocationId    String? @db.Uuid
+  mergeIntoEndpointId String? @db.Uuid
+
+  /// 0 a 100. Só `LINK` e `MERGE` pontuam por sinal de hardware; as outras
+  /// carregam a confiança do casamento de pessoa.
+  score  Int
+  signal MatchSignal?
+
+  /// Turno inferido, quando a sugestão é de ocupação. Texto livre (D15): o
+  /// helper propõe "Manhã" e a pessoa corrige para "12x36 A".
+  shift String?
+
+  /// O QUE o sistema viu — quais dias, quais horas, quantas amostras, qual
+  /// serial. Vai para a tela: sugestão sem evidência visível é palpite, e
+  /// ninguém deveria aceitar um palpite que reescreve o inventário.
+  evidence Json
+
+  /// sha256 da evidência normalizada. É o que separa "já me disseram não sobre
+  /// ISTO" de "já me disseram não sobre este par, faça o que fizer" (D97).
+  evidenceHash String
+
+  state        SuggestionState @default(PENDING)
+  resolvedAt   DateTime?
+  /// Sem FK, como `ActivityLog.actorId`: é carimbo de quem decidiu, não vínculo.
+  resolvedById String?         @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  endpoint       Endpoint  @relation("SugestaoDoEndpoint", fields: [endpointId], references: [id], onDelete: Cascade)
+  asset          Asset?    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  targetUser     User?     @relation(fields: [targetUserId], references: [id], onDelete: Cascade)
+  targetLocation Location? @relation(fields: [targetLocationId], references: [id], onDelete: Cascade)
+  mergeInto      Endpoint? @relation("SugestaoDeMerge", fields: [mergeIntoEndpointId], references: [id], onDelete: Cascade)
+
+  // O índice que impede a fila de empilhar (`sugestao_pendente_por_alvo`, com
+  // COALESCE nas FKs nuláveis) é PARCIAL e nasce na migration escrita à mão.
+  @@index([state, kind])
+  @@index([endpointId, state])
+  @@index([assetId])
+  @@map("reconciliation_suggestions")
+}
+
+// QUEM ESTEVE LOGADO NESTA MÁQUINA, EM QUE DIA — agregado, nunca log de sessão.
+//
+// O D49 em tabela. Uma linha por handshake seria a mesma armadilha que o
+// `AssetUsageDaily` evita: a consulta "quem usa essa máquina" varreria milhões
+// de linhas. E, sendo dado de PESSOA, o formato certo é o menor que responde à
+// pergunta — em que dias e em que faixa de hora, não um rastro minuto a minuto.
+//
+// O propósito é declarado (identificar posto e ocupante), a retenção é curta
+// (`AppSetting.userDailyRetentionDays`, 90 dias) e o que sai daqui é SUGESTÃO
+// para um humano. Não é medida de produtividade, e este sistema não se propõe a
+// fazer isso.
+model EndpointUserDaily {
+  id         String @id @default(uuid()) @db.Uuid
+  endpointId String @db.Uuid
+
+  /// A chave normalizada: `DOMINIO\ana.silva` → `ana.silva`. Guardada mesmo
+  /// quando não casa com ninguém — é ela que denuncia a conta de serviço que
+  /// precisa entrar na allowlist.
+  userKey String
+  /// Preenchido quando o casamento foi inequívoco. Ambíguo = null (D46).
+  userId  String? @db.Uuid
+
+  day         DateTime @db.Date
+  firstSeenAt DateTime
+  lastSeenAt  DateTime
+  samples     Int      @default(1)
+
+  endpoint Endpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // É O ÍNDICE que garante a agregação, não o `upsert` lembrar de acertar a
+  // chave. Declarado aqui porque o Prisma o expressa — os PARCIAIS (`WHERE …`)
+  // é que moram só no SQL, e a diferença é a nota do model `Location`.
+  @@unique([endpointId, userKey, day])
+  @@index([endpointId, day])
+  @@index([userId, day])
+  @@map("endpoint_user_daily")
+}
+
+// MUDANÇA DE HARDWARE DETECTADA — trocou o HD, tiraram pente de RAM.
+//
+// Detectada, não digitada: a diferença com o `ActivityLog` é essa. Lá a linha
+// tem ator e diz o que alguém FEZ; aqui não tem ator nenhum e diz o que o mundo
+// mudou sem avisar. Espremer isto no ActivityLog daria `actorId` nulo em toda
+// linha — e o D23 existe justamente para que ator nulo signifique alguma coisa.
+model AssetChange {
+  id         String  @id @default(uuid()) @db.Uuid
+  assetId    String  @db.Uuid
+  endpointId String? @db.Uuid
+
+  /// O nome do campo como o usuário o vê: "RAM total", "Disco", "Modelo".
+  field    String
+  oldValue String?
+  newValue String
+
+  detectedAt DateTime @default(now())
+
+  asset    Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  endpoint Endpoint? @relation(fields: [endpointId], references: [id], onDelete: SetNull)
+
+  @@index([assetId, detectedAt])
+  @@map("asset_changes")
+}
+
+// O CATÁLOGO DE SOFTWARE NORMALIZADO — o fim do `installedSoftware` write-only.
+//
+// Até a F7 o JSON do handshake era gravado e NUNCA lido por nada (três
+// ocorrências no código, todas de escrita). Aqui ele vira duas tabelas que
+// respondem perguntas.
+model SoftwarePackage {
+  id String @id @default(uuid()) @db.Uuid
+
+  name      String
+  version   String
+  publisher String?
+
+  /// A CHAVE É DERIVADA, e isso é o D100.
+  ///
+  /// `@@unique([name, version, publisher])` NÃO serve: em Postgres dois `NULL`
+  /// não são iguais dentro de um índice único, então a tupla com `publisher`
+  /// nulo — que é comum — não deduplica. O catálogo ganharia uma linha nova por
+  /// máquina, por handshake, e a conformidade contaria como diferentes
+  /// instalações que são a mesma.
+  ///
+  /// Formato: `nome|versão|fabricante ?? ''`, tudo em minúsculas.
+  normalizedKey String @unique
+
+  createdAt DateTime @default(now())
+
+  installations SoftwareInstallation[]
+  licenses      LicenseSoftware[]
+
+  @@index([name])
+  @@map("software_packages")
+}
+
+// O software visto NESTA máquina. `removedAt` preenchido = desinstalado —
+// a linha fica, pelo mesmo princípio do `Assignment` e do `LicenseSeatCheckout`.
+model SoftwareInstallation {
+  id         String @id @default(uuid()) @db.Uuid
+  endpointId String @db.Uuid
+  packageId  String @db.Uuid
+
+  firstSeenAt DateTime  @default(now())
+  lastSeenAt  DateTime  @default(now())
+  removedAt   DateTime?
+
+  endpoint Endpoint        @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  package  SoftwarePackage @relation(fields: [packageId], references: [id], onDelete: Restrict)
+
+  /// Uma linha por (máquina, pacote): o job reencontra a instalação e atualiza
+  /// `lastSeenAt`, em vez de inserir de novo a cada handshake.
+  @@unique([endpointId, packageId])
+  @@index([endpointId, removedAt])
+  @@index([packageId, removedAt])
+  @@map("software_installations")
+}
+
+// A PONTE LICENÇA ↔ PACOTE — explícita, nunca por semelhança de nome (D102).
+//
+// "Office 365 E3" no contrato é "Microsoft 365 Apps for enterprise" no Programas
+// e Recursos; "Adobe Acrobat Pro" convive com "Adobe Acrobat (64-bit)" e com o
+// Reader, que é grátis. Casamento aproximado erra nos dois sentidos, e os dois
+// erros são caros: um falso "instalado sem licença" manda comprar assento que já
+// existe; um falso "coberto" entrega auditoria de fornecedor com resposta errada
+// — que é exatamente a pergunta que o módulo de licença existe para responder
+// valendo dinheiro.
+//
+// Um vínculo explícito é trabalho humano uma vez por licença, e é o único que
+// alguém consegue CONFERIR.
+model LicenseSoftware {
+  id        String @id @default(uuid()) @db.Uuid
+  licenseId String @db.Uuid
+  packageId String @db.Uuid
+
+  createdAt   DateTime @default(now())
+  createdById String?  @db.Uuid
+
+  license License         @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+  package SoftwarePackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([licenseId, packageId])
+  @@index([packageId])
+  @@map("license_software")
+}
+
+// ATIVO OCIOSO — quanto a máquina foi realmente usada, agregado por dia.
+//
+// Mesmo motivo do D49: sem agregação, "quem não usa este notebook há 30 dias"
+// varre milhões de linhas de telemetria. E cruzado com o `postoVago` que o
+// `resolverResponsaveis()` já devolve, isto separa "ninguém USA" de "ninguém
+// RESPONDE" — duas conversas diferentes, com duas pessoas diferentes.
+model AssetUsageDaily {
+  id      String   @id @default(uuid()) @db.Uuid
+  assetId String   @db.Uuid
+  day     DateTime @db.Date
+
+  /// Minutos com sinal de uso no dia, estimados pelas amostras de telemetria.
+  activeMinutes Int @default(0)
+  samples       Int @default(0)
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, day])
+  @@index([assetId, day])
+  @@map("asset_usage_daily")
 }

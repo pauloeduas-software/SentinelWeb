@@ -4,9 +4,11 @@ import { checkDependencies, isHealthy } from './core/lifecycle/health';
 import { installProcessHandlers, onShutdown } from './core/lifecycle/shutdown';
 import { closeDatabase } from './core/database/prismaClient';
 import { verificarCanarioDeCriptografia } from './core/crypto/canary';
+import { colunasCifradasDaLicenca } from './domain/license/helpers/coluna-cifrada.helper';
 import { disconnectAllAgents } from './domain/agent/agent.registry';
 import { startZombieCleanerJob, stopZombieCleanerJob } from './domain/endpoint/jobs/zombie-cleaner.job';
 import { startOverdueReminderJob, stopOverdueReminderJob } from './domain/assignment/jobs/overdue-reminder.job';
+import { startReconcileJob, stopReconcileJob } from './domain/reconciliation/jobs/reconcile.job';
 import { buildApp } from './app';
 
 const logger = createLogger('server');
@@ -34,7 +36,11 @@ async function bootstrap() {
   // ele precisa de uma consulta, e o que ele protege — a chave de criptografia
   // ter mudado por baixo dos valores gravados — é exatamente o tipo de falha
   // que não pode esperar a primeira requisição para aparecer.
-  await verificarCanarioDeCriptografia();
+  // A lista de colunas cifradas vem do DOMÍNIO e é passada aqui: `core` não
+  // conhece `domain`, e quando o canário falha é o dado real que decide se o
+  // boot cai ou segue. Coluna nova cifrada (a F9 vem com uma) entra nesta
+  // chamada, senão o canário conclui que ela não existe.
+  await verificarCanarioDeCriptografia(colunasCifradasDaLicenca());
 
   const server = await buildApp();
 
@@ -48,6 +54,7 @@ async function bootstrap() {
   // SIGTERM no meio do boot continua sendo tratado.
   onShutdown('job de agentes zumbis', stopZombieCleanerJob);
   onShutdown('job de lembrete de atraso', stopOverdueReminderJob);
+  onShutdown('job de reconciliação', stopReconcileJob);
   onShutdown('conexões de agente', disconnectAllAgents);
   onShutdown('servidor HTTP', () => server.close());
   onShutdown('banco de dados', closeDatabase);
@@ -57,6 +64,11 @@ async function bootstrap() {
   // janela diária fica em `job_runs` e sobrevive ao deploy (D79). Sem ela, subir
   // o servidor três vezes numa manhã mandaria três cobranças do mesmo notebook.
   startOverdueReminderJob();
+  // A reconciliação acorda de hora em hora e executa UMA vez por hora (mesma
+  // janela do D79, com granularidade diferente). Fora do `app.ts` pelo mesmo
+  // motivo dos outros dois: job com `setInterval` dentro de teste é escrita
+  // concorrente em banco compartilhado.
+  startReconcileJob();
 
   const port = getPort();
   await server.listen({ port, host: '0.0.0.0' });

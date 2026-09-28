@@ -53,7 +53,22 @@ import { prisma } from '../../../core/database/prismaClient';
 //
 // NÃO acrescente `VIEW_*` para outras telas. Auditar leitura de dado comum
 // encheria a trilha de linhas que ninguém lê e afogaria justamente esta.
-export type ActivityAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE' | 'END' | 'CHECKOUT' | 'CHECKIN' | 'RETIRE' | 'UNRETIRE' | 'OFFBOARD' | 'ATTACH' | 'DETACH' | 'ACCEPT' | 'DECLINE' | 'REVOKE' | 'INSTALL' | 'UNINSTALL' | 'ADJUST' | 'VIEW_KEY';
+// `LINK`, `UNLINK` e `MERGE` são da convergência com o RMM (F7). As três são
+// gravadas com `entityType: 'Asset'` — quem abre o histórico do ativo quer ler
+// "passou a ser a máquina PC-ANA", e um log pendurado numa entidade que a tela
+// não abre não apareceria em consulta nenhuma (é o mesmo motivo do
+// `ATTACH`/`DETACH`).
+//
+// `LINK` e `UNLINK` são o vínculo endpoint↔ativo (D45). Elas existem separadas
+// de `UPDATE` porque não são edição de campo: são a afirmação de que este
+// patrimônio e aquela máquina descoberta são a mesma coisa — e ela é desfeita
+// SOZINHA pelo `onDelete: SetNull` quando um ativo é apagado de verdade, o que
+// torna a linha de log a única testemunha do que havia antes.
+//
+// `MERGE` é a fusão de duas máquinas descobertas (reimagem, troca de placa).
+// Operação destrutiva e sem desfazer, com o estado anterior no `changes` — é
+// dela que sai a resposta para "por que esta telemetria mudou de máquina?".
+export type ActivityAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE' | 'END' | 'CHECKOUT' | 'CHECKIN' | 'RETIRE' | 'UNRETIRE' | 'OFFBOARD' | 'ATTACH' | 'DETACH' | 'ACCEPT' | 'DECLINE' | 'REVOKE' | 'INSTALL' | 'UNINSTALL' | 'ADJUST' | 'VIEW_KEY' | 'LINK' | 'UNLINK' | 'MERGE';
 
 // `ADJUST` é a quantidade NOMINAL de um item de estoque mudando — chegou nota,
 // quebrou, recontagem (F5, Etapa D). Ele convive com o `StockLog`, que grava o
