@@ -94,7 +94,7 @@ export async function detectarPostoCompartilhado(
   if (!endpoint?.assetId || endpoint.mergedIntoId) return 0;
 
   const configuracao = configuracaoDaRodada ?? (await lerConfiguracaoDaDescoberta());
-  const presencas = recorrentes(await resumirObservacoes(endpointId, chavesIgnoradas(configuracao)));
+  const presencas = recorrentes(await resumirObservacoes(endpointId, chavesIgnoradas(configuracao), configuracao.timezone));
 
   // UMA pessoa recorrente é o caso do `suggest-posse` (D47), não deste arquivo.
   if (presencas.length < 2) return 0;

@@ -6,6 +6,7 @@ import AssetTabs, { AbaFutura } from './components/AssetTabs';
 import ComponentsTab from './components/ComponentsTab';
 import LicensesTab from './components/LicensesTab';
 import MaquinaTab from './components/MaquinaTab';
+import MaintenanceTab from './components/MaintenanceTab';
 import DetalhesTab from './components/DetalhesTab';
 import FilesTab from './components/FilesTab';
 import HistoryTab from './components/HistoryTab';
@@ -34,6 +35,8 @@ export default function AssetDetailPage() {
     componentes, componentesPendentes, handleRetirarComponente,
     licencas, licencasPendentes,
     maquina, maquinaPendente, desvinculando, handleDesvincular,
+    manutencoes, manutencoesPendentes, auditorias, auditoriasPendentes,
+    handleAbrirManutencao, handleEncerrarManutencao,
     anexos, anexosPendentes, enviandoArquivo, erroDeArquivo, temImagem,
     handleAnexar, handleExcluirAnexo, handleTrocarImagem, handleRemoverImagem,
     modal, abrirEdicao, abrirClone, abrirPosse, abrirDescomissionar, fecharModal,
@@ -153,6 +156,17 @@ export default function AssetDetailPage() {
             carregando={maquinaPendente}
             desvinculando={desvinculando}
             onDesvincular={handleDesvincular}
+          />
+        )}
+
+        {aba === 'manutencoes' && (
+          <MaintenanceTab
+            assetId={asset.id}
+            manutencoes={manutencoes}
+            auditorias={auditorias}
+            carregando={manutencoesPendentes || auditoriasPendentes}
+            onAbrir={handleAbrirManutencao}
+            onEncerrar={(manutencaoId) => void handleEncerrarManutencao(manutencaoId)}
           />
         )}
 

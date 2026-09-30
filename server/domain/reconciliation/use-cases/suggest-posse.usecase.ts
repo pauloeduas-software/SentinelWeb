@@ -76,7 +76,7 @@ export async function sugerirPosseOuOcupacao(
   if (!endpoint?.assetId || endpoint.mergedIntoId) return 0;
 
   const configuracao = configuracaoDaRodada ?? (await lerConfiguracaoDaDescoberta());
-  const presencas = recorrentes(await resumirObservacoes(endpointId, chavesIgnoradas(configuracao)));
+  const presencas = recorrentes(await resumirObservacoes(endpointId, chavesIgnoradas(configuracao), configuracao.timezone));
 
   if (presencas.length === 0) return 0;
   if (presencas.length > 1) return 0;

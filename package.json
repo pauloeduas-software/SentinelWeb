@@ -10,6 +10,7 @@
     "start": "NODE_ENV=production tsx server/server.ts",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:puro": "vitest run --project puro",
     "test:watch": "vitest",
     "preview": "vite preview",
     "db:generate": "prisma generate",

@@ -1,5 +1,5 @@
 import { prisma } from '../../../core/database/prismaClient';
-import { horaLocal, turnoPelaHora } from '../helpers/shift.helper';
+import { FUSO_PADRAO, horaLocal, turnoPelaHora } from '../helpers/shift.helper';
 
 // O RESUMO DA JANELA — quem apareceu nesta máquina, em quantos dias, em que
 // faixa de hora.
@@ -45,6 +45,12 @@ export interface PresencaObservada {
 export async function resumirObservacoes(
   endpointId: string,
   chavesIgnoradas: Set<string>,
+  /**
+   * O fuso da empresa (`AppSetting.timezone`, D123). Recebido por parâmetro e não
+   * lido aqui: este use-case roda uma vez por endpoint, e uma consulta de
+   * configuração por máquina seriam centenas por hora para uma resposta única.
+   */
+  fuso: string = FUSO_PADRAO,
   dias: number = DIAS_DA_JANELA,
 ): Promise<PresencaObservada[]> {
   const desde = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
@@ -64,7 +70,7 @@ export async function resumirObservacoes(
     // A hora do PRIMEIRO contato do dia é a que descreve o turno: a última pode
     // ser a máquina esquecida ligada de madrugada, e a média entre as duas
     // transformaria manhã + esquecimento em "Tarde".
-    const hora = horaLocal(linha.firstSeenAt);
+    const hora = horaLocal(linha.firstSeenAt, fuso);
 
     if (!atual) {
       porChave.set(linha.userKey, {

@@ -1,4 +1,6 @@
-import { executarUmaVezPorJanela, inicioDoDia } from '../../../core/jobs/claim-window';
+import { executarUmaVezPorJanela } from '../../../core/jobs/claim-window';
+import { inicioDoDiaLocal } from '../../../core/time/local-day';
+import { lerConfiguracaoDoCicloDeVida } from '../../settings/helpers/lifecycle-settings.helper';
 import { enviar, urlDoPainel } from '../../../core/mail/mailer';
 import { createLogger } from '../../../core/logger/logger';
 import { listOverdueAssignments, type ItemVencido } from '../use-cases/list-overdue.usecase';
@@ -98,13 +100,37 @@ export async function enviarLembretesDeAtraso(): Promise<number> {
   return grupos.size;
 }
 
+/**
+ * A janela do dia NO FUSO DA EMPRESA, e não no do processo (D123).
+ *
+ * Mudou na F8. Antes era `inicioDoDia()`, que usa o relógio do processo: em
+ * produção (UTC) a janela virava às 21h de São Paulo, então o lembrete do dia
+ * podia sair duas vezes no mesmo dia de trabalho — uma às 20h59 e outra às 21h01,
+ * as duas "no primeiro tick do dia". Quem recebe a cobrança não vê UTC nenhum.
+ */
+async function janelaDeHoje(): Promise<Date> {
+  const { timezone } = await lerConfiguracaoDoCicloDeVida();
+  return inicioDoDiaLocal(timezone);
+}
+
 export function startOverdueReminderJob(): void {
   if (timer) return;
 
+  // O `try/catch` é em volta da LEITURA da configuração, e não é redundante com o
+  // que o `executarUmaVezPorJanela` já faz: aquele protege a tarefa, este protege
+  // o passo que vem antes dela. Uma rejeição aqui seria *unhandled rejection*
+  // dentro de um `setInterval` — no Node 15+ isso derruba o processo, e o banco
+  // reiniciando por trinta segundos passaria a ser motivo de o servidor cair.
   const rodar = () =>
-    void executarUmaVezPorJanela(NOME_DO_JOB, inicioDoDia(), async () => {
-      await enviarLembretesDeAtraso();
-    });
+    void (async () => {
+      try {
+        await executarUmaVezPorJanela(NOME_DO_JOB, await janelaDeHoje(), async () => {
+          await enviarLembretesDeAtraso();
+        });
+      } catch (error) {
+        logger.error('[Lembrete] Falha ao ler a configuração da janela.', error);
+      }
+    })();
 
   // A PRIMEIRA tentativa é no boot, e não daqui a uma hora: subir o servidor às
   // 9h e só tentar às 10h atrasaria o lembrete sem motivo. Quem impede a

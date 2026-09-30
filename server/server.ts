@@ -9,6 +9,7 @@ import { disconnectAllAgents } from './domain/agent/agent.registry';
 import { startZombieCleanerJob, stopZombieCleanerJob } from './domain/endpoint/jobs/zombie-cleaner.job';
 import { startOverdueReminderJob, stopOverdueReminderJob } from './domain/assignment/jobs/overdue-reminder.job';
 import { startReconcileJob, stopReconcileJob } from './domain/reconciliation/jobs/reconcile.job';
+import { startDailyAlertsJob, stopDailyAlertsJob } from './domain/alert/jobs/daily-alerts.job';
 import { buildApp } from './app';
 
 const logger = createLogger('server');
@@ -55,6 +56,7 @@ async function bootstrap() {
   onShutdown('job de agentes zumbis', stopZombieCleanerJob);
   onShutdown('job de lembrete de atraso', stopOverdueReminderJob);
   onShutdown('job de reconciliação', stopReconcileJob);
+  onShutdown('job de alertas diários', stopDailyAlertsJob);
   onShutdown('conexões de agente', disconnectAllAgents);
   onShutdown('servidor HTTP', () => server.close());
   onShutdown('banco de dados', closeDatabase);
@@ -69,6 +71,12 @@ async function bootstrap() {
   // motivo dos outros dois: job com `setInterval` dentro de teste é escrita
   // concorrente em banco compartilhado.
   startReconcileJob();
+  // Os alertas acordam de hora em hora e executam UMA vez por dia, na HORA e no
+  // FUSO configurados (D123) — e não no primeiro tick depois da meia-noite do
+  // servidor, que é o que `inicioDoDia()` daria. Fora do `app.ts` pelo mesmo
+  // motivo dos outros três: job com `setInterval` dentro de teste é escrita
+  // concorrente em banco compartilhado.
+  startDailyAlertsJob();
 
   const port = getPort();
   await server.listen({ port, host: '0.0.0.0' });

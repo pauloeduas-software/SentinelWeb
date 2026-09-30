@@ -451,6 +451,17 @@ model AssetModel {
   manufacturerId String @db.Uuid
   categoryId     String @db.Uuid
 
+  // A REGRA DE DEPRECIAÇÃO, e ela pendura AQUI (F8, Etapa C).
+  //
+  // No modelo e não no ativo, por dois motivos que se reforçam: `Asset` não tem
+  // `categoryId` (a categoria vem daqui), e vida útil contábil é característica
+  // do EQUIPAMENTO — todo notebook daquele modelo deprecia igual. É também onde
+  // o Snipe-IT a pendura.
+  //
+  // Nulável de propósito: a maioria dos modelos nunca terá regra, e valor
+  // contábil sem regra é `null`, nunca zero (D55).
+  depreciationId String? @db.Uuid
+
   // Imagem. Só o CAMINHO, nunca os bytes — quem guarda o arquivo é o
   // `UPLOAD_DIR` (server/core/storage/). BLOB no banco dobra o tamanho do dump
   // e faz cada leitura carregar megabytes que ninguém pediu.
@@ -461,8 +472,9 @@ model AssetModel {
 
   // Restrict é a rede embaixo do 409 do `countUsages`: mesmo que a checagem da
   // aplicação seja esquecida, o banco recusa e o P2003 vira 409 no errorHandler.
-  manufacturer Manufacturer @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
-  category     Category     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  manufacturer Manufacturer  @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
+  category     Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  depreciation Depreciation? @relation(fields: [depreciationId], references: [id], onDelete: Restrict)
 
   assets Asset[]
 
@@ -470,6 +482,7 @@ model AssetModel {
   // então não é preciso índice parcial aqui (verificado).
   @@unique([manufacturerId, modelNumber])
   @@index([categoryId])
+  @@index([depreciationId])
   @@map("asset_models")
 }
 
@@ -491,10 +504,13 @@ model Supplier {
   updatedAt DateTime @updatedAt
   assets    Asset[]
 
-  accessories Accessory[]
-  consumables Consumable[]
-  components  Component[]
-  licenses    License[]
+  accessories  Accessory[]
+  consumables  Consumable[]
+  components   Component[]
+  licenses     License[]
+  // A manutenção paga por fornecedor (F8). `Restrict` do lado de lá, como as
+  // outras cinco: é a rede embaixo do 409 do `countUsages`.
+  maintenances Maintenance[]
 
   @@map("suppliers")
 }
@@ -586,6 +602,11 @@ model Depreciation {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // O LADO QUE FALTAVA (F8). Esta tabela existe desde a F1 e ninguém apontava
+  // para ela: o `countUsages` da spec devolvia `0` fixo, então apagar uma regra
+  // de depreciação em uso era permitido. Com a relação, a contagem é real.
+  models AssetModel[]
 
   @@map("depreciations")
 }
@@ -730,17 +751,36 @@ model Asset {
   // não pode zerar junto.
   lastSeenByAgentAt DateTime?
 
+  // ── A CONFERÊNCIA FÍSICA (F8) ────────────────────────────────────────────
+  //
+  // CACHE DE EVENTO, no molde do `assignedToId`: escritor único (o use-case de
+  // auditoria), fato que aconteceu, e existe porque *"quais ativos nunca foram
+  // auditados"* é pergunta sobre a frota inteira — respondê-la por `MAX()` sobre
+  // `audits` a cada carregamento de relatório varreria a tabela de histórico.
+  //
+  // E `nextAuditAt` NÃO EXISTE, de propósito (D53). Ela seria
+  // `lastAuditAt + intervalo`, e o intervalo é configuração GLOBAL: no dia em
+  // que alguém trocar 12 meses por 6, toda linha gravada antes passa a mentir, e
+  // a correção é um UPDATE em massa que ninguém vai lembrar de rodar. O corte é
+  // calculado na consulta, a partir de `AppSetting.auditIntervalMonths`.
+  lastAuditAt DateTime?
+
   /// A máquina descoberta que É este ativo. Lado fraco do 1:1 — a FK mora lá (D45).
   endpoint Endpoint?
 
-  changes     AssetChange[]
-  usageDays   AssetUsageDaily[]
+  changes   AssetChange[]
+  usageDays AssetUsageDaily[]
+
+  // ── O CICLO DE VIDA (F8) ─────────────────────────────────────────────────
+  maintenances Maintenance[]
+  audits       Audit[]
+  alerts       Alert[]
   // `suggestions`, e não o `ReconciliationSuggestion` que o `prisma format`
   // escreveu sozinho: o nome gerado não é convenção nenhuma e destoa dos outros
   // três lados da mesma relação (`Endpoint`, `User` e `Location` todos a chamam
   // de `suggestions`). Nome de campo de relação não existe no banco, então isto
   // NÃO pede migração — o que ele muda é o que se lê no `include`.
-  suggestions ReconciliationSuggestion[]
+  suggestions  ReconciliationSuggestion[]
 
   @@index([deletedAt])
   @@index([statusId])
@@ -751,6 +791,10 @@ model Asset {
   // emitir `DROP INDEX` dele a cada migração nova.
   @@index([retiredAt])
   @@index([lastSeenByAgentAt])
+  // O relatório de auditoria vencida é `lastAuditAt IS NULL OR lastAuditAt <
+  // :corte` sobre a frota inteira, e é a consulta mais pesada da F8. Sem este
+  // índice ela é varredura sequencial em `assets` a cada abertura da aba.
+  @@index([lastAuditAt])
   @@map("assets")
 }
 
@@ -1101,6 +1145,55 @@ model AppSetting {
   /// NASCE VAZIA. Preencher com palpites (`admin`, `administrator`) esconderia
   /// um administrador que é uma pessoa de verdade usando a máquina dela.
   ignoredUserKeys String[] @default([])
+
+  // ── O CICLO DE VIDA E OS ALERTAS (F8) ────────────────────────────────────
+  //
+  // Moram aqui pelo mesmo motivo dos cinco botões da descoberta: são valores de
+  // configuração, não um domínio. E moram no BANCO, e não no `.env`, porque
+  // destinatário e limiar mudam sem deploy — o que fica no ambiente é o
+  // TRANSPORTE (`SMTP_URL`, `MAIL_FROM`), que é segredo (D57).
+  //
+  // NÃO EXISTE `lastAlertRunAt` AQUI, e isso é o D79: a janela de execução de
+  // cada job é uma LINHA em `job_runs`, com o nome do job como chave. Uma coluna
+  // aqui seria disputada pelo lembrete de atraso da F4 e pelos alertas desta
+  // fase — o segundo a acordar receberia `count: 0`, leria como "já rodou hoje" e
+  // nunca executaria, todo dia, sem erro e sem log.
+
+  /// Desligado, o job toma a janela e não faz nada. Nem grava, nem envia.
+  alertsEnabled Boolean @default(true)
+
+  /// Quem recebe o e-mail. VAZIA por padrão: endereço chutado é e-mail perdido.
+  alertEmails String[] @default([])
+
+  /// Slack, Teams, o que aceitar um POST. Validado em TODO envio (D126): só
+  /// `https`, e nunca host interno — a URL vem do banco e a requisição sai do
+  /// servidor, o que é SSRF pelo desenho.
+  alertWebhookUrl String?
+
+  /// Antecedência dos avisos de prazo, em dias.
+  warrantyAlertDays Int @default(30)
+  eolAlertDays      Int @default(60)
+
+  /// Manutenção aberta há mais que isto vira alerta. É o que dá `dueAt` a um
+  /// fato que não tem data-alvo: `completionDate` é nulo justamente por ela
+  /// estar aberta (D125).
+  maintenanceOpenDays Int @default(15)
+
+  /// De quanto em quanto tempo cada ativo deve ser conferido, e com quanta
+  /// antecedência o relatório avisa. O corte é calculado a partir daqui a cada
+  /// consulta — nunca gravado em coluna (D53).
+  auditIntervalMonths Int @default(12)
+  auditWarningDays    Int @default(30)
+
+  /// A HORA local em que a rodada diária pode ser tomada (0–23), e o FUSO que
+  /// decide o que é "hoje" (D123).
+  ///
+  /// Sem `alertHour`, a janela do dia é tomada pelo primeiro tick depois da
+  /// meia-noite e o campo na tela não muda nada. Sem `timezone`, "hoje" é o dia
+  /// do PROCESSO — que roda em UTC em produção e no fuso de quem desenvolve na
+  /// máquina local, então a mesma configuração produz dois comportamentos.
+  alertHour Int    @default(8)
+  timezone  String @default("America/Sao_Paulo")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1951,4 +2044,213 @@ model AssetUsageDaily {
   @@unique([assetId, day])
   @@index([assetId, day])
   @@map("asset_usage_daily")
+}
+
+// ============================================================================
+// CICLO DE VIDA — o que acontece com o ativo DEPOIS de ele existir e estar
+// entregue (docs/FASE-8-PLANO-ITAM.md)
+//
+// As três tabelas desta seção têm um traço em comum e ele explica o resto:
+// NENHUMA TEM `deletedAt`. Histórico de serviço, conferência física e aviso
+// disparado são fatos append-only — e a coluna ligaria a `softDeleteExtension`
+// numa tabela que ninguém quer escopada.
+//
+// O preço está pago onde ele aparece: como a extension NÃO as alcança, toda
+// consulta que soma custo ou conta auditoria filtra `asset: { deletedAt: null }`
+// À MÃO. Relação aninhada não herda escopo (D8, verificado).
+// ============================================================================
+
+/// O que foi feito com o equipamento. `SUPORTE` é contrato, não conserto — e é
+/// por isso que abrir manutenção NÃO muda o status do ativo.
+enum MaintenanceType {
+  MANUTENCAO
+  REPARO
+  UPGRADE
+  CALIBRACAO
+  SUPORTE
+}
+
+// O HISTÓRICO DE SERVIÇO DO ATIVO.
+//
+// VÁRIAS ABERTAS POR ATIVO CONVIVEM, e isso é de propósito: não há índice
+// parcial aqui. É a simetria invertida de `assignments_um_aberto_por_ativo`,
+// onde a unicidade É a regra — um ativo só pode estar entregue a um detentor,
+// mas o mesmo notebook pode ter um contrato de suporte anual aberto e um reparo
+// de teclado em andamento, que são dois fatos que não se atrapalham.
+//
+// `completionDate` nulo é o que significa ABERTA. Não há coluna `status`: ela
+// seria derivável da data e divergiria dela na primeira edição (é o D44 da
+// licença, uma tabela abaixo).
+model Maintenance {
+  id      String @id @default(uuid()) @db.Uuid
+  assetId String @db.Uuid
+
+  /// Quem prestou o serviço. Nulável: serviço feito pela própria TI não tem
+  /// fornecedor, e inventar um ("Interno") poluiria o catálogo de compras.
+  supplierId String? @db.Uuid
+
+  type  MaintenanceType
+  title String
+
+  startDate      DateTime
+  /// Nulo = EM ABERTO. É esta coluna que o alerta `MANUTENCAO_EM_ABERTO` olha.
+  completionDate DateTime?
+
+  /// Decimal, NUNCA Float. Sai no JSON como string e quem formata é a tela.
+  cost Decimal? @db.Decimal(12, 2)
+
+  /// Saiu na garantia — o serviço aconteceu e não custou. Separado de
+  /// `cost = 0`: zero é "não custou nada"; isto é "o fabricante pagou", e é a
+  /// pergunta que uma renovação de contrato faz.
+  isWarranty Boolean @default(false)
+
+  notes String?
+
+  createdById String? @db.Uuid
+  updatedById String? @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  asset    Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  supplier Supplier? @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+
+  @@index([assetId, startDate])
+  /// O total EM ABERTO da tela global: `completionDate IS NULL`.
+  @@index([completionDate])
+  @@index([supplierId])
+  @@map("maintenances")
+}
+
+/// O que o auditor encontrou. Três valores, e `DIVERGENTE` é o único que faz o
+/// sistema escrever em outra tabela (`Asset.locationId`).
+enum AuditResult {
+  OK
+  DIVERGENTE
+  NAO_LOCALIZADO
+}
+
+/// Quem conferiu. `AGENTE` é gravado pelo JOB e só quando o número de série
+/// confere (D124) — nunca pelo handshake, que roda a cada mensagem de cada
+/// máquina (D95).
+enum AuditMethod {
+  MANUAL
+  AGENTE
+}
+
+// A CONFERÊNCIA FÍSICA — e ela confere TRÊS campos, não um.
+//
+// Antes do modelo de posse, auditar era perguntar "o ativo está onde o sistema
+// diz?". Com a posse, são três perguntas que divergem por motivos diferentes:
+// ONDE ESTÁ (`Asset.locationId`), DE QUEM É O POSTO (a `Assignment` aberta) e
+// QUEM OCUPA O POSTO (`LocationOccupant`). As duas últimas o auditor observa e o
+// sistema MARCA — nunca corrige (D52).
+//
+// UMA LINHA POR ATIVO, e auditar um posto cria N delas numa transação (D54):
+// *"quais ativos nunca foram auditados"* é a pergunta que paga esta tabela, e
+// ela não é respondível por linha de posto.
+model Audit {
+  id        String   @id @default(uuid()) @db.Uuid
+  assetId   String   @db.Uuid
+  auditedAt DateTime @default(now())
+
+  result AuditResult
+  method AuditMethod @default(MANUAL)
+
+  // ONDE ESTAVA e ONDE FOI ACHADO — e os dois são UUID SEM FK, pelo motivo do
+  // `ActivityLog.actorId`: conferência é append-only e não pode depender do
+  // ciclo de vida da linha de `locations`. Com FK e `SetNull`, apagar uma sala
+  // apagaria a prova de que o ativo estava nela; com `Restrict`, a sala nunca
+  // poderia ser apagada.
+  locationIdBefore String? @db.Uuid
+  locationIdFound  String? @db.Uuid
+
+  /// O ativo foi achado num posto que NÃO é o alvo da posse aberta. O sistema
+  /// marca e oferece o checkout de correção; mover a posse a partir de uma
+  /// observação transferiria responsabilidade por palpite (D52).
+  divergenciaDePosse Boolean @default(false)
+
+  /// A posse aponta para um local SEM ocupante aberto — o *posto vago* da F2
+  /// aparecendo no chão da fábrica.
+  postoVago Boolean @default(false)
+
+  notes String?
+
+  /// Quem conferiu. Nulo quando foi o job (D124) — e esse nulo é uma
+  /// afirmação, não um esquecimento: alerta e job não têm autor.
+  auditedById String? @db.Uuid
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, auditedAt])
+  @@index([auditedAt])
+  @@map("audits")
+}
+
+/// Os quatro sinais que o job diário sabe calcular. TODOS são do ATIVO, e isso
+/// é o D128: licença vencendo (F6) e estoque baixo (F5) continuam derivados sob
+/// demanda no painel da própria tela. Puxá-los para cá pediria um alvo
+/// polimórfico, que é aditivo e fica para quem precisar de e-mail deles.
+enum AlertType {
+  GARANTIA_VENCENDO
+  EOL_PROXIMO
+  AUDITORIA_VENCIDA
+  MANUTENCAO_EM_ABERTO
+}
+
+// O AVISO — persistido ANTES de ser enviado, e é isso que o D57 decide.
+//
+// Três coisas vêm de gravar primeiro: *"o alerta disparou?"* vira um `SELECT`; o
+// sistema funciona sem SMTP configurado; e o `dedupeKey` vira a defesa contra o
+// mesmo aviso chegando todo dia até alguém resolver o problema.
+//
+// SEM `deletedAt` e sem edição: um alerta não se conserta, se LÊ (`readAt`). É
+// por isso que o D127 importa tanto — a linha gerada errada fica, e o
+// `dedupeKey` garante que ela não seja recriada, mas também que não seja
+// corrigida. Ativo fora do parque não entra.
+model Alert {
+  id   String    @id @default(uuid()) @db.Uuid
+  type AlertType
+
+  /// O ativo de que o alerta fala. Nulável porque um alerta pode ser DA FROTA
+  /// (nenhum ativo específico), e `Cascade` porque um ativo apagado de verdade
+  /// não deixa aviso órfão no sino.
+  assetId String? @db.Uuid
+
+  /// QUANDO o prazo vence — não quando o alerta nasceu. É o que a tela ordena.
+  dueAt DateTime
+
+  /// A IDENTIDADE DO AVISO, e ela tem uma regra POR TIPO (D125).
+  ///
+  /// Dois tipos usam uma data estável do ativo (garantia, EOL); um usa o fato de
+  /// nunca ter sido auditado (`...:nunca`, e NÃO a data do corte, que anda todo
+  /// dia e recriaria o alerta diariamente); e o quarto usa o id da MANUTENÇÃO,
+  /// porque um ativo com duas manutenções abertas tem dois problemas.
+  ///
+  /// `@unique` + `createMany({ skipDuplicates: true })` é o que faz a rodada
+  /// repetida não duplicar nada — sem SELECT prévio e sem corrida.
+  dedupeKey String @unique
+
+  /// O que a mensagem precisa dizer, congelado no momento do disparo: etiqueta,
+  /// nome, dias restantes. Congelado de propósito — o e-mail que saiu falava
+  /// disto, e reconstruir a frase amanhã diria outra coisa.
+  payload Json?
+
+  createdAt DateTime @default(now())
+
+  /// Lido no sino. Não é "resolvido": o problema pode continuar.
+  readAt DateTime?
+
+  /// Os canais configurados foram tentados e ao menos um entregou (D126). Nulo
+  /// depois de uma rodada é a informação de que a PRÓXIMA precisa: ela reenvia.
+  notifiedAt DateTime?
+
+  asset Asset? @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  /// O sino: não lidos, mais recentes primeiro.
+  @@index([readAt, dueAt])
+  /// A varredura de reenvio: o que ficou sem entrega.
+  @@index([notifiedAt])
+  @@index([assetId])
+  @@map("alerts")
 }

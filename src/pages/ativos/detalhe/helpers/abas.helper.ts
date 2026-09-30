@@ -39,7 +39,10 @@ export const ABAS: readonly Aba[] = [
   // desabilitada, porque o que ela mostra não existia em fase nenhuma: até a
   // convergência, o ativo não sabia que tinha uma máquina.
   { id: 'maquina', rotulo: 'Máquina', icone: MonitorSmartphone, fase: null },
-  { id: 'manutencoes', rotulo: 'Manutenções', icone: Wrench, fase: 'Fase 8' },
+  // Saiu de desabilitada na F8: sumiu o `fase`, entrou o conteúdo — a moldura da
+  // tela não mudou, que era o que a decisão prometia. Ela mostra DUAS listas:
+  // serviço e conferência (ver `MaintenanceTab`).
+  { id: 'manutencoes', rotulo: 'Manutenções', icone: Wrench, fase: null },
   // Entrou na Leva 2 do docs/FECHAMENTO-F2-F4-PLANO-ITAM.md — era a Etapa G da
   // F2, adiada quando `@fastify/multipart` foi instalado e não usado.
   { id: 'arquivos', rotulo: 'Arquivos', icone: Paperclip, fase: null },

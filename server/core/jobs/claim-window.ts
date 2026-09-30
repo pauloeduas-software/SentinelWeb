@@ -60,7 +60,18 @@ export async function tomarJanela(nome: string, inicioDaJanela: Date): Promise<b
   }
 }
 
-/** Meia-noite de hoje, hora local do servidor — o começo da janela DIÁRIA. */
+/**
+ * Meia-noite de hoje, hora local do PROCESSO.
+ *
+ * ⚠️ Para job que avisa GENTE, prefira `inicioDoDiaLocal(fuso)` de
+ * `core/time/local-day.ts` (D123): o processo roda em UTC em produção e no fuso
+ * de quem desenvolve na máquina local, então "hoje" aqui é o dia do servidor e
+ * não o de quem lê o e-mail — uma rodada às 21h em São Paulo já é o dia seguinte
+ * em UTC, e a janela do dia fecharia duas vezes.
+ *
+ * Continua existindo para janela que não fala com ninguém (a de hora da
+ * reconciliação usa a própria) e para o teste, que fixa o relógio do processo.
+ */
 export function inicioDoDia(): Date {
   const inicio = new Date();
   inicio.setHours(0, 0, 0, 0);

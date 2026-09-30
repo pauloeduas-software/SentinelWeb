@@ -279,6 +279,12 @@ Gerado a partir dos próprios arquivos. **D1–D13** estão acima nesta página 
 | **D120** | `proporSugestao` não recebe cliente, porque abre transação | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
 | **D121** | Casar a conta busca os candidatos, não o cadastro inteiro | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
 | **D122** | `Asset.suggestions`, e não o nome que o `prisma format` escreveu | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
+| **D123** | A janela do job é do FUSO e da HORA configurados; `inicioDoDia` ganha parâmetro | [`FASE-8-PLANO-ITAM.md`](./FASE-8-PLANO-ITAM.md) |
+| **D124** | A auditoria pelo agente nasce no JOB, uma por ativo por dia, e só quando o SERIAL confere | [`FASE-8-PLANO-ITAM.md`](./FASE-8-PLANO-ITAM.md) |
+| **D125** | `dedupeKey` tem uma regra por tipo, e ela carrega o id da ORIGEM | [`FASE-8-PLANO-ITAM.md`](./FASE-8-PLANO-ITAM.md) |
+| **D126** | O webhook tem allowlist de destino; `notifiedAt` é do alerta, e a rodada seguinte reenvia o nulo | [`FASE-8-PLANO-ITAM.md`](./FASE-8-PLANO-ITAM.md) |
+| **D127** | Alerta não nasce para ativo fora do parque | [`FASE-8-PLANO-ITAM.md`](./FASE-8-PLANO-ITAM.md) |
+| **D128** | A central nasce só com os sinais do ATIVO | [`FASE-8-PLANO-ITAM.md`](./FASE-8-PLANO-ITAM.md) |
 
 ---
 
@@ -569,7 +575,7 @@ de lógica apareceram sob teste).
 - [x] **M** ~~`SoftwarePackage` + `SoftwareInstallation`~~ — feito. A chave do pacote é **derivada** (`normalizedKey`), porque em Postgres dois `NULL` não são iguais num índice único e o pacote sem fabricante não deduplicaria (D100)
 - [x] **G** ~~**Conformidade alimentada pelo software instalado**~~ — feito, e ela exigiu uma ponte que o desenho não previa: `LicenseSoftware`, **explícita** (D102). Casar "Office 365 E3" com "Microsoft 365 Apps for enterprise" por semelhança de nome erra nos dois sentidos, e os dois erros são caros. **Ela passou uma auditoria inteira sem porta de entrada** (D117): as rotas de escrita e de relatório existiam e não havia como LISTAR pacotes, então nenhuma tela chegava a um `packageId`, a ponte nunca recebia linha e o relatório respondia `semVinculoDeSoftware` para sempre. Hoje `GET /api/software-packages` existe e a tela da licença tem o formulário e as duas contas
 - [x] **P** ~~Separar os dois eixos de status~~ — feito, e o `AgentStatus` tem **dois** valores, não três (D98): `NEVER_SEEN` seria um valor que nenhuma linha de `endpoints` pode ter, porque a linha nasce de um handshake. "Cadastrado e nunca visto" é pergunta do ATIVO. O campo de último contato chama `lastSeenByAgentAt` e quem o escreve é o **job** (D95)
-- [ ] **P** Auditoria automática: cada handshake é uma auditoria física — **fica para a F8**, de propósito: ela grava linha de `Audit` com `method = AGENTE`, e `Asset.lastAuditAt` é dela. Duas fases escrevendo a mesma coluna é o começo de duas fontes de verdade
+- [x] **P** ~~Auditoria automática: cada handshake é uma auditoria física~~ — feito na F8 (D124), e **não no handshake**: ela nasce no job de reconciliação, ao lado do carimbo do último contato, no máximo uma por ativo por dia, e **só quando o `biosSerial` normalizado bate com o `Asset.serial`**. No handshake seria o D95 outra vez — `touchEndpoint` roda a cada mensagem de cada máquina. Hostname e MAC não contam: nenhum dos dois prova que alguém olhou o equipamento
 - [x] **M** ~~Detecção e fusão de duplicados~~ — feito. A fusão **não apaga** o endpoint antigo (D103): ele ganha `mergedIntoId` e sai das listagens, porque o agente pode voltar e o `ApiToken` daquela instalação aponta para ele. E ela consolida as colisões de presença e de software em vez de mover cegamente (D108)
 - [x] **M** ~~Ativo ocioso (`AssetUsageDaily`)~~ — feito, cruzado com *posto vago*: é o cruzamento que separa "ninguém USA" de "ninguém RESPONDE"
 - [x] **P** ~~Painel de cobertura~~ — feito, com os dez números saindo da mesma `$transaction`: contados um a um, um handshake no meio faria a conta não fechar, e painel que não soma é painel em que ninguém confia
@@ -599,23 +605,25 @@ que eles explicam são lidos.
 
 ## Fase 8 — Ciclo de vida
 
-- [ ] **M** `Maintenance` — tipo (MANUTENÇÃO / REPARO / UPGRADE / CALIBRAÇÃO / SUPORTE), fornecedor, início, fim, custo, `isWarranty`
-- [ ] **P** Tela global de manutenções com custo acumulado e em aberto
-- [ ] **M** `Audit` — auditoria física com resultado (OK / DIVERGENTE / NÃO LOCALIZADO) e `lastAuditAt`. **`nextAuditAt` não nasce** (D53, [`FASE-8-PLANO-ITAM.md`](./FASE-8-PLANO-ITAM.md))
-- [ ] **P** Intervalo de auditoria global (meses) e antecedência do aviso (dias)
-- [ ] **P** Relatório de auditorias vencidas / a vencer / nunca auditadas
-- [ ] **M** **A conferência da auditoria passa a ter três campos, não um.** Antes era só localização; agora é *onde está* (`locationId`), *de quem é o posto* (a assignment aberta) e *quem ocupa aquele posto hoje* (`LocationOccupant`). Os três divergem por motivos diferentes e a divergência de cada um tem tratamento próprio:
-  - ativo achado em outro lugar → atualiza `locationId` e registra o anterior;
-  - ativo achado numa mesa que **não** é a da assignment → ou foi emprestado informalmente, ou a posse está errada. O auditor decide, o sistema não adivinha;
-  - posto **sem ocupante aberto** com ativo entregue a ele → é o *posto vago* da F2 aparecendo no chão da fábrica, e a auditoria é o momento em que alguém descobre quem sentou ali
-- [ ] **P** Cálculo do valor contábil atual (depreciação linear com piso) — campo calculado, nunca coluna
-- [ ] **P** Relatório de depreciação com totais (custo, acumulado, valor atual) — `recharts` já está no `package.json` e **nunca foi importado**; gráfico de curva sai sem instalar nada
-- [ ] **P** Relatório de garantias e EOL vencendo em N dias
-- [ ] **P** `Setting` de alertas: liga/desliga, destinatários, threshold em dias
-- [ ] **M** Envio de e-mail SMTP (`nodemailer`) — hoje o `.env` só tem `DATABASE_URL` e `AGENT_TOKEN`
-- [ ] **M** Scheduler diário, gravando `lastAlertRunAt` para sobreviver a restart (o `setInterval` do `zombie-cleaner.job.ts` reinicia a cada deploy)
-- [ ] **P** Integração com webhook (Slack / Teams)
-- [ ] **P** Central de alertas dentro do app
+- [x] **M** ~~`Maintenance` — tipo (MANUTENÇÃO / REPARO / UPGRADE / CALIBRAÇÃO / SUPORTE), fornecedor, início, fim, custo, `isWarranty`~~ — feito. **Várias abertas por ativo convivem** (simetria invertida do `assignments_um_aberto_por_ativo`), e abrir manutenção **não muda o status do ativo**
+- [x] **P** ~~Tela global de manutenções com custo acumulado e em aberto~~ — `/manutencoes`. Os totais são `aggregate` sobre o RECORTE, fora do `skip`/`take`: somar a página daria o custo de quinze linhas e mudaria ao virar a página
+- [x] **M** ~~`Audit` — auditoria física com resultado (OK / DIVERGENTE / NÃO LOCALIZADO) e `lastAuditAt`~~ — feito, com `@@index([lastAuditAt])`. **`nextAuditAt` não nasceu** (D53)
+- [x] **P** ~~Intervalo de auditoria global (meses) e antecedência do aviso (dias)~~ — `AppSetting.auditIntervalMonths` e `auditWarningDays`. Nasceram na Etapa B, junto da auditoria de que falam, porque o relatório da Etapa D as lê
+- [x] **P** ~~Relatório de auditorias vencidas / a vencer / nunca auditadas~~ — três baldes, e "nunca" é um deles: no banco cabem num `OR`, mas a AÇÃO é diferente (um vencido tem histórico; um nunca conferido pode não existir fisicamente)
+- [x] **M** ~~**A conferência da auditoria passa a ter três campos, não um**~~ — feito, e o sistema escreve SÓ o primeiro (D52): `Asset.locationId`. Os outros dois são MARCADOS (`divergenciaDePosse`, `postoVago`) e a correção é checkout, com autor e data. A conferência é por POSTO (`/auditorias`) e o registro é por ATIVO (D54)
+- [x] **P** ~~Cálculo do valor contábil atual (depreciação linear com piso)~~ — função pura em `asset/helpers/depreciacao.helper.ts`, calculada na leitura. `min(custo, max(piso, …))` — os DOIS lados, porque o piso `AMOUNT` não tem teto e um mouse com residual de R$ 5.000 valorizaria no papel
+- [x] **P** ~~Relatório de depreciação com totais~~ — e `recharts` finalmente foi importado, pela própria página. A série vem pronta do servidor (D55); os `null` ficam em três baldes separados, porque somá-los como zero barateia a frota
+- [x] **P** ~~Relatório de garantias e EOL vencendo em N dias~~ — duas listas e dois limiares: garantia vira chamado, EOL vira orçamento
+- [x] **P** ~~`Setting` de alertas: liga/desliga, destinatários, threshold em dias~~ — dez campos no `AppSetting`, com tela na aba Alertas de `/relatorios` (ao lado dos números que eles explicam)
+- [x] **M** ~~Envio de e-mail SMTP (`nodemailer`)~~ — **já existia desde a F4** (`core/mail/mailer.ts`, D86). A fase reusou; nenhuma variável de ambiente nova
+- [x] **M** ~~Scheduler diário~~ — e **não** gravando `lastAlertRunAt`: a janela é uma LINHA em `job_runs` (D79), na HORA e no FUSO configurados (D123)
+- [x] **P** ~~Integração com webhook (Slack / Teams)~~ — `core/webhook/`, com allowlist de destino (D126): só `https` e endereço público, validado a cada envio e contra o que o DNS devolve
+- [x] **P** ~~Central de alertas dentro do app~~ — `AlertBell` no cabeçalho. Ela é o canal PRIMÁRIO: toda notificação vira linha antes de virar mensagem (D57)
+
+**O que ficou de fora, com o motivo escrito:** licença vencendo (F6) e estoque baixo (F5) **não**
+entraram na central (D128) — os dois sinais já são derivados sob demanda no painel da própria tela,
+e materializá-los aqui pediria o inverso do que o D44 e o D34 protegem. O caminho para eles é um
+alvo polimórfico em `Alert`, que é aditivo.
 
 ---
 
@@ -699,7 +707,8 @@ Registrado para não ser reaberto a cada revisão.
 F0 (base) ✅ → F1 (catálogo + ativo inteiro) ✅ → [MODELO DE POSSE] ✅ schema
    → F2 (ativos) ✅ → F3 (auth) ✅ → F4 (posse: checkout/checkin/posto) ✅
       → F5 (estoque) ✅ → F6 (licenças) ✅ → F7 (convergência RMM) ✅
-         → F8 (ciclo de vida) → F9 (campos) → F10 (relatórios) → F11 (acesso)
+            → F8 (ciclo de vida) ✅
+               → F9 (campos) → F10 (relatórios) → F11 (acesso)
 ```
 
 **A F0 até a F4 estão completas.** As três últimas fecharam pelo
@@ -729,10 +738,23 @@ vencedor, erra toda semana e acaba descartando a observação como ruído. Com a
 do modelo de posse a mesma observação é consistente, e vira cadastro que uma pessoa
 confirma. Não falta dado a quem copia: falta **onde guardar**.
 
-**O próximo passo é a F8** — ciclo de vida. Ela herda da F7 um item declarado: *"cada
-handshake é uma auditoria física"* grava `Audit` com `method = AGENTE`, e `Asset.lastAuditAt`
-é coluna dela. A F7 não a criou de propósito — duas fases escrevendo a mesma coluna é o
-começo de duas fontes de verdade.
+**A F8 fechou**: `Maintenance`, `Audit` e `Alert`, o valor contábil calculado (D55), `/relatorios`
+com as quatro abas e o job diário com janela por fuso e hora (D123). Ela também **executou o item
+que a F7 declarou** — *"cada handshake é uma auditoria física"* — e o executou diferente do que
+estava escrito: a linha de `Audit` com `method = AGENTE` nasce no job, uma por ativo por dia, e só
+quando o número de série confere (D124). No handshake ela cresceria em máquinas × mensagens por dia,
+que é o D95 pela segunda vez.
+
+**E ela é a primeira fase que avisa sobre o que NÃO aconteceu.** Os outros três jobs reagem a um
+fato — o agente bateu, a máquina sumiu, o prazo de devolução venceu. A garantia vencendo dispara
+porque o calendário andou, e foi isso que transformou "quando o job roda" numa pergunta de produto:
+a hora e o fuso passaram a ser configuração, e `inicioDoDia()` ganhou um irmão que sabe em que fuso
+é "hoje" (o lembrete de atraso da F4 mudou junto, porque ele tinha o mesmo defeito).
+
+**O próximo passo é a F9** — campos customizados. Ela herda da F6 o `core/crypto/cipher.ts` (D81)
+para o campo cifrado em repouso, e herda da F8 a coluna que **não** existe: `AssetModel` ganhou
+`depreciationId` e nada mais, então o `customFieldsetId` que o plano da F9 previa continua por
+nascer.
 
 **F0 → F1 → F2 continua o caminho crítico.** Tudo depende do modelo de dados certo. Começar por
 telas antes disso é retrabalho garantido — foi exatamente o que aconteceu com
