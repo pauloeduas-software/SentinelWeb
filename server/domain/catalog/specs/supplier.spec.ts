@@ -31,13 +31,26 @@ export const supplierSpec: CatalogSpec = {
   // no ativo, porque o `SetNull` apagaria o vínculo de uma linha ainda
   // restaurável — ela voltaria da lixeira sem saber de quem foi comprada; nos
   // de estoque, porque a FK `Restrict` não distingue lixeira de linha viva.
+  // A LICENÇA entrou na F6 e FICOU DE FORA desta contagem — corrigido na F8.
+  // `License.supplierId` é `Restrict`, então apagar um fornecedor usado só por
+  // licença já era recusado; só que pelo P2003, com a frase genérica "registro
+  // está em uso por outro cadastro" em vez da que conta por quantos. A rede
+  // existia, o ensinamento não.
+  //
+  // A MANUTENÇÃO é a sexta (F8), e é `Restrict` pelo mesmo motivo dos de estoque:
+  // apagar quem consertou apagaria de quem se cobra a garantia.
   countUsages: async (client, id) => {
-    const [ativos, acessorios, consumiveis, componentes] = await Promise.all([
+    const [ativos, acessorios, consumiveis, componentes, licencas, manutencoes] = await Promise.all([
       client.asset.count({ where: { supplierId: id, ...INCLUINDO_LIXEIRA } }),
       client.accessory.count({ where: { supplierId: id, ...INCLUINDO_LIXEIRA } }),
       client.consumable.count({ where: { supplierId: id, ...INCLUINDO_LIXEIRA } }),
       client.component.count({ where: { supplierId: id, ...INCLUINDO_LIXEIRA } }),
+      client.license.count({ where: { supplierId: id, ...INCLUINDO_LIXEIRA } }),
+      // SEM `INCLUINDO_LIXEIRA`: `maintenances` não tem a coluna `deletedAt`, e o
+      // escape hatch só faz sentido onde a extension atua. A linha é sempre
+      // visível, e é sempre contada.
+      client.maintenance.count({ where: { supplierId: id } }),
     ]);
-    return ativos + acessorios + consumiveis + componentes;
+    return ativos + acessorios + consumiveis + componentes + licencas + manutencoes;
   },
 };

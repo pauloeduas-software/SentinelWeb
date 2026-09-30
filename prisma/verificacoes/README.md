@@ -3,9 +3,11 @@
 SQL que **prova** uma invariante em vez de descrevê-la. Roda numa transação que
 termina em `ROLLBACK`: não deixa resíduo, e pode rodar no banco de trabalho.
 
-Existe porque o projeto ainda não tem suíte de testes (`docs/ARQUITETURA.md`) e
-porque estas regras vivem no BANCO — um teste de aplicação passaria por cima
-delas sem tocá-las.
+Existe porque estas regras vivem no BANCO: um teste de aplicação passaria por
+cima delas sem tocá-las. (A frase original dizia "porque o projeto ainda não tem
+suíte de testes" — tem, desde a F5: `npm test`, contra Postgres real, ver
+`docs/TESTES.md`. O que a suíte **não** alcança são os índices parciais e os
+CHECKs, porque ela entra pela API, que nunca tenta violá-los.)
 
 ```bash
 docker exec -i sentinel-postgres psql -U sentinel -d sentineldb -q -f - \

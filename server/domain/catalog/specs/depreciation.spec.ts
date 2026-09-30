@@ -19,8 +19,15 @@ export const depreciationSpec: CatalogSpec = {
   searchable: ['name'],
   audited: ['name', 'months', 'floorValue', 'floorType'],
 
-  // A depreciação passa a ser referenciada pelo modelo/ativo na F8.
-  countUsages: () => Promise.resolve(0),
+  // A DEPRECIAÇÃO GANHOU DONO NA F8 (Etapa C): `AssetModel.depreciationId`.
+  //
+  // Esta linha devolvia `0` FIXO desde a F1, e não era descuido: nada apontava
+  // para a tabela, então não havia uso para contar. Com a FK `Restrict` no modelo,
+  // devolver zero passaria a MENTIR — a aplicação liberaria o delete, o Postgres
+  // recusaria com P2003, e o usuário leria "registro está em uso por outro
+  // cadastro" sem saber por quantos modelos nem quais.
+  countUsages: async (client, id) =>
+    client.assetModel.count({ where: { depreciationId: id } }),
 
   /**
    * Piso em percentual não passa de 100%.

@@ -67,6 +67,12 @@ const camposModelo = {
   modelNumber: textoOpcional('número do modelo', 100),
   eolMonths: mesesOpcional('vida útil'),
   notes: textoOpcional('notas', 2_000),
+  // A REGRA DE DEPRECIAÇÃO (F8, Etapa C). Ancora no MODELO e não no ativo porque
+  // `Asset` não tem `categoryId` — a categoria vem daqui — e porque vida útil
+  // contábil é característica do equipamento: todo notebook daquele modelo
+  // deprecia igual. Nulável: a maioria dos modelos nunca terá regra, e valor
+  // contábil sem regra é `null`, nunca zero (D55).
+  depreciationId: uuidOpcional('regra de depreciação'),
 };
 
 export const createAssetModelSchema = z.strictObject({

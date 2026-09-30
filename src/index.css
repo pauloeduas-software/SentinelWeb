@@ -13,6 +13,19 @@
   --color-status-danger: #ef4444;
   --color-status-info: #3b82f6;
 
+  /* A SÉRIE DOS GRÁFICOS (F8) — e ela NÃO é `--color-status-success`.
+   *
+   * O verde de status tem L=0.72 em OKLCH, fora da faixa [0.48, 0.67] que uma
+   * série de gráfico precisa ocupar sobre a superfície escura (#111111): num
+   * traço de 2px ele "estoura", e num preenchimento com alfa ele clareia demais.
+   * Este é o mesmo verde um passo abaixo, validado contra a superfície escura nas
+   * cinco checagens (faixa de luminosidade, piso de croma, separação para
+   * daltonismo, piso de visão normal e contraste).
+   *
+   * Cor de STATUS é reservada para estado (bom/atenção/crítico) e não vira "série
+   * 1" — é por isso que ela ganha token próprio em vez de ser reaproveitada. */
+  --color-chart-serie: #16a34a;
+
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 }

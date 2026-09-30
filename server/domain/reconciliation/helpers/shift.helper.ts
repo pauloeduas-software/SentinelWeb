@@ -1,3 +1,5 @@
+import { horaLocalEm } from '../../../core/time/local-day';
+
 // O TURNO INFERIDO PELA HORA EM QUE A PESSOA APARECE — função pura.
 //
 // ─────────────────────────────────────────────────────────────────────────────
@@ -25,19 +27,25 @@
 // faz a meia-noite deixar de ser um precipício no meio da conta.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// O FUSO PADRÃO — e a partir da F8 ele é só o PADRÃO, não a verdade (D123).
+//
+// `AppSetting.timezone` passou a existir, e quem chama a inferência de turno
+// entrega o valor configurado (o job lê a configuração uma vez por rodada e o
+// propaga). A constante fica porque esta é uma função PURA — ela não pode
+// consultar o banco — e porque um parâmetro obrigatório aqui só empurraria a
+// mesma decisão para cada chamador de teste.
 export const FUSO_PADRAO = 'America/Sao_Paulo';
 
-/** A hora do dia (0–23) naquele fuso, para um instante em UTC. */
+/**
+ * A hora do dia (0–23) naquele fuso, para um instante em UTC.
+ *
+ * A conversão em si mora em `core/time/local-day.ts` desde a F8: a janela do job
+ * diário precisa da mesma travessia (hora de parede ↔ instante UTC), e duas
+ * implementações de `Intl` divergiriam justamente no caso que ninguém testa — a
+ * virada do horário de verão.
+ */
 export function horaLocal(instante: Date, fuso: string = FUSO_PADRAO): number {
-  const formatador = new Intl.DateTimeFormat('pt-BR', {
-    timeZone: fuso,
-    hour: 'numeric',
-    // `h23` explícito, e não só `hour12: false`: há ICU em que o ciclo padrão
-    // devolve "24" para a meia-noite, e `Number('24')` cairia no turno errado
-    // justamente na hora que esta correção existe para acertar.
-    hourCycle: 'h23',
-  });
-  return Number(formatador.format(instante));
+  return horaLocalEm(instante, fuso);
 }
 
 export type Turno = 'Manhã' | 'Tarde' | 'Noite';

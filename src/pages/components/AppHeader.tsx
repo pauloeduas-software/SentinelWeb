@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Armchair, Boxes, KeyRound, LayoutDashboard, LogOut, Radar, Server, Database, ScrollText, Users, SlidersHorizontal } from 'lucide-react';
+import { Armchair, Boxes, FileBarChart, KeyRound, LayoutDashboard, LogOut, Radar, Server, Database, ScrollText, Users, SlidersHorizontal, Wrench } from 'lucide-react';
+import AlertBell from './AlertBell';
 import { useAuthStore } from '../../domain/auth/auth.store';
 
 // Navegação do painel. Fica em pages/components porque é interface
@@ -22,6 +23,12 @@ const NAV_ITEMS = [
   // produto — o que o agente VÊ e o que a empresa CADASTROU (F7). Fica perto do
   // inventário porque é dele que ela fala, não do RMM.
   { to: '/descobertas', label: 'Descobertas', icon: Radar },
+  // As DUAS entradas da F8, e são duas de propósito: a barra já tinha dez itens e
+  // desaparece abaixo de `md`. A conferência por posto (`/auditorias`) NÃO ocupa
+  // lugar aqui — ela é alcançada de dentro de Postos e pela aba de auditorias dos
+  // relatórios, porque é lá que estão os números que levam alguém a conferir.
+  { to: '/manutencoes', label: 'Manutenções', icon: Wrench },
+  { to: '/relatorios', label: 'Relatórios', icon: FileBarChart },
   { to: '/users', label: 'Usuários', icon: Users },
   { to: '/tokens', label: 'Tokens', icon: KeyRound },
   { to: '/configuracoes', label: 'Config', icon: SlidersHorizontal },
@@ -69,6 +76,9 @@ export default function AppHeader() {
           compartilhado, ninguém sabe em nome de quem está clicando. */}
       {usuario && (
         <div className="flex items-center gap-4 font-mono text-xs">
+          {/* O sino ANTES do nome: ele é a única coisa do cabeçalho que muda
+              sozinha, e é do lado direito que o olho volta depois de ler a tela. */}
+          <AlertBell />
           <div className="hidden sm:flex flex-col items-end leading-tight">
             <span className="text-text-primary">{usuario.name}</span>
             <span className="text-[10px] text-text-tertiary uppercase tracking-widest">

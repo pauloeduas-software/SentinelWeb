@@ -10,11 +10,34 @@
 > aplicação.
 
 ```bash
-npm test          # roda tudo, uma vez
+npm test               # roda tudo, uma vez
+npm run test:puro      # só o que NÃO precisa de banco
 npm run test:watch
-npx vitest run tests/corridas          # só uma pasta
-npx vitest run -t "etiqueta automática" # só o que casa com o nome
+npx vitest run tests/corridas           # só uma pasta
+npx vitest run -t "etiqueta automática"  # só o que casa com o nome
+npx vitest run --project banco           # só o que fala com o Postgres
 ```
+
+### Dois projetos, e a divisão é pelo que o teste PRECISA para rodar
+
+Arquivo terminado em **`.puro.test.ts`** exercita função pura e não abre conexão
+nenhuma. Ele roda no projeto `puro`, que **não tem `globalSetup` nem `setupFiles`** —
+e é isso que faz `npm run test:puro` funcionar numa máquina sem contêiner, em
+milissegundos, num *pre-commit*.
+
+Todo o resto roda no projeto `banco`, com o `globalSetup` que cria o banco e aplica
+as migrations.
+
+> **A separação nasceu de um furo.** `webhook.puro.test.ts` já era puro e já estava
+> em arquivo próprio — mas o `globalSetup` roda em TODA invocação, então rodá-lo
+> sozinho morria com `PrismaClientInitializationError` antes do primeiro `it`. A
+> allowlist de destino de webhook é a única coisa da F8 que um atacante alcança, e
+> ela só era verificável com Postgres de pé: exatamente o oposto do que separar o
+> arquivo pretendia.
+>
+> O sufixo vai no **nome** e não numa pasta própria: `tests/ciclo-de-vida/` continua
+> agrupando por fase, que é como alguém procura ("o que a F8 cobre?"), e a exigência
+> de infraestrutura fica visível no arquivo que a tem.
 
 ---
 
@@ -63,6 +86,50 @@ configurar nada (só precisa do Postgres de pé: `docker compose up -d`).
 | `tests/listagens/` | o que cada vista e cada leitura DEVOLVE, e o que ela esconde | filtro que esconde demais não dá erro: some linha e ninguém percebe |
 | `tests/estoque/` | o saldo derivado, a trava da linha-pai e o que a F5 não pode perder da F4 | é a única pasta POR DOMÍNIO, e é de propósito: as três asserções que importam (invariante, corrida e operação) contam a mesma história sobre as mesmas seis tabelas, e separá-las em três pastas faria quem investiga um saldo errado abrir três arquivos distantes |
 | `tests/descoberta/` | a borda do agente, a cascata de matching, a fila, o turno inferido, a mudança de hardware detectada e o que o modelo de posse faz com o usuário logado | é a segunda pasta por domínio, pelo mesmo motivo: a história é uma só, do handshake até o cadastro que uma pessoa aceita |
+| `tests/licencas/` | o assento materializado, a corrida do `SKIP LOCKED`, a chave cifrada e o canário | terceira pasta por domínio: contrato, assento e segredo contam a mesma história |
+| `tests/jobs/` | a janela de execução de um job (o D79) | o cenário que ela impede — dois jobs disputando a mesma coluna — não dá erro nenhum: o segundo simplesmente nunca roda |
+| `tests/ciclo-de-vida/` | manutenção, conferência física, valor contábil e a central de alertas (F8) | quarta pasta por domínio. As quatro coisas se cruzam: a manutenção aberta vira alerta, a conferência escreve `lastAuditAt` que o alerta lê, e o valor contábil é o único número do sistema que muda quando NADA acontece |
+
+### `ciclo-de-vida/` — as três que falhariam em silêncio
+
+**`auditoria.test.ts`, primeiro teste: a amarra do D52.** Auditar na Mesa 2 um ativo entregue à Mesa
+1 move `Asset.locationId` e **não toca** a `Assignment`. É a regra que um refactor bem-intencionado
+quebra — *"se o ativo está na Mesa 2, a posse devia apontar para lá"* parece conserto e é
+transferência de responsabilidade a partir de um palpite. Vermelho ali significa que a Laura e a Ana
+deixaram de responder pelo equipamento sem ninguém ter assinado nada.
+
+**`valor-contabil.test.ts`: o piso `AMOUNT` acima do custo.** O `beforeWrite` da spec de depreciação
+limita o piso a 100% quando ele é `PERCENT`; `AMOUNT` **não tem teto**. Sem o `min(custo, …)` da
+fórmula, um mouse de R$ 50 com residual de R$ 5.000 vale R$ 5.000 no papel — um mouse que valorizou,
+e o total da frota subindo a cada mouse cadastrado.
+
+**`alertas.test.ts`: o alerta que nasce de novo todo dia.** A chave de deduplicação tem uma regra por
+tipo (D125). Com a versão ingênua (`tipo:ativo:prazo` para os quatro), ativo nunca conferido usaria a
+data do CORTE — que anda todo dia —, e o aviso renasceria diariamente. O teste roda a varredura duas
+vezes e exige `0` criados na segunda.
+
+**`webhook.puro.test.ts` não fala com o banco, e é de propósito.** A função é pura e o que ela protege
+é a única coisa da fase que um atacante alcança: a URL vem do banco e a requisição sai do servidor. Um
+teste que precisasse subir a aplicação para provar isso rodaria devagar e acabaria pulado — e era
+justamente o que acontecia até o arquivo ganhar o sufixo `.puro` e o projeto sem `globalSetup`.
+
+**`fuso.puro.test.ts`: a travessia que erra uma vez por semestre, de madrugada.** `core/time/local-day.ts`
+converte hora de parede ↔ instante UTC, e faz **duas passadas** de deslocamento de propósito: a
+primeira mede no chute em UTC (lugar errado), a segunda no instante já corrigido. Com uma passada só,
+a virada do horário de verão erra em exatamente uma hora — e é o tipo de defeito que passa em todo
+teste manual. Os casos de 01/11/2026 em `America/New_York` são o que prova que a segunda passada
+existe.
+
+> O plano da F8 dizia que a janela do job "já está coberta por `tests/jobs/janela.test.ts` — não se
+> refaz". **Não estava:** aquele arquivo exercita `inicioDoDia()`, que usa o relógio do PROCESSO. As
+> funções que a fase criou são outras, e não tinham teste nenhum.
+
+**`auditoria-pelo-agente.test.ts`: os seis "nãos" do D124.** A conferência automática não nasce no
+handshake, não conta hostname nem MAC, não é `NAO_LOCALIZADO` quando o serial falta, não escreve
+`locationId`, não marca as duas divergências e não grava `ActivityLog`. O penúltimo estava **errado no
+código**: o caminho do agente passava a posse lida do banco, e a linha diária nascia afirmando
+`divergenciaDePosse` que ninguém observou — o D52 furado por dentro de um job, que é o pior lugar para
+descobrir isso.
 
 ### `estoque/` — as duas que falhariam em silêncio
 
@@ -246,6 +313,10 @@ nenhum usuário consegue criar.
 dois arquivos truncariam a tabela no meio do teste do outro, e a falha mudaria de
 lugar a cada execução — suíte que falha sem repetir ensina a ignorar o vermelho.
 
+A opção fica na **raiz** da configuração e não dentro do projeto `banco`, porque o
+vitest só a aceita nesse nível: ela é do runner, não de um projeto. O projeto `puro`
+herda a serialização e não se incomoda — são dois arquivos de milissegundos.
+
 ---
 
 ## Acrescentar um arquivo
@@ -272,6 +343,29 @@ it('descreve a regra, não o código', async () => {
   expect(status).toBe(201);
 });
 ```
+
+### ⚠️ Montando o cenário DENTRO de cada `it`? Passe um sufixo
+
+```ts
+const cenario = await cenarioDePosse(api, ' (posto-vago)');
+```
+
+`cenarioDePosse` cria fabricante, posto e dois colaboradores com nomes **fixos**, e os três têm
+unicidade no banco (`@unique` em `Manufacturer.name` e `Location.name`, índice parcial no e-mail). A
+segunda chamada no mesmo arquivo devolve **409 "Registro já existe" vindo de dentro do fixture** — que
+se lê como defeito da aplicação, não do teste. Foi exatamente o que escondeu sete dos oito `it` de
+`ciclo-de-vida/auditoria.test.ts` até a suíte rodar pela primeira vez.
+
+O sufixo entra no nome do fabricante, do posto e das pessoas; a versão do **e-mail** é sanitizada
+dentro do fixture (`' (posto-vago)'` → `laura.posto-vago@teste.local`), porque a parte local de um
+e-mail não aceita espaço nem parêntese e o 422 resultante fala de algo que o teste não testa.
+
+O padrão é **vazio**, e continua assim de propósito: `invariantes/posse.test.ts`,
+`aceite/fluxo.test.ts` e `listagens/historico-da-pessoa.test.ts` comparam os nomes LITERAIS
+(`'Laura Souza'`, `'Ana Lima'`, `'Mesa 1'`). Quem chama uma vez não muda nada.
+
+> **Use o nome do caso, não um contador.** `' (posto-vago)'` diz qual `it` produziu o 409; `' (3)'`
+> manda você contar `describe`s.
 
 Três regras:
 

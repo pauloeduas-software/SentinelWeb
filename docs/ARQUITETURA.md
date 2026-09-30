@@ -68,7 +68,7 @@ server/
 | `endpoint` | Máquina descoberta pelo agente (lado RMM) + telemetria + comandos | `Endpoint`, `Telemetry` |
 | `asset` | Ativo do ITAM — o `Asset` do vocabulário do Snipe-IT | `Asset` |
 | `catalog` | As sete tabelas de catálogo, com UM CRUD genérico dirigido por spec | `Category`, `StatusLabel`, `Manufacturer`, `AssetModel`, `Supplier`, `Location`, `Depreciation` |
-| `settings` | Configuração global (hoje só a etiqueta automática) | `AppSetting` |
+| `settings` | Configuração global: etiqueta automática, os botões da descoberta e os dez valores do ciclo de vida (limiares, hora e fuso) | `AppSetting` |
 | `activity` | Trilha de auditoria, gravada na transação de quem a origina | `ActivityLog` |
 | `user` | Colaborador da empresa | `User` |
 | `assignment` | **Posse**: entrega e devolução de ativo, com alvo polimórfico (pessoa, posto ou outro ativo) e o histórico de quem teve o quê | `Assignment` |
@@ -76,6 +76,10 @@ server/
 | `stock` | **Estoque**: os três tipos que têm QUANTIDADE, com saldo derivado e trava na linha-pai | `Accessory`, `AccessoryCheckout`, `Consumable`, `ConsumableCheckout`, `Component`, `ComponentAsset`, `StockLog` |
 | `license` | **Licenças**: o contrato e seus ASSENTOS materializados, com chave de produto cifrada em repouso | `License`, `LicenseSeat`, `LicenseSeatCheckout` |
 | `reconciliation` | **Convergência RMM × ITAM**: o vínculo entre a máquina descoberta e o ativo cadastrado, a fila de sugestões, o software normalizado e o uso agregado | `ReconciliationSuggestion`, `EndpointUserDaily`, `AssetChange`, `SoftwarePackage`, `SoftwareInstallation`, `LicenseSoftware`, `AssetUsageDaily` |
+| `maintenance` | **Histórico de serviço**: o que foi feito no ativo, por quem, quanto custou e se saiu na garantia | `Maintenance` |
+| `audit` | **Conferência física**: as três perguntas do modelo de posse, conferidas por POSTO e registradas por ATIVO | `Audit` |
+| `alert` | **Central de alertas**: os quatro sinais do ativo, persistidos antes de virarem mensagem, com o job diário | `Alert` |
+| `report` | **Leitura agregada** — quatro relatórios, e nenhum deles escreve | — |
 
 > **A decisão D1 foi executada na Fase 1.** `asset/` (RMM) virou `endpoint/`, e o
 > nome `asset/` passou ao ativo do ITAM. O `inventory/` deixou de existir junto
@@ -277,11 +281,13 @@ Em ordem de prioridade, do [`ITAM-TODO.md`](./ITAM-TODO.md):
 - **Termo de entrega** — F4. O checkout, o checkin, o histórico de posse e a
   ocupação de posto **existem** (ver abaixo). Falta o fluxo de aceite: EULA da
   categoria, assinatura, PDF, e-mail e lembrete de atraso.
-- **Convergência RMM × ITAM** — F7. Conformidade de licença alimentada pelo
-  software realmente instalado: `LicenseSeat → Asset → Endpoint →
-  SoftwareInstallation`. É esse join que o D39 protege ao recusar `Location`
-  como alvo de assento — um assento pendurado num móvel não teria caminho até
-  uma instalação.
+- **Campos customizados** — F9. O `AssetModel` ganhou `depreciationId` na F8 e
+  **nada além disso**: o `customFieldsetId` que o plano da F9 prevê continua por
+  nascer, e a cifra que ele vai usar (`core/crypto/cipher.ts`, D81) já existe
+  desde a F6.
+- **Etiquetas, importação e o report builder** — F10. A moldura de
+  `/relatorios` nasceu na F8, com quatro abas mais a dos alertas; export CSV,
+  seletor de colunas e report builder entram NELA, não numa segunda tela.
 
 > **As licenças JÁ EXISTEM** — esta seção as listava como pendentes. A F6
 > fechou: `server/domain/license/`, com assento materializado (D40), escolha sem
@@ -292,6 +298,25 @@ Em ordem de prioridade, do [`ITAM-TODO.md`](./ITAM-TODO.md):
 > os listava como pendentes e estava desatualizada. O login é a F3, o aceite
 > fechou na Leva 4 do `FECHAMENTO-F2-F4-PLANO-ITAM.md`, e `npm test` roda contra
 > Postgres real pelo mesmo Fastify de produção (ver `TESTES.md`).
+
+> **A convergência RMM × ITAM e o ciclo de vida JÁ EXISTEM** — esta seção os
+> listava como pendentes. A F7 fechou o vínculo `Endpoint ↔ Asset` (D45) e a
+> conformidade cruzada; a F8 fechou manutenção, conferência física, valor contábil
+> calculado (D55), `/relatorios` e a central de alertas com job diário
+> (`docs/FASE-8-PLANO-ITAM.md`).
+>
+> **E o ciclo de vida mexeu em `core`:** nasceram `core/time/local-day.ts` (em que
+> fuso é "hoje" — D123) e `core/webhook/` (o canal secundário, com allowlist de
+> destino — D126). Os dois são infraestrutura pura: recebem fuso e URL por
+> parâmetro e não sabem o que é um alerta.
+>
+> **"Estar no parque" é UMA definição, e ela mora no domínio dono das colunas:**
+> `asset/helpers/asset-scope.helper.ts` (`retiredAt: null` + `status.type != ARCHIVED`),
+> importada por `report`, `audit` e `alert`. A revisão da F8 encontrou **três** versões
+> dela, e a mais frouxa tinha consequência: um ativo `ARCHIVED` era auditado todo dia
+> pelo job e nunca aparecia no relatório que lê o escopo completo. Domínio que
+> pergunta importa; domínio que responde é o dono do dado — é o D16 aplicado a uma
+> constante.
 
 > Validação com `zod`, paginação, busca, ordenação, soft delete e `ActivityLog`
 > **existem** desde a Fase 0 — esta seção os listava como pendentes e estava

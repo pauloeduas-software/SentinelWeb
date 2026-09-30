@@ -79,3 +79,35 @@ export const ASSET_SELECT = {
   supplier: { select: { id: true, name: true } },
   assignedTo: { select: USER_PUBLIC_SELECT },
 } as const;
+
+/**
+ * A REGRA DE DEPRECIAÇÃO, e ela está no select do DETALHE — não no compartilhado.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * QUEM CALCULA VALOR CONTÁBIL É UMA TELA, E A LISTAGEM NÃO É ELA.
+ *
+ * Na F8 estes quatro campos entraram direto no `ASSET_SELECT`, com a justificativa
+ * de evitar N+1 "na listagem e no relatório da frota inteira". As duas razões não
+ * se sustentam: a listagem NÃO calcula valor contábil, e o relatório de depreciação
+ * tem `SELECT` próprio (`depreciation-report.usecase.ts`).
+ *
+ * O que o select compartilhado tem de verdade são NOVE consumidores — a listagem,
+ * a busca por série, a tela do posto, as posses do colaborador e os seis use-cases
+ * de escrita do ativo. Todos ganhavam um `LEFT JOIN` em `depreciations` e quatro
+ * colunas na resposta para um número que nenhum deles mostra.
+ *
+ * Aqui a regra viaja com o único leitor que a usa, e o N+1 continua não existindo:
+ * é UMA consulta, com a regra embutida, para UM ativo.
+ * ═════════════════════════════════════════════════════════════════════════════
+ */
+export const ASSET_DETAIL_SELECT = {
+  ...ASSET_SELECT,
+  model: {
+    select: {
+      ...ASSET_SELECT.model.select,
+      depreciation: {
+        select: { id: true, name: true, months: true, floorValue: true, floorType: true },
+      },
+    },
+  },
+} as const;

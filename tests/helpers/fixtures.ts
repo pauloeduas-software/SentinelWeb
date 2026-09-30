@@ -184,18 +184,120 @@ export async function criarAtivo(
  * Um ativo no estoque, duas pessoas e um posto de trabalho — que é o mínimo
  * para exercitar as três camadas do `docs/MODELO-POSSE.md`, incluindo o caso
  * que nenhum ITAM de prateleira modela: DUAS pessoas no MESMO posto.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * O `sufixo` E POR QUE O PADRÃO DELE É VAZIO.
+ *
+ * `Manufacturer.name` e `Location.name` são `@unique`, e `User.email` tem índice
+ * único parcial. Chamar esta função DUAS vezes no mesmo arquivo colide nos três —
+ * 409 "Registro já existe" vindo de dentro do fixture, que se lê como defeito da
+ * aplicação e não do teste. Foi o que aconteceu com `ciclo-de-vida/auditoria.test.ts`,
+ * que a monta uma vez por `it`.
+ *
+ * O padrão fica VAZIO de propósito: quatro testes já passando dependem dos nomes
+ * LITERAIS que ela produz — `invariantes/posse.test.ts` compara
+ * `['Ana Lima', 'Laura Souza']`, `aceite/fluxo.test.ts` confere o `signerName` e
+ * `listagens/historico-da-pessoa.test.ts` espera `locationLabel === 'Mesa 1'`.
+ * Trocar os nomes por gerados quebraria os quatro para consertar um. Quem chama
+ * mais de uma vez passa o sufixo; quem chama uma vez não muda nada.
+ * ═════════════════════════════════════════════════════════════════════════════
  */
-export async function cenarioDePosse(api: ApiDeTeste) {
+export async function cenarioDePosse(api: ApiDeTeste, sufixo = '') {
   const seed = await idsDoSeed();
-  const fabricanteId = await criarFabricante(api);
+
+  // O SUFIXO DO E-MAIL É SANITIZADO AQUI, e não na responsabilidade de quem chama.
+  //
+  // Nome de fabricante e de posto aceitam qualquer texto; a parte local de um
+  // e-mail não. Um sufixo legível como " (posto-vago)" produz
+  // `laura (posto-vago)@teste.local`, que o zod da borda recusa com 422 — e o teste
+  // morre dizendo "e-mail inválido", que não tem nada a ver com o que ele testa.
+  //
+  // Sanitizar aqui é a mesma escolha do `method` na auditoria pelo agente: a regra
+  // mora onde ninguém pode esquecer dela, porque quem chama é quem erra.
+  const parteDeEmail = sufixo.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const noEmail = parteDeEmail ? `.${parteDeEmail}` : '';
+
+  const fabricanteId = await criarFabricante(api, `Fabricante de Teste${sufixo}`);
   const modelId = await criarModelo(api, { categoriaId: seed.categoriaId, fabricanteId });
 
   const [mesa1, laura, ana, ativo] = await Promise.all([
-    criarLocal(api, { name: 'Mesa 1', isWorkstation: true }),
-    criarColaborador(api, { name: 'Laura Souza', email: 'laura@teste.local' }),
-    criarColaborador(api, { name: 'Ana Lima', email: 'ana@teste.local' }),
+    criarLocal(api, { name: `Mesa 1${sufixo}`, isWorkstation: true }),
+    criarColaborador(api, { name: `Laura Souza${sufixo}`, email: `laura${noEmail}@teste.local` }),
+    criarColaborador(api, { name: `Ana Lima${sufixo}`, email: `ana${noEmail}@teste.local` }),
     criarAtivo(api, { statusId: seed.statusDeployableId, modelId }),
   ]);
 
   return { ...seed, modelId, fabricanteId, mesa1, laura, ana, ativo };
+}
+
+// ── O CICLO DE VIDA (F8) ────────────────────────────────────────────────────
+
+/** Um fornecedor, pela API. O nome é `@unique`, então quem chama passa o próprio. */
+export async function criarFornecedor(api: ApiDeTeste, name: string): Promise<string> {
+  const criado = exigir201<Criado>('fornecedor', await api.post('/api/suppliers', { name }));
+  return criado.id;
+}
+
+/**
+ * Uma regra de depreciação, pela API — nunca por `prisma.depreciation.create`.
+ *
+ * Criar pelo Prisma pularia o `beforeWrite` da spec, que é justamente o que limita
+ * o piso `PERCENT` a 100% — e o teste do valor contábil existe para provar o que
+ * acontece quando o piso `AMOUNT` passa do custo, que é o caso que aquele
+ * `beforeWrite` NÃO cobre.
+ */
+export async function criarDepreciacao(
+  api: ApiDeTeste,
+  opcoes: { name: string; months: number; floorValue: string; floorType: 'PERCENT' | 'AMOUNT' },
+): Promise<string> {
+  const criado = exigir201<Criado>('depreciação', await api.post('/api/depreciations', opcoes));
+  return criado.id;
+}
+
+/** Pendura a regra no MODELO — é ali que ela ancora (a categoria vem do modelo). */
+export async function pendurarDepreciacao(
+  api: ApiDeTeste,
+  modelId: string,
+  depreciationId: string,
+): Promise<void> {
+  exigir201('depreciação no modelo', await api.put(`/api/asset-models/${modelId}`, { depreciationId }));
+}
+
+/** Uma manutenção, pela rota do ATIVO: ela nasce sempre pendurada num. */
+export async function criarManutencao(
+  api: ApiDeTeste,
+  assetId: string,
+  opcoes: {
+    type?: 'MANUTENCAO' | 'REPARO' | 'UPGRADE' | 'CALIBRACAO' | 'SUPORTE';
+    title: string;
+    startDate: string;
+    completionDate?: string;
+    cost?: string;
+    isWarranty?: boolean;
+    supplierId?: string;
+  },
+): Promise<{ id: string; cost: string | null; emAberto: boolean }> {
+  const corpo: Record<string, unknown> = {
+    type: opcoes.type ?? 'REPARO',
+    title: opcoes.title,
+    startDate: opcoes.startDate,
+  };
+  if (opcoes.completionDate !== undefined) corpo.completionDate = opcoes.completionDate;
+  if (opcoes.cost !== undefined) corpo.cost = opcoes.cost;
+  if (opcoes.isWarranty !== undefined) corpo.isWarranty = opcoes.isWarranty;
+  if (opcoes.supplierId !== undefined) corpo.supplierId = opcoes.supplierId;
+
+  return exigir201('manutenção', await api.post(`/api/assets/${assetId}/maintenances`, corpo));
+}
+
+/** `AAAA-MM-DD` de N dias atrás — o que os testes de prazo precisam. */
+export function diasAtras(dias: number): string {
+  const data = new Date();
+  data.setUTCDate(data.getUTCDate() - dias);
+  return data.toISOString().slice(0, 10);
+}
+
+/** `AAAA-MM-DD` de N dias à frente. */
+export function diasAFrente(dias: number): string {
+  return diasAtras(-dias);
 }

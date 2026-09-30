@@ -16,9 +16,14 @@ import {
 } from '../../../../domain/stock/stock.queries';
 import { useAssetLicensesQuery } from '../../../../domain/license/license.queries';
 import {
+  useAssetMaintenancesQuery, useCloseMaintenance, useCreateMaintenance,
+} from '../../../../domain/maintenance/maintenance.queries';
+import { useAssetAuditsQuery } from '../../../../domain/audit/audit.queries';
+import {
   useDesvincularMaquina, useMaquinaDoAtivoQuery,
 } from '../../../../domain/reconciliation/reconciliation.queries';
 import type { RetireInput } from '../../../../domain/shared/asset.types';
+import type { ManutencaoInput } from '../../../../domain/shared/lifecycle.types';
 import type { AbaId } from '../helpers/abas.helper';
 
 // Estado da TELA DE DETALHE. Aba, modais e o ativo em edição são de uma tela
@@ -64,6 +69,18 @@ export function useAssetDetail() {
   // desvincular, que é a correção de um vínculo errado — o pior resultado
   // possível daquela fase, e não pode depender de mexer no banco à mão.
   const { data: maquina, isPending: maquinaPendente } = useMaquinaDoAtivoQuery(id ?? null);
+
+  // MANUTENÇÕES (F8) — a aba que a F2 deixou desabilitada dizendo "Fase 8". Abrir
+  // e encerrar moram aqui porque é na tela do ativo que alguém está quando o
+  // equipamento quebra; a tela global existe para a pergunta do parque inteiro.
+  //
+  // E as CONFERÊNCIAS, só leitura: registrar auditoria de um ativo isolado é a
+  // rota `POST /api/assets/:id/audit`, mas o gesto real é conferir um POSTO (D54)
+  // — e é lá que a tela de conferência vive.
+  const { data: manutencoes, isPending: manutencoesPendentes } = useAssetMaintenancesQuery(id ?? null);
+  const { data: auditorias, isPending: auditoriasPendentes } = useAssetAuditsQuery(id ?? null);
+  const abrirManutencao = useCreateMaintenance();
+  const encerrarManutencao = useCloseMaintenance();
   const desvincular = useDesvincularMaquina();
   const retirarComponente = useDetachComponent();
 
@@ -213,6 +230,26 @@ export function useAssetDetail() {
     componentesPendentes,
     licencas: licencas ?? [],
     licencasPendentes,
+
+    // MANUTENÇÕES e CONFERÊNCIAS — as duas listas da aba que chegou na F8.
+    manutencoes: manutencoes ?? [],
+    manutencoesPendentes,
+    auditorias: auditorias ?? [],
+    auditoriasPendentes,
+    handleAbrirManutencao: async (dados: ManutencaoInput) => {
+      if (!id) return;
+      await abrirManutencao.mutateAsync({ assetId: id, data: dados });
+    },
+    handleEncerrarManutencao: async (manutencaoId: string) => {
+      // Sem janela aqui, e sem custo: encerrar da aba do ativo é o caso "acabou
+      // agora" — o servidor usa hoje. Quem precisa lançar o valor final usa a tela
+      // de Manutenções, que tem o formulário com custo e observações.
+      try {
+        await encerrarManutencao.mutateAsync({ id: manutencaoId, data: {} });
+      } catch (erro) {
+        alert((erro as Error).message);
+      }
+    },
 
     // MÁQUINA — a aba que nasceu pronta na F7.
     maquina,

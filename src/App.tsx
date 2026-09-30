@@ -8,6 +8,9 @@ import PostosPage from './pages/postos';
 import EstoquePage from './pages/estoque';
 import LicencasPage from './pages/licencas';
 import DescobertasPage from './pages/descobertas';
+import ManutencoesPage from './pages/manutencoes';
+import AuditoriasPage from './pages/auditorias';
+import RelatoriosPage from './pages/relatorios';
 import UsersPage from './pages/gestao-usuario';
 import UserDetailPage from './pages/gestao-usuario/detalhe';
 import ConfiguracoesPage from './pages/configuracoes';
@@ -64,6 +67,17 @@ function Layout() {
               por trás: `/reconciliacao` seria o mesmo erro que `/itam` foi até
               a F6, nomear a tela pelo assunto em vez de pelo conteúdo. */}
           <Route path="/descobertas" element={<DescobertasPage />} />
+          {/* O CICLO DE VIDA (F8). As três rotas levam o nome do que a tela
+              LISTA, no plural — `/auditorias` e não `/auditoria`, que nomearia o
+              processo, o mesmo erro que `/itam` foi até a F6.
+
+              `/auditorias` NÃO tem entrada no menu de propósito: a barra já tem
+              doze itens e a conferência começa por um posto, então quem chega aqui
+              vem de Postos ou da aba de auditorias dos relatórios — onde estão os
+              números que levam alguém a conferir. */}
+          <Route path="/manutencoes" element={<ManutencoesPage />} />
+          <Route path="/auditorias" element={<AuditoriasPage />} />
+          <Route path="/relatorios" element={<RelatoriosPage />} />
           <Route path="/users" element={<UsersPage />} />
           {/* Perfil do colaborador: os dois baldes de posse e o desligamento
               (docs/MODELO-POSSE.md, Camada 3). Depois de `/users` porque o

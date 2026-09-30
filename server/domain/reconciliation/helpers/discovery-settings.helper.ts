@@ -14,6 +14,20 @@ export interface ConfiguracaoDaDescoberta {
   shadowHours: number;
   userDailyRetentionDays: number;
   ignoredUserKeys: string[];
+  /**
+   * O FUSO, que nasceu na F8 (D123) e é lido aqui de propósito.
+   *
+   * O turno da ocupação é inferido da hora LOCAL em que a pessoa aparece
+   * (`shift.helper.ts`), e até a F8 esse fuso era uma constante embutida —
+   * `FUSO_PADRAO`. Com `AppSetting.timezone` existindo, manter a constante como
+   * fonte da verdade seria fabricar a segunda resposta para a mesma pergunta.
+   *
+   * Ele viaja NESTA configuração, e não numa leitura própria, porque o job de
+   * reconciliação lê isto UMA vez por rodada e passa para cada endpoint: uma
+   * consulta a mais por máquina para descobrir o fuso da empresa seriam 500
+   * consultas por hora para uma resposta que não muda.
+   */
+  timezone: string;
 }
 
 const CAMPOS = {
@@ -22,6 +36,7 @@ const CAMPOS = {
   shadowHours: true,
   userDailyRetentionDays: true,
   ignoredUserKeys: true,
+  timezone: true,
 } as const;
 
 /**

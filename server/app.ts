@@ -32,6 +32,10 @@ import { WorkstationMaestro } from './domain/workstation/workstation.maestro';
 import { StockMaestro } from './domain/stock/stock.maestro';
 import { LicenseMaestro } from './domain/license/license.maestro';
 import { AttachmentMaestro } from './domain/attachment/attachment.maestro';
+import { MaintenanceMaestro } from './domain/maintenance/maintenance.maestro';
+import { AuditMaestro } from './domain/audit/audit.maestro';
+import { ReportMaestro } from './domain/report/report.maestro';
+import { AlertMaestro } from './domain/alert/alert.maestro';
 import { AcceptanceMaestro } from './domain/acceptance/acceptance.maestro';
 import { TAMANHO_MAXIMO_BYTES } from './core/storage/mime';
 import { buildReadinessReport, checkDependencies } from './core/lifecycle/health';
@@ -207,6 +211,15 @@ export async function buildApp(): Promise<FastifyInstance> {
   // `/api/assets/:id`. Registrar na ordem em que o conceito nasce é o que mantém
   // o arquivo legível (docs/FASE-7-PLANO-ITAM.md).
   await ReconciliationMaestro.setupRoutes(server);
+  // CICLO DE VIDA depois da convergência: as rotas de manutenção e de auditoria
+  // pendem de `/api/assets/:id`, e a auditoria automática (D124) é escrita pelo
+  // job da reconciliação — registrar na ordem em que o conceito nasce é o que
+  // mantém o arquivo legível (docs/FASE-8-PLANO-ITAM.md).
+  await MaintenanceMaestro.setupRoutes(server);
+  await AuditMaestro.setupRoutes(server);
+  await AlertMaestro.setupRoutes(server);
+  // Relatório por último da fase: ele só LÊ o que os outros escrevem.
+  await ReportMaestro.setupRoutes(server);
   await AttachmentMaestro.setupRoutes(server);
   // Aceite depois de posse: o termo nasce dentro da transação do checkout, e a
   // leitura pública dele pende de `assignments`.

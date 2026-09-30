@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { ClipboardCheck, Plus } from 'lucide-react';
 import ListToolbar from '../components/ListToolbar';
 import PostoDetalheModal from './components/PostoDetalheModal';
 import PostoFormModal from './components/PostoFormModal';
@@ -37,12 +37,24 @@ export default function PostosPage() {
             {rotuloDaContagem(total, view)}
           </div>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary font-mono text-xs uppercase tracking-widest transition-colors shrink-0"
-        >
-          <Plus size={14} /> Novo posto
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* A PORTA DA CONFERÊNCIA (F8). Ela mora aqui, e não no menu, porque a
+              auditoria física começa por um POSTO: a unidade de trabalho é a mesa,
+              e é desta lista que se escolhe qual conferir. A barra de navegação já
+              tem doze itens. */}
+          <Link
+            to="/auditorias"
+            className="flex items-center gap-2 px-4 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base font-mono text-xs uppercase tracking-widest transition-colors"
+          >
+            <ClipboardCheck size={14} /> Conferir
+          </Link>
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary font-mono text-xs uppercase tracking-widest transition-colors"
+          >
+            <Plus size={14} /> Novo posto
+          </button>
+        </div>
       </div>
 
       {/* Os três recortes ficam FORA do ListToolbar: as abas dele são

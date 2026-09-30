@@ -68,7 +68,24 @@ import { prisma } from '../../../core/database/prismaClient';
 // `MERGE` é a fusão de duas máquinas descobertas (reimagem, troca de placa).
 // Operação destrutiva e sem desfazer, com o estado anterior no `changes` — é
 // dela que sai a resposta para "por que esta telemetria mudou de máquina?".
-export type ActivityAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE' | 'END' | 'CHECKOUT' | 'CHECKIN' | 'RETIRE' | 'UNRETIRE' | 'OFFBOARD' | 'ATTACH' | 'DETACH' | 'ACCEPT' | 'DECLINE' | 'REVOKE' | 'INSTALL' | 'UNINSTALL' | 'ADJUST' | 'VIEW_KEY' | 'LINK' | 'UNLINK' | 'MERGE';
+// `SERVICE`, `SERVICE_CLOSE` e `AUDIT` são do ciclo de vida (F8). As três são
+// gravadas com `entityType: 'Asset'`, pelo motivo do `ATTACH` e do `INSTALL`:
+// quem abre a aba Histórico do notebook quer ler "entrou em reparo em março" e
+// "foi conferido na Mesa 2" — um log pendurado numa entidade que a tela não abre
+// não apareceria em consulta nenhuma.
+//
+// `SERVICE`/`SERVICE_CLOSE` convivem com o `CREATE`/`UPDATE` gravado em
+// `entityType: 'Maintenance'`, e nenhuma é cópia da outra: são as duas perguntas
+// que a operação responde — "o que aconteceu com este ativo" e "o que mudou
+// nesta linha de manutenção". É a mesma escolha do INSTALL, escrita duas vezes
+// de propósito.
+//
+// `AUDIT` é gravado SÓ PELA CONFERÊNCIA MANUAL. A automática (D124) roda para
+// toda máquina vinculada, todo dia: uma linha de log por ativo por dia afogaria
+// a trilha inteira em eventos que ninguém pediu — o mesmo motivo que impede
+// `VIEW_*` de virar padrão. O registro dela é a linha em `audits`, que é a
+// tabela que existe para responder "quando este ativo foi conferido".
+export type ActivityAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE' | 'END' | 'CHECKOUT' | 'CHECKIN' | 'RETIRE' | 'UNRETIRE' | 'OFFBOARD' | 'ATTACH' | 'DETACH' | 'ACCEPT' | 'DECLINE' | 'REVOKE' | 'INSTALL' | 'UNINSTALL' | 'ADJUST' | 'VIEW_KEY' | 'LINK' | 'UNLINK' | 'MERGE' | 'SERVICE' | 'SERVICE_CLOSE' | 'AUDIT';
 
 // `ADJUST` é a quantidade NOMINAL de um item de estoque mudando — chegou nota,
 // quebrou, recontagem (F5, Etapa D). Ele convive com o `StockLog`, que grava o
