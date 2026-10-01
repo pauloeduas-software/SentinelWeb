@@ -14,10 +14,13 @@ import RelatoriosPage from './pages/relatorios';
 import UsersPage from './pages/gestao-usuario';
 import UserDetailPage from './pages/gestao-usuario/detalhe';
 import ConfiguracoesPage from './pages/configuracoes';
+import ImportacaoPage from './pages/importacao';
+import EtiquetasPage from './pages/etiquetas';
 import LoginPage from './pages/login';
 import AceitePage from './pages/aceite';
 import TokensPage from './pages/tokens';
 import { useAuthStore } from './domain/auth/auth.store';
+import { useFormatoDoSistema } from './pages/hooks/useSistema';
 
 /**
  * `/itam/assets/:id` → `/ativos/:id`, preservando o id.
@@ -33,6 +36,11 @@ function RedirecionarAtivo() {
 // Só o esqueleto da aplicação: moldura e rotas. Estado, chamada de API e regra
 // de tela ficam nas páginas (pages/<contexto>/hooks) e nos stores de domínio.
 function Layout() {
+  // A CONFIGURAÇÃO DE SISTEMA (F10) é aplicada AQUI, e só aqui: acima do
+  // roteador, porque formato de número e de data valem para toda tela, e dentro
+  // do `Layout`, porque a rota pede sessão — a configuração não é pública.
+  useFormatoDoSistema();
+
   return (
     <div className="min-h-screen bg-bg-base text-text-primary selection:bg-status-info/20 font-sans flex flex-col">
       <AppHeader />
@@ -85,6 +93,11 @@ function Layout() {
               ordem aqui é para quem lê. */}
           <Route path="/users/:id" element={<UserDetailPage />} />
           <Route path="/configuracoes" element={<ConfiguracoesPage />} />
+          {/* A IMPORTAÇÃO (F10, Etapa D). Rota própria, e o nome é o
+              substantivo do que a tela faz. */}
+          <Route path="/importacao" element={<ImportacaoPage />} />
+          {/* AS ETIQUETAS (F10, Etapa G). */}
+          <Route path="/etiquetas" element={<EtiquetasPage />} />
           <Route path="/tokens" element={<TokensPage />} />
         </Routes>
       </main>

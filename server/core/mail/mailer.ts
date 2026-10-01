@@ -1,5 +1,6 @@
 import nodemailer, { type Transporter } from 'nodemailer';
 import { createLogger } from '../logger/logger';
+import { urlDoPainel } from '../config/app-url';
 
 // O CORREIO — um lugar só, e ele não sabe o que é entrega, devolução ou aceite.
 //
@@ -44,18 +45,6 @@ function obterTransporte(): Transporter | null {
 
 function remetente(): string {
   return process.env.MAIL_FROM?.trim() || 'Sentinel <nao-responda@sentinel.local>';
-}
-
-/**
- * A URL pública do painel, para os links do corpo do e-mail.
- *
- * Sem ela o e-mail sai com link relativo, que não clica em lugar nenhum. O
- * padrão aponta para a porta de desenvolvimento porque é onde ele será lido
- * primeiro — e o log do no-op mostra a URL inteira, então um valor errado
- * aparece antes de ir para produção.
- */
-export function urlDoPainel(): string {
-  return (process.env.APP_URL?.trim() || 'http://localhost:3000').replace(/\/+$/, '');
 }
 
 /**
@@ -112,3 +101,11 @@ export function reiniciarTransporte(): void {
   transporte = null;
   iniciado = false;
 }
+
+// A URL DO PAINEL mudou de casa para `core/config/app-url.ts` (F10, Etapa G): o
+// QR da etiqueta passou a precisar dela, e um domínio de etiqueta importando do
+// correio mentiria sobre a dependência.
+//
+// O reexport mantém os chamadores do e-mail onde estão — eles pedem a URL para
+// montar o corpo da mensagem, e é aqui que o corpo é montado.
+export { urlDoPainel };

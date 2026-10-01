@@ -3,12 +3,7 @@ import { AppError } from '../../../core/errors/app-error';
 import { apagar, gravar } from '../../../core/storage/storage';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { ATTACHMENT_SELECT } from '../helpers/attachment-select.helper';
-
-export interface ArquivoRecebido {
-  bytes: Buffer;
-  originalName: string;
-  mimeType: string;
-}
+import type { ArquivoRecebido } from '../../shared/multipart.helper';
 
 /**
  * Anexa um arquivo a um ativo.

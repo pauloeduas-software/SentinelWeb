@@ -7,8 +7,11 @@ const logger = createLogger('settings.maestro');
 
 // Configuração global (tabela `app_settings`, uma linha).
 //
-// A tela de Configurações do singleton — marca, logo, moeda, formato de data —
-// é a Fase 10. Por ora só a etiqueta automática tem dono definido.
+// TRÊS RECORTES DA MESMA LINHA, um por tela, e isso é de propósito (D65): a
+// descoberta (F7), os alertas (F8) e o sistema (F10). Não existe uma rota que
+// devolva o singleton inteiro — ela levaria para o navegador o `cryptoCanary` e
+// o `assetTagNext`, que não são configuração de ninguém (ver
+// `helpers/system-settings.helper.ts`).
 export class SettingsMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
     // GET, e nunca POST: é leitura pura. Consumir a etiqueta acontece só dentro
@@ -27,6 +30,23 @@ export class SettingsMaestro {
     // três domínios diferentes os leem (relatório, alerta e reconciliação).
     server.get('/api/settings/alerts', settingsController.getLifecycle);
     server.put('/api/settings/alerts', WRITE_RATE_LIMIT, settingsController.saveLifecycle);
+
+    // A CONFIGURAÇÃO DE SISTEMA (F10): marca, formato de número e data, moeda,
+    // delimitador do CSV e retenção do backup. `PUT` e todos os campos
+    // opcionais, como os dois pares acima.
+    server.get('/api/settings', settingsController.getSystem);
+    server.put('/api/settings', WRITE_RATE_LIMIT, settingsController.saveSystem);
+
+    // A MARCA é arquivo, então tem rota própria em `multipart/form-data` — e
+    // SAI POR `/api/` COM SESSÃO, como todo arquivo deste sistema (D84).
+    //
+    // O custo conhecido, escrito aqui para não ser descoberto depois: a TELA DE
+    // LOGIN não mostra a logo, porque ela não tem sessão para pedir o arquivo.
+    // Abrir esta rota resolveria o enfeite e entregaria, de graça, o nome e a
+    // identidade visual da empresa a quem só sabe a URL do painel.
+    server.get('/api/settings/branding/:marca', settingsController.getBranding);
+    server.put('/api/settings/branding/:marca', WRITE_RATE_LIMIT, settingsController.setBranding);
+    server.delete('/api/settings/branding/:marca', WRITE_RATE_LIMIT, settingsController.clearBranding);
 
     logger.info('[Maestro] Rotas de Configuração inicializadas.');
   }

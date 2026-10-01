@@ -46,3 +46,25 @@ export function tiposAceitos(): string[] {
 export function tiposDeImagemAceitos(): string[] {
   return [...IMAGENS];
 }
+
+/**
+ * O MIME de um arquivo que NÓS gravamos, pela extensão dele.
+ *
+ * É o inverso do mapa `TIPOS`, e existe porque a coluna guarda só o CAMINHO: a
+ * rota que transmite a imagem precisa de um `Content-Type` e não tem `mimetype`
+ * guardado para consultar. Derivar daqui é seguro justamente porque a extensão
+ * no disco foi escrita pelo `gravar()` a partir da allowlist — ela nunca veio
+ * do nome que o cliente mandou.
+ *
+ * O padrão é `application/octet-stream` e não um tipo de imagem chutado:
+ * extensão desconhecida significa arquivo que este sistema não gravou, e
+ * anunciá-lo como `image/jpeg` faria o navegador tentar desenhá-lo.
+ */
+export function mimeDoArquivo(caminho: string): string {
+  const ponto = caminho.lastIndexOf('.');
+  if (ponto === -1) return 'application/octet-stream';
+
+  const extensao = caminho.slice(ponto).toLowerCase();
+  const encontrado = Object.entries(TIPOS).find(([, valor]) => valor === extensao);
+  return encontrado?.[0] ?? 'application/octet-stream';
+}

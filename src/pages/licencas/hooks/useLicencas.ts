@@ -52,6 +52,14 @@ export function useLicencas() {
     [page, view, debouncedSearch],
   );
 
+  // Os mesmos filtros SEM paginação — é o que o export leva (F10, Etapa C). O
+  // servidor recusa `page`/`perPage` ali com 422: exportar é levar tudo que o
+  // filtro alcança.
+  const filtrosParaExport = useMemo(
+    () => ({ view, q: debouncedSearch || undefined }),
+    [view, debouncedSearch],
+  );
+
   const { data, isPending } = useLicensesQuery(params);
   const licencas = data?.rows ?? [];
   const { data: alertas } = useLicenseAlertsQuery();
@@ -185,6 +193,7 @@ export function useLicencas() {
     perPage: PER_PAGE,
     setPage,
     search,
+    filtrosParaExport,
     changeSearch,
     view,
     changeView,

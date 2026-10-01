@@ -41,6 +41,16 @@ export interface ApiDeTeste extends Cliente {
   app: FastifyInstance;
   /** O id do administrador logado — o ator esperado em todo `ActivityLog`. */
   adminId: string;
+  /**
+   * O cabeçalho `cookie` da sessão, para o que precisa de `app.inject()` cru.
+   *
+   * QUEM PRECISA DISSO: upload. O cliente acima manda JSON, e um corpo
+   * `multipart/form-data` é um `Buffer` com `content-type` próprio — então ele
+   * vai pelo `inject`, que não carrega cookie sozinho. Antes desta linha, cada
+   * arquivo de teste que subia arquivo fazia um SEGUNDO login para descobrir o
+   * cookie que o `criarApi` já tinha na mão.
+   */
+  cookie: string;
   /** O MESMO app, sem o cookie de sessão: é com ele que se testa a porta fechada. */
   anonimo: Cliente;
   fechar(): Promise<void>;
@@ -125,10 +135,13 @@ export async function criarApi(): Promise<ApiDeTeste> {
 
   const { id: adminId } = JSON.parse(login.body) as { id: string };
 
+  const cookie = `${COOKIE_SESSAO}=${token}`;
+
   return {
     app,
     adminId,
-    ...clienteCom(app, `${COOKIE_SESSAO}=${token}`),
+    cookie,
+    ...clienteCom(app, cookie),
     anonimo: clienteCom(app, null),
     fechar: () => app.close(),
   };

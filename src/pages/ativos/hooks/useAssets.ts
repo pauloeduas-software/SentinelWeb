@@ -40,6 +40,16 @@ export function useAssets() {
     [page, debouncedSearch, view, statusId, relatorio],
   );
 
+  // OS MESMOS FILTROS, SEM PAGINAÇÃO — é o que o export leva (F10, Etapa C).
+  //
+  // Separado de `params` de propósito: o servidor RECUSA `page` e `perPage` no
+  // export com 422, porque exportar é levar tudo que o filtro alcança. Derivar
+  // um do outro com `delete` deixaria a recusa a uma distração de distância.
+  const filtrosParaExport = useMemo(
+    () => ({ q: debouncedSearch || undefined, view, statusId, relatorio }),
+    [debouncedSearch, view, statusId, relatorio],
+  );
+
   const { data, isPending } = useAssetsQuery(params);
   const { data: stats } = useAssetStatsQuery();
   // AS COLUNAS CUSTOMIZADAS (F9, `showInListView`). Consulta própria, e não um
@@ -208,6 +218,8 @@ export function useAssets() {
     changeRelatorio,
     statusId,
     statusFiltrado,
+    /** Os filtros correntes, sem paginação — para o link do export. */
+    filtrosParaExport,
     toggleStatus,
     limparStatus: () => trocarFiltro(() => setStatusId(undefined)),
     loading: isPending,

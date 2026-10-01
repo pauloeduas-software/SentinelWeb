@@ -5,6 +5,7 @@ import { prisma } from '../../server/core/database/prismaClient';
 import { diretorioDeUpload } from '../../server/core/storage/storage';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { criarAtivo, criarFabricante, criarModelo, idsDoSeed } from '../helpers/fixtures';
+import { PDF_MINIMO, PNG_1x1, corpoMultipart } from '../helpers/multipart';
 
 // ANEXO E IMAGEM — e a prova do D84, que é o motivo de esta suíte existir.
 //
@@ -21,26 +22,11 @@ import { criarAtivo, criarFabricante, criarModelo, idsDoSeed } from '../helpers/
 // Por isso TODA leitura de arquivo aqui passa por `/api/`, e o primeiro teste
 // deste arquivo é o anônimo tomando 401.
 
-const PNG_1x1 = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-  'base64',
-);
-const PDF = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n', 'utf8');
-
-/** Corpo multipart montado à mão — é o que o navegador manda. */
-function multipart(nome: string, tipo: string, bytes: Buffer) {
-  const limite = '----sentinelteste';
-  const cabeca = Buffer.from(
-    `--${limite}\r\nContent-Disposition: form-data; name="file"; filename="${nome}"\r\n` +
-      `Content-Type: ${tipo}\r\n\r\n`,
-    'utf8',
-  );
-  const rabo = Buffer.from(`\r\n--${limite}--\r\n`, 'utf8');
-  return {
-    payload: Buffer.concat([cabeca, bytes, rabo]),
-    headers: { 'content-type': `multipart/form-data; boundary=${limite}` },
-  };
-}
+// O corpo e os dois arquivos de exemplo saem de `helpers/multipart.ts`: a F10
+// precisa dos mesmos para a marca e para o CSV, e duas cópias do boundary
+// divergiriam onde a diferença se lê como "a rota recusou o arquivo".
+const PDF = PDF_MINIMO;
+const multipart = corpoMultipart;
 
 interface Anexo {
   id: string;
@@ -71,28 +57,12 @@ async function subirAnexo(nome = 'nota-fiscal.pdf', tipo = 'application/pdf', by
   const resposta = await api.app.inject({
     method: 'POST',
     url: `/api/assets/${assetId}/attachments`,
-    headers: { ...headers, cookie: await cookieDoAdmin() },
+    headers: { ...headers, cookie: api.cookie },
     payload,
   });
   return { status: resposta.statusCode, body: JSON.parse(resposta.body || '{}') as Anexo };
 }
 
-/** O cookie do cliente autenticado — `inject` cru não o carrega sozinho. */
-let cookieCache: string | null = null;
-async function cookieDoAdmin(): Promise<string> {
-  if (cookieCache) return cookieCache;
-  const login = await api.app.inject({
-    method: 'POST',
-    url: '/api/auth/login',
-    payload: {
-      username: process.env.ADMIN_USERNAME ?? 'admin',
-      password: process.env.ADMIN_PASSWORD ?? '',
-    },
-  });
-  const c = login.cookies.find((x) => x.name === 'sentinel_sessao');
-  cookieCache = `sentinel_sessao=${c?.value ?? ''}`;
-  return cookieCache;
-}
 
 describe('a porta fechada (D84)', () => {
   it('download de anexo SEM sessão responde 401', async () => {
@@ -172,7 +142,7 @@ describe('upload', () => {
     const resposta = await api.app.inject({
       method: 'POST',
       url: '/api/assets/11111111-1111-4111-8111-111111111111/attachments',
-      headers: { ...headers, cookie: await cookieDoAdmin() },
+      headers: { ...headers, cookie: api.cookie },
       payload,
     });
     expect(resposta.statusCode).toBe(404);
@@ -186,7 +156,7 @@ describe('download', () => {
     const resposta = await api.app.inject({
       method: 'GET',
       url: `/api/attachments/${criado.body.id}/download`,
-      headers: { cookie: await cookieDoAdmin() },
+      headers: { cookie: api.cookie },
     });
 
     expect(resposta.statusCode).toBe(200);
@@ -255,7 +225,7 @@ describe('imagem', () => {
     const primeira = await api.app.inject({
       method: 'PUT',
       url: `/api/images/asset/${assetId}`,
-      headers: { ...headers, cookie: await cookieDoAdmin() },
+      headers: { ...headers, cookie: api.cookie },
       payload,
     });
     expect(primeira.statusCode).toBe(200);
@@ -269,7 +239,7 @@ describe('imagem', () => {
     const servida = await api.app.inject({
       method: 'GET',
       url: `/api/images/asset/${assetId}`,
-      headers: { cookie: await cookieDoAdmin() },
+      headers: { cookie: api.cookie },
     });
     expect(servida.statusCode).toBe(200);
     expect(servida.headers['content-type']).toBe('image/png');
@@ -278,7 +248,7 @@ describe('imagem', () => {
     const segunda = await api.app.inject({
       method: 'PUT',
       url: `/api/images/asset/${assetId}`,
-      headers: { ...headers, cookie: await cookieDoAdmin() },
+      headers: { ...headers, cookie: api.cookie },
       payload,
     });
     expect(segunda.statusCode).toBe(200);
@@ -293,7 +263,7 @@ describe('imagem', () => {
     const resposta = await api.app.inject({
       method: 'PUT',
       url: `/api/images/asset/${assetId}`,
-      headers: { ...headers, cookie: await cookieDoAdmin() },
+      headers: { ...headers, cookie: api.cookie },
       payload,
     });
     expect(resposta.statusCode).toBe(422);
@@ -304,7 +274,7 @@ describe('imagem', () => {
     const resposta = await api.app.inject({
       method: 'PUT',
       url: `/api/images/usuarios/${assetId}`,
-      headers: { ...headers, cookie: await cookieDoAdmin() },
+      headers: { ...headers, cookie: api.cookie },
       payload,
     });
     expect(resposta.statusCode).toBe(422);

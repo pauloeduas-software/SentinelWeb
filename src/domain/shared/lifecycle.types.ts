@@ -364,3 +364,50 @@ export interface RelatorioDeManutencoes {
   total: number;
   porTipo: CustoPorTipo[];
 }
+
+// ── A CAMADA 3 AGREGADA (F10, Etapa F) ──────────────────────────────────────
+//
+// Os dois relatórios que leem `vw_asset_responsibles`. Eles moram neste arquivo
+// porque a tela deles é a mesma — `/relatorios`, a moldura que a F8 criou e que
+// o plano da F10 manda reusar em vez de abrir uma segunda página.
+
+export interface LinhaDeResponsabilidade {
+  userId: string;
+  name: string;
+  email: string;
+  /** Desligado ou na lixeira, e ainda respondendo: é pendência de devolução. */
+  desligado: boolean;
+  /** A posse é DELA. Desfaz-se com uma devolução. */
+  diretos: number;
+  /** Ela OCUPA a mesa a que o equipamento foi entregue. Desfaz-se com escala. */
+  porPosto: number;
+  /** O equipamento está preso a outro que é dela (a dock que segura o notebook). */
+  porAtivo: number;
+  total: number;
+  custoTotal: string | null;
+}
+
+export interface RelatorioDeResponsabilidade {
+  linhas: LinhaDeResponsabilidade[];
+  semResponsavel: number;
+  desligadosComPosse: number;
+}
+
+export interface GrupoDoBuilder {
+  grupo: string | null;
+  ativos: number;
+  custoTotal: string | null;
+}
+
+export interface RespostaDoBuilder {
+  columns: { token: string; rotulo: string }[];
+  agruparPor: string | null;
+  linhas: Record<string, unknown>[];
+  grupos: GrupoDoBuilder[];
+  disponiveis: string[];
+}
+
+export interface CamposDoBuilder {
+  colunas: string[];
+  agrupaveis: string[];
+}

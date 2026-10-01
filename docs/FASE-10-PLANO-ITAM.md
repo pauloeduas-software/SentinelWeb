@@ -3,6 +3,13 @@
 > Plano **prospectivo** da Fase 10 do [`ITAM-TODO.md`](./ITAM-TODO.md). Convenções de camada:
 > [`ARQUITETURA.md`](./ARQUITETURA.md). Contrato de posse: [`MODELO-POSSE.md`](./MODELO-POSSE.md).
 >
+> **Auditado em 01/10/2026**, contra a árvore com a F8 e a F9 fechadas:
+> [`AUDITORIA-F10.md`](./AUDITORIA-F10.md) — cinco afirmações deste arquivo caducaram
+> (as dependências, a suíte, as rotas de `/api/settings`, a F9 e a ordem de commits) e
+> onze defeitos foram encontrados, três deles mudando o que seria entregue. Este
+> arquivo fica como foi escrito, porque é o registro do que se decidiu; o que vale
+> para executar é o plano de lá.
+>
 > Esforço: **P** = até meio dia · **M** = 1 a 3 dias · **G** = mais de 3 dias · Decisões **D65–D71**, na
 > numeração contínua do projeto (D1–D13 no TODO, D14–D17 em `DECISOES-POSSE.md`).
 
