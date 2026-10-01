@@ -6,9 +6,9 @@ import type { CatalogRow } from '../../../domain/shared/catalog.types';
 
 const COR_PADRAO = '#888888';
 
-// Valor inicial de cada campo. Tudo vira string, menos checkbox: é o que o
-// `<input>` controlado espera, e o servidor já converte de volta (o `''` vira
-// `null` no schema, e número vazio vira `null` no `preprocess`).
+// Valor inicial de cada campo. Tudo vira string, menos checkbox e lista: é o
+// que o `<input>` controlado espera, e o servidor já converte de volta (o `''`
+// vira `null` no schema, e número vazio vira `null` no `preprocess`).
 function valoresIniciais(spec: CatalogUiSpec, registro: CatalogRow | null): Record<string, unknown> {
   const valores: Record<string, unknown> = {};
 
@@ -17,10 +17,38 @@ function valoresIniciais(spec: CatalogUiSpec, registro: CatalogRow | null): Reco
 
     if (campo.tipo === 'checkbox') valores[campo.key] = Boolean(atual);
     else if (campo.tipo === 'select') valores[campo.key] = String(atual ?? campo.opcoes?.[0]?.value ?? '');
-    else valores[campo.key] = atual == null ? '' : String(atual);
+    // `lista` é um `String[]` no banco e um valor POR LINHA na tela. A conversão
+    // acontece nas duas pontas — aqui e no `paraEnvio` —, e não no meio: um
+    // estado que guardasse o array obrigaria o `<textarea>` a recalculá-lo a
+    // cada tecla, e uma linha em branco no meio da digitação sumiria embaixo do
+    // cursor.
+    else if (campo.tipo === 'lista') {
+      valores[campo.key] = Array.isArray(atual) ? atual.join('\n') : '';
+    } else valores[campo.key] = atual == null ? '' : String(atual);
   }
 
   return valores;
+}
+
+/**
+ * O corpo que vai para a API: os campos `lista` voltam a ser `String[]`.
+ *
+ * Linha vazia é DESCARTADA, e isso é o que faz a edição funcionar: um `Enter`
+ * no fim do texto produz uma linha em branco, e mandá-la viraria 422 "valor da
+ * lista não pode ser vazio" numa tecla que ninguém considera um valor.
+ */
+function paraEnvio(spec: CatalogUiSpec, valores: Record<string, unknown>): Record<string, unknown> {
+  const corpo = { ...valores };
+
+  for (const campo of spec.campos) {
+    if (campo.tipo !== 'lista') continue;
+    corpo[campo.key] = String(valores[campo.key] ?? '')
+      .split('\n')
+      .map((linha) => linha.trim())
+      .filter((linha) => linha !== '');
+  }
+
+  return corpo;
 }
 
 interface CatalogFormModalProps {
@@ -43,7 +71,7 @@ export default function CatalogFormModal({ spec, registro, onClose, onSubmit }: 
     setErro('');
 
     try {
-      await onSubmit(valores);
+      await onSubmit(paraEnvio(spec, valores));
     } catch (falha) {
       // O apiClient já traduziu a resposta do servidor em Error.message.
       setErro((falha as Error).message);
@@ -219,6 +247,26 @@ function Campo({
         onChange={(event) => onChange(event.target.value)}
         className={`${CLASSE_CAMPO} h-20 resize-none`}
       />
+    );
+  }
+
+  // UM VALOR POR LINHA, e não separado por vírgula: valor de lista pode CONTER
+  // vírgula ("Sim, com ressalva"), e um separador que aparece no conteúdo não é
+  // separador. A quebra de linha não aparece dentro de um `<option>`.
+  if (campo.tipo === 'lista') {
+    const quantos = String(valor ?? '').split('\n').filter((linha) => linha.trim() !== '').length;
+    return (
+      <>
+        <textarea
+          value={String(valor ?? '')}
+          placeholder={campo.placeholder ?? 'Um valor por linha'}
+          onChange={(event) => onChange(event.target.value)}
+          className={`${CLASSE_CAMPO} h-24 resize-y font-mono`}
+        />
+        <p className="text-text-tertiary text-[10px] leading-relaxed pt-1 tabular-nums">
+          {quantos === 0 ? 'nenhum valor' : `${quantos} ${quantos === 1 ? 'valor' : 'valores'}`}
+        </p>
+      </>
     );
   }
 

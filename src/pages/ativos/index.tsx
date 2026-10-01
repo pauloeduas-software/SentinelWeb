@@ -9,10 +9,33 @@ import { formatarData, formatarMoeda } from '../helpers/format.helper';
 import { seloDaSaida } from './helpers/descomissionamento.helper';
 import { TRACO, resumoDaPosse, rotuloDaOperacao } from './helpers/posse.helper';
 import { useAssets } from './hooks/useAssets';
+import type { CampoDeColuna } from '../../domain/shared/custom-field.types';
+
+/**
+ * O valor de uma coluna customizada, ou `null` quando não há o que mostrar.
+ *
+ * Cálculo fora do JSX (docs/ARQUITETURA.md). `CHECKBOX` é o único que precisa de
+ * tradução: o valor viaja como o TEXTO `"true"`/`"false"` — é o que o servidor
+ * guarda, para o filtro `?cf[slug]=true` funcionar igual a qualquer outro campo
+ * —, e "true" numa célula de tabela não é português.
+ */
+function valorDaColuna(
+  // `undefined` junto de `null`: a coluna não está no select compartilhado do
+  // servidor, então o tipo `Asset` a declara opcional. Aqui os dois significam a
+  // mesma coisa — não há valor para esta célula.
+  customFields: Record<string, string> | null | undefined,
+  campo: CampoDeColuna,
+): string | null {
+  const valor = customFields?.[campo.slug];
+  if (valor === undefined || valor === '') return null;
+  if (campo.element === 'CHECKBOX') return valor === 'true' ? 'sim' : 'não';
+  return valor;
+}
 
 export default function AtivosPage() {
   const {
-    assets, total, totalCadastrado, porStatus, descomissionados, arquivados, page, perPage, setPage,
+    assets, total, totalCadastrado, porStatus, colunasCustomizadas,
+    descomissionados, arquivados, page, perPage, setPage,
     search, changeSearch, view, changeView, relatorio, changeRelatorio,
     statusId, statusFiltrado, toggleStatus, limparStatus,
     modalAberto, emEdicao, clonando, openCreate, openEdit, openClone, closeModal, abrirDetalhe,
@@ -111,6 +134,16 @@ export default function AtivosPage() {
               <th className="px-6 py-4 font-normal">Localização</th>
               <th className="px-6 py-4 font-normal">Responsável</th>
               <th className="px-6 py-4 font-normal">Compra</th>
+              {/* AS COLUNAS QUE O CLIENTE CRIOU (F9, `showInListView`). Depois das
+                  nativas e antes das ações: elas são extras, e mover "Ações" do
+                  fim quebraria o hábito de quem usa a tela todo dia.
+
+                  Campo CIFRADO não chega aqui — o servidor o exclui desta rota, e
+                  o cadastro recusa marcá-lo como coluna: uma coluna de `••••••`
+                  repetido em toda linha ocuparia espaço para não informar nada. */}
+              {colunasCustomizadas.map((campo) => (
+                <th key={campo.slug} className="px-6 py-4 font-normal">{campo.name}</th>
+              ))}
               <th className="px-6 py-4 font-normal text-right">Ações</th>
             </tr>
           </thead>
@@ -194,6 +227,21 @@ export default function AtivosPage() {
                     <div className="tabular-nums">{formatarMoeda(asset.purchaseCost)}</div>
                     <div className="text-[10px] text-text-tertiary mt-1 tabular-nums">{formatarData(asset.purchaseDate)}</div>
                   </td>
+                  {/* Uma célula por coluna customizada, na MESMA ordem do
+                      cabeçalho — as duas percorrem a mesma lista, que é o que as
+                      mantém alinhadas quando um campo entra ou sai.
+
+                      `customFields` é `null` no ativo que não tem campo nenhum, e
+                      a chave falta no que não preencheu ESTE campo: os dois casos
+                      caem no travessão, que é o que a tabela já faz com coluna
+                      vazia. */}
+                  {colunasCustomizadas.map((campo) => (
+                    <td key={campo.slug} className="px-6 py-4 text-text-secondary">
+                      {valorDaColuna(asset.customFields, campo) ?? (
+                        <span className="text-text-tertiary">{TRACO}</span>
+                      )}
+                    </td>
+                  ))}
                   <td className="px-6 py-4 text-right" onClick={(event) => event.stopPropagation()}>
                     <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                       {view === 'trashed' ? (
@@ -232,7 +280,12 @@ export default function AtivosPage() {
 
             {assets.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-6 py-16 text-center text-text-tertiary">
+                {/* 9 nativas MAIS as que o cliente criou (F9): o cabeçalho e cada
+                    linha percorrem `colunasCustomizadas`, e esta célula é a única
+                    que não percorre nada — então ela é a única que precisa somar.
+                    Com o número cravado, um campo marcado como coluna deixava o
+                    "nenhum ativo encontrado" sem cobrir a tabela. */}
+                <td colSpan={9 + colunasCustomizadas.length} className="px-6 py-16 text-center text-text-tertiary">
                   <div className="flex flex-col items-center justify-center">
                     <Database size={24} className="mb-4 opacity-50" />
                     {view === 'trashed' ? (

@@ -51,8 +51,19 @@ import { prisma } from '../../../core/database/prismaClient';
 // instalar o software em qualquer máquina, para sempre, e nenhuma coluna do
 // inventário registraria isso.
 //
+// `VIEW_FIELD` é um CAMPO CUSTOMIZADO CIFRADO revelado (F9, D62) — o segundo e
+// último `VIEW_*`, e ele não afrouxa a regra abaixo: ele a satisfaz. O teste é o
+// do `VIEW_KEY`: *o simples acesso é o fato auditável, porque depois de revelado
+// o valor não pode ser "des-revelado"*. A senha do BIOS ou a chave do Wi-Fi que
+// alguém leu continua conhecida para sempre, e nenhuma coluna do inventário
+// registraria isso.
+//
+// A rota que o grava RECUSA campo não cifrado com 422, e essa recusa é o que
+// impede esta ação de virar o padrão que a linha seguinte proíbe: sem ela, uma
+// tela poderia usar a mesma rota para ler campo comum e encher a trilha.
+//
 // NÃO acrescente `VIEW_*` para outras telas. Auditar leitura de dado comum
-// encheria a trilha de linhas que ninguém lê e afogaria justamente esta.
+// encheria a trilha de linhas que ninguém lê e afogaria justamente estas duas.
 // `LINK`, `UNLINK` e `MERGE` são da convergência com o RMM (F7). As três são
 // gravadas com `entityType: 'Asset'` — quem abre o histórico do ativo quer ler
 // "passou a ser a máquina PC-ANA", e um log pendurado numa entidade que a tela
@@ -85,7 +96,7 @@ import { prisma } from '../../../core/database/prismaClient';
 // a trilha inteira em eventos que ninguém pediu — o mesmo motivo que impede
 // `VIEW_*` de virar padrão. O registro dela é a linha em `audits`, que é a
 // tabela que existe para responder "quando este ativo foi conferido".
-export type ActivityAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE' | 'END' | 'CHECKOUT' | 'CHECKIN' | 'RETIRE' | 'UNRETIRE' | 'OFFBOARD' | 'ATTACH' | 'DETACH' | 'ACCEPT' | 'DECLINE' | 'REVOKE' | 'INSTALL' | 'UNINSTALL' | 'ADJUST' | 'VIEW_KEY' | 'LINK' | 'UNLINK' | 'MERGE' | 'SERVICE' | 'SERVICE_CLOSE' | 'AUDIT';
+export type ActivityAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE' | 'END' | 'CHECKOUT' | 'CHECKIN' | 'RETIRE' | 'UNRETIRE' | 'OFFBOARD' | 'ATTACH' | 'DETACH' | 'ACCEPT' | 'DECLINE' | 'REVOKE' | 'INSTALL' | 'UNINSTALL' | 'ADJUST' | 'VIEW_KEY' | 'VIEW_FIELD' | 'LINK' | 'UNLINK' | 'MERGE' | 'SERVICE' | 'SERVICE_CLOSE' | 'AUDIT';
 
 // `ADJUST` é a quantidade NOMINAL de um item de estoque mudando — chegou nota,
 // quebrou, recontagem (F5, Etapa D). Ele convive com o `StockLog`, que grava o

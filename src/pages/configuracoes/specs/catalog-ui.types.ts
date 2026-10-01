@@ -10,7 +10,14 @@ export type TipoCampo =
   | 'text' | 'textarea' | 'color' | 'number' | 'checkbox'
   | 'select'    // valores fixos, vindos de um enum do banco
   | 'reference' // valores vindos de outra tabela, por /options
-  | 'money';
+  | 'money'
+  // `lista` é um `String[]` no banco, editado como um valor por linha (F9).
+  //
+  // Ele entra como tipo NOVO em vez de um `textarea` que a tela separe por
+  // vírgula, por um motivo de dado: valor de lista pode CONTER vírgula ("Sim,
+  // com ressalva"), e um separador que aparece no conteúdo não é separador. A
+  // quebra de linha não aparece dentro de um `<option>`.
+  | 'lista';
 
 export interface OpcaoFixa {
   value: string;
@@ -48,7 +55,15 @@ export interface CampoSpec {
   ajuda?: string;
 }
 
-export type RenderColuna = 'texto' | 'cor' | 'enum' | 'relacao' | 'booleano' | 'meses' | 'moeda';
+export type RenderColuna =
+  | 'texto' | 'cor' | 'enum' | 'relacao' | 'booleano' | 'meses' | 'moeda'
+  // `contagem` lê um agregado do `_count` do servidor — quantos campos um
+  // conjunto tem (F9). Não é coluna da tabela: é conta, e por isso não entra no
+  // `audited` da spec do servidor.
+  | 'contagem'
+  // `lista` desenha um `String[]` como "3 valores", com os primeiros no `title`.
+  // Despejar vinte valores numa célula de tabela deixaria a linha ilegível.
+  | 'lista';
 
 export interface ColunaSpec {
   key: string;
@@ -58,6 +73,8 @@ export interface ColunaSpec {
   opcoes?: readonly OpcaoFixa[];
   /** `moeda`: o campo irmão que diz se é % ou R$ */
   campoTipo?: string;
+  /** `contagem`: qual chave dentro de `_count` ler ('fields', 'categories'…) */
+  contagemDe?: string;
 }
 
 /**
@@ -79,7 +96,7 @@ export interface ColunaSpec {
  * ação nova é obrigado pelo compilador a tratá-la no `switch` de quem abre o
  * modal. Ação declarada e não tratada vira erro de tipo, não botão morto.
  */
-export type AcaoLinhaId = 'ocupantes';
+export type AcaoLinhaId = 'ocupantes' | 'campos-do-conjunto';
 
 export interface AcaoLinhaSpec {
   id: AcaoLinhaId;
@@ -152,4 +169,44 @@ export const TIPOS_RESIDUAL: readonly OpcaoFixa[] = [
     ajuda: 'O piso é uma porcentagem do valor de compra. Ex.: 10% de R$ 5.000 = R$ 500.' },
   { value: 'AMOUNT', label: 'Valor fixo (R$)',
     ajuda: 'O piso é um valor em reais, igual para todos os ativos que usarem esta regra.' },
+];
+
+// ── OS ENUMS DOS CAMPOS CUSTOMIZADOS (F9) ───────────────────────────────────
+//
+// Duas listas, porque são duas perguntas independentes de verdade: COMO o campo
+// se desenha (`element`) e O QUE ele aceita (`format`). Um `LISTBOX` de IPs e um
+// `TEXT` de IP validam igual e se desenham diferente.
+
+export const ELEMENTOS_DE_CAMPO: readonly OpcaoFixa[] = [
+  { value: 'TEXT', label: 'Texto (uma linha)',
+    ajuda: 'Uma caixa de texto. O que o valor pode ser é decidido pelo FORMATO, abaixo.' },
+  { value: 'TEXTAREA', label: 'Texto (várias linhas)',
+    ajuda: 'Para observação longa. Não entra como coluna da listagem de ativos.' },
+  { value: 'LISTBOX', label: 'Lista de opções',
+    ajuda: 'Um `<select>` com valores fixos. Exige preencher a lista de valores.' },
+  { value: 'RADIO', label: 'Botões de opção',
+    ajuda: 'Como a lista, mas com todas as opções à vista. Bom para até quatro valores.' },
+  { value: 'CHECKBOX', label: 'Caixa de marcar',
+    ajuda: 'Sim ou não. O valor é guardado como texto ("true"/"false"), para o filtro funcionar igual aos outros campos.' },
+  { value: 'DATE', label: 'Data',
+    ajuda: 'Abre o calendário do navegador e guarda no formato AAAA-MM-DD.' },
+];
+
+export const FORMATOS_DE_CAMPO: readonly OpcaoFixa[] = [
+  { value: 'ANY', label: 'Qualquer texto',
+    ajuda: 'Sem restrição de conteúdo. O tamanho continua limitado — o valor mora na linha do ativo.' },
+  { value: 'NUMERIC', label: 'Número',
+    ajuda: 'Aceita sinal e casas decimais (1234 ou 12,5). ATENÇÃO: não dá para ORDENAR por este campo — ver a ajuda do fim da tela.' },
+  { value: 'ALPHA', label: 'Só letras' },
+  { value: 'ALPHANUMERIC', label: 'Letras e números' },
+  { value: 'EMAIL', label: 'E-mail' },
+  { value: 'URL', label: 'Endereço de site' },
+  { value: 'IP', label: 'IP (v4 ou v6)' },
+  { value: 'IPV4', label: 'IPv4', ajuda: 'Ex.: 10.0.0.7. Um IPv6 aqui é recusado.' },
+  { value: 'IPV6', label: 'IPv6' },
+  { value: 'MAC', label: 'Endereço MAC', ajuda: 'Com separador: 00:1B:44:11:3A:B7 ou 00-1B-44-11-3A-B7.' },
+  { value: 'DATE', label: 'Data (AAAA-MM-DD)' },
+  { value: 'BOOLEAN', label: 'Verdadeiro/falso' },
+  { value: 'REGEX', label: 'Expressão regular própria',
+    ajuda: 'Exige o padrão. Quantificador aninhado — como (a+)+ — é recusado: ele pode travar o servidor inteiro numa entrada de poucas dezenas de caracteres.' },
 ];

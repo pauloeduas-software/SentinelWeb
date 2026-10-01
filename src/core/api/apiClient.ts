@@ -41,6 +41,54 @@ export function registrarPerdaDeSessao(handler: () => void): void {
   aoPerderSessao = handler;
 }
 
+/**
+ * O erro traduzido, com o mapa POR CAMPO quando o servidor o manda.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * POR QUE O `fields` PRECISA SOBREVIVER À TRADUÇÃO.
+ *
+ * O 422 do servidor vem com `{ error: "resumo", fields: { "<campo>": "<motivo>" } }`
+ * (server/core/errors/zod-error.ts). Até aqui só o resumo sobrevivia, e isso
+ * bastava enquanto todo formulário tinha campos FIXOS: uma faixa vermelha no
+ * topo dizendo "IP Fixo: use um endereço IPv4" é legível quando há seis campos
+ * na tela.
+ *
+ * Com campos customizados (F9) deixa de bastar. O conjunto pode ter vinte campos
+ * que o cliente criou, e o resumo corta em três com "(e mais N)" — então o
+ * motivo do vigésimo campo simplesmente não aparece em lugar nenhum. O `slug`
+ * vem no `fields` justamente para a tela pintar a mensagem NO campo, e jogá-lo
+ * fora aqui tornaria isso impossível sem cada página refazer a leitura do corpo
+ * do erro.
+ *
+ * Fica nesta classe, e não num `cause` que cada tela destrinche, porque este
+ * arquivo já é o único lugar que conhece o formato da resposta de erro — é a
+ * mesma razão pela qual a mensagem é traduzida aqui.
+ * ═════════════════════════════════════════════════════════════════════════════
+ */
+export class ErroDaApi extends Error {
+  /** `campo` → motivo. Vazio quando o erro não é de validação. */
+  readonly fields: Record<string, string>;
+
+  constructor(message: string, fields: Record<string, string>, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'ErroDaApi';
+    this.fields = fields;
+  }
+}
+
+/** O `fields` do corpo, se ele vier no formato esperado. */
+function camposDoErro(data: unknown): Record<string, string> {
+  if (typeof data !== 'object' || data === null) return {};
+  const fields = (data as { fields?: unknown }).fields;
+  if (typeof fields !== 'object' || fields === null || Array.isArray(fields)) return {};
+
+  const saida: Record<string, string> = {};
+  for (const [campo, motivo] of Object.entries(fields)) {
+    if (typeof motivo === 'string') saida[campo] = motivo;
+  }
+  return saida;
+}
+
 // O backend responde erro SEMPRE no mesmo formato (`{ error: "mensagem" }`, ver
 // server/core/errors). Traduzir isso em Error acontece aqui, num lugar só: as
 // telas mostram `error.message` sem cada uma precisar conhecer o formato da
@@ -68,6 +116,11 @@ apiClient.interceptors.response.use(
             ? 'Erro inesperado no servidor.'
             : 'Não foi possível falar com o servidor.';
 
-    return Promise.reject(new Error(message, { cause: error }));
+    // `ErroDaApi` e não `Error`: continua sendo um `Error` para todo código que
+    // só lê `.message` (que é a maioria), e carrega o `fields` para quem precisa
+    // pintar o campo certo.
+    return Promise.reject(
+      new ErroDaApi(message, camposDoErro(error?.response?.data), { cause: error }),
+    );
   },
 );

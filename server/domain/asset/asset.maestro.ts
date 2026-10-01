@@ -24,6 +24,10 @@ export class AssetMaestro {
     // COLISÃO (serial que casa com dois ativos vale zero, D46) e uma rota que
     // devolve um ativo por serial não tem como responder isso.
     server.get('/api/assets/by-serial/:serial', assetController.bySerial);
+    // O CONJUNTO DE CAMPOS CUSTOMIZADOS do modelo escolhido (F9, D58). Caminho
+    // fixo, e por isso ANTES de `/:id` — ela não é a leitura de um ativo: o
+    // formulário a chama no cadastro, quando ativo nenhum existe ainda.
+    server.get('/api/assets/fieldset', assetController.fieldset);
 
     // A leitura unitária vem DEPOIS das rotas de caminho fixo (`/stats`,
     // `/options`, `/by-serial`): o find-my-way casa o segmento estático antes do
@@ -37,6 +41,18 @@ export class AssetMaestro {
     // A aba Histórico: o `ActivityLog` do ativo unido ao histórico de posse, do
     // mais recente para o mais antigo. NÃO existe tabela `AssetLog` (D18).
     server.get('/api/assets/:id/history', assetController.history);
+
+    // REVELAR um campo customizado cifrado (F9, D62). A ÚNICA porta por onde o
+    // valor em claro sai: toda outra leitura devolve `••••••`.
+    //
+    // GET que ESCREVE `ActivityLog`, como o `/product-key` da F6 — e com o teto
+    // de escrita por isso mesmo: é a rota que um script tentaria em laço para
+    // varrer segredos, e cada tentativa custa uma linha de auditoria.
+    server.get(
+      '/api/assets/:id/custom-fields/:slug/reveal',
+      WRITE_RATE_LIMIT,
+      assetController.revealCustomField,
+    );
 
     server.post('/api/assets', WRITE_RATE_LIMIT, assetController.create);
     server.put('/api/assets/:id', WRITE_RATE_LIMIT, assetController.update);

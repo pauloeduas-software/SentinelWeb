@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { $Enums, type Prisma } from '@prisma/client';
+import { AppError } from '../../../core/errors/app-error';
 
 // Colunas que a listagem de ativos aceita ordenar. Allowlist do DOMÍNIO: o
 // parser em core/http/list-query.ts a recebe por parâmetro, porque `core` não
@@ -54,7 +55,35 @@ export interface AssetFilters {
   statusId?: string;
   locationId?: string;
   relatorio?: AssetRelatorio;
+  /** `?cf[slug]=valor` — igualdade dentro do JsonB (F9, D63). Vazio quando não veio. */
+  cf: Record<string, string>;
 }
+
+// ---------------------------------------------------------------------------
+// O FILTRO POR CAMPO CUSTOMIZADO — `?cf[slug]=valor` (F9, D63)
+// ---------------------------------------------------------------------------
+//
+// A CHAVE CHEGA LITERAL, COM OS COLCHETES, e é isso que faz esta leitura ser
+// possível sem trocar o parser de query do Fastify: o `fast-querystring` é
+// plano — ele não interpreta `[...]` como aninhamento —, então
+// `?cf[ip_fixo]=10.0.0.7` vira a chave `"cf[ip_fixo]"` com valor `"10.0.0.7"`.
+//
+// O slug é conferido contra o MESMO formato do cadastro. Uma chave `cf[...]` que
+// não casa não é lida aqui e segue para o parser do `core`, que a recusa com 422
+// pelo `strictObject` — a mensagem diz "campo não reconhecido: cf[Foo]", que é a
+// resposta certa e não precisou de código nenhum.
+const CHAVE_DE_CAMPO = /^cf\[([a-z][a-z0-9_]*)\]$/;
+
+/**
+ * Teto de filtros de campo customizado por requisição.
+ *
+ * Cada um é um `AND` a mais no `where`, e cada um custa uma varredura da coluna
+ * JsonB (ver `buildAssetFilterWhere`). Sem teto, `?cf[a]=1&cf[b]=2&…` com
+ * cinquenta chaves é uma consulta caríssima escrita numa URL.
+ */
+const MAX_FILTROS_CF = 5;
+/** Teto do valor. O que se guarda tem teto de 1.000; procurar por mais é lixo. */
+const MAX_VALOR_CF = 200;
 
 /**
  * ATIVO EM POSTO VAGO — equipamento parado em mesa sem ninguém.
@@ -102,11 +131,61 @@ export function separarFiltrosDeAtivo(raw: unknown): {
   paraOCore: Record<string, unknown>;
 } {
   const query = { ...((raw ?? {}) as Record<string, unknown>) };
+
+  // Os `cf[...]` saem ANTES do schema: eles não são chaves fixas, então nem o
+  // `assetFiltersSchema` (que é `z.object`) nem o parser estrito do `core`
+  // sabem nomeá-los.
+  const cf: Record<string, string> = {};
+  for (const chave of Object.keys(query)) {
+    const casou = CHAVE_DE_CAMPO.exec(chave);
+    if (!casou) continue;
+
+    const slug = casou[1];
+    const valor = query[chave];
+    delete query[chave];
+
+    // Valor vazio significa "não filtre por isto", e não "ache quem tem string
+    // vazia" — que é um estado que não existe (limpar um campo REMOVE a chave).
+    if (valor === undefined || valor === '') continue;
+
+    // ── A CHAVE REPETIDA É RECUSADA, NÃO IGNORADA ────────────────────────
+    //
+    // `?cf[ip_fixo]=10.0.0.7&cf[ip_fixo]=10.0.0.8` faz o parser de query
+    // entregar um ARRAY. Descartá-lo em silêncio — que é o que um
+    // `typeof valor !== 'string'` faria — devolveria a lista INTEIRA sem filtro
+    // nenhum, para uma URL que pediu dois filtros. É a mesma falha muda que o
+    // `strictObject` existe para evitar, e ela é pior aqui: a tela mostraria
+    // resultado, só não o pedido.
+    //
+    // E não há o que adivinhar: um campo tem UM valor, então dois valores para a
+    // mesma chave não expressam "ou" nem "e" — expressam um erro de quem montou
+    // a URL.
+    if (typeof valor !== 'string') {
+      throw new AppError(
+        `cf[${slug}]: o filtro aparece mais de uma vez na consulta. Um campo customizado `
+        + 'aceita um valor por filtro.',
+        422,
+      );
+    }
+
+    if (valor.length > MAX_VALOR_CF) {
+      throw new AppError(`cf[${slug}]: máximo de ${MAX_VALOR_CF} caracteres`, 422);
+    }
+
+    if (valor.trim() === '') continue;
+
+    cf[slug] = valor.trim();
+  }
+
+  if (Object.keys(cf).length > MAX_FILTROS_CF) {
+    throw new AppError(`Máximo de ${MAX_FILTROS_CF} filtros por campo customizado de uma vez.`, 422);
+  }
+
   const filtros = assetFiltersSchema.parse(query);
 
   for (const chave of CHAVES_DO_DOMINIO) delete query[chave];
 
-  return { filtros, paraOCore: query };
+  return { filtros: { ...filtros, cf }, paraOCore: query };
 }
 
 /**
@@ -153,10 +232,47 @@ function whereDaVista(view: AssetView, statusIdExplicito: boolean): Prisma.Asset
  * inventar filtros que ele não tem.
  */
 export function buildAssetFilterWhere(filtros: AssetFilters): Prisma.AssetWhereInput {
+  const camposCustomizados = Object.entries(filtros.cf);
+
   return {
     ...whereDaVista(filtros.view, filtros.statusId !== undefined),
     ...(filtros.statusId ? { statusId: filtros.statusId } : {}),
     ...(filtros.locationId ? { locationId: filtros.locationId } : {}),
     ...(filtros.relatorio === 'posto-vago' ? POSTO_VAGO : {}),
+
+    // ── IGUALDADE DENTRO DO JsonB (F9, D63) ────────────────────────────────
+    //
+    // `AND` e não espalhamento: duas chaves `customFields` no mesmo objeto se
+    // sobrescreveriam, e filtrar por dois campos customizados de uma vez
+    // aplicaria só o último — em silêncio.
+    //
+    // ⚠️ ESTE FILTRO NÃO USA O ÍNDICE GIN, E É MEDIDO. O Prisma tipado emite
+    //
+    //     WHERE ("customFields" #> ARRAY['ip_fixo']::text[])::jsonb = $1
+    //
+    // que é comparação de EXPRESSÃO: Seq Scan. O que o GIN serve é `@>`:
+    //
+    //     WHERE "customFields" @> '{"ip_fixo":"10.0.0.7"}'
+    //
+    // Medido em 50 mil linhas: 13,5 ms na forma do Prisma contra 0,63 ms com
+    // `@>` (Bitmap Index Scan). Vinte vezes, crescendo linearmente com a tabela.
+    //
+    // E ele fica assim mesmo, porque a alternativa é pior: `@>` só se alcança por
+    // `$queryRaw`, e este `where` se SOMA a vista, status, localização, busca,
+    // ordenação e paginação — um pré-filtro cru devolveria uma lista de ids que
+    // viraria um `IN` sem teto, ou uma segunda paginação que mentiria no `total`.
+    // As perguntas de tabela inteira, que não precisam compor, DESCEM para SQL
+    // cru e usam o índice (`count-assets-with-field.usecase.ts`).
+    //
+    // **É este o número que a F10 herda** (D63): o report builder vai querer
+    // filtrar, ordenar e agrupar por campo customizado, e o que esta fase lhe
+    // entrega é a medida, não uma promessa.
+    ...(camposCustomizados.length > 0
+      ? {
+        AND: camposCustomizados.map(([slug, valor]) => ({
+          customFields: { path: [slug], equals: valor },
+        })),
+      }
+      : {}),
   };
 }

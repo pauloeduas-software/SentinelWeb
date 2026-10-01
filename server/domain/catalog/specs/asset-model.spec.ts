@@ -16,6 +16,10 @@ export const assetModelSpec: CatalogSpec = {
   select: {
     id: true, name: true, modelNumber: true, eolMonths: true, notes: true,
     manufacturerId: true, categoryId: true, depreciationId: true, createdAt: true,
+    // A ÂNCORA QUE SOBREPÕE A CATEGORIA (F9, D58). O nome vem embutido pelo
+    // mesmo motivo do fabricante: a tabela mostra o nome, não o uuid.
+    customFieldsetId: true,
+    customFieldset: { select: { id: true, name: true } },
     manufacturer: { select: { id: true, name: true } },
     category: { select: { id: true, name: true, type: true } },
     // A regra embutida porque a tabela mostra o NOME dela, e porque é daqui que
@@ -26,7 +30,10 @@ export const assetModelSpec: CatalogSpec = {
   sortable: ['name', 'modelNumber', 'createdAt'],
   defaultSort: 'name',
   searchable: ['name', 'modelNumber'],
-  audited: ['name', 'modelNumber', 'eolMonths', 'notes', 'manufacturerId', 'categoryId', 'depreciationId'],
+  audited: [
+    'name', 'modelNumber', 'eolMonths', 'notes',
+    'manufacturerId', 'categoryId', 'depreciationId', 'customFieldsetId',
+  ],
 
   // Conta a lixeira também: a FK é `Restrict` e o banco recusaria de todo jeito,
   // mas sem isto a contagem dá 0 e o usuário recebe o P2003 genérico no lugar da

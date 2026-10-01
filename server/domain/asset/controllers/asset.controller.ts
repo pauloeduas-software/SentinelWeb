@@ -1,7 +1,11 @@
 import { z } from 'zod';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { parseListQuery } from '../../../core/http/list-query';
+import { prisma } from '../../../core/database/prismaClient';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
+import { fieldsetQuerySchema, revealParamsSchema } from '../../custom-field/schemas/custom-field.schema';
+import { resolveFieldset } from '../../custom-field/use-cases/resolve-fieldset.usecase';
+import { revealCustomField } from '../../custom-field/use-cases/reveal-custom-field.usecase';
 import { idParamSchema } from '../../shared/params.schema';
 import { historyQuerySchema } from '../../shared/history.schema';
 import { ASSET_SORTABLE, separarFiltrosDeAtivo } from '../helpers/asset-filters.helper';
@@ -77,6 +81,32 @@ export const assetController = {
   async bySerial(request: FastifyRequest) {
     const { serial } = serialParamSchema.parse(request.params);
     return findAssetBySerial(serial);
+  },
+
+  /**
+   * O CONJUNTO DE CAMPOS CUSTOMIZADOS de um modelo (F9, D58).
+   *
+   * Por `?modelId=` e não por ativo: o formulário precisa dos campos no instante
+   * em que o usuário escolhe o modelo no `<select>`, ANTES de o ativo existir. É
+   * no cadastro que os campos obrigatórios mais importam.
+   */
+  async fieldset(request: FastifyRequest) {
+    const { modelId } = fieldsetQuerySchema.parse(request.query ?? {});
+    return resolveFieldset(prisma, modelId);
+  },
+
+  /**
+   * REVELAR um campo cifrado (F9, D62). GET, como o `/product-key` da F6.
+   *
+   * ⚠️ Ela GRAVA `ActivityLog` — é o ponto do sistema em que uma LEITURA é o
+   * fato auditável, porque um segredo revelado não pode ser "des-revelado". Um
+   * GET que escreve contraria o hábito de propósito, e a razão é a mesma da F6:
+   * a tela pede um valor, e a resposta certa a "quem viu isto?" só existe se o
+   * registro acontecer no mesmo caminho.
+   */
+  async revealCustomField(request: FastifyRequest) {
+    const { id, slug } = revealParamsSchema.parse(request.params);
+    return revealCustomField(id, slug, atorDaRequisicao(request));
   },
 
   async create(request: FastifyRequest, reply: FastifyReply) {

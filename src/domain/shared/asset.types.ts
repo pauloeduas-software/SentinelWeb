@@ -125,6 +125,46 @@ export interface Asset {
    * a subida do frontend e a do backend da F4, o campo simplesmente não chega.
    */
   posse: PosseResolvida | null;
+
+  /**
+   * OS CAMPOS CUSTOMIZADOS, já MASCARADOS (F9).
+   *
+   * `slug` → valor. Todo valor cifrado chega como `MASCARA_DE_CAMPO` (`••••••`) —
+   * o texto em claro sai por UMA porta só, a de revelar, que grava
+   * `ActivityLog`. Reenviar a máscara no formulário significa "não mexi neste
+   * campo" (`custom-field.types.ts`).
+   *
+   * `null` quando o ativo não tem campo nenhum: é o contrato da coluna, que é
+   * `DbNull` e não o literal JSON `null`.
+   *
+   * ⚠️ Pode conter chave que NÃO está no conjunto atual do modelo — os órfãos do
+   * D60. A tela de detalhe as mostra; o formulário não as edita.
+   *
+   * ⚠️ OPCIONAL, e a interrogação é o contrato real: a coluna NÃO está no
+   * `ASSET_SELECT` compartilhado do servidor, então só vem nas quatro leituras
+   * que a precisam (listagem, detalhe, criação e edição). A tela do posto
+   * (`workstation.types.ts`) e as posses do colaborador tipam as linhas delas com
+   * esta mesma interface e recebem um corpo SEM esta chave.
+   *
+   * Declará-la obrigatória fazia o tipo prometer o que dois endpoints não
+   * entregam — e o primeiro `asset.customFields.x` escrito numa daquelas telas
+   * compilaria para quebrar em runtime.
+   */
+  customFields?: Record<string, string> | null;
+
+  /**
+   * Tem algum valor cifrado gravado nesta linha?
+   *
+   * Vem junto de `customFields`, da mesma função que a mascara
+   * (`comCamposMascarados`), e é a resposta de LINHA à pergunta "há segredo
+   * aqui?" — o que a torna útil para uma marca na listagem sem abrir o ativo.
+   *
+   * ⚠️ NÃO é o que decide o botão de revelar: esse é por CAMPO, e a ficha o
+   * decide pelo par `campo.encrypted` + valor igual à máscara
+   * (`CustomFieldsCard`). Uma flag de linha não sabe dizer QUAL campo tem
+   * segredo, que é o que o botão precisa saber.
+   */
+  temSegredo?: boolean;
 }
 
 /**
@@ -292,7 +332,17 @@ export interface RetireInput {
 export type BulkOperacao =
   | { op: 'status'; statusId: string }
   | { op: 'location'; locationId: string | null }
-  | { op: 'delete' };
+  | { op: 'delete' }
+  /**
+   * PREENCHER um campo customizado nos selecionados (F9) — o backfill que o D61
+   * manda fazer antes de promover um campo a obrigatório.
+   *
+   * `value: null` é limpar, e limpar REMOVE a chave. O servidor recusa o lote
+   * inteiro quando algum ativo selecionado não pede o campo, quando o valor não
+   * serve ao formato, quando o campo é cifrado e quando esvaziar deixaria um
+   * obrigatório vazio.
+   */
+  | { op: 'custom-field'; fieldId: string; value: string | null };
 
 /** Corpo de `POST /api/assets/bulk` — UMA operação declarada, N ativos. */
 export type BulkInput = BulkOperacao & { ids: string[] };

@@ -102,6 +102,35 @@ function ehDiff(valor: unknown): valor is { de: unknown; para: unknown } {
 }
 
 /**
+ * O prefixo que o servidor põe nas chaves de campo customizado dentro do
+ * `changes` (`server/domain/custom-field/helpers/custom-field-value.helper.ts`).
+ */
+const PREFIXO_CUSTOMIZADO = 'cf.';
+
+/**
+ * O rótulo de um campo customizado, ou `null` quando a chave não é de um.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * ELE MOSTRA O `slug`, E NÃO O NOME DO CAMPO — de propósito.
+ *
+ * Os mapas de rótulo são estáticos, e campo customizado é criado em RUNTIME:
+ * não há linha para acrescentar. Resolver o slug para o nome atual exigiria
+ * consultar o cadastro de campos a cada abertura da aba — e responderia errado
+ * justamente no caso interessante: o campo pode ter sido RENOMEADO depois do
+ * evento, ou APAGADO.
+ *
+ * É a mesma escolha do UUID truncado logo acima: o log guarda o que valia NAQUELE
+ * momento, e o slug é imutável (D60), então ele é a única referência que não
+ * envelhece. A marca "(campo customizado)" é o que impede alguém de procurar
+ * `ip_fixo` entre as colunas de `assets`.
+ * ═════════════════════════════════════════════════════════════════════════════
+ */
+function rotuloDeCampoCustomizado(campo: string): string | null {
+  if (!campo.startsWith(PREFIXO_CUSTOMIZADO)) return null;
+  return `${campo.slice(PREFIXO_CUSTOMIZADO.length)} (campo customizado)`;
+}
+
+/**
  * Separa o `changes` em DIFF e DETALHE.
  *
  * As duas formas convivem no mesmo objeto — o checkout grava
@@ -123,7 +152,7 @@ export function lerEvento(evento: EventoComChanges, rotulos: Record<string, stri
     return { mudancas, detalhes };
   }
 
-  const rotuloDoCampo = (campo: string) => rotulos[campo] ?? campo;
+  const rotuloDoCampo = (campo: string) => rotulos[campo] ?? rotuloDeCampoCustomizado(campo) ?? campo;
 
   for (const [campo, valor] of Object.entries(evento.changes as Record<string, unknown>)) {
     if (ehDiff(valor)) {

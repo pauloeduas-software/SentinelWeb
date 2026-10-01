@@ -67,7 +67,8 @@ server/
 | `agent` | Conversa WebSocket com o Agente Sentinel (C#). Só transporte. | — |
 | `endpoint` | Máquina descoberta pelo agente (lado RMM) + telemetria + comandos | `Endpoint`, `Telemetry` |
 | `asset` | Ativo do ITAM — o `Asset` do vocabulário do Snipe-IT | `Asset` |
-| `catalog` | As sete tabelas de catálogo, com UM CRUD genérico dirigido por spec | `Category`, `StatusLabel`, `Manufacturer`, `AssetModel`, `Supplier`, `Location`, `Depreciation` |
+| `catalog` | As NOVE tabelas de catálogo, com UM CRUD genérico dirigido por spec | `Category`, `StatusLabel`, `Manufacturer`, `AssetModel`, `Supplier`, `Location`, `Depreciation`, `CustomField`, `CustomFieldset` |
+| `custom-field` | **Campos customizados**: o que a spec de catálogo não expressa — a composição de um conjunto (ordem e obrigatoriedade por vínculo), a resolução categoria × modelo, a validação de valor e a regra do preenchimento em massa | `CustomFieldsetField` |
 | `settings` | Configuração global: etiqueta automática, os botões da descoberta e os dez valores do ciclo de vida (limiares, hora e fuso) | `AppSetting` |
 | `activity` | Trilha de auditoria, gravada na transação de quem a origina | `ActivityLog` |
 | `user` | Colaborador da empresa | `User` |
@@ -81,6 +82,17 @@ server/
 | `alert` | **Central de alertas**: os quatro sinais do ativo, persistidos antes de virarem mensagem, com o job diário | `Alert` |
 | `report` | **Leitura agregada** — quatro relatórios, e nenhum deles escreve | — |
 
+> **`catalog` e `custom-field` são o MESMO assunto em duas pastas, e a divisão é o
+> D64.** A parte PLANA dos dois cadastros novos é CRUD de catálogo — listar,
+> buscar, ordenar, `ActivityLog`, 409 por uso —, então são duas specs e nenhuma
+> rota escrita à mão. O que **não** cabe numa spec é ordem, obrigatoriedade por
+> vínculo e validação de valor: isso tem regra, e regra mora em use-case.
+>
+> A fronteira se lê nas rotas: as dez planas saem do laço do `CatalogMaestro`; as
+> três que sobram (`/custom-fields/list-view` e o par
+> `/custom-fieldsets/:id/fields`) moram no `CustomFieldMaestro`, e nenhuma delas
+> grava nem lê UM CAMPO de uma linha.
+
 > **A decisão D1 foi executada na Fase 1.** `asset/` (RMM) virou `endpoint/`, e o
 > nome `asset/` passou ao ativo do ITAM. O `inventory/` deixou de existir junto
 > com a tabela `inventory_items`.
@@ -91,10 +103,16 @@ server/
 
 ### `catalog` e `stock` são as duas exceções à fatia vertical
 
-As sete tabelas de catálogo são o MESMO CRUD: nome, listagem paginada, busca,
-ordenação, `ActivityLog`, 409 quando a linha está em uso. Sete fatias verticais
-completas seriam ~77 arquivos quase idênticos — o que esta mesma página chama de
+As NOVE tabelas de catálogo são o MESMO CRUD: nome, listagem paginada, busca,
+ordenação, `ActivityLog`, 409 quando a linha está em uso. Nove fatias verticais
+completas seriam ~99 arquivos quase idênticos — o que esta mesma página chama de
 cerimônia, não arquitetura.
+
+> **O número está escrito aqui de propósito, e precisa ser corrigido junto.** A
+> F9 acrescentou duas tabelas e este parágrafo dizia "sete" — o mesmo tipo de
+> referência envelhecida que o `INVARIANTES.md` pede para corrigir ao acrescentar
+> uma invariante. Quem lê "sete" e conta nove no `specs/index.ts` passa a
+> desconfiar do resto da página.
 
 Então elas compartilham um CRUD genérico, e o que varia mora em `specs/`: um
 arquivo por tabela declarando o slug da rota, o schema de entrada, a allowlist de
@@ -102,7 +120,7 @@ resposta, as colunas ordenáveis e a regra de "em uso". **Acrescentar uma tabela
 de catálogo é escrever a spec e incluí-la em `specs/index.ts`** — nenhuma rota é
 escrita à mão.
 
-O preço, declarado: tipar a união dos sete delegates do Prisma não existe em TS,
+O preço, declarado: tipar a união dos nove delegates do Prisma não existe em TS,
 então cada spec faz UM cast, ao lado do nome do model. O cast não atravessa a
 regra: a entrada continua validada pelo `strictObject`, a saída continua limitada
 pelo `select`, e o `countUsages` de cada spec continua totalmente tipado.
@@ -281,13 +299,24 @@ Em ordem de prioridade, do [`ITAM-TODO.md`](./ITAM-TODO.md):
 - **Termo de entrega** — F4. O checkout, o checkin, o histórico de posse e a
   ocupação de posto **existem** (ver abaixo). Falta o fluxo de aceite: EULA da
   categoria, assinatura, PDF, e-mail e lembrete de atraso.
-- **Campos customizados** — F9. O `AssetModel` ganhou `depreciationId` na F8 e
-  **nada além disso**: o `customFieldsetId` que o plano da F9 prevê continua por
-  nascer, e a cifra que ele vai usar (`core/crypto/cipher.ts`, D81) já existe
-  desde a F6.
 - **Etiquetas, importação e o report builder** — F10. A moldura de
   `/relatorios` nasceu na F8, com quatro abas mais a dos alertas; export CSV,
   seletor de colunas e report builder entram NELA, não numa segunda tela.
+
+> **Os campos customizados JÁ EXISTEM** — esta seção os listava como pendentes,
+> dizendo que o `customFieldsetId` "continua por nascer". A F9 fechou: as duas
+> âncoras de conjunto nasceram (`Category` e `AssetModel`, categoria como padrão e
+> modelo sobrepondo — D58), os valores moram em `Asset.customFields` (JsonB, D59) e
+> o campo cifrado reusa o `core/crypto/cipher.ts` da F6 sem criar um segundo
+> formato (D81). Ver `docs/FASE-9-PLANO-ITAM.md`.
+>
+> **E ela mexeu em dois lugares fora do próprio domínio, os dois por medida:**
+> o `ClienteCatalogo` do CRUD de catálogo deixou de excluir `$queryRaw` (a
+> contagem de chaves no JsonB só usa o índice GIN por `?`, e precisa rodar DENTRO
+> da transação do delete), e o `apiClient` passou a preservar o `fields` do 422
+> numa classe própria — num conjunto de vinte campos criados pelo cliente, o
+> resumo da mensagem corta em três e o motivo do vigésimo não apareceria em lugar
+> nenhum.
 
 > **As licenças JÁ EXISTEM** — esta seção as listava como pendentes. A F6
 > fechou: `server/domain/license/`, com assento materializado (D40), escolha sem
@@ -357,8 +386,12 @@ pessoa — e a máquina ficaria rodando software sem licença atribuída.
 
 O que isso proíbe, e o lint não pega: **escrever em `Asset.assignedToId` fora do
 checkout/checkin**, **mudar `qty` de um item de estoque fora do
-`adjust-quantity`**, e **ler `License.productKey` fora do
-`reveal-product-key.usecase.ts`** — a defesa do segundo é a chave não existir no schema de
+`adjust-quantity`**, **ler `License.productKey` fora do
+`reveal-product-key.usecase.ts`**, e **ler `Asset.customFields` sem passar por
+`comCamposMascarados()`** — a coluna guarda pacote cifrado ao lado de valor
+comum, e é o prefixo `enc:` dentro do valor que diz qual é qual (por isso ela
+NÃO está no `ASSET_SELECT` compartilhado: só os quatro leitores que a mostram a
+carregam) — a defesa do segundo é a chave não existir no schema de
 edição, não uma checagem. Aquela coluna é cache do caso `USER`; um segundo lugar que a
 escreva recria a divergência que o modelo existe para impedir. As invariantes
 estão em [`INVARIANTES.md`](./INVARIANTES.md) e são provadas por

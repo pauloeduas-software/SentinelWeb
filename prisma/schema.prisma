@@ -391,9 +391,23 @@ model Category {
   components  Component[]
   licenses    License[]
 
+  // O CONJUNTO DE CAMPOS CUSTOMIZADOS PADRÃO (F9, D58).
+  //
+  // A categoria é a âncora PADRÃO; o modelo sobrepõe quando preenchido. Aqui
+  // porque "todo notebook pede número de patrimônio" é regra de CATEGORIA — o
+  // campo que o cliente realmente quer é da categoria *Notebook*, não do
+  // *Latitude 5420*.
+  //
+  // `Restrict`: apagar um conjunto que uma categoria usa é recusado com 409 e a
+  // contagem, em vez de zerar a âncora em silêncio — que é o que um `SetNull`
+  // faria, deixando a categoria inteira sem campos sem ninguém tocar nela.
+  customFieldsetId String?         @db.Uuid
+  customFieldset   CustomFieldset? @relation(fields: [customFieldsetId], references: [id], onDelete: Restrict)
+
   // Por (nome, tipo), não só por nome: "Notebook" como categoria de ATIVO e
   // "Notebook" como categoria de LICENÇA são duas coisas diferentes.
   @@unique([name, type])
+  @@index([customFieldsetId])
   @@map("categories")
 }
 
@@ -476,6 +490,22 @@ model AssetModel {
   category     Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   depreciation Depreciation? @relation(fields: [depreciationId], references: [id], onDelete: Restrict)
 
+  // O CONJUNTO DE CAMPOS CUSTOMIZADOS QUE SOBREPÕE A CATEGORIA (F9, D58).
+  //
+  // `fieldset = model.customFieldsetId ?? model.category.customFieldsetId`, e a
+  // resolução mora numa função só (`resolve-fieldset.usecase.ts`). É o único
+  // jeito de expressar o campo que só existe num modelo — o IMEI do tablet 4G.
+  //
+  // Três níveis (categoria → modelo → ativo) ficaram de fora pelo motivo que
+  // limita o salto de `ASSET` no D16: cadeia mais longa é sintoma de modelagem
+  // errada e custa um salto de consulta a cada leitura.
+  //
+  // A F1 adiou este atributo e o `ITAM-TODO.md` chegou a dizer que a coluna
+  // estava "reservada" — não estava: FK para tabela inexistente é impossível,
+  // não adiável. As duas colunas nascem aqui, na F9.
+  customFieldsetId String?         @db.Uuid
+  customFieldset   CustomFieldset? @relation(fields: [customFieldsetId], references: [id], onDelete: Restrict)
+
   assets Asset[]
 
   // Vários modelos SEM número convivem: o Postgres trata NULL como distinto,
@@ -483,6 +513,7 @@ model AssetModel {
   @@unique([manufacturerId, modelNumber])
   @@index([categoryId])
   @@index([depreciationId])
+  @@index([customFieldsetId])
   @@map("asset_models")
 }
 
@@ -612,6 +643,177 @@ model Depreciation {
 }
 
 // ============================================================================
+// CAMPOS CUSTOMIZADOS — docs/FASE-9-PLANO-ITAM.md (D58 a D64)
+// ============================================================================
+
+// Como o campo aparece no formulário. É APRESENTAÇÃO, e não validação: quem
+// decide o que é um valor aceitável é `CustomFieldFormat`, abaixo.
+//
+// A separação existe porque as duas perguntas são independentes de verdade: um
+// `LISTBOX` de IPs fixos e um `TEXT` de IP fixo validam igual e se desenham
+// diferente. Um enum só para os dois multiplicaria os valores.
+enum CustomFieldElement {
+  TEXT
+  TEXTAREA
+  LISTBOX
+  CHECKBOX
+  RADIO
+  DATE
+}
+
+// O que o valor precisa ser para entrar. O motor que traduz cada um destes num
+// `ZodType` é `server/domain/custom-field/helpers/field-validator.helper.ts`,
+// e é função PURA — o formato não sabe o que é um ativo.
+//
+// `ANY` é o padrão e significa "texto livre, com teto de tamanho". Não é
+// ausência de validação: comprimento continua limitado, porque o valor mora
+// dentro de uma coluna JsonB que a listagem lê inteira.
+enum CustomFieldFormat {
+  ANY
+  NUMERIC
+  ALPHA
+  ALPHANUMERIC
+  EMAIL
+  URL
+  IP
+  IPV4
+  IPV6
+  MAC
+  DATE
+  BOOLEAN
+  REGEX
+}
+
+// UM campo que o cliente criou — *IP fixo*, *hostname*, *patrimônio da
+// contabilidade*, *IMEI*.
+//
+// ═════════════════════════════════════════════════════════════════════════════
+// ESTA TABELA DESCREVE O CAMPO. ELA NÃO GUARDA VALOR NENHUM (D59).
+//
+// O valor mora em `Asset.customFields`, um JsonB na própria linha do ativo, com
+// o `slug` como chave. Nem DDL em runtime (o `migrate diff` compara o banco
+// contra o ARQUIVO de schema, então uma coluna criada em runtime é drift e a
+// próxima migration emitiria um `DROP COLUMN` para ela — todo campo do cliente
+// morreria no deploy seguinte), nem EAV (uma linha por campo por ativo
+// transforma a listagem num pivô e a coluna da tabela em N joins).
+//
+// O PREÇO, declarado: não há integridade referencial entre as chaves do JSON e
+// esta tabela. É o que o D60 fecha — `slug` é IMUTÁVEL, e valor órfão não é
+// apagado.
+// ═════════════════════════════════════════════════════════════════════════════
+model CustomField {
+  id   String @id @default(uuid()) @db.Uuid
+  name String
+
+  /// A CHAVE DENTRO DO JSON, e ela é imutável (D60). Derivada do nome na
+  /// criação; `beforeWrite` recusa trocá-la depois. Renomeá-la seria um
+  /// `UPDATE` sobre `assets` inteira que teria que ser transacional com esta
+  /// linha — e um meio-caminho deixa valores órfãos sem ninguém saber.
+  slug String @unique
+
+  element CustomFieldElement @default(TEXT)
+  format  CustomFieldFormat  @default(ANY)
+
+  /// Só quando `format = REGEX`. As três guardas do D63 (teto no padrão, teto
+  /// na entrada, recusa de quantificador aninhado) moram no validador.
+  regexPattern String?
+
+  /// Os valores de `LISTBOX` e `RADIO`. Alterar a lista depois NÃO apaga valor
+  /// já gravado que saiu dela: a tela o mostra marcado como fora da lista.
+  listValues String[]
+
+  helpText String?
+
+  /// Cifrado em repouso (D62/D81): o valor vira `enc:v1:<kid>:<iv>:<tag>:<ct>`
+  /// dentro do mesmo JsonB, volta mascarado por padrão, e revelar é rota
+  /// própria que grava `ActivityLog`.
+  ///
+  /// Campo cifrado SAI DE TUDO: não é buscável, não é ordenável, não entra no
+  /// diff do `ActivityLog` e não entra na coluna da listagem.
+  encrypted Boolean @default(false)
+
+  // AS TRÊS FLAGS DE VISIBILIDADE. `showInListView` é a única com efeito hoje:
+  // ela põe o campo como coluna da tabela de ativos. As outras duas são o
+  // contrato das telas que ainda não existem (a visão do colaborador, o corpo
+  // do e-mail de entrega) e estão aqui para o campo não precisar de migration
+  // quando elas chegarem.
+  showInListView    Boolean @default(false)
+  displayInUserView Boolean @default(false)
+  showInEmail       Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fieldsets CustomFieldsetField[]
+
+  @@map("custom_fields")
+}
+
+// UM CONJUNTO de campos — o que uma categoria ou um modelo pede.
+//
+// Existe como tabela própria, e não como uma lista de campos pendurada na
+// categoria, porque o mesmo conjunto serve *Notebook* e *Desktop*: repetir a
+// composição em cada âncora faria as duas divergirem no primeiro campo novo.
+model CustomFieldset {
+  id   String @id @default(uuid()) @db.Uuid
+  name String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fields CustomFieldsetField[]
+
+  // AS DUAS ÂNCORAS (D58). A categoria é o padrão, o modelo sobrepõe.
+  categories  Category[]
+  assetModels AssetModel[]
+
+  @@map("custom_fieldsets")
+}
+
+// O VÍNCULO campo × conjunto — e é ELE que guarda obrigatoriedade e ordem.
+//
+// ═════════════════════════════════════════════════════════════════════════════
+// `required` MORA AQUI, NÃO EM `CustomField` (D61).
+//
+// O mesmo campo *Centro de custo* é obrigatório no conjunto de Notebooks e
+// opcional no de Periféricos. Uma flag global em `CustomField` não sabe
+// expressar isso, e é assim no Snipe-IT porque é o que a operação real pede.
+//
+// `ordem` NÃO É ÚNICO, e isso é uma decisão sobre o Postgres: reordenar N
+// vínculos numa transação colidiria com um `@@unique([fieldsetId, ordem])` no
+// meio do caminho, porque constraint do Postgres é IMEDIATA e o Prisma não
+// expressa `DEFERRABLE`. O desempate da leitura é `orderBy: [{ ordem }, { fieldId }]`.
+// ═════════════════════════════════════════════════════════════════════════════
+model CustomFieldsetField {
+  fieldsetId String @db.Uuid
+  fieldId    String @db.Uuid
+
+  ordem    Int     @default(0)
+  required Boolean @default(false)
+
+  /// Sugerido no formulário de um ativo NOVO. Não é backfill: ativo já gravado
+  /// não recebe o padrão retroativamente — isso seria escrever em N mil linhas
+  /// por causa de uma edição de catálogo.
+  defaultValue String?
+
+  createdAt DateTime @default(now())
+
+  /// `Cascade`: o vínculo é COMPOSIÇÃO do conjunto, não referência a ele.
+  /// Apagar o conjunto apaga a lista dele, e o que impede apagar um conjunto em
+  /// uso é o `Restrict` das duas âncoras, não este lado.
+  fieldset CustomFieldset @relation(fields: [fieldsetId], references: [id], onDelete: Cascade)
+
+  /// `Restrict`: o campo é REFERENCIADO pelo vínculo. Apagar um campo que algum
+  /// conjunto usa é recusado com 409 e a contagem — que soma vínculos E ativos
+  /// com a chave presente (`countUsages` da spec, D64).
+  field CustomField @relation(fields: [fieldId], references: [id], onDelete: Restrict)
+
+  @@id([fieldsetId, fieldId])
+  @@index([fieldId])
+  @@map("custom_fieldset_fields")
+}
+
+// ============================================================================
 // O ATIVO — o coração do ITAM (docs/FASE-1-PLANO.md, Etapa G)
 // ============================================================================
 
@@ -693,6 +895,24 @@ model Asset {
 
   // Foto do equipamento. Só o CAMINHO — ver o mesmo campo no catálogo.
   imagePath String?
+
+  // ── OS VALORES DOS CAMPOS CUSTOMIZADOS (F9, D59) ─────────────────────────
+  //
+  // JsonB na PRÓPRIA LINHA do ativo, com o `slug` do campo como chave. Nem uma
+  // coluna por campo (o que o Snipe-IT faz, e que aqui morreria no `migrate
+  // diff` da próxima migration como drift), nem uma tabela EAV (uma linha por
+  // campo por ativo transforma a listagem num pivô).
+  //
+  // ⚠️ `Prisma.DbNull` × `Prisma.JsonNull`: ativo SEM campos customizados grava
+  // `DbNull` — coluna nula. Com `JsonNull` o banco guardaria o literal JSON
+  // `null` DENTRO da coluna, `customFields IS NULL` pararia de achá-lo, e a
+  // contagem de "sem campos preenchidos" passaria a mentir. É a armadilha mais
+  // barata de cair e a mais cara de achar depois.
+  //
+  // O conteúdo é validado no USE-CASE, não na borda: o `strictObject` do schema
+  // de entrada recusa chave desconhecida e não PODE conhecer campos criados em
+  // runtime (`validate-custom-fields.usecase.ts`).
+  customFields Json? @db.JsonB
 
   // QUEM cadastrou e QUEM editou por último.
   //
@@ -795,6 +1015,34 @@ model Asset {
   // :corte` sobre a frota inteira, e é a consulta mais pesada da F8. Sem este
   // índice ela é varredura sequencial em `assets` a cada abertura da aba.
   @@index([lastAuditAt])
+  // O ÍNDICE DOS CAMPOS CUSTOMIZADOS (F9, D63).
+  //
+  // `JsonbOps` e NÃO `JsonbPathOps`: o segundo é menor e mais rápido para `@>`,
+  // mas não suporta o operador `?` (existência de chave) — e *"ativos que têm o
+  // campo X preenchido"* é a primeira pergunta da tela de administração. Paga-se
+  // o tamanho do índice pela pergunta.
+  //
+  // ⚠️ QUEM SE PAGA COM ELE SÃO AS CONTAGENS, NÃO O FILTRO DA LISTAGEM.
+  //
+  // O GIN serve `@>` (contenção) e `?` (existência), e o Prisma TIPADO não os
+  // emite: `customFields: { path: [slug], equals: valor }` sai como
+  //
+  //     WHERE ("customFields" #> ARRAY['ip_fixo']::text[])::jsonb = $1
+  //
+  // que é comparação de EXPRESSÃO — Seq Scan. Medido em 50 mil linhas: 13,5 ms
+  // nessa forma contra 0,63 ms com `@>` (Bitmap Index Scan).
+  //
+  // Então o filtro `?cf[slug]=valor` fica no Prisma tipado e PAGA a varredura,
+  // porque ele se soma a vista, status, localização, busca, ordenação e paginação
+  // num `where` só (ver `asset-filters.helper.ts`). O que desceu para `$queryRaw`
+  // e usa este índice são as perguntas de tabela inteira, que não compõem com
+  // nada: o 409 que impede apagar um campo em uso (D64) e o contador do D61
+  // (`count-assets-with-field.usecase.ts`).
+  //
+  // Ele NÃO faz nada por `ORDER BY customFields->>'x'`, nem por faixa, nem por
+  // `ILIKE` — por isso campo customizado não entra em `ASSET_SORTABLE` nesta
+  // fase, e a F10 herda o número medido em vez de uma promessa.
+  @@index([customFields(ops: JsonbOps)], type: Gin)
   @@map("assets")
 }
 

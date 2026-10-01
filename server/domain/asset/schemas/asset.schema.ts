@@ -4,6 +4,7 @@ import {
   booleano, dataOpcional, mesesOpcional, nomeObrigatorio, textoOpcional,
   uuidObrigatorio, uuidOpcional, valorMonetarioOpcional,
 } from '../../shared/fields.schema';
+import { MAX_VALOR } from '../../custom-field/helpers/field-validator.helper';
 
 // Contrato de entrada das rotas de ativo.
 //
@@ -60,6 +61,29 @@ const camposComuns = {
   eolMonths: mesesOpcional('vida útil'),
   eolDate: dataOpcional('fim de vida'),
   eolExplicit: booleano('fim de vida definido à mão').optional(),
+
+  // ── OS CAMPOS CUSTOMIZADOS (F9, Etapa B) ─────────────────────────────────
+  //
+  // UM campo do schema, com o conteúdo opaco aqui de propósito — e isso não é
+  // preguiça, é a única forma de manter as duas garantias da borda.
+  //
+  // O `strictObject` acima recusa chave desconhecida (é o que fecha o mass
+  // assignment da F0) e ele NÃO PODE conhecer campos criados em runtime. As duas
+  // saídas ruins eram montar o schema por requisição — o controller passaria a
+  // consultar o banco antes do `parse`, e a allowlist estática viraria uma
+  // allowlist vinda do banco — ou aceitar `z.any()`, que é o mass assignment de
+  // volta pela brecha.
+  //
+  // Então a borda valida a FORMA (é um objeto raso de chave para valor?) e o
+  // conteúdo é validado onde o conjunto resolvido é conhecido:
+  // `custom-field/use-cases/validate-custom-fields.usecase.ts`. O 422 de lá sai
+  // com o `slug` em `fields`, no mesmo formato do `formatZodError` — é assim que
+  // a tela sabe em qual input pintar a mensagem.
+  //
+  // `z.unknown()` no valor e não `z.string()`: o formulário manda booleano de
+  // verdade num `CHECKBOX` e número num campo numérico. Normalizar isso é
+  // trabalho do motor (`normalizarValor`), num lugar só.
+  customFields: z.record(z.string(), z.unknown()).optional(),
 };
 
 export const createAssetSchema = z.strictObject({
@@ -112,7 +136,9 @@ export const retireAssetSchema = z.strictObject({
  * Teto de ids por lote.
  *
  * Não é número redondo por acaso: são ~201 statements dentro de uma
- * `$transaction`, que é o que cabe com folga no timeout explícito do use-case.
+ * `$transaction` nas três operações de coluna, e ~401 na de campo customizado
+ * (que grava linha a linha, porque o JsonB de cada ativo é diferente) — o que
+ * cabe com folga no timeout explícito do use-case.
  * Sem teto, `ids` com 50 mil uuids é uma negação de serviço de uma linha só.
  */
 export const BULK_MAX_IDS = 200;
@@ -148,7 +174,29 @@ export const bulkAssetsSchema = z.discriminatedUnion('op', [
     op: z.literal('delete'),
     ids: idsDoLote,
   }),
-], 'operação inválida: use status, location ou delete');
+  // ── PREENCHER UM CAMPO CUSTOMIZADO EM MASSA (F9, o backfill do D61) ──────
+  //
+  // Pelo `fieldId` e não pelo `slug`, como toda referência do lote: um id errado
+  // responde 404 "campo não encontrado", enquanto um slug errado só se descobre
+  // como "o conjunto deste modelo não tem esse campo" — mensagem sobre a seleção
+  // para um erro que é do seletor.
+  //
+  // `value` NULÁVEL de propósito: `null` (e `''`, que o use-case normaliza para
+  // o mesmo) é LIMPAR o campo nos N ativos, e limpar REMOVE a chave. É operação
+  // legítima — e é recusada quando o campo é obrigatório em algum dos conjuntos
+  // alcançados, porque aí ela deixaria N ativos num estado que a edição de um só
+  // não produz.
+  //
+  // O conteúdo é conferido contra o FORMATO do campo no use-case, não aqui: é o
+  // mesmo motivo de `customFields` ser opaco no schema do ativo — a borda não
+  // pode conhecer campo criado em runtime.
+  z.strictObject({
+    op: z.literal('custom-field'),
+    ids: idsDoLote,
+    fieldId: uuidObrigatorio('campo customizado'),
+    value: z.string().max(MAX_VALOR, `valor: máximo de ${MAX_VALOR} caracteres`).nullable(),
+  }),
+], 'operação inválida: use status, location, delete ou custom-field');
 
 // O `historyQuerySchema` da aba Histórico mudou para `shared/history.schema.ts`
 // quando a pessoa ganhou o dela — o ativo não é mais o único a ter histórico.

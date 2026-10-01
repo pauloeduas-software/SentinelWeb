@@ -89,6 +89,7 @@ configurar nada (só precisa do Postgres de pé: `docker compose up -d`).
 | `tests/licencas/` | o assento materializado, a corrida do `SKIP LOCKED`, a chave cifrada e o canário | terceira pasta por domínio: contrato, assento e segredo contam a mesma história |
 | `tests/jobs/` | a janela de execução de um job (o D79) | o cenário que ela impede — dois jobs disputando a mesma coluna — não dá erro nenhum: o segundo simplesmente nunca roda |
 | `tests/ciclo-de-vida/` | manutenção, conferência física, valor contábil e a central de alertas (F8) | quarta pasta por domínio. As quatro coisas se cruzam: a manutenção aberta vira alerta, a conferência escreve `lastAuditAt` que o alerta lê, e o valor contábil é o único número do sistema que muda quando NADA acontece |
+| `tests/campos-customizados/` | o cadastro e suas guardas, a resolução categoria × modelo, a cifra no JsonB, o filtro e o **backfill em massa** (F9) | quinta pasta por domínio, e a que mais depende de **não** ser dividida: as cinco coisas são a MESMA coluna vista de cinco lados. A cifra só faz sentido junto com a máscara que volta no formulário; o filtro só faz sentido junto com a decisão de o valor ser sempre texto; a resolução do conjunto é o que decide se uma chave é válida ou órfã; e o lote escreve a mesma chave que a edição de um só, com o mesmo diff — é por isso que o backfill é testado ao lado do contador que o manda acontecer, e não na pasta do lote. Separadas, quem investiga um valor que sumiu abriria cinco arquivos distantes |
 
 ### `ciclo-de-vida/` — as três que falhariam em silêncio
 
