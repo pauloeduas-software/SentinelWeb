@@ -373,7 +373,7 @@ Execução detalhada em [`FASE-2-PLANO-ITAM.md`](./FASE-2-PLANO-ITAM.md).
 - [x] **M** ~~Aba **Histórico** do ativo, lendo o `ActivityLog`~~ — feito na F2, sem tabela `AssetLog` (D18). `GET /api/assets/:id/history` une o log e a posse numa lista só.
 - [x] **P** ~~Arquivar ativo (status `type = ARCHIVED` sai das listagens por padrão; `?view=archived`)~~ — feito na Leva 1 do [`FECHAMENTO-F2-F4-PLANO-ITAM.md`](./FECHAMENTO-F2-F4-PLANO-ITAM.md) (D85). A vista padrão passou a excluir `ARCHIVED` junto com `retiredAt`, e `?statusId=` explícito vence a exclusão — senão clicar no contador de um status arquivado abriria lista vazia. **A invariante estado × posse continua valendo e já existia** (D16; [`INVARIANTES.md`](./INVARIANTES.md)): ativo com responsável resolvido **não pode** ir para `ARCHIVED` — arquivar é declarar que saiu da operação, e o que está com alguém não saiu. O 409 diz com quem está, não só que falhou. A devolução (checkin) é o pré-requisito, e é a mesma regra que impede `DEPLOYABLE` com detentor. O que faltava era só a VISTA.
 - [x] **P** ~~**Relatório "ativos em posto vago"**~~ — feito na F2: `?relatorio=posto-vago`, filtro do Prisma e nunca `.filter()` depois da consulta (senão o `total` do envelope mentiria).
-- [x] **G** ~~Ações em massa: editar N, trocar status, mover de localização, excluir, checkout em massa~~ — feito. `POST /api/assets/bulk` é **tudo ou nada** (D21); `POST /api/assets/bulk-checkout` é **por linha com relatório** (D31) — e a diferença é a natureza da operação, não inconsistência.
+- [x] **G** ~~Ações em massa: editar N, trocar status, mover de localização, excluir, checkout em massa~~ — feito. `POST /api/assets/bulk` é **tudo ou nada** (D21); `POST /api/assets/bulk-checkout` é **por linha com relatório** (D31) — e a diferença é a natureza da operação, não inconsistência. **A quarta operação chegou na F9**: `op: 'custom-field'` preenche (ou limpa) um campo customizado nos N selecionados — é o backfill que o D61 exige antes de promover um campo a obrigatório, e sem ele o contador da tela de conjuntos mandava por uma porta que não abria. Ele recusa o lote inteiro quando algum ativo não pede aquele campo, porque gravar chave desconhecida em 200 linhas é o mass assignment do JsonB.
 - [x] **P** ~~Clonar ativo~~ — feito na F2, **sem rota**: é o formulário em modo criação com os valores de outro ativo, e só etiqueta e série nascem em branco. A etiqueta vem do `/settings/next-asset-tag`, que é *peek*.
 - [x] **M** ~~Imagem do ativo, do modelo, do fabricante e da categoria~~ — feito na Leva 2 do [`FECHAMENTO-F2-F4-PLANO-ITAM.md`](./FECHAMENTO-F2-F4-PLANO-ITAM.md). `imagePath` nas quatro tabelas, `PUT/GET/DELETE /api/images/:alvo/:id`.
 - [x] **M** ~~Anexos por ativo (nota fiscal, contrato, foto) com tipo e tamanho permitidos~~ — feito na Leva 2. **NÃO é rota estática** (D84): sai por `GET /api/attachments/:id/download`, com sessão — em produção o guard libera todo GET fora de `/api`, e uma raiz `/uploads/` deixaria nota fiscal e contrato públicos.
@@ -629,17 +629,18 @@ alvo polimórfico em `Alert`, que é aditivo.
 
 ## Fase 9 — Campos Customizados
 
-- [ ] **M** `CustomField` — nome, slug, elemento (TEXT / TEXTAREA / LISTBOX / CHECKBOX / RADIO / DATE), formato, help text, obrigatório, único
-- [ ] **M** Motor de validação por formato: IP, IPv4, IPv6, MAC, e-mail, URL, numérico, alfanumérico, data, booleano, regex custom
-- [ ] **M** `CustomFieldset` ancorado em **modelo E categoria, com precedência do modelo** — ver [`FASE-9-PLANO-ITAM.md`](./FASE-9-PLANO-ITAM.md), D58. O Snipe-IT ancora só no modelo, e o `AssetModel` existe desde a F1; a categoria fica porque `Asset` **não tem `categoryId`** (ela vem do modelo) e porque "todo notebook pede patrimônio" é regra de categoria, não de modelo.
-  ⚠️ **Correção:** uma versão anterior deste item dizia que o `AssetModel` "já tem a coluna reservada" para o fieldset. **Não tem** — verificado no schema: as colunas dele são `id, name, eolMonths, modelNumber, notes, manufacturerId, categoryId`. A F1 adiou o atributo, não o criou; a coluna nasce na F9
-- [ ] **M** Valores em `customFields Json? @db.JsonB` + índice GIN (D7)
-- [ ] **M** Renderização dinâmica no formulário e como coluna na tabela
-- [ ] **G** Tela de administração de campos e conjuntos
-- [ ] **P** Flags de visibilidade (`showInListView`, `displayInUserView`, `showInEmail`)
-- [ ] **P** Valor padrão por modelo
-- [ ] **M** Campo customizado cifrado em repouso — **`server/core/crypto/cipher.ts` já existe** (nasceu na F6): `cifrar(claro, aad)` / `decifrar(pacote, aad)`, formato `enc:v1:<kid>:<iv>:<tag>:<ct>` (D81), com chaveiro e canário de boot (D91). Aqui o prefixo `enc:` é obrigatório de verdade — dentro do mesmo `JsonB` convivem valores cifrados e comuns, e sem marca não há como saber qual é qual
-- [ ] **P** Campos customizados no import e no export CSV
+- [x] **M** ~~`CustomField` — nome, slug, elemento (TEXT / TEXTAREA / LISTBOX / CHECKBOX / RADIO / DATE), formato, help text, obrigatório, único~~ — feito. **`obrigatório` não é do campo, é do VÍNCULO** (D61): o mesmo "Centro de custo" é obrigatório em Notebooks e opcional em Periféricos. O `único` deste item ficou de fora: unicidade de valor entre ativos precisaria de um índice de expressão por campo, que é o DDL por campo que o D7 recusou
+- [x] **M** ~~Motor de validação por formato: IP, IPv4, IPv6, MAC, e-mail, URL, numérico, alfanumérico, data, booleano, regex custom~~ — feito, função PURA (`field-validator.helper.ts`), com as três guardas de ReDoS do D63 rodando no CADASTRO do campo e no motor
+- [x] **M** ~~`CustomFieldset` ancorado em **modelo E categoria, com precedência do modelo**~~ — feito — ver [`FASE-9-PLANO-ITAM.md`](./FASE-9-PLANO-ITAM.md), D58. O Snipe-IT ancora só no modelo, e o `AssetModel` existe desde a F1; a categoria fica porque `Asset` **não tem `categoryId`** (ela vem do modelo) e porque "todo notebook pede patrimônio" é regra de categoria, não de modelo.
+  ⚠️ **Correção:** uma versão anterior deste item dizia que o `AssetModel` "já tem a coluna reservada" para o fieldset. **Não tem** — verificado no schema: as colunas dele são `id, name, eolMonths, modelNumber, notes, manufacturerId, categoryId`. A F1 adiou o atributo, não o criou; a coluna nasceu na F9, junto com a de `Category`
+- [x] **M** ~~Valores em `customFields Json? @db.JsonB` + índice GIN (D7)~~ — feito, e o índice **não é alcançado pelo filtro**: o Prisma tipado emite `#>` com comparação de expressão (Seq Scan), não `@>`. As contagens de tabela inteira desceram para `$queryRaw` e usam o índice; o filtro da listagem paga a varredura e o número está **medido** no fechamento da [`FASE-9-PLANO-ITAM.md`](./FASE-9-PLANO-ITAM.md)
+- [x] **M** ~~Renderização dinâmica no formulário e como coluna na tabela~~ — feito (`CustomFieldsSection.tsx` + as colunas de `showInListView` na listagem de ativos)
+- [x] **G** ~~Tela de administração de campos e conjuntos~~ — feito: duas abas novas em Configurações (Campos e Conjuntos), dirigidas pelas specs de UI, mais o modal de composição — a **única tela de arrastar-e-soltar do projeto**, com o contador do D61 ao lado de cada caixa "obrigatório"
+- [x] **P** ~~Flags de visibilidade (`showInListView`, `displayInUserView`, `showInEmail`)~~ — as três gravam; só `showInListView` TEM EFEITO hoje. As outras duas são o contrato das telas que não existem (a visão do colaborador, o corpo do e-mail de entrega) e estão declaradas como "guardado agora" na ajuda do formulário
+- [x] **P** ~~Valor padrão por modelo~~ — feito, e é do **VÍNCULO**, não do modelo (D61): `CustomFieldsetField.defaultValue`, validado contra o formato do campo no CADASTRO do conjunto e aplicado só na CRIAÇÃO do ativo. Campo cifrado não aceita padrão — ele ficaria em claro no cadastro, e um segredo igual em toda máquina não é segredo
+- [x] **M** ~~Campo customizado cifrado em repouso~~ — feito. **`server/core/crypto/cipher.ts` já existia** (nasceu na F6): `cifrar(claro, aad)` / `decifrar(pacote, aad)`, formato `enc:v1:<kid>:<iv>:<tag>:<ct>` (D81), com chaveiro e canário de boot (D91). Aqui o prefixo `enc:` é obrigatório de verdade — dentro do mesmo `JsonB` convivem valores cifrados e comuns, e sem marca não há como saber qual é qual
+- [x] **M** ~~Preenchimento em massa de um campo customizado~~ — feito **depois** do fechamento da fase, numa segunda revisão: o D61 descreve a promoção como *"nasce opcional, a edição em massa faz o backfill, e só então promove-se"*, a tela imprimia essa frase ao lado do contador, e o lote da F2 só sabia status, localização e lixeira. `op: 'custom-field'` no `POST /api/assets/bulk`, com as quatro recusas que importam (ativo fora do conjunto barra o lote inteiro, valor fora do formato, campo cifrado, esvaziar obrigatório). Ver a seção 5 do fechamento da [`FASE-9-PLANO-ITAM.md`](./FASE-9-PLANO-ITAM.md)
+- [ ] **P** Campos customizados no import e no export CSV — **fica para a F10**, com o importador e o export que ainda não existem. Anotar a coluna aqui sem o CSV existir seria escrever metade de uma feature
 
 ---
 
@@ -708,7 +709,7 @@ F0 (base) ✅ → F1 (catálogo + ativo inteiro) ✅ → [MODELO DE POSSE] ✅ s
    → F2 (ativos) ✅ → F3 (auth) ✅ → F4 (posse: checkout/checkin/posto) ✅
       → F5 (estoque) ✅ → F6 (licenças) ✅ → F7 (convergência RMM) ✅
             → F8 (ciclo de vida) ✅
-               → F9 (campos) → F10 (relatórios) → F11 (acesso)
+               → F9 (campos) ✅ → F10 (relatórios) → F11 (acesso)
 ```
 
 **A F0 até a F4 estão completas.** As três últimas fecharam pelo
@@ -751,10 +752,27 @@ porque o calendário andou, e foi isso que transformou "quando o job roda" numa 
 a hora e o fuso passaram a ser configuração, e `inicioDoDia()` ganhou um irmão que sabe em que fuso
 é "hoje" (o lembrete de atraso da F4 mudou junto, porque ele tinha o mesmo defeito).
 
-**O próximo passo é a F9** — campos customizados. Ela herda da F6 o `core/crypto/cipher.ts` (D81)
-para o campo cifrado em repouso, e herda da F8 a coluna que **não** existe: `AssetModel` ganhou
-`depreciationId` e nada mais, então o `customFieldsetId` que o plano da F9 previa continua por
-nascer.
+**A F9 fechou**: `CustomField`, `CustomFieldset` e o vínculo, as **duas** âncoras de conjunto
+(categoria como padrão, modelo sobrepondo — D58), o motor de validação por formato como função
+pura, os valores em `JsonB` com índice GIN, o campo cifrado em repouso reusando o
+`core/crypto/cipher.ts` da F6 (D81) e a tela de administração com o contador do D61. As duas
+colunas que este arquivo dizia estarem "reservadas" nasceram nela.
+
+**E ela é a primeira fase que mede em vez de prometer.** O D63 afirmava que o filtro por campo
+customizado usaria o índice GIN; não usa — o Prisma tipado emite comparação de expressão, e a
+diferença é de 20× em 50 mil linhas. A fase separou as perguntas que precisam **compor** (ficam no
+Prisma e pagam a varredura) das que varrem a tabela inteira e não compõem (descem para `$queryRaw` e
+usam o índice), e entregou o número à F10 em vez de uma afirmação. Ver o fechamento da
+[`FASE-9-PLANO-ITAM.md`](./FASE-9-PLANO-ITAM.md), que lista os **cinco defeitos** que a revisão
+pegou — todos invisíveis pela tela, quatro alcançáveis só pela API — e, na seção 5, o que uma
+**segunda** revisão achou depois de a fase já estar verde: o backfill em massa que o D61 exigia e
+que não existia, mais seis acertos menores com a mesma assinatura — a tela prometendo uma regra
+que o código não cumpria.
+
+**O próximo passo é a F10** — etiquetas, relatórios e importação. Ela herda da F9 três coisas: o
+número medido do JsonB (para decidir entre `$queryRaw` com allowlist, ordenação em memória com teto
+ou fora de escopo), o seletor de colunas que precisa herdar as colunas customizadas pelo mesmo
+mecanismo das nativas, e o item **P** do CSV que ficou esperando o importador existir.
 
 **F0 → F1 → F2 continua o caminho crítico.** Tudo depende do modelo de dados certo. Começar por
 telas antes disso é retrabalho garantido — foi exatamente o que aconteceu com

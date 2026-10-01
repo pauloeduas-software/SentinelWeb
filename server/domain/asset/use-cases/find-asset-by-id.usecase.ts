@@ -1,7 +1,7 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { resolverResponsaveis, type PosseResolvida } from '../../assignment/use-cases/resolve-responsibles.usecase';
-import { ASSET_DETAIL_SELECT } from '../helpers/asset-select.helper';
+import { ASSET_DETAIL_SELECT, comCamposMascarados } from '../helpers/asset-select.helper';
 import { calcularValorContabil, type ValorContabil } from '../helpers/depreciacao.helper';
 
 // `findFirst`, nunca `findUnique`: o escopo da lixeira não alcança o
@@ -20,7 +20,9 @@ function buscarAtivo(id: string) {
  * contábil muda quando nada acontece. O segundo é o que torna a coluna
  * impossível — ela envelheceria sozinha.
  */
-export type AssetDetail = NonNullable<Awaited<ReturnType<typeof buscarAtivo>>> & {
+export type AssetDetail = ReturnType<
+  typeof comCamposMascarados<NonNullable<Awaited<ReturnType<typeof buscarAtivo>>>>
+> & {
   posse: PosseResolvida;
   valorContabil: ValorContabil;
 };
@@ -57,5 +59,8 @@ export async function findAssetById(id: string): Promise<AssetDetail> {
     regra: ativo.model.depreciation,
   });
 
-  return { ...ativo, posse, valorContabil };
+  // `comCamposMascarados` é a ÚNICA saída de uma linha com `customFields`: o
+  // pacote cifrado vira `••••••` e `temSegredo` diz à tela se oferece o botão de
+  // revelar (F9, Etapa E).
+  return { ...comCamposMascarados(ativo), posse, valorContabil };
 }

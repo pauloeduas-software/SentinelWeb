@@ -5,6 +5,7 @@ import { installProcessHandlers, onShutdown } from './core/lifecycle/shutdown';
 import { closeDatabase } from './core/database/prismaClient';
 import { verificarCanarioDeCriptografia } from './core/crypto/canary';
 import { colunasCifradasDaLicenca } from './domain/license/helpers/coluna-cifrada.helper';
+import { colunasCifradasDoAtivo } from './domain/custom-field/helpers/coluna-cifrada.helper';
 import { disconnectAllAgents } from './domain/agent/agent.registry';
 import { startZombieCleanerJob, stopZombieCleanerJob } from './domain/endpoint/jobs/zombie-cleaner.job';
 import { startOverdueReminderJob, stopOverdueReminderJob } from './domain/assignment/jobs/overdue-reminder.job';
@@ -39,9 +40,16 @@ async function bootstrap() {
   // que não pode esperar a primeira requisição para aparecer.
   // A lista de colunas cifradas vem do DOMÍNIO e é passada aqui: `core` não
   // conhece `domain`, e quando o canário falha é o dado real que decide se o
-  // boot cai ou segue. Coluna nova cifrada (a F9 vem com uma) entra nesta
-  // chamada, senão o canário conclui que ela não existe.
-  await verificarCanarioDeCriptografia(colunasCifradasDaLicenca());
+  // boot cai ou segue. Coluna nova cifrada entra nesta chamada, senão o canário
+  // conclui que ela não existe — e segue com a mensagem errada.
+  //
+  // São DUAS desde a F9: `licenses.productKey` (F6) e `assets.customFields`, os
+  // campos customizados marcados como cifrados (D62). O `canary.ts` previa esta
+  // segunda em comentário.
+  await verificarCanarioDeCriptografia([
+    ...colunasCifradasDaLicenca(),
+    ...colunasCifradasDoAtivo(),
+  ]);
 
   const server = await buildApp();
 

@@ -37,6 +37,7 @@ export default function AssetDetailPage() {
     maquina, maquinaPendente, desvinculando, handleDesvincular,
     manutencoes, manutencoesPendentes, auditorias, auditoriasPendentes,
     handleAbrirManutencao, handleEncerrarManutencao,
+    conjuntoDeCampos, camposRevelados, revelandoCampo, erroAoRevelar, handleRevelarCampo,
     anexos, anexosPendentes, enviandoArquivo, erroDeArquivo, temImagem,
     handleAnexar, handleExcluirAnexo, handleTrocarImagem, handleRemoverImagem,
     modal, abrirEdicao, abrirClone, abrirPosse, abrirDescomissionar, fecharModal,
@@ -120,6 +121,11 @@ export default function AssetDetailPage() {
         {aba === 'detalhes' && (
           <DetalhesTab
             asset={asset}
+            conjuntoDeCampos={conjuntoDeCampos}
+            camposRevelados={camposRevelados}
+            revelandoCampo={revelandoCampo}
+            erroAoRevelar={erroAoRevelar}
+            onRevelarCampo={(slug) => void handleRevelarCampo(slug)}
             onDescomissionar={abrirDescomissionar}
             onReverterSaida={() => void handleReverterSaida()}
           />

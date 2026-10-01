@@ -301,3 +301,85 @@ export function diasAtras(dias: number): string {
 export function diasAFrente(dias: number): string {
   return diasAtras(-dias);
 }
+
+// ── CAMPOS CUSTOMIZADOS (F9) ────────────────────────────────────────────────
+
+/**
+ * Um campo customizado, pela API — nunca por `prisma.customField.create`.
+ *
+ * Criar pelo Prisma pularia a derivação do `slug` a partir do nome, as três
+ * guardas do `beforeWrite` (slug imutável, cifra que não vira, coerência entre
+ * elemento e formato) e o `ActivityLog` — e o teste passaria a provar coisas
+ * sobre um campo que nenhum administrador consegue cadastrar.
+ *
+ * O `slug` é `@unique` e nasce do NOME, então quem cria mais de um no mesmo
+ * arquivo passa nomes distintos.
+ */
+export async function criarCampo(
+  api: ApiDeTeste,
+  opcoes: {
+    name: string;
+    slug?: string;
+    element?: 'TEXT' | 'TEXTAREA' | 'LISTBOX' | 'CHECKBOX' | 'RADIO' | 'DATE';
+    format?: string;
+    regexPattern?: string;
+    listValues?: string[];
+    helpText?: string;
+    encrypted?: boolean;
+    showInListView?: boolean;
+  },
+): Promise<{ id: string; slug: string }> {
+  return exigir201('campo customizado', await api.post('/api/custom-fields', opcoes));
+}
+
+/** Um conjunto vazio. A composição entra por `comporConjunto`. */
+export async function criarConjunto(api: ApiDeTeste, name: string): Promise<string> {
+  const criado = exigir201<Criado>('conjunto de campos', await api.post('/api/custom-fieldsets', { name }));
+  return criado.id;
+}
+
+/**
+ * A composição INTEIRA de um conjunto — a ordem é a do array.
+ *
+ * Pela rota própria, e não pelo `PUT /api/custom-fieldsets/:id` do catálogo: a
+ * spec genérica grava um `data` plano e não sabe expressar ordem nem
+ * obrigatoriedade por vínculo (D64).
+ */
+export async function comporConjunto(
+  api: ApiDeTeste,
+  fieldsetId: string,
+  fields: { fieldId: string; required?: boolean; defaultValue?: string | null }[],
+): Promise<ComposicaoNaResposta> {
+  return exigir201(
+    'composição do conjunto',
+    await api.put(`/api/custom-fieldsets/${fieldsetId}/fields`, {
+      fields: fields.map((campo) => ({
+        fieldId: campo.fieldId,
+        required: campo.required ?? false,
+        ...(campo.defaultValue !== undefined ? { defaultValue: campo.defaultValue } : {}),
+      })),
+    }),
+  );
+}
+
+export interface ComposicaoNaResposta {
+  id: string;
+  name: string;
+  modelosAlcancados: number;
+  fields: {
+    fieldId: string; slug: string; name: string; required: boolean;
+    defaultValue: string | null; ordem: number; quebrariam: number;
+  }[];
+}
+
+/** Pendura o conjunto numa das DUAS âncoras do D58 — a categoria ou o modelo. */
+export async function pendurarConjunto(
+  api: ApiDeTeste,
+  onde: { categoriaId: string } | { modelId: string },
+  customFieldsetId: string | null,
+): Promise<void> {
+  const rota = 'categoriaId' in onde
+    ? `/api/categories/${onde.categoriaId}`
+    : `/api/asset-models/${onde.modelId}`;
+  exigir201('conjunto na âncora', await api.put(rota, { customFieldsetId }));
+}

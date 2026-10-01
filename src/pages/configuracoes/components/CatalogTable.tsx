@@ -1,4 +1,4 @@
-import { Edit2, Trash2, Check, Minus, Users, type LucideIcon } from 'lucide-react';
+import { Edit2, Trash2, Check, Minus, ListOrdered, Users, type LucideIcon } from 'lucide-react';
 import { formatarMeses, formatarResidual, nomeDaRelacao, rotuloDoEnum } from '../../helpers/format.helper';
 import type { AcaoLinhaId, AcaoLinhaSpec, ColunaSpec } from '../specs/catalog-ui.types';
 import type { CatalogRow } from '../../../domain/shared/catalog.types';
@@ -9,6 +9,10 @@ import type { CatalogRow } from '../../../domain/shared/catalog.types';
 // ícone — esquecer um vira erro de tipo.
 const ICONE_DA_ACAO: Record<AcaoLinhaId, LucideIcon> = {
   ocupantes: Users,
+  // A composição de um conjunto de campos (F9): quais campos, em que ORDEM e
+  // quais obrigatórios. `ListOrdered` porque a ordem é o que essa tela edita e
+  // o que nenhuma outra aba tem.
+  'campos-do-conjunto': ListOrdered,
 };
 
 interface CatalogTableProps {
@@ -129,6 +133,29 @@ function Celula({ coluna, registro }: { coluna: ColunaSpec; registro: CatalogRow
 
     case 'moeda':
       return <span className="tabular-nums">{formatarResidual(valor, registro[coluna.campoTipo ?? ''])}</span>;
+
+    // Um agregado do `_count` do servidor (F9). Zero aparece como `0` e não como
+    // `—`: "este conjunto tem zero campos" é um fato acionável — é o conjunto
+    // que precisa ser composto —, e um travessão o esconderia entre os "sem
+    // dado".
+    case 'contagem': {
+      const contagens = registro._count as Record<string, number> | undefined;
+      const total = contagens?.[coluna.contagemDe ?? ''] ?? 0;
+      return <span className="tabular-nums">{total}</span>;
+    }
+
+    // Um `String[]`. A contagem na célula e os valores no `title`: despejar
+    // vinte opções numa célula de tabela deixaria a linha ilegível, e esconder
+    // que elas existem deixaria a coluna inútil.
+    case 'lista': {
+      const itens = Array.isArray(valor) ? valor.map(String) : [];
+      if (itens.length === 0) return <span>—</span>;
+      return (
+        <span className="tabular-nums" title={itens.join(', ')}>
+          {itens.length} {itens.length === 1 ? 'valor' : 'valores'}
+        </span>
+      );
+    }
 
     default:
       return <span>{valor == null || valor === '' ? '—' : String(valor)}</span>;

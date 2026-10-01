@@ -335,3 +335,296 @@ F: feat(web): formulário dinâmico e administração de campos e conjuntos
 ```
 
 O lint tem que passar em cada um. Não há suíte: a verificação é a seção acima.
+
+---
+
+# Fechamento da F9 — o que a execução mudou
+
+> Escrito **depois** de a fase rodar, com a suíte verde (`npm test`: 511 asserções,
+> 92 delas desta fase). **A seção 5 é de uma segunda passada**, posterior a este
+> fechamento: com ela a suíte está em 522, e a pasta da fase em 103. O plano acima fica como estava — o que divergiu está aqui,
+> e não corrigido em silêncio lá em cima: quem lê o plano de uma fase precisa poder
+> comparar o que se previa com o que se aprendeu.
+
+## 1. O D63 estava errado sobre o Prisma, e o número é este
+
+**O que o plano dizia:** o filtro `?cf[slug]=valor` seria traduzido para
+`customFields: { path: [slug], equals: valor }` e **usaria** o índice GIN.
+
+**O que o Prisma emite:**
+
+```sql
+WHERE ("customFields" #> ARRAY['ip_fixo']::text[])::jsonb = $1
+```
+
+Comparação de **expressão** sobre a coluna. Nenhum índice GIN a serve — o GIN
+serve `@>`, `?` e os operadores de contenção, e o Prisma tipado não os expõe.
+
+**Medido em 50 mil linhas** (tabela sintética, chave presente em 40 delas):
+
+| Pergunta | Em SQL cru | Pelo Prisma tipado |
+|---|---|---|
+| existência de chave rara (`?`) | Bitmap Index Scan · **0,05 ms** | Seq Scan · **5,2 ms** |
+| igualdade (`@>`) | Bitmap Index Scan · **0,63 ms** | Seq Scan · **13,5 ms** |
+| ordenação (`->>` + `ORDER BY`) | — | Seq Scan + Sort · **14,3 ms** |
+
+**O que foi feito com isso, e é uma divisão, não uma escolha única:**
+
+- **As perguntas de tabela inteira desceram para `$queryRaw`** e usam o índice:
+  `countAssetsWithField` (o 409 que impede apagar um campo em uso, D64) e
+  `countAssetsQueQuebrariam` (o contador do D61). Elas não precisam compor com
+  nada, então o SQL cru não custa nada.
+- **O filtro da listagem ficou no Prisma tipado** e paga a varredura. Ele se
+  **soma** a vista, status, localização, busca, ordenação e paginação num `where`
+  só; um pré-filtro cru devolveria uma lista de ids que viraria um `IN` sem teto,
+  ou uma segunda paginação que mentiria no `total` do envelope.
+- **O índice GIN entrou e se paga** — pelas contagens, não pelo filtro. Sem elas,
+  ele seria peso morto: tamanho e amplificação de escrita a cada `UPDATE` em
+  `assets` para não servir consulta nenhuma.
+
+**É este o número que a F10 herda**, e agora ele é medida, não promessa. O report
+builder vai querer filtrar, ordenar e agrupar por campo customizado; as três
+saídas continuam as do D63 (`$queryRaw` com allowlist, ordenação em memória com
+teto, ou fora de escopo), e a primeira agora tem precedente neste repositório.
+
+Para o `ClienteCatalogo` do CRUD de catálogo poder falar SQL cru **dentro da
+transação do delete**, o tipo dele mudou de ``Omit<…, `$${string}`>`` — que tirava
+`$queryRaw` junto com os métodos de sessão — para a lista explícita dos seis
+métodos que o cliente de transação não tem. Sem isso a contagem teria que rodar
+FORA da transação, que é justamente onde ela não pode estar.
+
+## 2. O AAD precisou do `slug`, e o D81 fala de três partes
+
+O D81 define o AAD como `"<tabela>:<coluna>:<id da linha>"`. Aqui ele é
+`"assets:customFields.<slug>:<id>"`, e a diferença não é cosmética.
+
+Numa coluna dedicada (`licenses.productKey`) há **um** segredo por linha, e
+tabela + coluna + id identificam o lugar sem ambiguidade. Nesta coluna convivem
+**N** segredos na mesma linha — a senha do BIOS e a chave do Wi-Fi do mesmo
+notebook. Sem o `slug`, os dois teriam endereço idêntico: quem tem acesso ao
+banco trocaria um pelo outro e o sistema **revelaria um como se fosse o outro**,
+com a tag de autenticação conferindo.
+
+É exatamente o ataque que o item 3 do D81 existe para fechar, uma camada abaixo —
+então o desenho não é uma exceção à decisão, é ela aplicada à forma desta coluna.
+Provado por `tests/campos-customizados/cifra.test.ts`.
+
+## 3. Todo valor é guardado como TEXTO, inclusive o booleano
+
+O plano não decidia isso, e a escolha aparece em três lugares de uma vez:
+
+- o filtro `?cf[slug]=valor` chega da query string como texto. Se `CHECKBOX`
+  guardasse `true` (booleano JSON) e `TEXT` guardasse `"10.0.0.7"`, o mesmo
+  filtro precisaria adivinhar o tipo do campo antes de montar a comparação — e
+  adivinharia errado no dia em que o formato mudasse;
+- `customFields->>'x'` devolve texto de qualquer jeito, então guardar número como
+  número não compraria ordenação (ela está fora por causa do índice, D63);
+- o GIN com `jsonb_ops` indexa pares chave/valor, e tipo instável produz entradas
+  de índice instáveis.
+
+O formulário continua mandando booleano de verdade; a conversão mora num lugar
+só (`normalizarValor`), e o formato `BOOLEAN` valida `"true"`/`"false"`.
+
+**E limpar um campo REMOVE a chave**, em vez de gravar `null` nela: um
+`{"ip_fixo": null}` faria `customFields ? 'ip_fixo'` continuar verdadeiro, e a
+contagem de "quantos ativos têm este campo preenchido" — que é a base do 409 do
+D64 e do contador do D61 — passaria a contar quem apagou o valor.
+
+## 4. Cinco defeitos que a revisão pegou, e o que cada um ensinou
+
+Nenhum deles aparecia na tela; quatro só aparecem por outro caminho que não o
+formulário, e o quinto aparecia como lixo na tela errada.
+
+### 4.1 O obrigatório era driblado pela máscara que o próprio sistema imprime
+
+A leitura devolve `••••••` no lugar de um valor cifrado, e o formulário reenvia
+todo campo a cada salvamento — então a máscara chega de volta no corpo. Ela
+significa *"não mexi neste campo"*.
+
+A primeira versão a descartava na hora de **cifrar**, e aí ela já havia passado
+pela conferência de obrigatoriedade como um valor **presente**: um campo cifrado
+**e** obrigatório era criado vazio mandando `••••••`. O obrigatório driblado por
+um valor que o próprio sistema tinha impresso.
+
+E havia um segundo efeito na mesma causa: um campo cifrado com `format: REGEX`
+recusava a máscara, porque `••••••` não casa com padrão nenhum — a edição de
+**qualquer outro campo** do ativo passava a responder 422 num campo que ninguém
+tocou.
+
+**A correção é de posição:** a máscara sai de cena no passo 2, antes da validação
+de formato e antes do merge. Os dois sintomas eram um.
+
+### 4.2 `POST /api/assets` sem a chave `customFields` criava ativo inválido
+
+`undefined` significa "não mexe" na **edição** — é o que permite trocar o modelo
+de um ativo antigo sem exigir os obrigatórios do conjunto novo, e sem isso a
+promoção gradual do D61 (opcional → backfill → obrigatório) travaria o parque
+inteiro no instante da promoção.
+
+Na **criação** não há nada para preservar, então a chave ausente e `{}` são a
+mesma coisa. Tratá-las diferente fazia o "obrigatório" valer só para quem usava o
+painel — o formulário sempre manda a chave —, nunca para quem chamava a API.
+
+### 4.3 O padrão de ReDoS era aceito no cadastro e só falhava na tela de quem preenche
+
+`motivoParaRecusarPadrao` existia e era consultada **só pelo motor de validação**,
+que transforma padrão recusado num validador que recusa tudo. Seguro, e na tela
+errada: `(a+)+$` entrava no catálogo calado, e quem descobria era a pessoa
+preenchendo o formulário de um ativo, recebendo *"a expressão regular deste campo
+foi recusada"* sobre uma configuração que ela não fez e não pode corrigir.
+
+A guarda passou a rodar no `beforeWrite` do cadastro, onde a mensagem chega a
+quem digitou o padrão. A do motor **fica**: ela protege contra padrão que entrou
+por outro caminho (um `psql` à mão, um seed).
+
+### 4.4 O `changes` aninhado virava `[object Object]` na aba Histórico
+
+Para evitar que um campo customizado chamado `serial` sobrescrevesse no histórico
+o diff da **coluna** `serial`, a primeira versão aninhou tudo sob
+`changes.customFields`. Isso quebrou a aba: o leitor genérico
+(`src/pages/helpers/historico.helper.ts`) separa diff de detalhe pela **forma** do
+valor — `{ de, para }` é mudança, o resto é detalhe —, então um objeto de objetos
+caía em "detalhe" e era impresso cru.
+
+As chaves passaram a ser **planas e prefixadas** (`cf.<slug>`): o ponto garante
+que nenhuma coluna do Prisma colida, e a forma `{ de, para }` faz a aba lê-las
+sem saber que campo customizado existe. O rótulo mostra o `slug`, não o nome —
+pela mesma razão que o UUID aparece truncado ali: o log guarda o que valia
+**naquele** momento, e o campo pode ter sido renomeado ou apagado depois.
+
+### 4.5 Revelar um segredo não atualizava a trilha na tela
+
+A rota grava `VIEW_FIELD` a cada chamada. A mutação não invalidava as consultas do
+ativo, então a aba Histórico continuava mostrando a linha do tempo de **antes** da
+revelação — a tela negando, para quem estava olhando, o registro que o servidor
+acabara de gravar. É a linha que o `useRevealProductKey` da F6 já tinha.
+
+## 5. A revisão depois do fechamento: o D61 mandava por uma porta que não abria
+
+> Esta seção é de uma **segunda** passada, feita depois de a fase já estar
+> fechada e verde. O item 5.1 é uma capacidade que faltava; os de 5.2 são
+> pequenos, e todos têm a mesma assinatura: **a tela prometia uma regra que o
+> código não cumpria**.
+
+### 5.1 O backfill em massa não existia — e era a única porta que o D61 oferecia
+
+**O que o plano assumia:** o pré-requisito desta fase diz *"F2 concluída — a
+edição em massa é o instrumento de backfill quando um campo vira obrigatório
+(D61)"*, e o D61 descreve o caminho da promoção como *"nasce opcional, a edição
+em massa faz o backfill, e só então promove-se para obrigatório"*. A tela de
+composição imprime isso ao lado de cada contador: *"O caminho é preencher em
+massa primeiro e promover depois."*
+
+**O que existia:** o lote da F2 conhecia **três** operações — `status`,
+`location` e `delete`. Nenhuma delas toca `customFields`. O contador do D61
+calculava o número certo, a frase mandava preencher em massa, e preencher mil
+ativos eram mil formulários abertos um a um. O item não estava em *"o que ficou
+de fora"*, porque ninguém tinha notado que faltava: as duas pontas estavam
+prontas e o meio não.
+
+**O que foi feito:** uma quarta operação, `op: 'custom-field'`, com `fieldId` e
+`value` (`null` = limpar). A regra mora em
+`custom-field/use-cases/bulk-fill-field.usecase.ts` — pelo D64, o que o lote
+precisa saber de um campo customizado é conhecimento deste domínio; o use-case do
+ativo só orquestra a transação.
+
+As quatro recusas, e cada uma fecha um estrago diferente:
+
+| Recusa | O que ela impede |
+|---|---|
+| ativo cujo conjunto **não pede** o campo barra o **lote inteiro** (422) | gravar chave desconhecida em N linhas de uma vez — o passo 1 do `validarCamposCustomizados`, que o caminho de um ativo só já fazia, entrando pela porta dos fundos multiplicado por 200 |
+| valor **fora do formato** (422) | descobrir no ativo 143 que o valor não servia, com 142 já gravados |
+| campo **cifrado** (422) | um segredo igual em duzentas máquinas, que não é segredo — a mesma recusa do `defaultValue` do vínculo |
+| **esvaziar um obrigatório** (422) | deixar N ativos num estado que a edição de um só não produz, e que a próxima edição de qualquer outro campo passaria a recusar |
+
+Três decisões de desenho que o código explica e que vale repetir aqui:
+
+- **Linha a linha, e não `updateMany`.** O valor novo é UMA chave dentro do JsonB
+  de cada ativo, e as outras chaves de cada linha são diferentes — inclusive as
+  órfãs (D60) e as cifradas. Um `updateMany` gravaria o mesmo objeto nas N linhas,
+  apagando tudo o que não fosse esta chave. São ~200 `update` numa transação que
+  já fazia ~200 `recordActivity`.
+- **Duas consultas, não duas por ativo.** A conferência de alcance resolve o
+  conjunto dos modelos **distintos** (a linha do D58) e pergunta de uma vez quais
+  desses conjuntos têm o campo. Duzentos ativos de três modelos custam duas
+  consultas.
+- **O diff de cada linha usa o mesmo `diffDeCampos`** da edição de um ativo só,
+  então as chaves do `changes` saem planas e prefixadas (`cf.<slug>`) — a forma
+  que o item 4.4 ensinou. O `de` de cada linha é o que permite desfazer um lote
+  aplicado por engano.
+
+**O que isso ensina:** um contador que mede o custo de uma operação é meia
+feature. A outra metade é a operação que paga o custo — e as duas precisam nascer
+juntas, senão o número vira uma recomendação que o sistema não sabe seguir.
+
+### 5.2 Seis acertos menores da mesma revisão
+
+- **`colSpan={9}` cravado na linha de "nenhum ativo".** O cabeçalho e cada linha
+  da tabela percorrem `colunasCustomizadas`; esta célula era a única que não
+  percorria nada. Com um campo marcado como coluna, a mensagem de lista vazia
+  deixava de cobrir a tabela. Agora é `9 + colunasCustomizadas.length`.
+- **O comentário do índice GIN no `schema.prisma` ficou na versão pré-medição.**
+  Ele dizia que o filtro é *"traduzido para `@>`"* e que o índice acelera
+  igualdade — exatamente o que o item 1 desta página desmentiu com números. O
+  plano pode manter o texto antigo (ele declara que mantém); o comentário de uma
+  coluna viva, não: quem o lê conclui que o filtro usa o índice.
+- **`TEXTAREA` com `showInListView` virava coluna.** A ajuda do elemento diz *"Não
+  entra como coluna da listagem de ativos"* e **nada cumpria a frase**: uma
+  observação de dois mil caracteres ia para a célula. Agora o `beforeWrite` recusa,
+  e a rota `/custom-fields/list-view` filtra o elemento junto com `encrypted` —
+  pelo mesmo motivo que ela já filtrava a cifra: a guarda vale para o que passa
+  pela API, e uma linha de seed não passou.
+- **`temSegredo` era documentado como "o que a tela usa para o botão de revelar"**,
+  e nenhuma tela o usava: o botão é por CAMPO, e a ficha o decide pelo par
+  `campo.encrypted` + valor igual à máscara. A flag é de LINHA e continua (ela sai
+  de graça, e responde "há segredo neste ativo?" sem abrir o ativo) — o que mudou
+  foi a frase que prometia outra coisa.
+- **`Asset.customFields` era declarado obrigatório no tipo do front**, enquanto o
+  comentário logo acima explicava que a tela do posto e as posses do colaborador
+  não a carregam — e não carregam mesmo, porque a coluna não está no
+  `ASSET_SELECT` compartilhado. O tipo prometia o que dois endpoints não entregam.
+  Agora é opcional, como `temSegredo` já era.
+- **O `changes` da composição de um conjunto era `{ campos: { de: [...], para: [...] } }`**
+  — `{ de, para }` com arrays de objetos dentro, que é a forma que o item 4.4
+  corrigiu nos campos do ativo: passa pelo teste de forma do leitor genérico e
+  falha na impressão, virando `[object Object]`. Nenhuma tela mostra histórico de
+  conjunto hoje, e é justamente por isso que precisava ser corrigido agora — a
+  primeira que mostrar não vai desconfiar da forma do dado. Virou uma linha de
+  texto que carrega ordem, obrigatoriedade e padrão.
+
+## 6. O que ficou de fora, e por quê
+
+- **Ordenar por campo customizado.** Fora por medida, não por falta de tempo
+  (D63, e a tabela do item 1). `?sort=cf.slug` responde 422 com a lista do que dá
+  para ordenar.
+- **Campos customizados no import e no export CSV** (o item **P** do TODO).
+  Depende do importador e do export, que nascem na **F10** — anotar a coluna aqui
+  sem o CSV existir seria escrever metade de uma feature.
+- **`displayInUserView` e `showInEmail` gravam e não fazem nada.** Declarado na
+  ajuda dos dois campos no formulário, com a palavra "guardado agora" — é o mesmo
+  tratamento que `requireAcceptance` teve entre a F1 e a F4. Um checkbox que grava
+  o dado e não muda comportamento nenhum é tão enganoso quanto um rótulo errado.
+- **`worker_threads` com timeout para o regex.** As três guardas do D63 reduzem o
+  risco, não o eliminam, e o residual continua **aceito**: o padrão é digitado por
+  um administrador do sistema, não por um anônimo, e um processo por validação não
+  se paga contra isso.
+- **Campos customizados fora do `Asset`** (licença, acessório, componente).
+  Quando entrarem, a pergunta é se o conjunto é o mesmo catálogo de campos ou um
+  por tipo de entidade — e a resposta muda a chave de `CustomFieldsetField`.
+
+## 7. Ordem de commits, como saiu
+
+```
+A: feat(db): CustomField, CustomFieldset e as duas âncoras de conjunto
+B: feat(custom-field): motor de validação por formato
+C: feat(custom-field): resolução do conjunto (modelo sobrepõe categoria)
+D: feat(itam): gravação, filtro por igualdade e índice GIN
+E: feat(security): campo customizado cifrado em repouso
+F: feat(web): formulário dinâmico e administração de campos e conjuntos
+```
+
+O plano dizia *"não há suíte: a verificação é a seção acima"* — e isso deixou de
+ser verdade na F8. A verificação é
+`tests/campos-customizados/` (103 asserções, cinco arquivos: 92 do fechamento
+da fase e 11 da revisão da seção 5), e os comandos da seção **Verificação**
+continuam valendo para conferir à mão.

@@ -1,20 +1,23 @@
 import { prisma } from '../../../core/database/prismaClient';
 import type { ListEnvelope, ListQuery } from '../../../core/http/list-query';
 import { resolverResponsaveisEmLote, type PosseResolvida } from '../../assignment/use-cases/resolve-responsibles.usecase';
-import { ASSET_SELECT } from '../helpers/asset-select.helper';
+import { ASSET_SELECT_COM_CAMPOS, comCamposMascarados } from '../helpers/asset-select.helper';
 import {
   buildAssetFilterWhere, buildAssetWhere, type AssetFilters, type AssetSortable,
 } from '../helpers/asset-filters.helper';
 
-type AssetRow = Awaited<ReturnType<typeof buscarPagina>>[number];
+type AssetRow = ReturnType<typeof comCamposMascarados<Awaited<ReturnType<typeof buscarPagina>>[number]>>;
 
 /** A linha da listagem com a responsabilidade já resolvida (Camada 3). */
 export type AssetRowComPosse = AssetRow & { posse: PosseResolvida };
 
+// `ASSET_SELECT_COM_CAMPOS` e não o compartilhado: a listagem mostra os campos
+// marcados com `showInListView` como coluna (F9, Etapa F), e é a única leitura em
+// lote que os precisa. Toda linha passa por `comCamposMascarados` antes de sair.
 function buscarPagina(where: object, query: ListQuery<AssetSortable>) {
   return prisma.asset.findMany({
     where,
-    select: ASSET_SELECT,
+    select: ASSET_SELECT_COM_CAMPOS,
     orderBy: { [query.sort]: query.order },
     skip: query.skip,
     take: query.take,
@@ -63,7 +66,10 @@ export async function listAssets(
     total,
     // `!` não: o lote garante uma entrada por id pedido, mas quem lê o código
     // aqui não sabe disso — o fallback deixa a promessa local e explícita.
-    rows: rows.map((linha) => ({ ...linha, posse: posses.get(linha.id) ?? semPosse() })),
+    rows: rows.map((linha) => ({
+      ...comCamposMascarados(linha),
+      posse: posses.get(linha.id) ?? semPosse(),
+    })),
   };
 }
 

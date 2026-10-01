@@ -16,6 +16,11 @@ const ROTULO_DA_ACAO: Record<string, string> = {
   // seria uma linha do tempo em que ninguém distingue documento de hardware.
   INSTALL: 'Componente instalado',
   UNINSTALL: 'Componente retirado',
+  // A leitura de um campo customizado CIFRADO (F9, D62). Ela está aqui, e não no
+  // leitor genérico, pelo mesmo motivo do `VIEW_KEY` da licença: é a segunda e
+  // última ação do projeto que registra uma LEITURA, porque um segredo revelado
+  // não pode ser "des-revelado" — e não é vocabulário que toda trilha tenha.
+  VIEW_FIELD: 'Campo cifrado revelado',
 };
 
 /** Os nomes de coluna que aparecem no diff, em português. */
@@ -57,6 +62,11 @@ const ROTULO_DO_CAMPO: Record<string, string> = {
   de: 'Instaladas antes',
   sucessoraId: 'Continua instalado (linha)',
   disponivel: 'Disponível depois',
+  // Campos customizados (F9). O `changes` do `VIEW_FIELD` grava QUAL campo e
+  // QUANDO — nunca o valor: seria trocar um segredo cifrado numa coluna por um
+  // segredo em claro numa tabela de auditoria, que é lida por mais gente.
+  slug: 'Campo revelado',
+  revealedAt: 'Revelado em',
 };
 
 export function lerEventoDoAtivo(evento: EventoDoAtivo): LeituraDoEvento {

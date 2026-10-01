@@ -23,7 +23,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 
 ---
 
-## As catorze
+## As dezesseis
 
 | # | Invariante | Onde | O que o usuário vê |
 |---|---|---|---|
@@ -41,6 +41,8 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 12 | Uma máquina é no máximo um ativo, e um ativo no máximo uma máquina | **banco** — `@unique` em `Endpoint.assetId` | 409 `Este ativo já está vinculado a outra máquina. Use a fusão se for a mesma máquina reinstalada.` |
 | 13 | A mesma sugestão não empilha na fila | **banco** — índice único parcial `sugestao_pendente_por_alvo` | nada: o job trata o `P2002` como "outro já criou" |
 | 14 | A observação de uso é uma linha por (máquina, conta, dia) | **banco** — índice único `endpoint_user_daily` | nada: o `upsert` incrementa em vez de inserir |
+| 15 | O `slug` de um campo customizado não muda depois de criado | **aplicação** — `custom-field.spec.ts` → `beforeWrite` | 409 `O identificador de um campo não muda depois de criado: ele é a chave do valor em cada ativo. Este campo é "ip_fixo". Para trocar o identificador, crie outro campo — o nome visível, esse sim, pode ser editado à vontade.` |
+| 16 | Um campo com valor gravado não vira cifrado, nem deixa de ser | **aplicação** — `custom-field.spec.ts` → `beforeWrite` | 409 `Não é possível ligar a cifra de "chave_wifi": 12 ativos já têm valor gravado neste campo. Os valores existentes estão em claro e não seriam cifrados retroativamente. Crie um campo novo com a configuração desejada.` |
 
 ---
 
@@ -482,6 +484,67 @@ presença de pessoa, que este sistema não se propõe a guardar, e teria a reten
 
 ---
 
+### 15 — O `slug` de um campo customizado é imutável
+
+`server/domain/catalog/specs/custom-field.spec.ts` → `beforeWrite`
+
+═══════════════════════════════════════════════════════════════════════════════
+
+**Esta é a invariante que torna o `JsonB` da F9 seguro**, e ela existe porque o
+D59 aceitou um preço declarado: **não há integridade referencial entre as chaves
+do JSON e a tabela `custom_fields`**. Uma coluna por campo customizado daria essa
+integridade e morreria no `migrate diff` seguinte (é o D7); uma tabela EAV daria
+e transformaria a listagem num pivô. O JsonB é a escolha certa, e esta regra é o
+que paga por ela.
+
+O `slug` é o **nome da propriedade** dentro de `assets.customFields`, em N mil
+linhas. Renomeá-lo é um `UPDATE` sobre a tabela inteira que teria que ser
+transacional com a linha do campo — e um meio-caminho (o processo morre, o
+`statement_timeout` corta) deixa metade dos ativos com a chave velha e metade com
+a nova, **sem nada que acuse**: as duas são chaves válidas de um JSON válido, a
+tela simplesmente deixa de mostrar o valor de metade da frota.
+
+**Por que na aplicação:** a regra é *"mudou de X para Y?"* — precisa do valor
+anterior. É a mesma forma da invariante 3, e a mesma razão de ela não caber num
+CHECK.
+
+**Por que não há migração em massa oferecida:** ela existiria para servir a um
+caso que tem saída melhor. O `name` — que é o que aparece em toda tela — muda à
+vontade; o `slug` é infraestrutura, e ninguém além de quem escreve
+`?cf[ip_fixo]=` à mão precisa vê-lo. Uma regra de três linhas no lugar de um
+script de migração e de um modo de falha.
+
+> **Pelo mesmo motivo, trocar o conjunto de um ativo NÃO apaga as chaves que
+> sobraram** (D60). Elas são dado do cliente, o conjunto antigo pode voltar, e
+> mantê-las custa zero. A tela de detalhe as mostra marcadas como "de um conjunto
+> anterior"; o formulário não as edita e a validação as ignora. Apagar dado do
+> cliente porque um `<select>` mudou é a "limpeza" que ninguém pede e todos
+> lamentam.
+
+### 16 — A cifra de um campo não vira com valor gravado
+
+`server/domain/catalog/specs/custom-field.spec.ts` → `beforeWrite`
+
+**Os dois sentidos estragam, e estragam diferente:**
+
+| Operação | O que aconteceria |
+|---|---|
+| ligar `encrypted` | os valores antigos ficam **em claro** dentro do JsonB com o sistema tratando-os como cifrados. A leitura os mostra crus (não casam com `enc:v1:`), e a rota de revelar responde 422 "não é cifrado" para um campo que a tela desenha com cadeado |
+| desligar `encrypted` | os valores existentes continuam cifrados, e a tela passa a mostrar `enc:v1:e99fe939:…` como se fosse o valor |
+
+**Por que não há recifragem em massa:** ela teria que decifrar e recifrar N mil
+linhas numa transação, e o que falhasse no meio ficaria **ilegível** — não
+"errado", ilegível. O AAD amarra cada valor à linha e ao campo onde ele mora
+(D81 + `aadDoCampo`), então nem um `UPDATE` cruzado salvaria o que ficasse pelo
+caminho.
+
+A saída é a do slug: **criar outro campo**. E a contagem que sustenta o 409 usa
+`?` do Postgres em SQL cru, porque o `path`/`not: DbNull` do Prisma tipado não
+alcança o índice GIN — ver
+[`FASE-9-PLANO-ITAM.md`](./FASE-9-PLANO-ITAM.md).
+
+---
+
 ## O que **não** é invariante, e por isso não está aqui
 
 - **`Asset.assignedToId` bate com a `Assignment` aberta.** É *cache*, não
@@ -512,6 +575,21 @@ presença de pessoa, que este sistema não se propõe a guardar, e teria a reten
 - **Só `DEPLOYABLE` libera checkout.** É regra de fluxo do checkout (F4), não
   fato sobre linhas já gravadas.
 - **Validação de formato** (uuid, tamanho, enum) — é do `zod`, na borda.
+- **Toda chave de `assets.customFields` corresponde a um campo cadastrado.** Ela
+  **não** corresponde, e é de propósito (invariante 15, do outro lado): trocar o
+  modelo de um ativo deixa as chaves do conjunto anterior no JSON, intactas. O
+  que o sistema garante é não CRIAR chave desconhecida, e vale nos **dois** caminhos
+  que escrevem a coluna: `validate-custom-fields` recusa com 422 o que não está no
+  conjunto resolvido do ativo, e o preenchimento em massa
+  (`bulk-fill-field.usecase.ts`) recusa o LOTE INTEIRO quando algum ativo
+  selecionado não pede aquele campo — gravar chave desconhecida em 200 linhas de uma
+  vez é o mesmo furo multiplicado. E o `countUsages` do campo soma os ativos com a
+  chave presente para que apagar o campo não deixe órfão em silêncio.
+- **O valor gravado ainda está na `listValues` do campo.** Ele pode não estar: a
+  lista é editável depois, e valor que saiu dela **não é apagado**. A tela o
+  mostra marcado como fora da lista, e o `<select>` o injeta como opção extra —
+  senão ele cairia na primeira opção e o dado do cliente seria trocado por um
+  default no primeiro render. É o D60 outra vez.
 
 ## Acrescentar uma invariante
 

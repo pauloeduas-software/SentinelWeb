@@ -1,5 +1,7 @@
 import { assetModelSpec } from './asset-model.spec';
 import { categorySpec } from './category.spec';
+import { customFieldSpec } from './custom-field.spec';
+import { customFieldsetSpec } from './custom-fieldset.spec';
 import { depreciationSpec } from './depreciation.spec';
 import { locationSpec } from './location.spec';
 import { manufacturerSpec } from './manufacturer.spec';
@@ -20,4 +22,9 @@ export const CATALOG_SPECS: readonly CatalogSpec[] = [
   supplierSpec,
   locationSpec,
   depreciationSpec,
+  // AS DUAS DA F9. Por último porque são as que se mexem menos: o cliente cria
+  // os campos uma vez e depois só preenche valores. A tela de Configurações usa
+  // esta mesma ordem nas abas.
+  customFieldSpec,
+  customFieldsetSpec,
 ];

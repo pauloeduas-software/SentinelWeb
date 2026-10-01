@@ -1,14 +1,16 @@
 import { Plus, SlidersHorizontal } from 'lucide-react';
 import CatalogFormModal from './components/CatalogFormModal';
 import CatalogTable from './components/CatalogTable';
+import FieldsetFieldsModal from './components/FieldsetFieldsModal';
 import LocationOccupantsModal from './components/LocationOccupantsModal';
 import ListToolbar from '../components/ListToolbar';
 import { useCatalog } from './hooks/useCatalog';
+import { useConjuntoDeCampos } from './hooks/useConjuntoDeCampos';
 import { useOcupantes } from '../hooks/useOcupantes';
 
 // As tabelas de catálogo do ITAM — o menu *Settings* do Snipe-IT.
 //
-// Uma tela para as sete tabelas, dirigida pelas specs de `specs/`: acrescentar
+// Uma tela para as NOVE tabelas, dirigida pelas specs de `specs/`: acrescentar
 // uma tabela é escrever a spec, não copiar uma página.
 export default function ConfiguracoesPage() {
   const {
@@ -18,11 +20,21 @@ export default function ConfiguracoesPage() {
     acaoAberta, openAcao, closeAcao,
   } = useCatalog();
 
-  // A ação de linha declarada pela spec de Localizações. Traduzir a ação
-  // genérica em "qual posto" é trabalho DESTA tela: o hook é compartilhado com
-  // /postos, que não tem ação de linha nenhuma para conhecer.
+  // As ações de linha declaradas pelas specs. Traduzir a ação genérica em "qual
+  // posto" ou "qual conjunto" é trabalho DESTA tela: o `useCatalog` guarda QUAL
+  // ação e SOBRE QUEM, e não sabe o que cada uma faz — assim uma ação nova não
+  // mexe naquele arquivo.
+  //
+  // `useOcupantes` é compartilhado com /postos, que não tem ação de linha nenhuma
+  // para conhecer.
   const posto = acaoAberta?.id === 'ocupantes' ? acaoAberta.registro : null;
   const ocupantes = useOcupantes(posto?.id ?? null);
+
+  // A SEGUNDA ação do projeto (F9): a composição de um conjunto de campos. Os
+  // dois hooks são chamados sempre, com `null` quando a ação não é a deles — é o
+  // que as regras de hooks exigem, e é por isso que os dois aceitam `null`.
+  const conjunto = acaoAberta?.id === 'campos-do-conjunto' ? acaoAberta.registro : null;
+  const campos = useConjuntoDeCampos(conjunto?.id ?? null);
 
   return (
     <div className="animate-in fade-in duration-300 h-[calc(100vh-4rem)] flex flex-col pb-6">
@@ -97,6 +109,27 @@ export default function ConfiguracoesPage() {
           registro={emEdicao}
           onClose={closeModal}
           onSubmit={handleSubmit}
+        />
+      )}
+
+      {conjunto && (
+        <FieldsetFieldsModal
+          nome={campos.nome || String(conjunto.name)}
+          modelosAlcancados={campos.modelosAlcancados}
+          rascunho={campos.rascunho}
+          disponiveis={campos.disponiveis}
+          carregando={campos.carregando}
+          salvando={campos.salvando}
+          sujo={campos.sujo}
+          erro={campos.erro}
+          onAcrescentar={campos.acrescentar}
+          onRemover={campos.remover}
+          onAlternarObrigatorio={campos.alternarObrigatorio}
+          onDefinirPadrao={campos.definirPadrao}
+          onMover={campos.mover}
+          onDescartar={campos.descartar}
+          onGravar={campos.gravar}
+          onClose={closeAcao}
         />
       )}
 

@@ -20,6 +20,9 @@ import {
 } from '../../../../domain/maintenance/maintenance.queries';
 import { useAssetAuditsQuery } from '../../../../domain/audit/audit.queries';
 import {
+  useConjuntoDoModeloQuery, useRevelarCampo,
+} from '../../../../domain/custom-field/custom-field.queries';
+import {
   useDesvincularMaquina, useMaquinaDoAtivoQuery,
 } from '../../../../domain/reconciliation/reconciliation.queries';
 import type { RetireInput } from '../../../../domain/shared/asset.types';
@@ -43,6 +46,39 @@ export function useAssetDetail() {
   const [modal, setModal] = useState<ModalAberto>('nenhum');
 
   const { data: asset, isPending, error } = useAssetQuery(id);
+
+  // ── OS CAMPOS CUSTOMIZADOS (F9) ─────────────────────────────────────────
+  //
+  // O conjunto vem do MODELO (D58) e é o que dá RÓTULO e ORDEM aos valores: a
+  // resposta do ativo traz `{ slug: valor }`, e `ip_fixo` não é o que se mostra
+  // numa ficha. Ele serve também ao formulário de edição, que monta os inputs.
+  const { data: conjuntoDeCampos } = useConjuntoDoModeloQuery(asset?.modelId);
+
+  const revelar = useRevelarCampo(id ?? '');
+
+  // ── O VALOR REVELADO NÃO É CACHE, E ISSO É A DECISÃO ────────────────────
+  //
+  // Ele mora em `useState` desta tela e morre com ela: a rota que o devolve
+  // GRAVA `ActivityLog` a cada chamada, porque *quem viu este segredo* é o fato
+  // auditável (D62). Guardá-lo no cache do TanStack Query faria o valor
+  // reaparecer ao voltar para a tela sem uma linha de auditoria correspondente —
+  // e o histórico passaria a contar menos visualizações do que houve.
+  //
+  // O mesmo desenho da revelação da chave de produto da F6.
+  const [camposRevelados, setCamposRevelados] = useState<Record<string, string>>({});
+  const [erroAoRevelar, setErroAoRevelar] = useState('');
+
+  const handleRevelarCampo = async (slug: string) => {
+    setErroAoRevelar('');
+    try {
+      const { value } = await revelar.mutateAsync(slug);
+      setCamposRevelados((atual) => ({ ...atual, [slug]: value }));
+    } catch (falha) {
+      // O erro APARECE, e não vira `alert`: aqui ele é informativo (chave de
+      // criptografia trocada, valor adulterado) e a tela continua usável.
+      setErroAoRevelar((falha as Error).message);
+    }
+  };
   const { data: historico, isPending: historicoPendente } = useAssetHistoryQuery(id);
   // A aba Posse lê o histórico de posse pela query do domínio de posse — a
   // mesma rota que a F4 escreve. Esta tela LÊ, não recalcula nada.
@@ -260,6 +296,11 @@ export function useAssetDetail() {
       desvincular.mutate(maquina.endpointId);
     },
     handleRetirarComponente,
+    conjuntoDeCampos,
+    camposRevelados,
+    revelandoCampo: revelar.isPending ? revelar.variables ?? null : null,
+    erroAoRevelar,
+    handleRevelarCampo,
 
     // ARQUIVO — a aba Arquivos.
     anexos: anexos ?? [],

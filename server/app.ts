@@ -23,6 +23,7 @@ import { AgentMaestro } from './domain/agent/agent.maestro';
 import { EndpointMaestro } from './domain/endpoint/endpoint.maestro';
 import { ReconciliationMaestro } from './domain/reconciliation/reconciliation.maestro';
 import { CatalogMaestro } from './domain/catalog/catalog.maestro';
+import { CustomFieldMaestro } from './domain/custom-field/custom-field.maestro';
 import { AssetMaestro } from './domain/asset/asset.maestro';
 import { SettingsMaestro } from './domain/settings/settings.maestro';
 import { UserMaestro } from './domain/user/user.maestro';
@@ -183,6 +184,12 @@ export async function buildApp(): Promise<FastifyInstance> {
   await AuthMaestro.setupRoutes(server);
   await EndpointMaestro.setupRoutes(server);
   await CatalogMaestro.setupRoutes(server);
+  // CAMPO CUSTOMIZADO depois do catálogo e ANTES do ativo (F9): as dez rotas
+  // planas dos dois cadastros são spec de catálogo (D64) e já subiram acima;
+  // aqui entram as três que a spec não expressa — a composição de um conjunto e
+  // os campos que viram coluna. O ativo vem depois porque o formulário dele lê o
+  // conjunto resolvido.
+  await CustomFieldMaestro.setupRoutes(server);
   await AssetMaestro.setupRoutes(server);
   await SettingsMaestro.setupRoutes(server);
   await UserMaestro.setupRoutes(server);

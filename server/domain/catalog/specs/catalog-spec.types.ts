@@ -8,10 +8,22 @@ import type { prisma } from '../../../core/database/prismaClient';
 /**
  * Cliente do Prisma aceito pelo CRUD: tanto o global quanto o de transação.
  *
- * `Omit<…, '$'>` tira os métodos de sessão (`$transaction`, `$connect`…) que o
- * cliente de transação não tem — é o que faz o MESMO código servir os dois.
+ * A lista de exclusão é a do PRÓPRIO Prisma (`ITXClientDenyList`): são os seis
+ * métodos de SESSÃO que o cliente de transação não tem. Escrita à mão porque o
+ * tipo não é exportado publicamente no 5.x.
+ *
+ * ⚠️ Ela era `Omit<…, `$${string}`>`, que tirava TODOS os métodos com `$` —
+ * inclusive `$queryRaw`. A F9 precisa dele: a contagem de ativos com uma chave
+ * presente no JsonB só usa o índice GIN por `?`/`@>`, e o Prisma tipado emite
+ * `#>` com comparação de expressão, que é varredura sequencial (medido: 0,05ms
+ * contra 5,2ms em 50 mil linhas). Tirar `$queryRaw` do tipo empurraria a
+ * contagem para FORA da transação do delete — que é justamente onde ela não
+ * pode estar.
  */
-export type ClienteCatalogo = Omit<typeof prisma, `$${string}`>;
+export type ClienteCatalogo = Omit<
+  typeof prisma,
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+>;
 
 /**
  * O mínimo que o CRUD usa de um delegate do Prisma.

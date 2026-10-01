@@ -1,7 +1,14 @@
 import { randomUUID } from 'crypto';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordActivity, type ActivityAction } from '../../activity/use-cases/record-activity.usecase';
+import {
+  diffDeCampos, type MudancaDeCampo,
+} from '../../custom-field/helpers/custom-field-value.helper';
+import {
+  aplicarCampoNoAtivo, assertCampoAlcancaOLote, resolverCampoDoLote,
+} from '../../custom-field/use-cases/bulk-fill-field.usecase';
 import { assertStatusCoerenteComPosse, type ClienteStatusPosse } from './assert-status-posse.usecase';
 
 // AÇÃO EM MASSA — uma operação, N ativos, TUDO OU NADA (D21).
@@ -28,7 +35,16 @@ import { assertStatusCoerenteComPosse, type ClienteStatusPosse } from './assert-
 export type BulkAssetsData =
   | { op: 'status'; ids: string[]; statusId: string }
   | { op: 'location'; ids: string[]; locationId: string | null }
-  | { op: 'delete'; ids: string[] };
+  | { op: 'delete'; ids: string[] }
+  /**
+   * PREENCHER UM CAMPO CUSTOMIZADO nos N ativos (F9) — o backfill do D61.
+   *
+   * `value: null` é limpar, e limpar REMOVE a chave. O que pode e o que não pode
+   * mora em `custom-field/use-cases/bulk-fill-field.usecase.ts`: campo cifrado
+   * não entra, valor fora do formato não entra, ativo cujo modelo não pede o
+   * campo barra o lote inteiro, e esvaziar um obrigatório é recusado.
+   */
+  | { op: 'custom-field'; ids: string[]; fieldId: string; value: string | null };
 
 export interface BulkResult {
   op: BulkAssetsData['op'];
@@ -54,14 +70,25 @@ const ACAO: Record<BulkAssetsData['op'], ActivityAction> = {
   status: 'UPDATE',
   location: 'UPDATE',
   delete: 'DELETE',
+  'custom-field': 'UPDATE',
 };
 
-/** O estado anterior de cada ativo do lote — o que o diff de cada linha precisa. */
+/**
+ * O estado anterior de cada ativo do lote — o que o diff de cada linha precisa.
+ *
+ * `modelId` e `customFields` entram pela operação de campo customizado, e pela
+ * mesma razão que `statusId` e `locationId` já estavam aqui: o diff daquela
+ * operação precisa do valor de ANTES, e o modelo é o que decide se o conjunto
+ * dele pede o campo (D58). Uma coluna a mais lida no `carregarLote` custa menos
+ * que uma segunda viagem ao banco por ativo.
+ */
 interface AtivoDoLote {
   id: string;
   assetTag: string;
   statusId: string;
   locationId: string | null;
+  modelId: string;
+  customFields: Prisma.JsonValue | null;
 }
 
 /**
@@ -74,7 +101,10 @@ interface AtivoDoLote {
 async function carregarLote(client: ClienteStatusPosse, ids: string[]): Promise<AtivoDoLote[]> {
   const ativos = await client.asset.findMany({
     where: { id: { in: ids } },
-    select: { id: true, assetTag: true, statusId: true, locationId: true },
+    select: {
+      id: true, assetTag: true, statusId: true, locationId: true,
+      modelId: true, customFields: true,
+    },
   });
 
   if (ativos.length !== ids.length) {
@@ -122,8 +152,24 @@ async function assertStatusDoLote(
   }
 }
 
-/** O que muda em `assets`, por operação. `delete` é o soft delete de sempre. */
-function dadosDaOperacao(data: BulkAssetsData) {
+/**
+ * As operações que mudam UMA COLUNA igual em todas as linhas — as que cabem num
+ * `updateMany`.
+ *
+ * O campo customizado fica de fora porque ele não é uma delas: o JsonB de cada
+ * ativo é diferente, e o valor novo tem que ser mesclado linha a linha.
+ */
+type OperacaoDeColuna = Exclude<BulkAssetsData, { op: 'custom-field' }>;
+
+/**
+ * O que muda em `assets`, por operação. `delete` é o soft delete de sempre.
+ *
+ * ⚠️ O PARÂMETRO EXCLUI `custom-field` DE PROPÓSITO, e não é zelo de tipo: o
+ * último `return` desta função é o do `delete`, então uma operação nova que
+ * caísse aqui sem `if` próprio APAGARIA o lote inteiro. Com a união estreitada,
+ * isso é erro de compilação em vez de incidente.
+ */
+function dadosDaOperacao(data: OperacaoDeColuna) {
   if (data.op === 'status') return { statusId: data.statusId };
   if (data.op === 'location') return { locationId: data.locationId };
   return { deletedAt: new Date() };
@@ -139,7 +185,14 @@ function dadosDaOperacao(data: BulkAssetsData) {
  * lote gravado com UMA linha em vez de N é indistinguível de um lote de um
  * ativo só.
  */
-function mudancasDoAtivo(data: BulkAssetsData, ativo: AtivoDoLote, batchId: string, batchSize: number) {
+function mudancasDoAtivo(
+  data: BulkAssetsData,
+  ativo: AtivoDoLote,
+  batchId: string,
+  batchSize: number,
+  /** Só a operação de campo customizado traz isto: o diff `cf.<slug>` daquele ativo. */
+  camposAlterados: Record<string, MudancaDeCampo> = {},
+) {
   const comum = { batchId, batchSize, op: data.op };
 
   if (data.op === 'status') {
@@ -147,6 +200,14 @@ function mudancasDoAtivo(data: BulkAssetsData, ativo: AtivoDoLote, batchId: stri
   }
   if (data.op === 'location') {
     return { ...comum, locationId: { de: ativo.locationId, para: data.locationId } };
+  }
+  // ESPALHADO, com as chaves já prefixadas por `cf.` pelo `diffDeCampos` — a
+  // mesma forma que a edição de um ativo só grava. É o que faz a aba Histórico
+  // lê-las sem saber que campo customizado existe: `{ de, para }` plano é
+  // mudança, objeto de objetos cairia em "detalhe" e sairia como `[object
+  // Object]`.
+  if (data.op === 'custom-field') {
+    return { ...comum, ...camposAlterados };
   }
   return comum;
 }
@@ -182,26 +243,68 @@ export async function bulkUpdateAssets(data: BulkAssetsData, actorId: string | n
     // botão clicado — que é exatamente o tipo de divergência que este código
     // evita em todo o resto.
 
-    // UM `updateMany` para as N linhas: o diff de cada uma já está em memória
-    // desde o `carregarLote`, então reler ativo por ativo custaria 200 viagens
-    // ao banco para não descobrir nada novo.
-    const { count } = await tx.asset.updateMany({
-      where: { id: { in: ids } },
-      data: dadosDaOperacao(data),
-    });
+    // ── O CAMPO CUSTOMIZADO É LINHA A LINHA, E NÃO TEM COMO NÃO SER ────────
+    //
+    // O valor novo é UMA chave dentro do JsonB de cada ativo, e as outras chaves
+    // de cada linha são diferentes — inclusive as órfãs de um conjunto anterior e
+    // as cifradas, que precisam continuar lá (D60). Um `updateMany` gravaria o
+    // mesmo objeto nas N linhas, apagando tudo o que não fosse esta chave; o
+    // Prisma não expressa merge de JsonB, e `jsonb_set` por `$queryRaw` tiraria a
+    // operação de dentro da extension de soft delete.
+    //
+    // São ~200 `update` numa transação com timeout de 20s — a mesma ordem de
+    // grandeza dos ~200 `recordActivity` que o lote já fazia abaixo.
+    const diffPorAtivo = new Map<string, Record<string, MudancaDeCampo>>();
+    let afetados: number;
+
+    if (data.op === 'custom-field') {
+      // As duas recusas que valem para o LOTE INTEIRO saem antes de qualquer
+      // escrita: formato do valor, e conjunto que alcança todos os ativos (D21).
+      const campo = await resolverCampoDoLote(tx, data.fieldId, data.value);
+      await assertCampoAlcancaOLote(tx, campo, ativos);
+
+      for (const ativo of ativos) {
+        const { antes, depois, valores } = aplicarCampoNoAtivo(campo, ativo.customFields);
+
+        await tx.asset.update({
+          where: { id: ativo.id },
+          // `DbNull` e nunca `JsonNull` quando a última chave saiu: o segundo
+          // grava o literal JSON `null` DENTRO da coluna e `customFields IS NULL`
+          // para de achar o ativo.
+          data: { customFields: valores ?? Prisma.DbNull },
+        });
+
+        diffPorAtivo.set(ativo.id, diffDeCampos(antes, depois));
+      }
+
+      afetados = ativos.length;
+    } else {
+      // UM `updateMany` para as N linhas: o diff de cada uma já está em memória
+      // desde o `carregarLote`, então reler ativo por ativo custaria 200 viagens
+      // ao banco para não descobrir nada novo.
+      const { count } = await tx.asset.updateMany({
+        where: { id: { in: ids } },
+        data: dadosDaOperacao(data),
+      });
+      afetados = count;
+    }
 
     // UMA LINHA DE HISTÓRICO POR ATIVO, nunca uma pelo lote: a aba Histórico é
     // de um ativo, e um evento gravado no lote não apareceria em nenhuma delas.
     // As N levam o mesmo `batchId` para a tela poder reagrupá-las.
+    //
+    // As N são gravadas mesmo quando o valor daquele ativo não mudou — é o que
+    // mantém `batchSize` conferível contra o número de linhas, e é o que as três
+    // operações antigas já faziam ao trocar um status pelo mesmo status.
     for (const ativo of ativos) {
       await recordActivity(tx, {
         entityType: 'Asset',
         entityId: ativo.id,
         action: ACAO[data.op],
-        changes: mudancasDoAtivo(data, ativo, batchId, ativos.length),
+        changes: mudancasDoAtivo(data, ativo, batchId, ativos.length, diffPorAtivo.get(ativo.id)),
       }, actorId);
     }
 
-    return { op: data.op, batchId, afetados: count, ids };
+    return { op: data.op, batchId, afetados, ids };
   }, TRANSACAO);
 }
