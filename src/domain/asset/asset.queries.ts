@@ -4,6 +4,7 @@ import type {
   Asset, AssetListParams, AssetStats, BulkInput, BulkResult, EventoDoAtivo, RetireInput,
 } from '../shared/asset.types';
 import type { ListEnvelope } from '../shared/list.types';
+import type { ResultadoDaBusca } from '../shared/label.types';
 
 // A chave inclui os parâmetros: sem isso a página 2 seria servida do cache da
 // página 1. `all` é o prefixo — invalidar ['assets'] alcança listagem e
@@ -21,6 +22,52 @@ export const assetKeys = {
 };
 
 export type AssetInput = Record<string, unknown>;
+
+/**
+ * A URL do CSV da listagem (F10, Etapa C).
+ *
+ * NÃO É UMA MUTAÇÃO NEM UMA QUERY: é um link que o navegador baixa. O arquivo
+ * pode ter megabytes e não entra no cache do TanStack Query — guardá-lo ali
+ * seria manter o conteúdo inteiro na memória da aba, para um dado que ninguém
+ * relê.
+ *
+ * O cookie de sessão vai sozinho, porque é a MESMA origem (D84 continua
+ * valendo: a rota é `/api/` e exige sessão). `page` e `perPage` NÃO entram —
+ * exportar é levar tudo que o filtro alcança, e o servidor responde 422 a quem
+ * os mandar.
+ */
+export function urlDoExportDeAtivos(
+  params: Omit<AssetListParams, 'page' | 'perPage'>,
+  colunas?: readonly string[],
+): string {
+  const busca = new URLSearchParams();
+
+  for (const [chave, valor] of Object.entries(params)) {
+    if (valor !== undefined && valor !== '') busca.set(chave, String(valor));
+  }
+  if (colunas && colunas.length > 0) busca.set('columns', colunas.join(','));
+
+  return `${apiClient.defaults.baseURL ?? ''}/assets/export?${busca.toString()}`;
+}
+
+/**
+ * A BUSCA DO LEITOR DE CÓDIGO DE BARRAS (F10, Etapa G).
+ *
+ * `useMutation` e não `useQuery`, apesar de ser `GET`: o gesto é um BIPE seguido
+ * de Enter, e o resultado é uma NAVEGAÇÃO — não um dado que a tela mostra e
+ * revalida. Como query, cada tecla digitada entraria na chave do cache, e o
+ * `refetchOnWindowFocus` reabriria a busca de ontem ao voltar para a aba.
+ *
+ * SEM DEBOUNCE, de propósito: o leitor digita a etiqueta inteira em
+ * milissegundos e manda `Enter`. Um debounce engoliria a submissão, que é
+ * justamente o evento que importa aqui.
+ */
+export function useBuscaDoLeitor() {
+  return useMutation({
+    mutationFn: async (q: string) =>
+      (await apiClient.get<ResultadoDaBusca>('/search', { params: { q } })).data,
+  });
+}
 
 export function useAssetsQuery(params: AssetListParams) {
   return useQuery({

@@ -26,6 +26,7 @@ import { CatalogMaestro } from './domain/catalog/catalog.maestro';
 import { CustomFieldMaestro } from './domain/custom-field/custom-field.maestro';
 import { AssetMaestro } from './domain/asset/asset.maestro';
 import { SettingsMaestro } from './domain/settings/settings.maestro';
+import { BackupMaestro } from './domain/backup/backup.maestro';
 import { UserMaestro } from './domain/user/user.maestro';
 import { AssignmentMaestro } from './domain/assignment/assignment.maestro';
 import { OccupancyMaestro } from './domain/occupancy/occupancy.maestro';
@@ -36,6 +37,8 @@ import { AttachmentMaestro } from './domain/attachment/attachment.maestro';
 import { MaintenanceMaestro } from './domain/maintenance/maintenance.maestro';
 import { AuditMaestro } from './domain/audit/audit.maestro';
 import { ReportMaestro } from './domain/report/report.maestro';
+import { ImportMaestro } from './domain/import/import.maestro';
+import { LabelMaestro } from './domain/label/label.maestro';
 import { AlertMaestro } from './domain/alert/alert.maestro';
 import { AcceptanceMaestro } from './domain/acceptance/acceptance.maestro';
 import { TAMANHO_MAXIMO_BYTES } from './core/storage/mime';
@@ -192,6 +195,10 @@ export async function buildApp(): Promise<FastifyInstance> {
   await CustomFieldMaestro.setupRoutes(server);
   await AssetMaestro.setupRoutes(server);
   await SettingsMaestro.setupRoutes(server);
+  // BACKUP depois de configuração: a retenção que ele aplica é uma coluna do
+  // `AppSetting`, e as rotas dele só NASCEM quando `BACKUP_ENABLED` está ligado
+  // (F10, Etapa A).
+  await BackupMaestro.setupRoutes(server);
   await UserMaestro.setupRoutes(server);
   // Posse e ocupação vêm DEPOIS de asset e user: as rotas deles pendem de
   // `/api/assets/:id` e `/api/users/:id`, e registrar na ordem em que o
@@ -227,6 +234,14 @@ export async function buildApp(): Promise<FastifyInstance> {
   await AlertMaestro.setupRoutes(server);
   // Relatório por último da fase: ele só LÊ o que os outros escrevem.
   await ReportMaestro.setupRoutes(server);
+  // IMPORTAÇÃO depois de TODOS os domínios em que ela escreve (F10, Etapa D): o
+  // adaptador de ativos chama `createAsset` e `checkoutAsset`, e o de pessoas
+  // chama `createUser`. Registrar na ordem em que o conceito nasce é o que
+  // mantém este arquivo legível.
+  await ImportMaestro.setupRoutes(server);
+  // ETIQUETA por último dos domínios da F10: ela só LÊ ativo e configuração, e
+  // nada depende dela.
+  await LabelMaestro.setupRoutes(server);
   await AttachmentMaestro.setupRoutes(server);
   // Aceite depois de posse: o termo nasce dentro da transação do checkout, e a
   // leitura pública dele pende de `assignments`.

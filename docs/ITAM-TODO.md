@@ -646,19 +646,24 @@ alvo polimórfico em `Alert`, que é aditivo.
 
 ## Fase 10 — Etiquetas, Relatórios e Importação
 
-- [ ] **M** Código de barras 1D (Code128) e QR 2D por ativo (`bwip-js` + `qrcode`)
-- [ ] **G** Impressão de etiquetas em PDF com layout configurável (folha, tamanho, gutters, logo, campos) + **preview antes de gastar a folha**
-- [ ] **M** Busca global otimizada para leitor de código de barras (match exato de asset tag/serial primeiro, depois `ILIKE`)
-- [ ] **P** Export CSV de qualquer listagem — **com BOM UTF-8**, senão o Excel em PT-BR abre acentos quebrados
-- [ ] **P** ⚠️ **A chave de produto da licença NÃO pode entrar no CSV.** É a quarta porta por onde ela poderia sair (as outras três foram fechadas na F6: a allowlist da resposta, o diff do `ActivityLog` e o `sanitize.ts`). O export lê `License` direto; sem uma allowlist explícita aqui, `productKey` viaja no arquivo — cifrada, mas fora do banco, e num arquivo que circula por e-mail. O certo é exportar `productKeyMask`
-- [ ] **G** Importador CSV com mapeamento de colunas, update de existentes e relatório de erros por linha (`Import` + `ImportRow`). **Posse importada passa pelo checkout**, não por `UPDATE` em `assignedToId` (D17): a coluna de responsável do CSV vira uma `Assignment` com `checkoutAt` retroativo
-- [ ] **M** Seção de Relatórios (`/relatorios`) com os relatórios prontos do Snipe-IT, mais os que só existem aqui: *posto vago*, *ativos por posto*, *o que cada pessoa responde (direto × por posto)*
-- [ ] **M** Custom report builder com seleção de colunas — `columns` validado contra **allowlist**, nunca montar `select` do Prisma com string do cliente
-- [ ] **M** `Setting` singleton + tela de Configurações (branding, logo, favicon, cor, locale, timezone, formato de data, moeda) — o `AppSetting` já existe desde a F1 (é onde mora o `assetTagNext`)
-- [ ] **P** `src/lib/format.ts` com `Intl.DateTimeFormat` / `Intl.NumberFormat` lendo do `Setting`
-- [ ] **M** Backup do banco e dos anexos pela interface (`pg_dump -Fc`) + retenção
-- [ ] **M** Seletor de colunas visíveis com preferência salva — o catálogo de colunas paga por três gaps (sort allowlist, custom report, picker)
-- [ ] **M** Combobox com busca acima de 200 opções — hoje `/options` tem teto de 200 e o `ReferenceSelect` não tem campo de busca (observação 7 da auditoria da F1; a perda silenciosa de vínculo já foi fechada, navegar além das 200 não)
+> Plano em [`FASE-10-PLANO-ITAM.md`](./FASE-10-PLANO-ITAM.md), **auditado** em
+> [`AUDITORIA-F10.md`](./AUDITORIA-F10.md) — é de lá que sai a ordem de execução, com
+> a mudança no checkout (data retroativa e silêncio) virando leva própria antes do
+> importador, e as decisões D129–D134.
+
+- [x] **M** ~~Código de barras 1D (Code128) e QR 2D por ativo~~ — feito (D70: QR leva URL, Code128 leva a etiqueta)
+- [x] **G** ~~Impressão de etiquetas em PDF com layout configurável~~ — feito, e **a prévia É o PDF**, pela mesma função
+- [x] **M** ~~Busca global otimizada para leitor de código de barras~~ — feito (`GET /api/search`), e o campo mora no cabeçalho
+- [x] **P** ~~Export CSV de qualquer listagem~~ — feito em ativos e licenças, com BOM e escape de fórmula
+- [x] **P** ~~⚠️ A chave de produto da licença NÃO pode entrar no CSV~~ — fechada por CONSTRUÇÃO: o export passa pelo mesmo `paraResposta()` da listagem, que a remove (D133).
+- [x] **G** ~~Importador CSV com mapeamento de colunas~~ — feito, dois passos com dry-run obrigatório
+- [x] **M** ~~Seção de Relatórios~~ — as abas novas são *Responsabilidade* e *Montar relatório*; posto vago e ativos por posto JÁ existiam em `/postos` (D130)
+- [x] **M** ~~Custom report builder com seleção de colunas~~ — feito, token → fragmento SQL declarado (D67)
+- [x] **M** ~~`Setting` singleton + tela de Configurações~~ — feito no `AppSetting` que já existia (D65)
+- [x] **P** ~~`src/lib/format.ts`~~ — feito em `src/pages/helpers/format.helper.ts`, que já existia; o `formatarData` continua FATIANDO a string ISO
+- [x] **M** ~~Backup do banco pela interface~~ — feito atrás de `BACKUP_ENABLED` (desligado por padrão)
+- [x] **M** ~~Seletor de colunas visíveis com preferência salva~~ — feito, no zustand com `persist` (client state)
+- [x] **M** ~~Combobox com busca acima de 200 opções~~ — feito; o `?q=` do servidor já existia desde a F1, faltava a tela
 
 ---
 
@@ -709,7 +714,7 @@ F0 (base) ✅ → F1 (catálogo + ativo inteiro) ✅ → [MODELO DE POSSE] ✅ s
    → F2 (ativos) ✅ → F3 (auth) ✅ → F4 (posse: checkout/checkin/posto) ✅
       → F5 (estoque) ✅ → F6 (licenças) ✅ → F7 (convergência RMM) ✅
             → F8 (ciclo de vida) ✅
-               → F9 (campos) ✅ → F10 (relatórios) → F11 (acesso)
+               → F9 (campos) ✅ → F10 (relatórios) ✅ → F11 (acesso)
 ```
 
 **A F0 até a F4 estão completas.** As três últimas fecharam pelo

@@ -29,6 +29,43 @@ export interface CheckoutData {
   statusId?: string | null;
   expectedCheckinAt?: Date | null;
   checkoutNotes?: string | null;
+
+  // ── AS DUAS CHAVES DA IMPORTAÇÃO (F10, D131) ──────────────────────────────
+  //
+  // NENHUMA DAS DUAS ESTÁ NO `checkoutSchema`, e isso é a defesa: o
+  // `strictObject` da borda recusa com 422 quem as mandar pela API. Elas só
+  // existem para quem chama este use-case de dentro do servidor — hoje, o
+  // importador de CSV.
+
+  /**
+   * QUANDO a entrega aconteceu no mundo físico. Ausente, é agora (o
+   * `@default(now())` da coluna).
+   *
+   * Existe porque a carga inicial de uma empresa é um CSV de equipamento que já
+   * está na mão das pessoas há anos: gravar tudo com a data de hoje faria o
+   * histórico de posse nascer mentindo, e é justamente o histórico que alguém
+   * abre para perguntar "desde quando isto é dele?".
+   *
+   * A data é validada como NÃO FUTURA na borda do importador
+   * (`dataNaoFutura`, em shared/fields.schema.ts) — e não aqui, porque este
+   * use-case recebe `Date` já construído, não string de formulário.
+   */
+  checkoutAt?: Date | null;
+
+  /**
+   * Não emite termo de entrega e não manda e-mail nenhum.
+   *
+   * POR QUE ISTO EXISTE: importar 500 equipamentos já entregues emitiria 500
+   * termos e mandaria 500 convites para assinar o recebimento de um notebook
+   * que a pessoa usa desde 2024. O termo ficaria pendente para sempre — ele
+   * nasce `PENDENTE` e só o aceite o fecha —, então a primeira importação
+   * encheria a tela de pendência que ninguém pode resolver, e o e-mail já teria
+   * saído: não há como desfazer.
+   *
+   * A TELA NUNCA PASSA ISTO. Entrega feita por gente continua emitindo termo e
+   * avisando, que é o fluxo da F4 inteiro.
+   */
+  semAviso?: boolean;
 }
 
 /**
@@ -212,6 +249,14 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, actorId
   // O CONVITE do termo sai junto com o aviso de entrega, e pelo mesmo motivo
   // está aqui fora: depois do commit. Um link de aceite mandado por transação
   // que reverteu aponta para um termo que não existe.
+  //
+  // Importação silenciosa (D131): nada de termo, nada de e-mail. O `termo` já
+  // volta nulo de dentro da transação, então o bloco abaixo nem seria entrado —
+  // mas o aviso de entrega NÃO depende do termo, e é ele que mandaria 500
+  // mensagens. A guarda explícita está aqui para que as duas saídas de e-mail
+  // deste arquivo fiquem sob a mesma condição, visíveis juntas.
+  if (data.semAviso) return resultado;
+
   if (resultado.termo) {
     const convite = corpoDoConvite({
       signerName: resultado.termo.signerName,
@@ -312,6 +357,10 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
           targetLocationId: data.targetType === 'LOCATION' ? alvoId : null,
           expectedCheckinAt: data.expectedCheckinAt ?? null,
           checkoutNotes: data.checkoutNotes ?? null,
+          // `undefined` e não `null`: a coluna é obrigatória com
+          // `@default(now())`, então omitir é o que deixa o banco carimbar a
+          // hora. Um `null` aqui seria violação de NOT NULL, não "use o padrão".
+          checkoutAt: data.checkoutAt ?? undefined,
           // QUEM ENTREGOU. A coluna nasceu nulável esperando a F3 e a partir
           // daqui tem nome — e este nome não é trilha de auditoria: ele sai
           // IMPRESSO no termo de entrega (F4), que é dado de negócio e precisa
@@ -358,8 +407,9 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
     //
     // Devolve `null` quando não há o que emitir: categoria sem
     // `requireAcceptance`, ou alvo `ASSET` (D87 — o detentor é um equipamento,
-    // e o documento segue o ativo que o segura).
-    const termo = await issueAcceptance(tx, {
+    // e o documento segue o ativo que o segura). O terceiro caso é a importação
+    // (D131): equipamento que a pessoa já tem não ganha termo para assinar.
+    const termo = data.semAviso ? null : await issueAcceptance(tx, {
       assignmentId: posse.id,
       assetId,
       targetType: data.targetType,

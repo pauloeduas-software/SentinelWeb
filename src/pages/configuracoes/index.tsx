@@ -1,17 +1,27 @@
+import { useState } from 'react';
 import { Plus, SlidersHorizontal } from 'lucide-react';
 import CatalogFormModal from './components/CatalogFormModal';
 import CatalogTable from './components/CatalogTable';
 import FieldsetFieldsModal from './components/FieldsetFieldsModal';
 import LocationOccupantsModal from './components/LocationOccupantsModal';
+import SistemaPanel from './components/SistemaPanel';
 import ListToolbar from '../components/ListToolbar';
 import { useCatalog } from './hooks/useCatalog';
 import { useConjuntoDeCampos } from './hooks/useConjuntoDeCampos';
+import { useConfigDoSistema } from './hooks/useConfigDoSistema';
 import { useOcupantes } from '../hooks/useOcupantes';
 
 // As tabelas de catálogo do ITAM — o menu *Settings* do Snipe-IT.
 //
 // Uma tela para as NOVE tabelas, dirigida pelas specs de `specs/`: acrescentar
 // uma tabela é escrever a spec, não copiar uma página.
+//
+// E UMA DÉCIMA ABA QUE NÃO É TABELA: *Sistema* (F10), que edita a LINHA ÚNICA do
+// `AppSetting` — marca, formato e retenção do backup. Ela não cabe numa spec de
+// catálogo (não tem listagem, nem paginação, nem botão de "novo"), então a
+// página passa a ter duas formas e escolhe entre elas. É o mesmo desenho que
+// `/relatorios` já usa para a aba de alertas: quatro abas de relatório mais uma
+// de configuração, num tipo só.
 export default function ConfiguracoesPage() {
   const {
     specs, spec, changeTab, registros, total, page, perPage, setPage,
@@ -27,6 +37,12 @@ export default function ConfiguracoesPage() {
   //
   // `useOcupantes` é compartilhado com /postos, que não tem ação de linha nenhuma
   // para conhecer.
+  // Qual das duas formas a tela está mostrando. `useState` local porque é
+  // estado de UMA tela (docs/ARQUITETURA.md) — e fora do `useCatalog` porque
+  // ele cuida da listagem de catálogo, que nesta aba não existe.
+  const [emSistema, setEmSistema] = useState(false);
+  const sistema = useConfigDoSistema();
+
   const posto = acaoAberta?.id === 'ocupantes' ? acaoAberta.registro : null;
   const ocupantes = useOcupantes(posto?.id ?? null);
 
@@ -42,14 +58,22 @@ export default function ConfiguracoesPage() {
       <div className="flex justify-between items-end mb-6 shrink-0">
         <div>
           <h2 className="text-xl font-mono text-text-primary uppercase tracking-widest">Configurações</h2>
-          <p className="text-xs text-text-tertiary mt-2 font-mono max-w-2xl">{spec.descricao}</p>
+          <p className="text-xs text-text-tertiary mt-2 font-mono max-w-2xl">
+            {emSistema
+              ? 'A identidade da empresa, como número e data aparecem na tela, e quanto tempo o backup fica no disco.'
+              : spec.descricao}
+          </p>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary font-mono text-xs uppercase tracking-widest transition-colors shrink-0"
-        >
-          <Plus size={14} /> {spec.singular}
-        </button>
+        {/* Sem botão de "novo" na aba Sistema: ela edita uma linha que já
+            existe e não pode ter uma segunda (o id é fixo, `singleton`). */}
+        {!emSistema && (
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary font-mono text-xs uppercase tracking-widest transition-colors shrink-0"
+          >
+            <Plus size={14} /> {spec.singular}
+          </button>
+        )}
       </div>
 
       <div className="flex flex-wrap border border-border-sutil font-mono text-xs mb-4 shrink-0">
@@ -57,9 +81,9 @@ export default function ConfiguracoesPage() {
           <button
             key={item.slug}
             type="button"
-            onClick={() => changeTab(item.slug)}
+            onClick={() => { setEmSistema(false); changeTab(item.slug); }}
             className={`px-4 py-2 uppercase tracking-widest transition-colors ${
-              item.slug === spec.slug
+              !emSistema && item.slug === spec.slug
                 ? 'bg-text-primary text-bg-base'
                 : 'text-text-tertiary hover:text-text-primary hover:bg-bg-base'
             }`}
@@ -67,8 +91,37 @@ export default function ConfiguracoesPage() {
             {item.aba}
           </button>
         ))}
+
+        {/* A ÚLTIMA, e separada por uma borda: as nove primeiras são tabelas de
+            catálogo; esta é a configuração global. Misturá-las sem marca
+            nenhuma faria parecer que existe uma tabela chamada "Sistema". */}
+        <button
+          type="button"
+          onClick={() => setEmSistema(true)}
+          className={`px-4 py-2 uppercase tracking-widest transition-colors border-l border-border-sutil ${
+            emSistema
+              ? 'bg-text-primary text-bg-base'
+              : 'text-text-tertiary hover:text-text-primary hover:bg-bg-base'
+          }`}
+        >
+          Sistema
+        </button>
       </div>
 
+      {emSistema ? (
+        <SistemaPanel
+          configuracao={sistema.configuracao}
+          carregando={sistema.carregando}
+          salvando={sistema.salvando}
+          erro={sistema.erro}
+          urlDaLogo={sistema.urlDaLogo}
+          urlDoFavicon={sistema.urlDoFavicon}
+          onSalvar={sistema.onSalvar}
+          onSubirMarca={sistema.onSubirMarca}
+          onLimparMarca={sistema.onLimparMarca}
+        />
+      ) : (
+        <>
       <ListToolbar
         search={search}
         onSearchChange={changeSearch}
@@ -102,6 +155,9 @@ export default function ConfiguracoesPage() {
           </div>
         }
       />
+
+        </>
+      )}
 
       {modalAberto && (
         <CatalogFormModal

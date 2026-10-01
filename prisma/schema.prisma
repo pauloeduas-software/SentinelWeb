@@ -1443,6 +1443,85 @@ model AppSetting {
   alertHour Int    @default(8)
   timezone  String @default("America/Sao_Paulo")
 
+  // ── A IDENTIDADE, O FORMATO E O BACKUP (F10, D65) ────────────────────────
+  //
+  // O TODO pedia um "`Setting` singleton" novo. Ele já existe — é esta tabela,
+  // desde a F1, e é onde o `assetTagNext` mora. Uma segunda tabela de
+  // configuração global seria duas linhas respondendo à mesma pergunta, e a
+  // primeira dúvida de quem chegasse depois seria "em qual delas eu escrevo?".
+  //
+  // MORA NO BANCO e não no `.env` pelo mesmo motivo dos limiares de alerta
+  // (D57): marca, moeda e formato de data mudam sem deploy. O que fica no
+  // ambiente é o que é SEGREDO ou é do processo — `SMTP_URL`, `BACKUP_ENABLED`,
+  // `BACKUP_DIR`.
+
+  /// Aparece no topo da tela, no termo de entrega e no rodapé da etiqueta.
+  companyName String @default("Minha Empresa")
+
+  /// Caminhos RELATIVOS dentro do `UPLOAD_DIR`, nunca URL: o arquivo sai por
+  /// rota autenticada, como todo anexo (D84). Guardar URL absoluta aqui faria
+  /// a logo quebrar no dia em que o domínio mudasse.
+  logoPath    String?
+  faviconPath String?
+
+  /// A cor de destaque, em `#rrggbb` — vai para `style`, porque o Tailwind não
+  /// gera classe a partir de string de runtime. O padrão é a cor que a
+  /// interface já usa hoje (`--color-text-primary`): ligar o botão não muda
+  /// nada até alguém escolher outra.
+  primaryColor String @default("#ededed")
+
+  /// Como NÚMERO e DATA são escritos na tela. Não valem para o CSV: lá a regra
+  /// é ponto decimal e `YYYY-MM-DD`, porque o export é a entrada do importador
+  /// e um `1.234,50` não sobrevive ao round-trip (D69).
+  locale     String @default("pt-BR")
+  dateFormat String @default("DD/MM/YYYY")
+  currency   String @default("BRL")
+
+  /// O delimitador que o export escreve e que o import OFERECE como padrão —
+  /// o Excel em português salva com `;`. No import ele é detectado na linha de
+  /// cabeçalho; aqui é só o palpite inicial.
+  csvDelimiter String @default(";")
+
+  /// Quantos dias de dump ficam em disco. O expurgo é explícito e tem nome
+  /// (`prune-backups`): sem ele, "backup pela interface" é uma forma lenta de
+  /// encher o volume do servidor até o Postgres não conseguir mais escrever.
+  backupRetentionDays Int @default(30)
+
+  // ── O LAYOUT DA ETIQUETA (F10, Etapa G) ──────────────────────────────────
+  //
+  // MORA AQUI, e não numa tabela de "modelos de etiqueta": é UM layout por
+  // instalação, porque é uma folha de etiquetas adesivas que a empresa compra
+  // — e ela compra uma. Uma tabela de layouts seria a tela de escolher entre
+  // linhas que ninguém cadastrou.
+  //
+  // AS MEDIDAS SÃO EM MILÍMETROS, e não em pontos: quem configura isto está com
+  // a embalagem da folha na mão, e a embalagem fala em milímetros. A conversão
+  // para pontos PostScript (72 por polegada) é do renderizador.
+
+  /// `A4` ou `LETTER`. O PDF é gerado no tamanho EXATO da página — a impressora
+  /// que "ajusta à página" desalinha a folha inteira, e a tela avisa isso.
+  labelPageSize String @default("A4")
+
+  /// A grade. 3×8 é a folha de etiqueta mais comum no Brasil (Pimaco 6081).
+  labelCols Int @default(3)
+  labelRows Int @default(8)
+
+  /// As margens da folha e o espaço ENTRE etiquetas, em mm.
+  labelMarginTopMm  Float @default(12)
+  labelMarginLeftMm Float @default(7)
+  labelGutterXMm    Float @default(2.5)
+  labelGutterYMm    Float @default(0)
+
+  /// O que vai impresso em cada etiqueta, na ordem. Allowlist no servidor
+  /// (`label-fields.helper.ts`): token fora dela é 422.
+  labelFields String[] @default(["assetTag", "model", "company"])
+
+  /// O QR leva a URL da tela do ativo; o código de barras leva a ETIQUETA (D70).
+  /// São dois leitores diferentes: a câmera do celular abre link, o leitor de
+  /// mão digita texto num campo.
+  labelQr      Boolean @default(true)
+  labelBarcode Boolean @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -2501,4 +2580,149 @@ model Alert {
   @@index([notifiedAt])
   @@index([assetId])
   @@map("alerts")
+}
+
+// ============================================================================
+// IMPORTAÇÃO DE CSV — o dado ENTRANDO (docs/FASE-10-PLANO-ITAM.md, Etapa D)
+//
+// DUAS TABELAS, E A SEGUNDA É A QUE IMPORTA. `Import` é o cabeçalho (arquivo,
+// alvo, mapeamento, totais); `ImportRow` é uma linha do CSV com o que aconteceu
+// com ela.
+//
+// POR QUE O RELATÓRIO POR LINHA PRECISA DE TABELA, e não de uma resposta HTTP:
+//
+//   1. uma resposta com 5.000 erros não sobrevive ao fechamento da aba, e é
+//      justamente no arquivo grande que alguém precisa reler a lista;
+//   2. depois do apply, ela é a ÚNICA trilha do que entrou — junto com o
+//      `ActivityLog` de cada gravação, é por ela que se desfaz à mão;
+//   3. o apply roda em LOTES com transação por lote (o `$transaction` do Prisma
+//      tem timeout de 5 s, e 5.000 linhas não cabem numa só). Sem uma linha por
+//      registro, uma falha no meio deixaria "aplicou até onde?" sem resposta.
+//
+// A IMPORTAÇÃO É DE DOIS PASSOS, E O DRY-RUN É OBRIGATÓRIO (D68): o upload roda
+// a simulação e grava as linhas; um segundo POST aplica. Import é a operação com
+// maior razão dano/esforço do sistema — um clique, milhares de linhas — e na
+// importação de OCUPAÇÃO ela muda quem responde por centenas de equipamentos
+// sem tocar em posse nenhuma.
+// ============================================================================
+
+/// O que o arquivo carrega. Cada alvo tem o seu conjunto de colunas e a sua
+/// chave de atualização — não existe import "genérico".
+enum ImportTarget {
+  ASSETS
+  USERS
+  OCCUPANTS
+}
+
+enum ImportStatus {
+  /// Simulado e gravado. Nada foi escrito fora de `imports`/`import_rows`.
+  SIMULADO
+  /// O apply começou. Fica aqui se o processo morrer no meio — e é isso que
+  /// `appliedUpTo` existe para responder.
+  APLICANDO
+  APLICADO
+  /// O arquivo foi recusado inteiro (encoding, cabeçalho, mapeamento).
+  RECUSADO
+}
+
+enum ImportRowStatus {
+  OK
+  ERRO
+  /// Existe e já está como o arquivo pede — reimportar o mesmo CSV é seguro.
+  IGNORADA
+}
+
+model Import {
+  id String @id @default(uuid()) @db.Uuid
+
+  /// O nome que o navegador mandou. Só para a tela: o arquivo não é guardado.
+  ///
+  /// NÃO guardamos o CSV original de propósito — ele teria dado de pessoa
+  /// (nome, e-mail) numa terceira cópia, fora do banco e fora da política de
+  /// retenção. O que sobrevive é a linha CRUA de cada registro em `ImportRow`,
+  /// que é o que o relatório precisa.
+  filename String
+
+  target ImportTarget
+  status ImportStatus @default(SIMULADO)
+
+  /// `{ chave: 'assetTag', colunas: { 'Etiqueta': 'assetTag', … } }`.
+  ///
+  /// Json e não colunas: o mapeamento tem forma diferente por alvo e é escolhido
+  /// pelo usuário no momento do upload. Ele é VALIDADO na borda contra a
+  /// allowlist de campos do alvo (o mesmo desenho do D67), então o que entra aqui
+  /// já passou por uma lista fechada.
+  mapping Json
+
+  /// O delimitador DETECTADO na linha de cabeçalho, guardado para a tela
+  /// explicar o que ela leu quando o arquivo vier com o separador errado.
+  delimiter String
+
+  totalLinhas Int @default(0)
+  ok          Int @default(0)
+  erro        Int @default(0)
+  ignorada    Int @default(0)
+
+  /// Até qual `lineNumber` o apply chegou. É o que torna o lote RETOMÁVEL: um
+  /// `P2028` no meio não deixa mais a pergunta "o que entrou?" sem resposta.
+  appliedUpTo Int @default(0)
+
+  /// Por que o arquivo inteiro foi recusado, quando foi.
+  message String?
+
+  // ── O EFEITO DE SEGUNDA ORDEM DA OCUPAÇÃO (Etapa E) ──────────────────────
+  //
+  // Só preenchidos no alvo `OCCUPANTS`, e é por isso que são nuláveis.
+  //
+  // Importar ocupação muda quem responde por TODO ativo entregue àquele posto,
+  // sem tocar em uma `Assignment` sequer — é o que o modelo promete (um headset
+  // chega na mesa: zero linhas, herda os dois responsáveis) e é o que torna um
+  // nome de mesa errado em 300 linhas uma transferência de responsabilidade do
+  // andar inteiro. Por isso o dry-run CONTA, e o número aparece antes do apply.
+  /// Quantos ativos passam a ter responsável resolvido.
+  ganhamResponsavel Int?
+  /// Quantos deixam de ter.
+  perdemResponsavel Int?
+
+  /// Quem subiu o arquivo (D23). Sem relação declarada, como no `ActivityLog`:
+  /// apagar o cadastro não pode apagar a trilha de uma carga.
+  actorId String? @db.Uuid
+
+  rows ImportRow[]
+
+  createdAt DateTime  @default(now())
+  appliedAt DateTime?
+
+  @@index([createdAt])
+  @@map("imports")
+}
+
+model ImportRow {
+  id       String @id @default(uuid()) @db.Uuid
+  importId String @db.Uuid
+
+  /// A linha no ARQUIVO, contando o cabeçalho como 1. É o número que a pessoa
+  /// vê no Excel — um índice de array aqui obrigaria a somar dois de cabeça
+  /// para achar a linha errada num arquivo de cinco mil.
+  lineNumber Int
+
+  /// A linha como ela chegou, por cabeçalho do CSV. É isto que permite reler o
+  /// relatório depois sem o arquivo em mãos.
+  raw Json
+
+  status  ImportRowStatus
+  /// O motivo, em português, quando `ERRO` ou `IGNORADA`.
+  message String?
+
+  /// O que a linha criou ou atualizou. Nulo em `ERRO` e em `IGNORADA`.
+  entityId String? @db.Uuid
+
+  import Import @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  /// Uma linha do arquivo aparece UMA vez: o apply reescreve a linha existente
+  /// em vez de acrescentar uma segunda versão dela.
+  @@unique([importId, lineNumber])
+  /// A tela do relatório filtra por situação ("mostre só os erros").
+  @@index([importId, status])
+  @@map("import_rows")
 }

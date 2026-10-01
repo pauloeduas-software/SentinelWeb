@@ -1,4 +1,6 @@
 import { Plus } from 'lucide-react';
+import ExportarCsv from '../components/ExportarCsv';
+import { urlDoExportDeLicencas } from '../../domain/license/license.queries';
 import ListToolbar from '../components/ListToolbar';
 import AlertasLicenca from './components/AlertasLicenca';
 import EntregaAssentoModal from './components/EntregaAssentoModal';
@@ -22,7 +24,7 @@ export default function LicencasPage() {
     alertas,
     modal, licencaAberta, abrir, fechar,
     handleCriar, handleEditar, handleEntregar, handleDevolver,
-    handleExcluir, handleRestaurar,
+    handleExcluir, handleRestaurar, filtrosParaExport,
   } = useLicencas();
 
   return (
@@ -37,12 +39,17 @@ export default function LicencasPage() {
             <span className="text-text-secondary"> Posto de trabalho não é alvo: o computador da mesa é.</span>
           </p>
         </div>
-        <button
-          onClick={() => abrir('criar')}
-          className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary font-mono text-xs uppercase tracking-widest transition-colors shrink-0"
-        >
-          <Plus size={14} /> Nova licença
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* O CSV das licenças NÃO leva a chave de produto — é a quarta porta
+              que o TODO marcou, e ela está fechada no servidor (D133). */}
+          <ExportarCsv url={urlDoExportDeLicencas(filtrosParaExport)} total={total} />
+          <button
+            onClick={() => abrir('criar')}
+            className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary font-mono text-xs uppercase tracking-widest transition-colors"
+          >
+            <Plus size={14} /> Nova licença
+          </button>
+        </div>
       </div>
 
       <AlertasLicenca alertas={alertas} />

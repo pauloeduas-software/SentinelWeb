@@ -2,7 +2,7 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { apagar, gravar } from '../../../core/storage/storage';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
-import type { ArquivoRecebido } from './upload-attachment.usecase';
+import type { ArquivoRecebido } from '../../shared/multipart.helper';
 
 // A IMAGEM DAS QUATRO TABELAS que a têm — ativo, modelo, fabricante e
 // categoria — num use-case só.

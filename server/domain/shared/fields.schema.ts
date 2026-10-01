@@ -21,12 +21,24 @@ export const textoOpcional = (rotulo: string, max = 500) =>
 // Cor em hexadecimal, porque ela vai para `style={{ color }}` no frontend — o
 // Tailwind não gera classe a partir de string de runtime, então o valor precisa
 // ser CSS válido por conta própria.
+//
+// O FORMATO MORA NUMA CONSTANTE porque duas colunas o usam com
+// obrigatoriedade diferente: a cor do rótulo de status é opcional (catálogo,
+// F1) e a cor de destaque da marca não é (`AppSetting.primaryColor`, F10 —
+// a coluna tem default e nunca é nula). Duas cópias do regex divergiriam no dia
+// em que alguém aceitasse `#rgb` de três dígitos em uma delas.
+const HEX_RRGGBB = /^#[0-9a-fA-F]{6}$/;
+const FORMATO_DE_COR = 'cor deve estar no formato #rrggbb';
+
 export const corOpcional = z
   .string()
   .trim()
-  .regex(/^#[0-9a-fA-F]{6}$/, 'cor deve estar no formato #rrggbb')
+  .regex(HEX_RRGGBB, FORMATO_DE_COR)
   .nullish()
   .transform((valor) => (valor === undefined ? undefined : valor || null));
+
+export const corObrigatoria = (rotulo: string) =>
+  z.string(`${rotulo} é obrigatória`).trim().regex(HEX_RRGGBB, `${rotulo}: ${FORMATO_DE_COR}`);
 
 // `z.email()` da zod 4 valida ANTES do `.trim()`; por isso o `pipe` (a mesma
 // armadilha documentada na Fase 0, em user.schema.ts).

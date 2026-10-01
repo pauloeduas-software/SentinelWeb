@@ -1,7 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Armchair, Boxes, FileBarChart, KeyRound, LayoutDashboard, LogOut, Radar, Server, Database, ScrollText, Users, SlidersHorizontal, Wrench } from 'lucide-react';
+import { Armchair, Boxes, FileBarChart, FileUp, KeyRound, QrCode, LayoutDashboard, LogOut, Radar, Server, Database, ScrollText, Users, SlidersHorizontal, Wrench } from 'lucide-react';
 import AlertBell from './AlertBell';
+import BuscaDoLeitor from './BuscaDoLeitor';
 import { useAuthStore } from '../../domain/auth/auth.store';
+import { useSistema, useUrlDaLogo } from '../hooks/useSistema';
 
 // Navegação do painel. Fica em pages/components porque é interface
 // compartilhada entre as páginas — não pertence a nenhum domínio.
@@ -32,10 +34,19 @@ const NAV_ITEMS = [
   { to: '/users', label: 'Usuários', icon: Users },
   { to: '/tokens', label: 'Tokens', icon: KeyRound },
   { to: '/configuracoes', label: 'Config', icon: SlidersHorizontal },
+  // A IMPORTAÇÃO fica por ÚLTIMO, depois de Config: é a tela que alguém abre
+  // uma vez na carga inicial e raramente depois — e a barra já desaparece
+  // abaixo de `md` com os itens que são de uso diário.
+  { to: '/importacao', label: 'Importar', icon: FileUp },
+  { to: '/etiquetas', label: 'Etiquetas', icon: QrCode },
 ] as const;
 
 export default function AppHeader() {
   const location = useLocation();
+  // A marca sai da configuração de sistema; a query é compartilhada com o
+  // `Layout`, então ler aqui não dobra requisição nenhuma.
+  const { configuracao } = useSistema();
+  const urlDaLogo = useUrlDaLogo();
   // Quem está logado sai do store, não de uma busca: sessão é client state
   // (docs/ARQUITETURA.md) e o cabeçalho só a lê.
   const usuario = useAuthStore((estado) => estado.usuario);
@@ -44,11 +55,24 @@ export default function AppHeader() {
   return (
     <header className="h-14 border-b border-border-sutil bg-bg-base sticky top-0 z-40 flex items-center px-6 justify-between shrink-0">
       <div className="flex items-center gap-8">
+        {/* A MARCA (F10). Sem logo configurada, o ícone de sempre — e o nome da
+            empresa continua vindo do `AppSetting`, que nasce com um padrão.
+            Nada aqui depende de a configuração ter chegado: é cabeçalho, e
+            piscar no primeiro render é pior que esperar o segundo. */}
         <div className="flex items-center gap-3">
-          <div className="bg-text-primary p-1 rounded-sm">
-            <LayoutDashboard size={14} className="text-bg-base" />
-          </div>
-          <h1 className="text-sm font-bold tracking-tight uppercase">Sentinel</h1>
+          {urlDaLogo ? (
+            <img src={urlDaLogo} alt="" className="h-6 w-auto max-w-[120px] object-contain" />
+          ) : (
+            <div className="bg-text-primary p-1 rounded-sm">
+              <LayoutDashboard size={14} className="text-bg-base" />
+            </div>
+          )}
+          <h1
+            className="text-sm font-bold tracking-tight uppercase"
+            style={{ color: 'var(--color-marca)' }}
+          >
+            {configuracao?.companyName ?? 'Sentinel'}
+          </h1>
         </div>
 
         <nav className="hidden md:flex items-center gap-1 font-mono text-xs uppercase tracking-widest">
@@ -76,6 +100,14 @@ export default function AppHeader() {
           compartilhado, ninguém sabe em nome de quem está clicando. */}
       {usuario && (
         <div className="flex items-center gap-4 font-mono text-xs">
+          {/* O CAMPO DO BIPE (F10, Etapa G), em TODA tela: conferir uma
+              prateleira é bipar vinte equipamentos em sequência, e ter de
+              navegar até uma tela de busca entre cada um transformaria o gesto
+              em vinte navegações. Acerto exato abre o ativo direto. */}
+          <div className="hidden md:block">
+            <BuscaDoLeitor />
+          </div>
+
           {/* O sino ANTES do nome: ele é a única coisa do cabeçalho que muda
               sozinha, e é do lado direito que o olho volta depois de ler a tela. */}
           <AlertBell />

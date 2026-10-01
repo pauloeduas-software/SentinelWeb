@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { createLogger } from '../../core/logger/logger';
-import { WRITE_RATE_LIMIT } from '../../core/http/write-rate-limit';
+import { EXPORT_RATE_LIMIT, WRITE_RATE_LIMIT } from '../../core/http/write-rate-limit';
 import { licenseController } from './controllers/license.controller';
 import { listLicenseAlerts } from './use-cases/list-license-alerts.usecase';
 
@@ -41,6 +41,13 @@ export class LicenseMaestro {
 
     // ── O CONTRATO ─────────────────────────────────────────────────────────
     server.get('/api/licenses', licenseController.list);
+
+    // O EXPORT (F10, Etapa C) — teto próprio, e ANTES de `/api/licenses/:id`
+    // para o `export` não ser lido como um id.
+    //
+    // A CHAVE DE PRODUTO NÃO SAI NELE: o arquivo é montado pelo mesmo
+    // `paraResposta()` da listagem, que a remove por desestruturação (D133).
+    server.get('/api/licenses/export', EXPORT_RATE_LIMIT, licenseController.export);
     server.get('/api/licenses/:id', licenseController.byId);
     server.get('/api/licenses/:id/seats', licenseController.seats);
     server.get('/api/licenses/:id/history', licenseController.history);

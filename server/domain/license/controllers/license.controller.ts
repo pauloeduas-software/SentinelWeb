@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { parseListQuery } from '../../../core/http/list-query';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
@@ -9,6 +10,9 @@ import {
   createLicenseSchema, updateLicenseSchema,
 } from '../schemas/license.schema';
 import { listLicenses } from '../use-cases/list-licenses.usecase';
+import { colunasDoExportDeLicenca, exportLicenses } from '../use-cases/export-licenses.usecase';
+import { cabecalhosDeCsv } from '../../shared/csv.helper';
+import { lerConfiguracaoDoSistema } from '../../settings/helpers/system-settings.helper';
 import { getLicense } from '../use-cases/get-license.usecase';
 import { createLicense } from '../use-cases/create-license.usecase';
 import { updateLicense } from '../use-cases/update-license.usecase';
@@ -28,6 +32,24 @@ import { listAssetSeats } from '../use-cases/list-asset-seats.usecase';
 // falhou, e os `AppError` dos use-cases (409 de sem assento, 404 de licença
 // inexistente, 422 de chave sem criptografia) saem pelo mesmo caminho.
 
+// O EXPORT (F10, Etapa C). `strictObject` recusa `page`, `perPage` e `sort`:
+// exportar é levar tudo que o filtro alcança, e a ordem é por `id` por causa do
+// cursor (ver o use-case). Aceitá-los em silêncio prometeria um recorte que o
+// arquivo não tem.
+const exportQuerySchema = z.strictObject({
+  q: z.string().trim().max(200, 'busca: máximo de 200 caracteres').optional()
+    .transform((valor) => valor || undefined),
+  view: z.enum(['active', 'trashed'], 'view inválida: use active ou trashed').default('active'),
+  columns: z.string().trim().max(1_000, 'columns: lista muito longa').optional(),
+});
+
+/** `?columns=name,livres` → tokens. Vazio vira `undefined` (o padrão). */
+function tokensDeColuna(columns: string | undefined): string[] | undefined {
+  if (!columns) return undefined;
+  const tokens = columns.split(',').map((token) => token.trim()).filter(Boolean);
+  return tokens.length > 0 ? tokens : undefined;
+}
+
 export const licenseController = {
   async list(request: FastifyRequest) {
     const query = parseListQuery(request.query, {
@@ -46,6 +68,26 @@ export const licenseController = {
   async byId(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     return getLicense(id);
+  },
+
+  /**
+   * O CSV das licenças (F10, Etapa C) — sem a chave de produto.
+   *
+   * Ela não sai daqui por construção, não por checagem: o export passa pelo
+   * mesmo `paraResposta()` da listagem, que a REMOVE por desestruturação
+   * (D133). Ver o cabeçalho de `export-licenses.usecase.ts`.
+   */
+  async export(request: FastifyRequest, reply: FastifyReply) {
+    const { q, view, columns } = exportQuerySchema.parse(request.query ?? {});
+
+    // Antes do primeiro byte: depois que a resposta começa não há mais como
+    // devolver 422, e o cliente receberia um arquivo truncado com status 200.
+    const colunas = colunasDoExportDeLicenca(tokensDeColuna(columns));
+    const { csvDelimiter } = await lerConfiguracaoDoSistema();
+
+    return reply
+      .headers(cabecalhosDeCsv('licencas'))
+      .send(exportLicenses(q, view, colunas, csvDelimiter));
   },
 
   async create(request: FastifyRequest, reply: FastifyReply) {

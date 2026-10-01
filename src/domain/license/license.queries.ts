@@ -15,6 +15,22 @@ import type {
 // listagem, o detalhe, a grade de assentos e os alertas — que mudam a cada
 // entrega, sem ninguém ter tocado neles.
 
+/**
+ * A URL do CSV das licenças (F10, Etapa C).
+ *
+ * `<a download>`, não query: ver `urlDoExportDeAtivos`. Nenhuma coluna é pedida
+ * aqui — o conjunto padrão do servidor é o que uma planilha de conferência quer,
+ * e a chave de produto NÃO está nele nem em nenhum outro: o arquivo é montado
+ * pelo mesmo `paraResposta()` da listagem, que a remove (D133).
+ */
+export function urlDoExportDeLicencas(params: { q?: string; view?: string }): string {
+  const busca = new URLSearchParams();
+  if (params.q) busca.set('q', params.q);
+  if (params.view) busca.set('view', params.view);
+
+  return `${apiClient.defaults.baseURL ?? ''}/licenses/export?${busca.toString()}`;
+}
+
 export const licenseKeys = {
   all: ['licenses'] as const,
   list: (params: ListParams) => ['licenses', 'list', params] as const,

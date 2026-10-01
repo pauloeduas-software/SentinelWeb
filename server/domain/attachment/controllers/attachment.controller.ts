@@ -1,82 +1,31 @@
 import { z } from 'zod';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { AppError } from '../../../core/errors/app-error';
-import {
-  TAMANHO_MAXIMO_BYTES, ehImagem, extensaoDoMime, tiposAceitos, tiposDeImagemAceitos,
-} from '../../../core/storage/mime';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { listAssetAttachments } from '../use-cases/list-asset-attachments.usecase';
-import { uploadAttachment, type ArquivoRecebido } from '../use-cases/upload-attachment.usecase';
+import { uploadAttachment } from '../use-cases/upload-attachment.usecase';
+import { lerArquivo } from '../../shared/multipart.helper';
 import { deleteAttachment } from '../use-cases/delete-attachment.usecase';
 import { downloadAttachment } from '../use-cases/download-attachment.usecase';
 import {
   ALVOS_DE_IMAGEM, clearImage, getImagePath, setImage, type AlvoDeImagem,
 } from '../use-cases/set-image.usecase';
 import { abrir, existe } from '../../../core/storage/storage';
+import { mimeDoArquivo } from '../../../core/storage/mime';
 
 // Só HTTP. A diferença para os outros controllers é que aqui a entrada não é
-// JSON: é `multipart/form-data`, e o zod não a valida — quem valida é este
-// arquivo, na borda, antes de qualquer byte chegar ao disco.
+// JSON: é `multipart/form-data`, e o zod não a valida.
+//
+// QUEM VALIDA É `domain/shared/multipart.helper.ts`, na borda, antes de
+// qualquer byte chegar ao disco. Ele saiu deste arquivo quando a marca da F10
+// (logo e favicon) e o CSV do importador passaram a precisar das mesmas quatro
+// recusas: copiada, a allowlist de tipo divergiria justamente onde não pode.
 
 const alvoParamSchema = z.strictObject({
   alvo: z.enum(ALVOS_DE_IMAGEM as [AlvoDeImagem, ...AlvoDeImagem[]], 'alvo de imagem inválido'),
   id: z.uuid('identificador inválido'),
 });
-
-/**
- * Lê o arquivo do corpo multipart e o valida.
- *
- * AS TRÊS RECUSAS, e a ordem importa:
- *
- * 1. **Sem arquivo** → 422. Formulário enviado vazio é erro de quem chamou, não
- *    um upload de zero bytes.
- * 2. **MIME fora da allowlist** → 422 dizendo o que É aceito. Allowlist, nunca
- *    blocklist: uma lista de "o que não pode" está sempre um formato atrás.
- * 3. **Maior que o teto** → 413. O `@fastify/multipart` já corta no `limits`,
- *    mas a checagem aqui é o que transforma o corte num erro com mensagem —
- *    sem ela o `file.truncated` passaria e gravaríamos um PDF pela metade.
- *
- * O `mimetype` vem do CLIENTE e não é confiável; ele serve para escolher a
- * extensão e recusar o que não está na lista, nunca para provar o conteúdo.
- * Quem garante que um `.exe` renomeado não vira executável no servidor é o fato
- * de nada aqui executar arquivo — e de o nome no disco nunca vir de fora.
- */
-async function lerArquivo(request: FastifyRequest, apenasImagem: boolean): Promise<ArquivoRecebido> {
-  const parte = await request.file({ limits: { fileSize: TAMANHO_MAXIMO_BYTES } });
-  if (!parte) throw new AppError('Envie um arquivo no campo "file".', 422);
-
-  const mimeType = parte.mimetype;
-
-  if (apenasImagem && !ehImagem(mimeType)) {
-    throw new AppError(
-      `Tipo de imagem não aceito: ${mimeType}. Aceitos: ${tiposDeImagemAceitos().join(', ')}.`,
-      422,
-    );
-  }
-
-  if (!extensaoDoMime(mimeType)) {
-    throw new AppError(
-      `Tipo de arquivo não aceito: ${mimeType}. Aceitos: ${tiposAceitos().join(', ')}.`,
-      422,
-    );
-  }
-
-  const bytes = await parte.toBuffer();
-
-  // `truncated` é como o plugin avisa que cortou no teto. Sem isto, o arquivo
-  // seria gravado incompleto e o defeito só apareceria ao abrir o PDF.
-  if (parte.file.truncated) {
-    throw new AppError(
-      `Arquivo maior que o limite de ${Math.round(TAMANHO_MAXIMO_BYTES / 1024 / 1024)} MB.`,
-      413,
-    );
-  }
-
-  if (bytes.byteLength === 0) throw new AppError('O arquivo enviado está vazio.', 422);
-
-  return { bytes, mimeType, originalName: parte.filename || 'arquivo' };
-}
 
 /**
  * Manda o arquivo pela resposta.
@@ -111,7 +60,7 @@ export const attachmentController = {
 
   async upload(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
-    const arquivo = await lerArquivo(request, false);
+    const arquivo = await lerArquivo(request);
     const anexo = await uploadAttachment(id, arquivo, atorDaRequisicao(request));
     return reply.status(201).send(anexo);
   },
@@ -129,7 +78,7 @@ export const attachmentController = {
 
   async setImage(request: FastifyRequest) {
     const { alvo, id } = alvoParamSchema.parse(request.params);
-    const arquivo = await lerArquivo(request, true);
+    const arquivo = await lerArquivo(request, { apenasImagem: true });
     return setImage(alvo, id, arquivo, atorDaRequisicao(request));
   },
 
@@ -154,13 +103,8 @@ export const attachmentController = {
     // `inline` e não `attachment`: imagem é para APARECER na tela, num `<img>`,
     // não para ser baixada. O tipo sai da extensão do arquivo que nós mesmos
     // gravamos, e não de um `mimetype` guardado — a coluna é só o caminho.
-    const tipo = caminho.endsWith('.png') ? 'image/png'
-      : caminho.endsWith('.webp') ? 'image/webp'
-      : caminho.endsWith('.gif') ? 'image/gif'
-      : 'image/jpeg';
-
     return reply
-      .header('Content-Type', tipo)
+      .header('Content-Type', mimeDoArquivo(caminho))
       .header('Cache-Control', 'private, max-age=0, no-store')
       .send(abrir(caminho));
   },

@@ -4,11 +4,15 @@ import AssetFilterBar from './components/AssetFilterBar';
 import AssetFormModal from './components/AssetFormModal';
 import BulkActionBar from './components/BulkActionBar';
 import CheckoutModal from './components/CheckoutModal';
+import ColunasMenu from './components/ColunasMenu';
+import ExportarCsv from '../components/ExportarCsv';
 import ListToolbar from '../components/ListToolbar';
 import { formatarData, formatarMoeda } from '../helpers/format.helper';
 import { seloDaSaida } from './helpers/descomissionamento.helper';
 import { TRACO, resumoDaPosse, rotuloDaOperacao } from './helpers/posse.helper';
 import { useAssets } from './hooks/useAssets';
+import { useColunas } from './hooks/useColunas';
+import { urlDoExportDeAtivos } from '../../domain/asset/asset.queries';
 import type { CampoDeColuna } from '../../domain/shared/custom-field.types';
 
 /**
@@ -41,8 +45,13 @@ export default function AtivosPage() {
     modalAberto, emEdicao, clonando, openCreate, openEdit, openClone, closeModal, abrirDetalhe,
     handleSubmit, handleDelete, handleRestore,
     emPosse, openPosse, closePosse, handleEntregar, handleDevolver,
-    selecao, handleBulk,
+    selecao, handleBulk, filtrosParaExport,
   } = useAssets();
+
+  // AS COLUNAS VISÍVEIS (F10, Etapa B). Preferência do navegador, não do
+  // servidor: ninguém a consulta e ela não é fato sobre o inventário
+  // (docs/ARQUITETURA.md, *client state*).
+  const colunas = useColunas();
 
   return (
     <div className="animate-in fade-in duration-300 h-[calc(100vh-4rem)] flex flex-col pb-6">
@@ -76,12 +85,28 @@ export default function AtivosPage() {
             ))}
           </div>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary font-mono text-xs uppercase tracking-widest transition-colors"
-        >
-          <Plus size={14} /> Novo Ativo
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* O export vem ANTES do seletor de colunas, e os dois são vizinhos
+              de propósito: o arquivo leva as colunas visíveis, então escolher
+              coluna e exportar é um gesto só. */}
+          <ExportarCsv
+            url={urlDoExportDeAtivos(filtrosParaExport, colunas.paraExportar)}
+            total={total}
+          />
+          <ColunasMenu
+            catalogo={colunas.catalogo}
+            visiveis={colunas.visiveis}
+            personalizado={colunas.personalizado}
+            onAlternar={colunas.alternar}
+            onRestaurar={colunas.restaurar}
+          />
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary font-mono text-xs uppercase tracking-widest transition-colors"
+          >
+            <Plus size={14} /> Novo Ativo
+          </button>
+        </div>
       </div>
 
       <AssetFilterBar
@@ -127,13 +152,24 @@ export default function AtivosPage() {
                   className="accent-status-info w-4 h-4 cursor-pointer"
                 />
               </th>
-              <th className="px-6 py-4 font-normal">Etiqueta</th>
-              <th className="px-6 py-4 font-normal">Modelo</th>
-              <th className="px-6 py-4 font-normal">Categoria</th>
-              <th className="px-6 py-4 font-normal">Status</th>
-              <th className="px-6 py-4 font-normal">Localização</th>
-              <th className="px-6 py-4 font-normal">Responsável</th>
-              <th className="px-6 py-4 font-normal">Compra</th>
+              {/* O CABEÇALHO E A CÉLULA consultam o MESMO `mostrar()`, e é só
+                  isso que os mantém alinhados. Iterar a lista de tokens e
+                  desenhar a célula por token seria mais curto e exigiria uma
+                  função de render por coluna — o que levaria o JSX de status,
+                  de posse e de compra (que não são texto: são selo, lista com
+                  turno e duas linhas) para dentro de um helper. */}
+              {colunas.mostrar('assetTag') && <th className="px-6 py-4 font-normal">Etiqueta</th>}
+              {colunas.mostrar('model') && <th className="px-6 py-4 font-normal">Modelo</th>}
+              {colunas.mostrar('category') && <th className="px-6 py-4 font-normal">Categoria</th>}
+              {colunas.mostrar('status') && <th className="px-6 py-4 font-normal">Status</th>}
+              {colunas.mostrar('location') && <th className="px-6 py-4 font-normal">Localização</th>}
+              {colunas.mostrar('responsible') && <th className="px-6 py-4 font-normal">Responsável</th>}
+              {colunas.mostrar('purchase') && <th className="px-6 py-4 font-normal">Compra</th>}
+              {colunas.mostrar('name') && <th className="px-6 py-4 font-normal">Nome</th>}
+              {colunas.mostrar('supplier') && <th className="px-6 py-4 font-normal">Fornecedor</th>}
+              {colunas.mostrar('orderNumber') && <th className="px-6 py-4 font-normal">Nº do pedido</th>}
+              {colunas.mostrar('warranty') && <th className="px-6 py-4 font-normal">Garantia</th>}
+              {colunas.mostrar('eol') && <th className="px-6 py-4 font-normal">Fim de vida</th>}
               {/* AS COLUNAS QUE O CLIENTE CRIOU (F9, `showInListView`). Depois das
                   nativas e antes das ações: elas são extras, e mover "Ações" do
                   fim quebraria o hábito de quem usa a tela todo dia.
@@ -174,6 +210,7 @@ export default function AtivosPage() {
                       className="accent-status-info w-4 h-4 cursor-pointer"
                     />
                   </td>
+                  {colunas.mostrar('assetTag') && (
                   <td className="px-6 py-4">
                     <div className="font-medium">{asset.assetTag}</div>
                     {asset.serial && <div className="text-[10px] text-text-tertiary mt-1">SN {asset.serial}</div>}
@@ -183,11 +220,17 @@ export default function AtivosPage() {
                       </div>
                     )}
                   </td>
+                  )}
+                  {colunas.mostrar('model') && (
                   <td className="px-6 py-4 text-text-secondary">
                     <div>{asset.model.name}</div>
                     <div className="text-[10px] text-text-tertiary mt-1">{asset.model.manufacturer.name}</div>
                   </td>
+                  )}
+                  {colunas.mostrar('category') && (
                   <td className="px-6 py-4 text-text-tertiary">{asset.model.category.name}</td>
+                  )}
+                  {colunas.mostrar('status') && (
                   <td className="px-6 py-4">
                     {/* A cor vem do banco (StatusLabel.color), então vai por
                         `style` — o Tailwind não gera classe a partir de string de
@@ -201,10 +244,14 @@ export default function AtivosPage() {
                       {asset.status.name}
                     </span>
                   </td>
+                  )}
+                  {colunas.mostrar('location') && (
                   <td className="px-6 py-4 text-text-tertiary">{asset.location?.name ?? '—'}</td>
+                  )}
                   {/* RESPONSÁVEL — derivado, e pode ser mais de um: os ocupantes
                       do posto para o qual o ativo foi entregue aparecem juntos,
                       cada um com o turno (docs/MODELO-POSSE.md, Camada 3). */}
+                  {colunas.mostrar('responsible') && (
                   <td className="px-6 py-4">
                     {posse.quantos > 0
                       ? <div className="text-text-secondary whitespace-normal max-w-[20rem]">{posse.responsaveis}</div>
@@ -223,10 +270,39 @@ export default function AtivosPage() {
                       </div>
                     )}
                   </td>
+                  )}
+                  {colunas.mostrar('purchase') && (
                   <td className="px-6 py-4 text-text-secondary">
                     <div className="tabular-nums">{formatarMoeda(asset.purchaseCost)}</div>
                     <div className="text-[10px] text-text-tertiary mt-1 tabular-nums">{formatarData(asset.purchaseDate)}</div>
                   </td>
+                  )}
+
+                  {/* AS CINCO QUE O SELETOR TROUXE. Todas vinham no payload da
+                      listagem desde a F1 — nenhuma custa consulta a mais. */}
+                  {colunas.mostrar('name') && (
+                    <td className="px-6 py-4 text-text-secondary">
+                      {asset.name || <span className="text-text-tertiary">{TRACO}</span>}
+                    </td>
+                  )}
+                  {colunas.mostrar('supplier') && (
+                    <td className="px-6 py-4 text-text-tertiary">{asset.supplier?.name ?? TRACO}</td>
+                  )}
+                  {colunas.mostrar('orderNumber') && (
+                    <td className="px-6 py-4 text-text-tertiary">
+                      {asset.orderNumber || <span className="text-text-tertiary">{TRACO}</span>}
+                    </td>
+                  )}
+                  {colunas.mostrar('warranty') && (
+                    <td className="px-6 py-4 text-text-secondary tabular-nums">
+                      {formatarData(asset.warrantyExpiresAt)}
+                    </td>
+                  )}
+                  {colunas.mostrar('eol') && (
+                    <td className="px-6 py-4 text-text-secondary tabular-nums">
+                      {formatarData(asset.eolDate)}
+                    </td>
+                  )}
                   {/* Uma célula por coluna customizada, na MESMA ordem do
                       cabeçalho — as duas percorrem a mesma lista, que é o que as
                       mantém alinhadas quando um campo entra ou sai.
@@ -280,12 +356,16 @@ export default function AtivosPage() {
 
             {assets.length === 0 && (
               <tr>
-                {/* 9 nativas MAIS as que o cliente criou (F9): o cabeçalho e cada
-                    linha percorrem `colunasCustomizadas`, e esta célula é a única
-                    que não percorre nada — então ela é a única que precisa somar.
-                    Com o número cravado, um campo marcado como coluna deixava o
-                    "nenhum ativo encontrado" sem cobrir a tabela. */}
-                <td colSpan={9 + colunasCustomizadas.length} className="px-6 py-16 text-center text-text-tertiary">
+                {/* A SOMA, e não um número cravado: as visíveis (que o seletor
+                    muda, F10) mais as que o cliente criou (F9), mais a coluna do
+                    checkbox e a de ações. Esta célula é a única que não percorre
+                    lista nenhuma, então é a única que precisa contar — e com o
+                    número fixo o "nenhum ativo encontrado" deixava de cobrir a
+                    tabela a cada coluna marcada ou desmarcada. */}
+                <td
+                  colSpan={2 + colunas.visiveis.length + colunasCustomizadas.length}
+                  className="px-6 py-16 text-center text-text-tertiary"
+                >
                   <div className="flex flex-col items-center justify-center">
                     <Database size={24} className="mb-4 opacity-50" />
                     {view === 'trashed' ? (

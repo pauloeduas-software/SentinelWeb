@@ -9,9 +9,18 @@ interface ListToolbarProps {
   /** Omitido nas listagens sem lixeira: a aba simplesmente não aparece. */
   view?: ListView;
   onViewChange?: (view: ListView) => void;
-  search: string;
-  onSearchChange: (value: string) => void;
-  placeholder: string;
+  /**
+   * Omitidos onde não há o que buscar, e aí o campo não aparece — é a mesma
+   * opcionalidade que a aba de lixeira já tinha.
+   *
+   * QUEM PRECISA: o relatório do importador (F10, Etapa D), que pagina 5.000
+   * linhas de um arquivo e não tem busca nenhuma. Um campo de busca inerte ali
+   * prometeria uma função que não existe; escrever uma segunda paginação ao lado
+   * desta faria duas barras divergirem no primeiro ajuste.
+   */
+  search?: string;
+  onSearchChange?: (value: string) => void;
+  placeholder?: string;
   page: number;
   perPage: number;
   total: number;
@@ -59,16 +68,18 @@ export default function ListToolbar({
         </div>
       )}
 
-      <div className="relative flex-1 min-w-[220px] max-w-sm">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
-        <input
-          type="search"
-          value={search}
-          onChange={event => onSearchChange(event.target.value)}
-          placeholder={placeholder}
-          className="w-full pl-9 pr-3 py-2 bg-surface-card border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors"
-        />
-      </div>
+      {onSearchChange && (
+        <div className="relative flex-1 min-w-[220px] max-w-sm">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
+          <input
+            type="search"
+            value={search ?? ''}
+            onChange={event => onSearchChange(event.target.value)}
+            placeholder={placeholder}
+            className="w-full pl-9 pr-3 py-2 bg-surface-card border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors"
+          />
+        </div>
+      )}
 
       <div className="flex items-center gap-4">
         <span className="text-text-tertiary tabular-nums">
