@@ -1,8 +1,8 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../../core/database/prismaClient';
 import {
-  ESCOPO_DO_RELATORIO, REPORT_TOKENS, baseDoRelatorio, colunaDeAgrupamento, coluna,
-  selectDasColunas,
+  ESCOPO_DO_RELATORIO, baseDoRelatorio, colunaDeAgrupamento, coluna,
+  selectDasColunas, assertColunasPermitidas, tokensPermitidos,
 } from '../helpers/report-columns';
 
 // O RELATÓRIO MONTADO PELO USUÁRIO (F10, Etapa F — D67).
@@ -64,11 +64,23 @@ export interface RespostaDoRelatorio {
   disponiveis: string[];
 }
 
-export async function customReport(pedido: PedidoDeRelatorio): Promise<RespostaDoRelatorio> {
+export async function customReport(
+  pedido: PedidoDeRelatorio,
+  /**
+   * O que a sessão alcança (F11, D77). Por parâmetro: o use-case não conhece
+   * `request`.
+   */
+  pode: (permissao: string) => boolean,
+): Promise<RespostaDoRelatorio> {
   const limite = Math.min(Math.max(pedido.limit ?? LINHAS_PADRAO, 1), MAX_LINHAS);
 
   // A validação acontece ANTES de qualquer consulta: token inválido é 422 com a
   // lista, e não um erro de SQL.
+  //
+  // E a PERMISSÃO vem junto, no mesmo lugar e pela mesma razão — antes de haver
+  // SQL. Pedir `purchaseCost` sem `assets.viewCost` é 403 aqui, não uma coluna
+  // de nulos na planilha (D138).
+  assertColunasPermitidas(pedido.columns, pode);
   const select = selectDasColunas(pedido.columns);
   const colunas = pedido.columns.map((token) => ({ token, rotulo: coluna(token).rotulo }));
 
@@ -88,14 +100,28 @@ export async function customReport(pedido: PedidoDeRelatorio): Promise<RespostaD
     // preço. A deduplicação certa é por (ativo, grupo) — a mesma granularidade
     // que o `COUNT(DISTINCT a.id)` já tinha —, e é o que a subconsulta faz. Daí
     // o `COUNT(*)` de fora ser idêntico ao `COUNT(DISTINCT)` de antes.
+    // O `SUM` DO CUSTO SÓ EXISTE COM A CHAVE (D77): sem ela, `NULL::numeric`
+    // no lugar da coluna. A forma da resposta não muda — `custoTotal` já podia
+    // ser nulo (grupo inteiro sem custo cadastrado) e a tela já o trata —, e o
+    // valor não é lido do banco em vez de ser apagado depois.
+    //
+    // Note que o AGRUPAMENTO continua funcionando: quem não vê dinheiro ainda
+    // conta quantos ativos tem cada categoria. O que falta é só a soma.
+    const somaDoCusto = pode('assets.viewCost')
+      ? Prisma.sql`SUM("custoDoAtivo")`
+      : Prisma.sql`NULL::numeric`;
+    const custoDoAtivo = pode('assets.viewCost')
+      ? Prisma.sql`a."purchaseCost"`
+      : Prisma.sql`NULL::numeric`;
+
     const grupos = await prisma.$queryRaw<GrupoDeRelatorio[]>(Prisma.sql`
       SELECT grupo,
              COUNT(*)::int AS ativos,
-             SUM("custoDoAtivo") AS "custoTotal"
+             ${somaDoCusto} AS "custoTotal"
         FROM (
           SELECT DISTINCT a.id AS "assetId",
                  ${agrupamento.expr} AS grupo,
-                 a."purchaseCost" AS "custoDoAtivo"
+                 ${custoDoAtivo} AS "custoDoAtivo"
             ${baseDoRelatorio()}
             ${ESCOPO_DO_RELATORIO}
         ) AS "umaLinhaPorAtivoEGrupo"
@@ -116,7 +142,7 @@ export async function customReport(pedido: PedidoDeRelatorio): Promise<RespostaD
         ...grupo,
         custoTotal: grupo.custoTotal === null ? null : String(grupo.custoTotal),
       })),
-      disponiveis: REPORT_TOKENS,
+      disponiveis: [...tokensPermitidos(pode)],
     };
   }
 
@@ -142,6 +168,6 @@ export async function customReport(pedido: PedidoDeRelatorio): Promise<RespostaD
       return convertida;
     }),
     grupos: [],
-    disponiveis: REPORT_TOKENS,
+    disponiveis: [...tokensPermitidos(pode)],
   };
 }

@@ -109,6 +109,50 @@ export const ASSET_SELECT_COM_CAMPOS = {
   customFields: true,
 } as const;
 
+// ═══════════════════════════════════════════════════════════════════════════
+// O CUSTO POR PERMISSÃO (F11, D77) — e ele é OMITIDO DO SELECT, não mascarado
+// depois.
+//
+// POR QUE OMITIR, E NÃO APAGAR O CAMPO ANTES DE RESPONDER: mascarar depois
+// deixa o valor passar pelo processo. Ele entra no objeto, e daí em diante vaza
+// por qualquer caminho que não seja a resposta "feliz" — a linha de log de um
+// erro que serializa o objeto, um `JSON.stringify` num handler de exceção, o
+// `changes` de um `ActivityLog` montado com spread. O dado que não deve sair
+// não é lido.
+//
+// POR QUE UMA FUNÇÃO E NÃO DOIS `const`: os dois selects têm que ser o MESMO
+// menos uma coluna. Dois literais lado a lado divergem na primeira coluna
+// acrescentada — e a que divergiria é a versão restrita, que ninguém olha no
+// dia a dia porque o administrador vê tudo.
+//
+// ⚠️ O QUE ESTA FUNÇÃO **NÃO** COBRE, de propósito: as 50 chamadas a
+// `ASSET_SELECT` das ESCRITAS internas (`checkoutAsset`, `fecharPosse`,
+// `retireAsset`, `updateAsset`…). Elas leem o ativo para gravar outra coisa e
+// não devolvem custo a ninguém; enfiar a sessão em cada use-case de escrita
+// espalharia autorização por toda a camada de posse para zero ganho. O custo
+// sai por LEITURA, e é a leitura que filtra.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** As colunas que `assets.viewCost` governa. Uma lista, num lugar só. */
+const COLUNAS_DE_CUSTO = ['purchaseCost'] as const;
+
+/**
+ * Remove as colunas de custo de um select quando a sessão não tem a chave.
+ *
+ * Genérica porque serve o select da listagem e o do detalhe — e o do detalhe
+ * tem a regra de depreciação embutida, que também é dinheiro.
+ */
+function semCusto<T extends Record<string, unknown>>(select: T): T {
+  const copia = { ...select };
+  for (const coluna of COLUNAS_DE_CUSTO) delete copia[coluna];
+  return copia;
+}
+
+/** O select da LISTAGEM, conforme a sessão enxergue custo ou não. */
+export function assetSelect(podeVerCusto: boolean) {
+  return podeVerCusto ? ASSET_SELECT_COM_CAMPOS : semCusto(ASSET_SELECT_COM_CAMPOS);
+}
+
 /** A forma crua da coluna, como o Prisma a devolve. */
 interface LinhaComCampos {
   customFields: Prisma.JsonValue | null;
@@ -177,3 +221,27 @@ export const ASSET_DETAIL_SELECT = {
     },
   },
 } as const;
+
+/**
+ * O select do DETALHE, conforme a sessão enxergue custo ou não.
+ *
+ * TIRA A REGRA DE DEPRECIAÇÃO JUNTO, e não só a coluna de custo. O valor
+ * contábil é `purchaseCost` menos a depreciação acumulada: sem o custo ele não é
+ * calculável, então trazer `model.depreciation` seria pagar um `LEFT JOIN` para
+ * alimentar uma conta que não vai acontecer — e deixaria na resposta a regra
+ * financeira ("48 meses, piso de R$ 300") para quem não pode ver dinheiro.
+ *
+ * Quem consome tem que tratar `valorContabil: null` de qualquer forma: ele já
+ * era nulo para ativo sem custo cadastrado e para modelo sem regra. "Sem
+ * permissão" entra como terceiro motivo do mesmo `null`, e nenhuma tela precisa
+ * saber distinguir os três — a diferença aparece no campo de custo, que
+ * simplesmente não vem.
+ */
+export function assetDetailSelect(podeVerCusto: boolean) {
+  if (podeVerCusto) return ASSET_DETAIL_SELECT;
+
+  return {
+    ...semCusto(ASSET_SELECT_COM_CAMPOS),
+    model: { select: ASSET_SELECT.model.select },
+  };
+}

@@ -63,6 +63,41 @@ export interface PosseResolvida {
   postoVago: boolean;
 }
 
+/**
+ * COMO o escalonamento foi encontrado (F11, Etapa F — D73).
+ *
+ * `LOCAL` quando o gestor é da própria localização do ativo; `ANCESTRAL` quando
+ * a subida da árvore precisou passar por ela. A tela precisa da diferença:
+ * *"gestor da Mesa 1"* e *"gestor do Andar 2, porque a Mesa 1 não tem"* são
+ * frases diferentes para quem vai ligar.
+ */
+export type ViaEscalonamento = 'LOCAL' | 'ANCESTRAL';
+
+/**
+ * Para quem ligar quando o posto está VAZIO — `resolverEscalonamento()`.
+ *
+ * ⚠️ **Não é responsabilidade, e não entra em `responsaveis`.** As duas coisas
+ * respondem a perguntas vizinhas e diferentes (docs/MODELO-POSSE.md, "A
+ * fronteira"): `Responsavel` é *quem está com o equipamento*; isto é *quem
+ * responde pelo espaço*. O gestor da localidade não assinou nada por este ativo
+ * e não aparece na Camada 3 — se aparecesse, `postoVago` nunca mais acenderia.
+ *
+ * `null` em dois casos, e nenhum é erro: ativo sem localização (não há árvore
+ * para subir) e árvore sem gestor em ancestral nenhum — que é o buraco que o
+ * desligamento com substituto existe para não criar.
+ */
+export interface Escalonamento {
+  userId: string;
+  name: string;
+  email: string;
+  /** O local que TEM o gestor — pode ser um ancestral, não o do ativo. */
+  locationId: string;
+  locationName: string;
+  via: ViaEscalonamento;
+  /** Quantos níveis a subida andou. 0 = o próprio local do ativo. */
+  saltos: number;
+}
+
 /** Pessoa embutida numa linha de posse ou de ocupação. */
 export interface PessoaRef {
   id: string;

@@ -28,6 +28,9 @@
         ├─ lockedUntil no futuro ───────────────────────────────► 423 + LOGIN_BLOCKED
         ├─ senha errada ──► failedLoginCount++ (5 = trava 15min) ─► 401 + LOGIN_FAIL
         ├─ isActive: false ─────────────────────────────────────► 403 + LOGIN_DISABLED
+        ├─ 2FA ativo, sem código ───────────────────────────────► 401 + etapa:TOTP
+        │                                                          (NÃO conta tentativa)
+        ├─ 2FA ativo, código errado ──► failedLoginCount++ ─────► 401 + etapa:TOTP
         └─ acerto
              ├─ rehash transparente se o hash for de parâmetros antigos
              ├─ zera contador/trava, grava lastLoginAt
@@ -68,8 +71,16 @@ E em **toda** requisição seguinte:
 ### 1. A porta é fechada por padrão
 
 O `preHandler` global exige sessão em **toda** rota, e a exceção é escrita à mão
-em `ROTAS_PUBLICAS` (`server/app.ts`). Hoje são quatro linhas: os dois health
-checks, o login e o `/agent-hub` (que tem autenticação própria).
+em `ROTAS_PUBLICAS` (`server/app.ts`): os dois health checks, o login, o
+`/agent-hub` (que tem autenticação própria), o termo de entrega (quem assina pode
+não ter conta — D27) e, quando o SSO está configurado, as duas rotas do OIDC mais a
+pergunta "este servidor tem SSO?" que a tela de login faz.
+
+**E desde a F11 há uma segunda porta fechada por padrão, do lado da AUTORIZAÇÃO:**
+`core/http/permission-guard.ts` exige que toda rota declare a chave que pede — e
+rota registrada sem declaração **derruba o boot**, com o nome dela no erro (D137).
+Os dois guards são o mesmo desenho pelo mesmo motivo, e o segundo tem um degrau a
+mais: o esquecimento não vira API aberta em silêncio, vira servidor que não sobe.
 
 A alternativa — proteger rota a rota — tem um defeito que não aparece em
 revisão: **a rota nova nasce aberta**, e esquecer de protegê-la não gera erro
@@ -275,15 +286,231 @@ sessão, que é o `ApiToken` da Etapa G. Quando ela existir, é lá que entra.
 
 ---
 
+## As TRÊS portas (F11) — e por que a sessão continua sendo uma
+
+Até a F10 havia um caminho de entrada: usuário, senha, cookie. A F11 acrescentou
+dois, e nenhum deles é uma segunda sessão.
+
+```
+  1. SENHA (+ segundo fator)      POST /api/auth/login        → cookie httpOnly
+  2. SSO (OIDC)                   GET  /api/auth/oidc/start   → cookie httpOnly
+  3. TOKEN PESSOAL DE API         Authorization: Bearer sw_…   → sessão da requisição
+```
+
+**As duas primeiras terminam no MESMO cookie, assinado pelo mesmo lugar.** O
+`concluirLoginOidc()` devolve a mesma `SessaoEmitida` do `login.usecase.ts`
+justamente por isso: duas formas de "sessão emitida" significariam dois jeitos de
+montar o cookie, e um deles ficaria sem o `tv` no primeiro refactor.
+
+**A terceira não emite cookie nenhum.** O token é conferido a cada requisição e a
+sessão vale por aquela requisição só. Ele não é um atalho para escapar da
+autorização: passa pela MESMA releitura de usuário e carrega as MESMAS permissões
+(o `preHandler` não sabe por qual porta a requisição entrou — exceto onde isso
+importa, ver abaixo).
+
+---
+
+## O segundo fator (TOTP)
+
+Seis dígitos de um aplicativo autenticador, pedidos **depois** da senha. Três
+colunas em `users`, nenhuma tabela nova (D80).
+
+| Coluna | O que é |
+|---|---|
+| `totpSecret` | o segredo em base32, **cifrado** com AAD `users:totpSecret:<id>` (D81) |
+| `totpEnabledAt` | nulo = cadastro **não confirmado**. É esta data que o login consulta |
+| `totpRecoveryCodes` | oito códigos `XXXXX-XXXXX`, em **sha256**, de uso único |
+
+### Por que o cadastro é em dois passos, com estado no banco
+
+`enroll` grava o segredo com `totpEnabledAt` nulo; `confirm` confere um código e
+preenche a data. Entre os dois, **o login continua pedindo só a senha**.
+
+A alternativa — devolver o segredo e exigi-lo de volta no `confirm`, sem gravar
+nada — tem dois defeitos: o segredo passaria a viajar do cliente para o servidor
+como dado de entrada confiável, e quem fechasse a aba entre ler o QR e digitar o
+código ficaria com o autenticador configurado contra um segredo que o sistema
+esqueceu. Uma linha no celular que nunca vai funcionar, sem jeito de descobrir.
+
+**E o estado intermediário não tranca ninguém** — é por isso que o login olha
+`totpEnabledAt`, nunca `totpSecret`.
+
+### O login em dois envios, e a senha que é reenviada
+
+O servidor responde **401 com `etapa: 'TOTP'`** quando a senha confere e o código
+falta. A tela mostra o campo e reenvia os três valores numa requisição só.
+
+Reenviar a senha é deliberado: um "login pela metade" guardado no servidor seria
+uma meia-sessão — com validade, lugar para morar e um token próprio para o cliente
+trazer de volta —, ou seja, uma segunda forma de sessão existir ao lado do cookie.
+A senha ainda está na memória do formulário de qualquer maneira: ela acabou de ser
+digitada nele.
+
+### As duas contagens, que são diferentes
+
+| Situação | Conta tentativa? | Evento |
+|---|---|---|
+| senha certa, código **ausente** | **não** | `TOTP_REQUIRED` |
+| senha certa, código **errado** | **sim** (trava em 5) | `TOTP_FAIL` |
+
+A primeira acontece em todo login legítimo de quem tem 2FA — contá-la travaria a
+conta de quem acertou a senha cinco vezes seguidas. A segunda conta porque seis
+dígitos com três códigos válidos por janela seriam, sem isso, o único campo do
+sistema com tentativa ilimitada.
+
+> **A janela é de ±1 passo**, e na otplib 13 isso se escreve `epochTolerance: [30, 30]`
+> — em SEGUNDOS, não em passos. Passar `1` compila e dá uma tolerância de um
+> segundo: o código expiraria na virada do passo e a pessoa veria "código inválido"
+> digitando o número que o celular mostra.
+
+### Desligar exige um código. E não existe rota para desligar o de outra pessoa
+
+Sem o código, quem roubasse uma sessão aberta desligaria a proteção com um clique
+— e ela valeria só contra quem tem a senha.
+
+E uma rota de "administrador desliga o 2FA de alguém" é a porta que o 2FA veio
+fechar: bastaria comprometer uma conta com `access.manage` para esvaziar o segundo
+fator de todo mundo. Quem perdeu o celular **e** os oito códigos é destravado por
+comando de linha, que exige acesso ao servidor:
+
+```bash
+npm run totp:desativar -- maria.silva
+```
+
+O evento fica na trilha **sem `ip` e sem `userAgent`** — não houve requisição —, e
+é essa ausência que distingue o destravamento manual do dia em que a própria
+pessoa desativou pela tela.
+
+---
+
+## O token pessoal de API
+
+`sw_<prefixo>.<segredo>` no `Authorization: Bearer`. Mesma tabela e mesmo caminho
+de autenticação do token de agente (D80); o que muda é o `ownerType` e o dono.
+
+**O que ele é:** a pessoa, por outro meio. Mesmas permissões, mesmo `actorId` no
+`ActivityLog`.
+
+**O que ele não é:** um caminho para mexer na própria credencial. As rotas de
+credencial (`ROTA_DE_CREDENCIAL`, no maestro) exigem **cookie**, e o
+`exigirSessaoDeCookie` responde 403 a um token que tente trocar senha, emitir
+outro token ou alterar o segundo fator. Um token que emite tokens é um token que
+não se revoga; um token que desliga o 2FA é o 2FA desligado.
+
+### Duas ausências deliberadas
+
+- **não há conferência de `tokenVersion`.** O `tv` é a geração do COOKIE; um token
+  de API não foi assinado com número nenhum. Então **trocar a senha não revoga
+  token pessoal** — são credenciais separadas, e quem trocou a senha não pediu para
+  derrubar a integração que deixou rodando. O que revoga em massa é o
+  **desligamento**, onde a intenção é exatamente cortar tudo.
+- **o cabeçalho ganha do cookie** quando os dois vêm juntos. Se o cookie ganhasse,
+  um script rodando de dentro do navegador autenticaria pela sessão do operador —
+  com as permissões dele — e o `lastUsedAt` do token nunca andaria.
+
+---
+
+## O SSO (OIDC) e o diretório (LDAP)
+
+> **LDAP sincroniza; OIDC autentica; ninguém entra sem cadastro** (D78).
+
+As duas coisas são **desligadas por padrão** e só existem configuradas. As rotas
+de SSO nem são registradas sem `OIDC_ISSUER` — uma rota pública que existe sem
+provedor configurado é superfície de ataque que responde erro.
+
+### As variáveis de ambiente, e por que elas não estão no banco
+
+```bash
+# Diretório (opcional). As quatro primeiras são obrigatórias JUNTAS.
+LDAP_URL=ldaps://dc01.empresa.local:636
+LDAP_BIND_DN=CN=svc-sentinel,OU=Servicos,DC=empresa,DC=local
+LDAP_BIND_PASSWORD=...
+LDAP_BASE_DN=DC=empresa,DC=local
+LDAP_FILTER=            # opcional; o padrão exclui conta desabilitada no AD
+LDAP_TIMEOUT_SEGUNDOS=30
+
+# SSO (opcional). As quatro são obrigatórias JUNTAS.
+OIDC_ISSUER=https://login.microsoftonline.com/<tenant>/v2.0
+OIDC_CLIENT_ID=...
+OIDC_CLIENT_SECRET=...
+OIDC_REDIRECT_URI=https://inventario.empresa.com/api/auth/oidc/callback
+```
+
+O resto da configuração do produto mora no `AppSetting` (hora do alerta, prefixo
+de etiqueta, limiares), e aqui a escolha é a oposta por três razões: **são segredos
+de serviço** (guardá-los no banco pediria uma tela que exibe ou substitui o segredo
+do diretório corporativo, alcançável por quem tiver `settings.manage`), **mudá-los
+não é operação de rotina**, e **ausente tem de querer dizer DESLIGADO já no boot**.
+
+> **`OIDC_REDIRECT_URI` é obrigatória e não é deduzida da requisição.** Montar a
+> URL de callback a partir do `Host` que o cliente mandou é como se constrói um
+> open redirect: bastaria um `Host:` forjado para o provedor devolver o código de
+> autorização para outro servidor.
+
+### O fluxo, e onde mora o `state`
+
+`state`, `nonce` e o verificador do PKCE viajam num cookie `httpOnly` de **dez
+minutos**, assinado com o mesmo `JWT_SECRET`. Não é uma sessão: não tem `sub`, não
+autentica nada, e o `preHandler` de sessão nem olha para ele.
+
+Memória de processo não serviria (dois contêineres atrás de um balanceador não a
+compartilham, e o callback pode cair no outro — o login falharia de forma
+intermitente, só em produção); uma tabela seria uma linha por tentativa de login,
+com expurgo próprio, para guardar três strings por 60 segundos.
+
+### Quem entra, e quem é recusado
+
+| Caso | O que acontece |
+|---|---|
+| `externalId` casa | entra |
+| e-mail casa e `authSource` é `LDAP`/`OIDC` | entra, e o vínculo é gravado |
+| e-mail casa e `authSource` é `LOCAL` | **403** + `OIDC_DENIED` |
+| e-mail não existe | **403** + `OIDC_DENIED` |
+
+Provisionar no primeiro login (*JIT provisioning*) é cômodo e transformaria o
+diretório inteiro em operadores do inventário. E fundir uma conta `LOCAL` pelo
+e-mail deixaria quem controla aquele endereço no provedor herdar os grupos de uma
+conta criada aqui — inclusive o `Administrador`. O vínculo é explícito, por
+`PUT /api/users/:id/auth-source`, com `access.manage` e `ActivityLog` do DE→PARA.
+
+> ⚠️ **O SSO não pede o segundo fator local.** Quem tem TOTP aqui e entra por SSO
+> não digita código: a verificação de identidade é a do provedor, que tem o MFA
+> dele. É uma troca consciente — exigir o código depois do redirecionamento pediria
+> a meia-sessão que o login de senha recusou criar —, e o que limita o risco é a
+> linha acima: o SSO só alcança contas que alguém marcou explicitamente como
+> federadas. Se o provedor não exigir MFA, a resposta certa é exigir MFA no provedor.
+
+### A sincronização MARCA; ela não desliga
+
+Uma rodada por dia (`job_runs`, nome `sync-ldap`), na hora configurada para os
+alertas. Quem sai do diretório ganha `directoryMissingAt` e aparece na ficha com um
+aviso — **ninguém é desligado**.
+
+Um filtro LDAP mal escrito, uma OU renomeada ou um controlador fora do ar devolvem
+"zero pessoas", e um job que desligasse por isso devolveria o inventário da empresa
+ao estoque numa madrugada: o desligamento faz checkin em massa e encerra as
+ocupações (F11, Etapa G). Por isso a **rodada vazia não marca ninguém**, e o log
+diz o que conferir.
+
+---
+
 ## O que ainda não existe (e é decisão, não esquecimento)
 
 | Falta | Por quê |
 |---|---|
-| **RBAC** | Hoje todo mundo que tem login é administrador. Qualquer sessão válida redefine a senha de qualquer um. O filtro entra no `setUserPassword`, que é o ponto único por onde a senha muda. → **F11** |
-| **Revogar uma sessão específica** | Exige tabela de sessão. → **Etapa G** |
-| **Logout derrubar as outras sessões** | Hoje `logout` só apaga o cookie local. Quem precisa derrubar tudo usa o `set-password`. |
-| **Política de senha no `.env`** | O mínimo de 12 caracteres é constante no `auth.schema.ts`. Não há demanda para torná-lo configurável. |
-| **2FA** | Nunca foi pedido. |
+| **Revogar uma sessão específica** | Exige tabela de sessão: saber QUAIS sessões existem para derrubar uma. O `tokenVersion` derruba **todas** de uma pessoa, e é com ele que o desligamento corta o acesso. "Desconectar este aparelho" continua sem existir |
+| **Logout derrubar as outras sessões** | Hoje `logout` só apaga o cookie local. Quem precisa derrubar tudo usa o `set-password`, que incrementa o `tokenVersion` |
+| **Política de senha no `.env`** | O mínimo de 12 caracteres é constante no `auth.schema.ts`. Não há demanda para torná-lo configurável |
+| **Segundo fator obrigatório por grupo** | Hoje o 2FA é opcional e de iniciativa de cada pessoa. "Todo mundo de `access.manage` precisa ter" é uma regra defensável e é decisão NOVA: ela precisa de um lugar para morar (uma flag no grupo) e de uma resposta para a pessoa que entra hoje sem ter cadastrado — bloquear o login dela ou obrigá-la a cadastrar na hora |
+| **SAML** | Só OIDC (D78). Entra ID fala os dois, e SAML pediria uma segunda biblioteca, uma segunda forma de validar asserção assinada e um segundo caminho de login para manter. Nenhum provedor em uso aqui exige SAML |
+| **Reset de senha por e-mail** | O caminho hoje é alguém com `access.manage` definir a senha (`POST /api/users/:id/set-password`). Um fluxo de "esqueci a senha" é um token de uso único por e-mail — o mesmo mecanismo do termo de aceite (F4) —, e ele reabre uma superfície pública que ninguém pediu |
+
+> **O RBAC e o 2FA SAÍRAM desta tabela** — a F11 os fez existir. A autorização é a
+> união das permissões dos grupos (D76), conferida por um hook global que **derruba o
+> boot** se alguma rota não declarar o que exige (D137); o segundo fator está na
+> seção acima. E a linha do RBAC dizia que *"o filtro entra no `setUserPassword`"* —
+> entrou, e com a chave que a auditoria escolheu: `access.manage`, não `users.edit`,
+> porque quem troca a senha de alguém entra como essa pessoa e herda os grupos dela.
 
 > **Nota sobre o mínimo de 12 caracteres:** ele vale para **definir** senha
 > (`setPasswordSchema`), não para o login. No login só existe o teto de 128
@@ -296,26 +523,51 @@ sessão, que é o `ApiToken` da Etapa G. Quando ela existir, é lá que entra.
 
 ```
 server/domain/auth/
-├── auth.maestro.ts                      rotas + ROTA_DE_CREDENCIAL (bodyLimit, no-store, Origin)
-├── auth.types.ts                        SessionUser, SessaoEmitida, o payload do JWT
+├── auth.maestro.ts                      rotas + ROTA_DE_CREDENCIAL (bodyLimit, no-store, Origin, só cookie)
+├── auth.types.ts                        SessionUser, SessaoEmitida, o payload do JWT (duas formas)
 ├── controllers/auth.controller.ts        só HTTP: assina o JWT, grava o cookie
+├── cli/desativar-totp.cli.ts            a linha de escape do 2FA (comando, nunca rota)
 ├── helpers/
-│   ├── actor.helper.ts                  quem está agindo (o actorId do D23)
+│   ├── actor.helper.ts                  quem está agindo (o actorId do D23) + a sessão das rotas /me
+│   ├── api-token.helper.ts              a forma `prefixo.segredo`, e o sha256 do segredo
 │   ├── auth-hardening.helper.ts         semCache + verificarOrigem
-│   ├── authenticate-request.helper.ts   o que o preHandler global chama
+│   ├── authenticate-request.helper.ts   o que o preHandler global chama — cookie OU Bearer
 │   ├── password.helper.ts               argon2id, hash descartável, precisaRehash
 │   ├── request-context.helper.ts        ip + user-agent para a trilha
-│   └── session-cookie.helper.ts         atributos do cookie, iguais na gravação e na limpeza
-├── schemas/auth.schema.ts               loginSchema, setPasswordSchema (strictObject)
+│   ├── session-cookie.helper.ts         atributos do cookie, iguais na gravação e na limpeza
+│   └── totp.helper.ts                   RFC 6238 em função pura: segredo, URI, janela, recuperação
+├── schemas/auth.schema.ts               loginSchema (+ totp/recoveryCode), setPasswordSchema
 └── use-cases/
+    ├── authenticate-api-token.usecase.ts  o Bearer, para AGENT e para USER
     ├── current-user.usecase.ts          releitura por requisição (2 variantes)
-    ├── login.usecase.ts                 as três recusas
+    ├── login.usecase.ts                 as três recusas + o segundo fator
+    ├── manage-api-tokens.usecase.ts     emitir/listar/revogar, por ESCOPO de dono
+    ├── manage-totp.usecase.ts           cadastro em dois passos, códigos, desativação
     ├── record-auth-event.usecase.ts     a trilha, best-effort
     └── set-user-password.usecase.ts     senha + username + increment do tokenVersion
 
-server/core/http/require-auth.ts         a porta fechada por padrão
+server/domain/access/                    a OUTRA metade da sessão: o que ela alcança
+├── helpers/permission-catalog.ts        as 35 chaves, em código
+├── helpers/route-permissions.ts         método + rota → chave (o mapa que o boot confere)
+├── helpers/require-permission.ts        temPermissao() e exigirPermissao() (403 que nomeia a chave)
+├── helpers/directory-config.helper.ts   LDAP e OIDC: ausente = DESLIGADO
+├── cli/conceder-administrador.cli.ts    a linha de escape do acesso
+├── controllers/oidc.controller.ts       os dois redirecionamentos e o cookie do desafio
+├── jobs/ldap-sync.job.ts                uma rodada por dia (job_runs: `sync-ldap`)
+└── use-cases/
+    ├── effective-permissions.usecase.ts a UNIÃO dos grupos (D76), na consulta de sessão (D136)
+    ├── oidc-login.usecase.ts            state, nonce, PKCE — e as três recusas do D78
+    ├── set-auth-source.usecase.ts       o vínculo explícito (access.manage)
+    └── sync-ldap.usecase.ts             traz e MARCA; nunca desliga
+
+server/core/http/require-auth.ts         a porta fechada por padrão (sessão)
+server/core/http/permission-guard.ts     a porta fechada por padrão (autorização) + a conferência do boot
 server/app.ts                            ROTAS_PUBLICAS — a allowlist inteira
 tests/invariantes/sessao.test.ts         16 testes, todos por HTTP
+tests/invariantes/permissao.test.ts      a cobertura do mapa e o "nunca sem administrador"
+tests/invariantes/segundo-fator.test.ts  os três estados do 2FA, o login em dois envios, as duas contagens
+tests/invariantes/token-pessoal.test.ts  o que o token alcança — e o que ele NÃO pode fazer
+tests/acesso/                            o diretório e o SSO, inclusive o comportamento do desligado
 ```
 
 ---
@@ -323,5 +575,7 @@ tests/invariantes/sessao.test.ts         16 testes, todos por HTTP
 ## Ver também
 
 - `docs/FASE-3-PLANO-ITAM.md` — como a autenticação foi construída (D22, D23, Etapas A–G)
+- `docs/FASE-11-PLANO-ITAM.md` e `docs/AUDITORIA-F11.md` — a autorização, o segundo
+  fator, o token pessoal e o SSO (D72–D78, D135–D142)
 - `docs/INVARIANTES.md` — as regras que o banco garante
 - `docs/TESTES.md` — por que a suíte só fala HTTP

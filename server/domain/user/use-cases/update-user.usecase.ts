@@ -10,14 +10,40 @@ import { USER_PUBLIC_SELECT } from '../helpers/user-select.helper';
 export interface UpdateUserData {
   name?: string;
   email?: string;
-  department?: string | null;
+  /** O id do departamento (F11, Etapa D). A coluna de texto não é mais escrita. */
+  departmentId?: string | null;
+  employeeNumber?: string | null;
+  jobTitle?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  hiredAt?: Date | null;
+  managerId?: string | null;
 }
 
-const CAMPOS_AUDITADOS = ['name', 'email', 'department'] as const;
+// O DIFF É SOBRE IDS, não sobre nomes: o log guarda o que foi gravado. Se
+// guardasse "Comercial" e alguém renomeasse o departamento, o histórico passaria
+// a contar uma mudança que não houve nesta pessoa.
+const CAMPOS_AUDITADOS = [
+  'name', 'email', 'departmentId', 'employeeNumber', 'jobTitle', 'phone', 'address',
+  'hiredAt', 'managerId',
+] as const;
+
+/**
+ * O select do DIFF — o público mais os campos auditados.
+ *
+ * Não é o `USER_PUBLIC_SELECT`: ele deixou de trazer o departamento na F11
+ * (D135), e `buildChanges` comparando um campo que o "antes" não tem marcaria
+ * como alterado tudo que foi enviado. É a mesma armadilha que o
+ * `CatalogSpec.select` documenta ("precisa conter todo campo de `audited`").
+ */
+const SELECT_DO_DIFF = {
+  id: true, name: true, email: true, departmentId: true, employeeNumber: true,
+  jobTitle: true, phone: true, address: true, hiredAt: true, managerId: true,
+} as const;
 
 export async function updateUser(id: string, data: UpdateUserData, actorId: string | null) {
   return prisma.$transaction(async (tx) => {
-    const antes = await tx.user.findFirst({ where: { id }, select: USER_PUBLIC_SELECT });
+    const antes = await tx.user.findFirst({ where: { id }, select: SELECT_DO_DIFF });
     if (!antes) throw new AppError('Registro não encontrado', 404);
 
     // O índice único do e-mail é parcial e o Prisma não o conhece: a colisão
@@ -32,9 +58,15 @@ export async function updateUser(id: string, data: UpdateUserData, actorId: stri
       data: {
         name: data.name,
         email: data.email,
-        department: data.department,
+        departmentId: data.departmentId,
+        employeeNumber: data.employeeNumber,
+        jobTitle: data.jobTitle,
+        phone: data.phone,
+        address: data.address,
+        hiredAt: data.hiredAt,
+        managerId: data.managerId,
       },
-      select: USER_PUBLIC_SELECT,
+      select: SELECT_DO_DIFF,
     });
 
     const changes = buildChanges(antes, depois, CAMPOS_AUDITADOS);
@@ -42,6 +74,9 @@ export async function updateUser(id: string, data: UpdateUserData, actorId: stri
       await recordActivity(tx, { entityType: 'User', entityId: id, action: 'UPDATE', changes }, actorId);
     }
 
-    return depois;
+    // Devolve pelo select PÚBLICO, não pelo do diff: o cliente recebe o mesmo
+    // formato de toda rota que devolve usuário, e os campos de auditoria não
+    // vazam por aqui.
+    return tx.user.findFirstOrThrow({ where: { id }, select: USER_PUBLIC_SELECT });
   });
 }

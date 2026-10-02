@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { textoOpcional, uuidOpcional } from '../../shared/fields.schema';
+import { dataOpcional, textoOpcional, uuidOpcional } from '../../shared/fields.schema';
 
 // Contrato de entrada das rotas de usuário. `strictObject` pelo mesmo motivo do
 // inventário: campo desconhecido vira 422, não gravação silenciosa.
@@ -20,19 +20,35 @@ const nome = z.string('nome é obrigatório').trim()
 const email = z.string('e-mail é obrigatório').trim().toLowerCase()
   .pipe(z.email('e-mail inválido').max(320, 'e-mail: máximo de 320 caracteres'));
 
-const departamento = z.string().trim().max(120, 'departamento: máximo de 120 caracteres').nullish()
-  .transform(valor => (valor === undefined ? undefined : valor || null));
+// ─────────────────────────────────────────────────────────────────────────────
+// O DEPARTAMENTO AGORA É UM ID (F11, Etapa D — D75).
+//
+// `department: string` SAIU do contrato de entrada, e `strictObject` faz disso
+// um 422 explícito: quem ainda mandar o texto recebe "campo desconhecido:
+// department" em vez de uma gravação silenciosamente ignorada. É o jeito mais
+// barato de descobrir um cliente antigo.
+// ─────────────────────────────────────────────────────────────────────────────
+const camposDeIdentidade = {
+  departmentId: uuidOpcional('departamento'),
+  // QUEM COBRA a pessoa. Nunca quem responde pelo ativo dela (D72).
+  managerId: uuidOpcional('gestor'),
+  employeeNumber: textoOpcional('matrícula', 40),
+  jobTitle: textoOpcional('cargo', 120),
+  phone: textoOpcional('telefone', 40),
+  address: textoOpcional('endereço', 300),
+  hiredAt: dataOpcional('data de admissão'),
+};
 
 export const createUserSchema = z.strictObject({
   name: nome,
   email,
-  department: departamento,
+  ...camposDeIdentidade,
 });
 
 export const updateUserSchema = z.strictObject({
   name: nome.optional(),
   email: email.optional(),
-  department: departamento,
+  ...camposDeIdentidade,
 });
 
 /**
@@ -58,4 +74,22 @@ export const offboardUserSchema = z.strictObject({
   // caminho normal. Escolher é para o caso de o equipamento voltar para
   // conferência ou conserto.
   statusId: uuidOpcional('status'),
+
+  /**
+   * QUEM ASSUME O QUE ESTA PESSOA GERE (F11, Etapa G).
+   *
+   * Obrigatório — com **409**, não 422 — quando ela é gestora de gente
+   * (`User.managerId`), de localidade (`Location.managerId`) ou de departamento.
+   * O corpo está válido; é o ESTADO que recusa, e por isso 409.
+   *
+   * O CASO QUE ISTO IMPEDE é a localidade: desligar o gestor do "Andar 2" sem
+   * substituto deixa o `resolverEscalonamento()` sem resposta para toda mesa
+   * abaixo dele — e, pelo D27, torna **inentregável** qualquer equipamento com
+   * termo de aceite naquele prédio. O sintoma apareceria dias depois, num
+   * checkout, como um 409 sobre uma localidade que ninguém mexeu.
+   *
+   * Em branco quando a pessoa não gere nada: a guarda só dispara se houver o
+   * que transferir.
+   */
+  substitutoId: uuidOpcional('substituto'),
 });

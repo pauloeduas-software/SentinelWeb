@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import UserFormModal from './components/UserFormModal';
 import ListToolbar from '../components/ListToolbar';
 import { useUsers } from './hooks/useUsers';
+import Iniciais from '../components/Iniciais';
 
 export default function UsersPage() {
   const {
@@ -56,10 +57,17 @@ export default function UsersPage() {
                     baldes de posse e o desligamento. A lista não tem como
                     mostrar isso em uma célula — são três listas. */}
                 <td className="px-6 py-4 font-medium text-text-primary">
-                  <Link to={`/users/${user.id}`} className="hover:underline">{user.name}</Link>
+                  {/* AS INICIAIS (F11): a cor vem do nome, então a mesma pessoa é
+                      sempre a mesma cor — é o que deixa achar uma linha conhecida
+                      numa lista de cem sem ler nome por nome. Decoração, nunca o
+                      único portador de significado: o nome está do lado. */}
+                  <Link to={`/users/${user.id}`} className="flex items-center gap-2 hover:underline">
+                    <Iniciais nome={user.name} />
+                    {user.name}
+                  </Link>
                 </td>
                 <td className="px-6 py-4 text-text-tertiary">{user.email}</td>
-                <td className="px-6 py-4">{user.department || '--'}</td>
+                <td className="px-6 py-4">{user.department?.name || '--'}</td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                     {view === 'trashed' ? (

@@ -67,7 +67,19 @@ const CAMPOS: Record<ImportTarget, CampoDeImport[]> = {
   USERS: [
     { token: 'email', rotulo: 'E-mail', obrigatorioNaCriacao: true, chave: true },
     { token: 'name', rotulo: 'Nome', obrigatorioNaCriacao: true },
-    { token: 'department', rotulo: 'Departamento' },
+    {
+      token: 'department',
+      rotulo: 'Departamento',
+      // A COLUNA CONTINUA SENDO O NOME, e não o id — ninguém digita uuid em
+      // planilha. Desde a F11 (Etapa D) o departamento é entidade, e o
+      // importador resolve nome → id na hora de planejar.
+      //
+      // NOME DESCONHECIDO É LINHA RECUSADA, nunca departamento criado: um typo
+      // (`Comercail`) criaria um cadastro ao lado do certo, e daí em diante o
+      // relatório por departamento mentiria sem erro nenhum ter acontecido. É a
+      // mesma recusa do D132 para e-mail ambíguo.
+      ajuda: 'O nome exato do departamento, já cadastrado. Nome desconhecido recusa a linha.',
+    },
   ],
 
   OCCUPANTS: [
@@ -85,6 +97,67 @@ const CAMPOS: Record<ImportTarget, CampoDeImport[]> = {
 
 export function camposDoAlvo(target: ImportTarget): CampoDeImport[] {
   return CAMPOS[target];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OS CAMPOS CUSTOMIZADOS NO IMPORT (F9, o item que esperava a F10).
+//
+// ═════════════════════════════════════════════════════════════════════════════
+// SÓ EM `ASSETS`, E SÓ OS NÃO CIFRADOS.
+//
+// Só em ativos porque é só o ativo que tem `customFields` (F9): pessoa, ocupação
+// e estoque não têm a coluna, e oferecer o token nos outros alvos seria oferecer um
+// mapeamento que o adaptador ignora em silêncio.
+//
+// E O CIFRADO FICA DE FORA, com o mesmo argumento do export invertido: ali o
+// problema é o segredo SAIR num arquivo; aqui é ele ENTRAR por um. Uma planilha com
+// a senha da BIOS de trezentas máquinas em texto, passando por e-mail e ficando no
+// `Downloads` de quem a montou, é a pior forma possível de carregar segredo — e o
+// caminho certo já existe: o campo no formulário do ativo, um por vez, cifrado na
+// gravação.
+//
+// ⚠️ A VALIDAÇÃO DE FORMATO NÃO ACONTECE AQUI, e isso é reuso e não omissão: o
+// adaptador monta `customFields` e entrega ao `createAsset`/`updateAsset`, que
+// chamam o MESMO `validarCamposCustomizados()` do formulário (F9). Uma validação
+// própria no importador seria uma segunda regra para IP, MAC e regex — e a segunda
+// divergiria da primeira no primeiro ajuste.
+// ═════════════════════════════════════════════════════════════════════════════
+
+/** Um campo customizado, como o mapeamento o oferece. */
+export interface CampoCustomizadoDeImport {
+  slug: string;
+  name: string;
+  encrypted: boolean;
+}
+
+/** O prefixo do token — o MESMO do export de CSV (`cf:`). */
+const PREFIXO_CF = 'cf:';
+
+/**
+ * Os campos customizados que o alvo aceita, já como `CampoDeImport`.
+ *
+ * Alvo que não é `ASSETS` devolve lista vazia, e cifrado é filtrado aqui — nos dois
+ * casos o token simplesmente não existe, então o mapeamento que o mandar recebe o
+ * 422 de "campo desconhecido" com a lista dos válidos.
+ */
+export function camposCustomizadosDoAlvo(
+  target: ImportTarget,
+  campos: readonly CampoCustomizadoDeImport[],
+): CampoDeImport[] {
+  if (target !== 'ASSETS') return [];
+
+  return campos
+    .filter((campo) => !campo.encrypted)
+    .map((campo) => ({
+      token: `${PREFIXO_CF}${campo.slug}`,
+      rotulo: campo.name,
+      ajuda: 'Campo customizado. O valor é validado pelo formato do campo, como no formulário.',
+    }));
+}
+
+/** O slug dentro do token, ou `null` quando o token não é de campo customizado. */
+export function slugDoTokenDeImport(token: string): string | null {
+  return token.startsWith(PREFIXO_CF) ? token.slice(PREFIXO_CF.length) : null;
 }
 
 export function chavesDoAlvo(target: ImportTarget): string[] {
@@ -136,8 +209,20 @@ export function validarMapeamento(
   target: ImportTarget,
   mapeamento: MapeamentoValidado,
   cabecalhos: readonly string[],
+  /**
+   * Os campos customizados do sistema, para os tokens `cf:<slug>` (F9/F10).
+   *
+   * Por PARÂMETRO porque esta função é pura e tem teste puro
+   * (`tests/importacao/mapeamento.puro.test.ts`): quem consulta o banco é o
+   * use-case do dry-run, uma vez por arquivo. Lista vazia é o sistema sem campo
+   * customizado nenhum, e aí todo `cf:` é desconhecido — que é a verdade.
+   */
+  camposCustomizados: readonly CampoCustomizadoDeImport[] = [],
 ): MapeamentoValidado {
-  const validos = new Set(CAMPOS[target].map((campo) => campo.token));
+  const validos = new Set([
+    ...CAMPOS[target].map((campo) => campo.token),
+    ...camposCustomizadosDoAlvo(target, camposCustomizados).map((campo) => campo.token),
+  ]);
   const tokens = Object.values(mapeamento.colunas);
 
   const desconhecidos = tokens.filter((token) => !validos.has(token));

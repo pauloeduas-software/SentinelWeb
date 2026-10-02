@@ -51,7 +51,11 @@ export default function AtivosPage() {
   // AS COLUNAS VISÍVEIS (F10, Etapa B). Preferência do navegador, não do
   // servidor: ninguém a consulta e ela não é fato sobre o inventário
   // (docs/ARQUITETURA.md, *client state*).
-  const colunas = useColunas();
+  //
+  // As CUSTOMIZADAS entram por parâmetro, e só para o export: a tabela as desenha
+  // por conta própria (elas não passam pelo seletor), mas o `?columns=` precisa
+  // nomeá-las para o arquivo ter o que a tela tem.
+  const colunas = useColunas(colunasCustomizadas);
 
   return (
     <div className="animate-in fade-in duration-300 h-[calc(100vh-4rem)] flex flex-col pb-6">

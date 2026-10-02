@@ -30,6 +30,18 @@ export async function updateLicense(
   id: string,
   data: UpdateLicenseData,
   actorId: string | null,
+  /**
+   * A sessão pode ver a chave? (F11, D77)
+   *
+   * A ESCRITA TAMBÉM PRECISA DISSO, e o caso que obriga é o `update`: editar o
+   * nome de uma licença sem tocar na chave devolveria a máscara da chave que já
+   * estava lá. Quem tem `licenses.edit` e não tem `licenses.viewKey` leria um
+   * fragmento do segredo salvando um campo que não tem nada a ver com ele.
+   *
+   * `false` por padrão de propósito: chamador novo que esquecer de passar
+   * recebe o menos revelador, em vez de vazar por omissão.
+   */
+  podeVerChave = false,
 ): Promise<LicencaNaResposta> {
   const { productKey, ...campos } = data;
 
@@ -82,5 +94,5 @@ export async function updateLicense(
     return depois;
   });
 
-  return paraResposta(licenca, await contarAssentosDe(prisma, id), { comMascara: true });
+  return paraResposta(licenca, await contarAssentosDe(prisma, id), { comMascara: podeVerChave });
 }

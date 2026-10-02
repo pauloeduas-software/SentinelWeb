@@ -53,7 +53,16 @@ export interface AuthGuardOptions {
   autenticar: (request: FastifyRequest) => Promise<void>;
 }
 
-function casa(rota: RotaPublica, method: string, path: string): boolean {
+/**
+ * A requisição casa com esta linha da allowlist?
+ *
+ * EXPORTADA porque tem dois leitores, e os dois precisam concordar: o guard de
+ * sessão (aqui) e o de permissão (`permission-guard.ts`), que pula as mesmas
+ * rotas — elas não têm sessão, então não têm permissão. Duas implementações do
+ * mesmo casamento divergiriam, e a divergência apareceria como `/health`
+ * exigindo uma chave que ninguém sem login pode ter.
+ */
+export function casaRotaPublica(rota: RotaPublica, method: string, path: string): boolean {
   if (rota.method !== '*' && rota.method !== method) return false;
   if (rota.path.endsWith('/*')) return path.startsWith(rota.path.slice(0, -1));
   return rota.path === path;
@@ -67,7 +76,7 @@ export function registerAuthGuard(server: FastifyInstance, options: AuthGuardOpt
     // senão `/health?x=1` deixaria de ser público.
     const path = request.url.split('?')[0];
 
-    if (rotasPublicas.some((rota) => casa(rota, request.method, path))) return;
+    if (rotasPublicas.some((rota) => casaRotaPublica(rota, request.method, path))) return;
 
     if (estaticoPublico && request.method === 'GET' && !path.startsWith('/api')) return;
 

@@ -21,7 +21,16 @@ export const userKeys = {
 export interface UserInput {
   name: string;
   email: string;
-  department?: string;
+  /** O id do departamento (F11, Etapa D) — era texto livre até a F10. */
+  departmentId?: string | null;
+  /** Quem cobra a pessoa. Nunca quem responde pelo ativo dela (D72). */
+  managerId?: string | null;
+  employeeNumber?: string | null;
+  jobTitle?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  /** `AAAA-MM-DD`. */
+  hiredAt?: string | null;
 }
 
 export function useUsersQuery(params: ListParams) {

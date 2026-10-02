@@ -10,6 +10,10 @@ import {
   devolverAssentosDoUsuario, type AssentoDevolvido,
 } from '../../license/use-cases/checkin-user-seats.usecase';
 import { USER_DETAIL_SELECT } from '../helpers/user-select.helper';
+import {
+  contarChefias, motivoParaExigirSubstituto, temChefia, transferirChefias,
+  type ChefiasTransferidas,
+} from '../helpers/substituto.helper';
 import { travarUsuarioOuFalhar } from './lock-user.usecase';
 
 // DESLIGAMENTO — D32. As DUAS camadas, numa transação só.
@@ -46,6 +50,14 @@ export interface OffboardData {
   notes?: string | null;
   /** Status de volta dos ativos. Ausente, o primeiro `DEPLOYABLE` — o estoque. */
   statusId?: string | null;
+  /**
+   * Quem assume as chefias desta pessoa (F11, Etapa G).
+   *
+   * Obrigatório, com 409, quando ela gere gente, localidade ou departamento —
+   * ver `helpers/substituto.helper.ts`, que explica por que a localidade é a que
+   * tem dentes.
+   */
+  substitutoId?: string | null;
 }
 
 export interface AtivoDevolvido {
@@ -75,6 +87,16 @@ export interface ResultadoDesligamento {
    */
   assentosDevolvidos: AssentoDevolvido[];
   ocupacoesEncerradas: OcupacaoEncerrada[];
+  /**
+   * O que o substituto assumiu. `null` quando a pessoa não geria nada.
+   *
+   * Vai para a tela porque é a parte do desligamento que mexe no cadastro de
+   * OUTRAS pessoas e lugares: o operador precisa ver que seis mesas trocaram de
+   * gestor, não descobrir isso depois.
+   */
+  chefiasTransferidas: ChefiasTransferidas | null;
+  /** Tokens pessoais revogados e sessões derrubadas (F11, Etapa G, passo 5). */
+  acessoRevogado: { tokens: number; sessoesDerrubadas: boolean };
 }
 
 export async function offboardUser(
@@ -118,6 +140,38 @@ export async function offboardUser(
       throw new AppError('Este colaborador já foi desligado.', 409, {
         terminatedAt: pessoa.terminatedAt.toISOString(),
       });
+    }
+
+    // ── 0. TRANSFERIR AS CHEFIAS (F11, Etapa G — passo 1 do plano) ─────────
+    //
+    // ANTES DE TUDO, e numerado como zero porque é a única parte que pode
+    // RECUSAR a operação inteira: recusar depois de devolver dez ativos faria a
+    // transação voltar atrás sobre dez checkins já logados — o rollback resolve
+    // o banco e não resolve o tempo de quem clicou.
+    //
+    // O caso com dentes é a LOCALIDADE. Pelo D27, o termo de entrega de um ativo
+    // com alvo `LOCATION` vai para o gestor da localidade, encontrado subindo a
+    // árvore (`resolverEscalonamento`, D139). Desligar o gestor do "Andar 2" sem
+    // substituto deixa toda mesa abaixo dele sem resposta — e entregar
+    // equipamento com termo de aceite naquele prédio passa a ser 409, dias
+    // depois, sobre uma localidade que ninguém tocou.
+    const chefias = await contarChefias(tx, userId);
+    let chefiasTransferidas: ChefiasTransferidas | null = null;
+
+    if (temChefia(chefias)) {
+      if (!data.substitutoId) {
+        // 409 e não 422: o corpo está válido — é o ESTADO da pessoa que exige o
+        // campo. Mesma família do "ainda responde por 2 ativos" do `DELETE`.
+        //
+        // Os números vão nos `details` para a tela abrir o campo do substituto
+        // com a lista do que vai ser transferido, sem reparsear a frase em
+        // português.
+        throw new AppError(motivoParaExigirSubstituto(chefias)!, 409, { ...chefias });
+      }
+
+      chefiasTransferidas = await transferirChefias(
+        tx, { id: pessoa.id, name: pessoa.name }, data.substitutoId, actorId,
+      );
     }
 
     // ── 1. DEVOLVER o que está no nome da pessoa ───────────────────────────
@@ -254,9 +308,39 @@ export async function offboardUser(
     // transação volta atrás e a pessoa NÃO fica marcada como desligada com
     // pendência aberta — o estado que faria o 409 do `DELETE` disparar sem que
     // ninguém entendesse por quê.
+    // ── 6. REVOGAR O ACESSO (F11, Etapa G — passo 5 do plano) ─────────────
+    //
+    // DUAS COISAS, e uma delas já existia desde a F3:
+    //
+    // `ApiToken` pessoal → `revokedAt`. `updateMany` com `ownerType: 'USER'`
+    //   porque o token de AGENTE da mesma pessoa (se ela emitiu algum) é da
+    //   MÁQUINA, não dela — revogá-lo derrubaria a coleta de um computador que
+    //   continua na empresa. O D80 pôs os dois na mesma tabela justamente
+    //   porque o caminho de autenticação é um só; o de REVOGAÇÃO não é.
+    //
+    // Sessões → `tokenVersion + 1`. NÃO precisa de mecanismo novo: a F3 já
+    //   assina a geração dentro do JWT e a confere contra esta coluna a cada
+    //   requisição (`authenticate-request.helper.ts`). Incrementar aqui invalida,
+    //   de uma vez, todo token emitido antes — sem tabela de sessão e sem lista
+    //   de revogação. Quem ler "revogar sessões" do zero constrói a tabela.
+    //
+    // E a releitura por requisição já recusaria `isActive: false` na requisição
+    // seguinte. O incremento entra porque as duas defesas respondem a coisas
+    // diferentes: aquela depende de a flag estar gravada, esta mata o token em
+    // si. Se um dia alguém "reativar" a pessoa sem querer, os tokens antigos
+    // continuam mortos.
+    const tokens = await tx.apiToken.updateMany({
+      where: { ownerType: 'USER', userId, revokedAt: null },
+      data: { revokedAt: saidaEm },
+    });
+
     const desligada = await tx.user.update({
       where: { id: userId },
-      data: { isActive: false, terminatedAt: saidaEm },
+      data: {
+        isActive: false,
+        terminatedAt: saidaEm,
+        tokenVersion: { increment: 1 },
+      },
       select: USER_DETAIL_SELECT,
     });
 
@@ -278,6 +362,11 @@ export async function offboardUser(
         // dinheiro.
         assentosQueimados: assentosDevolvidos.filter((assento) => assento.queimado).length,
         ocupacoesEncerradas: ocupacoesEncerradas.length,
+        // O placar do ACESSO fechado, ao lado do da posse: "ela ainda conseguia
+        // entrar?" é pergunta de auditoria, e a resposta tem que estar na linha
+        // do desligamento.
+        tokensRevogados: tokens.count,
+        chefiasTransferidas: chefiasTransferidas ? { ...chefiasTransferidas } : null,
         notes: data.notes ?? null,
       },
     }, actorId);
@@ -294,6 +383,8 @@ export async function offboardUser(
       acessoriosDevolvidos,
       assentosDevolvidos,
       ocupacoesEncerradas,
+      chefiasTransferidas,
+      acessoRevogado: { tokens: tokens.count, sessoesDerrubadas: true },
     };
   });
 }

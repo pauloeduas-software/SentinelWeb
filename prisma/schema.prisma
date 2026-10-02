@@ -143,10 +143,23 @@ model Telemetry {
 }
 
 model User {
-  id         String  @id @default(uuid()) @db.Uuid
-  name       String
-  email      String
-  department String?
+  id    String @id @default(uuid()) @db.Uuid
+  name  String
+  email String
+
+  // O DEPARTAMENTO — uma FK, e só (F11, Etapa J — D75).
+  //
+  // A coluna de TEXTO `department` existiu aqui desde a F1 e caiu na migração 2 de
+  // 2, depois de a lista de departamentos ter sido revisada à mão. A troca foi em
+  // dois tempos de propósito: entre as duas migrações, um rollback ainda encontrava
+  // o texto original — com `add`+`backfill`+`drop` num commit só, voltar atrás é
+  // perda de dado.
+  //
+  // E é por isso que a relação abaixo volta a se chamar `department`, sem
+  // sublinhado: o nome estava ocupado pela coluna em transição, e com ela fora a
+  // borda não precisa mais achatar nada (o `comDepartamento()` do
+  // `user-select.helper.ts` deixou de existir junto).
+  departmentId String? @db.Uuid
 
   // AUTENTICAÇÃO (F3). Nulável porque a base nasceu sem login: um colaborador
   // cadastrado para receber equipamento não precisa de acesso ao sistema, e
@@ -180,6 +193,87 @@ model User {
   // ainda usa o sistema" é a pergunta que antecede a limpeza de acessos.
   lastLoginAt DateTime?
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // O SEGUNDO FATOR (F11, Etapa H). Três colunas, nenhuma tabela nova (D80).
+  //
+  // `totpSecret` É CIFRADO EM REPOUSO, com AAD `users:totpSecret:<id>` — o mesmo
+  // `core/crypto/cipher.ts` da F6 e da F9 (D81). Por que cifrar, se ele já é um
+  // segredo gravado num banco com acesso restrito: quem lê um dump passa a poder
+  // GERAR os códigos da pessoa, para sempre e sem deixar rastro em lugar nenhum.
+  // É a diferença entre vazar um hash (inútil) e vazar uma chave (um gerador).
+  //
+  // `totpEnabledAt` NULO COM SEGREDO PREENCHIDO é o estado intermediário, e ele
+  // precisa existir: entre "o aplicativo leu o QR" e "o primeiro código conferiu"
+  // há um intervalo em que exigir o segundo fator trancaria a pessoa fora por um
+  // cadastro que ela não concluiu. Então o login só exige o código quando esta
+  // data está preenchida; o segredo sozinho é cadastro pendente.
+  //
+  // `totpRecoveryCodes` guarda SHA-256, não o código em claro, e é uso único: o
+  // código consumido sai do array. Sha256 e não argon2 pelo mesmo motivo do
+  // `ApiToken.tokenHash` — são 50 bits de aleatoriedade sem dicionário a atacar,
+  // e KDF caro aqui só adicionaria latência ao login de quem perdeu o celular.
+  totpSecret        String?
+  totpEnabledAt     DateTime?
+  totpRecoveryCodes String[]
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DE ONDE VEM ESTA IDENTIDADE (F11, Etapa I — D78).
+  //
+  // `authSource` responde "quem manda nos dados desta pessoa, e por onde ela
+  // entra". E ele é a trava do vínculo: o login por OIDC casa pelo `externalId`
+  // ou, na PRIMEIRA vez, por e-mail — mas só quando esta coluna já diz `OIDC`.
+  // Conta `LOCAL` com o mesmo e-mail NÃO é fundida automaticamente, porque
+  // fundir seria deixar quem controla um e-mail no provedor entrar como uma
+  // conta que alguém criou aqui. A troca é explícita, por rota própria com
+  // `access.manage` (`PUT /api/users/:id/auth-source`).
+  //
+  // `externalId` é o `oid` do Entra (ou o GUID do objeto no AD): estável, ao
+  // contrário do e-mail, que muda quando alguém se casa ou troca de domínio.
+  // Único por índice PARCIAL na migration, como `email` e `username`.
+  //
+  // `directoryMissingAt` É A MARCA DE REVISÃO, e ela é o D78 inteiro: quem sai
+  // do diretório **não é desligado** pelo job. Desligar automaticamente faria um
+  // filtro LDAP mal escrito — ou uma OU renomeada — devolver o inventário da
+  // empresa ao estoque numa madrugada. A sincronização MARCA; uma pessoa decide.
+  externalId         String?
+  authSource         AuthSource @default(LOCAL)
+  /// Última vez que o diretório confirmou esta pessoa. Nulo = nunca sincronizada.
+  directorySyncedAt  DateTime?
+  /// Desde quando ela deixou de aparecer na busca. Nulo = está lá (ou nunca veio).
+  directoryMissingAt DateTime?
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // IDENTIDADE DO COLABORADOR (F11, Etapa E).
+  //
+  // `employeeNumber` tem unicidade por índice PARCIAL (`WHERE "deletedAt" IS
+  // NULL`) na migration, o mesmo caso de `email` e `username`: uma matrícula na
+  // lixeira travaria para sempre o recadastro da mesma pessoa.
+  //
+  // `firstName`/`lastName` NÃO EXISTEM, apesar de o TODO pedir "nome dividido":
+  // `name` já é o campo canônico, dividi-lo exige um backfill que adivinha onde
+  // termina o nome em "Maria da Silva Souza", e um campo que só existe para ser
+  // recomposto na exibição é duas fontes de verdade para o mesmo dado. De
+  // LDAP/OIDC o que importa guardar é `employeeNumber` e `jobTitle`.
+  employeeNumber String?
+  jobTitle       String?
+  phone          String?
+  address        String?
+
+  /// Admissão. Não é `createdAt`: a pessoa trabalha aqui desde antes do sistema.
+  hiredAt DateTime?
+
+  // GESTOR DA PESSOA — a hierarquia de gente, em auto-relação.
+  //
+  // ⚠️ ELE NÃO ENTRA EM `resolverResponsaveis()`, e isto é o D72. Gestor é ROTA
+  // DE ESCALONAMENTO, não detentor: ele recebe o aviso de atraso e aprova a
+  // baixa. Responsabilidade por ativo é *quem está com o equipamento*, e quem
+  // responde é a posse aberta ou os ocupantes do posto (D16). Se um dia "o
+  // gestor responde junto" for regra do cliente, é decisão NOVA e explícita —
+  // não efeito colateral de esta coluna existir.
+  //
+  // `SetNull`: desligar o gestor não pode derrubar os liderados junto.
+  managerId String? @db.Uuid
+
   // Desligamento (F11) é diferente de lixeira: quem saiu da empresa continua no
   // histórico de posse e nos relatórios, só não opera mais.
   isActive         Boolean            @default(true)
@@ -210,12 +304,47 @@ model User {
   endpointDays EndpointUserDaily[]
   suggestions  ReconciliationSuggestion[]
 
+  // OS TOKENS PESSOAIS (F11, Etapa H). A relação nasce com a FK que o `userId`
+  // não tinha (D142) — ver o `model ApiToken` para por que ela é `Cascade`.
+  apiTokens ApiToken[]
+
+  // ACESSO (F11). Os grupos de que esta pessoa participa — a permissão efetiva
+  // é a UNIÃO das permissões deles (D76). Sem grupo, ela entra no sistema e não
+  // alcança nada: é a porta fechada por padrão da F3 levada à autorização.
+  groups Group[]
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // AS TRÊS HIERARQUIAS QUE PASSAM POR UMA PESSOA (F11, Etapa C — D72).
+  //
+  // Elas parecem todas responder "de quem é isto?" e respondem a perguntas
+  // diferentes. A tabela inteira está em docs/MODELO-POSSE.md:
+  //
+  //   quem RESPONDE pelo ativo?        a posse aberta → pessoa, ou os
+  //                                     ocupantes do posto  (`resolverResponsaveis`)
+  //   quem COBRA a pessoa?             `managerId`          (hierarquia de gente)
+  //   quem responde pelo ESPAÇO, e     `Location.managerId`, subindo a árvore
+  //     pelo posto SEM ocupante?        (`resolverEscalonamento`)
+  //   a quem PERTENCE o custo?         `Department`         (relatório e rateio)
+  //
+  // Em uma linha: *o posto responde pelo ativo; a pessoa responde pelo posto; o
+  // gestor da localidade responde pelo posto vazio — e nunca pelo posto
+  // ocupado.*
+  department    Department?  @relation("DepartmentMembers", fields: [departmentId], references: [id], onDelete: Restrict)
+  departmentsManaged Department[] @relation("DepartmentManager")
+  manager       User?        @relation("UserManager", fields: [managerId], references: [id], onDelete: SetNull)
+  reports       User[]       @relation("UserManager")
+
   // `email` NÃO é @unique aqui de propósito: a unicidade é um índice parcial
   // (`WHERE deleted_at IS NULL`) criado na migration. Com @unique comum, um
   // usuário na lixeira bloquearia para sempre o recadastro do mesmo e-mail —
   // é o `unique_undeleted` do Snipe-IT (docs/ITAM-TODO.md, F2).
   @@index([email])
   @@index([deletedAt])
+  @@index([departmentId])
+  @@index([managerId])
+  // O login por OIDC busca por `externalId` em TODA entrada; a sincronização
+  // LDAP, uma vez por pessoa por dia. Sem índice, as duas varrem a tabela.
+  @@index([externalId])
   @@map("users")
 }
 
@@ -225,6 +354,99 @@ model User {
 // autenticação é a Fase 3 — esperar por ela significaria perder o histórico de
 // tudo que for cadastrado até lá. Sem FK porque log de auditoria é append-only:
 // a integridade dele não pode depender do ciclo de vida da linha do usuário.
+model Department {
+  id   String  @id @default(uuid()) @db.Uuid
+  name String  @unique
+  code String?
+
+  // GESTOR DO DEPARTAMENTO. `SetNull` de propósito: desligar o gestor não pode
+  // derrubar o departamento junto.
+  //
+  // ⚠️ ELE NÃO RESPONDE POR ATIVO NENHUM, e isto é o D72. Departamento agrupa
+  // PESSOAS — serve para relatório ("quanto o Comercial tem em equipamento"),
+  // rateio de custo e filtro de tela. Entregar "para o Comercial" é entregar
+  // para uma sala ou para uma pessoa: departamento não tem mesa, não tem chave
+  // e não assina nada. Quem responde por um ativo é a posse aberta, e quando o
+  // alvo é um posto, os ocupantes dele (D16, docs/MODELO-POSSE.md).
+  managerId String? @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  manager User?  @relation("DepartmentManager", fields: [managerId], references: [id], onDelete: SetNull)
+  // `Restrict`: apagar um departamento com gente dentro deixaria as pessoas
+  // apontando para o nada. A recusa é 409 pela contagem de uso, como em toda
+  // tabela de catálogo (D8).
+  members User[] @relation("DepartmentMembers")
+
+  @@index([managerId])
+  @@map("departments")
+}
+
+model Group {
+  id   String  @id @default(uuid()) @db.Uuid
+  name String  @unique
+  description String?
+
+  // AS PERMISSÕES, em JsonB: `{ "assets.view": true, "assets.edit": true }`.
+  //
+  // POR QUE JSONB, E NÃO UMA TABELA `group_permissions` COM UMA LINHA POR CHAVE:
+  // a permissão é lida INTEIRA, sempre, e na requisição mais quente do sistema
+  // (a releitura de sessão). Em tabela, isso é um join que devolve N linhas para
+  // serem imediatamente reduzidas a um conjunto — e o conjunto é o que o
+  // `preHandler` quer. Em JsonB é uma coluna, num `include` que já existe.
+  //
+  // Ninguém consulta "quais grupos têm `assets.edit`" com frequência, e quando
+  // consultar, o operador `?` do JsonB responde com índice GIN — o mesmo
+  // caminho que a F9 usa para contar ativo com campo customizado preenchido.
+  //
+  // O RISCO REAL DO FORMATO está no D76 e não é o join: é que chave digitada
+  // errada aqui **não dá erro nenhum**, só nega em silêncio. Por isso o catálogo
+  // de chaves é declarado em código (`access/helpers/permission-catalog.ts`), a
+  // gravação recusa o que não está nele, e o teste confere as duas pontas.
+  //
+  // NÃO EXISTE `deny` (D76): a permissão efetiva é a UNIÃO das chaves dos grupos
+  // da pessoa. Negação em união cria dependência de ordem e transforma "por que
+  // ela não consegue ver?" numa investigação por N grupos; sem ela, a resposta é
+  // sempre a mesma — nenhum grupo dela concede a chave.
+  permissions Json @db.JsonB
+
+  // GRUPO DE SISTEMA — hoje só o `Administrador`.
+  //
+  // O QUE A FLAG RESOLVE, e é um conflito real entre duas regras boas do
+  // projeto. "Administrador" significa *alcança tudo*, então chave nova no
+  // catálogo tem que chegar nele — senão o administrador perde acesso a uma
+  // tela nova em silêncio, que é o sintoma que o D76 persegue. Isso pede que o
+  // seed reescreva as permissões dele a cada execução.
+  //
+  // Mas o `prisma/seed.ts` tem a regra oposta, e com razão: ele NÃO desfaz o
+  // que alguém mudou de propósito (é por isso que a senha do administrador é
+  // preservada). Um seed que reescrevesse as permissões de um grupo editável
+  // seria exatamente "a idempotência que reabre uma porta que alguém fechou".
+  //
+  // A flag tira o conflito em vez de escolher um lado: o grupo de sistema é
+  // **do código**. O seed o reconcilia porque ninguém pode tê-lo editado — a
+  // rota de edição recusa mexer nas permissões dele (409). Para restringir uma
+  // pessoa, tira-se ela do grupo; para um perfil mais fraco, cria-se outro
+  // grupo. Nada do que o operador decide é desfeito, porque aqui ele não
+  // decide nada.
+  //
+  // Apagar também é recusado: sem ele, o `assertSobraAdministrador` tornaria o
+  // próximo `db:seed` a única forma de voltar a ter acesso.
+  isSystem Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // N:M IMPLÍCITA: o Prisma cria `_GroupToUser` sozinho. Explícita (um model de
+  // junção) só se o vínculo tivesse atributo próprio — "desde quando ela está
+  // neste grupo" seria um, e não é pergunta que alguém faça: quem responde
+  // "quando o acesso dela mudou" é o ActivityLog, que registra a troca.
+  users User[]
+
+  @@map("groups")
+}
+
 model ActivityLog {
   id         String   @id @default(uuid()) @db.Uuid
   entityType String
@@ -271,6 +493,16 @@ model AuthEvent {
   @@map("auth_events")
 }
 
+/// De onde vem a identidade de um colaborador (F11, Etapa I — D78).
+enum AuthSource {
+  /// Cadastrado aqui, entra com usuário e senha deste sistema.
+  LOCAL
+  /// Vem da sincronização com o diretório. O diretório manda nos dados.
+  LDAP
+  /// Entra por SSO (OIDC/Entra ID). Pode ter vindo do LDAP e ganhado SSO depois.
+  OIDC
+}
+
 enum AuthEventType {
   LOGIN_OK
   // Usuário inexistente, sem senha cadastrada ou senha errada — os três caem
@@ -287,6 +519,37 @@ enum AuthEventType {
   LOGOUT
   // Senha redefinida: derruba toda sessão aberta daquele usuário (tokenVersion).
   PASSWORD_CHANGED
+
+  // ── O SEGUNDO FATOR (F11, Etapa H) ────────────────────────────────────────
+  //
+  // Os cinco são de TIPOS diferentes de propósito, e nenhum deles é `LOGIN_FAIL`:
+  // ali o fato é "a senha não serve". Aqui a senha SERVIU — o que faltou foi o
+  // segundo fator, e essa distinção é a primeira coisa que se procura num
+  // incidente ("alguém já tem a senha dela?").
+  //
+  // Enum e não texto: o `type` tem índice e a tela de trilha filtra por ele.
+  // O preço é que valor novo é migração, e é um preço que se paga.
+
+  /// Senha certa, segundo fator exigido e NÃO informado. É o que denuncia senha vazada.
+  TOTP_REQUIRED
+  /// Código informado e errado. Conta no mesmo contador que trava a conta.
+  TOTP_FAIL
+  TOTP_ENABLED
+  TOTP_DISABLED
+  /// Entrou por código de recuperação: o celular se perdeu, e o código queimou.
+  TOTP_RECOVERY_USED
+
+  // ── O SSO (F11, Etapa I) ──────────────────────────────────────────────────
+  //
+  // ENTRAR por OIDC continua sendo `LOGIN_OK`: o fato é o mesmo, e separar os
+  // tipos faria toda consulta de "quem entrou hoje" ter de somar dois.
+  //
+  // A RECUSA é que precisa de tipo próprio, porque ela não é falha de senha nem
+  // conta travada: é alguém que o provedor de identidade autenticou com sucesso e
+  // que este sistema não conhece — ou conhece como conta LOCAL, que o D78 recusa
+  // fundir em silêncio. O `username` da linha guarda o e-mail que o provedor
+  // mandou, que é o dado com que se decide criar ou vincular a pessoa.
+  OIDC_DENIED
 }
 
 // ============================================================================
@@ -1312,7 +1575,24 @@ model ApiToken {
   name      String
   ownerType ApiTokenOwner
 
-  /// Só quando ownerType = USER.
+  // ─────────────────────────────────────────────────────────────────────────
+  // O DONO, QUANDO ELE É UMA PESSOA (F11, Etapa H — D142).
+  //
+  // A coluna existia desde a F0 e NÃO tinha chave estrangeira: nada no banco
+  // impedia um token apontar para um uuid que nunca foi usuário. Não doía
+  // enquanto ninguém a preenchia; o token pessoal é o primeiro a preencher.
+  //
+  // `Cascade`, e não `SetNull` como em `AuthEvent.userId`, e a diferença entre os
+  // dois diz o que cada tabela é: um evento de autenticação é REGISTRO, e tem de
+  // sobreviver ao cadastro que ele descreve — é justamente o que a auditoria vem
+  // procurar. Um token é PODER, e poder sem dono é uma credencial que autentica
+  // como ninguém: `ownerType: 'USER'` com `userId` nulo passaria pela busca por
+  // prefixo e pela conferência do segredo, e só quebraria depois, ao carregar a
+  // sessão. Some com o dono.
+  //
+  // ⚠️ Isto vale para o DELETE de verdade. Desligar alguém é `isActive: false`
+  // (soft), e o token continua existindo — por isso o desligamento o REVOGA
+  // explicitamente (`offboard-user.usecase.ts`), em vez de confiar na FK.
   userId     String? @db.Uuid
   /// Só quando ownerType = AGENT — e NULO até o primeiro handshake.
   endpointId String? @db.Uuid
@@ -1331,7 +1611,12 @@ model ApiToken {
   createdById String?   @db.Uuid
   createdAt   DateTime  @default(now())
 
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([ownerType])
+  // A listagem de `/api/me/tokens` filtra por dono: sem índice, ela varre a
+  // tabela de tokens da frota inteira para achar os três de uma pessoa.
+  @@index([userId])
   @@map("api_tokens")
 }
 

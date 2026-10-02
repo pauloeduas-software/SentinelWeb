@@ -3,6 +3,12 @@ import { AppError } from '../../../core/errors/app-error';
 import { USER_DETAIL_SELECT } from '../helpers/user-select.helper';
 import { contarPosseAberta, type PosseAbertaDoUsuario } from './count-user-posse.usecase';
 
+/** `{ id, name }` — como departamento e gestor saem para a tela. */
+interface Referencia {
+  id: string;
+  name: string;
+}
+
 /**
  * UM colaborador, com o placar do que ainda o prende ao inventário.
  *
@@ -19,10 +25,26 @@ export interface UsuarioComPosse {
   id: string;
   name: string;
   email: string;
-  department: string | null;
   createdAt: Date;
   isActive: boolean;
   terminatedAt: Date | null;
+
+  // A IDENTIDADE (F11, Etapa E). Só nesta leitura — ver `USER_DETAIL_SELECT`.
+  employeeNumber: string | null;
+  jobTitle: string | null;
+  phone: string | null;
+  address: string | null;
+  hiredAt: Date | null;
+
+  /**
+   * O departamento.
+   *
+   * Objeto e não texto: ele virou entidade na F11 (D75), e a tela mostra o nome
+   * mas navega pelo id. A coluna de texto que ocupava este nome caiu na Etapa J.
+   */
+  department: Referencia | null;
+  /** Quem COBRA esta pessoa. Nunca quem responde pelo ativo dela (D72). */
+  manager: Referencia | null;
   posseAberta: PosseAbertaDoUsuario;
 }
 

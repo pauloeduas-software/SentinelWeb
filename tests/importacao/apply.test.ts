@@ -305,7 +305,45 @@ ATV-CAIXA-2;${modelo};Em uso
 });
 
 describe('POST /api/imports/:id/apply — pessoas', () => {
+  // A COLUNA CONTINUA SENDO O NOME do departamento — ninguém digita uuid em
+  // planilha. O que mudou na F11 (Etapa D) é que o importador RESOLVE nome → id
+  // e recusa nome desconhecido, em vez de gravar o texto.
   const COLUNAS = { 'E-mail': 'email', Nome: 'name', Departamento: 'department' };
+
+  /**
+   * Os departamentos que as planilhas deste `describe` mencionam.
+   *
+   * Cadastrados pela ROTA, antes de importar — que é exatamente o fluxo que o
+   * importador agora exige. Semeá-los com `prisma.department.create` pularia o
+   * zod da borda, e é o que `tests/helpers/app.ts` existe para impedir.
+   */
+  beforeAll(async () => {
+    for (const name of ['TI', 'Financeiro']) {
+      const criado = await api.post('/api/departments', { name });
+      // 409 é aceitável: outro `it` do arquivo pode ter criado antes.
+      expect([201, 409]).toContain(criado.status);
+    }
+  });
+
+  it('recusa a linha quando o departamento não está cadastrado', async () => {
+    // D132 aplicado ao departamento: nome desconhecido é LINHA RECUSADA, nunca
+    // departamento criado em silêncio. Um typo (`Comercail`) criaria um cadastro
+    // ao lado do certo, e daí em diante o relatório por departamento mentiria
+    // sem nenhum erro ter acontecido.
+    const simulacao = await simular(
+      `E-mail;Nome;Departamento\r\nsetor.novo@teste.local;Alguém;Comercail\r\n`,
+      { chave: 'email', colunas: COLUNAS },
+      'USERS',
+    );
+
+    expect(simulacao.body.erro).toBe(1);
+    const linha = (await linhasDe(simulacao.body.id))[0];
+    expect(linha.status).toBe('ERRO');
+    // A mensagem NOMEIA o que foi digitado e diz onde cadastrar: é o dry-run
+    // fazendo o trabalho dele.
+    expect(linha.message).toMatch(/Comercail/);
+    expect(linha.message).toMatch(/não está cadastrado/);
+  });
 
   it('cadastra, atualiza e ignora — nessa ordem, no mesmo arquivo', async () => {
     const criar = await simular(
@@ -318,9 +356,12 @@ describe('POST /api/imports/:id/apply — pessoas', () => {
 
     const pessoa = await prisma.user.findFirst({
       where: { email: 'novo.import@teste.local' },
-      select: { name: true, department: true },
+      // A RELAÇÃO, não a coluna de texto: o nome do CSV foi resolvido para o id
+      // do departamento cadastrado (F11, Etapa D).
+      select: { name: true, department: { select: { name: true } } },
     });
-    expect(pessoa).toMatchObject({ name: 'Pessoa Nova', department: 'TI' });
+    expect(pessoa?.name).toBe('Pessoa Nova');
+    expect(pessoa?.department?.name).toBe('TI');
 
     // De novo, com departamento diferente: ATUALIZA.
     const atualizar = await simular(
@@ -333,9 +374,9 @@ describe('POST /api/imports/:id/apply — pessoas', () => {
 
     const depois = await prisma.user.findFirst({
       where: { email: 'novo.import@teste.local' },
-      select: { department: true },
+      select: { department: { select: { name: true } } },
     });
-    expect(depois!.department).toBe('Financeiro');
+    expect(depois!.department?.name).toBe('Financeiro');
 
     // E mais uma vez igual: IGNORADA.
     const igual = await simular(

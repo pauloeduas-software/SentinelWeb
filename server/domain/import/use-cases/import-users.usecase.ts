@@ -45,15 +45,68 @@ export function adaptadorDePessoas(): Adaptador {
 
     const existente = await prisma.user.findFirst({
       where: { email },
-      select: { id: true, name: true, department: true },
+      select: { id: true, name: true, departmentId: true },
     });
+
+
+    /**
+     * NOME → ID do departamento, resolvido SOB DEMANDA.
+     *
+     * ═════════════════════════════════════════════════════════════════════
+     * CHAMADA DEPOIS DAS VALIDAÇÕES BÁSICAS, e a ordem é o ponto.
+     *
+     * Enquanto esta consulta rodava no topo do `planejar`, uma linha sem nome e
+     * com departamento desconhecido reclamava do DEPARTAMENTO — e quem montou a
+     * planilha corrigia o nome do setor para então descobrir que faltava o nome
+     * da pessoa. Duas rodadas de dry-run para dois problemas na mesma linha.
+     *
+     * A precedência certa é a do que IDENTIFICA a linha: sem nome não há pessoa
+     * a cadastrar, e aí o departamento dela é pergunta que não se faz.
+     *
+     * E ela também deixou de consultar o banco para linhas que vão ser
+     * recusadas de qualquer forma — numa planilha de 500 linhas com a coluna
+     * mal preenchida, eram 500 consultas jogadas fora.
+     * ═════════════════════════════════════════════════════════════════════
+     *
+     * NOME DESCONHECIDO É LINHA RECUSADA, nunca departamento criado. É a mesma
+     * recusa do D132 para e-mail ambíguo, pelo mesmo raciocínio: o CSV é texto
+     * digitado por alguém, e `Comercail` criaria um departamento novo ao lado do
+     * `Comercial` certo. Depois disso, metade das pessoas aponta para o errado e
+     * o relatório por departamento mente sem nenhum erro ter acontecido.
+     *
+     * Criar cadastro a partir de importação é a porta por onde o catálogo
+     * apodrece. O dry-run mostra a linha recusada com o nome digitado, e quem
+     * importou cadastra o departamento (ou corrige o typo) antes de aplicar —
+     * que é exatamente para isso que o dry-run existe.
+     */
+    async function resolverDepartamento(): Promise<string | undefined> {
+      if (!linha.department) return undefined;
+
+      const nome = linha.department.trim();
+      const departamento = await prisma.department.findFirst({
+        // `mode: 'insensitive'` porque o CSV vem com a caixa que a pessoa
+        // digitou: casar `comercial` com `Comercial` é acerto, não adivinhação —
+        // o nome é `@unique`, então não há duas grafias para escolher entre.
+        where: { name: { equals: nome, mode: 'insensitive' } },
+        select: { id: true },
+      });
+
+      if (!departamento) {
+        throw new AppError(
+          `Departamento "${nome}" não está cadastrado. Cadastre-o em Configurações → ` +
+          'Departamentos antes de importar, ou corrija a grafia na planilha.',
+          422,
+        );
+      }
+      return departamento.id;
+    }
 
     if (!existente) {
       if (!linha.name) {
         throw new AppError('Pessoa nova precisa do nome, e a coluna Nome está vazia.', 422);
       }
 
-      const dados = { name: linha.name, email, department: linha.department ?? null };
+      const dados = { name: linha.name, email, departmentId: (await resolverDepartamento()) ?? null };
 
       return {
         situacao: 'OK',
@@ -67,8 +120,13 @@ export function adaptadorDePessoas(): Adaptador {
     // pessoas não demite 200).
     const mudancas: Record<string, string | null> = {};
     if (linha.name && linha.name !== existente.name) mudancas.name = linha.name;
-    if (linha.department && linha.department !== existente.department) {
-      mudancas.department = linha.department;
+
+    // Compara IDS, não nomes: comparar texto com texto reimportaria a mesma
+    // pessoa como "alterada" sempre que a caixa da planilha diferisse da do
+    // cadastro.
+    const departmentId = await resolverDepartamento();
+    if (departmentId && departmentId !== existente.departmentId) {
+      mudancas.departmentId = departmentId;
     }
 
     if (Object.keys(mudancas).length === 0) {
@@ -77,7 +135,10 @@ export function adaptadorDePessoas(): Adaptador {
 
     return {
       situacao: 'OK',
-      descricao: `Atualiza ${Object.keys(mudancas).join(', ')} de ${existente.name}.`,
+      // O ROTULO em português, não o nome do campo: a linha do dry-run é lida
+      // por quem montou a planilha, e "Atualiza departmentId de Laura" não
+      // ajuda ninguém a decidir se aplica.
+      descricao: `Atualiza ${Object.keys(mudancas).map(rotuloDoCampo).join(', ')} de ${existente.name}.`,
       aplicar: async (actorId) => {
         await updateUser(existente.id, mudancas, actorId);
         return existente.id;
@@ -86,4 +147,10 @@ export function adaptadorDePessoas(): Adaptador {
   }
 
   return { planejar };
+}
+
+/** O nome do campo como a pessoa que montou a planilha o conhece. */
+function rotuloDoCampo(campo: string): string {
+  const rotulos: Record<string, string> = { name: 'nome', departmentId: 'departamento' };
+  return rotulos[campo] ?? campo;
 }

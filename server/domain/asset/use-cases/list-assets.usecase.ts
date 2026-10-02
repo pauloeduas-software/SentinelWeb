@@ -1,12 +1,17 @@
 import { prisma } from '../../../core/database/prismaClient';
 import type { ListEnvelope, ListQuery } from '../../../core/http/list-query';
 import { resolverResponsaveisEmLote, type PosseResolvida } from '../../assignment/use-cases/resolve-responsibles.usecase';
-import { ASSET_SELECT_COM_CAMPOS, comCamposMascarados } from '../helpers/asset-select.helper';
+import { assetSelect, ASSET_SELECT_COM_CAMPOS, comCamposMascarados } from '../helpers/asset-select.helper';
 import {
   buildAssetFilterWhere, buildAssetWhere, type AssetFilters, type AssetSortable,
 } from '../helpers/asset-filters.helper';
 
-type AssetRow = ReturnType<typeof comCamposMascarados<Awaited<ReturnType<typeof buscarPagina>>[number]>>;
+type LinhaCrua = Awaited<ReturnType<typeof buscarPagina>>[number];
+// `Partial` em `purchaseCost` é o contrato do D77 aparecendo no TIPO: a coluna
+// pode não vir, e quem consome tem que tratar a ausência. Sem isto, o TS
+// afirmaria que ela está sempre lá e a tela a leria como `undefined` em
+// silêncio.
+type AssetRow = ReturnType<typeof comCamposMascarados<LinhaCrua>>;
 
 /** A linha da listagem com a responsabilidade já resolvida (Camada 3). */
 export type AssetRowComPosse = AssetRow & { posse: PosseResolvida };
@@ -14,10 +19,13 @@ export type AssetRowComPosse = AssetRow & { posse: PosseResolvida };
 // `ASSET_SELECT_COM_CAMPOS` e não o compartilhado: a listagem mostra os campos
 // marcados com `showInListView` como coluna (F9, Etapa F), e é a única leitura em
 // lote que os precisa. Toda linha passa por `comCamposMascarados` antes de sair.
-function buscarPagina(where: object, query: ListQuery<AssetSortable>) {
+function buscarPagina(where: object, query: ListQuery<AssetSortable>, podeVerCusto: boolean) {
   return prisma.asset.findMany({
     where,
-    select: ASSET_SELECT_COM_CAMPOS,
+    // O select DEPENDE DA SESSÃO (D77): sem `assets.viewCost`, `purchaseCost`
+    // não é lido do banco. Mascarar depois deixaria o valor passar por log, por
+    // erro e por qualquer serialização no caminho.
+    select: assetSelect(podeVerCusto) as typeof ASSET_SELECT_COM_CAMPOS,
     orderBy: { [query.sort]: query.order },
     skip: query.skip,
     take: query.take,
@@ -34,6 +42,14 @@ function buscarPagina(where: object, query: ListQuery<AssetSortable>) {
 export async function listAssets(
   query: ListQuery<AssetSortable>,
   filtros: AssetFilters,
+  /**
+   * A sessão enxerga custo de compra? (F11, D77)
+   *
+   * Vem por PARÂMETRO, do controller, e não de um `request` importado aqui: o
+   * use-case não conhece HTTP (docs/ARQUITETURA.md), e é a mesma inversão do
+   * `actorId` do D23 — quem sabe quem está pedindo é a borda.
+   */
+  podeVerCusto: boolean,
 ): Promise<ListEnvelope<AssetRowComPosse>> {
   // Espalhamento, e não `AND`: a busca textual só escreve `OR` e os filtros só
   // escrevem colunas e relações — nenhuma chave dos dois lados se repete.
@@ -44,7 +60,7 @@ export async function listAssets(
   // que a página mostra.
   const [total, rows] = await prisma.$transaction([
     prisma.asset.count({ where }),
-    buscarPagina(where, query),
+    buscarPagina(where, query, podeVerCusto),
   ]);
 
   // Quem responde por cada ativo NÃO sai do `ASSET_SELECT`: é derivado da posse

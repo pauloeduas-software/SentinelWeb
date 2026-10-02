@@ -108,6 +108,91 @@ pessoa resolve; cadeia mais longa é sintoma de modelagem errada e vira ciclo.
 
 ---
 
+## A fronteira: posto, gestor e departamento
+
+> F11, Etapa C — **D72** e **D73**. A seção nasceu de três colunas que existem,
+> apontam todas para uma pessoa e parecem responder a mesma pergunta:
+> `Location.managerId` (desde a F1), `User.managerId` e `User.departmentId` (as
+> duas da F11). Elas respondem a **quatro** perguntas diferentes, e misturá-las
+> é o jeito mais fácil de reabrir o D16 por efeito colateral.
+
+| A pergunta | Quem responde | Onde isso mora |
+|---|---|---|
+| **Quem responde pelo ativo?** | a posse aberta → a pessoa, ou os ocupantes do posto | `resolverResponsaveis()` (Camada 3) |
+| **Quem responde pelo posto VAZIO?** | o gestor da localidade, subindo a árvore | `resolverEscalonamento()` |
+| **Quem cobra a pessoa?** | o gestor dela | `User.managerId` |
+| **A quem pertence o custo?** | o departamento | `User.departmentId` → `Department` |
+
+Em uma linha: **o posto responde pelo ativo; a pessoa responde pelo posto; o
+gestor da localidade responde pelo posto vazio — e nunca pelo posto ocupado.**
+
+### O que a fronteira proíbe
+
+Três coisas, e nenhuma delas dá erro de compilação — por isso estão escritas:
+
+1. **`User.managerId` não entra em `resolverResponsaveis()`.** Gestor é rota de
+   escalonamento: ele recebe o aviso de atraso e aprova a baixa. Pôr o gestor na
+   lista de responsáveis faria toda devolução pendente ter dois nomes, e o
+   segundo nunca esteve com o equipamento.
+
+2. **`Location.managerId` não entra em `resolverResponsaveis()` tampouco.** Ele é
+   a resposta da pergunta *vizinha* — quem atende o telefone quando o posto está
+   vazio. Se ele entrasse, **todo** ativo passaria a ter responsável e *"ativo em
+   posto vago"* deixaria de ser expressável (ver abaixo).
+
+3. **`Department` não detém ativo.** Não há `targetType: 'DEPARTMENT'` em
+   `Assignment`, e não vai haver: departamento não tem mesa, não tem chave e não
+   assina termo. Entregar "para o Comercial" é entregar para uma **sala** (que é
+   uma `Location`, e tem ocupantes) ou para uma **pessoa**. Um quarto alvo
+   polimórfico criaria posse sem responsável possível — exatamente o vazio que a
+   Camada 2 existe para preencher.
+
+O departamento serve a outras três coisas, todas legítimas: relatório (*"quanto o
+Comercial tem em equipamento"*), rateio de custo e filtro de tela. Nenhuma delas
+é posse.
+
+### Por que o escalonamento é função IRMÃ, e nunca um `else`
+
+A tentação é escrever, dentro da Camada 3: *"se o posto está vago, devolve o
+gestor da localidade"*. Isso destrói o sinal mais útil do modelo, porque três
+leitores dependem de o vazio **continuar vazio**:
+
+| Leitor | O que ele perde com o `else` |
+|---|---|
+| `PosseResolvida.postoVago` | a marca na ficha do ativo nunca mais acende |
+| `GET /api/workstations?view=vagos` | o relatório de posto sem ocupante fica vazio |
+| o alerta de ativo parado (job da F8) | para de disparar — tudo tem responsável |
+
+São perguntas diferentes e por isso são duas funções:
+
+- *quem está com isto?* — **admite vazio.** O equipamento pode estar no estoque,
+  ou numa mesa que ninguém ocupa. O vazio **é** o fato.
+- *para quem eu ligo?* — existe para **preencher** o vazio da primeira. Não diz
+  quem é responsável; diz quem atende.
+
+### Onde o escalonamento aparece
+
+Três lugares, e em nenhum deles ele vira responsabilidade:
+
+- **na ficha do ativo**, ao lado do `postoVago` que o motiva — é a aba Posse que
+  o mostra, com a diferença entre *"gestor da Mesa 1"* e *"gestor do Andar 2,
+  porque a Mesa 1 não tem"*;
+- **no termo de entrega de alvo `LOCATION`** (D27 + D139): quem assina é um
+  gestor, encontrado subindo a árvore. O 409 só dispara quando **nenhum**
+  ancestral tem gestor;
+- **no desligamento com substituto** (Etapa G): desligar quem gere localidade sem
+  informar substituto é 409, porque deixar a localidade sem gestor é abrir o
+  buraco que as duas linhas acima caem dentro.
+
+### Se um dia "o gestor responde junto" for regra
+
+É **decisão nova e explícita**, tomada aqui e com nome — não efeito colateral de
+as colunas existirem. E a forma dela não é acrescentar o gestor à Camada 3: é
+decidir se ele vira **ocupante** do posto (o que a Camada 2 já expressa, com
+turno e tudo) ou se a responsabilidade passa a ter grau, que é tabela nova.
+
+---
+
 ## O que acontece com `Asset.assignedToId`
 
 **A coluna continua, o significado muda.** Ela passa a ser **cache do caso

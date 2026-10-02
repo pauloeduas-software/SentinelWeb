@@ -44,6 +44,28 @@ export interface PostoDeOrigem {
   locationName: string;
   /** O turno desta pessoa NESTE posto — texto livre ("Manhã", "12x36 A"). */
   shift: string | null;
+  /**
+   * COM QUEM o posto é dividido — os OUTROS ocupantes abertos dele (F11, Etapa I).
+   *
+   * ═════════════════════════════════════════════════════════════════════════
+   * ISTO É O QUE IMPEDE A DEVOLUÇÃO ERRADA, e é a razão de a tela do colaborador
+   * existir no plural que o D141 pediu.
+   *
+   * Sem esta lista, "Mesa 1 · monitor LG" na tela da Laura se lê como *o monitor
+   * é meu*. Ela sai da empresa, devolve o monitor da sala, e a Ana — que divide a
+   * mesa no turno da tarde — fica sem monitor. O equipamento é do POSTO; a
+   * responsabilidade é compartilhada, e quem a divide tem nome.
+   *
+   * Vazia quando a pessoa é a única ocupante: aí o posto é dela sozinha, e a
+   * tela não desenha nada a mais.
+   *
+   * ⚠️ NÃO inclui a própria pessoa — ela já sabe que responde. E não é "quem
+   * responde pelo ativo": é quem responde pelo MESMO POSTO, que é a Camada 2
+   * (docs/MODELO-POSSE.md). O gestor da localidade continua fora disto, porque
+   * ele responde pelo posto VAZIO e não pelo ocupado (D72).
+   * ═════════════════════════════════════════════════════════════════════════
+   */
+  coOcupantes: { id: string; name: string; shift: string | null }[];
 }
 
 export type AtivoPorPosto = AtivoEmPosse & { posto: PostoDeOrigem };
@@ -126,6 +148,23 @@ export async function listUserHoldings(userId: string): Promise<Holdings> {
     select: { assetId: true, targetLocationId: true },
   });
 
+  // COM QUEM CADA POSTO É DIVIDIDO — uma consulta para todos os postos, não uma
+  // por posto. São os OUTROS ocupantes abertos (`NOT: { userId }`), e é o que a
+  // tela do colaborador usa para dizer "este monitor é da mesa que você divide
+  // com a Ana" em vez de "este monitor é seu".
+  const outrosOcupantes = await prisma.locationOccupant.findMany({
+    where: { locationId: { in: idsDeLocal }, endedAt: null, NOT: { userId } },
+    select: { locationId: true, shift: true, user: { select: { id: true, name: true } } },
+    orderBy: [{ user: { name: 'asc' } }],
+  });
+
+  const coOcupantesPorLocal = new Map<string, { id: string; name: string; shift: string | null }[]>();
+  for (const outro of outrosOcupantes) {
+    const lista = coOcupantesPorLocal.get(outro.locationId) ?? [];
+    lista.push({ id: outro.user.id, name: outro.user.name, shift: outro.shift });
+    coOcupantesPorLocal.set(outro.locationId, lista);
+  }
+
   const localDoAtivo = new Map<string, string>();
   for (const posse of posses) {
     if (posse.targetLocationId) localDoAtivo.set(posse.assetId, posse.targetLocationId);
@@ -163,6 +202,7 @@ export async function listUserHoldings(userId: string): Promise<Holdings> {
       locationId: ocupacao.locationId,
       locationName: ocupacao.location.name,
       shift: ocupacao.shift,
+      coOcupantes: coOcupantesPorLocal.get(ocupacao.locationId) ?? [],
     };
     for (const ativo of ativosPorLocal.get(ocupacao.locationId) ?? []) {
       porPosto.push({ ...ativo, posto });

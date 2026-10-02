@@ -11,6 +11,7 @@ import { startZombieCleanerJob, stopZombieCleanerJob } from './domain/endpoint/j
 import { startOverdueReminderJob, stopOverdueReminderJob } from './domain/assignment/jobs/overdue-reminder.job';
 import { startReconcileJob, stopReconcileJob } from './domain/reconciliation/jobs/reconcile.job';
 import { startDailyAlertsJob, stopDailyAlertsJob } from './domain/alert/jobs/daily-alerts.job';
+import { startLdapSyncJob, stopLdapSyncJob } from './domain/access/jobs/ldap-sync.job';
 import { buildApp } from './app';
 
 const logger = createLogger('server');
@@ -65,6 +66,7 @@ async function bootstrap() {
   onShutdown('job de lembrete de atraso', stopOverdueReminderJob);
   onShutdown('job de reconciliação', stopReconcileJob);
   onShutdown('job de alertas diários', stopDailyAlertsJob);
+  onShutdown('job de sincronização com o diretório', stopLdapSyncJob);
   onShutdown('conexões de agente', disconnectAllAgents);
   onShutdown('servidor HTTP', () => server.close());
   onShutdown('banco de dados', closeDatabase);
@@ -85,6 +87,12 @@ async function bootstrap() {
   // motivo dos outros três: job com `setInterval` dentro de teste é escrita
   // concorrente em banco compartilhado.
   startDailyAlertsJob();
+
+  // A SINCRONIZAÇÃO COM O DIRETÓRIO (F11, Etapa I). Ele mesmo decide se vale a
+  // pena existir: sem `LDAP_URL` configurada, não agenda nada e loga uma linha —
+  // a maioria das instalações não usa diretório, e um erro por hora no log delas
+  // seria pior que o silêncio.
+  startLdapSyncJob();
 
   const port = getPort();
   await server.listen({ port, host: '0.0.0.0' });

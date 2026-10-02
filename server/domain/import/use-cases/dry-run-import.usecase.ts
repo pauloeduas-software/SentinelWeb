@@ -5,6 +5,7 @@ import { createLogger } from '../../../core/logger/logger';
 import { ADAPTADORES } from '../helpers/adaptadores.helper';
 import { lerCsv } from '../helpers/csv-parse.helper';
 import { mapearLinha, validarMapeamento, type MapeamentoValidado } from '../helpers/import-fields.helper';
+import { listarCamposParaCsv } from '../../custom-field/use-cases/list-csv-fields.usecase';
 
 const logger = createLogger('import.dry-run');
 
@@ -65,7 +66,15 @@ export async function dryRunImport(entrada: EntradaDoDryRun) {
   // mapear "Etiqueta" num arquivo cujo cabeçalho é "etiqueta " produziria uma
   // coluna sempre vazia, e o import "funcionaria" cadastrando 500 ativos sem
   // etiqueta nenhuma.
-  const mapeamento = validarMapeamento(entrada.target, entrada.mapeamento, cabecalhos);
+  // OS CAMPOS CUSTOMIZADOS ENTRAM NA ALLOWLIST (F9/F10): uma consulta por arquivo,
+  // não por linha. Sem ela, mapear uma coluna para `cf:centro_de_custo` seria
+  // "campo desconhecido".
+  const mapeamento = validarMapeamento(
+    entrada.target,
+    entrada.mapeamento,
+    cabecalhos,
+    await listarCamposParaCsv(),
+  );
 
   if (linhas.length === 0) {
     throw new AppError('O arquivo tem cabeçalho mas nenhuma linha de dado.', 422);

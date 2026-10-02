@@ -1,7 +1,26 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import ReferenceSelect from '../../components/ReferenceSelect';
 import type { User } from '../../../domain/shared/user.types';
 import type { UserInput } from '../../../domain/user/user.queries';
+
+// O FORMULÁRIO DE CADASTRO — nome, e-mail, departamento e gestor.
+//
+// ═══════════════════════════════════════════════════════════════════════════
+// POR QUE A IDENTIDADE (matrícula, cargo, telefone, endereço, admissão) NÃO
+// ESTÁ AQUI, apesar de a F11 tê-la criado.
+//
+// Este modal abre da LISTAGEM, e a listagem traz `User` — o
+// `USER_LIST_SELECT` do servidor, que não tem os campos de identidade (eles
+// ficam no `USER_DETAIL_SELECT`, D135). Um campo de cargo aqui abriria vazio ao
+// editar e **apagaria o valor salvo** ao gravar: o clássico formulário que
+// limpa o que não mostrou.
+//
+// Buscar o detalhe aqui resolveria o vazio e criaria outro problema — duas
+// superfícies editando os mesmos nove campos, divergindo na primeira validação
+// nova. Então a divisão é por onde o dado JÁ está: o que a listagem traz se
+// edita aqui; o resto se edita na ficha, onde o detalhe já foi carregado.
+// ═══════════════════════════════════════════════════════════════════════════
 
 interface UserFormModalProps {
   user?: User | null;
@@ -13,7 +32,10 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
-    department: user?.department || '',
+    // O ID, não o nome: o departamento virou entidade na F11 (D75). `''` é o
+    // "nenhum" do `<select>`, convertido para `null` na submissão.
+    departmentId: user?.department?.id || '',
+    managerId: user?.managerId || '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -25,7 +47,15 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
     setError('');
 
     try {
-      await onSubmit(formData);
+      // `'' → null`: o `<select>` sem escolha manda string vazia, e o zod do
+      // servidor espera uuid ou nulo. É a mesma conversão que o
+      // `ReferenceSelect` documenta para `parentId`/`managerId`.
+      await onSubmit({
+        name: formData.name,
+        email: formData.email,
+        departmentId: formData.departmentId || null,
+        managerId: formData.managerId || null,
+      });
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -60,7 +90,27 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
 
           <div className="space-y-1">
             <label className="text-text-secondary uppercase tracking-widest text-[10px]">Departamento</label>
-            <input type="text" value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})} className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors" placeholder="Ex: TI" />
+            {/* `ReferenceSelect` e não um campo de texto: departamento é
+                entidade desde a F11 (D75), e texto livre é o que produziu
+                `Comercial`, `comercial ` e `COMERCIAL` como três coisas na base
+                que o backfill da migração teve de revisar à mão. */}
+            <ReferenceSelect
+              rota="departments"
+              valor={formData.departmentId}
+              onChange={(valor) => setFormData({ ...formData, departmentId: valor })}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-text-secondary uppercase tracking-widest text-[10px]">Gestor</label>
+            {/* QUEM COBRA a pessoa — nunca quem responde pelo ativo dela (D72).
+                `excluirId` para ninguém ser gestor de si mesmo. */}
+            <ReferenceSelect
+              rota="users"
+              valor={formData.managerId}
+              excluirId={user?.id}
+              onChange={(valor) => setFormData({ ...formData, managerId: valor })}
+            />
           </div>
 
           <div className="pt-4 flex justify-end gap-3 border-t border-border-sutil">

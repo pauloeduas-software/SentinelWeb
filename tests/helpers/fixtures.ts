@@ -143,14 +143,31 @@ export async function criarModelo(
   return criado.id;
 }
 
+/**
+ * Uma localização, pela API.
+ *
+ * `parentId` e `managerId` são opcionais e só viajam quando vêm preenchidos: o
+ * `strictObject` da borda aceita os dois, mas mandar `undefined` explícito muda
+ * o corpo do PUT de "não mencionei" para "apaguei" em alguns schemas — e aqui
+ * quem chama sem eles quer uma localização solta, não uma com pai nulo.
+ *
+ * ⚠️ `parentId` passa pelo `assertSemCicloDeLocalizacao`: não há como MONTAR um
+ * ciclo por este caminho, e é de propósito. Quem precisa de uma árvore cíclica
+ * para exercitar o teto de profundidade grava pelo Prisma direto, porque é só
+ * assim que ela existe (`tests/listagens/escalonamento.test.ts`).
+ */
 export async function criarLocal(
   api: ApiDeTeste,
-  opcoes: { name: string; isWorkstation?: boolean } ,
+  opcoes: { name: string; isWorkstation?: boolean; parentId?: string; managerId?: string },
 ): Promise<string> {
-  const criado = exigir201<Criado>('localização', await api.post('/api/locations', {
+  const corpo: Record<string, unknown> = {
     name: opcoes.name,
     isWorkstation: opcoes.isWorkstation ?? false,
-  }));
+  };
+  if (opcoes.parentId !== undefined) corpo.parentId = opcoes.parentId;
+  if (opcoes.managerId !== undefined) corpo.managerId = opcoes.managerId;
+
+  const criado = exigir201<Criado>('localização', await api.post('/api/locations', corpo));
   return criado.id;
 }
 

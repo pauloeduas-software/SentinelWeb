@@ -33,20 +33,31 @@ import { validarCampos } from '../../server/domain/label/helpers/label-layout.he
 /** O que todo objeto literal herda — e que nenhum deles declara. */
 const HERDADOS = ['constructor', '__proto__', 'toString', 'valueOf', 'hasOwnProperty', 'isPrototypeOf'];
 
+/**
+ * Uma sessão que alcança tudo (F11).
+ *
+ * `colunasDoExport` passou a receber o teste de permissão porque `purchaseCost`
+ * exige `assets.viewCost` (D77, a obrigação cruzada). Estes casos são sobre
+ * token HERDADO, não sobre permissão: quem recusa `constructor` tem que recusar
+ * para qualquer sessão, e passar "pode tudo" mantém o teste falando de uma coisa
+ * só. A permissão tem teste próprio em `tests/invariantes/dado-sensivel.test.ts`.
+ */
+const PODE_TUDO = () => true;
+
 describe('export de ativos — token herdado é 422, não arquivo truncado', () => {
   for (const herdado of HERDADOS) {
     it(`recusa "${herdado}" com a lista dos válidos`, () => {
-      expect(() => colunasDoExport([herdado])).toThrow(/Coluna desconhecida/);
+      expect(() => colunasDoExport([herdado], PODE_TUDO)).toThrow(/Coluna desconhecida/);
     });
   }
 
   it('a lista boa continua passando, na ordem pedida e sem repetição', () => {
-    const { tokens } = colunasDoExport(['serial', 'assetTag', 'serial']);
+    const { tokens } = colunasDoExport(['serial', 'assetTag', 'serial'], PODE_TUDO);
     expect(tokens).toEqual(['serial', 'assetTag']);
   });
 
   it('cada coluna devolvida tem título e leitor — é o que o stream chama', () => {
-    for (const coluna of colunasDoExport(undefined).colunas) {
+    for (const coluna of colunasDoExport(undefined, PODE_TUDO).colunas) {
       expect(typeof coluna.titulo).toBe('string');
       expect(typeof coluna.valor).toBe('function');
     }

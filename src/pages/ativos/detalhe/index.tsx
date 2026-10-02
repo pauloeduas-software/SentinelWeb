@@ -135,6 +135,7 @@ export default function AssetDetailPage() {
           <PosseTab
             posse={asset.posse}
             assignments={assignments}
+            escalonamento={asset.escalonamento ?? null}
             carregando={possePendente}
             onAbrirOperacao={abrirPosse}
           />

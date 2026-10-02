@@ -69,11 +69,44 @@ export class ErroDaApi extends Error {
   /** `campo` → motivo. Vazio quando o erro não é de validação. */
   readonly fields: Record<string, string>;
 
-  constructor(message: string, fields: Record<string, string>, options?: ErrorOptions) {
+  /**
+   * O corpo do erro, cru — para o campo que SÓ aquela rota manda.
+   *
+   * O formato do servidor é `{ error: "…", ...details }` (`core/errors/app-error.ts`
+   * espalha os `details` no corpo), e até aqui chegavam apenas `error` e `fields`.
+   * O login do segundo fator (F11, Etapa H) precisa de um terceiro: `etapa: 'TOTP'`
+   * é o que diz à tela *"a senha está certa, peça o código"*. Sem ele, a única
+   * alternativa seria comparar a MENSAGEM por texto — que quebra na primeira vez
+   * que alguém melhorar a frase.
+   *
+   * Não é um `Record<string, unknown>` passeando pelo painel: quem lê isto lê UMA
+   * chave conhecida, e é por isso que o acesso passa por `detalheDoErro()`.
+   */
+  readonly corpo: Record<string, unknown>;
+
+  constructor(
+    message: string,
+    fields: Record<string, string>,
+    corpo: Record<string, unknown>,
+    options?: ErrorOptions,
+  ) {
     super(message, options);
     this.name = 'ErroDaApi';
     this.fields = fields;
+    this.corpo = corpo;
   }
+}
+
+/**
+ * Um campo do corpo do erro, como texto — ou `null`.
+ *
+ * Existe para quem não é `ErroDaApi` passar batido: o `catch` de uma tela recebe
+ * `unknown`, e `(erro as ErroDaApi).corpo.etapa` estouraria num erro de rede.
+ */
+export function detalheDoErro(erro: unknown, campo: string): string | null {
+  if (!(erro instanceof ErroDaApi)) return null;
+  const valor = erro.corpo[campo];
+  return typeof valor === 'string' ? valor : null;
 }
 
 /** O `fields` do corpo, se ele vier no formato esperado. */
@@ -119,8 +152,13 @@ apiClient.interceptors.response.use(
     // `ErroDaApi` e não `Error`: continua sendo um `Error` para todo código que
     // só lê `.message` (que é a maioria), e carrega o `fields` para quem precisa
     // pintar o campo certo.
+    const data: unknown = error?.response?.data;
+    const corpo = typeof data === 'object' && data !== null && !Array.isArray(data)
+      ? (data as Record<string, unknown>)
+      : {};
+
     return Promise.reject(
-      new ErroDaApi(message, camposDoErro(error?.response?.data), { cause: error }),
+      new ErroDaApi(message, camposDoErro(data), corpo, { cause: error }),
     );
   },
 );

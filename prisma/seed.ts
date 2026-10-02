@@ -14,6 +14,9 @@ import { pathToFileURL } from 'node:url';
 import { prisma, closeDatabase } from '../server/core/database/prismaClient';
 import { APP_SETTING_ID } from '../server/domain/settings/helpers/app-setting.helper';
 import { hashSenha } from '../server/domain/auth/helpers/password.helper';
+import {
+  GRUPO_ADMINISTRADOR, permissoesDeAdministrador,
+} from '../server/domain/access/helpers/permission-catalog';
 import { isProduction } from '../server/core/config/env';
 import { createLogger } from '../server/core/logger/logger';
 
@@ -98,6 +101,9 @@ const CATEGORIES = [
 //
 // Depois da F3 a API é fechada por padrão: sem esta linha, ninguém loga, e sem
 // login ninguém cria usuário — um ovo-e-galinha que só o seed resolve.
+// O NOME DO GRUPO DE SISTEMA vem do CATÁLOGO (`GRUPO_ADMINISTRADOR`): o seed o
+// reconcilia, a rota de edição o recusa e o comando de escape o procura — os três
+// têm que falar do mesmo grupo, e um literal por arquivo não garante isso.
 const ADMIN_USERNAME = (process.env.ADMIN_USERNAME ?? 'admin').trim().toLowerCase();
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL ?? 'admin@sentinel.local').trim().toLowerCase();
 const ADMIN_NAME = process.env.ADMIN_NAME?.trim() || 'Administrador';
@@ -209,6 +215,66 @@ const seeders: Seeder[] = [
         data: { name: ADMIN_NAME, email: ADMIN_EMAIL, username: ADMIN_USERNAME, passwordHash },
       });
       logger.info(`[Seed] Administrador "${ADMIN_USERNAME}" criado.`);
+    },
+  },
+  {
+    // O GRUPO `Administrador` (F11) — depois do usuário, porque precisa dele
+    // para vincular.
+    //
+    // ESTE SEEDER REESCREVE AS PERMISSÕES A CADA EXECUÇÃO, e é o único que
+    // reescreve algo. Pode, porque o grupo é `isSystem`: a rota de edição
+    // recusa mexer nas permissões dele (409), então não há decisão de operador
+    // a desfazer — nada aqui reabre porta que alguém fechou.
+    //
+    // E PRECISA reescrever: "Administrador" quer dizer *alcança tudo*, e chave
+    // nova no catálogo que não chegasse aqui faria o administrador perder uma
+    // tela nova em silêncio — o sintoma exato que o D76 persegue. A lista vem
+    // de `permissoesDeAdministrador()`, derivada do catálogo, então chave nova
+    // entra sozinha.
+    name: 'Grupo Administrador',
+    run: async () => {
+      const permissions = permissoesDeAdministrador();
+
+      const grupo = await prisma.group.upsert({
+        where: { name: GRUPO_ADMINISTRADOR },
+        update: { permissions, isSystem: true },
+        create: {
+          name: GRUPO_ADMINISTRADOR,
+          description: 'Acesso total. As permissões vêm do código e são repostas pelo seed.',
+          permissions,
+          isSystem: true,
+        },
+        select: { id: true },
+      });
+
+      // O ADMINISTRADOR DO `.env` ENTRA NO GRUPO. `connect` e não `set`: `set`
+      // substituiria a lista inteira e tiraria essa pessoa de qualquer outro
+      // grupo em que a tenham posto — o seed não tem o que opinar sobre isso.
+      //
+      // `findFirst` porque `username` não é `@unique` no Prisma (a unicidade é
+      // índice parcial na migration).
+      const admin = await prisma.user.findFirst({
+        where: { OR: [{ username: ADMIN_USERNAME }, { email: ADMIN_EMAIL }] },
+        select: { id: true, name: true },
+      });
+
+      if (!admin) {
+        // Acontece quando o seeder de cima parou por falta de `ADMIN_PASSWORD`.
+        // Avisa e segue: o grupo já existe, e o próximo `db:seed` com a senha
+        // definida faz o vínculo.
+        logger.warn('[Seed] Grupo Administrador pronto, mas nenhum usuário administrador para vincular.');
+        return;
+      }
+
+      await prisma.group.update({
+        where: { id: grupo.id },
+        data: { users: { connect: { id: admin.id } } },
+      });
+
+      logger.info(
+        `[Seed] Grupo "${GRUPO_ADMINISTRADOR}" com ${Object.keys(permissions).length} permissões; ` +
+        `"${admin.name}" é membro.`,
+      );
     },
   },
 ];
