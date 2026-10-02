@@ -6,7 +6,9 @@ import { relatorioDeAuditorias } from '../use-cases/audit-report.usecase';
 import { resumirManutencoes } from '../../maintenance/use-cases/summarize-maintenances.usecase';
 import { responsibilityReport } from '../use-cases/responsibility-report.usecase';
 import { customReport } from '../use-cases/custom-report.usecase';
-import { REPORT_TOKENS, REPORT_TOKENS_AGRUPAVEIS } from '../helpers/report-columns';
+import { REPORT_TOKENS_AGRUPAVEIS, tokensPermitidos } from '../helpers/report-columns';
+import { temPermissao } from '../../access/helpers/require-permission';
+import type { Permissao } from '../../access/helpers/permission-catalog';
 
 /**
  * O corpo do builder (F10, Etapa F).
@@ -66,8 +68,8 @@ export const reportController = {
    * pessoa, e um recorte na query string faria a tela discordar do número que o
    * cabeçalho mostra.
    */
-  async responsabilidade() {
-    return responsibilityReport();
+  async responsabilidade(request: FastifyRequest) {
+    return responsibilityReport(temPermissao(request, 'assets.viewCost'));
   },
 
   /**
@@ -80,11 +82,19 @@ export const reportController = {
    */
   async custom(request: FastifyRequest) {
     const pedido = customReportSchema.parse(request.body ?? {});
-    return customReport(pedido);
+    return customReport(pedido, (permissao) => temPermissao(request, permissao as Permissao));
   },
 
-  /** O que o builder aceita — a tela monta o seletor com isto, sem adivinhar. */
-  async camposDoBuilder() {
-    return { colunas: REPORT_TOKENS, agrupaveis: REPORT_TOKENS_AGRUPAVEIS };
+  /**
+   * O que o builder aceita — a tela monta o seletor com isto, sem adivinhar.
+   *
+   * FILTRADO PELA PERMISSÃO (F11, D77): oferecer *Custo de compra* a quem não
+   * tem `assets.viewCost` é oferecer um 403. A pessoa marcaria a coluna, geraria
+   * o relatório, receberia o erro e não saberia qual das quinze colunas o
+   * causou.
+   */
+  async camposDoBuilder(request: FastifyRequest) {
+    const pode = (permissao: string) => temPermissao(request, permissao as Permissao);
+    return { colunas: tokensPermitidos(pode), agrupaveis: REPORT_TOKENS_AGRUPAVEIS };
   },
 };

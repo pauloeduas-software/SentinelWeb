@@ -23,7 +23,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 
 ---
 
-## As dezesseis
+## As dezoito
 
 | # | Invariante | Onde | O que o usuário vê |
 |---|---|---|---|
@@ -43,6 +43,8 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 14 | A observação de uso é uma linha por (máquina, conta, dia) | **banco** — índice único `endpoint_user_daily` | nada: o `upsert` incrementa em vez de inserir |
 | 15 | O `slug` de um campo customizado não muda depois de criado | **aplicação** — `custom-field.spec.ts` → `beforeWrite` | 409 `O identificador de um campo não muda depois de criado: ele é a chave do valor em cada ativo. Este campo é "ip_fixo". Para trocar o identificador, crie outro campo — o nome visível, esse sim, pode ser editado à vontade.` |
 | 16 | Um campo com valor gravado não vira cifrado, nem deixa de ser | **aplicação** — `custom-field.spec.ts` → `beforeWrite` | 409 `Não é possível ligar a cifra de "chave_wifi": 12 ativos já têm valor gravado neste campo. Os valores existentes estão em claro e não seriam cifrados retroativamente. Crie um campo novo com a configuração desejada.` |
+| 17 | Sempre existe alguém, com login, que alcança `access.manage` | **aplicação** — `assertSobraAdministrador()`, DEPOIS da escrita e dentro da transação | 409 `Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. Dê "Gerenciar grupos, permissões e tokens de API" a outra pessoa com login antes de seguir.` |
+| 18 | Uma credencial de API sempre tem dono | **banco** — FK `api_tokens_userId_fkey` com `Cascade` | nada: a FK impede o órfão, e apagar a pessoa leva os tokens dela |
 
 ---
 
@@ -545,6 +547,64 @@ alcança o índice GIN — ver
 
 ---
 
+### 17 — Nunca sem administrador
+
+```ts
+// access/helpers/ultimo-administrador.ts, no FIM da transação
+await assertSobraAdministrador(tx);
+```
+
+**A checagem roda DEPOIS da escrita, dentro da transação** — e é isso que a torna
+completa. Prever se uma operação vai deixar o sistema sem administrador exigiria
+simular a união de permissões para cada caminho (tirar a chave do grupo, apagar o
+grupo, tirar a pessoa do grupo, desligar a pessoa, apagar a pessoa), e o quinto
+caminho seria o esquecido. Aplicando e **contando depois**, há uma pergunta só:
+*ainda existe alguém?* Se não, o `throw` desfaz tudo e nada aconteceu.
+
+**Quem conta como administrador precisa poder ENTRAR**: `passwordHash` não nulo
+(a base nasceu sem login — a maior parte dos cadastros existe só para receber
+equipamento), `isActive`, e fora da lixeira. Um "administrador" que não faz login
+não destrava nada.
+
+**E a contagem reusa `unirPermissoes()`**, a mesma função do `preHandler`. Uma
+consulta JsonB própria (`permissions: { path: ['access.manage'], equals: true }`)
+seria uma segunda definição de "tem a permissão" — e no dia em que a união mudasse,
+a checagem continuaria contando pela regra antiga.
+
+> **O que esta invariante NÃO cobre, e por isso existe a linha de escape:** o
+> caminho da tela. Grupo esvaziado por `psql`, restore parcial, ou a única conta com
+> a chave que perdeu a senha E o segundo fator deixam o sistema de pé e **trancado**.
+> A saída é `npm run acesso:administrador -- <login>`, que exige acesso ao servidor —
+> e **não** uma rota de emergência, que seria uma rota concedendo `access.manage` sem
+> ter `access.manage`.
+
+---
+
+### 18 — `api_tokens_userId_fkey`
+
+```sql
+ALTER TABLE "api_tokens"
+  ADD CONSTRAINT "api_tokens_userId_fkey"
+  FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
+```
+
+A coluna existia desde a F0 **sem** chave estrangeira: nada impedia um token
+apontar para um uuid que nunca foi usuário. Não doía enquanto ninguém a preenchia;
+o token pessoal (F11) é o primeiro a preencher.
+
+**`Cascade`, e não `SetNull` como em `AuthEvent.userId`** — e a diferença entre os
+dois diz o que cada tabela é. Um evento de autenticação é **registro**, e tem de
+sobreviver ao cadastro que ele descreve: é justamente o que a auditoria vem
+procurar. Um token é **poder**, e poder sem dono é uma credencial que autentica
+como ninguém — `ownerType: 'USER'` com `userId` nulo passaria pela busca por
+prefixo e pela conferência do segredo, e só quebraria depois, ao carregar a sessão.
+
+⚠️ Isto vale para o `DELETE` de verdade. **Desligar** alguém é `isActive: false`
+(soft), e o token continua existindo — por isso o desligamento o **revoga**
+explicitamente, em vez de confiar na FK.
+
+---
+
 ## O que **não** é invariante, e por isso não está aqui
 
 - **`Asset.assignedToId` bate com a `Assignment` aberta.** É *cache*, não
@@ -575,6 +635,22 @@ alcança o índice GIN — ver
 - **Só `DEPLOYABLE` libera checkout.** É regra de fluxo do checkout (F4), não
   fato sobre linhas já gravadas.
 - **Validação de formato** (uuid, tamanho, enum) — é do `zod`, na borda.
+- **Toda rota declara a permissão que exige.** É garantia de **BOOT**, não
+  invariante de dado: `core/http/permission-guard.ts` confere o mapa contra a
+  tabela de rotas do Fastify e **derruba o processo** com a lista das que faltam
+  (D137). Não cabe nesta lista porque não há linha gravada que possa violá-la — o
+  que ela protege é uma rota existir alcançável sem ninguém ter decidido isso. E o
+  lugar certo para ela é o boot, não uma checagem por requisição: `npm test` fica
+  vermelho antes de qualquer deploy.
+- **A permissão efetiva de uma sessão bate com os grupos da pessoa.** Ela é
+  DERIVADA a cada requisição, na mesma consulta que relê o usuário (D136) — não há
+  cópia com que divergir. É o D16 aplicado ao acesso: materializar a união numa
+  coluna exigiria recalculá-la a cada troca de grupo, e no dia em que o recálculo
+  falhasse alguém continuaria alcançando o que já lhe foi tirado.
+- **Quem sumiu do diretório está desligado.** Ele **não** está, e é o D78: a
+  sincronização MARCA (`directoryMissingAt`) e uma pessoa decide. Um filtro LDAP
+  mal escrito devolve "zero pessoas", e um job que desligasse por isso devolveria o
+  inventário da empresa ao estoque numa madrugada.
 - **Toda chave de `assets.customFields` corresponde a um campo cadastrado.** Ela
   **não** corresponde, e é de propósito (invariante 15, do outro lado): trocar o
   modelo de um ativo deixa as chaves do conjunto anterior no JSON, intactas. O

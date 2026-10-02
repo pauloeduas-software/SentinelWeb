@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { createAsset } from '../../asset/use-cases/create-asset.usecase';
@@ -6,6 +8,10 @@ import { checkoutAsset } from '../../assignment/use-cases/checkout-asset.usecase
 import { escolherStatusPorTipo } from '../../assignment/use-cases/checkout-asset.usecase';
 import type { Adaptador, PlanoDaLinha } from '../helpers/plano.types';
 import { dataDoCsv, dinheiroDoCsv, emailDoCsv, inteiroDoCsv } from '../helpers/valores.helper';
+import { slugDoTokenDeImport } from '../helpers/import-fields.helper';
+import { lerCampos } from '../../custom-field/helpers/custom-field-value.helper';
+import { resolveFieldset } from '../../custom-field/use-cases/resolve-fieldset.usecase';
+import { validarCamposCustomizados } from '../../custom-field/use-cases/validate-custom-fields.usecase';
 
 // A IMPORTAÇÃO DE ATIVOS (F10, Etapa D) — e a parte que não existe em ITAM de
 // prateleira é a última coluna.
@@ -55,6 +61,12 @@ const SELECT_EXISTENTE = {
   modelId: true,
   locationId: true,
   supplierId: true,
+  // OS CAMPOS CUSTOMIZADOS (F9/F10): eles entram aqui por DUAS razões, e as duas
+  // são do dry-run. A primeira é a comparação — sem o valor atual, reimportar o
+  // mesmo arquivo mostraria "vai atualizar" em toda linha. A segunda é a
+  // validação: o que já está gravado decide se um campo obrigatório do conjunto
+  // está satisfeito (D61).
+  customFields: true,
   assignments: {
     where: { checkinAt: null },
     select: { id: true, targetType: true, targetUserId: true },
@@ -226,6 +238,26 @@ export function adaptadorDeAtivos(): Adaptador {
   }
 
   /** O que a linha quer gravar nas colunas do ativo. Lança no primeiro valor inválido. */
+  /**
+   * O conjunto resolvido do modelo, em cache DA IMPORTAÇÃO.
+   *
+   * Uma planilha de 500 linhas tem dois ou três modelos; sem o cache, seriam 500
+   * resoluções de conjunto (cada uma com duas consultas) para responder a mesma
+   * coisa. É o mesmo desenho dos caches de nome → id que este adaptador já tem, e
+   * pelo mesmo motivo — e, como eles, ele morre com a importação: um cache de
+   * processo serviria conjunto velho depois de alguém editar o conjunto na tela.
+   */
+  const conjuntoPorModelo = new Map<string, Awaited<ReturnType<typeof resolveFieldset>>>();
+
+  async function conjuntoDoModelo(modelId: string) {
+    const cacheado = conjuntoPorModelo.get(modelId);
+    if (cacheado) return cacheado;
+
+    const resolvido = await resolveFieldset(prisma, modelId);
+    conjuntoPorModelo.set(modelId, resolvido);
+    return resolvido;
+  }
+
   async function camposDaLinha(linha: Record<string, string>) {
     const dados: Record<string, unknown> = {};
 
@@ -241,7 +273,65 @@ export function adaptadorDeAtivos(): Adaptador {
     if (linha.supplier) dados.supplierId = (await buscarFornecedor(linha.supplier)).id;
     if (linha.model) dados.modelId = (await buscarModelo(linha.model, linha.manufacturer)).id;
 
+    // ── OS CAMPOS CUSTOMIZADOS (F9, o item que esperava a F10) ──────────────
+    //
+    // A linha mapeada chega com as chaves do TOKEN (`cf:<slug>`), e o que o
+    // `createAsset`/`updateAsset` espera é `{ slug: valor }`. A tradução é aqui, e
+    // só isso: quem VALIDA o formato (IP, MAC, regex), aplica o padrão do vínculo e
+    // confere obrigatoriedade é o `validarCamposCustomizados()` que aqueles
+    // use-cases já chamam — o MESMO do formulário.
+    //
+    // POR QUE SÓ ENTRA QUANDO HÁ ALGUMA COLUNA MAPEADA, e não um `{}` sempre:
+    // na EDIÇÃO, `customFields` ausente significa "não mexe" (F9), e `{}` significa
+    // "esvazie tudo". Um objeto vazio em todo import apagaria os campos
+    // customizados de todo ativo atualizado por uma planilha que nem fala deles.
+    const customFields: Record<string, string> = {};
+    for (const [chave, valor] of Object.entries(linha)) {
+      const slug = slugDoTokenDeImport(chave);
+      if (slug) customFields[slug] = valor;
+    }
+    if (Object.keys(customFields).length > 0) dados.customFields = customFields;
+
     return dados;
+  }
+
+  /**
+   * Confere os campos customizados NO DRY-RUN, com a MESMA função do formulário.
+   *
+   * ═══════════════════════════════════════════════════════════════════════════
+   * POR QUE ISTO EXISTE, SE O `createAsset`/`updateAsset` JÁ VALIDA.
+   *
+   * Porque o dry-run existe para dizer o que VAI acontecer, e sem esta chamada um
+   * IP mal digitado na linha 300 passava pela simulação como "OK" e só estourava
+   * no `apply` — que é o momento em que já não há o que simular. A promessa do
+   * passo de simulação é justamente essa: nenhuma surpresa depois do botão.
+   *
+   * E NÃO É UMA SEGUNDA REGRA: é a mesma `validarCamposCustomizados()` que o
+   * formulário chama, com o mesmo conjunto resolvido pelo mesmo `resolveFieldset`.
+   * Escrever aqui uma validação de formato própria é o que criaria duas regras para
+   * IP, MAC e regex — e a segunda divergiria da primeira no primeiro ajuste.
+   *
+   * O `assetId` é DESCARTÁVEL (`randomUUID`) e não é escrito em lugar nenhum: ele
+   * só entra no AAD de valor cifrado (D81), e campo cifrado não é importável. Usar
+   * o id real na criação é impossível — o ativo ainda não existe.
+   * ═══════════════════════════════════════════════════════════════════════════
+   */
+  async function conferirCamposCustomizados(
+    dados: Record<string, unknown>,
+    contexto: { modelId: string; gravados: Record<string, string>; criando: boolean },
+  ): Promise<void> {
+    const recebido = dados.customFields as Record<string, string> | undefined;
+    if (!recebido) return;
+
+    const conjunto = await conjuntoDoModelo(contexto.modelId);
+
+    validarCamposCustomizados({
+      conjunto,
+      recebido,
+      gravados: contexto.gravados,
+      assetId: randomUUID(),
+      criando: contexto.criando,
+    });
   }
 
   /** `checkoutAt` só vale com responsável — a data de uma entrega que não existe não significa nada. */
@@ -318,6 +408,14 @@ export function adaptadorDeAtivos(): Adaptador {
 
     const dados = await camposDaLinha(linha);
 
+    // A CONFERÊNCIA DOS CAMPOS CUSTOMIZADOS ACONTECE AQUI, no dry-run: um IP mal
+    // digitado na linha 300 não pode passar como "OK" e estourar no `apply`.
+    await conferirCamposCustomizados(dados, {
+      modelId: dados.modelId as string,
+      gravados: {},
+      criando: true,
+    });
+
     // COM RESPONSÁVEL: nasce DISPONÍVEL e a ENTREGA aplica o status do arquivo.
     // Sem: o status do arquivo vai direto, e "Em uso" sem posse é legítimo — é o
     // posto vago da invariante 4.
@@ -366,6 +464,16 @@ export function adaptadorDeAtivos(): Adaptador {
     entregaEm: Date | undefined,
   ): Promise<PlanoDaLinha> {
     const dados = await camposDaLinha(linha);
+
+    // O MESMO, na atualização — e aqui `gravados` importa: um campo obrigatório do
+    // conjunto que JÁ está preenchido no ativo não pode ser cobrado da planilha que
+    // nem fala dele (D61).
+    await conferirCamposCustomizados(dados, {
+      modelId: (dados.modelId as string | undefined) ?? existente.modelId as string,
+      gravados: lerCampos(existente.customFields as Prisma.JsonValue),
+      criando: false,
+    });
+
     const posseAberta = existente.assignments[0] ?? null;
 
     // ── A POSSE ─────────────────────────────────────────────────────────────
@@ -425,6 +533,18 @@ export function adaptadorDeAtivos(): Adaptador {
     // ── O QUE DE FATO MUDA ──────────────────────────────────────────────────
     const mudancas = Object.entries(dados).filter(([campo, valor]) => {
       const atual = existente[campo];
+
+      // CAMPO CUSTOMIZADO: a comparação é POR SLUG, dentro do JsonB.
+      //
+      // `valor !== atual` entre dois objetos é sempre `true` (identidade), então
+      // sem este caso reimportar o MESMO arquivo mostraria "vai atualizar" em toda
+      // linha — e o dry-run perderia exatamente o que ele existe para dizer. A
+      // comparação é só das chaves que o ARQUIVO traz: as outras não estão em jogo.
+      if (campo === 'customFields') {
+        const gravados = lerCampos(atual as Prisma.JsonValue);
+        return Object.entries(valor as Record<string, string>)
+          .some(([slug, novoValor]) => (gravados[slug] ?? '') !== novoValor);
+      }
 
       // Data: comparar o DIA, não o instante — o banco devolve `Date` e o
       // arquivo traz meia-noite UTC.

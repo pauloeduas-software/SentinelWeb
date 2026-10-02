@@ -6,6 +6,18 @@
 >
 > Esforço: **P** = até meio dia · **M** = 1 a 3 dias · **G** = mais de 3 dias · Decisões **D72–D78**, na
 > numeração contínua do projeto (D1–D13 no TODO, D14–D17 em `DECISOES-POSSE.md`).
+>
+> **Auditado em 01/10/2026**, contra a árvore com a F10 fechada:
+> [`AUDITORIA-F11.md`](./AUDITORIA-F11.md) — oito afirmações deste arquivo caducaram (as
+> dependências, a suíte, a tela de detalhe, o 409 do `DELETE`, o passo 4 do desligamento e a
+> ordem de commits) e onze defeitos foram encontrados, três deles mudando o que seria entregue:
+> `department` viaja no `USER_PUBLIC_SELECT`, a permissão não tem onde morar na requisição, e
+> `requirePermission` por rota reabre o furo que a F3 fechou. Este arquivo fica como foi escrito,
+> porque é o registro do que se decidiu; o que vale para executar é o plano de lá.
+>
+> **A FASE FECHOU.** As dez etapas (A–J) estão aplicadas — ver o
+> [Fechamento da F11](#fechamento-da-f11), no fim deste arquivo, com o que a execução
+> decidiu por conta própria e o que ficou de fora com o motivo.
 
 ---
 
@@ -377,3 +389,105 @@ H: chore(db): DROP COLUMN users.department (migração 2 de 2)
 
 O commit **H** só entra depois de a lista de departamentos ser revisada à mão. O lint tem que
 passar em cada um. Não há suíte: a verificação é a seção acima.
+
+---
+
+# Fechamento da F11
+
+> Escrito depois de executar, e contra a árvore: as dez etapas do plano de
+> implementação da [`AUDITORIA-F11.md`](./AUDITORIA-F11.md) (A–J) estão aplicadas.
+> `npm run lint` limpo, `npm test` com **874 testes em 76 arquivos**, e a cadeia de
+> migrações aplicada **do zero** num banco descartável com o seed por cima — que
+> nesta fase não é zelo: é a exigência da única migração não aditiva do projeto.
+
+## O que cada etapa entregou
+
+| Etapa | Entregue |
+|---|---|
+| **A** | `access/` nasce: catálogo de **35 chaves** em código, o mapa `método + rota → chave`, o `preHandler` e a conferência de cobertura no boot (D137). `request.permissions` como `Set`, FORA de `request.user` (D136) |
+| **B** | `Group` com permissões em JsonB, união permissiva sem `deny` (D76), aba Grupos, seed do grupo de sistema e o 409 de "nunca sem administrador" |
+| **C** | Dado sensível em **três mecanismos**: custo sai do `select`, chave e campo cifrado têm rota de revelar, e a depreciação exige a chave na rota inteira (D77, D138, D140) |
+| **D** | `Department` como entidade + a décima spec de catálogo, com backfill na mesma transação (migração 1 de 2) |
+| **E** | Identidade (`employeeNumber`, `jobTitle`, `phone`, `address`, `hiredAt`, `managerId`) e `GET /api/users/:id/reports` |
+| **F** | `resolverEscalonamento()`, o aceite passando a usá-lo (D139), a seção *A fronteira* no `MODELO-POSSE.md` e o bloco na aba Posse |
+| **G** | Desligamento com guarda de substituto e revogação de acesso (tokens + `tokenVersion`) |
+| **H** | Segundo fator TOTP e token pessoal de API, mais as duas linhas de escape em `*/cli/` |
+| **I** | Sincronização LDAP, login OIDC e `/meus-equipamentos` |
+| **J** | `DROP COLUMN users.department` (migração 2 de 2), e a relação volta a se chamar `department` |
+
+## As cinco coisas que a execução decidiu, e o plano não tinha decidido
+
+**1. O login do segundo fator é um passo da MESMA tela, e a senha é reenviada.**
+A alternativa é um estado intermediário no servidor — uma meia-sessão com validade,
+lugar para morar e um token próprio para o cliente trazer de volta, ou seja, uma
+segunda forma de sessão existir ao lado do cookie. O projeto tem uma. A senha ainda
+está na memória do formulário de qualquer maneira: ela acabou de ser digitada nele.
+O preço é `etapa: 'TOTP'` viajando no corpo do 401 — e foi ele que fez o
+`ErroDaApi` do painel passar a preservar o corpo do erro, porque a alternativa era a
+tela comparar a MENSAGEM por texto.
+
+**2. O cadastro do TOTP tem estado no banco (`totpEnabledAt` nulo).** Sem ele, quem
+fechasse a aba entre ler o QR e digitar o código ficaria com o autenticador
+configurado contra um segredo que o sistema esqueceu. E o estado intermediário não
+tranca ninguém: o login olha a DATA, nunca o segredo.
+
+**3. O token pessoal não alcança rota de credencial.** Ele age como a pessoa — mesmas
+chaves, mesmo `actorId` —, e é justamente por isso que não pode trocar senha, emitir
+outro token nem mexer no 2FA. Um token que emite tokens é um token que não se revoga.
+E o cabeçalho **ganha do cookie** quando os dois vêm juntos, senão um script rodando
+de dentro do navegador autenticaria pela sessão do operador e o `lastUsedAt` nunca
+andaria.
+
+**4. Numa instalação híbrida, o SSO não sobrescreve o `externalId` do LDAP.** Foi um
+ping-pong diário evitado: a sincronização ancora a pessoa pelo `guid:…`, e um login
+OIDC que gravasse `oidc:…` por cima faria o job seguinte não encontrá-la pelo
+identificador, re-vinculá-la por e-mail e gravar o `guid:` de volta — todo dia, para
+sempre. O `externalId` só é gravado quando está vazio; o SSO daquela pessoa passa a
+casar pelo e-mail, que a própria sincronização mantém em dia.
+
+**5. O portal diz COM QUEM o posto é dividido.** Não estava no plano, e sem isso a
+tela produz a devolução errada: "Mesa 1 · monitor LG" se lê como *o monitor é meu*.
+Isso exigiu `coOcupantes` em `listUserHoldings`, que é o mesmo use-case da ficha do
+colaborador — a Camada 3 não pode ter uma versão para o administrador e outra para o
+colaborador.
+
+## O que a fase consertou fora do próprio escopo
+
+- **o 409 do termo de entrega** (F4): lia `Location.manager` da folha, e entregar
+  para uma mesa sem gestor próprio dentro de um andar com gestor era recusado. Agora
+  usa a mesma subida da fronteira (D139);
+- **`api_tokens.userId` sem chave estrangeira** desde a F0 (D142). A migração apaga
+  órfão antes de criar a FK — na prática, zero linhas; está ali para o banco que teve
+  `psql`;
+- **o nome do grupo de sistema** vivia como literal em `prisma/seed.ts` e outro na
+  migração. Virou `GRUPO_ADMINISTRADOR`, no catálogo, com três leitores;
+- **o item do CSV que a F9 adiou** (campos customizados no export e no import) — e o
+  dry-run passou a validar o formato, senão um IP mal digitado na linha 300 só
+  estouraria no `apply`.
+
+## O que ficou de fora, com o motivo
+
+| O que | Por quê |
+|---|---|
+| `isVip` / `isRemote` | coluna sem leitor é coluna que ninguém mantém (defeito 11 da auditoria). Quando houver a tela, é migração aditiva de duas linhas |
+| nome dividido (`firstName`/`lastName`) | `name` é o campo canônico; dividi-lo exige adivinhar onde termina o nome em "Maria da Silva Souza" |
+| SAML | OIDC cobre o Entra ID. A segunda biblioteca seria um segundo caminho de login para manter |
+| 2FA obrigatório por grupo | decisão nova: precisa de um lugar para morar e de uma resposta para quem entra hoje sem ter cadastrado |
+| revogar UMA sessão | exige tabela de sessão. O `tokenVersion` derruba todas, e é o que o desligamento usa |
+| anexo de licença (D94) | dono polimórfico em `Attachment`. É o único item em aberto do `ITAM-TODO.md` |
+
+## As duas provas que não são comando
+
+Elas continuam valendo e **não** estão na suíte, porque exigem um diretório e um
+provedor de identidade de verdade:
+
+1. **entrar por SSO** com uma conta marcada como `OIDC` e conferir que a sessão nasce
+   com as permissões dos grupos dela — e que uma conta `LOCAL` com o mesmo e-mail é
+   recusada com 403 e `OIDC_DENIED` na trilha;
+2. **desativar alguém no LDAP**, rodar o sync e confirmar que ela foi **marcada para
+   revisão** na ficha, não desligada.
+
+O que a suíte prova sobre esses dois caminhos é o comportamento do **desligado** — que
+é o padrão de toda instalação que não os usa: as rotas de SSO não existem sem
+configuração (404, não 500), a sincronização recusa com 409, e o vínculo explícito
+exige `access.manage`.

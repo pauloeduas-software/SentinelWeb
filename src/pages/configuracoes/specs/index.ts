@@ -194,6 +194,30 @@ const depreciacao: CatalogUiSpec = {
   ],
 };
 
+// ── O DEPARTAMENTO (F11, Etapa D) ───────────────────────────────────────────
+
+const departamento: CatalogUiSpec = {
+  slug: 'departments',
+  aba: 'Departamentos',
+  singular: 'Departamento',
+  // A DESCRIÇÃO DIZ O QUE ELE **NÃO** FAZ, de propósito: é a dúvida que leva
+  // alguém a procurar "entregar para o Comercial" e não achar (D72).
+  descricao: 'Agrupa pessoas para relatório e rateio de custo. Um departamento NÃO recebe ativo — entregar é para uma pessoa ou para um posto.',
+  placeholderBusca: 'Buscar departamento...',
+  colunas: [
+    { key: 'name', label: 'Nome' },
+    { key: 'code', label: 'Código' },
+    { key: 'manager', label: 'Gestor', render: 'relacao' },
+  ],
+  campos: [
+    { key: 'name', label: 'Nome', tipo: 'text', obrigatorio: true, placeholder: 'Ex: Comercial' },
+    { key: 'code', label: 'Código', tipo: 'text', placeholder: 'Ex: CC-1020',
+      ajuda: 'O centro de custo, quando a empresa tem um.' },
+    { key: 'managerId', label: 'Gestor', tipo: 'reference', rota: 'users',
+      ajuda: 'Recebe aviso e aprova baixa. NÃO responde pelos ativos de quem está no departamento.' },
+  ],
+};
+
 // ── OS CAMPOS CUSTOMIZADOS (F9) ─────────────────────────────────────────────
 
 const campoCustomizado: CatalogUiSpec = {
@@ -263,6 +287,12 @@ const conjuntoDeCampos: CatalogUiSpec = {
 
 export const CATALOG_UI_SPECS: readonly CatalogUiSpec[] = [
   categoria, status, fabricante, modelo, fornecedor, localizacao, depreciacao,
+  // A DÉCIMA, DA F11 (D75). Depois das de inventário porque é cadastro de GENTE:
+  // quem abre Configurações está quase sempre atrás de categoria, modelo ou
+  // local. Mesma ordem do `CATALOG_SPECS` do servidor — as duas listas são
+  // percorridas em paralelo pela tela e pelo maestro, e divergir faria a aba
+  // apontar para a spec errada.
+  departamento,
   // As duas da F9, por último: o cliente cria os campos uma vez e depois só
   // preenche valores. Mesma ordem do `CATALOG_SPECS` do servidor.
   campoCustomizado, conjuntoDeCampos,

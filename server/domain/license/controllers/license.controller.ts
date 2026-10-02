@@ -11,6 +11,7 @@ import {
 } from '../schemas/license.schema';
 import { listLicenses } from '../use-cases/list-licenses.usecase';
 import { colunasDoExportDeLicenca, exportLicenses } from '../use-cases/export-licenses.usecase';
+import { temPermissao } from '../../access/helpers/require-permission';
 import { cabecalhosDeCsv } from '../../shared/csv.helper';
 import { lerConfiguracaoDoSistema } from '../../settings/helpers/system-settings.helper';
 import { getLicense } from '../use-cases/get-license.usecase';
@@ -67,7 +68,7 @@ export const licenseController = {
 
   async byId(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return getLicense(id);
+    return getLicense(id, undefined, temPermissao(request, 'licenses.viewKey'));
   },
 
   /**
@@ -92,14 +93,14 @@ export const licenseController = {
 
   async create(request: FastifyRequest, reply: FastifyReply) {
     const data = createLicenseSchema.parse(request.body ?? {});
-    const licenca = await createLicense(data, atorDaRequisicao(request));
+    const licenca = await createLicense(data, atorDaRequisicao(request), temPermissao(request, 'licenses.viewKey'));
     return reply.status(201).send(licenca);
   },
 
   async update(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     const data = updateLicenseSchema.parse(request.body ?? {});
-    return updateLicense(id, data, atorDaRequisicao(request));
+    return updateLicense(id, data, atorDaRequisicao(request), temPermissao(request, 'licenses.viewKey'));
   },
 
   async remove(request: FastifyRequest, reply: FastifyReply) {
@@ -110,7 +111,7 @@ export const licenseController = {
 
   async restore(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return restoreLicense(id, atorDaRequisicao(request));
+    return restoreLicense(id, atorDaRequisicao(request), temPermissao(request, 'licenses.viewKey'));
   },
 
   /** A grade de assentos: livre · pessoa · ativo · queimado · aposentado. */

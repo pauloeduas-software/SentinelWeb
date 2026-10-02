@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react';
 import { create } from 'zustand';
 import { registrarPerdaDeSessao } from '../../core/api/apiClient';
 import { queryClient } from '../../core/api/queryClient';
@@ -79,6 +80,40 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ usuario: null, verificando: false });
   },
 }));
+
+/**
+ * ESTA PESSOA ALCANÇA ESTA CHAVE? — o que as telas perguntam (F11).
+ *
+ * Hook e não função solta: ele assina o store, então o menu e os botões se
+ * redesenham quando a sessão troca — sem isso, quem entrasse com outra conta na
+ * mesma aba veria os itens da anterior até dar F5.
+ *
+ * ⚠️ ISTO NÃO É SEGURANÇA, e vale repetir onde se lê. A autorização é o
+ * `preHandler` do servidor, que fecha tudo por padrão e já recusou antes de
+ * qualquer tela existir (`core/http/permission-guard.ts`). Aqui é só interface:
+ * não oferecer o clique que vai voltar 403.
+ *
+ * Sessão ausente devolve `false` em tudo: é o estado dos primeiros
+ * milissegundos, e durante ele é melhor não desenhar um item que vai sumir do
+ * que desenhar um que vai aparecer.
+ */
+export function usePode(permissao: string): boolean {
+  return useAuthStore((estado) => estado.usuario?.permissions.includes(permissao) ?? false);
+}
+
+/**
+ * A versão para quem precisa testar VÁRIAS chaves num render.
+ *
+ * `usePode` numa lista de itens quebraria a regra dos hooks (um por item, em
+ * número variável). Este devolve a função e assina o store uma vez só.
+ */
+export function usePermissoes(): (permissao: string) => boolean {
+  const permissoes = useAuthStore((estado) => estado.usuario?.permissions);
+  // A dependência é o ARRAY vindo do store, que só troca de identidade quando a
+  // sessão troca — então o `Set` não é remontado a cada render.
+  const conjunto = useMemo(() => new Set(permissoes ?? []), [permissoes]);
+  return useCallback((permissao: string) => conjunto.has(permissao), [conjunto]);
+}
 
 // O elo entre o 401 do `apiClient` e a tela.
 //

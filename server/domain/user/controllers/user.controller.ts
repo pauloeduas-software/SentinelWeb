@@ -15,6 +15,7 @@ import { updateUser } from '../use-cases/update-user.usecase';
 import { deleteUser } from '../use-cases/delete-user.usecase';
 import { offboardUser } from '../use-cases/offboard-user.usecase';
 import { restoreUser } from '../use-cases/restore-user.usecase';
+import { listUserReports } from '../use-cases/list-user-reports.usecase';
 
 const optionsQuerySchema = z.strictObject({
   q: z.string().trim().max(200, 'busca: máximo de 200 caracteres').optional()
@@ -82,6 +83,17 @@ export const userController = {
     const { id } = idParamSchema.parse(request.params);
     const data = offboardUserSchema.parse(request.body ?? {});
     return offboardUser(id, data, atorDaRequisicao(request));
+  },
+
+  /**
+   * Os liderados diretos desta pessoa (F11, Etapa E).
+   *
+   * Hierarquia de GENTE. Ela não responde nada sobre equipamento — ver o
+   * use-case, que explica por que a pergunta "e os ativos deles?" é um não.
+   */
+  async reports(request: FastifyRequest) {
+    const { id } = idParamSchema.parse(request.params);
+    return listUserReports(id);
   },
 
   async restore(request: FastifyRequest) {

@@ -164,6 +164,65 @@ export function selectDasColunas(tokens: readonly string[]): Prisma.Sql {
   return Prisma.join(fragmentos, ', ');
 }
 
+/**
+ * Os tokens do builder que exigem permissão, e qual (F11, D77).
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * SEM ISTO, O BUILDER É A PORTA DOS FUNDOS DO CUSTO — e a mais larga das três.
+ *
+ * O export de ativos tem uma allowlist de colunas fixa; aqui a pessoa MONTA a
+ * consulta, escolhendo colunas e agrupamento. Fechar a listagem e o CSV e
+ * deixar o builder aberto é trocar um clique por três: *Montar relatório →
+ * Custo de compra → Gerar*.
+ *
+ * O `custoDoAtivo` entra junto porque o `custom-report.usecase.ts` o seleciona
+ * para SOMAR por grupo. Ele não é um token que a pessoa pede — é interno —, e
+ * está aqui para o use-case consultar com a mesma lista, em vez de ter uma
+ * regra própria que alguém esqueceria de atualizar.
+ * ═════════════════════════════════════════════════════════════════════════
+ */
+export const TOKENS_COM_PERMISSAO: Readonly<Record<string, string>> = {
+  purchaseCost: 'assets.viewCost',
+};
+
+/**
+ * Os tokens que esta sessão pode pedir — é o que a tela usa para montar o
+ * seletor.
+ *
+ * Filtrar a LISTA, e não só recusar o pedido, porque o seletor com uma opção
+ * que sempre dá 403 é pior do que o seletor sem ela: a pessoa marca, gera,
+ * recebe o erro e não sabe que o problema é aquela coluna.
+ */
+export function tokensPermitidos(pode: (permissao: string) => boolean): readonly string[] {
+  return REPORT_TOKENS.filter(
+    (token) => !TOKENS_COM_PERMISSAO[token] || pode(TOKENS_COM_PERMISSAO[token]),
+  );
+}
+
+/**
+ * Recusa os tokens que a sessão não alcança. **403**, e antes de montar o SQL.
+ *
+ * Chamada pelo use-case, e não embutida no `selectDasColunas`: aquela função é
+ * usada também pelo agrupamento e pelo export, e cada chamador tem o seu
+ * momento de ter a sessão em mão. Uma permissão lida lá dentro obrigaria a
+ * passá-la por três caminhos que não precisam dela.
+ */
+export function assertColunasPermitidas(
+  tokens: readonly string[],
+  pode: (permissao: string) => boolean,
+): void {
+  const negadas = tokens.filter(
+    (token) => TOKENS_COM_PERMISSAO[token] && !pode(TOKENS_COM_PERMISSAO[token]),
+  );
+  if (negadas.length === 0) return;
+
+  throw new AppError(
+    `Seu acesso não inclui a coluna: ${negadas.join(', ')}. Tire-a da seleção para gerar o relatório.`,
+    403,
+    { negadas },
+  );
+}
+
 /** O token de agrupamento, conferido contra a lista do que PODE agrupar. */
 export function colunaDeAgrupamento(token: string): ColunaDeRelatorio {
   const encontrada = coluna(token);

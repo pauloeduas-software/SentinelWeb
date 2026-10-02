@@ -46,11 +46,16 @@ beforeAll(async () => {
   api = await criarApi();
   cenario = await cenarioDePosse(api);
 
+  // O DEPARTAMENTO virou entidade na F11 (Etapa D): o PUT manda o id, não o
+  // nome. Cadastrado pela rota de catálogo, como qualquer um dos dez cadastros.
+  const departamento = await api.post<{ id: string }>('/api/departments', { name: 'Comercial' });
+  expect(departamento.status).toBe(201);
+
   // A HISTÓRIA que o teste vai ler, montada pela API na ordem em que aconteceu.
   await api.put(`/api/users/${cenario.laura}`, {
     name: 'Laura Souza',
     email: 'laura@teste.local',
-    department: 'Comercial',
+    departmentId: departamento.body.id,
   });
 
   const ocupou = await api.post<{ id: string }>(`/api/locations/${cenario.mesa1}/occupants`, {

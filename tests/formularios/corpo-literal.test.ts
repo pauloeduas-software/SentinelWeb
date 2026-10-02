@@ -178,19 +178,42 @@ describe('PUT /api/assets/:id com o corpo literal do formulário de edição', (
 });
 
 describe('POST /api/users com o corpo literal do UserFormModal', () => {
-  /** Cópia fiel de `src/pages/gestao-usuario/components/UserFormModal.tsx`. */
+  /**
+   * Cópia fiel de `src/pages/gestao-usuario/components/UserFormModal.tsx`.
+   *
+   * O formulário mudou na F11 (Etapa D): `department: ''` virou
+   * `departmentId: null` e nasceu `managerId: null`. A conversão `'' → null` é
+   * do formulário — o `<select>` sem escolha manda string vazia, e o zod do
+   * servidor espera uuid ou nulo.
+   */
   function corpoDoFormularioDeUsuario(sobrescrever: Record<string, unknown> = {}) {
-    return { name: '', email: '', department: '', ...sobrescrever };
+    return { name: '', email: '', departmentId: null, managerId: null, ...sobrescrever };
   }
 
-  it('aceita departamento vazio e o grava como `null`', async () => {
+  it('aceita departamento e gestor nulos', async () => {
     const { status, body } = await api.post<Record<string, unknown>>(
       '/api/users',
       corpoDoFormularioDeUsuario({ name: 'Laura Souza', email: 'laura.formulario@teste.local' }),
     );
 
     expect(status).toBe(201);
-    expect(body.department).toBeNull();
+    // `department` NÃO VEM na resposta de criação, e isso é o D135: a criação
+    // devolve pelo `USER_PUBLIC_SELECT`, que deixou de carregar o departamento
+    // porque ele viaja embutido em toda posse e toda ocupação. Quem quer o
+    // departamento pede a listagem ou o perfil.
+    expect(Object.hasOwn(body, 'department')).toBe(false);
+    expect(body.id).toBeTruthy();
+  });
+
+  it('recusa o `department` de texto que o formulário mandava antes (422)', async () => {
+    // `strictObject` transforma a troca de contrato em erro EXPLÍCITO: um
+    // cliente antigo que ainda mande o texto recebe "campo desconhecido" em vez
+    // de ter o departamento ignorado em silêncio.
+    const { status } = await api.post('/api/users', {
+      name: 'Cliente Antigo', email: 'antigo@teste.local', department: 'Comercial',
+    });
+
+    expect(status).toBe(422);
   });
 
   it('recusa nome e e-mail vazios com 422 por campo', async () => {

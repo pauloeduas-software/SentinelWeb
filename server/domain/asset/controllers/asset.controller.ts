@@ -19,6 +19,7 @@ import { exportAssets } from '../use-cases/export-assets.usecase';
 import { globalSearch } from '../use-cases/global-search.usecase';
 import { resolveTags } from '../use-cases/resolve-tags.usecase';
 import { colunasDoExport } from '../helpers/asset-export-columns.helper';
+import { listarCamposParaCsv } from '../../custom-field/use-cases/list-csv-fields.usecase';
 import { cabecalhosDeCsv } from '../../shared/csv.helper';
 import { lerConfiguracaoDoSistema } from '../../settings/helpers/system-settings.helper';
 import { getAssetStats } from '../use-cases/asset-stats.usecase';
@@ -28,6 +29,9 @@ import { deleteAsset } from '../use-cases/delete-asset.usecase';
 import { restoreAsset } from '../use-cases/restore-asset.usecase';
 import { findAssetBySerial } from '../use-cases/find-asset-by-serial.usecase';
 import { findAssetById } from '../use-cases/find-asset-by-id.usecase';
+// A BORDA é quem sabe quem está pedindo (D23, mesma inversão do `actorId`): o
+// use-case recebe um booleano e não conhece `request`.
+import { temPermissao } from '../../access/helpers/require-permission';
 import { getAssetHistory } from '../use-cases/asset-history.usecase';
 import { retireAsset } from '../use-cases/retire-asset.usecase';
 import { unretireAsset } from '../use-cases/unretire-asset.usecase';
@@ -105,12 +109,12 @@ export const assetController = {
       trashable: false,
     });
 
-    return listAssets(query, filtros);
+    return listAssets(query, filtros, temPermissao(request, 'assets.viewCost'));
   },
 
   async byId(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return findAssetById(id);
+    return findAssetById(id, temPermissao(request, 'assets.viewCost'));
   },
 
   async history(request: FastifyRequest) {
@@ -160,7 +164,18 @@ export const assetController = {
     // A validação do token acontece ANTES de a resposta começar: depois do
     // primeiro byte não há mais como responder 422 — o cliente receberia um
     // arquivo truncado com status 200.
-    const escolhidas = colunasDoExport(tokensDeColuna(columns));
+    // A ALLOWLIST DE COLUNAS PASSA A SER FILTRADA PELA PERMISSÃO (D77, a
+    // obrigação cruzada): sem isto o CSV é a porta dos fundos do custo que a
+    // listagem acabou de fechar.
+    // OS CAMPOS CUSTOMIZADOS ENTRAM NA ALLOWLIST (F9, o item que esperava a F10):
+    // uma consulta, aqui, antes do primeiro byte — nunca por linha. Sem ela, o
+    // token `cf:<slug>` seria "coluna desconhecida" e a planilha nunca carregaria
+    // o que o cliente cadastrou.
+    const escolhidas = colunasDoExport(
+      tokensDeColuna(columns),
+      (permissao) => temPermissao(request, permissao as Parameters<typeof temPermissao>[1]),
+      await listarCamposParaCsv(),
+    );
     const { csvDelimiter } = await lerConfiguracaoDoSistema();
 
     return reply

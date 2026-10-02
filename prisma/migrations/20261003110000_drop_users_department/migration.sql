@@ -1,0 +1,33 @@
+-- ═══════════════════════════════════════════════════════════════════════════
+-- `DROP COLUMN users.department` — migração 2 de 2 (F11, Etapa J — D75).
+--
+-- A ÚNICA MIGRAÇÃO NÃO ADITIVA DO PROJETO, e a única irreversível: depois dela, o
+-- texto original ("Comercial", "comercial", "COMERCIAL") não existe mais para
+-- conferência. É por isso que ela vem SOZINHA, num commit só dela, e depois de a
+-- lista de departamentos ter sido revisada à mão.
+--
+-- O QUE A MIGRAÇÃO 1 DE 2 (`20261002093000_departamento_e_colaborador`) JÁ FEZ:
+-- criou `departments`, acrescentou `users.departmentId` com FK, e preencheu os
+-- dois a partir de `GROUP BY btrim(department)` na MESMA transação. Desde então
+-- nada LÊ esta coluna — nem o select, nem a busca, nem a ordenação, nem o
+-- importador —, e ela ficou no banco apenas como rede de rollback.
+--
+-- POR QUE OS DOIS TEMPOS, repetido aqui porque é o lugar onde a decisão se paga:
+-- com `add` + `backfill` + `drop` num commit só, um rollback do deploy volta o
+-- código e deixa o banco sem a coluna de texto E sem ninguém para preencher a
+-- nova. Em dois tempos, o intervalo entre eles é justamente a janela em que voltar
+-- atrás ainda encontra o dado original.
+--
+-- ⚠️ ANTES DE APLICAR EM PRODUÇÃO, a conferência que esta migração pressupõe:
+--
+--   SELECT btrim("department") AS texto, count(*)
+--     FROM "users" WHERE "department" IS NOT NULL GROUP BY 1 ORDER BY 1;
+--
+-- Duas grafias da mesma área ("TI" e "T.I.") viraram DOIS departamentos no
+-- backfill, porque `btrim` tira espaço nas pontas e nada mais. Unir é trabalho de
+-- gente — `lower(btrim(...))` escolheria arbitrariamente qual grafia sobrevive —, e
+-- depois deste `DROP` não há mais como saber qual era qual.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- AlterTable
+ALTER TABLE "users" DROP COLUMN "department";

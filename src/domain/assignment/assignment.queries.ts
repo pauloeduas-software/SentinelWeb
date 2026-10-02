@@ -16,6 +16,7 @@ export const assignmentKeys = {
   all: ['assignments'] as const,
   doAtivo: (assetId: string) => ['assignments', 'asset', assetId] as const,
   doUsuario: (userId: string) => ['assignments', 'user', userId] as const,
+  minhas: ['assignments', 'me'] as const,
 };
 
 /**
@@ -94,6 +95,27 @@ export function useUserHoldingsQuery(userId: string | null) {
     queryFn: async () =>
       (await apiClient.get<UserHoldings>(`/users/${userId}/holdings`)).data,
     enabled: userId != null,
+  });
+}
+
+/**
+ * O MESMO, para quem está logado — a tela "Meus equipamentos" (F11, Etapa I).
+ *
+ * ROTA PRÓPRIA E CHAVE DE CACHE PRÓPRIA, em vez de `useUserHoldingsQuery(eu.id)`.
+ * As duas razões:
+ *
+ * 1. **autorização.** `/api/users/:id/holdings` exige `users.view`, porque fala de
+ *    outra pessoa. Um colaborador comum não tem essa chave e receberia 403 ao
+ *    abrir a própria tela;
+ *
+ * 2. **cache.** Com a mesma chave, a resposta do administrador olhando a ficha da
+ *    Laura e a da própria Laura olhando o portal dela ocupariam a MESMA entrada se
+ *    os ids coincidissem — e a invalidação de uma mexeria na outra.
+ */
+export function useMeusHoldingsQuery() {
+  return useQuery({
+    queryKey: assignmentKeys.minhas,
+    queryFn: async () => (await apiClient.get<UserHoldings>('/me/holdings')).data,
   });
 }
 

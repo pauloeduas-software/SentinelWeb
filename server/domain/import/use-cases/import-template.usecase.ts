@@ -1,6 +1,9 @@
 import type { ImportTarget } from '@prisma/client';
 import { BOM, celula } from '../../shared/csv.helper';
-import { camposDoAlvo, chavesDoAlvo } from '../helpers/import-fields.helper';
+import {
+  camposCustomizadosDoAlvo, camposDoAlvo, chavesDoAlvo,
+} from '../helpers/import-fields.helper';
+import { listarCamposParaCsv } from '../../custom-field/use-cases/list-csv-fields.usecase';
 
 // O MODELO DE CSV BAIXÁVEL (F10, Etapas D e E).
 //
@@ -51,12 +54,21 @@ export function modeloDeCsv(target: ImportTarget, delimitador: string): string {
   return `${BOM}${cabecalho}\r\n${exemplo}\r\n`;
 }
 
-/** Para a tela montar o `<select>` de mapeamento sem conhecer o servidor. */
-export function camposParaATela(target: ImportTarget) {
+/**
+ * Para a tela montar o `<select>` de mapeamento sem conhecer o servidor.
+ *
+ * `async` desde a F11: os campos CUSTOMIZADOS vêm do banco (F9/F10), e eles são
+ * parte da lista que a tela oferece — sem isso, a coluna "Centro de custo" da
+ * planilha não teria para onde ser mapeada, e o token `cf:` recusaria com 422 uma
+ * coisa que o sistema sabe fazer.
+ */
+export async function camposParaATela(target: ImportTarget) {
+  const customizados = camposCustomizadosDoAlvo(target, await listarCamposParaCsv());
+
   return {
     target,
     chaves: chavesDoAlvo(target),
-    campos: camposDoAlvo(target).map((campo) => ({
+    campos: [...camposDoAlvo(target), ...customizados].map((campo) => ({
       token: campo.token,
       rotulo: campo.rotulo,
       obrigatorioNaCriacao: campo.obrigatorioNaCriacao ?? false,

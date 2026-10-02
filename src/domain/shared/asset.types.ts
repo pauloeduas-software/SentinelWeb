@@ -1,6 +1,6 @@
 import type { AcessorioEmPosse } from './stock.types';
 import type { AssentoEmPosse } from './license.types';
-import type { AlvoDaPosse, PosseResolvida } from './posse.types';
+import type { AlvoDaPosse, Escalonamento, PosseResolvida } from './posse.types';
 import type { ListParams } from './list.types';
 import type { User } from './user.types';
 
@@ -127,6 +127,22 @@ export interface Asset {
   posse: PosseResolvida | null;
 
   /**
+   * PARA QUEM LIGAR quando o posto está vazio (F11, Etapa F).
+   *
+   * Vem ao lado de `posse` porque é a pergunta vizinha — e **não dentro dela**,
+   * porque não é responsabilidade: quem está com o equipamento sai de
+   * `posse.responsaveis`, e o gestor da localidade nunca entra ali
+   * (docs/MODELO-POSSE.md, "A fronteira"). Os dois juntos num campo só
+   * apagariam `postoVago`, que é o sinal que motiva a ligação.
+   *
+   * ⚠️ OPCIONAL, pelo mesmo motivo de `customFields`: só a LEITURA DE UM ativo o
+   * calcula (`findAssetById`). A listagem não — seria uma subida de árvore por
+   * linha —, e a tela do posto e as posses do colaborador tipam as linhas delas
+   * com esta mesma interface.
+   */
+  escalonamento?: Escalonamento | null;
+
+  /**
    * OS CAMPOS CUSTOMIZADOS, já MASCARADOS (F9).
    *
    * `slug` → valor. Todo valor cifrado chega como `MASCARA_DE_CAMPO` (`••••••`) —
@@ -186,6 +202,18 @@ export interface PostoDoAtivo {
   locationId: string;
   locationName: string;
   shift: string | null;
+  /**
+   * COM QUEM o posto é dividido — os outros ocupantes abertos (F11, Etapa I).
+   *
+   * É o que impede a devolução errada na tela do colaborador: sem esta lista,
+   * "Mesa 1 · monitor LG" se lê como *o monitor é meu*, e quem sai da empresa
+   * devolve o monitor que a colega do outro turno usa. Vazia quando a pessoa é a
+   * única ocupante.
+   *
+   * ⚠️ OPCIONAL no tipo: a tela do POSTO e outras leituras tipam linhas com esta
+   * mesma interface e não calculam co-ocupantes. Quem a lê trata a ausência.
+   */
+  coOcupantes?: { id: string; name: string; shift: string | null }[];
 }
 
 /**

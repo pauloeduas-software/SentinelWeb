@@ -15,8 +15,12 @@ import { createLogger, rootLogger } from './core/logger/logger';
 import { generateRequestId, registerRequestLogger } from './core/logger/request-logger';
 import { registerErrorHandler } from './core/errors/error-handler';
 import { registerAuthGuard, type RotaPublica } from './core/http/require-auth';
+import { registerPermissionGuard } from './core/http/permission-guard';
 
 import { AuthMaestro } from './domain/auth/auth.maestro';
+import { AccessMaestro } from './domain/access/access.maestro';
+import { exigenciaDaRota } from './domain/access/helpers/route-permissions';
+import { exigirPermissao } from './domain/access/helpers/require-permission';
 import { autenticarRequisicao } from './domain/auth/helpers/authenticate-request.helper';
 import { COOKIE_SESSAO, SESSAO_SEGUNDOS } from './domain/auth/helpers/session-cookie.helper';
 import { AgentMaestro } from './domain/agent/agent.maestro';
@@ -92,6 +96,21 @@ export const ROTAS_PUBLICAS: readonly RotaPublica[] = [
   // que abre UM termo e nada mais. O prefixo `/*` cobre as quatro rotas
   // (`/aceite/:token`, `/aceitar`, `/recusar` e `/pdf`).
   { method: '*', path: '/api/aceite/*', motivo: 'termo de entrega: quem assina pode não ter conta (D27)' },
+  // ── O SSO (F11, Etapa I) ─────────────────────────────────────────────────
+  //
+  // AS DUAS SÓ EXISTEM com `OIDC_ISSUER` configurado (ver `access.maestro.ts`), e
+  // são públicas pelo mesmo motivo do login: é por elas que a sessão NASCE. Quem
+  // as alcança, por definição, ainda não tem cookie.
+  //
+  // O que autoriza não é sessão, é o DESAFIO: `state`, `nonce` e o verificador do
+  // PKCE, assinados num cookie de dez minutos que só este par de rotas abre. O
+  // callback sem o cookie responde 400 e manda começar de novo.
+  { method: 'GET', path: '/api/auth/oidc/start', motivo: 'início do SSO: é por onde a sessão nasce' },
+  { method: 'GET', path: '/api/auth/oidc/callback', motivo: 'a volta do provedor, ainda sem sessão' },
+  // DOIS BOOLEANOS, e é a TELA DE LOGIN que os lê — ela roda sem sessão, e precisa
+  // saber se desenha o botão de entrada única. Não revela endpoint, DN nem client
+  // id; e a mesma informação já se obtém vendo se `/api/auth/oidc/start` existe.
+  { method: 'GET', path: '/api/access/directory', motivo: 'a tela de login decide se oferece SSO' },
 ];
 
 /**
@@ -181,10 +200,35 @@ export async function buildApp(): Promise<FastifyInstance> {
     autenticar: autenticarRequisicao,
   });
 
+  // A AUTORIZAÇÃO, depois da sessão e ANTES dos maestros — pela mesma razão de
+  // ordem: hook de instância vale para as rotas registradas depois dele.
+  //
+  // `preHandler` roda na ordem de registro, então este sempre vê o
+  // `request.permissions` que o guard de sessão acabou de pendurar.
+  //
+  // O `verificarCobertura` devolvido é chamado DEPOIS de todos os maestros: é
+  // só lá que a tabela de rotas está completa (D137).
+  const guardaDePermissao = registerPermissionGuard(server, {
+    exigenciaDaRota,
+    autorizar: exigirPermissao,
+    rotasPublicas: ROTAS_PUBLICAS,
+    foraDaConferencia: [
+      { method: 'GET', path: '/health', motivo: 'liveness do container, que não tem sessão' },
+      { method: 'GET', path: '/health/ready', motivo: 'readiness do monitoramento' },
+      // O catch-all do painel. Não é rota de API: ele entrega o `index.html`
+      // para qualquer caminho que não seja `/api` nem `/agent-hub`, e o próprio
+      // guard de sessão já o libera por `estaticoPublico`.
+      { method: 'GET', path: '/*', motivo: 'fallback do painel estático (entrega index.html)' },
+    ],
+  });
+
   logger.info('[App] Inicializando Maestros de Domínio...');
   // `auth` primeiro: é o domínio que todos os outros passaram a depender (o
   // `preHandler` acima já usa o `autenticarRequisicao` dele).
   await AuthMaestro.setupRoutes(server);
+  // ACESSO logo depois de `auth`: grupos, permissões e o token pessoal são a
+  // outra metade da sessão — quem entrou é do `auth`, o que ele alcança é daqui.
+  await AccessMaestro.setupRoutes(server);
   await EndpointMaestro.setupRoutes(server);
   await CatalogMaestro.setupRoutes(server);
   // CAMPO CUSTOMIZADO depois do catálogo e ANTES do ativo (F9): as dez rotas
@@ -280,6 +324,15 @@ export async function buildApp(): Promise<FastifyInstance> {
       logger.warn(`[App] NODE_ENV=production mas ${distPath} não existe. Rode "npm run build" antes.`);
     }
   }
+
+  // A CONFERÊNCIA DE COBERTURA (D137) — aqui, e não antes: é neste ponto que
+  // toda rota do sistema já passou pelo hook `onRoute`.
+  //
+  // LANÇA quando há rota sem exigência declarada, e lançar é o ponto inteiro:
+  // um `logger.error` no boot é um erro que o deploy ignora, e a consequência de
+  // ignorá-lo é uma rota que qualquer sessão alcança sem ninguém ter decidido
+  // isso. Aqui, o processo não sobe e o `npm test` fica vermelho na hora.
+  guardaDePermissao.verificarCobertura();
 
   // `ready()` força o Fastify a resolver o grafo de plugins AGORA, aqui dentro.
   // Sem isto, um erro de registro só apareceria na primeira requisição — no

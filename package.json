@@ -17,6 +17,8 @@
     "db:migrate": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
+    "acesso:administrador": "tsx server/domain/access/cli/conceder-administrador.cli.ts",
+    "totp:desativar": "tsx server/domain/auth/cli/desativar-totp.cli.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {
@@ -36,8 +38,10 @@
     "axios": "^1.14.0",
     "bwip-js": "^4.11.4",
     "fastify": "^5.11.3",
+    "ldapts": "^9.2.0",
     "lucide-react": "^1.7.0",
     "nodemailer": "^10.0.10",
+    "openid-client": "^6.8.8",
     "otplib": "^13.5.0",
     "papaparse": "^5.7.0",
     "pdfkit": "^0.20.2",

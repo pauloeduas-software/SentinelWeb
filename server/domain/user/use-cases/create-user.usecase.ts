@@ -6,7 +6,21 @@ import { USER_PUBLIC_SELECT } from '../helpers/user-select.helper';
 export interface CreateUserData {
   name: string;
   email: string;
-  department?: string | null;
+  /**
+   * O id do departamento (F11, Etapa D). Era um texto livre até a F10.
+   *
+   * A coluna `department` NÃO é mais escrita por ninguém — nem aqui com o nome
+   * do departamento "por garantia". Escrever nas duas criaria duas fontes de
+   * verdade para o mesmo dado durante a transição, e a que divergisse seria a
+   * que o `DROP COLUMN` da migração 2 de 2 levaria embora sem aviso.
+   */
+  departmentId?: string | null;
+  employeeNumber?: string | null;
+  jobTitle?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  hiredAt?: Date | null;
+  managerId?: string | null;
 }
 
 export async function createUser(data: CreateUserData, actorId: string | null) {
@@ -22,7 +36,13 @@ export async function createUser(data: CreateUserData, actorId: string | null) {
       data: {
         name: data.name,
         email: data.email,
-        department: data.department ?? null,
+        departmentId: data.departmentId ?? null,
+        employeeNumber: data.employeeNumber ?? null,
+        jobTitle: data.jobTitle ?? null,
+        phone: data.phone ?? null,
+        address: data.address ?? null,
+        hiredAt: data.hiredAt ?? null,
+        managerId: data.managerId ?? null,
       },
       select: USER_PUBLIC_SELECT,
     });
@@ -33,7 +53,12 @@ export async function createUser(data: CreateUserData, actorId: string | null) {
         entityType: 'User',
         entityId: user.id,
         action: 'CREATE',
-        changes: { name: user.name, email: user.email, department: user.department },
+        // O `departmentId` e não o nome: o log guarda o que foi GRAVADO, e o
+        // nome pode mudar depois sem que este cadastro tenha mudado.
+        changes: {
+          name: user.name, email: user.email, departmentId: data.departmentId ?? null,
+          employeeNumber: data.employeeNumber ?? null, managerId: data.managerId ?? null,
+        },
       },
       actorId,
     );

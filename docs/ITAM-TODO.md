@@ -534,7 +534,7 @@ D42, D43 e a Etapa E do desenho original.
 - [x] **M** ~~Alertas de licença expirando e de assentos abaixo do mínimo~~ — feito em `/api/licenses/alerts`, com o tipo como FILTRO (mesma forma do `/api/stock/alerts`)
 - [x] **M** ~~Histórico da licença (quem pegou, quem devolveu, quem viu a chave)~~ — feito. `VIEW_KEY` é a primeira ação do projeto que registra uma LEITURA, e é de propósito: a chave é o único dado cujo simples acesso é o fato auditável
 - [ ] **M** Anexos de licença (nota fiscal, contrato, certificado) — **adiado, D94**: `Attachment.assetId` é `NOT NULL` com FK para `assets`, então isto exige dono polimórfico em `Attachment` (migração, discriminante, CHECK e uma decisão sobre o arquivo quando o dono some). É uma etapa sobre ANEXO, não sobre licença
-- [ ] **P** Export CSV de licenças **com a chave mascarada por padrão** — **não existe export no projeto**; o item é da F10. Anotado lá
+- [x] **P** ~~Export CSV de licenças **com a chave mascarada por padrão**~~ — feito na F10, e **melhor do que "mascarada"**: a chave não sai de jeito nenhum. O export passa pelo mesmo `paraResposta()` da listagem, que a remove (D133) — mascarar seria uma segunda regra, e a coluna de `••••` em cinco mil linhas não informa nada. Provado em `tests/relatorios/export.test.ts`, que o chama de "a quarta porta da chave de produto"
 
 **O que a fase costurou fora do próprio domínio (D93):** assento é posse, então
 `count-user-posse`, o `holdings`, o `offboard`, o 409 do `DELETE` — de pessoa **e** de
@@ -640,7 +640,9 @@ alvo polimórfico em `Alert`, que é aditivo.
 - [x] **P** ~~Valor padrão por modelo~~ — feito, e é do **VÍNCULO**, não do modelo (D61): `CustomFieldsetField.defaultValue`, validado contra o formato do campo no CADASTRO do conjunto e aplicado só na CRIAÇÃO do ativo. Campo cifrado não aceita padrão — ele ficaria em claro no cadastro, e um segredo igual em toda máquina não é segredo
 - [x] **M** ~~Campo customizado cifrado em repouso~~ — feito. **`server/core/crypto/cipher.ts` já existia** (nasceu na F6): `cifrar(claro, aad)` / `decifrar(pacote, aad)`, formato `enc:v1:<kid>:<iv>:<tag>:<ct>` (D81), com chaveiro e canário de boot (D91). Aqui o prefixo `enc:` é obrigatório de verdade — dentro do mesmo `JsonB` convivem valores cifrados e comuns, e sem marca não há como saber qual é qual
 - [x] **M** ~~Preenchimento em massa de um campo customizado~~ — feito **depois** do fechamento da fase, numa segunda revisão: o D61 descreve a promoção como *"nasce opcional, a edição em massa faz o backfill, e só então promove-se"*, a tela imprimia essa frase ao lado do contador, e o lote da F2 só sabia status, localização e lixeira. `op: 'custom-field'` no `POST /api/assets/bulk`, com as quatro recusas que importam (ativo fora do conjunto barra o lote inteiro, valor fora do formato, campo cifrado, esvaziar obrigatório). Ver a seção 5 do fechamento da [`FASE-9-PLANO-ITAM.md`](./FASE-9-PLANO-ITAM.md)
-- [ ] **P** Campos customizados no import e no export CSV — **fica para a F10**, com o importador e o export que ainda não existem. Anotar a coluna aqui sem o CSV existir seria escrever metade de uma feature
+- [x] **P** ~~Campos customizados no import e no export CSV~~ — feito, e o item esperou de propósito: *"anotar a coluna sem o CSV existir seria escrever metade de uma feature"*. O token é `cf:<slug>` nos dois lados, e a allowlist é montada a partir dos campos que EXISTEM no banco — `cf:*` liberado por prefixo aceitaria `cf:qualquer_coisa` e devolveria coluna vazia em toda linha, que é o defeito silencioso que o D67 fecha.
+  **O campo CIFRADO não sai e não entra**, e a assimetria é aparente: no export, mascarar daria uma coluna de `••••••` repetido e exportar o pacote seria o segredo saindo num arquivo que circula por e-mail; no import, uma planilha com a senha da BIOS de trezentas máquinas em texto é a pior forma possível de carregar segredo. Nos dois, 422 com o NOME do campo — não "coluna desconhecida".
+  E a **validação de formato não foi reescrita**: o importador monta `customFields` e entrega ao `createAsset`/`updateAsset`, que chamam o mesmo `validarCamposCustomizados()` do formulário. O dry-run passou a chamá-lo também, senão um IP mal digitado na linha 300 só estouraria no `apply`
 
 ---
 
@@ -667,26 +669,47 @@ alvo polimórfico em `Alert`, que é aditivo.
 
 ---
 
-## Fase 11 — Acesso avançado
+## Fase 11 — Acesso avançado ✅
 
-- [ ] **G** `Group` + permissões granulares por módulo (view / create / edit / delete / checkout por tipo de item)
-- [ ] **P** Permissão sobre dado sensível: chave de licença, custo de compra, lista de processos, comandos RMM
-- [ ] **P** Campos de identidade do colaborador: nome dividido, matrícula, cargo, telefone, endereço
-- [ ] **P** `Department` como entidade (hoje é texto livre em `User.department`)
-- [ ] **P** Gestor do colaborador (`managerId`) e visão de liderados
-- [ ] **M** **A fronteira entre departamento, gestor e posto** — as três coisas parecem responder "de quem é isto?" e respondem a perguntas diferentes. Documentar e respeitar:
-  - **o posto responde pelo ativo.** `Assignment` → `LocationOccupant` é a cadeia que diz quem responde por um equipamento, e é a única (D16);
-  - **o departamento agrupa pessoas.** Serve para relatório ("quanto o Comercial tem em equipamento"), rateio de custo e filtro de tela. Um `Department` **não** detém ativo: entregar "para o Comercial" é entregar para uma sala ou para uma pessoa;
-  - **o gestor é rota de escalonamento**, não detentor. Ele recebe o aviso de overdue e aprova a baixa; não aparece em `resolverResponsaveis`.
-  Consequência prática: `Location.manager` (que já existe desde a F1) e `User.managerId` **não** entram na resolução de responsabilidade. Se um dia "o gestor responde junto" for regra do cliente, é decisão nova e explícita, não efeito colateral de ter as duas colunas
-- [ ] **P** Ciclo de vida do colaborador: ativo/inativo, admissão, desligamento, VIP, remoto — o desligamento dispara o check-in em massa **e** o encerramento das ocupações (F4)
-- [ ] **M** Listagem de pessoas com busca, paginação e filtros
-- [ ] **M** `ApiToken` pessoal (geração, prefixo, hash, revogação, `lastUsedAt`)
-- [ ] **M** 2FA TOTP (`otplib` + `qrcode`)
-- [ ] **M** Sincronização LDAP / Active Directory (`ldapts`)
-- [ ] **M** SSO — OIDC com Entra ID (não SAML), recusando login de quem não está cadastrado
-- [ ] **M** Portal do colaborador: ver o que é meu, aceitar o termo, solicitar item — com os **dois baldes** (direto × por posto), senão a pessoa devolve o monitor da sala achando que era dela
-- [ ] **P** Avatar do colaborador (começar por iniciais geradas, sem upload)
+> Plano em [`FASE-11-PLANO-ITAM.md`](./FASE-11-PLANO-ITAM.md), **auditado** em
+> [`AUDITORIA-F11.md`](./AUDITORIA-F11.md) — é de lá que sai a ordem de execução, com a
+> infraestrutura de permissão virando a **primeira** etapa (declarar as 177 rotas antes de
+> existir grupo que conceda), o contrato de `department` mudando junto com a entidade e não no
+> `DROP COLUMN`, e as decisões D135–D142.
+
+- [x] **G** ~~`Group` + permissões granulares por módulo (view / create / edit / delete / checkout por tipo de item)~~ — feito, com **35 chaves** e uma inversão que o plano não previa: a exigência **não** é escrita rota por rota. Ela mora num MAPA central (`access/helpers/route-permissions.ts`) conferido contra a tabela de rotas do Fastify **no boot** — rota registrada sem declaração **derruba o processo** (D137). Por rota, a rota nova nasceria liberada, que é o furo que a F3 já havia fechado para a sessão
+- [x] **P** ~~Permissão sobre dado sensível: chave de licença, custo de compra, lista de processos, comandos RMM~~ — feito, e **em três mecanismos diferentes** porque o dado é de três naturezas (D77, D140): `assets.viewCost` **sai do `select`** (não é mascarado depois); `licenses.viewKey` e `assets.viewSecret` trancam a ROTA de revelar; e o relatório de depreciação exige a chave do custo **na rota inteira**, porque sem custo não sobra relatório (D138). O comando RMM é `endpoints.command`, chave só dele
+- [x] **P** ~~Campos de identidade do colaborador: nome dividido, matrícula, cargo, telefone, endereço~~ — feito, **menos o nome dividido**: `name` já é o campo canônico, dividi-lo exige um backfill que adivinha onde termina o nome em "Maria da Silva Souza", e um campo que só existe para ser recomposto na exibição são duas fontes de verdade para o mesmo dado. `employeeNumber` é único por índice **parcial**, como `email` e `username` — matrícula é justamente o número que a empresa reaproveita ao recontratar
+- [x] **P** ~~`Department` como entidade (hoje é texto livre em `User.department`)~~ — feito em **duas migrações**, e é a única migração não aditiva do projeto: criar + FK + backfill na mesma transação, `DROP COLUMN` na seguinte (D75). Entre as duas, um rollback ainda encontra o texto original. O `GROUP BY btrim(department)` não unifica grafia — `TI` e `T.I.` viraram dois departamentos de propósito, porque escolher qual sobrevive é trabalho de gente, e depois do `DROP` o original não existe mais para conferência
+- [x] **P** ~~Gestor do colaborador (`managerId`) e visão de liderados~~ — feito, com `GET /api/users/:id/reports`. ⚠️ Ele **não** entra em `resolverResponsaveis()` (D72)
+- [x] **M** ~~**A fronteira entre departamento, gestor e posto**~~ — documentada em [`MODELO-POSSE.md`](./MODELO-POSSE.md) (seção *A fronteira*), que é o contrato — não num comentário de código. São **quatro** perguntas, não três, e cada uma tem UMA fonte:
+  - **o posto responde pelo ativo** — `Assignment` → `LocationOccupant` (D16);
+  - **o gestor da localidade responde pelo posto VAZIO** — `resolverEscalonamento()`, subindo a árvore com o mesmo teto de 32 do `location-cycle.helper.ts` (o banco aceita ciclo). Função **irmã** da Camada 3, nunca um `else` dentro dela: com o `else`, todo ativo passa a ter responsável e *"ativo em posto vago"* deixa de ser expressável — três leitores dependem desse vazio continuar vazio (D73);
+  - **o gestor da pessoa a cobra** — `User.managerId`, rota de escalonamento e nada mais;
+  - **o departamento agrupa pessoas** — relatório, rateio e filtro. Não há `targetType: 'DEPARTMENT'` e não vai haver: departamento não tem mesa, não tem chave e não assina termo.
+  E a fase **corrigiu um defeito** que essa fronteira revelou: o termo de entrega de alvo `LOCATION` lia `Location.manager` da FOLHA e recusava com 409 — entregar um notebook para a "Mesa 1", sem gestor próprio, dentro de um "Andar 2" que tem, era recusado com o gestor cadastrado e visível na tela. Agora ele usa a MESMA subida (D139)
+- [x] **P** ~~Ciclo de vida do colaborador: ativo/inativo, admissão, desligamento~~ — feito, e o desligamento ganhou os dois passos que faltavam: a **guarda do substituto** (409 se a pessoa gere gente ou localidade e o corpo não traz `substitutoId` — localidade sem gestor é o buraco do escalonamento) e a **revogação de acesso** (tokens pessoais `revokedAt` + `tokenVersion` incrementado, na mesma transação). **`isVip` e `isRemote` ficaram de fora**, e isso é o defeito 11 da auditoria: coluna que nasce sem leitor é coluna que ninguém mantém. Quando houver a tela que os lê, eles são uma migração aditiva de duas linhas
+- [x] **M** ~~Listagem de pessoas com busca, paginação e filtros~~ — já existia desde a F2; a F11 trocou a coluna Departamento de texto para a relação e tirou `department` da allowlist de ordenação (ordenar por relação é `department: { name: 'asc' }`, não pelo nome da coluna)
+- [x] **M** ~~`ApiToken` pessoal (geração, prefixo, hash, revogação, `lastUsedAt`)~~ — feito **pelo mesmo caminho de autenticação do agente** (D80), generalizado por `ownerType` (defeito 6). As rotas são `/api/me/tokens`: **sem `:id` na URL não existe o caso "mandei o id de outra pessoa"**, e o dono sai da sessão. O token age COMO a pessoa — mesmas chaves, mesmo `actorId` — e **não alcança rota de credencial**: um token que emite tokens é um token que não se revoga. A FK que `api_tokens.userId` nunca teve nasceu aqui (D142), e é `Cascade`, não `SetNull`: token sem dono é credencial que autentica como ninguém
+- [x] **M** ~~2FA TOTP (`otplib` + `qrcode`)~~ — feito: segredo **cifrado** com AAD `users:totpSecret:<id>` (D81, o mesmo `core/crypto/cipher.ts` da F6), oito códigos de recuperação em sha256 e uso único, janela de ±1 passo. O cadastro é em **dois passos com estado no banco** (`totpEnabledAt` nulo = pendente), e o estado intermediário **não tranca ninguém**. Desligar exige um código; **não existe rota para desligar o 2FA de outra pessoa** — isso é `npm run totp:desativar`, porque uma rota de bypass é a porta que o 2FA veio fechar
+- [x] **M** ~~Sincronização LDAP / Active Directory (`ldapts`)~~ — feito, e a regra que importa é a do D78: **sumir do diretório MARCA para revisão, nunca desliga**. Um filtro mal escrito devolve "zero pessoas", e um job que desligasse por isso devolveria o inventário da empresa ao estoque numa madrugada — por isso a rodada vazia **não marca ninguém**. E-mail que já existe como conta `LOCAL` vira **conflito**, não fusão. `paged: true` não é otimização: o AD corta em 1000 por padrão, e sem ele a empresa de 1200 pessoas marcaria 200 como ausentes
+- [x] **M** ~~SSO — OIDC com Entra ID (não SAML), recusando login de quem não está cadastrado~~ — feito, com `state`, `nonce` e PKCE num cookie assinado de dez minutos (memória de processo não sobrevive a dois contêineres; tabela seria uma linha por tentativa de login). **Ninguém entra sem cadastro**, e conta `LOCAL` com o mesmo e-mail é **recusada**: fundir deixaria quem controla aquele endereço no provedor herdar os grupos de uma conta criada aqui. O vínculo é explícito, com `access.manage` e `ActivityLog` do DE→PARA. ⚠️ O SSO **não pede o segundo fator local** — a troca está escrita na [`AUTENTICACAO.md`](./AUTENTICACAO.md)
+- [x] **M** ~~Portal do colaborador: ver o que é meu, aceitar o termo, solicitar item — com os **dois baldes**~~ — feito como `/meus-equipamentos` (D141: a tela leva o nome do que lista). Os dois baldes, e o do posto **diz com quem é dividido** — sem essa lista, "Mesa 1 · monitor LG" se lê como *o monitor é meu*, e quem sai da empresa devolve o monitor que a colega do outro turno usa. A rota é `/api/me/holdings`, irmã da com `:id` e **não um `?me=true`**: a diferença não é de filtro, é de autorização. *Solicitar item* continua em **Descartado de propósito**, e o aceite já tem o caminho dele desde a F4 (link no e-mail, sem exigir conta)
+- [x] **P** ~~Avatar do colaborador (começar por iniciais geradas, sem upload)~~ — feito, com a cor **derivada do nome** (`hsl` de matiz variável, saturação e luminosidade fixas): a mesma pessoa é sempre a mesma cor em toda tela, sem nada gravado. Foto pediria armazenamento, rota com permissão, miniatura e uma resposta de LGPD sobre guardar imagem de pessoa junto do patrimônio — e o que ela resolve (achar a linha certa numa lista) as iniciais com cor resolvem
+
+**O que a fase entregou e o plano não pedia:** `Iniciais` é decoração que nunca é o
+único portador de significado (o nome está sempre ao lado), e as **duas linhas de
+escape em `*/cli/`** — `npm run acesso:administrador` e `npm run totp:desativar`. A
+segunda está no plano; a primeira nasceu da pergunta que a auditoria da Etapa B
+deixou em aberto: o 409 de *"nunca sem administrador"* cobre o caminho da TELA, e não
+cobre o usuário apagado, o grupo esvaziado por `psql` nem a única conta com a chave
+que perdeu a senha E o segundo fator. Nos três, o sistema fica de pé e **trancado**.
+
+**O que ficou de fora, com o motivo escrito:** `isVip`/`isRemote` (coluna sem leitor
+— defeito 11), nome dividido (duas fontes de verdade para `name`), SAML (OIDC cobre
+o Entra ID, e a segunda biblioteca seria um segundo caminho de login para manter) e
+segundo fator **obrigatório** por grupo — que é decisão nova: ela precisa de um lugar
+para morar e de uma resposta para quem entra hoje sem ter cadastrado.
 
 ---
 
@@ -714,8 +737,11 @@ F0 (base) ✅ → F1 (catálogo + ativo inteiro) ✅ → [MODELO DE POSSE] ✅ s
    → F2 (ativos) ✅ → F3 (auth) ✅ → F4 (posse: checkout/checkin/posto) ✅
       → F5 (estoque) ✅ → F6 (licenças) ✅ → F7 (convergência RMM) ✅
             → F8 (ciclo de vida) ✅
-               → F9 (campos) ✅ → F10 (relatórios) ✅ → F11 (acesso)
+               → F9 (campos) ✅ → F10 (relatórios) ✅ → F11 (acesso) ✅
 ```
+
+**As onze fases estão fechadas.** O único item em aberto deste arquivo é o anexo de
+licença (D94), que espera um dono polimórfico em `Attachment` — e espera de propósito.
 
 **A F0 até a F4 estão completas.** As três últimas fecharam pelo
 [`FECHAMENTO-F2-F4-PLANO-ITAM.md`](./FECHAMENTO-F2-F4-PLANO-ITAM.md), organizado em cinco **levas**
@@ -774,10 +800,35 @@ pegou — todos invisíveis pela tela, quatro alcançáveis só pela API — e, 
 que não existia, mais seis acertos menores com a mesma assinatura — a tela prometendo uma regra
 que o código não cumpria.
 
-**O próximo passo é a F10** — etiquetas, relatórios e importação. Ela herda da F9 três coisas: o
-número medido do JsonB (para decidir entre `$queryRaw` com allowlist, ordenação em memória com teto
-ou fora de escopo), o seletor de colunas que precisa herdar as colunas customizadas pelo mesmo
-mecanismo das nativas, e o item **P** do CSV que ficou esperando o importador existir.
+**A F10 fechou**: as etiquetas com QR e Code128 (a prévia É o PDF), o export CSV, o importador com
+dry-run obrigatório, as duas abas novas de `/relatorios` e o report builder por token → fragmento
+declarado (D67). Ela herdou da F9 o número medido do JsonB e o seletor de colunas; o item **P** do
+CSV que esperava o importador existir foi fechado na F11, junto com o resto.
+
+**A F11 fechou, e ela é a fase que mudou o `core` duas vezes.**
+
+A primeira é a autorização. O plano mandava escrever o `preHandler` de permissão rota por rota,
+dentro de cada maestro — e a auditoria recusou pelo mesmo motivo que a F3 já havia recusado para a
+SESSÃO: por rota, a rota NOVA nasce liberada, e esquecer de protegê-la não gera erro nenhum. Nasceu
+`core/http/permission-guard.ts`, irmão do `require-auth.ts`, com um degrau que o irmão não tem: ele
+confere a tabela de rotas do Fastify **no boot**, e rota sem declaração **derruba o processo**
+(D137). O esquecimento deixou de ser uma API aberta em silêncio e passou a ser um `npm test`
+vermelho.
+
+A segunda é a identidade. `auth/` ganhou segundo fator e token pessoal pelo caminho que o D80 já
+tinha aberto; `access/` ganhou o diretório e o SSO. E as três entradas terminam no MESMO cookie, com
+a mesma releitura de usuário e as mesmas permissões — porque duas formas de "sessão emitida"
+significariam dois jeitos de montar o cookie, e um deles ficaria sem o `tv` no primeiro refactor.
+
+**E ela é a primeira fase cuja migração não é aditiva.** O `DROP COLUMN users.department` foi em dois
+tempos, com o contrato mudando na migração 1 (D135) e a coluna caindo na 2 — entre as duas, um
+rollback ainda encontra o texto original. Foi também a primeira vez que a receita de reconstruir o
+banco do zero (`ARQUITETURA.md`) deixou de ser zelo e passou a ser pré-requisito de fechar a fase.
+
+**O que a F11 descobriu e corrigiu fora do próprio escopo:** o termo de entrega de alvo `LOCATION`
+(F4) lia `Location.manager` da FOLHA e recusava com 409 — entregar para a "Mesa 1" dentro de um
+"Andar 2" que tem gestor era recusado, com o gestor cadastrado e visível na tela. A fronteira do D72
+revelou isso ao escrever a função que sobe a árvore, e o aceite passou a usá-la (D139).
 
 **F0 → F1 → F2 continua o caminho crítico.** Tudo depende do modelo de dados certo. Começar por
 telas antes disso é retrabalho garantido — foi exatamente o que aconteceu com

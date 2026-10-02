@@ -1,5 +1,6 @@
 import { AppError } from '../../../core/errors/app-error';
 import type { ClientePosse } from '../../assignment/use-cases/resolve-responsibles.usecase';
+import { resolverEscalonamento } from '../../assignment/use-cases/resolver-escalonamento.usecase';
 import { gerarToken, validadePadrao } from '../helpers/token.helper';
 
 // A EMISSÃO DO TERMO — dentro da transação do checkout.
@@ -30,8 +31,9 @@ interface Signatario {
  * Descobre quem assina.
  *
  * `USER`     — a própria pessoa.
- * `LOCATION` — o GESTOR da localidade (D27). `Location.managerId` existe desde
- *              a F1 e esta é a primeira regra que o LÊ para decidir algo.
+ * `LOCATION` — o GESTOR da localidade (D27), encontrado SUBINDO a árvore
+ *              (`resolverEscalonamento`, D139): a Mesa 1 sem gestor próprio
+ *              dentro de um Andar 2 com gestor resolve no Andar 2.
  * `ASSET`    — ninguém (D87). Devolve `null`, e o chamador não emite.
  */
 async function resolverSignatario(
@@ -50,23 +52,56 @@ async function resolverSignatario(
     return { userId: pessoa.id, name: pessoa.name, email: pessoa.email };
   }
 
+  // ═══════════════════════════════════════════════════════════════════════
+  // QUEM RESPONDE PELO ESPAÇO SAI DE `resolverEscalonamento()`, E NÃO DE UMA
+  // LEITURA DO `managerId` DA FOLHA (F11, Etapa F — D139).
+  //
+  // ESTE ARQUIVO ERA A SEGUNDA RESPOSTA PARA A MESMA PERGUNTA, e era a pior das
+  // duas. Ele lia `Location.manager` da localização EXATA e recusava se fosse
+  // nula — sem subir a árvore. Consequência concreta: entregar um notebook com
+  // termo de aceite para a "Mesa 1", que não tem gestor próprio, dentro do
+  // "Andar 2", que tem, era **409**. O gestor existia, estava cadastrado, e o
+  // sistema dizia para cadastrá-lo.
+  //
+  // A F11 criou a função que sobe a árvore, e deixar esta leitura como estava
+  // faria a fase fechar com duas respostas divergentes para *"quem responde
+  // pelo espaço?"* — o D16 renascendo na camada de cima (é o precedente do
+  // D130: posto vago continua saindo de UM lugar só).
+  //
+  // O D27 NÃO MUDA: o termo vai para **um** gestor, não para os N ocupantes, e
+  // sem gestor em ancestral nenhum o checkout continua sendo recusado. O que
+  // muda é que agora "sem gestor" quer dizer *a árvore inteira não tem*, e não
+  // *esta folha não tem*.
+  //
+  // E A AMARRA QUE MANTÉM O MODELO ÍNTEGRO: assinar NÃO torna o gestor
+  // responsável resolvido. `resolverResponsaveis()` continua devolvendo só os
+  // ocupantes do posto, e o escalonamento continua sendo função separada (D73).
+  // ═══════════════════════════════════════════════════════════════════════
   const local = await tx.location.findUnique({
     where: { id: ctx.targetLocationId ?? '' },
-    select: { name: true, manager: { select: { id: true, name: true, email: true } } },
+    select: { id: true, name: true },
   });
   if (!local) throw new AppError('Localização do termo não encontrada.', 422);
 
-  // SEM GESTOR, O CHECKOUT É RECUSADO (D27). Não se emite termo para ninguém, e
-  // não se entrega em silêncio um equipamento que exige assinatura: as duas
-  // saídas deixariam o documento sem dono. O 409 diz o que fazer.
-  if (!local.manager) {
+  const escalonamento = await resolverEscalonamento(tx, local.id);
+
+  // SEM GESTOR EM ANCESTRAL NENHUM, O CHECKOUT É RECUSADO (D27). Não se emite
+  // termo para ninguém, e não se entrega em silêncio um equipamento que exige
+  // assinatura: as duas saídas deixariam o documento sem dono. O 409 diz o que
+  // fazer — e agora diz a verdade, porque a árvore inteira foi consultada.
+  if (!escalonamento) {
     throw new AppError(
-      `Defina o gestor de "${local.name}" antes de entregar equipamento com termo de aceite.`,
+      `Defina o gestor de "${local.name}" (ou de uma localização acima dela) antes de ` +
+      'entregar equipamento com termo de aceite.',
       409,
     );
   }
 
-  return { userId: local.manager.id, name: local.manager.name, email: local.manager.email };
+  return {
+    userId: escalonamento.userId,
+    name: escalonamento.name,
+    email: escalonamento.email,
+  };
 }
 
 /**

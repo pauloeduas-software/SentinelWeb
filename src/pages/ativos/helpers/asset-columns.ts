@@ -103,12 +103,33 @@ export const COLUNAS_FIXAS: string[] = COLUNAS_DE_ATIVO
  * arquivo, e é a ordem em que a tela as mostra — quem exporta para conferir
  * contra a tela não quer reordenar nada.
  */
-export function tokensDeExport(visiveis: readonly string[]): string[] {
+export function tokensDeExport(
+  visiveis: readonly string[],
+  /**
+   * Os campos customizados que a TABELA está mostrando (F9, `showInListView`).
+   *
+   * Eles entram no arquivo porque a promessa do botão é *"o CSV tem o que a tela
+   * mostra"*: a tabela desenha estas colunas depois das fixas, e um export que as
+   * omitisse produziria uma planilha mais pobre do que a tela de onde ela saiu.
+   *
+   * Não passam pelo seletor de colunas, como na tabela — quem decide se um campo
+   * customizado aparece é o `showInListView` do próprio campo, em Configurações, e
+   * não a preferência de cada pessoa. Dois lugares decidindo isso faria a planilha
+   * de duas pessoas ter colunas diferentes para o mesmo filtro.
+   */
+  camposCustomizados: readonly { slug: string }[] = [],
+): string[] {
   const tokens = COLUNAS_DE_ATIVO
     .filter((coluna) => visiveis.includes(coluna.token))
     .flatMap((coluna) => coluna.exporta ?? [coluna.token]);
 
-  return [...new Set(tokens)];
+  // `cf:` é o MESMO prefixo que o servidor espera
+  // (`custom-field/use-cases/list-csv-fields.usecase.ts`). Ele está escrito aqui e
+  // lá, e é o teste de export que mantém os dois concordando — um prefixo
+  // divergente devolveria 422 "coluna desconhecida" no primeiro download.
+  const customizados = camposCustomizados.map((campo) => `cf:${campo.slug}`);
+
+  return [...new Set([...tokens, ...customizados])];
 }
 
 export function colunasVisiveis(preferencia: readonly string[]): string[] {

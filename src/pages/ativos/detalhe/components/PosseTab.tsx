@@ -1,5 +1,7 @@
-import { ArrowRightLeft, MapPin, TriangleAlert, Undo2, User } from 'lucide-react';
-import type { Assignment, PosseResolvida, Responsavel } from '../../../../domain/shared/posse.types';
+import { ArrowRightLeft, MapPin, PhoneCall, TriangleAlert, Undo2, User } from 'lucide-react';
+import type {
+  Assignment, Escalonamento, PosseResolvida, Responsavel,
+} from '../../../../domain/shared/posse.types';
 import { formatarData } from '../../../helpers/format.helper';
 import { comoChegouAoAlvo, estaAberta, rotuloDoAlvo } from '../helpers/rotulo-do-alvo.helper';
 
@@ -29,14 +31,36 @@ const VIA: Record<Responsavel['via'], { rotulo: string; explicacao: string }> = 
   },
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// E O SEGUNDO MAPA, QUE É DE OUTRA PERGUNTA (F11, Etapa F — D73).
+//
+// `VIA` acima explica como alguém virou RESPONSÁVEL. Este explica como o
+// ESCALONAMENTO foi encontrado, e os dois nunca se misturam numa lista só: o
+// gestor da localidade não está com o equipamento. Ver docs/MODELO-POSSE.md,
+// seção "A fronteira".
+const VIA_DO_ESCALONAMENTO: Record<Escalonamento['via'], (local: string) => string> = {
+  LOCAL: (local) => `Gestor de ${local}, que é a própria localização do ativo.`,
+  // O número de saltos vai na frase porque é o que avisa que o contato é
+  // INDIRETO: "gestor do Andar 2" soa como a pessoa certa até se saber que o
+  // ativo está três níveis abaixo, numa mesa que ninguém administra.
+  ANCESTRAL: (local) => `Gestor de ${local} — a localização do ativo não tem gestor próprio, então a responsabilidade pelo espaço sobe a árvore até aqui.`,
+};
+
 interface PosseTabProps {
   posse: PosseResolvida | null;
   assignments: Assignment[];
+  /**
+   * Para quem ligar quando ninguém ocupa o posto. `null` é resposta legítima:
+   * ativo sem localização, ou árvore sem gestor em ancestral nenhum.
+   */
+  escalonamento: Escalonamento | null;
   carregando: boolean;
   onAbrirOperacao: () => void;
 }
 
-export default function PosseTab({ posse, assignments, carregando, onAbrirOperacao }: PosseTabProps) {
+export default function PosseTab({
+  posse, assignments, escalonamento, carregando, onAbrirOperacao,
+}: PosseTabProps) {
   // Cálculo fora do JSX: as três perguntas da tela, respondidas uma vez.
   const entregue = posse?.assignmentId != null;
   const responsaveis = posse?.responsaveis ?? [];
@@ -118,6 +142,56 @@ export default function PosseTab({ posse, assignments, carregando, onAbrirOperac
           )}
         </div>
       )}
+
+      {/* ── RESPONSÁVEIS × ESCALONAMENTO (F11, Etapa F) ────────────────────────
+          O bloco existe para o CONTRASTE, e é por isso que ele aparece mesmo
+          quando há responsável: as duas perguntas são vizinhas, as respostas são
+          pessoas, e sem a distinção escrita na tela alguém vai ligar para o
+          gestor do andar achando que o notebook é dele.
+
+          Ele fica DEPOIS de "Entregue para" porque é ali que o `postoVago`
+          acende — o aviso diz "equipamento parado em mesa vazia" e a pergunta
+          seguinte é exatamente *então com quem eu falo?*. */}
+      <section className="space-y-2 border border-border-sutil p-4">
+        <div className="flex items-center gap-2">
+          <PhoneCall size={13} className="text-text-tertiary" />
+          <h3 className="text-text-tertiary uppercase tracking-widest text-[10px]">
+            Para quem ligar pelo espaço
+          </h3>
+        </div>
+
+        {escalonamento ? (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-text-primary">{escalonamento.name}</span>
+              <span className="text-[10px] uppercase tracking-widest text-text-secondary">
+                {escalonamento.via === 'LOCAL' ? 'gestor do local' : `${escalonamento.saltos} nível(is) acima`}
+              </span>
+            </div>
+            <div className="text-text-tertiary text-[10px]">{escalonamento.email}</div>
+            <div className="text-text-tertiary text-[10px] leading-relaxed">
+              {VIA_DO_ESCALONAMENTO[escalonamento.via](escalonamento.locationName)}
+            </div>
+          </>
+        ) : (
+          <div className="flex items-start gap-2 text-[10px] leading-relaxed text-text-tertiary">
+            {posse?.postoVago && <TriangleAlert size={12} className="mt-0.5 shrink-0 text-status-warning" />}
+            <span>
+              Nenhuma localização acima deste ativo tem gestor cadastrado — ou ele não está em
+              localização nenhuma. Enquanto for assim, um posto vago aqui não tem a quem escalar, e
+              a entrega com termo de aceite para este posto é recusada.
+            </span>
+          </div>
+        )}
+
+        <p className="text-text-tertiary text-[10px] leading-relaxed border-t border-border-sutil/50 pt-2">
+          <strong className="text-text-secondary">Isto não é responsabilidade.</strong> Quem responde
+          pelo ativo está na lista de cima — é quem está com o equipamento. O gestor da localidade
+          responde pelo <em>espaço</em>: ele é quem assina o termo de uma entrega para posto e quem
+          se procura quando o posto está vazio. Ele nunca entra em "quem responde hoje", e é essa
+          separação que mantém POSTO VAGO sendo um sinal em vez de um nome.
+        </p>
+      </section>
 
       <section className="space-y-3">
         <h3 className="text-text-tertiary uppercase tracking-widest text-[10px] border-b border-border-sutil pb-2">

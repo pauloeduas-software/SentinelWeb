@@ -81,6 +81,12 @@ server/
 | `audit` | **Conferência física**: as três perguntas do modelo de posse, conferidas por POSTO e registradas por ATIVO | `Audit` |
 | `alert` | **Central de alertas**: os quatro sinais do ativo, persistidos antes de virarem mensagem, com o job diário | `Alert` |
 | `report` | **Leitura agregada** — quatro relatórios, e nenhum deles escreve | — |
+| `label` | **Etiquetas**: código de barras, QR e a folha em PDF (F10) | — |
+| `import` | **Importação CSV**: o mapeamento, o dry-run obrigatório e o relatório linha a linha (F10) | `Import`, `ImportRow` |
+| `backup` | **Backup do banco** pela interface, atrás de `BACKUP_ENABLED` (F10) | — |
+| `acceptance` | **Termo de entrega**: o EULA copiado, a assinatura e o PDF (F4) | `Acceptance` |
+| `attachment` | **Anexo e imagem**: o arquivo, onde ele mora e quem pode baixá-lo (F2) | `Attachment` |
+| `access` | **Autorização e identidade** (F11): grupos e permissão efetiva, o catálogo de chaves, o departamento como entidade, a sincronização com o diretório e o login por SSO | `Group`, `Department` |
 
 > **`catalog` e `custom-field` são o MESMO assunto em duas pastas, e a divisão é o
 > D64.** A parte PLANA dos dois cadastros novos é CRUD de catálogo — listar,
@@ -346,6 +352,39 @@ Em ordem de prioridade, do [`ITAM-TODO.md`](./ITAM-TODO.md):
 > pelo job e nunca aparecia no relatório que lê o escopo completo. Domínio que
 > pergunta importa; domínio que responde é o dono do dado — é o D16 aplicado a uma
 > constante.
+
+> **Etiquetas, importação e o report builder JÁ EXISTEM** — o terceiro item da
+> lista acima caducou. A F10 fechou: `label/` (Code128 e QR, com a folha em PDF
+> cuja prévia É o PDF), `import/` (mapeamento de colunas e dry-run obrigatório),
+> o export CSV de ativos e licenças, o seletor de colunas e o report builder — as
+> três abas novas entraram na moldura de `/relatorios` que a F8 criou, como estava
+> previsto. Ver `docs/FASE-10-PLANO-ITAM.md`.
+
+> **A AUTORIZAÇÃO JÁ EXISTE, e ela mudou o `core`** — a F11 fechou o que o
+> primeiro item desta lista previa pela metade. Quando ele foi escrito, a aposta era
+> *"o middleware vai por rota, dentro de cada maestro"*; a auditoria da fase
+> recusou isso, e pelo mesmo motivo que a F3 já havia recusado para a SESSÃO: por
+> rota, a rota NOVA nasce liberada. Então nasceu `core/http/permission-guard.ts`,
+> irmão do `require-auth.ts`, com um degrau a mais — ele confere a tabela de rotas
+> do Fastify no boot, e **rota sem permissão declarada derruba o processo** (D137).
+>
+> O que a fase trouxe, em uma linha cada:
+>
+> - **`access/`** — grupos com permissão em JsonB (união permissiva, sem `deny` —
+>   D76), o catálogo de 35 chaves em código, `Department` como entidade (D75), a
+>   sincronização com o diretório (que MARCA quem sumiu, nunca desliga — D78) e o
+>   login por OIDC;
+> - **`auth/` cresceu** — segundo fator TOTP (cifrado em repouso com o
+>   `core/crypto/cipher.ts` da F6), token pessoal de API pelo mesmo caminho de
+>   autenticação do agente (D80), e as duas linhas de escape em `*/cli/`, que são
+>   comando de linha de propósito: uma rota que destrava o 2FA é o 2FA desligado;
+> - **dado sensível some do `select`, não é mascarado depois** (D77) — custo de
+>   compra, chave de produto e campo cifrado, cada um pelo caminho que cabe a ele.
+>
+> **A migração não aditiva da fase** (`DROP COLUMN users.department`) foi em DOIS
+> tempos, e é o único lugar do projeto onde isso aconteceu: criar + preencher numa
+> migração, apagar na seguinte — entre as duas, um rollback ainda encontra o texto
+> original. Ver `prisma/migrations/*_departamento_e_colaborador` e `*_drop_users_department`.
 
 > Validação com `zod`, paginação, busca, ordenação, soft delete e `ActivityLog`
 > **existem** desde a Fase 0 — esta seção os listava como pendentes e estava

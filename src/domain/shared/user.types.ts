@@ -1,9 +1,34 @@
-/** Colaborador da empresa — quem recebe os ativos do inventário. */
+/** `{ id, name }` — como departamento e gestor chegam na resposta. */
+export interface Referencia {
+  id: string;
+  name: string;
+}
+
+/**
+ * Colaborador da empresa — quem recebe os ativos do inventário.
+ *
+ * `department` É OPCIONAL NO TIPO, e isso é o contrato do D135 aparecendo aqui:
+ * ele só vem na LISTAGEM de pessoas (`USER_LIST_SELECT` no servidor), que é a
+ * única tela que mostra a coluna. Nos lugares onde um usuário vem EMBUTIDO — o
+ * `assignedTo` de um ativo, o ocupante de um posto, o alvo de uma posse — ele
+ * não vem, porque o join não tem o que fazer em cada linha de cada histórico.
+ *
+ * Então `user.department` ausente não é dado faltando: é o select certo tendo
+ * sido usado. Quem precisa dele numa tela nova pede a rota que o traz.
+ */
 export interface User {
   id: string;
   name: string;
   email: string;
-  department?: string | null;
+  /** Só na listagem de pessoas e no perfil — ver acima (D135). */
+  department?: Referencia | null;
+  /**
+   * O id do gestor, cru. Só na LISTAGEM, e só porque o formulário o edita.
+   *
+   * Sem ele, o `<select>` de gestor abriria vazio ao editar e gravaria `null` —
+   * editar o nome de alguém apagaria o gestor dela em silêncio.
+   */
+  managerId?: string | null;
   createdAt: string;
 }
 
@@ -46,7 +71,46 @@ export interface UserDetail extends User {
   isActive: boolean;
   /** ISO da saída, ou `null` para quem continua na empresa. */
   terminatedAt: string | null;
+
+  // A IDENTIDADE (F11, Etapa E). Só nesta leitura, pelo mesmo motivo de
+  // `isActive`/`terminatedAt`.
+  employeeNumber: string | null;
+  jobTitle: string | null;
+  phone: string | null;
+  address: string | null;
+  /** ISO da admissão. Não é `createdAt`: a pessoa trabalha aqui desde antes. */
+  hiredAt: string | null;
+  /**
+   * Quem COBRA esta pessoa — a hierarquia de gente.
+   *
+   * ⚠️ NUNCA quem responde pelo ativo dela (D72). Responsabilidade por
+   * equipamento é *quem está com ele*, e sai de `posse.responsaveis`.
+   */
+  manager: Referencia | null;
   posseAberta: PosseAbertaDoUsuario;
+
+  // ── DE ONDE VEM ESTA IDENTIDADE (F11, Etapa I — D78) ─────────────────────
+
+  /**
+   * `LOCAL` entra com usuário e senha deste sistema; `LDAP` veio da
+   * sincronização com o diretório; `OIDC` entra por SSO.
+   *
+   * ⚠️ Mudar isto para `OIDC` **concede um caminho de login**: quem autenticar
+   * aquele e-mail no provedor passa a entrar como esta pessoa, com os grupos
+   * dela. Por isso a troca não é um campo do formulário de cadastro — é rota
+   * própria com `access.manage` (`PUT /api/users/:id/auth-source`).
+   */
+  authSource: 'LOCAL' | 'LDAP' | 'OIDC';
+  /** ISO da última vez que o diretório confirmou esta pessoa. */
+  directorySyncedAt: string | null;
+  /**
+   * Desde quando ela deixou de aparecer na busca do diretório.
+   *
+   * É uma MARCA DE REVISÃO, não um desligamento (D78): a sincronização nunca
+   * desliga ninguém — um filtro LDAP mal escrito devolveria "zero pessoas" e o
+   * inventário inteiro voltaria ao estoque numa madrugada. Quem decide é gente.
+   */
+  directoryMissingAt: string | null;
 }
 
 /**

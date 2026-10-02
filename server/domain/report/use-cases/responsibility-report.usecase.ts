@@ -65,7 +65,19 @@ export interface RelatorioDeResponsabilidade {
   desligadosComPosse: number;
 }
 
-export async function responsibilityReport(): Promise<RelatorioDeResponsabilidade> {
+export async function responsibilityReport(
+  /** A sessão enxerga custo? (F11, D77). Por parâmetro, como nos outros. */
+  podeVerCusto: boolean,
+): Promise<RelatorioDeResponsabilidade> {
+  // O `SUM` do custo só existe com a chave: `NULL::numeric` no lugar, e o valor
+  // não é lido do banco em vez de ser apagado depois. A forma da resposta não
+  // muda — `custoTotal` já podia vir nulo para quem só responde por ativo sem
+  // custo cadastrado —, então nenhuma tela precisa mudar para tratar isto.
+  //
+  // O relatório CONTINUA ÚTIL sem a chave: ele responde "quem responde por
+  // quantos equipamentos", que é a pergunta principal. O custo é a coluna que
+  // alguns veem.
+  const somaDoCusto = podeVerCusto ? Prisma.sql`SUM(a."purchaseCost")` : Prisma.sql`NULL::numeric`;
   const linhas = await prisma.$queryRaw<(Omit<LinhaDeResponsabilidade, 'custoTotal'> & {
     custoTotal: unknown;
   })[]>(Prisma.sql`
@@ -77,7 +89,7 @@ export async function responsibilityReport(): Promise<RelatorioDeResponsabilidad
            COUNT(DISTINCT CASE WHEN r.via = 'POSTO'  THEN r."assetId" END)::int AS "porPosto",
            COUNT(DISTINCT CASE WHEN r.via = 'ATIVO'  THEN r."assetId" END)::int AS "porAtivo",
            COUNT(DISTINCT r."assetId")::int AS total,
-           SUM(a."purchaseCost") AS "custoTotal"
+           ${somaDoCusto} AS "custoTotal"
       FROM vw_asset_responsibles r
       JOIN assets a ON a.id = r."assetId"
       JOIN status_labels s ON s.id = a."statusId"

@@ -37,6 +37,18 @@ export interface Cliente {
 }
 
 export interface ApiDeTeste extends Cliente {
+  /**
+   * Uma sessão com EXATAMENTE as permissões pedidas (F11).
+   *
+   * É o que permite testar o que o administrador nunca vê: ele está no grupo
+   * `Administrador`, que tem todas as chaves, então nenhuma asserção sobre
+   * "sem permissão" é possível pelo cliente padrão.
+   *
+   * Cria um colaborador com senha, um grupo com as chaves pedidas, vincula os
+   * dois e entra. Lista VAZIA é um caso legítimo e útil: é a sessão que entrou e
+   * não alcança nada — a que prova que a porta está fechada por padrão.
+   */
+  comoUsuario(permissoes: readonly string[]): Promise<Cliente & { userId: string }>;
   /** A instância montada, para o que o cliente não cobre (WebSocket, `app.hasRoute`). */
   app: FastifyInstance;
   /** O id do administrador logado — o ator esperado em todo `ActivityLog`. */
@@ -106,6 +118,27 @@ function clienteCom(app: FastifyInstance, cookie: string | null): Cliente {
 }
 
 /**
+ * Um cliente com UM cookie de sessão específico.
+ *
+ * QUEM PRECISA DISSO: o arquivo que faz login mais de uma vez na mesma conta — o
+ * do segundo fator (F11, Etapa H), em que a MESMA pessoa entra sem código, com
+ * código errado, com código certo e com código de recuperação. O `criarApi()`
+ * guarda um cookie só (o do administrador) e o `comoUsuario()` devolve um cliente
+ * já logado sem as credenciais, então nenhum dos dois serve para reentrar.
+ *
+ * Recebe o VALOR do cookie (o que vem de `resposta.cookies`), não o cabeçalho
+ * montado: quem chama acabou de ler a resposta do login e não tem por que
+ * conhecer o nome do cookie.
+ *
+ * Para autenticar por TOKEN pessoal não há função nenhuma — é `api.anonimo` com
+ * `{ headers: { authorization: 'Bearer …' } }`. O cabeçalho já é por requisição,
+ * e um cliente próprio só esconderia que ali não há sessão.
+ */
+export function clienteComSessao(app: FastifyInstance, valorDoCookie: string): Cliente {
+  return clienteCom(app, `${COOKIE_SESSAO}=${valorDoCookie}`);
+}
+
+/**
  * Monta a aplicação e entra como o administrador do seed.
  *
  * Uma por arquivo de teste, em `beforeAll`. Por arquivo, e não global, porque
@@ -137,11 +170,75 @@ export async function criarApi(): Promise<ApiDeTeste> {
 
   const cookie = `${COOKIE_SESSAO}=${token}`;
 
+  const padrao = clienteCom(app, cookie);
+
+  /**
+   * A sessão restrita, montada PELA API — nunca por escrita direta no banco.
+   *
+   * Pelas rotas (`POST /api/users`, `POST /api/groups`, `PUT /api/users/:id/groups`,
+   * `POST /api/users/:id/set-password`) porque é o mesmo motivo que este arquivo
+   * inteiro existe: um teste que semeia grupo com `prisma.group.create` pula o
+   * zod que valida a chave contra o catálogo, e passaria a verde com uma
+   * permissão que a aplicação recusaria gravar.
+   */
+  async function comoUsuario(permissoes: readonly string[]) {
+    // `Date.now()` no sufixo porque `email` e `name` são únicos por índice
+    // parcial, e um arquivo de teste chama isto mais de uma vez.
+    const marca = `p${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    const senha = 'Senha-De-Teste-123';
+
+    const pessoa = await padrao.post<{ id: string }>('/api/users', {
+      name: `Sessão ${marca}`,
+      email: `${marca}@teste.local`,
+    });
+    if (pessoa.status !== 201 && pessoa.status !== 200) {
+      throw new Error(`comoUsuario: criar pessoa falhou (${pessoa.status}): ${JSON.stringify(pessoa.body)}`);
+    }
+
+    const grupo = await padrao.post<{ id: string }>('/api/groups', {
+      name: `Grupo ${marca}`,
+      permissions: [...permissoes],
+    });
+    if (grupo.status !== 201 && grupo.status !== 200) {
+      throw new Error(`comoUsuario: criar grupo falhou (${grupo.status}): ${JSON.stringify(grupo.body)}`);
+    }
+
+    const vinculo = await padrao.put(`/api/users/${pessoa.body.id}/groups`, {
+      groupIds: [grupo.body.id],
+    });
+    if (vinculo.status !== 200) {
+      throw new Error(`comoUsuario: vincular grupo falhou (${vinculo.status}): ${JSON.stringify(vinculo.body)}`);
+    }
+
+    const credencial = await padrao.post(`/api/users/${pessoa.body.id}/set-password`, {
+      username: marca,
+      password: senha,
+    });
+    if (credencial.status !== 200 && credencial.status !== 204) {
+      throw new Error(`comoUsuario: dar senha falhou (${credencial.status}): ${JSON.stringify(credencial.body)}`);
+    }
+
+    const entrada = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { username: marca, password: senha },
+    });
+    if (entrada.statusCode !== 200) {
+      throw new Error(`comoUsuario: login falhou (${entrada.statusCode}): ${entrada.body}`);
+    }
+
+    const sessao = entrada.cookies.find((c) => c.name === COOKIE_SESSAO)?.value;
+    if (!sessao) throw new Error('comoUsuario: login sem cookie de sessão.');
+
+    return { ...clienteCom(app, `${COOKIE_SESSAO}=${sessao}`), userId: pessoa.body.id };
+  }
+
   return {
     app,
     adminId,
     cookie,
-    ...clienteCom(app, cookie),
+    ...padrao,
+    comoUsuario,
     anonimo: clienteCom(app, null),
     fechar: () => app.close(),
   };
