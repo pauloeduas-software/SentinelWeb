@@ -29,7 +29,7 @@ import type { AlvoDaPosse } from '../../../domain/shared/posse.types';
 // do corpo (`montarEntrega`) continua no helper puro, fora do JSX.
 //
 // O que ele continua NÃO fazendo: `apiClient`, `axios`, `useQuery` direto. O
-// acesso é pela query do domínio, como manda o docs/ARQUITETURA.md.
+// acesso é pela query do domínio, como manda o docs/referencia/arquitetura.md.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const CLASSE_CAMPO =

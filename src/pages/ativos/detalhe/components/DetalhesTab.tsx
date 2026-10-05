@@ -25,7 +25,7 @@ export default function DetalhesTab({
   asset, conjuntoDeCampos, camposRevelados, revelandoCampo, erroAoRevelar,
   onRevelarCampo, onDescomissionar, onReverterSaida,
 }: DetalhesTabProps) {
-  // Cálculo fora do JSX (docs/ARQUITETURA.md). Os dois textos abaixo dependem
+  // Cálculo fora do JSX (docs/referencia/arquitetura.md). Os dois textos abaixo dependem
   // do mesmo dado e são lidos em dois lugares da tela.
   const selo = seloDaSaida(asset);
   const categoria = asset.model.category.name;

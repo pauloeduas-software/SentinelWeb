@@ -34,7 +34,7 @@ export interface User {
 
 /**
  * O que ainda prende a pessoa ao inventário — as QUATRO pontas da posse
- * (docs/MODELO-POSSE.md), contadas separadas.
+ * (docs/referencia/modelo-de-posse.md), contadas separadas.
  *
  * Separadas porque se resolvem de jeitos diferentes: o ativo e o acessório se
  * devolvem, o assento volta ao contrato (ou QUEIMA, D43) e o posto se desocupa.

@@ -14,7 +14,7 @@ import type {
 // O motor existia desde a Etapa G e esta tela não. Sem ela, `LicenseSoftware`
 // não recebia linha por nenhum caminho de produto, e o relatório respondia
 // `semVinculoDeSoftware: true` para sempre — motor completo, resposta vazia.
-// É o "defeito 1" do docs/TESTES.md na forma mais pura: verificado pela API,
+// É o "defeito 1" do docs/referencia/testes.md na forma mais pura: verificado pela API,
 // inalcançável pelo formulário.
 //
 // ─────────────────────────────────────────────────────────────────────────────

@@ -11,7 +11,7 @@ import { cenarioDePosse, criarLocal } from '../helpers/fixtures';
 // Um ativo entregue a um posto com DUAS pessoas aparece DUAS vezes em
 // `vw_asset_responsibles` — uma por responsável. É o que o modelo de posse
 // promete e é o que torna "o que cada pessoa responde" respondível
-// (docs/MODELO-POSSE.md, Camada 3).
+// (docs/referencia/modelo-de-posse.md, Camada 3).
 //
 // O QUE NÃO ERA CORRETO: o `COUNT(DISTINCT a.id)` do agrupamento sabia disso e o
 // `SUM(a."purchaseCost")` ao lado NÃO. A contagem saía certa e o dinheiro saía

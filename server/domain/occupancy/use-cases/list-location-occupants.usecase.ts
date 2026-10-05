@@ -5,7 +5,7 @@ import { OCCUPANT_SELECT } from '../helpers/occupant-select.helper';
 
 /**
  * Quem ocupa um posto de trabalho — a pergunta da Camada 2
- * (docs/MODELO-POSSE.md) e a entrada da Camada 3: é daqui que sai "quem
+ * (docs/referencia/modelo-de-posse.md) e a entrada da Camada 3: é daqui que sai "quem
  * responde pelo mouse da Mesa 1".
  *
  * SEM envelope e SEM paginação, ao contrário de `/api/assets` e `/api/users`.
@@ -22,7 +22,7 @@ export async function listLocationOccupants(locationId: string, view: OccupancyV
   // (posto vago é sinal operacional; posto inexistente é erro de quem chamou).
   //
   // `findUnique` e não `findFirst`: `Location` não tem `deletedAt`, o catálogo
-  // não tem lixeira (docs/FASE-1-PLANO-ITAM.md, D8).
+  // não tem lixeira (docs/historico/fase-01-catalogo-e-ativo.md, D8).
   const local = await prisma.location.findUnique({ where: { id: locationId }, select: { id: true } });
   if (!local) throw new AppError('Localização não encontrada.', 404);
 

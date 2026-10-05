@@ -46,7 +46,7 @@ export async function listAssets(
    * A sessão enxerga custo de compra? (F11, D77)
    *
    * Vem por PARÂMETRO, do controller, e não de um `request` importado aqui: o
-   * use-case não conhece HTTP (docs/ARQUITETURA.md), e é a mesma inversão do
+   * use-case não conhece HTTP (docs/referencia/arquitetura.md), e é a mesma inversão do
    * `actorId` do D23 — quem sabe quem está pedindo é a borda.
    */
   podeVerCusto: boolean,
@@ -64,7 +64,7 @@ export async function listAssets(
   ]);
 
   // Quem responde por cada ativo NÃO sai do `ASSET_SELECT`: é derivado da posse
-  // aberta e, quando o alvo é um posto, dos ocupantes dele (docs/MODELO-POSSE.md,
+  // aberta e, quando o alvo é um posto, dos ocupantes dele (docs/referencia/modelo-de-posse.md,
   // Camada 3). `assignedToId` sozinho responderia errado justamente no caso que
   // motivou o modelo — o mouse da Mesa 1, que é da Laura e da Ana e de ninguém
   // em particular.

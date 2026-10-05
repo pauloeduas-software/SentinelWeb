@@ -5,7 +5,7 @@ import { WRITE_RATE_LIMIT } from '../../core/http/write-rate-limit';
 
 const logger = createLogger('assignment.maestro');
 
-// A POSSE — entrega, devolução e quem responde pelo quê (docs/MODELO-POSSE.md).
+// A POSSE — entrega, devolução e quem responde pelo quê (docs/referencia/modelo-de-posse.md).
 //
 // As rotas penduram em `/api/assets` e `/api/users`, mas o domínio é próprio, e
 // não uma pasta a mais dentro de `asset/`: a entrega não é uma edição de ativo,

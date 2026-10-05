@@ -1,4 +1,4 @@
-// Atraso de devolução — função pura, sem I/O (docs/ARQUITETURA.md).
+// Atraso de devolução — função pura, sem I/O (docs/referencia/arquitetura.md).
 
 const UM_DIA_EM_MS = 24 * 60 * 60 * 1000;
 

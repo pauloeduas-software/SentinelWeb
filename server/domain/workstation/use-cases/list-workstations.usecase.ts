@@ -13,7 +13,7 @@ import { resolverCaminhos } from './resolve-location-paths.usecase';
 /**
  * Os POSTOS DE TRABALHO, com o que a tela precisa por linha.
  *
- * O posto é o coração do modelo (docs/MODELO-POSSE.md) e estava invisível:
+ * O posto é o coração do modelo (docs/referencia/modelo-de-posse.md) e estava invisível:
  * chegava-se a ele pela 6ª aba de Configurações, por um ícone pequeno numa
  * linha de catálogo. Esta rota é a superfície que faltava — e não um modelo
  * novo: continua lendo `locations`, `location_occupants` e `assignments`.

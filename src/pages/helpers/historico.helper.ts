@@ -2,8 +2,8 @@
 // abas Histórico do ativo e da pessoa.
 //
 // Nasceu dentro de `ativos/detalhe/helpers/`, quando o ativo era o único
-// com linha do tempo, e mudou para cá quando a pessoa ganhou a dela (Leva 1 do
-// docs/FECHAMENTO-F2-F4-PLANO-ITAM.md). O que ficou lá é o que É do ativo — os
+// com linha do tempo, e mudou para cá quando a pessoa ganhou a dela (Leva 1C do
+// fechamento da F4, em docs/historico/fase-04-posse.md). O que ficou lá é o que É do ativo — os
 // nomes das colunas dele e a frase do título; o que veio para cá é o que vale
 // para qualquer trilha.
 //
@@ -139,7 +139,7 @@ function rotuloDeCampoCustomizado(campo: string): string | null {
  * futura que grave um par `{de, para}` aparece como mudança sozinha.
  *
  * Os RÓTULOS vêm por parâmetro, e não de um mapa global: é a mesma inversão do
- * `parseListQuery` recebendo a allowlist do domínio (docs/ARQUITETURA.md). Um
+ * `parseListQuery` recebendo a allowlist do domínio (docs/referencia/arquitetura.md). Um
  * mapa único com as colunas de `assets` e de `users` juntas traduziria `name`
  * como "Nome" nos dois e erraria no primeiro campo homônimo com sentidos
  * diferentes.

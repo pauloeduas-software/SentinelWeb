@@ -8,7 +8,7 @@ import type { Credenciais, SessionUser } from '../shared/auth.types';
 // dela e nenhuma tela a busca por conta própria — o painel a lê uma vez ao
 // abrir e depois só muda quando alguém entra ou sai. Guardá-la no cache do
 // Query e no `auth.store.ts` ao mesmo tempo criaria exatamente o que o
-// docs/ARQUITETURA.md proíbe: duas fontes de verdade para o mesmo dado.
+// docs/referencia/arquitetura.md proíbe: duas fontes de verdade para o mesmo dado.
 //
 // Então o balde certo é o zustand (`auth.store.ts`), e este arquivo é só o
 // transporte que ele usa.

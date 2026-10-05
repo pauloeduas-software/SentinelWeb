@@ -16,7 +16,7 @@ import { useBulkSelection } from './useBulkSelection';
 const PER_PAGE = 10;
 
 // Estado da tela de ativos. Página, busca, vista, filtros, seleção e modal são
-// de UMA tela: ficam aqui, em useState, e não em store (docs/ARQUITETURA.md).
+// de UMA tela: ficam aqui, em useState, e não em store (docs/referencia/arquitetura.md).
 
 export function useAssets() {
   const navigate = useNavigate();
@@ -102,7 +102,7 @@ export function useAssets() {
 
   // O ativo cuja POSSE está sendo mexida. Modal próprio, e não uma aba do
   // formulário, porque entregar não é editar: é uma operação, com regra e
-  // histórico próprios (docs/MODELO-POSSE.md).
+  // histórico próprios (docs/referencia/modelo-de-posse.md).
   const [emPosse, setEmPosse] = useState<Asset | null>(null);
 
   const openCreate = () => {

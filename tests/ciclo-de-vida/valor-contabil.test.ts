@@ -6,7 +6,7 @@ import {
   criarAtivo, criarDepreciacao, criarFabricante, criarModelo, idsDoSeed, pendurarDepreciacao,
 } from '../helpers/fixtures';
 
-// O VALOR CONTÁBIL — docs/FASE-8-PLANO-ITAM.md, Etapa C (D55).
+// O VALOR CONTÁBIL — docs/historico/fase-08-ciclo-de-vida.md, Etapa C (D55).
 //
 // ═════════════════════════════════════════════════════════════════════════════
 // O TESTE QUE PAGA ESTE ARQUIVO É O DO PISO `AMOUNT` ACIMA DO CUSTO.

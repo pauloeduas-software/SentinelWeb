@@ -71,7 +71,7 @@ export async function fecharPosse(
       statusId: dados.statusId,
       // Limpo SEMPRE, inclusive quando a posse era de LOCATION ou de ASSET e a
       // coluna já estava nula: o cache do caso `USER` não pode sobreviver à
-      // devolução por nenhum caminho (docs/MODELO-POSSE.md).
+      // devolução por nenhum caminho (docs/referencia/modelo-de-posse.md).
       assignedToId: null,
     },
     select: ASSET_SELECT,

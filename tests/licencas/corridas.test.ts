@@ -101,7 +101,7 @@ describe('oito entregas simultâneas numa licença de CINCO assentos', () => {
 
   it('nenhum assento ficou com duas ocupações abertas', async () => {
     // A rede do banco: `license_seat_uma_aberta_por_assento`. Esta consulta é a
-    // mesma que o INVARIANTES.md manda rodar contra produção.
+    // mesma que o docs/referencia/invariantes.md manda rodar contra produção.
     const duplicados = await prisma.$queryRaw<{ seatId: string }[]>`
       SELECT "seatId" FROM license_seat_checkouts
        WHERE "checkinAt" IS NULL GROUP BY "seatId" HAVING COUNT(*) > 1

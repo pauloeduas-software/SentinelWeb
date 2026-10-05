@@ -6,7 +6,7 @@ import { $Enums } from '@prisma/client';
 // POR QUE ELAS SÃO TRÊS, E NÃO UMA.
 //
 // Antes do modelo de posse, auditar era conferir UM campo: o ativo está onde o
-// sistema diz? Com as três camadas do docs/MODELO-POSSE.md, são três perguntas
+// sistema diz? Com as três camadas do docs/referencia/modelo-de-posse.md, são três perguntas
 // que divergem por motivos diferentes e pedem tratamentos diferentes:
 //
 //   ONDE ESTÁ         `Asset.locationId`      → o sistema CORRIGE

@@ -5,7 +5,7 @@ import { maintenanceController } from './controllers/maintenance.controller';
 
 const logger = createLogger('maintenance.maestro');
 
-// O HISTÓRICO DE SERVIÇO DO ATIVO (docs/FASE-8-PLANO-ITAM.md, Etapa A).
+// O HISTÓRICO DE SERVIÇO DO ATIVO (docs/historico/fase-08-ciclo-de-vida.md, Etapa A).
 //
 // FATIA VERTICAL, e não uma spec no motor do catálogo: a listagem carrega
 // AGREGADO (custo total, em aberto, na garantia) sobre o mesmo recorte da página,

@@ -16,7 +16,7 @@ export class AssetMaestro {
     server.get('/api/assets', assetController.list);
     server.get('/api/assets/stats', assetController.stats);
     // Lista enxuta para o `<select>` da aba "Ativo" do modal de entrega: é assim
-    // que se prende um periférico a outro equipamento (docs/MODELO-POSSE.md).
+    // que se prende um periférico a outro equipamento (docs/referencia/modelo-de-posse.md).
     server.get('/api/assets/options', assetController.options);
 
     // O EXPORT (F10, Etapa C). ANTES de `/api/assets/:id` como as outras rotas

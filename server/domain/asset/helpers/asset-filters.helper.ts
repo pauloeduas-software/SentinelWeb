@@ -90,7 +90,7 @@ const MAX_VALOR_CF = 200;
  *
  * Posse ABERTA (`checkinAt: null`) cujo alvo é uma localização **sem nenhum
  * ocupante aberto**. É o sinal que nenhum ITAM de prateleira dá, e o candidato
- * natural a voltar para o estoque (docs/MODELO-POSSE.md).
+ * natural a voltar para o estoque (docs/referencia/modelo-de-posse.md).
  *
  * FILTRO DO PRISMA, nunca `.filter()` depois da consulta: filtrando no cliente,
  * a página 1 mostraria 3 de 25 linhas e o `total` do envelope mentiria — a

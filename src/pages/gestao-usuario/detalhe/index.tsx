@@ -10,7 +10,7 @@ import type { Asset, PostoDoAtivo } from '../../../domain/shared/asset.types';
 import Iniciais from '../../components/Iniciais';
 
 // PERFIL DO COLABORADOR — a Camada 3 vista do lado da pessoa
-// (docs/MODELO-POSSE.md).
+// (docs/referencia/modelo-de-posse.md).
 //
 // A tela existe para responder "o que a Laura responde?" e, logo em seguida, "o
 // que acontece quando ela sair?". Por isso ela mostra CINCO listas:
@@ -22,7 +22,7 @@ import Iniciais from '../../components/Iniciais';
 //                                 máquina e aparecem na aba Licenças dele
 //   5. os POSTOS que ela ocupa    inclusive os que não têm ativo nenhum
 //
-// Juntar 1 e 2 numa lista só é o erro que o MODELO-POSSE.md descreve: devolver
+// Juntar 1 e 2 numa lista só é o erro que o docs/referencia/modelo-de-posse.md descreve: devolver
 // um ativo da Mesa 1 pelo perfil da Laura tiraria da Ana junto.
 //
 // A 4 é a que não se vê em lugar nenhum se não estiver aqui — ninguém tropeça

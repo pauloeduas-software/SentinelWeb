@@ -9,7 +9,7 @@ import { usePostos } from './hooks/usePostos';
 
 // O POSTO DE TRABALHO — a Mesa 1, a bancada, o guichê.
 //
-// É o coração do modelo de posse (docs/MODELO-POSSE.md) e estava invisível:
+// É o coração do modelo de posse (docs/referencia/modelo-de-posse.md) e estava invisível:
 // montar a Mesa 1 com Laura de manhã e Ana à tarde exigia Configurações → 6ª
 // aba → achar a linha → um ícone pequeno de pessoas. Esta tela é a superfície
 // que faltava; o modelo não mudou — o posto continua sendo uma `Location`
@@ -59,7 +59,7 @@ export default function PostosPage() {
 
       {/* Os três recortes ficam FORA do ListToolbar: as abas dele são
           `Ativos|Lixeira` e falam de exclusão, enquanto estas falam de ocupação
-          (docs/MODELO-POSSE.md). Mesma forma visual, pergunta diferente. */}
+          (docs/referencia/modelo-de-posse.md). Mesma forma visual, pergunta diferente. */}
       <div className="flex flex-wrap border border-border-sutil font-mono text-xs mb-4 w-fit shrink-0">
         {VISOES.map((visao) => (
           <button

@@ -27,7 +27,7 @@ export interface AvisoDeQueima {
 }
 
 // Estado da tela de Licenças: página, busca, vista e qual licença está aberta.
-// Tudo de UMA tela — `useState`, não store (docs/ARQUITETURA.md).
+// Tudo de UMA tela — `useState`, não store (docs/referencia/arquitetura.md).
 export function useLicencas() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');

@@ -18,7 +18,7 @@ import { cenarioDePosse, criarAtivo } from '../helpers/fixtures';
 //    monitor LG" se lê como *o monitor é meu*: a Laura sai da empresa, devolve o
 //    monitor da sala, e a Ana — que divide a mesa no turno da tarde — fica sem
 //    monitor. A responsabilidade por equipamento de posto é COMPARTILHADA
-//    (docs/MODELO-POSSE.md, Camada 2), e a tela tem de dizer isso.
+//    (docs/referencia/modelo-de-posse.md, Camada 2), e a tela tem de dizer isso.
 // ═════════════════════════════════════════════════════════════════════════════
 
 interface Holdings {

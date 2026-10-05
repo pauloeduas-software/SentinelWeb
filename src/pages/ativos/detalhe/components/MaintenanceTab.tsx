@@ -48,7 +48,7 @@ export default function MaintenanceTab({
 
   if (carregando) return <p className="text-text-tertiary">Carregando histórico de serviço…</p>;
 
-  // Cálculo fora do JSX (docs/ARQUITETURA.md).
+  // Cálculo fora do JSX (docs/referencia/arquitetura.md).
   const emAberto = manutencoes.filter((manutencao) => manutencao.emAberto).length;
   const custo = manutencoes.reduce((soma, manutencao) => soma + Number(manutencao.cost ?? 0), 0);
 

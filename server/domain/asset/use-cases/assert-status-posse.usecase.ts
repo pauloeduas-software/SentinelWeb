@@ -27,7 +27,7 @@ const TIPOS_PROIBIDOS_COM_POSSE: Partial<Record<$Enums.StatusLabelType, string>>
 };
 
 /**
- * Invariante estado × posse (docs/INVARIANTES.md).
+ * Invariante estado × posse (docs/referencia/invariantes.md).
  *
  * Um ativo com `Assignment` ABERTA (`checkinAt: null`) não pode receber status
  * de tipo `DEPLOYABLE` nem `ARCHIVED`. São 2 combinações proibidas de 10
@@ -42,7 +42,7 @@ const TIPOS_PROIBIDOS_COM_POSSE: Partial<Record<$Enums.StatusLabelType, string>>
  *   gaveta dela, aguardando descarte. Continua sendo responsabilidade de
  *   alguém, e é exatamente isso que o relatório precisa mostrar.
  * - `IN_USE` COM responsável é o caso normal, e `IN_USE` SEM responsável é o
- *   sinal operacional que a F4 vai caçar (ver MODELO-POSSE.md, "posto vago").
+ *   sinal operacional que a F4 vai caçar (ver docs/referencia/modelo-de-posse.md, "posto vago").
  *
  * BLOQUEIA, NUNCA LIMPA SOZINHO. A alternativa "tudo bem, fecho a assignment
  * junto" é perda de dado silenciosa: quem mandou o status para `DEPLOYABLE`

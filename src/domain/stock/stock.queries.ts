@@ -9,7 +9,7 @@ import type {
   ItemDeEstoque, MotivoDoAjuste, MovimentoDoItem, StockSlug,
 } from '../shared/stock.types';
 
-// O ESTOQUE — acessórios, consumíveis e componentes (docs/FASE-5-PLANO-ITAM.md).
+// O ESTOQUE — acessórios, consumíveis e componentes (docs/historico/fase-05-estoque.md).
 //
 // A chave inclui o SLUG porque as três abas são três tabelas: sem ele, abrir
 // "Consumíveis" serviria a lista de acessórios do cache. `['stock']` continua
@@ -85,7 +85,7 @@ export function useAssetComponentsQuery(assetId: string | null) {
 /**
  * Por que TODA mutação daqui invalida ativos, posses e postos, e não só estoque.
  *
- * O estoque atravessa as três camadas do docs/MODELO-POSSE.md desde a F5:
+ * O estoque atravessa as três camadas do docs/referencia/modelo-de-posse.md desde a F5:
  * entregar um mouse à Mesa 1 muda o que a tela do POSTO mostra e o `holdings`
  * de cada OCUPANTE dela, sem nenhum ativo ter sido tocado; instalar um pente
  * muda a aba Componentes do ATIVO. Invalidar só `stock` deixaria essas telas

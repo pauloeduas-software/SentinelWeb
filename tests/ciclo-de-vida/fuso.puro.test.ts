@@ -4,7 +4,7 @@ import {
 } from '../../server/core/time/local-day';
 import { horaLocal, turnoDaHora } from '../../server/domain/reconciliation/helpers/shift.helper';
 
-// EM QUE FUSO É "HOJE" — docs/FASE-8-PLANO-ITAM.md, D123.
+// EM QUE FUSO É "HOJE" — docs/historico/fase-08-ciclo-de-vida.md, D123.
 //
 // ═════════════════════════════════════════════════════════════════════════════
 // ESTE ARQUIVO NÃO EXISTIA, E ERA A PEÇA MAIS SUTIL DA FASE SEM TESTE NENHUM.

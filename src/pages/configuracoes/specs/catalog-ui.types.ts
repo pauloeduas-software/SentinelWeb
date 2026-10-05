@@ -82,7 +82,7 @@ export interface ColunaSpec {
  *
  * Por que isto existe: as sete abas são o MESMO CRUD, e foi essa igualdade que
  * permitiu uma tela só. Localizações quebrou a igualdade em UM ponto — um posto
- * tem ocupantes (docs/MODELO-POSSE.md, Camada 2), e as outras seis tabelas não
+ * tem ocupantes (docs/referencia/modelo-de-posse.md, Camada 2), e as outras seis tabelas não
  * têm nada parecido.
  *
  * As duas saídas ruins eram: uma tela separada só para Localizações (volta a

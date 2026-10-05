@@ -10,7 +10,7 @@ import type { CatalogDelegate, CatalogSpec, ClienteCatalogo } from './catalog-sp
 // O QUE ESTÁ AQUI E O QUE NÃO ESTÁ.
 //
 // Listar, buscar, ordenar, `ActivityLog` e 409-por-uso é o que o motor genérico
-// do catálogo já faz, e o `ARQUITETURA.md` diz que acrescentar tabela de
+// do catálogo já faz, e o `docs/referencia/arquitetura.md` diz que acrescentar tabela de
 // catálogo *é escrever a spec*. O que NÃO cabe numa spec é ordem,
 // obrigatoriedade por vínculo e validação de valor: isso tem regra, e regra mora
 // em use-case — `server/domain/custom-field/`.

@@ -15,7 +15,7 @@ export const apiClient = axios.create({
   timeout: 10_000,
   headers: { 'Content-Type': 'application/json' },
   // A SESSÃO INTEIRA DEPENDE DESTA LINHA. O cookie de sessão é httpOnly
-  // (docs/FASE-3-PLANO-ITAM.md, D22): JavaScript não o lê e não o manda à mão — quem
+  // (docs/historico/fase-03-autenticacao-e-ator.md, D22): JavaScript não o lê e não o manda à mão — quem
   // o envia é o navegador, e só com `withCredentials`. Sem isto, front na 3000
   // e API na 3001 são origens distintas e o cookie simplesmente não viaja: o
   // sintoma é 401 em tudo depois de um login que respondeu 200, sem erro nenhum

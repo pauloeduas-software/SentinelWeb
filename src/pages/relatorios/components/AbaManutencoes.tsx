@@ -14,7 +14,7 @@ import { rotuloDoTipo } from '../../manutencoes/helpers/manutencao.helper';
 // ângulos, que ninguém faz bem — e com cinco fatias fica ilegível.
 
 export default function AbaManutencoes({ dados }: { dados: RelatorioDeManutencoes }) {
-  // Cálculo fora do JSX (docs/ARQUITETURA.md). O maior custo é o denominador da
+  // Cálculo fora do JSX (docs/referencia/arquitetura.md). O maior custo é o denominador da
   // barra: normalizar pelo total faria a linha maior ocupar 30% da largura e o
   // gráfico inteiro parecer vazio.
   const maior = dados.porTipo.reduce((maximo, linha) => Math.max(maximo, Number(linha.custo)), 0);

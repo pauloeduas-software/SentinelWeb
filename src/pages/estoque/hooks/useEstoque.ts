@@ -17,7 +17,7 @@ export type ModalDeEstoque = 'criar' | 'editar' | 'ajustar' | 'saida' | 'detalhe
 
 // Estado da tela de Estoque: que aba, que página, o que está na busca e qual
 // item está aberto. Tudo de UMA tela — fica aqui, em `useState`, e não em store
-// (docs/ARQUITETURA.md).
+// (docs/referencia/arquitetura.md).
 //
 // AS TRÊS MUTAÇÕES DE SAÍDA são declaradas todas, sempre, mesmo com uma aba só
 // visível: hook não pode ser condicional. Quem escolhe qual chamar é o

@@ -30,7 +30,7 @@ interface Props {
 export default function ConferenciaPanel({
   conferencia, presentes, onAlternar, onMarcarTodos, onDesmarcarTodos,
 }: Props) {
-  // Cálculo fora do JSX (docs/ARQUITETURA.md).
+  // Cálculo fora do JSX (docs/referencia/arquitetura.md).
   const idsAqui = new Set(conferencia.noPosto.map((item) => item.asset.id));
   const sumidos = conferencia.doPosto.filter((item) => !idsAqui.has(item.asset.id));
   const postoVago = conferencia.ocupantes === 0 && conferencia.doPosto.length > 0;

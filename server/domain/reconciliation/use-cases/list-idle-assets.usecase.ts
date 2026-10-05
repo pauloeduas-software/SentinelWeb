@@ -11,7 +11,7 @@ import { resolverResponsaveisEmLote } from '../../assignment/use-cases/resolve-r
 //   ocioso + sem posse        → já está no estoque e ligado à toa
 //
 // Nenhum ITAM de prateleira responde a segunda linha, porque `postoVago` só
-// existe se houver uma camada entre o ativo e a pessoa (MODELO-POSSE.md).
+// existe se houver uma camada entre o ativo e a pessoa (docs/referencia/modelo-de-posse.md).
 // ═════════════════════════════════════════════════════════════════════════════
 
 export interface AtivoOcioso {

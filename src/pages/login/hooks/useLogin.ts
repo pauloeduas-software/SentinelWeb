@@ -16,7 +16,7 @@ import { pedindoSegundoFator } from '../../../domain/auth/auth.queries';
 // um estado intermediário no servidor seria uma meia-sessão, com validade, lugar
 // para morar e um token próprio para o cliente trazer de volta — ou seja, uma
 // segunda forma de sessão existir, ao lado do cookie. O projeto tem UMA
-// (docs/AUTENTICACAO.md), e a senha ainda está na memória do formulário de
+// (docs/referencia/acesso.md), e a senha ainda está na memória do formulário de
 // qualquer forma: ela acabou de ser digitada nele.
 //
 // A CONSEQUÊNCIA VISÍVEL, e é de propósito: a senha NÃO é limpa quando o erro é o

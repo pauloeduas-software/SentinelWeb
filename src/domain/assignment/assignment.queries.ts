@@ -4,7 +4,7 @@ import { assetKeys } from '../asset/asset.queries';
 import type { UserHoldings } from '../shared/asset.types';
 import type { AlvoDaPosse, Assignment } from '../shared/posse.types';
 
-// A POSSE — Camada 1 de docs/MODELO-POSSE.md.
+// A POSSE — Camada 1 de docs/referencia/modelo-de-posse.md.
 //
 // Entregar e devolver são OPERAÇÕES, não edição de campo: não existe `useUpdate`
 // aqui de propósito. Uma posse nasce no checkout e morre no checkin, e o

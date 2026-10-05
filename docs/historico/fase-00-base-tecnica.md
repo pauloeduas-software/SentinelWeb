@@ -1,8 +1,8 @@
 # Plano de implementação — Fase 0 ✅ CONCLUÍDA
 
-> Plano de execução da Fase 0 do [`ITAM-TODO.md`](./ITAM-TODO.md), escrito contra o
+> Plano de execução da Fase 0 do [`../ROADMAP.md`](../ROADMAP.md), escrito contra o
 > código real depois da reestruturação em `server/domain/` e `src/domain/`.
-> Convenções de camada: [`ARQUITETURA.md`](./ARQUITETURA.md) — o `npm run lint` é
+> Convenções de camada: [`../referencia/arquitetura.md`](../referencia/arquitetura.md) — o `npm run lint` é
 > quem verifica, não o code review.
 >
 > Esforço: **P** = até meio dia · **M** = 1 a 3 dias
@@ -38,6 +38,31 @@ Duas armadilhas de biblioteca também apareceram e estão documentadas no códig
 `z.email()` da zod 4 valida **antes** do `.trim()` (precisa de `pipe`), e o 429
 do `@fastify/rate-limit` é lançado como erro — sem tratamento explícito no
 `error-handler`, virava 500.
+
+---
+
+## O que a auditoria das F0 e F1 encontrou nesta fase
+
+A auditoria de 23/09/2026 passou pelas duas fases de uma vez, porque elas estavam na mesma
+árvore de trabalho. Os 5 defeitos e as correções estão no
+[`fase-01-catalogo-e-ativo.md`](fase-01-catalogo-e-ativo.md) — é lá que o código auditado nasceu. Dois
+itens, porém, são de arquivos **desta** fase:
+
+1. **Três comentários apontando para arquivos que não existiam mais.** `shared/fields.schema.ts`
+   citava `inventory.schema.ts`, `core/database/soft-delete.extension.ts` citava
+   `InventoryItem` e `src/domain/shared/list.types.ts` citava `/inventory`. Resíduo do rename
+   da Etapa F da F1, nos três arquivos que a F0 escreveu. Corrigidos.
+
+2. **`.env` sem `AGENT_TOKEN`.** O `.env.example` tinha a chave, o `.env` local não. Em
+   desenvolvimento o boot sobe com aviso (por desenho, decidido na Etapa E); em produção ele
+   para. Não foi preenchido na época de propósito: definir um token ali faria o `/agent-hub`
+   recusar o agente C# que então conectava sem nenhum. Resolvido de vez na **Leva 5 da F3**,
+   que trocou o token compartilhado pelo `ApiToken` por agente (D89) — com convivência e log
+   de depreciação, exatamente para não derrubar a frota.
+
+E um terceiro, que é da F0 pela origem e da F1 pelo sintoma: o `buildChanges` de
+`shared/diff.helper.ts` não tratava `Decimal` (defeito 4 da auditoria). O helper é desta fase;
+a armadilha só apareceu quando a F1 trouxe as duas primeiras colunas `Decimal` do projeto.
 
 ---
 
@@ -308,7 +333,7 @@ invalidar `['inventory']` invalida todas as páginas.
 
 **Onde o estado de página mora.** Página, busca e ordenação são estado de uma
 tela só — `useState` dentro de `src/pages/gestao-itam/hooks/useInventory.ts`,
-como o `ARQUITETURA.md` já define para modal e seleção. Não é client state
+como o `../referencia/arquitetura.md` já define para modal e seleção. Não é client state
 global, não entra em store. O hook repassa os parâmetros para a query do domínio;
 a página nunca toca em `@tanstack/react-query` (o lint recusa).
 
@@ -433,7 +458,7 @@ F3, E sobe para primeiro).
 
 ---
 
-## Mapa de volta para o `ITAM-TODO.md`
+## Mapa de volta para o `../ROADMAP.md`
 
 | Item da F0 | Etapa |
 |---|---|

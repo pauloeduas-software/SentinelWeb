@@ -1,7 +1,7 @@
 import type { CookieSerializeOptions } from '@fastify/cookie';
 import { isProduction } from '../../../core/config/env';
 
-// O cookie de sessão — D22 do docs/FASE-3-PLANO-ITAM.md.
+// O cookie de sessão — D22 do docs/historico/fase-03-autenticacao-e-ator.md.
 //
 // `httpOnly` é a decisão inteira em uma palavra: um XSS em qualquer tela do
 // painel lê o `localStorage` inteiro e leva a sessão embora para sempre; o
@@ -33,7 +33,7 @@ function atributosDoCookie(): CookieSerializeOptions {
     // `Lax`, não `Strict`: em desenvolvimento o painel roda na 3000 e a API na
     // 3001, e `Strict` faria o navegador simplesmente não enviar o cookie — o
     // sintoma é 401 em tudo depois de um login que respondeu 200, sem erro
-    // nenhum no console (docs/FASE-3-PLANO-ITAM.md, "Riscos e armadilhas").
+    // nenhum no console (docs/historico/fase-03-autenticacao-e-ator.md, "Riscos e armadilhas").
     sameSite: 'lax',
     // Só em produção: `Secure` em http://localhost faz o navegador descartar o
     // cookie em silêncio.

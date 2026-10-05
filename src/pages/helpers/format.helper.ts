@@ -1,7 +1,7 @@
 import type { FormatoDeData } from '../../domain/shared/settings.types';
 
 // Formatação compartilhada entre as telas — funções puras, fora do JSX
-// (docs/ARQUITETURA.md: "cálculo sai do JSX").
+// (docs/referencia/arquitetura.md: "cálculo sai do JSX").
 //
 // ═════════════════════════════════════════════════════════════════════════════
 // O IDIOMA, A MOEDA E O FORMATO DE DATA VÊM DO `AppSetting` (F10, Etapa A) —

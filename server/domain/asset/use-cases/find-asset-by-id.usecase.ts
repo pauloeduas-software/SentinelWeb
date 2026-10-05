@@ -20,7 +20,7 @@ function buscarAtivo(id: string, podeVerCusto: boolean) {
 }
 
 /**
- * O ativo com a responsabilidade resolvida (Camada 3 do docs/MODELO-POSSE.md) e
+ * O ativo com a responsabilidade resolvida (Camada 3 do docs/referencia/modelo-de-posse.md) e
  * o valor contábil calculado (F8, D55).
  *
  * Os dois são DERIVADOS e nenhum é coluna, pelo mesmo motivo com um detalhe

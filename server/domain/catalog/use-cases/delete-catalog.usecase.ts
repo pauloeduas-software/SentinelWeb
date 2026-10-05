@@ -5,7 +5,7 @@ import { buildSnapshot } from '../../shared/diff.helper';
 import type { CatalogSpec } from '../specs/catalog-spec.types';
 
 /**
- * Apaga de verdade — o catálogo não tem lixeira (docs/FASE-1-PLANO-ITAM.md, D8).
+ * Apaga de verdade — o catálogo não tem lixeira (docs/historico/fase-01-catalogo-e-ativo.md, D8).
  *
  * A proteção é o `countUsages`: linha referenciada por alguém não é apagada, e
  * o cliente recebe 409 dizendo por quantos. É o que o Snipe-IT faz ao recusar

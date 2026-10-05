@@ -3,9 +3,9 @@ import { z } from 'zod';
 // O contrato de entrada de TODA aba Histórico — do ativo e da pessoa.
 //
 // Nasceu em `asset/schemas/asset.schema.ts`, com o histórico do ativo, e mudou
-// para cá quando a pessoa ganhou o dela (Leva 1 do
-// docs/FECHAMENTO-F2-F4-PLANO-ITAM.md): a alternativa era o domínio `user`
-// importar um schema do domínio `asset`, que é seta que o ARQUITETURA.md não
+// para cá quando a pessoa ganhou o dela (Leva 1C do fechamento da F4, em
+// docs/historico/fase-04-posse.md): a alternativa era o domínio `user`
+// importar um schema do domínio `asset`, que é seta que o docs/referencia/arquitetura.md não
 // desenha — ou uma segunda cópia, que divergiria do teto original no primeiro
 // ajuste.
 

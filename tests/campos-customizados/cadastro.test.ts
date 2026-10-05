@@ -63,7 +63,7 @@ describe('D60 — o slug é imutável', () => {
       slug: 'centro_custo',
     });
     expect(trocado.status).toBe(409);
-    // A mensagem ENSINA a saída — é a regra do INVARIANTES.md.
+    // A mensagem ENSINA a saída — é a regra do docs/referencia/invariantes.md.
     expect(trocado.body.error).toMatch(/crie outro campo/i);
     expect(trocado.body.slug).toBe('centro_de_custo');
   });

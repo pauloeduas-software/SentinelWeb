@@ -1,7 +1,7 @@
 import type { prisma } from '../../../core/database/prismaClient';
 import { INCLUINDO_LIXEIRA } from '../../../core/database/soft-delete.extension';
 
-// CAMADA 3 do docs/MODELO-POSSE.md — a responsabilidade DERIVADA.
+// CAMADA 3 do docs/referencia/modelo-de-posse.md — a responsabilidade DERIVADA.
 //
 // Ela NUNCA é coluna. Seria uma quarta fonte de verdade para o que a
 // `Assignment` (Camada 1) e o `LocationOccupant` (Camada 2) já dizem, e a
@@ -49,7 +49,7 @@ export interface PosseResolvida {
   responsaveis: Responsavel[];
   /**
    * Alvo LOCATION sem NENHUM ocupante aberto — equipamento parado em posto
-   * vazio. Não é erro: é o sinal operacional que o MODELO-POSSE.md pede e que
+   * vazio. Não é erro: é o sinal operacional que o docs/referencia/modelo-de-posse.md pede e que
    * nenhum ITAM de prateleira responde. Candidato a voltar para o estoque.
    */
   postoVago: boolean;
@@ -152,7 +152,7 @@ function responsaveisPeloAtivoAlvo(alvo: PosseAberta | undefined, dicionarios: D
 
   // Alvo do alvo também é ASSET: o salto PARA AQUI, sem recursão.
   //
-  // O limite é de propósito (MODELO-POSSE.md, Camada 3): dock → notebook →
+  // O limite é de propósito (docs/referencia/modelo-de-posse.md, Camada 3): dock → notebook →
   // pessoa resolve o caso real, e cadeia mais longa é sintoma de modelagem
   // errada — a mesma que, sem limite, vira ciclo e trava o processo.
   return [];

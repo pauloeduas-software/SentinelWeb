@@ -3,7 +3,7 @@ import type { OccupantInput } from '../../domain/occupancy/occupancy.queries';
 import type { LocationOccupant } from '../../domain/shared/posse.types';
 
 // Leitura das ocupações de um posto para a tela — funções puras, fora do JSX
-// (docs/ARQUITETURA.md). Camada 2 de docs/MODELO-POSSE.md.
+// (docs/referencia/arquitetura.md). Camada 2 de docs/referencia/modelo-de-posse.md.
 //
 // Mora em `pages/helpers/`, e não na pasta de uma página, porque a MESMA
 // ocupação é lida em dois lugares: o painel de ocupantes da aba Localizações e

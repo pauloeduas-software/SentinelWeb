@@ -9,7 +9,7 @@ import { listLocationAccessories } from '../../stock/use-cases/list-location-acc
 /**
  * UM posto: quem está nele e o que foi entregue a ele.
  *
- * São as duas metades do modelo numa tela só (docs/MODELO-POSSE.md): a Camada 2
+ * São as duas metades do modelo numa tela só (docs/referencia/modelo-de-posse.md): a Camada 2
  * — os ocupantes, com turno — e a Camada 1 vista do lado do posto — as posses
  * abertas cujo alvo é esta localização. É a junção das duas que responde "quem
  * é responsável pelo mouse da Mesa 1".

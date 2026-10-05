@@ -6,7 +6,7 @@ import {
 import type { LocationOccupant, OccupantView } from '../../domain/shared/posse.types';
 import { nomeDoOcupante } from '../helpers/ocupantes.helper';
 
-// Os OCUPANTES de um posto — Camada 2 de docs/MODELO-POSSE.md.
+// Os OCUPANTES de um posto — Camada 2 de docs/referencia/modelo-de-posse.md.
 //
 // Hook COMPARTILHADO entre duas telas: o painel da aba Localizações e o detalhe
 // do posto em /postos. É a mesma operação — colocar alguém na mesa e tirar —, e

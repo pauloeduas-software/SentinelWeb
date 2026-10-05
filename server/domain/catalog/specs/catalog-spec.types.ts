@@ -3,7 +3,7 @@ import type { prisma } from '../../../core/database/prismaClient';
 
 // O contrato de UMA tabela de catálogo. Sete arquivos preenchem isto e o CRUD
 // genérico (use-cases/) atende às sete — em vez de sete fatias verticais quase
-// idênticas, que é o que o docs/ARQUITETURA.md chama de cerimônia.
+// idênticas, que é o que o docs/referencia/arquitetura.md chama de cerimônia.
 
 /**
  * Cliente do Prisma aceito pelo CRUD: tanto o global quanto o de transação.

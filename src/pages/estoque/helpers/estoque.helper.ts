@@ -3,7 +3,7 @@ import type {
 } from '../../../domain/shared/stock.types';
 
 // As três abas e a leitura de uma linha de estoque — funções e dados PUROS,
-// sem I/O e fora do JSX (docs/ARQUITETURA.md).
+// sem I/O e fora do JSX (docs/referencia/arquitetura.md).
 //
 // Fica em `helpers/` também porque um arquivo que exporta componente E
 // constante quebra o fast refresh do Vite, e o lint reprova.

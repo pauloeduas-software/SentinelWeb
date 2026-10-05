@@ -46,11 +46,19 @@ server/
 ├── server.ts                    # O PROCESSO: valida env, checa banco, liga jobs, abre porta, morre limpo
 ├── app.ts                       # A APLICAÇÃO: buildApp() monta tudo e NÃO abre porta (é o que o teste usa)
 ├── core/                        # INFRAESTRUTURA. zero regra de negócio.
-│   ├── config/                  # load-env, env (validateEnv), cors
-│   ├── database/                # prismaClient (+ closeDatabase)
-│   ├── errors/                  # app-error (AppError), error-handler, error-shape
+│   ├── config/                  # load-env, env (validateEnv), cors, app-url (urlDoPainel)
+│   ├── crypto/                  # cipher (enc:v1:kid:…, D81), keyring (D91), canary (derruba o boot)
+│   ├── database/                # prismaClient, soft-delete.extension (acha a lixeira pelo DMMF)
+│   ├── errors/                  # app-error (AppError), error-handler, error-shape, zod-error
+│   ├── http/                    # require-auth (sessão), permission-guard (autorização + boot, D137),
+│   │                            #   list-query (paginação + allowlist de ordenação), write-rate-limit
+│   ├── jobs/                    # claim-window — o CAS por linha de JobRun (D79)
+│   ├── lifecycle/               # health (readiness), shutdown (onShutdown)
 │   ├── logger/                  # logger (createLogger), sanitize, request-logger
-│   └── lifecycle/               # health (readiness), shutdown (onShutdown)
+│   ├── mail/                    # mailer — sem SMTP, no-op que loga o que teria mandado (D86)
+│   ├── storage/                 # storage (os bytes, D83), mime (allowlist MIME → extensão)
+│   ├── time/                    # local-day — em que fuso é "hoje" (D123)
+│   └── webhook/                 # webhook, destino-seguro (allowlist de destino, D126)
 └── domain/<nome>/               # FATIA VERTICAL — sempre o mesmo esqueleto
     ├── <nome>.maestro.ts        # registra as rotas do domínio. Só rota.
     ├── controllers/             # só HTTP: lê a requisição, chama use-case, responde
@@ -87,6 +95,9 @@ server/
 | `acceptance` | **Termo de entrega**: o EULA copiado, a assinatura e o PDF (F4) | `Acceptance` |
 | `attachment` | **Anexo e imagem**: o arquivo, onde ele mora e quem pode baixá-lo (F2) | `Attachment` |
 | `access` | **Autorização e identidade** (F11): grupos e permissão efetiva, o catálogo de chaves, o departamento como entidade, a sincronização com o diretório e o login por SSO | `Group`, `Department` |
+| `auth` | **Sessão e credencial**: login, cookie, segundo fator, token de API e a trilha de autenticação | `ApiToken`, `AuthEvent` |
+| `workstation` | **O posto como tela**: a leitura de `Location` + ocupantes que a `/postos` mostra, e onde `ehPostoVago()` mora | — |
+| `shared` | Tipos e helpers usados por mais de um domínio (`diff.helper`, `fields.schema`, `history.schema`, `csv.helper`, `multipart.helper`) | — |
 
 > **`catalog` e `custom-field` são o MESMO assunto em duas pastas, e a divisão é o
 > D64.** A parte PLANA dos dois cadastros novos é CRUD de catálogo — listar,
@@ -105,7 +116,7 @@ server/
 >
 > ⚠️ **`Asset` nunca pode ter coluna `status`, `lastSeen` ou `hwid`** — são as do
 > `Endpoint`. É essa ausência que faz o compilador barrar uma query do RMM
-> apontando para a tabela errada (`ITAM-TODO.md`, D13).
+> apontando para a tabela errada (`../ROADMAP.md`, D13).
 
 ### `catalog` e `stock` são as duas exceções à fatia vertical
 
@@ -116,7 +127,7 @@ cerimônia, não arquitetura.
 
 > **O número está escrito aqui de propósito, e precisa ser corrigido junto.** A
 > F9 acrescentou duas tabelas e este parágrafo dizia "sete" — o mesmo tipo de
-> referência envelhecida que o `INVARIANTES.md` pede para corrigir ao acrescentar
+> referência envelhecida que o `invariantes.md` pede para corrigir ao acrescentar
 > uma invariante. Quem lê "sete" e conta nove no `specs/index.ts` passa a
 > desconfiar do resto da página.
 
@@ -125,6 +136,10 @@ arquivo por tabela declarando o slug da rota, o schema de entrada, a allowlist d
 resposta, as colunas ordenáveis e a regra de "em uso". **Acrescentar uma tabela
 de catálogo é escrever a spec e incluí-la em `specs/index.ts`** — nenhuma rota é
 escrita à mão.
+
+> **E o `ClienteCatalogo` do CRUD genérico NÃO exclui `$queryRaw`:** a contagem de chaves dentro
+> do `JsonB` só usa o índice GIN pelo operador `?`, e precisa rodar **dentro** da transação do
+> delete — senão apagar um campo customizado deixaria valor órfão em silêncio.
 
 O preço, declarado: tipar a união dos nove delegates do Prisma não existe em TS,
 então cada spec faz UM cast, ao lado do nome do model. O cast não atravessa a
@@ -231,40 +246,9 @@ Regras práticas:
   `apiClient` já traduziu da resposta do servidor.
 - **Cálculo sai do JSX.** Parse de coluna Json, conversão de bytes e cor de
   status moram em `helpers/`.
-
----
-
-## A regra de corte: quando criar `use-cases/`
-
-Os quatro domínios de hoje já têm o esqueleto completo. Para um domínio **novo**,
-comece simples e quebre quando um dos dois acontecer:
-
-1. o arquivo do domínio passar de ~250 linhas; **ou**
-2. a mesma operação for chamada de **dois lugares** (rota + job, rota + WebSocket).
-
-O critério 2 é o que importa de verdade. Exemplo real: `touchAsset` é chamada
-pelo hub do agente a cada mensagem e o `markStaleAssetsOffline` pelo job — por
-isso são use-cases, não linhas soltas dentro da rota.
-
-Não crie `controllers/` + `use-cases/` para um CRUD de quatro linhas só por
-simetria: três arquivos para `prisma.x.findMany()` é cerimônia, não arquitetura.
-
----
-
-## Como adicionar um domínio novo
-
-```
-server/domain/licenca/
-├── licenca.maestro.ts                      # as rotas
-├── controllers/licenca.controller.ts       # entrada/saída HTTP
-└── use-cases/list-licencas.usecase.ts      # o que o negócio faz
-```
-
-1. Escreva o use-case primeiro (é o que tem teste e regra).
-2. O controller só converte requisição ↔ use-case.
-3. O maestro só lista rotas.
-4. Registre em **`app.ts`** (não em `server.ts`): `await LicencaMaestro.setupRoutes(server);`
-5. No front: `src/domain/licenca/licenca.store.ts` + `src/pages/<contexto>/`.
+- **O `apiClient` preserva o `fields` do 422**, numa classe de erro própria. Num conjunto de
+  vinte campos customizados criados pelo cliente, o resumo da mensagem corta em três e o motivo
+  do vigésimo não apareceria em lugar nenhum.
 
 ---
 
@@ -276,7 +260,7 @@ Estão em `server/server.ts` e existem para o sistema falhar cedo e limpo.
 > divisão existe para o teste: `buildApp()` devolve a aplicação inteira sem
 > abrir porta, sem ligar job e sem instalar handler de sinal, e é isso que
 > permite exercitar a API por `app.inject()` — pelo mesmo grafo de plugins de
-> produção. Rota nova se registra em `app.ts` (ver [`TESTES.md`](./TESTES.md)).
+> produção. Rota nova se registra em `app.ts` (ver [`testes.md`](testes.md)).
 
 
 - **`validateEnv()` antes de tudo.** Variável obrigatória faltando derruba o
@@ -296,105 +280,39 @@ Estão em `server/server.ts` e existem para o sistema falhar cedo e limpo.
 
 ## O que ainda não existe
 
-Em ordem de prioridade, do [`ITAM-TODO.md`](./ITAM-TODO.md):
+**Uma coisa, e ela está declarada: anexo com dono polimórfico.** `Attachment.assetId` é
+`NOT NULL` com FK para `assets`, então anexo de licença e de manutenção (**D94**) exigem
+discriminante, CHECK e uma decisão sobre o arquivo quando o dono some. É o único item em aberto
+do [`../ROADMAP.md`](../ROADMAP.md).
 
-- **Autenticação** — F3. Não existe login. O `/agent-hub` exige `AGENT_TOKEN`
-  desde a F0, mas é segredo compartilhado, não token por agente. Quando o login
-  entrar, o middleware vai por rota, dentro de cada maestro, e o `actorId` do
-  `ActivityLog` — hoje sempre nulo — passa a ser preenchido.
-- **Termo de entrega** — F4. O checkout, o checkin, o histórico de posse e a
-  ocupação de posto **existem** (ver abaixo). Falta o fluxo de aceite: EULA da
-  categoria, assinatura, PDF, e-mail e lembrete de atraso.
-- **Etiquetas, importação e o report builder** — F10. A moldura de
-  `/relatorios` nasceu na F8, com quatro abas mais a dos alertas; export CSV,
-  seletor de colunas e report builder entram NELA, não numa segunda tela.
+O que **não** vai existir por decisão — multi-empresa (**D4**), fila de requisição, SAML
+(**D78**), revogar uma sessão específica — está em [`../decisoes/`](../decisoes/) e em
+[`acesso.md`](./acesso.md), cada um com o motivo escrito.
 
-> **Os campos customizados JÁ EXISTEM** — esta seção os listava como pendentes,
-> dizendo que o `customFieldsetId` "continua por nascer". A F9 fechou: as duas
-> âncoras de conjunto nasceram (`Category` e `AssetModel`, categoria como padrão e
-> modelo sobrepondo — D58), os valores moram em `Asset.customFields` (JsonB, D59) e
-> o campo cifrado reusa o `core/crypto/cipher.ts` da F6 sem criar um segundo
-> formato (D81). Ver `docs/FASE-9-PLANO-ITAM.md`.
->
-> **E ela mexeu em dois lugares fora do próprio domínio, os dois por medida:**
-> o `ClienteCatalogo` do CRUD de catálogo deixou de excluir `$queryRaw` (a
-> contagem de chaves no JsonB só usa o índice GIN por `?`, e precisa rodar DENTRO
-> da transação do delete), e o `apiClient` passou a preservar o `fields` do 422
-> numa classe própria — num conjunto de vinte campos criados pelo cliente, o
-> resumo da mensagem corta em três e o motivo do vigésimo não apareceria em lugar
-> nenhum.
-
-> **As licenças JÁ EXISTEM** — esta seção as listava como pendentes. A F6
-> fechou: `server/domain/license/`, com assento materializado (D40), escolha sem
-> corrida por `SELECT … FOR UPDATE SKIP LOCKED` (D41) e chave cifrada em
-> `server/core/crypto/` (D91). Ver `docs/FASE-6-PLANO-ITAM.md`.
-
-> **Autenticação, termo de entrega e a suíte de testes JÁ EXISTEM** — esta seção
-> os listava como pendentes e estava desatualizada. O login é a F3, o aceite
-> fechou na Leva 4 do `FECHAMENTO-F2-F4-PLANO-ITAM.md`, e `npm test` roda contra
-> Postgres real pelo mesmo Fastify de produção (ver `TESTES.md`).
-
-> **A convergência RMM × ITAM e o ciclo de vida JÁ EXISTEM** — esta seção os
-> listava como pendentes. A F7 fechou o vínculo `Endpoint ↔ Asset` (D45) e a
-> conformidade cruzada; a F8 fechou manutenção, conferência física, valor contábil
-> calculado (D55), `/relatorios` e a central de alertas com job diário
-> (`docs/FASE-8-PLANO-ITAM.md`).
->
-> **E o ciclo de vida mexeu em `core`:** nasceram `core/time/local-day.ts` (em que
-> fuso é "hoje" — D123) e `core/webhook/` (o canal secundário, com allowlist de
-> destino — D126). Os dois são infraestrutura pura: recebem fuso e URL por
-> parâmetro e não sabem o que é um alerta.
->
-> **"Estar no parque" é UMA definição, e ela mora no domínio dono das colunas:**
-> `asset/helpers/asset-scope.helper.ts` (`retiredAt: null` + `status.type != ARCHIVED`),
-> importada por `report`, `audit` e `alert`. A revisão da F8 encontrou **três** versões
-> dela, e a mais frouxa tinha consequência: um ativo `ARCHIVED` era auditado todo dia
-> pelo job e nunca aparecia no relatório que lê o escopo completo. Domínio que
-> pergunta importa; domínio que responde é o dono do dado — é o D16 aplicado a uma
-> constante.
-
-> **Etiquetas, importação e o report builder JÁ EXISTEM** — o terceiro item da
-> lista acima caducou. A F10 fechou: `label/` (Code128 e QR, com a folha em PDF
-> cuja prévia É o PDF), `import/` (mapeamento de colunas e dry-run obrigatório),
-> o export CSV de ativos e licenças, o seletor de colunas e o report builder — as
-> três abas novas entraram na moldura de `/relatorios` que a F8 criou, como estava
-> previsto. Ver `docs/FASE-10-PLANO-ITAM.md`.
-
-> **A AUTORIZAÇÃO JÁ EXISTE, e ela mudou o `core`** — a F11 fechou o que o
-> primeiro item desta lista previa pela metade. Quando ele foi escrito, a aposta era
-> *"o middleware vai por rota, dentro de cada maestro"*; a auditoria da fase
-> recusou isso, e pelo mesmo motivo que a F3 já havia recusado para a SESSÃO: por
-> rota, a rota NOVA nasce liberada. Então nasceu `core/http/permission-guard.ts`,
-> irmão do `require-auth.ts`, com um degrau a mais — ele confere a tabela de rotas
-> do Fastify no boot, e **rota sem permissão declarada derruba o processo** (D137).
->
-> O que a fase trouxe, em uma linha cada:
->
-> - **`access/`** — grupos com permissão em JsonB (união permissiva, sem `deny` —
->   D76), o catálogo de 35 chaves em código, `Department` como entidade (D75), a
->   sincronização com o diretório (que MARCA quem sumiu, nunca desliga — D78) e o
->   login por OIDC;
-> - **`auth/` cresceu** — segundo fator TOTP (cifrado em repouso com o
->   `core/crypto/cipher.ts` da F6), token pessoal de API pelo mesmo caminho de
->   autenticação do agente (D80), e as duas linhas de escape em `*/cli/`, que são
->   comando de linha de propósito: uma rota que destrava o 2FA é o 2FA desligado;
-> - **dado sensível some do `select`, não é mascarado depois** (D77) — custo de
->   compra, chave de produto e campo cifrado, cada um pelo caminho que cabe a ele.
->
-> **A migração não aditiva da fase** (`DROP COLUMN users.department`) foi em DOIS
-> tempos, e é o único lugar do projeto onde isso aconteceu: criar + preencher numa
-> migração, apagar na seguinte — entre as duas, um rollback ainda encontra o texto
-> original. Ver `prisma/migrations/*_departamento_e_colaborador` e `*_drop_users_department`.
-
-> Validação com `zod`, paginação, busca, ordenação, soft delete e `ActivityLog`
-> **existem** desde a Fase 0 — esta seção os listava como pendentes e estava
-> desatualizada.
+> **Esta seção já listou onze coisas como pendentes, e as onze existem.** Ela carregava **oito**
+> blocos de autocorreção — *"JÁ EXISTE, esta seção estava desatualizada"* — que é exatamente o que
+> acontece quando um documento de referência tenta também ser o registro do que mudou. O que cada
+> fase construiu está em [`../historico/`](../historico/); aqui fica só o que é verdade agora.
 
 ---
 
+## "Estar no parque" é UMA definição, e ela mora no domínio dono das colunas
+
+`asset/helpers/asset-scope.helper.ts` — `retiredAt: null` **e** `status.type != ARCHIVED` —
+importado por `report`, `audit` e `alert`.
+
+A revisão da F8 encontrou **três** versões dela, e a mais frouxa tinha consequência: um ativo
+`ARCHIVED` era auditado todo dia pelo job e nunca aparecia no relatório que lê o escopo completo.
+Domínio que **pergunta** importa; domínio que **responde** é o dono do dado — é o D16 aplicado a
+uma constante.
+
+O mesmo vale para o recorte em SQL cru: a versão `Prisma.sql` mora **no mesmo arquivo** da versão
+Prisma, senão o relatório em `$queryRaw` escreve a quarta cópia.
+
+---
 ## Posse: a regra que atravessa três domínios
 
-Leia [`MODELO-POSSE.md`](./MODELO-POSSE.md) antes de mexer em `assignment`,
+Leia [`modelo-de-posse.md`](modelo-de-posse.md) antes de mexer em `assignment`,
 `occupancy` ou no status do ativo. Em três linhas:
 
 1. **`Assignment`** é a fonte de verdade da posse. Alvo polimórfico — pessoa,
@@ -433,14 +351,14 @@ NÃO está no `ASSET_SELECT` compartilhado: só os quatro leitores que a mostram
 carregam) — a defesa do segundo é a chave não existir no schema de
 edição, não uma checagem. Aquela coluna é cache do caso `USER`; um segundo lugar que a
 escreva recria a divergência que o modelo existe para impedir. As invariantes
-estão em [`INVARIANTES.md`](./INVARIANTES.md) e são provadas por
+estão em [`invariantes.md`](invariantes.md) e são provadas por
 `tests/invariantes/` (`npm test`) e por `prisma/verificacoes/posse-invariantes.sql`.
 
 ---
 
 ## Sessão: a porta fechada por padrão
 
-Leia [`AUTENTICACAO.md`](./AUTENTICACAO.md) antes de mexer em rota, cookie ou
+Leia [`acesso.md`](acesso.md) antes de mexer em rota, cookie ou
 qualquer coisa com "auth" no nome. Em três linhas:
 
 1. **Toda rota exige sessão.** A exceção é a allowlist `ROTAS_PUBLICAS` em
@@ -458,39 +376,14 @@ resposta** e **ler usuário fora do `USER_PUBLIC_SELECT`**. Provado por
 
 ---
 
-## Migrations: a regra que não pode ser esquecida
+---
 
-**Nunca `prisma migrate dev`.** Ele é interativo, detecta drift e oferece resetar
-o banco. Para cada migração nova:
+## As receitas saíram daqui
 
-```bash
-PASTA="prisma/migrations/$(date +%Y%m%d%H%M%S)_nome"
-mkdir -p "$PASTA"
-npx prisma migrate diff --from-url "$DATABASE_URL" \
-  --to-schema-datamodel prisma/schema.prisma --script > "$PASTA/migration.sql"
-# REVISAR o SQL antes de aplicar
-npm run db:migrate && npm run db:generate
-```
+Três seções deste arquivo eram **instrução**, não descrição, e instrução ninguém procura na
+linha 460 de um documento chamado "Arquitetura". Elas viraram guias:
 
-**Revisar o SQL não é formalidade.** Já aconteceu duas vezes de o gerador emitir
-algo que destrói dado ou não executa:
-
-- um `DROP INDEX` que o Postgres recusa quando o índice sustenta uma CONSTRAINT;
-- um `DROP TABLE` + `CREATE TABLE` para o que era um **rename** de model, o que
-  teria apagado a frota inteira descoberta pelo agente.
-
-**E o teste que pega o resto:** reconstruir o banco do zero num banco descartável.
-
-```bash
-docker exec sentinel-postgres psql -U sentinel -d postgres \
-  -c "DROP DATABASE IF EXISTS sentinel_audit;" -c "CREATE DATABASE sentinel_audit;"
-AUDIT="postgresql://sentinel:sentinelpassword@localhost:3002/sentinel_audit?schema=public"
-DATABASE_URL="$AUDIT" npx prisma migrate deploy
-DATABASE_URL="$AUDIT" npm run db:seed
-```
-
-Foi assim que se descobriu que a cadeia de migrations **não aplicava do zero**: o
-`0_init` foi adotado com `migrate resolve --applied` e nunca rodou, então ninguém
-notou que ele cria `CREATE UNIQUE INDEX` onde o banco de desenvolvimento — nascido
-de `db push` — tinha uma CONSTRAINT. Rodar a cadeia em banco limpo é o único jeito
-de garantir que um ambiente novo sobe.
+- [`../guias/criar-uma-migration.md`](../guias/criar-uma-migration.md) — a receita do
+  `migrate diff`, por que **nunca** `migrate dev`, e o teste de reconstruir o banco do zero;
+- [`../guias/adicionar-um-dominio.md`](../guias/adicionar-um-dominio.md) — os cinco passos, mais
+  a regra de corte de quando quebrar em `use-cases/`.

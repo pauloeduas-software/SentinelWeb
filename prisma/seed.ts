@@ -43,7 +43,8 @@ interface Seeder {
 // `DEPLOYABLE`, o que dizia que equipamento na mão de alguém estava disponível
 // para entrega. A primeira correção o moveu para `PENDING` e estava pior —
 // empacotava "está com um colaborador" junto com "está na assistência", que é a
-// distinção mais cara do inventário. Ver docs/AUDITORIA-F0-F1.md.
+// distinção mais cara do inventário. Ver a auditoria das F0 e F1, no fim de
+// docs/historico/fase-01-catalogo-e-ativo.md.
 //
 // `showInNav` marca os que viram atalho de filtro na interface: os do dia a dia.
 //

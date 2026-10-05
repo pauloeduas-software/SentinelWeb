@@ -11,7 +11,7 @@ import type {
 } from '../../../domain/shared/reconciliation.types';
 
 // O ESTADO DA TELA DE DESCOBERTAS. A página é markup e mais nada
-// (docs/ARQUITETURA.md).
+// (docs/referencia/arquitetura.md).
 
 export type AbaDaTela = 'fila' | 'orfaos' | 'ociosos';
 

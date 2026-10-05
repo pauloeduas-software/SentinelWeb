@@ -14,7 +14,7 @@ import type { User } from './user.types';
  * campos na F11, e é esse o motivo de os dois tipos existirem separados.
  *
  * O que NÃO existe aqui, e nunca vai existir: token. Ele viaja em cookie
- * httpOnly e o JavaScript do painel nunca o vê (docs/FASE-3-PLANO-ITAM.md, D22).
+ * httpOnly e o JavaScript do painel nunca o vê (docs/historico/fase-03-autenticacao-e-ator.md, D22).
  */
 export type SessionUser = User & {
   /**

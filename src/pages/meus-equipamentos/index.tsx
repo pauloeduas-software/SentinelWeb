@@ -16,14 +16,14 @@ import { formatarData } from '../helpers/format.helper';
 // e a segunda diz COM QUEM o posto é dividido — porque sem isso a pessoa devolve
 // o monitor da sala achando que era dela, e a colega do turno da tarde fica sem
 // monitor. A responsabilidade por equipamento de posto é compartilhada
-// (docs/MODELO-POSSE.md, Camada 2), e uma tela que esconde isso produz a
+// (docs/referencia/modelo-de-posse.md, Camada 2), e uma tela que esconde isso produz a
 // devolução errada.
 //
 // O QUE ELA NÃO TEM, de propósito:
 //   - botão de devolver. Devolução é operação de quem recebe de volta (`checkin`,
 //     com `assets.checkout`), e não do próprio colaborador: o equipamento tem de
 //     passar pela mão de alguém do time de TI;
-//   - solicitar item. Está em *Descartado de propósito* no ITAM-TODO, e esta fase
+//   - solicitar item. Está em *Descartado de propósito* no docs/ROADMAP.md, e esta fase
 //     não reabre: time pequeno pede no chat, e duas telas de fila valem zero.
 // ═══════════════════════════════════════════════════════════════════════════
 

@@ -18,7 +18,8 @@ import { criarFabricante, criarModelo, idsDoSeed } from '../helpers/fixtures';
 // campo ao formulário sem tratar o `''` no schema, é aqui que aparece.
 //
 // A auditoria: "O teste que teria pego os defeitos 1, 3, 4 e 5 é o mesmo:
-// enviar o corpo literal que o formulário monta." (docs/AUDITORIA-F0-F1.md)
+// enviar o corpo literal que o formulário monta."
+// (docs/historico/fase-01-catalogo-e-ativo.md, "Auditoria das F0 e F1")
 
 let api: ApiDeTeste;
 let statusId = '';
@@ -46,7 +47,7 @@ afterAll(async () => {
  *
  * `assignedToId` NÃO está aqui de propósito — o campo saiu do formulário na F4,
  * e o `strictObject` do servidor recusa a chave. A ausência é a regra
- * (docs/MODELO-POSSE.md, D14).
+ * (docs/referencia/modelo-de-posse.md, D14).
  */
 function corpoDoFormularioDeAtivo(sobrescrever: Record<string, unknown> = {}) {
   return {

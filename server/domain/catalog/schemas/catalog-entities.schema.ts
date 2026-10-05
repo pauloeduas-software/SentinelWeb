@@ -10,7 +10,7 @@ import { MAX_SLUG, slugificar } from '../../custom-field/helpers/slug.helper';
 // Contrato de entrada das sete tabelas de catálogo, num lugar só.
 //
 // `strictObject` em tudo: campo desconhecido é recusado em vez de ignorado em
-// silêncio — é o que fecha o mass assignment (docs/FASE-0-PLANO-ITAM.md).
+// silêncio — é o que fecha o mass assignment (docs/historico/fase-00-base-tecnica.md).
 //
 // Os enums vêm de `$Enums`, gerado pelo Prisma a partir do schema: a lista de
 // valores válidos tem UMA fonte, o banco. É o fim do texto livre que a Fase 1
@@ -119,7 +119,7 @@ export const updateSupplierSchema = z.strictObject({ name: nomeObrigatorio().opt
 //
 // A DÉCIMA SPEC DO CATÁLOGO (F11, Etapa D — D75), e não um domínio próprio: é
 // CRUD plano — nome, código, gestor, busca, 409 por uso —, e o
-// `docs/ARQUITETURA.md` diz que acrescentar tabela de catálogo *é escrever a
+// `docs/referencia/arquitetura.md` diz que acrescentar tabela de catálogo *é escrever a
 // spec*. Um `domain/department/` completo seria oito arquivos para repetir o
 // que o CRUD genérico já faz para nove tabelas.
 const camposDepartamento = {

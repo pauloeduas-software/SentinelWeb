@@ -32,7 +32,7 @@ export interface AgentCommandPacket {
  * do painel justamente por ser velha.
  *
  * Quem não manda serial simplesmente não pontua por serial na cascata de
- * reconciliação (docs/FASE-7-PLANO-ITAM.md, D46).
+ * reconciliação (docs/historico/fase-07-convergencia-rmm-itam.md, D46).
  */
 export interface HandshakeData {
   hwid: string;

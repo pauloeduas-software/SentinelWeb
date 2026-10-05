@@ -11,7 +11,8 @@ import { prisma } from '../../../core/database/prismaClient';
 //
 // E ELE É OBRIGATÓRIO: o `= null` temporário que a F3 deixou aqui foi apagado
 // quando `catalog` (3 chamadas) e `occupancy` (2) passaram a propagar o ator
-// (Leva 1 do docs/FECHAMENTO-F2-F4-PLANO-ITAM.md). É a AUSÊNCIA de default que
+// (Leva 1A do fechamento da F3, em docs/historico/fase-03-autenticacao-e-ator.md). É a AUSÊNCIA de
+// default que
 // fecha a rede do D23: chamada nova que esqueça o ator não compila, em vez de
 // gravar `null` e só ser descoberta numa auditoria — a mesma rede do rename do
 // `Asset` no D13, onde os 6 pontos do RMM falharam na compilação e nenhum
@@ -29,7 +30,7 @@ import { prisma } from '../../../core/database/prismaClient';
 // (`Assignment`). Separadas de `UPDATE` porque não são uma edição de campo:
 // são as duas únicas operações que escrevem `Asset.assignedToId`, e o
 // histórico do ativo precisa mostrá-las como evento, não como diff
-// (docs/MODELO-POSSE.md).
+// (docs/referencia/modelo-de-posse.md).
 // `ATTACH` e `DETACH` são anexo POSTO e RETIRADO de um ativo. Gravados com
 // `entityType: 'Asset'`, e não numa entidade `Attachment` própria: quem lê a
 // aba Histórico quer saber que a nota fiscal daquele notebook foi trocada, e um

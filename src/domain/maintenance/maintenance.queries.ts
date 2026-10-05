@@ -6,7 +6,7 @@ import type {
   EncerramentoInput, FiltrosDeManutencao, ListaDeManutencoes, Manutencao, ManutencaoInput,
 } from '../shared/lifecycle.types';
 
-// AS MANUTENÇÕES (docs/FASE-8-PLANO-ITAM.md, Etapa A).
+// AS MANUTENÇÕES (docs/historico/fase-08-ciclo-de-vida.md, Etapa A).
 //
 // `['maintenances']` é o prefixo, então invalidar depois de gravar alcança a
 // listagem global, o resumo do cabeçalho e a aba do ativo — os três mudam a cada

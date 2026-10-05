@@ -109,7 +109,7 @@ function Layout() {
             <Route path="/relatorios" element={<RelatoriosPage />} />
             <Route path="/users" element={<UsersPage />} />
             {/* Perfil do colaborador: os dois baldes de posse e o desligamento
-                (docs/MODELO-POSSE.md, Camada 3). Depois de `/users` porque o
+                (docs/referencia/modelo-de-posse.md, Camada 3). Depois de `/users` porque o
                 react-router escolhe a rota MAIS específica, não a primeira — a
                 ordem aqui é para quem lê. */}
             <Route path="/users/:id" element={<UserDetailPage />} />

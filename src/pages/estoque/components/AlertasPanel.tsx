@@ -10,7 +10,7 @@ import type { AlertasDeEstoque } from '../../../domain/shared/stock.types';
 //
 // O segundo é o que nenhum ITAM de prateleira dá, e ele nasce de graça do
 // modelo de posse: unidade com alvo `LOCATION` num posto sem ocupante aberto
-// resolve para "ninguém" (docs/MODELO-POSSE.md).
+// resolve para "ninguém" (docs/referencia/modelo-de-posse.md).
 
 interface AlertasPanelProps {
   alertas: AlertasDeEstoque;

@@ -150,7 +150,7 @@ export function useConjuntoDeCampos(fieldsetId: string | null) {
   /**
    * Grava. O erro NÃO sobe: ele é mostrado dentro do modal.
    *
-   * É a exceção à regra de "mutação propaga" (docs/ARQUITETURA.md), e o motivo é
+   * É a exceção à regra de "mutação propaga" (docs/referencia/arquitetura.md), e o motivo é
    * o rascunho: propagando, o modal fecharia com a edição perdida, e o 422 do
    * valor padrão inválido — que é o erro mais provável aqui — apareceria num
    * `alert` sem a lista para corrigir.

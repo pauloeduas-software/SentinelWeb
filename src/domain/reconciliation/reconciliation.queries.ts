@@ -9,7 +9,7 @@ import type {
   PacoteDoCatalogo, ReviewState, Sugestao, SuggestionKind,
 } from '../shared/reconciliation.types';
 
-// A CONVERGÊNCIA RMM × ITAM (docs/FASE-7-PLANO-ITAM.md).
+// A CONVERGÊNCIA RMM × ITAM (docs/historico/fase-07-convergencia-rmm-itam.md).
 //
 // `['reconciliation']` é o prefixo, então invalidar depois de resolver uma
 // sugestão alcança a fila E o painel de cobertura — que muda a cada aceite sem

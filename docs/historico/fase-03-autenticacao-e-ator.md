@@ -1,9 +1,9 @@
 # Plano de implementação — Fase 3: autenticação e ator
 
-> Plano **prospectivo** da Fase 3 do [`ITAM-TODO.md`](./ITAM-TODO.md), escrito
+> Plano **prospectivo** da Fase 3 do [`../ROADMAP.md`](../ROADMAP.md), escrito
 > contra o código real depois da F1 e do modelo de posse entrar no schema.
-> Camadas: [`ARQUITETURA.md`](./ARQUITETURA.md) · posse:
-> [`MODELO-POSSE.md`](./MODELO-POSSE.md) e [`DECISOES-POSSE.md`](./DECISOES-POSSE.md).
+> Camadas: [`../referencia/arquitetura.md`](../referencia/arquitetura.md) · posse:
+> [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md) e [`../decisoes/posse.md`](../decisoes/posse.md).
 >
 > Esforço: **P** = até meio dia · **M** = 1 a 3 dias · **G** = mais de 3 dias
 
@@ -97,7 +97,7 @@ por escrito, ou ganha um hook próprio — o que não pode é ficar implícito.
   tem que ser passado (D23).
 
 O controller lê `request.user.id` e repassa; o use-case continua sem conhecer
-HTTP, como manda o `ARQUITETURA.md`. Tornar o parâmetro obrigatório é o que
+HTTP, como manda o `../referencia/arquitetura.md`. Tornar o parâmetro obrigatório é o que
 transforma cada ponto esquecido num erro de compilação em vez de num `null`
 silencioso no banco — é a mesma rede que o D13 montou para o rename do `Asset`.
 
@@ -124,7 +124,7 @@ impresso no termo de entrega, e isso é dado de negócio, não trilha.
 
 ## Etapa G — `ApiToken` por agente e a tela de login · **M**
 
-> ⚠️ **Reconciliado — ver [`DECISOES-RECONCILIACAO.md`](./DECISOES-RECONCILIACAO.md), D80.** A tabela é **uma só**, com dono polimórfico (`ownerType`): a F11 cria o token PESSOAL na mesma.
+> ⚠️ **Reconciliado — ver [`../decisoes/README.md`](../decisoes/README.md), D80.** A tabela é **uma só**, com dono polimórfico (`ownerType`): a F11 cria o token PESSOAL na mesma.
 > Duas tabelas duplicariam o caminho de autenticação, que é idêntico nos dois casos.
 
 - **Schema:** model `ApiToken` (`name`, `ownerType`, `userId?`, `endpointId?`, `prefix`,
@@ -144,65 +144,14 @@ para atacar, e pagar 100 ms de KDF a cada handshake de agente é transformar a
 defesa da senha em lentidão da frota.
 
 O `auth.store.ts` é o primeiro conteúdo real do balde `zustand` que o
-`ARQUITETURA.md` já reservou: sessão é client state, não server state — ninguém
+`../referencia/arquitetura.md` já reservou: sessão é client state, não server state — ninguém
 faz polling dela.
 
-## Decisões da fase — D22 a D26
+## Decisões da fase
 
-### D22 — Sessão em cookie `httpOnly`, não em `localStorage`.
+> As decisões desta fase moram em [`../decisoes/acesso.md`](../decisoes/acesso.md) — **D22–D26 e o D89**. Elas saíram daqui porque decisão se arquiva pelo ASSUNTO que governa, não pela fase que a tomou: quem precisa saber as regras de um assunto não deveria ter que descobrir em que fase ele nasceu.
 
-**Decidido:** JWT curto em cookie `httpOnly` + `Secure` em produção, assinado com
-`JWT_SECRET`. Nenhum token no corpo da resposta.
-**Descartado:** Bearer token guardado no `localStorage` pelo front.
-**Por quê:** um XSS em qualquer página do app lê o `localStorage` inteiro e leva a
-sessão embora; o cookie `httpOnly` não é legível por JavaScript, então o mesmo XSS
-consegue *usar* a sessão enquanto a aba está aberta, mas não *exportá-la*. O preço
-é CSRF, e ele se paga com `SameSite` mais o CORS já fechado da F0 — que recusa
-`*` e trabalha com allowlist de origem desde o primeiro dia.
-
-### D23 — `actorId` é parâmetro obrigatório, não `AsyncLocalStorage`.
-
-**Decidido:** o controller lê `request.user.id` e passa adiante; a assinatura do
-use-case **exige** o argumento.
-**Descartado:** `AsyncLocalStorage` em `core` guardando o ator da requisição.
-**Por quê:** o ALS é menos digitação e falha em silêncio — um caminho que não
-propague o contexto (um job, um `setImmediate`, o hub do agente) grava `null` e
-ninguém descobre até auditar. O parâmetro obrigatório transforma cada esquecimento
-em erro de compilação, que é a única verificação automática que este repositório
-tem hoje. E manteria "ator" dentro de `core`, que não pode conhecer negócio.
-O preço é tocar ~20 assinaturas **uma vez**.
-
-### D24 — O histórico anterior fica sem ator. Não há backfill.
-
-**Decidido:** tudo que foi gravado antes do login continua com `actorId: null`, e
-a tela mostra "—".
-**Descartado:** atribuir os registros antigos ao primeiro administrador, ou criar
-um usuário `system` e carimbar tudo nele.
-**Por quê:** auditoria falsificada é pior que auditoria ausente, porque parece
-confiável. "Fulano arquivou 40 ativos em janeiro" seria mentira com aparência de
-prova, e alguém a usaria numa conversa real. É a mesma razão pela qual
-`ActivityLog.actorId` nasceu nulável em vez de segurar o `ActivityLog` até a F3:
-registro sem ator é registro; registro com ator errado é dano.
-
-### D25 — Ocupação de posto não ganha coluna de ator.
-
-**Decidido:** `LocationOccupant` continua sem `openedById`/`closedById`.
-**Descartado:** espelhar `checkoutById`/`checkinById` por simetria.
-**Por quê:** `Assignment` tem essas colunas porque **o nome sai impresso no termo
-de entrega** — é dado de negócio, que precisa sobreviver a qualquer expurgo de
-log. A ocupação não gera documento: "quem cadastrou a Laura na Mesa 1?" é pergunta
-de auditoria, e a resposta é o `ActivityLog`. Duas colunas por simetria seriam
-dado duplicado com uma fonte a mais para divergir.
-
-### D26 — `createdById`/`updatedById` só onde a tela mostra.
-
-**Decidido:** as duas colunas no `Asset`, não nas 14 tabelas.
-**Descartado:** o item do TODO como está escrito ("em todas as tabelas").
-**Por quê:** o `ActivityLog` já responde *quem criou isto* — a linha `CREATE` está
-lá, com o ator. A coluna existe para não fazer essa consulta **por linha** na tela
-de detalhe do ativo, que é a única que mostra o dado. Nas outras treze, seria
-desnormalização paga sem ninguém para cobrar. Quando uma tela nova precisar, é
-migração aditiva de duas colunas.
+O índice das 142 está em [`../decisoes/README.md`](../decisoes/README.md).
 
 ## Riscos e armadilhas
 
@@ -391,12 +340,16 @@ uma segunda chave para administrar sem nada a mais para proteger. Só `JWT_SECRE
 
 ### O que NÃO entrou
 
-- **`ApiToken` por agente (Etapa G).** O `/agent-hub` continua com o
-  `AGENT_TOKEN` compartilhado da F0. É trabalho independente do login humano.
-- **`createdById` / `updatedById` no `Asset` (Etapa F).** Exige migration, e esta
-  fase não toca no schema.
-- **`/aceite/:token` e `/uploads/` na allowlist.** As rotas são da F4 e da F2 e
-  ainda não existem — entram na lista quando nascerem, com o motivo escrito.
+- **`ApiToken` por agente (Etapa G).** O `/agent-hub` continuou com o
+  `AGENT_TOKEN` compartilhado da F0. É trabalho independente do login humano, e entrou no
+  fechamento — ver [Leva 5](#leva-5--apitoken-por-agente--m-), no fim deste arquivo.
+- **`createdById` / `updatedById` no `Asset` (Etapa F).** Exigia migration, e esta
+  fase não tocou no schema. Entrou pegando carona na migration de anexos da F2
+  (Leva 2 do fechamento), que é a mesma tabela.
+- **`/aceite/:token` e `/uploads/` na allowlist.** As rotas eram da F4 e da F2 e
+  ainda não existiam — entram na lista quando nascerem, com o motivo escrito. O
+  `/uploads/` **nunca entrou**, e de propósito: o **D84** decidiu que anexo sai por `/api/`
+  com sessão, não por rota estática.
 - **RBAC.** Qualquer sessão válida pode tudo, inclusive redefinir a senha de
   qualquer um. É a F11, e o ponto de filtro já está isolado num use-case só.
 - **Backfill de ator (D24).** De propósito: o que é anterior ao login segue sem
@@ -426,3 +379,85 @@ Servidor na porta 3097 contra `sentinel_audit`:
   global no ar — a frota não caiu.
 - `JWT_SECRET` ausente derruba o boot com a lista do que falta; `JWT_SECRET`
   curto derruba o boot em produção.
+
+---
+
+# Fechamento da F3 — as duas pontas que a fase deixou abertas
+
+> As F2, F3 e F4 foram fechadas **juntas**, em cinco levas, na ordem em que as pontas
+> dependiam umas das outras — e não na ordem das fases. O grafo das levas e a tabela das
+> catorze pontas estão no
+> [Fechamento da F2](fase-02-ativos.md#fechamento-da-f2--as-pontas-que-a-fase-deixou-abertas).
+> Desta fase eram duas: a **Leva 1A** (o ator chegando aos dois domínios que faltavam) e a
+> **Leva 5** (o `ApiToken` por agente, a Etapa G).
+
+## Leva 1A — O ator chega a `catalog` e `occupancy`, e o `= null` morre ✅
+
+- **Muda:** `catalog/use-cases/{create,update,delete}-catalog.usecase.ts` e
+  `occupancy/use-cases/{add-location-occupant,end-location-occupancy}.usecase.ts` ganham
+  `actorId: string | null` como **último** parâmetro; os dois controllers passam
+  `atorDaRequisicao(request)`.
+- **Depois, e só depois:** apagar o `= null` da assinatura de `recordActivity`.
+- **Regra:** a ordem é essa e não a inversa. Apagar o default primeiro quebra a compilação em
+  cinco pontos de uma vez e o trabalho passa a ser feito sem rede; propagando antes, o
+  compilador fica **quieto até o fim** e então aponta exatamente o que sobrou.
+
+É o fechamento do **D23**, e era a dívida nomeada na decisão 1 de *Três decisões que a
+implementação teve de tomar*: a partir daqui, esquecer o ator é erro de compilação, não linha
+de log com `actorId: null` que ninguém lê.
+
+**O que entrou:** `actorId` virou parâmetro obrigatório nos cinco pontos que faltavam, com os
+dois controllers passando `atorDaRequisicao(request)`. O `= null` foi apagado, e a rede foi
+**verificada quebrando de propósito**: tirar o ator de uma chamada responde
+`TS2554: Expected 3 arguments, but got 2`. Era isso que o D23 queria.
+
+**O aviso que valia durante a leva:** qualquer trabalho em paralelo que chamasse
+`recordActivity` ia quebrar na compilação no meio dela — efeito desejado, melhor saber antes do
+que descobrir num merge.
+
+## Leva 5 — `ApiToken` por agente · **M** ✅
+
+A Etapa G desta fase, por último e sozinha, porque é a única que depende de um binário que
+**não está neste repositório**.
+
+**Migration `20260923180000_api_token`:** o model `ApiToken`, o enum `ApiTokenOwner` e o CHECK
+de coerência do dono — exatamente como o **D80** os escreve, e não uma segunda versão deles,
+mais o índice parcial `api_tokens_um_ativo_por_endpoint`.
+
+**Nasceu:** `auth/helpers/api-token.helper.ts` (sha256, não argon2),
+`auth/use-cases/authenticate-api-token.usecase.ts`, `manage-api-tokens.usecase.ts`,
+`bind-agent-token.usecase.ts` e a tela `/tokens`.
+
+**Mudou:** `agent/helpers/authenticate-agent.helper.ts`, que passou a aceitar **os dois**
+caminhos.
+
+**Regras:**
+
+- O token viaja como `prefixo.segredo`. O lookup é pelo **prefixo**; a comparação do segredo é
+  em tempo constante contra um **sha256**, não argon2 — 32 bytes aleatórios não têm dicionário
+  a proteger, e 100 ms de KDF por handshake é transformar a defesa da senha humana em lentidão
+  da frota.
+- `endpointId` nasce **nulo** e é preenchido no primeiro handshake. O mesmo token chegando
+  depois de outra máquina é sinal de token copiado: vira alerta, **não** um `UPDATE` silencioso
+  do vínculo (D80).
+- A troca pelo `AGENT_TOKEN` é **por convivência**, com prazo e log de depreciação (**D89**):
+  cada uso do token compartilhado sai como `warn` com o IP.
+
+**A armadilha do gerador, de novo:** enum novo não compila em uma linha (`P1012`) — um valor por
+linha em `ApiTokenOwner`. O CHECK do D80 e o índice parcial **não saem** do `migrate diff` e
+entram à mão.
+
+## Verificação
+
+| Leva | Arquivo | O que prova |
+|---|---|---|
+| 1A | `tests/invariantes/ator.test.ts` | as 5 operações de catálogo e ocupação gravam `actorId` |
+| 5 | `tests/invariantes/api-token.test.ts` | token revogado → 401; prefixo inexistente → 401 sem diferença de tempo; o CHECK do dono recusa `USER` com `endpointId`; o segredo nunca volta |
+
+## O que continuou fora
+
+| O quê | Por quê |
+|---|---|
+| **Tirar o `AGENT_TOKEN` do `.env`** | é o commit seguinte, depois de o log de depreciação silenciar (D89) |
+| **RBAC** | é a F11. Qualquer sessão válida ainda podia tudo, inclusive emitir token de agente |
+| **Backfill de ator** | D24, e continua valendo: o que é anterior ao login segue sem ator |

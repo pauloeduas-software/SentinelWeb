@@ -1,9 +1,9 @@
 # Plano de implementação — Fase 4: checkout e checkin
 
-> Plano **prospectivo** da Fase 4 do [`ITAM-TODO.md`](./ITAM-TODO.md). Contrato:
-> [`MODELO-POSSE.md`](./MODELO-POSSE.md) · porquês:
-> [`DECISOES-POSSE.md`](./DECISOES-POSSE.md) · o que o sistema recusa:
-> [`INVARIANTES.md`](./INVARIANTES.md) · camadas: [`ARQUITETURA.md`](./ARQUITETURA.md).
+> Plano **prospectivo** da Fase 4 do [`../ROADMAP.md`](../ROADMAP.md). Contrato:
+> [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md) · porquês:
+> [`../decisoes/posse.md`](../decisoes/posse.md) · o que o sistema recusa:
+> [`../referencia/invariantes.md`](../referencia/invariantes.md) · camadas: [`../referencia/arquitetura.md`](../referencia/arquitetura.md).
 > **Parte desta fase já está em execução** — ver *O que já entrou*.
 >
 > Esforço: **P** = até meio dia · **M** = 1 a 3 dias · **G** = mais de 3 dias
@@ -37,7 +37,7 @@ os ativos diretos e deixar as ocupações de posto abertas é desligar pela meta
 | Invariante estado × posse | `asset/use-cases/assert-status-posse.usecase.ts` |
 | Ocupação: adicionar, encerrar, listar por local e por pessoa | `server/domain/occupancy/` |
 | O contrato de posse do front, com `PosseResolvida.postoVago` | `src/domain/shared/posse.types.ts` |
-| As quatro invariantes documentadas e provadas em SQL | `INVARIANTES.md`, `prisma/verificacoes/` |
+| As quatro invariantes documentadas e provadas em SQL | `../referencia/invariantes.md`, `prisma/verificacoes/` |
 
 **Em execução agora:** o domínio `assignment` (checkout/checkin polimórfico) e a
 resolução de responsáveis — assumidos prontos aqui, e não replanejados.
@@ -203,11 +203,15 @@ Mesa 1 = **2** (D28 — encerrar a ocupação **não** fecha a posse do posto); 
 ativos com duas posses abertas; zero `assignedToId` fora do caso `USER`; e o
 `ActivityLog` com 4 `CHECKIN` + 1 `END` + 1 `OFFBOARD`.
 
-## O que ficou pendente
+## O que ficou pendente — e onde foi fechado
+
+> **Tudo desta seção entrou no fechamento conjunto das F2, F3 e F4** (levas 1B, 1C, 3 e 4) —
+> ver [Fechamento da F4](#fechamento-da-f4--o-aceite-o-correio-e-as-duas-dívidas-sem-migration),
+> no fim deste arquivo. A lista fica como registro do que faltava quando a fase parou.
 
 **Aceite/EULA, assinatura, PDF e e-mail (Etapas A, B, C e o lembrete da D) NÃO
-entraram** — dependem de libs da próxima leva, e as decisões D27, D29 e D30
-continuam valendo como estão escritas acima. Junto com eles ficam:
+entraram** — dependiam de libs da leva seguinte, e as decisões D27, D29 e D30
+continuam valendo como estão escritas acima. Junto com eles ficaram:
 
 - **O índice parcial dos vencidos.** Ele **não sai do `migrate diff`** (o Prisma
   não expressa `WHERE` em índice) e nenhuma migration foi criada aqui — sem ele,
@@ -224,8 +228,11 @@ continuam valendo como estão escritas acima. Junto com eles ficam:
   nenhuma rota expõe hoje.
 - **`AppSetting.checkoutStatusId`/`checkinStatusId`** (o "qual rótulo `IN_USE`?"
   dos Riscos): continua valendo o primeiro do tipo, por nome.
-- **`checkoutAt` no futuro** ainda é aceito pelo schema da entrega — a recusa que
-  o `occupancy.schema.ts` já faz com `startedAt` não tem par aqui.
+- ~~**`checkoutAt` no futuro** ainda é aceito pelo schema da entrega~~ — **esta linha estava
+  errada, e a Leva 1B a corrigiu:** `checkoutSchema` não tem o campo e `Assignment.checkoutAt`
+  é `@default(now())`, então a data da entrega nunca vem do cliente. O buraco real era o
+  **outro** campo — `expectedCheckinAt` no **passado**, que nasce vencido. A recusa que falta
+  ser par do `occupancy.schema.ts` é `dataNaoPassada()`, não `dataNaoFutura()`.
 
 ## Etapa A — Aceite com EULA e assinatura · **G**
 
@@ -271,7 +278,7 @@ entrega que não existe. E a recíproca — falha de envio não desfaz a entrega
   `ON "assignments"("expectedCheckinAt") WHERE "checkinAt" IS NULL`, e
   a linha `'lembrete-de-atraso'` da tabela `JobRun` (D79 — **não** uma coluna
   `AppSetting.lastAlertRunAt`, que a F8 também usaria e que faria um dos dois
-  jobs nunca executar; ver [`DECISOES-RECONCILIACAO.md`](./DECISOES-RECONCILIACAO.md)).
+  jobs nunca executar; ver [`../decisoes/README.md`](../decisoes/README.md)).
 - **Nasce:** `assignment/use-cases/list-overdue.usecase.ts` e
   `assignment/jobs/overdue-reminder.job.ts`.
 - **Regra:** vencido é `checkinAt IS NULL AND expectedCheckinAt < now()`.
@@ -310,107 +317,15 @@ ativo da Mesa 1 pelo perfil da Laura devolveria o da Ana junto.
 O nome é `offboard`, não `checkin-all`: quem lê "check-in de tudo" não espera que
 a operação mexa em posto — e é essa a metade que se esquece.
 
-## Decisões da fase — D27 a D32
+## Decisões da fase
 
-### D27 — Num posto com duas pessoas, quem assina o termo é o gestor da localidade.
+> As decisões desta fase moram em [`../decisoes/posse.md`](../decisoes/posse.md) — **D27–D32, mais o D87 e o D88**. Elas saíram daqui porque decisão se arquiva pelo ASSUNTO que governa, não pela fase que a tomou: quem precisa saber as regras de um assunto não deveria ter que descobrir em que fase ele nasceu.
+>
+> **Uma delas não ficou com o assunto desta fase:** o **D86** — e-mail é *best-effort* com
+> log — foi para [`../decisoes/plataforma.md`](../decisoes/plataforma.md), porque o correio
+> tem quatro clientes e três são de fases diferentes.
 
-**Decidido.** Com `targetType = LOCATION` e categoria que exige aceite, sai **um**
-termo, para o `Location.managerId` — coluna que existe desde a F1 e nunca foi lida
-por nada. Os ocupantes recebem **ciência por e-mail**, não assinatura.
-
-**Descartado: cada ocupante assina o seu.** São N documentos para **um** fato: o
-ativo ficaria com aceite "parcialmente pendente" enquanto um dos N não assina — e
-ele já está na mesa desde o primeiro dia. Pior no tempo: quem entra em março
-reabriria o aceite de um ativo entregue em janeiro, ou trabalharia sob um termo
-que nunca viu.
-
-**Descartado: posto não tem termo.** É justamente o equipamento compartilhado que
-some — o de todos e de ninguém; dispensar o documento aí é dispensá-lo onde serve.
-**Descartado: o primeiro ocupante assina pelos outros** — cria responsabilidade que
-a pessoa não escolheu e que o modelo não reconhece: a Camada 3 devolve Laura e Ana
-como iguais, sem primeiro nem segundo.
-
-**Por que o gestor.** `Location.managerId` já nomeia o responsável formal daquele
-lugar — nasceu com `onDelete: SetNull` porque *"desligar o gestor não pode derrubar
-a filial"*, ou seja, a localidade sempre teve dono no schema. E porque o
-`MODELO-POSSE.md` recusa N detentores diretos com a frase *"responsabilidade
-compartilhada sem um posto no meio é responsabilidade de ninguém"*: o termo do
-posto é a mesma frase no plano documental — um nome no papel.
-
-**O que esta decisão NÃO faz, e é o que impede a contradição:** assinar o termo
-**não** torna o gestor responsável resolvido. `resolverResponsaveis()` continua
-devolvendo os ocupantes, e só — o `DECISOES-POSSE.md` declara responsabilidade
-hierárquica fora do modelo, e esta decisão é sobre **quem firma o documento**,
-camada que não existe na resolução.
-
-**Sem gestor, o checkout é recusado com 409** — *"defina o gestor de «Mesa 1» antes
-de entregar equipamento com termo de aceite"*. Não se emite termo para ninguém.
-Categoria **sem** `requireAcceptance` entrega normalmente: não há documento.
-
-### D28 — Quando o último ocupante sai, a posse continua aberta.
-
-**Decidido.** Encerrar a última `LocationOccupant` aberta de um posto **não** fecha
-as `Assignment` daquele posto. Os ativos passam a aparecer no relatório de **posto
-vago** (F2, Etapa E) e `resolverResponsaveis()` devolve lista vazia com
-`postoVago: true` — que é exatamente o que `posse.types.ts` já declara.
-
-**Descartado: fechar as assignments automaticamente.** Seria o sistema fazendo um
-check-in que ninguém fez. O equipamento continua fisicamente na mesa, e a devolução
-tem data, estado, nota e — com a F3 — quem recebeu. É o raciocínio que
-`assert-status-posse.usecase.ts` já aplica ao recusar mandar ativo entregue para
-`DEPLOYABLE`: **bloqueia, nunca limpa sozinho** — limpar sozinho é perda de dado
-silenciosa.
-
-**Descartado: recusar a saída do último ocupante enquanto houver ativo no posto.**
-A pessoa já saiu; o fato é do mundo, não do banco. Sistema que recusa registrar o
-que aconteceu produz dado falso na hora seguinte — alguém encerra por SQL, ou deixa
-a Laura "ocupando" há seis meses um posto onde não trabalha.
-**Descartado: transferir a responsabilidade ao gestor** — contradiz o
-`DECISOES-POSSE.md` e faria dele responsável por um parque inteiro sem ato nenhum.
-Ele assina o termo (D27); não herda a guarda.
-
-**O que a saída do último ocupante faz:** grava `ActivityLog` no local e, com o
-alerta da F8, avisa o gestor de que há N ativos em posto vago. É **sinal**, não
-erro, e nenhuma invariante é violada: a posse continua aberta, e o que esvaziou
-foi a Camada 2.
-
-### D29 — O EULA é copiado para o `Acceptance`, não referenciado.
-
-**Decidido:** `eulaSnapshot` guarda o texto no instante da emissão.
-**Descartado:** FK para `Category` e ler `eulaText` na hora de exibir.
-**Por quê:** editar o EULA da categoria mudaria, retroativamente, o que centenas de
-pessoas assinaram — sem log em `assets` e sem ninguém perceber. Um termo que muda
-depois de assinado não é termo.
-
-### D30 — O PDF é gerado no aceite e guardado. Nunca regenerado.
-
-**Decidido:** o arquivo nasce no `accept-term.usecase.ts`; o caminho vai em `pdfPath`.
-**Descartado:** gerar sob demanda em `GET /api/acceptances/:id/pdf`.
-**Por quê:** regenerar monta o documento com os dados de **hoje** — o ativo pode ter
-mudado de nome, de local e de dono. O PDF existe para provar o que foi assinado, e
-prova que se recalcula não prova nada. É o D29 no arquivo.
-
-### D31 — Entrega em massa é por linha, com relatório. (O oposto da F2.)
-
-**Decidido:** `bulk-checkout` processa cada ativo na sua transação e devolve o que
-entrou e o que foi recusado, com o motivo. **Descartado:** tudo ou nada, como a
-ação em massa da F2 (D21).
-**Por quê:** não é inconsistência, é a natureza da operação. Edição em massa é
-**uma** intenção aplicada a N linhas — metade aplicada é estado que ninguém pediu.
-Checkout em massa são **N entregas independentes**: um kit de 8 itens em que 1
-está com outra pessoa ainda entrega 7, e refazer os 7 à mão é pior que ler um
-relatório de uma linha.
-
-### D32 — Desligamento é uma operação com nome próprio, e fecha as duas camadas.
-
-**Decidido:** `POST /api/users/:id/offboard` fecha posses `USER` abertas **e**
-ocupações abertas, na mesma transação, com uma nota comum. **Descartado:**
-`checkin-all` só sobre `Assignment`, como o TODO descrevia.
-**Por quê:** devolver os ativos diretos e deixar a pessoa ocupando a Mesa 1 mantém
-um desligado como responsável resolvido por todo equipamento daquele posto — o
-`resolverResponsaveis()` continua devolvendo o nome dele, e o 409 de exclusão
-dispara sem que ninguém entenda por quê. Por isso o 409 do `DELETE` conta **as
-duas** coisas, não só as posses.
+O índice das 142 está em [`../decisoes/README.md`](../decisoes/README.md).
 
 ## Riscos e armadilhas
 
@@ -507,3 +422,212 @@ transporte no-op já no lugar não se testa o fluxo colando token à mão. Depoi
 A (aceite) → B (PDF) → D (vencidos) → E (massa) → F (perfil) → G (desligamento),
 um commit por etapa, lint passando em cada um. A verificação é a seção acima, mais
 `prisma/verificacoes/posse-invariantes.sql` para o que é invariante de banco.
+
+---
+
+# Fechamento da F4 — o aceite, o correio e as duas dívidas sem migration
+
+> As F2, F3 e F4 foram fechadas **juntas**, em cinco levas, na ordem em que as pontas
+> dependiam umas das outras — e não na ordem das fases. O grafo das levas e a tabela das
+> catorze pontas estão no
+> [Fechamento da F2](fase-02-ativos.md#fechamento-da-f2--as-pontas-que-a-fase-deixou-abertas).
+> Desta fase eram quatro: as **levas 1B e 1C** (dívida sem migration), a **Leva 3** (correio e
+> agendamento, Etapa C + o que faltava da D) e a **Leva 4** (aceite, assinatura e PDF, Etapas
+> A e B). A Leva 4 foi a única que dependeu de duas outras: ela precisava de **onde gravar**
+> (Leva 2, na F2) e de **como avisar** (Leva 3).
+>
+> **Com estas levas, as F0 a F4 ficaram completas.**
+
+## Leva 1B — `expectedCheckinAt` não pode nascer no passado ✅
+
+> ⚠️ **Correção a este plano.** A seção *O que ficou pendente* dizia que *"`checkoutAt` no
+> futuro ainda é aceito pelo schema da entrega"*. **Não era:** `checkoutSchema` não tem o campo,
+> e `Assignment.checkoutAt` é `@default(now())` — a data da entrega nunca vem do cliente.
+
+- **Muda:** `shared/fields.schema.ts` ganha `meiaNoiteUTC()`, `dataNaoFutura()` e
+  `dataNaoPassada()`; `occupancy.schema.ts` passa a usar o compartilhado no lugar do
+  `amanhaUTC()` local; `assignment.schema.ts` aplica `dataNaoPassada` em `expectedCheckinAt`.
+- **Regra:** hoje é aceito, ontem não. Uma entrega com prazo no passado **nasce vencida** —
+  aparece em `GET /api/assignments/overdue` no mesmo segundo e, com a Leva 3, dispara lembrete
+  de algo que acabou de sair do estoque.
+
+O espelho é exato e é por isso que os dois construtores vão para o mesmo arquivo: ocupação
+**recusa o futuro** (quem "vai ocupar" contaria como ocupante hoje); devolução **recusa o
+passado** (quem "ia devolver ontem" nasce em atraso). São a mesma regra vista dos dois lados, e
+duas cópias divergiriam no primeiro ajuste.
+
+**O que entrou:** nasceram `dataNaoFutura` e `dataNaoPassada` em `shared/fields.schema.ts`, com
+`meiaNoiteUTC()`/`amanhaUTC()` privados no mesmo arquivo. `occupancy.schema.ts` passou a usar o
+construtor compartilhado — **a mensagem dele ficou idêntica**, porque o texto é derivado do
+rótulo (`início da ocupação não pode ser uma data futura`) — e `assignment.schema.ts` aplicou o
+par em `expectedCheckinAt`. A entrega em massa herdou a regra de graça: `bulkCheckoutSchema`
+estende o `checkoutSchema` em vez de repetir os campos.
+
+*(A data retroativa de entrega — `checkoutAt` no passado — passou a existir depois, na F10, e
+apenas para o importador: ver o D131.)*
+
+## Leva 1C — Histórico da pessoa ✅
+
+- **Nasce:** `user/use-cases/user-history.usecase.ts` e `GET /api/users/:id/history`, na mesma
+  forma de `asset/use-cases/asset-history.usecase.ts` (que já une `ActivityLog` e posse, e já
+  resolve o teto de 200).
+- **Muda:** `src/pages/gestao-usuario/detalhe/` ganha a lista.
+- **Regra:** o histórico da pessoa é **o que aconteceu COM ela** — `entityType='User' AND
+  entityId=:id`, unido às posses (`Assignment.targetUserId`) e às ocupações
+  (`LocationOccupant.userId`).
+
+**O que ele não é:** *"o que esta pessoa fez"*, que seria `actorId=:id` e é outro relatório — o
+de auditoria de operador, que pertence à F11 junto com o RBAC. Misturar os dois na mesma lista
+responde as duas perguntas pela metade: quem abre o perfil da Laura para saber o que ela tem na
+mão leria, no meio, os 400 ativos que ela cadastrou.
+
+**O que entrou, e a forma que mudou:** **três** fontes, e a novidade é que elas são **disjuntas
+por construção** — a entrega é gravada com `entityType: 'Asset'` e a ocupação com
+`entityType: 'LocationOccupant'`, então nenhuma cai numa consulta por `entityType: 'User'`: o
+histórico do ativo precisa de uma lista de exclusão, este não. No front, a parte genérica do
+`historico.helper.ts` mudou para `src/pages/helpers/`, recebendo o mapa de rótulos **por
+parâmetro** (a mesma inversão do `parseListQuery`); o que ficou em `gestao-itam/detalhe/helpers/`
+é o que é do ativo. E o `historyQuerySchema` saiu de `asset/schemas/asset.schema.ts` e virou
+`shared/history.schema.ts` — a alternativa era o domínio `user` importar um schema do domínio
+`asset`, seta que o [`../referencia/arquitetura.md`](../referencia/arquitetura.md) não desenha, ou uma segunda cópia do
+teto, que divergiria do original no primeiro ajuste.
+
+## Leva 3 — Envio e agendamento · **M** ✅
+
+A Etapa C inteira e a metade da Etapa D que faltava.
+
+**Migration `20260923160000_job_run_e_vencidos`:**
+
+- model `JobRun` (`name @id`, `lastRunAt`, `updatedAt`) — a tabela do **D79**
+- o índice parcial, à mão, porque o `migrate diff` não emite `WHERE`:
+
+  ```sql
+  CREATE INDEX "assignments_vencidos"
+    ON "assignments"("expectedCheckinAt") WHERE "checkinAt" IS NULL;
+  ```
+
+**Nasceu:**
+
+| Onde | O quê |
+|---|---|
+| `server/core/mail/mailer.ts` | transporte. Sem SMTP, **no-op que loga o e-mail que teria mandado** |
+| `server/core/mail/templates/` | os quatro corpos, em texto e HTML |
+| `server/core/jobs/claim-window.ts` | o CAS por linha do D79 — recebe o nome do job por parâmetro |
+| `server/domain/assignment/jobs/overdue-reminder.job.ts` | a linha `'lembrete-de-atraso'` |
+
+**Muda:** `checkout-asset.usecase.ts` e `checkin-asset.usecase.ts` passam a enviar **depois do
+commit**; `Category.checkinEmail` deixa de ser coluna morta.
+
+**Regras:**
+
+- **O envio acontece fora da `$transaction`, sempre.** SMTP não tem rollback: um e-mail
+  disparado por transação que reverteu avisa o colaborador de uma entrega que não existe. E a
+  recíproca — falha de envio **não** desfaz a entrega (D86).
+- Alvo `LOCATION` notifica **todos os ocupantes abertos** do posto (D27).
+- Sem SMTP configurado, o transporte loga o destinatário e o assunto em nível `info`. Silêncio
+  torna *"não chegou"* indepurável.
+- O job **não** copia o `setInterval` solto do `zombie-cleaner.job.ts`: ele reinicia a cada
+  deploy, e herdar isso manda o lembrete duas vezes ou nenhuma, conforme a hora em que se sobe o
+  servidor. Quem decide se já rodou é a `JobRun` — **não** uma coluna `AppSetting.lastAlertRunAt`
+  (D79).
+
+**Uma regressão evitada:** ao unificar o `rotuloDoAlvo` — duplicado entre o histórico e o e-mail
+— a versão compartilhada devolvia texto de reserva no lugar de `null`. O `tsc` aceitou (string é
+atribuível a `string | null`), mas a aba Histórico teria passado a escrever *"Entregue para
+colaborador"* onde antes escrevia *"Entregue"*. Separado em `rotuloDoAlvo` (null) e
+`rotuloDoAlvoOuPadrao` (texto de reserva, só para o corpo do e-mail).
+
+## Leva 4 — Aceite, assinatura e PDF · **G** ✅
+
+As Etapas A e B, o relatório que fecha a fase, e as duas colunas de status que ficaram
+pendentes.
+
+**Migration `20260923170000_aceite`:**
+
+- model `Acceptance` — `assignmentId`, `assetId`, `token @unique`, `eulaSnapshot String`,
+  `signerUserId?`, `signerName`, `signerEmail`, `signaturePath?`, `pdfPath?`, `acceptedAt?`,
+  `declinedAt?`, `declineReason?`, `expiresAt`, `remindedAt?`
+- índice parcial `acceptances_um_pendente_por_posse`, `ON ("assignmentId") WHERE "acceptedAt" IS NULL`
+- `AppSetting.checkoutStatusId` / `checkinStatusId` (nuláveis)
+
+**Nasceu:** `server/domain/acceptance/` (maestro, controller, `issue-acceptance`, `accept-term`,
+`decline-term`, `remind-acceptance`, `list-pending-acceptances`, `helpers/token.helper.ts`,
+`helpers/termo-pdf.helper.ts`) e `src/pages/aceite/`, com assinatura em `<canvas>` e PDF por
+`pdfkit`. `Category.requireAcceptance` e `eulaText`, inertes desde a F1, ganharam dono.
+
+**Rotas:** a página `/aceite/:token` (pública), `POST /api/aceite/:token/aceitar`,
+`POST /api/aceite/:token/recusar`, `GET /api/acceptances?view=pendentes`,
+`POST /api/acceptances/:id/remind`, `GET /api/acceptances/:id/pdf`.
+
+**Regras:**
+
+- O aceite nasce **dentro da transação do checkout** quando `category.requireAcceptance`, e o
+  EULA é **copiado** para `eulaSnapshot` (D29).
+- O token é `crypto.randomBytes(32).toString('base64url')`, de uso único e com validade. A
+  página do termo entra na `ROTAS_PUBLICAS` de `server/app.ts` **com o motivo escrito**, e não
+  mostra nada além do termo em questão.
+- O PDF nasce no instante do aceite e é guardado; **nunca regenerado** (D30).
+- Alvo `LOCATION` → **um** termo, para o `Location.managerId`; sem gestor, o checkout é recusado
+  com 409 (D27). Alvo `ASSET` → **termo nenhum** (**D87**).
+- Aceite pendente **não** bloqueia a entrega (**D88**).
+- `AppSetting.checkoutStatusId`/`checkinStatusId`, quando preenchidos, substituem o
+  `escolherStatusPorTipo(…, 'IN_USE', 'Em uso')` — que escolhe *o primeiro do tipo, por nome*.
+  Vazios, o comportamento anterior continua valendo.
+
+**A segunda porta do PDF.** Ele sai por dois caminhos: `/api/acceptances/:id/pdf`, com sessão,
+para quem administra; e pelo próprio token, para quem assinou — que não tem conta no sistema e
+ainda assim precisa da via dele. O token é o **mesmo** de uso único, e quem já assinou continua
+podendo buscar o documento até `expiresAt`.
+
+**A colisão de rota que só apareceria em produção.** O plano dizia `/aceite/:token` para a API,
+e `/aceite/:token` já era a rota da **página** no React Router. Em produção o Fastify
+resolveria a API antes do `/*` que entrega o `index.html` e o navegador receberia JSON no lugar
+da tela — em desenvolvimento não, porque o proxy do Vite só encaminha `/api`. A API passou para
+`/api/aceite/*`, e `tests/aceite/fluxo.test.ts` trava a separação com `hasRoute`.
+
+**O token é mascarado no log.** `core/logger/sanitize.ts` mascara chaves sensíveis do corpo e o
+`SENSITIVE_KEY` já casava `token` — mas o token do aceite viaja no **caminho**, que o
+`request-logger` gravava inteiro. Agora sai `/api/aceite/***/aceitar`, senão o `X-Request-Id`
+sairia acompanhado da credencial que ele deveria proteger.
+
+## Riscos que esta parte do fechamento acrescentou
+
+**Duas janelas de job na mesma tabela.** O `claim-window.ts` é do D79 e recebe o nome por
+parâmetro. Reusar a linha `'lembrete-de-atraso'` para o alerta da F8 reabre exatamente o
+conflito que o D79 fechou — e o sintoma é um dos dois alertas **nunca** sair, sem erro em lugar
+nenhum.
+
+**`Acceptance` com `expiresAt` e o relógio.** Termo expirado não é termo recusado: `expiresAt`
+vencido com `acceptedAt` nulo continua **pendente**, reemitível, e não vira `declinedAt`.
+Confundir os dois faria o relatório de não aceitos esvaziar sozinho com o tempo.
+
+## Verificação
+
+| Leva | Arquivo | O que prova |
+|---|---|---|
+| 1B | `tests/formularios/datas.test.ts` | `expectedCheckinAt` de ontem → 422; de hoje → 201 |
+| 1C | `tests/listagens/historico-da-pessoa.test.ts` | as três fontes entram e nenhuma se repete |
+| 3 | `tests/jobs/janela.test.ts` | dois jobs de nomes diferentes ganham a janela no mesmo dia; o mesmo job duas vezes, não |
+| 3 | `tests/correio/aviso.test.ts` | sem SMTP, o envio loga e **não** lança; falha de envio não desfaz o checkout |
+| 4 | `tests/aceite/fluxo.test.ts` | categoria com `requireAcceptance` gera termo no checkout; alvo `ASSET` não gera (D87); alvo `LOCATION` sem gestor → 409 (D27); a entrega conclui com o termo pendente (D88); token usado duas vezes → 409; a API e a página não colidem |
+
+Mais uma prova que só o SQL dá, no padrão de `prisma/verificacoes/`:
+
+```sql
+-- aceite pendente de assignment já devolvida: o termo ficou para trás
+SELECT a.id FROM acceptances a
+  JOIN assignments s ON s.id = a."assignmentId"
+ WHERE a."acceptedAt" IS NULL AND s."checkinAt" IS NOT NULL;
+```
+
+**O placar do fechamento, nas quatro levas desta fase mais as da F2 e da F3:** a suíte foi de 59
+para **145 asserções**, `npm run build` e `npm run lint` limpos, 5 migrations aplicadas.
+
+## O que continuou fora, e por quê
+
+| O quê | Por quê |
+|---|---|
+| **RBAC** | é a F11. Aqui, qualquer sessão válida continuava podendo tudo — inclusive baixar qualquer anexo |
+| **Anexo em licença e manutenção** | `Attachment` nasceu com FK direta para `Asset`. Quando a F6 e a F8 quiserem, é uma coluna nulável e um discriminante — aditivo, o padrão do `Assignment` |
+| **Outbox de e-mail** | D86, com o preço escrito: um aviso perdido está perdido |
+| **Renomear `Asset.assignedToId`** | é cache do caso `USER` e está documentado como tal (D17). Mexer nele é migração sem ganho |

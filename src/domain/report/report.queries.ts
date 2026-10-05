@@ -5,7 +5,7 @@ import type {
   RelatorioDePrazos, RelatorioDeResponsabilidade, RespostaDoBuilder,
 } from '../shared/lifecycle.types';
 
-// OS RELATÓRIOS — quatro da F8 (docs/FASE-8-PLANO-ITAM.md, Etapa D) e dois da
+// OS RELATÓRIOS — quatro da F8 (docs/historico/fase-08-ciclo-de-vida.md, Etapa D) e dois da
 // F10 (Etapa F), na MESMA moldura: o plano manda acrescentar aba, não abrir uma
 // segunda tela de relatórios.
 //

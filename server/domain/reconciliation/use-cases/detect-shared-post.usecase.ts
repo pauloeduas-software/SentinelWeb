@@ -14,7 +14,7 @@ import { recorrentes, resumirObservacoes, type PresencaObservada } from './summa
 // todo ITAM de prateleira trata isto como ruído — não falta dado, falta ONDE
 // GUARDAR.
 //
-// Com as três camadas do MODELO-POSSE.md a mesma observação é consistente: o
+// Com as três camadas do docs/referencia/modelo-de-posse.md a mesma observação é consistente: o
 // ativo é do posto (uma `Assignment`), as pessoas são ocupantes (duas linhas de
 // `LocationOccupant`) e o turno é um rótulo no vínculo pessoa↔posto. Não há
 // contradição para resolver, então não há nada para descartar.

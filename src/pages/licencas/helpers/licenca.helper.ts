@@ -1,7 +1,7 @@
 import type { AssentoDeLicenca, StatusDaLicenca } from '../../../domain/shared/license.types';
 
 // Funções puras da tela de licenças — cálculo e cor fora do JSX
-// (docs/ARQUITETURA.md).
+// (docs/referencia/arquitetura.md).
 
 /** A cor de cada status. Hex, porque o Tailwind não gera classe de runtime. */
 const COR_DO_STATUS: Record<StatusDaLicenca, string> = {

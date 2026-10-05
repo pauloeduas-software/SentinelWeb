@@ -5,11 +5,11 @@ import {
 import type { Posto } from '../../../domain/shared/workstation.types';
 
 // A lista de postos. Apresentacional: recebe as linhas prontas e devolve o
-// clique — não conhece query nem HTTP (docs/ARQUITETURA.md).
+// clique — não conhece query nem HTTP (docs/referencia/arquitetura.md).
 //
 // O que cada linha responde, e que nenhuma tela de ITAM de prateleira responde:
 // QUEM está na mesa, EM QUE TURNO, QUANTO equipamento ela segura, e se está
-// VAGA — equipamento parado sem ninguém respondendo (docs/MODELO-POSSE.md).
+// VAGA — equipamento parado sem ninguém respondendo (docs/referencia/modelo-de-posse.md).
 
 interface PostosTableProps {
   postos: readonly Posto[];
@@ -33,7 +33,7 @@ export default function PostosTable({ postos, vazio, onAbrir }: PostosTableProps
         <tbody className="text-text-primary divide-y divide-border-sutil/50">
           {postos.map((posto) => {
             // O agrupamento por turno sai do JSX para o helper: aqui só se
-            // escolhe o que mostrar (docs/ARQUITETURA.md).
+            // escolhe o que mostrar (docs/referencia/arquitetura.md).
             const turnos = turnosDoPosto(posto.ocupantes);
 
             return (

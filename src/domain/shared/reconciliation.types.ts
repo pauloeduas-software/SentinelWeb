@@ -1,5 +1,5 @@
 // A CONVERGÊNCIA RMM × ITAM, do lado do navegador
-// (docs/FASE-7-PLANO-ITAM.md).
+// (docs/historico/fase-07-convergencia-rmm-itam.md).
 
 export type SuggestionKind = 'LINK' | 'MERGE' | 'CHECKOUT' | 'OCCUPANCY' | 'SHARED_POST';
 export type SuggestionState = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SUPERSEDED';

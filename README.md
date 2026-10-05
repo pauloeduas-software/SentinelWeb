@@ -30,7 +30,7 @@ por camada): import que sobe a seta reprova o `npm run lint`, com a mensagem do 
 fazer no lugar.
 
 **A convenção completa — onde cada coisa vai, como adicionar um domínio novo e
-quando quebrar em use-cases — está em [`docs/ARQUITETURA.md`](./docs/ARQUITETURA.md).**
+quando quebrar em use-cases — está em [`docs/referencia/arquitetura.md`](./docs/referencia/arquitetura.md).**
 Leia antes de criar arquivo novo.
 
 O tema **Cyber-Industrial** (modo escuro, cores de status, fonte monoespaçada)
@@ -99,7 +99,7 @@ bun run dev
 | `build` | Typecheck dos 3 projetos TS + build do front |
 | `start` | Produção: a API serve o `dist` |
 | `lint` | ESLint em `src/`, `server/` e `tests/` |
-| `test` / `test:watch` | Vitest contra o banco `sentineldb_test` (descartável). Ver [`docs/TESTES.md`](./docs/TESTES.md) |
+| `test` / `test:watch` | Vitest contra o banco `sentineldb_test` (descartável). Ver [`docs/referencia/testes.md`](./docs/referencia/testes.md) |
 | `db:migrate` / `db:generate` / `db:studio` | Prisma |
 
 ### Migrations

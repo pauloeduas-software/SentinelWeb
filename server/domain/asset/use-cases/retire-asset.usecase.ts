@@ -11,7 +11,7 @@ import { assertSemPosseParaDescomissionar } from './assert-retire-posse.usecase'
 // extraviado, roubado ou trocado em garantia.
 //
 // NÃO é arquivar e NÃO é apagar. São três colunas, três perguntas e nenhuma
-// substitui a outra (D19, docs/FASE-2-PLANO-ITAM.md):
+// substitui a outra (D19, docs/historico/fase-02-ativos.md):
 //
 //   `status.type = ARCHIVED`  saiu da OPERAÇÃO   — classificação, reversível
 //   `retiredAt`               saiu do PATRIMÔNIO — fato datado, contábil

@@ -225,7 +225,7 @@ Era a suspeita certa: o modelo de posse mexe direto no `StatusLabelType`.
 Hoje `IN_USE` + sem responsável é ambíguo — *em uso por quem?*. Com as três
 camadas, o mouse da Mesa 1 está em uso **por Laura e Ana**, e o banco prova.
 
-**2. A invariante estado × posse** (ver `INVARIANTES.md`): um ativo com
+**2. A invariante estado × posse** (ver `invariantes.md`): um ativo com
 responsável resolvido não pode ter status de tipo `DEPLOYABLE` (estoque) nem
 `ARCHIVED` (fora de operação).
 
@@ -240,18 +240,29 @@ Candidato a voltar ao estoque. Nenhum ITAM de prateleira responde isso.
 
 ## O que este modelo NÃO resolve
 
-Declarado para não ser redescoberto em auditoria:
+Declarado aqui para não ser redescoberto em auditoria como se fosse defeito. São
+limites escolhidos, não esquecimentos.
 
-- **Mouse reserva na gaveta de uma mesa ocupada** apareceria como
-  responsabilidade dos ocupantes, se alguém fizer checkout dele para a mesa. A
-  saída é não fazer checkout de item de reserva — `locationId` (*onde está*)
-  continua separado da assignment (*quem responde*). Um ativo pode estar **em**
-  um lugar sem ser **do** lugar.
+- **Mouse reserva na gaveta de uma mesa ocupada.** Se alguém fizer checkout dele
+  para a Mesa 1, ele aparece como responsabilidade da Laura e da Ana — que não
+  sabem que ele existe. A saída é **não** fazer checkout de item de reserva:
+  `locationId` (*onde está*) continua separado da assignment (*quem responde*).
+  Um ativo pode estar **em** um lugar sem ser **do** lugar. O modelo não impede o
+  erro; ele dá o lugar certo para registrar a diferença.
+
 - **N detentores diretos simultâneos** continua impossível por construção, e é
-  proposital: responsabilidade compartilhada sem um posto no meio é
-  responsabilidade de ninguém. O caminho é criar o posto.
-- **Escala com horário** (`08:00–12:00`) não existe. `shift` é rótulo. Se virar
-  necessidade, é tabela própria, não coluna nova aqui.
+  proposital (D14): responsabilidade compartilhada sem um posto no meio é
+  responsabilidade de ninguém. O caminho suportado é criar o posto. Se a
+  necessidade aparecer mesmo assim, a alavanca está identificada — derrubar o
+  índice parcial —, mas é decisão nova, não ajuste.
+
+- **Escala com horário** (`08:00–12:00`, feriado, sobreposição) não existe.
+  `shift` é rótulo (D15). Se virar necessidade, é tabela própria com semântica de
+  agenda, não coluna nova em `LocationOccupant`.
+
+- **Responsabilidade parcial ou hierárquica** (o gestor responde junto com quem
+  usa) não é modelada. `Location.manager` e o `managerId` do colaborador (F11)
+  existem para outra coisa — ver a fronteira na F11 do `../ROADMAP.md`.
 
 ---
 

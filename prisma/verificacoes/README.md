@@ -6,7 +6,7 @@ termina em `ROLLBACK`: não deixa resíduo, e pode rodar no banco de trabalho.
 Existe porque estas regras vivem no BANCO: um teste de aplicação passaria por
 cima delas sem tocá-las. (A frase original dizia "porque o projeto ainda não tem
 suíte de testes" — tem, desde a F5: `npm test`, contra Postgres real, ver
-`docs/TESTES.md`. O que a suíte **não** alcança são os índices parciais e os
+`docs/referencia/testes.md`. O que a suíte **não** alcança são os índices parciais e os
 CHECKs, porque ela entra pela API, que nunca tenta violá-los.)
 
 ```bash
@@ -16,7 +16,7 @@ docker exec -i sentinel-postgres psql -U sentinel -d sentineldb -q -f - \
 
 | Arquivo | O que prova |
 |---|---|
-| `posse-invariantes.sql` | Os 7 cenários do modelo de posse (`docs/MODELO-POSSE.md`): duas pessoas no mesmo posto passam; a mesma pessoa duas vezes falha; duplo checkout falha; a Camada 3 resolve o mouse da Mesa 1 para Laura (manhã) e Ana (tarde); devolver libera nova entrega; e o check-in fecha a linha sem apagar o histórico |
+| `posse-invariantes.sql` | Os 7 cenários do modelo de posse (`docs/referencia/modelo-de-posse.md`): duas pessoas no mesmo posto passam; a mesma pessoa duas vezes falha; duplo checkout falha; a Camada 3 resolve o mouse da Mesa 1 para Laura (manhã) e Ana (tarde); devolver libera nova entrega; e o check-in fecha a linha sem apagar o histórico |
 
 **Como ler o resultado:** os passos marcados `-> esperado: FALHA` devem imprimir
 um `ERROR: duplicate key ... um_aberto_por_...`. Ausência de erro ali é a

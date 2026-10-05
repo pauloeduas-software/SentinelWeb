@@ -54,7 +54,7 @@ export interface NovoPostoInput {
 /**
  * Cria um posto — gravando em `/locations`, não numa rota própria.
  *
- * O posto É uma `Location` (docs/MODELO-POSSE.md, D15): uma rota de escrita
+ * O posto É uma `Location` (docs/referencia/modelo-de-posse.md, D15): uma rota de escrita
  * separada seria um segundo lugar para criar a mesma linha, e com ela um
  * segundo lugar para esquecer a guarda de ciclo da hierarquia e o
  * `ActivityLog`. O que esta mutação acrescenta é `isWorkstation: true` — a

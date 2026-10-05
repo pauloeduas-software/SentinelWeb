@@ -58,7 +58,7 @@ export interface RelatorioEntregaEmLote {
  * O motivo que vai para o relatório.
  *
  * Só `AppError` tem texto escrito para ser lido por gente — é a regra do
- * `docs/ARQUITETURA.md`: `error.message` de banco ou de biblioteca nunca vai
+ * `docs/referencia/arquitetura.md`: `error.message` de banco ou de biblioteca nunca vai
  * para o cliente. Qualquer outra coisa vira uma frase genérica AQUI e o erro
  * completo vai para o log, com o id do ativo, para ser depurável depois.
  */

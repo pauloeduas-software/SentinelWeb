@@ -8,7 +8,7 @@ import {
   listUserSeats, type AssentoEmPosse,
 } from '../../license/use-cases/list-user-seats.usecase';
 
-// "Quais ativos a Laura responde?" — a pergunta que o MODELO-POSSE.md diz que
+// "Quais ativos a Laura responde?" — a pergunta que o docs/referencia/modelo-de-posse.md diz que
 // passa a existir com as três camadas, e que o `Asset.assignedToId` sozinho
 // nunca respondeu: ele só conhece o caso `USER`.
 //
@@ -35,7 +35,7 @@ type AtivoEmPosse = Awaited<ReturnType<typeof buscarAtivos>>[number];
  *
  * Vem embutido em cada ativo, e NÃO se deduz do `asset.location` que já está na
  * resposta: `locationId` é ONDE o ativo está, e o alvo da posse é DE QUEM ele
- * é. Os dois divergem no caso que o próprio MODELO-POSSE.md descreve — o mouse
+ * é. Os dois divergem no caso que o próprio docs/referencia/modelo-de-posse.md descreve — o mouse
  * guardado na gaveta da Mesa 1 está na sala e não é do posto. Agrupar no
  * cliente pelo campo errado daria uma lista plausível e errada.
  */
@@ -61,7 +61,7 @@ export interface PostoDeOrigem {
    *
    * ⚠️ NÃO inclui a própria pessoa — ela já sabe que responde. E não é "quem
    * responde pelo ativo": é quem responde pelo MESMO POSTO, que é a Camada 2
-   * (docs/MODELO-POSSE.md). O gestor da localidade continua fora disto, porque
+   * (docs/referencia/modelo-de-posse.md). O gestor da localidade continua fora disto, porque
    * ele responde pelo posto VAZIO e não pelo ocupado (D72).
    * ═════════════════════════════════════════════════════════════════════════
    */

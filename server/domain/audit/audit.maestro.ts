@@ -5,7 +5,7 @@ import { auditController } from './controllers/audit.controller';
 
 const logger = createLogger('audit.maestro');
 
-// A CONFERÊNCIA FÍSICA (docs/FASE-8-PLANO-ITAM.md, Etapa B).
+// A CONFERÊNCIA FÍSICA (docs/historico/fase-08-ciclo-de-vida.md, Etapa B).
 //
 // AS ROTAS DE POSTO MORAM AQUI, e não no CRUD de catálogo de localizações: elas
 // têm REGRA — deduzem o resultado de cada ativo, movem `locationId`, marcam as

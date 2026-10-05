@@ -3,7 +3,7 @@ import type { ClienteStatusPosse } from './assert-status-posse.usecase';
 
 /**
  * Guarda irmã da `assertStatusCoerenteComPosse` — a Invariante 4 aplicada ao
- * DESCOMISSIONAMENTO (docs/INVARIANTES.md, docs/FASE-2-PLANO-ITAM.md D19).
+ * DESCOMISSIONAMENTO (docs/referencia/invariantes.md, docs/historico/fase-02-ativos.md D19).
  *
  * Ativo com `Assignment` aberta não pode sair do patrimônio. "Vendido" e "está
  * na mão da Laura" não podem ser verdade ao mesmo tempo: o equipamento sumiria

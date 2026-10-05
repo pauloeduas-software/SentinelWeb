@@ -6,7 +6,7 @@ import { persist } from 'zustand/middleware';
 // ═════════════════════════════════════════════════════════════════════════════
 // POR QUE ZUSTAND, E NÃO O SERVIDOR NEM O TANSTACK QUERY.
 //
-// O `ARQUITETURA.md` já nomeava este caso: *client state* é "o que só existe no
+// O `docs/referencia/arquitetura.md` já nomeava este caso: *client state* é "o que só existe no
 // navegador e ninguém busca". Quais colunas uma pessoa quer ver não é um fato
 // sobre o inventário — ninguém consulta, não envelhece, não é compartilhado
 // entre telas nem entre pessoas, e não existe pergunta de negócio que ele

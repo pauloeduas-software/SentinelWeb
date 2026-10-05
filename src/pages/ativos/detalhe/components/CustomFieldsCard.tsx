@@ -46,7 +46,7 @@ export default function CustomFieldsCard({
   const gravados = valores ?? {};
   const doConjunto = conjunto?.campos ?? [];
 
-  // Cálculo fora do JSX (docs/ARQUITETURA.md). Órfão é chave gravada que o
+  // Cálculo fora do JSX (docs/referencia/arquitetura.md). Órfão é chave gravada que o
   // conjunto atual não tem — e enquanto o conjunto não chegou, nada é órfão:
   // considerar tudo órfão por um quadro faria a ficha piscar uma lista de
   // "valores de conjunto anterior" que não existe.

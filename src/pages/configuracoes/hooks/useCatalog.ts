@@ -23,7 +23,7 @@ const PER_PAGE = 10;
 
 // Estado da tela de Configurações: qual aba, que página, o que está no campo de
 // busca e qual registro está no modal. Tudo de UMA tela — fica aqui, em
-// useState, e não em store (docs/ARQUITETURA.md).
+// useState, e não em store (docs/referencia/arquitetura.md).
 export function useCatalog() {
   const [slug, setSlug] = useState(CATALOG_UI_SPECS[0].slug);
   const [page, setPage] = useState(1);

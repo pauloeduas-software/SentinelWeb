@@ -13,7 +13,7 @@ import { persist } from 'zustand/middleware';
 // iriam para o `localStorage` juntas — e a segunda voltaria `true` para quem
 // fechou a aba com o menu aberto.
 //
-// É CLIENT STATE pela definição do docs/ARQUITETURA.md: só existe no navegador,
+// É CLIENT STATE pela definição do docs/referencia/arquitetura.md: só existe no navegador,
 // ninguém busca, não envelhece e não responde pergunta de negócio nenhuma. Mora
 // em `pages/hooks` porque é cromo da moldura — a barra é de `pages/components`,
 // e não há domínio de que isto seja um fato. O `eslint` permite: o que `pages`

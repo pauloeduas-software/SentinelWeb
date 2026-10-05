@@ -19,7 +19,7 @@ function unicos(ids: (string | null)[]): string[] {
  * O CAMINHO na árvore de cada posto — "Sede › Andar 2 › Sala 3".
  *
  * Por que é use-case e não helper: ele vai ao banco, e `helpers/` são puros
- * (docs/ARQUITETURA.md). E é arquivo próprio porque a listagem e o detalhe
+ * (docs/referencia/arquitetura.md). E é arquivo próprio porque a listagem e o detalhe
  * fazem a MESMA pergunta — é o critério 2 da "regra de corte".
  *
  * NÃO é uma consulta por linha, e também não é a tabela inteira em memória: a

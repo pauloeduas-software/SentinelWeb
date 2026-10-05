@@ -9,7 +9,7 @@ import LicencaFormModal from './components/LicencaFormModal';
 import LicencaTable from './components/LicencaTable';
 import { useLicencas } from './hooks/useLicencas';
 
-// AS LICENÇAS DE SOFTWARE (docs/FASE-6-PLANO-ITAM.md).
+// AS LICENÇAS DE SOFTWARE (docs/historico/fase-06-licencas.md).
 //
 // O que a licença tem e o ativo não tem é ASSENTO: ela não é entregue, é
 // consumida N vezes — e a pergunta que esta tela existe para responder é
@@ -17,7 +17,7 @@ import { useLicencas } from './hooks/useLicencas';
 // auditoria de fornecedor.
 //
 // Markup e mais nada: estado e chamadas ficam no `useLicencas`
-// (docs/ARQUITETURA.md).
+// (docs/referencia/arquitetura.md).
 export default function LicencasPage() {
   const {
     licencas, total, page, perPage, setPage, search, changeSearch, view, changeView,

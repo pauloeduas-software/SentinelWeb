@@ -3,7 +3,7 @@ import { QueryClient } from '@tanstack/react-query';
 /**
  * Cache de dado de servidor do painel.
  *
- * Divisão de responsabilidade (ver docs/ARQUITETURA.md):
+ * Divisão de responsabilidade (ver docs/referencia/arquitetura.md):
  * - **TanStack Query** guarda *server state*: o que vem da API, envelhece e é
  *   compartilhado entre telas (ativos, inventário, usuários).
  * - **zustand** guarda *client state*: o que só existe no navegador (sessão em

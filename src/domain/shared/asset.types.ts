@@ -65,7 +65,7 @@ export interface Asset {
   locationId: string | null;
   supplierId: string | null;
   /**
-   * CACHE do caso `USER` da posse, e só dele (docs/MODELO-POSSE.md).
+   * CACHE do caso `USER` da posse, e só dele (docs/referencia/modelo-de-posse.md).
    *
    * É `null` quando o detentor é uma LOCALIZAÇÃO ou OUTRO ATIVO. Não é campo de
    * formulário: quem escreve aqui é o checkout/checkin. Para mostrar quem
@@ -117,7 +117,7 @@ export interface Asset {
   assignedTo: User | null;
 
   /**
-   * A responsabilidade RESOLVIDA desta linha (Camada 3 do MODELO-POSSE.md),
+   * A responsabilidade RESOLVIDA desta linha (Camada 3 do docs/referencia/modelo-de-posse.md),
    * calculada pelo servidor para a tela não fazer uma consulta por ativo.
    *
    * Vem no contrato de `GET /api/assets`. Continua sendo lida por
@@ -132,7 +132,7 @@ export interface Asset {
    * Vem ao lado de `posse` porque é a pergunta vizinha — e **não dentro dela**,
    * porque não é responsabilidade: quem está com o equipamento sai de
    * `posse.responsaveis`, e o gestor da localidade nunca entra ali
-   * (docs/MODELO-POSSE.md, "A fronteira"). Os dois juntos num campo só
+   * (docs/referencia/modelo-de-posse.md, "A fronteira"). Os dois juntos num campo só
    * apagariam `postoVago`, que é o sinal que motiva a ligação.
    *
    * ⚠️ OPCIONAL, pelo mesmo motivo de `customFields`: só a LEITURA DE UM ativo o
@@ -196,7 +196,7 @@ export interface Asset {
  * ocupa. Vem embutido em cada item de `porPosto` porque NÃO dá para deduzir de
  * `asset.location` — `locationId` é *onde o ativo está*, o alvo da posse é *de
  * quem ele é*, e os dois divergem (o mouse reserva guardado na gaveta de uma
- * mesa ocupada). Ver docs/MODELO-POSSE.md.
+ * mesa ocupada). Ver docs/referencia/modelo-de-posse.md.
  */
 export interface PostoDoAtivo {
   locationId: string;
@@ -284,7 +284,7 @@ export interface AssetStats {
  *
  * `retired` e `archived` são do ITAM e por isso não moram no tipo compartilhado:
  * nenhuma outra tabela do sistema tem "saiu do patrimônio" nem "saiu de
- * operação" (D20, docs/FASE-2-PLANO-ITAM.md).
+ * operação" (D20, docs/historico/fase-02-ativos.md).
  *
  * As duas parecem a mesma coisa e não são (D19): descomissionar é fato
  * contábil e não volta; arquivar é decisão operacional e volta trocando o

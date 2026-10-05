@@ -3,7 +3,7 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { cenarioDePosse, criarAtivo } from '../helpers/fixtures';
 import { prisma } from '../../server/core/database/prismaClient';
 
-// AS INVARIANTES DO MODELO DE POSSE — `docs/INVARIANTES.md`, 1, 2 e 4.
+// AS INVARIANTES DO MODELO DE POSSE — `docs/referencia/invariantes.md`, 1, 2 e 4.
 //
 // São os fatos que nunca podem ser falsos no banco. Cada uma é testada pela
 // PORTA que o usuário usa, não pelo use-case: metade da defesa é o índice
@@ -87,7 +87,7 @@ describe('invariante 2 — uma ocupação aberta por (posto, pessoa)', () => {
   it('permite DUAS pessoas no MESMO posto — que é o ponto do modelo', async () => {
     // A chave do índice é o PAR (posto, pessoa). Laura de manhã e Ana à tarde
     // na mesma Mesa 1 é o caso que o Snipe-IT não modela e que o
-    // docs/MODELO-POSSE.md existe para resolver (D48).
+    // docs/referencia/modelo-de-posse.md existe para resolver (D48).
     const ana = await api.post(`/api/locations/${cenario.mesa1}/occupants`, {
       userId: cenario.ana,
       shift: 'Tarde',

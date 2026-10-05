@@ -13,7 +13,7 @@ import { dataDoCsv, emailDoCsv } from '../helpers/valores.helper';
 //
 // Ela escreve em `location_occupants`, e nada mais. Mas quem responde por um
 // ativo entregue a um POSTO são os ocupantes abertos daquele posto
-// (docs/MODELO-POSSE.md, Camada 3) — então acrescentar uma linha aqui muda quem
+// (docs/referencia/modelo-de-posse.md, Camada 3) — então acrescentar uma linha aqui muda quem
 // responde por TODO equipamento daquela mesa, sem tocar em uma `Assignment`
 // sequer.
 //

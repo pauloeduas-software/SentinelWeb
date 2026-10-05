@@ -11,7 +11,8 @@ import { criarColaborador, criarLocal } from '../helpers/fixtures';
 // chamadas gravavam `actorId: null` — e o silêncio era o problema: uma linha de
 // auditoria sem autor é indistinguível de uma operação feita antes do login.
 //
-// O default foi apagado (Leva 1 do docs/FECHAMENTO-F2-F4-PLANO-ITAM.md), e a
+// O default foi apagado (Leva 1A do fechamento da F3, em
+// docs/historico/fase-03-autenticacao-e-ator.md), e a
 // primeira rede é o COMPILADOR: chamada sem ator não compila. Esta suíte é a
 // segunda rede, e prova outra coisa — que o ator que chega ao log é o da
 // SESSÃO, e não um `null` propagado com ar de valor legítimo.

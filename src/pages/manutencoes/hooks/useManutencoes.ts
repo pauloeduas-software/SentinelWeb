@@ -14,7 +14,7 @@ const PER_PAGE = 15;
 export type ModalDeManutencao = 'criar' | 'editar' | 'encerrar' | null;
 
 // Estado da tela de Manutenções: página, busca, filtros e qual linha está aberta.
-// Tudo de UMA tela — `useState`, não store (docs/ARQUITETURA.md).
+// Tudo de UMA tela — `useState`, não store (docs/referencia/arquitetura.md).
 export function useManutencoes() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');

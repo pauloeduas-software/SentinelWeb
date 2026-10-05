@@ -5,7 +5,7 @@ import RelatorioDoImport from './components/RelatorioDoImport';
 import { useImportacao } from './hooks/useImportacao';
 import type { AlvoDeImport } from '../../domain/shared/import.types';
 
-// A IMPORTAÇÃO DE CSV (docs/FASE-10-PLANO-ITAM.md, Etapa D).
+// A IMPORTAÇÃO DE CSV (docs/historico/fase-10-etiquetas-relatorios-importacao.md, Etapa D).
 //
 // TELA PRÓPRIA, e não um botão dentro de Ativos: ela importa TRÊS coisas
 // (ativos, pessoas e ocupação de posto) e o fluxo tem três passos com estado

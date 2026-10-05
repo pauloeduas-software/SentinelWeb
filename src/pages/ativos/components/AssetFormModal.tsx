@@ -10,7 +10,7 @@ import type { Asset } from '../../../domain/shared/asset.types';
 import type { ConjuntoResolvido } from '../../../domain/shared/custom-field.types';
 
 // POSSE NÃO É CAMPO DESTE FORMULÁRIO — e a ausência é a decisão (D14,
-// docs/MODELO-POSSE.md).
+// docs/referencia/modelo-de-posse.md).
 //
 // O campo "Responsável" existia aqui e foi removido na F4. `assignedToId` virou
 // CACHE do caso `USER` da posse, escrito só pelo checkout e pelo checkin: um
@@ -41,7 +41,7 @@ const ROTULO = 'text-text-secondary uppercase tracking-widest text-[10px]';
  * cadastrar o segundo notebook do mesmo lote.
  *
  * A posse NÃO é copiada porque nem está aqui: entregar é operação, não campo
- * (docs/MODELO-POSSE.md). Um clone nasce no estoque, como deve.
+ * (docs/referencia/modelo-de-posse.md). Um clone nasce no estoque, como deve.
  *
  * OS CAMPOS CUSTOMIZADOS SÃO COPIADOS, e o segredo NÃO — sem código para isso.
  * O clone carrega a máscara `••••••` dos campos cifrados, e o servidor a lê como

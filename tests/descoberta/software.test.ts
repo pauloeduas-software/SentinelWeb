@@ -176,7 +176,7 @@ describe('a conformidade', () => {
 // nunca recebia linha e a conformidade respondia `semVinculoDeSoftware` para
 // sempre — motor completo, resposta vazia.
 //
-// É o "defeito 1" do docs/TESTES.md na forma mais pura, e é por isso que estes
+// É o "defeito 1" do docs/referencia/testes.md na forma mais pura, e é por isso que estes
 // testes entram pela API e não pelo use-case.
 // ═════════════════════════════════════════════════════════════════════════════
 

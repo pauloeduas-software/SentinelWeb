@@ -7,7 +7,7 @@ import {
 import type { OccupantInput } from '../../domain/occupancy/occupancy.queries';
 import type { LocationOccupant, OccupantView } from '../../domain/shared/posse.types';
 
-// QUEM OCUPA O POSTO — Camada 2 de docs/MODELO-POSSE.md, a que o Snipe-IT não
+// QUEM OCUPA O POSTO — Camada 2 de docs/referencia/modelo-de-posse.md, a que o Snipe-IT não
 // tem.
 //
 // É o painel onde a Mesa 1 vira "Laura de manhã, Ana à tarde": os dois nomes

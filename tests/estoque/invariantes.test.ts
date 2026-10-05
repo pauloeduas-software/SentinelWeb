@@ -3,7 +3,7 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { cenarioDePosse, criarItemDeEstoque } from '../helpers/fixtures';
 import { prisma } from '../../server/core/database/prismaClient';
 
-// AS INVARIANTES DO ESTOQUE — `docs/FASE-5-PLANO-ITAM.md`, D33 a D38.
+// AS INVARIANTES DO ESTOQUE — `docs/historico/fase-05-estoque.md`, D33 a D38.
 //
 // São os fatos que nunca podem ser falsos no banco. Cada um é exercitado pela
 // PORTA que o usuário usa, não pelo use-case: metade da defesa é o CHECK no

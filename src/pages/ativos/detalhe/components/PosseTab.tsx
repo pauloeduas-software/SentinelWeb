@@ -5,7 +5,7 @@ import type {
 import { formatarData } from '../../../helpers/format.helper';
 import { comoChegouAoAlvo, estaAberta, rotuloDoAlvo } from '../helpers/rotulo-do-alvo.helper';
 
-// A ABA POSSE — as três camadas do docs/MODELO-POSSE.md numa tela só:
+// A ABA POSSE — as três camadas do docs/referencia/modelo-de-posse.md numa tela só:
 //
 //   quem responde   (Camada 3, DERIVADA — pode ser mais de um, com turno)
 //   para quem foi   (Camada 1, a `Assignment` aberta)
@@ -36,7 +36,7 @@ const VIA: Record<Responsavel['via'], { rotulo: string; explicacao: string }> = 
 //
 // `VIA` acima explica como alguém virou RESPONSÁVEL. Este explica como o
 // ESCALONAMENTO foi encontrado, e os dois nunca se misturam numa lista só: o
-// gestor da localidade não está com o equipamento. Ver docs/MODELO-POSSE.md,
+// gestor da localidade não está com o equipamento. Ver docs/referencia/modelo-de-posse.md,
 // seção "A fronteira".
 const VIA_DO_ESCALONAMENTO: Record<Escalonamento['via'], (local: string) => string> = {
   LOCAL: (local) => `Gestor de ${local}, que é a própria localização do ativo.`,

@@ -14,7 +14,7 @@ import { ASSIGNMENT_SELECT } from '../helpers/assignment-select.helper';
 import { travarUsuarioOuFalhar } from '../../user/use-cases/lock-user.usecase';
 import type { AlvoPosse, ClientePosse } from './resolve-responsibles.usecase';
 
-// A ENTREGA — Camada 1 do docs/MODELO-POSSE.md.
+// A ENTREGA — Camada 1 do docs/referencia/modelo-de-posse.md.
 //
 // É uma das duas únicas operações que escrevem `Asset.assignedToId` (a outra é
 // a devolução). O formulário de ativo perdeu esse campo na F4 de propósito: um
@@ -168,7 +168,7 @@ async function assertAlvoExiste(client: ClientePosse, tipo: AlvoPosse, alvoId: s
  *
  * Mora no checkout e é importado pelo checkin porque é a MESMA regra nas duas
  * pontas — um terceiro arquivo para uma consulta de cinco linhas é a cerimônia
- * que o docs/ARQUITETURA.md recusa, e duas cópias divergiriam no primeiro
+ * que o docs/referencia/arquitetura.md recusa, e duas cópias divergiriam no primeiro
  * ajuste de mensagem.
  *
  * Ordenado por nome, e não "o primeiro que vier": sem `orderBy` o Postgres não

@@ -122,7 +122,7 @@ export default function CustomFieldsSection({
 /**
  * O valor gravado saiu da lista do campo?
  *
- * Cálculo fora do JSX (docs/ARQUITETURA.md) — e ele é a razão de o `<select>`
+ * Cálculo fora do JSX (docs/referencia/arquitetura.md) — e ele é a razão de o `<select>`
  * abaixo injetar a opção extra: sem ela, o `<select>` não teria como exibir o
  * valor atual e cairia na primeira opção, trocando o dado do cliente por um
  * default no primeiro render.

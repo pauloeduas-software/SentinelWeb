@@ -10,7 +10,7 @@ import { listStockAlerts } from './use-cases/list-stock-alerts.usecase';
 
 const logger = createLogger('stock.maestro');
 
-// O ESTOQUE — os três tipos que têm quantidade (docs/FASE-5-PLANO-ITAM.md).
+// O ESTOQUE — os três tipos que têm quantidade (docs/historico/fase-05-estoque.md).
 //
 // UM domínio com os três dentro, e não três fatias verticais (D35): eles
 // compartilham UMA invariante — saldo derivado mais trava na linha-pai (D34) —

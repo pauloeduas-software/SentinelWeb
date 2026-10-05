@@ -119,7 +119,7 @@ installProcessHandlers();
  * ela aponta para dentro do Node, que é o único lugar onde não está o problema.
  *
  * Aqui o erro não é do sistema, é do ambiente de quem está desenvolvendo — e a
- * regra do docs/INVARIANTES.md vale igual: *se a mensagem não ensina o que
+ * regra do docs/referencia/invariantes.md vale igual: *se a mensagem não ensina o que
  * fazer em seguida, ela ainda não está pronta*.
  *
  * Sem o `error` no log de propósito: a pilha não acrescenta nada a um

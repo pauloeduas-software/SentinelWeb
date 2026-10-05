@@ -43,7 +43,7 @@ export const ABAS: readonly Aba[] = [
   // tela não mudou, que era o que a decisão prometia. Ela mostra DUAS listas:
   // serviço e conferência (ver `MaintenanceTab`).
   { id: 'manutencoes', rotulo: 'Manutenções', icone: Wrench, fase: null },
-  // Entrou na Leva 2 do docs/FECHAMENTO-F2-F4-PLANO-ITAM.md — era a Etapa G da
-  // F2, adiada quando `@fastify/multipart` foi instalado e não usado.
+  // Entrou na Leva 2 do fechamento da F2 (docs/historico/fase-02-ativos.md) — era a
+  // Etapa G dela, adiada quando `@fastify/multipart` foi instalado e não usado.
   { id: 'arquivos', rotulo: 'Arquivos', icone: Paperclip, fase: null },
 ];

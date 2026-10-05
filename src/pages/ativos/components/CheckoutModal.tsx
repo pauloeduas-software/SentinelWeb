@@ -7,7 +7,7 @@ import type { Asset } from '../../../domain/shared/asset.types';
 import type { AlvoDaPosse } from '../../../domain/shared/posse.types';
 
 // ENTREGAR e DEVOLVER — a única porta pela qual a posse de um ativo muda
-// (docs/MODELO-POSSE.md).
+// (docs/referencia/modelo-de-posse.md).
 //
 // O modal tem DOIS estados, decididos pelo dado e não por quem clicou: ativo com
 // posse aberta só aceita devolução; sem posse aberta, entrega. É o mesmo botão

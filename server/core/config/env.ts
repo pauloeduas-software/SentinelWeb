@@ -98,7 +98,7 @@ function validateEncryptionKey(): void {
   logger.warn(`[Env] ${problema}. O campo de chave de produto responderá 422. ${comoGerar}`);
 }
 
-// Chave que assina o JWT da sessão (cookie httpOnly — docs/FASE-3-PLANO-ITAM.md, D22).
+// Chave que assina o JWT da sessão (cookie httpOnly — docs/historico/fase-03-autenticacao-e-ator.md, D22).
 export function getJwtSecret(): string {
   return (process.env.JWT_SECRET ?? '').replace(/^"|"$/g, '').trim();
 }

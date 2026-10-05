@@ -9,7 +9,7 @@ import type { AlvoPosse } from '../use-cases/resolve-responsibles.usecase';
 // SMTP não tem rollback: um e-mail disparado por transação que reverteu avisa o
 // colaborador de uma entrega que não existe, e não há como desfazer.
 //
-// QUEM RECEBE depende do alvo, e é a Camada 3 do MODELO-POSSE.md em forma de
+// QUEM RECEBE depende do alvo, e é a Camada 3 do docs/referencia/modelo-de-posse.md em forma de
 // destinatário:
 //
 //   USER      a pessoa. Um endereço.
