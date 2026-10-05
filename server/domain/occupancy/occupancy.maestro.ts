@@ -5,7 +5,7 @@ import { WRITE_RATE_LIMIT } from '../../core/http/write-rate-limit';
 
 const logger = createLogger('occupancy.maestro');
 
-// Quem ocupa um posto de trabalho — a Camada 2 do docs/MODELO-POSSE.md, o que o
+// Quem ocupa um posto de trabalho — a Camada 2 do docs/referencia/modelo-de-posse.md, o que o
 // Snipe-IT não tem.
 //
 // As rotas penduram em `/api/locations/:id` e `/api/users/:id`, e não em um

@@ -5,7 +5,7 @@ import {
 } from '../helpers/fixtures';
 import { prisma } from '../../server/core/database/prismaClient';
 
-// INVARIANTE 3 — o tipo de um status em uso não muda (`docs/INVARIANTES.md`).
+// INVARIANTE 3 — o tipo de um status em uso não muda (`docs/referencia/invariantes.md`).
 //
 // É a única das quatro que mora inteiramente na APLICAÇÃO, e a razão está na
 // forma da regra: "mudou de X para Y **e** há quem aponte". Precisa do valor

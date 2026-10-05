@@ -10,7 +10,7 @@ import type {
 // state (não envelhece, ninguém faz polling dela) e mora no zustand. Isto é
 // server state de verdade — a lista de tokens muda quando se emite ou revoga, e
 // o status do segundo fator muda quando se confirma. É dado do servidor que uma
-// tela lê e invalida, que é exatamente o balde do Query (docs/ARQUITETURA.md).
+// tela lê e invalida, que é exatamente o balde do Query (docs/referencia/arquitetura.md).
 //
 // E ELES NÃO ENTRAM NO `auth.store`: pôr a lista de tokens no store criaria duas
 // fontes de verdade para o que o servidor já sabe, que é a única regra absoluta

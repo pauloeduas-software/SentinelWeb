@@ -56,7 +56,7 @@ export function useUserDetail() {
   const fecharDesligamento = () => setModalDesligamento(false);
 
   // O erro SOBE para o modal mostrar a mensagem do servidor (mutação propaga —
-  // docs/ARQUITETURA.md). Um `catch` aqui transformaria "já foi desligado" num
+  // docs/referencia/arquitetura.md). Um `catch` aqui transformaria "já foi desligado" num
   // modal que fecha sozinho sem ninguém entender.
   const handleDesligar = async (data: OffboardInput) => {
     if (!id) return;
@@ -67,7 +67,7 @@ export function useUserDetail() {
     user,
     // Os dois baldes de `GET /api/users/:id/holdings`, separados como o
     // servidor os devolve: devolver é ato sobre o DIRETO, e o do posto se
-    // desfaz mudando a escala (docs/MODELO-POSSE.md).
+    // desfaz mudando a escala (docs/referencia/modelo-de-posse.md).
     diretos: holdings?.diretos ?? [],
     porPosto: holdings?.porPosto ?? [],
     // ACESSÓRIOS (F5) — lista única com `via` por item. Não somar com nada:

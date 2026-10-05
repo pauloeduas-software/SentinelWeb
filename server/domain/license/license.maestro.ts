@@ -7,7 +7,7 @@ import { listLicenseAlerts } from './use-cases/list-license-alerts.usecase';
 
 const logger = createLogger('license.maestro');
 
-// AS LICENÇAS DE SOFTWARE (docs/FASE-6-PLANO-ITAM.md).
+// AS LICENÇAS DE SOFTWARE (docs/historico/fase-06-licencas.md).
 //
 // FATIA VERTICAL INTEIRA, e não uma spec no motor do catálogo: a coluna
 // principal da listagem é DERIVADA (`livres / seatsTotal`) e o `select` da

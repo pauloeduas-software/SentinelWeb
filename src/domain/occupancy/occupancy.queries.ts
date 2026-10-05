@@ -5,7 +5,7 @@ import { assignmentKeys } from '../assignment/assignment.queries';
 import { workstationKeys } from '../workstation/workstation.queries';
 import type { LocationOccupant, OccupantView } from '../shared/posse.types';
 
-// QUEM OCUPA O POSTO — Camada 2 de docs/MODELO-POSSE.md, a que o Snipe-IT não
+// QUEM OCUPA O POSTO — Camada 2 de docs/referencia/modelo-de-posse.md, a que o Snipe-IT não
 // tem. É aqui que a Mesa 1 vira "Laura de manhã, Ana à tarde".
 //
 // A chave inclui o recorte (`current`/`all`): sem isso o histórico seria servido

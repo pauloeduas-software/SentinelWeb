@@ -1,15 +1,13 @@
-# TODO ITAM — inspirado no Snipe-IT
+# Roadmap do ITAM
 
-> Levantamento do que o Snipe-IT tem e o SentinelWeb ainda não tem.
-> Base: auditoria de 9 domínios do Snipe-IT contra o código real do repositório,
-> com verificação adversarial de cada item. 179 itens analisados, 175 gaps
-> confirmados.
+> **O que falta, e o que cada fase entregou.** Nasceu como levantamento do que o Snipe-IT tem e o
+> SentinelWeb não tinha — auditoria de 9 domínios contra o código real, 179 itens analisados, 175
+> gaps confirmados — e hoje é o placar: **as onze fases estão fechadas**, e o único item em aberto
+> é o anexo de licença (D94).
 >
-> **O Snipe-IT é referência, não autoridade.** Onde ele já resolveu, copiamos a
-> solução (D1–D13). Onde ele não modela o problema — e a posse compartilhada por
-> posto de trabalho é o primeiro caso — o caminho é nosso e está escrito em
-> [`MODELO-POSSE.md`](./MODELO-POSSE.md) e [`DECISOES-POSSE.md`](./DECISOES-POSSE.md)
-> (D14–D17).
+> Este arquivo é o **checklist**: uma linha por item, com o que de fato entrou. A narrativa de
+> cada fase — o plano, a revisão e o fechamento — está em [`historico/`](./historico/); as regras
+> que saíram de lá, em [`decisoes/`](./decisoes/).
 >
 > Legenda de esforço: **P** = até meio dia · **M** = 1 a 3 dias · **G** = mais de 3 dias
 > Estado: `[ ]` a fazer · `🔄` **em implementação agora**, ainda não verificado ·
@@ -17,276 +15,24 @@
 
 ---
 
-## Decisões de arquitetura
+## As decisões
 
-Tomadas antes de escrever código, porque mudam o nome de tabelas e o caminho das migrações.
-Os agentes da auditoria divergiram em algumas delas — aqui está a decisão fechada.
+As 142 decisões de arquitetura do projeto **não moram mais aqui** — elas estão em
+[`decisoes/`](./decisoes/), uma pasta por assunto, com o índice completo em
+[`decisoes/README.md`](./decisoes/README.md). Este arquivo voltou a ser o que o nome diz: o que
+falta fazer.
 
-- **D1 — `InventoryItem` vira `Asset`; o `Asset` atual (descoberto pelo agente) vira `Endpoint`. ✅ FEITO na F1.**
-  Executado como `drop`+`create` do lado ITAM (D12) e rename de verdade do lado RMM.
-  No Snipe-IT, `Asset` é o ativo gerenciado — é esse vocabulário que queremos. A tabela que o
-  agente C# popula passa a se chamar `Endpoint` (`@@map("endpoints")`).
-  Impactou: `server/domain/agent/`, `server/domain/asset/` (virou `endpoint/`),
-  `server/domain/inventory/` (virou `asset/`), `src/domain/asset/`, `src/pages/telemetria/*`.
-  ⚠️ O ponto de risco era `touchAsset`, chamada a cada mensagem do agente: um `prisma.asset`
-  apontando para o model errado ali congelaria o `lastSeen` e o zombie cleaner marcaria a frota
-  inteira como OFFLINE. **Verificado na auditoria:** o arquivo hoje é
-  `server/domain/endpoint/use-cases/touch-endpoint.usecase.ts` e aponta para o model certo —
-  e os 6 pontos do RMM falharam na compilação durante o rename, nenhum silencioso (ver D13).
-  As rotas RMM passaram para `/api/endpoints` — não por colisão de rota (testado: `POST
-  /api/assets/:hwid/command` convive com `POST /api/assets/:id/checkout` no find-my-way 9.7;
-  só colide método+caminho idênticos com nome de parâmetro diferente), mas por clareza.
+A regra: decisão se arquiva **pelo assunto que governa**, não pela fase que a tomou nem pelo
+documento que a descobriu. As D1–D17, que viviam nesta página por extenso, estão em
+[`decisoes/catalogo-e-ativo.md`](./decisoes/catalogo-e-ativo.md),
+[`decisoes/posse.md`](./decisoes/posse.md),
+[`decisoes/plataforma.md`](./decisoes/plataforma.md) e
+[`decisoes/campos-customizados.md`](./decisoes/campos-customizados.md).
 
-- **D2 — `Folder` morre. ✅ FEITO.**
-  Snipe-IT não tem "pastas/filiais". Ele tem `Location` (hierárquica, com endereço, gestor,
-  pai/filho) e `Company` (multi-tenancy). O `Folder` era uma invenção nossa que fazia papel de
-  location pobre. Removido por completo na migration `20260922180151_remove_folders`:
-  model, coluna `folderId`, rotas `/api/folders`, sidebar de pastas e o select do formulário.
-  A `Location` de verdade nasceu na F1, do zero — não havia nada para migrar.
-
-- **D3 — `quantity` sai do `Asset`. ✅ APLICADO na F1.**
-  No Snipe-IT 1 linha = 1 equipamento físico, com etiqueta e série próprias. Quantidade só
-  existe em `Accessory`, `Consumable` e `Component` (F5). Resolveu-se sozinho pelo D12: a
-  tabela nova nasceu sem a coluna.
-
-- **D4 — `Company` / Full Multiple Companies Support: descartado.**
-  Uma empresa só. FMCS obriga filtro por `companyId` em toda query do Prisma — caro e fácil de
-  furar. A hierarquia de `Location` resolve o que precisamos hoje.
-
-- **D5 — Nada de texto livre onde o Snipe-IT tem tabela. ✅ APLICADO na F1.** `category` e
-  `status` viraram `Category` (com `type`) e `StatusLabel` (com `type`).
-  **Correção vinda da auditoria da F1:** o seed classificava "Em Uso" como `DEPLOYABLE`, e
-  `DEPLOYABLE` significa *pode ser entregue* — um ativo que está com alguém não pode. As duas
-  saídas óbvias foram descartadas (derivar de `assignedToId` deixa sem resposta o monitor
-  parafusado na sala, que está em uso **sem** responsável; tipar `PENDING` empacota "está com
-  um colaborador" junto com "está na assistência", que é a distinção mais cara do inventário).
-  `IN_USE` virou o **quinto** tipo do enum, entre `DEPLOYABLE` e `PENDING`:
-
-  ```prisma
-  enum StatusLabelType {
-    DEPLOYABLE    // no estoque, pode ser entregue — o único que libera o checkout
-    IN_USE        // com alguém ou instalado em algum lugar
-    PENDING       // fora do estoque por impedimento, e volta (reparo, trânsito)
-    ARCHIVED      // saiu da operação
-    UNDEPLOYABLE  // ainda é seu, não serve, não volta
-  }
-  ```
-
-  **São cinco tipos, não quatro.** Qualquer texto, tela ou allowlist que liste quatro está
-  desatualizado. A posição importa: o Postgres ordena pela ordem de declaração e a listagem de
-  status é ordenável por `type` — a migration precisou de `ADD VALUE 'IN_USE' AFTER 'DEPLOYABLE'`
-  à mão, porque o `migrate diff` acrescenta no fim.
-
-- **D6 — Baselinar as migrations antes de tocar em qualquer coluna — e NÃO com `migrate dev`. ✅ FEITO na F0.**
-  O schema tinha sido aplicado com `db push` e a tabela `_prisma_migrations` não existia, então
-  `prisma migrate dev` detectaria drift e **ofereceria resetar o banco**. O estado atual foi
-  adotado como migração inicial:
-
-  ```bash
-  mkdir -p prisma/migrations/0_init
-  bunx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script \
-    > prisma/migrations/0_init/migration.sql
-  bunx prisma migrate resolve --applied 0_init
-  ```
-
-  A receita ficou fixada para sempre: `migrate diff --from-url` + `migrate deploy`, **nunca**
-  `migrate dev` (é interativo e falha neste ambiente).
-
-- **D7 — Campos customizados em `JsonB`, não em DDL dinâmico.**
-  O Snipe-IT cria uma coluna por campo customizado. Isso é inviável com `prisma migrate`.
-
-- **D8 — O catálogo não tem soft delete. ✅ APLICADO.** Delete real, bloqueado por
-  uso (409 com a contagem) — que é a proteção que o Snipe-IT de fato aplica ao
-  recusar apagar categoria com item associado. A lixeira sairia cara aqui porque a
-  extension do Prisma **não alcança leitura de relação aninhada** (verificado): uma
-  categoria apagada continuaria aparecendo em todo ativo que a referencia.
-  A auditoria da F1 achou o outro lado disso: `countUsages` rodava **com** escopo de lixeira e
-  não enxergava ativo apagado, então apagar fornecedor zerava o vínculo de ativos na lixeira em
-  silêncio. Corrigido com `INCLUINDO_LIXEIRA` nas cinco specs que contam ativos.
-
-- **D9 — Um domínio `catalog` com sete specs. ✅ APLICADO.** `server/domain/catalog/`.
-  Sete fatias verticais seriam ~77 arquivos quase idênticos.
-
-- **D10 — `type` é `enum` do Prisma. ✅ APLICADO.** `CategoryType`, `StatusLabelType`,
-  `DepreciationFloorType` viram tipos do Postgres. Preço conhecido: acrescentar valor
-  depois é `ALTER TYPE … ADD VALUE` à mão — foi exatamente o que o `IN_USE` custou.
-
-- **D11 — `/options` separado da listagem. ✅ APLICADO.** `perPage` tem teto de 100,
-  certo para tabela e errado para `<select>`.
-
-- **D12 — O `Asset` nasceu inteiro na F1. ✅ APLICADO.** `inventory_items` foi
-  **apagada**, não migrada: a base anterior era descartável e as tabelas estavam
-  zeradas, então foi `drop` + `create` na forma do Snipe-IT.
-
-- **D13 — `Asset` nunca tem `status`, `lastSeen` nem `hwid`. ✅ REGRA PERMANENTE.** São colunas
-  do `Endpoint`. É essa ausência que faz o compilador barrar uma query do RMM apontando para a
-  tabela errada — testado: os 6 pontos do RMM falharam na compilação com 11 erros, nenhum
-  silencioso. O status do ciclo de vida é `statusId` (D5).
-  **Quando a F7 registrar o último contato do agente no ativo, o campo chama
-  `lastSeenByAgentAt` ou `lastAuditAt`, nunca `lastSeen`.** É o mesmo par de eixos que a F7 já
-  separa (`AgentStatus` × `LifecycleStatus`), aplicado ao nome da coluna.
-
-### Modelo de posse — D14 a D17
-
-Detalhe, descartados e o que quebra na reversão em [`DECISOES-POSSE.md`](./DECISOES-POSSE.md).
-O contrato do modelo está em [`MODELO-POSSE.md`](./MODELO-POSSE.md).
-
-- **D14 — O detentor é singular; o ALVO é que é polimórfico. ✅ APLICADO no schema.**
-  Um ativo tem **no máximo uma** posse aberta, garantida pelo índice único parcial
-  `assignments_um_aberto_por_ativo` (`WHERE "checkinAt" IS NULL`) — regra do banco, não da
-  aplicação. O alvo pode ser pessoa, localização ou outro ativo (`AssignmentTarget`).
-  Descartado `Asset ⟷ User` N:M: perde o posto, que é a unidade real da operação, e cresce
-  multiplicativamente (20 mesas × 5 ativos × 2 turnos = 200 linhas contra 40).
-  **Derrubar aquele índice é a alavanca** para N detentores simultâneos no futuro — a mudança é
-  de uma linha de DDL, não de camada.
-
-- **D15 — O posto de trabalho é uma `Location`, não uma entidade nova. ✅ APLICADO no schema.**
-  A árvore já existe (`Sede → Andar 2 → Sala 3 → Mesa 1`) e o ativo já aponta para ela por
-  `locationId`. Uma `Workstation` paralela duplicaria a hierarquia e daria ao ativo **dois
-  campos de "onde"**. Quem ocupa o posto vive em `LocationOccupant`, com `shift` **texto livre**
-  — enum engessaria escalas reais (12x36, revezamento A/B) e faixa de horário seria agenda, não
-  inventário.
-
-- **D16 — Responsabilidade é DERIVADA, nunca coluna.**
-  `resolverResponsaveis(ativo)` lê a assignment aberta e, quando o alvo é `LOCATION`, os
-  ocupantes abertos daquele local. Coluna seria uma quarta fonte de verdade para o que as
-  Camadas 1 e 2 já dizem, e a divergência seria **silenciosa**. O salto de `ASSET` é limitado a
-  **um nível** (dock → notebook → pessoa), o que também torna ciclo impossível por construção.
-
-- **D17 — `Asset.assignedToId` deixa de ser editável pelo formulário.**
-  Vira **cache do caso `USER`** e sai do `createAssetSchema`, do `updateAssetSchema` e do modal.
-  Escrevem nele só o checkout e o checkin. Campo editável à mão ao lado de uma tabela de posse
-  são duas fontes de verdade para o mesmo fato. **É o mesmo erro que a auditoria da F1 encontrou
-  um nível acima** — "Em Uso" tipado `DEPLOYABLE`, um rótulo declarado competindo com um fato
-  derivável —, agora uma camada abaixo: se a operação existe, ela é a dona do campo.
-
----
-
-## Índice das decisões
-
-Gerado a partir dos próprios arquivos. **D1–D13** estão acima nesta página (as D8–D13 detalhadas em [`FASE-1-PLANO-ITAM.md`](./FASE-1-PLANO-ITAM.md)); **D14–D17** em [`DECISOES-POSSE.md`](./DECISOES-POSSE.md); **D18+** no plano da fase que as tomou; **D83–D89** em [`FECHAMENTO-F2-F4-PLANO-ITAM.md`](./FECHAMENTO-F2-F4-PLANO-ITAM.md), que fecha as pontas abertas das F2, F3 e F4.
-
-> ⚠️ O [`FASE-0-PLANO-ITAM.md`](./FASE-0-PLANO-ITAM.md) usa uma numeração LOCAL (`D1. Migração`, `D2. O escopo automático`…) que antecede este esquema e **não** corresponde às D1–D4 desta página. É registro histórico e ficou como está.
-
-| # | Decisão | Onde |
-|---|---|---|
-| **D14** | O detentor é singular; o ALVO é que é polimórfico | [`DECISOES-POSSE.md`](./DECISOES-POSSE.md) |
-| **D15** | O posto de trabalho é uma Location, não uma entidade nova | [`DECISOES-POSSE.md`](./DECISOES-POSSE.md) |
-| **D16** | Responsabilidade é DERIVADA, nunca coluna | [`DECISOES-POSSE.md`](./DECISOES-POSSE.md) |
-| **D17** | Asset.assignedToId deixa de ser editável pelo formulário | [`DECISOES-POSSE.md`](./DECISOES-POSSE.md) |
-| **D18** | AssetLog não nasce. A aba Histórico lê o ActivityLog | [`FASE-2-PLANO-ITAM.md`](./FASE-2-PLANO-ITAM.md) |
-| **D19** | Arquivar, descomissionar e apagar são três coisas, com três colunas | [`FASE-2-PLANO-ITAM.md`](./FASE-2-PLANO-ITAM.md) |
-| **D20** | "Arquivados" e "posto vago" são filtros do domínio, não view do core | [`FASE-2-PLANO-ITAM.md`](./FASE-2-PLANO-ITAM.md) |
-| **D21** | Ação em massa é tudo ou nada; entrega em massa não será (F4) | [`FASE-2-PLANO-ITAM.md`](./FASE-2-PLANO-ITAM.md) |
-| **D22** | Sessão em cookie httpOnly, não em localStorage | [`FASE-3-PLANO-ITAM.md`](./FASE-3-PLANO-ITAM.md) |
-| **D23** | actorId é parâmetro obrigatório, não AsyncLocalStorage | [`FASE-3-PLANO-ITAM.md`](./FASE-3-PLANO-ITAM.md) |
-| **D24** | O histórico anterior fica sem ator. Não há backfill | [`FASE-3-PLANO-ITAM.md`](./FASE-3-PLANO-ITAM.md) |
-| **D25** | Ocupação de posto não ganha coluna de ator | [`FASE-3-PLANO-ITAM.md`](./FASE-3-PLANO-ITAM.md) |
-| **D26** | createdById/updatedById só onde a tela mostra | [`FASE-3-PLANO-ITAM.md`](./FASE-3-PLANO-ITAM.md) |
-| **D27** | Num posto com duas pessoas, quem assina o termo é o gestor da localidade | [`FASE-4-PLANO-ITAM.md`](./FASE-4-PLANO-ITAM.md) |
-| **D28** | Quando o último ocupante sai, a posse continua aberta | [`FASE-4-PLANO-ITAM.md`](./FASE-4-PLANO-ITAM.md) |
-| **D29** | O EULA é copiado para o Acceptance, não referenciado | [`FASE-4-PLANO-ITAM.md`](./FASE-4-PLANO-ITAM.md) |
-| **D30** | O PDF é gerado no aceite e guardado. Nunca regenerado | [`FASE-4-PLANO-ITAM.md`](./FASE-4-PLANO-ITAM.md) |
-| **D31** | Entrega em massa é por linha, com relatório. (O oposto da F2.) | [`FASE-4-PLANO-ITAM.md`](./FASE-4-PLANO-ITAM.md) |
-| **D32** | Desligamento é uma operação com nome próprio, e fecha as duas camadas | [`FASE-4-PLANO-ITAM.md`](./FASE-4-PLANO-ITAM.md) |
-| **D33** | O acessório entregue a um posto é do posto; os ocupantes respondem solidariamente | [`FASE-5-PLANO-ITAM.md`](./FASE-5-PLANO-ITAM.md) |
-| **D34** | Saldo é sempre calculado, nunca coluna | [`FASE-5-PLANO-ITAM.md`](./FASE-5-PLANO-ITAM.md) |
-| **D35** | Um domínio stock, não três fatias verticais | [`FASE-5-PLANO-ITAM.md`](./FASE-5-PLANO-ITAM.md) |
-| **D36** | Os três têm lixeira; aqui o D8 não se aplica | [`FASE-5-PLANO-ITAM.md`](./FASE-5-PLANO-ITAM.md) |
-| **D37** | Consumable não tem devolução; não é validação, é ausência | [`FASE-5-PLANO-ITAM.md`](./FASE-5-PLANO-ITAM.md) |
-| **D38** | Devolução parcial de componente divide a linha | [`FASE-5-PLANO-ITAM.md`](./FASE-5-PLANO-ITAM.md) |
-| **D39** | Assento de licença não vai para um posto | [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md) |
-| **D40** | Assento materializado, ocupação em tabela própria | [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md) |
-| **D41** | FOR UPDATE SKIP LOCKED, e o preço dele | [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md) |
-| **D42** | Chave cifrada numa coluna versionada, sem plano B em claro | [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md) |
-| **D43** | burnedAt e retiredAt são fatos diferentes | [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md) |
-| **D44** | Status da licença é derivado, nunca coluna | [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md) |
-| **D45** | A FK mora no Endpoint, e as tabelas não se fundem | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D46** | Evidência ambígua é evidência zero | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D47** | O usuário logado sugere ocupação quando a posse é do posto | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D48** | Dois usuários na mesma máquina é evidência de posto compartilhado | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D49** | Observação de usuário é agregada por dia, com retenção | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D50** | lastSeenByAgentAt existe, é escrito uma vez por dia, e nunca se chama lastSeen | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D51** | Auto-provisionamento nasce em SUGGEST | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D52** | A auditoria corrige *onde está*. Nunca *quem responde* | [`FASE-8-PLANO-ITAM.md`](./FASE-8-PLANO-ITAM.md) |
-| **D53** | lastAuditAt é coluna. nextAuditAt não nasce | [`FASE-8-PLANO-ITAM.md`](./FASE-8-PLANO-ITAM.md) |
-| **D54** | A auditoria é registrada por ATIVO. O posto é a unidade de trabalho | [`FASE-8-PLANO-ITAM.md`](./FASE-8-PLANO-ITAM.md) |
-| **D55** | Valor contábil é calculado no servidor. Sempre | [`FASE-8-PLANO-ITAM.md`](./FASE-8-PLANO-ITAM.md) |
-| **D56** | O job diário não é setInterval. É tick curto com compare-and-set | [`FASE-8-PLANO-ITAM.md`](./FASE-8-PLANO-ITAM.md) |
-| **D57** | A central no app é o canal primário; SMTP mora no .env | [`FASE-8-PLANO-ITAM.md`](./FASE-8-PLANO-ITAM.md) |
-| **D58** | O conjunto ancora na categoria e no modelo, com precedência do modelo | [`FASE-9-PLANO-ITAM.md`](./FASE-9-PLANO-ITAM.md) |
-| **D59** | Valores em JsonB na linha do ativo. Não DDL dinâmico, não EAV | [`FASE-9-PLANO-ITAM.md`](./FASE-9-PLANO-ITAM.md) |
-| **D60** | O slug é imutável. O valor órfão não é apagado | [`FASE-9-PLANO-ITAM.md`](./FASE-9-PLANO-ITAM.md) |
-| **D61** | Obrigatoriedade é do vínculo, não do campo | [`FASE-9-PLANO-ITAM.md`](./FASE-9-PLANO-ITAM.md) |
-| **D62** | Cifra é enc:v1: dentro do JsonB, com rota própria para revelar | [`FASE-9-PLANO-ITAM.md`](./FASE-9-PLANO-ITAM.md) |
-| **D63** | Filtrar por campo customizado: sim. Ordenar: não, nesta fase | [`FASE-9-PLANO-ITAM.md`](./FASE-9-PLANO-ITAM.md) |
-| **D64** | A parte plana é spec de catálogo; a composição é domínio próprio | [`FASE-9-PLANO-ITAM.md`](./FASE-9-PLANO-ITAM.md) |
-| **D65** | Não nasce tabela Setting. O AppSetting cresce | [`FASE-10-PLANO-ITAM.md`](./FASE-10-PLANO-ITAM.md) |
-| **D66** | Responsável resolvido é uma view, não coluna nem cache | [`FASE-10-PLANO-ITAM.md`](./FASE-10-PLANO-ITAM.md) |
-| **D67** | O builder recebe token. Nunca campo, nunca SQL | [`FASE-10-PLANO-ITAM.md`](./FASE-10-PLANO-ITAM.md) |
-| **D68** | Importação é de dois passos, e o dry-run é obrigatório | [`FASE-10-PLANO-ITAM.md`](./FASE-10-PLANO-ITAM.md) |
-| **D69** | O export manda número cru e data ISO — e trata fórmula | [`FASE-10-PLANO-ITAM.md`](./FASE-10-PLANO-ITAM.md) |
-| **D70** | QR leva URL. Código de barras leva a etiqueta | [`FASE-10-PLANO-ITAM.md`](./FASE-10-PLANO-ITAM.md) |
-| **D71** | O catálogo de colunas é declarado duas vezes, de propósito | [`FASE-10-PLANO-ITAM.md`](./FASE-10-PLANO-ITAM.md) |
-| **D72** | Posto responde pelo ativo; departamento agrupa pessoas; gestor escalona | [`FASE-11-PLANO-ITAM.md`](./FASE-11-PLANO-ITAM.md) |
-| **D73** | resolverEscalonamento() é função separada de resolverResponsaveis() | [`FASE-11-PLANO-ITAM.md`](./FASE-11-PLANO-ITAM.md) |
-| **D74** | Desligar não é apagar. E encerrar ocupações é passo do fluxo | [`FASE-11-PLANO-ITAM.md`](./FASE-11-PLANO-ITAM.md) |
-| **D75** | Department é a oitava spec do catálogo, e a troca de coluna é em duas migrações | [`FASE-11-PLANO-ITAM.md`](./FASE-11-PLANO-ITAM.md) |
-| **D76** | Permissão é união permissiva. Não existe deny | [`FASE-11-PLANO-ITAM.md`](./FASE-11-PLANO-ITAM.md) |
-| **D77** | Dado sensível é filtrado no select, não mascarado na resposta | [`FASE-11-PLANO-ITAM.md`](./FASE-11-PLANO-ITAM.md) |
-| **D78** | LDAP sincroniza; OIDC autentica; ninguém entra sem cadastro | [`FASE-11-PLANO-ITAM.md`](./FASE-11-PLANO-ITAM.md) |
-| **D79** | Cada job tem a própria linha em JobRun. lastAlertRunAt não é coluna de AppSetting | [`DECISOES-RECONCILIACAO.md`](./DECISOES-RECONCILIACAO.md) |
-| **D80** | Um ApiToken só, com dono polimórfico (agente ou pessoa) | [`DECISOES-RECONCILIACAO.md`](./DECISOES-RECONCILIACAO.md) |
-| **D81** | Uma cifra: core/crypto/cipher.ts, enc:v1:kid:iv:tag:ct, com AAD | [`DECISOES-RECONCILIACAO.md`](./DECISOES-RECONCILIACAO.md) |
-| **D82** | terminate não existe. A F11 estende o offboard da F4 | [`DECISOES-RECONCILIACAO.md`](./DECISOES-RECONCILIACAO.md) |
-| **D83** | O armazenamento é core/storage/; a linha do anexo é do domínio | [`FECHAMENTO-F2-F4-PLANO-ITAM.md`](./FECHAMENTO-F2-F4-PLANO-ITAM.md) |
-| **D84** | Anexo não é rota estática. Sai por /api/, com sessão | [`FECHAMENTO-F2-F4-PLANO-ITAM.md`](./FECHAMENTO-F2-F4-PLANO-ITAM.md) |
-| **D85** | ?view=archived é a quarta vista, e a listagem padrão exclui ARCHIVED | [`FECHAMENTO-F2-F4-PLANO-ITAM.md`](./FECHAMENTO-F2-F4-PLANO-ITAM.md) |
-| **D86** | E-mail é best-effort com log. O que não pode se perder tem linha em tabela | [`FECHAMENTO-F2-F4-PLANO-ITAM.md`](./FECHAMENTO-F2-F4-PLANO-ITAM.md) |
-| **D87** | Entrega com alvo ASSET não emite termo | [`FECHAMENTO-F2-F4-PLANO-ITAM.md`](./FECHAMENTO-F2-F4-PLANO-ITAM.md) |
-| **D88** | Aceite pendente não bloqueia a entrega | [`FECHAMENTO-F2-F4-PLANO-ITAM.md`](./FECHAMENTO-F2-F4-PLANO-ITAM.md) |
-| **D89** | A troca do AGENT_TOKEN pelo ApiToken é por convivência, com prazo | [`FECHAMENTO-F2-F4-PLANO-ITAM.md`](./FECHAMENTO-F2-F4-PLANO-ITAM.md) |
-| **D90** | Quem reconcilia trava todos os assentos; quem entrega trava um | [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md) |
-| **D91** | Chaveiro, não chave: o kid vem da própria chave, e o canário derruba o boot | [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md) |
-| **D92** | livres sai das linhas; aposentados não entra na subtração (corrige o D43) | [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md) |
-| **D93** | Assento é posse: entra no holdings, no 409 do DELETE e no offboard | [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md) |
-| **D94** | Anexo de licença sai da fase: exige dono polimórfico em Attachment | [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md) |
-| **D95** | Quem carimba lastSeenByAgentAt é o JOB, não o touchEndpoint | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D96** | Uma tabela de sugestão com discriminante, não cinco | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D97** | A recusa tem memória, e a memória tem chave (evidenceHash) | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D98** | AgentStatus tem dois valores; "nunca visto" é pergunta do ativo | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D99** | O teste do agente entra por WebSocket de verdade, em porta efêmera | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D100** | Chave do pacote derivada; hash do software é do servidor | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D101** | A allowlist de contas ignoradas nasce nesta fase | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D102** | Licença ↔ pacote é vínculo explícito, nunca casamento por nome | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D103** | Merge não apaga: o endpoint perdedor ganha mergedIntoId | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D104** | MAC é sinal de MERGE, não de vínculo (Asset não tem MAC) | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D105** | Dois hashes de software: o que chegou e o que foi normalizado | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D106** | Campo ausente no handshake não APAGA o que já foi coletado | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D107** | O aceite age e depois fecha; a ordem erra para o lado certo | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D108** | A fusão preserva o lastSeen mais recente, não o createdAt | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D109** | O hash da sugestão é da AFIRMAÇÃO, não da evidência que cresce | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D110** | A fila tem três portas de saída; a terceira é o mundo mudar | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D111** | A janela da agregação de uso corta na meia-noite | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D112** | `discoveryMode = OFF` desliga a descoberta de verdade | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D113** | O turno é a MODA dos turnos, não a média das horas (a noite virava "Manhã") | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D114** | O seletor de posto oferece POSTO (`/api/workstations`), não toda localização | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D115** | A rota da aba chama `/machine` e devolve o que a aba mostra | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D116** | A `AssetChange` ganha escritor, e ele mora no handshake | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D117** | A conformidade ganha porta de entrada: o catálogo de pacotes | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D118** | A configuração da descoberta ganha tela, e a allowlist com ela | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D119** | Assinatura na `key`, nunca `setState` em efeito | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D120** | `proporSugestao` não recebe cliente, porque abre transação | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D121** | Casar a conta busca os candidatos, não o cadastro inteiro | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D122** | `Asset.suggestions`, e não o nome que o `prisma format` escreveu | [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md) |
-| **D123** | A janela do job é do FUSO e da HORA configurados; `inicioDoDia` ganha parâmetro | [`FASE-8-PLANO-ITAM.md`](./FASE-8-PLANO-ITAM.md) |
-| **D124** | A auditoria pelo agente nasce no JOB, uma por ativo por dia, e só quando o SERIAL confere | [`FASE-8-PLANO-ITAM.md`](./FASE-8-PLANO-ITAM.md) |
-| **D125** | `dedupeKey` tem uma regra por tipo, e ela carrega o id da ORIGEM | [`FASE-8-PLANO-ITAM.md`](./FASE-8-PLANO-ITAM.md) |
-| **D126** | O webhook tem allowlist de destino; `notifiedAt` é do alerta, e a rodada seguinte reenvia o nulo | [`FASE-8-PLANO-ITAM.md`](./FASE-8-PLANO-ITAM.md) |
-| **D127** | Alerta não nasce para ativo fora do parque | [`FASE-8-PLANO-ITAM.md`](./FASE-8-PLANO-ITAM.md) |
-| **D128** | A central nasce só com os sinais do ATIVO | [`FASE-8-PLANO-ITAM.md`](./FASE-8-PLANO-ITAM.md) |
-
----
+**O Snipe-IT é referência, não autoridade.** Onde ele já resolveu, copiamos a solução (D1–D13).
+Onde ele não modela o problema — e a posse compartilhada por posto de trabalho é o primeiro caso
+— o caminho é nosso, e está em [`referencia/modelo-de-posse.md`](./referencia/modelo-de-posse.md)
+(o contrato) e [`decisoes/posse.md`](./decisoes/posse.md) (o porquê, D14–D17).
 
 ## A janela — o que ela já pagou e o que ainda protege
 
@@ -311,7 +57,7 @@ recadastrar a posse depois. A F4 está pronta, então essa janela está aberta a
 ## Fase 0 — Base técnica ✅ CONCLUÍDA
 
 Nada aqui é funcionalidade visível, mas todo o resto depende disso.
-Execução detalhada em [`FASE-0-PLANO-ITAM.md`](./FASE-0-PLANO-ITAM.md).
+Execução detalhada em [`historico/fase-00-base-tecnica.md`](historico/fase-00-base-tecnica.md).
 
 - [x] **P** ~~Migration baseline via `migrate diff` + `migrate resolve --applied`~~ — feito (`0_init`). **Nota:** `migrate dev` é interativo e falha neste ambiente; usar `migrate diff --from-url $DATABASE_URL --to-schema-datamodel` + `migrate deploy` para cada migração nova
 - [x] **P** ~~Scripts de banco no `package.json`~~ — feito: `db:seed` + bloco `"prisma": { "seed": "tsx prisma/seed.ts" }` (Prisma 5.22 lê daí; `prisma.config.ts` só existe da 6.x)
@@ -332,8 +78,8 @@ Execução detalhada em [`FASE-0-PLANO-ITAM.md`](./FASE-0-PLANO-ITAM.md).
 ## Fase 1 — Catálogo e o ativo do ITAM ✅ CONCLUÍDA
 
 No Snipe-IT isso é o menu *Settings* mais a tabela de ativos. É o que transforma
-texto livre em dado. Execução e provas em [`FASE-1-PLANO-ITAM.md`](./FASE-1-PLANO-ITAM.md);
-revisão linha a linha em [`AUDITORIA-F0-F1.md`](./AUDITORIA-F0-F1.md).
+texto livre em dado. Execução, provas e a **auditoria linha a linha das F0 e F1** (5 defeitos, todos
+corrigidos) em [`historico/fase-01-catalogo-e-ativo.md`](historico/fase-01-catalogo-e-ativo.md).
 
 > **A fronteira F1/F2 mudou durante a execução.** A base de ITAM anterior era
 > descartável, então o `Asset` nasceu **inteiro** aqui em vez de magro na F1 e
@@ -356,7 +102,7 @@ revisão linha a linha em [`AUDITORIA-F0-F1.md`](./AUDITORIA-F0-F1.md).
 O modelo do ativo nasceu na F1 (ver nota acima). O que resta aqui é
 funcionalidade sobre ele: tela de detalhe, histórico, ações em massa, imagens,
 anexos, arquivamento e descomissionamento.
-Execução detalhada em [`FASE-2-PLANO-ITAM.md`](./FASE-2-PLANO-ITAM.md).
+Execução detalhada em [`historico/fase-02-ativos.md`](historico/fase-02-ativos.md).
 
 - [x] **G** Renomear `InventoryItem` → `Asset` e `Asset` → `Endpoint` (D1); remover `quantity` (D3) — **feito na F1** (Etapa G)
 - [x] **M** **Asset tag** única com prefixo, zerofill e auto-incremento — `nextAssetTag()` faz `update({ data: { assetTagNext: { increment: 1 } } })` **primeiro** e usa o valor retornado; ler-e-depois-incrementar colide em READ COMMITTED. `GET /api/settings/next-asset-tag` é *peek* puro e nunca incrementa, senão abrir e cancelar o modal fura a sequência — **feito na F1** (Etapa G)
@@ -368,14 +114,14 @@ Execução detalhada em [`FASE-2-PLANO-ITAM.md`](./FASE-2-PLANO-ITAM.md).
 - [x] **P** EOL: `eolMonths` no modelo, `eolDate` calculada, `eolExplicit` para override manual — **feito na F1** (Etapa G)
 - [x] **M** `Asset.statusId` obrigatório apontando para `StatusLabel`; status vira consequência do checkout, não campo digitado — **feito na F1** (Etapa G)
 - [x] **M** Soft delete com lixeira e restauração (herda F0) — **feito na F1** (Etapa G)
-- [x] **M** ~~**Tela de detalhe do ativo** (`/ativos/:id`, `/itam/assets/:id` até a F6) com sete abas~~ — feito na F2 ([`FASE-2-PLANO-ITAM.md`](./FASE-2-PLANO-ITAM.md)). As sete nascem juntas: Detalhes, Posse, Histórico e Arquivos com conteúdo; Componentes (F5), Licenças (F6) e Manutenções (F8) desabilitadas dizendo em que fase chegam — aba ausente e aba vazia são indistinguíveis de defeito.
+- [x] **M** ~~**Tela de detalhe do ativo** (`/ativos/:id`, `/itam/assets/:id` até a F6) com sete abas~~ — feito na F2 ([`historico/fase-02-ativos.md`](historico/fase-02-ativos.md)). As sete nascem juntas: Detalhes, Posse, Histórico e Arquivos com conteúdo; Componentes (F5), Licenças (F6) e Manutenções (F8) desabilitadas dizendo em que fase chegam — aba ausente e aba vazia são indistinguíveis de defeito.
 - [x] **M** ~~**Aba Posse** — os responsáveis resolvidos no topo e o histórico de `Assignment` abaixo~~ — feito na F2. É a tela que prova o modelo: quem abre um mouse da Mesa 1 lê "Laura (Manhã), Ana (Tarde)" sem nenhum campo digitado.
 - [x] **M** ~~Aba **Histórico** do ativo, lendo o `ActivityLog`~~ — feito na F2, sem tabela `AssetLog` (D18). `GET /api/assets/:id/history` une o log e a posse numa lista só.
-- [x] **P** ~~Arquivar ativo (status `type = ARCHIVED` sai das listagens por padrão; `?view=archived`)~~ — feito na Leva 1 do [`FECHAMENTO-F2-F4-PLANO-ITAM.md`](./FECHAMENTO-F2-F4-PLANO-ITAM.md) (D85). A vista padrão passou a excluir `ARCHIVED` junto com `retiredAt`, e `?statusId=` explícito vence a exclusão — senão clicar no contador de um status arquivado abriria lista vazia. **A invariante estado × posse continua valendo e já existia** (D16; [`INVARIANTES.md`](./INVARIANTES.md)): ativo com responsável resolvido **não pode** ir para `ARCHIVED` — arquivar é declarar que saiu da operação, e o que está com alguém não saiu. O 409 diz com quem está, não só que falhou. A devolução (checkin) é o pré-requisito, e é a mesma regra que impede `DEPLOYABLE` com detentor. O que faltava era só a VISTA.
+- [x] **P** ~~Arquivar ativo (status `type = ARCHIVED` sai das listagens por padrão; `?view=archived`)~~ — feito na Leva 1D do fechamento da F2 ([`historico/fase-02-ativos.md`](historico/fase-02-ativos.md), D85). A vista padrão passou a excluir `ARCHIVED` junto com `retiredAt`, e `?statusId=` explícito vence a exclusão — senão clicar no contador de um status arquivado abriria lista vazia. **A invariante estado × posse continua valendo e já existia** (D16; [`referencia/invariantes.md`](referencia/invariantes.md)): ativo com responsável resolvido **não pode** ir para `ARCHIVED` — arquivar é declarar que saiu da operação, e o que está com alguém não saiu. O 409 diz com quem está, não só que falhou. A devolução (checkin) é o pré-requisito, e é a mesma regra que impede `DEPLOYABLE` com detentor. O que faltava era só a VISTA.
 - [x] **P** ~~**Relatório "ativos em posto vago"**~~ — feito na F2: `?relatorio=posto-vago`, filtro do Prisma e nunca `.filter()` depois da consulta (senão o `total` do envelope mentiria).
 - [x] **G** ~~Ações em massa: editar N, trocar status, mover de localização, excluir, checkout em massa~~ — feito. `POST /api/assets/bulk` é **tudo ou nada** (D21); `POST /api/assets/bulk-checkout` é **por linha com relatório** (D31) — e a diferença é a natureza da operação, não inconsistência. **A quarta operação chegou na F9**: `op: 'custom-field'` preenche (ou limpa) um campo customizado nos N selecionados — é o backfill que o D61 exige antes de promover um campo a obrigatório, e sem ele o contador da tela de conjuntos mandava por uma porta que não abria. Ele recusa o lote inteiro quando algum ativo não pede aquele campo, porque gravar chave desconhecida em 200 linhas é o mass assignment do JsonB.
 - [x] **P** ~~Clonar ativo~~ — feito na F2, **sem rota**: é o formulário em modo criação com os valores de outro ativo, e só etiqueta e série nascem em branco. A etiqueta vem do `/settings/next-asset-tag`, que é *peek*.
-- [x] **M** ~~Imagem do ativo, do modelo, do fabricante e da categoria~~ — feito na Leva 2 do [`FECHAMENTO-F2-F4-PLANO-ITAM.md`](./FECHAMENTO-F2-F4-PLANO-ITAM.md). `imagePath` nas quatro tabelas, `PUT/GET/DELETE /api/images/:alvo/:id`.
+- [x] **M** ~~Imagem do ativo, do modelo, do fabricante e da categoria~~ — feito na Leva 2 do fechamento da F2 ([`historico/fase-02-ativos.md`](historico/fase-02-ativos.md)). `imagePath` nas quatro tabelas, `PUT/GET/DELETE /api/images/:alvo/:id`.
 - [x] **M** ~~Anexos por ativo (nota fiscal, contrato, foto) com tipo e tamanho permitidos~~ — feito na Leva 2. **NÃO é rota estática** (D84): sai por `GET /api/attachments/:id/download`, com sessão — em produção o guard libera todo GET fora de `/api`, e uma raiz `/uploads/` deixaria nota fiscal e contrato públicos.
 - [x] **M** ~~Busca, filtros, ordenação e paginação na listagem de ativos~~ — feito na F2: `?q=`, `?statusId=`, `?locationId=`, ordenação por allowlist e as quatro vistas (`active|trashed|retired|archived`).
 - [x] **P** ~~Descomissionamento: `retiredAt`, `retiredReason`~~ — feito na F2. São TRÊS colunas com três significados (D19), e `retire` recusa ativo entregue com 409 que diz com quem ele está.
@@ -386,7 +132,7 @@ Execução detalhada em [`FASE-2-PLANO-ITAM.md`](./FASE-2-PLANO-ITAM.md).
 
 Entra cedo porque `ActivityLog` sem ator é log pela metade. RBAC completo fica na Fase 11.
 
-- [x] **M** ~~Login, senha e sessão~~ — feito na F3 ([`FASE-3-PLANO-ITAM.md`](./FASE-3-PLANO-ITAM.md)): argon2id, JWT em cookie `httpOnly` (D22), `preHandler` global negando por padrão e `tokenVersion` — trocar a senha derruba quem já está dentro.
+- [x] **M** ~~Login, senha e sessão~~ — feito na F3 ([`historico/fase-03-autenticacao-e-ator.md`](historico/fase-03-autenticacao-e-ator.md)): argon2id, JWT em cookie `httpOnly` (D22), `preHandler` global negando por padrão e `tokenVersion` — trocar a senha derruba quem já está dentro.
 - [x] **P** ~~`failedLoginCount` / `lockedUntil` (bloqueio por tentativas)~~ — feito na F3. A janela é de minutos, não bloqueio permanente: ele trocaria um ataque barato por um chamado garantido.
 - [x] **P** ~~`createdById` / `updatedById`~~ — feito na Leva 2, e **só no `Asset`** (D26): o `ActivityLog` já responde "quem criou isto"; a coluna existe para a tela de detalhe não consultar por linha.
 - [x] **P** ~~`Assignment.checkoutById` / `checkinById` e `LocationOccupant` passam a ser preenchidos~~ — feito. As duas colunas do `Assignment` desde a F3; a ocupação **não ganha coluna** (D25) e a resposta é o `ActivityLog`, que passou a ter ator na Leva 1.
@@ -403,7 +149,7 @@ existe: `Assignment`, `LocationOccupant`, `AssignmentTarget` e os dois índices
 `20260923011728_posse_e_ocupacao`. O que falta é a **operação** que escreve neles.
 
 > As invariantes que cada operação tem que defender — e onde cada uma mora, se
-> no banco ou na aplicação — estão em [`INVARIANTES.md`](./INVARIANTES.md).
+> no banco ou na aplicação — estão em [`referencia/invariantes.md`](referencia/invariantes.md).
 >
 > **Por que o modelo entrou antes da fase.** Decidir cardinalidade depois de a
 > `Assignment` existir e estar em uso custaria retrabalho em cinco arquivos e uma
@@ -430,8 +176,8 @@ existe: `Assignment`, `LocationOccupant`, `AssignmentTarget` e os dois índices
 
 - [x] **M** `resolverResponsaveis(ativo)` — a resolução das três camadas (D16), com o limite de **um salto** no alvo `ASSET`. Sai na resposta do ativo; **não vira coluna**
 - [x] **M** `GET /api/users/:id/holdings` com **dois baldes**: `diretos` (assignments `USER` dela) e `porPosto` (ativos das assignments `LOCATION` dos postos que ela ocupa, com o turno). Separados de propósito — devolver um notebook é ato da pessoa; sair da Mesa 1 é ato do posto, e misturar os dois na tela faz alguém devolver o monitor da sala
-- [x] **M** ~~**Tela de perfil do colaborador** com os dois baldes e o histórico~~ — `src/pages/gestao-usuario/detalhe/`. O **histórico da pessoa** fechou na Leva 1 do [`FECHAMENTO-F2-F4-PLANO-ITAM.md`](./FECHAMENTO-F2-F4-PLANO-ITAM.md): `GET /api/users/:id/history` une `ActivityLog`, posses diretas e ocupações de posto — a terceira fonte é o que o D25 mandou responder pelo log em vez de virar coluna
-- [x] **P** Invariante **estado × posse** ([`INVARIANTES.md`](./INVARIANTES.md)): ativo com responsável resolvido não pode ter status de tipo `DEPLOYABLE` (estoque) nem `ARCHIVED` (fora de operação). É a regra que impede a posse e o status divergirem agora que as duas coisas são graváveis em separado — a continuação direta da correção do `IN_USE` (D5)
+- [x] **M** ~~**Tela de perfil do colaborador** com os dois baldes e o histórico~~ — `src/pages/gestao-usuario/detalhe/`. O **histórico da pessoa** fechou na Leva 1C do fechamento da F4 ([`historico/fase-04-posse.md`](historico/fase-04-posse.md)): `GET /api/users/:id/history` une `ActivityLog`, posses diretas e ocupações de posto — a terceira fonte é o que o D25 mandou responder pelo log em vez de virar coluna
+- [x] **P** Invariante **estado × posse** ([`referencia/invariantes.md`](referencia/invariantes.md)): ativo com responsável resolvido não pode ter status de tipo `DEPLOYABLE` (estoque) nem `ARCHIVED` (fora de operação). É a regra que impede a posse e o status divergirem agora que as duas coisas são graváveis em separado — a continuação direta da correção do `IN_USE` (D5)
 - [x] **P** Só status de tipo **`DEPLOYABLE`** libera a entrega. Checkout move o ativo para um status `IN_USE`; o checkin aplica o status escolhido (`DEPLOYABLE` de volta ao estoque, ou `PENDING` se voltou quebrado)
 
 **Operações que dependem das três**
@@ -476,7 +222,7 @@ As duas invariantes de banco têm prova própria, reexecutável:
 ## Fase 5 — Acessórios, Consumíveis e Componentes ✅ CONCLUÍDA
 
 Os três tipos que **têm quantidade** — e que por isso não são `Asset` (D3). Execução
-detalhada em [`FASE-5-PLANO-ITAM.md`](./FASE-5-PLANO-ITAM.md), decisões **D33–D38**.
+detalhada em [`historico/fase-05-estoque.md`](historico/fase-05-estoque.md), decisões **D33–D38**.
 
 > A régua contra o ativo: **tem etiqueta própria → é `Asset`**. A dock tem patrimônio e
 > série, então é `Asset` com `Assignment` de alvo `ASSET` (F4). O pente de RAM não tem,
@@ -486,7 +232,7 @@ detalhada em [`FASE-5-PLANO-ITAM.md`](./FASE-5-PLANO-ITAM.md), decisões **D33�
 - [x] **M** ~~`Consumable` — qty, `minQty`, checkout **decrementa e não volta**~~ — feito, e a irreversibilidade é ESTRUTURAL: não há coluna de fechamento, não há rota, e `POST /api/consumables/checkouts/:id/checkin` responde **404 do roteador** (D37)
 - [x] **M** ~~`Component` — qty, `minQty`, checkout **para um ativo** (RAM, HD)~~ — feito, com `serial` do LOTE (peça com patrimônio próprio é ativo, não componente)
 - [x] **M** ~~`AccessoryCheckout` (uma linha por unidade entregue)~~ — feito: `checkedInAt` fecha, a linha nunca é apagada.
-  - **A pergunta em aberto foi respondida no [D33](./FASE-5-PLANO-ITAM.md):** acessório entregue a posto conta **uma** unidade, qualquer que seja o número de ocupantes — o saldo do almoxarifado não pode depender da escala do RH. "Quantos mouses a Laura tem?" ganha **duas respostas honestas** (diretos e por posto, compartilhados) que **nunca** são somadas: somar produz "Laura tem 6 mouses" a partir de 5 compartilhados, frase falsa sobre o patrimônio. É por isso que `holdings` devolve `via` **por item** e não devolve total nenhum
+  - **A pergunta em aberto foi respondida no [D33](historico/fase-05-estoque.md):** acessório entregue a posto conta **uma** unidade, qualquer que seja o número de ocupantes — o saldo do almoxarifado não pode depender da escala do RH. "Quantos mouses a Laura tem?" ganha **duas respostas honestas** (diretos e por posto, compartilhados) que **nunca** são somadas: somar produz "Laura tem 6 mouses" a partir de 5 compartilhados, frase falsa sobre o patrimônio. É por isso que `holdings` devolve `via` **por item** e não devolve total nenhum
 - [x] **M** ~~`ConsumableCheckout` com `userNameSnapshot`~~ — feito, copiado no ato pelo mesmo motivo do EULA (D29): o consumo de março precisa continuar legível depois que a pessoa sai
 - [x] **G** ~~`ComponentAsset` com `assignedQty` — primeira ponte real entre estoque e ativo~~ — feito, e alimenta a aba Componentes do ativo, que saiu de desabilitada
 - [x] **M** ~~Quantidade restante **calculada**, nunca coluna~~ — feito (D34), num helper só. E **contar não é travar**: toda saída faz `SELECT … FOR UPDATE` na linha-pai DENTRO da transação, senão duas requisições contam "4 de 5 ocupados" e as duas inserem
@@ -508,7 +254,7 @@ no dado e quatro na leitura. Nenhuma quebrava teste, que é o que as tornava car
 mudava de tipo por baixo do acessório, o ativo na lixeira prendia as peças dentro dele, a nota
 da retirada apagava a da instalação e o rótulo *"parcial: 2 de 4"* que o D38 prometeu não
 existia. As oito, com o porquê e o teste que passou a cobrir cada uma, estão em
-**[Correções depois do fechamento](./FASE-5-PLANO-ITAM.md#correções-depois-do-fechamento)**.
+**[Correções depois do fechamento](historico/fase-05-estoque.md#correções-depois-do-fechamento)**.
 
 **Como a fase foi verificada:** 46 asserções em `tests/estoque/`, contra Postgres real e pelo
 mesmo Fastify de produção. As duas mais caras são as que falhariam **em silêncio**: o
@@ -520,7 +266,7 @@ disparam sem `await` entre elas e contam os status — três unidades com cinco 
 
 ## Fase 6 — Licenças de Software ✅
 
-**Fechada** — ver [`FASE-6-PLANO-ITAM.md`](./FASE-6-PLANO-ITAM.md), com as etapas
+**Fechada** — ver [`historico/fase-06-licencas.md`](historico/fase-06-licencas.md), com as etapas
 reescritas contra a árvore real na execução. Decisões novas: **D90–D94**, que corrigem
 D42, D43 e a Etapa E do desenho original.
 
@@ -555,7 +301,7 @@ fecha, e `tests/licencas/posse.test.ts` prova a igualdade em vez de confiar nela
 **Isto o Snipe-IT não tem.** Ele é um CMDB manual, sem descoberta. Nós temos agente instalado.
 É aqui que o produto deixa de ser um clone.
 
-**Fechada** — ver [`FASE-7-PLANO-ITAM.md`](./FASE-7-PLANO-ITAM.md), com as etapas reescritas
+**Fechada** — ver [`historico/fase-07-convergencia-rmm-itam.md`](historico/fase-07-convergencia-rmm-itam.md), com as etapas reescritas
 contra a árvore real e o que só apareceu na execução. Decisões em três levas: **D45–D51**
 (escritas depois da F1), **D95–D103** (desenho da fase, contra a árvore com F2–F6) e
 **D104–D108** (execução) e **D109–D112** (auditoria da fase fechada, quando quatro erros
@@ -631,15 +377,15 @@ alvo polimórfico em `Alert`, que é aditivo.
 
 - [x] **M** ~~`CustomField` — nome, slug, elemento (TEXT / TEXTAREA / LISTBOX / CHECKBOX / RADIO / DATE), formato, help text, obrigatório, único~~ — feito. **`obrigatório` não é do campo, é do VÍNCULO** (D61): o mesmo "Centro de custo" é obrigatório em Notebooks e opcional em Periféricos. O `único` deste item ficou de fora: unicidade de valor entre ativos precisaria de um índice de expressão por campo, que é o DDL por campo que o D7 recusou
 - [x] **M** ~~Motor de validação por formato: IP, IPv4, IPv6, MAC, e-mail, URL, numérico, alfanumérico, data, booleano, regex custom~~ — feito, função PURA (`field-validator.helper.ts`), com as três guardas de ReDoS do D63 rodando no CADASTRO do campo e no motor
-- [x] **M** ~~`CustomFieldset` ancorado em **modelo E categoria, com precedência do modelo**~~ — feito — ver [`FASE-9-PLANO-ITAM.md`](./FASE-9-PLANO-ITAM.md), D58. O Snipe-IT ancora só no modelo, e o `AssetModel` existe desde a F1; a categoria fica porque `Asset` **não tem `categoryId`** (ela vem do modelo) e porque "todo notebook pede patrimônio" é regra de categoria, não de modelo.
+- [x] **M** ~~`CustomFieldset` ancorado em **modelo E categoria, com precedência do modelo**~~ — feito — ver [`historico/fase-09-campos-customizados.md`](historico/fase-09-campos-customizados.md), D58. O Snipe-IT ancora só no modelo, e o `AssetModel` existe desde a F1; a categoria fica porque `Asset` **não tem `categoryId`** (ela vem do modelo) e porque "todo notebook pede patrimônio" é regra de categoria, não de modelo.
   ⚠️ **Correção:** uma versão anterior deste item dizia que o `AssetModel` "já tem a coluna reservada" para o fieldset. **Não tem** — verificado no schema: as colunas dele são `id, name, eolMonths, modelNumber, notes, manufacturerId, categoryId`. A F1 adiou o atributo, não o criou; a coluna nasceu na F9, junto com a de `Category`
-- [x] **M** ~~Valores em `customFields Json? @db.JsonB` + índice GIN (D7)~~ — feito, e o índice **não é alcançado pelo filtro**: o Prisma tipado emite `#>` com comparação de expressão (Seq Scan), não `@>`. As contagens de tabela inteira desceram para `$queryRaw` e usam o índice; o filtro da listagem paga a varredura e o número está **medido** no fechamento da [`FASE-9-PLANO-ITAM.md`](./FASE-9-PLANO-ITAM.md)
+- [x] **M** ~~Valores em `customFields Json? @db.JsonB` + índice GIN (D7)~~ — feito, e o índice **não é alcançado pelo filtro**: o Prisma tipado emite `#>` com comparação de expressão (Seq Scan), não `@>`. As contagens de tabela inteira desceram para `$queryRaw` e usam o índice; o filtro da listagem paga a varredura e o número está **medido** no fechamento da [`historico/fase-09-campos-customizados.md`](historico/fase-09-campos-customizados.md)
 - [x] **M** ~~Renderização dinâmica no formulário e como coluna na tabela~~ — feito (`CustomFieldsSection.tsx` + as colunas de `showInListView` na listagem de ativos)
 - [x] **G** ~~Tela de administração de campos e conjuntos~~ — feito: duas abas novas em Configurações (Campos e Conjuntos), dirigidas pelas specs de UI, mais o modal de composição — a **única tela de arrastar-e-soltar do projeto**, com o contador do D61 ao lado de cada caixa "obrigatório"
 - [x] **P** ~~Flags de visibilidade (`showInListView`, `displayInUserView`, `showInEmail`)~~ — as três gravam; só `showInListView` TEM EFEITO hoje. As outras duas são o contrato das telas que não existem (a visão do colaborador, o corpo do e-mail de entrega) e estão declaradas como "guardado agora" na ajuda do formulário
 - [x] **P** ~~Valor padrão por modelo~~ — feito, e é do **VÍNCULO**, não do modelo (D61): `CustomFieldsetField.defaultValue`, validado contra o formato do campo no CADASTRO do conjunto e aplicado só na CRIAÇÃO do ativo. Campo cifrado não aceita padrão — ele ficaria em claro no cadastro, e um segredo igual em toda máquina não é segredo
 - [x] **M** ~~Campo customizado cifrado em repouso~~ — feito. **`server/core/crypto/cipher.ts` já existia** (nasceu na F6): `cifrar(claro, aad)` / `decifrar(pacote, aad)`, formato `enc:v1:<kid>:<iv>:<tag>:<ct>` (D81), com chaveiro e canário de boot (D91). Aqui o prefixo `enc:` é obrigatório de verdade — dentro do mesmo `JsonB` convivem valores cifrados e comuns, e sem marca não há como saber qual é qual
-- [x] **M** ~~Preenchimento em massa de um campo customizado~~ — feito **depois** do fechamento da fase, numa segunda revisão: o D61 descreve a promoção como *"nasce opcional, a edição em massa faz o backfill, e só então promove-se"*, a tela imprimia essa frase ao lado do contador, e o lote da F2 só sabia status, localização e lixeira. `op: 'custom-field'` no `POST /api/assets/bulk`, com as quatro recusas que importam (ativo fora do conjunto barra o lote inteiro, valor fora do formato, campo cifrado, esvaziar obrigatório). Ver a seção 5 do fechamento da [`FASE-9-PLANO-ITAM.md`](./FASE-9-PLANO-ITAM.md)
+- [x] **M** ~~Preenchimento em massa de um campo customizado~~ — feito **depois** do fechamento da fase, numa segunda revisão: o D61 descreve a promoção como *"nasce opcional, a edição em massa faz o backfill, e só então promove-se"*, a tela imprimia essa frase ao lado do contador, e o lote da F2 só sabia status, localização e lixeira. `op: 'custom-field'` no `POST /api/assets/bulk`, com as quatro recusas que importam (ativo fora do conjunto barra o lote inteiro, valor fora do formato, campo cifrado, esvaziar obrigatório). Ver a seção 5 do fechamento da [`historico/fase-09-campos-customizados.md`](historico/fase-09-campos-customizados.md)
 - [x] **P** ~~Campos customizados no import e no export CSV~~ — feito, e o item esperou de propósito: *"anotar a coluna sem o CSV existir seria escrever metade de uma feature"*. O token é `cf:<slug>` nos dois lados, e a allowlist é montada a partir dos campos que EXISTEM no banco — `cf:*` liberado por prefixo aceitaria `cf:qualquer_coisa` e devolveria coluna vazia em toda linha, que é o defeito silencioso que o D67 fecha.
   **O campo CIFRADO não sai e não entra**, e a assimetria é aparente: no export, mascarar daria uma coluna de `••••••` repetido e exportar o pacote seria o segredo saindo num arquivo que circula por e-mail; no import, uma planilha com a senha da BIOS de trezentas máquinas em texto é a pior forma possível de carregar segredo. Nos dois, 422 com o NOME do campo — não "coluna desconhecida".
   E a **validação de formato não foi reescrita**: o importador monta `customFields` e entrega ao `createAsset`/`updateAsset`, que chamam o mesmo `validarCamposCustomizados()` do formulário. O dry-run passou a chamá-lo também, senão um IP mal digitado na linha 300 só estouraria no `apply`
@@ -648,10 +394,9 @@ alvo polimórfico em `Alert`, que é aditivo.
 
 ## Fase 10 — Etiquetas, Relatórios e Importação
 
-> Plano em [`FASE-10-PLANO-ITAM.md`](./FASE-10-PLANO-ITAM.md), **auditado** em
-> [`AUDITORIA-F10.md`](./AUDITORIA-F10.md) — é de lá que sai a ordem de execução, com
-> a mudança no checkout (data retroativa e silêncio) virando leva própria antes do
-> importador, e as decisões D129–D134.
+> Plano, revisão e fechamento em [`historico/fase-10-etiquetas-relatorios-importacao.md`](historico/fase-10-etiquetas-relatorios-importacao.md). A
+> revisão de 01/10 mudou a ordem de execução — a mudança no checkout (data retroativa e
+> silêncio) virou leva própria antes do importador — e acrescentou as decisões D129–D134.
 
 - [x] **M** ~~Código de barras 1D (Code128) e QR 2D por ativo~~ — feito (D70: QR leva URL, Code128 leva a etiqueta)
 - [x] **G** ~~Impressão de etiquetas em PDF com layout configurável~~ — feito, e **a prévia É o PDF**, pela mesma função
@@ -671,8 +416,8 @@ alvo polimórfico em `Alert`, que é aditivo.
 
 ## Fase 11 — Acesso avançado ✅
 
-> Plano em [`FASE-11-PLANO-ITAM.md`](./FASE-11-PLANO-ITAM.md), **auditado** em
-> [`AUDITORIA-F11.md`](./AUDITORIA-F11.md) — é de lá que sai a ordem de execução, com a
+> Plano, revisão e fechamento em [`historico/fase-11-acesso-avancado.md`](historico/fase-11-acesso-avancado.md). A
+> revisão de 01/10 mudou a ordem de execução, com a
 > infraestrutura de permissão virando a **primeira** etapa (declarar as 177 rotas antes de
 > existir grupo que conceda), o contrato de `department` mudando junto com a entidade e não no
 > `DROP COLUMN`, e as decisões D135–D142.
@@ -682,7 +427,7 @@ alvo polimórfico em `Alert`, que é aditivo.
 - [x] **P** ~~Campos de identidade do colaborador: nome dividido, matrícula, cargo, telefone, endereço~~ — feito, **menos o nome dividido**: `name` já é o campo canônico, dividi-lo exige um backfill que adivinha onde termina o nome em "Maria da Silva Souza", e um campo que só existe para ser recomposto na exibição são duas fontes de verdade para o mesmo dado. `employeeNumber` é único por índice **parcial**, como `email` e `username` — matrícula é justamente o número que a empresa reaproveita ao recontratar
 - [x] **P** ~~`Department` como entidade (hoje é texto livre em `User.department`)~~ — feito em **duas migrações**, e é a única migração não aditiva do projeto: criar + FK + backfill na mesma transação, `DROP COLUMN` na seguinte (D75). Entre as duas, um rollback ainda encontra o texto original. O `GROUP BY btrim(department)` não unifica grafia — `TI` e `T.I.` viraram dois departamentos de propósito, porque escolher qual sobrevive é trabalho de gente, e depois do `DROP` o original não existe mais para conferência
 - [x] **P** ~~Gestor do colaborador (`managerId`) e visão de liderados~~ — feito, com `GET /api/users/:id/reports`. ⚠️ Ele **não** entra em `resolverResponsaveis()` (D72)
-- [x] **M** ~~**A fronteira entre departamento, gestor e posto**~~ — documentada em [`MODELO-POSSE.md`](./MODELO-POSSE.md) (seção *A fronteira*), que é o contrato — não num comentário de código. São **quatro** perguntas, não três, e cada uma tem UMA fonte:
+- [x] **M** ~~**A fronteira entre departamento, gestor e posto**~~ — documentada em [`referencia/modelo-de-posse.md`](referencia/modelo-de-posse.md) (seção *A fronteira*), que é o contrato — não num comentário de código. São **quatro** perguntas, não três, e cada uma tem UMA fonte:
   - **o posto responde pelo ativo** — `Assignment` → `LocationOccupant` (D16);
   - **o gestor da localidade responde pelo posto VAZIO** — `resolverEscalonamento()`, subindo a árvore com o mesmo teto de 32 do `location-cycle.helper.ts` (o banco aceita ciclo). Função **irmã** da Camada 3, nunca um `else` dentro dela: com o `else`, todo ativo passa a ter responsável e *"ativo em posto vago"* deixa de ser expressável — três leitores dependem desse vazio continuar vazio (D73);
   - **o gestor da pessoa a cobra** — `User.managerId`, rota de escalonamento e nada mais;
@@ -693,7 +438,7 @@ alvo polimórfico em `Alert`, que é aditivo.
 - [x] **M** ~~`ApiToken` pessoal (geração, prefixo, hash, revogação, `lastUsedAt`)~~ — feito **pelo mesmo caminho de autenticação do agente** (D80), generalizado por `ownerType` (defeito 6). As rotas são `/api/me/tokens`: **sem `:id` na URL não existe o caso "mandei o id de outra pessoa"**, e o dono sai da sessão. O token age COMO a pessoa — mesmas chaves, mesmo `actorId` — e **não alcança rota de credencial**: um token que emite tokens é um token que não se revoga. A FK que `api_tokens.userId` nunca teve nasceu aqui (D142), e é `Cascade`, não `SetNull`: token sem dono é credencial que autentica como ninguém
 - [x] **M** ~~2FA TOTP (`otplib` + `qrcode`)~~ — feito: segredo **cifrado** com AAD `users:totpSecret:<id>` (D81, o mesmo `core/crypto/cipher.ts` da F6), oito códigos de recuperação em sha256 e uso único, janela de ±1 passo. O cadastro é em **dois passos com estado no banco** (`totpEnabledAt` nulo = pendente), e o estado intermediário **não tranca ninguém**. Desligar exige um código; **não existe rota para desligar o 2FA de outra pessoa** — isso é `npm run totp:desativar`, porque uma rota de bypass é a porta que o 2FA veio fechar
 - [x] **M** ~~Sincronização LDAP / Active Directory (`ldapts`)~~ — feito, e a regra que importa é a do D78: **sumir do diretório MARCA para revisão, nunca desliga**. Um filtro mal escrito devolve "zero pessoas", e um job que desligasse por isso devolveria o inventário da empresa ao estoque numa madrugada — por isso a rodada vazia **não marca ninguém**. E-mail que já existe como conta `LOCAL` vira **conflito**, não fusão. `paged: true` não é otimização: o AD corta em 1000 por padrão, e sem ele a empresa de 1200 pessoas marcaria 200 como ausentes
-- [x] **M** ~~SSO — OIDC com Entra ID (não SAML), recusando login de quem não está cadastrado~~ — feito, com `state`, `nonce` e PKCE num cookie assinado de dez minutos (memória de processo não sobrevive a dois contêineres; tabela seria uma linha por tentativa de login). **Ninguém entra sem cadastro**, e conta `LOCAL` com o mesmo e-mail é **recusada**: fundir deixaria quem controla aquele endereço no provedor herdar os grupos de uma conta criada aqui. O vínculo é explícito, com `access.manage` e `ActivityLog` do DE→PARA. ⚠️ O SSO **não pede o segundo fator local** — a troca está escrita na [`AUTENTICACAO.md`](./AUTENTICACAO.md)
+- [x] **M** ~~SSO — OIDC com Entra ID (não SAML), recusando login de quem não está cadastrado~~ — feito, com `state`, `nonce` e PKCE num cookie assinado de dez minutos (memória de processo não sobrevive a dois contêineres; tabela seria uma linha por tentativa de login). **Ninguém entra sem cadastro**, e conta `LOCAL` com o mesmo e-mail é **recusada**: fundir deixaria quem controla aquele endereço no provedor herdar os grupos de uma conta criada aqui. O vínculo é explícito, com `access.manage` e `ActivityLog` do DE→PARA. ⚠️ O SSO **não pede o segundo fator local** — a troca está escrita na [`referencia/acesso.md`](referencia/acesso.md)
 - [x] **M** ~~Portal do colaborador: ver o que é meu, aceitar o termo, solicitar item — com os **dois baldes**~~ — feito como `/meus-equipamentos` (D141: a tela leva o nome do que lista). Os dois baldes, e o do posto **diz com quem é dividido** — sem essa lista, "Mesa 1 · monitor LG" se lê como *o monitor é meu*, e quem sai da empresa devolve o monitor que a colega do outro turno usa. A rota é `/api/me/holdings`, irmã da com `:id` e **não um `?me=true`**: a diferença não é de filtro, é de autorização. *Solicitar item* continua em **Descartado de propósito**, e o aceite já tem o caminho dele desde a F4 (link no e-mail, sem exigir conta)
 - [x] **P** ~~Avatar do colaborador (começar por iniciais geradas, sem upload)~~ — feito, com a cor **derivada do nome** (`hsl` de matiz variável, saturação e luminosidade fixas): a mesma pessoa é sempre a mesma cor em toda tela, sem nada gravado. Foto pediria armazenamento, rota com permissão, miniatura e uma resposta de LGPD sobre guardar imagem de pessoa junto do patrimônio — e o que ela resolve (achar a linha certa numa lista) as iniciais com cor resolvem
 
@@ -743,11 +488,14 @@ F0 (base) ✅ → F1 (catálogo + ativo inteiro) ✅ → [MODELO DE POSSE] ✅ s
 **As onze fases estão fechadas.** O único item em aberto deste arquivo é o anexo de
 licença (D94), que espera um dono polimórfico em `Attachment` — e espera de propósito.
 
-**A F0 até a F4 estão completas.** As três últimas fecharam pelo
-[`FECHAMENTO-F2-F4-PLANO-ITAM.md`](./FECHAMENTO-F2-F4-PLANO-ITAM.md), organizado em cinco **levas**
-e não em três fases — porque o armazenamento de arquivo (Etapa G da F2) era pré-requisito da
+**A F0 até a F4 estão completas.** As três últimas fecharam **juntas**, em cinco **levas** e
+não em três fases — porque o armazenamento de arquivo (Etapa G da F2) era pré-requisito da
 assinatura e do PDF (Etapas A e B da F4), e o correio servia aos dois lados. Nenhuma revisão de
-fase isolada teria visto essa dependência: ela só aparece olhando as três juntas.
+fase isolada teria visto essa dependência: ela só aparece olhando as três juntas. O grafo das
+levas e a tabela das catorze pontas estão no
+[Fechamento da F2](historico/fase-02-ativos.md#fechamento-da-f2--as-pontas-que-a-fase-deixou-abertas);
+cada leva está no plano da fase a que pertencia ([F2](historico/fase-02-ativos.md),
+[F3](historico/fase-03-autenticacao-e-ator.md), [F4](historico/fase-04-posse.md)).
 
 **A F5 fechou**: as seis tabelas de estoque, o saldo derivado com trava na linha-pai e a
 integração com a posse da F4 (holdings, desligamento, posto).
@@ -794,7 +542,7 @@ customizado usaria o índice GIN; não usa — o Prisma tipado emite comparaçã
 diferença é de 20× em 50 mil linhas. A fase separou as perguntas que precisam **compor** (ficam no
 Prisma e pagam a varredura) das que varrem a tabela inteira e não compõem (descem para `$queryRaw` e
 usam o índice), e entregou o número à F10 em vez de uma afirmação. Ver o fechamento da
-[`FASE-9-PLANO-ITAM.md`](./FASE-9-PLANO-ITAM.md), que lista os **cinco defeitos** que a revisão
+[`historico/fase-09-campos-customizados.md`](historico/fase-09-campos-customizados.md), que lista os **cinco defeitos** que a revisão
 pegou — todos invisíveis pela tela, quatro alcançáveis só pela API — e, na seção 5, o que uma
 **segunda** revisão achou depois de a fase já estar verde: o backfill em massa que o D61 exigia e
 que não existia, mais seis acertos menores com a mesma assinatura — a tela prometendo uma regra
@@ -823,7 +571,7 @@ significariam dois jeitos de montar o cookie, e um deles ficaria sem o `tv` no p
 **E ela é a primeira fase cuja migração não é aditiva.** O `DROP COLUMN users.department` foi em dois
 tempos, com o contrato mudando na migração 1 (D135) e a coluna caindo na 2 — entre as duas, um
 rollback ainda encontra o texto original. Foi também a primeira vez que a receita de reconstruir o
-banco do zero (`ARQUITETURA.md`) deixou de ser zelo e passou a ser pré-requisito de fechar a fase.
+banco do zero (`referencia/arquitetura.md`) deixou de ser zelo e passou a ser pré-requisito de fechar a fase.
 
 **O que a F11 descobriu e corrigiu fora do próprio escopo:** o termo de entrega de alvo `LOCATION`
 (F4) lia `Location.manager` da FOLHA e recusava com 409 — entregar para a "Mesa 1" dentro de um

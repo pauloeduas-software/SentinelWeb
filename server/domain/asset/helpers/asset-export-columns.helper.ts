@@ -65,7 +65,7 @@ export interface LinhaDeExport {
  *
  * `Laura Souza (direto)` ou `Laura Souza (Mesa 1, manhã); Ana Lima (Mesa 1,
  * tarde)` — a Camada 3 devolve LISTA, porque num posto com duas pessoas as duas
- * respondem (docs/MODELO-POSSE.md). Achatar para o primeiro nome responderia
+ * respondem (docs/referencia/modelo-de-posse.md). Achatar para o primeiro nome responderia
  * errado exatamente no caso que o modelo existe para cobrir.
  *
  * O separador é `;` com espaço, e a célula vai entre aspas pelo

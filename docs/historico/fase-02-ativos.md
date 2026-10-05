@@ -1,9 +1,9 @@
 # Plano de implementação — Fase 2: ativos, o que se faz com eles
 
-> Plano **prospectivo** da Fase 2 do [`ITAM-TODO.md`](./ITAM-TODO.md), escrito
+> Plano **prospectivo** da Fase 2 do [`../ROADMAP.md`](../ROADMAP.md), escrito
 > contra o código real depois da F1 e do modelo de posse entrar no schema.
-> Camadas: [`ARQUITETURA.md`](./ARQUITETURA.md) · posse:
-> [`MODELO-POSSE.md`](./MODELO-POSSE.md) e [`INVARIANTES.md`](./INVARIANTES.md).
+> Camadas: [`../referencia/arquitetura.md`](../referencia/arquitetura.md) · posse:
+> [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md) e [`../referencia/invariantes.md`](../referencia/invariantes.md).
 >
 > Esforço: **P** = até meio dia · **M** = 1 a 3 dias · **G** = mais de 3 dias
 
@@ -151,12 +151,21 @@ levam o mesmo `batchId` em `changes` para a tela agrupá-las.
 - **Schema:** `imagePath String?` em `Asset`, `AssetModel`, `Manufacturer` e
   `Category`; model `Attachment` (`assetId`, `path`, `originalName`, `mimeType`,
   `sizeBytes`, `uploadedById String?`, `createdAt`), `onDelete: Cascade`.
-- **Nasce:** `server/domain/attachment/` (maestro, controller,
-  `use-cases/upload-attachment.usecase.ts`, `delete-attachment.usecase.ts`,
-  `helpers/storage.helper.ts`) e
+- **Nasce:** `server/core/storage/` (gravar bytes, derivar nome seguro, apagar —
+  **não** `attachment/helpers/storage.helper.ts`, ver **D83**),
+  `server/domain/attachment/` (maestro, controller,
+  `use-cases/upload-attachment.usecase.ts`, `delete-attachment.usecase.ts`) e
   `src/pages/gestao-itam/detalhe/components/FilesTab.tsx`.
 - **Regra:** o arquivo vai para `UPLOAD_DIR` com nome **uuid + extensão derivada
-  do MIME da allowlist** — nunca o nome que o cliente mandou.
+  do MIME da allowlist** — nunca o nome que o cliente mandou. O download sai por
+  **`GET /api/attachments/:id/download`, com sessão**, e `UPLOAD_DIR` fica fora de
+  qualquer raiz do `@fastify/static` (**D84**).
+
+> ⚠️ **Esta etapa foi reescrita no fechamento, e o motivo é um furo de segurança.** O texto
+> original mandava servir os arquivos por `@fastify/static` numa segunda raiz. A F2 foi
+> planejada **antes** da porta fechada da F3 — e com a regra do estático daquela fase, um
+> `GET /uploads/<uuid>.pdf` não começa com `/api` e sairia **sem sessão em produção**. Ver o
+> **D84**, e o [Fechamento da F2](#fechamento-da-f2--as-pontas-que-a-fase-deixou-abertas).
 
 `uploadedById` nasce nulável pelo motivo de `ActivityLog.actorId`: a F3 não
 chegou, e esperar por ela perderia tudo que for anexado até lá.
@@ -179,55 +188,23 @@ Clonar é operação **de tela**, sem rota nova. A etiqueta vem do
 `GET /api/settings/next-asset-tag`, que é *peek* puro — abrir e cancelar o clone
 duas vezes não pode furar a sequência.
 
-## Decisões da fase — D18 a D21
+## Decisões da fase
 
-### D18 — `AssetLog` não nasce. A aba Histórico lê o `ActivityLog`.
+> As decisões desta fase moram em [`../decisoes/catalogo-e-ativo.md`](../decisoes/catalogo-e-ativo.md) — **D18–D21 e o D85**. Elas saíram daqui porque decisão se arquiva pelo ASSUNTO que governa, não pela fase que a tomou: quem precisa saber as regras de um assunto não deveria ter que descobrir em que fase ele nasceu.
+>
+> **Duas delas não ficaram com o assunto desta fase:** o **D83** e o **D84** — onde o
+> armazenamento de arquivo mora e por que anexo sai por `/api/` com sessão — foram para
+> [`../decisoes/plataforma.md`](../decisoes/plataforma.md), porque guardar bytes é
+> infraestrutura e serve também ao termo de entrega da F4.
 
-**Decidido:** uma trilha só, filtrada por `entityType`/`entityId`.
-**Descartado:** tabela `AssetLog` com campo, valor antigo e valor novo por linha.
-**Por quê:** o `ActivityLog` já grava o diff em `changes` **na mesma transação** da
-operação — a garantia que a segunda tabela teria de reconstruir. Com as duas, a
-pergunta *"por que o histórico não bate com a auditoria?"* passa a ter resposta
-possível, e isso basta para não criá-la. O que falta é **rota de leitura**, e
-fazer as operações que ainda não logam (arquivar, descomissionar, checkout,
-checkin, nota) gravarem com `entityType: 'Asset'`.
-
-### D19 — Arquivar, descomissionar e apagar são três coisas, com três colunas.
-
-**Decidido:** `status.type = ARCHIVED` (classificação, reversível), `retiredAt` +
-`retiredReason` (fato datado de saída do parque), `deletedAt` (lixeira).
-**Descartado:** um `archived Boolean` no `Asset`.
-**Por quê:** o booleano seria segunda fonte de verdade ao lado de `status.type` —
-o erro do `assignedToId` editável (D17), uma camada acima. E as três respondem
-perguntas diferentes (*pode ser entregue?*, *ainda é patrimônio?*, *existe?*):
-colapsá-las obriga a inventar a resposta que falta na hora do relatório.
-
-### D20 — "Arquivados" e "posto vago" são filtros do domínio, não `view` do `core`.
-
-**Decidido:** `?arquivados=` e `?relatorio=` vivem em `asset-filters.helper.ts`.
-**Descartado:** acrescentar `'archived'` ao `ListView` de `core/http/list-query.ts`.
-**Por quê:** `trashed` é genérico — toda tabela com `deletedAt` o entende.
-"Arquivado" é `status.type = ARCHIVED`, que só existe no ITAM: pôr isso no `core`
-é fazer a infraestrutura conhecer negócio — o que a seta `pages → domain → core`
-proíbe e o lint reprova.
-
-### D21 — Ação em massa é tudo ou nada; entrega em massa não será (F4).
-
-**Decidido:** `POST /api/assets/bulk` roda numa `$transaction` e falha inteira se
-um id barrar, devolvendo 409 com a lista.
-**Descartado:** aplicar o que der e devolver relatório por linha.
-**Por quê:** edição em massa é **uma** intenção aplicada a N linhas — metade
-aplicada é um estado que ninguém pediu e ninguém desfaz sem conferir os 200 um a
-um. É o oposto do checkout em massa da F4, que são N entregas independentes: 7
-entregues e 1 recusado é um resultado legível. A diferença não é inconsistência,
-é a natureza da operação — e por isso está declarada nos dois planos.
+O índice das 142 está em [`../decisoes/README.md`](../decisoes/README.md).
 
 ## Riscos e armadilhas
 
-**`@fastify/static` registrado duas vezes derruba o boot.** Já existe um root
-para o front; o segundo, para `/uploads/`, precisa de `decorateReply: false` —
-sem isso o Fastify lança `FST_ERR_DEC_ALREADY_PRESENT`, porque `sendFile` já foi
-decorado.
+**`@fastify/static` registrado duas vezes derruba o boot.** Continua valendo caso alguém
+reintroduza a segunda raiz apesar do **D84**: sem `decorateReply: false` o Fastify lança
+`FST_ERR_DEC_ALREADY_PRESENT`, porque `sendFile` já foi decorado. Mas o desenho certo é
+**não ter a segunda raiz** — anexo sai por rota com sessão.
 
 **O arquivo no disco não participa da `$transaction`.** Gravá-lo antes do commit
 deixa órfão quando a transação reverte: valida → grava a linha → commita → só
@@ -419,16 +396,14 @@ e cancelar o clone não fura a sequência.
 nascem passando `atorDaRequisicao(request)`, em vez de deixar três pontos para
 trás quando o `= null` temporário for removido.
 
-### O que ficou para a próxima leva
+### O que ficou para o fechamento
 
-**Etapa G — imagem e anexos (multipart).** `@fastify/multipart` está instalado e
-nada mais foi feito: nem `Attachment`, nem `imagePath`, nem `UPLOAD_DIR`. A aba
-**Arquivos** já existe na tela de detalhe, desabilitada, com o rótulo "próxima
-leva" — quando a etapa entrar, é trocar o `fase` por `null` em
-`detalhe/helpers/abas.helper.ts` e escrever o conteúdo. As armadilhas
-continuam valendo e estão na seção "Riscos": `@fastify/static` registrado duas
-vezes, o arquivo que não participa da `$transaction`, a extensão vinda do
-cliente e o soft delete que não pode apagar arquivo.
+**Etapa G — imagem e anexos (multipart)** e **a vista de arquivados**. Quando esta leva
+fechou, `@fastify/multipart` estava instalado e nada mais tinha sido feito: nem `Attachment`,
+nem `imagePath`, nem `UPLOAD_DIR`; a aba **Arquivos** existia na tela de detalhe, desabilitada,
+com o rótulo "próxima leva". As duas entraram no fechamento conjunto das F2, F3 e F4 — ver
+[Fechamento da F2](#fechamento-da-f2--as-pontas-que-a-fase-deixou-abertas), no fim deste
+arquivo, com o desenho do armazenamento corrigido (D83, D84).
 
 ### Verificado em runtime
 
@@ -456,3 +431,154 @@ autenticado pelo login da F3:
   linha de histórico por ativo com `batchSize`; `op` inválida, campo faltando,
   campo a mais e 201 ids → 422; id inexistente → 404 com a lista;
 - `prisma/verificacoes/descomissionamento.sql`: zero linhas nas cinco consultas.
+
+---
+
+# Fechamento da F2 — as pontas que a fase deixou abertas
+
+> As F2, F3 e F4 foram fechadas **juntas**, em cinco levas, porque as pontas que sobraram
+> dependiam umas das outras numa ordem que não é a ordem das fases. Esta seção guarda o que
+> era da F2: a **Leva 1D** (a vista de arquivados) e a **Leva 2** (o armazenamento de
+> arquivo). As outras levas estão nos planos da [F3](fase-03-autenticacao-e-ator.md) e da
+> [F4](fase-04-posse.md), que apontam para a tabela e o grafo abaixo.
+
+## Por que levas, e não três revisões de fase
+
+Três coisas atravessavam as três fases:
+
+1. **O armazenamento de arquivo era o gargalo.** Ele é a Etapa G desta fase, e é também onde
+   moram a assinatura e o PDF do termo da F4. Enquanto não existisse, o aceite não tinha onde
+   gravar nada.
+2. **O envio de e-mail tinha quatro clientes** — checkout, checkin, aceite e lembrete de
+   atraso — e três deles eram de fases diferentes.
+3. **A porta fechada da F3 mudou o desenho da Etapa G desta fase**, que foi escrita antes
+   dela. Ver o **D84**: é um furo de segurança real, não um detalhe de estilo.
+
+```
+Leva 1  dívida sem migration ────────────┐
+                                         │
+Leva 2  armazenamento ───┬───────────────┼──▶ Leva 4  aceite + assinatura + PDF
+                         │               │
+Leva 3  e-mail + job ────┘───────────────┘
+
+Leva 5  ApiToken por agente  (independente de tudo; por último por causa da frota)
+```
+
+A Leva 4 é a única que depende de duas outras: ela precisa de **onde gravar** (Leva 2) e de
+**como avisar** (Leva 3). As levas 1 e 5 não dependiam de nada — a 1 veio primeiro porque era
+barata e a 5 por último porque é a única que exige coordenar com um binário que **não está
+neste repositório**.
+
+## As catorze pontas, levantadas contra o código
+
+Levantado lendo o repositório, não o `../ROADMAP.md` — que na época marcava a F2 e a F3
+inteiras como pendentes.
+
+| # | O que faltava | Fase | Prova de que faltava |
+|---|---|---|---|
+| 1 | Ator em `catalog` e `occupancy` | F3 | as 5 chamadas de `recordActivity` sem o 3º parâmetro |
+| 2 | `expectedCheckinAt` no passado é aceito | F4 | `assignment.schema.ts` não tinha `refine` |
+| 3 | Histórico da pessoa no perfil | F4 | nenhuma rota lia `ActivityLog` por `entityId` de `User` |
+| 4 | Vista "arquivados" | **F2** | `ASSET_VIEWS = ['active','trashed','retired']` |
+| 5 | `Attachment` + `imagePath` | **F2 (G)** | `@fastify/multipart` instalado, **zero imports** |
+| 6 | `createdById`/`updatedById` no `Asset` | F3 (F) | nenhuma das duas colunas no `schema.prisma` |
+| 7 | `core/mail/` | F4 (C) | `nodemailer` instalado, **zero imports** |
+| 8 | `JobRun` + janela de execução | F4 (D) | D79 decidido, tabela não criada |
+| 9 | Índice parcial dos vencidos | F4 (D) | `GET /api/assignments/overdue` varria `assignments` |
+| 10 | Lembrete automático de atraso | F4 (D) | não existia `overdue-reminder.job.ts` |
+| 11 | `Acceptance` + a página do termo | F4 (A) | `Category.requireAcceptance` e `eulaText` **nunca lidos** |
+| 12 | PDF do termo | F4 (B) | `pdfkit` instalado, **zero imports** |
+| 13 | Relatório de não aceitos + reenvio | F4 | dependia do 11 |
+| 14 | `ApiToken` por agente | F3 (G) | `/agent-hub` com o `AGENT_TOKEN` compartilhado da F0 |
+
+Quatro itens do `../ROADMAP.md` **não** entraram porque já estavam feitos e o documento não
+tinha sido atualizado: painel de ocupantes no posto, checkout em massa, perfil do colaborador
+(menos o histórico) e o desligamento.
+
+## Leva 1D — A vista "arquivados" (**D85**) ✅
+
+- **Muda:** `asset/helpers/asset-filters.helper.ts` (`ASSET_VIEWS` ganha `'archived'`, e
+  `whereDaVista` passa a olhar `status.type`), `asset/use-cases/asset-stats.usecase.ts` (o
+  contador) e `src/pages/gestao-itam/index.tsx` (a quarta aba).
+- **Regra:** `active` exclui `retiredAt` **e** `status.type = ARCHIVED`; `archived` mostra só
+  o segundo; `trashed` continua sem olhar status nenhum — lixeira é lixeira.
+
+A invariante que impede arquivar ativo entregue **já existia** e não mudou:
+`assert-status-posse.usecase.ts` recusa `ARCHIVED` com responsável resolvido. O que faltava era
+só a vista.
+
+**O que entrou:** `ASSET_VIEWS` ganhou `'archived'`, `whereDaVista` passou a receber se há
+`statusId` explícito, e `/stats` ganhou o contador `archived` com `total` deixando de incluí-lo.
+`AssetStats.byStatus` ganhou `type`, que é o que deixa a tela saber que aquele contador é de
+arquivo.
+
+**A armadilha que apareceu escrevendo o teste, e que o plano já previa:** com `active`
+excluindo `ARCHIVED`, clicar no contador de um status arquivado no cabeçalho abriria lista
+vazia. A regra do D85 (`statusId` explícito vence a exclusão) está implementada e é o teste
+`?statusId= do arquivado DEVOLVE o ativo, em vez de uma lista vazia`.
+
+## Leva 2 — Armazenamento de arquivo · **M** ✅
+
+A Etapa G desta fase, mais as duas colunas de ator da Etapa F da F3 — que pegaram carona por
+serem a mesma migration.
+
+**Migration `20260923150000_anexos_e_autoria`:**
+
+- `imagePath String?` em `Asset`, `AssetModel`, `Manufacturer` e `Category`
+- model `Attachment`: `assetId` (`onDelete: Cascade`), `path`, `originalName`, `mimeType`,
+  `sizeBytes Int`, `uploadedById String?`, `createdAt`
+- `createdById String?` e `updatedById String?` **no `Asset`, e só** (D26)
+
+**Nasceu:**
+
+| Onde | O quê |
+|---|---|
+| `server/core/storage/storage.ts` | gravar, apagar e resolver caminho. Não sabe o que é anexo (**D83**) |
+| `server/core/storage/mime.ts` | a allowlist MIME → extensão |
+| `server/domain/attachment/` | maestro, controller, `upload-attachment`, `delete-attachment`, `list-asset-attachments`, `attachment-select.helper.ts` |
+| `src/pages/gestao-itam/detalhe/components/FilesTab.tsx` | a aba que existia desabilitada |
+
+**Rotas:** `POST|GET /api/assets/:id/attachments`, `GET /api/attachments/:id/download`,
+`DELETE /api/attachments/:id` e `GET|PUT|DELETE /api/images/:alvo/:id`.
+
+**Regras:**
+
+- O nome no disco é `uuid` + extensão derivada do **MIME da allowlist**, nunca o nome que o
+  cliente mandou. O original vai para `originalName`, só para exibir.
+- O arquivo **não participa da `$transaction`**: valida → grava a linha → commita → **só
+  então** move do temporário para o definitivo. Gravar antes deixa órfão no disco quando a
+  transação reverte.
+- **Soft delete não apaga arquivo.** Mandar o ativo para a lixeira e restaurar não pode
+  devolver um link quebrado.
+- `uploadedById` nasce **preenchido** — ao contrário do que a Etapa G previa: quando ela foi
+  escrita a F3 não existia, e agora existe.
+- Trocar a imagem apaga a anterior **depois** do commit, pela mesma razão.
+
+**O D84 está provado em teste:** `tests/anexos/upload.test.ts` verifica que anônimo leva 401 no
+download **e** que `GET /uploads/*` não é rota nenhuma. Se alguém registrar `@fastify/static`
+ali, o teste cai.
+
+**Um defeito latente corrigido de passagem:** `assets_retiredAt_idx` e
+`locations_isWorkstation_idx` tinham sido criados à mão numa migration e nunca declarados no
+schema — então **todo** `migrate diff` emitia `DROP INDEX` deles. Declarados, os DROPs sumiram
+das quatro migrations do fechamento.
+
+## Riscos que esta parte do fechamento acrescentou
+
+**`../../` no nome do arquivo.** O nome no disco é `uuid` + extensão da allowlist e `path.join`
+**não** protege sozinho: o caminho final é conferido contra a raiz resolvida antes de qualquer
+escrita ou leitura.
+
+**`imagePath` em quatro tabelas é quatro caminhos de exclusão.** Apagar o fabricante não pode
+deixar o arquivo, e apagar o arquivo não pode deixar a coluna apontando para o vazio. O
+catálogo **não** tem lixeira (D8): ali o delete é real e o arquivo vai junto, depois do commit.
+
+## Verificação
+
+| Leva | Arquivo | O que prova |
+|---|---|---|
+| 1D | `tests/listagens/vistas-do-ativo.test.ts` | arquivado some de `active`, aparece em `?view=archived`, e `?statusId=` do arquivado **devolve** o ativo |
+| 2 | `tests/anexos/upload.test.ts` | anônimo em `/api/attachments/:id/download` → 401; MIME fora da allowlist → 422; `../../` no nome não escapa da raiz; soft delete do ativo **não** apaga o arquivo; `GET /uploads/*` não é rota |
+
+Mais uma prova que só o SQL dá, no padrão de `prisma/verificacoes/`: **anexo órfão** — linha
+apontando para arquivo que não existe mais no disco, comparando com o listado de `UPLOAD_DIR`.

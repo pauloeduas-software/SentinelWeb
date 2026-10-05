@@ -9,7 +9,7 @@ import StockTable from './components/StockTable';
 import { ABAS_DE_ESTOQUE } from './helpers/estoque.helper';
 import { useEstoque } from './hooks/useEstoque';
 
-// O ESTOQUE — os três tipos de item que TÊM QUANTIDADE (docs/FASE-5-PLANO-ITAM.md).
+// O ESTOQUE — os três tipos de item que TÊM QUANTIDADE (docs/historico/fase-05-estoque.md).
 //
 // UMA tela com três abas, e não três telas: os três compartilham a mesma
 // invariante (o saldo é calculado, nunca coluna) e a mesma tabela. O que difere
@@ -21,7 +21,7 @@ import { useEstoque } from './hooks/useEstoque';
 // pente de RAM não tem, então é componente aqui.
 //
 // Markup e mais nada: estado e chamadas ficam no `useEstoque`
-// (docs/ARQUITETURA.md).
+// (docs/referencia/arquitetura.md).
 export default function EstoquePage() {
   const {
     aba, slug, changeSlug,

@@ -24,7 +24,7 @@ import { useAssetDetail } from './hooks/useAssetDetail';
 // não havia como abrir um ativo direto. Ela começa por `GET /api/assets/:id`.
 //
 // Markup e mais nada: estado e chamadas ficam no `useAssetDetail`
-// (docs/ARQUITETURA.md).
+// (docs/referencia/arquitetura.md).
 
 export default function AssetDetailPage() {
   const {
@@ -60,7 +60,7 @@ export default function AssetDetailPage() {
     );
   }
 
-  // Cálculo fora do JSX (docs/ARQUITETURA.md).
+  // Cálculo fora do JSX (docs/referencia/arquitetura.md).
   const selo = seloDaSaida(asset);
   const abaAtual = ABAS.find((item) => item.id === aba);
 

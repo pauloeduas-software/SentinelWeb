@@ -12,7 +12,7 @@ import {
   useResponsabilidadeQuery,
 } from '../../domain/report/report.queries';
 
-// OS RELATÓRIOS (docs/FASE-8-PLANO-ITAM.md, Etapa D).
+// OS RELATÓRIOS (docs/historico/fase-08-ciclo-de-vida.md, Etapa D).
 //
 // QUATRO ABAS NUMA PÁGINA, e a F10 HERDA ESTA MOLDURA: export CSV, seletor de
 // colunas e report builder entram aqui, como abas desta mesma tela — não numa

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { dataNaoPassada, textoOpcional, uuidOpcional } from '../../shared/fields.schema';
 
 // Contrato de entrada da ENTREGA e da DEVOLUÇÃO — as duas únicas operações que
-// escrevem posse (docs/MODELO-POSSE.md).
+// escrevem posse (docs/referencia/modelo-de-posse.md).
 //
 // `strictObject` recusa campo desconhecido em vez de ignorar em silêncio. Aqui
 // ele faz mais do que fechar mass assignment: mandar `assignedToId` para o

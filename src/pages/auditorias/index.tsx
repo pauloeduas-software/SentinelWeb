@@ -2,7 +2,7 @@ import { Armchair, ClipboardCheck, Search } from 'lucide-react';
 import ConferenciaPanel from './components/ConferenciaPanel';
 import { useAuditorias } from './hooks/useAuditorias';
 
-// AS CONFERÊNCIAS (docs/FASE-8-PLANO-ITAM.md, Etapa B).
+// AS CONFERÊNCIAS (docs/historico/fase-08-ciclo-de-vida.md, Etapa B).
 //
 // ═════════════════════════════════════════════════════════════════════════════
 // O POSTO É A UNIDADE DE TRABALHO; O REGISTRO É POR ATIVO (D54).

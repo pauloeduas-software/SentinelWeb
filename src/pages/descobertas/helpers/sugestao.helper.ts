@@ -17,7 +17,7 @@ interface Rotulo {
  *
  * `OCCUPANCY` e `SHARED_POST` têm a frase mais longa de propósito: são as duas
  * que o operador nunca viu em outro sistema, porque nenhum outro tem onde
- * guardar a resposta (docs/FASE-7-PLANO-ITAM.md, D47 e D48).
+ * guardar a resposta (docs/historico/fase-07-convergencia-rmm-itam.md, D47 e D48).
  */
 export const ROTULOS: Record<SuggestionKind, Rotulo> = {
   LINK: {

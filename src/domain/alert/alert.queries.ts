@@ -4,7 +4,7 @@ import type {
   CentralDeAlertas, ConfiguracaoDoCicloDeVida, ResultadoDaRodadaDeAlertas,
 } from '../shared/lifecycle.types';
 
-// A CENTRAL DE ALERTAS (docs/FASE-8-PLANO-ITAM.md, Etapa E).
+// A CENTRAL DE ALERTAS (docs/historico/fase-08-ciclo-de-vida.md, Etapa E).
 
 export const alertKeys = {
   all: ['alerts'] as const,

@@ -26,7 +26,7 @@ export const OCCUPANT_SELECT = {
   locationId: true,
   userId: true,
 
-  // Texto livre: "Manhã", "Tarde", "12x36 A" (docs/MODELO-POSSE.md, Camada 2).
+  // Texto livre: "Manhã", "Tarde", "12x36 A" (docs/referencia/modelo-de-posse.md, Camada 2).
   shift: true,
 
   startedAt: true,

@@ -79,7 +79,7 @@ export default function OffboardModal({
   const [statusId, setStatusId] = useState('');
   const [erro, setErro] = useState('');
 
-  // Cálculo fora do JSX (docs/ARQUITETURA.md). Os dois recortes existem porque
+  // Cálculo fora do JSX (docs/referencia/arquitetura.md). Os dois recortes existem porque
   // a operação trata os dois grupos de forma OPOSTA: os diretos voltam ao
   // estoque, os do posto ficam onde estão (D33).
   const acessoriosDiretos = acessorios.filter((acessorio) => acessorio.via === 'DIRETO');

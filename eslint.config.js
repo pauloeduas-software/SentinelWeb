@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
-// Mensagens da regra de dependência (docs/ARQUITETURA.md).
+// Mensagens da regra de dependência (docs/referencia/arquitetura.md).
 // `pages → domain → core`: import que sobe essa seta reprova o lint.
 const CORE_SEM_NEGOCIO = 'core é infraestrutura: não pode conhecer domain nem pages. Inverta a dependência (receba por parâmetro).'
 const DOMAIN_SEM_TELA = 'domain não conhece tela. Se a página precisa disso, exponha pelo store/use-case.'

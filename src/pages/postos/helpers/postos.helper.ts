@@ -2,7 +2,7 @@ import type { NovoPostoInput } from '../../../domain/workstation/workstation.que
 import type { Posto, PostoOcupante, PostoView } from '../../../domain/shared/workstation.types';
 
 // Leitura de um posto para a tela — funções puras, fora do JSX
-// (docs/ARQUITETURA.md). Camadas 1 e 2 de docs/MODELO-POSSE.md, vistas do lado
+// (docs/referencia/arquitetura.md). Camadas 1 e 2 de docs/referencia/modelo-de-posse.md, vistas do lado
 // do posto.
 
 export const TRACO = '—';

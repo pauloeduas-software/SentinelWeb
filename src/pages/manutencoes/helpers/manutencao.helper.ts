@@ -1,7 +1,7 @@
 import type { Manutencao, TipoDeManutencao } from '../../../domain/shared/lifecycle.types';
 import { TIPOS_DE_MANUTENCAO } from '../../../domain/shared/lifecycle.types';
 
-// Cálculo fora do JSX (docs/ARQUITETURA.md) — funções puras.
+// Cálculo fora do JSX (docs/referencia/arquitetura.md) — funções puras.
 
 export function rotuloDoTipo(type: TipoDeManutencao): string {
   return TIPOS_DE_MANUTENCAO.find((opcao) => opcao.value === type)?.label ?? type;

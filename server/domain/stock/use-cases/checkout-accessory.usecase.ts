@@ -14,7 +14,7 @@ import type { CheckoutAccessoryData } from '../schemas/accessory.schema';
 // ─────────────────────────────────────────────────────────────────────────────
 // A NOVIDADE SOBRE O SNIPE-IT: o alvo pode ser um POSTO (D33).
 //
-// Entregar 5 mouses à Mesa 1 é o caso real do docs/MODELO-POSSE.md, e forçar a
+// Entregar 5 mouses à Mesa 1 é o caso real do docs/referencia/modelo-de-posse.md, e forçar a
 // escolha de uma pessoa faria o acessório mentir do mesmo jeito que
 // `Asset.assignedToId` mentiria (D17).
 //

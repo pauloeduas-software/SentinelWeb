@@ -5,7 +5,7 @@ import { alertController } from './controllers/alert.controller';
 
 const logger = createLogger('alert.maestro');
 
-// A CENTRAL DE ALERTAS (docs/FASE-8-PLANO-ITAM.md, Etapa E).
+// A CENTRAL DE ALERTAS (docs/historico/fase-08-ciclo-de-vida.md, Etapa E).
 //
 // ORDEM DAS ROTAS: o segmento LITERAL vem antes do parâmetro — `/api/alerts/run`
 // e `/api/alerts/read-all` ANTES de `/api/alerts/:id/read`. O find-my-way prefere

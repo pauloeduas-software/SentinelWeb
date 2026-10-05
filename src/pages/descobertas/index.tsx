@@ -8,7 +8,7 @@ import { useDescobertas, type AbaDaTela } from './hooks/useDescobertas';
 import type { SuggestionKind } from '../../domain/shared/reconciliation.types';
 
 // O QUE O AGENTE DESCOBRIU E O CADASTRO AINDA NÃO SABE
-// (docs/FASE-7-PLANO-ITAM.md).
+// (docs/historico/fase-07-convergencia-rmm-itam.md).
 //
 // A tela se chama DESCOBERTAS, e não "Reconciliação": ela leva o nome do que
 // LISTA, não o do processo que roda por trás. É a mesma correção que aposentou

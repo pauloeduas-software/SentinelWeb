@@ -6,7 +6,7 @@ import type { Credenciais, SessionUser } from '../shared/auth.types';
 import { fetchSessao, loginRequest, logoutRequest } from './auth.queries';
 
 // A SESSÃO EM MEMÓRIA — o primeiro conteúdo real do balde `zustand` que o
-// docs/ARQUITETURA.md reservou desde o começo.
+// docs/referencia/arquitetura.md reservou desde o começo.
 //
 // Client state, não server state: existe só no navegador, não envelhece e
 // ninguém faz polling dela. O TanStack Query, que guarda tudo o mais, seria a
@@ -56,7 +56,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   entrar: async (credenciais) => {
     // O erro PROPAGA de propósito: é um clique do usuário, e a tela precisa
     // mostrar "usuário ou senha inválidos" ou "conta bloqueada". Quem trata é o
-    // `hooks/useLogin.ts` da página (docs/ARQUITETURA.md: busca engole erro,
+    // `hooks/useLogin.ts` da página (docs/referencia/arquitetura.md: busca engole erro,
     // mutação propaga).
     const usuario = await loginRequest(credenciais);
     limparCacheDoServidor();

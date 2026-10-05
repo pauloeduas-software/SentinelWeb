@@ -76,7 +76,7 @@ const logger = createLogger('app');
 //   - `listen`, `onShutdown`, `installProcessHandlers()` — tudo do processo.
 
 // A API é FECHADA por padrão: o `preHandler` global exige sessão em tudo, e
-// esta lista é a exceção inteira (docs/FASE-3-PLANO-ITAM.md, Etapa C).
+// esta lista é a exceção inteira (docs/historico/fase-03-autenticacao-e-ator.md, Etapa C).
 //
 // Ela mora aqui, e não dentro de `core/http/require-auth.ts`, porque saber que
 // o `/agent-hub` tem autenticação própria é conhecimento de NEGÓCIO — e `core`
@@ -246,7 +246,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await UserMaestro.setupRoutes(server);
   // Posse e ocupação vêm DEPOIS de asset e user: as rotas deles pendem de
   // `/api/assets/:id` e `/api/users/:id`, e registrar na ordem em que o
-  // recurso principal nasce é o que mantém o arquivo legível (docs/MODELO-POSSE.md).
+  // recurso principal nasce é o que mantém o arquivo legível (docs/referencia/modelo-de-posse.md).
   await AssignmentMaestro.setupRoutes(server);
   await OccupancyMaestro.setupRoutes(server);
   // Posto vem por ÚLTIMO da fatia de posse: ele só lê o que os três acima
@@ -255,24 +255,24 @@ export async function buildApp(): Promise<FastifyInstance> {
   // ESTOQUE depois de posse: as rotas dele pendem de `/api/assets/:id` (a aba
   // Componentes) e o `holdings` da F4 passou a listar acessório — os dois
   // domínios se leem, e registrar na ordem em que o conceito nasce é o que
-  // mantém o arquivo legível (docs/FASE-5-PLANO-ITAM.md).
+  // mantém o arquivo legível (docs/historico/fase-05-estoque.md).
   await StockMaestro.setupRoutes(server);
   // LICENÇA depois de estoque: as rotas dela pendem de `/api/assets/:id` (a aba
   // Licenças) e o `holdings`/desligamento da F4 passaram a contar assento — os
   // domínios se leem, e registrar na ordem em que o conceito nasce é o que
-  // mantém o arquivo legível (docs/FASE-6-PLANO-ITAM.md).
+  // mantém o arquivo legível (docs/historico/fase-06-licencas.md).
   await LicenseMaestro.setupRoutes(server);
   // Arquivo depois de asset e catálogo: as rotas dele pendem de `/api/assets/:id`
   // e das quatro tabelas com imagem.
   // CONVERGÊNCIA depois de licença: a conformidade cruza o software instalado
   // com o assento da F6, e as rotas de vínculo pendem de `/api/endpoints/:id` e
   // `/api/assets/:id`. Registrar na ordem em que o conceito nasce é o que mantém
-  // o arquivo legível (docs/FASE-7-PLANO-ITAM.md).
+  // o arquivo legível (docs/historico/fase-07-convergencia-rmm-itam.md).
   await ReconciliationMaestro.setupRoutes(server);
   // CICLO DE VIDA depois da convergência: as rotas de manutenção e de auditoria
   // pendem de `/api/assets/:id`, e a auditoria automática (D124) é escrita pelo
   // job da reconciliação — registrar na ordem em que o conceito nasce é o que
-  // mantém o arquivo legível (docs/FASE-8-PLANO-ITAM.md).
+  // mantém o arquivo legível (docs/historico/fase-08-ciclo-de-vida.md).
   await MaintenanceMaestro.setupRoutes(server);
   await AuditMaestro.setupRoutes(server);
   await AlertMaestro.setupRoutes(server);

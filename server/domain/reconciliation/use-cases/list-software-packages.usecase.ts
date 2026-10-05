@@ -12,7 +12,7 @@ import { prisma } from '../../../core/database/prismaClient';
 // devolvia `semVinculoDeSoftware: true` para sempre — relatório que nunca sai do
 // estado vazio, com todo o motor por baixo funcionando.
 //
-// É o mesmo defeito que a suíte desta casa nasceu para pegar (docs/TESTES.md, o
+// É o mesmo defeito que a suíte desta casa nasceu para pegar (docs/referencia/testes.md, o
 // "defeito 1"): funcionalidade verificada pelo caminho da API e inalcançável
 // pelo caminho do formulário.
 // ═════════════════════════════════════════════════════════════════════════════

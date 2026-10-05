@@ -1,17 +1,13 @@
-# Decisões do modelo de posse — D14 a D17
+# Decisões da posse e da responsabilidade
 
-> Continuação da numeração de decisões do [`ITAM-TODO.md`](./ITAM-TODO.md).
-> O **modelo** está em [`MODELO-POSSE.md`](./MODELO-POSSE.md) — lá está o contrato.
-> Aqui está **por que ele é assim**, o que foi descartado no caminho e o que
-> quebra se alguém reverter.
+> O coração do projeto, e a parte em que o Snipe-IT deixou de ser referência. O contrato está em [`referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md); aqui está por que ele é assim.
 >
-> Mesmo formato das D1–D13: o que foi decidido, por quê, o que foi descartado e
-> por quê, e o que quebra na reversão. O que o sistema **recusa** para o modelo
-> continuar verdadeiro está em [`INVARIANTES.md`](./INVARIANTES.md).
+> **A regra desta pasta:** decisão escrita aqui **não se reescreve**. Se a realidade mudou, a
+> decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
+> cada regra governou. O índice das 142 está em [`README.md`](./README.md).
 >
-> Origem: a pergunta do dono do projeto durante a auditoria da F1 — *"um
-> computador, mouse etc. está na Mesa 1, e essa mesa é usada de manhã pela Laura
-> e à tarde pela Ana — as duas são responsáveis. Como isso se modela?"*
+> Decisões neste arquivo: D14–D17, D27–D32, D82, D87–D88.
+> A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
 
@@ -225,7 +221,8 @@ que o sistema deveria derivar, e a contradição estava em três arquivos ao mes
 tempo sem quebrar teste nenhum. A conclusão daquela correção foi textual:
 
 > *"É o que impede o status e a posse divergirem, já que agora as duas coisas são
-> graváveis em separado."* — `AUDITORIA-F0-F1.md`, *O que resta*, item 3
+> graváveis em separado."* — `../historico/fase-01-catalogo-e-ativo.md`, *Auditoria das F0 e F1*, o que restou,
+> item 3
 
 Este é o mesmo movimento, uma camada abaixo: **se a operação existe, ela é a dona
 do campo.** O que estava certo enquanto não havia checkout (marcar à mão quem
@@ -253,41 +250,197 @@ inteiros sem avisar.
 
 ---
 
-## O que este modelo não resolve
+## D27 — Num posto com duas pessoas, quem assina o termo é o gestor da localidade.
 
-Declarado aqui para não ser redescoberto em auditoria como se fosse defeito. São
-limites escolhidos, não esquecimentos.
+**Decidido.** Com `targetType = LOCATION` e categoria que exige aceite, sai **um**
+termo, para o `Location.managerId` — coluna que existe desde a F1 e nunca foi lida
+por nada. Os ocupantes recebem **ciência por e-mail**, não assinatura.
 
-- **Mouse reserva na gaveta de uma mesa ocupada.** Se alguém fizer checkout dele
-  para a Mesa 1, ele aparece como responsabilidade da Laura e da Ana — que não
-  sabem que ele existe. A saída é **não** fazer checkout de item de reserva:
-  `locationId` (*onde está*) continua separado da assignment (*quem responde*).
-  Um ativo pode estar **em** um lugar sem ser **do** lugar. O modelo não impede o
-  erro; ele dá o lugar certo para registrar a diferença.
+**Descartado: cada ocupante assina o seu.** São N documentos para **um** fato: o
+ativo ficaria com aceite "parcialmente pendente" enquanto um dos N não assina — e
+ele já está na mesa desde o primeiro dia. Pior no tempo: quem entra em março
+reabriria o aceite de um ativo entregue em janeiro, ou trabalharia sob um termo
+que nunca viu.
 
-- **N detentores diretos simultâneos** continua impossível por construção, e é
-  proposital (D14): responsabilidade compartilhada sem um posto no meio é
-  responsabilidade de ninguém. O caminho suportado é criar o posto. Se a
-  necessidade aparecer mesmo assim, a alavanca está identificada — derrubar o
-  índice parcial —, mas é decisão nova, não ajuste.
+**Descartado: posto não tem termo.** É justamente o equipamento compartilhado que
+some — o de todos e de ninguém; dispensar o documento aí é dispensá-lo onde serve.
+**Descartado: o primeiro ocupante assina pelos outros** — cria responsabilidade que
+a pessoa não escolheu e que o modelo não reconhece: a Camada 3 devolve Laura e Ana
+como iguais, sem primeiro nem segundo.
 
-- **Escala com horário** (`08:00–12:00`, feriado, sobreposição) não existe.
-  `shift` é rótulo (D15). Se virar necessidade, é tabela própria com semântica de
-  agenda, não coluna nova em `LocationOccupant`.
+**Por que o gestor.** `Location.managerId` já nomeia o responsável formal daquele
+lugar — nasceu com `onDelete: SetNull` porque *"desligar o gestor não pode derrubar
+a filial"*, ou seja, a localidade sempre teve dono no schema. E porque o
+`../referencia/modelo-de-posse.md` recusa N detentores diretos com a frase *"responsabilidade
+compartilhada sem um posto no meio é responsabilidade de ninguém"*: o termo do
+posto é a mesma frase no plano documental — um nome no papel.
 
-- **Responsabilidade parcial ou hierárquica** (o gestor responde junto com quem
-  usa) não é modelada. `Location.manager` e o `managerId` do colaborador (F11)
-  existem para outra coisa — ver a fronteira na F11 do `ITAM-TODO.md`.
+**O que esta decisão NÃO faz, e é o que impede a contradição:** assinar o termo
+**não** torna o gestor responsável resolvido. `resolverResponsaveis()` continua
+devolvendo os ocupantes, e só — o `posse.md` declara responsabilidade
+hierárquica fora do modelo, e esta decisão é sobre **quem firma o documento**,
+camada que não existe na resolução.
+
+**Sem gestor, o checkout é recusado com 409** — *"defina o gestor de «Mesa 1» antes
+de entregar equipamento com termo de aceite"*. Não se emite termo para ninguém.
+Categoria **sem** `requireAcceptance` entrega normalmente: não há documento.
 
 ---
 
-## Onde cada decisão vive no código
+## D28 — Quando o último ocupante sai, a posse continua aberta.
 
-Para quem for verificar, e para quem for mexer.
+**Decidido.** Encerrar a última `LocationOccupant` aberta de um posto **não** fecha
+as `Assignment` daquele posto. Os ativos passam a aparecer no relatório de **posto
+vago** (F2, Etapa E) e `resolverResponsaveis()` devolve lista vazia com
+`postoVago: true` — que é exatamente o que `posse.types.ts` já declara.
+
+**Descartado: fechar as assignments automaticamente.** Seria o sistema fazendo um
+check-in que ninguém fez. O equipamento continua fisicamente na mesa, e a devolução
+tem data, estado, nota e — com a F3 — quem recebeu. É o raciocínio que
+`assert-status-posse.usecase.ts` já aplica ao recusar mandar ativo entregue para
+`DEPLOYABLE`: **bloqueia, nunca limpa sozinho** — limpar sozinho é perda de dado
+silenciosa.
+
+**Descartado: recusar a saída do último ocupante enquanto houver ativo no posto.**
+A pessoa já saiu; o fato é do mundo, não do banco. Sistema que recusa registrar o
+que aconteceu produz dado falso na hora seguinte — alguém encerra por SQL, ou deixa
+a Laura "ocupando" há seis meses um posto onde não trabalha.
+**Descartado: transferir a responsabilidade ao gestor** — contradiz o
+`posse.md` e faria dele responsável por um parque inteiro sem ato nenhum.
+Ele assina o termo (D27); não herda a guarda.
+
+**O que a saída do último ocupante faz:** grava `ActivityLog` no local e, com o
+alerta da F8, avisa o gestor de que há N ativos em posto vago. É **sinal**, não
+erro, e nenhuma invariante é violada: a posse continua aberta, e o que esvaziou
+foi a Camada 2.
+
+---
+
+## D29 — O EULA é copiado para o `Acceptance`, não referenciado.
+
+**Decidido:** `eulaSnapshot` guarda o texto no instante da emissão.
+**Descartado:** FK para `Category` e ler `eulaText` na hora de exibir.
+**Por quê:** editar o EULA da categoria mudaria, retroativamente, o que centenas de
+pessoas assinaram — sem log em `assets` e sem ninguém perceber. Um termo que muda
+depois de assinado não é termo.
+
+---
+
+## D30 — O PDF é gerado no aceite e guardado. Nunca regenerado.
+
+**Decidido:** o arquivo nasce no `accept-term.usecase.ts`; o caminho vai em `pdfPath`.
+**Descartado:** gerar sob demanda em `GET /api/acceptances/:id/pdf`.
+**Por quê:** regenerar monta o documento com os dados de **hoje** — o ativo pode ter
+mudado de nome, de local e de dono. O PDF existe para provar o que foi assinado, e
+prova que se recalcula não prova nada. É o D29 no arquivo.
+
+---
+
+## D31 — Entrega em massa é por linha, com relatório. (O oposto da F2.)
+
+**Decidido:** `bulk-checkout` processa cada ativo na sua transação e devolve o que
+entrou e o que foi recusado, com o motivo. **Descartado:** tudo ou nada, como a
+ação em massa da F2 (D21).
+**Por quê:** não é inconsistência, é a natureza da operação. Edição em massa é
+**uma** intenção aplicada a N linhas — metade aplicada é estado que ninguém pediu.
+Checkout em massa são **N entregas independentes**: um kit de 8 itens em que 1
+está com outra pessoa ainda entrega 7, e refazer os 7 à mão é pior que ler um
+relatório de uma linha.
+
+---
+
+## D32 — Desligamento é uma operação com nome próprio, e fecha as duas camadas.
+
+**Decidido:** `POST /api/users/:id/offboard` fecha posses `USER` abertas **e**
+ocupações abertas, na mesma transação, com uma nota comum. **Descartado:**
+`checkin-all` só sobre `Assignment`, como o TODO descrevia.
+**Por quê:** devolver os ativos diretos e deixar a pessoa ocupando a Mesa 1 mantém
+um desligado como responsável resolvido por todo equipamento daquele posto — o
+`resolverResponsaveis()` continua devolvendo o nome dele, e o 409 de exclusão
+dispara sem que ninguém entenda por quê. Por isso o 409 do `DELETE` conta **as
+duas** coisas, não só as posses.
+
+---
+
+## D82 — `terminate` não existe. A F11 **estende** o `offboard`.
+
+**O conflito.** O `offboard` da F4 (D32) e o `terminate` da F11 (Etapa D) são a
+mesma operação, escrita duas vezes: as duas fecham posses e ocupações.
+
+**O que aconteceria.** Duas rotas fazendo a mesma coisa divergem, e a que divergir
+vai esquecer **o mesmo passo**: encerrar as ocupações de posto. É o passo que não
+dá erro quando falta — a responsabilidade do posto é **derivada**
+([`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md), Camada 3), então um desligado continua
+aparecendo como responsável por tudo que está na Mesa 1, meses depois, e nenhuma
+consulta acusa. É o bug mais perigoso do modelo, e duas rotas é a forma mais fácil
+de criá-lo.
+
+**Decidido:** **uma** rota e **um** use-case — `POST /api/users/:id/offboard`,
+`server/domain/user/use-cases/offboard-user.usecase.ts` — que **cresce** a cada
+fase em vez de ganhar um irmão.
+
+| Fase | O que o `offboard` passa a fazer |
+|---|---|
+| **F4** *(feito)* | devolve as posses diretas, encerra as ocupações de posto, marca `terminatedAt` + `isActive = false`, registra tudo no `ActivityLog` |
+| **F11** | acrescenta a **guarda do substituto** para quem é gestor, e a **revogação de sessões e `ApiToken`s** (D80) |
+
+A Etapa D da F11 deixa de ser *"criar o desligamento"* e passa a ser
+**"estender o desligamento"**.
+
+> **Nota de estado.** O `offboard` da F4 **já grava** `terminatedAt` e
+> `isActive` — a F11 não precisa acrescentá-los, só o que está na linha dela
+> acima. O plano da F11 descreve o passo 4 como se a coluna ainda não existisse.
+
+**Afeta:** [`../historico/fase-11-acesso-avancado.md`](../historico/fase-11-acesso-avancado.md) (Etapa D e o passo 4 do
+D74). A F4 não muda.
+
+---
+
+## D87 — Entrega com alvo `ASSET` não emite termo.
+
+**Decidido:** `targetType = ASSET` nunca gera `Acceptance`, mesmo que a categoria exija aceite.
+**Descartado:** emitir o termo para o responsável resolvido do ativo detentor.
+**Por quê:** o D27 decidiu quem assina quando o alvo é um posto e deixou o alvo `ASSET` de fora
+— porque nele **não há pessoa nenhuma**. A dock foi entregue ao notebook; quem responde pelo
+notebook pode mudar amanhã por um checkout que não menciona a dock, e o termo ficaria assinado
+por alguém que não tem mais relação com o equipamento.
+
+O documento segue o notebook: quem assinou o termo dele assinou por um conjunto, e é essa a
+leitura que a aba Posse já mostra com o salto de um nível do D16. Emitir um segundo termo para o
+mesmo objeto físico é pedir duas assinaturas para um fato.
+
+---
+
+## D88 — Aceite pendente não bloqueia a entrega.
+
+**Decidido:** o checkout conclui, a `Assignment` abre, o status vai para `IN_USE` e o
+`Acceptance` nasce pendente ao lado. Pendência é **linha de relatório**, não estado da posse.
+**Descartado:** a entrega ficar em estado intermediário até a assinatura.
+**Por quê:** é o **D28 aplicado ao documento**. O equipamento já está na mão da pessoa — o fato
+é do mundo, não do banco. Um sistema que recusa registrar o que aconteceu produz dado falso na
+hora seguinte: quem precisa entregar o notebook hoje entregaria e cadastraria depois, ou
+cadastraria como se não exigisse termo.
+
+**E é o que torna o D27 coerente no tempo:** com alvo `LOCATION`, o termo espera o gestor, que
+pode estar de férias. Travar a entrega até ele assinar é travar a Mesa 1 por uma assinatura —
+exatamente o que o D27 recusou ao descartar *"cada ocupante assina o seu"*.
+
+**O que a pendência faz:** aparece em `GET /api/acceptances?view=pendentes`, é reenviável, e
+expira. `resolverResponsaveis()` **não** muda — quem está com o equipamento responde por ele,
+assinado ou não.
+
+---
+
+## Onde o modelo vive no código — D14 a D17
+
+Para quem for verificar, e para quem for mexer. A tabela cobre as quatro decisões do **modelo**;
+as da operação (D27–D32, D87, D88) estão aplicadas nos use-cases de `assignment/`, `acceptance/`
+e `user/`, e as provas delas estão em `tests/invariantes/posse.test.ts` e
+`tests/corridas/posse.test.ts`.
 
 | Decisão | Onde está aplicada |
 |---|---|
 | D14 | `prisma/schema.prisma` (model `Assignment`, enum `AssignmentTarget`) · migration `20260923011728_posse_e_ocupacao` (índice `assignments_um_aberto_por_ativo`) |
 | D15 | `prisma/schema.prisma` (model `LocationOccupant`, campo `shift`) · mesma migration (índice `location_occupants_um_aberto_por_pessoa_local`) |
-| D16 | use-case de resolução no domínio de posse — **nenhuma coluna** em `Asset` · invariante estado × posse em [`INVARIANTES.md`](./INVARIANTES.md) |
+| D16 | use-case de resolução no domínio de posse — **nenhuma coluna** em `Asset` · invariante estado × posse em [`../referencia/invariantes.md`](../referencia/invariantes.md) |
 | D17 | comentário de `Asset.assignedToId` no schema · `server/domain/asset/schemas/asset.schema.ts` (o campo sai dos dois schemas) · checkout/checkin são os únicos gravadores |

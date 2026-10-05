@@ -7,7 +7,7 @@ import type {
   AlvoDeImport, CamposDoAlvo, Importacao, LinhaDoImport, MapeamentoDeImport, SituacaoDaLinha,
 } from '../shared/import.types';
 
-// A IMPORTAÇÃO DE CSV (docs/FASE-10-PLANO-ITAM.md, Etapa D).
+// A IMPORTAÇÃO DE CSV (docs/historico/fase-10-etiquetas-relatorios-importacao.md, Etapa D).
 //
 // DOIS PASSOS, DUAS MUTAÇÕES (D68). O upload SIMULA — ele não escreve nada fora
 // de `imports`/`import_rows` —, e é por isso que `useSubirImportacao` não

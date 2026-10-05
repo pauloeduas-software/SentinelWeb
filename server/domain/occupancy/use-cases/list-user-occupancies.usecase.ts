@@ -8,7 +8,7 @@ import { OCCUPANT_SELECT } from '../helpers/occupant-select.helper';
  * lida pelo outro lado.
  *
  * É metade da resposta de "quais ativos a Laura responde?"
- * (docs/MODELO-POSSE.md): a outra metade são as assignments com alvo USER dela.
+ * (docs/referencia/modelo-de-posse.md): a outra metade são as assignments com alvo USER dela.
  * Esta rota devolve os POSTOS, não os ativos — quem junta os dois é a Camada 3,
  * e é ela que precisa desta consulta indexada por `userId`.
  *

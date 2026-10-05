@@ -251,7 +251,7 @@ describe('D74 — desligar não é apagar, e a consulta que prova', () => {
     expect(pessoa!.isActive).toBe(false);
     // `deletedAt` significa *este cadastro não devia existir*. Quem saiu da
     // empresa continua no histórico de posse — é a pergunta "quem estava com o
-    // notebook antes?" que o MODELO-POSSE.md protege ao nunca apagar histórico.
+    // notebook antes?" que o docs/referencia/modelo-de-posse.md protege ao nunca apagar histórico.
     expect(pessoa!.deletedAt).toBeNull();
   });
 });

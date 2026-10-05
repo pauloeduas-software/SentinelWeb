@@ -1,6 +1,6 @@
 # Autenticação — como a sessão nasce, vive e morre
 
-> **Este documento é o contrato da sessão.** O `docs/FASE-3-PLANO-ITAM.md` descreve
+> **Este documento é o contrato da sessão.** O `docs/historico/fase-03-autenticacao-e-ator.md` descreve
 > como a autenticação foi construída; este descreve **o que ela é hoje**, por
 > que cada peça está onde está, e o que deliberadamente ainda não existe.
 >
@@ -574,8 +574,8 @@ tests/acesso/                            o diretório e o SSO, inclusive o compo
 
 ## Ver também
 
-- `docs/FASE-3-PLANO-ITAM.md` — como a autenticação foi construída (D22, D23, Etapas A–G)
-- `docs/FASE-11-PLANO-ITAM.md` e `docs/AUDITORIA-F11.md` — a autorização, o segundo
-  fator, o token pessoal e o SSO (D72–D78, D135–D142)
-- `docs/INVARIANTES.md` — as regras que o banco garante
-- `docs/TESTES.md` — por que a suíte só fala HTTP
+- `docs/historico/fase-03-autenticacao-e-ator.md` — como a autenticação foi construída (D22, D23, Etapas A–G)
+- `docs/historico/fase-11-acesso-avancado.md` — a autorização, o segundo fator, o token pessoal e o SSO
+  (D72–D78, D135–D142), com a revisão do plano e o fechamento no mesmo arquivo
+- `docs/referencia/invariantes.md` — as regras que o banco garante
+- `docs/referencia/testes.md` — por que a suíte só fala HTTP

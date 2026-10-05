@@ -46,7 +46,7 @@ export const ASSET_SELECT = {
   // listagem `?view=retired` devolveria linhas indistinguíveis das outras.
   //
   // NÃO é `deletedAt` nem `status.type = ARCHIVED`: as três colunas respondem
-  // perguntas diferentes e nenhuma substitui a outra (D19, docs/FASE-2-PLANO-ITAM.md).
+  // perguntas diferentes e nenhuma substitui a outra (D19, docs/historico/fase-02-ativos.md).
   retiredAt: true,
   retiredReason: true,
 

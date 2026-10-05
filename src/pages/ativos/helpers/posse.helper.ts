@@ -2,9 +2,9 @@ import type { CheckinInput, CheckoutInput } from '../../../domain/assignment/ass
 import type { AlvoDaPosse, PosseResolvida, Responsavel } from '../../../domain/shared/posse.types';
 
 // Leitura da posse para a tela — funções puras, fora do JSX
-// (docs/ARQUITETURA.md: "cálculo sai do JSX").
+// (docs/referencia/arquitetura.md: "cálculo sai do JSX").
 //
-// O contrato está em docs/MODELO-POSSE.md: a responsabilidade é DERIVADA, pode
+// O contrato está em docs/referencia/modelo-de-posse.md: a responsabilidade é DERIVADA, pode
 // ser de VÁRIAS pessoas (os ocupantes de um posto) e pode ser de NINGUÉM mesmo
 // com o ativo entregue (posto sem ocupante aberto). As três coisas aparecem numa
 // célula de tabela, e é isto que este arquivo resolve.

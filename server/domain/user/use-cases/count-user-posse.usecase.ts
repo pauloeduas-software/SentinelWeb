@@ -4,7 +4,7 @@ import { contarAssentosDoUsuario } from '../../license/use-cases/count-user-seat
 
 // O QUE AINDA PRENDE UMA PESSOA AO INVENTÁRIO — as duas pontas, contadas juntas.
 //
-// São QUATRO desde a F6, e as quatro vêm do mesmo lugar (docs/MODELO-POSSE.md):
+// São QUATRO desde a F6, e as quatro vêm do mesmo lugar (docs/referencia/modelo-de-posse.md):
 // o que está no NOME da pessoa — ativo (`Assignment` alvo `USER`), acessório
 // (`AccessoryCheckout` alvo `USER`) e assento de licença
 // (`LicenseSeatCheckout.assignedUserId`) — e o que ela responde por OCUPAR um

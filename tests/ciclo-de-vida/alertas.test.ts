@@ -5,7 +5,7 @@ import {
   criarAtivo, criarFabricante, criarManutencao, criarModelo, diasAtras, idsDoSeed,
 } from '../helpers/fixtures';
 
-// A CENTRAL DE ALERTAS — docs/FASE-8-PLANO-ITAM.md, Etapa E.
+// A CENTRAL DE ALERTAS — docs/historico/fase-08-ciclo-de-vida.md, Etapa E.
 //
 // ═════════════════════════════════════════════════════════════════════════════
 // O QUE ESTA SUÍTE EXISTE PARA IMPEDIR é o alerta que nasce DE NOVO todo dia.

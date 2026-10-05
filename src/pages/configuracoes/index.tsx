@@ -49,7 +49,7 @@ export default function ConfiguracoesPage() {
   // `true` — e alguém escreveria o `if` que decide qual ganha. Um modo só não
   // admite o estado impossível.
   //
-  // `useState` local porque é estado de UMA tela (docs/ARQUITETURA.md), e fora
+  // `useState` local porque é estado de UMA tela (docs/referencia/arquitetura.md), e fora
   // do `useCatalog` porque ele cuida da listagem de catálogo, que nestas duas
   // abas não existe.
   const [modo, setModo] = useState<'catalogo' | 'sistema' | 'grupos'>('catalogo');

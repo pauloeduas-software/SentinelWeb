@@ -1,4 +1,4 @@
-// Contrato de POSSE com a API — as três camadas de docs/MODELO-POSSE.md:
+// Contrato de POSSE com a API — as três camadas de docs/referencia/modelo-de-posse.md:
 //
 //   Camada 1  Assignment        a posse, com alvo polimórfico (USER|ASSET|LOCATION)
 //   Camada 2  LocationOccupant  quem ocupa o posto, com o turno
@@ -57,7 +57,7 @@ export interface PosseResolvida {
   /**
    * Posse apontando para uma localização SEM ocupante aberto: equipamento
    * parado em posto vazio. É sinal operacional, não erro de dado — por isso
-   * vem no contrato e aparece na listagem (MODELO-POSSE.md, "Como amarra no
+   * vem no contrato e aparece na listagem (docs/referencia/modelo-de-posse.md, "Como amarra no
    * status", item 3).
    */
   postoVago: boolean;
@@ -77,7 +77,7 @@ export type ViaEscalonamento = 'LOCAL' | 'ANCESTRAL';
  * Para quem ligar quando o posto está VAZIO — `resolverEscalonamento()`.
  *
  * ⚠️ **Não é responsabilidade, e não entra em `responsaveis`.** As duas coisas
- * respondem a perguntas vizinhas e diferentes (docs/MODELO-POSSE.md, "A
+ * respondem a perguntas vizinhas e diferentes (docs/referencia/modelo-de-posse.md, "A
  * fronteira"): `Responsavel` é *quem está com o equipamento*; isto é *quem
  * responde pelo espaço*. O gestor da localidade não assinou nada por este ativo
  * e não aparece na Camada 3 — se aparecesse, `postoVago` nunca mais acenderia.

@@ -9,7 +9,7 @@ import type { Posto, PostoDetalhe } from '../../../domain/shared/workstation.typ
 
 // UM POSTO ABERTO: quem está nele e o que foi entregue a ele.
 //
-// São as duas metades do modelo numa janela só (docs/MODELO-POSSE.md): os
+// São as duas metades do modelo numa janela só (docs/referencia/modelo-de-posse.md): os
 // OCUPANTES (Camada 2, com turno) e os ATIVOS cuja posse aberta aponta para
 // este posto (Camada 1 vista do lado do posto). É a junção das duas que
 // responde "quem responde pelo mouse da Mesa 1" — e é por isso que as duas

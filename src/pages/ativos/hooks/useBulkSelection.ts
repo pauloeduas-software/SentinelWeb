@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 
 // A SELEÇÃO da listagem — estado de UMA tela, em `useState`
-// (docs/ARQUITETURA.md). Nada aqui fala com o servidor: quem envia o lote é o
+// (docs/referencia/arquitetura.md). Nada aqui fala com o servidor: quem envia o lote é o
 // hook da página; aqui só se decide o que está marcado.
 //
 // `Set`, e não array: marcar e desmarcar é a operação mais frequente da tela e

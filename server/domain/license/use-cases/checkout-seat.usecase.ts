@@ -41,7 +41,7 @@ import type { CheckoutSeatData } from '../schemas/license.schema';
  * O BANCO TAMBÉM GARANTE (`license_seat_alvo_xor`), e esta função continua
  * existindo para dar 422 com o nome do campo que falta: o erro do CHECK viraria
  * uma mensagem sobre constraint, que não ensina nada a quem preencheu o
- * formulário. É a regra do INVARIANTES.md — o banco GARANTE, a aplicação
+ * formulário. É a regra do docs/referencia/invariantes.md — o banco GARANTE, a aplicação
  * EXPLICA.
  *
  * Devolve o alvo já escolhido: o resto do use-case grava a partir dele e nunca

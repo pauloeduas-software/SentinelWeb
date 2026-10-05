@@ -71,7 +71,7 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
       { to: '/', label: 'Telemetria', icon: Server, permissao: 'endpoints.view' },
       { to: '/ativos', label: 'Ativos', icon: Database, permissao: 'assets.view' },
       // Logo depois de Ativos: é a mesma operação vista do outro lado — o ativo
-      // está na mesa, e a mesa é de quem a ocupa (docs/MODELO-POSSE.md).
+      // está na mesa, e a mesa é de quem a ocupa (docs/referencia/modelo-de-posse.md).
       { to: '/postos', label: 'Postos', icon: Armchair, permissao: 'assets.view' },
       // Depois de Postos porque a entrega de acessório pende dele: os 5 mouses
       // da Mesa 1 são do POSTO, e quem responde são os ocupantes (D33).

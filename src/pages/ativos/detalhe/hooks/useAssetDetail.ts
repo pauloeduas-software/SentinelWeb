@@ -30,7 +30,7 @@ import type { ManutencaoInput } from '../../../../domain/shared/lifecycle.types'
 import type { AbaId } from '../helpers/abas.helper';
 
 // Estado da TELA DE DETALHE. Aba, modais e o ativo em edição são de uma tela
-// só: ficam aqui, em `useState`, e não em store (docs/ARQUITETURA.md).
+// só: ficam aqui, em `useState`, e não em store (docs/referencia/arquitetura.md).
 //
 // Quem busca dado é a query do domínio; este hook só decide o que a tela faz
 // com ela. Nenhum componente da pasta fala HTTP.
@@ -122,7 +122,7 @@ export function useAssetDetail() {
 
   // ARQUIVO. Quatro mutações e uma consulta, todas do domínio `attachment`:
   // esta tela é a única que os usa hoje, mas o transporte fica lá porque
-  // página não fala HTTP (docs/ARQUITETURA.md).
+  // página não fala HTTP (docs/referencia/arquitetura.md).
   const { data: anexos, isPending: anexosPendentes } = useAssetAttachmentsQuery(id);
   const anexar = useUploadAttachment();
   const excluirAnexo = useDeleteAttachment();

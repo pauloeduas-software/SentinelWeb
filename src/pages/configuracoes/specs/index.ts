@@ -166,7 +166,7 @@ const localizacao: CatalogUiSpec = {
     { key: 'notes', label: 'Notas', tipo: 'textarea', largura: 'inteira' },
   ],
   // A ÚNICA aba com ação própria: um posto tem ocupantes, e nenhuma outra
-  // tabela de catálogo tem (docs/MODELO-POSSE.md, Camada 2). As outras seis
+  // tabela de catálogo tem (docs/referencia/modelo-de-posse.md, Camada 2). As outras seis
   // omitem `acoes` e seguem com editar/excluir, como sempre.
   acoes: [
     { id: 'ocupantes', titulo: 'Ocupantes do posto' },

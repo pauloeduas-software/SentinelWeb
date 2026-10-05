@@ -11,7 +11,7 @@ const PER_PAGE = 10;
 
 // Estado da tela de Postos: que recorte, que página, o que está na busca e qual
 // posto está aberto. Tudo de UMA tela — fica aqui, em useState, e não em store
-// (docs/ARQUITETURA.md).
+// (docs/referencia/arquitetura.md).
 //
 // O POSTO ABERTO é guardado como a LINHA inteira, não só o id: o modal precisa
 // do nome e do caminho para desenhar o cabeçalho no primeiro quadro, e a

@@ -9,7 +9,7 @@ import { Readable } from 'stream';
 // colunas de cada um mora no domínio dono das colunas — é o que a revisão da F8
 // aprendeu com o `ATIVO_NO_PARQUE`. Com o arquivo em `report/`, `asset` e
 // `license` passariam a importar `report` para escrever um CSV, uma seta que o
-// ARQUITETURA.md não desenha. Aqui ele é o que de fato é: formato de arquivo,
+// docs/referencia/arquitetura.md não desenha. Aqui ele é o que de fato é: formato de arquivo,
 // sem conhecimento de negócio nenhum — vizinho do `multipart.helper.ts`, que
 // chegou em `shared/` pelo mesmo caminho.
 //

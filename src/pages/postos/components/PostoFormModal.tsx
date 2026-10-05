@@ -13,7 +13,7 @@ import type { NovoPostoInput } from '../../../domain/workstation/workstation.que
 // localização lá, onde eles fazem sentido.
 //
 // Grava em `/locations` com `isWorkstation: true` (ver a query do domínio): o
-// posto É uma `Location`, e não há tabela nova (docs/MODELO-POSSE.md, D15).
+// posto É uma `Location`, e não há tabela nova (docs/referencia/modelo-de-posse.md, D15).
 
 const CLASSE_CAMPO =
   'w-full p-2 bg-bg-base border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors';

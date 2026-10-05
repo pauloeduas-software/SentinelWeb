@@ -18,7 +18,7 @@ import { MAX_VALOR } from '../../custom-field/helpers/field-validator.helper';
 // NÃO existe `quantity`: um ativo é UM equipamento (D3).
 //
 // NÃO existe mais `assignedToId`: a operação foi para o CHECKOUT/CHECKIN
-// (docs/MODELO-POSSE.md). A coluna continua no banco e continua saindo na
+// (docs/referencia/modelo-de-posse.md). A coluna continua no banco e continua saindo na
 // resposta (`ASSET_SELECT`), mas virou cache do caso `targetType: USER` da
 // `Assignment` — quem escreve nela é só a entrega e a devolução. Um campo
 // editável à mão ao lado de uma tabela de posse são duas fontes de verdade para

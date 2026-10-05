@@ -8,7 +8,7 @@ import { TIPOS_DE_MANUTENCAO } from '../../domain/shared/lifecycle.types';
 import type { SituacaoDeManutencao, TipoDeManutencao } from '../../domain/shared/lifecycle.types';
 import { formatarMoeda } from '../helpers/format.helper';
 
-// AS MANUTENÇÕES (docs/FASE-8-PLANO-ITAM.md, Etapa A).
+// AS MANUTENÇÕES (docs/historico/fase-08-ciclo-de-vida.md, Etapa A).
 //
 // O que a manutenção tem e o ativo não tem é HISTÓRICO DE SERVIÇO: a pergunta que
 // esta tela responde é "quanto este parque custa para manter, e o que ainda está
@@ -16,7 +16,7 @@ import { formatarMoeda } from '../helpers/format.helper';
 // contrato.
 //
 // Markup e mais nada: estado e chamadas ficam no `useManutencoes`
-// (docs/ARQUITETURA.md).
+// (docs/referencia/arquitetura.md).
 
 const SITUACOES: { valor: SituacaoDeManutencao; rotulo: string }[] = [
   { valor: 'todas', rotulo: 'Todas' },

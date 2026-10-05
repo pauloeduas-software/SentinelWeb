@@ -24,7 +24,7 @@ import type { ClientePosse } from './resolve-responsibles.usecase';
 // ⚠️ O QUE ESTA FUNÇÃO NÃO É: ela NÃO torna ninguém responsável. O gestor da
 // localidade não está com o equipamento, não assinou nada por ele e não aparece
 // em `resolverResponsaveis()`. Quem misturar os dois reabre o D72 por efeito
-// colateral — e o `MODELO-POSSE.md` passa a ter duas respostas para "de quem é
+// colateral — e o `docs/referencia/modelo-de-posse.md` passa a ter duas respostas para "de quem é
 // isto?".
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -77,7 +77,7 @@ interface LocalNaSubida {
  *
  * Devolve `null` quando NENHUM ancestral tem gestor — e isso **não é erro**: é
  * o buraco do escalonamento, e é informação. A consulta recursiva que lista
- * esses buracos está em `docs/FASE-11-PLANO-ITAM.md`, na seção de verificação:
+ * esses buracos está em `docs/historico/fase-11-acesso-avancado.md`, na seção de verificação:
  * localidade sem gestor em ancestral nenhum é o que o desligamento com
  * `substitutoId` existe para não criar.
  *

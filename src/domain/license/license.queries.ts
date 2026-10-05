@@ -9,7 +9,7 @@ import type {
   ResultadoDaDevolucao,
 } from '../shared/license.types';
 
-// AS LICENÇAS DE SOFTWARE (docs/FASE-6-PLANO-ITAM.md).
+// AS LICENÇAS DE SOFTWARE (docs/historico/fase-06-licencas.md).
 //
 // `['licenses']` é o prefixo, então invalidar depois de gravar alcança a
 // listagem, o detalhe, a grade de assentos e os alertas — que mudam a cada

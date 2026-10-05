@@ -199,7 +199,7 @@ export async function criarAtivo(
  * O cenário completo do modelo de posse, em uma chamada.
  *
  * Um ativo no estoque, duas pessoas e um posto de trabalho — que é o mínimo
- * para exercitar as três camadas do `docs/MODELO-POSSE.md`, incluindo o caso
+ * para exercitar as três camadas do `docs/referencia/modelo-de-posse.md`, incluindo o caso
  * que nenhum ITAM de prateleira modela: DUAS pessoas no MESMO posto.
  *
  * ═════════════════════════════════════════════════════════════════════════════

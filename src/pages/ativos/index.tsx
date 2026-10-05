@@ -18,7 +18,7 @@ import type { CampoDeColuna } from '../../domain/shared/custom-field.types';
 /**
  * O valor de uma coluna customizada, ou `null` quando não há o que mostrar.
  *
- * Cálculo fora do JSX (docs/ARQUITETURA.md). `CHECKBOX` é o único que precisa de
+ * Cálculo fora do JSX (docs/referencia/arquitetura.md). `CHECKBOX` é o único que precisa de
  * tradução: o valor viaja como o TEXTO `"true"`/`"false"` — é o que o servidor
  * guarda, para o filtro `?cf[slug]=true` funcionar igual a qualquer outro campo
  * —, e "true" numa célula de tabela não é português.
@@ -50,7 +50,7 @@ export default function AtivosPage() {
 
   // AS COLUNAS VISÍVEIS (F10, Etapa B). Preferência do navegador, não do
   // servidor: ninguém a consulta e ela não é fato sobre o inventário
-  // (docs/ARQUITETURA.md, *client state*).
+  // (docs/referencia/arquitetura.md, *client state*).
   //
   // As CUSTOMIZADAS entram por parâmetro, e só para o export: a tabela as desenha
   // por conta própria (elas não passam pelo seletor), mas o `?columns=` precisa
@@ -191,7 +191,7 @@ export default function AtivosPage() {
           <tbody className="text-text-primary divide-y divide-border-sutil/50">
             {assets.map((asset) => {
               // O cálculo da posse fica no helper, nunca no JSX
-              // (docs/ARQUITETURA.md). Aqui só se escolhe o que mostrar.
+              // (docs/referencia/arquitetura.md). Aqui só se escolhe o que mostrar.
               const posse = resumoDaPosse(asset.posse);
               const selo = seloDaSaida(asset);
 
@@ -254,7 +254,7 @@ export default function AtivosPage() {
                   )}
                   {/* RESPONSÁVEL — derivado, e pode ser mais de um: os ocupantes
                       do posto para o qual o ativo foi entregue aparecem juntos,
-                      cada um com o turno (docs/MODELO-POSSE.md, Camada 3). */}
+                      cada um com o turno (docs/referencia/modelo-de-posse.md, Camada 3). */}
                   {colunas.mostrar('responsible') && (
                   <td className="px-6 py-4">
                     {posse.quantos > 0

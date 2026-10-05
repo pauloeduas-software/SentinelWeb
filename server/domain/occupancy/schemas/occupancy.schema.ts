@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { dataNaoFutura, textoOpcional, uuidObrigatorio } from '../../shared/fields.schema';
 
 // Contrato de entrada das rotas de ocupação — a Camada 2 do
-// docs/MODELO-POSSE.md: quem ocupa um posto de trabalho.
+// docs/referencia/modelo-de-posse.md: quem ocupa um posto de trabalho.
 //
 // `strictObject` pelo mesmo motivo do resto do sistema: campo desconhecido vira
 // 422 em vez de gravação silenciosa. Aqui isso também fecha uma porta
@@ -24,7 +24,7 @@ import { dataNaoFutura, textoOpcional, uuidObrigatorio } from '../../shared/fiel
  * (shared/fields.schema.ts), junto com o `dataNaoPassada` que é o espelho dele
  * na devolução prevista — a regra mora num lugar só. Aqui vale registrar o
  * limite do modelo: escala com data futura é agenda, e agenda está declarada
- * fora dele (docs/MODELO-POSSE.md, "O que este modelo NÃO resolve").
+ * fora dele (docs/referencia/modelo-de-posse.md, "O que este modelo NÃO resolve").
  */
 const inicioOpcional = dataNaoFutura('início da ocupação');
 
@@ -33,7 +33,7 @@ export const addOccupantSchema = z.strictObject({
 
   // TEXTO LIVRE, com teto de 60 caracteres: "Manhã", "Tarde", "12x36 A". Enum
   // engessaria escalas reais e faixa de horário seria agenda, não inventário
-  // (docs/MODELO-POSSE.md, Camada 2). O teto existe só para o campo não virar
+  // (docs/referencia/modelo-de-posse.md, Camada 2). O teto existe só para o campo não virar
   // depósito de observação — para isso há `notes`.
   shift: textoOpcional('turno', 60),
 

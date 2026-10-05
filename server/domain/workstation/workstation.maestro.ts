@@ -16,7 +16,7 @@ const logger = createLogger('workstation.maestro');
 // (`POST /api/locations` com `isWorkstation: true`). Um segundo caminho de
 // escrita para a mesma tabela seria um segundo lugar para esquecer a guarda de
 // ciclo, o 409 por uso e o `ActivityLog` — a divergência silenciosa que o
-// MODELO-POSSE.md existe para impedir, um andar abaixo.
+// docs/referencia/modelo-de-posse.md existe para impedir, um andar abaixo.
 //
 // Os OCUPANTES também não estão aqui: são do domínio `occupancy`, que já expõe
 // `/api/locations/:id/occupants`. A tela de postos consome as três rotas; o

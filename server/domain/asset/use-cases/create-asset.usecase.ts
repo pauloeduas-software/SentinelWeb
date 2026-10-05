@@ -98,7 +98,7 @@ export async function createAsset(data: CreateAssetData, actorId: string | null)
         locationId: data.locationId ?? null,
         supplierId: data.supplierId ?? null,
         // `assignedToId` nasce nulo e só o CHECKOUT o preenche
-        // (docs/MODELO-POSSE.md). Ativo que já está com alguém entra pelo
+        // (docs/referencia/modelo-de-posse.md). Ativo que já está com alguém entra pelo
         // cadastro e recebe um checkout em seguida — a operação que existe
         // para isso e que deixa histórico.
         orderNumber: data.orderNumber ?? null,

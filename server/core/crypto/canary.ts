@@ -43,7 +43,7 @@ const SINGLETON = 'singleton';
 // Aqui o chaveiro abre TUDO o que está gravado — e o boot morria, com uma
 // mensagem afirmando o contrário e mandando restaurar uma chave que nenhum dado
 // pede. Alarme falso que tranca o ambiente e ensina a coisa errada, que é o
-// oposto do que o `INVARIANTES.md` cobra de uma mensagem.
+// oposto do que o `docs/referencia/invariantes.md` cobra de uma mensagem.
 //
 // A correção não afrouxa o D91: quando o canário não confere, o canário deixa de
 // ser a resposta e passa a ser a PERGUNTA. Quem responde é o dado — se algum
@@ -238,7 +238,7 @@ export async function verificarCanarioDeCriptografia(
 
   // ── HÁ DADO ILEGÍVEL. AGORA SIM O BOOT CAI ────────────────────────────────
   //
-  // A frase diz o que fazer, não só o que houve — é a regra do INVARIANTES.md:
+  // A frase diz o que fazer, não só o que houve — é a regra do docs/referencia/invariantes.md:
   // *se a mensagem não ensina o que fazer em seguida, ela ainda não está
   // pronta*. As duas saídas são reais e opostas, e escolher a errada destrói
   // dado, então as duas estão escritas.

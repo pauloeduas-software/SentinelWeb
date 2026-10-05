@@ -185,7 +185,7 @@ async function recusar(
   logger.warn(`[OIDC] Login recusado para ${identificacao}: ${motivoInterno}`);
 
   // A MENSAGEM NÃO DIZ QUAL DOS CASOS FOI, pelo mesmo motivo das três recusas do
-  // login (docs/AUTENTICACAO.md): "não existe aqui", "existe como conta local" e
+  // login (docs/referencia/acesso.md): "não existe aqui", "existe como conta local" e
   // "está desligada" são três fatos diferentes sobre a conta de outra pessoa, e
   // quem está do lado de fora não tem o que fazer com a diferença. Quem precisa
   // da diferença é o administrador, e ela está no `auth_events` e no log.

@@ -7,7 +7,7 @@ import type { Prisma } from '@prisma/client';
  *
  * `vagos` é a que justifica a tela existir: posto com equipamento e SEM
  * ninguém respondendo por ele é sinal operacional, não erro de cadastro
- * (docs/MODELO-POSSE.md, "Como isso amarra no status", item 3).
+ * (docs/referencia/modelo-de-posse.md, "Como isso amarra no status", item 3).
  *
  * `ocupados` é o complemento útil — quem está de fato em serviço —, e NÃO é o
  * inverso exato de `vagos`: um posto recém-criado, sem ativo e sem gente, não
@@ -29,7 +29,7 @@ export const WORKSTATION_SORTABLE: readonly [WorkstationSortable, ...Workstation
 
 /**
  * Uma posse ABERTA apontando para o posto — o que faz um ativo "estar entregue"
- * à mesa (docs/MODELO-POSSE.md, Camada 1).
+ * à mesa (docs/referencia/modelo-de-posse.md, Camada 1).
  *
  * `asset: { deletedAt: null }` escrito à mão porque a `softDeleteExtension` só
  * age no model do topo da consulta: num filtro de relação aninhado ela não

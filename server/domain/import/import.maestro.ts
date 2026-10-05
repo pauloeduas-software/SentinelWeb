@@ -5,7 +5,7 @@ import { importController } from './controllers/import.controller';
 
 const logger = createLogger('import.maestro');
 
-// A IMPORTAÇÃO DE CSV (docs/FASE-10-PLANO-ITAM.md, Etapa D).
+// A IMPORTAÇÃO DE CSV (docs/historico/fase-10-etiquetas-relatorios-importacao.md, Etapa D).
 //
 // DOIS PASSOS, DUAS ROTAS, e a separação é a regra (D68): `POST /api/imports`
 // simula e grava o relatório; `POST /api/imports/:id/apply` executa. Não existe

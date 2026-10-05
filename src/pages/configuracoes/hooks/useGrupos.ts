@@ -66,7 +66,7 @@ export function useGrupos() {
 
   async function handleSubmit(data: GrupoInput) {
     // O erro PROPAGA: é mutação, e o 409 do grupo de sistema e o 422 da chave
-    // desconhecida são frases que a pessoa precisa ler (docs/ARQUITETURA.md —
+    // desconhecida são frases que a pessoa precisa ler (docs/referencia/arquitetura.md —
     // busca engole erro, mutação propaga).
     if (emEdicao) await editar.mutateAsync({ id: emEdicao.id, data });
     else await criar.mutateAsync(data);

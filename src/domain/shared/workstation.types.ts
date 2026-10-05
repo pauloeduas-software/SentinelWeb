@@ -5,7 +5,7 @@ import type { LocationOccupant, PessoaRef } from './posse.types';
 // Contrato do POSTO DE TRABALHO com a API — `GET /api/workstations`.
 //
 // O posto NÃO é uma entidade nova: é uma `Location` marcada com
-// `isWorkstation` (docs/MODELO-POSSE.md, D15). O que este arquivo tipa é a
+// `isWorkstation` (docs/referencia/modelo-de-posse.md, D15). O que este arquivo tipa é a
 // LEITURA que a tela de postos faz — a localização somada ao que o modelo de
 // posse diz sobre ela: quem a ocupa e o que foi entregue a ela.
 //
@@ -55,7 +55,7 @@ export interface Posto {
 
   /**
    * Tem equipamento e ninguém responde por ele. É sinal operacional, não erro
-   * de dado: candidato a voltar para o estoque (docs/MODELO-POSSE.md, "Como
+   * de dado: candidato a voltar para o estoque (docs/referencia/modelo-de-posse.md, "Como
    * isso amarra no status", item 3).
    */
   vago: boolean;

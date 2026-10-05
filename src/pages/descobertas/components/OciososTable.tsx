@@ -7,7 +7,7 @@ import type { AtivoOcioso } from '../../../domain/shared/reconciliation.types';
 //
 // A coluna `postoVago` é a que nenhum ITAM de prateleira tem como preencher:
 // ela só existe porque há uma camada entre o ativo e a pessoa
-// (docs/MODELO-POSSE.md). Um notebook ocioso COM responsável é uma conversa
+// (docs/referencia/modelo-de-posse.md). Um notebook ocioso COM responsável é uma conversa
 // ("você ainda precisa disto?"); um desktop ocioso numa mesa VAZIA é outra
 // ("isto volta para o estoque").
 

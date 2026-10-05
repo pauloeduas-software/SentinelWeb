@@ -2,7 +2,7 @@ import type { Asset, MotivoDaSaida } from '../../../domain/shared/asset.types';
 import { formatarData } from '../../helpers/format.helper';
 
 // DESCOMISSIONAMENTO na tela — funções puras, fora do JSX
-// (docs/ARQUITETURA.md: "cálculo sai do JSX").
+// (docs/referencia/arquitetura.md: "cálculo sai do JSX").
 //
 // São TRÊS saídas diferentes e nenhuma substitui a outra (D19):
 //

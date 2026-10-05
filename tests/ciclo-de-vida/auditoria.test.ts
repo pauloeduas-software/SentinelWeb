@@ -3,7 +3,7 @@ import { prisma } from '../../server/core/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { cenarioDePosse, criarAtivo, criarLocal } from '../helpers/fixtures';
 
-// A CONFERÊNCIA FÍSICA — docs/FASE-8-PLANO-ITAM.md, Etapa B.
+// A CONFERÊNCIA FÍSICA — docs/historico/fase-08-ciclo-de-vida.md, Etapa B.
 //
 // ═════════════════════════════════════════════════════════════════════════════
 // O PRIMEIRO TESTE DESTE ARQUIVO É A AMARRA DA FASE (D52).
@@ -14,7 +14,7 @@ import { cenarioDePosse, criarAtivo, criarLocal } from '../helpers/fixtures';
 // conserto e é transferência de RESPONSABILIDADE a partir de um palpite —
 // empréstimo de uma tarde e mudança de posto são indistinguíveis pela observação.
 //
-// Se este teste falhar, o `MODELO-POSSE.md` deixou de valer: a Laura e a Ana
+// Se este teste falhar, o `docs/referencia/modelo-de-posse.md` deixou de valer: a Laura e a Ana
 // param de responder pelo equipamento sem ninguém ter assinado nada.
 // ═════════════════════════════════════════════════════════════════════════════
 

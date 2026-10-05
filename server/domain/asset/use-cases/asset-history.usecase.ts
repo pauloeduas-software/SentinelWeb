@@ -7,7 +7,7 @@ import type { AlvoPosse } from '../../assignment/use-cases/resolve-responsibles.
 
 // A LINHA DO TEMPO DE UM ATIVO — a aba Histórico da tela de detalhe.
 //
-// NÃO nasce tabela `AssetLog` (D18, docs/FASE-2-PLANO-ITAM.md). O `ActivityLog` já
+// NÃO nasce tabela `AssetLog` (D18, docs/historico/fase-02-ativos.md). O `ActivityLog` já
 // grava o diff em `changes` NA MESMA TRANSAÇÃO da operação, que é a garantia
 // que uma segunda tabela teria de reconstruir — e com as duas, "por que o
 // histórico não bate com a auditoria?" passa a ser uma pergunta possível. O que

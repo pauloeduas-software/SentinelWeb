@@ -25,7 +25,7 @@ import type { ItemComSaldo, ItemDeEstoque } from './list-stock.usecase';
  * renomeado; o sistema não tem como escolher qual.
  *
  * É o mesmo cuidado que o checkout tem com o `JA_ENTREGUE` — e o débito que o
- * `INVARIANTES.md` registra para a invariante 1, pago aqui.
+ * `docs/referencia/invariantes.md` registra para a invariante 1, pago aqui.
  */
 export async function restoreStockItem(
   spec: StockKindSpec,

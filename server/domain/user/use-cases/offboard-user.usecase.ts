@@ -24,7 +24,7 @@ import { travarUsuarioOuFalhar } from './lock-user.usecase';
 // um desligado como responsável resolvido por todo equipamento daquele posto:
 // `resolverResponsaveis()` continua devolvendo o nome dele, meses depois, e
 // nenhuma consulta acusa nada, porque a responsabilidade é DERIVADA
-// (docs/MODELO-POSSE.md, Camada 3).
+// (docs/referencia/modelo-de-posse.md, Camada 3).
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // DESLIGAR NÃO É APAGAR, e as duas colunas existem separadas por isso.
@@ -179,7 +179,7 @@ export async function offboardUser(
     // Só `targetType: 'USER'`. Os ativos do POSTO NÃO são devolvidos: eles são
     // do posto, não dela — devolver o monitor da Mesa 1 porque a Laura saiu
     // tiraria da Ana, que continua trabalhando lá, um equipamento que está na
-    // mesa dela (docs/MODELO-POSSE.md; é a mesma razão do D28).
+    // mesa dela (docs/referencia/modelo-de-posse.md; é a mesma razão do D28).
     //
     // O `asset: { deletedAt: null }` é a MESMA condição do `contarPosseAberta`,
     // e as duas têm que ser a mesma: o 409 do `DELETE` conta o que esta consulta

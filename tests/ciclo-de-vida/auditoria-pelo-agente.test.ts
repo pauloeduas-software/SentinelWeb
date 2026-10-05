@@ -6,7 +6,7 @@ import { criarAtivo, criarFabricante, criarLocal, criarModelo, idsDoSeed } from 
 import { auditarPeloAgente } from '../../server/domain/audit/use-cases/audit-by-agent.usecase';
 import { FUSO_PADRAO } from '../../server/domain/reconciliation/helpers/shift.helper';
 
-// A CONFERÊNCIA AUTOMÁTICA — docs/FASE-8-PLANO-ITAM.md, D124.
+// A CONFERÊNCIA AUTOMÁTICA — docs/historico/fase-08-ciclo-de-vida.md, D124.
 //
 // ═════════════════════════════════════════════════════════════════════════════
 // ESTE ARQUIVO NÃO EXISTIA, E COBRE A PARTE MAIS SURPREENDENTE DA FASE.

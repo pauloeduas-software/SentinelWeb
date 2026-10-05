@@ -12,7 +12,7 @@ export interface PessoaDoPosto {
 export interface OcupanteDoPosto {
   id: string;
   userId: string;
-  /** Texto livre: "Manhã", "Tarde", "12x36 A" (docs/MODELO-POSSE.md, Camada 2). */
+  /** Texto livre: "Manhã", "Tarde", "12x36 A" (docs/referencia/modelo-de-posse.md, Camada 2). */
   shift: string | null;
   user: PessoaDoPosto | null;
 }
@@ -55,7 +55,7 @@ export interface WorkstationRow {
  * As duas metades importam. Sem ocupante e sem ativo é só um posto novo — nada
  * a sinalizar. Com ativo e sem ocupante é equipamento parado em mesa vazia,
  * candidato a voltar ao estoque, e é o sinal que nenhum ITAM de prateleira
- * responde (docs/MODELO-POSSE.md).
+ * responde (docs/referencia/modelo-de-posse.md).
  *
  * Função, e não a expressão solta em dois lugares: a listagem e o detalhe
  * precisam responder a MESMA coisa, e duas cópias divergiriam no primeiro

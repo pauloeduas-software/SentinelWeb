@@ -4,7 +4,7 @@ import { reportController } from './controllers/report.controller';
 
 const logger = createLogger('report.maestro');
 
-// OS RELATÓRIOS (docs/FASE-8-PLANO-ITAM.md, Etapa D).
+// OS RELATÓRIOS (docs/historico/fase-08-ciclo-de-vida.md, Etapa D).
 //
 // TODO GET, E NENHUM ESCREVE. Não é coincidência que valha a pena escrever: um
 // relatório que grava é um relatório que muda o que ele mesmo mede, e a primeira

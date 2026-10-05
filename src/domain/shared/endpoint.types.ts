@@ -4,7 +4,7 @@ import type { Telemetry } from './telemetry.types';
  * O eixo do AGENTE — dois valores, e não os três que o TODO pedia.
  *
  * "Nunca visto pelo agente" é pergunta do ATIVO, não desta tabela: uma linha de
- * endpoint nasce de um handshake (docs/FASE-7-PLANO-ITAM.md, D98).
+ * endpoint nasce de um handshake (docs/historico/fase-07-convergencia-rmm-itam.md, D98).
  *
  * União, e não `string`: com `string`, `endpoint.status === 'Online'` compila e
  * é sempre falso.

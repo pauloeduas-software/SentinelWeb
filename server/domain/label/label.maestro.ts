@@ -5,7 +5,7 @@ import { labelController } from './controllers/label.controller';
 
 const logger = createLogger('label.maestro');
 
-// ETIQUETAS, QR E CÓDIGO DE BARRAS (docs/FASE-10-PLANO-ITAM.md, Etapa G).
+// ETIQUETAS, QR E CÓDIGO DE BARRAS (docs/historico/fase-10-etiquetas-relatorios-importacao.md, Etapa G).
 //
 // O PREVIEW E A FOLHA SÃO A MESMA FUNÇÃO, e por isso são rotas gêmeas: a
 // diferença é uma página contra todas, e `inline` contra `attachment`. Um

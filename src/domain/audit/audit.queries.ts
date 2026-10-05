@@ -6,7 +6,7 @@ import type {
   Auditoria, AuditoriaInput, ConferenciaDoPosto, ConferenciaInput, ResultadoDaConferencia,
 } from '../shared/lifecycle.types';
 
-// A CONFERÊNCIA FÍSICA (docs/FASE-8-PLANO-ITAM.md, Etapa B).
+// A CONFERÊNCIA FÍSICA (docs/historico/fase-08-ciclo-de-vida.md, Etapa B).
 
 export const auditKeys = {
   all: ['audits'] as const,

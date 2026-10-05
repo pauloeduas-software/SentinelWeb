@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../core/api/apiClient';
 import type { LayoutDeEtiqueta, LayoutNaResposta, MedidaDaEtiqueta } from '../shared/label.types';
 
-// AS ETIQUETAS (docs/FASE-10-PLANO-ITAM.md, Etapa G).
+// AS ETIQUETAS (docs/historico/fase-10-etiquetas-relatorios-importacao.md, Etapa G).
 //
 // O PREVIEW VEM COMO BLOB, e é por isso que ele é `useMutation` e não
 // `useQuery`: a resposta é um PDF de alguns KB que precisa virar uma URL de

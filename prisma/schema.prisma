@@ -13,7 +13,7 @@ datasource db {
 // é o `Asset` do vocabulário do Snipe-IT. Aqui nenhuma coluna pode voltar a se
 // chamar `status`, `lastSeen` ou `hwid` do outro lado: é essa ausência que faz o
 // compilador barrar uma query do RMM que aponte para a tabela errada
-// (docs/FASE-1-PLANO.md, D13).
+// (docs/historico/fase-01-catalogo-e-ativo.md, D13).
 model Endpoint {
   id       String @id @default(uuid()) @db.Uuid
   hwid     String @unique
@@ -24,7 +24,7 @@ model Endpoint {
   // O EIXO DO AGENTE, e só ele. Enum desde a F7: era `String` livre, e o que
   // impedia `status = "Em uso"` de entrar aqui era a boa vontade de quem
   // escrevesse a query. O ciclo de vida do ativo é `StatusLabel`, outra tabela,
-  // outro eixo (docs/FASE-7-PLANO-ITAM.md, D98).
+  // outro eixo (docs/historico/fase-07-convergencia-rmm-itam.md, D98).
   //
   // DOIS VALORES, e não os três que o TODO pedia: `NEVER_SEEN` seria um valor
   // que NENHUMA linha desta tabela pode ter, porque a linha nasce de um
@@ -284,7 +284,7 @@ model User {
   assets           Asset[]
   managedLocations Location[]
   // Posses diretas (alvo USER) e postos de trabalho que esta pessoa ocupa.
-  // Responsabilidade real = as duas somadas (docs/MODELO-POSSE.md, Camada 3).
+  // Responsabilidade real = as duas somadas (docs/referencia/modelo-de-posse.md, Camada 3).
   assignments      Assignment[]
   occupancies      LocationOccupant[]
   authEvents       AuthEvent[]
@@ -317,7 +317,7 @@ model User {
   // AS TRÊS HIERARQUIAS QUE PASSAM POR UMA PESSOA (F11, Etapa C — D72).
   //
   // Elas parecem todas responder "de quem é isto?" e respondem a perguntas
-  // diferentes. A tabela inteira está em docs/MODELO-POSSE.md:
+  // diferentes. A tabela inteira está em docs/referencia/modelo-de-posse.md:
   //
   //   quem RESPONDE pelo ativo?        a posse aberta → pessoa, ou os
   //                                     ocupantes do posto  (`resolverResponsaveis`)
@@ -337,7 +337,7 @@ model User {
   // `email` NÃO é @unique aqui de propósito: a unicidade é um índice parcial
   // (`WHERE deleted_at IS NULL`) criado na migration. Com @unique comum, um
   // usuário na lixeira bloquearia para sempre o recadastro do mesmo e-mail —
-  // é o `unique_undeleted` do Snipe-IT (docs/ITAM-TODO.md, F2).
+  // é o `unique_undeleted` do Snipe-IT (docs/ROADMAP.md, F2).
   @@index([email])
   @@index([deletedAt])
   @@index([departmentId])
@@ -367,7 +367,7 @@ model Department {
   // rateio de custo e filtro de tela. Entregar "para o Comercial" é entregar
   // para uma sala ou para uma pessoa: departamento não tem mesa, não tem chave
   // e não assina nada. Quem responde por um ativo é a posse aberta, e quando o
-  // alvo é um posto, os ocupantes dele (D16, docs/MODELO-POSSE.md).
+  // alvo é um posto, os ocupantes dele (D16, docs/referencia/modelo-de-posse.md).
   managerId String? @db.Uuid
 
   createdAt DateTime @default(now())
@@ -553,7 +553,7 @@ enum AuthEventType {
 }
 
 // ============================================================================
-// CATÁLOGO — as tabelas que o Snipe-IT chama de *Settings* (docs/FASE-1-PLANO.md)
+// CATÁLOGO — as tabelas que o Snipe-IT chama de *Settings* (docs/historico/fase-01-catalogo-e-ativo.md)
 //
 // Nenhuma tem `deletedAt`, e isso é decisão, não esquecimento (D8): a extension
 // de soft delete descobre a lixeira pela PRESENÇA da coluna, então a ausência é
@@ -763,7 +763,7 @@ model AssetModel {
   // limita o salto de `ASSET` no D16: cadeia mais longa é sintoma de modelagem
   // errada e custa um salto de consulta a cada leitura.
   //
-  // A F1 adiou este atributo e o `ITAM-TODO.md` chegou a dizer que a coluna
+  // A F1 adiou este atributo e o `docs/ROADMAP.md` chegou a dizer que a coluna
   // estava "reservada" — não estava: FK para tabela inexistente é impossível,
   // não adiável. As duas colunas nascem aqui, na F9.
   customFieldsetId String?         @db.Uuid
@@ -906,7 +906,7 @@ model Depreciation {
 }
 
 // ============================================================================
-// CAMPOS CUSTOMIZADOS — docs/FASE-9-PLANO-ITAM.md (D58 a D64)
+// CAMPOS CUSTOMIZADOS — docs/historico/fase-09-campos-customizados.md (D58 a D64)
 // ============================================================================
 
 // Como o campo aparece no formulário. É APRESENTAÇÃO, e não validação: quem
@@ -1077,7 +1077,7 @@ model CustomFieldsetField {
 }
 
 // ============================================================================
-// O ATIVO — o coração do ITAM (docs/FASE-1-PLANO.md, Etapa G)
+// O ATIVO — o coração do ITAM (docs/historico/fase-01-catalogo-e-ativo.md, Etapa G)
 // ============================================================================
 
 // Um ativo = UM equipamento físico, com etiqueta e série próprias.
@@ -1113,12 +1113,12 @@ model Asset {
   statusId     String  @db.Uuid
   modelId      String  @db.Uuid
   // ONDE o ativo está. NÃO é quem responde por ele — ver `assignedToId` abaixo e
-  // docs/MODELO-POSSE.md: um ativo pode estar EM um lugar sem ser DO lugar (o
+  // docs/referencia/modelo-de-posse.md: um ativo pode estar EM um lugar sem ser DO lugar (o
   // mouse reserva na gaveta de uma mesa ocupada).
   locationId   String? @db.Uuid
   supplierId   String? @db.Uuid
   // CACHE do caso `USER`, e só dele. A fonte de verdade da posse é a
-  // `Assignment` aberta (docs/MODELO-POSSE.md, Camada 1).
+  // `Assignment` aberta (docs/referencia/modelo-de-posse.md, Camada 1).
   //
   // Fica `null` quando o detentor é uma LOCALIZAÇÃO (a Mesa 1, cujos
   // responsáveis são os ocupantes dela) ou OUTRO ATIVO (a dock presa ao
@@ -1310,7 +1310,7 @@ model Asset {
 }
 
 // ============================================================================
-// POSSE E RESPONSABILIDADE — docs/MODELO-POSSE.md (D14, D15, D16)
+// POSSE E RESPONSABILIDADE — docs/referencia/modelo-de-posse.md (D14, D15, D16)
 // ============================================================================
 
 // Para QUEM um ativo foi entregue.
@@ -1528,7 +1528,7 @@ model Attachment {
 }
 
 // ============================================================================
-// EXECUÇÃO AGENDADA — D79 (docs/DECISOES-RECONCILIACAO.md)
+// EXECUÇÃO AGENDADA — D79 (docs/decisoes/README.md)
 // ============================================================================
 
 // Uma LINHA POR JOB, identificada pelo nome.
@@ -1545,7 +1545,7 @@ model Attachment {
 // `server/core/jobs/claim-window.ts`, que recebe o nome por parâmetro e não
 // sabe o que é um alerta nem um atraso.
 // ============================================================================
-// TOKEN DE API — D80 (docs/DECISOES-RECONCILIACAO.md)
+// TOKEN DE API — D80 (docs/decisoes/README.md)
 // ============================================================================
 
 enum ApiTokenOwner {
@@ -1814,7 +1814,7 @@ model AppSetting {
 }
 
 // ============================================================================
-// ESTOQUE — os três tipos que TÊM QUANTIDADE (docs/FASE-5-PLANO-ITAM.md)
+// ESTOQUE — os três tipos que TÊM QUANTIDADE (docs/historico/fase-05-estoque.md)
 //
 // A régua contra o `Asset`: **tem etiqueta própria → é `Asset`**. Lá uma linha
 // é um equipamento com patrimônio e série; aqui uma linha é N unidades
@@ -1857,7 +1857,7 @@ enum AccessoryTarget {
 // O que é entregue e VOLTA: mouse, teclado, headset sem patrimônio.
 //
 // A novidade sobre o Snipe-IT está no alvo: entregar 5 mouses à Mesa 1 é o caso
-// real do docs/MODELO-POSSE.md, e forçar a escolha de uma pessoa faria o
+// real do docs/referencia/modelo-de-posse.md, e forçar a escolha de uma pessoa faria o
 // acessório mentir do mesmo jeito que `assignedToId` mentiria (D17).
 model Accessory {
   id   String @id @default(uuid()) @db.Uuid
@@ -1919,7 +1919,7 @@ model Accessory {
 // (D33): o saldo do almoxarifado não pode depender da escala do RH. Quem
 // responde por ela são os ocupantes abertos daquele posto, resolvidos na
 // leitura — e posto sem ocupante resolve para `[]`, que é o *posto vago* do
-// MODELO-POSSE.md aplicado ao estoque, não um bug.
+// docs/referencia/modelo-de-posse.md aplicado ao estoque, não um bug.
 model AccessoryCheckout {
   id          String @id @default(uuid()) @db.Uuid
   accessoryId String @db.Uuid
@@ -2158,7 +2158,7 @@ model ComponentAsset {
 }
 
 // ============================================================================
-// MOVIMENTAÇÃO DE ESTOQUE — docs/FASE-5-PLANO-ITAM.md, Etapa D
+// MOVIMENTAÇÃO DE ESTOQUE — docs/historico/fase-05-estoque.md, Etapa D
 // ============================================================================
 
 enum StockItemType {
@@ -2372,7 +2372,7 @@ model LicenseSeatCheckout {
 }
 
 // ============================================================================
-// CONVERGÊNCIA RMM × ITAM — docs/FASE-7-PLANO-ITAM.md (D45–D51, D95–D103)
+// CONVERGÊNCIA RMM × ITAM — docs/historico/fase-07-convergencia-rmm-itam.md (D45–D51, D95–D103)
 //
 // O `Endpoint` sabe o que a máquina É; o `Asset` sabe o que a empresa COMPROU e
 // de quem cobra. Tudo aqui existe para ligar os dois SEM FUNDI-LOS (D45) e para
@@ -2660,7 +2660,7 @@ model AssetUsageDaily {
 
 // ============================================================================
 // CICLO DE VIDA — o que acontece com o ativo DEPOIS de ele existir e estar
-// entregue (docs/FASE-8-PLANO-ITAM.md)
+// entregue (docs/historico/fase-08-ciclo-de-vida.md)
 //
 // As três tabelas desta seção têm um traço em comum e ele explica o resto:
 // NENHUMA TEM `deletedAt`. Histórico de serviço, conferência física e aviso
@@ -2868,7 +2868,7 @@ model Alert {
 }
 
 // ============================================================================
-// IMPORTAÇÃO DE CSV — o dado ENTRANDO (docs/FASE-10-PLANO-ITAM.md, Etapa D)
+// IMPORTAÇÃO DE CSV — o dado ENTRANDO (docs/historico/fase-10-etiquetas-relatorios-importacao.md, Etapa D)
 //
 // DUAS TABELAS, E A SEGUNDA É A QUE IMPORTA. `Import` é o cabeçalho (arquivo,
 // alvo, mapeamento, totais); `ImportRow` é uma linha do CSV com o que aconteceu

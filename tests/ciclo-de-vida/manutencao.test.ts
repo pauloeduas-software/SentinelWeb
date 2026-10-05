@@ -6,7 +6,7 @@ import {
   diasAtras, idsDoSeed,
 } from '../helpers/fixtures';
 
-// O HISTÓRICO DE SERVIÇO — docs/FASE-8-PLANO-ITAM.md, Etapa A.
+// O HISTÓRICO DE SERVIÇO — docs/historico/fase-08-ciclo-de-vida.md, Etapa A.
 //
 // O QUE ESTA SUÍTE EXISTE PARA IMPEDIR são três coisas que falhariam em silêncio:
 //

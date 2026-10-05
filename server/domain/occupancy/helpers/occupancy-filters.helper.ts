@@ -5,7 +5,7 @@ import type { Prisma } from '@prisma/client';
  *
  * `current` — quem ocupa o posto AGORA (`endedAt IS NULL`). É o padrão porque é
  * a pergunta da operação e a que a Camada 3 usa para resolver responsáveis
- * (docs/MODELO-POSSE.md).
+ * (docs/referencia/modelo-de-posse.md).
  *
  * `all` — o histórico inteiro, aberto e encerrado. Existe porque encerrar não é
  * apagar: "quem respondia pela Mesa 1 em março?" precisa continuar respondível,

@@ -40,7 +40,7 @@ export interface AlertasDeEstoque {
    *
    * Não é erro e nunca foi recusado na entrega: preparar a mesa antes de a
    * pessoa chegar é o caso real. O que a lista diz é que ninguém responde por
-   * aquela unidade — é o *posto vago* do docs/MODELO-POSSE.md aplicado ao
+   * aquela unidade — é o *posto vago* do docs/referencia/modelo-de-posse.md aplicado ao
    * estoque, e o candidato natural a voltar para o almoxarifado.
    *
    * Só ACESSÓRIO aparece aqui: é o único dos três cujo alvo pode ser um posto.

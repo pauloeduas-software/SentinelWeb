@@ -1,7 +1,7 @@
 import { Download, Printer, Save, ScanLine } from 'lucide-react';
 import { useEtiquetas } from './hooks/useEtiquetas';
 
-// AS ETIQUETAS (docs/FASE-10-PLANO-ITAM.md, Etapa G).
+// AS ETIQUETAS (docs/historico/fase-10-etiquetas-relatorios-importacao.md, Etapa G).
 //
 // A PRÉVIA É O PDF DE VERDADE, renderizada pela MESMA função da impressão — um
 // desenho aproximado em HTML discordaria do arquivo, e o objetivo declarado da

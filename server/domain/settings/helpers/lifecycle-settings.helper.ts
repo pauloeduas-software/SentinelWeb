@@ -11,7 +11,7 @@ import { APP_SETTING_ID } from './app-setting.helper';
 // relatório (corte de auditoria), o job de alertas (limiares, hora, fuso) e a
 // reconciliação (o fuso do turno, D123). Se ela morasse no domínio de alerta, o
 // relatório importaria `alert` para descobrir de quanto em quanto tempo um ativo
-// deve ser conferido, que é uma seta que o ARQUITETURA.md não desenha.
+// deve ser conferido, que é uma seta que o docs/referencia/arquitetura.md não desenha.
 
 export interface ConfiguracaoDoCicloDeVida {
   alertsEnabled: boolean;

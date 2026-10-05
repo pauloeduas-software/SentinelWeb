@@ -161,7 +161,7 @@ export async function updateAsset(id: string, data: UpdateAssetData, actorId: st
         locationId: data.locationId,
         supplierId: data.supplierId,
         // `assignedToId` NÃO está aqui de propósito: quem escreve nele é só o
-        // checkout/checkin (docs/MODELO-POSSE.md). Continua em
+        // checkout/checkin (docs/referencia/modelo-de-posse.md). Continua em
         // `CAMPOS_AUDITADOS` acima — o checkout grava, e o diff precisa pegar.
         orderNumber: data.orderNumber,
         purchaseDate: data.purchaseDate,

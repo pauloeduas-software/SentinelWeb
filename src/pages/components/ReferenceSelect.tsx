@@ -12,7 +12,7 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue';
 // proíbem. Um componente por campo resolve: cada instância faz a sua chamada, e
 // montar/desmontar ao trocar de aba é o caminho normal do React.
 //
-// Continua sem falar HTTP: usa a query do domínio, como manda o ARQUITETURA.md.
+// Continua sem falar HTTP: usa a query do domínio, como manda o docs/referencia/arquitetura.md.
 
 /**
  * O TETO DO `/options` NO SERVIDOR, repetido aqui de propósito.

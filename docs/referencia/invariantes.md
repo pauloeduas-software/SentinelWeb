@@ -2,7 +2,7 @@
 
 > Fatos que **nunca** podem ser falsos no banco, e onde cada um é defendido.
 >
-> Complementa o [`MODELO-POSSE.md`](./MODELO-POSSE.md), que diz *o que* o modelo
+> Complementa o [`modelo-de-posse.md`](modelo-de-posse.md), que diz *o que* o modelo
 > significa. Esta página diz *o que o sistema recusa* para que o significado
 > continue verdadeiro.
 
@@ -16,7 +16,7 @@
 | precisa valer contra **corrida** entre duas requisições | precisa de uma **mensagem que ensina**, não de um 409 genérico |
 | precisa valer para **qualquer escritor** — seed, `psql`, script de migração | depende de estado anterior (*mudou de X para Y?*) |
 
-O critério de desempate é o do `MODELO-POSSE.md`: *a regra vive no banco, não na
+O critério de desempate é o do `modelo-de-posse.md`: *a regra vive no banco, não na
 memória de quem escreve a próxima query*. Quando as duas colunas se aplicam, é o
 banco que garante e a aplicação que **explica** — a aplicação checa antes para
 dar a mensagem boa, o índice fica atrás para pegar a corrida.
@@ -543,7 +543,7 @@ caminho.
 A saída é a do slug: **criar outro campo**. E a contagem que sustenta o 409 usa
 `?` do Postgres em SQL cru, porque o `path`/`not: DbNull` do Prisma tipado não
 alcança o índice GIN — ver
-[`FASE-9-PLANO-ITAM.md`](./FASE-9-PLANO-ITAM.md).
+[`../historico/fase-09-campos-customizados.md`](../historico/fase-09-campos-customizados.md).
 
 ---
 
@@ -610,7 +610,7 @@ explicitamente, em vez de confiar na FK.
 - **`Asset.assignedToId` bate com a `Assignment` aberta.** É *cache*, não
   invariante: quem escreve nele é só o checkout/checkin, e ele saiu do
   `createAssetSchema`/`updateAssetSchema` justamente para que não exista um
-  segundo escritor com quem divergir (`MODELO-POSSE.md`). A defesa é **não ter a
+  segundo escritor com quem divergir (`modelo-de-posse.md`). A defesa é **não ter a
   operação**, não ter uma checagem.
 - **`qty` de um item de estoque só muda pelo `adjust-quantity`.** Mesmo caso, uma
   fase depois: a chave **não é declarada** no `strictObject` do schema de edição,
@@ -667,13 +667,11 @@ explicitamente, em vez de confiar na FK.
   senão ele cairia na primeira opção e o dado do cliente seria trocado por um
   default no primeiro render. É o D60 outra vez.
 
-## Acrescentar uma invariante
+---
 
-1. Decida a coluna da tabela lá em cima. Na dúvida entre as duas: **banco**.
-2. Se for de aplicação, ela mora no use-case **dentro da transação** de quem
-   grava, nunca no controller — o controller não é o único caminho até o dado.
-3. Escreva a mensagem antes do código. Se a mensagem não ensina o que fazer em
-   seguida, a regra ainda não está entendida.
-4. Acrescente a linha na tabela do começo do arquivo — e corrija o número no
-   título dela. Referir-se a ela por "As onze" era o que fazia esta instrução
-   apontar para um título que não existia mais a cada fase.
+## Para acrescentar uma
+
+O passo a passo está em
+[`../guias/acrescentar-uma-invariante.md`](../guias/acrescentar-uma-invariante.md) — incluindo a
+regra de corrigir o número no título desta página, que é o que mantinha a instrução apontando
+para um título que não existia mais a cada fase.

@@ -48,7 +48,7 @@ interface LinhaSimulada {
  * O motivo que vai para a linha do relatório.
  *
  * Só `AppError` tem texto escrito para ser lido por gente — é a regra do
- * `ARQUITETURA.md`, e a mesma escolha do `motivoDaRecusa` da entrega em massa
+ * `docs/referencia/arquitetura.md`, e a mesma escolha do `motivoDaRecusa` da entrega em massa
  * (D31). Qualquer outra coisa vira uma frase genérica AQUI, e o erro completo
  * vai para o log com o número da linha, para ser depurável depois.
  */
