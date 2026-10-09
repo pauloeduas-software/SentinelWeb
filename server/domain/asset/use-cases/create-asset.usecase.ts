@@ -3,7 +3,6 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { nextAssetTag } from '../../settings/use-cases/app-settings.usecase';
-import { calcularDatas } from '../helpers/asset-dates.helper';
 import { ASSET_SELECT } from '../helpers/asset-select.helper';
 import { assertEtiquetaESerieLivres } from './assert-unique-asset.usecase';
 
@@ -21,10 +20,6 @@ export interface CreateAssetData {
   orderNumber?: string | null;
   purchaseDate?: Date | null;
   purchaseCost?: string | null;
-  warrantyMonths?: number | null;
-  eolMonths?: number | null;
-  eolDate?: Date | null;
-  eolExplicit?: boolean;
   /** Campo customizado: `slug` → valor cru. Validado no use-case, não na borda. */
 }
 
@@ -35,7 +30,7 @@ export async function createAsset(data: CreateAssetData, actorId: string | null)
   return prisma.$transaction(async (tx) => {
     const modelo = await tx.assetModel.findUnique({
       where: { id: data.modelId },
-      select: { eolMonths: true },
+      select: { id: true },
     });
     if (!modelo) throw new AppError('Modelo não encontrado.', 404);
 
@@ -50,18 +45,6 @@ export async function createAsset(data: CreateAssetData, actorId: string | null)
     // gerá-lo em dois lugares conforme o payload seria a pior forma de economizar
     // um `randomUUID`.
     const id = randomUUID();
-
-    // A vida útil desce do modelo quando o ativo não define a sua: é o modelo
-    // que sabe que um notebook dura 48 meses.
-    const eolMonths = data.eolMonths ?? modelo.eolMonths ?? null;
-
-    const { warrantyExpiresAt, eolDate } = calcularDatas({
-      purchaseDate: data.purchaseDate,
-      warrantyMonths: data.warrantyMonths,
-      eolMonths,
-      eolExplicit: data.eolExplicit,
-      eolDate: data.eolDate,
-    });
 
     const ativo = await tx.asset.create({
       data: {
@@ -83,11 +66,6 @@ export async function createAsset(data: CreateAssetData, actorId: string | null)
         orderNumber: data.orderNumber ?? null,
         purchaseDate: data.purchaseDate ?? null,
         purchaseCost: data.purchaseCost ?? null,
-        warrantyMonths: data.warrantyMonths ?? null,
-        warrantyExpiresAt,
-        eolMonths,
-        eolDate,
-        eolExplicit: data.eolExplicit ?? false,
         // Autoria (D26). Duas colunas SÓ aqui, para a tela de detalhe não
         // consultar o `ActivityLog` por linha. `createdById` nunca muda depois.
         createdById: actorId,

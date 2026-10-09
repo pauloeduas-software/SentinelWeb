@@ -7,7 +7,6 @@ import ComponentsTab from './components/ComponentsTab';
 import LicensesTab from './components/LicensesTab';
 import MaquinaTab from './components/MaquinaTab';
 import DetalhesTab from './components/DetalhesTab';
-import FilesTab from './components/FilesTab';
 import HistoryTab from './components/HistoryTab';
 import PosseTab from './components/PosseTab';
 import RetireModal from './components/RetireModal';
@@ -34,8 +33,6 @@ export default function AssetDetailPage() {
     componentes, componentesPendentes, handleRetirarComponente,
     licencas, licencasPendentes,
     maquina, maquinaPendente, desvinculando, handleDesvincular,
-    anexos, anexosPendentes, enviandoArquivo, erroDeArquivo, temImagem,
-    handleAnexar, handleExcluirAnexo, handleTrocarImagem, handleRemoverImagem,
     modal, abrirEdicao, abrirClone, abrirPosse, abrirDescomissionar, fecharModal,
     handleSubmit, handleEntregar, handleDevolver, handleDescomissionar, handleReverterSaida,
     handleDelete,
@@ -126,7 +123,6 @@ export default function AssetDetailPage() {
           <PosseTab
             posse={asset.posse}
             assignments={assignments}
-            escalonamento={asset.escalonamento ?? null}
             carregando={possePendente}
             onAbrirOperacao={abrirPosse}
           />
@@ -161,21 +157,6 @@ export default function AssetDetailPage() {
         {/* As abas de fase futura são desabilitadas na barra; este ramo existe
             para a tela continuar íntegra se alguma delas for aberta por outro
             caminho. */}
-        {aba === 'arquivos' && (
-          <FilesTab
-            assetId={asset.id}
-            temImagem={temImagem}
-            anexos={anexos}
-            carregando={anexosPendentes}
-            enviando={enviandoArquivo}
-            erro={erroDeArquivo}
-            onAnexar={handleAnexar}
-            onExcluirAnexo={handleExcluirAnexo}
-            onTrocarImagem={handleTrocarImagem}
-            onRemoverImagem={handleRemoverImagem}
-          />
-        )}
-
         {abaAtual?.fase && <AbaFutura rotulo={abaAtual.rotulo} fase={abaAtual.fase} />}
       </div>
 

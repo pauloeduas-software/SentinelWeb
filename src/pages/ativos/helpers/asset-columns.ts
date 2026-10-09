@@ -34,47 +34,27 @@ export interface ColunaDeAtivo {
    * sem nome, e o jeito de voltar atrás seria adivinhar qual linha é qual.
    */
   fixa?: boolean;
-  /**
-   * Os tokens do EXPORT que esta coluna da tela significa. Omitido, é o próprio.
-   *
-   * ═════════════════════════════════════════════════════════════════════════
-   * POR QUE A TRADUÇÃO EXISTE, E POR QUE ELA MORA AQUI.
-   *
-   * As duas listas do D71 não são a mesma lista, e não deveriam ser: uma CÉLULA
-   * da tela costuma carregar dois fatos — "Compra" mostra o custo com a data
-   * embaixo, "Etiqueta" mostra a série embaixo —, e numa PLANILHA isso são duas
-   * colunas, porque ninguém soma uma coluna que tem data e dinheiro juntos.
-   *
-   * Mandar o token da tela cru para `/api/assets/export` devolveria 422 em
-   * `purchase`, `warranty` e `eol`. O 422 é o comportamento certo do servidor
-   * (ele não conhece `purchase`), e a tradução é trabalho da interface — que é
-   * quem sabe que a célula "Compra" significa duas colunas no arquivo.
-   * ═════════════════════════════════════════════════════════════════════════
-   */
-  exporta?: readonly string[];
 }
 
 export const COLUNAS_DE_ATIVO: readonly ColunaDeAtivo[] = [
   // A célula da etiqueta mostra a SÉRIE embaixo; no arquivo elas são duas
   // colunas, porque é por uma delas que se procura e pela outra que se confere.
-  { token: 'assetTag', rotulo: 'Etiqueta', padrao: true, fixa: true, exporta: ['assetTag', 'serial'] },
+  { token: 'assetTag', rotulo: 'Etiqueta', padrao: true, fixa: true },
   // A célula do modelo mostra o FABRICANTE embaixo, pelo mesmo motivo.
-  { token: 'model', rotulo: 'Modelo', padrao: true, exporta: ['model', 'manufacturer'] },
+  { token: 'model', rotulo: 'Modelo', padrao: true },
   { token: 'category', rotulo: 'Categoria', padrao: true },
   { token: 'status', rotulo: 'Status', padrao: true },
   { token: 'location', rotulo: 'Localização', padrao: true },
   { token: 'responsible', rotulo: 'Responsável', padrao: true },
   // Custo e data juntos na tela; separados no arquivo, porque ninguém soma uma
   // coluna com data e dinheiro dentro.
-  { token: 'purchase', rotulo: 'Compra', padrao: true, exporta: ['purchaseDate', 'purchaseCost'] },
+  { token: 'purchase', rotulo: 'Compra', padrao: true },
 
   // As que a tela não mostrava, e que o payload da listagem JÁ TRAZ. Nenhuma
   // delas custa uma consulta a mais: o `ASSET_SELECT` do servidor é o mesmo.
   { token: 'name', rotulo: 'Nome', padrao: false },
   { token: 'supplier', rotulo: 'Fornecedor', padrao: false },
   { token: 'orderNumber', rotulo: 'Nº do pedido', padrao: false },
-  { token: 'warranty', rotulo: 'Garantia', padrao: false, exporta: ['warrantyExpiresAt'] },
-  { token: 'eol', rotulo: 'Fim de vida', padrao: false, exporta: ['eolDate'] },
 ];
 
 /** O conjunto que a preferência vazia significa. */
@@ -96,21 +76,6 @@ export const COLUNAS_FIXAS: string[] = COLUNAS_DE_ATIVO
  * coluna que o cabeçalho não desenha — e, pior, a FIXA poderia faltar numa
  * preferência gravada por uma versão antiga.
  */
-/**
- * Os tokens que o EXPORT recebe, a partir do que a tela está mostrando.
- *
- * Na ordem do catálogo, sem repetição: é a ordem em que as colunas saem no
- * arquivo, e é a ordem em que a tela as mostra — quem exporta para conferir
- * contra a tela não quer reordenar nada.
- */
-export function tokensDeExport(visiveis: readonly string[]): string[] {
-  const tokens = COLUNAS_DE_ATIVO
-    .filter((coluna) => visiveis.includes(coluna.token))
-    .flatMap((coluna) => coluna.exporta ?? [coluna.token]);
-
-  return [...new Set(tokens)];
-}
-
 export function colunasVisiveis(preferencia: readonly string[]): string[] {
   const escolhidas = new Set([...preferencia, ...COLUNAS_FIXAS]);
   return COLUNAS_DE_ATIVO.filter((coluna) => escolhidas.has(coluna.token)).map((c) => c.token);

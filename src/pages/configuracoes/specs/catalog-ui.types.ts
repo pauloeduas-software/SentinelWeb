@@ -56,7 +56,7 @@ export interface CampoSpec {
 }
 
 export type RenderColuna =
-  | 'texto' | 'cor' | 'enum' | 'relacao' | 'booleano' | 'meses' | 'moeda'
+  | 'texto' | 'cor' | 'enum' | 'relacao' | 'booleano' | 'moeda'
   // `contagem` lê um agregado do `_count` do servidor — quantos campos um
   // conjunto tem (F9). Não é coluna da tabela: é conta, e por isso não entra no
   // `audited` da spec do servidor.

@@ -65,24 +65,6 @@ export const uuidOpcional = (rotulo: string) =>
     .transform((valor) => (valor === undefined ? undefined : valor || null))
     .pipe(z.uuid(`${rotulo}: identificador inválido`).nullish());
 
-/**
- * Número de meses opcional.
- *
- * O `preprocess` não é zelo: `z.coerce.number()` roda `Number('')`, que é **0**.
- * Sem ele, deixar "vida útil" em branco no formulário gravaria `eolMonths = 0`
- * — ou seja, "já venceu" — em vez de `null`, e a data de EOL calculada a partir
- * disso sairia errada sem ninguém ver erro nenhum. Testado.
- */
-export const mesesOpcional = (rotulo: string) =>
-  z.preprocess(
-    (valor) => (valor === '' ? null : valor),
-    z.coerce.number(`${rotulo} deve ser um número`)
-      .int(`${rotulo} deve ser um número inteiro`)
-      .min(0, `${rotulo} não pode ser negativo`)
-      .max(1200, `${rotulo}: máximo de 1200 meses`)
-      .nullish(),
-  );
-
 export const mesesObrigatorio = (rotulo: string) =>
   z.coerce.number(`${rotulo} deve ser um número`)
     .int(`${rotulo} deve ser um número inteiro`)

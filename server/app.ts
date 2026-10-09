@@ -7,7 +7,6 @@ import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
-import multipart from '@fastify/multipart';
 
 import { getJwtSecret, isProduction } from './core/config/env';
 import { getCorsOrigins } from './core/config/cors';
@@ -35,9 +34,6 @@ import { OccupancyMaestro } from './domain/occupancy/occupancy.maestro';
 import { WorkstationMaestro } from './domain/workstation/workstation.maestro';
 import { StockMaestro } from './domain/stock/stock.maestro';
 import { LicenseMaestro } from './domain/license/license.maestro';
-import { AttachmentMaestro } from './domain/attachment/attachment.maestro';
-import { ReportMaestro } from './domain/report/report.maestro';
-import { TAMANHO_MAXIMO_BYTES } from './core/storage/mime';
 import { buildReadinessReport, checkDependencies } from './core/lifecycle/health';
 import { countAgentsOnline } from './domain/agent/agent.registry';
 
@@ -126,18 +122,6 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   await server.register(websocket);
 
-  // Upload de arquivo. Os tetos aqui são a PRIMEIRA barreira e são do
-  // transporte: eles cortam antes de o corpo inteiro chegar à memória. A
-  // segunda barreira é o controller, que transforma o corte em mensagem — sem
-  // ela, um PDF truncado seria gravado como se estivesse inteiro.
-  //
-  // `files: 1` porque toda rota daqui recebe UM arquivo: anexo é uma chamada
-  // por arquivo, e imagem é um campo. Um formulário com dez arquivos é pedido
-  // que nenhuma rota atende, e recusá-lo no transporte é mais barato que no
-  // handler.
-  await server.register(multipart, {
-    limits: { fileSize: TAMANHO_MAXIMO_BYTES, files: 1, fields: 10 },
-  });
 
   // O cookie vem ANTES do jwt: é o @fastify/cookie que faz `request.cookies`
   // existir, e sem ele o `cookie:` abaixo não encontraria token nenhum.
@@ -224,9 +208,6 @@ export async function buildApp(): Promise<FastifyInstance> {
   // `/api/assets/:id`. Registrar na ordem em que o conceito nasce é o que mantém
   // o arquivo legível (docs/historico/fase-07-convergencia-rmm-itam.md).
   await ReconciliationMaestro.setupRoutes(server);
-  // Relatório depois da convergência: ele só LÊ o que os outros escrevem.
-  await ReportMaestro.setupRoutes(server);
-  await AttachmentMaestro.setupRoutes(server);
   await AgentMaestro.setupRoutes(server);
 
   // Liveness: o processo está de pé e respondendo. É o health check do

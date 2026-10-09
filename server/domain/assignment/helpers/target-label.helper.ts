@@ -18,7 +18,7 @@ interface AlvoDaPosse {
  * DEVOLVE `null` QUANDO O ALVO NÃO VEIO, e não um texto de reserva. É o que o
  * histórico precisa: com um rótulo sempre preenchido, a aba escreveria
  * "Entregue para colaborador" no lugar de "Entregue" — uma frase que parece
- * dado e não é. Quem quiser texto de reserva pede por `rotuloDoAlvoOuPadrao`.
+ * dado e não é.
  *
  * O alvo só vem nulo quando o `select` de quem chamou não o trouxe: as três FKs
  * são garantidas pelo CHECK de coerência no banco.
@@ -30,19 +30,4 @@ export function rotuloDoAlvo(assignment: AlvoDaPosse): string | null {
 
   const { assetTag, name } = assignment.targetAsset;
   return name ? `${assetTag} — ${name}` : assetTag;
-}
-
-/**
- * O mesmo rótulo, com texto de reserva por tipo de alvo.
- *
- * Para o CORPO DO E-MAIL, onde a frase precisa fechar: "entregue para " seguido
- * de nada é pior do que "entregue para o colaborador".
- */
-export function rotuloDoAlvoOuPadrao(assignment: AlvoDaPosse): string {
-  const rotulo = rotuloDoAlvo(assignment);
-  if (rotulo) return rotulo;
-
-  if (assignment.targetType === 'USER') return 'o colaborador';
-  if (assignment.targetType === 'LOCATION') return 'a localização';
-  return 'o ativo detentor';
 }

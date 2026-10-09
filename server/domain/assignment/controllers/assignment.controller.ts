@@ -1,12 +1,10 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { idParamSchema } from '../../shared/params.schema';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
-import { bulkCheckoutSchema, checkinSchema, checkoutSchema } from '../schemas/assignment.schema';
+import { checkinSchema, checkoutSchema } from '../schemas/assignment.schema';
 import { checkoutAsset } from '../use-cases/checkout-asset.usecase';
-import { bulkCheckout } from '../use-cases/bulk-checkout.usecase';
 import { checkinAsset } from '../use-cases/checkin-asset.usecase';
 import { listAssetAssignments } from '../use-cases/list-asset-assignments.usecase';
-import { listOverdueAssignments } from '../use-cases/list-overdue.usecase';
 import { listUserHoldings } from '../use-cases/list-user-holdings.usecase';
 
 // Só HTTP. Sem try/catch: o `parse` do schema rejeita e a rejeição cai no
@@ -24,22 +22,6 @@ export const assignmentController = {
     // entrega em `Assignment.checkoutById` (D25).
     const resultado = await checkoutAsset(id, data, atorDaRequisicao(request));
     return reply.status(201).send(resultado);
-  },
-
-  /**
-   * 200, e NÃO 201: a entrega em massa não cria "um" recurso — ela devolve um
-   * RELATÓRIO de N entregas independentes, em que parte pode ter sido recusada
-   * (D31). Um 201 com `Location` apontando para quê? E um 207 Multi-Status
-   * obrigaria todo cliente a saber ler um formato que só esta rota usa: o
-   * relatório no corpo diz a mesma coisa em português.
-   *
-   * O status também não vira 4xx quando TODAS falham: o pedido foi processado,
-   * e o que o operador precisa ver é a lista de motivos — que um 409 genérico
-   * esconderia atrás de uma frase só.
-   */
-  async bulkCheckout(request: FastifyRequest) {
-    const data = bulkCheckoutSchema.parse(request.body ?? {});
-    return bulkCheckout(data, atorDaRequisicao(request));
   },
 
   async checkin(request: FastifyRequest) {
@@ -63,7 +45,4 @@ export const assignmentController = {
   // vencido (`docs/historico/fase-04-posse.md`, Etapa D), não uma preferência de quem
   // consulta. Filtro por pessoa ou por local entraria quando existir a tela que
   // o peça — e aí como parâmetro validado, nunca como `where` vindo do cliente.
-  async overdue() {
-    return listOverdueAssignments();
-  },
 };

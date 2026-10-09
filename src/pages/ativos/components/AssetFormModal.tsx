@@ -59,10 +59,6 @@ function valoresIniciais(asset: Asset | null, clonar: boolean) {
     orderNumber: asset?.orderNumber ?? '',
     purchaseDate: paraCampoDeData(asset?.purchaseDate),
     purchaseCost: asset?.purchaseCost ?? '',
-    warrantyMonths: asset?.warrantyMonths == null ? '' : String(asset.warrantyMonths),
-    eolMonths: asset?.eolMonths == null ? '' : String(asset.eolMonths),
-    eolDate: paraCampoDeData(asset?.eolDate),
-    eolExplicit: asset?.eolExplicit ?? false,
     byod: asset?.byod ?? false,
     requestable: asset?.requestable ?? false,
     notes: asset?.notes ?? '',
@@ -218,32 +214,6 @@ export default function AssetFormModal({ asset, clonar = false, onClose, onSubmi
               <input inputMode="decimal" value={valores.purchaseCost} onChange={(e) => definir('purchaseCost', e.target.value)} placeholder="Ex: 4599.90" className={CLASSE_CAMPO} />
             </div>
           </Secao>
-
-          <Secao titulo="Prazos">
-            <div className="space-y-1">
-              <label className={ROTULO}>Garantia (meses)</label>
-              <input type="number" min={0} value={valores.warrantyMonths} onChange={(e) => definir('warrantyMonths', e.target.value)} className={CLASSE_CAMPO} />
-            </div>
-            <div className="space-y-1">
-              <label className={ROTULO}>Vida útil (meses)</label>
-              <input type="number" min={0} value={valores.eolMonths} onChange={(e) => definir('eolMonths', e.target.value)} placeholder="herda do modelo" className={CLASSE_CAMPO} />
-            </div>
-            <label className="flex items-center gap-3 cursor-pointer text-text-secondary col-span-2">
-              <input type="checkbox" checked={valores.eolExplicit} onChange={(e) => definir('eolExplicit', e.target.checked)} className="accent-status-success w-4 h-4" />
-              <span className={ROTULO}>Definir a data de fim de vida à mão</span>
-            </label>
-            {valores.eolExplicit && (
-              <div className="space-y-1">
-                <label className={ROTULO}>Fim de vida</label>
-                <input type="date" value={valores.eolDate} onChange={(e) => definir('eolDate', e.target.value)} className={CLASSE_CAMPO} />
-              </div>
-            )}
-            <p className="col-span-2 text-text-tertiary text-[10px] leading-relaxed">
-              Vencimento da garantia e fim de vida são calculados a partir da data da compra.
-              Sem data de compra, os dois ficam em branco.
-            </p>
-          </Secao>
-
 
           <Secao titulo="Outros">
             <label className="flex items-center gap-3 cursor-pointer text-text-secondary">

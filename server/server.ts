@@ -7,7 +7,6 @@ import { verificarCanarioDeCriptografia } from './core/crypto/canary';
 import { colunasCifradasDaLicenca } from './domain/license/helpers/coluna-cifrada.helper';
 import { disconnectAllAgents } from './domain/agent/agent.registry';
 import { startZombieCleanerJob, stopZombieCleanerJob } from './domain/endpoint/jobs/zombie-cleaner.job';
-import { startOverdueReminderJob, stopOverdueReminderJob } from './domain/assignment/jobs/overdue-reminder.job';
 import { startReconcileJob, stopReconcileJob } from './domain/reconciliation/jobs/reconcile.job';
 import { buildApp } from './app';
 
@@ -57,17 +56,12 @@ async function bootstrap() {
   // início do processo e consultam esta lista só na hora de encerrar, então um
   // SIGTERM no meio do boot continua sendo tratado.
   onShutdown('job de agentes zumbis', stopZombieCleanerJob);
-  onShutdown('job de lembrete de atraso', stopOverdueReminderJob);
   onShutdown('job de reconciliação', stopReconcileJob);
   onShutdown('conexões de agente', disconnectAllAgents);
   onShutdown('servidor HTTP', () => server.close());
   onShutdown('banco de dados', closeDatabase);
 
   startZombieCleanerJob();
-  // O lembrete de atraso acorda de hora em hora e executa UMA vez por dia — a
-  // janela diária fica em `job_runs` e sobrevive ao deploy (D79). Sem ela, subir
-  // o servidor três vezes numa manhã mandaria três cobranças do mesmo notebook.
-  startOverdueReminderJob();
   // A reconciliação acorda de hora em hora e executa UMA vez por hora (mesma
   // janela do D79, com granularidade diferente). Fora do `app.ts` pelo mesmo
   // motivo do outro: job com `setInterval` dentro de teste é escrita

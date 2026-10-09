@@ -61,10 +61,6 @@ function corpoDoFormularioDeAtivo(sobrescrever: Record<string, unknown> = {}) {
     orderNumber: '',
     purchaseDate: '',
     purchaseCost: '',
-    warrantyMonths: '',
-    eolMonths: '',
-    eolDate: '',
-    eolExplicit: false,
     byod: false,
     requestable: false,
     notes: '',
@@ -103,8 +99,6 @@ describe('POST /api/assets com o corpo literal do AssetFormModal', () => {
     // `Invalid Date`.
     expect(body.purchaseCost).toBeNull();
     expect(body.purchaseDate).toBeNull();
-    expect(body.warrantyMonths).toBeNull();
-    expect(body.eolMonths).toBeNull();
   });
 
   it('não confunde FK vazia com FK inválida', async () => {
@@ -152,7 +146,7 @@ describe('PUT /api/assets/:id com o corpo literal do formulário de edição', (
   it('editar só o nome não apaga o resto nem quebra nas strings vazias', async () => {
     const criado = await api.post<{ id: string; assetTag: string }>(
       '/api/assets',
-      corpoDoFormularioDeAtivo({ serial: 'SN-EDICAO', warrantyMonths: '12', purchaseDate: '2026-01-31' }),
+      corpoDoFormularioDeAtivo({ serial: 'SN-EDICAO', purchaseDate: '2026-01-31' }),
     );
     expect(criado.status).toBe(201);
 
@@ -164,7 +158,6 @@ describe('PUT /api/assets/:id com o corpo literal do formulário de edição', (
         assetTag: criado.body.assetTag,
         serial: 'SN-EDICAO',
         name: 'Nome novo',
-        warrantyMonths: '12',
         purchaseDate: '2026-01-31',
       }),
     });
@@ -174,7 +167,7 @@ describe('PUT /api/assets/:id com o corpo literal do formulário de edição', (
     // O que não foi tocado continua lá: era este o erro mais provável da
     // edição, segundo a auditoria.
     expect(body.serial).toBe('SN-EDICAO');
-    expect(body.warrantyMonths).toBe(12);
+    expect(body.purchaseDate).not.toBeNull();
   });
 });
 

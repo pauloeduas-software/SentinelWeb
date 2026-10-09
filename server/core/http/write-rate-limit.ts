@@ -21,9 +21,6 @@ export const DESTRUCTIVE_RATE_LIMIT: RouteShorthandOptions = {
 // 10/min é folgado para gente (ninguém exporta a mesma lista dez vezes por
 // minuto) e corta script. Ele vale POR ROTA e por IP, então exportar ativos não
 // consome o teto de exportar licenças.
-export const EXPORT_RATE_LIMIT: RouteShorthandOptions = {
-  config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
-};
 
 // O login tem teto próprio porque é a única rota onde a repetição É o ataque.
 //

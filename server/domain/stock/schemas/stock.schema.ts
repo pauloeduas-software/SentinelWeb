@@ -28,7 +28,7 @@ export const quantidadeObrigatoria = (rotulo: string) =>
  * O `preprocess` não é zelo: `z.coerce.number()` roda `Number('')`, que é **0**
  * — e `minQty = 0` significa "alerte quando o disponível ficar abaixo de zero",
  * ou seja, nunca. Deixar o campo em branco no formulário gravaria um piso mudo
- * em vez de `null`. É a mesma armadilha do `mesesOpcional` da F1.
+ * em vez de `null`.
  */
 export const minimoOpcional = z.preprocess(
   (valor) => (valor === '' ? null : valor),

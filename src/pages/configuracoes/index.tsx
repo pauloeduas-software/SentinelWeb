@@ -113,11 +113,7 @@ export default function ConfiguracoesPage() {
           carregando={sistema.carregando}
           salvando={sistema.salvando}
           erro={sistema.erro}
-          urlDaLogo={sistema.urlDaLogo}
-          urlDoFavicon={sistema.urlDoFavicon}
           onSalvar={sistema.onSalvar}
-          onSubirMarca={sistema.onSubirMarca}
-          onLimparMarca={sistema.onLimparMarca}
         />
       ) : (
         <>

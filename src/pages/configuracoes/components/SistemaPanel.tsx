@@ -1,11 +1,11 @@
-import { useRef, useState } from 'react';
-import { Image, Save, Trash2, Upload } from 'lucide-react';
+import { useState } from 'react';
+import { Save } from 'lucide-react';
 import {
   DELIMITADORES_DE_CSV, FORMATOS_DE_DATA,
-  type ConfiguracaoDoSistema, type DelimitadorDeCsv, type FormatoDeData, type MarcaVisual,
+  type ConfiguracaoDoSistema, type DelimitadorDeCsv, type FormatoDeData,
 } from '../../../domain/shared/settings.types';
 
-// A ABA *SISTEMA* (F10, Etapa A) — marca e formato de número, data e moeda.
+// A ABA *SISTEMA* (F10, Etapa A) — formato de número, data e moeda.
 //
 // TINHA um terceiro grupo, a retenção do backup; ele saiu com o backup (D156),
 // porque campo que configura uma rotina que não existe é um campo que mente.
@@ -48,11 +48,7 @@ interface Props {
   carregando: boolean;
   salvando: boolean;
   erro: string | null;
-  urlDaLogo: string | null;
-  urlDoFavicon: string | null;
   onSalvar: (dados: Partial<ConfiguracaoDoSistema>) => void;
-  onSubirMarca: (marca: MarcaVisual, arquivo: File) => void;
-  onLimparMarca: (marca: MarcaVisual) => void;
 }
 
 /**
@@ -69,79 +65,7 @@ interface Props {
  * que continua valendo, em vez de um campo mentindo que a mudança pegou.
  */
 function assinatura(c: ConfiguracaoDoSistema): string {
-  return [c.companyName, c.primaryColor, c.locale, c.dateFormat, c.currency, c.csvDelimiter]
-    .join('·');
-}
-
-function Marca({
-  titulo, ajuda, url, onSubir, onLimpar, salvando,
-}: {
-  titulo: string;
-  ajuda: string;
-  url: string | null;
-  onSubir: (arquivo: File) => void;
-  onLimpar: () => void;
-  salvando: boolean;
-}) {
-  const campo = useRef<HTMLInputElement>(null);
-
-  return (
-    <div className="space-y-2">
-      <span className={ROTULO}>{titulo}</span>
-
-      <div className="flex items-center gap-3">
-        <div className="h-12 w-20 border border-border-sutil flex items-center justify-center bg-bg-base shrink-0">
-          {url ? (
-            // Sem `key` no `src`, trocar a logo não repinta: a URL é a MESMA
-            // (ela aponta para a marca, não para o arquivo), e o navegador
-            // serve a imagem anterior do cache dele. A rota manda `no-store`,
-            // mas o `<img>` já montado não refaz o pedido sozinho.
-            <img key={url} src={url} alt="" className="max-h-10 max-w-[72px] object-contain" />
-          ) : (
-            <Image size={14} className="text-text-tertiary" />
-          )}
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <input
-            ref={campo}
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/gif"
-            className="hidden"
-            onChange={(evento) => {
-              const arquivo = evento.target.files?.[0];
-              if (arquivo) onSubir(arquivo);
-              // Zera o campo: escolher o MESMO arquivo de novo precisa disparar
-              // outro `change`, e sem isto o segundo clique não faz nada.
-              evento.target.value = '';
-            }}
-          />
-
-          <button
-            type="button"
-            disabled={salvando}
-            onClick={() => campo.current?.click()}
-            className="flex items-center gap-2 px-3 py-1.5 border border-border-sutil hover:border-text-secondary text-[10px] uppercase tracking-widest transition-colors disabled:opacity-40"
-          >
-            <Upload size={12} /> Enviar
-          </button>
-
-          {url && (
-            <button
-              type="button"
-              disabled={salvando}
-              onClick={onLimpar}
-              className="flex items-center gap-2 px-3 py-1.5 text-text-tertiary hover:text-status-danger text-[10px] uppercase tracking-widest transition-colors disabled:opacity-40"
-            >
-              <Trash2 size={12} /> Remover
-            </button>
-          )}
-        </div>
-      </div>
-
-      <span className={AJUDA}>{ajuda}</span>
-    </div>
-  );
+  return [c.locale, c.dateFormat, c.currency, c.csvDelimiter].join('·');
 }
 
 function Formulario({ configuracao, salvando, onSalvar }: {
@@ -149,8 +73,6 @@ function Formulario({ configuracao, salvando, onSalvar }: {
   salvando: boolean;
   onSalvar: (dados: Partial<ConfiguracaoDoSistema>) => void;
 }) {
-  const [companyName, setCompanyName] = useState(() => configuracao.companyName);
-  const [primaryColor, setPrimaryColor] = useState(() => configuracao.primaryColor);
   const [locale, setLocale] = useState(() => configuracao.locale);
   const [dateFormat, setDateFormat] = useState<FormatoDeData>(() => configuracao.dateFormat);
   const [currency, setCurrency] = useState(() => configuracao.currency);
@@ -158,8 +80,6 @@ function Formulario({ configuracao, salvando, onSalvar }: {
 
   const handleSalvar = () => {
     onSalvar({
-      companyName,
-      primaryColor,
       locale,
       dateFormat,
       currency,
@@ -173,37 +93,6 @@ function Formulario({ configuracao, salvando, onSalvar }: {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <label className="space-y-1 block">
-          <span className={ROTULO}>Nome da empresa</span>
-          <input
-            type="text" maxLength={200} value={companyName}
-            onChange={(evento) => setCompanyName(evento.target.value)}
-            className={CAMPO}
-          />
-          <span className={AJUDA}>Aparece no cabeçalho do painel e no termo de entrega.</span>
-        </label>
-
-        <label className="space-y-1 block">
-          <span className={ROTULO}>Cor de destaque</span>
-          <div className="flex items-center gap-2">
-            <input
-              type="color" value={primaryColor}
-              onChange={(evento) => setPrimaryColor(evento.target.value)}
-              className="h-8 w-10 bg-bg-base border border-border-sutil p-0.5"
-            />
-            <input
-              type="text" value={primaryColor} maxLength={7}
-              onChange={(evento) => setPrimaryColor(evento.target.value)}
-              className={`${CAMPO} uppercase`}
-            />
-          </div>
-          <span className={AJUDA}>
-            Em <code>#rrggbb</code>. Ela pinta o nome da empresa — e só ele, de propósito:
-            a cor do texto do painel também é o fundo de todo botão, e uma marca escura ali
-            deixaria botão escuro com letra escura.
-          </span>
-        </label>
-
         <label className="space-y-1 block">
           <span className={ROTULO}>Idioma e região</span>
           <select value={locale} onChange={(evento) => setLocale(evento.target.value)} className={CAMPO}>
@@ -269,8 +158,7 @@ function Formulario({ configuracao, salvando, onSalvar }: {
 }
 
 export default function SistemaPanel({
-  configuracao, carregando, salvando, erro, urlDaLogo, urlDoFavicon,
-  onSalvar, onSubirMarca, onLimparMarca,
+  configuracao, carregando, salvando, erro, onSalvar,
 }: Props) {
   if (carregando || !configuracao) {
     return (
@@ -295,25 +183,6 @@ export default function SistemaPanel({
         onSalvar={onSalvar}
       />
 
-      <div className="border-t border-border-sutil pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Marca
-          titulo="Logo"
-          ajuda="PNG, JPG, WEBP ou GIF, até 2 MB. Sai por rota com sessão, como todo arquivo deste sistema — por isso a tela de login não a mostra."
-          url={urlDaLogo}
-          salvando={salvando}
-          onSubir={(arquivo) => onSubirMarca('logo', arquivo)}
-          onLimpar={() => onLimparMarca('logo')}
-        />
-
-        <Marca
-          titulo="Favicon"
-          ajuda="O ícone da aba. Quadrado e pequeno: 32×32 ou 64×64 é o que o navegador usa."
-          url={urlDoFavicon}
-          salvando={salvando}
-          onSubir={(arquivo) => onSubirMarca('favicon', arquivo)}
-          onLimpar={() => onLimparMarca('favicon')}
-        />
-      </div>
     </div>
   );
 }

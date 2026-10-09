@@ -9,9 +9,6 @@ import {
   type CheckinInput, type CheckoutInput,
 } from '../../../../domain/assignment/assignment.queries';
 import {
-  useAssetAttachmentsQuery, useClearImage, useDeleteAttachment, useSetImage, useUploadAttachment,
-} from '../../../../domain/attachment/attachment.queries';
-import {
   useAssetComponentsQuery, useDetachComponent,
 } from '../../../../domain/stock/stock.queries';
 import { useAssetLicensesQuery } from '../../../../domain/license/license.queries';
@@ -71,15 +68,6 @@ export function useAssetDetail() {
 
   const retirarComponente = useDetachComponent();
 
-  // ARQUIVO. Quatro mutações e uma consulta, todas do domínio `attachment`:
-  // esta tela é a única que os usa hoje, mas o transporte fica lá porque
-  // página não fala HTTP (docs/referencia/arquitetura.md).
-  const { data: anexos, isPending: anexosPendentes } = useAssetAttachmentsQuery(id);
-  const anexar = useUploadAttachment();
-  const excluirAnexo = useDeleteAttachment();
-  const trocarImagem = useSetImage();
-  const removerImagem = useClearImage();
-
   /**
    * Retirar uma peça — total ou PARCIAL.
    *
@@ -119,12 +107,6 @@ export function useAssetDetail() {
       alert((falha as Error).message);
     }
   };
-
-  // O erro do upload SOBE para a aba, e não vira `alert`: o 422 do MIME e o 413
-  // do tamanho são recusas que ensinam, e a mensagem vem do servidor.
-  const erroDeArquivo =
-    [anexar.error, excluirAnexo.error, trocarImagem.error, removerImagem.error]
-      .find(Boolean) ?? null;
 
   const fecharModal = () => setModal('nenhum');
 
@@ -227,21 +209,6 @@ export function useAssetDetail() {
       desvincular.mutate(maquina.endpointId);
     },
     handleRetirarComponente,
-
-    // ARQUIVO — a aba Arquivos.
-    anexos: anexos ?? [],
-    anexosPendentes,
-    enviandoArquivo:
-      anexar.isPending || excluirAnexo.isPending || trocarImagem.isPending || removerImagem.isPending,
-    erroDeArquivo: erroDeArquivo ? (erroDeArquivo as Error).message : null,
-    // `imagePath` vem no `ASSET_SELECT` e a tela o usa SÓ como "tem foto ou
-    // não": a URL que ela monta é por id (`/api/images/asset/:id`), nunca o
-    // caminho no disco.
-    temImagem: Boolean(asset?.imagePath),
-    handleAnexar: (file: File) => { if (id) anexar.mutate({ assetId: id, file }); },
-    handleExcluirAnexo: (anexoId: string) => { if (id) excluirAnexo.mutate({ id: anexoId, assetId: id }); },
-    handleTrocarImagem: (file: File) => { if (id) trocarImagem.mutate({ alvo: 'asset', id, file }); },
-    handleRemoverImagem: () => { if (id) removerImagem.mutate({ alvo: 'asset', id }); },
 
     modal,
     abrirEdicao: () => setModal('editar'),

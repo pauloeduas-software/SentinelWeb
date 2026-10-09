@@ -41,7 +41,7 @@ const assentosObrigatorios = z.coerce.number('total de assentos deve ser um núm
  * O `preprocess` não é zelo: `z.coerce.number()` roda `Number('')`, que é **0**
  * — e `minSeats = 0` significa "alerte quando os livres ficarem abaixo de
  * zero", ou seja, nunca. Deixar o campo em branco gravaria um piso mudo em vez
- * de `null`. É a mesma armadilha do `minQty` da F5 e do `mesesOpcional` da F1.
+ * de `null`. É a mesma armadilha do `minQty` da F5.
  */
 const minimoOpcional = z.preprocess(
   (valor) => (valor === '' ? null : valor),

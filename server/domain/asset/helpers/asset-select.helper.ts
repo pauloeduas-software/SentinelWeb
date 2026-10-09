@@ -33,11 +33,6 @@ export const ASSET_SELECT = {
   // Decimal: sai no JSON como STRING.
   purchaseCost: true,
 
-  warrantyMonths: true,
-  warrantyExpiresAt: true,
-  eolMonths: true,
-  eolDate: true,
-  eolExplicit: true,
 
   // DESCOMISSIONAMENTO. Sai na resposta porque a tela precisa mostrar o selo
   // "descomissionado" na linha e na aba Detalhes — e porque, sem ele, a
@@ -47,18 +42,6 @@ export const ASSET_SELECT = {
   // perguntas diferentes e nenhuma substitui a outra (D19, docs/historico/fase-02-ativos.md).
   retiredAt: true,
   retiredReason: true,
-
-  // Foto do ativo. O valor é o caminho relativo no `UPLOAD_DIR`, e a tela o usa
-  // SÓ como "tem imagem ou não" — a URL que ela monta é `/api/images/asset/:id`,
-  // por id.
-  //
-  // O caminho não é credencial nem atalho: NENHUMA rota aceita caminho de
-  // arquivo como parâmetro. Quem serve resolve o caminho a partir do id, dentro
-  // do servidor, depois de conferir a sessão. É por isso que ele pode sair aqui
-  // enquanto `Attachment.path` fica de fora do `ATTACHMENT_SELECT`: lá a lista
-  // tem N linhas e devolver N nomes de arquivo é dar um mapa do diretório sem
-  // ganho nenhum; aqui é um campo que a própria linha já tem.
-  imagePath: true,
 
   // Autoria (D26) — as duas colunas que existem para a tela de detalhe não
   // consultar o `ActivityLog` por linha.
@@ -70,7 +53,7 @@ export const ASSET_SELECT = {
   status: { select: { id: true, name: true, type: true, color: true } },
   model: {
     select: {
-      id: true, name: true, modelNumber: true, eolMonths: true,
+      id: true, name: true, modelNumber: true,
       manufacturer: { select: { id: true, name: true } },
       category: { select: { id: true, name: true, type: true, color: true } },
     },

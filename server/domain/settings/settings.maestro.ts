@@ -31,16 +31,6 @@ export class SettingsMaestro {
     server.get('/api/settings', settingsController.getSystem);
     server.put('/api/settings', WRITE_RATE_LIMIT, settingsController.saveSystem);
 
-    // A MARCA é arquivo, então tem rota própria em `multipart/form-data` — e
-    // SAI POR `/api/` COM SESSÃO, como todo arquivo deste sistema (D84).
-    //
-    // O custo conhecido, escrito aqui para não ser descoberto depois: a TELA DE
-    // LOGIN não mostra a logo, porque ela não tem sessão para pedir o arquivo.
-    // Abrir esta rota resolveria o enfeite e entregaria, de graça, o nome e a
-    // identidade visual da empresa a quem só sabe a URL do painel.
-    server.get('/api/settings/branding/:marca', settingsController.getBranding);
-    server.put('/api/settings/branding/:marca', WRITE_RATE_LIMIT, settingsController.setBranding);
-    server.delete('/api/settings/branding/:marca', WRITE_RATE_LIMIT, settingsController.clearBranding);
 
     logger.info('[Maestro] Rotas de Configuração inicializadas.');
   }

@@ -201,7 +201,6 @@ model User {
   // ainda usa o sistema" é a pergunta que antecede a limpeza de acessos.
   lastLoginAt DateTime?
 
-
   // ─────────────────────────────────────────────────────────────────────────
   // IDENTIDADE DO COLABORADOR (F11, Etapa E).
   //
@@ -345,7 +344,6 @@ model Department {
   @@map("departments")
 }
 
-
 model ActivityLog {
   id         String   @id @default(uuid()) @db.Uuid
   entityType String
@@ -359,9 +357,6 @@ model ActivityLog {
   @@index([createdAt])
   @@map("activity_logs")
 }
-
-
-
 
 // ============================================================================
 // CATÁLOGO — as tabelas que o Snipe-IT chama de *Settings* (docs/historico/fase-01-catalogo-e-ativo.md)
@@ -429,7 +424,6 @@ enum RetiredReason {
   GARANTIA
 }
 
-
 model Category {
   id   String       @id @default(uuid()) @db.Uuid
   name String
@@ -442,11 +436,6 @@ model Category {
   requireAcceptance Boolean @default(false)
   eulaText          String?
   checkinEmail      Boolean @default(false)
-
-  // Imagem. Só o CAMINHO, nunca os bytes — quem guarda o arquivo é o
-  // `UPLOAD_DIR` (server/core/storage/). BLOB no banco dobra o tamanho do dump
-  // e faz cada leitura carregar megabytes que ninguém pediu.
-  imagePath String?
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -503,11 +492,6 @@ model Manufacturer {
   supportEmail String?
   supportUrl   String?
 
-  // Imagem. Só o CAMINHO, nunca os bytes — quem guarda o arquivo é o
-  // `UPLOAD_DIR` (server/core/storage/). BLOB no banco dobra o tamanho do dump
-  // e faz cada leitura carregar megabytes que ninguém pediu.
-  imagePath String?
-
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   assetModels AssetModel[]
@@ -524,8 +508,6 @@ model AssetModel {
   id   String @id @default(uuid()) @db.Uuid
   name String
 
-  // Vida útil em meses. O ativo herda daqui e pode sobrescrever (F1/G).
-  eolMonths   Int?
   modelNumber String?
   notes       String?
 
@@ -541,11 +523,6 @@ model AssetModel {
   //
   // Nulável de propósito: a maioria dos modelos nunca terá regra, e valor
   // contábil sem regra é `null`, nunca zero (D55).
-
-  // Imagem. Só o CAMINHO, nunca os bytes — quem guarda o arquivo é o
-  // `UPLOAD_DIR` (server/core/storage/). BLOB no banco dobra o tamanho do dump
-  // e faz cada leitura carregar megabytes que ninguém pediu.
-  imagePath String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -680,12 +657,6 @@ model Location {
   @@map("locations")
 }
 
-
-
-
-
-
-
 // ============================================================================
 // O ATIVO — o coração do ITAM (docs/historico/fase-01-catalogo-e-ativo.md, Etapa G)
 // ============================================================================
@@ -746,15 +717,6 @@ model Asset {
   // Decimal, nunca Float. Sai no JSON como string.
   purchaseCost Decimal?  @db.Decimal(12, 2)
 
-  // `warrantyExpiresAt` e `eolDate` são CALCULADAS no save, a partir dos meses e
-  // da data de compra. `eolExplicit` marca que alguém sobrescreveu a data à mão
-  // e que o cálculo não deve mais mexer nela.
-  warrantyMonths    Int?
-  warrantyExpiresAt DateTime?
-  eolMonths         Int?
-  eolDate           DateTime?
-  eolExplicit       Boolean   @default(false)
-
   // DESCOMISSIONAMENTO — o ativo saiu do parque, e por quê.
   //
   // São TRÊS colunas diferentes e nenhuma substitui a outra (D19):
@@ -765,9 +727,6 @@ model Asset {
   // lixeira é um erro de digitação e não deveria ter existido.
   retiredAt     DateTime?
   retiredReason RetiredReason?
-
-  // Foto do equipamento. Só o CAMINHO — ver o mesmo campo no catálogo.
-  imagePath String?
 
   // QUEM cadastrou e QUEM editou por último.
   //
@@ -796,8 +755,6 @@ model Asset {
   assignments     Assignment[] @relation("AssignmentAsset")
   // As posses em que este ativo é o DETENTOR (a dock que segura o notebook).
   heldAssignments Assignment[] @relation("AssignmentTargetAsset")
-
-  attachments Attachment[]
 
   // O QUE ESTÁ DENTRO DESTE ATIVO — a primeira ponte real entre estoque e
   // ativo (F5). O pente de RAM não tem etiqueta própria, então é `Component`;
@@ -955,14 +912,12 @@ model Assignment {
   targetAsset    Asset?    @relation("AssignmentTargetAsset", fields: [targetAssetId], references: [id], onDelete: Restrict)
   targetLocation Location? @relation(fields: [targetLocationId], references: [id], onDelete: Restrict)
 
-
   @@index([assetId, checkinAt])
   @@index([targetUserId, checkinAt])
   @@index([targetLocationId, checkinAt])
   @@index([targetAssetId, checkinAt])
   @@map("assignments")
 }
-
 
 model LocationOccupant {
   id         String @id @default(uuid()) @db.Uuid
@@ -989,55 +944,6 @@ model LocationOccupant {
   @@index([userId, endedAt])
   @@map("location_occupants")
 }
-
-// Configuração global do sistema — uma linha só.
-//
-// O id é fixo (`singleton`) em vez de uuid: é o que impede uma segunda linha de
-// existir sem precisar de trigger nem de constraint de contagem.
-// ============================================================================
-// ARQUIVO — docs/FECHAMENTO-F2-F4-PLANO-ITAM.md (D83, D84)
-// ============================================================================
-
-// Anexo de um ativo: nota fiscal, contrato, foto, laudo.
-//
-// A LINHA mora aqui; os BYTES moram no `UPLOAD_DIR` e quem os grava é
-// `server/core/storage/` (D83) — que não sabe o que é um anexo, e por isso
-// serve também à assinatura e ao PDF do termo, que NÃO são anexos de ativo.
-//
-// FK DIRETA PARA `Asset`, não polimórfica. Quando licença (F6) e manutenção
-// (F8) quiserem anexo, é uma coluna nulável a mais e um discriminante — o
-// padrão do `Assignment`, aditivo. Nascer polimórfico agora é pagar
-// complexidade por dois donos que não existem.
-//
-// `onDelete: Cascade` é o DELETE FÍSICO, que hoje não tem rota: o ativo tem
-// soft delete, e mandá-lo para a lixeira NÃO apaga arquivo nenhum — restaurar
-// tem que devolver a nota fiscal junto.
-model Attachment {
-  id      String @id @default(uuid()) @db.Uuid
-  assetId String @db.Uuid
-
-  // O nome NO DISCO: uuid + extensão da allowlist de MIME. Nunca o nome que o
-  // cliente mandou — `../../` num nome de arquivo é o ataque mais velho que
-  // existe, e `path.join` não protege sozinho.
-  path String
-
-  // O nome que a PESSOA deu, só para exibir e para o download nomear o arquivo.
-  originalName String
-  mimeType     String
-  sizeBytes    Int
-
-  // Quem subiu. Nasce PREENCHIDO — ao contrário do que a Etapa G da F2 previa,
-  // porque quando ela foi escrita a F3 não existia. Sem FK, como `createdById`.
-  uploadedById String?  @db.Uuid
-  createdAt    DateTime @default(now())
-
-  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
-
-  @@index([assetId])
-  @@map("attachments")
-}
-
-
 
 model JobRun {
   /// 'lembrete-de-atraso', 'alertas-diarios', 'sync-ldap'.
@@ -1119,10 +1025,6 @@ model AppSetting {
   /// `https`, e nunca host interno — a URL vem do banco e a requisição sai do
   /// servidor, o que é SSRF pelo desenho.
 
-  /// Antecedência dos avisos de prazo, em dias.
-  warrantyAlertDays Int @default(30)
-  eolAlertDays      Int @default(60)
-
   /// Manutenção aberta há mais que isto vira alerta. É o que dá `dueAt` a um
   /// fato que não tem data-alvo: `completionDate` é nulo justamente por ela
   /// estar aberta (D125).
@@ -1151,21 +1053,6 @@ model AppSetting {
   // (D57): marca, moeda e formato de data mudam sem deploy. O que fica no
   // ambiente é o que é SEGREDO ou é do processo — `SMTP_URL`, `BACKUP_ENABLED`,
   // `BACKUP_DIR`.
-
-  /// Aparece no topo da tela, no termo de entrega e no rodapé da etiqueta.
-  companyName String @default("Minha Empresa")
-
-  /// Caminhos RELATIVOS dentro do `UPLOAD_DIR`, nunca URL: o arquivo sai por
-  /// rota autenticada, como todo anexo (D84). Guardar URL absoluta aqui faria
-  /// a logo quebrar no dia em que o domínio mudasse.
-  logoPath    String?
-  faviconPath String?
-
-  /// A cor de destaque, em `#rrggbb` — vai para `style`, porque o Tailwind não
-  /// gera classe a partir de string de runtime. O padrão é a cor que a
-  /// interface já usa hoje (`--color-text-primary`): ligar o botão não muda
-  /// nada até alguém escolher outra.
-  primaryColor String @default("#ededed")
 
   /// Como NÚMERO e DATA são escritos na tela. Não valem para o CSV: lá a regra
   /// é ponto decimal e `YYYY-MM-DD`, porque o export é a entrada do importador
@@ -2029,15 +1916,4 @@ model AssetUsageDaily {
   @@index([assetId, day])
   @@map("asset_usage_daily")
 }
-
-
-
-
-
-
-
-
-
-
-
 

@@ -89,13 +89,6 @@ export function formatarResidual(valor: unknown, tipo: unknown): string {
   );
 }
 
-export function formatarMeses(valor: unknown): string {
-  if (valor == null || valor === '') return '—';
-  const numero = Number(valor);
-  if (Number.isNaN(numero)) return String(valor);
-  return `${numero} ${numero === 1 ? 'mês' : 'meses'}`;
-}
-
 /** Nome de uma relação embutida (`manufacturer.name`, `parent.name`). */
 export function nomeDaRelacao(valor: unknown): string {
   if (valor && typeof valor === 'object' && 'name' in valor) {

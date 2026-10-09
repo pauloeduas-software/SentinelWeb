@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { corObrigatoria } from '../../shared/fields.schema';
 
 // Contrato da configuração da descoberta (F7).
 //
@@ -34,14 +33,6 @@ export const configuracaoDaDescobertaSchema = z.strictObject({
 });
 
 
-// ── O CICLO DE VIDA E OS ALERTAS (F8) ──────────────────────────────────────
-//
-// Os tetos e os pisos têm a mesma função dos da descoberta: impedir que uma
-// configuração transforme o painel em alarme. `warrantyAlertDays: 0` faria o
-// aviso chegar no dia do vencimento, quando não há mais o que fazer;
-// `auditIntervalMonths: 0` faria a frota inteira nascer com conferência vencida.
-
-
 
 // ── A CONFIGURAÇÃO DE SISTEMA (F10, D65) ───────────────────────────────────
 //
@@ -65,14 +56,7 @@ const FORMATOS_DE_DATA = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'] as const;
 const DELIMITADORES = [';', ',', '|', '\t'] as const;
 
 export const configuracaoDoSistemaSchema = z.strictObject({
-  companyName: z
-    .string('nome da empresa é obrigatório')
-    .trim()
-    .min(1, 'nome da empresa não pode ser vazio')
-    .max(200, 'nome da empresa: máximo de 200 caracteres')
-    .optional(),
 
-  primaryColor: corObrigatoria('cor de destaque').optional(),
 
   /**
    * O idioma, conferido contra o banco de locales do próprio Node.

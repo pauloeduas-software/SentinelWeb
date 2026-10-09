@@ -1,7 +1,5 @@
 import { prisma } from '../../../core/database/prismaClient';
-import { avisarEntrega, dispararAviso } from '../helpers/notificacao.helper';
 import { APP_SETTING_ID } from '../../settings/helpers/app-setting.helper';
-import { rotuloDoAlvoOuPadrao } from '../helpers/target-label.helper';
 import { AppError } from '../../../core/errors/app-error';
 import { errorCode } from '../../../core/errors/error-shape';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
@@ -62,7 +60,6 @@ export interface CheckoutData {
    * A TELA NUNCA PASSA ISTO. Entrega feita por gente continua emitindo termo e
    * avisando, que é o fluxo da F4 inteiro.
    */
-  semAviso?: boolean;
 }
 
 /**
@@ -237,28 +234,6 @@ export async function assertStatusExiste(client: ClientePosse, statusId: string)
 
 export async function checkoutAsset(assetId: string, data: CheckoutData, actorId: string | null) {
   const resultado = await executarCheckout(assetId, data, actorId);
-
-  // O AVISO SAI DEPOIS DO COMMIT, e é por isso que ele está AQUI e não lá
-  // dentro. SMTP não tem rollback: um e-mail disparado por transação que
-  // reverteu avisa o colaborador de uma entrega que não existe, e não há como
-  // desfazer. A recíproca também vale — falha de envio não desfaz a entrega
-  // (D86), e `dispararAviso` engole a falha de propósito.
-  //
-  // Entrega silenciosa: nada de e-mail. TINHA uma segunda saída aqui — o convite
-  // para assinar o termo de entrega —, e ela saiu com o aceite (D150).
-  if (data.semAviso) return resultado;
-
-  dispararAviso(avisarEntrega({
-    assetId,
-    assetTag: resultado.asset.assetTag,
-    assetName: resultado.asset.name,
-    targetType: resultado.assignment.targetType,
-    targetUserId: resultado.assignment.targetUserId,
-    targetLocationId: resultado.assignment.targetLocationId,
-    targetLabel: rotuloDoAlvoOuPadrao(resultado.assignment),
-    notes: resultado.assignment.checkoutNotes,
-    expectedCheckinAt: resultado.assignment.expectedCheckinAt,
-  }));
 
   return resultado;
 }

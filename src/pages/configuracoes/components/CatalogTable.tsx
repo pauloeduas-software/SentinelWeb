@@ -1,5 +1,5 @@
 import { Edit2, Trash2, Check, Minus, Users, type LucideIcon } from 'lucide-react';
-import { formatarMeses, formatarResidual, nomeDaRelacao, rotuloDoEnum } from '../../helpers/format.helper';
+import { formatarResidual, nomeDaRelacao, rotuloDoEnum } from '../../helpers/format.helper';
 import type { AcaoLinhaId, AcaoLinhaSpec, ColunaSpec } from '../specs/catalog-ui.types';
 import type { CatalogRow } from '../../../domain/shared/catalog.types';
 
@@ -124,8 +124,6 @@ function Celula({ coluna, registro }: { coluna: ColunaSpec; registro: CatalogRow
         ? <Check size={14} className="text-status-success" />
         : <Minus size={14} className="text-text-tertiary" />;
 
-    case 'meses':
-      return <span className="tabular-nums">{formatarMeses(valor)}</span>;
 
     case 'moeda':
       return <span className="tabular-nums">{formatarResidual(valor, registro[coluna.campoTipo ?? ''])}</span>;
