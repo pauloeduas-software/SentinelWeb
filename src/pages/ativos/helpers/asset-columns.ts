@@ -53,7 +53,6 @@ export const COLUNAS_DE_ATIVO: readonly ColunaDeAtivo[] = [
   // As que a tela não mostrava, e que o payload da listagem JÁ TRAZ. Nenhuma
   // delas custa uma consulta a mais: o `ASSET_SELECT` do servidor é o mesmo.
   { token: 'name', rotulo: 'Nome', padrao: false },
-  { token: 'supplier', rotulo: 'Fornecedor', padrao: false },
   { token: 'orderNumber', rotulo: 'Nº do pedido', padrao: false },
 ];
 

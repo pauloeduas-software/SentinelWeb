@@ -25,7 +25,6 @@ export const ASSET_SELECT = {
   statusId: true,
   modelId: true,
   locationId: true,
-  supplierId: true,
   assignedToId: true,
 
   orderNumber: true,
@@ -59,7 +58,6 @@ export const ASSET_SELECT = {
     },
   },
   location: { select: { id: true, name: true } },
-  supplier: { select: { id: true, name: true } },
   assignedTo: { select: USER_PUBLIC_SELECT },
 } as const;
 

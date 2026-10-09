@@ -4,7 +4,7 @@ import ReferenceSelect from '../../components/ReferenceSelect';
 import type { User } from '../../../domain/shared/user.types';
 import type { UserInput } from '../../../domain/user/user.queries';
 
-// O FORMULÁRIO DE CADASTRO — nome, e-mail, departamento e gestor.
+// O FORMULÁRIO DE CADASTRO — nome, e-mail, papel e gestor.
 //
 // ═══════════════════════════════════════════════════════════════════════════
 // POR QUE A IDENTIDADE (matrícula, cargo, telefone, endereço, admissão) NÃO
@@ -32,9 +32,7 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
-    // O ID, não o nome: o departamento virou entidade na F11 (D75). `''` é o
     // "nenhum" do `<select>`, convertido para `null` na submissão.
-    departmentId: user?.department?.id || '',
     managerId: user?.managerId || '',
     // O PAPEL (D148). Conta nova nasce `USUARIO`, que é o `@default` da coluna —
     // a porta fechada por padrão da F3 levada à autorização.
@@ -56,7 +54,6 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
       await onSubmit({
         name: formData.name,
         email: formData.email,
-        departmentId: formData.departmentId || null,
         managerId: formData.managerId || null,
         role: formData.role,
       });
@@ -90,19 +87,6 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
           <div className="space-y-1">
             <label className="text-text-secondary uppercase tracking-widest text-[10px]">E-mail*</label>
             <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors" placeholder="Ex: joao@empresa.com" />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-text-secondary uppercase tracking-widest text-[10px]">Departamento</label>
-            {/* `ReferenceSelect` e não um campo de texto: departamento é
-                entidade desde a F11 (D75), e texto livre é o que produziu
-                `Comercial`, `comercial ` e `COMERCIAL` como três coisas na base
-                que o backfill da migração teve de revisar à mão. */}
-            <ReferenceSelect
-              rota="departments"
-              valor={formData.departmentId}
-              onChange={(valor) => setFormData({ ...formData, departmentId: valor })}
-            />
           </div>
 
           <div className="space-y-1">

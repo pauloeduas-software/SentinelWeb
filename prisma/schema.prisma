@@ -155,20 +155,6 @@ model User {
   name  String
   email String
 
-  // O DEPARTAMENTO — uma FK, e só (F11, Etapa J — D75).
-  //
-  // A coluna de TEXTO `department` existiu aqui desde a F1 e caiu na migração 2 de
-  // 2, depois de a lista de departamentos ter sido revisada à mão. A troca foi em
-  // dois tempos de propósito: entre as duas migrações, um rollback ainda encontrava
-  // o texto original — com `add`+`backfill`+`drop` num commit só, voltar atrás é
-  // perda de dado.
-  //
-  // E é por isso que a relação abaixo volta a se chamar `department`, sem
-  // sublinhado: o nome estava ocupado pela coluna em transição, e com ela fora a
-  // borda não precisa mais achatar nada (o `comDepartamento()` do
-  // `user-select.helper.ts` deixou de existir junto).
-  departmentId String? @db.Uuid
-
   // AUTENTICAÇÃO (F3). Nulável porque a base nasceu sem login: um colaborador
   // cadastrado para receber equipamento não precisa de acesso ao sistema, e
   // exigir senha de todo mundo tornaria a carga inicial impossível.
@@ -284,15 +270,9 @@ model User {
   //   quem RESPONDE pelo ativo?        a posse aberta → pessoa, ou os
   //                                     ocupantes do posto  (`resolverResponsaveis`)
   //   quem COBRA a pessoa?             `managerId`          (hierarquia de gente)
-  //   quem responde pelo ESPAÇO, e     `Location.managerId`, subindo a árvore
-  //     pelo posto SEM ocupante?        (`resolverEscalonamento`)
-  //   a quem PERTENCE o custo?         `Department`         (relatório e rateio)
+  //   quem responde pelo ESPAÇO?       `Location.managerId`
   //
-  // Em uma linha: *o posto responde pelo ativo; a pessoa responde pelo posto; o
-  // gestor da localidade responde pelo posto vazio — e nunca pelo posto
-  // ocupado.*
-  department    Department?  @relation("DepartmentMembers", fields: [departmentId], references: [id], onDelete: Restrict)
-  departmentsManaged Department[] @relation("DepartmentManager")
+  // Em uma linha: *o posto responde pelo ativo, e a pessoa responde pelo posto.*
   manager       User?        @relation("UserManager", fields: [managerId], references: [id], onDelete: SetNull)
   reports       User[]       @relation("UserManager")
 
@@ -302,46 +282,9 @@ model User {
   // é o `unique_undeleted` do Snipe-IT (docs/ROADMAP.md, F2).
   @@index([email])
   @@index([deletedAt])
-  @@index([departmentId])
   @@index([managerId])
   @@map("users")
 }
-
-// Trilha de auditoria: o que mudou, quando e por quem.
-//
-// `actorId` é nulável e SEM relação com `User` de propósito. Nulável porque
-// autenticação é a Fase 3 — esperar por ela significaria perder o histórico de
-// tudo que for cadastrado até lá. Sem FK porque log de auditoria é append-only:
-// a integridade dele não pode depender do ciclo de vida da linha do usuário.
-model Department {
-  id   String  @id @default(uuid()) @db.Uuid
-  name String  @unique
-  code String?
-
-  // GESTOR DO DEPARTAMENTO. `SetNull` de propósito: desligar o gestor não pode
-  // derrubar o departamento junto.
-  //
-  // ⚠️ ELE NÃO RESPONDE POR ATIVO NENHUM, e isto é o D72. Departamento agrupa
-  // PESSOAS — serve para relatório ("quanto o Comercial tem em equipamento"),
-  // rateio de custo e filtro de tela. Entregar "para o Comercial" é entregar
-  // para uma sala ou para uma pessoa: departamento não tem mesa, não tem chave
-  // e não assina nada. Quem responde por um ativo é a posse aberta, e quando o
-  // alvo é um posto, os ocupantes dele (D16, docs/referencia/modelo-de-posse.md).
-  managerId String? @db.Uuid
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  manager User?  @relation("DepartmentManager", fields: [managerId], references: [id], onDelete: SetNull)
-  // `Restrict`: apagar um departamento com gente dentro deixaria as pessoas
-  // apontando para o nada. A recusa é 409 pela contagem de uso, como em toda
-  // tabela de catálogo (D8).
-  members User[] @relation("DepartmentMembers")
-
-  @@index([managerId])
-  @@map("departments")
-}
-
 model ActivityLog {
   id         String   @id @default(uuid()) @db.Uuid
   entityType String
@@ -542,32 +485,6 @@ model AssetModel {
   @@index([categoryId])
   @@map("asset_models")
 }
-
-model Supplier {
-  id   String @id @default(uuid()) @db.Uuid
-  name String @unique
-
-  contactName String?
-  phone       String?
-  email       String?
-  url         String?
-  address     String?
-  city        String?
-  state       String?
-  zip         String?
-  notes       String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  assets    Asset[]
-
-  licenses     License[]
-  // A manutenção paga por fornecedor (F8). `Restrict` do lado de lá, como as
-  // outras cinco: é a rede embaixo do 409 do `countUsages`.
-
-  @@map("suppliers")
-}
-
 model Location {
   id   String @id @default(uuid()) @db.Uuid
   name String @unique
@@ -671,7 +588,6 @@ model Asset {
   // docs/referencia/modelo-de-posse.md: um ativo pode estar EM um lugar sem ser DO lugar (o
   // mouse reserva na gaveta de uma mesa ocupada).
   locationId   String? @db.Uuid
-  supplierId   String? @db.Uuid
   // CACHE do caso `USER`, e só dele. A fonte de verdade da posse é a
   // `Assignment` aberta (docs/referencia/modelo-de-posse.md, Camada 1).
   //
@@ -722,7 +638,6 @@ model Asset {
   status     StatusLabel @relation(fields: [statusId], references: [id], onDelete: Restrict)
   model      AssetModel  @relation(fields: [modelId], references: [id], onDelete: Restrict)
   location   Location?   @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  supplier   Supplier?   @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   assignedTo User?       @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
 
   // A posse deste ativo, aberta e histórica.
@@ -1078,7 +993,6 @@ model License {
 
   categoryId     String  @db.Uuid
   manufacturerId String? @db.Uuid
-  supplierId     String? @db.Uuid
 
   orderNumber  String?
   purchaseDate DateTime?
@@ -1097,7 +1011,6 @@ model License {
 
   category     Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
-  supplier     Supplier?     @relation(fields: [supplierId], references: [id], onDelete: Restrict)
 
   seats LicenseSeat[]
 

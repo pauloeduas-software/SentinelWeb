@@ -53,7 +53,6 @@ function valoresIniciais(asset: Asset | null, clonar: boolean) {
     statusId: asset?.statusId ?? '',
     modelId: asset?.modelId ?? '',
     locationId: asset?.locationId ?? '',
-    supplierId: asset?.supplierId ?? '',
     // `assignedToId` NÃO está aqui, e a ausência é a regra: ver o comentário do
     // topo do arquivo. O servidor recusa o campo no corpo.
     orderNumber: asset?.orderNumber ?? '',
@@ -195,10 +194,6 @@ export default function AssetFormModal({ asset, clonar = false, onClose, onSubmi
           </Secao>
 
           <Secao titulo="Compra">
-            <div className="space-y-1">
-              <label className={ROTULO}>Fornecedor</label>
-              <ReferenceSelect rota="suppliers" valor={valores.supplierId} onChange={(v) => definir('supplierId', v)} />
-            </div>
             <div className="space-y-1">
               <label className={ROTULO}>Número do pedido</label>
               <input value={valores.orderNumber} onChange={(e) => definir('orderNumber', e.target.value)} className={CLASSE_CAMPO} />

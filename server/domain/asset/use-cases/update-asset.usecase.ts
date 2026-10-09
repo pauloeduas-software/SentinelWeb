@@ -11,7 +11,7 @@ export type UpdateAssetData = Partial<CreateAssetData>;
 
 const CAMPOS_AUDITADOS = [
   'assetTag', 'serial', 'name', 'notes', 'byod', 'requestable',
-  'statusId', 'modelId', 'locationId', 'supplierId', 'assignedToId',
+  'statusId', 'modelId', 'locationId', 'assignedToId',
   'orderNumber', 'purchaseDate', 'purchaseCost',
 ] as const;
 
@@ -56,7 +56,6 @@ export async function updateAsset(id: string, data: UpdateAssetData, actorId: st
         byod: data.byod,
         requestable: data.requestable,
         locationId: data.locationId,
-        supplierId: data.supplierId,
         // `assignedToId` NÃO está aqui de propósito: quem escreve nele é só o
         // checkout/checkin (docs/referencia/modelo-de-posse.md). Continua em
         // `CAMPOS_AUDITADOS` acima — o checkout grava, e o diff precisa pegar.

@@ -3,7 +3,7 @@ import {
   type CatalogUiSpec,
 } from './catalog-ui.types';
 
-// As SETE abas da tela de Configurações, na ordem em que aparecem: do que se
+// As CINCO abas da tela de Configurações, na ordem em que aparecem: do que se
 // mexe mais para o que se mexe menos. A ordem espelha CATALOG_SPECS do servidor.
 
 const categoria: CatalogUiSpec = {
@@ -96,33 +96,6 @@ const modelo: CatalogUiSpec = {
     { key: 'notes', label: 'Notas', tipo: 'textarea', largura: 'inteira' },
   ],
 };
-
-const fornecedor: CatalogUiSpec = {
-  slug: 'suppliers',
-  aba: 'Fornecedores',
-  singular: 'Fornecedor',
-  descricao: 'De quem se compra. Usado nos dados de compra do ativo e nas manutenções.',
-  placeholderBusca: 'Buscar fornecedor, contato ou cidade...',
-  colunas: [
-    { key: 'name', label: 'Nome' },
-    { key: 'contactName', label: 'Contato' },
-    { key: 'phone', label: 'Telefone' },
-    { key: 'city', label: 'Cidade' },
-  ],
-  campos: [
-    { key: 'name', label: 'Nome', tipo: 'text', obrigatorio: true },
-    { key: 'contactName', label: 'Pessoa de contato', tipo: 'text' },
-    { key: 'phone', label: 'Telefone', tipo: 'text' },
-    { key: 'email', label: 'E-mail', tipo: 'text' },
-    { key: 'url', label: 'Site', tipo: 'text', placeholder: 'https://...' },
-    { key: 'zip', label: 'CEP', tipo: 'text' },
-    { key: 'address', label: 'Endereço', tipo: 'text', largura: 'inteira' },
-    { key: 'city', label: 'Cidade', tipo: 'text' },
-    { key: 'state', label: 'Estado', tipo: 'text' },
-    { key: 'notes', label: 'Notas', tipo: 'textarea', largura: 'inteira' },
-  ],
-};
-
 const localizacao: CatalogUiSpec = {
   slug: 'locations',
   aba: 'Localizações',
@@ -163,36 +136,9 @@ const localizacao: CatalogUiSpec = {
 
 
 // ── O DEPARTAMENTO (F11, Etapa D) ───────────────────────────────────────────
-
-const departamento: CatalogUiSpec = {
-  slug: 'departments',
-  aba: 'Departamentos',
-  singular: 'Departamento',
-  // A DESCRIÇÃO DIZ O QUE ELE **NÃO** FAZ, de propósito: é a dúvida que leva
-  // alguém a procurar "entregar para o Comercial" e não achar (D72).
-  descricao: 'Agrupa pessoas para relatório e rateio de custo. Um departamento NÃO recebe ativo — entregar é para uma pessoa ou para um posto.',
-  placeholderBusca: 'Buscar departamento...',
-  colunas: [
-    { key: 'name', label: 'Nome' },
-    { key: 'code', label: 'Código' },
-    { key: 'manager', label: 'Gestor', render: 'relacao' },
-  ],
-  campos: [
-    { key: 'name', label: 'Nome', tipo: 'text', obrigatorio: true, placeholder: 'Ex: Comercial' },
-    { key: 'code', label: 'Código', tipo: 'text', placeholder: 'Ex: CC-1020',
-      ajuda: 'O centro de custo, quando a empresa tem um.' },
-    { key: 'managerId', label: 'Gestor', tipo: 'reference', rota: 'users',
-      ajuda: 'Recebe aviso e aprova baixa. NÃO responde pelos ativos de quem está no departamento.' },
-  ],
-};
-
-// ── OS CAMPOS CUSTOMIZADOS (F9) ─────────────────────────────────────────────
-
+// Mesma ordem do `CATALOG_SPECS` do servidor — as duas listas são percorridas
+// em paralelo pela tela e pelo maestro, e divergir faria a aba apontar para a
+// spec errada.
 export const CATALOG_UI_SPECS: readonly CatalogUiSpec[] = [
-  categoria, status, fabricante, modelo, fornecedor, localizacao, // A DÉCIMA, DA F11 (D75). Depois das de inventário porque é cadastro de GENTE:
-  // quem abre Configurações está quase sempre atrás de categoria, modelo ou
-  // local. Mesma ordem do `CATALOG_SPECS` do servidor — as duas listas são
-  // percorridas em paralelo pela tela e pelo maestro, e divergir faria a aba
-  // apontar para a spec errada.
-  departamento,
+  categoria, status, fabricante, modelo, localizacao,
 ];

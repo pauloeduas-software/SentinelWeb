@@ -121,7 +121,6 @@ export default function AtivosPage() {
               {colunas.mostrar('responsible') && <th className="px-6 py-4 font-normal">Responsável</th>}
               {colunas.mostrar('purchase') && <th className="px-6 py-4 font-normal">Compra</th>}
               {colunas.mostrar('name') && <th className="px-6 py-4 font-normal">Nome</th>}
-              {colunas.mostrar('supplier') && <th className="px-6 py-4 font-normal">Fornecedor</th>}
               {colunas.mostrar('orderNumber') && <th className="px-6 py-4 font-normal">Nº do pedido</th>}
               <th className="px-6 py-4 font-normal text-right">Ações</th>
             </tr>
@@ -218,9 +217,6 @@ export default function AtivosPage() {
                     <td className="px-6 py-4 text-text-secondary">
                       {asset.name || <span className="text-text-tertiary">{TRACO}</span>}
                     </td>
-                  )}
-                  {colunas.mostrar('supplier') && (
-                    <td className="px-6 py-4 text-text-tertiary">{asset.supplier?.name ?? TRACO}</td>
                   )}
                   {colunas.mostrar('orderNumber') && (
                     <td className="px-6 py-4 text-text-tertiary">

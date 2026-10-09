@@ -92,7 +92,6 @@ export default function LicencaDetalheModal({ licenca, onClose, onDevolver }: Li
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Campo rotulo="Categoria">{atual.category?.name ?? '—'}</Campo>
             <Campo rotulo="Fabricante">{atual.manufacturer?.name ?? '—'}</Campo>
-            <Campo rotulo="Fornecedor">{atual.supplier?.name ?? '—'}</Campo>
             <Campo rotulo="Custo">{formatarMoeda(atual.purchaseCost)}</Campo>
             <Campo rotulo="Licenciado para">{atual.licensedToName ?? '—'}</Campo>
             <Campo rotulo="E-mail">{atual.licensedToEmail ?? '—'}</Campo>

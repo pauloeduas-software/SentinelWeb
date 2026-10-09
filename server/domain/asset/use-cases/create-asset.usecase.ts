@@ -16,7 +16,6 @@ export interface CreateAssetData {
   byod?: boolean;
   requestable?: boolean;
   locationId?: string | null;
-  supplierId?: string | null;
   orderNumber?: string | null;
   purchaseDate?: Date | null;
   purchaseCost?: string | null;
@@ -58,7 +57,6 @@ export async function createAsset(data: CreateAssetData, actorId: string | null)
         byod: data.byod ?? false,
         requestable: data.requestable ?? false,
         locationId: data.locationId ?? null,
-        supplierId: data.supplierId ?? null,
         // `assignedToId` nasce nulo e só o CHECKOUT o preenche
         // (docs/referencia/modelo-de-posse.md). Ativo que já está com alguém entra pelo
         // cadastro e recebe um checkout em seguida — a operação que existe

@@ -29,7 +29,6 @@ export const LICENSE_SELECT = {
 
   categoryId: true,
   manufacturerId: true,
-  supplierId: true,
 
   orderNumber: true,
   purchaseDate: true,
@@ -47,7 +46,6 @@ export const LICENSE_SELECT = {
 
   category: { select: { id: true, name: true, type: true, color: true } },
   manufacturer: { select: { id: true, name: true } },
-  supplier: { select: { id: true, name: true } },
 } as const;
 
 /** A pessoa embutida numa linha de ocupação. Mesma forma do estoque. */

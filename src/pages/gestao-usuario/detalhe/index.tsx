@@ -53,7 +53,6 @@ export default function UserDetailPage() {
           </h2>
           <div className="flex items-center gap-4 font-mono text-xs text-text-tertiary flex-wrap">
             <span>{user.email}</span>
-            <span>{user.department?.name || 'sem departamento'}</span>
             {user.terminatedAt ? (
               // O desligamento é a primeira coisa que a tela precisa dizer:
               // todo número abaixo dele tem que ser lido como histórico.

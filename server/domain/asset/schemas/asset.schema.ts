@@ -50,7 +50,6 @@ const camposComuns = {
   requestable: booleano('pode ser solicitado').optional(),
 
   locationId: uuidOpcional('localização'),
-  supplierId: uuidOpcional('fornecedor'),
 
   orderNumber: textoOpcional('número do pedido', 100),
   purchaseDate: dataOpcional('data de compra'),
