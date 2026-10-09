@@ -40,13 +40,12 @@ afterAll(async () => {
 });
 
 describe('o histórico da licença é legível pela tela', () => {
-  const CHAVE = 'ZZZZ-AAAA-BBBB-CD34';
   let trilhaId: string;
 
   beforeAll(async () => {
     const licenca = await criarLicenca(api, {
       name: 'OEM da trilha', categoryId: cenario.categoriaLicencaId, seatsTotal: 5,
-      reassignable: false, productKey: CHAVE,
+      reassignable: false,
     });
     trilhaId = licenca.id;
 
@@ -69,9 +68,8 @@ describe('o histórico da licença é legível pela tela', () => {
     ]);
     for (const entrega of entregas) expect(entrega.status, JSON.stringify(entrega.body)).toBe(201);
 
-    // Um evento de cada forma que o `changes` assume: diff, ids soltos e leitura.
+    // Um evento de cada forma que o `changes` assume: diff e ids soltos.
     expect((await api.put(`/api/licenses/${trilhaId}`, { name: 'OEM da trilha (renomeada)' })).status).toBe(200);
-    expect((await api.get(`/api/licenses/${trilhaId}/product-key`)).status).toBe(200);
 
     const antes = await api.get<{ seatsTotal: number; queimados: number; livres: number }>(
       `/api/licenses/${trilhaId}`,
@@ -115,21 +113,6 @@ describe('o histórico da licença é legível pela tela', () => {
           .not.toBe(item.campo);
       }
     }
-  });
-
-  it('a revelação da chave aparece na trilha — e sem a chave', async () => {
-    const { body } = await api.get<EventoDaLicenca[]>(`/api/licenses/${trilhaId}/history`);
-    const leitura = body.find((evento) => evento.action === 'VIEW_KEY');
-    expect(leitura).toBeDefined();
-
-    // É ESTE par que faz o aviso do modal ("fica registrado no histórico") ser
-    // verdade em vez de ameaça vazia.
-    expect(rotuloDaAcao(leitura!.action, ACOES_DA_LICENCA)).toBe('Chave revelada');
-    const { detalhes } = lerEvento(leitura!, ROTULOS_DA_LICENCA);
-    expect(detalhes.map((d) => d.rotulo)).toContain('Revelada em');
-
-    // E a chave não vaza pela tela do histórico, que é a quinta porta possível.
-    expect(JSON.stringify(body)).not.toContain('CD34');
   });
 
   it('a queima e a edição aparecem legíveis, cada uma na sua forma', async () => {

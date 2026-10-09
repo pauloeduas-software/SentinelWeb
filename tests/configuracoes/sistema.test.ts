@@ -3,11 +3,9 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 
 // A CONFIGURAÇÃO DE SISTEMA (F10, Etapa A) — e o que ela não devolve.
 //
-// 1. NÃO devolve o singleton inteiro. `cryptoCanary` é texto conhecido cifrado:
-//    quem o tem pode atacar a chave offline, sem tocar no servidor. E
-//    `assetTagNext` não é configuração — é um contador consumido dentro da
-//    transação que cria o ativo (quem o espia usa `/settings/next-asset-tag`,
-//    que não consome).
+// NÃO devolve o singleton inteiro: `assetTagNext` não é configuração — é um
+// contador consumido dentro da transação que cria o ativo (quem o espia usa
+// `/settings/next-asset-tag`, que não consome).
 
 interface ConfiguracaoDoSistema {
   locale: string;
@@ -40,7 +38,6 @@ describe('GET /api/settings', () => {
   it('não leva o canário da cifra nem o contador de etiquetas para o navegador', async () => {
     const { body } = await api.get<Record<string, unknown>>('/api/settings');
 
-    expect(body).not.toHaveProperty('cryptoCanary');
     expect(body).not.toHaveProperty('assetTagNext');
     expect(body).not.toHaveProperty('assetTagPrefix');
     // Nem os dois recortes vizinhos: cada tela pede o seu.

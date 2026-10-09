@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste, type Cliente } from '../helpers/app';
-import { criarFabricante, criarLicenca, criarModelo, idsDoSeed } from '../helpers/fixtures';
+import { criarFabricante, criarModelo, idsDoSeed } from '../helpers/fixtures';
 
 // DADO SENSÍVEL É OMITIDO DO `select`, NÃO MASCARADO DEPOIS (F11, D77).
 //
@@ -19,10 +19,9 @@ import { criarFabricante, criarLicenca, criarModelo, idsDoSeed } from '../helper
 // ═════════════════════════════════════════════════════════════════════════════
 
 let api: ApiDeTeste;
-/** Vê ativo e licença, mas NÃO vê dinheiro nem chave. */
+/** Vê ativo, mas NÃO vê dinheiro. */
 let semSegredo: Cliente;
 let assetId: string;
-let licenseId: string;
 
 beforeAll(async () => {
   api = await criarApi();
@@ -44,16 +43,7 @@ beforeAll(async () => {
   expect(ativo.status).toBe(201);
   assetId = ativo.body.id;
 
-  const licenca = await criarLicenca(api, {
-    name: 'Office com chave',
-    seatsTotal: 5,
-    categoryId: seed.categoriaLicencaId,
-    productKey: 'AAAAA-BBBBB-CCCCC-DDDDD',
-  });
-  licenseId = licenca.id;
-
-  // `TECNICO` vê ativo, licença e relatório — e NÃO vê custo nem chave, que o
-  // D148 pôs em `ADMIN`. É exatamente a sessão que este arquivo precisa.
+  // `TECNICO` vê ativo, e NÃO vê custo, que o D148 pôs em `ADMIN`.
   semSegredo = await api.comoUsuario('TECNICO');
 });
 
@@ -88,52 +78,5 @@ describe('custo de compra — só `ADMIN` (D148)', () => {
     expect(resposta.body.purchaseCost).toBe('4250.9');
   });
 
-});
-
-describe('chave de produto — `licenses.viewKey`', () => {
-  it('a rota de revelar é 403', async () => {
-    const resposta = await semSegredo.get(`/api/licenses/${licenseId}/product-key`);
-    expect(resposta.status).toBe(403);
-  });
-
-  it('o detalhe não traz nem a MÁSCARA, mas diz que existe chave', async () => {
-    const resposta = await semSegredo.get<{ productKeyMask: unknown; hasProductKey: boolean }>(
-      `/api/licenses/${licenseId}`,
-    );
-
-    expect(resposta.status).toBe(200);
-    // A MÁSCARA TAMBÉM É A CHAVE, em pedaço menor: ela revela os últimos
-    // caracteres, que é um fragmento do segredo.
-    expect(resposta.body.productKeyMask).toBeNull();
-    // Mas "esta licença tem chave guardada" é fato de cadastro, não segredo — e
-    // é o que a tela precisa para saber se mostra o botão de revelar.
-    expect(resposta.body.hasProductKey).toBe(true);
-  });
-
-  it('quem TEM a chave vê a máscara e revela', async () => {
-    const detalhe = await api.get<{ productKeyMask: string }>(`/api/licenses/${licenseId}`);
-    expect(detalhe.body.productKeyMask).toBeTruthy();
-
-    const revelada = await api.get<{ productKey: string }>(`/api/licenses/${licenseId}/product-key`);
-    expect(revelada.status).toBe(200);
-    expect(revelada.body.productKey).toBe('AAAAA-BBBBB-CCCCC-DDDDD');
-  });
-
-  it('EDITAR a licença não vaza a máscara para quem só pode editar', async () => {
-    // O caso que obriga a permissão a entrar na ESCRITA: salvar o nome da
-    // licença, sem tocar na chave, devolvia a máscara da chave que já estava
-    // lá. Um `TECNICO`, que edita e não vê chave, leria um
-    // fragmento do segredo salvando um campo que não tem nada a ver com ele.
-    const editor = await api.comoUsuario('TECNICO');
-
-    const resposta = await editor.put<{ productKeyMask: unknown; hasProductKey: boolean }>(
-      `/api/licenses/${licenseId}`,
-      { name: 'Office com chave (renomeado)' },
-    );
-
-    expect(resposta.status).toBe(200);
-    expect(resposta.body.productKeyMask).toBeNull();
-    expect(resposta.body.hasProductKey).toBe(true);
-  });
 });
 

@@ -59,7 +59,7 @@ export async function idsDoSeed() {
  * Uma licença, pela API — nunca por `prisma.license.create`.
  *
  * Criar pelo Prisma pularia o zod da borda, a guarda de tipo da categoria, a
- * CIFRA da chave de produto e — o que mais importa — a criação dos assentos na
+ * criação dos assentos na
  * mesma transação. O teste passaria a provar coisas sobre uma licença de 5
  * assentos com zero linhas em `license_seats`, que nenhum usuário consegue
  * cadastrar.
@@ -75,7 +75,6 @@ export async function criarLicenca(
     seatsTotal: number;
     reassignable?: boolean;
     minSeats?: number;
-    productKey?: string;
     expirationDate?: string;
     terminationDate?: string;
   },
@@ -85,7 +84,7 @@ export async function criarLicenca(
     categoryId: opcoes.categoryId,
     seatsTotal: opcoes.seatsTotal,
   };
-  for (const chave of ['reassignable', 'minSeats', 'productKey', 'expirationDate', 'terminationDate'] as const) {
+  for (const chave of ['reassignable', 'minSeats', 'expirationDate', 'terminationDate'] as const) {
     if (opcoes[chave] !== undefined) corpo[chave] = opcoes[chave];
   }
 

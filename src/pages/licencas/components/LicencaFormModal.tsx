@@ -53,7 +53,6 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
   const [licensedToName, setLicensedToName] = useState(licenca?.licensedToName ?? '');
   const [licensedToEmail, setLicensedToEmail] = useState(licenca?.licensedToEmail ?? '');
   // Sempre vazio, inclusive na edição — ver o bloco no topo do arquivo.
-  const [productKey, setProductKey] = useState('');
   const [manufacturerId, setManufacturerId] = useState(licenca?.manufacturerId ?? '');
   const [supplierId, setSupplierId] = useState(licenca?.supplierId ?? '');
   const [orderNumber, setOrderNumber] = useState(licenca?.orderNumber ?? '');
@@ -89,12 +88,6 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
       purchaseCost: limpar(purchaseCost),
       notes: limpar(notes),
     };
-
-    // A CHAVE SÓ VAI QUANDO FOI DIGITADA. Campo vazio na edição significa
-    // "não mexe na chave" — mandar `null` apagaria a que já existe, e o
-    // formulário não tem como saber se o vazio foi intenção ou descuido.
-    // Quem quer apagar usa o botão próprio, no detalhe.
-    if (productKey.trim() !== '') dados.productKey = productKey.trim();
 
     try {
       await onSubmit(dados);
@@ -179,19 +172,6 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
               <span className="block text-[10px] text-text-tertiary">
                 Rescisão do contrato. A partir dessa data a licença fica ENCERRADA mesmo que o
                 vencimento seja depois — e uma data futura não encerra nada hoje.
-              </span>
-            </label>
-
-            <label className="space-y-1.5 col-span-2">
-              <span className={ROTULO}>Chave de produto</span>
-              <input
-                value={productKey} onChange={(e) => setProductKey(e.target.value)}
-                className={CLASSE_CAMPO} autoComplete="off"
-                placeholder={licenca?.hasProductKey ? 'já cadastrada — preencha só para substituir' : 'AAAA-BBBB-CCCC-DDDD'}
-              />
-              <span className="block text-[10px] text-text-tertiary leading-relaxed">
-                Cifrada em repouso. Depois de salva ela nunca mais aparece na tela inteira — só
-                mascarada, e revelá-la fica registrado no histórico.
               </span>
             </label>
 

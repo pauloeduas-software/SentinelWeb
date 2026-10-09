@@ -4,7 +4,7 @@ import { assetKeys } from '../asset/asset.queries';
 import { userKeys } from '../user/user.queries';
 import type { ListEnvelope, ListParams } from '../shared/list.types';
 import type {
-  AlertasDeLicenca, AlvoDoAssento, AssentoDeLicenca, ChaveRevelada,
+  AlertasDeLicenca, AlvoDoAssento, AssentoDeLicenca,
   EntregaDeAssento, EventoDaLicenca, Licenca, LicencaDoAtivo, LicencaInput,
   ResultadoDaDevolucao,
 } from '../shared/license.types';
@@ -156,27 +156,5 @@ export function useCheckinSeat() {
     mutationFn: ({ seatId, notes }: { seatId: string; notes?: string | null }) =>
       apiClient.post<ResultadoDaDevolucao>(`/licenses/seats/${seatId}/checkin`, { notes }),
     onSuccess: () => invalidarLicencaEPosse(queryClient),
-  });
-}
-
-/**
- * REVELAR A CHAVE — `useMutation` num GET, e é de propósito.
- *
- * `useQuery` cacheia e refaz a busca sozinho: a chave ficaria no cache do
- * TanStack, e cada refetch automático gravaria mais um `VIEW_KEY` no
- * `ActivityLog` — a trilha de "quem viu o segredo" encheria de leituras que
- * ninguém pediu, e a única pergunta que ela existe para responder ficaria
- * afogada.
- *
- * Como mutação, ela só dispara no clique, não é cacheada, e o componente que a
- * chama guarda o valor em `useState` — que some quando o modal fecha.
- */
-export function useRevealProductKey() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (licenseId: string) =>
-      (await apiClient.get<ChaveRevelada>(`/licenses/${licenseId}/product-key`)).data,
-    // A trilha ganhou uma linha `VIEW_KEY`: a aba Histórico precisa saber.
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: licenseKeys.all }),
   });
 }
