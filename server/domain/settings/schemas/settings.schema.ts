@@ -46,15 +46,6 @@ export const configuracaoDaDescobertaSchema = z.strictObject({
 /** Os formatos que a tela sabe desenhar. String livre aqui viraria `Invalid Date`. */
 const FORMATOS_DE_DATA = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'] as const;
 
-/**
- * Os delimitadores que o export escreve e o import oferece.
- *
- * Lista fechada, e curta de propósito: um delimitador de dois caracteres, ou um
- * `"`, produziria um CSV que nenhum programa lê de volta — e o export é a
- * entrada do importador (D69).
- */
-const DELIMITADORES = [';', ',', '|', '\t'] as const;
-
 export const configuracaoDoSistemaSchema = z.strictObject({
 
 
@@ -109,10 +100,6 @@ export const configuracaoDoSistemaSchema = z.strictObject({
         return /^[A-Z]{3}$/.test(valor);
       }
     }, 'moeda desconhecida: use um código como BRL, USD ou EUR')
-    .optional(),
-
-  csvDelimiter: z
-    .enum(DELIMITADORES, 'delimitador inválido: use ; , | ou tabulação')
     .optional(),
 
 });
