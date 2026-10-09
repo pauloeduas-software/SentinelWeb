@@ -8,8 +8,7 @@ const logger = createLogger('auth.maestro');
 
 // Login, logout e "quem sou eu".
 //
-// `/api/users/:id/set-password` mora AQUI e não no `user.maestro.ts` pelo mesmo
-// motivo de `/api/users/:id/holdings` morar no `assignment.maestro.ts`: a rota
+// `/api/users/:id/set-password` mora AQUI e não no `user.maestro.ts`: a rota
 // pendura em `/api/users` mas o assunto é credencial, não cadastro. Manter isso
 // separado é o que deixa o CRUD de colaborador continuar sem saber o que é um
 // `passwordHash` — e o `USER_PUBLIC_SELECT` continuar sendo a única porta de

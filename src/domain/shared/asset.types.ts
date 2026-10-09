@@ -1,5 +1,3 @@
-import type { AcessorioEmPosse } from './stock.types';
-import type { AssentoEmPosse } from './license.types';
 import type { AlvoDaPosse, PosseResolvida } from './posse.types';
 import type { ListParams } from './list.types';
 import type { User } from './user.types';
@@ -110,72 +108,6 @@ export interface Asset {
    */
   posse: PosseResolvida | null;
 
-}
-
-/**
- * O que uma pessoa tem em posse — `GET /api/users/:id/holdings`.
- *
- * As duas listas são separadas de propósito: `diretos` são as posses no nome
- * dela, e `porPosto` são os ativos entregues a localizações que ela ocupa. A
- * devolução de cada grupo é uma operação diferente, e juntá-las numa lista só
- * esconderia isso.
- */
-/**
- * Por onde um ativo chega até a Mesa 1: o posto que o detém e o turno de quem o
- * ocupa. Vem embutido em cada item de `porPosto` porque NÃO dá para deduzir de
- * `asset.location` — `locationId` é *onde o ativo está*, o alvo da posse é *de
- * quem ele é*, e os dois divergem (o mouse reserva guardado na gaveta de uma
- * mesa ocupada). Ver docs/referencia/modelo-de-posse.md.
- */
-export interface PostoDoAtivo {
-  locationId: string;
-  locationName: string;
-  shift: string | null;
-  /**
-   * COM QUEM o posto é dividido — os outros ocupantes abertos (F11, Etapa I).
-   *
-   * É o que impede a devolução errada na tela do colaborador: sem esta lista,
-   * "Mesa 1 · monitor LG" se lê como *o monitor é meu*, e quem sai da empresa
-   * devolve o monitor que a colega do outro turno usa. Vazia quando a pessoa é a
-   * única ocupante.
-   *
-   * ⚠️ OPCIONAL no tipo: a tela do POSTO e outras leituras tipam linhas com esta
-   * mesma interface e não calculam co-ocupantes. Quem a lê trata a ausência.
-   */
-  coOcupantes?: { id: string; name: string; shift: string | null }[];
-}
-
-/**
- * O que uma pessoa responde, nos dois caminhos que existem:
- *
- * - `diretos` — entregues a ela (`targetType: 'USER'`);
- * - `porPosto` — entregues a um posto que ela ocupa. Ela responde junto com os
- *   outros ocupantes, e é exatamente por isso que a responsabilidade não cabe
- *   numa coluna do ativo.
- */
-export interface UserHoldings {
-  diretos: Asset[];
-  porPosto: (Asset & { posto: PostoDoAtivo })[];
-  /**
-   * ACESSÓRIOS (F5) — e aqui em lista ÚNICA, com `via` por item, em vez de dois
-   * baldes como os ativos acima.
-   *
-   * Não é inconsistência: um ativo direto e um ativo de posto exigem AÇÕES
-   * diferentes na tela (devolver × sair do posto), e por isso ficam separados.
-   * Uma unidade de acessório se devolve pelo `checkoutId` nos dois casos.
-   *
-   * O que não muda é o D33: `via` por item é justamente o que impede somar 1
-   * direto com 5 compartilhados e dizer "6 mouses da Laura".
-   */
-  acessorios: AcessorioEmPosse[];
-  /**
-   * ASSENTOS DE LICENÇA (F6, D93) — a quarta ponta, e a única que pode ser
-   * DESTRUÍDA pelo desligamento.
-   *
-   * Só os de alvo `USER`, pela mesma razão que separa `diretos` de `porPosto`:
-   * o assento do desktop da mesa é da máquina, não de quem senta nela.
-   */
-  assentos: AssentoEmPosse[];
 }
 
 /**

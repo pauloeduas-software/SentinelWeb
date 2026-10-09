@@ -89,7 +89,7 @@ export const USER_LIST_SELECT = {
 } as const;
 
 // O MESMO usuário, mais o estado do vínculo com a empresa — para a tela de
-// PERFIL e para a resposta do desligamento.
+// PERFIL.
 //
 // É um select separado, e não duas colunas a mais no de cima, porque o de cima
 // vai EMBUTIDO em toda posse e em toda ocupação (`ASSIGNMENT_SELECT`,

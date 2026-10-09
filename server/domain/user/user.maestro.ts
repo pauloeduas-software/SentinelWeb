@@ -25,16 +25,6 @@ export class UserMaestro {
     server.put('/api/users/:id', WRITE_RATE_LIMIT, userController.update);
     server.delete('/api/users/:id', WRITE_RATE_LIMIT, userController.remove);
 
-    // DESLIGAMENTO (D32) — devolve os ativos diretos, encerra as ocupações de
-    // posto e marca a saída, numa transação só. É a operação que o 409 do
-    // `DELETE` acima manda fazer primeiro.
-    //
-    // POST e não DELETE: não apaga nada. `terminatedAt` e `deletedAt` são
-    // coisas diferentes (quem saiu da empresa continua no histórico de posse),
-    // e um verbo que sugerisse exclusão convidaria exatamente à confusão que a
-    // operação existe para desfazer.
-    server.post('/api/users/:id/offboard', WRITE_RATE_LIMIT, userController.offboard);
-
     server.post('/api/users/:id/restore', WRITE_RATE_LIMIT, userController.restore);
 
     logger.info('[Maestro] Rotas de Usuários inicializadas.');

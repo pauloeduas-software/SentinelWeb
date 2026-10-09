@@ -27,10 +27,6 @@ export class AssignmentMaestro {
     // e todas as anteriores.
     server.get('/api/assets/:id/assignments', assignmentController.history);
 
-    // O que a pessoa responde: as posses diretas dela MAIS os ativos dos postos
-    // que ela ocupa. A soma das duas é a Camada 3 vista do lado do colaborador.
-    server.get('/api/users/:id/holdings', assignmentController.holdings);
-
     logger.info('[Maestro] Rotas de Posse (entrega/devolução) inicializadas.');
   }
 }
