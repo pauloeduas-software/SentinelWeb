@@ -1,5 +1,4 @@
 import type { ClientePosse } from '../../assignment/use-cases/resolve-responsibles.usecase';
-import { contarAcessoriosDiretos } from '../../stock/use-cases/count-user-accessories.usecase';
 import { contarAssentosDoUsuario } from '../../license/use-cases/count-user-seats.usecase';
 
 // O QUE AINDA PRENDE UMA PESSOA AO INVENTÁRIO — as duas pontas, contadas juntas.
@@ -24,19 +23,9 @@ export interface PosseAbertaDoUsuario {
   /** `LocationOccupant` abertas — o que encerrar. */
   postosOcupados: number;
   /**
-   * `AccessoryCheckout` abertas com alvo `USER` — a terceira ponta, da F5.
+   * `LicenseSeatCheckout` abertas com `assignedUserId` — a terceira ponta, da F6.
    *
-   * SÓ as diretas. As unidades do POSTO não entram pelo mesmo motivo que os
-   * ativos do posto não entram: elas são do posto, e o desligamento não tem o
-   * direito de devolvê-las (`stock/use-cases/count-user-accessories.usecase.ts`).
-   */
-  acessoriosEmPosse: number;
-  /**
-   * `LicenseSeatCheckout` abertas com `assignedUserId` — a quarta ponta, da F6.
-   *
-   * SÓ as da pessoa. Os assentos de ATIVO não entram pelo mesmo motivo que os
-   * acessórios do posto não entram: eles são da máquina, e o desligamento não
-   * tem o direito de devolvê-los
+   * SÓ as da pessoa. Os assentos de ATIVO não entram: eles são da máquina
    * (`license/use-cases/count-user-seats.usecase.ts`).
    */
   assentosEmPosse: number;
@@ -52,7 +41,7 @@ export async function contarPosseAberta(
   client: ClientePosse,
   userId: string,
 ): Promise<PosseAbertaDoUsuario> {
-  const [ativosEmPosse, postosOcupados, acessoriosEmPosse, assentosEmPosse] = await Promise.all([
+  const [ativosEmPosse, postosOcupados, assentosEmPosse] = await Promise.all([
     client.assignment.count({
       // `asset: { deletedAt: null }` EXPLÍCITO. `assignments` não tem
       // `deletedAt`, então a extension não escopa esta contagem — e ela não
@@ -64,11 +53,10 @@ export async function contarPosseAberta(
       where: { targetType: 'USER', targetUserId: userId, checkinAt: null, asset: { deletedAt: null } },
     }),
     client.locationOccupant.count({ where: { userId, endedAt: null } }),
-    contarAcessoriosDiretos(client, userId),
     contarAssentosDoUsuario(client, userId),
   ]);
 
-  return { ativosEmPosse, postosOcupados, acessoriosEmPosse, assentosEmPosse };
+  return { ativosEmPosse, postosOcupados, assentosEmPosse };
 }
 
 /** "2 ativos", "1 ativo" — plural à mão porque é uma frase, não um dado. */
@@ -90,9 +78,6 @@ function quantos(total: number, singular: string, plural: string): string {
 export function motivoParaNaoExcluir(posse: PosseAbertaDoUsuario): string | null {
   const partes: string[] = [];
   if (posse.ativosEmPosse > 0) partes.push(`responde por ${quantos(posse.ativosEmPosse, 'ativo', 'ativos')}`);
-  if (posse.acessoriosEmPosse > 0) {
-    partes.push(`está com ${quantos(posse.acessoriosEmPosse, 'acessório', 'acessórios')}`);
-  }
   if (posse.assentosEmPosse > 0) {
     partes.push(`ocupa ${quantos(posse.assentosEmPosse, 'assento de licença', 'assentos de licença')}`);
   }

@@ -40,13 +40,10 @@ export const supplierSpec: CatalogSpec = {
   // A MANUTENÇÃO é a sexta (F8), e é `Restrict` pelo mesmo motivo dos de estoque:
   // apagar quem consertou apagaria de quem se cobra a garantia.
   countUsages: async (client, id) => {
-    const [ativos, acessorios, consumiveis, componentes, licencas] = await Promise.all([
+    const [ativos, licencas] = await Promise.all([
       client.asset.count({ where: { supplierId: id, ...INCLUINDO_LIXEIRA } }),
-      client.accessory.count({ where: { supplierId: id, ...INCLUINDO_LIXEIRA } }),
-      client.consumable.count({ where: { supplierId: id, ...INCLUINDO_LIXEIRA } }),
-      client.component.count({ where: { supplierId: id, ...INCLUINDO_LIXEIRA } }),
       client.license.count({ where: { supplierId: id, ...INCLUINDO_LIXEIRA } }),
     ]);
-    return ativos + acessorios + consumiveis + componentes + licencas;
+    return ativos + licencas;
   },
 };

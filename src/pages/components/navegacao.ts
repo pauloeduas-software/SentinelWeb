@@ -1,5 +1,5 @@
 import {
-  Armchair, Boxes, Database, Radar, ScrollText, Server, SlidersHorizontal, Users, type LucideIcon,
+  Armchair, Database, Radar, ScrollText, Server, SlidersHorizontal, Users, type LucideIcon,
 } from 'lucide-react';
 
 // O MENU, declarado em um lugar só — a barra lateral desenha, o cabeçalho lê
@@ -70,13 +70,8 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
       // Logo depois de Ativos: é a mesma operação vista do outro lado — o ativo
       // está na mesa, e a mesa é de quem a ocupa (docs/referencia/modelo-de-posse.md).
       { to: '/postos', label: 'Postos', icon: Armchair, papel: 'TECNICO' },
-      // Depois de Postos porque a entrega de acessório pende dele: os 5 mouses
-      // da Mesa 1 são do POSTO, e quem responde são os ocupantes (D33).
-      { to: '/estoque', label: 'Estoque', icon: Boxes, papel: 'TECNICO' },
-      // Depois de Estoque porque é o mesmo desenho um passo adiante: lá o saldo
-      // é calculado sobre unidades intercambiáveis, aqui o assento é uma LINHA
-      // que se trava (D40). E porque licença também é posse — entra no
-      // desligamento.
+      // Depois de Postos porque licença também é posse: o assento é uma LINHA
+      // que se trava (D40).
       { to: '/licencas', label: 'Licenças', icon: ScrollText, papel: 'TECNICO' },
     ],
   },

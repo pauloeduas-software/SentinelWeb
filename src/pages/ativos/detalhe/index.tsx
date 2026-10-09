@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import AssetFormModal from '../components/AssetFormModal';
 import CheckoutModal from '../components/CheckoutModal';
 import AssetTabs, { AbaFutura } from './components/AssetTabs';
-import ComponentsTab from './components/ComponentsTab';
 import LicensesTab from './components/LicensesTab';
 import MaquinaTab from './components/MaquinaTab';
 import DetalhesTab from './components/DetalhesTab';
@@ -30,7 +29,6 @@ export default function AssetDetailPage() {
     aba, setAba,
     eventos, totalDeEventos, historicoPendente,
     assignments, possePendente,
-    componentes, componentesPendentes, handleRetirarComponente,
     licencas, licencasPendentes,
     maquina, maquinaPendente, desvinculando, handleDesvincular,
     modal, abrirEdicao, abrirClone, abrirPosse, abrirDescomissionar, fecharModal,
@@ -130,14 +128,6 @@ export default function AssetDetailPage() {
 
         {aba === 'historico' && (
           <HistoryTab eventos={eventos} total={totalDeEventos} carregando={historicoPendente} />
-        )}
-
-        {aba === 'componentes' && (
-          <ComponentsTab
-            instalacoes={componentes}
-            carregando={componentesPendentes}
-            onRetirar={(instalacaoId, assignedQty) => void handleRetirarComponente(instalacaoId, assignedQty)}
-          />
         )}
 
         {aba === 'licencas' && (

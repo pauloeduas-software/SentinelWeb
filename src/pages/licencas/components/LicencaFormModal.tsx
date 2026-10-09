@@ -7,10 +7,8 @@ import type { Licenca, LicencaInput } from '../../../domain/shared/license.types
 // Cadastro e edição de uma licença.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// `seatsTotal` É EDITÁVEL, ao contrário do `qty` do estoque — e a diferença é
-// real: `qty` é consequência de movimentação (chegou nota, quebrou), enquanto
-// `seatsTotal` é o NÚMERO DO CONTRATO. Alguém comprou mais assentos, e digitar
-// isso É a operação.
+// `seatsTotal` É EDITÁVEL, e é o NÚMERO DO CONTRATO: alguém comprou mais
+// assentos, e digitar isso É a operação.
 //
 // O que o servidor garante é que ele nunca muda sozinho: a reconciliação cria
 // ou aposenta linhas na MESMA transação, e reduzir abaixo do que está ocupado

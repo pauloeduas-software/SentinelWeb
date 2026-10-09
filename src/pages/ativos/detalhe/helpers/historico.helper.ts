@@ -14,8 +14,6 @@ const ROTULO_DA_ACAO: Record<string, string> = {
   // próprias, e não os ATTACH/DETACH do anexo: os dois eventos caem nesta
   // mesma lista, e "anexo posto" para a nota fiscal e para o pente de RAM
   // seria uma linha do tempo em que ninguém distingue documento de hardware.
-  INSTALL: 'Componente instalado',
-  UNINSTALL: 'Componente retirado',
   // A leitura de um campo customizado CIFRADO (F9, D62). Ela está aqui, e não no
   // leitor genérico, pelo mesmo motivo do `VIEW_KEY` da licença: é a segunda e
   // última ação do projeto que registra uma LEITURA, porque um segredo revelado
@@ -46,9 +44,6 @@ const ROTULO_DO_CAMPO: Record<string, string> = {
   targetType: 'Tipo de alvo',
   targetId: 'Alvo',
   // Estoque (F5). `assetTag` não entra: já está no topo, e a chave é a mesma.
-  instalacaoId: 'Instalação',
-  componentId: 'Componente',
-  componentName: 'Nome do componente',
   assetId: 'Ativo',
   qty: 'Unidades',
   retirada: 'Unidades retiradas',
