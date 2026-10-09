@@ -3,7 +3,7 @@ import {
   type CatalogUiSpec,
 } from './catalog-ui.types';
 
-// As NOVE abas da tela de Configurações, na ordem em que aparecem: do que se
+// As SETE abas da tela de Configurações, na ordem em que aparecem: do que se
 // mexe mais para o que se mexe menos. A ordem espelha CATALOG_SPECS do servidor.
 
 const categoria: CatalogUiSpec = {

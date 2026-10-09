@@ -11,15 +11,13 @@ import { useOcupantes } from '../hooks/useOcupantes';
 
 // As tabelas de catálogo do ITAM — o menu *Settings* do Snipe-IT.
 //
-// Uma tela para as NOVE tabelas, dirigida pelas specs de `specs/`: acrescentar
+// Uma tela para as SETE tabelas, dirigida pelas specs de `specs/`: acrescentar
 // uma tabela é escrever a spec, não copiar uma página.
 //
-// E UMA DÉCIMA ABA QUE NÃO É TABELA: *Sistema* (F10), que edita a LINHA ÚNICA do
-// `AppSetting` — marca, formato e retenção do backup. Ela não cabe numa spec de
+// E UMA OITAVA ABA QUE NÃO É TABELA: *Sistema* (F10), que edita a LINHA ÚNICA do
+// `AppSetting` — marca e formato. Ela não cabe numa spec de
 // catálogo (não tem listagem, nem paginação, nem botão de "novo"), então a
-// página passa a ter duas formas e escolhe entre elas. É o mesmo desenho que
-// `/relatorios` já usa para a aba de alertas: quatro abas de relatório mais uma
-// de configuração, num tipo só.
+// página passa a ter duas formas e escolhe entre elas.
 export default function ConfiguracoesPage() {
   const {
     specs, spec, changeTab, registros, total, page, perPage, setPage,

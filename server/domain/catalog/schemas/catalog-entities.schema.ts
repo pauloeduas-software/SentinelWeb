@@ -105,7 +105,7 @@ export const updateSupplierSchema = z.strictObject({ name: nomeObrigatorio().opt
 // CRUD plano — nome, código, gestor, busca, 409 por uso —, e o
 // `docs/referencia/arquitetura.md` diz que acrescentar tabela de catálogo *é escrever a
 // spec*. Um `domain/department/` completo seria oito arquivos para repetir o
-// que o CRUD genérico já faz para nove tabelas.
+// que o CRUD genérico já faz para sete tabelas.
 const camposDepartamento = {
   // O código do centro de custo, quando a empresa tem um. Opcional porque a
   // maioria não tem, e exigi-lo tornaria o cadastro impossível de preencher.

@@ -769,23 +769,6 @@ model Asset {
   // Foto do equipamento. Só o CAMINHO — ver o mesmo campo no catálogo.
   imagePath String?
 
-  // ── OS VALORES DOS CAMPOS CUSTOMIZADOS (F9, D59) ─────────────────────────
-  //
-  // JsonB na PRÓPRIA LINHA do ativo, com o `slug` do campo como chave. Nem uma
-  // coluna por campo (o que o Snipe-IT faz, e que aqui morreria no `migrate
-  // diff` da próxima migration como drift), nem uma tabela EAV (uma linha por
-  // campo por ativo transforma a listagem num pivô).
-  //
-  // ⚠️ `Prisma.DbNull` × `Prisma.JsonNull`: ativo SEM campos customizados grava
-  // `DbNull` — coluna nula. Com `JsonNull` o banco guardaria o literal JSON
-  // `null` DENTRO da coluna, `customFields IS NULL` pararia de achá-lo, e a
-  // contagem de "sem campos preenchidos" passaria a mentir. É a armadilha mais
-  // barata de cair e a mais cara de achar depois.
-  //
-  // O conteúdo é validado no USE-CASE, não na borda: o `strictObject` do schema
-  // de entrada recusa chave desconhecida e não PODE conhecer campos criados em
-  // runtime (`validate-custom-fields.usecase.ts`).
-
   // QUEM cadastrou e QUEM editou por último.
   //
   // Duas colunas AQUI, e não nas catorze tabelas (D26): o `ActivityLog` já
@@ -1195,35 +1178,6 @@ model AppSetting {
   /// o Excel em português salva com `;`. No import ele é detectado na linha de
   /// cabeçalho; aqui é só o palpite inicial.
   csvDelimiter String @default(";")
-
-  /// Quantos dias de dump ficam em disco. O expurgo é explícito e tem nome
-  /// (`prune-backups`): sem ele, "backup pela interface" é uma forma lenta de
-  /// encher o volume do servidor até o Postgres não conseguir mais escrever.
-
-  // ── O LAYOUT DA ETIQUETA (F10, Etapa G) ──────────────────────────────────
-  //
-  // MORA AQUI, e não numa tabela de "modelos de etiqueta": é UM layout por
-  // instalação, porque é uma folha de etiquetas adesivas que a empresa compra
-  // — e ela compra uma. Uma tabela de layouts seria a tela de escolher entre
-  // linhas que ninguém cadastrou.
-  //
-  // AS MEDIDAS SÃO EM MILÍMETROS, e não em pontos: quem configura isto está com
-  // a embalagem da folha na mão, e a embalagem fala em milímetros. A conversão
-  // para pontos PostScript (72 por polegada) é do renderizador.
-
-  /// `A4` ou `LETTER`. O PDF é gerado no tamanho EXATO da página — a impressora
-  /// que "ajusta à página" desalinha a folha inteira, e a tela avisa isso.
-
-  /// A grade. 3×8 é a folha de etiqueta mais comum no Brasil (Pimaco 6081).
-
-  /// As margens da folha e o espaço ENTRE etiquetas, em mm.
-
-  /// O que vai impresso em cada etiqueta, na ordem. Allowlist no servidor
-  /// (`label-fields.helper.ts`): token fora dela é 422.
-
-  /// O QR leva a URL da tela do ativo; o código de barras leva a ETIQUETA (D70).
-  /// São dois leitores diferentes: a câmera do celular abre link, o leitor de
-  /// mão digita texto num campo.
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

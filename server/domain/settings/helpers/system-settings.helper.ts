@@ -1,7 +1,7 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { APP_SETTING_ID } from './app-setting.helper';
 
-// A CONFIGURAÇÃO DE SISTEMA — marca, formato e backup (F10, D65).
+// A CONFIGURAÇÃO DE SISTEMA — marca e formato (F10, D65).
 //
 // Mesmo desenho do `lifecycle-settings.helper.ts` e do
 // `discovery-settings.helper.ts`: leitura do singleton que já existe, `upsert`
@@ -11,7 +11,7 @@ import { APP_SETTING_ID } from './app-setting.helper';
 // ─────────────────────────────────────────────────────────────────────────────
 // POR QUE É O TERCEIRO RECORTE, E NÃO UMA ROTA QUE DEVOLVE O SINGLETON INTEIRO.
 //
-// A tabela tem hoje 26 colunas, e três telas diferentes escrevem nela: os
+// A tabela tem hoje 25 colunas, e três telas diferentes escrevem nela: os
 // botões da descoberta (F7), os limiares de alerta (F8) e esta. Uma rota
 // `GET /api/settings` que devolvesse tudo levaria para o navegador o
 // `cryptoCanary` — texto conhecido cifrado, que é material para quem quiser

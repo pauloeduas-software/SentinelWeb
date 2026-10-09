@@ -98,7 +98,7 @@ export default function UserDetailPage() {
       {/* O ACESSO (F11) vem ANTES das posses, e a ordem é a da pergunta: quem
           abre esta tela para resolver um chamado de acesso não precisa rolar
           por quatro listas de equipamento. Só para quem administra acesso — as
-          rotas por trás exigem `access.manage`. */}
+          rotas por trás exigem `ADMIN`. */}
 
       <Secao
         icone={HardDrive}
