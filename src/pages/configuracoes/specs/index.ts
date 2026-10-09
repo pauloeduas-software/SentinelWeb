@@ -15,20 +15,11 @@ const categoria: CatalogUiSpec = {
   colunas: [
     { key: 'name', label: 'Nome', render: 'cor' },
     { key: 'type', label: 'Tipo', render: 'enum', opcoes: TIPOS_CATEGORIA },
-    { key: 'requireAcceptance', label: 'Exige aceite', render: 'booleano' },
-    { key: 'checkinEmail', label: 'Avisa na devolução', render: 'booleano' },
   ],
   campos: [
     { key: 'name', label: 'Nome', tipo: 'text', obrigatorio: true, placeholder: 'Ex: Notebook' },
     { key: 'type', label: 'Tipo', tipo: 'select', obrigatorio: true, opcoes: TIPOS_CATEGORIA },
     { key: 'color', label: 'Cor', tipo: 'color' },
-    { key: 'requireAcceptance', label: 'Exigir aceite na entrega', tipo: 'checkbox',
-      ajuda: 'Guardado agora. Passa a valer quando a entrega com assinatura existir.' },
-    { key: 'checkinEmail', label: 'Avisar por e-mail na devolução', tipo: 'checkbox',
-      ajuda: 'Guardado agora. Depende do envio de e-mail, que ainda não existe.' },
-    { key: 'eulaText', label: 'Termo de uso (EULA)', tipo: 'textarea', largura: 'inteira',
-      placeholder: 'Texto apresentado ao colaborador no aceite...',
-      ajuda: 'Guardado agora. É o texto que o colaborador vai assinar quando o aceite existir.' },
   ],
 };
 

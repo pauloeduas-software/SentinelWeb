@@ -28,13 +28,12 @@ export const categorySpec: CatalogSpec = {
   updateSchema: updateCategorySchema,
 
   select: {
-    id: true, name: true, type: true, color: true,
-    requireAcceptance: true, eulaText: true, checkinEmail: true, createdAt: true,
+    id: true, name: true, type: true, color: true, createdAt: true,
   },
   sortable: ['name', 'type', 'createdAt'],
   defaultSort: 'name',
   searchable: ['name'],
-  audited: ['name', 'type', 'color', 'requireAcceptance', 'eulaText', 'checkinEmail'],
+  audited: ['name', 'type', 'color'],
 
   // O `<select>` do formulário de ativo pede só as de ATIVO; sem isto ele
   // ofereceria duas linhas de mesmo nome e tipos diferentes.

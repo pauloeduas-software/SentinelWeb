@@ -11,13 +11,8 @@
 export const FORMATOS_DE_DATA = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'] as const;
 export type FormatoDeData = (typeof FORMATOS_DE_DATA)[number];
 
-/** Os delimitadores que o export escreve e o import oferece como padrão. */
-export const DELIMITADORES_DE_CSV = [';', ',', '|', '\t'] as const;
-export type DelimitadorDeCsv = (typeof DELIMITADORES_DE_CSV)[number];
-
 export interface ConfiguracaoDoSistema {
   locale: string;
   dateFormat: FormatoDeData;
   currency: string;
-  csvDelimiter: DelimitadorDeCsv;
 }

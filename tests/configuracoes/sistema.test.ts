@@ -11,7 +11,6 @@ interface ConfiguracaoDoSistema {
   locale: string;
   dateFormat: string;
   currency: string;
-  csvDelimiter: string;
 }
 
 let api: ApiDeTeste;
@@ -31,7 +30,6 @@ describe('GET /api/settings', () => {
     expect(status).toBe(200);
     expect(body.locale).toBe('pt-BR');
     expect(body.currency).toBe('BRL');
-    expect(body.csvDelimiter).toBe(';');
     expect(body.dateFormat).toBe('DD/MM/YYYY');
   });
 
@@ -80,12 +78,10 @@ describe('PUT /api/settings', () => {
     expect(body.fields?.locale).toMatch(/idioma/i);
   });
 
-  it('recusa moeda desconhecida, formato de data fora da lista e delimitador inventado', async () => {
+  it('recusa moeda desconhecida e formato de data fora da lista', async () => {
     const moeda = await api.put('/api/settings', { currency: 'XQZ' });
     const data = await api.put('/api/settings', { dateFormat: 'DD.MM.YY' });
-    const delimitador = await api.put('/api/settings', { csvDelimiter: '::' });
-
-    expect([moeda.status, data.status, delimitador.status]).toEqual([422, 422, 422]);
+    expect([moeda.status, data.status]).toEqual([422, 422]);
   });
 
 });

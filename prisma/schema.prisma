@@ -372,12 +372,6 @@ model Category {
 
   color String?
 
-  // Inertes até a F4 (fluxo de aceite): a categoria é quem decide se a entrega
-  // exige assinatura e qual EULA é apresentado.
-  requireAcceptance Boolean @default(false)
-  eulaText          String?
-  checkinEmail      Boolean @default(false)
-
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   assetModels AssetModel[]
@@ -940,11 +934,6 @@ model AppSetting {
   locale     String @default("pt-BR")
   dateFormat String @default("DD/MM/YYYY")
   currency   String @default("BRL")
-
-  /// O delimitador que o export escreve e que o import OFERECE como padrão —
-  /// o Excel em português salva com `;`. No import ele é detectado na linha de
-  /// cabeçalho; aqui é só o palpite inicial.
-  csvDelimiter String @default(";")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

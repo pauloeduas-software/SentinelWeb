@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Save } from 'lucide-react';
 import {
-  DELIMITADORES_DE_CSV, FORMATOS_DE_DATA,
-  type ConfiguracaoDoSistema, type DelimitadorDeCsv, type FormatoDeData,
+  FORMATOS_DE_DATA,
+  type ConfiguracaoDoSistema, type FormatoDeData,
 } from '../../../domain/shared/settings.types';
 
 // A ABA *SISTEMA* (F10, Etapa A) — formato de número, data e moeda.
@@ -36,13 +36,6 @@ const IDIOMAS = [
   { valor: 'es-ES', rotulo: 'Español' },
 ] as const;
 
-const NOME_DO_DELIMITADOR: Record<DelimitadorDeCsv, string> = {
-  ';': 'Ponto e vírgula  ;',
-  ',': 'Vírgula  ,',
-  '|': 'Barra vertical  |',
-  '\t': 'Tabulação',
-};
-
 interface Props {
   configuracao: ConfiguracaoDoSistema | undefined;
   carregando: boolean;
@@ -65,7 +58,7 @@ interface Props {
  * que continua valendo, em vez de um campo mentindo que a mudança pegou.
  */
 function assinatura(c: ConfiguracaoDoSistema): string {
-  return [c.locale, c.dateFormat, c.currency, c.csvDelimiter].join('·');
+  return [c.locale, c.dateFormat, c.currency].join('·');
 }
 
 function Formulario({ configuracao, salvando, onSalvar }: {
@@ -76,14 +69,12 @@ function Formulario({ configuracao, salvando, onSalvar }: {
   const [locale, setLocale] = useState(() => configuracao.locale);
   const [dateFormat, setDateFormat] = useState<FormatoDeData>(() => configuracao.dateFormat);
   const [currency, setCurrency] = useState(() => configuracao.currency);
-  const [csvDelimiter, setCsvDelimiter] = useState<DelimitadorDeCsv>(() => configuracao.csvDelimiter);
 
   const handleSalvar = () => {
     onSalvar({
       locale,
       dateFormat,
       currency,
-      csvDelimiter,
       // `Number` e não `parseInt`: campo vazio vira `0`, que o servidor recusa
       // com a mensagem certa ("mínimo de 1") em vez de virar `NaN` e subir como
       // 422 sobre um campo que a pessoa nem sabe que mandou.
@@ -120,27 +111,7 @@ function Formulario({ configuracao, salvando, onSalvar }: {
           >
             {FORMATOS_DE_DATA.map((formato) => <option key={formato} value={formato}>{formato}</option>)}
           </select>
-          <span className={AJUDA}>
-            Só a EXIBIÇÃO. O CSV sempre sai em <code>AAAA-MM-DD</code>, porque ele é a entrada
-            do importador.
-          </span>
-        </label>
-
-        <label className="space-y-1 block">
-          <span className={ROTULO}>Delimitador do CSV</span>
-          <select
-            value={csvDelimiter}
-            onChange={(evento) => setCsvDelimiter(evento.target.value as DelimitadorDeCsv)}
-            className={CAMPO}
-          >
-            {DELIMITADORES_DE_CSV.map((d) => (
-              <option key={d} value={d}>{NOME_DO_DELIMITADOR[d]}</option>
-            ))}
-          </select>
-          <span className={AJUDA}>
-            O Excel em português salva com <code>;</code>. Na importação o delimitador é
-            DETECTADO no cabeçalho — isto aqui é o que o export escreve.
-          </span>
+          <span className={AJUDA}>Só a EXIBIÇÃO: decide como a tela escreve as datas.</span>
         </label>
 
       </div>

@@ -28,14 +28,12 @@ export interface ConfiguracaoDoSistema {
   locale: string;
   dateFormat: string;
   currency: string;
-  csvDelimiter: string;
 }
 
 const CAMPOS = {
   locale: true,
   dateFormat: true,
   currency: true,
-  csvDelimiter: true,
 } as const;
 
 export async function lerConfiguracaoDoSistema(): Promise<ConfiguracaoDoSistema> {

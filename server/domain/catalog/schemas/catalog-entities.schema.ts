@@ -17,9 +17,6 @@ import {
 // ---------------------------------------------------------------- Category
 const camposCategoria = {
   color: corOpcional,
-  requireAcceptance: booleano('exigir aceite').optional(),
-  eulaText: textoOpcional('termo de uso', 5_000),
-  checkinEmail: booleano('avisar na devolução').optional(),
 };
 
 export const createCategorySchema = z.strictObject({
