@@ -50,15 +50,9 @@ export async function lerConfiguracaoDoSistema(): Promise<ConfiguracaoDoSistema>
 /**
  * Salva o que a aba *Sistema* oferece.
  *
- * `logoPath` e `faviconPath` NÃO entram aqui, e isso é a regra: o caminho de um
- * arquivo é escrito por quem gravou o arquivo (`set-branding.usecase.ts`),
- * nunca por um `PUT` de JSON. Aceitá-los no corpo deixaria qualquer cliente
- * apontar a logo para um caminho arbitrário dentro do `UPLOAD_DIR` — e a rota
- * que serve a imagem leria esse caminho.
- *
- * Todos os outros são opcionais porque a tela salva um de cada vez — mandar os
- * sete para mudar um seria pedir ao cliente que conhecesse os outros seis
- * (mesma escolha do PUT da descoberta e do dos alertas).
+ * Todos os campos são opcionais porque a tela salva um de cada vez — mandar
+ * todos para mudar um seria pedir ao cliente que conhecesse o resto (mesma
+ * escolha do PUT da descoberta).
  */
 export async function salvarConfiguracaoDoSistema(
   dados: Partial<ConfiguracaoDoSistema>,
