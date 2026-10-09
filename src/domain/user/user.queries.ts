@@ -21,6 +21,8 @@ export const userKeys = {
 export interface UserInput {
   name: string;
   email: string;
+  /** O papel (D148). Ausente, numa criação, nasce `USUARIO` pelo `@default`. */
+  role?: 'USUARIO' | 'TECNICO' | 'ADMIN';
   /** O id do departamento (F11, Etapa D) — era texto livre até a F10. */
   departmentId?: string | null;
   /** Quem cobra a pessoa. Nunca quem responde pelo ativo dela (D72). */

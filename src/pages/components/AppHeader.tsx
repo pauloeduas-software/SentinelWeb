@@ -1,6 +1,5 @@
 import { useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
-import AlertBell from './AlertBell';
 import BuscaDoLeitor from './BuscaDoLeitor';
 import { nomeDaTela } from './navegacao';
 import { useBarraLateral } from '../hooks/useBarraLateral';
@@ -62,7 +61,6 @@ export default function AppHeader() {
         <div className="hidden md:block">
           <BuscaDoLeitor />
         </div>
-        <AlertBell />
       </div>
     </header>
   );

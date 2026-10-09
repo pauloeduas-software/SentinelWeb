@@ -1,27 +1,15 @@
-import { Prisma } from '@prisma/client';
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { buildChanges } from '../../shared/diff.helper';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
-import { resolveFieldset } from '../../custom-field/use-cases/resolve-fieldset.usecase';
-import { validarCamposCustomizados } from '../../custom-field/use-cases/validate-custom-fields.usecase';
-import { diffDeCampos, lerCampos } from '../../custom-field/helpers/custom-field-value.helper';
 import { calcularDatas } from '../helpers/asset-dates.helper';
-import { ASSET_SELECT_COM_CAMPOS, comCamposMascarados } from '../helpers/asset-select.helper';
+import { ASSET_SELECT } from '../helpers/asset-select.helper';
 import { assertEtiquetaESerieLivres } from './assert-unique-asset.usecase';
 import { assertStatusCoerenteComPosse } from './assert-status-posse.usecase';
 import type { CreateAssetData } from './create-asset.usecase';
 
 export type UpdateAssetData = Partial<CreateAssetData>;
 
-// `customFields` NÃO ESTÁ AQUI, e a ausência é a decisão (F9).
-//
-// O `buildChanges` compara com `===` depois de normalizar ESCALARES; dois
-// objetos de mesmo conteúdo são instâncias diferentes e sempre diferem. Posto
-// nesta lista, `customFields` escreveria uma linha de histórico em TODO PUT, com
-// o objeto inteiro dos dois lados — e levaria o pacote cifrado junto, que é
-// exatamente o que o D62 proíbe. O diff dele é chave a chave, em
-// `diffDeCampos`, e entra no `changes` por fora.
 const CAMPOS_AUDITADOS = [
   'assetTag', 'serial', 'name', 'notes', 'byod', 'requestable',
   'statusId', 'modelId', 'locationId', 'supplierId', 'assignedToId',
@@ -87,7 +75,7 @@ async function resolverVidaUtil(
 
 export async function updateAsset(id: string, data: UpdateAssetData, actorId: string | null) {
   return prisma.$transaction(async (tx) => {
-    const antes = await tx.asset.findFirst({ where: { id }, select: ASSET_SELECT_COM_CAMPOS });
+    const antes = await tx.asset.findFirst({ where: { id }, select: ASSET_SELECT });
     if (!antes) throw new AppError('Registro não encontrado', 404);
 
     await assertEtiquetaESerieLivres(tx, {
@@ -126,27 +114,6 @@ export async function updateAsset(id: string, data: UpdateAssetData, actorId: st
       eolDate: valorFinal(data.eolDate, antes.eolDate),
     });
 
-    // ── OS CAMPOS CUSTOMIZADOS, CONTRA O CONJUNTO DO MODELO FINAL (F9) ──────
-    //
-    // `valorFinal` e não `data.modelId`: trocar o modelo pode trocar o conjunto
-    // (D58), e o que vale é o conjunto de DEPOIS da edição. Validar contra o
-    // modelo anterior recusaria justamente o valor do campo novo que a troca de
-    // modelo acabou de trazer.
-    //
-    // ⚠️ E as chaves do conjunto ANTERIOR não são apagadas (D60): elas voltam
-    // como `orfaos`, intactas — inclusive cifradas, inclusive fora da lista.
-    // Apagar dado do cliente porque um `<select>` mudou é a "limpeza" que
-    // ninguém pede e todos lamentam.
-    const gravados = lerCampos(antes.customFields);
-    const conjunto = await resolveFieldset(tx, valorFinal(data.modelId, antes.modelId));
-    const campos = validarCamposCustomizados({
-      conjunto,
-      recebido: data.customFields,
-      gravados,
-      assetId: id,
-      criando: false,
-    });
-
     const depois = await tx.asset.update({
       where: { id },
       data: {
@@ -174,14 +141,10 @@ export async function updateAsset(id: string, data: UpdateAssetData, actorId: st
         eolMonths,
         warrantyExpiresAt,
         eolDate,
-        // `intocado` é a chave `customFields` nem ter vindo no corpo: `undefined`
-        // faz o Prisma não tocar na coluna, que é a mesma regra de todo campo
-        // acima. `DbNull` e nunca `JsonNull` quando não sobrou chave nenhuma.
-        customFields: campos.intocado ? undefined : campos.valores ?? Prisma.DbNull,
         // Autoria (D26). `createdById` NÃO entra aqui: quem criou não muda.
         updatedById: actorId,
       },
-      select: ASSET_SELECT_COM_CAMPOS,
+      select: ASSET_SELECT,
     });
 
     const changes = buildChanges(antes, depois, CAMPOS_AUDITADOS);
@@ -196,9 +159,7 @@ export async function updateAsset(id: string, data: UpdateAssetData, actorId: st
     // formato `{ de, para }` das colunas nativas, que é como a aba Histórico
     // reconhece uma mudança. Aninhado, o leitor genérico o classificava como
     // "detalhe" e imprimia `[object Object]`.
-    const camposAlterados = campos.intocado ? {} : diffDeCampos(gravados, campos.valores ?? {});
-
-    const changesCompleto = { ...changes, ...camposAlterados };
+    const changesCompleto = changes;
 
     if (Object.keys(changesCompleto).length > 0) {
       await recordActivity(
@@ -208,7 +169,6 @@ export async function updateAsset(id: string, data: UpdateAssetData, actorId: st
       );
     }
 
-    // A máscara é a ÚNICA saída de uma linha com `customFields`.
-    return comCamposMascarados(depois);
+    return depois;
   });
 }

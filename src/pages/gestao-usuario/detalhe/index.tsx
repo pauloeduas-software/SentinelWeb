@@ -1,11 +1,9 @@
 import { ArrowLeft, Boxes, HardDrive, History, LogOut, MapPin, ScrollText, UserX } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import AcessoCard from './components/AcessoCard';
 import HistoryPanel from './components/HistoryPanel';
 import OffboardModal from './components/OffboardModal';
 import { useUserDetail } from './hooks/useUserDetail';
 import { formatarData } from '../../helpers/format.helper';
-import { usePode } from '../../../domain/auth/auth.store';
 import type { Asset, PostoDoAtivo } from '../../../domain/shared/asset.types';
 import Iniciais from '../../components/Iniciais';
 
@@ -44,11 +42,6 @@ export default function UserDetailPage() {
     modalDesligamento, abrirDesligamento, fecharDesligamento,
     handleDesligar, desligando, resultado,
   } = useUserDetail();
-
-  // O bloco de acesso só para quem administra acesso: as rotas por trás dele
-  // exigem `access.manage`, e um card que carrega vazio com 403 no console é
-  // pior do que card nenhum. A segurança é o `preHandler` do servidor.
-  const podeGerenciarAcesso = usePode('access.manage');
 
   if (carregando) {
     return <p className="font-mono text-xs text-text-tertiary">Carregando colaborador...</p>;
@@ -106,15 +99,6 @@ export default function UserDetailPage() {
           abre esta tela para resolver um chamado de acesso não precisa rolar
           por quatro listas de equipamento. Só para quem administra acesso — as
           rotas por trás exigem `access.manage`. */}
-      {podeGerenciarAcesso && (
-        <AcessoCard
-          userId={user.id}
-          desligado={user.terminatedAt !== null}
-          authSource={user.authSource}
-          directorySyncedAt={user.directorySyncedAt}
-          directoryMissingAt={user.directoryMissingAt}
-        />
-      )}
 
       <Secao
         icone={HardDrive}

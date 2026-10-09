@@ -1,9 +1,6 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { USER_PUBLIC_SELECT } from '../../user/helpers/user-select.helper';
-import {
-  GRUPOS_PARA_PERMISSAO, unirPermissoes,
-} from '../../access/use-cases/effective-permissions.usecase';
-import type { Permissao } from '../../access/helpers/permission-catalog';
+import type { Papel } from '../../access/helpers/papel';
 import type { SessionUser } from '../auth.types';
 
 /**
@@ -45,23 +42,20 @@ export function carregarUsuarioDaSessao(id: string): Promise<SessionUser | null>
  */
 export async function carregarSessaoParaValidacao(
   id: string,
-): Promise<{ usuario: SessionUser; tokenVersion: number; permissoes: Set<Permissao> } | null> {
+): Promise<{ usuario: SessionUser; tokenVersion: number; papel: Papel } | null> {
   const linha = await prisma.user.findFirst({
     where: { id, isActive: true },
-    // OS GRUPOS VÊM NA MESMA CONSULTA (D136), e é por isso que a permissão não
-    // custa uma segunda ida ao banco por requisição. O `include` acrescenta um
-    // join à consulta mais quente do sistema — é o preço mínimo possível, e a
-    // alternativa (um `effective-permissions` chamado à parte no `preHandler`)
-    // dobraria a contagem de consultas de TODA requisição autenticada.
-    select: { ...USER_PUBLIC_SELECT, tokenVersion: true, groups: GRUPOS_PARA_PERMISSAO },
+    // O PAPEL VEM NA MESMA CONSULTA, e agora é uma COLUNA — não mais o join nos
+    // grupos que o D136 descrevia. A releitura por requisição é o caminho mais
+    // quente do sistema, e o D148 tirou um join dele.
+    select: { ...USER_PUBLIC_SELECT, tokenVersion: true, role: true },
   });
   if (!linha) return null;
 
-  // `tokenVersion` e `groups` saem do objeto antes de ele virar `usuario`: os
-  // dois são lidos, usados e DESCARTADOS. É a mesma mecânica para os dois, e
-  // pelo mesmo motivo — nenhum dos dois é dado de usuário para exibir, e o
-  // `USER_PUBLIC_SELECT` continua sendo a única porta de saída do que o cliente
-  // vê.
-  const { tokenVersion, groups, ...usuario } = linha;
-  return { usuario, tokenVersion, permissoes: unirPermissoes(groups) };
+  // `tokenVersion` e `role` saem do objeto antes de ele virar `usuario`: os dois
+  // são lidos, usados e DESCARTADOS. É a mesma mecânica para os dois, e pelo
+  // mesmo motivo — nenhum dos dois é dado de usuário para exibir, e o
+  // `USER_PUBLIC_SELECT` continua sendo a única porta de saída do que o cliente vê.
+  const { tokenVersion, role, ...usuario } = linha;
+  return { usuario, tokenVersion, papel: role };
 }

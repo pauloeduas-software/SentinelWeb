@@ -1,3 +1,4 @@
+import { assertSobraAdministrador } from '../../access/helpers/ultimo-administrador';
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { buildChanges } from '../../shared/diff.helper';
@@ -10,6 +11,8 @@ import { USER_PUBLIC_SELECT } from '../helpers/user-select.helper';
 export interface UpdateUserData {
   name?: string;
   email?: string;
+  /** O papel (D148). Ausente = não mexe. */
+  role?: 'USUARIO' | 'TECNICO' | 'ADMIN';
   /** O id do departamento (F11, Etapa D). A coluna de texto não é mais escrita. */
   departmentId?: string | null;
   employeeNumber?: string | null;
@@ -25,7 +28,7 @@ export interface UpdateUserData {
 // a contar uma mudança que não houve nesta pessoa.
 const CAMPOS_AUDITADOS = [
   'name', 'email', 'departmentId', 'employeeNumber', 'jobTitle', 'phone', 'address',
-  'hiredAt', 'managerId',
+  'hiredAt', 'managerId', 'role',
 ] as const;
 
 /**
@@ -38,7 +41,7 @@ const CAMPOS_AUDITADOS = [
  */
 const SELECT_DO_DIFF = {
   id: true, name: true, email: true, departmentId: true, employeeNumber: true,
-  jobTitle: true, phone: true, address: true, hiredAt: true, managerId: true,
+  jobTitle: true, phone: true, address: true, hiredAt: true, managerId: true, role: true,
 } as const;
 
 export async function updateUser(id: string, data: UpdateUserData, actorId: string | null) {
@@ -65,6 +68,7 @@ export async function updateUser(id: string, data: UpdateUserData, actorId: stri
         address: data.address,
         hiredAt: data.hiredAt,
         managerId: data.managerId,
+        role: data.role,
       },
       select: SELECT_DO_DIFF,
     });
@@ -73,6 +77,12 @@ export async function updateUser(id: string, data: UpdateUserData, actorId: stri
     if (Object.keys(changes).length > 0) {
       await recordActivity(tx, { entityType: 'User', entityId: id, action: 'UPDATE', changes }, actorId);
     }
+
+    // A REDE, como ÚLTIMA instrução antes da leitura de saída (D148): rebaixar o
+    // único administrador que entra desfaz a transação inteira. Roda sempre, e não
+    // só quando `data.role` veio — o custo é um `count` e a alternativa é lembrar
+    // de chamá-la em cada caminho novo que mexa em papel.
+    await assertSobraAdministrador(tx);
 
     // Devolve pelo select PÚBLICO, não pelo do diff: o cliente recebe o mesmo
     // formato de toda rota que devolve usuário, e os campos de auditoria não

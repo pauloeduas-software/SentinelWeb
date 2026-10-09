@@ -38,13 +38,7 @@ interface AtivoNaListagem {
   } | null;
 }
 
-interface LinhaDoBuilder {
-  assetTag: string;
-  responsavel: string;
-  via: string;
-}
 
-const SEM_RESPONSAVEL = '(sem responsável)';
 
 /** `{ etiqueta → ['Nome|VIA', …] }` pelo caminho da TELA (o resolver). */
 async function peloResolver(): Promise<Map<string, string[]>> {
@@ -61,21 +55,36 @@ async function peloResolver(): Promise<Map<string, string[]>> {
   return mapa;
 }
 
-/** `{ etiqueta → ['Nome|VIA', …] }` pelo caminho do RELATÓRIO (a view). */
+/**
+ * `{ etiqueta → ['Nome|VIA', …] }` lendo a VIEW direto, por SQL.
+ *
+ * LIA PELO BUILDER (`POST /api/reports/custom`) até o D154, que tirou o builder.
+ * Ler a view por `$queryRaw` é melhor do que parecia: o que este arquivo prova é
+ * que a view e o `resolverResponsaveisEmLote()` concordam (D66, D129), e uma rota
+ * no meio só acrescentava uma coisa que poderia estar errada sem que a view
+ * estivesse. Agora os dois lados da comparação são as duas implementações, e nada
+ * mais.
+ *
+ * `vw_asset_responsibles` NÃO existe no schema do Prisma de propósito — ela é
+ * criada por migration e nenhum `select` a alcança. Por isso o SQL cru.
+ */
 async function pelaView(): Promise<Map<string, string[]>> {
-  const { body } = await api.post<{ linhas: LinhaDoBuilder[] }>('/api/reports/custom', {
-    columns: ['assetTag', 'responsavel', 'via'],
-    limit: 2000,
-  });
+  const linhas = await prisma.$queryRaw<{ assetTag: string; name: string; via: string }[]>`
+    SELECT a."assetTag", u.name, r.via
+      FROM assets a
+      LEFT JOIN vw_asset_responsibles r ON r."assetId" = a.id
+      LEFT JOIN users u ON u.id = r."userId"
+     WHERE a."deletedAt" IS NULL
+  `;
 
   const mapa = new Map<string, string[]>();
 
-  for (const linha of body.linhas) {
+  for (const linha of linhas) {
     const atual = mapa.get(linha.assetTag) ?? [];
 
-    // A linha "(sem responsável)" é o `LEFT JOIN` sem par — o ativo existe no
-    // relatório e não tem ninguém. O resolver expressa o mesmo com lista vazia.
-    if (linha.responsavel !== SEM_RESPONSAVEL) atual.push(`${linha.responsavel}|${linha.via}`);
+    // `name` nulo é o `LEFT JOIN` sem par — o ativo existe e não tem ninguém. O
+    // resolver expressa o mesmo com lista vazia.
+    if (linha.name) atual.push(`${linha.name}|${linha.via}`);
 
     mapa.set(linha.assetTag, atual.sort());
   }
@@ -266,65 +275,5 @@ describe('GET /api/reports/responsabilidade', () => {
   it('exige sessão', async () => {
     const { status } = await api.anonimo.get('/api/reports/responsabilidade');
     expect(status).toBe(401);
-  });
-});
-
-describe('POST /api/reports/custom — o builder (D67)', () => {
-  it('recusa token fora da allowlist, devolvendo a lista dos válidos', async () => {
-    const { status, body } = await api.post<{ error: string; validas?: string[] }>(
-      '/api/reports/custom',
-      { columns: ['assetTag', 'a."purchaseCost"; DROP TABLE assets'] },
-    );
-
-    expect(status).toBe(422);
-    expect(body.error).toMatch(/Coluna desconhecida/);
-    expect(body.validas).toContain('responsavel');
-  });
-
-  it('agrupa por responsável resolvido — o que nenhuma coluna de tabela responde', async () => {
-    const { status, body } = await api.post<{
-      agruparPor: string;
-      grupos: { grupo: string; ativos: number; custoTotal: string | null }[];
-    }>('/api/reports/custom', { columns: ['assetTag'], agruparPor: 'responsavel' });
-
-    expect(status).toBe(200);
-    expect(body.agruparPor).toBe('responsavel');
-
-    const laura = body.grupos.find((grupo) => grupo.grupo === 'Laura Souza (view)');
-    expect(laura!.ativos).toBe(2);
-
-    // O balde dos sem responsável tem rótulo, não `null`: é o grupo que alguém
-    // abre o relatório para ver.
-    expect(body.grupos.some((grupo) => grupo.grupo === '(sem responsável)')).toBe(true);
-  });
-
-  it('recusa agrupar por coluna que é VALOR, não categoria', async () => {
-    const { status, body } = await api.post<{ error: string; agrupaveis?: string[] }>(
-      '/api/reports/custom',
-      { columns: ['assetTag'], agruparPor: 'purchaseCost' },
-    );
-
-    expect(status).toBe(422);
-    expect(body.error).toMatch(/não pode agrupar/);
-    expect(body.agrupaveis).toContain('status');
-  });
-
-  it('recusa corpo vazio e mais de 15 colunas', async () => {
-    const vazio = await api.post('/api/reports/custom', { columns: [] });
-    const demais = await api.post('/api/reports/custom', {
-      columns: Array.from({ length: 16 }, () => 'assetTag'),
-    });
-
-    expect([vazio.status, demais.status]).toEqual([422, 422]);
-  });
-
-  it('o seletor da tela sai do servidor, com o que pode agrupar', async () => {
-    const { body } = await api.get<{ colunas: string[]; agrupaveis: string[] }>(
-      '/api/reports/builder/fields',
-    );
-
-    expect(body.colunas).toContain('turno');
-    expect(body.agrupaveis).toContain('posto');
-    expect(body.agrupaveis).not.toContain('purchaseCost');
   });
 });

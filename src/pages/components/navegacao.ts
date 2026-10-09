@@ -1,7 +1,5 @@
 import {
-  Armchair, Boxes, ClipboardCheck, Database, FileBarChart, FileUp, KeyRound,
-  Laptop, QrCode, Radar, ScrollText, Server, ShieldCheck, SlidersHorizontal, Users, Wrench,
-  type LucideIcon,
+  Armchair, Boxes, Database, FileBarChart, Radar, ScrollText, Server, SlidersHorizontal, Users, type LucideIcon,
 } from 'lucide-react';
 
 // O MENU, declarado em um lugar só — a barra lateral desenha, o cabeçalho lê
@@ -42,14 +40,13 @@ export interface ItemDeMenu {
    * daqui pode estar incompleta sem consequência de segurança — o pior caso é
    * um item visível que responde 403.
    *
-   * **AUSENTE quer dizer "todo mundo vê"**, e existe para as telas que falam sobre
-   * QUEM ESTÁ OLHANDO: minha conta e meus equipamentos. As rotas delas também não
-   * exigem chave nenhuma no servidor (as dispensas declaradas em
-   * `access/helpers/route-permissions.ts`) — é a mesma decisão, dos dois lados:
-   * ninguém precisa de autorização para cuidar da própria credencial nem para ver
-   * o que está no próprio nome.
+   * **AUSENTE quer dizer "todo mundo vê"**. Era o caso de Minha conta e Meus
+   * equipamentos, as duas telas que falavam sobre QUEM ESTÁ OLHANDO; as duas
+   * saíram (D148, D156) e hoje nenhum item do menu dispensa papel — mas o campo
+   * continua opcional, porque a próxima tela desse tipo não deve precisar de
+   * mudança de tipo para existir.
    */
-  permissao?: string;
+  papel?: 'TECNICO' | 'ADMIN';
 }
 
 export interface GrupoDeMenu {
@@ -68,19 +65,19 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
   {
     titulo: 'Operação',
     itens: [
-      { to: '/', label: 'Telemetria', icon: Server, permissao: 'endpoints.view' },
-      { to: '/ativos', label: 'Ativos', icon: Database, permissao: 'assets.view' },
+      { to: '/', label: 'Telemetria', icon: Server, papel: 'TECNICO' },
+      { to: '/ativos', label: 'Ativos', icon: Database, papel: 'TECNICO' },
       // Logo depois de Ativos: é a mesma operação vista do outro lado — o ativo
       // está na mesa, e a mesa é de quem a ocupa (docs/referencia/modelo-de-posse.md).
-      { to: '/postos', label: 'Postos', icon: Armchair, permissao: 'assets.view' },
+      { to: '/postos', label: 'Postos', icon: Armchair, papel: 'TECNICO' },
       // Depois de Postos porque a entrega de acessório pende dele: os 5 mouses
       // da Mesa 1 são do POSTO, e quem responde são os ocupantes (D33).
-      { to: '/estoque', label: 'Estoque', icon: Boxes, permissao: 'stock.view' },
+      { to: '/estoque', label: 'Estoque', icon: Boxes, papel: 'TECNICO' },
       // Depois de Estoque porque é o mesmo desenho um passo adiante: lá o saldo
       // é calculado sobre unidades intercambiáveis, aqui o assento é uma LINHA
       // que se trava (D40). E porque licença também é posse — entra no
       // desligamento.
-      { to: '/licencas', label: 'Licenças', icon: ScrollText, permissao: 'licenses.view' },
+      { to: '/licencas', label: 'Licenças', icon: ScrollText, papel: 'TECNICO' },
     ],
   },
   {
@@ -88,43 +85,25 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
     itens: [
       // O que o agente VÊ e o cadastro não sabe (F7). Perto do inventário
       // porque é dele que a tela fala, não do RMM.
-      { to: '/descobertas', label: 'Descobertas', icon: Radar, permissao: 'endpoints.view' },
-      { to: '/manutencoes', label: 'Manutenções', icon: Wrench, permissao: 'assets.view' },
+      { to: '/descobertas', label: 'Descobertas', icon: Radar, papel: 'TECNICO' },
       // AGORA TEM LUGAR NO MENU, e o motivo da ausência caducou junto com a
       // barra horizontal: `/auditorias` ficava de fora porque "a barra já tem
       // doze itens e desaparece abaixo de md". Na vertical não há essa disputa,
       // e esconder a tela de conferência fazia dela a única do sistema que só
       // se alcançava por dentro de outra.
-      { to: '/auditorias', label: 'Auditorias', icon: ClipboardCheck, permissao: 'assets.view' },
     ],
   },
   {
     titulo: 'Gestão',
     itens: [
-      { to: '/users', label: 'Usuários', icon: Users, permissao: 'users.view' },
-      { to: '/relatorios', label: 'Relatórios', icon: FileBarChart, permissao: 'reports.view' },
-    ],
-  },
-  {
-    // MINHA CONTA fica em grupo PRÓPRIO, no fim: ela não é operação (não fala de
-    // ativo nenhum) nem sistema (não configura nada para os outros). É a única
-    // seção que toda sessão vê, inclusive a de quem não tem chave nenhuma — e por
-    // isso ela é também a última tela que sobra quando o acesso é removido.
-    titulo: 'Minha conta',
-    itens: [
-      // PRIMEIRO os equipamentos, depois a conta: o colaborador comum abre o
-      // painel para ver o que está no nome dele, não para mexer em credencial.
-      { to: '/meus-equipamentos', label: 'Meus equipamentos', icon: Laptop },
-      { to: '/minha-conta', label: 'Minha conta', icon: ShieldCheck },
+      { to: '/users', label: 'Usuários', icon: Users, papel: 'TECNICO' },
+      { to: '/relatorios', label: 'Relatórios', icon: FileBarChart, papel: 'TECNICO' },
     ],
   },
   {
     titulo: 'Sistema',
     itens: [
-      { to: '/configuracoes', label: 'Configurações', icon: SlidersHorizontal, permissao: 'catalog.manage' },
-      { to: '/importacao', label: 'Importar', icon: FileUp, permissao: 'imports.manage' },
-      { to: '/etiquetas', label: 'Etiquetas', icon: QrCode, permissao: 'labels.print' },
-      { to: '/tokens', label: 'Tokens', icon: KeyRound, permissao: 'access.manage' },
+      { to: '/configuracoes', label: 'Configurações', icon: SlidersHorizontal, papel: 'ADMIN' },
     ],
   },
 ];

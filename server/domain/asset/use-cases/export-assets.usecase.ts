@@ -4,7 +4,7 @@ import { csvStream } from '../../shared/csv.helper';
 import { resolverResponsaveisEmLote } from '../../assignment/use-cases/resolve-responsibles.usecase';
 import { buildAssetFilterWhere, buildAssetWhere, type AssetFilters } from '../helpers/asset-filters.helper';
 import {
-  pediuCampoCustomizado, type ColunasEscolhidas, type LinhaDeExport,
+  type ColunasEscolhidas, type LinhaDeExport,
 } from '../helpers/asset-export-columns.helper';
 
 // O EXPORT DA LISTAGEM DE ATIVOS (F10, Etapa C).
@@ -81,11 +81,6 @@ export function exportAssets(
 
   // O JsonB SÓ ENTRA NO SELECT QUANDO ALGUMA COLUNA `cf:` FOI PEDIDA (F9/F10).
   //
-  // `customFields` é a coluna mais gorda da tabela e está FORA do select
-  // compartilhado por decisão da F9 — trazê-la em todo export faria quem baixa as
-  // onze colunas padrão pagar o JsonB de cinco mil ativos para descartá-lo. A
-  // pergunta sai do TOKEN, igual à do responsável, e pelo mesmo motivo.
-  const querCampos = pediuCampoCustomizado(tokens);
 
   const where = { ...buildAssetWhere(q), ...buildAssetFilterWhere(filtros) };
 
@@ -96,7 +91,7 @@ export function exportAssets(
     lote: async (cursor) => {
       const rows = await prisma.asset.findMany({
         where,
-        select: querCampos ? { ...EXPORT_SELECT, customFields: true } : EXPORT_SELECT,
+        select: EXPORT_SELECT,
         orderBy: { id: 'asc' },
         take: TAMANHO_DO_LOTE,
         // `skip: 1` com cursor: sem ele a linha do cursor volta como primeira

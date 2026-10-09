@@ -1,7 +1,5 @@
 import { PackageX, Undo2 } from 'lucide-react';
-import CustomFieldsCard from './CustomFieldsCard';
 import type { Asset } from '../../../../domain/shared/asset.types';
-import type { ConjuntoResolvido } from '../../../../domain/shared/custom-field.types';
 import { formatarData, formatarMeses, formatarMoeda } from '../../../helpers/format.helper';
 import { seloDaSaida } from '../../helpers/descomissionamento.helper';
 
@@ -10,20 +8,12 @@ import { seloDaSaida } from '../../helpers/descomissionamento.helper';
 
 interface DetalhesTabProps {
   asset: Asset;
-  /** O conjunto do modelo: dá RÓTULO e ORDEM aos valores de `asset.customFields`. */
-  conjuntoDeCampos: ConjuntoResolvido | undefined;
-  /** `slug` → valor revelado nesta sessão de tela. Nunca persistido (D62). */
-  camposRevelados: Record<string, string>;
-  revelandoCampo: string | null;
-  erroAoRevelar: string;
-  onRevelarCampo: (slug: string) => void;
   onDescomissionar: () => void;
   onReverterSaida: () => void;
 }
 
 export default function DetalhesTab({
-  asset, conjuntoDeCampos, camposRevelados, revelandoCampo, erroAoRevelar,
-  onRevelarCampo, onDescomissionar, onReverterSaida,
+  asset, onDescomissionar, onReverterSaida,
 }: DetalhesTabProps) {
   // Cálculo fora do JSX (docs/referencia/arquitetura.md). Os dois textos abaixo dependem
   // do mesmo dado e são lidos em dois lugares da tela.
@@ -99,14 +89,6 @@ export default function DetalhesTab({
             o que o cliente criou vale mais que as duas caixas de marcar, e menos
             que o texto livre que alguém escreveu sobre este ativo. Ocupa a linha
             inteira porque o número de campos é do cliente, não do layout. */}
-        <CustomFieldsCard
-          valores={asset.customFields}
-          conjunto={conjuntoDeCampos}
-          revelados={camposRevelados}
-          revelando={revelandoCampo}
-          erroAoRevelar={erroAoRevelar}
-          onRevelar={onRevelarCampo}
-        />
 
         <Secao titulo="Notas">
           <p className="col-span-2 text-text-secondary whitespace-pre-wrap leading-relaxed">

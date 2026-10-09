@@ -5,7 +5,10 @@ import {
   type ConfiguracaoDoSistema, type DelimitadorDeCsv, type FormatoDeData, type MarcaVisual,
 } from '../../../domain/shared/settings.types';
 
-// A ABA *SISTEMA* (F10, Etapa A) — marca, formato e retenção do backup.
+// A ABA *SISTEMA* (F10, Etapa A) — marca e formato de número, data e moeda.
+//
+// TINHA um terceiro grupo, a retenção do backup; ele saiu com o backup (D156),
+// porque campo que configura uma rotina que não existe é um campo que mente.
 //
 // POR QUE ELA FICA AQUI, e não numa tela nova: `/configuracoes` já é a tela das
 // NOVE tabelas de catálogo, dirigida por spec. Esta aba é a décima, e é a
@@ -66,7 +69,7 @@ interface Props {
  * que continua valendo, em vez de um campo mentindo que a mudança pegou.
  */
 function assinatura(c: ConfiguracaoDoSistema): string {
-  return [c.companyName, c.primaryColor, c.locale, c.dateFormat, c.currency, c.csvDelimiter, c.backupRetentionDays]
+  return [c.companyName, c.primaryColor, c.locale, c.dateFormat, c.currency, c.csvDelimiter]
     .join('·');
 }
 
@@ -152,7 +155,6 @@ function Formulario({ configuracao, salvando, onSalvar }: {
   const [dateFormat, setDateFormat] = useState<FormatoDeData>(() => configuracao.dateFormat);
   const [currency, setCurrency] = useState(() => configuracao.currency);
   const [csvDelimiter, setCsvDelimiter] = useState<DelimitadorDeCsv>(() => configuracao.csvDelimiter);
-  const [retencao, setRetencao] = useState(() => String(configuracao.backupRetentionDays));
 
   const handleSalvar = () => {
     onSalvar({
@@ -165,7 +167,6 @@ function Formulario({ configuracao, salvando, onSalvar }: {
       // `Number` e não `parseInt`: campo vazio vira `0`, que o servidor recusa
       // com a mensagem certa ("mínimo de 1") em vez de virar `NaN` e subir como
       // 422 sobre um campo que a pessoa nem sabe que mandou.
-      backupRetentionDays: Number(retencao),
     });
   };
 
@@ -253,18 +254,6 @@ function Formulario({ configuracao, salvando, onSalvar }: {
           </span>
         </label>
 
-        <label className="space-y-1 block">
-          <span className={ROTULO}>Retenção do backup</span>
-          <input
-            type="number" min={1} max={3650} value={retencao}
-            onChange={(evento) => setRetencao(evento.target.value)}
-            className={CAMPO}
-          />
-          <span className={AJUDA}>
-            Em dias. O expurgo nunca apaga o dump mais recente, mesmo vencido: retenção
-            atrasada não pode deixar o sistema sem backup nenhum.
-          </span>
-        </label>
       </div>
 
       <button

@@ -3,9 +3,7 @@ import { parseAgentMessage } from './helpers/parse-agent-message.helper';
 import { registerAgent, unregisterAgent } from './agent.registry';
 import { handleAgentMessage } from './use-cases/handle-agent-message.usecase';
 import { markEndpointOffline } from '../endpoint/use-cases/mark-endpoint-offline.usecase';
-import { autenticarAgente, type FormaDeAutenticacao } from './helpers/authenticate-agent.helper';
-import { vincularTokenAoEndpoint } from '../auth/use-cases/bind-agent-token.usecase';
-import { prisma } from '../../core/database/prismaClient';
+import { autenticarAgente } from './helpers/authenticate-agent.helper';
 import { shortHwid } from '../endpoint/helpers/hwid.helper';
 import { createLogger } from '../../core/logger/logger';
 
@@ -14,25 +12,16 @@ const logger = createLogger('agent.maestro');
 // Porta de entrada do Agente Sentinel (C#). Aqui só mora transporte: aceitar a
 // conexão, traduzir o que chegou e encaminhar. Regra de negócio nenhuma.
 //
-// A rota exige `Authorization: Bearer <token>`, e aceita DOIS formatos durante
-// a transição (D89): o `ApiToken` por agente — o certo, com prefixo, hash,
-// revogação e vínculo com a máquina — e o `AGENT_TOKEN` compartilhado da F0,
-// que sai quando o log de depreciação parar de aparecer.
+// A rota exige `Authorization: Bearer <token>`, conferido contra o
+// `AGENT_TOKEN` do `.env`. Eram dois formatos em transição (D89); o `ApiToken`
+// por agente saiu no D149, e com ele o vínculo token↔máquina.
 export class AgentMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
-    // COMO a conexão se autenticou, por requisição. Guardado aqui e não em
-    // `request` porque o `preHandler` e o handler do WebSocket são funções
-    // diferentes, e só o primeiro vê o header.
-    const autenticacaoPorRequisicao = new WeakMap<FastifyRequest, FormaDeAutenticacao>();
-
     const exigirToken = async (request: FastifyRequest, reply: FastifyReply) => {
       const ip = request.socket.remoteAddress ?? 'desconhecido';
-      const forma = await autenticarAgente(request.headers.authorization, ip);
+      const forma = await autenticarAgente(request.headers.authorization);
 
-      if (forma) {
-        autenticacaoPorRequisicao.set(request, forma);
-        return;
-      }
+      if (forma) return;
 
       // `preHandler` roda ANTES do upgrade: quem não tem token leva 401 e o
       // WebSocket nem chega a existir — melhor do que aceitar o socket e fechar.
@@ -63,20 +52,6 @@ export class AgentMaestro {
         try {
           await handleAgentMessage(message);
 
-          // O VÍNCULO TOKEN ↔ MÁQUINA, depois de o handshake ter criado ou
-          // encontrado o `Endpoint` (D80). Feito aqui e não antes porque só
-          // agora a máquina existe no banco — o token é gerado na INSTALAÇÃO
-          // do agente, quando ela ainda não existia.
-          const forma = autenticacaoPorRequisicao.get(request);
-          if (message.type === 'Handshake' && forma?.via === 'API_TOKEN') {
-            const endpoint = await prisma.endpoint.findUnique({
-              where: { hwid: message.hwid },
-              select: { id: true },
-            });
-            if (endpoint) {
-              await vincularTokenAoEndpoint(forma.token.id, endpoint.id, shortHwid(message.hwid));
-            }
-          }
         } catch (error) {
           logger.error(`[Agent] Falha ao processar ${message.type} de ${shortHwid(message.hwid)}:`, error);
         }

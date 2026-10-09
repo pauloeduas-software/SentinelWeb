@@ -96,7 +96,7 @@ export interface ResultadoDesligamento {
    */
   chefiasTransferidas: ChefiasTransferidas | null;
   /** Tokens pessoais revogados e sessões derrubadas (F11, Etapa G, passo 5). */
-  acessoRevogado: { tokens: number; sessoesDerrubadas: boolean };
+  acessoRevogado: { sessoesDerrubadas: boolean };
 }
 
 export async function offboardUser(
@@ -329,11 +329,6 @@ export async function offboardUser(
     // diferentes: aquela depende de a flag estar gravada, esta mata o token em
     // si. Se um dia alguém "reativar" a pessoa sem querer, os tokens antigos
     // continuam mortos.
-    const tokens = await tx.apiToken.updateMany({
-      where: { ownerType: 'USER', userId, revokedAt: null },
-      data: { revokedAt: saidaEm },
-    });
-
     const desligada = await tx.user.update({
       where: { id: userId },
       data: {
@@ -364,8 +359,7 @@ export async function offboardUser(
         ocupacoesEncerradas: ocupacoesEncerradas.length,
         // O placar do ACESSO fechado, ao lado do da posse: "ela ainda conseguia
         // entrar?" é pergunta de auditoria, e a resposta tem que estar na linha
-        // do desligamento.
-        tokensRevogados: tokens.count,
+        // do desligamento.,
         chefiasTransferidas: chefiasTransferidas ? { ...chefiasTransferidas } : null,
         notes: data.notes ?? null,
       },
@@ -384,7 +378,7 @@ export async function offboardUser(
       assentosDevolvidos,
       ocupacoesEncerradas,
       chefiasTransferidas,
-      acessoRevogado: { tokens: tokens.count, sessoesDerrubadas: true },
+      acessoRevogado: { sessoesDerrubadas: true },
     };
   });
 }

@@ -5,13 +5,10 @@ import { installProcessHandlers, onShutdown } from './core/lifecycle/shutdown';
 import { closeDatabase } from './core/database/prismaClient';
 import { verificarCanarioDeCriptografia } from './core/crypto/canary';
 import { colunasCifradasDaLicenca } from './domain/license/helpers/coluna-cifrada.helper';
-import { colunasCifradasDoAtivo } from './domain/custom-field/helpers/coluna-cifrada.helper';
 import { disconnectAllAgents } from './domain/agent/agent.registry';
 import { startZombieCleanerJob, stopZombieCleanerJob } from './domain/endpoint/jobs/zombie-cleaner.job';
 import { startOverdueReminderJob, stopOverdueReminderJob } from './domain/assignment/jobs/overdue-reminder.job';
 import { startReconcileJob, stopReconcileJob } from './domain/reconciliation/jobs/reconcile.job';
-import { startDailyAlertsJob, stopDailyAlertsJob } from './domain/alert/jobs/daily-alerts.job';
-import { startLdapSyncJob, stopLdapSyncJob } from './domain/access/jobs/ldap-sync.job';
 import { buildApp } from './app';
 
 const logger = createLogger('server');
@@ -44,13 +41,10 @@ async function bootstrap() {
   // boot cai ou segue. Coluna nova cifrada entra nesta chamada, senão o canário
   // conclui que ela não existe — e segue com a mensagem errada.
   //
-  // São DUAS desde a F9: `licenses.productKey` (F6) e `assets.customFields`, os
-  // campos customizados marcados como cifrados (D62). O `canary.ts` previa esta
-  // segunda em comentário.
-  await verificarCanarioDeCriptografia([
-    ...colunasCifradasDaLicenca(),
-    ...colunasCifradasDoAtivo(),
-  ]);
+  // VOLTOU A SER UMA: `licenses.productKey` (F6). A segunda era
+  // `assets.customFields` (D62), e saiu com os campos customizados no D145 — a
+  // cifra continua com o mesmo arquivo e o mesmo formato (D81), só com um uso.
+  await verificarCanarioDeCriptografia(colunasCifradasDaLicenca());
 
   const server = await buildApp();
 
@@ -65,8 +59,6 @@ async function bootstrap() {
   onShutdown('job de agentes zumbis', stopZombieCleanerJob);
   onShutdown('job de lembrete de atraso', stopOverdueReminderJob);
   onShutdown('job de reconciliação', stopReconcileJob);
-  onShutdown('job de alertas diários', stopDailyAlertsJob);
-  onShutdown('job de sincronização com o diretório', stopLdapSyncJob);
   onShutdown('conexões de agente', disconnectAllAgents);
   onShutdown('servidor HTTP', () => server.close());
   onShutdown('banco de dados', closeDatabase);
@@ -78,22 +70,9 @@ async function bootstrap() {
   startOverdueReminderJob();
   // A reconciliação acorda de hora em hora e executa UMA vez por hora (mesma
   // janela do D79, com granularidade diferente). Fora do `app.ts` pelo mesmo
-  // motivo dos outros dois: job com `setInterval` dentro de teste é escrita
+  // motivo do outro: job com `setInterval` dentro de teste é escrita
   // concorrente em banco compartilhado.
   startReconcileJob();
-  // Os alertas acordam de hora em hora e executam UMA vez por dia, na HORA e no
-  // FUSO configurados (D123) — e não no primeiro tick depois da meia-noite do
-  // servidor, que é o que `inicioDoDia()` daria. Fora do `app.ts` pelo mesmo
-  // motivo dos outros três: job com `setInterval` dentro de teste é escrita
-  // concorrente em banco compartilhado.
-  startDailyAlertsJob();
-
-  // A SINCRONIZAÇÃO COM O DIRETÓRIO (F11, Etapa I). Ele mesmo decide se vale a
-  // pena existir: sem `LDAP_URL` configurada, não agenda nada e loga uma linha —
-  // a maioria das instalações não usa diretório, e um erro por hora no log delas
-  // seria pior que o silêncio.
-  startLdapSyncJob();
-
   const port = getPort();
   await server.listen({ port, host: '0.0.0.0' });
   logger.info(`🚀 [Server] Sentinel API operando em http://localhost:${port}`);

@@ -12,7 +12,6 @@ import {
   encerrarSugestoesObsoletas, expurgarSugestoesSubstituidas,
 } from '../use-cases/invalidate-suggestions.usecase';
 import { lerConfiguracaoDaDescoberta } from '../helpers/discovery-settings.helper';
-import { auditarPeloAgente } from '../../audit/use-cases/audit-by-agent.usecase';
 
 // A VARREDURA — de hora em hora, sobre as máquinas SEM vínculo.
 //
@@ -46,7 +45,7 @@ export function inicioDaHora(): Date {
  * inteira). A reconciliação vem depois, máquina a máquina.
  */
 export async function rodarReconciliacao(): Promise<{
-  endpoints: number; sugeridas: number; vinculadas: number; encerradas: number; conferidas: number;
+  endpoints: number; sugeridas: number; vinculadas: number; encerradas: number;
 }> {
   const carimbados = await carimbarUltimoContatoNosAtivos();
 
@@ -140,19 +139,17 @@ export async function rodarReconciliacao(): Promise<{
   // Depois de tudo de propósito: ela é a única coisa desta rodada que escreve numa
   // tabela de PATRIMÔNIO (`assets.lastAuditAt`), e uma falha dela não pode levar
   // junto a fila de sugestões que acabou de ser construída.
-  const conferidas = await auditarPeloAgente(configuracao.timezone);
 
-  if (carimbados > 0 || sugeridas > 0 || vinculadas > 0 || encerradas > 0 || conferidas > 0) {
+  if (carimbados > 0 || sugeridas > 0 || vinculadas > 0 || encerradas > 0 || 0 > 0) {
     logger.info(
       `[Reconciliação] ${pendentes.length} máquina(s) sem vínculo; ` +
       `${sugeridas} sugestão(ões), ${vinculadas} vínculo(s) automático(s), ` +
       `${encerradas} sugestão(ões) encerrada(s) por mudança no cadastro, ` +
-      `${carimbados} ativo(s) com último contato atualizado, ` +
-      `${conferidas} conferido(s) pelo agente.`,
+      `${carimbados} ativo(s) com último contato atualizado.`,
     );
   }
 
-  return { endpoints: pendentes.length, sugeridas, vinculadas, encerradas, conferidas };
+  return { endpoints: pendentes.length, sugeridas, vinculadas, encerradas };
 }
 
 export function startReconcileJob(): void {

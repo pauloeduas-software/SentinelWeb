@@ -1,4 +1,4 @@
-import { Edit2, Trash2, Check, Minus, ListOrdered, Users, type LucideIcon } from 'lucide-react';
+import { Edit2, Trash2, Check, Minus, Users, type LucideIcon } from 'lucide-react';
 import { formatarMeses, formatarResidual, nomeDaRelacao, rotuloDoEnum } from '../../helpers/format.helper';
 import type { AcaoLinhaId, AcaoLinhaSpec, ColunaSpec } from '../specs/catalog-ui.types';
 import type { CatalogRow } from '../../../domain/shared/catalog.types';
@@ -9,10 +9,6 @@ import type { CatalogRow } from '../../../domain/shared/catalog.types';
 // ícone — esquecer um vira erro de tipo.
 const ICONE_DA_ACAO: Record<AcaoLinhaId, LucideIcon> = {
   ocupantes: Users,
-  // A composição de um conjunto de campos (F9): quais campos, em que ORDEM e
-  // quais obrigatórios. `ListOrdered` porque a ordem é o que essa tela edita e
-  // o que nenhuma outra aba tem.
-  'campos-do-conjunto': ListOrdered,
 };
 
 interface CatalogTableProps {

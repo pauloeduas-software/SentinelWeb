@@ -1,13 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { X } from 'lucide-react';
-import CustomFieldsSection from './CustomFieldsSection';
 import ReferenceSelect from '../../components/ReferenceSelect';
-import { errosPorCampo } from '../../helpers/erros-por-campo.helper';
 import { paraCampoDeData } from '../../helpers/format.helper';
 import { useNextAssetTagQuery, type AssetInput } from '../../../domain/asset/asset.queries';
-import { useConjuntoDoModeloQuery } from '../../../domain/custom-field/custom-field.queries';
 import type { Asset } from '../../../domain/shared/asset.types';
-import type { ConjuntoResolvido } from '../../../domain/shared/custom-field.types';
 
 // POSSE NÃO É CAMPO DESTE FORMULÁRIO — e a ausência é a decisão (D14,
 // docs/referencia/modelo-de-posse.md).
@@ -71,43 +67,9 @@ function valoresIniciais(asset: Asset | null, clonar: boolean) {
     requestable: asset?.requestable ?? false,
     notes: asset?.notes ?? '',
     // `slug` → valor, como a leitura os devolve (cifrado já vem mascarado).
-    customFields: { ...(asset?.customFields ?? {}) } as Record<string, string>,
   };
 }
 
-/**
- * O corpo que vai para a API.
- *
- * ═════════════════════════════════════════════════════════════════════════════
- * `customFields` LEVA EXATAMENTE AS CHAVES DO CONJUNTO RESOLVIDO — nem mais, nem
- * menos. E as duas bordas importam.
- *
- * **Nem mais:** o estado do formulário carrega TODOS os valores gravados,
- * inclusive as chaves de um conjunto anterior (os órfãos do D60). Reenviá-las
- * faria o servidor responder 422 "campo customizado desconhecido para este
- * modelo" — e a edição de qualquer ativo que já trocou de modelo ficaria
- * impossível, num erro que fala de uma chave que a tela nem mostra.
- *
- * **Nem menos:** a chave `customFields` é OMITIDA enquanto o conjunto não
- * carregou, e omitir significa "não mexe" (`validate-custom-fields.usecase.ts`).
- * Mandar `{}` ali apagaria todo valor do ativo se alguém salvasse no instante
- * entre abrir o modal e a resposta do conjunto chegar.
- * ═════════════════════════════════════════════════════════════════════════════
- */
-function paraEnvio(
-  valores: ReturnType<typeof valoresIniciais>,
-  conjunto: ConjuntoResolvido | undefined,
-): AssetInput {
-  const { customFields, ...nativos } = valores;
-
-  // Conjunto ainda não carregado: a coluna não é tocada.
-  if (!conjunto) return nativos;
-
-  const doConjunto: Record<string, string> = {};
-  for (const campo of conjunto.campos) doConjunto[campo.slug] = customFields[campo.slug] ?? '';
-
-  return { ...nativos, customFields: doConjunto };
-}
 
 interface AssetFormModalProps {
   asset: Asset | null;
@@ -127,47 +89,29 @@ export default function AssetFormModal({ asset, clonar = false, onClose, onSubmi
   const [valores, setValores] = useState(() => valoresIniciais(asset, clonar));
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
-  /** `slug` → motivo, do `fields` do 422. É o que pinta a mensagem NO campo. */
-  const [errosDeCampo, setErrosDeCampo] = useState<Record<string, string>>({});
 
   // Só quando vai CRIAR — inclusive clonando —, e é *peek*: o servidor NÃO
   // consome o número aqui. Se consumisse, abrir e cancelar o modal duas vezes
   // furaria a sequência de etiquetas.
   const { data: proxima } = useNextAssetTagQuery(!asset || clonar);
 
-  // O CONJUNTO DE CAMPOS DO MODELO ESCOLHIDO (D58), relido a cada troca do
-  // `<select>`: é o modelo que decide quais campos existem, e ele muda dentro do
-  // próprio formulário.
-  const { data: conjunto } = useConjuntoDoModeloQuery(valores.modelId || undefined);
 
-  // AS CHAVES DE UM CONJUNTO ANTERIOR (D60). Cálculo fora do JSX, e ele depende
-  // do conjunto que acabou de carregar: enquanto ele não chega, nada é órfão —
-  // mostrar o aviso antes da resposta contaria como órfão o conjunto inteiro.
-  const orfaos = useMemo(() => {
-    if (!conjunto) return [];
-    const doConjunto = new Set(conjunto.campos.map((campo) => campo.slug));
-    return Object.keys(valores.customFields).filter((slug) => !doConjunto.has(slug));
-  }, [conjunto, valores.customFields]);
 
   const definir = (campo: string, valor: unknown) =>
     setValores((atual) => ({ ...atual, [campo]: valor }));
 
-  const definirCampoCustomizado = (slug: string, valor: string) =>
-    setValores((atual) => ({ ...atual, customFields: { ...atual.customFields, [slug]: valor } }));
 
   const enviar = async (event: React.FormEvent) => {
     event.preventDefault();
     setSalvando(true);
     setErro('');
-    setErrosDeCampo({});
     try {
-      await onSubmit(paraEnvio(valores, conjunto));
+      await onSubmit(valores);
     } catch (falha) {
       setErro((falha as Error).message);
       // O resumo do 422 corta em três campos com "(e mais N)": num conjunto de
       // vinte campos customizados, o motivo do vigésimo não apareceria em lugar
       // nenhum sem este mapa.
-      setErrosDeCampo(errosPorCampo(falha));
     } finally {
       setSalvando(false);
     }
@@ -300,19 +244,6 @@ export default function AssetFormModal({ asset, clonar = false, onClose, onSubmi
             </p>
           </Secao>
 
-          {/* CAMPOS CUSTOMIZADOS. Depois de Catálogo porque é o MODELO que decide
-              quais campos existem, e antes de "Outros" porque o que o cliente
-              criou é mais importante que as duas caixas de marcar do fim.
-
-              A seção não aparece quando o modelo não tem conjunto: um cabeçalho
-              seguido de nada sugere que algo não carregou. */}
-          <CustomFieldsSection
-            conjunto={conjunto}
-            valores={valores.customFields}
-            erros={errosDeCampo}
-            orfaos={orfaos}
-            onChange={definirCampoCustomizado}
-          />
 
           <Secao titulo="Outros">
             <label className="flex items-center gap-3 cursor-pointer text-text-secondary">

@@ -231,15 +231,8 @@ export interface ResultadoDaRodadaDeAlertas {
 // ── A CONFIGURAÇÃO DO CICLO DE VIDA ────────────────────────────────────────
 
 export interface ConfiguracaoDoCicloDeVida {
-  alertsEnabled: boolean;
-  alertEmails: string[];
-  alertWebhookUrl: string | null;
   warrantyAlertDays: number;
   eolAlertDays: number;
-  maintenanceOpenDays: number;
-  auditIntervalMonths: number;
-  auditWarningDays: number;
-  alertHour: number;
   timezone: string;
 }
 
@@ -263,7 +256,6 @@ export interface LinhaDaDepreciacao {
   assetTag: string;
   name: string | null;
   modelName: string;
-  depreciationName: string | null;
   purchaseDate: string | null;
   purchaseCost: string | null;
   valorAtual: string | null;

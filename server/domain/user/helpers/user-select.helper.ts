@@ -56,12 +56,21 @@ const DEPARTAMENTO_SELECT = { select: { id: true, name: true } } as const;
  * listagem que o mostra. Com ele no `USER_PUBLIC_SELECT`, o join viajaria em
  * todas as outras; sem um select próprio, a coluna da tela ficaria vazia.
  *
- * É o mesmo desenho do `ASSET_SELECT_COM_CAMPOS`: o compartilhado é o enxuto, e
+ * É o mesmo desenho do `ASSET_SELECT`: o compartilhado é o enxuto, e
  * quem precisa de mais tem o seu.
  */
 export const USER_LIST_SELECT = {
   ...USER_PUBLIC_SELECT,
   department: DEPARTAMENTO_SELECT,
+
+  // O PAPEL, e ele está aqui pelo MESMO defeito concreto que trouxe o
+  // `managerId` abaixo — não por completude.
+  //
+  // O formulário abre da listagem e edita o papel. Sem este campo, o `<select>`
+  // dele inicializaria em `USUARIO` e **gravaria** `USUARIO`: corrigir o e-mail
+  // de um administrador o rebaixaria, em silêncio. A rede do
+  // `ultimo-administrador.ts` pegaria o caso do ÚLTIMO; os outros passariam.
+  role: true,
 
   // `managerId` CRU, sem join — e ele está aqui por um defeito concreto, não por
   // completude.
@@ -125,9 +134,6 @@ export const USER_DETAIL_SELECT = {
   // dia"*, que é o que estes três campos respondem. Expor o `oid` de cada
   // colaborador numa resposta de API é dar a quem lê o painel metade de uma
   // correlação com o Entra ID, sem ninguém ter pedido.
-  authSource: true,
-  directorySyncedAt: true,
-  directoryMissingAt: true,
 } as const;
 
 // O `comDepartamento()` NÃO EXISTE MAIS (F11, Etapa J).

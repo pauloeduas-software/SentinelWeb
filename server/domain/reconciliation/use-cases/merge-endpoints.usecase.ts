@@ -126,12 +126,6 @@ export async function fundirEndpoints(perdedorId: string, vencedorId: string, ac
 
     await tx.assetChange.updateMany({ where: { endpointId: perdedorId }, data: { endpointId: vencedorId } });
 
-    // ── O TOKEN da instalação antiga ─────────────────────────────────────────
-    //
-    // Ele passa a apontar para o vencedor: o binário instalado na máquina é o
-    // mesmo, e revogar o token por causa de uma reimagem derrubaria o agente que
-    // está funcionando agora.
-    await tx.apiToken.updateMany({ where: { endpointId: perdedorId }, data: { endpointId: vencedorId } });
 
     // ── O VÍNCULO, se só o perdedor tinha ────────────────────────────────────
     const assetId = vencedor.assetId ?? perdedor.assetId;

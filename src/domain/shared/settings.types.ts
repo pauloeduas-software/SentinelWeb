@@ -29,7 +29,6 @@ export interface ConfiguracaoDoSistema {
   dateFormat: FormatoDeData;
   currency: string;
   csvDelimiter: DelimitadorDeCsv;
-  backupRetentionDays: number;
 }
 
 export type MarcaVisual = 'logo' | 'favicon';

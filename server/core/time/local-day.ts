@@ -100,21 +100,6 @@ export function inicioDoDiaLocal(fuso: string, agora: Date = new Date()): Date {
   return instanteDoLocal(fuso, hoje.ano, hoje.mes, hoje.dia, 0);
 }
 
-/**
- * HOJE às `hora`, naquele fuso — o começo da janela de um job com horário.
- *
- * Devolve um instante que pode estar NO FUTURO: às 3h da manhã, com
- * `alertHour: 8`, a janela de hoje ainda não abriu. Quem chama precisa comparar
- * — e é essa comparação que faz o `alertHour` significar alguma coisa. Sem ela, a
- * janela diária seria tomada pelo primeiro tick depois da meia-noite e o campo na
- * tela de configuração não mudaria nada.
- */
-export function inicioDaJanelaLocal(fuso: string, hora: number, agora: Date = new Date()): Date {
-  const hoje = partesLocais(agora, fuso);
-  const limitada = Math.min(Math.max(Math.trunc(hora), 0), 23);
-  return instanteDoLocal(fuso, hoje.ano, hoje.mes, hoje.dia, limitada);
-}
-
 /** A hora do dia (0–23) naquele fuso. Usada pelo turno da ocupação (F7). */
 export function horaLocalEm(instante: Date, fuso: string): number {
   return partesLocais(instante, fuso).hora;

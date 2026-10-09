@@ -58,7 +58,7 @@ export default function AppSidebar() {
   // SÓ O QUE A PESSOA ALCANÇA (F11) — e o GRUPO VAZIO SOME JUNTO.
   //
   // Filtrar só os itens deixaria "Convergência" como um título com nada
-  // embaixo para quem não tem `endpoints.view`: um cabeçalho de seção vazio é
+  // embaixo para quem é `USUARIO`: um cabeçalho de seção vazio é
   // pior do que a seção não existir, porque parece coisa que não carregou.
   //
   // `useMemo` porque `pode` só troca quando a sessão troca: sem ele, a lista
@@ -67,10 +67,9 @@ export default function AppSidebar() {
     () => GRUPOS_DE_MENU
       .map((grupo) => ({
         ...grupo,
-        // SEM CHAVE = TODO MUNDO VÊ. É o caso de "Minha conta": a tela fala da
-        // credencial de quem está olhando, e o servidor também não exige
-        // permissão nela (dispensa declarada no mapa de rotas).
-        itens: grupo.itens.filter((item) => item.permissao === undefined || pode(item.permissao)),
+        // SEM PAPEL = TODO MUNDO VÊ. Hoje nenhum item está nesse caso (D148,
+        // D156), e o campo segue opcional para a próxima tela desse tipo.
+        itens: grupo.itens.filter((item) => item.papel === undefined || pode(item.papel)),
       }))
       .filter((grupo) => grupo.itens.length > 0),
     [pode],

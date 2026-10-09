@@ -30,10 +30,14 @@ const PADRAO = 'uploads';
 
 /**
  * As subpastas. Uma por tipo de conteúdo, e não uma pasta só:
- * `ls` numa pasta com 40 mil arquivos é inútil, e separar por origem deixa o
- * backup escolher o que levar.
+ * `ls` numa pasta com 40 mil arquivos é inútil, e separar por origem deixa a
+ * cópia de segurança escolher o que levar.
+ *
+ * ERAM QUATRO: `assinaturas` e `termos` guardavam a assinatura e o PDF do termo
+ * de entrega, e saíram com o aceite (D150). A união é fechada de propósito —
+ * pasta nova é uma linha aqui, e o tipo recusa a string solta no meio do código.
  */
-export type Pasta = 'anexos' | 'imagens' | 'assinaturas' | 'termos';
+export type Pasta = 'anexos' | 'imagens';
 
 function raiz(): string {
   return path.resolve(process.env.UPLOAD_DIR?.trim() || PADRAO);

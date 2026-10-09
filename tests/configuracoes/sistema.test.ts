@@ -26,7 +26,6 @@ interface ConfiguracaoDoSistema {
   dateFormat: string;
   currency: string;
   csvDelimiter: string;
-  backupRetentionDays: number;
 }
 
 let api: ApiDeTeste;
@@ -48,7 +47,6 @@ describe('GET /api/settings', () => {
     expect(body.currency).toBe('BRL');
     expect(body.csvDelimiter).toBe(';');
     expect(body.dateFormat).toBe('DD/MM/YYYY');
-    expect(body.backupRetentionDays).toBe(30);
   });
 
   it('não leva o canário da cifra nem o contador de etiquetas para o navegador', async () => {
@@ -114,11 +112,6 @@ describe('PUT /api/settings', () => {
     expect(body.fields?.primaryColor).toMatch(/#rrggbb/);
   });
 
-  it('recusa retenção de backup igual a zero', async () => {
-    // `0` apagaria o dump no mesmo expurgo que roda depois de criá-lo.
-    const { status } = await api.put('/api/settings', { backupRetentionDays: 0 });
-    expect(status).toBe(422);
-  });
 
   it('recusa `logoPath` no corpo: caminho de arquivo não se escreve por JSON', async () => {
     const { status, body } = await api.put<{ fields?: Record<string, string> }>('/api/settings', {

@@ -8,7 +8,6 @@ import {
   useCheckinAsset, useCheckoutAsset,
   type CheckinInput, type CheckoutInput,
 } from '../../../domain/assignment/assignment.queries';
-import { useColunasCustomizadasQuery } from '../../../domain/custom-field/custom-field.queries';
 import type { Asset, AssetRelatorio, AssetView, BulkOperacao } from '../../../domain/shared/asset.types';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useBulkSelection } from './useBulkSelection';
@@ -52,13 +51,6 @@ export function useAssets() {
 
   const { data, isPending } = useAssetsQuery(params);
   const { data: stats } = useAssetStatsQuery();
-  // AS COLUNAS CUSTOMIZADAS (F9, `showInListView`). Consulta própria, e não um
-  // campo da listagem: a tabela precisa dos RÓTULOS, e a listagem só traz
-  // `{ slug: valor }` — `ip_fixo` não é cabeçalho de coluna.
-  //
-  // Ela não entra em `params` nem invalida com a lista: campo customizado é
-  // catálogo, muda quando um administrador o edita (`staleTime` de 60s na query).
-  const { data: colunasCustomizadas } = useColunasCustomizadasQuery();
   const criar = useCreateAsset();
   const editar = useUpdateAsset();
   const excluir = useDeleteAsset();
@@ -204,7 +196,6 @@ export function useAssets() {
     // As colunas que o cliente criou. Vazio é o caso NORMAL — a maioria das
     // instalações não tem campo marcado como coluna —, e a tabela segue
     // idêntica ao que era.
-    colunasCustomizadas: colunasCustomizadas ?? [],
     descomissionados: stats?.retired ?? 0,
     arquivados: stats?.archived ?? 0,
     page,

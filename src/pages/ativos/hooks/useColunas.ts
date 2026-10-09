@@ -10,13 +10,7 @@ import {
 // (`mostrar`) e a operação que o menu dispara (`alternar`). A derivação fica
 // aqui, e não no store, porque ela depende do CATÁLOGO — que muda com o deploy,
 // enquanto o store guarda o que a pessoa clicou há meses.
-export function useColunas(
-  /**
-   * As colunas customizadas que a tabela mostra (F9). Entram no `?columns=` do
-   * export para o arquivo ter o que a tela tem — ver `tokensDeExport`.
-   */
-  camposCustomizados: readonly { slug: string }[] = [],
-) {
+export function useColunas() {
   const preferencia = useAssetColumnsStore((estado) => estado.colunas);
   const definir = useAssetColumnsStore((estado) => estado.definir);
   const restaurar = useAssetColumnsStore((estado) => estado.restaurar);
@@ -49,7 +43,7 @@ export function useColunas(
     catalogo: COLUNAS_DE_ATIVO,
     visiveis,
     /** O que o `?columns=` do export leva — ver `tokensDeExport`. */
-    paraExportar: tokensDeExport(visiveis, camposCustomizados),
+    paraExportar: tokensDeExport(visiveis),
     mostrar: (token: string) => visiveis.includes(token),
     alternar,
     restaurar,

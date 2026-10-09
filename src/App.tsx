@@ -9,19 +9,11 @@ import PostosPage from './pages/postos';
 import EstoquePage from './pages/estoque';
 import LicencasPage from './pages/licencas';
 import DescobertasPage from './pages/descobertas';
-import ManutencoesPage from './pages/manutencoes';
-import AuditoriasPage from './pages/auditorias';
 import RelatoriosPage from './pages/relatorios';
 import UsersPage from './pages/gestao-usuario';
 import UserDetailPage from './pages/gestao-usuario/detalhe';
 import ConfiguracoesPage from './pages/configuracoes';
-import ImportacaoPage from './pages/importacao';
-import EtiquetasPage from './pages/etiquetas';
 import LoginPage from './pages/login';
-import AceitePage from './pages/aceite';
-import TokensPage from './pages/tokens';
-import MinhaContaPage from './pages/minha-conta';
-import MeusEquipamentosPage from './pages/meus-equipamentos';
 import { useAuthStore } from './domain/auth/auth.store';
 import { useFormatoDoSistema } from './pages/hooks/useSistema';
 
@@ -94,18 +86,6 @@ function Layout() {
                 por trás: `/reconciliacao` seria o mesmo erro que `/itam` foi até
                 a F6, nomear a tela pelo assunto em vez de pelo conteúdo. */}
             <Route path="/descobertas" element={<DescobertasPage />} />
-            {/* O CICLO DE VIDA (F8). As três rotas levam o nome do que a tela
-                LISTA, no plural — `/auditorias` e não `/auditoria`, que nomearia
-                o processo, o mesmo erro que `/itam` foi até a F6.
-
-                `/auditorias` PASSOU A TER entrada no menu: a razão da ausência
-                era o aperto da barra horizontal ("a barra já tem doze itens e
-                desaparece abaixo de md"), e ela caducou com a barra lateral.
-                Continua alcançável de dentro de Postos e da aba de auditorias
-                dos relatórios, que é de onde vêm os números que levam alguém a
-                conferir. */}
-            <Route path="/manutencoes" element={<ManutencoesPage />} />
-            <Route path="/auditorias" element={<AuditoriasPage />} />
             <Route path="/relatorios" element={<RelatoriosPage />} />
             <Route path="/users" element={<UsersPage />} />
             {/* Perfil do colaborador: os dois baldes de posse e o desligamento
@@ -114,23 +94,6 @@ function Layout() {
                 ordem aqui é para quem lê. */}
             <Route path="/users/:id" element={<UserDetailPage />} />
             <Route path="/configuracoes" element={<ConfiguracoesPage />} />
-            {/* A IMPORTAÇÃO (F10, Etapa D). Rota própria, e o nome é o
-                substantivo do que a tela faz. */}
-            <Route path="/importacao" element={<ImportacaoPage />} />
-            {/* AS ETIQUETAS (F10, Etapa G). */}
-            <Route path="/etiquetas" element={<EtiquetasPage />} />
-            <Route path="/tokens" element={<TokensPage />} />
-            {/* MINHA CONTA (F11, Etapa H): segundo fator e tokens pessoais. A
-                única tela do painel que não exige permissão nenhuma — ninguém
-                precisa de autorização para cuidar da própria credencial. O nome é
-                o substantivo do que ela mostra, não o do assunto. */}
-            <Route path="/minha-conta" element={<MinhaContaPage />} />
-            {/* O PORTAL DO COLABORADOR (F11, Etapa I). O nome é o que a tela
-                LISTA — equipamentos no meu nome —, não `/portal`, que nomearia o
-                tipo de software (D141). Como `/minha-conta`, não exige permissão
-                nenhuma: ninguém precisa de autorização para ver o que está no
-                próprio nome. */}
-            <Route path="/meus-equipamentos" element={<MeusEquipamentosPage />} />
           </Routes>
         </main>
       </div>
@@ -183,7 +146,6 @@ export default function App() {
             no alvo LOCATION quem assina é o gestor da localidade (D27). Mandá-lo
             para o login seria fechar a porta justamente no caso que a página
             existe para cobrir. Quem autoriza é o token na URL. */}
-        <Route path="/aceite/:token" element={<AceitePage />} />
         <Route path="/login" element={usuario ? <Navigate to="/" replace /> : <LoginPage />} />
         <Route path="/*" element={usuario ? <Layout /> : <Navigate to="/login" replace />} />
       </Routes>

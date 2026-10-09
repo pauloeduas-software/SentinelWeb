@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  horaLocalEm, inicioDaJanelaLocal, inicioDoDiaLocal,
+  horaLocalEm, inicioDoDiaLocal,
 } from '../../server/core/time/local-day';
 import { horaLocal, turnoDaHora } from '../../server/domain/reconciliation/helpers/shift.helper';
 
@@ -55,41 +55,6 @@ describe('o começo do dia local', () => {
     // que é o que UMA passada de deslocamento devolveria.
     expect(inicioDoDiaLocal(NY, D('2026-11-01T12:00:00Z')).toISOString())
       .toBe('2026-11-01T04:00:00.000Z');
-  });
-});
-
-describe('a janela do disparo', () => {
-  it('é hoje na hora configurada, no fuso configurado', () => {
-    expect(inicioDaJanelaLocal(SP, 8, D('2026-09-29T14:00:00Z')).toISOString())
-      .toBe('2026-09-29T11:00:00.000Z');
-  });
-
-  it('pode estar no FUTURO — e é isso que faz `alertHour` significar algo', () => {
-    // 06:00Z é 03:00 em São Paulo. Com `alertHour: 8`, a janela de hoje ainda não
-    // abriu, e o job precisa comparar: sem a comparação, ele tomaria a janela do dia
-    // no primeiro tick depois da meia-noite e o campo na tela não mudaria nada.
-    const agora = D('2026-09-29T06:00:00Z');
-    expect(inicioDaJanelaLocal(SP, 8, agora).getTime()).toBeGreaterThan(agora.getTime());
-  });
-
-  it('a mesma hora de parede muda de instante com o horário de verão', () => {
-    // 8h da manhã em Nova York é 12:00Z no verão e 13:00Z no inverno. Uma janela que
-    // ignorasse isso dispararia uma hora deslocada durante metade do ano.
-    expect(inicioDaJanelaLocal(NY, 8, D('2026-10-15T20:00:00Z')).toISOString())
-      .toBe('2026-10-15T12:00:00.000Z');
-    expect(inicioDaJanelaLocal(NY, 8, D('2026-11-15T20:00:00Z')).toISOString())
-      .toBe('2026-11-15T13:00:00.000Z');
-  });
-
-  it('limita a hora à faixa 0–23 em vez de estourar para o dia seguinte', () => {
-    // O schema já recusa fora da faixa (422), mas a coluna também é escrita por
-    // dump restaurado e UPDATE à mão — e `Date.UTC(…, 99)` viraria uma data quatro
-    // dias adiante, que o job nunca alcançaria.
-    const agora = D('2026-09-29T14:00:00Z');
-    expect(inicioDaJanelaLocal(SP, 99, agora).toISOString())
-      .toBe(inicioDaJanelaLocal(SP, 23, agora).toISOString());
-    expect(inicioDaJanelaLocal(SP, -7, agora).toISOString())
-      .toBe(inicioDaJanelaLocal(SP, 0, agora).toISOString());
   });
 });
 

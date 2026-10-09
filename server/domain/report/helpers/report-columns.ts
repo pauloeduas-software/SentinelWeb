@@ -1,3 +1,4 @@
+import type { Papel } from '../../access/helpers/papel';
 import { Prisma } from '@prisma/client';
 import { AppError } from '../../../core/errors/app-error';
 import { ATIVO_NO_PARQUE_SQL, ATIVO_VIVO_SQL } from '../../asset/helpers/asset-scope.helper';
@@ -181,8 +182,11 @@ export function selectDasColunas(tokens: readonly string[]): Prisma.Sql {
  * regra própria que alguém esqueceria de atualizar.
  * ═════════════════════════════════════════════════════════════════════════
  */
-export const TOKENS_COM_PERMISSAO: Readonly<Record<string, string>> = {
-  purchaseCost: 'assets.viewCost',
+// ⚠️ O VALOR É UM PAPEL (D148). Ver a nota em `asset-export-columns.helper.ts`:
+// uma chave de permissão antiga esquecida aqui libera a coluna para todo mundo,
+// porque `papelAlcanca()` compara por `indexOf` e o de uma string estranha é -1.
+export const TOKENS_COM_PERMISSAO: Readonly<Record<string, Papel>> = {
+  purchaseCost: 'ADMIN',
 };
 
 /**
@@ -193,7 +197,7 @@ export const TOKENS_COM_PERMISSAO: Readonly<Record<string, string>> = {
  * que sempre dá 403 é pior do que o seletor sem ela: a pessoa marca, gera,
  * recebe o erro e não sabe que o problema é aquela coluna.
  */
-export function tokensPermitidos(pode: (permissao: string) => boolean): readonly string[] {
+export function tokensPermitidos(pode: (papel: Papel) => boolean): readonly string[] {
   return REPORT_TOKENS.filter(
     (token) => !TOKENS_COM_PERMISSAO[token] || pode(TOKENS_COM_PERMISSAO[token]),
   );

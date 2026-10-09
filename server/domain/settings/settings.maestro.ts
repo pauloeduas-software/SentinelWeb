@@ -25,12 +25,6 @@ export class SettingsMaestro {
     server.get('/api/settings/discovery', settingsController.getDiscovery);
     server.put('/api/settings/discovery', WRITE_RATE_LIMIT, settingsController.saveDiscovery);
 
-    // OS ALERTAS E A AUDITORIA (F8). Mesma forma da descoberta, e no mesmo lugar
-    // de propósito: são valores de configuração do singleton, não um domínio — e
-    // três domínios diferentes os leem (relatório, alerta e reconciliação).
-    server.get('/api/settings/alerts', settingsController.getLifecycle);
-    server.put('/api/settings/alerts', WRITE_RATE_LIMIT, settingsController.saveLifecycle);
-
     // A CONFIGURAÇÃO DE SISTEMA (F10): marca, formato de número e data, moeda,
     // delimitador do CSV e retenção do backup. `PUT` e todos os campos
     // opcionais, como os dois pares acima.

@@ -36,6 +36,9 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
     // "nenhum" do `<select>`, convertido para `null` na submissão.
     departmentId: user?.department?.id || '',
     managerId: user?.managerId || '',
+    // O PAPEL (D148). Conta nova nasce `USUARIO`, que é o `@default` da coluna —
+    // a porta fechada por padrão da F3 levada à autorização.
+    role: user?.role || 'USUARIO',
   });
 
   const [loading, setLoading] = useState(false);
@@ -55,6 +58,7 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
         email: formData.email,
         departmentId: formData.departmentId || null,
         managerId: formData.managerId || null,
+        role: formData.role,
       });
     } catch (err) {
       setError((err as Error).message);
@@ -99,6 +103,28 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
               valor={formData.departmentId}
               onChange={(valor) => setFormData({ ...formData, departmentId: valor })}
             />
+          </div>
+
+          <div className="space-y-1">
+            <label htmlFor="role" className="text-text-secondary uppercase tracking-widest text-[10px]">Papel</label>
+            {/* `<select>` nativo e não `ReferenceSelect`: os três valores vêm do
+                CÓDIGO (o enum `Papel`), não de uma tabela — não há rota de opções
+                a consultar, e inventar uma seria uma requisição para uma
+                constante.
+
+                O servidor exige `ADMIN` em `PUT /api/users/:id` e recusa (409)
+                rebaixar o último administrador que entra — esta tela não repete
+                nenhuma das duas regras, só oferece o campo. */}
+            <select
+              id="role"
+              value={formData.role}
+              onChange={(evento) => setFormData({ ...formData, role: evento.target.value as typeof formData.role })}
+              className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors"
+            >
+              <option value="USUARIO">Usuário — só o que está no próprio nome</option>
+              <option value="TECNICO">Técnico — o inventário inteiro</option>
+              <option value="ADMIN">Administrador — mais gente, configuração e custo</option>
+            </select>
           </div>
 
           <div className="space-y-1">

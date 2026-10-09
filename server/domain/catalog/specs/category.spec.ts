@@ -49,15 +49,11 @@ export const categorySpec: CatalogSpec = {
   select: {
     id: true, name: true, type: true, color: true,
     requireAcceptance: true, eulaText: true, checkinEmail: true, createdAt: true,
-    // A ÂNCORA PADRÃO do conjunto de campos customizados (F9, D58). O nome do
-    // conjunto vem embutido porque a tabela o mostra, não o uuid.
-    customFieldsetId: true,
-    customFieldset: { select: { id: true, name: true } },
   },
   sortable: ['name', 'type', 'createdAt'],
   defaultSort: 'name',
   searchable: ['name'],
-  audited: ['name', 'type', 'color', 'requireAcceptance', 'eulaText', 'checkinEmail', 'customFieldsetId'],
+  audited: ['name', 'type', 'color', 'requireAcceptance', 'eulaText', 'checkinEmail'],
 
   // O `<select>` do formulário de ativo pede só as de ATIVO; sem isto ele
   // ofereceria duas linhas de mesmo nome e tipos diferentes.

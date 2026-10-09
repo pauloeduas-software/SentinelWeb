@@ -1,9 +1,6 @@
 import { assetModelSpec } from './asset-model.spec';
 import { categorySpec } from './category.spec';
-import { customFieldSpec } from './custom-field.spec';
-import { customFieldsetSpec } from './custom-fieldset.spec';
 import { departmentSpec } from './department.spec';
-import { depreciationSpec } from './depreciation.spec';
 import { locationSpec } from './location.spec';
 import { manufacturerSpec } from './manufacturer.spec';
 import { statusLabelSpec } from './status-label.spec';
@@ -22,16 +19,11 @@ export const CATALOG_SPECS: readonly CatalogSpec[] = [
   assetModelSpec,
   supplierSpec,
   locationSpec,
-  depreciationSpec,
-  // A DÉCIMA, DA F11 (D75). Depois das de ativo porque é cadastro de GENTE, não
+  // A SÉTIMA E ÚLTIMA (D75). Depois das de ativo porque é cadastro de GENTE, não
   // de inventário: quem abre Configurações está quase sempre atrás de categoria,
-  // modelo ou local. E antes das duas de campo customizado porque se mexe mais
-  // do que elas — departamento muda com reorganização de empresa; campo
-  // customizado o cliente cria uma vez.
+  // modelo ou local.
+  //
+  // ERAM DEZ. Saíram `depreciationSpec` (D152, o valor contábil) e as duas de
+  // campo customizado (D145) — a parte plana que o D64 havia trazido para cá.
   departmentSpec,
-  // AS DUAS DA F9. Por último porque são as que se mexem menos: o cliente cria
-  // os campos uma vez e depois só preenche valores. A tela de Configurações usa
-  // esta mesma ordem nas abas.
-  customFieldSpec,
-  customFieldsetSpec,
 ];

@@ -1,7 +1,7 @@
-# As 142 decisões do SentinelWeb
+# As 164 decisões do SentinelWeb
 
 > Toda decisão de arquitetura do projeto, arquivada **pelo assunto que ela governa** — não pela
-> fase que a tomou. A numeração `D1`…`D142` é contínua e global: ela é o nome da decisão e não
+> fase que a tomou. A numeração `D1`…`D164` é contínua e global: ela é o nome da decisão e não
 > muda, mesmo que o arquivo onde ela vive mude.
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve.** Se a realidade mudou, ela é
@@ -11,12 +11,13 @@
 > Quem quer saber **o que vale hoje**, leia [`../referencia/`](../referencia/).
 > Quem quer saber **o que foi feito e quando**, leia [`../historico/`](../historico/).
 
-## Os dez assuntos
+## Os onze assuntos
 
 | Arquivo | Assunto | Decisões |
 |---|---|---|
 | [`reconciliacao.md`](./reconciliacao.md) | Reconciliação | 35 |
 | [`acesso.md`](./acesso.md) | Acesso | 22 |
+| [`escopo.md`](./escopo.md) | **Escopo** — o que o sistema deixou de fazer | 22 |
 | [`catalogo-e-ativo.md`](./catalogo-e-ativo.md) | Catálogo e ativo | 15 |
 | [`posse.md`](./posse.md) | Posse | 13 |
 | [`relatorios-import-etiquetas.md`](./relatorios-import-etiquetas.md) | Relatórios, import e etiquetas | 13 |
@@ -39,6 +40,30 @@ que corrigem algo anterior:
 | **D75** (`Department` em duas migrações) | **D135** | o contrato muda com a entidade, não no `DROP COLUMN` |
 | **D77** (dado sensível no `select`) | **D140** | em `JsonB` isso é impossível: mascarar depois é o limite da regra, não exceção |
 | **D16** (responsabilidade derivada) | **D130**, **D139** | a derivação tem UMA implementação por pergunta — nem a view nem o aceite criam a segunda |
+
+**O de-escopo (D143–D156) supera por subtração**, e é o maior grupo de supersessões do projeto:
+a decisão antiga não estava errada, o que ela governava deixou de existir. Está inteiro em
+[`escopo.md`](./escopo.md), e o critério é o D143 — sobrevive o que serve ao núcleo ITAM ou à
+ponte ITAM×RMM.
+
+| Corrige | É corrigida por | O que mudou |
+|---|---|---|
+| **D52**, **D54** (conferência física) | **D144** | a manual sai; a do agente (D124) fica, e era a que já respondia |
+| **D7**, **D58**–**D64** (campos customizados) | **D145** | o assunto inteiro sai; a cifra fica com um uso só, e o D77 volta a ser regra inteira |
+| **D68**, **D131**, **D132**, **D134** (importação) | **D146** | a carga é a descoberta; o **export** (D69) fica |
+| **D70** (etiqueta) | **D147** | o `assetTag` fica; desenhar o papel sai |
+| **D76**, **D78**, **D136** (permissão, LDAP, OIDC) | **D148** | matriz vira `User.role`; o D137 (cobertura no boot) fica |
+| **D80**, **D89**, **D142** (`ApiToken`) | **D149** | o prazo do D89 expira sem ser cumprido, e por escrito |
+| **D27**, **D29**, **D30**, **D87**, **D88** (aceite) | **D150** | o termo sai; o `resolverEscalonamento()` (D73) fica |
+| **D57**, **D125**–**D128** (alertas) | **D151** | os sinais continuam consultáveis; empurrá-los sai. O D79 **não** sai |
+| **D55** (valor contábil) | **D152** | `purchaseCost` fica; a amortização sai |
+| **D36**, **D37**, **D38** (estoque) | **D153** | sete modelos viram `StockItem` + `StockMovement`; o D34 torna isso barato |
+| **D67**, **D71**, **D133** (builder de relatório) | **D154** | três consultas em código; a superfície desaparece em vez de ser defendida |
+| **D141** (nome do portal) | **D156** | o nome estava certo; a tela cai |
+| **D144** (conferência pelo agente), **D53** | **D157** | sem tela ninguém lê o registro; o job perde uma linha e nada mais |
+| **D155** (manutenção no histórico) | **D158** | sem tela ninguém cria a linha, e o `ActivityLog` (D18) já é o lugar |
+| **D153** (estoque em item + movimento) | **D160** | o único item que REESCREVIA; não foi executado, e o log diz isso |
+| **D154** (três relatórios) | **D161** | são dois: licença e estoque já exportavam pelos domínios deles |
 
 Quatro decisões nasceram para resolver **conflito entre dois planos**, e não de uma fase só:
 **D79** (cada job tem a própria linha), **D80** (um `ApiToken` com dono polimórfico), **D81** (uma
@@ -196,3 +221,25 @@ arquivadas no assunto que governam, com o conflito original descrito dentro de c
 | **D140** | O D77 é regra de coluna. Em JsonB, mascarar depois é o limite, não a exceção | [Acesso](./acesso.md#d140--o-d77-é-regra-de-coluna-em-jsonb-mascarar-depois-é-o-limite-não-a-exceção) |
 | **D141** | O portal se chama pelo que lista | [Acesso](./acesso.md#d141--o-portal-se-chama-pelo-que-lista) |
 | **D142** | `api_tokens.userId` ganha FK antes de existir token pessoal | [Acesso](./acesso.md#d142--api_tokensuserid-ganha-fk-antes-de-existir-token-pessoal) |
+| **D143** | O escopo é ITAM **+** RMM, e o critério de corte é a ponte | [Escopo](./escopo.md#d143--o-escopo-é-itam--rmm-e-o-critério-de-corte-é-a-ponte) |
+| **D144** | A conferência **manual** sai. A conferência pelo agente fica | [Escopo](./escopo.md#d144--a-conferência-manual-sai-a-conferência-pelo-agente-fica) |
+| **D145** | Campos customizados saem inteiros | [Escopo](./escopo.md#d145--campos-customizados-saem-inteiros) |
+| **D146** | A importação de CSV sai. A carga é a descoberta | [Escopo](./escopo.md#d146--a-importação-de-csv-sai-a-carga-é-a-descoberta) |
+| **D147** | As etiquetas saem | [Escopo](./escopo.md#d147--as-etiquetas-saem) |
+| **D148** | Permissão vira **papel**. Grupo, diretório, SSO e segundo fator saem | [Escopo](./escopo.md#d148--permissão-vira-papel-grupo-diretório-sso-e-segundo-fator-saem) |
+| **D149** | O `ApiToken` sai, e o agente volta ao `AGENT_TOKEN` | [Escopo](./escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token) |
+| **D150** | O termo de aceite sai | [Escopo](./escopo.md#d150--o-termo-de-aceite-sai) |
+| **D151** | A central de alertas e o webhook saem | [Escopo](./escopo.md#d151--a-central-de-alertas-e-o-webhook-saem) |
+| **D152** | O valor contábil sai | [Escopo](./escopo.md#d152--o-valor-contábil-sai) |
+| **D153** | Estoque vira **item** e **movimento** | [Escopo](./escopo.md#d153--estoque-vira-item-e-movimento) |
+| **D154** | Relatório vira três consultas fixas | [Escopo](./escopo.md#d154--relatório-vira-três-consultas-fixas) |
+| **D155** | Manutenção vira registro no histórico do ativo | [Escopo](./escopo.md#d155--manutenção-vira-registro-no-histórico-do-ativo) |
+| **D156** | O portal do colaborador e o backup saem | [Escopo](./escopo.md#d156--o-portal-do-colaborador-e-o-backup-saem) |
+| **D157** | A conferência sai **inteira**, inclusive a do agente | [Escopo](./escopo.md#d157--a-conferência-sai-inteira-inclusive-a-do-agente) |
+| **D158** | Manutenção sai **inteira** | [Escopo](./escopo.md#d158--manutenção-sai-inteira) |
+| **D159** | A tela da convergência fica, e é a única das cinco que fica | [Escopo](./escopo.md#d159--a-tela-da-convergência-fica-e-é-a-única-das-cinco-que-fica) |
+| **D160** | O estoque **não** foi achatado | [Escopo](./escopo.md#d160--o-estoque-não-foi-achatado) |
+| **D161** | Os relatórios que sobraram são **dois**, e não três | [Escopo](./escopo.md#d161--os-relatórios-que-sobraram-são-dois-e-não-três) |
+| **D162** | "Minha conta" sai, e o papel vira campo do formulário de usuário | [Escopo](./escopo.md#d162--minha-conta-sai-e-o-papel-vira-campo-do-formulário-de-usuário) |
+| **D163** | O mapa de coluna protegida é tipado `Papel`, porque `indexOf` de string estranha é **-1** | [Escopo](./escopo.md#d163--o-mapa-de-coluna-protegida-é-tipado-papel-porque-indexof-de-string-estranha-é--1) |
+| **D164** | O `DEFAULT` da coluna **tranca o sistema**, e a migração precisa do backfill | [Escopo](./escopo.md#d164--o-default-da-coluna-tranca-o-sistema-e-a-migração-precisa-do-backfill) |

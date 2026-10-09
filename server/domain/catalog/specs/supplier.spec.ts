@@ -40,17 +40,13 @@ export const supplierSpec: CatalogSpec = {
   // A MANUTENÇÃO é a sexta (F8), e é `Restrict` pelo mesmo motivo dos de estoque:
   // apagar quem consertou apagaria de quem se cobra a garantia.
   countUsages: async (client, id) => {
-    const [ativos, acessorios, consumiveis, componentes, licencas, manutencoes] = await Promise.all([
+    const [ativos, acessorios, consumiveis, componentes, licencas] = await Promise.all([
       client.asset.count({ where: { supplierId: id, ...INCLUINDO_LIXEIRA } }),
       client.accessory.count({ where: { supplierId: id, ...INCLUINDO_LIXEIRA } }),
       client.consumable.count({ where: { supplierId: id, ...INCLUINDO_LIXEIRA } }),
       client.component.count({ where: { supplierId: id, ...INCLUINDO_LIXEIRA } }),
       client.license.count({ where: { supplierId: id, ...INCLUINDO_LIXEIRA } }),
-      // SEM `INCLUINDO_LIXEIRA`: `maintenances` não tem a coluna `deletedAt`, e o
-      // escape hatch só faz sentido onde a extension atua. A linha é sempre
-      // visível, e é sempre contada.
-      client.maintenance.count({ where: { supplierId: id } }),
     ]);
-    return ativos + acessorios + consumiveis + componentes + licencas + manutencoes;
+    return ativos + acessorios + consumiveis + componentes + licencas;
   },
 };

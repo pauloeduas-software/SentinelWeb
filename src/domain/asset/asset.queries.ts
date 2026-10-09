@@ -4,7 +4,7 @@ import type {
   Asset, AssetListParams, AssetStats, BulkInput, BulkResult, EventoDoAtivo, RetireInput,
 } from '../shared/asset.types';
 import type { ListEnvelope } from '../shared/list.types';
-import type { ResultadoDaBusca } from '../shared/label.types';
+import type { ResultadoDaBusca } from '../shared/search.types';
 
 // A chave inclui os parâmetros: sem isso a página 2 seria servida do cache da
 // página 1. `all` é o prefixo — invalidar ['assets'] alcança listagem e

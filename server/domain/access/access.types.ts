@@ -1,42 +1,35 @@
-import type { Permissao } from './helpers/permission-catalog';
+import type { Papel } from './helpers/papel';
 
-// `request.permissions` ganha tipo de verdade em todo o backend.
+// `request.papel` ganha tipo de verdade em todo o backend.
 //
 // ═══════════════════════════════════════════════════════════════════════════
-// POR QUE NÃO DENTRO DE `request.user` (D136).
+// POR QUE NÃO DENTRO DE `request.user` — o D136 valia pela matriz, e o
+// argumento MUDOU com o D148.
 //
-// `request.user` é o `SessionUser`, e `SessionUser` é
-// `Prisma.UserGetPayload<{ select: typeof USER_PUBLIC_SELECT }>` — ou seja, é
-// literalmente a allowlist do que pode SAIR de um usuário
-// (`user/helpers/user-select.helper.ts`). Pôr permissão lá teria dois efeitos,
-// os dois ruins:
+// O D136 tinha duas razões para manter a permissão fora do `SessionUser`:
+// (1) a allowlist de `user-select.helper.ts` responde "o que é público de um
+// usuário", não "o que ele pode fazer"; e (2) o `USER_PUBLIC_SELECT` viaja
+// embutido em toda posse, ocupação e `assignedTo` do inventário — o JSON de
+// permissões de cada grupo iria em cada linha de histórico de todo ativo.
 //
-// 1. a allowlist deixaria de responder "o que é público de um usuário" e
-//    passaria a responder também "o que ele pode fazer" — que não é dado dele;
+// A segunda razão caiu: `papel` é UMA string de oito caracteres, não um
+// conjunto de chaves. Carregá-la no select embutido custaria nada.
 //
-// 2. o `USER_PUBLIC_SELECT` vai EMBUTIDO em toda posse, toda ocupação e todo
-//    `assignedTo` do inventário. O JSON de permissões de cada grupo viajaria em
-//    cada linha de histórico de todo ativo. É o mesmo argumento que já manteve
-//    `isActive` e `terminatedAt` num select separado (`USER_DETAIL_SELECT`).
-//
-// Então a permissão é um campo IRMÃO na requisição: lido na mesma consulta,
-// usado pelo `preHandler`, e nunca serializado para o cliente. Quem quer saber
-// o próprio acesso pede `GET /api/auth/me`, que o devolve de propósito.
-//
-// `Set` e não array: a pergunta é sempre "tem esta chave?", feita uma vez por
-// requisição. Em array isso é varredura; aqui é `has`.
+// A PRIMEIRA NÃO CAIU, e é por ela que o campo continua irmão: a allowlist de
+// saída não deve passar a responder sobre autorização. Quem lê o próprio acesso
+// pede `GET /api/auth/me`, que devolve o papel de propósito.
 // ═══════════════════════════════════════════════════════════════════════════
 
 declare module 'fastify' {
   interface FastifyRequest {
     /**
-     * As permissões efetivas da sessão — união dos grupos (D76).
+     * O papel da sessão (D148).
      *
-     * `undefined` em rota pública, onde não há sessão: ali não há permissão, e
-     * isso é a verdade, não uma falha. O `preHandler` de permissão nem chega
-     * nessas rotas (elas estão na allowlist), e quem ler isto fora de uma rota
+     * `undefined` em rota pública, onde não há sessão: ali não há papel, e isso
+     * é a verdade, não uma falha. O `preHandler` de permissão nem chega nessas
+     * rotas (elas estão na allowlist), e quem ler isto fora de uma rota
      * autenticada tem que tratar o `undefined` — por isso ele está no tipo.
      */
-    permissions?: ReadonlySet<Permissao>;
+    papel?: Papel;
   }
 }

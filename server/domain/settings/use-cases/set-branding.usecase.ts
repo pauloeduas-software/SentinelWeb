@@ -62,7 +62,6 @@ async function trocarCaminho(
       dateFormat: true,
       currency: true,
       csvDelimiter: true,
-      backupRetentionDays: true,
     },
   });
 

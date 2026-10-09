@@ -16,17 +16,9 @@ import {
 } from '../../../../domain/stock/stock.queries';
 import { useAssetLicensesQuery } from '../../../../domain/license/license.queries';
 import {
-  useAssetMaintenancesQuery, useCloseMaintenance, useCreateMaintenance,
-} from '../../../../domain/maintenance/maintenance.queries';
-import { useAssetAuditsQuery } from '../../../../domain/audit/audit.queries';
-import {
-  useConjuntoDoModeloQuery, useRevelarCampo,
-} from '../../../../domain/custom-field/custom-field.queries';
-import {
   useDesvincularMaquina, useMaquinaDoAtivoQuery,
 } from '../../../../domain/reconciliation/reconciliation.queries';
 import type { RetireInput } from '../../../../domain/shared/asset.types';
-import type { ManutencaoInput } from '../../../../domain/shared/lifecycle.types';
 import type { AbaId } from '../helpers/abas.helper';
 
 // Estado da TELA DE DETALHE. Aba, modais e o ativo em edição são de uma tela
@@ -47,38 +39,8 @@ export function useAssetDetail() {
 
   const { data: asset, isPending, error } = useAssetQuery(id);
 
-  // ── OS CAMPOS CUSTOMIZADOS (F9) ─────────────────────────────────────────
-  //
-  // O conjunto vem do MODELO (D58) e é o que dá RÓTULO e ORDEM aos valores: a
-  // resposta do ativo traz `{ slug: valor }`, e `ip_fixo` não é o que se mostra
-  // numa ficha. Ele serve também ao formulário de edição, que monta os inputs.
-  const { data: conjuntoDeCampos } = useConjuntoDoModeloQuery(asset?.modelId);
-
-  const revelar = useRevelarCampo(id ?? '');
-
-  // ── O VALOR REVELADO NÃO É CACHE, E ISSO É A DECISÃO ────────────────────
-  //
-  // Ele mora em `useState` desta tela e morre com ela: a rota que o devolve
-  // GRAVA `ActivityLog` a cada chamada, porque *quem viu este segredo* é o fato
-  // auditável (D62). Guardá-lo no cache do TanStack Query faria o valor
-  // reaparecer ao voltar para a tela sem uma linha de auditoria correspondente —
-  // e o histórico passaria a contar menos visualizações do que houve.
-  //
-  // O mesmo desenho da revelação da chave de produto da F6.
-  const [camposRevelados, setCamposRevelados] = useState<Record<string, string>>({});
-  const [erroAoRevelar, setErroAoRevelar] = useState('');
-
-  const handleRevelarCampo = async (slug: string) => {
-    setErroAoRevelar('');
-    try {
-      const { value } = await revelar.mutateAsync(slug);
-      setCamposRevelados((atual) => ({ ...atual, [slug]: value }));
-    } catch (falha) {
-      // O erro APARECE, e não vira `alert`: aqui ele é informativo (chave de
-      // criptografia trocada, valor adulterado) e a tela continua usável.
-      setErroAoRevelar((falha as Error).message);
-    }
-  };
+  // A aba Posse lê o histórico de posse pela query do domínio de posse — a
+  // mesma rota que a F4 escreve. Esta tela LÊ, não recalcula nada.
   const { data: historico, isPending: historicoPendente } = useAssetHistoryQuery(id);
   // A aba Posse lê o histórico de posse pela query do domínio de posse — a
   // mesma rota que a F4 escreve. Esta tela LÊ, não recalcula nada.
@@ -105,19 +67,8 @@ export function useAssetDetail() {
   // desvincular, que é a correção de um vínculo errado — o pior resultado
   // possível daquela fase, e não pode depender de mexer no banco à mão.
   const { data: maquina, isPending: maquinaPendente } = useMaquinaDoAtivoQuery(id ?? null);
-
-  // MANUTENÇÕES (F8) — a aba que a F2 deixou desabilitada dizendo "Fase 8". Abrir
-  // e encerrar moram aqui porque é na tela do ativo que alguém está quando o
-  // equipamento quebra; a tela global existe para a pergunta do parque inteiro.
-  //
-  // E as CONFERÊNCIAS, só leitura: registrar auditoria de um ativo isolado é a
-  // rota `POST /api/assets/:id/audit`, mas o gesto real é conferir um POSTO (D54)
-  // — e é lá que a tela de conferência vive.
-  const { data: manutencoes, isPending: manutencoesPendentes } = useAssetMaintenancesQuery(id ?? null);
-  const { data: auditorias, isPending: auditoriasPendentes } = useAssetAuditsQuery(id ?? null);
-  const abrirManutencao = useCreateMaintenance();
-  const encerrarManutencao = useCloseMaintenance();
   const desvincular = useDesvincularMaquina();
+
   const retirarComponente = useDetachComponent();
 
   // ARQUIVO. Quatro mutações e uma consulta, todas do domínio `attachment`:
@@ -267,26 +218,6 @@ export function useAssetDetail() {
     licencas: licencas ?? [],
     licencasPendentes,
 
-    // MANUTENÇÕES e CONFERÊNCIAS — as duas listas da aba que chegou na F8.
-    manutencoes: manutencoes ?? [],
-    manutencoesPendentes,
-    auditorias: auditorias ?? [],
-    auditoriasPendentes,
-    handleAbrirManutencao: async (dados: ManutencaoInput) => {
-      if (!id) return;
-      await abrirManutencao.mutateAsync({ assetId: id, data: dados });
-    },
-    handleEncerrarManutencao: async (manutencaoId: string) => {
-      // Sem janela aqui, e sem custo: encerrar da aba do ativo é o caso "acabou
-      // agora" — o servidor usa hoje. Quem precisa lançar o valor final usa a tela
-      // de Manutenções, que tem o formulário com custo e observações.
-      try {
-        await encerrarManutencao.mutateAsync({ id: manutencaoId, data: {} });
-      } catch (erro) {
-        alert((erro as Error).message);
-      }
-    },
-
     // MÁQUINA — a aba que nasceu pronta na F7.
     maquina,
     maquinaPendente,
@@ -296,11 +227,6 @@ export function useAssetDetail() {
       desvincular.mutate(maquina.endpointId);
     },
     handleRetirarComponente,
-    conjuntoDeCampos,
-    camposRevelados,
-    revelandoCampo: revelar.isPending ? revelar.variables ?? null : null,
-    erroAoRevelar,
-    handleRevelarCampo,
 
     // ARQUIVO — a aba Arquivos.
     anexos: anexos ?? [],

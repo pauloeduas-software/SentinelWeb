@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ScanLine } from 'lucide-react';
 import { useBuscaDoLeitor } from '../../domain/asset/asset.queries';
-import type { ResultadoDaBusca } from '../../domain/shared/label.types';
+import type { ResultadoDaBusca } from '../../domain/shared/search.types';
 
 // O CAMPO DO BIPE (F10, Etapa G) — no cabeçalho, em toda tela.
 //
