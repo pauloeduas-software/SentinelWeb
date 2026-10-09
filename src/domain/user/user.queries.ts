@@ -1,10 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../core/api/apiClient';
-import { assetKeys } from '../asset/asset.queries';
-import { assignmentKeys } from '../assignment/assignment.queries';
-import { occupancyKeys } from '../occupancy/occupancy.queries';
-import { stockKeys } from '../stock/stock.queries';
-import type { AssentoDevolvido } from '../shared/license.types';
 import type { EventoDaPessoa, User, UserDetail } from '../shared/user.types';
 import type { ListEnvelope, ListParams } from '../shared/list.types';
 
@@ -103,26 +98,11 @@ export function useUserHistoryQuery(id: string | null) {
   });
 }
 
-/** Corpo de `POST /api/users/:id/offboard`. */
-export interface OffboardInput {
-  /** Vai para a devolução de cada ativo e para a trilha de auditoria. */
-  notes?: string;
-  /** Para onde os ativos voltam. Em branco, o servidor manda ao estoque. */
-  statusId?: string;
-}
-
 /** Um ativo que o desligamento devolveu. */
 export interface AtivoDevolvido {
   assignmentId: string;
   assetId: string;
   assetTag: string;
-}
-
-/** Uma unidade de acessório que voltou ao estoque no desligamento. */
-export interface AcessorioDevolvido {
-  checkoutId: string;
-  accessoryId: string;
-  accessoryName: string;
 }
 
 /** Um posto que o desligamento desocupou. */
@@ -131,76 +111,4 @@ export interface OcupacaoEncerrada {
   locationId: string;
   locationName: string;
   shift: string | null;
-}
-
-/**
- * O relatório do desligamento: o que a operação FECHOU, item a item.
- *
- * A tela mostra isto depois de confirmar, e é o mesmo par de listas que ela
- * mostrou ANTES, no aviso do modal — a confirmação do que foi prometido.
- */
-export interface ResultadoDesligamento {
-  user: { id: string; name: string; email: string; isActive: boolean; terminatedAt: string | null };
-  devolvidos: AtivoDevolvido[];
-  /**
-   * As unidades de acessório de alvo `USER` que voltaram ao estoque (F5).
-   *
-   * As do POSTO não entram, e a ausência delas aqui é o ponto: os 5 mouses da
-   * Mesa 1 continuam na mesa, com quem ficou. Devolvê-los faria o inventário
-   * mentir com o saldo batendo.
-   */
-  acessoriosDevolvidos: AcessorioDevolvido[];
-  /**
-   * Os assentos de licença de alvo `USER` que voltaram ao contrato (F6).
-   *
-   * Os do ATIVO não entram, pelo mesmo motivo dos acessórios de posto: o
-   * assento do desktop é da máquina, que continua ligada com o software
-   * instalado.
-   *
-   * Cada um diz se foi QUEIMADO. É a única linha do desligamento que custa
-   * dinheiro — `reassignable = false` faz a devolução DESTRUIR o assento —, e
-   * por isso o modal mostra o placar antes e confirma depois.
-   */
-  assentosDevolvidos: AssentoDevolvido[];
-  ocupacoesEncerradas: OcupacaoEncerrada[];
-}
-
-/**
- * DESLIGAR — devolve os ativos diretos, encerra as ocupações de posto e marca a
- * saída, numa transação só no servidor (D32).
- *
- * Invalida QUATRO caches, e nenhum deles é decorativo:
- *
- * - `users`       o perfil passou a mostrar "desligado em";
- * - `assignments` as posses diretas fecharam, e o `holdings` esvaziou;
- * - `occupancies` os postos da pessoa foram desocupados;
- * - `assets`      a coluna Responsável da listagem mudou em DOIS lugares — nos
- *   ativos devolvidos e, sem ninguém ter tocado neles, em todo ativo dos postos
- *   que ela deixou: a responsabilidade é derivada (Camada 3), e sair da Mesa 1
- *   muda quem responde por tudo que está lá;
- * - `stock`       as unidades de acessório no nome dela voltaram ao estoque, e
- *   o disponível de cada item mudou (F5);
- * - `licenses`    os assentos no nome dela voltaram ao contrato, e `livres` é
- *   conta sobre as linhas (F6, D92) — sem isto a grade de assentos e a coluna
- *   `livres/total` continuam mostrando ocupado o que acabou de ser devolvido,
- *   e é justamente na tela de licenças que alguém decide comprar assento novo.
- */
-export function useOffboardUser() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: OffboardInput }) =>
-      (await apiClient.post<ResultadoDesligamento>(`/users/${id}/offboard`, data)).data,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: userKeys.all });
-      void queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
-      void queryClient.invalidateQueries({ queryKey: occupancyKeys.all });
-      void queryClient.invalidateQueries({ queryKey: assetKeys.all });
-      void queryClient.invalidateQueries({ queryKey: stockKeys.all });
-      // O prefixo LITERAL, e não `licenseKeys.all`: `license.queries.ts` já
-      // importa `userKeys` (entregar assento muda o `holdings` da pessoa), e
-      // importar de volta faria o primeiro ciclo entre dois arquivos de query
-      // do projeto. Um literal com o motivo escrito é mais barato que o ciclo.
-      void queryClient.invalidateQueries({ queryKey: ['licenses'] });
-    },
-  });
 }

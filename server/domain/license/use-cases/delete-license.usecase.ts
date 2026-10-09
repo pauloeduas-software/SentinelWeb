@@ -16,10 +16,10 @@ import { contarAssentosDe, travarTodosOsAssentos, travarLicencaOuFalhar } from '
  * documentam.
  *
  * Sem a recusa, mandar a licença para a lixeira deixa os assentos ocupados
- * presos: eles continuam contando como ocupados em `holdings` e no 409 do
- * desligamento — as consultas olham `license_seat_checkouts`, que não tem
- * `deletedAt` —, e a tela que ofereceria a devolução responde 404, porque a
- * licença não existe mais para o inventário.
+ * presos: eles continuam contando no 409 do `DELETE` do colaborador — a
+ * consulta olha `license_seat_checkouts`, que não tem `deletedAt` —, e a tela
+ * que ofereceria a devolução responde 404, porque a licença não existe mais
+ * para o inventário.
  * ─────────────────────────────────────────────────────────────────────────────
  *
  * A TRAVA vem antes da contagem, e é o que a torna confiável: sem ela, uma

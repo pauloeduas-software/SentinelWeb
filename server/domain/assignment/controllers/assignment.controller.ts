@@ -5,7 +5,6 @@ import { checkinSchema, checkoutSchema } from '../schemas/assignment.schema';
 import { checkoutAsset } from '../use-cases/checkout-asset.usecase';
 import { checkinAsset } from '../use-cases/checkin-asset.usecase';
 import { listAssetAssignments } from '../use-cases/list-asset-assignments.usecase';
-import { listUserHoldings } from '../use-cases/list-user-holdings.usecase';
 
 // Só HTTP. Sem try/catch: o `parse` do schema rejeita e a rejeição cai no
 // errorHandler, que devolve 422 com o campo que falhou — e os `AppError` dos
@@ -34,11 +33,6 @@ export const assignmentController = {
   async history(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     return listAssetAssignments(id);
-  },
-
-  async holdings(request: FastifyRequest) {
-    const { id } = idParamSchema.parse(request.params);
-    return listUserHoldings(id);
   },
 
   // Sem query string nenhuma, e é de propósito: o recorte é a definição de

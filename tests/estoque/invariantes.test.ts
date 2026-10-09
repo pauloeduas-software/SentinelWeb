@@ -118,29 +118,6 @@ describe('D33 — a entrega ao posto não multiplica por ocupante', () => {
     expect(abertas).toBe(1);
   });
 
-  it('as duas ocupantes respondem pela MESMA unidade, e nada é somado', async () => {
-    const daLaura = await api.get<{ acessorios: { via: string; posto: unknown }[] }>(
-      `/api/users/${cenario.laura}/holdings`,
-    );
-    const daAna = await api.get<{ acessorios: { via: string; checkoutId: string }[] }>(
-      `/api/users/${cenario.ana}/holdings`,
-    );
-
-    const postoDaLaura = daLaura.body.acessorios.filter((a) => a.via === 'POSTO');
-    const postoDaAna = daAna.body.acessorios.filter((a) => a.via === 'POSTO');
-
-    expect(postoDaLaura).toHaveLength(1);
-    expect(postoDaAna).toHaveLength(1);
-
-    // A MESMA linha nas duas telas — é essa igualdade que prova que a unidade é
-    // uma só. Somar os dois perfis produziria "o time tem 2 mouses da Mesa 1".
-    expect(postoDaLaura[0]).toMatchObject({ via: 'POSTO' });
-    expect(daAna.body.acessorios[0].checkoutId).toBeTruthy();
-
-    // E `via` vem POR ITEM: não existe um total na resposta para alguém somar.
-    expect(JSON.stringify(daLaura.body.acessorios)).not.toContain('total');
-  });
-
   it('aceita entrega a posto VAZIO e a lista no alerta', async () => {
     // Recusar quebraria o caso real de preparar a mesa antes de a pessoa
     // chegar. Aceitar e SINALIZAR é o *posto vago* aplicado ao estoque.
@@ -242,7 +219,7 @@ describe('D37 — o consumível não volta, e a ausência é a regra', () => {
     expect(api.app.hasRoute({ method: 'POST', url: '/api/consumables/checkouts/:id/checkin' })).toBe(false);
   });
 
-  it('o nome de quem consumiu é cópia, e sobrevive ao desligamento', async () => {
+  it('o nome de quem consumiu é cópia, e sobrevive à exclusão', async () => {
     const item = await criarItemDeEstoque(api, 'consumables', {
       name: 'Toner do snapshot', categoryId: cenario.categoriaConsumivelId, qty: 5,
     });
@@ -251,8 +228,8 @@ describe('D37 — o consumível não volta, e a ausência é a regra', () => {
     });
 
     await api.post(`/api/consumables/${item.id}/consume`, { userId: pessoa.body.id, qty: 1 });
-    await api.post(`/api/users/${pessoa.body.id}/offboard`, {});
-    await api.delete(`/api/users/${pessoa.body.id}`);
+    // O consumo não deixa posse aberta, então o DELETE passa direto.
+    expect((await api.delete(`/api/users/${pessoa.body.id}`)).status).toBe(200);
 
     const movimentos = await api.get<{ action: string; rotulo: string }[]>(
       `/api/consumables/${item.id}/movements`,

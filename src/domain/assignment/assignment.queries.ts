@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../core/api/apiClient';
 import { assetKeys } from '../asset/asset.queries';
-import type { UserHoldings } from '../shared/asset.types';
 import type { AlvoDaPosse, Assignment } from '../shared/posse.types';
 
 // A POSSE — Camada 1 de docs/referencia/modelo-de-posse.md.
@@ -51,37 +50,6 @@ export function useAssetAssignmentsQuery(assetId: string | null) {
     queryFn: async () =>
       (await apiClient.get<Assignment[]>(`/assets/${assetId}/assignments`)).data,
     enabled: assetId != null,
-  });
-}
-
-/** O que uma pessoa tem em posse: no nome dela e pelos postos que ela ocupa. */
-export function useUserHoldingsQuery(userId: string | null) {
-  return useQuery({
-    queryKey: assignmentKeys.doUsuario(userId ?? ''),
-    queryFn: async () =>
-      (await apiClient.get<UserHoldings>(`/users/${userId}/holdings`)).data,
-    enabled: userId != null,
-  });
-}
-
-/**
- * O MESMO, para quem está logado — a tela "Meus equipamentos" (F11, Etapa I).
- *
- * ROTA PRÓPRIA E CHAVE DE CACHE PRÓPRIA, em vez de `useUserHoldingsQuery(eu.id)`.
- * As duas razões:
- *
- * 1. **autorização.** `/api/users/:id/holdings` exige `users.view`, porque fala de
- *    outra pessoa. Um colaborador comum não tem essa chave e receberia 403 ao
- *    abrir a própria tela;
- *
- * 2. **cache.** Com a mesma chave, a resposta do administrador olhando a ficha da
- *    Laura e a da própria Laura olhando o portal dela ocupariam a MESMA entrada se
- *    os ids coincidissem — e a invalidação de uma mexeria na outra.
- */
-export function useMeusHoldingsQuery() {
-  return useQuery({
-    queryKey: assignmentKeys.minhas,
-    queryFn: async () => (await apiClient.get<UserHoldings>('/me/holdings')).data,
   });
 }
 

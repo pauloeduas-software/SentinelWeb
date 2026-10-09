@@ -5,7 +5,7 @@ import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { historyQuerySchema } from '../../shared/history.schema';
 import { USER_SORTABLE } from '../helpers/user-filters.helper';
-import { createUserSchema, offboardUserSchema, updateUserSchema } from '../schemas/user.schema';
+import { createUserSchema, updateUserSchema } from '../schemas/user.schema';
 import { listUsers } from '../use-cases/list-users.usecase';
 import { listUserOptions } from '../use-cases/list-user-options.usecase';
 import { getUser } from '../use-cases/get-user.usecase';
@@ -13,7 +13,6 @@ import { getUserHistory } from '../use-cases/user-history.usecase';
 import { createUser } from '../use-cases/create-user.usecase';
 import { updateUser } from '../use-cases/update-user.usecase';
 import { deleteUser } from '../use-cases/delete-user.usecase';
-import { offboardUser } from '../use-cases/offboard-user.usecase';
 import { restoreUser } from '../use-cases/restore-user.usecase';
 import { listUserReports } from '../use-cases/list-user-reports.usecase';
 
@@ -73,16 +72,6 @@ export const userController = {
     const { id } = idParamSchema.parse(request.params);
     await deleteUser(id, atorDaRequisicao(request));
     return { success: true };
-  },
-
-  // DESLIGAMENTO — devolve os ativos diretos, encerra as ocupações de posto e
-  // marca a saída, numa transação só (D32). 200, e não 201: nada é criado, e o
-  // corpo é o relatório do que a operação fechou — que é o que a tela mostra
-  // depois de confirmar.
-  async offboard(request: FastifyRequest) {
-    const { id } = idParamSchema.parse(request.params);
-    const data = offboardUserSchema.parse(request.body ?? {});
-    return offboardUser(id, data, atorDaRequisicao(request));
   },
 
   /**

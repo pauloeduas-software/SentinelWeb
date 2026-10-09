@@ -163,44 +163,6 @@ export interface AlertasDeLicenca {
   assentosBaixos: LicencaEmAlerta[];
 }
 
-/**
- * Um assento de licença NO NOME de uma pessoa — `GET /api/users/:id/holdings`.
- *
- * SÓ os de alvo `USER` (D39/D93). O assento do desktop da Mesa 1 é da máquina e
- * aparece na aba Licenças DAQUELE ativo, que é de onde alguém pode devolvê-lo.
- *
- * Não tem `via` como o acessório (D33): acessório chega por dois caminhos —
- * dela e do posto —, e assento só chega por um.
- */
-export interface AssentoEmPosse {
-  /** O id da OCUPAÇÃO, não o do assento. */
-  checkoutId: string;
-  seatId: string;
-  seatNumber: number;
-  licenseId: string;
-  licenseName: string;
-  categoryName: string | null;
-  /** `false` = devolver QUEIMA o assento: ele não volta ao contrato (D43). */
-  reassignable: boolean;
-  checkoutAt: string;
-}
-
-/**
- * Um assento que o DESLIGAMENTO devolveu — o relatório, depois de confirmar.
- *
- * `queimado` é o que separa uma devolução de uma perda patrimonial: com
- * `reassignable = false`, o assento não volta ao contrato. A tela mostra o
- * número antes de confirmar e confirma depois, porque não tem desfazer.
- */
-export interface AssentoDevolvido {
-  checkoutId: string;
-  seatId: string;
-  seatNumber: number;
-  licenseId: string;
-  licenseName: string;
-  queimado: boolean;
-}
-
 /** Uma licença instalada num ativo — a aba Licenças da tela do ativo. */
 export interface LicencaDoAtivo {
   id: string;

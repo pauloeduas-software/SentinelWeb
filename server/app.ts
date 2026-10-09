@@ -192,14 +192,12 @@ export async function buildApp(): Promise<FastifyInstance> {
   // escrevem (localização, posse e ocupação), e nada depende dele.
   await WorkstationMaestro.setupRoutes(server);
   // ESTOQUE depois de posse: as rotas dele pendem de `/api/assets/:id` (a aba
-  // Componentes) e o `holdings` da F4 passou a listar acessório — os dois
-  // domínios se leem, e registrar na ordem em que o conceito nasce é o que
-  // mantém o arquivo legível (docs/historico/fase-05-estoque.md).
+  // Componentes), e registrar na ordem em que o conceito nasce é o que mantém o
+  // arquivo legível (docs/historico/fase-05-estoque.md).
   await StockMaestro.setupRoutes(server);
   // LICENÇA depois de estoque: as rotas dela pendem de `/api/assets/:id` (a aba
-  // Licenças) e o `holdings`/desligamento da F4 passaram a contar assento — os
-  // domínios se leem, e registrar na ordem em que o conceito nasce é o que
-  // mantém o arquivo legível (docs/historico/fase-06-licencas.md).
+  // Licenças), e registrar na ordem em que o conceito nasce é o que mantém o
+  // arquivo legível (docs/historico/fase-06-licencas.md).
   await LicenseMaestro.setupRoutes(server);
   // Arquivo depois de asset e catálogo: as rotas dele pendem de `/api/assets/:id`
   // e das quatro tabelas com imagem.

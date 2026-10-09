@@ -189,16 +189,3 @@ export interface AlertasDeEstoque {
  * Vem POR ITEM, e é isso que impede a soma que o D33 proíbe: 1 direto com 5
  * compartilhados do posto não são "6 mouses da Laura".
  */
-export type ViaAcessorio = 'DIRETO' | 'POSTO';
-
-export interface AcessorioEmPosse {
-  /** O id da ENTREGA — é dele que sai o botão "devolver". */
-  checkoutId: string;
-  accessoryId: string;
-  name: string;
-  categoryName: string | null;
-  via: ViaAcessorio;
-  checkedOutAt: string;
-  expectedCheckinAt: string | null;
-  posto: { locationId: string; locationName: string; shift: string | null } | null;
-}

@@ -59,10 +59,8 @@ export async function contarPosseAberta(
       // alcança relação aninhada de jeito nenhum.
       //
       // Sem esta linha, um ativo mandado para a lixeira com a posse ainda
-      // aberta contaria aqui e NÃO apareceria no `holdings` (que é escopado):
-      // o 409 diria "responde por 1 ativo" ao lado de uma lista vazia, e o
-      // operador não teria o que devolver. É a mesma escolha do `holdings` —
-      // equipamento que saiu do inventário não se cobra de ninguém.
+      // aberta contaria aqui: o 409 diria "responde por 1 ativo" sobre
+      // equipamento que saiu do inventário, e não se cobra isso de ninguém.
       where: { targetType: 'USER', targetUserId: userId, checkinAt: null, asset: { deletedAt: null } },
     }),
     client.locationOccupant.count({ where: { userId, endedAt: null } }),

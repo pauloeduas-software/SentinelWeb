@@ -129,9 +129,9 @@ export async function checkoutSeat(
     // transações que travam os mesmos dois recursos em ordens opostas travam
     // uma à outra, e o Postgres mata uma delas.
     //
-    // No alvo `USER` o motivo é o mesmo da F5: o `offboard` fecha os assentos
-    // desta pessoa, e sem a trava uma entrega simultânea nasceria DEPOIS da
-    // leitura dele — o desligado terminaria com assento na mão e nada acusaria.
+    // No alvo `USER` a trava protege a contagem que o `DELETE` do colaborador
+    // lê: sem ela, uma entrega simultânea nasceria depois da leitura e a pessoa
+    // seria apagada com assento na mão.
     if (alvo.tipo === 'USER') await travarUsuarioOuFalhar(tx, alvo.id);
     else await travarAtivoOuFalhar(tx, alvo.id);
 
