@@ -5,7 +5,6 @@ import Iniciais from './Iniciais';
 import { GRUPOS_DE_MENU, itemEstaAtivo } from './navegacao';
 import { useBarraLateral } from '../hooks/useBarraLateral';
 import { useAuthStore, usePermissoes } from '../../domain/auth/auth.store';
-import { useSistema, useUrlDaLogo } from '../hooks/useSistema';
 
 // A NAVEGAÇÃO DO PAINEL, na vertical.
 //
@@ -32,8 +31,6 @@ export default function AppSidebar() {
   const { recolhida, abertaNoCelular, alternarRecolhida, fecharNoCelular } = useBarraLateral();
   // A marca sai da configuração de sistema; a query é compartilhada com o
   // `Layout` e com o cabeçalho, então ler aqui não dobra requisição nenhuma.
-  const { configuracao } = useSistema();
-  const urlDaLogo = useUrlDaLogo();
   const usuario = useAuthStore((estado) => estado.usuario);
   const sair = useAuthStore((estado) => estado.sair);
   // `usePermissoes` e não `usePode` por item: o número de itens é variável, e um
@@ -106,21 +103,12 @@ export default function AppSidebar() {
             Mesma altura do cabeçalho (`h-14`) de propósito: a borda de baixo
             daqui e a do cabeçalho formam UMA linha reta atravessando a tela. */}
         <div className="h-14 shrink-0 flex items-center gap-3 border-b border-border-sutil px-4">
-          <Link to="/" className="flex items-center gap-3 min-w-0" title={configuracao?.companyName ?? 'Sentinel'}>
-            {urlDaLogo ? (
-              <img src={urlDaLogo} alt="" className="h-6 w-6 shrink-0 object-contain" />
-            ) : (
-              <div className="bg-text-primary p-1 rounded-sm shrink-0">
-                <LayoutDashboard size={14} className="text-bg-base" />
-              </div>
-            )}
+          <Link to="/" className="flex items-center gap-3 min-w-0" title="Sentinel">
+            <div className="bg-text-primary p-1 rounded-sm shrink-0">
+              <LayoutDashboard size={14} className="text-bg-base" />
+            </div>
             {!recolhida && (
-              <h1
-                className="truncate text-sm font-bold uppercase tracking-tight"
-                style={{ color: 'var(--color-marca)' }}
-              >
-                {configuracao?.companyName ?? 'Sentinel'}
-              </h1>
+              <h1 className="truncate text-sm font-bold uppercase tracking-tight">Sentinel</h1>
             )}
           </Link>
 

@@ -1,16 +1,15 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  useAssetStatsQuery, useAssetsQuery, useBulkAssets, useCreateAsset, useDeleteAsset,
+  useAssetStatsQuery, useAssetsQuery, useCreateAsset, useDeleteAsset,
   useRestoreAsset, useUpdateAsset, type AssetInput,
 } from '../../../domain/asset/asset.queries';
 import {
   useCheckinAsset, useCheckoutAsset,
   type CheckinInput, type CheckoutInput,
 } from '../../../domain/assignment/assignment.queries';
-import type { Asset, AssetRelatorio, AssetView, BulkOperacao } from '../../../domain/shared/asset.types';
+import type { Asset, AssetRelatorio, AssetView } from '../../../domain/shared/asset.types';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
-import { useBulkSelection } from './useBulkSelection';
 
 const PER_PAGE = 10;
 
@@ -39,16 +38,6 @@ export function useAssets() {
     [page, debouncedSearch, view, statusId, relatorio],
   );
 
-  // OS MESMOS FILTROS, SEM PAGINAÇÃO — é o que o export leva (F10, Etapa C).
-  //
-  // Separado de `params` de propósito: o servidor RECUSA `page` e `perPage` no
-  // export com 422, porque exportar é levar tudo que o filtro alcança. Derivar
-  // um do outro com `delete` deixaria a recusa a uma distração de distância.
-  const filtrosParaExport = useMemo(
-    () => ({ q: debouncedSearch || undefined, view, statusId, relatorio }),
-    [debouncedSearch, view, statusId, relatorio],
-  );
-
   const { data, isPending } = useAssetsQuery(params);
   const { data: stats } = useAssetStatsQuery();
   const criar = useCreateAsset();
@@ -57,23 +46,13 @@ export function useAssets() {
   const restaurar = useRestoreAsset();
   const entregar = useCheckoutAsset();
   const devolver = useCheckinAsset();
-  const emMassa = useBulkAssets();
 
   const assets = useMemo(() => data?.rows ?? [], [data]);
   const total = data?.total ?? 0;
 
-  const selecao = useBulkSelection(useMemo(() => assets.map((asset) => asset.id), [assets]));
-
-  /**
-   * Trocar de vista ou de filtro LIMPA a seleção.
-   *
-   * A lista passa a ser outra, e uma seleção que continua viva fora da tela é
-   * uma ação em massa disparada sobre ativos que ninguém está vendo.
-   */
   const trocarFiltro = (aplicar: () => void) => {
     aplicar();
     setPage(1);
-    selecao.limpar();
   };
 
   const changeView = (proxima: AssetView) => trocarFiltro(() => setView(proxima));
@@ -169,19 +148,6 @@ export function useAssets() {
     }
   };
 
-  /**
-   * A ação em massa. O erro PROPAGA para a barra mostrar qual ativo barrou: é o
-   * 409 que ensina, e engoli-lo aqui deixaria a tela "não fez nada" em silêncio.
-   *
-   * A seleção só é limpa quando o lote passa. Falhou, ela continua de pé — o
-   * operador acabou de ler qual ativo precisa tirar do lote, e remontar 30
-   * seleções à mão seria a punição errada.
-   */
-  const handleBulk = async (operacao: BulkOperacao) => {
-    await emMassa.mutateAsync({ ...operacao, ids: selecao.ids });
-    selecao.limpar();
-  };
-
   // Cálculo fora do JSX: o nome do status filtrado sai da lista de contadores.
   const porStatus = stats?.byStatus ?? [];
   const statusFiltrado = porStatus.find((status) => status.id === statusId)?.name ?? null;
@@ -209,8 +175,6 @@ export function useAssets() {
     changeRelatorio,
     statusId,
     statusFiltrado,
-    /** Os filtros correntes, sem paginação — para o link do export. */
-    filtrosParaExport,
     toggleStatus,
     limparStatus: () => trocarFiltro(() => setStatusId(undefined)),
     loading: isPending,
@@ -230,7 +194,5 @@ export function useAssets() {
     closePosse,
     handleEntregar,
     handleDevolver,
-    selecao,
-    handleBulk,
   };
 }

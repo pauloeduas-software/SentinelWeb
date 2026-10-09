@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { $Enums } from '@prisma/client';
 import {
-  booleano, dataOpcional, mesesOpcional, nomeObrigatorio, textoOpcional,
+  booleano, dataOpcional, nomeObrigatorio, textoOpcional,
   uuidObrigatorio, uuidOpcional, valorMonetarioOpcional,
 } from '../../shared/fields.schema';
 
@@ -33,7 +33,7 @@ import {
  * o formulário sempre manda a chave — `assetTag: ''` quando o usuário não digita
  * nada e deixa a etiqueta automática fazer o trabalho. Sem isto o `''` cai no
  * `.min(1)` e a etiqueta automática fica INALCANÇÁVEL pela tela, respondendo
- * 422 "etiqueta não pode ser vazio". É a mesma armadilha do `mesesOpcional`, e
+ * 422 "etiqueta não pode ser vazio". É a mesma armadilha do número opcional, e
  * a solução é a mesma: normalizar antes de validar.
  */
 const etiquetaOpcional = z.preprocess(
@@ -56,10 +56,6 @@ const camposComuns = {
   purchaseDate: dataOpcional('data de compra'),
   purchaseCost: valorMonetarioOpcional('valor de compra'),
 
-  warrantyMonths: mesesOpcional('garantia'),
-  eolMonths: mesesOpcional('vida útil'),
-  eolDate: dataOpcional('fim de vida'),
-  eolExplicit: booleano('fim de vida definido à mão').optional(),
 
   // ── OS CAMPOS CUSTOMIZADOS (F9, Etapa B) ─────────────────────────────────
   //
@@ -106,57 +102,6 @@ export const retireAssetSchema = z.strictObject({
   // (ver retire-asset.usecase.ts).
   notes: textoOpcional('observações', 2_000),
 });
-
-// ---------------------------------------------------------------------------
-// AÇÃO EM MASSA
-// ---------------------------------------------------------------------------
-
-/**
- * Teto de ids por lote.
- *
- * Não é número redondo por acaso: são ~201 statements dentro de uma
- * `$transaction` nas três operações de coluna, e ~401 na de campo customizado
- * (que grava linha a linha, porque o JsonB de cada ativo é diferente) — o que
- * cabe com folga no timeout explícito do use-case.
- * Sem teto, `ids` com 50 mil uuids é uma negação de serviço de uma linha só.
- */
-export const BULK_MAX_IDS = 200;
-
-const idsDoLote = z
-  .array(z.uuid('ativo: identificador inválido'))
-  .min(1, 'selecione ao menos um ativo')
-  .max(BULK_MAX_IDS, `máximo de ${BULK_MAX_IDS} ativos por lote`);
-
-/**
- * A OPERAÇÃO É DECLARADA, e o que ela exige vem junto — `discriminatedUnion`
- * sobre `op`, não um objeto com três campos opcionais.
- *
- * É a allowlist de operação escrita no lugar onde ela é verificada: `op:
- * 'status'` sem `statusId` responde 422 dizendo o campo que falta, e
- * `op: 'delete'` com `statusId` junto responde 422 pelo `strictObject` — em vez
- * de apagar 200 ativos ignorando em silêncio o campo que sugeria outra coisa.
- */
-export const bulkAssetsSchema = z.discriminatedUnion('op', [
-  z.strictObject({
-    op: z.literal('status'),
-    ids: idsDoLote,
-    statusId: uuidObrigatorio('status'),
-  }),
-  z.strictObject({
-    op: z.literal('location'),
-    ids: idsDoLote,
-    // Nulável de propósito: "tirar a localização" é uma operação em massa tão
-    // legítima quanto mover — o campo é opcional na tabela.
-    locationId: uuidObrigatorio('localização').nullable(),
-  }),
-  z.strictObject({
-    op: z.literal('delete'),
-    ids: idsDoLote,
-  }),
-  // ── PREENCHER UM CAMPO CUSTOMIZADO EM MASSA (F9, o backfill do D61) ──────
-  //
-  // Pelo `fieldId` e não pelo `slug`, como toda referência do lote: um id errado
-], 'operação inválida: use status, location, delete ou custom-field');
 
 // O `historyQuerySchema` da aba Histórico mudou para `shared/history.schema.ts`
 // quando a pessoa ganhou o dela — o ativo não é mais o único a ter histórico.

@@ -1,6 +1,4 @@
 import { prisma } from '../../../core/database/prismaClient';
-import { avisarDevolucao, dispararAviso } from '../helpers/notificacao.helper';
-import { rotuloDoAlvoOuPadrao } from '../helpers/target-label.helper';
 import { AppError } from '../../../core/errors/app-error';
 import { assertStatusExiste, escolherStatusPorTipo } from './checkout-asset.usecase';
 import { fecharPosse } from './close-assignment.usecase';
@@ -19,22 +17,6 @@ export interface CheckinData {
 
 export async function checkinAsset(assetId: string, data: CheckinData, actorId: string | null) {
   const resultado = await executarCheckin(assetId, data, actorId);
-
-  // DEPOIS do commit, como na entrega. Aqui o destinatário é quem DEIXOU de
-  // responder pelo equipamento — a posse já está fechada quando o e-mail sai, e
-  // é por isso que os destinatários saem da `assignment` devolvida e não de uma
-  // consulta nova: uma consulta agora não acharia mais ninguém.
-  dispararAviso(avisarDevolucao({
-    assetId,
-    assetTag: resultado.asset.assetTag,
-    assetName: resultado.asset.name,
-    targetType: resultado.assignment.targetType,
-    targetUserId: resultado.assignment.targetUserId,
-    targetLocationId: resultado.assignment.targetLocationId,
-    targetLabel: rotuloDoAlvoOuPadrao(resultado.assignment),
-    notes: resultado.assignment.checkinNotes,
-    expectedCheckinAt: null,
-  }));
 
   return resultado;
 }

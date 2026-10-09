@@ -25,10 +25,6 @@ import { APP_SETTING_ID } from './app-setting.helper';
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface ConfiguracaoDoSistema {
-  companyName: string;
-  logoPath: string | null;
-  faviconPath: string | null;
-  primaryColor: string;
   locale: string;
   dateFormat: string;
   currency: string;
@@ -36,10 +32,6 @@ export interface ConfiguracaoDoSistema {
 }
 
 const CAMPOS = {
-  companyName: true,
-  logoPath: true,
-  faviconPath: true,
-  primaryColor: true,
   locale: true,
   dateFormat: true,
   currency: true,
@@ -69,7 +61,7 @@ export async function lerConfiguracaoDoSistema(): Promise<ConfiguracaoDoSistema>
  * (mesma escolha do PUT da descoberta e do dos alertas).
  */
 export async function salvarConfiguracaoDoSistema(
-  dados: Partial<Omit<ConfiguracaoDoSistema, 'logoPath' | 'faviconPath'>>,
+  dados: Partial<ConfiguracaoDoSistema>,
 ): Promise<ConfiguracaoDoSistema> {
   return prisma.appSetting.upsert({
     where: { id: APP_SETTING_ID },

@@ -1,5 +1,5 @@
 import {
-  Armchair, Boxes, Database, FileBarChart, Radar, ScrollText, Server, SlidersHorizontal, Users, type LucideIcon,
+  Armchair, Boxes, Database, Radar, ScrollText, Server, SlidersHorizontal, Users, type LucideIcon,
 } from 'lucide-react';
 
 // O MENU, declarado em um lugar só — a barra lateral desenha, o cabeçalho lê
@@ -92,7 +92,6 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
     titulo: 'Gestão',
     itens: [
       { to: '/users', label: 'Usuários', icon: Users, papel: 'TECNICO' },
-      { to: '/relatorios', label: 'Relatórios', icon: FileBarChart, papel: 'TECNICO' },
     ],
   },
   {

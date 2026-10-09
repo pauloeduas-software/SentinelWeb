@@ -14,7 +14,7 @@ export const assetModelSpec: CatalogSpec = {
   // O fabricante e a categoria vêm embutidos porque a tabela mostra o nome, não
   // o uuid — e uma segunda consulta por linha seria N+1 na tela.
   select: {
-    id: true, name: true, modelNumber: true, eolMonths: true, notes: true,
+    id: true, name: true, modelNumber: true, notes: true,
     manufacturerId: true, categoryId: true, createdAt: true,
     manufacturer: { select: { id: true, name: true } },
     category: { select: { id: true, name: true, type: true } },
@@ -23,7 +23,7 @@ export const assetModelSpec: CatalogSpec = {
   defaultSort: 'name',
   searchable: ['name', 'modelNumber'],
   audited: [
-    'name', 'modelNumber', 'eolMonths', 'notes', 'manufacturerId', 'categoryId',
+    'name', 'modelNumber', 'notes', 'manufacturerId', 'categoryId',
   ],
 
   // Conta a lixeira também: a FK é `Restrict` e o banco recusaria de todo jeito,

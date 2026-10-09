@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { assetController } from './controllers/asset.controller';
 import { createLogger } from '../../core/logger/logger';
-import { EXPORT_RATE_LIMIT, WRITE_RATE_LIMIT } from '../../core/http/write-rate-limit';
+import { WRITE_RATE_LIMIT } from '../../core/http/write-rate-limit';
 
 const logger = createLogger('asset.maestro');
 
@@ -18,15 +18,6 @@ export class AssetMaestro {
     // Lista enxuta para o `<select>` da aba "Ativo" do modal de entrega: é assim
     // que se prende um periférico a outro equipamento (docs/referencia/modelo-de-posse.md).
     server.get('/api/assets/options', assetController.options);
-
-    // O EXPORT (F10, Etapa C). ANTES de `/api/assets/:id` como as outras rotas
-    // de segmento fixo — o find-my-way casa o estático primeiro, mas a ordem
-    // aqui é o que mantém o arquivo legível.
-    //
-    // Teto PRÓPRIO (`EXPORT_RATE_LIMIT`, 10/min): cada chamada varre a tabela
-    // inteira com cursor, e o teto global de 300/min permitiria trezentas
-    // varreduras por minuto — negação de serviço acidental com dois cliques.
-    server.get('/api/assets/export', EXPORT_RATE_LIMIT, assetController.export);
 
     // A BUSCA DO LEITOR DE CÓDIGO DE BARRAS (F10, Etapa G).
     //
@@ -81,10 +72,6 @@ export class AssetMaestro {
     // substitui a outra (D19). POST porque muda estado e deixa histórico.
     server.post('/api/assets/:id/retire', WRITE_RATE_LIMIT, assetController.retire);
     server.post('/api/assets/:id/unretire', WRITE_RATE_LIMIT, assetController.unretire);
-
-    // AÇÃO EM MASSA: uma operação declarada, N ativos, tudo ou nada (D21).
-    // Caminho fixo `/bulk` e não `/:id/...` — o lote não é operação de UM ativo.
-    server.post('/api/assets/bulk', WRITE_RATE_LIMIT, assetController.bulk);
 
     logger.info('[Maestro] Rotas de Ativos (ITAM) inicializadas.');
   }

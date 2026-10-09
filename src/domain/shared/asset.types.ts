@@ -1,6 +1,6 @@
 import type { AcessorioEmPosse } from './stock.types';
 import type { AssentoEmPosse } from './license.types';
-import type { AlvoDaPosse, Escalonamento, PosseResolvida } from './posse.types';
+import type { AlvoDaPosse, PosseResolvida } from './posse.types';
 import type { ListParams } from './list.types';
 import type { User } from './user.types';
 
@@ -34,7 +34,6 @@ export interface CategoriaRef extends Referencia {
 
 export interface ModeloRef extends Referencia {
   modelNumber: string | null;
-  eolMonths: number | null;
   manufacturer: Referencia;
   category: CategoriaRef;
 }
@@ -77,12 +76,6 @@ export interface Asset {
   purchaseDate: string | null;
   purchaseCost: string | null;
 
-  warrantyMonths: number | null;
-  warrantyExpiresAt: string | null;
-  eolMonths: number | null;
-  eolDate: string | null;
-  eolExplicit: boolean;
-
   /**
    * DESCOMISSIONAMENTO — o ativo saiu do PATRIMÔNIO.
    *
@@ -94,15 +87,6 @@ export interface Asset {
   retiredAt: string | null;
   retiredReason: MotivoDaSaida | null;
 
-  /**
-   * O caminho da foto dentro do `UPLOAD_DIR`, ou `null`.
-   *
-   * A tela o usa SÓ como "tem foto ou não" — a URL que ela monta é por id
-   * (`/api/images/asset/:id`, ver `attachment.queries.ts`). O caminho não é
-   * atalho para nada: nenhuma rota aceita caminho de arquivo como parâmetro, e
-   * o arquivo só sai por rota autenticada (D84).
-   */
-  imagePath: string | null;
 
   /** Quem cadastrou e quem editou por último (D26). Nulos no que é anterior à F3. */
   createdById: string | null;
@@ -126,21 +110,6 @@ export interface Asset {
    */
   posse: PosseResolvida | null;
 
-  /**
-   * PARA QUEM LIGAR quando o posto está vazio (F11, Etapa F).
-   *
-   * Vem ao lado de `posse` porque é a pergunta vizinha — e **não dentro dela**,
-   * porque não é responsabilidade: quem está com o equipamento sai de
-   * `posse.responsaveis`, e o gestor da localidade nunca entra ali
-   * (docs/referencia/modelo-de-posse.md, "A fronteira"). Os dois juntos num campo só
-   * apagariam `postoVago`, que é o sinal que motiva a ligação.
-   *
-   * ⚠️ OPCIONAL: só a LEITURA DE UM ativo o calcula (`findAssetById`). A
-   * listagem não — seria uma subida de árvore por
-   * linha —, e a tela do posto e as posses do colaborador tipam as linhas delas
-   * com esta mesma interface.
-   */
-  escalonamento?: Escalonamento | null;
 }
 
 /**
@@ -308,36 +277,3 @@ export interface RetireInput {
   notes?: string;
 }
 
-/**
- * A operação do lote SEM os ids: o que a barra de ação monta e o hook da página
- * completa com a seleção.
- *
- * União discriminada igual à do servidor — `op: 'status'` sem `statusId` não
- * compila aqui e responderia 422 lá. Separada de `BulkInput` porque `Omit` não
- * distribui sobre união: `Omit<BulkInput, 'ids'>` colapsaria nas chaves comuns
- * e deixaria `statusId` de fora.
- */
-export type BulkOperacao =
-  | { op: 'status'; statusId: string }
-  | { op: 'location'; locationId: string | null }
-  | { op: 'delete' }
-  /**
-   * PREENCHER um campo customizado nos selecionados (F9) — o backfill que o D61
-   * manda fazer antes de promover um campo a obrigatório.
-   *
-   * `value: null` é limpar, e limpar REMOVE a chave. O servidor recusa o lote
-   * inteiro quando algum ativo selecionado não pede o campo, quando o valor não
-   * serve ao formato, quando o campo é cifrado e quando esvaziar deixaria um
-   * obrigatório vazio.
-   */
-  | { op: 'custom-field'; fieldId: string; value: string | null };
-
-/** Corpo de `POST /api/assets/bulk` — UMA operação declarada, N ativos. */
-export type BulkInput = BulkOperacao & { ids: string[] };
-
-export interface BulkResult {
-  op: BulkInput['op'];
-  batchId: string;
-  afetados: number;
-  ids: string[];
-}

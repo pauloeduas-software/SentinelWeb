@@ -37,40 +37,6 @@ export interface CheckoutInput {
   checkoutNotes?: string;
 }
 
-/**
- * Corpo de `POST /api/assets/bulk-checkout` — o MESMO da entrega, mais a lista
- * de ativos. UM alvo para todos: é o kit de onboarding, não N entregas soltas.
- */
-export interface BulkCheckoutInput extends CheckoutInput {
-  assetIds: string[];
-}
-
-/** Uma entrega que deu certo, no relatório do lote. */
-export interface EntregaFeita {
-  assetId: string;
-  assetTag: string;
-  assignmentId: string;
-}
-
-/** Uma entrega recusada, com a frase que o servidor escreveu. */
-export interface EntregaRecusada {
-  assetId: string;
-  erro: string;
-}
-
-/**
- * O relatório de `bulk-checkout` (D31).
- *
- * A entrega em massa é POR LINHA: um kit de 8 em que 1 está com outra pessoa
- * entrega 7 e recusa 1, e é este objeto que conta a história. Não existe "deu
- * erro" aqui — existe o que entrou e o que foi recusado, com motivo.
- */
-export interface RelatorioEntregaEmLote {
-  total: number;
-  ok: EntregaFeita[];
-  falhas: EntregaRecusada[];
-}
-
 /** Corpo de `POST /api/assets/:id/checkin`. */
 export interface CheckinInput {
   /** Para que estado o ativo volta: estoque, conserto, inutilizável... */
@@ -151,25 +117,3 @@ export function useCheckinAsset() {
   });
 }
 
-/**
- * ENTREGAR EM MASSA — N ativos, um alvo, um relatório.
- *
- * A mutação NÃO rejeita quando parte das linhas falha: o servidor responde 200
- * com o relatório, e quem decide o que mostrar é a tela. Tratar recusa de linha
- * como erro de requisição jogaria fora a lista do que ENTROU — que é a metade
- * que o operador precisa para saber o que não refazer.
- *
- * Invalida posses e ativos pelo mesmo motivo da entrega avulsa: o responsável e
- * o status de N linhas da listagem mudaram de uma vez.
- */
-export function useBulkCheckout() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (data: BulkCheckoutInput) =>
-      (await apiClient.post<RelatorioEntregaEmLote>('/assets/bulk-checkout', data)).data,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
-      void queryClient.invalidateQueries({ queryKey: assetKeys.all });
-    },
-  });
-}

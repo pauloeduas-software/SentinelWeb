@@ -21,23 +21,6 @@ export class AssignmentMaestro {
     server.post('/api/assets/:id/checkout', WRITE_RATE_LIMIT, assignmentController.checkout);
     server.post('/api/assets/:id/checkin', WRITE_RATE_LIMIT, assignmentController.checkin);
 
-    // ENTREGA EM MASSA — o kit de onboarding (D31). Rota ESTÁTICA irmã de
-    // `/api/assets/:id/checkout`, e não `/api/assets/checkout` em lote: o
-    // find-my-way prefere o segmento literal ao parâmetro, então
-    // `bulk-checkout` nunca é confundido com um `:id`. O hífen no nome é o que
-    // deixa isso legível em log e em `curl`.
-    //
-    // Teto de escrita como as outras: uma entrega em massa é UMA requisição, e
-    // o que ela move são N linhas — o custo por requisição é maior, o número de
-    // requisições humanas por minuto não.
-    server.post('/api/assets/bulk-checkout', WRITE_RATE_LIMIT, assignmentController.bulkCheckout);
-
-    // Posses abertas com prazo vencido. Mora em `/api/assignments`, e não em
-    // `/api/assets/overdue`, porque o que está vencido é a POSSE — o ativo não
-    // tem prazo nenhum, quem tem é a entrega. É também a primeira rota do
-    // sistema a pendurar no nome do domínio, e a do lembrete automático (F8)
-    // entra ao lado desta.
-    server.get('/api/assignments/overdue', assignmentController.overdue);
 
     // Histórico do ativo, mais recente primeiro. Append-only: a devolução
     // preenche `checkinAt` e a linha fica, então esta rota mostra a posse atual

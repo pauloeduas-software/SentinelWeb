@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { $Enums } from '@prisma/client';
 import {
-  booleano, corOpcional, emailOpcional, mesesOpcional,
+  booleano, corOpcional, emailOpcional,
   nomeObrigatorio, textoOpcional, urlOpcional, uuidObrigatorio, uuidOpcional,
 } from '../../shared/fields.schema';
 
@@ -65,7 +65,6 @@ export const updateManufacturerSchema = z.strictObject({ name: nomeObrigatorio()
 // -------------------------------------------------------------- AssetModel
 const camposModelo = {
   modelNumber: textoOpcional('número do modelo', 100),
-  eolMonths: mesesOpcional('vida útil'),
   notes: textoOpcional('notas', 2_000),
 };
 

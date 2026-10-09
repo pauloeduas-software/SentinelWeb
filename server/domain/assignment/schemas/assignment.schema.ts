@@ -48,37 +48,5 @@ export const checkinSchema = z.strictObject({
   checkinNotes: textoOpcional('observações da devolução', 2_000),
 });
 
-/**
- * Teto de ativos por entrega em massa.
- *
- * 100 é o mesmo teto de uma página da listagem (`core/http/list-query.ts`), e
- * não por simetria: a seleção da tela nasce de uma página, então um lote maior
- * que a página é um pedido montado à mão. O limite existe porque cada linha é
- * uma transação — mil ids num corpo só seriam mil transações seguradas por uma
- * requisição HTTP, que estoura o timeout do cliente e deixa o relatório sem
- * quem o leia.
- */
-const MAX_ATIVOS_POR_LOTE = 100;
-
-/**
- * ENTREGA EM MASSA: o mesmo corpo do checkout, mais a lista de ativos.
- *
- * O alvo é UM só para todos — é o que a operação significa (o kit inteiro para
- * a mesma pessoa, ou para a mesma Mesa 1). Alvos diferentes por linha seriam N
- * entregas sem nada em comum, e para isso já existe a rota individual.
- *
- * `.extend` sobre o `checkoutSchema` em vez de repetir os sete campos: a
- * coerência entre `targetType` e a FK preenchida é validada UMA vez, no
- * `assertAlvoCoerente` de dentro do `checkoutAsset` que cada linha chama. Um
- * segundo schema com as mesmas regras divergiria do primeiro no próximo ajuste.
- */
-export const bulkCheckoutSchema = checkoutSchema.extend({
-  assetIds: z
-    .array(z.uuid('ativo: identificador inválido'), 'informe os ativos a entregar')
-    .min(1, 'selecione ao menos um ativo')
-    .max(MAX_ATIVOS_POR_LOTE, `entrega em massa: máximo de ${MAX_ATIVOS_POR_LOTE} ativos por vez`),
-});
-
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
 export type CheckinInput = z.infer<typeof checkinSchema>;
-export type BulkCheckoutInput = z.infer<typeof bulkCheckoutSchema>;

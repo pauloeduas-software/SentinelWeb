@@ -9,7 +9,6 @@ import PostosPage from './pages/postos';
 import EstoquePage from './pages/estoque';
 import LicencasPage from './pages/licencas';
 import DescobertasPage from './pages/descobertas';
-import RelatoriosPage from './pages/relatorios';
 import UsersPage from './pages/gestao-usuario';
 import UserDetailPage from './pages/gestao-usuario/detalhe';
 import ConfiguracoesPage from './pages/configuracoes';
@@ -86,7 +85,6 @@ function Layout() {
                 por trás: `/reconciliacao` seria o mesmo erro que `/itam` foi até
                 a F6, nomear a tela pelo assunto em vez de pelo conteúdo. */}
             <Route path="/descobertas" element={<DescobertasPage />} />
-            <Route path="/relatorios" element={<RelatoriosPage />} />
             <Route path="/users" element={<UsersPage />} />
             {/* Perfil do colaborador: os dois baldes de posse e o desligamento
                 (docs/referencia/modelo-de-posse.md, Camada 3). Depois de `/users` porque o

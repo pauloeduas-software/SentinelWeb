@@ -1,6 +1,6 @@
-import { Cpu, History, Info, KeyRound, MonitorSmartphone, Paperclip, Users } from 'lucide-react';
+import { Cpu, History, Info, KeyRound, MonitorSmartphone, Users } from 'lucide-react';
 
-// AS SETE ABAS DA TELA DE DETALHE — dado, não componente.
+// AS SEIS ABAS DA TELA DE DETALHE — dado, não componente.
 //
 // Fica em `helpers/` porque é a lista que a tela percorre, e porque um arquivo
 // que exporta componente E constante quebra o fast refresh do Vite (o lint
@@ -15,7 +15,7 @@ import { Cpu, History, Info, KeyRound, MonitorSmartphone, Paperclip, Users } fro
 
 export type AbaId =
   | 'detalhes' | 'posse' | 'historico'
-  | 'componentes' | 'licencas' | 'maquina' | 'arquivos';
+  | 'componentes' | 'licencas' | 'maquina';
 
 export interface Aba {
   id: AbaId;
@@ -39,7 +39,4 @@ export const ABAS: readonly Aba[] = [
   // desabilitada, porque o que ela mostra não existia em fase nenhuma: até a
   // convergência, o ativo não sabia que tinha uma máquina.
   { id: 'maquina', rotulo: 'Máquina', icone: MonitorSmartphone, fase: null },
-  // Entrou na Leva 2 do fechamento da F2 (docs/historico/fase-02-ativos.md) — era a
-  // Etapa G dela, adiada quando `@fastify/multipart` foi instalado e não usado.
-  { id: 'arquivos', rotulo: 'Arquivos', icone: Paperclip, fase: null },
 ];

@@ -88,49 +88,6 @@ describe('custo de compra — só `ADMIN` (D148)', () => {
     expect(resposta.body.purchaseCost).toBe('4250.9');
   });
 
-
-  it('o relatório de responsabilidade abre, mas sem a soma de custo', async () => {
-    // Ele responde "quem responde por quantos equipamentos", que é a pergunta
-    // principal e não é sobre dinheiro. Só a coluna de custo some.
-    const resposta = await semSegredo.get<{ linhas: { total: number; custoTotal: unknown }[] }>(
-      '/api/reports/responsabilidade',
-    );
-
-    expect(resposta.status).toBe(200);
-    for (const linha of resposta.body.linhas) {
-      // A contagem continua — é a pergunta principal do relatório.
-      expect(linha.total).toBeGreaterThan(0);
-      expect(linha.custoTotal).toBeNull();
-    }
-  });
-
-  it('o EXPORT recusa a coluna de custo pedida pelo nome', async () => {
-    // Aqui o mecanismo é outro, de propósito: não dá para "não ler" uma coluna
-    // que o usuário pediu pelo nome. O honesto é dizer que ele não pode pedi-la
-    // — e antes do primeiro byte, senão o cliente recebe um CSV truncado com
-    // status 200.
-    const resposta = await semSegredo.get<{ error: string }>(
-      '/api/assets/export?columns=assetTag,purchaseCost',
-    );
-
-    expect(resposta.status).toBe(403);
-    expect(resposta.body.error).toMatch(/purchaseCost/);
-  });
-
-  it('o EXPORT sem escolher coluna funciona, já sem a de custo', async () => {
-    // O padrão inclui `purchaseCost`. Se ele não fosse filtrado, quem não tem a
-    // chave tomaria 403 ao baixar sem escolher nada — e não há nada de errado
-    // em não escolher.
-    const resposta = await semSegredo.get<string>('/api/assets/export');
-
-    expect(resposta.status).toBe(200);
-    expect(typeof resposta.body).toBe('string');
-    expect(resposta.body).not.toMatch(/Custo de compra/);
-    // E continua sendo um CSV de verdade, com as outras colunas.
-    expect(resposta.body).toMatch(/Etiqueta/);
-  });
-
-
 });
 
 describe('chave de produto — `licenses.viewKey`', () => {

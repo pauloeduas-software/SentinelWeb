@@ -1,9 +1,6 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { resolverResponsaveis, type PosseResolvida } from '../../assignment/use-cases/resolve-responsibles.usecase';
-import {
-  resolverEscalonamento, type Escalonamento,
-} from '../../assignment/use-cases/resolver-escalonamento.usecase';
 import { assetDetailSelect, ASSET_SELECT } from '../helpers/asset-select.helper';
 
 // `findFirst`, nunca `findUnique`: o escopo da lixeira não alcança o
@@ -29,24 +26,6 @@ function buscarAtivo(id: string, podeVerCusto: boolean) {
  */
 export type AssetDetail = NonNullable<Awaited<ReturnType<typeof buscarAtivo>>> & {
   posse: PosseResolvida;
-  /**
-   * PARA QUEM LIGAR por este ativo (F11, Etapa F — D73).
-   *
-   * Sai AQUI, ao lado de `posse.postoVago`, e não em rota irmã: quem pergunta
-   * "para quem eu ligo?" está olhando a ficha que acabou de dizer "posto vago".
-   * Uma segunda requisição para a resposta óbvia da primeira seria dois cliques
-   * para uma pergunta.
-   *
-   * ⚠️ ELE NÃO É RESPONSÁVEL. O gestor da localidade não está com o
-   * equipamento, não assinou nada por ele e NÃO aparece em
-   * `posse.responsaveis`. São perguntas diferentes, e misturá-las reabre o D72
-   * por efeito colateral.
-   *
-   * `null` quando não há gestor em ancestral nenhum — e isso não é erro: é o
-   * buraco do escalonamento, que o desligamento com `substitutoId` existe para
-   * não criar.
-   */
-  escalonamento: Escalonamento | null;
 };
 
 /**
@@ -67,18 +46,7 @@ export async function findAssetById(id: string, podeVerCusto: boolean): Promise<
   const ativo = await buscarAtivo(id, podeVerCusto);
   if (!ativo) throw new AppError('Registro não encontrado', 404);
 
-  // FORA de transação: são leituras e nenhuma decisão depende de elas serem do
-  // mesmo instante — a tela recarrega inteira a cada invalidação.
-  //
-  // EM PARALELO porque são independentes: a responsabilidade sai da posse
-  // aberta, o escalonamento sai da árvore de localizações, e nenhuma das duas
-  // lê o resultado da outra. Em série, a ficha pagaria a soma das duas.
-  const [posse, escalonamento] = await Promise.all([
-    resolverResponsaveis(prisma, id),
-    resolverEscalonamento(prisma, ativo.locationId),
-  ]);
+  const posse = await resolverResponsaveis(prisma, id);
 
-  // Calculado na LEITURA, não gravado: é o D55, e a regra já veio embutida no
-
-  return { ...ativo, posse, escalonamento };
+  return { ...ativo, posse };
 }

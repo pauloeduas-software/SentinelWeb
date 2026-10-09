@@ -23,7 +23,6 @@ import type { ClienteStatusPosse } from './assert-status-posse.usecase';
  * @param client   Prisma global ou o `tx` da transação de quem chama.
  * @param assetId  O ativo que está sendo descomissionado.
  * @param etiqueta A etiqueta, só para a mensagem dizer QUAL ativo barrou — é o
- *                 que faz a recusa servir também para o lote (`/assets/bulk`).
  */
 export async function assertSemPosseParaDescomissionar(
   client: ClienteStatusPosse,

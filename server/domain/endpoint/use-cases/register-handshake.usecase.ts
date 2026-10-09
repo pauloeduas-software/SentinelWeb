@@ -87,7 +87,7 @@ export async function registerHandshake(data: HandshakeData): Promise<HandshakeR
   });
 
   // Devolve o `id` porque quem roteia a mensagem (domain/agent) precisa dele
-  // para a observação de usuário e para o vínculo do ApiToken — sem isso, os
+  // para a observação de usuário e para as mudanças de hardware — sem isso, os
   // dois fariam um `findUnique` pelo hwid logo depois deste upsert, que é a
   // mesma linha lida duas vezes no caminho de ingestão.
   const endpoint = await prisma.endpoint.upsert({

@@ -85,7 +85,6 @@ const modelo: CatalogUiSpec = {
     { key: 'manufacturer', label: 'Fabricante', render: 'relacao' },
     { key: 'category', label: 'Categoria', render: 'relacao' },
     { key: 'modelNumber', label: 'Número' },
-    { key: 'eolMonths', label: 'Vida útil', render: 'meses' },
   ],
   campos: [
     { key: 'name', label: 'Nome do modelo', tipo: 'text', obrigatorio: true, placeholder: 'Ex: Latitude 5450' },
@@ -94,8 +93,6 @@ const modelo: CatalogUiSpec = {
     // Só categorias de ATIVO: um modelo de equipamento não pertence a uma
     // categoria de licença.
     { key: 'categoryId', label: 'Categoria', tipo: 'reference', rota: 'categories', filtroTipo: 'ASSET', obrigatorio: true },
-    { key: 'eolMonths', label: 'Vida útil (meses)', tipo: 'number', placeholder: 'Ex: 48',
-      ajuda: 'Todo ativo deste modelo herda este prazo, e pode sobrescrever.' },
     { key: 'notes', label: 'Notas', tipo: 'textarea', largura: 'inteira' },
   ],
 };
