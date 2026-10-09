@@ -14,7 +14,6 @@ export interface UpdateUserData {
   /** O papel (D148). Ausente = não mexe. */
   role?: 'USUARIO' | 'TECNICO' | 'ADMIN';
   /** O id do departamento (F11, Etapa D). A coluna de texto não é mais escrita. */
-  departmentId?: string | null;
   employeeNumber?: string | null;
   jobTitle?: string | null;
   phone?: string | null;
@@ -27,7 +26,7 @@ export interface UpdateUserData {
 // guardasse "Comercial" e alguém renomeasse o departamento, o histórico passaria
 // a contar uma mudança que não houve nesta pessoa.
 const CAMPOS_AUDITADOS = [
-  'name', 'email', 'departmentId', 'employeeNumber', 'jobTitle', 'phone', 'address',
+  'name', 'email', 'employeeNumber', 'jobTitle', 'phone', 'address',
   'hiredAt', 'managerId', 'role',
 ] as const;
 
@@ -40,7 +39,7 @@ const CAMPOS_AUDITADOS = [
  * `CatalogSpec.select` documenta ("precisa conter todo campo de `audited`").
  */
 const SELECT_DO_DIFF = {
-  id: true, name: true, email: true, departmentId: true, employeeNumber: true,
+  id: true, name: true, email: true, employeeNumber: true,
   jobTitle: true, phone: true, address: true, hiredAt: true, managerId: true, role: true,
 } as const;
 
@@ -61,7 +60,6 @@ export async function updateUser(id: string, data: UpdateUserData, actorId: stri
       data: {
         name: data.name,
         email: data.email,
-        departmentId: data.departmentId,
         employeeNumber: data.employeeNumber,
         jobTitle: data.jobTitle,
         phone: data.phone,

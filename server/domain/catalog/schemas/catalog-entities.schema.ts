@@ -82,45 +82,6 @@ export const updateAssetModelSchema = z.strictObject({
   ...camposModelo,
 });
 
-// ---------------------------------------------------------------- Supplier
-const camposFornecedor = {
-  contactName: textoOpcional('contato', 200),
-  phone: textoOpcional('telefone', 50),
-  email: emailOpcional,
-  url: urlOpcional,
-  address: textoOpcional('endereço', 300),
-  city: textoOpcional('cidade', 100),
-  state: textoOpcional('estado', 100),
-  zip: textoOpcional('CEP', 20),
-  notes: textoOpcional('notas', 2_000),
-};
-
-export const createSupplierSchema = z.strictObject({ name: nomeObrigatorio(), ...camposFornecedor });
-export const updateSupplierSchema = z.strictObject({ name: nomeObrigatorio().optional(), ...camposFornecedor });
-
-// -------------------------------------------------------------- Department
-//
-// A DÉCIMA SPEC DO CATÁLOGO (F11, Etapa D — D75), e não um domínio próprio: é
-// CRUD plano — nome, código, gestor, busca, 409 por uso —, e o
-// `docs/referencia/arquitetura.md` diz que acrescentar tabela de catálogo *é escrever a
-// spec*. Um `domain/department/` completo seria oito arquivos para repetir o
-// que o CRUD genérico já faz para sete tabelas.
-const camposDepartamento = {
-  // O código do centro de custo, quando a empresa tem um. Opcional porque a
-  // maioria não tem, e exigi-lo tornaria o cadastro impossível de preencher.
-  code: textoOpcional('código', 40),
-  // O GESTOR DO DEPARTAMENTO. Ele NÃO responde por ativo nenhum (D72) — a
-  // coluna existe para relatório e para a rota de escalonamento de gente.
-  managerId: uuidOpcional('gestor'),
-};
-
-export const createDepartmentSchema = z.strictObject({
-  name: nomeObrigatorio(), ...camposDepartamento,
-});
-export const updateDepartmentSchema = z.strictObject({
-  name: nomeObrigatorio().optional(), ...camposDepartamento,
-});
-
 // ---------------------------------------------------------------- Location
 const camposLocalizacao = {
   parentId: uuidOpcional('localização pai'),

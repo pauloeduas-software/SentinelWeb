@@ -44,7 +44,6 @@ export interface Licenca {
 
   categoryId: string;
   manufacturerId: string | null;
-  supplierId: string | null;
 
   orderNumber: string | null;
   purchaseDate: string | null;
@@ -59,7 +58,6 @@ export interface Licenca {
 
   category: CategoriaDaLicenca | null;
   manufacturer: ReferenciaNomeada | null;
-  supplier: ReferenciaNomeada | null;
 
   // ── O que o servidor CALCULOU ──────────────────────────────────────────────
   ocupados: number;
@@ -197,7 +195,6 @@ export interface LicencaInput {
   licensedToEmail?: string | null;
   minSeats?: number | null;
   manufacturerId?: string | null;
-  supplierId?: string | null;
   orderNumber?: string | null;
   purchaseDate?: string | null;
   purchaseCost?: string | null;

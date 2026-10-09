@@ -1,21 +1,10 @@
-/** `{ id, name }` — como departamento e gestor chegam na resposta. */
+/** `{ id, name }` — como o gestor chega na resposta. */
 export interface Referencia {
   id: string;
   name: string;
 }
 
-/**
- * Colaborador da empresa — quem recebe os ativos do inventário.
- *
- * `department` É OPCIONAL NO TIPO, e isso é o contrato do D135 aparecendo aqui:
- * ele só vem na LISTAGEM de pessoas (`USER_LIST_SELECT` no servidor), que é a
- * única tela que mostra a coluna. Nos lugares onde um usuário vem EMBUTIDO — o
- * `assignedTo` de um ativo, o ocupante de um posto, o alvo de uma posse — ele
- * não vem, porque o join não tem o que fazer em cada linha de cada histórico.
- *
- * Então `user.department` ausente não é dado faltando: é o select certo tendo
- * sido usado. Quem precisa dele numa tela nova pede a rota que o traz.
- */
+/** Colaborador da empresa — quem recebe os ativos do inventário. */
 export interface User {
   /**
    * O papel (D148) — `USUARIO`, `TECNICO` ou `ADMIN`.
@@ -29,7 +18,6 @@ export interface User {
   name: string;
   email: string;
   /** Só na listagem de pessoas e no perfil — ver acima (D135). */
-  department?: Referencia | null;
   /**
    * O id do gestor, cru. Só na LISTAGEM, e só porque o formulário o edita.
    *

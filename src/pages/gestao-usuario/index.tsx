@@ -46,16 +46,14 @@ export default function UsersPage() {
             <tr>
               <th className="px-6 py-4 font-normal">Nome</th>
               <th className="px-6 py-4 font-normal">E-mail</th>
-              <th className="px-6 py-4 font-normal">Departamento</th>
               <th className="px-6 py-4 font-normal text-right">Ações</th>
             </tr>
           </thead>
           <tbody className="text-text-primary">
             {users.map((user) => (
               <tr key={user.id} className="border-b border-border-sutil/50 hover:bg-bg-base transition-colors group">
-                {/* O nome é o caminho para o PERFIL: é lá que estão os dois
-                    baldes de posse e o desligamento. A lista não tem como
-                    mostrar isso em uma célula — são três listas. */}
+                {/* O nome é o caminho para o PERFIL: é lá que estão os postos
+                    que a pessoa ocupa e o histórico dela. */}
                 <td className="px-6 py-4 font-medium text-text-primary">
                   {/* AS INICIAIS (F11): a cor vem do nome, então a mesma pessoa é
                       sempre a mesma cor — é o que deixa achar uma linha conhecida
@@ -67,7 +65,6 @@ export default function UsersPage() {
                   </Link>
                 </td>
                 <td className="px-6 py-4 text-text-tertiary">{user.email}</td>
-                <td className="px-6 py-4">{user.department?.name || '--'}</td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                     {view === 'trashed' ? (

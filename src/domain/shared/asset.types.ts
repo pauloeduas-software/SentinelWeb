@@ -60,7 +60,6 @@ export interface Asset {
   statusId: string;
   modelId: string;
   locationId: string | null;
-  supplierId: string | null;
   /**
    * CACHE do caso `USER` da posse, e só dele (docs/referencia/modelo-de-posse.md).
    *
@@ -95,7 +94,6 @@ export interface Asset {
   status: StatusRef;
   model: ModeloRef;
   location: Referencia | null;
-  supplier: Referencia | null;
   assignedTo: User | null;
 
   /**

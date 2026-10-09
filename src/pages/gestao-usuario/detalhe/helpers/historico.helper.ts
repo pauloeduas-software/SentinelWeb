@@ -33,8 +33,6 @@ const ROTULO_DO_CAMPO: Record<string, string> = {
   // continuam no log para sempre — o `docs/referencia/modelo-de-posse.md` protege o histórico ao
   // nunca apagá-lo, e um evento de 2025 sem rótulo apareceria como
   // "department" cru no meio de uma lista em português.
-  department: 'Departamento',
-  departmentId: 'Departamento',
   employeeNumber: 'Matrícula',
   jobTitle: 'Cargo',
   phone: 'Telefone',

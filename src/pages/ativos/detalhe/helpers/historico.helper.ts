@@ -32,7 +32,6 @@ const ROTULO_DO_CAMPO: Record<string, string> = {
   statusId: 'Status',
   modelId: 'Modelo',
   locationId: 'Localização',
-  supplierId: 'Fornecedor',
   assignedToId: 'Responsável direto',
   orderNumber: 'Número do pedido',
   purchaseDate: 'Data da compra',

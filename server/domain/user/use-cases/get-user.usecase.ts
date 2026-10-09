@@ -42,7 +42,6 @@ export interface UsuarioComPosse {
    * Objeto e não texto: ele virou entidade na F11 (D75), e a tela mostra o nome
    * mas navega pelo id. A coluna de texto que ocupava este nome caiu na Etapa J.
    */
-  department: Referencia | null;
   /** Quem COBRA esta pessoa. Nunca quem responde pelo ativo dela (D72). */
   manager: Referencia | null;
   posseAberta: PosseAbertaDoUsuario;

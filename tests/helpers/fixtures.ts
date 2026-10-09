@@ -215,12 +215,6 @@ export async function cenarioDePosse(api: ApiDeTeste, sufixo = '') {
 
 // ── O CICLO DE VIDA (F8) ────────────────────────────────────────────────────
 
-/** Um fornecedor, pela API. O nome é `@unique`, então quem chama passa o próprio. */
-export async function criarFornecedor(api: ApiDeTeste, name: string): Promise<string> {
-  const criado = exigir201<Criado>('fornecedor', await api.post('/api/suppliers', { name }));
-  return criado.id;
-}
-
 /** `AAAA-MM-DD` de N dias atrás — o que os testes de prazo precisam. */
 export function diasAtras(dias: number): string {
   const data = new Date();

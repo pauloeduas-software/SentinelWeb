@@ -63,7 +63,6 @@ export default function DetalhesTab({
         </Secao>
 
         <Secao titulo="Compra">
-          <Campo rotulo="Fornecedor" valor={asset.supplier?.name} />
           <Campo rotulo="Número do pedido" valor={asset.orderNumber} />
           <Campo rotulo="Data da compra" valor={formatarData(asset.purchaseDate)} />
           <Campo rotulo="Valor" valor={formatarMoeda(asset.purchaseCost)} />

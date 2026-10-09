@@ -16,7 +16,6 @@ export interface CreateUserData {
    * verdade para o mesmo dado durante a transição, e a que divergisse seria a
    * que o `DROP COLUMN` da migração 2 de 2 levaria embora sem aviso.
    */
-  departmentId?: string | null;
   employeeNumber?: string | null;
   jobTitle?: string | null;
   phone?: string | null;
@@ -38,7 +37,6 @@ export async function createUser(data: CreateUserData, actorId: string | null) {
       data: {
         name: data.name,
         email: data.email,
-        departmentId: data.departmentId ?? null,
         employeeNumber: data.employeeNumber ?? null,
         jobTitle: data.jobTitle ?? null,
         phone: data.phone ?? null,
@@ -61,7 +59,7 @@ export async function createUser(data: CreateUserData, actorId: string | null) {
         // O `departmentId` e não o nome: o log guarda o que foi GRAVADO, e o
         // nome pode mudar depois sem que este cadastro tenha mudado.
         changes: {
-          name: user.name, email: user.email, departmentId: data.departmentId ?? null,
+          name: user.name, email: user.email,
           employeeNumber: data.employeeNumber ?? null, managerId: data.managerId ?? null,
         },
       },

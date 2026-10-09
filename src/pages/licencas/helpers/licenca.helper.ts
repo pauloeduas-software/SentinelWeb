@@ -104,7 +104,6 @@ export const ROTULOS_DA_LICENCA: Record<string, string> = {
   licensedToEmail: 'E-mail do licenciado',
   categoryId: 'Categoria',
   manufacturerId: 'Fabricante',
-  supplierId: 'Fornecedor',
   orderNumber: 'Pedido',
   purchaseDate: 'Data da compra',
   purchaseCost: 'Valor da compra',

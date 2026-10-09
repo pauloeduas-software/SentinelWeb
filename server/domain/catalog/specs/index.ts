@@ -1,10 +1,8 @@
 import { assetModelSpec } from './asset-model.spec';
 import { categorySpec } from './category.spec';
-import { departmentSpec } from './department.spec';
 import { locationSpec } from './location.spec';
 import { manufacturerSpec } from './manufacturer.spec';
 import { statusLabelSpec } from './status-label.spec';
-import { supplierSpec } from './supplier.spec';
 import type { CatalogSpec } from './catalog-spec.types';
 
 // O registro das tabelas de catálogo. O maestro percorre esta lista — acrescentar
@@ -17,13 +15,5 @@ export const CATALOG_SPECS: readonly CatalogSpec[] = [
   statusLabelSpec,
   manufacturerSpec,
   assetModelSpec,
-  supplierSpec,
   locationSpec,
-  // A SÉTIMA E ÚLTIMA (D75). Depois das de ativo porque é cadastro de GENTE, não
-  // de inventário: quem abre Configurações está quase sempre atrás de categoria,
-  // modelo ou local.
-  //
-  // ERAM DEZ. Saíram `depreciationSpec` (D152, o valor contábil) e as duas de
-  // campo customizado (D145) — a parte plana que o D64 havia trazido para cá.
-  departmentSpec,
 ];

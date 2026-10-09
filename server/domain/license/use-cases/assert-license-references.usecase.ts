@@ -13,7 +13,6 @@ import type { ClienteLicenca } from '../helpers/license-seats.helper';
 export interface ReferenciasDaLicenca {
   categoryId?: string;
   manufacturerId?: string | null;
-  supplierId?: string | null;
 }
 
 /**
@@ -56,12 +55,5 @@ export async function assertReferenciasDaLicenca(
       where: { id: dados.manufacturerId }, select: { id: true },
     });
     if (!fabricante) throw new AppError('Fabricante não encontrado.', 404);
-  }
-
-  if (dados.supplierId) {
-    const fornecedor = await client.supplier.findUnique({
-      where: { id: dados.supplierId }, select: { id: true },
-    });
-    if (!fornecedor) throw new AppError('Fornecedor não encontrado.', 404);
   }
 }

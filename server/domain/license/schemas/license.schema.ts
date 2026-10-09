@@ -48,7 +48,6 @@ const camposComuns = {
   minSeats: minimoOpcional,
 
   manufacturerId: uuidOpcional('fabricante'),
-  supplierId: uuidOpcional('fornecedor'),
 
   orderNumber: textoOpcional('número do pedido', 100),
   purchaseDate: dataOpcional('data de compra'),

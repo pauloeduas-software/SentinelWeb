@@ -29,7 +29,6 @@ const email = z.string('e-mail é obrigatório').trim().toLowerCase()
 // barato de descobrir um cliente antigo.
 // ─────────────────────────────────────────────────────────────────────────────
 const camposDeIdentidade = {
-  departmentId: uuidOpcional('departamento'),
   // QUEM COBRA a pessoa. Nunca quem responde pelo ativo dela (D72).
   managerId: uuidOpcional('gestor'),
   employeeNumber: textoOpcional('matrícula', 40),

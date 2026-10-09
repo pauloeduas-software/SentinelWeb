@@ -5,7 +5,7 @@ export const LICENSE_AUDITED = [
   'expirationDate', 'terminationDate',
   'licensedToName', 'licensedToEmail',
   'minSeats',
-  'categoryId', 'manufacturerId', 'supplierId',
+  'categoryId', 'manufacturerId',
   'orderNumber', 'purchaseDate', 'purchaseCost', 'notes',
 ] as const;
 

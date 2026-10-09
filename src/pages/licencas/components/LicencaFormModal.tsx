@@ -52,7 +52,6 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
   const [licensedToEmail, setLicensedToEmail] = useState(licenca?.licensedToEmail ?? '');
   // Sempre vazio, inclusive na edição — ver o bloco no topo do arquivo.
   const [manufacturerId, setManufacturerId] = useState(licenca?.manufacturerId ?? '');
-  const [supplierId, setSupplierId] = useState(licenca?.supplierId ?? '');
   const [orderNumber, setOrderNumber] = useState(licenca?.orderNumber ?? '');
   const [purchaseDate, setPurchaseDate] = useState(paraCampoDeData(licenca?.purchaseDate));
   // STRING do começo ao fim: converter para `number` aqui é como o erro de
@@ -80,7 +79,6 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
       licensedToName: limpar(licensedToName),
       licensedToEmail: limpar(licensedToEmail),
       manufacturerId: limpar(manufacturerId),
-      supplierId: limpar(supplierId),
       orderNumber: limpar(orderNumber),
       purchaseDate: limpar(purchaseDate),
       purchaseCost: limpar(purchaseCost),
@@ -181,11 +179,6 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
             <label className="space-y-1.5">
               <span className={ROTULO}>E-mail do licenciado</span>
               <input type="email" value={licensedToEmail} onChange={(e) => setLicensedToEmail(e.target.value)} className={CLASSE_CAMPO} />
-            </label>
-
-            <label className="space-y-1.5">
-              <span className={ROTULO}>Fornecedor</span>
-              <ReferenceSelect rota="suppliers" valor={supplierId} onChange={setSupplierId} />
             </label>
 
             <label className="space-y-1.5">
