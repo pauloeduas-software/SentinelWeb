@@ -45,7 +45,7 @@ export const configuracaoDaDescobertaSchema = z.strictObject({
 
 // ── A CONFIGURAÇÃO DE SISTEMA (F10, D65) ───────────────────────────────────
 //
-// Marca, formato e backup. Os três grupos de validação daqui têm o mesmo
+// Marca e formato. Os grupos de validação daqui têm o mesmo
 // objetivo e ele não é zelo: `locale`, `dateFormat` e `currency` são lidos pela
 // TELA para formatar número e data. Um valor que o `Intl` não conhece não vira
 // texto errado — ele LANÇA `RangeError` no primeiro `toLocaleString`, e a tela

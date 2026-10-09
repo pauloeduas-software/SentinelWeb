@@ -86,11 +86,6 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
       // O que o agente VÊ e o cadastro não sabe (F7). Perto do inventário
       // porque é dele que a tela fala, não do RMM.
       { to: '/descobertas', label: 'Descobertas', icon: Radar, papel: 'TECNICO' },
-      // AGORA TEM LUGAR NO MENU, e o motivo da ausência caducou junto com a
-      // barra horizontal: `/auditorias` ficava de fora porque "a barra já tem
-      // doze itens e desaparece abaixo de md". Na vertical não há essa disputa,
-      // e esconder a tela de conferência fazia dela a única do sistema que só
-      // se alcançava por dentro de outra.
     ],
   },
   {

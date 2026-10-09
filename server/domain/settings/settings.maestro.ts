@@ -26,7 +26,7 @@ export class SettingsMaestro {
     server.put('/api/settings/discovery', WRITE_RATE_LIMIT, settingsController.saveDiscovery);
 
     // A CONFIGURAÇÃO DE SISTEMA (F10): marca, formato de número e data, moeda,
-    // delimitador do CSV e retenção do backup. `PUT` e todos os campos
+    // delimitador do CSV. `PUT` e todos os campos
     // opcionais, como os dois pares acima.
     server.get('/api/settings', settingsController.getSystem);
     server.put('/api/settings', WRITE_RATE_LIMIT, settingsController.saveSystem);

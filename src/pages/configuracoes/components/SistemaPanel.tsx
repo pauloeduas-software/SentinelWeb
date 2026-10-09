@@ -11,7 +11,7 @@ import {
 // porque campo que configura uma rotina que não existe é um campo que mente.
 //
 // POR QUE ELA FICA AQUI, e não numa tela nova: `/configuracoes` já é a tela das
-// NOVE tabelas de catálogo, dirigida por spec. Esta aba é a décima, e é a
+// SETE tabelas de catálogo, dirigida por spec. Esta aba é a oitava, e é a
 // primeira que não é tabela — o que ela edita é a LINHA ÚNICA do `AppSetting`.
 // É a mesma escolha que pôs os botões da descoberta ao lado do painel de
 // cobertura (F7) e a central de alertas dentro de `/relatorios` (F8):

@@ -2,9 +2,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { prisma } from '../../server/core/database/prismaClient';
 import { PAPEIS, papelAlcanca, ehPapel } from '../../server/domain/access/helpers/papel';
-import {
-  ROTAS_POR_PERMISSAO, exigenciaDaRota,
-} from '../../server/domain/access/helpers/route-permissions';
+import Fastify, { type HTTPMethods } from 'fastify';
+import { registerPermissionGuard } from '../../server/core/http/permission-guard';
+import { ROTAS_POR_PERMISSAO } from '../../server/domain/access/helpers/route-permissions';
 
 // AS INVARIANTES DO ACESSO (D148) — e a que importa é a segunda.
 //
@@ -39,38 +39,57 @@ describe('o mapa de rotas × a tabela do Fastify (D137)', () => {
   });
 
   it('o mapa não declara rota que não existe', () => {
-    // O espelho do caso de baixo: declaração morta é linha que ninguém apagou
-    // quando a rota saiu, e ela esconde o que o mapa realmente cobre.
-    const registradas = new Set(
-      api.app.printRoutes({ commonPrefix: false })
-        .split('\n')
-        .flatMap((linha) => {
-          const casamento = linha.match(/^(?<url>\S+)\s+\((?<metodos>[^)]+)\)/);
-          if (!casamento?.groups) return [];
-          return casamento.groups.metodos
-            .split(',')
-            .map((metodo) => `${metodo.trim()} ${casamento.groups!.url}`);
-        }),
-    );
+    // O ESPELHO do caso de baixo, e o que ele pega é declaração MORTA: linha que
+    // ninguém apagou quando a rota saiu. Ela não abre acesso nenhum — o guard só
+    // consulta o mapa a partir de uma rota real —, mas esconde o que o mapa de
+    // fato cobre, e é a primeira coisa que mente numa revisão.
+    //
+    // `hasRoute` E NÃO `printRoutes`: a versão anterior deste caso parseava o
+    // texto de `printRoutes({ commonPrefix: false })`, e aquele texto é uma
+    // ÁRVORE — as linhas começam com `├──` e cada caminho é relativo ao nó pai.
+    // O regex não casava nenhuma linha, o conjunto de rotas registradas saía
+    // VAZIO, e `mortas` era o mapa INTEIRO; a asserção que sobrava
+    // (`not.toContain('GET /api/groups')`) passava por isso, não por acerto.
+    // `hasRoute` pergunta ao roteador, com o padrão exato que o mapa declara.
+    const mortas = Object.keys(ROTAS_POR_PERMISSAO).filter((chave) => {
+      const [metodo, ...resto] = chave.split(' ');
+      return !api.app.hasRoute({ method: metodo as HTTPMethods, url: resto.join(' ') });
+    });
 
-    const mortas = Object.keys(ROTAS_POR_PERMISSAO).filter((chave) => !registradas.has(chave));
-    // Tolerante de propósito: o `printRoutes` normaliza prefixo e este teste não
-    // pode ficar mais frágil que o do boot. O que ele pega é o óbvio — um
-    // caminho inteiro que deixou de existir.
-    expect(mortas.filter((chave) => chave.includes('/api/'))).not.toContain('GET /api/groups');
+    expect(mortas).toEqual([]);
   });
 
-  it('nenhuma rota de API fica sem exigência — é o que o boot confere', () => {
-    // A conferência do boot já rodou (o `criarApi` chama `buildApp`, que a
-    // executa e LANÇA). Este caso existe para o motivo da falha aparecer como
-    // asserção e não como exceção de `beforeAll`, que o vitest reporta sem
-    // dizer qual rota.
-    const semDeclaracao = Object.keys(ROTAS_POR_PERMISSAO)
-      .filter((chave) => {
-        const [metodo, ...resto] = chave.split(' ');
-        return exigenciaDaRota(metodo, resto.join(' ')) === undefined;
-      });
-    expect(semDeclaracao).toEqual([]);
+  it('rota registrada fora do mapa derruba a conferência de cobertura', async () => {
+    // A CONFERÊNCIA DO BOOT (D137), exercitada pelos dois lados numa instância
+    // descartável. Não dá para provar isto na aplicação real: lá ela já rodou
+    // dentro do `buildApp()` do `beforeAll` e, se falhasse, o arquivo inteiro
+    // morreria antes da primeira asserção. O que se testa aqui é o MECANISMO —
+    // mesma função, mesmo objeto que protege o boot.
+    const declaradas = new Set(['GET /declarada']);
+    const opcoes = {
+      exigenciaDaRota: (metodo: string, url: string) =>
+        (declaradas.has(`${metodo.toUpperCase()} ${url}`) ? 'ADMIN' : undefined),
+      autorizar: () => {},
+      rotasPublicas: [],
+      foraDaConferencia: [],
+    };
+
+    const coberta = Fastify();
+    const guardaCoberta = registerPermissionGuard(coberta, opcoes);
+    coberta.get('/declarada', async () => 'ok');
+    await coberta.ready();
+    expect(() => guardaCoberta.verificarCobertura()).not.toThrow();
+    await coberta.close();
+
+    const furada = Fastify();
+    const guardaFurada = registerPermissionGuard(furada, opcoes);
+    furada.get('/declarada', async () => 'ok');
+    furada.post('/esquecida', async () => 'ok');
+    await furada.ready();
+    // A mensagem tem que NOMEAR a rota: é o que faz o erro do boot ser
+    // acionável em vez de "alguma coisa não está declarada".
+    expect(() => guardaFurada.verificarCobertura()).toThrow(/POST \/esquecida/);
+    await furada.close();
   });
 });
 

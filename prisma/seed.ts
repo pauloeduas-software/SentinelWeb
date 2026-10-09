@@ -99,9 +99,6 @@ const CATEGORIES = [
 //
 // Depois da F3 a API é fechada por padrão: sem esta linha, ninguém loga, e sem
 // login ninguém cria usuário — um ovo-e-galinha que só o seed resolve.
-// O NOME DO GRUPO DE SISTEMA vem do CATÁLOGO (`GRUPO_ADMINISTRADOR`): o seed o
-// reconcilia, a rota de edição o recusa e o comando de escape o procura — os três
-// têm que falar do mesmo grupo, e um literal por arquivo não garante isso.
 const ADMIN_USERNAME = (process.env.ADMIN_USERNAME ?? 'admin').trim().toLowerCase();
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL ?? 'admin@sentinel.local').trim().toLowerCase();
 const ADMIN_NAME = process.env.ADMIN_NAME?.trim() || 'Administrador';
