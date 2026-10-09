@@ -6,7 +6,6 @@ import AssetTabs, { AbaFutura } from './components/AssetTabs';
 import ComponentsTab from './components/ComponentsTab';
 import LicensesTab from './components/LicensesTab';
 import MaquinaTab from './components/MaquinaTab';
-import MaintenanceTab from './components/MaintenanceTab';
 import DetalhesTab from './components/DetalhesTab';
 import FilesTab from './components/FilesTab';
 import HistoryTab from './components/HistoryTab';
@@ -35,9 +34,6 @@ export default function AssetDetailPage() {
     componentes, componentesPendentes, handleRetirarComponente,
     licencas, licencasPendentes,
     maquina, maquinaPendente, desvinculando, handleDesvincular,
-    manutencoes, manutencoesPendentes, auditorias, auditoriasPendentes,
-    handleAbrirManutencao, handleEncerrarManutencao,
-    conjuntoDeCampos, camposRevelados, revelandoCampo, erroAoRevelar, handleRevelarCampo,
     anexos, anexosPendentes, enviandoArquivo, erroDeArquivo, temImagem,
     handleAnexar, handleExcluirAnexo, handleTrocarImagem, handleRemoverImagem,
     modal, abrirEdicao, abrirClone, abrirPosse, abrirDescomissionar, fecharModal,
@@ -121,11 +117,6 @@ export default function AssetDetailPage() {
         {aba === 'detalhes' && (
           <DetalhesTab
             asset={asset}
-            conjuntoDeCampos={conjuntoDeCampos}
-            camposRevelados={camposRevelados}
-            revelandoCampo={revelandoCampo}
-            erroAoRevelar={erroAoRevelar}
-            onRevelarCampo={(slug) => void handleRevelarCampo(slug)}
             onDescomissionar={abrirDescomissionar}
             onReverterSaida={() => void handleReverterSaida()}
           />
@@ -166,16 +157,6 @@ export default function AssetDetailPage() {
           />
         )}
 
-        {aba === 'manutencoes' && (
-          <MaintenanceTab
-            assetId={asset.id}
-            manutencoes={manutencoes}
-            auditorias={auditorias}
-            carregando={manutencoesPendentes || auditoriasPendentes}
-            onAbrir={handleAbrirManutencao}
-            onEncerrar={(manutencaoId) => void handleEncerrarManutencao(manutencaoId)}
-          />
-        )}
 
         {/* As abas de fase futura são desabilitadas na barra; este ramo existe
             para a tela continuar íntegra se alguma delas for aberta por outro

@@ -13,32 +13,11 @@ import { TRACO, resumoDaPosse, rotuloDaOperacao } from './helpers/posse.helper';
 import { useAssets } from './hooks/useAssets';
 import { useColunas } from './hooks/useColunas';
 import { urlDoExportDeAtivos } from '../../domain/asset/asset.queries';
-import type { CampoDeColuna } from '../../domain/shared/custom-field.types';
 
-/**
- * O valor de uma coluna customizada, ou `null` quando não há o que mostrar.
- *
- * Cálculo fora do JSX (docs/referencia/arquitetura.md). `CHECKBOX` é o único que precisa de
- * tradução: o valor viaja como o TEXTO `"true"`/`"false"` — é o que o servidor
- * guarda, para o filtro `?cf[slug]=true` funcionar igual a qualquer outro campo
- * —, e "true" numa célula de tabela não é português.
- */
-function valorDaColuna(
-  // `undefined` junto de `null`: a coluna não está no select compartilhado do
-  // servidor, então o tipo `Asset` a declara opcional. Aqui os dois significam a
-  // mesma coisa — não há valor para esta célula.
-  customFields: Record<string, string> | null | undefined,
-  campo: CampoDeColuna,
-): string | null {
-  const valor = customFields?.[campo.slug];
-  if (valor === undefined || valor === '') return null;
-  if (campo.element === 'CHECKBOX') return valor === 'true' ? 'sim' : 'não';
-  return valor;
-}
 
 export default function AtivosPage() {
   const {
-    assets, total, totalCadastrado, porStatus, colunasCustomizadas,
+    assets, total, totalCadastrado, porStatus,
     descomissionados, arquivados, page, perPage, setPage,
     search, changeSearch, view, changeView, relatorio, changeRelatorio,
     statusId, statusFiltrado, toggleStatus, limparStatus,
@@ -53,9 +32,7 @@ export default function AtivosPage() {
   // (docs/referencia/arquitetura.md, *client state*).
   //
   // As CUSTOMIZADAS entram por parâmetro, e só para o export: a tabela as desenha
-  // por conta própria (elas não passam pelo seletor), mas o `?columns=` precisa
-  // nomeá-las para o arquivo ter o que a tela tem.
-  const colunas = useColunas(colunasCustomizadas);
+  const colunas = useColunas();
 
   return (
     <div className="animate-in fade-in duration-300 h-[calc(100vh-4rem)] flex flex-col pb-6">
@@ -174,16 +151,6 @@ export default function AtivosPage() {
               {colunas.mostrar('orderNumber') && <th className="px-6 py-4 font-normal">Nº do pedido</th>}
               {colunas.mostrar('warranty') && <th className="px-6 py-4 font-normal">Garantia</th>}
               {colunas.mostrar('eol') && <th className="px-6 py-4 font-normal">Fim de vida</th>}
-              {/* AS COLUNAS QUE O CLIENTE CRIOU (F9, `showInListView`). Depois das
-                  nativas e antes das ações: elas são extras, e mover "Ações" do
-                  fim quebraria o hábito de quem usa a tela todo dia.
-
-                  Campo CIFRADO não chega aqui — o servidor o exclui desta rota, e
-                  o cadastro recusa marcá-lo como coluna: uma coluna de `••••••`
-                  repetido em toda linha ocuparia espaço para não informar nada. */}
-              {colunasCustomizadas.map((campo) => (
-                <th key={campo.slug} className="px-6 py-4 font-normal">{campo.name}</th>
-              ))}
               <th className="px-6 py-4 font-normal text-right">Ações</th>
             </tr>
           </thead>
@@ -307,21 +274,6 @@ export default function AtivosPage() {
                       {formatarData(asset.eolDate)}
                     </td>
                   )}
-                  {/* Uma célula por coluna customizada, na MESMA ordem do
-                      cabeçalho — as duas percorrem a mesma lista, que é o que as
-                      mantém alinhadas quando um campo entra ou sai.
-
-                      `customFields` é `null` no ativo que não tem campo nenhum, e
-                      a chave falta no que não preencheu ESTE campo: os dois casos
-                      caem no travessão, que é o que a tabela já faz com coluna
-                      vazia. */}
-                  {colunasCustomizadas.map((campo) => (
-                    <td key={campo.slug} className="px-6 py-4 text-text-secondary">
-                      {valorDaColuna(asset.customFields, campo) ?? (
-                        <span className="text-text-tertiary">{TRACO}</span>
-                      )}
-                    </td>
-                  ))}
                   <td className="px-6 py-4 text-right" onClick={(event) => event.stopPropagation()}>
                     <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                       {view === 'trashed' ? (
@@ -367,7 +319,7 @@ export default function AtivosPage() {
                     número fixo o "nenhum ativo encontrado" deixava de cobrir a
                     tabela a cada coluna marcada ou desmarcada. */}
                 <td
-                  colSpan={2 + colunas.visiveis.length + colunasCustomizadas.length}
+                  colSpan={2 + colunas.visiveis.length}
                   className="px-6 py-16 text-center text-text-tertiary"
                 >
                   <div className="flex flex-col items-center justify-center">

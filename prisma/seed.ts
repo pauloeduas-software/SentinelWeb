@@ -14,9 +14,6 @@ import { pathToFileURL } from 'node:url';
 import { prisma, closeDatabase } from '../server/core/database/prismaClient';
 import { APP_SETTING_ID } from '../server/domain/settings/helpers/app-setting.helper';
 import { hashSenha } from '../server/domain/auth/helpers/password.helper';
-import {
-  GRUPO_ADMINISTRADOR, permissoesDeAdministrador,
-} from '../server/domain/access/helpers/permission-catalog';
 import { isProduction } from '../server/core/config/env';
 import { createLogger } from '../server/core/logger/logger';
 
@@ -219,63 +216,39 @@ const seeders: Seeder[] = [
     },
   },
   {
-    // O GRUPO `Administrador` (F11) — depois do usuário, porque precisa dele
-    // para vincular.
+    // O PAPEL DO ADMINISTRADOR — depois do usuário, porque precisa dele.
     //
-    // ESTE SEEDER REESCREVE AS PERMISSÕES A CADA EXECUÇÃO, e é o único que
-    // reescreve algo. Pode, porque o grupo é `isSystem`: a rota de edição
-    // recusa mexer nas permissões dele (409), então não há decisão de operador
-    // a desfazer — nada aqui reabre porta que alguém fechou.
+    // ERA O SEEDER DO GRUPO `Administrador` (F11): ele reescrevia as permissões a
+    // cada execução, porque "Administrador" quer dizer *alcança tudo* e chave nova
+    // no catálogo que não chegasse aqui faria o administrador perder uma tela em
+    // silêncio. Com papel (D148) não há lista a repor: `ADMIN` alcança tudo por
+    // `papelAlcanca()`, e papel novo não existe sem mexer no enum.
     //
-    // E PRECISA reescrever: "Administrador" quer dizer *alcança tudo*, e chave
-    // nova no catálogo que não chegasse aqui faria o administrador perder uma
-    // tela nova em silêncio — o sintoma exato que o D76 persegue. A lista vem
-    // de `permissoesDeAdministrador()`, derivada do catálogo, então chave nova
-    // entra sozinha.
-    name: 'Grupo Administrador',
+    // O seeder continua existindo porque o `.env` diz QUEM é o administrador, e
+    // garantir que essa pessoa tenha o papel é o que destrava o primeiro login.
+    name: 'Papel do administrador',
     run: async () => {
-      const permissions = permissoesDeAdministrador();
-
-      const grupo = await prisma.group.upsert({
-        where: { name: GRUPO_ADMINISTRADOR },
-        update: { permissions, isSystem: true },
-        create: {
-          name: GRUPO_ADMINISTRADOR,
-          description: 'Acesso total. As permissões vêm do código e são repostas pelo seed.',
-          permissions,
-          isSystem: true,
-        },
-        select: { id: true },
-      });
-
-      // O ADMINISTRADOR DO `.env` ENTRA NO GRUPO. `connect` e não `set`: `set`
-      // substituiria a lista inteira e tiraria essa pessoa de qualquer outro
-      // grupo em que a tenham posto — o seed não tem o que opinar sobre isso.
-      //
       // `findFirst` porque `username` não é `@unique` no Prisma (a unicidade é
       // índice parcial na migration).
       const admin = await prisma.user.findFirst({
         where: { OR: [{ username: ADMIN_USERNAME }, { email: ADMIN_EMAIL }] },
-        select: { id: true, name: true },
+        select: { id: true, name: true, role: true },
       });
 
       if (!admin) {
         // Acontece quando o seeder de cima parou por falta de `ADMIN_PASSWORD`.
-        // Avisa e segue: o grupo já existe, e o próximo `db:seed` com a senha
-        // definida faz o vínculo.
-        logger.warn('[Seed] Grupo Administrador pronto, mas nenhum usuário administrador para vincular.');
+        // Avisa e segue: o próximo `db:seed` com a senha definida resolve.
+        logger.warn('[Seed] Nenhum usuário administrador para promover.');
         return;
       }
 
-      await prisma.group.update({
-        where: { id: grupo.id },
-        data: { users: { connect: { id: admin.id } } },
-      });
+      if (admin.role === 'ADMIN') {
+        logger.info(`[Seed] "${admin.name}" já é ADMIN.`);
+        return;
+      }
 
-      logger.info(
-        `[Seed] Grupo "${GRUPO_ADMINISTRADOR}" com ${Object.keys(permissions).length} permissões; ` +
-        `"${admin.name}" é membro.`,
-      );
+      await prisma.user.update({ where: { id: admin.id }, data: { role: 'ADMIN' } });
+      logger.info(`[Seed] "${admin.name}" promovido a ADMIN.`);
     },
   },
 ];

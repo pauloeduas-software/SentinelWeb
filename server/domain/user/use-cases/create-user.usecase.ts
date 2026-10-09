@@ -6,6 +6,8 @@ import { USER_PUBLIC_SELECT } from '../helpers/user-select.helper';
 export interface CreateUserData {
   name: string;
   email: string;
+  /** O papel (D148). Ausente nasce `USUARIO`, pelo `@default` do schema. */
+  role?: 'USUARIO' | 'TECNICO' | 'ADMIN';
   /**
    * O id do departamento (F11, Etapa D). Era um texto livre até a F10.
    *
@@ -43,6 +45,9 @@ export async function createUser(data: CreateUserData, actorId: string | null) {
         address: data.address ?? null,
         hiredAt: data.hiredAt ?? null,
         managerId: data.managerId ?? null,
+        // Ausente cai no `@default(USUARIO)` do schema — e é por isso que aqui
+        // não há `?? 'USUARIO'`: a porta fechada por padrão mora num lugar só.
+        role: data.role,
       },
       select: USER_PUBLIC_SELECT,
     });

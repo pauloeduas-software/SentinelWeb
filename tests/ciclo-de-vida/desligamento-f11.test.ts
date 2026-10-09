@@ -155,7 +155,7 @@ describe('a guarda do substituto', () => {
 describe('a revogação de acesso', () => {
   it('revoga o token pessoal e derruba a sessão', async () => {
     // Uma pessoa COM login, para haver sessão a derrubar.
-    const pessoa = await api.comoUsuario(['assets.view']);
+    const pessoa = await api.comoUsuario('TECNICO');
 
     // A sessão dela funciona.
     expect((await pessoa.get('/api/assets')).status).toBe(200);
@@ -187,7 +187,7 @@ describe('a revogação de acesso', () => {
   });
 
   it('o login dela passa a ser recusado com 403, não 401', async () => {
-    const pessoa = await api.comoUsuario([]);
+    const pessoa = await api.comoUsuario('USUARIO');
     const credencial = await prisma.user.findFirst({
       where: { id: pessoa.userId }, select: { username: true },
     });

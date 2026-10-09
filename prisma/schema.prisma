@@ -142,6 +142,14 @@ model Telemetry {
   @@map("telemetries")
 }
 
+/// Os três papéis da autorização (D148). A ordem do enum é a hierarquia, e a
+/// comparação mora em `access/helpers/papel.ts` — nunca num `indexOf` por fora.
+enum Papel {
+  USUARIO
+  TECNICO
+  ADMIN
+}
+
 model User {
   id    String @id @default(uuid()) @db.Uuid
   name  String
@@ -193,54 +201,6 @@ model User {
   // ainda usa o sistema" é a pergunta que antecede a limpeza de acessos.
   lastLoginAt DateTime?
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // O SEGUNDO FATOR (F11, Etapa H). Três colunas, nenhuma tabela nova (D80).
-  //
-  // `totpSecret` É CIFRADO EM REPOUSO, com AAD `users:totpSecret:<id>` — o mesmo
-  // `core/crypto/cipher.ts` da F6 e da F9 (D81). Por que cifrar, se ele já é um
-  // segredo gravado num banco com acesso restrito: quem lê um dump passa a poder
-  // GERAR os códigos da pessoa, para sempre e sem deixar rastro em lugar nenhum.
-  // É a diferença entre vazar um hash (inútil) e vazar uma chave (um gerador).
-  //
-  // `totpEnabledAt` NULO COM SEGREDO PREENCHIDO é o estado intermediário, e ele
-  // precisa existir: entre "o aplicativo leu o QR" e "o primeiro código conferiu"
-  // há um intervalo em que exigir o segundo fator trancaria a pessoa fora por um
-  // cadastro que ela não concluiu. Então o login só exige o código quando esta
-  // data está preenchida; o segredo sozinho é cadastro pendente.
-  //
-  // `totpRecoveryCodes` guarda SHA-256, não o código em claro, e é uso único: o
-  // código consumido sai do array. Sha256 e não argon2 pelo mesmo motivo do
-  // `ApiToken.tokenHash` — são 50 bits de aleatoriedade sem dicionário a atacar,
-  // e KDF caro aqui só adicionaria latência ao login de quem perdeu o celular.
-  totpSecret        String?
-  totpEnabledAt     DateTime?
-  totpRecoveryCodes String[]
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // DE ONDE VEM ESTA IDENTIDADE (F11, Etapa I — D78).
-  //
-  // `authSource` responde "quem manda nos dados desta pessoa, e por onde ela
-  // entra". E ele é a trava do vínculo: o login por OIDC casa pelo `externalId`
-  // ou, na PRIMEIRA vez, por e-mail — mas só quando esta coluna já diz `OIDC`.
-  // Conta `LOCAL` com o mesmo e-mail NÃO é fundida automaticamente, porque
-  // fundir seria deixar quem controla um e-mail no provedor entrar como uma
-  // conta que alguém criou aqui. A troca é explícita, por rota própria com
-  // `access.manage` (`PUT /api/users/:id/auth-source`).
-  //
-  // `externalId` é o `oid` do Entra (ou o GUID do objeto no AD): estável, ao
-  // contrário do e-mail, que muda quando alguém se casa ou troca de domínio.
-  // Único por índice PARCIAL na migration, como `email` e `username`.
-  //
-  // `directoryMissingAt` É A MARCA DE REVISÃO, e ela é o D78 inteiro: quem sai
-  // do diretório **não é desligado** pelo job. Desligar automaticamente faria um
-  // filtro LDAP mal escrito — ou uma OU renomeada — devolver o inventário da
-  // empresa ao estoque numa madrugada. A sincronização MARCA; uma pessoa decide.
-  externalId         String?
-  authSource         AuthSource @default(LOCAL)
-  /// Última vez que o diretório confirmou esta pessoa. Nulo = nunca sincronizada.
-  directorySyncedAt  DateTime?
-  /// Desde quando ela deixou de aparecer na busca. Nulo = está lá (ou nunca veio).
-  directoryMissingAt DateTime?
 
   // ─────────────────────────────────────────────────────────────────────────
   // IDENTIDADE DO COLABORADOR (F11, Etapa E).
@@ -277,6 +237,14 @@ model User {
   // Desligamento (F11) é diferente de lixeira: quem saiu da empresa continua no
   // histórico de posse e nos relatórios, só não opera mais.
   isActive         Boolean            @default(true)
+
+  // O PAPEL (D148), no lugar da matriz de permissões por grupo (D76).
+  //
+  // `USUARIO` é o padrão e é o que a porta fechada da F3 pede: conta nova não
+  // alcança nada além de si mesma, e quem quiser mais escreve a linha. A rede
+  // que impede o sistema de ficar sem ninguém que entre está em
+  // `access/helpers/ultimo-administrador.ts`, chamada no fim da transação.
+  role Papel @default(USUARIO)
   terminatedAt     DateTime?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
@@ -287,7 +255,6 @@ model User {
   // Responsabilidade real = as duas somadas (docs/referencia/modelo-de-posse.md, Camada 3).
   assignments      Assignment[]
   occupancies      LocationOccupant[]
-  authEvents       AuthEvent[]
 
   // ESTOQUE (F5). O acessório entregue à pessoa volta; o consumível não — e é
   // por isso que os dois são tabelas separadas, não um enum numa só (D37).
@@ -306,12 +273,10 @@ model User {
 
   // OS TOKENS PESSOAIS (F11, Etapa H). A relação nasce com a FK que o `userId`
   // não tinha (D142) — ver o `model ApiToken` para por que ela é `Cascade`.
-  apiTokens ApiToken[]
 
   // ACESSO (F11). Os grupos de que esta pessoa participa — a permissão efetiva
   // é a UNIÃO das permissões deles (D76). Sem grupo, ela entra no sistema e não
   // alcança nada: é a porta fechada por padrão da F3 levada à autorização.
-  groups Group[]
 
   // ─────────────────────────────────────────────────────────────────────────
   // AS TRÊS HIERARQUIAS QUE PASSAM POR UMA PESSOA (F11, Etapa C — D72).
@@ -342,9 +307,6 @@ model User {
   @@index([deletedAt])
   @@index([departmentId])
   @@index([managerId])
-  // O login por OIDC busca por `externalId` em TODA entrada; a sincronização
-  // LDAP, uma vez por pessoa por dia. Sem índice, as duas varrem a tabela.
-  @@index([externalId])
   @@map("users")
 }
 
@@ -383,69 +345,6 @@ model Department {
   @@map("departments")
 }
 
-model Group {
-  id   String  @id @default(uuid()) @db.Uuid
-  name String  @unique
-  description String?
-
-  // AS PERMISSÕES, em JsonB: `{ "assets.view": true, "assets.edit": true }`.
-  //
-  // POR QUE JSONB, E NÃO UMA TABELA `group_permissions` COM UMA LINHA POR CHAVE:
-  // a permissão é lida INTEIRA, sempre, e na requisição mais quente do sistema
-  // (a releitura de sessão). Em tabela, isso é um join que devolve N linhas para
-  // serem imediatamente reduzidas a um conjunto — e o conjunto é o que o
-  // `preHandler` quer. Em JsonB é uma coluna, num `include` que já existe.
-  //
-  // Ninguém consulta "quais grupos têm `assets.edit`" com frequência, e quando
-  // consultar, o operador `?` do JsonB responde com índice GIN — o mesmo
-  // caminho que a F9 usa para contar ativo com campo customizado preenchido.
-  //
-  // O RISCO REAL DO FORMATO está no D76 e não é o join: é que chave digitada
-  // errada aqui **não dá erro nenhum**, só nega em silêncio. Por isso o catálogo
-  // de chaves é declarado em código (`access/helpers/permission-catalog.ts`), a
-  // gravação recusa o que não está nele, e o teste confere as duas pontas.
-  //
-  // NÃO EXISTE `deny` (D76): a permissão efetiva é a UNIÃO das chaves dos grupos
-  // da pessoa. Negação em união cria dependência de ordem e transforma "por que
-  // ela não consegue ver?" numa investigação por N grupos; sem ela, a resposta é
-  // sempre a mesma — nenhum grupo dela concede a chave.
-  permissions Json @db.JsonB
-
-  // GRUPO DE SISTEMA — hoje só o `Administrador`.
-  //
-  // O QUE A FLAG RESOLVE, e é um conflito real entre duas regras boas do
-  // projeto. "Administrador" significa *alcança tudo*, então chave nova no
-  // catálogo tem que chegar nele — senão o administrador perde acesso a uma
-  // tela nova em silêncio, que é o sintoma que o D76 persegue. Isso pede que o
-  // seed reescreva as permissões dele a cada execução.
-  //
-  // Mas o `prisma/seed.ts` tem a regra oposta, e com razão: ele NÃO desfaz o
-  // que alguém mudou de propósito (é por isso que a senha do administrador é
-  // preservada). Um seed que reescrevesse as permissões de um grupo editável
-  // seria exatamente "a idempotência que reabre uma porta que alguém fechou".
-  //
-  // A flag tira o conflito em vez de escolher um lado: o grupo de sistema é
-  // **do código**. O seed o reconcilia porque ninguém pode tê-lo editado — a
-  // rota de edição recusa mexer nas permissões dele (409). Para restringir uma
-  // pessoa, tira-se ela do grupo; para um perfil mais fraco, cria-se outro
-  // grupo. Nada do que o operador decide é desfeito, porque aqui ele não
-  // decide nada.
-  //
-  // Apagar também é recusado: sem ele, o `assertSobraAdministrador` tornaria o
-  // próximo `db:seed` a única forma de voltar a ter acesso.
-  isSystem Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // N:M IMPLÍCITA: o Prisma cria `_GroupToUser` sozinho. Explícita (um model de
-  // junção) só se o vínculo tivesse atributo próprio — "desde quando ela está
-  // neste grupo" seria um, e não é pergunta que alguém faça: quem responde
-  // "quando o acesso dela mudou" é o ActivityLog, que registra a troca.
-  users User[]
-
-  @@map("groups")
-}
 
 model ActivityLog {
   id         String   @id @default(uuid()) @db.Uuid
@@ -461,96 +360,8 @@ model ActivityLog {
   @@map("activity_logs")
 }
 
-// TRILHA DE AUTENTICAÇÃO — quem tentou entrar, de onde, e no que deu.
-//
-// POR QUE UMA TABELA PRÓPRIA, e não mais um `ActivityLog`: aquele é
-// ENTIDADE-cêntrico (`entityType` + `entityId` + o que mudou nela) e pressupõe
-// um ator identificado. Aqui a linha mais importante é justamente a que NÃO tem
-// usuário: a tentativa contra um login que não existe. Espremer isso no
-// ActivityLog significaria `entityId` nulo, `action: 'LOGIN_FAIL'` e um `changes`
-// carregando IP — três campos mentindo sobre o que são.
-//
-// O `userId` é nulável e `onDelete: SetNull`: apagar o cadastro não pode apagar
-// o histórico de acesso dele, que é exatamente o que uma auditoria vem procurar.
-// O `username` fica gravado em texto ao lado porque é o que foi DIGITADO — pode
-// não corresponder a conta nenhuma, e é esse o dado interessante numa varredura.
-//
-// Nunca, em hipótese alguma, a senha tentada. Log com senha é vazamento
-// permanente, com data e IP anexados.
-model AuthEvent {
-  id        String        @id @default(uuid()) @db.Uuid
-  type      AuthEventType
-  userId    String?       @db.Uuid
-  user      User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
-  username  String?
-  ip        String?
-  userAgent String?
-  createdAt DateTime      @default(now())
 
-  @@index([userId, createdAt])
-  @@index([createdAt])
-  @@index([type, createdAt])
-  @@map("auth_events")
-}
 
-/// De onde vem a identidade de um colaborador (F11, Etapa I — D78).
-enum AuthSource {
-  /// Cadastrado aqui, entra com usuário e senha deste sistema.
-  LOCAL
-  /// Vem da sincronização com o diretório. O diretório manda nos dados.
-  LDAP
-  /// Entra por SSO (OIDC/Entra ID). Pode ter vindo do LDAP e ganhado SSO depois.
-  OIDC
-}
-
-enum AuthEventType {
-  LOGIN_OK
-  // Usuário inexistente, sem senha cadastrada ou senha errada — os três caem
-  // aqui de propósito, pelo mesmo motivo de a resposta HTTP ser uma só: separar
-  // no log é construir o oráculo de enumeração dentro de casa.
-  LOGIN_FAIL
-  // Tentativa recusada porque a conta já estava travada. É o evento que denuncia
-  // ataque em curso: LOGIN_FAIL espalhado é gente esquecendo a senha, uma rajada
-  // de LOGIN_BLOCKED na mesma conta é outra coisa.
-  LOGIN_BLOCKED
-  // Acesso desligado (F11) com a senha CERTA. Merece tipo próprio: alguém que
-  // saiu da empresa ainda sabe a senha e ainda está tentando entrar.
-  LOGIN_DISABLED
-  LOGOUT
-  // Senha redefinida: derruba toda sessão aberta daquele usuário (tokenVersion).
-  PASSWORD_CHANGED
-
-  // ── O SEGUNDO FATOR (F11, Etapa H) ────────────────────────────────────────
-  //
-  // Os cinco são de TIPOS diferentes de propósito, e nenhum deles é `LOGIN_FAIL`:
-  // ali o fato é "a senha não serve". Aqui a senha SERVIU — o que faltou foi o
-  // segundo fator, e essa distinção é a primeira coisa que se procura num
-  // incidente ("alguém já tem a senha dela?").
-  //
-  // Enum e não texto: o `type` tem índice e a tela de trilha filtra por ele.
-  // O preço é que valor novo é migração, e é um preço que se paga.
-
-  /// Senha certa, segundo fator exigido e NÃO informado. É o que denuncia senha vazada.
-  TOTP_REQUIRED
-  /// Código informado e errado. Conta no mesmo contador que trava a conta.
-  TOTP_FAIL
-  TOTP_ENABLED
-  TOTP_DISABLED
-  /// Entrou por código de recuperação: o celular se perdeu, e o código queimou.
-  TOTP_RECOVERY_USED
-
-  // ── O SSO (F11, Etapa I) ──────────────────────────────────────────────────
-  //
-  // ENTRAR por OIDC continua sendo `LOGIN_OK`: o fato é o mesmo, e separar os
-  // tipos faria toda consulta de "quem entrou hoje" ter de somar dois.
-  //
-  // A RECUSA é que precisa de tipo próprio, porque ela não é falha de senha nem
-  // conta travada: é alguém que o provedor de identidade autenticou com sucesso e
-  // que este sistema não conhece — ou conhece como conta LOCAL, que o D78 recusa
-  // fundir em silêncio. O `username` da linha guarda o e-mail que o provedor
-  // mandou, que é o dado com que se decide criar ou vincular a pessoa.
-  OIDC_DENIED
-}
 
 // ============================================================================
 // CATÁLOGO — as tabelas que o Snipe-IT chama de *Settings* (docs/historico/fase-01-catalogo-e-ativo.md)
@@ -618,10 +429,6 @@ enum RetiredReason {
   GARANTIA
 }
 
-enum DepreciationFloorType {
-  PERCENT
-  AMOUNT
-}
 
 model Category {
   id   String       @id @default(uuid()) @db.Uuid
@@ -664,13 +471,10 @@ model Category {
   // `Restrict`: apagar um conjunto que uma categoria usa é recusado com 409 e a
   // contagem, em vez de zerar a âncora em silêncio — que é o que um `SetNull`
   // faria, deixando a categoria inteira sem campos sem ninguém tocar nela.
-  customFieldsetId String?         @db.Uuid
-  customFieldset   CustomFieldset? @relation(fields: [customFieldsetId], references: [id], onDelete: Restrict)
 
   // Por (nome, tipo), não só por nome: "Notebook" como categoria de ATIVO e
   // "Notebook" como categoria de LICENÇA são duas coisas diferentes.
   @@unique([name, type])
-  @@index([customFieldsetId])
   @@map("categories")
 }
 
@@ -737,7 +541,6 @@ model AssetModel {
   //
   // Nulável de propósito: a maioria dos modelos nunca terá regra, e valor
   // contábil sem regra é `null`, nunca zero (D55).
-  depreciationId String? @db.Uuid
 
   // Imagem. Só o CAMINHO, nunca os bytes — quem guarda o arquivo é o
   // `UPLOAD_DIR` (server/core/storage/). BLOB no banco dobra o tamanho do dump
@@ -751,7 +554,6 @@ model AssetModel {
   // aplicação seja esquecida, o banco recusa e o P2003 vira 409 no errorHandler.
   manufacturer Manufacturer  @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
   category     Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  depreciation Depreciation? @relation(fields: [depreciationId], references: [id], onDelete: Restrict)
 
   // O CONJUNTO DE CAMPOS CUSTOMIZADOS QUE SOBREPÕE A CATEGORIA (F9, D58).
   //
@@ -766,8 +568,6 @@ model AssetModel {
   // A F1 adiou este atributo e o `docs/ROADMAP.md` chegou a dizer que a coluna
   // estava "reservada" — não estava: FK para tabela inexistente é impossível,
   // não adiável. As duas colunas nascem aqui, na F9.
-  customFieldsetId String?         @db.Uuid
-  customFieldset   CustomFieldset? @relation(fields: [customFieldsetId], references: [id], onDelete: Restrict)
 
   assets Asset[]
 
@@ -775,8 +575,6 @@ model AssetModel {
   // então não é preciso índice parcial aqui (verificado).
   @@unique([manufacturerId, modelNumber])
   @@index([categoryId])
-  @@index([depreciationId])
-  @@index([customFieldsetId])
   @@map("asset_models")
 }
 
@@ -804,7 +602,6 @@ model Supplier {
   licenses     License[]
   // A manutenção paga por fornecedor (F8). `Restrict` do lado de lá, como as
   // outras cinco: é a rede embaixo do 409 do `countUsages`.
-  maintenances Maintenance[]
 
   @@map("suppliers")
 }
@@ -883,198 +680,11 @@ model Location {
   @@map("locations")
 }
 
-model Depreciation {
-  id     String @id @default(uuid()) @db.Uuid
-  name   String @unique
-  months Int
 
-  // Decimal, NUNCA Float: 0.1 + 0.2 = 0.30000000000000004 em ponto flutuante.
-  // Sai na resposta JSON como STRING ("1234.5") — o frontend tipa como string e
-  // formata com Intl.NumberFormat.
-  floorValue Decimal               @db.Decimal(12, 2)
-  floorType  DepreciationFloorType
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
-  // O LADO QUE FALTAVA (F8). Esta tabela existe desde a F1 e ninguém apontava
-  // para ela: o `countUsages` da spec devolvia `0` fixo, então apagar uma regra
-  // de depreciação em uso era permitido. Com a relação, a contagem é real.
-  models AssetModel[]
 
-  @@map("depreciations")
-}
 
-// ============================================================================
-// CAMPOS CUSTOMIZADOS — docs/historico/fase-09-campos-customizados.md (D58 a D64)
-// ============================================================================
-
-// Como o campo aparece no formulário. É APRESENTAÇÃO, e não validação: quem
-// decide o que é um valor aceitável é `CustomFieldFormat`, abaixo.
-//
-// A separação existe porque as duas perguntas são independentes de verdade: um
-// `LISTBOX` de IPs fixos e um `TEXT` de IP fixo validam igual e se desenham
-// diferente. Um enum só para os dois multiplicaria os valores.
-enum CustomFieldElement {
-  TEXT
-  TEXTAREA
-  LISTBOX
-  CHECKBOX
-  RADIO
-  DATE
-}
-
-// O que o valor precisa ser para entrar. O motor que traduz cada um destes num
-// `ZodType` é `server/domain/custom-field/helpers/field-validator.helper.ts`,
-// e é função PURA — o formato não sabe o que é um ativo.
-//
-// `ANY` é o padrão e significa "texto livre, com teto de tamanho". Não é
-// ausência de validação: comprimento continua limitado, porque o valor mora
-// dentro de uma coluna JsonB que a listagem lê inteira.
-enum CustomFieldFormat {
-  ANY
-  NUMERIC
-  ALPHA
-  ALPHANUMERIC
-  EMAIL
-  URL
-  IP
-  IPV4
-  IPV6
-  MAC
-  DATE
-  BOOLEAN
-  REGEX
-}
-
-// UM campo que o cliente criou — *IP fixo*, *hostname*, *patrimônio da
-// contabilidade*, *IMEI*.
-//
-// ═════════════════════════════════════════════════════════════════════════════
-// ESTA TABELA DESCREVE O CAMPO. ELA NÃO GUARDA VALOR NENHUM (D59).
-//
-// O valor mora em `Asset.customFields`, um JsonB na própria linha do ativo, com
-// o `slug` como chave. Nem DDL em runtime (o `migrate diff` compara o banco
-// contra o ARQUIVO de schema, então uma coluna criada em runtime é drift e a
-// próxima migration emitiria um `DROP COLUMN` para ela — todo campo do cliente
-// morreria no deploy seguinte), nem EAV (uma linha por campo por ativo
-// transforma a listagem num pivô e a coluna da tabela em N joins).
-//
-// O PREÇO, declarado: não há integridade referencial entre as chaves do JSON e
-// esta tabela. É o que o D60 fecha — `slug` é IMUTÁVEL, e valor órfão não é
-// apagado.
-// ═════════════════════════════════════════════════════════════════════════════
-model CustomField {
-  id   String @id @default(uuid()) @db.Uuid
-  name String
-
-  /// A CHAVE DENTRO DO JSON, e ela é imutável (D60). Derivada do nome na
-  /// criação; `beforeWrite` recusa trocá-la depois. Renomeá-la seria um
-  /// `UPDATE` sobre `assets` inteira que teria que ser transacional com esta
-  /// linha — e um meio-caminho deixa valores órfãos sem ninguém saber.
-  slug String @unique
-
-  element CustomFieldElement @default(TEXT)
-  format  CustomFieldFormat  @default(ANY)
-
-  /// Só quando `format = REGEX`. As três guardas do D63 (teto no padrão, teto
-  /// na entrada, recusa de quantificador aninhado) moram no validador.
-  regexPattern String?
-
-  /// Os valores de `LISTBOX` e `RADIO`. Alterar a lista depois NÃO apaga valor
-  /// já gravado que saiu dela: a tela o mostra marcado como fora da lista.
-  listValues String[]
-
-  helpText String?
-
-  /// Cifrado em repouso (D62/D81): o valor vira `enc:v1:<kid>:<iv>:<tag>:<ct>`
-  /// dentro do mesmo JsonB, volta mascarado por padrão, e revelar é rota
-  /// própria que grava `ActivityLog`.
-  ///
-  /// Campo cifrado SAI DE TUDO: não é buscável, não é ordenável, não entra no
-  /// diff do `ActivityLog` e não entra na coluna da listagem.
-  encrypted Boolean @default(false)
-
-  // AS TRÊS FLAGS DE VISIBILIDADE. `showInListView` é a única com efeito hoje:
-  // ela põe o campo como coluna da tabela de ativos. As outras duas são o
-  // contrato das telas que ainda não existem (a visão do colaborador, o corpo
-  // do e-mail de entrega) e estão aqui para o campo não precisar de migration
-  // quando elas chegarem.
-  showInListView    Boolean @default(false)
-  displayInUserView Boolean @default(false)
-  showInEmail       Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  fieldsets CustomFieldsetField[]
-
-  @@map("custom_fields")
-}
-
-// UM CONJUNTO de campos — o que uma categoria ou um modelo pede.
-//
-// Existe como tabela própria, e não como uma lista de campos pendurada na
-// categoria, porque o mesmo conjunto serve *Notebook* e *Desktop*: repetir a
-// composição em cada âncora faria as duas divergirem no primeiro campo novo.
-model CustomFieldset {
-  id   String @id @default(uuid()) @db.Uuid
-  name String @unique
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  fields CustomFieldsetField[]
-
-  // AS DUAS ÂNCORAS (D58). A categoria é o padrão, o modelo sobrepõe.
-  categories  Category[]
-  assetModels AssetModel[]
-
-  @@map("custom_fieldsets")
-}
-
-// O VÍNCULO campo × conjunto — e é ELE que guarda obrigatoriedade e ordem.
-//
-// ═════════════════════════════════════════════════════════════════════════════
-// `required` MORA AQUI, NÃO EM `CustomField` (D61).
-//
-// O mesmo campo *Centro de custo* é obrigatório no conjunto de Notebooks e
-// opcional no de Periféricos. Uma flag global em `CustomField` não sabe
-// expressar isso, e é assim no Snipe-IT porque é o que a operação real pede.
-//
-// `ordem` NÃO É ÚNICO, e isso é uma decisão sobre o Postgres: reordenar N
-// vínculos numa transação colidiria com um `@@unique([fieldsetId, ordem])` no
-// meio do caminho, porque constraint do Postgres é IMEDIATA e o Prisma não
-// expressa `DEFERRABLE`. O desempate da leitura é `orderBy: [{ ordem }, { fieldId }]`.
-// ═════════════════════════════════════════════════════════════════════════════
-model CustomFieldsetField {
-  fieldsetId String @db.Uuid
-  fieldId    String @db.Uuid
-
-  ordem    Int     @default(0)
-  required Boolean @default(false)
-
-  /// Sugerido no formulário de um ativo NOVO. Não é backfill: ativo já gravado
-  /// não recebe o padrão retroativamente — isso seria escrever em N mil linhas
-  /// por causa de uma edição de catálogo.
-  defaultValue String?
-
-  createdAt DateTime @default(now())
-
-  /// `Cascade`: o vínculo é COMPOSIÇÃO do conjunto, não referência a ele.
-  /// Apagar o conjunto apaga a lista dele, e o que impede apagar um conjunto em
-  /// uso é o `Restrict` das duas âncoras, não este lado.
-  fieldset CustomFieldset @relation(fields: [fieldsetId], references: [id], onDelete: Cascade)
-
-  /// `Restrict`: o campo é REFERENCIADO pelo vínculo. Apagar um campo que algum
-  /// conjunto usa é recusado com 409 e a contagem — que soma vínculos E ativos
-  /// com a chave presente (`countUsages` da spec, D64).
-  field CustomField @relation(fields: [fieldId], references: [id], onDelete: Restrict)
-
-  @@id([fieldsetId, fieldId])
-  @@index([fieldId])
-  @@map("custom_fieldset_fields")
-}
 
 // ============================================================================
 // O ATIVO — o coração do ITAM (docs/historico/fase-01-catalogo-e-ativo.md, Etapa G)
@@ -1175,7 +785,6 @@ model Asset {
   // O conteúdo é validado no USE-CASE, não na borda: o `strictObject` do schema
   // de entrada recusa chave desconhecida e não PODE conhecer campos criados em
   // runtime (`validate-custom-fields.usecase.ts`).
-  customFields Json? @db.JsonB
 
   // QUEM cadastrou e QUEM editou por último.
   //
@@ -1206,7 +815,6 @@ model Asset {
   heldAssignments Assignment[] @relation("AssignmentTargetAsset")
 
   attachments Attachment[]
-  acceptances Acceptance[]
 
   // O QUE ESTÁ DENTRO DESTE ATIVO — a primeira ponte real entre estoque e
   // ativo (F5). O pente de RAM não tem etiqueta própria, então é `Component`;
@@ -1246,7 +854,6 @@ model Asset {
   // que alguém trocar 12 meses por 6, toda linha gravada antes passa a mentir, e
   // a correção é um UPDATE em massa que ninguém vai lembrar de rodar. O corte é
   // calculado na consulta, a partir de `AppSetting.auditIntervalMonths`.
-  lastAuditAt DateTime?
 
   /// A máquina descoberta que É este ativo. Lado fraco do 1:1 — a FK mora lá (D45).
   endpoint Endpoint?
@@ -1255,9 +862,6 @@ model Asset {
   usageDays AssetUsageDaily[]
 
   // ── O CICLO DE VIDA (F8) ─────────────────────────────────────────────────
-  maintenances Maintenance[]
-  audits       Audit[]
-  alerts       Alert[]
   // `suggestions`, e não o `ReconciliationSuggestion` que o `prisma format`
   // escreveu sozinho: o nome gerado não é convenção nenhuma e destoa dos outros
   // três lados da mesma relação (`Endpoint`, `User` e `Location` todos a chamam
@@ -1274,10 +878,6 @@ model Asset {
   // emitir `DROP INDEX` dele a cada migração nova.
   @@index([retiredAt])
   @@index([lastSeenByAgentAt])
-  // O relatório de auditoria vencida é `lastAuditAt IS NULL OR lastAuditAt <
-  // :corte` sobre a frota inteira, e é a consulta mais pesada da F8. Sem este
-  // índice ela é varredura sequencial em `assets` a cada abertura da aba.
-  @@index([lastAuditAt])
   // O ÍNDICE DOS CAMPOS CUSTOMIZADOS (F9, D63).
   //
   // `JsonbOps` e NÃO `JsonbPathOps`: o segundo é menor e mais rápido para `@>`,
@@ -1305,7 +905,6 @@ model Asset {
   // Ele NÃO faz nada por `ORDER BY customFields->>'x'`, nem por faixa, nem por
   // `ILIKE` — por isso campo customizado não entra em `ASSET_SORTABLE` nesta
   // fase, e a F10 herda o número medido em vez de uma promessa.
-  @@index([customFields(ops: JsonbOps)], type: Gin)
   @@map("assets")
 }
 
@@ -1373,7 +972,6 @@ model Assignment {
   targetAsset    Asset?    @relation("AssignmentTargetAsset", fields: [targetAssetId], references: [id], onDelete: Restrict)
   targetLocation Location? @relation(fields: [targetLocationId], references: [id], onDelete: Restrict)
 
-  acceptances Acceptance[]
 
   @@index([assetId, checkinAt])
   @@index([targetUserId, checkinAt])
@@ -1382,77 +980,6 @@ model Assignment {
   @@map("assignments")
 }
 
-// Quem ocupa um posto de trabalho — a camada que o Snipe-IT não tem.
-//
-// `Location` é a folha da árvore que já existe (`Sede → Andar 2 → Sala 3 →
-// Mesa 1`). NÃO se criou uma entidade `Workstation` paralela: duplicaria a
-// hierarquia e daria ao ativo dois campos de "onde" (D15).
-//
-// `endedAt` nulo = ocupação ABERTA. Mesmo padrão do `Assignment`: a saída
-// preenche a data, não apaga a linha, e "quem respondia pela Mesa 1 em março?"
-// continua respondível.
-// ============================================================================
-// ACEITE DO TERMO DE ENTREGA — F4, Etapas A e B (D27, D29, D30, D87, D88)
-// ============================================================================
-
-// O termo que a pessoa assina ao receber um equipamento.
-//
-// NASCE DENTRO DA TRANSAÇÃO DO CHECKOUT, quando a categoria do modelo exige
-// (`Category.requireAcceptance`). E não bloqueia a entrega (D88): o equipamento
-// já está na mão de quem o recebeu — o fato é do mundo, não do banco. Pendência
-// é linha de relatório, não estado da posse.
-//
-// QUEM ASSINA, pelo alvo da posse:
-//   USER      a própria pessoa.
-//   LOCATION  o GESTOR da localidade (D27). Um termo, não N — e os ocupantes
-//             recebem ciência por e-mail. Assinar NÃO torna o gestor
-//             responsável resolvido; `resolverResponsaveis()` continua
-//             devolvendo só os ocupantes.
-//   ASSET     NINGUÉM, e o termo não é emitido (D87): o detentor é um
-//             equipamento, e o documento segue o ativo que o segura.
-model Acceptance {
-  id           String @id @default(uuid()) @db.Uuid
-  assignmentId String @db.Uuid
-  assetId      String @db.Uuid
-
-  /// O segredo da URL pública `/aceite/:token`. 32 bytes em base64url.
-  token String @unique
-
-  // O EULA COPIADO, não referenciado (D29). Editar o texto da categoria mudaria,
-  // retroativamente, o que centenas de pessoas assinaram — sem log em lugar
-  // nenhum. Um termo que muda depois de assinado não é termo.
-  eulaSnapshot String
-
-  // Quem assina. `signerUserId` é nulável porque o gestor pode ter sido
-  // excluído depois; o NOME e o E-MAIL são cópia, pelo mesmo motivo do EULA —
-  // o documento tem que continuar legível sozinho.
-  signerUserId String? @db.Uuid
-  signerName   String
-  signerEmail  String
-
-  /// Caminho da imagem da assinatura no UPLOAD_DIR. Nulo até assinar.
-  signaturePath String?
-  /// Caminho do PDF gerado NO ACEITE e nunca regenerado (D30).
-  pdfPath       String?
-
-  acceptedAt    DateTime?
-  declinedAt    DateTime?
-  declineReason String?
-
-  /// Depois disto o token não abre mais. Pendência não vira recusa (só expira).
-  expiresAt  DateTime
-  remindedAt DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  asset      Asset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
-
-  @@index([assetId])
-  @@index([acceptedAt])
-  @@map("acceptances")
-}
 
 model LocationOccupant {
   id         String @id @default(uuid()) @db.Uuid
@@ -1527,98 +1054,7 @@ model Attachment {
   @@map("attachments")
 }
 
-// ============================================================================
-// EXECUÇÃO AGENDADA — D79 (docs/decisoes/README.md)
-// ============================================================================
 
-// Uma LINHA POR JOB, identificada pelo nome.
-//
-// A alternativa que esta tabela substitui era `AppSetting.lastAlertRunAt`, uma
-// coluna só — e ela tinha um defeito que não dá erro: o lembrete de atraso (F4)
-// e os alertas diários (F8) fariam *compare-and-set* na MESMA coluna. O
-// primeiro a acordar venceria e gravaria a data; o segundo receberia `count: 0`,
-// leria isso como "outra instância já rodou hoje" e NÃO executaria. Todo dia,
-// sem erro e sem log de falha — e a explicação estaria numa coluna cujo nome
-// não menciona nenhum dos dois.
-//
-// Com uma linha por job, um nunca bloqueia o outro. Quem faz o CAS é
-// `server/core/jobs/claim-window.ts`, que recebe o nome por parâmetro e não
-// sabe o que é um alerta nem um atraso.
-// ============================================================================
-// TOKEN DE API — D80 (docs/decisoes/README.md)
-// ============================================================================
-
-enum ApiTokenOwner {
-  AGENT
-  USER
-}
-
-// UMA tabela, com uma coluna dizendo quem é o dono.
-//
-// A F3 (Etapa G) criava `ApiToken` com `endpointId` — o token POR AGENTE. A F11
-// (Etapa F) criava `ApiToken` com `userId` — o token PESSOAL. Os dois planos
-// achavam que criavam *"o"* `ApiToken`, e duas tabelas seriam duas cópias da
-// parte mais sensível do sistema: procurar pelo prefixo, comparar o hash em
-// tempo constante, conferir `revokedAt`, carimbar `lastUsedAt`. A segunda cópia
-// esqueceria uma das quatro no primeiro ajuste.
-//
-// O DETALHE QUE MUDA O DESENHO: o token do agente é gerado ANTES de a máquina
-// existir no sistema — no momento em que o agente é instalado. Então
-// `endpointId` nasce NULO e é preenchido no primeiro handshake. A partir daí, o
-// mesmo token chegando de outra máquina é sinal de token copiado, e vira
-// alerta — não um `UPDATE` silencioso do vínculo.
-//
-// O CHECK de coerência do dono vai à mão na migration: o Prisma não o expressa,
-// como os índices parciais deste projeto.
-model ApiToken {
-  id        String        @id @default(uuid()) @db.Uuid
-  name      String
-  ownerType ApiTokenOwner
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // O DONO, QUANDO ELE É UMA PESSOA (F11, Etapa H — D142).
-  //
-  // A coluna existia desde a F0 e NÃO tinha chave estrangeira: nada no banco
-  // impedia um token apontar para um uuid que nunca foi usuário. Não doía
-  // enquanto ninguém a preenchia; o token pessoal é o primeiro a preencher.
-  //
-  // `Cascade`, e não `SetNull` como em `AuthEvent.userId`, e a diferença entre os
-  // dois diz o que cada tabela é: um evento de autenticação é REGISTRO, e tem de
-  // sobreviver ao cadastro que ele descreve — é justamente o que a auditoria vem
-  // procurar. Um token é PODER, e poder sem dono é uma credencial que autentica
-  // como ninguém: `ownerType: 'USER'` com `userId` nulo passaria pela busca por
-  // prefixo e pela conferência do segredo, e só quebraria depois, ao carregar a
-  // sessão. Some com o dono.
-  //
-  // ⚠️ Isto vale para o DELETE de verdade. Desligar alguém é `isActive: false`
-  // (soft), e o token continua existindo — por isso o desligamento o REVOGA
-  // explicitamente (`offboard-user.usecase.ts`), em vez de confiar na FK.
-  userId     String? @db.Uuid
-  /// Só quando ownerType = AGENT — e NULO até o primeiro handshake.
-  endpointId String? @db.Uuid
-
-  /// A metade pública do token, e a chave de busca. Viaja como `prefixo.segredo`.
-  prefix String @unique
-
-  // O segredo em SHA-256, não em argon2 — e é decisão, não economia. Argon2 é
-  // caro DE PROPÓSITO: é o que protege senha humana contra força bruta offline.
-  // Um token de 32 bytes aleatórios não tem dicionário a atacar, e pagar 100 ms
-  // de KDF a cada handshake é transformar a defesa da senha em lentidão da frota.
-  tokenHash String
-
-  lastUsedAt  DateTime?
-  revokedAt   DateTime?
-  createdById String?   @db.Uuid
-  createdAt   DateTime  @default(now())
-
-  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([ownerType])
-  // A listagem de `/api/me/tokens` filtra por dono: sem índice, ela varre a
-  // tabela de tokens da frota inteira para achar os três de uma pessoa.
-  @@index([userId])
-  @@map("api_tokens")
-}
 
 model JobRun {
   /// 'lembrete-de-atraso', 'alertas-diarios', 'sync-ldap'.
@@ -1693,15 +1129,12 @@ model AppSetting {
   // nunca executaria, todo dia, sem erro e sem log.
 
   /// Desligado, o job toma a janela e não faz nada. Nem grava, nem envia.
-  alertsEnabled Boolean @default(true)
 
   /// Quem recebe o e-mail. VAZIA por padrão: endereço chutado é e-mail perdido.
-  alertEmails String[] @default([])
 
   /// Slack, Teams, o que aceitar um POST. Validado em TODO envio (D126): só
   /// `https`, e nunca host interno — a URL vem do banco e a requisição sai do
   /// servidor, o que é SSRF pelo desenho.
-  alertWebhookUrl String?
 
   /// Antecedência dos avisos de prazo, em dias.
   warrantyAlertDays Int @default(30)
@@ -1710,13 +1143,10 @@ model AppSetting {
   /// Manutenção aberta há mais que isto vira alerta. É o que dá `dueAt` a um
   /// fato que não tem data-alvo: `completionDate` é nulo justamente por ela
   /// estar aberta (D125).
-  maintenanceOpenDays Int @default(15)
 
   /// De quanto em quanto tempo cada ativo deve ser conferido, e com quanta
   /// antecedência o relatório avisa. O corte é calculado a partir daqui a cada
   /// consulta — nunca gravado em coluna (D53).
-  auditIntervalMonths Int @default(12)
-  auditWarningDays    Int @default(30)
 
   /// A HORA local em que a rodada diária pode ser tomada (0–23), e o FUSO que
   /// decide o que é "hoje" (D123).
@@ -1725,7 +1155,6 @@ model AppSetting {
   /// meia-noite e o campo na tela não muda nada. Sem `timezone`, "hoje" é o dia
   /// do PROCESSO — que roda em UTC em produção e no fuso de quem desenvolve na
   /// máquina local, então a mesma configuração produz dois comportamentos.
-  alertHour Int    @default(8)
   timezone  String @default("America/Sao_Paulo")
 
   // ── A IDENTIDADE, O FORMATO E O BACKUP (F10, D65) ────────────────────────
@@ -1770,7 +1199,6 @@ model AppSetting {
   /// Quantos dias de dump ficam em disco. O expurgo é explícito e tem nome
   /// (`prune-backups`): sem ele, "backup pela interface" é uma forma lenta de
   /// encher o volume do servidor até o Postgres não conseguir mais escrever.
-  backupRetentionDays Int @default(30)
 
   // ── O LAYOUT DA ETIQUETA (F10, Etapa G) ──────────────────────────────────
   //
@@ -1785,27 +1213,17 @@ model AppSetting {
 
   /// `A4` ou `LETTER`. O PDF é gerado no tamanho EXATO da página — a impressora
   /// que "ajusta à página" desalinha a folha inteira, e a tela avisa isso.
-  labelPageSize String @default("A4")
 
   /// A grade. 3×8 é a folha de etiqueta mais comum no Brasil (Pimaco 6081).
-  labelCols Int @default(3)
-  labelRows Int @default(8)
 
   /// As margens da folha e o espaço ENTRE etiquetas, em mm.
-  labelMarginTopMm  Float @default(12)
-  labelMarginLeftMm Float @default(7)
-  labelGutterXMm    Float @default(2.5)
-  labelGutterYMm    Float @default(0)
 
   /// O que vai impresso em cada etiqueta, na ordem. Allowlist no servidor
   /// (`label-fields.helper.ts`): token fora dela é 422.
-  labelFields String[] @default(["assetTag", "model", "company"])
 
   /// O QR leva a URL da tela do ativo; o código de barras leva a ETIQUETA (D70).
   /// São dois leitores diferentes: a câmera do celular abre link, o leitor de
   /// mão digita texto num campo.
-  labelQr      Boolean @default(true)
-  labelBarcode Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2658,356 +2076,14 @@ model AssetUsageDaily {
   @@map("asset_usage_daily")
 }
 
-// ============================================================================
-// CICLO DE VIDA — o que acontece com o ativo DEPOIS de ele existir e estar
-// entregue (docs/historico/fase-08-ciclo-de-vida.md)
-//
-// As três tabelas desta seção têm um traço em comum e ele explica o resto:
-// NENHUMA TEM `deletedAt`. Histórico de serviço, conferência física e aviso
-// disparado são fatos append-only — e a coluna ligaria a `softDeleteExtension`
-// numa tabela que ninguém quer escopada.
-//
-// O preço está pago onde ele aparece: como a extension NÃO as alcança, toda
-// consulta que soma custo ou conta auditoria filtra `asset: { deletedAt: null }`
-// À MÃO. Relação aninhada não herda escopo (D8, verificado).
-// ============================================================================
 
-/// O que foi feito com o equipamento. `SUPORTE` é contrato, não conserto — e é
-/// por isso que abrir manutenção NÃO muda o status do ativo.
-enum MaintenanceType {
-  MANUTENCAO
-  REPARO
-  UPGRADE
-  CALIBRACAO
-  SUPORTE
-}
 
-// O HISTÓRICO DE SERVIÇO DO ATIVO.
-//
-// VÁRIAS ABERTAS POR ATIVO CONVIVEM, e isso é de propósito: não há índice
-// parcial aqui. É a simetria invertida de `assignments_um_aberto_por_ativo`,
-// onde a unicidade É a regra — um ativo só pode estar entregue a um detentor,
-// mas o mesmo notebook pode ter um contrato de suporte anual aberto e um reparo
-// de teclado em andamento, que são dois fatos que não se atrapalham.
-//
-// `completionDate` nulo é o que significa ABERTA. Não há coluna `status`: ela
-// seria derivável da data e divergiria dela na primeira edição (é o D44 da
-// licença, uma tabela abaixo).
-model Maintenance {
-  id      String @id @default(uuid()) @db.Uuid
-  assetId String @db.Uuid
 
-  /// Quem prestou o serviço. Nulável: serviço feito pela própria TI não tem
-  /// fornecedor, e inventar um ("Interno") poluiria o catálogo de compras.
-  supplierId String? @db.Uuid
 
-  type  MaintenanceType
-  title String
 
-  startDate      DateTime
-  /// Nulo = EM ABERTO. É esta coluna que o alerta `MANUTENCAO_EM_ABERTO` olha.
-  completionDate DateTime?
 
-  /// Decimal, NUNCA Float. Sai no JSON como string e quem formata é a tela.
-  cost Decimal? @db.Decimal(12, 2)
 
-  /// Saiu na garantia — o serviço aconteceu e não custou. Separado de
-  /// `cost = 0`: zero é "não custou nada"; isto é "o fabricante pagou", e é a
-  /// pergunta que uma renovação de contrato faz.
-  isWarranty Boolean @default(false)
 
-  notes String?
 
-  createdById String? @db.Uuid
-  updatedById String? @db.Uuid
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
-  asset    Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  supplier Supplier? @relation(fields: [supplierId], references: [id], onDelete: Restrict)
-
-  @@index([assetId, startDate])
-  /// O total EM ABERTO da tela global: `completionDate IS NULL`.
-  @@index([completionDate])
-  @@index([supplierId])
-  @@map("maintenances")
-}
-
-/// O que o auditor encontrou. Três valores, e `DIVERGENTE` é o único que faz o
-/// sistema escrever em outra tabela (`Asset.locationId`).
-enum AuditResult {
-  OK
-  DIVERGENTE
-  NAO_LOCALIZADO
-}
-
-/// Quem conferiu. `AGENTE` é gravado pelo JOB e só quando o número de série
-/// confere (D124) — nunca pelo handshake, que roda a cada mensagem de cada
-/// máquina (D95).
-enum AuditMethod {
-  MANUAL
-  AGENTE
-}
-
-// A CONFERÊNCIA FÍSICA — e ela confere TRÊS campos, não um.
-//
-// Antes do modelo de posse, auditar era perguntar "o ativo está onde o sistema
-// diz?". Com a posse, são três perguntas que divergem por motivos diferentes:
-// ONDE ESTÁ (`Asset.locationId`), DE QUEM É O POSTO (a `Assignment` aberta) e
-// QUEM OCUPA O POSTO (`LocationOccupant`). As duas últimas o auditor observa e o
-// sistema MARCA — nunca corrige (D52).
-//
-// UMA LINHA POR ATIVO, e auditar um posto cria N delas numa transação (D54):
-// *"quais ativos nunca foram auditados"* é a pergunta que paga esta tabela, e
-// ela não é respondível por linha de posto.
-model Audit {
-  id        String   @id @default(uuid()) @db.Uuid
-  assetId   String   @db.Uuid
-  auditedAt DateTime @default(now())
-
-  result AuditResult
-  method AuditMethod @default(MANUAL)
-
-  // ONDE ESTAVA e ONDE FOI ACHADO — e os dois são UUID SEM FK, pelo motivo do
-  // `ActivityLog.actorId`: conferência é append-only e não pode depender do
-  // ciclo de vida da linha de `locations`. Com FK e `SetNull`, apagar uma sala
-  // apagaria a prova de que o ativo estava nela; com `Restrict`, a sala nunca
-  // poderia ser apagada.
-  locationIdBefore String? @db.Uuid
-  locationIdFound  String? @db.Uuid
-
-  /// O ativo foi achado num posto que NÃO é o alvo da posse aberta. O sistema
-  /// marca e oferece o checkout de correção; mover a posse a partir de uma
-  /// observação transferiria responsabilidade por palpite (D52).
-  divergenciaDePosse Boolean @default(false)
-
-  /// A posse aponta para um local SEM ocupante aberto — o *posto vago* da F2
-  /// aparecendo no chão da fábrica.
-  postoVago Boolean @default(false)
-
-  notes String?
-
-  /// Quem conferiu. Nulo quando foi o job (D124) — e esse nulo é uma
-  /// afirmação, não um esquecimento: alerta e job não têm autor.
-  auditedById String? @db.Uuid
-
-  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
-
-  @@index([assetId, auditedAt])
-  @@index([auditedAt])
-  @@map("audits")
-}
-
-/// Os quatro sinais que o job diário sabe calcular. TODOS são do ATIVO, e isso
-/// é o D128: licença vencendo (F6) e estoque baixo (F5) continuam derivados sob
-/// demanda no painel da própria tela. Puxá-los para cá pediria um alvo
-/// polimórfico, que é aditivo e fica para quem precisar de e-mail deles.
-enum AlertType {
-  GARANTIA_VENCENDO
-  EOL_PROXIMO
-  AUDITORIA_VENCIDA
-  MANUTENCAO_EM_ABERTO
-}
-
-// O AVISO — persistido ANTES de ser enviado, e é isso que o D57 decide.
-//
-// Três coisas vêm de gravar primeiro: *"o alerta disparou?"* vira um `SELECT`; o
-// sistema funciona sem SMTP configurado; e o `dedupeKey` vira a defesa contra o
-// mesmo aviso chegando todo dia até alguém resolver o problema.
-//
-// SEM `deletedAt` e sem edição: um alerta não se conserta, se LÊ (`readAt`). É
-// por isso que o D127 importa tanto — a linha gerada errada fica, e o
-// `dedupeKey` garante que ela não seja recriada, mas também que não seja
-// corrigida. Ativo fora do parque não entra.
-model Alert {
-  id   String    @id @default(uuid()) @db.Uuid
-  type AlertType
-
-  /// O ativo de que o alerta fala. Nulável porque um alerta pode ser DA FROTA
-  /// (nenhum ativo específico), e `Cascade` porque um ativo apagado de verdade
-  /// não deixa aviso órfão no sino.
-  assetId String? @db.Uuid
-
-  /// QUANDO o prazo vence — não quando o alerta nasceu. É o que a tela ordena.
-  dueAt DateTime
-
-  /// A IDENTIDADE DO AVISO, e ela tem uma regra POR TIPO (D125).
-  ///
-  /// Dois tipos usam uma data estável do ativo (garantia, EOL); um usa o fato de
-  /// nunca ter sido auditado (`...:nunca`, e NÃO a data do corte, que anda todo
-  /// dia e recriaria o alerta diariamente); e o quarto usa o id da MANUTENÇÃO,
-  /// porque um ativo com duas manutenções abertas tem dois problemas.
-  ///
-  /// `@unique` + `createMany({ skipDuplicates: true })` é o que faz a rodada
-  /// repetida não duplicar nada — sem SELECT prévio e sem corrida.
-  dedupeKey String @unique
-
-  /// O que a mensagem precisa dizer, congelado no momento do disparo: etiqueta,
-  /// nome, dias restantes. Congelado de propósito — o e-mail que saiu falava
-  /// disto, e reconstruir a frase amanhã diria outra coisa.
-  payload Json?
-
-  createdAt DateTime @default(now())
-
-  /// Lido no sino. Não é "resolvido": o problema pode continuar.
-  readAt DateTime?
-
-  /// Os canais configurados foram tentados e ao menos um entregou (D126). Nulo
-  /// depois de uma rodada é a informação de que a PRÓXIMA precisa: ela reenvia.
-  notifiedAt DateTime?
-
-  asset Asset? @relation(fields: [assetId], references: [id], onDelete: Cascade)
-
-  /// O sino: não lidos, mais recentes primeiro.
-  @@index([readAt, dueAt])
-  /// A varredura de reenvio: o que ficou sem entrega.
-  @@index([notifiedAt])
-  @@index([assetId])
-  @@map("alerts")
-}
-
-// ============================================================================
-// IMPORTAÇÃO DE CSV — o dado ENTRANDO (docs/historico/fase-10-etiquetas-relatorios-importacao.md, Etapa D)
-//
-// DUAS TABELAS, E A SEGUNDA É A QUE IMPORTA. `Import` é o cabeçalho (arquivo,
-// alvo, mapeamento, totais); `ImportRow` é uma linha do CSV com o que aconteceu
-// com ela.
-//
-// POR QUE O RELATÓRIO POR LINHA PRECISA DE TABELA, e não de uma resposta HTTP:
-//
-//   1. uma resposta com 5.000 erros não sobrevive ao fechamento da aba, e é
-//      justamente no arquivo grande que alguém precisa reler a lista;
-//   2. depois do apply, ela é a ÚNICA trilha do que entrou — junto com o
-//      `ActivityLog` de cada gravação, é por ela que se desfaz à mão;
-//   3. o apply roda em LOTES com transação por lote (o `$transaction` do Prisma
-//      tem timeout de 5 s, e 5.000 linhas não cabem numa só). Sem uma linha por
-//      registro, uma falha no meio deixaria "aplicou até onde?" sem resposta.
-//
-// A IMPORTAÇÃO É DE DOIS PASSOS, E O DRY-RUN É OBRIGATÓRIO (D68): o upload roda
-// a simulação e grava as linhas; um segundo POST aplica. Import é a operação com
-// maior razão dano/esforço do sistema — um clique, milhares de linhas — e na
-// importação de OCUPAÇÃO ela muda quem responde por centenas de equipamentos
-// sem tocar em posse nenhuma.
-// ============================================================================
-
-/// O que o arquivo carrega. Cada alvo tem o seu conjunto de colunas e a sua
-/// chave de atualização — não existe import "genérico".
-enum ImportTarget {
-  ASSETS
-  USERS
-  OCCUPANTS
-}
-
-enum ImportStatus {
-  /// Simulado e gravado. Nada foi escrito fora de `imports`/`import_rows`.
-  SIMULADO
-  /// O apply começou. Fica aqui se o processo morrer no meio — e é isso que
-  /// `appliedUpTo` existe para responder.
-  APLICANDO
-  APLICADO
-  /// O arquivo foi recusado inteiro (encoding, cabeçalho, mapeamento).
-  RECUSADO
-}
-
-enum ImportRowStatus {
-  OK
-  ERRO
-  /// Existe e já está como o arquivo pede — reimportar o mesmo CSV é seguro.
-  IGNORADA
-}
-
-model Import {
-  id String @id @default(uuid()) @db.Uuid
-
-  /// O nome que o navegador mandou. Só para a tela: o arquivo não é guardado.
-  ///
-  /// NÃO guardamos o CSV original de propósito — ele teria dado de pessoa
-  /// (nome, e-mail) numa terceira cópia, fora do banco e fora da política de
-  /// retenção. O que sobrevive é a linha CRUA de cada registro em `ImportRow`,
-  /// que é o que o relatório precisa.
-  filename String
-
-  target ImportTarget
-  status ImportStatus @default(SIMULADO)
-
-  /// `{ chave: 'assetTag', colunas: { 'Etiqueta': 'assetTag', … } }`.
-  ///
-  /// Json e não colunas: o mapeamento tem forma diferente por alvo e é escolhido
-  /// pelo usuário no momento do upload. Ele é VALIDADO na borda contra a
-  /// allowlist de campos do alvo (o mesmo desenho do D67), então o que entra aqui
-  /// já passou por uma lista fechada.
-  mapping Json
-
-  /// O delimitador DETECTADO na linha de cabeçalho, guardado para a tela
-  /// explicar o que ela leu quando o arquivo vier com o separador errado.
-  delimiter String
-
-  totalLinhas Int @default(0)
-  ok          Int @default(0)
-  erro        Int @default(0)
-  ignorada    Int @default(0)
-
-  /// Até qual `lineNumber` o apply chegou. É o que torna o lote RETOMÁVEL: um
-  /// `P2028` no meio não deixa mais a pergunta "o que entrou?" sem resposta.
-  appliedUpTo Int @default(0)
-
-  /// Por que o arquivo inteiro foi recusado, quando foi.
-  message String?
-
-  // ── O EFEITO DE SEGUNDA ORDEM DA OCUPAÇÃO (Etapa E) ──────────────────────
-  //
-  // Só preenchidos no alvo `OCCUPANTS`, e é por isso que são nuláveis.
-  //
-  // Importar ocupação muda quem responde por TODO ativo entregue àquele posto,
-  // sem tocar em uma `Assignment` sequer — é o que o modelo promete (um headset
-  // chega na mesa: zero linhas, herda os dois responsáveis) e é o que torna um
-  // nome de mesa errado em 300 linhas uma transferência de responsabilidade do
-  // andar inteiro. Por isso o dry-run CONTA, e o número aparece antes do apply.
-  /// Quantos ativos passam a ter responsável resolvido.
-  ganhamResponsavel Int?
-  /// Quantos deixam de ter.
-  perdemResponsavel Int?
-
-  /// Quem subiu o arquivo (D23). Sem relação declarada, como no `ActivityLog`:
-  /// apagar o cadastro não pode apagar a trilha de uma carga.
-  actorId String? @db.Uuid
-
-  rows ImportRow[]
-
-  createdAt DateTime  @default(now())
-  appliedAt DateTime?
-
-  @@index([createdAt])
-  @@map("imports")
-}
-
-model ImportRow {
-  id       String @id @default(uuid()) @db.Uuid
-  importId String @db.Uuid
-
-  /// A linha no ARQUIVO, contando o cabeçalho como 1. É o número que a pessoa
-  /// vê no Excel — um índice de array aqui obrigaria a somar dois de cabeça
-  /// para achar a linha errada num arquivo de cinco mil.
-  lineNumber Int
-
-  /// A linha como ela chegou, por cabeçalho do CSV. É isto que permite reler o
-  /// relatório depois sem o arquivo em mãos.
-  raw Json
-
-  status  ImportRowStatus
-  /// O motivo, em português, quando `ERRO` ou `IGNORADA`.
-  message String?
-
-  /// O que a linha criou ou atualizou. Nulo em `ERRO` e em `IGNORADA`.
-  entityId String? @db.Uuid
-
-  import Import @relation(fields: [importId], references: [id], onDelete: Cascade)
-
-  /// Uma linha do arquivo aparece UMA vez: o apply reescreve a linha existente
-  /// em vez de acrescentar uma segunda versão dela.
-  @@unique([importId, lineNumber])
-  /// A tela do relatório filtra por situação ("mostre só os erros").
-  @@index([importId, status])
-  @@map("import_rows")
-}

@@ -18,7 +18,7 @@ import { registerAuthGuard, type RotaPublica } from './core/http/require-auth';
 import { registerPermissionGuard } from './core/http/permission-guard';
 
 import { AuthMaestro } from './domain/auth/auth.maestro';
-import { AccessMaestro } from './domain/access/access.maestro';
+
 import { exigenciaDaRota } from './domain/access/helpers/route-permissions';
 import { exigirPermissao } from './domain/access/helpers/require-permission';
 import { autenticarRequisicao } from './domain/auth/helpers/authenticate-request.helper';
@@ -27,10 +27,8 @@ import { AgentMaestro } from './domain/agent/agent.maestro';
 import { EndpointMaestro } from './domain/endpoint/endpoint.maestro';
 import { ReconciliationMaestro } from './domain/reconciliation/reconciliation.maestro';
 import { CatalogMaestro } from './domain/catalog/catalog.maestro';
-import { CustomFieldMaestro } from './domain/custom-field/custom-field.maestro';
 import { AssetMaestro } from './domain/asset/asset.maestro';
 import { SettingsMaestro } from './domain/settings/settings.maestro';
-import { BackupMaestro } from './domain/backup/backup.maestro';
 import { UserMaestro } from './domain/user/user.maestro';
 import { AssignmentMaestro } from './domain/assignment/assignment.maestro';
 import { OccupancyMaestro } from './domain/occupancy/occupancy.maestro';
@@ -38,13 +36,7 @@ import { WorkstationMaestro } from './domain/workstation/workstation.maestro';
 import { StockMaestro } from './domain/stock/stock.maestro';
 import { LicenseMaestro } from './domain/license/license.maestro';
 import { AttachmentMaestro } from './domain/attachment/attachment.maestro';
-import { MaintenanceMaestro } from './domain/maintenance/maintenance.maestro';
-import { AuditMaestro } from './domain/audit/audit.maestro';
 import { ReportMaestro } from './domain/report/report.maestro';
-import { ImportMaestro } from './domain/import/import.maestro';
-import { LabelMaestro } from './domain/label/label.maestro';
-import { AlertMaestro } from './domain/alert/alert.maestro';
-import { AcceptanceMaestro } from './domain/acceptance/acceptance.maestro';
 import { TAMANHO_MAXIMO_BYTES } from './core/storage/mime';
 import { buildReadinessReport, checkDependencies } from './core/lifecycle/health';
 import { countAgentsOnline } from './domain/agent/agent.registry';
@@ -87,30 +79,6 @@ export const ROTAS_PUBLICAS: readonly RotaPublica[] = [
   { method: 'GET', path: '/health/ready', motivo: 'readiness do monitoramento, que também não tem' },
   { method: 'POST', path: '/api/auth/login', motivo: 'é por onde a sessão nasce' },
   { method: 'GET', path: '/agent-hub', motivo: 'autenticação própria (AGENT_TOKEN)' },
-  // O TERMO DE ENTREGA. Quem abre é um colaborador com um link no e-mail, e ele
-  // pode não ter conta no sistema — no alvo LOCATION quem assina é o gestor da
-  // localidade (D27), que pode nunca ter entrado no painel. Exigir sessão aqui
-  // tornaria o aceite impossível justamente no caso que ele existe para cobrir.
-  //
-  // Quem autoriza é o TOKEN: 32 bytes aleatórios, de uso único, com validade, e
-  // que abre UM termo e nada mais. O prefixo `/*` cobre as quatro rotas
-  // (`/aceite/:token`, `/aceitar`, `/recusar` e `/pdf`).
-  { method: '*', path: '/api/aceite/*', motivo: 'termo de entrega: quem assina pode não ter conta (D27)' },
-  // ── O SSO (F11, Etapa I) ─────────────────────────────────────────────────
-  //
-  // AS DUAS SÓ EXISTEM com `OIDC_ISSUER` configurado (ver `access.maestro.ts`), e
-  // são públicas pelo mesmo motivo do login: é por elas que a sessão NASCE. Quem
-  // as alcança, por definição, ainda não tem cookie.
-  //
-  // O que autoriza não é sessão, é o DESAFIO: `state`, `nonce` e o verificador do
-  // PKCE, assinados num cookie de dez minutos que só este par de rotas abre. O
-  // callback sem o cookie responde 400 e manda começar de novo.
-  { method: 'GET', path: '/api/auth/oidc/start', motivo: 'início do SSO: é por onde a sessão nasce' },
-  { method: 'GET', path: '/api/auth/oidc/callback', motivo: 'a volta do provedor, ainda sem sessão' },
-  // DOIS BOOLEANOS, e é a TELA DE LOGIN que os lê — ela roda sem sessão, e precisa
-  // saber se desenha o botão de entrada única. Não revela endpoint, DN nem client
-  // id; e a mesma informação já se obtém vendo se `/api/auth/oidc/start` existe.
-  { method: 'GET', path: '/api/access/directory', motivo: 'a tela de login decide se oferece SSO' },
 ];
 
 /**
@@ -226,23 +194,10 @@ export async function buildApp(): Promise<FastifyInstance> {
   // `auth` primeiro: é o domínio que todos os outros passaram a depender (o
   // `preHandler` acima já usa o `autenticarRequisicao` dele).
   await AuthMaestro.setupRoutes(server);
-  // ACESSO logo depois de `auth`: grupos, permissões e o token pessoal são a
-  // outra metade da sessão — quem entrou é do `auth`, o que ele alcança é daqui.
-  await AccessMaestro.setupRoutes(server);
   await EndpointMaestro.setupRoutes(server);
   await CatalogMaestro.setupRoutes(server);
-  // CAMPO CUSTOMIZADO depois do catálogo e ANTES do ativo (F9): as dez rotas
-  // planas dos dois cadastros são spec de catálogo (D64) e já subiram acima;
-  // aqui entram as três que a spec não expressa — a composição de um conjunto e
-  // os campos que viram coluna. O ativo vem depois porque o formulário dele lê o
-  // conjunto resolvido.
-  await CustomFieldMaestro.setupRoutes(server);
   await AssetMaestro.setupRoutes(server);
   await SettingsMaestro.setupRoutes(server);
-  // BACKUP depois de configuração: a retenção que ele aplica é uma coluna do
-  // `AppSetting`, e as rotas dele só NASCEM quando `BACKUP_ENABLED` está ligado
-  // (F10, Etapa A).
-  await BackupMaestro.setupRoutes(server);
   await UserMaestro.setupRoutes(server);
   // Posse e ocupação vêm DEPOIS de asset e user: as rotas deles pendem de
   // `/api/assets/:id` e `/api/users/:id`, e registrar na ordem em que o
@@ -269,27 +224,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   // `/api/assets/:id`. Registrar na ordem em que o conceito nasce é o que mantém
   // o arquivo legível (docs/historico/fase-07-convergencia-rmm-itam.md).
   await ReconciliationMaestro.setupRoutes(server);
-  // CICLO DE VIDA depois da convergência: as rotas de manutenção e de auditoria
-  // pendem de `/api/assets/:id`, e a auditoria automática (D124) é escrita pelo
-  // job da reconciliação — registrar na ordem em que o conceito nasce é o que
-  // mantém o arquivo legível (docs/historico/fase-08-ciclo-de-vida.md).
-  await MaintenanceMaestro.setupRoutes(server);
-  await AuditMaestro.setupRoutes(server);
-  await AlertMaestro.setupRoutes(server);
-  // Relatório por último da fase: ele só LÊ o que os outros escrevem.
+  // Relatório depois da convergência: ele só LÊ o que os outros escrevem.
   await ReportMaestro.setupRoutes(server);
-  // IMPORTAÇÃO depois de TODOS os domínios em que ela escreve (F10, Etapa D): o
-  // adaptador de ativos chama `createAsset` e `checkoutAsset`, e o de pessoas
-  // chama `createUser`. Registrar na ordem em que o conceito nasce é o que
-  // mantém este arquivo legível.
-  await ImportMaestro.setupRoutes(server);
-  // ETIQUETA por último dos domínios da F10: ela só LÊ ativo e configuração, e
-  // nada depende dela.
-  await LabelMaestro.setupRoutes(server);
   await AttachmentMaestro.setupRoutes(server);
-  // Aceite depois de posse: o termo nasce dentro da transação do checkout, e a
-  // leitura pública dele pende de `assignments`.
-  await AcceptanceMaestro.setupRoutes(server);
   await AgentMaestro.setupRoutes(server);
 
   // Liveness: o processo está de pé e respondendo. É o health check do

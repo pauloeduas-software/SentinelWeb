@@ -4,8 +4,7 @@ import { resolverResponsaveis, type PosseResolvida } from '../../assignment/use-
 import {
   resolverEscalonamento, type Escalonamento,
 } from '../../assignment/use-cases/resolver-escalonamento.usecase';
-import { assetDetailSelect, ASSET_DETAIL_SELECT, comCamposMascarados } from '../helpers/asset-select.helper';
-import { calcularValorContabil, type ValorContabil } from '../helpers/depreciacao.helper';
+import { assetDetailSelect, ASSET_SELECT } from '../helpers/asset-select.helper';
 
 // `findFirst`, nunca `findUnique`: o escopo da lixeira não alcança o
 // `findUnique` (core/database/soft-delete.extension.ts), e um ativo apagado não
@@ -15,7 +14,7 @@ function buscarAtivo(id: string, podeVerCusto: boolean) {
     // O select DEPENDE DA SESSÃO (D77). Sem `assets.viewCost` não vêm nem a
     // coluna de custo nem a REGRA de depreciação — ver `assetDetailSelect`.
     where: { id },
-    select: assetDetailSelect(podeVerCusto) as typeof ASSET_DETAIL_SELECT,
+    select: assetDetailSelect(podeVerCusto) as typeof ASSET_SELECT,
   });
 }
 
@@ -28,11 +27,8 @@ function buscarAtivo(id: string, podeVerCusto: boolean) {
  * contábil muda quando nada acontece. O segundo é o que torna a coluna
  * impossível — ela envelheceria sozinha.
  */
-export type AssetDetail = ReturnType<
-  typeof comCamposMascarados<NonNullable<Awaited<ReturnType<typeof buscarAtivo>>>>
-> & {
+export type AssetDetail = NonNullable<Awaited<ReturnType<typeof buscarAtivo>>> & {
   posse: PosseResolvida;
-  valorContabil: ValorContabil;
   /**
    * PARA QUEM LIGAR por este ativo (F11, Etapa F — D73).
    *
@@ -58,7 +54,7 @@ export type AssetDetail = ReturnType<
  * fazendo e que não existia: até aqui o modal recebia a linha que a listagem já
  * tinha em memória, e uma URL colada no navegador não tem essa linha.
  *
- * Devolve pelo `ASSET_DETAIL_SELECT` — o `ASSET_SELECT` da listagem mais a regra
+ * Devolve pelo `ASSET_SELECT` da listagem — a regra
  * de depreciação, que só esta leitura usa. Allowlist, nunca
  * `include` — mais a posse resolvida, pelo mesmo `resolverResponsaveis` da
  * listagem. Recalcular a Camada 3 aqui com outra consulta seria uma segunda
@@ -83,23 +79,6 @@ export async function findAssetById(id: string, podeVerCusto: boolean): Promise<
   ]);
 
   // Calculado na LEITURA, não gravado: é o D55, e a regra já veio embutida no
-  // `ASSET_DETAIL_SELECT` (`model.depreciation`) para isto não custar outra
-  // consulta — e ela fica FORA do select compartilhado, que nove outros
-  // consumidores usam sem calcular valor contábil nenhum.
-  //
-  // SEM `assets.viewCost` NÃO HÁ O QUE CALCULAR, e não é preciso um `if` para
-  // isso: o select não trouxe `purchaseCost` nem `model.depreciation`, então a
-  // função recebe os dois indefinidos e devolve o mesmo `null` que já devolvia
-  // para ativo sem custo cadastrado. "Sem permissão" é o terceiro motivo do
-  // mesmo nulo, e nenhuma tela precisa distinguir os três.
-  const valorContabil = calcularValorContabil({
-    purchaseCost: ativo.purchaseCost ?? null,
-    purchaseDate: ativo.purchaseDate,
-    regra: ativo.model.depreciation ?? null,
-  });
 
-  // `comCamposMascarados` é a ÚNICA saída de uma linha com `customFields`: o
-  // pacote cifrado vira `••••••` e `temSegredo` diz à tela se oferece o botão de
-  // revelar (F9, Etapa E).
-  return { ...comCamposMascarados(ativo), posse, valorContabil, escalonamento };
+  return { ...ativo, posse, escalonamento };
 }

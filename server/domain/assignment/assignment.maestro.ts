@@ -48,15 +48,6 @@ export class AssignmentMaestro {
     // que ela ocupa. A soma das duas é a Camada 3 vista do lado do colaborador.
     server.get('/api/users/:id/holdings', assignmentController.holdings);
 
-    // O MESMO, para quem está logado — a tela "Meus equipamentos" (F11, Etapa I).
-    //
-    // Rota irmã e NÃO um `?me=true` na de cima: a diferença não é de filtro, é de
-    // AUTORIZAÇÃO. `/api/users/:id/holdings` exige `users.view` porque fala de
-    // outra pessoa; esta não exige chave nenhuma porque não há outra pessoa de quem
-    // falar. Um parâmetro booleano na mesma rota faria as duas regras conviverem no
-    // mesmo `preHandler`, que é como se escreve um furo.
-    server.get('/api/me/holdings', assignmentController.meusHoldings);
-
     logger.info('[Maestro] Rotas de Posse (entrega/devolução) inicializadas.');
   }
 }

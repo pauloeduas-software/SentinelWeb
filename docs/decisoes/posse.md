@@ -4,7 +4,7 @@
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve**. Se a realidade mudou, a
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
-> cada regra governou. O índice das 142 está em [`README.md`](./README.md).
+> cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D14–D17, D27–D32, D82, D87–D88.
 > A execução que as aplicou está em [`../historico/`](../historico/).

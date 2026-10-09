@@ -1,34 +1,11 @@
-import { z } from 'zod';
 import type { FastifyRequest } from 'fastify';
-import { relatorioDeDepreciacao } from '../use-cases/depreciation-report.usecase';
 import { relatorioDePrazos } from '../use-cases/warranty-report.usecase';
-import { relatorioDeAuditorias } from '../use-cases/audit-report.usecase';
-import { resumirManutencoes } from '../../maintenance/use-cases/summarize-maintenances.usecase';
 import { responsibilityReport } from '../use-cases/responsibility-report.usecase';
-import { customReport } from '../use-cases/custom-report.usecase';
-import { REPORT_TOKENS_AGRUPAVEIS, tokensPermitidos } from '../helpers/report-columns';
-import { temPermissao } from '../../access/helpers/require-permission';
-import type { Permissao } from '../../access/helpers/permission-catalog';
+import { temPapel } from '../../access/helpers/require-permission';
 
-/**
- * O corpo do builder (F10, Etapa F).
- *
- * `strictObject` como em todo corpo do sistema, e o TOKEN é validado DUAS
- * vezes: aqui na forma (string, tamanho, quantidade) e no use-case contra a
- * allowlist de `report-columns.ts`, que é quem conhece os fragmentos. A segunda
- * é a que importa — ela devolve 422 com a lista dos válidos (D67).
- */
-const customReportSchema = z.strictObject({
-  columns: z
-    .array(z.string().trim().min(1, 'coluna não pode ser vazia').max(60, 'coluna: máximo de 60 caracteres'))
-    .min(1, 'escolha ao menos uma coluna')
-    .max(15, 'no máximo 15 colunas'),
-  agruparPor: z.string().trim().min(1).max(60).optional(),
-  limit: z.number().int('limite deve ser inteiro').min(1).max(2_000).optional(),
-});
 
-// Só HTTP, e nas quatro primeiras abas nem há o que ler da requisição: elas são
-// leitura agregada sem parâmetro — os limiares vêm da CONFIGURAÇÃO, não da
+// Só HTTP, e nas duas abas que sobraram (D154) nem há o que ler da requisição:
+// elas são leitura agregada sem parâmetro — os limiares vêm da CONFIGURAÇÃO, não da
 // query string.
 //
 // É de propósito: `?dias=90` na URL faria o relatório contradizer o alerta, que
@@ -36,27 +13,9 @@ const customReportSchema = z.strictObject({
 // telas passam a concordar.
 
 export const reportController = {
-  async depreciacao() {
-    return relatorioDeDepreciacao();
-  },
-
+  /** Garantia e fim de vida vencendo — os limiares vêm da configuração. */
   async prazos() {
     return relatorioDePrazos();
-  },
-
-  async auditorias() {
-    return relatorioDeAuditorias();
-  },
-
-  /**
-   * O resumo vem do DOMÍNIO de manutenção, não de um `groupBy` daqui.
-   *
-   * Relatório lê do domínio; ele não reimplementa o domínio. A regra de o que
-   * conta como custo — ativo vivo, `Decimal` somado, garantia contada à parte —
-   * mora num lugar só, e duas cópias divergiriam no primeiro ajuste.
-   */
-  async manutencoes() {
-    return resumirManutencoes();
   },
 
   // ── A CAMADA 3 AGREGADA (F10, Etapa F) ───────────────────────────────────
@@ -64,37 +23,12 @@ export const reportController = {
   /**
    * O que cada pessoa responde, direto × por posto.
    *
-   * Sem parâmetro, como as quatro abas acima: é a frota inteira agregada por
+   * Sem parâmetro, como a aba de prazos: é a frota inteira agregada por
    * pessoa, e um recorte na query string faria a tela discordar do número que o
    * cabeçalho mostra.
    */
   async responsabilidade(request: FastifyRequest) {
-    return responsibilityReport(temPermissao(request, 'assets.viewCost'));
+    return responsibilityReport(temPapel(request, 'ADMIN'));
   },
 
-  /**
-   * O relatório montado pelo usuário (D67).
-   *
-   * `POST` e não `GET`, apesar de ser leitura: a lista de colunas é um ARRAY e
-   * `?columns=a&columns=b&columns=…` com quinze itens estoura o limite prático
-   * de URL de alguns proxies — e o corpo é onde um array se escreve sem
-   * ambiguidade. Nada aqui grava.
-   */
-  async custom(request: FastifyRequest) {
-    const pedido = customReportSchema.parse(request.body ?? {});
-    return customReport(pedido, (permissao) => temPermissao(request, permissao as Permissao));
-  },
-
-  /**
-   * O que o builder aceita — a tela monta o seletor com isto, sem adivinhar.
-   *
-   * FILTRADO PELA PERMISSÃO (F11, D77): oferecer *Custo de compra* a quem não
-   * tem `assets.viewCost` é oferecer um 403. A pessoa marcaria a coluna, geraria
-   * o relatório, receberia o erro e não saberia qual das quinze colunas o
-   * causou.
-   */
-  async camposDoBuilder(request: FastifyRequest) {
-    const pode = (permissao: string) => temPermissao(request, permissao as Permissao);
-    return { colunas: tokensPermitidos(pode), agrupaveis: REPORT_TOKENS_AGRUPAVEIS };
-  },
 };

@@ -33,7 +33,6 @@ export interface ConfiguracaoDoSistema {
   dateFormat: string;
   currency: string;
   csvDelimiter: string;
-  backupRetentionDays: number;
 }
 
 const CAMPOS = {
@@ -45,7 +44,6 @@ const CAMPOS = {
   dateFormat: true,
   currency: true,
   csvDelimiter: true,
-  backupRetentionDays: true,
 } as const;
 
 export async function lerConfiguracaoDoSistema(): Promise<ConfiguracaoDoSistema> {

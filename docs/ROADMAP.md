@@ -17,7 +17,7 @@
 
 ## As decisões
 
-As 142 decisões de arquitetura do projeto **não moram mais aqui** — elas estão em
+As 164 decisões de arquitetura do projeto **não moram mais aqui** — elas estão em
 [`decisoes/`](./decisoes/), uma pasta por assunto, com o índice completo em
 [`decisoes/README.md`](./decisoes/README.md). Este arquivo voltou a ser o que o nome diz: o que
 falta fazer.

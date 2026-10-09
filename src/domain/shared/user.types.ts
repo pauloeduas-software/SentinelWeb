@@ -17,6 +17,14 @@ export interface Referencia {
  * sido usado. Quem precisa dele numa tela nova pede a rota que o traz.
  */
 export interface User {
+  /**
+   * O papel (D148) — `USUARIO`, `TECNICO` ou `ADMIN`.
+   *
+   * Vem no `USER_LIST_SELECT`, e não só no detalhe: o formulário abre da
+   * listagem e edita este campo. Sem ele aqui, o `<select>` inicializaria em
+   * `USUARIO` e gravaria `USUARIO` — corrigir um e-mail rebaixaria a pessoa.
+   */
+  role: 'USUARIO' | 'TECNICO' | 'ADMIN';
   id: string;
   name: string;
   email: string;
@@ -89,28 +97,6 @@ export interface UserDetail extends User {
   manager: Referencia | null;
   posseAberta: PosseAbertaDoUsuario;
 
-  // ── DE ONDE VEM ESTA IDENTIDADE (F11, Etapa I — D78) ─────────────────────
-
-  /**
-   * `LOCAL` entra com usuário e senha deste sistema; `LDAP` veio da
-   * sincronização com o diretório; `OIDC` entra por SSO.
-   *
-   * ⚠️ Mudar isto para `OIDC` **concede um caminho de login**: quem autenticar
-   * aquele e-mail no provedor passa a entrar como esta pessoa, com os grupos
-   * dela. Por isso a troca não é um campo do formulário de cadastro — é rota
-   * própria com `access.manage` (`PUT /api/users/:id/auth-source`).
-   */
-  authSource: 'LOCAL' | 'LDAP' | 'OIDC';
-  /** ISO da última vez que o diretório confirmou esta pessoa. */
-  directorySyncedAt: string | null;
-  /**
-   * Desde quando ela deixou de aparecer na busca do diretório.
-   *
-   * É uma MARCA DE REVISÃO, não um desligamento (D78): a sincronização nunca
-   * desliga ninguém — um filtro LDAP mal escrito devolveria "zero pessoas" e o
-   * inventário inteiro voltaria ao estoque numa madrugada. Quem decide é gente.
-   */
-  directoryMissingAt: string | null;
 }
 
 /**

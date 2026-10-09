@@ -39,15 +39,32 @@ const camposDeIdentidade = {
   hiredAt: dataOpcional('data de admissão'),
 };
 
+/**
+ * O PAPEL (D148), no mesmo corpo do cadastro — e não em rota própria.
+ *
+ * A matriz antiga tinha rota separada (`PUT /api/users/:id/groups`) porque o dono
+ * do dado era o grupo: quem decidia o que uma permissão concedia era o domínio de
+ * acesso, e `user` não tinha o que opinar. Com papel o dono é a COLUNA, e uma
+ * rota própria para gravar um enum de três valores seria cerimônia.
+ *
+ * `PUT /api/users/:id` exige `ADMIN` no mapa de rotas, que é a mesma exigência
+ * que a rota de grupos tinha — ninguém se promove sozinho.
+ */
+const papel = z.enum(['USUARIO', 'TECNICO', 'ADMIN'], 'papel inválido');
+
 export const createUserSchema = z.strictObject({
   name: nome,
   email,
+  // Ausente nasce `USUARIO`, pelo `@default` do schema: conta nova não alcança
+  // nada além de si mesma, que é a porta fechada por padrão da F3.
+  role: papel.optional(),
   ...camposDeIdentidade,
 });
 
 export const updateUserSchema = z.strictObject({
   name: nome.optional(),
   email: email.optional(),
+  role: papel.optional(),
   ...camposDeIdentidade,
 });
 

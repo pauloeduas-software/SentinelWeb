@@ -53,17 +53,3 @@ export function haDiasUTC(dias: number, agora: Date = new Date()): Date {
   piso.setUTCDate(piso.getUTCDate() - dias);
   return piso;
 }
-
-/**
- * O CORTE DA AUDITORIA: antes desta data, o ativo está vencido.
- *
- * Calculado na aplicação a cada consulta, a partir de `auditIntervalMonths` —
- * nunca gravado numa coluna `nextAuditAt` (D53). No dia em que alguém trocar 12
- * meses por 6, esta conta já responde diferente; uma coluna precisaria de um
- * UPDATE em massa que ninguém vai lembrar de rodar.
- */
-export function corteDaAuditoria(intervaloEmMeses: number, agora: Date = new Date()): Date {
-  const corte = hojeUTC(agora);
-  corte.setUTCMonth(corte.getUTCMonth() - intervaloEmMeses);
-  return corte;
-}

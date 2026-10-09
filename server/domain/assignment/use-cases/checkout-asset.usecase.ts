@@ -1,9 +1,6 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { avisarEntrega, dispararAviso } from '../helpers/notificacao.helper';
 import { APP_SETTING_ID } from '../../settings/helpers/app-setting.helper';
-import { enviar } from '../../../core/mail/mailer';
-import { issueAcceptance } from '../../acceptance/use-cases/issue-acceptance.usecase';
-import { corpoDoConvite } from '../../acceptance/use-cases/remind-acceptance.usecase';
 import { rotuloDoAlvoOuPadrao } from '../helpers/target-label.helper';
 import { AppError } from '../../../core/errors/app-error';
 import { errorCode } from '../../../core/errors/error-shape';
@@ -246,26 +243,10 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, actorId
   // reverteu avisa o colaborador de uma entrega que não existe, e não há como
   // desfazer. A recíproca também vale — falha de envio não desfaz a entrega
   // (D86), e `dispararAviso` engole a falha de propósito.
-  // O CONVITE do termo sai junto com o aviso de entrega, e pelo mesmo motivo
-  // está aqui fora: depois do commit. Um link de aceite mandado por transação
-  // que reverteu aponta para um termo que não existe.
   //
-  // Importação silenciosa (D131): nada de termo, nada de e-mail. O `termo` já
-  // volta nulo de dentro da transação, então o bloco abaixo nem seria entrado —
-  // mas o aviso de entrega NÃO depende do termo, e é ele que mandaria 500
-  // mensagens. A guarda explícita está aqui para que as duas saídas de e-mail
-  // deste arquivo fiquem sob a mesma condição, visíveis juntas.
+  // Entrega silenciosa: nada de e-mail. TINHA uma segunda saída aqui — o convite
+  // para assinar o termo de entrega —, e ela saiu com o aceite (D150).
   if (data.semAviso) return resultado;
-
-  if (resultado.termo) {
-    const convite = corpoDoConvite({
-      signerName: resultado.termo.signerName,
-      assetTag: resultado.asset.assetTag,
-      assetName: resultado.asset.name,
-      token: resultado.termo.token,
-    });
-    dispararAviso(enviar({ para: [resultado.termo.signerEmail], ...convite }).then(() => undefined));
-  }
 
   dispararAviso(avisarEntrega({
     assetId,
@@ -400,24 +381,6 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
       select: ASSET_SELECT,
     });
 
-    // O TERMO, dentro da MESMA transação: se a emissão falhar — o posto sem
-    // gestor do D27 —, a entrega inteira volta atrás. Entregar em silêncio um
-    // equipamento cuja categoria exige assinatura deixaria o documento sem dono
-    // e ninguém saberia que ele deveria existir.
-    //
-    // Devolve `null` quando não há o que emitir: categoria sem
-    // `requireAcceptance`, ou alvo `ASSET` (D87 — o detentor é um equipamento,
-    // e o documento segue o ativo que o segura). O terceiro caso é a importação
-    // (D131): equipamento que a pessoa já tem não ganha termo para assinar.
-    const termo = data.semAviso ? null : await issueAcceptance(tx, {
-      assignmentId: posse.id,
-      assetId,
-      targetType: data.targetType,
-      targetUserId: data.targetUserId ?? null,
-      targetLocationId: data.targetLocationId ?? null,
-      assetTag: ativoAtualizado.assetTag,
-    });
-
     // No histórico do ATIVO, não no da posse: é a linha do tempo do equipamento
     // que alguém abre para perguntar "por onde isto andou".
     await recordActivity(
@@ -436,6 +399,6 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
       actorId,
     );
 
-    return { assignment: posse, asset: ativoAtualizado, termo };
+    return { assignment: posse, asset: ativoAtualizado };
   });
 }

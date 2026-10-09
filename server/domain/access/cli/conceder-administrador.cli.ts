@@ -1,7 +1,6 @@
 import { pathToFileURL } from 'node:url';
 import { prisma, closeDatabase } from '../../../core/database/prismaClient';
 import { createLogger } from '../../../core/logger/logger';
-import { GRUPO_ADMINISTRADOR } from '../helpers/permission-catalog';
 
 // A LINHA DE ESCAPE DO ACESSO — comando de linha (F11, Etapa B).
 //
@@ -40,31 +39,16 @@ export async function concederAdministrador(identificador: string): Promise<void
     throw new Error(`Nenhum colaborador com nome de acesso ou e-mail "${identificador}".`);
   }
 
-  const grupo = await prisma.group.findUnique({
-    where: { name: GRUPO_ADMINISTRADOR },
-    select: { id: true },
-  });
-
-  if (!grupo) {
-    // O grupo é de SISTEMA e o seed o reconcilia a cada execução; não achá-lo
-    // significa que o seed nunca rodou neste banco. Mandar rodar é melhor do que
-    // criá-lo aqui com uma segunda cópia do catálogo de chaves — duas fontes para
-    // a mesma lista é o que o `permissoesDeAdministrador()` existe para evitar.
-    throw new Error(
-      `O grupo "${GRUPO_ADMINISTRADOR}" não existe neste banco. Rode "npm run db:seed" antes.`,
-    );
-  }
-
   await prisma.user.update({
     where: { id: pessoa.id },
-    // `connect` e não `set`: a pessoa continua nos grupos que já tinha. `set`
-    // trocaria o acesso dela pelo de administrador, apagando vínculos que alguém
-    // configurou — num comando de emergência, destruir configuração é o oposto do
-    // que se quer.
-    data: { groups: { connect: { id: grupo.id } } },
+    // Uma COLUNA, não um vínculo. Era `groups: { connect: … }` com `connect` e não
+    // `set`, para a pessoa continuar nos grupos que já tinha (num comando de
+    // emergência, destruir configuração é o oposto do que se quer). Com papel
+    // (D148) a questão desaparece: não há vínculo a preservar.
+    data: { role: 'ADMIN' },
   });
 
-  logger.warn(`[Acesso] ${pessoa.name} entrou no grupo "${GRUPO_ADMINISTRADOR}".`);
+  logger.warn(`[Acesso] ${pessoa.name} agora é ADMIN.`);
 
   // OS DOIS AVISOS QUE EVITAM O SEGUNDO CHAMADO: estar no grupo não é poder
   // entrar. Quem não tem senha não faz login (a base nasceu sem login — é o caso

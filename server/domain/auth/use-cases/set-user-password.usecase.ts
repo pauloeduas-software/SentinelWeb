@@ -3,8 +3,6 @@ import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { USER_PUBLIC_SELECT } from '../../user/helpers/user-select.helper';
 import { hashSenha } from '../helpers/password.helper';
-import type { ContextoDaRequisicao } from '../helpers/request-context.helper';
-import { registrarEventoAuth } from './record-auth-event.usecase';
 
 // Administrar a credencial de acesso de alguém.
 //
@@ -27,7 +25,6 @@ export async function setUserPassword(
   id: string,
   data: SetPasswordData,
   actorId: string | null,
-  ctx?: ContextoDaRequisicao,
 ) {
   // O hash fica FORA da transação: argon2 leva ~50 ms e segurar uma conexão do
   // pool durante o cálculo é transformar redefinição de senha em fila de banco.
@@ -93,19 +90,6 @@ export async function setUserPassword(
   });
 
   // FORA da transação, de propósito: a trilha de autenticação não pode sumir
-  // num rollback, e o `registrarEventoAuth` engole o próprio erro — dentro da
-  // transação, uma falha ao gravar o evento arriscaria desfazer a troca de senha
-  // que já deu certo.
-  //
-  // O evento registra a pessoa cuja senha MUDOU (e cujas sessões acabaram de
-  // cair), não quem mandou mudar: quem mandou já está no `ActivityLog` acima,
-  // como ator. São duas perguntas diferentes e cada uma tem o seu lugar.
-  await registrarEventoAuth({
-    type: 'PASSWORD_CHANGED',
-    userId: id,
-    username: resultado.username,
-    ctx,
-  });
 
   return resultado.usuario;
 }

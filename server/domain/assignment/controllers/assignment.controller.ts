@@ -1,6 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { idParamSchema } from '../../shared/params.schema';
-import { sessaoDaRequisicao } from '../../auth/helpers/actor.helper';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { bulkCheckoutSchema, checkinSchema, checkoutSchema } from '../schemas/assignment.schema';
 import { checkoutAsset } from '../use-cases/checkout-asset.usecase';
@@ -58,24 +57,6 @@ export const assignmentController = {
   async holdings(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     return listUserHoldings(id);
-  },
-
-  /**
-   * O MESMO cálculo, para a pessoa da SESSÃO — o portal (F11, Etapa I).
-   *
-   * MESMO use-case, de propósito: os dois baldes (posse direta × por posto) são a
-   * Camada 3, e ela não pode ter uma versão para o administrador e outra para o
-   * colaborador. Uma segunda implementação divergiria no primeiro caso de borda —
-   * o acessório entregue ao posto, o assento de licença, a dock presa ao notebook
-   * — e a pessoa passaria a ver uma lista diferente da que o RH vê na ficha dela.
-   *
-   * O que muda é só DE QUEM: aqui o id sai da sessão, e é por isso que a rota não
-   * tem `:id`. Sem parâmetro na URL, não existe o caso "pedi a lista de outra
-   * pessoa" — e é o que permite dispensar a chave `users.view`.
-   */
-  async meusHoldings(request: FastifyRequest) {
-    const { userId } = sessaoDaRequisicao(request);
-    return listUserHoldings(userId);
   },
 
   // Sem query string nenhuma, e é de propósito: o recorte é a definição de

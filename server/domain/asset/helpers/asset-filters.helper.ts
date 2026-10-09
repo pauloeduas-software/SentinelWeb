@@ -56,7 +56,6 @@ export interface AssetFilters {
   locationId?: string;
   relatorio?: AssetRelatorio;
   /** `?cf[slug]=valor` — igualdade dentro do JsonB (F9, D63). Vazio quando não veio. */
-  cf: Record<string, string>;
 }
 
 // ---------------------------------------------------------------------------
@@ -185,7 +184,7 @@ export function separarFiltrosDeAtivo(raw: unknown): {
 
   for (const chave of CHAVES_DO_DOMINIO) delete query[chave];
 
-  return { filtros: { ...filtros, cf }, paraOCore: query };
+  return { filtros, paraOCore: query };
 }
 
 /**
@@ -232,7 +231,6 @@ function whereDaVista(view: AssetView, statusIdExplicito: boolean): Prisma.Asset
  * inventar filtros que ele não tem.
  */
 export function buildAssetFilterWhere(filtros: AssetFilters): Prisma.AssetWhereInput {
-  const camposCustomizados = Object.entries(filtros.cf);
 
   return {
     ...whereDaVista(filtros.view, filtros.statusId !== undefined),
@@ -242,37 +240,6 @@ export function buildAssetFilterWhere(filtros: AssetFilters): Prisma.AssetWhereI
 
     // ── IGUALDADE DENTRO DO JsonB (F9, D63) ────────────────────────────────
     //
-    // `AND` e não espalhamento: duas chaves `customFields` no mesmo objeto se
-    // sobrescreveriam, e filtrar por dois campos customizados de uma vez
-    // aplicaria só o último — em silêncio.
-    //
-    // ⚠️ ESTE FILTRO NÃO USA O ÍNDICE GIN, E É MEDIDO. O Prisma tipado emite
-    //
-    //     WHERE ("customFields" #> ARRAY['ip_fixo']::text[])::jsonb = $1
-    //
-    // que é comparação de EXPRESSÃO: Seq Scan. O que o GIN serve é `@>`:
-    //
-    //     WHERE "customFields" @> '{"ip_fixo":"10.0.0.7"}'
-    //
-    // Medido em 50 mil linhas: 13,5 ms na forma do Prisma contra 0,63 ms com
-    // `@>` (Bitmap Index Scan). Vinte vezes, crescendo linearmente com a tabela.
-    //
-    // E ele fica assim mesmo, porque a alternativa é pior: `@>` só se alcança por
-    // `$queryRaw`, e este `where` se SOMA a vista, status, localização, busca,
-    // ordenação e paginação — um pré-filtro cru devolveria uma lista de ids que
-    // viraria um `IN` sem teto, ou uma segunda paginação que mentiria no `total`.
-    // As perguntas de tabela inteira, que não precisam compor, DESCEM para SQL
-    // cru e usam o índice (`count-assets-with-field.usecase.ts`).
-    //
-    // **É este o número que a F10 herda** (D63): o report builder vai querer
-    // filtrar, ordenar e agrupar por campo customizado, e o que esta fase lhe
-    // entrega é a medida, não uma promessa.
-    ...(camposCustomizados.length > 0
-      ? {
-        AND: camposCustomizados.map(([slug, valor]) => ({
-          customFields: { path: [slug], equals: valor },
-        })),
-      }
-      : {}),
+
   };
 }

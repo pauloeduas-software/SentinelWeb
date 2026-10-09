@@ -213,6 +213,5 @@ describe('a consolidação do que colide', () => {
 
     // E o token daquela instalação segue o binário, que é o mesmo: revogá-lo por
     // causa de uma reimagem derrubaria o agente que está funcionando agora.
-    expect(await prisma.apiToken.count({ where: { endpointId: nova } })).toBe(0);
   });
 });

@@ -1,6 +1,4 @@
-import type { Prisma } from '@prisma/client';
 import { USER_PUBLIC_SELECT } from '../../user/helpers/user-select.helper';
-import { mascararCampos, temCampoCifrado } from '../../custom-field/helpers/custom-field-value.helper';
 
 // O que de um ativo pode sair para o cliente — em UM lugar só, usado pela
 // listagem, pela criação, pela edição e pela busca por série.
@@ -82,38 +80,11 @@ export const ASSET_SELECT = {
   assignedTo: { select: USER_PUBLIC_SELECT },
 } as const;
 
-/**
- * O `ASSET_SELECT` MAIS OS CAMPOS CUSTOMIZADOS (F9, Etapa D).
- *
- * ═════════════════════════════════════════════════════════════════════════════
- * POR QUE `customFields` NÃO ENTROU NO SELECT COMPARTILHADO.
- *
- * Ele tem NOVE consumidores: a listagem, a busca por série, a tela do posto, as
- * posses do colaborador e os seis use-cases de escrita. Só quatro mostram campo
- * customizado — a listagem (coluna de `showInListView`), o detalhe e as
- * respostas de criação e edição, que devolvem o estado salvo ao formulário.
- *
- * E a diferença aqui não é só peso de resposta, como foi no caso da depreciação:
- * o que está guardado nessa coluna inclui PACOTE CIFRADO, e todo caminho que a
- * leia precisa passar pela máscara. Deixá-la no select compartilhado poria o
- * `enc:v1:…` em cinco respostas que ninguém mascararia — não é vazamento de
- * segredo (o pacote é inútil sem a chave), mas é lixo numa resposta que não o
- * pediu e um convite para o próximo caminho esquecer a máscara.
- *
- * Quem lê esta coluna passa por `comCamposMascarados()`. É um arquivo, uma
- * função, e o tipo obriga.
- * ═════════════════════════════════════════════════════════════════════════════
- */
-export const ASSET_SELECT_COM_CAMPOS = {
-  ...ASSET_SELECT,
-  customFields: true,
-} as const;
-
 // ═══════════════════════════════════════════════════════════════════════════
 // O CUSTO POR PERMISSÃO (F11, D77) — e ele é OMITIDO DO SELECT, não mascarado
 // depois.
 //
-// POR QUE OMITIR, E NÃO APAGAR O CAMPO ANTES DE RESPONDER: mascarar depois
+
 // deixa o valor passar pelo processo. Ele entra no objeto, e daí em diante vaza
 // por qualquer caminho que não seja a resposta "feliz" — a linha de log de um
 // erro que serializa o objeto, um `JSON.stringify` num handler de exceção, o
@@ -150,98 +121,26 @@ function semCusto<T extends Record<string, unknown>>(select: T): T {
 
 /** O select da LISTAGEM, conforme a sessão enxergue custo ou não. */
 export function assetSelect(podeVerCusto: boolean) {
-  return podeVerCusto ? ASSET_SELECT_COM_CAMPOS : semCusto(ASSET_SELECT_COM_CAMPOS);
+  return podeVerCusto ? ASSET_SELECT : semCusto(ASSET_SELECT);
 }
 
 /** A forma crua da coluna, como o Prisma a devolve. */
-interface LinhaComCampos {
-  customFields: Prisma.JsonValue | null;
-}
 
-/**
- * A ÚNICA saída de uma linha que carrega `customFields`.
- *
- * Troca todo valor cifrado pela máscara e acrescenta `temSegredo`.
- *
- * A DECISÃO DE QUEM MASCARAR É DO PRÓPRIO DADO, não de uma consulta a
- * `custom_fields WHERE encrypted`: o prefixo `enc:` viaja dentro do valor
- * exatamente para isso (D81, item 1). Ver `mascararCampos`.
- *
- * ⚠️ `temSegredo` É A RESPOSTA DE LINHA, E NÃO É O QUE DECIDE O BOTÃO DE REVELAR.
- *
- * Ele responde *"há algum segredo guardado neste ativo?"*, que é pergunta de
- * listagem — uma marca na linha sem abrir o ativo. O botão de revelar é por
- * CAMPO, e a ficha o decide pelo par `campo.encrypted` + valor igual à máscara
- * (`CustomFieldsCard.tsx`): uma flag de linha não sabe dizer QUAL dos campos tem
- * segredo, que é justamente o que o botão precisa saber.
- *
- * Ele sai aqui porque é de graça — a máscara já percorreu os valores para
- * descobri-lo — e porque a alternativa é a tela deduzir de um sentinela de texto
- * o que o servidor já sabia.
- */
-export function comCamposMascarados<T extends LinhaComCampos>(linha: T): Omit<T, 'customFields'> & {
-  customFields: Record<string, string> | null;
-  temSegredo: boolean;
-} {
-  return {
-    ...linha,
-    customFields: mascararCampos(linha.customFields),
-    temSegredo: temCampoCifrado(linha.customFields),
-  };
-}
-
-/**
- * A REGRA DE DEPRECIAÇÃO, e ela está no select do DETALHE — não no compartilhado.
- *
- * ═════════════════════════════════════════════════════════════════════════════
- * QUEM CALCULA VALOR CONTÁBIL É UMA TELA, E A LISTAGEM NÃO É ELA.
- *
- * Na F8 estes quatro campos entraram direto no `ASSET_SELECT`, com a justificativa
- * de evitar N+1 "na listagem e no relatório da frota inteira". As duas razões não
- * se sustentam: a listagem NÃO calcula valor contábil, e o relatório de depreciação
- * tem `SELECT` próprio (`depreciation-report.usecase.ts`).
- *
- * O que o select compartilhado tem de verdade são NOVE consumidores — a listagem,
- * a busca por série, a tela do posto, as posses do colaborador e os seis use-cases
- * de escrita do ativo. Todos ganhavam um `LEFT JOIN` em `depreciations` e quatro
- * colunas na resposta para um número que nenhum deles mostra.
- *
- * Aqui a regra viaja com o único leitor que a usa, e o N+1 continua não existindo:
- * é UMA consulta, com a regra embutida, para UM ativo.
- * ═════════════════════════════════════════════════════════════════════════════
- */
-export const ASSET_DETAIL_SELECT = {
-  ...ASSET_SELECT_COM_CAMPOS,
-  model: {
-    select: {
-      ...ASSET_SELECT.model.select,
-      depreciation: {
-        select: { id: true, name: true, months: true, floorValue: true, floorType: true },
-      },
-    },
-  },
-} as const;
 
 /**
  * O select do DETALHE, conforme a sessão enxergue custo ou não.
  *
- * TIRA A REGRA DE DEPRECIAÇÃO JUNTO, e não só a coluna de custo. O valor
- * contábil é `purchaseCost` menos a depreciação acumulada: sem o custo ele não é
- * calculável, então trazer `model.depreciation` seria pagar um `LEFT JOIN` para
- * alimentar uma conta que não vai acontecer — e deixaria na resposta a regra
- * financeira ("48 meses, piso de R$ 300") para quem não pode ver dinheiro.
- *
- * Quem consome tem que tratar `valorContabil: null` de qualquer forma: ele já
- * era nulo para ativo sem custo cadastrado e para modelo sem regra. "Sem
- * permissão" entra como terceiro motivo do mesmo `null`, e nenhuma tela precisa
- * saber distinguir os três — a diferença aparece no campo de custo, que
- * simplesmente não vem.
+ * ERA MAIS QUE ISSO: ele acrescentava a regra de depreciação do modelo ao
+ * `ASSET_SELECT`, porque o valor contábil era `purchaseCost` menos a depreciação
+ * acumulada e só a ficha o calculava. O valor contábil saiu no D152, e o detalhe
+ * voltou a ser o select compartilhado — menos a coluna de custo, quando a sessão
+ * não é `ADMIN` (D77).
  */
 export function assetDetailSelect(podeVerCusto: boolean) {
-  if (podeVerCusto) return ASSET_DETAIL_SELECT;
+  if (podeVerCusto) return ASSET_SELECT;
 
   return {
-    ...semCusto(ASSET_SELECT_COM_CAMPOS),
+    ...semCusto(ASSET_SELECT),
     model: { select: ASSET_SELECT.model.select },
   };
 }

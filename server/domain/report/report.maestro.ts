@@ -19,21 +19,16 @@ const logger = createLogger('report.maestro');
 // relatórios, que é como duas listas do mesmo dado começam a divergir.
 export class ReportMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
-    server.get('/api/reports/depreciacao', reportController.depreciacao);
     server.get('/api/reports/prazos', reportController.prazos);
-    server.get('/api/reports/auditorias', reportController.auditorias);
-    server.get('/api/reports/manutencoes', reportController.manutencoes);
 
     // A CAMADA 3 AGREGADA (F10, Etapa F). As duas leem a view
     // `vw_asset_responsibles`, que o Prisma não conhece — ver o D66 e a
     // migration `20261001160000_view_responsaveis`.
     server.get('/api/reports/responsabilidade', reportController.responsabilidade);
-    server.get('/api/reports/builder/fields', reportController.camposDoBuilder);
 
     // `POST` numa rota que só LÊ: a lista de colunas é um array, e ela não cabe
     // numa query string sem ambiguidade. Nada aqui grava — e por isso não há
     // `WRITE_RATE_LIMIT`; vale o teto global de 300/min.
-    server.post('/api/reports/custom', reportController.custom);
 
     // O POSTO VAGO E OS ATIVOS POR POSTO **NÃO NASCEM AQUI** (D130).
     //

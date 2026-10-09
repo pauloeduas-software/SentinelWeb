@@ -1,67 +1,48 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { APP_SETTING_ID } from './app-setting.helper';
 
-// A CONFIGURAÇÃO DO CICLO DE VIDA — alertas, auditoria e o fuso (F8).
+// OS LIMIARES DE PRAZO E O FUSO — o que sobrou da configuração do ciclo de vida.
 //
-// Mesmo desenho do `discovery-settings.helper.ts`: leitura do singleton que já
-// existe, com `upsert` para o caso do banco restaurado de backup antigo, e em
-// `helpers/` porque ler colunas de uma linha fixa não é operação de negócio.
+// ERAM DEZ CAMPOS (F8): alertas ligados, destinatários, webhook, hora da janela,
+// intervalo e aviso de auditoria, dias de manutenção aberta, mais estes três.
+// Os sete primeiros saíram com os alertas (D151), a conferência (D157) e a
+// manutenção (D158) — e as colunas foram junto, porque configuração que não
+// configura nada é um campo na tela que mente.
 //
-// MORA NO DOMÍNIO `settings` e não em `alert` porque três domínios a leem — o
-// relatório (corte de auditoria), o job de alertas (limiares, hora, fuso) e a
-// reconciliação (o fuso do turno, D123). Se ela morasse no domínio de alerta, o
-// relatório importaria `alert` para descobrir de quanto em quanto tempo um ativo
-// deve ser conferido, que é uma seta que o docs/referencia/arquitetura.md não desenha.
+// MORA NO DOMÍNIO `settings` e não em `report` porque DOIS domínios a leem: o
+// relatório de prazos (os limiares) e o job de lembrete de atraso (o fuso). Se
+// morasse no relatório, o job de posse importaria `report` para descobrir em que
+// fuso é meia-noite, que é uma seta que o docs/referencia/arquitetura.md não
+// desenha.
+//
+// SÓ LEITURA: a gravação (`salvarConfiguracaoDoCicloDeVida`) saiu com a rota
+// `PUT /api/settings/alerts`, que era a única que a chamava. Os três campos que
+// restaram mudam no banco ou no seed — nenhuma tela os edita hoje.
 
 export interface ConfiguracaoDoCicloDeVida {
-  alertsEnabled: boolean;
-  alertEmails: string[];
-  alertWebhookUrl: string | null;
   warrantyAlertDays: number;
   eolAlertDays: number;
-  maintenanceOpenDays: number;
-  auditIntervalMonths: number;
-  auditWarningDays: number;
-  alertHour: number;
   timezone: string;
 }
 
 const CAMPOS = {
-  alertsEnabled: true,
-  alertEmails: true,
-  alertWebhookUrl: true,
   warrantyAlertDays: true,
   eolAlertDays: true,
-  maintenanceOpenDays: true,
-  auditIntervalMonths: true,
-  auditWarningDays: true,
-  alertHour: true,
   timezone: true,
 } as const;
 
+/**
+ * Lê os três do singleton.
+ *
+ * `upsert` e não `findUnique` pelo mesmo motivo do resto desta pasta: um banco
+ * restaurado de backup antigo pode não ter a linha, e o padrão do schema é a
+ * resposta certa — melhor do que estourar numa leitura de configuração.
+ */
 export async function lerConfiguracaoDoCicloDeVida(): Promise<ConfiguracaoDoCicloDeVida> {
   return prisma.appSetting.upsert({
     where: { id: APP_SETTING_ID },
     update: {},
     create: { id: APP_SETTING_ID },
-    select: CAMPOS,
-  });
-}
-
-/**
- * Salva os campos que a tela de Configurações oferece.
- *
- * Todos opcionais porque a tela salva um de cada vez — mandar os dez para mudar
- * um seria pedir ao cliente que conhecesse os outros nove (mesma escolha do PUT
- * da configuração da descoberta, F7).
- */
-export async function salvarConfiguracaoDoCicloDeVida(
-  dados: Partial<ConfiguracaoDoCicloDeVida>,
-): Promise<ConfiguracaoDoCicloDeVida> {
-  return prisma.appSetting.upsert({
-    where: { id: APP_SETTING_ID },
-    update: dados,
-    create: { id: APP_SETTING_ID, ...dados },
     select: CAMPOS,
   });
 }

@@ -1,0 +1,20 @@
+-- AlterTable
+ALTER TABLE "app_settings" DROP COLUMN "alertEmails",
+DROP COLUMN "alertHour",
+DROP COLUMN "alertWebhookUrl",
+DROP COLUMN "alertsEnabled",
+DROP COLUMN "auditIntervalMonths",
+DROP COLUMN "auditWarningDays",
+DROP COLUMN "backupRetentionDays",
+DROP COLUMN "labelBarcode",
+DROP COLUMN "labelCols",
+DROP COLUMN "labelFields",
+DROP COLUMN "labelGutterXMm",
+DROP COLUMN "labelGutterYMm",
+DROP COLUMN "labelMarginLeftMm",
+DROP COLUMN "labelMarginTopMm",
+DROP COLUMN "labelPageSize",
+DROP COLUMN "labelQr",
+DROP COLUMN "labelRows",
+DROP COLUMN "maintenanceOpenDays";
+

@@ -1,11 +1,7 @@
 import { z } from 'zod';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { parseListQuery } from '../../../core/http/list-query';
-import { prisma } from '../../../core/database/prismaClient';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
-import { fieldsetQuerySchema, revealParamsSchema } from '../../custom-field/schemas/custom-field.schema';
-import { resolveFieldset } from '../../custom-field/use-cases/resolve-fieldset.usecase';
-import { revealCustomField } from '../../custom-field/use-cases/reveal-custom-field.usecase';
 import { idParamSchema } from '../../shared/params.schema';
 import { historyQuerySchema } from '../../shared/history.schema';
 import { ASSET_SORTABLE, separarFiltrosDeAtivo } from '../helpers/asset-filters.helper';
@@ -19,7 +15,6 @@ import { exportAssets } from '../use-cases/export-assets.usecase';
 import { globalSearch } from '../use-cases/global-search.usecase';
 import { resolveTags } from '../use-cases/resolve-tags.usecase';
 import { colunasDoExport } from '../helpers/asset-export-columns.helper';
-import { listarCamposParaCsv } from '../../custom-field/use-cases/list-csv-fields.usecase';
 import { cabecalhosDeCsv } from '../../shared/csv.helper';
 import { lerConfiguracaoDoSistema } from '../../settings/helpers/system-settings.helper';
 import { getAssetStats } from '../use-cases/asset-stats.usecase';
@@ -31,7 +26,7 @@ import { findAssetBySerial } from '../use-cases/find-asset-by-serial.usecase';
 import { findAssetById } from '../use-cases/find-asset-by-id.usecase';
 // A BORDA é quem sabe quem está pedindo (D23, mesma inversão do `actorId`): o
 // use-case recebe um booleano e não conhece `request`.
-import { temPermissao } from '../../access/helpers/require-permission';
+import { temPapel } from '../../access/helpers/require-permission';
 import { getAssetHistory } from '../use-cases/asset-history.usecase';
 import { retireAsset } from '../use-cases/retire-asset.usecase';
 import { unretireAsset } from '../use-cases/unretire-asset.usecase';
@@ -109,12 +104,12 @@ export const assetController = {
       trashable: false,
     });
 
-    return listAssets(query, filtros, temPermissao(request, 'assets.viewCost'));
+    return listAssets(query, filtros, temPapel(request, 'ADMIN'));
   },
 
   async byId(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return findAssetById(id, temPermissao(request, 'assets.viewCost'));
+    return findAssetById(id, temPapel(request, 'ADMIN'));
   },
 
   async history(request: FastifyRequest) {
@@ -167,14 +162,9 @@ export const assetController = {
     // A ALLOWLIST DE COLUNAS PASSA A SER FILTRADA PELA PERMISSÃO (D77, a
     // obrigação cruzada): sem isto o CSV é a porta dos fundos do custo que a
     // listagem acabou de fechar.
-    // OS CAMPOS CUSTOMIZADOS ENTRAM NA ALLOWLIST (F9, o item que esperava a F10):
-    // uma consulta, aqui, antes do primeiro byte — nunca por linha. Sem ela, o
-    // token `cf:<slug>` seria "coluna desconhecida" e a planilha nunca carregaria
-    // o que o cliente cadastrou.
     const escolhidas = colunasDoExport(
       tokensDeColuna(columns),
-      (permissao) => temPermissao(request, permissao as Parameters<typeof temPermissao>[1]),
-      await listarCamposParaCsv(),
+      (papel) => temPapel(request, papel as Parameters<typeof temPapel>[1]),
     );
     const { csvDelimiter } = await lerConfiguracaoDoSistema();
 
@@ -186,32 +176,6 @@ export const assetController = {
   async bySerial(request: FastifyRequest) {
     const { serial } = serialParamSchema.parse(request.params);
     return findAssetBySerial(serial);
-  },
-
-  /**
-   * O CONJUNTO DE CAMPOS CUSTOMIZADOS de um modelo (F9, D58).
-   *
-   * Por `?modelId=` e não por ativo: o formulário precisa dos campos no instante
-   * em que o usuário escolhe o modelo no `<select>`, ANTES de o ativo existir. É
-   * no cadastro que os campos obrigatórios mais importam.
-   */
-  async fieldset(request: FastifyRequest) {
-    const { modelId } = fieldsetQuerySchema.parse(request.query ?? {});
-    return resolveFieldset(prisma, modelId);
-  },
-
-  /**
-   * REVELAR um campo cifrado (F9, D62). GET, como o `/product-key` da F6.
-   *
-   * ⚠️ Ela GRAVA `ActivityLog` — é o ponto do sistema em que uma LEITURA é o
-   * fato auditável, porque um segredo revelado não pode ser "des-revelado". Um
-   * GET que escreve contraria o hábito de propósito, e a razão é a mesma da F6:
-   * a tela pede um valor, e a resposta certa a "quem viu isto?" só existe se o
-   * registro acontecer no mesmo caminho.
-   */
-  async revealCustomField(request: FastifyRequest) {
-    const { id, slug } = revealParamsSchema.parse(request.params);
-    return revealCustomField(id, slug, atorDaRequisicao(request));
   },
 
   async create(request: FastifyRequest, reply: FastifyReply) {
