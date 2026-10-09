@@ -41,23 +41,19 @@ export interface User {
 }
 
 /**
- * O que ainda prende a pessoa ao inventário — as QUATRO pontas da posse
+ * O que ainda prende a pessoa ao inventário — as TRÊS pontas da posse
  * (docs/referencia/modelo-de-posse.md), contadas separadas.
  *
- * Separadas porque se resolvem de jeitos diferentes: o ativo e o acessório se
- * devolvem, o assento volta ao contrato (ou QUEIMA, D43) e o posto se desocupa.
- * Uma soma só diria "5 pendências" e mandaria o operador procurar cinco
- * devoluções que não existem.
+ * Separadas porque se resolvem de jeitos diferentes: o ativo se devolve, o
+ * assento volta ao contrato (ou QUEIMA, D43) e o posto se desocupa. Uma soma só
+ * diria "5 pendências" e mandaria o operador procurar cinco devoluções que não
+ * existem.
  *
- * São as mesmas quatro que o 409 do `DELETE` devolve em `details`
- * (`user/use-cases/delete-user.usecase.ts`) — e é por isso que faltar uma aqui
- * não é cosmético: a tela que decidir pelo `details` enxergaria zero pendência
- * em quem só ocupa assento de licença.
+ * São as mesmas três que o 409 do `DELETE` devolve em `details`
+ * (`user/use-cases/delete-user.usecase.ts`).
  */
 export interface PosseAbertaDoUsuario {
   ativosEmPosse: number;
-  /** Unidades de acessório de alvo `USER` — só as DIRETAS, nunca as do posto (F5). */
-  acessoriosEmPosse: number;
   /** Assentos de licença de alvo `USER` — nunca os dos ativos dela (F6, D93). */
   assentosEmPosse: number;
   postosOcupados: number;
@@ -67,7 +63,7 @@ export interface PosseAbertaDoUsuario {
  * UM colaborador, como `GET /api/users/:id` o devolve — a tela de perfil.
  *
  * Tem dois campos que a LISTAGEM não traz, e a diferença é proposital: eles
- * existem para a tela de perfil e para o desligamento, e viajariam em cada
+ * existem para a tela de perfil, e viajariam em cada
  * linha de cada histórico se entrassem no `USER_PUBLIC_SELECT` do servidor.
  *
  * `terminatedAt` NÃO é lixeira. Quem saiu da empresa continua no cadastro, com

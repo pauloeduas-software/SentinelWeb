@@ -6,7 +6,6 @@ import TelemetryPage from './pages/telemetria';
 import AtivosPage from './pages/ativos';
 import AssetDetailPage from './pages/ativos/detalhe';
 import PostosPage from './pages/postos';
-import EstoquePage from './pages/estoque';
 import LicencasPage from './pages/licencas';
 import DescobertasPage from './pages/descobertas';
 import UsersPage from './pages/gestao-usuario';
@@ -64,21 +63,13 @@ function Layout() {
             <Route path="/ativos/:id" element={<AssetDetailPage />} />
             {/* AS ROTAS ANTIGAS, redirecionando. `/itam` era o nome da tela até a
                 F6; ele saiu porque "ITAM" é o nome do ASSUNTO do sistema inteiro,
-                não desta tela — que lista ATIVOS, como /estoque lista estoque e
-                /licencas lista licenças. O redirecionamento fica porque a URL
+                não desta tela — que lista ATIVOS, como /licencas lista licenças. O redirecionamento fica porque a URL
                 antiga JÁ SAIU daqui: todo e-mail de entrega e de atraso enviado
-                antes desta troca leva `/itam/assets/:id`
-                (`assignment/helpers/notificacao.helper.ts`, que agora emite o
-                caminho novo), e quem clicar num e-mail de mês passado tem que
-                chegar na tela, não num 404. */}
+                antes desta troca leva `/itam/assets/:id`, e quem colar uma URL
+                antiga tem que chegar na tela, não num 404. */}
             <Route path="/itam" element={<Navigate to="/ativos" replace />} />
             <Route path="/itam/assets/:id" element={<RedirecionarAtivo />} />
             <Route path="/postos" element={<PostosPage />} />
-            {/* O que tem QUANTIDADE: acessório, consumível, componente (F5).
-                Rota irmã de /ativos, e não uma aba dentro dela: um mouse não é um
-                ativo, e misturar os dois na mesma tabela daria metade das células
-                vazias (não há etiqueta nem série a mostrar). */}
-            <Route path="/estoque" element={<EstoquePage />} />
             <Route path="/licencas" element={<LicencasPage />} />
             {/* O QUE O AGENTE VÊ E O CADASTRO NÃO SABE (F7). A rota leva o nome
                 do que a tela LISTA — descobertas —, e não o do processo que roda

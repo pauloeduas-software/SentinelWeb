@@ -152,7 +152,7 @@ export function useLicencas() {
   // novo. O 409 daqui é escrito para ensinar, e engoli-lo transforma uma recusa
   // explicada numa tela que parece travada.
   //
-  // `alert` é o mesmo do `useEstoque`/`useAssets` — feio e consistente.
+  // `alert` é o mesmo do `useAssets` — feio e consistente.
   // ─────────────────────────────────────────────────────────────────────────
 
   const handleExcluir = async (licenca: Licenca) => {
