@@ -1,17 +1,16 @@
-import { useState } from 'react';
-import { Eye, KeyRound, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import AssentosGrade from './AssentosGrade';
 import ConformidadeLicenca from './ConformidadeLicenca';
 import HistoricoLicenca from './HistoricoLicenca';
 import {
-  useLicenseHistoryQuery, useLicenseQuery, useLicenseSeatsQuery, useRevealProductKey,
+  useLicenseHistoryQuery, useLicenseQuery, useLicenseSeatsQuery,
 } from '../../../domain/license/license.queries';
 import type { Licenca } from '../../../domain/shared/license.types';
 import type { AvisoDeQueima } from '../hooks/useLicencas';
 import { corDoStatus, textoDoPrazo } from '../helpers/licenca.helper';
 import { formatarMoeda } from '../../helpers/format.helper';
 
-// O DETALHE DA LICENÇA: a grade de assentos e a chave mascarada.
+// O DETALHE DA LICENÇA: a grade de assentos e o histórico.
 //
 // ═════════════════════════════════════════════════════════════════════════════
 // A CHAVE REVELADA VIVE EM `useState`, NUNCA NO CACHE.
@@ -54,34 +53,9 @@ export default function LicencaDetalheModal({ licenca, onClose, onDevolver }: Li
   // abaixo traz a MÁSCARA e as contagens frescas logo em seguida.
   const { data: detalhe } = useLicenseQuery(licenca.id);
   const { data: assentos } = useLicenseSeatsQuery(licenca.id);
-  // A trilha na MESMA janela, e não numa aba separada: quem revela uma chave
-  // precisa ver, logo abaixo, que a revelação foi registrada — é o que torna o
-  // aviso verdadeiro em vez de ameaça vazia.
   const { data: eventos, isPending: historicoPendente } = useLicenseHistoryQuery(licenca.id);
-  const revelar = useRevealProductKey();
-
-  const [chave, setChave] = useState<string | null>(null);
-  const [erroDaChave, setErroDaChave] = useState('');
 
   const atual = detalhe ?? licenca;
-
-  const handleRevelar = async () => {
-    setErroDaChave('');
-    const ok = window.confirm(
-      'Revelar a chave de produto fica REGISTRADO no histórico desta licença, '
-      + 'com o seu nome e a data.\n\nContinuar?',
-    );
-    if (!ok) return;
-
-    try {
-      const resposta = await revelar.mutateAsync(licenca.id);
-      setChave(resposta.productKey);
-    } catch (falha) {
-      // É aqui que aparece o erro de criptografia — chave do ambiente trocada,
-      // ou valor que não pertence a este registro.
-      setErroDaChave((falha as Error).message);
-    }
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
@@ -113,45 +87,6 @@ export default function LicencaDetalheModal({ licenca, onClose, onDevolver }: Li
             <Campo rotulo="Ocupados">{atual.ocupados}</Campo>
             <Campo rotulo="Queimados"><span className={atual.queimados > 0 ? 'text-status-danger' : ''}>{atual.queimados}</span></Campo>
             <Campo rotulo="Aposentados">{atual.aposentados}</Campo>
-          </div>
-
-          {/* A CHAVE */}
-          <div className="border border-border-sutil p-4 space-y-2">
-            <span className={ROTULO}>Chave de produto</span>
-            {!atual.hasProductKey ? (
-              <p className="text-text-tertiary">Nenhuma chave cadastrada.</p>
-            ) : (
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="text-text-primary tracking-widest">
-                  {chave ?? atual.productKeyMask ?? '— (indisponível)'}
-                </span>
-                {chave === null && (
-                  <button
-                    type="button"
-                    onClick={() => void handleRevelar()}
-                    disabled={revelar.isPending}
-                    className="flex items-center gap-2 px-3 py-1.5 border border-border-sutil text-text-tertiary hover:border-text-primary hover:text-text-primary uppercase tracking-widest transition-colors disabled:opacity-50"
-                  >
-                    <Eye size={12} /> {revelar.isPending ? 'Revelando…' : 'Revelar'}
-                  </button>
-                )}
-                {chave !== null && (
-                  <span className="flex items-center gap-1.5 text-[10px] text-status-warning">
-                    <KeyRound size={11} /> visível só nesta janela · registrado no histórico
-                  </span>
-                )}
-              </div>
-            )}
-            {erroDaChave && <p className="text-status-danger text-[10px]">{erroDaChave}</p>}
-            {atual.hasProductKey && atual.productKeyMask === null && chave === null && !erroDaChave && (
-              // A máscara vem nula quando o chaveiro não abre o valor. A tela
-              // continua funcionando — mas precisa dizer por quê, senão o campo
-              // parece vazio sem motivo.
-              <p className="text-[10px] text-status-warning leading-relaxed">
-                A máscara não pôde ser calculada: a chave de criptografia do servidor não abre
-                este valor. Revelar mostrará o erro exato.
-              </p>
-            )}
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -99,7 +99,6 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   'POST /api/licenses/:id/restore': 'ADMIN',
   'POST /api/licenses/:id/checkout-seat': 'TECNICO',
   'POST /api/licenses/seats/:id/checkin': 'TECNICO',
-  'GET /api/licenses/:id/product-key': 'ADMIN',
   'GET /api/accessories': 'TECNICO',
   'GET /api/accessories/:id': 'TECNICO',
   'GET /api/accessories/:id/checkouts': 'TECNICO',

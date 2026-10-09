@@ -13,23 +13,6 @@ import {
 /** Teto de assentos por contrato. Acima disso é carga, não operação de tela. */
 const MAX_ASSENTOS = 100_000;
 
-/**
- * A CHAVE DE PRODUTO, como ela ENTRA. Ela nunca sai por aqui.
- *
- * ─────────────────────────────────────────────────────────────────────────────
- * O `''` VIRA `null` E É ISSO QUE APAGA A CHAVE.
- *
- * Sem o tratamento, limpar o campo no formulário mandaria string vazia e o
- * use-case cifraria `""` — uma chave "preenchida" que não é chave nenhuma, com
- * `hasProductKey: true` e uma máscara vazia na tela. Apagar precisa ser
- * possível e precisa ser explícito: `null` apaga, ausente não mexe.
- * ─────────────────────────────────────────────────────────────────────────────
- */
-const chaveDeProduto = z.string().trim()
-  .max(200, 'chave de produto: máximo de 200 caracteres')
-  .nullish()
-  .transform((valor) => (valor === undefined ? undefined : valor || null));
-
 const assentosObrigatorios = z.coerce.number('total de assentos deve ser um número')
   .int('total de assentos deve ser um número inteiro')
   .min(0, 'total de assentos não pode ser negativo')
@@ -62,7 +45,6 @@ const camposComuns = {
   licensedToName: textoOpcional('licenciado para', 200),
   licensedToEmail: emailOpcional,
 
-  productKey: chaveDeProduto,
   minSeats: minimoOpcional,
 
   manufacturerId: uuidOpcional('fabricante'),

@@ -46,7 +46,6 @@ interface LicencaLida {
   status: string;
   diasParaVencer: number | null;
   livres: number;
-  productKeyMask: string | null;
 }
 
 async function lerStatus(id: string): Promise<LicencaLida> {
@@ -228,29 +227,6 @@ describe('o alerta de assentos abaixo do mínimo', () => {
     // categorias e ninguém saberia que o filtro não pegou.
     expect((await api.get('/api/licenses/alerts?tipo=vencerndo')).status).toBe(422);
     expect((await api.get('/api/licenses/alerts?tip=vencendo')).status).toBe(422);
-  });
-});
-
-describe('a máscara da chave', () => {
-  it('preserva a pontuação e revela só os quatro últimos', async () => {
-    const licenca = await criarLicenca(api, {
-      name: 'Com chave longa', categoryId: cenario.categoriaLicencaId, seatsTotal: 1,
-      productKey: 'AAAA-BBBB-CCCC-AB12',
-    });
-
-    expect((await lerStatus(licenca.id)).productKeyMask).toBe('••••-••••-••••-AB12');
-  });
-
-  it('chave curta demais para esconder algo sai INTEIRA mascarada', async () => {
-    // Mostrar "AB12" de uma chave que É "AB12" seria revelar o segredo com
-    // aparência de máscara — pior que não mascarar, porque quem lê a tela
-    // acredita que não está vendo.
-    const licenca = await criarLicenca(api, {
-      name: 'Com chave curta', categoryId: cenario.categoriaLicencaId, seatsTotal: 1,
-      productKey: 'AB12',
-    });
-
-    expect((await lerStatus(licenca.id)).productKeyMask).toBe('••••');
   });
 });
 

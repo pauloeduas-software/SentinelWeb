@@ -3,11 +3,6 @@
 // ⚠️ `purchaseCost` é STRING, e não `number` — a coluna é `Decimal` no Postgres
 // e o JSON a serializa assim. É a armadilha nº 7 da F1, pela quarta vez.
 //
-// ⚠️ `productKey` NÃO EXISTE neste arquivo, e a ausência é a regra: a chave só
-// sai por `GET /api/licenses/:id/product-key`, que tem tipo próprio lá embaixo.
-// Declará-la aqui convidaria alguém a tentar lê-la de uma listagem, onde ela
-// nunca esteve.
-
 export interface ReferenciaNomeada {
   id: string;
   name: string;
@@ -78,10 +73,6 @@ export interface Licenca {
   /** `livres < minSeats`. Falso quando não há piso. */
   assentosBaixos: boolean;
 
-  /** Tem chave gravada? Basta para decidir se a tela oferece "revelar". */
-  hasProductKey: boolean;
-  /** `••••-••••-••••-AB12`. Só no DETALHE — na listagem vem `null`. */
-  productKeyMask: string | null;
 }
 
 export interface PessoaDoAssento {
@@ -137,12 +128,6 @@ export interface ResultadoDaDevolucao {
 /** O que a entrega responde. */
 export interface EntregaDeAssento extends OcupacaoDeAssento {
   seatNumber: number;
-}
-
-/** A ÚNICA forma da chave em claro no frontend. Nunca guardada, só exibida. */
-export interface ChaveRevelada {
-  licenseId: string;
-  productKey: string;
 }
 
 /**
@@ -237,7 +222,7 @@ export interface LicencaDoAtivo {
   };
 }
 
-/** O corpo do formulário. `productKey` entra aqui e nunca volta. */
+/** O corpo do formulário. */
 export interface LicencaInput {
   name: string;
   categoryId: string;
@@ -248,7 +233,6 @@ export interface LicencaInput {
   terminationDate?: string | null;
   licensedToName?: string | null;
   licensedToEmail?: string | null;
-  productKey?: string | null;
   minSeats?: number | null;
   manufacturerId?: string | null;
   supplierId?: string | null;

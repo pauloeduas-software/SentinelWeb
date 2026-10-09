@@ -46,12 +46,6 @@ export class LicenseMaestro {
     server.get('/api/licenses/:id/seats', licenseController.seats);
     server.get('/api/licenses/:id/history', licenseController.history);
 
-    // A ÚNICA porta por onde a chave de produto sai — e ela grava `VIEW_KEY` na
-    // mesma transação da leitura. `WRITE_RATE_LIMIT` num GET de propósito: o
-    // teto aqui não protege o servidor, protege o SEGREDO. Uma varredura que
-    // revelasse todas as chaves da base é o ataque que esta rota permitiria, e
-    // 40/min é o que separa uso humano de varredura.
-    server.get('/api/licenses/:id/product-key', WRITE_RATE_LIMIT, licenseController.productKey);
 
     server.post('/api/licenses', WRITE_RATE_LIMIT, licenseController.create);
     server.put('/api/licenses/:id', WRITE_RATE_LIMIT, licenseController.update);

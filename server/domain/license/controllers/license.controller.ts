@@ -9,7 +9,6 @@ import {
   createLicenseSchema, updateLicenseSchema,
 } from '../schemas/license.schema';
 import { listLicenses } from '../use-cases/list-licenses.usecase';
-import { temPapel } from '../../access/helpers/require-permission';
 import { getLicense } from '../use-cases/get-license.usecase';
 import { createLicense } from '../use-cases/create-license.usecase';
 import { updateLicense } from '../use-cases/update-license.usecase';
@@ -18,7 +17,6 @@ import { restoreLicense } from '../use-cases/restore-license.usecase';
 import { listLicenseSeats } from '../use-cases/list-license-seats.usecase';
 import { checkoutSeat } from '../use-cases/checkout-seat.usecase';
 import { checkinSeat } from '../use-cases/checkin-seat.usecase';
-import { revealProductKey } from '../use-cases/reveal-product-key.usecase';
 import { listLicenseHistory } from '../use-cases/license-history.usecase';
 import { listAssetSeats } from '../use-cases/list-asset-seats.usecase';
 
@@ -46,20 +44,20 @@ export const licenseController = {
 
   async byId(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return getLicense(id, undefined, temPapel(request, 'ADMIN'));
+    return getLicense(id);
   },
 
 
   async create(request: FastifyRequest, reply: FastifyReply) {
     const data = createLicenseSchema.parse(request.body ?? {});
-    const licenca = await createLicense(data, atorDaRequisicao(request), temPapel(request, 'ADMIN'));
+    const licenca = await createLicense(data, atorDaRequisicao(request));
     return reply.status(201).send(licenca);
   },
 
   async update(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     const data = updateLicenseSchema.parse(request.body ?? {});
-    return updateLicense(id, data, atorDaRequisicao(request), temPapel(request, 'ADMIN'));
+    return updateLicense(id, data, atorDaRequisicao(request));
   },
 
   async remove(request: FastifyRequest, reply: FastifyReply) {
@@ -70,7 +68,7 @@ export const licenseController = {
 
   async restore(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return restoreLicense(id, atorDaRequisicao(request), temPapel(request, 'ADMIN'));
+    return restoreLicense(id, atorDaRequisicao(request));
   },
 
   /** A grade de assentos: livre · pessoa · ativo · queimado · aposentado. */
@@ -101,12 +99,6 @@ export const licenseController = {
     const { id } = idParamSchema.parse(request.params);
     const data = checkinSeatSchema.parse(request.body ?? {});
     return checkinSeat(id, data, atorDaRequisicao(request));
-  },
-
-  /** Revela a chave — e grava `VIEW_KEY` na MESMA transação. */
-  async productKey(request: FastifyRequest) {
-    const { id } = idParamSchema.parse(request.params);
-    return revealProductKey(id, atorDaRequisicao(request));
   },
 
   async history(request: FastifyRequest) {
