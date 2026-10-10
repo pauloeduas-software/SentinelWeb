@@ -44,10 +44,10 @@ function valoresIniciais(asset: Asset | null, clonar: boolean, statusPadraoId: s
     assetTag: clonar ? '' : asset?.assetTag ?? '',
     serial: clonar ? '' : asset?.serial ?? '',
     name: asset?.name ?? '',
-    // Ativo NOVO nasce "Disponível" (o id vem do hook da página): o primeiro
-    // da lista alfabética era "Aguardando", e o cadastro mais comum — chegou,
-    // está no estoque — exigia trocar o campo toda vez. Edição e clone mantêm
-    // o status do ativo de origem.
+    // Ativo NOVO nasce com o status de tipo "Disponível" (`DEPLOYABLE`; o id
+    // vem do hook da página): o primeiro da lista alfabética era "Aguardando",
+    // e o cadastro mais comum — chegou, está no estoque — exigia trocar o campo
+    // toda vez. Edição e clone mantêm o status do ativo de origem.
     statusId: asset?.statusId ?? statusPadraoId,
     modelId: asset?.modelId ?? '',
     locationId: asset?.locationId ?? '',
