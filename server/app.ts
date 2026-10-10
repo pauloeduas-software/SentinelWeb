@@ -32,6 +32,7 @@ import { UserMaestro } from './domain/user/user.maestro';
 import { AssignmentMaestro } from './domain/assignment/assignment.maestro';
 import { OccupancyMaestro } from './domain/occupancy/occupancy.maestro';
 import { WorkstationMaestro } from './domain/workstation/workstation.maestro';
+import { StockMaestro } from './domain/stock/stock.maestro';
 import { LicenseMaestro } from './domain/license/license.maestro';
 import { buildReadinessReport, checkDependencies } from './core/lifecycle/health';
 import { countAgentsOnline } from './domain/agent/agent.registry';
@@ -244,6 +245,9 @@ export async function buildApp(
   // Posto vem por ÚLTIMO da fatia de posse: ele só lê o que os três acima
   // escrevem (localização, posse e ocupação), e nada depende dele.
   await WorkstationMaestro.setupRoutes(server);
+  // ESTOQUE depois da posse: a saída de uma unidade aponta para pessoa e posto,
+  // e a ficha do posto lê as unidades entregues a ele.
+  await StockMaestro.setupRoutes(server);
   // LICENÇA depois de posse: as rotas dela pendem de `/api/assets/:id` (a aba
   // Licenças), e registrar na ordem em que o conceito nasce é o que mantém o
   // arquivo legível (docs/historico/fase-06-licencas.md).
