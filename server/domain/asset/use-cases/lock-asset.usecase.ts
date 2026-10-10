@@ -23,10 +23,27 @@ import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
 // não existe — o ponto cego do soft delete que o `deleteUser` também documenta.
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// O GRAFO DE TRAVAS do sistema é acíclico, e é o que impede duas transações de
-// travarem os mesmos dois recursos em ordens opostas — o Postgres mata uma
-// delas. Hoje há dois caminhos, e os dois travam na mesma ordem
-// `usuário → ativo`: o checkout de ativo e a entrega de assento de licença.
+// O GRAFO DE TRAVAS do sistema, e por que a ORDEM é sempre `usuário → ativo →
+// posto`. Duas transações que travam os mesmos dois recursos em ordens opostas
+// travam uma à outra, e o Postgres mata uma com `40P01` — que o `error-handler`
+// não mapeia e devolve como 500.
+//
+//   usuário → ativo   o checkout a pessoa, e a entrega de assento a pessoa
+//   ativo → posto     o checkout a posto e o vínculo de máquina, pela
+//                     invariante 19 (`workstation/helpers/computador-do-posto.helper.ts`)
+//   ativo             o soft delete do ativo, e a entrega de assento a ativo
+//
+// E AS TRAVAS QUE O POSTGRES TOMA SOZINHO CONTAM. `update-asset.usecase.ts`
+// grava `locationId`: o `UPDATE` trava a linha do ativo e o gatilho da FK
+// `assets.locationId` adquire `FOR KEY SHARE` na linha do local — que conflita
+// com `FOR UPDATE`. É uma aresta `ativo → posto` que nenhum `grep` por
+// `FOR UPDATE` mostra, e foi ela que obrigou a invariante 19 a travar o ativo
+// ANTES do posto. Uma aresta implícita assim existe em toda FK escrita.
+//
+// Este arquivo não é o inventário completo das travas — o domínio de licença
+// trava `licenses` e `license_seats` por conta própria (`license-seats.helper.ts`).
+// É o inventário de quem disputa USUÁRIO, ATIVO e POSTO, que são as três linhas
+// que mais de um domínio pede.
 
 /**
  * Trava a linha do ativo até o fim da transação atual.
