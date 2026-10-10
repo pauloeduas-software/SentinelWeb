@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-// O hwid é a identidade da máquina, gerada pelo agente C# — não é uuid, então
-// tem schema próprio em vez do `idParamSchema` compartilhado.
+// O hwid é a identidade da máquina, derivada do hardware pelo agente. NÃO é
+// uuid, então ele tem schema próprio em vez do `idParamSchema` compartilhado.
 export const hwidParamSchema = z.strictObject({
   hwid: z.string('hwid é obrigatório').trim().min(1, 'hwid não pode ser vazio').max(256, 'hwid: máximo de 256 caracteres'),
 });

@@ -29,8 +29,6 @@ import { useAuthStore, usePermissoes } from '../../domain/auth/auth.store';
 export default function AppSidebar() {
   const location = useLocation();
   const { recolhida, abertaNoCelular, alternarRecolhida, fecharNoCelular } = useBarraLateral();
-  // A marca sai da configuração de sistema; a query é compartilhada com o
-  // `Layout` e com o cabeçalho, então ler aqui não dobra requisição nenhuma.
   const usuario = useAuthStore((estado) => estado.usuario);
   const sair = useAuthStore((estado) => estado.sair);
   // `usePermissoes` e não `usePode` por item: o número de itens é variável, e um
@@ -132,7 +130,7 @@ export default function AppSidebar() {
             <div key={grupo.titulo ?? indice} className={indice > 0 ? 'mt-5' : ''}>
               {/* O título da seção desaparece quando a barra está recolhida —
                   em 64px não cabe texto. No lugar dele, uma linha: sem nenhuma
-                  marca, os quinze ícones viram uma coluna sem hierarquia. */}
+                  marca, os ícones viram uma coluna sem hierarquia. */}
               {grupo.titulo && (
                 recolhida ? (
                   <div className="mx-4 mb-2 border-t border-border-sutil" />
@@ -156,8 +154,7 @@ export default function AppSidebar() {
                       'flex items-center gap-3 px-4 py-2 transition-colors',
                       // A BARRA DE 2px À ESQUERDA é o que marca o ativo, e ela
                       // existe nos dois modos — recolhida, a cor do ícone
-                      // sozinha é fraca demais para achar a tela atual numa
-                      // coluna de quinze.
+                      // sozinha é fraca demais para achar a tela atual.
                       ativo
                         ? 'border-l-2 border-status-success bg-surface-card text-status-success'
                         : 'border-l-2 border-transparent text-text-tertiary hover:bg-surface-card hover:text-text-primary',

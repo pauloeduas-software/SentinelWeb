@@ -26,7 +26,7 @@ export interface Telemetry {
   /** Bytes. Ver `ramTotal`. */
   ramUsed: string;
   /**
-   * Colunas Json do Postgres: o formato exato depende da versão do agente C#
+   * Colunas Json do Postgres: o formato exato depende da versão do agente
    * que gravou a amostra. A leitura passa pelos parsers de
    * `pages/telemetria/helpers/metrics.helper.ts`, que toleram as variações.
    */

@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// A máquina descoberta pelo Agente Sentinel (C#) — o lado RMM.
+// A máquina descoberta pelo Agente Sentinel — o lado RMM.
 //
 // Chamava-se `Asset` até a Fase 1. O nome foi liberado para o ativo do ITAM, que
 // é o `Asset` do vocabulário do Snipe-IT. Aqui nenhuma coluna pode voltar a se
@@ -38,7 +38,7 @@ model Endpoint {
   macAddress String?
 
   // ── IDENTIDADE COLETADA (F7, Etapa A) ────────────────────────────────────
-  // Tudo nulável: o agente C# vive fora deste repositório e o rollout leva
+  // Tudo nulável: o agente vive fora deste repositório e o rollout leva
   // semanas. Máquina que não manda serial não pontua por serial — não vira erro.
   biosSerial    String?
   systemUuid    String?
@@ -243,7 +243,7 @@ model ActivityLog {
 // de soft delete descobre a lixeira pela PRESENÇA da coluna, então a ausência é
 // o opt-out. A proteção aqui é o 409 por uso — que é o que o Snipe-IT realmente
 // faz ao recusar apagar categoria com item associado. Manter lixeira no catálogo
-// custaria sete índices únicos parciais, o `upsert` do seed e uma camada de
+// custaria um índice único parcial por tabela, o `upsert` do seed e uma camada de
 // apresentação para esconder relação apagada (a extension não alcança leitura
 // aninhada — verificado).
 // ============================================================================
@@ -361,16 +361,6 @@ model AssetModel {
 
   manufacturerId String @db.Uuid
   categoryId     String @db.Uuid
-
-  // A REGRA DE DEPRECIAÇÃO, e ela pendura AQUI (F8, Etapa C).
-  //
-  // No modelo e não no ativo, por dois motivos que se reforçam: `Asset` não tem
-  // `categoryId` (a categoria vem daqui), e vida útil contábil é característica
-  // do EQUIPAMENTO — todo notebook daquele modelo deprecia igual. É também onde
-  // o Snipe-IT a pendura.
-  //
-  // Nulável de propósito: a maioria dos modelos nunca terá regra, e valor
-  // contábil sem regra é `null`, nunca zero (D55).
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -751,7 +741,7 @@ model AppSetting {
 }
 
 // ============================================================================
-// LICENÇAS DE SOFTWARE — docs/FASE-6-EXECUCAO-ITAM.md (D39–D94)
+// LICENÇAS DE SOFTWARE — docs/historico/fase-06-licencas.md (D39–D94)
 //
 // O que a licença tem e o ativo não tem é ASSENTO: ela não é entregue, é
 // consumida N vezes. Três decisões desenham as tabelas:

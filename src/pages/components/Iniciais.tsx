@@ -1,4 +1,4 @@
-// O AVATAR DO COLABORADOR — iniciais geradas, sem upload (F11).
+// O AVATAR DO COLABORADOR — iniciais geradas.
 //
 // ═══════════════════════════════════════════════════════════════════════════
 // POR QUE INICIAIS E NÃO FOTO, e por que isto não é "a primeira metade" de um

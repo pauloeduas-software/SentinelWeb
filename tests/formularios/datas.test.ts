@@ -13,7 +13,7 @@ import { cenarioDePosse, criarAtivo, criarColaborador, criarLocal } from '../hel
 //               ninguém vê no posto, e bloquearia o cadastro de quem está lá.
 //
 //   devolução   recusa o PASSADO — uma entrega com prazo para ontem NASCE
-//   prevista    vencida: entra em `/api/assignments/overdue` no mesmo segundo
+//   prevista    vencida: o prazo expira no mesmo segundo em que o
 //               e, com o lembrete automático da Leva 3, cobraria de volta o
 //               que acabou de sair do estoque.
 //

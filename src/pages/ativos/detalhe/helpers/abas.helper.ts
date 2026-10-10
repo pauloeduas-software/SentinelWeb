@@ -6,12 +6,11 @@ import { History, Info, KeyRound, MonitorSmartphone, Users } from 'lucide-react'
 // que exporta componente E constante quebra o fast refresh do Vite (o lint
 // reprova). O componente que as desenha é `components/AssetTabs.tsx`.
 //
-// TODAS NASCEM, e as que ainda não existem aparecem
-// DESABILITADAS dizendo em que fase chegam. Não é enfeite: aba ausente e aba
-// vazia são indistinguíveis de defeito para quem usa o sistema — "cadê os
-// componentes deste notebook?" não tem resposta se a aba não estiver lá. Com a
-// fase escrita, a pergunta se responde sozinha e a moldura da tela não muda
-// quando a fase chegar: some o `fase`, entra o conteúdo.
+// TODAS NASCEM, e as que ainda não existem aparecem DESABILITADAS dizendo em
+// que fase chegam. Não é enfeite: aba ausente e aba vazia são indistinguíveis de
+// defeito para quem usa o sistema. Hoje as cinco estão com `fase: null` — o
+// mecanismo fica para a próxima aba, e é ele que faz a moldura da tela não mudar
+// quando ela chegar: some o `fase`, entra o conteúdo.
 
 export type AbaId =
   | 'detalhes' | 'posse' | 'historico'

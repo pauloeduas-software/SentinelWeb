@@ -8,19 +8,19 @@ import {
 // ═══════════════════════════════════════════════════════════════════════════
 // POR QUE SAIU DO CABEÇALHO (e por que isto é correção de defeito, não enfeite).
 //
-// Os itens moravam numa `<nav>` horizontal dentro do `<header>`. Com catorze
-// deles, a barra passava de 1500px de conteúdo: o `<header>` ficava mais largo
-// que a janela, e como ele é `sticky`, a PÁGINA INTEIRA ganhava barra de rolagem
-// horizontal — em toda tela, inclusive nas que não têm tabela larga. Rolar para
-// o lado para achar um link de menu é o sintoma; a causa era a barra competir
-// por largura com o conteúdo.
+// Os itens moravam numa `<nav>` horizontal dentro do `<header>`. O menu era bem
+// maior antes do corte de escopo, e com catorze deles a barra passava de 1500px
+// de conteúdo: o `<header>` ficava mais largo que a janela, e como ele é
+// `sticky`, a PÁGINA INTEIRA ganhava barra de rolagem horizontal — em toda tela,
+// inclusive nas que não têm tabela larga. Rolar para o lado para achar um link de
+// menu é o sintoma; a causa era a barra competir por largura com o conteúdo.
 //
 // E abaixo de `md` a `<nav>` era `hidden`: no celular e na janela estreita não
 // havia navegação NENHUMA — só o logo e o botão de sair. O menu não ficava
 // apertado, ele desaparecia.
 //
-// Na vertical o número de itens para de ser um problema de largura: quinze
-// cabem numa coluna de 220px, e a lista cresce para baixo, onde há espaço.
+// Na vertical o número de itens para de ser um problema de largura: eles cabem
+// numa coluna de 220px, e a lista cresce para baixo, onde há espaço.
 // ═══════════════════════════════════════════════════════════════════════════
 
 export interface ItemDeMenu {
@@ -31,8 +31,8 @@ export interface ItemDeMenu {
    * A chave que a tela deste item exige (F11).
    *
    * É a MESMA que o servidor exige na rota principal da tela — não uma segunda
-   * regra. O item sem a chave não é desenhado: um *Importar* que leva a uma tela
-   * que não carrega é pior do que um menu com um item a menos.
+   * regra. O item sem a chave não é desenhado: um item que leva a uma tela que
+   * não carrega é pior do que um menu com um item a menos.
    *
    * ⚠️ Esconder NÃO protege: a autorização é o `preHandler` do servidor
    * (`server/core/http/permission-guard.ts`), que recusa a requisição antes de
@@ -57,10 +57,10 @@ export interface GrupoDeMenu {
 
 // OS GRUPOS SÃO O QUE A VERTICAL PERMITIU E A HORIZONTAL NÃO.
 //
-// Em linha, quinze links eram uma fila sem hierarquia: "Etiquetas" ficava do
-// lado de "Config" por ter sobrado ali. Em coluna há onde escrever o título da
-// seção, e a ordem passa a dizer algo — operação diária em cima, sistema
-// embaixo, porque é essa a frequência de uso.
+// Em linha, os links eram uma fila sem hierarquia: o último entrava ao lado de
+// "Config" por ter sobrado ali. Em coluna há onde escrever o título da seção, e
+// a ordem passa a dizer algo — operação diária em cima, sistema embaixo, porque
+// é essa a frequência de uso.
 export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
   {
     titulo: 'Operação',
@@ -116,7 +116,7 @@ export function itemEstaAtivo(to: string, caminho: string): boolean {
  * O nome da tela atual, para o cabeçalho.
  *
  * O item MAIS específico ganha: `/users/:id` casa `/users`, e se um dia houver
- * `/users/grupos` as duas casariam — a mais longa é a certa.
+ * `/users/algo` as duas casariam — a mais longa é a certa.
  */
 export function nomeDaTela(caminho: string): string | null {
   const casados = ITENS_DE_MENU.filter((item) => itemEstaAtivo(item.to, caminho));

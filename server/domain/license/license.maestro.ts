@@ -19,14 +19,14 @@ const logger = createLogger('license.maestro');
 // `/api/licenses/seats/:seatId/checkin` antes de `/api/licenses/:id/...`. O
 // find-my-way prefere o literal ao parâmetro sozinho, mas manter a ordem aqui é
 // o que deixa isso óbvio para quem acrescentar a próxima — foi a mesma regra
-// que o `stock.maestro.ts` fixou na F5.
+// que vale para todo maestro desta casa.
 export class LicenseMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
     // ── OS DOIS SINAIS, numa rota só ───────────────────────────────────────
     //
     // ANTES de `/:id` de propósito (ver o bloco acima). O tipo é FILTRO e não
     // rota separada porque os dois alertas valem para a mesma tela — a mesma
-    // escolha do `/api/stock/alerts` da F5.
+    // escolha de quem lê os dois no mesmo painel.
     server.get('/api/licenses/alerts', async (request: FastifyRequest) => {
       const { tipo } = alertasQuerySchema.parse(request.query ?? {});
       return listLicenseAlerts(tipo);
@@ -45,7 +45,6 @@ export class LicenseMaestro {
     server.get('/api/licenses/:id', licenseController.byId);
     server.get('/api/licenses/:id/seats', licenseController.seats);
     server.get('/api/licenses/:id/history', licenseController.history);
-
 
     server.post('/api/licenses', WRITE_RATE_LIMIT, licenseController.create);
     server.put('/api/licenses/:id', WRITE_RATE_LIMIT, licenseController.update);

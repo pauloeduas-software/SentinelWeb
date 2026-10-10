@@ -34,11 +34,6 @@ export function rotuloDoMotivo(motivo: MotivoDaSaida | null | undefined): string
   return MOTIVOS_DA_SAIDA.find((opcao) => opcao.value === motivo)?.label ?? motivo;
 }
 
-/** Saiu do patrimônio? É a pergunta que decide entre "Descomissionar" e "Reverter". */
-export function estaDescomissionado(asset: Pick<Asset, 'retiredAt'> | null | undefined): boolean {
-  return asset?.retiredAt != null;
-}
-
 /**
  * "Vendido em 10/09/2026" — o selo da linha e do cabeçalho do detalhe.
  *

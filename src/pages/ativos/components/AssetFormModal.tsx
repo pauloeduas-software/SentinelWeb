@@ -33,17 +33,11 @@ const ROTULO = 'text-text-secondary uppercase tracking-widest text-[10px]';
  *
  * As duas são ÚNICAS entre os vivos (índice parcial no banco): copiadas, o
  * servidor responderia 409 e o clone nunca gravaria. Todo o resto — modelo,
- * fornecedor, valor, garantia, notas — é justamente o que se quer repetir ao
- * cadastrar o segundo notebook do mesmo lote.
+ * localização, valor, notas — é justamente o que se quer repetir ao cadastrar o
+ * segundo notebook do mesmo lote.
  *
  * A posse NÃO é copiada porque nem está aqui: entregar é operação, não campo
- * (docs/referencia/modelo-de-posse.md). Um clone nasce no estoque, como deve.
- *
- * OS CAMPOS CUSTOMIZADOS SÃO COPIADOS, e o segredo NÃO — sem código para isso.
- * O clone carrega a máscara `••••••` dos campos cifrados, e o servidor a lê como
- * "não mexi"; num ativo NOVO não há valor anterior para manter, então o campo
- * nasce vazio. Um segredo que se clona junto com a etiqueta é o oposto do que
- * cifrar em repouso existe para garantir.
+ * (docs/referencia/modelo-de-posse.md). Um clone nasce sem posse, como deve.
  */
 function valoresIniciais(asset: Asset | null, clonar: boolean) {
   return {
@@ -61,10 +55,8 @@ function valoresIniciais(asset: Asset | null, clonar: boolean) {
     byod: asset?.byod ?? false,
     requestable: asset?.requestable ?? false,
     notes: asset?.notes ?? '',
-    // `slug` → valor, como a leitura os devolve (cifrado já vem mascarado).
   };
 }
-
 
 interface AssetFormModalProps {
   asset: Asset | null;
@@ -90,11 +82,8 @@ export default function AssetFormModal({ asset, clonar = false, onClose, onSubmi
   // furaria a sequência de etiquetas.
   const { data: proxima } = useNextAssetTagQuery(!asset || clonar);
 
-
-
   const definir = (campo: string, valor: unknown) =>
     setValores((atual) => ({ ...atual, [campo]: valor }));
-
 
   const enviar = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -104,9 +93,6 @@ export default function AssetFormModal({ asset, clonar = false, onClose, onSubmi
       await onSubmit(valores);
     } catch (falha) {
       setErro((falha as Error).message);
-      // O resumo do 422 corta em três campos com "(e mais N)": num conjunto de
-      // vinte campos customizados, o motivo do vigésimo não apareceria em lugar
-      // nenhum sem este mapa.
     } finally {
       setSalvando(false);
     }

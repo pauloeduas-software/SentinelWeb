@@ -75,13 +75,12 @@ function validateJwtSecret(): void {
   logger.warn(`[Env] JWT_SECRET fraco: ${fraco}. Aceito só em desenvolvimento. ${comoGerar}`);
 }
 
-
 // Chave que assina o JWT da sessão (cookie httpOnly — docs/historico/fase-03-autenticacao-e-ator.md, D22).
 export function getJwtSecret(): string {
   return (process.env.JWT_SECRET ?? '').replace(/^"|"$/g, '').trim();
 }
 
-// Segredo compartilhado com o Agente Sentinel (C#). Vazio = sem autenticação,
+// Segredo compartilhado com o Agente Sentinel. Vazio = sem autenticação,
 // aceito apenas fora de produção (ver validateEnv).
 export function getAgentToken(): string {
   return (process.env.AGENT_TOKEN ?? '').replace(/^"|"$/g, '').trim();

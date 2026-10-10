@@ -10,7 +10,7 @@ const categoria: CatalogUiSpec = {
   slug: 'categories',
   aba: 'Categorias',
   singular: 'Categoria',
-  descricao: 'O NOME é seu. O TIPO diz a que módulo a categoria pertence — uma categoria de Ativo não agrupa licenças. Aqui também se define se a entrega exige aceite do colaborador.',
+  descricao: 'O NOME é seu. O TIPO diz a que módulo a categoria pertence — uma categoria de Ativo não agrupa licenças.',
   placeholderBusca: 'Buscar categoria...',
   colunas: [
     { key: 'name', label: 'Nome', render: 'cor' },
@@ -69,7 +69,7 @@ const modelo: CatalogUiSpec = {
   slug: 'asset-models',
   aba: 'Modelos',
   singular: 'Modelo',
-  descricao: 'O catálogo de equipamentos. O ativo herda daqui a categoria e a vida útil.',
+  descricao: 'O catálogo de equipamentos. O ativo herda daqui a categoria.',
   placeholderBusca: 'Buscar modelo ou número...',
   colunas: [
     { key: 'name', label: 'Modelo' },
@@ -118,15 +118,13 @@ const localizacao: CatalogUiSpec = {
     { key: 'notes', label: 'Notas', tipo: 'textarea', largura: 'inteira' },
   ],
   // A ÚNICA aba com ação própria: um posto tem ocupantes, e nenhuma outra
-  // tabela de catálogo tem (docs/referencia/modelo-de-posse.md, Camada 2). As outras seis
+  // tabela de catálogo tem (docs/referencia/modelo-de-posse.md, Camada 2). As outras quatro
   // omitem `acoes` e seguem com editar/excluir, como sempre.
   acoes: [
     { id: 'ocupantes', titulo: 'Ocupantes do posto' },
   ],
 };
 
-
-// ── O DEPARTAMENTO (F11, Etapa D) ───────────────────────────────────────────
 // Mesma ordem do `CATALOG_SPECS` do servidor — as duas listas são percorridas
 // em paralelo pela tela e pelo maestro, e divergir faria a aba apontar para a
 // spec errada.

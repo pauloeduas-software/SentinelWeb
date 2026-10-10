@@ -1,7 +1,7 @@
 /**
  * O que `GET /api/search` devolve — a busca do leitor de código de barras.
  *
- * MORAVA EM `label.types.ts`, junto do layout de impressão: quem gera a etiqueta
+ * MORAVA JUNTO DO LAYOUT DE IMPRESSÃO: quem gerava a etiqueta
  * e quem a lê de volta eram o mesmo assunto (F10, Etapa G). As etiquetas saíram
  * no D147 e esta ficou — ler um código colado numa máquina não depende de este
  * sistema ter desenhado o papel.

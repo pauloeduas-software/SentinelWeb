@@ -4,7 +4,7 @@
 -- parciais), e o SQL prova que elas recusam o que deve recusar. Aqui as regras
 -- vivem na APLICAÇÃO — `assert-retire-posse.usecase.ts` e a `$transaction` do
 -- lote —, porque cruzam tabelas e porque o valor delas está na MENSAGEM que
--- ensina o que fazer (docs/INVARIANTES.md, "a regra de onde cada uma mora").
+-- ensina o que fazer (docs/referencia/invariantes.md, "a regra de onde cada uma mora").
 --
 -- Então este arquivo não prova o índice: ele DETECTA a linha que não deveria
 -- existir. Toda consulta abaixo tem que devolver ZERO linhas. Uma linha

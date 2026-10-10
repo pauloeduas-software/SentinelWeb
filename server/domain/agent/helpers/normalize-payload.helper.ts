@@ -16,7 +16,7 @@ export function toHandshakeData(message: ParsedAgentMessage): HandshakeData {
     cpuModel: readString(payload, 'cpuModel'),
     installedSoftware: readField(payload, 'installedSoftware') ?? null,
 
-    // A IDENTIDADE (F7). Os sinônimos são os nomes que o agente C# usa hoje e os
+    // A IDENTIDADE (F7). Os sinônimos são os nomes que o agente usa hoje e os
     // que ele usou antes — a mesma tabela que já resolvia PascalCase × camelCase.
     // Ausência vira `null` e segue: agente velho não é erro.
     biosSerial: readString(payload, 'biosSerial', 'serialNumber'),

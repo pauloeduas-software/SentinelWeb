@@ -1,11 +1,11 @@
 import { timingSafeEqual } from 'crypto';
 import { getAgentToken } from '../../../core/config/env';
 
-// Autenticação do Agente Sentinel (C#) no /agent-hub.
+// Autenticação do Agente Sentinel no /agent-hub.
 //
 // O token vai no header `Authorization: Bearer <token>`, não na query string:
-// header é o que o `core/logger` já oculta (logger.ts, `redact`) e o que o
-// `ClientWebSocket.Options.SetRequestHeader` do C# envia sem esforço.
+// header é o que o `core/logger` já oculta (logger.ts, `redact`), e todo cliente
+// WebSocket sabe mandar header na abertura da conexão.
 //
 // UM CAMINHO SÓ: o `AGENT_TOKEN` compartilhado, do `.env`.
 //

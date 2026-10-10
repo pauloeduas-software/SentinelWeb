@@ -47,7 +47,6 @@ export const licenseController = {
     return getLicense(id);
   },
 
-
   async create(request: FastifyRequest, reply: FastifyReply) {
     const data = createLicenseSchema.parse(request.body ?? {});
     const licenca = await createLicense(data, atorDaRequisicao(request));

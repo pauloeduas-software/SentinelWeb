@@ -42,7 +42,7 @@ export async function retireAsset(id: string, data: RetireAssetData, actorId: st
     if (!antes) throw new AppError('Registro não encontrado', 404);
 
     // Descomissionar duas vezes reescreveria a data da primeira saída — e é a
-    // data que o relatório de depreciação (F8) usa para parar de contar.
+    // data em que o ativo parou de ser patrimônio.
     if (antes.retiredAt) {
       throw new AppError(
         `${antes.assetTag} já foi descomissionado em ${diaEmPortugues(antes.retiredAt)}.`,

@@ -49,9 +49,6 @@ export class AuthMaestro {
       authController.setPassword,
     );
 
-
-
-
     logger.info('[Maestro] Rotas de Autenticação inicializadas.');
   }
 }

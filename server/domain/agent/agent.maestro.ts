@@ -9,7 +9,7 @@ import { createLogger } from '../../core/logger/logger';
 
 const logger = createLogger('agent.maestro');
 
-// Porta de entrada do Agente Sentinel (C#). Aqui só mora transporte: aceitar a
+// Porta de entrada do Agente Sentinel. Aqui só mora transporte: aceitar a
 // conexão, traduzir o que chegou e encaminhar. Regra de negócio nenhuma.
 //
 // A rota exige `Authorization: Bearer <token>`, conferido contra o

@@ -11,7 +11,6 @@ export default function LoginPage() {
     username, setUsername, password, setPassword, erro, enviando, handleSubmit,
   } = useLogin();
 
-
   return (
     <div className="min-h-screen bg-bg-base text-text-primary font-sans flex items-center justify-center p-6">
       <div className="w-full max-w-sm animate-in fade-in duration-300">
@@ -68,7 +67,6 @@ export default function LoginPage() {
               />
             </div>
 
-
             <div className="pt-4 border-t border-border-sutil">
               <button
                 type="submit"
@@ -80,7 +78,6 @@ export default function LoginPage() {
             </div>
           </form>
         </div>
-
 
         <p className="mt-6 text-[10px] font-mono text-text-tertiary uppercase tracking-widest text-center">
           Sessão de 8 horas · Cinco erros bloqueiam a conta por 15 minutos

@@ -109,7 +109,6 @@ export const ROTULOS_DA_LICENCA: Record<string, string> = {
   purchaseCost: 'Valor da compra',
   notes: 'Notas',
 
-
   seatNumber: 'Assento',
   seatId: 'Assento (id)',
   checkoutId: 'Ocupação',

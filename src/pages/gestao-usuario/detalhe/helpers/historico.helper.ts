@@ -2,14 +2,9 @@ import type { EventoDaPessoa } from '../../../../domain/shared/user.types';
 import { lerEvento, rotuloDaAcao, type LeituraDoEvento } from '../../../helpers/historico.helper';
 
 // O que a aba Histórico da PESSOA acrescenta ao leitor genérico
-// (`src/pages/helpers/historico.helper.ts`): os nomes das colunas de `users`, a
-// palavra do desligamento e a frase do título — que aqui depende da FONTE, e
-// não só da ação.
-
-/** As ações que só a pessoa tem. As comuns estão no leitor genérico. */
-const ROTULO_DA_ACAO: Record<string, string> = {
-  OFFBOARD: 'Desligado',
-};
+// (`src/pages/helpers/historico.helper.ts`): os nomes das colunas de `users`, o
+// segundo mapa de ação (o do POSTO) e a frase do título — que aqui depende da
+// FONTE, e não só da ação.
 
 /**
  * `CREATE` e `END` vindos da fonte POSTO querem dizer outra coisa.
@@ -33,17 +28,10 @@ const ROTULO_DO_CAMPO: Record<string, string> = {
   phone: 'Telefone',
   address: 'Endereço',
   hiredAt: 'Admissão',
-  // Troca de acesso (F11): o `set-user-groups` grava na linha do tempo da
-  // PESSOA, ao lado do desligamento.
-  grupos: 'Grupos',
-  entrou: 'Entrou nos grupos',
-  saiu: 'Saiu dos grupos',
   username: 'Usuário de acesso',
   credencial: 'Credencial',
   isActive: 'Ativo',
-  // Gravados pelo `OFFBOARD`: é o placar do que a operação fechou.
-  ativosDevolvidos: 'Ativos devolvidos',
-  ocupacoesEncerradas: 'Postos desocupados',
+  role: 'Papel',
   notes: 'Observações',
 };
 
@@ -64,7 +52,7 @@ export function lerEventoDaPessoa(evento: EventoDaPessoa): LeituraDoEvento {
  */
 export function tituloDoEvento(evento: EventoDaPessoa): string {
   if (evento.fonte === 'POSSE' && evento.posse) {
-    return `${rotuloDaAcao(evento.action, ROTULO_DA_ACAO)}: ${evento.posse.assetLabel}`;
+    return `${rotuloDaAcao(evento.action)}: ${evento.posse.assetLabel}`;
   }
 
   if (evento.fonte === 'POSTO' && evento.posto) {
@@ -73,5 +61,5 @@ export function tituloDoEvento(evento: EventoDaPessoa): string {
     return `${acao}: ${evento.posto.locationLabel}${turno}`;
   }
 
-  return rotuloDaAcao(evento.action, ROTULO_DA_ACAO);
+  return rotuloDaAcao(evento.action);
 }

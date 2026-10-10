@@ -33,7 +33,7 @@ export default function UsersPage() {
         onViewChange={changeView}
         search={search}
         onSearchChange={changeSearch}
-        placeholder="Buscar por nome, e-mail ou departamento..."
+        placeholder="Buscar por nome, e-mail ou matrícula..."
         page={page}
         perPage={perPage}
         total={total}

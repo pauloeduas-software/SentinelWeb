@@ -55,7 +55,6 @@ const camposComuns = {
   purchaseDate: dataOpcional('data de compra'),
   purchaseCost: valorMonetarioOpcional('valor de compra'),
 
-
   // ── OS CAMPOS CUSTOMIZADOS (F9, Etapa B) ─────────────────────────────────
   //
 };
@@ -77,10 +76,6 @@ export const updateAssetSchema = z.strictObject({
   statusId: uuidObrigatorio('status').optional(),
   modelId: uuidObrigatorio('modelo').optional(),
   ...camposComuns,
-});
-
-export const serialParamSchema = z.strictObject({
-  serial: z.string().trim().min(1, 'número de série é obrigatório').max(150),
 });
 
 // ---------------------------------------------------------------------------

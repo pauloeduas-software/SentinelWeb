@@ -19,12 +19,9 @@ export const configuracaoDaDescobertaSchema = z.strictObject({
   shadowHours: inteiroEntre('horas para Shadow IT', 1, 720).optional(),
 });
 
-
-
 // ── A CONFIGURAÇÃO DE SISTEMA (F10, D65) ───────────────────────────────────
 //
-// Marca e formato. Os grupos de validação daqui têm o mesmo
-// objetivo e ele não é zelo: `locale`, `dateFormat` e `currency` são lidos pela
+// Formato de número, de data e moeda. A validação daqui não é zelo: `locale`, `dateFormat` e `currency` são lidos pela
 // TELA para formatar número e data. Um valor que o `Intl` não conhece não vira
 // texto errado — ele LANÇA `RangeError` no primeiro `toLocaleString`, e a tela
 // que estava mostrando a lista de ativos fica em branco. Validar aqui é a
@@ -34,7 +31,6 @@ export const configuracaoDaDescobertaSchema = z.strictObject({
 const FORMATOS_DE_DATA = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'] as const;
 
 export const configuracaoDoSistemaSchema = z.strictObject({
-
 
   /**
    * O idioma, conferido contra o banco de locales do próprio Node.

@@ -7,7 +7,7 @@ import { AppError } from '../../../core/errors/app-error';
 // São dois hooks pequenos e independentes, aplicados só em `/api/auth/*` e no
 // `set-password`. Não viraram middleware global porque nenhum dos dois faz
 // sentido no resto: `no-store` atrapalharia o cache do painel estático, e
-// exigir `Origin` em toda rota quebraria o agente C# e qualquer integração que
+// exigir `Origin` em toda rota quebraria o agente e qualquer integração que
 // não seja navegador.
 
 /**

@@ -78,12 +78,11 @@ export interface Asset {
    *
    * Não confundir com as outras duas saídas (D19): `status.type === 'ARCHIVED'`
    * é ter saído da OPERAÇÃO, e a lixeira é ter sido cadastrado ERRADO. Um
-   * notebook vendido continua no relatório de depreciação com a data em que
-   * saiu; um da lixeira nunca deveria ter existido.
+   * notebook vendido continua no patrimônio histórico, com a data em que saiu;
+   * um da lixeira nunca deveria ter existido.
    */
   retiredAt: string | null;
   retiredReason: MotivoDaSaida | null;
-
 
   /** Quem cadastrou e quem editou por último (D26). Nulos no que é anterior à F3. */
   createdById: string | null;

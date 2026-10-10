@@ -94,17 +94,7 @@ export async function rodarReconciliacao(): Promise<{
   // (são a memória do D97) nem as aceitas (são a trilha de quem decidiu).
   await expurgarSugestoesSubstituidas();
 
-  // ── A CONFERÊNCIA AUTOMÁTICA (F8, D124) ──────────────────────────────────
-  //
-  // Mora AQUI, ao lado do carimbo do último contato, e não no handshake — é o D95
-  // pelo mesmo argumento: `touchEndpoint` roda a cada mensagem de cada máquina, e
-  // uma linha de `audits` ali cresceria em máquinas × mensagens por dia.
-  //
-  // Depois de tudo de propósito: ela é a única coisa desta rodada que escreve numa
-  // tabela de PATRIMÔNIO (`assets.lastAuditAt`), e uma falha dela não pode levar
-  // junto a fila de sugestões que acabou de ser construída.
-
-  if (carimbados > 0 || sugeridas > 0 || vinculadas > 0 || encerradas > 0 || 0 > 0) {
+  if (carimbados > 0 || sugeridas > 0 || vinculadas > 0 || encerradas > 0) {
     logger.info(
       `[Reconciliação] ${pendentes.length} máquina(s) sem vínculo; ` +
       `${sugeridas} sugestão(ões), ${vinculadas} vínculo(s) automático(s), ` +

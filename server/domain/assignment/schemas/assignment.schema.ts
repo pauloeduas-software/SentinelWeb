@@ -30,9 +30,8 @@ export const checkoutSchema = z.strictObject({
   statusId: uuidOpcional('status'),
 
   // PRAZO, e por isso não aceita o passado: uma entrega com devolução prevista
-  // para ontem nasce VENCIDA — entra em `GET /api/assignments/overdue` no mesmo
-  // segundo em que o equipamento saiu do estoque, e com o lembrete automático
-  // (Leva 3) cobraria de volta o que acabou de ser entregue. Hoje é aceito.
+  // para ontem nasce VENCIDA — o prazo expira no mesmo segundo em que o
+  // equipamento sai, que é um cadastro que ninguém quis fazer.
   // O espelho é o `startedAt` da ocupação, que recusa o FUTURO pelo motivo
   // oposto (shared/fields.schema.ts).
   expectedCheckinAt: dataNaoPassada('devolução prevista'),

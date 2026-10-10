@@ -3,7 +3,7 @@ import { apiClient } from '../../core/api/apiClient';
 import type { CatalogOption, CatalogRow } from '../shared/catalog.types';
 import type { ListEnvelope, ListParams } from '../shared/list.types';
 
-// Um conjunto de hooks para as SETE tabelas de catálogo — o espelho, no
+// Um conjunto de hooks para as CINCO tabelas de catálogo — o espelho, no
 // frontend, do CRUD genérico do servidor. O `slug` é o que muda.
 //
 // A chave inclui o slug e os parâmetros: sem isso a aba de Fornecedores seria

@@ -42,7 +42,7 @@ export async function listLicenses(
   // A CONTAGEM, em lote e FORA da transação acima. Fora de propósito: aquela
   // existe para o total e a página serem do mesmo instante, e alongá-la com a
   // contagem de assentos seguraria a transação durante leitura que não precisa
-  // dessa garantia — a mesma escolha que `listStock` e `listAssets` fazem.
+  // dessa garantia — a mesma escolha que o `listAssets` faz.
   const contagens = await contarAssentos(prisma, rows.map((linha) => linha.id));
 
   return {

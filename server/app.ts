@@ -121,7 +121,6 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   await server.register(websocket);
 
-
   // O cookie vem ANTES do jwt: é o @fastify/cookie que faz `request.cookies`
   // existir, e sem ele o `cookie:` abaixo não encontraria token nenhum.
   // Sem `secret`: o cookie não é assinado porque o conteúdo dele JÁ é um JWT
@@ -194,8 +193,6 @@ export async function buildApp(): Promise<FastifyInstance> {
   // Licenças), e registrar na ordem em que o conceito nasce é o que mantém o
   // arquivo legível (docs/historico/fase-06-licencas.md).
   await LicenseMaestro.setupRoutes(server);
-  // Arquivo depois de asset e catálogo: as rotas dele pendem de `/api/assets/:id`
-  // e das quatro tabelas com imagem.
   // CONVERGÊNCIA por último: as rotas de vínculo pendem de `/api/endpoints/:id`
   // e `/api/assets/:id`, e a aba Máquina pendura no ativo. Registrar na ordem em
   // que o conceito nasce é o que mantém o arquivo legível
