@@ -22,5 +22,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["server", "prisma"]
+  "include": ["server", "prisma", "scripts"]
 }
