@@ -1,13 +1,13 @@
 import { AppError } from '../../../core/errors/app-error';
 
-// A TRAVA DA LINHA DO COLABORADOR — o que faz o desligamento e a entrega
+// A TRAVA DA LINHA DO COLABORADOR — o que faz a desativação e a entrega
 // pararem de se atropelar.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // O BUG QUE ISTO FECHA, passo a passo
 //
 //   T1 (entrega)        lê o usuário  → `isActive: true`, segue
-//   T2 (desligamento)   lê as posses  → não há nenhuma, fecha nada
+//   T2 (desativação)    lê as posses  → não há nenhuma, fecha nada
 //   T2                  grava `isActive = false`                  → COMMIT
 //   T1                  cria a `Assignment`                        → COMMIT
 //

@@ -16,21 +16,19 @@ import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
 // Resultado: um ativo na lixeira com 4 pentes dentro. As unidades somem do
 // `disponivel` do componente e não há tela que as devolva — `GET
 // /api/assets/:id/components` responde 404, porque o ativo não existe mais para
-// o inventário. É o mesmo desenho do 409 que `deleteStockItem` dá do outro
+// o inventário. É o mesmo desenho do 409 que `deleteUser` dá do outro
 // lado, e sem a trava ele não dispara.
 //
 // O `onDelete: Restrict` de `component_assets.assetId` NÃO cobre isto: apagar
 // aqui é `UPDATE assets SET "deletedAt" = now()`. O Postgres não vê `DELETE`
 // nenhum, a FK não é consultada e a rede não existe — o ponto cego do soft
-// delete que `deleteUser` e `deleteStockItem` também documentam.
+// delete que `deleteUser` também documenta.
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// ORDEM DE TRAVAMENTO: **componente antes de ativo**, nos caminhos que travam
-// os dois (hoje só `attachComponent`). O grafo de travas do sistema continua
-// acíclico: `usuário → ativo` (checkout e desligamento), `usuário → item de
-// estoque` (entrega de acessório) e `componente → ativo` (instalação). Duas
-// transações que travem os mesmos dois recursos em ordens opostas travam uma à
-// outra, e o Postgres mata uma delas.
+// O GRAFO DE TRAVAS do sistema é acíclico, e é o que impede duas transações de
+// travarem os mesmos dois recursos em ordens opostas — o Postgres mata uma
+// delas. Hoje há dois caminhos, e os dois travam na mesma ordem
+// `usuário → ativo`: o checkout de ativo e a entrega de assento de licença.
 
 /**
  * Trava a linha do ativo até o fim da transação atual.

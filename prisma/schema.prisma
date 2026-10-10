@@ -494,8 +494,7 @@ model Location {
 // Um ativo = UM equipamento físico, com etiqueta e série próprias.
 //
 // Não existe `quantity` aqui, e é de propósito (D3): um ativo é UM equipamento.
-// O `InventoryItem` achatado com quantidade que existia antes foi removido
-// junto com esta tabela.
+// Contagem é consulta sobre linhas, não coluna.
 //
 // NÃO há `categoryId`: a categoria do ativo é a do MODELO (`model.category`) —
 // é assim no Snipe-IT, e é o que impede um ativo e o seu modelo divergirem de

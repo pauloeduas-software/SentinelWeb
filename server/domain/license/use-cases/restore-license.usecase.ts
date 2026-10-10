@@ -21,7 +21,7 @@ import {
  * cadastro novo com o mesmo nome. O restore esbarra no índice, e o status certo
  * é 409 — mas a frase NÃO pode ser a genérica do error-handler ("Registro já
  * existe"), que num alerta disparado por um clique em "Restaurar" não diz o que
- * aconteceu nem o que fazer. Mesmo cuidado do `restoreStockItem`.
+ * aconteceu nem o que fazer. Mesmo cuidado do `restoreAsset`.
  */
 export async function restoreLicense(
   id: string,

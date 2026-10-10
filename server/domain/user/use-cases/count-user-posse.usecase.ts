@@ -3,18 +3,17 @@ import { contarAssentosDoUsuario } from '../../license/use-cases/count-user-seat
 
 // O QUE AINDA PRENDE UMA PESSOA AO INVENTÁRIO — as duas pontas, contadas juntas.
 //
-// São QUATRO desde a F6, e as quatro vêm do mesmo lugar (docs/referencia/modelo-de-posse.md):
-// o que está no NOME da pessoa — ativo (`Assignment` alvo `USER`), acessório
-// (`AccessoryCheckout` alvo `USER`) e assento de licença
-// (`LicenseSeatCheckout.assignedUserId`) — e o que ela responde por OCUPAR um
-// posto (`LocationOccupant`). Contar só a primeira é o erro que o D32 descreve:
-// o desligado continua respondendo por tudo que está na Mesa 1, e nenhuma
-// consulta acusa, porque a Camada 3 é derivada.
+// São TRÊS, e as três vêm do mesmo lugar (docs/referencia/modelo-de-posse.md):
+// o que está no NOME da pessoa — ativo (`Assignment` alvo `USER`) e assento de
+// licença (`LicenseSeatCheckout.assignedUserId`) — e o que ela responde por
+// OCUPAR um posto (`LocationOccupant`). Contar só a primeira é o erro que o D32
+// descreve: quem saiu continua respondendo por tudo que está na Mesa 1, e
+// nenhuma consulta acusa, porque a Camada 3 é derivada.
 //
 // A PERGUNTA QUE DECIDE se algo entra aqui não é "tem tabela própria?", é
 // *"alguém responde por isto quando a pessoa sai?"*. Assento de licença responde
 // sim — ele custa dinheiro por mês e é nominal —, e por isso entrou junto com as
-// outras três em vez de virar uma contagem que alguém precisasse lembrar de
+// outras duas em vez de virar uma contagem que alguém precisasse lembrar de
 // somar.
 
 export interface PosseAbertaDoUsuario {
@@ -85,13 +84,15 @@ export function motivoParaNaoExcluir(posse: PosseAbertaDoUsuario): string | null
 
   if (partes.length === 0) return null;
 
-  // Vírgula entre as primeiras e " e " antes da última: com QUATRO pontas desde
-  // a F6, um `join(' e ')` produziria "responde por 1 ativo e está com 2
-  // acessórios e ocupa 1 assento de licença e ocupa 1 posto" — uma frase que
-  // ninguém lê até o fim.
+  // Vírgula entre as primeiras e " e " antes da última: com três pontas, um
+  // `join(' e ')` produziria "responde por 1 ativo e ocupa 1 assento de licença
+  // e ocupa 1 posto" — uma frase que ninguém lê até o fim.
   const frase = partes.length === 1
     ? partes[0]
     : `${partes.slice(0, -1).join(', ')} e ${partes[partes.length - 1]}`;
 
-  return `Este colaborador ainda ${frase}. Faça o desligamento antes de excluir.`;
+  // A FRASE DIZ O QUE FAZER, e o que ela manda fazer tem que EXISTIR: devolver
+  // o ativo, devolver o assento e encerrar a ocupação são as três operações que
+  // zeram as três pontas contadas acima.
+  return `Este colaborador ainda ${frase}. Devolva o que está com ele e encerre as ocupações antes de excluir.`;
 }

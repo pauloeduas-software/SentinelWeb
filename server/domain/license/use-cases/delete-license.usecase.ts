@@ -12,7 +12,7 @@ import { contarAssentosDe, travarTodosOsAssentos, travarLicencaOuFalhar } from '
  * Apagar aqui é `UPDATE licenses SET "deletedAt" = now()`. O Postgres não vê
  * `DELETE` nenhum, o `Cascade` para `license_seats` não dispara e a FK
  * `Restrict` dos alvos não é consultada — a rede NÃO EXISTE. É o ponto cego do
- * soft delete, o mesmo que `deleteUser`, `deleteAsset` e `deleteStockItem`
+ * soft delete, o mesmo que `deleteUser` e `deleteAsset`
  * documentam.
  *
  * Sem a recusa, mandar a licença para a lixeira deixa os assentos ocupados

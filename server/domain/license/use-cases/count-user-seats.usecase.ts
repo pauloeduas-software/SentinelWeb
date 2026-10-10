@@ -8,7 +8,7 @@ import type { ClienteLicenca } from '../helpers/license-seats.helper';
  *
  * Eles são da máquina, não dela: a Laura sai e o desktop da Mesa 1 continua
  * ligado, com o mesmo Office instalado. Contá-los aqui faria o `DELETE`
- * responder 409 sobre licença que o desligamento não tem o direito de devolver
+ * responder 409 sobre licença que a exclusão não tem o direito de devolver
  * — e o operador ficaria com um cadastro que nunca pode ser apagado e uma tela
  * que não oferece ação nenhuma para resolver.
  *

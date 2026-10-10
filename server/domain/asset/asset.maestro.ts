@@ -55,10 +55,6 @@ export class AssetMaestro {
     // mais recente para o mais antigo. NÃO existe tabela `AssetLog` (D18).
     server.get('/api/assets/:id/history', assetController.history);
 
-    // REVELAR um campo customizado cifrado (F9, D62). A ÚNICA porta por onde o
-    // valor em claro sai: toda outra leitura devolve `••••••`.
-    //
-
     server.post('/api/assets', WRITE_RATE_LIMIT, assetController.create);
     server.put('/api/assets/:id', WRITE_RATE_LIMIT, assetController.update);
     server.delete('/api/assets/:id', WRITE_RATE_LIMIT, assetController.remove);

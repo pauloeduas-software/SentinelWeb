@@ -8,14 +8,6 @@ export interface CreateUserData {
   email: string;
   /** O papel (D148). Ausente nasce `USUARIO`, pelo `@default` do schema. */
   role?: 'USUARIO' | 'TECNICO' | 'ADMIN';
-  /**
-   * O id do departamento (F11, Etapa D). Era um texto livre até a F10.
-   *
-   * A coluna `department` NÃO é mais escrita por ninguém — nem aqui com o nome
-   * do departamento "por garantia". Escrever nas duas criaria duas fontes de
-   * verdade para o mesmo dado durante a transição, e a que divergisse seria a
-   * que o `DROP COLUMN` da migração 2 de 2 levaria embora sem aviso.
-   */
   employeeNumber?: string | null;
   jobTitle?: string | null;
   phone?: string | null;
@@ -54,8 +46,6 @@ export async function createUser(data: CreateUserData, actorId: string | null) {
         entityType: 'User',
         entityId: user.id,
         action: 'CREATE',
-        // O `departmentId` e não o nome: o log guarda o que foi GRAVADO, e o
-        // nome pode mudar depois sem que este cadastro tenha mudado.
         changes: {
           name: user.name, email: user.email,
           employeeNumber: data.employeeNumber ?? null,

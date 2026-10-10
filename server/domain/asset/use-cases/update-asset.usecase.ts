@@ -70,22 +70,10 @@ export async function updateAsset(id: string, data: UpdateAssetData, actorId: st
 
     const changes = buildChanges(antes, depois, CAMPOS_AUDITADOS);
 
-    // Chave a chave, e SEM o valor cifrado (D62): o que fica registrado é que o
-    // segredo mudou e quando — nunca o que ele é.
-    //
-    // ESPALHADO no `changes`, com as chaves prefixadas por `cf.` — e as duas
-    // coisas são deliberadas. O prefixo evita que um campo customizado chamado
-    // `serial` sobrescreva o diff da COLUNA `serial` (o slug é do cliente, e
-    // nada impede a colisão); o espalhamento mantém cada entrada no MESMO
-    // formato `{ de, para }` das colunas nativas, que é como a aba Histórico
-    // reconhece uma mudança. Aninhado, o leitor genérico o classificava como
-    // "detalhe" e imprimia `[object Object]`.
-    const changesCompleto = changes;
-
-    if (Object.keys(changesCompleto).length > 0) {
+    if (Object.keys(changes).length > 0) {
       await recordActivity(
         tx,
-        { entityType: 'Asset', entityId: id, action: 'UPDATE', changes: changesCompleto },
+        { entityType: 'Asset', entityId: id, action: 'UPDATE', changes },
         actorId,
       );
     }
