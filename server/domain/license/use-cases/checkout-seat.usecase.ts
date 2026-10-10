@@ -107,7 +107,7 @@ async function assertAlvoApto(
 
   // DESLIGADO é diferente de APAGADO (D32). 409 e não 404: a pessoa existe, o
   // estado dela é que recusa. Entregar a quem saiu reabriria, uma linha depois
-  // do desligamento, exatamente a pendência que o desligamento fechou.
+  // da desativação, exatamente a pendência que a desativação fechou.
   if (!pessoa.isActive) {
     throw new AppError(`${pessoa.name} está desligado(a) e não pode receber assento de licença.`, 409);
   }

@@ -27,8 +27,5 @@ export async function listUsers(query: ListQuery<UserSortable>): Promise<ListEnv
     buscarPagina(where, query),
   ]);
 
-  // Sem achatamento nenhum: com o `DROP COLUMN users.department` aplicado (Etapa
-  // J), a relação voltou a se chamar `department` no schema e o `USER_LIST_SELECT`
-  // já devolve `{ id, name }` — que é o que o contrato da API sempre prometeu.
   return { total, rows };
 }

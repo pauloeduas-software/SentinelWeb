@@ -7,8 +7,7 @@ import {
 // Contrato de entrada das rotas de licença.
 //
 // `strictObject` em tudo: campo desconhecido é 422, não silêncio. É o que fecha
-// o mass assignment — e é também o que impede a chave de produto de entrar por
-// uma porta que não passa pela cifra.
+// o mass assignment.
 
 /** Teto de assentos por contrato. Acima disso é carga, não operação de tela. */
 const MAX_ASSENTOS = 100_000;

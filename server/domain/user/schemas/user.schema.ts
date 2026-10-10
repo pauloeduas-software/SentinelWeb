@@ -20,16 +20,7 @@ const nome = z.string('nome é obrigatório').trim()
 const email = z.string('e-mail é obrigatório').trim().toLowerCase()
   .pipe(z.email('e-mail inválido').max(320, 'e-mail: máximo de 320 caracteres'));
 
-// ─────────────────────────────────────────────────────────────────────────────
-// O DEPARTAMENTO AGORA É UM ID (F11, Etapa D — D75).
-//
-// `department: string` SAIU do contrato de entrada, e `strictObject` faz disso
-// um 422 explícito: quem ainda mandar o texto recebe "campo desconhecido:
-// department" em vez de uma gravação silenciosamente ignorada. É o jeito mais
-// barato de descobrir um cliente antigo.
-// ─────────────────────────────────────────────────────────────────────────────
 const camposDeIdentidade = {
-  // QUEM COBRA a pessoa. Nunca quem responde pelo ativo dela (D72).
   employeeNumber: textoOpcional('matrícula', 40),
   jobTitle: textoOpcional('cargo', 120),
   phone: textoOpcional('telefone', 40),

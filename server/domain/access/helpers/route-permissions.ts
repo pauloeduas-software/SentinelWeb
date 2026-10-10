@@ -21,19 +21,16 @@ import type { Papel } from './papel';
 // herdaria o papel do vizinho e passaria a existir protegida pelo papel errado,
 // sem ninguém declarar nada. Verbosidade aqui é o preço da conferência.
 //
-// O QUE MUDOU NO D148: o valor da linha era uma chave de permissão nomeada
-// (`assets.view`, `licenses.viewKey`) resolvida contra a união dos grupos da
-// sessão. Agora é o papel MÍNIMO, e `papelAlcanca()` faz o resto — `ADMIN`
+// O valor da linha é o papel MÍNIMO, e `papelAlcanca()` faz o resto: `ADMIN`
 // satisfaz linha de `TECNICO`, e nenhuma linha precisa listar os dois.
 //
-// O CRITÉRIO das 123 linhas, escrito uma vez aqui em vez de repetido em cada:
+// O CRITÉRIO, escrito uma vez aqui em vez de repetido em cada linha:
 //
 //   `null`     — a sessão basta. Duas rotas, e as duas são sobre si mesmo.
 //   `TECNICO`  — todo o inventário: ver, criar, editar, entregar, devolver,
-//                aposentar, reconciliar, exportar. É o trabalho do dia.
-//   `ADMIN`    — gente (criar, editar, desligar, trocar senha), configuração do
-//                sistema, EXCLUIR de verdade (e restaurar o excluído), e os três
-//                segredos: custo, chave de licença e dado sensível.
+//                aposentar, reconciliar. É o trabalho do dia.
+//   `ADMIN`    — gente (criar, editar, desativar, trocar senha), configuração do
+//                sistema, EXCLUIR de verdade (e restaurar o excluído) e o custo.
 //
 // `users.view` ficou em `TECNICO` de propósito: entregar equipamento exige
 // escolher a pessoa, e um técnico que não lista gente não faz checkout. O que é

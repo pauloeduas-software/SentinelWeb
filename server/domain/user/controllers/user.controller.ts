@@ -39,8 +39,8 @@ export const userController = {
   },
 
   // UM colaborador, para a tela de perfil. Vem com o placar de posse aberta
-  // porque é dele que o botão de desligamento tira o que mostrar antes de
-  // confirmar — e é o mesmo número do 409 do DELETE.
+  // porque é o mesmo número do 409 do DELETE: é ele que mostra, antes de
+  // confirmar, o que ainda está nas mãos da pessoa.
   async get(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     return getUser(id);

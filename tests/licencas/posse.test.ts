@@ -48,7 +48,7 @@ describe('o 409 do DELETE conhece o assento', () => {
     // A frase diz QUANTOS e por qual camada — sem isso o operador procura no
     // lugar errado, e a camada da licença é justamente a que ninguém lembra.
     expect(recusa.body.error).toContain('1 assento de licença');
-    expect(recusa.body.error).toContain('Faça o desligamento antes de excluir');
+    expect(recusa.body.error).toContain('Devolva o que está com ele e encerre as ocupações');
     // E O NÚMERO TAMBÉM NOS `details`: é por eles que a tela decide abrir o
     // modal de desligamento, sem reparsear uma frase em português. Sem
     // `assentosEmPosse`, quem só ocupa assento recebia um 409 com todos os

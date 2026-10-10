@@ -28,11 +28,6 @@ const ROTULO_DA_ACAO_NO_POSTO: Record<string, string> = {
 const ROTULO_DO_CAMPO: Record<string, string> = {
   name: 'Nome',
   email: 'E-mail',
-  // `department` (texto) e `departmentId` (relação) convivem no histórico, e os
-  // dois precisam de rótulo: o primeiro aparece em eventos ANTERIORES à F11, que
-  // continuam no log para sempre — o `docs/referencia/modelo-de-posse.md` protege o histórico ao
-  // nunca apagá-lo, e um evento de 2025 sem rótulo apareceria como
-  // "department" cru no meio de uma lista em português.
   employeeNumber: 'Matrícula',
   jobTitle: 'Cargo',
   phone: 'Telefone',
