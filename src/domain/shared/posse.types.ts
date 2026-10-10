@@ -81,6 +81,14 @@ export interface AtivoAlvoRef {
 export interface LocalRef {
   id: string;
   name: string;
+  /**
+   * É um POSTO DE TRABALHO, e não um depósito ou uma filial?
+   *
+   * Quem pergunta é a aba Posse do ativo: só o posto tem ficha própria
+   * (`/postos/:id`) para onde levar. Opcional porque não toda rota que devolve um
+   * `LocalRef` o manda.
+   */
+  isWorkstation?: boolean;
 }
 
 /**

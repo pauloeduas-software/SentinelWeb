@@ -61,6 +61,24 @@ export interface Posto {
 }
 
 /**
+ * O ativo como a FICHA DO POSTO o recebe: o contrato de ativo mais a máquina.
+ *
+ * O campo a mais existe porque esta tela mostra a telemetria do computador da
+ * mesa, e para isso precisa saber qual dos ativos entregues é um computador e
+ * qual máquina consultar. Ele NÃO está no `Asset` compartilhado de propósito:
+ * `endpointId` sairia em toda listagem, em toda criação e em toda edição de
+ * ativo, e ali ninguém o usa — `GET /api/workstations/:id` é a única rota que o
+ * manda DENTRO de um objeto de ativo
+ * (`server/domain/workstation/use-cases/get-workstation.usecase.ts`). A aba
+ * Máquina também conhece um `endpointId`, mas por fora do ativo, em
+ * `GET /api/assets/:id/machine`.
+ */
+export interface AtivoDoPosto extends Asset {
+  /** `null` quando o ativo não tem máquina: monitor, teclado, cabo, cadeira. */
+  endpointId: string | null;
+}
+
+/**
  * O posto aberto — `GET /api/workstations/:id`.
  *
  * `ocupantes` aqui é a ocupação completa (`LocationOccupant`), com período e
@@ -71,5 +89,5 @@ export interface PostoDetalhe extends Omit<Posto, 'ocupantes'> {
   manager: Referencia | null;
   ocupantes: LocationOccupant[];
   /** Os ativos entregues ao posto — posse ABERTA com alvo LOCATION. */
-  ativos: Asset[];
+  ativos: AtivoDoPosto[];
 }

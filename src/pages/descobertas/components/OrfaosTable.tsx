@@ -6,8 +6,9 @@ import type { ReviewState } from '../../../domain/shared/reconciliation.types';
 //
 // A triagem não MEXE na máquina: `ALLOWED` é "eu sei o que é isso", `BLOCKED` é
 // "isto não deveria estar na rede". Nenhum dos dois desliga ninguém
-// remotamente — o comando remoto existe, é outra tela, e é uma decisão humana
-// explícita.
+// remotamente — o comando remoto existe, mora na ficha do ativo a que a máquina
+// está vinculada (e numa máquina desta lista, por definição, não está), e é uma
+// decisão humana explícita.
 //
 // O valor da triagem é tirar da fila o que já foi olhado: sem ela, a mesma
 // máquina conhecida reaparece como "não autorizada" toda semana, e o alerta que

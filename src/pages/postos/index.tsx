@@ -19,6 +19,7 @@ export default function PostosPage() {
     postos, total, page, perPage, setPage, search, changeSearch, view, changeView,
     modalAberto, openCreate, closeModal, handleCriar,
     postoId, postoAberto, openDetalhe, closeDetalhe, detalhe, detalhePendente, detalheErro, ocupantes,
+    devolvendo, handleDevolver,
   } = usePostos();
 
   return (
@@ -140,6 +141,8 @@ export default function PostosPage() {
           onViewChange={ocupantes.changeView}
           onAdicionar={ocupantes.handleAdicionar}
           onEncerrar={ocupantes.handleEncerrar}
+          onDevolver={handleDevolver}
+          devolvendo={devolvendo}
           onClose={closeDetalhe}
         />
       )}

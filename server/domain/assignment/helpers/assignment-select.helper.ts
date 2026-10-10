@@ -37,5 +37,9 @@ export const ASSIGNMENT_SELECT = {
 
   targetUser: { select: USER_PUBLIC_SELECT },
   targetAsset: { select: { id: true, assetTag: true, name: true } },
-  targetLocation: { select: { id: true, name: true } },
+  // `isWorkstation` sai junto com o nome porque a tela do ativo precisa decidir
+  // se o alvo é um POSTO ou um depósito: só o posto tem ficha para onde levar
+  // (`/postos/:id`), e um link que leva um depósito para uma tela chamada
+  // "posto" seria o nome errado na cara do usuário.
+  targetLocation: { select: { id: true, name: true, isWorkstation: true } },
 } as const;

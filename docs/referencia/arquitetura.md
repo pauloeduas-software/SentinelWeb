@@ -197,7 +197,13 @@ de um `fetch` manual no fim de cada mutação).
 
 Regras práticas:
 
-- **Componente não faz `fetch`.** Recebe `onSubmit`, `onCommand`, `onDelete`.
+- **Componente não faz `fetch`.** Recebe `onSubmit`, `onCommand`, `onDelete`. Duas
+  exceções, e as duas são widgets AUTOCONTIDOS usados por telas sem relação entre
+  si, onde passar tudo por prop duplicaria a mesma ligação em cada chamador:
+  `pages/components/ReferenceSelect` (busca a lista de opções da rota que recebe) e
+  `pages/components/TelemetriaDaMaquina` (consulta e revalida uma máquina, e manda
+  comando nela). Exceção se declara no cabeçalho do componente; a terceira que
+  aparecer sem motivo escrito é a regra virando sugestão.
 - **Página não importa `@tanstack/react-query` nem `axios`.** O lint recusa. Ela
   usa o hook da própria pasta, que usa a query do domínio.
 - **Busca engole erro, mutação propaga.** A lista recarrega a cada 5s e uma

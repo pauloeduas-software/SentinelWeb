@@ -35,8 +35,9 @@ export interface SentCommand {
  * máquina (`:id/link`, `:id/review`).
  *
  * Isto NÃO é esconder o hwid: ele continua saindo na listagem e na rota de uma
- * máquina, porque é coluna do `Endpoint` e o painel o mostra. O que sai da URL é
- * a identidade de HARDWARE como ENDEREÇO — e com ela sai o `{ hwid }` que o
+ * máquina, porque é coluna do `Endpoint`, e a aba Máquina do ativo o mostra com
+ * um botão de copiar — é o que se cola num chamado. O que sai da URL é a
+ * identidade de HARDWARE como ENDEREÇO, e com ela sai o `{ hwid }` que o
  * `details` do erro espalhava no corpo da resposta.
  *
  * E ISSO SEPAROU DOIS ERROS QUE ERAM UM. Com o hwid na URL, "máquina não existe"

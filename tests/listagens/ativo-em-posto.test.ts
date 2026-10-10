@@ -229,4 +229,5 @@ describe('o ativo entregue a um posto sai da listagem', () => {
     expect(status).toBe(200);
     expect(body.ativos.map((a) => a.id)).toContain(item.id);
   });
+
 });

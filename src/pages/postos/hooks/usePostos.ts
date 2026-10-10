@@ -4,7 +4,8 @@ import {
   useCreateWorkstation, useWorkstationQuery, useWorkstationsQuery,
   type NovoPostoInput,
 } from '../../../domain/workstation/workstation.queries';
-import type { Posto, PostoView } from '../../../domain/shared/workstation.types';
+import { useCheckinAsset } from '../../../domain/assignment/assignment.queries';
+import type { AtivoDoPosto, Posto, PostoView } from '../../../domain/shared/workstation.types';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useOcupantes } from '../../hooks/useOcupantes';
 
@@ -50,6 +51,7 @@ export function usePostos() {
 
   const { data, isPending } = useWorkstationsQuery(params);
   const criar = useCreateWorkstation();
+  const devolver = useCheckinAsset();
 
   const [modalAberto, setModalAberto] = useState(false);
 
@@ -74,6 +76,31 @@ export function usePostos() {
   const handleCriar = async (dados: NovoPostoInput) => {
     await criar.mutateAsync(dados);
     setModalAberto(false);
+  };
+
+  /**
+   * DEVOLVER O ATIVO DA MESA, daqui mesmo.
+   *
+   * Antes a devolução só existia na tela de Ativos — e o ativo entregue a um
+   * posto SAIU dela (`asset-filters.helper.ts`). O computador da Mesa 1 ficava
+   * visível só nesta ficha, e a única operação possível sobre ele estava na tela
+   * que não o mostrava mais: para devolvê-lo era preciso chegar à ficha do ativo
+   * por busca ou por URL. Esta é a ponta que faltava do caminho que a etapa
+   * passada abriu.
+   *
+   * CORPO VAZIO de propósito: o servidor resolve o status de volta para o
+   * primeiro `DEPLOYABLE` (`checkin-asset.usecase.ts`). O formulário completo da
+   * devolução — status de volta e observação — continua na tela de Ativos, onde
+   * cabe; aqui o que se quer é tirar o equipamento da mesa.
+   *
+   * `confirm` com o NÚMERO e o NOME, não "tem certeza?": o que faz alguém parar é
+   * ler a etiqueta do que vai sair da mesa.
+   */
+  const handleDevolver = async (ativo: AtivoDoPosto) => {
+    const qual = ativo.name ? `${ativo.assetTag} (${ativo.name})` : ativo.assetTag;
+    if (!confirm(`Devolver ${qual} ao estoque? Ele sai deste posto e volta para a lista de Ativos.`)) return;
+
+    await devolver.mutateAsync({ id: ativo.id, data: {} });
   };
 
   return {
@@ -103,6 +130,8 @@ export function usePostos() {
     // zero ativos e zero ocupantes, que é indistinguível de um posto novo e
     // vazio — a tela mentiria em vez de dizer que o link está morto.
     detalheErro: detalheErro ? detalheErro.message : null,
+    devolvendo: devolver.isPending,
+    handleDevolver,
 
     ocupantes,
   };

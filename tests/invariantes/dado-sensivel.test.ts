@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { prisma } from '../../server/core/database/prismaClient';
 import { criarApi, type ApiDeTeste, type Cliente } from '../helpers/app';
 import { criarFabricante, criarModelo, idsDoSeed } from '../helpers/fixtures';
 
@@ -58,6 +59,42 @@ describe('custo de compra — só `ADMIN` (D148)', () => {
     expect(linha).toBeDefined();
     // AUSENTE, não nula.
     expect(Object.hasOwn(linha!, 'purchaseCost')).toBe(false);
+  });
+
+  it('a FICHA DO POSTO não traz a propriedade dos ativos da mesa', async () => {
+    // A TERCEIRA PORTA, e ela faltava. `GET /api/workstations/:id` devolve os
+    // ativos entregues ao posto com o select de ativo, e `purchaseCost` está
+    // nele: um técnico que abrisse a mesa recebia o custo de compra de cada
+    // equipamento dela — pelo caminho que as duas asserções acima fecham em
+    // `/api/assets`.
+    //
+    // A mesa vem pelo Prisma porque o que está sob teste é a LEITURA do posto, e
+    // não o cadastro de localização.
+    const mesa = await prisma.location.create({
+      data: { name: 'Mesa do Custo', isWorkstation: true },
+      select: { id: true },
+    });
+    expect((await api.post(`/api/assets/${assetId}/checkout`, {
+      targetType: 'LOCATION',
+      targetLocationId: mesa.id,
+    })).status).toBe(201);
+
+    const resposta = await semSegredo.get<{ ativos: Record<string, unknown>[] }>(
+      `/api/workstations/${mesa.id}`,
+    );
+
+    expect(resposta.status).toBe(200);
+    const linha = resposta.body.ativos.find((a) => a.assetTag === 'ATV-CUSTO-1');
+    expect(linha).toBeDefined();
+    // AUSENTE, não nula.
+    expect(Object.hasOwn(linha!, 'purchaseCost')).toBe(false);
+
+    // E o ADMIN continua vendo: sem esta metade, esconder de todos passaria.
+    const comoAdmin = await api.get<{ ativos: Record<string, unknown>[] }>(
+      `/api/workstations/${mesa.id}`,
+    );
+    const linhaDoAdmin = comoAdmin.body.ativos.find((a) => a.assetTag === 'ATV-CUSTO-1');
+    expect(linhaDoAdmin!.purchaseCost).toBe('4250.9');
   });
 
   it('o DETALHE não traz a propriedade — nem a regra de depreciação', async () => {

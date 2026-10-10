@@ -17,9 +17,14 @@ export async function listEndpoints(
     prisma.endpoint.findMany({
       where,
       include: {
-        // `include` aqui é intencional: a telemetria é o conteúdo do card, e o
-        // model `Endpoint` não recebe campo sensível (o `select` obrigatório vale
-        // para `User`, que ganha `passwordHash` na Fase 3).
+        // `include` aqui é intencional: o model `Endpoint` não recebe campo
+        // sensível (o `select` obrigatório vale para `User`, que ganha
+        // `passwordHash` na Fase 3).
+        //
+        // ⚠️ E ele é CARO no plural: com mais de um pai o Prisma não empurra o
+        // `take: 1` para o SQL — emite `endpointId IN (…)` sem LIMIT e corta em
+        // memória. Quem precisa da amostra de UMA máquina usa `getEndpoint`, que
+        // tem um pai só e por isso vira `LIMIT 1` de verdade.
         telemetries: {
           orderBy: { timestamp: 'desc' },
           take: 1,
