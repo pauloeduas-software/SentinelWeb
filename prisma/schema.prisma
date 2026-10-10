@@ -111,6 +111,12 @@ model Telemetry {
   topProcesses Json?
   endpoint     Endpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
 
+  /// As duas perguntas que se fazem a esta tabela fixam a máquina e ordenam pelo
+  /// tempo: a amostra ATUAL de uma máquina (a ficha do ativo e a do posto, de
+  /// poucos em poucos segundos) e a JANELA de três dias do agregado de uso, que
+  /// é o único leitor da série histórica. Sem este índice as duas eram varredura
+  /// sequencial da tabela inteira — ver a migration que o criou.
+  @@index([endpointId, timestamp(sort: Desc)])
   @@map("telemetries")
 }
 

@@ -30,10 +30,15 @@ export function useEndpointsQuery() {
 /**
  * Comando de sistema na máquina. Não invalida cache: o efeito não é um dado
  * nosso — é a máquina desligando. O próximo ciclo de telemetria mostra.
+ *
+ * Pelo ID da máquina, e não pelo hwid: quem resolve a identidade de hardware é o
+ * servidor (`send-command.usecase.ts`). O painel tinha o hwid porque carregava a
+ * frota inteira; as telas que herdaram o comando conhecem o `endpointId` e mais
+ * nada.
  */
 export function useSendCommand() {
   return useMutation({
-    mutationFn: ({ hwid, action }: { hwid: string; action: AgentAction }) =>
-      apiClient.post(`/endpoints/${hwid}/command`, { action }),
+    mutationFn: ({ endpointId, action }: { endpointId: string; action: AgentAction }) =>
+      apiClient.post(`/endpoints/${endpointId}/command`, { action }),
   });
 }

@@ -45,7 +45,7 @@ export default function TelemetryPage() {
         <EndpointDetailModal
           endpoint={selectedEndpoint}
           onClose={closeDetail}
-          onCommand={(action) => void handleCommand(selectedEndpoint.hwid, action)}
+          onCommand={(action) => void handleCommand(selectedEndpoint.id, action)}
         />
       )}
     </div>

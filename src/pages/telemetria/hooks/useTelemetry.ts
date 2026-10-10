@@ -30,12 +30,12 @@ export function useTelemetry() {
   const openDetail = (endpoint: Endpoint) => setSelectedHwid(endpoint.hwid);
   const closeDetail = () => setSelectedHwid(null);
 
-  const handleCommand = async (hwid: string, action: AgentAction) => {
+  const handleCommand = async (endpointId: string, action: AgentAction) => {
     const label = action.toUpperCase();
     if (!confirm(`CUIDADO: Tem certeza que deseja enviar o comando de ${label} para a máquina?`)) return;
 
     try {
-      await sendCommand.mutateAsync({ hwid, action });
+      await sendCommand.mutateAsync({ endpointId, action });
       alert('Comando disparado com sucesso!');
     } catch (error) {
       alert(`Erro: ${(error as Error).message}`);

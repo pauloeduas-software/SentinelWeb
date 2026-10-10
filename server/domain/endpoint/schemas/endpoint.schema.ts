@@ -1,10 +1,10 @@
 import { z } from 'zod';
 
-// O hwid é a identidade da máquina, derivada do hardware pelo agente. NÃO é
-// uuid, então ele tem schema próprio em vez do `idParamSchema` compartilhado.
-export const hwidParamSchema = z.strictObject({
-  hwid: z.string('hwid é obrigatório').trim().min(1, 'hwid não pode ser vazio').max(256, 'hwid: máximo de 256 caracteres'),
-});
+// O HWID NÃO É MAIS PARÂMETRO DE ROTA NENHUMA, e por isso não há schema para
+// ele aqui. Era do comando (`:hwid/command`), que passou a ser `:id/command` e
+// resolve o hwid no use-case — a identidade de hardware deixou de atravessar a
+// URL. Quem fala de uma máquina por HTTP usa o uuid, como `:id/link` e
+// `:id/review` já usavam, e o `idParamSchema` compartilhado cobre todos.
 
 // `toUpperCase` no schema, não no controller: a normalização faz parte do
 // contrato — o agente recebe sempre o comando em maiúscula.
