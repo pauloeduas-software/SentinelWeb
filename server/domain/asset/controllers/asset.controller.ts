@@ -47,7 +47,7 @@ const buscaGlobalSchema = z.strictObject({
 export const assetController = {
   async list(request: FastifyRequest) {
     // A vista e os filtros do ITAM saem PRIMEIRO. O parser do `core` valida com
-    // `strictObject` e responderia 422 a `?statusId=`, `?relatorio=` ou
+    // `strictObject` e responderia 422 a `?statusId=` ou
     // `?view=retired` — que ele, por decisão de camada, não conhece (D20).
     const { filtros, paraOCore } = separarFiltrosDeAtivo(request.query);
 

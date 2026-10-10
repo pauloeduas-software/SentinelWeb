@@ -45,34 +45,36 @@ export function buildAssetWhere(q?: string): Prisma.AssetWhereInput {
 export const ASSET_VIEWS = ['active', 'trashed', 'retired', 'archived'] as const;
 export type AssetView = (typeof ASSET_VIEWS)[number];
 
-/** Recortes prontos que respondem a uma pergunta operacional, não a um filtro. */
-export const ASSET_RELATORIOS = ['posto-vago'] as const;
-export type AssetRelatorio = (typeof ASSET_RELATORIOS)[number];
-
 export interface AssetFilters {
   view: AssetView;
   statusId?: string;
   locationId?: string;
-  relatorio?: AssetRelatorio;
 }
 
 /**
- * ATIVO EM POSTO VAGO — equipamento parado em mesa sem ninguém.
+ * ENTREGUE A UM POSTO DE TRABALHO — posse aberta cujo alvo é um local marcado.
  *
- * Posse ABERTA (`checkinAt: null`) cujo alvo é uma localização **sem nenhum
- * ocupante aberto**. É o sinal que nenhum ITAM de prateleira dá, e o candidato
- * natural a ser recolhido (docs/referencia/modelo-de-posse.md).
+ * É o recorte que a listagem padrão EXCLUI: o equipamento que está numa mesa
+ * tem endereço, e o endereço dele é a mesa. Quem pergunta "o que há no parque"
+ * quer o que está em estoque ou com gente; o que está montado num posto se
+ * pergunta em `/postos`, onde ele aparece junto dos ocupantes que respondem por
+ * ele. Sem isto, o mesmo computador aparece nas duas telas e nenhuma das duas
+ * responde uma pergunta inteira.
+ *
+ * SÓ ONDE `isWorkstation` É VERDADE, pelo mesmo motivo da invariante 19: o
+ * depósito e a sala de reunião não são mesa de ninguém, e o ativo guardado lá
+ * continua sendo parque.
  *
  * FILTRO DO PRISMA, nunca `.filter()` depois da consulta: filtrando no cliente,
  * a página 1 mostraria 3 de 25 linhas e o `total` do envelope mentiria — a
  * paginação inteira passa a descrever um conjunto que a tela não está vendo.
  */
-export const POSTO_VAGO: Prisma.AssetWhereInput = {
+export const EM_POSTO_DE_TRABALHO: Prisma.AssetWhereInput = {
   assignments: {
     some: {
       checkinAt: null,
       targetType: 'LOCATION',
-      targetLocation: { occupants: { none: { endedAt: null } } },
+      targetLocation: { isWorkstation: true },
     },
   },
 };
@@ -84,7 +86,6 @@ const assetFiltersSchema = z.object({
   view: z.enum(ASSET_VIEWS, `vista inválida: use ${ASSET_VIEWS.join(', ')}`).default('active'),
   statusId: z.uuid('status: identificador inválido').optional(),
   locationId: z.uuid('localização: identificador inválido').optional(),
-  relatorio: z.enum(ASSET_RELATORIOS, `relatório inválido: use ${ASSET_RELATORIOS.join(', ')}`).optional(),
 });
 
 /** Derivada do schema para as duas listas não divergirem quando entrar um filtro novo. */
@@ -140,13 +141,22 @@ function whereDaVista(view: AssetView, statusIdExplicito: boolean): Prisma.Asset
   if (view === 'retired') return { retiredAt: { not: null } };
   if (view === 'archived') return { retiredAt: null, status: { type: $Enums.StatusLabelType.ARCHIVED } };
 
+  // O `NOT` do posto vale TAMBÉM com `?statusId=` explícito, ao contrário da
+  // exclusão do arquivado: clicar no contador de um status é pedir aquele
+  // status, não mudar de assunto — e o computador do posto continua sendo
+  // pergunta de `/postos`. É o que mantém o contador do cabeçalho batendo com a
+  // tabela, porque o `/stats` exclui o mesmo conjunto.
   return statusIdExplicito
-    ? { retiredAt: null }
-    : { retiredAt: null, status: { type: { not: $Enums.StatusLabelType.ARCHIVED } } };
+    ? { retiredAt: null, NOT: EM_POSTO_DE_TRABALHO }
+    : {
+      retiredAt: null,
+      status: { type: { not: $Enums.StatusLabelType.ARCHIVED } },
+      NOT: EM_POSTO_DE_TRABALHO,
+    };
 }
 
 /**
- * Vista + filtros de coluna + relatório, tudo que NÃO é a busca textual.
+ * Vista + filtros de coluna, tudo que NÃO é a busca textual.
  *
  * Fica separado de `buildAssetWhere` porque os dois se somam por espalhamento
  * no use-case e nenhuma chave se repete entre eles (`OR` de um lado, colunas do
@@ -158,6 +168,5 @@ export function buildAssetFilterWhere(filtros: AssetFilters): Prisma.AssetWhereI
     ...whereDaVista(filtros.view, filtros.statusId !== undefined),
     ...(filtros.statusId ? { statusId: filtros.statusId } : {}),
     ...(filtros.locationId ? { locationId: filtros.locationId } : {}),
-    ...(filtros.relatorio === 'posto-vago' ? POSTO_VAGO : {}),
   };
 }

@@ -149,7 +149,6 @@ export interface AssetStats {
 export type AssetView = 'active' | 'trashed' | 'retired' | 'archived';
 
 /** Recortes prontos que respondem a uma pergunta, não a um filtro de coluna. */
-export type AssetRelatorio = 'posto-vago';
 
 /**
  * O que `GET /api/assets` aceita: o que toda listagem aceita MAIS o que só o
@@ -163,7 +162,6 @@ export type AssetListParams = Omit<ListParams, 'view'> & {
   view?: AssetView;
   statusId?: string;
   locationId?: string;
-  relatorio?: AssetRelatorio;
 };
 
 /**
