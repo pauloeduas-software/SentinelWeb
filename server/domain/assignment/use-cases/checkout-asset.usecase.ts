@@ -7,7 +7,7 @@ import { ASSET_SELECT } from '../../asset/helpers/asset-select.helper';
 import { assertStatusCoerenteComPosse } from '../../asset/use-cases/assert-status-posse.usecase';
 import { ASSIGNMENT_SELECT } from '../helpers/assignment-select.helper';
 import { travarUsuarioOuFalhar } from '../../user/use-cases/lock-user.usecase';
-import { computadorDoPosto, jaTemComputador } from '../../workstation/helpers/computador-do-posto.helper';
+import { ativoDoPosto, jaTemAtivo } from '../../workstation/helpers/ativo-do-posto.helper';
 import type { AlvoPosse, ClientePosse } from './resolve-responsibles.usecase';
 
 // A ENTREGA — Camada 1 do docs/referencia/modelo-de-posse.md.
@@ -266,12 +266,7 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
     // ser entregue a ninguém.
     const ativo = await tx.asset.findFirst({
       where: { id: assetId },
-      select: {
-        id: true, statusId: true, status: { select: { name: true, type: true } },
-        // Só a existência, e não o endpoint inteiro: é o predicado de
-        // "é computador" da regra de posto (computador-do-posto.helper.ts).
-        endpoint: { select: { id: true } },
-      },
+      select: { id: true, statusId: true, status: { select: { name: true, type: true } } },
     });
     if (!ativo) throw new AppError('Registro não encontrado', 404);
 
@@ -302,19 +297,15 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
       );
     }
 
-    // NO MÁXIMO UM COMPUTADOR POR POSTO — a primeira das QUATRO portas; as
-    // outras são o vínculo de máquina a ativo (`link-endpoint-asset.usecase.ts`),
+    // NO MÁXIMO UM ATIVO POR POSTO — a primeira das TRÊS portas; as outras são
     // a marca de posto (`catalog/specs/location.spec.ts`) e a restauração da
     // lixeira (`asset/use-cases/restore-asset.usecase.ts`). Depois de todas as
     // recusas baratas, e DENTRO da transação: não há índice único embaixo,
-    // porque a regra cruza três tabelas.
-    //
-    // Só quando o ativo que está entrando É um computador. Monitor, teclado e
-    // periférico entram sem limite, e o helper devolve `null` para local que não
-    // é posto de trabalho.
-    if (data.targetType === 'LOCATION' && ativo.endpoint) {
-      const ocupante = await computadorDoPosto(tx, alvoId, assetId);
-      if (ocupante) throw new AppError(jaTemComputador(ocupante), 409, { assetId: ocupante.id });
+    // porque a regra cruza três tabelas. O helper devolve `null` para local que
+    // não é posto de trabalho.
+    if (data.targetType === 'LOCATION') {
+      const ocupante = await ativoDoPosto(tx, alvoId, assetId);
+      if (ocupante) throw new AppError(jaTemAtivo(ocupante), 409, { assetId: ocupante.id });
     }
 
     if (data.statusId) await assertStatusExiste(tx, data.statusId);

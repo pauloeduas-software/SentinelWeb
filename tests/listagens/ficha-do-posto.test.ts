@@ -10,8 +10,8 @@ import { criarAtivo, criarFabricante, criarModelo, idsDoSeed } from '../helpers/
 // volta à ficha de cada ativo. Para isso ela pergunta duas coisas que são de
 // rotas diferentes, e as duas nasceram nesta etapa:
 //
-//   `GET /api/workstations/:id`        — qual dos ativos entregues tem MÁQUINA,
-//                                        e qual máquina consultar;
+//   `GET /api/workstations/:id`        — se o ativo da mesa tem MÁQUINA
+//                                        vinculada, e qual máquina consultar;
 //   `GET /api/assets/:id/assignments`  — se o alvo da posse aberta é um POSTO,
 //                                        porque só posto tem ficha para onde ir
 //                                        (um depósito também é `Location`).
@@ -69,18 +69,19 @@ async function entregarA(assetId: string, locationId: string) {
 }
 
 describe('o que a ficha do posto lê', () => {
-  it('a ficha do posto diz QUAL dos ativos entregues é o computador', async () => {
+  it('a ficha do posto diz se o ativo da mesa tem MÁQUINA, e qual', async () => {
     // A ficha mostra a telemetria do computador da mesa, e para isso precisa
-    // saber qual dos ativos entregues tem máquina — e qual máquina consultar.
-    // Sem o `endpointId` por linha, a tela teria que perguntar isso ativo por
-    // ativo, ou adivinhar pela categoria.
-    const mesa = await prisma.location.create({
-      data: { name: 'Mesa do Computador da Ficha', isWorkstation: true },
-      select: { id: true },
-    });
+    // saber se o ativo entregue tem máquina vinculada — e qual máquina
+    // consultar. Sem o `endpointId` por linha, a tela teria que perguntar isso
+    // em outra rota. Duas mesas, porque um posto tem um ativo só (invariante
+    // 19): a do desktop com agente e a do desktop cujo agente ainda não chegou.
+    const [comAgente, semAgente] = await Promise.all([
+      prisma.location.create({ data: { name: 'Mesa com agente', isWorkstation: true }, select: { id: true } }),
+      prisma.location.create({ data: { name: 'Mesa sem agente', isWorkstation: true }, select: { id: true } }),
+    ]);
 
     const computador = await ativo('Desktop com agente da ficha', 'SN-FICHA-20');
-    const monitor = await ativo('Monitor da ficha', 'SN-FICHA-21');
+    const semMaquina = await ativo('Desktop sem agente da ficha', 'SN-FICHA-21');
 
     const agente = await conectarAgente(api, 'maquina-da-ficha-do-posto');
     await agente.handshake({ Hostname: 'pc-da-ficha' });
@@ -89,24 +90,24 @@ describe('o que a ficha do posto lê', () => {
     expect((await api.post(`/api/endpoints/${maquina.id}/link`, { assetId: computador.id })).status).toBe(201);
     await agente.fechar();
 
-    await entregarA(computador.id, mesa.id);
-    await entregarA(monitor.id, mesa.id);
+    await entregarA(computador.id, comAgente.id);
+    await entregarA(semMaquina.id, semAgente.id);
 
-    const { body } = await api.get<{ ativos: { id: string; endpointId: string | null }[] }>(
-      `/api/workstations/${mesa.id}`,
-    );
+    const lerMesa = async (id: string) => (await api.get<{ ativos: { id: string; endpointId: string | null }[] }>(
+      `/api/workstations/${id}`,
+    )).body.ativos;
 
-    const porId = new Map(body.ativos.map((a) => [a.id, a.endpointId]));
-    // OS DOIS ESTÃO NA RESPOSTA. Sem esta linha, a asserção do monitor abaixo
-    // passaria também se a linha dele tivesse sumido da lista: `get` de chave
-    // ausente é `undefined`, e `toBeNull` recusa `undefined` — mas a mensagem
-    // falaria do campo, não da linha que faltou.
-    expect(porId.has(computador.id) && porId.has(monitor.id)).toBe(true);
-    expect(porId.get(computador.id)).toBe(maquina.id);
-    // O MONITOR TEM QUE VIR COM `null`, e não ausente: é a diferença entre
-    // "não é computador" e "a tela não sabe". `toBeNull` recusa `undefined`,
-    // então esta linha também pega a relação que não foi selecionada.
-    expect(porId.get(monitor.id)).toBeNull();
+    const naComAgente = await lerMesa(comAgente.id);
+    expect(naComAgente.map((a) => a.id)).toEqual([computador.id]);
+    expect(naComAgente[0].endpointId).toBe(maquina.id);
+
+    // O ATIVO SEM MÁQUINA TEM QUE VIR COM `null`, e não ausente: é a diferença
+    // entre "ainda sem agente" e "a tela não sabe". `toBeNull` recusa
+    // `undefined`, então esta linha também pega a relação que não foi
+    // selecionada.
+    const naSemAgente = await lerMesa(semAgente.id);
+    expect(naSemAgente.map((a) => a.id)).toEqual([semMaquina.id]);
+    expect(naSemAgente[0].endpointId).toBeNull();
   });
 
   it('a posse aberta diz se o alvo é POSTO, e não só o nome dele', async () => {

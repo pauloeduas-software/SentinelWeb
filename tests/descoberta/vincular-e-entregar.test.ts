@@ -97,8 +97,8 @@ describe('POST /api/endpoints/:id/link-and-checkout', () => {
     expect(await prisma.assignment.count({ where: { assetId: emUso.id, checkinAt: null } })).toBe(0);
   });
 
-  it('e o posto que já tem computador recusa a entrega pela porta da invariante 19', async () => {
-    const mesa = await posto('Mesa já com computador');
+  it('e o posto que já tem ativo recusa a entrega pela porta da invariante 19', async () => {
+    const mesa = await posto('Mesa já com ativo');
     const primeiro = await ativo('Primeiro computador');
     expect((await vincularEEntregar(await maquina('ve-primeiro'), primeiro.id, mesa)).status).toBe(201);
 
@@ -107,7 +107,7 @@ describe('POST /api/endpoints/:id/link-and-checkout', () => {
 
     expect(status).toBe(409);
     expect(body.error).toContain(primeiro.assetTag);
-    expect(body.error).toMatch(/j[áa] tem um computador/i);
+    expect(body.error).toMatch(/j[áa] tem um ativo/i);
     // O vínculo do segundo ficou: a máquina é dele. O que não entrou foi na mesa.
     expect(await prisma.assignment.count({ where: { assetId: segundo.id, checkinAt: null } })).toBe(0);
   });

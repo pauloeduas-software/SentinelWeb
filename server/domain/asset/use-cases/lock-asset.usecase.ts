@@ -29,8 +29,8 @@ import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
 // não mapeia e devolve como 500.
 //
 //   usuário → ativo   o checkout a pessoa, e a entrega de assento a pessoa
-//   ativo → posto     o checkout a posto e o vínculo de máquina, pela
-//                     invariante 19 (`workstation/helpers/computador-do-posto.helper.ts`)
+//   ativo → posto     o checkout a posto e a restauração da lixeira, pela
+//                     invariante 19 (`workstation/helpers/ativo-do-posto.helper.ts`)
 //   ativo             o soft delete do ativo, e a entrega de assento a ativo
 //
 // E AS TRAVAS QUE O POSTGRES TOMA SOZINHO CONTAM. `update-asset.usecase.ts`
