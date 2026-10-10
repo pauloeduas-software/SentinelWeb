@@ -147,28 +147,61 @@ describe('nunca sem administrador (D148)', () => {
 });
 
 describe('a porta fechada por padrão', () => {
-  it('sessão USUARIO entra e não alcança nada', async () => {
-    const sem = await api.comoUsuario('USUARIO');
+  it('USUARIO não entra no painel, e a recusa explica por quê', async () => {
+    // O papel existe para quem RECEBE equipamento. Como nenhuma rota de
+    // inventário o aceita e nenhum item do menu dispensa papel, deixá-lo entrar
+    // produzia um painel vazio respondendo 403 em tudo — que parece defeito.
+    const marca = `colab${Date.now()}`;
+    const pessoa = await api.post<{ id: string }>('/api/users', {
+      name: 'Colaborador Sem Painel', email: `${marca}@teste.local`,
+    });
+    expect(pessoa.status).toBe(201);
 
-    // Entrou: `/api/auth/me` é dispensa DECLARADA, e tem que ser — sem ela não
-    // há como desenhar nem a tela que explica que a pessoa não tem acesso.
-    const eu = await sem.get<{ role: string }>('/api/auth/me');
-    expect(eu.status).toBe(200);
-    expect(eu.body.role).toBe('USUARIO');
+    const senha = 'Senha-De-Teste-123';
+    expect((await api.post(`/api/users/${pessoa.body.id}/set-password`, {
+      username: marca, password: senha,
+    })).status).toBe(200);
 
-    // E não alcança o resto.
-    for (const url of ['/api/assets', '/api/users', '/api/licenses', '/api/settings']) {
-      const resposta = await sem.get(url);
-      expect(resposta.status, `${url} devia ser 403`).toBe(403);
-    }
+    // A conta nasce `USUARIO` pelo `@default` da coluna — ninguém a rebaixou.
+    const entrada = await api.anonimo.post<{ error: string }>('/api/auth/login', {
+      username: marca, password: senha,
+    });
+
+    // 403 e não 401: a senha está CERTA, o que falta é autorização.
+    expect(entrada.status).toBe(403);
+    expect(entrada.body.error).toMatch(/colaborador/i);
+    expect(entrada.body.error).toContain('Técnico');
   });
 
-  it('o 403 NOMEIA o papel que falta', async () => {
-    const sem = await api.comoUsuario('USUARIO');
-    const resposta = await sem.get<{ error: string; papel?: string }>('/api/assets');
+  it('promovido a TECNICO, o mesmo login passa', async () => {
+    // A outra metade: provar que o bloqueio é do PAPEL e não da conta, senão
+    // uma implementação que recusa todo mundo passaria no caso de cima.
+    const marca = `promovido${Date.now()}`;
+    const pessoa = await api.post<{ id: string }>('/api/users', {
+      name: 'Colaborador Promovido', email: `${marca}@teste.local`,
+    });
+    const senha = 'Senha-De-Teste-123';
+    await api.post(`/api/users/${pessoa.body.id}/set-password`, { username: marca, password: senha });
+
+    expect((await api.anonimo.post('/api/auth/login', { username: marca, password: senha })).status)
+      .toBe(403);
+
+    expect((await api.put(`/api/users/${pessoa.body.id}`, { role: 'TECNICO' })).status).toBe(200);
+
+    expect((await api.anonimo.post('/api/auth/login', { username: marca, password: senha })).status)
+      .toBe(200);
+  });
+
+  it('o 403 das rotas NOMEIA o papel que falta', async () => {
+    // Agora pelo TECNICO numa rota de ADMIN: é a mesma mensagem do guard, e o
+    // caminho que sobrou agora que `USUARIO` não tem sessão.
+    const tecnico = await api.comoUsuario('TECNICO');
+    // `PUT /api/settings` é de ADMIN (o `GET` é de técnico): a recusa vem do
+    // `preHandler`, antes de o corpo ser lido.
+    const resposta = await tecnico.put<{ error: string }>('/api/settings', { locale: 'pt-BR' });
 
     expect(resposta.status).toBe(403);
-    expect(resposta.body.error).toContain('Técnico');
+    expect(resposta.body.error).toContain('Administrador');
   });
 
   it('TECNICO abre o inventário e NÃO abre configuração', async () => {

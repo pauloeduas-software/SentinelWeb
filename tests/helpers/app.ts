@@ -44,11 +44,11 @@ export interface ApiDeTeste extends Cliente {
    * `ADMIN` e alcança tudo, então nenhuma asserção sobre "sem acesso" é possível
    * por ele.
    *
-   * Cria um colaborador com senha, define o papel e entra. `USUARIO` (o padrão) é
-   * o caso mais útil: é a sessão que entrou e não alcança nada — a que prova que
-   * a porta está fechada por padrão.
+   * Cria um colaborador com senha, define o papel e entra. `TECNICO` é o padrão
+   * porque `USUARIO` NÃO ENTRA: o login o recusa com 403, e é isso que
+   * `tests/invariantes/permissao.test.ts` prova.
    */
-  comoUsuario(papel?: 'USUARIO' | 'TECNICO' | 'ADMIN'): Promise<Cliente & { userId: string }>;
+  comoUsuario(papel?: 'TECNICO' | 'ADMIN'): Promise<Cliente & { userId: string }>;
   /** A instância montada, para o que o cliente não cobre (WebSocket, `app.hasRoute`). */
   app: FastifyInstance;
   /** O id do administrador logado — o ator esperado em todo `ActivityLog`. */
@@ -183,7 +183,7 @@ export async function criarApi(): Promise<ApiDeTeste> {
    * ERA `comoUsuario(permissoes: string[])`, com grupo (D76). O D148 trocou a
    * matriz pelo papel, e o grupo intermediário desapareceu junto.
    */
-  async function comoUsuario(papel: 'USUARIO' | 'TECNICO' | 'ADMIN' = 'USUARIO') {
+  async function comoUsuario(papel: 'TECNICO' | 'ADMIN' = 'TECNICO') {
     // `Date.now()` no sufixo porque `email` e `name` são únicos por índice
     // parcial, e um arquivo de teste chama isto mais de uma vez.
     const marca = `p${Date.now()}${Math.floor(Math.random() * 1000)}`;
@@ -197,12 +197,11 @@ export async function criarApi(): Promise<ApiDeTeste> {
       throw new Error(`comoUsuario: criar pessoa falhou (${pessoa.status}): ${JSON.stringify(pessoa.body)}`);
     }
 
-    // `USUARIO` é o padrão da coluna: só chama a rota quando há o que mudar.
-    if (papel !== 'USUARIO') {
-      const promocao = await padrao.put(`/api/users/${pessoa.body.id}`, { role: papel });
-      if (promocao.status !== 200) {
-        throw new Error(`comoUsuario: definir papel falhou (${promocao.status}): ${JSON.stringify(promocao.body)}`);
-      }
+    // A coluna nasce `USUARIO`, que não entra no painel: toda sessão de teste
+    // precisa de uma promoção explícita.
+    const promocao = await padrao.put(`/api/users/${pessoa.body.id}`, { role: papel });
+    if (promocao.status !== 200) {
+      throw new Error(`comoUsuario: definir papel falhou (${promocao.status}): ${JSON.stringify(promocao.body)}`);
     }
 
     const credencial = await padrao.post(`/api/users/${pessoa.body.id}/set-password`, {
