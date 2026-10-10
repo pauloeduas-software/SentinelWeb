@@ -7,11 +7,11 @@ import { lerEvento, rotuloDaAcao } from '../../src/pages/helpers/historico.helpe
 import { ACOES_DA_LICENCA, ROTULOS_DA_LICENCA } from '../../src/pages/licencas/helpers/licenca.helper';
 import type { EventoDaLicenca } from '../../src/domain/shared/license.types';
 
-// ARQUIVO PRÓPRIO, e o motivo é o teto de escrita: `WRITE_RATE_LIMIT` é 40 por
-// minuto contado em MEMÓRIA POR INSTÂNCIA, e `operacoes.test.ts` já gastava 35
-// com uma instância só. Um teste a mais lá dentro começaria a receber 429 —
-// falha que muda de lugar conforme a ordem dos testes, que é o pior tipo.
-// Instância nova, contador novo.
+// ARQUIVO PRÓPRIO, e o motivo ERA o teto de escrita: `WRITE_RATE_LIMIT` é 40 por
+// minuto contado em memória por instância, e `operacoes.test.ts` já gastava 35
+// com uma instância só. Esse motivo caiu — o limitador não é registrado no teste
+// (`server/app.ts`, `comTetoDeRequisicao`). O arquivo fica separado pelo assunto:
+// aqui é o HISTÓRICO do assento, lá são as operações sobre ele.
 
 // ═════════════════════════════════════════════════════════════════════════════
 // A TRILHA COMO A TELA A LÊ — e a aritmética que o aviso de queima promete.

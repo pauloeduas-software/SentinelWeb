@@ -9,15 +9,29 @@ import { criarAtivo, criarFabricante, criarModelo, idsDoSeed } from '../helpers/
 // Computador = ativo com MÁQUINA VINCULADA. A regra vale só onde
 // `isWorkstation` é verdade, e não limita monitor, teclado nem periférico.
 //
-// São DUAS portas, e a segunda não é redundante: sem ela a regra seria
-// contornável pela ordem — entregar ao posto o desktop SEM agente, que passa
-// porque ainda não é computador, e vincular a máquina depois.
+// São DUAS portas que RECUSAM, e a segunda não é redundante: sem ela a regra
+// seria contornável pela ordem — entregar ao posto o desktop SEM agente, que
+// passa porque ainda não é computador, e vincular a máquina depois. Elas estão
+// no primeiro `describe`.
 //
-// AS TROCAS (devolver, desvincular, re-vincular, lixeira) estão no arquivo
-// irmão `computador-por-posto-trocas.test.ts`, e não aqui, pelo teto de
-// escrita: 40 por minuto por INSTÂNCIA, e a instância é por arquivo.
-
-const PREFIXO = 'A';
+// O segundo `describe` cobre o outro lado: a regra é "no máximo um", não
+// "exatamente um", e os quatro caminhos que LIBERAM a vaga precisam funcionar,
+// ou a regra tranca o posto em vez de protegê-lo.
+//
+// OS DOIS ESTAVAM EM ARQUIVOS SEPARADOS, e o motivo não era o assunto: era o
+// teto de escrita, contado por instância da aplicação, e o vínculo de máquina é
+// rota destrutiva — teto de DEZ. Uma metade gastava oito vínculos e a outra sete;
+// juntas são quinze, e dezessete contando o re-vínculo e o desvínculo. O teto
+// saiu do ambiente de teste
+// (`server/app.ts`, `comTetoDeRequisicao`; a prova dele vive em
+// `teto-de-requisicao.test.ts`) e as duas metades voltaram para onde a
+// invariante está escrita: um arquivo.
+//
+// A TERCEIRA PORTA — marcar como posto um local que já tem dois computadores —
+// fica em `computador-por-posto-marca.test.ts`. Aquela separação é por ASSUNTO:
+// ela não guarda a entrada do computador no posto, guarda a transição da marca,
+// e tem cenário próprio (salas sem marca, local na lixeira, PUT que não menciona
+// a marca).
 
 let api: ApiDeTeste;
 let seed: Awaited<ReturnType<typeof idsDoSeed>>;
@@ -38,12 +52,9 @@ afterAll(async () => {
 /**
  * O posto, pelo PRISMA e não pela API.
  *
- * O teto de escrita é 40 por minuto e é contado em memória por instância da
- * aplicação (`tests/helpers/app.ts`), e uma instância é por ARQUIVO. Cada caso
- * aqui gasta escrita em ativo, vínculo e entrega — que são o que está sob teste
- * — e o cadastro do posto não é. É a mesma escolha do teste das 205
- * localizações: `createMany` em vez de 205 `POST`, porque o que se exercita é
- * outra coisa.
+ * O que está sob teste aqui é a guarda do checkout e a do vínculo; o cadastro do
+ * posto não é. É a mesma escolha do teste das 205 localizações: `createMany` em
+ * vez de 205 `POST`, porque o que se exercita é outra coisa.
  */
 async function criarPosto(name: string, isWorkstation = true) {
   const criado = await prisma.location.create({ data: { name, isWorkstation }, select: { id: true } });
@@ -57,7 +68,7 @@ async function ativo(nome: string) {
     statusId: seed.statusDeployableId,
     modelId,
     name: nome,
-    assetTag: `POSTO-${PREFIXO}-${String(contador).padStart(3, '0')}`,
+    assetTag: `POSTO-${String(contador).padStart(3, '0')}`,
   });
 }
 
@@ -82,9 +93,11 @@ async function darMaquinaA(assetId: string, hwid: string) {
 /**
  * O mesmo, exigindo que o vínculo tenha acontecido.
  *
- * Existe porque sem a asserção um 429 do teto de escrita deixa o ativo SEM
- * máquina em silêncio, e o caso seguinte falha dizendo "esperava 409, recebeu
- * 201" — uma falha que não fala do que o teste investiga.
+ * É PRÉ-CONDIÇÃO, e por isso é asserção e não `void`: sem ela, um vínculo que
+ * falha por qualquer razão deixa o ativo SEM máquina em silêncio, e o caso
+ * seguinte falha dizendo "esperava 409, recebeu 201" — uma falha que não fala do
+ * que o teste investiga. Foi um 429 do teto que ensinou isso; o teto saiu, e a
+ * asserção fica, porque a lição não era sobre o teto.
  */
 async function darMaquinaOuFalhar(assetId: string, hwid: string) {
   const r = await darMaquinaA(assetId, hwid);
@@ -178,5 +191,74 @@ describe('invariante 19 — no máximo um computador por posto', () => {
     expect((await entregarAoPosto(tres.id, sala)).status).toBe(201);
     expect((await darMaquinaA(tres.id, 'sala-tres')).status).toBe(201);
   });
+});
 
+describe('invariante 19 — o que libera a vaga do posto', () => {
+  it('re-vincular a MESMA máquina ao computador do posto não recusa a si mesmo', async () => {
+    // É o único caminho em que o `assetId` excluído da busca carrega peso: o
+    // `vincularEndpointAoAtivo` deixa passar a mesma máquina no mesmo ativo, e
+    // sem a exclusão esse ativo seria encontrado como "o computador que já está
+    // lá" — a operação responderia 409 contra si mesma.
+    const posto = await criarPosto('Mesa do Re-vínculo');
+
+    const computador = await ativo('Desktop do re-vínculo');
+    const { endpointId } = await darMaquinaOuFalhar(computador.id, 'revinculo-um');
+    expect((await entregarAoPosto(computador.id, posto)).status).toBe(201);
+
+    const denovo = await api.post(`/api/endpoints/${endpointId}/link`, { assetId: computador.id });
+    expect(denovo.status).toBe(201);
+  });
+
+  it('desvincular a máquina do computador do posto libera a vaga', async () => {
+    // O espelho do caso da devolução, pela OUTRA porta: é o fluxo de trocar a
+    // máquina de um posto sem devolver o ativo.
+    const posto = await criarPosto('Mesa da Troca de Máquina');
+
+    const velho = await ativo('Desktop de máquina velha');
+    const { endpointId } = await darMaquinaOuFalhar(velho.id, 'troca-maquina-velha');
+    expect((await entregarAoPosto(velho.id, posto)).status).toBe(201);
+
+    const novo = await ativo('Desktop de máquina nova');
+    await darMaquinaOuFalhar(novo.id, 'troca-maquina-nova');
+    expect((await entregarAoPosto(novo.id, posto)).status).toBe(409);
+
+    // Tirar a máquina do primeiro faz dele um ativo-sem-máquina: ele continua
+    // no posto, e deixa de ser o computador dele.
+    expect((await api.delete(`/api/endpoints/${endpointId}/link`)).status).toBe(200);
+
+    expect((await entregarAoPosto(novo.id, posto)).status).toBe(201);
+  });
+
+  it('ativo na LIXEIRA com posse aberta não tranca o posto', async () => {
+    // O `delete-asset` só carimba `deletedAt` — ele NÃO fecha a posse. Sem o
+    // `deletedAt: null` no filtro aninhado (que a softDeleteExtension não
+    // alcança, porque o topo da consulta é `assignment`), o posto recusaria
+    // todo computador novo apontando um ativo que nenhuma tela mostra.
+    const posto = await criarPosto('Mesa da Lixeira');
+
+    const sumido = await ativo('Desktop que foi para a lixeira');
+    await darMaquinaOuFalhar(sumido.id, 'lixeira-um');
+    expect((await entregarAoPosto(sumido.id, posto)).status).toBe(201);
+    expect((await api.delete(`/api/assets/${sumido.id}`)).status).toBe(200);
+
+    const novo = await ativo('Desktop que chega depois');
+    await darMaquinaOuFalhar(novo.id, 'lixeira-dois');
+    expect((await entregarAoPosto(novo.id, posto)).status).toBe(201);
+  });
+
+  it('devolver o computador libera o posto para outro', async () => {
+    const posto = await criarPosto('Mesa que troca');
+
+    const velho = await ativo('Desktop velho');
+    await darMaquinaOuFalhar(velho.id, 'troca-velho');
+    expect((await entregarAoPosto(velho.id, posto)).status).toBe(201);
+
+    const novo = await ativo('Desktop novo');
+    await darMaquinaOuFalhar(novo.id, 'troca-novo');
+    expect((await entregarAoPosto(novo.id, posto)).status).toBe(409);
+
+    expect((await api.post(`/api/assets/${velho.id}/checkin`, {})).status).toBe(200);
+
+    expect((await entregarAoPosto(novo.id, posto)).status).toBe(201);
+  });
 });

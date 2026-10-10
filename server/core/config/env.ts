@@ -5,6 +5,32 @@ const logger = createLogger('env');
 
 export const isProduction = process.env.NODE_ENV === 'production';
 
+/**
+ * O teto de requisições por IP vale neste ambiente?
+ *
+ * FALSO SÓ NO TESTE, e o motivo está em `server/app.ts`: o teto é contado em
+ * memória e não sabe que a suíte inteira é uma pessoa só. Fora disso o ambiente
+ * de teste não ganha atalho nenhum — nenhuma guarda, nenhuma validação e nenhuma
+ * regra de negócio pergunta o ambiente, porque um teste que roda contra regra
+ * diferente da de produção não prova nada sobre produção.
+ *
+ * FUNÇÃO COM PARÂMETRO, e não uma constante lida do `process.env` no import, por
+ * uma razão de prova: o que decide se a produção sobe protegida é o SENTIDO desta
+ * comparação, e uma constante só pode ser testada mexendo em `process.env` antes
+ * do import — o que em ESM não dá para fazer de dentro de um teste. Com o
+ * parâmetro, `tests/invariantes/teto-de-requisicao.test.ts` afirma os quatro
+ * casos direto, e inverter o `!==` fica vermelho.
+ *
+ * O PARÂMETRO É OBRIGATÓRIO, e isso não é estilo. Com `nodeEnv = process.env.NODE_ENV`
+ * como padrão, `tetoDeRequisicaoLigado(undefined)` cai no padrão em vez de receber
+ * `undefined` — e o caso "ambiente sem NODE_ENV", que é o do `npm run dev`, ficava
+ * INALCANÇÁVEL pelo teste: dentro do vitest o padrão vale `'test'`, então a
+ * asserção do desenvolvimento afirmava o teste. Quem lê o ambiente é quem chama.
+ */
+export function tetoDeRequisicaoLigado(nodeEnv: string | undefined): boolean {
+  return nodeEnv !== 'test';
+}
+
 // Variáveis sem as quais o servidor não funciona: faltou alguma, o boot para
 // aqui com a lista completa (em vez de falhar aos poucos em runtime).
 //

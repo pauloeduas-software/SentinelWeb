@@ -29,7 +29,7 @@ afterAll(async () => {
   await api.fechar();
 });
 
-/** Uma sala SEM a marca, pelo Prisma: o teto de escrita é por arquivo. */
+/** Uma sala SEM a marca, pelo Prisma: o cadastro dela não é o que está sob teste. */
 async function sala(name: string) {
   const criada = await prisma.location.create({
     data: { name, isWorkstation: false },
