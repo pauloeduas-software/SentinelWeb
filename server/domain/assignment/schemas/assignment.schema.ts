@@ -45,6 +45,10 @@ export const checkinSchema = z.strictObject({
   // explícita.
   statusId: uuidOpcional('status'),
   checkinNotes: textoOpcional('observações da devolução', 2_000),
+  // O ESCOPO: fecha a posse só se ela aponta para esta localização, senão 409.
+  // É o que a ficha do posto manda, para não fechar a posse de outra pessoa
+  // por cima de uma tela velha (`checkin-asset.usecase.ts`).
+  targetLocationId: uuidOpcional('posto'),
 });
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;

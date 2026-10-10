@@ -44,6 +44,11 @@ export interface CheckinInput {
   /** Para que estado o ativo volta: estoque, conserto, inutilizável... */
   statusId?: string;
   checkinNotes?: string;
+  /**
+   * Só fecha a posse se ela aponta para esta localização (409 se não). A ficha
+   * do posto manda o id dela; a tela de Ativos, que olha a posse, não manda.
+   */
+  targetLocationId?: string;
 }
 
 /** O histórico de posse de um ativo: a aberta primeiro, depois as fechadas. */

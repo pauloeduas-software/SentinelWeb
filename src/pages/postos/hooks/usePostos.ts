@@ -88,19 +88,25 @@ export function usePostos() {
    * por busca ou por URL. Esta é a ponta que faltava do caminho que a etapa
    * passada abriu.
    *
-   * CORPO VAZIO de propósito: o servidor resolve o status de volta para o
-   * primeiro `DEPLOYABLE` (`checkin-asset.usecase.ts`). O formulário completo da
-   * devolução — status de volta e observação — continua na tela de Ativos, onde
-   * cabe; aqui o que se quer é tirar o equipamento da mesa.
+   * SÓ O ESCOPO no corpo, e mais nada: o servidor resolve o status de volta para
+   * o primeiro `DEPLOYABLE` (`checkin-asset.usecase.ts`). O formulário completo
+   * da devolução — status de volta e observação — continua na tela de Ativos,
+   * onde cabe; aqui o que se quer é tirar o equipamento DESTA mesa.
+   *
+   * E é por isso que o `targetLocationId` vai: a ficha pode estar velha. Entre
+   * ela carregar e o clique, o ativo pode ter sido devolvido e entregue à Laura,
+   * e um corpo vazio fecharia a posse dela. Com o posto no corpo, o servidor
+   * recusa com 409 e diz com quem o ativo está — a mensagem sobe para a ficha.
    *
    * `confirm` com o NÚMERO e o NOME, não "tem certeza?": o que faz alguém parar é
    * ler a etiqueta do que vai sair da mesa.
    */
   const handleDevolver = async (ativo: AtivoDoPosto) => {
+    if (!postoId) return;
     const qual = ativo.name ? `${ativo.assetTag} (${ativo.name})` : ativo.assetTag;
     if (!confirm(`Devolver ${qual} ao estoque? Ele sai deste posto e volta para a lista de Ativos.`)) return;
 
-    await devolver.mutateAsync({ id: ativo.id, data: {} });
+    await devolver.mutateAsync({ id: ativo.id, data: { targetLocationId: postoId } });
   };
 
   return {
