@@ -63,7 +63,13 @@ export interface HandshakeData {
   /** Specs COLETADAS: moram no lado que descobre, não em `assets` (D16). */
   ramTotalBytes: bigint | null;
   diskTotalBytes: bigint | null;
-  /** `Win32_ComputerSystem.UserName` — "DOMINIO\\ana.silva". A observação da Etapa E. */
+  /**
+   * `Win32_ComputerSystem.UserName` — "DOMINIO\\ana.silva".
+   *
+   * O PROTOCOLO AINDA ACEITA, E O SERVIDOR NÃO GUARDA. O campo continua no fio
+   * porque o agente em campo continua mandando, e tirá-lo do tipo transformaria
+   * em erro de parser uma mensagem que é válida. O que saiu foi a coluna.
+   */
   loggedOnUser: string | null;
 }
 

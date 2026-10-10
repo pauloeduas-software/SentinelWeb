@@ -74,7 +74,6 @@ export async function registerHandshake(data: HandshakeData): Promise<HandshakeR
     chassisType: data.chassisType ?? undefined,
     ramTotalBytes: data.ramTotalBytes ?? undefined,
     diskTotalBytes: data.diskTotalBytes ?? undefined,
-    loggedOnUser: data.loggedOnUser ?? undefined,
   };
 
   // A FOTOGRAFIA DO ANTES, e é UMA leitura por `hwid` — coluna `@unique`, então
@@ -87,9 +86,9 @@ export async function registerHandshake(data: HandshakeData): Promise<HandshakeR
   });
 
   // Devolve o `id` porque quem roteia a mensagem (domain/agent) precisa dele
-  // para a observação de usuário e para as mudanças de hardware — sem isso, os
-  // dois fariam um `findUnique` pelo hwid logo depois deste upsert, que é a
-  // mesma linha lida duas vezes no caminho de ingestão.
+  // para as mudanças de hardware — sem isso, ela faria um `findUnique` pelo
+  // hwid logo depois deste upsert, que é a mesma linha lida duas vezes no
+  // caminho de ingestão.
   const endpoint = await prisma.endpoint.upsert({
     where: { hwid: data.hwid },
     update: { ...inventory, status: 'ONLINE', lastSeen: new Date() },

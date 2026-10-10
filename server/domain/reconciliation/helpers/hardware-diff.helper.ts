@@ -17,8 +17,8 @@
  *
  * `hostname` fica **fora**: ele muda por renomeação administrativa, não por
  * alguém abrir a máquina, e enchê-la de linhas de `AssetChange` faria a tabela
- * responder a pergunta errada. `lastSeen`, `status` e `loggedOnUser` também
- * ficam fora — os três mudam a cada mensagem e já têm lugar próprio.
+ * responder a pergunta errada. `lastSeen` e `status` também ficam fora — os
+ * dois mudam a cada mensagem e já têm lugar próprio.
  */
 export interface EspecificacoesColetadas {
   manufacturer: string | null;

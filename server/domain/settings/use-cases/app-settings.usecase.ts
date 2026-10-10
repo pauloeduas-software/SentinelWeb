@@ -99,7 +99,7 @@ export async function peekNextAssetTag(): Promise<{ assetTag: string }> {
 /**
  * Salva os botões da convergência RMM × ITAM.
  *
- * `discoveryMode` é o mais perigoso dos cinco e por isso vale reler o D51 antes
+ * `discoveryMode` é o mais perigoso dos três e por isso vale reler o D51 antes
  * de mexer: em `ON`, a primeira VM de teste que alguém subir vira patrimônio — e
  * consome uma etiqueta do contador, que o `nextAssetTag()` acima nunca devolve.
  * O estrago não é a linha a mais: é a sequência furada para sempre.
@@ -112,8 +112,6 @@ export async function salvarConfiguracaoDaDescoberta(dados: {
   discoveryMode?: DiscoveryMode;
   ghostDays?: number;
   shadowHours?: number;
-  userDailyRetentionDays?: number;
-  ignoredUserKeys?: string[];
 }) {
   return prisma.appSetting.upsert({
     where: { id: APP_SETTING_ID },
@@ -123,8 +121,6 @@ export async function salvarConfiguracaoDaDescoberta(dados: {
       discoveryMode: true,
       ghostDays: true,
       shadowHours: true,
-      userDailyRetentionDays: true,
-      ignoredUserKeys: true,
     },
   });
 }

@@ -101,10 +101,6 @@ function Especificacoes({ specs }: { specs: EspecificacoesDaMaquina }) {
       <Campo rotulo="UUID">{specs.systemUuid ?? '—'}</Campo>
       <Campo rotulo="MAC">{specs.macAddress ?? '—'}</Campo>
       <Campo rotulo="IP local">{specs.localIp ?? '—'}</Campo>
-      {/* O último usuário logado é o dado de onde a fase tira a sugestão de
-          posse. Mostrá-lo aqui é o que torna a sugestão auditável: quem recebe
-          "entregar este ativo à Ana" pode ver de onde o sistema tirou isso. */}
-      <Campo rotulo="Último login">{specs.loggedOnUser ?? '—'}</Campo>
     </div>
   );
 }

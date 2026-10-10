@@ -60,10 +60,6 @@ model Endpoint {
   ramTotalBytes  BigInt?
   diskTotalBytes BigInt?
 
-  /// Último usuário visto logado. Bruto, como veio: "DOMINIO\ana.silva".
-  /// Quem o transforma em `userKey` é o helper da Etapa E.
-  loggedOnUser String?
-
   /// sha256 da lista de software que o AGENTE mandou no último handshake.
   /// Calculado no servidor, nunca aceito do agente (D100).
   softwareHash String?
@@ -101,7 +97,6 @@ model Endpoint {
   merged       Endpoint[] @relation("EndpointMerge")
 
   telemetries   Telemetry[]
-  userDays      EndpointUserDaily[]
   installations SoftwareInstallation[]
   suggestions   ReconciliationSuggestion[] @relation("SugestaoDoEndpoint")
   mergeTargetOf ReconciliationSuggestion[] @relation("SugestaoDeMerge")
@@ -231,13 +226,6 @@ model User {
 
   // LICENÇA (F6). Assento vai para pessoa ou ativo, nunca para um posto (D39).
   licenseSeats LicenseSeatCheckout[]
-
-  // CONVERGÊNCIA (F7). O que o agente OBSERVOU sobre esta pessoa e o que o
-  // sistema PROPÔS por causa disso — nenhum dos dois é posse: posse continua
-  // sendo `Assignment` e `LocationOccupant`, e é por lá que a sugestão aceita
-  // passa a existir.
-  endpointDays EndpointUserDaily[]
-  suggestions  ReconciliationSuggestion[]
 
   // ─────────────────────────────────────────────────────────────────────────
   // AS DUAS PERGUNTAS QUE PASSAM POR UMA PESSOA (D72).
@@ -480,8 +468,6 @@ model Location {
   // só no SQL porque ele não os expressa, e esses o `migrate diff` ignora em vez
   // de tentar remover — a diferença é essa, e é o que separa "mora na migration
   // de propósito" de "ficou para trás".
-  suggestions ReconciliationSuggestion[]
-
   @@index([parentId])
   @@index([isWorkstation])
   @@map("locations")
@@ -758,7 +744,7 @@ model AppSetting {
   // ── OS BOTÕES DA DESCOBERTA (F7) ─────────────────────────────────────────
   //
   // Moram no singleton que já existe, e não numa tabela de configuração nova:
-  // são cinco valores, não um domínio.
+  // são três valores, não um domínio.
   //
   // `SUGGEST` é o padrão e isso é o D51: em `ON`, a primeira VM de teste que
   // alguém subir vira patrimônio — e consome uma etiqueta do contador, que o
@@ -770,24 +756,6 @@ model AppSetting {
   ghostDays   Int @default(30)
   /// Máquina sem cadastro vista há mais que isto é SHADOW IT.
   shadowHours Int @default(24)
-
-  /// Expurgo do `EndpointUserDaily` (D49): dado de pessoa, retenção curta.
-  userDailyRetentionDays Int @default(90)
-
-  /// Contas que a detecção de posto compartilhado IGNORA — o técnico de TI que
-  /// loga em 40 máquinas para dar suporte, a conta de serviço (D101).
-  ///
-  /// NASCE VAZIA. Preencher com palpites (`admin`, `administrator`) esconderia
-  /// um administrador que é uma pessoa de verdade usando a máquina dela.
-  ignoredUserKeys String[] @default([])
-
-  /// O FUSO que decide o que é "hoje" (D123). Sem ele, "hoje" é o dia do
-  /// PROCESSO — que roda em UTC em produção e no fuso de quem desenvolve na
-  /// máquina local, então a mesma configuração produz dois comportamentos.
-  ///
-  /// A janela de execução de cada job é uma LINHA em `job_runs`, com o nome do
-  /// job como chave, e não uma coluna aqui (D79).
-  timezone String @default("America/Sao_Paulo")
 
   // ── O FORMATO (F10, D65) ─────────────────────────────────────────────────
   //
@@ -981,13 +949,6 @@ enum SuggestionKind {
   LINK
   /// Este endpoint é o MESMO que aquele outro: reimagem ou troca de placa.
   MERGE
-  /// O ativo está com esta pessoa (a `Assignment` que falta).
-  CHECKOUT
-  /// A pessoa OCUPA o posto a que o ativo está entregue — o item que só existe
-  /// por causa do modelo de posse (D47).
-  OCCUPANCY
-  /// Duas pessoas em turnos diferentes na mesma máquina: promover a posto (D48).
-  SHARED_POST
 }
 
 enum SuggestionState {
@@ -1017,18 +978,12 @@ model ReconciliationSuggestion {
 
   // Os alvos. Qual deles está preenchido depende do `kind`.
   assetId             String? @db.Uuid
-  targetUserId        String? @db.Uuid
-  targetLocationId    String? @db.Uuid
   mergeIntoEndpointId String? @db.Uuid
 
-  /// 0 a 100. Só `LINK` e `MERGE` pontuam por sinal de hardware; as outras
-  /// carregam a confiança do casamento de pessoa.
+  /// 0 a 100, e todo ponto vem de sinal de hardware: é a cascata de identidade
+  /// que pontua, não um palpite sobre gente.
   score  Int
   signal MatchSignal?
-
-  /// Turno inferido, quando a sugestão é de ocupação. Texto livre (D15): o
-  /// helper propõe "Manhã" e a pessoa corrige para "12x36 A".
-  shift String?
 
   /// O QUE o sistema viu — quais dias, quais horas, quantas amostras, qual
   /// serial. Vai para a tela: sugestão sem evidência visível é palpite, e
@@ -1047,57 +1002,16 @@ model ReconciliationSuggestion {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  endpoint       Endpoint  @relation("SugestaoDoEndpoint", fields: [endpointId], references: [id], onDelete: Cascade)
-  asset          Asset?    @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  targetUser     User?     @relation(fields: [targetUserId], references: [id], onDelete: Cascade)
-  targetLocation Location? @relation(fields: [targetLocationId], references: [id], onDelete: Cascade)
-  mergeInto      Endpoint? @relation("SugestaoDeMerge", fields: [mergeIntoEndpointId], references: [id], onDelete: Cascade)
+  endpoint  Endpoint  @relation("SugestaoDoEndpoint", fields: [endpointId], references: [id], onDelete: Cascade)
+  asset     Asset?    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  mergeInto Endpoint? @relation("SugestaoDeMerge", fields: [mergeIntoEndpointId], references: [id], onDelete: Cascade)
 
   // O índice que impede a fila de empilhar (`sugestao_pendente_por_alvo`, com
-  // COALESCE nas FKs nuláveis) é PARCIAL e nasce na migration escrita à mão.
+  // COALESCE nas duas FKs nuláveis) é PARCIAL e nasce na migration escrita à mão.
   @@index([state, kind])
   @@index([endpointId, state])
   @@index([assetId])
   @@map("reconciliation_suggestions")
-}
-
-// QUEM ESTEVE LOGADO NESTA MÁQUINA, EM QUE DIA — agregado, nunca log de sessão.
-//
-// O D49 em tabela. Uma linha por handshake seria a mesma armadilha que o
-// `AssetUsageDaily` evita: a consulta "quem usa essa máquina" varreria milhões
-// de linhas. E, sendo dado de PESSOA, o formato certo é o menor que responde à
-// pergunta — em que dias e em que faixa de hora, não um rastro minuto a minuto.
-//
-// O propósito é declarado (identificar posto e ocupante), a retenção é curta
-// (`AppSetting.userDailyRetentionDays`, 90 dias) e o que sai daqui é SUGESTÃO
-// para um humano. Não é medida de produtividade, e este sistema não se propõe a
-// fazer isso.
-model EndpointUserDaily {
-  id         String @id @default(uuid()) @db.Uuid
-  endpointId String @db.Uuid
-
-  /// A chave normalizada: `DOMINIO\ana.silva` → `ana.silva`. Guardada mesmo
-  /// quando não casa com ninguém — é ela que denuncia a conta de serviço que
-  /// precisa entrar na allowlist.
-  userKey String
-  /// Preenchido quando o casamento foi inequívoco. Ambíguo = null (D46).
-  userId  String? @db.Uuid
-
-  day         DateTime @db.Date
-  firstSeenAt DateTime
-  lastSeenAt  DateTime
-  samples     Int      @default(1)
-
-  endpoint Endpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
-  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  // É O ÍNDICE que garante a agregação, não o `upsert` lembrar de acertar a
-  // chave. Declarado aqui porque o Prisma o expressa — os PARCIAIS (`WHERE …`)
-  // é que moram só no SQL, e a diferença é a nota do model `Location`.
-  @@unique([endpointId, userKey, day])
-  @@index([endpointId, day])
-  @@index([userId, day])
-  @@map("endpoint_user_daily")
 }
 
 // MUDANÇA DE HARDWARE DETECTADA — trocou o HD, tiraram pente de RAM.

@@ -1,30 +1,18 @@
 import { z } from 'zod';
-import { uuidObrigatorio, uuidOpcional, textoOpcional } from '../../shared/fields.schema';
+import { uuidObrigatorio, uuidOpcional } from '../../shared/fields.schema';
 
 // Contrato de entrada das rotas de reconciliação.
 //
 // `strictObject` como no resto do sistema: campo desconhecido vira 422 em vez de
 // gravação silenciosa. Aqui isso fecha uma porta específica — não existe jeito
 // de mandar `state: 'ACCEPTED'` pelo corpo e fechar uma sugestão sem executar o
-// que ela propõe.
+// que ela propõe. O aceite não tem corpo: a sugestão já diz tudo que ela afirma.
 
 export const filtroDeSugestoesSchema = z.strictObject({
   state: z.enum(['PENDING', 'ACCEPTED', 'REJECTED', 'SUPERSEDED']).optional(),
-  kind: z.enum(['LINK', 'MERGE', 'CHECKOUT', 'OCCUPANCY', 'SHARED_POST']).optional(),
+  kind: z.enum(['LINK', 'MERGE']).optional(),
   endpointId: uuidOpcional('máquina'),
   assetId: uuidOpcional('ativo'),
-});
-
-/**
- * O que a pessoa pode ACRESCENTAR ao aceitar.
- *
- * Existe por causa do `SHARED_POST`: o sistema propõe promover a máquina a posto
- * compartilhado, mas quem decide QUAL posto é gente — pode ser um que já existe
- * e que o sistema não teria como adivinhar. Vazio, vale o que a sugestão propôs.
- */
-export const aceiteSchema = z.strictObject({
-  locationId: uuidOpcional('posto'),
-  shift: textoOpcional('turno', 60),
 });
 
 export const vinculoSchema = z.strictObject({

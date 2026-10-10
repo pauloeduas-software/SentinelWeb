@@ -2,7 +2,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { idParamSchema } from '../../shared/params.schema';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import {
-  aceiteSchema, buscaDePacotesSchema, filtroDeSugestoesSchema, fusaoSchema,
+  buscaDePacotesSchema, filtroDeSugestoesSchema, fusaoSchema,
   janelaDeOciosidadeSchema, softwareDaLicencaSchema, triagemSchema, vinculoSchema,
 } from '../schemas/reconciliation.schema';
 import { listarSugestoes } from '../use-cases/list-suggestions.usecase';
@@ -31,8 +31,7 @@ export const reconciliationController = {
 
   async accept(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    const extra = aceiteSchema.parse(request.body ?? {});
-    return aceitarSugestao(id, atorDaRequisicao(request), extra);
+    return aceitarSugestao(id, atorDaRequisicao(request));
   },
 
   async reject(request: FastifyRequest) {

@@ -131,18 +131,17 @@ describe('o que a fusão recusa', () => {
 // ═════════════════════════════════════════════════════════════════════════════
 // A CONSOLIDAÇÃO — o caminho NORMAL da fusão, e o que não tinha teste.
 //
-// O D108 diz que `endpoint_user_daily` é única por (máquina, conta, dia) e
-// `software_installations` por (máquina, pacote), e que as duas linhas podem ter
-// registros do MESMO dia e do MESMO pacote — é o caso comum, porque a reimagem
-// acontece no meio de um dia de trabalho. Mover cegamente violaria o índice e
-// derrubaria a fusão inteira na metade.
+// O D108 diz que `software_installations` é única por (máquina, pacote), e que as
+// duas linhas podem ter registros do MESMO pacote — é o caso comum, porque a
+// reimagem acontece no meio de um dia de trabalho. Mover cegamente violaria o
+// índice e derrubaria a fusão inteira na metade.
 //
 // Ou seja: o ramo que a fusão percorre quase sempre era justamente o que a suíte
 // não exercitava, numa operação sem desfazer.
 // ═════════════════════════════════════════════════════════════════════════════
 
 describe('a consolidação do que colide', () => {
-  it('soma amostras, estica as datas e preserva o "instalado desde" mais antigo', async () => {
+  it('preserva o "instalado desde" mais antigo e o último contato mais recente', async () => {
     const ativo = await criarAtivo(api, { statusId, modelId, name: 'pc-consolida' });
 
     const ids: Record<string, string> = {};
@@ -157,7 +156,7 @@ describe('a consolidação do que colide', () => {
     const nova = ids['cons-nova'];
     await api.post(`/api/endpoints/${velha}/link`, { assetId: ativo.id });
 
-    // O MESMO DIA nas duas linhas, que é o que a reimagem no meio do expediente
+    // DUAS HORAS DO MESMO DIA, que é o que a reimagem no meio do expediente
     // produz. Escrita direta por Prisma: a "API" destas linhas é o agente
     // mandando handshake em horas diferentes do mesmo dia.
     const hoje = new Date();
@@ -165,14 +164,7 @@ describe('a consolidação do que colide', () => {
     const manha = new Date(dia.getTime() + 11 * 60 * 60 * 1000);
     const tarde = new Date(dia.getTime() + 20 * 60 * 60 * 1000);
 
-    await prisma.endpointUserDaily.create({
-      data: { endpointId: velha, userKey: 'laura', day: dia, firstSeenAt: manha, lastSeenAt: manha, samples: 4 },
-    });
-    await prisma.endpointUserDaily.create({
-      data: { endpointId: nova, userKey: 'laura', day: dia, firstSeenAt: tarde, lastSeenAt: tarde, samples: 7 },
-    });
-
-    // E o MESMO PACOTE, instalado antes da reimagem e ainda presente depois.
+    // O MESMO PACOTE, instalado antes da reimagem e ainda presente depois.
     const pacote = await prisma.softwarePackage.create({
       data: { name: 'Office', version: '16.0', publisher: 'Microsoft', normalizedKey: 'office|16.0|microsoft' },
     });
@@ -190,15 +182,6 @@ describe('a consolidação do que colide', () => {
 
     const fusao = await api.post(`/api/endpoints/${nova}/merge`, { intoEndpointId: velha });
     expect(fusao.status).toBe(200);
-
-    // UMA linha por (máquina, conta, dia), com as amostras SOMADAS e a janela de
-    // horas ESTICADA para cobrir o dia inteiro das duas.
-    const dias = await prisma.endpointUserDaily.findMany({ where: { endpointId: velha, userKey: 'laura' } });
-    expect(dias).toHaveLength(1);
-    expect(dias[0].samples).toBe(11);
-    expect(dias[0].firstSeenAt.toISOString()).toBe(manha.toISOString());
-    expect(dias[0].lastSeenAt.toISOString()).toBe(tarde.toISOString());
-    expect(await prisma.endpointUserDaily.count({ where: { endpointId: nova } })).toBe(0);
 
     // "Instalado desde" é fato da MÁQUINA, não da linha: se o Office estava lá
     // antes da reimagem, a data antiga é a que responde a pergunta da auditoria.
