@@ -19,7 +19,6 @@ export interface UpdateUserData {
   phone?: string | null;
   address?: string | null;
   hiredAt?: Date | null;
-  managerId?: string | null;
 }
 
 // O DIFF É SOBRE IDS, não sobre nomes: o log guarda o que foi gravado. Se
@@ -27,7 +26,7 @@ export interface UpdateUserData {
 // a contar uma mudança que não houve nesta pessoa.
 const CAMPOS_AUDITADOS = [
   'name', 'email', 'employeeNumber', 'jobTitle', 'phone', 'address',
-  'hiredAt', 'managerId', 'role',
+  'hiredAt', 'role',
 ] as const;
 
 /**
@@ -40,7 +39,7 @@ const CAMPOS_AUDITADOS = [
  */
 const SELECT_DO_DIFF = {
   id: true, name: true, email: true, employeeNumber: true,
-  jobTitle: true, phone: true, address: true, hiredAt: true, managerId: true, role: true,
+  jobTitle: true, phone: true, address: true, hiredAt: true, role: true,
 } as const;
 
 export async function updateUser(id: string, data: UpdateUserData, actorId: string | null) {
@@ -65,7 +64,6 @@ export async function updateUser(id: string, data: UpdateUserData, actorId: stri
         phone: data.phone,
         address: data.address,
         hiredAt: data.hiredAt,
-        managerId: data.managerId,
         role: data.role,
       },
       select: SELECT_DO_DIFF,

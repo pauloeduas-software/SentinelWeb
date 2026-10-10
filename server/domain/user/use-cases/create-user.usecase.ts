@@ -21,7 +21,6 @@ export interface CreateUserData {
   phone?: string | null;
   address?: string | null;
   hiredAt?: Date | null;
-  managerId?: string | null;
 }
 
 export async function createUser(data: CreateUserData, actorId: string | null) {
@@ -42,7 +41,6 @@ export async function createUser(data: CreateUserData, actorId: string | null) {
         phone: data.phone ?? null,
         address: data.address ?? null,
         hiredAt: data.hiredAt ?? null,
-        managerId: data.managerId ?? null,
         // Ausente cai no `@default(USUARIO)` do schema — e é por isso que aqui
         // não há `?? 'USUARIO'`: a porta fechada por padrão mora num lugar só.
         role: data.role,
@@ -60,7 +58,7 @@ export async function createUser(data: CreateUserData, actorId: string | null) {
         // nome pode mudar depois sem que este cadastro tenha mudado.
         changes: {
           name: user.name, email: user.email,
-          employeeNumber: data.employeeNumber ?? null, managerId: data.managerId ?? null,
+          employeeNumber: data.employeeNumber ?? null,
         },
       },
       actorId,

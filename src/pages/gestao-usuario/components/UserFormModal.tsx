@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import ReferenceSelect from '../../components/ReferenceSelect';
 import type { User } from '../../../domain/shared/user.types';
 import type { UserInput } from '../../../domain/user/user.queries';
 
-// O FORMULÁRIO DE CADASTRO — nome, e-mail, papel e gestor.
+// O FORMULÁRIO DE CADASTRO — nome, e-mail e papel.
 //
 // ═══════════════════════════════════════════════════════════════════════════
 // POR QUE A IDENTIDADE (matrícula, cargo, telefone, endereço, admissão) NÃO
@@ -33,7 +32,6 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
     name: user?.name || '',
     email: user?.email || '',
     // "nenhum" do `<select>`, convertido para `null` na submissão.
-    managerId: user?.managerId || '',
     // O PAPEL (D148). Conta nova nasce `USUARIO`, que é o `@default` da coluna —
     // a porta fechada por padrão da F3 levada à autorização.
     role: user?.role || 'USUARIO',
@@ -48,13 +46,9 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
     setError('');
 
     try {
-      // `'' → null`: o `<select>` sem escolha manda string vazia, e o zod do
-      // servidor espera uuid ou nulo. É a mesma conversão que o
-      // `ReferenceSelect` documenta para `parentId`/`managerId`.
       await onSubmit({
         name: formData.name,
         email: formData.email,
-        managerId: formData.managerId || null,
         role: formData.role,
       });
     } catch (err) {
@@ -109,18 +103,6 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
               <option value="TECNICO">Técnico — o inventário inteiro</option>
               <option value="ADMIN">Administrador — mais gente, configuração e custo</option>
             </select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-text-secondary uppercase tracking-widest text-[10px]">Gestor</label>
-            {/* QUEM COBRA a pessoa — nunca quem responde pelo ativo dela (D72).
-                `excluirId` para ninguém ser gestor de si mesmo. */}
-            <ReferenceSelect
-              rota="users"
-              valor={formData.managerId}
-              excluirId={user?.id}
-              onChange={(valor) => setFormData({ ...formData, managerId: valor })}
-            />
           </div>
 
           <div className="pt-4 flex justify-end gap-3 border-t border-border-sutil">

@@ -38,7 +38,6 @@ const ROTULO_DO_CAMPO: Record<string, string> = {
   phone: 'Telefone',
   address: 'Endereço',
   hiredAt: 'Admissão',
-  managerId: 'Gestor',
   // Troca de acesso (F11): o `set-user-groups` grava na linha do tempo da
   // PESSOA, ao lado do desligamento.
   grupos: 'Grupos',

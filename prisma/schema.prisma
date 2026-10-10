@@ -207,18 +207,6 @@ model User {
   /// Admissão. Não é `createdAt`: a pessoa trabalha aqui desde antes do sistema.
   hiredAt DateTime?
 
-  // GESTOR DA PESSOA — a hierarquia de gente, em auto-relação.
-  //
-  // ⚠️ ELE NÃO ENTRA EM `resolverResponsaveis()`, e isto é o D72. Gestor é ROTA
-  // DE ESCALONAMENTO, não detentor: ele recebe o aviso de atraso e aprova a
-  // baixa. Responsabilidade por ativo é *quem está com o equipamento*, e quem
-  // responde é a posse aberta ou os ocupantes do posto (D16). Se um dia "o
-  // gestor responde junto" for regra do cliente, é decisão NOVA e explícita —
-  // não efeito colateral de esta coluna existir.
-  //
-  // `SetNull`: desligar o gestor não pode derrubar os liderados junto.
-  managerId String? @db.Uuid
-
   // Desligamento (F11) é diferente de lixeira: quem saiu da empresa continua no
   // histórico de posse e nos relatórios, só não opera mais.
   isActive         Boolean            @default(true)
@@ -262,19 +250,13 @@ model User {
   // alcança nada: é a porta fechada por padrão da F3 levada à autorização.
 
   // ─────────────────────────────────────────────────────────────────────────
-  // AS TRÊS HIERARQUIAS QUE PASSAM POR UMA PESSOA (F11, Etapa C — D72).
+  // AS DUAS PERGUNTAS QUE PASSAM POR UMA PESSOA (D72).
   //
-  // Elas parecem todas responder "de quem é isto?" e respondem a perguntas
-  // diferentes. A tabela inteira está em docs/referencia/modelo-de-posse.md:
-  //
-  //   quem RESPONDE pelo ativo?        a posse aberta → pessoa, ou os
-  //                                     ocupantes do posto  (`resolverResponsaveis`)
-  //   quem COBRA a pessoa?             `managerId`          (hierarquia de gente)
-  //   quem responde pelo ESPAÇO?       `Location.managerId`
+  //   quem RESPONDE pelo ativo?    a posse aberta → pessoa, ou os ocupantes do
+  //                                 posto (`resolverResponsaveis`)
+  //   quem responde pelo ESPAÇO?   `Location.managerId`
   //
   // Em uma linha: *o posto responde pelo ativo, e a pessoa responde pelo posto.*
-  manager       User?        @relation("UserManager", fields: [managerId], references: [id], onDelete: SetNull)
-  reports       User[]       @relation("UserManager")
 
   // `email` NÃO é @unique aqui de propósito: a unicidade é um índice parcial
   // (`WHERE deleted_at IS NULL`) criado na migration. Com @unique comum, um
@@ -282,7 +264,6 @@ model User {
   // é o `unique_undeleted` do Snipe-IT (docs/ROADMAP.md, F2).
   @@index([email])
   @@index([deletedAt])
-  @@index([managerId])
   @@map("users")
 }
 model ActivityLog {

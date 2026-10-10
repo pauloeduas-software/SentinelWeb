@@ -106,7 +106,6 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   'PUT /api/users/:id': 'ADMIN',
   'DELETE /api/users/:id': 'ADMIN',
   'POST /api/users/:id/restore': 'ADMIN',
-  'GET /api/users/:id/reports': 'TECNICO',
   'POST /api/users/:id/set-password': 'ADMIN',
   'GET /api/endpoints': 'TECNICO',
   'GET /api/assets/:id/machine': 'TECNICO',

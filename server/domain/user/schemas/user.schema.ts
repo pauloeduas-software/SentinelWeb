@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { dataOpcional, textoOpcional, uuidOpcional } from '../../shared/fields.schema';
+import { dataOpcional, textoOpcional } from '../../shared/fields.schema';
 
 // Contrato de entrada das rotas de usuário. `strictObject` pelo mesmo motivo do
 // inventário: campo desconhecido vira 422, não gravação silenciosa.
@@ -30,7 +30,6 @@ const email = z.string('e-mail é obrigatório').trim().toLowerCase()
 // ─────────────────────────────────────────────────────────────────────────────
 const camposDeIdentidade = {
   // QUEM COBRA a pessoa. Nunca quem responde pelo ativo dela (D72).
-  managerId: uuidOpcional('gestor'),
   employeeNumber: textoOpcional('matrícula', 40),
   jobTitle: textoOpcional('cargo', 120),
   phone: textoOpcional('telefone', 40),
