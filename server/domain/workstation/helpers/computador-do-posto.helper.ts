@@ -144,7 +144,38 @@ export async function contarComputadoresNoLocal(
   });
 }
 
-/** A frase das duas portas que recusam o segundo computador. */
+/**
+ * Dentre os locais pedidos, os POSTOS DE TRABALHO que já têm computador.
+ *
+ * É a pergunta da cascata de reconciliação (`match-endpoint.usecase.ts`), e
+ * ela é feita em LOTE: o job pergunta por todos os candidatos de uma máquina
+ * numa consulta, não um `computadorDoPosto` por candidato.
+ *
+ * O mesmo filtro dos irmãos — posse aberta, ativo vivo, com máquina —, e o
+ * `isWorkstation` entra pela relação, porque a sala de reunião não tem vaga a
+ * contar. Sem trava, como o contador da marca: o job propõe, não grava, e quem
+ * grava (o aceite, o vínculo manual) passa pelas portas que travam.
+ */
+export async function postosComComputador(
+  client: Pick<typeof prisma, 'assignment'>,
+  locationIds: string[],
+): Promise<Set<string>> {
+  if (locationIds.length === 0) return new Set();
+
+  const posses = await client.assignment.findMany({
+    where: {
+      targetLocationId: { in: locationIds },
+      checkinAt: null,
+      targetLocation: { isWorkstation: true },
+      asset: { deletedAt: null, endpoint: { isNot: null } },
+    },
+    select: { targetLocationId: true },
+  });
+
+  return new Set(posses.flatMap((posse) => (posse.targetLocationId ? [posse.targetLocationId] : [])));
+}
+
+/** A frase das portas que recusam o segundo computador. */
 export function jaTemComputador(computador: ComputadorDoPosto): string {
   const qual = computador.name ? `${computador.assetTag} (${computador.name})` : computador.assetTag;
   return `Este posto de trabalho já tem um computador: ${qual}. Faça a devolução dele antes.`;
