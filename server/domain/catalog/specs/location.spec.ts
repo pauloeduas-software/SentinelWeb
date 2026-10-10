@@ -1,6 +1,6 @@
 import { INCLUINDO_LIXEIRA } from '../../../core/database/soft-delete.extension';
 import { AppError } from '../../../core/errors/app-error';
-import { contarComputadoresNoLocal } from '../../workstation/helpers/computador-do-posto.helper';
+import { contarAtivosNoLocal } from '../../workstation/helpers/ativo-do-posto.helper';
 import { assertSemCicloDeLocalizacao } from '../helpers/location-cycle.helper';
 import { createLocationSchema, updateLocationSchema } from '../schemas/catalog-entities.schema';
 import type { CatalogDelegate, CatalogSpec } from './catalog-spec.types';
@@ -53,17 +53,15 @@ export const locationSpec: CatalogSpec = {
     return filhas + ativos;
   },
 
-  // A TERCEIRA PORTA DA INVARIANTE 19.
+  // A PORTA DA MARCA na invariante 19 — as outras duas são a entrega
+  // (`checkout-asset.usecase.ts`) e a volta da lixeira
+  // (`asset/use-cases/restore-asset.usecase.ts`). Sem esta guarda, uma sala com
+  // dois computadores virava posto de trabalho em uma requisição, e a invariante
+  // ficava falsa no banco sem nada ter falhado — numa página que promete fatos
+  // que nunca são falsos.
   //
-  // As duas primeiras defendem a ESCRITA de posse e de vínculo
-  // (`checkout-asset.usecase.ts` e `link-endpoint-asset.usecase.ts`), e a quarta
-  // a volta da lixeira (`asset/use-cases/restore-asset.usecase.ts`). Faltava a
-  // marca: sem esta guarda, uma sala com dois computadores virava posto de
-  // trabalho em uma requisição, e a invariante ficava falsa no banco sem nada
-  // ter falhado — numa página que promete fatos que nunca são falsos.
-  //
-  // MAIS DE UM, e não um: a regra é "no máximo um computador por posto", então
-  // marcar uma sala que já tem exatamente um é legítimo e vira um posto válido.
+  // MAIS DE UM, e não um: a regra é "no máximo um ativo por posto", então marcar
+  // uma sala que já tem exatamente um é legítimo e vira um posto válido.
   //
   // O padrão dos três passos é o do `category.spec.ts` e do `status-label.spec.ts`:
   // sai na criação, sai quando o campo não foi mencionado, e sai quando a marca
@@ -80,13 +78,13 @@ export const locationSpec: CatalogSpec = {
     });
     if (!atual || atual.isWorkstation) return;
 
-    const quantos = await contarComputadoresNoLocal(client, id);
+    const quantos = await contarAtivosNoLocal(client, id);
     if (quantos > 1) {
       throw new AppError(
-        `Este local tem ${quantos} computadores entregues e um posto de trabalho tem no máximo um. `
+        `Este local tem ${quantos} ativos entregues e um posto de trabalho tem no máximo um. `
           + 'Devolva os que não ficam nele antes de marcá-lo como posto.',
         409,
-        { computadores: quantos },
+        { ativos: quantos },
       );
     }
   },

@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import OccupantsPanel from '../../components/OccupantsPanel';
 import TelemetriaDaMaquina from '../../components/TelemetriaDaMaquina';
 import {
-  caminhoDoPosto, computadoresDoPosto, explicacaoDoVago, resumoDeAtivos,
+  ativosComMaquina, caminhoDoPosto, explicacaoDoVago, resumoDeAtivos,
 } from '../helpers/postos.helper';
 import type { OccupantInput } from '../../../domain/occupancy/occupancy.queries';
 import type { LocationOccupant, OccupantView } from '../../../domain/shared/posse.types';
@@ -87,9 +87,10 @@ export default function PostoDetalheModal({
 
   const ativos = detalhe?.ativos ?? [];
   // Cálculo fora do JSX (docs/referencia/arquitetura.md). Num posto marcado a
-  // lista tem no máximo um — é a invariante 19 —, mas esta ficha responde por
-  // qualquer localização, e a sala de reunião pode ter dois.
-  const computadores = computadoresDoPosto(ativos);
+  // lista tem no máximo um ativo — é a invariante 19 —, mas esta ficha responde
+  // por qualquer localização, e a sala de reunião pode ter dois. Com máquina
+  // vinculada é o que tem telemetria para mostrar.
+  const comMaquina = ativosComMaquina(ativos);
   const caminho = detalhe?.caminho ?? posto?.caminho;
   const vago = detalhe?.vago ?? posto?.vago ?? false;
   const totalAtivos = detalhe?.totalAtivos ?? posto?.totalAtivos ?? 0;
@@ -186,12 +187,14 @@ export default function PostoDetalheModal({
                         <Link to={`/ativos/${ativo.id}`} className="text-status-info hover:underline">
                           {ativo.assetTag}
                         </Link>
-                        {ativo.endpointId && (
+                        {/* Todo ativo é computador; o que a linha avisa é o
+                            que falta a ele — a máquina, e com ela a telemetria. */}
+                        {!ativo.endpointId && (
                           <span
                             className="ml-2 text-[10px] uppercase tracking-widest text-text-tertiary"
-                            title="Tem máquina vinculada: é o computador deste posto"
+                            title="Sem máquina vinculada: a telemetria aparece quando o agente for vinculado ao ativo, em Descobertas"
                           >
-                            computador
+                            sem agente
                           </span>
                         )}
                         {ativo.serial && (
@@ -268,65 +271,64 @@ export default function PostoDetalheModal({
               <MonitorSmartphone size={12} /> O computador deste posto
             </h3>
 
-            {computadores.length === 0 ? (
+            {ativos.length === 0 ? (
               <p className="text-text-tertiary text-[10px] leading-relaxed border border-border-sutil px-4 py-6 text-center">
                 {/* CARREGANDO VEM PRIMEIRO. Sem ele, o primeiro quadro de toda
                     abertura de `/postos/:id` afirmava que a mesa está vazia e
                     depois se corrigia — a tabela quarenta pixels acima já fazia
                     isso certo, e o contador da linha da listagem (`totalAtivos`)
                     chega antes do detalhe para quem veio da lista. */}
-                {carregando
-                  ? 'Lendo o posto…'
-                  : totalAtivos === 0
-                    ? 'Nada entregue a este posto ainda.'
-                    : 'Nenhum dos ativos deste posto tem máquina vinculada.'}
+                {carregando || totalAtivos > 0 ? 'Lendo o posto…' : 'Nada entregue a este posto ainda.'}
+              </p>
+            ) : comMaquina.length === 0 ? (
+              <p className="text-text-tertiary text-[10px] leading-relaxed border border-border-sutil px-4 py-6 text-center">
+                O computador deste posto é o {ativos[0].assetTag}
+                {ativos[0].name && ` (${ativos[0].name})`}, e ele ainda não tem máquina vinculada.
                 <span className="block mt-2">
-                  Computador é ativo com agente: ele aparece aqui quando a máquina é vinculada ao
-                  ativo, em{' '}
+                  A telemetria aparece quando a máquina é vinculada ao ativo, em{' '}
                   <Link to="/descobertas" className="text-status-success hover:underline">Descobertas</Link>.
                 </span>
               </p>
             ) : (
               <>
-                {/* QUAL ativo é este painel: a mesa tem vários, e sem a etiqueta
-                    a telemetria ficaria flutuando sem dono dentro da ficha. */}
+                {/* QUAL ativo é este painel: numa sala sem a marca a mesa tem
+                    vários, e sem a etiqueta a telemetria ficaria flutuando sem
+                    dono dentro da ficha. */}
                 <p className="text-text-tertiary text-[10px]">
-                  {computadores[0].assetTag}
-                  {computadores[0].name && ` · ${computadores[0].name}`}
+                  {comMaquina[0].assetTag}
+                  {comMaquina[0].name && ` · ${comMaquina[0].name}`}
                 </p>
 
-                <TelemetriaDaMaquina endpointId={computadores[0].endpointId} />
-
-                {computadores.length > 1 && (
-                  <p className="flex items-start gap-2 text-status-warning text-[10px] leading-relaxed">
-                    <TriangleAlert size={12} className="shrink-0 mt-0.5" />
-                    {/* A FRASE OLHA A MARCA em vez de afirmar o que ela é.
-                        Dois computadores num local SEM a marca é estado normal —
-                        a sala de reunião. Num local COM a marca é estado que a
-                        invariante 19 recusa nas quatro portas, e que ainda assim
-                        pode existir: dado de antes da regra, ou a corrida da marca,
-                        que não trava a linha do local. Dizer "a marca está
-                        desligada" nos dois casos seria mentir no segundo, que é
-                        justamente o que precisa ser visto. */}
-                    {detalhe?.isWorkstation ? (
-                      <span>
-                        Este posto tem {computadores.length} ativos com máquina, e um posto de
-                        trabalho tem no máximo UM. É estado que a regra recusa — ele vem de antes
-                        dela, ou de uma marca ligada no mesmo instante da segunda entrega. Devolva
-                        os que não ficam nesta mesa. O painel acima é do {computadores[0].assetTag};
-                        a telemetria de cada um está na ficha dele, na aba Máquina.
-                      </span>
-                    ) : (
-                      <span>
-                        Este local tem {computadores.length} ativos com máquina, e o painel acima é
-                        do {computadores[0].assetTag}. A regra de no máximo um computador vale para
-                        POSTO DE TRABALHO, e este local não está marcado como um — então aqui é
-                        estado normal. A telemetria de cada um está na ficha dele, na aba Máquina.
-                      </span>
-                    )}
-                  </p>
-                )}
+                <TelemetriaDaMaquina endpointId={comMaquina[0].endpointId} />
               </>
+            )}
+
+            {ativos.length > 1 && (
+              <p className="flex items-start gap-2 text-status-warning text-[10px] leading-relaxed">
+                <TriangleAlert size={12} className="shrink-0 mt-0.5" />
+                {/* A FRASE OLHA A MARCA em vez de afirmar o que ela é. Dois
+                    ativos num local SEM a marca é estado normal — a sala de
+                    reunião. Num local COM a marca é estado que a invariante 19
+                    recusa nas três portas, e que ainda assim pode existir: dado
+                    de antes da regra, ou a corrida da marca, que não trava a
+                    linha do local. Dizer "a marca está desligada" nos dois casos
+                    seria mentir no segundo, que é justamente o que precisa ser
+                    visto. */}
+                {detalhe?.isWorkstation ? (
+                  <span>
+                    Este posto tem {ativos.length} ativos, e um posto de trabalho tem no máximo UM. É
+                    estado que a regra recusa — ele vem de antes dela, ou de uma marca ligada no mesmo
+                    instante da segunda entrega. Devolva os que não ficam nesta mesa. O painel acima é
+                    do primeiro com máquina; a telemetria de cada um está na ficha dele, na aba Máquina.
+                  </span>
+                ) : (
+                  <span>
+                    Este local tem {ativos.length} ativos. A regra de no máximo um por posto vale para
+                    POSTO DE TRABALHO, e este local não está marcado como um — então aqui é estado
+                    normal. A telemetria de cada um está na ficha dele, na aba Máquina.
+                  </span>
+                )}
+              </p>
             )}
           </section>
 

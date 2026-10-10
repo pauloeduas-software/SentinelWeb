@@ -18,7 +18,6 @@ let seed: Awaited<ReturnType<typeof idsDoSeed>>;
 let modelId: string;
 let contador = 0;
 
-let posto: string;
 let deposito: string;
 
 beforeAll(async () => {
@@ -27,13 +26,19 @@ beforeAll(async () => {
   const fabricanteId = await criarFabricante(api, 'Fabricante da Listagem');
   modelId = await criarModelo(api, { categoriaId: seed.categoriaId, fabricanteId });
 
-  const [mesa, dep] = await Promise.all([
-    prisma.location.create({ data: { name: 'Mesa da Listagem', isWorkstation: true }, select: { id: true } }),
-    prisma.location.create({ data: { name: 'Depósito da Listagem', isWorkstation: false }, select: { id: true } }),
-  ]);
-  posto = mesa.id;
+  const dep = await prisma.location.create({
+    data: { name: 'Depósito da Listagem', isWorkstation: false }, select: { id: true },
+  });
   deposito = dep.id;
 });
+
+/**
+ * UMA MESA POR CASO. Um posto de trabalho tem no máximo um ativo (invariante
+ * 19), então os casos não podem dividir a mesma mesa — o segundo levaria 409.
+ */
+async function mesa(nome: string) {
+  return prisma.location.create({ data: { name: nome, isWorkstation: true }, select: { id: true, name: true } });
+}
 
 afterAll(async () => {
   await api.fechar();
@@ -72,11 +77,12 @@ async function listar(query = '') {
 describe('o ativo entregue a um posto sai da listagem', () => {
   it('estava na lista antes da entrega, e sai depois dela', async () => {
     const item = await ativo('Desktop da mesa', 'SN-LISTA-1');
+    const posto = await mesa('Mesa da Listagem 1');
 
     const antes = await listar('?perPage=100');
     expect(antes.rows.map((l) => l.id)).toContain(item.id);
 
-    await entregarA(item.id, posto);
+    await entregarA(item.id, posto.id);
 
     const depois = await listar('?perPage=100');
     expect(depois.rows.map((l) => l.id)).not.toContain(item.id);
@@ -86,7 +92,7 @@ describe('o ativo entregue a um posto sai da listagem', () => {
 
   it('volta para a lista quando é devolvido', async () => {
     const item = await ativo('Desktop que volta', 'SN-LISTA-2');
-    await entregarA(item.id, posto);
+    await entregarA(item.id, (await mesa('Mesa da Listagem 2')).id);
     expect((await listar('?perPage=100')).rows.map((l) => l.id)).not.toContain(item.id);
 
     expect((await api.post(`/api/assets/${item.id}/checkin`, {})).status).toBe(200);
@@ -129,7 +135,7 @@ describe('o ativo entregue a um posto sai da listagem', () => {
 
   it('o filtro por status também exclui: clicar no contador não traz o do posto', async () => {
     const item = await ativo('Desktop do status', 'SN-LISTA-5');
-    await entregarA(item.id, posto);
+    await entregarA(item.id, (await mesa('Mesa da Listagem 5')).id);
 
     const porStatus = await listar(`?perPage=100&statusId=${seed.statusEmUsoId}`);
     expect(porStatus.rows.map((l) => l.id)).not.toContain(item.id);
@@ -137,7 +143,7 @@ describe('o ativo entregue a um posto sai da listagem', () => {
 
   it('mas a BUSCA continua achando, por etiqueta e por série', async () => {
     const item = await ativo('Desktop procurado', 'SN-LISTA-6');
-    await entregarA(item.id, posto);
+    await entregarA(item.id, (await mesa('Mesa da Listagem 6')).id);
 
     const porEtiqueta = await api.get<{ tipo: string; ativos: { id: string }[] }>(
       `/api/search?q=${item.assetTag}`,
@@ -154,15 +160,16 @@ describe('o ativo entregue a um posto sai da listagem', () => {
 
   it('a busca EXATA diz em que posto o ativo está, para a tela levar até lá', async () => {
     const item = await ativo('Desktop que leva ao posto', 'SN-LISTA-8');
-    await entregarA(item.id, posto);
+    const posto = await mesa('Mesa da Listagem 8');
+    await entregarA(item.id, posto.id);
 
     const { body } = await api.get<{ tipo: string; posto: { id: string; name: string } | null }>(
       `/api/search?q=${item.assetTag}`,
     );
 
     expect(body.tipo).toBe('EXATO');
-    expect(body.posto?.id).toBe(posto);
-    expect(body.posto?.name).toBe('Mesa da Listagem');
+    expect(body.posto?.id).toBe(posto.id);
+    expect(body.posto?.name).toBe('Mesa da Listagem 8');
   });
 
   // Os três mecanismos de `posto: null` são DIFERENTES, e por isso são três
@@ -208,10 +215,11 @@ describe('o ativo entregue a um posto sai da listagem', () => {
 
   it('e volta a ser null quando o computador é devolvido', async () => {
     const item = await ativo('Desktop que sai do posto', 'SN-LISTA-12');
-    await entregarA(item.id, posto);
+    const posto = await mesa('Mesa da Listagem 12');
+    await entregarA(item.id, posto.id);
 
     const noPosto = await api.get<{ posto: { id: string } | null }>(`/api/search?q=${item.assetTag}`);
-    expect(noPosto.body.posto?.id).toBe(posto);
+    expect(noPosto.body.posto?.id).toBe(posto.id);
 
     expect((await api.post(`/api/assets/${item.id}/checkin`, {})).status).toBe(200);
 
@@ -221,10 +229,11 @@ describe('o ativo entregue a um posto sai da listagem', () => {
 
   it('e a ficha do posto mostra o computador que a listagem deixou de mostrar', async () => {
     const item = await ativo('Desktop da ficha', 'SN-LISTA-7');
-    await entregarA(item.id, posto);
+    const posto = await mesa('Mesa da Listagem 7');
+    await entregarA(item.id, posto.id);
 
     const { status, body } = await api.get<{ ativos: { id: string }[]; totalAtivos: number }>(
-      `/api/workstations/${posto}`,
+      `/api/workstations/${posto.id}`,
     );
     expect(status).toBe(200);
     expect(body.ativos.map((a) => a.id)).toContain(item.id);

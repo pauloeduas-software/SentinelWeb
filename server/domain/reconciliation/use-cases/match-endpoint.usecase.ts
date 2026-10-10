@@ -9,7 +9,6 @@ import { vincularEndpointAoAtivo } from './link-endpoint-asset.usecase';
 import {
   lerConfiguracaoDaDescoberta, type ConfiguracaoDaDescoberta,
 } from '../helpers/discovery-settings.helper';
-import { postosComComputador } from '../../workstation/helpers/computador-do-posto.helper';
 
 // PARA CADA MÁQUINA SEM VÍNCULO, QUAL ATIVO ELA É — e o que fazer com a resposta.
 //
@@ -60,8 +59,6 @@ export interface ResultadoDoMatch {
   sugeridas: number;
   vinculadas: number;
   colisoes: number;
-  /** Casamentos descartados porque o ativo está num posto que já tem computador. */
-  semVaga: number;
 }
 
 /**
@@ -90,7 +87,7 @@ export async function reconciliarEndpoint(
 
   // Já vinculada: não há o que reconciliar. Quem mexe num vínculo existente é o
   // `unlink`, e é humano — nunca o job.
-  if (endpoint.assetId) return { sugeridas: 0, vinculadas: 0, colisoes: 0, semVaga: 0 };
+  if (endpoint.assetId) return { sugeridas: 0, vinculadas: 0, colisoes: 0 };
 
   const configuracao = configuracaoDaRodada ?? (await lerConfiguracaoDaDescoberta());
 
@@ -104,7 +101,7 @@ export async function reconciliarEndpoint(
   //
   // O que `OFF` desliga é o que o enum diz que ele governa: *o que o sistema faz
   // quando descobre máquina SEM CADASTRO*.
-  if (configuracao.discoveryMode === 'OFF') return { sugeridas: 0, vinculadas: 0, colisoes: 0, semVaga: 0 };
+  if (configuracao.discoveryMode === 'OFF') return { sugeridas: 0, vinculadas: 0, colisoes: 0 };
 
   const lixoDoParque = repetidos ?? (await valoresRepetidosNoParque());
 
@@ -134,46 +131,12 @@ export async function reconciliarEndpoint(
       serial: true,
       name: true,
       endpoint: { select: { id: true } },
-      // O posto onde o candidato está, se estiver: é o outro descarte abaixo.
-      assignments: {
-        where: { checkinAt: null, targetLocationId: { not: null } },
-        select: { targetLocationId: true },
-      },
     },
   });
   const ocupados = new Set(candidatos.filter((ativo) => ativo.endpoint).map((ativo) => ativo.id));
 
   const porAtivo = casarEndpointComAtivos(endpoint, candidatos, lixoDoParque);
-  const livres = porAtivo.casamentos.filter((casamento) => !ocupados.has(casamento.alvoId));
-
-  // O SEGUNDO DESCARTE DEPOIS DE PONTUAR, pelo mesmo motivo do primeiro: o
-  // ativo cujo posto de trabalho JÁ TEM outro computador.
-  //
-  // Vincular esta máquina a ele é o que a segunda porta da invariante 19
-  // recusa (`link-endpoint-asset.usecase.ts`): o ativo é periférico até ganhar
-  // máquina, e a máquina o transformaria no segundo computador da mesa. Antes
-  // deste filtro a cascata não sabia disso — em `ON` o job tentava o vínculo
-  // automático e colhia o 409 como erro de rodada, e em `SUGGEST` a fila
-  // oferecia um botão que o aceite recusava. Filtrar na ORIGEM é o mesmo
-  // espírito da invariante 6: o sistema não propõe o que ele mesmo vai negar.
-  //
-  // A máquina fica sem vínculo, na lista de não vinculadas, para alguém
-  // decidir à mão — e a decisão provável é devolver um dos dois computadores.
-  const postoDoCandidato = new Map(
-    candidatos.map((ativo) => [ativo.id, ativo.assignments[0]?.targetLocationId ?? null]),
-  );
-  const postosCheios = await postosComComputador(
-    prisma,
-    [...new Set(livres.flatMap((casamento) => {
-      const posto = postoDoCandidato.get(casamento.alvoId);
-      return posto ? [posto] : [];
-    }))],
-  );
-  const casamentos = livres.filter((casamento) => {
-    const posto = postoDoCandidato.get(casamento.alvoId);
-    return !(posto && postosCheios.has(posto));
-  });
-  const semVaga = livres.length - casamentos.length;
+  const casamentos = porAtivo.casamentos.filter((casamento) => !ocupados.has(casamento.alvoId));
 
   let sugeridas = 0;
   let vinculadas = 0;
@@ -216,5 +179,5 @@ export async function reconciliarEndpoint(
     }
   }
 
-  return { sugeridas, vinculadas, colisoes: porAtivo.colisoes.length, semVaga };
+  return { sugeridas, vinculadas, colisoes: porAtivo.colisoes.length };
 }

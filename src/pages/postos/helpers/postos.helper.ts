@@ -86,24 +86,20 @@ export function explicacaoDoVago(posto: Pick<Posto, 'totalAtivos'>): string {
 }
 
 /**
- * Os ativos deste posto que SÃO computadores — os que têm máquina vinculada.
+ * Os ativos deste posto que TÊM MÁQUINA VINCULADA — os que têm telemetria.
  *
- * Num posto marcado a lista tem no máximo um elemento — as quatro portas da
- * invariante 19 (checkout, vínculo, marca e restauração da lixeira) recusam o
- * segundo. A resposta é uma LISTA mesmo assim, por dois motivos:
+ * Todo ativo é um computador (o que não é máquina é estoque), e um posto marcado
+ * tem no máximo um — é a invariante 19. O que varia é se o agente já foi
+ * vinculado a ele: sem máquina, o computador está na mesa mas a ficha não tem o
+ * que medir.
  *
- *   a ficha responde por QUALQUER localização, inclusive a sala de reunião, onde
- *     a regra não vale e dois computadores são estado normal;
- *   e a marca não trava a linha do local (`invariantes.md`, 19): marcar a sala
- *     no mesmo instante em que o segundo computador entra nela é uma corrida que
- *     passa, e o dado de antes da regra também não foi reconferido.
- *
- * Quem usa a lista decide o que dizer sobre a segunda — e a ficha diz coisas
- * diferentes conforme o local esteja marcado ou não.
+ * A resposta é uma LISTA mesmo assim: a ficha responde por QUALQUER localização,
+ * inclusive a sala de reunião, onde a regra não vale e dois computadores são
+ * estado normal. Quem usa a lista decide o que dizer sobre a segunda.
  */
 export type AtivoComMaquina = AtivoDoPosto & { endpointId: string };
 
-export function computadoresDoPosto(ativos: readonly AtivoDoPosto[]): AtivoComMaquina[] {
+export function ativosComMaquina(ativos: readonly AtivoDoPosto[]): AtivoComMaquina[] {
   // Predicado de tipo, e não `filter` + `as`: é o filtro que sabe que o campo
   // não é nulo, e dizê-lo aqui poupa um cast em cada lugar que usa a lista.
   return ativos.filter((ativo): ativo is AtivoComMaquina => ativo.endpointId !== null);

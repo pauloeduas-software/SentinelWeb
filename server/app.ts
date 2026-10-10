@@ -84,10 +84,9 @@ export interface OpcoesDaAplicacao {
    * POR QUE ELE É DESLIGADO NO TESTE, e por que isso não enfraquece a suíte.
    *
    * O teto conta requisições por IP, em memória, por instância da aplicação. A
-   * suíte inteira vem de um IP só, e cada arquivo de teste é uma rajada: a
-   * `tests/invariantes/computador-por-posto.test.ts` faz dezessete chamadas em
-   * rota DESTRUTIVA — teto de dez. O teto não está medindo abuso ali, está
-   * medindo o tamanho do arquivo.
+   * suíte inteira vem de um IP só, e cada arquivo de teste é uma rajada de
+   * dezenas de escritas em segundos — várias em rota DESTRUTIVA, teto de dez. O
+   * teto não está medindo abuso ali, está medindo o tamanho do arquivo.
    *
    * E o preço disso era pago na moeda errada. A regra "um `criarApi()` por
    * arquivo" existia por causa do contador; arquivo que crescia era DIVIDIDO

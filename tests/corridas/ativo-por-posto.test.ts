@@ -1,20 +1,19 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '../../server/core/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { conectarAgente, esperarPor } from '../helpers/agente';
 import { criarAtivo, criarFabricante, criarLocal, criarModelo, idsDoSeed } from '../helpers/fixtures';
 
-// A CORRIDA DA INVARIANTE 19 — dois computadores entregues ao mesmo posto, ao
-// mesmo tempo.
+// A CORRIDA DA INVARIANTE 19 — dois ativos entregues ao mesmo posto, ao mesmo
+// tempo.
 //
 // Esta é a invariante que NÃO tem rede no banco: a regra cruza `assignments`,
-// `assets` e `endpoints`, e índice único é sobre uma tabela só. Então o `if` do
+// `assets` e `locations`, e índice único é sobre uma tabela só. Então o `if` do
 // use-case é tudo que existe — e `if` de aplicação é exatamente o que as duas
 // requisições atravessam juntas em READ COMMITTED.
 //
 // É por isso que o helper trava a linha do posto com `FOR UPDATE`. Este arquivo
 // é a prova de que ela trava: sem o `FOR UPDATE`, as duas entregas passam e o
-// posto fica com dois computadores.
+// posto fica com dois ativos.
 
 let api: ApiDeTeste;
 let seed: Awaited<ReturnType<typeof idsDoSeed>>;
@@ -39,69 +38,43 @@ function placar(respostas: { status: number }[]): Record<number, number> {
   return contagem;
 }
 
-/** Um ativo disponível COM máquina vinculada — ou seja, um computador. */
-async function computador(nome: string, hwid: string) {
+/** Um ativo disponível. */
+async function ativo(nome: string) {
   contador += 1;
-  const ativo = await criarAtivo(api, {
+  return criarAtivo(api, {
     statusId: seed.statusDeployableId,
     modelId,
     name: nome,
     assetTag: `CORRIDA-${String(contador).padStart(4, '0')}`,
   });
-
-  const agente = await conectarAgente(api, hwid);
-  await agente.handshake({ Hostname: `pc-${hwid}` });
-  const maquina = await esperarPor(`a máquina ${hwid}`, () =>
-    prisma.endpoint.findUnique({ where: { hwid } }));
-  await agente.fechar();
-
-  const vinculo = await api.post(`/api/endpoints/${maquina.id}/link`, { assetId: ativo.id });
-  expect(vinculo.status, `vínculo de ${hwid} falhou`).toBe(201);
-
-  return ativo;
 }
 
-describe('dois computadores entregues ao MESMO posto, ao mesmo tempo', () => {
+const entregar = (assetId: string, locationId: string) =>
+  api.post(`/api/assets/${assetId}/checkout`, { targetType: 'LOCATION', targetLocationId: locationId });
+
+describe('dois ativos entregues ao MESMO posto, ao mesmo tempo', () => {
   it('deixa passar exatamente UM', async () => {
     const posto = await criarLocal(api, { name: 'Mesa da Corrida', isWorkstation: true });
-    const um = await computador('Desktop A', 'corrida-a');
-    const dois = await computador('Desktop B', 'corrida-b');
+    const um = await ativo('Desktop A');
+    const dois = await ativo('Desktop B');
 
     // SEM `await` entre as duas: é o `Promise.all` que as põe no event loop
     // juntas, cada uma com sua conexão do pool. Quem serializa é o Postgres.
-    const respostas = await Promise.all([
-      api.post(`/api/assets/${um.id}/checkout`, {
-        targetType: 'LOCATION',
-        targetLocationId: posto,
-      }),
-      api.post(`/api/assets/${dois.id}/checkout`, {
-        targetType: 'LOCATION',
-        targetLocationId: posto,
-      }),
-    ]);
+    const respostas = await Promise.all([entregar(um.id, posto), entregar(dois.id, posto)]);
 
     expect(placar(respostas)[201]).toBe(1);
     expect(placar(respostas)[409]).toBe(1);
 
-    const computadoresNoPosto = await prisma.assignment.count({
-      where: {
-        targetLocationId: posto,
-        checkinAt: null,
-        asset: { endpoint: { isNot: null } },
-      },
-    });
-    expect(computadoresNoPosto).toBe(1);
+    const noPosto = await prisma.assignment.count({ where: { targetLocationId: posto, checkinAt: null } });
+    expect(noPosto).toBe(1);
   });
 
   it('e a perdedora não deixa posse fechada de consolação', async () => {
     const posto = await criarLocal(api, { name: 'Mesa da Corrida 2', isWorkstation: true });
-    const um = await computador('Desktop C', 'corrida-c');
-    const dois = await computador('Desktop D', 'corrida-d');
+    const um = await ativo('Desktop C');
+    const dois = await ativo('Desktop D');
 
-    await Promise.all([
-      api.post(`/api/assets/${um.id}/checkout`, { targetType: 'LOCATION', targetLocationId: posto }),
-      api.post(`/api/assets/${dois.id}/checkout`, { targetType: 'LOCATION', targetLocationId: posto }),
-    ]);
+    await Promise.all([entregar(um.id, posto), entregar(dois.id, posto)]);
 
     // A recusa tem que ser TOTAL: uma `Assignment` com `checkinAt` preenchido
     // seria histórico de uma entrega que nunca aconteceu.
@@ -111,15 +84,11 @@ describe('dois computadores entregues ao MESMO posto, ao mesmo tempo', () => {
 
   it('o posto NÃO marcado deixa os dois passarem, mesmo na corrida', async () => {
     const sala = await criarLocal(api, { name: 'Sala da Corrida', isWorkstation: false });
-    const um = await computador('Desktop E', 'corrida-e');
-    const dois = await computador('Desktop F', 'corrida-f');
+    const um = await ativo('Desktop E');
+    const dois = await ativo('Desktop F');
 
-    const respostas = await Promise.all([
-      api.post(`/api/assets/${um.id}/checkout`, { targetType: 'LOCATION', targetLocationId: sala }),
-      api.post(`/api/assets/${dois.id}/checkout`, { targetType: 'LOCATION', targetLocationId: sala }),
-    ]);
+    const respostas = await Promise.all([entregar(um.id, sala), entregar(dois.id, sala)]);
 
-    // A trava serializa as duas, mas a regra não se aplica: as duas entram.
     expect(placar(respostas)[201]).toBe(2);
   });
 });
