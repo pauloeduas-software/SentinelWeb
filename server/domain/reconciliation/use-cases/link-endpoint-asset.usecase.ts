@@ -2,6 +2,7 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { errorCode } from '../../../core/errors/error-shape';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { computadorDoPosto, jaTemComputador } from '../../workstation/helpers/computador-do-posto.helper';
 
 // O VÍNCULO — a afirmação de que esta máquina descoberta e aquele patrimônio são
 // a mesma coisa (D45).
@@ -51,9 +52,28 @@ export async function vincularEndpointAoAtivo(
       // uma máquina viva e sumiria da tela levando o vínculo junto.
       const ativo = await tx.asset.findFirst({
         where: { id: assetId },
-        select: { id: true, assetTag: true, name: true },
+        select: {
+          id: true, assetTag: true, name: true,
+          // O posto onde ele está, se estiver: é a outra porta da regra de "no
+          // máximo um computador por posto".
+          assignments: {
+            where: { checkinAt: null, targetLocationId: { not: null } },
+            select: { targetLocationId: true },
+          },
+        },
       });
       if (!ativo) throw new AppError('Ativo não encontrado.', 404);
+
+      // A SEGUNDA PORTA. Vincular a máquina transforma este ativo EM computador,
+      // e se ele já está entregue a um posto de trabalho que tem outro
+      // computador, o vínculo é o que criaria o estado que o checkout recusa.
+      // Sem esta guarda, a regra seria contornável pela ordem das operações:
+      // entregar o desktop sem agente ao posto e vincular depois.
+      const postoAtual = ativo.assignments[0]?.targetLocationId;
+      if (postoAtual) {
+        const ocupante = await computadorDoPosto(tx, postoAtual, assetId);
+        if (ocupante) throw new AppError(jaTemComputador(ocupante), 409, { assetId: ocupante.id });
+      }
 
       const vinculado = await tx.endpoint.update({
         where: { id: endpointId },

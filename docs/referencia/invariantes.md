@@ -23,7 +23,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 
 ---
 
-## As treze
+## As catorze
 
 > **A numeração é a original, e por isso salta.** O corte do ITAM levou as
 > invariantes 7, 8, 15, 16 e 18 junto com as tabelas que elas defendiam
@@ -47,6 +47,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 13 | A mesma sugestão não empilha na fila | **banco** — índice único parcial `sugestao_pendente_por_alvo` | nada: o job trata o `P2002` como "outro já criou" |
 | 14 | A observação de uso é uma linha por (máquina, conta, dia) | **banco** — índice único `endpoint_user_daily` | nada: o `upsert` incrementa em vez de inserir |
 | 17 | Sempre existe alguém, com login, que é `ADMIN` | **aplicação** — `assertSobraAdministrador()`, DEPOIS da escrita e dentro da transação | 409 `Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. Dê o papel de Administrador a outra pessoa com login antes de seguir.` |
+| 19 | No máximo um computador por posto de trabalho | **aplicação** — `computadorDoPosto()`, nas duas portas, com `FOR UPDATE` na linha do posto | 409 `Este posto de trabalho já tem um computador: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.` |
 
 ---
 
@@ -440,6 +441,75 @@ que não faz login não destrava nada.
 > `npm run acesso:administrador -- <login>`, que exige acesso ao servidor — e
 > **não** uma rota de emergência, que seria uma rota concedendo `ADMIN` sem ser
 > `ADMIN`.
+
+---
+
+### 19 — No máximo um computador por posto de trabalho
+
+```ts
+// workstation/helpers/computador-do-posto.helper.ts, nas DUAS portas,
+// dentro da transação
+const ocupante = await computadorDoPosto(tx, locationId, assetId);
+if (ocupante) throw new AppError(jaTemComputador(ocupante), 409);
+```
+
+Um posto de trabalho é uma mesa, uma bancada, um guichê: uma pessoa por turno,
+um computador. Duas máquinas entregues à mesma mesa não são um cenário de
+inventário — são um cadastro errado que ninguém percebe, porque a tela do posto
+mostraria duas e a telemetria somaria o uso das duas como se fosse daquele posto.
+
+**Computador é ativo com MÁQUINA VINCULADA** (`Asset.endpoint`), e não uma
+categoria: categoria é cadastro de texto livre, onde "Desktop", "desktop" e "PC"
+são três linhas, e uma regra que recusa com 409 não pode depender de alguém ter
+digitado igual. O vínculo é fato observado — o agente respondeu por aquela
+máquina. **A consequência é assumida:** um desktop em que o agente ainda não foi
+instalado não conta, e dois deles cabem no mesmo posto até o agente chegar.
+
+**Por que na aplicação:** a regra cruza `assignments`, `assets` e `endpoints`.
+Não é a forma nem a unicidade de uma tabela só, então não há índice que a
+expresse — é o mesmo argumento da invariante 6.
+
+**E por isso ela trava a linha do posto.** Estar dentro da transação não basta:
+em READ COMMITTED duas entregas simultâneas de dois computadores ao mesmo posto
+leem as duas um estado de antes, nenhuma enxerga a posse que a outra não
+confirmou, e as duas passam. É o mesmo furo que a invariante 6 fecha com
+`travarUsuario`, e nenhum `if` o pega. Sem rede no banco, a serialização é
+explícita: `SELECT id FROM locations WHERE id = $1 FOR UPDATE` antes da leitura,
+na linha que as duas transações disputam.
+
+**São DUAS portas, e a segunda não é redundante:**
+
+| porta | o que ela impede |
+| --- | --- |
+| `checkout-asset.usecase.ts` | entregar ao posto um ativo que já tem máquina, quando o posto já tem computador |
+| `link-endpoint-asset.usecase.ts` | vincular máquina a um ativo que já está num posto que tem computador |
+
+Sem a segunda, a regra seria contornável pela ordem: entregar ao posto o desktop
+**sem** agente — que não é computador e passa —, e vincular a máquina depois.
+
+**Note o que ela NÃO proíbe:** monitor, teclado e periférico no mesmo posto, sem
+limite (o modelo de posse descreve a mesa com vários ativos, e a Camada 3 resolve
+os responsáveis de todos eles pelos ocupantes); vários ocupantes no posto, que
+são o desenho da Camada 2; e dois computadores em local **sem** `isWorkstation` —
+a sala de reunião e o depósito continuam livres, porque proibir ali quebraria o
+uso que já existe. **Posto sem computador continua válido**: a regra é "no
+máximo um", não "exatamente um". (O `postoVago` é outra coisa, e não tem relação
+com esta invariante: ele é posto **sem ocupante** — gente, não máquina.)
+
+**O BURACO CONHECIDO, e ele é na marca.** `PUT /api/locations/:id` grava
+`isWorkstation` pelo CRUD de catálogo, sem guarda nenhuma: uma sala de reunião
+com dois computadores pode ser marcada como posto de trabalho, e a invariante
+passa a ser falsa no banco sem nada ter falhado. As duas portas defendem a
+ESCRITA de posse e de vínculo; nenhuma defende a mudança da marca. Fechar isso é
+uma linha em `locationSpec.beforeWrite` (`catalog/specs/location.spec.ts`), onde
+o `assertSemCicloDeLocalizacao` já mora — e está registrado aqui em vez de
+escondido, porque esta página promete fatos que nunca são falsos no banco.
+
+> **A regra é testada, não argumentada.** `tests/invariantes/computador-por-posto.test.ts`
+> cobre as duas portas, o monitor que entra num posto que já tem computador, e os
+> dois computadores na sala de reunião. **A corrida também:**
+> `tests/corridas/computador-por-posto.test.ts` dispara duas entregas simultâneas
+> ao mesmo posto e exige que exatamente uma entre.
 
 ---
 

@@ -399,10 +399,15 @@ model Location {
   // numa mesa, e misturar as duas numa lista só foi o que tornou o posto
   // invisível na interface.
   //
-  // Esta flag é de APRESENTAÇÃO, não de regra: ela separa as duas coisas nas
-  // telas e habilita a página /postos. Nenhuma invariante depende dela — um
-  // local sem a marca continua podendo receber ativo e ocupante, porque
-  // proibir isso quebraria a sala de reunião que já funciona hoje.
+  // A flag separa as duas coisas nas telas e habilita a página /postos. E ela
+  // É REGRA desde a invariante 19: no máximo UM computador (ativo com máquina
+  // vinculada) por local marcado. Fora da marca não há limite — a sala de
+  // reunião com dois computadores continua valendo, que é o uso que proibir
+  // quebraria.
+  //
+  // O que a marca NÃO restringe, dentro ou fora dela: monitor, teclado e
+  // periférico, que entram no posto sem limite, e os ocupantes, que são vários
+  // por desenho (a Camada 2 do modelo de posse).
   isWorkstation Boolean @default(false)
 
   // Gestor da localidade. SetNull de propósito: desligar o gestor não pode
