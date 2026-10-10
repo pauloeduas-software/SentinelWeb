@@ -94,7 +94,7 @@ model Endpoint {
   asset   Asset?  @relation(fields: [assetId], references: [id], onDelete: SetNull)
 
   /// Fundido em outro endpoint (reimagem, troca de placa). A linha FICA (D103):
-  /// o agente antigo pode voltar, e o `ApiToken` daquela instalação aponta para
+  /// o agente antigo pode voltar, e as sugestões e o histórico apontam para
   /// este id.
   mergedIntoId String?    @db.Uuid
   mergedInto   Endpoint?  @relation("EndpointMerge", fields: [mergedIntoId], references: [id], onDelete: SetNull)
@@ -194,11 +194,10 @@ model User {
   // NULL`) na migration, o mesmo caso de `email` e `username`: uma matrícula na
   // lixeira travaria para sempre o recadastro da mesma pessoa.
   //
-  // `firstName`/`lastName` NÃO EXISTEM, apesar de o TODO pedir "nome dividido":
-  // `name` já é o campo canônico, dividi-lo exige um backfill que adivinha onde
-  // termina o nome em "Maria da Silva Souza", e um campo que só existe para ser
-  // recomposto na exibição é duas fontes de verdade para o mesmo dado. De
-  // LDAP/OIDC o que importa guardar é `employeeNumber` e `jobTitle`.
+  // `firstName`/`lastName` NÃO EXISTEM: `name` já é o campo canônico, dividi-lo
+  // exige um backfill que adivinha onde termina o nome em "Maria da Silva
+  // Souza", e um campo que só existe para ser recomposto na exibição é duas
+  // fontes de verdade para o mesmo dado.
   employeeNumber String?
   jobTitle       String?
   phone          String?
@@ -211,7 +210,7 @@ model User {
   // de posse, só não opera mais — não entra no sistema e não recebe entrega
   // nova. Editável em `PUT /api/users/:id`, e a mudança vai para o ActivityLog
   // com ator e data.
-  isActive         Boolean            @default(true)
+  isActive Boolean @default(true)
 
   // O PAPEL (D148), no lugar da matriz de permissões por grupo (D76).
   //
@@ -219,7 +218,7 @@ model User {
   // alcança nada além de si mesma, e quem quiser mais escreve a linha. A rede
   // que impede o sistema de ficar sem ninguém que entre está em
   // `access/helpers/ultimo-administrador.ts`, chamada no fim da transação.
-  role Papel @default(USUARIO)
+  role             Papel              @default(USUARIO)
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   deletedAt        DateTime?
@@ -230,9 +229,6 @@ model User {
   assignments      Assignment[]
   occupancies      LocationOccupant[]
 
-  // ESTOQUE (F5). O acessório entregue à pessoa volta; o consumível não — e é
-  // por isso que os dois são tabelas separadas, não um enum numa só (D37).
-
   // LICENÇA (F6). Assento vai para pessoa ou ativo, nunca para um posto (D39).
   licenseSeats LicenseSeatCheckout[]
 
@@ -242,13 +238,6 @@ model User {
   // passa a existir.
   endpointDays EndpointUserDaily[]
   suggestions  ReconciliationSuggestion[]
-
-  // OS TOKENS PESSOAIS (F11, Etapa H). A relação nasce com a FK que o `userId`
-  // não tinha (D142) — ver o `model ApiToken` para por que ela é `Cascade`.
-
-  // ACESSO (F11). Os grupos de que esta pessoa participa — a permissão efetiva
-  // é a UNIÃO das permissões deles (D76). Sem grupo, ela entra no sistema e não
-  // alcança nada: é a porta fechada por padrão da F3 levada à autorização.
 
   // ─────────────────────────────────────────────────────────────────────────
   // AS DUAS PERGUNTAS QUE PASSAM POR UMA PESSOA (D72).
@@ -267,6 +256,7 @@ model User {
   @@index([deletedAt])
   @@map("users")
 }
+
 model ActivityLog {
   id         String   @id @default(uuid()) @db.Uuid
   entityType String
@@ -355,18 +345,7 @@ model Category {
   updatedAt   DateTime     @updatedAt
   assetModels AssetModel[]
 
-  licenses    License[]
-
-  // O CONJUNTO DE CAMPOS CUSTOMIZADOS PADRÃO (F9, D58).
-  //
-  // A categoria é a âncora PADRÃO; o modelo sobrepõe quando preenchido. Aqui
-  // porque "todo notebook pede número de patrimônio" é regra de CATEGORIA — o
-  // campo que o cliente realmente quer é da categoria *Notebook*, não do
-  // *Latitude 5420*.
-  //
-  // `Restrict`: apagar um conjunto que uma categoria usa é recusado com 409 e a
-  // contagem, em vez de zerar a âncora em silêncio — que é o que um `SetNull`
-  // faria, deixando a categoria inteira sem campos sem ninguém tocar nela.
+  licenses License[]
 
   // Por (nome, tipo), não só por nome: "Notebook" como categoria de ATIVO e
   // "Notebook" como categoria de LICENÇA são duas coisas diferentes.
@@ -403,7 +382,7 @@ model Manufacturer {
   updatedAt   DateTime     @updatedAt
   assetModels AssetModel[]
 
-  licenses    License[]
+  licenses License[]
 
   @@map("manufacturers")
 }
@@ -433,22 +412,8 @@ model AssetModel {
 
   // Restrict é a rede embaixo do 409 do `countUsages`: mesmo que a checagem da
   // aplicação seja esquecida, o banco recusa e o P2003 vira 409 no errorHandler.
-  manufacturer Manufacturer  @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
-  category     Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-
-  // O CONJUNTO DE CAMPOS CUSTOMIZADOS QUE SOBREPÕE A CATEGORIA (F9, D58).
-  //
-  // `fieldset = model.customFieldsetId ?? model.category.customFieldsetId`, e a
-  // resolução mora numa função só (`resolve-fieldset.usecase.ts`). É o único
-  // jeito de expressar o campo que só existe num modelo — o IMEI do tablet 4G.
-  //
-  // Três níveis (categoria → modelo → ativo) ficaram de fora pelo motivo que
-  // limita o salto de `ASSET` no D16: cadeia mais longa é sintoma de modelagem
-  // errada e custa um salto de consulta a cada leitura.
-  //
-  // A F1 adiou este atributo e o `docs/ROADMAP.md` chegou a dizer que a coluna
-  // estava "reservada" — não estava: FK para tabela inexistente é impossível,
-  // não adiável. As duas colunas nascem aqui, na F9.
+  manufacturer Manufacturer @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
+  category     Category     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   assets Asset[]
 
@@ -458,6 +423,7 @@ model AssetModel {
   @@index([categoryId])
   @@map("asset_models")
 }
+
 model Location {
   id   String @id @default(uuid()) @db.Uuid
   name String @unique
@@ -639,32 +605,18 @@ model Asset {
   // não pode zerar junto.
   lastSeenByAgentAt DateTime?
 
-  // ── A CONFERÊNCIA FÍSICA (F8) ────────────────────────────────────────────
-  //
-  // CACHE DE EVENTO, no molde do `assignedToId`: escritor único (o use-case de
-  // auditoria), fato que aconteceu, e existe porque *"quais ativos nunca foram
-  // auditados"* é pergunta sobre a frota inteira — respondê-la por `MAX()` sobre
-  // `audits` a cada carregamento de relatório varreria a tabela de histórico.
-  //
-  // E `nextAuditAt` NÃO EXISTE, de propósito (D53). Ela seria
-  // `lastAuditAt + intervalo`, e o intervalo é configuração GLOBAL: no dia em
-  // que alguém trocar 12 meses por 6, toda linha gravada antes passa a mentir, e
-  // a correção é um UPDATE em massa que ninguém vai lembrar de rodar. O corte é
-  // calculado na consulta, a partir de `AppSetting.auditIntervalMonths`.
-
   /// A máquina descoberta que É este ativo. Lado fraco do 1:1 — a FK mora lá (D45).
   endpoint Endpoint?
 
   changes   AssetChange[]
   usageDays AssetUsageDaily[]
 
-  // ── O CICLO DE VIDA (F8) ─────────────────────────────────────────────────
   // `suggestions`, e não o `ReconciliationSuggestion` que o `prisma format`
   // escreveu sozinho: o nome gerado não é convenção nenhuma e destoa dos outros
   // três lados da mesma relação (`Endpoint`, `User` e `Location` todos a chamam
   // de `suggestions`). Nome de campo de relação não existe no banco, então isto
   // NÃO pede migração — o que ele muda é o que se lê no `include`.
-  suggestions  ReconciliationSuggestion[]
+  suggestions ReconciliationSuggestion[]
 
   @@index([deletedAt])
   @@index([statusId])
@@ -675,33 +627,6 @@ model Asset {
   // emitir `DROP INDEX` dele a cada migração nova.
   @@index([retiredAt])
   @@index([lastSeenByAgentAt])
-  // O ÍNDICE DOS CAMPOS CUSTOMIZADOS (F9, D63).
-  //
-  // `JsonbOps` e NÃO `JsonbPathOps`: o segundo é menor e mais rápido para `@>`,
-  // mas não suporta o operador `?` (existência de chave) — e *"ativos que têm o
-  // campo X preenchido"* é a primeira pergunta da tela de administração. Paga-se
-  // o tamanho do índice pela pergunta.
-  //
-  // ⚠️ QUEM SE PAGA COM ELE SÃO AS CONTAGENS, NÃO O FILTRO DA LISTAGEM.
-  //
-  // O GIN serve `@>` (contenção) e `?` (existência), e o Prisma TIPADO não os
-  // emite: `customFields: { path: [slug], equals: valor }` sai como
-  //
-  //     WHERE ("customFields" #> ARRAY['ip_fixo']::text[])::jsonb = $1
-  //
-  // que é comparação de EXPRESSÃO — Seq Scan. Medido em 50 mil linhas: 13,5 ms
-  // nessa forma contra 0,63 ms com `@>` (Bitmap Index Scan).
-  //
-  // Então o filtro `?cf[slug]=valor` fica no Prisma tipado e PAGA a varredura,
-  // porque ele se soma a vista, status, localização, busca, ordenação e paginação
-  // num `where` só (ver `asset-filters.helper.ts`). O que desceu para `$queryRaw`
-  // e usa este índice são as perguntas de tabela inteira, que não compõem com
-  // nada: o 409 que impede apagar um campo em uso (D64) e o contador do D61
-  // (`count-assets-with-field.usecase.ts`).
-  //
-  // Ele NÃO faz nada por `ORDER BY customFields->>'x'`, nem por faixa, nem por
-  // `ILIKE` — por isso campo customizado não entra em `ASSET_SORTABLE` nesta
-  // fase, e a F10 herda o número medido em vez de uma promessa.
   @@map("assets")
 }
 
@@ -803,7 +728,7 @@ model LocationOccupant {
 }
 
 model JobRun {
-  /// 'lembrete-de-atraso', 'alertas-diarios', 'sync-ldap'.
+  /// O nome do job — hoje só 'reconciliacao'.
   name      String    @id
   lastRunAt DateTime?
   updatedAt DateTime  @updatedAt
@@ -857,59 +782,20 @@ model AppSetting {
   /// um administrador que é uma pessoa de verdade usando a máquina dela.
   ignoredUserKeys String[] @default([])
 
-  // ── O CICLO DE VIDA E OS ALERTAS (F8) ────────────────────────────────────
-  //
-  // Moram aqui pelo mesmo motivo dos cinco botões da descoberta: são valores de
-  // configuração, não um domínio. E moram no BANCO, e não no `.env`, porque
-  // destinatário e limiar mudam sem deploy — o que fica no ambiente é o
-  // TRANSPORTE (`SMTP_URL`, `MAIL_FROM`), que é segredo (D57).
-  //
-  // NÃO EXISTE `lastAlertRunAt` AQUI, e isso é o D79: a janela de execução de
-  // cada job é uma LINHA em `job_runs`, com o nome do job como chave. Uma coluna
-  // aqui seria disputada pelo lembrete de atraso da F4 e pelos alertas desta
-  // fase — o segundo a acordar receberia `count: 0`, leria como "já rodou hoje" e
-  // nunca executaria, todo dia, sem erro e sem log.
-
-  /// Desligado, o job toma a janela e não faz nada. Nem grava, nem envia.
-
-  /// Quem recebe o e-mail. VAZIA por padrão: endereço chutado é e-mail perdido.
-
-  /// Slack, Teams, o que aceitar um POST. Validado em TODO envio (D126): só
-  /// `https`, e nunca host interno — a URL vem do banco e a requisição sai do
-  /// servidor, o que é SSRF pelo desenho.
-
-  /// Manutenção aberta há mais que isto vira alerta. É o que dá `dueAt` a um
-  /// fato que não tem data-alvo: `completionDate` é nulo justamente por ela
-  /// estar aberta (D125).
-
-  /// De quanto em quanto tempo cada ativo deve ser conferido, e com quanta
-  /// antecedência o relatório avisa. O corte é calculado a partir daqui a cada
-  /// consulta — nunca gravado em coluna (D53).
-
-  /// A HORA local em que a rodada diária pode ser tomada (0–23), e o FUSO que
-  /// decide o que é "hoje" (D123).
-  ///
-  /// Sem `alertHour`, a janela do dia é tomada pelo primeiro tick depois da
-  /// meia-noite e o campo na tela não muda nada. Sem `timezone`, "hoje" é o dia
-  /// do PROCESSO — que roda em UTC em produção e no fuso de quem desenvolve na
+  /// O FUSO que decide o que é "hoje" (D123). Sem ele, "hoje" é o dia do
+  /// PROCESSO — que roda em UTC em produção e no fuso de quem desenvolve na
   /// máquina local, então a mesma configuração produz dois comportamentos.
-  timezone  String @default("America/Sao_Paulo")
+  ///
+  /// A janela de execução de cada job é uma LINHA em `job_runs`, com o nome do
+  /// job como chave, e não uma coluna aqui (D79).
+  timezone String @default("America/Sao_Paulo")
 
-  // ── A IDENTIDADE, O FORMATO E O BACKUP (F10, D65) ────────────────────────
+  // ── O FORMATO (F10, D65) ─────────────────────────────────────────────────
   //
-  // O TODO pedia um "`Setting` singleton" novo. Ele já existe — é esta tabela,
-  // desde a F1, e é onde o `assetTagNext` mora. Uma segunda tabela de
-  // configuração global seria duas linhas respondendo à mesma pergunta, e a
-  // primeira dúvida de quem chegasse depois seria "em qual delas eu escrevo?".
-  //
-  // MORA NO BANCO e não no `.env` pelo mesmo motivo dos limiares de alerta
-  // (D57): marca, moeda e formato de data mudam sem deploy. O que fica no
-  // ambiente é o que é SEGREDO ou é do processo — `SMTP_URL`, `BACKUP_ENABLED`,
-  // `BACKUP_DIR`.
+  // MORA NO BANCO e não no `.env`: moeda e formato de data mudam sem deploy. O
+  // que fica no ambiente é o que é SEGREDO ou é do processo.
 
-  /// Como NÚMERO e DATA são escritos na tela. Não valem para o CSV: lá a regra
-  /// é ponto decimal e `YYYY-MM-DD`, porque o export é a entrada do importador
-  /// e um `1.234,50` não sobrevive ao round-trip (D69).
+  /// Como NÚMERO e DATA são escritos na tela.
   locale     String @default("pt-BR")
   dateFormat String @default("DD/MM/YYYY")
   currency   String @default("BRL")
@@ -928,7 +814,6 @@ model AppSetting {
 //
 //   D40  o assento é MATERIALIZADO (uma linha, não um contador) — é o que se trava
 //   D39  o assento vai para uma pessoa XOR um ativo, nunca para um posto
-//   D42  a chave de produto é cifrada em repouso e mascarada na resposta
 //
 // Nenhuma coluna de saldo (livres é conta sobre as linhas, D92) e nenhuma
 // coluna de status (é função das datas e de hoje, D44).
@@ -1047,7 +932,8 @@ model LicenseSeatCheckout {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Cascade no assento; Restrict nos alvos — é a rede embaixo do 409 do desligamento.
+  // Cascade no assento; Restrict nos alvos — é a rede embaixo do 409 que
+  // impede apagar pessoa ou ativo que ainda ocupa assento.
   seat          LicenseSeat @relation(fields: [seatId], references: [id], onDelete: Cascade)
   assignedUser  User?       @relation(fields: [assignedUserId], references: [id], onDelete: Restrict)
   assignedAsset Asset?      @relation(fields: [assignedAssetId], references: [id], onDelete: Restrict)
@@ -1119,8 +1005,7 @@ enum SuggestionState {
 // POR QUE UMA SÓ: cinco tabelas seriam cinco cópias do que é caro (idempotência,
 // deduplicação, evidência, aceite, memória da recusa) para variar o que é
 // barato (qual FK está preenchida). Invariante copiada é invariante que um dia
-// diverge — o mesmo argumento que uniu os três tipos de estoque (D35) e as duas
-// naturezas de `ApiToken` (D80).
+// diverge.
 //
 // O PREÇO, DECLARADO: a coerência entre `kind` e qual FK está preenchida não é
 // expressável no schema do Prisma. É validada no use-case, como o
@@ -1344,4 +1229,3 @@ model AssetUsageDaily {
   @@index([assetId, day])
   @@map("asset_usage_daily")
 }
-
