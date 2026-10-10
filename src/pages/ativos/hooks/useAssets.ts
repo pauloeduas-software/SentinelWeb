@@ -8,7 +8,7 @@ import {
   useCheckinAsset, useCheckoutAsset,
   type CheckinInput, type CheckoutInput,
 } from '../../../domain/assignment/assignment.queries';
-import type { Asset, AssetRelatorio, AssetView } from '../../../domain/shared/asset.types';
+import type { Asset, AssetView } from '../../../domain/shared/asset.types';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 
 const PER_PAGE = 10;
@@ -23,7 +23,6 @@ export function useAssets() {
   const [view, setView] = useState<AssetView>('active');
   const [search, setSearch] = useState('');
   const [statusId, setStatusId] = useState<string | undefined>();
-  const [relatorio, setRelatorio] = useState<AssetRelatorio | undefined>();
   const debouncedSearch = useDebouncedValue(search);
 
   // Zerar a página no mesmo handler que muda o filtro, e não num `useEffect`
@@ -34,8 +33,8 @@ export function useAssets() {
   };
 
   const params = useMemo(
-    () => ({ page, perPage: PER_PAGE, q: debouncedSearch || undefined, view, statusId, relatorio }),
-    [page, debouncedSearch, view, statusId, relatorio],
+    () => ({ page, perPage: PER_PAGE, q: debouncedSearch || undefined, view, statusId }),
+    [page, debouncedSearch, view, statusId],
   );
 
   const { data, isPending } = useAssetsQuery(params);
@@ -56,7 +55,6 @@ export function useAssets() {
   };
 
   const changeView = (proxima: AssetView) => trocarFiltro(() => setView(proxima));
-  const changeRelatorio = (proximo?: AssetRelatorio) => trocarFiltro(() => setRelatorio(proximo));
 
   /**
    * Clicar no contador do cabeçalho filtra por aquele status; clicar de novo
@@ -171,8 +169,6 @@ export function useAssets() {
     changeSearch,
     view,
     changeView,
-    relatorio,
-    changeRelatorio,
     statusId,
     statusFiltrado,
     toggleStatus,

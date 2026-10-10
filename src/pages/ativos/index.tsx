@@ -15,7 +15,7 @@ export default function AtivosPage() {
   const {
     assets, total, totalCadastrado, porStatus,
     descomissionados, arquivados, page, perPage, setPage,
-    search, changeSearch, view, changeView, relatorio, changeRelatorio,
+    search, changeSearch, view, changeView,
     statusId, statusFiltrado, toggleStatus, limparStatus,
     modalAberto, emEdicao, clonando, openCreate, openEdit, openClone, closeModal, abrirDetalhe,
     handleSubmit, handleDelete, handleRestore,
@@ -83,8 +83,6 @@ export default function AtivosPage() {
         onViewChange={changeView}
         descomissionados={descomissionados}
         arquivados={arquivados}
-        relatorio={relatorio}
-        onRelatorioChange={changeRelatorio}
         statusFiltrado={statusFiltrado}
         onLimparStatus={limparStatus}
       />
@@ -278,8 +276,6 @@ export default function AtivosPage() {
                       <span>Nenhum ativo descomissionado.</span>
                     ) : view === 'archived' ? (
                       <span>Nenhum ativo arquivado.</span>
-                    ) : relatorio === 'posto-vago' ? (
-                      <span>Nenhum ativo parado em posto vago.</span>
                     ) : search ? (
                       <span>Nenhum ativo encontrado para "{search}".</span>
                     ) : statusId ? (
