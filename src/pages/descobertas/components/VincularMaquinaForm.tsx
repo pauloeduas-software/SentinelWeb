@@ -18,7 +18,7 @@ import type { Endpoint } from '../../../domain/shared/endpoint.types';
 // tela de Ativos — a mesa é uma localização, e a sala de reunião também recebe.
 //
 // Não fala HTTP: recebe `onVincular` e mostra o que ele rejeitar. O erro mora
-// AQUI porque é aqui que a pessoa decide — "este posto já tem um computador"
+// AQUI porque é aqui que a pessoa decide — "este posto já tem um ativo"
 // precisa aparecer ao lado do campo onde ela escolheu o posto.
 
 const ROTULO = 'text-[10px] uppercase tracking-widest text-text-tertiary';
@@ -83,7 +83,7 @@ export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCa
           <ReferenceSelect rota="locations" valor={locationId} onChange={setLocationId} />
           <p className="text-[10px] text-text-tertiary leading-relaxed">
             Opcional. Com posto, o ativo é entregue à mesa na mesma operação — e um posto que já
-            tem computador recusa.
+            tem ativo recusa.
           </p>
         </div>
       </div>

@@ -44,7 +44,7 @@ export interface Responsavel {
 export interface PosseResolvida {
   assignmentId: string | null;
   targetType: AlvoPosse | null;
-  /** "Laura Souza", "Mesa 1", "ATV-00012 — Notebook". */
+  /** "Laura Souza", "Mesa 1". */
   targetLabel: string | null;
   responsaveis: Responsavel[];
   /**

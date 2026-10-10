@@ -248,8 +248,8 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
     // nasce NO NOME DE UM DESLIGADO — o estado que o D32 existe para impedir e
     // que nenhuma consulta acusa, porque nada falhou.
     //
-    // Só no alvo `USER`: entrega a posto ou a ativo detentor não disputa linha
-    // de usuário nenhuma, e travar à toa só aumentaria a chance de deadlock.
+    // Só no alvo `USER`: entrega a posto não disputa linha de usuário nenhuma,
+    // e travar à toa só aumentaria a chance de deadlock.
     if (data.targetType === 'USER') await travarUsuarioOuFalhar(tx, alvoId);
 
     // `findFirst`, nunca `findUnique`: o escopo da lixeira não alcança o

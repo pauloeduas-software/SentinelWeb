@@ -278,12 +278,16 @@ export default function PostoDetalheModal({
                     depois se corrigia — a tabela quarenta pixels acima já fazia
                     isso certo, e o contador da linha da listagem (`totalAtivos`)
                     chega antes do detalhe para quem veio da lista. */}
-                {carregando || totalAtivos > 0 ? 'Lendo o posto…' : 'Nada entregue a este posto ainda.'}
+                {carregando ? 'Lendo o posto…' : 'Nada entregue a este posto ainda.'}
               </p>
             ) : comMaquina.length === 0 ? (
               <p className="text-text-tertiary text-[10px] leading-relaxed border border-border-sutil px-4 py-6 text-center">
-                O computador deste posto é o {ativos[0].assetTag}
-                {ativos[0].name && ` (${ativos[0].name})`}, e ele ainda não tem máquina vinculada.
+                {/* A frase olha a marca: num posto o ativo é O computador da
+                    mesa; numa sala sem marca pode haver vários, e nenhum deles é
+                    "o" da sala. */}
+                {detalhe?.isWorkstation && ativos.length === 1
+                  ? `O computador deste posto é o ${ativos[0].assetTag}${ativos[0].name ? ` (${ativos[0].name})` : ''}, e ele ainda não tem máquina vinculada.`
+                  : `Nenhum dos ${ativos.length} ativos deste local tem máquina vinculada.`}
                 <span className="block mt-2">
                   A telemetria aparece quando a máquina é vinculada ao ativo, em{' '}
                   <Link to="/descobertas" className="text-status-success hover:underline">Descobertas</Link>.

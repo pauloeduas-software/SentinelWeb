@@ -21,8 +21,8 @@ import { vincularEndpointAoAtivo } from './link-endpoint-asset.usecase';
 // verdadeiro — esta máquina É aquele patrimônio — sem posse, que é um estado
 // normal do sistema (todo ativo com agente começa assim). O contrário deixaria
 // um ativo entregue a uma mesa sem a máquina que motivou a entrega. E a guarda
-// da invariante 19 continua valendo nas duas pontas: o vínculo passa pela sua
-// porta, a entrega pela dela, e o posto com computador recusa a segunda.
+// da invariante 19 vale na ENTREGA: o vínculo não muda o que o ativo é, e é a
+// entrega que o posto com ativo recusa.
 //
 // A RESPOSTA DIZ O QUE ACONTECEU. Quando a entrega falha, a recusa sobe com o
 // status dela e a frase diz que o vínculo ficou: quem clicou precisa saber que

@@ -87,10 +87,10 @@ const camposLocalizacao = {
   // Marca a folha da árvore que é MESA, e não filial: é o que separa "Mesa 1"
   // de "Filial São Paulo" nas telas e o que alimenta /postos.
   //
-  // E ELA É REGRA, desde a invariante 19: um local sem a marca continua podendo
+  // E ELA É REGRA, pela invariante 19: um local sem a marca continua podendo
   // receber ativo e ocupante, mas LIGAR a marca num local que já tem mais de um
-  // computador é 409 — a guarda está no `beforeWrite` da spec de localização.
-  // Fora da marca não há limite (prisma/schema.prisma, D15).
+  // ativo é 409 — a guarda está no `beforeWrite` da spec de localização. Fora
+  // da marca não há limite (prisma/schema.prisma).
   isWorkstation: booleano('é posto de trabalho').optional(),
   address: textoOpcional('endereço', 300),
   city: textoOpcional('cidade', 100),

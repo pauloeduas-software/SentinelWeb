@@ -11,15 +11,14 @@ import { resolverCaminhos } from './resolve-location-paths.usecase';
  * São as duas metades do modelo numa tela só (docs/referencia/modelo-de-posse.md): a Camada 2
  * — os ocupantes, com turno — e a Camada 1 vista do lado do posto — as posses
  * abertas cujo alvo é esta localização. É a junção das duas que responde "quem
- * é responsável pelo mouse da Mesa 1".
+ * é responsável pelo computador da Mesa 1".
  *
- * NÃO exige `isWorkstation` para responder, e isso continua sendo decisão — mas
- * o motivo mudou de nome. A marca JÁ NÃO É só de apresentação: ela é a terceira
- * porta da invariante 19, e ligá-la num local com mais de um computador é 409
- * (`catalog/specs/location.spec.ts`). O que ela não faz é trancar LEITURA: uma
- * sala de reunião que recebeu ativo e ocupante antes de a marca existir continua
- * respondendo aqui, e `isWorkstation` sai na resposta para o cliente saber qual é
- * o caso. 404 é só para id que não existe.
+ * NÃO exige `isWorkstation` para responder, e isso é decisão. A marca não é só
+ * de apresentação: ela é a porta da marca na invariante 19, e ligá-la num local
+ * com mais de um ativo é 409 (`catalog/specs/location.spec.ts`). O que ela não
+ * faz é trancar LEITURA: uma sala de reunião que recebeu ativo e ocupante
+ * continua respondendo aqui, e `isWorkstation` sai na resposta para o cliente
+ * saber qual é o caso. 404 é só para id que não existe.
  */
 export async function getWorkstation(id: string, podeVerCusto: boolean) {
   // `findUnique`: `Location` não tem `deletedAt`, o catálogo não tem lixeira (D8).
@@ -57,8 +56,8 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
     resolverCaminhos([local.parentId]),
   ]);
 
-  // A relação vira um CAMPO: a tela quer saber se este ativo é um computador e
-  // qual máquina consultar, não receber um objeto aninhado de uma chave só.
+  // A relação vira um CAMPO: a tela quer saber se este ativo tem máquina
+  // vinculada e qual consultar, não receber um objeto aninhado de uma chave só.
   const ativos = entregues.map(({ endpoint, ...ativo }) => ({
     ...ativo,
     endpointId: endpoint?.id ?? null,

@@ -85,11 +85,13 @@ describe('invariante 19 — no máximo um ativo por posto', () => {
     expect(body.assetId).toBe(primeiro.id);
   });
 
-  it('recusa com ou sem máquina vinculada: a regra é sobre o ATIVO', async () => {
+  it('recusa o segundo desktop mesmo SEM agente: a regra é sobre o ATIVO', async () => {
     // Era o contorno que uma segunda porta, no vínculo, fechava: entregar ao
     // posto o desktop SEM agente e vincular depois. Com a regra sobre o ativo,
     // o segundo desktop é recusado na entrega, tenha agente ou não — e o vínculo
-    // deixou de ter porta, porque não muda o que o ativo é.
+    // deixou de ter porta, porque não muda o que o ativo é. O caso COM agente,
+    // e o de desvincular não liberar a vaga, estão em
+    // `descoberta/vincular-e-entregar.test.ts`, que é quem sobe agente.
     const posto = await criarPosto('Mesa sem Agente');
 
     const comAgentePorVir = await ativo('Desktop cujo agente ainda não chegou');
