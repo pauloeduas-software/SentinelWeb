@@ -302,9 +302,10 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
       );
     }
 
-    // NO MÁXIMO UM COMPUTADOR POR POSTO — a primeira das TRÊS portas; as outras
-    // são o vínculo de máquina a ativo (`link-endpoint-asset.usecase.ts`) e a
-    // marca de posto (`catalog/specs/location.spec.ts`). Depois de todas as
+    // NO MÁXIMO UM COMPUTADOR POR POSTO — a primeira das QUATRO portas; as
+    // outras são o vínculo de máquina a ativo (`link-endpoint-asset.usecase.ts`),
+    // a marca de posto (`catalog/specs/location.spec.ts`) e a restauração da
+    // lixeira (`asset/use-cases/restore-asset.usecase.ts`). Depois de todas as
     // recusas baratas, e DENTRO da transação: não há índice único embaixo,
     // porque a regra cruza três tabelas.
     //

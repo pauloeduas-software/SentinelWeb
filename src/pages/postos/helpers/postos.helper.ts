@@ -88,15 +88,15 @@ export function explicacaoDoVago(posto: Pick<Posto, 'totalAtivos'>): string {
 /**
  * Os ativos deste posto que SÃO computadores — os que têm máquina vinculada.
  *
- * Num posto marcado a lista tem no máximo um elemento NO CAMINHO NORMAL — as três
- * portas da invariante 19 (checkout, vínculo e a marca) recusam o segundo. Mas a
- * resposta é uma LISTA por dois motivos, e os dois são reais:
+ * Num posto marcado a lista tem no máximo um elemento — as quatro portas da
+ * invariante 19 (checkout, vínculo, marca e restauração da lixeira) recusam o
+ * segundo. A resposta é uma LISTA mesmo assim, por dois motivos:
  *
  *   a ficha responde por QUALQUER localização, inclusive a sala de reunião, onde
  *     a regra não vale e dois computadores são estado normal;
- *   e restaurar da lixeira um ativo que já estava no posto NÃO reconfere a regra
- *     (`restore-asset.usecase.ts` só reconfere etiqueta e série), então até um
- *     posto marcado pode chegar a dois.
+ *   e a marca não trava a linha do local (`invariantes.md`, 19): marcar a sala
+ *     no mesmo instante em que o segundo computador entra nela é uma corrida que
+ *     passa, e o dado de antes da regra também não foi reconferido.
  *
  * Quem usa a lista decide o que dizer sobre a segunda — e a ficha diz coisas
  * diferentes conforme o local esteja marcado ou não.
