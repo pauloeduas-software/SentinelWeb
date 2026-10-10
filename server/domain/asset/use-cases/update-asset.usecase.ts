@@ -10,7 +10,7 @@ import type { CreateAssetData } from './create-asset.usecase';
 export type UpdateAssetData = Partial<CreateAssetData>;
 
 const CAMPOS_AUDITADOS = [
-  'assetTag', 'serial', 'name', 'notes', 'byod', 'requestable',
+  'assetTag', 'serial', 'name', 'notes',
   'statusId', 'modelId', 'locationId', 'assignedToId',
   'orderNumber', 'purchaseDate', 'purchaseCost',
 ] as const;
@@ -53,8 +53,6 @@ export async function updateAsset(id: string, data: UpdateAssetData, actorId: st
         serial: data.serial,
         name: data.name,
         notes: data.notes,
-        byod: data.byod,
-        requestable: data.requestable,
         locationId: data.locationId,
         // `assignedToId` NÃO está aqui de propósito: quem escreve nele é só o
         // checkout/checkin (docs/referencia/modelo-de-posse.md). Continua em

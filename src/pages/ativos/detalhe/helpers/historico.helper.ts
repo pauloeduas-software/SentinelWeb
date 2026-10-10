@@ -23,8 +23,6 @@ const ROTULO_DO_CAMPO: Record<string, string> = {
   serial: 'Número de série',
   name: 'Nome',
   notes: 'Notas',
-  byod: 'BYOD',
-  requestable: 'Pode ser solicitado',
   statusId: 'Status',
   modelId: 'Modelo',
   locationId: 'Localização',

@@ -19,8 +19,6 @@ export const ASSET_SELECT = {
   serial: true,
   name: true,
   notes: true,
-  byod: true,
-  requestable: true,
 
   statusId: true,
   modelId: true,

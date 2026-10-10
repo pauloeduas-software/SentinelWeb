@@ -469,7 +469,7 @@ Registrado para não ser reaberto a cada revisão.
 | **`Asset ⟷ User` N:M** (nosso, não do Snipe-IT) | Perde o posto, que é a unidade real da operação, e cresce multiplicativamente. O detentor é singular; o alvo é que é polimórfico — D14 |
 | **Entidade `Workstation`** (nosso, não do Snipe-IT) | Duplicaria a hierarquia de `Location` e daria ao ativo dois campos de "onde". Posto é uma `Location` folha — D15 |
 | **Coluna de responsáveis no `Asset`** | Quarta fonte de verdade para o que as Camadas 1 e 2 já dizem, divergindo em silêncio. Responsabilidade é derivada — D16 |
-| **Fila de requisição e aprovação de item** | Time interno pequeno pede no chat. Duas telas, valor zero. `requestable` fica no schema para quando fizer sentido |
+| **Fila de requisição e aprovação de item** | Time interno pequeno pede no chat. Duas telas, valor zero. O `requestable` que ficava no schema esperando por ela saiu no corte de escopo |
 | **Requisição de licença** | Mesmo motivo |
 | **Renumeração em massa de asset tags** | Operação de migração, não de produto. Script pontual resolve |
 

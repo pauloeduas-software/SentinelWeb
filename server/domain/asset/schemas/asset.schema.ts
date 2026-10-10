@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { $Enums } from '@prisma/client';
 import {
-  booleano, dataOpcional, nomeObrigatorio, textoOpcional,
+  dataOpcional, nomeObrigatorio, textoOpcional,
   uuidObrigatorio, uuidOpcional, valorMonetarioOpcional,
 } from '../../shared/fields.schema';
 
@@ -45,9 +45,6 @@ const camposComuns = {
   serial: textoOpcional('número de série', 150),
   name: textoOpcional('nome', 200),
   notes: textoOpcional('notas', 2_000),
-
-  byod: booleano('equipamento do colaborador').optional(),
-  requestable: booleano('pode ser solicitado').optional(),
 
   locationId: uuidOpcional('localização'),
 

@@ -13,8 +13,6 @@ export interface CreateAssetData {
   serial?: string | null;
   name?: string | null;
   notes?: string | null;
-  byod?: boolean;
-  requestable?: boolean;
   locationId?: string | null;
   orderNumber?: string | null;
   purchaseDate?: Date | null;
@@ -54,8 +52,6 @@ export async function createAsset(data: CreateAssetData, actorId: string | null)
         serial: data.serial ?? null,
         name: data.name ?? null,
         notes: data.notes ?? null,
-        byod: data.byod ?? false,
-        requestable: data.requestable ?? false,
         locationId: data.locationId ?? null,
         // `assignedToId` nasce nulo e só o CHECKOUT o preenche
         // (docs/referencia/modelo-de-posse.md). Ativo que já está com alguém entra pelo
