@@ -63,12 +63,12 @@ export async function sendCommand(endpointId: string, action: string): Promise<S
   // `sendToAgent` normaliza o hwid por dentro (`sanitizeHwid`), que é a mesma
   // normalização que o `registerAgent` aplicou na chave — então o valor do banco
   // acha o socket sem tratamento aqui.
-  const delivered = sendToAgent(maquina.hwid, {
+  const entrega = await sendToAgent(maquina.hwid, {
     Type: 'Command',
     Payload: { Action: action, CommandId: commandId },
   });
 
-  if (!delivered) {
+  if (entrega === 'DESCONECTADO') {
     throw new AppError(
       `O agente de ${maquina.hostname} não está conectado agora. `
         + 'O comando não fica em fila: ele só chega em máquina online.',
@@ -77,6 +77,20 @@ export async function sendCommand(endpointId: string, action: string): Promise<S
     );
   }
 
-  logger.info(`[Endpoint] Comando ${action} enviado para ${shortHwid(maquina.hwid)}`, { commandId });
+  // O SOCKET EXISTIA E A ESCRITA FALHOU — a conexão caiu entre a conferência e
+  // o envio, ou o sistema recusou os bytes. Não é o 409 de cima: a máquina não
+  // estava offline quando se perguntou, e é o caminho para o agente que
+  // falhou. 502, e a resposta diz isso: a rota não responde sucesso sem o
+  // pacote ter saído, e é a tela que decide tentar de novo.
+  if (entrega === 'FALHOU') {
+    throw new AppError(
+      `O envio ao agente de ${maquina.hostname} falhou: a conexão caiu antes de o comando sair. `
+        + 'Nada foi entregue — tente de novo em instantes.',
+      502,
+      { endpointId },
+    );
+  }
+
+  logger.info(`[Endpoint] Comando ${action} entregue a ${shortHwid(maquina.hwid)}`, { commandId });
   return { commandId };
 }
