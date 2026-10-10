@@ -1,7 +1,5 @@
-import { Prisma } from '@prisma/client';
 import { prisma } from '../../../core/database/prismaClient';
 import type { HandshakeData } from '../../shared/agent-protocol.types';
-import { hashDaListaDeSoftware, normalizarListaDeSoftware } from '../../reconciliation/helpers/software-key.helper';
 import type { EspecificacoesColetadas } from '../../reconciliation/helpers/hardware-diff.helper';
 import { shortHwid } from '../helpers/hwid.helper';
 import { createLogger } from '../../../core/logger/logger';
@@ -56,17 +54,6 @@ export async function registerHandshake(data: HandshakeData): Promise<HandshakeR
     macAddress: data.macAddress,
     localIp: data.localIp,
     cpuModel: data.cpuModel,
-    // Campo Json: ausente vira `undefined` (não escreve) em vez de null
-    installedSoftware: (data.installedSoftware ?? undefined) as Prisma.InputJsonValue | undefined,
-
-    // O HASH DA LISTA, calculado aqui e não no job (D100). São dois `sha256` de
-    // string por handshake — que acontece quando o agente sobe, não a cada
-    // amostra —, e é ele que impede o job de re-hashear o JSON da frota inteira
-    // de hora em hora só para descobrir quem mudou.
-    softwareHash: data.installedSoftware === null
-      ? undefined
-      : hashDaListaDeSoftware(normalizarListaDeSoftware(data.installedSoftware)),
-
     biosSerial: data.biosSerial ?? undefined,
     systemUuid: data.systemUuid ?? undefined,
     manufacturer: data.manufacturer ?? undefined,

@@ -3,9 +3,7 @@
 // ═════════════════════════════════════════════════════════════════════════════
 // A `AssetChange` nasceu na Etapa B desta fase e ficou SEM ESCRITOR: a tabela
 // existia, o índice existia, e nenhuma linha entrava nela. Tabela sem escritor
-// não é meio caminho andado — é uma promessa no schema que a tela não cumpre, e
-// é o mesmo defeito que o `installedSoftware` tinha antes da Etapa G (três
-// ocorrências no código, todas de escrita).
+// não é meio caminho andado — é uma promessa no schema que a tela não cumpre.
 //
 // Este arquivo é a comparação, e ele é PURO de propósito: a regra sobre o que
 // conta como mudança é a coisa que mais vai mudar com dado real de campo, e ela

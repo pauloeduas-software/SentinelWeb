@@ -59,21 +59,9 @@ export class ReconciliationMaestro {
     // fazem com `/api/locations`: a pergunta "o que é esta máquina" é do ativo,
     // mas a resposta só existe porque os dois lados se falam.
     //
-    // `/machine` e não `/software`, corrigindo o nome do plano: ela devolve
-    // especificação, último contato, mudança de hardware detectada E a lista de
-    // programas. Com quatro conteúdos, `software` nomeava um quarto da resposta.
+    // `/machine` e não o nome de um dos conteúdos: ela devolve especificação
+    // coletada, os dois últimos contatos e a mudança de hardware detectada.
     server.get('/api/assets/:id/machine', reconciliationController.assetMachine);
-
-    // SOFTWARE E CONFORMIDADE (Etapa G).
-    //
-    // O CATÁLOGO DE PACOTES é o que faltava para a ponte do D102 ter porta de
-    // entrada: sem ele, `PUT /api/licenses/:id/software` existia e nenhuma tela
-    // tinha de onde tirar um `packageId`, então `LicenseSoftware` nunca recebia
-    // linha e a conformidade respondia `semVinculoDeSoftware` para sempre.
-    server.get('/api/software-packages', reconciliationController.softwarePackages);
-    server.get('/api/licenses/:id/compliance', reconciliationController.licenseCompliance);
-    server.get('/api/licenses/:id/software', reconciliationController.licenseSoftware);
-    server.put('/api/licenses/:id/software', WRITE_RATE_LIMIT, reconciliationController.setLicenseSoftware);
 
     logger.info('[Maestro] Rotas de Reconciliação (RMM × ITAM) inicializadas.');
   }

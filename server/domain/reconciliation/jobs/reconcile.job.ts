@@ -3,7 +3,6 @@ import { prisma } from '../../../core/database/prismaClient';
 import { createLogger } from '../../../core/logger/logger';
 import { reconciliarEndpoint, valoresRepetidosNoParque } from '../use-cases/match-endpoint.usecase';
 import { carimbarUltimoContatoNosAtivos } from '../use-cases/stamp-last-seen.usecase';
-import { normalizarSoftwarePendente } from '../use-cases/normalize-software.usecase';
 import { agregarUsoDosAtivos } from '../use-cases/aggregate-usage.usecase';
 import {
   encerrarSugestoesObsoletas, expurgarSugestoesSubstituidas,
@@ -90,10 +89,6 @@ export async function rodarReconciliacao(): Promise<{
   // O USO AGREGADO dos últimos dias (Etapa I): uma instrução para a frota
   // inteira, e é ela que faz a pergunta do ativo ocioso caber numa consulta.
   await agregarUsoDosAtivos();
-
-  // O SOFTWARE de quem mudou — a comparação dos dois hashes (D100). Numa frota
-  // estável esta chamada devolve zero linhas e não custa nada.
-  await normalizarSoftwarePendente();
 
   // O EXPURGO do histórico da fila: só as linhas SUBSTITUÍDAS, nunca as recusadas
   // (são a memória do D97) nem as aceitas (são a trilha de quem decidiu).

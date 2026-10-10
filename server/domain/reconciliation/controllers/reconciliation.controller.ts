@@ -2,8 +2,8 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { idParamSchema } from '../../shared/params.schema';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import {
-  buscaDePacotesSchema, filtroDeSugestoesSchema, fusaoSchema,
-  janelaDeOciosidadeSchema, softwareDaLicencaSchema, triagemSchema, vinculoSchema,
+  filtroDeSugestoesSchema, fusaoSchema,
+  janelaDeOciosidadeSchema, triagemSchema, vinculoSchema,
 } from '../schemas/reconciliation.schema';
 import { listarSugestoes } from '../use-cases/list-suggestions.usecase';
 import { aceitarSugestao } from '../use-cases/accept-suggestion.usecase';
@@ -13,11 +13,7 @@ import { desvincularEndpoint, vincularEndpointAoAtivo } from '../use-cases/link-
 import { triarEndpoint } from '../use-cases/review-endpoint.usecase';
 import { fundirEndpoints } from '../use-cases/merge-endpoints.usecase';
 import { listarAtivosOciosos } from '../use-cases/list-idle-assets.usecase';
-import { calcularConformidade, definirSoftwareDaLicenca } from '../use-cases/license-compliance.usecase';
 import { obterMaquinaDoAtivo } from '../use-cases/get-asset-machine.usecase';
-import {
-  listarPacotesDeSoftware, listarSoftwareDaLicenca,
-} from '../use-cases/list-software-packages.usecase';
 
 // Só HTTP. Sem try/catch: o `parse` rejeita e cai no errorHandler, que devolve
 // 422 com o campo que falhou; o `AppError` dos use-cases sai por lá também.
@@ -70,28 +66,6 @@ export const reconciliationController = {
   async assetMachine(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     return obterMaquinaDoAtivo(id);
-  },
-
-  async softwarePackages(request: FastifyRequest) {
-    const { q, limite } = buscaDePacotesSchema.parse(request.query ?? {});
-    return listarPacotesDeSoftware(q, limite);
-  },
-
-  async licenseCompliance(request: FastifyRequest) {
-    const { id } = idParamSchema.parse(request.params);
-    return calcularConformidade(id);
-  },
-
-  async licenseSoftware(request: FastifyRequest) {
-    const { id } = idParamSchema.parse(request.params);
-    const rows = await listarSoftwareDaLicenca(id);
-    return { total: rows.length, rows };
-  },
-
-  async setLicenseSoftware(request: FastifyRequest) {
-    const { id } = idParamSchema.parse(request.params);
-    const { packageIds } = softwareDaLicencaSchema.parse(request.body ?? {});
-    return definirSoftwareDaLicenca(id, packageIds, atorDaRequisicao(request));
   },
 
   async review(request: FastifyRequest) {
