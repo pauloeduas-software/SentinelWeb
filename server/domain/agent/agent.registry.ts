@@ -32,12 +32,49 @@ export function countAgentsOnline(): number {
   return activeAgents.size;
 }
 
-/** Entrega um pacote ao agente. `false` = agente não está conectado aqui. */
-export function sendToAgent(hwid: string, packet: AgentCommandPacket): boolean {
+/**
+ * O que aconteceu com um pacote mandado ao agente.
+ *
+ *   `ENTREGUE`      o socket confirmou que o pacote saiu.
+ *   `DESCONECTADO`  não há socket aberto para este HWID neste processo.
+ *   `FALHOU`        havia socket, e a escrita nele falhou.
+ */
+export type EntregaAoAgente = 'ENTREGUE' | 'DESCONECTADO' | 'FALHOU';
+
+/**
+ * Entrega um pacote ao agente, e só diz `ENTREGUE` quando o socket confirmou.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * DEVOLVIA `true` ASSIM QUE ACHAVA O SOCKET NO MAPA — sem olhar o estado dele
+ * e sem esperar o `send`. O mapa é atualizado pelo `close` do lado do servidor,
+ * que chega DEPOIS de a conexão cair: entre um e outro, o socket está no mapa
+ * com `readyState` em CLOSING, o `send` do `ws` descarta o pacote em silêncio
+ * (ou grita no callback que ninguém passava), e a rota respondia "Comando
+ * enviado" para um comando que não saiu do processo. Quem estava na tela
+ * tentando desligar uma máquina lia o sucesso e esperava.
+ *
+ * Duas conferências, nesta ordem: o `readyState`, que é barato e pega o socket
+ * que já está morrendo; e o CALLBACK do `send`, que é a única confirmação que
+ * o `ws` dá de que os bytes foram escritos — com erro, se a escrita falhou.
+ * "Escrito no socket" ainda não é "o agente leu", e o protocolo não tem
+ * confirmação do outro lado; o que esta função promete é não dizer sucesso
+ * sem o envio ter acontecido.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+export function sendToAgent(hwid: string, packet: AgentCommandPacket): Promise<EntregaAoAgente> {
   const socket = activeAgents.get(sanitizeHwid(hwid));
-  if (!socket) return false;
-  socket.send(JSON.stringify(packet));
-  return true;
+  // `WebSocket.OPEN` pela instância, e não pela classe, porque `ws` entra aqui
+  // só como tipo (`import type`): o valor da constante mora no objeto.
+  if (!socket || socket.readyState !== socket.OPEN) return Promise.resolve('DESCONECTADO');
+
+  return new Promise((resolve) => {
+    try {
+      socket.send(JSON.stringify(packet), (erro) => resolve(erro ? 'FALHOU' : 'ENTREGUE'));
+    } catch (erro) {
+      logger.warn(`[Agent] Falha ao escrever no socket de ${shortHwid(hwid)}:`, erro);
+      resolve('FALHOU');
+    }
+  });
 }
 
 // Encerramento gracioso: avisa os agentes antes de o processo sair, para que
