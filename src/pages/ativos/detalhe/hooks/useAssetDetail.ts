@@ -145,7 +145,7 @@ export function useAssetDetail() {
     assignments: assignments ?? [],
     possePendente,
 
-    // COMPONENTES — a aba que saiu de desabilitada na F5.
+    // LICENÇAS — o que está licenciado neste ativo.
     licencas: licencas ?? [],
     licencasPendentes,
 

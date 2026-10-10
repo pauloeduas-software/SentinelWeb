@@ -6,11 +6,8 @@ import { History, Info, KeyRound, MonitorSmartphone, Users } from 'lucide-react'
 // que exporta componente E constante quebra o fast refresh do Vite (o lint
 // reprova). O componente que as desenha é `components/AssetTabs.tsx`.
 //
-// TODAS NASCEM, e as que ainda não existem aparecem DESABILITADAS dizendo em
-// que fase chegam. Não é enfeite: aba ausente e aba vazia são indistinguíveis de
-// defeito para quem usa o sistema. Hoje as cinco estão com `fase: null` — o
-// mecanismo fica para a próxima aba, e é ele que faz a moldura da tela não mudar
-// quando ela chegar: some o `fase`, entra o conteúdo.
+// Toda aba desta lista existe e tem conteúdo. Aba que não tivesse não entraria
+// aqui: aba vazia é indistinguível de defeito para quem usa o sistema.
 
 export type AbaId =
   | 'detalhes' | 'posse' | 'historico'
@@ -20,19 +17,12 @@ export interface Aba {
   id: AbaId;
   rotulo: string;
   icone: typeof Info;
-  /** `null` = já existe. Preenchido = ainda não, e diz quando. */
-  fase: string | null;
 }
 
 export const ABAS: readonly Aba[] = [
-  { id: 'detalhes', rotulo: 'Detalhes', icone: Info, fase: null },
-  { id: 'posse', rotulo: 'Posse', icone: Users, fase: null },
-  { id: 'historico', rotulo: 'Histórico', icone: History, fase: null },
-  // Saiu de desabilitada na F6: sumiu o `fase`, entrou o conteúdo — a moldura
-  // da tela não mudou, que era o que a decisão prometia.
-  { id: 'licencas', rotulo: 'Licenças', icone: KeyRound, fase: null },
-  // NASCEU JÁ PRONTA na F7 — é a única das abas que não passou por
-  // desabilitada, porque o que ela mostra não existia em fase nenhuma: até a
-  // convergência, o ativo não sabia que tinha uma máquina.
-  { id: 'maquina', rotulo: 'Máquina', icone: MonitorSmartphone, fase: null },
+  { id: 'detalhes', rotulo: 'Detalhes', icone: Info },
+  { id: 'posse', rotulo: 'Posse', icone: Users },
+  { id: 'historico', rotulo: 'Histórico', icone: History },
+  { id: 'licencas', rotulo: 'Licenças', icone: KeyRound },
+  { id: 'maquina', rotulo: 'Máquina', icone: MonitorSmartphone },
 ];

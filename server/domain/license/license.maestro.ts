@@ -57,10 +57,9 @@ export class LicenseMaestro {
     // duas o mesmo número.
     server.post('/api/licenses/:id/checkout-seat', WRITE_RATE_LIMIT, licenseController.checkoutSeat);
 
-    // O QUE ESTÁ LICENCIADO NESTE ATIVO — a aba Licenças que a F2 deixou
-    // desabilitada. Pendura em `/api/assets/:id` como as rotas de posse e de
-    // componente fazem, e pelo mesmo motivo: o dono do conceito é este domínio,
-    // não o do ativo.
+    // O QUE ESTÁ LICENCIADO NESTE ATIVO — o que a aba Licenças do ativo mostra.
+    // Pendura em `/api/assets/:id` como as rotas de posse fazem, e pelo mesmo
+    // motivo: o dono do conceito é este domínio, não o do ativo.
     server.get('/api/assets/:id/licenses', licenseController.doAtivo);
 
     logger.info('[Maestro] Rotas de Licenças inicializadas.');
