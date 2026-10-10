@@ -47,7 +47,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 13 | A mesma sugestão não empilha na fila | **banco** — índice único parcial `sugestao_pendente_por_alvo` | nada: o job trata o `P2002` como "outro já criou" |
 | 14 | A observação de uso é uma linha por (máquina, conta, dia) | **banco** — índice único `endpoint_user_daily` | nada: o `upsert` incrementa em vez de inserir |
 | 17 | Sempre existe alguém, com login, que é `ADMIN` | **aplicação** — `assertSobraAdministrador()`, DEPOIS da escrita e dentro da transação | 409 `Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. Dê o papel de Administrador a outra pessoa com login antes de seguir.` |
-| 19 | No máximo um computador por posto de trabalho | **aplicação** — `computadorDoPosto()`, nas duas portas, com `FOR UPDATE` na linha do posto | 409 `Este posto de trabalho já tem um computador: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.` |
+| 19 | No máximo um computador por posto de trabalho | **aplicação** — três portas: as duas de posse e vínculo (`computadorDoPosto()`, com `FOR UPDATE` na linha do posto) e a da marca (`locationSpec.beforeWrite`) | 409 `Este posto de trabalho já tem um computador: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.` |
 
 ---
 
@@ -447,10 +447,14 @@ que não faz login não destrava nada.
 ### 19 — No máximo um computador por posto de trabalho
 
 ```ts
-// workstation/helpers/computador-do-posto.helper.ts, nas DUAS portas,
-// dentro da transação
+// workstation/helpers/computador-do-posto.helper.ts, nas duas portas que
+// TRAVAM (posse e vínculo), dentro da transação
 const ocupante = await computadorDoPosto(tx, locationId, assetId);
 if (ocupante) throw new AppError(jaTemComputador(ocupante), 409);
+
+// catalog/specs/location.spec.ts — a terceira porta, a da MARCA
+const quantos = await contarComputadoresNoLocal(client, id);
+if (quantos > 1) throw new AppError(/* … */, 409);
 ```
 
 Um posto de trabalho é uma mesa, uma bancada, um guichê: uma pessoa por turno,
@@ -477,15 +481,23 @@ confirmou, e as duas passam. É o mesmo furo que a invariante 6 fecha com
 explícita: `SELECT id FROM locations WHERE id = $1 FOR UPDATE` antes da leitura,
 na linha que as duas transações disputam.
 
-**São DUAS portas, e a segunda não é redundante:**
+**São TRÊS portas, e nenhuma é redundante:**
 
 | porta | o que ela impede |
 | --- | --- |
 | `checkout-asset.usecase.ts` | entregar ao posto um ativo que já tem máquina, quando o posto já tem computador |
 | `link-endpoint-asset.usecase.ts` | vincular máquina a um ativo que já está num posto que tem computador |
+| `locationSpec.beforeWrite` | **marcar como posto** um local que já tem mais de um computador |
 
 Sem a segunda, a regra seria contornável pela ordem: entregar ao posto o desktop
 **sem** agente — que não é computador e passa —, e vincular a máquina depois.
+
+Sem a terceira, seria contornável pela marca: entregar dois computadores a uma
+sala de reunião, onde a regra não vale, e marcar a sala como posto depois. É
+`mais de um`, e não `um`, porque a regra é "no máximo um": marcar uma sala que
+já tem exatamente um computador é legítimo, e é como um posto nasce com o
+equipamento já lá. A guarda só dispara na TRANSIÇÃO — um PUT que não menciona a
+marca, ou que a reafirma, não passa por ela.
 
 **Note o que ela NÃO proíbe:** monitor, teclado e periférico no mesmo posto, sem
 limite (o modelo de posse descreve a mesa com vários ativos, e a Camada 3 resolve
@@ -496,18 +508,19 @@ uso que já existe. **Posto sem computador continua válido**: a regra é "no
 máximo um", não "exatamente um". (O `postoVago` é outra coisa, e não tem relação
 com esta invariante: ele é posto **sem ocupante** — gente, não máquina.)
 
-**O BURACO CONHECIDO, e ele é na marca.** `PUT /api/locations/:id` grava
-`isWorkstation` pelo CRUD de catálogo, sem guarda nenhuma: uma sala de reunião
-com dois computadores pode ser marcada como posto de trabalho, e a invariante
-passa a ser falsa no banco sem nada ter falhado. As duas portas defendem a
-ESCRITA de posse e de vínculo; nenhuma defende a mudança da marca. Fechar isso é
-uma linha em `locationSpec.beforeWrite` (`catalog/specs/location.spec.ts`), onde
-o `assertSemCicloDeLocalizacao` já mora — e está registrado aqui em vez de
-escondido, porque esta página promete fatos que nunca são falsos no banco.
+**O que a terceira porta NÃO cobre, e é aceito:** ela conta os computadores no
+instante da marca e não trava a linha do local. Marcar a sala como posto ao mesmo
+tempo em que alguém entrega o segundo computador a ela é uma corrida que passa —
+ligar a marca é operação de cadastro, feita uma vez por mesa, e a guarda existe
+para impedir quem marca o local errado. As duas portas de posse e de vínculo,
+que são as que recebem tráfego, continuam travando.
 
 > **A regra é testada, não argumentada.** `tests/invariantes/computador-por-posto.test.ts`
-> cobre as duas portas, o monitor que entra num posto que já tem computador, e os
-> dois computadores na sala de reunião. **A corrida também:**
+> cobre as duas primeiras portas, o monitor que entra num posto que já tem
+> computador, e os dois computadores na sala de reunião;
+> `…-trocas.test.ts` cobre os quatro caminhos que liberam a vaga;
+> `…-marca.test.ts` cobre a terceira porta, incluindo a sala com UM computador
+> que vira posto e o PUT que não menciona a marca. **A corrida também:**
 > `tests/corridas/computador-por-posto.test.ts` dispara duas entregas simultâneas
 > ao mesmo posto e exige que exatamente uma entre.
 

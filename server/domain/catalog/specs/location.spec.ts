@@ -1,4 +1,6 @@
 import { INCLUINDO_LIXEIRA } from '../../../core/database/soft-delete.extension';
+import { AppError } from '../../../core/errors/app-error';
+import { contarComputadoresNoLocal } from '../../workstation/helpers/computador-do-posto.helper';
 import { assertSemCicloDeLocalizacao } from '../helpers/location-cycle.helper';
 import { createLocationSchema, updateLocationSchema } from '../schemas/catalog-entities.schema';
 import type { CatalogDelegate, CatalogSpec } from './catalog-spec.types';
@@ -51,5 +53,40 @@ export const locationSpec: CatalogSpec = {
     return filhas + ativos;
   },
 
-  beforeWrite: (client, id, data) => assertSemCicloDeLocalizacao(client, id, data.parentId),
+  // A TERCEIRA PORTA DA INVARIANTE 19.
+  //
+  // As outras duas defendem a ESCRITA de posse e de vínculo
+  // (`checkout-asset.usecase.ts` e `link-endpoint-asset.usecase.ts`). Faltava a
+  // marca: sem esta guarda, uma sala com dois computadores virava posto de
+  // trabalho em uma requisição, e a invariante ficava falsa no banco sem nada
+  // ter falhado — numa página que promete fatos que nunca são falsos.
+  //
+  // MAIS DE UM, e não um: a regra é "no máximo um computador por posto", então
+  // marcar uma sala que já tem exatamente um é legítimo e vira um posto válido.
+  //
+  // O padrão dos três passos é o do `category.spec.ts` e do `status-label.spec.ts`:
+  // sai na criação, sai quando o campo não foi mencionado, e sai quando a marca
+  // já estava ligada — a guarda só dispara na TRANSIÇÃO.
+  async beforeWrite(client, id, data) {
+    await assertSemCicloDeLocalizacao(client, id, data.parentId);
+
+    // Na criação não há posse apontando para um local que ainda não existe.
+    if (!id || data.isWorkstation !== true) return;
+
+    const atual = await client.location.findUnique({
+      where: { id },
+      select: { isWorkstation: true },
+    });
+    if (!atual || atual.isWorkstation) return;
+
+    const quantos = await contarComputadoresNoLocal(client, id);
+    if (quantos > 1) {
+      throw new AppError(
+        `Este local tem ${quantos} computadores entregues e um posto de trabalho tem no máximo um. `
+          + 'Devolva os que não ficam nele antes de marcá-lo como posto.',
+        409,
+        { computadores: quantos },
+      );
+    }
+  },
 };

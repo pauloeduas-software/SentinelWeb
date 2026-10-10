@@ -1,3 +1,4 @@
+import type { prisma } from '../../../core/database/prismaClient';
 import type { ClientePosse } from '../../assignment/use-cases/resolve-responsibles.usecase';
 import { travarAtivoOuFalhar } from '../../asset/use-cases/lock-asset.usecase';
 import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
@@ -112,6 +113,35 @@ export async function computadorDoPosto(
   });
 
   return posse?.asset ?? null;
+}
+
+/**
+ * QUANTOS computadores estão entregues a este local, posto de trabalho ou não.
+ *
+ * Irmão do `computadorDoPosto`, e as diferenças são as três que a terceira
+ * porta exige: ela CONTA em vez de devolver o primeiro (é a diferença entre
+ * "tem um" e "tem três"); não tem ativo em operação para excluir; e NÃO olha o
+ * `isWorkstation`, porque quem chama está justamente no ato de ligar a marca —
+ * o irmão devolveria `null` aqui, sempre.
+ *
+ * Sem trava: ligar a marca é operação de cadastro, feita uma vez por mesa, e a
+ * guarda existe para impedir o erro de quem marca o local errado — não uma
+ * corrida. As duas portas de posse e vínculo continuam sendo as que travam.
+ */
+export async function contarComputadoresNoLocal(
+  client: Pick<typeof prisma, 'assignment'>,
+  locationId: string,
+): Promise<number> {
+  return client.assignment.count({
+    where: {
+      targetLocationId: locationId,
+      checkinAt: null,
+      // O MESMO filtro do irmão, e o `deletedAt` pelo mesmo motivo: a
+      // `softDeleteExtension` só age no model do topo da consulta, e aqui o topo
+      // é `assignment`.
+      asset: { deletedAt: null, endpoint: { isNot: null } },
+    },
+  });
 }
 
 /** A frase das duas portas que recusam o segundo computador. */
