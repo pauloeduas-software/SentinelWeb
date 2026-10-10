@@ -15,18 +15,13 @@ import type { CheckoutSeatData } from '../schemas/license.schema';
 // ═════════════════════════════════════════════════════════════════════════════
 // O ALVO É PESSOA **XOR** ATIVO — NUNCA UM POSTO (D39).
 //
-// A ausência de `assignedLocationId` é a decisão, e ela tem três argumentos:
+// A ausência de `assignedLocationId` é a decisão, e ela tem dois argumentos:
 //
 // 1. LICENÇA É CONSUMIDA POR UMA INSTALAÇÃO. O fornecedor licencia por
 //    dispositivo ou por usuário nomeado; não existe EULA que licencie um móvel.
 //    Quando o auditor pergunta onde o assento está, "na Mesa 1" não conta.
 //
-// 2. A F7 QUEBRARIA. A conformidade alimentada pelo software instalado é o join
-//    `LicenseSeat → Asset → Endpoint → SoftwareInstallation`. Um assento
-//    apontando para uma `Location` não tem caminho até uma instalação: seria um
-//    buraco exatamente no relatório que justifica o módulo.
-//
-// 3. O CASO DO POSTO COMPARTILHADO JÁ TEM RESPOSTA, E ELA É MAIS HONESTA. O
+// 2. O CASO DO POSTO COMPARTILHADO JÁ TEM RESPOSTA, E ELA É MAIS HONESTA. O
 //    desktop fixo da Mesa 1 é um `Asset`: o assento vai PARA O ATIVO, a
 //    `Assignment` daquele ativo aponta para a `Location`, e os responsáveis
 //    saem da Camada 2. E se a licença for por usuário nomeado, Laura e Ana

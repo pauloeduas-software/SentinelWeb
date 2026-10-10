@@ -37,12 +37,6 @@ const SELECT_ENDPOINT = {
  * recente, que é a que o agente está usando agora. Quem escolhe é quem opera:
  * a tela mostra as duas com data de último contato, e a escolha errada aqui é
  * recuperável só por outra fusão.
- *
- * SOBRE AS COLISÕES DE CHAVE: `software_installations` é única por (máquina,
- * pacote), e as duas máquinas podem ter linhas do MESMO pacote — é o caso
- * normal, aliás, porque a reimagem acontece no meio de um dia de trabalho.
- * Mover cegamente violaria o índice, então as colididas são CONSOLIDADAS e só
- * as demais são movidas.
  */
 export async function fundirEndpoints(perdedorId: string, vencedorId: string, actorId: string | null) {
   if (perdedorId === vencedorId) {
@@ -74,33 +68,7 @@ export async function fundirEndpoints(perdedorId: string, vencedorId: string, ac
       data: { endpointId: vencedorId },
     });
 
-    // ── O SOFTWARE, idem ─────────────────────────────────────────────────────
-    const instalacoes = await tx.softwareInstallation.findMany({ where: { endpointId: perdedorId } });
-    for (const instalacao of instalacoes) {
-      const existente = await tx.softwareInstallation.findUnique({
-        where: { endpointId_packageId: { endpointId: vencedorId, packageId: instalacao.packageId } },
-        select: { id: true, firstSeenAt: true },
-      });
-
-      if (!existente) {
-        await tx.softwareInstallation.update({ where: { id: instalacao.id }, data: { endpointId: vencedorId } });
-        continue;
-      }
-
-      // A primeira vez que o software foi visto é da MÁQUINA, não da linha: se
-      // ele estava instalado antes da reimagem, "instalado desde" é a data
-      // antiga. É o mesmo princípio de preservar o histórico mais longo.
-      await tx.softwareInstallation.update({
-        where: { id: existente.id },
-        data: {
-          firstSeenAt: instalacao.firstSeenAt < existente.firstSeenAt ? instalacao.firstSeenAt : existente.firstSeenAt,
-        },
-      });
-      await tx.softwareInstallation.delete({ where: { id: instalacao.id } });
-    }
-
     await tx.assetChange.updateMany({ where: { endpointId: perdedorId }, data: { endpointId: vencedorId } });
-
 
     // ── O VÍNCULO, se só o perdedor tinha ────────────────────────────────────
     const assetId = vencedor.assetId ?? perdedor.assetId;

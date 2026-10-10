@@ -52,10 +52,10 @@ export function useAssetDetail() {
   // licenças, onde o aviso de queima tem os números para explicar.
   const { data: licencas, isPending: licencasPendentes } = useAssetLicensesQuery(id ?? null);
 
-  // A MÁQUINA (F7): especificações coletadas, último contato, software instalado
-  // e as trocas de peça que o agente percebeu — tudo do endpoint vinculado. E
-  // desvincular, que é a correção de um vínculo errado — o pior resultado
-  // possível daquela fase, e não pode depender de mexer no banco à mão.
+  // A MÁQUINA (F7): especificações coletadas, último contato e as trocas de peça
+  // que o agente percebeu — tudo do endpoint vinculado. E desvincular, que é a
+  // correção de um vínculo errado — o pior resultado possível daquela fase, e
+  // não pode depender de mexer no banco à mão.
   const { data: maquina, isPending: maquinaPendente } = useMaquinaDoAtivoQuery(id ?? null);
   const desvincular = useDesvincularMaquina();
 

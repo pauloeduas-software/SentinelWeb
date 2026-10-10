@@ -45,14 +45,19 @@ describe('o handshake antigo continua valendo', () => {
 });
 
 describe('o que o servidor deixou de guardar continua passando no fio', () => {
-  it('aceita um campo que o servidor não guarda mais, e o ignora', async () => {
-    // O PROTOCOLO NÃO MUDOU quando a observação de usuário saiu: o agente em
-    // campo continua mandando `LoggedOnUser`, e o servidor apenas deixou de
-    // gravá-lo. Sem este caso, um campo esquecido no `upsert` viraria
-    // `Unknown argument` no PRIMEIRO handshake de produção e passaria pela
-    // suíte inteira — o compilador não pega, porque o objeto entra por spread.
+  it('aceita os campos que o servidor não guarda mais, e os ignora', async () => {
+    // O PROTOCOLO NÃO MUDOU quando a observação de usuário e o inventário de
+    // software saíram: o agente em campo continua mandando `LoggedOnUser` e
+    // `InstalledSoftware`, e o servidor apenas deixou de gravá-los. Sem este
+    // caso, um campo esquecido no `upsert` viraria `Unknown argument` no
+    // PRIMEIRO handshake de produção e passaria pela suíte inteira — o
+    // compilador não pega, porque o objeto entra por spread.
     const agente = await conectarAgente(api, 'hwid-campo-ignorado');
-    await agente.handshake({ Hostname: 'pc-ignora', LoggedOnUser: 'EMPRESA\\ana.lima' });
+    await agente.handshake({
+      Hostname: 'pc-ignora',
+      LoggedOnUser: 'EMPRESA\\ana.lima',
+      InstalledSoftware: [{ Name: 'Office', Version: '16.0', Publisher: 'Microsoft' }],
+    });
 
     const endpoint = await esperarPor('a máquina com campo ignorado', () => buscar('hwid-campo-ignorado'));
 

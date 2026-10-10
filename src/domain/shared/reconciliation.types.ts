@@ -62,12 +62,6 @@ export interface AtivoOcioso {
   responsaveis: { id: string; name: string; via: string }[];
 }
 
-export interface PacoteInstalado {
-  firstSeenAt: string;
-  lastSeenAt: string;
-  package: { id: string; name: string; version: string; publisher: string | null };
-}
-
 /**
  * As especificações que o AGENTE coletou.
  *
@@ -118,34 +112,5 @@ export interface MaquinaDoAtivo {
    */
   ultimoContatoNoAtivo: string | null;
   especificacoes: EspecificacoesDaMaquina | null;
-  total: number;
-  rows: PacoteInstalado[];
   mudancas: MudancaDeHardware[];
-}
-
-export interface MaquinaEmDesconformidade {
-  assetId: string;
-  assetTag: string;
-  assetName: string | null;
-  hostname: string | null;
-}
-
-export interface Conformidade {
-  licenseId: string;
-  licenseName: string;
-  pacotes: { id: string; name: string; version: string; publisher: string | null }[];
-  instaladoSemAssento: MaquinaEmDesconformidade[];
-  assentoSemInstalacao: MaquinaEmDesconformidade[];
-  assentosDePessoa: number;
-  semVinculoDeSoftware: boolean;
-}
-
-/** Um pacote do catálogo descoberto — a lista de onde a ponte do D102 escolhe. */
-export interface PacoteDoCatalogo {
-  id: string;
-  name: string;
-  version: string;
-  publisher: string | null;
-  /** Em quantas máquinas ele está instalado agora. É o que ordena a lista. */
-  instalacoes: number;
 }

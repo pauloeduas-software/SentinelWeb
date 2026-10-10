@@ -196,10 +196,10 @@ export async function buildApp(): Promise<FastifyInstance> {
   await LicenseMaestro.setupRoutes(server);
   // Arquivo depois de asset e catálogo: as rotas dele pendem de `/api/assets/:id`
   // e das quatro tabelas com imagem.
-  // CONVERGÊNCIA depois de licença: a conformidade cruza o software instalado
-  // com o assento da F6, e as rotas de vínculo pendem de `/api/endpoints/:id` e
-  // `/api/assets/:id`. Registrar na ordem em que o conceito nasce é o que mantém
-  // o arquivo legível (docs/historico/fase-07-convergencia-rmm-itam.md).
+  // CONVERGÊNCIA por último: as rotas de vínculo pendem de `/api/endpoints/:id`
+  // e `/api/assets/:id`, e a aba Máquina pendura no ativo. Registrar na ordem em
+  // que o conceito nasce é o que mantém o arquivo legível
+  // (docs/historico/fase-07-convergencia-rmm-itam.md).
   await ReconciliationMaestro.setupRoutes(server);
   await AgentMaestro.setupRoutes(server);
 

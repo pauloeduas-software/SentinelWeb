@@ -41,6 +41,14 @@ export interface HandshakeData {
   macAddress: string | null;
   localIp: string | null;
   cpuModel: string | null;
+  /**
+   * A lista de programas instalados, como o agente a manda.
+   *
+   * O PROTOCOLO AINDA ACEITA, E O SERVIDOR NÃO GUARDA — o mesmo caso do
+   * `loggedOnUser` abaixo. O campo continua no fio porque o agente em campo
+   * continua mandando, e tirá-lo do tipo transformaria em erro de parser uma
+   * mensagem que é válida. O que saiu foram as tabelas que o normalizavam.
+   */
   installedSoftware: unknown;
 
   /** `Win32_BIOS.SerialNumber` — o sinal de 100 pontos da cascata. */

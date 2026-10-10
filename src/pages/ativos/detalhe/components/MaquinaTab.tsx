@@ -208,39 +208,6 @@ export default function MaquinaTab({ maquina, carregando, desvinculando, onDesvi
           <Mudancas mudancas={maquina.mudancas} />
         )}
       </div>
-
-      <div className="font-mono text-xs">
-        <h3 className={`${ROTULO} mb-2 block`}>Software instalado — {maquina.total}</h3>
-
-        {maquina.rows.length === 0 ? (
-          <p className="text-text-tertiary border border-border-sutil px-4 py-6 text-center">
-            O agente ainda não mandou a lista de software desta máquina.
-          </p>
-        ) : (
-          <table className="w-full border border-border-sutil">
-            <thead className="bg-bg-surface border-b border-border-sutil">
-              <tr>
-                <th className={CABECALHO}>Programa</th>
-                <th className={CABECALHO}>Versão</th>
-                <th className={CABECALHO}>Fabricante</th>
-                <th className={CABECALHO}>Visto desde</th>
-              </tr>
-            </thead>
-            <tbody>
-              {maquina.rows.map((linha) => (
-                <tr key={linha.package.id} className="border-b border-border-sutil last:border-0">
-                  <td className="px-3 py-2 text-text-primary">{linha.package.name}</td>
-                  <td className="px-3 py-2 text-text-secondary">{linha.package.version}</td>
-                  <td className="px-3 py-2 text-text-tertiary">{linha.package.publisher ?? '—'}</td>
-                  <td className="px-3 py-2 text-text-tertiary">
-                    {new Date(linha.firstSeenAt).toLocaleDateString('pt-BR')}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
     </div>
   );
 }

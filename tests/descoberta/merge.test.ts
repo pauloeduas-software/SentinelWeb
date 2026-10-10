@@ -129,19 +129,20 @@ describe('o que a fusão recusa', () => {
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
-// A CONSOLIDAÇÃO — o caminho NORMAL da fusão, e o que não tinha teste.
+// O ÚLTIMO CONTATO DEPOIS DA FUSÃO — o D108.
 //
-// O D108 diz que `software_installations` é única por (máquina, pacote), e que as
-// duas linhas podem ter registros do MESMO pacote — é o caso comum, porque a
-// reimagem acontece no meio de um dia de trabalho. Mover cegamente violaria o
-// índice e derrubaria a fusão inteira na metade.
+// A máquina esteve viva na data MAIOR das duas linhas, independentemente de qual
+// delas registrou: é a mesma máquina. Ficar com o `lastSeen` do vencedor por ele
+// ser o vencedor faria a reimagem parecer um equipamento que sumiu — e é o
+// `lastSeen` que o painel de cobertura usa para contar fantasma.
 //
-// Ou seja: o ramo que a fusão percorre quase sempre era justamente o que a suíte
-// não exercitava, numa operação sem desfazer.
+// Este bloco cobria também a consolidação das instalações de software, que saiu
+// com o inventário de software. O que ele prova agora é a parte que não era de
+// software, numa operação sem desfazer.
 // ═════════════════════════════════════════════════════════════════════════════
 
-describe('a consolidação do que colide', () => {
-  it('preserva o "instalado desde" mais antigo e o último contato mais recente', async () => {
+describe('o último contato depois da fusão', () => {
+  it('o vencedor fica com o último contato MAIS RECENTE dos dois', async () => {
     const ativo = await criarAtivo(api, { statusId, modelId, name: 'pc-consolida' });
 
     const ids: Record<string, string> = {};
@@ -157,44 +158,23 @@ describe('a consolidação do que colide', () => {
     await api.post(`/api/endpoints/${velha}/link`, { assetId: ativo.id });
 
     // DUAS HORAS DO MESMO DIA, que é o que a reimagem no meio do expediente
-    // produz. Escrita direta por Prisma: a "API" destas linhas é o agente
+    // produz. Escrita direta por Prisma: a "API" destas datas é o agente
     // mandando handshake em horas diferentes do mesmo dia.
     const hoje = new Date();
     const dia = new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth(), hoje.getUTCDate() - 1));
     const manha = new Date(dia.getTime() + 11 * 60 * 60 * 1000);
     const tarde = new Date(dia.getTime() + 20 * 60 * 60 * 1000);
 
-    // O MESMO PACOTE, instalado antes da reimagem e ainda presente depois.
-    const pacote = await prisma.softwarePackage.create({
-      data: { name: 'Office', version: '16.0', publisher: 'Microsoft', normalizedKey: 'office|16.0|microsoft' },
-    });
-    const antigo = new Date(dia.getTime() - 60 * 24 * 60 * 60 * 1000);
-    await prisma.softwareInstallation.create({
-      data: { endpointId: velha, packageId: pacote.id, firstSeenAt: antigo, lastSeenAt: manha },
-    });
-    await prisma.softwareInstallation.create({
-      data: { endpointId: nova, packageId: pacote.id, firstSeenAt: tarde, lastSeenAt: tarde },
-    });
-
-    // O lastSeen do perdedor é o mais RECENTE: o vencedor tem que ficar com ele.
+    // O lastSeen do PERDEDOR é o mais recente: o vencedor tem que ficar com ele.
     await prisma.endpoint.update({ where: { id: nova }, data: { lastSeen: tarde } });
     await prisma.endpoint.update({ where: { id: velha }, data: { lastSeen: manha } });
 
     const fusao = await api.post(`/api/endpoints/${nova}/merge`, { intoEndpointId: velha });
     expect(fusao.status).toBe(200);
 
-    // "Instalado desde" é fato da MÁQUINA, não da linha: se o Office estava lá
-    // antes da reimagem, a data antiga é a que responde a pergunta da auditoria.
-    const instalacoes = await prisma.softwareInstallation.findMany({ where: { endpointId: velha } });
-    expect(instalacoes).toHaveLength(1);
-    expect(instalacoes[0].firstSeenAt.toISOString()).toBe(antigo.toISOString());
-
     // D108: o vencedor fica com o `lastSeen` MAIS RECENTE dos dois — a máquina
     // esteve viva naquela data, independentemente de qual linha registrou.
     const vencedor = await prisma.endpoint.findUniqueOrThrow({ where: { id: velha } });
     expect(vencedor.lastSeen.toISOString()).toBe(tarde.toISOString());
-
-    // E o token daquela instalação segue o binário, que é o mesmo: revogá-lo por
-    // causa de uma reimagem derrubaria o agente que está funcionando agora.
   });
 });

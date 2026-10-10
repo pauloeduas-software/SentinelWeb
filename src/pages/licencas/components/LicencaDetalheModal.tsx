@@ -1,6 +1,5 @@
 import { X } from 'lucide-react';
 import AssentosGrade from './AssentosGrade';
-import ConformidadeLicenca from './ConformidadeLicenca';
 import HistoricoLicenca from './HistoricoLicenca';
 import {
   useLicenseHistoryQuery, useLicenseQuery, useLicenseSeatsQuery,
@@ -113,17 +112,6 @@ export default function LicencaDetalheModal({ licenca, onClose, onDevolver }: Li
                   : { seatsTotal: atual.seatsTotal, queimados: atual.queimados },
               )}
             />
-          </div>
-
-          {/* CONFORMIDADE entre os assentos e o histórico, e não numa aba
-              separada: a pergunta "este contrato está sendo cumprido?" se
-              responde olhando a grade de assentos e o cruzamento com o software
-              instalado ao mesmo tempo. Separar os dois faria quem lê a grade
-              concluir que 8 de 10 ocupados significa conformidade — e ocupado
-              por quem não tem o programa instalado é assento pago à toa. */}
-          <div className="space-y-3">
-            <span className={ROTULO}>Conformidade</span>
-            <ConformidadeLicenca licenseId={licenca.id} />
           </div>
 
           <div className="space-y-3">

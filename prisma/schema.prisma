@@ -33,10 +33,9 @@ model Endpoint {
   status   AgentStatus @default(ONLINE)
   lastSeen DateTime    @default(now())
 
-  cpuModel          String?
-  installedSoftware Json?
-  localIp           String?
-  macAddress        String?
+  cpuModel   String?
+  localIp    String?
+  macAddress String?
 
   // ── IDENTIDADE COLETADA (F7, Etapa A) ────────────────────────────────────
   // Tudo nulável: o agente C# vive fora deste repositório e o rollout leva
@@ -59,19 +58,6 @@ model Endpoint {
   // ninguém saberia qual está certa. É o D16 uma camada abaixo.
   ramTotalBytes  BigInt?
   diskTotalBytes BigInt?
-
-  /// sha256 da lista de software que o AGENTE mandou no último handshake.
-  /// Calculado no servidor, nunca aceito do agente (D100).
-  softwareHash String?
-
-  /// sha256 da lista que as tabelas `software_installations` REFLETEM.
-  ///
-  /// São duas colunas, e não uma, porque elas respondem perguntas diferentes:
-  /// a de cima é o que chegou, esta é o que foi processado. Com uma só, o job
-  /// teria que re-hashear o JSON de 500 máquinas por hora para descobrir quem
-  /// mudou — e o hash existe justamente para esse trabalho não acontecer.
-  /// Diferentes = há o que normalizar, e a comparação é de duas colunas.
-  softwareNormalizedHash String?
 
   /// Triagem do Shadow IT: máquina vista pelo agente e sem cadastro.
   reviewState ReviewState @default(UNREVIEWED)
@@ -97,7 +83,6 @@ model Endpoint {
   merged       Endpoint[] @relation("EndpointMerge")
 
   telemetries   Telemetry[]
-  installations SoftwareInstallation[]
   suggestions   ReconciliationSuggestion[] @relation("SugestaoDoEndpoint")
   mergeTargetOf ReconciliationSuggestion[] @relation("SugestaoDeMerge")
   changes       AssetChange[]
@@ -834,9 +819,6 @@ model License {
 
   seats LicenseSeat[]
 
-  /// Os pacotes de software que esta licença cobre. Vínculo explícito (D102).
-  software LicenseSoftware[]
-
   // `name` não é @unique: a unicidade é índice PARCIAL na migration.
   @@index([deletedAt])
   @@index([categoryId])
@@ -1037,88 +1019,6 @@ model AssetChange {
 
   @@index([assetId, detectedAt])
   @@map("asset_changes")
-}
-
-// O CATÁLOGO DE SOFTWARE NORMALIZADO — o fim do `installedSoftware` write-only.
-//
-// Até a F7 o JSON do handshake era gravado e NUNCA lido por nada (três
-// ocorrências no código, todas de escrita). Aqui ele vira duas tabelas que
-// respondem perguntas.
-model SoftwarePackage {
-  id String @id @default(uuid()) @db.Uuid
-
-  name      String
-  version   String
-  publisher String?
-
-  /// A CHAVE É DERIVADA, e isso é o D100.
-  ///
-  /// `@@unique([name, version, publisher])` NÃO serve: em Postgres dois `NULL`
-  /// não são iguais dentro de um índice único, então a tupla com `publisher`
-  /// nulo — que é comum — não deduplica. O catálogo ganharia uma linha nova por
-  /// máquina, por handshake, e a conformidade contaria como diferentes
-  /// instalações que são a mesma.
-  ///
-  /// Formato: `nome|versão|fabricante ?? ''`, tudo em minúsculas.
-  normalizedKey String @unique
-
-  createdAt DateTime @default(now())
-
-  installations SoftwareInstallation[]
-  licenses      LicenseSoftware[]
-
-  @@index([name])
-  @@map("software_packages")
-}
-
-// O software visto NESTA máquina. `removedAt` preenchido = desinstalado —
-// a linha fica, pelo mesmo princípio do `Assignment` e do `LicenseSeatCheckout`.
-model SoftwareInstallation {
-  id         String @id @default(uuid()) @db.Uuid
-  endpointId String @db.Uuid
-  packageId  String @db.Uuid
-
-  firstSeenAt DateTime  @default(now())
-  lastSeenAt  DateTime  @default(now())
-  removedAt   DateTime?
-
-  endpoint Endpoint        @relation(fields: [endpointId], references: [id], onDelete: Cascade)
-  package  SoftwarePackage @relation(fields: [packageId], references: [id], onDelete: Restrict)
-
-  /// Uma linha por (máquina, pacote): o job reencontra a instalação e atualiza
-  /// `lastSeenAt`, em vez de inserir de novo a cada handshake.
-  @@unique([endpointId, packageId])
-  @@index([endpointId, removedAt])
-  @@index([packageId, removedAt])
-  @@map("software_installations")
-}
-
-// A PONTE LICENÇA ↔ PACOTE — explícita, nunca por semelhança de nome (D102).
-//
-// "Office 365 E3" no contrato é "Microsoft 365 Apps for enterprise" no Programas
-// e Recursos; "Adobe Acrobat Pro" convive com "Adobe Acrobat (64-bit)" e com o
-// Reader, que é grátis. Casamento aproximado erra nos dois sentidos, e os dois
-// erros são caros: um falso "instalado sem licença" manda comprar assento que já
-// existe; um falso "coberto" entrega auditoria de fornecedor com resposta errada
-// — que é exatamente a pergunta que o módulo de licença existe para responder
-// valendo dinheiro.
-//
-// Um vínculo explícito é trabalho humano uma vez por licença, e é o único que
-// alguém consegue CONFERIR.
-model LicenseSoftware {
-  id        String @id @default(uuid()) @db.Uuid
-  licenseId String @db.Uuid
-  packageId String @db.Uuid
-
-  createdAt   DateTime @default(now())
-  createdById String?  @db.Uuid
-
-  license License         @relation(fields: [licenseId], references: [id], onDelete: Cascade)
-  package SoftwarePackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
-
-  @@unique([licenseId, packageId])
-  @@index([packageId])
-  @@map("license_software")
 }
 
 // ATIVO OCIOSO — quanto a máquina foi realmente usada, agregado por dia.
