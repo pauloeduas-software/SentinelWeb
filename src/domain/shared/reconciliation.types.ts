@@ -44,6 +44,14 @@ export interface Cobertura {
   sugestoesPendentes: number;
 }
 
+/** O placar de uma varredura — `POST /api/reconciliation/run`. */
+export interface ResultadoDaVarredura {
+  endpoints: number;
+  sugeridas: number;
+  vinculadas: number;
+  encerradas: number;
+}
+
 export interface ConfiguracaoDaDescoberta {
   discoveryMode: DiscoveryMode;
   ghostDays: number;

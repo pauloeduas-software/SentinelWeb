@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import {
   useAceitarSugestao, useCoberturaQuery, useConfiguracaoDaDescobertaQuery,
-  useOciososQuery, useRecusarSugestao, useSalvarConfiguracaoDaDescoberta,
+  useOciososQuery, useReconciliarAgora, useRecusarSugestao, useSalvarConfiguracaoDaDescoberta,
   useSugestoesQuery, useTriarMaquina, useVincularEEntregar, useVincularMaquina,
 } from '../../../domain/reconciliation/reconciliation.queries';
 import { useEndpointsQuery } from '../../../domain/endpoint/endpoint.queries';
-import type { ConfiguracaoDaDescoberta, ReviewState } from '../../../domain/shared/reconciliation.types';
+import { usePode } from '../../../domain/auth/auth.store';
+import type {
+  ConfiguracaoDaDescoberta, ResultadoDaVarredura, ReviewState,
+} from '../../../domain/shared/reconciliation.types';
 
 // O ESTADO DA TELA DE DESCOBERTAS. A página é markup e mais nada
 // (docs/referencia/arquitetura.md).
@@ -34,6 +37,14 @@ export function useDescobertas() {
   const vincular = useVincularMaquina();
   const vincularEEntregar = useVincularEEntregar();
   const salvarConfiguracao = useSalvarConfiguracaoDaDescoberta();
+
+  // RECONCILIAR AGORA: só `ADMIN` vê o botão (a rota recusa os outros com 403;
+  // aqui é interface, não segurança). O placar da última rodada fica na tela
+  // ao lado do botão — "3 sugestões, 1 vínculo" é a resposta à pergunta de
+  // quem clicou, e um `alert` a faria sumir no fechar.
+  const reconciliar = useReconciliarAgora();
+  const podeReconciliar = usePode('ADMIN');
+  const [ultimaVarredura, setUltimaVarredura] = useState<ResultadoDaVarredura | null>(null);
 
   /**
    * O erro vai para a TELA, e não para o console.
@@ -68,7 +79,14 @@ export function useDescobertas() {
     carregandoMaquinas: semVinculo.isLoading || vinculadas.isLoading,
 
     ocupado: aceitar.isPending || recusar.isPending || triar.isPending
-      || vincular.isPending || vincularEEntregar.isPending,
+      || vincular.isPending || vincularEEntregar.isPending || reconciliar.isPending,
+
+    podeReconciliar,
+    reconciliando: reconciliar.isPending,
+    ultimaVarredura,
+    handleReconciliar: () => void comErro(async () => {
+      setUltimaVarredura(await reconciliar.mutateAsync());
+    }),
 
     handleAceitar: (id: string) => void comErro(() => aceitar.mutateAsync(id)),
     handleRecusar: (id: string) => void comErro(() => recusar.mutateAsync(id)),

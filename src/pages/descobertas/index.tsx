@@ -1,4 +1,4 @@
-import { AlertCircle, Inbox } from 'lucide-react';
+import { AlertCircle, Inbox, RefreshCw } from 'lucide-react';
 import ConfiguracaoDaDescoberta from './components/ConfiguracaoDaDescoberta';
 import OciososTable from './components/OciososTable';
 import OrfaosTable from './components/OrfaosTable';
@@ -37,18 +37,46 @@ export default function DescobertasPage() {
     sugestoes, carregandoSugestoes, cobertura, carregandoCobertura,
     ociosos, semVinculo, vinculadas, carregandoMaquinas, ocupado,
     configuracao, salvandoConfiguracao,
+    podeReconciliar, reconciliando, ultimaVarredura, handleReconciliar,
     handleAceitar, handleRecusar, handleTriar, handleVincular, handleSalvarConfiguracao,
   } = useDescobertas();
 
   return (
     <div className="animate-in fade-in duration-300 flex flex-col pb-6">
 
-      <div className="mb-6 shrink-0">
-        <h2 className="text-xl font-mono text-text-primary uppercase tracking-widest">Descobertas</h2>
-        <p className="text-xs text-text-tertiary mt-2 font-mono max-w-3xl leading-relaxed">
-          O que o agente vê e o cadastro ainda não sabe. Cada linha é uma proposta com a
-          evidência à vista — o sistema propõe, e quem decide é você.
-        </p>
+      <div className="mb-6 shrink-0 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-mono text-text-primary uppercase tracking-widest">Descobertas</h2>
+          <p className="text-xs text-text-tertiary mt-2 font-mono max-w-3xl leading-relaxed">
+            O que o agente vê e o cadastro ainda não sabe. Cada linha é uma proposta com a
+            evidência à vista — o sistema propõe, e quem decide é você.
+          </p>
+        </div>
+
+        {/* RECONCILIAR AGORA (ADMIN). A varredura roda de hora em hora e toma
+            a janela da hora; quem cadastrou o ativo e quer ver a proposta nascer
+            não deveria esperar a hora virar. O placar fica ao lado do botão. */}
+        {podeReconciliar && (
+          <div className="flex flex-col items-end gap-1 font-mono text-[10px]">
+            <button
+              type="button"
+              disabled={reconciliando}
+              onClick={handleReconciliar}
+              className="flex items-center gap-2 px-4 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base uppercase tracking-widest transition-colors disabled:opacity-40"
+            >
+              <RefreshCw size={12} className={reconciliando ? 'animate-spin' : ''} />
+              {reconciliando ? 'Varrendo…' : 'Reconciliar agora'}
+            </button>
+            {ultimaVarredura && (
+              <span className="text-text-tertiary" aria-live="polite">
+                {ultimaVarredura.endpoints} máquina{ultimaVarredura.endpoints === 1 ? '' : 's'} sem vínculo
+                {' · '}{ultimaVarredura.sugeridas} sugest{ultimaVarredura.sugeridas === 1 ? 'ão' : 'ões'}
+                {' · '}{ultimaVarredura.vinculadas} vínculo{ultimaVarredura.vinculadas === 1 ? '' : 's'}
+                {' · '}{ultimaVarredura.encerradas} encerrada{ultimaVarredura.encerradas === 1 ? '' : 's'}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       <PainelDeCobertura cobertura={cobertura} carregando={carregandoCobertura} />

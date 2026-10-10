@@ -13,6 +13,7 @@ import { vincularEEntregar } from '../use-cases/link-and-checkout.usecase';
 import { triarEndpoint } from '../use-cases/review-endpoint.usecase';
 import { listarAtivosOciosos } from '../use-cases/list-idle-assets.usecase';
 import { obterMaquinaDoAtivo } from '../use-cases/get-asset-machine.usecase';
+import { rodarReconciliacao } from '../jobs/reconcile.job';
 
 // Só HTTP. Sem try/catch: o `parse` rejeita e cai no errorHandler, que devolve
 // 422 com o campo que falhou; o `AppError` dos use-cases sai por lá também.
@@ -36,6 +37,12 @@ export const reconciliationController = {
 
   async coverage(_request: FastifyRequest, reply: FastifyReply) {
     return reply.send(await calcularCobertura());
+  },
+
+  // A VARREDURA AGORA. Mesma função da rodada da hora, sem a janela: devolve o
+  // placar da rodada, e o 409 de "já tem uma rodando" sai pelo errorHandler.
+  async runNow() {
+    return rodarReconciliacao();
   },
 
   async link(request: FastifyRequest, reply: FastifyReply) {
