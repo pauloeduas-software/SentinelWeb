@@ -218,6 +218,9 @@ model User {
   //   quem responde pelo ESPAÇO?   `Location.managerId`
   //
   // Em uma linha: *o posto responde pelo ativo, e a pessoa responde pelo posto.*
+  // As unidades de estoque entregues NO NOME desta pessoa (`StockMovement`
+  // de alvo USER): é a ponta do estoque na invariante 6.
+  stockMovements StockMovement[]
 
   // `email` NÃO é @unique aqui de propósito: a unicidade é um índice parcial
   // (`WHERE deleted_at IS NULL`) criado na migration. Com @unique comum, um
@@ -254,9 +257,13 @@ model ActivityLog {
 // aninhada — verificado).
 // ============================================================================
 
+// A que MÓDULO a categoria pertence. `STOCK` é o item por quantidade — monitor,
+// teclado, mouse, cabo —, sem patrimônio individual: o que não é máquina não é
+// ativo (ver `StockItem`).
 enum CategoryType {
   ASSET
   LICENSE
+  STOCK
 }
 
 // O tipo do status responde: *o que dá para fazer com este ativo agora?*
@@ -316,7 +323,8 @@ model Category {
   updatedAt   DateTime     @updatedAt
   assetModels AssetModel[]
 
-  licenses License[]
+  licenses   License[]
+  stockItems StockItem[]
 
   // Por (nome, tipo), não só por nome: "Notebook" como categoria de ATIVO e
   // "Notebook" como categoria de LICENÇA são duas coisas diferentes.
@@ -406,15 +414,15 @@ model Location {
   // invisível na interface.
   //
   // A flag separa as duas coisas nas telas e habilita a página /postos. E ela
-  // É REGRA desde a invariante 19: no máximo UM computador (ativo com máquina
-  // vinculada) por local marcado. Fora da marca não há limite — a sala de
-  // reunião com dois computadores continua valendo, que é o uso que proibir
-  // quebraria — e por isso LIGAR a marca também é guardado: uma sala com mais de
-  // um computador não vira posto (`locationSpec.beforeWrite`).
+  // É REGRA pela invariante 19: no máximo UM ativo por local marcado — ativo é
+  // computador. Fora da marca não há limite — a sala de reunião com dois
+  // computadores continua valendo, que é o uso que proibir quebraria — e por
+  // isso LIGAR a marca também é guardado: uma sala com mais de um ativo não vira
+  // posto (`locationSpec.beforeWrite`).
   //
-  // O que a marca NÃO restringe, dentro ou fora dela: monitor, teclado e
-  // periférico, que entram no posto sem limite, e os ocupantes, que são vários
-  // por desenho (a Camada 2 do modelo de posse).
+  // O que a marca NÃO restringe, dentro ou fora dela: o estoque entregue ao
+  // posto (monitor, teclado, mouse — `StockMovement`), que entra sem limite, e
+  // os ocupantes, que são vários por desenho (a Camada 2 do modelo de posse).
   isWorkstation Boolean @default(false)
 
   // Gestor da localidade. SetNull de propósito: desligar o gestor não pode
@@ -432,9 +440,12 @@ model Location {
   assets   Asset[]
 
   // Ativos entregues A ESTE LOCAL (alvo LOCATION) e as pessoas que o ocupam.
-  // É a junção das duas que responde "quem é responsável pelo mouse da Mesa 1".
-  assignments Assignment[]
-  occupants   LocationOccupant[]
+  // É a junção das duas que responde "quem é responsável pelo computador da
+  // Mesa 1". E as unidades de ESTOQUE entregues ao posto — os 5 mouses da Mesa
+  // 1 —, pelas quais respondem os mesmos ocupantes.
+  assignments    Assignment[]
+  occupants      LocationOccupant[]
+  stockMovements StockMovement[]
 
   // DECLARADOS AQUI, e não só na migration que os criou.
   //
@@ -1026,4 +1037,130 @@ model AssetUsageDaily {
   @@unique([assetId, day])
   @@index([assetId, day])
   @@map("asset_usage_daily")
+}
+
+// ============================================================================
+// ESTOQUE — o que tem QUANTIDADE, e não patrimônio.
+//
+// A régua contra o `Asset`: ATIVO É COMPUTADOR. Monitor, teclado, mouse, cabo e
+// dock são estoque — N unidades intercambiáveis de um item, sem etiqueta nem
+// série individual. Uma linha de `StockItem` é o item; cada unidade que sai é
+// uma linha de `StockMovement`.
+//
+// O ITEM NÃO TEM COLUNA DE SALDO, e isso é decisão. `qty` é *quanto há no
+// total* — só muda por ENTRADA e BAIXA, nunca pelo formulário —, e o disponível
+// é `qty − COUNT(saídas abertas)`, calculado num helper só. Uma coluna
+// `disponivel` mantida por decremento pode DIVERGIR das linhas — basta um
+// INSERT que não passe pelo decremento — e a partir daí ela mente para sempre,
+// porque ela *é* a resposta: não existe ninguém para discordar dela.
+//
+// O ITEM TEM LIXEIRA, ao contrário do catálogo: a leitura aninhada aqui é de
+// HISTÓRICO — o nome do item na saída de março —, e mostrar o item apagado ali
+// é o certo. O delete real levaria junto o histórico, que não se reconstrói.
+// ============================================================================
+
+// O que uma movimentação faz com o item.
+//
+//   ENTRADA  soma `qty` ao total — chegou nota, recontagem para cima.
+//   BAIXA    subtrai `qty` do total — quebrou, perdeu, recontagem para baixo.
+//            Nunca abaixo do que está fora (`adjust-stock`).
+//   SAIDA    UMA unidade entregue a pessoa ou posto; `returnedAt` nulo é a
+//            unidade fora do estoque, e é o que o saldo conta. A devolução
+//            preenche `returnedAt` e NUNCA apaga a linha.
+enum StockMovementKind {
+  ENTRADA
+  BAIXA
+  SAIDA
+}
+
+// Para QUEM uma unidade saiu. Só nos movimentos de SAIDA.
+enum StockTarget {
+  USER
+  LOCATION
+}
+
+model StockItem {
+  id   String @id @default(uuid()) @db.Uuid
+  name String
+
+  // QUANTO HÁ NO TOTAL — não quanto sobra. Só muda por movimento de ENTRADA ou
+  // BAIXA, na mesma transação que grava a linha; a chave NÃO existe no schema
+  // de edição (`strictObject` devolve 422 a chave desconhecida, e não declarar
+  // é a defesa).
+  qty Int
+
+  categoryId String  @db.Uuid
+  notes      String?
+
+  // Autoria: carimbo, não vínculo, como em `Asset`.
+  createdById String? @db.Uuid
+  updatedById String? @db.Uuid
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  // Restrict: é o 409 por uso do catálogo, e a FK é a rede embaixo dele.
+  category  Category        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  movements StockMovement[]
+
+  // `name` NÃO é @unique aqui: a unicidade é índice PARCIAL
+  // (`WHERE "deletedAt" IS NULL`) na migration — o `unique_undeleted` de novo.
+  // Com @unique comum, um item na lixeira travaria para sempre o recadastro do
+  // mesmo nome.
+  @@index([deletedAt])
+  @@index([categoryId])
+  @@map("stock_items")
+}
+
+// UMA LINHA POR MOVIMENTO, e a saída é UMA UNIDADE por linha.
+//
+// Entregar 5 mouses à Mesa 1 grava 5 linhas de SAIDA, e devolver é por linha:
+// é o que faz a devolução ser de uma unidade identificada, sem quantidade
+// parcial para dividir, e faz o saldo ser um `COUNT`. Entregar a um posto vale
+// UMA unidade, qualquer que seja o número de ocupantes — o saldo do
+// almoxarifado não pode depender da escala do RH. Quem responde por ela são os
+// ocupantes abertos daquele posto, resolvidos na leitura.
+//
+// A forma da linha é CHECK do banco, escrito à mão na migration
+// (`stock_movements_forma`): SAIDA tem exatamente um alvo e `qty = 1`;
+// ENTRADA e BAIXA não têm alvo nem devolução.
+model StockMovement {
+  id     String            @id @default(uuid()) @db.Uuid
+  itemId String            @db.Uuid
+  kind   StockMovementKind
+
+  /// Quantas unidades este movimento moveu. Sempre 1 na SAIDA.
+  qty Int
+
+  // Discriminante + duas FKs nuláveis, como no `Assignment`. Só na SAIDA.
+  targetType       StockTarget?
+  targetUserId     String?      @db.Uuid
+  targetLocationId String?      @db.Uuid
+
+  /// Só na SAIDA. Nulo = unidade FORA do estoque. É o que o saldo conta.
+  returnedAt DateTime?
+
+  /// A observação do movimento — por que entrou, por que saiu, para quem.
+  notes       String?
+  /// A observação da DEVOLUÇÃO. Coluna própria: com uma só, a nota da volta
+  /// sobrescreveria a da ida.
+  returnNotes String?
+
+  createdById  String? @db.Uuid
+  returnedById String? @db.Uuid
+
+  createdAt DateTime @default(now())
+
+  // Cascade no item dono do movimento; Restrict nos ALVOS: não se apaga uma
+  // pessoa nem um posto que ainda segura unidade — é o 409 por uso do catálogo.
+  item           StockItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  targetUser     User?     @relation(fields: [targetUserId], references: [id], onDelete: Restrict)
+  targetLocation Location? @relation(fields: [targetLocationId], references: [id], onDelete: Restrict)
+
+  @@index([itemId, kind, returnedAt])
+  @@index([itemId, createdAt])
+  @@index([targetUserId, returnedAt])
+  @@index([targetLocationId, returnedAt])
+  @@map("stock_movements")
 }
