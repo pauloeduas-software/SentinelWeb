@@ -205,9 +205,9 @@ Regras práticas:
   `apiClient` já traduziu da resposta do servidor.
 - **Cálculo sai do JSX.** Parse de coluna Json, conversão de bytes e cor de
   status moram em `helpers/`.
-- **O `apiClient` preserva o `fields` do 422**, numa classe de erro própria: o
-  resumo da mensagem corta a lista em três, e sem o `fields` o motivo do quarto
-  campo inválido não apareceria em lugar nenhum.
+- **O `apiClient` traduz o erro num lugar só.** Toda tela mostra
+  `error.message`; o `fields` por campo que o 422 traz no corpo não é lido por
+  nenhuma delas, e o cliente não o desembrulha mais.
 
 ---
 

@@ -186,8 +186,9 @@ describe('POST /api/users com o corpo literal do UserFormModal', () => {
 
   it('recusa nome e e-mail vazios com 422 por campo', async () => {
     // O formulário deixa enviar (o `required` do HTML é do navegador, não da
-    // API), então o 422 precisa vir com o nome do campo para a tela pintar o
-    // input certo — e não uma frase solta.
+    // API), então o 422 tem que dizer QUAL campo falhou, e não uma frase solta.
+    // Nenhuma tela pinta o input hoje — todas mostram o `error`; é este teste
+    // que mantém o `fields` no corpo para a primeira que quiser.
     const { status, body } = await api.post<{ fields?: Record<string, string> }>(
       '/api/users',
       corpoDoFormularioDeUsuario(),
