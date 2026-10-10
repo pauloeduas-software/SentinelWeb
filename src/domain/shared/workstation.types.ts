@@ -1,5 +1,6 @@
 import type { Asset, Referencia } from './asset.types';
 import type { LocationOccupant, PessoaRef } from './posse.types';
+import type { UnidadeDeEstoque } from './stock.types';
 
 // Contrato do POSTO DE TRABALHO com a API — `GET /api/workstations`.
 //
@@ -90,4 +91,7 @@ export interface PostoDetalhe extends Omit<Posto, 'ocupantes'> {
   ocupantes: LocationOccupant[];
   /** Os ativos entregues ao posto — posse ABERTA com alvo LOCATION. */
   ativos: AtivoDoPosto[];
+  /** As unidades de estoque na mesa — saídas ABERTAS com alvo LOCATION, uma por unidade. */
+  itens: UnidadeDeEstoque[];
+  totalItens: number;
 }

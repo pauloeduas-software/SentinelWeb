@@ -1,17 +1,19 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { ASSET_SELECT, assetSelect } from '../../asset/helpers/asset-select.helper';
+import { listLocationStock } from '../../stock/use-cases/list-location-stock.usecase';
 import { WORKSTATION_DETAIL_SELECT } from '../helpers/workstation-select.helper';
 import { ehPostoVago } from '../helpers/workstation-row.helper';
 import { resolverCaminhos } from './resolve-location-paths.usecase';
 
 /**
- * UM posto: quem está nele e o que foi entregue a ele.
+ * UM posto: quem está nele, o ativo entregue a ele e o estoque na mesa.
  *
  * São as duas metades do modelo numa tela só (docs/referencia/modelo-de-posse.md): a Camada 2
  * — os ocupantes, com turno — e a Camada 1 vista do lado do posto — as posses
- * abertas cujo alvo é esta localização. É a junção das duas que responde "quem
- * é responsável pelo computador da Mesa 1".
+ * abertas cujo alvo é esta localização, mais as unidades de ESTOQUE entregues a
+ * ele. É a junção que responde "quem é responsável pelo computador e pelos
+ * cinco mouses da Mesa 1": os mesmos ocupantes, pelos dois.
  *
  * NÃO exige `isWorkstation` para responder, e isso é decisão. A marca não é só
  * de apresentação: ela é a porta da marca na invariante 19, e ligá-la num local
@@ -29,7 +31,7 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
 
   if (!local) throw new AppError('Posto de trabalho não encontrado.', 404);
 
-  const [entregues, caminhos] = await Promise.all([
+  const [entregues, itens, caminhos] = await Promise.all([
     // Consulta em `asset`, e não nas `assignments` do posto, de propósito: no
     // topo da consulta a `softDeleteExtension` age, e o ativo na lixeira fica
     // de fora sozinho. Lido pela relação, ele apareceria como equipamento na
@@ -53,6 +55,12 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
       },
       orderBy: { assetTag: 'asc' },
     }),
+    // AS UNIDADES DE ESTOQUE NA MESA — uma linha por unidade. É o "o que esta
+    // mesa tem" completo: sem elas a ficha mostrava o computador e escondia os
+    // cinco mouses em cima dele. Lista PRÓPRIA, e não somada aos ativos: um
+    // mouse não tem etiqueta nem série, e `totalAtivos` continua contando só
+    // ativo — é esse número que a invariante 19 limita a um.
+    listLocationStock(id),
     resolverCaminhos([local.parentId]),
   ]);
 
@@ -78,9 +86,12 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
     totalOcupantes: occupants.length,
     ativos,
     totalAtivos: ativos.length,
+    itens,
+    totalItens: itens.length,
 
-    // `vago` olha só os ATIVOS: o sinal existe para o equipamento caro parado
-    // em mesa sem ninguém.
+    // `vago` olha só os ATIVOS, e isso é decisão: o sinal existe para o
+    // equipamento caro parado em mesa sem ninguém. Um posto com um mouse na
+    // gaveta e nenhum ocupante não é o caso que o selo existe para acender.
     vago: ehPostoVago(occupants.length, ativos.length),
   };
 }

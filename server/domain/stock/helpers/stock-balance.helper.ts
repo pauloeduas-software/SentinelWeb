@@ -1,5 +1,5 @@
 import { AppError } from '../../../core/errors/app-error';
-import type { ClienteCatalogo } from '../../catalog/specs/catalog-spec.types';
+import type { prisma } from '../../../core/database/prismaClient';
 import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
 
 // O SALDO — a invariante que sustenta o estoque inteiro.
@@ -32,8 +32,15 @@ import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
 // milissegundo.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** O cliente das contagens: o global ou o de transação. */
-export type ClienteEstoque = ClienteCatalogo;
+/**
+ * O cliente das contagens: o global ou o de transação.
+ *
+ * `Omit<…, '$'>` tira os métodos de sessão, que o cliente de transação não tem
+ * — a mesma forma do `ClientePosse`, para o `contarPosseAberta` do colaborador
+ * (que recebe um `ClientePosse`) poder contar estoque com o mesmo cliente.
+ * Quem precisa travar pede `ClienteQueTrava` à parte.
+ */
+export type ClienteEstoque = Omit<typeof prisma, `$${string}`>;
 
 /** Quantas unidades estão FORA do estoque, por item. Zero não vem no mapa. */
 export type ForaPorItem = Map<string, number>;

@@ -1,20 +1,23 @@
 import type { ClientePosse } from '../../assignment/use-cases/resolve-responsibles.usecase';
 import { contarAssentosDoUsuario } from '../../license/use-cases/count-user-seats.usecase';
+import { contarEstoqueDoUsuario } from '../../stock/use-cases/count-user-stock.usecase';
 
-// O QUE AINDA PRENDE UMA PESSOA AO INVENTÁRIO — as duas pontas, contadas juntas.
+// O QUE AINDA PRENDE UMA PESSOA AO INVENTÁRIO — as pontas, contadas juntas.
 //
-// São TRÊS, e as três vêm do mesmo lugar (docs/referencia/modelo-de-posse.md):
-// o que está no NOME da pessoa — ativo (`Assignment` alvo `USER`) e assento de
-// licença (`LicenseSeatCheckout.assignedUserId`) — e o que ela responde por
-// OCUPAR um posto (`LocationOccupant`). Contar só a primeira é o erro que o D32
-// descreve: quem saiu continua respondendo por tudo que está na Mesa 1, e
-// nenhuma consulta acusa, porque a Camada 3 é derivada.
+// São QUATRO, e vêm do mesmo lugar (docs/referencia/modelo-de-posse.md): o que
+// está no NOME da pessoa — ativo (`Assignment` alvo `USER`), assento de licença
+// (`LicenseSeatCheckout.assignedUserId`) e unidade de estoque (`StockMovement`
+// de SAIDA alvo `USER`) — e o que ela responde por OCUPAR um posto
+// (`LocationOccupant`). Contar só a primeira é o erro que o D32 descreve: quem
+// saiu continua respondendo por tudo que está na Mesa 1, e nenhuma consulta
+// acusa, porque a Camada 3 é derivada.
 //
 // A PERGUNTA QUE DECIDE se algo entra aqui não é "tem tabela própria?", é
 // *"alguém responde por isto quando a pessoa sai?"*. Assento de licença responde
-// sim — ele custa dinheiro por mês e é nominal —, e por isso entrou junto com as
-// outras duas em vez de virar uma contagem que alguém precisasse lembrar de
-// somar.
+// sim — ele custa dinheiro por mês e é nominal; o mouse no nome dela também: é
+// patrimônio, por quantidade, com uma pessoa respondendo. Por isso os dois
+// entraram junto com os outros em vez de virarem uma contagem que alguém
+// precisasse lembrar de somar.
 
 export interface PosseAbertaDoUsuario {
   /** `Assignment` abertas com alvo `USER` — o que devolver. */
@@ -28,6 +31,12 @@ export interface PosseAbertaDoUsuario {
    * (`license/use-cases/count-user-seats.usecase.ts`).
    */
   assentosEmPosse: number;
+  /**
+   * `StockMovement` de SAIDA abertas com alvo `USER` — a quarta ponta, a do
+   * estoque. SÓ as da pessoa: as unidades do POSTO são do posto, e quem sai da
+   * empresa não leva o mouse da Mesa 1 (`stock/use-cases/count-user-stock.usecase.ts`).
+   */
+  itensEmPosse: number;
 }
 
 /**
@@ -40,7 +49,7 @@ export async function contarPosseAberta(
   client: ClientePosse,
   userId: string,
 ): Promise<PosseAbertaDoUsuario> {
-  const [ativosEmPosse, postosOcupados, assentosEmPosse] = await Promise.all([
+  const [ativosEmPosse, postosOcupados, assentosEmPosse, itensEmPosse] = await Promise.all([
     client.assignment.count({
       // `asset: { deletedAt: null }` EXPLÍCITO. `assignments` não tem
       // `deletedAt`, então a extension não escopa esta contagem — e ela não
@@ -53,9 +62,10 @@ export async function contarPosseAberta(
     }),
     client.locationOccupant.count({ where: { userId, endedAt: null } }),
     contarAssentosDoUsuario(client, userId),
+    contarEstoqueDoUsuario(client, userId),
   ]);
 
-  return { ativosEmPosse, postosOcupados, assentosEmPosse };
+  return { ativosEmPosse, postosOcupados, assentosEmPosse, itensEmPosse };
 }
 
 /** "2 ativos", "1 ativo" — plural à mão porque é uma frase, não um dado. */
@@ -80,11 +90,14 @@ export function motivoParaNaoExcluir(posse: PosseAbertaDoUsuario): string | null
   if (posse.assentosEmPosse > 0) {
     partes.push(`ocupa ${quantos(posse.assentosEmPosse, 'assento de licença', 'assentos de licença')}`);
   }
+  if (posse.itensEmPosse > 0) {
+    partes.push(`está com ${quantos(posse.itensEmPosse, 'item de estoque', 'itens de estoque')}`);
+  }
   if (posse.postosOcupados > 0) partes.push(`ocupa ${quantos(posse.postosOcupados, 'posto', 'postos')}`);
 
   if (partes.length === 0) return null;
 
-  // Vírgula entre as primeiras e " e " antes da última: com três pontas, um
+  // Vírgula entre as primeiras e " e " antes da última: com quatro pontas, um
   // `join(' e ')` produziria "responde por 1 ativo e ocupa 1 assento de licença
   // e ocupa 1 posto" — uma frase que ninguém lê até o fim.
   const frase = partes.length === 1
@@ -92,7 +105,7 @@ export function motivoParaNaoExcluir(posse: PosseAbertaDoUsuario): string | null
     : `${partes.slice(0, -1).join(', ')} e ${partes[partes.length - 1]}`;
 
   // A FRASE DIZ O QUE FAZER, e o que ela manda fazer tem que EXISTIR: devolver
-  // o ativo, devolver o assento e encerrar a ocupação são as três operações que
-  // zeram as três pontas contadas acima.
+  // o ativo, o assento e a unidade de estoque, e encerrar a ocupação, são as
+  // quatro operações que zeram as quatro pontas contadas acima.
   return `Este colaborador ainda ${frase}. Devolva o que está com ele e encerre as ocupações antes de excluir.`;
 }
