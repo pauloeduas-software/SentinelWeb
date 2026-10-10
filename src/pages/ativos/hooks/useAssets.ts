@@ -50,16 +50,15 @@ export function useAssets() {
   const assets = useMemo(() => data?.rows ?? [], [data]);
   const total = data?.total ?? 0;
 
-  // O STATUS COM QUE UM ATIVO NOVO NASCE: "Disponível", e não o primeiro da
-  // lista alfabética ("Aguardando"). Só `DEPLOYABLE` pode ser entregue, e o
-  // ativo recém-cadastrado está no estoque, pronto — é o mesmo padrão que o
-  // servidor aplica na devolução (`escolherStatusPorTipo`, tipo `DEPLOYABLE`,
-  // "Disponível"). Pelo nome quando ele existe; senão o primeiro do tipo, que
-  // é a regra do servidor sem a preferência.
+  // O STATUS COM QUE UM ATIVO NOVO NASCE: o primeiro do TIPO `DEPLOYABLE` — o
+  // tipo que a tela de Configurações rotula "Disponível" e que o seed chama de
+  // "Pronto p/ Uso" —, e não o primeiro da lista alfabética ("Aguardando").
+  // Só `DEPLOYABLE` pode ser entregue, e o ativo recém-cadastrado está no
+  // estoque, pronto. Pelo TIPO e não pelo nome: nome é cadastro de texto livre,
+  // e é a mesma regra que o servidor aplica na devolução sem preferência
+  // configurada (`escolherStatusPorTipo`: o primeiro do tipo, por nome).
   const { data: disponiveis } = useCatalogOptionsQuery('status-labels', 'DEPLOYABLE');
-  const statusPadraoId = disponiveis?.find((opcao) => opcao.name === 'Disponível')?.id
-    ?? disponiveis?.[0]?.id
-    ?? '';
+  const statusPadraoId = disponiveis?.[0]?.id ?? '';
 
   const trocarFiltro = (aplicar: () => void) => {
     aplicar();
