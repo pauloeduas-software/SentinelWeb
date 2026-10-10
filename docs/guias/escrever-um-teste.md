@@ -56,9 +56,13 @@ Três regras:
 1. **Tudo por HTTP.** O Prisma entra só para **ler** o resultado ou para provar
    uma regra de banco que a API recusa antes (é o caso de
    `invariantes/check-assignment.test.ts`, o único que escreve SQL cru).
-2. **Um `criarApi()` por arquivo**, em `beforeAll`. O teto do rate limit é contado
-   em memória por instância: uma instância para a suíte inteira faria o arquivo
-   de número quinze tomar 429 por causa dos catorze anteriores.
+2. **Um `criarApi()` por arquivo**, em `beforeAll` — cada arquivo abre e fecha a sua.
+   Isto **já não é** limite de quantas requisições o arquivo pode fazer: o teto do rate
+   limit era contado em memória por instância e dividia arquivo por aritmética, e o
+   limitador deixou de ser registrado no teste (`server/app.ts`, `comTetoDeRequisicao`).
+   Escreva o arquivo pelo assunto; quem prova o teto é `invariantes/teto-de-requisicao.test.ts`
+   — o único arquivo que monta duas instâncias, uma de cada montagem, porque o que ele
+   prova é a diferença entre as duas.
 3. **Sem depender da ordem dos testes.** Os testes do mesmo arquivo compartilham
    banco (semear custa um argon2, e pagá-lo por `it` levaria minutos), então cada
    um cria o que precisa com nome próprio.

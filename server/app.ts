@@ -8,7 +8,7 @@ import fastifyStatic from '@fastify/static';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 
-import { getJwtSecret, isProduction } from './core/config/env';
+import { getJwtSecret, isProduction, tetoDeRequisicaoLigado } from './core/config/env';
 import { getCorsOrigins } from './core/config/cors';
 import { createLogger, rootLogger } from './core/logger/logger';
 import { generateRequestId, registerRequestLogger } from './core/logger/request-logger';
@@ -76,13 +76,62 @@ export const ROTAS_PUBLICAS: readonly RotaPublica[] = [
   { method: 'GET', path: '/agent-hub', motivo: 'autenticação própria (AGENT_TOKEN)' },
 ];
 
+export interface OpcoesDaAplicacao {
+  /**
+   * Registrar o teto de requisições por IP.
+   *
+   * ═════════════════════════════════════════════════════════════════════════
+   * POR QUE ELE É DESLIGADO NO TESTE, e por que isso não enfraquece a suíte.
+   *
+   * O teto conta requisições por IP, em memória, por instância da aplicação. A
+   * suíte inteira vem de um IP só, e cada arquivo de teste é uma rajada: a
+   * `tests/invariantes/computador-por-posto.test.ts` faz dezessete chamadas em
+   * rota DESTRUTIVA — teto de dez. O teto não está medindo abuso ali, está
+   * medindo o tamanho do arquivo.
+   *
+   * E o preço disso era pago na moeda errada. A regra "um `criarApi()` por
+   * arquivo" existia por causa do contador; arquivo que crescia era DIVIDIDO
+   * para caber no teto, com o assunto partido em dois pela aritmética de um
+   * limitador; e quando o teto estourava, a resposta era 429 numa asserção que
+   * esperava 409 — uma falha que não fala do que o teste investiga, e que muda
+   * de lugar conforme a ordem.
+   *
+   * O que NÃO se perde: o limitador continua montado igual em produção e em
+   * desenvolvimento, e `tests/invariantes/teto-de-requisicao.test.ts` monta uma
+   * instância COM ele e prova o 429 — é o único lugar da suíte onde o teto é o
+   * assunto, que é exatamente onde ele deve ser exercitado.
+   *
+   * Este é o ÚNICO atalho que o ambiente de teste tem. Nenhuma outra guarda —
+   * de sessão, de permissão ou de invariante — pergunta o ambiente: teste que
+   * roda contra regra diferente da de produção não prova nada sobre produção.
+   * ═════════════════════════════════════════════════════════════════════════
+   */
+  comTetoDeRequisicao?: boolean;
+}
+
 /**
  * Monta a aplicação inteira e devolve sem abrir porta nenhuma.
  *
  * Quem chama decide o que fazer com ela: `server.ts` liga os jobs e chama
  * `listen`; o teste chama `inject`.
  */
-export async function buildApp(): Promise<FastifyInstance> {
+export async function buildApp(
+  { comTetoDeRequisicao = tetoDeRequisicaoLigado(process.env.NODE_ENV) }: OpcoesDaAplicacao = {},
+): Promise<FastifyInstance> {
+  // PRODUÇÃO NÃO SOBE SEM TETO, aconteça o que acontecer com o padrão acima.
+  //
+  // O padrão é uma expressão, e expressão se edita: trocá-lo por `false` deixaria
+  // a suíte inteira verde — ela afirma "desligado no teste" e afirma os números
+  // "quando ligado", e nenhum teste pode montar uma aplicação de PRODUÇÃO para
+  // conferir o padrão dela. Esta linha fecha isso pelo outro lado, do mesmo jeito
+  // que o `verificarCobertura()` fecha a rota sem permissão declarada: em vez de
+  // uma API exposta em silêncio, um processo que não sobe.
+  if (isProduction && !comTetoDeRequisicao) {
+    throw new Error(
+      'buildApp: teto de requisições desligado em produção. Ele só é dispensado no '
+        + 'harness de teste (server/core/config/env.ts, tetoDeRequisicaoLigado).',
+    );
+  }
   const server = Fastify({
     // Mesma instância de log da aplicação: requisição e domínio saem no mesmo
     // formato, com o mesmo nível e o mesmo destino.
@@ -107,17 +156,24 @@ export async function buildApp(): Promise<FastifyInstance> {
   // Teto de requisições por IP. O painel consulta /api/endpoints a cada 5s (12/min)
   // mais as listagens, então 300/min sobra para uso normal e corta repetição
   // automatizada. Rotas de escrita têm teto próprio, mais baixo, nos maestros.
-  await server.register(rateLimit, {
-    max: 300,
-    timeWindow: '1 minute',
-    // Health check de container bate sem parar e não pode ser barrado: ficar sem
-    // resposta aqui faria o orquestrador reiniciar um servidor saudável.
-    allowList: (request) => request.url.startsWith('/health'),
-    // A resposta do 429 NÃO é montada aqui: o plugin lança o erro e quem traduz
-    // é o core/errors/error-handler, único lugar do sistema que monta resposta
-    // de erro. Com `errorResponseBuilder`, o objeto devolvido chegava ao handler
-    // sem status reconhecível e virava 500.
-  });
+  //
+  // O `if` é o que o `comTetoDeRequisicao` governa, e o motivo está escrito na
+  // opção. Note que ele desliga o plugin INTEIRO, e não só o teto de escrita: os
+  // tetos por rota são `config.rateLimit` nas opções de cada rota, e sem o plugin
+  // registrado esse `config` fica sendo um objeto que ninguém lê.
+  if (comTetoDeRequisicao) {
+    await server.register(rateLimit, {
+      max: 300,
+      timeWindow: '1 minute',
+      // Health check de container bate sem parar e não pode ser barrado: ficar sem
+      // resposta aqui faria o orquestrador reiniciar um servidor saudável.
+      allowList: (request) => request.url.startsWith('/health'),
+      // A resposta do 429 NÃO é montada aqui: o plugin lança o erro e quem traduz
+      // é o core/errors/error-handler, único lugar do sistema que monta resposta
+      // de erro. Com `errorResponseBuilder`, o objeto devolvido chegava ao handler
+      // sem status reconhecível e virava 500.
+    });
+  }
 
   await server.register(websocket);
 
