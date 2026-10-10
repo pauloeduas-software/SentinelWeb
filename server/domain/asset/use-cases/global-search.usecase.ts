@@ -1,5 +1,5 @@
 import { prisma } from '../../../core/database/prismaClient';
-import { ASSET_SELECT } from '../helpers/asset-select.helper';
+import { ASSET_SELECT, assetSelect } from '../helpers/asset-select.helper';
 import { buildAssetWhere } from '../helpers/asset-filters.helper';
 
 // A BUSCA DO LEITOR DE CÓDIGO DE BARRAS (F10, Etapa G).
@@ -79,19 +79,35 @@ async function postoDoAtivo(assetId: string): Promise<PostoDoAcerto | null> {
   return posse?.targetLocation ?? null;
 }
 
-export async function globalSearch(q: string): Promise<ResultadoDaBusca> {
+export async function globalSearch(
+  q: string,
+  /**
+   * A sessão enxerga custo de compra? (D77)
+   *
+   * Por parâmetro, da borda, como na listagem e no detalhe: o use-case não
+   * conhece `request`. A busca devolve ativos INTEIROS com o mesmo select da
+   * listagem, então era a terceira porta do custo depois de `/api/assets` e
+   * `/api/assets/:id` — e vazava: um técnico que bipasse uma etiqueta recebia
+   * o `purchaseCost` que a listagem lhe esconde.
+   */
+  podeVerCusto: boolean,
+): Promise<ResultadoDaBusca> {
   // `trim` SEM mexer em mais nada: zero à esquerda é parte da etiqueta
   // (`ATV-00042`), e um `replace` esperto comeria justamente o que identifica o
   // ativo. O leitor manda exatamente o que está impresso.
   const termo = q.trim();
   if (termo === '') return { tipo: 'NENHUM', por: 'vazio', total: 0, ativos: [], posto: null };
 
+  // O select DEPENDE DA SESSÃO (D77): sem a chave, `purchaseCost` não é lido
+  // do banco. O `as` fixa o tipo no select completo, como na listagem.
+  const select = assetSelect(podeVerCusto) as typeof ASSET_SELECT;
+
   // 1. A ETIQUETA. `findFirst` e não `findUnique`: a unicidade é índice PARCIAL
   // (`WHERE deleted_at IS NULL`), que o Prisma não conhece — e é o `findFirst`
   // que recebe o escopo da lixeira.
   const porEtiqueta = await prisma.asset.findFirst({
     where: { assetTag: termo },
-    select: ASSET_SELECT,
+    select,
   });
   if (porEtiqueta) {
     return {
@@ -103,7 +119,7 @@ export async function globalSearch(q: string): Promise<ResultadoDaBusca> {
   // 2. A SÉRIE.
   const porSerie = await prisma.asset.findFirst({
     where: { serial: termo },
-    select: ASSET_SELECT,
+    select,
   });
   if (porSerie) {
     return {
@@ -118,7 +134,7 @@ export async function globalSearch(q: string): Promise<ResultadoDaBusca> {
   // a listagem não acha.
   const aproximados = await prisma.asset.findMany({
     where: buildAssetWhere(termo),
-    select: ASSET_SELECT,
+    select,
     orderBy: { assetTag: 'asc' },
     take: MAX_PARCIAL,
   });
