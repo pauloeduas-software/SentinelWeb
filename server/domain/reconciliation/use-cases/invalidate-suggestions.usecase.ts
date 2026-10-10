@@ -9,8 +9,8 @@ const logger = createLogger('reconciliation.invalidacao');
 // A fila nascia e era resolvida por uma pessoa, e isso cobria dois dos três
 // caminhos. O terceiro é o mais comum de todos: **o mundo muda sozinho e a
 // sugestão deixa de descrever qualquer coisa.** Alguém vincula a máquina à mão
-// ao ativo que o sistema ia sugerir; alguém funde duas máquinas. Nada disso
-// passa por aqui, e a sugestão continuava `PENDING` para sempre.
+// ao ativo que o sistema ia sugerir, ou dá aquele ativo a outra máquina. Nada
+// disso passa por aqui, e a sugestão continuava `PENDING` para sempre.
 //
 // O estrago não era só fila suja. Aceitar uma sugestão que o mundo já realizou
 // DEGRADAVA CADASTRO CERTO: aceitar "esta máquina é o ATV-00012" depois de
@@ -24,16 +24,16 @@ const logger = createLogger('reconciliation.invalidacao');
 
 const SELECT_PENDENTE = {
   id: true,
-  kind: true,
-  endpoint: { select: { assetId: true, mergedIntoId: true } },
-  mergeInto: { select: { mergedIntoId: true } },
+  endpoint: { select: { assetId: true } },
+  // O OUTRO LADO DO MESMO 1:1. A máquina pode continuar sem ativo e o ATIVO ter
+  // ganhado outra máquina no meio — e aí a proposta também morreu.
+  asset: { select: { endpoint: { select: { id: true } } } },
 } as const;
 
 type Pendente = {
   id: string;
-  kind: string;
-  endpoint: { assetId: string | null; mergedIntoId: string | null };
-  mergeInto: { mergedIntoId: string | null } | null;
+  endpoint: { assetId: string | null };
+  asset: { endpoint: { id: string } | null } | null;
 };
 
 /**
@@ -44,25 +44,20 @@ type Pendente = {
  * isso, "42 sugestões encerradas" é um número que ninguém sabe se é bom.
  */
 function motivoDeInvalidar(pendente: Pendente): string | null {
-  // Máquina fundida em outra: TODA sugestão dela fala de um parque com duas
-  // máquinas onde há uma. O merge já encerra as suas, mas quem chega depois por
-  // outro caminho (o job) precisa da mesma conclusão.
-  if (pendente.endpoint.mergedIntoId) return 'a máquina foi fundida em outra';
+  // A MÁQUINA foi vinculada — a este ativo ou a outro. Nos dois casos a proposta
+  // acabou: uma máquina é no máximo um ativo (invariante 12).
+  if (pendente.endpoint.assetId) return 'a máquina já foi vinculada a um ativo';
 
-  switch (pendente.kind) {
-    case 'LINK':
-      // O vínculo aconteceu — com este ativo ou com outro. Nos dois casos a
-      // proposta acabou: uma máquina é no máximo um ativo (invariante 12).
-      return pendente.endpoint.assetId ? 'a máquina já foi vinculada a um ativo' : null;
+  // O ATIVO foi vinculado a OUTRA máquina, e este é o lado que faltava.
+  //
+  // Sem isto a pendente ficava `PENDING` para sempre: a invalidação olhava só o
+  // lado da máquina, que continua sem ativo, então nenhum motivo disparava — e
+  // aceitar devolvia o P2002 do `endpoints.assetId @unique` traduzido em 409.
+  // Era literalmente o botão que a fila oferece e o banco nega, do outro lado do
+  // 1:1 que a geração passou a respeitar.
+  if (pendente.asset?.endpoint) return 'o ativo já tem outra máquina';
 
-    case 'MERGE':
-      if (pendente.endpoint.assetId) return 'a máquina já foi vinculada a um ativo';
-      if (pendente.mergeInto?.mergedIntoId) return 'a máquina de destino já foi fundida em outra';
-      return null;
-
-    default:
-      return null;
-  }
+  return null;
 }
 
 /**

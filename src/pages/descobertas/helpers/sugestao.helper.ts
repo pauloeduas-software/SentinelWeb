@@ -19,11 +19,6 @@ export const ROTULOS: Record<SuggestionKind, Rotulo> = {
     acao: 'O ativo passa a ter esta máquina. Nada muda na posse.',
     cor: 'text-status-info',
   },
-  MERGE: {
-    titulo: 'Fundir máquinas duplicadas',
-    acao: 'A telemetria e o histórico migram para a máquina de destino. Não há como desfazer.',
-    cor: 'text-status-warning',
-  },
 };
 
 /** "SN-ABC-123 casou com o serial do ativo" — a frase de uma linha da evidência. */
@@ -31,8 +26,6 @@ export function resumoDaSugestao(sugestao: Sugestao): string {
   switch (sugestao.kind) {
     case 'LINK':
       return `${sugestao.endpoint.hostname} → ${sugestao.asset?.assetTag ?? 'ativo'}`;
-    case 'MERGE':
-      return `${sugestao.endpoint.hostname} → ${sugestao.mergeInto?.hostname ?? 'máquina cadastrada'}`;
   }
 }
 

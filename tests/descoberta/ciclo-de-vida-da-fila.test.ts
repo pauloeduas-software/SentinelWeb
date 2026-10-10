@@ -50,9 +50,9 @@ async function maquinaDescoberta(hwid: string, hostname: string, serial?: string
   return endpoint.id;
 }
 
-const pendentesDe = (endpointId: string, kind: string) =>
+const pendentesDe = (endpointId: string) =>
   prisma.reconciliationSuggestion.count({
-    where: { endpointId, kind: kind as never, state: 'PENDING' },
+    where: { endpointId, kind: 'LINK', state: 'PENDING' },
   });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -81,7 +81,7 @@ describe('o mundo muda sozinho e a fila acompanha (D110)', () => {
     // SEM RODAR O JOB: quem vincula já encerra o que dizia o contrário, na mesma
     // transação. Esperar a varredura deixaria por até uma hora um botão de
     // aceitar que o `@unique` do vínculo recusaria.
-    expect(await pendentesDe(endpointId, 'LINK')).toBe(0);
+    expect(await pendentesDe(endpointId)).toBe(0);
 
     const encerrada = await prisma.reconciliationSuggestion.findUniqueOrThrow({
       where: { id: nascida.id },
@@ -94,7 +94,7 @@ describe('o mundo muda sozinho e a fila acompanha (D110)', () => {
     // A rodada seguinte não a ressuscita: a máquina tem ativo, e sugestão de
     // vínculo só nasce para quem não tem.
     await rodarReconciliacao();
-    expect(await pendentesDe(endpointId, 'LINK')).toBe(0);
+    expect(await pendentesDe(endpointId)).toBe(0);
   });
 });
 
@@ -111,7 +111,7 @@ describe('discoveryMode = OFF desliga a descoberta (D112)', () => {
     // O enum tinha três valores e só `ON` era lido: `OFF` se comportava como
     // `SUGGEST`, então quem desligava a descoberta continuava recebendo tudo.
     // Configuração que não faz nada é pior que configuração que falta.
-    expect(await pendentesDe(endpointId, 'LINK')).toBe(0);
+    expect(await pendentesDe(endpointId)).toBe(0);
 
     await api.put('/api/settings/discovery', { discoveryMode: 'SUGGEST' });
     await rodarReconciliacao();

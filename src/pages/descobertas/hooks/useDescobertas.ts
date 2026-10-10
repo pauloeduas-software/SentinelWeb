@@ -5,9 +5,7 @@ import {
   useSugestoesQuery, useTriarMaquina,
 } from '../../../domain/reconciliation/reconciliation.queries';
 import { useEndpointsQuery } from '../../../domain/endpoint/endpoint.queries';
-import type {
-  ConfiguracaoDaDescoberta, ReviewState, SuggestionKind,
-} from '../../../domain/shared/reconciliation.types';
+import type { ConfiguracaoDaDescoberta, ReviewState } from '../../../domain/shared/reconciliation.types';
 
 // O ESTADO DA TELA DE DESCOBERTAS. A página é markup e mais nada
 // (docs/referencia/arquitetura.md).
@@ -16,10 +14,9 @@ export type AbaDaTela = 'fila' | 'orfaos' | 'ociosos';
 
 export function useDescobertas() {
   const [aba, setAba] = useState<AbaDaTela>('fila');
-  const [filtro, setFiltro] = useState<SuggestionKind | undefined>(undefined);
   const [erro, setErro] = useState<string | null>(null);
 
-  const sugestoes = useSugestoesQuery(filtro);
+  const sugestoes = useSugestoesQuery();
   const cobertura = useCoberturaQuery();
   const ociosos = useOciososQuery(30);
   const configuracao = useConfiguracaoDaDescobertaQuery();
@@ -49,7 +46,6 @@ export function useDescobertas() {
 
   return {
     aba, setAba,
-    filtro, setFiltro,
     erro, limparErro: () => setErro(null),
 
     sugestoes: sugestoes.data?.rows ?? [],

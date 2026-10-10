@@ -22,7 +22,7 @@ export interface Cobertura {
   /** FANTASMA: já foi visto, e sumiu há mais de `ghostDays`. */
   fantasmas: number;
 
-  /** Máquinas que o agente descobriu (não fundidas). */
+  /** Máquinas que o agente descobriu. */
   descobertas: number;
   /** Delas, quantas não têm cadastro: os órfãos. */
   orfaos: number;
@@ -63,17 +63,16 @@ export async function calcularCobertura(): Promise<Cobertura> {
     prisma.asset.count({ where: { ...vivos, lastSeenByAgentAt: null } }),
     prisma.asset.count({ where: { ...vivos, lastSeenByAgentAt: { lt: limiteFantasma } } }),
 
-    prisma.endpoint.count({ where: { mergedIntoId: null } }),
-    prisma.endpoint.count({ where: { mergedIntoId: null, assetId: null } }),
+    prisma.endpoint.count(),
+    prisma.endpoint.count({ where: { assetId: null } }),
     prisma.endpoint.count({
       where: {
-        mergedIntoId: null,
         assetId: null,
         reviewState: 'UNREVIEWED',
         lastSeen: { lt: limiteShadow },
       },
     }),
-    prisma.endpoint.count({ where: { mergedIntoId: null, reviewState: 'BLOCKED' } }),
+    prisma.endpoint.count({ where: { reviewState: 'BLOCKED' } }),
 
     prisma.reconciliationSuggestion.count({ where: { state: 'PENDING' } }),
   ]);

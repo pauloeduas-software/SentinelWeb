@@ -5,7 +5,7 @@ import { endpointKeys } from '../endpoint/endpoint.queries';
 import type { ListEnvelope } from '../shared/list.types';
 import type {
   AtivoOcioso, Cobertura, ConfiguracaoDaDescoberta, MaquinaDoAtivo,
-  ReviewState, Sugestao, SuggestionKind,
+  ReviewState, Sugestao,
 } from '../shared/reconciliation.types';
 
 // A CONVERGÊNCIA RMM × ITAM (docs/historico/fase-07-convergencia-rmm-itam.md).
@@ -20,20 +20,18 @@ import type {
 
 export const reconciliationKeys = {
   all: ['reconciliation'] as const,
-  sugestoes: (kind?: SuggestionKind) => ['reconciliation', 'sugestoes', kind ?? 'todas'] as const,
+  sugestoes: () => ['reconciliation', 'sugestoes'] as const,
   cobertura: () => ['reconciliation', 'cobertura'] as const,
   ociosos: (dias: number) => ['reconciliation', 'ociosos', dias] as const,
   configuracao: () => ['reconciliation', 'configuracao'] as const,
   maquinaDoAtivo: (assetId: string) => ['reconciliation', 'maquina', assetId] as const,
 };
 
-export function useSugestoesQuery(kind?: SuggestionKind) {
+export function useSugestoesQuery() {
   return useQuery({
-    queryKey: reconciliationKeys.sugestoes(kind),
+    queryKey: reconciliationKeys.sugestoes(),
     queryFn: async () => (
-      await apiClient.get<ListEnvelope<Sugestao>>('/reconciliation/suggestions', {
-        params: kind ? { kind } : undefined,
-      })
+      await apiClient.get<ListEnvelope<Sugestao>>('/reconciliation/suggestions')
     ).data,
   });
 }

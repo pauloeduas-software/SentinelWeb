@@ -22,7 +22,4 @@ export const SUGGESTION_SELECT = {
   asset: {
     select: { id: true, assetTag: true, name: true, serial: true },
   },
-  mergeInto: {
-    select: { id: true, hwid: true, hostname: true, assetId: true },
-  },
 } satisfies Prisma.ReconciliationSuggestionSelect;
