@@ -26,9 +26,6 @@ const ABAS: { id: AbaDaTela; rotulo: string }[] = [
 const FILTROS: { valor: SuggestionKind | undefined; rotulo: string }[] = [
   { valor: undefined, rotulo: 'Todas' },
   { valor: 'LINK', rotulo: 'Vínculo' },
-  { valor: 'CHECKOUT', rotulo: 'Posse' },
-  { valor: 'OCCUPANCY', rotulo: 'Ocupação' },
-  { valor: 'SHARED_POST', rotulo: 'Posto compartilhado' },
   { valor: 'MERGE', rotulo: 'Fusão' },
 ];
 
@@ -36,7 +33,7 @@ export default function DescobertasPage() {
   const {
     aba, setAba, filtro, setFiltro, erro, limparErro,
     sugestoes, carregandoSugestoes, cobertura, carregandoCobertura,
-    ociosos, orfaos, postos, ocupado,
+    ociosos, orfaos, ocupado,
     configuracao, salvandoConfiguracao,
     handleAceitar, handleRecusar, handleTriar, handleSalvarConfiguracao,
   } = useDescobertas();
@@ -49,7 +46,6 @@ export default function DescobertasPage() {
         <p className="text-xs text-text-tertiary mt-2 font-mono max-w-3xl leading-relaxed">
           O que o agente vê e o cadastro ainda não sabe. Cada linha é uma proposta com a
           evidência à vista — o sistema propõe, e quem decide é você.
-          <span className="text-text-secondary"> Duas pessoas na mesma máquina não é conflito: é um posto compartilhado.</span>
         </p>
       </div>
 
@@ -120,7 +116,7 @@ export default function DescobertasPage() {
               <span>Nada esperando decisão.</span>
               <span className="text-[10px] max-w-md text-center leading-relaxed">
                 A varredura roda de hora em hora. Quando o agente encontrar uma máquina que
-                casa com um ativo, ou alguém logado onde o cadastro não esperava, a proposta
+                casa com um ativo, ou duas linhas que são a mesma máquina, a proposta
                 aparece aqui.
               </span>
             </div>
@@ -130,7 +126,6 @@ export default function DescobertasPage() {
                 <SugestaoCard
                   key={sugestao.id}
                   sugestao={sugestao}
-                  postos={postos}
                   ocupado={ocupado}
                   onAceitar={handleAceitar}
                   onRecusar={handleRecusar}

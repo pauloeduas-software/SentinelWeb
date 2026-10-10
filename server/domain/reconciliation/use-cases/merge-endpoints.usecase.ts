@@ -38,12 +38,11 @@ const SELECT_ENDPOINT = {
  * a tela mostra as duas com data de último contato, e a escolha errada aqui é
  * recuperável só por outra fusão.
  *
- * SOBRE AS COLISÕES DE CHAVE: `endpoint_user_daily` é única por (máquina, conta,
- * dia) e `software_installations` por (máquina, pacote). As duas máquinas podem
- * ter linhas do MESMO dia e do MESMO pacote — é o caso normal, aliás, porque a
- * reimagem acontece no meio de um dia de trabalho. Mover cegamente violaria o
- * índice, então as colididas são CONSOLIDADAS (somando amostras e esticando as
- * datas) e só as demais são movidas.
+ * SOBRE AS COLISÕES DE CHAVE: `software_installations` é única por (máquina,
+ * pacote), e as duas máquinas podem ter linhas do MESMO pacote — é o caso
+ * normal, aliás, porque a reimagem acontece no meio de um dia de trabalho.
+ * Mover cegamente violaria o índice, então as colididas são CONSOLIDADAS e só
+ * as demais são movidas.
  */
 export async function fundirEndpoints(perdedorId: string, vencedorId: string, actorId: string | null) {
   if (perdedorId === vencedorId) {
@@ -74,30 +73,6 @@ export async function fundirEndpoints(perdedorId: string, vencedorId: string, ac
       where: { endpointId: perdedorId },
       data: { endpointId: vencedorId },
     });
-
-    // ── A PRESENÇA, consolidando o que colide ────────────────────────────────
-    const diasDoPerdedor = await tx.endpointUserDaily.findMany({ where: { endpointId: perdedorId } });
-    for (const dia of diasDoPerdedor) {
-      const existente = await tx.endpointUserDaily.findUnique({
-        where: { endpointId_userKey_day: { endpointId: vencedorId, userKey: dia.userKey, day: dia.day } },
-        select: { id: true, firstSeenAt: true, lastSeenAt: true },
-      });
-
-      if (!existente) {
-        await tx.endpointUserDaily.update({ where: { id: dia.id }, data: { endpointId: vencedorId } });
-        continue;
-      }
-
-      await tx.endpointUserDaily.update({
-        where: { id: existente.id },
-        data: {
-          firstSeenAt: dia.firstSeenAt < existente.firstSeenAt ? dia.firstSeenAt : existente.firstSeenAt,
-          lastSeenAt: dia.lastSeenAt > existente.lastSeenAt ? dia.lastSeenAt : existente.lastSeenAt,
-          samples: { increment: dia.samples },
-        },
-      });
-      await tx.endpointUserDaily.delete({ where: { id: dia.id } });
-    }
 
     // ── O SOFTWARE, idem ─────────────────────────────────────────────────────
     const instalacoes = await tx.softwareInstallation.findMany({ where: { endpointId: perdedorId } });

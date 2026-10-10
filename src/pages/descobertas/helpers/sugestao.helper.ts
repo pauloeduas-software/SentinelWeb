@@ -12,13 +12,7 @@ interface Rotulo {
   cor: string;
 }
 
-/**
- * O que cada tipo de sugestão propõe, em português de quem opera.
- *
- * `OCCUPANCY` e `SHARED_POST` têm a frase mais longa de propósito: são as duas
- * que o operador nunca viu em outro sistema, porque nenhum outro tem onde
- * guardar a resposta (docs/historico/fase-07-convergencia-rmm-itam.md, D47 e D48).
- */
+/** O que cada tipo de sugestão propõe, em português de quem opera. */
 export const ROTULOS: Record<SuggestionKind, Rotulo> = {
   LINK: {
     titulo: 'Vincular máquina ao ativo',
@@ -30,21 +24,6 @@ export const ROTULOS: Record<SuggestionKind, Rotulo> = {
     acao: 'A telemetria e o histórico migram para a máquina de destino. Não há como desfazer.',
     cor: 'text-status-warning',
   },
-  CHECKOUT: {
-    titulo: 'Entregar o ativo à pessoa',
-    acao: 'Abre a posse no nome dela. Se o ativo já estiver com outra pessoa, a posse anterior é devolvida antes.',
-    cor: 'text-status-success',
-  },
-  OCCUPANCY: {
-    titulo: 'Registrar ocupação do posto',
-    acao: 'A pessoa passa a ocupar o posto. O ativo continua sendo do posto — a posse dele não muda.',
-    cor: 'text-status-success',
-  },
-  SHARED_POST: {
-    titulo: 'Promover a posto compartilhado',
-    acao: 'O ativo passa a ser do posto e as pessoas viram ocupantes dele, com turno. A posse pessoal é devolvida.',
-    cor: 'text-status-warning',
-  },
 };
 
 /** "SN-ABC-123 casou com o serial do ativo" — a frase de uma linha da evidência. */
@@ -54,12 +33,6 @@ export function resumoDaSugestao(sugestao: Sugestao): string {
       return `${sugestao.endpoint.hostname} → ${sugestao.asset?.assetTag ?? 'ativo'}`;
     case 'MERGE':
       return `${sugestao.endpoint.hostname} → ${sugestao.mergeInto?.hostname ?? 'máquina cadastrada'}`;
-    case 'CHECKOUT':
-      return `${sugestao.asset?.assetTag ?? 'ativo'} → ${sugestao.targetUser?.name ?? 'pessoa'}`;
-    case 'OCCUPANCY':
-      return `${sugestao.targetUser?.name ?? 'pessoa'} → ${sugestao.targetLocation?.name ?? 'posto'}`;
-    case 'SHARED_POST':
-      return `${sugestao.asset?.assetTag ?? 'ativo'} → posto compartilhado`;
   }
 }
 

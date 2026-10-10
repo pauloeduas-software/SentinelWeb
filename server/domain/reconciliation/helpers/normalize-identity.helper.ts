@@ -129,21 +129,3 @@ export function normalizeHostname(valor: string | null | undefined): string | nu
   const semDominio = limpo.toLowerCase().split('.')[0];
   return semDominio.length >= 3 ? semDominio : null;
 }
-
-/**
- * A chave de usuário: `DOMINIO\ana.silva` → `ana.silva`, `ana@empresa.com` →
- * `ana`.
- *
- * Guardada mesmo quando não casa com ninguém — é ela que denuncia a conta de
- * serviço que precisa entrar na allowlist do `AppSetting` (D101).
- */
-export function normalizeUserKey(valor: string | null | undefined): string | null {
-  const limpo = limpar(valor);
-  if (!limpo) return null;
-
-  const semDominio = limpo.includes('\\') ? limpo.split('\\').pop()! : limpo;
-  const semEmail = semDominio.split('@')[0];
-  const minusculo = semEmail.trim().toLowerCase();
-
-  return minusculo.length > 0 ? minusculo : null;
-}

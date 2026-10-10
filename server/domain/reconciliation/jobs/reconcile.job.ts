@@ -3,11 +3,8 @@ import { prisma } from '../../../core/database/prismaClient';
 import { createLogger } from '../../../core/logger/logger';
 import { reconciliarEndpoint, valoresRepetidosNoParque } from '../use-cases/match-endpoint.usecase';
 import { carimbarUltimoContatoNosAtivos } from '../use-cases/stamp-last-seen.usecase';
-import { sugerirPosseOuOcupacao } from '../use-cases/suggest-posse.usecase';
-import { detectarPostoCompartilhado } from '../use-cases/detect-shared-post.usecase';
 import { normalizarSoftwarePendente } from '../use-cases/normalize-software.usecase';
 import { agregarUsoDosAtivos } from '../use-cases/aggregate-usage.usecase';
-import { expurgarObservacoesAntigas } from '../use-cases/record-user-observation.usecase';
 import {
   encerrarSugestoesObsoletas, expurgarSugestoesSubstituidas,
 } from '../use-cases/invalidate-suggestions.usecase';
@@ -90,29 +87,6 @@ export async function rodarReconciliacao(): Promise<{
     }
   }
 
-  // ── O OUTRO LADO: as máquinas que JÁ TÊM ativo ───────────────────────────
-  //
-  // Elas não precisam de vínculo, mas é nelas que está a pergunta que só este
-  // produto sabe fazer: quem usa esta máquina, e o que isso diz sobre a posse
-  // (D47) ou sobre o posto (D48).
-  const vinculados = await prisma.endpoint.findMany({
-    where: { assetId: { not: null }, mergedIntoId: null },
-    select: { id: true },
-  });
-
-  for (const endpoint of vinculados) {
-    try {
-      // Os dois, e nesta ordem. Eles são exclusivos por construção — o primeiro
-      // desiste com duas pessoas recorrentes, o segundo exige duas —, mas a
-      // ordem importa para quem lê o log: posse é o caso comum, posto
-      // compartilhado é o achado.
-      sugeridas += await sugerirPosseOuOcupacao(endpoint.id, configuracao);
-      sugeridas += await detectarPostoCompartilhado(endpoint.id, configuracao);
-    } catch (error) {
-      logger.error(`[Reconciliação] Falha ao sugerir posse de ${endpoint.id}:`, error);
-    }
-  }
-
   // O USO AGREGADO dos últimos dias (Etapa I): uma instrução para a frota
   // inteira, e é ela que faz a pergunta do ativo ocioso caber numa consulta.
   await agregarUsoDosAtivos();
@@ -121,12 +95,7 @@ export async function rodarReconciliacao(): Promise<{
   // estável esta chamada devolve zero linhas e não custa nada.
   await normalizarSoftwarePendente();
 
-  // O EXPURGO da observação de usuário, na mesma rodada. Dado de pessoa com
-  // prazo (D49): um job próprio para um `deleteMany` por hora seria mais
-  // agendamento do que trabalho.
-  await expurgarObservacoesAntigas(configuracao.userDailyRetentionDays);
-
-  // E o do histórico da fila: só as linhas SUBSTITUÍDAS, nunca as recusadas
+  // O EXPURGO do histórico da fila: só as linhas SUBSTITUÍDAS, nunca as recusadas
   // (são a memória do D97) nem as aceitas (são a trilha de quem decidiu).
   await expurgarSugestoesSubstituidas();
 

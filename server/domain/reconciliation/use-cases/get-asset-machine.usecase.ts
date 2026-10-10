@@ -38,7 +38,6 @@ export interface EspecificacoesDaMaquina {
   diskTotalBytes: string | null;
   macAddress: string | null;
   localIp: string | null;
-  loggedOnUser: string | null;
 }
 
 const SELECT_MAQUINA = {
@@ -58,7 +57,6 @@ const SELECT_MAQUINA = {
   diskTotalBytes: true,
   macAddress: true,
   localIp: true,
-  loggedOnUser: true,
 } as const;
 
 /**
@@ -121,7 +119,6 @@ export async function obterMaquinaDoAtivo(assetId: string) {
     diskTotalBytes: endpoint.diskTotalBytes?.toString() ?? null,
     macAddress: endpoint.macAddress,
     localIp: endpoint.localIp,
-    loggedOnUser: endpoint.loggedOnUser,
   };
 
   return {

@@ -35,7 +35,6 @@ export interface Endpoint {
   /** Vem como STRING: é `BigInt` no banco, e BigInt não tem JSON. */
   ramTotalBytes?: string | null;
   diskTotalBytes?: string | null;
-  loggedOnUser?: string | null;
 
   /** O vínculo com o patrimônio (D45). Nulo = máquina sem cadastro. */
   assetId?: string | null;

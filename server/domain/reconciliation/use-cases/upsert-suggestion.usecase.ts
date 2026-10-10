@@ -14,12 +14,9 @@ export interface SugestaoProposta {
   kind: SuggestionKind;
   endpointId: string;
   assetId?: string | null;
-  targetUserId?: string | null;
-  targetLocationId?: string | null;
   mergeIntoEndpointId?: string | null;
   score: number;
   signal?: MatchSignal | null;
-  shift?: string | null;
   /** O que a tela mostra. Pode crescer a cada rodada — ver `evidence.helper.ts`. */
   evidence: Evidencia;
   /**
@@ -36,7 +33,7 @@ export interface SugestaoProposta {
  * rodadas seguidas com `criadas: 0` é a prova de que a idempotência funciona.
  */
 export type ResultadoDaProposta =
-  | 'CRIADA' | 'RENOVADA' | 'INALTERADA' | 'JA_RESOLVIDA' | 'PESSOA_INATIVA';
+  | 'CRIADA' | 'RENOVADA' | 'INALTERADA' | 'JA_RESOLVIDA';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POR QUE NÃO HÁ PARÂMETRO `client` AQUI
@@ -57,12 +54,10 @@ export type ResultadoDaProposta =
 // é uma decoração.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** As quatro FKs de alvo, normalizadas — `undefined` e `null` são a mesma coisa aqui. */
+/** As duas FKs de alvo, normalizadas — `undefined` e `null` são a mesma coisa aqui. */
 function alvoDaProposta(proposta: SugestaoProposta) {
   return {
     assetId: proposta.assetId ?? null,
-    targetUserId: proposta.targetUserId ?? null,
-    targetLocationId: proposta.targetLocationId ?? null,
     mergeIntoEndpointId: proposta.mergeIntoEndpointId ?? null,
   };
 }
@@ -89,42 +84,9 @@ function alvoDaProposta(proposta: SugestaoProposta) {
  * **2. Não existe. Há uma `PENDING` com outra afirmação para o mesmo alvo?**
  * Ela vira `SUPERSEDED` e a nova nasce, na mesma transação. `SUPERSEDED` não é
  * sinônimo de recusa: ninguém disse não, o mundo é que mudou — a máquina passou
- * a mandar o serial, a pessoa trocou.
- *
- * **Antes dos dois, o passo 0: a pessoa ainda opera?** Ver abaixo.
+ * a mandar o serial.
  */
 export async function proporSugestao(proposta: SugestaoProposta): Promise<ResultadoDaProposta> {
-  // ─────────────────────────────────────────────────────────────────────────
-  // PASSO 0 — PESSOA DESATIVADA NÃO GERA SUGESTÃO.
-  //
-  // AQUI, e não em cada chamador, porque esta função é o funil único das três
-  // propostas que nomeiam gente (`CHECKOUT`, `OCCUPANCY`, e a `OCCUPANCY` que
-  // o posto compartilhado propõe por pessoa). Um portão por chamador é um
-  // portão que o próximo tipo de sugestão esquece.
-  //
-  // NÃO é no registro da observação (`record-user-observation.usecase.ts`).
-  // Aquela linha é o FATO — "esta conta esteve logada nesta máquina" —, e
-  // desativar alguém não torna falso que ela usou a máquina ontem; filtrar lá
-  // mentiria na cobertura e na ociosidade. E não resolveria: o `userId` é
-  // estampado no handshake e fica congelado na linha de `EndpointUserDaily`,
-  // então as linhas gravadas ANTES da desativação continuariam alimentando a
-  // fila. O portão pertence à PROPOSTA, que é onde o sistema afirma algo sobre
-  // o presente.
-  //
-  // Uma consulta, e só quando há proposta para escrever — não uma por endpoint
-  // por rodada do job.
-  //
-  // `findFirst` pelo escopo da lixeira: quem foi apagado também não passa, e aí
-  // o motivo é outro (sugerir posse para um cadastro excluído ressuscitaria um
-  // vínculo que alguém desfez de propósito).
-  if (proposta.targetUserId) {
-    const pessoa = await prisma.user.findFirst({
-      where: { id: proposta.targetUserId },
-      select: { isActive: true },
-    });
-    if (!pessoa?.isActive) return 'PESSOA_INATIVA';
-  }
-
   const alvo = alvoDaProposta(proposta);
   const evidenceHash = hashDaAfirmacao(proposta.afirmacao);
   const par = { kind: proposta.kind, endpointId: proposta.endpointId, ...alvo };
@@ -133,7 +95,6 @@ export async function proporSugestao(proposta: SugestaoProposta): Promise<Result
     ...par,
     score: proposta.score,
     signal: proposta.signal ?? null,
-    shift: proposta.shift ?? null,
     evidence: proposta.evidence as Prisma.InputJsonValue,
     evidenceHash,
   };
@@ -155,7 +116,6 @@ export async function proporSugestao(proposta: SugestaoProposta): Promise<Result
       data: {
         evidence: proposta.evidence as Prisma.InputJsonValue,
         score: proposta.score,
-        shift: proposta.shift ?? null,
       },
     });
     return 'INALTERADA';

@@ -26,8 +26,8 @@ export class ReconciliationMaestro {
     // dos dois lados: o uso vem da telemetria, o `postoVago` vem da posse.
     server.get('/api/reconciliation/idle', reconciliationController.idle);
 
-    // ACEITAR é a escrita mais pesada do sistema: ela pode abrir posse, mover
-    // ativo entre camadas do modelo e criar ocupação. Teto de destrutiva.
+    // ACEITAR é a escrita mais pesada da fila: ela pode fundir duas máquinas,
+    // que é a única operação do sistema sem desfazer (D103). Teto de destrutiva.
     server.post(
       '/api/reconciliation/suggestions/:id/accept',
       DESTRUCTIVE_RATE_LIMIT,

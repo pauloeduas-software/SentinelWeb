@@ -15,10 +15,9 @@ import type {
 // sugestão alcança a fila E o painel de cobertura — que muda a cada aceite sem
 // ninguém ter tocado nele.
 //
-// E o invalidate vai ALÉM do prefixo, de propósito: aceitar uma sugestão pode
-// abrir posse, mover um ativo entre camadas do modelo e criar ocupação. Quem
-// não invalidasse `assets` e `endpoints` junto deixaria a tela do ativo
-// mostrando o dono antigo até alguém recarregar a página.
+// E o invalidate vai ALÉM do prefixo, de propósito: aceitar uma sugestão muda o
+// vínculo máquina↔ativo. Quem não invalidasse `assets` e `endpoints` junto
+// deixaria a aba Máquina do ativo vazia até alguém recarregar a página.
 
 export const reconciliationKeys = {
   all: ['reconciliation'] as const,
@@ -93,16 +92,11 @@ function useInvalidarTudo() {
   };
 }
 
-export interface AceiteExtra {
-  locationId?: string;
-  shift?: string;
-}
-
 export function useAceitarSugestao() {
   const invalidar = useInvalidarTudo();
   return useMutation({
-    mutationFn: async ({ id, extra }: { id: string; extra?: AceiteExtra }) =>
-      (await apiClient.post<Sugestao>(`/reconciliation/suggestions/${id}/accept`, extra ?? {})).data,
+    mutationFn: async (id: string) =>
+      (await apiClient.post<Sugestao>(`/reconciliation/suggestions/${id}/accept`, {})).data,
     onSuccess: invalidar,
   });
 }
