@@ -105,8 +105,14 @@ export async function detectarPostoCompartilhado(
   const identificadas = presencas.filter((presenca) => presenca.userId);
   if (identificadas.length < 2) return 0;
 
+  // `isActive: true` para a EVIDÊNCIA não nomear quem já saiu da empresa. Quem
+  // não voltar desta consulta cai fora do recorte no filtro abaixo — e, se
+  // sobrar menos de duas pessoas identificadas, não há posto compartilhado
+  // nenhum a afirmar. Não é redundante com o passo 0 do `proporSugestao`: lá a
+  // proposta é barrada; aqui o TEXTO da sugestão que sobra deixa de citar como
+  // ocupante alguém que foi desativado.
   const pessoas = await prisma.user.findMany({
-    where: { id: { in: identificadas.map((presenca) => presenca.userId!) } },
+    where: { id: { in: identificadas.map((presenca) => presenca.userId!) }, isActive: true },
     select: { id: true, name: true },
   });
   const nomePorId = new Map(pessoas.map((pessoa) => [pessoa.id, pessoa.name]));

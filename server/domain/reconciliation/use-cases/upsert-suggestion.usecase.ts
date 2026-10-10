@@ -35,7 +35,8 @@ export interface SugestaoProposta {
  * O que aconteceu com a proposta. Devolvido para o job contar e logar — três
  * rodadas seguidas com `criadas: 0` é a prova de que a idempotência funciona.
  */
-export type ResultadoDaProposta = 'CRIADA' | 'RENOVADA' | 'INALTERADA' | 'JA_RESOLVIDA';
+export type ResultadoDaProposta =
+  | 'CRIADA' | 'RENOVADA' | 'INALTERADA' | 'JA_RESOLVIDA' | 'PESSOA_INATIVA';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POR QUE NÃO HÁ PARÂMETRO `client` AQUI
@@ -89,8 +90,41 @@ function alvoDaProposta(proposta: SugestaoProposta) {
  * Ela vira `SUPERSEDED` e a nova nasce, na mesma transação. `SUPERSEDED` não é
  * sinônimo de recusa: ninguém disse não, o mundo é que mudou — a máquina passou
  * a mandar o serial, a pessoa trocou.
+ *
+ * **Antes dos dois, o passo 0: a pessoa ainda opera?** Ver abaixo.
  */
 export async function proporSugestao(proposta: SugestaoProposta): Promise<ResultadoDaProposta> {
+  // ─────────────────────────────────────────────────────────────────────────
+  // PASSO 0 — PESSOA DESATIVADA NÃO GERA SUGESTÃO.
+  //
+  // AQUI, e não em cada chamador, porque esta função é o funil único das três
+  // propostas que nomeiam gente (`CHECKOUT`, `OCCUPANCY`, e a `OCCUPANCY` que
+  // o posto compartilhado propõe por pessoa). Um portão por chamador é um
+  // portão que o próximo tipo de sugestão esquece.
+  //
+  // NÃO é no registro da observação (`record-user-observation.usecase.ts`).
+  // Aquela linha é o FATO — "esta conta esteve logada nesta máquina" —, e
+  // desativar alguém não torna falso que ela usou a máquina ontem; filtrar lá
+  // mentiria na cobertura e na ociosidade. E não resolveria: o `userId` é
+  // estampado no handshake e fica congelado na linha de `EndpointUserDaily`,
+  // então as linhas gravadas ANTES da desativação continuariam alimentando a
+  // fila. O portão pertence à PROPOSTA, que é onde o sistema afirma algo sobre
+  // o presente.
+  //
+  // Uma consulta, e só quando há proposta para escrever — não uma por endpoint
+  // por rodada do job.
+  //
+  // `findFirst` pelo escopo da lixeira: quem foi apagado também não passa, e aí
+  // o motivo é outro (sugerir posse para um cadastro excluído ressuscitaria um
+  // vínculo que alguém desfez de propósito).
+  if (proposta.targetUserId) {
+    const pessoa = await prisma.user.findFirst({
+      where: { id: proposta.targetUserId },
+      select: { isActive: true },
+    });
+    if (!pessoa?.isActive) return 'PESSOA_INATIVA';
+  }
+
   const alvo = alvoDaProposta(proposta);
   const evidenceHash = hashDaAfirmacao(proposta.afirmacao);
   const par = { kind: proposta.kind, endpointId: proposta.endpointId, ...alvo };

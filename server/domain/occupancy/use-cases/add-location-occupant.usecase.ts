@@ -55,9 +55,10 @@ export async function addLocationOccupant(
 
       // A TRAVA na linha do colaborador, antes de lê-lo. Ocupar um posto é
       // assumir responsabilidade derivada por tudo que está nele, então a
-      // corrida com o desligamento é a mesma da entrega: sem a trava, a
-      // ocupação nasce depois de o `offboard` ter encerrado a lista e o
-      // desligado volta a responder pela Mesa 1 (`lock-user.usecase.ts`).
+      // corrida com a desativação é a mesma da entrega: sem a trava, a
+      // ocupação nasce no intervalo entre o `PUT /api/users/:id` ler a pessoa
+      // e gravar `isActive: false`, e o desativado volta a responder pela Mesa
+      // 1 (`lock-user.usecase.ts`).
       await travarUsuario(tx, data.userId);
 
       // `findFirst`: só ele recebe o escopo da lixeira da extension — o `where`
@@ -65,8 +66,24 @@ export async function addLocationOccupant(
       // (core/database/soft-delete.extension.ts). Com `findUnique` aqui, um
       // colaborador excluído voltaria a ser posto num posto de trabalho. A
       // trava acima não substitui esta leitura: ela serializa, não filtra.
-      const pessoa = await tx.user.findFirst({ where: { id: data.userId }, select: { id: true } });
+      const pessoa = await tx.user.findFirst({
+        where: { id: data.userId },
+        select: { id: true, name: true, isActive: true },
+      });
       if (!pessoa) throw new AppError('Colaborador não encontrado.', 404);
+
+      // DESATIVADO é diferente de APAGADO, e os dois são recusados aqui — a
+      // mesma guarda do `checkoutAsset` (D32), pela mesma razão e com o mesmo
+      // código. A assimetria durou até aqui: a entrega de ativo recusava quem
+      // saiu da empresa, e o posto de trabalho aceitava. Como responsável de
+      // ativo em posto é DERIVADO da ocupação (`resolverResponsaveis`), a
+      // brecha reabria por outro caminho exatamente a posse que a desativação
+      // fecha — e sem nunca passar por um checkout.
+      //
+      // 409 e não 404: a pessoa existe, o estado dela é que recusa.
+      if (!pessoa.isActive) {
+        throw new AppError(`${pessoa.name} está desativado(a) e não pode ocupar um posto de trabalho.`, 409);
+      }
 
       const aberta = await tx.locationOccupant.findFirst({
         where: { locationId, userId: data.userId, endedAt: null },

@@ -62,11 +62,36 @@ function motivoDeInvalidar(
   pendente: Pendente,
   posse: PosseAberta | null | undefined,
   ocupacoesAbertas: Set<string>,
+  pessoasInativas: Set<string>,
 ): string | null {
   // Máquina fundida em outra: TODA sugestão dela fala de um parque com duas
   // máquinas onde há uma. O merge já encerra as suas, mas quem chega depois por
   // outro caminho (o job) precisa da mesma conclusão.
   if (pendente.endpoint.mergedIntoId) return 'a máquina foi fundida em outra';
+
+  // A PESSOA FOI DESATIVADA depois de a sugestão nascer — antes de qualquer
+  // `switch`, porque vale para todo tipo que nomeia gente.
+  //
+  // Sem isto a sugestão ficava `PENDING` para sempre: a invalidação olhava
+  // máquina, vínculo, posse e ocupação, e nunca o ESTADO de quem ela nomeia. O
+  // painel a mostrava sem marca nenhuma (o `select` da fila devolve nome e
+  // e-mail, não `isActive`), com o botão de aceitar ligado.
+  //
+  // E o aceite não era rede de segurança: só o `CHECKOUT` caía no 409 do
+  // `checkoutAsset`. `OCCUPANCY` passava, e cadastrava como ocupante de um
+  // posto alguém que saiu da empresa — que é posse derivada, pelo
+  // `resolverResponsaveis`, sem nunca ter passado por um checkout.
+  //
+  // DESCARTAR, e não marcar: a fila existe para ser esvaziada, e uma sugestão
+  // que o sistema sabe que não deve ser aceita não é informação — é armadilha.
+  //
+  // `SUPERSEDED`, como todo motivo deste arquivo: ninguém disse não, o mundo
+  // andou. E é o que faz a reativação funcionar sem nada a mais — a afirmação
+  // não foi enterrada, então a rodada seguinte a propõe de novo a partir da
+  // mesma evidência.
+  if (pendente.targetUserId && pessoasInativas.has(pendente.targetUserId)) {
+    return 'a pessoa foi desativada';
+  }
 
   switch (pendente.kind) {
     case 'LINK':
@@ -134,7 +159,7 @@ function motivoDeInvalidar(
  * limpeza tem que vir primeiro para que a mesma rodada possa propor de novo o
  * que ainda faz sentido, e para que o painel de cobertura conte fila de verdade.
  *
- * TRÊS CONSULTAS PARA A FILA INTEIRA, e não uma por sugestão: a fila é pequena
+ * QUATRO CONSULTAS PARA A FILA INTEIRA, e não uma por sugestão: a fila é pequena
  * por desenho (ela existe para ser esvaziada), mas um `findFirst` por linha
  * dentro de um laço é o tipo de coisa que passa despercebido até a frota
  * dobrar.
@@ -162,12 +187,25 @@ export async function encerrarSugestoesObsoletas(): Promise<number> {
   });
   const ocupacoesAbertas = new Set(ocupacoes.map((o) => `${o.locationId}:${o.userId}`));
 
+  // A QUARTA consulta, no mesmo formato das outras três: uma para a fila
+  // inteira. Pergunta pelos DESATIVADOS em vez dos ativos porque é a resposta
+  // menor — fila saudável tem zero.
+  const userIds = [...new Set(
+    pendentes.map((p) => p.targetUserId).filter((id): id is string => !!id),
+  )];
+  const inativas = userIds.length === 0 ? [] : await prisma.user.findMany({
+    where: { id: { in: userIds }, isActive: false },
+    select: { id: true },
+  });
+  const pessoasInativas = new Set(inativas.map((pessoa) => pessoa.id));
+
   const obsoletas: { id: string; motivo: string }[] = [];
   for (const pendente of pendentes) {
     const motivo = motivoDeInvalidar(
       pendente,
       pendente.assetId ? posseporAtivo.get(pendente.assetId) : null,
       ocupacoesAbertas,
+      pessoasInativas,
     );
     if (motivo) obsoletas.push({ id: pendente.id, motivo });
   }
