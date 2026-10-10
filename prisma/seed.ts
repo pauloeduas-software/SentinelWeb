@@ -77,8 +77,8 @@ const STATUS_LABELS = [
 ] as const;
 
 // Conjunto mínimo para o formulário de ativo não abrir com `<select>` vazio.
-// NÃO semeamos fabricante, fornecedor, localização, modelo nem depreciação: são
-// dado da empresa, não do software — semear "Dell" é adivinhar o cliente.
+// NÃO semeamos fabricante, localização nem modelo: são dado da empresa, não do
+// software — semear "Dell" é adivinhar o cliente.
 const CATEGORIES = [
   { name: 'Notebook', type: 'ASSET', color: '#3b82f6' },
   { name: 'Desktop', type: 'ASSET', color: '#3b82f6' },
