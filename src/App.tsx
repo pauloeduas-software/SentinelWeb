@@ -69,6 +69,10 @@ function Layout() {
             <Route path="/itam" element={<Navigate to="/ativos" replace />} />
             <Route path="/itam/assets/:id" element={<RedirecionarAtivo />} />
             <Route path="/postos" element={<PostosPage />} />
+            {/* A FICHA DO POSTO É ROTA, e é a mesma tela: a listagem fica atrás
+                da janela. É destino de link porque a busca por etiqueta larga
+                aqui quem bipou o computador de uma mesa — ele saiu de /ativos. */}
+            <Route path="/postos/:id" element={<PostosPage />} />
             <Route path="/licencas" element={<LicencasPage />} />
             {/* O QUE O AGENTE VÊ E O CADASTRO NÃO SABE (F7). A rota leva o nome
                 do que a tela LISTA — descobertas —, e não o do processo que roda

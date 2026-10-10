@@ -11,4 +11,11 @@ export interface ResultadoDaBusca {
   por: string;
   total: number;
   ativos: { id: string; assetTag: string; serial: string | null; name: string | null }[];
+  /**
+   * O posto onde o ativo do acerto EXATO está montado, quando está.
+   *
+   * É o que decide o destino do bipe: computador de mesa saiu da listagem de
+   * ativos, então a ficha dele é a do POSTO.
+   */
+  posto: { id: string; name: string } | null;
 }

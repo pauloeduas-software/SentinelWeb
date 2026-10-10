@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   useCreateWorkstation, useWorkstationQuery, useWorkstationsQuery,
   type NovoPostoInput,
@@ -13,10 +14,16 @@ const PER_PAGE = 10;
 // posto está aberto. Tudo de UMA tela — fica aqui, em useState, e não em store
 // (docs/referencia/arquitetura.md).
 //
-// O POSTO ABERTO é guardado como a LINHA inteira, não só o id: o modal precisa
-// do nome e do caminho para desenhar o cabeçalho no primeiro quadro, e a
-// consulta do detalhe (que traz os ativos) chega depois. Guardar só o id faria
-// a janela abrir sem título.
+// O POSTO ABERTO MORA NA URL (`/postos/:id`), e não em `useState`: a ficha do
+// posto virou destino de link — é onde a busca por etiqueta larga quem bipou o
+// computador de uma mesa. Com estado, esse link não existiria, e recarregar a
+// página fecharia a ficha.
+//
+// A LINHA da listagem continua sendo usada quando ela está carregada: ela dá
+// nome e caminho ao cabeçalho sem esperar o detalhe, que é a razão de ela existir
+// aqui. Quem entra pela URL não a tem — nem quem abre um posto que está em outra
+// página da listagem —, e aí o cabeçalho espera o detalhe chegar: uma ida e
+// volta de rede, não um quadro. Durante ela o nome é `…` e o caminho não aparece.
 export function usePostos() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -45,17 +52,22 @@ export function usePostos() {
   const criar = useCreateWorkstation();
 
   const [modalAberto, setModalAberto] = useState(false);
-  const [postoAberto, setPostoAberto] = useState<Posto | null>(null);
+
+  const { id: postoId } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const postoAberto = data?.rows.find((linha) => linha.id === postoId) ?? null;
 
   // As duas consultas do detalhe ficam DESLIGADAS enquanto não houver posto
   // aberto (`enabled`), e não atrás de um `if` — hook condicional é o que as
   // regras do React proíbem.
-  const { data: detalhe, isPending: detalhePendente } = useWorkstationQuery(postoAberto?.id ?? null);
+  const {
+    data: detalhe, isPending: detalhePendente, error: detalheErro,
+  } = useWorkstationQuery(postoId ?? null);
 
   // Os ocupantes vêm do hook COMPARTILHADO com a aba Localizações: adicionar e
   // encerrar são a mesma operação nas duas telas, e é ele que também serve o
   // histórico — que o detalhe do posto (`GET /api/workstations/:id`) não traz.
-  const ocupantes = useOcupantes(postoAberto?.id ?? null);
+  const ocupantes = useOcupantes(postoId ?? null);
 
   // O erro sobe para o formulário mostrar a mensagem do servidor — é por aqui
   // que aparece o 409 de nome repetido e o de hierarquia em ciclo.
@@ -81,11 +93,16 @@ export function usePostos() {
     closeModal: () => setModalAberto(false),
     handleCriar,
 
+    postoId: postoId ?? null,
     postoAberto,
-    openDetalhe: setPostoAberto,
-    closeDetalhe: () => setPostoAberto(null),
+    openDetalhe: (posto: Posto) => navigate(`/postos/${posto.id}`),
+    closeDetalhe: () => navigate('/postos'),
     detalhe: detalhe ?? null,
-    detalhePendente: postoAberto != null && detalhePendente,
+    detalhePendente: postoId != null && detalhePendente,
+    // O 404 de `/postos/<id-que-não-existe>`. Sem isto a janela abriria com
+    // zero ativos e zero ocupantes, que é indistinguível de um posto novo e
+    // vazio — a tela mentiria em vez de dizer que o link está morto.
+    detalheErro: detalheErro ? detalheErro.message : null,
 
     ocupantes,
   };

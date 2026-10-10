@@ -18,7 +18,7 @@ export default function PostosPage() {
   const {
     postos, total, page, perPage, setPage, search, changeSearch, view, changeView,
     modalAberto, openCreate, closeModal, handleCriar,
-    postoAberto, openDetalhe, closeDetalhe, detalhe, detalhePendente, ocupantes,
+    postoId, postoAberto, openDetalhe, closeDetalhe, detalhe, detalhePendente, detalheErro, ocupantes,
   } = usePostos();
 
   return (
@@ -107,9 +107,29 @@ export default function PostosPage() {
         }
       />
 
-      {modalAberto && <PostoFormModal onClose={closeModal} onSubmit={handleCriar} />}
+      {/* `!postoId` porque a ficha e o formulário são os dois `fixed inset-0`
+          no mesmo z-index: com a URL de um posto e o formulário aberto pelo
+          histórico do navegador, a ficha pintava em cima e fechá-la revelava o
+          formulário ainda aberto por baixo. */}
+      {modalAberto && !postoId && <PostoFormModal onClose={closeModal} onSubmit={handleCriar} />}
 
-      {postoAberto && (
+      {postoId && detalheErro && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-surface-card border border-border-sutil shadow-2xl p-6 font-mono text-xs space-y-4">
+            <p className="text-text-primary uppercase tracking-widest">Posto não encontrado</p>
+            <p className="text-text-tertiary leading-relaxed">{detalheErro}</p>
+            <button
+              type="button"
+              onClick={closeDetalhe}
+              className="px-4 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base uppercase tracking-widest transition-colors"
+            >
+              Voltar para a lista
+            </button>
+          </div>
+        </div>
+      )}
+
+      {postoId && !detalheErro && (
         <PostoDetalheModal
           posto={postoAberto}
           detalhe={detalhe}

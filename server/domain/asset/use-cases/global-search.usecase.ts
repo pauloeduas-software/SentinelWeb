@@ -23,6 +23,12 @@ const MAX_PARCIAL = 20;
 
 export type TipoDeAcerto = 'EXATO' | 'PARCIAL' | 'NENHUM';
 
+/** O posto onde o ativo está montado, quando está. */
+export interface PostoDoAcerto {
+  id: string;
+  name: string;
+}
+
 export interface ResultadoDaBusca {
   /**
    * `EXATO` quando a etiqueta ou a série casaram — é o caso em que a tela pode
@@ -33,6 +39,44 @@ export interface ResultadoDaBusca {
   por: string;
   total: number;
   ativos: unknown[];
+  /**
+   * O POSTO DO ACERTO EXATO, quando o ativo está montado numa mesa.
+   *
+   * Existe porque o ativo entregue a um posto saiu da listagem `/ativos`. A
+   * ficha do ativo diz o NOME da mesa e para aí: não leva até ela, e não mostra
+   * o resto do que está montado nela nem quem responde por ela. Com o posto, a
+   * busca larga em `/postos/:id`, que responde as três coisas.
+   *
+   * `null` nos outros casos, e não ausente: no aproximado há uma lista e a tela
+   * mostra a lista, então um campo com dois estados em vez de três é o que faz
+   * "só no acerto EXATO" ser verificável pelo tipo.
+   */
+  posto: PostoDoAcerto | null;
+}
+
+/**
+ * O posto de trabalho onde este ativo está, ou `null`.
+ *
+ * `isWorkstation: true` e não qualquer localização, pelo mesmo motivo da
+ * listagem: o ativo guardado no depósito continua sendo parque e a ficha dele é
+ * a do ativo.
+ */
+async function postoDoAtivo(assetId: string): Promise<PostoDoAcerto | null> {
+  const posse = await prisma.assignment.findFirst({
+    where: {
+      assetId,
+      checkinAt: null,
+      // `targetType` é inócuo aqui (só o alvo LOCATION preenche a FK), e está
+      // escrito para este `where` ficar IDÊNTICO ao `EM_POSTO_DE_TRABALHO` da
+      // listagem. É a concordância dos dois que garante que não exista ativo
+      // que sai de `/ativos` e a busca não saiba para onde mandar.
+      targetType: 'LOCATION',
+      targetLocation: { isWorkstation: true },
+    },
+    select: { targetLocation: { select: { id: true, name: true } } },
+  });
+
+  return posse?.targetLocation ?? null;
 }
 
 export async function globalSearch(q: string): Promise<ResultadoDaBusca> {
@@ -40,7 +84,7 @@ export async function globalSearch(q: string): Promise<ResultadoDaBusca> {
   // (`ATV-00042`), e um `replace` esperto comeria justamente o que identifica o
   // ativo. O leitor manda exatamente o que está impresso.
   const termo = q.trim();
-  if (termo === '') return { tipo: 'NENHUM', por: 'vazio', total: 0, ativos: [] };
+  if (termo === '') return { tipo: 'NENHUM', por: 'vazio', total: 0, ativos: [], posto: null };
 
   // 1. A ETIQUETA. `findFirst` e não `findUnique`: a unicidade é índice PARCIAL
   // (`WHERE deleted_at IS NULL`), que o Prisma não conhece — e é o `findFirst`
@@ -49,14 +93,24 @@ export async function globalSearch(q: string): Promise<ResultadoDaBusca> {
     where: { assetTag: termo },
     select: ASSET_SELECT,
   });
-  if (porEtiqueta) return { tipo: 'EXATO', por: 'assetTag', total: 1, ativos: [porEtiqueta] };
+  if (porEtiqueta) {
+    return {
+      tipo: 'EXATO', por: 'assetTag', total: 1, ativos: [porEtiqueta],
+      posto: await postoDoAtivo(porEtiqueta.id),
+    };
+  }
 
   // 2. A SÉRIE.
   const porSerie = await prisma.asset.findFirst({
     where: { serial: termo },
     select: ASSET_SELECT,
   });
-  if (porSerie) return { tipo: 'EXATO', por: 'serial', total: 1, ativos: [porSerie] };
+  if (porSerie) {
+    return {
+      tipo: 'EXATO', por: 'serial', total: 1, ativos: [porSerie],
+      posto: await postoDoAtivo(porSerie.id),
+    };
+  }
 
   // 3. O APROXIMADO — e só agora. `buildAssetWhere` é o MESMO `OR` da listagem
   // (etiqueta, série, nome, pedido, modelo e fabricante): duas definições de
@@ -74,5 +128,6 @@ export async function globalSearch(q: string): Promise<ResultadoDaBusca> {
     por: 'aproximado',
     total: aproximados.length,
     ativos: aproximados,
+    posto: null,
   };
 }

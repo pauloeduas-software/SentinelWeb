@@ -19,7 +19,8 @@ import type { ResultadoDaBusca } from '../../domain/shared/search.types';
 //                 que não achar.
 //
 // O QUE ACONTECE DEPENDE DO ACERTO: exato (etiqueta ou série)
-// NAVEGA direto para o ativo — é o gesto do bipe, e uma lista de um item só
+// NAVEGA direto — para a ficha do posto, se o equipamento está montado numa
+// mesa, e para a ficha do ativo nos outros casos — é o gesto do bipe, e uma lista de um item só
 // seria um clique a mais em cada equipamento conferido. Aproximado abre a lista.
 // ═════════════════════════════════════════════════════════════════════════════
 
@@ -41,7 +42,11 @@ export default function BuscaDoLeitor() {
       // o que acontece quando alguém está conferindo uma prateleira.
       setTermo('');
       setResultado(null);
-      navigate(`/ativos/${achado.ativos[0].id}`);
+      // O DESTINO DEPENDE DE ONDE O EQUIPAMENTO ESTÁ: computador montado numa
+      // mesa saiu da listagem de ativos, e a tela que explica onde ele está é a
+      // do posto — com os ocupantes que respondem por ele. O resto vai para a
+      // ficha do ativo, como sempre.
+      navigate(achado.posto ? `/postos/${achado.posto.id}` : `/ativos/${achado.ativos[0].id}`);
       campo.current?.focus();
       return;
     }
