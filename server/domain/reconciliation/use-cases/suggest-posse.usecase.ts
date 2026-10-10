@@ -102,7 +102,7 @@ export async function sugerirPosseOuOcupacao(
     });
     if (jaOcupa) return 0;
 
-    await proporSugestao({
+    const proposta = await proporSugestao({
       kind: 'OCCUPANCY',
       endpointId,
       assetId: endpoint.assetId,
@@ -121,7 +121,10 @@ export async function sugerirPosseOuOcupacao(
       // também fica fora: é palpite que uma pessoa corrige.
       afirmacao: { conta: presenca.userKey, userId: presenca.userId, locationId: posse.targetLocationId },
     });
-    return 1;
+    // O retorno conta o que FOI proposto: pessoa desativada não gera sugestão
+    // (o passo 0 do `proporSugestao`), e contá-la aqui inflaria o número que o
+    // job registra — "12 sugestões propostas" tem que ser 12 linhas na fila.
+    return proposta === 'PESSOA_INATIVA' ? 0 : 1;
   }
 
   // ── O ativo já é da pessoa: o cadastro bate, nada a sugerir ───────────────
@@ -130,7 +133,7 @@ export async function sugerirPosseOuOcupacao(
   // ── Sem posse, ou com posse de OUTRA pessoa: CHECKOUT ─────────────────────
   const reatribuicao = posse?.targetType === 'USER';
 
-  await proporSugestao({
+  const proposta = await proporSugestao({
     kind: 'CHECKOUT',
     endpointId,
     assetId: endpoint.assetId,
@@ -149,5 +152,5 @@ export async function sugerirPosseOuOcupacao(
     // está com ninguém, e quem recusou uma não recusou a outra.
     afirmacao: { conta: presenca.userKey, userId: presenca.userId, reatribuicao },
   });
-  return 1;
+  return proposta === 'PESSOA_INATIVA' ? 0 : 1;
 }

@@ -236,6 +236,32 @@ describe('quem não está ativo na empresa não recebe equipamento', () => {
     expect(desativacao!.changes.isActive).toMatchObject({ de: true, para: false });
   });
 
+  it('e também não ocupa posto de trabalho (409 simétrico)', async () => {
+    // A ASSIMETRIA QUE EXISTIA ATÉ AQUI: `checkoutAsset` recusava quem saiu da
+    // empresa, e `addLocationOccupant` só conferia existência. Como responsável
+    // de ativo em posto é DERIVADO da ocupação (`resolverResponsaveis`), a
+    // brecha reabria por fora do checkout a posse que a desativação fecha — e a
+    // fila de reconciliação chegava a oferecer o botão que fazia isso.
+    const pessoa = await criarColaborador(api, {
+      name: 'Rita Alves', email: 'rita.inativa@teste.local',
+    });
+    expect((await api.put(`/api/users/${pessoa}`, { isActive: false })).status).toBe(200);
+
+    const recusa = await api.post<{ error: string }>(`/api/locations/${cenario.mesa1}/occupants`, {
+      userId: pessoa,
+      shift: 'Manhã',
+    });
+
+    // Mesmo código e mesma razão do checkout: a pessoa existe, o estado recusa.
+    expect(recusa.status).toBe(409);
+    expect(recusa.body.error).toMatch(/desativad|desligad|inativ/i);
+
+    // E não ficou meia ocupação.
+    expect(await prisma.locationOccupant.count({
+      where: { locationId: cenario.mesa1, userId: pessoa, endedAt: null },
+    })).toBe(0);
+  });
+
   it('reativar pela API libera a entrega de novo', async () => {
     const pessoa = await criarColaborador(api, {
       name: 'Rita Alves', email: 'rita.volta@teste.local',
