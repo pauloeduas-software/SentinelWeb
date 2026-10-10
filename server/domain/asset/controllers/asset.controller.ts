@@ -89,7 +89,8 @@ export const assetController = {
    */
   async search(request: FastifyRequest) {
     const { q } = buscaGlobalSchema.parse(request.query ?? {});
-    return globalSearch(q);
+    // O custo é de `ADMIN` (D77), aqui como na listagem e no detalhe.
+    return globalSearch(q, temPapel(request, 'ADMIN'));
   },
 
   async options(request: FastifyRequest) {

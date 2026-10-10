@@ -115,5 +115,31 @@ describe('custo de compra — só `ADMIN` (D148)', () => {
     expect(resposta.body.purchaseCost).toBe('4250.9');
   });
 
+  it('a BUSCA GLOBAL não traz a propriedade — no acerto exato nem no aproximado', async () => {
+    // A QUARTA PORTA, e ela também faltava. `GET /api/search` devolve o ativo
+    // inteiro com o select da listagem, nos três passos (etiqueta, série,
+    // aproximado): um técnico que bipasse a etiqueta recebia o custo que a
+    // listagem lhe esconde. Os dois caminhos são consultas diferentes, então os
+    // dois são conferidos — um `select` esquecido no aproximado passaria pelo
+    // caso do exato.
+    type Busca = { tipo: string; ativos: Record<string, unknown>[] };
+
+    const exato = await semSegredo.get<Busca>('/api/search?q=ATV-CUSTO-1');
+    expect(exato.status).toBe(200);
+    expect(exato.body.tipo).toBe('EXATO');
+    expect(Object.hasOwn(exato.body.ativos[0], 'purchaseCost')).toBe(false);
+
+    const aproximado = await semSegredo.get<Busca>('/api/search?q=CUSTO');
+    expect(aproximado.body.tipo).toBe('PARCIAL');
+    const linha = aproximado.body.ativos.find((a) => a.assetTag === 'ATV-CUSTO-1');
+    expect(linha).toBeDefined();
+    expect(Object.hasOwn(linha!, 'purchaseCost')).toBe(false);
+
+    // E o ADMIN continua vendo, pelos dois caminhos.
+    const comoAdmin = await api.get<Busca>('/api/search?q=ATV-CUSTO-1');
+    expect(comoAdmin.body.ativos[0].purchaseCost).toBe('4250.9');
+    const aproximadoDoAdmin = await api.get<Busca>('/api/search?q=CUSTO');
+    expect(aproximadoDoAdmin.body.ativos.find((a) => a.assetTag === 'ATV-CUSTO-1')?.purchaseCost).toBe('4250.9');
+  });
 });
 
