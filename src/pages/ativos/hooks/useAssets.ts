@@ -8,6 +8,7 @@ import {
   useCheckinAsset, useCheckoutAsset,
   type CheckinInput, type CheckoutInput,
 } from '../../../domain/assignment/assignment.queries';
+import { useCatalogOptionsQuery } from '../../../domain/catalog/catalog.queries';
 import type { Asset, AssetView } from '../../../domain/shared/asset.types';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 
@@ -48,6 +49,17 @@ export function useAssets() {
 
   const assets = useMemo(() => data?.rows ?? [], [data]);
   const total = data?.total ?? 0;
+
+  // O STATUS COM QUE UM ATIVO NOVO NASCE: "Disponível", e não o primeiro da
+  // lista alfabética ("Aguardando"). Só `DEPLOYABLE` pode ser entregue, e o
+  // ativo recém-cadastrado está no estoque, pronto — é o mesmo padrão que o
+  // servidor aplica na devolução (`escolherStatusPorTipo`, tipo `DEPLOYABLE`,
+  // "Disponível"). Pelo nome quando ele existe; senão o primeiro do tipo, que
+  // é a regra do servidor sem a preferência.
+  const { data: disponiveis } = useCatalogOptionsQuery('status-labels', 'DEPLOYABLE');
+  const statusPadraoId = disponiveis?.find((opcao) => opcao.name === 'Disponível')?.id
+    ?? disponiveis?.[0]?.id
+    ?? '';
 
   const trocarFiltro = (aplicar: () => void) => {
     aplicar();
@@ -177,6 +189,7 @@ export function useAssets() {
     modalAberto,
     emEdicao,
     clonando,
+    statusPadraoId,
     openCreate,
     openEdit,
     openClone,

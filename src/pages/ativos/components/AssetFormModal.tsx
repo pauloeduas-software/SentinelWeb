@@ -39,12 +39,16 @@ const ROTULO = 'text-text-secondary uppercase tracking-widest text-[10px]';
  * A posse NÃO é copiada porque nem está aqui: entregar é operação, não campo
  * (docs/referencia/modelo-de-posse.md). Um clone nasce sem posse, como deve.
  */
-function valoresIniciais(asset: Asset | null, clonar: boolean) {
+function valoresIniciais(asset: Asset | null, clonar: boolean, statusPadraoId: string) {
   return {
     assetTag: clonar ? '' : asset?.assetTag ?? '',
     serial: clonar ? '' : asset?.serial ?? '',
     name: asset?.name ?? '',
-    statusId: asset?.statusId ?? '',
+    // Ativo NOVO nasce "Disponível" (o id vem do hook da página): o primeiro
+    // da lista alfabética era "Aguardando", e o cadastro mais comum — chegou,
+    // está no estoque — exigia trocar o campo toda vez. Edição e clone mantêm
+    // o status do ativo de origem.
+    statusId: asset?.statusId ?? statusPadraoId,
     modelId: asset?.modelId ?? '',
     locationId: asset?.locationId ?? '',
     // `assignedToId` NÃO está aqui, e a ausência é a regra: ver o comentário do
@@ -66,12 +70,20 @@ interface AssetFormModalProps {
    * distinguir "editar este" de "criar outro igual a este".
    */
   clonar?: boolean;
+  /**
+   * O status de um ativo NOVO. Vem de quem abre o modal porque é a listagem
+   * que tem a lista de status; sem ele (a ficha do ativo, que só edita e
+   * clona), o campo nasce em branco como antes.
+   */
+  statusPadraoId?: string;
   onClose: () => void;
   onSubmit: (data: AssetInput) => Promise<void>;
 }
 
-export default function AssetFormModal({ asset, clonar = false, onClose, onSubmit }: AssetFormModalProps) {
-  const [valores, setValores] = useState(() => valoresIniciais(asset, clonar));
+export default function AssetFormModal({
+  asset, clonar = false, statusPadraoId = '', onClose, onSubmit,
+}: AssetFormModalProps) {
+  const [valores, setValores] = useState(() => valoresIniciais(asset, clonar, statusPadraoId));
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
