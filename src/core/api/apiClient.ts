@@ -42,40 +42,16 @@ export function registrarPerdaDeSessao(handler: () => void): void {
 }
 
 /**
- * O erro traduzido, com o mapa POR CAMPO quando o servidor o manda.
+ * O erro traduzido: a mensagem que a tela mostra, com o erro original no `cause`.
  *
- * O 422 do servidor vem com `{ error: "resumo", fields: { "<campo>": "<motivo>" } }`
- * (server/core/errors/zod-error.ts), e o resumo corta em três campos com "(e
- * mais N)" — então o motivo do quarto não aparece em lugar nenhum. O `fields`
- * sobrevive à tradução para que um formulário possa pintar a mensagem NO campo.
- *
- * NENHUMA TELA O LÊ HOJE: todas mostram só o `message`. Ele fica porque é o que
- * o servidor manda em todo 422 — jogá-lo fora aqui obrigaria a próxima tela que
- * quiser o campo certo a refazer a leitura do corpo do erro, que é exatamente o
- * que este arquivo existe para centralizar.
+ * Nome próprio e não `Error` cru para a rejeição ser reconhecível na pilha e no
+ * console. Nenhuma tela faz `instanceof` hoje — todas leem só o `message`.
  */
 export class ErroDaApi extends Error {
-  /** `campo` → motivo. Vazio quando o erro não é de validação. */
-  readonly fields: Record<string, string>;
-
-  constructor(message: string, fields: Record<string, string>, options?: ErrorOptions) {
+  constructor(message: string, options?: ErrorOptions) {
     super(message, options);
     this.name = 'ErroDaApi';
-    this.fields = fields;
   }
-}
-
-/** O `fields` do corpo, se ele vier no formato esperado. */
-function camposDoErro(data: unknown): Record<string, string> {
-  if (typeof data !== 'object' || data === null) return {};
-  const fields = (data as { fields?: unknown }).fields;
-  if (typeof fields !== 'object' || fields === null || Array.isArray(fields)) return {};
-
-  const saida: Record<string, string> = {};
-  for (const [campo, motivo] of Object.entries(fields)) {
-    if (typeof motivo === 'string') saida[campo] = motivo;
-  }
-  return saida;
 }
 
 // O backend responde erro SEMPRE no mesmo formato (`{ error: "mensagem" }`, ver
@@ -106,10 +82,8 @@ apiClient.interceptors.response.use(
             : 'Não foi possível falar com o servidor.';
 
     // `ErroDaApi` e não `Error`: continua sendo um `Error` para todo código que
-    // só lê `.message` (que é todo ele hoje), e carrega o `fields` para quem
-    // precisar pintar o campo certo.
-    return Promise.reject(
-      new ErroDaApi(message, camposDoErro(error?.response?.data), { cause: error }),
-    );
+    // só lê `.message` (que é todo ele hoje), e o `cause` guarda o erro do axios
+    // para quem for depurar.
+    return Promise.reject(new ErroDaApi(message, { cause: error }));
   },
 );
