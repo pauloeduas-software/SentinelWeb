@@ -58,12 +58,27 @@ export const occupancyViewQuerySchema = z.strictObject({
 });
 
 /**
- * Params do encerramento: `/api/locations/:id/occupants/:occupantId`.
+ * O corpo da correção de turno.
  *
- * São DOIS uuids porque a ocupação é encerrada DENTRO do posto a que pertence —
- * o use-case filtra pelos dois juntos. Sem o `:id` na consulta, um id de
- * ocupação de outro local encerraria por esta rota, e a URL deixaria de
- * descrever o que aconteceu.
+ * `shift` é OBRIGATÓRIO como chave e aceita `null`: um PATCH de um campo só em
+ * que a ausência não significa nada é um corpo vazio, e `strictObject` com a
+ * chave exigida devolve 422 em vez de gravar silêncio. `null` é como se apaga o
+ * turno. O teto de 60 é o mesmo de `addOccupantSchema`, e pelo mesmo motivo.
+ */
+export const updateOccupantShiftSchema = z.strictObject({
+  shift: z.string('informe o turno').trim().max(60, 'turno: máximo de 60 caracteres')
+    .nullable()
+    .transform((valor) => valor || null),
+});
+
+/**
+ * Params do encerramento e da correção de turno:
+ * `/api/locations/:id/occupants/:occupantId`.
+ *
+ * São DOIS uuids porque a ocupação é encerrada e corrigida DENTRO do posto a que
+ * pertence — os dois use-cases filtram pelos dois juntos. Sem o `:id` na
+ * consulta, uma ocupação de outro local seria encerrada ou corrigida por estas
+ * rotas, e a URL deixaria de descrever o que aconteceu.
  */
 export const occupantParamsSchema = z.strictObject({
   id: z.uuid('identificador inválido'),

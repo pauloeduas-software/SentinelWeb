@@ -78,6 +78,7 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   'GET /api/locations/:id/occupants': 'TECNICO',
   'POST /api/locations/:id/occupants': 'TECNICO',
   'DELETE /api/locations/:id/occupants/:occupantId': 'TECNICO',
+  'PATCH /api/locations/:id/occupants/:occupantId': 'TECNICO',
   'GET /api/users/:id/occupancies': 'TECNICO',
   'GET /api/workstations': 'TECNICO',
   'GET /api/workstations/:id': 'TECNICO',

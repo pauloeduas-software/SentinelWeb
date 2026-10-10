@@ -3,10 +3,12 @@ import { idParamSchema } from '../../shared/params.schema';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import {
   addOccupantSchema, occupancyViewQuerySchema, occupantParamsSchema,
+  updateOccupantShiftSchema,
 } from '../schemas/occupancy.schema';
 import { listLocationOccupants } from '../use-cases/list-location-occupants.usecase';
 import { addLocationOccupant } from '../use-cases/add-location-occupant.usecase';
 import { endLocationOccupancy } from '../use-cases/end-location-occupancy.usecase';
+import { updateOccupantShift } from '../use-cases/update-occupant-shift.usecase';
 import { listUserOccupancies } from '../use-cases/list-user-occupancies.usecase';
 
 // Só HTTP. Sem try/catch: o `parse` do schema rejeita e a rejeição cai no
@@ -31,6 +33,14 @@ export const occupancyController = {
   async end(request: FastifyRequest) {
     const { id, occupantId } = occupantParamsSchema.parse(request.params);
     return endLocationOccupancy(id, occupantId, atorDaRequisicao(request));
+  },
+
+  // PATCH e não PUT: corrige UM atributo do vínculo aberto, e o resto da
+  // ocupação (pessoa, posto, `startedAt`) não é alterável por desenho.
+  async updateShift(request: FastifyRequest) {
+    const { id, occupantId } = occupantParamsSchema.parse(request.params);
+    const { shift } = updateOccupantShiftSchema.parse(request.body ?? {});
+    return updateOccupantShift(id, occupantId, shift, atorDaRequisicao(request));
   },
 
   async listByUser(request: FastifyRequest) {
