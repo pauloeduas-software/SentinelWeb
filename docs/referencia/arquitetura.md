@@ -46,7 +46,7 @@ server/
 ├── server.ts                    # O PROCESSO: valida env, checa banco, liga jobs, abre porta, morre limpo
 ├── app.ts                       # A APLICAÇÃO: buildApp() monta tudo e NÃO abre porta (é o que o teste usa)
 ├── core/                        # INFRAESTRUTURA. zero regra de negócio.
-│   ├── config/                  # load-env, env (validateEnv), cors, app-url (urlDoPainel)
+│   ├── config/                  # load-env, env (validateEnv), cors
 │   ├── database/                # prismaClient, soft-delete.extension (acha a lixeira pelo DMMF)
 │   ├── errors/                  # app-error (AppError), error-handler, error-shape, zod-error
 │   ├── http/                    # require-auth (sessão), permission-guard (autorização + boot, D137),

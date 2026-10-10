@@ -1,5 +1,4 @@
 import { prisma } from '../../../core/database/prismaClient';
-import { urlDoPainel } from '../../../core/config/app-url';
 import { ASSET_SELECT } from '../helpers/asset-select.helper';
 import { buildAssetWhere } from '../helpers/asset-filters.helper';
 
@@ -17,11 +16,6 @@ import { buildAssetWhere } from '../helpers/asset-filters.helper';
 // bipa um código espera resposta instantânea, e em 99% dos bipes o primeiro
 // passo já responde — então a varredura só acontece quando alguém DIGITOU algo
 // aproximado.
-//
-// O PREFIXO DO QR É DESCARTADO. O QR contém `${APP_URL}/ativos/:id` (D70), e um
-// leitor de mão configurado em modo "teclado" digita a URL INTEIRA no campo de
-// busca. Sem este corte, bipar o QR dentro do campo não acharia nada — e a
-// pessoa concluiria que a etiqueta está errada.
 // ═════════════════════════════════════════════════════════════════════════════
 
 /** Teto da busca aproximada. Quem precisa de mais usa a listagem, com filtro. */
@@ -31,29 +25,14 @@ export type TipoDeAcerto = 'EXATO' | 'PARCIAL' | 'NENHUM';
 
 export interface ResultadoDaBusca {
   /**
-   * `EXATO` quando a etiqueta, a série ou o id do QR casaram — é o caso em que a
-   * tela pode ABRIR o ativo direto, sem mostrar lista.
+   * `EXATO` quando a etiqueta ou a série casaram — é o caso em que a tela pode
+   * ABRIR o ativo direto, sem mostrar lista.
    */
   tipo: TipoDeAcerto;
-  /** `assetTag`, `serial`, `qr` ou `aproximado`. É o que a tela explica ao usuário. */
+  /** `assetTag`, `serial` ou `aproximado`. É o que a tela explica ao usuário. */
   por: string;
   total: number;
   ativos: unknown[];
-}
-
-/**
- * O id dentro de uma URL do painel, ou `null`.
- *
- * Aceita o caminho com ou sem o domínio: o leitor de mão às vezes é configurado
- * para digitar só o path, e o celular copia a URL inteira. Também aceita o
- * caminho ANTIGO (`/itam/assets/:id`), porque etiqueta impressa dura anos e
- * `App.tsx` mantém o redirecionamento para ela.
- */
-export function idDaUrlDoPainel(texto: string): string | null {
-  const limpo = texto.trim().replace(urlDoPainel(), '');
-  const casou = /\/(?:ativos|itam\/assets)\/([0-9a-fA-F-]{36})/.exec(limpo);
-
-  return casou ? casou[1] : null;
 }
 
 export async function globalSearch(q: string): Promise<ResultadoDaBusca> {
@@ -62,14 +41,6 @@ export async function globalSearch(q: string): Promise<ResultadoDaBusca> {
   // ativo. O leitor manda exatamente o que está impresso.
   const termo = q.trim();
   if (termo === '') return { tipo: 'NENHUM', por: 'vazio', total: 0, ativos: [] };
-
-  // 0. O QR, antes de tudo: ele é o único caso em que o texto do campo NÃO é
-  // uma etiqueta nem uma série.
-  const idDoQr = idDaUrlDoPainel(termo);
-  if (idDoQr) {
-    const porId = await prisma.asset.findFirst({ where: { id: idDoQr }, select: ASSET_SELECT });
-    if (porId) return { tipo: 'EXATO', por: 'qr', total: 1, ativos: [porId] };
-  }
 
   // 1. A ETIQUETA. `findFirst` e não `findUnique`: a unicidade é índice PARCIAL
   // (`WHERE deleted_at IS NULL`), que o Prisma não conhece — e é o `findFirst`
