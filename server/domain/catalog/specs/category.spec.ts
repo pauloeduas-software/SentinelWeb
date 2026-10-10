@@ -5,17 +5,18 @@ import type { CatalogDelegate, CatalogSpec, ClienteCatalogo } from './catalog-sp
 
 // O ativo NÃO tem `categoryId`: a categoria dele é a do modelo. Por isso o uso
 // se conta em dois saltos — modelos desta categoria, e ativos desses modelos.
+// O item de estoque aponta direto.
 //
-// `INCLUINDO_LIXEIRA` no ativo: ele continua preso ao modelo, e trocar o tipo da
-// categoria por baixo dele mudaria a semântica de um registro que ainda pode
-// voltar. `assetModel` não precisa do mesmo cuidado: não tem
-// lixeira.
+// `INCLUINDO_LIXEIRA` no ativo e no item: os dois continuam presos à categoria,
+// e trocar o tipo dela por baixo deles mudaria a semântica de um registro que
+// ainda pode voltar. `assetModel` não precisa do mesmo cuidado: não tem lixeira.
 const contarUsos = async (client: ClienteCatalogo, id: string) => {
-  const [modelos, ativos] = await Promise.all([
+  const [modelos, ativos, itens] = await Promise.all([
     client.assetModel.count({ where: { categoryId: id } }),
     client.asset.count({ where: { model: { categoryId: id }, ...INCLUINDO_LIXEIRA } }),
+    client.stockItem.count({ where: { categoryId: id, ...INCLUINDO_LIXEIRA } }),
   ]);
-  return modelos + ativos;
+  return modelos + ativos + itens;
 };
 
 export const categorySpec: CatalogSpec = {
@@ -35,9 +36,9 @@ export const categorySpec: CatalogSpec = {
   searchable: ['name'],
   audited: ['name', 'type', 'color'],
 
-  // O `<select>` do formulário de ativo pede só as de ATIVO; sem isto ele
+  // O `<select>` de cada formulário pede só as do SEU tipo; sem isto ele
   // ofereceria duas linhas de mesmo nome e tipos diferentes.
-  optionFilter: { campo: 'type', valores: ['ASSET', 'LICENSE'] },
+  optionFilter: { campo: 'type', valores: ['ASSET', 'LICENSE', 'STOCK'] },
 
   countUsages: contarUsos,
 

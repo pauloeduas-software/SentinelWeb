@@ -40,17 +40,21 @@ export const locationSpec: CatalogSpec = {
   // de localizações continua devolvendo TUDO de propósito: o pai de uma mesa é
   // uma sala, e uma sala não é posto.
 
-  // Filhas na hierarquia e ativos guardados aqui.
+  // Filhas na hierarquia, ativos guardados aqui e unidades de estoque
+  // entregues a este posto.
   //
-  // Os da lixeira inclusive: o ativo aponta com `onDelete: SetNull`, então
-  // ignorá-lo faria o banco zerar o `locationId` de uma linha ainda
-  // restaurável, em silêncio.
+  // Os ativos da lixeira inclusive: o ativo aponta com `onDelete: SetNull`,
+  // então ignorá-lo faria o banco zerar o `locationId` de uma linha ainda
+  // restaurável, em silêncio. As unidades só as FORA (`returnedAt` nulo): a
+  // FK é `Restrict` e o banco recusaria de qualquer forma, mas por 409 genérico
+  // — contar aqui é o que faz a mensagem dizer quantas.
   countUsages: async (client, id) => {
-    const [filhas, ativos] = await Promise.all([
+    const [filhas, ativos, unidades] = await Promise.all([
       client.location.count({ where: { parentId: id } }),
       client.asset.count({ where: { locationId: id, ...INCLUINDO_LIXEIRA } }),
+      client.stockMovement.count({ where: { targetLocationId: id, kind: 'SAIDA', returnedAt: null } }),
     ]);
-    return filhas + ativos;
+    return filhas + ativos + unidades;
   },
 
   // A PORTA DA MARCA na invariante 19 — as outras duas são a entrega

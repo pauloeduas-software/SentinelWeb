@@ -76,14 +76,17 @@ const STATUS_LABELS = [
     notes: 'Fora de operação e fora das listagens do dia a dia.' },
 ] as const;
 
-// Conjunto mínimo para o formulário de ativo não abrir com `<select>` vazio.
+// Conjunto mínimo para os formulários não abrirem com `<select>` vazio.
 // NÃO semeamos fabricante, localização nem modelo: são dado da empresa, não do
 // software — semear "Dell" é adivinhar o cliente.
+//
+// ATIVO É COMPUTADOR: as categorias de ativo são as de máquina. Monitor e
+// periférico são ESTOQUE — item por quantidade, sem patrimônio individual.
 const CATEGORIES = [
   { name: 'Notebook', type: 'ASSET', color: '#3b82f6' },
   { name: 'Desktop', type: 'ASSET', color: '#3b82f6' },
-  { name: 'Monitor', type: 'ASSET', color: '#888888' },
-  { name: 'Periférico', type: 'ASSET', color: '#888888' },
+  { name: 'Monitor', type: 'STOCK', color: '#888888' },
+  { name: 'Periférico', type: 'STOCK', color: '#888888' },
   { name: 'Licença', type: 'LICENSE', color: '#f59e0b' },
 ] as const;
 

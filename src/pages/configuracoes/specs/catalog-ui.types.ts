@@ -122,7 +122,9 @@ export interface CatalogUiSpec {
 // agrupa licenças.
 export const TIPOS_CATEGORIA: readonly OpcaoFixa[] = [
   { value: 'ASSET', label: 'Ativo',
-    ajuda: 'Equipamento único, com etiqueta e número de série. Uma linha por equipamento.' },
+    ajuda: 'Computador, com etiqueta e número de série. Uma linha por máquina.' },
+  { value: 'STOCK', label: 'Estoque',
+    ajuda: 'Item por quantidade, sem patrimônio individual: monitor, teclado, mouse, cabo.' },
   { value: 'LICENSE', label: 'Licença',
     ajuda: 'Software, com assentos atribuídos a pessoas ou a máquinas.' },
 ];
