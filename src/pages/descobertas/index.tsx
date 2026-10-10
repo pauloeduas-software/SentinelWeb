@@ -5,7 +5,6 @@ import OrfaosTable from './components/OrfaosTable';
 import PainelDeCobertura from './components/PainelDeCobertura';
 import SugestaoCard from './components/SugestaoCard';
 import { useDescobertas, type AbaDaTela } from './hooks/useDescobertas';
-import type { SuggestionKind } from '../../domain/shared/reconciliation.types';
 
 // O QUE O AGENTE DESCOBRIU E O CADASTRO AINDA NÃO SABE
 // (docs/historico/fase-07-convergencia-rmm-itam.md).
@@ -23,15 +22,9 @@ const ABAS: { id: AbaDaTela; rotulo: string }[] = [
   { id: 'ociosos', rotulo: 'Ociosos' },
 ];
 
-const FILTROS: { valor: SuggestionKind | undefined; rotulo: string }[] = [
-  { valor: undefined, rotulo: 'Todas' },
-  { valor: 'LINK', rotulo: 'Vínculo' },
-  { valor: 'MERGE', rotulo: 'Fusão' },
-];
-
 export default function DescobertasPage() {
   const {
-    aba, setAba, filtro, setFiltro, erro, limparErro,
+    aba, setAba, erro, limparErro,
     sugestoes, carregandoSugestoes, cobertura, carregandoCobertura,
     ociosos, orfaos, ocupado,
     configuracao, salvandoConfiguracao,
@@ -91,23 +84,6 @@ export default function DescobertasPage() {
 
       {aba === 'fila' && (
         <>
-          <div className="flex flex-wrap items-center gap-1 mb-4">
-            {FILTROS.map(({ valor, rotulo }) => (
-              <button
-                key={rotulo}
-                type="button"
-                onClick={() => setFiltro(valor)}
-                className={`px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest border transition-colors ${
-                  filtro === valor
-                    ? 'border-text-primary text-text-primary'
-                    : 'border-border-sutil text-text-tertiary hover:text-text-primary'
-                }`}
-              >
-                {rotulo}
-              </button>
-            ))}
-          </div>
-
           {carregandoSugestoes ? (
             <p className="text-text-tertiary text-xs font-mono">Carregando sugestões…</p>
           ) : sugestoes.length === 0 ? (
@@ -115,8 +91,8 @@ export default function DescobertasPage() {
               <Inbox size={24} className="opacity-50" />
               <span>Nada esperando decisão.</span>
               <span className="text-[10px] max-w-md text-center leading-relaxed">
-                A varredura roda de hora em hora. Quando o agente encontrar uma máquina que
-                casa com um ativo, ou duas linhas que são a mesma máquina, a proposta
+                A varredura roda de hora em hora. Quando o agente encontrar uma máquina
+                cuja identidade de hardware casa com um ativo do cadastro, a proposta
                 aparece aqui.
               </span>
             </div>

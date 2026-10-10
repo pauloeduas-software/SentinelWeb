@@ -113,7 +113,6 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   'POST /api/reconciliation/suggestions/:id/reject': 'TECNICO',
   'POST /api/endpoints/:id/link': 'TECNICO',
   'DELETE /api/endpoints/:id/link': 'TECNICO',
-  'POST /api/endpoints/:id/merge': 'TECNICO',
   'PATCH /api/endpoints/:id/review': 'TECNICO',
   'POST /api/endpoints/:hwid/command': 'TECNICO',
   'GET /api/settings': 'TECNICO',

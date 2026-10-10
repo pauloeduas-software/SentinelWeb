@@ -1,9 +1,9 @@
 // A CONVERGÊNCIA RMM × ITAM, do lado do navegador
 // (docs/historico/fase-07-convergencia-rmm-itam.md).
 
-export type SuggestionKind = 'LINK' | 'MERGE';
+export type SuggestionKind = 'LINK';
 export type SuggestionState = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SUPERSEDED';
-export type MatchSignal = 'SERIAL' | 'UUID' | 'MAC' | 'HOSTNAME';
+export type MatchSignal = 'SERIAL' | 'UUID' | 'HOSTNAME';
 export type DiscoveryMode = 'OFF' | 'SUGGEST' | 'ON';
 export type ReviewState = 'UNREVIEWED' | 'ALLOWED' | 'BLOCKED';
 
@@ -28,7 +28,6 @@ export interface Sugestao {
 
   endpoint: { id: string; hwid: string; hostname: string; lastSeen: string; biosSerial: string | null };
   asset: { id: string; assetTag: string; name: string | null; serial: string | null } | null;
-  mergeInto: { id: string; hwid: string; hostname: string; assetId: string | null } | null;
 }
 
 /** O painel de cobertura — a pergunta que só existe depois de os dois lados se falarem. */

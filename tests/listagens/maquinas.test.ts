@@ -130,15 +130,4 @@ describe('o que a listagem continua recusando', () => {
     expect((await listar('?ordr=asc')).status).toBe(422);
     expect((await listar('?vinculoo=sem')).status).toBe(422);
   });
-
-  it('e máquina fundida continua fora de toda listagem', async () => {
-    const perdedora = await maquina('lista-fundida');
-    const vencedora = await maquina('lista-vencedora');
-    await api.post(`/api/endpoints/${perdedora}/merge`, { intoEndpointId: vencedora });
-
-    for (const query of ['', '?vinculo=sem', '?reviewState=UNREVIEWED']) {
-      const { body } = await listar(query);
-      expect(body.rows.map((linha) => linha.id)).not.toContain(perdedora);
-    }
-  });
 });

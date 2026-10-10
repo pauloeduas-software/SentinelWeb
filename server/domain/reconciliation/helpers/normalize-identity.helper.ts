@@ -49,15 +49,6 @@ const UUIDS_INUTEIS = new Set([
   '03000200-0400-0500-0006-000700080009',
 ]);
 
-/**
- * MACs que não são de placa de rede física.
- *
- * `00:00:00:00:00:00` é ausência. Os prefixos são adaptadores virtuais —
- * VMware, VirtualBox, Hyper-V, Docker —, que TODA máquina com aquele software
- * tem iguais. É o mesmo problema do serial de fábrica, com outro nome.
- */
-const MACS_VIRTUAIS = ['00:00:00:00:00:00', '00:50:56', '00:0c:29', '00:05:69', '08:00:27', '00:15:5d', '02:42:'];
-
 function limpar(valor: string | null | undefined): string | null {
   if (typeof valor !== 'string') return null;
   const limpo = valor.trim();
@@ -94,26 +85,6 @@ export function normalizeUuid(valor: string | null | undefined): string | null {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(minusculo)) return null;
 
   return minusculo;
-}
-
-/**
- * MAC comparável, ou `null`.
- *
- * Aceita `00-1A-2B`, `001a2b…` e `00:1a:2b`, e devolve sempre com dois-pontos:
- * o agente já mandou os três formatos em versões diferentes, e comparar grafias
- * diferentes do mesmo endereço é não comparar nada.
- */
-export function normalizeMac(valor: string | null | undefined): string | null {
-  const limpo = limpar(valor);
-  if (!limpo) return null;
-
-  const so_hex = limpo.toLowerCase().replace(/[^0-9a-f]/g, '');
-  if (so_hex.length !== 12) return null;
-
-  const formatado = so_hex.match(/.{2}/g)!.join(':');
-  if (MACS_VIRTUAIS.some((prefixo) => formatado.startsWith(prefixo))) return null;
-
-  return formatado;
 }
 
 /**

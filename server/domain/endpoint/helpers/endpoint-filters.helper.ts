@@ -24,13 +24,7 @@ export interface FiltrosDeEndpoint {
 }
 
 export function buildEndpointWhere(filtros: FiltrosDeEndpoint = {}): Prisma.EndpointWhereInput {
-  const where: Prisma.EndpointWhereInput = {
-    // MÁQUINA FUNDIDA SAI DA LISTAGEM, sempre. A linha continua no banco porque
-    // o agente antigo pode voltar e porque as sugestões e o histórico dela
-    // apontam para ela (D103) — mas ela não é mais uma máquina do parque, e
-    // mostrá-la faria a mesma máquina aparecer duas vezes no painel.
-    mergedIntoId: null,
-  };
+  const where: Prisma.EndpointWhereInput = {};
 
   if (filtros.vinculo === 'com') where.assetId = { not: null };
   if (filtros.vinculo === 'sem') where.assetId = null;

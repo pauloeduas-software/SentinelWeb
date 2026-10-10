@@ -68,7 +68,7 @@ const SELECT_MAQUINA = {
  */
 export async function obterMaquinaDoAtivo(assetId: string) {
   const [endpoint, ativo] = await Promise.all([
-    prisma.endpoint.findFirst({ where: { assetId, mergedIntoId: null }, select: SELECT_MAQUINA }),
+    prisma.endpoint.findFirst({ where: { assetId }, select: SELECT_MAQUINA }),
     // `findFirst` e não `findUnique`: é ele que recebe o escopo da lixeira da
     // extension, então ativo excluído não devolve máquina por esta porta.
     prisma.asset.findFirst({ where: { id: assetId }, select: { id: true, lastSeenByAgentAt: true } }),

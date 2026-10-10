@@ -14,7 +14,6 @@ export interface SugestaoProposta {
   kind: SuggestionKind;
   endpointId: string;
   assetId?: string | null;
-  mergeIntoEndpointId?: string | null;
   score: number;
   signal?: MatchSignal | null;
   /** O que a tela mostra. Pode crescer a cada rodada — ver `evidence.helper.ts`. */
@@ -54,12 +53,9 @@ export type ResultadoDaProposta =
 // é uma decoração.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** As duas FKs de alvo, normalizadas — `undefined` e `null` são a mesma coisa aqui. */
+/** A FK de alvo, normalizada — `undefined` e `null` são a mesma coisa aqui. */
 function alvoDaProposta(proposta: SugestaoProposta) {
-  return {
-    assetId: proposta.assetId ?? null,
-    mergeIntoEndpointId: proposta.mergeIntoEndpointId ?? null,
-  };
+  return { assetId: proposta.assetId ?? null };
 }
 
 /**

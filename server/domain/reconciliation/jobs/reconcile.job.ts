@@ -64,10 +64,10 @@ export async function rodarReconciliacao(): Promise<{
   const configuracao = await lerConfiguracaoDaDescoberta();
   const repetidos = await valoresRepetidosNoParque();
 
-  // Só quem NÃO tem vínculo e não foi fundido: uma frota de 500 máquinas com 480
-  // já reconciliadas custa 20 cascatas por hora, não 500.
+  // Só quem NÃO tem vínculo: uma frota de 500 máquinas com 480 já reconciliadas
+  // custa 20 cascatas por hora, não 500.
   const pendentes = await prisma.endpoint.findMany({
-    where: { assetId: null, mergedIntoId: null },
+    where: { assetId: null },
     select: { id: true },
   });
 

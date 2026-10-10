@@ -2,8 +2,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { idParamSchema } from '../../shared/params.schema';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import {
-  filtroDeSugestoesSchema, fusaoSchema,
-  janelaDeOciosidadeSchema, triagemSchema, vinculoSchema,
+  filtroDeSugestoesSchema, janelaDeOciosidadeSchema, triagemSchema, vinculoSchema,
 } from '../schemas/reconciliation.schema';
 import { listarSugestoes } from '../use-cases/list-suggestions.usecase';
 import { aceitarSugestao } from '../use-cases/accept-suggestion.usecase';
@@ -11,7 +10,6 @@ import { recusarSugestao } from '../use-cases/reject-suggestion.usecase';
 import { calcularCobertura } from '../use-cases/coverage-stats.usecase';
 import { desvincularEndpoint, vincularEndpointAoAtivo } from '../use-cases/link-endpoint-asset.usecase';
 import { triarEndpoint } from '../use-cases/review-endpoint.usecase';
-import { fundirEndpoints } from '../use-cases/merge-endpoints.usecase';
 import { listarAtivosOciosos } from '../use-cases/list-idle-assets.usecase';
 import { obterMaquinaDoAtivo } from '../use-cases/get-asset-machine.usecase';
 
@@ -55,12 +53,6 @@ export const reconciliationController = {
     const { dias } = janelaDeOciosidadeSchema.parse(request.query ?? {});
     const rows = await listarAtivosOciosos(dias);
     return { total: rows.length, rows };
-  },
-
-  async merge(request: FastifyRequest) {
-    const { id } = idParamSchema.parse(request.params);
-    const { intoEndpointId } = fusaoSchema.parse(request.body ?? {});
-    return fundirEndpoints(id, intoEndpointId, atorDaRequisicao(request));
   },
 
   async assetMachine(request: FastifyRequest) {

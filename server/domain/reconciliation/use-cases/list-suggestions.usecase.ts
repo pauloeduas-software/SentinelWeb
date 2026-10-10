@@ -1,11 +1,10 @@
-import type { Prisma, SuggestionKind, SuggestionState } from '@prisma/client';
+import type { Prisma, SuggestionState } from '@prisma/client';
 import { prisma } from '../../../core/database/prismaClient';
 import type { ListEnvelope } from '../../../core/http/list-query';
 import { SUGGESTION_SELECT } from '../helpers/suggestion-select.helper';
 
 export interface FiltroDeSugestoes {
   state?: SuggestionState;
-  kind?: SuggestionKind;
   // `null` aceito ao lado de `undefined`: o `uuidOpcional` do schema devolve
   // null para campo vazio, e obrigar o controller a converter seria espalhar
   // tradução de contrato pela borda.
@@ -28,7 +27,6 @@ export interface FiltroDeSugestoes {
 export async function listarSugestoes(filtro: FiltroDeSugestoes) {
   const where: Prisma.ReconciliationSuggestionWhereInput = {
     state: filtro.state ?? 'PENDING',
-    ...(filtro.kind ? { kind: filtro.kind } : {}),
     ...(filtro.endpointId ? { endpointId: filtro.endpointId } : {}),
     ...(filtro.assetId ? { assetId: filtro.assetId } : {}),
   };

@@ -21,18 +21,19 @@ import { createHash } from 'crypto';
 // Então a EVIDÊNCIA é o que vai para a TELA, e a AFIRMAÇÃO é o que vai para o
 // HASH — e só muda quando a frase muda.
 //
-// Hoje nenhuma das duas sugestões que existem tem evidência que cresça por
-// conta própria (sinal, valor, hostname e hwid são estáveis), e a separação
-// continua valendo mesmo assim: ela é o que faz o hash descrever a AFIRMAÇÃO em
-// vez do que a sustenta, e é essa promessa que o próximo tipo de sugestão herda
-// em vez de ter que redescobrir.
+// Hoje a única sugestão que existe não tem evidência que cresça por conta
+// própria (sinal, valor, hostname e hwid são estáveis), e a separação continua
+// valendo mesmo assim: ela é o que faz o hash descrever a AFIRMAÇÃO em vez do
+// que a sustenta, e é essa promessa que o próximo tipo de sugestão herda em vez
+// de ter que redescobrir.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * A evidência que vai para a tela.
  *
- * É `Record` aberto de propósito: cada tipo de sugestão mostra coisas
- * diferentes (qual sinal casou, qual valor, qual máquina absorve qual).
+ * É `Record` aberto de propósito: o que a sugestão mostra é o que a sustenta
+ * (qual sinal casou, com que valor, em que hostname), e isso cresce com o
+ * próximo tipo sem mexer no tipo daqui.
  * O que não varia é que ela é SEMPRE visível — sugestão sem evidência é palpite,
  * e ninguém deveria aceitar um palpite que reescreve o inventário.
  */

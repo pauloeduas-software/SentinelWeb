@@ -10,7 +10,6 @@ import { uuidObrigatorio, uuidOpcional } from '../../shared/fields.schema';
 
 export const filtroDeSugestoesSchema = z.strictObject({
   state: z.enum(['PENDING', 'ACCEPTED', 'REJECTED', 'SUPERSEDED']).optional(),
-  kind: z.enum(['LINK', 'MERGE']).optional(),
   endpointId: uuidOpcional('máquina'),
   assetId: uuidOpcional('ativo'),
 });
@@ -21,10 +20,6 @@ export const vinculoSchema = z.strictObject({
 
 export const triagemSchema = z.strictObject({
   reviewState: z.enum(['UNREVIEWED', 'ALLOWED', 'BLOCKED'], 'situação inválida'),
-});
-
-export const fusaoSchema = z.strictObject({
-  intoEndpointId: uuidObrigatorio('máquina de destino'),
 });
 
 /** `?dias=` da lista de ociosos. Não é `strictObject` — ver o filtro de máquinas. */

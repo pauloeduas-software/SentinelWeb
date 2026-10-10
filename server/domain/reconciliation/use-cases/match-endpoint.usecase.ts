@@ -1,8 +1,7 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import {
-  casarEndpointComAtivos, casarEndpointComEndpoints, PONTOS_PARA_VINCULO_AUTOMATICO,
-  type ResultadoDaCascata,
+  casarEndpointComAtivos, PONTOS_PARA_VINCULO_AUTOMATICO,
 } from '../helpers/match-cascade.helper';
 import { normalizeSerial, normalizeUuid } from '../helpers/normalize-identity.helper';
 import { proporSugestao } from './upsert-suggestion.usecase';
@@ -24,7 +23,6 @@ const SELECT_IDENTIDADE = {
   hostname: true,
   biosSerial: true,
   systemUuid: true,
-  macAddress: true,
   assetId: true,
 } as const;
 
@@ -42,7 +40,6 @@ const SELECT_IDENTIDADE = {
  */
 export async function valoresRepetidosNoParque(): Promise<Set<string>> {
   const endpoints = await prisma.endpoint.findMany({
-    where: { mergedIntoId: null },
     select: { biosSerial: true, systemUuid: true },
   });
 
@@ -89,7 +86,7 @@ export async function reconciliarEndpoint(
   if (!endpoint) throw new AppError('Máquina não encontrada.', 404);
 
   // Já vinculada: não há o que reconciliar. Quem mexe num vínculo existente é o
-  // `unlink` (humano) ou o merge — nunca o job.
+  // `unlink`, e é humano — nunca o job.
   if (endpoint.assetId) return { sugeridas: 0, vinculadas: 0, colisoes: 0 };
 
   const configuracao = configuracaoDaRodada ?? (await lerConfiguracaoDaDescoberta());
@@ -103,9 +100,7 @@ export async function reconciliarEndpoint(
   // encontrada, ajustada, e o problema continua.
   //
   // O que `OFF` desliga é o que o enum diz que ele governa: *o que o sistema faz
-  // quando descobre máquina SEM CADASTRO*. A sugestão de posse e a de posto
-  // compartilhado seguem rodando, porque elas falam de máquina que JÁ TEM
-  // cadastro — é outra pergunta, e não é esta chave que a responde.
+  // quando descobre máquina SEM CADASTRO*.
   if (configuracao.discoveryMode === 'OFF') return { sugeridas: 0, vinculadas: 0, colisoes: 0 };
 
   const lixoDoParque = repetidos ?? (await valoresRepetidosNoParque());
@@ -115,90 +110,74 @@ export async function reconciliarEndpoint(
   // filtro (core/database/soft-delete.extension.ts). Ativo APOSENTADO entra de
   // propósito — máquina que continua mandando handshake de um ativo vendido é
   // exatamente o achado que o painel de cobertura existe para mostrar.
+  //
+  // ATIVO QUE JÁ TEM MÁQUINA ENTRA NA CASCATA, E SAI DEPOIS DE PONTUAR.
+  //
+  // Filtrá-lo na consulta era o jeito óbvio e DESLIGAVA O D46: a colisão é por
+  // ÍNDICE, contada sobre a lista de candidatos, então tirar um dos ambíguos de
+  // vista transforma "não sei qual dos dois" em "é este". `Asset.name` não está
+  // em índice único nenhum, então dois ativos vivos com o mesmo nome são o caso
+  // real — e o hostname que casava com os dois, que valia ZERO por ser colisão,
+  // passaria a valer 60 e a parecer resposta.
+  //
+  // Então a ordem é: pontuar com TODOS à vista, e só então descartar o
+  // casamento cujo ativo já é de outra máquina. O que isso evita é a sugestão de
+  // vínculo que o `endpoints.assetId @unique` recusaria no aceite — um botão que
+  // a fila oferece e o banco nega.
   const candidatos = await prisma.asset.findMany({
-    select: { id: true, assetTag: true, serial: true, name: true },
+    select: {
+      id: true,
+      assetTag: true,
+      serial: true,
+      name: true,
+      endpoint: { select: { id: true } },
+    },
   });
+  const ocupados = new Set(candidatos.filter((ativo) => ativo.endpoint).map((ativo) => ativo.id));
 
   const porAtivo = casarEndpointComAtivos(endpoint, candidatos, lixoDoParque);
-  const porEndpoint = casarEndpointComEndpoints(
-    endpoint,
-    await prisma.endpoint.findMany({
-      where: { id: { not: endpoint.id }, mergedIntoId: null, assetId: { not: null } },
-      select: SELECT_IDENTIDADE,
-    }),
-  );
+  const casamentos = porAtivo.casamentos.filter((casamento) => !ocupados.has(casamento.alvoId));
 
   let sugeridas = 0;
   let vinculadas = 0;
 
-  // MERGE ANTES DE LINK, e isso não é ordem de conveniência: quando o serial
-  // casa com um ativo que JÁ TEM endpoint vinculado, o fato do mundo é que a
-  // máquina foi reimaginada — propor o vínculo ali criaria uma disputa entre
-  // duas linhas pelo mesmo ativo, que o `@unique` recusaria de qualquer jeito.
-  for (const casamento of porEndpoint.casamentos) {
-    await proporSugestao({
-      kind: 'MERGE',
-      endpointId: endpoint.id,
-      mergeIntoEndpointId: casamento.alvoId,
-      score: casamento.score,
-      signal: casamento.signal,
-      evidence: {
-        motivo: 'A mesma identidade de hardware já pertence a outra máquina cadastrada.',
-        sinal: casamento.signal,
-        valor: casamento.valor,
-        hwid: endpoint.hwid,
-      },
-      // A afirmação é o SINAL e o VALOR que casaram, e mais nada. O `hwid` está
-      // na evidência para quem lê a tela, e fica fora daqui porque é constante
-      // do par — repeti-lo no hash não distingue afirmação nenhuma.
-      afirmacao: { sinal: casamento.signal, valor: casamento.valor },
+  const automatico = configuracao.discoveryMode === 'ON'
+    && casamentos.length === 1
+    && casamentos[0].score >= PONTOS_PARA_VINCULO_AUTOMATICO;
+
+  if (automatico) {
+    // Ator `null`: quem vinculou foi o sistema, e o D24 manda não inventar
+    // ator — auditoria falsificada é pior que auditoria ausente.
+    await vincularEndpointAoAtivo(endpoint.id, casamentos[0].alvoId, null, {
+      automatico: true,
+      sinal: casamentos[0].signal,
+      valor: casamentos[0].valor,
     });
-    sugeridas += 1;
-  }
-
-  if (porEndpoint.casamentos.length === 0) {
-    const automatico = configuracao.discoveryMode === 'ON'
-      && porAtivo.casamentos.length === 1
-      && porAtivo.casamentos[0].score >= PONTOS_PARA_VINCULO_AUTOMATICO;
-
-    if (automatico) {
-      // Ator `null`: quem vinculou foi o sistema, e o D24 manda não inventar
-      // ator — auditoria falsificada é pior que auditoria ausente.
-      await vincularEndpointAoAtivo(endpoint.id, porAtivo.casamentos[0].alvoId, null, {
-        automatico: true,
-        sinal: porAtivo.casamentos[0].signal,
-        valor: porAtivo.casamentos[0].valor,
+    vinculadas += 1;
+  } else {
+    for (const casamento of casamentos) {
+      await proporSugestao({
+        kind: 'LINK',
+        endpointId: endpoint.id,
+        assetId: casamento.alvoId,
+        score: casamento.score,
+        signal: casamento.signal,
+        evidence: {
+          sinal: casamento.signal,
+          valor: casamento.valor,
+          hostname: endpoint.hostname,
+          hwid: endpoint.hwid,
+        },
+        // O `hostname` está na evidência e NÃO na afirmação: ele é renomeável
+        // e volta atrás (é o que a tabela de pontos diz), então incluí-lo faria
+        // um rename reoferecer uma sugestão recusada. O que afirma é o sinal e
+        // o valor — e quando o serial chega, os dois mudam, que é exatamente o
+        // caso que o D97 existe para não perder.
+        afirmacao: { sinal: casamento.signal, valor: casamento.valor },
       });
-      vinculadas += 1;
-    } else {
-      for (const casamento of porAtivo.casamentos) {
-        await proporSugestao({
-          kind: 'LINK',
-          endpointId: endpoint.id,
-          assetId: casamento.alvoId,
-          score: casamento.score,
-          signal: casamento.signal,
-          evidence: {
-            sinal: casamento.signal,
-            valor: casamento.valor,
-            hostname: endpoint.hostname,
-            hwid: endpoint.hwid,
-          },
-          // O `hostname` está na evidência e NÃO na afirmação: ele é renomeável
-          // e volta atrás (é o que a tabela de pontos diz), então incluí-lo faria
-          // um rename reoferecer uma sugestão recusada. O que afirma é o sinal e
-          // o valor — e quando o serial chega, os dois mudam, que é exatamente o
-          // caso que o D97 existe para não perder.
-          afirmacao: { sinal: casamento.signal, valor: casamento.valor },
-        });
-        sugeridas += 1;
-      }
+      sugeridas += 1;
     }
   }
 
-  return { sugeridas, vinculadas, colisoes: colisoesDe(porAtivo) + colisoesDe(porEndpoint) };
-}
-
-function colisoesDe(resultado: ResultadoDaCascata): number {
-  return resultado.colisoes.length;
+  return { sugeridas, vinculadas, colisoes: porAtivo.colisoes.length };
 }

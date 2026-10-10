@@ -36,7 +36,6 @@ export async function carimbarUltimoContatoNosAtivos(): Promise<number> {
        SET "lastSeenByAgentAt" = e."lastSeen"
       FROM "endpoints" e
      WHERE e."assetId" = a."id"
-       AND e."mergedIntoId" IS NULL
        AND (a."lastSeenByAgentAt" IS NULL OR a."lastSeenByAgentAt" < e."lastSeen")
   `;
 }
