@@ -85,6 +85,56 @@ export function parseNetwork(raw: unknown): NetworkMetrics {
   };
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// AS UNIDADES DA REDE — uma base só, e ela é BYTE.
+//
+// O agente manda a velocidade em `RxSpeedKbps` (kilobit por segundo, que é como
+// placa de rede e operadora falam) e os totais de duas formas: `BytesReceived`,
+// o contador cru em bytes, e `TotalRxGb`, já convertido por ele. A tela mostrava
+// os dois lados como vinham — "Kbps" ao lado de "Gb" — e o leitor somava bit
+// com byte sem saber: um "Gb" minúsculo é gigaBIT, e o total era em gigaBYTE.
+//
+// Aqui a velocidade é convertida para BYTE por segundo e os totais ficam em
+// byte, e o rótulo diz a unidade por extenso (kB/s, MB/s, MB, GB). Byte e não
+// bit porque é a unidade do resto do painel — RAM, disco e processos — e a que
+// a pessoa compara com o tamanho de um arquivo.
+//
+// A conversão assume o que o nome do campo diz: `Kbps` = 1.000 bit/s, a
+// convenção de rede. Os totais em bytes usam 1.024³ por GB, como a RAM e o
+// disco deste mesmo painel.
+// ═════════════════════════════════════════════════════════════════════════════
+
+/** Um número já formatado com a unidade que o acompanha. */
+export interface Medida {
+  valor: string;
+  unidade: string;
+}
+
+/** kbit/s do agente → byte por segundo, em kB/s ou MB/s. */
+export function formatarTaxa(kbps: number): Medida {
+  const kBs = kbps / 8;
+  if (kBs >= 1000) return { valor: (kBs / 1000).toFixed(1), unidade: 'MB/s' };
+  return { valor: kBs.toFixed(0), unidade: 'kB/s' };
+}
+
+/**
+ * O volume de tráfego em BYTES.
+ *
+ * O contador cru (`bytesReceived`) quando o agente o manda; senão o total em
+ * GB que ele mesmo informa, trazido para bytes. Os dois são a mesma grandeza
+ * dita de dois jeitos, e o cru é o que não passou por arredondamento.
+ */
+export function volumeDeRede(bytes: number, gbInformado: number): number {
+  return bytes > 0 ? bytes : gbInformado * BYTES_IN_GB;
+}
+
+/** Bytes → MB ou GB, conforme o tamanho. */
+export function formatarVolume(bytes: number): Medida {
+  const gb = bytes / BYTES_IN_GB;
+  if (gb >= 1) return { valor: gb.toFixed(1), unidade: 'GB' };
+  return { valor: (bytes / 1024 ** 2).toFixed(0), unidade: 'MB' };
+}
+
 export function parseProcesses(raw: unknown): ProcessMetrics[] {
   return asRecords(raw).map(([, process]) => ({
     pid: readNumber(process, 'pid'),

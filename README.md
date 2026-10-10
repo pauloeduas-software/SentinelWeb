@@ -46,7 +46,7 @@ fica em `src/index.css`, com variáveis CSS do Tailwind.
 Toda resposta leva `X-Request-Id`, que aparece na linha de log da requisição.
 
 ## 🚀 Funcionalidades da UI
-*   **Grid de Rede 2x2**: Visualização minimalista de tráfego (Velocidade Kbps + Totais GB).
+*   **Rede numa base só**: velocidade (kB/s, MB/s) e totais (MB, GB) em byte, na ficha do ativo e na do posto.
 *   **Lista de Ativos Dinâmica**: Filtros automáticos por status ONLINE/OFFLINE.
 *   **Execução Direta**: Disparo de comandos de nível de Kernel com confirmação de segurança.
 

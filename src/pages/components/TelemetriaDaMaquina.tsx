@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Activity, Copy, Cpu, HardDrive, Lock, Power, RefreshCw, TriangleAlert } from 'lucide-react';
-import { readSnapshot, usagePercent } from '../helpers/metrics.helper';
+import {
+  formatarTaxa, formatarVolume, readSnapshot, usagePercent, volumeDeRede,
+} from '../helpers/metrics.helper';
 import { useMaquinaAoVivo, type ComandoDaMaquina } from '../hooks/useMaquinaAoVivo';
 
 // COMO A MÁQUINA ESTÁ AGORA, e o que se pode mandar nela.
@@ -106,7 +108,7 @@ function Barra({ rotulo, valor, detalhe }: { rotulo: string; valor: number; deta
   );
 }
 
-function Numero({ rotulo, valor, unidade }: { rotulo: string; valor: number; unidade: string }) {
+function Numero({ rotulo, valor, unidade }: { rotulo: string; valor: string; unidade: string }) {
   return (
     <div className="space-y-1">
       <span className={ROTULO}>{rotulo}</span>
@@ -142,6 +144,13 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
   const amostra = maquina.telemetries[0];
   const online = maquina.status === 'ONLINE';
   const { cpuUsage, ramTotalGb, ramUsedGb, ramPercent, disks, network, processes } = readSnapshot(amostra);
+  // A rede numa base só, em byte (metrics.helper.ts): o agente mede a
+  // velocidade em kbit/s e o total em byte, e os dois saíam lado a lado com
+  // "Kbps" e "Gb" — bit e byte na mesma linha, sem ninguém avisar.
+  const recebendo = formatarTaxa(network.rxSpeedKbps);
+  const taxaDeEnvio = formatarTaxa(network.txSpeedKbps);
+  const totalRecebido = formatarVolume(volumeDeRede(network.bytesReceived, network.totalRxGb));
+  const totalEnviado = formatarVolume(volumeDeRede(network.bytesSent, network.totalTxGb));
 
   return (
     <div className="space-y-5">
@@ -203,14 +212,20 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
             </div>
           )}
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border border-border-sutil p-4">
-            {/* Sem `?? 0`: o `parseNetwork` já devolve número em todo caso — é
-                ele que absorve a coluna Json ausente, o texto no lugar do objeto
-                e o campo em PascalCase. O `??` era herança da tela antiga. */}
-            <Numero rotulo="Recebendo" valor={network.rxSpeedKbps} unidade="Kbps" />
-            <Numero rotulo="Enviando" valor={network.txSpeedKbps} unidade="Kbps" />
-            <Numero rotulo="Total recebido" valor={network.totalRxGb} unidade="Gb" />
-            <Numero rotulo="Total enviado" valor={network.totalTxGb} unidade="Gb" />
+          <div className="border border-border-sutil p-4 space-y-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <Numero rotulo="Recebendo" valor={recebendo.valor} unidade={recebendo.unidade} />
+              <Numero rotulo="Enviando" valor={taxaDeEnvio.valor} unidade={taxaDeEnvio.unidade} />
+              <Numero rotulo="Total recebido" valor={totalRecebido.valor} unidade={totalRecebido.unidade} />
+              <Numero rotulo="Total enviado" valor={totalEnviado.valor} unidade={totalEnviado.unidade} />
+            </div>
+            {/* A BASE, escrita: a unidade ao lado do número diz "kB/s" e "GB",
+                e esta linha diz que as quatro são a mesma coisa. Sem ela, quem
+                conhece o agente procura o "Kbps" que ele manda e desconfia do
+                número menor. */}
+            <p className="text-[10px] text-text-tertiary leading-relaxed">
+              Rede em bytes: velocidade em kB/s ou MB/s, totais em MB ou GB desde que o agente ligou.
+            </p>
           </div>
 
           {processes.length > 0 && (
