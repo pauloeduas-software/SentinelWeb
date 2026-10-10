@@ -10,19 +10,18 @@ import { dataNaoPassada, textoOpcional, uuidOpcional } from '../../shared/fields
 // `targetType` com a FK que combina, não uma coluna solta no corpo.
 
 /**
- * As três FKs são TODAS opcionais aqui, e a obrigatoriedade de UMA delas fica
- * no use-case (`assertAlvoCoerente`), não no zod.
+ * As duas FKs são opcionais aqui, e a obrigatoriedade de UMA delas fica no
+ * use-case (`assertAlvoCoerente`), não no zod.
  *
- * Por quê: a regra não é "este campo é obrigatório", é "exatamente uma das três
+ * Por quê: a regra não é "este campo é obrigatório", é "exatamente uma das duas
  * está preenchida E é a que casa com o `targetType`". Escrita como `refine`,
  * ela viraria um 422 com a mensagem no objeto inteiro em vez de no campo, e
  * ficaria longe do lugar onde o alvo é de fato usado. No use-case ela vira
  * `AppError(…, 422)` com o texto que ensina o modelo.
  */
 export const checkoutSchema = z.strictObject({
-  targetType: z.enum(['USER', 'ASSET', 'LOCATION'], 'tipo de alvo inválido: use USER, ASSET ou LOCATION'),
+  targetType: z.enum(['USER', 'LOCATION'], 'tipo de alvo inválido: use USER ou LOCATION'),
   targetUserId: uuidOpcional('colaborador'),
-  targetAssetId: uuidOpcional('ativo detentor'),
   targetLocationId: uuidOpcional('localização'),
 
   // Status DEPOIS da entrega. Ausente, o use-case escolhe o primeiro de tipo

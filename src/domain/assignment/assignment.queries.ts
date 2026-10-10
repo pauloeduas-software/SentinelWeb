@@ -24,14 +24,13 @@ export const assignmentKeys = {
 /**
  * Corpo de `POST /api/assets/:id/checkout`.
  *
- * As três FKs são nuláveis e só UMA vale: qual, o `targetType` diz. A coerência
+ * As duas FKs são nuláveis e só UMA vale: qual, o `targetType` diz. A coerência
  * entre as duas coisas é validada no servidor (`assertAlvoCoerente`) — aqui o
  * formulário manda só a que corresponde à aba escolhida.
  */
 export interface CheckoutInput {
   targetType: AlvoDaPosse;
   targetUserId?: string;
-  targetAssetId?: string;
   targetLocationId?: string;
   /** Em branco, o servidor decide (a entrega força o ativo para "em uso"). */
   statusId?: string;

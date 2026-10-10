@@ -7,7 +7,7 @@ import { USER_PUBLIC_SELECT } from '../../user/helpers/user-select.helper';
 // nenhuma até alguém escrever o nome dela aqui. Mesmo padrão — e mesmo motivo —
 // do `ASSET_SELECT` (asset/helpers/asset-select.helper.ts).
 //
-// Os três alvos vêm embutidos com allowlist própria porque a tela mostra o NOME
+// Os dois alvos vêm embutidos com allowlist própria porque a tela mostra o NOME
 // de quem recebeu, não o uuid — e uma consulta por linha do histórico seria
 // N+1. O `targetUser` reaproveita `USER_PUBLIC_SELECT` em vez de listar os
 // campos de novo: uma cópia esquecida na Fase 3 devolveria o `passwordHash` por
@@ -23,7 +23,6 @@ export const ASSIGNMENT_SELECT = {
 
   targetType: true,
   targetUserId: true,
-  targetAssetId: true,
   targetLocationId: true,
 
   checkoutAt: true,
@@ -36,7 +35,6 @@ export const ASSIGNMENT_SELECT = {
   createdAt: true,
 
   targetUser: { select: USER_PUBLIC_SELECT },
-  targetAsset: { select: { id: true, assetTag: true, name: true } },
   // `isWorkstation` sai junto com o nome porque a tela do ativo precisa decidir
   // se o alvo é um POSTO ou um depósito: só o posto tem ficha para onde levar
   // (`/postos/:id`), e um link que leva um depósito para uma tela chamada

@@ -4,11 +4,10 @@ interface AlvoDaPosse {
   targetType: AlvoPosse;
   targetUser: { name: string } | null;
   targetLocation: { name: string } | null;
-  targetAsset: { assetTag: string; name: string | null } | null;
 }
 
 /**
- * O nome de quem recebeu — "Laura Souza", "Mesa 1", "ATV-00012 — Dell Latitude".
+ * O nome de quem recebeu — "Laura Souza", "Mesa 1".
  *
  * Existia duplicado no histórico do ativo (`asset-history.usecase.ts`) e passou
  * a ser preciso também no e-mail de entrega. Mora aqui porque é leitura do
@@ -20,14 +19,10 @@ interface AlvoDaPosse {
  * "Entregue para colaborador" no lugar de "Entregue" — uma frase que parece
  * dado e não é.
  *
- * O alvo só vem nulo quando o `select` de quem chamou não o trouxe: as três FKs
+ * O alvo só vem nulo quando o `select` de quem chamou não o trouxe: as duas FKs
  * são garantidas pelo CHECK de coerência no banco.
  */
 export function rotuloDoAlvo(assignment: AlvoDaPosse): string | null {
   if (assignment.targetType === 'USER') return assignment.targetUser?.name ?? null;
-  if (assignment.targetType === 'LOCATION') return assignment.targetLocation?.name ?? null;
-  if (!assignment.targetAsset) return null;
-
-  const { assetTag, name } = assignment.targetAsset;
-  return name ? `${assetTag} — ${name}` : assetTag;
+  return assignment.targetLocation?.name ?? null;
 }
