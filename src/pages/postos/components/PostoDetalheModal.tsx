@@ -14,21 +14,31 @@ import type { Posto, PostoDetalhe } from '../../../domain/shared/workstation.typ
 // responde "quem responde pelo mouse da Mesa 1" — e é por isso que as duas
 // listas precisam aparecer juntas, não em telas separadas.
 //
-// MODAL, E NÃO ROTA `/postos/:id` — a decisão, e o porquê:
-//   1. as operações daqui (pôr alguém no posto, tirar) são feitas e a pessoa
-//      volta para a lista. Uma rota desmontaria a listagem e perderia a busca,
-//      o recorte e a página em que ela estava — exatamente o que se estava
-//      usando para achar este posto;
-//   2. a mesma operação já é um painel dentro de uma janela na aba
-//      Localizações; virar rota aqui criaria duas experiências para o mesmo ato;
-//   3. uma rota pediria estado de "id que não existe" e uma navegação própria,
-//      para um link que ninguém precisa compartilhar hoje.
-// Se um dia a ficha do posto virar destino de link (um QR code na mesa, por
-// exemplo), ela vira rota — e este componente é o corpo dela, sem reescrita.
+// JANELA SOBRE A ROTA `/postos/:id`, e as duas coisas ao mesmo tempo.
+//
+// Era só janela, e a decisão de então listava três motivos: as operações daqui
+// são feitas e a pessoa volta para a lista, e uma rota desmontaria a listagem
+// perdendo a busca e a página em que ela estava; a mesma operação já é um painel
+// dentro de uma janela na aba Localizações; e um link que ninguém precisava
+// compartilhar não pagava o estado de "id que não existe".
+//
+// O TERCEIRO MOTIVO CAIU: o ativo entregue a um posto saiu da listagem de
+// ativos, e a busca por etiqueta passou a largar AQUI quem bipou o computador
+// de uma mesa. Virou link que alguém precisa.
+//
+// Os outros dois continuam de pé, e é por isso que a ficha é rota SEM deixar de
+// ser janela: `/postos/:id` renderiza a mesma tela de `/postos`, com a listagem
+// atrás. Fechar é navegar para `/postos`, e a listagem está lá, como estava.
+// O componente não mudou de forma — só passou a aceitar `posto` nulo, que é o
+// caso de quem entra pela URL sem ter passado pela lista.
 
 interface PostoDetalheModalProps {
-  /** A linha clicada: dá título à janela no primeiro quadro, antes do detalhe. */
-  posto: Posto;
+  /**
+   * A linha da listagem, quando ela está carregada: dá título à janela no
+   * primeiro quadro, antes do detalhe. `null` quando se entra pela URL direto —
+   * aí o cabeçalho espera o detalhe, que é um quadro.
+   */
+  posto: Posto | null;
   detalhe: PostoDetalhe | null;
   carregando: boolean;
   ocupantes: readonly LocationOccupant[];
@@ -47,8 +57,9 @@ export default function PostoDetalheModal({
   // Enquanto o detalhe não chega, vale o que a linha já dizia: o cabeçalho e o
   // selo de vago aparecem no primeiro quadro em vez de piscar depois.
   const ativos = detalhe?.ativos ?? [];
-  const vago = detalhe?.vago ?? posto.vago;
-  const totalAtivos = detalhe?.totalAtivos ?? posto.totalAtivos;
+  const caminho = detalhe?.caminho ?? posto?.caminho;
+  const vago = detalhe?.vago ?? posto?.vago ?? false;
+  const totalAtivos = detalhe?.totalAtivos ?? posto?.totalAtivos ?? 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
@@ -57,10 +68,14 @@ export default function PostoDetalheModal({
         <div className="flex items-start justify-between px-6 py-4 border-b border-border-sutil bg-bg-base/50">
           <div>
             <h2 className="flex items-center gap-3 text-sm font-mono text-text-primary tracking-widest uppercase">
-              <Armchair size={16} /> {posto.name}
+              <Armchair size={16} /> {detalhe?.name ?? posto?.name ?? '…'}
             </h2>
+            {/* O caminho só aparece quando ele é CONHECIDO. Com `?? []` o
+                `caminhoDoPosto` devolveria "na raiz", que é uma posição — e
+                afirmar isso para uma mesa em "Sede › Andar 2" enquanto o
+                detalhe não chegou é mentir, não é esperar. */}
             <p className="font-mono text-[10px] text-text-tertiary mt-2">
-              {caminhoDoPosto(detalhe?.caminho ?? posto.caminho)}
+              {caminho && caminhoDoPosto(caminho)}
               {detalhe?.manager && <> · gestor: {detalhe.manager.name}</>}
             </p>
           </div>

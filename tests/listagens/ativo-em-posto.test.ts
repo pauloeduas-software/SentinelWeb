@@ -152,6 +152,73 @@ describe('o ativo entregue a um posto sai da listagem', () => {
     expect(porSerie.body.ativos.map((a) => a.id)).toEqual([item.id]);
   });
 
+  it('a busca EXATA diz em que posto o ativo está, para a tela levar até lá', async () => {
+    const item = await ativo('Desktop que leva ao posto', 'SN-LISTA-8');
+    await entregarA(item.id, posto);
+
+    const { body } = await api.get<{ tipo: string; posto: { id: string; name: string } | null }>(
+      `/api/search?q=${item.assetTag}`,
+    );
+
+    expect(body.tipo).toBe('EXATO');
+    expect(body.posto?.id).toBe(posto);
+    expect(body.posto?.name).toBe('Mesa da Listagem');
+  });
+
+  // Os três mecanismos de `posto: null` são DIFERENTES, e por isso são três
+  // casos: sem posse nenhuma, posse num local que não é mesa, e posse de
+  // PESSOA. Num laço só, o segundo não rodaria quando o primeiro caísse, e a
+  // falha não diria qual deles quebrou.
+  it('é null para o ativo sem posse: o destino é a ficha dele', async () => {
+    const item = await ativo('Desktop na prateleira', 'SN-LISTA-9');
+
+    const { body } = await api.get<{ tipo: string; posto: unknown }>(
+      `/api/search?q=${item.assetTag}`,
+    );
+    expect(body.tipo).toBe('EXATO');
+    expect(body.posto).toBeNull();
+  });
+
+  it('é null para o ativo entregue a um local que não é posto', async () => {
+    const item = await ativo('Desktop no depósito 2', 'SN-LISTA-10');
+    await entregarA(item.id, deposito);
+
+    const { body } = await api.get<{ posto: unknown }>(`/api/search?q=${item.assetTag}`);
+    expect(body.posto).toBeNull();
+  });
+
+  it('é null para o ativo entregue a uma PESSOA', async () => {
+    // É o caso que o `targetType: 'LOCATION'` do `where` governa: posse de
+    // pessoa deixa `targetLocationId` nulo e não pode virar posto nenhum.
+    const item = await ativo('Notebook da Ana', 'SN-LISTA-11');
+    const pessoa = await api.post<{ id: string }>('/api/users', {
+      name: 'Ana da Busca',
+      email: 'ana.busca@teste.local',
+    });
+    expect(pessoa.status).toBe(201);
+    const entrega = await api.post(`/api/assets/${item.id}/checkout`, {
+      targetType: 'USER',
+      targetUserId: pessoa.body.id,
+    });
+    expect(entrega.status).toBe(201);
+
+    const { body } = await api.get<{ posto: unknown }>(`/api/search?q=${item.assetTag}`);
+    expect(body.posto).toBeNull();
+  });
+
+  it('e volta a ser null quando o computador é devolvido', async () => {
+    const item = await ativo('Desktop que sai do posto', 'SN-LISTA-12');
+    await entregarA(item.id, posto);
+
+    const noPosto = await api.get<{ posto: { id: string } | null }>(`/api/search?q=${item.assetTag}`);
+    expect(noPosto.body.posto?.id).toBe(posto);
+
+    expect((await api.post(`/api/assets/${item.id}/checkin`, {})).status).toBe(200);
+
+    const depois = await api.get<{ posto: unknown }>(`/api/search?q=${item.assetTag}`);
+    expect(depois.body.posto).toBeNull();
+  });
+
   it('e a ficha do posto mostra o computador que a listagem deixou de mostrar', async () => {
     const item = await ativo('Desktop da ficha', 'SN-LISTA-7');
     await entregarA(item.id, posto);
