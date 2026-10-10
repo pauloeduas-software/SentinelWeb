@@ -40,11 +40,11 @@ export interface ItemDeMenu {
    * daqui pode estar incompleta sem consequência de segurança — o pior caso é
    * um item visível que responde 403.
    *
-   * **AUSENTE quer dizer "todo mundo vê"**. Era o caso de Minha conta e Meus
-   * equipamentos, as duas telas que falavam sobre QUEM ESTÁ OLHANDO; as duas
-   * saíram (D148, D156) e hoje nenhum item do menu dispensa papel — mas o campo
-   * continua opcional, porque a próxima tela desse tipo não deve precisar de
-   * mudança de tipo para existir.
+   * **AUSENTE quer dizer "todo mundo vê"**, e hoje nenhum item dispensa papel:
+   * toda sessão é `TECNICO` ou `ADMIN`, porque `USUARIO` não entra no painel —
+   * o login o recusa com 403 (`login.usecase.ts`). O campo continua opcional
+   * porque a próxima tela desse tipo não deve precisar de mudança de tipo para
+   * existir.
    */
   papel?: 'TECNICO' | 'ADMIN';
 }
