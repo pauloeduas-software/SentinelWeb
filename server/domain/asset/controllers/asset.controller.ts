@@ -35,8 +35,10 @@ const optionsQuerySchema = z.strictObject({
 /**
  * A BUSCA GLOBAL (F10, Etapa G) — só `q`, e ela é OBRIGATÓRIA.
  *
- * Teto de 300 caracteres e não os 200 da busca de listagem: aqui o campo também
- * recebe a URL inteira do QR, que num domínio longo passa dos 200 (D70).
+ * O teto de 300 caracteres é maior que os 200 da busca de listagem porque o
+ * campo recebia a URL inteira do QR. O passo do QR saiu e o teto ficou: a
+ * etiqueta vai até 200 caracteres (`shared/fields.schema.ts`) e a série até 150
+ * (`asset.schema.ts`), então 300 não recusa nada que o banco consiga guardar.
  */
 const buscaGlobalSchema = z.strictObject({
   q: z.string('informe o que buscar').trim().min(1, 'busca vazia').max(300, 'busca: máximo de 300 caracteres'),
