@@ -2,6 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../core/api/apiClient';
 import { assetKeys } from '../asset/asset.queries';
 import { endpointKeys } from '../endpoint/endpoint.queries';
+// Vincular E ENTREGAR muda a ficha do posto: a chave é do posto, quem pergunta
+// importa (docs/referencia/arquitetura.md).
+import { workstationKeys } from '../workstation/workstation.queries';
 import type { ListEnvelope } from '../shared/list.types';
 import type {
   AtivoOcioso, Cobertura, ConfiguracaoDaDescoberta, MaquinaDoAtivo,
@@ -110,6 +113,47 @@ export function useDesvincularMaquina() {
   return useMutation({
     mutationFn: async (endpointId: string) => (await apiClient.delete(`/endpoints/${endpointId}/link`)).data,
     onSuccess: invalidar,
+  });
+}
+
+/**
+ * VINCULAR À MÃO — `POST /api/endpoints/:id/link`.
+ *
+ * A rota existia desde a F7 e nenhuma tela a chamava: o vínculo só nascia pela
+ * fila, e a máquina que a cascata não casava com nada (serial em branco, nome
+ * que não bate) ficava em "sem cadastro" sem botão. É a afirmação "esta máquina
+ * é aquele patrimônio", dita por gente.
+ */
+export function useVincularMaquina() {
+  const invalidar = useInvalidarTudo();
+  return useMutation({
+    mutationFn: async ({ endpointId, assetId }: { endpointId: string; assetId: string }) =>
+      (await apiClient.post(`/endpoints/${endpointId}/link`, { assetId })).data,
+    onSuccess: invalidar,
+  });
+}
+
+/**
+ * VINCULAR E ENTREGAR AO POSTO — `POST /api/endpoints/:id/link-and-checkout`.
+ *
+ * O cadastro do computador novo de ponta a ponta. Invalida também o posto,
+ * porque a entrega muda a ficha dele; e invalida NO ERRO também: a rota
+ * encadeia duas operações e o vínculo pode ter ficado quando a entrega falha —
+ * a resposta diz isso, e a lista precisa refletir.
+ */
+export function useVincularEEntregar() {
+  const queryClient = useQueryClient();
+  const invalidar = useInvalidarTudo();
+  const invalidarComPosto = () => {
+    invalidar();
+    void queryClient.invalidateQueries({ queryKey: workstationKeys.all });
+  };
+  return useMutation({
+    mutationFn: async ({ endpointId, assetId, targetLocationId }: {
+      endpointId: string; assetId: string; targetLocationId: string;
+    }) => (await apiClient.post(`/endpoints/${endpointId}/link-and-checkout`, { assetId, targetLocationId })).data,
+    onSuccess: invalidarComPosto,
+    onError: invalidarComPosto,
   });
 }
 

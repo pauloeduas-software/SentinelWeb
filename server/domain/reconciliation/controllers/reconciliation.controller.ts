@@ -2,13 +2,14 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { idParamSchema } from '../../shared/params.schema';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import {
-  filtroDeSugestoesSchema, janelaDeOciosidadeSchema, triagemSchema, vinculoSchema,
+  filtroDeSugestoesSchema, janelaDeOciosidadeSchema, triagemSchema, vinculoComEntregaSchema, vinculoSchema,
 } from '../schemas/reconciliation.schema';
 import { listarSugestoes } from '../use-cases/list-suggestions.usecase';
 import { aceitarSugestao } from '../use-cases/accept-suggestion.usecase';
 import { recusarSugestao } from '../use-cases/reject-suggestion.usecase';
 import { calcularCobertura } from '../use-cases/coverage-stats.usecase';
 import { desvincularEndpoint, vincularEndpointAoAtivo } from '../use-cases/link-endpoint-asset.usecase';
+import { vincularEEntregar } from '../use-cases/link-and-checkout.usecase';
 import { triarEndpoint } from '../use-cases/review-endpoint.usecase';
 import { listarAtivosOciosos } from '../use-cases/list-idle-assets.usecase';
 import { obterMaquinaDoAtivo } from '../use-cases/get-asset-machine.usecase';
@@ -42,6 +43,14 @@ export const reconciliationController = {
     const { assetId } = vinculoSchema.parse(request.body ?? {});
     const vinculado = await vincularEndpointAoAtivo(id, assetId, atorDaRequisicao(request));
     return reply.status(201).send(vinculado);
+  },
+
+  async linkAndCheckout(request: FastifyRequest, reply: FastifyReply) {
+    const { id } = idParamSchema.parse(request.params);
+    const { assetId, targetLocationId } = vinculoComEntregaSchema.parse(request.body ?? {});
+    // 201 como o vínculo e a entrega sozinhos: duas linhas nascem.
+    const resultado = await vincularEEntregar(id, assetId, targetLocationId, atorDaRequisicao(request));
+    return reply.status(201).send(resultado);
   },
 
   async unlink(request: FastifyRequest) {

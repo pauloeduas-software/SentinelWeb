@@ -1,6 +1,8 @@
 import { prisma } from '../../../core/database/prismaClient';
 import type { ListEnvelope, ListQuery } from '../../../core/http/list-query';
-import { presentEndpoint, type PresentedEndpoint } from '../helpers/present-endpoint.helper';
+import {
+  ATIVO_DA_MAQUINA_SELECT, presentEndpoint, type PresentedEndpoint,
+} from '../helpers/present-endpoint.helper';
 import { buildEndpointWhere, type EndpointSortable, type FiltrosDeEndpoint } from '../helpers/endpoint-filters.helper';
 
 // Máquinas descobertas pelo agente, cada uma com a amostra de telemetria mais
@@ -29,6 +31,9 @@ export async function listEndpoints(
           orderBy: { timestamp: 'desc' },
           take: 1,
         },
+        // O patrimônio de quem tem: é o que separa a lista de máquinas
+        // VINCULADAS de uma lista de hostnames, em `/descobertas`.
+        asset: ATIVO_DA_MAQUINA_SELECT,
       },
       orderBy: { [query.sort]: query.order },
       skip: query.skip,

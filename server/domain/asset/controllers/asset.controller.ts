@@ -30,6 +30,11 @@ import { unretireAsset } from '../use-cases/unretire-asset.usecase';
 const optionsQuerySchema = z.strictObject({
   q: z.string().trim().max(200, 'busca: máximo de 200 caracteres').optional()
     .transform((valor) => valor || undefined),
+  // `?maquina=sem`: só ativo SEM máquina vinculada — o seletor do vínculo em
+  // `/descobertas`, onde ativo que já tem máquina é opção que o `@unique`
+  // recusa. Enum de um valor, como o `?vinculo=` das máquinas: valor errado é
+  // 422, não filtro ignorado.
+  maquina: z.enum(['sem'], 'máquina: use sem').optional(),
 });
 
 /**
@@ -94,8 +99,8 @@ export const assetController = {
   },
 
   async options(request: FastifyRequest) {
-    const { q } = optionsQuerySchema.parse(request.query ?? {});
-    return listAssetOptions(q);
+    const { q, maquina } = optionsQuerySchema.parse(request.query ?? {});
+    return listAssetOptions(q, { semMaquina: maquina === 'sem' });
   },
 
   async create(request: FastifyRequest, reply: FastifyReply) {

@@ -4,6 +4,7 @@ import OciososTable from './components/OciososTable';
 import OrfaosTable from './components/OrfaosTable';
 import PainelDeCobertura from './components/PainelDeCobertura';
 import SugestaoCard from './components/SugestaoCard';
+import VinculadasTable from './components/VinculadasTable';
 import { useDescobertas, type AbaDaTela } from './hooks/useDescobertas';
 
 // O QUE O AGENTE DESCOBRIU E O CADASTRO AINDA NÃO SABE
@@ -14,11 +15,19 @@ import { useDescobertas, type AbaDaTela } from './hooks/useDescobertas';
 // `/itam` em favor de `/ativos` — "ITAM" era o nome do assunto do sistema
 // inteiro, não daquela tela.
 //
+// AS DUAS LISTAS DE MÁQUINAS, separadas pelo vínculo: o que o agente vê e o
+// cadastro não sabe ("Sem vínculo"), e o que já é patrimônio ("Vinculadas").
+// A primeira tem as duas ações que faltavam — vincular a um ativo à mão, e
+// vincular e entregar ao posto numa ida só —, porque a fila de sugestões só
+// alcança a máquina que a cascata casou com alguma coisa; a que chegou com o
+// serial em branco e um nome que não bate ficava aqui sem botão.
+//
 // Markup e mais nada: estado e chamadas ficam no `useDescobertas`.
 
 const ABAS: { id: AbaDaTela; rotulo: string }[] = [
   { id: 'fila', rotulo: 'Sugestões' },
-  { id: 'orfaos', rotulo: 'Sem cadastro' },
+  { id: 'sem', rotulo: 'Sem vínculo' },
+  { id: 'com', rotulo: 'Vinculadas' },
   { id: 'ociosos', rotulo: 'Ociosos' },
 ];
 
@@ -26,9 +35,9 @@ export default function DescobertasPage() {
   const {
     aba, setAba, erro, limparErro,
     sugestoes, carregandoSugestoes, cobertura, carregandoCobertura,
-    ociosos, orfaos, ocupado,
+    ociosos, semVinculo, vinculadas, carregandoMaquinas, ocupado,
     configuracao, salvandoConfiguracao,
-    handleAceitar, handleRecusar, handleTriar, handleSalvarConfiguracao,
+    handleAceitar, handleRecusar, handleTriar, handleVincular, handleSalvarConfiguracao,
   } = useDescobertas();
 
   return (
@@ -45,9 +54,9 @@ export default function DescobertasPage() {
       <PainelDeCobertura cobertura={cobertura} carregando={carregandoCobertura} />
 
       {/* A CONFIGURAÇÃO logo abaixo do painel, e não numa tela de ajustes: os
-          cinco botões explicam os números que acabaram de ser lidos. "Por que
-          tenho 12 fantasmas?" se responde mexendo em `ghostDays`, e separar as
-          duas coisas em telas diferentes esconderia a resposta da pergunta. */}
+          botões explicam os números que acabaram de ser lidos. "Por que tenho
+          12 fantasmas?" se responde mexendo em `ghostDays`, e separar as duas
+          coisas em telas diferentes esconderia a resposta da pergunta. */}
       <ConfiguracaoDaDescoberta
         configuracao={configuracao}
         salvando={salvandoConfiguracao}
@@ -77,6 +86,12 @@ export default function DescobertasPage() {
             {rotulo}
             {id === 'fila' && sugestoes.length > 0 && (
               <span className="ml-2 text-[10px] text-text-tertiary">{sugestoes.length}</span>
+            )}
+            {id === 'sem' && semVinculo.length > 0 && (
+              <span className="ml-2 text-[10px] text-text-tertiary">{semVinculo.length}</span>
+            )}
+            {id === 'com' && vinculadas.length > 0 && (
+              <span className="ml-2 text-[10px] text-text-tertiary">{vinculadas.length}</span>
             )}
           </button>
         ))}
@@ -112,7 +127,16 @@ export default function DescobertasPage() {
         </>
       )}
 
-      {aba === 'orfaos' && <OrfaosTable orfaos={orfaos} ocupado={ocupado} onTriar={handleTriar} />}
+      {aba === 'sem' && (
+        <OrfaosTable
+          orfaos={semVinculo}
+          carregando={carregandoMaquinas}
+          ocupado={ocupado}
+          onTriar={handleTriar}
+          onVincular={handleVincular}
+        />
+      )}
+      {aba === 'com' && <VinculadasTable maquinas={vinculadas} carregando={carregandoMaquinas} />}
       {aba === 'ociosos' && <OciososTable ociosos={ociosos} />}
     </div>
   );
