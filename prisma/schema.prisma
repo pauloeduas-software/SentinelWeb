@@ -313,9 +313,6 @@ model ActivityLog {
 
 enum CategoryType {
   ASSET
-  ACCESSORY
-  CONSUMABLE
-  COMPONENT
   LICENSE
 }
 

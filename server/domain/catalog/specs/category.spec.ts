@@ -37,7 +37,7 @@ export const categorySpec: CatalogSpec = {
 
   // O `<select>` do formulário de ativo pede só as de ATIVO; sem isto ele
   // ofereceria duas linhas de mesmo nome e tipos diferentes.
-  optionFilter: { campo: 'type', valores: ['ASSET', 'ACCESSORY', 'CONSUMABLE', 'COMPONENT', 'LICENSE'] },
+  optionFilter: { campo: 'type', valores: ['ASSET', 'LICENSE'] },
 
   countUsages: contarUsos,
 
