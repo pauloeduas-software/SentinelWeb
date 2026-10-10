@@ -403,7 +403,8 @@ model Location {
   // É REGRA desde a invariante 19: no máximo UM computador (ativo com máquina
   // vinculada) por local marcado. Fora da marca não há limite — a sala de
   // reunião com dois computadores continua valendo, que é o uso que proibir
-  // quebraria.
+  // quebraria — e por isso LIGAR a marca também é guardado: uma sala com mais de
+  // um computador não vira posto (`locationSpec.beforeWrite`).
   //
   // O que a marca NÃO restringe, dentro ou fora dela: monitor, teclado e
   // periférico, que entram no posto sem limite, e os ocupantes, que são vários
@@ -474,9 +475,6 @@ model Asset {
 
   name  String?
   notes String?
-
-  byod        Boolean @default(false)
-  requestable Boolean @default(false)
 
   statusId     String  @db.Uuid
   modelId      String  @db.Uuid

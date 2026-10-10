@@ -43,7 +43,7 @@ afterAll(async () => {
  *
  * Os dois `ReferenceSelect` obrigatórios (modelo e status) chegam preenchidos
  * porque o formulário não envia sem eles. TODO O RESTO vai como a tela monta:
- * string vazia no texto, `false` no checkbox.
+ * string vazia em cada campo de texto.
  *
  * `assignedToId` NÃO está aqui de propósito — o campo saiu do formulário na F4,
  * e o `strictObject` do servidor recusa a chave. A ausência é a regra
@@ -60,8 +60,6 @@ function corpoDoFormularioDeAtivo(sobrescrever: Record<string, unknown> = {}) {
     orderNumber: '',
     purchaseDate: '',
     purchaseCost: '',
-    byod: false,
-    requestable: false,
     notes: '',
     ...sobrescrever,
   };

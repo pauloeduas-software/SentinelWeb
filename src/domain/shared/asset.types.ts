@@ -54,8 +54,6 @@ export interface Asset {
   serial: string | null;
   name: string | null;
   notes: string | null;
-  byod: boolean;
-  requestable: boolean;
 
   statusId: string;
   modelId: string;

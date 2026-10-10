@@ -52,8 +52,6 @@ function valoresIniciais(asset: Asset | null, clonar: boolean) {
     orderNumber: asset?.orderNumber ?? '',
     purchaseDate: paraCampoDeData(asset?.purchaseDate),
     purchaseCost: asset?.purchaseCost ?? '',
-    byod: asset?.byod ?? false,
-    requestable: asset?.requestable ?? false,
     notes: asset?.notes ?? '',
   };
 }
@@ -196,15 +194,7 @@ export default function AssetFormModal({ asset, clonar = false, onClose, onSubmi
             </div>
           </Secao>
 
-          <Secao titulo="Outros">
-            <label className="flex items-center gap-3 cursor-pointer text-text-secondary">
-              <input type="checkbox" checked={valores.byod} onChange={(e) => definir('byod', e.target.checked)} className="accent-status-success w-4 h-4" />
-              <span className={ROTULO}>Equipamento do colaborador (BYOD)</span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer text-text-secondary">
-              <input type="checkbox" checked={valores.requestable} onChange={(e) => definir('requestable', e.target.checked)} className="accent-status-success w-4 h-4" />
-              <span className={ROTULO}>Pode ser solicitado</span>
-            </label>
+          <Secao titulo="Notas">
             <div className="space-y-1 col-span-2">
               <label className={ROTULO}>Notas</label>
               <textarea value={valores.notes} onChange={(e) => definir('notes', e.target.value)} className={`${CLASSE_CAMPO} h-20 resize-none`} />
