@@ -121,17 +121,10 @@ export interface CatalogUiSpec {
 // formulário precisam das MESMAS listas — separadas, divergiriam no primeiro
 // valor novo.
 // O tipo da categoria diz a que MÓDULO ela pertence: uma categoria de Ativo não
-// agrupa licenças, e a diferença entre acessório, consumível e componente é o
-// que acontece na devolução.
+// agrupa licenças.
 export const TIPOS_CATEGORIA: readonly OpcaoFixa[] = [
   { value: 'ASSET', label: 'Ativo',
     ajuda: 'Equipamento único, com etiqueta e número de série. Uma linha por equipamento.' },
-  { value: 'ACCESSORY', label: 'Acessório',
-    ajuda: 'Tem quantidade. Empresta para uma pessoa e volta. Ex.: mouse, headset, dock.' },
-  { value: 'CONSUMABLE', label: 'Consumível',
-    ajuda: 'Tem quantidade. Sai do estoque e NÃO volta. Ex.: toner, cabo, pilha.' },
-  { value: 'COMPONENT', label: 'Componente',
-    ajuda: 'Tem quantidade. Vai DENTRO de um ativo. Ex.: pente de RAM, SSD, placa de vídeo.' },
   { value: 'LICENSE', label: 'Licença',
     ajuda: 'Software, com assentos atribuídos a pessoas ou a máquinas.' },
 ];
