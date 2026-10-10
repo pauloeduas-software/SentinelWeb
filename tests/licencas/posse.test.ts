@@ -3,7 +3,6 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 import {
   cenarioDePosse, criarAtivo, criarColaborador, criarLicenca,
 } from '../helpers/fixtures';
-import { prisma } from '../../server/core/database/prismaClient';
 
 // A COSTURA COM A POSSE (D93) — a etapa que o plano prospectivo da F6 não tinha.
 //
@@ -76,12 +75,9 @@ describe('o 409 do DELETE conhece o assento', () => {
 describe('quem não pode receber assento', () => {
   it('desligado responde 409 — a pessoa existe, o estado recusa', async () => {
     const pessoa = await criarColaborador(api, { name: 'Felipe Rocha', email: 'felipe@teste.local' });
-    // Desligar pelo banco: a rota de desligamento saiu, e a recusa que este
-    // caso prova é do CHECKOUT, que continua lendo `isActive`.
-    await prisma.user.update({
-      where: { id: pessoa },
-      data: { isActive: false, terminatedAt: new Date() },
-    });
+    // Desativada pela porta da tela, como no teste de posse: o que este caso
+    // prova é a recusa do CHECKOUT DE ASSENTO.
+    expect((await api.put(`/api/users/${pessoa}`, { isActive: false })).status).toBe(200);
 
     const licenca = await criarLicenca(api, {
       name: 'Slack', categoryId: cenario.categoriaLicencaId, seatsTotal: 5,

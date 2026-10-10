@@ -53,14 +53,15 @@ export default function UserDetailPage() {
           </h2>
           <div className="flex items-center gap-4 font-mono text-xs text-text-tertiary flex-wrap">
             <span>{user.email}</span>
-            {user.terminatedAt ? (
-              // O desligamento é a primeira coisa que a tela precisa dizer:
-              // todo número abaixo dele tem que ser lido como histórico.
-              <span className="flex items-center gap-2 text-status-warning">
-                <UserX size={12} /> desligado em {formatarData(user.terminatedAt)}
-              </span>
-            ) : (
+            {user.isActive ? (
               <span className="text-status-success">ativo</span>
+            ) : (
+              // Estar inativo é a primeira coisa que a tela precisa dizer: todo
+              // número abaixo tem que ser lido como histórico. Quando e por
+              // quem está no histórico, logo embaixo.
+              <span className="flex items-center gap-2 text-status-warning">
+                <UserX size={12} /> inativo na empresa
+              </span>
             )}
           </div>
         </div>

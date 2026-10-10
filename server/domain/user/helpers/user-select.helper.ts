@@ -35,6 +35,12 @@ export const USER_LIST_SELECT = {
   // de um administrador o rebaixaria, em silêncio. A rede do
   // `ultimo-administrador.ts` pegaria o caso do ÚLTIMO; os outros passariam.
   role: true,
+
+  // `isActive` pelo MESMO motivo, e o defeito aqui é ainda mais calado: o
+  // formulário edita o vínculo com a empresa, e sem o campo na linha o checkbox
+  // nasceria MARCADO — corrigir o telefone de quem foi desativado o reativaria,
+  // devolvendo acesso ao sistema a quem saiu.
+  isActive: true,
 } as const;
 
 // O MESMO usuário, mais o estado do vínculo com a empresa — para a tela de
@@ -45,21 +51,16 @@ export const USER_LIST_SELECT = {
 // `OCCUPANT_SELECT`): dois campos acrescentados lá viajariam em cada linha de
 // histórico de todo ativo, para serem usados em uma tela só.
 //
-// `isActive` e `terminatedAt` andam juntos porque dizem a mesma coisa por dois
-// ângulos — "pode operar?" e "saiu quando?" —, e uma tela que mostrasse só o
-// primeiro não teria como escrever a data no lugar do rótulo "desligado".
-//
 // Continuam de FORA, e não por esquecimento: `username`, `passwordHash`,
 // `failedLoginCount` e `lockedUntil`. Perfil de colaborador não é tela de
 // credencial, e a allowlist é o que garante que a F3 não os vaze por aqui.
 export const USER_DETAIL_SELECT = {
   ...USER_PUBLIC_SELECT,
   isActive: true,
-  terminatedAt: true,
 
-  // A IDENTIDADE E O CICLO DE VIDA (F11, Etapa E). Só na tela de PERFIL, pelo
-  // mesmo motivo de `isActive`/`terminatedAt`: nove campos a mais em cada linha
-  // de cada histórico de cada ativo, para serem usados numa tela só.
+  // A IDENTIDADE (F11, Etapa E). Só na tela de PERFIL, pelo mesmo motivo de
+  // `isActive`: campos a mais em cada linha de cada histórico de cada ativo,
+  // para serem usados numa tela só.
   employeeNumber: true,
   jobTitle: true,
   phone: true,

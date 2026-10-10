@@ -21,7 +21,6 @@ export interface UsuarioComPosse {
   email: string;
   createdAt: Date;
   isActive: boolean;
-  terminatedAt: Date | null;
 
   // A IDENTIDADE (F11, Etapa E). Só nesta leitura — ver `USER_DETAIL_SELECT`.
   employeeNumber: string | null;

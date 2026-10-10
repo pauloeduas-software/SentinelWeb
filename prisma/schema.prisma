@@ -207,8 +207,10 @@ model User {
   /// Admissão. Não é `createdAt`: a pessoa trabalha aqui desde antes do sistema.
   hiredAt DateTime?
 
-  // Desligamento (F11) é diferente de lixeira: quem saiu da empresa continua no
-  // histórico de posse e nos relatórios, só não opera mais.
+  // Desativar é diferente de lixeira: quem saiu da empresa continua no histórico
+  // de posse, só não opera mais — não entra no sistema e não recebe entrega
+  // nova. Editável em `PUT /api/users/:id`, e a mudança vai para o ActivityLog
+  // com ator e data.
   isActive         Boolean            @default(true)
 
   // O PAPEL (D148), no lugar da matriz de permissões por grupo (D76).
@@ -218,7 +220,6 @@ model User {
   // que impede o sistema de ficar sem ninguém que entre está em
   // `access/helpers/ultimo-administrador.ts`, chamada no fim da transação.
   role Papel @default(USUARIO)
-  terminatedAt     DateTime?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   deletedAt        DateTime?

@@ -8,7 +8,7 @@ import { AppError } from '../../../core/errors/app-error';
 //
 //   T1 (entrega)        lê o usuário  → `isActive: true`, segue
 //   T2 (desligamento)   lê as posses  → não há nenhuma, fecha nada
-//   T2                  grava `isActive = false`, `terminatedAt`  → COMMIT
+//   T2                  grava `isActive = false`                  → COMMIT
 //   T1                  cria a `Assignment`                        → COMMIT
 //
 // Resultado: um colaborador DESLIGADO com posse aberta. Os dois caminhos

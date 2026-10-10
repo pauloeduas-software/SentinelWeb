@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { cenarioDePosse, criarAtivo } from '../helpers/fixtures';
+import { cenarioDePosse, criarAtivo, criarColaborador } from '../helpers/fixtures';
 import { prisma } from '../../server/core/database/prismaClient';
 
 // AS INVARIANTES DO MODELO DE POSSE — `docs/referencia/invariantes.md`, 1, 2 e 4.
@@ -187,5 +187,72 @@ describe('invariante 4 — estado × posse', () => {
 
     const { status } = await api.put(`/api/assets/${ativo.id}`, { statusId: manutencao.id });
     expect(status).toBe(200);
+  });
+});
+
+describe('quem não está ativo na empresa não recebe equipamento', () => {
+  it('desativar pela API recusa o checkout (409) e registra no histórico', async () => {
+    const pessoa = await criarColaborador(api, {
+      name: 'Marcos Lima', email: 'marcos.inativo@teste.local',
+    });
+
+    // A DESATIVAÇÃO PELA PORTA DA TELA — `PUT /api/users/:id` com `isActive`.
+    // É o caminho que o formulário usa, e é ele que precisa estar fechado: a
+    // guarda do checkout já existia, mas até aqui nada na API sabia desativar
+    // alguém, então a recusa era inalcançável por quem usa o sistema.
+    const desativada = await api.put<{ id: string }>(`/api/users/${pessoa}`, { isActive: false });
+    expect(desativada.status).toBe(200);
+
+    const ativo = await criarAtivo(api, {
+      statusId: cenario.statusDeployableId,
+      modelId: cenario.modelId,
+      name: 'Notebook do inativo',
+    });
+
+    const recusa = await api.post<{ error: string }>(`/api/assets/${ativo.id}/checkout`, {
+      targetType: 'USER',
+      targetUserId: pessoa,
+    });
+
+    // 409 e não 404: a pessoa existe, é o ESTADO dela que recusa.
+    expect(recusa.status).toBe(409);
+    expect(recusa.body.error).toMatch(/desligad|inativ/i);
+
+    // O ativo continua no estoque — a recusa não deixou meia entrega.
+    const semPosse = await prisma.assignment.count({
+      where: { assetId: ativo.id, checkinAt: null },
+    });
+    expect(semPosse).toBe(0);
+
+    // E a mudança FICA NO HISTÓRICO da pessoa, com ator: é o que responde
+    // "quem desativou, e quando" agora que não há coluna de data.
+    const historico = await api.get<{ rows: { action: string; changes: Record<string, unknown> }[] }>(
+      `/api/users/${pessoa}/history`,
+    );
+    const desativacao = historico.body.rows.find(
+      (evento) => evento.action === 'UPDATE' && 'isActive' in (evento.changes ?? {}),
+    );
+    expect(desativacao, JSON.stringify(historico.body.rows)).toBeDefined();
+    expect(desativacao!.changes.isActive).toMatchObject({ de: true, para: false });
+  });
+
+  it('reativar pela API libera a entrega de novo', async () => {
+    const pessoa = await criarColaborador(api, {
+      name: 'Rita Alves', email: 'rita.volta@teste.local',
+    });
+    await api.put(`/api/users/${pessoa}`, { isActive: false });
+    expect((await api.put(`/api/users/${pessoa}`, { isActive: true })).status).toBe(200);
+
+    const ativo = await criarAtivo(api, {
+      statusId: cenario.statusDeployableId,
+      modelId: cenario.modelId,
+      name: 'Notebook da volta',
+    });
+
+    const entrega = await api.post(`/api/assets/${ativo.id}/checkout`, {
+      targetType: 'USER',
+      targetUserId: pessoa,
+    });
+    expect(entrega.status).toBe(201);
   });
 });
