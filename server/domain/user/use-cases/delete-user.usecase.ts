@@ -48,6 +48,7 @@ export async function deleteUser(id: string, actorId: string | null): Promise<vo
       throw new AppError(motivo, 409, {
         ativosEmPosse: posse.ativosEmPosse,
         assentosEmPosse: posse.assentosEmPosse,
+        itensEmPosse: posse.itensEmPosse,
         postosOcupados: posse.postosOcupados,
       });
     }
