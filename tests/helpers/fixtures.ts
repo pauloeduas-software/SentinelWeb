@@ -27,15 +27,18 @@ function exigir201<T>(o_que: string, resposta: { status: number; body: unknown }
 /** Os ids que o seed deixa prontos. Lidos, nunca criados. */
 export async function idsDoSeed() {
   const [
-    deployable, emUso, arquivado, categoria, licenca,
+    deployable, emUso, arquivado, categoria, licenca, estoque,
   ] = await Promise.all([
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'DEPLOYABLE' }, select: { id: true } }),
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'IN_USE' }, select: { id: true } }),
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'ARCHIVED' }, select: { id: true } }),
     prisma.category.findFirstOrThrow({ where: { type: 'ASSET' }, select: { id: true } }),
-    // A da F6. O seed cria "Licença" com `type: 'LICENSE'`, e é o TIPO que o
-    // use-case confere: categoria de ASSET numa licença é 422.
+    // A da licença. O seed cria "Licença" com `type: 'LICENSE'`, e é o TIPO que
+    // o use-case confere: categoria de ASSET numa licença é 422.
     prisma.category.findFirstOrThrow({ where: { type: 'LICENSE' }, select: { id: true } }),
+    // A do estoque: "Monitor" e "Periférico" nascem `STOCK` no seed, e é o tipo
+    // que o use-case confere — categoria de ATIVO num item de estoque é 422.
+    prisma.category.findFirstOrThrow({ where: { type: 'STOCK' }, select: { id: true } }),
   ]);
 
   return {
@@ -44,7 +47,29 @@ export async function idsDoSeed() {
     statusArquivadoId: arquivado.id,
     categoriaId: categoria.id,
     categoriaLicencaId: licenca.id,
+    categoriaEstoqueId: estoque.id,
   };
+}
+
+/**
+ * Um item de estoque, pela API — nunca por `prisma.stockItem.create`.
+ *
+ * O motivo é o do topo deste arquivo: criar pelo Prisma pularia o zod da borda,
+ * a guarda de tipo da categoria, a ENTRADA inicial e o `ActivityLog`, e o teste
+ * passaria a provar coisas sobre um item que nenhum usuário consegue cadastrar.
+ *
+ * O NOME é único entre os vivos, então quem chama passa um nome próprio por
+ * caso.
+ */
+export async function criarItemDeEstoque(
+  api: ApiDeTeste,
+  opcoes: { name: string; categoryId: string; qty?: number; notes?: string },
+): Promise<{ id: string; name: string; qty: number }> {
+  const corpo: Record<string, unknown> = { name: opcoes.name, categoryId: opcoes.categoryId };
+  if (opcoes.qty !== undefined) corpo.qty = opcoes.qty;
+  if (opcoes.notes !== undefined) corpo.notes = opcoes.notes;
+
+  return exigir201('item de estoque', await api.post('/api/stock/items', corpo));
 }
 
 /**
