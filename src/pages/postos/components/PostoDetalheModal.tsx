@@ -303,18 +303,18 @@ export default function PostoDetalheModal({
                     {/* A FRASE OLHA A MARCA em vez de afirmar o que ela é.
                         Dois computadores num local SEM a marca é estado normal —
                         a sala de reunião. Num local COM a marca é estado que a
-                        invariante 19 recusa nas três portas, e que ainda assim é
-                        alcançável: restaurar da lixeira um ativo que já estava no
-                        posto não reconfere a regra. Dizer "a marca está
+                        invariante 19 recusa nas quatro portas, e que ainda assim
+                        pode existir: dado de antes da regra, ou a corrida da marca,
+                        que não trava a linha do local. Dizer "a marca está
                         desligada" nos dois casos seria mentir no segundo, que é
                         justamente o que precisa ser visto. */}
                     {detalhe?.isWorkstation ? (
                       <span>
                         Este posto tem {computadores.length} ativos com máquina, e um posto de
-                        trabalho tem no máximo UM. É estado que a regra recusa — ele só se alcança
-                        restaurando da lixeira um ativo que já estava aqui. Devolva os que não ficam
-                        nesta mesa. O painel acima é do {computadores[0].assetTag}; a telemetria de
-                        cada um está na ficha dele, na aba Máquina.
+                        trabalho tem no máximo UM. É estado que a regra recusa — ele vem de antes
+                        dela, ou de uma marca ligada no mesmo instante da segunda entrega. Devolva
+                        os que não ficam nesta mesa. O painel acima é do {computadores[0].assetTag};
+                        a telemetria de cada um está na ficha dele, na aba Máquina.
                       </span>
                     ) : (
                       <span>

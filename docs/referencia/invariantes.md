@@ -47,7 +47,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 13 | A mesma sugestão não empilha na fila | **banco** — índice único parcial `sugestao_pendente_por_alvo` | nada: o job trata o `P2002` como "outro já criou" |
 | 14 | A observação de uso é uma linha por (máquina, conta, dia) | **banco** — índice único `endpoint_user_daily` | nada: o `upsert` incrementa em vez de inserir |
 | 17 | Sempre existe alguém, com login, que é `ADMIN` | **aplicação** — `assertSobraAdministrador()`, DEPOIS da escrita e dentro da transação | 409 `Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. Dê o papel de Administrador a outra pessoa com login antes de seguir.` |
-| 19 | No máximo um computador por posto de trabalho | **aplicação** — três portas: as duas de posse e vínculo (`computadorDoPosto()`, com `FOR UPDATE` na linha do posto) e a da marca (`locationSpec.beforeWrite`) | 409 `Este posto de trabalho já tem um computador: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.` |
+| 19 | No máximo um computador por posto de trabalho | **aplicação** — quatro portas: as três de posse, vínculo e restauração da lixeira (`computadorDoPosto()`, com `FOR UPDATE` na linha do posto) e a da marca (`locationSpec.beforeWrite`) | 409 `Este posto de trabalho já tem um computador: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.` |
 
 ---
 
@@ -447,8 +447,8 @@ que não faz login não destrava nada.
 ### 19 — No máximo um computador por posto de trabalho
 
 ```ts
-// workstation/helpers/computador-do-posto.helper.ts, nas duas portas que
-// TRAVAM (posse e vínculo), dentro da transação
+// workstation/helpers/computador-do-posto.helper.ts, nas três portas que
+// TRAVAM (posse, vínculo e restauração da lixeira), dentro da transação
 const ocupante = await computadorDoPosto(tx, locationId, assetId);
 if (ocupante) throw new AppError(jaTemComputador(ocupante), 409);
 
@@ -481,13 +481,14 @@ confirmou, e as duas passam. É o mesmo furo que a invariante 6 fecha com
 explícita: `SELECT id FROM locations WHERE id = $1 FOR UPDATE` antes da leitura,
 na linha que as duas transações disputam.
 
-**São TRÊS portas, e nenhuma é redundante:**
+**São QUATRO portas, e nenhuma é redundante:**
 
 | porta | o que ela impede |
 | --- | --- |
 | `checkout-asset.usecase.ts` | entregar ao posto um ativo que já tem máquina, quando o posto já tem computador |
 | `link-endpoint-asset.usecase.ts` | vincular máquina a um ativo que já está num posto que tem computador |
 | `locationSpec.beforeWrite` | **marcar como posto** um local que já tem mais de um computador |
+| `restore-asset.usecase.ts` | **restaurar da lixeira** um computador cuja posse aberta aponta para um posto que, enquanto ele estava fora, recebeu outro |
 
 Sem a segunda, a regra seria contornável pela ordem: entregar ao posto o desktop
 **sem** agente — que não é computador e passa —, e vincular a máquina depois.
@@ -498,6 +499,13 @@ sala de reunião, onde a regra não vale, e marcar a sala como posto depois. É
 já tem exatamente um computador é legítimo, e é como um posto nasce com o
 equipamento já lá. A guarda só dispara na TRANSIÇÃO — um PUT que não menciona a
 marca, ou que a reafirma, não passa por ela.
+
+Sem a quarta, seria contornável pela lixeira: o `delete-asset` só carimba
+`deletedAt` e **não fecha a posse**, e as três outras portas ignoram o ativo na
+lixeira de propósito — um ativo que nenhuma tela mostra não pode trancar a mesa.
+Juntas, as duas decisões abrem o caminho: a vaga é ocupada enquanto o computador
+está na lixeira, e restaurá-lo o devolve a uma mesa que já não tem lugar para
+ele. A porta reconfere na volta, com o mesmo helper e a mesma frase.
 
 **Note o que ela NÃO proíbe:** monitor, teclado e periférico no mesmo posto, sem
 limite (o modelo de posse descreve a mesa com vários ativos, e a Camada 3 resolve
@@ -517,8 +525,9 @@ que são as que recebem tráfego, continuam travando.
 
 > **A regra é testada, não argumentada.** `tests/invariantes/computador-por-posto.test.ts`
 > cobre as duas primeiras portas, o monitor que entra num posto que já tem
-> computador, e os dois computadores na sala de reunião;
-> `…-trocas.test.ts` cobre os quatro caminhos que liberam a vaga;
+> computador, os dois computadores na sala de reunião, os quatro caminhos que
+> liberam a vaga e a quarta porta — a restauração recusada, e a aceita quando a
+> vaga continua livre ou o ativo não é computador;
 > `…-marca.test.ts` cobre a terceira porta, incluindo a sala com UM computador
 > que vira posto e o PUT que não menciona a marca. **A corrida também:**
 > `tests/corridas/computador-por-posto.test.ts` dispara duas entregas simultâneas

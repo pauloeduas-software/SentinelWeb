@@ -32,6 +32,9 @@ import { criarAtivo, criarFabricante, criarModelo, idsDoSeed } from '../helpers/
 // ela não guarda a entrada do computador no posto, guarda a transição da marca,
 // e tem cenário próprio (salas sem marca, local na lixeira, PUT que não menciona
 // a marca).
+//
+// A QUARTA — restaurar da lixeira — está no terceiro `describe` daqui, porque é
+// a entrada do computador no posto outra vez, só que pela porta de trás.
 
 let api: ApiDeTeste;
 let seed: Awaited<ReturnType<typeof idsDoSeed>>;
@@ -260,5 +263,60 @@ describe('invariante 19 — o que libera a vaga do posto', () => {
     expect((await api.post(`/api/assets/${velho.id}/checkin`, {})).status).toBe(200);
 
     expect((await entregarAoPosto(novo.id, posto)).status).toBe(201);
+  });
+});
+
+describe('invariante 19 — a QUARTA porta: restaurar da lixeira', () => {
+  // O `delete-asset` só carimba `deletedAt` e NÃO fecha a posse, e as outras
+  // três portas ignoram o ativo na lixeira de propósito (é o caso "ativo na
+  // LIXEIRA com posse aberta não tranca o posto", acima). Juntas, as duas
+  // decisões abrem o caminho: a vaga é ocupada enquanto o ativo está na lixeira,
+  // e restaurá-lo o devolve a uma mesa que já não tem lugar para ele.
+  it('recusa restaurar o computador de um posto que recebeu outro enquanto ele estava na lixeira', async () => {
+    const posto = await criarPosto('Mesa da Restauração');
+
+    const antigo = await ativo('Desktop que foi para a lixeira com posse');
+    await darMaquinaOuFalhar(antigo.id, 'restaura-antigo');
+    expect((await entregarAoPosto(antigo.id, posto)).status).toBe(201);
+    expect((await api.delete(`/api/assets/${antigo.id}`)).status).toBe(200);
+
+    const novo = await ativo('Desktop que entrou no lugar');
+    await darMaquinaOuFalhar(novo.id, 'restaura-novo');
+    expect((await entregarAoPosto(novo.id, posto)).status).toBe(201);
+
+    const { status, body } = await api.post<{ error: string; assetId?: string }>(
+      `/api/assets/${antigo.id}/restore`,
+    );
+
+    expect(status).toBe(409);
+    // A MESMA frase das outras portas, nomeando quem já está lá.
+    expect(body.error).toContain(novo.assetTag);
+    expect(body.error).toMatch(/j[áa] tem um computador/i);
+    expect(body.assetId).toBe(novo.id);
+
+    // E nada foi gravado: o ativo continua na lixeira. `findUnique` porque o
+    // escopo da lixeira não o alcança — é justamente o que se quer ler aqui.
+    const depois = await prisma.asset.findUnique({ where: { id: antigo.id }, select: { deletedAt: true } });
+    expect(depois?.deletedAt).not.toBeNull();
+  });
+
+  it('restaura quando a vaga continua livre — e sempre, quando o ativo não é computador', async () => {
+    const posto = await criarPosto('Mesa da Restauração Livre');
+
+    const computador = await ativo('Desktop que volta da lixeira');
+    await darMaquinaOuFalhar(computador.id, 'restaura-livre');
+    expect((await entregarAoPosto(computador.id, posto)).status).toBe(201);
+    expect((await api.delete(`/api/assets/${computador.id}`)).status).toBe(200);
+
+    // Enquanto ele estava fora, só entrou um monitor: a vaga de computador
+    // continua dele.
+    const monitor = await ativo('Monitor que entrou enquanto isso');
+    expect((await entregarAoPosto(monitor.id, posto)).status).toBe(201);
+    expect((await api.post(`/api/assets/${computador.id}/restore`)).status).toBe(200);
+
+    // O monitor na lixeira volta mesmo com a mesa cheia de computador: a regra
+    // é sobre computador, e ele não é um.
+    expect((await api.delete(`/api/assets/${monitor.id}`)).status).toBe(200);
+    expect((await api.post(`/api/assets/${monitor.id}/restore`)).status).toBe(200);
   });
 });

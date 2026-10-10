@@ -55,8 +55,9 @@ export const locationSpec: CatalogSpec = {
 
   // A TERCEIRA PORTA DA INVARIANTE 19.
   //
-  // As outras duas defendem a ESCRITA de posse e de vínculo
-  // (`checkout-asset.usecase.ts` e `link-endpoint-asset.usecase.ts`). Faltava a
+  // As duas primeiras defendem a ESCRITA de posse e de vínculo
+  // (`checkout-asset.usecase.ts` e `link-endpoint-asset.usecase.ts`), e a quarta
+  // a volta da lixeira (`asset/use-cases/restore-asset.usecase.ts`). Faltava a
   // marca: sem esta guarda, uma sala com dois computadores virava posto de
   // trabalho em uma requisição, e a invariante ficava falsa no banco sem nada
   // ter falhado — numa página que promete fatos que nunca são falsos.
