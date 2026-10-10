@@ -24,7 +24,6 @@ export interface User {
    * Sem ele, o `<select>` de gestor abriria vazio ao editar e gravaria `null` —
    * editar o nome de alguém apagaria o gestor dela em silêncio.
    */
-  managerId?: string | null;
   createdAt: string;
 }
 
@@ -78,7 +77,6 @@ export interface UserDetail extends User {
    * ⚠️ NUNCA quem responde pelo ativo dela (D72). Responsabilidade por
    * equipamento é *quem está com ele*, e sai de `posse.responsaveis`.
    */
-  manager: Referencia | null;
   posseAberta: PosseAbertaDoUsuario;
 
 }

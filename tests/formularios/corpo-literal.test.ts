@@ -169,17 +169,12 @@ describe('PUT /api/assets/:id com o corpo literal do formulário de edição', (
 });
 
 describe('POST /api/users com o corpo literal do UserFormModal', () => {
-  /**
-   * Cópia fiel de `src/pages/gestao-usuario/components/UserFormModal.tsx`.
-   *
-   * A conversão `'' → null` é do formulário — o `<select>` sem escolha manda
-   * string vazia, e o zod do servidor espera uuid ou nulo.
-   */
+  /** Cópia fiel de `src/pages/gestao-usuario/components/UserFormModal.tsx`. */
   function corpoDoFormularioDeUsuario(sobrescrever: Record<string, unknown> = {}) {
-    return { name: '', email: '', managerId: null, ...sobrescrever };
+    return { name: '', email: '', role: 'USUARIO', ...sobrescrever };
   }
 
-  it('aceita gestor nulo', async () => {
+  it('aceita o corpo mínimo da tela', async () => {
     const { status, body } = await api.post<Record<string, unknown>>(
       '/api/users',
       corpoDoFormularioDeUsuario({ name: 'Laura Souza', email: 'laura.formulario@teste.local' }),

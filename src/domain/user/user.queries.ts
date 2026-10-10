@@ -20,7 +20,6 @@ export interface UserInput {
   role?: 'USUARIO' | 'TECNICO' | 'ADMIN';
   /** O id do departamento (F11, Etapa D) — era texto livre até a F10. */
   /** Quem cobra a pessoa. Nunca quem responde pelo ativo dela (D72). */
-  managerId?: string | null;
   employeeNumber?: string | null;
   jobTitle?: string | null;
   phone?: string | null;

@@ -28,29 +28,13 @@ export const USER_PUBLIC_SELECT = {
 export const USER_LIST_SELECT = {
   ...USER_PUBLIC_SELECT,
 
-  // O PAPEL, e ele está aqui pelo MESMO defeito concreto que trouxe o
-  // `managerId` abaixo — não por completude.
+  // O PAPEL, e ele está aqui por um defeito concreto, não por completude.
   //
   // O formulário abre da listagem e edita o papel. Sem este campo, o `<select>`
   // dele inicializaria em `USUARIO` e **gravaria** `USUARIO`: corrigir o e-mail
   // de um administrador o rebaixaria, em silêncio. A rede do
   // `ultimo-administrador.ts` pegaria o caso do ÚLTIMO; os outros passariam.
   role: true,
-
-  // `managerId` CRU, sem join — e ele está aqui por um defeito concreto, não por
-  // completude.
-  //
-  // O formulário de cadastro abre da listagem e edita o gestor. Sem este campo,
-  // o `<select>` dele inicializaria vazio e **gravaria null**: editar o nome de
-  // alguém apagaria o gestor dela, calado. É o formulário que limpa o que não
-  // mostrou, e a forma de impedi-lo é a listagem trazer o que o formulário
-  // edita.
-  //
-  // CRU e não `manager: { select: { name } }` porque a tabela não mostra o nome
-  // do gestor — só o formulário precisa dele, e ali o `ReferenceSelect` resolve
-  // o nome a partir do id pelo `/options`. Um join por linha para um dado que a
-  // tela não exibe é o que o D135 acabou de tirar daqui.
-  managerId: true,
 } as const;
 
 // O MESMO usuário, mais o estado do vínculo com a empresa — para a tela de
@@ -81,10 +65,6 @@ export const USER_DETAIL_SELECT = {
   phone: true,
   address: true,
   hiredAt: true,
-
-  // O GESTOR DA PESSOA — quem a cobra, e nunca quem responde pelo ativo dela
-  // (D72). Vem com nome porque a tela mostra "responde a Ana Lima".
-  manager: { select: { id: true, name: true } },
 
   // ── DE ONDE VEM ESTA IDENTIDADE (F11, Etapa I — D78) ─────────────────────
   //

@@ -3,12 +3,6 @@ import { AppError } from '../../../core/errors/app-error';
 import { USER_DETAIL_SELECT } from '../helpers/user-select.helper';
 import { contarPosseAberta, type PosseAbertaDoUsuario } from './count-user-posse.usecase';
 
-/** `{ id, name }` — como departamento e gestor saem para a tela. */
-interface Referencia {
-  id: string;
-  name: string;
-}
-
 /**
  * UM colaborador, com o placar do que ainda o prende ao inventário.
  *
@@ -43,7 +37,6 @@ export interface UsuarioComPosse {
    * mas navega pelo id. A coluna de texto que ocupava este nome caiu na Etapa J.
    */
   /** Quem COBRA esta pessoa. Nunca quem responde pelo ativo dela (D72). */
-  manager: Referencia | null;
   posseAberta: PosseAbertaDoUsuario;
 }
 
