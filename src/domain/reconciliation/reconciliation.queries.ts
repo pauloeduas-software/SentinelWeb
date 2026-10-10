@@ -8,7 +8,7 @@ import { workstationKeys } from '../workstation/workstation.queries';
 import type { ListEnvelope } from '../shared/list.types';
 import type {
   AtivoOcioso, Cobertura, ConfiguracaoDaDescoberta, MaquinaDoAtivo,
-  ReviewState, Sugestao,
+  ResultadoDaVarredura, ReviewState, Sugestao,
 } from '../shared/reconciliation.types';
 
 // A CONVERGÊNCIA RMM × ITAM (docs/historico/fase-07-convergencia-rmm-itam.md).
@@ -154,6 +154,21 @@ export function useVincularEEntregar() {
     }) => (await apiClient.post(`/endpoints/${endpointId}/link-and-checkout`, { assetId, targetLocationId })).data,
     onSuccess: invalidarComPosto,
     onError: invalidarComPosto,
+  });
+}
+
+/**
+ * RECONCILIAR AGORA — `POST /api/reconciliation/run`.
+ *
+ * A varredura inteira, fora da janela do job. Invalida tudo o que uma rodada
+ * muda: a fila e a cobertura, as máquinas (vínculo automático em `ON`) e os
+ * ativos (o carimbo do último contato).
+ */
+export function useReconciliarAgora() {
+  const invalidar = useInvalidarTudo();
+  return useMutation({
+    mutationFn: async () => (await apiClient.post<ResultadoDaVarredura>('/reconciliation/run')).data,
+    onSuccess: invalidar,
   });
 }
 

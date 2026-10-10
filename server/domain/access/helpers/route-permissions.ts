@@ -109,6 +109,8 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   'GET /api/reconciliation/coverage': 'TECNICO',
   'GET /api/reconciliation/idle': 'TECNICO',
   'GET /api/reconciliation/suggestions': 'TECNICO',
+  // Varrer a frota inteira é operação de administração, não do chamado do dia.
+  'POST /api/reconciliation/run': 'ADMIN',
   'POST /api/reconciliation/suggestions/:id/accept': 'TECNICO',
   'POST /api/reconciliation/suggestions/:id/reject': 'TECNICO',
   'POST /api/endpoints/:id/link': 'TECNICO',

@@ -1,5 +1,6 @@
 import { executarUmaVezPorJanela } from '../../../core/jobs/claim-window';
 import { prisma } from '../../../core/database/prismaClient';
+import { AppError } from '../../../core/errors/app-error';
 import { createLogger } from '../../../core/logger/logger';
 import { reconciliarEndpoint, valoresRepetidosNoParque } from '../use-cases/match-endpoint.usecase';
 import { carimbarUltimoContatoNosAtivos } from '../use-cases/stamp-last-seen.usecase';
@@ -25,6 +26,16 @@ const INTERVALO_MS = 60 * 60 * 1000;
 
 let timer: NodeJS.Timeout | null = null;
 
+// UMA VARREDURA POR VEZ, neste processo.
+//
+// Duas chamadas simultâneas — o botão "Reconciliar agora" clicado duas vezes,
+// ou o botão no mesmo instante da rodada da hora — reencontrariam as mesmas
+// evidências ao mesmo tempo. O índice parcial da fila segura a duplicata
+// (`upsert-suggestion.usecase.ts`), então não seria dado errado; seria a mesma
+// varredura paga duas vezes, com um resultado que ninguém sabe de quem é. O
+// guarda é de processo, como o registro de agentes: o deploy é single-node.
+let emAndamento = false;
+
 /** O começo da hora corrente: a janela deste job. */
 export function inicioDaHora(): Date {
   const inicio = new Date();
@@ -32,17 +43,42 @@ export function inicioDaHora(): Date {
   return inicio;
 }
 
+export interface ResultadoDaVarredura {
+  endpoints: number;
+  sugeridas: number;
+  vinculadas: number;
+  encerradas: number;
+}
+
 /**
- * Uma rodada inteira. Exportada para o teste chamar sem `setInterval` — o
- * agendamento é do processo, o conteúdo é do domínio.
+ * Uma rodada inteira. Exportada para o teste chamar sem `setInterval`, e para
+ * a rota `POST /api/reconciliation/run` — o agendamento é do processo, o
+ * conteúdo é do domínio, e o botão da tela é um terceiro chamador do mesmo
+ * conteúdo, sem janela: quem clicou quer a varredura AGORA, não na próxima hora
+ * nem no próximo boot.
+ *
+ * 409 quando já há uma em andamento (ver `emAndamento`). É `AppError` e não
+ * `false` porque o chamador de produção é a rota, e o job trata a exceção no
+ * `catch` da janela como qualquer outra falha de rodada — a janela fica
+ * tomada, e a varredura que estava rodando já cobre a hora.
  *
  * A ORDEM IMPORTA: o carimbo do último contato vem primeiro porque ele é o que
  * alimenta a consulta de fantasma, e ele é barato (uma instrução para a frota
  * inteira). A reconciliação vem depois, máquina a máquina.
  */
-export async function rodarReconciliacao(): Promise<{
-  endpoints: number; sugeridas: number; vinculadas: number; encerradas: number;
-}> {
+export async function rodarReconciliacao(): Promise<ResultadoDaVarredura> {
+  if (emAndamento) {
+    throw new AppError('Já há uma varredura em andamento. Espere ela terminar.', 409);
+  }
+  emAndamento = true;
+  try {
+    return await executarVarredura();
+  } finally {
+    emAndamento = false;
+  }
+}
+
+async function executarVarredura(): Promise<ResultadoDaVarredura> {
   const carimbados = await carimbarUltimoContatoNosAtivos();
 
   // ── A LIMPEZA VEM PRIMEIRO (D110) ────────────────────────────────────────
