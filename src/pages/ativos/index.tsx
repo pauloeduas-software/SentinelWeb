@@ -17,7 +17,7 @@ export default function AtivosPage() {
     descomissionados, arquivados, page, perPage, setPage,
     search, changeSearch, view, changeView,
     statusId, statusFiltrado, toggleStatus, limparStatus,
-    modalAberto, emEdicao, clonando, openCreate, openEdit, openClone, closeModal, abrirDetalhe,
+    modalAberto, emEdicao, clonando, statusPadraoId, openCreate, openEdit, openClone, closeModal, abrirDetalhe,
     handleSubmit, handleDelete, handleRestore,
     emPosse, openPosse, closePosse, handleEntregar, handleDevolver,
   } = useAssets();
@@ -302,7 +302,13 @@ export default function AtivosPage() {
       </div>
 
       {modalAberto && (
-        <AssetFormModal asset={emEdicao} clonar={clonando} onClose={closeModal} onSubmit={handleSubmit} />
+        <AssetFormModal
+          asset={emEdicao}
+          clonar={clonando}
+          statusPadraoId={statusPadraoId}
+          onClose={closeModal}
+          onSubmit={handleSubmit}
+        />
       )}
 
       {emPosse && (
