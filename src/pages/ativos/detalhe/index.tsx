@@ -2,14 +2,13 @@ import { ArrowLeft, ArrowRightLeft, Copy, Edit2, PackageX, Trash2, Undo2 } from 
 import { Link } from 'react-router-dom';
 import AssetFormModal from '../components/AssetFormModal';
 import CheckoutModal from '../components/CheckoutModal';
-import AssetTabs, { AbaFutura } from './components/AssetTabs';
+import AssetTabs from './components/AssetTabs';
 import LicensesTab from './components/LicensesTab';
 import MaquinaTab from './components/MaquinaTab';
 import DetalhesTab from './components/DetalhesTab';
 import HistoryTab from './components/HistoryTab';
 import PosseTab from './components/PosseTab';
 import RetireModal from './components/RetireModal';
-import { ABAS } from './helpers/abas.helper';
 import { seloDaSaida } from '../helpers/descomissionamento.helper';
 import { rotuloDaOperacao } from '../helpers/posse.helper';
 import { useAssetDetail } from './hooks/useAssetDetail';
@@ -53,7 +52,6 @@ export default function AssetDetailPage() {
 
   // Cálculo fora do JSX (docs/referencia/arquitetura.md).
   const selo = seloDaSaida(asset);
-  const abaAtual = ABAS.find((item) => item.id === aba);
 
   return (
     <div className="animate-in fade-in duration-300 space-y-6 pb-6">
@@ -142,11 +140,6 @@ export default function AssetDetailPage() {
             onDesvincular={handleDesvincular}
           />
         )}
-
-        {/* As abas de fase futura são desabilitadas na barra; este ramo existe
-            para a tela continuar íntegra se alguma delas for aberta por outro
-            caminho. */}
-        {abaAtual?.fase && <AbaFutura rotulo={abaAtual.rotulo} fase={abaAtual.fase} />}
       </div>
 
       {(modal === 'editar' || modal === 'clonar') && (
