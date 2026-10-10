@@ -14,6 +14,12 @@ export interface User {
    * `USUARIO` e gravaria `USUARIO` — corrigir um e-mail rebaixaria a pessoa.
    */
   role: 'USUARIO' | 'TECNICO' | 'ADMIN';
+  /**
+   * Está ativa na empresa? Vem na listagem pelo mesmo motivo do papel: o
+   * formulário edita este campo, e sem ele o checkbox nasceria marcado e
+   * reativaria quem foi desativado.
+   */
+  isActive: boolean;
   id: string;
   name: string;
   email: string;
@@ -49,22 +55,18 @@ export interface PosseAbertaDoUsuario {
 /**
  * UM colaborador, como `GET /api/users/:id` o devolve — a tela de perfil.
  *
- * Tem dois campos que a LISTAGEM não traz, e a diferença é proposital: eles
- * existem para a tela de perfil, e viajariam em cada
- * linha de cada histórico se entrassem no `USER_PUBLIC_SELECT` do servidor.
+ * Os campos daqui que a LISTAGEM não traz são proposital: eles existem para
+ * esta tela, e viajariam em cada linha de cada histórico se entrassem no
+ * `USER_PUBLIC_SELECT` do servidor.
  *
- * `terminatedAt` NÃO é lixeira. Quem saiu da empresa continua no cadastro, com
- * o histórico de posse apontando para ele; `deletedAt` (que nem chega aqui) é
+ * DESATIVAR NÃO É LIXEIRA. Quem saiu da empresa continua no cadastro, com o
+ * histórico de posse apontando para ele; `deletedAt` (que nem chega aqui) é
  * para cadastro criado errado. Confundir os dois é perder a única prova de quem
  * estava com o equipamento.
  */
 export interface UserDetail extends User {
-  isActive: boolean;
-  /** ISO da saída, ou `null` para quem continua na empresa. */
-  terminatedAt: string | null;
 
-  // A IDENTIDADE (F11, Etapa E). Só nesta leitura, pelo mesmo motivo de
-  // `isActive`/`terminatedAt`.
+  // A IDENTIDADE (F11, Etapa E). Só nesta leitura.
   employeeNumber: string | null;
   jobTitle: string | null;
   phone: string | null;

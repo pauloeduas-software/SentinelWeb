@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { dataOpcional, textoOpcional } from '../../shared/fields.schema';
+import { booleano, dataOpcional, textoOpcional } from '../../shared/fields.schema';
 
 // Contrato de entrada das rotas de usuário. `strictObject` pelo mesmo motivo do
 // inventário: campo desconhecido vira 422, não gravação silenciosa.
@@ -59,9 +59,20 @@ export const createUserSchema = z.strictObject({
   ...camposDeIdentidade,
 });
 
+/**
+ * SÓ NA EDIÇÃO: quem acabou de ser cadastrado nasce ativo pelo `@default` da
+ * coluna, e um `isActive: false` na criação seria cadastrar alguém já desligado
+ * — operação que não existe.
+ *
+ * Desativar é o que impede novas entregas: o `checkoutAsset` e o
+ * `checkoutSeat` recusam alvo inativo com 409, e a releitura de sessão
+ * (`current-user.usecase.ts`) derruba a sessão de quem foi desativado na
+ * requisição seguinte. Não é lixeira: o cadastro fica, com o histórico inteiro.
+ */
 export const updateUserSchema = z.strictObject({
   name: nome.optional(),
   email: email.optional(),
   role: papel.optional(),
+  isActive: booleano('ativo').optional(),
   ...camposDeIdentidade,
 });

@@ -46,7 +46,6 @@ const ROTULO_DO_CAMPO: Record<string, string> = {
   username: 'Usuário de acesso',
   credencial: 'Credencial',
   isActive: 'Ativo',
-  terminatedAt: 'Desligamento',
   // Gravados pelo `OFFBOARD`: é o placar do que a operação fechou.
   ativosDevolvidos: 'Ativos devolvidos',
   ocupacoesEncerradas: 'Postos desocupados',

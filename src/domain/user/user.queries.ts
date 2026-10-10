@@ -18,8 +18,8 @@ export interface UserInput {
   email: string;
   /** O papel (D148). Ausente, numa criação, nasce `USUARIO` pelo `@default`. */
   role?: 'USUARIO' | 'TECNICO' | 'ADMIN';
-  /** O id do departamento (F11, Etapa D) — era texto livre até a F10. */
-  /** Quem cobra a pessoa. Nunca quem responde pelo ativo dela (D72). */
+  /** SÓ na edição: desativar impede entrega nova e derruba a sessão da pessoa. */
+  isActive?: boolean;
   employeeNumber?: string | null;
   jobTitle?: string | null;
   phone?: string | null;
