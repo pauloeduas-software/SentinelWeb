@@ -7,8 +7,12 @@ import type { ListEnvelope } from '../shared/list.types';
 // a string que a query usou.
 export const endpointKeys = {
   all: ['endpoints'] as const,
+  lista: (vinculo: Vinculo | undefined) => ['endpoints', 'lista', vinculo ?? 'todas'] as const,
   detalhe: (id: string) => ['endpoints', 'detalhe', id] as const,
 };
+
+/** O recorte de `GET /api/endpoints?vinculo=`: `com` ativo, ou `sem`. */
+export type Vinculo = 'com' | 'sem';
 
 // Ritmo da revalidação. O agente manda amostra a cada poucos segundos; abaixo
 // disso só geraria requisição sem dado novo.
@@ -18,17 +22,21 @@ const POLL_INTERVAL_MS = 5_000;
  * Máquinas descobertas pelo agente, com a amostra de telemetria mais recente.
  * Revalida sozinha: não há `setInterval` nem limpeza de timer para manter.
  *
- * Quem a consome é `/descobertas`, para separar as máquinas sem cadastro. A tela
- * que mostrava a frota inteira em cards saiu, e com ela o único leitor que
+ * Quem a consome é `/descobertas`, nas DUAS listas — as máquinas sem vínculo e
+ * as vinculadas —, e o recorte é do SERVIDOR (`?vinculo=`), não um `filter` em
+ * memória sobre a frota inteira: o filtro existia desde a F7 e a tela nunca o
+ * usou. A tela que mostrava a frota em cards saiu, e com ela o único leitor que
  * precisava da amostra de TODAS — por isso a telemetria de uma máquina tem
  * consulta própria abaixo.
  */
-export function useEndpointsQuery() {
+export function useEndpointsQuery(vinculo?: Vinculo) {
   return useQuery({
-    queryKey: endpointKeys.all,
+    queryKey: endpointKeys.lista(vinculo),
     // A API responde no envelope `{ total, rows }` em todas as listagens;
     // `/descobertas` usa só as linhas.
-    queryFn: async () => (await apiClient.get<ListEnvelope<Endpoint>>('/endpoints')).data.rows,
+    queryFn: async () => (
+      await apiClient.get<ListEnvelope<Endpoint>>('/endpoints', { params: vinculo ? { vinculo } : {} })
+    ).data.rows,
     refetchInterval: POLL_INTERVAL_MS,
   });
 }

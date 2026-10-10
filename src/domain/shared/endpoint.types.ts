@@ -38,6 +38,11 @@ export interface Endpoint {
 
   /** O vínculo com o patrimônio (D45). Nulo = máquina sem cadastro. */
   assetId?: string | null;
+  /**
+   * O ativo do vínculo, identificado: é a coluna da lista de máquinas
+   * vinculadas, e a etiqueta leva à ficha. `null` quando não há vínculo.
+   */
+  asset: { id: string; assetTag: string; name: string | null } | null;
   reviewState?: ReviewState;
 
   /** Só a amostra mais recente: a API devolve `take: 1`. */

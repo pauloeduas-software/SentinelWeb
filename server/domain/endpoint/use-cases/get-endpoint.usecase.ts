@@ -1,6 +1,8 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { presentEndpoint, type PresentedEndpoint } from '../helpers/present-endpoint.helper';
+import {
+  ATIVO_DA_MAQUINA_SELECT, presentEndpoint, type PresentedEndpoint,
+} from '../helpers/present-endpoint.helper';
 
 /**
  * UMA máquina, com a amostra de telemetria mais recente.
@@ -43,6 +45,7 @@ export async function getEndpoint(id: string): Promise<PresentedEndpoint> {
       // `(endpointId, timestamp DESC)`: sem ele, cada poll de cada tela aberta
       // era uma varredura sequencial desta tabela.
       telemetries: { orderBy: { timestamp: 'desc' }, take: 1 },
+      asset: ATIVO_DA_MAQUINA_SELECT,
     },
   });
 

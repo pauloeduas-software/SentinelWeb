@@ -44,6 +44,7 @@ interface Maquina {
   id: string;
   hostname: string;
   assetId: string | null;
+  asset: { id: string; assetTag: string; name: string | null } | null;
   reviewState: string;
 }
 
@@ -80,6 +81,14 @@ describe('o filtro de vínculo', () => {
     const com = await listar('?vinculo=com');
     expect(com.body.rows.map((linha) => linha.id)).toContain(comCadastro);
     expect(com.body.rows.map((linha) => linha.id)).not.toContain(semCadastro);
+
+    // O ATIVO VEM NA LINHA, e não só o `assetId`: a lista de máquinas
+    // vinculadas mostra a etiqueta, e um uuid não é coluna que alguém leia.
+    // `null` (e não ausente) na máquina sem vínculo: é "não tem", não "a tela
+    // não sabe" — `toBeNull` recusa `undefined`.
+    const vinculada = com.body.rows.find((linha) => linha.id === comCadastro);
+    expect(vinculada?.asset).toEqual({ id: ativo.id, assetTag: ativo.assetTag, name: 'Ativo da listagem' });
+    expect(sem.body.rows.find((linha) => linha.id === semCadastro)?.asset).toBeNull();
 
     // E o total sem filtro é a soma dos dois: um filtro que não fecha a conta
     // está escondendo linha.

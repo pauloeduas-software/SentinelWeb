@@ -48,6 +48,17 @@ export class ReconciliationMaestro {
     server.post('/api/endpoints/:id/link', DESTRUCTIVE_RATE_LIMIT, reconciliationController.link);
     server.delete('/api/endpoints/:id/link', DESTRUCTIVE_RATE_LIMIT, reconciliationController.unlink);
 
+    // VINCULAR E ENTREGAR AO POSTO numa operação — o cadastro do computador
+    // novo de ponta a ponta, a partir de `/descobertas`. Rota própria e não um
+    // campo a mais no `link`: o corpo do vínculo é UMA afirmação (esta máquina
+    // é aquele ativo), e a entrega é outra operação, com outra guarda e outro
+    // histórico. Teto de destrutiva pelo mesmo motivo do `link`.
+    server.post(
+      '/api/endpoints/:id/link-and-checkout',
+      DESTRUCTIVE_RATE_LIMIT,
+      reconciliationController.linkAndCheckout,
+    );
+
     server.patch('/api/endpoints/:id/review', WRITE_RATE_LIMIT, reconciliationController.review);
 
     // A ABA MÁQUINA. Pendura em `/api/assets/:id` como as rotas de ocupação

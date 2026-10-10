@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   useAceitarSugestao, useCoberturaQuery, useConfiguracaoDaDescobertaQuery,
   useOciososQuery, useRecusarSugestao, useSalvarConfiguracaoDaDescoberta,
-  useSugestoesQuery, useTriarMaquina,
+  useSugestoesQuery, useTriarMaquina, useVincularEEntregar, useVincularMaquina,
 } from '../../../domain/reconciliation/reconciliation.queries';
 import { useEndpointsQuery } from '../../../domain/endpoint/endpoint.queries';
 import type { ConfiguracaoDaDescoberta, ReviewState } from '../../../domain/shared/reconciliation.types';
@@ -10,7 +10,12 @@ import type { ConfiguracaoDaDescoberta, ReviewState } from '../../../domain/shar
 // O ESTADO DA TELA DE DESCOBERTAS. A página é markup e mais nada
 // (docs/referencia/arquitetura.md).
 
-export type AbaDaTela = 'fila' | 'orfaos' | 'ociosos';
+/**
+ * As quatro abas. `sem` e `com` são as DUAS LISTAS de máquinas — o que o agente
+ * vê e o cadastro não sabe, e o que já é patrimônio —, e são o recorte do
+ * servidor (`?vinculo=`), não um `filter` sobre a frota inteira.
+ */
+export type AbaDaTela = 'fila' | 'sem' | 'com' | 'ociosos';
 
 export function useDescobertas() {
   const [aba, setAba] = useState<AbaDaTela>('fila');
@@ -20,11 +25,14 @@ export function useDescobertas() {
   const cobertura = useCoberturaQuery();
   const ociosos = useOciososQuery(30);
   const configuracao = useConfiguracaoDaDescobertaQuery();
-  const endpoints = useEndpointsQuery();
+  const semVinculo = useEndpointsQuery('sem');
+  const vinculadas = useEndpointsQuery('com');
 
   const aceitar = useAceitarSugestao();
   const recusar = useRecusarSugestao();
   const triar = useTriarMaquina();
+  const vincular = useVincularMaquina();
+  const vincularEEntregar = useVincularEEntregar();
   const salvarConfiguracao = useSalvarConfiguracaoDaDescoberta();
 
   /**
@@ -55,17 +63,33 @@ export function useDescobertas() {
     ociosos: ociosos.data?.rows ?? [],
     configuracao: configuracao.data,
 
-    // Os órfãos saem da MESMA consulta da listagem de máquinas: máquina
-    // sem `assetId` é a definição de órfão, e uma rota nova só para filtrar o
-    // que já está em memória seria uma segunda fonte para o mesmo fato.
-    orfaos: (endpoints.data ?? []).filter((endpoint) => !endpoint.assetId),
+    semVinculo: semVinculo.data ?? [],
+    vinculadas: vinculadas.data ?? [],
+    carregandoMaquinas: semVinculo.isLoading || vinculadas.isLoading,
 
-    ocupado: aceitar.isPending || recusar.isPending || triar.isPending,
+    ocupado: aceitar.isPending || recusar.isPending || triar.isPending
+      || vincular.isPending || vincularEEntregar.isPending,
 
     handleAceitar: (id: string) => void comErro(() => aceitar.mutateAsync(id)),
     handleRecusar: (id: string) => void comErro(() => recusar.mutateAsync(id)),
     handleTriar: (id: string, reviewState: ReviewState) =>
       void comErro(() => triar.mutateAsync({ id, reviewState })),
+
+    /**
+     * VINCULAR À MÃO, e opcionalmente ENTREGAR ao posto na mesma ida.
+     *
+     * PROPAGA em vez de passar pelo `comErro`: o formulário é inline, na linha
+     * da máquina, e é lá que a recusa precisa aparecer — "este posto já tem um
+     * computador", ou "a máquina foi vinculada, mas a entrega não aconteceu".
+     * A faixa de erro no topo da tela ficaria longe de quem clicou.
+     */
+    handleVincular: async (endpointId: string, assetId: string, targetLocationId: string | null) => {
+      if (targetLocationId) {
+        await vincularEEntregar.mutateAsync({ endpointId, assetId, targetLocationId });
+      } else {
+        await vincular.mutateAsync({ endpointId, assetId });
+      }
+    },
 
     /**
      * Salva um pedaço da configuração — e o corpo é PARCIAL de propósito.

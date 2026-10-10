@@ -18,6 +18,12 @@ export const vinculoSchema = z.strictObject({
   assetId: uuidObrigatorio('ativo'),
 });
 
+/** Vincular e entregar ao posto numa operação (`link-and-checkout.usecase.ts`). */
+export const vinculoComEntregaSchema = z.strictObject({
+  assetId: uuidObrigatorio('ativo'),
+  targetLocationId: uuidObrigatorio('posto'),
+});
+
 export const triagemSchema = z.strictObject({
   reviewState: z.enum(['UNREVIEWED', 'ALLOWED', 'BLOCKED'], 'situação inválida'),
 });
