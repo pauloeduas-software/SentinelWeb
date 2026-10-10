@@ -1,8 +1,10 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { parseListQuery } from '../../../core/http/list-query';
-import { endpointFilterSchema, hwidParamSchema, sendCommandSchema } from '../schemas/endpoint.schema';
+import { endpointFilterSchema, sendCommandSchema } from '../schemas/endpoint.schema';
+import { idParamSchema } from '../../shared/params.schema';
 import { ENDPOINT_SORTABLE } from '../helpers/endpoint-filters.helper';
 import { listEndpoints } from '../use-cases/list-endpoints.usecase';
+import { getEndpoint } from '../use-cases/get-endpoint.usecase';
 import { sendCommand } from '../use-cases/send-command.usecase';
 
 // Só HTTP: lê a requisição, chama o use-case, devolve a resposta. Sem
@@ -48,11 +50,16 @@ export const endpointController = {
     return listEndpoints(query, filtros);
   },
 
+  async detail(request: FastifyRequest) {
+    const { id } = idParamSchema.parse(request.params);
+    return getEndpoint(id);
+  },
+
   async command(request: FastifyRequest, reply: FastifyReply) {
-    const { hwid } = hwidParamSchema.parse(request.params);
+    const { id } = idParamSchema.parse(request.params);
     const { action } = sendCommandSchema.parse(request.body ?? {});
 
-    const { commandId } = await sendCommand(hwid, action);
+    const { commandId } = await sendCommand(id, action);
     return reply.status(200).send({ message: 'Comando enviado.', commandId });
   },
 };

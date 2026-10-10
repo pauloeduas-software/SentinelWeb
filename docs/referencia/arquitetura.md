@@ -134,7 +134,8 @@ resposta de erro.
 
 | Situação | Vira | Quem faz |
 |---|---|---|
-| `AppError('Agente offline.', 404)` | 404 + a mensagem | use-case |
+| `AppError('Máquina não encontrada.', 404)` | 404 + a mensagem | use-case |
+| `AppError('O agente de … não está conectado agora.', 409)` | 409 + a mensagem | use-case |
 | Prisma `P2025` (não achou) | 404 "Registro não encontrado" | error-handler |
 | Prisma `P2002` (unique) | 409 "Registro já existe" | error-handler |
 | JSON malformado / corpo grande | 400 / 413 | error-handler |
