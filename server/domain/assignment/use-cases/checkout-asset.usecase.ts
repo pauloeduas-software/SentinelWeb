@@ -302,10 +302,11 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
       );
     }
 
-    // NO MÁXIMO UM COMPUTADOR POR POSTO — a primeira das duas portas; a outra é
-    // o vínculo de máquina a ativo (`link-endpoint-asset.usecase.ts`). Depois de
-    // todas as recusas baratas, e DENTRO da transação: não há índice único
-    // embaixo, porque a regra cruza três tabelas.
+    // NO MÁXIMO UM COMPUTADOR POR POSTO — a primeira das TRÊS portas; as outras
+    // são o vínculo de máquina a ativo (`link-endpoint-asset.usecase.ts`) e a
+    // marca de posto (`catalog/specs/location.spec.ts`). Depois de todas as
+    // recusas baratas, e DENTRO da transação: não há índice único embaixo,
+    // porque a regra cruza três tabelas.
     //
     // Só quando o ativo que está entrando É um computador. Monitor, teclado e
     // periférico entram sem limite, e o helper devolve `null` para local que não
