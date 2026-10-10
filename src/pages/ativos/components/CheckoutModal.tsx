@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRightLeft, HardDrive, MapPin, TriangleAlert, Undo2, User, X } from 'lucide-react';
+import { ArrowRightLeft, MapPin, TriangleAlert, Undo2, User, X } from 'lucide-react';
 import ReferenceSelect from '../../components/ReferenceSelect';
 import { montarDevolucao, montarEntrega, resumoDaPosse, type ResumoPosse } from '../helpers/posse.helper';
 import type { CheckinInput, CheckoutInput } from '../../../domain/assignment/assignment.queries';
@@ -25,9 +25,12 @@ const CLASSE_CAMPO =
 const ROTULO = 'text-text-secondary uppercase tracking-widest text-[10px]';
 
 /**
- * As TRÊS abas do seletor de alvo. Cada uma é um `targetType` do contrato, e a
+ * As DUAS abas do seletor de alvo. Cada uma é um `targetType` do contrato, e a
  * `ajuda` explica a diferença no momento da escolha — que é quando a dúvida
  * aparece, e é o mesmo padrão dos `<select>` de Configurações.
+ *
+ * Não há aba "Ativo": ativo é computador, e um computador não é entregue a
+ * outro. O que acompanha a máquina (dock, monitor, cabo) é estoque.
  *
  * `rota` é o slug de `/options`. Para pessoas é `users` (GET /api/users/options,
  * server/domain/user/user.maestro.ts) — não `people` nem `colaboradores`.
@@ -54,17 +57,7 @@ const ABAS: readonly {
     icone: MapPin,
     rota: 'locations',
     rotuloAlvo: 'Localização',
-    ajuda: 'A posse fica no LUGAR. Quem responde são os ocupantes dele — podem ser vários, em turnos diferentes. Os ocupantes de cada posto se gerenciam em Configurações › Localizações.',
-  },
-  {
-    tipo: 'ASSET',
-    rotulo: 'Ativo',
-    icone: HardDrive,
-    // Espelho de `/api/assets/options`, a rota de opções de ativo da F4. As
-    // outras duas já existem; esta chega junto com o checkout no servidor.
-    rota: 'assets',
-    rotuloAlvo: 'Ativo detentor',
-    ajuda: 'O ativo passa a acompanhar outro — a dock presa ao notebook. Quem responde por ele é quem responde pelo ativo detentor.',
+    ajuda: 'A posse fica no LUGAR. Quem responde são os ocupantes dele — podem ser vários, em turnos diferentes. Os ocupantes de cada posto se gerenciam na ficha do posto, em Postos.',
   },
 ];
 
@@ -172,9 +165,6 @@ export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }
                   rota={abaAtual.rota}
                   valor={alvoId}
                   obrigatorio
-                  // Um ativo não pode ser detentor de si mesmo. A cadeia mais
-                  // longa (A → B → A) é barrada pelo servidor.
-                  excluirId={abaAtual.tipo === 'ASSET' ? asset.id : undefined}
                   onChange={setAlvoId}
                 />
                 <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">{abaAtual.ajuda}</p>

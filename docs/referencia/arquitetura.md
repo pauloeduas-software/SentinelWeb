@@ -75,7 +75,7 @@ server/
 | `settings` | Configuração global: etiqueta automática, os botões da descoberta e o formato de número, data e moeda | `AppSetting` |
 | `activity` | Trilha de auditoria, gravada na transação de quem a origina | `ActivityLog` |
 | `user` | Colaborador da empresa | `User` |
-| `assignment` | **Posse**: entrega e devolução de ativo, com alvo polimórfico (pessoa, posto ou outro ativo) e o histórico de quem teve o quê | `Assignment` |
+| `assignment` | **Posse**: entrega e devolução de ativo, com alvo polimórfico (pessoa ou posto) e o histórico de quem teve o quê | `Assignment` |
 | `occupancy` | **Ocupação do posto**: quem trabalha em qual localização, e em que turno | `LocationOccupant` |
 | `license` | **Licenças**: o contrato e seus ASSENTOS materializados | `License`, `LicenseSeat`, `LicenseSeatCheckout` |
 | `reconciliation` | **Convergência RMM × ITAM**: o vínculo entre a máquina descoberta e o ativo cadastrado, a fila de sugestões, o software normalizado e o uso agregado | `ReconciliationSuggestion`, `EndpointUserDaily`, `AssetChange`, `SoftwarePackage`, `SoftwareInstallation`, `LicenseSoftware`, `AssetUsageDaily` |
@@ -284,9 +284,8 @@ onde o escopo completo era lido. Domínio que **pergunta** importa; domínio que
 Leia [`modelo-de-posse.md`](modelo-de-posse.md) antes de mexer em `assignment`,
 `occupancy` ou no status do ativo. Em três linhas:
 
-1. **`Assignment`** é a fonte de verdade da posse. Alvo polimórfico — pessoa,
-   **posto** ou outro ativo. Uma aberta por ativo, garantida por índice único
-   parcial no banco.
+1. **`Assignment`** é a fonte de verdade da posse. Alvo polimórfico — pessoa ou
+   **posto**. Uma aberta por ativo, garantida por índice único parcial no banco.
 2. **`LocationOccupant`** é quem ocupa o posto, com turno. É a camada que permite
    a Mesa 1 ser da Laura de manhã e da Ana à tarde **sem o ativo apontar para
    duas pessoas**.

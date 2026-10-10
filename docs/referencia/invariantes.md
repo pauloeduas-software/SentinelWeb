@@ -38,7 +38,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 2 | Uma ocupação aberta por (posto, pessoa) | **banco** — índice único parcial | 409 `Registro já existe` |
 | 3 | O tipo de um status em uso não muda | **aplicação** — `status-label.spec.ts` | 409 `Não é possível mudar o tipo: status em uso por 200 registros.` |
 | 4 | Estado × posse: ativo entregue não fica `DEPLOYABLE` nem `ARCHIVED` | **aplicação** — `assert-status-posse.usecase.ts` | 409 `"Pronto p/ Uso" é um status de estoque, e este ativo está entregue. Faça a devolução antes de mudar o status.` |
-| 5 | A forma da posse: um alvo coerente, nunca a si mesmo, devolução depois da entrega | **banco** — três `CHECK` | 409 `Registro já existe` (a API recusa antes, com frase própria) |
+| 5 | A forma da posse: um alvo coerente, devolução depois da entrega | **banco** — dois `CHECK` | 409 `Registro já existe` (a API recusa antes, com frase própria) |
 | 6 | Colaborador desativado ou na lixeira não tem posse direta, **assento de licença** nem ocupação aberta | **aplicação** — 409 no `DELETE`, no `checkout` e no cadastro de ocupante + trava de linha | 409 `Este colaborador ainda responde por 2 ativos, ocupa 1 assento de licença e ocupa 1 posto. Devolva o que está com ele e encerre as ocupações antes de excluir.` |
 | 9 | O alvo de um assento de licença é UM: pessoa **ou** ativo, nunca os dois, nunca nenhum | **banco** — CHECK `license_seat_alvo_xor` | 422 com o campo que falta (a API recusa antes, com frase própria) |
 | 10 | Um assento de licença não está em duas mãos | **banco** — índice único parcial `license_seat_uma_aberta_por_assento` | 409 `Sem assento livre em "Office 2024": 5 de 5 ocupados.` |
@@ -165,22 +165,18 @@ checkout concorrente entre a checagem e o `UPDATE` passaria.
 
 ```sql
 ALTER TABLE "assignments" ADD CONSTRAINT "assignments_alvo_coerente" CHECK (
-  num_nonnulls("targetUserId", "targetAssetId", "targetLocationId") = 1
+  num_nonnulls("targetUserId", "targetLocationId") = 1
   AND (   ("targetType" = 'USER'     AND "targetUserId"     IS NOT NULL)
-       OR ("targetType" = 'ASSET'    AND "targetAssetId"    IS NOT NULL)
        OR ("targetType" = 'LOCATION' AND "targetLocationId" IS NOT NULL))
-);
-ALTER TABLE "assignments" ADD CONSTRAINT "assignments_nao_entregue_a_si_mesmo" CHECK (
-  "targetAssetId" IS NULL OR "targetAssetId" <> "assetId"
 );
 ALTER TABLE "assignments" ADD CONSTRAINT "assignments_devolucao_nao_antecede_entrega" CHECK (
   "checkinAt" IS NULL OR "checkinAt" >= "checkoutAt"
 );
 ```
 
-Três afirmações sobre a mesma linha: o alvo polimórfico é **coerente** (uma FK
-preenchida, e é a que casa com o `targetType`), o ativo **não responde por si
-mesmo**, e a posse **não fecha antes de abrir**.
+Duas afirmações sobre a mesma linha: o alvo polimórfico é **coerente** (uma FK
+preenchida, e é a que casa com o `targetType`), e a posse **não fecha antes de
+abrir**.
 
 **Por que no banco, se o `assertAlvoCoerente` já valida:** porque a validação da
 aplicação defende quem passa pela API, e esta tabela tem outros escritores — o
@@ -198,9 +194,9 @@ frouxa das três.
 devolução no mesmo dia da entrega, com dois relógios que podem coincidir no
 milissegundo.
 
-**Onde está:** `prisma/migrations/20260923105500_check_do_assignment/migration.sql`.
-A aplicação continua recusando antes, com a frase que ensina o modelo; o CHECK é
-a rede de baixo.
+**Onde está:** na migration `0_init` e, o da coerência, refeito para dois alvos
+em `20261010220000_o_alvo_ativo_sai_da_posse`. A aplicação continua recusando
+antes, com a frase que ensina o modelo; o CHECK é a rede de baixo.
 
 ### 6 — Desativado não fica com posse aberta
 

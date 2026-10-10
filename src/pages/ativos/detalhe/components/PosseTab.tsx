@@ -28,10 +28,6 @@ const VIA: Record<Responsavel['via'], { rotulo: string; explicacao: string }> = 
     rotulo: 'por ocupar o posto',
     explicacao: 'Responde porque ocupa a localização que detém o ativo. Sai da escala, sai a responsabilidade.',
   },
-  ATIVO: {
-    rotulo: 'pelo ativo detentor',
-    explicacao: 'O ativo acompanha outro equipamento, e quem responde é quem responde por aquele.',
-  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

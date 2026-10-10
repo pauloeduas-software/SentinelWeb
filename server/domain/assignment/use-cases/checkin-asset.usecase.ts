@@ -55,10 +55,9 @@ async function executarCheckin(assetId: string, data: CheckinData, actorId: stri
         id: true,
         targetType: true,
         targetLocationId: true,
-        // Os três alvos, para a recusa do escopo dizer COM QUEM o ativo está.
+        // Os dois alvos, para a recusa do escopo dizer COM QUEM o ativo está.
         targetUser: { select: { name: true } },
         targetLocation: { select: { name: true } },
-        targetAsset: { select: { assetTag: true, name: true } },
       },
     });
     // 409 e não 404: o ativo existe, quem não existe é a posse — é conflito de

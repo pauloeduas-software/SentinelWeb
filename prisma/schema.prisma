@@ -541,9 +541,7 @@ model Asset {
   assignedTo User?       @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
 
   // A posse deste ativo, aberta e histórica.
-  assignments     Assignment[] @relation("AssignmentAsset")
-  // As posses em que este ativo é o DETENTOR (a dock que segura o notebook).
-  heldAssignments Assignment[] @relation("AssignmentTargetAsset")
+  assignments Assignment[] @relation("AssignmentAsset")
 
   // Os assentos de licença que esta máquina ocupa (F6).
   licenseSeats LicenseSeatCheckout[]
@@ -597,14 +595,16 @@ model Asset {
 
 // Para QUEM um ativo foi entregue.
 //
-// Polimórfico como no Snipe-IT — pessoa, outro ativo ou localização —, com uma
-// diferença que o Snipe-IT não tem: quando o alvo é `LOCATION`, os responsáveis
-// são os OCUPANTES daquele local, que podem ser vários e em turnos diferentes
-// (`LocationOccupant`). É o que permite a Mesa 1 ser da Laura de manhã e da Ana
-// à tarde sem o ativo precisar apontar para duas pessoas.
+// Polimórfico — pessoa ou localização —, com uma diferença que o Snipe-IT não
+// tem: quando o alvo é `LOCATION`, os responsáveis são os OCUPANTES daquele
+// local, que podem ser vários e em turnos diferentes (`LocationOccupant`). É o
+// que permite a Mesa 1 ser da Laura de manhã e da Ana à tarde sem o ativo
+// precisar apontar para duas pessoas.
+//
+// Não há alvo ATIVO: ativo é computador, e um computador não é entregue a outro
+// computador. O que acompanha a máquina (dock, monitor, cabo) é estoque.
 enum AssignmentTarget {
   USER
-  ASSET
   LOCATION
 }
 
@@ -623,12 +623,12 @@ model Assignment {
   id      String @id @default(uuid()) @db.Uuid
   assetId String @db.Uuid
 
-  // Discriminante + três FKs nuláveis. A coerência entre o tipo e qual FK está
-  // preenchida é validada no use-case (`assertAlvoCoerente`): CHECK constraint
+  // Discriminante + duas FKs nuláveis. A coerência entre o tipo e qual FK está
+  // preenchida é validada no use-case (`assertAlvoCoerente`) e pelo CHECK
+  // `assignments_alvo_coerente`, escrito à mão na migration: CHECK constraint
   // não é expressável no schema do Prisma e ficaria invisível aqui.
   targetType       AssignmentTarget
   targetUserId     String?          @db.Uuid
-  targetAssetId    String?          @db.Uuid
   targetLocationId String?          @db.Uuid
 
   checkoutAt        DateTime  @default(now())
@@ -648,17 +648,15 @@ model Assignment {
   updatedAt DateTime @updatedAt
 
   // Cascade no ativo dono da posse: apagar o ativo de verdade leva o histórico
-  // dele junto. Restrict nos ALVOS: não se apaga uma pessoa, um local ou um
-  // ativo que ainda segura alguma coisa — é o 409 por uso do catálogo.
+  // dele junto. Restrict nos ALVOS: não se apaga uma pessoa ou um local que
+  // ainda segura alguma coisa — é o 409 por uso do catálogo.
   asset          Asset     @relation("AssignmentAsset", fields: [assetId], references: [id], onDelete: Cascade)
   targetUser     User?     @relation(fields: [targetUserId], references: [id], onDelete: Restrict)
-  targetAsset    Asset?    @relation("AssignmentTargetAsset", fields: [targetAssetId], references: [id], onDelete: Restrict)
   targetLocation Location? @relation(fields: [targetLocationId], references: [id], onDelete: Restrict)
 
   @@index([assetId, checkinAt])
   @@index([targetUserId, checkinAt])
   @@index([targetLocationId, checkinAt])
-  @@index([targetAssetId, checkinAt])
   @@map("assignments")
 }
 

@@ -37,7 +37,7 @@ unidade real da operação, e faz a informação crescer multiplicativamente:
 ```
           ┌─────────────────────────────────────────────┐
  Camada 1 │  Assignment — a posse, alvo polimórfico      │  ← paridade Snipe-IT
-          │  Asset ──> USER | ASSET | LOCATION           │
+          │  Asset ──> USER | LOCATION                   │
           └───────────────────┬─────────────────────────┘
                               │ quando o alvo é LOCATION
           ┌───────────────────▼─────────────────────────┐
@@ -53,9 +53,10 @@ unidade real da operação, e faz a informação crescer multiplicativamente:
 
 ### Camada 1 — `Assignment`: a posse
 
-Uma linha por entrega. Alvo polimórfico (`targetType` + três FKs nuláveis), como
-no Snipe-IT: entrega-se para uma **pessoa**, para uma **localização** ou para
-**outro ativo** (a dock presa ao notebook).
+Uma linha por entrega. Alvo polimórfico (`targetType` + duas FKs nuláveis):
+entrega-se para uma **pessoa** ou para uma **localização**. Não há alvo "outro
+ativo": ativo é computador, e o que acompanha a máquina (dock, monitor, cabo) é
+estoque, por quantidade.
 
 - **Aberta** = `checkinAt IS NULL`. É a posse atual.
 - **Fechada** = `checkinAt` preenchido. É histórico, e histórico não se apaga.
@@ -97,14 +98,10 @@ resolverResponsaveis(ativo):
   se não houver          →  []                        (sem detentor: estoque)
   targetType = USER      →  [aquele usuário]
   targetType = LOCATION  →  ocupantes abertos daquele local   ← Laura + Ana
-  targetType = ASSET     →  resolverResponsaveis(ativo-alvo)  (máx. 1 salto)
 ```
 
 **Nunca é coluna.** Coluna seria uma quarta fonte de verdade para o que as
 Camadas 1 e 2 já dizem, e a divergência entre elas seria silenciosa.
-
-O salto de `ASSET` é limitado a **um nível** de propósito: dock → notebook →
-pessoa resolve; cadeia mais longa é sintoma de modelagem errada e vira ciclo.
 
 ---
 
@@ -171,7 +168,6 @@ tudo) ou se a responsabilidade passa a ter grau, que é tabela nova.
 |---|---|---|
 | Entregue para a Laura | id da Laura | `Assignment` (targetType USER) |
 | Na Mesa 1 (Laura + Ana) | **`null`** | `Assignment` (targetType LOCATION) → ocupantes |
-| Preso à dock | **`null`** | `Assignment` (targetType ASSET) |
 | No estoque | `null` | não há assignment aberta |
 
 E — **isto é a parte que muda comportamento** — ela deixa de ser editável pelo

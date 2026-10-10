@@ -1,6 +1,6 @@
 // Contrato de POSSE com a API — as três camadas de docs/referencia/modelo-de-posse.md:
 //
-//   Camada 1  Assignment        a posse, com alvo polimórfico (USER|ASSET|LOCATION)
+//   Camada 1  Assignment        a posse, com alvo polimórfico (USER|LOCATION)
 //   Camada 2  LocationOccupant  quem ocupa o posto, com o turno
 //   Camada 3  PosseResolvida    a responsabilidade DERIVADA — nunca coluna
 //
@@ -12,19 +12,18 @@
 // não importa de lá. É o que evita ciclo entre dois arquivos de tipo.
 
 /** Para QUEM um ativo foi entregue. Espelha o enum `AssignmentTarget`. */
-export type AlvoDaPosse = 'USER' | 'ASSET' | 'LOCATION';
+export type AlvoDaPosse = 'USER' | 'LOCATION';
 
 /**
  * COMO a pessoa virou responsável — o caminho que a Camada 3 percorreu:
  *
  * - `DIRETO`  a posse aponta para ela (`targetType: 'USER'`)
  * - `POSTO`   ela ocupa a localização para a qual o ativo foi entregue
- * - `ATIVO`   o ativo está preso a outro ativo, e ela responde por aquele
  *
  * Importa na tela: "Laura" por posse direta e "Laura" por ocupar a Mesa 1 são
  * fatos diferentes, e a devolução de cada um é uma operação diferente.
  */
-export type ViaDaResponsabilidade = 'DIRETO' | 'POSTO' | 'ATIVO';
+export type ViaDaResponsabilidade = 'DIRETO' | 'POSTO';
 
 /** Uma pessoa que responde pelo ativo. É calculada, nunca lida de coluna. */
 export interface Responsavel {
@@ -51,7 +50,7 @@ export interface PosseResolvida {
   /** `null` = não há posse aberta. É o que decide entre entregar e devolver. */
   assignmentId: string | null;
   targetType: AlvoDaPosse | null;
-  /** Nome de quem detém: a pessoa, a etiqueta do ativo ou o nome do posto. */
+  /** Nome de quem detém: a pessoa ou o nome do posto. */
   targetLabel: string | null;
   responsaveis: Responsavel[];
   /**
@@ -68,13 +67,6 @@ export interface PessoaRef {
   id: string;
   name: string;
   email: string;
-}
-
-/** Ativo embutido como ALVO de uma posse (a dock que segura o notebook). */
-export interface AtivoAlvoRef {
-  id: string;
-  assetTag: string;
-  name: string | null;
 }
 
 /** Localização embutida como alvo de uma posse. */
@@ -108,7 +100,6 @@ export interface Assignment {
 
   targetType: AlvoDaPosse;
   targetUserId: string | null;
-  targetAssetId: string | null;
   targetLocationId: string | null;
 
   checkoutAt: string;
@@ -119,7 +110,6 @@ export interface Assignment {
   checkinNotes: string | null;
 
   targetUser?: PessoaRef | null;
-  targetAsset?: AtivoAlvoRef | null;
   targetLocation?: LocalRef | null;
 }
 
