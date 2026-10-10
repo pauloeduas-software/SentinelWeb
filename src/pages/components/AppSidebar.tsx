@@ -101,7 +101,11 @@ export default function AppSidebar() {
             Mesma altura do cabeçalho (`h-14`) de propósito: a borda de baixo
             daqui e a do cabeçalho formam UMA linha reta atravessando a tela. */}
         <div className="h-14 shrink-0 flex items-center gap-3 border-b border-border-sutil px-4">
-          <Link to="/" className="flex items-center gap-3 min-w-0" title="Sentinel">
+          {/* `/ativos` e não `/`: a raiz REDIRECIONA para cá (src/App.tsx), e
+              clicar na marca empilhava uma entrada de histórico que o
+              redirecionamento substituía — o primeiro "voltar" depois disso não
+              mudava nada na tela. */}
+          <Link to="/ativos" className="flex items-center gap-3 min-w-0" title="Sentinel">
             <div className="bg-text-primary p-1 rounded-sm shrink-0">
               <LayoutDashboard size={14} className="text-bg-base" />
             </div>

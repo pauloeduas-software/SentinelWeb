@@ -3,7 +3,7 @@ import type {
   NetworkMetrics,
   ProcessMetrics,
   Telemetry,
-} from '../../../domain/shared/telemetry.types';
+} from '../../domain/shared/telemetry.types';
 
 const BYTES_IN_GB = 1024 ** 3;
 
@@ -60,9 +60,19 @@ export function parseDisks(raw: unknown): DiskMetrics[] {
   }));
 }
 
+/** Zeros para a amostra sem rede nenhuma — todos os campos, não só dois. */
+const SEM_REDE: NetworkMetrics = {
+  bytesReceived: 0, bytesSent: 0,
+  rxSpeedKbps: 0, txSpeedKbps: 0, totalRxGb: 0, totalTxGb: 0,
+};
+
 export function parseNetwork(raw: unknown): NetworkMetrics {
   const parsed = parseJsonField(raw);
-  if (!parsed || typeof parsed !== 'object') return { bytesReceived: 0, bytesSent: 0 };
+  // O retorno de saída devolvia SÓ `bytesReceived` e `bytesSent`, e era por isso
+  // que os quatro campos de velocidade eram opcionais no tipo: a amostra sem
+  // coluna de rede saía incompleta, e cada tela pagava um `?? 0`. O caminho feliz
+  // já preenchia os seis — agora os dois preenchem, e o tipo pode exigir.
+  if (!parsed || typeof parsed !== 'object') return SEM_REDE;
 
   const source = parsed as Record<string, unknown>;
   return {
@@ -83,14 +93,13 @@ export function parseProcesses(raw: unknown): ProcessMetrics[] {
   }));
 }
 
-/** Tudo que as telas de telemetria precisam de uma amostra, já calculado. */
+/** Tudo que uma tela precisa de uma amostra, já calculado. */
 export interface TelemetrySnapshot {
   cpuUsage: number;
   ramTotalGb: number;
   ramUsedGb: number;
   ramPercent: number;
   disks: DiskMetrics[];
-  mainDiskPercent: number;
   network: NetworkMetrics;
   processes: ProcessMetrics[];
 }
@@ -98,8 +107,10 @@ export interface TelemetrySnapshot {
 export function readSnapshot(telemetry: Telemetry | undefined): TelemetrySnapshot {
   const ramTotalGb = bytesToGb(telemetry?.ramTotal);
   const ramUsedGb = bytesToGb(telemetry?.ramUsed);
+  // `mainDiskPercent` saiu daqui junto com o último leitor dele: era a barra DSK
+  // do card da frota, que mostrava só o primeiro disco por falta de espaço. Quem
+  // mostra disco agora mostra TODOS, com o `usagePercent` por linha.
   const disks = parseDisks(telemetry?.disks);
-  const mainDisk = disks[0];
 
   return {
     cpuUsage: Number(telemetry?.cpuUsage ?? 0),
@@ -107,7 +118,6 @@ export function readSnapshot(telemetry: Telemetry | undefined): TelemetrySnapsho
     ramUsedGb,
     ramPercent: usagePercent(ramUsedGb, ramTotalGb),
     disks,
-    mainDiskPercent: mainDisk ? usagePercent(mainDisk.usedGb, mainDisk.totalGb) : 0,
     network: parseNetwork(telemetry?.network),
     processes: parseProcesses(telemetry?.topProcesses),
   };

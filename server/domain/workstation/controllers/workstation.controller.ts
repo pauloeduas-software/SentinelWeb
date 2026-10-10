@@ -1,6 +1,7 @@
 import type { FastifyRequest } from 'fastify';
 import { parseListQuery } from '../../../core/http/list-query';
 import { idParamSchema } from '../../shared/params.schema';
+import { temPapel } from '../../access/helpers/require-permission';
 import { workstationViewQuerySchema } from '../schemas/workstation.schema';
 import { WORKSTATION_SORTABLE } from '../helpers/workstation-filters.helper';
 import { listWorkstations } from '../use-cases/list-workstations.usecase';
@@ -34,6 +35,16 @@ export const workstationController = {
 
   async detail(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return getWorkstation(id);
+    // O CUSTO DOS ATIVOS DA MESA É DE `ADMIN` (D77), e esta rota vazava.
+    //
+    // A ficha do posto devolve os ativos entregues com o `ASSET_SELECT`
+    // completo, e `purchaseCost` está nele: um `TECNICO` que abrisse
+    // `/postos/:id` recebia o custo de compra de cada equipamento da mesa —
+    // exatamente o que `tests/invariantes/dado-sensivel.test.ts` prova que
+    // `/api/assets` e `/api/assets/:id` não fazem. O vazamento era por falta de
+    // uma terceira porta, não por decisão: quem lê filtra, e esta é a leitura
+    // que faltava. Mesma inversão do `actorId` (D23) — quem sabe quem está
+    // pedindo é a borda.
+    return getWorkstation(id, temPapel(request, 'ADMIN'));
   },
 };

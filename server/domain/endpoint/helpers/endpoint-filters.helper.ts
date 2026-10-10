@@ -1,8 +1,8 @@
 import type { Prisma } from '@prisma/client';
 
-// A tela de telemetria mostra a frota inteira em cards e não tem controle de
-// página: o envelope existe para a API ter UMA forma de resposta, não porque a
-// tela pagina. Por isso o padrão é generoso (ver endpoint.controller.ts).
+// `/descobertas` lê a frota inteira de uma vez e não tem controle de página: o
+// envelope existe para a API ter UMA forma de resposta, não porque a tela pagina.
+// Por isso o padrão é generoso (ver endpoint.controller.ts).
 
 /**
  * As colunas ordenáveis.

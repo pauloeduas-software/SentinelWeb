@@ -7,22 +7,48 @@ import type { ListEnvelope } from '../shared/list.types';
 // a string que a query usou.
 export const endpointKeys = {
   all: ['endpoints'] as const,
+  detalhe: (id: string) => ['endpoints', 'detalhe', id] as const,
 };
 
-// Ritmo do painel de telemetria. O agente manda amostra a cada poucos segundos;
-// abaixo disso só geraria requisição sem dado novo.
+// Ritmo da revalidação. O agente manda amostra a cada poucos segundos; abaixo
+// disso só geraria requisição sem dado novo.
 const POLL_INTERVAL_MS = 5_000;
 
 /**
  * Máquinas descobertas pelo agente, com a amostra de telemetria mais recente.
  * Revalida sozinha: não há `setInterval` nem limpeza de timer para manter.
+ *
+ * Quem a consome é `/descobertas`, para separar as máquinas sem cadastro. A tela
+ * que mostrava a frota inteira em cards saiu, e com ela o único leitor que
+ * precisava da amostra de TODAS — por isso a telemetria de uma máquina tem
+ * consulta própria abaixo.
  */
 export function useEndpointsQuery() {
   return useQuery({
     queryKey: endpointKeys.all,
-    // A API responde no envelope `{ total, rows }` em todas as listagens; a tela
-    // de telemetria usa só as linhas, porque mostra a frota inteira em cards.
+    // A API responde no envelope `{ total, rows }` em todas as listagens;
+    // `/descobertas` usa só as linhas.
     queryFn: async () => (await apiClient.get<ListEnvelope<Endpoint>>('/endpoints')).data.rows,
+    refetchInterval: POLL_INTERVAL_MS,
+  });
+}
+
+/**
+ * UMA máquina, com a amostra mais recente — a ficha do ativo (aba Máquina) e a
+ * do posto.
+ *
+ * Revalida no mesmo ritmo do painel antigo. A diferença é o tamanho da resposta:
+ * ali eram as 500 linhas da frota a cada ciclo para desenhar os cards; aqui é a
+ * máquina que está na tela.
+ *
+ * `enabled` porque ativo sem máquina vinculada é o caso comum — monitor, cadeira
+ * e cabo nunca terão agente —, e `null` ali não pode virar `/endpoints/null`.
+ */
+export function useEndpointQuery(id: string | null) {
+  return useQuery({
+    queryKey: endpointKeys.detalhe(id ?? ''),
+    queryFn: async () => (await apiClient.get<Endpoint>(`/endpoints/${id}`)).data,
+    enabled: id != null,
     refetchInterval: POLL_INTERVAL_MS,
   });
 }

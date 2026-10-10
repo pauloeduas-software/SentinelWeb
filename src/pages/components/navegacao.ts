@@ -1,5 +1,5 @@
 import {
-  Armchair, Database, Radar, ScrollText, Server, SlidersHorizontal, Users, type LucideIcon,
+  Armchair, Database, Radar, ScrollText, SlidersHorizontal, Users, type LucideIcon,
 } from 'lucide-react';
 
 // O MENU, declarado em um lugar só — a barra lateral desenha, o cabeçalho lê
@@ -65,7 +65,11 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
   {
     titulo: 'Operação',
     itens: [
-      { to: '/', label: 'Telemetria', icon: Server, papel: 'TECNICO' },
+      // ATIVOS É O PRIMEIRO ITEM, e antes dele havia Telemetria em `/`. A tela
+      // da frota saiu: ela media as máquinas sem saber de quem são, e a medida
+      // foi para a ficha do ativo e a do posto, onde a máquina tem nome. A raiz
+      // passou a redirecionar para cá (src/App.tsx), então nenhum item aponta
+      // mais para `/`.
       { to: '/ativos', label: 'Ativos', icon: Database, papel: 'TECNICO' },
       // Logo depois de Ativos: é a mesma operação vista do outro lado — o ativo
       // está na mesa, e a mesa é de quem a ocupa (docs/referencia/modelo-de-posse.md).
@@ -105,11 +109,16 @@ export const ITENS_DE_MENU: readonly ItemDeMenu[] = GRUPOS_DE_MENU.flatMap((grup
  *
  * PREFIXO, e não igualdade: a tela de detalhe do ativo mora em `/ativos/:id` e
  * precisa manter *Ativos* aceso — com igualdade, o menu apagava inteiro assim
- * que se abria um ativo. A raiz é o caso à parte, porque todo caminho começa
- * com `/`.
+ * que se abria um ativo.
+ *
+ * O prefixo é comparado com a BARRA no fim (`${to}/`), e é isso que torna a raiz
+ * um caso comum em vez de especial: havia aqui um ramo `to === '/'` pela
+ * preocupação de que todo caminho comece com `/`, mas `'/ativos'.startsWith('//')`
+ * é falso — o ramo nunca mudou resposta nenhuma. Ele saiu junto com o item de
+ * Telemetria, que era o único a morar em `/`.
  */
 export function itemEstaAtivo(to: string, caminho: string): boolean {
-  return to === '/' ? caminho === '/' : caminho === to || caminho.startsWith(`${to}/`);
+  return caminho === to || caminho.startsWith(`${to}/`);
 }
 
 /**

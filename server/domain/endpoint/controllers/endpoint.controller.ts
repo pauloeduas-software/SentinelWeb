@@ -27,9 +27,10 @@ export const endpointController = {
     // acontecido lá; aqui a F7 refez o erro em vez de copiar a solução.
     const { vinculo, reviewState, ...paginacao } = (request.query ?? {}) as Record<string, unknown>;
 
-    // `perPage` generoso: a tela de telemetria mostra a frota inteira em cards e
-    // não tem controle de página. O envelope existe para a API ter uma forma só
-    // de resposta — quando a frota crescer, o controle entra sem mudar contrato.
+    // `perPage` generoso: `/descobertas` lê a frota inteira para separar as
+    // máquinas sem cadastro, e não tem controle de página. O envelope existe para
+    // a API ter uma forma só de resposta — quando a frota crescer, o controle
+    // entra sem mudar contrato. Quem quer UMA máquina usa `GET /api/endpoints/:id`.
     const query = parseListQuery(paginacao, {
       sortable: ENDPOINT_SORTABLE,
       defaultSort: 'hostname',

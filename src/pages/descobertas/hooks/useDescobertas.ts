@@ -55,7 +55,7 @@ export function useDescobertas() {
     ociosos: ociosos.data?.rows ?? [],
     configuracao: configuracao.data,
 
-    // Os órfãos saem da MESMA consulta que o painel de telemetria usa: máquina
+    // Os órfãos saem da MESMA consulta da listagem de máquinas: máquina
     // sem `assetId` é a definição de órfão, e uma rota nova só para filtrar o
     // que já está em memória seria uma segunda fonte para o mesmo fato.
     orfaos: (endpoints.data ?? []).filter((endpoint) => !endpoint.assetId),

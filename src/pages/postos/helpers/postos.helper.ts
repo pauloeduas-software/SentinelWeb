@@ -1,5 +1,7 @@
 import type { NovoPostoInput } from '../../../domain/workstation/workstation.queries';
-import type { Posto, PostoOcupante, PostoView } from '../../../domain/shared/workstation.types';
+import type {
+  AtivoDoPosto, Posto, PostoOcupante, PostoView,
+} from '../../../domain/shared/workstation.types';
 
 // Leitura de um posto para a tela — funções puras, fora do JSX
 // (docs/referencia/arquitetura.md). Camadas 1 e 2 de docs/referencia/modelo-de-posse.md, vistas do lado
@@ -81,6 +83,30 @@ export function resumoDeAtivos(total: number): string {
  */
 export function explicacaoDoVago(posto: Pick<Posto, 'totalAtivos'>): string {
   return `${resumoDeAtivos(posto.totalAtivos)} entregue${posto.totalAtivos === 1 ? '' : 's'} aqui e ninguém responde por ${posto.totalAtivos === 1 ? 'ele' : 'eles'}.`;
+}
+
+/**
+ * Os ativos deste posto que SÃO computadores — os que têm máquina vinculada.
+ *
+ * Num posto marcado a lista tem no máximo um elemento NO CAMINHO NORMAL — as três
+ * portas da invariante 19 (checkout, vínculo e a marca) recusam o segundo. Mas a
+ * resposta é uma LISTA por dois motivos, e os dois são reais:
+ *
+ *   a ficha responde por QUALQUER localização, inclusive a sala de reunião, onde
+ *     a regra não vale e dois computadores são estado normal;
+ *   e restaurar da lixeira um ativo que já estava no posto NÃO reconfere a regra
+ *     (`restore-asset.usecase.ts` só reconfere etiqueta e série), então até um
+ *     posto marcado pode chegar a dois.
+ *
+ * Quem usa a lista decide o que dizer sobre a segunda — e a ficha diz coisas
+ * diferentes conforme o local esteja marcado ou não.
+ */
+export type AtivoComMaquina = AtivoDoPosto & { endpointId: string };
+
+export function computadoresDoPosto(ativos: readonly AtivoDoPosto[]): AtivoComMaquina[] {
+  // Predicado de tipo, e não `filter` + `as`: é o filtro que sabe que o campo
+  // não é nulo, e dizê-lo aqui poupa um cast em cada lugar que usa a lista.
+  return ativos.filter((ativo): ativo is AtivoComMaquina => ativo.endpointId !== null);
 }
 
 /**

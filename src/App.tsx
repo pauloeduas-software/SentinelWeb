@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import AppHeader from './pages/components/AppHeader';
 import AppSidebar from './pages/components/AppSidebar';
-import TelemetryPage from './pages/telemetria';
 import AtivosPage from './pages/ativos';
 import AssetDetailPage from './pages/ativos/detalhe';
 import PostosPage from './pages/postos';
@@ -56,7 +55,14 @@ function Layout() {
 
         <main className="min-w-0 flex-1 overflow-x-clip p-4 md:p-8">
           <Routes>
-            <Route path="/" element={<TelemetryPage />} />
+            {/* A RAIZ LEVA AOS ATIVOS, e isso é o fim de uma tela.
+                `/` era a telemetria: a frota em cards, que ninguém abria para
+                perguntar nada — ela sabia a medida da máquina e não sabia de quem
+                a máquina é. A telemetria foi para a ficha do ativo e a do posto, e
+                a raiz passou a levar para a tela que se usa de verdade, que é a
+                lista de ATIVOS. `replace` para que o botão de voltar não jogue a
+                pessoa de volta na raiz, num pingue-pongue. */}
+            <Route path="/" element={<Navigate to="/ativos" replace />} />
             <Route path="/ativos" element={<AtivosPage />} />
             {/* A tela do ativo. Rota própria, e não modal: é uma URL que se cola
                 no chamado, se abre em outra aba e se guarda nos favoritos. */}

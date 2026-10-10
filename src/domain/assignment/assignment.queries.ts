@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../core/api/apiClient';
 import { assetKeys } from '../asset/asset.queries';
+// Quem PERGUNTA importa; o dono do dado é quem responde (docs/referencia/arquitetura.md).
+// A posse precisa dizer ao posto que algo mudou nele, e a chave é do posto.
+import { workstationKeys } from '../workstation/workstation.queries';
 import type { AlvoDaPosse, Assignment } from '../shared/posse.types';
 
 // A POSSE — Camada 1 de docs/referencia/modelo-de-posse.md.
@@ -54,21 +57,44 @@ export function useAssetAssignmentsQuery(assetId: string | null) {
 }
 
 /**
- * Entregar.
+ * O QUE UMA ENTREGA OU UMA DEVOLUÇÃO MUDA NA TELA, num lugar só.
  *
- * Invalida ativos TAMBÉM, e não só as posses: a coluna Responsável da listagem
- * e o status do ativo são consequência da entrega. Sem isto, a tabela continuaria
- * mostrando o dono anterior até o próximo refetch.
+ * Três domínios, e nenhum deles é opcional:
+ *
+ *   posses  — a linha que acabou de abrir ou fechar;
+ *   ativos  — a coluna Responsável e o status são consequência da operação, e
+ *             um ativo entregue a um posto SAI da listagem `/ativos`
+ *             (`asset-filters.helper.ts`), então a tabela muda de tamanho;
+ *   postos  — a ficha do posto lista os ativos entregues a ele, conta quantos
+ *             são e deriva o selo de POSTO VAGO desses dois números.
+ *
+ * O terceiro não estava aqui, e não dava para notar: até esta etapa nenhuma
+ * entrega ou devolução acontecia com uma tela de posto montada. A devolução
+ * passou a morar DENTRO da ficha do posto, e aí a tabela de ativos, o contador e
+ * o selo de vago estão todos na tela no instante em que a mutação volta — sem
+ * esta linha, a linha devolvida continuaria na tabela e o selo seria calculado
+ * sobre o número de antes.
+ *
+ * A entrega entra pelo mesmo caminho por simetria, e não por defeito observado:
+ * entregar é feito em `/ativos`, com `/postos` desmontada, e `staleTime: 0` já
+ * faz a ficha reler ao montar.
+ *
+ * É o mesmo desenho do `invalidarPosseDerivada` da ocupação, pelo mesmo motivo:
+ * posse é um fato que três telas leem de ângulos diferentes.
  */
+function invalidarAlvosDaPosse(queryClient: ReturnType<typeof useQueryClient>) {
+  void queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
+  void queryClient.invalidateQueries({ queryKey: assetKeys.all });
+  void queryClient.invalidateQueries({ queryKey: workstationKeys.all });
+}
+
+/** Entregar. */
 export function useCheckoutAsset() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: CheckoutInput }) =>
       apiClient.post(`/assets/${id}/checkout`, data),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
-      void queryClient.invalidateQueries({ queryKey: assetKeys.all });
-    },
+    onSuccess: () => invalidarAlvosDaPosse(queryClient),
   });
 }
 
@@ -78,10 +104,7 @@ export function useCheckinAsset() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: CheckinInput }) =>
       apiClient.post(`/assets/${id}/checkin`, data),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
-      void queryClient.invalidateQueries({ queryKey: assetKeys.all });
-    },
+    onSuccess: () => invalidarAlvosDaPosse(queryClient),
   });
 }
 
