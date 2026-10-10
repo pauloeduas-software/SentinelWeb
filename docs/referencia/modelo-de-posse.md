@@ -17,18 +17,25 @@ Um ativo tem **um** detentor. Mas um detentor pode ser **um lugar**, e um lugar
 pode ser ocupado por **várias pessoas** — em turnos diferentes, ao mesmo tempo,
 ou os dois.
 
-Modelar isso como `Asset ⟷ User` muitos-para-muitos **perde o lugar**, que é a
-unidade real da operação, e faz a informação crescer multiplicativamente:
+**Ativo é computador.** O que não é máquina — monitor, teclado, mouse, cabo — é
+estoque, por quantidade, e as unidades entregues à mesa (`StockMovement` de
+alvo posto) respondem pelos mesmos ocupantes que o computador. Um posto de
+trabalho tem no máximo um ativo (invariante 19) e quantas unidades de estoque
+precisar.
 
-| | `Asset ⟷ User` direto | Ativo → Posto → Ocupantes |
+Modelar a responsabilidade como `Asset ⟷ User` muitos-para-muitos **perde o
+lugar**, que é a unidade real da operação, e faz a informação crescer
+multiplicativamente:
+
+| | vínculo direto equipamento ⟷ pessoa | Equipamento → Posto → Ocupantes |
 |---|---|---|
-| 3 ativos na mesa, 2 pessoas | 6 linhas | **2 linhas** (o ativo→mesa já existe em `locationId`) |
-| Ana sai da empresa | atualizar 3 linhas | atualizar **1** |
-| Chega um headset na mesa | criar 2 linhas | **zero** — herda os dois responsáveis |
+| 1 computador e 5 unidades de estoque na mesa, 2 pessoas | 12 linhas | **2 ocupações** (o equipamento→mesa já é a posse) |
+| Ana sai da empresa | atualizar 6 linhas | atualizar **1** |
+| Chega um headset (estoque) na mesa | criar 2 linhas | **zero** — herda os dois responsáveis |
 | Onde mora o turno "manhã"? | repetido em cada par | **uma vez**, no vínculo pessoa↔posto |
-| 20 mesas × 5 ativos × 2 turnos | 200 linhas | 40 |
+| 20 mesas × 6 equipamentos × 2 turnos | 240 linhas | 40 |
 
-**A pluralidade não fica no ativo. Fica no posto.**
+**A pluralidade não fica no equipamento. Fica no posto.**
 
 ---
 
@@ -188,7 +195,7 @@ Era a suspeita certa: o modelo de posse mexe direto no `StatusLabelType`.
 
 **1. `IN_USE` deixa de ser declaração e vira fato verificável.**
 Hoje `IN_USE` + sem responsável é ambíguo — *em uso por quem?*. Com as três
-camadas, o mouse da Mesa 1 está em uso **por Laura e Ana**, e o banco prova.
+camadas, o computador da Mesa 1 está em uso **por Laura e Ana**, e o banco prova.
 
 **2. A invariante estado × posse** (ver `invariantes.md`): um ativo com
 responsável resolvido não pode ter status de tipo `DEPLOYABLE` (estoque) nem

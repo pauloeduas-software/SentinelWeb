@@ -112,6 +112,24 @@ describe('POST /api/endpoints/:id/link-and-checkout', () => {
     expect(await prisma.assignment.count({ where: { assetId: segundo.id, checkinAt: null } })).toBe(0);
   });
 
+  it('desvincular a máquina NÃO libera a vaga: o ativo continua sendo o da mesa', async () => {
+    // Era o atalho da regra antiga — "computador = ativo com máquina": tirar a
+    // máquina do ativo velho o transformava em "não computador" e o novo
+    // entrava por cima. Com a regra sobre o ativo, trocar o computador da mesa é
+    // devolver o antigo e entregar o novo.
+    const mesa = await posto('Mesa da troca de máquina');
+    const velho = await ativo('Desktop velho');
+    const endpointId = await maquina('ve-troca-velho');
+    expect((await vincularEEntregar(endpointId, velho.id, mesa)).status).toBe(201);
+
+    expect((await api.delete(`/api/endpoints/${endpointId}/link`)).status).toBe(200);
+
+    const novo = await ativo('Desktop novo');
+    const { status, body } = await vincularEEntregar(await maquina('ve-troca-novo'), novo.id, mesa);
+    expect(status).toBe(409);
+    expect(body.error).toContain(velho.assetTag);
+  });
+
   it('corpo sem o posto é 422, e máquina que não existe é 404', async () => {
     const desktop = await ativo('Desktop do corpo incompleto');
     const endpointId = await maquina('ve-corpo');

@@ -521,8 +521,9 @@ existe para impedir quem marca o local errado. As portas de entrega e de
 restauração, que são as que recebem tráfego, continuam travando.
 
 > **A regra é testada, não argumentada.** `tests/invariantes/ativo-por-posto.test.ts`
-> cobre a porta da entrega (com e sem máquina vinculada), os dois ativos na sala
-> de reunião, o que libera a vaga e a porta da restauração;
+> cobre a porta da entrega sem agente, os dois ativos na sala de reunião, o que
+> libera a vaga e a porta da restauração; `tests/descoberta/vincular-e-entregar.test.ts`
+> cobre a entrega com agente e prova que desvincular a máquina NÃO libera a vaga;
 > `…-marca.test.ts` cobre a porta da marca, incluindo a sala com UM ativo que
 > vira posto e o PUT que não menciona a marca. **A corrida também:**
 > `tests/corridas/ativo-por-posto.test.ts` dispara duas entregas simultâneas ao

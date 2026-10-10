@@ -64,7 +64,7 @@ export interface Posto {
  * O ativo como a FICHA DO POSTO o recebe: o contrato de ativo mais a máquina.
  *
  * O campo a mais existe porque esta tela mostra a telemetria do computador da
- * mesa, e para isso precisa saber qual dos ativos entregues é um computador e
+ * mesa, e para isso precisa saber se o ativo da mesa tem máquina vinculada e
  * qual máquina consultar. Ele NÃO está no `Asset` compartilhado de propósito:
  * `endpointId` sairia em toda listagem, em toda criação e em toda edição de
  * ativo, e ali ninguém o usa — `GET /api/workstations/:id` é a única rota que o
@@ -74,7 +74,7 @@ export interface Posto {
  * `GET /api/assets/:id/machine`.
  */
 export interface AtivoDoPosto extends Asset {
-  /** `null` quando o ativo não tem máquina: monitor, teclado, cabo, cadeira. */
+  /** `null` quando o agente ainda não foi vinculado ao ativo. */
   endpointId: string | null;
 }
 
