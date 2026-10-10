@@ -25,9 +25,8 @@ export const settingsController = {
 
   // ── A CONFIGURAÇÃO DE SISTEMA (F10) ──────────────────────────────────────
   //
-  // Mesma forma dos dois pares acima — `GET` do recorte, `PUT` com todos os
-  // campos opcionais. O que muda é a marca: ela é ARQUIVO, então entra por
-  // rota própria em `multipart/form-data` e não pelo JSON do `PUT`.
+  // Mesma forma do par acima — `GET` do recorte, `PUT` com todos os campos
+  // opcionais.
 
   async getSystem() {
     return lerConfiguracaoDoSistema();
@@ -37,7 +36,5 @@ export const settingsController = {
     const dados = configuracaoDoSistemaSchema.parse(request.body ?? {});
     return salvarConfiguracaoDoSistema(dados);
   },
-
-
 
 };

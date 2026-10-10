@@ -7,22 +7,20 @@ import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
 // ─────────────────────────────────────────────────────────────────────────────
 // O QUE ELA FECHA
 //
-//   T1 (instalar peça)       conta o saldo do componente, vai gravar
-//   T2 (mandar o ativo       conta as instalações abertas → zero, segue
+//   T1 (entregar um assento  conta o que está aberto, vai gravar
+//       de licença ao ativo)
+//   T2 (mandar o ativo       conta o que está aberto → zero, segue
 //       para a lixeira)
 //   T2                       grava `deletedAt` no ativo            → COMMIT
-//   T1                       cria a `ComponentAsset`               → COMMIT
+//   T1                       grava o assento no ativo              → COMMIT
 //
-// Resultado: um ativo na lixeira com 4 pentes dentro. As unidades somem do
-// `disponivel` do componente e não há tela que as devolva — `GET
-// /api/assets/:id/components` responde 404, porque o ativo não existe mais para
-// o inventário. É o mesmo desenho do 409 que `deleteUser` dá do outro
-// lado, e sem a trava ele não dispara.
+// Resultado: um ativo na lixeira com assento pago em cima dele, e nenhuma tela
+// que o devolva — o ativo não existe mais para o inventário. É o mesmo desenho
+// do 409 que o `deleteUser` dá do outro lado, e sem a trava ele não dispara.
 //
-// O `onDelete: Restrict` de `component_assets.assetId` NÃO cobre isto: apagar
-// aqui é `UPDATE assets SET "deletedAt" = now()`. O Postgres não vê `DELETE`
-// nenhum, a FK não é consultada e a rede não existe — o ponto cego do soft
-// delete que `deleteUser` também documenta.
+// A FK `Restrict` NÃO cobre isto: apagar aqui é `UPDATE assets SET "deletedAt"
+// = now()`. O Postgres não vê `DELETE` nenhum, a FK não é consultada e a rede
+// não existe — o ponto cego do soft delete que o `deleteUser` também documenta.
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // O GRAFO DE TRAVAS do sistema é acíclico, e é o que impede duas transações de

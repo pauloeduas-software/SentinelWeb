@@ -10,15 +10,11 @@ import { lerEvento, rotuloDaAcao, type LeituraDoEvento } from '../../../helpers/
 const ROTULO_DA_ACAO: Record<string, string> = {
   RETIRE: 'Descomissionado',
   UNRETIRE: 'Voltou ao patrimônio',
-  // Peça de estoque posta e retirada de dentro do ativo (F5). Palavras
-  // próprias, e não os ATTACH/DETACH do anexo: os dois eventos caem nesta
-  // mesma lista, e "anexo posto" para a nota fiscal e para o pente de RAM
-  // seria uma linha do tempo em que ninguém distingue documento de hardware.
-  // A leitura de um campo customizado CIFRADO (F9, D62). Ela está aqui, e não no
-  // leitor genérico, pelo mesmo motivo do `VIEW_KEY` da licença: é a segunda e
-  // última ação do projeto que registra uma LEITURA, porque um segredo revelado
-  // não pode ser "des-revelado" — e não é vocabulário que toda trilha tenha.
-  VIEW_FIELD: 'Campo cifrado revelado',
+  // O vínculo com a máquina descoberta (F7, D45). Está aqui e não no leitor
+  // genérico porque é gravado com `entityType: 'Asset'`: a aba Histórico do
+  // ativo é a única tela que o mostra.
+  LINK: 'Máquina vinculada',
+  UNLINK: 'Máquina desvinculada',
 };
 
 /** Os nomes de coluna que aparecem no diff, em português. */
@@ -38,22 +34,14 @@ const ROTULO_DO_CAMPO: Record<string, string> = {
   purchaseCost: 'Valor de compra',
   retiredAt: 'Saída do patrimônio',
   retiredReason: 'Motivo da saída',
-  op: 'Operação em massa',
   assignmentId: 'Posse',
   targetType: 'Tipo de alvo',
   targetId: 'Alvo',
-  // Estoque (F5). `assetTag` não entra: já está no topo, e a chave é a mesma.
-  assetId: 'Ativo',
-  qty: 'Unidades',
-  retirada: 'Unidades retiradas',
-  de: 'Instaladas antes',
-  sucessoraId: 'Continua instalado (linha)',
-  disponivel: 'Disponível depois',
-  // Campos customizados (F9). O `changes` do `VIEW_FIELD` grava QUAL campo e
-  // QUANDO — nunca o valor: seria trocar um segredo cifrado numa coluna por um
-  // segredo em claro numa tabela de auditoria, que é lida por mais gente.
-  slug: 'Campo revelado',
-  revealedAt: 'Revelado em',
+  // O que o `LINK`/`UNLINK` grava no `changes` (F7).
+  hostname: 'Máquina',
+  hwid: 'Identificador da máquina',
+  origem: 'Origem do vínculo',
+  sinal: 'Sinal que casou',
 };
 
 export function lerEventoDoAtivo(evento: EventoDoAtivo): LeituraDoEvento {

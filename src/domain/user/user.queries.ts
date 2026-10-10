@@ -95,18 +95,3 @@ export function useUserHistoryQuery(id: string | null) {
     enabled: id != null,
   });
 }
-
-/** Um ativo que o desligamento devolveu. */
-export interface AtivoDevolvido {
-  assignmentId: string;
-  assetId: string;
-  assetTag: string;
-}
-
-/** Um posto que o desligamento desocupou. */
-export interface OcupacaoEncerrada {
-  id: string;
-  locationId: string;
-  locationName: string;
-  shift: string | null;
-}

@@ -19,7 +19,7 @@ import { useFormatoDoSistema } from './pages/hooks/useSistema';
  * `/itam/assets/:id` → `/ativos/:id`, preservando o id.
  *
  * Um `Navigate` com caminho literal não serve aqui: o id está na URL, e é ele
- * que o e-mail antigo carrega.
+ * que a URL antiga carrega.
  */
 function RedirecionarAtivo() {
   const { id } = useParams<{ id: string }>();
@@ -63,10 +63,9 @@ function Layout() {
             <Route path="/ativos/:id" element={<AssetDetailPage />} />
             {/* AS ROTAS ANTIGAS, redirecionando. `/itam` era o nome da tela até a
                 F6; ele saiu porque "ITAM" é o nome do ASSUNTO do sistema inteiro,
-                não desta tela — que lista ATIVOS, como /licencas lista licenças. O redirecionamento fica porque a URL
-                antiga JÁ SAIU daqui: todo e-mail de entrega e de atraso enviado
-                antes desta troca leva `/itam/assets/:id`, e quem colar uma URL
-                antiga tem que chegar na tela, não num 404. */}
+                não desta tela — que lista ATIVOS, como /licencas lista licenças.
+                O redirecionamento fica porque quem colar uma URL antiga tem que
+                chegar na tela, não num 404. */}
             <Route path="/itam" element={<Navigate to="/ativos" replace />} />
             <Route path="/itam/assets/:id" element={<RedirecionarAtivo />} />
             <Route path="/postos" element={<PostosPage />} />
@@ -77,7 +76,7 @@ function Layout() {
                 a F6, nomear a tela pelo assunto em vez de pelo conteúdo. */}
             <Route path="/descobertas" element={<DescobertasPage />} />
             <Route path="/users" element={<UsersPage />} />
-            {/* Perfil do colaborador: os dois baldes de posse e o desligamento
+            {/* Perfil do colaborador: os dois baldes de posse
                 (docs/referencia/modelo-de-posse.md, Camada 3). Depois de `/users` porque o
                 react-router escolhe a rota MAIS específica, não a primeira — a
                 ordem aqui é para quem lê. */}
@@ -130,11 +129,6 @@ export default function App() {
       <Routes>
         {/* Já logado em /login: volta para o painel, em vez de mostrar um
             formulário que não tem o que fazer. */}
-        {/* O TERMO DE ENTREGA vive FORA do `Layout` e antes da checagem de
-            sessão: quem o abre veio de um e-mail e pode não ter conta nenhuma —
-            no alvo LOCATION quem assina é o gestor da localidade (D27). Mandá-lo
-            para o login seria fechar a porta justamente no caso que a página
-            existe para cobrir. Quem autoriza é o token na URL. */}
         <Route path="/login" element={usuario ? <Navigate to="/" replace /> : <LoginPage />} />
         <Route path="/*" element={usuario ? <Layout /> : <Navigate to="/login" replace />} />
       </Routes>

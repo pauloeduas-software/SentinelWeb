@@ -143,7 +143,6 @@ export default function AssetDetailPage() {
           />
         )}
 
-
         {/* As abas de fase futura são desabilitadas na barra; este ramo existe
             para a tela continuar íntegra se alguma delas for aberta por outro
             caminho. */}

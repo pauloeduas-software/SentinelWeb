@@ -5,20 +5,15 @@ import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { historyQuerySchema } from '../../shared/history.schema';
 import { ASSET_SORTABLE, separarFiltrosDeAtivo } from '../helpers/asset-filters.helper';
-import {
-  createAssetSchema, retireAssetSchema,
-  serialParamSchema, updateAssetSchema,
-} from '../schemas/asset.schema';
+import { createAssetSchema, retireAssetSchema, updateAssetSchema } from '../schemas/asset.schema';
 import { listAssets } from '../use-cases/list-assets.usecase';
 import { listAssetOptions } from '../use-cases/list-asset-options.usecase';
 import { globalSearch } from '../use-cases/global-search.usecase';
-import { resolveTags } from '../use-cases/resolve-tags.usecase';
 import { getAssetStats } from '../use-cases/asset-stats.usecase';
 import { createAsset } from '../use-cases/create-asset.usecase';
 import { updateAsset } from '../use-cases/update-asset.usecase';
 import { deleteAsset } from '../use-cases/delete-asset.usecase';
 import { restoreAsset } from '../use-cases/restore-asset.usecase';
-import { findAssetBySerial } from '../use-cases/find-asset-by-serial.usecase';
 import { findAssetById } from '../use-cases/find-asset-by-id.usecase';
 // A BORDA é quem sabe quem está pedindo (D23, mesma inversão do `actorId`): o
 // use-case recebe um booleano e não conhece `request`.
@@ -45,19 +40,6 @@ const optionsQuerySchema = z.strictObject({
  */
 const buscaGlobalSchema = z.strictObject({
   q: z.string('informe o que buscar').trim().min(1, 'busca vazia').max(300, 'busca: máximo de 300 caracteres'),
-});
-
-/**
- * A lista bipada (F10, Etapa G).
- *
- * `POST` numa rota que só LÊ, pelo mesmo motivo do report builder: a entrada é
- * um ARRAY de até 500 termos, e isso não cabe numa query string.
- */
-const resolveTagsSchema = z.strictObject({
-  termos: z
-    .array(z.string().trim().max(300, 'termo: máximo de 300 caracteres'), 'informe as etiquetas')
-    .min(1, 'bipe ou cole ao menos uma etiqueta')
-    .max(500, 'no máximo 500 etiquetas por vez'),
 });
 
 export const assetController = {
@@ -108,21 +90,9 @@ export const assetController = {
     return globalSearch(q);
   },
 
-  /** Resolve uma lista de etiquetas/séries/QRs bipados (F10, Etapa G). */
-  async resolveTags(request: FastifyRequest) {
-    const { termos } = resolveTagsSchema.parse(request.body ?? {});
-    return resolveTags(termos);
-  },
-
   async options(request: FastifyRequest) {
     const { q } = optionsQuerySchema.parse(request.query ?? {});
     return listAssetOptions(q);
-  },
-
-
-  async bySerial(request: FastifyRequest) {
-    const { serial } = serialParamSchema.parse(request.params);
-    return findAssetBySerial(serial);
   },
 
   async create(request: FastifyRequest, reply: FastifyReply) {

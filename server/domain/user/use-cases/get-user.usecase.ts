@@ -10,10 +10,9 @@ import { contarPosseAberta, type PosseAbertaDoUsuario } from './count-user-posse
  * pessoa por id — buscar 25 para usar 1 é o que faz a tela de detalhe depender
  * de por qual página o usuário chegou nela (e quebrar no F5).
  *
- * As duas contagens vêm JUNTAS, e não em rota separada, porque é delas que o
- * botão de desligamento tira o que mostrar antes de confirmar, e porque são as
- * mesmas duas do 409 do `DELETE`: a tela e a recusa passam a falar o mesmo
- * número, lido da mesma função (`contarPosseAberta`).
+ * AS CONTAGENS VÊM JUNTAS, e não em rota separada, porque são as mesmas que o
+ * 409 do `DELETE` usa: a tela e a recusa passam a falar o mesmo número, lido da
+ * mesma função (`contarPosseAberta`).
  */
 export interface UsuarioComPosse {
   id: string;
@@ -30,12 +29,9 @@ export interface UsuarioComPosse {
   hiredAt: Date | null;
 
   /**
-   * O departamento.
-   *
-   * Objeto e não texto: ele virou entidade na F11 (D75), e a tela mostra o nome
-   * mas navega pelo id. A coluna de texto que ocupava este nome caiu na Etapa J.
+   * O que prende esta pessoa ao inventário, nas TRÊS pontas: ativos em posse
+   * direta, postos ocupados e assentos de licença (`count-user-posse`).
    */
-  /** Quem COBRA esta pessoa. Nunca quem responde pelo ativo dela (D72). */
   posseAberta: PosseAbertaDoUsuario;
 }
 

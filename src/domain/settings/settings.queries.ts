@@ -5,7 +5,7 @@ import type { ConfiguracaoDoSistema } from '../shared/settings.types';
 // A CONFIGURAÇÃO DE SISTEMA — formato de número, data e moeda (F10).
 //
 // POR QUE ESTE RECORTE TEM DOMÍNIO PRÓPRIO, e os outros dois não: a descoberta
-// vive em `reconciliation.queries.ts` e os alertas em `alert.queries.ts`, cada
+// vive em `reconciliation.queries.ts`, cada
 // um ao lado de quem os consome. Este é consumido por TODA tela que formata
 // dinheiro ou data — não há um domínio para pendurá-lo sem mentir sobre quem o
 // usa.

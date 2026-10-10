@@ -11,7 +11,7 @@ import { useOcupantes } from '../hooks/useOcupantes';
 
 // As tabelas de catálogo do ITAM — o menu *Settings* do Snipe-IT.
 //
-// Uma tela para as SETE tabelas, dirigida pelas specs de `specs/`: acrescentar
+// Uma tela para as CINCO tabelas, dirigida pelas specs de `specs/`: acrescentar
 // uma tabela é escrever a spec, não copiar uma página.
 //
 // E UMA OITAVA ABA QUE NÃO É TABELA: *Sistema* (F10), que edita a LINHA ÚNICA do
@@ -48,7 +48,6 @@ export default function ConfiguracoesPage() {
 
   const posto = acaoAberta?.id === 'ocupantes' ? acaoAberta.registro : null;
   const ocupantes = useOcupantes(posto?.id ?? null);
-
 
   return (
     <div className="animate-in fade-in duration-300 h-[calc(100vh-4rem)] flex flex-col pb-6">
@@ -154,7 +153,6 @@ export default function ConfiguracoesPage() {
         </>
       )}
 
-
       {modalAberto && (
         <CatalogFormModal
           spec={spec}
@@ -163,7 +161,6 @@ export default function ConfiguracoesPage() {
           onSubmit={handleSubmit}
         />
       )}
-
 
       {posto && (
         <LocationOccupantsModal

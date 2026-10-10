@@ -3,7 +3,7 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { conectarAgente, esperarPor } from '../helpers/agente';
 import { prisma } from '../../server/core/database/prismaClient';
 
-// A BORDA DO AGENTE — o que o rollout do C# vai exercitar por semanas.
+// A BORDA DO AGENTE — o que o rollout vai exercitar por semanas.
 //
 // Enquanto o binário novo não chega em toda a frota, o servidor atende os dois
 // formatos ao mesmo tempo. Este arquivo é o que garante que isso continue
@@ -116,7 +116,7 @@ describe('o handshake novo traz identidade', () => {
 describe('o que o agente manda vazio é "não sei", nunca zero', () => {
   it('string vazia em RamTotalBytes não vira "esta máquina tem zero bytes"', async () => {
     const agente = await conectarAgente(api, 'vazio-1');
-    // O agente C# serializa `null` como string vazia em algumas versões, e
+    // O agente serializa `null` como string vazia em algumas versões, e
     // `Number('')` é `0` — finito e não negativo. Sem a guarda do
     // `readOptionalBigInt`, isto gravava uma AFIRMAÇÃO sobre a máquina: que ela
     // tem zero bytes de RAM. É diferente de "esta versão do agente não coleta

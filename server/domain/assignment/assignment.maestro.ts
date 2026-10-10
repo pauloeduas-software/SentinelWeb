@@ -21,7 +21,6 @@ export class AssignmentMaestro {
     server.post('/api/assets/:id/checkout', WRITE_RATE_LIMIT, assignmentController.checkout);
     server.post('/api/assets/:id/checkin', WRITE_RATE_LIMIT, assignmentController.checkin);
 
-
     // Histórico do ativo, mais recente primeiro. Append-only: a devolução
     // preenche `checkinAt` e a linha fica, então esta rota mostra a posse atual
     // e todas as anteriores.

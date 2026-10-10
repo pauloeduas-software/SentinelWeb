@@ -59,7 +59,6 @@ export function useAssetDetail() {
   const { data: maquina, isPending: maquinaPendente } = useMaquinaDoAtivoQuery(id ?? null);
   const desvincular = useDesvincularMaquina();
 
-
   const fecharModal = () => setModal('nenhum');
 
   /**

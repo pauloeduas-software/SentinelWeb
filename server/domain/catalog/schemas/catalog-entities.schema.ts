@@ -5,7 +5,7 @@ import {
   nomeObrigatorio, textoOpcional, urlOpcional, uuidObrigatorio, uuidOpcional,
 } from '../../shared/fields.schema';
 
-// Contrato de entrada das sete tabelas de catálogo, num lugar só.
+// Contrato de entrada das cinco tabelas de catálogo, num lugar só.
 //
 // `strictObject` em tudo: campo desconhecido é recusado em vez de ignorado em
 // silêncio — é o que fecha o mass assignment (docs/historico/fase-00-base-tecnica.md).

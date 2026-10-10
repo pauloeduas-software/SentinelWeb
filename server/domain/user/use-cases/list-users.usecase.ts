@@ -9,9 +9,9 @@ type UserRow = LinhaCrua;
 function buscarPagina(where: object, query: ListQuery<UserSortable>) {
   return prisma.user.findMany({
     where,
-    // `USER_LIST_SELECT` e não o público: esta é a ÚNICA listagem que mostra a
-    // coluna Departamento, e o join dele não tem o que fazer no select que viaja
-    // embutido em toda posse e toda ocupação (D135).
+    // `USER_LIST_SELECT` e não o público: a listagem de pessoas mostra colunas
+    // que não têm o que fazer no select que viaja embutido em toda posse e toda
+    // ocupação (D135).
     select: USER_LIST_SELECT,
     orderBy: { [query.sort]: query.order },
     skip: query.skip,

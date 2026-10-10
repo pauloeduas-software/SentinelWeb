@@ -12,7 +12,7 @@ import { SUGGESTION_SELECT } from '../helpers/suggestion-select.helper';
  *
  * Sem a linha, o job reoferece a mesma sugestão de hora em hora e a fila vira
  * ruído. Com uma linha sem hash, a recusa correta de hoje esconderia a sugestão
- * correta de amanhã — e o rollout do agente C# vai produzir exatamente isso às
+ * correta de amanhã — e o rollout do agente vai produzir exatamente isso às
  * centenas, quando máquinas que não mandavam serial passarem a mandar.
  */
 export async function recusarSugestao(id: string, actorId: string | null) {

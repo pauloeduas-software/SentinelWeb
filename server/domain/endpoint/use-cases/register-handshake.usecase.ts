@@ -44,7 +44,7 @@ export interface HandshakeRegistrado {
 export async function registerHandshake(data: HandshakeData): Promise<HandshakeRegistrado> {
   // `?? undefined` em TODO campo de identidade, e não `?? null`: em Prisma,
   // `undefined` significa NÃO ESCREVA e `null` significa APAGUE. A diferença é a
-  // fase inteira durante o rollout do agente C# — uma máquina que já mandou o
+  // fase inteira durante o rollout do agente — uma máquina que já mandou o
   // serial e reconecta com a versão antiga do agente (rollback, reinstalação)
   // apagaria o próprio serial, e com ele o vínculo que a reconciliação já tinha
   // resolvido. O que o agente velho não sabe, ele não desfaz.

@@ -32,18 +32,8 @@ export class AssetMaestro {
     // qual a rota existe.
     server.get('/api/search', assetController.search);
 
-    // A LISTA BIPADA — uma pergunta só para as 24 etiquetas de uma folha
-    // (F10, Etapa G). `POST` porque a entrada é um array; nada grava.
-    server.post('/api/assets/resolve-tags', assetController.resolveTags);
-    // Match exato para leitor de código de barras. **Não é o caminho da
-    // reconciliação da F7**, como esta linha dizia antes: a cascata de matching
-    // carrega os candidatos e compara em memória, porque ela precisa detectar
-    // COLISÃO (serial que casa com dois ativos vale zero, D46) e uma rota que
-    // devolve um ativo por serial não tem como responder isso.
-    server.get('/api/assets/by-serial/:serial', assetController.bySerial);
-
     // A leitura unitária vem DEPOIS das rotas de caminho fixo (`/stats`,
-    // `/options`, `/by-serial`): o find-my-way casa o segmento estático antes do
+    // `/options`, `/search`): o find-my-way casa o segmento estático antes do
     // parâmetro, mas manter a ordem aqui é o que deixa isso óbvio para quem
     // acrescentar a próxima.
     //

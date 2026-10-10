@@ -92,8 +92,8 @@ export function useAssetLicensesQuery(assetId: string | null) {
  * O assento é POSSE (D93): entregá-lo a alguém muda o `holdings` daquela pessoa
  * e o 409 do `DELETE` dela; entregá-lo a uma máquina muda a aba Licenças do
  * ativo e o 409 do `DELETE` dele. Invalidar só `licenses` deixaria essas telas
- * mentindo até o próximo refetch — o mesmo raciocínio do
- * `invalidarEstoqueEPosse` da F5.
+ * mentindo até o próximo refetch: operação que atravessa domínios invalida os
+ * dois lados.
  */
 function invalidarLicencaEPosse(queryClient: ReturnType<typeof useQueryClient>) {
   void queryClient.invalidateQueries({ queryKey: licenseKeys.all });

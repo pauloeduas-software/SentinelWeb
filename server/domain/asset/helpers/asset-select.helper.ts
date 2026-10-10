@@ -32,7 +32,6 @@ export const ASSET_SELECT = {
   // Decimal: sai no JSON como STRING.
   purchaseCost: true,
 
-
   // DESCOMISSIONAMENTO. Sai na resposta porque a tela precisa mostrar o selo
   // "descomissionado" na linha e na aba Detalhes — e porque, sem ele, a
   // listagem `?view=retired` devolveria linhas indistinguíveis das outras.
@@ -91,8 +90,8 @@ const COLUNAS_DE_CUSTO = ['purchaseCost'] as const;
 /**
  * Remove as colunas de custo de um select quando a sessão não tem a chave.
  *
- * Genérica porque serve o select da listagem e o do detalhe — e o do detalhe
- * tem a regra de depreciação embutida, que também é dinheiro.
+ * Genérica porque serve o select da listagem e o do detalhe: os dois carregam
+ * a mesma coluna de dinheiro.
  */
 function semCusto<T extends Record<string, unknown>>(select: T): T {
   const copia = { ...select };
@@ -104,9 +103,6 @@ function semCusto<T extends Record<string, unknown>>(select: T): T {
 export function assetSelect(podeVerCusto: boolean) {
   return podeVerCusto ? ASSET_SELECT : semCusto(ASSET_SELECT);
 }
-
-/** A forma crua da coluna, como o Prisma a devolve. */
-
 
 /**
  * O select do DETALHE, conforme a sessão enxergue custo ou não.

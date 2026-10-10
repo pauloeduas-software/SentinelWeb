@@ -70,7 +70,7 @@ export async function esperarPor<T>(
 /**
  * Conecta um agente.
  *
- * O payload sai em PascalCase porque é assim que o agente C# serializa — e é o
+ * O payload sai em PascalCase porque é assim que o agente serializa — e é o
  * caminho que o `normalize-payload.helper` tem que resolver. Um teste escrito em
  * camelCase provaria o caminho mais fácil.
  */

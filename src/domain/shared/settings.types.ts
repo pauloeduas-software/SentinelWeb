@@ -2,7 +2,7 @@
 // `GET /api/settings` devolve.
 //
 // É o TERCEIRO recorte do mesmo singleton: a descoberta mora em
-// `reconciliation.types.ts` e os alertas em `lifecycle.types.ts`, cada um no
+// `reconciliation.types.ts`, cada um no
 // domínio que os consome. Este não tem um consumidor só — `locale`,
 // `dateFormat` e `currency` são lidos por toda tela que mostra dinheiro ou
 // data —, e é por isso que ele tem domínio próprio.

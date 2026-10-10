@@ -44,69 +44,25 @@ export function registrarPerdaDeSessao(handler: () => void): void {
 /**
  * O erro traduzido, com o mapa POR CAMPO quando o servidor o manda.
  *
- * ═════════════════════════════════════════════════════════════════════════════
- * POR QUE O `fields` PRECISA SOBREVIVER À TRADUÇÃO.
- *
  * O 422 do servidor vem com `{ error: "resumo", fields: { "<campo>": "<motivo>" } }`
- * (server/core/errors/zod-error.ts). Até aqui só o resumo sobrevivia, e isso
- * bastava enquanto todo formulário tinha campos FIXOS: uma faixa vermelha no
- * topo dizendo "IP Fixo: use um endereço IPv4" é legível quando há seis campos
- * na tela.
+ * (server/core/errors/zod-error.ts), e o resumo corta em três campos com "(e
+ * mais N)" — então o motivo do quarto não aparece em lugar nenhum. O `fields`
+ * sobrevive à tradução para que um formulário possa pintar a mensagem NO campo.
  *
- * Com campos customizados (F9) deixa de bastar. O conjunto pode ter vinte campos
- * que o cliente criou, e o resumo corta em três com "(e mais N)" — então o
- * motivo do vigésimo campo simplesmente não aparece em lugar nenhum. O `slug`
- * vem no `fields` justamente para a tela pintar a mensagem NO campo, e jogá-lo
- * fora aqui tornaria isso impossível sem cada página refazer a leitura do corpo
- * do erro.
- *
- * Fica nesta classe, e não num `cause` que cada tela destrinche, porque este
- * arquivo já é o único lugar que conhece o formato da resposta de erro — é a
- * mesma razão pela qual a mensagem é traduzida aqui.
- * ═════════════════════════════════════════════════════════════════════════════
+ * NENHUMA TELA O LÊ HOJE: todas mostram só o `message`. Ele fica porque é o que
+ * o servidor manda em todo 422 — jogá-lo fora aqui obrigaria a próxima tela que
+ * quiser o campo certo a refazer a leitura do corpo do erro, que é exatamente o
+ * que este arquivo existe para centralizar.
  */
 export class ErroDaApi extends Error {
   /** `campo` → motivo. Vazio quando o erro não é de validação. */
   readonly fields: Record<string, string>;
 
-  /**
-   * O corpo do erro, cru — para o campo que SÓ aquela rota manda.
-   *
-   * O formato do servidor é `{ error: "…", ...details }` (`core/errors/app-error.ts`
-   * espalha os `details` no corpo), e até aqui chegavam apenas `error` e `fields`.
-   * O login do segundo fator (F11, Etapa H) precisa de um terceiro: `etapa: 'TOTP'`
-   * é o que diz à tela *"a senha está certa, peça o código"*. Sem ele, a única
-   * alternativa seria comparar a MENSAGEM por texto — que quebra na primeira vez
-   * que alguém melhorar a frase.
-   *
-   * Não é um `Record<string, unknown>` passeando pelo painel: quem lê isto lê UMA
-   * chave conhecida, e é por isso que o acesso passa por `detalheDoErro()`.
-   */
-  readonly corpo: Record<string, unknown>;
-
-  constructor(
-    message: string,
-    fields: Record<string, string>,
-    corpo: Record<string, unknown>,
-    options?: ErrorOptions,
-  ) {
+  constructor(message: string, fields: Record<string, string>, options?: ErrorOptions) {
     super(message, options);
     this.name = 'ErroDaApi';
     this.fields = fields;
-    this.corpo = corpo;
   }
-}
-
-/**
- * Um campo do corpo do erro, como texto — ou `null`.
- *
- * Existe para quem não é `ErroDaApi` passar batido: o `catch` de uma tela recebe
- * `unknown`, e `(erro as ErroDaApi).corpo.etapa` estouraria num erro de rede.
- */
-export function detalheDoErro(erro: unknown, campo: string): string | null {
-  if (!(erro instanceof ErroDaApi)) return null;
-  const valor = erro.corpo[campo];
-  return typeof valor === 'string' ? valor : null;
 }
 
 /** O `fields` do corpo, se ele vier no formato esperado. */
@@ -150,15 +106,10 @@ apiClient.interceptors.response.use(
             : 'Não foi possível falar com o servidor.';
 
     // `ErroDaApi` e não `Error`: continua sendo um `Error` para todo código que
-    // só lê `.message` (que é a maioria), e carrega o `fields` para quem precisa
-    // pintar o campo certo.
-    const data: unknown = error?.response?.data;
-    const corpo = typeof data === 'object' && data !== null && !Array.isArray(data)
-      ? (data as Record<string, unknown>)
-      : {};
-
+    // só lê `.message` (que é todo ele hoje), e carrega o `fields` para quem
+    // precisar pintar o campo certo.
     return Promise.reject(
-      new ErroDaApi(message, camposDoErro(data), corpo, { cause: error }),
+      new ErroDaApi(message, camposDoErro(error?.response?.data), { cause: error }),
     );
   },
 );

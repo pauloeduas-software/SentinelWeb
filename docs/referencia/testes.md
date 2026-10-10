@@ -11,33 +11,19 @@
 
 ```bash
 npm test               # roda tudo, uma vez
-npm run test:puro      # só o que NÃO precisa de banco
 npm run test:watch
 npx vitest run tests/corridas           # só uma pasta
 npx vitest run -t "etiqueta automática"  # só o que casa com o nome
-npx vitest run --project banco           # só o que fala com o Postgres
 ```
 
-### Dois projetos, e a divisão é pelo que o teste PRECISA para rodar
+### Uma configuração só, porque todo teste fala com o banco
 
-Arquivo terminado em **`.puro.test.ts`** exercita função pura e não abre conexão
-nenhuma. Ele roda no projeto `puro`, que **não tem `globalSetup` nem `setupFiles`** —
-e é isso que faz `npm run test:puro` funcionar numa máquina sem contêiner, em
-milissegundos, num *pre-commit*.
-
-Todo o resto roda no projeto `banco`, com o `globalSetup` que cria o banco e aplica
-as migrations.
-
-> **A separação nasceu de um furo.** `webhook.puro.test.ts` já era puro e já estava
-> em arquivo próprio — mas o `globalSetup` roda em TODA invocação, então rodá-lo
-> sozinho morria com `PrismaClientInitializationError` antes do primeiro `it`. A
-> allowlist de destino de webhook é a única coisa da F8 que um atacante alcança, e
-> ela só era verificável com Postgres de pé: exatamente o oposto do que separar o
-> arquivo pretendia.
->
-> O sufixo vai no **nome** e não numa pasta própria: `tests/ciclo-de-vida/` continua
-> agrupando por fase, que é como alguém procura ("o que a F8 cobre?"), e a exigência
-> de infraestrutura fica visível no arquivo que a tem.
+Houve dois projetos: arquivo terminado em **`.puro.test.ts`** exercitava função
+pura e rodava sem `globalSetup`, o que permitia um `npm run test:puro` numa
+máquina sem contêiner. O corte de escopo levou o último arquivo puro, e um
+projeto com zero arquivos não é separação — é um script que sai com erro sem
+nenhum teste ter falhado. O par (projeto + sufixo no nome do arquivo) volta junto
+com o próximo teste puro.
 
 ---
 

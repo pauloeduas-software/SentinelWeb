@@ -28,10 +28,6 @@ export function unregisterAgent(hwid: string, socket: WebSocket): boolean {
   return true;
 }
 
-export function isAgentOnline(hwid: string): boolean {
-  return activeAgents.has(sanitizeHwid(hwid));
-}
-
 export function countAgentsOnline(): number {
   return activeAgents.size;
 }

@@ -11,7 +11,6 @@ import { TRACO, resumoDaPosse, rotuloDaOperacao } from './helpers/posse.helper';
 import { useAssets } from './hooks/useAssets';
 import { useColunas } from './hooks/useColunas';
 
-
 export default function AtivosPage() {
   const {
     assets, total, totalCadastrado, porStatus,

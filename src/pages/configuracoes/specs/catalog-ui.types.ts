@@ -56,7 +56,7 @@ export interface CampoSpec {
 }
 
 export type RenderColuna =
-  | 'texto' | 'cor' | 'enum' | 'relacao' | 'booleano' | 'moeda'
+  | 'texto' | 'cor' | 'enum' | 'relacao' | 'booleano'
   // `contagem` lê um agregado do `_count` do servidor — quantos campos um
   // conjunto tem (F9). Não é coluna da tabela: é conta, e por isso não entra no
   // `audited` da spec do servidor.
@@ -71,8 +71,6 @@ export interface ColunaSpec {
   render?: RenderColuna;
   /** `enum`: para traduzir o valor do banco no rótulo em português */
   opcoes?: readonly OpcaoFixa[];
-  /** `moeda`: o campo irmão que diz se é % ou R$ */
-  campoTipo?: string;
   /** `contagem`: qual chave dentro de `_count` ler ('fields', 'categories'…) */
   contagemDe?: string;
 }
@@ -80,9 +78,9 @@ export interface ColunaSpec {
 /**
  * Uma ação por LINHA além de editar e excluir.
  *
- * Por que isto existe: as sete abas são o MESMO CRUD, e foi essa igualdade que
+ * Por que isto existe: as cinco abas são o MESMO CRUD, e foi essa igualdade que
  * permitiu uma tela só. Localizações quebrou a igualdade em UM ponto — um posto
- * tem ocupantes (docs/referencia/modelo-de-posse.md, Camada 2), e as outras seis tabelas não
+ * tem ocupantes (docs/referencia/modelo-de-posse.md, Camada 2), e as outras tabelas não
  * têm nada parecido.
  *
  * As duas saídas ruins eram: uma tela separada só para Localizações (volta a
@@ -113,7 +111,7 @@ export interface CatalogUiSpec {
   placeholderBusca: string;
   colunas: readonly ColunaSpec[];
   campos: readonly CampoSpec[];
-  /** Ausente nas seis abas que só têm o CRUD. Ver `AcaoLinhaSpec`. */
+  /** Ausente nas cinco abas que só têm o CRUD. Ver `AcaoLinhaSpec`. */
   acoes?: readonly AcaoLinhaSpec[];
 }
 

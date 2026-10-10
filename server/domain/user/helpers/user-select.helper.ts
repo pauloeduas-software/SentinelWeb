@@ -66,18 +66,5 @@ export const USER_DETAIL_SELECT = {
   phone: true,
   address: true,
   hiredAt: true,
-
-  // ── DE ONDE VEM ESTA IDENTIDADE (F11, Etapa I — D78) ─────────────────────
-  //
-  // SÓ NO DETALHE, e não no `USER_LIST_SELECT`: a listagem de pessoas não mostra
-  // origem de identidade, e três campos a mais por linha em quinhentas linhas são
-  // o que o D135 acabou de tirar daqui.
-  //
-  // `externalId` NÃO SAI, de propósito. Ele é o identificador da pessoa no
-  // provedor de identidade (o `oid` do tenant), e a tela não tem nada a fazer com
-  // ele: o que ela precisa dizer é *"vem do diretório"* e *"sumiu de lá em tal
-  // dia"*, que é o que estes três campos respondem. Expor o `oid` de cada
-  // colaborador numa resposta de API é dar a quem lê o painel metade de uma
-  // correlação com o Entra ID, sem ninguém ter pedido.
 } as const;
 

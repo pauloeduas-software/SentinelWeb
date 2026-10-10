@@ -14,7 +14,7 @@ export type AgentStatus = 'ONLINE' | 'OFFLINE';
 /** Triagem do Shadow IT — máquina vista pelo agente e sem cadastro. */
 export type ReviewState = 'UNREVIEWED' | 'ALLOWED' | 'BLOCKED';
 
-/** Máquina descoberta pelo Agente Sentinel (C#) — o lado RMM. */
+/** Máquina descoberta pelo Agente Sentinel — o lado RMM. */
 export interface Endpoint {
   id: string;
   hwid: string;

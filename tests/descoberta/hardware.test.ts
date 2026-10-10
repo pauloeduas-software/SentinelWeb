@@ -41,7 +41,7 @@ const VAZIO = {
 
 describe('o que NÃO é mudança de hardware', () => {
   it('a primeira coleta de um campo não é troca de peça', () => {
-    // O rollout do agente C# vai produzir isso às centenas no mesmo dia — 500
+    // O rollout do agente vai produzir isso às centenas no mesmo dia — 500
     // máquinas ganhando `biosSerial` de uma vez. Contar como mudança
     // transformaria o histórico de cada ativo num relatório de deploy.
     const depois = { ...VAZIO, biosSerial: 'ABC123', ramTotalBytes: 17179869184n };
