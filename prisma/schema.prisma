@@ -1123,8 +1123,9 @@ model StockItem {
 // ocupantes abertos daquele posto, resolvidos na leitura.
 //
 // A forma da linha é CHECK do banco, escrito à mão na migration
-// (`stock_movements_forma`): SAIDA tem exatamente um alvo e `qty = 1`;
-// ENTRADA e BAIXA não têm alvo nem devolução.
+// (`stock_movements_forma`): SAIDA tem exatamente um alvo, o discriminante
+// preenchido e `qty = 1`; ENTRADA e BAIXA não têm alvo nem devolução. E o
+// total do item não fica negativo (`stock_items_qty_nao_negativa`).
 model StockMovement {
   id     String            @id @default(uuid()) @db.Uuid
   itemId String            @db.Uuid
@@ -1152,8 +1153,10 @@ model StockMovement {
 
   createdAt DateTime @default(now())
 
-  // Cascade no item dono do movimento; Restrict nos ALVOS: não se apaga uma
-  // pessoa nem um posto que ainda segura unidade — é o 409 por uso do catálogo.
+  // Cascade no item dono do movimento. Restrict nos ALVOS, e os dois 409 têm
+  // donos diferentes: o posto é catálogo e o `countUsages` da localização conta
+  // as unidades; a pessoa só vai para a lixeira (soft), então a FK nunca é
+  // consultada — quem recusa é a invariante 6 (`contarPosseAberta`).
   item           StockItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
   targetUser     User?     @relation(fields: [targetUserId], references: [id], onDelete: Restrict)
   targetLocation Location? @relation(fields: [targetLocationId], references: [id], onDelete: Restrict)
