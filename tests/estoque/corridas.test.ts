@@ -63,6 +63,38 @@ describe('cinco saídas simultâneas de um estoque de três', () => {
   });
 });
 
+describe('BAIXA concorrente com SAÍDA, no mesmo item de UMA unidade', () => {
+  it('deixa passar exatamente UMA, e o estado final bate com quem venceu', async () => {
+    // As duas travam a MESMA linha do item antes de contar (`travarItemOuFalhar`
+    // em `adjust-stock` e em `checkout-stock`), então o Postgres serializa: uma
+    // das duas vê o estado DEPOIS da outra. Não importa qual vence — a baixa de
+    // 1 com a unidade já fora, ou a saída de um item já baixado a zero — o que
+    // não pode acontecer é as DUAS passarem.
+    const dock = await criarItemDeEstoque(api, { name: 'Dock da corrida baixa×saída', categoryId: cenario.categoriaEstoqueId, qty: 1 });
+
+    const baixar = () => api.post(`/api/stock/items/${dock.id}/adjust`, { kind: 'BAIXA', qty: 1 });
+    const [baixa, saida] = await Promise.all([baixar(), sair(dock.id)]);
+
+    const sucessos = [baixa.status === 201, saida.status === 201].filter(Boolean).length;
+    expect(sucessos).toBe(1);
+    expect([baixa.status, saida.status].filter((s) => s !== 201)).toEqual([409]);
+
+    const item = await prisma.stockItem.findUniqueOrThrow({ where: { id: dock.id }, select: { qty: true } });
+    const fora = await abertas(dock.id);
+    if (baixa.status === 201) {
+      // A baixa venceu: o item foi a zero antes de a saída contar, e ela viu
+      // "0 de 0 fora" — sem unidade.
+      expect(item.qty).toBe(0);
+      expect(fora).toBe(0);
+    } else {
+      // A saída venceu: a unidade saiu, e a baixa viu "1 de 1 fora" — abaixo
+      // do que está fora.
+      expect(item.qty).toBe(1);
+      expect(fora).toBe(1);
+    }
+  });
+});
+
 describe('devolver a mesma unidade duas vezes ao mesmo tempo', () => {
   it('fecha UMA vez — e o carimbo de devolução não é reescrito', async () => {
     const teclado = await criarItemDeEstoque(api, { name: 'Teclado devolvido duas vezes', categoryId: cenario.categoriaEstoqueId, qty: 1 });

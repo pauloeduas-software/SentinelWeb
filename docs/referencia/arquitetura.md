@@ -297,12 +297,12 @@ impede o cadastro de sumir, e ele fecha quando a pessoa sai. Então
 `count-user-posse` e o 409 do `DELETE` (de pessoa **e** de ativo) contam
 assento, em vez de o domínio de licença ganhar versões próprias.
 
-**E a desativação de uma pessoa é recusada nas TRÊS pontas, não em uma:**
-`checkoutAsset`, `checkoutSeat` e `addLocationOccupant` respondem 409 para quem
-está inativo, com a trava de linha em `lock-user.usecase.ts` como primeira
-instrução de cada transação. A terceira foi a que faltou mais tempo, e o motivo
-é instrutivo: ocupação de posto não *parece* posse, mas responsabilidade por
-ativo em posto é DERIVADA dela.
+**E a desativação de uma pessoa é recusada nas QUATRO pontas, não em uma:**
+`checkoutAsset`, `checkoutSeat`, `checkoutStock` e `addLocationOccupant`
+respondem 409 para quem está inativo, com a trava de linha em
+`lock-user.usecase.ts` como primeira instrução de cada transação. A ocupação de
+posto foi a que faltou mais tempo, e o motivo é instrutivo: ocupação de posto
+não *parece* posse, mas responsabilidade por ativo em posto é DERIVADA dela.
 
 O que isso proíbe, e o lint não pega: **escrever em `Asset.assignedToId` fora do
 checkout/checkin**. Aquela coluna é cache do caso `USER`; um segundo lugar que a

@@ -29,8 +29,9 @@ export interface UsuarioComPosse {
   hiredAt: Date | null;
 
   /**
-   * O que prende esta pessoa ao inventário, nas TRÊS pontas: ativos em posse
-   * direta, postos ocupados e assentos de licença (`count-user-posse`).
+   * O que prende esta pessoa ao inventário, nas QUATRO pontas: ativos em posse
+   * direta, postos ocupados, assentos de licença e itens de estoque no nome
+   * dela (`count-user-posse`).
    */
   posseAberta: PosseAbertaDoUsuario;
 }

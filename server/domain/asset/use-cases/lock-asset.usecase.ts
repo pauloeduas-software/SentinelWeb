@@ -46,9 +46,10 @@ import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
 // ANTES do posto. Uma aresta implícita assim existe em toda FK escrita.
 //
 // Este arquivo não é o inventário completo das travas — o domínio de licença
-// trava `licenses` e `license_seats` por conta própria (`license-seats.helper.ts`).
-// É o inventário de quem disputa USUÁRIO, ATIVO e POSTO, que são as três linhas
-// que mais de um domínio pede.
+// trava `licenses` e `license_seats` por conta própria (`license-seats.helper.ts`),
+// e o de estoque trava `stock_items` em `stock-balance.helper.ts`. É o
+// inventário de quem disputa USUÁRIO, ATIVO, ITEM e POSTO, que são as quatro
+// linhas que mais de um domínio pede.
 
 /**
  * Trava a linha do ativo até o fim da transação atual.

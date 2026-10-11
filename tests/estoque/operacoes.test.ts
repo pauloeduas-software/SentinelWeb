@@ -87,6 +87,42 @@ describe('a movimentação', () => {
     expect(body.rows.find((e) => e.action === 'SAIDA')?.id).not.toBe(devolucao.id);
   });
 
+  it('a saída de N unidades é UM evento na linha do tempo, com qty = N', async () => {
+    // As N linhas do `createManyAndReturn` nascem no MESMO instante; é essa
+    // igualdade que `agruparSaidas` usa para juntá-las — "5 mouses para a Mesa
+    // 1", não cinco eventos de um.
+    const mouse = await item('Mouse do lote na linha do tempo', 5);
+    const saida = await api.post<{ unidades: { id: string }[] }>(`/api/stock/items/${mouse.id}/checkout`, {
+      targetType: 'LOCATION', targetLocationId: cenario.mesa1, qty: 5,
+    });
+    expect(saida.status).toBe(201);
+
+    const { body } = await api.get<{ rows: Evento[] }>(`/api/stock/items/${mouse.id}/movements`);
+    const eventosDeSaida = body.rows.filter((e) => e.action === 'SAIDA');
+    expect(eventosDeSaida).toHaveLength(1);
+    expect(eventosDeSaida[0].qty).toBe(5);
+  });
+
+  it('a qty do evento é recontada no banco, e não fica truncada pela janela', async () => {
+    // Um lote de TRÊS linhas, com duas ENTRADAS mais novas depois dele: a
+    // janela de 3 linhas pega as 2 ENTRADAS mais UMA das três linhas do lote (a
+    // do desempate por id). Sem a recontagem no banco, o evento mostraria
+    // "saíram 1" — quando saíram 3. É o mesmo risco que o cabeçalho deste
+    // arquivo já descreve para a devolução antiga, agora para o lote.
+    const cabo = await item('Cabo do lote truncado pela janela', 10);
+    const saida = await api.post<{ unidades: { id: string }[] }>(`/api/stock/items/${cabo.id}/checkout`, {
+      targetType: 'LOCATION', targetLocationId: cenario.mesa1, qty: 3,
+    });
+    expect(saida.status).toBe(201);
+    expect((await api.post(`/api/stock/items/${cabo.id}/adjust`, { kind: 'ENTRADA', qty: 1 })).status).toBe(201);
+    expect((await api.post(`/api/stock/items/${cabo.id}/adjust`, { kind: 'ENTRADA', qty: 1 })).status).toBe(201);
+
+    const { body } = await api.get<{ rows: Evento[] }>(`/api/stock/items/${cabo.id}/movements?limit=3`);
+    const evento = body.rows.find((e) => e.action === 'SAIDA');
+    expect(evento).toBeDefined();
+    expect(evento?.qty).toBe(3);
+  });
+
   it('não esconde a devolução de hoje de uma saída antiga, mesmo com limite', async () => {
     // A linha da saída é uma das mais ANTIGAS por `createdAt`; a devolução dela
     // é o evento mais RECENTE. Com uma consulta só, ordenada pela data de saída,

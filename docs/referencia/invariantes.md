@@ -202,14 +202,16 @@ antes, com a frase que ensina o modelo; o CHECK é a rede de baixo.
 
 `server/domain/user/use-cases/lock-user.usecase.ts`, chamada como **primeira**
 instrução da transação em `deleteUser`, `checkoutAsset` (alvo `USER`),
-`checkoutSeat` (alvo `USER`) e `addLocationOccupant`.
+`checkoutSeat` (alvo `USER`), `checkoutStock` (alvo `USER`) e
+`addLocationOccupant`.
 
-**TRÊS PONTAS, e são as três que fazem alguém responder por equipamento:** ativo
-no nome (`Assignment` alvo `USER`), assento de licença
-(`LicenseSeatCheckout.assignedUserId`) e ocupação de posto (`LocationOccupant`)
-— esta última porque ocupante responde pelos ativos do posto por derivação da
-Camada 3. A pergunta que decide se algo entra aqui não é *"tem tabela própria?"*,
-é ***"alguém responde por isto quando a pessoa sai?"***.
+**QUATRO PONTAS, e são as quatro que fazem alguém responder por equipamento:**
+ativo no nome (`Assignment` alvo `USER`), assento de licença
+(`LicenseSeatCheckout.assignedUserId`), unidade de estoque no nome
+(`StockMovement` de SAIDA alvo `USER`) e ocupação de posto (`LocationOccupant`)
+— esta última porque ocupante responde pelos ativos e pelo estoque do posto por
+derivação da Camada 3. A pergunta que decide se algo entra aqui não é *"tem
+tabela própria?"*, é ***"alguém responde por isto quando a pessoa sai?"***.
 
 **As três guardas de leitura são furáveis por corrida**, e a trava é a metade que
 faltava:
