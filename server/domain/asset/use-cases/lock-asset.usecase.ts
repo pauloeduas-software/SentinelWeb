@@ -32,6 +32,11 @@ import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
 //   ativo → posto     o checkout a posto e a restauração da lixeira, pela
 //                     invariante 19 (`workstation/helpers/ativo-do-posto.helper.ts`)
 //   ativo             o soft delete do ativo, e a entrega de assento a ativo
+//   usuário → item    a saída de estoque a pessoa (`stock/use-cases/checkout-stock.usecase.ts`)
+//   item → posto      implícita: o INSERT da saída a posto toma `FOR KEY SHARE`
+//                     na linha do local, com o item já travado. Nenhum caminho
+//                     trava posto e depois item, e nenhum trava item e depois
+//                     usuário — é o que mantém o grafo sem ciclo.
 //
 // E AS TRAVAS QUE O POSTGRES TOMA SOZINHO CONTAM. `update-asset.usecase.ts`
 // grava `locationId`: o `UPDATE` trava a linha do ativo e o gatilho da FK

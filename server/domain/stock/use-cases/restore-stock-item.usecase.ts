@@ -1,6 +1,7 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { comSaldo, contarForaDe } from '../helpers/stock-balance.helper';
 import { STOCK_ITEM_SELECT } from '../helpers/stock-select.helper';
 import { assertNomeLivre } from './create-stock-item.usecase';
 
@@ -24,6 +25,9 @@ export async function restoreStockItem(id: string, actorId: string | null) {
     await tx.stockItem.updateMany({ where: { id, deletedAt: { not: null } }, data: { deletedAt: null } });
     await recordActivity(tx, { entityType: 'StockItem', entityId: id, action: 'RESTORE' }, actorId);
 
-    return tx.stockItem.findFirstOrThrow({ where: { id }, select: STOCK_ITEM_SELECT });
+    const item = await tx.stockItem.findFirstOrThrow({ where: { id }, select: STOCK_ITEM_SELECT });
+    // Zero por construção — item só vai para a lixeira sem unidade fora —, mas
+    // contado, não afirmado: é a mesma função que o resto usa.
+    return comSaldo(item, await contarForaDe(tx, id));
   });
 }

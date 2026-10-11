@@ -36,7 +36,12 @@ export interface EventoDeEstoque {
   movementId: string;
   action: AcaoDoMovimento;
   at: Date;
-  /** Quantas unidades o evento moveu. Sempre 1 na saída e na devolução. */
+  /**
+   * Quantas unidades o evento moveu. Na SAIDA é o tamanho do LOTE: as N linhas
+   * de uma mesma saída (mesmo instante, mesmo alvo, mesmo autor) viram um
+   * evento só — "5 mouses para a Mesa 1", não cinco linhas de um. A devolução
+   * é por unidade, e fica por unidade.
+   */
   qty: number;
   /** "Laura Souza", "Mesa 1". Nulo na entrada e na baixa. */
   targetLabel: string | null;
@@ -90,36 +95,81 @@ function eventosDe(movimento: Movimento): EventoDeEstoque[] {
   return eventos;
 }
 
+/** A chave do lote: o que faz N linhas de uma saída serem o MESMO evento. */
+function chaveDoLote(evento: EventoDeEstoque): string {
+  return [
+    evento.action, evento.at.getTime(), evento.targetType, evento.targetUserId,
+    evento.targetLocationId, evento.actorId, evento.notes,
+  ].join('|');
+}
+
+/**
+ * Junta as linhas de uma mesma saída num evento só.
+ *
+ * Só a SAIDA: ENTRADA e BAIXA já são uma linha por operação, e a DEVOLUCAO é por
+ * unidade por desenho. O `createManyAndReturn` da saída grava as N linhas com o
+ * mesmo `createdAt`, então a chave fecha o lote sem precisar de um id de lote na
+ * tabela.
+ */
+function agruparSaidas(eventos: EventoDeEstoque[]): EventoDeEstoque[] {
+  const lotes = new Map<string, EventoDeEstoque>();
+  const resultado: EventoDeEstoque[] = [];
+
+  for (const evento of eventos) {
+    if (evento.action !== 'SAIDA') {
+      resultado.push(evento);
+      continue;
+    }
+    const lote = lotes.get(chaveDoLote(evento));
+    if (lote) {
+      lote.qty += evento.qty;
+    } else {
+      const copia = { ...evento };
+      lotes.set(chaveDoLote(evento), copia);
+      resultado.push(copia);
+    }
+  }
+
+  return resultado;
+}
+
 export async function listStockMovements(itemId: string, limite = LIMITE_PADRAO) {
   // `findFirst` pelo escopo da lixeira, como o detalhe: a movimentação de um
   // item apagado se lê restaurando o item.
   const item = await prisma.stockItem.findFirst({ where: { id: itemId }, select: { id: true } });
   if (!item) throw new AppError('Item de estoque não encontrado.', 404);
 
-  const [porSaida, porDevolucao, total] = await Promise.all([
+  // `id` desempata em todas as ordenações: as N linhas de uma saída nascem no
+  // mesmo milissegundo, e sem o desempate a borda do `take` mudaria entre dois
+  // GETs iguais.
+  const [porSaida, porDevolucao, linhasNoBanco, devolvidas] = await Promise.all([
     prisma.stockMovement.findMany({
       where: { itemId },
       select: STOCK_MOVEMENT_SELECT,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limite,
     }),
     prisma.stockMovement.findMany({
-      where: { itemId, returnedAt: { not: null } },
+      // `kind: 'SAIDA'` junto: é o que o CHECK já garante, e é o que deixa o
+      // índice `(itemId, kind, returnedAt)` servir filtro e ordenação.
+      where: { itemId, kind: 'SAIDA', returnedAt: { not: null } },
       select: STOCK_MOVEMENT_SELECT,
-      orderBy: { returnedAt: 'desc' },
+      orderBy: [{ returnedAt: 'desc' }, { id: 'desc' }],
       take: limite,
     }),
-    // O total de EVENTOS, não de linhas: cada devolução conta um a mais.
-    prisma.stockMovement.count({ where: { itemId } }).then(async (linhas) =>
-      linhas + (await prisma.stockMovement.count({ where: { itemId, returnedAt: { not: null } } }))),
+    prisma.stockMovement.count({ where: { itemId } }),
+    prisma.stockMovement.count({ where: { itemId, kind: 'SAIDA', returnedAt: { not: null } } }),
   ]);
 
   const linhas = new Map<string, Movimento>();
   for (const movimento of [...porSaida, ...porDevolucao]) linhas.set(movimento.id, movimento);
 
-  const eventos = [...linhas.values()].flatMap(eventosDe)
-    .sort((a, b) => b.at.getTime() - a.at.getTime())
-    .slice(0, limite);
+  const eventos = agruparSaidas(
+    [...linhas.values()].flatMap(eventosDe)
+      .sort((a, b) => b.at.getTime() - a.at.getTime() || b.id.localeCompare(a.id)),
+  ).slice(0, limite);
 
-  return { total, rows: eventos };
+  // O total de EVENTOS ANTES do agrupamento: linhas mais devoluções. É o número
+  // honesto para "há mais do que isto" — o lote só junta o que a tela mostra.
+  return { total: linhasNoBanco + devolvidas, rows: eventos };
 }

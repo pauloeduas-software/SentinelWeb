@@ -103,22 +103,22 @@ export async function checkoutStock(itemId: string, data: CheckoutStockInput, ac
     const fora = await contarForaDe(tx, itemId);
     assertDisponivel(item, data.qty, fora);
 
-    const unidades = [];
-    for (let i = 0; i < data.qty; i += 1) {
-      unidades.push(await tx.stockMovement.create({
-        data: {
-          itemId,
-          kind: 'SAIDA',
-          qty: 1,
-          targetType: data.targetType,
-          targetUserId: data.targetType === 'USER' ? alvoId : null,
-          targetLocationId: data.targetType === 'LOCATION' ? alvoId : null,
-          notes: data.notes ?? null,
-          createdById: actorId,
-        },
-        select: STOCK_MOVEMENT_SELECT,
-      }));
-    }
+    // UMA ida ao banco para as N linhas, com as duas travas seguradas o menor
+    // tempo possível — e as N unidades com o MESMO `createdAt`, que é o que
+    // deixa a linha do tempo mostrá-las como uma saída de N, não N saídas.
+    const unidades = await tx.stockMovement.createManyAndReturn({
+      data: Array.from({ length: data.qty }, () => ({
+        itemId,
+        kind: 'SAIDA' as const,
+        qty: 1,
+        targetType: data.targetType,
+        targetUserId: data.targetType === 'USER' ? alvoId : null,
+        targetLocationId: data.targetType === 'LOCATION' ? alvoId : null,
+        notes: data.notes ?? null,
+        createdById: actorId,
+      })),
+      select: STOCK_MOVEMENT_SELECT,
+    });
 
     // No histórico do ITEM: é onde alguém abre para perguntar "para onde foram
     // os 5 mouses". O `disponivel` DEPOIS da saída explica o evento sem obrigar

@@ -2,7 +2,7 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { buildSnapshot } from '../../shared/diff.helper';
-import type { ClienteEstoque } from '../helpers/stock-balance.helper';
+import { comSaldo, type ClienteEstoque } from '../helpers/stock-balance.helper';
 import { STOCK_ITEM_SELECT } from '../helpers/stock-select.helper';
 import type { CreateStockItemInput } from '../schemas/stock.schema';
 
@@ -70,6 +70,8 @@ export async function createStockItem(data: CreateStockItemInput, actorId: strin
       changes: buildSnapshot(item, CAMPOS_AUDITADOS),
     }, actorId);
 
-    return item;
+    // COM SALDO, como a listagem e o detalhe: uma forma só de item na API.
+    // `fora` é zero por construção — nada saiu de um item que acabou de nascer.
+    return comSaldo(item, 0);
   });
 }
