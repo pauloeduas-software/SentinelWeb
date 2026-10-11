@@ -345,9 +345,35 @@ describe('invariante 6 — a ponta do estoque', () => {
 });
 
 describe('a porta fechada e o papel', () => {
-  it('as rotas exigem sessão, e apagar e restaurar são do ADMIN', async () => {
-    expect((await api.anonimo.get('/api/stock/items')).status).toBe(401);
+  it('as DEZ rotas do domínio exigem sessão — a garantia é por OMISSÃO', async () => {
+    // Rota nova sem linha no mapa de permissão é rota que QUALQUER sessão
+    // alcança, e nada falha: o boot derruba isso (D137/D148), mas o que se
+    // prova aqui é o efeito fim-a-fim, rota por rota, e não só o mecanismo
+    // genérico (`tests/invariantes/permissao.test.ts`). Um id qualquer no lugar
+    // do parâmetro basta: a sessão é checada ANTES do handler olhar o corpo.
+    const falso = '00000000-0000-0000-0000-000000000000';
+    const rotas: { metodo: 'get' | 'post' | 'put' | 'delete'; url: string }[] = [
+      { metodo: 'get', url: '/api/stock/items' },
+      { metodo: 'get', url: `/api/stock/items/${falso}` },
+      { metodo: 'get', url: `/api/stock/items/${falso}/movements` },
+      { metodo: 'post', url: '/api/stock/items' },
+      { metodo: 'put', url: `/api/stock/items/${falso}` },
+      { metodo: 'delete', url: `/api/stock/items/${falso}` },
+      { metodo: 'post', url: `/api/stock/items/${falso}/restore` },
+      { metodo: 'post', url: `/api/stock/items/${falso}/adjust` },
+      { metodo: 'post', url: `/api/stock/items/${falso}/checkout` },
+      { metodo: 'post', url: `/api/stock/movements/${falso}/checkin` },
+    ];
 
+    for (const { metodo, url } of rotas) {
+      const resposta = metodo === 'get'
+        ? await api.anonimo.get(url)
+        : await api.anonimo[metodo](url, {});
+      expect(resposta.status, `${metodo.toUpperCase()} ${url}`).toBe(401);
+    }
+  });
+
+  it('apagar e restaurar são do ADMIN; o técnico opera o resto', async () => {
     const tecnico = await api.comoUsuario('TECNICO');
     const mouse = await item('Mouse do técnico', 1);
     // O técnico opera: cria, entrega, devolve.

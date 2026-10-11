@@ -169,6 +169,24 @@ export async function listStockMovements(itemId: string, limite = LIMITE_PADRAO)
       .sort((a, b) => b.at.getTime() - a.at.getTime() || b.id.localeCompare(a.id)),
   ).slice(0, limite);
 
+  // A QTY DE CADA SAIDA É RECONTADA NO BANCO, e não só a soma de quem apareceu
+  // na janela. `porSaida`/`porDevolucao` cortam por LINHA (`take: limite`), e as
+  // N linhas de um lote são contíguas na ordenação — mas um lote bem no limite
+  // do corte pode ter só PARTE das linhas na janela, e a soma local subcontaria
+  // em silêncio: um evento "saíram 37" quando saíram 100. A recontagem é pelo
+  // MESMO discriminante do CHECK `stock_movements_forma` (ele garante que são as
+  // colunas que fecham o lote), e só para os eventos que de fato vão à tela —
+  // o resto da página nunca pede esta conta.
+  await Promise.all(eventos.filter((e) => e.action === 'SAIDA').map(async (evento) => {
+    evento.qty = await prisma.stockMovement.count({
+      where: {
+        itemId, kind: 'SAIDA', createdAt: evento.at,
+        targetType: evento.targetType, targetUserId: evento.targetUserId,
+        targetLocationId: evento.targetLocationId, createdById: evento.actorId, notes: evento.notes,
+      },
+    });
+  }));
+
   // O total de EVENTOS ANTES do agrupamento: linhas mais devoluções. É o número
   // honesto para "há mais do que isto" — o lote só junta o que a tela mostra.
   return { total: linhasNoBanco + devolvidas, rows: eventos };

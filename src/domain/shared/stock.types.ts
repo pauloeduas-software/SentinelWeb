@@ -125,3 +125,28 @@ export interface EventoDeEstoque {
   notes: string | null;
   actorId: string | null;
 }
+
+/**
+ * O que a saída responde — `POST /api/stock/items/:id/checkout`.
+ *
+ * As unidades vêm no formato de `MovimentoDeEstoque`, prontas para a tela
+ * listar "o que acabou de sair"; `disponivel` é o saldo JÁ COM a saída
+ * aplicada, do mesmo jeito que `ResultadoDaDevolucao` traz `livres` depois da
+ * devolução — a tela não recalcula, só lê.
+ */
+export interface ResultadoDaSaida {
+  unidades: MovimentoDeEstoque[];
+  disponivel: number;
+}
+
+/**
+ * O que a entrada e a baixa respondem — `POST /api/stock/items/:id/adjust`.
+ *
+ * `item` já vem com o saldo (`ItemDeEstoque`), e `movimento` é a linha que a
+ * operação gravou — a tela troca o item da listagem por `item` e pode mostrar
+ * `movimento` na linha do tempo sem esperar o próximo GET.
+ */
+export interface ResultadoDoAjuste {
+  item: ItemDeEstoque;
+  movimento: MovimentoDeEstoque;
+}
