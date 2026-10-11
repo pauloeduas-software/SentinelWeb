@@ -82,7 +82,10 @@ export async function contarForaDe(client: ClienteEstoque, id: string): Promise<
  *
  * ORDEM DE TRAVAMENTO: usuário antes do item. A saída para pessoa trava o
  * colaborador primeiro (`lock-user.usecase.ts`), pelo mesmo motivo da entrega de
- * ativo — e nenhum caminho do sistema trava item e depois usuário.
+ * ativo — e nenhum caminho do sistema trava item e depois usuário. A saída a
+ * posto ainda toma `FOR KEY SHARE` na linha do local pelo INSERT (aresta
+ * implícita item → posto), e nenhum caminho trava posto antes de item. O grafo
+ * inteiro está em `lock-asset.usecase.ts`.
  */
 export async function travarItemOuFalhar(client: ClienteQueTrava, itemId: string): Promise<void> {
   const linhas = await client.$queryRaw<{ id: string }[]>`
@@ -120,10 +123,12 @@ export function assertDisponivel(item: { name: string; qty: number }, pedidas: n
   const disponivel = item.qty - fora;
   if (pedidas <= disponivel) return;
 
-  throw new AppError(
-    `Sem unidade disponível de ${item.name}: ${fora} de ${item.qty} fora do estoque`
-      + (pedidas > 1 ? `, e a saída pede ${pedidas}.` : '.'),
-    409,
-    { qty: item.qty, fora, disponivel, pedidas },
-  );
+  // Duas frases, porque são dois estados: nada disponível, ou menos do que a
+  // saída pede. "Sem unidade disponível" com duas na gaveta seria falsa.
+  const frase = disponivel <= 0
+    ? `Sem unidade disponível de ${item.name}: ${fora} de ${item.qty} fora do estoque.`
+    : `Sem unidade suficiente de ${item.name}: a saída pede ${pedidas} e há ${disponivel} `
+      + `${disponivel === 1 ? 'disponível' : 'disponíveis'} (${fora} de ${item.qty} fora do estoque).`;
+
+  throw new AppError(frase, 409, { qty: item.qty, fora, disponivel, pedidas });
 }

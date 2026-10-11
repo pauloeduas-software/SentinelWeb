@@ -2,6 +2,7 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { buildChanges } from '../../shared/diff.helper';
+import { comSaldo, contarForaDe } from '../helpers/stock-balance.helper';
 import { STOCK_ITEM_SELECT } from '../helpers/stock-select.helper';
 import type { UpdateStockItemInput } from '../schemas/stock.schema';
 import { assertCategoriaDeEstoque, assertNomeLivre } from './create-stock-item.usecase';
@@ -35,6 +36,8 @@ export async function updateStockItem(id: string, data: UpdateStockItemInput, ac
       await recordActivity(tx, { entityType: 'StockItem', entityId: id, action: 'UPDATE', changes }, actorId);
     }
 
-    return depois;
+    // Com saldo, como toda leitura de item: a tela substitui a linha pela
+    // resposta e não pode perder o `disponivel` nessa troca.
+    return comSaldo(depois, await contarForaDe(tx, id));
   });
 }

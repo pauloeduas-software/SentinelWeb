@@ -62,7 +62,7 @@ export async function adjustStock(itemId: string, data: AdjustStockInput, actorI
       entityType: 'StockItem',
       entityId: itemId,
       action: 'UPDATE',
-      changes: { qty: { de: antes.qty, para: depois.qty }, movimento: data.kind },
+      changes: { qty: { de: antes.qty, para: depois.qty }, movimento: { de: null, para: data.kind } },
     }, actorId);
 
     return { item: comSaldo(depois, fora), movimento };

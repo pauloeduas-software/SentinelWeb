@@ -20,8 +20,11 @@ export async function getStockItem(id: string) {
       where: { itemId: id, kind: 'SAIDA', returnedAt: null },
       select: STOCK_MOVEMENT_SELECT,
       // As mais antigas primeiro: é a ordem em que saíram, e a que a tela usa
-      // para devolver "a primeira que saiu".
-      orderBy: { createdAt: 'asc' },
+      // para devolver "a primeira que saiu". `id` desempata as N de uma mesma
+      // saída, que nascem no mesmo milissegundo.
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      // Teto: `fora` (a contagem) é a verdade; a lista é o que cabe na tela.
+      take: 200,
     }),
   ]);
 
