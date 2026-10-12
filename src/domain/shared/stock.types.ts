@@ -150,3 +150,30 @@ export interface ResultadoDoAjuste {
   item: ItemDeEstoque;
   movimento: MovimentoDeEstoque;
 }
+
+/** O corpo do cadastro — `qty` é a quantidade INICIAL, e vira a primeira entrada. */
+export interface CriarItemDeEstoqueInput {
+  name: string;
+  categoryId: string;
+  qty?: number;
+  notes?: string | null;
+}
+
+/** O corpo da edição. Sem `qty`: o total muda por entrada e baixa, nunca por aqui. */
+export interface EditarItemDeEstoqueInput {
+  name?: string;
+  categoryId?: string;
+  notes?: string | null;
+}
+
+/** Entrada soma ao total; baixa subtrai, nunca abaixo do que está fora. */
+export interface AjustarEstoqueInput {
+  kind: 'ENTRADA' | 'BAIXA';
+  qty: number;
+  notes?: string | null;
+}
+
+/** O alvo da saída: colaborador OU posto, nunca os dois (checkout-stock.usecase.ts). */
+export type AlvoDaSaidaInput =
+  | { targetType: 'USER'; targetUserId: string; qty: number; notes?: string | null }
+  | { targetType: 'LOCATION'; targetLocationId: string; qty: number; notes?: string | null };

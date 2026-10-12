@@ -5,6 +5,7 @@ import AppSidebar from './pages/components/AppSidebar';
 import AtivosPage from './pages/ativos';
 import AssetDetailPage from './pages/ativos/detalhe';
 import PostosPage from './pages/postos';
+import EstoquePage from './pages/estoque';
 import LicencasPage from './pages/licencas';
 import DescobertasPage from './pages/descobertas';
 import UsersPage from './pages/gestao-usuario';
@@ -79,6 +80,11 @@ function Layout() {
                 da janela. É destino de link porque a busca por etiqueta larga
                 aqui quem bipou o computador de uma mesa — ele saiu de /ativos. */}
             <Route path="/postos/:id" element={<PostosPage />} />
+            {/* O ESTOQUE: monitor, teclado, mouse, cabo — o que tem
+                quantidade e não patrimônio (docs/decisoes/estoque.md). Perto
+                de Postos porque a saída pode ir para uma mesa, e perto de
+                Licenças porque as duas são posse consumida em unidade. */}
+            <Route path="/estoque" element={<EstoquePage />} />
             <Route path="/licencas" element={<LicencasPage />} />
             {/* O QUE O AGENTE VÊ E O CADASTRO NÃO SABE (F7). A rota leva o nome
                 do que a tela LISTA — descobertas —, e não o do processo que roda
