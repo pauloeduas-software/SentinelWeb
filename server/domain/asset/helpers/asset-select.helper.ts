@@ -105,11 +105,8 @@ export function assetSelect(podeVerCusto: boolean) {
 /**
  * O select do DETALHE, conforme a sessão enxergue custo ou não.
  *
- * ERA MAIS QUE ISSO: ele acrescentava a regra de depreciação do modelo ao
- * `ASSET_SELECT`, porque o valor contábil era `purchaseCost` menos a depreciação
- * acumulada e só a ficha o calculava. O valor contábil saiu no D152, e o detalhe
- * voltou a ser o select compartilhado — menos a coluna de custo, quando a sessão
- * não é `ADMIN` (D77).
+ * É o select compartilhado (`ASSET_SELECT`) — menos a coluna de custo, quando a
+ * sessão não é `ADMIN` (D77).
  */
 export function assetDetailSelect(podeVerCusto: boolean) {
   if (podeVerCusto) return ASSET_SELECT;

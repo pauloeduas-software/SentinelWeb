@@ -22,11 +22,6 @@ const logger = createLogger('auth.maestro');
  *   errada. Nenhum corpo legítimo daqui passa de algumas centenas de bytes.
  * - `semCache`: a resposta carrega `Set-Cookie` de sessão.
  * - `verificarOrigem`: segunda camada anti-CSRF atrás do `SameSite` do cookie.
- *
- * TINHA UM QUARTO: `exigirSessaoDeCookie`, que impedia um token pessoal de API de
- * mexer na própria credencial. Saiu com o `ApiToken` no D149 — sem token pessoal,
- * toda requisição autenticada já é cookie de sessão, e o hook não tinha o que
- * recusar.
  */
 const ROTA_DE_CREDENCIAL: RouteShorthandOptions = {
   bodyLimit: 8 * 1024,

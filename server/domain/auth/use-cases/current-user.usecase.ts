@@ -45,9 +45,9 @@ export async function carregarSessaoParaValidacao(
 ): Promise<{ usuario: SessionUser; tokenVersion: number; papel: Papel } | null> {
   const linha = await prisma.user.findFirst({
     where: { id, isActive: true },
-    // O PAPEL VEM NA MESMA CONSULTA, e agora é uma COLUNA — não mais o join nos
-    // grupos que o D136 descrevia. A releitura por requisição é o caminho mais
-    // quente do sistema, e o D148 tirou um join dele.
+    // O PAPEL VEM NA MESMA CONSULTA, por ser uma COLUNA: a releitura por
+    // requisição é o caminho mais quente do sistema, e um join a mais nela
+    // custaria em toda requisição autenticada.
     select: { ...USER_PUBLIC_SELECT, tokenVersion: true, role: true },
   });
   if (!linha) return null;

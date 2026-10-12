@@ -58,13 +58,7 @@ export interface SessaoEmitida {
 // é reassinado a cada login.
 declare module '@fastify/jwt' {
   interface FastifyJWT {
-    /**
-     * O que este sistema ASSINA. Uma forma só: a sessão.
-     *
-     * Eram duas — a segunda era o desafio do SSO (`state`, `nonce`, verificador
-     * do PKCE), assinado com o mesmo segredo num cookie de dez minutos. Saiu com
-     * o OIDC no D148, e com ela a união que `reply.jwtSign` herdava.
-     */
+    /** O que este sistema ASSINA. Uma forma só: a sessão. */
     payload: { sub: string; tv: number };
     user: SessionUser;
   }
