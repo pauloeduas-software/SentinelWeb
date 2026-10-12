@@ -7,7 +7,8 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. O índice está em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D143–D164.
+> Decisões neste arquivo: D143–D164, e O (segunda rodada, numerada por letra — ver
+> [`README.md`](./README.md#a-segunda-rodada-ap)).
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
@@ -472,3 +473,57 @@ exigiria um administrador, que é justamente o que o defeito tira.
 **A lição, que vale além desta migração:** `DEFAULT` numa coluna nova é o valor para a LINHA que
 ainda não existe. Para as que já existem, ele é uma escrita em massa disfarçada de declaração — e
 quando a coluna governa acesso, é uma escrita em massa que se tranca para fora.
+
+---
+
+## O — O segundo de-escopo: o que a primeira rodada manteve, ou não enxergou, sai
+
+**Decidido:** mais uma leva de corte, pelo MESMO critério do D143, aplicado sem a folga que a
+primeira rodada deu a alguns itens. Saem, numa leva de 49 arquivos (331 testes passando depois
+dela):
+
+- ações em massa — `POST /api/assets/bulk`, `bulk-checkout`, `BulkActionBar` e a seleção da
+  listagem;
+- export CSV de ativos e licenças, e o domínio `report` inteiro — as duas consultas que o D161
+  tinha mantido (`/api/reports/prazos`, `/api/reports/responsabilidade`) não sobrevivem, e
+  `vw_asset_responsibles` sai sem leitor;
+- correio inteiro — `core/mail`, o lembrete de atraso (`GET /api/assignments/overdue`), o job de
+  lembrete e `resolverEscalonamento()`;
+- anexos e imagens (domínio `attachment`, `imagePath` nas quatro tabelas, a aba Arquivos) e
+  branding (logo, favicon, nome da empresa, cor de destaque, `core/storage`) — e com os dois, o
+  plugin de multipart e as variáveis de upload;
+- a cifra da chave de produto da licença, inteira — `core/crypto`, `reveal-product-key`,
+  `License.productKey`, `AppSetting.cryptoCanary`;
+- o desligamento (`offboard-user`) e os quatro "holdings" do perfil (diretos, por posto,
+  acessórios, assentos) — substituídos por desativar pela edição (`isActive` no formulário de
+  Usuários, sem fechar nada automaticamente);
+- `Supplier`, `Department` e `User.managerId` — as abas de Configurações caem de sete para cinco;
+- as quatro colunas órfãs do termo de aceite e do export (`requireAcceptance`, `eulaText`,
+  `checkinEmail`, `csvDelimiter`).
+
+**Supera:** D21 (ação em massa "tudo ou nada" — deixa de existir), D31 (entrega em massa por
+linha), D32 e [D82](./posse.md#d82--terminate-não-existe-a-f11-estende-o-offboard) (desligamento
+como operação com nome próprio — a F11 não tem mais o que estender), D57 e
+[D86](./plataforma.md#d86--e-mail-é-best-effort-com-log-o-que-não-pode-se-perder-tem-linha-em-tabela)
+(o e-mail, inteiro — nada do que restava dele sobrevive), D66/D129/D130 (a view do responsável
+resolvido), D73 (`resolverEscalonamento`, sem chamador), D74 (a frase "desligar não é apagar"
+presume uma operação de desligar que não existe mais), D75/D135/[D156](#d156--o-portal-do-colaborador-e-o-backup-saem)
+(`Department`, que a primeira rodada tinha mantido), [D154](#d154--relatório-vira-três-consultas-fixas)/[D161](#d161--os-relatórios-que-sobraram-são-dois-e-não-três)
+(os relatórios, agora zero).
+**Mantém:** [D143](#d143--o-escopo-é-itam--rmm-e-o-critério-de-corte-é-a-ponte) — a régua é a
+mesma; o que muda é até onde ela foi aplicada.
+
+**Por quê uma segunda rodada, e não a primeira corrigida:** a primeira cortou pelo critério certo
+e mesmo assim manteve itens que não o atravessam — o D86 justificou o e-mail pelo lembrete de
+atraso, o D154/D161 por já existir export nos domínios, o D156 por `Department` estar "entranhado"
+em `user`. Em cada um desses casos o argumento registrado era verdadeiro **e** o item não servia
+ao núcleo nem à ponte — a primeira rodada pesou o custo de tirar mais alto que o ganho de não ter.
+Esta rodada paga esse custo.
+
+**O que fica, e por quê:** tudo que atravessa a ponte ITAM×RMM continua de pé —
+`reconciliation` ([D159](#d159--a-tela-da-convergência-fica-e-é-a-única-das-cinco-que-fica)), a
+telemetria consolidada na ficha do ativo e do posto, a licença como cadastro simples e o estoque
+como item e movimento — ver o índice da segunda rodada em
+[`README.md`](./README.md#a-segunda-rodada-ap). `Location.managerId` fica: é gestor de espaço,
+lido pela spec de localização, e não carrega nenhum dos usos que levaram o `User.managerId`
+embora.

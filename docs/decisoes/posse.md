@@ -6,7 +6,8 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D14–D17, D27–D32, D82, D87–D88.
+> Decisões neste arquivo: D14–D17, D27–D32, D82, D87–D88, e B/K da segunda rodada (ver
+> [`README.md`](./README.md#a-segunda-rodada-ap)).
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
@@ -428,6 +429,70 @@ exatamente o que o D27 recusou ao descartar *"cada ocupante assina o seu"*.
 **O que a pendência faz:** aparece em `GET /api/acceptances?view=pendentes`, é reenviável, e
 expira. `resolverResponsaveis()` **não** muda — quem está com o equipamento responde por ele,
 assinado ou não.
+
+---
+
+## K — O alvo `ASSET` sai da posse
+
+**Decidido:** `AssignmentTarget` fica com `USER` e `LOCATION`. `targetAssetId`, a relação, o
+índice e o CHECK de "não entregue a si mesmo" saem do schema; o CHECK da coerência do alvo
+(invariante 5) é refeito para as duas FKs que restam.
+**Supera:** [D14](#d14--o-detentor-é-singular-o-alvo-é-que-é-polimórfico), no que descreve o
+`ASSET` como terceiro alvo possível, e [D87](#d87--entrega-com-alvo-asset-não-emite-termo), que
+fica sem objeto — não existe mais entrega de alvo `ASSET` para não emitir termo sobre.
+
+**Por quê:** o alvo `ASSET` existia para o componente entregue a outro ativo — um pente de RAM
+"pertencendo" a um notebook. Com [I](./catalogo-e-ativo.md#i--ativo-é-computador) (ativo é
+computador) esse caso deixa de existir: o pente não é `Asset`, é estoque, e o que o acompanha é
+`StockMovement`, não `Assignment`. Um computador não é entregue a outro computador — a posse
+entre dois ativos nunca teve um caso de uso real fora do componente, e o componente saiu com o
+D153/[J](./estoque.md#j--o-estoque-volta-como-stockitem--stockmovement).
+
+**O que isso simplifica:** a Camada 3 perde um salto — `resolverResponsaveis()` passa de seis
+consultas em lote para quatro, porque não precisa mais seguir `targetAssetId` até achar um alvo
+que não seja outro ativo. `via` passa a ser só `DIRETO` ou `POSTO`, nunca um terceiro valor. A aba
+Ativo sai do modal de entrega; os selects, rótulos e tipos do contrato que já falavam só de
+pessoa e posto não mudam.
+
+**O que a migração faz:** apaga as posses de alvo `ASSET` antes de encolher o enum — zero linhas
+nos bancos deste projeto, então não há dado real em jogo, mas a ordem (apagar antes de encolher)
+é a mesma do D153 e de toda redução de enum do projeto: o Postgres não aceita um valor em uso
+desaparecer da definição.
+
+---
+
+## B — Invariante 19, na forma final: **um ativo por posto de trabalho**
+
+**Decidido:** um posto de trabalho (`Location.isWorkstation`) tem no máximo **um** `Asset` com
+posse aberta apontando para ele. A regra é sobre o ativo, não sobre "ativo com máquina vinculada".
+Descrição completa, com as três portas e o que cada uma impede, em
+[`../referencia/invariantes.md`](../referencia/invariantes.md#19--no-máximo-um-ativo-por-posto-de-trabalho).
+
+**A forma intermediária, pela qual ela passou primeiro:** nasceu como "no máximo **um
+computador** por posto", com computador definido como *ativo com máquina (`Endpoint`) vinculada*
+— não categoria, porque categoria é texto livre e um 409 não pode depender de alguém ter digitado
+"Desktop" igual. Essa forma tinha **quatro** portas: a entrega (`checkout-asset`), o vínculo de
+máquina (vincular um `Endpoint` a um ativo já num posto com computador), a marca
+`isWorkstation` (ligar a marca num local que já tem mais de um computador) e a restauração da
+lixeira.
+
+**Por quê a forma intermediária não se sustentou:** com [I](./catalogo-e-ativo.md#i--ativo-é-computador)
+(ativo é computador — nada que não é máquina entra em `/ativos`), a pergunta "este ativo é um
+computador?" ficou sempre verdadeira, e a porta do vínculo e o filtro da cascata de reconciliação
+(que recusava propor vínculo para ativo já num posto com computador) pararam de proteger
+qualquer coisa: vincular ou não a máquina deixou de mudar o que o ativo **é**, só o que a ficha
+dele consegue mostrar (telemetria ou "sem agente"). Um desktop cujo agente ainda não chegou já era
+o computador da mesa antes de a forma intermediária admitir isso.
+
+**Supera:** nada do D1–D164 — a invariante 19 nasceu depois do corte do ITAM e nunca teve
+decisão própria nesta pasta, só a entrada em `invariantes.md`. Esta decisão registra onde ela
+chegou, incluindo o PATCH de correção de turno do ocupante
+(`PATCH /api/locations/:id/occupants/:occupantId`), que entrou na mesma leva por tocar o mesmo
+caminho de posse de posto.
+
+**O que ficou em TRÊS portas, e por quê a quarta não é redundante com nenhuma das outras:**
+entrega, marca e restauração da lixeira — ver a tabela completa em `invariantes.md`. A do vínculo
+saiu porque, na forma final, vincular máquina não decide a vaga; a vaga é decidida na entrega.
 
 ---
 
