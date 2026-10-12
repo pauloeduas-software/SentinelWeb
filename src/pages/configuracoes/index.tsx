@@ -33,12 +33,8 @@ export default function ConfiguracoesPage() {
   //
   // `useOcupantes` é compartilhado com /postos, que não tem ação de linha nenhuma
   // para conhecer.
-  // QUAL DAS TRÊS FORMAS a tela está mostrando.
-  //
-  // Era um booleano (`emSistema`) enquanto havia duas; virou um modo quando
-  // apareceu a terceira (Grupos), porque dois booleanos admitiriam o estado
-  // impossível de os dois serem `true`. Grupos saiu no D148 e voltaram a ser
-  // duas — o modo fica, porque é a forma que não admite o estado impossível.
+  // QUAL DAS DUAS FORMAS a tela está mostrando. Um modo, não dois booleanos:
+  // dois booleanos admitiriam o estado impossível de os dois serem `true`.
   //
   // `useState` local porque é estado de UMA tela (docs/referencia/arquitetura.md), e fora
   // do `useCatalog` porque ele cuida da listagem de catálogo, que nestas duas

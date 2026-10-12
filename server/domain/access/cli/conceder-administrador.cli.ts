@@ -39,10 +39,7 @@ export async function concederAdministrador(identificador: string): Promise<void
 
   await prisma.user.update({
     where: { id: pessoa.id },
-    // Uma COLUNA, não um vínculo. Era `groups: { connect: … }` com `connect` e não
-    // `set`, para a pessoa continuar nos grupos que já tinha (num comando de
-    // emergência, destruir configuração é o oposto do que se quer). Com papel
-    // (D148) a questão desaparece: não há vínculo a preservar.
+    // Uma COLUNA, não um vínculo: não há nada mais a preservar além do papel.
     data: { role: 'ADMIN' },
   });
 

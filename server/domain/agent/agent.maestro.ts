@@ -13,8 +13,7 @@ const logger = createLogger('agent.maestro');
 // conexão, traduzir o que chegou e encaminhar. Regra de negócio nenhuma.
 //
 // A rota exige `Authorization: Bearer <token>`, conferido contra o
-// `AGENT_TOKEN` do `.env`. Eram dois formatos em transição (D89); o `ApiToken`
-// por agente saiu no D149, e com ele o vínculo token↔máquina.
+// `AGENT_TOKEN` do `.env` — um segredo fixo, sem vínculo por máquina.
 export class AgentMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
     const exigirToken = async (request: FastifyRequest, reply: FastifyReply) => {
