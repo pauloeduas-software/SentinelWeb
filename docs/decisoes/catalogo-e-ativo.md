@@ -6,7 +6,8 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D1–D3, D5, D8–D13, D18–D21, D85.
+> Decisões neste arquivo: D1–D3, D5, D8–D13, D18–D21, D85, e C/I da segunda rodada (ver
+> [`README.md`](./README.md#a-segunda-rodada-ap)).
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
@@ -331,3 +332,60 @@ id é dizer que se quer aquele status.
 **O preço:** `active` deixa de ser um predicado de coluna e passa a ter um join com
 `status_labels`. A tabela é pequena e `assets_statusId_idx` existe; se um dia doer, o caminho é
 desnormalizar o `type` para `assets`, não voltar atrás na regra.
+
+---
+
+## I — Ativo é computador
+
+**Decidido:** `/ativos` e o model `Asset` são para **máquinas** — o que tem ou pode ter um
+`Endpoint` vinculado. Monitor, teclado, mouse, cabo e qualquer coisa sem patrimônio individual
+não são `Asset`: são [estoque](./estoque.md#j--o-estoque-volta-como-stockitem--stockmovement), por
+quantidade, sem série nem etiqueta própria.
+**Consequência de:** [D3](#d3--quantity-sai-do-asset) (quem tem quantidade não é `Asset`) e do
+retorno do estoque — ver [J](./estoque.md).
+
+**Por quê precisou ser dito outra vez:** o D3 já tinha decidido isso na F1, pela régua "tem
+etiqueta própria → é `Asset`". O que faltava não era a regra — era um lugar onde ela decidisse
+algo que custasse caro errar. É o que a [invariante 19](../referencia/invariantes.md#19--no-máximo-um-ativo-por-posto-de-trabalho)
+passou a ser: "no máximo um **ativo** por posto" só funciona como regra simples se "ativo" for
+sinônimo de "o computador da mesa" — caso contrário o monitor e o teclado entrariam na mesma
+contagem do notebook, e a regra teria que aprender a distinguir categoria por texto livre.
+
+**O que isso simplificou, em cascata:** `byod` e `requestable` saíram do `Asset` — as duas
+colunas nasceram de um modelo em que qualquer coisa podia ser `Asset`, e nenhuma delas tinha
+leitor (nenhum filtro, nenhuma ordenação, nenhum relatório). O status padrão de um ativo novo
+passou a vir do **tipo** (`DEPLOYABLE`, "Disponível"), não do nome do status — o cadastro mais
+comum parava de exigir trocar o status toda vez.
+
+**O que isso NÃO decide:** se um dia um acessório caro (headset com patrimônio) precisar de
+série própria, a régua do D3 continua valendo — "tem etiqueta própria → é `Asset`" — e ele
+deixaria de ser estoque. Não é este o motivo do corte: o corte é sobre o que a invariante 19
+precisa que "ativo" signifique.
+
+---
+
+## C — O ativo entregue a um posto sai de `/ativos`; a ficha do posto é rota
+
+**Decidido:** a vista padrão de `/ativos` exclui quem tem posse aberta num local marcado como
+posto (`isWorkstation`). `/postos/:id` passa a ser rota — a mesma tela de `/postos`, com a
+listagem atrás —, e a busca por etiqueta ou série leva até ela quando o ativo está montado numa
+mesa.
+**Descartado:** manter o ativo entregue a um posto na listagem de `/ativos`, com a mesa como só
+mais uma coluna de "onde está".
+
+**Por quê:** "o que há no parque" e "o que está nesta mesa" são perguntas diferentes. Um
+computador montado numa mesa tem endereço, e o endereço dele é a mesa — quem pergunta pelo
+parque quer o que está em estoque (disponível para entregar) ou com uma pessoa direta; o que
+está num posto se pergunta em `/postos`, ao lado dos ocupantes que respondem por ele. Antes desta
+decisão a ficha do posto era só uma janela (`useState`), sem URL própria — e sem lugar para onde
+mandar quem acabou de ver o computador sumir da lista de ativos.
+
+**O que acompanha a listagem, para a ausência não virar confusão:** a linha que sai de
+`/ativos` deixa um rastro — "entregue à Mesa 1", com link — porque quem acabou de entregar volta
+a esta tela e não acha o que entregou. `/stats` e o `?statusId=` explícito excluem o mesmo
+conjunto, pelo mesmo motivo do D85: um contador que promete uma linha que a tabela não mostra é
+o defeito que ele existe para não ter. O relatório de posto vago, que ocupava a mesma chave do
+`where`, sai de `/ativos` com o filtro — a vista `vagos` de `/postos` continua.
+
+**Só onde `isWorkstation` é true:** depósito e sala de reunião não são mesa de ninguém, e o
+ativo guardado ali continua sendo parque.

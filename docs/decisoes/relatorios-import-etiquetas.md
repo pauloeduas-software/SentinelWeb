@@ -6,7 +6,8 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D65–D71, D129–D134.
+> Decisões neste arquivo: D65–D71, D129–D134, e F da segunda rodada (ver
+> [`README.md`](./README.md#a-segunda-rodada-ap)).
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
@@ -139,3 +140,26 @@ envelheceria sozinha, e o dia em que divergir é o dia em que a chave viaja.
 O teto global (10 MB, `files: 1`, `fields: 10`) é o do anexo. O mapeamento viaja
 como **um** campo JSON. **Descartado:** subir o teto global — ele protege as
 rotas de anexo, que recebem arquivo de gente.
+
+---
+
+## F — A busca por QR sai, com `APP_URL`, `resolve-tags` e `by-serial`
+
+**Decidido:** saem o passo 0 da busca global (reconhecer e descartar o prefixo de URL do
+painel), `idDaUrlDoPainel`, `core/config/app-url.ts` inteiro e as duas rotas sem tela
+`resolve-tags` e `by-serial`. `APP_URL` sai do `.env.example`, sem leitor. A busca por **etiqueta**
+e por **série** fica inteira, nos mesmos três passos.
+**Consequência de:** [D147](./escopo.md#d147--as-etiquetas-saem) — o QR só existia para ser
+impresso numa etiqueta, e desenhar o papel já tinha saído; isto remove o que ficou de pé sem
+leitor, o passo da busca que esperava reconhecer a URL que ninguém mais imprime.
+
+**Por quê só agora, e não junto com o D147:** `APP_URL` tinha outro leitor citado no cabeçalho
+do passo 0 — o correio, que mandava link no e-mail de lembrete. O correio saiu inteiro no
+[segundo de-escopo](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai),
+e só depois disso `urlDoPainel` ficou sendo o único export do arquivo, e a busca o único
+chamador — sem outro leitor, o passo inteiro ficou morto.
+
+**O que a busca global ganhou de cobertura nesta decisão:** não tinha **nenhum** teste. Entra
+`tests/listagens/busca-global.test.ts` com oito casos — incluindo o que discrimina a remoção:
+reintroduzir o passo 0 e ele falhar com "expected 'EXATO' to be 'NENHUM'" prova que o teste
+pega a regressão, não só o caminho feliz.

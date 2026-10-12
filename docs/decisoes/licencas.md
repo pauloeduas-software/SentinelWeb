@@ -6,7 +6,8 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D39–D44, D90–D94.
+> Decisões neste arquivo: D39–D44, D90–D94, e G da segunda rodada (ver
+> [`README.md`](./README.md#a-segunda-rodada-ap)).
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
@@ -267,3 +268,43 @@ etapa inteira, e não é sobre licença: é sobre anexo.
 **O que se perde, declarado:** a nota fiscal e o contrato da licença continuam fora do
 sistema por mais uma fase. Contra isso, `orderNumber`, `purchaseDate` e `purchaseCost`
 já entram na F6 — a *referência* ao documento existe, o arquivo é que não.
+
+---
+
+## G — Software instalado e conformidade de licença saem; licença vira cadastro simples
+
+**Decidido:** saem `license-compliance`, `normalize-software`, `list-software-packages` e
+`software-key.helper`; `SoftwarePackage`, `SoftwareInstallation` e `LicenseSoftware` saem do
+schema, com os sete índices deles. `Endpoint` perde `installedSoftware` e os dois hashes de
+software. A cifra da chave de produto sai inteira — `core/crypto`, `reveal-product-key`,
+`License.productKey`, `AppSetting.cryptoCanary` — ver o
+[segundo de-escopo](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai).
+A tela de conformidade sai inteira; o modal da licença fica com a grade de assentos e o
+histórico.
+**Supera:** [D42](#d42--chave-cifrada-numa-coluna-versionada-sem-plano-b-em-claro) e
+[D91](#d91--chaveiro-não-chave-o-kid-vem-da-própria-chave) (a cifra, que não tem mais onde
+morar) e [D102](./reconciliacao.md#d102--licença--pacote-é-vínculo-explícito-nunca-casamento-por-nome)
+(licença ↔ pacote — a ponte some com os dois lados dela).
+
+**Por quê:** conformidade de licença respondia "o que está instalado bate com o que a empresa
+comprou?", e essa pergunta precisa do catálogo de pacotes, da normalização de nome de software
+e do hash do que o agente reporta — uma cadeia inteira que só serve a essa pergunta. O
+[D143](./escopo.md#d143--o-escopo-é-itam--rmm-e-o-critério-de-corte-é-a-ponte) pede "serve ao
+núcleo ou à ponte" — e a conformidade de licença **é** a ponte original do projeto, mas a
+segunda rodada decidiu que o assento materializado (D40) e a reconciliação de contrato (D41, D90,
+D92) já são a demonstração da convergência onde ela mais conta: dinheiro e assento nominal. A
+conformidade por hash de instalação era uma segunda demonstração da mesma tese, pagando de novo
+pelo que o estoque e a ocupação já provam.
+
+**Por quê a cifra não sobrevive sem o produto que a usava:** o
+[D145](./escopo.md#d145--campos-customizados-saem-inteiros) já tinha reduzido a cifra a um uso
+só — a chave de produto da licença. Com a conformidade saindo,
+revelar a chave de produto perde o cenário que a justificava (provar a instalação contra o que
+foi comprado); o que sobra é a licença como contrato e assento, sem segredo para guardar.
+
+**O que NÃO muda:** o domínio `license` em si — a ponte morava toda na reconciliação e na
+cifra, nenhum deles é o domínio. Os assentos, a numeração, o `FOR UPDATE SKIP LOCKED` (D41) e a
+fórmula de `livres` (D92) continuam exatamente como eram.
+
+**O protocolo não muda:** `installedSoftware` e `softwareHash` continuam no tipo e no parser do
+handshake, com a nota de que o servidor não guarda — mesma escolha do A para `loggedOnUser`.

@@ -6,7 +6,8 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D4, D6, D79, D81, D83–D84, D86.
+> Decisões neste arquivo: D4, D6, D79, D81, D83–D84, D86, e L/M da segunda rodada (ver
+> [`README.md`](./README.md#a-segunda-rodada-ap)).
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
@@ -191,3 +192,51 @@ SMTP está perdido, e ninguém é notificado disso além do log. Um *outbox* cus
 job e uma política de retentativa para proteger a mensagem **menos** importante das quatro.
 Quando houver um e-mail cuja perda quebre um processo, ele nasce com linha em tabela — como o
 aceite nasceu.
+
+> **Superada pelo [segundo de-escopo](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):**
+> o correio saiu inteiro, inclusive o lembrete de atraso que esta decisão defendia como o único
+> e-mail que não podia se perder. Não sobrou e-mail nenhum para aplicar a régua.
+
+---
+
+## L — O teto de requisições é desligado em `NODE_ENV=test`, com guarda contra produção
+
+**Decidido:** `@fastify/rate-limit` não é registrado quando `NODE_ENV=test`. A decisão vira
+função pura (`tetoDeRequisicaoLigado`), afirmada por teste — e um teste dedicado prova que
+produção **não sobe** com o teto desligado.
+
+**Por quê:** o teto conta por IP e em memória, e a suíte inteira roda do mesmo IP. Sem desligar,
+qualquer arquivo de teste que disparasse mais de uma rajada de escritas tomava 429 da própria
+suíte — não do sistema sob teste. A alternativa de subir o teto só para o ambiente de teste
+resolveria o 429, mas pararia de testar o que o teto faz; desligar e testar a corrida à parte
+(`tests/corridas/`) separa as duas perguntas.
+
+**Por quê a guarda, e não só o `if`:** um `if (NODE_ENV !== 'test')` sem teste é o tipo de linha
+que alguém lê e confia; a função pura dedicada é afirmada por teste a cada execução, e a
+dedicada existe para que produção subir com o teto desligado seja uma regressão que a suíte pega
+antes do deploy, não depois de um ataque.
+
+**O que motivou a mudança física do arquivo:** `computador-por-posto-trocas.test.ts` voltou para
+o arquivo da invariante de onde tinha sido separado — a divisão original era pelo teto
+destrutivo de dez escritas por instância do harness, não pelo assunto; com o teto desligado em
+teste, a divisão por teto deixou de fazer sentido.
+
+---
+
+## M — Um lockfile só, o do `bun`
+
+**Decidido:** `package-lock.json` sai. `bun.lock` é a única fonte de verdade, regenerado do
+`package.json` atual.
+
+**Por quê:** o README já manda rodar `bun install`, e nenhum CI, Dockerfile ou doc citava
+`npm ci` — o `package-lock.json` não tinha leitor, só existia. **E o que ficou não era
+inofensivo:** o `bun.lock` que sobreviveria estava desatualizado desde agosto e descrevia OUTRO
+projeto — tinha dependências de gráfico (`d3`, `clsx`, `es-toolkit`) que este projeto não usa e
+não tinha `argon2` nem os plugins do Fastify que ele usa agora. Um lockfile que ninguém lê
+diverge em silêncio; dois lockfiles divergentes é pior, porque cada um sugere ser a verdade para
+quem olhar primeiro.
+
+**Como foi provado, e não só regenerado:** `node_modules` foi reinstalado do zero a partir só do
+`bun.lock` novo, para provar que ele basta sozinho — idempotente, sem o `nodemailer` que a
+limpeza do segundo de-escopo tinha tirado do `package.json` voltar por reinstalação. `tsc` nos
+três projetos, `eslint`, build e a suíte inteira verdes na árvore resultante.

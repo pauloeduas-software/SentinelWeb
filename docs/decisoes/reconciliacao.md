@@ -6,7 +6,8 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D45–D51, D95–D122.
+> Decisões neste arquivo: D45–D51, D95–D122, e A/D/E/H da segunda rodada (ver
+> [`README.md`](./README.md#a-segunda-rodada-ap)).
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
@@ -764,3 +765,132 @@ chamavam de `suggestions`. Nome de campo de relação **não existe no banco**, 
 pede migração — `migrate diff` contra o banco com todas as migrações aplicadas volta vazio. O
 que ela muda é o que se lê num `include`, e nome gerado por ferramenta é o que se copia na
 próxima vez.
+
+---
+
+## A — A reconciliação deixa de inferir pessoa pela conta do sistema operacional
+
+**Decidido:** saem a observação de usuário logado (`EndpointUserDaily`), a sugestão de
+ocupação de posto por inferência (`OCCUPANCY`) e a de posto compartilhado por dois usuários na
+mesma máquina. `SuggestionKind` fica só com `LINK` e `MERGE` (e, depois de
+[H](#h--a-fusão-de-máquinas-sai), só `LINK`); a sugestão passa a ter **dois** alvos possíveis em
+vez de quatro, e sem turno.
+**Supera:** [D47](#d47--o-usuário-logado-sugere-ocupação-quando-a-posse-é-do-posto) (o usuário
+logado sugerindo ocupação), [D48](#d48--dois-usuários-na-mesma-máquina-é-evidência-de-posto-compartilhado)
+(dois usuários = posto compartilhado) e [D49](#d49--observação-de-usuário-é-agregada-por-dia-com-retenção)
+(a agregação diária que alimentava as duas) — e a invariante 14 (`endpoint_user_daily`), que sai
+de [`../referencia/invariantes.md`](../referencia/invariantes.md) junto com a tabela.
+**Mantém:** [D50](#d50--lastseenbyagentat-existe-e-nunca-se-chama-lastseen) —
+`Endpoint.lastSeenByAgentAt` continua respondendo "quando esta máquina foi vista pela última
+vez", que é pergunta sobre a MÁQUINA, não sobre quem estava logado nela.
+
+**Por quê:** a conta do sistema operacional é o sinal mais fraco que a descoberta tinha —
+"fulano estava logado" não é "fulano ocupa esta mesa", e as duas sugestões que dependiam disso
+(ocupação e posto compartilhado) erravam exatamente nos casos em que mais importava não errar: a
+conta de serviço, o turno que troca de usuário sem trocar de posto, a sessão que fica aberta. O
+projeto já tinha o sinal forte para "quem ocupa o posto" — a ocupação cadastrada em
+`LocationOccupant` — e inferir o mesmo fato por um caminho mais fraco era manter dois lugares que
+podiam discordar.
+
+**O que isso custa, e é aceito:** a fila deixa de propor ocupação para quem a tela ainda não
+cadastrou. O cadastro continua manual, pela ficha do posto — o que sai é a sugestão automática
+baseada em quem fez login, não a possibilidade de cadastrar.
+
+**O protocolo não muda:** `loggedOnUser` continua no tipo e no parser do handshake; o servidor
+só para de gravar. Trocar o protocolo exigiria coordenar a troca com o agente já instalado, e não
+havia necessidade — o campo chegando e sendo ignorado é mais simples que renegociar o contrato.
+
+---
+
+## H — A fusão de máquinas sai
+
+**Decidido:** saem `merge-endpoints`, a cascata máquina↔máquina, o sinal `MAC` e
+`normalizeMac`. `SuggestionKind` fica só com `LINK`; `MatchSignal` fica com `SERIAL`, `UUID` e
+`HOSTNAME`. `Endpoint.mergedIntoId` e `ReconciliationSuggestion.mergeIntoEndpointId` saem do
+schema.
+**Supera:** [D103](#d103--merge-não-apaga-o-endpoint-perdedor-ganha-mergedintoid) e
+[D104](#d104--mac-é-sinal-de-merge-não-de-vínculo), que descreviam a fusão e o sinal que a
+disparava.
+
+**Por quê:** o `hwid` é derivado do hardware e estável entre reinstalações — não existe mais
+"segunda linha para a mesma máquina" para fundir. O D103 e o D104 resolviam um problema real
+quando o `hwid` podia mudar; deixou de existir o cenário que os justificava.
+
+**O que isso simplificou:** a mensagem do 409 de vínculo deixa de mandar usar a fusão e passa a
+apontar o "Desvincular" da aba Máquina, que já existe. Os sete filtros de `mergedIntoId: null`
+somem — inclusive os dois em SQL cru (`stamp-last-seen`, `aggregate-usage`) que o compilador não
+alcançava e que quebrariam em runtime se ficassem apontando para uma coluna inexistente. A
+invalidação ganha o outro lado do 1:1 que a fusão escondia: uma sugestão pendente cujo ATIVO
+ganhou outra máquina por outro caminho ficava `PENDING` para sempre, e aceitá-la devolvia o
+`P2002` cru em vez de um 409 com frase.
+
+**O que NÃO se perde:** as máquinas já fundidas em bancos existentes **não são apagadas** —
+apagar levaria junto a telemetria que o D103 preservava, por um caso que nenhum banco deste
+projeto tem.
+
+**O que a cascata ganhou com a simplificação:** o candidato entregue a um posto com outro
+computador (ver [B](./posse.md#b--invariante-19-na-forma-final-um-ativo-por-posto-de-trabalho))
+sai da lista **depois** de pontuar, como o ativo já ocupado — tirá-lo antes desligaria o D46
+(evidência ambígua é evidência zero), porque a colisão é contada sobre a lista de candidatos.
+
+---
+
+## D — A telemetria e o comando vão para a ficha do ativo e a do posto
+
+**Decidido:** a tela de frota (`/`) sai — `/` redireciona para `/ativos` e o item Telemetria
+deixa o menu. `GET /api/endpoints/:id` nasce: a telemetria passa a ser consultada por máquina,
+não pela frota inteira a cada ciclo. `POST /api/endpoints/:hwid/command` vira
+`POST /api/endpoints/:id/command`, com o use-case resolvendo o `hwid` por dentro — a identidade
+de hardware sai da URL. `TelemetriaDaMaquina` é o painel compartilhado (medidas, processos, rede,
+discos, HWID com copiar, os três comandos), usado na aba Máquina do ativo e na ficha do posto.
+**Supera:** [D115](#d115--a-rota-da-aba-chama-machine-e-devolve-o-que-a-aba-mostra), que falava
+da rota da aba de telemetria do jeito antigo.
+
+**Por quê:** a telemetria sempre foi pergunta sobre UMA máquina — "como está o computador desta
+mesa", "o que está instalado neste notebook" — e uma tela separada que lista a frota inteira
+obriga quem pergunta isso a sair da ficha do ativo, achar a linha certa e voltar. Consolidá-la
+na ficha é a mesma régua de C (o ativo entregue a um posto se olha em `/postos`, não em
+`/ativos`): a pergunta tem um lugar, e esse lugar não é uma tela à parte.
+
+**O que isso corrigiu, e não era sobre telemetria:** "máquina não existe" e "agente
+desconectado" eram o mesmo 404; passam a ser 404 e 409 — o segundo dizendo qual máquina não
+respondeu. `telemetries` ganha índice `(endpointId, timestamp DESC)`, sem o qual cada ciclo de
+cada tela aberta varria a tabela inteira. O comando por `sendToAgent` passou a conferir o
+`readyState` do socket e esperar o callback do `send` — ele devolvia sucesso só por achar o
+socket no mapa, e entre a queda da conexão e o `close` do servidor havia um "Comando enviado" sem
+nada ter saído; agora são três respostas (entregue, desconectado 409, escrita que falhou 502). A
+devolução pela ficha do posto passou a aceitar `targetLocationId` e só fechar a posse se ela
+apontar para aquela localização — sem isso, uma ficha velha aberta fechava a posse de quem
+recebeu o ativo entre o carregar da tela e o clique.
+
+---
+
+## E — `/descobertas` ganha vínculo manual e "Reconciliar agora"
+
+**Decidido:** `/descobertas` passa a mostrar as máquinas **sem vínculo** e as **vinculadas**
+(`?vinculo=`, que já filtrava desde a F7 sem a tela usar), com vínculo manual inline — escolher
+um ativo sem máquina e, opcional, um posto — e `POST /api/endpoints/:id/link-and-checkout`, que
+encadeia vínculo e entrega em sequência. `POST /api/reconciliation/run` (ADMIN) roda a mesma
+varredura do job sob demanda, sem esperar a janela da hora, com um botão na tela e o placar da
+última rodada ao lado.
+
+**Por quê o vínculo manual:** a cascata automática nem sempre acerta — hostname ambíguo,
+máquina que chegou antes do cadastro do ativo — e até esta decisão a única saída para esses
+casos era aceitar uma sugestão de baixa confiança ou esperar. Oferecer o vínculo à mão, na
+mesma tela que já lista as máquinas sem vínculo, fecha o caso sem precisar de uma sugestão para
+aceitar.
+
+**Por quê "vincular e entregar" não é atômico, por decisão:** vincular primeiro, entregar depois,
+em sequência — não numa transação só. Quando a entrega falha (por exemplo, o posto já tem um
+ativo — [B](./posse.md#b--invariante-19-na-forma-final-um-ativo-por-posto-de-trabalho)), o
+vínculo **fica** e a resposta diz isso. Desfazer o vínculo também seria uma escolha válida, mas
+esconderia que o vínculo é informação verdadeira e estável (qual máquina é qual ativo) enquanto a
+entrega é operação de posse, que pode ser repetida depois sem custo. Desfazer o que já é
+verdade para tentar de novo uma operação independente teria o único efeito de obrigar a
+descoberta a propor a mesma máquina outra vez.
+
+**Por quê "Reconciliar agora" é serializado:** uma segunda chamada com outra rodada em
+andamento responde 409 — o job de hora em hora passa pelo mesmo guarda. Rodar a varredura duas
+vezes ao mesmo tempo não dá resultado errado, mas dá trabalho em dobro sobre a mesma frota sem
+nenhum ganho, e a segunda rodada terminando depois da primeira poderia reabrir sugestões que a
+primeira já tinha fechado.

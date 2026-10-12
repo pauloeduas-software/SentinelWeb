@@ -1,12 +1,15 @@
 # Decisões do estoque
 
-> Acessório, consumível e componente — os três que têm QUANTIDADE, e a invariante do saldo calculado.
+> O que tem QUANTIDADE em vez de patrimônio individual — hoje um tipo só, `StockItem`, com o
+> saldo sempre calculado. As seis primeiras decisões (D33–D38) são de uma forma anterior, de
+> três modelos; a J conta por que ela voltou diferente.
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve**. Se a realidade mudou, a
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D33–D38.
+> Decisões neste arquivo: D33–D38, e J da segunda rodada (ver
+> [`README.md`](./README.md#a-segunda-rodada-ap)).
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
@@ -124,3 +127,46 @@ a sequência continua sendo o histórico (o que a auditoria pede). **O preço, d
 lido cru, o histórico parece dizer "instalou 4, retirou 4, instalou 2" — a aba rotula o
 par como *devolução parcial: 2 de 4* comparando a linha fechada com a sucessora, que é
 trabalho de apresentação, não de schema.
+
+---
+
+## J — O estoque volta como `StockItem` + `StockMovement`
+
+**Decidido:** `Accessory`, `Consumable`, `Component` e os três `Checkout` — removidos inteiros
+pelo segundo de-escopo (ver [`escopo.md`](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai))
+— dão lugar a **dois** modelos: `StockItem` (nome, categoria, `qty` total, notas, lixeira) e
+`StockMovement` (`ENTRADA`, `BAIXA` ou `SAIDA` de **uma** unidade, a pessoa ou a posto, com
+devolução por linha). Um tipo de item, não três. Sem piso de alerta (`minQty`) — o item não tem
+coluna de mínimo.
+**Supera:** [D36](#d36--os-três-têm-lixeira-aqui-o-d8-não-se-aplica) (fala de três modelos; só há
+um), [D37](#d37--consumable-não-tem-devolução-não-é-validação-é-ausência) (não existe mais um
+tipo sem devolução — toda `SAIDA` pode ser devolvida) e
+[D38](#d38--devolução-parcial-de-componente-divide-a-linha) (não existe mais devolução parcial de
+uma linha — cada unidade é a sua própria linha, e devolver é fechar UMA), além de
+[D153](./escopo.md#d153--estoque-vira-item-e-movimento) (que previu a forma, sem definir a saída
+por unidade nem o alvo em posto) e [D160](./escopo.md#d160--o-estoque-não-foi-achatado) (que
+registrou que a troca não tinha sido feita — agora foi).
+**Mantém:** [D33](#d33--o-acessório-entregue-a-um-posto-é-do-posto-os-ocupantes-respondem-solidariamente)
+(entrega a posto é **uma** unidade, os ocupantes respondem solidariamente — a mesma razão,
+aplicada ao `StockMovement`), [D34](#d34--saldo-é-sempre-calculado-nunca-coluna) (saldo é sempre
+`qty − COUNT(SAIDA aberta)`, nunca coluna — é o que torna a troca de baixo barata, exatamente como
+o D160 previu) e [D35](#d35--um-domínio-stock-não-três-fatias-verticais) (um domínio `stock`, mais
+verdadeiro ainda com um tipo só).
+
+**Por quê a forma é diferente da que o D153 previu:** o D153 falava em "item + movimento" sem
+decidir dois pontos que só apareceram ao implementar — **cada unidade de `SAIDA` é uma linha**
+(`qty: 1` por linha; pedir 5 grava cinco linhas, não uma linha com `qty: 5`), porque a devolução é
+de uma unidade identificada, sem quantidade parcial para dividir; e o alvo da saída pode ser
+**posto**, não só pessoa — herdando o D33 que os sete modelos antigos já tinham. `BAIXA` é a
+única porta para reduzir o total, e é recusada se deixaria `qty` abaixo do que está fora
+(devolva antes de dar baixa) — a frase do 409 carrega os números para a tela não recontar.
+
+**O que fica fora, por decisão:** `minQty`/alerta de estoque baixo não entrou — nenhuma leitura
+depende dele, e o D34 (saldo sempre calculado) não precisa de piso para ser verdade. Se a
+necessidade aparecer, é uma coluna nova e uma leitura nova, não uma reabertura desta decisão.
+
+**Onde mora a invariante do saldo negativo "de propósito":** `disponivel` pode ficar negativo —
+acontece quando uma linha de `SAIDA` é criada por fora da trava (psql à mão), e o helper
+devolve o número sem zerar: esconder a inconsistência que a tela existe para mostrar seria pior
+que mostrá-la. A cor do saldo na tela usa `<= 0`, não `=== 0`, por este motivo exato
+(`src/pages/estoque/helpers/estoque.helper.ts`).
