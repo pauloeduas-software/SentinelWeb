@@ -1,5 +1,6 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
+import { listUserStock } from '../../stock/use-cases/list-location-stock.usecase';
 import { USER_DETAIL_SELECT } from '../helpers/user-select.helper';
 import { contarPosseAberta, type PosseAbertaDoUsuario } from './count-user-posse.usecase';
 
@@ -34,6 +35,15 @@ export interface UsuarioComPosse {
    * dela (`count-user-posse`).
    */
   posseAberta: PosseAbertaDoUsuario;
+
+  /**
+   * As unidades de estoque no NOME dela — a mesma consulta que
+   * `contarEstoqueDoUsuario` conta (`itensEmPosse`), aqui por LINHA: é o que a
+   * ficha precisa para desenhar "o que está com esta pessoa" e oferecer a
+   * devolução por unidade, como a ficha do posto já faz com `itens`
+   * (`get-workstation.usecase.ts`).
+   */
+  itens: Awaited<ReturnType<typeof listUserStock>>;
 }
 
 export async function getUser(id: string): Promise<UsuarioComPosse> {
@@ -43,5 +53,10 @@ export async function getUser(id: string): Promise<UsuarioComPosse> {
   const usuario = await prisma.user.findFirst({ where: { id }, select: USER_DETAIL_SELECT });
   if (!usuario) throw new AppError('Registro não encontrado', 404);
 
-  return { ...usuario, posseAberta: await contarPosseAberta(prisma, id) };
+  const [posseAberta, itens] = await Promise.all([
+    contarPosseAberta(prisma, id),
+    listUserStock(id),
+  ]);
+
+  return { ...usuario, posseAberta, itens };
 }

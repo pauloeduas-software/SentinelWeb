@@ -4,6 +4,7 @@ import {
   useUserQuery,
 } from '../../../../domain/user/user.queries';
 import { useUserOccupanciesQuery } from '../../../../domain/occupancy/occupancy.queries';
+import { useCheckinStock } from '../../../../domain/stock/stock.queries';
 
 // Estado de TELA do perfil do colaborador. O dado vem das queries de domínio.
 //
@@ -28,6 +29,14 @@ export function useUserDetail() {
   const { data: ocupacoes } = useUserOccupanciesQuery(id);
   const { data: historico, isPending: carregandoHistorico } = useUserHistoryQuery(id);
 
+  // A DEVOLUÇÃO DO ITEM DE ESTOQUE, da ficha da pessoa — a mesma operação que
+  // a tela de Estoque e a ficha do posto já oferecem, pelo id do MOVIMENTO
+  // (a unidade), não do item (`checkin-stock.usecase.ts`). A rejeição sobe
+  // para quem chama mostrar a mensagem do servidor — o 409 de unidade já
+  // devolvida, duas abas na mesma ficha.
+  const devolverItem = useCheckinStock();
+  const handleDevolverItem = (movementId: string) => devolverItem.mutateAsync({ movementId });
+
   return {
     user,
     // Só as ABERTAS: a rota responde `?view=current` por padrão.
@@ -40,5 +49,8 @@ export function useUserDetail() {
     carregandoHistorico,
     carregando: carregandoUsuario,
     erro: error ? (error as Error).message : null,
+
+    handleDevolverItem,
+    devolvendoItem: devolverItem.isPending,
   };
 }
