@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { Armchair, MonitorSmartphone, TriangleAlert, Undo2, X } from 'lucide-react';
+import {
+  Armchair, Boxes, MonitorSmartphone, TriangleAlert, Undo2, X,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import OccupantsPanel from '../../components/OccupantsPanel';
 import TelemetriaDaMaquina from '../../components/TelemetriaDaMaquina';
 import {
   ativosComMaquina, caminhoDoPosto, explicacaoDoVago, resumoDeAtivos,
 } from '../helpers/postos.helper';
+import { momentoDoEvento } from '../../helpers/historico.helper';
 import type { OccupantInput } from '../../../domain/occupancy/occupancy.queries';
 import type { LocationOccupant, OccupantView } from '../../../domain/shared/posse.types';
 import type { AtivoDoPosto, Posto, PostoDetalhe } from '../../../domain/shared/workstation.types';
@@ -60,12 +63,16 @@ interface PostoDetalheModalProps {
   /** Tira o ativo desta mesa e devolve ao estoque. O `confirm` é do hook. */
   onDevolver: (ativo: AtivoDoPosto) => Promise<void>;
   devolvendo: boolean;
+  /** Devolve UMA unidade de estoque da mesa, pelo id do movimento. */
+  onDevolverItem: (movementId: string) => Promise<unknown>;
+  devolvendoItem: boolean;
   onClose: () => void;
 }
 
 export default function PostoDetalheModal({
   posto, detalhe, carregando, ocupantes, ocupantesCarregando,
-  view, onViewChange, onAdicionar, onEncerrar, onDevolver, devolvendo, onClose,
+  view, onViewChange, onAdicionar, onEncerrar, onDevolver, devolvendo,
+  onDevolverItem, devolvendoItem, onClose,
 }: PostoDetalheModalProps) {
   // Enquanto o detalhe não chega, vale o que a linha já dizia: o cabeçalho e o
   // selo de vago aparecem no primeiro quadro em vez de piscar depois.
@@ -85,7 +92,22 @@ export default function PostoDetalheModal({
     }
   };
 
+  // O MESMO DESENHO, para a devolução de ITEM DE ESTOQUE — erro próprio: as
+  // duas seções devolvem coisas diferentes, e misturar as mensagens faria uma
+  // devolução de mouse mostrar o erro deixado pela de ativo, ou o contrário.
+  const [erroDaDevolucaoDeItem, setErroDaDevolucaoDeItem] = useState('');
+
+  const devolverItem = async (movementId: string) => {
+    setErroDaDevolucaoDeItem('');
+    try {
+      await onDevolverItem(movementId);
+    } catch (falha) {
+      setErroDaDevolucaoDeItem((falha as Error).message);
+    }
+  };
+
   const ativos = detalhe?.ativos ?? [];
+  const itens = detalhe?.itens ?? [];
   // Cálculo fora do JSX (docs/referencia/arquitetura.md). Num posto marcado a
   // lista tem no máximo um ativo — é a invariante 19 —, mas esta ficha responde
   // por qualquer localização, e a sala de reunião pode ter dois. Com máquina
@@ -334,6 +356,78 @@ export default function PostoDetalheModal({
                 )}
               </p>
             )}
+          </section>
+
+          {/* ── O ESTOQUE DESTA MESA ──────────────────────────────────────
+              Abaixo do computador, de propósito: o ativo é o que a invariante
+              19 limita a um; o estoque é o resto da mesa — monitor, teclado,
+              mouse, cabo —, entregue por quantidade e sem a mesma trava
+              (docs/decisoes/estoque.md). */}
+          <section className="font-mono text-xs space-y-3 border-t border-border-sutil pt-5">
+            <div className="flex items-baseline justify-between gap-4">
+              <h3 className="text-text-secondary uppercase tracking-widest text-[10px] flex items-center gap-2">
+                <Boxes size={12} /> Estoque desta mesa
+              </h3>
+              <span className="text-text-tertiary tabular-nums">{itens.length} unidade(s)</span>
+            </div>
+
+            <p className="text-text-tertiary text-[10px] leading-relaxed">
+              Unidades de estoque entregues a este posto — qualquer ocupante aberto dela responde
+              por elas, independente de quem fez a entrega.
+            </p>
+
+            {erroDaDevolucaoDeItem && (
+              <div className="p-3 bg-status-danger/10 text-status-danger border border-status-danger/20" role="alert">
+                {erroDaDevolucaoDeItem}
+              </div>
+            )}
+
+            <div className="border border-border-sutil overflow-x-auto">
+              <table className="w-full text-left whitespace-nowrap">
+                <thead className="bg-bg-base/50 text-text-secondary border-b border-border-sutil uppercase tracking-widest">
+                  <tr>
+                    <th className="px-4 py-3 font-normal">Item</th>
+                    <th className="px-4 py-3 font-normal">Categoria</th>
+                    <th className="px-4 py-3 font-normal">Desde</th>
+                    <th className="px-4 py-3 font-normal text-right">Ação</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-border-sutil/50">
+                  {itens.map((unidade) => (
+                    <tr key={unidade.id} className="hover:bg-bg-base transition-colors">
+                      <td className="px-4 py-3 text-text-primary">
+                        {unidade.item.name}
+                        {unidade.item.deletedAt && (
+                          <span className="ml-2 text-[10px] uppercase tracking-widest text-text-tertiary">na lixeira</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-text-tertiary">{unidade.item.category.name}</td>
+                      <td className="px-4 py-3 text-text-tertiary">{momentoDoEvento(unidade.createdAt)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          disabled={devolvendoItem}
+                          onClick={() => void devolverItem(unidade.id)}
+                          title={`Devolver ${unidade.item.name} ao estoque`}
+                          className="inline-flex items-center gap-1.5 px-2 py-1 border border-border-sutil text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary hover:bg-bg-base disabled:opacity-30 transition-colors"
+                        >
+                          <Undo2 size={11} /> Devolver
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {itens.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-10 text-center text-text-tertiary">
+                        {carregando ? 'Carregando...' : 'Nenhum item de estoque entregue a este posto.'}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </section>
 
           <div className="flex justify-end">

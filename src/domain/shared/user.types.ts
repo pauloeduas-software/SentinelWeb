@@ -1,3 +1,5 @@
+import type { UnidadeDeEstoque } from './stock.types';
+
 /** `{ id, name }` — como o gestor chega na resposta. */
 export interface Referencia {
   id: string;
@@ -82,6 +84,9 @@ export interface UserDetail extends User {
    * equipamento é *quem está com ele*, e sai de `posse.responsaveis`.
    */
   posseAberta: PosseAbertaDoUsuario;
+
+  /** As unidades de estoque no NOME dela — como a ficha do posto mostra `itens`. */
+  itens: UnidadeDeEstoque[];
 
 }
 

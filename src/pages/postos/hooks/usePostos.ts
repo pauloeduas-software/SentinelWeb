@@ -5,6 +5,7 @@ import {
   type NovoPostoInput,
 } from '../../../domain/workstation/workstation.queries';
 import { useCheckinAsset } from '../../../domain/assignment/assignment.queries';
+import { useCheckinStock } from '../../../domain/stock/stock.queries';
 import type { AtivoDoPosto, Posto, PostoView } from '../../../domain/shared/workstation.types';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useOcupantes } from '../../hooks/useOcupantes';
@@ -52,6 +53,7 @@ export function usePostos() {
   const { data, isPending } = useWorkstationsQuery(params);
   const criar = useCreateWorkstation();
   const devolver = useCheckinAsset();
+  const devolverItem = useCheckinStock();
 
   const [modalAberto, setModalAberto] = useState(false);
 
@@ -109,6 +111,16 @@ export function usePostos() {
     await devolver.mutateAsync({ id: ativo.id, data: { targetLocationId: postoId } });
   };
 
+  /**
+   * DEVOLVER UMA UNIDADE DE ESTOQUE da mesa — a mesma operação que a tela de
+   * Estoque oferece, pelo id do MOVIMENTO (a unidade), não do item
+   * (`checkin-stock.usecase.ts`). Sem o escopo que o ativo precisa: a unidade
+   * é identificada pela própria linha, e uma ficha velha devolvendo uma
+   * unidade já devolvida leva 409, sem fechar a de outro posto — a mesma razão
+   * que o docblock do `checkin-stock.usecase.ts` explica.
+   */
+  const handleDevolverItem = (movementId: string) => devolverItem.mutateAsync({ movementId });
+
   return {
     postos: data?.rows ?? [],
     total: data?.total ?? 0,
@@ -138,6 +150,8 @@ export function usePostos() {
     detalheErro: detalheErro ? detalheErro.message : null,
     devolvendo: devolver.isPending,
     handleDevolver,
+    devolvendoItem: devolverItem.isPending,
+    handleDevolverItem,
 
     ocupantes,
   };
