@@ -77,8 +77,9 @@ server/
 | `user` | Colaborador da empresa | `User` |
 | `assignment` | **Posse**: entrega e devolução de ativo, com alvo polimórfico (pessoa ou posto) e o histórico de quem teve o quê | `Assignment` |
 | `occupancy` | **Ocupação do posto**: quem trabalha em qual localização, e em que turno | `LocationOccupant` |
-| `license` | **Licenças**: o contrato e seus ASSENTOS materializados | `License`, `LicenseSeat`, `LicenseSeatCheckout` |
-| `reconciliation` | **Convergência RMM × ITAM**: o vínculo entre a máquina descoberta e o ativo cadastrado, a fila de sugestões, o software normalizado e o uso agregado | `ReconciliationSuggestion`, `EndpointUserDaily`, `AssetChange`, `SoftwarePackage`, `SoftwareInstallation`, `LicenseSoftware`, `AssetUsageDaily` |
+| `license` | **Licenças**: o contrato e seus ASSENTOS materializados — cadastro simples, sem conformidade de software nem chave cifrada ([G](../decisoes/licencas.md#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples)) | `License`, `LicenseSeat`, `LicenseSeatCheckout` |
+| `stock` | **Estoque**: o que tem quantidade em vez de patrimônio individual — um tipo, saldo sempre calculado ([J](../decisoes/estoque.md#j--o-estoque-volta-como-stockitem--stockmovement)) | `StockItem`, `StockMovement` |
+| `reconciliation` | **Convergência RMM × ITAM**: o vínculo entre a máquina descoberta e o ativo cadastrado e a fila de sugestões — sem inferência por conta do sistema operacional ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)) nem fusão de máquinas ([H](../decisoes/reconciliacao.md#h--a-fusão-de-máquinas-sai)) | `ReconciliationSuggestion`, `AssetChange`, `AssetUsageDaily` |
 | `access` | **Autorização**: o papel da sessão, o mapa de rotas × papel mínimo e a invariante "nunca sem administrador" | — |
 | `auth` | **Sessão e credencial**: login, cookie e a geração da sessão (`tokenVersion`) | — |
 | `workstation` | **O posto como tela**: a leitura de `Location` + ocupantes que a `/postos` mostra, e onde `ehPostoVago()` mora | — |

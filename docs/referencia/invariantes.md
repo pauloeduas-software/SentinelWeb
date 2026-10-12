@@ -23,14 +23,18 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 
 ---
 
-## As catorze
+## As treze
 
 > **A numeração é a original, e por isso salta.** O corte do ITAM levou as
 > invariantes 7, 8, 15, 16 e 18 junto com as tabelas que elas defendiam
-> (acessório, estoque, campo customizado, token de API). Renumerar as que ficaram
-> quebraria as citações no código — `assert-status-posse.usecase.ts` diz
-> "invariante 4", `reconcile-seats.usecase.ts` diz "invariante 11" —, e um número
-> que muda de significado é pior que um número que falta.
+> (acessório, estoque, campo customizado, token de API); a segunda rodada levou a
+> 14 junto com `EndpointUserDaily`, quando a reconciliação deixou de inferir
+> pessoa pela conta do sistema operacional
+> ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)).
+> Renumerar as que ficaram quebraria as citações no código —
+> `assert-status-posse.usecase.ts` diz "invariante 4", `reconcile-seats.usecase.ts`
+> diz "invariante 11" —, e um número que muda de significado é pior que um
+> número que falta.
 
 | # | Invariante | Onde | O que o usuário vê |
 |---|---|---|---|
@@ -39,13 +43,12 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 3 | O tipo de um status em uso não muda | **aplicação** — `status-label.spec.ts` | 409 `Não é possível mudar o tipo: status em uso por 200 registros.` |
 | 4 | Estado × posse: ativo entregue não fica `DEPLOYABLE` nem `ARCHIVED` | **aplicação** — `assert-status-posse.usecase.ts` | 409 `"Pronto p/ Uso" é um status de estoque, e este ativo está entregue. Faça a devolução antes de mudar o status.` |
 | 5 | A forma da posse: um alvo coerente, devolução depois da entrega | **banco** — dois `CHECK` | 409 `Registro já existe` (a API recusa antes, com frase própria) |
-| 6 | Colaborador desativado ou na lixeira não tem posse direta, **assento de licença** nem ocupação aberta | **aplicação** — 409 no `DELETE`, no `checkout` e no cadastro de ocupante + trava de linha | 409 `Este colaborador ainda responde por 2 ativos, ocupa 1 assento de licença e ocupa 1 posto. Devolva o que está com ele e encerre as ocupações antes de excluir.` |
+| 6 | Colaborador desativado ou na lixeira não tem posse direta, **assento de licença**, **unidade de estoque** nem ocupação aberta | **aplicação** — 409 no `DELETE`, no `checkout` e no cadastro de ocupante + trava de linha | 409 `Este colaborador ainda responde por 2 ativos, ocupa 1 assento de licença, está com 3 itens de estoque e ocupa 1 posto. Devolva o que está com ele e encerre as ocupações antes de excluir.` |
 | 9 | O alvo de um assento de licença é UM: pessoa **ou** ativo, nunca os dois, nunca nenhum | **banco** — CHECK `license_seat_alvo_xor` | 422 com o campo que falta (a API recusa antes, com frase própria) |
 | 10 | Um assento de licença não está em duas mãos | **banco** — índice único parcial `license_seat_uma_aberta_por_assento` | 409 `Sem assento livre em "Office 2024": 5 de 5 ocupados.` |
 | 11 | `COUNT(assentos sem retiredAt)` **é** `seatsTotal` | **aplicação** — `reconcile-seats.usecase.ts`, na transação da gravação | 409 `Não há assentos livres suficientes para reduzir o contrato: 2 precisariam ser aposentados e só 1 está livre.` |
-| 12 | Uma máquina é no máximo um ativo, e um ativo no máximo uma máquina | **banco** — `@unique` em `Endpoint.assetId` | 409 `Este ativo já está vinculado a outra máquina. Use a fusão se for a mesma máquina reinstalada.` |
+| 12 | Uma máquina é no máximo um ativo, e um ativo no máximo uma máquina | **banco** — `@unique` em `Endpoint.assetId` | 409 `Este ativo já está vinculado a outra máquina. Desfaça aquele vínculo antes, pela aba Máquina do ativo.` |
 | 13 | A mesma sugestão não empilha na fila | **banco** — índice único parcial `sugestao_pendente_por_alvo` | nada: o job trata o `P2002` como "outro já criou" |
-| 14 | A observação de uso é uma linha por (máquina, conta, dia) | **banco** — índice único `endpoint_user_daily` | nada: o `upsert` incrementa em vez de inserir |
 | 17 | Sempre existe alguém, com login, que é `ADMIN` | **aplicação** — `assertSobraAdministrador()`, DEPOIS da escrita e dentro da transação | 409 `Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. Dê o papel de Administrador a outra pessoa com login antes de seguir.` |
 | 19 | No máximo um ativo por posto de trabalho | **aplicação** — três portas: a entrega e a restauração da lixeira (`ativoDoPosto()`, com `FOR UPDATE` na linha do posto) e a da marca (`locationSpec.beforeWrite`) | 409 `Este posto de trabalho já tem um ativo: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.` |
 
@@ -355,9 +358,11 @@ contato, e nenhuma forma de saber qual vale.
 O caso que ele pega de verdade é a **reimagem**: a máquina volta com `hwid` novo e
 o serial casando com um ativo que já tem endpoint. Sem o índice, o segundo vínculo
 entraria e a tela do ativo passaria a mostrar a máquina errada, escolhida por
-ordem de consulta. Com ele, a operação certa fica evidente — é fusão, não vínculo
-(D103) —, e é isso que a cascata de merge propõe antes de qualquer sugestão de
-vínculo.
+ordem de consulta. Com ele, a tentativa é recusada com 409, apontando para
+"Desvincular" na aba Máquina — não há mais fusão (saiu com
+[H](../decisoes/reconciliacao.md#h--a-fusão-de-máquinas-sai): o `hwid` é derivado
+do hardware e estável entre reinstalações, então a duplicação que a fusão
+resolvia não acontece mais).
 
 > `onDelete: SetNull` é o outro lado: apagar um ativo de verdade **não** leva
 > junto a telemetria da máquina. O preço é que o vínculo se desfaz em silêncio, e
@@ -368,8 +373,7 @@ vínculo.
 ```sql
 CREATE UNIQUE INDEX "sugestao_pendente_por_alvo"
   ON "reconciliation_suggestions" ("kind", "endpointId",
-    COALESCE("assetId", '000…'::uuid), COALESCE("targetUserId", '000…'::uuid),
-    COALESCE("targetLocationId", '000…'::uuid), COALESCE("mergeIntoEndpointId", '000…'::uuid))
+    COALESCE("assetId", '00000000-0000-0000-0000-000000000000'::uuid))
   WHERE "state" = 'PENDING';
 ```
 
@@ -377,10 +381,17 @@ CREATE UNIQUE INDEX "sugestao_pendente_por_alvo"
 recusada em março, substituída em abril e aceita em maio, e as três linhas contam
 essa história. O que não pode repetir é o que está **esperando decisão**.
 
-**`COALESCE` porque quatro das FKs de alvo são nuláveis**, e num índice único do
-Postgres `NULL` não colide com `NULL` — sem ele, duas sugestões de vínculo para o
-mesmo par (as duas com `targetUserId` nulo) passariam as duas, e o índice não
-impediria nada.
+**Hoje um alvo só — `assetId`.** O índice chegou a cobrir quatro alvos
+(`targetUserId`, `targetLocationId` e `mergeIntoEndpointId` além de `assetId`),
+de quando a fila também propunha ocupação de posto e fusão de máquinas; os dois
+saíram ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional),
+[H](../decisoes/reconciliacao.md#h--a-fusão-de-máquinas-sai)), e com eles as três
+colunas. `SuggestionKind` hoje só tem `LINK`.
+
+**`COALESCE` continua, mesmo com um alvo só** — e não é cerimônia: a coluna
+segue nulável, e em Postgres dois `NULL` nunca colidem num índice único. Uma
+linha `PENDING` com `assetId` nulo (bug, carga à mão) voltaria a poder empilhar
+sem limite, em silêncio, sem o `COALESCE`.
 
 O que ele protege não é o banco: é a **fila**. O job roda de hora em hora sobre a
 frota inteira e reencontra as mesmas evidências; sem o índice, uma semana de
@@ -390,23 +401,11 @@ pessoa vira uma lista que ninguém abre duas vezes.
 > **Provado em** `tests/descoberta/fila.test.ts`: três rodadas seguidas do job e a
 > contagem de `PENDING` não cresce.
 
-### 14 — `endpoint_user_daily` único por (máquina, conta, dia)
-
-```prisma
-@@unique([endpointId, userKey, day])
-```
-
-O D49 em forma de índice. A agregação por dia é garantida **pelo banco**, não pelo
-`upsert` lembrar de acertar a chave — e a diferença aparece na fusão de máquinas,
-que é o único lugar que move essas linhas de um endpoint para outro: sem o índice,
-mover cegamente criaria duas linhas do mesmo dia para a mesma pessoa, e a contagem
-de "em quantos dias ela apareceu" — que é o que decide se há posto compartilhado —
-passaria a contar dobrado.
-
-É também a forma do limite de privacidade: **em que dias e em que faixa de hora**,
-nunca um rastro minuto a minuto. Uma linha por handshake seria um histórico de
-presença de pessoa, que este sistema não se propõe a guardar, e teria a retenção de
-90 dias protegendo um dado que não deveria existir nesse formato.
+> **A invariante 14 saiu com `EndpointUserDaily`** quando a reconciliação deixou de inferir
+> pessoa pela conta do sistema operacional
+> ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)).
+> Ela garantia que a agregação por dia fosse uma linha por (máquina, conta, dia); a tabela que
+> ela defendia não existe mais.
 
 ---
 
