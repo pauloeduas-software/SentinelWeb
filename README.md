@@ -16,7 +16,9 @@ server/
 ├── server.ts              # bootstrap: valida env, checa banco, registra, sobe
 ├── core/                  # infra: config, database, errors, logger, lifecycle
 └── domain/<nome>/         # maestro (rotas) → controllers → use-cases → prisma
-    └── agent · asset · inventory · user
+    └── agent · endpoint · asset · catalog · settings · activity · user
+    └── assignment · occupancy · stock · license · reconciliation
+    └── access · auth · workstation · shared
 
 src/
 ├── App.tsx                # moldura e rotas
@@ -45,10 +47,25 @@ fica em `src/index.css`, com variáveis CSS do Tailwind.
 
 Toda resposta leva `X-Request-Id`, que aparece na linha de log da requisição.
 
-## 🚀 Funcionalidades da UI
-*   **Rede numa base só**: velocidade (kB/s, MB/s) e totais (MB, GB) em byte, na ficha do ativo e na do posto.
-*   **Lista de Ativos Dinâmica**: Filtros automáticos por status ONLINE/OFFLINE.
-*   **Execução Direta**: Disparo de comandos de nível de Kernel com confirmação de segurança.
+## 🚀 Telas
+
+| Rota | O que é | Papel mínimo |
+| --- | --- | --- |
+| `/ativos` | Listagem de ativos (computadores) — filtros, busca por etiqueta/série, ações de ciclo de vida | TECNICO |
+| `/ativos/:id` | Ficha do ativo — abas **Detalhes**, **Posse**, **Histórico**, **Licenças**, **Máquina** (telemetria e comando, quando há agente) | TECNICO |
+| `/postos` | Listagem de postos de trabalho (mesas) | TECNICO |
+| `/postos/:id` | Ficha do posto — ocupantes, o computador da mesa (com telemetria), ativos entregues e estoque da mesa | TECNICO |
+| `/estoque` | O que tem quantidade em vez de patrimônio — saldo, entrada/baixa, saída e devolução por unidade | TECNICO (apagar/restaurar: ADMIN) |
+| `/licencas` | Contratos de software e os assentos materializados | TECNICO (apagar/restaurar: ADMIN) |
+| `/descobertas` | O que o agente vê e o cadastro não sabe — máquinas sem vínculo, vínculo manual, fila de sugestões e "Reconciliar agora" | TECNICO (Reconciliar agora e a configuração da descoberta: ADMIN) |
+| `/users` | Listagem de colaboradores | TECNICO (criar/editar/excluir: ADMIN) |
+| `/users/:id` | Ficha da pessoa — postos ocupados, itens de estoque no nome dela, histórico | TECNICO |
+| `/configuracoes` | Catálogo (categorias, status, fabricantes, modelos, localizações) e configuração do sistema | ADMIN |
+
+A convergência RMM × ITAM — vínculo entre a máquina que o agente descobre e o ativo cadastrado,
+telemetria em tempo real e comando remoto — vive dentro das fichas do ativo e do posto, não numa
+tela própria. O critério de cada tela e o que já existiu e saiu estão em
+[`docs/decisoes/escopo.md`](./docs/decisoes/escopo.md).
 
 ## 📋 Requisitos
 *   Node.js v22.x ou superior
