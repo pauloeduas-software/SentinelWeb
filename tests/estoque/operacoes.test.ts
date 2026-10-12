@@ -187,3 +187,25 @@ describe('a ficha do posto', () => {
     expect((await api.post('/api/stock/movements/00000000-0000-0000-0000-000000000000/checkin', {})).status).toBe(404);
   });
 });
+
+describe('a ficha da pessoa', () => {
+  it('lista as unidades de estoque no nome dela, uma por unidade, e a devolução as tira dali', async () => {
+    const pessoa = cenario.ana;
+    const mouse = await item('Mouse da ficha da pessoa', 2);
+    const saida = await api.post<{ unidades: { id: string }[] }>(`/api/stock/items/${mouse.id}/checkout`, {
+      targetType: 'USER', targetUserId: pessoa, qty: 2,
+    });
+    expect(saida.status).toBe(201);
+
+    type Ficha = { itens: { id: string; item: { name: string } }[]; posseAberta: { itensEmPosse: number } };
+    const antes = await api.get<Ficha>(`/api/users/${pessoa}`);
+    expect(antes.status).toBe(200);
+    expect(antes.body.itens.map((u) => u.item.name)).toEqual(['Mouse da ficha da pessoa', 'Mouse da ficha da pessoa']);
+    expect(antes.body.posseAberta.itensEmPosse).toBe(antes.body.itens.length);
+
+    expect((await api.post(`/api/stock/movements/${saida.body.unidades[0].id}/checkin`, {})).status).toBe(200);
+    const depois = await api.get<Ficha>(`/api/users/${pessoa}`);
+    expect(depois.body.itens.map((u) => u.id)).toEqual([saida.body.unidades[1].id]);
+    expect(depois.body.posseAberta.itensEmPosse).toBe(1);
+  });
+});
