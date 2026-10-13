@@ -285,9 +285,6 @@ CREATE TABLE "app_settings" (
     "discoveryMode" "DiscoveryMode" NOT NULL DEFAULT 'SUGGEST',
     "ghostDays" INTEGER NOT NULL DEFAULT 30,
     "shadowHours" INTEGER NOT NULL DEFAULT 24,
-    "locale" TEXT NOT NULL DEFAULT 'pt-BR',
-    "dateFormat" TEXT NOT NULL DEFAULT 'DD/MM/YYYY',
-    "currency" TEXT NOT NULL DEFAULT 'BRL',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 

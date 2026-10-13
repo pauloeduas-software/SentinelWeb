@@ -196,9 +196,9 @@ describe('a porta fechada por padrão', () => {
     // Agora pelo TECNICO numa rota de ADMIN: é a mesma mensagem do guard, e o
     // caminho que sobrou agora que `USUARIO` não tem sessão.
     const tecnico = await api.comoUsuario('TECNICO');
-    // `PUT /api/settings` é de ADMIN (o `GET` é de técnico): a recusa vem do
-    // `preHandler`, antes de o corpo ser lido.
-    const resposta = await tecnico.put<{ error: string }>('/api/settings', { locale: 'pt-BR' });
+    // `PUT /api/settings/discovery` é de ADMIN (o `GET` é de técnico): a recusa
+    // vem do `preHandler`, antes de o corpo ser lido.
+    const resposta = await tecnico.put<{ error: string }>('/api/settings/discovery', { ghostDays: 30 });
 
     expect(resposta.status).toBe(403);
     expect(resposta.body.error).toContain('Administrador');

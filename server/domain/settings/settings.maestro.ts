@@ -7,10 +7,9 @@ const logger = createLogger('settings.maestro');
 
 // Configuração global (tabela `app_settings`, uma linha).
 //
-// DOIS RECORTES DA MESMA LINHA, um por tela, e isso é de propósito (D65): a
-// descoberta (F7) e o sistema (F10). Não existe uma rota que devolva o singleton
-// inteiro — ela levaria para o navegador o `assetTagNext`, que é contador e não
-// configuração de ninguém (ver `helpers/system-settings.helper.ts`).
+// UM RECORTE DA LINHA: a descoberta (F7). Não existe uma rota que devolva o
+// singleton inteiro — ela levaria para o navegador o `assetTagNext`, que é
+// contador e não configuração de ninguém.
 export class SettingsMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
     // GET, e nunca POST: é leitura pura. Consumir a etiqueta acontece só dentro
@@ -23,11 +22,6 @@ export class SettingsMaestro {
     // cliente que conhecesse os outros dois.
     server.get('/api/settings/discovery', settingsController.getDiscovery);
     server.put('/api/settings/discovery', WRITE_RATE_LIMIT, settingsController.saveDiscovery);
-
-    // A CONFIGURAÇÃO DE SISTEMA (F10): formato de número e data, e moeda. `PUT`
-    // e todos os campos opcionais, como o par acima.
-    server.get('/api/settings', settingsController.getSystem);
-    server.put('/api/settings', WRITE_RATE_LIMIT, settingsController.saveSystem);
 
     logger.info('[Maestro] Rotas de Configuração inicializadas.');
   }

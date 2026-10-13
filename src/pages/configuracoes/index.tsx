@@ -1,23 +1,15 @@
-import { useState } from 'react';
 import { Plus, SlidersHorizontal } from 'lucide-react';
 import CatalogFormModal from './components/CatalogFormModal';
 import CatalogTable from './components/CatalogTable';
 import LocationOccupantsModal from './components/LocationOccupantsModal';
-import SistemaPanel from './components/SistemaPanel';
 import ListToolbar from '../components/ListToolbar';
 import { useCatalog } from './hooks/useCatalog';
-import { useConfigDoSistema } from './hooks/useConfigDoSistema';
 import { useOcupantes } from '../hooks/useOcupantes';
 
 // As tabelas de catálogo do ITAM — o menu *Settings* do Snipe-IT.
 //
 // Uma tela para as CINCO tabelas, dirigida pelas specs de `specs/`: acrescentar
 // uma tabela é escrever a spec, não copiar uma página.
-//
-// E UMA OITAVA ABA QUE NÃO É TABELA: *Sistema* (F10), que edita a LINHA ÚNICA do
-// `AppSetting` — marca e formato. Ela não cabe numa spec de
-// catálogo (não tem listagem, nem paginação, nem botão de "novo"), então a
-// página passa a ter duas formas e escolhe entre elas.
 export default function ConfiguracoesPage() {
   const {
     specs, spec, changeTab, registros, total, page, perPage, setPage,
@@ -33,14 +25,6 @@ export default function ConfiguracoesPage() {
   //
   // `useOcupantes` é compartilhado com /postos, que não tem ação de linha nenhuma
   // para conhecer.
-  // QUAL DAS DUAS FORMAS a tela está mostrando. Um modo, não dois booleanos:
-  // dois booleanos admitiriam o estado impossível de os dois serem `true`.
-  //
-  // `useState` local porque é estado de UMA tela (docs/referencia/arquitetura.md), e fora
-  // do `useCatalog` porque ele cuida da listagem de catálogo, que nestas duas
-  // abas não existe.
-  const [modo, setModo] = useState<'catalogo' | 'sistema'>('catalogo');
-  const sistema = useConfigDoSistema();
 
   const posto = acaoAberta?.id === 'ocupantes' ? acaoAberta.registro : null;
   const ocupantes = useOcupantes(posto?.id ?? null);
@@ -52,21 +36,15 @@ export default function ConfiguracoesPage() {
         <div>
           <h2 className="text-xl font-mono text-text-primary uppercase tracking-widest">Configurações</h2>
           <p className="text-xs text-text-tertiary mt-2 font-mono max-w-2xl">
-            {modo === 'sistema'
-              ? 'A identidade da empresa e como número e data aparecem na tela.'
-              : spec.descricao}
+            {spec.descricao}
           </p>
         </div>
-        {/* Sem botão de "novo" na aba Sistema: ela edita uma linha que já
-            existe e não pode ter uma segunda (o id é fixo, `singleton`). */}
-        {modo === 'catalogo' && (
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary font-mono text-xs uppercase tracking-widest transition-colors shrink-0"
-          >
-            <Plus size={14} /> {spec.singular}
-          </button>
-        )}
+        <button
+          onClick={openCreate}
+          className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary font-mono text-xs uppercase tracking-widest transition-colors shrink-0"
+        >
+          <Plus size={14} /> {spec.singular}
+        </button>
       </div>
 
       <div className="flex flex-wrap border border-border-sutil font-mono text-xs mb-4 shrink-0">
@@ -74,9 +52,9 @@ export default function ConfiguracoesPage() {
           <button
             key={item.slug}
             type="button"
-            onClick={() => { setModo('catalogo'); changeTab(item.slug); }}
+            onClick={() => changeTab(item.slug)}
             className={`px-4 py-2 uppercase tracking-widest transition-colors ${
-              modo === 'catalogo' && item.slug === spec.slug
+              item.slug === spec.slug
                 ? 'bg-text-primary text-bg-base'
                 : 'text-text-tertiary hover:text-text-primary hover:bg-bg-base'
             }`}
@@ -84,34 +62,8 @@ export default function ConfiguracoesPage() {
             {item.aba}
           </button>
         ))}
-
-        {/* AS DUAS ÚLTIMAS, separadas por uma borda: as nove primeiras são
-            tabelas de catálogo; estas não são. Misturá-las sem marca nenhuma
-            faria parecer que existe uma tabela chamada "Sistema". */}
-        <button
-          type="button"
-          onClick={() => setModo('sistema')}
-          className={`px-4 py-2 uppercase tracking-widest transition-colors border-l border-border-sutil ${
-            modo === 'sistema'
-              ? 'bg-text-primary text-bg-base'
-              : 'text-text-tertiary hover:text-text-primary hover:bg-bg-base'
-          }`}
-        >
-          Sistema
-        </button>
-
       </div>
 
-      {modo === 'sistema' ? (
-        <SistemaPanel
-          configuracao={sistema.configuracao}
-          carregando={sistema.carregando}
-          salvando={sistema.salvando}
-          erro={sistema.erro}
-          onSalvar={sistema.onSalvar}
-        />
-      ) : (
-        <>
       <ListToolbar
         search={search}
         onSearchChange={changeSearch}
@@ -145,9 +97,6 @@ export default function ConfiguracoesPage() {
           </div>
         }
       />
-
-        </>
-      )}
 
       {modalAberto && (
         <CatalogFormModal
