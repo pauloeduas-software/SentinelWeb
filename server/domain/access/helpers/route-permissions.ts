@@ -130,10 +130,8 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   'DELETE /api/endpoints/:id/link': 'TECNICO',
   'PATCH /api/endpoints/:id/review': 'TECNICO',
   'POST /api/endpoints/:id/command': 'TECNICO',
-  'GET /api/settings': 'TECNICO',
   'GET /api/settings/next-asset-tag': 'TECNICO',
   'GET /api/settings/discovery': 'TECNICO',
-  'PUT /api/settings': 'ADMIN',
   'PUT /api/settings/discovery': 'ADMIN',
 
   // ── O CATÁLOGO, gerado ────────────────────────────────────────────────────

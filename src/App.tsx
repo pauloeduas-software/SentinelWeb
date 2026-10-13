@@ -13,7 +13,6 @@ import UserDetailPage from './pages/gestao-usuario/detalhe';
 import ConfiguracoesPage from './pages/configuracoes';
 import LoginPage from './pages/login';
 import { useAuthStore } from './domain/auth/auth.store';
-import { useFormatoDoSistema } from './pages/hooks/useSistema';
 
 /**
  * `/itam/assets/:id` → `/ativos/:id`, preservando o id.
@@ -29,11 +28,6 @@ function RedirecionarAtivo() {
 // Só o esqueleto da aplicação: moldura e rotas. Estado, chamada de API e regra
 // de tela ficam nas páginas (pages/<contexto>/hooks) e nos stores de domínio.
 function Layout() {
-  // A CONFIGURAÇÃO DE SISTEMA (F10) é aplicada AQUI, e só aqui: acima do
-  // roteador, porque formato de número e de data valem para toda tela, e dentro
-  // do `Layout`, porque a rota pede sessão — a configuração não é pública.
-  useFormatoDoSistema();
-
   return (
     // A MOLDURA EM DUAS COLUNAS: barra lateral e, ao lado, cabeçalho + conteúdo.
     //

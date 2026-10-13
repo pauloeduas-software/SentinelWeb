@@ -742,16 +742,6 @@ model AppSetting {
   /// Máquina sem cadastro vista há mais que isto é SHADOW IT.
   shadowHours Int @default(24)
 
-  // ── O FORMATO (F10, D65) ─────────────────────────────────────────────────
-  //
-  // MORA NO BANCO e não no `.env`: moeda e formato de data mudam sem deploy. O
-  // que fica no ambiente é o que é SEGREDO ou é do processo.
-
-  /// Como NÚMERO e DATA são escritos na tela.
-  locale     String @default("pt-BR")
-  dateFormat String @default("DD/MM/YYYY")
-  currency   String @default("BRL")
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
