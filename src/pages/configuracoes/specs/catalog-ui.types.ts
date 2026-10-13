@@ -113,6 +113,12 @@ export interface CatalogUiSpec {
   campos: readonly CampoSpec[];
   /** Ausente nas cinco abas que só têm o CRUD. Ver `AcaoLinhaSpec`. */
   acoes?: readonly AcaoLinhaSpec[];
+  /**
+   * Botões que recortam a listagem por um campo de valores fixos — o tipo da
+   * categoria. O servidor só aceita o campo que a spec dele declara em
+   * `optionFilter`; aqui ficam os rótulos.
+   */
+  filtroPorTipo?: { campo: string; opcoes: readonly OpcaoFixa[] };
 }
 
 // Traduções dos enums do banco. Ficam aqui, num lugar só, porque a tabela e o

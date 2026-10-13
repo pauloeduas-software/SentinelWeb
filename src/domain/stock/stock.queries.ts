@@ -2,7 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { apiClient } from '../../core/api/apiClient';
 import { userKeys } from '../user/user.queries';
 import { workstationKeys } from '../workstation/workstation.queries';
-import type { ListEnvelope, ListParams } from '../shared/list.types';
+import type { ListEnvelope, ListParamsComCategoria } from '../shared/list.types';
 import type {
   AjustarEstoqueInput, AlvoDaSaidaInput, CriarItemDeEstoqueInput, EditarItemDeEstoqueInput,
   EventoDeEstoque, ItemDeEstoque, ItemDeEstoqueDetalhe, MovimentoDeEstoque,
@@ -20,12 +20,12 @@ import type {
 
 export const stockKeys = {
   all: ['stock'] as const,
-  list: (params: ListParams) => ['stock', 'list', params] as const,
+  list: (params: ListParamsComCategoria) => ['stock', 'list', params] as const,
   item: (id: string) => ['stock', 'item', id] as const,
   movements: (id: string) => ['stock', 'movements', id] as const,
 };
 
-export function useStockQuery(params: ListParams) {
+export function useStockQuery(params: ListParamsComCategoria) {
   return useQuery({
     queryKey: stockKeys.list(params),
     queryFn: async () => (await apiClient.get<ListEnvelope<ItemDeEstoque>>('/stock/items', { params })).data,

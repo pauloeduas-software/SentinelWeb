@@ -4,6 +4,7 @@ import AssetFilterBar from './components/AssetFilterBar';
 import AssetFormModal from './components/AssetFormModal';
 import CheckoutModal from './components/CheckoutModal';
 import ColunasMenu from './components/ColunasMenu';
+import CategoriaFiltro from '../components/CategoriaFiltro';
 import ListToolbar from '../components/ListToolbar';
 import { formatarData, formatarMoeda } from '../helpers/format.helper';
 import { seloDaSaida } from './helpers/baixa.helper';
@@ -17,6 +18,7 @@ export default function AtivosPage() {
     baixados, page, perPage, setPage,
     search, changeSearch, view, changeView,
     statusId, statusFiltrado, toggleStatus, limparStatus,
+    categoryId, changeCategoria,
     modalAberto, emEdicao, clonando, statusPadraoId, openCreate, openEdit, openClone, closeModal, abrirDetalhe,
     handleSubmit, handleDelete, handleRestore,
     emPosse, openPosse, closePosse, handleEntregar, handleDevolver,
@@ -89,6 +91,7 @@ export default function AtivosPage() {
         search={search}
         onSearchChange={changeSearch}
         placeholder="Buscar por etiqueta, série, nome, modelo ou fabricante..."
+        filtros={<CategoriaFiltro tipo="ASSET" valor={categoryId} onChange={changeCategoria} />}
         page={page}
         perPage={perPage}
         total={total}
@@ -265,6 +268,8 @@ export default function AtivosPage() {
                       <span>Nenhum ativo encontrado para "{search}".</span>
                     ) : statusId ? (
                       <span>Nenhum ativo com este status.</span>
+                    ) : categoryId ? (
+                      <span>Nenhum ativo nesta categoria.</span>
                     ) : (
                       <>
                         <span>Nenhum ativo cadastrado.</span>

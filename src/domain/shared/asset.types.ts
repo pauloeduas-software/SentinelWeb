@@ -150,6 +150,7 @@ export type AssetListParams = Omit<ListParams, 'view'> & {
   view?: AssetView;
   statusId?: string;
   locationId?: string;
+  categoryId?: string;
 };
 
 /**

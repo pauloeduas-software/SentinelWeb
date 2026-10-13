@@ -29,14 +29,26 @@ interface Seeder {
 // não do software — semear "Dell" é adivinhar o cliente. Do status o software
 // só fixa o TIPO (enum `StatusLabelType`); o nome, quem cadastra é o usuário.
 //
-// ATIVO É COMPUTADOR: as categorias de ativo são as de máquina. Monitor e
-// periférico são ESTOQUE — item por quantidade, sem patrimônio individual.
+// ATIVO É COMPUTADOR: as categorias de ativo são as de máquina — o que tem ou
+// pode ter agente. Celular, tablet e impressora não entram.
+// ESTOQUE é item por quantidade, sem patrimônio individual. A categoria é a
+// FAMÍLIA, não o item: "Mouse" é nome de item na página de Estoque, e a
+// categoria dele é "Periférico".
+// LICENÇA agrupa por família de software.
 const CATEGORIES = [
   { name: 'Notebook', type: 'ASSET' },
   { name: 'Desktop', type: 'ASSET' },
-  { name: 'Monitor', type: 'STOCK' },
+  { name: 'Servidor', type: 'ASSET' },
+
   { name: 'Periférico', type: 'STOCK' },
-  { name: 'Licença', type: 'LICENSE' },
+  { name: 'Monitor', type: 'STOCK' },
+  { name: 'Cabo e adaptador', type: 'STOCK' },
+  { name: 'Peça de reposição', type: 'STOCK' },
+
+  { name: 'Sistema operacional', type: 'LICENSE' },
+  { name: 'Produtividade', type: 'LICENSE' },
+  { name: 'Segurança', type: 'LICENSE' },
+  { name: 'Design', type: 'LICENSE' },
 ] as const;
 
 // O ADMINISTRADOR INICIAL — o único jeito de entrar num banco recém-criado.

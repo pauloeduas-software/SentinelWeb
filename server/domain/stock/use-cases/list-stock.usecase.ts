@@ -3,6 +3,7 @@ import { prisma } from '../../../core/database/prismaClient';
 import type { ListEnvelope, ListQuery } from '../../../core/http/list-query';
 import { comSaldo, contarFora, type ComSaldo } from '../helpers/stock-balance.helper';
 import { STOCK_ITEM_SELECT } from '../helpers/stock-select.helper';
+import type { StockFilters } from '../schemas/stock.schema';
 
 export const STOCK_SORTABLE = ['name', 'qty', 'createdAt'] as const;
 export type StockSortable = (typeof STOCK_SORTABLE)[number];
@@ -20,10 +21,14 @@ export type StockItemComSaldo = ComSaldo<StockItemRow>;
  * listagem de ativos; o saldo vem depois, fora dela, porque é leitura que não
  * precisa da garantia.
  */
-export async function listStock(query: ListQuery<StockSortable>): Promise<ListEnvelope<StockItemComSaldo>> {
+export async function listStock(
+  query: ListQuery<StockSortable>,
+  filtros: StockFilters,
+): Promise<ListEnvelope<StockItemComSaldo>> {
   const where: Prisma.StockItemWhereInput = {
     ...(query.view === 'trashed' ? { deletedAt: { not: null } } : {}),
     ...(query.q ? { name: { contains: query.q, mode: 'insensitive' } } : {}),
+    ...(filtros.categoryId ? { categoryId: filtros.categoryId } : {}),
   };
 
   const [total, rows] = await prisma.$transaction([

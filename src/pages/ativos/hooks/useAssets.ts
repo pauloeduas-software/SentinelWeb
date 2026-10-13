@@ -24,6 +24,7 @@ export function useAssets() {
   const [view, setView] = useState<AssetView>('active');
   const [search, setSearch] = useState('');
   const [statusId, setStatusId] = useState<string | undefined>();
+  const [categoryId, setCategoryId] = useState<string | undefined>();
   const debouncedSearch = useDebouncedValue(search);
 
   // Zerar a página no mesmo handler que muda o filtro, e não num `useEffect`
@@ -34,8 +35,8 @@ export function useAssets() {
   };
 
   const params = useMemo(
-    () => ({ page, perPage: PER_PAGE, q: debouncedSearch || undefined, view, statusId }),
-    [page, debouncedSearch, view, statusId],
+    () => ({ page, perPage: PER_PAGE, q: debouncedSearch || undefined, view, statusId, categoryId }),
+    [page, debouncedSearch, view, statusId, categoryId],
   );
 
   const { data, isPending } = useAssetsQuery(params);
@@ -66,6 +67,7 @@ export function useAssets() {
   };
 
   const changeView = (proxima: AssetView) => trocarFiltro(() => setView(proxima));
+  const changeCategoria = (id: string | undefined) => trocarFiltro(() => setCategoryId(id));
 
   /**
    * Clicar no contador do cabeçalho filtra por aquele status; clicar de novo
@@ -183,6 +185,8 @@ export function useAssets() {
     statusFiltrado,
     toggleStatus,
     limparStatus: () => trocarFiltro(() => setStatusId(undefined)),
+    categoryId,
+    changeCategoria,
     loading: isPending,
     modalAberto,
     emEdicao,

@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react';
+import CategoriaFiltro from '../components/CategoriaFiltro';
 import ListToolbar from '../components/ListToolbar';
 import AjusteModal from './components/AjusteModal';
 import EstoqueTable from './components/EstoqueTable';
@@ -16,6 +17,7 @@ import { useEstoque } from './hooks/useEstoque';
 export default function EstoquePage() {
   const {
     itens, total, page, perPage, setPage, search, changeSearch, view, changeView,
+    categoryId, changeCategoria,
     modal, itemAberto, abrir, fechar,
     handleCriar, handleEditar, handleAjustar, handleSaida, handleDevolver,
     handleExcluir, handleRestaurar,
@@ -48,6 +50,7 @@ export default function EstoquePage() {
         search={search}
         onSearchChange={changeSearch}
         placeholder="Buscar por nome..."
+        filtros={<CategoriaFiltro tipo="STOCK" valor={categoryId} onChange={changeCategoria} />}
         page={page}
         perPage={perPage}
         total={total}
@@ -66,6 +69,8 @@ export default function EstoquePage() {
         vazio={
           search ? (
             <span>Nenhum item encontrado para "{search}".</span>
+          ) : categoryId ? (
+            <span>Nenhum item nesta categoria.</span>
           ) : view === 'trashed' ? (
             <span>A lixeira de estoque está vazia.</span>
           ) : (

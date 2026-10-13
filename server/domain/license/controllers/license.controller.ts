@@ -6,7 +6,7 @@ import { historyQuerySchema } from '../../shared/history.schema';
 import { LICENSE_SORTABLE } from '../helpers/license-audited.helper';
 import {
   checkinSeatSchema, checkoutSeatSchema,
-  createLicenseSchema, updateLicenseSchema,
+  createLicenseSchema, licenseFiltersSchema, updateLicenseSchema,
 } from '../schemas/license.schema';
 import { listLicenses } from '../use-cases/list-licenses.usecase';
 import { getLicense } from '../use-cases/get-license.usecase';
@@ -29,7 +29,12 @@ import { listAssetSeats } from '../use-cases/list-asset-seats.usecase';
 
 export const licenseController = {
   async list(request: FastifyRequest) {
-    const query = parseListQuery(request.query, {
+    // `categoryId` sai ANTES do `parseListQuery`, que é estrito e responderia
+    // 422 a uma chave que não conhece — o mesmo corte do `endpoint.controller.ts`.
+    const { categoryId, ...paginacao } = (request.query ?? {}) as Record<string, unknown>;
+    const filtros = licenseFiltersSchema.parse(categoryId === undefined ? {} : { categoryId });
+
+    const query = parseListQuery(paginacao, {
       sortable: LICENSE_SORTABLE,
       defaultSort: 'name',
       defaultOrder: 'asc',
@@ -39,7 +44,7 @@ export const licenseController = {
       trashable: true,
     });
 
-    return listLicenses(query);
+    return listLicenses(query, filtros);
   },
 
   async byId(request: FastifyRequest) {

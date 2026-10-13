@@ -73,7 +73,9 @@ export interface CatalogSpec {
   audited: readonly string[];
 
   /**
-   * Filtro que o `/options` aceita, como ALLOWLIST de campo e de valores.
+   * Filtro que o `/options` e a listagem aceitam, como ALLOWLIST de campo e
+   * de valores. Na listagem, é o que separa as categorias por tipo na tela de
+   * Configurações.
    *
    * Existe porque `/categories/options` devolvia dois "Notebook" — o de ATIVO e
    * o de LICENÇA — indistinguíveis num `<select>`. E o formulário de ativo

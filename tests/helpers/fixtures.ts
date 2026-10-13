@@ -33,10 +33,11 @@ export async function idsDoSeed() {
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'DEPLOYABLE' }, select: { id: true } }),
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'IN_USE' }, select: { id: true } }),
     prisma.category.findFirstOrThrow({ where: { type: 'ASSET' }, select: { id: true } }),
-    // A da licença. O seed cria "Licença" com `type: 'LICENSE'`, e é o TIPO que
-    // o use-case confere: categoria de ASSET numa licença é 422.
+    // A da licença. O seed cria as famílias ("Sistema operacional",
+    // "Produtividade"…) com `type: 'LICENSE'`, e é o TIPO que o use-case
+    // confere: categoria de ASSET numa licença é 422.
     prisma.category.findFirstOrThrow({ where: { type: 'LICENSE' }, select: { id: true } }),
-    // A do estoque: "Monitor" e "Periférico" nascem `STOCK` no seed, e é o tipo
+    // A do estoque: "Periférico", "Monitor"… nascem `STOCK` no seed, e é o tipo
     // que o use-case confere — categoria de ATIVO num item de estoque é 422.
     prisma.category.findFirstOrThrow({ where: { type: 'STOCK' }, select: { id: true } }),
   ]);

@@ -2,6 +2,7 @@ import { Plus, SlidersHorizontal } from 'lucide-react';
 import CatalogFormModal from './components/CatalogFormModal';
 import CatalogTable from './components/CatalogTable';
 import LocationOccupantsModal from './components/LocationOccupantsModal';
+import TipoFiltro from './components/TipoFiltro';
 import ListToolbar from '../components/ListToolbar';
 import { useCatalog } from './hooks/useCatalog';
 import { useOcupantes } from '../hooks/useOcupantes';
@@ -13,7 +14,7 @@ import { useOcupantes } from '../hooks/useOcupantes';
 export default function ConfiguracoesPage() {
   const {
     specs, spec, changeTab, registros, total, page, perPage, setPage,
-    search, changeSearch, modalAberto, emEdicao,
+    search, changeSearch, tipo, changeTipo, modalAberto, emEdicao,
     openCreate, openEdit, closeModal, handleSubmit, handleDelete,
     acaoAberta, openAcao, closeAcao,
   } = useCatalog();
@@ -68,6 +69,9 @@ export default function ConfiguracoesPage() {
         search={search}
         onSearchChange={changeSearch}
         placeholder={spec.placeholderBusca}
+        filtros={spec.filtroPorTipo && (
+          <TipoFiltro opcoes={spec.filtroPorTipo.opcoes} valor={tipo} onChange={changeTipo} />
+        )}
         page={page}
         perPage={perPage}
         total={total}
@@ -86,6 +90,8 @@ export default function ConfiguracoesPage() {
             <SlidersHorizontal size={24} className="mb-4 opacity-50" />
             {search ? (
               <span>Nada encontrado para "{search}".</span>
+            ) : tipo ? (
+              <span>Nada cadastrado neste tipo.</span>
             ) : (
               <>
                 <span>Nenhum registro em {spec.aba.toLowerCase()}.</span>

@@ -4,7 +4,8 @@ import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { historyQuerySchema } from '../../shared/history.schema';
 import { idParamSchema } from '../../shared/params.schema';
 import {
-  adjustStockSchema, checkinStockSchema, checkoutStockSchema, createStockItemSchema, updateStockItemSchema,
+  adjustStockSchema, checkinStockSchema, checkoutStockSchema, createStockItemSchema, stockFiltersSchema,
+  updateStockItemSchema,
 } from '../schemas/stock.schema';
 import { adjustStock } from '../use-cases/adjust-stock.usecase';
 import { checkinStock } from '../use-cases/checkin-stock.usecase';
@@ -22,14 +23,19 @@ import { updateStockItem } from '../use-cases/update-stock-item.usecase';
 // use-cases (409 sem unidade, 404) saem pelo mesmo caminho.
 export const stockController = {
   async list(request: FastifyRequest) {
-    const query = parseListQuery(request.query, {
+    // `categoryId` sai ANTES do `parseListQuery`, que é estrito e responderia
+    // 422 a uma chave que não conhece — o mesmo corte do `endpoint.controller.ts`.
+    const { categoryId, ...paginacao } = (request.query ?? {}) as Record<string, unknown>;
+    const filtros = stockFiltersSchema.parse(categoryId === undefined ? {} : { categoryId });
+
+    const query = parseListQuery(paginacao, {
       sortable: STOCK_SORTABLE,
       defaultSort: 'name',
       defaultOrder: 'asc',
       // O item tem lixeira: `?view=trashed` a lista.
       trashable: true,
     });
-    return listStock(query);
+    return listStock(query, filtros);
   },
 
   async byId(request: FastifyRequest) {

@@ -22,3 +22,9 @@ export interface ListParams {
   q?: string;
   view?: ListView;
 }
+
+/**
+ * Licenças e Estoque: o que toda listagem aceita MAIS o filtro por categoria.
+ * Fica fora do `ListParams` porque nem toda listagem tem categoria.
+ */
+export type ListParamsComCategoria = ListParams & { categoryId?: string };
