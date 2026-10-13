@@ -17,10 +17,6 @@ import { LICENSE_SEARCHABLE } from '../helpers/license-audited.helper';
  * de spec local da F5 se aplica — ali havia três tipos com uma invariante
  * compartilhada; aqui há um.
  *
- * A MÁSCARA NÃO VEM NA LISTAGEM (`comMascara` ausente). Decifrar cem linhas
- * para mostrar quatro caracteres de cada poria o texto em claro de cem chaves na
- * memória do processo — exposição que não paga o que entrega. A listagem leva
- * `hasProductKey`, que é o que a tela precisa para decidir se oferece o botão.
  */
 export async function listLicenses(
   query: ListQuery<string>,
@@ -46,7 +42,7 @@ export async function listLicenses(
   // A CONTAGEM, em lote e FORA da transação acima. Fora de propósito: aquela
   // existe para o total e a página serem do mesmo instante, e alongá-la com a
   // contagem de assentos seguraria a transação durante leitura que não precisa
-  // dessa garantia — a mesma escolha que `listStock` e `listAssets` fazem.
+  // dessa garantia — a mesma escolha que o `listAssets` faz.
   const contagens = await contarAssentos(prisma, rows.map((linha) => linha.id));
 
   return {

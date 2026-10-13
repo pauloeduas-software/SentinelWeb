@@ -1,7 +1,7 @@
 import type { ZodType } from 'zod';
 import type { prisma } from '../../../core/database/prismaClient';
 
-// O contrato de UMA tabela de catálogo. Sete arquivos preenchem isto e o CRUD
+// O contrato de UMA tabela de catálogo. Cinco arquivos preenchem isto e o CRUD
 // genérico (use-cases/) atende às sete — em vez de sete fatias verticais quase
 // idênticas, que é o que o docs/referencia/arquitetura.md chama de cerimônia.
 

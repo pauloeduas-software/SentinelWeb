@@ -10,7 +10,7 @@ import { recordActivity } from '../../activity/use-cases/record-activity.usecase
 // aplicação. O que este arquivo acrescenta é a MENSAGEM (o P2002 cru viraria
 // "Registro já existe", que não diz nada a quem está na tela) e o ActivityLog.
 
-const JA_TEM_MAQUINA = 'Este ativo já está vinculado a outra máquina. Use a fusão se for a mesma máquina reinstalada.';
+const JA_TEM_MAQUINA = 'Este ativo já está vinculado a outra máquina. Desfaça aquele vínculo antes, pela aba Máquina do ativo.';
 
 export interface OrigemDoVinculo {
   automatico?: boolean;
@@ -39,12 +39,9 @@ export async function vincularEndpointAoAtivo(
     return await prisma.$transaction(async (tx) => {
       const endpoint = await tx.endpoint.findUnique({
         where: { id: endpointId },
-        select: { id: true, hwid: true, hostname: true, assetId: true, mergedIntoId: true },
+        select: { id: true, hwid: true, hostname: true, assetId: true },
       });
       if (!endpoint) throw new AppError('Máquina não encontrada.', 404);
-      if (endpoint.mergedIntoId) {
-        throw new AppError('Esta máquina foi fundida em outra e não pode receber vínculo.', 409);
-      }
       if (endpoint.assetId && endpoint.assetId !== assetId) {
         throw new AppError('Esta máquina já está vinculada a outro ativo.', 409);
       }
@@ -58,6 +55,11 @@ export async function vincularEndpointAoAtivo(
       });
       if (!ativo) throw new AppError('Ativo não encontrado.', 404);
 
+      // O vínculo NÃO passa pela regra do posto: ativo é computador com ou sem
+      // máquina vinculada, então a vaga da mesa foi decidida na ENTREGA
+      // (`checkout-asset.usecase.ts`). Vincular depois não muda o que o ativo é
+      // — só o que a ficha dele consegue mostrar.
+
       const vinculado = await tx.endpoint.update({
         where: { id: endpointId },
         data: { assetId },
@@ -65,7 +67,7 @@ export async function vincularEndpointAoAtivo(
       });
 
       await tx.reconciliationSuggestion.updateMany({
-        where: { endpointId, state: 'PENDING', kind: { in: ['LINK', 'MERGE'] } },
+        where: { endpointId, state: 'PENDING' },
         data: { state: 'SUPERSEDED', resolvedAt: new Date() },
       });
 
@@ -96,6 +98,13 @@ export async function vincularEndpointAoAtivo(
  * corrigi-lo não pode depender de mexer no banco à mão. O `ActivityLog` grava o
  * que havia — a mesma linha que, quando o `onDelete: SetNull` desfizer um
  * vínculo sozinho ao apagar um ativo, vai ser a única testemunha do que existia.
+ *
+ * NÃO encerra sugestão nenhuma, e isso é o que o parque permite: sugestão de
+ * vínculo só nasce para máquina SEM ativo (`match-endpoint.usecase.ts`), e o
+ * `vincular` acima encerra as pendentes na mesma transação em que grava o
+ * `assetId`. Máquina vinculada não tem pendente, então aqui não havia o que
+ * encerrar — a rodada seguinte do job é que volta a propor, com a máquina já
+ * sem vínculo.
  */
 export async function desvincularEndpoint(endpointId: string, actorId: string | null) {
   return prisma.$transaction(async (tx) => {
@@ -110,21 +119,6 @@ export async function desvincularEndpoint(endpointId: string, actorId: string | 
       where: { id: endpointId },
       data: { assetId: null },
       select: { id: true, hwid: true, hostname: true, assetId: true },
-    });
-
-    // TODA sugestão pendente desta máquina cai, e não só as de vínculo (D110).
-    //
-    // A simetria com o `vincular` acima não era só elegância que faltava: uma
-    // sugestão de posse pendente fala do ativo ATRAVÉS desta máquina — "quem usa
-    // esta máquina deveria ter este ativo". Desfeito o vínculo, a frase perdeu o
-    // sujeito, e aceitá-la entregaria um ativo com base na evidência que o
-    // operador acabou de invalidar de propósito.
-    //
-    // O que ainda fizer sentido volta pela mão do job, que reconcilia máquina
-    // sem vínculo de hora em hora — e a memória da recusa continua de pé.
-    await tx.reconciliationSuggestion.updateMany({
-      where: { endpointId, state: 'PENDING' },
-      data: { state: 'SUPERSEDED', resolvedAt: new Date() },
     });
 
     await recordActivity(tx, {

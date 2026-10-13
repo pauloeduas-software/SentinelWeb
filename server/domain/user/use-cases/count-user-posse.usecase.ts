@@ -1,22 +1,23 @@
 import type { ClientePosse } from '../../assignment/use-cases/resolve-responsibles.usecase';
-import { contarAcessoriosDiretos } from '../../stock/use-cases/count-user-accessories.usecase';
 import { contarAssentosDoUsuario } from '../../license/use-cases/count-user-seats.usecase';
+import { contarEstoqueDoUsuario } from '../../stock/use-cases/count-user-stock.usecase';
 
-// O QUE AINDA PRENDE UMA PESSOA AO INVENTÁRIO — as duas pontas, contadas juntas.
+// O QUE AINDA PRENDE UMA PESSOA AO INVENTÁRIO — as pontas, contadas juntas.
 //
-// São QUATRO desde a F6, e as quatro vêm do mesmo lugar (docs/referencia/modelo-de-posse.md):
-// o que está no NOME da pessoa — ativo (`Assignment` alvo `USER`), acessório
-// (`AccessoryCheckout` alvo `USER`) e assento de licença
-// (`LicenseSeatCheckout.assignedUserId`) — e o que ela responde por OCUPAR um
-// posto (`LocationOccupant`). Contar só a primeira é o erro que o D32 descreve:
-// o desligado continua respondendo por tudo que está na Mesa 1, e nenhuma
-// consulta acusa, porque a Camada 3 é derivada.
+// São QUATRO, e vêm do mesmo lugar (docs/referencia/modelo-de-posse.md): o que
+// está no NOME da pessoa — ativo (`Assignment` alvo `USER`), assento de licença
+// (`LicenseSeatCheckout.assignedUserId`) e unidade de estoque (`StockMovement`
+// de SAIDA alvo `USER`) — e o que ela responde por OCUPAR um posto
+// (`LocationOccupant`). Contar só a primeira é o erro que o D32 descreve: quem
+// saiu continua respondendo por tudo que está na Mesa 1, e nenhuma consulta
+// acusa, porque a Camada 3 é derivada.
 //
 // A PERGUNTA QUE DECIDE se algo entra aqui não é "tem tabela própria?", é
 // *"alguém responde por isto quando a pessoa sai?"*. Assento de licença responde
-// sim — ele custa dinheiro por mês e é nominal —, e por isso entrou junto com as
-// outras três em vez de virar uma contagem que alguém precisasse lembrar de
-// somar.
+// sim — ele custa dinheiro por mês e é nominal; o mouse no nome dela também: é
+// patrimônio, por quantidade, com uma pessoa respondendo. Por isso os dois
+// entraram junto com os outros em vez de virarem uma contagem que alguém
+// precisasse lembrar de somar.
 
 export interface PosseAbertaDoUsuario {
   /** `Assignment` abertas com alvo `USER` — o que devolver. */
@@ -24,22 +25,18 @@ export interface PosseAbertaDoUsuario {
   /** `LocationOccupant` abertas — o que encerrar. */
   postosOcupados: number;
   /**
-   * `AccessoryCheckout` abertas com alvo `USER` — a terceira ponta, da F5.
+   * `LicenseSeatCheckout` abertas com `assignedUserId` — a terceira ponta, da F6.
    *
-   * SÓ as diretas. As unidades do POSTO não entram pelo mesmo motivo que os
-   * ativos do posto não entram: elas são do posto, e o desligamento não tem o
-   * direito de devolvê-las (`stock/use-cases/count-user-accessories.usecase.ts`).
-   */
-  acessoriosEmPosse: number;
-  /**
-   * `LicenseSeatCheckout` abertas com `assignedUserId` — a quarta ponta, da F6.
-   *
-   * SÓ as da pessoa. Os assentos de ATIVO não entram pelo mesmo motivo que os
-   * acessórios do posto não entram: eles são da máquina, e o desligamento não
-   * tem o direito de devolvê-los
+   * SÓ as da pessoa. Os assentos de ATIVO não entram: eles são da máquina
    * (`license/use-cases/count-user-seats.usecase.ts`).
    */
   assentosEmPosse: number;
+  /**
+   * `StockMovement` de SAIDA abertas com alvo `USER` — a quarta ponta, a do
+   * estoque. SÓ as da pessoa: as unidades do POSTO são do posto, e quem sai da
+   * empresa não leva o mouse da Mesa 1 (`stock/use-cases/count-user-stock.usecase.ts`).
+   */
+  itensEmPosse: number;
 }
 
 /**
@@ -52,25 +49,23 @@ export async function contarPosseAberta(
   client: ClientePosse,
   userId: string,
 ): Promise<PosseAbertaDoUsuario> {
-  const [ativosEmPosse, postosOcupados, acessoriosEmPosse, assentosEmPosse] = await Promise.all([
+  const [ativosEmPosse, postosOcupados, assentosEmPosse, itensEmPosse] = await Promise.all([
     client.assignment.count({
       // `asset: { deletedAt: null }` EXPLÍCITO. `assignments` não tem
       // `deletedAt`, então a extension não escopa esta contagem — e ela não
       // alcança relação aninhada de jeito nenhum.
       //
       // Sem esta linha, um ativo mandado para a lixeira com a posse ainda
-      // aberta contaria aqui e NÃO apareceria no `holdings` (que é escopado):
-      // o 409 diria "responde por 1 ativo" ao lado de uma lista vazia, e o
-      // operador não teria o que devolver. É a mesma escolha do `holdings` —
-      // equipamento que saiu do inventário não se cobra de ninguém.
+      // aberta contaria aqui: o 409 diria "responde por 1 ativo" sobre
+      // equipamento que saiu do inventário, e não se cobra isso de ninguém.
       where: { targetType: 'USER', targetUserId: userId, checkinAt: null, asset: { deletedAt: null } },
     }),
     client.locationOccupant.count({ where: { userId, endedAt: null } }),
-    contarAcessoriosDiretos(client, userId),
     contarAssentosDoUsuario(client, userId),
+    contarEstoqueDoUsuario(client, userId),
   ]);
 
-  return { ativosEmPosse, postosOcupados, acessoriosEmPosse, assentosEmPosse };
+  return { ativosEmPosse, postosOcupados, assentosEmPosse, itensEmPosse };
 }
 
 /** "2 ativos", "1 ativo" — plural à mão porque é uma frase, não um dado. */
@@ -92,23 +87,25 @@ function quantos(total: number, singular: string, plural: string): string {
 export function motivoParaNaoExcluir(posse: PosseAbertaDoUsuario): string | null {
   const partes: string[] = [];
   if (posse.ativosEmPosse > 0) partes.push(`responde por ${quantos(posse.ativosEmPosse, 'ativo', 'ativos')}`);
-  if (posse.acessoriosEmPosse > 0) {
-    partes.push(`está com ${quantos(posse.acessoriosEmPosse, 'acessório', 'acessórios')}`);
-  }
   if (posse.assentosEmPosse > 0) {
     partes.push(`ocupa ${quantos(posse.assentosEmPosse, 'assento de licença', 'assentos de licença')}`);
+  }
+  if (posse.itensEmPosse > 0) {
+    partes.push(`está com ${quantos(posse.itensEmPosse, 'item de estoque', 'itens de estoque')}`);
   }
   if (posse.postosOcupados > 0) partes.push(`ocupa ${quantos(posse.postosOcupados, 'posto', 'postos')}`);
 
   if (partes.length === 0) return null;
 
-  // Vírgula entre as primeiras e " e " antes da última: com QUATRO pontas desde
-  // a F6, um `join(' e ')` produziria "responde por 1 ativo e está com 2
-  // acessórios e ocupa 1 assento de licença e ocupa 1 posto" — uma frase que
-  // ninguém lê até o fim.
+  // Vírgula entre as primeiras e " e " antes da última: com quatro pontas, um
+  // `join(' e ')` produziria "responde por 1 ativo e ocupa 1 assento de licença
+  // e ocupa 1 posto" — uma frase que ninguém lê até o fim.
   const frase = partes.length === 1
     ? partes[0]
     : `${partes.slice(0, -1).join(', ')} e ${partes[partes.length - 1]}`;
 
-  return `Este colaborador ainda ${frase}. Faça o desligamento antes de excluir.`;
+  // A FRASE DIZ O QUE FAZER, e o que ela manda fazer tem que EXISTIR: devolver
+  // o ativo, o assento e a unidade de estoque, e encerrar a ocupação, são as
+  // quatro operações que zeram as quatro pontas contadas acima.
+  return `Este colaborador ainda ${frase}. Devolva o que está com ele e encerre as ocupações antes de excluir.`;
 }

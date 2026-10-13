@@ -23,7 +23,18 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 
 ---
 
-## As dezoito
+## As treze
+
+> **A numeração é a original, e por isso salta.** O corte do ITAM levou as
+> invariantes 7, 8, 15, 16 e 18 junto com as tabelas que elas defendiam
+> (acessório, estoque, campo customizado, token de API); a segunda rodada levou a
+> 14 junto com `EndpointUserDaily`, quando a reconciliação deixou de inferir
+> pessoa pela conta do sistema operacional
+> ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)).
+> Renumerar as que ficaram quebraria as citações no código —
+> `assert-status-posse.usecase.ts` diz "invariante 4", `reconcile-seats.usecase.ts`
+> diz "invariante 11" —, e um número que muda de significado é pior que um
+> número que falta.
 
 | # | Invariante | Onde | O que o usuário vê |
 |---|---|---|---|
@@ -31,20 +42,15 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 2 | Uma ocupação aberta por (posto, pessoa) | **banco** — índice único parcial | 409 `Registro já existe` |
 | 3 | O tipo de um status em uso não muda | **aplicação** — `status-label.spec.ts` | 409 `Não é possível mudar o tipo: status em uso por 200 registros.` |
 | 4 | Estado × posse: ativo entregue não fica `DEPLOYABLE` nem `ARCHIVED` | **aplicação** — `assert-status-posse.usecase.ts` | 409 `"Pronto p/ Uso" é um status de estoque, e este ativo está entregue. Faça a devolução antes de mudar o status.` |
-| 5 | A forma da posse: um alvo coerente, nunca a si mesmo, devolução depois da entrega | **banco** — três `CHECK` | 409 `Registro já existe` (a API recusa antes, com frase própria) |
-| 6 | Colaborador desligado ou na lixeira não tem posse direta, unidade de acessório direta, **assento de licença** nem ocupação aberta | **aplicação** — 409 no `DELETE` + trava de linha no `offboard`/`checkout` | 409 `Este colaborador ainda responde por 2 ativos, está com 1 acessório, ocupa 1 assento de licença e ocupa 1 posto. Faça o desligamento antes de excluir.` |
-| 7 | O alvo de uma entrega de acessório é UM, e é o que casa com o `targetType` | **banco** — CHECK `accessory_checkout_alvo_xor` | 422 com o campo que falta (a API recusa antes, com frase própria) |
-| 8 | Nenhuma saída de estoque passa do disponível | **aplicação** — `COUNT` + `SELECT … FOR UPDATE` na linha-pai, dentro da transação | 409 `Sem unidade suficiente deste acessório: 0 disponível(is) de 5.` |
+| 5 | A forma da posse: um alvo coerente, devolução depois da entrega | **banco** — dois `CHECK` | 409 `Registro já existe` (a API recusa antes, com frase própria) |
+| 6 | Colaborador desativado ou na lixeira não tem posse direta, **assento de licença**, **unidade de estoque** nem ocupação aberta | **aplicação** — 409 no `DELETE`, no `checkout` e no cadastro de ocupante + trava de linha | 409 `Este colaborador ainda responde por 2 ativos, ocupa 1 assento de licença, está com 3 itens de estoque e ocupa 1 posto. Devolva o que está com ele e encerre as ocupações antes de excluir.` |
 | 9 | O alvo de um assento de licença é UM: pessoa **ou** ativo, nunca os dois, nunca nenhum | **banco** — CHECK `license_seat_alvo_xor` | 422 com o campo que falta (a API recusa antes, com frase própria) |
 | 10 | Um assento de licença não está em duas mãos | **banco** — índice único parcial `license_seat_uma_aberta_por_assento` | 409 `Sem assento livre em "Office 2024": 5 de 5 ocupados.` |
 | 11 | `COUNT(assentos sem retiredAt)` **é** `seatsTotal` | **aplicação** — `reconcile-seats.usecase.ts`, na transação da gravação | 409 `Não há assentos livres suficientes para reduzir o contrato: 2 precisariam ser aposentados e só 1 está livre.` |
-| 12 | Uma máquina é no máximo um ativo, e um ativo no máximo uma máquina | **banco** — `@unique` em `Endpoint.assetId` | 409 `Este ativo já está vinculado a outra máquina. Use a fusão se for a mesma máquina reinstalada.` |
+| 12 | Uma máquina é no máximo um ativo, e um ativo no máximo uma máquina | **banco** — `@unique` em `Endpoint.assetId` | 409 `Este ativo já está vinculado a outra máquina. Desfaça aquele vínculo antes, pela aba Máquina do ativo.` |
 | 13 | A mesma sugestão não empilha na fila | **banco** — índice único parcial `sugestao_pendente_por_alvo` | nada: o job trata o `P2002` como "outro já criou" |
-| 14 | A observação de uso é uma linha por (máquina, conta, dia) | **banco** — índice único `endpoint_user_daily` | nada: o `upsert` incrementa em vez de inserir |
-| 15 | O `slug` de um campo customizado não muda depois de criado | **aplicação** — `custom-field.spec.ts` → `beforeWrite` | 409 `O identificador de um campo não muda depois de criado: ele é a chave do valor em cada ativo. Este campo é "ip_fixo". Para trocar o identificador, crie outro campo — o nome visível, esse sim, pode ser editado à vontade.` |
-| 16 | Um campo com valor gravado não vira cifrado, nem deixa de ser | **aplicação** — `custom-field.spec.ts` → `beforeWrite` | 409 `Não é possível ligar a cifra de "chave_wifi": 12 ativos já têm valor gravado neste campo. Os valores existentes estão em claro e não seriam cifrados retroativamente. Crie um campo novo com a configuração desejada.` |
-| 17 | Sempre existe alguém, com login, que alcança `access.manage` | **aplicação** — `assertSobraAdministrador()`, DEPOIS da escrita e dentro da transação | 409 `Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. Dê "Gerenciar grupos, permissões e tokens de API" a outra pessoa com login antes de seguir.` |
-| 18 | Uma credencial de API sempre tem dono | **banco** — FK `api_tokens_userId_fkey` com `Cascade` | nada: a FK impede o órfão, e apagar a pessoa leva os tokens dela |
+| 17 | Sempre existe alguém, com login, que é `ADMIN` | **aplicação** — `assertSobraAdministrador()`, DEPOIS da escrita e dentro da transação | 409 `Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. Dê o papel de Administrador a outra pessoa com login antes de seguir.` |
+| 19 | No máximo um ativo por posto de trabalho | **aplicação** — três portas: a entrega e a restauração da lixeira (`ativoDoPosto()`, com `FOR UPDATE` na linha do posto) e a da marca (`locationSpec.beforeWrite`) | 409 `Este posto de trabalho já tem um ativo: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.` |
 
 ---
 
@@ -109,15 +115,12 @@ A mesma guarda existe em `category.spec.ts`, e **aqui é mais grave**: o tipo da
 categoria diz a que módulo o registro pertence; o tipo do status decide se o
 equipamento pode ser entregue a alguém.
 
-> **A guarda vale o que a contagem enxerga.** A da categoria contava modelos e
-> ativos, e nada mais — então uma categoria usada **só por acessórios** contava
-> zero e mudava de `ACCESSORY` para `ASSET` sem recusa. O acessório terminava
-> numa categoria de tipo `ASSET`: exatamente o estado que
-> `assert-stock-references.usecase.ts` recusa com **422** na criação do item.
-> A guarda existia na porta do item; a da categoria estava aberta.
+> **A guarda vale o que a contagem enxerga.** Uma contagem que esquece uma
+> tabela deixa a guarda aberta sem avisar: ela responde "zero em uso" e a troca
+> de tipo passa.
 >
-> Contar é a regra inteira aqui — `countUsages` de categoria, fabricante,
-> fornecedor e localização precisa conhecer **toda** tabela que aponta para
+> Contar é a regra inteira aqui — `countUsages` de categoria, fabricante e
+> localização precisa conhecer **toda** tabela que aponta para
 > elas, e as seis da F5 apontam. Uma tabela nova numa fase futura reabre isto em
 > silêncio; é o preço de uma regra que é uma soma.
 
@@ -165,22 +168,18 @@ checkout concorrente entre a checagem e o `UPDATE` passaria.
 
 ```sql
 ALTER TABLE "assignments" ADD CONSTRAINT "assignments_alvo_coerente" CHECK (
-  num_nonnulls("targetUserId", "targetAssetId", "targetLocationId") = 1
+  num_nonnulls("targetUserId", "targetLocationId") = 1
   AND (   ("targetType" = 'USER'     AND "targetUserId"     IS NOT NULL)
-       OR ("targetType" = 'ASSET'    AND "targetAssetId"    IS NOT NULL)
        OR ("targetType" = 'LOCATION' AND "targetLocationId" IS NOT NULL))
-);
-ALTER TABLE "assignments" ADD CONSTRAINT "assignments_nao_entregue_a_si_mesmo" CHECK (
-  "targetAssetId" IS NULL OR "targetAssetId" <> "assetId"
 );
 ALTER TABLE "assignments" ADD CONSTRAINT "assignments_devolucao_nao_antecede_entrega" CHECK (
   "checkinAt" IS NULL OR "checkinAt" >= "checkoutAt"
 );
 ```
 
-Três afirmações sobre a mesma linha: o alvo polimórfico é **coerente** (uma FK
-preenchida, e é a que casa com o `targetType`), o ativo **não responde por si
-mesmo**, e a posse **não fecha antes de abrir**.
+Duas afirmações sobre a mesma linha: o alvo polimórfico é **coerente** (uma FK
+preenchida, e é a que casa com o `targetType`), e a posse **não fecha antes de
+abrir**.
 
 **Por que no banco, se o `assertAlvoCoerente` já valida:** porque a validação da
 aplicação defende quem passa pela API, e esta tabela tem outros escritores — o
@@ -189,44 +188,61 @@ linha com `targetType: 'USER'` e `targetLocationId` preenchido é aceita pelo
 Postgres sem CHECK, e a Camada 3 a resolve como *"sem responsável"* — em
 silêncio, que é o pior jeito de um equipamento sumir de vista.
 
-A `Assignment` era a **única** tabela do modelo de posse sem CHECK: o assento já
-é defendido pelo índice único parcial (#2) e o `AccessoryCheckout` da F5 nasce
-com o dele. A tabela que carrega a Camada 1 ficaria a mais frouxa das três.
+A `Assignment` era a **única** tabela do modelo de posse sem CHECK: a ocupação é
+defendida pelo índice único parcial (#2) e o assento de licença tem o
+`license_seat_alvo_xor` (#9). A tabela que carrega a Camada 1 ficaria a mais
+frouxa das três.
 
-**`>=` e não `>`** na data: entrega e devolução no mesmo instante é real — é o
-desligamento no mesmo dia da entrega, e o `offboard` carimba os dois com
-relógios que podem coincidir no milissegundo.
+**`>=` e não `>`** na data: entrega e devolução no mesmo instante é real — é a
+devolução no mesmo dia da entrega, com dois relógios que podem coincidir no
+milissegundo.
 
-**Onde está:** `prisma/migrations/20260923105500_check_do_assignment/migration.sql`.
-A aplicação continua recusando antes, com a frase que ensina o modelo; o CHECK é
-a rede de baixo.
+**Onde está:** na migration `0_init` e, o da coerência, refeito para dois alvos
+em `20261010220000_o_alvo_ativo_sai_da_posse`. A aplicação continua recusando
+antes, com a frase que ensina o modelo; o CHECK é a rede de baixo.
 
-### 6 — Desligado não fica com posse aberta
+### 6 — Desativado não fica com posse aberta
 
 `server/domain/user/use-cases/lock-user.usecase.ts`, chamada como **primeira**
-instrução da transação em `offboardUser`, `deleteUser`, `checkoutAsset` (alvo
-`USER`) e `addLocationOccupant`.
+instrução da transação em `deleteUser`, `checkoutAsset` (alvo `USER`),
+`checkoutSeat` (alvo `USER`), `checkoutStock` (alvo `USER`) e
+`addLocationOccupant`.
 
-O `DELETE` já respondia 409 com as duas contagens (`count-user-posse.usecase.ts`)
-e o `checkout` já recusava entregar a `isActive = false`. **As duas guardas eram
-furáveis por corrida**, e esta é a metade que faltava:
+**QUATRO PONTAS, e são as quatro que fazem alguém responder por equipamento:**
+ativo no nome (`Assignment` alvo `USER`), assento de licença
+(`LicenseSeatCheckout.assignedUserId`), unidade de estoque no nome
+(`StockMovement` de SAIDA alvo `USER`) e ocupação de posto (`LocationOccupant`)
+— esta última porque ocupante responde pelos ativos e pelo estoque do posto por
+derivação da Camada 3. A pergunta que decide se algo entra aqui não é *"tem
+tabela própria?"*, é ***"alguém responde por isto quando a pessoa sai?"***.
+
+**As três guardas de leitura são furáveis por corrida**, e a trava é a metade que
+faltava:
 
 ```
 T1 (entrega)       lê o usuário  → isActive: true, segue
-T2 (desligamento)  lê as posses  → não há nenhuma, fecha nada
-T2                 grava isActive = false, terminatedAt   → COMMIT
+T2 (desativação)   lê as posses  → não há nenhuma, fecha nada
+T2                 grava isActive = false                 → COMMIT
 T1                 cria a Assignment                      → COMMIT
 ```
 
-Resultado: **desligado com posse aberta**. Os dois caminhos fizeram exatamente o
+Resultado: **desativado com posse aberta**. Os dois caminhos fizeram exatamente o
 que está escrito neles. Em `READ COMMITTED` — o padrão do Postgres e o nosso —
 nenhum `if` pega isso: as duas transações leem um estado consistente de antes, e
 nenhuma enxerga o que a outra ainda não confirmou.
 
 E o estado é **invisível**: nada falha, nada é logado como erro. Quem descobre é
 o `DELETE`, meses depois, respondendo 409 *"ainda responde por 1 ativo"* sobre um
-cadastro que a tela mostra como desligado — e a tela do desligamento já não
-oferece devolver nada, porque a pessoa já está desligada.
+cadastro que a tela mostra como inativo.
+
+> **A assimetria que existia até o corte do ITAM:** `checkoutAsset` recusava
+> entregar ativo a quem está desativado e `addLocationOccupant` só conferia
+> existência. Como responsável de posto é DERIVADO da ocupação, a brecha reabria
+> por fora do checkout exatamente a responsabilidade que a desativação fecha — e
+> a fila de reconciliação chegava a oferecer o botão que fazia isso, porque o
+> aceite de uma sugestão `OCCUPANCY` passa por ali. Hoje as duas recusam com 409,
+> e a fila não propõe nada para quem está desativado
+> (`upsert-suggestion.usecase.ts`, passo 0).
 
 **A saída** é serializar as duas na linha que as duas disputam: `SELECT … FOR
 UPDATE` na linha do usuário. A segunda transação espera a primeira confirmar, e a
@@ -241,99 +257,10 @@ instrução de cada transação, antes de ler ativo e antes de contar posse.
 `assignments` e `location_occupants`. O que o banco oferece aqui é a trava, não
 a verificação.
 
-> **Encontrada por teste, não por leitura.** `tests/corridas/posse.test.ts`
-> dispara desligamento e entrega sem `await` entre eles e confere o estado final.
-> Antes da trava, ele ficava vermelho com `{ posses: 1 }`.
-
----
-
-### 7 — `accessory_checkout_alvo_xor`
-
-```sql
-ALTER TABLE "accessory_checkouts" ADD CONSTRAINT "accessory_checkout_alvo_xor"
-  CHECK (
-       ("targetType" = 'USER'     AND "targetUserId"     IS NOT NULL AND "targetLocationId" IS NULL)
-    OR ("targetType" = 'LOCATION' AND "targetLocationId" IS NOT NULL AND "targetUserId"     IS NULL)
-  );
-```
-
-Um discriminante ao lado de duas FKs nuláveis admite **quatro** estados, e três
-deles são mentira: as duas preenchidas, nenhuma preenchida, e a preenchida que
-não corresponde ao `targetType`.
-
-**Nenhum dá erro sozinho.** O que acontece é a resolução de responsáveis
-devolver `[]` em silêncio — *"ninguém responde por esta unidade"* — para uma
-unidade que está na mão de alguém.
-
-**Esta é a diferença da F5 para a F4.** No `Assignment` a mesma coerência é
-guarda de APLICAÇÃO (`assertAlvoCoerente`), porque com três FKs o CHECK ficaria
-longo e o Prisma não o expressa de qualquer jeito. Aqui são só duas, e o CHECK
-foi escrito à mão na migration — então a garantia alcança o `psql`, o importador
-de CSV da F10 e qualquer caminho futuro que não passe pelo use-case.
-
-**Onde está:** `prisma/migrations/20260923190000_estoque/migration.sql`. A
-aplicação continua validando por cima, para dar 422 com o nome do campo que
-falta: o erro do CHECK fala de constraint, que não ensina nada a quem preencheu
-o formulário.
-
-> **Provado por fora da API.** `tests/estoque/invariantes.test.ts` faz um
-> `INSERT` cru com as duas FKs preenchidas e espera a recusa — é isso que
-> demonstra que a garantia não depende do use-case.
-
-### 8 — Nenhuma saída passa do disponível
-
-```ts
-await prisma.$transaction(async (tx) => {
-  await travarItemOuFalhar(tx, 'ACCESSORY', 'acessório', id);   // SELECT … FOR UPDATE
-  const emUso = await contarEmUsoDe(tx, 'ACCESSORY', id);        // COUNT das linhas abertas
-  assertDisponivel('acessório', 1, item.qty, emUso);             // 409 com os números
-  await tx.accessoryCheckout.create({ /* … */ });
-});
-```
-
-**Por que não é uma coluna `qtyAvailable`** (D34): a coluna pode DIVERGIR das
-linhas. Basta um `INSERT` de checkout que não passe pelo decremento — falha no
-meio de uma operação sem transação, correção à mão no `psql`, importador da F10 —
-e a partir daí ela mente **para sempre**, porque a coluna *é* a resposta: não
-existe ninguém para discordar dela. Com `COUNT`, a resposta não pode divergir
-das linhas — ela **são** as linhas.
-
-**Por que o `COUNT` sozinho não basta: contar não é travar.** Duas requisições
-podem contar "4 de 5 ocupados" e as duas inserirem, dando 6 de 5. Em READ
-COMMITTED nenhuma enxerga o checkout que a outra ainda não confirmou, e nenhum
-`if` pega isso. Quem serializa é o `FOR UPDATE` na linha do ITEM — que precisa
-estar **dentro** da transação: um lock em autocommit dura zero milissegundo.
-
-**Por que na aplicação, e não no banco:** a regra cruza duas tabelas (o item e
-as saídas dele), e um CHECK não faz join. O que o banco oferece aqui é a
-**trava**, não a verificação — exatamente como na invariante 6.
-
-**Ordem de travamento: usuário antes do item, e componente antes de ativo.** A
-primeira é extensão direta do *usuário antes de ativo* da invariante 6; a
-segunda entrou com a recusa abaixo. O grafo de travas do sistema é `usuário →
-ativo`, `usuário → item de estoque` e `componente → ativo` — acíclico, e é isso
-que precisa continuar verdadeiro: duas transações que travem os mesmos dois
-recursos em ordens opostas travam uma à outra, e o Postgres mata uma delas.
-
-**A unidade não pode ficar presa do outro lado.** A mesma invariante tem uma
-segunda ponta, e ela não é sobre quantidade — é sobre haver caminho de volta:
-
-- `deleteStockItem` recusa mandar o item para a lixeira com unidade fora;
-- `deleteAsset` recusa mandar o ATIVO para a lixeira com peça dentro.
-
-Sem a segunda, as unidades instaladas sumiam do `disponivel` para sempre: a
-contagem olha `component_assets`, que não tem `deletedAt` e não sabe que o ativo
-foi apagado, e a tela que ofereceria a retirada responde 404. O `onDelete:
-Restrict` da FK não alcança — soft delete é `UPDATE`, e o Postgres não vê
-`DELETE` nenhum. É o mesmo ponto cego da invariante 6.
-
-> **Provado por corrida.** `tests/estoque/corridas.test.ts` dispara cinco
-> entregas de um estoque de três sem `await` entre elas: passam três `201` e
-> dois `409`, e o disponível fecha em `0` — nunca em `-2`.
->
-> **E por estado.** `tests/estoque/operacoes.test.ts` tenta apagar um ativo com
-> 4 unidades instaladas, espera o 409 com o número, retira a peça e confere que
-> o disponível volta inteiro.
+> **A corrida é testada, não argumentada.** `tests/corridas/posse.test.ts`
+> dispara duas entregas do mesmo ativo e duas ocupações do mesmo posto sem
+> `await` entre elas, e a asserção não é "deu certo": é *exatamente UMA passou, e
+> o banco tem exatamente UMA linha*.
 
 ---
 
@@ -431,9 +358,11 @@ contato, e nenhuma forma de saber qual vale.
 O caso que ele pega de verdade é a **reimagem**: a máquina volta com `hwid` novo e
 o serial casando com um ativo que já tem endpoint. Sem o índice, o segundo vínculo
 entraria e a tela do ativo passaria a mostrar a máquina errada, escolhida por
-ordem de consulta. Com ele, a operação certa fica evidente — é fusão, não vínculo
-(D103) —, e é isso que a cascata de merge propõe antes de qualquer sugestão de
-vínculo.
+ordem de consulta. Com ele, a tentativa é recusada com 409, apontando para
+"Desvincular" na aba Máquina — não há mais fusão (saiu com
+[H](../decisoes/reconciliacao.md#h--a-fusão-de-máquinas-sai): o `hwid` é derivado
+do hardware e estável entre reinstalações, então a duplicação que a fusão
+resolvia não acontece mais).
 
 > `onDelete: SetNull` é o outro lado: apagar um ativo de verdade **não** leva
 > junto a telemetria da máquina. O preço é que o vínculo se desfaz em silêncio, e
@@ -444,8 +373,7 @@ vínculo.
 ```sql
 CREATE UNIQUE INDEX "sugestao_pendente_por_alvo"
   ON "reconciliation_suggestions" ("kind", "endpointId",
-    COALESCE("assetId", '000…'::uuid), COALESCE("targetUserId", '000…'::uuid),
-    COALESCE("targetLocationId", '000…'::uuid), COALESCE("mergeIntoEndpointId", '000…'::uuid))
+    COALESCE("assetId", '00000000-0000-0000-0000-000000000000'::uuid))
   WHERE "state" = 'PENDING';
 ```
 
@@ -453,10 +381,17 @@ CREATE UNIQUE INDEX "sugestao_pendente_por_alvo"
 recusada em março, substituída em abril e aceita em maio, e as três linhas contam
 essa história. O que não pode repetir é o que está **esperando decisão**.
 
-**`COALESCE` porque quatro das FKs de alvo são nuláveis**, e num índice único do
-Postgres `NULL` não colide com `NULL` — sem ele, duas sugestões de vínculo para o
-mesmo par (as duas com `targetUserId` nulo) passariam as duas, e o índice não
-impediria nada.
+**Hoje um alvo só — `assetId`.** O índice chegou a cobrir quatro alvos
+(`targetUserId`, `targetLocationId` e `mergeIntoEndpointId` além de `assetId`),
+de quando a fila também propunha ocupação de posto e fusão de máquinas; os dois
+saíram ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional),
+[H](../decisoes/reconciliacao.md#h--a-fusão-de-máquinas-sai)), e com eles as três
+colunas. `SuggestionKind` hoje só tem `LINK`.
+
+**`COALESCE` continua, mesmo com um alvo só** — e não é cerimônia: a coluna
+segue nulável, e em Postgres dois `NULL` nunca colidem num índice único. Uma
+linha `PENDING` com `assetId` nulo (bug, carga à mão) voltaria a poder empilhar
+sem limite, em silêncio, sem o `COALESCE`.
 
 O que ele protege não é o banco: é a **fila**. O job roda de hora em hora sobre a
 frota inteira e reencontra as mesmas evidências; sem o índice, uma semana de
@@ -466,84 +401,11 @@ pessoa vira uma lista que ninguém abre duas vezes.
 > **Provado em** `tests/descoberta/fila.test.ts`: três rodadas seguidas do job e a
 > contagem de `PENDING` não cresce.
 
-### 14 — `endpoint_user_daily` único por (máquina, conta, dia)
-
-```prisma
-@@unique([endpointId, userKey, day])
-```
-
-O D49 em forma de índice. A agregação por dia é garantida **pelo banco**, não pelo
-`upsert` lembrar de acertar a chave — e a diferença aparece na fusão de máquinas,
-que é o único lugar que move essas linhas de um endpoint para outro: sem o índice,
-mover cegamente criaria duas linhas do mesmo dia para a mesma pessoa, e a contagem
-de "em quantos dias ela apareceu" — que é o que decide se há posto compartilhado —
-passaria a contar dobrado.
-
-É também a forma do limite de privacidade: **em que dias e em que faixa de hora**,
-nunca um rastro minuto a minuto. Uma linha por handshake seria um histórico de
-presença de pessoa, que este sistema não se propõe a guardar, e teria a retenção de
-90 dias protegendo um dado que não deveria existir nesse formato.
-
----
-
-### 15 — O `slug` de um campo customizado é imutável
-
-`server/domain/catalog/specs/custom-field.spec.ts` → `beforeWrite`
-
-═══════════════════════════════════════════════════════════════════════════════
-
-**Esta é a invariante que torna o `JsonB` da F9 seguro**, e ela existe porque o
-D59 aceitou um preço declarado: **não há integridade referencial entre as chaves
-do JSON e a tabela `custom_fields`**. Uma coluna por campo customizado daria essa
-integridade e morreria no `migrate diff` seguinte (é o D7); uma tabela EAV daria
-e transformaria a listagem num pivô. O JsonB é a escolha certa, e esta regra é o
-que paga por ela.
-
-O `slug` é o **nome da propriedade** dentro de `assets.customFields`, em N mil
-linhas. Renomeá-lo é um `UPDATE` sobre a tabela inteira que teria que ser
-transacional com a linha do campo — e um meio-caminho (o processo morre, o
-`statement_timeout` corta) deixa metade dos ativos com a chave velha e metade com
-a nova, **sem nada que acuse**: as duas são chaves válidas de um JSON válido, a
-tela simplesmente deixa de mostrar o valor de metade da frota.
-
-**Por que na aplicação:** a regra é *"mudou de X para Y?"* — precisa do valor
-anterior. É a mesma forma da invariante 3, e a mesma razão de ela não caber num
-CHECK.
-
-**Por que não há migração em massa oferecida:** ela existiria para servir a um
-caso que tem saída melhor. O `name` — que é o que aparece em toda tela — muda à
-vontade; o `slug` é infraestrutura, e ninguém além de quem escreve
-`?cf[ip_fixo]=` à mão precisa vê-lo. Uma regra de três linhas no lugar de um
-script de migração e de um modo de falha.
-
-> **Pelo mesmo motivo, trocar o conjunto de um ativo NÃO apaga as chaves que
-> sobraram** (D60). Elas são dado do cliente, o conjunto antigo pode voltar, e
-> mantê-las custa zero. A tela de detalhe as mostra marcadas como "de um conjunto
-> anterior"; o formulário não as edita e a validação as ignora. Apagar dado do
-> cliente porque um `<select>` mudou é a "limpeza" que ninguém pede e todos
-> lamentam.
-
-### 16 — A cifra de um campo não vira com valor gravado
-
-`server/domain/catalog/specs/custom-field.spec.ts` → `beforeWrite`
-
-**Os dois sentidos estragam, e estragam diferente:**
-
-| Operação | O que aconteceria |
-|---|---|
-| ligar `encrypted` | os valores antigos ficam **em claro** dentro do JsonB com o sistema tratando-os como cifrados. A leitura os mostra crus (não casam com `enc:v1:`), e a rota de revelar responde 422 "não é cifrado" para um campo que a tela desenha com cadeado |
-| desligar `encrypted` | os valores existentes continuam cifrados, e a tela passa a mostrar `enc:v1:e99fe939:…` como se fosse o valor |
-
-**Por que não há recifragem em massa:** ela teria que decifrar e recifrar N mil
-linhas numa transação, e o que falhasse no meio ficaria **ilegível** — não
-"errado", ilegível. O AAD amarra cada valor à linha e ao campo onde ele mora
-(D81 + `aadDoCampo`), então nem um `UPDATE` cruzado salvaria o que ficasse pelo
-caminho.
-
-A saída é a do slug: **criar outro campo**. E a contagem que sustenta o 409 usa
-`?` do Postgres em SQL cru, porque o `path`/`not: DbNull` do Prisma tipado não
-alcança o índice GIN — ver
-[`../historico/fase-09-campos-customizados.md`](../historico/fase-09-campos-customizados.md).
+> **A invariante 14 saiu com `EndpointUserDaily`** quando a reconciliação deixou de inferir
+> pessoa pela conta do sistema operacional
+> ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)).
+> Ela garantia que a agregação por dia fosse uma linha por (máquina, conta, dia); a tabela que
+> ela defendia não existe mais.
 
 ---
 
@@ -556,52 +418,117 @@ await assertSobraAdministrador(tx);
 
 **A checagem roda DEPOIS da escrita, dentro da transação** — e é isso que a torna
 completa. Prever se uma operação vai deixar o sistema sem administrador exigiria
-simular a união de permissões para cada caminho (tirar a chave do grupo, apagar o
-grupo, tirar a pessoa do grupo, desligar a pessoa, apagar a pessoa), e o quinto
-caminho seria o esquecido. Aplicando e **contando depois**, há uma pergunta só:
+simular cada caminho (rebaixar o papel, desativar a pessoa, apagar a pessoa), e o
+terceiro seria o esquecido. Aplicando e **contando depois**, há uma pergunta só:
 *ainda existe alguém?* Se não, o `throw` desfaz tudo e nada aconteceu.
+
+Um caminho novo que mexa em papel herda a proteção só por chamar isto no fim — e
+foi o que aconteceu com o `isActive` editável: a checagem roda em TODO `update`
+de usuário, não só quando `role` vem no corpo, então desativar o último
+administrador responde 409 sem ninguém ter escrito uma linha para isso.
 
 **Quem conta como administrador precisa poder ENTRAR**: `passwordHash` não nulo
 (a base nasceu sem login — a maior parte dos cadastros existe só para receber
-equipamento), `isActive`, e fora da lixeira. Um "administrador" que não faz login
-não destrava nada.
-
-**E a contagem reusa `unirPermissoes()`**, a mesma função do `preHandler`. Uma
-consulta JsonB própria (`permissions: { path: ['access.manage'], equals: true }`)
-seria uma segunda definição de "tem a permissão" — e no dia em que a união mudasse,
-a checagem continuaria contando pela regra antiga.
+equipamento), `isActive`, `role = ADMIN` e fora da lixeira. Um "administrador"
+que não faz login não destrava nada.
 
 > **O que esta invariante NÃO cobre, e por isso existe a linha de escape:** o
-> caminho da tela. Grupo esvaziado por `psql`, restore parcial, ou a única conta com
-> a chave que perdeu a senha E o segundo fator deixam o sistema de pé e **trancado**.
-> A saída é `npm run acesso:administrador -- <login>`, que exige acesso ao servidor —
-> e **não** uma rota de emergência, que seria uma rota concedendo `access.manage` sem
-> ter `access.manage`.
+> caminho da tela. Um restore parcial, ou a única conta `ADMIN` que perdeu a
+> senha, deixam o sistema de pé e **trancado**. A saída é
+> `npm run acesso:administrador -- <login>`, que exige acesso ao servidor — e
+> **não** uma rota de emergência, que seria uma rota concedendo `ADMIN` sem ser
+> `ADMIN`.
 
 ---
 
-### 18 — `api_tokens_userId_fkey`
+### 19 — No máximo um ativo por posto de trabalho
 
-```sql
-ALTER TABLE "api_tokens"
-  ADD CONSTRAINT "api_tokens_userId_fkey"
-  FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
+```ts
+// workstation/helpers/ativo-do-posto.helper.ts, nas duas portas que TRAVAM
+// (entrega e restauração da lixeira), dentro da transação
+const ocupante = await ativoDoPosto(tx, locationId, assetId);
+if (ocupante) throw new AppError(jaTemAtivo(ocupante), 409);
+
+// catalog/specs/location.spec.ts — a porta da MARCA
+const quantos = await contarAtivosNoLocal(client, id);
+if (quantos > 1) throw new AppError(/* … */, 409);
 ```
 
-A coluna existia desde a F0 **sem** chave estrangeira: nada impedia um token
-apontar para um uuid que nunca foi usuário. Não doía enquanto ninguém a preenchia;
-o token pessoal (F11) é o primeiro a preencher.
+Um posto de trabalho é uma mesa, uma bancada, um guichê: uma pessoa por turno,
+um computador. Duas máquinas entregues à mesma mesa não são um cenário de
+inventário — são um cadastro errado que ninguém percebe, porque a tela do posto
+mostraria duas e a telemetria somaria o uso das duas como se fosse daquele posto.
 
-**`Cascade`, e não `SetNull` como em `AuthEvent.userId`** — e a diferença entre os
-dois diz o que cada tabela é. Um evento de autenticação é **registro**, e tem de
-sobreviver ao cadastro que ele descreve: é justamente o que a auditoria vem
-procurar. Um token é **poder**, e poder sem dono é uma credencial que autentica
-como ninguém — `ownerType: 'USER'` com `userId` nulo passaria pela busca por
-prefixo e pela conferência do segredo, e só quebraria depois, ao carregar a sessão.
+**Ativo é computador.** Nada que não seja máquina é cadastrado em `/ativos`:
+monitor, teclado, mouse e cabo são estoque, por quantidade, sem patrimônio
+individual. É isso que faz a regra ser sobre o **ativo**, e não sobre "ativo com
+máquina vinculada": o agente instalado ou não instalado não muda o que o
+equipamento é, só o que a ficha dele consegue mostrar. Um desktop cujo agente
+ainda não chegou já é o computador da mesa, e o segundo é recusado na entrega.
 
-⚠️ Isto vale para o `DELETE` de verdade. **Desligar** alguém é `isActive: false`
-(soft), e o token continua existindo — por isso o desligamento o **revoga**
-explicitamente, em vez de confiar na FK.
+**Por que na aplicação:** a regra cruza `assignments`, `assets` e `locations`
+(`isWorkstation` numa, `deletedAt` noutra). Não é a forma nem a unicidade de uma
+tabela só, então não há índice que a expresse — é o mesmo argumento da
+invariante 6.
+
+**E por isso ela trava a linha do posto.** Estar dentro da transação não basta:
+em READ COMMITTED duas entregas simultâneas de dois ativos ao mesmo posto leem
+as duas um estado de antes, nenhuma enxerga a posse que a outra não confirmou, e
+as duas passam. É o mesmo furo que a invariante 6 fecha com `travarUsuario`, e
+nenhum `if` o pega. Sem rede no banco, a serialização é explícita:
+`SELECT id FROM locations WHERE id = $1 FOR UPDATE` antes da leitura, na linha
+que as duas transações disputam — depois de travar o ativo, que é a ordem do
+grafo de travas (`lock-asset.usecase.ts`).
+
+**São TRÊS portas, e nenhuma é redundante:**
+
+| porta | o que ela impede |
+| --- | --- |
+| `checkout-asset.usecase.ts` | entregar ao posto um segundo ativo |
+| `locationSpec.beforeWrite` | **marcar como posto** um local que já tem mais de um ativo |
+| `restore-asset.usecase.ts` | **restaurar da lixeira** um ativo cuja posse aberta aponta para um posto que, enquanto ele estava fora, recebeu outro |
+
+Sem a segunda, a regra seria contornável pela marca: entregar dois ativos a uma
+sala de reunião, onde a regra não vale, e marcar a sala como posto depois. É
+`mais de um`, e não `um`, porque a regra é "no máximo um": marcar uma sala que
+já tem exatamente um ativo é legítimo, e é como um posto nasce com o
+equipamento já lá. A guarda só dispara na TRANSIÇÃO — um PUT que não menciona a
+marca, ou que a reafirma, não passa por ela.
+
+Sem a terceira, seria contornável pela lixeira: o `delete-asset` só carimba
+`deletedAt` e **não fecha a posse**, e as outras duas portas ignoram o ativo na
+lixeira de propósito — um ativo que nenhuma tela mostra não pode trancar a mesa.
+Juntas, as duas decisões abrem o caminho: a vaga é ocupada enquanto o ativo
+está na lixeira, e restaurá-lo o devolve a uma mesa que já não tem lugar para
+ele. A porta reconfere na volta, com o mesmo helper e a mesma frase.
+
+**O vínculo de máquina NÃO é porta**, e já foi: enquanto "computador" era
+"ativo com máquina vinculada", entregar o desktop sem agente e vincular depois
+contornava a entrega, e o vínculo tinha de reconferir. Com a regra sobre o
+ativo, a vaga é decidida na entrega e o vínculo só muda o que a ficha mostra.
+
+**Note o que ela NÃO proíbe:** vários ocupantes no posto, que são o desenho da
+Camada 2; dois ativos em local **sem** `isWorkstation` — a sala de reunião e o
+depósito continuam livres, porque proibir ali quebraria o uso que já existe; e
+o estoque na mesa, que não é ativo. **Posto sem ativo continua válido**: a regra
+é "no máximo um", não "exatamente um". (O `postoVago` é outra coisa, e não tem
+relação com esta invariante: ele é posto **sem ocupante** — gente, não máquina.)
+
+**O que a porta da marca NÃO cobre, e é aceito:** ela conta os ativos no
+instante da marca e não trava a linha do local. Marcar a sala como posto ao
+mesmo tempo em que alguém entrega o segundo ativo a ela é uma corrida que passa
+— ligar a marca é operação de cadastro, feita uma vez por mesa, e a guarda
+existe para impedir quem marca o local errado. As portas de entrega e de
+restauração, que são as que recebem tráfego, continuam travando.
+
+> **A regra é testada, não argumentada.** `tests/invariantes/ativo-por-posto.test.ts`
+> cobre a porta da entrega sem agente, os dois ativos na sala de reunião, o que
+> libera a vaga e a porta da restauração; `tests/descoberta/vincular-e-entregar.test.ts`
+> cobre a entrega com agente e prova que desvincular a máquina NÃO libera a vaga;
+> `…-marca.test.ts` cobre a porta da marca, incluindo a sala com UM ativo que
+> vira posto e o PUT que não menciona a marca. **A corrida também:**
+> `tests/corridas/ativo-por-posto.test.ts` dispara duas entregas simultâneas ao
+> mesmo posto e exige que exatamente uma entre.
 
 ---
 
@@ -612,21 +539,6 @@ explicitamente, em vez de confiar na FK.
   `createAssetSchema`/`updateAssetSchema` justamente para que não exista um
   segundo escritor com quem divergir (`modelo-de-posse.md`). A defesa é **não ter a
   operação**, não ter uma checagem.
-- **`qty` de um item de estoque só muda pelo `adjust-quantity`.** Mesmo caso, uma
-  fase depois: a chave **não é declarada** no `strictObject` do schema de edição,
-  então o `PUT` com `qty` responde 422 sem que exista `if` nenhum a manter. Um
-  CHECK ou trigger no banco não serviria — ele barraria também o próprio ajuste,
-  que é quem tem o direito de escrever.
-- **`disponivel` nunca é negativo.** Ele **pode** ser, e isso é de propósito: é o
-  sinal de que a contagem física e a nominal brigaram (alguém criou linha de
-  saída por fora, ou baixou `qty` no `psql`). Zerar o número esconderia a
-  inconsistência que o alerta existe para mostrar. O que o sistema garante é não
-  CRIAR o negativo sozinho — o ajuste recusa baixar abaixo do que já saiu
-  (invariante 8, do outro lado).
-- **A máscara da chave de produto bate com a chave.** Ela **não é coluna** — é
-  derivada na leitura de detalhe, decifrando. Guardá-la ao lado da chave cifrada
-  criaria um segundo lugar dizendo o mesmo fato, e ele divergiria no dia em que
-  alguém escrevesse só um. É o D16 aplicado ao segredo.
 - **O status da licença.** `ATIVA/VENCENDO/EXPIRADA/ENCERRADA` sai de um helper
   puro sobre duas datas e o dia de hoje (D44). Não há linha gravada com que
   divergir — que é justamente por que ele não é coluna: uma coluna exigiria um
@@ -642,30 +554,17 @@ explicitamente, em vez de confiar na FK.
   que ela protege é uma rota existir alcançável sem ninguém ter decidido isso. E o
   lugar certo para ela é o boot, não uma checagem por requisição: `npm test` fica
   vermelho antes de qualquer deploy.
-- **A permissão efetiva de uma sessão bate com os grupos da pessoa.** Ela é
-  DERIVADA a cada requisição, na mesma consulta que relê o usuário (D136) — não há
-  cópia com que divergir. É o D16 aplicado ao acesso: materializar a união numa
-  coluna exigiria recalculá-la a cada troca de grupo, e no dia em que o recálculo
-  falhasse alguém continuaria alcançando o que já lhe foi tirado.
-- **Quem sumiu do diretório está desligado.** Ele **não** está, e é o D78: a
-  sincronização MARCA (`directoryMissingAt`) e uma pessoa decide. Um filtro LDAP
-  mal escrito devolve "zero pessoas", e um job que desligasse por isso devolveria o
-  inventário da empresa ao estoque numa madrugada.
-- **Toda chave de `assets.customFields` corresponde a um campo cadastrado.** Ela
-  **não** corresponde, e é de propósito (invariante 15, do outro lado): trocar o
-  modelo de um ativo deixa as chaves do conjunto anterior no JSON, intactas. O
-  que o sistema garante é não CRIAR chave desconhecida, e vale nos **dois** caminhos
-  que escrevem a coluna: `validate-custom-fields` recusa com 422 o que não está no
-  conjunto resolvido do ativo, e o preenchimento em massa
-  (`bulk-fill-field.usecase.ts`) recusa o LOTE INTEIRO quando algum ativo
-  selecionado não pede aquele campo — gravar chave desconhecida em 200 linhas de uma
-  vez é o mesmo furo multiplicado. E o `countUsages` do campo soma os ativos com a
-  chave presente para que apagar o campo não deixe órfão em silêncio.
-- **O valor gravado ainda está na `listValues` do campo.** Ele pode não estar: a
-  lista é editável depois, e valor que saiu dela **não é apagado**. A tela o
-  mostra marcado como fora da lista, e o `<select>` o injeta como opção extra —
-  senão ele cairia na primeira opção e o dado do cliente seria trocado por um
-  default no primeiro render. É o D60 outra vez.
+- **O papel efetivo de uma sessão bate com a coluna.** Ele é LIDO a cada
+  requisição, na mesma consulta que relê o usuário (D136/D148) — não há cópia com
+  que divergir. É o D16 aplicado ao acesso: guardar o papel no token exigiria
+  reemitir a sessão a cada troca, e no dia em que a reemissão falhasse alguém
+  continuaria alcançando o que já lhe foi tirado.
+- **A fila de sugestões só fala de gente que opera.** Não é invariante de dado,
+  é regra de PROPOSTA: a sugestão de quem foi desativado depois de ela nascer
+  existe no banco, e é legítima — ela sai da fila como `SUPERSEDED` na rodada
+  seguinte (`invalidate-suggestions.usecase.ts`), e volta se a pessoa for
+  reativada. O que o sistema garante é não PROPOR nada novo, e não que nenhuma
+  linha pendente aponte para alguém inativo entre duas rodadas do job.
 
 ---
 

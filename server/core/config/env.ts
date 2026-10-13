@@ -1,10 +1,35 @@
 import './load-env';
 import { createLogger } from '../logger/logger';
-import { diagnosticarChaveiro } from '../crypto/keyring';
 
 const logger = createLogger('env');
 
 export const isProduction = process.env.NODE_ENV === 'production';
+
+/**
+ * O teto de requisições por IP vale neste ambiente?
+ *
+ * FALSO SÓ NO TESTE, e o motivo está em `server/app.ts`: o teto é contado em
+ * memória e não sabe que a suíte inteira é uma pessoa só. Fora disso o ambiente
+ * de teste não ganha atalho nenhum — nenhuma guarda, nenhuma validação e nenhuma
+ * regra de negócio pergunta o ambiente, porque um teste que roda contra regra
+ * diferente da de produção não prova nada sobre produção.
+ *
+ * FUNÇÃO COM PARÂMETRO, e não uma constante lida do `process.env` no import, por
+ * uma razão de prova: o que decide se a produção sobe protegida é o SENTIDO desta
+ * comparação, e uma constante só pode ser testada mexendo em `process.env` antes
+ * do import — o que em ESM não dá para fazer de dentro de um teste. Com o
+ * parâmetro, `tests/invariantes/teto-de-requisicao.test.ts` afirma os quatro
+ * casos direto, e inverter o `!==` fica vermelho.
+ *
+ * O PARÂMETRO É OBRIGATÓRIO, e isso não é estilo. Com `nodeEnv = process.env.NODE_ENV`
+ * como padrão, `tetoDeRequisicaoLigado(undefined)` cai no padrão em vez de receber
+ * `undefined` — e o caso "ambiente sem NODE_ENV", que é o do `npm run dev`, ficava
+ * INALCANÇÁVEL pelo teste: dentro do vitest o padrão vale `'test'`, então a
+ * asserção do desenvolvimento afirmava o teste. Quem lê o ambiente é quem chama.
+ */
+export function tetoDeRequisicaoLigado(nodeEnv: string | undefined): boolean {
+  return nodeEnv !== 'test';
+}
 
 // Variáveis sem as quais o servidor não funciona: faltou alguma, o boot para
 // aqui com a lista completa (em vez de falhar aos poucos em runtime).
@@ -38,7 +63,6 @@ export function validateEnv(): void {
   }
 
   validateJwtSecret();
-  validateEncryptionKey();
 
   // O /agent-hub exige AGENT_TOKEN. Em produção, sem token o boot PARA: um aviso
   // no log não protege porta nenhuma, e era exatamente esse o buraco anterior.
@@ -77,33 +101,12 @@ function validateJwtSecret(): void {
   logger.warn(`[Env] JWT_SECRET fraco: ${fraco}. Aceito só em desenvolvimento. ${comoGerar}`);
 }
 
-// A CHAVE DE CRIPTOGRAFIA — mesma família do AGENT_TOKEN e do JWT_SECRET: em
-// produção derruba o boot, em desenvolvimento passa com aviso (F6, D91).
-//
-// A diferença para os outros dois é o que acontece SEM ela. O `/agent-hub` sem
-// token fica aberto; a sessão sem segredo fica falsificável. Aqui o sistema
-// continua íntegro: o campo de chave de produto é RECUSADO com 422 e a licença
-// nasce sem chave. Gravar em claro quando falta configuração seria o buraco —
-// o sistema funcionaria, ninguém perceberia, e o segredo estaria no banco.
-function validateEncryptionKey(): void {
-  const problema = diagnosticarChaveiro();
-  if (!problema) return;
-
-  const comoGerar = 'Gere uma chave: `openssl rand -hex 32`.';
-  if (isProduction) {
-    throw new Error(
-      `${problema}. Sem ela nenhuma chave de licença pode ser gravada nem lida. ${comoGerar}`,
-    );
-  }
-  logger.warn(`[Env] ${problema}. O campo de chave de produto responderá 422. ${comoGerar}`);
-}
-
 // Chave que assina o JWT da sessão (cookie httpOnly — docs/historico/fase-03-autenticacao-e-ator.md, D22).
 export function getJwtSecret(): string {
   return (process.env.JWT_SECRET ?? '').replace(/^"|"$/g, '').trim();
 }
 
-// Segredo compartilhado com o Agente Sentinel (C#). Vazio = sem autenticação,
+// Segredo compartilhado com o Agente Sentinel. Vazio = sem autenticação,
 // aceito apenas fora de produção (ver validateEnv).
 export function getAgentToken(): string {
   return (process.env.AGENT_TOKEN ?? '').replace(/^"|"$/g, '').trim();

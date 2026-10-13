@@ -14,7 +14,7 @@ export type AgentStatus = 'ONLINE' | 'OFFLINE';
 /** Triagem do Shadow IT — máquina vista pelo agente e sem cadastro. */
 export type ReviewState = 'UNREVIEWED' | 'ALLOWED' | 'BLOCKED';
 
-/** Máquina descoberta pelo Agente Sentinel (C#) — o lado RMM. */
+/** Máquina descoberta pelo Agente Sentinel — o lado RMM. */
 export interface Endpoint {
   id: string;
   hwid: string;
@@ -35,10 +35,14 @@ export interface Endpoint {
   /** Vem como STRING: é `BigInt` no banco, e BigInt não tem JSON. */
   ramTotalBytes?: string | null;
   diskTotalBytes?: string | null;
-  loggedOnUser?: string | null;
 
   /** O vínculo com o patrimônio (D45). Nulo = máquina sem cadastro. */
   assetId?: string | null;
+  /**
+   * O ativo do vínculo, identificado: é a coluna da lista de máquinas
+   * vinculadas, e a etiqueta leva à ficha. `null` quando não há vínculo.
+   */
+  asset: { id: string; assetTag: string; name: string | null } | null;
   reviewState?: ReviewState;
 
   /** Só a amostra mais recente: a API devolve `take: 1`. */

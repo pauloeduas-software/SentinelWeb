@@ -6,7 +6,8 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D22–D26, D72–D78, D80, D89, D135–D142.
+> Decisões neste arquivo: D22–D26, D72–D78, D80, D89, D135–D142, e P da segunda rodada (ver
+> [`README.md`](./README.md#a-segunda-rodada-ap)).
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
@@ -328,3 +329,23 @@ desligamento. **Descartado:** confiar no CHECK. O CHECK garante que `userId` **e
 `ownerType = 'USER'`**, não que ele aponte para alguém — um token pessoal pode referenciar um
 cadastro que nunca existiu, e o passo que revoga tokens no desligamento passaria por cima disso sem
 notar. É aditivo e barato agora; com linhas dentro, é validação a mais.
+
+---
+
+## P — `USUARIO` não entra no painel
+
+**Decidido:** o login recusa o papel `USUARIO` com 403 e uma frase que diz o que fazer, em vez
+de abrir um painel vazio que responde 403 em tudo. A sessão já emitida de quem for rebaixado
+continua valendo até expirar, respondendo 403 a cada rota — fechar essa janela exigiria mexer na
+releitura de sessão, por um ganho que não compensa o risco de tocar nela.
+**Consequência de:** [D148](./escopo.md#d148--permissão-vira-papel-grupo-diretório-sso-e-segundo-fator-saem)
+— `USUARIO` sempre foi o papel de quem só recebe equipamento, sem conta para operar o sistema; o
+que faltava era o login dizer isso antes de abrir um painel sem nada para mostrar.
+
+**Por quê 403 e não 401:** a senha está certa. O que falta é autorização, não autenticação — e
+as duas respostas existem precisamente para essa distinção, que o fluxo de login não respeitava
+antes desta decisão.
+
+**O que isso mudou no harness:** sessões de teste passam a nascer `TECNICO` por padrão, porque
+`USUARIO` não loga — um harness que criasse sessão `USUARIO` por padrão pararia de testar o
+sistema e começaria a testar a tela de recusa em todo lugar.

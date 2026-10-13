@@ -5,24 +5,15 @@ import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { historyQuerySchema } from '../../shared/history.schema';
 import { ASSET_SORTABLE, separarFiltrosDeAtivo } from '../helpers/asset-filters.helper';
-import {
-  bulkAssetsSchema, createAssetSchema, retireAssetSchema,
-  serialParamSchema, updateAssetSchema,
-} from '../schemas/asset.schema';
+import { createAssetSchema, retireAssetSchema, updateAssetSchema } from '../schemas/asset.schema';
 import { listAssets } from '../use-cases/list-assets.usecase';
 import { listAssetOptions } from '../use-cases/list-asset-options.usecase';
-import { exportAssets } from '../use-cases/export-assets.usecase';
 import { globalSearch } from '../use-cases/global-search.usecase';
-import { resolveTags } from '../use-cases/resolve-tags.usecase';
-import { colunasDoExport } from '../helpers/asset-export-columns.helper';
-import { cabecalhosDeCsv } from '../../shared/csv.helper';
-import { lerConfiguracaoDoSistema } from '../../settings/helpers/system-settings.helper';
 import { getAssetStats } from '../use-cases/asset-stats.usecase';
 import { createAsset } from '../use-cases/create-asset.usecase';
 import { updateAsset } from '../use-cases/update-asset.usecase';
 import { deleteAsset } from '../use-cases/delete-asset.usecase';
 import { restoreAsset } from '../use-cases/restore-asset.usecase';
-import { findAssetBySerial } from '../use-cases/find-asset-by-serial.usecase';
 import { findAssetById } from '../use-cases/find-asset-by-id.usecase';
 // A BORDA é quem sabe quem está pedindo (D23, mesma inversão do `actorId`): o
 // use-case recebe um booleano e não conhece `request`.
@@ -30,7 +21,6 @@ import { temPapel } from '../../access/helpers/require-permission';
 import { getAssetHistory } from '../use-cases/asset-history.usecase';
 import { retireAsset } from '../use-cases/retire-asset.usecase';
 import { unretireAsset } from '../use-cases/unretire-asset.usecase';
-import { bulkUpdateAssets } from '../use-cases/bulk-update-assets.usecase';
 
 // Só HTTP. Sem try/catch: o `parse` do schema rejeita e a rejeição cai no
 // errorHandler, que devolve 422 com o campo que falhou.
@@ -40,56 +30,29 @@ import { bulkUpdateAssets } from '../use-cases/bulk-update-assets.usecase';
 const optionsQuerySchema = z.strictObject({
   q: z.string().trim().max(200, 'busca: máximo de 200 caracteres').optional()
     .transform((valor) => valor || undefined),
-});
-
-// O EXPORT (F10, Etapa C) — a busca e as colunas.
-//
-// `strictObject` sobre o que SOBROU depois de os filtros do ITAM saírem
-// (`separarFiltrosDeAtivo`), e é ele que recusa `page`, `perPage` e `sort` com
-// 422. A recusa é a resposta certa e não falta de zelo: exportar é levar tudo
-// que o filtro alcança — paginar o arquivo não significa nada —, e a ordem é
-// por `id` por causa do cursor (ver `export-assets.usecase.ts`). Aceitar os
-// três em silêncio prometeria um recorte que o arquivo não tem.
-const exportQuerySchema = z.strictObject({
-  q: z.string().trim().max(200, 'busca: máximo de 200 caracteres').optional()
-    .transform((valor) => valor || undefined),
-  columns: z.string().trim().max(1_000, 'columns: lista muito longa').optional(),
+  // `?maquina=sem`: só ativo SEM máquina vinculada — o seletor do vínculo em
+  // `/descobertas`, onde ativo que já tem máquina é opção que o `@unique`
+  // recusa. Enum de um valor, como o `?vinculo=` das máquinas: valor errado é
+  // 422, não filtro ignorado.
+  maquina: z.enum(['sem'], 'máquina: use sem').optional(),
 });
 
 /**
  * A BUSCA GLOBAL (F10, Etapa G) — só `q`, e ela é OBRIGATÓRIA.
  *
- * Teto de 300 caracteres e não os 200 da busca de listagem: aqui o campo também
- * recebe a URL inteira do QR, que num domínio longo passa dos 200 (D70).
+ * O teto de 300 caracteres é maior que os 200 da busca de listagem porque o
+ * campo recebia a URL inteira do QR. O passo do QR saiu e o teto ficou: a
+ * etiqueta vai até 200 caracteres (`shared/fields.schema.ts`) e a série até 150
+ * (`asset.schema.ts`), então 300 não recusa nada que o banco consiga guardar.
  */
 const buscaGlobalSchema = z.strictObject({
   q: z.string('informe o que buscar').trim().min(1, 'busca vazia').max(300, 'busca: máximo de 300 caracteres'),
 });
 
-/**
- * A lista bipada (F10, Etapa G).
- *
- * `POST` numa rota que só LÊ, pelo mesmo motivo do report builder: a entrada é
- * um ARRAY de até 500 termos, e isso não cabe numa query string.
- */
-const resolveTagsSchema = z.strictObject({
-  termos: z
-    .array(z.string().trim().max(300, 'termo: máximo de 300 caracteres'), 'informe as etiquetas')
-    .min(1, 'bipe ou cole ao menos uma etiqueta')
-    .max(500, 'no máximo 500 etiquetas por vez'),
-});
-
-/** `?columns=assetTag,serial` → tokens. Vazio vira `undefined` (o padrão). */
-function tokensDeColuna(columns: string | undefined): string[] | undefined {
-  if (!columns) return undefined;
-  const tokens = columns.split(',').map((token) => token.trim()).filter(Boolean);
-  return tokens.length > 0 ? tokens : undefined;
-}
-
 export const assetController = {
   async list(request: FastifyRequest) {
     // A vista e os filtros do ITAM saem PRIMEIRO. O parser do `core` valida com
-    // `strictObject` e responderia 422 a `?statusId=`, `?relatorio=` ou
+    // `strictObject` e responderia 422 a `?statusId=` ou
     // `?view=retired` — que ele, por decisão de camada, não conhece (D20).
     const { filtros, paraOCore } = separarFiltrosDeAtivo(request.query);
 
@@ -131,51 +94,13 @@ export const assetController = {
    */
   async search(request: FastifyRequest) {
     const { q } = buscaGlobalSchema.parse(request.query ?? {});
-    return globalSearch(q);
-  },
-
-  /** Resolve uma lista de etiquetas/séries/QRs bipados (F10, Etapa G). */
-  async resolveTags(request: FastifyRequest) {
-    const { termos } = resolveTagsSchema.parse(request.body ?? {});
-    return resolveTags(termos);
+    // O custo é de `ADMIN` (D77), aqui como na listagem e no detalhe.
+    return globalSearch(q, temPapel(request, 'ADMIN'));
   },
 
   async options(request: FastifyRequest) {
-    const { q } = optionsQuerySchema.parse(request.query ?? {});
-    return listAssetOptions(q);
-  },
-
-  /**
-   * O CSV da listagem, com os MESMOS filtros da tela (F10, Etapa C).
-   *
-   * `reply.send(stream)`: o arquivo não é montado em memória. O delimitador sai
-   * da configuração (o Excel em português salva com `;`), e o BOM é escrito
-   * pelo `csv.helper.ts` — sem ele todo acento sai quebrado.
-   */
-  async export(request: FastifyRequest, reply: FastifyReply) {
-    const { filtros, paraOCore } = separarFiltrosDeAtivo(request.query);
-    const { q, columns } = exportQuerySchema.parse(paraOCore);
-
-    // A validação do token acontece ANTES de a resposta começar: depois do
-    // primeiro byte não há mais como responder 422 — o cliente receberia um
-    // arquivo truncado com status 200.
-    // A ALLOWLIST DE COLUNAS PASSA A SER FILTRADA PELA PERMISSÃO (D77, a
-    // obrigação cruzada): sem isto o CSV é a porta dos fundos do custo que a
-    // listagem acabou de fechar.
-    const escolhidas = colunasDoExport(
-      tokensDeColuna(columns),
-      (papel) => temPapel(request, papel as Parameters<typeof temPapel>[1]),
-    );
-    const { csvDelimiter } = await lerConfiguracaoDoSistema();
-
-    return reply
-      .headers(cabecalhosDeCsv('ativos'))
-      .send(exportAssets(filtros, q, escolhidas, csvDelimiter));
-  },
-
-  async bySerial(request: FastifyRequest) {
-    const { serial } = serialParamSchema.parse(request.params);
-    return findAssetBySerial(serial);
+    const { q, maquina } = optionsQuerySchema.parse(request.query ?? {});
+    return listAssetOptions(q, { semMaquina: maquina === 'sem' });
   },
 
   async create(request: FastifyRequest, reply: FastifyReply) {
@@ -211,12 +136,5 @@ export const assetController = {
   async unretire(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     return unretireAsset(id, atorDaRequisicao(request));
-  },
-
-  async bulk(request: FastifyRequest) {
-    // A união discriminada devolve 422 quando a operação não existe ou quando
-    // falta o campo que ELA exige — o controller não decide nada disso.
-    const data = bulkAssetsSchema.parse(request.body ?? {});
-    return bulkUpdateAssets(data, atorDaRequisicao(request));
   },
 };

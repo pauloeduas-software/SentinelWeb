@@ -1,11 +1,11 @@
-import { AlertCircle, Inbox } from 'lucide-react';
+import { AlertCircle, Inbox, RefreshCw } from 'lucide-react';
 import ConfiguracaoDaDescoberta from './components/ConfiguracaoDaDescoberta';
 import OciososTable from './components/OciososTable';
 import OrfaosTable from './components/OrfaosTable';
 import PainelDeCobertura from './components/PainelDeCobertura';
 import SugestaoCard from './components/SugestaoCard';
+import VinculadasTable from './components/VinculadasTable';
 import { useDescobertas, type AbaDaTela } from './hooks/useDescobertas';
-import type { SuggestionKind } from '../../domain/shared/reconciliation.types';
 
 // O QUE O AGENTE DESCOBRIU E O CADASTRO AINDA NÃO SABE
 // (docs/historico/fase-07-convergencia-rmm-itam.md).
@@ -15,50 +15,76 @@ import type { SuggestionKind } from '../../domain/shared/reconciliation.types';
 // `/itam` em favor de `/ativos` — "ITAM" era o nome do assunto do sistema
 // inteiro, não daquela tela.
 //
+// AS DUAS LISTAS DE MÁQUINAS, separadas pelo vínculo: o que o agente vê e o
+// cadastro não sabe ("Sem vínculo"), e o que já é patrimônio ("Vinculadas").
+// A primeira tem as duas ações que faltavam — vincular a um ativo à mão, e
+// vincular e entregar ao posto numa ida só —, porque a fila de sugestões só
+// alcança a máquina que a cascata casou com alguma coisa; a que chegou com o
+// serial em branco e um nome que não bate ficava aqui sem botão.
+//
 // Markup e mais nada: estado e chamadas ficam no `useDescobertas`.
 
 const ABAS: { id: AbaDaTela; rotulo: string }[] = [
   { id: 'fila', rotulo: 'Sugestões' },
-  { id: 'orfaos', rotulo: 'Sem cadastro' },
+  { id: 'sem', rotulo: 'Sem vínculo' },
+  { id: 'com', rotulo: 'Vinculadas' },
   { id: 'ociosos', rotulo: 'Ociosos' },
-];
-
-const FILTROS: { valor: SuggestionKind | undefined; rotulo: string }[] = [
-  { valor: undefined, rotulo: 'Todas' },
-  { valor: 'LINK', rotulo: 'Vínculo' },
-  { valor: 'CHECKOUT', rotulo: 'Posse' },
-  { valor: 'OCCUPANCY', rotulo: 'Ocupação' },
-  { valor: 'SHARED_POST', rotulo: 'Posto compartilhado' },
-  { valor: 'MERGE', rotulo: 'Fusão' },
 ];
 
 export default function DescobertasPage() {
   const {
-    aba, setAba, filtro, setFiltro, erro, limparErro,
+    aba, setAba, erro, limparErro,
     sugestoes, carregandoSugestoes, cobertura, carregandoCobertura,
-    ociosos, orfaos, postos, ocupado,
+    ociosos, semVinculo, vinculadas, carregandoMaquinas, ocupado,
     configuracao, salvandoConfiguracao,
-    handleAceitar, handleRecusar, handleTriar, handleSalvarConfiguracao,
+    podeReconciliar, reconciliando, ultimaVarredura, handleReconciliar,
+    handleAceitar, handleRecusar, handleTriar, handleVincular, handleSalvarConfiguracao,
   } = useDescobertas();
 
   return (
     <div className="animate-in fade-in duration-300 flex flex-col pb-6">
 
-      <div className="mb-6 shrink-0">
-        <h2 className="text-xl font-mono text-text-primary uppercase tracking-widest">Descobertas</h2>
-        <p className="text-xs text-text-tertiary mt-2 font-mono max-w-3xl leading-relaxed">
-          O que o agente vê e o cadastro ainda não sabe. Cada linha é uma proposta com a
-          evidência à vista — o sistema propõe, e quem decide é você.
-          <span className="text-text-secondary"> Duas pessoas na mesma máquina não é conflito: é um posto compartilhado.</span>
-        </p>
+      <div className="mb-6 shrink-0 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-mono text-text-primary uppercase tracking-widest">Descobertas</h2>
+          <p className="text-xs text-text-tertiary mt-2 font-mono max-w-3xl leading-relaxed">
+            O que o agente vê e o cadastro ainda não sabe. Cada linha é uma proposta com a
+            evidência à vista — o sistema propõe, e quem decide é você.
+          </p>
+        </div>
+
+        {/* RECONCILIAR AGORA (ADMIN). A varredura roda de hora em hora e toma
+            a janela da hora; quem cadastrou o ativo e quer ver a proposta nascer
+            não deveria esperar a hora virar. O placar fica ao lado do botão. */}
+        {podeReconciliar && (
+          <div className="flex flex-col items-end gap-1 font-mono text-[10px]">
+            <button
+              type="button"
+              disabled={reconciliando}
+              onClick={handleReconciliar}
+              className="flex items-center gap-2 px-4 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base uppercase tracking-widest transition-colors disabled:opacity-40"
+            >
+              <RefreshCw size={12} className={reconciliando ? 'animate-spin' : ''} />
+              {reconciliando ? 'Varrendo…' : 'Reconciliar agora'}
+            </button>
+            {ultimaVarredura && (
+              <span className="text-text-tertiary" aria-live="polite">
+                {ultimaVarredura.endpoints} máquina{ultimaVarredura.endpoints === 1 ? '' : 's'} sem vínculo
+                {' · '}{ultimaVarredura.sugeridas} sugest{ultimaVarredura.sugeridas === 1 ? 'ão' : 'ões'}
+                {' · '}{ultimaVarredura.vinculadas} vínculo{ultimaVarredura.vinculadas === 1 ? '' : 's'}
+                {' · '}{ultimaVarredura.encerradas} encerrada{ultimaVarredura.encerradas === 1 ? '' : 's'}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       <PainelDeCobertura cobertura={cobertura} carregando={carregandoCobertura} />
 
       {/* A CONFIGURAÇÃO logo abaixo do painel, e não numa tela de ajustes: os
-          cinco botões explicam os números que acabaram de ser lidos. "Por que
-          tenho 12 fantasmas?" se responde mexendo em `ghostDays`, e separar as
-          duas coisas em telas diferentes esconderia a resposta da pergunta. */}
+          botões explicam os números que acabaram de ser lidos. "Por que tenho
+          12 fantasmas?" se responde mexendo em `ghostDays`, e separar as duas
+          coisas em telas diferentes esconderia a resposta da pergunta. */}
       <ConfiguracaoDaDescoberta
         configuracao={configuracao}
         salvando={salvandoConfiguracao}
@@ -89,29 +115,18 @@ export default function DescobertasPage() {
             {id === 'fila' && sugestoes.length > 0 && (
               <span className="ml-2 text-[10px] text-text-tertiary">{sugestoes.length}</span>
             )}
+            {id === 'sem' && semVinculo.length > 0 && (
+              <span className="ml-2 text-[10px] text-text-tertiary">{semVinculo.length}</span>
+            )}
+            {id === 'com' && vinculadas.length > 0 && (
+              <span className="ml-2 text-[10px] text-text-tertiary">{vinculadas.length}</span>
+            )}
           </button>
         ))}
       </div>
 
       {aba === 'fila' && (
         <>
-          <div className="flex flex-wrap items-center gap-1 mb-4">
-            {FILTROS.map(({ valor, rotulo }) => (
-              <button
-                key={rotulo}
-                type="button"
-                onClick={() => setFiltro(valor)}
-                className={`px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest border transition-colors ${
-                  filtro === valor
-                    ? 'border-text-primary text-text-primary'
-                    : 'border-border-sutil text-text-tertiary hover:text-text-primary'
-                }`}
-              >
-                {rotulo}
-              </button>
-            ))}
-          </div>
-
           {carregandoSugestoes ? (
             <p className="text-text-tertiary text-xs font-mono">Carregando sugestões…</p>
           ) : sugestoes.length === 0 ? (
@@ -119,8 +134,8 @@ export default function DescobertasPage() {
               <Inbox size={24} className="opacity-50" />
               <span>Nada esperando decisão.</span>
               <span className="text-[10px] max-w-md text-center leading-relaxed">
-                A varredura roda de hora em hora. Quando o agente encontrar uma máquina que
-                casa com um ativo, ou alguém logado onde o cadastro não esperava, a proposta
+                A varredura roda de hora em hora. Quando o agente encontrar uma máquina
+                cuja identidade de hardware casa com um ativo do cadastro, a proposta
                 aparece aqui.
               </span>
             </div>
@@ -130,7 +145,6 @@ export default function DescobertasPage() {
                 <SugestaoCard
                   key={sugestao.id}
                   sugestao={sugestao}
-                  postos={postos}
                   ocupado={ocupado}
                   onAceitar={handleAceitar}
                   onRecusar={handleRecusar}
@@ -141,7 +155,16 @@ export default function DescobertasPage() {
         </>
       )}
 
-      {aba === 'orfaos' && <OrfaosTable orfaos={orfaos} ocupado={ocupado} onTriar={handleTriar} />}
+      {aba === 'sem' && (
+        <OrfaosTable
+          orfaos={semVinculo}
+          carregando={carregandoMaquinas}
+          ocupado={ocupado}
+          onTriar={handleTriar}
+          onVincular={handleVincular}
+        />
+      )}
+      {aba === 'com' && <VinculadasTable maquinas={vinculadas} carregando={carregandoMaquinas} />}
       {aba === 'ociosos' && <OciososTable ociosos={ociosos} />}
     </div>
   );

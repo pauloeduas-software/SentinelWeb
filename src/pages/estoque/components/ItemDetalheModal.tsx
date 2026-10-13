@@ -1,41 +1,41 @@
 import { Undo2, X } from 'lucide-react';
-import {
-  useAccessoryCheckoutsQuery, useStockMovementsQuery,
-} from '../../../domain/stock/stock.queries';
-import { deltaLegivel, rotuloDoMovimento } from '../helpers/estoque.helper';
-import { momentoDoEvento } from '../../helpers/historico.helper';
-import type { AbaDeEstoque } from '../helpers/estoque.helper';
+import MovimentacoesEstoque from './MovimentacoesEstoque';
+import { useStockItemQuery, useStockMovementsQuery } from '../../../domain/stock/stock.queries';
 import type { ItemDeEstoque } from '../../../domain/shared/stock.types';
+import { corDoSaldo } from '../helpers/estoque.helper';
+import { momentoDoEvento } from '../../helpers/historico.helper';
 
-// O DETALHE DE UM ITEM: quem está com as unidades, e tudo que já aconteceu.
+// O DETALHE DO ITEM: quem está com as unidades que saíram, e a linha do tempo.
 //
-// A MOVIMENTAÇÃO É A UNIÃO DE DUAS FONTES, feita pelo SERVIDOR na leitura: as
-// tabelas de saída respondem *para onde a unidade foi*, o `StockLog` responde
-// *por que a quantidade nominal mudou*. Não existe uma terceira tabela que
-// guarde as duas — ela seria uma segunda contagem do mesmo fato, e as duas
-// divergiriam no primeiro caminho que esquecesse de escrever numa delas.
-//
-// Este é o único componente da pasta que busca dado, pelo mesmo motivo do
-// `ReferenceSelect`: as duas consultas só fazem sentido com um item aberto, e
-// declará-las no hook da página as deixaria ligadas o tempo todo. Continua sem
-// falar HTTP — usa a query do domínio.
+// A LISTA DE "FORA" É ONDE A DEVOLUÇÃO ACONTECE — e o botão é por LINHA, não
+// por item: cada unidade é um `StockMovement` identificado, e devolver pede o
+// id DELE, não o do item (`checkin-stock.usecase.ts`).
 
 interface ItemDetalheModalProps {
-  aba: AbaDeEstoque;
   item: ItemDeEstoque;
   onClose: () => void;
-  onDevolver: (checkoutId: string) => Promise<void>;
+  onDevolver: (movementId: string) => void;
 }
 
-const CABECALHO = 'px-3 py-2 text-left text-[10px] uppercase tracking-widest text-text-tertiary font-normal';
+const ROTULO = 'text-text-tertiary uppercase tracking-widest text-[10px]';
 
-export default function ItemDetalheModal({ aba, item, onClose, onDevolver }: ItemDetalheModalProps) {
-  const { data: movimentos, isPending } = useStockMovementsQuery(aba.slug, item.id);
-  // Só o acessório tem "unidades fora que podem voltar": o consumível não volta
-  // (D37) e o componente se retira pela tela do ATIVO, onde ele está.
-  const { data: entregas } = useAccessoryCheckoutsQuery(
-    aba.kind === 'ACCESSORY' ? item.id : null,
+function Campo({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <span className={ROTULO}>{rotulo}</span>
+      <div className="text-text-secondary">{children}</div>
+    </div>
   );
+}
+
+export default function ItemDetalheModal({ item, onClose, onDevolver }: ItemDetalheModalProps) {
+  // A linha da listagem desenha o cabeçalho no primeiro quadro; a consulta
+  // abaixo traz as unidades fora e o saldo fresco em seguida.
+  const { data: detalhe } = useStockItemQuery(item.id);
+  const { data: movimentacao, isPending: movimentacaoPendente } = useStockMovementsQuery(item.id);
+
+  const atual = detalhe ?? item;
+  const unidadesFora = detalhe?.unidadesFora ?? [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
@@ -43,12 +43,8 @@ export default function ItemDetalheModal({ aba, item, onClose, onDevolver }: Ite
 
         <div className="flex items-center justify-between px-6 py-4 border-b border-border-sutil bg-bg-base/50 shrink-0">
           <div>
-            <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">{item.name}</h2>
-            <p className="font-mono text-[10px] text-text-tertiary mt-1 tabular-nums">
-              {item.disponivel} de {item.qty} disponíveis · {item.emUso} fora
-              {item.minQty !== null && <> · mínimo {item.minQty}</>}
-              {item.category && <> · {item.category.name}</>}
-            </p>
+            <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">{atual.name}</h2>
+            <p className="font-mono text-[10px] text-text-tertiary mt-1">{atual.category.name}</p>
           </div>
           <button onClick={onClose} className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
             <X size={16} />
@@ -57,107 +53,49 @@ export default function ItemDetalheModal({ aba, item, onClose, onDevolver }: Ite
 
         <div className="p-6 font-mono text-xs space-y-6 overflow-y-auto">
 
-          {aba.kind === 'ACCESSORY' && (
-            <section className="space-y-2">
-              <h3 className="text-[10px] uppercase tracking-widest text-text-secondary">
-                Unidades fora do estoque
-              </h3>
+          <div className="grid grid-cols-3 gap-4">
+            <Campo rotulo="Total">{atual.qty}</Campo>
+            <Campo rotulo="Disponível"><span style={{ color: corDoSaldo(atual) }}>{atual.disponivel}</span></Campo>
+            <Campo rotulo="Fora">{atual.fora}</Campo>
+          </div>
 
-              {(entregas ?? []).length === 0 ? (
-                <p className="text-text-tertiary">Nenhuma unidade entregue.</p>
-              ) : (
-                <table className="w-full">
-                  <thead className="border-b border-border-sutil">
-                    <tr>
-                      <th className={CABECALHO}>Com quem</th>
-                      <th className={CABECALHO}>Desde</th>
-                      <th className={CABECALHO}>Devolver até</th>
-                      <th className={`${CABECALHO} text-right`}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(entregas ?? []).map((entrega) => (
-                      <tr key={entrega.id} className="border-b border-border-sutil/50 last:border-0">
-                        <td className="px-3 py-2 text-text-primary">
-                          {entrega.targetUser?.name ?? entrega.targetLocation?.name ?? '—'}
-                          <span className="ml-2 text-[10px] text-text-tertiary uppercase tracking-widest">
-                            {entrega.targetType === 'LOCATION' ? 'posto' : 'pessoa'}
-                          </span>
-                          {entrega.targetType === 'LOCATION' && (
-                            // Quem responde por ela são os OCUPANTES do posto —
-                            // vários, pela MESMA unidade (D33). Dizer isso aqui
-                            // evita a leitura de que a mesa "tem" o mouse sem
-                            // ninguém respondendo.
-                            <div className="text-[10px] text-text-tertiary">
-                              respondem os ocupantes do posto
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 text-text-secondary">{momentoDoEvento(entrega.checkedOutAt)}</td>
-                        <td className="px-3 py-2 text-text-secondary">
-                          {entrega.expectedCheckinAt ? momentoDoEvento(entrega.expectedCheckinAt) : '—'}
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          <button
-                            type="button"
-                            title="Devolver esta unidade"
-                            onClick={() => void onDevolver(entrega.id)}
-                            className="p-2 text-text-tertiary hover:text-status-success transition-colors"
-                          >
-                            <Undo2 size={13} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </section>
-          )}
+          {atual.notes && <Campo rotulo="Notas">{atual.notes}</Campo>}
 
-          <section className="space-y-2">
-            <h3 className="text-[10px] uppercase tracking-widest text-text-secondary">Movimentação</h3>
-            <p className="text-text-tertiary text-[10px] leading-relaxed">
-              As saídas e os ajustes na mesma linha do tempo — duas fontes unidas na leitura, não
-              uma terceira tabela.
-            </p>
-
-            {isPending ? (
-              <p className="text-text-tertiary">Carregando…</p>
-            ) : (movimentos ?? []).length === 0 ? (
-              <p className="text-text-tertiary">Nada aconteceu com este item ainda.</p>
+          <div className="space-y-3">
+            <span className={ROTULO}>Fora do estoque</span>
+            {unidadesFora.length === 0 ? (
+              <p className="text-text-tertiary">Nenhuma unidade fora — tudo no estoque.</p>
             ) : (
-              <table className="w-full">
-                <thead className="border-b border-border-sutil">
-                  <tr>
-                    <th className={CABECALHO}>Quando</th>
-                    <th className={CABECALHO}>O quê</th>
-                    <th className={`${CABECALHO} text-right`}>Unidades</th>
-                    <th className={CABECALHO}>Quem / motivo</th>
-                    <th className={CABECALHO}>Observações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(movimentos ?? []).map((movimento) => (
-                    <tr key={movimento.id} className="border-b border-border-sutil/50 last:border-0">
-                      <td className="px-3 py-2 text-text-tertiary whitespace-nowrap">
-                        {momentoDoEvento(movimento.at)}
-                      </td>
-                      <td className="px-3 py-2 text-text-primary">{rotuloDoMovimento(movimento)}</td>
-                      <td
-                        className="px-3 py-2 text-right tabular-nums"
-                        style={{ color: movimento.qty > 0 ? '#22c55e' : '#f59e0b' }}
-                      >
-                        {deltaLegivel(movimento.qty)}
-                      </td>
-                      <td className="px-3 py-2 text-text-secondary">{movimento.rotulo ?? '—'}</td>
-                      <td className="px-3 py-2 text-text-tertiary">{movimento.notes ?? '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <ul className="space-y-2">
+                {unidadesFora.map((unidade) => (
+                  <li key={unidade.id} className="border border-border-sutil p-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-text-secondary">
+                        {unidade.targetType === 'USER' ? 'Colaborador: ' : 'Posto: '}
+                        {unidade.targetUser?.name ?? unidade.targetLocation?.name ?? '—'}
+                      </p>
+                      <p className="text-[10px] text-text-tertiary mt-1">
+                        desde {momentoDoEvento(unidade.createdAt)}
+                        {unidade.notes && <> · {unidade.notes}</>}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onDevolver(unidade.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 border border-border-sutil text-text-tertiary hover:text-status-success hover:border-status-success/40 uppercase tracking-widest text-[10px] transition-colors shrink-0"
+                    >
+                      <Undo2 size={12} /> Devolver
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
-          </section>
+          </div>
+
+          <div className="space-y-3">
+            <span className={ROTULO}>Movimentação</span>
+            <MovimentacoesEstoque eventos={movimentacao?.rows ?? []} carregando={movimentacaoPendente} />
+          </div>
         </div>
       </div>
     </div>

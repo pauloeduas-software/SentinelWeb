@@ -3,7 +3,7 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { conectarAgente, esperarPor } from '../helpers/agente';
 import { prisma } from '../../server/core/database/prismaClient';
 
-// A BORDA DO AGENTE — o que o rollout do C# vai exercitar por semanas.
+// A BORDA DO AGENTE — o que o rollout vai exercitar por semanas.
 //
 // Enquanto o binário novo não chega em toda a frota, o servidor atende os dois
 // formatos ao mesmo tempo. Este arquivo é o que garante que isso continue
@@ -44,8 +44,32 @@ describe('o handshake antigo continua valendo', () => {
   });
 });
 
+describe('o que o servidor deixou de guardar continua passando no fio', () => {
+  it('aceita os campos que o servidor não guarda mais, e os ignora', async () => {
+    // O PROTOCOLO NÃO MUDOU quando a observação de usuário e o inventário de
+    // software saíram: o agente em campo continua mandando `LoggedOnUser` e
+    // `InstalledSoftware`, e o servidor apenas deixou de gravá-los. Sem este
+    // caso, um campo esquecido no `upsert` viraria `Unknown argument` no
+    // PRIMEIRO handshake de produção e passaria pela suíte inteira — o
+    // compilador não pega, porque o objeto entra por spread.
+    const agente = await conectarAgente(api, 'hwid-campo-ignorado');
+    await agente.handshake({
+      Hostname: 'pc-ignora',
+      LoggedOnUser: 'EMPRESA\\ana.lima',
+      InstalledSoftware: [{ Name: 'Office', Version: '16.0', Publisher: 'Microsoft' }],
+    });
+
+    const endpoint = await esperarPor('a máquina com campo ignorado', () => buscar('hwid-campo-ignorado'));
+
+    expect(endpoint.hostname).toBe('pc-ignora');
+    expect(endpoint.status).toBe('ONLINE');
+
+    await agente.fechar();
+  });
+});
+
 describe('o handshake novo traz identidade', () => {
-  it('grava os oito campos vindos em PascalCase', async () => {
+  it('grava os sete campos vindos em PascalCase', async () => {
     const agente = await conectarAgente(api, 'hwid-agente-novo');
     await agente.handshake({
       Hostname: 'PC-ANA',
@@ -56,7 +80,6 @@ describe('o handshake novo traz identidade', () => {
       ChassisType: '10',
       RamTotalBytes: 17179869184,
       DiskTotalBytes: 512110190592,
-      LoggedOnUser: 'EMPRESA\\ana.lima',
       MacAddress: '00-1A-2B-3C-4D-5E',
     });
 
@@ -72,7 +95,6 @@ describe('o handshake novo traz identidade', () => {
     // confundiria com a relação de catálogo do ativo.
     expect(endpoint.hardwareModel).toBe('Latitude 5440');
     expect(endpoint.ramTotalBytes).toBe(17179869184n);
-    expect(endpoint.loggedOnUser).toBe('EMPRESA\\ana.lima');
 
     await agente.fechar();
   });
@@ -94,7 +116,7 @@ describe('o handshake novo traz identidade', () => {
 describe('o que o agente manda vazio é "não sei", nunca zero', () => {
   it('string vazia em RamTotalBytes não vira "esta máquina tem zero bytes"', async () => {
     const agente = await conectarAgente(api, 'vazio-1');
-    // O agente C# serializa `null` como string vazia em algumas versões, e
+    // O agente serializa `null` como string vazia em algumas versões, e
     // `Number('')` é `0` — finito e não negativo. Sem a guarda do
     // `readOptionalBigInt`, isto gravava uma AFIRMAÇÃO sobre a máquina: que ela
     // tem zero bytes de RAM. É diferente de "esta versão do agente não coleta

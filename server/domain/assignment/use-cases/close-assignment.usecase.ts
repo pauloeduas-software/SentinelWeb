@@ -5,18 +5,18 @@ import type { AlvoPosse, ClientePosse } from './resolve-responsibles.usecase';
 
 // AS TRÊS ESCRITAS DA DEVOLUÇÃO, em um lugar só.
 //
-// Existe porque a devolução passou a ter DUAS portas: o checkin de um ativo
-// (`checkin-asset.usecase.ts`) e o desligamento, que fecha de uma vez todas as
-// posses diretas de uma pessoa (`user/use-cases/offboard-user.usecase.ts`, D32).
-// Duas cópias das mesmas três escritas divergiriam no primeiro ajuste — e a
-// mais provável das divergências é a pior: esquecer de limpar
-// `Asset.assignedToId` num dos caminhos deixa o desligado como dono de um
-// equipamento que ele devolveu.
+// Existe porque fechar uma posse são TRÊS escritas que têm de andar juntas, e
+// uma segunda cópia delas divergiria no primeiro ajuste — a mais provável das
+// divergências sendo a pior: esquecer de limpar `Asset.assignedToId` deixa a
+// pessoa como dona de um equipamento que ela devolveu.
 //
-// Recebe o cliente (`ClientePosse` aceita o global e o de transação) porque as
-// duas portas já abrem a SUA transação, e cada uma fecha um número diferente de
-// posses dentro dela: o checkin fecha uma, o desligamento fecha N junto com as
-// ocupações de posto. Abrir uma transação aqui dentro quebraria as duas.
+// Hoje o chamador é um só, o checkin (`checkin-asset.usecase.ts`). A função fica
+// separada porque é o lugar onde a próxima porta de devolução entra sem copiar
+// nada.
+//
+// Recebe o cliente (`ClientePosse` aceita o global e o de transação) porque quem
+// chama já abriu a SUA transação. Abrir uma aqui dentro aninharia transação, que
+// o Prisma não suporta.
 
 /**
  * A posse aberta que vai ser fechada — o que quem chama já leu do banco.

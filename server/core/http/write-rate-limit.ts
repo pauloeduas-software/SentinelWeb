@@ -5,23 +5,18 @@ import type { RouteShorthandOptions } from 'fastify';
 // Criar, editar e apagar são ações humanas: 40 por minuto já é muito para quem
 // está preenchendo formulário, e é pouco para quem está varrendo a API. O
 // comando RMM (desligar/reiniciar máquina) fica ainda mais baixo — é destrutivo.
+//
+// ⚠️ ESTES OBJETOS SÃO INERTES SEM O PLUGIN. `config` é um campo livre das
+// opções de rota: quem o lê é o `@fastify/rate-limit`, e ele não é registrado no
+// ambiente de teste (`server/app.ts`, `comTetoDeRequisicao`). Então mexer nos
+// números aqui não muda nada do que a suíte vê — menos em
+// `tests/invariantes/teto-de-requisicao.test.ts`, que monta uma instância com o
+// plugin de propósito e é o único lugar onde estes tetos são o assunto.
 export const WRITE_RATE_LIMIT: RouteShorthandOptions = {
   config: { rateLimit: { max: 40, timeWindow: '1 minute' } },
 };
 
 export const DESTRUCTIVE_RATE_LIMIT: RouteShorthandOptions = {
-  config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
-};
-
-// O EXPORT (F10, Etapa C) tem teto próprio, e ele é BAIXO por um motivo que não
-// é abuso: cada chamada varre a tabela inteira com cursor e escreve o arquivo
-// no socket. Dois cliques em "exportar tudo" num parque de 50 mil ativos são
-// duas varreduras completas — o teto global de 300/min permitiria trezentas.
-//
-// 10/min é folgado para gente (ninguém exporta a mesma lista dez vezes por
-// minuto) e corta script. Ele vale POR ROTA e por IP, então exportar ativos não
-// consome o teto de exportar licenças.
-export const EXPORT_RATE_LIMIT: RouteShorthandOptions = {
   config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
 };
 

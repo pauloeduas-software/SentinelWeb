@@ -4,9 +4,8 @@ import {
   DIAS_DE_AVISO, diasParaVencer, meiaNoiteUTC, statusDaLicenca, type LicenseStatus,
 } from '../helpers/license-status.helper';
 
-// OS DOIS SINAIS DA LICENÇA, numa rota só — o mesmo desenho do
-// `/api/stock/alerts` da F5, e pelo mesmo motivo: os dois valem para a mesma
-// tela, então o tipo é FILTRO e não rota separada.
+// OS DOIS SINAIS DA LICENÇA, numa rota só: os dois valem para a mesma tela,
+// então o tipo é FILTRO e não rota separada.
 
 export interface LicencaEmAlerta {
   id: string;
@@ -67,9 +66,8 @@ export async function listLicenseAlerts(
  * a lista.
  *
  * O FILTRO GROSSO VAI AO BANCO (`expirationDate <= limite`), e o fino —
- * distinguir ENCERRADA — sai do helper puro. É a mesma divisão do
- * `list-stock-alerts`: o que é coluna filtra no Postgres, o que é derivado
- * filtra aqui.
+ * distinguir ENCERRADA — sai do helper puro. A divisão é essa: o que é coluna
+ * filtra no Postgres, o que é derivado filtra aqui.
  */
 async function licencasVencendo(): Promise<LicencaEmAlerta[]> {
   const limite = meiaNoiteUTC();

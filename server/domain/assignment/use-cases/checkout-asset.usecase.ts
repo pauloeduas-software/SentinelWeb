@@ -1,7 +1,5 @@
 import { prisma } from '../../../core/database/prismaClient';
-import { avisarEntrega, dispararAviso } from '../helpers/notificacao.helper';
 import { APP_SETTING_ID } from '../../settings/helpers/app-setting.helper';
-import { rotuloDoAlvoOuPadrao } from '../helpers/target-label.helper';
 import { AppError } from '../../../core/errors/app-error';
 import { errorCode } from '../../../core/errors/error-shape';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
@@ -9,6 +7,7 @@ import { ASSET_SELECT } from '../../asset/helpers/asset-select.helper';
 import { assertStatusCoerenteComPosse } from '../../asset/use-cases/assert-status-posse.usecase';
 import { ASSIGNMENT_SELECT } from '../helpers/assignment-select.helper';
 import { travarUsuarioOuFalhar } from '../../user/use-cases/lock-user.usecase';
+import { ativoDoPosto, jaTemAtivo } from '../../workstation/helpers/ativo-do-posto.helper';
 import type { AlvoPosse, ClientePosse } from './resolve-responsibles.usecase';
 
 // A ENTREGA — Camada 1 do docs/referencia/modelo-de-posse.md.
@@ -21,7 +20,6 @@ import type { AlvoPosse, ClientePosse } from './resolve-responsibles.usecase';
 export interface CheckoutData {
   targetType: AlvoPosse;
   targetUserId?: string | null;
-  targetAssetId?: string | null;
   targetLocationId?: string | null;
   statusId?: string | null;
   expectedCheckinAt?: Date | null;
@@ -62,7 +60,6 @@ export interface CheckoutData {
    * A TELA NUNCA PASSA ISTO. Entrega feita por gente continua emitindo termo e
    * avisando, que é o fluxo da F4 inteiro.
    */
-  semAviso?: boolean;
 }
 
 /**
@@ -72,33 +69,31 @@ export interface CheckoutData {
  */
 const JA_ENTREGUE = 'Este ativo já está entregue. Faça a devolução antes.';
 
-const TIPOS_DE_ALVO = ['USER', 'ASSET', 'LOCATION'] as const;
+const TIPOS_DE_ALVO = ['USER', 'LOCATION'] as const;
 
-/** Qual das três FKs nuláveis pertence a cada `targetType`. */
+/** Qual das duas FKs nuláveis pertence a cada `targetType`. */
 const FK_DO_ALVO = {
   USER: 'targetUserId',
-  ASSET: 'targetAssetId',
   LOCATION: 'targetLocationId',
 } as const;
 
 const ROTULO_DO_ALVO = {
   USER: 'um colaborador (targetUserId)',
-  ASSET: 'um ativo detentor (targetAssetId)',
   LOCATION: 'uma localização (targetLocationId)',
 } as const;
 
 /**
- * Coerência do alvo polimórfico: exatamente UMA das três FKs preenchida, e a
+ * Coerência do alvo polimórfico: exatamente UMA das duas FKs preenchida, e a
  * que casa com o `targetType`.
  *
- * Isto existe porque o banco NÃO garante: CHECK constraint não é expressável no
- * schema do Prisma, então `targetType: 'USER'` com `targetLocationId`
- * preenchido é uma linha que o Postgres aceita sem reclamar — e que a Camada 3
- * resolveria como "sem responsável", em silêncio. A guarda é da aplicação por
- * falta de opção, e por isso ela é a PRIMEIRA coisa que roda.
+ * O banco TAMBÉM garante — é o CHECK `assignments_alvo_coerente`, escrito à mão
+ * na migration, porque CHECK não é expressável no schema do Prisma. Esta função
+ * continua existindo para dar 422 com o nome do campo que falta: o erro do CHECK
+ * viraria uma mensagem sobre constraint, que não ensina nada a quem preencheu o
+ * formulário. E ela é a PRIMEIRA coisa que roda, antes de abrir transação.
  *
  * Devolve o id do alvo já escolhido: o resto do use-case grava a partir dele, e
- * nunca mais lê as três chaves do corpo.
+ * nunca mais lê as duas chaves do corpo.
  */
 function assertAlvoCoerente(data: CheckoutData): string {
   const alvoId = data[FK_DO_ALVO[data.targetType]];
@@ -127,9 +122,9 @@ function assertAlvoCoerente(data: CheckoutData): string {
  * nem a frase certa para "essa pessoa não existe". Conferir antes custa uma
  * consulta e devolve 404 com o nome do que faltou.
  *
- * Pessoa e ativo saem por `findFirst`, que o escopo da lixeira alcança: NÃO se
- * entrega equipamento a um cadastro na lixeira nem se prende uma coisa a um
- * ativo que está na lixeira. Localização não tem lixeira (D8), então `findUnique`.
+ * Pessoa sai por `findFirst`, que o escopo da lixeira alcança: NÃO se entrega
+ * equipamento a um cadastro na lixeira. Localização não tem lixeira, então
+ * `findUnique`.
  */
 async function assertAlvoExiste(client: ClientePosse, tipo: AlvoPosse, alvoId: string): Promise<void> {
   if (tipo === 'USER') {
@@ -150,14 +145,8 @@ async function assertAlvoExiste(client: ClientePosse, tipo: AlvoPosse, alvoId: s
     return;
   }
 
-  if (tipo === 'LOCATION') {
-    const local = await client.location.findUnique({ where: { id: alvoId }, select: { id: true } });
-    if (!local) throw new AppError('Localização não encontrada.', 404);
-    return;
-  }
-
-  const detentor = await client.asset.findFirst({ where: { id: alvoId }, select: { id: true } });
-  if (!detentor) throw new AppError('Ativo detentor não encontrado.', 404);
+  const local = await client.location.findUnique({ where: { id: alvoId }, select: { id: true } });
+  if (!local) throw new AppError('Localização não encontrada.', 404);
 }
 
 /**
@@ -238,28 +227,6 @@ export async function assertStatusExiste(client: ClientePosse, statusId: string)
 export async function checkoutAsset(assetId: string, data: CheckoutData, actorId: string | null) {
   const resultado = await executarCheckout(assetId, data, actorId);
 
-  // O AVISO SAI DEPOIS DO COMMIT, e é por isso que ele está AQUI e não lá
-  // dentro. SMTP não tem rollback: um e-mail disparado por transação que
-  // reverteu avisa o colaborador de uma entrega que não existe, e não há como
-  // desfazer. A recíproca também vale — falha de envio não desfaz a entrega
-  // (D86), e `dispararAviso` engole a falha de propósito.
-  //
-  // Entrega silenciosa: nada de e-mail. TINHA uma segunda saída aqui — o convite
-  // para assinar o termo de entrega —, e ela saiu com o aceite (D150).
-  if (data.semAviso) return resultado;
-
-  dispararAviso(avisarEntrega({
-    assetId,
-    assetTag: resultado.asset.assetTag,
-    assetName: resultado.asset.name,
-    targetType: resultado.assignment.targetType,
-    targetUserId: resultado.assignment.targetUserId,
-    targetLocationId: resultado.assignment.targetLocationId,
-    targetLabel: rotuloDoAlvoOuPadrao(resultado.assignment),
-    notes: resultado.assignment.checkoutNotes,
-    expectedCheckinAt: resultado.assignment.expectedCheckinAt,
-  }));
-
   return resultado;
 }
 
@@ -281,8 +248,8 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
     // nasce NO NOME DE UM DESLIGADO — o estado que o D32 existe para impedir e
     // que nenhuma consulta acusa, porque nada falhou.
     //
-    // Só no alvo `USER`: entrega a posto ou a ativo detentor não disputa linha
-    // de usuário nenhuma, e travar à toa só aumentaria a chance de deadlock.
+    // Só no alvo `USER`: entrega a posto não disputa linha de usuário nenhuma,
+    // e travar à toa só aumentaria a chance de deadlock.
     if (data.targetType === 'USER') await travarUsuarioOuFalhar(tx, alvoId);
 
     // `findFirst`, nunca `findUnique`: o escopo da lixeira não alcança o
@@ -293,13 +260,6 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
       select: { id: true, statusId: true, status: { select: { name: true, type: true } } },
     });
     if (!ativo) throw new AppError('Registro não encontrado', 404);
-
-    // Ativo preso a si mesmo é um ciclo de tamanho 1: a Camada 3 pararia no
-    // limite de um salto, mas o que ficaria gravado é uma posse que não diz
-    // quem responde por nada.
-    if (data.targetType === 'ASSET' && alvoId === assetId) {
-      throw new AppError('Um ativo não pode ser entregue a si mesmo.', 422);
-    }
 
     await assertAlvoExiste(tx, data.targetType, alvoId);
 
@@ -321,6 +281,17 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
       );
     }
 
+    // NO MÁXIMO UM ATIVO POR POSTO — a primeira das TRÊS portas; as outras são
+    // a marca de posto (`catalog/specs/location.spec.ts`) e a restauração da
+    // lixeira (`asset/use-cases/restore-asset.usecase.ts`). Depois de todas as
+    // recusas baratas, e DENTRO da transação: não há índice único embaixo,
+    // porque a regra cruza três tabelas. O helper devolve `null` para local que
+    // não é posto de trabalho.
+    if (data.targetType === 'LOCATION') {
+      const ocupante = await ativoDoPosto(tx, alvoId, assetId);
+      if (ocupante) throw new AppError(jaTemAtivo(ocupante), 409, { assetId: ocupante.id });
+    }
+
     if (data.statusId) await assertStatusExiste(tx, data.statusId);
     const statusId = data.statusId ?? (await escolherStatusPorTipo(tx, 'IN_USE', 'Em uso'));
 
@@ -330,11 +301,10 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
         data: {
           assetId,
           targetType: data.targetType,
-          // As três FKs saem do alvo já validado, e não do corpo: gravar a
-          // partir de UMA variável é o que garante que as outras duas fiquem
-          // nulas, em vez de depender de o cliente ter mandado só uma.
+          // As duas FKs saem do alvo já validado, e não do corpo: gravar a
+          // partir de UMA variável é o que garante que a outra fique nula, em
+          // vez de depender de o cliente ter mandado só uma.
           targetUserId: data.targetType === 'USER' ? alvoId : null,
-          targetAssetId: data.targetType === 'ASSET' ? alvoId : null,
           targetLocationId: data.targetType === 'LOCATION' ? alvoId : null,
           expectedCheckinAt: data.expectedCheckinAt ?? null,
           checkoutNotes: data.checkoutNotes ?? null,
@@ -373,9 +343,9 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
       where: { id: assetId },
       data: {
         statusId,
-        // CACHE do caso `USER`, e só dele: entregue a uma localização ou a
-        // outro ativo, quem responde são os ocupantes do posto ou o detentor, e
-        // um id de pessoa aqui seria uma resposta que a Camada 3 não daria.
+        // CACHE do caso `USER`, e só dele: entregue a uma localização, quem
+        // responde são os ocupantes do posto, e um id de pessoa aqui seria uma
+        // resposta que a Camada 3 não daria.
         assignedToId: data.targetType === 'USER' ? alvoId : null,
       },
       select: ASSET_SELECT,

@@ -10,3 +10,7 @@ dist-ssr
 # Em produção este diretório mora FORA do repositório — aqui é só o padrão de
 # desenvolvimento, e ele nunca entra no versionamento.
 uploads/
+
+# Rascunhos de trabalho (levantamentos, anotações). Não é código nem documentação
+# do projeto — o que vira decisão vai para docs/, o resto morre aqui.
+temp/

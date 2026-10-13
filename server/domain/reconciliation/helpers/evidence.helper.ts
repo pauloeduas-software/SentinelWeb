@@ -10,31 +10,30 @@ import { createHash } from 'crypto';
 //
 // A segunda é o que uma recusa sem chave significa, e ela custa caro: recusar
 // "este endpoint é o ATV-00012" porque o serial estava em branco é CORRETO, e
-// quando a máquina passar a mandar o serial de verdade — o que o rollout do
-// agente C# vai provocar às centenas — é OUTRA afirmação. Enterrá-la junto seria
-// perder exatamente os casos que a fase existe para achar.
+// quando a máquina passar a mandar o serial de verdade é OUTRA afirmação.
+// Enterrá-la junto seria perder exatamente os casos que a fase existe para achar.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // POR QUE SÃO DOIS CONCEITOS, E NÃO UM (a correção do D109)
 //
 // A primeira versão desta fase hasheava a EVIDÊNCIA INTEIRA, e isso desfazia a
-// memória da recusa para três dos cinco tipos de sugestão. A evidência de posse
-// carrega o que SUSTENTA a afirmação — em quantos dias a pessoa apareceu,
-// quantas amostras, em que horas —, e esses números crescem sozinhos. Um dia a
-// mais de presença mudava o hash, e a sugestão recusada voltava para a fila
-// como se fosse uma afirmação nova. Não era: era a mesma frase com o contador
-// incrementado.
+// memória da recusa sempre que a evidência carregava algo que muda sozinho.
+// Então a EVIDÊNCIA é o que vai para a TELA, e a AFIRMAÇÃO é o que vai para o
+// HASH — e só muda quando a frase muda.
 //
-// Então a EVIDÊNCIA é o que vai para a TELA (e cresce), e a AFIRMAÇÃO é o que
-// vai para o HASH (e só muda quando a frase muda). "A Laura usa esta máquina"
-// continua sendo a mesma afirmação no terceiro e no trigésimo dia.
+// Hoje a única sugestão que existe não tem evidência que cresça por conta
+// própria (sinal, valor, hostname e hwid são estáveis), e a separação continua
+// valendo mesmo assim: ela é o que faz o hash descrever a AFIRMAÇÃO em vez do
+// que a sustenta, e é essa promessa que o próximo tipo de sugestão herda em vez
+// de ter que redescobrir.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * A evidência que vai para a tela.
  *
- * É `Record` aberto de propósito: cada tipo de sugestão mostra coisas
- * diferentes (o serial que casou, os dias em que a pessoa apareceu, as horas).
+ * É `Record` aberto de propósito: o que a sugestão mostra é o que a sustenta
+ * (qual sinal casou, com que valor, em que hostname), e isso cresce com o
+ * próximo tipo sem mexer no tipo daqui.
  * O que não varia é que ela é SEMPRE visível — sugestão sem evidência é palpite,
  * e ninguém deveria aceitar um palpite que reescreve o inventário.
  */
@@ -44,10 +43,8 @@ export type Evidencia = Record<string, unknown>;
  * O que a sugestão AFIRMA, reduzido ao que a identifica.
  *
  * Regra para montar uma: se o valor mudar sozinho com o tempo, ele NÃO entra.
- * Contador de dias, contagem de amostras, histograma de horas e data do último
- * contato ficam de fora; quem é a pessoa, qual é o ativo, qual foi o sinal e
- * qual o valor que casou ficam dentro. O turno também fica fora — é palpite que
- * uma pessoa corrige (D15), não parte da frase.
+ * Data do último contato e qualquer contador ficam de fora; qual é o ativo, qual
+ * foi o sinal e qual o valor que casou ficam dentro.
  */
 export type Afirmacao = Record<string, unknown>;
 
@@ -69,7 +66,7 @@ function estavel(valor: unknown): unknown {
     return ordenado;
   }
   // BigInt não tem JSON, e as specs coletadas são BigInt: sem isto o hash
-  // estouraria justamente na sugestão que carrega RAM e disco na evidência.
+  // estouraria em qualquer afirmação que carregasse RAM ou disco.
   if (typeof valor === 'bigint') return valor.toString();
   return valor;
 }

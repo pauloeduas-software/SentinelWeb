@@ -1,7 +1,6 @@
 import { prisma } from '../../../core/database/prismaClient';
-import { avisarDevolucao, dispararAviso } from '../helpers/notificacao.helper';
-import { rotuloDoAlvoOuPadrao } from '../helpers/target-label.helper';
 import { AppError } from '../../../core/errors/app-error';
+import { rotuloDoAlvo } from '../helpers/target-label.helper';
 import { assertStatusExiste, escolherStatusPorTipo } from './checkout-asset.usecase';
 import { fecharPosse } from './close-assignment.usecase';
 
@@ -15,26 +14,22 @@ import { fecharPosse } from './close-assignment.usecase';
 export interface CheckinData {
   statusId?: string | null;
   checkinNotes?: string | null;
+  /**
+   * O ESCOPO da devolução: só fecha a posse se ela aponta para ESTA
+   * localização. Sem ele, fecha a posse aberta que o ativo tiver, seja com quem
+   * for — é o caminho da tela de Ativos, onde a pessoa está olhando a posse.
+   *
+   * Existe para a ficha do posto. Ela lista os ativos entregues à mesa e tem o
+   * botão Devolver em cada linha; entre a ficha carregar e o clique, o ativo
+   * pode ter sido devolvido e entregue a outra pessoa, e o clique fecharia a
+   * posse da Laura achando que tirava um mouse da Mesa 1. Com o escopo, o
+   * servidor recusa: a ficha estava velha, e é isso que a resposta diz.
+   */
+  targetLocationId?: string | null;
 }
 
 export async function checkinAsset(assetId: string, data: CheckinData, actorId: string | null) {
   const resultado = await executarCheckin(assetId, data, actorId);
-
-  // DEPOIS do commit, como na entrega. Aqui o destinatário é quem DEIXOU de
-  // responder pelo equipamento — a posse já está fechada quando o e-mail sai, e
-  // é por isso que os destinatários saem da `assignment` devolvida e não de uma
-  // consulta nova: uma consulta agora não acharia mais ninguém.
-  dispararAviso(avisarDevolucao({
-    assetId,
-    assetTag: resultado.asset.assetTag,
-    assetName: resultado.asset.name,
-    targetType: resultado.assignment.targetType,
-    targetUserId: resultado.assignment.targetUserId,
-    targetLocationId: resultado.assignment.targetLocationId,
-    targetLabel: rotuloDoAlvoOuPadrao(resultado.assignment),
-    notes: resultado.assignment.checkinNotes,
-    expectedCheckinAt: null,
-  }));
 
   return resultado;
 }
@@ -56,11 +51,32 @@ async function executarCheckin(assetId: string, data: CheckinData, actorId: stri
 
     const aberta = await tx.assignment.findFirst({
       where: { assetId, checkinAt: null },
-      select: { id: true, targetType: true },
+      select: {
+        id: true,
+        targetType: true,
+        targetLocationId: true,
+        // Os dois alvos, para a recusa do escopo dizer COM QUEM o ativo está.
+        targetUser: { select: { name: true } },
+        targetLocation: { select: { name: true } },
+      },
     });
     // 409 e não 404: o ativo existe, quem não existe é a posse — é conflito de
     // estado, e a mesma família do "já está entregue" da outra ponta.
     if (!aberta) throw new AppError('Este ativo não está entregue.', 409);
+
+    // O ESCOPO (ver `CheckinData`). Também 409: a posse existe, só não é a que
+    // quem clicou tinha na tela. A mensagem nomeia o alvo de verdade porque a
+    // pessoa precisa decidir se devolve mesmo assim — e isso ela faz na ficha
+    // do ativo, olhando a posse certa.
+    if (data.targetLocationId && aberta.targetLocationId !== data.targetLocationId) {
+      const alvo = rotuloDoAlvo(aberta);
+      throw new AppError(
+        `Este ativo não está entregue a este posto${alvo ? `: a posse aberta dele é com ${alvo}` : ''}. `
+          + 'Releia a ficha; para devolver mesmo assim, use a ficha do ativo.',
+        409,
+        { assignmentId: aberta.id },
+      );
+    }
 
     if (data.statusId) await assertStatusExiste(tx, data.statusId);
     // Sem escolha explícita, o equipamento volta para o estoque. O caminho

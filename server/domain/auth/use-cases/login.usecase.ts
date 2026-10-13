@@ -4,7 +4,7 @@ import { conferirSenha, conferirSenhaInexistente, hashSenha, precisaRehash } fro
 import type { SessaoEmitida } from '../auth.types';
 import { carregarSessaoParaValidacao } from './current-user.usecase';
 
-// O login. Três recusas, e só duas frases.
+// O login. Quatro recusas, e três frases.
 
 /**
  * A MESMA mensagem para "esse usuário não existe" e para "a senha está errada".
@@ -50,6 +50,9 @@ export async function login(
       failedLoginCount: true,
       lockedUntil: true,
       isActive: true,
+      // O PAPEL, na consulta que já estava acontecendo: é ele que decide se
+      // esta conta opera o painel (ver a recusa abaixo).
+      role: true,
       tokenVersion: true,
       username: true,
       // AS TRÊS COLUNAS DO SEGUNDO FATOR, na consulta que já estava acontecendo
@@ -109,6 +112,37 @@ export async function login(
   // visto, não mais uma falha no meio das outras.
   if (!usuario.isActive) {
     throw new AppError('Acesso desativado. Procure o administrador do sistema.', 403);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // `USUARIO` NÃO ENTRA NO PAINEL, e a recusa é AQUI — não na tela.
+  //
+  // O papel existe para quem RECEBE equipamento: ele é o alvo de uma entrega,
+  // não um operador. Nenhuma rota de inventário aceita `USUARIO` (o mapa de
+  // `route-permissions.ts` só tem `null` para ler a própria sessão e sair), e
+  // nenhum item do menu dispensa papel — então deixá-lo entrar produzia uma
+  // sessão que abre um painel VAZIO e responde 403 em tudo que a pessoa tentar.
+  // Isso parece defeito do sistema, e o chamado que chega é "o painel não
+  // carrega", não "eu não tenho acesso".
+  //
+  // A FRASE É PRÓPRIA pelo mesmo motivo da conta desativada: quem chegou aqui
+  // já provou que sabe a senha, então não há nada a enumerar — e ela diz o que
+  // fazer, em vez de mandar a pessoa procurar um erro de digitação que não há.
+  //
+  // 403 e não 401: a credencial está certa. O que falta é autorização, e é o
+  // mesmo código que o `permission-guard` usa para a mesma falta.
+  //
+  // A sessão JÁ EMITIDA de quem for rebaixado para `USUARIO` depois do login
+  // continua valendo até expirar, respondendo 403 em tudo — a releitura por
+  // requisição confere a lixeira e o `isActive`, não o papel. Fechar isso é
+  // mexer em `carregarSessaoParaValidacao`, e é decisão separada desta.
+  // ─────────────────────────────────────────────────────────────────────────
+  if (usuario.role === 'USUARIO') {
+    throw new AppError(
+      'Este acesso é de colaborador: ele serve para você receber equipamento, não para entrar '
+      + 'no painel. Se você precisa operar o sistema, peça ao administrador o papel de Técnico.',
+      403,
+    );
   }
 
   // O REHASH TRANSPARENTE: hash gerado com parâmetros antigos é regravado agora,

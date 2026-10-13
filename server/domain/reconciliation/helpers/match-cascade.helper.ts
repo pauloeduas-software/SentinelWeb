@@ -1,5 +1,5 @@
 import type { MatchSignal } from '@prisma/client';
-import { normalizeHostname, normalizeMac, normalizeSerial, normalizeUuid } from './normalize-identity.helper';
+import { normalizeHostname, normalizeSerial, normalizeUuid } from './normalize-identity.helper';
 
 // A CASCATA E A PONTUAÇÃO — funções puras. Recebem a identidade de um endpoint e
 // a dos candidatos, devolvem o que casou e quanto vale.
@@ -9,29 +9,19 @@ import { normalizeHostname, normalizeMac, normalizeSerial, normalizeUuid } from 
 // é testável linha a linha sem banco nenhum.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// POR QUE SÃO DUAS CASCATAS, E NÃO A TABELA DE QUATRO SINAIS DO PLANO
+// O PLANO DA FASE LISTAVA QUATRO SINAIS, E UM DELES NÃO CABIA AQUI
 //
-// O plano da fase listava `serial → uuid → MAC → hostname` numa cascata só,
-// contra o ativo. Escrevendo contra a árvore, o MAC não cabe ali: **`Asset` não
-// tem coluna de endereço MAC** — ele tem `assetTag`, `serial` e `name`, todos
-// digitados por gente. Não existe MAC do lado cadastrado para comparar.
-//
-// O que o MAC de fato responde é outra pergunta: *estas duas MÁQUINAS são a
-// mesma?* — reimagem ou troca de placa muda o `hwid` e cria endpoint novo. Então
-// ele é sinal de MERGE (endpoint × endpoint), não de LINK (endpoint × ativo).
-//
-// Deixá-lo na cascata errada não seria só inútil: seria pontuar 85 num sinal que
-// nunca casa, e a pontuação passaria a descrever uma coisa que não acontece.
+// `serial → uuid → MAC → hostname`, contra o ativo. Escrevendo contra a árvore,
+// o MAC nunca cabia: **`Asset` não tem coluna de endereço MAC** — ele tem
+// `assetTag`, `serial` e `name`, todos digitados por gente. Não existe MAC do
+// lado cadastrado para comparar, e pontuar um sinal que nunca casa faria a
+// pontuação descrever uma coisa que não acontece.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Quanto vale cada sinal. Ver o D46 para por que MAC não vale 100. */
+/** Quanto vale cada sinal. Ver o D46 para por que hostname não vale 100. */
 export const PONTOS: Record<MatchSignal, number> = {
   SERIAL: 100,
   UUID: 100,
-  // A DOCK STATION passa o MAC DELA ao notebook encaixado. Três notebooks que
-  // revezam a mesma dock parecem a mesma máquina — por isso 85, e por isso MAC
-  // repetido vale 0 (vira colisão).
-  MAC: 85,
   // Renomeável, e volta atrás: "PC-ANA" vira "PC-ANA-NOVO" e depois "PC-ANA".
   HOSTNAME: 60,
 };
@@ -42,7 +32,6 @@ export const PONTOS_PARA_VINCULO_AUTOMATICO = 100;
 export interface IdentidadeDoEndpoint {
   biosSerial: string | null;
   systemUuid: string | null;
-  macAddress: string | null;
   hostname: string;
 }
 
@@ -53,12 +42,8 @@ export interface CandidatoAtivo {
   name: string | null;
 }
 
-export interface CandidatoEndpoint extends IdentidadeDoEndpoint {
-  id: string;
-}
-
 export interface Casamento {
-  /** O id do outro lado: ativo na cascata de LINK, endpoint na de MERGE. */
+  /** O id do ativo que casou. */
   alvoId: string;
   signal: MatchSignal;
   score: number;
@@ -205,32 +190,6 @@ export function casarEndpointComAtivos(
     (a) => normalizeHostname(a.name),
     (a) => normalizeHostname(a.assetTag),
   ]));
-
-  return cascata.resultado();
-}
-
-/**
- * ENDPOINT × ENDPOINT — a cascata do `MERGE`.
- *
- * Duas linhas de `endpoints` com o mesmo serial são a mesma máquina que ganhou
- * `hwid` novo (reimagem, troca de placa). Aqui o MAC entra, com 85 pontos e com
- * a armadilha da dock explicitamente tratada: três notebooks que revezam a mesma
- * dock casam entre si pelo MAC dela, e é a regra da colisão que os separa.
- */
-export function casarEndpointComEndpoints(
-  identidade: IdentidadeDoEndpoint,
-  candidatos: CandidatoEndpoint[],
-): ResultadoDaCascata {
-  const cascata = novaCascata();
-
-  cascata.aplicar('SERIAL', normalizeSerial(identidade.biosSerial), indexar(candidatos, (e) => normalizeSerial(e.biosSerial)));
-  cascata.aplicar('UUID', normalizeUuid(identidade.systemUuid), indexar(candidatos, (e) => normalizeUuid(e.systemUuid)));
-  cascata.aplicar('MAC', normalizeMac(identidade.macAddress), indexar(candidatos, (e) => normalizeMac(e.macAddress)));
-
-  // HOSTNAME de propósito FORA daqui: máquina reimaginada quase sempre mantém o
-  // nome, e fundir duas linhas por 60 pontos de um campo renomeável é
-  // destrutivo demais para o que o sinal garante. Merge é uma operação sem
-  // desfazer (D103) e o piso dela é mais alto que o do vínculo.
 
   return cascata.resultado();
 }

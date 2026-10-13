@@ -6,30 +6,19 @@ import { linhasDaEvidencia, ROTULOS, resumoDaSugestao } from '../helpers/sugesta
 
 // UMA SUGESTÃO, COM A EVIDÊNCIA À VISTA.
 //
-// A evidência é aberta por padrão nas duas sugestões que mexem em POSSE
-// (`SHARED_POST` e `CHECKOUT`) e fechada nas outras. Não é preferência de
-// layout: são as duas em que aceitar sem ler muda o cadastro de mais de uma
-// pessoa, e o custo de um clique a mais é menor que o de um cadastro
-// degradado (D47).
+// A evidência nasce fechada e abre num clique: sugestão sem evidência visível é
+// palpite, e ninguém deveria aceitar um palpite que reescreve o inventário.
 
 interface Props {
   sugestao: Sugestao;
-  /** Postos disponíveis, para o `SHARED_POST` escolher onde a máquina fica. */
-  postos: { id: string; name: string }[];
   ocupado: boolean;
-  onAceitar: (id: string, extra?: { locationId?: string }) => void;
+  onAceitar: (id: string) => void;
   onRecusar: (id: string) => void;
 }
 
-export default function SugestaoCard({ sugestao, postos, ocupado, onAceitar, onRecusar }: Props) {
+export default function SugestaoCard({ sugestao, ocupado, onAceitar, onRecusar }: Props) {
   const rotulo = ROTULOS[sugestao.kind];
-  const mexeEmPosse = sugestao.kind === 'SHARED_POST' || sugestao.kind === 'CHECKOUT';
-  const [aberta, setAberta] = useState(mexeEmPosse);
-
-  // O posto só é perguntado quando o sistema não tem como saber: se o ativo já
-  // está numa localização marcada como posto, ela vem escolhida.
-  const precisaEscolherPosto = sugestao.kind === 'SHARED_POST' && !sugestao.targetLocation;
-  const [posto, setPosto] = useState('');
+  const [aberta, setAberta] = useState(false);
 
   const evidencia = linhasDaEvidencia(sugestao.evidence);
 
@@ -58,23 +47,10 @@ export default function SugestaoCard({ sugestao, postos, ocupado, onAceitar, onR
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {precisaEscolherPosto && (
-            <select
-              value={posto}
-              onChange={(evento) => setPosto(evento.target.value)}
-              className="bg-bg-surface border border-border-sutil px-2 py-1.5 text-xs font-mono text-text-primary"
-            >
-              <option value="">Escolha o posto…</option>
-              {postos.map((opcao) => (
-                <option key={opcao.id} value={opcao.id}>{opcao.name}</option>
-              ))}
-            </select>
-          )}
-
           <button
             type="button"
-            disabled={ocupado || (precisaEscolherPosto && !posto)}
-            onClick={() => onAceitar(sugestao.id, posto ? { locationId: posto } : undefined)}
+            disabled={ocupado}
+            onClick={() => onAceitar(sugestao.id)}
             className="p-2 text-status-success hover:bg-status-success/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             title="Aceitar"
           >

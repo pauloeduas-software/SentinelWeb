@@ -1,31 +1,32 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { comSaldo, contarEmUsoDe } from '../helpers/stock-balance.helper';
-import type { ClienteEstoque, StockKindSpec } from '../helpers/stock-kind.helper';
-import type { ItemComSaldo, ItemDeEstoque } from './list-stock.usecase';
+import { comSaldo, contarForaDe } from '../helpers/stock-balance.helper';
+import { STOCK_ITEM_SELECT, STOCK_MOVEMENT_SELECT } from '../helpers/stock-select.helper';
 
 /**
- * UM item, com o saldo já calculado.
+ * UM item: a linha com o saldo e as unidades que estão FORA — para quem, desde
+ * quando. É daqui que sai o botão Devolver de cada unidade na ficha do item.
  *
- * `findFirst` e nunca `findUnique`: o escopo da lixeira não alcança o
- * `findUnique` (`core/database/soft-delete.extension.ts`), e a tela de detalhe
- * de um item apagado abriria como se ele estivesse no estoque.
- *
- * Aceita o cliente de transação porque as operações de saída releem o item
- * DENTRO da transação, depois da trava — ler por fora seria ler um estado que a
- * trava existe justamente para congelar.
+ * `findFirst` pelo escopo da lixeira: item apagado responde 404 por esta porta,
+ * e a lixeira se lê pela listagem com `?view=trashed`.
  */
-export async function getStockItem(
-  spec: StockKindSpec,
-  id: string,
-  client: ClienteEstoque = prisma,
-): Promise<ItemComSaldo> {
-  const item = await spec.delegate(client).findFirst({
-    where: { id },
-    select: spec.select,
-  }) as ItemDeEstoque | null;
+export async function getStockItem(id: string) {
+  const item = await prisma.stockItem.findFirst({ where: { id }, select: STOCK_ITEM_SELECT });
+  if (!item) throw new AppError('Item de estoque não encontrado.', 404);
 
-  if (!item) throw new AppError(`Nenhum ${spec.rotulo} com este identificador.`, 404);
+  const [fora, unidadesFora] = await Promise.all([
+    contarForaDe(prisma, id),
+    prisma.stockMovement.findMany({
+      where: { itemId: id, kind: 'SAIDA', returnedAt: null },
+      select: STOCK_MOVEMENT_SELECT,
+      // As mais antigas primeiro: é a ordem em que saíram, e a que a tela usa
+      // para devolver "a primeira que saiu". `id` desempata as N de uma mesma
+      // saída, que nascem no mesmo milissegundo.
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      // Teto: `fora` (a contagem) é a verdade; a lista é o que cabe na tela.
+      take: 200,
+    }),
+  ]);
 
-  return comSaldo(item, await contarEmUsoDe(client, spec.kind, id));
+  return { ...comSaldo(item, fora), unidadesFora };
 }

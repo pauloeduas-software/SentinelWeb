@@ -10,19 +10,18 @@ import { dataNaoPassada, textoOpcional, uuidOpcional } from '../../shared/fields
 // `targetType` com a FK que combina, não uma coluna solta no corpo.
 
 /**
- * As três FKs são TODAS opcionais aqui, e a obrigatoriedade de UMA delas fica
- * no use-case (`assertAlvoCoerente`), não no zod.
+ * As duas FKs são opcionais aqui, e a obrigatoriedade de UMA delas fica no
+ * use-case (`assertAlvoCoerente`), não no zod.
  *
- * Por quê: a regra não é "este campo é obrigatório", é "exatamente uma das três
+ * Por quê: a regra não é "este campo é obrigatório", é "exatamente uma das duas
  * está preenchida E é a que casa com o `targetType`". Escrita como `refine`,
  * ela viraria um 422 com a mensagem no objeto inteiro em vez de no campo, e
  * ficaria longe do lugar onde o alvo é de fato usado. No use-case ela vira
  * `AppError(…, 422)` com o texto que ensina o modelo.
  */
 export const checkoutSchema = z.strictObject({
-  targetType: z.enum(['USER', 'ASSET', 'LOCATION'], 'tipo de alvo inválido: use USER, ASSET ou LOCATION'),
+  targetType: z.enum(['USER', 'LOCATION'], 'tipo de alvo inválido: use USER ou LOCATION'),
   targetUserId: uuidOpcional('colaborador'),
-  targetAssetId: uuidOpcional('ativo detentor'),
   targetLocationId: uuidOpcional('localização'),
 
   // Status DEPOIS da entrega. Ausente, o use-case escolhe o primeiro de tipo
@@ -30,9 +29,8 @@ export const checkoutSchema = z.strictObject({
   statusId: uuidOpcional('status'),
 
   // PRAZO, e por isso não aceita o passado: uma entrega com devolução prevista
-  // para ontem nasce VENCIDA — entra em `GET /api/assignments/overdue` no mesmo
-  // segundo em que o equipamento saiu do estoque, e com o lembrete automático
-  // (Leva 3) cobraria de volta o que acabou de ser entregue. Hoje é aceito.
+  // para ontem nasce VENCIDA — o prazo expira no mesmo segundo em que o
+  // equipamento sai, que é um cadastro que ninguém quis fazer.
   // O espelho é o `startedAt` da ocupação, que recusa o FUTURO pelo motivo
   // oposto (shared/fields.schema.ts).
   expectedCheckinAt: dataNaoPassada('devolução prevista'),
@@ -46,39 +44,11 @@ export const checkinSchema = z.strictObject({
   // explícita.
   statusId: uuidOpcional('status'),
   checkinNotes: textoOpcional('observações da devolução', 2_000),
-});
-
-/**
- * Teto de ativos por entrega em massa.
- *
- * 100 é o mesmo teto de uma página da listagem (`core/http/list-query.ts`), e
- * não por simetria: a seleção da tela nasce de uma página, então um lote maior
- * que a página é um pedido montado à mão. O limite existe porque cada linha é
- * uma transação — mil ids num corpo só seriam mil transações seguradas por uma
- * requisição HTTP, que estoura o timeout do cliente e deixa o relatório sem
- * quem o leia.
- */
-const MAX_ATIVOS_POR_LOTE = 100;
-
-/**
- * ENTREGA EM MASSA: o mesmo corpo do checkout, mais a lista de ativos.
- *
- * O alvo é UM só para todos — é o que a operação significa (o kit inteiro para
- * a mesma pessoa, ou para a mesma Mesa 1). Alvos diferentes por linha seriam N
- * entregas sem nada em comum, e para isso já existe a rota individual.
- *
- * `.extend` sobre o `checkoutSchema` em vez de repetir os sete campos: a
- * coerência entre `targetType` e a FK preenchida é validada UMA vez, no
- * `assertAlvoCoerente` de dentro do `checkoutAsset` que cada linha chama. Um
- * segundo schema com as mesmas regras divergiria do primeiro no próximo ajuste.
- */
-export const bulkCheckoutSchema = checkoutSchema.extend({
-  assetIds: z
-    .array(z.uuid('ativo: identificador inválido'), 'informe os ativos a entregar')
-    .min(1, 'selecione ao menos um ativo')
-    .max(MAX_ATIVOS_POR_LOTE, `entrega em massa: máximo de ${MAX_ATIVOS_POR_LOTE} ativos por vez`),
+  // O ESCOPO: fecha a posse só se ela aponta para esta localização, senão 409.
+  // É o que a ficha do posto manda, para não fechar a posse de outra pessoa
+  // por cima de uma tela velha (`checkin-asset.usecase.ts`).
+  targetLocationId: uuidOpcional('posto'),
 });
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
 export type CheckinInput = z.infer<typeof checkinSchema>;
-export type BulkCheckoutInput = z.infer<typeof bulkCheckoutSchema>;

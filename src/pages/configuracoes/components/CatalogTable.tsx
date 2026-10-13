@@ -1,5 +1,5 @@
 import { Edit2, Trash2, Check, Minus, Users, type LucideIcon } from 'lucide-react';
-import { formatarMeses, formatarResidual, nomeDaRelacao, rotuloDoEnum } from '../../helpers/format.helper';
+import { nomeDaRelacao, rotuloDoEnum } from '../../helpers/format.helper';
 import type { AcaoLinhaId, AcaoLinhaSpec, ColunaSpec } from '../specs/catalog-ui.types';
 import type { CatalogRow } from '../../../domain/shared/catalog.types';
 
@@ -15,7 +15,7 @@ interface CatalogTableProps {
   colunas: readonly ColunaSpec[];
   registros: readonly CatalogRow[];
   vazio: React.ReactNode;
-  /** Ações por linha da aba atual. Ausente nas seis abas que só têm CRUD. */
+  /** Ações por linha da aba atual. Ausente nas outras abas que só têm CRUD. */
   acoes?: readonly AcaoLinhaSpec[];
   onEdit: (registro: CatalogRow) => void;
   onDelete: (registro: CatalogRow) => void;
@@ -123,12 +123,6 @@ function Celula({ coluna, registro }: { coluna: ColunaSpec; registro: CatalogRow
       return valor
         ? <Check size={14} className="text-status-success" />
         : <Minus size={14} className="text-text-tertiary" />;
-
-    case 'meses':
-      return <span className="tabular-nums">{formatarMeses(valor)}</span>;
-
-    case 'moeda':
-      return <span className="tabular-nums">{formatarResidual(valor, registro[coluna.campoTipo ?? ''])}</span>;
 
     // Um agregado do `_count` do servidor (F9). Zero aparece como `0` e não como
     // `—`: "este conjunto tem zero campos" é um fato acionável — é o conjunto

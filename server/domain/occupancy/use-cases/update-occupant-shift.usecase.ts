@@ -3,13 +3,12 @@ import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { OCCUPANT_SELECT } from '../helpers/occupant-select.helper';
 
-// O TURNO DE UMA OCUPAÇÃO ABERTA, corrigido (F10, Etapa E).
+// O TURNO DE UMA OCUPAÇÃO ABERTA, corrigido.
 //
 // ═════════════════════════════════════════════════════════════════════════════
-// POR QUE ISTO NASCE COM O IMPORTADOR, E POR QUE NÃO É "ENCERRAR E REABRIR".
+// POR QUE NÃO É "ENCERRAR E REABRIR".
 //
-// Reimportar o mesmo arquivo com o turno diferente é o caso real: alguém
-// digitou "manha" na primeira carga e corrigiu para "manhã" na segunda. As duas
+// O caso real é o typo: alguém cadastrou "manha" e quer "manhã". As duas
 // alternativas erradas:
 //
 //   encerrar e reabrir   fabricaria histórico falso — a tabela passaria a dizer
@@ -17,21 +16,27 @@ import { OCCUPANT_SELECT } from '../helpers/occupant-select.helper';
 //                        causa de um typo. E "quem respondia pela Mesa 1 em
 //                        março?" ganharia um buraco onde não houve nenhum;
 //
-//   recusar a linha      deixaria o cadastro com o turno errado para sempre,
-//                        porque o arquivo corrigido não tem como entrar.
+//   não oferecer saída   deixaria o cadastro com o turno errado para sempre, já
+//                        que pessoa, posto e `startedAt` não são alteráveis.
 //
 // A terceira é esta: o turno é ATRIBUTO do vínculo aberto, e corrigi-lo é um
 // `UPDATE` com trilha. A linha continua a mesma, com o mesmo `startedAt`.
+//
+// O `locationId` entra na consulta pelo mesmo motivo do encerramento: a rota é
+// `/api/locations/:id/occupants/:occupantId`, e sem os dois juntos no `where`
+// uma ocupação de OUTRO posto seria corrigida por esta URL — que passaria a
+// descrever algo que não aconteceu.
 // ═════════════════════════════════════════════════════════════════════════════
 
 export async function updateOccupantShift(
+  locationId: string,
   occupantId: string,
   shift: string | null,
   actorId: string | null,
 ) {
   return prisma.$transaction(async (tx) => {
     const antes = await tx.locationOccupant.findFirst({
-      where: { id: occupantId },
+      where: { id: occupantId, locationId },
       select: { id: true, shift: true, endedAt: true },
     });
 

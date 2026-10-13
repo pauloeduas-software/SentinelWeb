@@ -1,22 +1,15 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { prisma } from '../../server/core/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { cenarioDePosse, criarItemDeEstoque } from '../helpers/fixtures';
-import { prisma } from '../../server/core/database/prismaClient';
 
-// AS CORRIDAS DO SALDO — o que "passa no teste com um usuário".
+// AS CORRIDAS DO ESTOQUE — o que "passa no teste com um usuário".
 //
-// CONTAR NÃO É TRAVAR. O `COUNT` garante que a resposta não diverge das linhas;
-// ele não impede que duas linhas nasçam ao mesmo tempo. Duas requisições podem
-// contar "4 de 5 ocupados" e as duas inserirem: 6 de 5. Em READ COMMITTED
-// nenhuma enxerga o checkout que a outra ainda não confirmou, e nenhum `if`
-// pega isso.
-//
-// Quem resolve é o `SELECT … FOR UPDATE` na linha-pai, DENTRO da transação —
-// um lock em autocommit é um lock que dura zero milissegundo.
-//
-// Por isso estes testes disparam as requisições SEM `await` entre elas e contam
-// os status. A asserção nunca é "deu certo": é "exatamente N passaram, e o
-// banco tem exatamente N linhas".
+// O saldo é `COUNT` das saídas abertas, e contar não é travar: duas requisições
+// podem contar "4 de 5 fora" e as duas inserirem, dando 6 de 5. Quem fecha isso
+// é o `FOR UPDATE` na linha do item, dentro da transação — e este arquivo é a
+// prova de que ele trava. A asserção nunca é "deu certo": é "exatamente N
+// passaram, e o banco tem exatamente N linhas".
 
 let api: ApiDeTeste;
 let cenario: Awaited<ReturnType<typeof cenarioDePosse>>;
@@ -30,173 +23,94 @@ afterAll(async () => {
   await api.fechar();
 });
 
-/** Quantas respostas de cada status — é a única forma da asserção de corrida. */
 function placar(respostas: { status: number }[]): Record<number, number> {
   const contagem: Record<number, number> = {};
   for (const r of respostas) contagem[r.status] = (contagem[r.status] ?? 0) + 1;
   return contagem;
 }
 
-describe('duas entregas simultâneas de um acessório com UMA unidade', () => {
+const sair = (itemId: string) =>
+  api.post<{ unidades: { id: string }[] }>(`/api/stock/items/${itemId}/checkout`, {
+    targetType: 'USER', targetUserId: cenario.laura,
+  });
+
+const abertas = (itemId: string) =>
+  prisma.stockMovement.count({ where: { itemId, kind: 'SAIDA', returnedAt: null } });
+
+describe('duas saídas simultâneas de um item com UMA unidade', () => {
   it('deixa passar exatamente UMA', async () => {
-    const item = await criarItemDeEstoque(api, 'accessories', {
-      name: 'Mouse da corrida', categoryId: cenario.categoriaAcessorioId, qty: 1,
-    });
+    const mouse = await criarItemDeEstoque(api, { name: 'Mouse da corrida', categoryId: cenario.categoriaEstoqueId, qty: 1 });
 
-    const respostas = await Promise.all([
-      api.post(`/api/accessories/${item.id}/checkout`, { targetType: 'USER', targetUserId: cenario.laura }),
-      api.post(`/api/accessories/${item.id}/checkout`, { targetType: 'USER', targetUserId: cenario.ana }),
-    ]);
+    // SEM `await` entre as duas: é o `Promise.all` que as põe no event loop
+    // juntas, cada uma com sua conexão do pool. Quem serializa é o Postgres.
+    const respostas = await Promise.all([sair(mouse.id), sair(mouse.id)]);
 
-    expect(placar(respostas)).toMatchObject({ 201: 1, 409: 1 });
-
-    const abertas = await prisma.accessoryCheckout.count({
-      where: { accessoryId: item.id, checkedInAt: null },
-    });
-    expect(abertas).toBe(1);
-  });
-
-  it('não deixa a perdedora gravar uma linha já devolvida de consolação', async () => {
-    // Uma linha com `checkedInAt` preenchido criada pela requisição perdedora
-    // seria histórico de uma entrega que nunca aconteceu, e o relatório de
-    // "quem esteve com este mouse" mentiria.
-    const item = await prisma.accessory.findFirstOrThrow({
-      where: { name: 'Mouse da corrida' }, select: { id: true },
-    });
-    expect(await prisma.accessoryCheckout.count({ where: { accessoryId: item.id } })).toBe(1);
+    expect(placar(respostas)[201]).toBe(1);
+    expect(placar(respostas)[409]).toBe(1);
+    expect(await abertas(mouse.id)).toBe(1);
   });
 });
 
-describe('cinco entregas simultâneas de um estoque de três', () => {
+describe('cinco saídas simultâneas de um estoque de três', () => {
   it('deixa passar exatamente TRÊS', async () => {
-    // O caso que só aparece no dia do onboarding de uma turma: cinco pessoas
-    // clicando em "entregar" no mesmo segundo.
-    const item = await criarItemDeEstoque(api, 'accessories', {
-      name: 'Teclado do onboarding', categoryId: cenario.categoriaAcessorioId, qty: 3,
-    });
+    const cabo = await criarItemDeEstoque(api, { name: 'Cabo da corrida', categoryId: cenario.categoriaEstoqueId, qty: 3 });
 
-    const respostas = await Promise.all(
-      Array.from({ length: 5 }, () =>
-        api.post(`/api/accessories/${item.id}/checkout`, {
-          targetType: 'LOCATION', targetLocationId: cenario.mesa1,
-        })),
-    );
+    const respostas = await Promise.all(Array.from({ length: 5 }, () => sair(cabo.id)));
 
-    expect(placar(respostas)).toMatchObject({ 201: 3, 409: 2 });
-
-    const depois = await api.get<{ qty: number; disponivel: number }>(`/api/accessories/${item.id}`);
-    // NUNCA negativo: é isso que a trava compra. Sem ela, as cinco passariam e
-    // o disponível ficaria em −2.
-    expect(depois.body).toMatchObject({ qty: 3, disponivel: 0 });
+    expect(placar(respostas)[201]).toBe(3);
+    expect(placar(respostas)[409]).toBe(2);
+    expect(await abertas(cabo.id)).toBe(3);
   });
 });
 
-describe('consumos simultâneos do mesmo consumível', () => {
-  it('não deixa consumir mais do que existe', async () => {
-    const item = await criarItemDeEstoque(api, 'consumables', {
-      name: 'Resma da corrida', categoryId: cenario.categoriaConsumivelId, qty: 10,
-    });
+describe('BAIXA concorrente com SAÍDA, no mesmo item de UMA unidade', () => {
+  it('deixa passar exatamente UMA, e o estado final bate com quem venceu', async () => {
+    // As duas travam a MESMA linha do item antes de contar (`travarItemOuFalhar`
+    // em `adjust-stock` e em `checkout-stock`), então o Postgres serializa: uma
+    // das duas vê o estado DEPOIS da outra. Não importa qual vence — a baixa de
+    // 1 com a unidade já fora, ou a saída de um item já baixado a zero — o que
+    // não pode acontecer é as DUAS passarem.
+    const dock = await criarItemDeEstoque(api, { name: 'Dock da corrida baixa×saída', categoryId: cenario.categoriaEstoqueId, qty: 1 });
 
-    // Quatro pedidos de 3 unidades em 10: cabem três, o quarto não.
-    const respostas = await Promise.all(
-      Array.from({ length: 4 }, () =>
-        api.post(`/api/consumables/${item.id}/consume`, { userId: cenario.ana, qty: 3 })),
-    );
+    const baixar = () => api.post(`/api/stock/items/${dock.id}/adjust`, { kind: 'BAIXA', qty: 1 });
+    const [baixa, saida] = await Promise.all([baixar(), sair(dock.id)]);
 
-    expect(placar(respostas)).toMatchObject({ 201: 3, 409: 1 });
+    const sucessos = [baixa.status === 201, saida.status === 201].filter(Boolean).length;
+    expect(sucessos).toBe(1);
+    expect([baixa.status, saida.status].filter((s) => s !== 201)).toEqual([409]);
 
-    const somado = await prisma.consumableCheckout.aggregate({
-      where: { consumableId: item.id },
-      _sum: { qty: true },
-    });
-    expect(somado._sum.qty).toBe(9);
-  });
-});
-
-describe('instalações simultâneas do mesmo componente', () => {
-  it('não deixa instalar mais unidades do que há em estoque', async () => {
-    const item = await criarItemDeEstoque(api, 'components', {
-      name: 'RAM da corrida', categoryId: cenario.categoriaComponenteId, qty: 4,
-    });
-
-    const respostas = await Promise.all([
-      api.post(`/api/components/${item.id}/attach`, { assetId: cenario.ativo.id, qty: 3 }),
-      api.post(`/api/components/${item.id}/attach`, { assetId: cenario.ativo.id, qty: 3 }),
-    ]);
-
-    expect(placar(respostas)).toMatchObject({ 201: 1, 409: 1 });
-
-    const instalado = await prisma.componentAsset.aggregate({
-      where: { componentId: item.id, detachedAt: null },
-      _sum: { assignedQty: true },
-    });
-    expect(instalado._sum.assignedQty).toBe(3);
+    const item = await prisma.stockItem.findUniqueOrThrow({ where: { id: dock.id }, select: { qty: true } });
+    const fora = await abertas(dock.id);
+    if (baixa.status === 201) {
+      // A baixa venceu: o item foi a zero antes de a saída contar, e ela viu
+      // "0 de 0 fora" — sem unidade.
+      expect(item.qty).toBe(0);
+      expect(fora).toBe(0);
+    } else {
+      // A saída venceu: a unidade saiu, e a baixa viu "1 de 1 fora" — abaixo
+      // do que está fora.
+      expect(item.qty).toBe(1);
+      expect(fora).toBe(1);
+    }
   });
 });
 
 describe('devolver a mesma unidade duas vezes ao mesmo tempo', () => {
   it('fecha UMA vez — e o carimbo de devolução não é reescrito', async () => {
-    // Aqui não há `FOR UPDATE`: quem serializa é o `checkedInAt: null` no WHERE
-    // do `updateMany`, aplicado pelo Postgres na hora do UPDATE. A segunda
-    // transação afeta zero linhas e recebe o 409.
-    const item = await criarItemDeEstoque(api, 'accessories', {
-      name: 'Mouse da dupla devolução', categoryId: cenario.categoriaAcessorioId, qty: 1,
-    });
-    const entrega = await api.post<{ id: string }>(`/api/accessories/${item.id}/checkout`, {
-      targetType: 'USER', targetUserId: cenario.laura,
-    });
+    const teclado = await criarItemDeEstoque(api, { name: 'Teclado devolvido duas vezes', categoryId: cenario.categoriaEstoqueId, qty: 1 });
+    const saida = await sair(teclado.id);
+    const unidade = saida.body.unidades[0].id;
 
-    const respostas = await Promise.all([
-      api.post(`/api/accessories/checkouts/${entrega.body.id}/checkin`, { notes: 'primeira' }),
-      api.post(`/api/accessories/checkouts/${entrega.body.id}/checkin`, { notes: 'segunda' }),
-    ]);
+    const devolver = () => api.post<{ returnedAt: string }>(`/api/stock/movements/${unidade}/checkin`, {});
+    const respostas = await Promise.all([devolver(), devolver()]);
 
-    expect(placar(respostas)).toMatchObject({ 200: 1, 409: 1 });
+    // Sem lock e sem janela: o `updateMany` com `returnedAt: null` no WHERE
+    // afeta zero linhas na segunda transação, e ela recebe o 409.
+    expect(placar(respostas)[200]).toBe(1);
+    expect(placar(respostas)[409]).toBe(1);
 
-    const linha = await prisma.accessoryCheckout.findUniqueOrThrow({
-      where: { id: entrega.body.id },
-      select: { checkinNotes: true },
-    });
-    // A nota da perdedora NÃO sobrescreveu a da vencedora.
-    expect(['primeira', 'segunda']).toContain(linha.checkinNotes);
-  });
-});
-
-describe('desligar e entregar acessório ao mesmo tempo', () => {
-  it('não deixa o desligado terminar com unidade na mão', async () => {
-    // A corrida mais cara da integração com a F4: o `offboard` lê as entregas
-    // abertas e as fecha; uma entrega que entre DEPOIS dessa leitura e ANTES do
-    // commit deixaria o desligado responsável por uma unidade — e o 409 do
-    // DELETE passaria a travar o cadastro para sempre. Quem fecha isso é a
-    // ordem de travamento: usuário ANTES do item.
-    const pessoa = await api.post<{ id: string }>('/api/users', {
-      name: 'Quem sai na corrida', email: 'corrida-estoque@teste.local',
-    });
-    const item = await criarItemDeEstoque(api, 'accessories', {
-      name: 'Mouse do desligamento', categoryId: cenario.categoriaAcessorioId, qty: 5,
-    });
-
-    const [entrega, desligamento] = await Promise.all([
-      api.post(`/api/accessories/${item.id}/checkout`, {
-        targetType: 'USER', targetUserId: pessoa.body.id,
-      }),
-      api.post(`/api/users/${pessoa.body.id}/offboard`, { notes: 'corrida' }),
-    ]);
-
-    // Qualquer uma pode ganhar — o que NÃO pode é o estado final ter as duas
-    // coisas verdadeiras.
-    expect([201, 409]).toContain(entrega.status);
-    expect([200, 409]).toContain(desligamento.status);
-
-    const desligada = await prisma.user.findFirstOrThrow({
-      where: { id: pessoa.body.id }, select: { terminatedAt: true },
-    });
-
-    if (desligada.terminatedAt) {
-      const abertas = await prisma.accessoryCheckout.count({
-        where: { targetType: 'USER', targetUserId: pessoa.body.id, checkedInAt: null },
-      });
-      expect(abertas).toBe(0);
-    }
+    const vencedora = respostas.find((r) => r.status === 200)!;
+    const linha = await prisma.stockMovement.findUniqueOrThrow({ where: { id: unidade }, select: { returnedAt: true } });
+    expect(linha.returnedAt?.toISOString()).toBe(vencedora.body.returnedAt);
   });
 });

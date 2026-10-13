@@ -2,14 +2,12 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import AppHeader from './pages/components/AppHeader';
 import AppSidebar from './pages/components/AppSidebar';
-import TelemetryPage from './pages/telemetria';
 import AtivosPage from './pages/ativos';
 import AssetDetailPage from './pages/ativos/detalhe';
 import PostosPage from './pages/postos';
 import EstoquePage from './pages/estoque';
 import LicencasPage from './pages/licencas';
 import DescobertasPage from './pages/descobertas';
-import RelatoriosPage from './pages/relatorios';
 import UsersPage from './pages/gestao-usuario';
 import UserDetailPage from './pages/gestao-usuario/detalhe';
 import ConfiguracoesPage from './pages/configuracoes';
@@ -21,7 +19,7 @@ import { useFormatoDoSistema } from './pages/hooks/useSistema';
  * `/itam/assets/:id` → `/ativos/:id`, preservando o id.
  *
  * Um `Navigate` com caminho literal não serve aqui: o id está na URL, e é ele
- * que o e-mail antigo carrega.
+ * que a URL antiga carrega.
  */
 function RedirecionarAtivo() {
   const { id } = useParams<{ id: string }>();
@@ -58,27 +56,34 @@ function Layout() {
 
         <main className="min-w-0 flex-1 overflow-x-clip p-4 md:p-8">
           <Routes>
-            <Route path="/" element={<TelemetryPage />} />
+            {/* A RAIZ LEVA AOS ATIVOS, e isso é o fim de uma tela.
+                `/` era a telemetria: a frota em cards, que ninguém abria para
+                perguntar nada — ela sabia a medida da máquina e não sabia de quem
+                a máquina é. A telemetria foi para a ficha do ativo e a do posto, e
+                a raiz passou a levar para a tela que se usa de verdade, que é a
+                lista de ATIVOS. `replace` para que o botão de voltar não jogue a
+                pessoa de volta na raiz, num pingue-pongue. */}
+            <Route path="/" element={<Navigate to="/ativos" replace />} />
             <Route path="/ativos" element={<AtivosPage />} />
             {/* A tela do ativo. Rota própria, e não modal: é uma URL que se cola
                 no chamado, se abre em outra aba e se guarda nos favoritos. */}
             <Route path="/ativos/:id" element={<AssetDetailPage />} />
             {/* AS ROTAS ANTIGAS, redirecionando. `/itam` era o nome da tela até a
                 F6; ele saiu porque "ITAM" é o nome do ASSUNTO do sistema inteiro,
-                não desta tela — que lista ATIVOS, como /estoque lista estoque e
-                /licencas lista licenças. O redirecionamento fica porque a URL
-                antiga JÁ SAIU daqui: todo e-mail de entrega e de atraso enviado
-                antes desta troca leva `/itam/assets/:id`
-                (`assignment/helpers/notificacao.helper.ts`, que agora emite o
-                caminho novo), e quem clicar num e-mail de mês passado tem que
+                não desta tela — que lista ATIVOS, como /licencas lista licenças.
+                O redirecionamento fica porque quem colar uma URL antiga tem que
                 chegar na tela, não num 404. */}
             <Route path="/itam" element={<Navigate to="/ativos" replace />} />
             <Route path="/itam/assets/:id" element={<RedirecionarAtivo />} />
             <Route path="/postos" element={<PostosPage />} />
-            {/* O que tem QUANTIDADE: acessório, consumível, componente (F5).
-                Rota irmã de /ativos, e não uma aba dentro dela: um mouse não é um
-                ativo, e misturar os dois na mesma tabela daria metade das células
-                vazias (não há etiqueta nem série a mostrar). */}
+            {/* A FICHA DO POSTO É ROTA, e é a mesma tela: a listagem fica atrás
+                da janela. É destino de link porque a busca por etiqueta larga
+                aqui quem bipou o computador de uma mesa — ele saiu de /ativos. */}
+            <Route path="/postos/:id" element={<PostosPage />} />
+            {/* O ESTOQUE: monitor, teclado, mouse, cabo — o que tem
+                quantidade e não patrimônio (docs/decisoes/estoque.md). Perto
+                de Postos porque a saída pode ir para uma mesa, e perto de
+                Licenças porque as duas são posse consumida em unidade. */}
             <Route path="/estoque" element={<EstoquePage />} />
             <Route path="/licencas" element={<LicencasPage />} />
             {/* O QUE O AGENTE VÊ E O CADASTRO NÃO SABE (F7). A rota leva o nome
@@ -86,9 +91,8 @@ function Layout() {
                 por trás: `/reconciliacao` seria o mesmo erro que `/itam` foi até
                 a F6, nomear a tela pelo assunto em vez de pelo conteúdo. */}
             <Route path="/descobertas" element={<DescobertasPage />} />
-            <Route path="/relatorios" element={<RelatoriosPage />} />
             <Route path="/users" element={<UsersPage />} />
-            {/* Perfil do colaborador: os dois baldes de posse e o desligamento
+            {/* Perfil do colaborador: os dois baldes de posse
                 (docs/referencia/modelo-de-posse.md, Camada 3). Depois de `/users` porque o
                 react-router escolhe a rota MAIS específica, não a primeira — a
                 ordem aqui é para quem lê. */}
@@ -141,11 +145,6 @@ export default function App() {
       <Routes>
         {/* Já logado em /login: volta para o painel, em vez de mostrar um
             formulário que não tem o que fazer. */}
-        {/* O TERMO DE ENTREGA vive FORA do `Layout` e antes da checagem de
-            sessão: quem o abre veio de um e-mail e pode não ter conta nenhuma —
-            no alvo LOCATION quem assina é o gestor da localidade (D27). Mandá-lo
-            para o login seria fechar a porta justamente no caso que a página
-            existe para cobrir. Quem autoriza é o token na URL. */}
         <Route path="/login" element={usuario ? <Navigate to="/" replace /> : <LoginPage />} />
         <Route path="/*" element={usuario ? <Layout /> : <Navigate to="/login" replace />} />
       </Routes>

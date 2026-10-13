@@ -1,6 +1,6 @@
-import type { EntregaDeAcessorio } from './stock.types';
 import type { Asset, Referencia } from './asset.types';
 import type { LocationOccupant, PessoaRef } from './posse.types';
+import type { UnidadeDeEstoque } from './stock.types';
 
 // Contrato do POSTO DE TRABALHO com a API — `GET /api/workstations`.
 //
@@ -62,6 +62,24 @@ export interface Posto {
 }
 
 /**
+ * O ativo como a FICHA DO POSTO o recebe: o contrato de ativo mais a máquina.
+ *
+ * O campo a mais existe porque esta tela mostra a telemetria do computador da
+ * mesa, e para isso precisa saber se o ativo da mesa tem máquina vinculada e
+ * qual máquina consultar. Ele NÃO está no `Asset` compartilhado de propósito:
+ * `endpointId` sairia em toda listagem, em toda criação e em toda edição de
+ * ativo, e ali ninguém o usa — `GET /api/workstations/:id` é a única rota que o
+ * manda DENTRO de um objeto de ativo
+ * (`server/domain/workstation/use-cases/get-workstation.usecase.ts`). A aba
+ * Máquina também conhece um `endpointId`, mas por fora do ativo, em
+ * `GET /api/assets/:id/machine`.
+ */
+export interface AtivoDoPosto extends Asset {
+  /** `null` quando o agente ainda não foi vinculado ao ativo. */
+  endpointId: string | null;
+}
+
+/**
  * O posto aberto — `GET /api/workstations/:id`.
  *
  * `ocupantes` aqui é a ocupação completa (`LocationOccupant`), com período e
@@ -72,15 +90,8 @@ export interface PostoDetalhe extends Omit<Posto, 'ocupantes'> {
   manager: Referencia | null;
   ocupantes: LocationOccupant[];
   /** Os ativos entregues ao posto — posse ABERTA com alvo LOCATION. */
-  ativos: Asset[];
-  /**
-   * Os ACESSÓRIOS entregues ao posto (F5) — uma linha por UNIDADE.
-   *
-   * Lista própria, e não somada aos ativos: um acessório não tem etiqueta nem
-   * série, e a tabela de ativos mostra as duas. Misturá-los daria uma tabela
-   * com metade das células vazias e faria "quantos ativos tem esta mesa?"
-   * responder um número que inclui mouse.
-   */
-  acessorios: EntregaDeAcessorio[];
-  totalAcessorios: number;
+  ativos: AtivoDoPosto[];
+  /** As unidades de estoque na mesa — saídas ABERTAS com alvo LOCATION, uma por unidade. */
+  itens: UnidadeDeEstoque[];
+  totalItens: number;
 }

@@ -48,6 +48,13 @@ async function criarUsuarioComAcesso(sufixo: string) {
   });
   expect(criado.status).toBe(201);
 
+  // `TECNICO`, e não o `USUARIO` que a coluna dá por padrão: o login recusa
+  // `USUARIO` com 403 (ele é o papel de quem RECEBE equipamento, não de quem
+  // opera o painel). Este arquivo é sobre SESSÃO — ele precisa de alguém que
+  // entre.
+  const promocao = await api.put(`/api/users/${criado.body.id}`, { role: 'TECNICO' });
+  expect(promocao.status).toBe(200);
+
   const username = `fulano.${sufixo}`;
   const password = 'senha-comprida-do-teste';
   const credencial = await api.post(`/api/users/${criado.body.id}/set-password`, { username, password });

@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../core/api/apiClient';
 import { assetKeys } from '../asset/asset.queries';
-import type { UserHoldings } from '../shared/asset.types';
+// Quem PERGUNTA importa; o dono do dado é quem responde (docs/referencia/arquitetura.md).
+// A posse precisa dizer ao posto que algo mudou nele, e a chave é do posto.
+import { workstationKeys } from '../workstation/workstation.queries';
 import type { AlvoDaPosse, Assignment } from '../shared/posse.types';
 
 // A POSSE — Camada 1 de docs/referencia/modelo-de-posse.md.
@@ -22,14 +24,13 @@ export const assignmentKeys = {
 /**
  * Corpo de `POST /api/assets/:id/checkout`.
  *
- * As três FKs são nuláveis e só UMA vale: qual, o `targetType` diz. A coerência
+ * As duas FKs são nuláveis e só UMA vale: qual, o `targetType` diz. A coerência
  * entre as duas coisas é validada no servidor (`assertAlvoCoerente`) — aqui o
  * formulário manda só a que corresponde à aba escolhida.
  */
 export interface CheckoutInput {
   targetType: AlvoDaPosse;
   targetUserId?: string;
-  targetAssetId?: string;
   targetLocationId?: string;
   /** Em branco, o servidor decide (a entrega força o ativo para "em uso"). */
   statusId?: string;
@@ -37,45 +38,16 @@ export interface CheckoutInput {
   checkoutNotes?: string;
 }
 
-/**
- * Corpo de `POST /api/assets/bulk-checkout` — o MESMO da entrega, mais a lista
- * de ativos. UM alvo para todos: é o kit de onboarding, não N entregas soltas.
- */
-export interface BulkCheckoutInput extends CheckoutInput {
-  assetIds: string[];
-}
-
-/** Uma entrega que deu certo, no relatório do lote. */
-export interface EntregaFeita {
-  assetId: string;
-  assetTag: string;
-  assignmentId: string;
-}
-
-/** Uma entrega recusada, com a frase que o servidor escreveu. */
-export interface EntregaRecusada {
-  assetId: string;
-  erro: string;
-}
-
-/**
- * O relatório de `bulk-checkout` (D31).
- *
- * A entrega em massa é POR LINHA: um kit de 8 em que 1 está com outra pessoa
- * entrega 7 e recusa 1, e é este objeto que conta a história. Não existe "deu
- * erro" aqui — existe o que entrou e o que foi recusado, com motivo.
- */
-export interface RelatorioEntregaEmLote {
-  total: number;
-  ok: EntregaFeita[];
-  falhas: EntregaRecusada[];
-}
-
 /** Corpo de `POST /api/assets/:id/checkin`. */
 export interface CheckinInput {
   /** Para que estado o ativo volta: estoque, conserto, inutilizável... */
   statusId?: string;
   checkinNotes?: string;
+  /**
+   * Só fecha a posse se ela aponta para esta localização (409 se não). A ficha
+   * do posto manda o id dela; a tela de Ativos, que olha a posse, não manda.
+   */
+  targetLocationId?: string;
 }
 
 /** O histórico de posse de um ativo: a aberta primeiro, depois as fechadas. */
@@ -88,53 +60,45 @@ export function useAssetAssignmentsQuery(assetId: string | null) {
   });
 }
 
-/** O que uma pessoa tem em posse: no nome dela e pelos postos que ela ocupa. */
-export function useUserHoldingsQuery(userId: string | null) {
-  return useQuery({
-    queryKey: assignmentKeys.doUsuario(userId ?? ''),
-    queryFn: async () =>
-      (await apiClient.get<UserHoldings>(`/users/${userId}/holdings`)).data,
-    enabled: userId != null,
-  });
+/**
+ * O QUE UMA ENTREGA OU UMA DEVOLUÇÃO MUDA NA TELA, num lugar só.
+ *
+ * Três domínios, e nenhum deles é opcional:
+ *
+ *   posses  — a linha que acabou de abrir ou fechar;
+ *   ativos  — a coluna Responsável e o status são consequência da operação, e
+ *             um ativo entregue a um posto SAI da listagem `/ativos`
+ *             (`asset-filters.helper.ts`), então a tabela muda de tamanho;
+ *   postos  — a ficha do posto lista os ativos entregues a ele, conta quantos
+ *             são e deriva o selo de POSTO VAGO desses dois números.
+ *
+ * O terceiro não estava aqui, e não dava para notar: até esta etapa nenhuma
+ * entrega ou devolução acontecia com uma tela de posto montada. A devolução
+ * passou a morar DENTRO da ficha do posto, e aí a tabela de ativos, o contador e
+ * o selo de vago estão todos na tela no instante em que a mutação volta — sem
+ * esta linha, a linha devolvida continuaria na tabela e o selo seria calculado
+ * sobre o número de antes.
+ *
+ * A entrega entra pelo mesmo caminho por simetria, e não por defeito observado:
+ * entregar é feito em `/ativos`, com `/postos` desmontada, e `staleTime: 0` já
+ * faz a ficha reler ao montar.
+ *
+ * É o mesmo desenho do `invalidarPosseDerivada` da ocupação, pelo mesmo motivo:
+ * posse é um fato que três telas leem de ângulos diferentes.
+ */
+function invalidarAlvosDaPosse(queryClient: ReturnType<typeof useQueryClient>) {
+  void queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
+  void queryClient.invalidateQueries({ queryKey: assetKeys.all });
+  void queryClient.invalidateQueries({ queryKey: workstationKeys.all });
 }
 
-/**
- * O MESMO, para quem está logado — a tela "Meus equipamentos" (F11, Etapa I).
- *
- * ROTA PRÓPRIA E CHAVE DE CACHE PRÓPRIA, em vez de `useUserHoldingsQuery(eu.id)`.
- * As duas razões:
- *
- * 1. **autorização.** `/api/users/:id/holdings` exige `users.view`, porque fala de
- *    outra pessoa. Um colaborador comum não tem essa chave e receberia 403 ao
- *    abrir a própria tela;
- *
- * 2. **cache.** Com a mesma chave, a resposta do administrador olhando a ficha da
- *    Laura e a da própria Laura olhando o portal dela ocupariam a MESMA entrada se
- *    os ids coincidissem — e a invalidação de uma mexeria na outra.
- */
-export function useMeusHoldingsQuery() {
-  return useQuery({
-    queryKey: assignmentKeys.minhas,
-    queryFn: async () => (await apiClient.get<UserHoldings>('/me/holdings')).data,
-  });
-}
-
-/**
- * Entregar.
- *
- * Invalida ativos TAMBÉM, e não só as posses: a coluna Responsável da listagem
- * e o status do ativo são consequência da entrega. Sem isto, a tabela continuaria
- * mostrando o dono anterior até o próximo refetch.
- */
+/** Entregar. */
 export function useCheckoutAsset() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: CheckoutInput }) =>
       apiClient.post(`/assets/${id}/checkout`, data),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
-      void queryClient.invalidateQueries({ queryKey: assetKeys.all });
-    },
+    onSuccess: () => invalidarAlvosDaPosse(queryClient),
   });
 }
 
@@ -144,32 +108,7 @@ export function useCheckinAsset() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: CheckinInput }) =>
       apiClient.post(`/assets/${id}/checkin`, data),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
-      void queryClient.invalidateQueries({ queryKey: assetKeys.all });
-    },
+    onSuccess: () => invalidarAlvosDaPosse(queryClient),
   });
 }
 
-/**
- * ENTREGAR EM MASSA — N ativos, um alvo, um relatório.
- *
- * A mutação NÃO rejeita quando parte das linhas falha: o servidor responde 200
- * com o relatório, e quem decide o que mostrar é a tela. Tratar recusa de linha
- * como erro de requisição jogaria fora a lista do que ENTROU — que é a metade
- * que o operador precisa para saber o que não refazer.
- *
- * Invalida posses e ativos pelo mesmo motivo da entrega avulsa: o responsável e
- * o status de N linhas da listagem mudaram de uma vez.
- */
-export function useBulkCheckout() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (data: BulkCheckoutInput) =>
-      (await apiClient.post<RelatorioEntregaEmLote>('/assets/bulk-checkout', data)).data,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
-      void queryClient.invalidateQueries({ queryKey: assetKeys.all });
-    },
-  });
-}

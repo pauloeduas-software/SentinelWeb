@@ -22,12 +22,18 @@ export class ReconciliationMaestro {
     server.get('/api/reconciliation/suggestions', reconciliationController.listSuggestions);
     server.get('/api/reconciliation/coverage', reconciliationController.coverage);
 
+    // RECONCILIAR AGORA. O job roda de hora em hora e toma a janela da hora;
+    // quem acabou de cadastrar o ativo e quer ver a sugestão nascer não deveria
+    // esperar a hora virar nem reiniciar o servidor. É `ADMIN`, e é uma por
+    // vez (409 com outra em andamento). Teto de escrita: varredura é cara.
+    server.post('/api/reconciliation/run', WRITE_RATE_LIMIT, reconciliationController.runNow);
+
     // OCIOSOS. Rota da reconciliação e não do ativo porque a resposta depende
     // dos dois lados: o uso vem da telemetria, o `postoVago` vem da posse.
     server.get('/api/reconciliation/idle', reconciliationController.idle);
 
-    // ACEITAR é a escrita mais pesada do sistema: ela pode abrir posse, mover
-    // ativo entre camadas do modelo e criar ocupação. Teto de destrutiva.
+    // ACEITAR afirma que esta máquina é aquele patrimônio, e o vínculo é
+    // `@unique`: errar aqui exige o `DELETE` para corrigir. Teto de destrutiva.
     server.post(
       '/api/reconciliation/suggestions/:id/accept',
       DESTRUCTIVE_RATE_LIMIT,
@@ -48,32 +54,26 @@ export class ReconciliationMaestro {
     server.post('/api/endpoints/:id/link', DESTRUCTIVE_RATE_LIMIT, reconciliationController.link);
     server.delete('/api/endpoints/:id/link', DESTRUCTIVE_RATE_LIMIT, reconciliationController.unlink);
 
-    server.patch('/api/endpoints/:id/review', WRITE_RATE_LIMIT, reconciliationController.review);
+    // VINCULAR E ENTREGAR AO POSTO numa operação — o cadastro do computador
+    // novo de ponta a ponta, a partir de `/descobertas`. Rota própria e não um
+    // campo a mais no `link`: o corpo do vínculo é UMA afirmação (esta máquina
+    // é aquele ativo), e a entrega é outra operação, com outra guarda e outro
+    // histórico. Teto de destrutiva pelo mesmo motivo do `link`.
+    server.post(
+      '/api/endpoints/:id/link-and-checkout',
+      DESTRUCTIVE_RATE_LIMIT,
+      reconciliationController.linkAndCheckout,
+    );
 
-    // A FUSÃO. `:id` é a máquina que DESAPARECE da listagem, e o corpo diz em
-    // quem ela é absorvida — a URL descreve quem some, que é o que a operação
-    // faz de irreversível.
-    server.post('/api/endpoints/:id/merge', DESTRUCTIVE_RATE_LIMIT, reconciliationController.merge);
+    server.patch('/api/endpoints/:id/review', WRITE_RATE_LIMIT, reconciliationController.review);
 
     // A ABA MÁQUINA. Pendura em `/api/assets/:id` como as rotas de ocupação
     // fazem com `/api/locations`: a pergunta "o que é esta máquina" é do ativo,
     // mas a resposta só existe porque os dois lados se falam.
     //
-    // `/machine` e não `/software`, corrigindo o nome do plano: ela devolve
-    // especificação, último contato, mudança de hardware detectada E a lista de
-    // programas. Com quatro conteúdos, `software` nomeava um quarto da resposta.
+    // `/machine` e não o nome de um dos conteúdos: ela devolve especificação
+    // coletada, os dois últimos contatos e a mudança de hardware detectada.
     server.get('/api/assets/:id/machine', reconciliationController.assetMachine);
-
-    // SOFTWARE E CONFORMIDADE (Etapa G).
-    //
-    // O CATÁLOGO DE PACOTES é o que faltava para a ponte do D102 ter porta de
-    // entrada: sem ele, `PUT /api/licenses/:id/software` existia e nenhuma tela
-    // tinha de onde tirar um `packageId`, então `LicenseSoftware` nunca recebia
-    // linha e a conformidade respondia `semVinculoDeSoftware` para sempre.
-    server.get('/api/software-packages', reconciliationController.softwarePackages);
-    server.get('/api/licenses/:id/compliance', reconciliationController.licenseCompliance);
-    server.get('/api/licenses/:id/software', reconciliationController.licenseSoftware);
-    server.put('/api/licenses/:id/software', WRITE_RATE_LIMIT, reconciliationController.setLicenseSoftware);
 
     logger.info('[Maestro] Rotas de Reconciliação (RMM × ITAM) inicializadas.');
   }

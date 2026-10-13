@@ -91,9 +91,6 @@ export const ACOES_DA_LICENCA: Record<string, string> = {
  * `parseListQuery` recebendo a allowlist: um mapa global traduziria `name` para
  * todas as tabelas e erraria no primeiro homônimo.
  *
- * `hasProductKey` e `productKeyTrocada` são o que o histórico sabe sobre a
- * chave, e é tudo o que ele PODE saber: `productKey` está fora de
- * `LICENSE_AUDITED` justamente para o diff não publicar o segredo (D42).
  */
 export const ROTULOS_DA_LICENCA: Record<string, string> = {
   name: 'Nome',
@@ -107,14 +104,10 @@ export const ROTULOS_DA_LICENCA: Record<string, string> = {
   licensedToEmail: 'E-mail do licenciado',
   categoryId: 'Categoria',
   manufacturerId: 'Fabricante',
-  supplierId: 'Fornecedor',
   orderNumber: 'Pedido',
   purchaseDate: 'Data da compra',
   purchaseCost: 'Valor da compra',
   notes: 'Notas',
-
-  hasProductKey: 'Chave cadastrada',
-  productKeyTrocada: 'Chave substituída',
 
   seatNumber: 'Assento',
   seatId: 'Assento (id)',

@@ -35,7 +35,7 @@ export type ClienteLicenca = Omit<typeof prisma, `$${string}`>;
  * Estrutural, e não `PrismaClient`, porque quem chama é sempre o `tx` de dentro
  * de uma `$transaction` — fora dela o `FOR UPDATE` é liberado no fim da própria
  * instrução e não protege nada. Mesmo contrato do `ClienteQueTrava` do
- * `user/use-cases/lock-user.usecase.ts` e do `stock-balance.helper.ts`.
+ * `user/use-cases/lock-user.usecase.ts`.
  */
 export interface ClienteQueTrava {
   $queryRaw<T = unknown>(query: Prisma.Sql): Promise<T>;

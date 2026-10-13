@@ -60,7 +60,6 @@ export async function agregarUsoDosAtivos(dias = 3): Promise<number> {
     FROM "telemetries" t
     JOIN "endpoints" e ON e."id" = t."endpointId"
     WHERE e."assetId" IS NOT NULL
-      AND e."mergedIntoId" IS NULL
       AND t."timestamp" >= ${desde}
     GROUP BY e."assetId", (t."timestamp" AT TIME ZONE 'UTC')::date
     ON CONFLICT ("assetId", "day") DO UPDATE

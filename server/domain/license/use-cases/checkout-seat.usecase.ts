@@ -15,18 +15,13 @@ import type { CheckoutSeatData } from '../schemas/license.schema';
 // ═════════════════════════════════════════════════════════════════════════════
 // O ALVO É PESSOA **XOR** ATIVO — NUNCA UM POSTO (D39).
 //
-// A ausência de `assignedLocationId` é a decisão, e ela tem três argumentos:
+// A ausência de `assignedLocationId` é a decisão, e ela tem dois argumentos:
 //
 // 1. LICENÇA É CONSUMIDA POR UMA INSTALAÇÃO. O fornecedor licencia por
 //    dispositivo ou por usuário nomeado; não existe EULA que licencie um móvel.
 //    Quando o auditor pergunta onde o assento está, "na Mesa 1" não conta.
 //
-// 2. A F7 QUEBRARIA. A conformidade alimentada pelo software instalado é o join
-//    `LicenseSeat → Asset → Endpoint → SoftwareInstallation`. Um assento
-//    apontando para uma `Location` não tem caminho até uma instalação: seria um
-//    buraco exatamente no relatório que justifica o módulo.
-//
-// 3. O CASO DO POSTO COMPARTILHADO JÁ TEM RESPOSTA, E ELA É MAIS HONESTA. O
+// 2. O CASO DO POSTO COMPARTILHADO JÁ TEM RESPOSTA, E ELA É MAIS HONESTA. O
 //    desktop fixo da Mesa 1 é um `Asset`: o assento vai PARA O ATIVO, a
 //    `Assignment` daquele ativo aponta para a `Location`, e os responsáveis
 //    saem da Camada 2. E se a licença for por usuário nomeado, Laura e Ana
@@ -107,7 +102,7 @@ async function assertAlvoApto(
 
   // DESLIGADO é diferente de APAGADO (D32). 409 e não 404: a pessoa existe, o
   // estado dela é que recusa. Entregar a quem saiu reabriria, uma linha depois
-  // do desligamento, exatamente a pendência que o desligamento fechou.
+  // da desativação, exatamente a pendência que a desativação fechou.
   if (!pessoa.isActive) {
     throw new AppError(`${pessoa.name} está desligado(a) e não pode receber assento de licença.`, 409);
   }
@@ -129,9 +124,9 @@ export async function checkoutSeat(
     // transações que travam os mesmos dois recursos em ordens opostas travam
     // uma à outra, e o Postgres mata uma delas.
     //
-    // No alvo `USER` o motivo é o mesmo da F5: o `offboard` fecha os assentos
-    // desta pessoa, e sem a trava uma entrega simultânea nasceria DEPOIS da
-    // leitura dele — o desligado terminaria com assento na mão e nada acusaria.
+    // No alvo `USER` a trava protege a contagem que o `DELETE` do colaborador
+    // lê: sem ela, uma entrega simultânea nasceria depois da leitura e a pessoa
+    // seria apagada com assento na mão.
     if (alvo.tipo === 'USER') await travarUsuarioOuFalhar(tx, alvo.id);
     else await travarAtivoOuFalhar(tx, alvo.id);
 

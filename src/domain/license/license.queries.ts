@@ -4,7 +4,7 @@ import { assetKeys } from '../asset/asset.queries';
 import { userKeys } from '../user/user.queries';
 import type { ListEnvelope, ListParams } from '../shared/list.types';
 import type {
-  AlertasDeLicenca, AlvoDoAssento, AssentoDeLicenca, ChaveRevelada,
+  AlertasDeLicenca, AlvoDoAssento, AssentoDeLicenca,
   EntregaDeAssento, EventoDaLicenca, Licenca, LicencaDoAtivo, LicencaInput,
   ResultadoDaDevolucao,
 } from '../shared/license.types';
@@ -14,22 +14,6 @@ import type {
 // `['licenses']` é o prefixo, então invalidar depois de gravar alcança a
 // listagem, o detalhe, a grade de assentos e os alertas — que mudam a cada
 // entrega, sem ninguém ter tocado neles.
-
-/**
- * A URL do CSV das licenças (F10, Etapa C).
- *
- * `<a download>`, não query: ver `urlDoExportDeAtivos`. Nenhuma coluna é pedida
- * aqui — o conjunto padrão do servidor é o que uma planilha de conferência quer,
- * e a chave de produto NÃO está nele nem em nenhum outro: o arquivo é montado
- * pelo mesmo `paraResposta()` da listagem, que a remove (D133).
- */
-export function urlDoExportDeLicencas(params: { q?: string; view?: string }): string {
-  const busca = new URLSearchParams();
-  if (params.q) busca.set('q', params.q);
-  if (params.view) busca.set('view', params.view);
-
-  return `${apiClient.defaults.baseURL ?? ''}/licenses/export?${busca.toString()}`;
-}
 
 export const licenseKeys = {
   all: ['licenses'] as const,
@@ -108,8 +92,8 @@ export function useAssetLicensesQuery(assetId: string | null) {
  * O assento é POSSE (D93): entregá-lo a alguém muda o `holdings` daquela pessoa
  * e o 409 do `DELETE` dela; entregá-lo a uma máquina muda a aba Licenças do
  * ativo e o 409 do `DELETE` dele. Invalidar só `licenses` deixaria essas telas
- * mentindo até o próximo refetch — o mesmo raciocínio do
- * `invalidarEstoqueEPosse` da F5.
+ * mentindo até o próximo refetch: operação que atravessa domínios invalida os
+ * dois lados.
  */
 function invalidarLicencaEPosse(queryClient: ReturnType<typeof useQueryClient>) {
   void queryClient.invalidateQueries({ queryKey: licenseKeys.all });
@@ -172,27 +156,5 @@ export function useCheckinSeat() {
     mutationFn: ({ seatId, notes }: { seatId: string; notes?: string | null }) =>
       apiClient.post<ResultadoDaDevolucao>(`/licenses/seats/${seatId}/checkin`, { notes }),
     onSuccess: () => invalidarLicencaEPosse(queryClient),
-  });
-}
-
-/**
- * REVELAR A CHAVE — `useMutation` num GET, e é de propósito.
- *
- * `useQuery` cacheia e refaz a busca sozinho: a chave ficaria no cache do
- * TanStack, e cada refetch automático gravaria mais um `VIEW_KEY` no
- * `ActivityLog` — a trilha de "quem viu o segredo" encheria de leituras que
- * ninguém pediu, e a única pergunta que ela existe para responder ficaria
- * afogada.
- *
- * Como mutação, ela só dispara no clique, não é cacheada, e o componente que a
- * chama guarda o valor em `useState` — que some quando o modal fecha.
- */
-export function useRevealProductKey() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (licenseId: string) =>
-      (await apiClient.get<ChaveRevelada>(`/licenses/${licenseId}/product-key`)).data,
-    // A trilha ganhou uma linha `VIEW_KEY`: a aba Histórico precisa saber.
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: licenseKeys.all }),
   });
 }

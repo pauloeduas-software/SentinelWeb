@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import ReferenceSelect from '../../components/ReferenceSelect';
 import type { User } from '../../../domain/shared/user.types';
 import type { UserInput } from '../../../domain/user/user.queries';
 
-// O FORMULÁRIO DE CADASTRO — nome, e-mail, departamento e gestor.
+// O FORMULÁRIO DE CADASTRO — nome, e-mail e papel.
 //
 // ═══════════════════════════════════════════════════════════════════════════
 // POR QUE A IDENTIDADE (matrícula, cargo, telefone, endereço, admissão) NÃO
@@ -32,13 +31,12 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
-    // O ID, não o nome: o departamento virou entidade na F11 (D75). `''` é o
-    // "nenhum" do `<select>`, convertido para `null` na submissão.
-    departmentId: user?.department?.id || '',
-    managerId: user?.managerId || '',
     // O PAPEL (D148). Conta nova nasce `USUARIO`, que é o `@default` da coluna —
     // a porta fechada por padrão da F3 levada à autorização.
     role: user?.role || 'USUARIO',
+    // O VÍNCULO COM A EMPRESA. Só editável na edição: criar alguém já inativo
+    // não é operação que exista.
+    isActive: user?.isActive ?? true,
   });
 
   const [loading, setLoading] = useState(false);
@@ -50,15 +48,13 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
     setError('');
 
     try {
-      // `'' → null`: o `<select>` sem escolha manda string vazia, e o zod do
-      // servidor espera uuid ou nulo. É a mesma conversão que o
-      // `ReferenceSelect` documenta para `parentId`/`managerId`.
       await onSubmit({
         name: formData.name,
         email: formData.email,
-        departmentId: formData.departmentId || null,
-        managerId: formData.managerId || null,
         role: formData.role,
+        // `isActive` só na EDIÇÃO: o `strictObject` do create recusa o campo, e
+        // recusar é o certo — quem nasce, nasce ativo.
+        ...(user ? { isActive: formData.isActive } : {}),
       });
     } catch (err) {
       setError((err as Error).message);
@@ -93,19 +89,6 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
           </div>
 
           <div className="space-y-1">
-            <label className="text-text-secondary uppercase tracking-widest text-[10px]">Departamento</label>
-            {/* `ReferenceSelect` e não um campo de texto: departamento é
-                entidade desde a F11 (D75), e texto livre é o que produziu
-                `Comercial`, `comercial ` e `COMERCIAL` como três coisas na base
-                que o backfill da migração teve de revisar à mão. */}
-            <ReferenceSelect
-              rota="departments"
-              valor={formData.departmentId}
-              onChange={(valor) => setFormData({ ...formData, departmentId: valor })}
-            />
-          </div>
-
-          <div className="space-y-1">
             <label htmlFor="role" className="text-text-secondary uppercase tracking-widest text-[10px]">Papel</label>
             {/* `<select>` nativo e não `ReferenceSelect`: os três valores vêm do
                 CÓDIGO (o enum `Papel`), não de uma tabela — não há rota de opções
@@ -127,17 +110,30 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
             </select>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-text-secondary uppercase tracking-widest text-[10px]">Gestor</label>
-            {/* QUEM COBRA a pessoa — nunca quem responde pelo ativo dela (D72).
-                `excluirId` para ninguém ser gestor de si mesmo. */}
-            <ReferenceSelect
-              rota="users"
-              valor={formData.managerId}
-              excluirId={user?.id}
-              onChange={(valor) => setFormData({ ...formData, managerId: valor })}
-            />
-          </div>
+          {/* O VÍNCULO COM A EMPRESA — só na edição.
+              Desativar NÃO é apagar: o cadastro fica, com o histórico de posse
+              inteiro. O que ele impede é entrega nova (o checkout de ativo e o
+              de assento recusam com 409) e sessão: a releitura derruba quem foi
+              desativado na requisição seguinte. */}
+          {user && (
+            <label className="flex items-start gap-3 cursor-pointer pt-2">
+              <input
+                type="checkbox"
+                checked={formData.isActive}
+                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                className="accent-status-success w-4 h-4 mt-0.5"
+              />
+              <span className="space-y-1">
+                <span className="block text-text-secondary uppercase tracking-widest text-[10px]">
+                  Ativo na empresa
+                </span>
+                <span className="block text-text-tertiary text-[10px] leading-relaxed">
+                  Desmarcado, a pessoa continua no cadastro e no histórico, mas não recebe
+                  equipamento novo nem entra no sistema. Devolva o que está no nome dela antes.
+                </span>
+              </span>
+            </label>
+          )}
 
           <div className="pt-4 flex justify-end gap-3 border-t border-border-sutil">
             <button type="button" onClick={onClose} className="px-4 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base transition-colors">

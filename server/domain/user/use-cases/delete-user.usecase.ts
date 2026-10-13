@@ -25,9 +25,9 @@ import { travarUsuarioOuFalhar } from './lock-user.usecase';
  * janela entre a contagem e o `UPDATE` em que uma entrega nova passaria — e o
  * ativo terminaria no nome de um cadastro na lixeira.
  *
- * A saída que o 409 ensina é o DESLIGAMENTO (`POST /api/users/:id/offboard`),
- * não um `DELETE` com força: são coisas diferentes. Desligar fecha as duas
- * camadas e preserva o histórico; a lixeira é para cadastro criado errado.
+ * A saída que o 409 ensina é DEVOLVER o que está com a pessoa e ENCERRAR as
+ * ocupações dela, não um `DELETE` com força: são coisas diferentes. Fechar a
+ * posse preserva o histórico; a lixeira é para cadastro criado errado.
  */
 export async function deleteUser(id: string, actorId: string | null): Promise<void> {
   await prisma.$transaction(async (tx) => {
@@ -44,14 +44,11 @@ export async function deleteUser(id: string, actorId: string | null): Promise<vo
     const motivo = motivoParaNaoExcluir(posse);
     if (motivo) {
       // TODAS as pontas também nos `details`, além da frase: a tela precisa
-      // decidir se abre o modal de desligamento (há o que fechar) sem reparsear
-      // a mensagem em português. `assentosEmPosse` entrou com a F6 — sem ele,
-      // quem só ocupa assento de licença recebia um 409 com todos os números em
-      // zero, e a tela concluía que não havia nada a desligar.
+      // saber O QUE está aberto sem reparsear a mensagem em português.
       throw new AppError(motivo, 409, {
         ativosEmPosse: posse.ativosEmPosse,
-        acessoriosEmPosse: posse.acessoriosEmPosse,
         assentosEmPosse: posse.assentosEmPosse,
+        itensEmPosse: posse.itensEmPosse,
         postosOcupados: posse.postosOcupados,
       });
     }

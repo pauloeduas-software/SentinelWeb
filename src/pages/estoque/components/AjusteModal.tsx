@@ -1,21 +1,12 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
-import { MOTIVOS_DO_AJUSTE } from '../helpers/estoque.helper';
-import type { AjusteInput } from '../../../domain/stock/stock.queries';
-import type { ItemDeEstoque, MotivoDoAjuste } from '../../../domain/shared/stock.types';
+import { PackageMinus, PackagePlus, X } from 'lucide-react';
+import type { AjustarEstoqueInput, ItemDeEstoque } from '../../../domain/shared/stock.types';
 
-// O AJUSTE DE ESTOQUE — a única porta para a quantidade.
+// ENTRADA E BAIXA — a única porta para o total do item.
 //
-// ─────────────────────────────────────────────────────────────────────────────
-// O CAMPO É O DELTA, NÃO O VALOR FINAL. "A quantidade agora é 42" é
-// ler-e-depois-escrever com outro nome: duas recontagens simultâneas gravariam
-// números calculados a partir do mesmo estado antigo, e uma sumiria sem erro.
-// O delta vai para um `increment` que o Postgres resolve na linha travada.
-//
-// A tela mostra a CONTA ("5 → 15") para o operador não ter que fazê-la de
-// cabeça — que é o argumento a favor do valor final, atendido sem o defeito
-// dele.
-// ─────────────────────────────────────────────────────────────────────────────
+// `qty` É DELTA, não o valor final: "chegou nota com 10" ou "quebraram 2", não
+// "agora são 42". O servidor aplica `increment`/`decrement` dentro da trava da
+// linha (`server/domain/stock/use-cases/adjust-stock.usecase.ts`).
 
 const CLASSE_CAMPO =
   'w-full p-2 bg-bg-base border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors';
@@ -25,23 +16,15 @@ const ROTULO = 'text-text-secondary uppercase tracking-widest text-[10px]';
 interface AjusteModalProps {
   item: ItemDeEstoque;
   onClose: () => void;
-  onSubmit: (dados: AjusteInput) => Promise<void>;
+  onSubmit: (data: AjustarEstoqueInput) => Promise<void>;
 }
 
 export default function AjusteModal({ item, onClose, onSubmit }: AjusteModalProps) {
-  const [delta, setDelta] = useState('');
-  const [reason, setReason] = useState<MotivoDoAjuste>('COMPRA');
+  const [kind, setKind] = useState<'ENTRADA' | 'BAIXA'>('ENTRADA');
+  const [qty, setQty] = useState('1');
   const [notes, setNotes] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
-
-  const numero = Number(delta);
-  const valido = delta.trim() !== '' && Number.isInteger(numero) && numero !== 0;
-  const novaQty = item.qty + (valido ? numero : 0);
-  // O que o servidor recusa com 409: baixar abaixo do que já saiu deixaria o
-  // disponível negativo por decisão do sistema, e não por inconsistência de
-  // contagem. A tela avisa antes para a recusa não ser uma surpresa.
-  const abaixoDoQueSaiu = valido && novaQty < item.emUso;
 
   const enviar = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -49,8 +32,9 @@ export default function AjusteModal({ item, onClose, onSubmit }: AjusteModalProp
     setErro('');
 
     try {
-      await onSubmit({ delta: numero, reason, ...(notes.trim() ? { notes: notes.trim() } : {}) });
+      await onSubmit({ kind, qty: Number(qty) || 0, notes: notes.trim() || null });
     } catch (falha) {
+      // O 409 de baixa que deixaria o total abaixo do que está fora.
       setErro((falha as Error).message);
     } finally {
       setSalvando(false);
@@ -59,13 +43,13 @@ export default function AjusteModal({ item, onClose, onSubmit }: AjusteModalProp
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
-      <div className="relative w-full max-w-lg bg-surface-card border border-border-sutil shadow-2xl flex flex-col">
+      <div className="relative w-full max-w-md bg-surface-card border border-border-sutil shadow-2xl flex flex-col">
 
         <div className="flex items-center justify-between px-6 py-4 border-b border-border-sutil bg-bg-base/50">
           <div>
-            <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">Ajustar quantidade</h2>
+            <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">Entrada ou baixa</h2>
             <p className="font-mono text-[10px] text-text-tertiary mt-1">
-              {item.name} · {item.qty} cadastrada(s), {item.emUso} fora do estoque
+              {item.name} · {item.qty} no total, {item.disponivel} disponível
             </p>
           </div>
           <button onClick={onClose} className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
@@ -78,78 +62,47 @@ export default function AjusteModal({ item, onClose, onSubmit }: AjusteModalProp
             <div className="p-3 bg-status-danger/10 text-status-danger border border-status-danger/20">{erro}</div>
           )}
 
-          <div className="space-y-1">
-            <label className={ROTULO}>Quanto somar*</label>
+          <div className="flex border border-border-sutil w-fit">
+            {([['ENTRADA', 'Entrada', PackagePlus], ['BAIXA', 'Baixa', PackageMinus]] as const).map(([valor, rotulo, Icone]) => (
+              <button
+                key={valor}
+                type="button"
+                onClick={() => setKind(valor)}
+                className={`flex items-center gap-2 px-4 py-2 uppercase tracking-widest transition-colors ${
+                  kind === valor
+                    ? 'bg-text-primary text-bg-base'
+                    : 'text-text-tertiary hover:text-text-primary hover:bg-bg-base'
+                }`}
+              >
+                <Icone size={12} /> {rotulo}
+              </button>
+            ))}
+          </div>
+
+          <label className="space-y-1.5 block">
+            <span className={ROTULO}>Quantidade *</span>
             <input
-              required
-              type="number"
-              value={delta}
-              onChange={(event) => setDelta(event.target.value)}
-              placeholder="10 para entrada, -3 para baixa"
-              className={CLASSE_CAMPO}
+              required type="number" min={1} value={qty}
+              onChange={(e) => setQty(e.target.value)} className={CLASSE_CAMPO}
             />
-            {valido && (
-              <p className="text-text-secondary text-[10px] pt-1 tabular-nums">
-                {item.qty} → <span className="text-text-primary">{novaQty}</span>
-                {' '}· disponível ficaria em {novaQty - item.emUso}
-              </p>
-            )}
-          </div>
+            <span className="block text-[10px] text-text-tertiary leading-relaxed">
+              {kind === 'ENTRADA'
+                ? 'Chegou nota, ou recontagem para cima: soma ao total.'
+                : 'Quebrou, perdeu, ou recontagem para baixo: subtrai do total. Recusada se deixar o total abaixo do que está fora.'}
+            </span>
+          </label>
 
-          {abaixoDoQueSaiu && (
-            <div className="p-3 border border-status-danger/30 bg-status-danger/10 text-status-danger text-[10px] leading-relaxed">
-              {item.emUso} unidade(s) deste item estão fora do estoque. Baixar para {novaQty} vai
-              ser recusado — devolva o que está na rua antes.
-            </div>
-          )}
+          <label className="space-y-1.5 block">
+            <span className={ROTULO}>Observações</span>
+            <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={CLASSE_CAMPO} />
+          </label>
 
-          <div className="space-y-1">
-            <label className={ROTULO}>Motivo*</label>
-            <select
-              value={reason}
-              onChange={(event) => setReason(event.target.value as MotivoDoAjuste)}
-              className={CLASSE_CAMPO}
-            >
-              {MOTIVOS_DO_AJUSTE.map((motivo) => (
-                <option key={motivo.valor} value={motivo.valor}>{motivo.rotulo}</option>
-              ))}
-            </select>
-            <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">
-              O motivo é uma lista fechada de propósito: texto livre viraria "compra", "Compra" e
-              "comprado" na mesma coluna de relatório.
-            </p>
-          </div>
-
-          <div className="space-y-1">
-            <label className={ROTULO}>Observações</label>
-            <textarea
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="Ex: nota fiscal 1234"
-              className={`${CLASSE_CAMPO} h-16 resize-none`}
-            />
-          </div>
-
-          <p className="text-text-tertiary text-[10px] leading-relaxed">
-            Este ajuste vira uma linha no histórico de movimentação do item, com o motivo e quem
-            fez. Ele responde por que a quantidade mudou — não para onde a unidade foi, que já
-            está registrado em cada entrega.
-          </p>
-
-          <div className="pt-4 flex justify-end gap-3 border-t border-border-sutil">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base transition-colors"
-            >
+          <div className="flex justify-end gap-2 pt-1">
+            <button type="button" onClick={onClose} className="px-4 py-2 border border-border-sutil text-text-tertiary hover:text-text-primary uppercase tracking-widest transition-colors">
               Cancelar
             </button>
-            <button
-              type="submit"
-              disabled={salvando || !valido}
-              className="px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary transition-colors disabled:opacity-50"
-            >
-              {salvando ? 'Gravando...' : 'Ajustar'}
+            <button type="submit" disabled={salvando} className="px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary uppercase tracking-widest transition-colors disabled:opacity-50">
+              {salvando ? 'Salvando…' : 'Confirmar'}
             </button>
           </div>
         </form>

@@ -2,53 +2,42 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { buildChanges } from '../../shared/diff.helper';
-import { comSaldo, contarEmUsoDe } from '../helpers/stock-balance.helper';
-import type { StockKindSpec } from '../helpers/stock-kind.helper';
-import { assertReferenciasDoItem } from './assert-stock-references.usecase';
-import type { ItemComSaldo, ItemDeEstoque } from './list-stock.usecase';
+import { comSaldo, contarForaDe } from '../helpers/stock-balance.helper';
+import { STOCK_ITEM_SELECT } from '../helpers/stock-select.helper';
+import type { UpdateStockItemInput } from '../schemas/stock.schema';
+import { assertCategoriaDeEstoque, assertNomeLivre } from './create-stock-item.usecase';
 
-/**
- * A edição — tudo menos a quantidade.
- *
- * `data` chega já validado por um `strictObject` que NÃO declara `qty`
- * (`schemas/stock.schema.ts`), então não há nada a filtrar aqui: um corpo com
- * `qty` foi recusado com 422 antes de chegar. Escrever um `delete data.qty`
- * neste arquivo seria a segunda defesa que faz a primeira parecer opcional.
- */
-export async function updateStockItem(
-  spec: StockKindSpec,
-  id: string,
-  data: Record<string, unknown>,
-  actorId: string | null,
-): Promise<ItemComSaldo> {
-  const item = await prisma.$transaction(async (tx) => {
-    const delegate = spec.delegate(tx);
+// `qty` NÃO está aqui, e a ausência é a regra: quantidade muda por ENTRADA e
+// BAIXA (`adjust-stock.usecase.ts`), que deixam linha de movimento. A chave
+// nem existe no schema de edição — o `strictObject` devolve 422 sozinho.
+const CAMPOS_AUDITADOS = ['name', 'categoryId', 'notes'] as const;
 
-    const antes = await delegate.findFirst({ where: { id }, select: spec.select });
-    if (!antes) throw new AppError(`Nenhum ${spec.rotulo} com este identificador.`, 404);
+export async function updateStockItem(id: string, data: UpdateStockItemInput, actorId: string | null) {
+  return prisma.$transaction(async (tx) => {
+    const antes = await tx.stockItem.findFirst({ where: { id }, select: STOCK_ITEM_SELECT });
+    if (!antes) throw new AppError('Item de estoque não encontrado.', 404);
 
-    await assertReferenciasDoItem(tx, spec, data);
+    if (data.categoryId !== undefined) await assertCategoriaDeEstoque(tx, data.categoryId);
+    if (data.name !== undefined) await assertNomeLivre(tx, data.name, id);
 
-    const depois = await delegate.update({
+    const depois = await tx.stockItem.update({
       where: { id },
-      data: { ...data, updatedById: actorId },
-      select: spec.select,
-    }) as ItemDeEstoque;
+      data: {
+        name: data.name,
+        categoryId: data.categoryId,
+        notes: data.notes,
+        updatedById: actorId,
+      },
+      select: STOCK_ITEM_SELECT,
+    });
 
-    // Só o que REALMENTE mudou vai para o log: gravar o registro inteiro a cada
-    // edição transformaria o histórico em cópia da tabela.
-    const changes = buildChanges(antes, depois, spec.audited);
+    const changes = buildChanges(antes, depois, CAMPOS_AUDITADOS);
     if (Object.keys(changes).length > 0) {
-      await recordActivity(tx, {
-        entityType: spec.entityType,
-        entityId: id,
-        action: 'UPDATE',
-        changes,
-      }, actorId);
+      await recordActivity(tx, { entityType: 'StockItem', entityId: id, action: 'UPDATE', changes }, actorId);
     }
 
-    return depois;
+    // Com saldo, como toda leitura de item: a tela substitui a linha pela
+    // resposta e não pode perder o `disponivel` nessa troca.
+    return comSaldo(depois, await contarForaDe(tx, id));
   });
-
-  return comSaldo(item, await contarEmUsoDe(prisma, spec.kind, id));
 }

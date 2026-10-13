@@ -52,8 +52,8 @@ export const WORKSTATION_SELECT = {
  * mais: aqui os ativos vêm por inteiro, então o `_count` deles seria um segundo
  * número para o mesmo fato — e dois números para o mesmo fato divergem.
  *
- * `manager` só aparece no detalhe: é quem assina o termo de entrega de um posto
- * com duas pessoas (D27), informação de ficha, não de tabela.
+ * `manager` só aparece no detalhe: é quem atende quando o posto está vazio —
+ * informação de ficha, não de tabela.
  *
  * Os ocupantes reaproveitam o `OCCUPANT_SELECT` do domínio `occupancy` em vez
  * de repetir a lista — quem decide o que é público de uma ocupação continua

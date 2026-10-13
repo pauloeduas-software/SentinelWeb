@@ -46,8 +46,7 @@ server/
 ├── server.ts                    # O PROCESSO: valida env, checa banco, liga jobs, abre porta, morre limpo
 ├── app.ts                       # A APLICAÇÃO: buildApp() monta tudo e NÃO abre porta (é o que o teste usa)
 ├── core/                        # INFRAESTRUTURA. zero regra de negócio.
-│   ├── config/                  # load-env, env (validateEnv), cors, app-url (urlDoPainel)
-│   ├── crypto/                  # cipher (enc:v1:kid:…, D81), keyring (D91), canary (derruba o boot)
+│   ├── config/                  # load-env, env (validateEnv), cors
 │   ├── database/                # prismaClient, soft-delete.extension (acha a lixeira pelo DMMF)
 │   ├── errors/                  # app-error (AppError), error-handler, error-shape, zod-error
 │   ├── http/                    # require-auth (sessão), permission-guard (autorização + boot, D137),
@@ -55,10 +54,7 @@ server/
 │   ├── jobs/                    # claim-window — o CAS por linha de JobRun (D79)
 │   ├── lifecycle/               # health (readiness), shutdown (onShutdown)
 │   ├── logger/                  # logger (createLogger), sanitize, request-logger
-│   ├── mail/                    # mailer — sem SMTP, no-op que loga o que teria mandado (D86)
-│   ├── storage/                 # storage (os bytes, D83), mime (allowlist MIME → extensão)
-│   ├── time/                    # local-day — em que fuso é "hoje" (D123)
-│   └── webhook/                 # webhook, destino-seguro (allowlist de destino, D126)
+│   └── time/                    # local-day — em que fuso é "hoje" (D123)
 └── domain/<nome>/               # FATIA VERTICAL — sempre o mesmo esqueleto
     ├── <nome>.maestro.ts        # registra as rotas do domínio. Só rota.
     ├── controllers/             # só HTTP: lê a requisição, chama use-case, responde
@@ -75,40 +71,19 @@ server/
 | `agent` | Conversa WebSocket com o Agente Sentinel (C#). Só transporte. | — |
 | `endpoint` | Máquina descoberta pelo agente (lado RMM) + telemetria + comandos | `Endpoint`, `Telemetry` |
 | `asset` | Ativo do ITAM — o `Asset` do vocabulário do Snipe-IT | `Asset` |
-| `catalog` | As NOVE tabelas de catálogo, com UM CRUD genérico dirigido por spec | `Category`, `StatusLabel`, `Manufacturer`, `AssetModel`, `Supplier`, `Location`, `Depreciation`, `CustomField`, `CustomFieldset` |
-| `custom-field` | **Campos customizados**: o que a spec de catálogo não expressa — a composição de um conjunto (ordem e obrigatoriedade por vínculo), a resolução categoria × modelo, a validação de valor e a regra do preenchimento em massa | `CustomFieldsetField` |
-| `settings` | Configuração global: etiqueta automática, os botões da descoberta e os dez valores do ciclo de vida (limiares, hora e fuso) | `AppSetting` |
+| `catalog` | As CINCO tabelas de catálogo, com UM CRUD genérico dirigido por spec | `Category`, `StatusLabel`, `Manufacturer`, `AssetModel`, `Location` |
+| `settings` | Configuração global: etiqueta automática, os botões da descoberta e o formato de número, data e moeda | `AppSetting` |
 | `activity` | Trilha de auditoria, gravada na transação de quem a origina | `ActivityLog` |
 | `user` | Colaborador da empresa | `User` |
-| `assignment` | **Posse**: entrega e devolução de ativo, com alvo polimórfico (pessoa, posto ou outro ativo) e o histórico de quem teve o quê | `Assignment` |
+| `assignment` | **Posse**: entrega e devolução de ativo, com alvo polimórfico (pessoa ou posto) e o histórico de quem teve o quê | `Assignment` |
 | `occupancy` | **Ocupação do posto**: quem trabalha em qual localização, e em que turno | `LocationOccupant` |
-| `stock` | **Estoque**: os três tipos que têm QUANTIDADE, com saldo derivado e trava na linha-pai | `Accessory`, `AccessoryCheckout`, `Consumable`, `ConsumableCheckout`, `Component`, `ComponentAsset`, `StockLog` |
-| `license` | **Licenças**: o contrato e seus ASSENTOS materializados, com chave de produto cifrada em repouso | `License`, `LicenseSeat`, `LicenseSeatCheckout` |
-| `reconciliation` | **Convergência RMM × ITAM**: o vínculo entre a máquina descoberta e o ativo cadastrado, a fila de sugestões, o software normalizado e o uso agregado | `ReconciliationSuggestion`, `EndpointUserDaily`, `AssetChange`, `SoftwarePackage`, `SoftwareInstallation`, `LicenseSoftware`, `AssetUsageDaily` |
-| `maintenance` | **Histórico de serviço**: o que foi feito no ativo, por quem, quanto custou e se saiu na garantia | `Maintenance` |
-| `audit` | **Conferência física**: as três perguntas do modelo de posse, conferidas por POSTO e registradas por ATIVO | `Audit` |
-| `alert` | **Central de alertas**: os quatro sinais do ativo, persistidos antes de virarem mensagem, com o job diário | `Alert` |
-| `report` | **Leitura agregada** — quatro relatórios, e nenhum deles escreve | — |
-| `label` | **Etiquetas**: código de barras, QR e a folha em PDF (F10) | — |
-| `import` | **Importação CSV**: o mapeamento, o dry-run obrigatório e o relatório linha a linha (F10) | `Import`, `ImportRow` |
-| `backup` | **Backup do banco** pela interface, atrás de `BACKUP_ENABLED` (F10) | — |
-| `acceptance` | **Termo de entrega**: o EULA copiado, a assinatura e o PDF (F4) | `Acceptance` |
-| `attachment` | **Anexo e imagem**: o arquivo, onde ele mora e quem pode baixá-lo (F2) | `Attachment` |
-| `access` | **Autorização e identidade** (F11): grupos e permissão efetiva, o catálogo de chaves, o departamento como entidade, a sincronização com o diretório e o login por SSO | `Group`, `Department` |
-| `auth` | **Sessão e credencial**: login, cookie, segundo fator, token de API e a trilha de autenticação | `ApiToken`, `AuthEvent` |
+| `license` | **Licenças**: o contrato e seus ASSENTOS materializados — cadastro simples, sem conformidade de software nem chave cifrada ([G](../decisoes/licencas.md#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples)) | `License`, `LicenseSeat`, `LicenseSeatCheckout` |
+| `stock` | **Estoque**: o que tem quantidade em vez de patrimônio individual — um tipo, saldo sempre calculado ([J](../decisoes/estoque.md#j--o-estoque-volta-como-stockitem--stockmovement)) | `StockItem`, `StockMovement` |
+| `reconciliation` | **Convergência RMM × ITAM**: o vínculo entre a máquina descoberta e o ativo cadastrado e a fila de sugestões — sem inferência por conta do sistema operacional ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)) nem fusão de máquinas ([H](../decisoes/reconciliacao.md#h--a-fusão-de-máquinas-sai)) | `ReconciliationSuggestion`, `AssetChange`, `AssetUsageDaily` |
+| `access` | **Autorização**: o papel da sessão, o mapa de rotas × papel mínimo e a invariante "nunca sem administrador" | — |
+| `auth` | **Sessão e credencial**: login, cookie e a geração da sessão (`tokenVersion`) | — |
 | `workstation` | **O posto como tela**: a leitura de `Location` + ocupantes que a `/postos` mostra, e onde `ehPostoVago()` mora | — |
-| `shared` | Tipos e helpers usados por mais de um domínio (`diff.helper`, `fields.schema`, `history.schema`, `csv.helper`, `multipart.helper`) | — |
-
-> **`catalog` e `custom-field` são o MESMO assunto em duas pastas, e a divisão é o
-> D64.** A parte PLANA dos dois cadastros novos é CRUD de catálogo — listar,
-> buscar, ordenar, `ActivityLog`, 409 por uso —, então são duas specs e nenhuma
-> rota escrita à mão. O que **não** cabe numa spec é ordem, obrigatoriedade por
-> vínculo e validação de valor: isso tem regra, e regra mora em use-case.
->
-> A fronteira se lê nas rotas: as dez planas saem do laço do `CatalogMaestro`; as
-> três que sobram (`/custom-fields/list-view` e o par
-> `/custom-fieldsets/:id/fields`) moram no `CustomFieldMaestro`, e nenhuma delas
-> grava nem lê UM CAMPO de uma linha.
+| `shared` | Tipos e helpers usados por mais de um domínio (`diff.helper`, `fields.schema`, `history.schema`) | — |
 
 > **A decisão D1 foi executada na Fase 1.** `asset/` (RMM) virou `endpoint/`, e o
 > nome `asset/` passou ao ativo do ITAM. O `inventory/` deixou de existir junto
@@ -118,18 +93,17 @@ server/
 > `Endpoint`. É essa ausência que faz o compilador barrar uma query do RMM
 > apontando para a tabela errada (`../ROADMAP.md`, D13).
 
-### `catalog` e `stock` são as duas exceções à fatia vertical
+### `catalog` é a exceção à fatia vertical
 
-As NOVE tabelas de catálogo são o MESMO CRUD: nome, listagem paginada, busca,
+As CINCO tabelas de catálogo são o MESMO CRUD: nome, listagem paginada, busca,
 ordenação, `ActivityLog`, 409 quando a linha está em uso. Nove fatias verticais
 completas seriam ~99 arquivos quase idênticos — o que esta mesma página chama de
 cerimônia, não arquitetura.
 
-> **O número está escrito aqui de propósito, e precisa ser corrigido junto.** A
-> F9 acrescentou duas tabelas e este parágrafo dizia "sete" — o mesmo tipo de
-> referência envelhecida que o `invariantes.md` pede para corrigir ao acrescentar
-> uma invariante. Quem lê "sete" e conta nove no `specs/index.ts` passa a
-> desconfiar do resto da página.
+> **O número está escrito aqui de propósito, e precisa ser corrigido junto.** É
+> o mesmo tipo de referência envelhecida que o `invariantes.md` pede para
+> corrigir ao acrescentar uma invariante: quem lê um número aqui e conta outro no
+> `specs/index.ts` passa a desconfiar do resto da página.
 
 Então elas compartilham um CRUD genérico, e o que varia mora em `specs/`: um
 arquivo por tabela declarando o slug da rota, o schema de entrada, a allowlist de
@@ -137,29 +111,15 @@ resposta, as colunas ordenáveis e a regra de "em uso". **Acrescentar uma tabela
 de catálogo é escrever a spec e incluí-la em `specs/index.ts`** — nenhuma rota é
 escrita à mão.
 
-> **E o `ClienteCatalogo` do CRUD genérico NÃO exclui `$queryRaw`:** a contagem de chaves dentro
-> do `JsonB` só usa o índice GIN pelo operador `?`, e precisa rodar **dentro** da transação do
-> delete — senão apagar um campo customizado deixaria valor órfão em silêncio.
-
-O preço, declarado: tipar a união dos nove delegates do Prisma não existe em TS,
+O preço, declarado: tipar a união dos cinco delegates do Prisma não existe em TS,
 então cada spec faz UM cast, ao lado do nome do model. O cast não atravessa a
 regra: a entrada continua validada pelo `strictObject`, a saída continua limitada
 pelo `select`, e o `countUsages` de cada spec continua totalmente tipado.
 
-**`stock` é a mesma ideia, em menor escala e por outro motivo (D35).** Acessório,
-consumível e componente compartilham UMA invariante — *o saldo é calculado, nunca
-coluna, e toda saída tranca a linha-pai* — e UMA tela. Três fatias verticais
-copiariam a invariante três vezes, e invariante copiada é invariante que um dia
-diverge. O que varia entre eles mora em `helpers/stock-kind.helper.ts`: três
-constantes com slug, rótulo, tipo de categoria e o `select`.
-
-**E ele NÃO usa o motor do catálogo**, apesar de parecer o mesmo problema: a
-coluna principal da listagem de estoque é **derivada** (`disponivel = qty −
-saídas abertas`) e o `select` da `CatalogSpec` é allowlist estática. Ensinar o
-genérico a calcular saldo seria dobrá-lo para atender três clientes — abstração
-que passa a custar mais do que economiza. As *operações* também diferem
-(entregar × consumir × instalar), e operação já é um arquivo por vez em
-`use-cases/`.
+**E o `countUsages` é a parte que não se pode esquecer:** ele precisa conhecer
+TODA tabela que aponta para a linha. Uma contagem incompleta responde "zero em
+uso" e deixa a guarda do 409 aberta — foi o que o corte do ITAM obrigou a
+revisar, porque cada tabela removida saiu de dentro de uma dessas contagens.
 
 ### O caminho de uma requisição
 
@@ -175,7 +135,8 @@ resposta de erro.
 
 | Situação | Vira | Quem faz |
 |---|---|---|
-| `AppError('Agente offline.', 404)` | 404 + a mensagem | use-case |
+| `AppError('Máquina não encontrada.', 404)` | 404 + a mensagem | use-case |
+| `AppError('O agente de … não está conectado agora.', 409)` | 409 + a mensagem | use-case |
 | Prisma `P2025` (não achou) | 404 "Registro não encontrado" | error-handler |
 | Prisma `P2002` (unique) | 409 "Registro já existe" | error-handler |
 | JSON malformado / corpo grande | 400 / 413 | error-handler |
@@ -224,10 +185,10 @@ São ferramentas para problemas diferentes e o projeto usa as duas. A regra úni
 **nunca as duas para o mesmo dado** — isso cria duas fontes de verdade para a
 mesma lista.
 
-Hoje só o primeiro balde tem conteúdo: ativos, inventário e usuários são todos
-dado de servidor. O zustand entra quando aparecer client state de verdade — a
-sessão em memória da F3 (é o `auth.store.ts` do IntraChat) e a preferência de
-colunas da F10. Estado de uma tela só (modal aberto, item em edição, seleção)
+Quase tudo está no primeiro balde: ativos, licenças, postos e usuários são todos
+dado de servidor. O zustand guarda o client state de verdade — a sessão em
+memória (`auth.store.ts`) e a preferência de colunas da listagem de ativos
+(`asset.store.ts`). Estado de uma tela só (modal aberto, item em edição, seleção)
 continua em `useState` dentro do hook da página: não é global, não precisa de store.
 
 O que a query assumiu e não se escreve mais à mão: intervalo de polling e limpeza
@@ -237,7 +198,13 @@ de um `fetch` manual no fim de cada mutação).
 
 Regras práticas:
 
-- **Componente não faz `fetch`.** Recebe `onSubmit`, `onCommand`, `onDelete`.
+- **Componente não faz `fetch`.** Recebe `onSubmit`, `onCommand`, `onDelete`. Duas
+  exceções, e as duas são widgets AUTOCONTIDOS usados por telas sem relação entre
+  si, onde passar tudo por prop duplicaria a mesma ligação em cada chamador:
+  `pages/components/ReferenceSelect` (busca a lista de opções da rota que recebe) e
+  `pages/components/TelemetriaDaMaquina` (consulta e revalida uma máquina, e manda
+  comando nela). Exceção se declara no cabeçalho do componente; a terceira que
+  aparecer sem motivo escrito é a regra virando sugestão.
 - **Página não importa `@tanstack/react-query` nem `axios`.** O lint recusa. Ela
   usa o hook da própria pasta, que usa a query do domínio.
 - **Busca engole erro, mutação propaga.** A lista recarrega a cada 5s e uma
@@ -246,9 +213,9 @@ Regras práticas:
   `apiClient` já traduziu da resposta do servidor.
 - **Cálculo sai do JSX.** Parse de coluna Json, conversão de bytes e cor de
   status moram em `helpers/`.
-- **O `apiClient` preserva o `fields` do 422**, numa classe de erro própria. Num conjunto de
-  vinte campos customizados criados pelo cliente, o resumo da mensagem corta em três e o motivo
-  do vigésimo não apareceria em lugar nenhum.
+- **O `apiClient` traduz o erro num lugar só.** Toda tela mostra
+  `error.message`; o `fields` por campo que o 422 traz no corpo não é lido por
+  nenhuma delas, e o cliente não o desembrulha mais.
 
 ---
 
@@ -280,14 +247,14 @@ Estão em `server/server.ts` e existem para o sistema falhar cedo e limpo.
 
 ## O que ainda não existe
 
-**Uma coisa, e ela está declarada: anexo com dono polimórfico.** `Attachment.assetId` é
-`NOT NULL` com FK para `assets`, então anexo de licença e de manutenção (**D94**) exigem
-discriminante, CHECK e uma decisão sobre o arquivo quando o dono some. É o único item em aberto
-do [`../ROADMAP.md`](../ROADMAP.md).
+**Nada em aberto.** O que o ITAM tinha e deixou de ter saiu por decisão de
+escopo, não por falta de tempo: o corte está registrado em
+[`../decisoes/escopo.md`](../decisoes/escopo.md), com o critério — *fica o que a
+ponte ITAM × RMM usa* — e a lista do que foi embora.
 
-O que **não** vai existir por decisão — multi-empresa (**D4**), fila de requisição, SAML
-(**D78**), revogar uma sessão específica — está em [`../decisoes/`](../decisoes/) e em
-[`acesso.md`](./acesso.md), cada um com o motivo escrito.
+O que **não** vai existir por decisão — multi-empresa (**D4**), fila de
+requisição, revogar uma sessão específica — está em
+[`../decisoes/`](../decisoes/), cada um com o motivo escrito.
 
 > **Esta seção já listou onze coisas como pendentes, e as onze existem.** Ela carregava **oito**
 > blocos de autocorreção — *"JÁ EXISTE, esta seção estava desatualizada"* — que é exatamente o que
@@ -298,16 +265,19 @@ O que **não** vai existir por decisão — multi-empresa (**D4**), fila de requ
 
 ## "Estar no parque" é UMA definição, e ela mora no domínio dono das colunas
 
-`asset/helpers/asset-scope.helper.ts` — `retiredAt: null` **e** `status.type != ARCHIVED` —
-importado por `report`, `audit` e `alert`.
+`retiredAt: null` **e** `status.type != ARCHIVED` — o recorte que diz se um ativo
+ainda é do parque.
 
-A revisão da F8 encontrou **três** versões dela, e a mais frouxa tinha consequência: um ativo
-`ARCHIVED` era auditado todo dia pelo job e nunca aparecia no relatório que lê o escopo completo.
-Domínio que **pergunta** importa; domínio que **responde** é o dono do dado — é o D16 aplicado a
-uma constante.
+A revisão da F8 encontrou **três** versões dela, e a mais frouxa tinha
+consequência: um ativo `ARCHIVED` era conferido todo dia pelo job e não aparecia
+onde o escopo completo era lido. Domínio que **pergunta** importa; domínio que
+**responde** é o dono do dado — é o D16 aplicado a uma constante.
 
-O mesmo vale para o recorte em SQL cru: a versão `Prisma.sql` mora **no mesmo arquivo** da versão
-Prisma, senão o relatório em `$queryRaw` escreve a quarta cópia.
+> O corte do ITAM levou os três leitores que importavam o helper, e com eles o
+> helper. A definição continua valendo e hoje está onde se consulta o parque: no
+> recorte de `list-assets` e no da reconciliação. **Se um terceiro leitor voltar,
+> a constante volta com ele** — três cópias foi o defeito, e ele nasce de cada
+> consulta reescrever o recorte à mão.
 
 ---
 ## Posse: a regra que atravessa três domínios
@@ -315,44 +285,32 @@ Prisma, senão o relatório em `$queryRaw` escreve a quarta cópia.
 Leia [`modelo-de-posse.md`](modelo-de-posse.md) antes de mexer em `assignment`,
 `occupancy` ou no status do ativo. Em três linhas:
 
-1. **`Assignment`** é a fonte de verdade da posse. Alvo polimórfico — pessoa,
-   **posto** ou outro ativo. Uma aberta por ativo, garantida por índice único
-   parcial no banco.
+1. **`Assignment`** é a fonte de verdade da posse. Alvo polimórfico — pessoa ou
+   **posto**. Uma aberta por ativo, garantida por índice único parcial no banco.
 2. **`LocationOccupant`** é quem ocupa o posto, com turno. É a camada que permite
    a Mesa 1 ser da Laura de manhã e da Ana à tarde **sem o ativo apontar para
    duas pessoas**.
 3. **Responsabilidade é derivada** (`resolverResponsaveis`), nunca coluna.
 
-**A F5 estendeu as três camadas ao estoque, sem criar paralelo nenhum:** o
-acessório entregue a um posto é **do posto** (D33), e quem responde por ele são
-os mesmos ocupantes — `holdings`, o 409 do `DELETE` e o desligamento passaram a
-ler as tabelas de estoque em vez de ganharem versões próprias. A linha que
-sustenta isso é o `targetType: 'USER'` do
-`stock/use-cases/checkin-user-accessories.usecase.ts`: sem ele, o desligamento
-devolveria ao estoque as unidades que continuam fisicamente na mesa.
-
-**A F6 estendeu as mesmas camadas à licença, sem criar paralelo nenhum (D93):**
+**A F6 estendeu as três camadas à licença, sem criar paralelo nenhum (D93):**
 assento é posse pelos mesmos três critérios — alguém responde por ele, ele
 impede o cadastro de sumir, e ele fecha quando a pessoa sai. Então
-`count-user-posse`, o 409 do `DELETE` (de pessoa **e** de ativo) e o `offboard`
-passaram a contar assento, em vez de o domínio de licença ganhar versões
-próprias. A linha que sustenta isso é o `assignedUserId` do
-`license/use-cases/checkin-user-seats.usecase.ts`: sem ele, o desligamento
-devolveria o assento do desktop da Mesa 1 — que continua ligado, agora com outra
-pessoa — e a máquina ficaria rodando software sem licença atribuída.
+`count-user-posse` e o 409 do `DELETE` (de pessoa **e** de ativo) contam
+assento, em vez de o domínio de licença ganhar versões próprias.
+
+**E a desativação de uma pessoa é recusada nas QUATRO pontas, não em uma:**
+`checkoutAsset`, `checkoutSeat`, `checkoutStock` e `addLocationOccupant`
+respondem 409 para quem está inativo, com a trava de linha em
+`lock-user.usecase.ts` como primeira instrução de cada transação. A ocupação de
+posto foi a que faltou mais tempo, e o motivo é instrutivo: ocupação de posto
+não *parece* posse, mas responsabilidade por ativo em posto é DERIVADA dela.
 
 O que isso proíbe, e o lint não pega: **escrever em `Asset.assignedToId` fora do
-checkout/checkin**, **mudar `qty` de um item de estoque fora do
-`adjust-quantity`**, **ler `License.productKey` fora do
-`reveal-product-key.usecase.ts`**, e **ler `Asset.customFields` sem passar por
-`comCamposMascarados()`** — a coluna guarda pacote cifrado ao lado de valor
-comum, e é o prefixo `enc:` dentro do valor que diz qual é qual (por isso ela
-NÃO está no `ASSET_SELECT` compartilhado: só os quatro leitores que a mostram a
-carregam) — a defesa do segundo é a chave não existir no schema de
-edição, não uma checagem. Aquela coluna é cache do caso `USER`; um segundo lugar que a
-escreva recria a divergência que o modelo existe para impedir. As invariantes
-estão em [`invariantes.md`](invariantes.md) e são provadas por
-`tests/invariantes/` (`npm test`) e por `prisma/verificacoes/posse-invariantes.sql`.
+checkout/checkin**. Aquela coluna é cache do caso `USER`; um segundo lugar que a
+escreva recria a divergência que o modelo existe para impedir — e a defesa é a
+chave não existir no schema de edição, não uma checagem. As invariantes estão em
+[`invariantes.md`](invariantes.md) e são provadas por `tests/invariantes/`
+(`npm test`) e por `prisma/verificacoes/posse-invariantes.sql`.
 
 ---
 
@@ -363,7 +321,8 @@ qualquer coisa com "auth" no nome. Em três linhas:
 
 1. **Toda rota exige sessão.** A exceção é a allowlist `ROTAS_PUBLICAS` em
    `server/app.ts` — quatro linhas, cada uma com o motivo escrito ao lado.
-   Rota nova nasce protegida.
+   Rota nova nasce protegida, e uma rota registrada sem exigência declarada
+   **derruba o boot** (D137).
 2. **O JWT nunca é visto pelo JavaScript.** Sai só no cookie `httpOnly`; o corpo
    da resposta leva o usuário, não o token.
 3. **O usuário é relido do banco a cada requisição**, e o `tokenVersion`

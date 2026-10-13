@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { cenarioDePosse, criarAtivo } from '../helpers/fixtures';
+import { cenarioDePosse, criarAtivo, criarColaborador, criarLocal } from '../helpers/fixtures';
 import { prisma } from '../../server/core/database/prismaClient';
 
 // AS INVARIANTES DO MODELO DE POSSE — `docs/referencia/invariantes.md`, 1, 2 e 4.
@@ -190,42 +190,139 @@ describe('invariante 4 — estado × posse', () => {
   });
 });
 
-describe('o desligamento fecha as DUAS camadas (D32)', () => {
-  it('devolve os ativos diretos E encerra as ocupações de posto', async () => {
-    // O bug mais perigoso do modelo: devolver os ativos e deixar a pessoa
-    // ocupando a Mesa 1 a mantém como responsável DERIVADA de tudo que está
-    // naquele posto, meses depois de ela sair — e nenhuma consulta acusa.
-    const antes = await prisma.locationOccupant.count({
-      where: { userId: cenario.laura, endedAt: null },
-    });
-    expect(antes).toBeGreaterThan(0);
+describe('a devolução escopada ao posto', () => {
+  // A ficha do posto manda `targetLocationId` no checkin: a posse só fecha se
+  // for DAQUELE posto. Sem isso, uma ficha velha — o ativo foi devolvido e
+  // entregue a outra pessoa entre o carregar e o clique — fecharia a posse da
+  // pessoa achando que tirava um mouse da mesa.
+  it('recusa fechar a posse que não é deste posto, e diz com quem o ativo está', async () => {
+    const mesa2 = await criarLocal(api, { name: 'Mesa 2 do escopo', isWorkstation: true });
+    const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
 
-    const { status, body } = await api.post<{ devolvidos: unknown[]; ocupacoesEncerradas: unknown[] }>(
-      `/api/users/${cenario.laura}/offboard`,
-      { notes: 'desligamento de teste' },
+    // Entregue à Laura, não à Mesa 1: é a ficha velha da Mesa 1 clicando.
+    expect((await api.post(`/api/assets/${ativo.id}/checkout`, {
+      targetType: 'USER', targetUserId: cenario.laura,
+    })).status).toBe(201);
+
+    const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/checkin`, {
+      targetLocationId: cenario.mesa1,
+    });
+    expect(status).toBe(409);
+    expect(body.error).toMatch(/n[ãa]o est[áa] entregue a este posto/i);
+    expect(body.error).toContain('Laura Souza');
+
+    // E a posse da Laura continua aberta: é o que o escopo existe para proteger.
+    const aberta = await prisma.assignment.findFirst({ where: { assetId: ativo.id, checkinAt: null } });
+    expect(aberta?.targetUserId).toBe(cenario.laura);
+
+    // Posse em OUTRO posto é a mesma recusa: Mesa 2 não devolve o que é da Mesa 1.
+    expect((await api.post(`/api/assets/${ativo.id}/checkin`, {})).status).toBe(200);
+    expect((await api.post(`/api/assets/${ativo.id}/checkout`, {
+      targetType: 'LOCATION', targetLocationId: cenario.mesa1,
+    })).status).toBe(201);
+    const deOutraMesa = await api.post<{ error: string }>(`/api/assets/${ativo.id}/checkin`, {
+      targetLocationId: mesa2,
+    });
+    expect(deOutraMesa.status).toBe(409);
+    expect(deOutraMesa.body.error).toContain('Mesa 1');
+
+    // Do posto certo, fecha.
+    expect((await api.post(`/api/assets/${ativo.id}/checkin`, {
+      targetLocationId: cenario.mesa1,
+    })).status).toBe(200);
+    expect(await prisma.assignment.count({ where: { assetId: ativo.id, checkinAt: null } })).toBe(0);
+  });
+});
+
+describe('quem não está ativo na empresa não recebe equipamento', () => {
+  it('desativar pela API recusa o checkout (409) e registra no histórico', async () => {
+    const pessoa = await criarColaborador(api, {
+      name: 'Marcos Lima', email: 'marcos.inativo@teste.local',
+    });
+
+    // A DESATIVAÇÃO PELA PORTA DA TELA — `PUT /api/users/:id` com `isActive`.
+    // É o caminho que o formulário usa, e é ele que precisa estar fechado: a
+    // guarda do checkout já existia, mas até aqui nada na API sabia desativar
+    // alguém, então a recusa era inalcançável por quem usa o sistema.
+    const desativada = await api.put<{ id: string }>(`/api/users/${pessoa}`, { isActive: false });
+    expect(desativada.status).toBe(200);
+
+    const ativo = await criarAtivo(api, {
+      statusId: cenario.statusDeployableId,
+      modelId: cenario.modelId,
+      name: 'Notebook do inativo',
+    });
+
+    const recusa = await api.post<{ error: string }>(`/api/assets/${ativo.id}/checkout`, {
+      targetType: 'USER',
+      targetUserId: pessoa,
+    });
+
+    // 409 e não 404: a pessoa existe, é o ESTADO dela que recusa.
+    expect(recusa.status).toBe(409);
+    expect(recusa.body.error).toMatch(/desligad|inativ/i);
+
+    // O ativo continua no estoque — a recusa não deixou meia entrega.
+    const semPosse = await prisma.assignment.count({
+      where: { assetId: ativo.id, checkinAt: null },
+    });
+    expect(semPosse).toBe(0);
+
+    // E a mudança FICA NO HISTÓRICO da pessoa, com ator: é o que responde
+    // "quem desativou, e quando" agora que não há coluna de data.
+    const historico = await api.get<{ rows: { action: string; changes: Record<string, unknown> }[] }>(
+      `/api/users/${pessoa}/history`,
     );
+    const desativacao = historico.body.rows.find(
+      (evento) => evento.action === 'UPDATE' && 'isActive' in (evento.changes ?? {}),
+    );
+    expect(desativacao, JSON.stringify(historico.body.rows)).toBeDefined();
+    expect(desativacao!.changes.isActive).toMatchObject({ de: true, para: false });
+  });
 
-    expect(status).toBe(200);
-    expect(body.ocupacoesEncerradas.length).toBe(antes);
-
-    const depois = await prisma.locationOccupant.count({
-      where: { userId: cenario.laura, endedAt: null },
+  it('e também não ocupa posto de trabalho (409 simétrico)', async () => {
+    // A ASSIMETRIA QUE EXISTIA ATÉ AQUI: `checkoutAsset` recusava quem saiu da
+    // empresa, e `addLocationOccupant` só conferia existência. Como responsável
+    // de ativo em posto é DERIVADO da ocupação (`resolverResponsaveis`), a
+    // brecha reabria por fora do checkout a posse que a desativação fecha — e a
+    // fila de reconciliação chegava a oferecer o botão que fazia isso.
+    const pessoa = await criarColaborador(api, {
+      name: 'Rita Alves', email: 'rita.inativa@teste.local',
     });
-    expect(depois).toBe(0);
+    expect((await api.put(`/api/users/${pessoa}`, { isActive: false })).status).toBe(200);
 
-    const posses = await prisma.assignment.count({
-      where: { targetType: 'USER', targetUserId: cenario.laura, checkinAt: null },
+    const recusa = await api.post<{ error: string }>(`/api/locations/${cenario.mesa1}/occupants`, {
+      userId: pessoa,
+      shift: 'Manhã',
     });
-    expect(posses).toBe(0);
 
-    // Desligar NÃO é apagar: o cadastro fica, com o histórico apontando para
-    // ele (D74). É o que responde "quem estava com este notebook em março?".
-    const pessoa = await prisma.user.findFirstOrThrow({
-      where: { id: cenario.laura },
-      select: { isActive: true, terminatedAt: true, deletedAt: true },
+    // Mesmo código e mesma razão do checkout: a pessoa existe, o estado recusa.
+    expect(recusa.status).toBe(409);
+    expect(recusa.body.error).toMatch(/desativad|desligad|inativ/i);
+
+    // E não ficou meia ocupação.
+    expect(await prisma.locationOccupant.count({
+      where: { locationId: cenario.mesa1, userId: pessoa, endedAt: null },
+    })).toBe(0);
+  });
+
+  it('reativar pela API libera a entrega de novo', async () => {
+    const pessoa = await criarColaborador(api, {
+      name: 'Rita Alves', email: 'rita.volta@teste.local',
     });
-    expect(pessoa.isActive).toBe(false);
-    expect(pessoa.terminatedAt).not.toBeNull();
-    expect(pessoa.deletedAt).toBeNull();
+    await api.put(`/api/users/${pessoa}`, { isActive: false });
+    expect((await api.put(`/api/users/${pessoa}`, { isActive: true })).status).toBe(200);
+
+    const ativo = await criarAtivo(api, {
+      statusId: cenario.statusDeployableId,
+      modelId: cenario.modelId,
+      name: 'Notebook da volta',
+    });
+
+    const entrega = await api.post(`/api/assets/${ativo.id}/checkout`, {
+      targetType: 'USER',
+      targetUserId: pessoa,
+    });
+    expect(entrega.status).toBe(201);
   });
 });

@@ -2,7 +2,7 @@ import { AlertTriangle, CalendarClock } from 'lucide-react';
 import type { AlertasDeLicenca } from '../../../domain/shared/license.types';
 import { corDoStatus, textoDoPrazo } from '../helpers/licenca.helper';
 
-// OS DOIS SINAIS DA LICENÇA, lado a lado — mesma forma do painel de estoque.
+// OS DOIS SINAIS DA LICENÇA, lado a lado.
 //
 // Eles respondem perguntas DIFERENTES e por isso não se somam num número só:
 // *"o que vence"* é prazo de contrato e *"o que está sem assento"* é capacidade.

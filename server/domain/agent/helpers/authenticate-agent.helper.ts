@@ -1,23 +1,18 @@
 import { timingSafeEqual } from 'crypto';
 import { getAgentToken } from '../../../core/config/env';
 
-// Autenticação do Agente Sentinel (C#) no /agent-hub.
+// Autenticação do Agente Sentinel no /agent-hub.
 //
 // O token vai no header `Authorization: Bearer <token>`, não na query string:
-// header é o que o `core/logger` já oculta (logger.ts, `redact`) e o que o
-// `ClientWebSocket.Options.SetRequestHeader` do C# envia sem esforço.
+// header é o que o `core/logger` já oculta (logger.ts, `redact`), e todo cliente
+// WebSocket sabe mandar header na abertura da conexão.
 //
 // UM CAMINHO SÓ: o `AGENT_TOKEN` compartilhado, do `.env`.
 //
-// ERAM DOIS (D89): um `ApiToken` por agente — com prefixo, hash, revogação e
-// vínculo com a máquina — convivendo com o compartilhado por prazo, até a frota
-// migrar. O D149 encerrou o prazo sem cumpri-lo: o `ApiToken` saiu com o
-// de-escopo, porque revogar token por agente é problema de frota de verdade e
-// aqui o agente da demonstração é um.
-//
 // O QUE ISSO CUSTA, declarado: o segredo é o mesmo para todas as máquinas, e
-// trocá-lo exige reconfigurar o agente em cada uma. É o estado da F0, e é
-// aceitável no escopo do D143 pelo mesmo motivo que o SSO saiu.
+// trocá-lo exige reconfigurar o agente em cada uma — aceitável porque revogar
+// token por agente só importa numa frota de verdade, e aqui o agente da
+// demonstração é um.
 
 function equalsSeguro(a: string, b: string): boolean {
   const bufferA = Buffer.from(a);

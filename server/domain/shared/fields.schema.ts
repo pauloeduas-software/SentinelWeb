@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // Construtores de campo reaproveitados pelos schemas de vários domínios — as
-// sete tabelas de catálogo e o ativo. Um lugar só para as regras que se repetem:
+// cinco tabelas de catálogo e o ativo. Um lugar só para as regras que se repetem:
 // nome, texto livre, cor, e-mail, site, dinheiro, data.
 //
 // Todos seguem o mesmo padrão: `''` vira `null`
@@ -22,11 +22,9 @@ export const textoOpcional = (rotulo: string, max = 500) =>
 // Tailwind não gera classe a partir de string de runtime, então o valor precisa
 // ser CSS válido por conta própria.
 //
-// O FORMATO MORA NUMA CONSTANTE porque duas colunas o usam com
-// obrigatoriedade diferente: a cor do rótulo de status é opcional (catálogo,
-// F1) e a cor de destaque da marca não é (`AppSetting.primaryColor`, F10 —
-// a coluna tem default e nunca é nula). Duas cópias do regex divergiriam no dia
-// em que alguém aceitasse `#rgb` de três dígitos em uma delas.
+// O FORMATO MORA NUMA CONSTANTE, e não embutido no único consumidor: o dia que
+// nascer a segunda coluna de cor, duas cópias do regex divergiriam na primeira
+// vez que alguém aceitasse `#rgb` de três dígitos em uma delas.
 const HEX_RRGGBB = /^#[0-9a-fA-F]{6}$/;
 const FORMATO_DE_COR = 'cor deve estar no formato #rrggbb';
 
@@ -36,9 +34,6 @@ export const corOpcional = z
   .regex(HEX_RRGGBB, FORMATO_DE_COR)
   .nullish()
   .transform((valor) => (valor === undefined ? undefined : valor || null));
-
-export const corObrigatoria = (rotulo: string) =>
-  z.string(`${rotulo} é obrigatória`).trim().regex(HEX_RRGGBB, `${rotulo}: ${FORMATO_DE_COR}`);
 
 // `z.email()` da zod 4 valida ANTES do `.trim()`; por isso o `pipe` (a mesma
 // armadilha documentada na Fase 0, em user.schema.ts).
@@ -64,30 +59,6 @@ export const uuidOpcional = (rotulo: string) =>
   z.string().trim().nullish()
     .transform((valor) => (valor === undefined ? undefined : valor || null))
     .pipe(z.uuid(`${rotulo}: identificador inválido`).nullish());
-
-/**
- * Número de meses opcional.
- *
- * O `preprocess` não é zelo: `z.coerce.number()` roda `Number('')`, que é **0**.
- * Sem ele, deixar "vida útil" em branco no formulário gravaria `eolMonths = 0`
- * — ou seja, "já venceu" — em vez de `null`, e a data de EOL calculada a partir
- * disso sairia errada sem ninguém ver erro nenhum. Testado.
- */
-export const mesesOpcional = (rotulo: string) =>
-  z.preprocess(
-    (valor) => (valor === '' ? null : valor),
-    z.coerce.number(`${rotulo} deve ser um número`)
-      .int(`${rotulo} deve ser um número inteiro`)
-      .min(0, `${rotulo} não pode ser negativo`)
-      .max(1200, `${rotulo}: máximo de 1200 meses`)
-      .nullish(),
-  );
-
-export const mesesObrigatorio = (rotulo: string) =>
-  z.coerce.number(`${rotulo} deve ser um número`)
-    .int(`${rotulo} deve ser um número inteiro`)
-    .min(1, `${rotulo} mínimo é 1`)
-    .max(1200, `${rotulo}: máximo de 1200 meses`);
 
 /**
  * Dinheiro. Fica STRING do começo ao fim, de propósito.
@@ -152,9 +123,9 @@ function amanhaUTC(): Date {
  * 1 desde março".
  *
  * `dataNaoPassada` — o prazo de um vínculo. Uma entrega com devolução prevista
- * para ontem NASCE VENCIDA: aparece em `GET /api/assignments/overdue` no mesmo
- * segundo e dispara lembrete de algo que acabou de sair do estoque. FUTURO
- * aqui é o caso normal, e HOJE é aceito — "devolve hoje" é prazo legítimo.
+ * para ontem NASCE VENCIDA: o prazo expira no mesmo segundo em que o
+ * equipamento sai, que é um cadastro que ninguém quis fazer. FUTURO aqui é o
+ * caso normal, e HOJE é aceito — "devolve hoje" é prazo legítimo.
  *
  * Nenhuma das duas cobre o valor ausente: campo opcional continua opcional, e
  * `null` passa. Quem exige a presença é o schema que usa o construtor.

@@ -3,9 +3,7 @@
 // ═════════════════════════════════════════════════════════════════════════════
 // A `AssetChange` nasceu na Etapa B desta fase e ficou SEM ESCRITOR: a tabela
 // existia, o índice existia, e nenhuma linha entrava nela. Tabela sem escritor
-// não é meio caminho andado — é uma promessa no schema que a tela não cumpre, e
-// é o mesmo defeito que o `installedSoftware` tinha antes da Etapa G (três
-// ocorrências no código, todas de escrita).
+// não é meio caminho andado — é uma promessa no schema que a tela não cumpre.
 //
 // Este arquivo é a comparação, e ele é PURO de propósito: a regra sobre o que
 // conta como mudança é a coisa que mais vai mudar com dado real de campo, e ela
@@ -17,8 +15,8 @@
  *
  * `hostname` fica **fora**: ele muda por renomeação administrativa, não por
  * alguém abrir a máquina, e enchê-la de linhas de `AssetChange` faria a tabela
- * responder a pergunta errada. `lastSeen`, `status` e `loggedOnUser` também
- * ficam fora — os três mudam a cada mensagem e já têm lugar próprio.
+ * responder a pergunta errada. `lastSeen` e `status` também ficam fora — os
+ * dois mudam a cada mensagem e já têm lugar próprio.
  */
 export interface EspecificacoesColetadas {
   manufacturer: string | null;
@@ -63,7 +61,7 @@ function comoTexto(valor: string | bigint | null): string | null {
  * **TRÊS COISAS NÃO SÃO MUDANÇA, e cada uma por um motivo diferente:**
  *
  * 1. **`null` → valor.** É a PRIMEIRA COLETA daquele campo, não uma troca de
- *    peça. O rollout do agente C# vai produzir isso às centenas no mesmo dia —
+ *    peça. O rollout do agente vai produzir isso às centenas no mesmo dia —
  *    500 máquinas ganhando `biosSerial` de uma vez —, e gravar tudo como
  *    "mudança de hardware" transformaria o histórico de cada ativo num relatório
  *    de deploy. Quem quer saber quando o campo apareceu tem o `ActivityLog` do

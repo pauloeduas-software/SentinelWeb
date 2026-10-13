@@ -1,130 +1,71 @@
 import { z } from 'zod';
-import { $Enums } from '@prisma/client';
-import {
-  dataOpcional, nomeObrigatorio, textoOpcional, uuidObrigatorio,
-  uuidOpcional, valorMonetarioOpcional,
-} from '../../shared/fields.schema';
+import { nomeObrigatorio, textoOpcional, uuidObrigatorio, uuidOpcional } from '../../shared/fields.schema';
 
-// Contrato de entrada das rotas de estoque. Os três tipos compartilham quase
-// tudo — o que varia mora em `accessory.schema.ts`, `consumable.schema.ts` e
-// `component.schema.ts`, que são três arquivos de poucas linhas cada.
+// Contrato de entrada do ESTOQUE.
 //
-// `strictObject` em tudo: campo desconhecido é 422, não silêncio. É o que fecha
-// o mass assignment — e é também o que implementa o D34 no formulário, como a
-// próxima constante explica.
+// `strictObject` como no resto do sistema: campo desconhecido vira 422 em vez
+// de gravação silenciosa. Aqui isso fecha uma porta específica — `qty` NÃO
+// está no schema de EDIÇÃO: quantidade muda por ENTRADA e BAIXA, que deixam
+// linha de movimento; um `PUT` que a aceitasse seria o segundo caminho, sem
+// histórico.
 
-/** Teto de unidades por operação. Acima disso é carga, não operação de tela. */
-const MAX_UNIDADES = 100_000;
-
-export const quantidadeObrigatoria = (rotulo: string) =>
+const quantidade = (rotulo: string, max: number) =>
   z.coerce.number(`${rotulo} deve ser um número`)
     .int(`${rotulo} deve ser um número inteiro`)
-    .min(0, `${rotulo} não pode ser negativa`)
-    .max(MAX_UNIDADES, `${rotulo}: máximo de ${MAX_UNIDADES}`);
+    .min(1, `${rotulo}: mínimo de 1`)
+    .max(max, `${rotulo}: máximo de ${max}`);
 
-/**
- * `minQty` opcional.
- *
- * O `preprocess` não é zelo: `z.coerce.number()` roda `Number('')`, que é **0**
- * — e `minQty = 0` significa "alerte quando o disponível ficar abaixo de zero",
- * ou seja, nunca. Deixar o campo em branco no formulário gravaria um piso mudo
- * em vez de `null`. É a mesma armadilha do `mesesOpcional` da F1.
- */
-export const minimoOpcional = z.preprocess(
-  (valor) => (valor === '' ? null : valor),
-  z.coerce.number('estoque mínimo deve ser um número')
-    .int('estoque mínimo deve ser um número inteiro')
-    .min(0, 'estoque mínimo não pode ser negativo')
-    .max(MAX_UNIDADES, `estoque mínimo: máximo de ${MAX_UNIDADES}`)
-    .nullish(),
-);
-
-/**
- * Os campos que os três tipos têm em comum.
- *
- * `qty` NÃO está aqui — ele entra só no schema de CRIAÇÃO, e por isso está
- * declarado à parte em `camposDeCriacao`.
- */
-export const camposComunsDoItem = {
-  minQty: minimoOpcional,
-  modelNumber: textoOpcional('número do modelo', 150),
-
-  manufacturerId: uuidOpcional('fabricante'),
-  supplierId: uuidOpcional('fornecedor'),
-  locationId: uuidOpcional('localização'),
-
-  orderNumber: textoOpcional('número do pedido', 100),
-  purchaseDate: dataOpcional('data de compra'),
-  purchaseCost: valorMonetarioOpcional('valor de compra'),
-
-  notes: textoOpcional('notas', 2_000),
-};
-
-/** Criação: nome, categoria e a quantidade inicial são obrigatórios. */
-export const camposDeCriacao = {
+export const createStockItemSchema = z.strictObject({
   name: nomeObrigatorio('nome'),
   categoryId: uuidObrigatorio('categoria'),
-  qty: quantidadeObrigatoria('quantidade'),
-  ...camposComunsDoItem,
-};
-
-/**
- * Edição: todo campo é opcional — ausente significa "mantém o valor atual".
- *
- * ─────────────────────────────────────────────────────────────────────────────
- * `qty` NÃO EXISTE AQUI, e essa ausência é a regra inteira.
- *
- * Quantidade é CONSEQUÊNCIA de movimentação, não atributo digitável — o mesmo
- * argumento do D17 para `Asset.assignedToId`. Com a chave declarada, existiriam
- * dois caminhos para mudar a quantidade e só um gravaria `StockLog`: o
- * histórico de estoque teria buracos que ninguém consegue explicar depois, e o
- * `PUT` do formulário seria justamente o caminho silencioso.
- *
- * NÃO é uma validação que recusa `qty` — é a chave não estar declarada. O
- * `strictObject` devolve 422 "campo não reconhecido" sozinho, e não há checagem
- * que alguém possa esquecer de escrever no próximo schema. Mesmo princípio do
- * D37: a segurança vem da ausência do nome.
- *
- * Quem muda quantidade é `POST /api/<tipo>/:id/adjust-quantity`, na mesma
- * transação que grava o log.
- * ─────────────────────────────────────────────────────────────────────────────
- */
-export const camposDeEdicao = {
-  name: nomeObrigatorio('nome').optional(),
-  categoryId: uuidObrigatorio('categoria').optional(),
-  ...camposComunsDoItem,
-};
-
-// ---------------------------------------------------------------------------
-// AJUSTE DE ESTOQUE — a única porta para `qty` (Etapa D)
-// ---------------------------------------------------------------------------
-
-/**
- * POR QUE O MOTIVO É ENUM, e não texto livre: é campo de relatório, e texto
- * livre aqui vira "compra", "Compra" e "comprado" na mesma coluna. É o D5
- * aplicado a mais uma coluna — o mesmo argumento do `RetiredReason`.
- *
- * O valor vem do enum do BANCO, não de uma lista reescrita aqui: um valor a
- * mais passa a ser aceito sem ninguém lembrar deste arquivo, e um valor
- * removido vira erro de compilação em vez de 500 na gravação.
- */
-export const adjustQuantitySchema = z.strictObject({
-  /**
-   * Quanto SOMAR. Negativo é baixa.
-   *
-   * Delta, e não o valor final, de propósito: o valor final é ler-e-depois-
-   * escrever com outro nome — duas recontagens simultâneas gravariam a mesma
-   * `qty` e uma das duas sumiria sem erro. O delta é aplicado com `increment`,
-   * que o Postgres resolve na linha travada.
-   */
-  delta: z.coerce.number('o ajuste deve ser um número')
-    .int('o ajuste deve ser um número inteiro')
-    .refine((valor) => valor !== 0, 'um ajuste de zero não muda nada')
-    .refine((valor) => Math.abs(valor) <= MAX_UNIDADES, `ajuste: máximo de ${MAX_UNIDADES} unidades`),
-
-  reason: z.enum($Enums.StockAdjustReason, 'motivo do ajuste inválido'),
-
-  notes: textoOpcional('observações', 2_000),
+  // A quantidade INICIAL — vira a primeira ENTRADA, para a movimentação contar
+  // a história desde o cadastro. Zero é legítimo: o item existe e ainda não
+  // chegou.
+  qty: z.coerce.number('quantidade deve ser um número')
+    .int('quantidade deve ser um número inteiro')
+    .min(0, 'quantidade: mínimo de 0')
+    .max(1_000_000, 'quantidade: máximo de 1.000.000')
+    .default(0),
+  notes: textoOpcional('notas', 2_000),
 });
 
-export type AdjustQuantityData = z.infer<typeof adjustQuantitySchema>;
+export const updateStockItemSchema = z.strictObject({
+  name: nomeObrigatorio('nome').optional(),
+  categoryId: uuidObrigatorio('categoria').optional(),
+  notes: textoOpcional('notas', 2_000),
+});
+
+/** ENTRADA soma ao total; BAIXA subtrai, nunca abaixo do que está fora. */
+export const adjustStockSchema = z.strictObject({
+  kind: z.enum(['ENTRADA', 'BAIXA'], 'tipo inválido: use ENTRADA ou BAIXA'),
+  qty: quantidade('quantidade', 1_000_000),
+  notes: textoOpcional('observação', 2_000),
+});
+
+/**
+ * A SAÍDA: `qty` unidades a UM alvo. Cada unidade vira uma linha; o teto por
+ * requisição existe porque são N `INSERT`s numa transação, e ninguém entrega
+ * mil mouses de uma vez pela tela.
+ *
+ * As duas FKs são opcionais aqui e a obrigatoriedade de UMA fica no use-case
+ * (`assertAlvoCoerente`), pelo mesmo motivo do checkout de ativo: a regra é
+ * "exatamente uma, e a que casa com o `targetType`", e no use-case ela vira
+ * `AppError(…, 422)` com o texto que ensina o modelo.
+ */
+export const checkoutStockSchema = z.strictObject({
+  targetType: z.enum(['USER', 'LOCATION'], 'tipo de alvo inválido: use USER ou LOCATION'),
+  targetUserId: uuidOpcional('colaborador'),
+  targetLocationId: uuidOpcional('localização'),
+  qty: quantidade('quantidade', 100).default(1),
+  notes: textoOpcional('observações da saída', 2_000),
+});
+
+export const checkinStockSchema = z.strictObject({
+  notes: textoOpcional('observações da devolução', 2_000),
+});
+
+export type CreateStockItemInput = z.infer<typeof createStockItemSchema>;
+export type UpdateStockItemInput = z.infer<typeof updateStockItemSchema>;
+export type AdjustStockInput = z.infer<typeof adjustStockSchema>;
+export type CheckoutStockInput = z.infer<typeof checkoutStockSchema>;
+export type CheckinStockInput = z.infer<typeof checkinStockSchema>;

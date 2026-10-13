@@ -1,5 +1,16 @@
 # Plano de implementação — Fase 5: acessórios, consumíveis e componentes
 
+> ⚠️ **O QUE ESTE PLANO CONSTRUIU NÃO EXISTE MAIS.** `Accessory`, `Consumable`, `Component` e os
+> três `Checkout` saíram inteiros no segundo de-escopo
+> ([O](../decisoes/escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai))
+> e o estoque voltou **diferente** — um tipo só, `StockItem` + `StockMovement` — pela decisão
+> [J](../decisoes/estoque.md#j--o-estoque-volta-como-stockitem--stockmovement). Este arquivo
+> fica como estava: registro do que foi construído e quando, não do que vale hoje — para o
+> estado atual, [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md) e
+> [`../decisoes/estoque.md`](../decisoes/estoque.md). A seção
+> [*O estoque voltou numa forma diferente*](#o-estoque-voltou-numa-forma-diferente-segunda-rodada),
+> no fim deste arquivo, conta a diferença.
+>
 > Plano **prospectivo** da Fase 5 do [`../ROADMAP.md`](../ROADMAP.md), escrito contra o
 > código real depois da F1 e contra [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md). Convenções de
 > camada: [`../referencia/arquitetura.md`](../referencia/arquitetura.md).
@@ -494,3 +505,41 @@ Nove testes novos, todos pela porta HTTP:
 | 6 | `tests/estoque/invariantes.test.ts` › o alerta de posto vago é sobre POSTO |
 | 7 | `tests/estoque/operacoes.test.ts` › a movimentação não esconde o evento mais recente |
 | 8 | sem teste: é comportamento de tela sem harness de DOM, e a defesa é o padrão do `useEstoque` repetido com o porquê ao lado |
+
+---
+
+## O estoque voltou numa forma diferente (segunda rodada)
+
+> Escrito depois de o estoque ter sido removido inteiro e reconstruído, numa fase da
+> refatoração posterior ao corte do ITAM — não é a F5 revisitada, é outro desenho sobre o
+> mesmo problema.
+
+**O que saiu, antes de voltar:** o segundo de-escopo
+([O](../decisoes/escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai))
+removeu `Accessory`, `Consumable`, `Component` e os três `Checkout` inteiros — as seis tabelas, os
+três enums, a tela `/estoque`, a aba Componentes do ativo e a suíte `tests/estoque/` desta fase.
+Por um tempo o projeto não teve estoque.
+
+**O que voltou, e por que não é o mesmo desenho:** a decisão
+[J](../decisoes/estoque.md#j--o-estoque-volta-como-stockitem--stockmovement) troca os três
+tipos por **um**, `StockItem`, com `StockMovement` carregando `ENTRADA`, `BAIXA` e `SAIDA` — e
+muda duas coisas que este plano não tinha decidido: cada unidade de `SAIDA` é a sua própria
+linha (`qty: 1`; sem devolução parcial de linha, porque não há linha com mais de uma unidade
+para dividir), e o alvo da saída pode ser **pessoa ou posto**, herdando o D33 desta fase sem o
+`AccessoryTarget` próprio. `minQty`/alerta de estoque baixo, que a Etapa B deste plano previa,
+não voltou — nenhuma leitura do sistema atual depende de piso.
+
+**O que sobrevive deste plano, e onde:** D33, D34 e D35 — entrega a posto como uma unidade,
+saldo sempre calculado, um domínio só — valem para o `StockItem` de hoje exatamente como
+valiam para os três modelos antigos; estão com o selo **Mantém** na decisão J. D36, D37 e D38,
+que descreviam a lixeira dos três, a ausência de devolução do consumível e a divisão de linha do
+componente, estão superados — o tipo único não tem o que essas três decisões distinguiam. A
+suíte atual é `tests/estoque/` de novo, reescrita do zero contra o schema novo; nenhum teste
+desta fase sobreviveu à remoção.
+
+**Por que este arquivo não foi reescrito por cima:** a regra do projeto é que decisão não se
+reescreve, e o mesmo vale para o registro do que foi construído — apagar o que este plano
+documentou apagaria a única prova de que o D33–D38 já governaram um código real, por quase um
+ano, antes do estoque ser removido e voltar diferente. Quem vier depois e achar
+`AccessoryCheckout` citado num commit antigo encontra aqui a explicação, não um arquivo que
+finge que ele nunca existiu.

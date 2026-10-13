@@ -1,52 +1,77 @@
 import { prisma } from '../../../core/database/prismaClient';
+import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { buildSnapshot } from '../../shared/diff.helper';
-import { comSaldo } from '../helpers/stock-balance.helper';
-import type { StockKindSpec } from '../helpers/stock-kind.helper';
-import { assertReferenciasDoItem } from './assert-stock-references.usecase';
-import type { ItemComSaldo, ItemDeEstoque } from './list-stock.usecase';
+import { comSaldo, type ClienteEstoque } from '../helpers/stock-balance.helper';
+import { STOCK_ITEM_SELECT } from '../helpers/stock-select.helper';
+import type { CreateStockItemInput } from '../schemas/stock.schema';
+
+const CAMPOS_AUDITADOS = ['name', 'qty', 'categoryId', 'notes'] as const;
 
 /**
- * O cadastro de um item de estoque. Um CRUD para os três tipos.
+ * A categoria do item tem que ser do tipo ESTOQUE.
  *
- * A `qty` inicial ENTRA aqui, e só aqui: é o único momento em que a quantidade
- * é atributo digitável, porque é a carga inicial do item. Daí em diante ela é
- * consequência de movimentação, e quem a muda é `adjust-quantity` — por isso a
- * chave não existe no schema de edição.
- *
- * NÃO nasce um `StockLog` de abertura. A criação já está no `ActivityLog` com a
- * `qty` no retrato, e uma linha de "delta = qty inicial" no log de movimentação
- * diria o mesmo fato num segundo lugar — que é a duplicação que o D34 recusa
- * uma camada acima.
+ * O banco não impede — a FK aceita qualquer categoria —, e é o `type` que
+ * separa: um item de estoque numa categoria de ATIVO é o mesmo erro que "Em
+ * Uso" tipado DEPLOYABLE foi na F1. 422 e não 404: a categoria existe, o tipo
+ * dela é que não serve.
  */
-export async function createStockItem(
-  spec: StockKindSpec,
-  data: Record<string, unknown>,
-  actorId: string | null,
-): Promise<ItemComSaldo> {
-  const criado = await prisma.$transaction(async (tx) => {
-    await assertReferenciasDoItem(tx, spec, data);
+export async function assertCategoriaDeEstoque(client: ClienteEstoque, categoryId: string): Promise<void> {
+  const categoria = await client.category.findUnique({ where: { id: categoryId }, select: { type: true } });
+  if (!categoria) throw new AppError('Categoria não encontrada.', 404);
+  if (categoria.type !== 'STOCK') {
+    throw new AppError('A categoria de um item de estoque precisa ser do tipo Estoque.', 422, { type: categoria.type });
+  }
+}
 
-    const item = await spec.delegate(tx).create({
-      data: { ...data, createdById: actorId, updatedById: actorId },
-      select: spec.select,
-    }) as ItemDeEstoque;
+/**
+ * O nome é único entre os vivos (índice parcial). Conferir antes é o que
+ * transforma o P2002 cru num 409 que diz o nome — e que deixa o item da lixeira
+ * fora da conta, porque é ela que pode ser restaurada.
+ */
+export async function assertNomeLivre(client: ClienteEstoque, name: string, ignorarId?: string): Promise<void> {
+  const outro = await client.stockItem.findFirst({
+    where: { name, ...(ignorarId ? { id: { not: ignorarId } } : {}) },
+    select: { id: true },
+  });
+  if (outro) throw new AppError(`Já existe um item de estoque chamado "${name}".`, 409);
+}
+
+export async function createStockItem(data: CreateStockItemInput, actorId: string | null) {
+  return prisma.$transaction(async (tx) => {
+    await assertCategoriaDeEstoque(tx, data.categoryId);
+    await assertNomeLivre(tx, data.name);
+
+    const item = await tx.stockItem.create({
+      data: {
+        name: data.name,
+        categoryId: data.categoryId,
+        qty: data.qty,
+        notes: data.notes ?? null,
+        createdById: actorId,
+        updatedById: actorId,
+      },
+      select: STOCK_ITEM_SELECT,
+    });
+
+    // A QUANTIDADE INICIAL É A PRIMEIRA ENTRADA. Sem esta linha, a movimentação
+    // do item começaria "do nada" com 10 unidades no total e nenhum movimento
+    // que as explicasse — e o total deixaria de ser a soma do que entrou.
+    if (data.qty > 0) {
+      await tx.stockMovement.create({
+        data: { itemId: item.id, kind: 'ENTRADA', qty: data.qty, notes: 'cadastro', createdById: actorId },
+      });
+    }
 
     await recordActivity(tx, {
-      entityType: spec.entityType,
+      entityType: 'StockItem',
       entityId: item.id,
       action: 'CREATE',
-      // O retrato dos campos auditados, pela mesma normalização do diff — é o
-      // que faz `Decimal` sair como string aqui e ali pelo mesmo caminho.
-      changes: buildSnapshot(item, spec.audited),
+      changes: buildSnapshot(item, CAMPOS_AUDITADOS),
     }, actorId);
 
-    return item;
+    // COM SALDO, como a listagem e o detalhe: uma forma só de item na API.
+    // `fora` é zero por construção — nada saiu de um item que acabou de nascer.
+    return comSaldo(item, 0);
   });
-
-  // Item recém-criado não tem saída nenhuma; o saldo é a `qty` inteira. A conta
-  // sai do mesmo helper assim mesmo, para a resposta ter exatamente a forma que
-  // a listagem tem — uma tela que recebe `disponivel` em GET e não em POST é
-  // uma tela com dois caminhos de renderização.
-  return comSaldo(criado, 0);
 }

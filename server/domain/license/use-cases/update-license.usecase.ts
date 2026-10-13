@@ -10,7 +10,6 @@ import {
 } from '../helpers/license-select.helper';
 import type { UpdateLicenseData } from '../schemas/license.schema';
 import { assertReferenciasDaLicenca } from './assert-license-references.usecase';
-import { cifrarChaveOuRecusar } from './create-license.usecase';
 import { reconciliarAssentos } from './reconcile-seats.usecase';
 
 /**
@@ -30,24 +29,11 @@ export async function updateLicense(
   id: string,
   data: UpdateLicenseData,
   actorId: string | null,
-  /**
-   * A sessão pode ver a chave? (F11, D77)
-   *
-   * A ESCRITA TAMBÉM PRECISA DISSO, e o caso que obriga é o `update`: editar o
-   * nome de uma licença sem tocar na chave devolveria a máscara da chave que já
-   * estava lá. Quem tem `licenses.edit` e não tem `licenses.viewKey` leria um
-   * fragmento do segredo salvando um campo que não tem nada a ver com ele.
-   *
-   * `false` por padrão de propósito: chamador novo que esquecer de passar
-   * recebe o menos revelador, em vez de vazar por omissão.
-   */
-  podeVerChave = false,
 ): Promise<LicencaNaResposta> {
-  const { productKey, ...campos } = data;
+  const campos = data;
 
   // FORA da transação: é checagem de configuração do servidor, não do banco.
   // O `id` já existe aqui — é o da rota —, então o AAD é o certo.
-  const cifrada = cifrarChaveOuRecusar(productKey, id);
 
   const licenca = await prisma.$transaction(async (tx) => {
     await travarLicencaOuFalhar(tx, id);
@@ -62,7 +48,7 @@ export async function updateLicense(
 
     const depois = await tx.license.update({
       where: { id },
-      data: { ...campos, productKey: cifrada, updatedById: actorId },
+      data: { ...campos, updatedById: actorId },
       select: LICENSE_SELECT,
     }) as LinhaDeLicenca;
 
@@ -73,17 +59,8 @@ export async function updateLicense(
       await reconciliarAssentos(tx, id, data.seatsTotal);
     }
 
-    // Só o que REALMENTE mudou vai para o log. `hasProductKey` entra à parte
-    // porque `productKey` não é auditado (D42): o diff publicaria o segredo.
-    const changes: Record<string, unknown> = buildChanges(antes, depois, LICENSE_AUDITED);
-    if ((antes.productKey !== null) !== (depois.productKey !== null)) {
-      changes.hasProductKey = { de: antes.productKey !== null, para: depois.productKey !== null };
-    } else if (cifrada !== undefined && depois.productKey !== null && antes.productKey !== depois.productKey) {
-      // Chave TROCADA por outra: o booleano não muda, e sem esta linha o
-      // histórico não registraria nada. `true` sem "de/para" porque não existe
-      // valor anterior que possa ser mostrado — e é esse o ponto.
-      changes.productKeyTrocada = true;
-    }
+    // Só o que REALMENTE mudou vai para o log.
+    const changes = buildChanges(antes, depois, LICENSE_AUDITED);
 
     if (Object.keys(changes).length > 0) {
       await recordActivity(tx, {
@@ -94,5 +71,5 @@ export async function updateLicense(
     return depois;
   });
 
-  return paraResposta(licenca, await contarAssentosDe(prisma, id), { comMascara: podeVerChave });
+  return paraResposta(licenca, await contarAssentosDe(prisma, id));
 }

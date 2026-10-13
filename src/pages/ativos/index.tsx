@@ -2,29 +2,24 @@ import { ArrowRightLeft, Copy, Database, Edit2, PackageX, Plus, RotateCcw, Trash
 import { Link } from 'react-router-dom';
 import AssetFilterBar from './components/AssetFilterBar';
 import AssetFormModal from './components/AssetFormModal';
-import BulkActionBar from './components/BulkActionBar';
 import CheckoutModal from './components/CheckoutModal';
 import ColunasMenu from './components/ColunasMenu';
-import ExportarCsv from '../components/ExportarCsv';
 import ListToolbar from '../components/ListToolbar';
 import { formatarData, formatarMoeda } from '../helpers/format.helper';
 import { seloDaSaida } from './helpers/descomissionamento.helper';
 import { TRACO, resumoDaPosse, rotuloDaOperacao } from './helpers/posse.helper';
 import { useAssets } from './hooks/useAssets';
 import { useColunas } from './hooks/useColunas';
-import { urlDoExportDeAtivos } from '../../domain/asset/asset.queries';
-
 
 export default function AtivosPage() {
   const {
     assets, total, totalCadastrado, porStatus,
     descomissionados, arquivados, page, perPage, setPage,
-    search, changeSearch, view, changeView, relatorio, changeRelatorio,
+    search, changeSearch, view, changeView,
     statusId, statusFiltrado, toggleStatus, limparStatus,
-    modalAberto, emEdicao, clonando, openCreate, openEdit, openClone, closeModal, abrirDetalhe,
+    modalAberto, emEdicao, clonando, statusPadraoId, openCreate, openEdit, openClone, closeModal, abrirDetalhe,
     handleSubmit, handleDelete, handleRestore,
     emPosse, openPosse, closePosse, handleEntregar, handleDevolver,
-    selecao, handleBulk, filtrosParaExport,
   } = useAssets();
 
   // AS COLUNAS VISÍVEIS (F10, Etapa B). Preferência do navegador, não do
@@ -67,13 +62,6 @@ export default function AtivosPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {/* O export vem ANTES do seletor de colunas, e os dois são vizinhos
-              de propósito: o arquivo leva as colunas visíveis, então escolher
-              coluna e exportar é um gesto só. */}
-          <ExportarCsv
-            url={urlDoExportDeAtivos(filtrosParaExport, colunas.paraExportar)}
-            total={total}
-          />
           <ColunasMenu
             catalogo={colunas.catalogo}
             visiveis={colunas.visiveis}
@@ -95,8 +83,6 @@ export default function AtivosPage() {
         onViewChange={changeView}
         descomissionados={descomissionados}
         arquivados={arquivados}
-        relatorio={relatorio}
-        onRelatorioChange={changeRelatorio}
         statusFiltrado={statusFiltrado}
         onLimparStatus={limparStatus}
       />
@@ -114,25 +100,10 @@ export default function AtivosPage() {
         onPageChange={setPage}
       />
 
-      {selecao.quantos > 0 && (
-        <div className="mb-4 shrink-0">
-          <BulkActionBar quantos={selecao.quantos} onAplicar={handleBulk} onLimpar={selecao.limpar} />
-        </div>
-      )}
-
       <div className="bg-surface-card border border-border-sutil flex-1 overflow-auto">
         <table className="w-full text-left font-mono text-xs whitespace-nowrap">
           <thead className="bg-bg-base/50 text-text-secondary border-b border-border-sutil uppercase tracking-widest sticky top-0 z-10">
             <tr>
-              <th className="px-4 py-4 font-normal w-10">
-                <input
-                  type="checkbox"
-                  checked={selecao.paginaInteiraMarcada}
-                  onChange={selecao.alternarPagina}
-                  aria-label="Selecionar a página inteira"
-                  className="accent-status-info w-4 h-4 cursor-pointer"
-                />
-              </th>
               {/* O CABEÇALHO E A CÉLULA consultam o MESMO `mostrar()`, e é só
                   isso que os mantém alinhados. Iterar a lista de tokens e
                   desenhar a célula por token seria mais curto e exigiria uma
@@ -147,10 +118,7 @@ export default function AtivosPage() {
               {colunas.mostrar('responsible') && <th className="px-6 py-4 font-normal">Responsável</th>}
               {colunas.mostrar('purchase') && <th className="px-6 py-4 font-normal">Compra</th>}
               {colunas.mostrar('name') && <th className="px-6 py-4 font-normal">Nome</th>}
-              {colunas.mostrar('supplier') && <th className="px-6 py-4 font-normal">Fornecedor</th>}
               {colunas.mostrar('orderNumber') && <th className="px-6 py-4 font-normal">Nº do pedido</th>}
-              {colunas.mostrar('warranty') && <th className="px-6 py-4 font-normal">Garantia</th>}
-              {colunas.mostrar('eol') && <th className="px-6 py-4 font-normal">Fim de vida</th>}
               <th className="px-6 py-4 font-normal text-right">Ações</th>
             </tr>
           </thead>
@@ -172,15 +140,6 @@ export default function AtivosPage() {
                   title={`Abrir ${asset.assetTag}`}
                   className="hover:bg-bg-base transition-colors group cursor-pointer"
                 >
-                  <td className="px-4 py-4" onClick={(event) => event.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={selecao.estaMarcado(asset.id)}
-                      onChange={() => selecao.alternar(asset.id)}
-                      aria-label={`Selecionar ${asset.assetTag}`}
-                      className="accent-status-info w-4 h-4 cursor-pointer"
-                    />
-                  </td>
                   {colunas.mostrar('assetTag') && (
                   <td className="px-6 py-4">
                     <div className="font-medium">{asset.assetTag}</div>
@@ -256,22 +215,9 @@ export default function AtivosPage() {
                       {asset.name || <span className="text-text-tertiary">{TRACO}</span>}
                     </td>
                   )}
-                  {colunas.mostrar('supplier') && (
-                    <td className="px-6 py-4 text-text-tertiary">{asset.supplier?.name ?? TRACO}</td>
-                  )}
                   {colunas.mostrar('orderNumber') && (
                     <td className="px-6 py-4 text-text-tertiary">
                       {asset.orderNumber || <span className="text-text-tertiary">{TRACO}</span>}
-                    </td>
-                  )}
-                  {colunas.mostrar('warranty') && (
-                    <td className="px-6 py-4 text-text-secondary tabular-nums">
-                      {formatarData(asset.warrantyExpiresAt)}
-                    </td>
-                  )}
-                  {colunas.mostrar('eol') && (
-                    <td className="px-6 py-4 text-text-secondary tabular-nums">
-                      {formatarData(asset.eolDate)}
                     </td>
                   )}
                   <td className="px-6 py-4 text-right" onClick={(event) => event.stopPropagation()}>
@@ -330,8 +276,6 @@ export default function AtivosPage() {
                       <span>Nenhum ativo descomissionado.</span>
                     ) : view === 'archived' ? (
                       <span>Nenhum ativo arquivado.</span>
-                    ) : relatorio === 'posto-vago' ? (
-                      <span>Nenhum ativo parado em posto vago.</span>
                     ) : search ? (
                       <span>Nenhum ativo encontrado para "{search}".</span>
                     ) : statusId ? (
@@ -358,7 +302,13 @@ export default function AtivosPage() {
       </div>
 
       {modalAberto && (
-        <AssetFormModal asset={emEdicao} clonar={clonando} onClose={closeModal} onSubmit={handleSubmit} />
+        <AssetFormModal
+          asset={emEdicao}
+          clonar={clonando}
+          statusPadraoId={statusPadraoId}
+          onClose={closeModal}
+          onSubmit={handleSubmit}
+        />
       )}
 
       {emPosse && (

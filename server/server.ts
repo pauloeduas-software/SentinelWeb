@@ -3,11 +3,8 @@ import { createLogger } from './core/logger/logger';
 import { checkDependencies, isHealthy } from './core/lifecycle/health';
 import { installProcessHandlers, onShutdown } from './core/lifecycle/shutdown';
 import { closeDatabase } from './core/database/prismaClient';
-import { verificarCanarioDeCriptografia } from './core/crypto/canary';
-import { colunasCifradasDaLicenca } from './domain/license/helpers/coluna-cifrada.helper';
 import { disconnectAllAgents } from './domain/agent/agent.registry';
 import { startZombieCleanerJob, stopZombieCleanerJob } from './domain/endpoint/jobs/zombie-cleaner.job';
-import { startOverdueReminderJob, stopOverdueReminderJob } from './domain/assignment/jobs/overdue-reminder.job';
 import { startReconcileJob, stopReconcileJob } from './domain/reconciliation/jobs/reconcile.job';
 import { buildApp } from './app';
 
@@ -32,20 +29,6 @@ async function bootstrap() {
     throw new Error(`Dependências indisponíveis no boot: ${JSON.stringify(health)}`);
   }
 
-  // O CANÁRIO (F6, D91). DEPOIS do banco responder e ANTES de abrir a porta:
-  // ele precisa de uma consulta, e o que ele protege — a chave de criptografia
-  // ter mudado por baixo dos valores gravados — é exatamente o tipo de falha
-  // que não pode esperar a primeira requisição para aparecer.
-  // A lista de colunas cifradas vem do DOMÍNIO e é passada aqui: `core` não
-  // conhece `domain`, e quando o canário falha é o dado real que decide se o
-  // boot cai ou segue. Coluna nova cifrada entra nesta chamada, senão o canário
-  // conclui que ela não existe — e segue com a mensagem errada.
-  //
-  // VOLTOU A SER UMA: `licenses.productKey` (F6). A segunda era
-  // `assets.customFields` (D62), e saiu com os campos customizados no D145 — a
-  // cifra continua com o mesmo arquivo e o mesmo formato (D81), só com um uso.
-  await verificarCanarioDeCriptografia(colunasCifradasDaLicenca());
-
   const server = await buildApp();
 
   // Encerramento gracioso, NESTA ordem: primeiro para quem gera trabalho novo
@@ -57,17 +40,12 @@ async function bootstrap() {
   // início do processo e consultam esta lista só na hora de encerrar, então um
   // SIGTERM no meio do boot continua sendo tratado.
   onShutdown('job de agentes zumbis', stopZombieCleanerJob);
-  onShutdown('job de lembrete de atraso', stopOverdueReminderJob);
   onShutdown('job de reconciliação', stopReconcileJob);
   onShutdown('conexões de agente', disconnectAllAgents);
   onShutdown('servidor HTTP', () => server.close());
   onShutdown('banco de dados', closeDatabase);
 
   startZombieCleanerJob();
-  // O lembrete de atraso acorda de hora em hora e executa UMA vez por dia — a
-  // janela diária fica em `job_runs` e sobrevive ao deploy (D79). Sem ela, subir
-  // o servidor três vezes numa manhã mandaria três cobranças do mesmo notebook.
-  startOverdueReminderJob();
   // A reconciliação acorda de hora em hora e executa UMA vez por hora (mesma
   // janela do D79, com granularidade diferente). Fora do `app.ts` pelo mesmo
   // motivo do outro: job com `setInterval` dentro de teste é escrita

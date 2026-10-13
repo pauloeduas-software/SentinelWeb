@@ -171,3 +171,103 @@ describe('hostname que alcança dois ativos por colunas diferentes', () => {
     expect(porHostname[0].score).toBe(60);
   });
 });
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ATIVO QUE JÁ TEM MÁQUINA — e por que ele entra na cascata antes de sair dela.
+//
+// A fusão de máquinas saiu: o `hwid` é derivado do hardware e estável entre
+// reinstalações, então não existe segunda linha para a mesma máquina. O que
+// existia era o ramo que absorvia o caso "o serial casa com um ativo que JÁ TEM
+// máquina" — e, sem ele, a mesma evidência produziria uma sugestão de VÍNCULO
+// que o `endpoints.assetId @unique` recusa no aceite.
+//
+// A GUARDA TEM DUAS METADES, e a segunda é a que já foi escrita errada uma vez:
+// filtrar o ativo ocupado NA CONSULTA desligaria o D46, porque a colisão é
+// contada sobre a lista de candidatos. Tirar um dos ambíguos de vista
+// transformaria "não sei qual dos dois" em "é este".
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe('ativo que já tem máquina', () => {
+  it('não recebe sugestão de vínculo de uma segunda máquina', async () => {
+    const ativo = await ativoComSerial('SN-OCUPADO-1', 'Ativo já vinculado');
+
+    // A primeira máquina leva o ativo, pelo caminho humano.
+    const primeira = await conectarAgente(api, 'ocupa-primeira');
+    await primeira.handshake({ Hostname: 'pc-primeira', BiosSerial: 'SN-OCUPADO-1' });
+    const dela = await esperarPor('a primeira máquina', () => prisma.endpoint.findUnique({ where: { hwid: 'ocupa-primeira' } }));
+    await primeira.fechar();
+    await api.post(`/api/endpoints/${dela.id}/link`, { assetId: ativo.id });
+
+    // A segunda chega com o MESMO serial. Antes isto era sugestão de fusão.
+    const segunda = await conectarAgente(api, 'ocupa-segunda');
+    await segunda.handshake({ Hostname: 'pc-segunda', BiosSerial: 'SN-OCUPADO-1' });
+    await esperarPor('a segunda máquina', () => prisma.endpoint.findUnique({ where: { hwid: 'ocupa-segunda' } }));
+    await segunda.fechar();
+
+    await rodarReconciliacao();
+
+    // NADA. Propor o vínculo aqui seria oferecer um botão que o `@unique`
+    // recusa — a máquina fica como órfã na triagem, que é a conversa certa.
+    expect(await sugestoesDe('ocupa-segunda')).toHaveLength(0);
+  });
+
+  it('mas continua contando para a colisão: hostname ambíguo não vira resposta', async () => {
+    // EXATAMENTE DOIS ativos com o mesmo NOME, e um nome que nenhum outro caso
+    // deste arquivo usa — o banco é um por ARQUIVO, e um terceiro ativo
+    // ambíguo faria este teste passar pelo motivo errado.
+    //
+    // `Asset.name` não está em índice único nenhum, ao contrário de `serial` e
+    // `assetTag`: dois ativos vivos com o mesmo nome são cadastro do dia a dia.
+    const ocupado = await criarAtivo(api, { statusId, modelId, name: 'pc-nome-repetido' });
+    await criarAtivo(api, { statusId, modelId, name: 'pc-nome-repetido' });
+
+    const dona = await conectarAgente(api, 'repetido-dono');
+    await dona.handshake({ Hostname: 'maquina-do-ocupado' });
+    const dela = await esperarPor('a máquina do ocupado', () => prisma.endpoint.findUnique({ where: { hwid: 'repetido-dono' } }));
+    await dona.fechar();
+    await api.post(`/api/endpoints/${dela.id}/link`, { assetId: ocupado.id });
+
+    const nova = await conectarAgente(api, 'repetido-novo');
+    await nova.handshake({ Hostname: 'pc-nome-repetido' });
+    await esperarPor('a máquina nova', () => prisma.endpoint.findUnique({ where: { hwid: 'repetido-novo' } }));
+    await nova.fechar();
+
+    await rodarReconciliacao();
+
+    // ZERO, e o motivo importa: o hostname casou com DOIS ativos, então não
+    // identifica nenhum (D46). Se a guarda do caso acima fosse escrita como
+    // filtro na CONSULTA, o ativo ocupado sairia de vista, o livre ficaria
+    // sozinho, e esta máquina receberia uma sugestão de 60 pontos com cara de
+    // certeza — para um cadastro que tem dois ativos com o mesmo nome.
+    const porHostname = (await sugestoesDe('repetido-novo')).filter((linha) => linha.signal === 'HOSTNAME');
+    expect(porHostname).toHaveLength(0);
+  });
+
+  it('e o vínculo manual recusa com uma instrução que existe', async () => {
+    const ativo = await ativoComSerial('SN-OCUPADO-2', 'Ativo de vínculo duplo');
+
+    const primeira = await conectarAgente(api, 'duplo-primeira');
+    await primeira.handshake({ Hostname: 'pc-duplo-1' });
+    const dela = await esperarPor('a primeira do duplo', () => prisma.endpoint.findUnique({ where: { hwid: 'duplo-primeira' } }));
+    await primeira.fechar();
+    await api.post(`/api/endpoints/${dela.id}/link`, { assetId: ativo.id });
+
+    const segunda = await conectarAgente(api, 'duplo-segunda');
+    await segunda.handshake({ Hostname: 'pc-duplo-2' });
+    const outra = await esperarPor('a segunda do duplo', () => prisma.endpoint.findUnique({ where: { hwid: 'duplo-segunda' } }));
+    await segunda.fechar();
+
+    const { status, body } = await api.post<{ error: string }>(
+      `/api/endpoints/${outra.id}/link`,
+      { assetId: ativo.id },
+    );
+
+    // 409 do `endpoints.assetId @unique`, traduzido. A mensagem mandava "usar a
+    // fusão" — uma rota que não existe mais. O caminho que ela cita agora é o
+    // botão Desvincular da aba Máquina, e é o que o operador pode fazer.
+    expect(status).toBe(409);
+    expect(body.error).toMatch(/já está vinculado a outra máquina/i);
+    expect(body.error).not.toMatch(/fus[ãa]o/i);
+  });
+});
+

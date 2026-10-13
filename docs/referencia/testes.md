@@ -11,33 +11,19 @@
 
 ```bash
 npm test               # roda tudo, uma vez
-npm run test:puro      # só o que NÃO precisa de banco
 npm run test:watch
 npx vitest run tests/corridas           # só uma pasta
 npx vitest run -t "etiqueta automática"  # só o que casa com o nome
-npx vitest run --project banco           # só o que fala com o Postgres
 ```
 
-### Dois projetos, e a divisão é pelo que o teste PRECISA para rodar
+### Uma configuração só, porque todo teste fala com o banco
 
-Arquivo terminado em **`.puro.test.ts`** exercita função pura e não abre conexão
-nenhuma. Ele roda no projeto `puro`, que **não tem `globalSetup` nem `setupFiles`** —
-e é isso que faz `npm run test:puro` funcionar numa máquina sem contêiner, em
-milissegundos, num *pre-commit*.
-
-Todo o resto roda no projeto `banco`, com o `globalSetup` que cria o banco e aplica
-as migrations.
-
-> **A separação nasceu de um furo.** `webhook.puro.test.ts` já era puro e já estava
-> em arquivo próprio — mas o `globalSetup` roda em TODA invocação, então rodá-lo
-> sozinho morria com `PrismaClientInitializationError` antes do primeiro `it`. A
-> allowlist de destino de webhook é a única coisa da F8 que um atacante alcança, e
-> ela só era verificável com Postgres de pé: exatamente o oposto do que separar o
-> arquivo pretendia.
->
-> O sufixo vai no **nome** e não numa pasta própria: `tests/ciclo-de-vida/` continua
-> agrupando por fase, que é como alguém procura ("o que a F8 cobre?"), e a exigência
-> de infraestrutura fica visível no arquivo que a tem.
+Houve dois projetos: arquivo terminado em **`.puro.test.ts`** exercitava função
+pura e rodava sem `globalSetup`, o que permitia um `npm run test:puro` numa
+máquina sem contêiner. O corte de escopo levou o último arquivo puro, e um
+projeto com zero arquivos não é separação — é um script que sai com erro sem
+nenhum teste ter falhado. O par (projeto + sufixo no nome do arquivo) volta junto
+com o próximo teste puro.
 
 ---
 
@@ -84,72 +70,32 @@ configurar nada (só precisa do Postgres de pé: `docker compose up -d`).
 | `tests/invariantes/` | as do [`invariantes.md`](invariantes.md) | vermelho aqui = o dado já pode estar errado no banco |
 | `tests/corridas/` | duas requisições simultâneas, e o placar | o que "passa no teste com um usuário" |
 | `tests/listagens/` | o que cada vista e cada leitura DEVOLVE, e o que ela esconde | filtro que esconde demais não dá erro: some linha e ninguém percebe |
-| `tests/estoque/` | o saldo derivado, a trava da linha-pai e o que a F5 não pode perder da F4 | é a única pasta POR DOMÍNIO, e é de propósito: as três asserções que importam (invariante, corrida e operação) contam a mesma história sobre as mesmas seis tabelas, e separá-las em três pastas faria quem investiga um saldo errado abrir três arquivos distantes |
-| `tests/descoberta/` | a borda do agente, a cascata de matching, a fila, o turno inferido, a mudança de hardware detectada e o que o modelo de posse faz com o usuário logado | é a segunda pasta por domínio, pelo mesmo motivo: a história é uma só, do handshake até o cadastro que uma pessoa aceita |
-| `tests/licencas/` | o assento materializado, a corrida do `SKIP LOCKED`, a chave cifrada e o canário | terceira pasta por domínio: contrato, assento e segredo contam a mesma história |
+| `tests/estoque/` | o saldo derivado, a trava da linha do item e as operações do `StockItem`/`StockMovement` | é a única pasta POR DOMÍNIO que sobrou, e é de propósito: invariante, corrida e operação contam a mesma história sobre as mesmas duas tabelas, e separá-las faria quem investiga um saldo errado abrir três arquivos distantes |
+| `tests/descoberta/` | a borda do agente, a cascata de matching por hardware, a fila, o vínculo manual e o comando — sem inferência por usuário logado ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)) nem fusão de máquinas ([H](../decisoes/reconciliacao.md#h--a-fusão-de-máquinas-sai)) | a segunda pasta por domínio, pelo mesmo motivo: a história é uma só, do handshake até o cadastro que uma pessoa aceita ou vincula à mão |
+| `tests/licencas/` | o assento materializado e a corrida do `SKIP LOCKED` — sem chave cifrada nem canário, que saíram com a conformidade de software ([G](../decisoes/licencas.md#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples)) | terceira pasta por domínio: contrato e assento contam a mesma história |
 | `tests/jobs/` | a janela de execução de um job (o D79) | o cenário que ela impede — dois jobs disputando a mesma coluna — não dá erro nenhum: o segundo simplesmente nunca roda |
-| `tests/ciclo-de-vida/` | manutenção, conferência física, valor contábil e a central de alertas (F8) | quarta pasta por domínio. As quatro coisas se cruzam: a manutenção aberta vira alerta, a conferência escreve `lastAuditAt` que o alerta lê, e o valor contábil é o único número do sistema que muda quando NADA acontece |
-| `tests/acesso/` | o diretório e o SSO: a tradução do que o LDAP devolve e o comportamento do DESLIGADO (F11, Etapa I) | sexta pasta por domínio. A suíte roda SEM diretório e SEM provedor de identidade — que é o estado de toda instalação que não os usa —, então o que ela prova é o padrão: as rotas de SSO **nem existem** sem configuração (404, não 500), a sincronização recusa com 409, e o vínculo explícito do D78 exige `access.manage`. A tradução de atributo (`mail` × `userPrincipalName`, GUID em bytes) é `.puro`, porque montar um servidor LDAP falso seria testar o servidor falso |
-| `tests/campos-customizados/` | o cadastro e suas guardas, a resolução categoria × modelo, a cifra no JsonB, o filtro, o **backfill em massa** (F9) e o **CSV** (export e import) | quinta pasta por domínio, e a que mais depende de **não** ser dividida: as cinco coisas são a MESMA coluna vista de cinco lados. A cifra só faz sentido junto com a máscara que volta no formulário; o filtro só faz sentido junto com a decisão de o valor ser sempre texto; a resolução do conjunto é o que decide se uma chave é válida ou órfã; e o lote escreve a mesma chave que a edição de um só, com o mesmo diff — é por isso que o backfill é testado ao lado do contador que o manda acontecer, e não na pasta do lote. Separadas, quem investiga um valor que sumiu abriria cinco arquivos distantes |
+| `tests/configuracoes/` | o recorte de `GET/PUT /api/settings` e o que ele NÃO leva ao navegador | o `AppSetting` encolheu junto com cada corte de escopo; este arquivo prova que o que saiu do schema também saiu do contrato |
 
-### `ciclo-de-vida/` — as três que falhariam em silêncio
+### `estoque/` — a que falharia em silêncio
 
-**`auditoria.test.ts`, primeiro teste: a amarra do D52.** Auditar na Mesa 2 um ativo entregue à Mesa
-1 move `Asset.locationId` e **não toca** a `Assignment`. É a regra que um refactor bem-intencionado
-quebra — *"se o ativo está na Mesa 2, a posse devia apontar para lá"* parece conserto e é
-transferência de responsabilidade a partir de um palpite. Vermelho ali significa que a Laura e a Ana
-deixaram de responder pelo equipamento sem ninguém ter assinado nada.
+**`invariantes.test.ts` › o CHECK do banco recusa a linha incoerente mesmo por fora da API.**
+`stock_movements_forma` (SAIDA com exatamente um alvo e uma unidade), `stock_items_qty_nao_negativa`
+e a devolução que não antecede a saída existem para quem não passa pelo use-case — o `psql` à mão,
+um script. Testar isso por HTTP seria impossível por construção; o teste insere direto no banco e
+lê a mensagem do Postgres.
 
-**`valor-contabil.test.ts`: o piso `AMOUNT` acima do custo.** O `beforeWrite` da spec de depreciação
-limita o piso a 100% quando ele é `PERCENT`; `AMOUNT` **não tem teto**. Sem o `min(custo, …)` da
-fórmula, um mouse de R$ 50 com residual de R$ 5.000 vale R$ 5.000 no papel — um mouse que valorizou,
-e o total da frota subindo a cada mouse cadastrado.
+**`invariantes.test.ts` › recusa a BAIXA abaixo do que está fora.** Dar baixa de mais unidades do
+que há fora do estoque gravaria `qty` menor que o número de unidades que ainda estão com gente — o
+saldo (`qty − fora`) ficaria negativo por um caminho que não é o psql à mão, e a frase do 409 carrega
+os números (`qty`, `fora`, `baixa`) para a tela não precisar recontar.
 
-**`alertas.test.ts`: o alerta que nasce de novo todo dia.** A chave de deduplicação tem uma regra por
-tipo (D125). Com a versão ingênua (`tipo:ativo:prazo` para os quatro), ativo nunca conferido usaria a
-data do CORTE — que anda todo dia —, e o aviso renasceria diariamente. O teste roda a varredura duas
-vezes e exige `0` criados na segunda.
+**`corridas.test.ts` › 1 de 1 e 3 de 5.** Duas saídas simultâneas de um item com uma unidade só:
+sem a trava da linha do item (`travarItemOuFalhar`), as duas contam "0 de 1 fora" e as duas inserem.
+Prova também a BAIXA concorrente com a SAÍDA no mesmo item, pela mesma trava.
 
-**`webhook.puro.test.ts` não fala com o banco, e é de propósito.** A função é pura e o que ela protege
-é a única coisa da fase que um atacante alcança: a URL vem do banco e a requisição sai do servidor. Um
-teste que precisasse subir a aplicação para provar isso rodaria devagar e acabaria pulado — e era
-justamente o que acontecia até o arquivo ganhar o sufixo `.puro` e o projeto sem `globalSetup`.
-
-**`fuso.puro.test.ts`: a travessia que erra uma vez por semestre, de madrugada.** `core/time/local-day.ts`
-converte hora de parede ↔ instante UTC, e faz **duas passadas** de deslocamento de propósito: a
-primeira mede no chute em UTC (lugar errado), a segunda no instante já corrigido. Com uma passada só,
-a virada do horário de verão erra em exatamente uma hora — e é o tipo de defeito que passa em todo
-teste manual. Os casos de 01/11/2026 em `America/New_York` são o que prova que a segunda passada
-existe.
-
-> O plano da F8 dizia que a janela do job "já está coberta por `tests/jobs/janela.test.ts` — não se
-> refaz". **Não estava:** aquele arquivo exercita `inicioDoDia()`, que usa o relógio do PROCESSO. As
-> funções que a fase criou são outras, e não tinham teste nenhum.
-
-**`auditoria-pelo-agente.test.ts`: os seis "nãos" do D124.** A conferência automática não nasce no
-handshake, não conta hostname nem MAC, não é `NAO_LOCALIZADO` quando o serial falta, não escreve
-`locationId`, não marca as duas divergências e não grava `ActivityLog`. O penúltimo estava **errado no
-código**: o caminho do agente passava a posse lida do banco, e a linha diária nascia afirmando
-`divergenciaDePosse` que ninguém observou — o D52 furado por dentro de um job, que é o pior lugar para
-descobrir isso.
-
-### `estoque/` — as duas que falhariam em silêncio
-
-Toda a pasta existe por causa de dois testes, e vale ler o porquê antes de
-mexer neles:
-
-- **`operacoes.test.ts` › o desligamento não esvazia o posto.** Sem o
-  `targetType: 'USER'` no `where`, desligar a Laura devolve ao estoque os 5
-  mouses da Mesa 1 — que continuam fisicamente na mesa, agora com a Ana. O saldo
-  **bate**, as linhas foram fechadas corretamente, nenhum erro é logado, e a
-  falta só aparece quando alguém vai buscar um mouse na gaveta.
-- **`operacoes.test.ts` › a retirada parcial divide a linha.** Se alguém trocar a
-  divisão por um decremento de `assignedQty`, o estado atual continua CERTO — a
-  soma das abertas não muda — e só o histórico desaparece. Nenhuma tela quebra.
-
-Nos dois casos a asserção é sobre o BANCO, não sobre a resposta HTTP: é o estado
-final que precisa estar certo, e ele é exatamente o que uma resposta `200`
-plausível esconderia.
+Em todos os casos a asserção central é sobre o BANCO — a contagem de `StockMovement` abertas —, não
+sobre a resposta HTTP: é o estado final que precisa estar certo, e é exatamente o que uma resposta
+`201` plausível esconderia se a trava não existisse.
 
 ### `listagens/` — o que a vista devolve, e o que ela esconde
 
@@ -165,7 +111,9 @@ produziria sozinha.
 
 ### `licencas/` — a corrida que o `SKIP LOCKED` ganha
 
-Sete arquivos, e cada um prova uma coisa que passaria despercebida:
+Cinco arquivos (sem `chave.test.ts` nem `canario.test.ts`, que saíram com a cifra —
+[G](../decisoes/licencas.md#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples)),
+e cada um prova uma coisa que passaria despercebida:
 
 - **`corridas.test.ts`** — oito entregas numa licença de cinco assentos, sem
   `await` entre elas. Passam cinco `201` e três `409`, **em assentos distintos**.
@@ -177,70 +125,49 @@ Sete arquivos, e cada um prova uma coisa que passaria despercebida:
   seatsTotal`) através de 5→8→6→8, provando que a numeração usa `MAX+1` e não
   colide com os aposentados; e a aritmética do D92, que a fórmula do plano
   prospectivo erraria.
-- **`chave.test.ts`** — as três portas por onde o segredo poderia sair: a
-  resposta, o diff do `ActivityLog` e o `sanitizeForLog`. O último **falharia
-  antes da F6**: o regex de `SENSITIVE_KEY` não casava com `productKey`. Também
-  prova o AAD — chave copiada de outra licença por dentro do banco não é
-  revelada.
 - **`operacoes.test.ts`** — a queima na devolução e o status derivado nas quatro
   bordas do calendário, onde um `<=` trocado por `<` só apareceria no dia exato.
-- **`historico.test.ts`** — a trilha da licença, `VIEW_KEY` inclusive.
-- **`posse.test.ts`** — o desligamento fecha o assento da PESSOA e **não** o do
-  ATIVO, e os 409 de `DELETE` de pessoa e de ativo citam o assento. E a promessa
-  contra o cumprimento: o conjunto que `GET /users/:id/holdings` devolve é
-  **exatamente** o que o `offboard` fecha, com a queima caindo em quem a tela
-  marcou. É o que impede o modal de desligamento de prometer devolução e
-  entregar destruição.
-- **`canario.test.ts`** — o canário grava no primeiro boot, **derruba** a troca
-  acidental de chave e **se regrava** com a chave ativa numa rotação. O último é
-  o que faz a rotação ter fim: sem ele o canário fica preso ao `kid` da chave
-  que o escreveu, e a antiga nunca pode sair do ambiente — o boot passaria a
-  falhar pedindo de volta uma chave que já não cifra nada.
+- **`historico.test.ts`** — a trilha da licença.
+- **`posse.test.ts`** — o 409 do `DELETE` de pessoa e de ativo cita o assento que ainda está
+  ocupado, com o número; e desativar a pessoa pela edição recusa o checkout de assento com 409 —
+  a mesma régua das outras três pontas da invariante 6.
 
 
 ### `descoberta/` — a única pasta que fala WebSocket
 
-Onze arquivos, e vários deles existem por asserções **negativas** — o que o sistema
-**não** pode fazer:
+Nove arquivos. A fila de sugestões não infere mais pessoa pela conta do sistema operacional
+([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)) —
+o que resta é o vínculo entre máquina e ativo, por evidência de hardware:
 
-- **`posse-sugerida.test.ts` › com o ativo entregue a um posto, NENHUMA sugestão
-  de checkout é gerada.** É a asserção mais importante da fase inteira. Se ela
-  cair, o sistema volta a sugerir "atribuir este desktop para a Ana" sobre um
-  ativo da Mesa 1 — e aceitar isso fecha a posse do posto, transformando um ativo
-  compartilhado em pessoal: some a Laura, some o turno, some a responsabilidade
-  solidária. O operador clica achando que está corrigindo o inventário.
-- **`posto-compartilhado.test.ts` › as duas, com turno; nenhum vencedor
-  escolhido.** A outra metade da mesma ideia. Com duas pessoas recorrentes, o
-  `suggest-posse` desiste de propósito — escolher a mais frequente é exatamente
-  o comportamento que a fase existe para não ter.
+- **`cascata.test.ts` › serial ambíguo ou de fábrica vale ZERO.** "To Be Filled By O.E.M." e
+  qualquer serial repetido em duas máquinas do parque não geram vínculo nenhum — evidência
+  ambígua é evidência zero (D46). É a asserção que, se cair, faz a cascata casar duas máquinas
+  reais com o mesmo ativo.
+- **`vincular-e-entregar.test.ts` › o vínculo manual não é atômico com a entrega, por decisão**
+  ([E](../decisoes/reconciliacao.md#e--descobertas-ganha-vínculo-manual-e-reconciliar-agora)).
+  Quando a entrega falha (o posto já tem um ativo — invariante 19), o vínculo FICA; a resposta
+  diz isso. E desvincular a máquina depois **não libera a vaga** — o ativo continua sendo o da
+  mesa, porque a invariante 19 é sobre o ativo, não sobre a máquina vinculada ([B](../decisoes/posse.md#b--invariante-19-na-forma-final-um-ativo-por-posto-de-trabalho)).
+- **`varredura-manual.test.ts` › "Reconciliar agora" é serializado.** Duas chamadas ao mesmo
+  tempo: uma varre, a outra é 409 — o mesmo guarda que o job de hora em hora usa.
+- **`hardware.test.ts` › primeira coleta NÃO é troca de peça.** O rollout do agente faz 500
+  máquinas ganharem `biosSerial` no mesmo dia. Sem esta asserção, cada uma entra com nove linhas
+  de "mudança de hardware" e o histórico de todo ativo do parque vira um relatório de deploy
+  (D116).
+- **`maquina-e-comando.test.ts` › "máquina não existe" e "agente desconectado" são 404 e 409
+  distintos**, e o comando só responde sucesso com o envio confirmado pelo socket — não por
+  achar a conexão no mapa ([D](../decisoes/reconciliacao.md#d--a-telemetria-e-o-comando-vão-para-a-ficha-do-ativo-e-a-do-posto)).
+- **`fila.test.ts` e `ciclo-de-vida-da-fila.test.ts`** provam que a mesma sugestão não empilha
+  (invariante 13) e que aceitar uma sugestão já realizada não inventa devolução no histórico —
+  o aceite de reatribuição é checkin + checkout, e aceitar "entregar à Ana" um ativo já entregue
+  à Ana gravaria uma devolução que nunca aconteceu.
+- **`uso-agregado.test.ts`** roda a mesma agregação com duas janelas, porque a pergunta é se
+  "idempotente" quer dizer que a segunda passada escreve o **mesmo** valor (D111).
 
-- **`ciclo-de-vida-da-fila.test.ts` › aceitar uma sugestão já realizada NÃO inventa
-  devolução no histórico.** É a asserção que nasceu de um erro real, e o erro era
-  do tipo que não aparece: o aceite de reatribuição é checkin + checkout, então
-  aceitar "entregar à Ana" um ativo **já entregue à Ana** gravava uma devolução
-  que nunca aconteceu. Um inventário errado alguém contesta; uma afirmação falsa
-  sobre o passado, no razão de posse, ninguém tem como descobrir.
-
-- **`hardware.test.ts` › primeira coleta NÃO é troca de peça.** O rollout do
-  agente C# faz 500 máquinas ganharem `biosSerial` no mesmo dia. Sem esta
-  asserção, cada uma delas entra com nove linhas de "mudança de hardware" e o
-  histórico de todo ativo do parque vira um relatório de deploy (D116). A irmã
-  dela — campo que sumiu **não** é peça que sumiu — é o D106 do lado da detecção:
-  coleta que falhou diz "não sei", e "não sei" não é "removeram".
-
-- **`turno.test.ts` › o plantão que atravessa a meia-noite é Noite.** A entrada é
-  `[22, 23, 0, 1]`, e ela é o defeito inteiro: a versão antiga tirava a média
-  aritmética das horas, chegava a 11,5 e rotulava o turno da noite como
-  **"Manhã"** — todas as noites, com a confiança de quem fez uma conta (D113).
-  Hora é grandeza circular; média de grandeza circular não significa nada. O
-  arquivo é **puro** de propósito: a regra do turno é a que mais vai mexer com
-  dado real de campo, e tem que ser verificável sem banco nem agente.
-
-E o `handshake.test.ts` guarda a regressão mais silenciosa que a F7 podia
+E o `handshake.test.ts` guarda a regressão mais silenciosa que a borda do agente podia
 introduzir: `ramTotalBytes` tem que sair como **string** em `/api/endpoints`. Com
 `BigInt` cru, o `JSON.stringify` do Fastify morre com *"Do not know how to
-serialize a BigInt"* — na rota que o painel consulta a cada 5 segundos, ou seja, a
-tela inteira em branco.
+serialize a BigInt"* — na rota que a ficha do ativo e a do posto consultam.
 
 **Aqui o `inject` não serve, e é a única exceção da suíte** (D99). O `/agent-hub` é
 WebSocket, e `inject` não faz upgrade: `tests/helpers/agente.ts` sobe a aplicação
@@ -249,21 +176,6 @@ alternativa — chamar `handleAgentMessage()` direto — pularia o parser, a tab
 sinônimos PascalCase/camelCase e o `readOptionalBigInt`, ou seja, pularia
 exatamente onde o agente velho e o novo se distinguem. É o mesmo princípio que faz
 os fixtures criarem cenário pela API.
-
-**Dois arquivos provam propriedades que só o TEMPO revela** — e é por isso que eles
-existem separados. O `ciclo-de-vida-da-fila.test.ts` acrescenta um dia de presença
-e roda o job de novo, porque a pergunta é se a memória da recusa sobrevive ao
-calendário (D109); o `uso-agregado.test.ts` roda a mesma agregação com duas
-janelas, porque a pergunta é se "idempotente" quer dizer que a segunda passada
-escreve o **mesmo** valor (D111). Nos dois casos o defeito era invisível numa
-única execução — a suíte só o veria rodando duas vezes, o que nenhum teste faz por
-acidente.
-
-**A única escrita direta por Prisma na suíte que não é leitura nem regra de banco**
-também está aqui, e o comentário do arquivo explica: `observar()` insere linhas de
-`endpoint_user_daily` com data passada. A "API" que escreve essas linhas é o
-agente mandando handshake em dias diferentes, e nenhum teste pode esperar três
-dias — o que se simula é o **calendário**, não um formulário.
 
 ### `formularios/` — o corpo literal
 
@@ -315,9 +227,9 @@ nenhum usuário consegue criar.
 dois arquivos truncariam a tabela no meio do teste do outro, e a falha mudaria de
 lugar a cada execução — suíte que falha sem repetir ensina a ignorar o vermelho.
 
-A opção fica na **raiz** da configuração e não dentro do projeto `banco`, porque o
-vitest só a aceita nesse nível: ela é do runner, não de um projeto. O projeto `puro`
-herda a serialização e não se incomoda — são dois arquivos de milissegundos.
+Hoje há **um projeto só** (`banco`) — o par de projetos (`banco` + `puro`) saiu quando o
+corte de escopo levou o último arquivo `.puro.test.ts`, e um projeto com zero arquivos não é
+separação. Volta junto com o próximo teste que não precisar do banco.
 
 ---
 

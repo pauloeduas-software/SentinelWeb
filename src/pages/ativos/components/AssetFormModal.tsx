@@ -33,43 +33,32 @@ const ROTULO = 'text-text-secondary uppercase tracking-widest text-[10px]';
  *
  * As duas são ÚNICAS entre os vivos (índice parcial no banco): copiadas, o
  * servidor responderia 409 e o clone nunca gravaria. Todo o resto — modelo,
- * fornecedor, valor, garantia, notas — é justamente o que se quer repetir ao
- * cadastrar o segundo notebook do mesmo lote.
+ * localização, valor, notas — é justamente o que se quer repetir ao cadastrar o
+ * segundo notebook do mesmo lote.
  *
  * A posse NÃO é copiada porque nem está aqui: entregar é operação, não campo
- * (docs/referencia/modelo-de-posse.md). Um clone nasce no estoque, como deve.
- *
- * OS CAMPOS CUSTOMIZADOS SÃO COPIADOS, e o segredo NÃO — sem código para isso.
- * O clone carrega a máscara `••••••` dos campos cifrados, e o servidor a lê como
- * "não mexi"; num ativo NOVO não há valor anterior para manter, então o campo
- * nasce vazio. Um segredo que se clona junto com a etiqueta é o oposto do que
- * cifrar em repouso existe para garantir.
+ * (docs/referencia/modelo-de-posse.md). Um clone nasce sem posse, como deve.
  */
-function valoresIniciais(asset: Asset | null, clonar: boolean) {
+function valoresIniciais(asset: Asset | null, clonar: boolean, statusPadraoId: string) {
   return {
     assetTag: clonar ? '' : asset?.assetTag ?? '',
     serial: clonar ? '' : asset?.serial ?? '',
     name: asset?.name ?? '',
-    statusId: asset?.statusId ?? '',
+    // Ativo NOVO nasce com o status de tipo "Disponível" (`DEPLOYABLE`; o id
+    // vem do hook da página): o primeiro da lista alfabética era "Aguardando",
+    // e o cadastro mais comum — chegou, está no estoque — exigia trocar o campo
+    // toda vez. Edição e clone mantêm o status do ativo de origem.
+    statusId: asset?.statusId ?? statusPadraoId,
     modelId: asset?.modelId ?? '',
     locationId: asset?.locationId ?? '',
-    supplierId: asset?.supplierId ?? '',
     // `assignedToId` NÃO está aqui, e a ausência é a regra: ver o comentário do
     // topo do arquivo. O servidor recusa o campo no corpo.
     orderNumber: asset?.orderNumber ?? '',
     purchaseDate: paraCampoDeData(asset?.purchaseDate),
     purchaseCost: asset?.purchaseCost ?? '',
-    warrantyMonths: asset?.warrantyMonths == null ? '' : String(asset.warrantyMonths),
-    eolMonths: asset?.eolMonths == null ? '' : String(asset.eolMonths),
-    eolDate: paraCampoDeData(asset?.eolDate),
-    eolExplicit: asset?.eolExplicit ?? false,
-    byod: asset?.byod ?? false,
-    requestable: asset?.requestable ?? false,
     notes: asset?.notes ?? '',
-    // `slug` → valor, como a leitura os devolve (cifrado já vem mascarado).
   };
 }
-
 
 interface AssetFormModalProps {
   asset: Asset | null;
@@ -81,12 +70,20 @@ interface AssetFormModalProps {
    * distinguir "editar este" de "criar outro igual a este".
    */
   clonar?: boolean;
+  /**
+   * O status de um ativo NOVO. Vem de quem abre o modal porque é a listagem
+   * que tem a lista de status; sem ele (a ficha do ativo, que só edita e
+   * clona), o campo nasce em branco como antes.
+   */
+  statusPadraoId?: string;
   onClose: () => void;
   onSubmit: (data: AssetInput) => Promise<void>;
 }
 
-export default function AssetFormModal({ asset, clonar = false, onClose, onSubmit }: AssetFormModalProps) {
-  const [valores, setValores] = useState(() => valoresIniciais(asset, clonar));
+export default function AssetFormModal({
+  asset, clonar = false, statusPadraoId = '', onClose, onSubmit,
+}: AssetFormModalProps) {
+  const [valores, setValores] = useState(() => valoresIniciais(asset, clonar, statusPadraoId));
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -95,11 +92,8 @@ export default function AssetFormModal({ asset, clonar = false, onClose, onSubmi
   // furaria a sequência de etiquetas.
   const { data: proxima } = useNextAssetTagQuery(!asset || clonar);
 
-
-
   const definir = (campo: string, valor: unknown) =>
     setValores((atual) => ({ ...atual, [campo]: valor }));
-
 
   const enviar = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -109,9 +103,6 @@ export default function AssetFormModal({ asset, clonar = false, onClose, onSubmi
       await onSubmit(valores);
     } catch (falha) {
       setErro((falha as Error).message);
-      // O resumo do 422 corta em três campos com "(e mais N)": num conjunto de
-      // vinte campos customizados, o motivo do vigésimo não apareceria em lugar
-      // nenhum sem este mapa.
     } finally {
       setSalvando(false);
     }
@@ -200,10 +191,6 @@ export default function AssetFormModal({ asset, clonar = false, onClose, onSubmi
 
           <Secao titulo="Compra">
             <div className="space-y-1">
-              <label className={ROTULO}>Fornecedor</label>
-              <ReferenceSelect rota="suppliers" valor={valores.supplierId} onChange={(v) => definir('supplierId', v)} />
-            </div>
-            <div className="space-y-1">
               <label className={ROTULO}>Número do pedido</label>
               <input value={valores.orderNumber} onChange={(e) => definir('orderNumber', e.target.value)} className={CLASSE_CAMPO} />
             </div>
@@ -219,41 +206,7 @@ export default function AssetFormModal({ asset, clonar = false, onClose, onSubmi
             </div>
           </Secao>
 
-          <Secao titulo="Prazos">
-            <div className="space-y-1">
-              <label className={ROTULO}>Garantia (meses)</label>
-              <input type="number" min={0} value={valores.warrantyMonths} onChange={(e) => definir('warrantyMonths', e.target.value)} className={CLASSE_CAMPO} />
-            </div>
-            <div className="space-y-1">
-              <label className={ROTULO}>Vida útil (meses)</label>
-              <input type="number" min={0} value={valores.eolMonths} onChange={(e) => definir('eolMonths', e.target.value)} placeholder="herda do modelo" className={CLASSE_CAMPO} />
-            </div>
-            <label className="flex items-center gap-3 cursor-pointer text-text-secondary col-span-2">
-              <input type="checkbox" checked={valores.eolExplicit} onChange={(e) => definir('eolExplicit', e.target.checked)} className="accent-status-success w-4 h-4" />
-              <span className={ROTULO}>Definir a data de fim de vida à mão</span>
-            </label>
-            {valores.eolExplicit && (
-              <div className="space-y-1">
-                <label className={ROTULO}>Fim de vida</label>
-                <input type="date" value={valores.eolDate} onChange={(e) => definir('eolDate', e.target.value)} className={CLASSE_CAMPO} />
-              </div>
-            )}
-            <p className="col-span-2 text-text-tertiary text-[10px] leading-relaxed">
-              Vencimento da garantia e fim de vida são calculados a partir da data da compra.
-              Sem data de compra, os dois ficam em branco.
-            </p>
-          </Secao>
-
-
-          <Secao titulo="Outros">
-            <label className="flex items-center gap-3 cursor-pointer text-text-secondary">
-              <input type="checkbox" checked={valores.byod} onChange={(e) => definir('byod', e.target.checked)} className="accent-status-success w-4 h-4" />
-              <span className={ROTULO}>Equipamento do colaborador (BYOD)</span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer text-text-secondary">
-              <input type="checkbox" checked={valores.requestable} onChange={(e) => definir('requestable', e.target.checked)} className="accent-status-success w-4 h-4" />
-              <span className={ROTULO}>Pode ser solicitado</span>
-            </label>
+          <Secao titulo="Notas">
             <div className="space-y-1 col-span-2">
               <label className={ROTULO}>Notas</label>
               <textarea value={valores.notes} onChange={(e) => definir('notes', e.target.value)} className={`${CLASSE_CAMPO} h-20 resize-none`} />
