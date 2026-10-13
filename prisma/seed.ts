@@ -76,32 +76,24 @@ const STATUS_LABELS = [
     notes: 'Fora de operação e fora das listagens do dia a dia.' },
 ] as const;
 
-// Conjunto mínimo para o formulário de ativo não abrir com `<select>` vazio.
-// NÃO semeamos fabricante, fornecedor, localização, modelo nem depreciação: são
-// dado da empresa, não do software — semear "Dell" é adivinhar o cliente.
+// Conjunto mínimo para os formulários não abrirem com `<select>` vazio.
+// NÃO semeamos fabricante, localização nem modelo: são dado da empresa, não do
+// software — semear "Dell" é adivinhar o cliente.
+//
+// ATIVO É COMPUTADOR: as categorias de ativo são as de máquina. Monitor e
+// periférico são ESTOQUE — item por quantidade, sem patrimônio individual.
 const CATEGORIES = [
   { name: 'Notebook', type: 'ASSET', color: '#3b82f6' },
   { name: 'Desktop', type: 'ASSET', color: '#3b82f6' },
-  { name: 'Monitor', type: 'ASSET', color: '#888888' },
-  { name: 'Periférico', type: 'ASSET', color: '#888888' },
+  { name: 'Monitor', type: 'STOCK', color: '#888888' },
+  { name: 'Periférico', type: 'STOCK', color: '#888888' },
   { name: 'Licença', type: 'LICENSE', color: '#f59e0b' },
-
-  // ESTOQUE (F5). Uma por tipo, e o TIPO é o que decide em qual das três abas a
-  // categoria aparece: o use-case recusa um acessório de categoria `ASSET`, e
-  // sem estas linhas a primeira tela de estoque de um banco novo abriria sem
-  // nenhuma categoria selecionável.
-  { name: 'Acessório', type: 'ACCESSORY', color: '#14b8a6' },
-  { name: 'Consumível', type: 'CONSUMABLE', color: '#a855f7' },
-  { name: 'Componente', type: 'COMPONENT', color: '#0ea5e9' },
 ] as const;
 
 // O ADMINISTRADOR INICIAL — o único jeito de entrar num banco recém-criado.
 //
 // Depois da F3 a API é fechada por padrão: sem esta linha, ninguém loga, e sem
 // login ninguém cria usuário — um ovo-e-galinha que só o seed resolve.
-// O NOME DO GRUPO DE SISTEMA vem do CATÁLOGO (`GRUPO_ADMINISTRADOR`): o seed o
-// reconcilia, a rota de edição o recusa e o comando de escape o procura — os três
-// têm que falar do mesmo grupo, e um literal por arquivo não garante isso.
 const ADMIN_USERNAME = (process.env.ADMIN_USERNAME ?? 'admin').trim().toLowerCase();
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL ?? 'admin@sentinel.local').trim().toLowerCase();
 const ADMIN_NAME = process.env.ADMIN_NAME?.trim() || 'Administrador';

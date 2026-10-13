@@ -5,9 +5,6 @@ import { momentoDoEvento } from '../../../helpers/historico.helper';
 
 // A ABA LICENÇAS — "o que está licenciado NESTA máquina".
 //
-// Nasceu desabilitada na F2, dizendo "chega na Fase 6"; é esta a Fase 6. A
-// moldura da tela não mudou: sumiu o `fase` da lista de abas, entrou o conteúdo.
-//
 // SÓ AS OCUPAÇÕES ABERTAS: a pergunta é de ESTADO. Os assentos que já foram
 // devolvidos estão na trilha da LICENÇA, não na do ativo.
 //

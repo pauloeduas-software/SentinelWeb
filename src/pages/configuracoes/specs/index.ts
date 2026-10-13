@@ -3,32 +3,23 @@ import {
   type CatalogUiSpec,
 } from './catalog-ui.types';
 
-// As NOVE abas da tela de Configurações, na ordem em que aparecem: do que se
+// As CINCO abas da tela de Configurações, na ordem em que aparecem: do que se
 // mexe mais para o que se mexe menos. A ordem espelha CATALOG_SPECS do servidor.
 
 const categoria: CatalogUiSpec = {
   slug: 'categories',
   aba: 'Categorias',
   singular: 'Categoria',
-  descricao: 'O NOME é seu. O TIPO diz a que módulo a categoria pertence — uma categoria de Ativo não agrupa licenças. Aqui também se define se a entrega exige aceite do colaborador.',
+  descricao: 'O NOME é seu. O TIPO diz a que módulo a categoria pertence — uma categoria de Ativo não agrupa licenças.',
   placeholderBusca: 'Buscar categoria...',
   colunas: [
     { key: 'name', label: 'Nome', render: 'cor' },
     { key: 'type', label: 'Tipo', render: 'enum', opcoes: TIPOS_CATEGORIA },
-    { key: 'requireAcceptance', label: 'Exige aceite', render: 'booleano' },
-    { key: 'checkinEmail', label: 'Avisa na devolução', render: 'booleano' },
   ],
   campos: [
     { key: 'name', label: 'Nome', tipo: 'text', obrigatorio: true, placeholder: 'Ex: Notebook' },
     { key: 'type', label: 'Tipo', tipo: 'select', obrigatorio: true, opcoes: TIPOS_CATEGORIA },
     { key: 'color', label: 'Cor', tipo: 'color' },
-    { key: 'requireAcceptance', label: 'Exigir aceite na entrega', tipo: 'checkbox',
-      ajuda: 'Guardado agora. Passa a valer quando a entrega com assinatura existir.' },
-    { key: 'checkinEmail', label: 'Avisar por e-mail na devolução', tipo: 'checkbox',
-      ajuda: 'Guardado agora. Depende do envio de e-mail, que ainda não existe.' },
-    { key: 'eulaText', label: 'Termo de uso (EULA)', tipo: 'textarea', largura: 'inteira',
-      placeholder: 'Texto apresentado ao colaborador no aceite...',
-      ajuda: 'Guardado agora. É o texto que o colaborador vai assinar quando o aceite existir.' },
   ],
 };
 
@@ -78,14 +69,13 @@ const modelo: CatalogUiSpec = {
   slug: 'asset-models',
   aba: 'Modelos',
   singular: 'Modelo',
-  descricao: 'O catálogo de equipamentos. O ativo herda daqui a categoria e a vida útil.',
+  descricao: 'O catálogo de equipamentos. O ativo herda daqui a categoria.',
   placeholderBusca: 'Buscar modelo ou número...',
   colunas: [
     { key: 'name', label: 'Modelo' },
     { key: 'manufacturer', label: 'Fabricante', render: 'relacao' },
     { key: 'category', label: 'Categoria', render: 'relacao' },
     { key: 'modelNumber', label: 'Número' },
-    { key: 'eolMonths', label: 'Vida útil', render: 'meses' },
   ],
   campos: [
     { key: 'name', label: 'Nome do modelo', tipo: 'text', obrigatorio: true, placeholder: 'Ex: Latitude 5450' },
@@ -94,38 +84,9 @@ const modelo: CatalogUiSpec = {
     // Só categorias de ATIVO: um modelo de equipamento não pertence a uma
     // categoria de licença.
     { key: 'categoryId', label: 'Categoria', tipo: 'reference', rota: 'categories', filtroTipo: 'ASSET', obrigatorio: true },
-    { key: 'eolMonths', label: 'Vida útil (meses)', tipo: 'number', placeholder: 'Ex: 48',
-      ajuda: 'Todo ativo deste modelo herda este prazo, e pode sobrescrever.' },
     { key: 'notes', label: 'Notas', tipo: 'textarea', largura: 'inteira' },
   ],
 };
-
-const fornecedor: CatalogUiSpec = {
-  slug: 'suppliers',
-  aba: 'Fornecedores',
-  singular: 'Fornecedor',
-  descricao: 'De quem se compra. Usado nos dados de compra do ativo e nas manutenções.',
-  placeholderBusca: 'Buscar fornecedor, contato ou cidade...',
-  colunas: [
-    { key: 'name', label: 'Nome' },
-    { key: 'contactName', label: 'Contato' },
-    { key: 'phone', label: 'Telefone' },
-    { key: 'city', label: 'Cidade' },
-  ],
-  campos: [
-    { key: 'name', label: 'Nome', tipo: 'text', obrigatorio: true },
-    { key: 'contactName', label: 'Pessoa de contato', tipo: 'text' },
-    { key: 'phone', label: 'Telefone', tipo: 'text' },
-    { key: 'email', label: 'E-mail', tipo: 'text' },
-    { key: 'url', label: 'Site', tipo: 'text', placeholder: 'https://...' },
-    { key: 'zip', label: 'CEP', tipo: 'text' },
-    { key: 'address', label: 'Endereço', tipo: 'text', largura: 'inteira' },
-    { key: 'city', label: 'Cidade', tipo: 'text' },
-    { key: 'state', label: 'Estado', tipo: 'text' },
-    { key: 'notes', label: 'Notas', tipo: 'textarea', largura: 'inteira' },
-  ],
-};
-
 const localizacao: CatalogUiSpec = {
   slug: 'locations',
   aba: 'Localizações',
@@ -157,45 +118,16 @@ const localizacao: CatalogUiSpec = {
     { key: 'notes', label: 'Notas', tipo: 'textarea', largura: 'inteira' },
   ],
   // A ÚNICA aba com ação própria: um posto tem ocupantes, e nenhuma outra
-  // tabela de catálogo tem (docs/referencia/modelo-de-posse.md, Camada 2). As outras seis
+  // tabela de catálogo tem (docs/referencia/modelo-de-posse.md, Camada 2). As outras quatro
   // omitem `acoes` e seguem com editar/excluir, como sempre.
   acoes: [
     { id: 'ocupantes', titulo: 'Ocupantes do posto' },
   ],
 };
 
-
-// ── O DEPARTAMENTO (F11, Etapa D) ───────────────────────────────────────────
-
-const departamento: CatalogUiSpec = {
-  slug: 'departments',
-  aba: 'Departamentos',
-  singular: 'Departamento',
-  // A DESCRIÇÃO DIZ O QUE ELE **NÃO** FAZ, de propósito: é a dúvida que leva
-  // alguém a procurar "entregar para o Comercial" e não achar (D72).
-  descricao: 'Agrupa pessoas para relatório e rateio de custo. Um departamento NÃO recebe ativo — entregar é para uma pessoa ou para um posto.',
-  placeholderBusca: 'Buscar departamento...',
-  colunas: [
-    { key: 'name', label: 'Nome' },
-    { key: 'code', label: 'Código' },
-    { key: 'manager', label: 'Gestor', render: 'relacao' },
-  ],
-  campos: [
-    { key: 'name', label: 'Nome', tipo: 'text', obrigatorio: true, placeholder: 'Ex: Comercial' },
-    { key: 'code', label: 'Código', tipo: 'text', placeholder: 'Ex: CC-1020',
-      ajuda: 'O centro de custo, quando a empresa tem um.' },
-    { key: 'managerId', label: 'Gestor', tipo: 'reference', rota: 'users',
-      ajuda: 'Recebe aviso e aprova baixa. NÃO responde pelos ativos de quem está no departamento.' },
-  ],
-};
-
-// ── OS CAMPOS CUSTOMIZADOS (F9) ─────────────────────────────────────────────
-
+// Mesma ordem do `CATALOG_SPECS` do servidor — as duas listas são percorridas
+// em paralelo pela tela e pelo maestro, e divergir faria a aba apontar para a
+// spec errada.
 export const CATALOG_UI_SPECS: readonly CatalogUiSpec[] = [
-  categoria, status, fabricante, modelo, fornecedor, localizacao, // A DÉCIMA, DA F11 (D75). Depois das de inventário porque é cadastro de GENTE:
-  // quem abre Configurações está quase sempre atrás de categoria, modelo ou
-  // local. Mesma ordem do `CATALOG_SPECS` do servidor — as duas listas são
-  // percorridas em paralelo pela tela e pelo maestro, e divergir faria a aba
-  // apontar para a spec errada.
-  departamento,
+  categoria, status, fabricante, modelo, localizacao,
 ];

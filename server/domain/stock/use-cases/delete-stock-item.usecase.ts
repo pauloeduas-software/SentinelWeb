@@ -1,65 +1,44 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
-import { contarSaidasAbertas, travarItemOuFalhar } from '../helpers/stock-balance.helper';
-import type { StockKindSpec } from '../helpers/stock-kind.helper';
+import { contarForaDe, travarItemOuFalhar } from '../helpers/stock-balance.helper';
 
 /**
- * A LIXEIRA do item de estoque — e o 409 que protege as saídas abertas.
+ * Manda o item para a lixeira — recusando enquanto houver unidade FORA.
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * POR QUE OS TRÊS TÊM LIXEIRA, se o catálogo não tem (D36)
+ * O item tem lixeira porque a leitura aninhada dele é de HISTÓRICO (o nome do
+ * item na saída de março), e apagar de verdade levaria o histórico junto. Mas
+ * um item com unidade na rua não some de vista: a unidade continuaria contando
+ * como fora, na mão de alguém, e a tela que ofereceria a devolução responderia
+ * 404 — é o mesmo 409 que o ativo dá pelo assento de licença.
  *
- * O vazamento que o D8 evitou é o de um registro apagado aparecendo como valor
- * ATUAL de outra linha — a categoria na lixeira ainda sendo a categoria do
- * ativo. Aqui a leitura aninhada é de HISTÓRICO: o nome do acessório na linha
- * de consumo de março. Mostrar o item apagado ali é o CERTO.
+ * POR QUE NÃO O BANCO: apagar aqui é `UPDATE stock_items SET "deletedAt"`, o
+ * Postgres não vê `DELETE` nenhum e a FK não é consultada — o ponto cego do
+ * soft delete, o mesmo do `deleteUser`.
  *
- * E o delete real levaria junto o histórico de consumo (as FKs são `Cascade`),
- * que é a única coisa desta fase que não se reconstrói.
- * ─────────────────────────────────────────────────────────────────────────────
- *
- * POR QUE A RECUSA É DE APLICAÇÃO, E NÃO DO BANCO: apagar aqui é
- * `UPDATE … SET "deletedAt" = now()`. O Postgres não vê `DELETE` nenhum, a FK
- * `Restrict` do alvo não é consultada e a rede NÃO EXISTE — é o primeiro ponto
- * cego do soft delete, o mesmo que o `deleteUser` documenta.
- *
- * A TRAVA vem antes da contagem, e é o que torna a contagem confiável: sem ela,
- * uma entrega simultânea cria a saída DEPOIS deste `count` e o item vai para a
- * lixeira com unidade na rua.
+ * A TRAVA vem antes da contagem: sem ela, uma saída simultânea cria a linha
+ * DEPOIS deste `count`.
  */
-export async function deleteStockItem(
-  spec: StockKindSpec,
-  id: string,
-  actorId: string | null,
-): Promise<void> {
+export async function deleteStockItem(id: string, actorId: string | null): Promise<void> {
   await prisma.$transaction(async (tx) => {
-    await travarItemOuFalhar(tx, spec.kind, spec.rotulo, id);
+    await travarItemOuFalhar(tx, id);
 
-    const abertas = await contarSaidasAbertas(tx, spec.kind, id);
-    if (abertas > 0) {
+    const fora = await contarForaDe(tx, id);
+    if (fora > 0) {
       throw new AppError(
-        `Este ${spec.rotulo} ainda tem ${abertas} ${abertas === 1 ? 'unidade' : 'unidades'} fora do estoque. ` +
-          'Faça a devolução antes de excluir.',
+        `Este item tem ${fora} ${fora === 1 ? 'unidade' : 'unidades'} fora do estoque. `
+          + 'Devolva-as antes de excluir.',
         409,
-        { saidasAbertas: abertas },
+        { fora },
       );
     }
 
-    const { count } = await spec.delegate(tx).updateMany({
+    const { count } = await tx.stockItem.updateMany({
       where: { id, deletedAt: null },
       data: { deletedAt: new Date() },
     });
+    if (count === 0) throw new AppError('Este item já está na lixeira.', 409);
 
-    // Zero linhas afetadas aqui só pode ser UMA coisa: o item já estava na
-    // lixeira. O id inexistente foi separado pela trava lá em cima, que
-    // responde 404 antes de chegar neste ponto.
-    //
-    // Por isso 409 e não 404: o registro existe, o ESTADO dele é que recusa —
-    // mesma família do "este ativo já está entregue" e do "esta ocupação já foi
-    // encerrada".
-    if (count === 0) throw new AppError(`Este ${spec.rotulo} já está na lixeira.`, 409);
-
-    await recordActivity(tx, { entityType: spec.entityType, entityId: id, action: 'DELETE' }, actorId);
+    await recordActivity(tx, { entityType: 'StockItem', entityId: id, action: 'DELETE' }, actorId);
   });
 }

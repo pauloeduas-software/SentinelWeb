@@ -1,6 +1,6 @@
 // Contrato de POSSE com a API — as três camadas de docs/referencia/modelo-de-posse.md:
 //
-//   Camada 1  Assignment        a posse, com alvo polimórfico (USER|ASSET|LOCATION)
+//   Camada 1  Assignment        a posse, com alvo polimórfico (USER|LOCATION)
 //   Camada 2  LocationOccupant  quem ocupa o posto, com o turno
 //   Camada 3  PosseResolvida    a responsabilidade DERIVADA — nunca coluna
 //
@@ -12,19 +12,18 @@
 // não importa de lá. É o que evita ciclo entre dois arquivos de tipo.
 
 /** Para QUEM um ativo foi entregue. Espelha o enum `AssignmentTarget`. */
-export type AlvoDaPosse = 'USER' | 'ASSET' | 'LOCATION';
+export type AlvoDaPosse = 'USER' | 'LOCATION';
 
 /**
  * COMO a pessoa virou responsável — o caminho que a Camada 3 percorreu:
  *
  * - `DIRETO`  a posse aponta para ela (`targetType: 'USER'`)
  * - `POSTO`   ela ocupa a localização para a qual o ativo foi entregue
- * - `ATIVO`   o ativo está preso a outro ativo, e ela responde por aquele
  *
  * Importa na tela: "Laura" por posse direta e "Laura" por ocupar a Mesa 1 são
  * fatos diferentes, e a devolução de cada um é uma operação diferente.
  */
-export type ViaDaResponsabilidade = 'DIRETO' | 'POSTO' | 'ATIVO';
+export type ViaDaResponsabilidade = 'DIRETO' | 'POSTO';
 
 /** Uma pessoa que responde pelo ativo. É calculada, nunca lida de coluna. */
 export interface Responsavel {
@@ -51,7 +50,7 @@ export interface PosseResolvida {
   /** `null` = não há posse aberta. É o que decide entre entregar e devolver. */
   assignmentId: string | null;
   targetType: AlvoDaPosse | null;
-  /** Nome de quem detém: a pessoa, a etiqueta do ativo ou o nome do posto. */
+  /** Nome de quem detém: a pessoa ou o nome do posto. */
   targetLabel: string | null;
   responsaveis: Responsavel[];
   /**
@@ -63,41 +62,6 @@ export interface PosseResolvida {
   postoVago: boolean;
 }
 
-/**
- * COMO o escalonamento foi encontrado (F11, Etapa F — D73).
- *
- * `LOCAL` quando o gestor é da própria localização do ativo; `ANCESTRAL` quando
- * a subida da árvore precisou passar por ela. A tela precisa da diferença:
- * *"gestor da Mesa 1"* e *"gestor do Andar 2, porque a Mesa 1 não tem"* são
- * frases diferentes para quem vai ligar.
- */
-export type ViaEscalonamento = 'LOCAL' | 'ANCESTRAL';
-
-/**
- * Para quem ligar quando o posto está VAZIO — `resolverEscalonamento()`.
- *
- * ⚠️ **Não é responsabilidade, e não entra em `responsaveis`.** As duas coisas
- * respondem a perguntas vizinhas e diferentes (docs/referencia/modelo-de-posse.md, "A
- * fronteira"): `Responsavel` é *quem está com o equipamento*; isto é *quem
- * responde pelo espaço*. O gestor da localidade não assinou nada por este ativo
- * e não aparece na Camada 3 — se aparecesse, `postoVago` nunca mais acenderia.
- *
- * `null` em dois casos, e nenhum é erro: ativo sem localização (não há árvore
- * para subir) e árvore sem gestor em ancestral nenhum — que é o buraco que o
- * desligamento com substituto existe para não criar.
- */
-export interface Escalonamento {
-  userId: string;
-  name: string;
-  email: string;
-  /** O local que TEM o gestor — pode ser um ancestral, não o do ativo. */
-  locationId: string;
-  locationName: string;
-  via: ViaEscalonamento;
-  /** Quantos níveis a subida andou. 0 = o próprio local do ativo. */
-  saltos: number;
-}
-
 /** Pessoa embutida numa linha de posse ou de ocupação. */
 export interface PessoaRef {
   id: string;
@@ -105,17 +69,18 @@ export interface PessoaRef {
   email: string;
 }
 
-/** Ativo embutido como ALVO de uma posse (a dock que segura o notebook). */
-export interface AtivoAlvoRef {
-  id: string;
-  assetTag: string;
-  name: string | null;
-}
-
 /** Localização embutida como alvo de uma posse. */
 export interface LocalRef {
   id: string;
   name: string;
+  /**
+   * É um POSTO DE TRABALHO, e não um depósito ou uma filial?
+   *
+   * Quem pergunta é a aba Posse do ativo: só o posto tem ficha própria
+   * (`/postos/:id`) para onde levar. Opcional porque não toda rota que devolve um
+   * `LocalRef` o manda.
+   */
+  isWorkstation?: boolean;
 }
 
 /**
@@ -135,7 +100,6 @@ export interface Assignment {
 
   targetType: AlvoDaPosse;
   targetUserId: string | null;
-  targetAssetId: string | null;
   targetLocationId: string | null;
 
   checkoutAt: string;
@@ -146,7 +110,6 @@ export interface Assignment {
   checkinNotes: string | null;
 
   targetUser?: PessoaRef | null;
-  targetAsset?: AtivoAlvoRef | null;
   targetLocation?: LocalRef | null;
 }
 

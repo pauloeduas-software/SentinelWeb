@@ -7,30 +7,49 @@ import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
 // ─────────────────────────────────────────────────────────────────────────────
 // O QUE ELA FECHA
 //
-//   T1 (instalar peça)       conta o saldo do componente, vai gravar
-//   T2 (mandar o ativo       conta as instalações abertas → zero, segue
+//   T1 (entregar um assento  conta o que está aberto, vai gravar
+//       de licença ao ativo)
+//   T2 (mandar o ativo       conta o que está aberto → zero, segue
 //       para a lixeira)
 //   T2                       grava `deletedAt` no ativo            → COMMIT
-//   T1                       cria a `ComponentAsset`               → COMMIT
+//   T1                       grava o assento no ativo              → COMMIT
 //
-// Resultado: um ativo na lixeira com 4 pentes dentro. As unidades somem do
-// `disponivel` do componente e não há tela que as devolva — `GET
-// /api/assets/:id/components` responde 404, porque o ativo não existe mais para
-// o inventário. É o mesmo desenho do 409 que `deleteStockItem` dá do outro
-// lado, e sem a trava ele não dispara.
+// Resultado: um ativo na lixeira com assento pago em cima dele, e nenhuma tela
+// que o devolva — o ativo não existe mais para o inventário. É o mesmo desenho
+// do 409 que o `deleteUser` dá do outro lado, e sem a trava ele não dispara.
 //
-// O `onDelete: Restrict` de `component_assets.assetId` NÃO cobre isto: apagar
-// aqui é `UPDATE assets SET "deletedAt" = now()`. O Postgres não vê `DELETE`
-// nenhum, a FK não é consultada e a rede não existe — o ponto cego do soft
-// delete que `deleteUser` e `deleteStockItem` também documentam.
+// A FK `Restrict` NÃO cobre isto: apagar aqui é `UPDATE assets SET "deletedAt"
+// = now()`. O Postgres não vê `DELETE` nenhum, a FK não é consultada e a rede
+// não existe — o ponto cego do soft delete que o `deleteUser` também documenta.
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// ORDEM DE TRAVAMENTO: **componente antes de ativo**, nos caminhos que travam
-// os dois (hoje só `attachComponent`). O grafo de travas do sistema continua
-// acíclico: `usuário → ativo` (checkout e desligamento), `usuário → item de
-// estoque` (entrega de acessório) e `componente → ativo` (instalação). Duas
-// transações que travem os mesmos dois recursos em ordens opostas travam uma à
-// outra, e o Postgres mata uma delas.
+// O GRAFO DE TRAVAS do sistema, e por que a ORDEM é sempre `usuário → ativo →
+// posto`. Duas transações que travam os mesmos dois recursos em ordens opostas
+// travam uma à outra, e o Postgres mata uma com `40P01` — que o `error-handler`
+// não mapeia e devolve como 500.
+//
+//   usuário → ativo   o checkout a pessoa, e a entrega de assento a pessoa
+//   ativo → posto     o checkout a posto e a restauração da lixeira, pela
+//                     invariante 19 (`workstation/helpers/ativo-do-posto.helper.ts`)
+//   ativo             o soft delete do ativo, e a entrega de assento a ativo
+//   usuário → item    a saída de estoque a pessoa (`stock/use-cases/checkout-stock.usecase.ts`)
+//   item → posto      implícita: o INSERT da saída a posto toma `FOR KEY SHARE`
+//                     na linha do local, com o item já travado. Nenhum caminho
+//                     trava posto e depois item, e nenhum trava item e depois
+//                     usuário — é o que mantém o grafo sem ciclo.
+//
+// E AS TRAVAS QUE O POSTGRES TOMA SOZINHO CONTAM. `update-asset.usecase.ts`
+// grava `locationId`: o `UPDATE` trava a linha do ativo e o gatilho da FK
+// `assets.locationId` adquire `FOR KEY SHARE` na linha do local — que conflita
+// com `FOR UPDATE`. É uma aresta `ativo → posto` que nenhum `grep` por
+// `FOR UPDATE` mostra, e foi ela que obrigou a invariante 19 a travar o ativo
+// ANTES do posto. Uma aresta implícita assim existe em toda FK escrita.
+//
+// Este arquivo não é o inventário completo das travas — o domínio de licença
+// trava `licenses` e `license_seats` por conta própria (`license-seats.helper.ts`),
+// e o de estoque trava `stock_items` em `stock-balance.helper.ts`. É o
+// inventário de quem disputa USUÁRIO, ATIVO, ITEM e POSTO, que são as quatro
+// linhas que mais de um domínio pede.
 
 /**
  * Trava a linha do ativo até o fim da transação atual.

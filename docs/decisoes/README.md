@@ -1,8 +1,10 @@
-# As 164 decisões do SentinelWeb
+# As decisões do SentinelWeb
 
 > Toda decisão de arquitetura do projeto, arquivada **pelo assunto que ela governa** — não pela
 > fase que a tomou. A numeração `D1`…`D164` é contínua e global: ela é o nome da decisão e não
-> muda, mesmo que o arquivo onde ela vive mude.
+> muda, mesmo que o arquivo onde ela vive mude. Depois do D164 veio uma segunda rodada, com 15
+> decisões próprias, nomeadas por letra (`A`…`P`, sem `N`) em vez de número — ver
+> [*A segunda rodada*](#a-segunda-rodada-ap) abaixo.
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve.** Se a realidade mudou, ela é
 > **superada** por outra, com link entre as duas. O log é o que diz por quanto tempo cada regra
@@ -74,6 +76,43 @@ arquivadas no assunto que governam, com o conflito original descrito dentro de c
 > [`../historico/fase-00-base-tecnica.md`](../historico/fase-00-base-tecnica.md) chama suas
 > sub-etapas de `D1. Migração`, `D2. O escopo automático`… — isso **antecede** este esquema e
 > **não** corresponde às D1–D4 desta tabela. É registro histórico e ficou como está.
+
+---
+
+## A segunda rodada (A–P)
+
+O corte do ITAM (D143–D164) foi a **primeira** rodada de de-escopo, com numeração contínua D1–D164.
+Depois dela o projeto passou por uma **segunda** rodada — mais de-escopo (O), a forma final da
+invariante 19 (B), o retorno do estoque numa forma diferente da que o D153 previu (J) e meia dúzia
+de outras decisões que não vieram de uma fase do `ROADMAP.md`, e sim da revisão do que ficou depois
+do corte. Elas usam **letra**, não número: a numeração D é contínua porque corresponde à ordem em
+que o código citava "invariante N" e "D N" — recomeçá-la nesta rodada criaria colisão com os D's
+que o código ainda cita. Letra deixa claro, só pelo nome, que a decisão é desta rodada.
+
+| Letra | Decisão | Onde |
+|---|---|---|
+| **A** | A reconciliação deixa de inferir pessoa pela conta do sistema operacional | [Reconciliação](./reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional) |
+| **B** | Invariante 19, na forma final: um ativo por posto de trabalho | [Posse](./posse.md#b--invariante-19-na-forma-final-um-ativo-por-posto-de-trabalho) |
+| **C** | O ativo entregue a um posto sai de `/ativos`; a ficha do posto é rota | [Catálogo e ativo](./catalogo-e-ativo.md#c--o-ativo-entregue-a-um-posto-sai-de-ativos-a-ficha-do-posto-é-rota) |
+| **D** | A telemetria e o comando vão para a ficha do ativo e a do posto | [Reconciliação](./reconciliacao.md#d--a-telemetria-e-o-comando-vão-para-a-ficha-do-ativo-e-a-do-posto) |
+| **E** | `/descobertas` ganha vínculo manual e "Reconciliar agora" | [Reconciliação](./reconciliacao.md#e--descobertas-ganha-vínculo-manual-e-reconciliar-agora) |
+| **F** | A busca por QR sai, com `APP_URL`, `resolve-tags` e `by-serial` | [Relatórios, import e etiquetas](./relatorios-import-etiquetas.md#f--a-busca-por-qr-sai-com-app_url-resolve-tags-e-by-serial) |
+| **G** | Software instalado e conformidade de licença saem; licença vira cadastro simples | [Licenças](./licencas.md#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples) |
+| **H** | A fusão de máquinas sai | [Reconciliação](./reconciliacao.md#h--a-fusão-de-máquinas-sai) |
+| **I** | Ativo é computador | [Catálogo e ativo](./catalogo-e-ativo.md#i--ativo-é-computador) |
+| **J** | O estoque volta como `StockItem` + `StockMovement` | [Estoque](./estoque.md#j--o-estoque-volta-como-stockitem--stockmovement) |
+| **K** | O alvo `ASSET` sai da posse | [Posse](./posse.md#k--o-alvo-asset-sai-da-posse) |
+| **L** | O teto de requisições é desligado em `NODE_ENV=test`, com guarda contra produção | [Plataforma](./plataforma.md#l--o-teto-de-requisições-é-desligado-em-node_envtest-com-guarda-contra-produção) |
+| **M** | Um lockfile só, o do `bun` | [Plataforma](./plataforma.md#m--um-lockfile-só-o-do-bun) |
+| **O** | O segundo de-escopo: o que a primeira rodada manteve, ou não enxergou, sai | [Escopo](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai) |
+| **P** | `USUARIO` não entra no painel | [Acesso](./acesso.md#p--usuario-não-entra-no-painel) |
+
+**`N` não existe, de propósito.** As correções de segurança e consistência desta rodada (custo
+de compra vazando por uma quarta porta, comando que respondia sucesso sem confirmação do socket,
+status padrão do ativo novo, unidade de rede em bit misturada com byte) não são decisão de
+arquitetura — são a aplicação de regras já decididas (D77, acima de tudo) em um lugar que tinha
+escapado. Ficam só no histórico da fase, não aqui: decisão registrada sem ser decisão nova é
+ruído para quem lê o índice procurando o que mudou de ideia.
 
 ## O índice
 

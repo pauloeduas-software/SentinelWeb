@@ -70,18 +70,10 @@ export function resumoDaPosse(posse: PosseResolvida | null | undefined): ResumoP
   };
 }
 
-/** "no posto Mesa 1", "preso a ETI-0004" — vazio quando o alvo é a pessoa. */
+/** "no posto Mesa 1" — vazio quando o alvo é a pessoa. */
 function detalheDoAlvo(posse: PosseResolvida | null | undefined): string | null {
   if (!posse?.targetLabel) return null;
-
-  switch (posse.targetType) {
-    case 'LOCATION':
-      return `no posto ${posse.targetLabel}`;
-    case 'ASSET':
-      return `preso a ${posse.targetLabel}`;
-    default:
-      return null;
-  }
+  return posse.targetType === 'LOCATION' ? `no posto ${posse.targetLabel}` : null;
 }
 
 /**
@@ -100,8 +92,8 @@ export function rotuloDaOperacao(posse: PosseResolvida | null | undefined): stri
  *
  * Mora aqui, e não no `onSubmit` do modal, por dois motivos concretos:
  *
- * 1. das três FKs de alvo, UMA vale — a que corresponde à aba escolhida. Mandar
- *    as outras (mesmo vazias) seria mandar um alvo que o usuário não escolheu;
+ * 1. das duas FKs de alvo, UMA vale — a que corresponde à aba escolhida. Mandar
+ *    a outra (mesmo vazia) seria mandar um alvo que o usuário não escolheu;
  * 2. campo vazio precisa virar AUSENTE, não `''`: uma data vazia chegaria ao
  *    servidor como string inválida em vez de "não informado".
  */
@@ -115,7 +107,6 @@ export function montarEntrega(valores: {
   const corpo: CheckoutInput = { targetType: valores.targetType };
 
   if (valores.targetType === 'USER') corpo.targetUserId = valores.alvoId;
-  if (valores.targetType === 'ASSET') corpo.targetAssetId = valores.alvoId;
   if (valores.targetType === 'LOCATION') corpo.targetLocationId = valores.alvoId;
 
   if (valores.statusId) corpo.statusId = valores.statusId;

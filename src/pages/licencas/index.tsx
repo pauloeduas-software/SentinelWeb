@@ -1,6 +1,4 @@
 import { Plus } from 'lucide-react';
-import ExportarCsv from '../components/ExportarCsv';
-import { urlDoExportDeLicencas } from '../../domain/license/license.queries';
 import ListToolbar from '../components/ListToolbar';
 import AlertasLicenca from './components/AlertasLicenca';
 import EntregaAssentoModal from './components/EntregaAssentoModal';
@@ -24,7 +22,7 @@ export default function LicencasPage() {
     alertas,
     modal, licencaAberta, abrir, fechar,
     handleCriar, handleEditar, handleEntregar, handleDevolver,
-    handleExcluir, handleRestaurar, filtrosParaExport,
+    handleExcluir, handleRestaurar,
   } = useLicencas();
 
   return (
@@ -40,9 +38,6 @@ export default function LicencasPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {/* O CSV das licenças NÃO leva a chave de produto — é a quarta porta
-              que o TODO marcou, e ela está fechada no servidor (D133). */}
-          <ExportarCsv url={urlDoExportDeLicencas(filtrosParaExport)} total={total} />
           <button
             onClick={() => abrir('criar')}
             className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary font-mono text-xs uppercase tracking-widest transition-colors"

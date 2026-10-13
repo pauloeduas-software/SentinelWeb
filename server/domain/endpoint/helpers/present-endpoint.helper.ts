@@ -25,13 +25,34 @@ export type PresentedEndpoint = Omit<Endpoint, 'ramTotalBytes' | 'diskTotalBytes
   ramTotalBytes: string | null;
   diskTotalBytes: string | null;
   telemetries: PresentedTelemetry[];
+  asset: AtivoDaMaquina | null;
 };
+
+/**
+ * O ATIVO a que a máquina está vinculada — o que a lista de máquinas vinculadas
+ * mostra na coluna do patrimônio.
+ *
+ * Só o que identifica: `assetId` cru já saía, e um uuid não é uma coluna que
+ * alguém leia. O resto do ativo é da ficha dele, para onde a etiqueta leva.
+ */
+export interface AtivoDaMaquina {
+  id: string;
+  assetTag: string;
+  name: string | null;
+}
+
+/** O `include` do ativo, igual na listagem e na rota de uma máquina. */
+export const ATIVO_DA_MAQUINA_SELECT = {
+  select: { id: true, assetTag: true, name: true },
+} as const;
 
 export function presentTelemetry(telemetry: Telemetry): PresentedTelemetry {
   return { ...telemetry, ramTotal: telemetry.ramTotal.toString(), ramUsed: telemetry.ramUsed.toString() };
 }
 
-export function presentEndpoint(endpoint: Endpoint & { telemetries: Telemetry[] }): PresentedEndpoint {
+export function presentEndpoint(
+  endpoint: Endpoint & { telemetries: Telemetry[]; asset: AtivoDaMaquina | null },
+): PresentedEndpoint {
   return {
     ...endpoint,
     ramTotalBytes: endpoint.ramTotalBytes?.toString() ?? null,

@@ -11,7 +11,6 @@ export const SUGGESTION_SELECT = {
   kind: true,
   score: true,
   signal: true,
-  shift: true,
   evidence: true,
   state: true,
   createdAt: true,
@@ -22,14 +21,5 @@ export const SUGGESTION_SELECT = {
   },
   asset: {
     select: { id: true, assetTag: true, name: true, serial: true },
-  },
-  targetUser: {
-    select: { id: true, name: true, email: true },
-  },
-  targetLocation: {
-    select: { id: true, name: true },
-  },
-  mergeInto: {
-    select: { id: true, hwid: true, hostname: true, assetId: true },
   },
 } satisfies Prisma.ReconciliationSuggestionSelect;

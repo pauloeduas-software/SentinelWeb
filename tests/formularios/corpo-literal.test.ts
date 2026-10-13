@@ -42,8 +42,10 @@ afterAll(async () => {
  * `src/pages/ativos/components/AssetFormModal.tsx`.
  *
  * Os dois `ReferenceSelect` obrigatórios (modelo e status) chegam preenchidos
- * porque o formulário não envia sem eles. TODO O RESTO vai como a tela monta:
- * string vazia no texto, `false` no checkbox.
+ * porque o formulário não envia sem eles — e o status já NASCE preenchido com
+ * o primeiro de tipo `DEPLOYABLE` (`useAssets`, `statusPadraoId`), que é o
+ * mesmo usado aqui. TODO O RESTO vai como a tela monta: string vazia em cada
+ * campo de texto.
  *
  * `assignedToId` NÃO está aqui de propósito — o campo saiu do formulário na F4,
  * e o `strictObject` do servidor recusa a chave. A ausência é a regra
@@ -57,16 +59,9 @@ function corpoDoFormularioDeAtivo(sobrescrever: Record<string, unknown> = {}) {
     statusId,
     modelId,
     locationId: '',
-    supplierId: '',
     orderNumber: '',
     purchaseDate: '',
     purchaseCost: '',
-    warrantyMonths: '',
-    eolMonths: '',
-    eolDate: '',
-    eolExplicit: false,
-    byod: false,
-    requestable: false,
     notes: '',
     ...sobrescrever,
   };
@@ -103,15 +98,12 @@ describe('POST /api/assets com o corpo literal do AssetFormModal', () => {
     // `Invalid Date`.
     expect(body.purchaseCost).toBeNull();
     expect(body.purchaseDate).toBeNull();
-    expect(body.warrantyMonths).toBeNull();
-    expect(body.eolMonths).toBeNull();
   });
 
   it('não confunde FK vazia com FK inválida', async () => {
-    // `locationId: ''` e `supplierId: ''` são o caso normal da tela: os dois
-    // `<select>` são opcionais e começam sem seleção. Um `uuid()` cru aqui
-    // responderia 422 "identificador inválido" para quem simplesmente não
-    // escolheu localização.
+    // `locationId: ''` é o caso normal da tela: o `<select>` é opcional e
+    // começa sem seleção. Um `uuid()` cru aqui responderia 422 "identificador
+    // inválido" para quem simplesmente não escolheu localização.
     const { status, body } = await api.post<Record<string, unknown>>(
       '/api/assets',
       corpoDoFormularioDeAtivo(),
@@ -119,7 +111,6 @@ describe('POST /api/assets com o corpo literal do AssetFormModal', () => {
 
     expect(status).toBe(201);
     expect(body.locationId).toBeNull();
-    expect(body.supplierId).toBeNull();
   });
 
   it('respeita a etiqueta digitada quando o usuário preenche o campo', async () => {
@@ -152,7 +143,7 @@ describe('PUT /api/assets/:id com o corpo literal do formulário de edição', (
   it('editar só o nome não apaga o resto nem quebra nas strings vazias', async () => {
     const criado = await api.post<{ id: string; assetTag: string }>(
       '/api/assets',
-      corpoDoFormularioDeAtivo({ serial: 'SN-EDICAO', warrantyMonths: '12', purchaseDate: '2026-01-31' }),
+      corpoDoFormularioDeAtivo({ serial: 'SN-EDICAO', purchaseDate: '2026-01-31' }),
     );
     expect(criado.status).toBe(201);
 
@@ -164,7 +155,6 @@ describe('PUT /api/assets/:id com o corpo literal do formulário de edição', (
         assetTag: criado.body.assetTag,
         serial: 'SN-EDICAO',
         name: 'Nome novo',
-        warrantyMonths: '12',
         purchaseDate: '2026-01-31',
       }),
     });
@@ -174,53 +164,31 @@ describe('PUT /api/assets/:id com o corpo literal do formulário de edição', (
     // O que não foi tocado continua lá: era este o erro mais provável da
     // edição, segundo a auditoria.
     expect(body.serial).toBe('SN-EDICAO');
-    expect(body.warrantyMonths).toBe(12);
+    expect(body.purchaseDate).not.toBeNull();
   });
 });
 
 describe('POST /api/users com o corpo literal do UserFormModal', () => {
-  /**
-   * Cópia fiel de `src/pages/gestao-usuario/components/UserFormModal.tsx`.
-   *
-   * O formulário mudou na F11 (Etapa D): `department: ''` virou
-   * `departmentId: null` e nasceu `managerId: null`. A conversão `'' → null` é
-   * do formulário — o `<select>` sem escolha manda string vazia, e o zod do
-   * servidor espera uuid ou nulo.
-   */
+  /** Cópia fiel de `src/pages/gestao-usuario/components/UserFormModal.tsx`. */
   function corpoDoFormularioDeUsuario(sobrescrever: Record<string, unknown> = {}) {
-    return { name: '', email: '', departmentId: null, managerId: null, ...sobrescrever };
+    return { name: '', email: '', role: 'USUARIO', ...sobrescrever };
   }
 
-  it('aceita departamento e gestor nulos', async () => {
+  it('aceita o corpo mínimo da tela', async () => {
     const { status, body } = await api.post<Record<string, unknown>>(
       '/api/users',
       corpoDoFormularioDeUsuario({ name: 'Laura Souza', email: 'laura.formulario@teste.local' }),
     );
 
     expect(status).toBe(201);
-    // `department` NÃO VEM na resposta de criação, e isso é o D135: a criação
-    // devolve pelo `USER_PUBLIC_SELECT`, que deixou de carregar o departamento
-    // porque ele viaja embutido em toda posse e toda ocupação. Quem quer o
-    // departamento pede a listagem ou o perfil.
-    expect(Object.hasOwn(body, 'department')).toBe(false);
     expect(body.id).toBeTruthy();
-  });
-
-  it('recusa o `department` de texto que o formulário mandava antes (422)', async () => {
-    // `strictObject` transforma a troca de contrato em erro EXPLÍCITO: um
-    // cliente antigo que ainda mande o texto recebe "campo desconhecido" em vez
-    // de ter o departamento ignorado em silêncio.
-    const { status } = await api.post('/api/users', {
-      name: 'Cliente Antigo', email: 'antigo@teste.local', department: 'Comercial',
-    });
-
-    expect(status).toBe(422);
   });
 
   it('recusa nome e e-mail vazios com 422 por campo', async () => {
     // O formulário deixa enviar (o `required` do HTML é do navegador, não da
-    // API), então o 422 precisa vir com o nome do campo para a tela pintar o
-    // input certo — e não uma frase solta.
+    // API), então o 422 tem que dizer QUAL campo falhou, e não uma frase solta.
+    // Nenhuma tela pinta o input hoje — todas mostram o `error`; é este teste
+    // que mantém o `fields` no corpo para a primeira que quiser.
     const { status, body } = await api.post<{ fields?: Record<string, string> }>(
       '/api/users',
       corpoDoFormularioDeUsuario(),

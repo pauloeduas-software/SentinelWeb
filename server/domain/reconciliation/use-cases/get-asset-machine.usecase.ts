@@ -4,17 +4,11 @@ import { listarMudancasDoAtivo } from './record-hardware-changes.usecase';
 // ═════════════════════════════════════════════════════════════════════════════
 // O QUE O AGENTE VÊ DESTE ATIVO — tudo o que a aba Máquina mostra, numa resposta.
 //
-// SAIU DE `license-compliance.usecase.ts`, e o motivo é de camada: aquele arquivo
-// responde "esta licença está sendo cumprida?" e este responde "o que é esta
-// máquina?". A única razão de terem nascido juntos é que os dois passam por
-// `SoftwareInstallation` — e vizinhança de tabela não é vizinhança de assunto.
-//
-// A ROTA CHAMA `/machine` E NÃO `/software`, corrigindo o nome que o plano da
-// fase escreveu. Enquanto ela devolvia só a lista de programas, `software` era o
-// nome certo; agora que devolve especificação, último contato e mudança de
-// hardware, `software` descreveria um terço do conteúdo. É a mesma regra que
-// aposentou `/itam` em favor de `/ativos` e que fez a tela se chamar
-// `/descobertas`: o nome é do que a coisa É, não do que ela era quando nasceu.
+// A ROTA CHAMA `/machine`, e não o nome de um dos conteúdos: ela devolve
+// especificação coletada, os dois últimos contatos e a mudança de hardware
+// detectada. É a mesma regra que aposentou `/itam` em favor de `/ativos` e que
+// fez a tela se chamar `/descobertas`: o nome é do que a coisa É, não do que ela
+// era quando nasceu.
 // ═════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -38,7 +32,6 @@ export interface EspecificacoesDaMaquina {
   diskTotalBytes: string | null;
   macAddress: string | null;
   localIp: string | null;
-  loggedOnUser: string | null;
 }
 
 const SELECT_MAQUINA = {
@@ -58,7 +51,6 @@ const SELECT_MAQUINA = {
   diskTotalBytes: true,
   macAddress: true,
   localIp: true,
-  loggedOnUser: true,
 } as const;
 
 /**
@@ -76,7 +68,7 @@ const SELECT_MAQUINA = {
  */
 export async function obterMaquinaDoAtivo(assetId: string) {
   const [endpoint, ativo] = await Promise.all([
-    prisma.endpoint.findFirst({ where: { assetId, mergedIntoId: null }, select: SELECT_MAQUINA }),
+    prisma.endpoint.findFirst({ where: { assetId }, select: SELECT_MAQUINA }),
     // `findFirst` e não `findUnique`: é ele que recebe o escopo da lixeira da
     // extension, então ativo excluído não devolve máquina por esta porta.
     prisma.asset.findFirst({ where: { id: assetId }, select: { id: true, lastSeenByAgentAt: true } }),
@@ -90,24 +82,11 @@ export async function obterMaquinaDoAtivo(assetId: string) {
     ultimoContato: null,
     ultimoContatoNoAtivo: ativo?.lastSeenByAgentAt ?? null,
     especificacoes: null,
-    total: 0,
-    rows: [],
     mudancas: [],
   };
   if (!ativo || !endpoint) return vazio;
 
-  const [instalacoes, mudancas] = await Promise.all([
-    prisma.softwareInstallation.findMany({
-      where: { endpointId: endpoint.id, removedAt: null },
-      select: {
-        firstSeenAt: true,
-        lastSeenAt: true,
-        package: { select: { id: true, name: true, version: true, publisher: true } },
-      },
-      orderBy: { package: { name: 'asc' } },
-    }),
-    listarMudancasDoAtivo(assetId),
-  ]);
+  const mudancas = await listarMudancasDoAtivo(assetId);
 
   const especificacoes: EspecificacoesDaMaquina = {
     manufacturer: endpoint.manufacturer,
@@ -121,7 +100,6 @@ export async function obterMaquinaDoAtivo(assetId: string) {
     diskTotalBytes: endpoint.diskTotalBytes?.toString() ?? null,
     macAddress: endpoint.macAddress,
     localIp: endpoint.localIp,
-    loggedOnUser: endpoint.loggedOnUser,
   };
 
   return {
@@ -132,8 +110,6 @@ export async function obterMaquinaDoAtivo(assetId: string) {
     ultimoContato: endpoint.lastSeen,
     ultimoContatoNoAtivo: ativo.lastSeenByAgentAt,
     especificacoes,
-    total: instalacoes.length,
-    rows: instalacoes,
     mudancas,
   };
 }

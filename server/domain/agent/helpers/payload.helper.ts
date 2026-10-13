@@ -1,4 +1,4 @@
-// O agente C# manda os campos em PascalCase; versões antigas mandam camelCase.
+// O agente manda os campos em PascalCase; versões antigas mandam camelCase.
 // Em vez de espalhar `payload.Hwid || payload.hwid` por todo lado, a leitura do
 // payload cru acontece só aqui.
 

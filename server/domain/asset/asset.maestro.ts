@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { assetController } from './controllers/asset.controller';
 import { createLogger } from '../../core/logger/logger';
-import { EXPORT_RATE_LIMIT, WRITE_RATE_LIMIT } from '../../core/http/write-rate-limit';
+import { WRITE_RATE_LIMIT } from '../../core/http/write-rate-limit';
 
 const logger = createLogger('asset.maestro');
 
@@ -19,15 +19,6 @@ export class AssetMaestro {
     // que se prende um periférico a outro equipamento (docs/referencia/modelo-de-posse.md).
     server.get('/api/assets/options', assetController.options);
 
-    // O EXPORT (F10, Etapa C). ANTES de `/api/assets/:id` como as outras rotas
-    // de segmento fixo — o find-my-way casa o estático primeiro, mas a ordem
-    // aqui é o que mantém o arquivo legível.
-    //
-    // Teto PRÓPRIO (`EXPORT_RATE_LIMIT`, 10/min): cada chamada varre a tabela
-    // inteira com cursor, e o teto global de 300/min permitiria trezentas
-    // varreduras por minuto — negação de serviço acidental com dois cliques.
-    server.get('/api/assets/export', EXPORT_RATE_LIMIT, assetController.export);
-
     // A BUSCA DO LEITOR DE CÓDIGO DE BARRAS (F10, Etapa G).
     //
     // A ROTA É GLOBAL (`/api/search`) e o handler é do ativo: é ativo que ela
@@ -41,18 +32,8 @@ export class AssetMaestro {
     // qual a rota existe.
     server.get('/api/search', assetController.search);
 
-    // A LISTA BIPADA — uma pergunta só para as 24 etiquetas de uma folha
-    // (F10, Etapa G). `POST` porque a entrada é um array; nada grava.
-    server.post('/api/assets/resolve-tags', assetController.resolveTags);
-    // Match exato para leitor de código de barras. **Não é o caminho da
-    // reconciliação da F7**, como esta linha dizia antes: a cascata de matching
-    // carrega os candidatos e compara em memória, porque ela precisa detectar
-    // COLISÃO (serial que casa com dois ativos vale zero, D46) e uma rota que
-    // devolve um ativo por serial não tem como responder isso.
-    server.get('/api/assets/by-serial/:serial', assetController.bySerial);
-
     // A leitura unitária vem DEPOIS das rotas de caminho fixo (`/stats`,
-    // `/options`, `/by-serial`): o find-my-way casa o segmento estático antes do
+    // `/options`, `/search`): o find-my-way casa o segmento estático antes do
     // parâmetro, mas manter a ordem aqui é o que deixa isso óbvio para quem
     // acrescentar a próxima.
     //
@@ -63,10 +44,6 @@ export class AssetMaestro {
     // A aba Histórico: o `ActivityLog` do ativo unido ao histórico de posse, do
     // mais recente para o mais antigo. NÃO existe tabela `AssetLog` (D18).
     server.get('/api/assets/:id/history', assetController.history);
-
-    // REVELAR um campo customizado cifrado (F9, D62). A ÚNICA porta por onde o
-    // valor em claro sai: toda outra leitura devolve `••••••`.
-    //
 
     server.post('/api/assets', WRITE_RATE_LIMIT, assetController.create);
     server.put('/api/assets/:id', WRITE_RATE_LIMIT, assetController.update);
@@ -81,10 +58,6 @@ export class AssetMaestro {
     // substitui a outra (D19). POST porque muda estado e deixa histórico.
     server.post('/api/assets/:id/retire', WRITE_RATE_LIMIT, assetController.retire);
     server.post('/api/assets/:id/unretire', WRITE_RATE_LIMIT, assetController.unretire);
-
-    // AÇÃO EM MASSA: uma operação declarada, N ativos, tudo ou nada (D21).
-    // Caminho fixo `/bulk` e não `/:id/...` — o lote não é operação de UM ativo.
-    server.post('/api/assets/bulk', WRITE_RATE_LIMIT, assetController.bulk);
 
     logger.info('[Maestro] Rotas de Ativos (ITAM) inicializadas.');
   }

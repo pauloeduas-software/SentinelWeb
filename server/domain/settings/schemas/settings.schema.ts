@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { corObrigatoria } from '../../shared/fields.schema';
 
 // Contrato da configuração da descoberta (F7).
 //
@@ -18,35 +17,11 @@ export const configuracaoDaDescobertaSchema = z.strictObject({
   discoveryMode: z.enum(['OFF', 'SUGGEST', 'ON'], 'modo de descoberta inválido').optional(),
   ghostDays: inteiroEntre('dias para ativo fantasma', 1, 365).optional(),
   shadowHours: inteiroEntre('horas para Shadow IT', 1, 720).optional(),
-  userDailyRetentionDays: inteiroEntre('retenção da observação de uso', 7, 365).optional(),
-
-  /**
-   * A allowlist de contas ignoradas (D101).
-   *
-   * Teto de 100 entradas: passou disso, o que existe não é uma lista de exceções
-   * e sim uma política — e política de conta de serviço não se escreve numa
-   * caixa de texto.
-   */
-  ignoredUserKeys: z
-    .array(z.string().trim().min(1, 'conta ignorada não pode ser vazia').max(64, 'conta ignorada: máximo de 64 caracteres'))
-    .max(100, 'no máximo 100 contas ignoradas')
-    .optional(),
 });
-
-
-// ── O CICLO DE VIDA E OS ALERTAS (F8) ──────────────────────────────────────
-//
-// Os tetos e os pisos têm a mesma função dos da descoberta: impedir que uma
-// configuração transforme o painel em alarme. `warrantyAlertDays: 0` faria o
-// aviso chegar no dia do vencimento, quando não há mais o que fazer;
-// `auditIntervalMonths: 0` faria a frota inteira nascer com conferência vencida.
-
-
 
 // ── A CONFIGURAÇÃO DE SISTEMA (F10, D65) ───────────────────────────────────
 //
-// Marca, formato e backup. Os três grupos de validação daqui têm o mesmo
-// objetivo e ele não é zelo: `locale`, `dateFormat` e `currency` são lidos pela
+// Formato de número, de data e moeda. A validação daqui não é zelo: `locale`, `dateFormat` e `currency` são lidos pela
 // TELA para formatar número e data. Um valor que o `Intl` não conhece não vira
 // texto errado — ele LANÇA `RangeError` no primeiro `toLocaleString`, e a tela
 // que estava mostrando a lista de ativos fica em branco. Validar aqui é a
@@ -55,24 +30,7 @@ export const configuracaoDaDescobertaSchema = z.strictObject({
 /** Os formatos que a tela sabe desenhar. String livre aqui viraria `Invalid Date`. */
 const FORMATOS_DE_DATA = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'] as const;
 
-/**
- * Os delimitadores que o export escreve e o import oferece.
- *
- * Lista fechada, e curta de propósito: um delimitador de dois caracteres, ou um
- * `"`, produziria um CSV que nenhum programa lê de volta — e o export é a
- * entrada do importador (D69).
- */
-const DELIMITADORES = [';', ',', '|', '\t'] as const;
-
 export const configuracaoDoSistemaSchema = z.strictObject({
-  companyName: z
-    .string('nome da empresa é obrigatório')
-    .trim()
-    .min(1, 'nome da empresa não pode ser vazio')
-    .max(200, 'nome da empresa: máximo de 200 caracteres')
-    .optional(),
-
-  primaryColor: corObrigatoria('cor de destaque').optional(),
 
   /**
    * O idioma, conferido contra o banco de locales do próprio Node.
@@ -125,10 +83,6 @@ export const configuracaoDoSistemaSchema = z.strictObject({
         return /^[A-Z]{3}$/.test(valor);
       }
     }, 'moeda desconhecida: use um código como BRL, USD ou EUR')
-    .optional(),
-
-  csvDelimiter: z
-    .enum(DELIMITADORES, 'delimitador inválido: use ; , | ou tabulação')
     .optional(),
 
 });

@@ -5,36 +5,18 @@ import type { CatalogDelegate, CatalogSpec, ClienteCatalogo } from './catalog-sp
 
 // O ativo NÃO tem `categoryId`: a categoria dele é a do modelo. Por isso o uso
 // se conta em dois saltos — modelos desta categoria, e ativos desses modelos.
+// O item de estoque aponta direto.
 //
-// OS TRÊS DE ESTOQUE SÃO O SALTO ÚNICO: `Accessory`, `Consumable` e `Component`
-// apontam direto. Eles entraram aqui na F5, e a ausência deles era um furo de
-// verdade — não uma mensagem feia:
-//
-//   `beforeWrite` deixava passar o tipo de uma categoria usada SÓ por acessórios
-//   indo de `ACCESSORY` para `ASSET`, porque a contagem não os via. O acessório
-//   terminava numa categoria de tipo `ASSET` — exatamente o estado que
-//   `assert-stock-references.usecase.ts` recusa com 422 na criação, e que a tela
-//   evita com o `optionFilter`. A guarda existia na porta do ITEM e não na porta
-//   da CATEGORIA, e a de trás estava aberta.
-//
-// `INCLUINDO_LIXEIRA` nos três: as FKs deles são `Restrict`, e o Postgres não
-// distingue linha viva de linha na lixeira. Sem ele a contagem devolveria 0, o
-// `DELETE` seguiria, e o banco recusaria com P2003 — 409 genérico "Registro está
-// em uso por outro cadastro", sem dizer por quantos nem por quê.
-//
-// O ativo na lixeira conta pelo mesmo motivo — ele continua preso ao modelo, e
-// trocar o tipo da categoria por baixo dele mudaria a semântica de um registro
-// que ainda pode voltar. `assetModel` não precisa do mesmo cuidado: não tem
-// lixeira.
+// `INCLUINDO_LIXEIRA` no ativo e no item: os dois continuam presos à categoria,
+// e trocar o tipo dela por baixo deles mudaria a semântica de um registro que
+// ainda pode voltar. `assetModel` não precisa do mesmo cuidado: não tem lixeira.
 const contarUsos = async (client: ClienteCatalogo, id: string) => {
-  const [modelos, ativos, acessorios, consumiveis, componentes] = await Promise.all([
+  const [modelos, ativos, itens] = await Promise.all([
     client.assetModel.count({ where: { categoryId: id } }),
     client.asset.count({ where: { model: { categoryId: id }, ...INCLUINDO_LIXEIRA } }),
-    client.accessory.count({ where: { categoryId: id, ...INCLUINDO_LIXEIRA } }),
-    client.consumable.count({ where: { categoryId: id, ...INCLUINDO_LIXEIRA } }),
-    client.component.count({ where: { categoryId: id, ...INCLUINDO_LIXEIRA } }),
+    client.stockItem.count({ where: { categoryId: id, ...INCLUINDO_LIXEIRA } }),
   ]);
-  return modelos + ativos + acessorios + consumiveis + componentes;
+  return modelos + ativos + itens;
 };
 
 export const categorySpec: CatalogSpec = {
@@ -47,17 +29,16 @@ export const categorySpec: CatalogSpec = {
   updateSchema: updateCategorySchema,
 
   select: {
-    id: true, name: true, type: true, color: true,
-    requireAcceptance: true, eulaText: true, checkinEmail: true, createdAt: true,
+    id: true, name: true, type: true, color: true, createdAt: true,
   },
   sortable: ['name', 'type', 'createdAt'],
   defaultSort: 'name',
   searchable: ['name'],
-  audited: ['name', 'type', 'color', 'requireAcceptance', 'eulaText', 'checkinEmail'],
+  audited: ['name', 'type', 'color'],
 
-  // O `<select>` do formulário de ativo pede só as de ATIVO; sem isto ele
+  // O `<select>` de cada formulário pede só as do SEU tipo; sem isto ele
   // ofereceria duas linhas de mesmo nome e tipos diferentes.
-  optionFilter: { campo: 'type', valores: ['ASSET', 'ACCESSORY', 'CONSUMABLE', 'COMPONENT', 'LICENSE'] },
+  optionFilter: { campo: 'type', valores: ['ASSET', 'LICENSE', 'STOCK'] },
 
   countUsages: contarUsos,
 

@@ -8,17 +8,14 @@ const logger = createLogger('reconciliation.invalidacao');
 //
 // A fila nascia e era resolvida por uma pessoa, e isso cobria dois dos três
 // caminhos. O terceiro é o mais comum de todos: **o mundo muda sozinho e a
-// sugestão deixa de descrever qualquer coisa.** Alguém entrega o ativo à mão
-// para a mesma pessoa que o sistema ia sugerir; alguém desfaz um vínculo; a
-// posse passa para um posto. Nada disso passa por aqui, e a sugestão continuava
-// `PENDING` para sempre.
+// sugestão deixa de descrever qualquer coisa.** Alguém vincula a máquina à mão
+// ao ativo que o sistema ia sugerir, ou dá aquele ativo a outra máquina. Nada
+// disso passa por aqui, e a sugestão continuava `PENDING` para sempre.
 //
 // O estrago não era só fila suja. Aceitar uma sugestão que o mundo já realizou
-// DEGRADAVA CADASTRO CERTO: o aceite de `CHECKOUT` fecha a posse aberta e abre
-// outra, então aceitar "entregar à Ana" um ativo que já estava com a Ana
-// gravava no histórico uma DEVOLUÇÃO QUE NUNCA ACONTECEU. O razão de posse é o
-// núcleo deste produto, e um checkin inventado é pior que um inventário errado:
-// ele afirma que o equipamento voltou ao estoque numa data em que não voltou.
+// DEGRADAVA CADASTRO CERTO: aceitar "esta máquina é o ATV-00012" depois de
+// alguém ter vinculado a máquina a outro ativo afirma um vínculo que o
+// `@unique` recusaria — e a fila não deve oferecer o botão que não funciona.
 //
 // `SUPERSEDED` e não `REJECTED`, sempre: ninguém disse não. Recusa é ato de
 // gente e tem memória (D97); isto é o mundo tendo andado, e não deve enterrar
@@ -27,29 +24,17 @@ const logger = createLogger('reconciliation.invalidacao');
 
 const SELECT_PENDENTE = {
   id: true,
-  kind: true,
-  assetId: true,
-  targetUserId: true,
-  targetLocationId: true,
-  endpoint: { select: { assetId: true, mergedIntoId: true } },
-  mergeInto: { select: { mergedIntoId: true } },
+  endpoint: { select: { assetId: true } },
+  // O OUTRO LADO DO MESMO 1:1. A máquina pode continuar sem ativo e o ATIVO ter
+  // ganhado outra máquina no meio — e aí a proposta também morreu.
+  asset: { select: { endpoint: { select: { id: true } } } },
 } as const;
 
 type Pendente = {
   id: string;
-  kind: string;
-  assetId: string | null;
-  targetUserId: string | null;
-  targetLocationId: string | null;
-  endpoint: { assetId: string | null; mergedIntoId: string | null };
-  mergeInto: { mergedIntoId: string | null } | null;
+  endpoint: { assetId: string | null };
+  asset: { endpoint: { id: string } | null } | null;
 };
-
-interface PosseAberta {
-  targetType: string;
-  targetUserId: string | null;
-  targetLocationId: string | null;
-}
 
 /**
  * Por que ESTA sugestão não descreve mais o mundo — ou `null` se ela ainda
@@ -58,73 +43,21 @@ interface PosseAberta {
  * Devolve o motivo em texto, e não um booleano, porque ele vai para o log: sem
  * isso, "42 sugestões encerradas" é um número que ninguém sabe se é bom.
  */
-function motivoDeInvalidar(
-  pendente: Pendente,
-  posse: PosseAberta | null | undefined,
-  ocupacoesAbertas: Set<string>,
-): string | null {
-  // Máquina fundida em outra: TODA sugestão dela fala de um parque com duas
-  // máquinas onde há uma. O merge já encerra as suas, mas quem chega depois por
-  // outro caminho (o job) precisa da mesma conclusão.
-  if (pendente.endpoint.mergedIntoId) return 'a máquina foi fundida em outra';
+function motivoDeInvalidar(pendente: Pendente): string | null {
+  // A MÁQUINA foi vinculada — a este ativo ou a outro. Nos dois casos a proposta
+  // acabou: uma máquina é no máximo um ativo (invariante 12).
+  if (pendente.endpoint.assetId) return 'a máquina já foi vinculada a um ativo';
 
-  switch (pendente.kind) {
-    case 'LINK':
-      // O vínculo aconteceu — com este ativo ou com outro. Nos dois casos a
-      // proposta acabou: uma máquina é no máximo um ativo (invariante 12).
-      return pendente.endpoint.assetId ? 'a máquina já foi vinculada a um ativo' : null;
+  // O ATIVO foi vinculado a OUTRA máquina, e este é o lado que faltava.
+  //
+  // Sem isto a pendente ficava `PENDING` para sempre: a invalidação olhava só o
+  // lado da máquina, que continua sem ativo, então nenhum motivo disparava — e
+  // aceitar devolvia o P2002 do `endpoints.assetId @unique` traduzido em 409.
+  // Era literalmente o botão que a fila oferece e o banco nega, do outro lado do
+  // 1:1 que a geração passou a respeitar.
+  if (pendente.asset?.endpoint) return 'o ativo já tem outra máquina';
 
-    case 'MERGE':
-      if (pendente.endpoint.assetId) return 'a máquina já foi vinculada a um ativo';
-      if (pendente.mergeInto?.mergedIntoId) return 'a máquina de destino já foi fundida em outra';
-      return null;
-
-    case 'CHECKOUT': {
-      if (!pendente.assetId) return null;
-      if (pendente.endpoint.assetId !== pendente.assetId) {
-        return 'a máquina não está mais vinculada a este ativo';
-      }
-      // O CADASTRO JÁ BATE. É este ramo que impedia a devolução falsa: sem ele,
-      // aceitar aqui fazia checkin + checkout da mesma pessoa.
-      if (posse?.targetType === 'USER' && posse.targetUserId === pendente.targetUserId) {
-        return 'o ativo já está entregue a esta pessoa';
-      }
-      // A POSSE VIROU DE POSTO. A regra de geração diz que sugestão de checkout
-      // não nasce para ativo de posto (D47); uma que nasceu ANTES da mudança
-      // tem que sair da fila em vez de esperar o 409 do aceite — a fila não
-      // deve oferecer o botão que destrói cadastro.
-      if (posse?.targetType === 'LOCATION') return 'o ativo passou a ser de um posto de trabalho';
-      return null;
-    }
-
-    case 'OCCUPANCY': {
-      if (!pendente.assetId) return null;
-      if (pendente.endpoint.assetId !== pendente.assetId) {
-        return 'a máquina não está mais vinculada a este ativo';
-      }
-      if (pendente.targetLocationId && pendente.targetUserId
-        && ocupacoesAbertas.has(`${pendente.targetLocationId}:${pendente.targetUserId}`)) {
-        return 'a pessoa já está cadastrada como ocupante do posto';
-      }
-      // A ocupação é sugerida porque o ATIVO está entregue àquele posto. Se
-      // deixou de estar, a evidência que sustentava a proposta sumiu.
-      if (posse?.targetType !== 'LOCATION' || posse.targetLocationId !== pendente.targetLocationId) {
-        return 'o ativo não está mais entregue a este posto';
-      }
-      return null;
-    }
-
-    case 'SHARED_POST': {
-      if (!pendente.assetId) return null;
-      if (pendente.endpoint.assetId !== pendente.assetId) {
-        return 'a máquina não está mais vinculada a este ativo';
-      }
-      return null;
-    }
-
-    default:
-      return null;
-  }
+  return null;
 }
 
 /**
@@ -134,7 +67,7 @@ function motivoDeInvalidar(
  * limpeza tem que vir primeiro para que a mesma rodada possa propor de novo o
  * que ainda faz sentido, e para que o painel de cobertura conte fila de verdade.
  *
- * TRÊS CONSULTAS PARA A FILA INTEIRA, e não uma por sugestão: a fila é pequena
+ * UMA CONSULTA PARA A FILA INTEIRA, e não uma por sugestão: a fila é pequena
  * por desenho (ela existe para ser esvaziada), mas um `findFirst` por linha
  * dentro de um laço é o tipo de coisa que passa despercebido até a frota
  * dobrar.
@@ -146,29 +79,9 @@ export async function encerrarSugestoesObsoletas(): Promise<number> {
   })) as Pendente[];
   if (pendentes.length === 0) return 0;
 
-  const assetIds = [...new Set(pendentes.map((p) => p.assetId).filter((id): id is string => !!id))];
-  const posses = assetIds.length === 0 ? [] : await prisma.assignment.findMany({
-    where: { assetId: { in: assetIds }, checkinAt: null },
-    select: { assetId: true, targetType: true, targetUserId: true, targetLocationId: true },
-  });
-  const posseporAtivo = new Map(posses.map((posse) => [posse.assetId, posse]));
-
-  const locationIds = [...new Set(
-    pendentes.map((p) => p.targetLocationId).filter((id): id is string => !!id),
-  )];
-  const ocupacoes = locationIds.length === 0 ? [] : await prisma.locationOccupant.findMany({
-    where: { locationId: { in: locationIds }, endedAt: null },
-    select: { locationId: true, userId: true },
-  });
-  const ocupacoesAbertas = new Set(ocupacoes.map((o) => `${o.locationId}:${o.userId}`));
-
   const obsoletas: { id: string; motivo: string }[] = [];
   for (const pendente of pendentes) {
-    const motivo = motivoDeInvalidar(
-      pendente,
-      pendente.assetId ? posseporAtivo.get(pendente.assetId) : null,
-      ocupacoesAbertas,
-    );
+    const motivo = motivoDeInvalidar(pendente);
     if (motivo) obsoletas.push({ id: pendente.id, motivo });
   }
   if (obsoletas.length === 0) return 0;
@@ -192,9 +105,7 @@ export async function encerrarSugestoesObsoletas(): Promise<number> {
  * nenhuma depois de meio ano.
  *
  * Constante e não coluna de `AppSetting`: são seis meses para uma tabela de
- * trabalho interno, não uma política que alguém precise negociar. A retenção
- * que É de pessoa (`EndpointUserDaily`, D49) continua configurável, porque
- * aquela é sobre gente.
+ * trabalho interno, não uma política que alguém precise negociar.
  */
 export const DIAS_DE_HISTORICO_DA_FILA = 180;
 

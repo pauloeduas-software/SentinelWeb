@@ -2,11 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../core/api/apiClient';
 import { assetKeys } from '../asset/asset.queries';
 import { endpointKeys } from '../endpoint/endpoint.queries';
+// Vincular E ENTREGAR muda a ficha do posto: a chave é do posto, quem pergunta
+// importa (docs/referencia/arquitetura.md).
+import { workstationKeys } from '../workstation/workstation.queries';
 import type { ListEnvelope } from '../shared/list.types';
-import { licenseKeys } from '../license/license.queries';
 import type {
-  AtivoOcioso, Cobertura, Conformidade, ConfiguracaoDaDescoberta, MaquinaDoAtivo,
-  PacoteDoCatalogo, ReviewState, Sugestao, SuggestionKind,
+  AtivoOcioso, Cobertura, ConfiguracaoDaDescoberta, MaquinaDoAtivo,
+  ResultadoDaVarredura, ReviewState, Sugestao,
 } from '../shared/reconciliation.types';
 
 // A CONVERGÊNCIA RMM × ITAM (docs/historico/fase-07-convergencia-rmm-itam.md).
@@ -15,30 +17,24 @@ import type {
 // sugestão alcança a fila E o painel de cobertura — que muda a cada aceite sem
 // ninguém ter tocado nele.
 //
-// E o invalidate vai ALÉM do prefixo, de propósito: aceitar uma sugestão pode
-// abrir posse, mover um ativo entre camadas do modelo e criar ocupação. Quem
-// não invalidasse `assets` e `endpoints` junto deixaria a tela do ativo
-// mostrando o dono antigo até alguém recarregar a página.
+// E o invalidate vai ALÉM do prefixo, de propósito: aceitar uma sugestão muda o
+// vínculo máquina↔ativo. Quem não invalidasse `assets` e `endpoints` junto
+// deixaria a aba Máquina do ativo vazia até alguém recarregar a página.
 
 export const reconciliationKeys = {
   all: ['reconciliation'] as const,
-  sugestoes: (kind?: SuggestionKind) => ['reconciliation', 'sugestoes', kind ?? 'todas'] as const,
+  sugestoes: () => ['reconciliation', 'sugestoes'] as const,
   cobertura: () => ['reconciliation', 'cobertura'] as const,
   ociosos: (dias: number) => ['reconciliation', 'ociosos', dias] as const,
   configuracao: () => ['reconciliation', 'configuracao'] as const,
   maquinaDoAtivo: (assetId: string) => ['reconciliation', 'maquina', assetId] as const,
-  conformidade: (licenseId: string) => ['reconciliation', 'conformidade', licenseId] as const,
-  softwareDaLicenca: (licenseId: string) => ['reconciliation', 'licenca-software', licenseId] as const,
-  pacotes: (busca: string) => ['reconciliation', 'pacotes', busca] as const,
 };
 
-export function useSugestoesQuery(kind?: SuggestionKind) {
+export function useSugestoesQuery() {
   return useQuery({
-    queryKey: reconciliationKeys.sugestoes(kind),
+    queryKey: reconciliationKeys.sugestoes(),
     queryFn: async () => (
-      await apiClient.get<ListEnvelope<Sugestao>>('/reconciliation/suggestions', {
-        params: kind ? { kind } : undefined,
-      })
+      await apiClient.get<ListEnvelope<Sugestao>>('/reconciliation/suggestions')
     ).data,
   });
 }
@@ -66,20 +62,12 @@ export function useConfiguracaoDaDescobertaQuery() {
   });
 }
 
-/** Tudo o que a aba Máquina mostra: specs, último contato, software e mudanças. */
+/** Tudo o que a aba Máquina mostra: specs, último contato e mudanças de peça. */
 export function useMaquinaDoAtivoQuery(assetId: string | null) {
   return useQuery({
     queryKey: reconciliationKeys.maquinaDoAtivo(assetId ?? ''),
     queryFn: async () => (await apiClient.get<MaquinaDoAtivo>(`/assets/${assetId}/machine`)).data,
     enabled: assetId != null,
-  });
-}
-
-export function useConformidadeQuery(licenseId: string | null) {
-  return useQuery({
-    queryKey: reconciliationKeys.conformidade(licenseId ?? ''),
-    queryFn: async () => (await apiClient.get<Conformidade>(`/licenses/${licenseId}/compliance`)).data,
-    enabled: licenseId != null,
   });
 }
 
@@ -93,16 +81,11 @@ function useInvalidarTudo() {
   };
 }
 
-export interface AceiteExtra {
-  locationId?: string;
-  shift?: string;
-}
-
 export function useAceitarSugestao() {
   const invalidar = useInvalidarTudo();
   return useMutation({
-    mutationFn: async ({ id, extra }: { id: string; extra?: AceiteExtra }) =>
-      (await apiClient.post<Sugestao>(`/reconciliation/suggestions/${id}/accept`, extra ?? {})).data,
+    mutationFn: async (id: string) =>
+      (await apiClient.post<Sugestao>(`/reconciliation/suggestions/${id}/accept`, {})).data,
     onSuccess: invalidar,
   });
 }
@@ -133,6 +116,62 @@ export function useDesvincularMaquina() {
   });
 }
 
+/**
+ * VINCULAR À MÃO — `POST /api/endpoints/:id/link`.
+ *
+ * A rota existia desde a F7 e nenhuma tela a chamava: o vínculo só nascia pela
+ * fila, e a máquina que a cascata não casava com nada (serial em branco, nome
+ * que não bate) ficava em "sem cadastro" sem botão. É a afirmação "esta máquina
+ * é aquele patrimônio", dita por gente.
+ */
+export function useVincularMaquina() {
+  const invalidar = useInvalidarTudo();
+  return useMutation({
+    mutationFn: async ({ endpointId, assetId }: { endpointId: string; assetId: string }) =>
+      (await apiClient.post(`/endpoints/${endpointId}/link`, { assetId })).data,
+    onSuccess: invalidar,
+  });
+}
+
+/**
+ * VINCULAR E ENTREGAR AO POSTO — `POST /api/endpoints/:id/link-and-checkout`.
+ *
+ * O cadastro do computador novo de ponta a ponta. Invalida também o posto,
+ * porque a entrega muda a ficha dele; e invalida NO ERRO também: a rota
+ * encadeia duas operações e o vínculo pode ter ficado quando a entrega falha —
+ * a resposta diz isso, e a lista precisa refletir.
+ */
+export function useVincularEEntregar() {
+  const queryClient = useQueryClient();
+  const invalidar = useInvalidarTudo();
+  const invalidarComPosto = () => {
+    invalidar();
+    void queryClient.invalidateQueries({ queryKey: workstationKeys.all });
+  };
+  return useMutation({
+    mutationFn: async ({ endpointId, assetId, targetLocationId }: {
+      endpointId: string; assetId: string; targetLocationId: string;
+    }) => (await apiClient.post(`/endpoints/${endpointId}/link-and-checkout`, { assetId, targetLocationId })).data,
+    onSuccess: invalidarComPosto,
+    onError: invalidarComPosto,
+  });
+}
+
+/**
+ * RECONCILIAR AGORA — `POST /api/reconciliation/run`.
+ *
+ * A varredura inteira, fora da janela do job. Invalida tudo o que uma rodada
+ * muda: a fila e a cobertura, as máquinas (vínculo automático em `ON`) e os
+ * ativos (o carimbo do último contato).
+ */
+export function useReconciliarAgora() {
+  const invalidar = useInvalidarTudo();
+  return useMutation({
+    mutationFn: async () => (await apiClient.post<ResultadoDaVarredura>('/reconciliation/run')).data,
+    onSuccess: invalidar,
+  });
+}
+
 export function useSalvarConfiguracaoDaDescoberta() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -140,63 +179,6 @@ export function useSalvarConfiguracaoDaDescoberta() {
       (await apiClient.put<ConfiguracaoDaDescoberta>('/settings/discovery', dados)).data,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: reconciliationKeys.all });
-    },
-  });
-}
-
-// ── A PONTE LICENÇA↔PACOTE E A CONFORMIDADE (Etapa G, D102) ─────────────────
-//
-// Os três hooks abaixo são o que faltava para a conformidade existir de verdade.
-// O motor estava pronto desde a Etapa G — `LicenseSoftware`, o cruzamento por
-// assento, as duas perguntas do relatório — e nenhuma tela tinha de onde tirar
-// um `packageId`, então a ponte nunca recebia linha e `calcularConformidade`
-// respondia `semVinculoDeSoftware: true` para sempre.
-
-/**
- * O catálogo de software descoberto, com busca.
- *
- * `placeholderData` e não `enabled`: a lista abre com os mais instalados e vai
- * filtrando conforme se digita, sem piscar em branco entre as teclas. O catálogo
- * de uma frota real tem milhares de linhas e é o servidor que corta em 100.
- */
-export function usePacotesDeSoftwareQuery(busca: string) {
-  return useQuery({
-    queryKey: reconciliationKeys.pacotes(busca),
-    queryFn: async () => (
-      await apiClient.get<{ total: number; rows: PacoteDoCatalogo[] }>('/software-packages', {
-        params: busca ? { q: busca } : undefined,
-      })
-    ).data,
-    placeholderData: (anterior) => anterior,
-  });
-}
-
-/** Os pacotes JÁ ligados a esta licença — o que o formulário abre marcado. */
-export function useSoftwareDaLicencaQuery(licenseId: string | null) {
-  return useQuery({
-    queryKey: reconciliationKeys.softwareDaLicenca(licenseId ?? ''),
-    queryFn: async () => (
-      await apiClient.get<{ total: number; rows: PacoteDoCatalogo[] }>(`/licenses/${licenseId}/software`)
-    ).data,
-    enabled: licenseId != null,
-  });
-}
-
-/**
- * Define o CONJUNTO de pacotes de uma licença. O que não está na lista é
- * desligado — é por isso que a mutação recebe o conjunto e não um item.
- *
- * Invalida `licenseKeys` junto: mudar o que a licença cobre muda o relatório de
- * conformidade dela, e ele é lido na mesma janela.
- */
-export function useDefinirSoftwareDaLicenca(licenseId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (packageIds: string[]) =>
-      (await apiClient.put(`/licenses/${licenseId}/software`, { packageIds })).data,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: reconciliationKeys.all });
-      void queryClient.invalidateQueries({ queryKey: licenseKeys.all });
     },
   });
 }

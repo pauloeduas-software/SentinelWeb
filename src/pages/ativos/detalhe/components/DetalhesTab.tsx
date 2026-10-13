@@ -1,6 +1,6 @@
 import { PackageX, Undo2 } from 'lucide-react';
 import type { Asset } from '../../../../domain/shared/asset.types';
-import { formatarData, formatarMeses, formatarMoeda } from '../../../helpers/format.helper';
+import { formatarData, formatarMoeda } from '../../../helpers/format.helper';
 import { seloDaSaida } from '../../helpers/descomissionamento.helper';
 
 // A FICHA do ativo. Só leitura: editar é o modal que já existe, e duplicar os
@@ -63,32 +63,15 @@ export default function DetalhesTab({
         </Secao>
 
         <Secao titulo="Compra">
-          <Campo rotulo="Fornecedor" valor={asset.supplier?.name} />
           <Campo rotulo="Número do pedido" valor={asset.orderNumber} />
           <Campo rotulo="Data da compra" valor={formatarData(asset.purchaseDate)} />
           <Campo rotulo="Valor" valor={formatarMoeda(asset.purchaseCost)} />
         </Secao>
 
-        <Secao titulo="Prazos">
-          <Campo rotulo="Garantia" valor={formatarMeses(asset.warrantyMonths)} />
-          <Campo rotulo="Vence em" valor={formatarData(asset.warrantyExpiresAt)} />
-          <Campo rotulo="Vida útil" valor={formatarMeses(asset.eolMonths)} />
-          <Campo
-            rotulo="Fim de vida"
-            valor={formatarData(asset.eolDate)}
-            nota={asset.eolExplicit ? 'definido à mão' : undefined}
-          />
-        </Secao>
-
-        <Secao titulo="Outros">
-          <Campo rotulo="BYOD" valor={asset.byod ? 'sim' : 'não'} />
-          <Campo rotulo="Pode ser solicitado" valor={asset.requestable ? 'sim' : 'não'} />
-        </Secao>
-
-        {/* OS CAMPOS CUSTOMIZADOS (F9). Depois de "Outros" e antes de "Notas":
-            o que o cliente criou vale mais que as duas caixas de marcar, e menos
-            que o texto livre que alguém escreveu sobre este ativo. Ocupa a linha
-            inteira porque o número de campos é do cliente, não do layout. */}
+        {/* OS CAMPOS CUSTOMIZADOS (F9). Depois de "Compra" e antes de "Notas":
+            o que o cliente criou vale mais que os campos que vêm de fábrica, e
+            menos que o texto livre que alguém escreveu sobre este ativo. Ocupa a
+            linha inteira porque o número de campos é do cliente, não do layout. */}
 
         <Secao titulo="Notas">
           <p className="col-span-2 text-text-secondary whitespace-pre-wrap leading-relaxed">

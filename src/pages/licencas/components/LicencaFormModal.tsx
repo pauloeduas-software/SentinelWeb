@@ -7,10 +7,8 @@ import type { Licenca, LicencaInput } from '../../../domain/shared/license.types
 // Cadastro e edição de uma licença.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// `seatsTotal` É EDITÁVEL, ao contrário do `qty` do estoque — e a diferença é
-// real: `qty` é consequência de movimentação (chegou nota, quebrou), enquanto
-// `seatsTotal` é o NÚMERO DO CONTRATO. Alguém comprou mais assentos, e digitar
-// isso É a operação.
+// `seatsTotal` É EDITÁVEL, e é o NÚMERO DO CONTRATO: alguém comprou mais
+// assentos, e digitar isso É a operação.
 //
 // O que o servidor garante é que ele nunca muda sozinho: a reconciliação cria
 // ou aposenta linhas na MESMA transação, e reduzir abaixo do que está ocupado
@@ -53,9 +51,7 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
   const [licensedToName, setLicensedToName] = useState(licenca?.licensedToName ?? '');
   const [licensedToEmail, setLicensedToEmail] = useState(licenca?.licensedToEmail ?? '');
   // Sempre vazio, inclusive na edição — ver o bloco no topo do arquivo.
-  const [productKey, setProductKey] = useState('');
   const [manufacturerId, setManufacturerId] = useState(licenca?.manufacturerId ?? '');
-  const [supplierId, setSupplierId] = useState(licenca?.supplierId ?? '');
   const [orderNumber, setOrderNumber] = useState(licenca?.orderNumber ?? '');
   const [purchaseDate, setPurchaseDate] = useState(paraCampoDeData(licenca?.purchaseDate));
   // STRING do começo ao fim: converter para `number` aqui é como o erro de
@@ -83,18 +79,11 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
       licensedToName: limpar(licensedToName),
       licensedToEmail: limpar(licensedToEmail),
       manufacturerId: limpar(manufacturerId),
-      supplierId: limpar(supplierId),
       orderNumber: limpar(orderNumber),
       purchaseDate: limpar(purchaseDate),
       purchaseCost: limpar(purchaseCost),
       notes: limpar(notes),
     };
-
-    // A CHAVE SÓ VAI QUANDO FOI DIGITADA. Campo vazio na edição significa
-    // "não mexe na chave" — mandar `null` apagaria a que já existe, e o
-    // formulário não tem como saber se o vazio foi intenção ou descuido.
-    // Quem quer apagar usa o botão próprio, no detalhe.
-    if (productKey.trim() !== '') dados.productKey = productKey.trim();
 
     try {
       await onSubmit(dados);
@@ -182,19 +171,6 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
               </span>
             </label>
 
-            <label className="space-y-1.5 col-span-2">
-              <span className={ROTULO}>Chave de produto</span>
-              <input
-                value={productKey} onChange={(e) => setProductKey(e.target.value)}
-                className={CLASSE_CAMPO} autoComplete="off"
-                placeholder={licenca?.hasProductKey ? 'já cadastrada — preencha só para substituir' : 'AAAA-BBBB-CCCC-DDDD'}
-              />
-              <span className="block text-[10px] text-text-tertiary leading-relaxed">
-                Cifrada em repouso. Depois de salva ela nunca mais aparece na tela inteira — só
-                mascarada, e revelá-la fica registrado no histórico.
-              </span>
-            </label>
-
             <label className="space-y-1.5">
               <span className={ROTULO}>Licenciado para</span>
               <input value={licensedToName} onChange={(e) => setLicensedToName(e.target.value)} className={CLASSE_CAMPO} />
@@ -203,11 +179,6 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
             <label className="space-y-1.5">
               <span className={ROTULO}>E-mail do licenciado</span>
               <input type="email" value={licensedToEmail} onChange={(e) => setLicensedToEmail(e.target.value)} className={CLASSE_CAMPO} />
-            </label>
-
-            <label className="space-y-1.5">
-              <span className={ROTULO}>Fornecedor</span>
-              <ReferenceSelect rota="suppliers" valor={supplierId} onChange={setSupplierId} />
             </label>
 
             <label className="space-y-1.5">

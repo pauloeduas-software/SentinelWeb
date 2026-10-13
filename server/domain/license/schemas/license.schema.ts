@@ -7,28 +7,10 @@ import {
 // Contrato de entrada das rotas de licença.
 //
 // `strictObject` em tudo: campo desconhecido é 422, não silêncio. É o que fecha
-// o mass assignment — e é também o que impede a chave de produto de entrar por
-// uma porta que não passa pela cifra.
+// o mass assignment.
 
 /** Teto de assentos por contrato. Acima disso é carga, não operação de tela. */
 const MAX_ASSENTOS = 100_000;
-
-/**
- * A CHAVE DE PRODUTO, como ela ENTRA. Ela nunca sai por aqui.
- *
- * ─────────────────────────────────────────────────────────────────────────────
- * O `''` VIRA `null` E É ISSO QUE APAGA A CHAVE.
- *
- * Sem o tratamento, limpar o campo no formulário mandaria string vazia e o
- * use-case cifraria `""` — uma chave "preenchida" que não é chave nenhuma, com
- * `hasProductKey: true` e uma máscara vazia na tela. Apagar precisa ser
- * possível e precisa ser explícito: `null` apaga, ausente não mexe.
- * ─────────────────────────────────────────────────────────────────────────────
- */
-const chaveDeProduto = z.string().trim()
-  .max(200, 'chave de produto: máximo de 200 caracteres')
-  .nullish()
-  .transform((valor) => (valor === undefined ? undefined : valor || null));
 
 const assentosObrigatorios = z.coerce.number('total de assentos deve ser um número')
   .int('total de assentos deve ser um número inteiro')
@@ -41,7 +23,7 @@ const assentosObrigatorios = z.coerce.number('total de assentos deve ser um núm
  * O `preprocess` não é zelo: `z.coerce.number()` roda `Number('')`, que é **0**
  * — e `minSeats = 0` significa "alerte quando os livres ficarem abaixo de
  * zero", ou seja, nunca. Deixar o campo em branco gravaria um piso mudo em vez
- * de `null`. É a mesma armadilha do `minQty` da F5 e do `mesesOpcional` da F1.
+ * de `null`. É a mesma armadilha do `minQty` da F5.
  */
 const minimoOpcional = z.preprocess(
   (valor) => (valor === '' ? null : valor),
@@ -62,11 +44,9 @@ const camposComuns = {
   licensedToName: textoOpcional('licenciado para', 200),
   licensedToEmail: emailOpcional,
 
-  productKey: chaveDeProduto,
   minSeats: minimoOpcional,
 
   manufacturerId: uuidOpcional('fabricante'),
-  supplierId: uuidOpcional('fornecedor'),
 
   orderNumber: textoOpcional('número do pedido', 100),
   purchaseDate: dataOpcional('data de compra'),

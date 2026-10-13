@@ -7,17 +7,11 @@ import type {
 // ═════════════════════════════════════════════════════════════════════════════
 // OS BOTÕES DA DESCOBERTA — e até aqui eles não existiam em tela nenhuma.
 //
-// As cinco colunas estavam no `AppSetting` desde a Etapa B, a rota
+// As colunas estavam no `AppSetting` desde a Etapa B, a rota
 // `PUT /api/settings/discovery` estava pronta com zod e tetos, o hook estava
 // escrito — e a página nunca desenhou nada disso. Configuração sem tela é a
 // mesma coisa que configuração que não funciona: quem quer parar de receber
 // propostas sobre máquina não cadastrada não tem onde clicar.
-//
-// E a mais importante das cinco é a ALLOWLIST (D101). O próprio TODO chama as
-// três guardas da fila de "não opcionais", e ela é a terceira: sem ela, o
-// técnico de TI que loga em 40 máquinas para dar suporte gera 40 sugestões de
-// posto compartilhado no primeiro dia — e fila cujo primeiro contato é ruído não
-// é revisada uma segunda vez.
 // ═════════════════════════════════════════════════════════════════════════════
 
 interface Props {
@@ -34,7 +28,7 @@ const MODOS: { valor: DiscoveryMode; rotulo: string; explicacao: string; cor: st
   {
     valor: 'OFF',
     rotulo: 'Desligado',
-    explicacao: 'Nenhuma proposta sobre máquina sem cadastro. Posse e posto compartilhado continuam — eles falam de máquina que o cadastro já conhece.',
+    explicacao: 'Nenhuma proposta sobre máquina sem cadastro. A fila para de encher, e o painel de cobertura continua contando.',
     cor: 'text-text-tertiary',
   },
   {
@@ -46,35 +40,15 @@ const MODOS: { valor: DiscoveryMode; rotulo: string; explicacao: string; cor: st
   {
     valor: 'ON',
     rotulo: 'Vincular sozinho',
-    explicacao: 'Série ou UUID batendo com UM único ativo vira vínculo sem perguntar. Continua não criando ativo, posse nem ocupação sozinho.',
+    explicacao: 'Série ou UUID batendo com UM único ativo vira vínculo sem perguntar. Continua não criando ativo nem mexendo em posse sozinho.',
     cor: 'text-status-warning',
   },
 ];
 
 /**
- * A allowlist é editada como TEXTO, uma conta por linha.
- *
- * Não é preguiça de fazer chips: quem preenche esta caixa está colando nomes de
- * conta de serviço que leu num log (`sistema`, `svc_backup`, `admin.ti`), e
- * colar cinco linhas de uma vez é o gesto real. Um campo com "adicionar" por
- * item transformaria isso em cinco cliques.
- */
-function paraTexto(chaves: string[]): string {
-  return chaves.join('\n');
-}
-
-function paraLista(texto: string): string[] {
-  // Aceita vírgula E quebra de linha porque as duas aparecem em coisa colada,
-  // e recusar uma delas faria a pessoa achar que salvou o que não salvou.
-  return [...new Set(
-    texto.split(/[\n,;]/).map((parte) => parte.trim().toLowerCase()).filter(Boolean),
-  )];
-}
-
-/**
  * A ASSINATURA DA CONFIGURAÇÃO — a `key` do formulário.
  *
- * O rascunho dos quatro campos digitáveis é semeado com o que o servidor
+ * O rascunho dos dois campos digitáveis é semeado com o que o servidor
  * respondeu, e semear estado a partir de uma consulta assíncrona NÃO se faz com
  * `setState` dentro de `useEffect`: isso encadeia renders e o lint desta casa
  * reprova, com razão. O jeito que o projeto usa (`CatalogFormModal`) é estado
@@ -87,12 +61,7 @@ function paraLista(texto: string): string[] {
  * que continua valendo, em vez de um campo mentindo que a mudança pegou.
  */
 function assinatura(configuracao: Configuracao): string {
-  return [
-    configuracao.ghostDays,
-    configuracao.shadowHours,
-    configuracao.userDailyRetentionDays,
-    configuracao.ignoredUserKeys.join('|'),
-  ].join('·');
+  return [configuracao.ghostDays, configuracao.shadowHours].join('·');
 }
 
 interface FormularioProps {
@@ -101,12 +70,10 @@ interface FormularioProps {
   onSalvar: (dados: Partial<Configuracao>) => void;
 }
 
-/** Os quatro campos digitáveis. Remonta quando o servidor muda (ver `assinatura`). */
+/** Os dois campos digitáveis. Remonta quando o servidor muda (ver `assinatura`). */
 function Formulario({ configuracao, salvando, onSalvar }: FormularioProps) {
   const [ghostDays, setGhostDays] = useState(() => String(configuracao.ghostDays));
   const [shadowHours, setShadowHours] = useState(() => String(configuracao.shadowHours));
-  const [retencao, setRetencao] = useState(() => String(configuracao.userDailyRetentionDays));
-  const [ignoradas, setIgnoradas] = useState(() => paraTexto(configuracao.ignoredUserKeys));
 
   const handleSalvar = () => {
     // `Number` e não `parseInt`: campo vazio vira `0`, que o zod do servidor
@@ -115,14 +82,12 @@ function Formulario({ configuracao, salvando, onSalvar }: FormularioProps) {
     onSalvar({
       ghostDays: Number(ghostDays),
       shadowHours: Number(shadowHours),
-      userDailyRetentionDays: Number(retencao),
-      ignoredUserKeys: paraLista(ignoradas),
     });
   };
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <label className="space-y-1 block">
           <span className={ROTULO}>Dias para virar fantasma</span>
           <input
@@ -146,36 +111,7 @@ function Formulario({ configuracao, salvando, onSalvar }: FormularioProps) {
             Máquina sem cadastro vista há mais que isso e ainda sem triagem.
           </span>
         </label>
-
-        <label className="space-y-1 block">
-          <span className={ROTULO}>Retenção da observação de uso</span>
-          <input
-            type="number" min={7} max={365} value={retencao}
-            onChange={(evento) => setRetencao(evento.target.value)}
-            className={CAMPO}
-          />
-          <span className="text-[10px] text-text-tertiary block leading-relaxed">
-            Em dias. “Quem esteve em qual máquina” é dado de pessoa e tem prazo: passado
-            ele, a linha é apagada de verdade.
-          </span>
-        </label>
       </div>
-
-      <label className="space-y-1 block">
-        <span className={ROTULO}>Contas ignoradas</span>
-        <textarea
-          rows={4} value={ignoradas}
-          onChange={(evento) => setIgnoradas(evento.target.value)}
-          placeholder={'administrador\nsvc_backup\ntecnico.ti'}
-          className={`${CAMPO} resize-y`}
-        />
-        <span className="text-[10px] text-text-tertiary block leading-relaxed max-w-2xl">
-          Uma por linha. Conta de serviço e conta de suporte nunca devem virar dono de
-          equipamento nem ocupante de posto — quem loga em quarenta máquinas para dar
-          suporte não trabalha em quarenta mesas. Elas continuam aparecendo na evidência
-          das sugestões, para você descobrir quais faltam aqui.
-        </span>
-      </label>
 
       <button
         type="button"
@@ -210,9 +146,6 @@ export default function ConfiguracaoDaDescoberta({ configuracao, salvando, onSal
           <span className={modoAtual.cor}>{modoAtual.rotulo}</span>
           <span className="text-text-tertiary">fantasma em {configuracao.ghostDays}d</span>
           <span className="text-text-tertiary">shadow em {configuracao.shadowHours}h</span>
-          <span className="text-text-tertiary">
-            {configuracao.ignoredUserKeys.length} conta(s) ignorada(s)
-          </span>
         </span>
       </button>
 

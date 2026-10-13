@@ -44,6 +44,7 @@ interface Maquina {
   id: string;
   hostname: string;
   assetId: string | null;
+  asset: { id: string; assetTag: string; name: string | null } | null;
   reviewState: string;
 }
 
@@ -80,6 +81,14 @@ describe('o filtro de vínculo', () => {
     const com = await listar('?vinculo=com');
     expect(com.body.rows.map((linha) => linha.id)).toContain(comCadastro);
     expect(com.body.rows.map((linha) => linha.id)).not.toContain(semCadastro);
+
+    // O ATIVO VEM NA LINHA, e não só o `assetId`: a lista de máquinas
+    // vinculadas mostra a etiqueta, e um uuid não é coluna que alguém leia.
+    // `null` (e não ausente) na máquina sem vínculo: é "não tem", não "a tela
+    // não sabe" — `toBeNull` recusa `undefined`.
+    const vinculada = com.body.rows.find((linha) => linha.id === comCadastro);
+    expect(vinculada?.asset).toEqual({ id: ativo.id, assetTag: ativo.assetTag, name: 'Ativo da listagem' });
+    expect(sem.body.rows.find((linha) => linha.id === semCadastro)?.asset).toBeNull();
 
     // E o total sem filtro é a soma dos dois: um filtro que não fecha a conta
     // está escondendo linha.
@@ -129,16 +138,5 @@ describe('o que a listagem continua recusando', () => {
     // chave de domínio param na borda.
     expect((await listar('?ordr=asc')).status).toBe(422);
     expect((await listar('?vinculoo=sem')).status).toBe(422);
-  });
-
-  it('e máquina fundida continua fora de toda listagem', async () => {
-    const perdedora = await maquina('lista-fundida');
-    const vencedora = await maquina('lista-vencedora');
-    await api.post(`/api/endpoints/${perdedora}/merge`, { intoEndpointId: vencedora });
-
-    for (const query of ['', '?vinculo=sem', '?reviewState=UNREVIEWED']) {
-      const { body } = await listar(query);
-      expect(body.rows.map((linha) => linha.id)).not.toContain(perdedora);
-    }
   });
 });

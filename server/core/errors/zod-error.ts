@@ -37,8 +37,11 @@ export function formatZodError(error: ZodError): ZodErrorBody {
 
   // A mensagem legível não repete o nome técnico do campo: ela vai direto para o
   // formulário, e "category: categoria é obrigatório" é ruído para quem lê. Cada
-  // mensagem do schema já se explica sozinha. O mapa `fields` continua com a
-  // chave técnica, que é o que a tela usa para destacar o input certo.
+  // mensagem do schema já se explica sozinha. O mapa `fields` continua no corpo
+  // com a chave técnica, mas NENHUMA TELA O LÊ: o painel mostra só o `error`. O
+  // campo está de pé pelo tipo `ZodErrorBody` e pelos dois testes do corpo do
+  // 422, para a tela que quiser destacar o input certo não precisar mudar o
+  // servidor.
   const mensagens = Object.values(fields);
   const visiveis = mensagens.slice(0, MAX_NA_MENSAGEM);
   const restantes = mensagens.length - visiveis.length;

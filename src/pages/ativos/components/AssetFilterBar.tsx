@@ -1,13 +1,18 @@
-import { Archive, PackageX, Trash2, TriangleAlert, X } from 'lucide-react';
-import type { AssetRelatorio, AssetView } from '../../../domain/shared/asset.types';
+import { Archive, MonitorSmartphone, PackageX, Trash2, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import type { AssetView } from '../../../domain/shared/asset.types';
 
 // AS VISTAS E OS FILTROS DA LISTAGEM DE ATIVOS.
 //
 // Não é o `ListToolbar` compartilhado, e a separação é a mesma decisão do
 // servidor (D20): "Ativos / Lixeira" é genérico e vive lá; "Descomissionados",
-// "Arquivados" e "posto vago" só existem no ITAM e vivem aqui. Somar essas abas
-// ao componente compartilhado o obrigaria a conhecer colunas que só uma tabela
-// do sistema tem.
+// "Arquivados" só existem no ITAM e vivem aqui. Somar essas abas ao componente
+// compartilhado o obrigaria a conhecer colunas que só uma tabela do sistema tem.
+//
+// A LINHA SOBRE OS POSTOS aparece só na vista padrão, e ela existe porque a
+// ausência é a parte confusa: quem acabou de entregar um computador a uma mesa
+// volta para esta tela e não o encontra. Dizer para onde ele foi, com o link,
+// custa uma linha e evita a conclusão de que o sistema perdeu o ativo.
 //
 // ARQUIVADO E DESCOMISSIONADO SÃO ABAS SEPARADAS de propósito (D19). Parecem a
 // mesma coisa — "sumiu da lista" — e respondem a perguntas diferentes: o
@@ -25,15 +30,13 @@ interface AssetFilterBarProps {
   descomissionados: number;
   /** Quantos saíram de operação (status de tipo `ARCHIVED`) — o contador da outra. */
   arquivados: number;
-  relatorio?: AssetRelatorio;
-  onRelatorioChange: (relatorio?: AssetRelatorio) => void;
   /** O nome do status filtrado, quando um contador do cabeçalho foi clicado. */
   statusFiltrado: string | null;
   onLimparStatus: () => void;
 }
 
 export default function AssetFilterBar({
-  view, onViewChange, descomissionados, arquivados, relatorio, onRelatorioChange,
+  view, onViewChange, descomissionados, arquivados,
   statusFiltrado, onLimparStatus,
 }: AssetFilterBarProps) {
   const abas: { valor: AssetView; rotulo: string; icone?: typeof PackageX; contador?: number }[] = [
@@ -42,8 +45,6 @@ export default function AssetFilterBar({
     { valor: 'retired', rotulo: 'Descomissionados', icone: PackageX, contador: descomissionados },
     { valor: 'trashed', rotulo: 'Lixeira', icone: Trash2 },
   ];
-
-  const postoVago = relatorio === 'posto-vago';
 
   return (
     <div className="flex flex-wrap items-center gap-3 mb-4 font-mono text-xs">
@@ -68,22 +69,15 @@ export default function AssetFilterBar({
         ))}
       </div>
 
-      {/* RELATÓRIO, não filtro de coluna: "ativo entregue a um posto sem
-          ocupante" é uma pergunta operacional — equipamento parado em mesa
-          vazia —, e a resposta vem do servidor para a paginação não mentir. */}
-      <button
-        type="button"
-        onClick={() => onRelatorioChange(postoVago ? undefined : 'posto-vago')}
-        title="Ativos entregues a um posto que não tem nenhum ocupante aberto"
-        className={`${CLASSE_ABA} border ${
-          postoVago
-            ? 'border-status-warning/50 bg-status-warning/10 text-status-warning'
-            : 'border-border-sutil text-text-tertiary hover:text-text-primary hover:bg-bg-base'
-        }`}
-      >
-        <TriangleAlert size={13} /> Posto vago
-        {postoVago && <X size={12} />}
-      </button>
+      {view === 'active' && (
+        <span className="flex items-center gap-1.5 text-text-tertiary normal-case tracking-normal">
+          <MonitorSmartphone size={12} className="shrink-0" />
+          Computador entregue a um posto aparece em
+          <Link to="/postos" className="text-text-secondary hover:text-text-primary underline underline-offset-2">
+            Postos
+          </Link>
+        </span>
+      )}
 
       {statusFiltrado && (
         <button

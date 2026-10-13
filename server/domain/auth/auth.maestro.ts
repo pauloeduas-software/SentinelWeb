@@ -8,8 +8,7 @@ const logger = createLogger('auth.maestro');
 
 // Login, logout e "quem sou eu".
 //
-// `/api/users/:id/set-password` mora AQUI e não no `user.maestro.ts` pelo mesmo
-// motivo de `/api/users/:id/holdings` morar no `assignment.maestro.ts`: a rota
+// `/api/users/:id/set-password` mora AQUI e não no `user.maestro.ts`: a rota
 // pendura em `/api/users` mas o assunto é credencial, não cadastro. Manter isso
 // separado é o que deixa o CRUD de colaborador continuar sem saber o que é um
 // `passwordHash` — e o `USER_PUBLIC_SELECT` continuar sendo a única porta de
@@ -23,11 +22,6 @@ const logger = createLogger('auth.maestro');
  *   errada. Nenhum corpo legítimo daqui passa de algumas centenas de bytes.
  * - `semCache`: a resposta carrega `Set-Cookie` de sessão.
  * - `verificarOrigem`: segunda camada anti-CSRF atrás do `SameSite` do cookie.
- *
- * TINHA UM QUARTO: `exigirSessaoDeCookie`, que impedia um token pessoal de API de
- * mexer na própria credencial. Saiu com o `ApiToken` no D149 — sem token pessoal,
- * toda requisição autenticada já é cookie de sessão, e o hook não tinha o que
- * recusar.
  */
 const ROTA_DE_CREDENCIAL: RouteShorthandOptions = {
   bodyLimit: 8 * 1024,
@@ -49,9 +43,6 @@ export class AuthMaestro {
       { ...ROTA_DE_CREDENCIAL, ...WRITE_RATE_LIMIT },
       authController.setPassword,
     );
-
-
-
 
     logger.info('[Maestro] Rotas de Autenticação inicializadas.');
   }

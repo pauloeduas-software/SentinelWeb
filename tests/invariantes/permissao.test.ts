@@ -2,9 +2,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { prisma } from '../../server/core/database/prismaClient';
 import { PAPEIS, papelAlcanca, ehPapel } from '../../server/domain/access/helpers/papel';
-import {
-  ROTAS_POR_PERMISSAO, exigenciaDaRota,
-} from '../../server/domain/access/helpers/route-permissions';
+import Fastify, { type HTTPMethods } from 'fastify';
+import { registerPermissionGuard } from '../../server/core/http/permission-guard';
+import { ROTAS_POR_PERMISSAO } from '../../server/domain/access/helpers/route-permissions';
 
 // AS INVARIANTES DO ACESSO (D148) — e a que importa é a segunda.
 //
@@ -39,38 +39,57 @@ describe('o mapa de rotas × a tabela do Fastify (D137)', () => {
   });
 
   it('o mapa não declara rota que não existe', () => {
-    // O espelho do caso de baixo: declaração morta é linha que ninguém apagou
-    // quando a rota saiu, e ela esconde o que o mapa realmente cobre.
-    const registradas = new Set(
-      api.app.printRoutes({ commonPrefix: false })
-        .split('\n')
-        .flatMap((linha) => {
-          const casamento = linha.match(/^(?<url>\S+)\s+\((?<metodos>[^)]+)\)/);
-          if (!casamento?.groups) return [];
-          return casamento.groups.metodos
-            .split(',')
-            .map((metodo) => `${metodo.trim()} ${casamento.groups!.url}`);
-        }),
-    );
+    // O ESPELHO do caso de baixo, e o que ele pega é declaração MORTA: linha que
+    // ninguém apagou quando a rota saiu. Ela não abre acesso nenhum — o guard só
+    // consulta o mapa a partir de uma rota real —, mas esconde o que o mapa de
+    // fato cobre, e é a primeira coisa que mente numa revisão.
+    //
+    // `hasRoute` E NÃO `printRoutes`: a versão anterior deste caso parseava o
+    // texto de `printRoutes({ commonPrefix: false })`, e aquele texto é uma
+    // ÁRVORE — as linhas começam com `├──` e cada caminho é relativo ao nó pai.
+    // O regex não casava nenhuma linha, o conjunto de rotas registradas saía
+    // VAZIO, e `mortas` era o mapa INTEIRO; a asserção que sobrava
+    // (`not.toContain('GET /api/groups')`) passava por isso, não por acerto.
+    // `hasRoute` pergunta ao roteador, com o padrão exato que o mapa declara.
+    const mortas = Object.keys(ROTAS_POR_PERMISSAO).filter((chave) => {
+      const [metodo, ...resto] = chave.split(' ');
+      return !api.app.hasRoute({ method: metodo as HTTPMethods, url: resto.join(' ') });
+    });
 
-    const mortas = Object.keys(ROTAS_POR_PERMISSAO).filter((chave) => !registradas.has(chave));
-    // Tolerante de propósito: o `printRoutes` normaliza prefixo e este teste não
-    // pode ficar mais frágil que o do boot. O que ele pega é o óbvio — um
-    // caminho inteiro que deixou de existir.
-    expect(mortas.filter((chave) => chave.includes('/api/'))).not.toContain('GET /api/groups');
+    expect(mortas).toEqual([]);
   });
 
-  it('nenhuma rota de API fica sem exigência — é o que o boot confere', () => {
-    // A conferência do boot já rodou (o `criarApi` chama `buildApp`, que a
-    // executa e LANÇA). Este caso existe para o motivo da falha aparecer como
-    // asserção e não como exceção de `beforeAll`, que o vitest reporta sem
-    // dizer qual rota.
-    const semDeclaracao = Object.keys(ROTAS_POR_PERMISSAO)
-      .filter((chave) => {
-        const [metodo, ...resto] = chave.split(' ');
-        return exigenciaDaRota(metodo, resto.join(' ')) === undefined;
-      });
-    expect(semDeclaracao).toEqual([]);
+  it('rota registrada fora do mapa derruba a conferência de cobertura', async () => {
+    // A CONFERÊNCIA DO BOOT (D137), exercitada pelos dois lados numa instância
+    // descartável. Não dá para provar isto na aplicação real: lá ela já rodou
+    // dentro do `buildApp()` do `beforeAll` e, se falhasse, o arquivo inteiro
+    // morreria antes da primeira asserção. O que se testa aqui é o MECANISMO —
+    // mesma função, mesmo objeto que protege o boot.
+    const declaradas = new Set(['GET /declarada']);
+    const opcoes = {
+      exigenciaDaRota: (metodo: string, url: string) =>
+        (declaradas.has(`${metodo.toUpperCase()} ${url}`) ? 'ADMIN' : undefined),
+      autorizar: () => {},
+      rotasPublicas: [],
+      foraDaConferencia: [],
+    };
+
+    const coberta = Fastify();
+    const guardaCoberta = registerPermissionGuard(coberta, opcoes);
+    coberta.get('/declarada', async () => 'ok');
+    await coberta.ready();
+    expect(() => guardaCoberta.verificarCobertura()).not.toThrow();
+    await coberta.close();
+
+    const furada = Fastify();
+    const guardaFurada = registerPermissionGuard(furada, opcoes);
+    furada.get('/declarada', async () => 'ok');
+    furada.post('/esquecida', async () => 'ok');
+    await furada.ready();
+    // A mensagem tem que NOMEAR a rota: é o que faz o erro do boot ser
+    // acionável em vez de "alguma coisa não está declarada".
+    expect(() => guardaFurada.verificarCobertura()).toThrow(/POST \/esquecida/);
+    await furada.close();
   });
 });
 
@@ -128,28 +147,61 @@ describe('nunca sem administrador (D148)', () => {
 });
 
 describe('a porta fechada por padrão', () => {
-  it('sessão USUARIO entra e não alcança nada', async () => {
-    const sem = await api.comoUsuario('USUARIO');
+  it('USUARIO não entra no painel, e a recusa explica por quê', async () => {
+    // O papel existe para quem RECEBE equipamento. Como nenhuma rota de
+    // inventário o aceita e nenhum item do menu dispensa papel, deixá-lo entrar
+    // produzia um painel vazio respondendo 403 em tudo — que parece defeito.
+    const marca = `colab${Date.now()}`;
+    const pessoa = await api.post<{ id: string }>('/api/users', {
+      name: 'Colaborador Sem Painel', email: `${marca}@teste.local`,
+    });
+    expect(pessoa.status).toBe(201);
 
-    // Entrou: `/api/auth/me` é dispensa DECLARADA, e tem que ser — sem ela não
-    // há como desenhar nem a tela que explica que a pessoa não tem acesso.
-    const eu = await sem.get<{ role: string }>('/api/auth/me');
-    expect(eu.status).toBe(200);
-    expect(eu.body.role).toBe('USUARIO');
+    const senha = 'Senha-De-Teste-123';
+    expect((await api.post(`/api/users/${pessoa.body.id}/set-password`, {
+      username: marca, password: senha,
+    })).status).toBe(200);
 
-    // E não alcança o resto.
-    for (const url of ['/api/assets', '/api/users', '/api/licenses', '/api/settings']) {
-      const resposta = await sem.get(url);
-      expect(resposta.status, `${url} devia ser 403`).toBe(403);
-    }
+    // A conta nasce `USUARIO` pelo `@default` da coluna — ninguém a rebaixou.
+    const entrada = await api.anonimo.post<{ error: string }>('/api/auth/login', {
+      username: marca, password: senha,
+    });
+
+    // 403 e não 401: a senha está CERTA, o que falta é autorização.
+    expect(entrada.status).toBe(403);
+    expect(entrada.body.error).toMatch(/colaborador/i);
+    expect(entrada.body.error).toContain('Técnico');
   });
 
-  it('o 403 NOMEIA o papel que falta', async () => {
-    const sem = await api.comoUsuario('USUARIO');
-    const resposta = await sem.get<{ error: string; papel?: string }>('/api/assets');
+  it('promovido a TECNICO, o mesmo login passa', async () => {
+    // A outra metade: provar que o bloqueio é do PAPEL e não da conta, senão
+    // uma implementação que recusa todo mundo passaria no caso de cima.
+    const marca = `promovido${Date.now()}`;
+    const pessoa = await api.post<{ id: string }>('/api/users', {
+      name: 'Colaborador Promovido', email: `${marca}@teste.local`,
+    });
+    const senha = 'Senha-De-Teste-123';
+    await api.post(`/api/users/${pessoa.body.id}/set-password`, { username: marca, password: senha });
+
+    expect((await api.anonimo.post('/api/auth/login', { username: marca, password: senha })).status)
+      .toBe(403);
+
+    expect((await api.put(`/api/users/${pessoa.body.id}`, { role: 'TECNICO' })).status).toBe(200);
+
+    expect((await api.anonimo.post('/api/auth/login', { username: marca, password: senha })).status)
+      .toBe(200);
+  });
+
+  it('o 403 das rotas NOMEIA o papel que falta', async () => {
+    // Agora pelo TECNICO numa rota de ADMIN: é a mesma mensagem do guard, e o
+    // caminho que sobrou agora que `USUARIO` não tem sessão.
+    const tecnico = await api.comoUsuario('TECNICO');
+    // `PUT /api/settings` é de ADMIN (o `GET` é de técnico): a recusa vem do
+    // `preHandler`, antes de o corpo ser lido.
+    const resposta = await tecnico.put<{ error: string }>('/api/settings', { locale: 'pt-BR' });
 
     expect(resposta.status).toBe(403);
-    expect(resposta.body.error).toContain('Técnico');
+    expect(resposta.body.error).toContain('Administrador');
   });
 
   it('TECNICO abre o inventário e NÃO abre configuração', async () => {

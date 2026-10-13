@@ -1,10 +1,11 @@
 import { $Enums } from '@prisma/client';
 import { prisma } from '../../../core/database/prismaClient';
+import { EM_POSTO_DE_TRABALHO } from '../helpers/asset-filters.helper';
 
 // Contadores do cabeçalho da tela de ativos. Rota própria porque, com paginação,
 // `rows.length` conta só a página atual — a agregação roda FORA do skip/take.
 export interface AssetStats {
-  /** O que a listagem PADRÃO mostra: nem descomissionado, nem arquivado. */
+  /** O que a listagem PADRÃO mostra: nem descomissionado, nem arquivado, nem em posto. */
   total: number;
   byStatus: {
     id: string;
@@ -46,11 +47,16 @@ export interface AssetStats {
  *     esquecido sumiria do painel escondendo equipamento.
  */
 export async function getAssetStats(): Promise<AssetStats> {
-  // `retiredAt: null` no agrupamento porque a listagem padrão também o exclui:
-  // o contador do cabeçalho é o cabeçalho DAQUELA lista, e contar o notebook
-  // vendido aqui faria o badge prometer uma linha que a tabela não mostra.
+  // `retiredAt: null` E o `NOT` do posto de trabalho, porque a listagem padrão
+  // exclui os dois: o contador do cabeçalho é o cabeçalho DAQUELA lista, e
+  // contar aqui o notebook vendido — ou o computador montado numa mesa, que
+  // agora se pergunta em `/postos` — faria o badge prometer uma linha que a
+  // tabela não mostra. É a mesma exclusão de `whereDaVista`, importada de lá
+  // para as duas não divergirem quando uma mudar.
+  const semPosto = { retiredAt: null, NOT: EM_POSTO_DE_TRABALHO };
+
   const [grupos, rotulos, retired] = await Promise.all([
-    prisma.asset.groupBy({ by: ['statusId'], where: { retiredAt: null }, _count: { _all: true } }),
+    prisma.asset.groupBy({ by: ['statusId'], where: semPosto, _count: { _all: true } }),
     prisma.statusLabel.findMany({ select: { id: true, name: true, color: true, showInNav: true, type: true } }),
     prisma.asset.count({ where: { retiredAt: { not: null } } }),
   ]);
@@ -72,10 +78,10 @@ export async function getAssetStats(): Promise<AssetStats> {
     comTotal.reduce((soma, rotulo) => (ehArquivo(rotulo.type) === arquivo ? soma + rotulo.total : soma), 0);
 
   return {
-    // `total` conta o que a listagem PADRÃO mostra, e ela passou a excluir o
-    // arquivado junto com o descomissionado: o cabeçalho é o cabeçalho DAQUELA
-    // lista, e prometer uma linha que a tabela não mostra é o defeito que este
-    // contador existe para não ter.
+    // `total` conta o que a listagem PADRÃO mostra, e ela exclui o arquivado, o
+    // descomissionado e o que está entregue a um posto: o cabeçalho é o
+    // cabeçalho DAQUELA lista, e prometer uma linha que a tabela não mostra é o
+    // defeito que este contador existe para não ter.
     total: somar(false),
     byStatus,
     retired,

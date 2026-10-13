@@ -23,9 +23,24 @@ export interface AssetOption {
  * toda consulta de topo (core/database/soft-delete.extension.ts). Entregar um
  * ativo a outro que está na lixeira não é uma operação que deva existir.
  */
-export async function listAssetOptions(q?: string): Promise<AssetOption[]> {
+export interface FiltroDeOpcoesDeAtivo {
+  /**
+   * Só ativo SEM máquina vinculada. É o seletor de `/descobertas`: vincular a
+   * máquina a um ativo que já tem outra é o que `endpoints.assetId @unique`
+   * recusa, então a lista nem oferece.
+   */
+  semMaquina?: boolean;
+}
+
+export async function listAssetOptions(
+  q?: string,
+  filtro: FiltroDeOpcoesDeAtivo = {},
+): Promise<AssetOption[]> {
   const rows = await prisma.asset.findMany({
-    where: buildAssetWhere(q),
+    where: {
+      ...buildAssetWhere(q),
+      ...(filtro.semMaquina ? { endpoint: null } : {}),
+    },
     select: {
       id: true,
       assetTag: true,

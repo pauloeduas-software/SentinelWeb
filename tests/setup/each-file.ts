@@ -12,9 +12,8 @@ import { exigirBancoDeTeste, resetarBanco } from './database';
 //
 // POR QUE NÃO UMA TRANSAÇÃO COM ROLLBACK, que seria mais rápido: metade do que
 // esta suíte precisa provar é justamente o comportamento TRANSACIONAL — as
-// corridas com duas requisições simultâneas, os índices únicos parciais, o
-// rollback do `offboard`. Envolver tudo numa transação externa mudaria o que
-// está sendo testado.
+// corridas com duas requisições simultâneas e os índices únicos parciais.
+// Envolver tudo numa transação externa mudaria o que está sendo testado.
 
 beforeAll(async () => {
   // A trava de novo, aqui dentro: o `globalSetup` roda em OUTRO processo, e um

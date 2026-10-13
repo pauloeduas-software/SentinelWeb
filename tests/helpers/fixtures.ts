@@ -27,20 +27,18 @@ function exigir201<T>(o_que: string, resposta: { status: number; body: unknown }
 /** Os ids que o seed deixa prontos. Lidos, nunca criados. */
 export async function idsDoSeed() {
   const [
-    deployable, emUso, arquivado, categoria, acessorio, consumivel, componente, licenca,
+    deployable, emUso, arquivado, categoria, licenca, estoque,
   ] = await Promise.all([
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'DEPLOYABLE' }, select: { id: true } }),
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'IN_USE' }, select: { id: true } }),
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'ARCHIVED' }, select: { id: true } }),
     prisma.category.findFirstOrThrow({ where: { type: 'ASSET' }, select: { id: true } }),
-    // As três do estoque (F5). O seed cria uma por tipo, e é o TIPO que o
-    // use-case confere: categoria de ASSET num acessório é 422.
-    prisma.category.findFirstOrThrow({ where: { type: 'ACCESSORY' }, select: { id: true } }),
-    prisma.category.findFirstOrThrow({ where: { type: 'CONSUMABLE' }, select: { id: true } }),
-    prisma.category.findFirstOrThrow({ where: { type: 'COMPONENT' }, select: { id: true } }),
-    // A da F6. O seed cria "Licença" com `type: 'LICENSE'`, e é o TIPO que o
-    // use-case confere: categoria de ASSET numa licença é 422.
+    // A da licença. O seed cria "Licença" com `type: 'LICENSE'`, e é o TIPO que
+    // o use-case confere: categoria de ASSET numa licença é 422.
     prisma.category.findFirstOrThrow({ where: { type: 'LICENSE' }, select: { id: true } }),
+    // A do estoque: "Monitor" e "Periférico" nascem `STOCK` no seed, e é o tipo
+    // que o use-case confere — categoria de ATIVO num item de estoque é 422.
+    prisma.category.findFirstOrThrow({ where: { type: 'STOCK' }, select: { id: true } }),
   ]);
 
   return {
@@ -48,18 +46,37 @@ export async function idsDoSeed() {
     statusEmUsoId: emUso.id,
     statusArquivadoId: arquivado.id,
     categoriaId: categoria.id,
-    categoriaAcessorioId: acessorio.id,
-    categoriaConsumivelId: consumivel.id,
-    categoriaComponenteId: componente.id,
     categoriaLicencaId: licenca.id,
+    categoriaEstoqueId: estoque.id,
   };
+}
+
+/**
+ * Um item de estoque, pela API — nunca por `prisma.stockItem.create`.
+ *
+ * O motivo é o do topo deste arquivo: criar pelo Prisma pularia o zod da borda,
+ * a guarda de tipo da categoria, a ENTRADA inicial e o `ActivityLog`, e o teste
+ * passaria a provar coisas sobre um item que nenhum usuário consegue cadastrar.
+ *
+ * O NOME é único entre os vivos, então quem chama passa um nome próprio por
+ * caso.
+ */
+export async function criarItemDeEstoque(
+  api: ApiDeTeste,
+  opcoes: { name: string; categoryId: string; qty?: number; notes?: string },
+): Promise<{ id: string; name: string; qty: number }> {
+  const corpo: Record<string, unknown> = { name: opcoes.name, categoryId: opcoes.categoryId };
+  if (opcoes.qty !== undefined) corpo.qty = opcoes.qty;
+  if (opcoes.notes !== undefined) corpo.notes = opcoes.notes;
+
+  return exigir201('item de estoque', await api.post('/api/stock/items', corpo));
 }
 
 /**
  * Uma licença, pela API — nunca por `prisma.license.create`.
  *
  * Criar pelo Prisma pularia o zod da borda, a guarda de tipo da categoria, a
- * CIFRA da chave de produto e — o que mais importa — a criação dos assentos na
+ * criação dos assentos na
  * mesma transação. O teste passaria a provar coisas sobre uma licença de 5
  * assentos com zero linhas em `license_seats`, que nenhum usuário consegue
  * cadastrar.
@@ -75,7 +92,6 @@ export async function criarLicenca(
     seatsTotal: number;
     reassignable?: boolean;
     minSeats?: number;
-    productKey?: string;
     expirationDate?: string;
     terminationDate?: string;
   },
@@ -85,7 +101,7 @@ export async function criarLicenca(
     categoryId: opcoes.categoryId,
     seatsTotal: opcoes.seatsTotal,
   };
-  for (const chave of ['reassignable', 'minSeats', 'productKey', 'expirationDate', 'terminationDate'] as const) {
+  for (const chave of ['reassignable', 'minSeats', 'expirationDate', 'terminationDate'] as const) {
     if (opcoes[chave] !== undefined) corpo[chave] = opcoes[chave];
   }
 
@@ -99,31 +115,6 @@ export async function assentosDa(api: ApiDeTeste, licenseId: string) {
     checkouts: { id: string; assignedUserId: string | null; assignedAssetId: string | null }[];
   }[]>(`/api/licenses/${licenseId}/seats`);
   return exigir201<typeof resposta.body>('assentos', resposta);
-}
-
-/**
- * Um item de estoque, pela API — nunca por `prisma.accessory.create`.
- *
- * O motivo é o do topo deste arquivo: criar pelo Prisma pularia o zod da borda,
- * a guarda de tipo da categoria e o `ActivityLog`, e o teste passaria a provar
- * coisas sobre um item que nenhum usuário consegue cadastrar.
- *
- * O NOME é único por índice parcial nos três tipos, então quem chama passa um
- * sufixo próprio quando cria mais de um no mesmo arquivo.
- */
-export async function criarItemDeEstoque(
-  api: ApiDeTeste,
-  slug: 'accessories' | 'consumables' | 'components',
-  opcoes: { name: string; categoryId: string; qty: number; minQty?: number },
-): Promise<{ id: string; qty: number; disponivel: number }> {
-  const corpo: Record<string, unknown> = {
-    name: opcoes.name,
-    categoryId: opcoes.categoryId,
-    qty: opcoes.qty,
-  };
-  if (opcoes.minQty !== undefined) corpo.minQty = opcoes.minQty;
-
-  return exigir201(slug, await api.post(`/api/${slug}`, corpo));
 }
 
 export async function criarFabricante(api: ApiDeTeste, name = 'Fabricante de Teste'): Promise<string> {
@@ -198,7 +189,7 @@ export async function criarAtivo(
 /**
  * O cenário completo do modelo de posse, em uma chamada.
  *
- * Um ativo no estoque, duas pessoas e um posto de trabalho — que é o mínimo
+ * Um ativo disponível, duas pessoas e um posto de trabalho — que é o mínimo
  * para exercitar as três camadas do `docs/referencia/modelo-de-posse.md`, incluindo o caso
  * que nenhum ITAM de prateleira modela: DUAS pessoas no MESMO posto.
  *
@@ -248,12 +239,6 @@ export async function cenarioDePosse(api: ApiDeTeste, sufixo = '') {
 }
 
 // ── O CICLO DE VIDA (F8) ────────────────────────────────────────────────────
-
-/** Um fornecedor, pela API. O nome é `@unique`, então quem chama passa o próprio. */
-export async function criarFornecedor(api: ApiDeTeste, name: string): Promise<string> {
-  const criado = exigir201<Criado>('fornecedor', await api.post('/api/suppliers', { name }));
-  return criado.id;
-}
 
 /** `AAAA-MM-DD` de N dias atrás — o que os testes de prazo precisam. */
 export function diasAtras(dias: number): string {

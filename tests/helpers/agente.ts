@@ -30,6 +30,14 @@ export interface AgenteDeTeste {
   /** Manda um Handshake e espera o servidor confirmar que processou. */
   handshake(payload?: Record<string, unknown>): Promise<void>;
   telemetria(payload?: Record<string, unknown>): Promise<void>;
+  /**
+   * A próxima mensagem que o SERVIDOR mandou a este agente, já desserializada.
+   *
+   * É o que prova a entrega de um comando: a rota dizer 200 não é o pacote ter
+   * chegado do outro lado do socket. As mensagens ficam em fila desde a
+   * conexão, então chamar depois do envio não perde a que já chegou.
+   */
+  receber(descricao: string, tempoLimiteMs?: number): Promise<Record<string, unknown>>;
   fechar(): Promise<void>;
 }
 
@@ -70,7 +78,7 @@ export async function esperarPor<T>(
 /**
  * Conecta um agente.
  *
- * O payload sai em PascalCase porque é assim que o agente C# serializa — e é o
+ * O payload sai em PascalCase porque é assim que o agente serializa — e é o
  * caminho que o `normalize-payload.helper` tem que resolver. Um teste escrito em
  * camelCase provaria o caminho mais fácil.
  */
@@ -90,8 +98,36 @@ export async function conectarAgente(api: ApiDeTeste, hwid: string): Promise<Age
     socket.send(JSON.stringify({ Type, Payload: { Hwid: hwid, ...Payload } }));
   };
 
+  // O que o servidor mandou, na ordem. Quem espera uma mensagem e ainda não há
+  // nenhuma fica em `esperando`, e é acordado pela próxima que chegar.
+  const recebidas: Record<string, unknown>[] = [];
+  const esperando: ((mensagem: Record<string, unknown>) => void)[] = [];
+  socket.on('message', (bruto) => {
+    const mensagem = JSON.parse(bruto.toString()) as Record<string, unknown>;
+    const acordar = esperando.shift();
+    if (acordar) acordar(mensagem);
+    else recebidas.push(mensagem);
+  });
+
   return {
     hwid,
+    receber: (descricao, tempoLimiteMs = 5_000) => {
+      const pronta = recebidas.shift();
+      if (pronta) return Promise.resolve(pronta);
+
+      return new Promise((resolve, reject) => {
+        const limite = setTimeout(() => {
+          const indice = esperando.indexOf(acordar);
+          if (indice >= 0) esperando.splice(indice, 1);
+          reject(new Error(`Tempo esgotado esperando: ${descricao}`));
+        }, tempoLimiteMs);
+        const acordar = (mensagem: Record<string, unknown>) => {
+          clearTimeout(limite);
+          resolve(mensagem);
+        };
+        esperando.push(acordar);
+      });
+    },
     handshake: (payload = {}) => mandar('Handshake', {
       Hostname: 'maquina-de-teste',
       OsVersion: 'Windows 11 Pro',

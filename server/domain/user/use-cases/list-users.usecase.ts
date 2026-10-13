@@ -9,9 +9,9 @@ type UserRow = LinhaCrua;
 function buscarPagina(where: object, query: ListQuery<UserSortable>) {
   return prisma.user.findMany({
     where,
-    // `USER_LIST_SELECT` e não o público: esta é a ÚNICA listagem que mostra a
-    // coluna Departamento, e o join dele não tem o que fazer no select que viaja
-    // embutido em toda posse e toda ocupação (D135).
+    // `USER_LIST_SELECT` e não o público: a listagem de pessoas mostra colunas
+    // que não têm o que fazer no select que viaja embutido em toda posse e toda
+    // ocupação (D135).
     select: USER_LIST_SELECT,
     orderBy: { [query.sort]: query.order },
     skip: query.skip,
@@ -27,8 +27,5 @@ export async function listUsers(query: ListQuery<UserSortable>): Promise<ListEnv
     buscarPagina(where, query),
   ]);
 
-  // Sem achatamento nenhum: com o `DROP COLUMN users.department` aplicado (Etapa
-  // J), a relação voltou a se chamar `department` no schema e o `USER_LIST_SELECT`
-  // já devolve `{ id, name }` — que é o que o contrato da API sempre prometeu.
   return { total, rows };
 }

@@ -1,6 +1,4 @@
-import type { AcessorioEmPosse } from './stock.types';
-import type { AssentoEmPosse } from './license.types';
-import type { AlvoDaPosse, Escalonamento, PosseResolvida } from './posse.types';
+import type { AlvoDaPosse, PosseResolvida } from './posse.types';
 import type { ListParams } from './list.types';
 import type { User } from './user.types';
 
@@ -34,7 +32,6 @@ export interface CategoriaRef extends Referencia {
 
 export interface ModeloRef extends Referencia {
   modelNumber: string | null;
-  eolMonths: number | null;
   manufacturer: Referencia;
   category: CategoriaRef;
 }
@@ -57,13 +54,10 @@ export interface Asset {
   serial: string | null;
   name: string | null;
   notes: string | null;
-  byod: boolean;
-  requestable: boolean;
 
   statusId: string;
   modelId: string;
   locationId: string | null;
-  supplierId: string | null;
   /**
    * CACHE do caso `USER` da posse, e só dele (docs/referencia/modelo-de-posse.md).
    *
@@ -77,32 +71,16 @@ export interface Asset {
   purchaseDate: string | null;
   purchaseCost: string | null;
 
-  warrantyMonths: number | null;
-  warrantyExpiresAt: string | null;
-  eolMonths: number | null;
-  eolDate: string | null;
-  eolExplicit: boolean;
-
   /**
    * DESCOMISSIONAMENTO — o ativo saiu do PATRIMÔNIO.
    *
    * Não confundir com as outras duas saídas (D19): `status.type === 'ARCHIVED'`
    * é ter saído da OPERAÇÃO, e a lixeira é ter sido cadastrado ERRADO. Um
-   * notebook vendido continua no relatório de depreciação com a data em que
-   * saiu; um da lixeira nunca deveria ter existido.
+   * notebook vendido continua no patrimônio histórico, com a data em que saiu;
+   * um da lixeira nunca deveria ter existido.
    */
   retiredAt: string | null;
   retiredReason: MotivoDaSaida | null;
-
-  /**
-   * O caminho da foto dentro do `UPLOAD_DIR`, ou `null`.
-   *
-   * A tela o usa SÓ como "tem foto ou não" — a URL que ela monta é por id
-   * (`/api/images/asset/:id`, ver `attachment.queries.ts`). O caminho não é
-   * atalho para nada: nenhuma rota aceita caminho de arquivo como parâmetro, e
-   * o arquivo só sai por rota autenticada (D84).
-   */
-  imagePath: string | null;
 
   /** Quem cadastrou e quem editou por último (D26). Nulos no que é anterior à F3. */
   createdById: string | null;
@@ -113,7 +91,6 @@ export interface Asset {
   status: StatusRef;
   model: ModeloRef;
   location: Referencia | null;
-  supplier: Referencia | null;
   assignedTo: User | null;
 
   /**
@@ -126,127 +103,6 @@ export interface Asset {
    */
   posse: PosseResolvida | null;
 
-  /**
-   * PARA QUEM LIGAR quando o posto está vazio (F11, Etapa F).
-   *
-   * Vem ao lado de `posse` porque é a pergunta vizinha — e **não dentro dela**,
-   * porque não é responsabilidade: quem está com o equipamento sai de
-   * `posse.responsaveis`, e o gestor da localidade nunca entra ali
-   * (docs/referencia/modelo-de-posse.md, "A fronteira"). Os dois juntos num campo só
-   * apagariam `postoVago`, que é o sinal que motiva a ligação.
-   *
-   * ⚠️ OPCIONAL, pelo mesmo motivo de `customFields`: só a LEITURA DE UM ativo o
-   * calcula (`findAssetById`). A listagem não — seria uma subida de árvore por
-   * linha —, e a tela do posto e as posses do colaborador tipam as linhas delas
-   * com esta mesma interface.
-   */
-  escalonamento?: Escalonamento | null;
-
-  /**
-   * OS CAMPOS CUSTOMIZADOS, já MASCARADOS (F9).
-   *
-   * `slug` → valor. Todo valor cifrado chega como `MASCARA_DE_CAMPO` (`••••••`) —
-   * o texto em claro sai por UMA porta só, a de revelar, que grava
-   * `ActivityLog`. Reenviar a máscara no formulário significa "não mexi neste
-   * campo" (`custom-field.types.ts`).
-   *
-   * `null` quando o ativo não tem campo nenhum: é o contrato da coluna, que é
-   * `DbNull` e não o literal JSON `null`.
-   *
-   * ⚠️ Pode conter chave que NÃO está no conjunto atual do modelo — os órfãos do
-   * D60. A tela de detalhe as mostra; o formulário não as edita.
-   *
-   * ⚠️ OPCIONAL, e a interrogação é o contrato real: a coluna NÃO está no
-   * `ASSET_SELECT` compartilhado do servidor, então só vem nas quatro leituras
-   * que a precisam (listagem, detalhe, criação e edição). A tela do posto
-   * (`workstation.types.ts`) e as posses do colaborador tipam as linhas delas com
-   * esta mesma interface e recebem um corpo SEM esta chave.
-   *
-   * Declará-la obrigatória fazia o tipo prometer o que dois endpoints não
-   * entregam — e o primeiro `asset.customFields.x` escrito numa daquelas telas
-   * compilaria para quebrar em runtime.
-   */
-  customFields?: Record<string, string> | null;
-
-  /**
-   * Tem algum valor cifrado gravado nesta linha?
-   *
-   * Vem junto de `customFields`, da mesma função que a mascara
-   * (`comCamposMascarados`), e é a resposta de LINHA à pergunta "há segredo
-   * aqui?" — o que a torna útil para uma marca na listagem sem abrir o ativo.
-   *
-   * ⚠️ NÃO é o que decide o botão de revelar: esse é por CAMPO, e a ficha o
-   * decide pelo par `campo.encrypted` + valor igual à máscara
-   * (`CustomFieldsCard`). Uma flag de linha não sabe dizer QUAL campo tem
-   * segredo, que é o que o botão precisa saber.
-   */
-  temSegredo?: boolean;
-}
-
-/**
- * O que uma pessoa tem em posse — `GET /api/users/:id/holdings`.
- *
- * As duas listas são separadas de propósito: `diretos` são as posses no nome
- * dela, e `porPosto` são os ativos entregues a localizações que ela ocupa. A
- * devolução de cada grupo é uma operação diferente, e juntá-las numa lista só
- * esconderia isso.
- */
-/**
- * Por onde um ativo chega até a Mesa 1: o posto que o detém e o turno de quem o
- * ocupa. Vem embutido em cada item de `porPosto` porque NÃO dá para deduzir de
- * `asset.location` — `locationId` é *onde o ativo está*, o alvo da posse é *de
- * quem ele é*, e os dois divergem (o mouse reserva guardado na gaveta de uma
- * mesa ocupada). Ver docs/referencia/modelo-de-posse.md.
- */
-export interface PostoDoAtivo {
-  locationId: string;
-  locationName: string;
-  shift: string | null;
-  /**
-   * COM QUEM o posto é dividido — os outros ocupantes abertos (F11, Etapa I).
-   *
-   * É o que impede a devolução errada na tela do colaborador: sem esta lista,
-   * "Mesa 1 · monitor LG" se lê como *o monitor é meu*, e quem sai da empresa
-   * devolve o monitor que a colega do outro turno usa. Vazia quando a pessoa é a
-   * única ocupante.
-   *
-   * ⚠️ OPCIONAL no tipo: a tela do POSTO e outras leituras tipam linhas com esta
-   * mesma interface e não calculam co-ocupantes. Quem a lê trata a ausência.
-   */
-  coOcupantes?: { id: string; name: string; shift: string | null }[];
-}
-
-/**
- * O que uma pessoa responde, nos dois caminhos que existem:
- *
- * - `diretos` — entregues a ela (`targetType: 'USER'`);
- * - `porPosto` — entregues a um posto que ela ocupa. Ela responde junto com os
- *   outros ocupantes, e é exatamente por isso que a responsabilidade não cabe
- *   numa coluna do ativo.
- */
-export interface UserHoldings {
-  diretos: Asset[];
-  porPosto: (Asset & { posto: PostoDoAtivo })[];
-  /**
-   * ACESSÓRIOS (F5) — e aqui em lista ÚNICA, com `via` por item, em vez de dois
-   * baldes como os ativos acima.
-   *
-   * Não é inconsistência: um ativo direto e um ativo de posto exigem AÇÕES
-   * diferentes na tela (devolver × sair do posto), e por isso ficam separados.
-   * Uma unidade de acessório se devolve pelo `checkoutId` nos dois casos.
-   *
-   * O que não muda é o D33: `via` por item é justamente o que impede somar 1
-   * direto com 5 compartilhados e dizer "6 mouses da Laura".
-   */
-  acessorios: AcessorioEmPosse[];
-  /**
-   * ASSENTOS DE LICENÇA (F6, D93) — a quarta ponta, e a única que pode ser
-   * DESTRUÍDA pelo desligamento.
-   *
-   * Só os de alvo `USER`, pela mesma razão que separa `diretos` de `porPosto`:
-   * o assento do desktop da mesa é da máquina, não de quem senta nela.
-   */
-  assentos: AssentoEmPosse[];
 }
 
 /**
@@ -293,7 +149,6 @@ export interface AssetStats {
 export type AssetView = 'active' | 'trashed' | 'retired' | 'archived';
 
 /** Recortes prontos que respondem a uma pergunta, não a um filtro de coluna. */
-export type AssetRelatorio = 'posto-vago';
 
 /**
  * O que `GET /api/assets` aceita: o que toda listagem aceita MAIS o que só o
@@ -307,7 +162,6 @@ export type AssetListParams = Omit<ListParams, 'view'> & {
   view?: AssetView;
   statusId?: string;
   locationId?: string;
-  relatorio?: AssetRelatorio;
 };
 
 /**
@@ -348,36 +202,3 @@ export interface RetireInput {
   notes?: string;
 }
 
-/**
- * A operação do lote SEM os ids: o que a barra de ação monta e o hook da página
- * completa com a seleção.
- *
- * União discriminada igual à do servidor — `op: 'status'` sem `statusId` não
- * compila aqui e responderia 422 lá. Separada de `BulkInput` porque `Omit` não
- * distribui sobre união: `Omit<BulkInput, 'ids'>` colapsaria nas chaves comuns
- * e deixaria `statusId` de fora.
- */
-export type BulkOperacao =
-  | { op: 'status'; statusId: string }
-  | { op: 'location'; locationId: string | null }
-  | { op: 'delete' }
-  /**
-   * PREENCHER um campo customizado nos selecionados (F9) — o backfill que o D61
-   * manda fazer antes de promover um campo a obrigatório.
-   *
-   * `value: null` é limpar, e limpar REMOVE a chave. O servidor recusa o lote
-   * inteiro quando algum ativo selecionado não pede o campo, quando o valor não
-   * serve ao formato, quando o campo é cifrado e quando esvaziar deixaria um
-   * obrigatório vazio.
-   */
-  | { op: 'custom-field'; fieldId: string; value: string | null };
-
-/** Corpo de `POST /api/assets/bulk` — UMA operação declarada, N ativos. */
-export type BulkInput = BulkOperacao & { ids: string[] };
-
-export interface BulkResult {
-  op: BulkInput['op'];
-  batchId: string;
-  afetados: number;
-  ids: string[];
-}

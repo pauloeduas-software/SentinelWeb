@@ -3,11 +3,6 @@
 // ⚠️ `purchaseCost` é STRING, e não `number` — a coluna é `Decimal` no Postgres
 // e o JSON a serializa assim. É a armadilha nº 7 da F1, pela quarta vez.
 //
-// ⚠️ `productKey` NÃO EXISTE neste arquivo, e a ausência é a regra: a chave só
-// sai por `GET /api/licenses/:id/product-key`, que tem tipo próprio lá embaixo.
-// Declará-la aqui convidaria alguém a tentar lê-la de uma listagem, onde ela
-// nunca esteve.
-
 export interface ReferenciaNomeada {
   id: string;
   name: string;
@@ -49,7 +44,6 @@ export interface Licenca {
 
   categoryId: string;
   manufacturerId: string | null;
-  supplierId: string | null;
 
   orderNumber: string | null;
   purchaseDate: string | null;
@@ -64,7 +58,6 @@ export interface Licenca {
 
   category: CategoriaDaLicenca | null;
   manufacturer: ReferenciaNomeada | null;
-  supplier: ReferenciaNomeada | null;
 
   // ── O que o servidor CALCULOU ──────────────────────────────────────────────
   ocupados: number;
@@ -78,10 +71,6 @@ export interface Licenca {
   /** `livres < minSeats`. Falso quando não há piso. */
   assentosBaixos: boolean;
 
-  /** Tem chave gravada? Basta para decidir se a tela oferece "revelar". */
-  hasProductKey: boolean;
-  /** `••••-••••-••••-AB12`. Só no DETALHE — na listagem vem `null`. */
-  productKeyMask: string | null;
 }
 
 export interface PessoaDoAssento {
@@ -139,12 +128,6 @@ export interface EntregaDeAssento extends OcupacaoDeAssento {
   seatNumber: number;
 }
 
-/** A ÚNICA forma da chave em claro no frontend. Nunca guardada, só exibida. */
-export interface ChaveRevelada {
-  licenseId: string;
-  productKey: string;
-}
-
 /**
  * Um evento da trilha da licença — `GET /api/licenses/:id/history`.
  *
@@ -178,44 +161,6 @@ export interface AlertasDeLicenca {
   assentosBaixos: LicencaEmAlerta[];
 }
 
-/**
- * Um assento de licença NO NOME de uma pessoa — `GET /api/users/:id/holdings`.
- *
- * SÓ os de alvo `USER` (D39/D93). O assento do desktop da Mesa 1 é da máquina e
- * aparece na aba Licenças DAQUELE ativo, que é de onde alguém pode devolvê-lo.
- *
- * Não tem `via` como o acessório (D33): acessório chega por dois caminhos —
- * dela e do posto —, e assento só chega por um.
- */
-export interface AssentoEmPosse {
-  /** O id da OCUPAÇÃO, não o do assento. */
-  checkoutId: string;
-  seatId: string;
-  seatNumber: number;
-  licenseId: string;
-  licenseName: string;
-  categoryName: string | null;
-  /** `false` = devolver QUEIMA o assento: ele não volta ao contrato (D43). */
-  reassignable: boolean;
-  checkoutAt: string;
-}
-
-/**
- * Um assento que o DESLIGAMENTO devolveu — o relatório, depois de confirmar.
- *
- * `queimado` é o que separa uma devolução de uma perda patrimonial: com
- * `reassignable = false`, o assento não volta ao contrato. A tela mostra o
- * número antes de confirmar e confirma depois, porque não tem desfazer.
- */
-export interface AssentoDevolvido {
-  checkoutId: string;
-  seatId: string;
-  seatNumber: number;
-  licenseId: string;
-  licenseName: string;
-  queimado: boolean;
-}
-
 /** Uma licença instalada num ativo — a aba Licenças da tela do ativo. */
 export interface LicencaDoAtivo {
   id: string;
@@ -237,7 +182,7 @@ export interface LicencaDoAtivo {
   };
 }
 
-/** O corpo do formulário. `productKey` entra aqui e nunca volta. */
+/** O corpo do formulário. */
 export interface LicencaInput {
   name: string;
   categoryId: string;
@@ -248,10 +193,8 @@ export interface LicencaInput {
   terminationDate?: string | null;
   licensedToName?: string | null;
   licensedToEmail?: string | null;
-  productKey?: string | null;
   minSeats?: number | null;
   manufacturerId?: string | null;
-  supplierId?: string | null;
   orderNumber?: string | null;
   purchaseDate?: string | null;
   purchaseCost?: string | null;

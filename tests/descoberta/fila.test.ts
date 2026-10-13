@@ -14,7 +14,7 @@ import { prisma } from '../../server/core/database/prismaClient';
 //   2. recusar não reoferece            (a linha REJECTED fica)
 //   3. mas a evidência NOVA reoferece   (o evidenceHash)
 //
-// A terceira é a que quase ninguém implementa, e é a que o rollout do agente C#
+// A terceira é a que quase ninguém implementa, e é a que o rollout do agente
 // vai exercitar às centenas: máquina que não mandava serial passa a mandar, e
 // "este endpoint é o ATV-00012" vira outra afirmação.
 

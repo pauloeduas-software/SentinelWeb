@@ -13,22 +13,21 @@ export interface UpdateUserData {
   email?: string;
   /** O papel (D148). Ausente = não mexe. */
   role?: 'USUARIO' | 'TECNICO' | 'ADMIN';
-  /** O id do departamento (F11, Etapa D). A coluna de texto não é mais escrita. */
-  departmentId?: string | null;
+  /** Desativar impede entrega nova e derruba a sessão na requisição seguinte. */
+  isActive?: boolean;
   employeeNumber?: string | null;
   jobTitle?: string | null;
   phone?: string | null;
   address?: string | null;
   hiredAt?: Date | null;
-  managerId?: string | null;
 }
 
-// O DIFF É SOBRE IDS, não sobre nomes: o log guarda o que foi gravado. Se
-// guardasse "Comercial" e alguém renomeasse o departamento, o histórico passaria
-// a contar uma mudança que não houve nesta pessoa.
+// O DIFF É SOBRE O QUE FOI GRAVADO, e `isActive` entra nele: "desativado em tal
+// dia, por tal pessoa" é a pergunta que a coluna de data respondia antes, e o
+// log responde melhor — ele tem o ator.
 const CAMPOS_AUDITADOS = [
-  'name', 'email', 'departmentId', 'employeeNumber', 'jobTitle', 'phone', 'address',
-  'hiredAt', 'managerId', 'role',
+  'name', 'email', 'employeeNumber', 'jobTitle', 'phone', 'address',
+  'hiredAt', 'role', 'isActive',
 ] as const;
 
 /**
@@ -40,8 +39,9 @@ const CAMPOS_AUDITADOS = [
  * `CatalogSpec.select` documenta ("precisa conter todo campo de `audited`").
  */
 const SELECT_DO_DIFF = {
-  id: true, name: true, email: true, departmentId: true, employeeNumber: true,
-  jobTitle: true, phone: true, address: true, hiredAt: true, managerId: true, role: true,
+  id: true, name: true, email: true, employeeNumber: true,
+  jobTitle: true, phone: true, address: true, hiredAt: true, role: true,
+  isActive: true,
 } as const;
 
 export async function updateUser(id: string, data: UpdateUserData, actorId: string | null) {
@@ -61,14 +61,13 @@ export async function updateUser(id: string, data: UpdateUserData, actorId: stri
       data: {
         name: data.name,
         email: data.email,
-        departmentId: data.departmentId,
         employeeNumber: data.employeeNumber,
         jobTitle: data.jobTitle,
         phone: data.phone,
         address: data.address,
         hiredAt: data.hiredAt,
-        managerId: data.managerId,
         role: data.role,
+        isActive: data.isActive,
       },
       select: SELECT_DO_DIFF,
     });

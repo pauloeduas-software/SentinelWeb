@@ -14,7 +14,7 @@ const logger = createLogger('occupancy.maestro');
 // pergunta. `/api/locations/:id` e `/api/users/:id` continuam sendo do catálogo
 // e do domínio `user` — esta fatia só acrescenta o sub-recurso, sem tocar neles.
 //
-// O domínio é `occupancy` e não `location`: `Location` é uma das sete tabelas do
+// O domínio é `occupancy` e não `location`: `Location` é uma das cinco tabelas do
 // catálogo e mora no CRUD genérico dirigido por spec. Ocupação tem regra própria
 // (encerrar não é apagar, uma aberta por pessoa/posto) e não cabe em spec.
 export class OccupancyMaestro {
@@ -28,6 +28,15 @@ export class OccupancyMaestro {
       '/api/locations/:id/occupants/:occupantId',
       WRITE_RATE_LIMIT,
       occupancyController.end,
+    );
+
+    // CORRIGE O TURNO de uma ocupação aberta, sem encerrar e reabrir: o porquê
+    // está no use-case — histórico fabricado por causa de um typo não responde
+    // "quem respondia pela Mesa 1 em março?".
+    server.patch(
+      '/api/locations/:id/occupants/:occupantId',
+      WRITE_RATE_LIMIT,
+      occupancyController.updateShift,
     );
 
     server.get('/api/users/:id/occupancies', occupancyController.listByUser);

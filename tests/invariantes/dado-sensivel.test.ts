@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { prisma } from '../../server/core/database/prismaClient';
 import { criarApi, type ApiDeTeste, type Cliente } from '../helpers/app';
-import { criarFabricante, criarLicenca, criarModelo, idsDoSeed } from '../helpers/fixtures';
+import { criarFabricante, criarModelo, idsDoSeed } from '../helpers/fixtures';
 
 // DADO SENSÍVEL É OMITIDO DO `select`, NÃO MASCARADO DEPOIS (F11, D77).
 //
@@ -19,10 +20,9 @@ import { criarFabricante, criarLicenca, criarModelo, idsDoSeed } from '../helper
 // ═════════════════════════════════════════════════════════════════════════════
 
 let api: ApiDeTeste;
-/** Vê ativo e licença, mas NÃO vê dinheiro nem chave. */
+/** Vê ativo, mas NÃO vê dinheiro. */
 let semSegredo: Cliente;
 let assetId: string;
-let licenseId: string;
 
 beforeAll(async () => {
   api = await criarApi();
@@ -44,16 +44,7 @@ beforeAll(async () => {
   expect(ativo.status).toBe(201);
   assetId = ativo.body.id;
 
-  const licenca = await criarLicenca(api, {
-    name: 'Office com chave',
-    seatsTotal: 5,
-    categoryId: seed.categoriaLicencaId,
-    productKey: 'AAAAA-BBBBB-CCCCC-DDDDD',
-  });
-  licenseId = licenca.id;
-
-  // `TECNICO` vê ativo, licença e relatório — e NÃO vê custo nem chave, que o
-  // D148 pôs em `ADMIN`. É exatamente a sessão que este arquivo precisa.
+  // `TECNICO` vê ativo, e NÃO vê custo, que o D148 pôs em `ADMIN`.
   semSegredo = await api.comoUsuario('TECNICO');
 });
 
@@ -68,6 +59,42 @@ describe('custo de compra — só `ADMIN` (D148)', () => {
     expect(linha).toBeDefined();
     // AUSENTE, não nula.
     expect(Object.hasOwn(linha!, 'purchaseCost')).toBe(false);
+  });
+
+  it('a FICHA DO POSTO não traz a propriedade dos ativos da mesa', async () => {
+    // A TERCEIRA PORTA, e ela faltava. `GET /api/workstations/:id` devolve os
+    // ativos entregues ao posto com o select de ativo, e `purchaseCost` está
+    // nele: um técnico que abrisse a mesa recebia o custo de compra de cada
+    // equipamento dela — pelo caminho que as duas asserções acima fecham em
+    // `/api/assets`.
+    //
+    // A mesa vem pelo Prisma porque o que está sob teste é a LEITURA do posto, e
+    // não o cadastro de localização.
+    const mesa = await prisma.location.create({
+      data: { name: 'Mesa do Custo', isWorkstation: true },
+      select: { id: true },
+    });
+    expect((await api.post(`/api/assets/${assetId}/checkout`, {
+      targetType: 'LOCATION',
+      targetLocationId: mesa.id,
+    })).status).toBe(201);
+
+    const resposta = await semSegredo.get<{ ativos: Record<string, unknown>[] }>(
+      `/api/workstations/${mesa.id}`,
+    );
+
+    expect(resposta.status).toBe(200);
+    const linha = resposta.body.ativos.find((a) => a.assetTag === 'ATV-CUSTO-1');
+    expect(linha).toBeDefined();
+    // AUSENTE, não nula.
+    expect(Object.hasOwn(linha!, 'purchaseCost')).toBe(false);
+
+    // E o ADMIN continua vendo: sem esta metade, esconder de todos passaria.
+    const comoAdmin = await api.get<{ ativos: Record<string, unknown>[] }>(
+      `/api/workstations/${mesa.id}`,
+    );
+    const linhaDoAdmin = comoAdmin.body.ativos.find((a) => a.assetTag === 'ATV-CUSTO-1');
+    expect(linhaDoAdmin!.purchaseCost).toBe('4250.9');
   });
 
   it('o DETALHE não traz a propriedade — nem a regra de depreciação', async () => {
@@ -88,95 +115,31 @@ describe('custo de compra — só `ADMIN` (D148)', () => {
     expect(resposta.body.purchaseCost).toBe('4250.9');
   });
 
+  it('a BUSCA GLOBAL não traz a propriedade — no acerto exato nem no aproximado', async () => {
+    // A QUARTA PORTA, e ela também faltava. `GET /api/search` devolve o ativo
+    // inteiro com o select da listagem, nos três passos (etiqueta, série,
+    // aproximado): um técnico que bipasse a etiqueta recebia o custo que a
+    // listagem lhe esconde. Os dois caminhos são consultas diferentes, então os
+    // dois são conferidos — um `select` esquecido no aproximado passaria pelo
+    // caso do exato.
+    type Busca = { tipo: string; ativos: Record<string, unknown>[] };
 
-  it('o relatório de responsabilidade abre, mas sem a soma de custo', async () => {
-    // Ele responde "quem responde por quantos equipamentos", que é a pergunta
-    // principal e não é sobre dinheiro. Só a coluna de custo some.
-    const resposta = await semSegredo.get<{ linhas: { total: number; custoTotal: unknown }[] }>(
-      '/api/reports/responsabilidade',
-    );
+    const exato = await semSegredo.get<Busca>('/api/search?q=ATV-CUSTO-1');
+    expect(exato.status).toBe(200);
+    expect(exato.body.tipo).toBe('EXATO');
+    expect(Object.hasOwn(exato.body.ativos[0], 'purchaseCost')).toBe(false);
 
-    expect(resposta.status).toBe(200);
-    for (const linha of resposta.body.linhas) {
-      // A contagem continua — é a pergunta principal do relatório.
-      expect(linha.total).toBeGreaterThan(0);
-      expect(linha.custoTotal).toBeNull();
-    }
-  });
+    const aproximado = await semSegredo.get<Busca>('/api/search?q=CUSTO');
+    expect(aproximado.body.tipo).toBe('PARCIAL');
+    const linha = aproximado.body.ativos.find((a) => a.assetTag === 'ATV-CUSTO-1');
+    expect(linha).toBeDefined();
+    expect(Object.hasOwn(linha!, 'purchaseCost')).toBe(false);
 
-  it('o EXPORT recusa a coluna de custo pedida pelo nome', async () => {
-    // Aqui o mecanismo é outro, de propósito: não dá para "não ler" uma coluna
-    // que o usuário pediu pelo nome. O honesto é dizer que ele não pode pedi-la
-    // — e antes do primeiro byte, senão o cliente recebe um CSV truncado com
-    // status 200.
-    const resposta = await semSegredo.get<{ error: string }>(
-      '/api/assets/export?columns=assetTag,purchaseCost',
-    );
-
-    expect(resposta.status).toBe(403);
-    expect(resposta.body.error).toMatch(/purchaseCost/);
-  });
-
-  it('o EXPORT sem escolher coluna funciona, já sem a de custo', async () => {
-    // O padrão inclui `purchaseCost`. Se ele não fosse filtrado, quem não tem a
-    // chave tomaria 403 ao baixar sem escolher nada — e não há nada de errado
-    // em não escolher.
-    const resposta = await semSegredo.get<string>('/api/assets/export');
-
-    expect(resposta.status).toBe(200);
-    expect(typeof resposta.body).toBe('string');
-    expect(resposta.body).not.toMatch(/Custo de compra/);
-    // E continua sendo um CSV de verdade, com as outras colunas.
-    expect(resposta.body).toMatch(/Etiqueta/);
-  });
-
-
-});
-
-describe('chave de produto — `licenses.viewKey`', () => {
-  it('a rota de revelar é 403', async () => {
-    const resposta = await semSegredo.get(`/api/licenses/${licenseId}/product-key`);
-    expect(resposta.status).toBe(403);
-  });
-
-  it('o detalhe não traz nem a MÁSCARA, mas diz que existe chave', async () => {
-    const resposta = await semSegredo.get<{ productKeyMask: unknown; hasProductKey: boolean }>(
-      `/api/licenses/${licenseId}`,
-    );
-
-    expect(resposta.status).toBe(200);
-    // A MÁSCARA TAMBÉM É A CHAVE, em pedaço menor: ela revela os últimos
-    // caracteres, que é um fragmento do segredo.
-    expect(resposta.body.productKeyMask).toBeNull();
-    // Mas "esta licença tem chave guardada" é fato de cadastro, não segredo — e
-    // é o que a tela precisa para saber se mostra o botão de revelar.
-    expect(resposta.body.hasProductKey).toBe(true);
-  });
-
-  it('quem TEM a chave vê a máscara e revela', async () => {
-    const detalhe = await api.get<{ productKeyMask: string }>(`/api/licenses/${licenseId}`);
-    expect(detalhe.body.productKeyMask).toBeTruthy();
-
-    const revelada = await api.get<{ productKey: string }>(`/api/licenses/${licenseId}/product-key`);
-    expect(revelada.status).toBe(200);
-    expect(revelada.body.productKey).toBe('AAAAA-BBBBB-CCCCC-DDDDD');
-  });
-
-  it('EDITAR a licença não vaza a máscara para quem só pode editar', async () => {
-    // O caso que obriga a permissão a entrar na ESCRITA: salvar o nome da
-    // licença, sem tocar na chave, devolvia a máscara da chave que já estava
-    // lá. Um `TECNICO`, que edita e não vê chave, leria um
-    // fragmento do segredo salvando um campo que não tem nada a ver com ele.
-    const editor = await api.comoUsuario('TECNICO');
-
-    const resposta = await editor.put<{ productKeyMask: unknown; hasProductKey: boolean }>(
-      `/api/licenses/${licenseId}`,
-      { name: 'Office com chave (renomeado)' },
-    );
-
-    expect(resposta.status).toBe(200);
-    expect(resposta.body.productKeyMask).toBeNull();
-    expect(resposta.body.hasProductKey).toBe(true);
+    // E o ADMIN continua vendo, pelos dois caminhos.
+    const comoAdmin = await api.get<Busca>('/api/search?q=ATV-CUSTO-1');
+    expect(comoAdmin.body.ativos[0].purchaseCost).toBe('4250.9');
+    const aproximadoDoAdmin = await api.get<Busca>('/api/search?q=CUSTO');
+    expect(aproximadoDoAdmin.body.ativos.find((a) => a.assetTag === 'ATV-CUSTO-1')?.purchaseCost).toBe('4250.9');
   });
 });
 

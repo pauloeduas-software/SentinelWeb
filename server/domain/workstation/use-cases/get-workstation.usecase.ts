@@ -1,26 +1,28 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { ASSET_SELECT } from '../../asset/helpers/asset-select.helper';
+import { ASSET_SELECT, assetSelect } from '../../asset/helpers/asset-select.helper';
+import { listLocationStock } from '../../stock/use-cases/list-location-stock.usecase';
 import { WORKSTATION_DETAIL_SELECT } from '../helpers/workstation-select.helper';
 import { ehPostoVago } from '../helpers/workstation-row.helper';
 import { resolverCaminhos } from './resolve-location-paths.usecase';
-import { listLocationAccessories } from '../../stock/use-cases/list-location-accessories.usecase';
 
 /**
- * UM posto: quem está nele e o que foi entregue a ele.
+ * UM posto: quem está nele, o ativo entregue a ele e o estoque na mesa.
  *
  * São as duas metades do modelo numa tela só (docs/referencia/modelo-de-posse.md): a Camada 2
  * — os ocupantes, com turno — e a Camada 1 vista do lado do posto — as posses
- * abertas cujo alvo é esta localização. É a junção das duas que responde "quem
- * é responsável pelo mouse da Mesa 1".
+ * abertas cujo alvo é esta localização, mais as unidades de ESTOQUE entregues a
+ * ele. É a junção que responde "quem é responsável pelo computador e pelos
+ * cinco mouses da Mesa 1": os mesmos ocupantes, pelos dois.
  *
- * NÃO exige `isWorkstation` para responder, e isso é decisão: a marca é de
- * APRESENTAÇÃO (prisma/schema.prisma, D15) — ela separa listas, não tranca
- * leitura. Uma sala de reunião que recebeu ativo e ocupante antes de a marca
- * existir continua respondendo aqui, e `isWorkstation` sai na resposta para o
- * cliente saber qual é o caso. 404 é só para id que não existe.
+ * NÃO exige `isWorkstation` para responder, e isso é decisão. A marca não é só
+ * de apresentação: ela é a porta da marca na invariante 19, e ligá-la num local
+ * com mais de um ativo é 409 (`catalog/specs/location.spec.ts`). O que ela não
+ * faz é trancar LEITURA: uma sala de reunião que recebeu ativo e ocupante
+ * continua respondendo aqui, e `isWorkstation` sai na resposta para o cliente
+ * saber qual é o caso. 404 é só para id que não existe.
  */
-export async function getWorkstation(id: string) {
+export async function getWorkstation(id: string, podeVerCusto: boolean) {
   // `findUnique`: `Location` não tem `deletedAt`, o catálogo não tem lixeira (D8).
   const local = await prisma.location.findUnique({
     where: { id },
@@ -29,23 +31,45 @@ export async function getWorkstation(id: string) {
 
   if (!local) throw new AppError('Posto de trabalho não encontrado.', 404);
 
-  const [ativos, acessorios, caminhos] = await Promise.all([
+  const [entregues, itens, caminhos] = await Promise.all([
     // Consulta em `asset`, e não nas `assignments` do posto, de propósito: no
     // topo da consulta a `softDeleteExtension` age, e o ativo na lixeira fica
     // de fora sozinho. Lido pela relação, ele apareceria como equipamento na
     // mesa até alguém lembrar de filtrar à mão.
     prisma.asset.findMany({
       where: { assignments: { some: { targetLocationId: id, checkinAt: null } } },
-      select: ASSET_SELECT,
+      // O SELECT DO ATIVO, MAIS UM CAMPO E MENOS UM.
+      //
+      // MAIS a máquina vinculada, e o acréscimo é local de propósito: ela
+      // interessa a ESTA tela, que mostra a telemetria do computador da mesa.
+      // Acrescentá-la ao `ASSET_SELECT` compartilhado a faria sair em toda
+      // listagem, em toda criação e em toda edição, sem ninguém ter decidido.
+      //
+      // MENOS o custo de compra quando a sessão não é `ADMIN` (D77) — é o que o
+      // `assetSelect` faz, e é a mesma função que a listagem e o detalhe de
+      // ativo usam. O `as` fixa o tipo no select completo porque é ele que o
+      // Prisma precisa ver; o mesmo recurso que `list-assets.usecase.ts` usa.
+      select: {
+        ...(assetSelect(podeVerCusto) as typeof ASSET_SELECT),
+        endpoint: { select: { id: true } },
+      },
       orderBy: { assetTag: 'asc' },
     }),
-    // OS ACESSÓRIOS DO POSTO — o "o que este posto tem" do TODO, completado na
-    // F5. Sem eles, a tela da Mesa 1 mostrava o monitor e escondia os 5 mouses
-    // que estão em cima dela, que é justamente o caso que o D33 existe para
-    // modelar.
-    listLocationAccessories(id),
+    // AS UNIDADES DE ESTOQUE NA MESA — uma linha por unidade. É o "o que esta
+    // mesa tem" completo: sem elas a ficha mostrava o computador e escondia os
+    // cinco mouses em cima dele. Lista PRÓPRIA, e não somada aos ativos: um
+    // mouse não tem etiqueta nem série, e `totalAtivos` continua contando só
+    // ativo — é esse número que a invariante 19 limita a um.
+    listLocationStock(id),
     resolverCaminhos([local.parentId]),
   ]);
+
+  // A relação vira um CAMPO: a tela quer saber se este ativo tem máquina
+  // vinculada e qual consultar, não receber um objeto aninhado de uma chave só.
+  const ativos = entregues.map(({ endpoint, ...ativo }) => ({
+    ...ativo,
+    endpointId: endpoint?.id ?? null,
+  }));
 
   const { parentId, occupants, ...posto } = local;
 
@@ -62,19 +86,12 @@ export async function getWorkstation(id: string) {
     totalOcupantes: occupants.length,
     ativos,
     totalAtivos: ativos.length,
+    itens,
+    totalItens: itens.length,
 
-    // Lista PRÓPRIA, e não somada aos ativos: um acessório não tem etiqueta nem
-    // série, e a tabela de ativos mostra as duas. Misturá-los daria uma tabela
-    // com metade das células vazias e faria "quantos ativos tem esta mesa?"
-    // responder um número que inclui mouse.
-    acessorios,
-    totalAcessorios: acessorios.length,
-
-    // `vago` continua olhando só os ATIVOS, e isso é decisão: o sinal existe
-    // para o equipamento caro parado em mesa sem ninguém. Um posto com um mouse
-    // e nenhum ocupante entra em `/api/stock/alerts` pela categoria própria —
-    // e acender o mesmo selo aqui faria a tela de postos piscar alerta para
-    // toda mesa que tem um teclado na gaveta.
+    // `vago` olha só os ATIVOS, e isso é decisão: o sinal existe para o
+    // equipamento caro parado em mesa sem ninguém. Um posto com um mouse na
+    // gaveta e nenhum ocupante não é o caso que o selo existe para acender.
     vago: ehPostoVago(occupants.length, ativos.length),
   };
 }

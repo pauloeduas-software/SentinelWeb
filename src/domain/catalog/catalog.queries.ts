@@ -3,7 +3,7 @@ import { apiClient } from '../../core/api/apiClient';
 import type { CatalogOption, CatalogRow } from '../shared/catalog.types';
 import type { ListEnvelope, ListParams } from '../shared/list.types';
 
-// Um conjunto de hooks para as SETE tabelas de catálogo — o espelho, no
+// Um conjunto de hooks para as CINCO tabelas de catálogo — o espelho, no
 // frontend, do CRUD genérico do servidor. O `slug` é o que muda.
 //
 // A chave inclui o slug e os parâmetros: sem isso a aba de Fornecedores seria
@@ -19,8 +19,8 @@ export const catalogKeys = {
   // no campo devolveria a lista inteira, do cache, sem nenhuma requisição —
   // e o `staleTime` de um minuto lá embaixo tornaria isso ainda mais difícil de
   // perceber, porque funcionaria na primeira vez e não na segunda.
-  options: (rota: string, tipo?: string, q?: string) =>
-    ['catalog', rota, 'options', tipo ?? null, q ?? null] as const,
+  options: (rota: string, tipo?: string, q?: string, parametros?: Record<string, string>) =>
+    ['catalog', rota, 'options', tipo ?? null, q ?? null, parametros ?? null] as const,
 };
 
 export type CatalogInput = Record<string, unknown>;
@@ -47,12 +47,22 @@ export function useCatalogQuery(slug: string, params: ListParams) {
  * Filtro LOCAL sobre as 200 não resolveria nada — o problema só mudaria de
  * número, porque as 200 que chegam são as 200 primeiras em ordem alfabética.
  */
-export function useCatalogOptionsQuery(rota: string, tipo?: string, q?: string) {
+export function useCatalogOptionsQuery(
+  rota: string,
+  tipo?: string,
+  q?: string,
+  /**
+   * Outros parâmetros da rota de opções, quando ela tem um recorte próprio —
+   * `{ maquina: 'sem' }` em `/assets/options`, para o seletor do vínculo. Entra
+   * na chave, senão a lista filtrada seria servida do cache da inteira.
+   */
+  parametros?: Record<string, string>,
+) {
   return useQuery({
-    queryKey: catalogKeys.options(rota, tipo, q),
+    queryKey: catalogKeys.options(rota, tipo, q, parametros),
     queryFn: async () =>
       (await apiClient.get<CatalogOption[]>(`/${rota}/options`, {
-        params: { ...(tipo ? { type: tipo } : {}), ...(q ? { q } : {}) },
+        params: { ...(tipo ? { type: tipo } : {}), ...(q ? { q } : {}), ...(parametros ?? {}) },
       })).data,
     // Catálogo muda pouco: não vale refazer a consulta a cada abertura de modal.
     staleTime: 60_000,

@@ -1,5 +1,7 @@
 import type { NovoPostoInput } from '../../../domain/workstation/workstation.queries';
-import type { Posto, PostoOcupante, PostoView } from '../../../domain/shared/workstation.types';
+import type {
+  AtivoDoPosto, Posto, PostoOcupante, PostoView,
+} from '../../../domain/shared/workstation.types';
 
 // Leitura de um posto para a tela — funções puras, fora do JSX
 // (docs/referencia/arquitetura.md). Camadas 1 e 2 de docs/referencia/modelo-de-posse.md, vistas do lado
@@ -81,6 +83,26 @@ export function resumoDeAtivos(total: number): string {
  */
 export function explicacaoDoVago(posto: Pick<Posto, 'totalAtivos'>): string {
   return `${resumoDeAtivos(posto.totalAtivos)} entregue${posto.totalAtivos === 1 ? '' : 's'} aqui e ninguém responde por ${posto.totalAtivos === 1 ? 'ele' : 'eles'}.`;
+}
+
+/**
+ * Os ativos deste posto que TÊM MÁQUINA VINCULADA — os que têm telemetria.
+ *
+ * Todo ativo é um computador (o que não é máquina é estoque), e um posto marcado
+ * tem no máximo um — é a invariante 19. O que varia é se o agente já foi
+ * vinculado a ele: sem máquina, o computador está na mesa mas a ficha não tem o
+ * que medir.
+ *
+ * A resposta é uma LISTA mesmo assim: a ficha responde por QUALQUER localização,
+ * inclusive a sala de reunião, onde a regra não vale e dois computadores são
+ * estado normal. Quem usa a lista decide o que dizer sobre a segunda.
+ */
+export type AtivoComMaquina = AtivoDoPosto & { endpointId: string };
+
+export function ativosComMaquina(ativos: readonly AtivoDoPosto[]): AtivoComMaquina[] {
+  // Predicado de tipo, e não `filter` + `as`: é o filtro que sabe que o campo
+  // não é nulo, e dizê-lo aqui poupa um cast em cada lugar que usa a lista.
+  return ativos.filter((ativo): ativo is AtivoComMaquina => ativo.endpointId !== null);
 }
 
 /**

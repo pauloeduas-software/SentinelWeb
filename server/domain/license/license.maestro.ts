@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { createLogger } from '../../core/logger/logger';
-import { EXPORT_RATE_LIMIT, WRITE_RATE_LIMIT } from '../../core/http/write-rate-limit';
+import { WRITE_RATE_LIMIT } from '../../core/http/write-rate-limit';
 import { licenseController } from './controllers/license.controller';
 import { listLicenseAlerts } from './use-cases/list-license-alerts.usecase';
 
@@ -19,14 +19,14 @@ const logger = createLogger('license.maestro');
 // `/api/licenses/seats/:seatId/checkin` antes de `/api/licenses/:id/...`. O
 // find-my-way prefere o literal ao parâmetro sozinho, mas manter a ordem aqui é
 // o que deixa isso óbvio para quem acrescentar a próxima — foi a mesma regra
-// que o `stock.maestro.ts` fixou na F5.
+// que vale para todo maestro desta casa.
 export class LicenseMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
     // ── OS DOIS SINAIS, numa rota só ───────────────────────────────────────
     //
     // ANTES de `/:id` de propósito (ver o bloco acima). O tipo é FILTRO e não
     // rota separada porque os dois alertas valem para a mesma tela — a mesma
-    // escolha do `/api/stock/alerts` da F5.
+    // escolha de quem lê os dois no mesmo painel.
     server.get('/api/licenses/alerts', async (request: FastifyRequest) => {
       const { tipo } = alertasQuerySchema.parse(request.query ?? {});
       return listLicenseAlerts(tipo);
@@ -42,22 +42,9 @@ export class LicenseMaestro {
     // ── O CONTRATO ─────────────────────────────────────────────────────────
     server.get('/api/licenses', licenseController.list);
 
-    // O EXPORT (F10, Etapa C) — teto próprio, e ANTES de `/api/licenses/:id`
-    // para o `export` não ser lido como um id.
-    //
-    // A CHAVE DE PRODUTO NÃO SAI NELE: o arquivo é montado pelo mesmo
-    // `paraResposta()` da listagem, que a remove por desestruturação (D133).
-    server.get('/api/licenses/export', EXPORT_RATE_LIMIT, licenseController.export);
     server.get('/api/licenses/:id', licenseController.byId);
     server.get('/api/licenses/:id/seats', licenseController.seats);
     server.get('/api/licenses/:id/history', licenseController.history);
-
-    // A ÚNICA porta por onde a chave de produto sai — e ela grava `VIEW_KEY` na
-    // mesma transação da leitura. `WRITE_RATE_LIMIT` num GET de propósito: o
-    // teto aqui não protege o servidor, protege o SEGREDO. Uma varredura que
-    // revelasse todas as chaves da base é o ataque que esta rota permitiria, e
-    // 40/min é o que separa uso humano de varredura.
-    server.get('/api/licenses/:id/product-key', WRITE_RATE_LIMIT, licenseController.productKey);
 
     server.post('/api/licenses', WRITE_RATE_LIMIT, licenseController.create);
     server.put('/api/licenses/:id', WRITE_RATE_LIMIT, licenseController.update);
@@ -70,10 +57,9 @@ export class LicenseMaestro {
     // duas o mesmo número.
     server.post('/api/licenses/:id/checkout-seat', WRITE_RATE_LIMIT, licenseController.checkoutSeat);
 
-    // O QUE ESTÁ LICENCIADO NESTE ATIVO — a aba Licenças que a F2 deixou
-    // desabilitada. Pendura em `/api/assets/:id` como as rotas de posse e de
-    // componente fazem, e pelo mesmo motivo: o dono do conceito é este domínio,
-    // não o do ativo.
+    // O QUE ESTÁ LICENCIADO NESTE ATIVO — o que a aba Licenças do ativo mostra.
+    // Pendura em `/api/assets/:id` como as rotas de posse fazem, e pelo mesmo
+    // motivo: o dono do conceito é este domínio, não o do ativo.
     server.get('/api/assets/:id/licenses', licenseController.doAtivo);
 
     logger.info('[Maestro] Rotas de Licenças inicializadas.');

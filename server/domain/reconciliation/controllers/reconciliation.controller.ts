@@ -2,22 +2,18 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { idParamSchema } from '../../shared/params.schema';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import {
-  aceiteSchema, buscaDePacotesSchema, filtroDeSugestoesSchema, fusaoSchema,
-  janelaDeOciosidadeSchema, softwareDaLicencaSchema, triagemSchema, vinculoSchema,
+  filtroDeSugestoesSchema, janelaDeOciosidadeSchema, triagemSchema, vinculoComEntregaSchema, vinculoSchema,
 } from '../schemas/reconciliation.schema';
 import { listarSugestoes } from '../use-cases/list-suggestions.usecase';
 import { aceitarSugestao } from '../use-cases/accept-suggestion.usecase';
 import { recusarSugestao } from '../use-cases/reject-suggestion.usecase';
 import { calcularCobertura } from '../use-cases/coverage-stats.usecase';
 import { desvincularEndpoint, vincularEndpointAoAtivo } from '../use-cases/link-endpoint-asset.usecase';
+import { vincularEEntregar } from '../use-cases/link-and-checkout.usecase';
 import { triarEndpoint } from '../use-cases/review-endpoint.usecase';
-import { fundirEndpoints } from '../use-cases/merge-endpoints.usecase';
 import { listarAtivosOciosos } from '../use-cases/list-idle-assets.usecase';
-import { calcularConformidade, definirSoftwareDaLicenca } from '../use-cases/license-compliance.usecase';
 import { obterMaquinaDoAtivo } from '../use-cases/get-asset-machine.usecase';
-import {
-  listarPacotesDeSoftware, listarSoftwareDaLicenca,
-} from '../use-cases/list-software-packages.usecase';
+import { rodarReconciliacao } from '../jobs/reconcile.job';
 
 // Só HTTP. Sem try/catch: o `parse` rejeita e cai no errorHandler, que devolve
 // 422 com o campo que falhou; o `AppError` dos use-cases sai por lá também.
@@ -31,8 +27,7 @@ export const reconciliationController = {
 
   async accept(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    const extra = aceiteSchema.parse(request.body ?? {});
-    return aceitarSugestao(id, atorDaRequisicao(request), extra);
+    return aceitarSugestao(id, atorDaRequisicao(request));
   },
 
   async reject(request: FastifyRequest) {
@@ -44,11 +39,25 @@ export const reconciliationController = {
     return reply.send(await calcularCobertura());
   },
 
+  // A VARREDURA AGORA. Mesma função da rodada da hora, sem a janela: devolve o
+  // placar da rodada, e o 409 de "já tem uma rodando" sai pelo errorHandler.
+  async runNow() {
+    return rodarReconciliacao();
+  },
+
   async link(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
     const { assetId } = vinculoSchema.parse(request.body ?? {});
     const vinculado = await vincularEndpointAoAtivo(id, assetId, atorDaRequisicao(request));
     return reply.status(201).send(vinculado);
+  },
+
+  async linkAndCheckout(request: FastifyRequest, reply: FastifyReply) {
+    const { id } = idParamSchema.parse(request.params);
+    const { assetId, targetLocationId } = vinculoComEntregaSchema.parse(request.body ?? {});
+    // 201 como o vínculo e a entrega sozinhos: duas linhas nascem.
+    const resultado = await vincularEEntregar(id, assetId, targetLocationId, atorDaRequisicao(request));
+    return reply.status(201).send(resultado);
   },
 
   async unlink(request: FastifyRequest) {
@@ -62,37 +71,9 @@ export const reconciliationController = {
     return { total: rows.length, rows };
   },
 
-  async merge(request: FastifyRequest) {
-    const { id } = idParamSchema.parse(request.params);
-    const { intoEndpointId } = fusaoSchema.parse(request.body ?? {});
-    return fundirEndpoints(id, intoEndpointId, atorDaRequisicao(request));
-  },
-
   async assetMachine(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     return obterMaquinaDoAtivo(id);
-  },
-
-  async softwarePackages(request: FastifyRequest) {
-    const { q, limite } = buscaDePacotesSchema.parse(request.query ?? {});
-    return listarPacotesDeSoftware(q, limite);
-  },
-
-  async licenseCompliance(request: FastifyRequest) {
-    const { id } = idParamSchema.parse(request.params);
-    return calcularConformidade(id);
-  },
-
-  async licenseSoftware(request: FastifyRequest) {
-    const { id } = idParamSchema.parse(request.params);
-    const rows = await listarSoftwareDaLicenca(id);
-    return { total: rows.length, rows };
-  },
-
-  async setLicenseSoftware(request: FastifyRequest) {
-    const { id } = idParamSchema.parse(request.params);
-    const { packageIds } = softwareDaLicencaSchema.parse(request.body ?? {});
-    return definirSoftwareDaLicenca(id, packageIds, atorDaRequisicao(request));
   },
 
   async review(request: FastifyRequest) {

@@ -8,18 +8,16 @@ import { createLogger } from '../../../core/logger/logger';
 // O ESTADO QUE ESTE COMANDO CONSERTA, E POR QUE ELE PRECISA EXISTIR.
 //
 // A autorização da F11 tem uma recusa que impede o pior caso: remover o último
-// portador de `access.manage` é 409 (`ultimo-administrador.ts`). Ela cobre o
+// administrador é 409 (`ultimo-administrador.ts`). Ela cobre o
 // caminho da TELA, e não cobre os outros três:
 //
 //   - alguém apagou o próprio usuário administrador pela rota de pessoas;
-//   - o grupo `Administrador` foi esvaziado por `psql` ou por um restore parcial;
-//   - a única conta com a chave perdeu a senha E o segundo fator.
+//   - o papel foi rebaixado por `psql` ou por um restore parcial;
+//   - a única conta com papel `ADMIN` perdeu a senha.
 //
 // Em qualquer um deles o sistema fica de pé e TRANCADO: ninguém alcança a tela de
-// grupos para conceder a si mesmo o que falta. Sem este comando, a saída seria
-// escrever um `INSERT` no `_GroupToUser` à mão — que é exatamente o tipo de
-// operação que produz o estado inconsistente que o `permission-catalog.ts`
-// descreve (chave digitada errada, que nega em silêncio).
+// pessoas para conceder a si mesmo o papel que falta. Sem este comando, a saída
+// seria um `UPDATE users SET role` à mão.
 //
 // USO:
 //   npm run acesso:administrador -- maria.silva
@@ -41,10 +39,7 @@ export async function concederAdministrador(identificador: string): Promise<void
 
   await prisma.user.update({
     where: { id: pessoa.id },
-    // Uma COLUNA, não um vínculo. Era `groups: { connect: … }` com `connect` e não
-    // `set`, para a pessoa continuar nos grupos que já tinha (num comando de
-    // emergência, destruir configuração é o oposto do que se quer). Com papel
-    // (D148) a questão desaparece: não há vínculo a preservar.
+    // Uma COLUNA, não um vínculo: não há nada mais a preservar além do papel.
     data: { role: 'ADMIN' },
   });
 

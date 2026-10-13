@@ -1,8 +1,8 @@
 import type { Prisma } from '@prisma/client';
 
-// A tela de telemetria mostra a frota inteira em cards e não tem controle de
-// página: o envelope existe para a API ter UMA forma de resposta, não porque a
-// tela pagina. Por isso o padrão é generoso (ver endpoint.controller.ts).
+// `/descobertas` lê a frota inteira de uma vez e não tem controle de página: o
+// envelope existe para a API ter UMA forma de resposta, não porque a tela pagina.
+// Por isso o padrão é generoso (ver endpoint.controller.ts).
 
 /**
  * As colunas ordenáveis.
@@ -24,13 +24,7 @@ export interface FiltrosDeEndpoint {
 }
 
 export function buildEndpointWhere(filtros: FiltrosDeEndpoint = {}): Prisma.EndpointWhereInput {
-  const where: Prisma.EndpointWhereInput = {
-    // MÁQUINA FUNDIDA SAI DA LISTAGEM, sempre. A linha continua no banco porque
-    // o agente antigo pode voltar e porque o `ApiToken` daquela instalação
-    // aponta para ela (D103) — mas ela não é mais uma máquina do parque, e
-    // mostrá-la faria a mesma máquina aparecer duas vezes no painel.
-    mergedIntoId: null,
-  };
+  const where: Prisma.EndpointWhereInput = {};
 
   if (filtros.vinculo === 'com') where.assetId = { not: null };
   if (filtros.vinculo === 'sem') where.assetId = null;

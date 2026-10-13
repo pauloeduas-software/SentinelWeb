@@ -1,32 +1,21 @@
 import { Plus } from 'lucide-react';
 import ListToolbar from '../components/ListToolbar';
 import AjusteModal from './components/AjusteModal';
-import AlertasPanel from './components/AlertasPanel';
+import EstoqueTable from './components/EstoqueTable';
 import ItemDetalheModal from './components/ItemDetalheModal';
+import ItemFormModal from './components/ItemFormModal';
 import SaidaModal from './components/SaidaModal';
-import StockFormModal from './components/StockFormModal';
-import StockTable from './components/StockTable';
-import { ABAS_DE_ESTOQUE } from './helpers/estoque.helper';
 import { useEstoque } from './hooks/useEstoque';
 
-// O ESTOQUE — os três tipos de item que TÊM QUANTIDADE (docs/historico/fase-05-estoque.md).
-//
-// UMA tela com três abas, e não três telas: os três compartilham a mesma
-// invariante (o saldo é calculado, nunca coluna) e a mesma tabela. O que difere
-// é o que acontece quando uma unidade SAI — e é só isso que muda entre as abas:
-// o verbo do botão e o corpo do modal de saída.
-//
-// A régua contra o ativo, que a descrição de cada aba repete: **tem etiqueta
-// própria → é Ativo**. A dock tem patrimônio e série, então mora em /itam. O
-// pente de RAM não tem, então é componente aqui.
+// O ESTOQUE — monitor, teclado, mouse, cabo: o que tem QUANTIDADE e não
+// patrimônio (docs/decisoes/estoque.md). Ativo é computador; o resto entra
+// aqui, por quantidade.
 //
 // Markup e mais nada: estado e chamadas ficam no `useEstoque`
 // (docs/referencia/arquitetura.md).
 export default function EstoquePage() {
   const {
-    aba, slug, changeSlug,
     itens, total, page, perPage, setPage, search, changeSearch, view, changeView,
-    alertas,
     modal, itemAberto, abrir, fechar,
     handleCriar, handleEditar, handleAjustar, handleSaida, handleDevolver,
     handleExcluir, handleRestaurar,
@@ -39,80 +28,52 @@ export default function EstoquePage() {
         <div>
           <h2 className="text-xl font-mono text-text-primary uppercase tracking-widest">Estoque</h2>
           <p className="text-xs text-text-tertiary mt-2 font-mono max-w-2xl leading-relaxed">
-            O que tem quantidade, e por isso não é ativo. Aqui uma linha são N unidades
-            intercambiáveis; lá, uma linha é um equipamento com etiqueta e série.
-            <span className="text-text-secondary"> A régua: tem etiqueta própria, é ativo.</span>
+            O que não é computador: monitor, teclado, mouse, cabo. N unidades intercambiáveis por
+            item, entregues a um colaborador ou a um posto, e devolvidas uma a uma.
           </p>
         </div>
-        <button
-          onClick={() => abrir('criar')}
-          className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary font-mono text-xs uppercase tracking-widest transition-colors shrink-0"
-        >
-          <Plus size={14} /> Novo item
-        </button>
-      </div>
-
-      {/* AS TRÊS ABAS, fora do ListToolbar: as dele são `Ativos|Lixeira` e
-          falam de exclusão; estas falam de que TIPO de item se está olhando.
-          Mesma forma visual, pergunta diferente — o mesmo arranjo de /postos. */}
-      <div className="flex flex-wrap border border-border-sutil font-mono text-xs mb-3 w-fit shrink-0">
-        {ABAS_DE_ESTOQUE.map((item) => (
+        <div className="flex items-center gap-2 shrink-0">
           <button
-            key={item.slug}
-            type="button"
-            onClick={() => changeSlug(item.slug)}
-            className={`px-4 py-2 uppercase tracking-widest transition-colors ${
-              item.slug === slug
-                ? 'bg-text-primary text-bg-base'
-                : 'text-text-tertiary hover:text-text-primary hover:bg-bg-base'
-            }`}
+            onClick={() => abrir('criar')}
+            className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary font-mono text-xs uppercase tracking-widest transition-colors"
           >
-            {item.rotulo}
+            <Plus size={14} /> Novo item
           </button>
-        ))}
+        </div>
       </div>
-
-      {/* O que a aba É, em uma linha. Sem isto, "onde cadastro o mouse?" não
-          tem resposta na tela — e as três palavras (acessório, consumível,
-          componente) só significam alguma coisa para quem já leu o modelo. */}
-      <p className="font-mono text-[10px] text-text-tertiary mb-4 max-w-3xl leading-relaxed shrink-0">
-        {aba.descricao}
-      </p>
-
-      <AlertasPanel alertas={alertas} />
 
       <ListToolbar
         view={view}
         onViewChange={changeView}
         search={search}
         onSearchChange={changeSearch}
-        placeholder={`Buscar em ${aba.rotulo.toLowerCase()}, categoria ou fabricante...`}
+        placeholder="Buscar por nome..."
         page={page}
         perPage={perPage}
         total={total}
         onPageChange={setPage}
       />
 
-      <StockTable
+      <EstoqueTable
         itens={itens}
         view={view}
-        rotuloDaSaida={aba.acao}
         onAbrir={(item) => abrir('detalhe', item)}
-        onEditar={(item) => abrir('editar', item)}
         onAjustar={(item) => abrir('ajustar', item)}
         onSaida={(item) => abrir('saida', item)}
+        onEditar={(item) => abrir('editar', item)}
         onExcluir={(item) => void handleExcluir(item)}
         onRestaurar={(item) => void handleRestaurar(item)}
         vazio={
           search ? (
             <span>Nenhum item encontrado para "{search}".</span>
           ) : view === 'trashed' ? (
-            <span>A lixeira de {aba.rotulo.toLowerCase()} está vazia.</span>
+            <span>A lixeira de estoque está vazia.</span>
           ) : (
             <>
-              <span>Nenhum item em {aba.rotulo.toLowerCase()}.</span>
+              <span>Nenhum item de estoque cadastrado.</span>
               <span className="mt-4 text-[10px] max-w-md text-center leading-relaxed">
-                {aba.descricao}
+                Um item é N unidades de uma mesma coisa — monitores, mouses, cabos. Cadastre-o com
+                a quantidade que há hoje; o saldo disponível é calculado a partir das saídas.
               </span>
             </>
           )
@@ -120,11 +81,11 @@ export default function EstoquePage() {
       />
 
       {modal === 'criar' && (
-        <StockFormModal aba={aba} item={null} onClose={fechar} onSubmit={handleCriar} />
+        <ItemFormModal item={null} onClose={fechar} onSubmit={handleCriar} />
       )}
 
       {modal === 'editar' && itemAberto && (
-        <StockFormModal aba={aba} item={itemAberto} onClose={fechar} onSubmit={handleEditar} />
+        <ItemFormModal item={itemAberto} onClose={fechar} onSubmit={handleEditar} />
       )}
 
       {modal === 'ajustar' && itemAberto && (
@@ -132,11 +93,11 @@ export default function EstoquePage() {
       )}
 
       {modal === 'saida' && itemAberto && (
-        <SaidaModal aba={aba} item={itemAberto} onClose={fechar} onSubmit={handleSaida} />
+        <SaidaModal item={itemAberto} onClose={fechar} onSubmit={handleSaida} />
       )}
 
       {modal === 'detalhe' && itemAberto && (
-        <ItemDetalheModal aba={aba} item={itemAberto} onClose={fechar} onDevolver={handleDevolver} />
+        <ItemDetalheModal item={itemAberto} onClose={fechar} onDevolver={(movementId) => void handleDevolver(movementId)} />
       )}
     </div>
   );

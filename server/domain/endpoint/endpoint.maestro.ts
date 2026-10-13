@@ -10,7 +10,10 @@ const logger = createLogger('endpoint.maestro');
 export class EndpointMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
     server.get('/api/endpoints', endpointController.list);
-    server.post('/api/endpoints/:hwid/command', DESTRUCTIVE_RATE_LIMIT, endpointController.command);
+    // UMA máquina. Nasceu quando a telemetria saiu da tela de frota e foi para a
+    // ficha do ativo e a do posto, onde a pergunta é sobre uma só.
+    server.get('/api/endpoints/:id', endpointController.detail);
+    server.post('/api/endpoints/:id/command', DESTRUCTIVE_RATE_LIMIT, endpointController.command);
 
     logger.info('[Maestro] Rotas de Endpoints (RMM) inicializadas.');
   }

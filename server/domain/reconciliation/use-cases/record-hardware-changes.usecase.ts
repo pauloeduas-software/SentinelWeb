@@ -36,7 +36,7 @@ const logger = createLogger('reconciliation.hardware');
  * a conversa dela é outra (vincular primeiro), e é a tela de Descobertas que a
  * conduz.
  *
- * **Falha em silêncio (com log)**, como a observação de usuário: isto roda dentro
+ * **Falha em silêncio (com log)**: isto roda dentro
  * do tratamento do handshake e é uma INFERÊNCIA em cima do inventário. O que não
  * pode acontecer é a máquina deixar de aparecer no painel porque a detecção de
  * hardware tropeçou.

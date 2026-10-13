@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { $Enums, type Prisma } from '@prisma/client';
-import { AppError } from '../../../core/errors/app-error';
 
 // Colunas que a listagem de ativos aceita ordenar. Allowlist do DOMÍNIO: o
 // parser em core/http/list-query.ts a recebe por parâmetro, porque `core` não
@@ -46,61 +45,36 @@ export function buildAssetWhere(q?: string): Prisma.AssetWhereInput {
 export const ASSET_VIEWS = ['active', 'trashed', 'retired', 'archived'] as const;
 export type AssetView = (typeof ASSET_VIEWS)[number];
 
-/** Recortes prontos que respondem a uma pergunta operacional, não a um filtro. */
-export const ASSET_RELATORIOS = ['posto-vago'] as const;
-export type AssetRelatorio = (typeof ASSET_RELATORIOS)[number];
-
 export interface AssetFilters {
   view: AssetView;
   statusId?: string;
   locationId?: string;
-  relatorio?: AssetRelatorio;
-  /** `?cf[slug]=valor` — igualdade dentro do JsonB (F9, D63). Vazio quando não veio. */
 }
 
-// ---------------------------------------------------------------------------
-// O FILTRO POR CAMPO CUSTOMIZADO — `?cf[slug]=valor` (F9, D63)
-// ---------------------------------------------------------------------------
-//
-// A CHAVE CHEGA LITERAL, COM OS COLCHETES, e é isso que faz esta leitura ser
-// possível sem trocar o parser de query do Fastify: o `fast-querystring` é
-// plano — ele não interpreta `[...]` como aninhamento —, então
-// `?cf[ip_fixo]=10.0.0.7` vira a chave `"cf[ip_fixo]"` com valor `"10.0.0.7"`.
-//
-// O slug é conferido contra o MESMO formato do cadastro. Uma chave `cf[...]` que
-// não casa não é lida aqui e segue para o parser do `core`, que a recusa com 422
-// pelo `strictObject` — a mensagem diz "campo não reconhecido: cf[Foo]", que é a
-// resposta certa e não precisou de código nenhum.
-const CHAVE_DE_CAMPO = /^cf\[([a-z][a-z0-9_]*)\]$/;
-
 /**
- * Teto de filtros de campo customizado por requisição.
+ * ENTREGUE A UM POSTO DE TRABALHO — posse aberta cujo alvo é um local marcado.
  *
- * Cada um é um `AND` a mais no `where`, e cada um custa uma varredura da coluna
- * JsonB (ver `buildAssetFilterWhere`). Sem teto, `?cf[a]=1&cf[b]=2&…` com
- * cinquenta chaves é uma consulta caríssima escrita numa URL.
- */
-const MAX_FILTROS_CF = 5;
-/** Teto do valor. O que se guarda tem teto de 1.000; procurar por mais é lixo. */
-const MAX_VALOR_CF = 200;
-
-/**
- * ATIVO EM POSTO VAGO — equipamento parado em mesa sem ninguém.
+ * É o recorte que a listagem padrão EXCLUI: o equipamento que está numa mesa
+ * tem endereço, e o endereço dele é a mesa. Quem pergunta "o que há no parque"
+ * quer o que está em estoque ou com gente; o que está montado num posto se
+ * pergunta em `/postos`, onde ele aparece junto dos ocupantes que respondem por
+ * ele. Sem isto, o mesmo computador aparece nas duas telas e nenhuma das duas
+ * responde uma pergunta inteira.
  *
- * Posse ABERTA (`checkinAt: null`) cujo alvo é uma localização **sem nenhum
- * ocupante aberto**. É o sinal que nenhum ITAM de prateleira dá, e o candidato
- * natural a voltar para o estoque (docs/referencia/modelo-de-posse.md).
+ * SÓ ONDE `isWorkstation` É VERDADE, pelo mesmo motivo da invariante 19: o
+ * depósito e a sala de reunião não são mesa de ninguém, e o ativo guardado lá
+ * continua sendo parque.
  *
  * FILTRO DO PRISMA, nunca `.filter()` depois da consulta: filtrando no cliente,
  * a página 1 mostraria 3 de 25 linhas e o `total` do envelope mentiria — a
  * paginação inteira passa a descrever um conjunto que a tela não está vendo.
  */
-export const POSTO_VAGO: Prisma.AssetWhereInput = {
+export const EM_POSTO_DE_TRABALHO: Prisma.AssetWhereInput = {
   assignments: {
     some: {
       checkinAt: null,
       targetType: 'LOCATION',
-      targetLocation: { occupants: { none: { endedAt: null } } },
+      targetLocation: { isWorkstation: true },
     },
   },
 };
@@ -112,7 +86,6 @@ const assetFiltersSchema = z.object({
   view: z.enum(ASSET_VIEWS, `vista inválida: use ${ASSET_VIEWS.join(', ')}`).default('active'),
   statusId: z.uuid('status: identificador inválido').optional(),
   locationId: z.uuid('localização: identificador inválido').optional(),
-  relatorio: z.enum(ASSET_RELATORIOS, `relatório inválido: use ${ASSET_RELATORIOS.join(', ')}`).optional(),
 });
 
 /** Derivada do schema para as duas listas não divergirem quando entrar um filtro novo. */
@@ -131,55 +104,6 @@ export function separarFiltrosDeAtivo(raw: unknown): {
 } {
   const query = { ...((raw ?? {}) as Record<string, unknown>) };
 
-  // Os `cf[...]` saem ANTES do schema: eles não são chaves fixas, então nem o
-  // `assetFiltersSchema` (que é `z.object`) nem o parser estrito do `core`
-  // sabem nomeá-los.
-  const cf: Record<string, string> = {};
-  for (const chave of Object.keys(query)) {
-    const casou = CHAVE_DE_CAMPO.exec(chave);
-    if (!casou) continue;
-
-    const slug = casou[1];
-    const valor = query[chave];
-    delete query[chave];
-
-    // Valor vazio significa "não filtre por isto", e não "ache quem tem string
-    // vazia" — que é um estado que não existe (limpar um campo REMOVE a chave).
-    if (valor === undefined || valor === '') continue;
-
-    // ── A CHAVE REPETIDA É RECUSADA, NÃO IGNORADA ────────────────────────
-    //
-    // `?cf[ip_fixo]=10.0.0.7&cf[ip_fixo]=10.0.0.8` faz o parser de query
-    // entregar um ARRAY. Descartá-lo em silêncio — que é o que um
-    // `typeof valor !== 'string'` faria — devolveria a lista INTEIRA sem filtro
-    // nenhum, para uma URL que pediu dois filtros. É a mesma falha muda que o
-    // `strictObject` existe para evitar, e ela é pior aqui: a tela mostraria
-    // resultado, só não o pedido.
-    //
-    // E não há o que adivinhar: um campo tem UM valor, então dois valores para a
-    // mesma chave não expressam "ou" nem "e" — expressam um erro de quem montou
-    // a URL.
-    if (typeof valor !== 'string') {
-      throw new AppError(
-        `cf[${slug}]: o filtro aparece mais de uma vez na consulta. Um campo customizado `
-        + 'aceita um valor por filtro.',
-        422,
-      );
-    }
-
-    if (valor.length > MAX_VALOR_CF) {
-      throw new AppError(`cf[${slug}]: máximo de ${MAX_VALOR_CF} caracteres`, 422);
-    }
-
-    if (valor.trim() === '') continue;
-
-    cf[slug] = valor.trim();
-  }
-
-  if (Object.keys(cf).length > MAX_FILTROS_CF) {
-    throw new AppError(`Máximo de ${MAX_FILTROS_CF} filtros por campo customizado de uma vez.`, 422);
-  }
-
   const filtros = assetFiltersSchema.parse(query);
 
   for (const chave of CHAVES_DO_DOMINIO) delete query[chave];
@@ -193,8 +117,8 @@ export function separarFiltrosDeAtivo(raw: unknown): {
  * - `active` **exclui** duas coisas, por dois motivos diferentes: o
  *   descomissionado (`retiredAt`), que saiu do PATRIMÔNIO, e o arquivado
  *   (`status.type = ARCHIVED`), que saiu da OPERAÇÃO. Os dois continuam
- *   existindo — o primeiro para o relatório de depreciação (F8) e a auditoria,
- *   o segundo porque arquivar é reversível trocando o status.
+ *   existindo — o primeiro porque baixa é fato contábil que não se apaga, o
+ *   segundo porque arquivar é reversível trocando o status.
  * - `retired` e `archived` mostram **só** um deles cada.
  * - `trashed` é a lixeira e não olha nem `retiredAt` nem status: quem procura o
  *   que foi apagado procura tudo que foi apagado, vendido ou arquivado.
@@ -217,13 +141,22 @@ function whereDaVista(view: AssetView, statusIdExplicito: boolean): Prisma.Asset
   if (view === 'retired') return { retiredAt: { not: null } };
   if (view === 'archived') return { retiredAt: null, status: { type: $Enums.StatusLabelType.ARCHIVED } };
 
+  // O `NOT` do posto vale TAMBÉM com `?statusId=` explícito, ao contrário da
+  // exclusão do arquivado: clicar no contador de um status é pedir aquele
+  // status, não mudar de assunto — e o computador do posto continua sendo
+  // pergunta de `/postos`. É o que mantém o contador do cabeçalho batendo com a
+  // tabela, porque o `/stats` exclui o mesmo conjunto.
   return statusIdExplicito
-    ? { retiredAt: null }
-    : { retiredAt: null, status: { type: { not: $Enums.StatusLabelType.ARCHIVED } } };
+    ? { retiredAt: null, NOT: EM_POSTO_DE_TRABALHO }
+    : {
+      retiredAt: null,
+      status: { type: { not: $Enums.StatusLabelType.ARCHIVED } },
+      NOT: EM_POSTO_DE_TRABALHO,
+    };
 }
 
 /**
- * Vista + filtros de coluna + relatório, tudo que NÃO é a busca textual.
+ * Vista + filtros de coluna, tudo que NÃO é a busca textual.
  *
  * Fica separado de `buildAssetWhere` porque os dois se somam por espalhamento
  * no use-case e nenhuma chave se repete entre eles (`OR` de um lado, colunas do
@@ -231,15 +164,9 @@ function whereDaVista(view: AssetView, statusIdExplicito: boolean): Prisma.Asset
  * inventar filtros que ele não tem.
  */
 export function buildAssetFilterWhere(filtros: AssetFilters): Prisma.AssetWhereInput {
-
   return {
     ...whereDaVista(filtros.view, filtros.statusId !== undefined),
     ...(filtros.statusId ? { statusId: filtros.statusId } : {}),
     ...(filtros.locationId ? { locationId: filtros.locationId } : {}),
-    ...(filtros.relatorio === 'posto-vago' ? POSTO_VAGO : {}),
-
-    // ── IGUALDADE DENTRO DO JsonB (F9, D63) ────────────────────────────────
-    //
-
   };
 }

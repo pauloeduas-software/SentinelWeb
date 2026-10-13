@@ -1,4 +1,6 @@
 import { INCLUINDO_LIXEIRA } from '../../../core/database/soft-delete.extension';
+import { AppError } from '../../../core/errors/app-error';
+import { contarAtivosNoLocal } from '../../workstation/helpers/ativo-do-posto.helper';
 import { assertSemCicloDeLocalizacao } from '../helpers/location-cycle.helper';
 import { createLocationSchema, updateLocationSchema } from '../schemas/catalog-entities.schema';
 import type { CatalogDelegate, CatalogSpec } from './catalog-spec.types';
@@ -38,32 +40,57 @@ export const locationSpec: CatalogSpec = {
   // de localizações continua devolvendo TUDO de propósito: o pai de uma mesa é
   // uma sala, e uma sala não é posto.
 
-  // Filhas na hierarquia, ativos guardados aqui, os três de estoque guardados
-  // aqui, e as UNIDADES DE ACESSÓRIO entregues a este posto.
+  // Filhas na hierarquia, ativos guardados aqui e saídas de estoque para este
+  // posto.
   //
-  // Os da lixeira inclusive, por dois motivos diferentes que dão no mesmo
-  // número: o ativo aponta com `onDelete: SetNull`, então ignorá-lo faria o
-  // banco zerar o `locationId` de uma linha ainda restaurável, em silêncio; os
-  // de estoque apontam com `Restrict`, e a FK não distingue lixeira de linha
-  // viva — a contagem que os ignora promete um delete que o Postgres recusa com
-  // P2003, e o 409 vira o genérico que não diz por quantos.
-  //
-  // `accessoryCheckout` conta as ABERTAS **e as fechadas**, e isso não é
-  // descuido: `targetLocationId` é `Restrict`, então uma entrega já devolvida
-  // continua segurando o posto no banco. Contar só as abertas daria a mesma
-  // promessa falsa. É também o certo do ponto de vista do histórico — apagar a
-  // Mesa 1 apagaria de onde os 5 mouses estiveram.
+  // Os ativos da lixeira inclusive: o ativo aponta com `onDelete: SetNull`,
+  // então ignorá-lo faria o banco zerar o `locationId` de uma linha ainda
+  // restaurável, em silêncio. As saídas TODAS, devolvidas inclusive: a FK é
+  // `Restrict` em cada linha, e o histórico de "o que já esteve nesta mesa"
+  // segura o posto tanto quanto a unidade que está nela — contar só as abertas
+  // deixaria o posto só com histórico cair no P2003 cru, sem o número.
   countUsages: async (client, id) => {
-    const [filhas, ativos, acessorios, consumiveis, componentes, entregas] = await Promise.all([
+    const [filhas, ativos, saidas] = await Promise.all([
       client.location.count({ where: { parentId: id } }),
       client.asset.count({ where: { locationId: id, ...INCLUINDO_LIXEIRA } }),
-      client.accessory.count({ where: { locationId: id, ...INCLUINDO_LIXEIRA } }),
-      client.consumable.count({ where: { locationId: id, ...INCLUINDO_LIXEIRA } }),
-      client.component.count({ where: { locationId: id, ...INCLUINDO_LIXEIRA } }),
-      client.accessoryCheckout.count({ where: { targetLocationId: id } }),
+      client.stockMovement.count({ where: { targetLocationId: id } }),
     ]);
-    return filhas + ativos + acessorios + consumiveis + componentes + entregas;
+    return filhas + ativos + saidas;
   },
 
-  beforeWrite: (client, id, data) => assertSemCicloDeLocalizacao(client, id, data.parentId),
+  // A PORTA DA MARCA na invariante 19 — as outras duas são a entrega
+  // (`checkout-asset.usecase.ts`) e a volta da lixeira
+  // (`asset/use-cases/restore-asset.usecase.ts`). Sem esta guarda, uma sala com
+  // dois computadores virava posto de trabalho em uma requisição, e a invariante
+  // ficava falsa no banco sem nada ter falhado — numa página que promete fatos
+  // que nunca são falsos.
+  //
+  // MAIS DE UM, e não um: a regra é "no máximo um ativo por posto", então marcar
+  // uma sala que já tem exatamente um é legítimo e vira um posto válido.
+  //
+  // O padrão dos três passos é o do `category.spec.ts` e do `status-label.spec.ts`:
+  // sai na criação, sai quando o campo não foi mencionado, e sai quando a marca
+  // já estava ligada — a guarda só dispara na TRANSIÇÃO.
+  async beforeWrite(client, id, data) {
+    await assertSemCicloDeLocalizacao(client, id, data.parentId);
+
+    // Na criação não há posse apontando para um local que ainda não existe.
+    if (!id || data.isWorkstation !== true) return;
+
+    const atual = await client.location.findUnique({
+      where: { id },
+      select: { isWorkstation: true },
+    });
+    if (!atual || atual.isWorkstation) return;
+
+    const quantos = await contarAtivosNoLocal(client, id);
+    if (quantos > 1) {
+      throw new AppError(
+        `Este local tem ${quantos} ativos entregues e um posto de trabalho tem no máximo um. `
+          + 'Devolva os que não ficam nele antes de marcá-lo como posto.',
+        409,
+        { ativos: quantos },
+      );
+    }
+  },
 };

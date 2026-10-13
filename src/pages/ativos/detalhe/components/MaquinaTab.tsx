@@ -1,4 +1,5 @@
 import { MonitorSmartphone, Unlink } from 'lucide-react';
+import TelemetriaDaMaquina from '../../../components/TelemetriaDaMaquina';
 import type {
   EspecificacoesDaMaquina, MaquinaDoAtivo, MudancaDeHardware,
 } from '../../../../domain/shared/reconciliation.types';
@@ -22,6 +23,17 @@ import type {
 // divergência entre o cadastro e a coleta é uma pergunta sem lugar para ser
 // respondida — e a resposta mais provável, que alguém trocou a peça em março,
 // não estaria em tela nenhuma.
+// ─────────────────────────────────────────────────────────────────────────────
+// A TELEMETRIA E OS COMANDOS CHEGARAM AQUI, e vieram de uma tela que saiu.
+//
+// Eram `/`: a frota inteira em cards, com três barras cada. Aquela tela sabia a
+// medida e não sabia de quem é a máquina; esta ficha sabe o patrimônio, a pessoa
+// e o posto, e passou a saber a medida também. É a ordem certa das três seções
+// abaixo: o que a empresa COMPROU (as specs), o que MUDOU desde então, e como a
+// máquina está AGORA.
+//
+// O painel é `pages/components/TelemetriaDaMaquina` porque a ficha do POSTO
+// mostra o mesmo — o computador da mesa é um ativo, visto do outro lado.
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface MaquinaTabProps {
@@ -101,10 +113,6 @@ function Especificacoes({ specs }: { specs: EspecificacoesDaMaquina }) {
       <Campo rotulo="UUID">{specs.systemUuid ?? '—'}</Campo>
       <Campo rotulo="MAC">{specs.macAddress ?? '—'}</Campo>
       <Campo rotulo="IP local">{specs.localIp ?? '—'}</Campo>
-      {/* O último usuário logado é o dado de onde a fase tira a sugestão de
-          posse. Mostrá-lo aqui é o que torna a sugestão auditável: quem recebe
-          "entregar este ativo à Ana" pode ver de onde o sistema tirou isso. */}
-      <Campo rotulo="Último login">{specs.loggedOnUser ?? '—'}</Campo>
     </div>
   );
 }
@@ -165,11 +173,20 @@ export default function MaquinaTab({ maquina, carregando, desvinculando, onDesvi
         <div className="min-w-0">
           <span className={ROTULO}>Máquina vinculada</span>
           <p className="font-mono text-sm text-text-primary mt-1 truncate">{maquina.hostname}</p>
-          <p className="font-mono text-[10px] mt-1">
-            <span className={maquina.status === 'ONLINE' ? 'text-status-success' : 'text-text-tertiary'}>
-              {maquina.status}
-            </span>
-            <span className="text-text-tertiary"> · último contato {dataHora(maquina.ultimoContato)}</span>
+          {/* O SELO ONLINE/OFFLINE SAIU DAQUI, e isso conserta um defeito.
+              Ele vinha de `GET /api/assets/:id/machine`, que NÃO tem polling, e
+              a seção "Como está agora" lá embaixo mostra o mesmo campo vindo de
+              uma consulta que revalida a cada poucos segundos. Eram duas
+              respostas para a mesma pergunta a quarenta pixels de distância:
+              tirar o cabo da máquina pintava o painel de OFFLINE enquanto esta
+              linha continuava verde, e religar fazia o contrário.
+              É o erro que o comentário no alto deste arquivo descreve sobre as
+              specs — duas respostas para a mesma pergunta, e ninguém sabe qual
+              está certa. Quem responde "agora" é o painel, um dono só.
+              A DATA fica: ela é histórico ("foi visto às 10:02"), não estado, e
+              é metade da lição das duas datas logo abaixo. */}
+          <p className="font-mono text-[10px] mt-1 text-text-tertiary">
+            último contato {dataHora(maquina.ultimoContato)}
           </p>
           {/* AS DUAS DATAS, LADO A LADO — e o texto explica a diferença, que é de
               até uma hora. O carimbo do ativo é escrito pelo JOB e não pelo
@@ -214,36 +231,8 @@ export default function MaquinaTab({ maquina, carregando, desvinculando, onDesvi
       </div>
 
       <div className="font-mono text-xs">
-        <h3 className={`${ROTULO} mb-2 block`}>Software instalado — {maquina.total}</h3>
-
-        {maquina.rows.length === 0 ? (
-          <p className="text-text-tertiary border border-border-sutil px-4 py-6 text-center">
-            O agente ainda não mandou a lista de software desta máquina.
-          </p>
-        ) : (
-          <table className="w-full border border-border-sutil">
-            <thead className="bg-bg-surface border-b border-border-sutil">
-              <tr>
-                <th className={CABECALHO}>Programa</th>
-                <th className={CABECALHO}>Versão</th>
-                <th className={CABECALHO}>Fabricante</th>
-                <th className={CABECALHO}>Visto desde</th>
-              </tr>
-            </thead>
-            <tbody>
-              {maquina.rows.map((linha) => (
-                <tr key={linha.package.id} className="border-b border-border-sutil last:border-0">
-                  <td className="px-3 py-2 text-text-primary">{linha.package.name}</td>
-                  <td className="px-3 py-2 text-text-secondary">{linha.package.version}</td>
-                  <td className="px-3 py-2 text-text-tertiary">{linha.package.publisher ?? '—'}</td>
-                  <td className="px-3 py-2 text-text-tertiary">
-                    {new Date(linha.firstSeenAt).toLocaleDateString('pt-BR')}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <h3 className={`${ROTULO} mb-3 block`}>Como está agora</h3>
+        <TelemetriaDaMaquina endpointId={maquina.endpointId} />
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useAssetColumnsStore } from '../../../domain/asset/asset.store';
 import {
-  COLUNAS_DE_ATIVO, COLUNAS_FIXAS, COLUNAS_PADRAO, colunasVisiveis, tokensDeExport,
+  COLUNAS_DE_ATIVO, COLUNAS_FIXAS, COLUNAS_PADRAO, colunasVisiveis,
 } from '../helpers/asset-columns';
 
 // O SELETOR DE COLUNAS, do lado da tela (F10, Etapa B).
@@ -42,8 +42,6 @@ export function useColunas() {
   return {
     catalogo: COLUNAS_DE_ATIVO,
     visiveis,
-    /** O que o `?columns=` do export leva — ver `tokensDeExport`. */
-    paraExportar: tokensDeExport(visiveis),
     mostrar: (token: string) => visiveis.includes(token),
     alternar,
     restaurar,

@@ -14,17 +14,12 @@ import type { ClientePosse } from '../../assignment/use-cases/resolve-responsibl
 // não, o `throw` desfaz a transação inteira e nada aconteceu. Um caminho novo
 // que mexa em papel herda a proteção só por chamar isto no fim.
 //
-// O QUE O D148 SIMPLIFICOU AQUI: a contagem era `unirPermissoes(grupos)` filtrada
-// por `access.manage`, em memória, porque uma consulta JsonB seria uma segunda
-// definição de "tem a permissão". Com papel, a pergunta é uma coluna — e o banco
-// a responde com `count`, sem carregar pessoa nenhuma.
-//
 // QUEM CONTA COMO ADMINISTRADOR: precisa poder ENTRAR.
 //   `passwordHash` não nulo   sem credencial ninguém faz login, e um
 //                             "administrador" que não entra não destrava nada.
 //                             A base nasceu sem login: a maior parte dos
 //                             cadastros existe só para receber equipamento;
-//   `isActive`                desligado é recusado no login (F3);
+//   `isActive`                desativado é recusado no login;
 //   fora da lixeira           pelo escopo da extension, sem `where` à mão.
 //
 // O ESCAPE, e ele é de linha de comando de propósito:

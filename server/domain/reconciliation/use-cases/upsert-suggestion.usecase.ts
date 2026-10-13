@@ -14,12 +14,8 @@ export interface SugestaoProposta {
   kind: SuggestionKind;
   endpointId: string;
   assetId?: string | null;
-  targetUserId?: string | null;
-  targetLocationId?: string | null;
-  mergeIntoEndpointId?: string | null;
   score: number;
   signal?: MatchSignal | null;
-  shift?: string | null;
   /** O que a tela mostra. Pode crescer a cada rodada — ver `evidence.helper.ts`. */
   evidence: Evidencia;
   /**
@@ -35,7 +31,8 @@ export interface SugestaoProposta {
  * O que aconteceu com a proposta. Devolvido para o job contar e logar — três
  * rodadas seguidas com `criadas: 0` é a prova de que a idempotência funciona.
  */
-export type ResultadoDaProposta = 'CRIADA' | 'RENOVADA' | 'INALTERADA' | 'JA_RESOLVIDA';
+export type ResultadoDaProposta =
+  | 'CRIADA' | 'RENOVADA' | 'INALTERADA' | 'JA_RESOLVIDA';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POR QUE NÃO HÁ PARÂMETRO `client` AQUI
@@ -56,14 +53,9 @@ export type ResultadoDaProposta = 'CRIADA' | 'RENOVADA' | 'INALTERADA' | 'JA_RES
 // é uma decoração.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** As quatro FKs de alvo, normalizadas — `undefined` e `null` são a mesma coisa aqui. */
+/** A FK de alvo, normalizada — `undefined` e `null` são a mesma coisa aqui. */
 function alvoDaProposta(proposta: SugestaoProposta) {
-  return {
-    assetId: proposta.assetId ?? null,
-    targetUserId: proposta.targetUserId ?? null,
-    targetLocationId: proposta.targetLocationId ?? null,
-    mergeIntoEndpointId: proposta.mergeIntoEndpointId ?? null,
-  };
+  return { assetId: proposta.assetId ?? null };
 }
 
 /**
@@ -88,7 +80,7 @@ function alvoDaProposta(proposta: SugestaoProposta) {
  * **2. Não existe. Há uma `PENDING` com outra afirmação para o mesmo alvo?**
  * Ela vira `SUPERSEDED` e a nova nasce, na mesma transação. `SUPERSEDED` não é
  * sinônimo de recusa: ninguém disse não, o mundo é que mudou — a máquina passou
- * a mandar o serial, a pessoa trocou.
+ * a mandar o serial.
  */
 export async function proporSugestao(proposta: SugestaoProposta): Promise<ResultadoDaProposta> {
   const alvo = alvoDaProposta(proposta);
@@ -99,7 +91,6 @@ export async function proporSugestao(proposta: SugestaoProposta): Promise<Result
     ...par,
     score: proposta.score,
     signal: proposta.signal ?? null,
-    shift: proposta.shift ?? null,
     evidence: proposta.evidence as Prisma.InputJsonValue,
     evidenceHash,
   };
@@ -121,7 +112,6 @@ export async function proporSugestao(proposta: SugestaoProposta): Promise<Result
       data: {
         evidence: proposta.evidence as Prisma.InputJsonValue,
         score: proposta.score,
-        shift: proposta.shift ?? null,
       },
     });
     return 'INALTERADA';

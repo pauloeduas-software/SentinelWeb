@@ -1,4 +1,4 @@
-import { Edit2, KeyRound, RotateCcw, Trash2, UserPlus } from 'lucide-react';
+import { Edit2, RotateCcw, Trash2, UserPlus } from 'lucide-react';
 import type { Licenca } from '../../../domain/shared/license.types';
 import type { ListView } from '../../../domain/shared/list.types';
 import { corDoStatus, textoDoPrazo } from '../helpers/licenca.helper';
@@ -52,7 +52,6 @@ export default function LicencaTable({
             <th className={CABECALHO}>Status</th>
             <th className={`${CABECALHO} text-right`}>Livres / total</th>
             <th className={CABECALHO}>Vencimento</th>
-            <th className={CABECALHO}>Chave</th>
             <th className={`${CABECALHO} text-right`}>Custo</th>
             <th className={`${CABECALHO} text-right`}>Ações</th>
           </tr>
@@ -106,14 +105,6 @@ export default function LicencaTable({
 
                 <td className="px-4 py-3 text-text-secondary">
                   {textoDoPrazo(licenca.diasParaVencer)}
-                </td>
-
-                <td className="px-4 py-3">
-                  {/* A listagem NUNCA traz a máscara (só o detalhe traz) —
-                      aqui vale apenas se existe chave. */}
-                  {licenca.hasProductKey
-                    ? <KeyRound size={12} className="text-status-success" />
-                    : <span className="text-text-tertiary">—</span>}
                 </td>
 
                 <td className="px-4 py-3 text-right text-text-secondary">

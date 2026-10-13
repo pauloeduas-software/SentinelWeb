@@ -13,7 +13,7 @@ import { cenarioDePosse, criarAtivo, criarColaborador, criarLocal } from '../hel
 //               ninguém vê no posto, e bloquearia o cadastro de quem está lá.
 //
 //   devolução   recusa o PASSADO — uma entrega com prazo para ontem NASCE
-//   prevista    vencida: entra em `/api/assignments/overdue` no mesmo segundo
+//   prevista    vencida: o prazo expira no mesmo segundo em que o
 //               e, com o lembrete automático da Leva 3, cobraria de volta o
 //               que acabou de sair do estoque.
 //
@@ -97,20 +97,6 @@ describe('devolução prevista', () => {
     });
 
     expect(status).toBe(201);
-  });
-
-  it('a entrega EM MASSA herda a mesma recusa', async () => {
-    // O `bulkCheckoutSchema` estende o `checkoutSchema` em vez de repetir os
-    // campos, exatamente para a regra não valer só num dos dois caminhos.
-    const { status, body } = await api.post<{ error: string }>('/api/assets/bulk-checkout', {
-      targetType: 'USER',
-      targetUserId: cenario.laura,
-      assetIds: [await ativoNovo(), await ativoNovo()],
-      expectedCheckinAt: dia(-5),
-    });
-
-    expect(status).toBe(422);
-    expect(body.error).toMatch(/passada/i);
   });
 });
 

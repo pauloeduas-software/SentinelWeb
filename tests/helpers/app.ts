@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { buildApp } from '../../server/app';
+import { buildApp, type OpcoesDaAplicacao } from '../../server/app';
 import { COOKIE_SESSAO } from '../../server/domain/auth/helpers/session-cookie.helper';
 
 // O CLIENTE DE TESTE — requisições em memória contra a aplicação de verdade.
@@ -44,25 +44,15 @@ export interface ApiDeTeste extends Cliente {
    * `ADMIN` e alcança tudo, então nenhuma asserção sobre "sem acesso" é possível
    * por ele.
    *
-   * Cria um colaborador com senha, define o papel e entra. `USUARIO` (o padrão) é
-   * o caso mais útil: é a sessão que entrou e não alcança nada — a que prova que
-   * a porta está fechada por padrão.
+   * Cria um colaborador com senha, define o papel e entra. `TECNICO` é o padrão
+   * porque `USUARIO` NÃO ENTRA: o login o recusa com 403, e é isso que
+   * `tests/invariantes/permissao.test.ts` prova.
    */
-  comoUsuario(papel?: 'USUARIO' | 'TECNICO' | 'ADMIN'): Promise<Cliente & { userId: string }>;
+  comoUsuario(papel?: 'TECNICO' | 'ADMIN'): Promise<Cliente & { userId: string }>;
   /** A instância montada, para o que o cliente não cobre (WebSocket, `app.hasRoute`). */
   app: FastifyInstance;
   /** O id do administrador logado — o ator esperado em todo `ActivityLog`. */
   adminId: string;
-  /**
-   * O cabeçalho `cookie` da sessão, para o que precisa de `app.inject()` cru.
-   *
-   * QUEM PRECISA DISSO: upload. O cliente acima manda JSON, e um corpo
-   * `multipart/form-data` é um `Buffer` com `content-type` próprio — então ele
-   * vai pelo `inject`, que não carrega cookie sozinho. Antes desta linha, cada
-   * arquivo de teste que subia arquivo fazia um SEGUNDO login para descobrir o
-   * cookie que o `criarApi` já tinha na mão.
-   */
-  cookie: string;
   /** O MESMO app, sem o cookie de sessão: é com ele que se testa a porta fechada. */
   anonimo: Cliente;
   fechar(): Promise<void>;
@@ -141,14 +131,27 @@ export function clienteComSessao(app: FastifyInstance, valorDoCookie: string): C
 /**
  * Monta a aplicação e entra como o administrador do seed.
  *
- * Uma por arquivo de teste, em `beforeAll`. Por arquivo, e não global, porque
- * o teto do `@fastify/rate-limit` é contado em memória POR INSTÂNCIA: com uma
- * instância para a suíte inteira, o arquivo de número quinze começaria a tomar
- * 429 por causa das requisições dos catorze anteriores — uma falha que muda de
- * lugar conforme a ordem dos arquivos.
+ * Uma por arquivo de teste, em `beforeAll` — com uma exceção, que é o teste do
+ * teto: ele monta DUAS, uma de cada montagem, porque o que ele prova é a
+ * diferença entre as duas.
+ *
+ * O MOTIVO DISSO MUDOU, e vale registrar porque ele governava o tamanho dos
+ * arquivos: era o teto do `@fastify/rate-limit`, contado em memória POR
+ * INSTÂNCIA — com uma instância para a suíte inteira, o arquivo de número quinze
+ * tomava 429 por causa das requisições dos catorze anteriores. O limitador agora
+ * não é registrado no teste (`server/app.ts`, `comTetoDeRequisicao`), e o
+ * contador deixou de existir: nenhum arquivo precisa mais ser dividido para
+ * caber nele.
+ *
+ * Uma por arquivo continua sendo o certo, por outra razão: cada arquivo abre e
+ * FECHA a sua (`fechar()`), e uma instância compartilhada teria que sobreviver
+ * ao `afterAll` de todos eles. É arranjo de isolamento, não mais de aritmética.
+ *
+ * `opcoes` vai direto ao `buildApp`. Hoje quem passa algo é um teste só — o do
+ * teto, que precisa do limitador LIGADO para poder prová-lo.
  */
-export async function criarApi(): Promise<ApiDeTeste> {
-  const app = await buildApp();
+export async function criarApi(opcoes: OpcoesDaAplicacao = {}): Promise<ApiDeTeste> {
+  const app = await buildApp(opcoes);
 
   const login = await app.inject({
     method: 'POST',
@@ -183,7 +186,7 @@ export async function criarApi(): Promise<ApiDeTeste> {
    * ERA `comoUsuario(permissoes: string[])`, com grupo (D76). O D148 trocou a
    * matriz pelo papel, e o grupo intermediário desapareceu junto.
    */
-  async function comoUsuario(papel: 'USUARIO' | 'TECNICO' | 'ADMIN' = 'USUARIO') {
+  async function comoUsuario(papel: 'TECNICO' | 'ADMIN' = 'TECNICO') {
     // `Date.now()` no sufixo porque `email` e `name` são únicos por índice
     // parcial, e um arquivo de teste chama isto mais de uma vez.
     const marca = `p${Date.now()}${Math.floor(Math.random() * 1000)}`;
@@ -197,12 +200,11 @@ export async function criarApi(): Promise<ApiDeTeste> {
       throw new Error(`comoUsuario: criar pessoa falhou (${pessoa.status}): ${JSON.stringify(pessoa.body)}`);
     }
 
-    // `USUARIO` é o padrão da coluna: só chama a rota quando há o que mudar.
-    if (papel !== 'USUARIO') {
-      const promocao = await padrao.put(`/api/users/${pessoa.body.id}`, { role: papel });
-      if (promocao.status !== 200) {
-        throw new Error(`comoUsuario: definir papel falhou (${promocao.status}): ${JSON.stringify(promocao.body)}`);
-      }
+    // A coluna nasce `USUARIO`, que não entra no painel: toda sessão de teste
+    // precisa de uma promoção explícita.
+    const promocao = await padrao.put(`/api/users/${pessoa.body.id}`, { role: papel });
+    if (promocao.status !== 200) {
+      throw new Error(`comoUsuario: definir papel falhou (${promocao.status}): ${JSON.stringify(promocao.body)}`);
     }
 
     const credencial = await padrao.post(`/api/users/${pessoa.body.id}/set-password`, {
@@ -231,7 +233,6 @@ export async function criarApi(): Promise<ApiDeTeste> {
   return {
     app,
     adminId,
-    cookie,
     ...padrao,
     comoUsuario,
     anonimo: clienteCom(app, null),

@@ -1,6 +1,5 @@
 import { prisma } from '../../../core/database/prismaClient';
-import { urlDoPainel } from '../../../core/config/app-url';
-import { ASSET_SELECT } from '../helpers/asset-select.helper';
+import { ASSET_SELECT, assetSelect } from '../helpers/asset-select.helper';
 import { buildAssetWhere } from '../helpers/asset-filters.helper';
 
 // A BUSCA DO LEITOR DE CÓDIGO DE BARRAS (F10, Etapa G).
@@ -17,11 +16,6 @@ import { buildAssetWhere } from '../helpers/asset-filters.helper';
 // bipa um código espera resposta instantânea, e em 99% dos bipes o primeiro
 // passo já responde — então a varredura só acontece quando alguém DIGITOU algo
 // aproximado.
-//
-// O PREFIXO DO QR É DESCARTADO. O QR contém `${APP_URL}/ativos/:id` (D70), e um
-// leitor de mão configurado em modo "teclado" digita a URL INTEIRA no campo de
-// busca. Sem este corte, bipar o QR dentro do campo não acharia nada — e a
-// pessoa concluiria que a etiqueta está errada.
 // ═════════════════════════════════════════════════════════════════════════════
 
 /** Teto da busca aproximada. Quem precisa de mais usa a listagem, com filtro. */
@@ -29,63 +23,110 @@ const MAX_PARCIAL = 20;
 
 export type TipoDeAcerto = 'EXATO' | 'PARCIAL' | 'NENHUM';
 
+/** O posto onde o ativo está montado, quando está. */
+export interface PostoDoAcerto {
+  id: string;
+  name: string;
+}
+
 export interface ResultadoDaBusca {
   /**
-   * `EXATO` quando a etiqueta, a série ou o id do QR casaram — é o caso em que a
-   * tela pode ABRIR o ativo direto, sem mostrar lista.
+   * `EXATO` quando a etiqueta ou a série casaram — é o caso em que a tela pode
+   * ABRIR o ativo direto, sem mostrar lista.
    */
   tipo: TipoDeAcerto;
-  /** `assetTag`, `serial`, `qr` ou `aproximado`. É o que a tela explica ao usuário. */
+  /** `assetTag`, `serial` ou `aproximado`. É o que a tela explica ao usuário. */
   por: string;
   total: number;
   ativos: unknown[];
+  /**
+   * O POSTO DO ACERTO EXATO, quando o ativo está montado numa mesa.
+   *
+   * Existe porque o ativo entregue a um posto saiu da listagem `/ativos`. A
+   * ficha do ativo diz o NOME da mesa e para aí: não leva até ela, e não mostra
+   * o resto do que está montado nela nem quem responde por ela. Com o posto, a
+   * busca larga em `/postos/:id`, que responde as três coisas.
+   *
+   * `null` nos outros casos, e não ausente: no aproximado há uma lista e a tela
+   * mostra a lista, então um campo com dois estados em vez de três é o que faz
+   * "só no acerto EXATO" ser verificável pelo tipo.
+   */
+  posto: PostoDoAcerto | null;
 }
 
 /**
- * O id dentro de uma URL do painel, ou `null`.
+ * O posto de trabalho onde este ativo está, ou `null`.
  *
- * Aceita o caminho com ou sem o domínio: o leitor de mão às vezes é configurado
- * para digitar só o path, e o celular copia a URL inteira. Também aceita o
- * caminho ANTIGO (`/itam/assets/:id`), porque etiqueta impressa dura anos e
- * `App.tsx` mantém o redirecionamento para ela.
+ * `isWorkstation: true` e não qualquer localização, pelo mesmo motivo da
+ * listagem: o ativo guardado no depósito continua sendo parque e a ficha dele é
+ * a do ativo.
  */
-export function idDaUrlDoPainel(texto: string): string | null {
-  const limpo = texto.trim().replace(urlDoPainel(), '');
-  const casou = /\/(?:ativos|itam\/assets)\/([0-9a-fA-F-]{36})/.exec(limpo);
+async function postoDoAtivo(assetId: string): Promise<PostoDoAcerto | null> {
+  const posse = await prisma.assignment.findFirst({
+    where: {
+      assetId,
+      checkinAt: null,
+      // `targetType` é inócuo aqui (só o alvo LOCATION preenche a FK), e está
+      // escrito para este `where` ficar IDÊNTICO ao `EM_POSTO_DE_TRABALHO` da
+      // listagem. É a concordância dos dois que garante que não exista ativo
+      // que sai de `/ativos` e a busca não saiba para onde mandar.
+      targetType: 'LOCATION',
+      targetLocation: { isWorkstation: true },
+    },
+    select: { targetLocation: { select: { id: true, name: true } } },
+  });
 
-  return casou ? casou[1] : null;
+  return posse?.targetLocation ?? null;
 }
 
-export async function globalSearch(q: string): Promise<ResultadoDaBusca> {
+export async function globalSearch(
+  q: string,
+  /**
+   * A sessão enxerga custo de compra? (D77)
+   *
+   * Por parâmetro, da borda, como na listagem e no detalhe: o use-case não
+   * conhece `request`. A busca devolve ativos INTEIROS com o mesmo select da
+   * listagem, então era a terceira porta do custo depois de `/api/assets` e
+   * `/api/assets/:id` — e vazava: um técnico que bipasse uma etiqueta recebia
+   * o `purchaseCost` que a listagem lhe esconde.
+   */
+  podeVerCusto: boolean,
+): Promise<ResultadoDaBusca> {
   // `trim` SEM mexer em mais nada: zero à esquerda é parte da etiqueta
   // (`ATV-00042`), e um `replace` esperto comeria justamente o que identifica o
   // ativo. O leitor manda exatamente o que está impresso.
   const termo = q.trim();
-  if (termo === '') return { tipo: 'NENHUM', por: 'vazio', total: 0, ativos: [] };
+  if (termo === '') return { tipo: 'NENHUM', por: 'vazio', total: 0, ativos: [], posto: null };
 
-  // 0. O QR, antes de tudo: ele é o único caso em que o texto do campo NÃO é
-  // uma etiqueta nem uma série.
-  const idDoQr = idDaUrlDoPainel(termo);
-  if (idDoQr) {
-    const porId = await prisma.asset.findFirst({ where: { id: idDoQr }, select: ASSET_SELECT });
-    if (porId) return { tipo: 'EXATO', por: 'qr', total: 1, ativos: [porId] };
-  }
+  // O select DEPENDE DA SESSÃO (D77): sem a chave, `purchaseCost` não é lido
+  // do banco. O `as` fixa o tipo no select completo, como na listagem.
+  const select = assetSelect(podeVerCusto) as typeof ASSET_SELECT;
 
   // 1. A ETIQUETA. `findFirst` e não `findUnique`: a unicidade é índice PARCIAL
   // (`WHERE deleted_at IS NULL`), que o Prisma não conhece — e é o `findFirst`
   // que recebe o escopo da lixeira.
   const porEtiqueta = await prisma.asset.findFirst({
     where: { assetTag: termo },
-    select: ASSET_SELECT,
+    select,
   });
-  if (porEtiqueta) return { tipo: 'EXATO', por: 'assetTag', total: 1, ativos: [porEtiqueta] };
+  if (porEtiqueta) {
+    return {
+      tipo: 'EXATO', por: 'assetTag', total: 1, ativos: [porEtiqueta],
+      posto: await postoDoAtivo(porEtiqueta.id),
+    };
+  }
 
   // 2. A SÉRIE.
   const porSerie = await prisma.asset.findFirst({
     where: { serial: termo },
-    select: ASSET_SELECT,
+    select,
   });
-  if (porSerie) return { tipo: 'EXATO', por: 'serial', total: 1, ativos: [porSerie] };
+  if (porSerie) {
+    return {
+      tipo: 'EXATO', por: 'serial', total: 1, ativos: [porSerie],
+      posto: await postoDoAtivo(porSerie.id),
+    };
+  }
 
   // 3. O APROXIMADO — e só agora. `buildAssetWhere` é o MESMO `OR` da listagem
   // (etiqueta, série, nome, pedido, modelo e fabricante): duas definições de
@@ -93,7 +134,7 @@ export async function globalSearch(q: string): Promise<ResultadoDaBusca> {
   // a listagem não acha.
   const aproximados = await prisma.asset.findMany({
     where: buildAssetWhere(termo),
-    select: ASSET_SELECT,
+    select,
     orderBy: { assetTag: 'asc' },
     take: MAX_PARCIAL,
   });
@@ -103,5 +144,6 @@ export async function globalSearch(q: string): Promise<ResultadoDaBusca> {
     por: 'aproximado',
     total: aproximados.length,
     ativos: aproximados,
+    posto: null,
   };
 }

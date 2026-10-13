@@ -47,11 +47,6 @@ export function aplicarFormato(parcial: Partial<FormatoCorrente>): void {
   formato = { ...formato, ...parcial };
 }
 
-/** Para o teste puro voltar ao estado conhecido entre casos. */
-export function reiniciarFormato(): void {
-  formato = PADRAO;
-}
-
 /**
  * `toLocaleString` com locale inválido LANÇA `RangeError`, e isto roda no meio
  * do render de uma tabela: a lista inteira ficaria em branco por causa de um
@@ -65,35 +60,6 @@ function comFallback(formatar: (f: FormatoCorrente) => string, valor: number): s
   } catch {
     return String(valor);
   }
-}
-
-/**
- * Valor residual da depreciação.
- *
- * `valor` chega como STRING porque a coluna é `Decimal` no Postgres e o JSON
- * o serializa assim — inclusive perdendo o zero à direita ("1234.50" volta
- * "1234.5"). Por isso formatar é trabalho daqui, não do banco.
- */
-export function formatarResidual(valor: unknown, tipo: unknown): string {
-  if (valor == null || valor === '') return '—';
-
-  const numero = Number(valor);
-  if (Number.isNaN(numero)) return String(valor);
-
-  return comFallback(
-    (f) =>
-      tipo === 'PERCENT'
-        ? `${numero.toLocaleString(f.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`
-        : numero.toLocaleString(f.locale, { style: 'currency', currency: f.currency }),
-    numero,
-  );
-}
-
-export function formatarMeses(valor: unknown): string {
-  if (valor == null || valor === '') return '—';
-  const numero = Number(valor);
-  if (Number.isNaN(numero)) return String(valor);
-  return `${numero} ${numero === 1 ? 'mês' : 'meses'}`;
 }
 
 /** Nome de uma relação embutida (`manufacturer.name`, `parent.name`). */

@@ -31,6 +31,8 @@ const TETO_DE_OPCOES = 200;
 interface ReferenceSelectProps {
   rota: string;
   filtroTipo?: string;
+  /** Recorte próprio da rota, além do tipo: `{ maquina: 'sem' }` nos ativos. */
+  parametros?: Record<string, string>;
   valor: string;
   obrigatorio?: boolean;
   /** Some da lista: uma localização não pode ser o próprio pai. */
@@ -39,14 +41,14 @@ interface ReferenceSelectProps {
 }
 
 export default function ReferenceSelect({
-  rota, filtroTipo, valor, obrigatorio, excluirId, onChange,
+  rota, filtroTipo, parametros, valor, obrigatorio, excluirId, onChange,
 }: ReferenceSelectProps) {
   const [busca, setBusca] = useState('');
   // O MESMO `useDebouncedValue` das cinco listagens: sem ele é uma requisição
   // por tecla, e o `/options` não tem paginação para amortecer.
   const buscaDebounced = useDebouncedValue(busca);
 
-  const { data, isPending } = useCatalogOptionsQuery(rota, filtroTipo, buscaDebounced || undefined);
+  const { data, isPending } = useCatalogOptionsQuery(rota, filtroTipo, buscaDebounced || undefined, parametros);
   const opcoes = (data ?? []).filter((opcao) => opcao.id !== excluirId);
 
   // O `/options` tem teto de 200 (list-catalog-options.usecase.ts). Passando
