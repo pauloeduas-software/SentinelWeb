@@ -49,6 +49,7 @@ export interface AssetFilters {
   view: AssetView;
   statusId?: string;
   locationId?: string;
+  categoryId?: string;
 }
 
 /**
@@ -86,6 +87,7 @@ const assetFiltersSchema = z.object({
   view: z.enum(ASSET_VIEWS, `vista inválida: use ${ASSET_VIEWS.join(', ')}`).default('active'),
   statusId: z.uuid('status: identificador inválido').optional(),
   locationId: z.uuid('localização: identificador inválido').optional(),
+  categoryId: z.uuid('categoria: identificador inválido').optional(),
 });
 
 /** Derivada do schema para as duas listas não divergirem quando entrar um filtro novo. */
@@ -150,5 +152,7 @@ export function buildAssetFilterWhere(filtros: AssetFilters): Prisma.AssetWhereI
     ...whereDaVista(filtros.view),
     ...(filtros.statusId ? { statusId: filtros.statusId } : {}),
     ...(filtros.locationId ? { locationId: filtros.locationId } : {}),
+    // Pelo MODELO: o ativo não tem `categoryId`, a categoria dele é a do modelo.
+    ...(filtros.categoryId ? { model: { categoryId: filtros.categoryId } } : {}),
   };
 }

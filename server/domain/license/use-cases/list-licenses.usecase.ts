@@ -7,6 +7,7 @@ import {
   type LicencaNaResposta, type LinhaDeLicenca,
 } from '../helpers/license-select.helper';
 import { LICENSE_SEARCHABLE } from '../helpers/license-audited.helper';
+import type { LicenseFilters } from '../schemas/license.schema';
 
 /**
  * A LISTAGEM — e a coluna principal dela é DERIVADA (`livres / seatsTotal`).
@@ -20,10 +21,15 @@ import { LICENSE_SEARCHABLE } from '../helpers/license-audited.helper';
  */
 export async function listLicenses(
   query: ListQuery<string>,
+  filtros: LicenseFilters,
 ): Promise<ListEnvelope<LicencaNaResposta>> {
-  // Espalhamento, e não `AND`: a busca só escreve `OR` e a vista só escreve
-  // `deletedAt` — nenhuma chave dos dois lados se repete.
-  const where = { ...buildLicenseWhere(query.q), ...buildLicenseViewWhere(query.view) };
+  // Espalhamento, e não `AND`: a busca só escreve `OR`, a vista só escreve
+  // `deletedAt` e o filtro só `categoryId` — nenhuma chave se repete.
+  const where: Prisma.LicenseWhereInput = {
+    ...buildLicenseWhere(query.q),
+    ...buildLicenseViewWhere(query.view),
+    ...(filtros.categoryId ? { categoryId: filtros.categoryId } : {}),
+  };
 
   // `$transaction` para a contagem e a página saírem do MESMO instante: em duas
   // consultas soltas, um cadastro entre uma e outra faz o total não bater com o

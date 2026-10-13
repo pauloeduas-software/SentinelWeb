@@ -2,7 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { apiClient } from '../../core/api/apiClient';
 import { assetKeys } from '../asset/asset.queries';
 import { userKeys } from '../user/user.queries';
-import type { ListEnvelope, ListParams } from '../shared/list.types';
+import type { ListEnvelope, ListParamsComCategoria } from '../shared/list.types';
 import type {
   AlertasDeLicenca, AlvoDoAssento, AssentoDeLicenca,
   EntregaDeAssento, EventoDaLicenca, Licenca, LicencaDoAtivo, LicencaInput,
@@ -17,7 +17,7 @@ import type {
 
 export const licenseKeys = {
   all: ['licenses'] as const,
-  list: (params: ListParams) => ['licenses', 'list', params] as const,
+  list: (params: ListParamsComCategoria) => ['licenses', 'list', params] as const,
   item: (id: string) => ['licenses', 'item', id] as const,
   seats: (id: string) => ['licenses', 'seats', id] as const,
   historico: (id: string) => ['licenses', 'historico', id] as const,
@@ -26,7 +26,7 @@ export const licenseKeys = {
   doAtivo: (assetId: string) => ['licenses', 'do-ativo', assetId] as const,
 };
 
-export function useLicensesQuery(params: ListParams) {
+export function useLicensesQuery(params: ListParamsComCategoria) {
   return useQuery({
     queryKey: licenseKeys.list(params),
     queryFn: async () => (await apiClient.get<ListEnvelope<Licenca>>('/licenses', { params })).data,

@@ -106,7 +106,17 @@ export const checkinSeatSchema = z.strictObject({
   notes: textoOpcional('observações', 2_000),
 });
 
+/**
+ * Os filtros da LISTAGEM que não são do `parseListQuery`. O controller separa a
+ * query antes de qualquer `parse`, como no `endpoint.controller.ts`: os dois
+ * schemas são estritos e cada um recebe só o que é seu.
+ */
+export const licenseFiltersSchema = z.strictObject({
+  categoryId: z.uuid('categoria: identificador inválido').optional(),
+});
+
 export type CreateLicenseData = z.infer<typeof createLicenseSchema>;
 export type UpdateLicenseData = z.infer<typeof updateLicenseSchema>;
 export type CheckoutSeatData = z.infer<typeof checkoutSeatSchema>;
 export type CheckinSeatData = z.infer<typeof checkinSeatSchema>;
+export type LicenseFilters = z.infer<typeof licenseFiltersSchema>;

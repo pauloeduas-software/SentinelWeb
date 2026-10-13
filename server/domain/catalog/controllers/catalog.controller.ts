@@ -36,16 +36,35 @@ function buildOptionsQuerySchema(spec: CatalogSpec) {
 export function createCatalogController(spec: CatalogSpec) {
   const optionsQuerySchema = buildOptionsQuerySchema(spec);
 
+  // O MESMO filtro do `/options`, com a mesma allowlist de valores, para a
+  // listagem da tela de Configurações separar as categorias por tipo.
+  const filtroDaLista = spec.optionFilter
+    ? {
+        campo: spec.optionFilter.campo,
+        schema: z.enum(spec.optionFilter.valores, `${spec.optionFilter.campo}: valor inválido`).optional(),
+      }
+    : null;
+
   return {
     async list(request: FastifyRequest) {
-      const query = parseListQuery(request.query, {
+      // O filtro da spec (`?type=` nas categorias) sai ANTES do `parseListQuery`,
+      // que é estrito e não o conhece. Na tabela sem `optionFilter` nada sai, e
+      // a chave continua sendo 422 lá dentro.
+      const paginacao = { ...((request.query ?? {}) as Record<string, unknown>) };
+      let filtro: string | undefined;
+      if (filtroDaLista) {
+        filtro = filtroDaLista.schema.parse(paginacao[filtroDaLista.campo]);
+        delete paginacao[filtroDaLista.campo];
+      }
+
+      const query = parseListQuery(paginacao, {
         sortable: spec.sortable,
         defaultSort: spec.defaultSort,
         // Catálogo ordena por nome, não por data: é lista para consultar, não
         // fila de novidades. E `trashable` fica de fora — aqui não há lixeira (D8).
         defaultOrder: 'asc',
       });
-      return listCatalog(spec, query);
+      return listCatalog(spec, query, filtro);
     },
 
     async options(request: FastifyRequest) {

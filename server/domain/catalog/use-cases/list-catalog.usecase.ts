@@ -6,8 +6,12 @@ import type { CatalogSpec } from '../specs/catalog-spec.types';
 export async function listCatalog(
   spec: CatalogSpec,
   query: ListQuery<string>,
+  filtro?: string,
 ): Promise<ListEnvelope<Record<string, unknown>>> {
-  const where = buildCatalogWhere(spec.searchable, query.q);
+  const where = {
+    ...buildCatalogWhere(spec.searchable, query.q),
+    ...(filtro && spec.optionFilter ? { [spec.optionFilter.campo]: filtro } : {}),
+  };
 
   // Transação para a contagem e a página saírem do MESMO instante: em duas
   // consultas soltas, um cadastro entre uma e outra faz o total não bater com o

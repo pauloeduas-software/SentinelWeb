@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react';
+import CategoriaFiltro from '../components/CategoriaFiltro';
 import ListToolbar from '../components/ListToolbar';
 import AlertasLicenca from './components/AlertasLicenca';
 import EntregaAssentoModal from './components/EntregaAssentoModal';
@@ -19,6 +20,7 @@ import { useLicencas } from './hooks/useLicencas';
 export default function LicencasPage() {
   const {
     licencas, total, page, perPage, setPage, search, changeSearch, view, changeView,
+    categoryId, changeCategoria,
     alertas,
     modal, licencaAberta, abrir, fechar,
     handleCriar, handleEditar, handleEntregar, handleDevolver,
@@ -55,6 +57,7 @@ export default function LicencasPage() {
         search={search}
         onSearchChange={changeSearch}
         placeholder="Buscar por nome, licenciado, fabricante ou pedido..."
+        filtros={<CategoriaFiltro tipo="LICENSE" valor={categoryId} onChange={changeCategoria} />}
         page={page}
         perPage={perPage}
         total={total}
@@ -72,6 +75,8 @@ export default function LicencasPage() {
         vazio={
           search ? (
             <span>Nenhuma licença encontrada para "{search}".</span>
+          ) : categoryId ? (
+            <span>Nenhuma licença nesta categoria.</span>
           ) : view === 'trashed' ? (
             <span>A lixeira de licenças está vazia.</span>
           ) : (

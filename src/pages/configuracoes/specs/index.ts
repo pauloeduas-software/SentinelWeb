@@ -20,6 +20,7 @@ const categoria: CatalogUiSpec = {
     { key: 'name', label: 'Nome', tipo: 'text', obrigatorio: true, placeholder: 'Ex: Notebook' },
     { key: 'type', label: 'Tipo', tipo: 'select', obrigatorio: true, opcoes: TIPOS_CATEGORIA },
   ],
+  filtroPorTipo: { campo: 'type', opcoes: TIPOS_CATEGORIA },
 };
 
 const status: CatalogUiSpec = {

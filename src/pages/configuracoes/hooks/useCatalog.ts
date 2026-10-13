@@ -19,7 +19,9 @@ export interface AcaoLinhaAberta {
   registro: CatalogRow;
 }
 
-const PER_PAGE = 10;
+// Catálogo é lista curta: com 10, onze categorias já viravam duas páginas. A
+// tabela rola por dentro, então 25 não estoura a tela.
+const PER_PAGE = 25;
 
 // Estado da tela de Configurações: qual aba, que página, o que está no campo de
 // busca e qual registro está no modal. Tudo de UMA tela — fica aqui, em
@@ -29,6 +31,8 @@ export function useCatalog() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search);
+  // O valor do `filtroPorTipo` da aba. `undefined` é "todos".
+  const [tipo, setTipo] = useState<string | undefined>();
 
   const spec = useMemo(
     () => CATALOG_UI_SPECS.find((item) => item.slug === slug) ?? CATALOG_UI_SPECS[0],
@@ -42,6 +46,8 @@ export function useCatalog() {
     setSlug(proximo);
     setPage(1);
     setSearch('');
+    // O tipo é da aba: "Ativo" nas categorias não quer dizer nada nos status.
+    setTipo(undefined);
     // Trocar de aba fecha a ação aberta: o registro dela é da aba anterior.
     setAcaoAberta(null);
   };
@@ -51,9 +57,20 @@ export function useCatalog() {
     setPage(1);
   };
 
+  const changeTipo = (valor: string | undefined) => {
+    setTipo(valor);
+    setPage(1);
+  };
+
+  const campoDoFiltro = spec.filtroPorTipo?.campo;
   const params = useMemo(
-    () => ({ page, perPage: PER_PAGE, q: debouncedSearch || undefined }),
-    [page, debouncedSearch],
+    () => ({
+      page,
+      perPage: PER_PAGE,
+      q: debouncedSearch || undefined,
+      ...(campoDoFiltro && tipo ? { [campoDoFiltro]: tipo } : {}),
+    }),
+    [page, debouncedSearch, campoDoFiltro, tipo],
   );
 
   const { data, isPending } = useCatalogQuery(spec.slug, params);
@@ -119,6 +136,8 @@ export function useCatalog() {
     setPage,
     search,
     changeSearch,
+    tipo,
+    changeTipo,
     loading: isPending,
     modalAberto,
     emEdicao,

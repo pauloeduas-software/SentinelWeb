@@ -13,7 +13,7 @@ import type { ListEnvelope, ListParams } from '../shared/list.types';
 // está sendo mostrado.
 export const catalogKeys = {
   tabela: (slug: string) => ['catalog', slug] as const,
-  list: (slug: string, params: ListParams) => ['catalog', slug, 'list', params] as const,
+  list: (slug: string, params: CatalogListParams) => ['catalog', slug, 'list', params] as const,
   // O TERMO DE BUSCA ENTRA NA CHAVE (F10, Etapa B). Sem ele, a primeira
   // resposta ficaria no cache sob a mesma chave de toda busca seguinte: digitar
   // no campo devolveria a lista inteira, do cache, sem nenhuma requisição —
@@ -25,7 +25,10 @@ export const catalogKeys = {
 
 export type CatalogInput = Record<string, unknown>;
 
-export function useCatalogQuery(slug: string, params: ListParams) {
+/** A listagem aceita, além do comum, o filtro que a spec declara (`type` nas categorias). */
+export type CatalogListParams = ListParams & Record<string, unknown>;
+
+export function useCatalogQuery(slug: string, params: CatalogListParams) {
   return useQuery({
     queryKey: catalogKeys.list(slug, params),
     queryFn: async () =>

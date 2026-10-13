@@ -32,6 +32,7 @@ export function useLicencas() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [view, setView] = useState<ListView>('active');
+  const [categoryId, setCategoryId] = useState<string | undefined>();
   const debouncedSearch = useDebouncedValue(search);
 
   // Zerar a página no mesmo handler que muda o recorte, e não num `useEffect`
@@ -47,9 +48,14 @@ export function useLicencas() {
     setPage(1);
   };
 
+  const changeCategoria = (id: string | undefined) => {
+    setCategoryId(id);
+    setPage(1);
+  };
+
   const params = useMemo(
-    () => ({ page, perPage: PER_PAGE, view, q: debouncedSearch || undefined }),
-    [page, view, debouncedSearch],
+    () => ({ page, perPage: PER_PAGE, view, q: debouncedSearch || undefined, categoryId }),
+    [page, view, debouncedSearch, categoryId],
   );
 
   const { data, isPending } = useLicensesQuery(params);
@@ -188,6 +194,8 @@ export function useLicencas() {
     changeSearch,
     view,
     changeView,
+    categoryId,
+    changeCategoria,
 
     alertas: alertas ?? { vencendo: [], assentosBaixos: [] },
 
