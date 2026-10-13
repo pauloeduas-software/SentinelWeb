@@ -63,7 +63,7 @@ export default function LicensesTab({ licencas, carregando }: LicensesTabProps) 
                 </Link>
                 {!item.seat.license.reassignable && (
                   // O aviso aparece aqui porque é aqui que alguém decide
-                  // descomissionar a máquina — e devolver o assento no caminho
+                  // dar baixa na máquina — e devolver o assento no caminho
                   // destrói valor.
                   <span className="ml-2 text-[10px] text-status-warning">não reatribuível</span>
                 )}

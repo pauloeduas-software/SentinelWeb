@@ -81,13 +81,13 @@ async function assertAlvoApto(
     });
     if (!ativo) throw new AppError('Ativo não encontrado.', 404);
 
-    // DESCOMISSIONADO é diferente de APAGADO, e os dois precisam ser recusados.
+    // BAIXADO é diferente de APAGADO, e os dois precisam ser recusados.
     // Entregar assento a um ativo que saiu do inventário paga licença para uma
     // máquina que não existe mais — e é justamente o tipo de assento que some
     // da conta sem ninguém notar.
     if (ativo.retiredAt) {
       throw new AppError(
-        `O ativo ${ativo.assetTag} está descomissionado e não pode receber assento de licença.`,
+        `O ativo ${ativo.assetTag} teve baixa e não pode receber assento de licença.`,
         409,
       );
     }

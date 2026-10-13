@@ -30,12 +30,12 @@ export const ASSET_SELECT = {
   // Decimal: sai no JSON como STRING.
   purchaseCost: true,
 
-  // DESCOMISSIONAMENTO. Sai na resposta porque a tela precisa mostrar o selo
-  // "descomissionado" na linha e na aba Detalhes — e porque, sem ele, a
+  // BAIXA. Sai na resposta porque a tela precisa mostrar o selo
+  // "baixado" na linha e na aba Detalhes — e porque, sem ele, a
   // listagem `?view=retired` devolveria linhas indistinguíveis das outras.
   //
-  // NÃO é `deletedAt` nem `status.type = ARCHIVED`: as três colunas respondem
-  // perguntas diferentes e nenhuma substitui a outra (D19, docs/historico/fase-02-ativos.md).
+  // NÃO é `deletedAt`: as duas colunas respondem perguntas diferentes (D19,
+  // docs/historico/fase-02-ativos.md).
   retiredAt: true,
   retiredReason: true,
 
@@ -46,12 +46,12 @@ export const ASSET_SELECT = {
 
   createdAt: true,
 
-  status: { select: { id: true, name: true, type: true, color: true } },
+  status: { select: { id: true, name: true, type: true } },
   model: {
     select: {
       id: true, name: true, modelNumber: true,
       manufacturer: { select: { id: true, name: true } },
-      category: { select: { id: true, name: true, type: true, color: true } },
+      category: { select: { id: true, name: true, type: true } },
     },
   },
   location: { select: { id: true, name: true } },

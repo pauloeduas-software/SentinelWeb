@@ -12,7 +12,6 @@ export type AlvoDaSaida = 'USER' | 'LOCATION';
 
 export interface CategoriaDoItem extends Referencia {
   type: string;
-  color: string | null;
 }
 
 /**
@@ -100,7 +99,7 @@ export interface UnidadeDeEstoque {
     id: string;
     name: string;
     deletedAt: string | null;
-    category: { id: string; name: string; color: string | null };
+    category: { id: string; name: string };
   };
 }
 

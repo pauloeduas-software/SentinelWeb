@@ -229,19 +229,7 @@ export default function PostoDetalheModal({
                       </td>
                       <td className="px-4 py-3 text-text-tertiary">{ativo.model.category.name}</td>
                       <td className="px-4 py-3">
-                        {/* A cor vem do banco (StatusLabel.color), então vai por
-                            `style` — o Tailwind não gera classe a partir de
-                            string de runtime. */}
-                        <span
-                          className="px-2 py-1 border rounded-[2px] text-[10px] uppercase tracking-widest"
-                          style={ativo.status.color
-                            ? {
-                                color: ativo.status.color,
-                                borderColor: `${ativo.status.color}33`,
-                                backgroundColor: `${ativo.status.color}1a`,
-                              }
-                            : undefined}
-                        >
+                        <span className="px-2 py-1 border border-border-sutil rounded-[2px] text-text-secondary text-[10px] uppercase tracking-widest">
                           {ativo.status.name}
                         </span>
                       </td>

@@ -4,8 +4,6 @@ import ReferenceSelect from '../../components/ReferenceSelect';
 import type { CampoSpec, CatalogUiSpec } from '../specs/catalog-ui.types';
 import type { CatalogRow } from '../../../domain/shared/catalog.types';
 
-const COR_PADRAO = '#888888';
-
 // Valor inicial de cada campo. Tudo vira string, menos checkbox e lista: é o
 // que o `<input>` controlado espera, e o servidor já converte de volta (o `''`
 // vira `null` no schema, e número vazio vira `null` no `preprocess`).
@@ -207,35 +205,6 @@ function Campo({
           <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">{selecionada.ajuda}</p>
         )}
       </>
-    );
-  }
-
-  if (campo.tipo === 'color') {
-    const definida = typeof valor === 'string' && valor !== '';
-    return (
-      <div className="flex items-center gap-2">
-        {/* `<input type="color">` nunca fica vazio — ele cai em #000000. Por
-            isso o valor "sem cor" é guardado como '' e mostrado pelo botão ao
-            lado, não pelo próprio seletor. */}
-        <input
-          type="color"
-          value={definida ? String(valor) : COR_PADRAO}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-12 bg-bg-base border border-border-sutil cursor-pointer"
-        />
-        <span className="text-text-tertiary tabular-nums flex-1">
-          {definida ? String(valor) : 'sem cor'}
-        </span>
-        {definida && (
-          <button
-            type="button"
-            onClick={() => onChange('')}
-            className="px-2 py-1 border border-border-sutil text-text-tertiary hover:text-status-danger transition-colors"
-          >
-            limpar
-          </button>
-        )}
-      </div>
     );
   }
 

@@ -25,15 +25,15 @@ export const statusLabelSpec: CatalogSpec = {
   updateSchema: updateStatusLabelSchema,
 
   select: {
-    id: true, name: true, type: true, color: true,
-    showInNav: true, notes: true, createdAt: true,
+    id: true, name: true, type: true,
+    notes: true, createdAt: true,
   },
   sortable: ['name', 'type', 'createdAt'],
   defaultSort: 'name',
   searchable: ['name'],
-  audited: ['name', 'type', 'color', 'showInNav', 'notes'],
+  audited: ['name', 'type', 'notes'],
 
-  // Aqui o `optionFilter` NÃO restringe a lista: os cinco valores do enum estão
+  // Aqui o `optionFilter` NÃO restringe a lista: os quatro valores do enum estão
   // presentes, e é de propósito. Ele existe para que `?type=` seja um parâmetro
   // VALIDADO — o `catalog.controller.ts` monta um `z.enum` a partir desta lista,
   // então `?type=EM_USO` responde 422 em vez de ser ignorado em silêncio e
@@ -43,7 +43,7 @@ export const statusLabelSpec: CatalogSpec = {
   // dois "Notebook" no `<select>`, porque a chave dela é `@@unique([name, type])`.
   // `StatusLabel.name` é `@unique` global — dois rótulos de mesmo nome e tipos
   // diferentes são impossíveis por construção.)
-  optionFilter: { campo: 'type', valores: ['DEPLOYABLE', 'IN_USE', 'PENDING', 'ARCHIVED', 'UNDEPLOYABLE'] },
+  optionFilter: { campo: 'type', valores: ['DEPLOYABLE', 'IN_USE', 'PENDING', 'UNDEPLOYABLE'] },
 
   // Apagar um status em uso deixaria ativos apontando para o nada.
   countUsages: contarUsos,
@@ -54,9 +54,9 @@ export const statusLabelSpec: CatalogSpec = {
   // POR QUE AQUI É MAIS GRAVE QUE NA CATEGORIA: o tipo da categoria diz a que
   // MÓDULO o registro pertence (ativo, licença, consumível) — errar isso põe a
   // linha na tela errada. O tipo do status decide se o equipamento PODE SER
-  // ENTREGUE A ALGUÉM: `DEPLOYABLE` é o único que libera o checkout, e
-  // `ARCHIVED` tira o ativo de operação. Trocar o tipo de "Pronto p/ Uso" para
-  // `ARCHIVED` arquiva 200 ativos em silêncio, em uma requisição, sem nenhuma
+  // ENTREGUE A ALGUÉM: `DEPLOYABLE` é o único que libera o checkout. Trocar o
+  // tipo de um status disponível para `UNDEPLOYABLE` inutiliza 200 ativos em
+  // silêncio, em uma requisição, sem nenhuma
   // linha de `assets` ser escrita — e o `ActivityLog` dos 200 fica vazio,
   // porque do ponto de vista deles nada mudou.
   //

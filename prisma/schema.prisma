@@ -276,8 +276,9 @@ enum CategoryType {
 //                  em diagnóstico, em trânsito, à espera de preparo.
 //   UNDEPLOYABLE — ainda é patrimônio seu, mas não serve mais e não volta:
 //                  danificado sem conserto, perdido, roubado.
-//   ARCHIVED     — saiu da operação (vendido, descartado, doado). Sai das
-//                  listagens do dia a dia.
+//
+// Não existe tipo "arquivado": o ativo que sai de vez (vendido, descartado,
+// doado) é BAIXADO — `retiredAt` + `retiredReason` no `Asset`.
 //
 // `IN_USE` é tipo PRÓPRIO, e não `PENDING`, porque a diferença entre "está com
 // um colaborador" e "está na assistência" é a distinção mais cara do inventário:
@@ -296,7 +297,6 @@ enum StatusLabelType {
   DEPLOYABLE
   IN_USE
   PENDING
-  ARCHIVED
   UNDEPLOYABLE
 }
 
@@ -317,8 +317,6 @@ model Category {
   name String
   type CategoryType
 
-  color String?
-
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   assetModels AssetModel[]
@@ -337,9 +335,7 @@ model StatusLabel {
   name String          @unique
   type StatusLabelType
 
-  color     String?
-  showInNav Boolean @default(false)
-  notes     String?
+  notes String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -518,12 +514,11 @@ model Asset {
   // Decimal, nunca Float. Sai no JSON como string.
   purchaseCost Decimal?  @db.Decimal(12, 2)
 
-  // DESCOMISSIONAMENTO — o ativo saiu do parque, e por quê.
+  // BAIXA — o ativo saiu do parque, e por quê.
   //
-  // São TRÊS colunas diferentes e nenhuma substitui a outra (D19):
-  //   `status.type = ARCHIVED` — saiu da operação, some das listagens do dia a dia
-  //   `retiredAt`              — saiu do PATRIMÔNIO: vendido, descartado, roubado
-  //   `deletedAt`              — foi cadastrado errado e está na lixeira
+  // São DUAS colunas diferentes e uma não substitui a outra (D19):
+  //   `retiredAt` — saiu do PATRIMÔNIO: vendido, descartado, roubado
+  //   `deletedAt` — foi cadastrado errado e está na lixeira
   // Um ativo vendido é um fato contábil e continua nos relatórios; um ativo na
   // lixeira é um erro de digitação e não deveria ter existido.
   retiredAt     DateTime?

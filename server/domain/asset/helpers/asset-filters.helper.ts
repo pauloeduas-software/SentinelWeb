@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { $Enums, type Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 
 // Colunas que a listagem de ativos aceita ordenar. Allowlist do DOMÍNIO: o
 // parser em core/http/list-query.ts a recebe por parâmetro, porque `core` não
@@ -32,7 +32,7 @@ export function buildAssetWhere(q?: string): Prisma.AssetWhereInput {
 // ---------------------------------------------------------------------------
 //
 // `trashed` é genérico: toda tabela com `deletedAt` o entende, e por isso mora
-// no `core`. "Descomissionado" é `retiredAt IS NOT NULL` e "posto vago" é um
+// no `core`. "Baixado" é `retiredAt IS NOT NULL` e "posto vago" é um
 // join em `assignments` × `location_occupants` — os dois só existem no ITAM.
 // Pôr isso em `core/http/list-query.ts` seria fazer a infraestrutura conhecer
 // negócio, que é o que a seta `pages → domain → core` proíbe e o lint reprova.
@@ -42,7 +42,7 @@ export function buildAssetWhere(q?: string): Prisma.AssetWhereInput {
 // Uma vista, um lugar — traduzir `retired` para `active` antes do `core` e
 // guardar a real aqui deixaria duas verdades sobre a mesma chave.
 
-export const ASSET_VIEWS = ['active', 'trashed', 'retired', 'archived'] as const;
+export const ASSET_VIEWS = ['active', 'trashed', 'retired'] as const;
 export type AssetView = (typeof ASSET_VIEWS)[number];
 
 export interface AssetFilters {
@@ -112,47 +112,29 @@ export function separarFiltrosDeAtivo(raw: unknown): {
 }
 
 /**
- * O `where` das QUATRO vistas.
+ * O `where` das TRÊS vistas.
  *
- * - `active` **exclui** duas coisas, por dois motivos diferentes: o
- *   descomissionado (`retiredAt`), que saiu do PATRIMÔNIO, e o arquivado
- *   (`status.type = ARCHIVED`), que saiu da OPERAÇÃO. Os dois continuam
- *   existindo — o primeiro porque baixa é fato contábil que não se apaga, o
- *   segundo porque arquivar é reversível trocando o status.
- * - `retired` e `archived` mostram **só** um deles cada.
- * - `trashed` é a lixeira e não olha nem `retiredAt` nem status: quem procura o
- *   que foi apagado procura tudo que foi apagado, vendido ou arquivado.
+ * - `active` **exclui** o baixado (`retiredAt`), que saiu do
+ *   PATRIMÔNIO e continua existindo porque baixa é fato contábil que não se
+ *   apaga.
+ * - `retired` mostra **só** ele.
+ * - `trashed` é a lixeira e não olha `retiredAt`: quem procura o que foi
+ *   apagado procura tudo que foi apagado, vendido ou não.
  *
- * SÃO TRÊS COLUNAS COM TRÊS SIGNIFICADOS (D19), e é por isso que são três
- * vistas: um ativo vendido é fato contábil, um arquivado é decisão operacional
- * reversível, e um na lixeira é erro de digitação.
+ * SÃO DUAS COLUNAS COM DOIS SIGNIFICADOS (D19): um ativo vendido é fato
+ * contábil, e um na lixeira é erro de digitação.
  *
  * `deletedAt` explícito faz a extension de soft delete sair do caminho — é
  * assim que a lixeira alcança as linhas apagadas sem um segundo cliente Prisma.
  *
- * `statusIdExplicito` é a única concessão, e ela fecha uma armadilha real: os
- * contadores do cabeçalho viraram filtro clicável (`?statusId=`), e clicar no
- * contador de um status arquivado abriria uma lista VAZIA — um filtro que o
- * próprio sistema ofereceu e que não devolve nada. Pedir um status pelo id é
- * dizer que se quer aquele status, inclusive se ele for de arquivo.
+ * O `NOT` do posto mantém o contador do cabeçalho batendo com a tabela, porque
+ * o `/stats` exclui o mesmo conjunto: o computador do posto é pergunta de
+ * `/postos`.
  */
-function whereDaVista(view: AssetView, statusIdExplicito: boolean): Prisma.AssetWhereInput {
+function whereDaVista(view: AssetView): Prisma.AssetWhereInput {
   if (view === 'trashed') return { deletedAt: { not: null } };
   if (view === 'retired') return { retiredAt: { not: null } };
-  if (view === 'archived') return { retiredAt: null, status: { type: $Enums.StatusLabelType.ARCHIVED } };
-
-  // O `NOT` do posto vale TAMBÉM com `?statusId=` explícito, ao contrário da
-  // exclusão do arquivado: clicar no contador de um status é pedir aquele
-  // status, não mudar de assunto — e o computador do posto continua sendo
-  // pergunta de `/postos`. É o que mantém o contador do cabeçalho batendo com a
-  // tabela, porque o `/stats` exclui o mesmo conjunto.
-  return statusIdExplicito
-    ? { retiredAt: null, NOT: EM_POSTO_DE_TRABALHO }
-    : {
-      retiredAt: null,
-      status: { type: { not: $Enums.StatusLabelType.ARCHIVED } },
-      NOT: EM_POSTO_DE_TRABALHO,
-    };
+  return { retiredAt: null, NOT: EM_POSTO_DE_TRABALHO };
 }
 
 /**
@@ -165,7 +147,7 @@ function whereDaVista(view: AssetView, statusIdExplicito: boolean): Prisma.Asset
  */
 export function buildAssetFilterWhere(filtros: AssetFilters): Prisma.AssetWhereInput {
   return {
-    ...whereDaVista(filtros.view, filtros.statusId !== undefined),
+    ...whereDaVista(filtros.view),
     ...(filtros.statusId ? { statusId: filtros.statusId } : {}),
     ...(filtros.locationId ? { locationId: filtros.locationId } : {}),
   };

@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { PackageX, X } from 'lucide-react';
 import type { Asset, RetireInput } from '../../../../domain/shared/asset.types';
-import { MOTIVOS_DA_SAIDA } from '../../helpers/descomissionamento.helper';
+import { MOTIVOS_DA_SAIDA } from '../../helpers/baixa.helper';
 
-// DESCOMISSIONAR — registrar que o ativo saiu do PATRIMÔNIO.
+// DAR BAIXA — registrar que o ativo saiu do PATRIMÔNIO.
 //
 // Modal próprio, e não um campo do formulário de ativo, pelo mesmo motivo da
 // entrega: é uma OPERAÇÃO, com data, motivo e recusa própria (ativo entregue
 // não sai do patrimônio). Como campo, viraria um `<select>` que alguém muda sem
 // perceber ao editar o número de série.
 //
-// As três saídas são diferentes (D19) e o texto abaixo diz isso na hora da
-// decisão, que é quando a dúvida existe: arquivar tira da operação, a lixeira é
-// para cadastro errado, e isto aqui é o fato contábil de que o bem saiu.
+// As duas saídas são diferentes (D19) e o texto abaixo diz isso na hora da
+// decisão, que é quando a dúvida existe: a lixeira é para cadastro errado, e
+// isto aqui é o fato contábil de que o bem saiu.
 
 const CLASSE_CAMPO =
   'w-full p-2 bg-bg-base border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors';
@@ -59,7 +59,7 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
       <div className="relative w-full max-w-lg bg-surface-card border border-border-sutil shadow-2xl flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border-sutil bg-bg-base/50">
           <h2 className="flex items-center gap-3 text-sm font-mono text-text-primary tracking-widest uppercase">
-            <PackageX size={16} /> Descomissionar {asset.assetTag}
+            <PackageX size={16} /> Dar baixa em {asset.assetTag}
           </h2>
           <button onClick={onClose} className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
             <X size={16} />
@@ -73,9 +73,8 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
 
           <p className="text-text-tertiary text-[10px] leading-relaxed">
             O ativo sai do PATRIMÔNIO e das listagens do dia a dia, mas continua existindo: entra no
-            filtro "Descomissionados", segue no histórico e continua contando no relatório de
-            depreciação, com a data em que saiu. Para tirar de operação sem dar baixa, mude o status
-            para um de tipo arquivado; para desfazer um cadastro errado, use a lixeira.
+            filtro "Baixados", segue no histórico e continua contando no relatório de
+            depreciação, com a data em que saiu. Para desfazer um cadastro errado, use a lixeira.
           </p>
 
           <div className="space-y-1">

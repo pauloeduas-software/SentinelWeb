@@ -5,22 +5,20 @@ import { recordActivity } from '../../activity/use-cases/record-activity.usecase
 import { buildChanges } from '../../shared/diff.helper';
 import { diaEmPortugues } from '../helpers/asset-dates.helper';
 import { ASSET_SELECT } from '../helpers/asset-select.helper';
-import { assertSemPosseParaDescomissionar } from './assert-retire-posse.usecase';
+import { assertSemPosseParaBaixa } from './assert-retire-posse.usecase';
 
-// DESCOMISSIONAR — o ativo saiu do PATRIMÔNIO: foi vendido, descartado, doado,
+// DAR BAIXA — o ativo saiu do PATRIMÔNIO: foi vendido, descartado, doado,
 // extraviado, roubado ou trocado em garantia.
 //
-// NÃO é arquivar e NÃO é apagar. São três colunas, três perguntas e nenhuma
-// substitui a outra (D19, docs/historico/fase-02-ativos.md):
+// NÃO é apagar. São duas colunas, duas perguntas, e uma não substitui a outra
+// (D19, docs/historico/fase-02-ativos.md):
 //
-//   `status.type = ARCHIVED`  saiu da OPERAÇÃO   — classificação, reversível
-//   `retiredAt`               saiu do PATRIMÔNIO — fato datado, contábil
-//   `deletedAt`               foi cadastrado ERRADO — lixeira
+//   `retiredAt`  saiu do PATRIMÔNIO — fato datado, contábil
+//   `deletedAt`  foi cadastrado ERRADO — lixeira
 //
-// Por isso esta operação NÃO mexe no status. Quem vende um notebook pode querer
-// arquivá-lo também, e é uma segunda decisão, com uma segunda linha no
-// histórico — encadear as duas aqui tiraria do operador a escolha e esconderia
-// metade do que aconteceu.
+// Esta operação NÃO mexe no status: o status diz em que estado o equipamento
+// estava quando saiu, e trocá-lo é uma segunda decisão, com linha própria no
+// histórico.
 
 export interface RetireAssetData {
   retiredReason: $Enums.RetiredReason;
@@ -32,7 +30,7 @@ export interface RetireAssetData {
 
 export async function retireAsset(id: string, data: RetireAssetData, actorId: string | null = null) {
   // Transação porque são duas escritas que descrevem o MESMO fato: o ativo
-  // descomissionado e a linha de histórico que diz por quê. Uma sem a outra é
+  // baixado e a linha de histórico que diz por quê. Uma sem a outra é
   // um equipamento que sumiu do inventário sem explicação.
   return prisma.$transaction(async (tx) => {
     const antes = await tx.asset.findFirst({
@@ -41,11 +39,11 @@ export async function retireAsset(id: string, data: RetireAssetData, actorId: st
     });
     if (!antes) throw new AppError('Registro não encontrado', 404);
 
-    // Descomissionar duas vezes reescreveria a data da primeira saída — e é a
+    // Dar baixa duas vezes reescreveria a data da primeira saída — e é a
     // data em que o ativo parou de ser patrimônio.
     if (antes.retiredAt) {
       throw new AppError(
-        `${antes.assetTag} já foi descomissionado em ${diaEmPortugues(antes.retiredAt)}.`,
+        `${antes.assetTag} já teve baixa em ${diaEmPortugues(antes.retiredAt)}.`,
         409,
         { retiredAt: antes.retiredAt.toISOString(), retiredReason: antes.retiredReason },
       );
@@ -54,7 +52,7 @@ export async function retireAsset(id: string, data: RetireAssetData, actorId: st
     // A amarra da etapa: ativo entregue não sai do patrimônio. DENTRO da
     // transação porque lê a posse aberta — fora dela, um checkout concorrente
     // entre a checagem e o UPDATE passaria.
-    await assertSemPosseParaDescomissionar(tx, id, antes.assetTag);
+    await assertSemPosseParaBaixa(tx, id, antes.assetTag);
 
     const retiredAt = data.retiredAt ?? new Date();
 
@@ -73,7 +71,7 @@ export async function retireAsset(id: string, data: RetireAssetData, actorId: st
         // A justificativa NÃO vira coluna: ela descreve o EVENTO, não o ativo.
         // No `changes` ela fica presa à linha do histórico que a explica e
         // aparece na aba Histórico; numa coluna `retiredNotes`, um segundo
-        // descomissionamento a sobrescreveria (D18 — uma trilha só).
+        // baixa a sobrescreveria (D18 — uma trilha só).
         ...(data.notes ? { notes: data.notes } : {}),
       },
     }, actorId);

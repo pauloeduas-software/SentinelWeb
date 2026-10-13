@@ -10,7 +10,6 @@ export interface ReferenciaNomeada {
 
 export interface CategoriaDaLicenca extends ReferenciaNomeada {
   type: string;
-  color: string | null;
 }
 
 /** Derivado das datas e do dia de hoje, nunca coluna (D44). */

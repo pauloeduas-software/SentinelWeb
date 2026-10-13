@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { $Enums } from '@prisma/client';
 import {
-  booleano, corOpcional, emailOpcional,
+  booleano, emailOpcional,
   nomeObrigatorio, textoOpcional, urlOpcional, uuidObrigatorio, uuidOpcional,
 } from '../../shared/fields.schema';
 
@@ -15,36 +15,26 @@ import {
 // existe para promover (D5/D10).
 
 // ---------------------------------------------------------------- Category
-const camposCategoria = {
-  color: corOpcional,
-};
-
 export const createCategorySchema = z.strictObject({
   name: nomeObrigatorio(),
   type: z.enum($Enums.CategoryType, 'tipo de categoria inválido'),
-  ...camposCategoria,
 });
 
 export const updateCategorySchema = z.strictObject({
   name: nomeObrigatorio().optional(),
   type: z.enum($Enums.CategoryType, 'tipo de categoria inválido').optional(),
-  ...camposCategoria,
 });
 
 // ------------------------------------------------------------- StatusLabel
 export const createStatusLabelSchema = z.strictObject({
   name: nomeObrigatorio(),
   type: z.enum($Enums.StatusLabelType, 'tipo de status inválido'),
-  color: corOpcional,
-  showInNav: booleano('mostrar no menu').optional(),
   notes: textoOpcional('notas', 2_000),
 });
 
 export const updateStatusLabelSchema = z.strictObject({
   name: nomeObrigatorio().optional(),
   type: z.enum($Enums.StatusLabelType, 'tipo de status inválido').optional(),
-  color: corOpcional,
-  showInNav: booleano('mostrar no menu').optional(),
   notes: textoOpcional('notas', 2_000),
 });
 

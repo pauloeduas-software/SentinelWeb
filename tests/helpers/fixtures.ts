@@ -4,12 +4,13 @@ import type { ApiDeTeste } from './app';
 // O CENÁRIO de cada teste, montado PELA API.
 //
 // A regra do arquivo: o que o teste vai EXERCITAR nasce por HTTP; o que ele só
-// precisa CONSULTAR (os ids do catálogo que o seed criou) sai do Prisma direto.
+// precisa CONSULTAR (os ids do catálogo que o seed e o harness criaram) sai do
+// Prisma direto.
 //
 // A distinção importa. Criar o ativo com `prisma.asset.create` pularia o zod da
 // borda, o `strictObject`, a etiqueta automática e o `ActivityLog` — e o teste
 // passaria a provar coisas sobre um ativo que nenhum usuário consegue criar.
-// Já buscar o id do status "Pronto p/ Uso" não é operação nenhuma: é o mesmo
+// Já buscar o id de um status `DEPLOYABLE` não é operação nenhuma: é o mesmo
 // que ler a tela antes de clicar.
 
 interface Criado {
@@ -24,14 +25,13 @@ function exigir201<T>(o_que: string, resposta: { status: number; body: unknown }
   return resposta.body as T;
 }
 
-/** Os ids que o seed deixa prontos. Lidos, nunca criados. */
+/** Os ids que o seed e o harness (`tests/setup/database.ts`) deixam prontos. Lidos, nunca criados. */
 export async function idsDoSeed() {
   const [
-    deployable, emUso, arquivado, categoria, licenca, estoque,
+    deployable, emUso, categoria, licenca, estoque,
   ] = await Promise.all([
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'DEPLOYABLE' }, select: { id: true } }),
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'IN_USE' }, select: { id: true } }),
-    prisma.statusLabel.findFirstOrThrow({ where: { type: 'ARCHIVED' }, select: { id: true } }),
     prisma.category.findFirstOrThrow({ where: { type: 'ASSET' }, select: { id: true } }),
     // A da licença. O seed cria "Licença" com `type: 'LICENSE'`, e é o TIPO que
     // o use-case confere: categoria de ASSET numa licença é 422.
@@ -44,7 +44,6 @@ export async function idsDoSeed() {
   return {
     statusDeployableId: deployable.id,
     statusEmUsoId: emUso.id,
-    statusArquivadoId: arquivado.id,
     categoriaId: categoria.id,
     categoriaLicencaId: licenca.id,
     categoriaEstoqueId: estoque.id,

@@ -31,8 +31,8 @@ export async function updateAsset(id: string, data: UpdateAssetData, actorId: st
       ignorarId: id,
     });
 
-    // Estado × posse: status de estoque (`DEPLOYABLE`) ou de fora de operação
-    // (`ARCHIVED`) contradizem um ativo que está com alguém. A guarda entra
+    // Estado × posse: status de estoque (`DEPLOYABLE`) contradiz um ativo que
+    // está com alguém. A guarda entra
     // DENTRO da transação que já existe porque ela lê a assignment aberta —
     // fora dela, um checkout concorrente entre a checagem e o UPDATE passaria.
     //

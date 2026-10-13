@@ -41,7 +41,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 1 | Uma posse aberta por ativo | **banco** — índice único parcial | 409 `Registro já existe` |
 | 2 | Uma ocupação aberta por (posto, pessoa) | **banco** — índice único parcial | 409 `Registro já existe` |
 | 3 | O tipo de um status em uso não muda | **aplicação** — `status-label.spec.ts` | 409 `Não é possível mudar o tipo: status em uso por 200 registros.` |
-| 4 | Estado × posse: ativo entregue não fica `DEPLOYABLE` nem `ARCHIVED` | **aplicação** — `assert-status-posse.usecase.ts` | 409 `"Pronto p/ Uso" é um status de estoque, e este ativo está entregue. Faça a devolução antes de mudar o status.` |
+| 4 | Estado × posse: ativo entregue não fica `DEPLOYABLE` | **aplicação** — `assert-status-posse.usecase.ts` | 409 `"Pronto p/ Uso" é um status de estoque, e este ativo está entregue. Faça a devolução antes de mudar o status.` |
 | 5 | A forma da posse: um alvo coerente, devolução depois da entrega | **banco** — dois `CHECK` | 409 `Registro já existe` (a API recusa antes, com frase própria) |
 | 6 | Colaborador desativado ou na lixeira não tem posse direta, **assento de licença**, **unidade de estoque** nem ocupação aberta | **aplicação** — 409 no `DELETE`, no `checkout` e no cadastro de ocupante + trava de linha | 409 `Este colaborador ainda responde por 2 ativos, ocupa 1 assento de licença, está com 3 itens de estoque e ocupa 1 posto. Devolva o que está com ele e encerre as ocupações antes de excluir.` |
 | 9 | O alvo de um assento de licença é UM: pessoa **ou** ativo, nunca os dois, nunca nenhum | **banco** — CHECK `license_seat_alvo_xor` | 422 com o campo que falta (a API recusa antes, com frase própria) |
@@ -104,8 +104,8 @@ Camada 2 existe para permitir (Laura + Ana na Mesa 1).
 
 Trocar o `type` de um `StatusLabel` que 200 ativos usam muda o significado dos
 200 de uma vez, **sem escrever uma linha em `assets`** — e portanto sem
-`ActivityLog` nenhum. "Pronto p/ Uso" virando `ARCHIVED` arquiva a frota em
-silêncio.
+`ActivityLog` nenhum. Um status disponível virando `UNDEPLOYABLE` inutiliza a
+frota em silêncio.
 
 **Por que na aplicação:** a regra é *"mudou de X para Y **e** há quem aponte"* —
 precisa do valor anterior e de um `COUNT` em outra tabela. Nem índice nem CHECK
@@ -133,18 +133,17 @@ operação visível, uma por ativo, auditada.
 `updateAsset` dentro da transação que já existe.
 
 Ativo com `Assignment` aberta não pode receber status de tipo `DEPLOYABLE`
-("está no estoque, pode ser entregue") nem `ARCHIVED` ("saiu da operação"). As
-duas frases são falsas sobre um equipamento que está na mão de alguém.
+("está no estoque, pode ser entregue"). A frase é falsa sobre um equipamento que
+está na mão de alguém.
 
 | Tipo do status | Sem posse aberta — *estoque* | Com posse aberta — *entregue* |
 |---|---|---|
 | `DEPLOYABLE` | ✅ o caso normal do estoque | ❌ **proibido** — não está no estoque |
 | `IN_USE` | ✅ posto vago: sinal operacional, volta ao estoque | ✅ o caso normal |
 | `PENDING` | ✅ aguardando, em trânsito | ✅ foi ao conserto e **volta para a mesma pessoa** |
-| `ARCHIVED` | ✅ saiu da operação | ❌ **proibido** — sumiria do relatório continuando com ela |
 | `UNDEPLOYABLE` | ✅ quebrado, no depósito | ✅ notebook quebrado **ainda na gaveta dela** |
 
-**2 proibidas de 10, e a estreiteza é de propósito.** `PENDING` e
+**1 proibida de 8, e a estreiteza é de propósito.** `PENDING` e
 `UNDEPLOYABLE` com responsável descrevem operação real: fechar a posse quando o
 notebook vai à assistência obrigaria a refazer o checkout na volta e perderia a
 continuidade de quem responde por ele enquanto está fora.

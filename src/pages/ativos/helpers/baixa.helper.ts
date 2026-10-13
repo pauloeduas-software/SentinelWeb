@@ -1,16 +1,15 @@
 import type { Asset, MotivoDaSaida } from '../../../domain/shared/asset.types';
 import { formatarData } from '../../helpers/format.helper';
 
-// DESCOMISSIONAMENTO na tela — funções puras, fora do JSX
+// BAIXA na tela — funções puras, fora do JSX
 // (docs/referencia/arquitetura.md: "cálculo sai do JSX").
 //
-// São TRÊS saídas diferentes e nenhuma substitui a outra (D19):
+// São DUAS saídas diferentes e uma não substitui a outra (D19):
 //
-//   status.type = ARCHIVED  saiu da OPERAÇÃO    (classificação, reversível)
-//   retiredAt               saiu do PATRIMÔNIO  (fato datado: vendido, roubado)
-//   deletedAt               foi cadastrado ERRADO (lixeira)
+//   retiredAt  saiu do PATRIMÔNIO  (fato datado: vendido, roubado)
+//   deletedAt  foi cadastrado ERRADO (lixeira)
 //
-// Este arquivo cuida da do meio, e o vocabulário da tela vem daqui para as três
+// Este arquivo cuida da primeira, e o vocabulário da tela vem daqui para as três
 // telas que a mostram (listagem, detalhe e modal) dizerem a mesma coisa.
 
 /**

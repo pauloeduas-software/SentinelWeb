@@ -5,14 +5,11 @@ import { EM_POSTO_DE_TRABALHO } from '../helpers/asset-filters.helper';
 // Contadores do cabeçalho da tela de ativos. Rota própria porque, com paginação,
 // `rows.length` conta só a página atual — a agregação roda FORA do skip/take.
 export interface AssetStats {
-  /** O que a listagem PADRÃO mostra: nem descomissionado, nem arquivado, nem em posto. */
+  /** O que a listagem PADRÃO mostra: nem baixado, nem em posto. */
   total: number;
   byStatus: {
     id: string;
     name: string;
-    color: string | null;
-    showInNav: boolean;
-    /** O tipo do rótulo — é ele que diz à tela que este contador é de arquivo. */
     type: $Enums.StatusLabelType;
     total: number;
   }[];
@@ -25,26 +22,11 @@ export interface AssetStats {
    * que número nenhum.
    */
   retired: number;
-  /**
-   * Quantos saíram da OPERAÇÃO (`status.type = ARCHIVED`) — a vista
-   * `?view=archived`, e a outra metade do que `total` deixou de contar.
-   *
-   * São duas colunas com dois significados (D19): o descomissionado é fato
-   * contábil e não volta; o arquivado é decisão reversível, e volta trocando o
-   * status. Somar os dois num contador só apagaria essa diferença exatamente
-   * onde ela é operacional.
-   */
-  archived: number;
 }
 
 /**
- * Quais status aparecem no cabeçalho:
- *
- *   - os marcados como destaque (`showInNav`), MESMO com zero ativos — é isso
- *     que dá efeito visível ao campo, e um contador em zero é informação: "não
- *     há nada danificado" vale tanto quanto o número;
- *   - mais qualquer status que tenha ativo, marcado ou não — senão um status
- *     esquecido sumiria do painel escondendo equipamento.
+ * O cabeçalho mostra TODOS os status, inclusive os zerados: um contador em zero
+ * é informação — "não há nada inutilizável" vale tanto quanto o número.
  */
 export async function getAssetStats(): Promise<AssetStats> {
   // `retiredAt: null` E o `NOT` do posto de trabalho, porque a listagem padrão
@@ -57,34 +39,23 @@ export async function getAssetStats(): Promise<AssetStats> {
 
   const [grupos, rotulos, retired] = await Promise.all([
     prisma.asset.groupBy({ by: ['statusId'], where: semPosto, _count: { _all: true } }),
-    prisma.statusLabel.findMany({ select: { id: true, name: true, color: true, showInNav: true, type: true } }),
+    prisma.statusLabel.findMany({ select: { id: true, name: true, type: true } }),
     prisma.asset.count({ where: { retiredAt: { not: null } } }),
   ]);
 
   const contagem = new Map(grupos.map((grupo) => [grupo.statusId, grupo._count._all]));
 
-  const comTotal = rotulos.map((rotulo) => ({ ...rotulo, total: contagem.get(rotulo.id) ?? 0 }));
-
-  const byStatus = comTotal
-    .filter((rotulo) => rotulo.showInNav || rotulo.total > 0)
+  const byStatus = rotulos
+    .map((rotulo) => ({ ...rotulo, total: contagem.get(rotulo.id) ?? 0 }))
     .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, 'pt-BR'));
 
-  const ehArquivo = (tipo: $Enums.StatusLabelType) => tipo === $Enums.StatusLabelType.ARCHIVED;
-
-  // A soma sai de `comTotal`, não de `byStatus`: o filtro acima é de EXIBIÇÃO
-  // (esconde o rótulo zerado que ninguém marcou como destaque), e um contador
-  // que dependesse dele mudaria de valor quando alguém desmarcasse o destaque.
-  const somar = (arquivo: boolean) =>
-    comTotal.reduce((soma, rotulo) => (ehArquivo(rotulo.type) === arquivo ? soma + rotulo.total : soma), 0);
-
   return {
-    // `total` conta o que a listagem PADRÃO mostra, e ela exclui o arquivado, o
-    // descomissionado e o que está entregue a um posto: o cabeçalho é o
+    // `total` conta o que a listagem PADRÃO mostra, e ela exclui o
+    // baixado e o que está entregue a um posto: o cabeçalho é o
     // cabeçalho DAQUELA lista, e prometer uma linha que a tabela não mostra é o
     // defeito que este contador existe para não ter.
-    total: somar(false),
+    total: byStatus.reduce((soma, rotulo) => soma + rotulo.total, 0),
     byStatus,
     retired,
-    archived: somar(true),
   };
 }

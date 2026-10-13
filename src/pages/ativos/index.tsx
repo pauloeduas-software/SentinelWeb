@@ -6,7 +6,7 @@ import CheckoutModal from './components/CheckoutModal';
 import ColunasMenu from './components/ColunasMenu';
 import ListToolbar from '../components/ListToolbar';
 import { formatarData, formatarMoeda } from '../helpers/format.helper';
-import { seloDaSaida } from './helpers/descomissionamento.helper';
+import { seloDaSaida } from './helpers/baixa.helper';
 import { TRACO, resumoDaPosse, rotuloDaOperacao } from './helpers/posse.helper';
 import { useAssets } from './hooks/useAssets';
 import { useColunas } from './hooks/useColunas';
@@ -14,7 +14,7 @@ import { useColunas } from './hooks/useColunas';
 export default function AtivosPage() {
   const {
     assets, total, totalCadastrado, porStatus,
-    descomissionados, arquivados, page, perPage, setPage,
+    baixados, page, perPage, setPage,
     search, changeSearch, view, changeView,
     statusId, statusFiltrado, toggleStatus, limparStatus,
     modalAberto, emEdicao, clonando, statusPadraoId, openCreate, openEdit, openClone, closeModal, abrirDetalhe,
@@ -52,10 +52,6 @@ export default function AtivosPage() {
                     : 'border-transparent hover:border-border-sutil hover:text-text-secondary'
                 }`}
               >
-                <span
-                  className="w-2 h-2 rounded-full border border-border-sutil"
-                  style={status.color ? { backgroundColor: status.color } : undefined}
-                />
                 {status.name} <span className="text-text-secondary tabular-nums">{status.total}</span>
               </button>
             ))}
@@ -81,8 +77,7 @@ export default function AtivosPage() {
       <AssetFilterBar
         view={view}
         onViewChange={changeView}
-        descomissionados={descomissionados}
-        arquivados={arquivados}
+        baixados={baixados}
         statusFiltrado={statusFiltrado}
         onLimparStatus={limparStatus}
       />
@@ -162,15 +157,7 @@ export default function AtivosPage() {
                   )}
                   {colunas.mostrar('status') && (
                   <td className="px-6 py-4">
-                    {/* A cor vem do banco (StatusLabel.color), então vai por
-                        `style` — o Tailwind não gera classe a partir de string de
-                        runtime. */}
-                    <span
-                      className="px-2 py-1 border rounded-[2px] text-[10px] uppercase tracking-widest"
-                      style={asset.status.color
-                        ? { color: asset.status.color, borderColor: `${asset.status.color}33`, backgroundColor: `${asset.status.color}1a` }
-                        : undefined}
-                    >
+                    <span className="px-2 py-1 border border-border-sutil rounded-[2px] text-text-secondary text-[10px] uppercase tracking-widest">
                       {asset.status.name}
                     </span>
                   </td>
@@ -273,9 +260,7 @@ export default function AtivosPage() {
                     {view === 'trashed' ? (
                       <span>A lixeira está vazia.</span>
                     ) : view === 'retired' ? (
-                      <span>Nenhum ativo descomissionado.</span>
-                    ) : view === 'archived' ? (
-                      <span>Nenhum ativo arquivado.</span>
+                      <span>Nenhum ativo baixado.</span>
                     ) : search ? (
                       <span>Nenhum ativo encontrado para "{search}".</span>
                     ) : statusId ? (

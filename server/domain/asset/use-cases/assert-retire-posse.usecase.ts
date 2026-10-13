@@ -3,7 +3,7 @@ import type { ClienteStatusPosse } from './assert-status-posse.usecase';
 
 /**
  * Guarda irmã da `assertStatusCoerenteComPosse` — a Invariante 4 aplicada ao
- * DESCOMISSIONAMENTO (docs/referencia/invariantes.md, docs/historico/fase-02-ativos.md D19).
+ * BAIXA (docs/referencia/invariantes.md, docs/historico/fase-02-ativos.md D19).
  *
  * Ativo com `Assignment` aberta não pode sair do patrimônio. "Vendido" e "está
  * na mão da Laura" não podem ser verdade ao mesmo tempo: o equipamento sumiria
@@ -21,10 +21,10 @@ import type { ClienteStatusPosse } from './assert-status-posse.usecase';
  * equipamento em troca de uma data.
  *
  * @param client   Prisma global ou o `tx` da transação de quem chama.
- * @param assetId  O ativo que está sendo descomissionado.
+ * @param assetId  O ativo que está sendo baixado.
  * @param etiqueta A etiqueta, só para a mensagem dizer QUAL ativo barrou — é o
  */
-export async function assertSemPosseParaDescomissionar(
+export async function assertSemPosseParaBaixa(
   client: ClienteStatusPosse,
   assetId: string,
   etiqueta: string,
@@ -36,7 +36,7 @@ export async function assertSemPosseParaDescomissionar(
   if (!posse) return;
 
   throw new AppError(
-    `${etiqueta} está entregue e não pode ser descomissionado. Faça a devolução antes.`,
+    `${etiqueta} está entregue e não pode receber baixa. Faça a devolução antes.`,
     409,
     { assetId, assignmentId: posse.id, targetType: posse.targetType },
   );

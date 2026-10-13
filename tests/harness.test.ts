@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from './helpers/app';
 import { nomeDoBanco } from './setup/database';
 import { prisma } from '../server/core/database/prismaClient';
+import { semearBanco } from '../prisma/seed';
 
 // O teste DO HARNESS. Se este arquivo falha, nenhum outro resultado da suíte
 // significa coisa alguma — então ele prova as premissas antes das regras.
@@ -21,13 +22,17 @@ describe('o harness', () => {
     expect(nomeDoBanco()).toMatch(/_test$/);
   });
 
-  it('semeou o catálogo de fábrica antes do arquivo', async () => {
-    // Os cinco tipos de status do D5. A contagem prova que o seed rodou; o
-    // `IN_USE` prova que rodou a versão CERTA — é o tipo que nasceu depois da
-    // auditoria, e um banco semeado por uma cópia velha não o teria.
+  it('cadastrou um status de cada tipo antes do arquivo', async () => {
     const status = await prisma.statusLabel.findMany({ select: { type: true } });
-    expect(status.length).toBeGreaterThan(0);
-    expect(status.map((s) => s.type)).toContain('IN_USE');
+    expect(status.map((s) => s.type).sort()).toEqual(
+      ['DEPLOYABLE', 'IN_USE', 'PENDING', 'UNDEPLOYABLE'],
+    );
+  });
+
+  it('o seed não cria status: o nome é do usuário', async () => {
+    await prisma.statusLabel.deleteMany();
+    await semearBanco();
+    expect(await prisma.statusLabel.count()).toBe(0);
   });
 
   it('monta a aplicação sem abrir porta', () => {

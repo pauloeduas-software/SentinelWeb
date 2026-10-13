@@ -138,7 +138,7 @@ export function useRestoreAsset() {
 }
 
 /**
- * DESCOMISSIONAR — o ativo saiu do patrimônio.
+ * DAR BAIXA — o ativo saiu do patrimônio.
  *
  * Mutação separada da edição porque não é um campo do formulário: é operação,
  * com regra própria (ativo entregue é recusado) e linha própria no histórico.
@@ -152,7 +152,7 @@ export function useRetireAsset() {
   });
 }
 
-/** Desfazer o descomissionamento: a venda não saiu, o "roubado" apareceu. */
+/** Desfazer a baixa: a venda não saiu, o "roubado" apareceu. */
 export function useUnretireAsset() {
   const queryClient = useQueryClient();
   return useMutation({

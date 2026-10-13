@@ -44,7 +44,7 @@ export const LICENSE_SELECT = {
   updatedAt: true,
   deletedAt: true,
 
-  category: { select: { id: true, name: true, type: true, color: true } },
+  category: { select: { id: true, name: true, type: true } },
   manufacturer: { select: { id: true, name: true } },
 } as const;
 

@@ -22,7 +22,7 @@ import type { AbaId } from '../helpers/abas.helper';
 // com ela. Nenhum componente da pasta fala HTTP.
 
 /** Qual modal está aberto. UM de cada vez, por construção: são quatro portas para o mesmo ativo. */
-type ModalAberto = 'nenhum' | 'editar' | 'clonar' | 'posse' | 'descomissionar';
+type ModalAberto = 'nenhum' | 'editar' | 'clonar' | 'posse' | 'baixa';
 
 export function useAssetDetail() {
   const { id } = useParams<{ id: string }>();
@@ -43,7 +43,7 @@ export function useAssetDetail() {
   const criar = useCreateAsset();
   const editar = useUpdateAsset();
   const excluir = useDeleteAsset();
-  const descomissionar = useRetireAsset();
+  const darBaixa = useRetireAsset();
   const reverterSaida = useUnretireAsset();
   const entregar = useCheckoutAsset();
   const devolver = useCheckinAsset();
@@ -96,9 +96,9 @@ export function useAssetDetail() {
     fecharModal();
   };
 
-  const handleDescomissionar = async (dados: RetireInput) => {
+  const handleDarBaixa = async (dados: RetireInput) => {
     if (!asset) return;
-    await descomissionar.mutateAsync({ id: asset.id, data: dados });
+    await darBaixa.mutateAsync({ id: asset.id, data: dados });
     fecharModal();
   };
 
@@ -162,13 +162,13 @@ export function useAssetDetail() {
     abrirEdicao: () => setModal('editar'),
     abrirClone: () => setModal('clonar'),
     abrirPosse: () => setModal('posse'),
-    abrirDescomissionar: () => setModal('descomissionar'),
+    abrirBaixa: () => setModal('baixa'),
     fecharModal,
 
     handleSubmit,
     handleEntregar,
     handleDevolver,
-    handleDescomissionar,
+    handleDarBaixa,
     handleReverterSaida,
     handleDelete,
   };

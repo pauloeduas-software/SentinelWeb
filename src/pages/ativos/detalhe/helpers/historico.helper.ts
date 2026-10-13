@@ -8,7 +8,7 @@ import { lerEvento, rotuloDaAcao, type LeituraDoEvento } from '../../../helpers/
 
 /** As ações que só o ativo tem. As comuns estão no leitor genérico. */
 const ROTULO_DA_ACAO: Record<string, string> = {
-  RETIRE: 'Descomissionado',
+  RETIRE: 'Baixa do patrimônio',
   UNRETIRE: 'Voltou ao patrimônio',
   // O vínculo com a máquina descoberta (F7, D45). Está aqui e não no leitor
   // genérico porque é gravado com `entityType: 'Asset'`: a aba Histórico do

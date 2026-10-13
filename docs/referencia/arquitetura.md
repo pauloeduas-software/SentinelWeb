@@ -265,12 +265,12 @@ requisição, revogar uma sessão específica — está em
 
 ## "Estar no parque" é UMA definição, e ela mora no domínio dono das colunas
 
-`retiredAt: null` **e** `status.type != ARCHIVED` — o recorte que diz se um ativo
-ainda é do parque.
+`retiredAt: null` — o recorte que diz se um ativo ainda é do parque. (Até a
+remoção do tipo de status `ARCHIVED`, era também `status.type != ARCHIVED`.)
 
 A revisão da F8 encontrou **três** versões dela, e a mais frouxa tinha
-consequência: um ativo `ARCHIVED` era conferido todo dia pelo job e não aparecia
-onde o escopo completo era lido. Domínio que **pergunta** importa; domínio que
+consequência: um ativo fora do parque era conferido todo dia pelo job e não
+aparecia onde o escopo completo era lido. Domínio que **pergunta** importa; domínio que
 **responde** é o dono do dado — é o D16 aplicado a uma constante.
 
 > O corte do ITAM levou os três leitores que importavam o helper, e com eles o

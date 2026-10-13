@@ -105,7 +105,7 @@ function eventosDaPosse(assignment: Awaited<ReturnType<typeof listAssetAssignmen
  * Tudo que aconteceu com um ativo, do mais recente para o mais antigo.
  *
  * Duas fontes, uma lista: o `ActivityLog` (cadastro, edição com o diff campo a
- * campo, lixeira, restauração, descomissionamento) e `assignments` (entregas e
+ * campo, lixeira, restauração, baixa) e `assignments` (entregas e
  * devoluções, com o nome de quem recebeu).
  *
  * O envelope é o `{ total, rows }` de toda listagem, mas `total` aqui conta os

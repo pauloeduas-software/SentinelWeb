@@ -7,7 +7,7 @@
 // nada de `core/api` (o lint recusa).
 
 export type TipoCampo =
-  | 'text' | 'textarea' | 'color' | 'number' | 'checkbox'
+  | 'text' | 'textarea' | 'number' | 'checkbox'
   | 'select'    // valores fixos, vindos de um enum do banco
   | 'reference' // valores vindos de outra tabela, por /options
   | 'money'
@@ -56,7 +56,7 @@ export interface CampoSpec {
 }
 
 export type RenderColuna =
-  | 'texto' | 'cor' | 'enum' | 'relacao' | 'booleano'
+  | 'texto' | 'enum' | 'relacao' | 'booleano'
   // `contagem` lê um agregado do `_count` do servidor — quantos campos um
   // conjunto tem (F9). Não é coluna da tabela: é conta, e por isso não entra no
   // `audited` da spec do servidor.
@@ -129,18 +129,16 @@ export const TIPOS_CATEGORIA: readonly OpcaoFixa[] = [
     ajuda: 'Software, com assentos atribuídos a pessoas ou a máquinas.' },
 ];
 
-// Os cinco tipos de status, em palavras distintas entre si.
-//
-// A versão anterior tinha DOIS rótulos começando com "Parado —", o que os
-// tornava indistinguíveis de relance, e não explicava a diferença entre
-// "não volta" e "fora de operação". As distinções que confundem são estas:
+// Os quatro tipos de status, em palavras distintas entre si. As distinções que
+// confundem são estas:
 //
 //   Em uso       — fora do estoque porque está CUMPRINDO a função. Gera valor.
 //   Pendente     — fora do estoque por IMPEDIMENTO, e volta. Custa dinheiro.
 //   Inutilizável — ainda é SEU, mas não serve. Continua nas listagens e nos
 //                  relatórios, porque custou dinheiro e precisa ser auditado.
-//   Arquivado    — SAIU da operação (vendido, descartado, doado). Some das
-//                  listagens do dia a dia e fica só no histórico.
+//
+// O que SAI de vez (vendido, descartado, doado) não é tipo de status: é o
+// baixa do ativo (`retiredAt`).
 export const TIPOS_STATUS: readonly OpcaoFixa[] = [
   { value: 'DEPLOYABLE', label: 'Disponível',
     ajuda: 'Em estoque, pronto para entregar. É o único tipo que libera a entrega.' },
@@ -152,7 +150,5 @@ export const TIPOS_STATUS: readonly OpcaoFixa[] = [
   { value: 'PENDING', label: 'Pendente',
     ajuda: 'Fora do estoque por algum impedimento, e volta. Ex.: em conserto, em diagnóstico, em trânsito, falta formatar.' },
   { value: 'UNDEPLOYABLE', label: 'Inutilizável',
-    ajuda: 'Ainda é seu, mas não serve mais. Continua nas listagens e nos relatórios. Ex.: danificado, perdido, roubado.' },
-  { value: 'ARCHIVED', label: 'Arquivado',
-    ajuda: 'Saiu da operação: vendido, descartado ou doado. Some das listagens do dia a dia e fica só no histórico.' },
+    ajuda: 'Ainda é seu, mas não serve mais. Continua nas listagens e nos relatórios. Ex.: estragado, perdido, roubado.' },
 ];
