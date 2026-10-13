@@ -4,7 +4,7 @@ import { momentoDoEvento } from '../../../helpers/historico.helper';
 import { lerEventoDoAtivo, tituloDoEvento } from '../helpers/historico.helper';
 
 // A LINHA DO TEMPO do ativo. Duas fontes, uma lista (D18): o `ActivityLog` —
-// cadastro, edição com o diff campo a campo, lixeira, descomissionamento — e o
+// cadastro, edição com o diff campo a campo, lixeira, baixa — e o
 // histórico de posse, que traz o nome de quem recebeu.
 //
 // NÃO existe tabela `AssetLog`: o `ActivityLog` já grava o diff na mesma

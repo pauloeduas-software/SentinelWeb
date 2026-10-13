@@ -198,8 +198,7 @@ Hoje `IN_USE` + sem responsável é ambíguo — *em uso por quem?*. Com as trê
 camadas, o computador da Mesa 1 está em uso **por Laura e Ana**, e o banco prova.
 
 **2. A invariante estado × posse** (ver `invariantes.md`): um ativo com
-responsável resolvido não pode ter status de tipo `DEPLOYABLE` (estoque) nem
-`ARCHIVED` (fora de operação).
+responsável resolvido não pode ter status de tipo `DEPLOYABLE` (estoque).
 
 **3. Posto vago vira sinal operacional.** Ativo `IN_USE` cuja assignment aponta
 para um local **sem ocupantes abertos** = equipamento parado em posto vazio.

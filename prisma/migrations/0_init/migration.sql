@@ -28,7 +28,7 @@ CREATE TYPE "Papel" AS ENUM ('USUARIO', 'TECNICO', 'ADMIN');
 CREATE TYPE "CategoryType" AS ENUM ('ASSET', 'LICENSE', 'STOCK');
 
 -- CreateEnum
-CREATE TYPE "StatusLabelType" AS ENUM ('DEPLOYABLE', 'IN_USE', 'PENDING', 'ARCHIVED', 'UNDEPLOYABLE');
+CREATE TYPE "StatusLabelType" AS ENUM ('DEPLOYABLE', 'IN_USE', 'PENDING', 'UNDEPLOYABLE');
 
 -- CreateEnum
 CREATE TYPE "RetiredReason" AS ENUM ('VENDIDO', 'DESCARTADO', 'DOADO', 'EXTRAVIADO', 'ROUBADO', 'GARANTIA');
@@ -136,7 +136,6 @@ CREATE TABLE "categories" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
     "type" "CategoryType" NOT NULL,
-    "color" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -148,8 +147,6 @@ CREATE TABLE "status_labels" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
     "type" "StatusLabelType" NOT NULL,
-    "color" TEXT,
-    "showInNav" BOOLEAN NOT NULL DEFAULT false,
     "notes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,

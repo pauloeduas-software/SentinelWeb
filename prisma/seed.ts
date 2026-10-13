@@ -24,70 +24,19 @@ interface Seeder {
   run: () => Promise<void>;
 }
 
-// Os status de fábrica, espelhando o que o Snipe-IT traz no `StatuslabelSeeder`.
-//
-// O `type` NÃO é enfeite: é ele que decide o que dá para fazer com o ativo.
-// Só `DEPLOYABLE` libera o checkout (F4). Os cinco estão documentados no
-// `enum StatusLabelType` de prisma/schema.prisma; em uma linha cada:
-//
-//   DEPLOYABLE   — no estoque, pode ser entregue.
-//   IN_USE       — com alguém ou instalado em algum lugar.
-//   PENDING      — fora do estoque por impedimento, e volta (reparo, trânsito).
-//   UNDEPLOYABLE — não volta (danificado sem conserto, perdido, roubado).
-//   ARCHIVED     — encerrado; sai das listagens por padrão.
-//
-// `IN_USE` nasceu tipo próprio depois de uma auditoria: "Em Uso" era
-// `DEPLOYABLE`, o que dizia que equipamento na mão de alguém estava disponível
-// para entrega. A primeira correção o moveu para `PENDING` e estava pior —
-// empacotava "está com um colaborador" junto com "está na assistência", que é a
-// distinção mais cara do inventário. Ver a auditoria das F0 e F1, no fim de
-// docs/historico/fase-01-catalogo-e-ativo.md.
-//
-// `showInNav` marca os que viram atalho de filtro na interface: os do dia a dia.
-//
-// As cores saem dos tokens de `src/index.css`, para o catálogo nascer coerente
-// com o resto do painel. Vão como hexadecimal porque o Tailwind não gera classe
-// a partir de string de runtime — o frontend aplica por `style`.
-const STATUS_LABELS = [
-  // --- disponível para entrega ---
-  { name: 'Pronto p/ Uso', type: 'DEPLOYABLE', color: '#22c55e', showInNav: true,
-    notes: 'Em estoque, pronto para ser entregue a alguém.' },
-
-  // --- cumprindo a função: fora do estoque porque está sendo usado ---
-  { name: 'Em Uso', type: 'IN_USE', color: '#3b82f6', showInNav: true,
-    notes: 'Com um colaborador ou instalado em uma localização. Volta ao estoque na devolução.' },
-
-  // --- fora do estoque por impedimento, mas volta ---
-  { name: 'Aguardando', type: 'PENDING', color: '#f59e0b', showInNav: false,
-    notes: 'Comprado ou recebido, ainda não preparado para uso.' },
-  { name: 'Em Diagnóstico', type: 'PENDING', color: '#f59e0b', showInNav: false,
-    notes: 'Enviado para avaliação técnica; ainda não se sabe se tem conserto.' },
-  { name: 'Manutenção', type: 'PENDING', color: '#f59e0b', showInNav: true,
-    notes: 'Em reparo. Volta para o estoque quando terminar.' },
-
-  // --- não volta ---
-  { name: 'Danificado', type: 'UNDEPLOYABLE', color: '#ef4444', showInNav: true,
-    notes: 'Sem conserto viável. Candidato a descarte.' },
-  { name: 'Perdido / Roubado', type: 'UNDEPLOYABLE', color: '#ef4444', showInNav: false,
-    notes: 'Extraviado ou furtado. Mantido no inventário para a trilha de auditoria.' },
-
-  // --- encerrado ---
-  { name: 'Arquivado', type: 'ARCHIVED', color: '#888888', showInNav: false,
-    notes: 'Fora de operação e fora das listagens do dia a dia.' },
-] as const;
-
 // Conjunto mínimo para os formulários não abrirem com `<select>` vazio.
-// NÃO semeamos fabricante, localização nem modelo: são dado da empresa, não do
-// software — semear "Dell" é adivinhar o cliente.
+// NÃO semeamos fabricante, localização, modelo nem STATUS: são dado da empresa,
+// não do software — semear "Dell" é adivinhar o cliente. Do status o software
+// só fixa o TIPO (enum `StatusLabelType`); o nome, quem cadastra é o usuário.
 //
 // ATIVO É COMPUTADOR: as categorias de ativo são as de máquina. Monitor e
 // periférico são ESTOQUE — item por quantidade, sem patrimônio individual.
 const CATEGORIES = [
-  { name: 'Notebook', type: 'ASSET', color: '#3b82f6' },
-  { name: 'Desktop', type: 'ASSET', color: '#3b82f6' },
-  { name: 'Monitor', type: 'STOCK', color: '#888888' },
-  { name: 'Periférico', type: 'STOCK', color: '#888888' },
-  { name: 'Licença', type: 'LICENSE', color: '#f59e0b' },
+  { name: 'Notebook', type: 'ASSET' },
+  { name: 'Desktop', type: 'ASSET' },
+  { name: 'Monitor', type: 'STOCK' },
+  { name: 'Periférico', type: 'STOCK' },
+  { name: 'Licença', type: 'LICENSE' },
 ] as const;
 
 // O ADMINISTRADOR INICIAL — o único jeito de entrar num banco recém-criado.
@@ -132,18 +81,6 @@ const seeders: Seeder[] = [
         update: {},
         create: { id: APP_SETTING_ID },
       });
-    },
-  },
-  {
-    name: 'StatusLabel',
-    run: async () => {
-      for (const status of STATUS_LABELS) {
-        await prisma.statusLabel.upsert({
-          where: { name: status.name },
-          update: {},
-          create: status,
-        });
-      }
     },
   },
   {

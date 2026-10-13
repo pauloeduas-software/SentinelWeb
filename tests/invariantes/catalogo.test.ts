@@ -13,7 +13,7 @@ import {
 // O que ela impede é uma escrita que não deixa rastro: trocar o `type` de um
 // `StatusLabel` que 200 ativos usam muda o significado dos 200 DE UMA VEZ, sem
 // escrever uma linha em `assets` e portanto sem `ActivityLog` nenhum.
-// "Pronto p/ Uso" virando `ARCHIVED` arquiva a frota em silêncio.
+// Um status disponível virando `UNDEPLOYABLE` inutiliza a frota em silêncio.
 
 let api: ApiDeTeste;
 let modelId = '';
@@ -32,6 +32,11 @@ afterAll(async () => {
 });
 
 describe('StatusLabel', () => {
+  it('recusa o tipo ARCHIVED — quem sai de vez é baixado', async () => {
+    const { status } = await api.post('/api/status-labels', { name: 'Arquivado', type: 'ARCHIVED' });
+    expect(status).toBe(422);
+  });
+
   it('deixa mudar o tipo enquanto NINGUÉM usa', async () => {
     const criado = await api.post<{ id: string }>('/api/status-labels', {
       name: 'Status sem uso',
@@ -39,7 +44,7 @@ describe('StatusLabel', () => {
     });
     expect(criado.status).toBe(201);
 
-    const { status } = await api.put(`/api/status-labels/${criado.body.id}`, { type: 'ARCHIVED' });
+    const { status } = await api.put(`/api/status-labels/${criado.body.id}`, { type: 'UNDEPLOYABLE' });
     expect(status).toBe(200);
   });
 
@@ -51,7 +56,7 @@ describe('StatusLabel', () => {
     await criarAtivo(api, { statusId: criado.body.id, modelId, name: 'Ativo que segura o status' });
 
     const { status, body } = await api.put<{ error: string }>(`/api/status-labels/${criado.body.id}`, {
-      type: 'ARCHIVED',
+      type: 'UNDEPLOYABLE',
     });
 
     expect(status).toBe(409);
@@ -61,7 +66,7 @@ describe('StatusLabel', () => {
   });
 
   it('deixa renomear um status em uso — só o TIPO é que trava', async () => {
-    // A recusa é estreita de propósito: mudar a cor, o nome ou as notas de um
+    // A recusa é estreita de propósito: mudar o nome ou as notas de um
     // status em uso é edição normal e não muda o significado de ativo nenhum.
     const criado = await api.post<{ id: string }>('/api/status-labels', {
       name: 'Status renomeável',

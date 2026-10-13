@@ -52,10 +52,9 @@ export class AssetMaestro {
     // linha no ActivityLog.
     server.post('/api/assets/:id/restore', WRITE_RATE_LIMIT, assetController.restore);
 
-    // DESCOMISSIONAR: o ativo saiu do PATRIMÔNIO (vendido, descartado,
-    // roubado). Não é arquivar (`status.type = ARCHIVED`) nem apagar
-    // (`deletedAt`) — são três colunas com três significados, e nenhuma
-    // substitui a outra (D19). POST porque muda estado e deixa histórico.
+    // DAR BAIXA: o ativo saiu do PATRIMÔNIO (vendido, descartado,
+    // roubado). Não é apagar (`deletedAt`) — são duas colunas com dois
+    // significados (D19). POST porque muda estado e deixa histórico.
     server.post('/api/assets/:id/retire', WRITE_RATE_LIMIT, assetController.retire);
     server.post('/api/assets/:id/unretire', WRITE_RATE_LIMIT, assetController.unretire);
 

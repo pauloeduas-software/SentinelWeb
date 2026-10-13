@@ -169,8 +169,8 @@ export async function escolherStatusPorTipo(
   // A PREFERÊNCIA CONFIGURADA VENCE — `AppSetting.checkoutStatusId` para a
   // entrega, `checkinStatusId` para a devolução.
   //
-  // Sem ela, a escolha é "o primeiro do tipo, por nome", que funciona com os 8
-  // rótulos do seed e vira loteria assim que alguém cadastra "Em uso — home
+  // Sem ela, a escolha é "o primeiro do tipo, por nome", que funciona com um
+  // status por tipo e vira loteria assim que alguém cadastra "Em uso — home
   // office" e "Em uso — escritório": o status da entrega passa a depender da
   // ordem alfabética, e isso não está escrito em lugar nenhum que o operador
   // leia. Era a última pendência da F4.
@@ -335,7 +335,7 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
     // Invariante estado × posse, reaproveitada do domínio do ativo em vez de
     // recopiada aqui. Ela lê a posse ABERTA, então só funciona DEPOIS do
     // `create` — antes dele não há posse nenhuma para contradizer. Se o
-    // `statusId` escolhido à mão for de estoque ou de arquivo, a transação
+    // `statusId` escolhido à mão for de estoque, a transação
     // inteira volta atrás e nenhuma das três escritas acontece.
     await assertStatusCoerenteComPosse(tx, assetId, statusId);
 

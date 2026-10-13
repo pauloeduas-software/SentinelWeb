@@ -104,11 +104,6 @@ que **não** apareceu. Um filtro errado para mais não quebra nada: ele some com
 linha, a tela fica plausível, e a falta só é notada quando alguém procura um
 equipamento que o sistema jurava não ter.
 
-É também onde mora a armadilha do filtro que o próprio sistema oferece:
-`vistas-do-ativo.test.ts` prova que clicar no contador de um status arquivado
-devolve os ativos dele, em vez da lista vazia que a exclusão da vista padrão
-produziria sozinha.
-
 ### `licencas/` — a corrida que o `SKIP LOCKED` ganha
 
 Cinco arquivos (sem `chave.test.ts` nem `canario.test.ts`, que saíram com a cifra —

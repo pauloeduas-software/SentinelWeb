@@ -1,19 +1,19 @@
 import { PackageX, Undo2 } from 'lucide-react';
 import type { Asset } from '../../../../domain/shared/asset.types';
 import { formatarData, formatarMoeda } from '../../../helpers/format.helper';
-import { seloDaSaida } from '../../helpers/descomissionamento.helper';
+import { seloDaSaida } from '../../helpers/baixa.helper';
 
 // A FICHA do ativo. Só leitura: editar é o modal que já existe, e duplicar os
 // campos aqui em modo de edição criaria dois formulários para a mesma tabela.
 
 interface DetalhesTabProps {
   asset: Asset;
-  onDescomissionar: () => void;
+  onDarBaixa: () => void;
   onReverterSaida: () => void;
 }
 
 export default function DetalhesTab({
-  asset, onDescomissionar, onReverterSaida,
+  asset, onDarBaixa, onReverterSaida,
 }: DetalhesTabProps) {
   // Cálculo fora do JSX (docs/referencia/arquitetura.md). Os dois textos abaixo dependem
   // do mesmo dado e são lidos em dois lugares da tela.
@@ -30,8 +30,8 @@ export default function DetalhesTab({
             </div>
             <div className="text-text-primary">{selo}</div>
             <p className="text-text-tertiary text-[10px] leading-relaxed max-w-xl">
-              Saiu do patrimônio — não é o mesmo que estar arquivado (fora de operação) nem na
-              lixeira (cadastro errado). O ativo continua no histórico e nos relatórios com a data
+              Saiu do patrimônio — não é o mesmo que estar na lixeira (cadastro errado). O
+              ativo continua no histórico e nos relatórios com a data
               em que saiu.
             </p>
           </div>
@@ -83,16 +83,16 @@ export default function DetalhesTab({
       {!selo && (
         <div className="border-t border-border-sutil pt-4 flex items-center justify-between gap-4">
           <p className="text-text-tertiary text-[10px] leading-relaxed max-w-xl">
-            <span className="text-text-secondary uppercase tracking-widest">Descomissionar</span>{' '}
+            <span className="text-text-secondary uppercase tracking-widest">Dar baixa</span>{' '}
             registra que o ativo saiu do patrimônio, com a data e o motivo. Ativo entregue é
             recusado: faça a devolução antes.
           </p>
           <button
             type="button"
-            onClick={onDescomissionar}
+            onClick={onDarBaixa}
             className="flex items-center gap-2 px-3 py-2 border border-border-sutil text-text-secondary hover:text-status-warning hover:bg-bg-base transition-colors shrink-0"
           >
-            <PackageX size={13} /> Descomissionar
+            <PackageX size={13} /> Dar baixa
           </button>
         </div>
       )}

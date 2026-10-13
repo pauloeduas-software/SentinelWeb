@@ -51,8 +51,8 @@ export function useAssets() {
   const total = data?.total ?? 0;
 
   // O STATUS COM QUE UM ATIVO NOVO NASCE: o primeiro do TIPO `DEPLOYABLE` — o
-  // tipo que a tela de Configurações rotula "Disponível" e que o seed chama de
-  // "Pronto p/ Uso" —, e não o primeiro da lista alfabética ("Aguardando").
+  // tipo que a tela de Configurações rotula "Disponível" —, e não o primeiro da
+  // lista alfabética, que pode ser de qualquer tipo.
   // Só `DEPLOYABLE` pode ser entregue, e o ativo recém-cadastrado está no
   // estoque, pronto. Pelo TIPO e não pelo nome: nome é cadastro de texto livre,
   // e é a mesma regra que o servidor aplica na devolução sem preferência
@@ -171,8 +171,7 @@ export function useAssets() {
     // As colunas que o cliente criou. Vazio é o caso NORMAL — a maioria das
     // instalações não tem campo marcado como coluna —, e a tabela segue
     // idêntica ao que era.
-    descomissionados: stats?.retired ?? 0,
-    arquivados: stats?.archived ?? 0,
+    baixados: stats?.retired ?? 0,
     page,
     perPage: PER_PAGE,
     setPage,

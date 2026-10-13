@@ -101,4 +101,18 @@ export async function truncarTudo(): Promise<void> {
 export async function resetarBanco(): Promise<void> {
   await truncarTudo();
   await semearBanco();
+  await cadastrarStatusDeTeste();
+}
+
+// O seed não cria status (o nome é do usuário), então o harness cadastra um de
+// cada tipo, como um operador faria antes do primeiro ativo.
+async function cadastrarStatusDeTeste(): Promise<void> {
+  await prisma.statusLabel.createMany({
+    data: [
+      { name: 'Teste — Disponível', type: 'DEPLOYABLE' },
+      { name: 'Teste — Em uso', type: 'IN_USE' },
+      { name: 'Teste — Pendente', type: 'PENDING' },
+      { name: 'Teste — Inutilizável', type: 'UNDEPLOYABLE' },
+    ],
+  });
 }

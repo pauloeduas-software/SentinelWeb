@@ -22,12 +22,10 @@ export interface Referencia {
 
 export interface StatusRef extends Referencia {
   type: string;
-  color: string | null;
 }
 
 export interface CategoriaRef extends Referencia {
   type: string;
-  color: string | null;
 }
 
 export interface ModeloRef extends Referencia {
@@ -72,10 +70,9 @@ export interface Asset {
   purchaseCost: string | null;
 
   /**
-   * DESCOMISSIONAMENTO — o ativo saiu do PATRIMÔNIO.
+   * BAIXA — o ativo saiu do PATRIMÔNIO.
    *
-   * Não confundir com as outras duas saídas (D19): `status.type === 'ARCHIVED'`
-   * é ter saído da OPERAÇÃO, e a lixeira é ter sido cadastrado ERRADO. Um
+   * Não confundir com a lixeira (D19), que é ter sido cadastrado ERRADO. Um
    * notebook vendido continua no patrimônio histórico, com a data em que saiu;
    * um da lixeira nunca deveria ter existido.
    */
@@ -106,47 +103,38 @@ export interface Asset {
 }
 
 /**
- * Os cinco tipos de `StatusLabel`, espelhando o enum do Postgres.
+ * Os quatro tipos de `StatusLabel`, espelhando o enum do Postgres.
  *
- * São CINCO, não quatro: o `IN_USE` entrou entre `DEPLOYABLE` e `PENDING`
- * porque "está com alguém" e "está na assistência" é a distinção mais cara do
- * inventário (D5). Qualquer lista aqui com quatro está desatualizada.
+ * `IN_USE` é tipo próprio porque "está com alguém" e "está na assistência" é a
+ * distinção mais cara do inventário (D5). Não há tipo "arquivado": o que sai de
+ * vez é baixado (`retiredAt`).
  *
  * Os rótulos em português e a ajuda de cada um moram em
  * `pages/configuracoes/specs/catalog-ui.types.ts` — aqui é só o contrato.
  */
-export type TipoDeStatus = 'DEPLOYABLE' | 'IN_USE' | 'PENDING' | 'ARCHIVED' | 'UNDEPLOYABLE';
+export type TipoDeStatus = 'DEPLOYABLE' | 'IN_USE' | 'PENDING' | 'UNDEPLOYABLE';
 
 export interface AssetStats {
-  /** O que a listagem PADRÃO mostra: nem descomissionado, nem arquivado. */
+  /** O que a listagem PADRÃO mostra: nem baixado, nem em posto. */
   total: number;
   byStatus: {
     id: string;
     name: string;
-    color: string | null;
-    showInNav: boolean;
-    /** O tipo do rótulo — é ele que diz à tela que este contador é de arquivo. */
     type: TipoDeStatus;
     total: number;
   }[];
   /** Quantos saíram do PATRIMÔNIO (`retiredAt`) — vendido, descartado, roubado. */
   retired: number;
-  /** Quantos saíram da OPERAÇÃO (status de tipo `ARCHIVED`) — e voltam trocando o status. */
-  archived: number;
 }
 
 /**
- * As vistas da listagem de ATIVO — quatro, e não as duas do `ListView` genérico.
+ * As vistas da listagem de ATIVO — três, e não as duas do `ListView` genérico.
  *
- * `retired` e `archived` são do ITAM e por isso não moram no tipo compartilhado:
- * nenhuma outra tabela do sistema tem "saiu do patrimônio" nem "saiu de
- * operação" (D20, docs/historico/fase-02-ativos.md).
- *
- * As duas parecem a mesma coisa e não são (D19): descomissionar é fato
- * contábil e não volta; arquivar é decisão operacional e volta trocando o
- * status. `active` exclui as duas.
+ * `retired` é do ITAM e por isso não mora no tipo compartilhado: nenhuma outra
+ * tabela do sistema tem "saiu do patrimônio" (D20,
+ * docs/historico/fase-02-ativos.md). `active` o exclui.
  */
-export type AssetView = 'active' | 'trashed' | 'retired' | 'archived';
+export type AssetView = 'active' | 'trashed' | 'retired';
 
 /** Recortes prontos que respondem a uma pergunta, não a um filtro de coluna. */
 
@@ -168,7 +156,7 @@ export type AssetListParams = Omit<ListParams, 'view'> & {
  * Um evento da aba Histórico — `GET /api/assets/:id/history`.
  *
  * Duas fontes numa lista só: o `ActivityLog` (cadastro, edição com diff,
- * lixeira, descomissionamento) e o histórico de posse. NÃO existe tabela
+ * lixeira, baixa) e o histórico de posse. NÃO existe tabela
  * `AssetLog` (D18).
  */
 export interface EventoDoAtivo {

@@ -146,27 +146,8 @@ describe('invariante 4 — estado × posse', () => {
     expect(body.error).toMatch(/devolu[çc][ãa]o/i);
   });
 
-  it('recusa arquivar um ativo que está com alguém', async () => {
-    const ativo = await criarAtivo(api, {
-      statusId: cenario.statusDeployableId,
-      modelId: cenario.modelId,
-      name: 'Notebook do arquivamento',
-    });
-
-    await api.post(`/api/assets/${ativo.id}/checkout`, {
-      targetType: 'USER',
-      targetUserId: cenario.ana,
-    });
-
-    // Arquivar sumiria com ele do relatório enquanto continua na mão dela.
-    const { status } = await api.put(`/api/assets/${ativo.id}`, {
-      statusId: cenario.statusArquivadoId,
-    });
-    expect(status).toBe(409);
-  });
-
   it('ACEITA os estados que descrevem operação real com responsável', async () => {
-    // A estreiteza é de propósito: são 2 proibidos de 10. `PENDING` com
+    // A estreiteza é de propósito: é 1 proibido de 8. `PENDING` com
     // responsável é o notebook que foi à assistência e VOLTA para a mesma
     // pessoa — fechar a posse ali perderia a continuidade de quem responde.
     const ativo = await criarAtivo(api, {

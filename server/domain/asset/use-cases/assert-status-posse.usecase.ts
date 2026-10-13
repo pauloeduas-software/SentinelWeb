@@ -12,27 +12,24 @@ import { AppError } from '../../../core/errors/app-error';
 export type ClienteStatusPosse = Omit<typeof prisma, `$${string}`>;
 
 /**
- * Os dois tipos incompatíveis com posse aberta, e a razão de cada um — a razão
- * entra na mensagem para o erro ENSINAR o modelo em vez de só recusar.
+ * O tipo incompatível com posse aberta, e a razão — ela entra na mensagem para
+ * o erro ENSINAR o modelo em vez de só recusar.
  *
- * - `DEPLOYABLE` é "está no estoque, pode ser entregue". Um ativo que já está
- *   com alguém não está no estoque; dizer que está abre a porta para uma
- *   segunda entrega do mesmo equipamento.
- * - `ARCHIVED` é "saiu da operação". Não se arquiva o que ainda está na mão de
- *   um colaborador — o equipamento sumiria dos relatórios continuando com ele.
+ * `DEPLOYABLE` é "está no estoque, pode ser entregue". Um ativo que já está com
+ * alguém não está no estoque; dizer que está abre a porta para uma segunda
+ * entrega do mesmo equipamento.
  */
 const TIPOS_PROIBIDOS_COM_POSSE: Partial<Record<$Enums.StatusLabelType, string>> = {
   [$Enums.StatusLabelType.DEPLOYABLE]: 'é um status de estoque',
-  [$Enums.StatusLabelType.ARCHIVED]: 'tira o ativo de operação',
 };
 
 /**
  * Invariante estado × posse (docs/referencia/invariantes.md).
  *
  * Um ativo com `Assignment` ABERTA (`checkinAt: null`) não pode receber status
- * de tipo `DEPLOYABLE` nem `ARCHIVED`. São 2 combinações proibidas de 10
- * (5 tipos × com/sem posse) — a regra é estreita DE PROPÓSITO, porque as outras
- * oito descrevem operação real:
+ * de tipo `DEPLOYABLE`. É 1 combinação proibida de 8 (4 tipos × com/sem posse)
+ * — a regra é estreita DE PROPÓSITO, porque as outras sete descrevem operação
+ * real:
  *
  * - `PENDING` COM responsável é o notebook que foi para o conserto e VOLTA para
  *   a mesma pessoa. Fechar a posse na saída para a assistência obrigaria a
@@ -60,7 +57,7 @@ export async function assertStatusCoerenteComPosse(
   assetId: string,
   statusIdFinal: string,
 ): Promise<void> {
-  // Sem posse aberta não há o que contradizer: qualquer um dos cinco tipos
+  // Sem posse aberta não há o que contradizer: qualquer um dos quatro tipos
   // serve, e a consulta do status nem precisa acontecer.
   const posse = await client.assignment.findFirst({
     where: { assetId, checkinAt: null },

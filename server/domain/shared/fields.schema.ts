@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // Construtores de campo reaproveitados pelos schemas de vários domínios — as
 // cinco tabelas de catálogo e o ativo. Um lugar só para as regras que se repetem:
-// nome, texto livre, cor, e-mail, site, dinheiro, data.
+// nome, texto livre, e-mail, site, dinheiro, data.
 //
 // Todos seguem o mesmo padrão: `''` vira `null`
 // (o formulário manda string vazia quando o usuário limpa o campo) e ausente
@@ -17,23 +17,6 @@ export const nomeObrigatorio = (rotulo = 'nome') =>
 export const textoOpcional = (rotulo: string, max = 500) =>
   z.string().trim().max(max, `${rotulo}: máximo de ${max} caracteres`).nullish()
     .transform((valor) => (valor === undefined ? undefined : valor || null));
-
-// Cor em hexadecimal, porque ela vai para `style={{ color }}` no frontend — o
-// Tailwind não gera classe a partir de string de runtime, então o valor precisa
-// ser CSS válido por conta própria.
-//
-// O FORMATO MORA NUMA CONSTANTE, e não embutido no único consumidor: o dia que
-// nascer a segunda coluna de cor, duas cópias do regex divergiriam na primeira
-// vez que alguém aceitasse `#rgb` de três dígitos em uma delas.
-const HEX_RRGGBB = /^#[0-9a-fA-F]{6}$/;
-const FORMATO_DE_COR = 'cor deve estar no formato #rrggbb';
-
-export const corOpcional = z
-  .string()
-  .trim()
-  .regex(HEX_RRGGBB, FORMATO_DE_COR)
-  .nullish()
-  .transform((valor) => (valor === undefined ? undefined : valor || null));
 
 // `z.email()` da zod 4 valida ANTES do `.trim()`; por isso o `pipe` (a mesma
 // armadilha documentada na Fase 0, em user.schema.ts).

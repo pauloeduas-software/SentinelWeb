@@ -1,4 +1,4 @@
--- DESCOMISSIONAMENTO E AÇÃO EM MASSA — o que o banco pode conferir sozinho.
+-- BAIXA E AÇÃO EM MASSA — o que o banco pode conferir sozinho.
 --
 -- Diferença para `posse-invariantes.sql`: lá as regras vivem no BANCO (índices
 -- parciais), e o SQL prova que elas recusam o que deve recusar. Aqui as regras
@@ -12,7 +12,7 @@
 -- `psql` à mão, um script de carga, ou uma regressão no use-case.
 --
 --   docker exec -i sentinel-postgres psql -U sentinel -d sentineldb -q -f - \
---     < prisma/verificacoes/descomissionamento.sql
+--     < prisma/verificacoes/baixa.sql
 
 BEGIN;
 
@@ -37,7 +37,7 @@ WHERE (a."retiredAt" IS NULL) <> (a."retiredReason" IS NULL);
 \echo ''
 \echo '### 3. Saida do patrimonio sem linha no historico  -> esperado: 0 linhas'
 -- RETIRE grava `assets` e `activity_logs` na MESMA transacao. Um ativo
--- descomissionado sem o evento correspondente significa escrita fora do
+-- baixado sem o evento correspondente significa escrita fora do
 -- use-case — e um ativo que sumiu do parque sem explicacao.
 SELECT a."assetTag", a."retiredAt"
 FROM assets a

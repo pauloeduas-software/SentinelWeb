@@ -99,20 +99,6 @@ function Celula({ coluna, registro }: { coluna: ColunaSpec; registro: CatalogRow
   const valor = registro[coluna.key];
 
   switch (coluna.render) {
-    case 'cor':
-      return (
-        <span className="flex items-center gap-2 text-text-primary">
-          {/* A cor vem do BANCO, então vai por `style`. O Tailwind gera CSS a
-              partir do que está escrito no fonte — uma classe montada com
-              string de runtime não existiria no bundle. */}
-          <span
-            className="w-2 h-2 rounded-full shrink-0 border border-border-sutil"
-            style={typeof valor === 'string' && registro.color ? { backgroundColor: String(registro.color) } : undefined}
-          />
-          {String(registro.name)}
-        </span>
-      );
-
     case 'enum':
       return <span>{rotuloDoEnum(valor, coluna.opcoes)}</span>;
 

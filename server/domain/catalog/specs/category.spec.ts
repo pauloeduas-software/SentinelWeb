@@ -29,12 +29,12 @@ export const categorySpec: CatalogSpec = {
   updateSchema: updateCategorySchema,
 
   select: {
-    id: true, name: true, type: true, color: true, createdAt: true,
+    id: true, name: true, type: true, createdAt: true,
   },
   sortable: ['name', 'type', 'createdAt'],
   defaultSort: 'name',
   searchable: ['name'],
-  audited: ['name', 'type', 'color'],
+  audited: ['name', 'type'],
 
   // O `<select>` de cada formulário pede só as do SEU tipo; sem isto ele
   // ofereceria duas linhas de mesmo nome e tipos diferentes.

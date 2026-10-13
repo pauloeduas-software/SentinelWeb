@@ -13,13 +13,12 @@ const categoria: CatalogUiSpec = {
   descricao: 'O NOME é seu. O TIPO diz a que módulo a categoria pertence — uma categoria de Ativo não agrupa licenças.',
   placeholderBusca: 'Buscar categoria...',
   colunas: [
-    { key: 'name', label: 'Nome', render: 'cor' },
+    { key: 'name', label: 'Nome' },
     { key: 'type', label: 'Tipo', render: 'enum', opcoes: TIPOS_CATEGORIA },
   ],
   campos: [
     { key: 'name', label: 'Nome', tipo: 'text', obrigatorio: true, placeholder: 'Ex: Notebook' },
     { key: 'type', label: 'Tipo', tipo: 'select', obrigatorio: true, opcoes: TIPOS_CATEGORIA },
-    { key: 'color', label: 'Cor', tipo: 'color' },
   ],
 };
 
@@ -27,19 +26,16 @@ const status: CatalogUiSpec = {
   slug: 'status-labels',
   aba: 'Status',
   singular: 'Status',
-  descricao: 'O NOME é seu — crie quantos quiser. O TIPO é uma de cinco caixas que o sistema entende: é ele que decide se o ativo pode ser entregue a alguém e se ainda conta como patrimônio.',
+  descricao: 'O NOME é seu — crie quantos quiser. O TIPO é uma de quatro caixas que o sistema entende: é ele que decide se o ativo pode ser entregue a alguém.',
   placeholderBusca: 'Buscar status...',
   colunas: [
-    { key: 'name', label: 'Nome', render: 'cor' },
+    { key: 'name', label: 'Nome' },
     { key: 'type', label: 'Tipo', render: 'enum', opcoes: TIPOS_STATUS },
-    { key: 'showInNav', label: 'Em destaque', render: 'booleano' },
     { key: 'notes', label: 'Notas' },
   ],
   campos: [
     { key: 'name', label: 'Nome', tipo: 'text', obrigatorio: true, placeholder: 'Ex: Pronto p/ Uso' },
     { key: 'type', label: 'Tipo', tipo: 'select', obrigatorio: true, opcoes: TIPOS_STATUS },
-    { key: 'color', label: 'Cor', tipo: 'color' },
-    { key: 'showInNav', label: 'Destacar no painel de ativos (aparece mesmo com zero)', tipo: 'checkbox' },
     { key: 'notes', label: 'Notas', tipo: 'textarea', largura: 'inteira' },
   ],
 };

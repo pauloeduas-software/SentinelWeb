@@ -9,7 +9,7 @@ import DetalhesTab from './components/DetalhesTab';
 import HistoryTab from './components/HistoryTab';
 import PosseTab from './components/PosseTab';
 import RetireModal from './components/RetireModal';
-import { seloDaSaida } from '../helpers/descomissionamento.helper';
+import { seloDaSaida } from '../helpers/baixa.helper';
 import { rotuloDaOperacao } from '../helpers/posse.helper';
 import { useAssetDetail } from './hooks/useAssetDetail';
 
@@ -30,8 +30,8 @@ export default function AssetDetailPage() {
     assignments, possePendente,
     licencas, licencasPendentes,
     maquina, maquinaPendente, desvinculando, handleDesvincular,
-    modal, abrirEdicao, abrirClone, abrirPosse, abrirDescomissionar, fecharModal,
-    handleSubmit, handleEntregar, handleDevolver, handleDescomissionar, handleReverterSaida,
+    modal, abrirEdicao, abrirClone, abrirPosse, abrirBaixa, fecharModal,
+    handleSubmit, handleEntregar, handleDevolver, handleDarBaixa, handleReverterSaida,
     handleDelete,
   } = useAssetDetail();
 
@@ -67,14 +67,7 @@ export default function AssetDetailPage() {
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-xl font-mono text-text-primary uppercase tracking-widest">{asset.assetTag}</h2>
 
-            {/* A cor vem do banco (StatusLabel.color): vai por `style`, porque o
-                Tailwind não gera classe a partir de string de runtime. */}
-            <span
-              className="px-2 py-1 border rounded-[2px] font-mono text-[10px] uppercase tracking-widest"
-              style={asset.status.color
-                ? { color: asset.status.color, borderColor: `${asset.status.color}33`, backgroundColor: `${asset.status.color}1a` }
-                : undefined}
-            >
+            <span className="px-2 py-1 border border-border-sutil rounded-[2px] text-text-secondary font-mono text-[10px] uppercase tracking-widest">
               {asset.status.name}
             </span>
 
@@ -110,7 +103,7 @@ export default function AssetDetailPage() {
         {aba === 'detalhes' && (
           <DetalhesTab
             asset={asset}
-            onDescomissionar={abrirDescomissionar}
+            onDarBaixa={abrirBaixa}
             onReverterSaida={() => void handleReverterSaida()}
           />
         )}
@@ -160,8 +153,8 @@ export default function AssetDetailPage() {
         />
       )}
 
-      {modal === 'descomissionar' && (
-        <RetireModal asset={asset} onClose={fecharModal} onConfirmar={handleDescomissionar} />
+      {modal === 'baixa' && (
+        <RetireModal asset={asset} onClose={fecharModal} onConfirmar={handleDarBaixa} />
       )}
     </div>
   );

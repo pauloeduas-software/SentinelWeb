@@ -18,7 +18,7 @@ export const STOCK_ITEM_SELECT = {
   updatedAt: true,
   deletedAt: true,
 
-  category: { select: { id: true, name: true, type: true, color: true } },
+  category: { select: { id: true, name: true, type: true } },
 } as const;
 
 /**
@@ -63,7 +63,7 @@ export const STOCK_UNIT_SELECT = {
   item: {
     select: {
       id: true, name: true, deletedAt: true,
-      category: { select: { id: true, name: true, color: true } },
+      category: { select: { id: true, name: true } },
     },
   },
 } as const;

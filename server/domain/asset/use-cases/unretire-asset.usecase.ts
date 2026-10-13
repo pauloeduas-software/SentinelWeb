@@ -5,7 +5,7 @@ import { buildChanges } from '../../shared/diff.helper';
 import { ASSET_SELECT } from '../helpers/asset-select.helper';
 
 /**
- * DESFAZER o descomissionamento — a venda não saiu, o equipamento "roubado"
+ * DESFAZER a baixa — a venda não saiu, o equipamento "roubado"
  * apareceu, alguém clicou errado.
  *
  * Existe por simetria com a restauração da lixeira e pelo mesmo motivo: a
@@ -29,7 +29,7 @@ export async function unretireAsset(id: string, actorId: string | null = null) {
     if (!antes) throw new AppError('Registro não encontrado', 404);
 
     if (!antes.retiredAt) {
-      throw new AppError(`${antes.assetTag} não está descomissionado.`, 409);
+      throw new AppError(`${antes.assetTag} não teve baixa.`, 409);
     }
 
     const depois = await tx.asset.update({
