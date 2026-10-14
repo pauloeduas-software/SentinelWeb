@@ -4,8 +4,7 @@ import type { ApiDeTeste } from './app';
 // O CENÁRIO de cada teste, montado PELA API.
 //
 // A regra do arquivo: o que o teste vai EXERCITAR nasce por HTTP; o que ele só
-// precisa CONSULTAR (os ids do catálogo que o seed e o harness criaram) sai do
-// Prisma direto.
+// precisa CONSULTAR (os ids do catálogo que o seed criou) sai do Prisma direto.
 //
 // A distinção importa. Criar o ativo com `prisma.asset.create` pularia o zod da
 // borda, o `strictObject`, a etiqueta automática e o `ActivityLog` — e o teste
@@ -25,7 +24,7 @@ function exigir201<T>(o_que: string, resposta: { status: number; body: unknown }
   return resposta.body as T;
 }
 
-/** Os ids que o seed e o harness (`tests/setup/database.ts`) deixam prontos. Lidos, nunca criados. */
+/** Os ids que o seed deixa prontos. Lidos, nunca criados. */
 export async function idsDoSeed() {
   const [
     deployable, emUso, categoria, licenca, estoque,

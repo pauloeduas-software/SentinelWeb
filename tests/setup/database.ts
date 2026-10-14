@@ -1,6 +1,6 @@
 import { prisma } from '../../server/core/database/prismaClient';
 import { getDatabaseUrl } from '../../server/core/config/env';
-import { semearBanco } from '../../prisma/seed';
+import { semearBanco } from '../../prisma/seeds/index';
 
 // O BANCO DE TESTE — e a trava que impede o harness de apagar o seu.
 //
@@ -94,25 +94,11 @@ export async function truncarTudo(): Promise<void> {
 /**
  * O estado inicial de todo arquivo de teste: banco vazio + o seed de verdade.
  *
- * É o seed de `prisma/seed.ts`, importado — não uma cópia. Uma cópia
+ * É o seed de `prisma/seeds/`, importado — não uma cópia. Uma cópia
  * divergiria do catálogo real no primeiro ajuste, e os testes passariam a
  * provar coisas sobre um sistema que não existe.
  */
 export async function resetarBanco(): Promise<void> {
   await truncarTudo();
   await semearBanco();
-  await cadastrarStatusDeTeste();
-}
-
-// O seed não cria status (o nome é do usuário), então o harness cadastra um de
-// cada tipo, como um operador faria antes do primeiro ativo.
-async function cadastrarStatusDeTeste(): Promise<void> {
-  await prisma.statusLabel.createMany({
-    data: [
-      { name: 'Teste — Disponível', type: 'DEPLOYABLE' },
-      { name: 'Teste — Em uso', type: 'IN_USE' },
-      { name: 'Teste — Pendente', type: 'PENDING' },
-      { name: 'Teste — Inutilizável', type: 'UNDEPLOYABLE' },
-    ],
-  });
 }

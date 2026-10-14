@@ -21,7 +21,7 @@
     "postinstall": "prisma generate"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seeds/index.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",
