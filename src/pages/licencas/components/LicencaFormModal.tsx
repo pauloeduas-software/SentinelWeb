@@ -15,10 +15,6 @@ import type { Licenca, LicencaInput } from '../../../domain/shared/license.types
 // responde 409 com os números. A frase embaixo do campo diz isso, porque quem
 // reduz um contrato precisa saber antes de tentar.
 // ─────────────────────────────────────────────────────────────────────────────
-//
-// A CHAVE DE PRODUTO entra aqui e NUNCA volta: o campo nasce vazio inclusive na
-// edição. Preenchê-lo com a máscara convidaria alguém a salvar o formulário sem
-// tocar no campo e gravar `••••-••••-AB12` como se fosse a chave.
 
 const CLASSE_CAMPO =
   'w-full p-2 bg-bg-base border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors';
@@ -50,7 +46,6 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
   const [terminationDate, setTerminationDate] = useState(paraCampoDeData(licenca?.terminationDate));
   const [licensedToName, setLicensedToName] = useState(licenca?.licensedToName ?? '');
   const [licensedToEmail, setLicensedToEmail] = useState(licenca?.licensedToEmail ?? '');
-  // Sempre vazio, inclusive na edição — ver o bloco no topo do arquivo.
   const [manufacturerId, setManufacturerId] = useState(licenca?.manufacturerId ?? '');
   const [orderNumber, setOrderNumber] = useState(licenca?.orderNumber ?? '');
   const [purchaseDate, setPurchaseDate] = useState(paraCampoDeData(licenca?.purchaseDate));
@@ -120,7 +115,7 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
               <span className={ROTULO}>Nome *</span>
               <input
                 required value={name} onChange={(e) => setName(e.target.value)}
-                className={CLASSE_CAMPO} placeholder="Office 2024"
+                className={CLASSE_CAMPO}
               />
             </label>
 
@@ -128,12 +123,12 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
               <span className={ROTULO}>Categoria *</span>
               {/* Filtrada por TIPO: o `<select>` não oferece categoria de ativo,
                   porque o servidor a recusaria com 422. */}
-              <ReferenceSelect rota="categories" filtroTipo="LICENSE" valor={categoryId} obrigatorio onChange={setCategoryId} />
+              <ReferenceSelect rota="categories" filtroTipo="LICENSE" valor={categoryId} obrigatorio atual={licenca?.category} onChange={setCategoryId} />
             </label>
 
             <label className="space-y-1.5">
               <span className={ROTULO}>Fabricante</span>
-              <ReferenceSelect rota="manufacturers" valor={manufacturerId} onChange={setManufacturerId} />
+              <ReferenceSelect rota="manufacturers" valor={manufacturerId} atual={licenca?.manufacturer} onChange={setManufacturerId} />
             </label>
 
             <label className="space-y-1.5">
@@ -193,7 +188,7 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
 
             <label className="space-y-1.5">
               <span className={ROTULO}>Valor da compra</span>
-              <input value={purchaseCost} onChange={(e) => setPurchaseCost(e.target.value)} className={CLASSE_CAMPO} placeholder="1234.50" />
+              <input value={purchaseCost} onChange={(e) => setPurchaseCost(e.target.value)} className={CLASSE_CAMPO} />
             </label>
 
             <div className="col-span-2 flex flex-wrap gap-6 py-1">

@@ -24,10 +24,12 @@ export async function listCatalogOptions(
   spec: CatalogSpec,
   q?: string,
   filtro?: string,
+  incluirInativos = false,
 ): Promise<CatalogOption[]> {
   const rows = await spec.delegate(prisma).findMany({
     where: {
       ...buildCatalogWhere(spec.searchable, q),
+      ...(incluirInativos ? {} : spec.optionsWhere),
       ...(filtro && spec.optionFilter ? { [spec.optionFilter.campo]: filtro } : {}),
     },
     select: { id: true, name: true },

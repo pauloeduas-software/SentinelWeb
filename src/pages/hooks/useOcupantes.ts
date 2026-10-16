@@ -20,7 +20,7 @@ import { nomeDoOcupante } from '../helpers/ocupantes.helper';
 export function useOcupantes(locationId: string | null) {
   const [view, setView] = useState<OccupantView>('current');
 
-  const { data, isPending } = useLocationOccupantsQuery(locationId, view);
+  const { data, isPending, error } = useLocationOccupantsQuery(locationId, view);
   const adicionar = useAddLocationOccupant();
   const encerrar = useEndLocationOccupancy();
 
@@ -45,6 +45,10 @@ export function useOcupantes(locationId: string | null) {
     // `isPending` só vale quando há posto: com a query desligada ele fica
     // pendente para sempre, e a tabela mostraria "carregando" com o painel fechado.
     carregando: locationId != null && isPending,
+    // A consulta FALHOU: sem isto a lista vazia virava "Posto vago" — dizer que
+    // ninguém responde pelos ativos de uma mesa porque a rede caiu é exatamente
+    // o alarme falso que esta tela não pode dar.
+    erro: locationId != null && error ? error.message : null,
     view,
     changeView: setView,
     handleAdicionar,

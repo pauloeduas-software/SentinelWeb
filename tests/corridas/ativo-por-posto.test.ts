@@ -92,3 +92,34 @@ describe('dois ativos entregues ao MESMO posto, ao mesmo tempo', () => {
     expect(placar(respostas)[201]).toBe(2);
   });
 });
+
+describe('marcar como posto × entregar o SEGUNDO ativo ao mesmo local', () => {
+  it('nunca termina com um posto de dois ativos', async () => {
+    // A porta da marca contava os ativos ANTES de a entrega simultânea
+    // confirmar: uma via "1, pode marcar", a outra via "não é posto, pode
+    // entregar", e as duas passavam. A trava da linha do local na marca é o
+    // que as põe em fila. Várias rodadas: a ordem de chegada varia.
+    for (let rodada = 0; rodada < 6; rodada += 1) {
+      const sala = await criarLocal(api, { name: `Sala da marca ${rodada}` });
+      const primeiro = await ativo(`Desktop da marca ${rodada}`);
+      const segundo = await ativo(`Notebook da marca ${rodada}`);
+      expect((await entregar(primeiro.id, sala)).status).toBe(201);
+
+      const [marca, entrega] = await Promise.all([
+        api.put(`/api/locations/${sala}`, { isWorkstation: true }),
+        entregar(segundo.id, sala),
+      ]);
+
+      // Exatamente uma vence: marcou e a entrega bateu no posto ocupado, ou
+      // entregou e a marca viu dois ativos.
+      const venceu = [marca.status === 200, entrega.status === 201].filter(Boolean).length;
+      expect(venceu, `marca ${marca.status}, entrega ${entrega.status}`).toBe(1);
+
+      const [local, noLocal] = await Promise.all([
+        prisma.location.findUniqueOrThrow({ where: { id: sala }, select: { isWorkstation: true } }),
+        prisma.assignment.count({ where: { targetLocationId: sala, checkinAt: null } }),
+      ]);
+      if (local.isWorkstation) expect(noLocal).toBe(1);
+    }
+  });
+});

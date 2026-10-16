@@ -5,8 +5,9 @@ import {
 import { Link } from 'react-router-dom';
 import OccupantsPanel from '../../components/OccupantsPanel';
 import TelemetriaDaMaquina from '../../components/TelemetriaDaMaquina';
+import SeloDesativado from './SeloDesativado';
 import {
-  ativosComMaquina, caminhoDoPosto, explicacaoDoVago, resumoDeAtivos,
+  ativosComMaquina, estaDesativado, explicacaoDoVago, resumoDeAtivos,
 } from '../helpers/postos.helper';
 import { momentoDoEvento } from '../../helpers/historico.helper';
 import type { OccupantInput } from '../../../domain/occupancy/occupancy.queries';
@@ -56,6 +57,8 @@ interface PostoDetalheModalProps {
   carregando: boolean;
   ocupantes: readonly LocationOccupant[];
   ocupantesCarregando: boolean;
+  /** A lista de ocupantes falhou — o painel mostra o erro, não "posto vago". */
+  ocupantesErro: string | null;
   view: OccupantView;
   onViewChange: (view: OccupantView) => void;
   onAdicionar: (data: OccupantInput) => Promise<void>;
@@ -70,7 +73,7 @@ interface PostoDetalheModalProps {
 }
 
 export default function PostoDetalheModal({
-  posto, detalhe, carregando, ocupantes, ocupantesCarregando,
+  posto, detalhe, carregando, ocupantes, ocupantesCarregando, ocupantesErro,
   view, onViewChange, onAdicionar, onEncerrar, onDevolver, devolvendo,
   onDevolverItem, devolvendoItem, onClose,
 }: PostoDetalheModalProps) {
@@ -113,9 +116,13 @@ export default function PostoDetalheModal({
   // por qualquer localização, e a sala de reunião pode ter dois. Com máquina
   // vinculada é o que tem telemetria para mostrar.
   const comMaquina = ativosComMaquina(ativos);
-  const caminho = detalhe?.caminho ?? posto?.caminho;
   const vago = detalhe?.vago ?? posto?.vago ?? false;
   const totalAtivos = detalhe?.totalAtivos ?? posto?.totalAtivos ?? 0;
+  // DESATIVADO: a ficha continua mostrando tudo — é o histórico do lugar —, mas
+  // deixa de oferecer o que cria coisa nova nele (ocupante, entrega). Devolver
+  // e encerrar continuam: desativar não esvazia a mesa, e quem ficou nela precisa
+  // de uma saída.
+  const desativado = estaDesativado(detalhe ?? posto);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
@@ -125,15 +132,8 @@ export default function PostoDetalheModal({
           <div>
             <h2 className="flex items-center gap-3 text-sm font-mono text-text-primary tracking-widest uppercase">
               <Armchair size={16} /> {detalhe?.name ?? posto?.name ?? '…'}
+              {desativado && <SeloDesativado />}
             </h2>
-            {/* O caminho só aparece quando ele é CONHECIDO. Com `?? []` o
-                `caminhoDoPosto` devolveria "na raiz", que é uma posição — e
-                afirmar isso para uma mesa em "Sede › Andar 2" enquanto o
-                detalhe não chegou é mentir, não é esperar. */}
-            <p className="font-mono text-[10px] text-text-tertiary mt-2">
-              {caminho && caminhoDoPosto(caminho)}
-              {detalhe?.manager && <> · gestor: {detalhe.manager.name}</>}
-            </p>
           </div>
           <button onClick={onClose} className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
             <X size={16} />
@@ -145,8 +145,12 @@ export default function PostoDetalheModal({
             <div className="flex items-start gap-2 p-3 border border-status-warning/20 bg-status-warning/10 font-mono text-[10px] leading-relaxed text-status-warning">
               <TriangleAlert size={12} className="shrink-0 mt-0.5" />
               <span>
-                POSTO VAGO — {explicacaoDoVago({ totalAtivos })} Ou alguém assume o posto abaixo,
-                ou o equipamento volta para o estoque.
+                POSTO VAGO — {explicacaoDoVago({ totalAtivos })}{' '}
+                {/* Posto desativado não recebe ocupante: "alguém assume" seria
+                    oferecer a saída que o formulário logo abaixo não tem. */}
+                {desativado
+                  ? 'O posto está desativado e não recebe ocupante: o equipamento volta para o estoque.'
+                  : 'Ou alguém assume o posto abaixo, ou o equipamento volta para o estoque.'}
               </span>
             </div>
           )}
@@ -154,10 +158,12 @@ export default function PostoDetalheModal({
           <OccupantsPanel
             ocupantes={ocupantes}
             carregando={ocupantesCarregando}
+            erro={ocupantesErro}
             view={view}
             onViewChange={onViewChange}
             onAdicionar={onAdicionar}
             onEncerrar={onEncerrar}
+            desativado={desativado}
           />
 
           <section className="font-mono text-xs space-y-3 border-t border-border-sutil pt-5">
@@ -176,7 +182,9 @@ export default function PostoDetalheModal({
                   saiu da listagem de Ativos, e a operação ficou na tela que já não
                   mostra o ativo. A entrega não tem esse problema — o ativo está na
                   listagem justamente até ser entregue. */}
-              {' '}A entrega é feita em Ativos; a devolução, aqui ou lá.
+              {desativado
+                ? ' Posto desativado: não recebe entrega nova. A devolução continua, aqui ou em Ativos.'
+                : ' A entrega é feita em Ativos; a devolução, aqui ou lá.'}
             </p>
 
             {erroDaDevolucao && (
@@ -252,6 +260,10 @@ export default function PostoDetalheModal({
                       <td colSpan={5} className="px-4 py-10 text-center text-text-tertiary">
                         {carregando ? (
                           'Carregando...'
+                        ) : desativado ? (
+                          // Sem o convite à entrega: o servidor a recusa num
+                          // posto desativado, e o link levaria a um 409.
+                          'Nenhum ativo entregue a este posto. Desativado, ele não recebe entrega.'
                         ) : (
                           <>
                             Nenhum ativo entregue a este posto.
@@ -275,7 +287,7 @@ export default function PostoDetalheModal({
               morava numa tela de frota, que sabia a medida e não sabia de quem é
               a máquina; aqui a pergunta já vem com dono: "o computador da Mesa 1
               está bem?". E é no posto que ela se faz, porque é a mesa que tem
-              ocupante, turno e gestor — logo acima, nesta mesma ficha. */}
+              ocupante e turno — logo acima, nesta mesma ficha. */}
           <section className="font-mono text-xs space-y-3 border-t border-border-sutil pt-5">
             <h3 className="text-text-secondary uppercase tracking-widest text-[10px] flex items-center gap-2">
               <MonitorSmartphone size={12} /> O computador deste posto

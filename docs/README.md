@@ -6,7 +6,7 @@
 
 | Pasta | A regra | O que mora lá |
 |---|---|---|
-| [`referencia/`](./referencia/) | **É verdade AGORA.** Mudou o código, muda aqui. Não conta história, não dá instrução. | o que o sistema é: camadas, modelo de posse, invariantes, acesso, testes |
+| [`referencia/`](./referencia/) | **É verdade AGORA.** Mudou o código, muda aqui. Não conta história, não dá instrução. | o que o sistema é: camadas, modelo de posse, invariantes, acesso, testes, configurações, baixa do ativo |
 | [`guias/`](./guias/) | **Começa com um verbo.** Receita para quem já sabe o que quer. | criar uma migration, adicionar um domínio, escrever um teste |
 | [`decisoes/`](./decisoes/) | **Não se reescreve.** Se a realidade mudou, a decisão é *superada* por outra, com link entre as duas. | as 142 decisões (`D1`…`D142`), uma pasta por assunto |
 | [`historico/`](./historico/) | **Congelado na data.** Não se atualiza. | os planos, as revisões e os fechamentos das onze fases |
@@ -25,6 +25,10 @@ quem responde por um equipamento, [`referencia/modelo-de-posse.md`](./referencia
 **Vou mexer em rota, cookie ou permissão.** [`referencia/acesso.md`](./referencia/acesso.md).
 Rota nova nasce negada, e rota sem permissão declarada **derruba o boot** — é melhor saber disso
 antes.
+
+**Vou mexer nas Configurações ou na saída de um ativo.** [`referencia/configuracoes.md`](./referencia/configuracoes.md)
+diz o que cada uma das cinco tabelas é, o que a exclusão e a desativação recusam e quem as usa;
+[`referencia/baixa.md`](./referencia/baixa.md), o que é dar baixa — e por que não é status nem lixeira.
 
 **Vou mexer no banco.** [`referencia/invariantes.md`](./referencia/invariantes.md) diz o que
 nunca pode ser falso e onde cada regra é defendida, e

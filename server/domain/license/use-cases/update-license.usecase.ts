@@ -44,7 +44,10 @@ export async function updateLicense(
     }) as LinhaDeLicenca | null;
     if (!antes) throw new AppError('Nenhuma licença com este identificador.', 404);
 
-    await assertReferenciasDaLicenca(tx, campos);
+    await assertReferenciasDaLicenca(tx, campos, {
+      categoryId: antes.categoryId as string,
+      manufacturerId: antes.manufacturerId as string | null,
+    });
 
     const depois = await tx.license.update({
       where: { id },

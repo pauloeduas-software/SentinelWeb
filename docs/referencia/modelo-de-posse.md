@@ -93,9 +93,10 @@ Uma linha por pessoa que ocupa uma localização, com o turno.
     ON "location_occupants"("locationId", "userId") WHERE "endedAt" IS NULL;
   ```
 
-- **Mesa 1 é uma `Location`**, folha da árvore que já existe
-  (`Sede → Andar 2 → Sala 3 → Mesa 1`). Não se cria entidade `Workstation`
-  paralela: duplicaria a hierarquia e daria ao ativo dois campos de "onde".
+- **Mesa 1 é uma `Location`** marcada como posto (`isWorkstation`). Não se cria
+  entidade `Workstation` paralela: daria ao ativo dois campos de "onde". As
+  localizações são uma lista plana — sem "Dentro de" nem gestor —, e o nome,
+  único no sistema, é quem diz onde a mesa fica (`Mesa 1 — Filial SP`).
 
 ### Camada 3 — Responsabilidade derivada
 
@@ -112,28 +113,27 @@ Camadas 1 e 2 já dizem, e a divergência entre elas seria silenciosa.
 
 ---
 
-## A fronteira: quem responde pelo ativo, e quem só atende o telefone
-
-> **D72.** `Location.managerId` existe desde a F1, aponta para uma pessoa e
-> parece responder a mesma pergunta da Camada 3. Não responde — e confundir as
-> duas é o jeito mais fácil de reabrir o D16 por efeito colateral.
+## Quem responde pelo ativo — e só isso
 
 | A pergunta | Quem responde | Onde isso mora |
 |---|---|---|
 | **Quem responde pelo ativo?** | a posse aberta → a pessoa, ou os ocupantes do posto | `resolverResponsaveis()` (Camada 3) |
-| **Quem atende quando o posto está vazio?** | o gestor da localidade | `Location.managerId`, exibido na ficha do posto |
 
-Em uma linha: **o posto responde pelo ativo; a pessoa responde pelo posto; o
-gestor da localidade nunca responde pelo posto ocupado.**
+Em uma linha: **o posto responde pelo ativo; a pessoa responde pelo posto.**
+
+A localização **não aponta para pessoa nenhuma**. O "gestor da localidade"
+(`Location.managerId`, D72) existiu como resposta da pergunta vizinha — *quem
+atende quando o posto está vazio* — e saiu junto com a hierarquia: a tela não o
+usava para decidir nada.
 
 ### O que a fronteira proíbe
 
 Nada disso dá erro de compilação — por isso está escrito:
 
-1. **`Location.managerId` não entra em `resolverResponsaveis()`.** Ele é a
-   resposta da pergunta *vizinha* — quem atende o telefone quando o posto está
-   vazio. Se ele entrasse, **todo** ativo passaria a ter responsável e *"ativo em
-   posto vago"* deixaria de ser expressável (ver abaixo).
+1. **Não há "responsável padrão" do lugar.** Se alguém voltar a pôr uma pessoa
+   na localização, ela não entra em `resolverResponsaveis()`: se entrasse,
+   **todo** ativo passaria a ter responsável e *"ativo em posto vago"* deixaria
+   de ser expressável (ver abaixo).
 
 2. **Não há quarto alvo polimórfico.** Entregar "para o Comercial" é entregar
    para uma **sala** (que é uma `Location`, e tem ocupantes) ou para uma
@@ -142,9 +142,9 @@ Nada disso dá erro de compilação — por isso está escrito:
 
 ### Por que o vazio não tem `else`
 
-A tentação é escrever, dentro da Camada 3: *"se o posto está vago, devolve o
-gestor da localidade"*. Isso destrói o sinal mais útil do modelo, porque três
-leitores dependem de o vazio **continuar vazio**:
+A tentação é escrever, dentro da Camada 3: *"se o posto está vago, devolve
+alguém"*. Isso destrói o sinal mais útil do modelo, porque três leitores
+dependem de o vazio **continuar vazio**:
 
 | Leitor | O que ele perde com o `else` |
 |---|---|
@@ -157,12 +157,8 @@ ninguém, ou estar numa mesa que ninguém ocupa. O vazio **é** o fato, e é o q
 ponte ITAM × RMM lê: máquina ligada todo dia num posto sem ocupante é a pergunta
 que nenhum ITAM de prateleira formula.
 
-### Se um dia "o gestor responde junto" for regra
-
-É **decisão nova e explícita**, tomada aqui e com nome — não efeito colateral de
-a coluna existir. E a forma dela não é acrescentar o gestor à Camada 3: é decidir
-se ele vira **ocupante** do posto (o que a Camada 2 já expressa, com turno e
-tudo) ou se a responsabilidade passa a ter grau, que é tabela nova.
+Se um dia alguém precisar responder pelo posto vazio, a forma já existe: ele vira
+**ocupante** do posto, com turno — a Camada 2 expressa isso sem coluna nova.
 
 ---
 
@@ -234,8 +230,7 @@ limites escolhidos, não esquecimentos.
   agenda, não coluna nova em `LocationOccupant`.
 
 - **Responsabilidade parcial ou hierárquica** (o gestor responde junto com quem
-  usa) não é modelada. `Location.managerId` existe para outra coisa — ver a
-  fronteira acima.
+  usa) não é modelada, e a localização não tem gestor — ver a seção acima.
 
 ---
 

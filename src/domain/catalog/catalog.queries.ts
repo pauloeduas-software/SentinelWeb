@@ -6,7 +6,7 @@ import type { ListEnvelope, ListParams } from '../shared/list.types';
 // Um conjunto de hooks para as CINCO tabelas de catálogo — o espelho, no
 // frontend, do CRUD genérico do servidor. O `slug` é o que muda.
 //
-// A chave inclui o slug e os parâmetros: sem isso a aba de Fornecedores seria
+// A chave inclui o slug e os parâmetros: sem isso a aba de Fabricantes seria
 // servida do cache da de Categorias. `['catalog', slug]` continua sendo o
 // prefixo, então invalidar depois de gravar alcança a listagem E as opções da
 // mesma tabela, sem a mutação saber em que página ou em que `<select>` o dado
@@ -34,7 +34,15 @@ export function useCatalogQuery(slug: string, params: CatalogListParams) {
     queryFn: async () =>
       (await apiClient.get<ListEnvelope<CatalogRow>>(`/${slug}`, { params })).data,
     // Sem isto a tabela pisca em branco a cada troca de página ou tecla da busca.
-    placeholderData: keepPreviousData,
+    //
+    // MAS SÓ DENTRO DA MESMA TABELA. As cinco abas dividem este hook, e o
+    // `keepPreviousData` puro reaproveitava a resposta de QUALQUER chave
+    // anterior: trocar de Categorias para Status mostrava as categorias sob o
+    // cabeçalho de Status até a resposta chegar — e elas respondiam a clique,
+    // com o Editar abrindo o formulário de status sobre uma linha de categoria.
+    // Entre abas não há o que manter: a aba nova começa em "Carregando…".
+    placeholderData: (anterior, consultaAnterior) =>
+      consultaAnterior?.queryKey[1] === slug ? anterior : undefined,
   });
 }
 

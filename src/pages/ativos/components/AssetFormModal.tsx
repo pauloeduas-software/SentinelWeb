@@ -38,6 +38,12 @@ const ROTULO = 'text-text-secondary uppercase tracking-widest text-[10px]';
  *
  * A posse NÃO é copiada porque nem está aqui: entregar é operação, não campo
  * (docs/referencia/modelo-de-posse.md). Um clone nasce sem posse, como deve.
+ *
+ * E por isso o STATUS também não é copiado: o status acompanha a posse. Clonar
+ * um ativo entregue copiava o "Em uso" dele, e o clone nascia em uso sem estar
+ * com ninguém — um ativo que nenhuma entrega deixaria assim, e que a trava de
+ * entrega (só `DEPLOYABLE`) impedia de sair do estoque até alguém editar o
+ * status à mão.
  */
 function valoresIniciais(asset: Asset | null, clonar: boolean, statusPadraoId: string) {
   return {
@@ -47,8 +53,9 @@ function valoresIniciais(asset: Asset | null, clonar: boolean, statusPadraoId: s
     // Ativo NOVO nasce com o status de tipo "Disponível" (`DEPLOYABLE`; o id
     // vem do hook da página): o primeiro da lista alfabética pode ser de outro
     // tipo, e o cadastro mais comum — chegou, está no estoque — exigia trocar o campo
-    // toda vez. Edição e clone mantêm o status do ativo de origem.
-    statusId: asset?.statusId ?? statusPadraoId,
+    // toda vez. O CLONE também é ativo novo e nasce assim (ver o docblock).
+    // Só a edição mantém o status do ativo.
+    statusId: clonar || !asset ? statusPadraoId : asset.statusId,
     modelId: asset?.modelId ?? '',
     locationId: asset?.locationId ?? '',
     // `assignedToId` NÃO está aqui, e a ausência é a regra: ver o comentário do
@@ -71,9 +78,9 @@ interface AssetFormModalProps {
    */
   clonar?: boolean;
   /**
-   * O status de um ativo NOVO. Vem de quem abre o modal porque é a listagem
-   * que tem a lista de status; sem ele (a ficha do ativo, que só edita e
-   * clona), o campo nasce em branco como antes.
+   * O status de um ativo NOVO — cadastro ou clone. Vem de quem abre o modal
+   * porque é o hook da página que consulta os status; as duas portas que criam
+   * (a listagem e a ficha, que clona) o passam. Sem ele, o campo nasce em branco.
    */
   statusPadraoId?: string;
   onClose: () => void;
@@ -148,7 +155,6 @@ export default function AssetFormModal({
               <input
                 value={valores.serial}
                 onChange={(e) => definir('serial', e.target.value)}
-                placeholder="Ex: 5CG1234ABC"
                 className={CLASSE_CAMPO}
               />
             </div>
@@ -157,7 +163,6 @@ export default function AssetFormModal({
               <input
                 value={valores.name}
                 onChange={(e) => definir('name', e.target.value)}
-                placeholder="Ex: Notebook da recepção"
                 className={CLASSE_CAMPO}
               />
             </div>
@@ -168,15 +173,15 @@ export default function AssetFormModal({
               <label className={ROTULO}>Modelo*</label>
               {/* A CATEGORIA do ativo vem daqui: é a do modelo, não um campo à
                   parte — é assim no Snipe-IT, e é o que impede os dois divergirem. */}
-              <ReferenceSelect rota="asset-models" valor={valores.modelId} obrigatorio onChange={(v) => definir('modelId', v)} />
+              <ReferenceSelect rota="asset-models" valor={valores.modelId} obrigatorio atual={asset?.model} onChange={(v) => definir('modelId', v)} />
             </div>
             <div className="space-y-1">
               <label className={ROTULO}>Status*</label>
-              <ReferenceSelect rota="status-labels" valor={valores.statusId} obrigatorio onChange={(v) => definir('statusId', v)} />
+              <ReferenceSelect rota="status-labels" valor={valores.statusId} obrigatorio atual={asset?.status} onChange={(v) => definir('statusId', v)} />
             </div>
             <div className="space-y-1">
               <label className={ROTULO}>Localização</label>
-              <ReferenceSelect rota="locations" valor={valores.locationId} onChange={(v) => definir('locationId', v)} />
+              <ReferenceSelect rota="locations" valor={valores.locationId} atual={asset?.location} onChange={(v) => definir('locationId', v)} />
               <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">
                 Onde o ativo ESTÁ. Não é quem responde por ele.
               </p>
@@ -202,7 +207,7 @@ export default function AssetFormModal({
               <label className={ROTULO}>Valor (R$)</label>
               {/* `text`, não `number`: o valor viaja como string do formulário ao
                   Postgres, sem passar por ponto flutuante em lugar nenhum. */}
-              <input inputMode="decimal" value={valores.purchaseCost} onChange={(e) => definir('purchaseCost', e.target.value)} placeholder="Ex: 4599.90" className={CLASSE_CAMPO} />
+              <input inputMode="decimal" value={valores.purchaseCost} onChange={(e) => definir('purchaseCost', e.target.value)} className={CLASSE_CAMPO} />
             </div>
           </Secao>
 

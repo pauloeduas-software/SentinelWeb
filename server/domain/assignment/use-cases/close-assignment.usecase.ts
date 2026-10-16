@@ -2,6 +2,7 @@ import { recordActivity } from '../../activity/use-cases/record-activity.usecase
 import { ASSET_SELECT } from '../../asset/helpers/asset-select.helper';
 import { ASSIGNMENT_SELECT } from '../helpers/assignment-select.helper';
 import type { AlvoPosse, ClientePosse } from './resolve-responsibles.usecase';
+import { AppError } from '../../../core/errors/app-error';
 
 // AS TRÊS ESCRITAS DA DEVOLUÇÃO, em um lugar só.
 //
@@ -50,8 +51,12 @@ export async function fecharPosse(
   // posse está aberta, um status de estoque contradiz a Camada 1 — é exatamente
   // o que `assertStatusCoerenteComPosse` recusa na edição de ativo. Fechando
   // primeiro, o `DEPLOYABLE` passa a ser verdade antes de ser escrito.
-  const assignment = await client.assignment.update({
-    where: { id: posse.id },
+  // `updateMany` com `checkinAt: null`, e não `update` por id: é a rede embaixo
+  // da trava do ativo. Fechar uma posse JÁ fechada regravaria a data e quem
+  // recebeu de uma devolução que aconteceu antes — e seguiria adiante mudando o
+  // status de um ativo que pode já estar com outra pessoa.
+  const { count } = await client.assignment.updateMany({
+    where: { id: posse.id, checkinAt: null },
     data: {
       checkinAt: new Date(),
       checkinNotes: dados.checkinNotes ?? null,
@@ -62,6 +67,11 @@ export async function fecharPosse(
       // trás continua nulo de propósito: não há backfill (D24).
       checkinById: actorId,
     },
+  });
+  if (count === 0) throw new AppError('Este ativo não está entregue.', 409);
+
+  const assignment = await client.assignment.findUniqueOrThrow({
+    where: { id: posse.id },
     select: ASSIGNMENT_SELECT,
   });
 

@@ -3,6 +3,9 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { nextAssetTag } from '../../settings/use-cases/app-settings.usecase';
+import {
+  assertEscolhaAtiva, assertLocalRecebe, lerModeloTravado, lerStatusTravado,
+} from '../../catalog/helpers/catalog-lock.helper';
 import { ASSET_SELECT } from '../helpers/asset-select.helper';
 import { assertEtiquetaESerieLivres } from './assert-unique-asset.usecase';
 
@@ -25,11 +28,15 @@ export async function createAsset(data: CreateAssetData, actorId: string | null)
   // criação falhar depois disso o número precisa voltar — senão a sequência
   // ganha um buraco a cada erro de validação.
   return prisma.$transaction(async (tx) => {
-    const modelo = await tx.assetModel.findUnique({
-      where: { id: data.modelId },
-      select: { id: true },
-    });
+    // O modelo, o status e o local pelas portas do catálogo: 404 com nome no
+    // lugar do P2003 genérico, e o DESATIVADO recusado — ativo novo não escolhe
+    // modelo nem status que saíram de linha, nem nasce num local fechado.
+    const modelo = await lerModeloTravado(tx, data.modelId);
     if (!modelo) throw new AppError('Modelo não encontrado.', 404);
+    assertEscolhaAtiva(modelo, { rotulo: 'O modelo' });
+
+    assertEscolhaAtiva(await lerStatusTravado(tx, data.statusId), { rotulo: 'O status' });
+    if (data.locationId) await assertLocalRecebe(tx, data.locationId, 'ativo novo');
 
     const assetTag = data.assetTag ?? (await nextAssetTag(tx));
     await assertEtiquetaESerieLivres(tx, { assetTag, serial: data.serial });

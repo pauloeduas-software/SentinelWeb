@@ -11,7 +11,7 @@ export type TipoCampo =
   | 'select'    // valores fixos, vindos de um enum do banco
   | 'reference' // valores vindos de outra tabela, por /options
   | 'money'
-  // `lista` é um `String[]` no banco, editado como um valor por linha (F9).
+  // `lista` é um `String[]` no banco, editado como um valor por linha.
   //
   // Ele entra como tipo NOVO em vez de um `textarea` que a tela separe por
   // vírgula, por um motivo de dado: valor de lista pode CONTER vírgula ("Sim,
@@ -27,7 +27,7 @@ export interface OpcaoFixa {
    * selecionada.
    *
    * Existe porque rótulo de `<select>` não carrega a diferença entre duas
-   * opções parecidas — e as cinco de `StatusLabel.type` são exatamente isso.
+   * opções parecidas — e as quatro de `StatusLabel.type` são exatamente isso.
    * A dúvida aparece na hora de escolher, então a resposta vai ali.
    */
   ajuda?: string;
@@ -57,9 +57,8 @@ export interface CampoSpec {
 
 export type RenderColuna =
   | 'texto' | 'enum' | 'relacao' | 'booleano'
-  // `contagem` lê um agregado do `_count` do servidor — quantos campos um
-  // conjunto tem (F9). Não é coluna da tabela: é conta, e por isso não entra no
-  // `audited` da spec do servidor.
+  // `contagem` lê um agregado do `_count` do servidor. Não é coluna da tabela:
+  // é conta, e por isso não entraria no `audited` da spec do servidor.
   | 'contagem'
   // `lista` desenha um `String[]` como "3 valores", com os primeiros no `title`.
   // Despejar vinte valores numa célula de tabela deixaria a linha ilegível.
@@ -79,27 +78,42 @@ export interface ColunaSpec {
  * Uma ação por LINHA além de editar e excluir.
  *
  * Por que isto existe: as cinco abas são o MESMO CRUD, e foi essa igualdade que
- * permitiu uma tela só. Localizações quebrou a igualdade em UM ponto — um posto
- * tem ocupantes (docs/referencia/modelo-de-posse.md, Camada 2), e as outras tabelas não
- * têm nada parecido.
+ * permitiu uma tela só. Duas ações quebram a igualdade sem quebrar a tela:
+ * Desativar/Ativar, que as cinco abas declaram (com a marca no gênero de cada
+ * uma), e Ocupantes, que só Localizações tem — um posto tem ocupantes
+ * (docs/referencia/modelo-de-posse.md, Camada 2), e as outras tabelas não têm
+ * nada parecido.
  *
- * As duas saídas ruins eram: uma tela separada só para Localizações (volta a
+ * As duas saídas ruins eram: uma tela separada por aba diferente (volta a
  * duplicação que a spec eliminou) ou um `if (slug === 'locations')` no meio do
  * componente genérico (a exceção escondida, que a próxima pessoa copia). A
- * saída é esta: a tabela desenha as ações que a SPEC declarar, e a aba que não
- * declara nenhuma continua exatamente como era — sem botão, sem coluna a mais,
+ * saída é esta: a tabela desenha as ações que a SPEC declarar, e uma aba que
+ * não declarasse nenhuma ficaria só com editar e excluir — sem botão a mais,
  * sem `if`.
  *
  * O `id` é uma união fechada, e não `string`, de propósito: quem adicionar uma
  * ação nova é obrigado pelo compilador a tratá-la no `switch` de quem abre o
  * modal. Ação declarada e não tratada vira erro de tipo, não botão morto.
  */
-export type AcaoLinhaId = 'ocupantes';
+export type AcaoLinhaId = 'ocupantes' | 'ativacao';
 
 export interface AcaoLinhaSpec {
   id: AcaoLinhaId;
   /** Vira o `title` do botão — é o que o usuário lê ao passar o mouse. */
   titulo: string;
+  /**
+   * Ação que ALTERNA um booleano da linha — Desativar/Ativar. O `titulo` vale
+   * com o campo ligado; `tituloSeDesligado`, com ele desligado. A linha com o
+   * campo desligado aparece esmaecida e marcada, para o estado não depender de
+   * passar o mouse no botão.
+   */
+  alterna?: { campo: string; tituloSeDesligado: string; marcaSeDesligado: string };
+  /**
+   * A ação só aparece na linha em que este campo booleano é VERDADEIRO — os
+   * ocupantes só fazem sentido num posto de trabalho, e a aba de localizações
+   * lista filial, sala e depósito juntos.
+   */
+  visivelSe?: string;
 }
 
 export interface CatalogUiSpec {
@@ -107,11 +121,19 @@ export interface CatalogUiSpec {
   slug: string;
   aba: string;
   singular: string;
+  /**
+   * O gênero do `singular`, para o título "Novo …"/"Nova …" do formulário.
+   *
+   * Declarado, e não deduzido da última letra: "Status" e "Fabricante" não
+   * terminam em `o` e são masculinos, "Localização" não termina em `a` e é
+   * feminina. A regra da letra erraria três das cinco abas.
+   */
+  genero: 'm' | 'f';
   descricao: string;
   placeholderBusca: string;
   colunas: readonly ColunaSpec[];
   campos: readonly CampoSpec[];
-  /** Ausente nas cinco abas que só têm o CRUD. Ver `AcaoLinhaSpec`. */
+  /** As ações além de editar e excluir — Desativar nas cinco abas. Ver `AcaoLinhaSpec`. */
   acoes?: readonly AcaoLinhaSpec[];
   /**
    * Botões que recortam a listagem por um campo de valores fixos — o tipo da
@@ -143,7 +165,7 @@ export const TIPOS_CATEGORIA: readonly OpcaoFixa[] = [
 //   Inutilizável — ainda é SEU, mas não serve. Continua nas listagens e nos
 //                  relatórios, porque custou dinheiro e precisa ser auditado.
 //
-// O que SAI de vez (vendido, descartado, doado) não é tipo de status: é o
+// O que SAI de vez (vendido, descartado, doado) não é tipo de status: é a
 // baixa do ativo (`retiredAt`).
 export const TIPOS_STATUS: readonly OpcaoFixa[] = [
   { value: 'DEPLOYABLE', label: 'Disponível',
@@ -154,7 +176,7 @@ export const TIPOS_STATUS: readonly OpcaoFixa[] = [
   { value: 'IN_USE', label: 'Em uso',
     ajuda: 'Com um colaborador ou instalado em algum lugar. Fora do estoque porque está cumprindo a função dele.' },
   { value: 'PENDING', label: 'Pendente',
-    ajuda: 'Fora do estoque por algum impedimento, e volta. Ex.: em conserto, em diagnóstico, em trânsito, falta formatar.' },
+    ajuda: 'Fora do estoque por algum impedimento, e volta: conserto, diagnóstico, trânsito, preparo.' },
   { value: 'UNDEPLOYABLE', label: 'Inutilizável',
-    ajuda: 'Ainda é seu, mas não serve mais. Continua nas listagens e nos relatórios. Ex.: estragado, perdido, roubado.' },
+    ajuda: 'Ainda é seu, mas não serve mais e não volta. Continua nas listagens e nos relatórios.' },
 ];

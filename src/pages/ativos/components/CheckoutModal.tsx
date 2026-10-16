@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowRightLeft, MapPin, TriangleAlert, Undo2, User, X } from 'lucide-react';
 import ReferenceSelect from '../../components/ReferenceSelect';
+import { useCatalogOptionsQuery } from '../../../domain/catalog/catalog.queries';
 import { montarDevolucao, montarEntrega, resumoDaPosse, type ResumoPosse } from '../helpers/posse.helper';
 import type { CheckinInput, CheckoutInput } from '../../../domain/assignment/assignment.queries';
 import type { Asset } from '../../../domain/shared/asset.types';
@@ -16,8 +17,9 @@ import type { AlvoDaPosse } from '../../../domain/shared/posse.types';
 // índice único parcial do banco recusaria com um erro sem explicação.
 //
 // Como todo componente desta pasta, não fala HTTP: recebe `onEntregar` e
-// `onDevolver` por prop. O `ReferenceSelect` é a exceção documentada — busca as
-// opções pela query do domínio, nunca por `apiClient`.
+// `onDevolver` por prop. As exceções buscam opções pela query do domínio, nunca
+// por `apiClient`: o `ReferenceSelect` e a lista de status disponíveis que o
+// destino da entrega precisa ESCONDER (ver `idsDisponiveis`).
 
 const CLASSE_CAMPO =
   'w-full p-2 bg-bg-base border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors';
@@ -80,6 +82,16 @@ export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }
   const [erro, setErro] = useState('');
 
   const abaAtual = ABAS.find((item) => item.tipo === aba) ?? ABAS[0];
+
+  // OS STATUS "DISPONÍVEL" SAEM DO DESTINO DA ENTREGA. Entregar com status
+  // `DEPLOYABLE` deixaria o ativo com posse aberta e marcado como pronto para
+  // entregar de novo — o servidor recusa com 422, e a opção que só existe para
+  // levar 422 sai da lista. O `/options` filtra por UM tipo e não por "todos
+  // menos um"; pedir a lista dos disponíveis e tirá-los é o recorte que a rota
+  // permite. É a mesma consulta (e a mesma chave de cache) que a listagem usa
+  // para o status padrão do cadastro — na tela de Ativos ela já está pronta.
+  const { data: disponiveis } = useCatalogOptionsQuery('status-labels', 'DEPLOYABLE');
+  const idsDisponiveis = (disponiveis ?? []).map((opcao) => opcao.id);
 
   // Trocar de aba ZERA o alvo: o corpo leva UMA FK, e um id que sobrou da aba
   // anterior seria um alvo que o usuário não escolheu mais.
@@ -173,7 +185,12 @@ export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className={ROTULO}>Status após a entrega</label>
-                  <ReferenceSelect rota="status-labels" valor={statusId} onChange={setStatusId} />
+                  <ReferenceSelect
+                    rota="status-labels"
+                    valor={statusId}
+                    excluirIds={idsDisponiveis}
+                    onChange={setStatusId}
+                  />
                   <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">
                     Em branco, o servidor aplica o status de uso.
                   </p>
@@ -209,7 +226,6 @@ export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }
             <textarea
               value={observacoes}
               onChange={(event) => setObservacoes(event.target.value)}
-              placeholder={posse.entregue ? 'Ex: devolvido com a fonte, sem a maleta.' : 'Ex: entregue com dock e headset.'}
               className={`${CLASSE_CAMPO} h-20 resize-none`}
             />
           </div>
@@ -264,7 +280,7 @@ function PosseAtual({ posse }: { posse: ResumoPosse }) {
           <TriangleAlert size={12} className="mt-0.5 shrink-0" />
           <span>
             Posto sem ocupante aberto: o ativo está parado numa mesa vazia. Devolver ao estoque
-            ou colocar alguém no posto, em Configurações › Localizações.
+            ou colocar alguém no posto, na ficha do posto em Postos.
           </span>
         </div>
       )}

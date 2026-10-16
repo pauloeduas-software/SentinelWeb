@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PackageX, X } from 'lucide-react';
 import type { Asset, RetireInput } from '../../../../domain/shared/asset.types';
+import { hojeNoCampoDeData } from '../../../helpers/format.helper';
 import { MOTIVOS_DA_SAIDA } from '../../helpers/baixa.helper';
 
 // DAR BAIXA — registrar que o ativo saiu do PATRIMÔNIO.
@@ -27,7 +28,13 @@ interface RetireModalProps {
 
 export default function RetireModal({ asset, onClose, onConfirmar }: RetireModalProps) {
   const [motivo, setMotivo] = useState(MOTIVOS_DA_SAIDA[0].value);
-  const [data, setData] = useState('');
+  // A data NASCE com o dia de hoje e vai sempre preenchida. "Em branco = agora"
+  // mandava o servidor gravar o INSTANTE, e ele guarda a saída como dia em UTC:
+  // uma baixa às 22h de Brasília aparecia com o dia seguinte. Com o dia já
+  // escolhido aqui, no fuso de quem registra, não há instante para converter.
+  // O `useState` com função calcula hoje uma vez, ao abrir o modal.
+  const [hoje] = useState(hojeNoCampoDeData);
+  const [data, setData] = useState(hoje);
   const [observacoes, setObservacoes] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
@@ -38,16 +45,16 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
     setErro('');
 
     try {
-      // Campo vazio vira AUSENTE, nunca `''`: uma data vazia chegaria ao
-      // servidor como string inválida em vez de "não informado" — e ausente é
-      // o que faz o servidor usar agora.
+      // A data vai sempre: o campo é obrigatório e nasce com hoje (ver o
+      // `useState` acima). Observação vazia vira AUSENTE, nunca `''`.
       await onConfirmar({
         retiredReason: motivo,
-        ...(data ? { retiredAt: data } : {}),
+        retiredAt: data,
         ...(observacoes.trim() ? { notes: observacoes.trim() } : {}),
       });
     } catch (falha) {
-      // É aqui que aparece o 409 de ativo entregue, já traduzido pelo apiClient.
+      // É aqui que aparece o 409 de ativo entregue e o 422 de data futura, já
+      // traduzidos pelo apiClient.
       setErro((falha as Error).message);
     } finally {
       setSalvando(false);
@@ -72,9 +79,9 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
           )}
 
           <p className="text-text-tertiary text-[10px] leading-relaxed">
-            O ativo sai do PATRIMÔNIO e das listagens do dia a dia, mas continua existindo: entra no
-            filtro "Baixados", segue no histórico e continua contando no relatório de
-            depreciação, com a data em que saiu. Para desfazer um cadastro errado, use a lixeira.
+            O ativo sai do PATRIMÔNIO e das listagens do dia a dia, mas continua existindo: segue
+            no histórico e na vista "Baixados" da tela de Ativos, com a data e o motivo da saída.
+            Para desfazer um cadastro errado, use a lixeira.
           </p>
 
           <div className="space-y-1">
@@ -91,15 +98,20 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
           </div>
 
           <div className="space-y-1">
-            <label className={ROTULO}>Data da saída</label>
+            <label className={ROTULO}>Data da saída*</label>
+            {/* `max` = hoje porque o servidor recusa data futura (422): uma saída
+                que ainda não aconteceu não é fato a registrar. */}
             <input
               type="date"
+              required
+              max={hoje}
               value={data}
               onChange={(event) => setData(event.target.value)}
               className={CLASSE_CAMPO}
             />
             <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">
-              Em branco, vale agora. A venda pode ter sido semana passada e o registro, hoje.
+              Vem com a data de hoje. A venda pode ter sido semana passada e o registro, hoje: troque
+              pela data em que o ativo saiu.
             </p>
           </div>
 
@@ -108,7 +120,6 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
             <textarea
               value={observacoes}
               onChange={(event) => setObservacoes(event.target.value)}
-              placeholder="Ex: vendido no lote 2026/03, nota 1187."
               className={`${CLASSE_CAMPO} h-20 resize-none`}
             />
             <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">

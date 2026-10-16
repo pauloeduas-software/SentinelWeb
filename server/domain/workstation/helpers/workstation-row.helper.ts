@@ -28,9 +28,8 @@ export interface LocalDePosto {
   name: string;
   notes: string | null;
   isWorkstation: boolean;
+  isActive: boolean;
   createdAt: Date;
-  parentId: string | null;
-  parent: { id: string; name: string } | null;
   _count: { assignments: number };
 }
 
@@ -39,10 +38,8 @@ export interface WorkstationRow {
   name: string;
   notes: string | null;
   isWorkstation: boolean;
+  isActive: boolean;
   createdAt: Date;
-  parent: { id: string; name: string } | null;
-  /** Os ancestrais, da raiz para baixo: `['Sede', 'Andar 2', 'Sala 3']`. */
-  caminho: string[];
   ocupantes: OcupanteDoPosto[];
   totalOcupantes: number;
   totalAtivos: number;
@@ -98,7 +95,6 @@ export function agruparOcupantes(
 export function montarLinhaDePosto(
   local: LocalDePosto,
   ocupantesPorPosto: Map<string, OcupanteDoPosto[]>,
-  caminhosPorPai: Map<string, string[]>,
 ): WorkstationRow {
   const ocupantes = ocupantesPorPosto.get(local.id) ?? [];
   const totalAtivos = local._count.assignments;
@@ -108,9 +104,8 @@ export function montarLinhaDePosto(
     name: local.name,
     notes: local.notes,
     isWorkstation: local.isWorkstation,
+    isActive: local.isActive,
     createdAt: local.createdAt,
-    parent: local.parent,
-    caminho: local.parentId ? caminhosPorPai.get(local.parentId) ?? [] : [],
     ocupantes,
     // Sai do MESMO array que a tela renderiza, e não de um `_count` paralelo:
     // duas contagens do mesmo fato podem divergir, e a que o usuário confere

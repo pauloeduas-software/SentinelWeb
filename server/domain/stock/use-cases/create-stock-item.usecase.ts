@@ -2,11 +2,15 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { buildSnapshot } from '../../shared/diff.helper';
+import {
+  assertEscolhaAtiva, assertLocalRecebe, lerCategoriaTravada,
+} from '../../catalog/helpers/catalog-lock.helper';
+import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
 import { comSaldo, type ClienteEstoque } from '../helpers/stock-balance.helper';
 import { STOCK_ITEM_SELECT } from '../helpers/stock-select.helper';
 import type { CreateStockItemInput } from '../schemas/stock.schema';
 
-const CAMPOS_AUDITADOS = ['name', 'qty', 'categoryId', 'notes'] as const;
+const CAMPOS_AUDITADOS = ['name', 'qty', 'categoryId', 'locationId', 'notes'] as const;
 
 /**
  * A categoria do item tem que ser do tipo ESTOQUE.
@@ -15,13 +19,22 @@ const CAMPOS_AUDITADOS = ['name', 'qty', 'categoryId', 'notes'] as const;
  * separa: um item de estoque numa categoria de ATIVO é o mesmo erro que "Em
  * Uso" tipado DEPLOYABLE foi na F1. 422 e não 404: a categoria existe, o tipo
  * dela é que não serve.
+ *
+ * Lida `FOR SHARE`: a troca de tipo da categoria trava a linha antes de contar
+ * os itens, e esta leitura espera por ela em vez de aprovar o tipo velho.
  */
-export async function assertCategoriaDeEstoque(client: ClienteEstoque, categoryId: string): Promise<void> {
-  const categoria = await client.category.findUnique({ where: { id: categoryId }, select: { type: true } });
+export async function assertCategoriaDeEstoque(
+  client: ClienteEstoque & ClienteQueTrava,
+  categoryId: string,
+  /** A categoria de ANTES, na edição: desativada só é recusada quando muda. */
+  categoriaAtual?: string,
+): Promise<void> {
+  const categoria = await lerCategoriaTravada(client, categoryId);
   if (!categoria) throw new AppError('Categoria não encontrada.', 404);
   if (categoria.type !== 'STOCK') {
     throw new AppError('A categoria de um item de estoque precisa ser do tipo Estoque.', 422, { type: categoria.type });
   }
+  if (categoryId !== categoriaAtual) assertEscolhaAtiva(categoria, { rotulo: 'A categoria', feminino: true });
 }
 
 /**
@@ -41,12 +54,16 @@ export async function createStockItem(data: CreateStockItemInput, actorId: strin
   return prisma.$transaction(async (tx) => {
     await assertCategoriaDeEstoque(tx, data.categoryId);
     await assertNomeLivre(tx, data.name);
+    // O local de guarda: existe (404) e não foi desativado (409) — a mesma
+    // porta de quem entrega ou guarda ativo (`assertLocalRecebe`).
+    if (data.locationId) await assertLocalRecebe(tx, data.locationId, 'estoque novo');
 
     const item = await tx.stockItem.create({
       data: {
         name: data.name,
         categoryId: data.categoryId,
         qty: data.qty,
+        locationId: data.locationId ?? null,
         notes: data.notes ?? null,
         createdById: actorId,
         updatedById: actorId,

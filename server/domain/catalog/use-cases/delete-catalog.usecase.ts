@@ -23,12 +23,15 @@ export async function deleteCatalog(spec: CatalogSpec, id: string, actorId: stri
 
     const emUso = await spec.countUsages(tx, id);
     if (emUso > 0) {
+      const dica = spec.dicaEmUso ? ` ${spec.dicaEmUso}` : '';
       throw new AppError(
-        `Não é possível excluir: ${spec.rotulo} em uso por ${emUso} ${emUso === 1 ? 'registro' : 'registros'}.`,
+        `Não é possível excluir: ${spec.rotulo} em uso por ${emUso} ${emUso === 1 ? 'registro' : 'registros'}.${dica}`,
         409,
         { emUso },
       );
     }
+
+    await spec.beforeDelete?.(tx, id);
 
     await delegate.delete({ where: { id } });
 

@@ -1,12 +1,16 @@
 import { prisma } from '../../../core/database/prismaClient';
-import { APP_SETTING_ID } from '../../settings/helpers/app-setting.helper';
 import { AppError } from '../../../core/errors/app-error';
 import { errorCode } from '../../../core/errors/error-shape';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { ASSET_SELECT } from '../../asset/helpers/asset-select.helper';
 import { assertStatusCoerenteComPosse } from '../../asset/use-cases/assert-status-posse.usecase';
+import { travarAtivoOuFalhar } from '../../asset/use-cases/lock-asset.usecase';
+import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
+import {
+  assertEscolhaAtiva, assertLocalRecebe, lerStatusTravado,
+} from '../../catalog/helpers/catalog-lock.helper';
 import { ASSIGNMENT_SELECT } from '../helpers/assignment-select.helper';
-import { travarUsuarioOuFalhar } from '../../user/use-cases/lock-user.usecase';
+import { travarUsuarioOuFalhar, type ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
 import { ativoDoPosto, jaTemAtivo } from '../../workstation/helpers/ativo-do-posto.helper';
 import type { AlvoPosse, ClientePosse } from './resolve-responsibles.usecase';
 
@@ -123,10 +127,14 @@ function assertAlvoCoerente(data: CheckoutData): string {
  * consulta e devolve 404 com o nome do que faltou.
  *
  * Pessoa sai por `findFirst`, que o escopo da lixeira alcança: NÃO se entrega
- * equipamento a um cadastro na lixeira. Localização não tem lixeira, então
- * `findUnique`.
+ * equipamento a um cadastro na lixeira. Localização não tem lixeira; ela sai
+ * travada, pela marca de desativada.
  */
-async function assertAlvoExiste(client: ClientePosse, tipo: AlvoPosse, alvoId: string): Promise<void> {
+async function assertAlvoExiste(
+  client: ClientePosse & ClienteQueTrava,
+  tipo: AlvoPosse,
+  alvoId: string,
+): Promise<void> {
   if (tipo === 'USER') {
     const pessoa = await client.user.findFirst({
       where: { id: alvoId },
@@ -145,8 +153,11 @@ async function assertAlvoExiste(client: ClientePosse, tipo: AlvoPosse, alvoId: s
     return;
   }
 
-  const local = await client.location.findUnique({ where: { id: alvoId }, select: { id: true } });
-  if (!local) throw new AppError('Localização não encontrada.', 404);
+  // DESATIVADA é a mesma recusa do colaborador desligado, um degrau acima: o
+  // local continua no histórico e não recebe entrega nova. `UPDATE` e não
+  // `SHARE`: a invariante 19 trava este mesmo posto `FOR UPDATE` logo adiante,
+  // e subir de uma para a outra é deadlock entre duas entregas ao mesmo posto.
+  await assertLocalRecebe(client, alvoId, 'entrega nova', 'UPDATE');
 }
 
 /**
@@ -160,68 +171,41 @@ async function assertAlvoExiste(client: ClientePosse, tipo: AlvoPosse, alvoId: s
  * Ordenado por nome, e não "o primeiro que vier": sem `orderBy` o Postgres não
  * promete ordem nenhuma, e a entrega mudaria de status entre duas execuções
  * idênticas conforme o plano de consulta.
+ *
+ * A ESCOLHA É RELIDA TRAVADA. Entre o `findFirst` e a gravação, o rótulo
+ * escolhido — sem nenhum ativo ainda — pode ter o tipo trocado; a releitura
+ * `FOR SHARE` espera a troca confirmar e enxerga o tipo novo. Mudou, a
+ * operação recusa em vez de gravar um status que contradiz a posse.
  */
 export async function escolherStatusPorTipo(
-  client: ClientePosse,
+  client: ClientePosse & ClienteQueTrava,
   tipo: 'DEPLOYABLE' | 'IN_USE',
   rotulo: string,
 ): Promise<string> {
-  // A PREFERÊNCIA CONFIGURADA VENCE — `AppSetting.checkoutStatusId` para a
-  // entrega, `checkinStatusId` para a devolução.
-  //
-  // Sem ela, a escolha é "o primeiro do tipo, por nome", que funciona com um
-  // status por tipo e vira loteria assim que alguém cadastra "Em uso — home
-  // office" e "Em uso — escritório": o status da entrega passa a depender da
-  // ordem alfabética, e isso não está escrito em lugar nenhum que o operador
-  // leia. Era a última pendência da F4.
-  const preferido = await statusPreferido(client, tipo);
-  if (preferido) return preferido;
-
-  const status = await client.statusLabel.findFirst({
-    where: { type: tipo },
+  // Só entre os ATIVOS: o status desativado saiu de linha e não é mais
+  // aplicado a ninguém, nem pela escolha automática.
+  const escolhido = await client.statusLabel.findFirst({
+    where: { type: tipo, isActive: true },
     select: { id: true },
     orderBy: { name: 'asc' },
   });
+  if (!escolhido) {
+    throw new AppError(`Nenhum status ativo do tipo "${rotulo}". Reative um em Configurações › Status ou escolha o status à mão.`, 409);
+  }
 
-  if (!status) throw new AppError(`Nenhum status de tipo "${rotulo}" cadastrado.`, 409);
+  const status = await lerStatusTravado(client, escolhido.id);
+  if (status.type !== tipo || !status.isActive) {
+    throw new AppError(`O status "${status.name}" acabou de mudar. Tente de novo.`, 409);
+  }
   return status.id;
 }
 
 /**
- * O status escolhido nas configurações, se ele ainda existir E ainda for do
- * tipo certo.
- *
- * AS DUAS CONFERÊNCIAS IMPORTAM. O `SetNull` do schema cobre a exclusão, mas
- * não cobre a RETIPAGEM: alguém pode trocar o `type` do rótulo preferido de
- * `IN_USE` para `PENDING`, e aí a entrega passaria a aplicar um status que a
- * invariante estado × posse recusa — o checkout quebraria com uma mensagem
- * sobre coerência, e a causa estaria numa tela de configuração que ninguém
- * relacionaria. Tipo errado aqui vira "usa o padrão", em silêncio e correto.
+ * O status escolhido à mão existe (404) e está ATIVO (409). Lê travado, pelo
+ * mesmo motivo do `escolherStatusPorTipo`.
  */
-async function statusPreferido(
-  client: ClientePosse,
-  tipo: 'DEPLOYABLE' | 'IN_USE',
-): Promise<string | null> {
-  const config = await client.appSetting.findUnique({
-    where: { id: APP_SETTING_ID },
-    select: { checkoutStatusId: true, checkinStatusId: true },
-  });
-
-  const escolhido = tipo === 'IN_USE' ? config?.checkoutStatusId : config?.checkinStatusId;
-  if (!escolhido) return null;
-
-  const status = await client.statusLabel.findUnique({
-    where: { id: escolhido },
-    select: { id: true, type: true },
-  });
-
-  return status?.type === tipo ? status.id : null;
-}
-
-/** Mesmo motivo do `assertAlvoExiste`: 404 com frase própria em vez do P2003 genérico. */
-export async function assertStatusExiste(client: ClientePosse, statusId: string): Promise<void> {
-  const status = await client.statusLabel.findUnique({ where: { id: statusId }, select: { id: true } });
-  if (!status) throw new AppError('Status não encontrado.', 404);
+export async function assertStatusEscolhivel(client: ClienteQueTrava, statusId: string): Promise<void> {
+  assertEscolhaAtiva(await lerStatusTravado(client, statusId), { rotulo: 'O status' });
 }
 
 export async function checkoutAsset(assetId: string, data: CheckoutData, actorId: string | null) {
@@ -252,14 +236,41 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
     // e travar à toa só aumentaria a chance de deadlock.
     if (data.targetType === 'USER') await travarUsuarioOuFalhar(tx, alvoId);
 
+    // E O ATIVO, logo depois do usuário — a ordem do grafo (`lock-asset.usecase.ts`).
+    //
+    // Sem ela, a edição do ativo e a entrega corriam: a edição trocava o status
+    // para um de estoque, a guarda estado × posse não via posse nenhuma, a
+    // entrega confirmava, e o `UPDATE` da edição gravava "Disponível" por cima
+    // de um ativo entregue. O alvo posto já travava o ativo na invariante 19,
+    // mas tarde demais — depois de ler o ativo e o status dele.
+    await travarAtivoOuFalhar(tx, assetId);
+
     // `findFirst`, nunca `findUnique`: o escopo da lixeira não alcança o
     // `findUnique` (soft-delete.extension.ts), e um ativo na lixeira não pode
     // ser entregue a ninguém.
     const ativo = await tx.asset.findFirst({
       where: { id: assetId },
-      select: { id: true, statusId: true, status: { select: { name: true, type: true } } },
+      select: {
+        id: true, assetTag: true, statusId: true, retiredAt: true,
+        status: { select: { name: true, type: true } },
+      },
     });
     if (!ativo) throw new AppError('Registro não encontrado', 404);
+
+    // ATIVO BAIXADO NÃO SAI PARA NINGUÉM. Ele não é mais da empresa — foi
+    // vendido, doado, roubado —, e o status dele pode muito bem ser
+    // "Disponível", porque a baixa não mexe no status. Sem esta guarda, o
+    // notebook vendido era entregue como se estivesse no estoque. É o que o
+    // `Archived` do Snipe-IT garante, e o que a entrega de ASSENTO de licença
+    // já recusava (`checkout-seat.usecase.ts`). A trava do ativo acima fecha a
+    // corrida com a baixa simultânea.
+    if (ativo.retiredAt) {
+      throw new AppError(
+        `${ativo.assetTag} teve baixa em ${diaEmPortugues(ativo.retiredAt)} e não pode ser entregue. Desfaça a baixa antes.`,
+        409,
+        { retiredAt: ativo.retiredAt.toISOString() },
+      );
+    }
 
     await assertAlvoExiste(tx, data.targetType, alvoId);
 
@@ -292,7 +303,21 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
       if (ocupante) throw new AppError(jaTemAtivo(ocupante), 409, { assetId: ocupante.id });
     }
 
-    if (data.statusId) await assertStatusExiste(tx, data.statusId);
+    // O status escolhido à mão: existe (404) e NÃO é de estoque (422). A guarda
+    // estado × posse abaixo também recusaria o `DEPLOYABLE`, mas com a frase da
+    // edição — "faça a devolução antes" —, que manda devolver quem está
+    // entregando. Aqui o erro é do formulário, e a frase diz isso.
+    if (data.statusId) {
+      const escolhido = await lerStatusTravado(tx, data.statusId);
+      assertEscolhaAtiva(escolhido, { rotulo: 'O status' });
+      if (escolhido.type === 'DEPLOYABLE') {
+        throw new AppError(
+          `"${escolhido.name}" é um status de estoque e não serve para um ativo entregue. Escolha outro.`,
+          422,
+          { statusType: escolhido.type },
+        );
+      }
+    }
     const statusId = data.statusId ?? (await escolherStatusPorTipo(tx, 'IN_USE', 'Em uso'));
 
     let posse;

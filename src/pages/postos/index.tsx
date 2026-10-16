@@ -1,26 +1,29 @@
-import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
+import EstadoDaLista from '../components/EstadoDaLista';
 import ListToolbar from '../components/ListToolbar';
 import PostoDetalheModal from './components/PostoDetalheModal';
 import PostoFormModal from './components/PostoFormModal';
 import PostosTable from './components/PostosTable';
 import { VISOES, rotuloDaContagem } from './helpers/postos.helper';
 import { usePostos } from './hooks/usePostos';
+import { usePode } from '../../domain/auth/auth.store';
 
 // O POSTO DE TRABALHO — a Mesa 1, a bancada, o guichê.
 //
 // É o coração do modelo de posse (docs/referencia/modelo-de-posse.md) e estava invisível:
-// montar a Mesa 1 com Laura de manhã e Ana à tarde exigia Configurações → 6ª
-// aba → achar a linha → um ícone pequeno de pessoas. Esta tela é a superfície
+// montar a Mesa 1 com Laura de manhã e Ana à tarde exigia ir a Configurações,
+// achar a linha no meio das filiais e clicar num ícone pequeno de pessoas.
+// Hoje Configurações nem marca posto; esta tela é a superfície
 // que faltava; o modelo não mudou — o posto continua sendo uma `Location`
 // marcada com `isWorkstation` (D15), e nenhuma tabela nasceu para ela.
 export default function PostosPage() {
   const {
-    postos, total, page, perPage, setPage, search, changeSearch, view, changeView,
+    postos, total, carregando, erro, page, perPage, setPage, search, changeSearch, view, changeView,
     modalAberto, openCreate, closeModal, handleCriar,
     postoId, postoAberto, openDetalhe, closeDetalhe, detalhe, detalhePendente, detalheErro, ocupantes,
     devolvendo, handleDevolver, devolvendoItem, handleDevolverItem,
   } = usePostos();
+  const podeCriar = usePode('ADMIN');
 
   return (
     <div className="animate-in fade-in duration-300 h-[calc(100vh-4rem)] flex flex-col pb-6">
@@ -39,12 +42,15 @@ export default function PostosPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary font-mono text-xs uppercase tracking-widest transition-colors"
-          >
-            <Plus size={14} /> Novo posto
-          </button>
+          {/* Criar posto grava em `/locations`, que é `ADMIN`; o técnico lê. */}
+          {podeCriar && (
+            <button
+              onClick={openCreate}
+              className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary font-mono text-xs uppercase tracking-widest transition-colors"
+            >
+              <Plus size={14} /> Novo posto
+            </button>
+          )}
         </div>
       </div>
 
@@ -71,7 +77,7 @@ export default function PostosPage() {
       <ListToolbar
         search={search}
         onSearchChange={changeSearch}
-        placeholder="Buscar posto, nota ou a sala onde ele fica..."
+        placeholder="Buscar posto ou nota..."
         page={page}
         perPage={perPage}
         total={total}
@@ -82,29 +88,33 @@ export default function PostosPage() {
         postos={postos}
         onAbrir={openDetalhe}
         vazio={
-          search ? (
-            <span>Nenhum posto encontrado para "{search}".</span>
-          ) : view === 'vagos' ? (
-            <span>Nenhum posto vago. Todo equipamento entregue tem alguém respondendo por ele.</span>
-          ) : view === 'ocupados' ? (
-            <span>Nenhum posto ocupado no momento.</span>
-          ) : (
-            <>
-              <span>Nenhum posto de trabalho cadastrado.</span>
-              {/* A dica é necessária: quem já criou "Mesa 1" como localização
-                  antes desta tela existir não a encontra aqui, porque a marca
-                  de posto nasce desmarcada. Sem isto, a tela pareceria quebrada
-                  justamente para quem tem mais dado. */}
-              <span className="mt-4 text-[10px] max-w-md leading-relaxed">
-                Crie a primeira mesa no botão acima. Se você já tem localizações que são mesas,
-                marque "é posto de trabalho" nelas em{' '}
-                <Link to="/configuracoes" className="text-status-success hover:underline">
-                  Configurações › Localizações
-                </Link>
-                {' '}e elas aparecem aqui.
-              </span>
-            </>
-          )
+          <EstadoDaLista carregando={carregando} erro={erro}>
+            {search ? (
+              <span>Nenhum posto encontrado para "{search}".</span>
+            ) : view === 'vagos' ? (
+              <span>Nenhum posto vago. Todo equipamento entregue tem alguém respondendo por ele.</span>
+            ) : view === 'ocupados' ? (
+              <span>Nenhum posto ocupado no momento.</span>
+            ) : (
+              <>
+                <span>Nenhum posto de trabalho cadastrado.</span>
+                {/* A dica é necessária: quem já criou "Mesa 1" como localização
+                    antes desta tela existir não a encontra aqui, porque a marca
+                    de posto nasce desmarcada. Sem isto, a tela pareceria quebrada
+                    justamente para quem tem mais dado.
+                    "O botão acima" só existe para o ADMIN (`podeCriar`): para o
+                    técnico, apontar para um botão que ele não vê era mandá-lo
+                    procurar o que não está lá. */}
+                <span className="mt-4 text-[10px] max-w-md leading-relaxed">
+                  {podeCriar
+                    ? 'Crie a primeira mesa no botão acima. '
+                    : 'Postos são criados por um administrador — peça a um. '}
+                  Posto se cria aqui: as localizações de Configurações são gerais e não
+                  viram posto.
+                </span>
+              </>
+            )}
+          </EstadoDaLista>
         }
       />
 
@@ -137,6 +147,7 @@ export default function PostosPage() {
           carregando={detalhePendente}
           ocupantes={ocupantes.ocupantes}
           ocupantesCarregando={ocupantes.carregando}
+          ocupantesErro={ocupantes.erro}
           view={ocupantes.view}
           onViewChange={ocupantes.changeView}
           onAdicionar={ocupantes.handleAdicionar}

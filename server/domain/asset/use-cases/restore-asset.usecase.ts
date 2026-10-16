@@ -4,9 +4,15 @@ import { recordActivity } from '../../activity/use-cases/record-activity.usecase
 import { ativoDoPosto, jaTemAtivo } from '../../workstation/helpers/ativo-do-posto.helper';
 import { ASSET_SELECT } from '../helpers/asset-select.helper';
 import { assertEtiquetaESerieLivres } from './assert-unique-asset.usecase';
+import { travarAtivoOuFalhar } from './lock-asset.usecase';
 
 export async function restoreAsset(id: string, actorId: string | null) {
   return prisma.$transaction(async (tx) => {
+    // A trava ANTES de ler: sem ela, um duplo clique restaurava duas vezes e o
+    // histórico ganhava dois RESTORE para um fato só. A trava é sobre a LINHA
+    // e não filtra a lixeira (`lock-asset.usecase.ts`).
+    await travarAtivoOuFalhar(tx, id);
+
     const naLixeira = await tx.asset.findFirst({
       where: { id, deletedAt: { not: null } },
       select: {
@@ -50,7 +56,8 @@ export async function restoreAsset(id: string, actorId: string | null) {
       if (ocupante) throw new AppError(jaTemAtivo(ocupante), 409, { assetId: ocupante.id });
     }
 
-    await tx.asset.updateMany({ where: { id, deletedAt: { not: null } }, data: { deletedAt: null } });
+    const { count } = await tx.asset.updateMany({ where: { id, deletedAt: { not: null } }, data: { deletedAt: null } });
+    if (count === 0) throw new AppError('Ativo não está na lixeira.', 404);
     await recordActivity(tx, { entityType: 'Asset', entityId: id, action: 'RESTORE' }, actorId);
 
     return tx.asset.findFirstOrThrow({ where: { id }, select: ASSET_SELECT });

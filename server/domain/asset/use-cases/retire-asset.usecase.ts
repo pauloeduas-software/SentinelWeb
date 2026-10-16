@@ -6,6 +6,8 @@ import { buildChanges } from '../../shared/diff.helper';
 import { diaEmPortugues } from '../helpers/asset-dates.helper';
 import { ASSET_SELECT } from '../helpers/asset-select.helper';
 import { assertSemPosseParaBaixa } from './assert-retire-posse.usecase';
+import { travarAtivoOuFalhar } from './lock-asset.usecase';
+import { contarAssentosDoAtivo } from '../../license/use-cases/count-user-seats.usecase';
 
 // DAR BAIXA — o ativo saiu do PATRIMÔNIO: foi vendido, descartado, doado,
 // extraviado, roubado ou trocado em garantia.
@@ -33,6 +35,12 @@ export async function retireAsset(id: string, data: RetireAssetData, actorId: st
   // baixado e a linha de histórico que diz por quê. Uma sem a outra é
   // um equipamento que sumiu do inventário sem explicação.
   return prisma.$transaction(async (tx) => {
+    // A TRAVA DO ATIVO, antes de qualquer leitura — a mesma da entrega e da
+    // edição (`lock-asset.usecase.ts`). Sem ela, a baixa e uma entrega
+    // simultânea liam as duas "sem posse" e "sem baixa", e o ativo terminava
+    // vendido E entregue a alguém.
+    await travarAtivoOuFalhar(tx, id);
+
     const antes = await tx.asset.findFirst({
       where: { id },
       select: { id: true, assetTag: true, retiredAt: true, retiredReason: true },
@@ -49,10 +57,23 @@ export async function retireAsset(id: string, data: RetireAssetData, actorId: st
       );
     }
 
-    // A amarra da etapa: ativo entregue não sai do patrimônio. DENTRO da
-    // transação porque lê a posse aberta — fora dela, um checkout concorrente
-    // entre a checagem e o UPDATE passaria.
+    // A amarra da etapa: ativo entregue não sai do patrimônio. Com o ativo já
+    // travado, a entrega simultânea espera esta transação terminar.
     await assertSemPosseParaBaixa(tx, id, antes.assetTag);
+
+    // E o ASSENTO DE LICENÇA, pelo mesmo motivo da exclusão (`delete-asset`): o
+    // assento continuaria descontado do contrato, preso a uma máquina vendida —
+    // e a entrega de assento já recusa o baixado (`checkout-seat`), então ele
+    // nunca mais sairia por um caminho normal.
+    const assentos = await contarAssentosDoAtivo(tx, id);
+    if (assentos > 0) {
+      throw new AppError(
+        `${antes.assetTag} ainda ocupa ${assentos} ${assentos === 1 ? 'assento' : 'assentos'} de licença. `
+        + 'Devolva os assentos pela aba Licenças antes de dar baixa.',
+        409,
+        { assentosDeLicenca: assentos },
+      );
+    }
 
     const retiredAt = data.retiredAt ?? new Date();
 
@@ -71,8 +92,9 @@ export async function retireAsset(id: string, data: RetireAssetData, actorId: st
         // A justificativa NÃO vira coluna: ela descreve o EVENTO, não o ativo.
         // No `changes` ela fica presa à linha do histórico que a explica e
         // aparece na aba Histórico; numa coluna `retiredNotes`, um segundo
-        // baixa a sobrescreveria (D18 — uma trilha só).
-        ...(data.notes ? { notes: data.notes } : {}),
+        // baixa a sobrescreveria (D18 — uma trilha só). Chave `observacao`, e
+        // não `notes`: na tela, `notes` é o rótulo "Notas" das notas do ATIVO.
+        ...(data.notes ? { observacao: data.notes } : {}),
       },
     }, actorId);
 

@@ -12,7 +12,7 @@ import UsersPage from './pages/gestao-usuario';
 import UserDetailPage from './pages/gestao-usuario/detalhe';
 import ConfiguracoesPage from './pages/configuracoes';
 import LoginPage from './pages/login';
-import { useAuthStore } from './domain/auth/auth.store';
+import { useAuthStore, usePode } from './domain/auth/auth.store';
 
 /**
  * `/itam/assets/:id` → `/ativos/:id`, preservando o id.
@@ -23,6 +23,26 @@ import { useAuthStore } from './domain/auth/auth.store';
 function RedirecionarAtivo() {
   const { id } = useParams<{ id: string }>();
   return <Navigate to={`/ativos/${id ?? ''}`} replace />;
+}
+
+/**
+ * A ROTA QUE SÓ O ADMIN ABRE — Configurações, hoje.
+ *
+ * O menu já escondia o item, mas esconder o item não fecha a URL: quem colava
+ * `/configuracoes` (ou seguia um link antigo) via a tela inteira, com o botão de
+ * cadastrar e as ações de linha, e cada clique voltava 403 — o catálogo é
+ * `ADMIN` para escrever (`server/domain/access/helpers/route-permissions.ts`).
+ * Uma tela em que tudo falha é pior do que não chegar nela.
+ *
+ * Redireciona para a raiz, e não para uma tela de "sem acesso": a raiz já leva
+ * para Ativos, que é onde o técnico trabalha. `replace` pelo mesmo motivo do
+ * redirecionamento da raiz — voltar não pode cair aqui de novo.
+ *
+ * Como o `usePode`, isto é INTERFACE, não segurança: quem autoriza é o servidor.
+ */
+function SoAdmin({ children }: { children: React.ReactNode }) {
+  const pode = usePode('ADMIN');
+  return pode ? <>{children}</> : <Navigate to="/" replace />;
 }
 
 // Só o esqueleto da aplicação: moldura e rotas. Estado, chamada de API e regra
@@ -91,7 +111,7 @@ function Layout() {
                 react-router escolhe a rota MAIS específica, não a primeira — a
                 ordem aqui é para quem lê. */}
             <Route path="/users/:id" element={<UserDetailPage />} />
-            <Route path="/configuracoes" element={<ConfiguracoesPage />} />
+            <Route path="/configuracoes" element={<SoAdmin><ConfiguracoesPage /></SoAdmin>} />
           </Routes>
         </main>
       </div>

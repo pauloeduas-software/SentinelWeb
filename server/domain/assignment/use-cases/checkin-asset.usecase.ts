@@ -1,8 +1,10 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { rotuloDoAlvo } from '../helpers/target-label.helper';
-import { assertStatusExiste, escolherStatusPorTipo } from './checkout-asset.usecase';
+import { assertStatusEscolhivel, escolherStatusPorTipo } from './checkout-asset.usecase';
 import { fecharPosse } from './close-assignment.usecase';
+import { lerStatusTravado } from '../../catalog/helpers/catalog-lock.helper';
+import { travarAtivoOuFalhar } from '../../asset/use-cases/lock-asset.usecase';
 
 // A DEVOLUÇÃO — o fechamento da posse aberta.
 //
@@ -40,6 +42,13 @@ async function executarCheckin(assetId: string, data: CheckinData, actorId: stri
   // apontando para o responsável é o equipamento devolvido que continua
   // contando como "com a Laura" em todo relatório.
   return prisma.$transaction(async (tx) => {
+    // A TRAVA DO ATIVO, antes de ler a posse — a mesma da entrega, da edição e
+    // da baixa (`lock-asset.usecase.ts`). Sem ela, duas devoluções simultâneas
+    // liam a mesma posse aberta e passavam as duas; e uma devolução atrasada,
+    // depois de uma devolução e de uma entrega nova, fechava a posse VELHA e
+    // gravava "Disponível" num ativo entregue a outra pessoa.
+    await travarAtivoOuFalhar(tx, assetId);
+
     // `findFirst` pelo escopo da lixeira. Ativo apagado precisa ser restaurado
     // antes — devolver o que saiu do inventário escreveria histórico em cima de
     // uma linha que nenhuma tela mais enxerga.
@@ -78,7 +87,11 @@ async function executarCheckin(assetId: string, data: CheckinData, actorId: stri
       );
     }
 
-    if (data.statusId) await assertStatusExiste(tx, data.statusId);
+    // O status escolhido à mão: existe e está ativo — exceto se é o que o ativo
+    // JÁ tem. Devolver mantendo o status atual não escolhe nada novo, e é a
+    // mesma regra "só quando o vínculo muda" das outras portas.
+    if (data.statusId && data.statusId !== ativo.statusId) await assertStatusEscolhivel(tx, data.statusId);
+    else if (data.statusId) await lerStatusTravado(tx, data.statusId);
     // Sem escolha explícita, o equipamento volta para o estoque. O caminho
     // anormal — voltou quebrado, foi direto para a assistência — é que merece o
     // `statusId` no corpo, e a tela de devolução oferece a lista.

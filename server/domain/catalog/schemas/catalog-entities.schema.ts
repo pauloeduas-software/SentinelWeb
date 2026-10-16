@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { $Enums } from '@prisma/client';
 import {
   booleano, emailOpcional,
-  nomeObrigatorio, textoOpcional, urlOpcional, uuidObrigatorio, uuidOpcional,
+  nomeObrigatorio, textoOpcional, urlOpcional, uuidObrigatorio,
 } from '../../shared/fields.schema';
 
 // Contrato de entrada das cinco tabelas de catálogo, num lugar só.
@@ -23,6 +23,7 @@ export const createCategorySchema = z.strictObject({
 export const updateCategorySchema = z.strictObject({
   name: nomeObrigatorio().optional(),
   type: z.enum($Enums.CategoryType, 'tipo de categoria inválido').optional(),
+  isActive: booleano('ativa').optional(),
 });
 
 // ------------------------------------------------------------- StatusLabel
@@ -36,18 +37,22 @@ export const updateStatusLabelSchema = z.strictObject({
   name: nomeObrigatorio().optional(),
   type: z.enum($Enums.StatusLabelType, 'tipo de status inválido').optional(),
   notes: textoOpcional('notas', 2_000),
+  isActive: booleano('ativo').optional(),
 });
 
 // ------------------------------------------------------------ Manufacturer
 const camposFabricante = {
-  url: urlOpcional,
+  url: urlOpcional('site'),
   supportPhone: textoOpcional('telefone de suporte', 50),
   supportEmail: emailOpcional,
-  supportUrl: urlOpcional,
 };
 
 export const createManufacturerSchema = z.strictObject({ name: nomeObrigatorio(), ...camposFabricante });
-export const updateManufacturerSchema = z.strictObject({ name: nomeObrigatorio().optional(), ...camposFabricante });
+// `isActive` só na EDIÇÃO em categoria, status, fabricante e modelo: é o botão
+// Desativar/Ativar da linha. Quem nasce, nasce ativo — o create o recusa.
+export const updateManufacturerSchema = z.strictObject({
+  name: nomeObrigatorio().optional(), ...camposFabricante, isActive: booleano('ativo').optional(),
+});
 
 // -------------------------------------------------------------- AssetModel
 const camposModelo = {
@@ -67,14 +72,13 @@ export const updateAssetModelSchema = z.strictObject({
   manufacturerId: uuidObrigatorio('fabricante').optional(),
   categoryId: uuidObrigatorio('categoria').optional(),
   ...camposModelo,
+  isActive: booleano('ativo').optional(),
 });
 
 // ---------------------------------------------------------------- Location
 const camposLocalizacao = {
-  parentId: uuidOpcional('localização pai'),
-  managerId: uuidOpcional('gestor'),
 
-  // Marca a folha da árvore que é MESA, e não filial: é o que separa "Mesa 1"
+  // Marca a localização que é MESA, e não filial: é o que separa "Mesa 1"
   // de "Filial São Paulo" nas telas e o que alimenta /postos.
   //
   // E ELA É REGRA, pela invariante 19: um local sem a marca continua podendo
@@ -91,4 +95,7 @@ const camposLocalizacao = {
 };
 
 export const createLocationSchema = z.strictObject({ name: nomeObrigatorio(), ...camposLocalizacao });
-export const updateLocationSchema = z.strictObject({ name: nomeObrigatorio().optional(), ...camposLocalizacao });
+// `isActive` só na EDIÇÃO, como nas outras quatro: é o botão Desativar/Ativar.
+export const updateLocationSchema = z.strictObject({
+  name: nomeObrigatorio().optional(), ...camposLocalizacao, isActive: booleano('ativa').optional(),
+});

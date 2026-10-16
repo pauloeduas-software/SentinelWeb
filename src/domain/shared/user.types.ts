@@ -1,11 +1,5 @@
 import type { UnidadeDeEstoque } from './stock.types';
 
-/** `{ id, name }` — como o gestor chega na resposta. */
-export interface Referencia {
-  id: string;
-  name: string;
-}
-
 /** Colaborador da empresa — quem recebe os ativos do inventário. */
 export interface User {
   /**
@@ -17,21 +11,14 @@ export interface User {
    */
   role: 'USUARIO' | 'TECNICO' | 'ADMIN';
   /**
-   * Está ativa na empresa? Vem na listagem pelo mesmo motivo do papel: o
-   * formulário edita este campo, e sem ele o checkbox nasceria marcado e
-   * reativaria quem foi desativado.
+   * Está ativa na empresa? Vem na listagem porque é ela que decide o botão da
+   * linha — Desativar ou Ativar — e esmaece quem saiu. O formulário NÃO edita
+   * este campo: desativar e ativar são só o botão (ver `UserFormModal`).
    */
   isActive: boolean;
   id: string;
   name: string;
   email: string;
-  /** Só na listagem de pessoas e no perfil — ver acima (D135). */
-  /**
-   * O id do gestor, cru. Só na LISTAGEM, e só porque o formulário o edita.
-   *
-   * Sem ele, o `<select>` de gestor abriria vazio ao editar e gravaria `null` —
-   * editar o nome de alguém apagaria o gestor dela em silêncio.
-   */
   createdAt: string;
 }
 
@@ -78,10 +65,8 @@ export interface UserDetail extends User {
   /** ISO da admissão. Não é `createdAt`: a pessoa trabalha aqui desde antes. */
   hiredAt: string | null;
   /**
-   * Quem COBRA esta pessoa — a hierarquia de gente.
-   *
-   * ⚠️ NUNCA quem responde pelo ativo dela (D72). Responsabilidade por
-   * equipamento é *quem está com ele*, e sai de `posse.responsaveis`.
+   * O que ainda prende esta pessoa ao inventário, contado nas QUATRO pontas —
+   * ver `PosseAbertaDoUsuario` logo acima.
    */
   posseAberta: PosseAbertaDoUsuario;
 

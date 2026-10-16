@@ -1,6 +1,7 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { buildSnapshot } from '../../shared/diff.helper';
+import { assertNomeLivre } from '../helpers/nome-unico.helper';
 import type { CatalogSpec } from '../specs/catalog-spec.types';
 
 export async function createCatalog(
@@ -11,6 +12,7 @@ export async function createCatalog(
   // O log entra na MESMA transação da gravação: fora dela, o histórico
   // registraria um cadastro que depois falhou.
   return prisma.$transaction(async (tx) => {
+    await assertNomeLivre(spec, tx, null, data, null);
     await spec.beforeWrite?.(tx, null, data);
 
     const registro = await spec.delegate(tx).create({ data, select: spec.select });

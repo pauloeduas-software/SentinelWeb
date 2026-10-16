@@ -3,6 +3,7 @@ import CatalogFormModal from './components/CatalogFormModal';
 import CatalogTable from './components/CatalogTable';
 import LocationOccupantsModal from './components/LocationOccupantsModal';
 import TipoFiltro from './components/TipoFiltro';
+import EstadoDaLista from '../components/EstadoDaLista';
 import ListToolbar from '../components/ListToolbar';
 import { useCatalog } from './hooks/useCatalog';
 import { useOcupantes } from '../hooks/useOcupantes';
@@ -14,13 +15,13 @@ import { useOcupantes } from '../hooks/useOcupantes';
 export default function ConfiguracoesPage() {
   const {
     specs, spec, changeTab, registros, total, page, perPage, setPage,
-    search, changeSearch, tipo, changeTipo, modalAberto, emEdicao,
+    search, changeSearch, tipo, changeTipo, loading, erro, padroesDoNovo, modalAberto, emEdicao,
     openCreate, openEdit, closeModal, handleSubmit, handleDelete,
     acaoAberta, openAcao, closeAcao,
   } = useCatalog();
 
   // As ações de linha declaradas pelas specs. Traduzir a ação genérica em "qual
-  // posto" ou "qual conjunto" é trabalho DESTA tela: o `useCatalog` guarda QUAL
+  // posto" é trabalho DESTA tela: o `useCatalog` guarda QUAL
   // ação e SOBRE QUEM, e não sabe o que cada uma faz — assim uma ação nova não
   // mexe naquele arquivo.
   //
@@ -88,18 +89,20 @@ export default function ConfiguracoesPage() {
         vazio={
           <div className="flex flex-col items-center justify-center">
             <SlidersHorizontal size={24} className="mb-4 opacity-50" />
-            {search ? (
-              <span>Nada encontrado para "{search}".</span>
-            ) : tipo ? (
-              <span>Nada cadastrado neste tipo.</span>
-            ) : (
-              <>
-                <span>Nenhum registro em {spec.aba.toLowerCase()}.</span>
-                <button onClick={openCreate} className="mt-4 text-status-success hover:underline">
-                  Cadastrar {spec.singular.toLowerCase()}
-                </button>
-              </>
-            )}
+            <EstadoDaLista carregando={loading} erro={erro}>
+              {search ? (
+                <span>Nada encontrado para "{search}".</span>
+              ) : tipo ? (
+                <span>Nada cadastrado neste tipo.</span>
+              ) : (
+                <>
+                  <span>Nenhum registro em {spec.aba.toLowerCase()}.</span>
+                  <button onClick={openCreate} className="mt-4 text-status-success hover:underline">
+                    Cadastrar {spec.singular.toLowerCase()}
+                  </button>
+                </>
+              )}
+            </EstadoDaLista>
           </div>
         }
       />
@@ -108,6 +111,7 @@ export default function ConfiguracoesPage() {
         <CatalogFormModal
           spec={spec}
           registro={emEdicao}
+          padroes={padroesDoNovo}
           onClose={closeModal}
           onSubmit={handleSubmit}
         />
@@ -118,6 +122,7 @@ export default function ConfiguracoesPage() {
           posto={posto}
           ocupantes={ocupantes.ocupantes}
           carregando={ocupantes.carregando}
+          erro={ocupantes.erro}
           view={ocupantes.view}
           onViewChange={ocupantes.changeView}
           onAdicionar={ocupantes.handleAdicionar}

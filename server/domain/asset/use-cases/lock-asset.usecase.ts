@@ -31,7 +31,8 @@ import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
 //   usuário → ativo   o checkout a pessoa, e a entrega de assento a pessoa
 //   ativo → posto     o checkout a posto e a restauração da lixeira, pela
 //                     invariante 19 (`workstation/helpers/ativo-do-posto.helper.ts`)
-//   ativo             o soft delete do ativo, e a entrega de assento a ativo
+//   ativo             o soft delete do ativo, a entrega de assento a ativo, a
+//                     edição (`update-asset`) e a baixa (`retire-asset`)
 //   usuário → item    a saída de estoque a pessoa (`stock/use-cases/checkout-stock.usecase.ts`)
 //   item → posto      implícita: o INSERT da saída a posto toma `FOR KEY SHARE`
 //                     na linha do local, com o item já travado. Nenhum caminho
@@ -49,7 +50,9 @@ import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
 // trava `licenses` e `license_seats` por conta própria (`license-seats.helper.ts`),
 // e o de estoque trava `stock_items` em `stock-balance.helper.ts`. É o
 // inventário de quem disputa USUÁRIO, ATIVO, ITEM e POSTO, que são as quatro
-// linhas que mais de um domínio pede.
+// linhas que mais de um domínio pede. As linhas de CATÁLOGO (categoria, status,
+// fabricante, modelo, localização) vêm sempre por último, e as travas delas
+// estão em `catalog/helpers/catalog-lock.helper.ts`.
 
 /**
  * Trava a linha do ativo até o fim da transação atual.

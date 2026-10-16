@@ -110,3 +110,81 @@ describe('a etiqueta automática sob concorrência', () => {
     expect(noBanco.length).toBe(quantos);
   });
 });
+
+describe('edição do ativo para status de ESTOQUE × entrega, ao mesmo tempo', () => {
+  it('nunca termina com posse aberta E status disponível', async () => {
+    // Sem a trava do ativo nos dois lados, a edição lia "sem posse", a entrega
+    // confirmava, e o `UPDATE` da edição gravava o status de estoque por cima
+    // de um ativo já entregue — o estado que a invariante 4 proíbe e que
+    // nenhuma recusa acusou. Um SEGUNDO status disponível faz a edição ser uma
+    // troca de verdade (a guarda só olha quando o status muda).
+    const outro = await api.post<{ id: string }>('/api/status-labels', { name: 'Prateleira B', type: 'DEPLOYABLE' });
+    expect(outro.status).toBe(201);
+
+    // Várias rodadas: a ordem de chegada varia, e a asserção vale para todas.
+    for (let rodada = 0; rodada < 8; rodada += 1) {
+      const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
+
+      const [edicao, entrega] = await Promise.all([
+        api.put(`/api/assets/${ativo.id}`, { statusId: outro.body.id }),
+        api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'USER', targetUserId: cenario.laura }),
+      ]);
+      // A entrega sempre passa (o status das duas pontas é disponível); a
+      // edição passa se chegou antes e leva 409 se chegou depois.
+      expect(entrega.status).toBe(201);
+      expect([200, 409]).toContain(edicao.status);
+
+      const [abertas, final] = await Promise.all([
+        prisma.assignment.count({ where: { assetId: ativo.id, checkinAt: null } }),
+        prisma.asset.findUniqueOrThrow({ where: { id: ativo.id }, select: { status: { select: { type: true } } } }),
+      ]);
+      expect(abertas).toBe(1);
+      expect(final.status.type).not.toBe('DEPLOYABLE');
+    }
+  });
+});
+
+describe('baixa × entrega do mesmo ativo, ao mesmo tempo', () => {
+  it('nunca termina baixado E entregue', async () => {
+    // Sem a trava do ativo na baixa, as duas liam "sem posse" e "sem baixa" e
+    // passavam: o notebook ficava vendido e na mão da Laura ao mesmo tempo.
+    for (let rodada = 0; rodada < 8; rodada += 1) {
+      const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
+
+      const [baixa, entrega] = await Promise.all([
+        api.post(`/api/assets/${ativo.id}/retire`, { retiredReason: 'VENDIDO' }),
+        api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'USER', targetUserId: cenario.laura }),
+      ]);
+      // Exatamente uma vence: a que chegar depois encontra a outra feita e
+      // leva 409.
+      expect((baixa.status === 409) !== (entrega.status === 409)).toBe(true);
+
+      const [abertas, final] = await Promise.all([
+        prisma.assignment.count({ where: { assetId: ativo.id, checkinAt: null } }),
+        prisma.asset.findUniqueOrThrow({ where: { id: ativo.id }, select: { retiredAt: true } }),
+      ]);
+      expect(abertas > 0 && final.retiredAt !== null).toBe(false);
+    }
+  });
+});
+
+describe('duas devoluções do mesmo ativo, ao mesmo tempo', () => {
+  it('exatamente uma passa, e o histórico tem um CHECKIN só', async () => {
+    // Sem a trava do ativo na devolução, as duas liam a mesma posse aberta e
+    // respondiam 200 — duas linhas de CHECKIN para uma devolução.
+    for (let rodada = 0; rodada < 6; rodada += 1) {
+      const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
+      const entrega = await api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'USER', targetUserId: cenario.laura });
+      expect(entrega.status).toBe(201);
+
+      const respostas = await Promise.all([
+        api.post(`/api/assets/${ativo.id}/checkin`, {}),
+        api.post(`/api/assets/${ativo.id}/checkin`, {}),
+      ]);
+      expect(respostas.map((r) => r.status).sort()).toEqual([200, 409]);
+
+      const checkins = await prisma.activityLog.count({ where: { entityId: ativo.id, action: 'CHECKIN' } });
+      expect(checkins).toBe(1);
+    }
+  });
+});

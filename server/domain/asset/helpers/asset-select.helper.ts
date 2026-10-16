@@ -50,7 +50,11 @@ export const ASSET_SELECT = {
   model: {
     select: {
       id: true, name: true, modelNumber: true,
-      manufacturer: { select: { id: true, name: true } },
+      // Os canais de suporte vêm junto: é na ficha do ativo que o técnico
+      // precisa do telefone da garantia, não na tela de Configurações.
+      manufacturer: {
+        select: { id: true, name: true, url: true, supportPhone: true, supportEmail: true },
+      },
       category: { select: { id: true, name: true, type: true } },
     },
   },

@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { cenarioDePosse, criarAtivo, criarColaborador, criarLocal } from '../helpers/fixtures';
+import {
+  cenarioDePosse, criarAtivo, criarColaborador, criarLicenca, criarLocal, diasAFrente, idsDoSeed,
+} from '../helpers/fixtures';
 import { prisma } from '../../server/core/database/prismaClient';
 
 // AS INVARIANTES DO MODELO DE POSSE — `docs/referencia/invariantes.md`, 1, 2 e 4.
@@ -134,8 +136,8 @@ describe('invariante 4 — estado × posse', () => {
       targetUserId: cenario.laura,
     });
 
-    // "Pronto p/ Uso" quer dizer *está no estoque, pode ser entregue* — frase
-    // falsa sobre um equipamento que está na mão de alguém.
+    // `DEPLOYABLE` ("Disponível", no seed) quer dizer *está no estoque, pode
+    // ser entregue* — frase falsa sobre um equipamento que está na mão de alguém.
     const { status, body } = await api.put<{ error: string }>(`/api/assets/${ativo.id}`, {
       statusId: cenario.statusDeployableId,
     });
@@ -305,5 +307,110 @@ describe('quem não está ativo na empresa não recebe equipamento', () => {
       targetUserId: pessoa,
     });
     expect(entrega.status).toBe(201);
+  });
+});
+
+describe('a baixa recusa', () => {
+  it('o ativo entregue — devolva antes', async () => {
+    const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
+    await api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'USER', targetUserId: cenario.laura });
+
+    const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/retire`, { retiredReason: 'VENDIDO' });
+    expect(status).toBe(409);
+    expect(body.error).toMatch(/Faça a devolução antes/);
+  });
+
+  it('o ativo que ocupa assento de licença — o assento ficaria preso a uma máquina vendida', async () => {
+    const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
+    const { categoriaLicencaId } = await idsDoSeed();
+    const licenca = await criarLicenca(api, { name: 'Office da máquina vendida', categoryId: categoriaLicencaId, seatsTotal: 1 });
+    const assento = await api.post(`/api/licenses/${licenca.id}/checkout-seat`, { assignedAssetId: ativo.id });
+    expect(assento.status).toBe(201);
+
+    const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/retire`, { retiredReason: 'VENDIDO' });
+    expect(status).toBe(409);
+    expect(body.error).toMatch(/assento/);
+  });
+
+  it('a data futura — a baixa não acontece na semana que vem', async () => {
+    const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
+    const { status } = await api.post(`/api/assets/${ativo.id}/retire`, { retiredReason: 'VENDIDO', retiredAt: diasAFrente(7) });
+    expect(status).toBe(422);
+  });
+
+  it('dar baixa duas vezes', async () => {
+    const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
+    expect((await api.post(`/api/assets/${ativo.id}/retire`, { retiredReason: 'DOADO' })).status).toBe(200);
+    expect((await api.post(`/api/assets/${ativo.id}/retire`, { retiredReason: 'DOADO' })).status).toBe(409);
+  });
+});
+
+describe('ativo baixado', () => {
+  it('não é entregue, mesmo com status disponível — a baixa não mexe no status', async () => {
+    const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
+    const baixa = await api.post(`/api/assets/${ativo.id}/retire`, { retiredReason: 'VENDIDO' });
+    expect(baixa.status).toBe(200);
+
+    const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/checkout`, {
+      targetType: 'USER', targetUserId: cenario.laura,
+    });
+    expect(status).toBe(409);
+    expect(body.error).toMatch(/teve baixa/);
+    expect(await prisma.assignment.count({ where: { assetId: ativo.id } })).toBe(0);
+
+    // Desfeita a baixa, volta a poder sair.
+    expect((await api.post(`/api/assets/${ativo.id}/unretire`)).status).toBe(200);
+    const entrega = await api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'USER', targetUserId: cenario.laura });
+    expect(entrega.status).toBe(201);
+  });
+});
+
+describe('o status escolhido à mão', () => {
+  // Um uuid bem formado que não existe: o zod deixa passar, e quem responde é
+  // o use-case — 404 com nome, no lugar do P2003 "em uso por outro cadastro".
+  const INEXISTENTE = '00000000-0000-4000-8000-000000000000';
+
+  it('cadastro e edição de ativo com status inexistente dão 404', async () => {
+    const cadastro = await api.post<{ error: string }>('/api/assets', {
+      statusId: INEXISTENTE, modelId: cenario.modelId,
+    });
+    expect(cadastro.status).toBe(404);
+    expect(cadastro.body.error).toBe('Status não encontrado.');
+
+    const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
+    const edicao = await api.put<{ error: string }>(`/api/assets/${ativo.id}`, { statusId: INEXISTENTE });
+    expect(edicao.status).toBe(404);
+    expect(edicao.body.error).toBe('Status não encontrado.');
+  });
+
+  it('edição de ativo para um modelo inexistente dá 404, como o cadastro', async () => {
+    const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
+    const { status, body } = await api.put<{ error: string }>(`/api/assets/${ativo.id}`, { modelId: INEXISTENTE });
+    expect(status).toBe(404);
+    expect(body.error).toBe('Modelo não encontrado.');
+  });
+
+  it('a entrega recusa status de ESTOQUE com 422 — o erro é do formulário', async () => {
+    // A guarda estado × posse também recusaria, mas com 409 e "faça a
+    // devolução antes", que manda devolver quem está entregando.
+    const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
+
+    const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/checkout`, {
+      targetType: 'USER', targetUserId: cenario.laura, statusId: cenario.statusDeployableId,
+    });
+    expect(status).toBe(422);
+    expect(body.error).toMatch(/status de estoque/);
+    expect(await prisma.assignment.count({ where: { assetId: ativo.id } })).toBe(0);
+  });
+
+  it('a entrega com status inexistente dá 404', async () => {
+    const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
+
+    const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/checkout`, {
+      targetType: 'USER', targetUserId: cenario.laura, statusId: INEXISTENTE,
+    });
+    expect(status).toBe(404);
+    expect(body.error).toBe('Status não encontrado.');
+    expect(await prisma.assignment.count({ where: { assetId: ativo.id } })).toBe(0);
   });
 });

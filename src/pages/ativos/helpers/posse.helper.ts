@@ -1,4 +1,5 @@
 import type { CheckinInput, CheckoutInput } from '../../../domain/assignment/assignment.queries';
+import type { Asset } from '../../../domain/shared/asset.types';
 import type { AlvoDaPosse, PosseResolvida, Responsavel } from '../../../domain/shared/posse.types';
 
 // Leitura da posse para a tela — funções puras, fora do JSX
@@ -85,6 +86,31 @@ function detalheDoAlvo(posse: PosseResolvida | null | undefined): string | null 
  */
 export function rotuloDaOperacao(posse: PosseResolvida | null | undefined): string {
   return posse?.assignmentId != null ? 'Devolver' : 'Entregar';
+}
+
+/**
+ * Por que o botão de ENTREGAR está travado — ou `null`, se não está.
+ *
+ * Só ativo de status `DEPLOYABLE` ("Disponível") pode ser entregue: é a regra do
+ * servidor, e o tipo do status é exatamente a pergunta "está no estoque, pronto
+ * para sair?". Um ativo "Em conserto" com o botão aceso abria o modal inteiro,
+ * deixava escolher pessoa, data e observação, e só no fim levava a recusa.
+ *
+ * A DEVOLUÇÃO nunca trava aqui: ativo entregue precisa poder voltar, qualquer
+ * que seja o status — é por ela que um status errado se conserta.
+ *
+ * O texto diz o status ATUAL pelo nome que o cliente deu a ele, porque é esse
+ * nome que a pessoa vê na linha e procura em Configurações para entender.
+ *
+ * Ativo BAIXADO também trava, venha com o status que vier: ele saiu do
+ * patrimônio, e a baixa não mexe no status — um vendido pode estar
+ * "Disponível". O servidor recusa com 409; o botão não oferece.
+ */
+export function bloqueioDaEntrega(asset: Pick<Asset, 'posse' | 'status' | 'retiredAt'>): string | null {
+  if (asset.posse?.assignmentId != null) return null;
+  if (asset.retiredAt) return 'Ativo baixado não pode ser entregue — desfaça a baixa antes.';
+  if (asset.status.type === 'DEPLOYABLE') return null;
+  return `Só ativo disponível pode ser entregue — este está como ${asset.status.name}.`;
 }
 
 /**

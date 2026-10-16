@@ -27,6 +27,8 @@ export interface ItemDeEstoque {
   /** O TOTAL — só muda por entrada e baixa. */
   qty: number;
   categoryId: string;
+  /** Onde o que sobra fica guardado (o Depósito de TI). */
+  locationId: string | null;
   notes: string | null;
 
   createdById: string | null;
@@ -36,6 +38,7 @@ export interface ItemDeEstoque {
   deletedAt: string | null;
 
   category: CategoriaDoItem;
+  location: Referencia | null;
 
   /** Unidades fora do estoque agora. */
   fora: number;
@@ -155,6 +158,7 @@ export interface CriarItemDeEstoqueInput {
   name: string;
   categoryId: string;
   qty?: number;
+  locationId?: string | null;
   notes?: string | null;
 }
 
@@ -162,6 +166,7 @@ export interface CriarItemDeEstoqueInput {
 export interface EditarItemDeEstoqueInput {
   name?: string;
   categoryId?: string;
+  locationId?: string | null;
   notes?: string | null;
 }
 

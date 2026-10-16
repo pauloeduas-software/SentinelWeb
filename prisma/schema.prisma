@@ -201,7 +201,6 @@ model User {
   updatedAt        DateTime           @updatedAt
   deletedAt        DateTime?
   assets           Asset[]
-  managedLocations Location[]
   // Posses diretas (alvo USER) e postos de trabalho que esta pessoa ocupa.
   // Responsabilidade real = as duas somadas (docs/referencia/modelo-de-posse.md, Camada 3).
   assignments      Assignment[]
@@ -215,9 +214,9 @@ model User {
   //
   //   quem RESPONDE pelo ativo?    a posse aberta → pessoa, ou os ocupantes do
   //                                 posto (`resolverResponsaveis`)
-  //   quem responde pelo ESPAÇO?   `Location.managerId`
   //
   // Em uma linha: *o posto responde pelo ativo, e a pessoa responde pelo posto.*
+  // Não há "gestor do espaço": a localização não aponta para pessoa nenhuma.
   // As unidades de estoque entregues NO NOME desta pessoa (`StockMovement`
   // de alvo USER): é a ponta do estoque na invariante 6.
   stockMovements StockMovement[]
@@ -317,6 +316,11 @@ model Category {
   name String
   type CategoryType
 
+  // Desativado some das listas de escolha e não é escolhido de novo; o que já
+  // aponta para ele continua (docs/referencia/configuracoes.md). É a saída de
+  // quem não pode ser excluído por ter uso.
+  isActive Boolean @default(true)
+
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   assetModels AssetModel[]
@@ -337,6 +341,11 @@ model StatusLabel {
 
   notes String?
 
+  // Desativado some das listas de escolha e não é escolhido de novo; o que já
+  // aponta para ele continua (docs/referencia/configuracoes.md). É a saída de
+  // quem não pode ser excluído por ter uso.
+  isActive Boolean @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   assets    Asset[]
@@ -351,7 +360,11 @@ model Manufacturer {
   url          String?
   supportPhone String?
   supportEmail String?
-  supportUrl   String?
+
+  // Desativado some das listas de escolha e não é escolhido de novo; o que já
+  // aponta para ele continua (docs/referencia/configuracoes.md). É a saída de
+  // quem não pode ser excluído por ter uso.
+  isActive Boolean @default(true)
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -368,6 +381,11 @@ model AssetModel {
 
   modelNumber String?
   notes       String?
+
+  // Desativado some das listas de escolha e não é escolhido de novo; o que já
+  // aponta para ele continua (docs/referencia/configuracoes.md). É a saída de
+  // quem não pode ser excluído por ter uso.
+  isActive Boolean @default(true)
 
   manufacturerId String @db.Uuid
   categoryId     String @db.Uuid
@@ -393,7 +411,10 @@ model Location {
   id   String @id @default(uuid()) @db.Uuid
   name String @unique
 
-  parentId String? @db.Uuid
+  // LISTA PLANA, sem hierarquia e sem gestor. O nome já é único no sistema
+  // inteiro ("Mesa 1 — Filial SP"), então uma árvore matriz › andar › sala não
+  // diferenciava nada — só custava guarda de ciclo, trava da árvore e o caminho
+  // montado em Postos. Saiu inteira, e o "gestor da localidade" com ela.
   address  String?
   city     String?
   state    String?
@@ -403,8 +424,8 @@ model Location {
 
   // POSTO DE TRABALHO — a Mesa 1, a bancada, o guichê.
   //
-  // O posto É uma `Location` (D15): a árvore já existe, o ativo já aponta para
-  // ela, e criar uma `Workstation` paralela duplicaria a hierarquia. Mas uma
+  // O posto É uma `Location` (D15): o ativo já aponta para ela, e criar uma
+  // `Workstation` paralela duplicaria o cadastro de lugares. Mas uma
   // bancada NÃO é uma filial: endereço, CEP e telefone não querem dizer nada
   // numa mesa, e misturar as duas numa lista só foi o que tornou o posto
   // invisível na interface.
@@ -421,19 +442,19 @@ model Location {
   // os ocupantes, que são vários por desenho (a Camada 2 do modelo de posse).
   isWorkstation Boolean @default(false)
 
-  // Gestor da localidade. SetNull de propósito: desligar o gestor não pode
-  // derrubar a filial junto.
-  managerId String? @db.Uuid
+  // DESATIVAR é o caminho de quem não pode excluir — a mesma ideia do
+  // `User.isActive`. Localização com qualquer uso (ativo, entrega, saída de
+  // estoque, ocupante — histórico incluído) é recusada no delete com 409, e a
+  // filial que fechou continua respondendo "por onde este ativo passou".
+  // Desativada, ela não RECEBE nada novo: entrega de ativo ou de estoque,
+  // ocupante, ativo guardado nela. O que já está lá fica —
+  // desativar não devolve nem encerra nada, igual ao colaborador desativado.
+  isActive Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // O banco NÃO impede ciclo (A→B→A foi aceito no teste): a guarda de ciclo é
-  // da aplicação, em helpers/location-cycle.helper.ts.
-  parent   Location?  @relation("LocationTree", fields: [parentId], references: [id], onDelete: Restrict)
-  children Location[] @relation("LocationTree")
-  manager  User?      @relation(fields: [managerId], references: [id], onDelete: SetNull)
-  assets   Asset[]
+  assets Asset[]
 
   // Ativos entregues A ESTE LOCAL (alvo LOCATION) e as pessoas que o ocupam.
   // É a junção das duas que responde "quem é responsável pelo computador da
@@ -442,19 +463,20 @@ model Location {
   assignments    Assignment[]
   occupants      LocationOccupant[]
   stockMovements StockMovement[]
+  // Os itens de estoque GUARDADOS aqui (não os entregues — esses são as saídas).
+  stockItems     StockItem[]
 
-  // DECLARADOS AQUI, e não só na migration que os criou.
+  // DECLARADO AQUI, e não só na migration que o criou.
   //
-  // Os dois nasceram à mão em `20260923102207_postos_descomissionamento_auth` e
-  // ficaram de fora do schema. Consequência: o `migrate diff` não os via, achava
-  // que eram lixo do banco e emitia `DROP INDEX` em TODA migração seguinte —
-  // derrubando índice útil em silêncio para quem aplicasse o SQL sem ler.
+  // Nasceu à mão numa migration (hoje consolidada na `0_init`) e ficou de fora
+  // do schema. Consequência: o `migrate diff` não o via, achava que era lixo do
+  // banco e emitia `DROP INDEX` em TODA migração seguinte — derrubando índice
+  // útil em silêncio para quem aplicasse o SQL sem ler.
   //
   // São índices COMUNS, que o Prisma expressa. Os PARCIAIS (`WHERE …`) continuam
   // só no SQL porque ele não os expressa, e esses o `migrate diff` ignora em vez
   // de tentar remover — a diferença é essa, e é o que separa "mora na migration
   // de propósito" de "ficou para trás".
-  @@index([parentId])
   @@index([isWorkstation])
   @@map("locations")
 }
@@ -682,7 +704,10 @@ model LocationOccupant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  // Restrict, não Cascade: quem ocupou a Mesa 1 e em que turno é histórico de
+  // responsabilidade, e apagar o posto não pode apagá-lo junto. O posto com
+  // ocupação se desativa (`Location.isActive`), não se exclui.
+  location Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
   user     User     @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   // A mesma pessoa não ocupa o mesmo posto duas vezes ao mesmo tempo: índice
@@ -710,16 +735,6 @@ model AppSetting {
   assetTagPrefix   String @default("ATV-")
   assetTagZerofill Int    @default(5)
   assetTagNext     Int    @default(1)
-
-  // QUAL rótulo a entrega e a devolução aplicam.
-  //
-  // Vazios, vale o comportamento que já existia: o PRIMEIRO status do tipo
-  // (`IN_USE` na entrega, `DEPLOYABLE` na devolução), ordenado por nome. Isso
-  // funciona com os 8 rótulos do seed e vira loteria quando alguém cadastra
-  // "Em uso — home office" e "Em uso — escritório": a escolha passa a depender
-  // da ordem alfabética, e ninguém escreveu isso em lugar nenhum.
-  checkoutStatusId String? @db.Uuid
-  checkinStatusId  String? @db.Uuid
 
   // ── OS BOTÕES DA DESCOBERTA (F7) ─────────────────────────────────────────
   //
@@ -807,6 +822,9 @@ model License {
   // `name` não é @unique: a unicidade é índice PARCIAL na migration.
   @@index([deletedAt])
   @@index([categoryId])
+  // O `countUsages` do fabricante e o `Restrict` no delete dele varrem esta
+  // coluna; sem índice, cada exclusão de fabricante lê a tabela inteira.
+  @@index([manufacturerId])
   @@index([expirationDate])
   @@map("licenses")
 }
@@ -1077,6 +1095,11 @@ model StockItem {
   categoryId String  @db.Uuid
   notes      String?
 
+  // ONDE O ESTOQUE FICA GUARDADO — o Depósito de TI. Opcional: item recém-
+  // cadastrado pode ainda não ter lugar. É onde está o que SOBRA; a unidade
+  // entregue a alguém está com quem a recebeu (`StockMovement`).
+  locationId String? @db.Uuid
+
   // Autoria: carimbo, não vínculo, como em `Asset`.
   createdById String? @db.Uuid
   updatedById String? @db.Uuid
@@ -1087,6 +1110,9 @@ model StockItem {
 
   // Restrict: é o 409 por uso do catálogo, e a FK é a rede embaixo dele.
   category  Category        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  // Restrict, como a categoria: o local que guarda estoque é "em uso" e se
+  // desativa, não se exclui (`locationSpec.countUsages`).
+  location  Location?       @relation(fields: [locationId], references: [id], onDelete: Restrict)
   movements StockMovement[]
 
   // `name` NÃO é @unique aqui: a unicidade é índice PARCIAL
@@ -1095,6 +1121,7 @@ model StockItem {
   // mesmo nome.
   @@index([deletedAt])
   @@index([categoryId])
+  @@index([locationId])
   @@map("stock_items")
 }
 

@@ -114,3 +114,33 @@ describe('devolver a mesma unidade duas vezes ao mesmo tempo', () => {
     expect(linha.returnedAt?.toISOString()).toBe(vencedora.body.returnedAt);
   });
 });
+
+describe('troca do tipo da categoria STOCK → ASSET × cadastro de item nela', () => {
+  it('nunca termina com item de estoque numa categoria que não é de estoque', async () => {
+    // A FK só quer que a categoria EXISTA: o cadastro lia "Monitor → STOCK",
+    // a troca contava zero itens e gravava ASSET, e o item confirmava depois.
+    // Quem fecha é a trava nos dois lados (`catalog-lock.helper.ts`). Várias
+    // rodadas porque a ordem de chegada varia.
+    for (let rodada = 0; rodada < 8; rodada += 1) {
+      const criada = await api.post<{ id: string }>('/api/categories', { name: `Família da corrida ${rodada}`, type: 'STOCK' });
+      expect(criada.status).toBe(201);
+      const categoryId = criada.body.id;
+
+      const [troca, cadastro] = await Promise.all([
+        api.put(`/api/categories/${categoryId}`, { type: 'ASSET' }),
+        api.post('/api/stock/items', { name: `Item da corrida ${rodada}`, categoryId, qty: 1 }),
+      ]);
+
+      // Exatamente uma vence: ou o item entra e a troca vê 1 uso (409), ou a
+      // troca passa e o cadastro vê ASSET (422).
+      const venceu = [troca.status === 200, cadastro.status === 201].filter(Boolean).length;
+      expect(venceu, `troca ${troca.status}, cadastro ${cadastro.status}`).toBe(1);
+
+      const [categoria, itens] = await Promise.all([
+        prisma.category.findUniqueOrThrow({ where: { id: categoryId }, select: { type: true } }),
+        prisma.stockItem.count({ where: { categoryId } }),
+      ]);
+      if (itens > 0) expect(categoria.type).toBe('STOCK');
+    }
+  });
+});

@@ -18,8 +18,12 @@ interface LicencaTableProps {
   onAbrir: (licenca: Licenca) => void;
   onEditar: (licenca: Licenca) => void;
   onEntregar: (licenca: Licenca) => void;
-  onExcluir: (licenca: Licenca) => void;
-  onRestaurar: (licenca: Licenca) => void;
+  /**
+   * Lixeira e restaurar são `ADMIN` no servidor. Ausentes, os botões somem —
+   * quem decide é a página, que sabe o papel; a tabela só desenha.
+   */
+  onExcluir?: (licenca: Licenca) => void;
+  onRestaurar?: (licenca: Licenca) => void;
   vazio: React.ReactNode;
 }
 
@@ -114,14 +118,16 @@ export default function LicencaTable({
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
                     {naLixeira ? (
-                      <button
-                        type="button"
-                        onClick={() => onRestaurar(licenca)}
-                        title="Restaurar"
-                        className="p-1.5 text-text-tertiary hover:text-status-success transition-colors"
-                      >
-                        <RotateCcw size={14} />
-                      </button>
+                      onRestaurar && (
+                        <button
+                          type="button"
+                          onClick={() => onRestaurar(licenca)}
+                          title="Restaurar"
+                          className="p-1.5 text-text-tertiary hover:text-status-success transition-colors"
+                        >
+                          <RotateCcw size={14} />
+                        </button>
+                      )
                     ) : (
                       <>
                         <button
@@ -141,14 +147,16 @@ export default function LicencaTable({
                         >
                           <Edit2 size={14} />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => onExcluir(licenca)}
-                          title="Mover para a lixeira"
-                          className="p-1.5 text-text-tertiary hover:text-status-danger transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {onExcluir && (
+                          <button
+                            type="button"
+                            onClick={() => onExcluir(licenca)}
+                            title="Mover para a lixeira"
+                            className="p-1.5 text-text-tertiary hover:text-status-danger transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </>
                     )}
                   </div>

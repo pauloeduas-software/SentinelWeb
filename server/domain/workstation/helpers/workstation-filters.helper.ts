@@ -59,19 +59,13 @@ export const OCUPANTES_ABERTOS_ORDER_BY: Prisma.LocationOccupantOrderByWithRelat
   { startedAt: 'asc' },
 ];
 
-/**
- * A busca `?q=` varre nome, notas e o NOME DO PAI.
- *
- * O pai entra porque a pergunta real de quem procura um posto é "as mesas da
- * Sala 3" — e o nome da sala não está em nenhuma coluna da mesa. Sem isso,
- * achar um posto exigiria lembrar como ele foi nomeado.
- */
+/** A busca `?q=` varre nome e notas. */
 function buildBuscaWhere(q?: string): Prisma.LocationWhereInput {
   if (!q) return {};
 
   // `mode: 'insensitive'` é obrigatório: sem ele "mesa" não acha "Mesa 1".
   const contem = { contains: q, mode: 'insensitive' as const };
-  return { OR: [{ name: contem }, { notes: contem }, { parent: { name: contem } }] };
+  return { OR: [{ name: contem }, { notes: contem }] };
 }
 
 /**
@@ -97,9 +91,8 @@ function buildVisaoWhere(view: WorkstationView): Prisma.LocationWhereInput {
  * O `where` da listagem.
  *
  * `isWorkstation: true` é o corte da rota inteira: /postos mostra MESA, não
- * filial. Uma localização que é mesa e nunca foi marcada não aparece aqui — a
- * marca é justamente o que a tela usa para saber a diferença, e marcar é um
- * clique em Configurações › Localizações.
+ * filial. A marca nasce com o posto, criado na própria tela de Postos; a aba
+ * de Configurações lista localizações gerais e não a mostra nem a edita.
  */
 export function buildWorkstationWhere(
   q: string | undefined,
