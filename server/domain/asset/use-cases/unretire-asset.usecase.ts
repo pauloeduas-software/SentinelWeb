@@ -3,6 +3,7 @@ import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { buildChanges } from '../../shared/diff.helper';
 import { ASSET_SELECT } from '../helpers/asset-select.helper';
+import { travarAtivoOuFalhar } from './lock-asset.usecase';
 
 /**
  * DESFAZER a baixa — a venda não saiu, o equipamento "roubado"
@@ -22,6 +23,11 @@ import { ASSET_SELECT } from '../helpers/asset-select.helper';
  */
 export async function unretireAsset(id: string, actorId: string | null = null) {
   return prisma.$transaction(async (tx) => {
+    // A trava ANTES de ler, a mesma da baixa: sem ela, um duplo clique gravava
+    // dois UNRETIRE, e uma reversão atrasada podia apagar uma baixa NOVA feita
+    // no meio — com o histórico dizendo de onde ele voltou errado.
+    await travarAtivoOuFalhar(tx, id);
+
     const antes = await tx.asset.findFirst({
       where: { id },
       select: { id: true, assetTag: true, retiredAt: true, retiredReason: true },

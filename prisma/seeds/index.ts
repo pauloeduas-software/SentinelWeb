@@ -59,8 +59,9 @@ const executadoDireto =
 if (executadoDireto) {
   semearBanco()
     .catch((error: unknown) => {
-      // Cada seeder é uma transação própria: os que já rodaram continuam aplicados.
-      // Como tudo é upsert, rodar de novo depois de corrigir é seguro.
+      // Nenhum seeder abre transação: os que já rodaram — e as linhas que o que
+      // falhou chegou a gravar — continuam aplicados. Como tudo é upsert, rodar
+      // de novo depois de corrigir é seguro.
       logger.error('[Seed] Falhou. Corrija e rode de novo — o seed é idempotente.', error);
       process.exitCode = 1;
     })

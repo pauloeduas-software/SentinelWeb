@@ -10,6 +10,7 @@ export const STOCK_ITEM_SELECT = {
   name: true,
   qty: true,
   categoryId: true,
+  locationId: true,
   notes: true,
 
   createdById: true,
@@ -19,6 +20,7 @@ export const STOCK_ITEM_SELECT = {
   deletedAt: true,
 
   category: { select: { id: true, name: true, type: true } },
+  location: { select: { id: true, name: true } },
 } as const;
 
 /**

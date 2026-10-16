@@ -39,6 +39,10 @@ export async function listAssetOptions(
   const rows = await prisma.asset.findMany({
     where: {
       ...buildAssetWhere(q),
+      // Sem os BAIXADOS: os dois seletores que usam esta lista — o assento de
+      // licença e o vínculo de máquina — recusam o ativo que saiu do
+      // patrimônio, então oferecê-lo seria oferecer um 409.
+      retiredAt: null,
       ...(filtro.semMaquina ? { endpoint: null } : {}),
     },
     select: {

@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { apiClient } from '../../core/api/apiClient';
 import type { EventoDaPessoa, User, UserDetail } from '../shared/user.types';
 import type { ListEnvelope, ListParams } from '../shared/list.types';
+import { catalogKeys } from '../catalog/catalog.queries';
 
 export const userKeys = {
   all: ['users'] as const,
@@ -18,7 +19,10 @@ export interface UserInput {
   email: string;
   /** O papel (D148). Ausente, numa criação, nasce `USUARIO` pelo `@default`. */
   role?: 'USUARIO' | 'TECNICO' | 'ADMIN';
-  /** SÓ na edição: desativar impede entrega nova e derruba a sessão da pessoa. */
+  /**
+   * SÓ na edição, e só pelo botão Desativar/Ativar da lista: desativar impede
+   * entrega nova e derruba a sessão da pessoa.
+   */
   isActive?: boolean;
   employeeNumber?: string | null;
   jobTitle?: string | null;
@@ -36,19 +40,34 @@ export function useUsersQuery(params: ListParams) {
   });
 }
 
+/**
+ * A lista de colaboradores E os seletores de pessoa. As opções moram noutra
+ * chave (`['catalog', 'users', 'options', …]`), com um minuto de `staleTime`:
+ * invalidando só a lista, quem acabou de ser desativado continuava no seletor
+ * "Pessoa" da entrega e do posto — e escolhê-lo dava 409.
+ */
+function invalidarPessoas(queryClient: ReturnType<typeof useQueryClient>) {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: userKeys.all }),
+    queryClient.invalidateQueries({ queryKey: catalogKeys.tabela('users') }),
+  ]);
+}
+
 export function useCreateUser() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: UserInput) => apiClient.post('/users', data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: userKeys.all }),
+    onSuccess: () => invalidarPessoas(queryClient),
   });
 }
 
 export function useUpdateUser() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UserInput }) => apiClient.put(`/users/${id}`, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: userKeys.all }),
+    // `Partial`: o botão Desativar/Ativar manda só `{ isActive }`, e o
+    // `updateUserSchema` do servidor aceita cada campo como opcional.
+    mutationFn: ({ id, data }: { id: string; data: Partial<UserInput> }) => apiClient.put(`/users/${id}`, data),
+    onSuccess: () => invalidarPessoas(queryClient),
   });
 }
 
@@ -56,7 +75,7 @@ export function useRestoreUser() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiClient.post(`/users/${id}/restore`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: userKeys.all }),
+    onSuccess: () => invalidarPessoas(queryClient),
   });
 }
 
@@ -64,7 +83,7 @@ export function useDeleteUser() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiClient.delete(`/users/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: userKeys.all }),
+    onSuccess: () => invalidarPessoas(queryClient),
   });
 }
 

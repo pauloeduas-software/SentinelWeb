@@ -17,8 +17,12 @@ interface EstoqueTableProps {
   onAjustar: (item: ItemDeEstoque) => void;
   onSaida: (item: ItemDeEstoque) => void;
   onEditar: (item: ItemDeEstoque) => void;
-  onExcluir: (item: ItemDeEstoque) => void;
-  onRestaurar: (item: ItemDeEstoque) => void;
+  /**
+   * Lixeira e restaurar são `ADMIN` no servidor. Ausentes, os botões somem —
+   * quem decide é a página, que sabe o papel; a tabela só desenha.
+   */
+  onExcluir?: (item: ItemDeEstoque) => void;
+  onRestaurar?: (item: ItemDeEstoque) => void;
   vazio: React.ReactNode;
 }
 
@@ -42,6 +46,7 @@ export default function EstoqueTable({
           <tr>
             <th className={CABECALHO}>Item</th>
             <th className={CABECALHO}>Categoria</th>
+            <th className={CABECALHO}>Localização</th>
             <th className={`${CABECALHO} text-right`}>Disponível / total</th>
             <th className={`${CABECALHO} text-right`}>Ações</th>
           </tr>
@@ -70,6 +75,10 @@ export default function EstoqueTable({
                   {item.category.name}
                 </td>
 
+                <td className="px-4 py-3 text-text-secondary">
+                  {item.location?.name ?? '—'}
+                </td>
+
                 <td className="px-4 py-3 text-right">
                   <span style={{ color: corDoSaldo(item) }}>{item.disponivel}</span>
                   <span className="text-text-tertiary"> / {item.qty}</span>
@@ -81,14 +90,16 @@ export default function EstoqueTable({
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
                     {naLixeira ? (
-                      <button
-                        type="button"
-                        onClick={() => onRestaurar(item)}
-                        title="Restaurar"
-                        className="p-1.5 text-text-tertiary hover:text-status-success transition-colors"
-                      >
-                        <RotateCcw size={14} />
-                      </button>
+                      onRestaurar && (
+                        <button
+                          type="button"
+                          onClick={() => onRestaurar(item)}
+                          title="Restaurar"
+                          className="p-1.5 text-text-tertiary hover:text-status-success transition-colors"
+                        >
+                          <RotateCcw size={14} />
+                        </button>
+                      )
                     ) : (
                       <>
                         <button
@@ -116,14 +127,16 @@ export default function EstoqueTable({
                         >
                           <Edit2 size={14} />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => onExcluir(item)}
-                          title="Mover para a lixeira"
-                          className="p-1.5 text-text-tertiary hover:text-status-danger transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {onExcluir && (
+                          <button
+                            type="button"
+                            onClick={() => onExcluir(item)}
+                            title="Mover para a lixeira"
+                            className="p-1.5 text-text-tertiary hover:text-status-danger transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </>
                     )}
                   </div>

@@ -47,7 +47,6 @@ export default function LoginPage() {
                 value={username}
                 onChange={(evento) => setUsername(evento.target.value)}
                 className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors"
-                placeholder="Ex: admin"
               />
             </div>
 

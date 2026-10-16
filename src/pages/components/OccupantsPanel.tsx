@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { LogOut, UserPlus } from 'lucide-react';
 import ReferenceSelect from './ReferenceSelect';
+import { usePode } from '../../domain/auth/auth.store';
 import {
   estaAberta, montarOcupante, nomeDoOcupante, periodoDaOcupacao, turnoDoOcupante,
 } from '../helpers/ocupantes.helper';
@@ -37,17 +38,30 @@ const RECORTES: readonly { valor: OccupantView; rotulo: string }[] = [
 interface OccupantsPanelProps {
   ocupantes: readonly LocationOccupant[];
   carregando: boolean;
+  /** A consulta da lista falhou. Vence o vazio: não é "posto vago", é não saber. */
+  erro?: string | null;
   view: OccupantView;
   onViewChange: (view: OccupantView) => void;
   onAdicionar: (data: OccupantInput) => Promise<void>;
   onEncerrar: (ocupante: LocationOccupant) => Promise<void>;
   /** Some no detalhe do posto, que tem o seu próprio rodapé. */
   onFechar?: () => void;
+  /**
+   * A localização está DESATIVADA: a lista e o encerrar continuam, o "colocar
+   * alguém" some. O servidor recusa ocupante novo em lugar desativado, e um
+   * formulário que só existe para levar 409 é armadilha. Encerrar fica porque
+   * desativar não encerra ninguém — quem ainda está lá precisa poder sair.
+   */
+  desativado?: boolean;
 }
 
 export default function OccupantsPanel({
-  ocupantes, carregando, view, onViewChange, onAdicionar, onEncerrar, onFechar,
+  ocupantes, carregando, erro: erroAoCarregar = null, view, onViewChange, onAdicionar, onEncerrar, onFechar,
+  desativado = false,
 }: OccupantsPanelProps) {
+  // Reativar a localização é `ADMIN` (é uma edição do catálogo); o aviso de
+  // posto desativado só aponta Configurações para quem pode usá-la.
+  const ehAdmin = usePode('ADMIN');
   const [userId, setUserId] = useState('');
   const [shift, setShift] = useState('');
   const [startedAt, setStartedAt] = useState('');
@@ -137,13 +151,17 @@ export default function OccupantsPanel({
                 <td className="px-4 py-3 text-text-tertiary tabular-nums">{periodoDaOcupacao(ocupante)}</td>
                 <td className="px-4 py-3 text-right">
                   {/* Ocupação já encerrada não tem o que encerrar: a linha
-                      fica, sem botão, porque histórico é para ser lido. */}
+                      fica, sem botão, porque histórico é para ser lido.
+                      Visível ao passar o mouse, ao navegar por Tab e sempre no
+                      toque — o desenho do `CatalogTable`. Com `opacity-0` puro,
+                      no celular encerrar uma ocupação era impossível. */}
                   {estaAberta(ocupante) && (
                     <button
                       type="button"
                       onClick={() => void encerrar(ocupante)}
                       title="Encerrar ocupação"
-                      className="text-text-tertiary hover:text-status-danger transition-colors opacity-0 group-hover:opacity-100"
+                      aria-label={`Encerrar a ocupação de ${nomeDoOcupante(ocupante)}`}
+                      className="text-text-tertiary hover:text-status-danger transition-colors md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
                     >
                       <LogOut size={14} />
                     </button>
@@ -157,7 +175,9 @@ export default function OccupantsPanel({
                 <td colSpan={4} className="px-4 py-10 text-center text-text-tertiary">
                   {carregando
                     ? 'Carregando...'
-                    : view === 'all'
+                    : erroAoCarregar
+                      ? <span role="alert" className="text-status-danger">Não foi possível carregar os ocupantes: {erroAoCarregar}</span>
+                      : view === 'all'
                       ? 'Este posto nunca teve ocupante.'
                       : 'Posto vago: ninguém responde pelos ativos entregues aqui.'}
                 </td>
@@ -167,69 +187,89 @@ export default function OccupantsPanel({
         </table>
       </div>
 
-      <form onSubmit={adicionar} className="border-t border-border-sutil pt-5 space-y-4">
-        <div className={ROTULO}>Colocar alguém no posto</div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className={ROTULO}>Pessoa*</label>
-            {/* `users` é o slug real de `/options` (GET /api/users/options). */}
-            <ReferenceSelect rota="users" valor={userId} obrigatorio onChange={setUserId} />
-          </div>
-          <div className="space-y-1">
-            <label className={ROTULO}>Turno</label>
-            <input
-              value={shift}
-              onChange={(event) => setShift(event.target.value)}
-              placeholder="Ex: Manhã, Tarde, 12x36 A"
-              className={CLASSE_CAMPO}
-            />
-            <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">
-              Texto livre: é rótulo de escala, não horário. Aparece ao lado do nome na
-              listagem de ativos.
-            </p>
-          </div>
-          <div className="space-y-1">
-            <label className={ROTULO}>Desde</label>
-            <input
-              type="date"
-              value={startedAt}
-              onChange={(event) => setStartedAt(event.target.value)}
-              className={CLASSE_CAMPO}
-            />
-            <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">
-              Em branco, vale a partir de agora.
-            </p>
-          </div>
-          <div className="space-y-1">
-            <label className={ROTULO}>Notas</label>
-            <input
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              className={CLASSE_CAMPO}
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-3">
+      {desativado ? (
+        <div className="border-t border-border-sutil pt-5 flex items-center justify-between gap-4">
+          <p className="text-text-tertiary text-[10px] leading-relaxed max-w-xl">
+            Localização desativada: não recebe ocupante novo. Quem já está aqui pode ser
+            encerrado acima.{' '}
+            {ehAdmin
+              ? 'Para voltar a usá-la, use o botão Ativar da linha em Configurações › Localizações.'
+              : 'Para voltar a usá-la, peça a um administrador que a reative.'}
+          </p>
           {onFechar && (
             <button
               type="button"
               onClick={onFechar}
-              className="px-4 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base transition-colors"
+              className="px-4 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base transition-colors shrink-0"
             >
               Fechar
             </button>
           )}
-          <button
-            type="submit"
-            disabled={salvando || !userId}
-            className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary transition-colors disabled:opacity-50"
-          >
-            <UserPlus size={14} /> {salvando ? 'Adicionando...' : 'Adicionar ao posto'}
-          </button>
         </div>
-      </form>
+      ) : (
+        <form onSubmit={adicionar} className="border-t border-border-sutil pt-5 space-y-4">
+          <div className={ROTULO}>Colocar alguém no posto</div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className={ROTULO}>Pessoa*</label>
+              {/* `users` é o slug real de `/options` (GET /api/users/options). */}
+              <ReferenceSelect rota="users" valor={userId} obrigatorio onChange={setUserId} />
+            </div>
+            <div className="space-y-1">
+              <label className={ROTULO}>Turno</label>
+              <input
+                value={shift}
+                onChange={(event) => setShift(event.target.value)}
+                className={CLASSE_CAMPO}
+              />
+              <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">
+                Texto livre: é rótulo de escala, não horário. Aparece ao lado do nome na
+                listagem de ativos.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <label className={ROTULO}>Desde</label>
+              <input
+                type="date"
+                value={startedAt}
+                onChange={(event) => setStartedAt(event.target.value)}
+                className={CLASSE_CAMPO}
+              />
+              <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">
+                Em branco, vale a partir de agora.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <label className={ROTULO}>Notas</label>
+              <input
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                className={CLASSE_CAMPO}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3">
+            {onFechar && (
+              <button
+                type="button"
+                onClick={onFechar}
+                className="px-4 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base transition-colors"
+              >
+                Fechar
+              </button>
+            )}
+            <button
+              type="submit"
+              disabled={salvando || !userId}
+              className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary transition-colors disabled:opacity-50"
+            >
+              <UserPlus size={14} /> {salvando ? 'Adicionando...' : 'Adicionar ao posto'}
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

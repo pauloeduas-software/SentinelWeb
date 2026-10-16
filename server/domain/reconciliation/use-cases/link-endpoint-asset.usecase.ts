@@ -2,6 +2,7 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { errorCode } from '../../../core/errors/error-shape';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { travarAtivoOuFalhar } from '../../asset/use-cases/lock-asset.usecase';
 
 // O VÍNCULO — a afirmação de que esta máquina descoberta e aquele patrimônio são
 // a mesma coisa (D45).
@@ -37,6 +38,11 @@ export async function vincularEndpointAoAtivo(
 ) {
   try {
     return await prisma.$transaction(async (tx) => {
+      // A TRAVA DO ATIVO, primeiro — a mesma da baixa (`lock-asset.usecase.ts`).
+      // Sem ela, o vínculo lia o ativo "sem baixa", a baixa confirmava, e a
+      // máquina era gravada num ativo que acabou de sair do patrimônio.
+      await travarAtivoOuFalhar(tx, assetId);
+
       const endpoint = await tx.endpoint.findUnique({
         where: { id: endpointId },
         select: { id: true, hwid: true, hostname: true, assetId: true },
@@ -51,9 +57,18 @@ export async function vincularEndpointAoAtivo(
       // uma máquina viva e sumiria da tela levando o vínculo junto.
       const ativo = await tx.asset.findFirst({
         where: { id: assetId },
-        select: { id: true, assetTag: true, name: true },
+        select: { id: true, assetTag: true, name: true, retiredAt: true },
       });
       if (!ativo) throw new AppError('Ativo não encontrado.', 404);
+
+      // Ativo BAIXADO não recebe máquina: ele saiu do patrimônio, e o vínculo
+      // o traria de volta à cobertura e à telemetria como se fosse da empresa.
+      // A máquina que segue mandando sinal de um ativo vendido é um achado, não
+      // um vínculo — ela fica sem cadastro, que é onde a tela de descobertas a
+      // mostra.
+      if (ativo.retiredAt) {
+        throw new AppError(`${ativo.assetTag} teve baixa e não recebe máquina. Desfaça a baixa antes.`, 409);
+      }
 
       // O vínculo NÃO passa pela regra do posto: ativo é computador com ou sem
       // máquina vinculada, então a vaga da mesa foi decidida na ENTREGA

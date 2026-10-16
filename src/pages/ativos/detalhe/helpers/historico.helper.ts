@@ -1,10 +1,11 @@
-import type { EventoDoAtivo } from '../../../../domain/shared/asset.types';
+import type { EventoDoAtivo, MotivoDaSaida } from '../../../../domain/shared/asset.types';
 import { lerEvento, rotuloDaAcao, type LeituraDoEvento } from '../../../helpers/historico.helper';
+import { rotuloDoMotivo } from '../../helpers/baixa.helper';
 
 // O que a aba Histórico do ATIVO acrescenta ao leitor genérico
-// (`src/pages/helpers/historico.helper.ts`): os nomes das colunas de `assets` e
-// a frase do título. O resto — separar diff de detalhe, formatar valor, ler a
-// hora — vale para qualquer trilha e mora lá.
+// (`src/pages/helpers/historico.helper.ts`): os nomes das colunas de `assets`, o
+// motivo da saída em português e a frase do título. O resto — separar diff de
+// detalhe, formatar valor, ler a hora — vale para qualquer trilha e mora lá.
 
 /** As ações que só o ativo tem. As comuns estão no leitor genérico. */
 const ROTULO_DA_ACAO: Record<string, string> = {
@@ -32,6 +33,10 @@ const ROTULO_DO_CAMPO: Record<string, string> = {
   purchaseCost: 'Valor de compra',
   retiredAt: 'Saída do patrimônio',
   retiredReason: 'Motivo da saída',
+  // A observação que o RETIRE grava no `changes`. Chave própria, e não
+  // `notes`: com `notes` ela saía como "Notas" e se confundia com as notas do
+  // ativo, que são outra coisa (um campo da ficha, não um registro do evento).
+  observacao: 'Observação da baixa',
   assignmentId: 'Posse',
   targetType: 'Tipo de alvo',
   targetId: 'Alvo',
@@ -42,8 +47,30 @@ const ROTULO_DO_CAMPO: Record<string, string> = {
   sinal: 'Sinal que casou',
 };
 
+/**
+ * O motivo da saída no vocabulário da tela ("Vendido", não "VENDIDO").
+ *
+ * Traduzido AQUI, depois do leitor genérico, e não no `valorLegivel`: o enum é
+ * do ativo, e o leitor genérico serve também à pessoa. Valor vazio já chega
+ * como "—" e passa direto — `rotuloDoMotivo` devolveria o mesmo traço.
+ */
+function motivoLegivel(campo: string, valor: string): string {
+  return campo === 'retiredReason' ? rotuloDoMotivo(valor as MotivoDaSaida) : valor;
+}
+
 export function lerEventoDoAtivo(evento: EventoDoAtivo): LeituraDoEvento {
-  return lerEvento(evento, ROTULO_DO_CAMPO);
+  const leitura = lerEvento(evento, ROTULO_DO_CAMPO);
+  return {
+    mudancas: leitura.mudancas.map((mudanca) => ({
+      ...mudanca,
+      de: motivoLegivel(mudanca.campo, mudanca.de),
+      para: motivoLegivel(mudanca.campo, mudanca.para),
+    })),
+    detalhes: leitura.detalhes.map((detalhe) => ({
+      ...detalhe,
+      valor: motivoLegivel(detalhe.campo, detalhe.valor),
+    })),
+  };
 }
 
 /**

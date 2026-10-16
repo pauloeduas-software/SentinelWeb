@@ -23,7 +23,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 
 ---
 
-## As treze
+## As quinze
 
 > **A numeração é a original, e por isso salta.** O corte do ITAM levou as
 > invariantes 7, 8, 15, 16 e 18 junto com as tabelas que elas defendiam
@@ -40,8 +40,8 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 |---|---|---|---|
 | 1 | Uma posse aberta por ativo | **banco** — índice único parcial | 409 `Registro já existe` |
 | 2 | Uma ocupação aberta por (posto, pessoa) | **banco** — índice único parcial | 409 `Registro já existe` |
-| 3 | O tipo de um status em uso não muda | **aplicação** — `status-label.spec.ts` | 409 `Não é possível mudar o tipo: status em uso por 200 registros.` |
-| 4 | Estado × posse: ativo entregue não fica `DEPLOYABLE` | **aplicação** — `assert-status-posse.usecase.ts` | 409 `"Pronto p/ Uso" é um status de estoque, e este ativo está entregue. Faça a devolução antes de mudar o status.` |
+| 3 | O tipo de um status ou de uma categoria em uso não muda | **aplicação** — `status-label.spec.ts`, `category.spec.ts`, com a linha travada | 409 `Não é possível mudar o tipo: status em uso por 200 registros.` |
+| 4 | Estado × posse: ativo entregue não fica `DEPLOYABLE` | **aplicação** — `assert-status-posse.usecase.ts` | 409 `"Disponível" é um status de estoque, e este ativo está entregue. Faça a devolução antes de mudar o status.` |
 | 5 | A forma da posse: um alvo coerente, devolução depois da entrega | **banco** — dois `CHECK` | 409 `Registro já existe` (a API recusa antes, com frase própria) |
 | 6 | Colaborador desativado ou na lixeira não tem posse direta, **assento de licença**, **unidade de estoque** nem ocupação aberta | **aplicação** — 409 no `DELETE`, no `checkout` e no cadastro de ocupante + trava de linha | 409 `Este colaborador ainda responde por 2 ativos, ocupa 1 assento de licença, está com 3 itens de estoque e ocupa 1 posto. Devolva o que está com ele e encerre as ocupações antes de excluir.` |
 | 9 | O alvo de um assento de licença é UM: pessoa **ou** ativo, nunca os dois, nunca nenhum | **banco** — CHECK `license_seat_alvo_xor` | 422 com o campo que falta (a API recusa antes, com frase própria) |
@@ -50,7 +50,9 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 12 | Uma máquina é no máximo um ativo, e um ativo no máximo uma máquina | **banco** — `@unique` em `Endpoint.assetId` | 409 `Este ativo já está vinculado a outra máquina. Desfaça aquele vínculo antes, pela aba Máquina do ativo.` |
 | 13 | A mesma sugestão não empilha na fila | **banco** — índice único parcial `sugestao_pendente_por_alvo` | nada: o job trata o `P2002` como "outro já criou" |
 | 17 | Sempre existe alguém, com login, que é `ADMIN` | **aplicação** — `assertSobraAdministrador()`, DEPOIS da escrita e dentro da transação | 409 `Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. Dê o papel de Administrador a outra pessoa com login antes de seguir.` |
-| 19 | No máximo um ativo por posto de trabalho | **aplicação** — três portas: a entrega e a restauração da lixeira (`ativoDoPosto()`, com `FOR UPDATE` na linha do posto) e a da marca (`locationSpec.beforeWrite`) | 409 `Este posto de trabalho já tem um ativo: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.` |
+| 19 | No máximo um ativo por posto de trabalho | **aplicação** — três portas: a entrega e a restauração da lixeira (`ativoDoPosto()`, com `FOR UPDATE` na linha do posto) e a da marca (`locationSpec.beforeWrite`, com a linha travada) | 409 `Este posto de trabalho já tem um ativo: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.` |
+| 20 | Ativo baixado não tem posse aberta nem assento de licença | **aplicação** — duas portas: a baixa (`assertSemPosseParaBaixa` e a contagem de assentos) e a entrega (`checkout-asset`, `checkout-seat`), as duas com o ativo travado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Desfaça a baixa antes.` |
+| 21 | Localização desativada não recebe nada novo | **aplicação** — `assertLocalRecebe()`, em cada porta que entrega, ocupa ou guarda, com a linha do local travada | 409 `"Filial SP" está desativada e não recebe entrega nova.` |
 
 ---
 
@@ -111,9 +113,17 @@ frota em silêncio.
 precisa do valor anterior e de um `COUNT` em outra tabela. Nem índice nem CHECK
 fazem isso. E o 409 genérico do banco não diria **quantos**.
 
-A mesma guarda existe em `category.spec.ts`, e **aqui é mais grave**: o tipo da
+A mesma guarda existe em `category.spec.ts` — contando modelos, ativos, itens
+de estoque **e licenças**, lixeira inclusive — e **aqui é mais grave**: o tipo da
 categoria diz a que módulo o registro pertence; o tipo do status decide se o
 equipamento pode ser entregue a alguém.
+
+**Com a linha travada.** A troca de tipo trava a linha `FOR UPDATE` antes de
+contar, e todo leitor do tipo (cadastro de licença, de item de estoque, de
+modelo, de ativo, entrega, devolução) a lê `FOR SHARE`
+(`catalog/helpers/catalog-lock.helper.ts`). Sem isso, um cadastro que já tinha
+lido o tipo velho gravava depois da contagem e a guarda era contornada por uma
+corrida.
 
 > **A guarda vale o que a contagem enxerga.** Uma contagem que esquece uma
 > tabela deixa a guarda aberta sem avisar: ela responde "zero em uso" e a troca
@@ -158,8 +168,14 @@ um campo. O checkin existe para isso.
 valor da regra está na mensagem. Um CHECK constraint não faz join e não sabe
 dizer *"faça a devolução antes"*.
 
-**Por que dentro da transação:** ela lê a assignment aberta. Fora dela, um
-checkout concorrente entre a checagem e o `UPDATE` passaria.
+**Por que com o ativo travado:** ela lê a assignment aberta, e estar dentro da
+transação não basta — em READ COMMITTED a entrega simultânea confirmava a posse
+depois da guarda olhar, e o `UPDATE` da edição gravava o status de estoque por
+cima. O `updateAsset` e o checkout travam a linha do ativo antes de ler
+(`lock-asset.usecase.ts`), e o status escolhido é lido `FOR SHARE`. A devolução
+também trava o ativo, e só fecha a posse que ainda está ABERTA: duas devoluções
+simultâneas, ou uma devolução atrasada depois de uma entrega nova, não fecham a
+posse errada nem gravam "Disponível" num ativo entregue.
 
 ---
 
@@ -513,12 +529,10 @@ o estoque na mesa, que não é ativo. **Posto sem ativo continua válido**: a re
 é "no máximo um", não "exatamente um". (O `postoVago` é outra coisa, e não tem
 relação com esta invariante: ele é posto **sem ocupante** — gente, não máquina.)
 
-**O que a porta da marca NÃO cobre, e é aceito:** ela conta os ativos no
-instante da marca e não trava a linha do local. Marcar a sala como posto ao
-mesmo tempo em que alguém entrega o segundo ativo a ela é uma corrida que passa
-— ligar a marca é operação de cadastro, feita uma vez por mesa, e a guarda
-existe para impedir quem marca o local errado. As portas de entrega e de
-restauração, que são as que recebem tráfego, continuam travando.
+**A porta da marca também trava.** Ela trava a linha do local
+(`FOR NO KEY UPDATE`) antes de contar os ativos, e a entrega trava a mesma linha
+`FOR UPDATE`: marcar a sala como posto ao mesmo tempo em que alguém entrega o
+segundo ativo a ela termina com exatamente uma das duas.
 
 > **A regra é testada, não argumentada.** `tests/invariantes/ativo-por-posto.test.ts`
 > cobre a porta da entrega sem agente, os dois ativos na sala de reunião, o que
@@ -527,7 +541,82 @@ restauração, que são as que recebem tráfego, continuam travando.
 > `…-marca.test.ts` cobre a porta da marca, incluindo a sala com UM ativo que
 > vira posto e o PUT que não menciona a marca. **A corrida também:**
 > `tests/corridas/ativo-por-posto.test.ts` dispara duas entregas simultâneas ao
-> mesmo posto e exige que exatamente uma entre.
+> mesmo posto e exige que exatamente uma entre, e dispara a marca contra a
+> entrega do segundo ativo.
+
+---
+
+### 20 — Ativo baixado não tem posse aberta
+
+```ts
+// asset/use-cases/retire-asset.usecase.ts — a porta da BAIXA
+await travarAtivoOuFalhar(tx, id);
+await assertSemPosseParaBaixa(tx, id, antes.assetTag);
+
+// assignment/use-cases/checkout-asset.usecase.ts — a porta da ENTREGA
+if (ativo.retiredAt) throw new AppError(`${ativo.assetTag} teve baixa em …`, 409);
+```
+
+"Vendido" e "na mão da Laura" não podem ser verdade ao mesmo tempo. Se fossem, o
+equipamento sumiria do inventário continuando com ela, e a devolução — que
+registra em que estado ele voltou e quem recebeu — não aconteceria.
+
+**São duas portas, uma em cada sentido:**
+
+| porta | o que ela impede |
+| --- | --- |
+| `retire-asset.usecase.ts` | dar baixa em ativo **entregue** — `Faça a devolução antes.` — ou que **ocupa assento de licença** — `Devolva os assentos … antes de dar baixa.` |
+| `checkout-asset.usecase.ts` | **entregar** ativo baixado — e isso vale com **qualquer** status, porque a baixa não mexe no status: um vendido pode estar "Disponível" |
+
+A entrega de **assento de licença** a ativo (`checkout-seat.usecase.ts`) recusa
+o baixado pelo mesmo motivo: o assento ficaria preso a uma máquina que não
+existe mais.
+
+**Bloqueia, nunca fecha a posse sozinha** — o mesmo argumento da invariante 4.
+
+**Por que na aplicação:** cruza `assets.retiredAt` com `assignments`, e o valor
+está na mensagem. **E por isso trava:** a baixa e a entrega travam a linha do
+ativo antes de ler (`lock-asset.usecase.ts`); sem a trava, as duas liam "sem
+posse" e "sem baixa" e o ativo terminava baixado e entregue.
+
+**Desfazer a baixa** (`unretire-asset.usecase.ts`) não tem guarda: um ativo que
+volta ao patrimônio não contradiz nada. O que é a baixa e como ela aparece na
+tela está em [`baixa.md`](baixa.md).
+
+> **Testado:** `tests/invariantes/posse.test.ts` (o baixado não é entregue;
+> desfeita a baixa, volta a poder) e `tests/corridas/posse.test.ts` (baixa ×
+> entrega do mesmo ativo, várias rodadas, nunca os dois).
+
+---
+
+### 21 — Localização desativada não recebe nada novo
+
+```ts
+// catalog/helpers/catalog-lock.helper.ts
+await assertLocalRecebe(tx, locationId, 'entrega nova');   // 404 ou 409
+```
+
+A localização com uso não se exclui — apagá-la apagaria **onde** as coisas
+estiveram e **quem** respondia por elas. Ela se desativa (`isActive = false`), e
+desativada não **recebe**: entrega de ativo, saída de estoque, ocupante novo,
+ativo guardado nela. O que já está lá fica — desativar não devolve nem encerra
+nada, igual ao colaborador desativado.
+
+**As portas:** `checkout-asset` (entrega), `checkout-stock` (saída de estoque),
+`add-location-occupant` (ocupante), `create-asset` e `update-asset` (o local do
+ativo, só quando **muda** — o formulário reenvia todo campo).
+
+**Por que na aplicação:** depende do estado do local no momento da escrita, e
+cruza tabelas. **E por isso trava:** a desativação trava a linha do local
+(`FOR NO KEY UPDATE`), e cada porta a lê `FOR SHARE` — a entrega de ativo,
+`FOR UPDATE`, porque logo depois trava o mesmo posto pela invariante 19.
+
+O mesmo princípio vale para categoria, status, fabricante e modelo desativados —
+não são **escolhidos** de novo (`assertEscolhaAtiva`) —, mas ali é regra de
+formulário, não fato sobre o lugar: está em
+[`configuracoes.md`](configuracoes.md).
+
+> **Testado:** `tests/invariantes/localizacao.test.ts`.
 
 ---
 

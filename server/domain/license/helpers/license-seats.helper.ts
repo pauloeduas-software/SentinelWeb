@@ -166,22 +166,49 @@ export async function pegarAssentoLivre(
   client: ClienteQueTrava,
   licenseId: string,
 ): Promise<{ id: string; seatNumber: number } | null> {
-  const linhas = await client.$queryRaw<{ id: string; seatNumber: number }[]>(Prisma.sql`
-    SELECT s.id::text AS id, s."seatNumber"
-      FROM license_seats s
-     WHERE s."licenseId" = ${licenseId}::uuid
-       AND s."burnedAt" IS NULL
-       AND s."retiredAt" IS NULL
-       AND NOT EXISTS (
-             SELECT 1 FROM license_seat_checkouts c
-              WHERE c."seatId" = s.id AND c."checkinAt" IS NULL
-           )
-     ORDER BY s."seatNumber"
-     LIMIT 1
-     FOR UPDATE OF s SKIP LOCKED
-  `);
+  // OS QUE A RELEITURA ACHOU OCUPADOS, para a próxima volta pular.
+  //
+  // O `NOT EXISTS` roda sobre o snapshot do INÍCIO da instrução. Se outra
+  // entrega trava o assento 1, grava a ocupação e confirma nesse meio-tempo, a
+  // trava dela já saiu e a linha de `license_seats` não mudou — o Postgres não
+  // reavalia o `WHERE`, e esta busca devolvia o assento 1 como livre. O INSERT
+  // batia no índice `license_seat_uma_aberta_por_assento` e o usuário lia
+  // "Registro já existe" (era o teste intermitente de `licencas/historico`).
+  //
+  // A releitura é uma instrução NOVA, com snapshot novo: enxerga o COMMIT da
+  // outra. Ocupado, o assento entra na lista e a busca roda de novo — termina,
+  // porque cada volta tira um assento do universo.
+  const pular: string[] = [];
 
-  return linhas[0] ?? null;
+  for (;;) {
+    const linhas = await client.$queryRaw<{ id: string; seatNumber: number }[]>(Prisma.sql`
+      SELECT s.id::text AS id, s."seatNumber"
+        FROM license_seats s
+       WHERE s."licenseId" = ${licenseId}::uuid
+         AND s."burnedAt" IS NULL
+         AND s."retiredAt" IS NULL
+         AND s.id::text <> ALL(${pular}::text[])
+         AND NOT EXISTS (
+               SELECT 1 FROM license_seat_checkouts c
+                WHERE c."seatId" = s.id AND c."checkinAt" IS NULL
+             )
+       ORDER BY s."seatNumber"
+       LIMIT 1
+       FOR UPDATE OF s SKIP LOCKED
+    `);
+
+    const assento = linhas[0];
+    if (!assento) return null;
+
+    const aberta = await client.$queryRaw<{ um: number }[]>(Prisma.sql`
+      SELECT 1 AS um FROM license_seat_checkouts
+       WHERE "seatId" = ${assento.id}::uuid AND "checkinAt" IS NULL
+       LIMIT 1
+    `);
+    if (aberta.length === 0) return assento;
+
+    pular.push(assento.id);
+  }
 }
 
 /**

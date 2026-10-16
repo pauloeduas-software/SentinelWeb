@@ -20,17 +20,37 @@ export interface Referencia {
   name: string;
 }
 
+/**
+ * O status como vem embutido no ativo. `type` é a união, e não `string`: é ele
+ * que decide se o ativo pode ser entregue, e uma comparação com um valor que
+ * não existe (`'AVAILABLE'`) precisa ser erro de tipo, não um `false` calado.
+ */
 export interface StatusRef extends Referencia {
-  type: string;
+  type: TipoDeStatus;
 }
 
 export interface CategoriaRef extends Referencia {
   type: string;
 }
 
+/**
+ * O fabricante como vem embutido no modelo do ativo: o nome e os CANAIS DE
+ * SUPORTE. Os canais viajam com o ativo porque a pergunta "para onde ligo para
+ * acionar a garantia deste notebook?" se faz na ficha DELE — mandar a pessoa
+ * para Configurações › Fabricantes procurar a linha certa é o desvio que a
+ * ficha existe para poupar.
+ *
+ * Os três são opcionais no cadastro e chegam `null` quando em branco.
+ */
+export interface FabricanteRef extends Referencia {
+  url: string | null;
+  supportPhone: string | null;
+  supportEmail: string | null;
+}
+
 export interface ModeloRef extends Referencia {
   modelNumber: string | null;
-  manufacturer: Referencia;
+  manufacturer: FabricanteRef;
   category: CategoriaRef;
 }
 
@@ -186,7 +206,10 @@ export interface EventoDoAtivo {
 /** Corpo de `POST /api/assets/:id/retire`. */
 export interface RetireInput {
   retiredReason: MotivoDaSaida;
-  /** 'AAAA-MM-DD'. Em branco, o servidor usa agora. */
+  /**
+   * 'AAAA-MM-DD', nunca no futuro (o servidor responde 422). A tela manda
+   * sempre — o modal nasce com hoje no fuso local (ver `RetireModal`).
+   */
   retiredAt?: string;
   notes?: string;
 }

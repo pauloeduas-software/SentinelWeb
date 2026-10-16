@@ -64,7 +64,7 @@ export default function UserDetailPage() {
       <div className="flex justify-between items-end gap-6 flex-wrap">
         <div className="space-y-2">
           <Link to="/users" className="font-mono text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary flex items-center gap-2">
-            <ArrowLeft size={12} /> Colaboradores
+            <ArrowLeft size={12} /> Usuários
           </Link>
           <h2 className="flex items-center gap-3 text-xl font-mono text-text-primary uppercase tracking-widest">
             <Iniciais nome={user.name} tamanho="grande" />
@@ -75,11 +75,11 @@ export default function UserDetailPage() {
             {user.isActive ? (
               <span className="text-status-success">ativo</span>
             ) : (
-              // Estar inativo é a primeira coisa que a tela precisa dizer: todo
+              // Estar desativado é a primeira coisa que a tela precisa dizer: todo
               // número abaixo tem que ser lido como histórico. Quando e por
               // quem está no histórico, logo embaixo.
               <span className="flex items-center gap-2 text-status-warning">
-                <UserX size={12} /> inativo na empresa
+                <UserX size={12} /> desativado
               </span>
             )}
           </div>

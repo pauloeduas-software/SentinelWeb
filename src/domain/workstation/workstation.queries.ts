@@ -46,8 +46,6 @@ export function useWorkstationQuery(id: string | null) {
 /** Corpo do cadastro de um posto. */
 export interface NovoPostoInput {
   name: string;
-  /** A sala ou o andar que contém a mesa. Em branco, o posto fica na raiz. */
-  parentId?: string;
   notes?: string;
 }
 
@@ -56,8 +54,7 @@ export interface NovoPostoInput {
  *
  * O posto É uma `Location` (docs/referencia/modelo-de-posse.md, D15): uma rota de escrita
  * separada seria um segundo lugar para criar a mesma linha, e com ela um
- * segundo lugar para esquecer a guarda de ciclo da hierarquia e o
- * `ActivityLog`. O que esta mutação acrescenta é `isWorkstation: true` — a
+ * segundo lugar para esquecer a recusa de nome repetido e o `ActivityLog`. O que esta mutação acrescenta é `isWorkstation: true` — a
  * marca que faz a mesa aparecer em /postos em vez de se perder no meio das
  * filiais.
  *

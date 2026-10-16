@@ -2,6 +2,7 @@ import { PackageX, Undo2 } from 'lucide-react';
 import type { Asset } from '../../../../domain/shared/asset.types';
 import { formatarData, formatarMoeda } from '../../../helpers/format.helper';
 import { seloDaSaida } from '../../helpers/baixa.helper';
+import { canaisDeSuporte, type CanalDeSuporte } from '../helpers/suporte.helper';
 
 // A FICHA do ativo. Só leitura: editar é o modal que já existe, e duplicar os
 // campos aqui em modo de edição criaria dois formulários para a mesma tabela.
@@ -19,6 +20,7 @@ export default function DetalhesTab({
   // do mesmo dado e são lidos em dois lugares da tela.
   const selo = seloDaSaida(asset);
   const categoria = asset.model.category.name;
+  const canais = canaisDeSuporte(asset.model.manufacturer);
 
   return (
     <div className="space-y-6">
@@ -31,7 +33,7 @@ export default function DetalhesTab({
             <div className="text-text-primary">{selo}</div>
             <p className="text-text-tertiary text-[10px] leading-relaxed max-w-xl">
               Saiu do patrimônio — não é o mesmo que estar na lixeira (cadastro errado). O
-              ativo continua no histórico e nos relatórios com a data
+              ativo continua no histórico e na vista "Baixados" da tela de Ativos, com a data
               em que saiu.
             </p>
           </div>
@@ -62,16 +64,20 @@ export default function DetalhesTab({
           <Campo rotulo="Localização" valor={asset.location?.name} />
         </Secao>
 
+        {/* O SUPORTE DO FABRICANTE, logo ao lado do catálogo de onde ele vem.
+            Só os canais preenchidos; sem nenhum, a seção não aparece — três
+            travessões sob um título não ajudam ninguém a abrir chamado. */}
+        {canais.length > 0 && (
+          <Secao titulo={`Suporte · ${asset.model.manufacturer.name}`}>
+            {canais.map((canal) => <CampoDeCanal key={canal.rotulo} canal={canal} />)}
+          </Secao>
+        )}
+
         <Secao titulo="Compra">
           <Campo rotulo="Número do pedido" valor={asset.orderNumber} />
           <Campo rotulo="Data da compra" valor={formatarData(asset.purchaseDate)} />
           <Campo rotulo="Valor" valor={formatarMoeda(asset.purchaseCost)} />
         </Secao>
-
-        {/* OS CAMPOS CUSTOMIZADOS (F9). Depois de "Compra" e antes de "Notas":
-            o que o cliente criou vale mais que os campos que vêm de fábrica, e
-            menos que o texto livre que alguém escreveu sobre este ativo. Ocupa a
-            linha inteira porque o número de campos é do cliente, não do layout. */}
 
         <Secao titulo="Notas">
           <p className="col-span-2 text-text-secondary whitespace-pre-wrap leading-relaxed">
@@ -108,6 +114,35 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
       </h3>
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">{children}</div>
     </section>
+  );
+}
+
+/**
+ * Um canal de suporte: o mesmo desenho do `Campo`, com o valor clicável.
+ *
+ * Endereço web abre em outra aba com `noopener noreferrer` — a página do
+ * fabricante não ganha acesso a esta janela pelo `window.opener`, nem recebe a
+ * URL da ficha (com o id do ativo) no `Referer`. Valor que não virou link sai
+ * como texto.
+ */
+function CampoDeCanal({ canal }: { canal: CanalDeSuporte }) {
+  return (
+    <div className="space-y-1">
+      <div className="text-text-tertiary uppercase tracking-widest text-[10px]">{canal.rotulo}</div>
+      <div className="break-words">
+        {canal.href ? (
+          <a
+            href={canal.href}
+            {...(canal.externo ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+            className="text-status-info hover:underline"
+          >
+            {canal.texto}
+          </a>
+        ) : (
+          <span className="text-text-primary">{canal.texto}</span>
+        )}
+      </div>
+    </div>
   );
 }
 

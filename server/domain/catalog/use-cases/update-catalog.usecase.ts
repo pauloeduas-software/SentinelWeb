@@ -2,6 +2,7 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { buildChanges } from '../../shared/diff.helper';
+import { assertNomeLivre } from '../helpers/nome-unico.helper';
 import type { CatalogSpec } from '../specs/catalog-spec.types';
 
 export async function updateCatalog(
@@ -16,6 +17,7 @@ export async function updateCatalog(
     const antes = await delegate.findFirst({ where: { id }, select: spec.select });
     if (!antes) throw new AppError('Registro não encontrado', 404);
 
+    await assertNomeLivre(spec, tx, id, data, antes);
     await spec.beforeWrite?.(tx, id, data);
 
     const depois = await delegate.update({ where: { id }, data, select: spec.select });

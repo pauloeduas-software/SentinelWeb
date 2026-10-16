@@ -19,6 +19,7 @@ interface LocationOccupantsModalProps {
   posto: CatalogRow;
   ocupantes: readonly LocationOccupant[];
   carregando: boolean;
+  erro: string | null;
   view: OccupantView;
   onViewChange: (view: OccupantView) => void;
   onAdicionar: (data: OccupantInput) => Promise<void>;
@@ -27,7 +28,7 @@ interface LocationOccupantsModalProps {
 }
 
 export default function LocationOccupantsModal({
-  posto, ocupantes, carregando, view, onViewChange, onAdicionar, onEncerrar, onClose,
+  posto, ocupantes, carregando, erro, view, onViewChange, onAdicionar, onEncerrar, onClose,
 }: LocationOccupantsModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
@@ -53,11 +54,15 @@ export default function LocationOccupantsModal({
           <OccupantsPanel
             ocupantes={ocupantes}
             carregando={carregando}
+            erro={erro}
             view={view}
             onViewChange={onViewChange}
             onAdicionar={onAdicionar}
             onEncerrar={onEncerrar}
             onFechar={onClose}
+            // `=== false`, e não `!isActive`: linha sem o campo (servidor de
+            // antes dele) é ativa, que é o que toda localização era.
+            desativado={posto.isActive === false}
           />
         </div>
       </div>

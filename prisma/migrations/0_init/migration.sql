@@ -136,6 +136,7 @@ CREATE TABLE "categories" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
     "type" "CategoryType" NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -148,6 +149,7 @@ CREATE TABLE "status_labels" (
     "name" TEXT NOT NULL,
     "type" "StatusLabelType" NOT NULL,
     "notes" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -161,7 +163,7 @@ CREATE TABLE "manufacturers" (
     "url" TEXT,
     "supportPhone" TEXT,
     "supportEmail" TEXT,
-    "supportUrl" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -174,6 +176,7 @@ CREATE TABLE "asset_models" (
     "name" TEXT NOT NULL,
     "modelNumber" TEXT,
     "notes" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "manufacturerId" UUID NOT NULL,
     "categoryId" UUID NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -186,7 +189,6 @@ CREATE TABLE "asset_models" (
 CREATE TABLE "locations" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
-    "parentId" UUID,
     "address" TEXT,
     "city" TEXT,
     "state" TEXT,
@@ -194,7 +196,7 @@ CREATE TABLE "locations" (
     "phone" TEXT,
     "notes" TEXT,
     "isWorkstation" BOOLEAN NOT NULL DEFAULT false,
-    "managerId" UUID,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -277,8 +279,6 @@ CREATE TABLE "app_settings" (
     "assetTagPrefix" TEXT NOT NULL DEFAULT 'ATV-',
     "assetTagZerofill" INTEGER NOT NULL DEFAULT 5,
     "assetTagNext" INTEGER NOT NULL DEFAULT 1,
-    "checkoutStatusId" UUID,
-    "checkinStatusId" UUID,
     "discoveryMode" "DiscoveryMode" NOT NULL DEFAULT 'SUGGEST',
     "ghostDays" INTEGER NOT NULL DEFAULT 30,
     "shadowHours" INTEGER NOT NULL DEFAULT 24,
@@ -397,6 +397,7 @@ CREATE TABLE "stock_items" (
     "qty" INTEGER NOT NULL,
     "categoryId" UUID NOT NULL,
     "notes" TEXT,
+    "locationId" UUID,
     "createdById" UUID,
     "updatedById" UUID,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -471,9 +472,6 @@ CREATE UNIQUE INDEX "asset_models_manufacturerId_modelNumber_key" ON "asset_mode
 CREATE UNIQUE INDEX "locations_name_key" ON "locations"("name");
 
 -- CreateIndex
-CREATE INDEX "locations_parentId_idx" ON "locations"("parentId");
-
--- CreateIndex
 CREATE INDEX "locations_isWorkstation_idx" ON "locations"("isWorkstation");
 
 -- CreateIndex
@@ -519,6 +517,9 @@ CREATE INDEX "licenses_deletedAt_idx" ON "licenses"("deletedAt");
 CREATE INDEX "licenses_categoryId_idx" ON "licenses"("categoryId");
 
 -- CreateIndex
+CREATE INDEX "licenses_manufacturerId_idx" ON "licenses"("manufacturerId");
+
+-- CreateIndex
 CREATE INDEX "licenses_expirationDate_idx" ON "licenses"("expirationDate");
 
 -- CreateIndex
@@ -561,6 +562,9 @@ CREATE INDEX "stock_items_deletedAt_idx" ON "stock_items"("deletedAt");
 CREATE INDEX "stock_items_categoryId_idx" ON "stock_items"("categoryId");
 
 -- CreateIndex
+CREATE INDEX "stock_items_locationId_idx" ON "stock_items"("locationId");
+
+-- CreateIndex
 CREATE INDEX "stock_movements_itemId_kind_returnedAt_idx" ON "stock_movements"("itemId", "kind", "returnedAt");
 
 -- CreateIndex
@@ -585,12 +589,6 @@ ALTER TABLE "asset_models" ADD CONSTRAINT "asset_models_manufacturerId_fkey" FOR
 ALTER TABLE "asset_models" ADD CONSTRAINT "asset_models_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "locations" ADD CONSTRAINT "locations_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "locations" ADD CONSTRAINT "locations_managerId_fkey" FOREIGN KEY ("managerId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "assets" ADD CONSTRAINT "assets_statusId_fkey" FOREIGN KEY ("statusId") REFERENCES "status_labels"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -612,7 +610,7 @@ ALTER TABLE "assignments" ADD CONSTRAINT "assignments_targetUserId_fkey" FOREIGN
 ALTER TABLE "assignments" ADD CONSTRAINT "assignments_targetLocationId_fkey" FOREIGN KEY ("targetLocationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "location_occupants" ADD CONSTRAINT "location_occupants_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "location_occupants" ADD CONSTRAINT "location_occupants_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "location_occupants" ADD CONSTRAINT "location_occupants_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -652,6 +650,9 @@ ALTER TABLE "asset_usage_daily" ADD CONSTRAINT "asset_usage_daily_assetId_fkey" 
 
 -- AddForeignKey
 ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "stock_items"("id") ON DELETE CASCADE ON UPDATE CASCADE;

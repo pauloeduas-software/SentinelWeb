@@ -2,7 +2,7 @@ import type { ZodType } from 'zod';
 import type { prisma } from '../../../core/database/prismaClient';
 
 // O contrato de UMA tabela de catálogo. Cinco arquivos preenchem isto e o CRUD
-// genérico (use-cases/) atende às sete — em vez de sete fatias verticais quase
+// genérico (use-cases/) atende às cinco — em vez de cinco fatias verticais quase
 // idênticas, que é o que o docs/referencia/arquitetura.md chama de cerimônia.
 
 /**
@@ -28,7 +28,7 @@ export type ClienteCatalogo = Omit<
 /**
  * O mínimo que o CRUD usa de um delegate do Prisma.
  *
- * POR QUE NÃO O TIPO REAL: a união dos sete delegates não existe em TS — cada um
+ * POR QUE NÃO O TIPO REAL: a união dos cinco delegates não existe em TS — cada um
  * tem `where`/`data`/`select` próprios e a interseção deles não aceita nada.
  * Cada spec faz UM cast, ao lado do nome do model, e o cast morre ali.
  *
@@ -92,6 +92,31 @@ export interface CatalogSpec {
    * Ainda devolve 0 onde a tabela que aponta só nasce numa fase adiante.
    */
   countUsages: (client: ClienteCatalogo, id: string) => Promise<number>;
+
+  /** Frase que completa o 409 do delete — o que fazer em vez de excluir. */
+  dicaEmUso?: string;
+
+  /**
+   * O nome é único SEM diferença de maiúscula, dentro destes campos.
+   *
+   * `[]` = único na tabela inteira; `['type']` = único por tipo (categoria).
+   * Ausente = a tabela não tem nome único (modelo).
+   *
+   * O índice do banco compara byte a byte: "Dell" e "dell" passavam os dois e
+   * apareciam duplicados em todo `<select>`. A checagem é da aplicação e vem
+   * com a mensagem que diz QUAL nome colidiu; o `@unique` continua embaixo
+   * como rede da colisão exata.
+   */
+  nomeUnicoPor?: readonly string[];
+
+  /** Filtro fixo do `/options`: o que não pode ser ESCOLHIDO num formulário. */
+  optionsWhere?: Record<string, unknown>;
+
+  /**
+   * Regra que roda antes de EXCLUIR, depois da contagem de uso — para o que não
+   * é uso mas também segura a linha (o último status ativo de um tipo).
+   */
+  beforeDelete?: (client: ClienteCatalogo, id: string) => Promise<void>;
 
   /** Regra que roda antes de gravar. `id` é null na criação. */
   beforeWrite?: (

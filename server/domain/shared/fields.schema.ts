@@ -25,14 +25,25 @@ export const emailOpcional = z
   .trim()
   .nullish()
   .transform((valor) => (valor === undefined ? undefined : valor || null))
-  .pipe(z.email('e-mail inválido').max(200).nullish());
+  .pipe(z.email('e-mail inválido').max(200, 'e-mail: máximo de 200 caracteres').nullish());
 
-export const urlOpcional = z
+// Construtor, e não constante: a tela mostra só a mensagem, e "endereço
+// inválido" sem o rótulo não diz de qual campo é — o rótulo entra na frase.
+//
+// Só `http`/`https`: o `z.url()` sozinho aceita `javascript:` e `data:`, que
+// viram XSS armazenado no dia em que o campo for exibido como link. E sem
+// completar o esquema: `dell.com` é recusado, quem digita escreve o endereço
+// inteiro.
+export const urlOpcional = (rotulo: string) => z
   .string()
   .trim()
   .nullish()
   .transform((valor) => (valor === undefined ? undefined : valor || null))
-  .pipe(z.url('endereço de site inválido').max(300).nullish());
+  .pipe(
+    z.url({ protocol: /^https?$/, error: `${rotulo} inválido: use o endereço completo, com https://` })
+      .max(300, `${rotulo}: máximo de 300 caracteres`)
+      .nullish(),
+  );
 
 export const booleano = (rotulo: string) => z.boolean(`${rotulo} deve ser verdadeiro ou falso`);
 

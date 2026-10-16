@@ -42,6 +42,9 @@ que corrigem algo anterior:
 | **D75** (`Department` em duas migrações) | **D135** | o contrato muda com a entidade, não no `DROP COLUMN` |
 | **D77** (dado sensível no `select`) | **D140** | em `JsonB` isso é impossível: mascarar depois é o limite da regra, não exceção |
 | **D16** (responsabilidade derivada) | **D130**, **D139** | a derivação tem UMA implementação por pergunta — nem a view nem o aceite criam a segunda |
+| **D5** (cinco tipos de status) | commit `505c520` (status enxuto) | o `ARCHIVED` sai: **quatro** tipos; cor e `showInNav` saem do `StatusLabel`; o seed cria um status por tipo |
+| **D19** (três colunas de saída), **D127** | commit `505c520` (status enxuto) | sem `ARCHIVED`, sobram duas: `retiredAt` (a baixa) e `deletedAt` |
+| **D20** (`?arquivados=`), **D85** (`?view=archived`) | commit `505c520` (status enxuto) | a vista, a aba e o contador de arquivados saem; `active` exclui só o baixado |
 
 **O de-escopo (D143–D156) supera por subtração**, e é o maior grupo de supersessões do projeto:
 a decisão antiga não estava errada, o que ela governava deixou de existir. Está inteiro em

@@ -5,10 +5,14 @@ import AssetFormModal from './components/AssetFormModal';
 import CheckoutModal from './components/CheckoutModal';
 import ColunasMenu from './components/ColunasMenu';
 import CategoriaFiltro from '../components/CategoriaFiltro';
+import EstadoDaLista from '../components/EstadoDaLista';
 import ListToolbar from '../components/ListToolbar';
+import { usePode } from '../../domain/auth/auth.store';
 import { formatarData, formatarMoeda } from '../helpers/format.helper';
 import { seloDaSaida } from './helpers/baixa.helper';
-import { TRACO, resumoDaPosse, rotuloDaOperacao } from './helpers/posse.helper';
+import {
+  TRACO, bloqueioDaEntrega, resumoDaPosse, rotuloDaOperacao,
+} from './helpers/posse.helper';
 import { useAssets } from './hooks/useAssets';
 import { useColunas } from './hooks/useColunas';
 
@@ -18,17 +22,19 @@ export default function AtivosPage() {
     baixados, page, perPage, setPage,
     search, changeSearch, view, changeView,
     statusId, statusFiltrado, toggleStatus, limparStatus,
-    categoryId, changeCategoria,
+    categoryId, changeCategoria, loading, erro,
     modalAberto, emEdicao, clonando, statusPadraoId, openCreate, openEdit, openClone, closeModal, abrirDetalhe,
     handleSubmit, handleDelete, handleRestore,
     emPosse, openPosse, closePosse, handleEntregar, handleDevolver,
   } = useAssets();
+  // Mandar para a lixeira e tirar de lá é `ADMIN` no servidor (excluir de
+  // verdade é dele); o resto da linha é o trabalho do técnico. Sem isto o
+  // técnico via a lixeira e o restaurar, e os dois só levavam 403.
+  const ehAdmin = usePode('ADMIN');
 
   // AS COLUNAS VISÍVEIS (F10, Etapa B). Preferência do navegador, não do
   // servidor: ninguém a consulta e ela não é fato sobre o inventário
   // (docs/referencia/arquitetura.md, *client state*).
-  //
-  // As CUSTOMIZADAS entram por parâmetro, e só para o export: a tabela as desenha
   const colunas = useColunas();
 
   return (
@@ -127,6 +133,7 @@ export default function AtivosPage() {
               // (docs/referencia/arquitetura.md). Aqui só se escolhe o que mostrar.
               const posse = resumoDaPosse(asset.posse);
               const selo = seloDaSaida(asset);
+              const bloqueio = bloqueioDaEntrega(asset);
 
               return (
                 <tr
@@ -211,33 +218,46 @@ export default function AtivosPage() {
                     </td>
                   )}
                   <td className="px-6 py-4 text-right" onClick={(event) => event.stopPropagation()}>
-                    <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {/* Visível ao passar o mouse, ao navegar por Tab
+                        (`focus-within`) e sempre no toque, onde não há hover —
+                        o mesmo desenho do `CatalogTable`. Com `opacity-0` puro,
+                        o botão focado por Tab ficava invisível e, no celular,
+                        a coluna inteira não existia. */}
+                    <div className="flex items-center justify-end gap-3 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
                       {view === 'trashed' ? (
-                        <button onClick={() => void handleRestore(asset)} title="Restaurar" className="text-text-tertiary hover:text-status-success transition-colors">
-                          <RotateCcw size={14} />
-                        </button>
+                        ehAdmin && (
+                          <button onClick={() => void handleRestore(asset)} title="Restaurar" aria-label={`Restaurar ${asset.assetTag}`} className="text-text-tertiary hover:text-status-success transition-colors">
+                            <RotateCcw size={14} />
+                          </button>
+                        )
                       ) : (
                         <>
                           {/* Entregar/devolver é OPERAÇÃO, não campo: mora aqui,
-                              ao lado do ativo, e não dentro do formulário. */}
+                              ao lado do ativo, e não dentro do formulário.
+                              Travado, o `title` diz POR QUÊ — um botão apagado
+                              sem explicação parece defeito. */}
                           <button
                             onClick={() => openPosse(asset)}
-                            title={`${rotuloDaOperacao(asset.posse)} ${asset.assetTag}`}
-                            className="text-text-tertiary hover:text-status-info transition-colors"
+                            disabled={bloqueio !== null}
+                            title={bloqueio ?? `${rotuloDaOperacao(asset.posse)} ${asset.assetTag}`}
+                            aria-label={`${rotuloDaOperacao(asset.posse)} ${asset.assetTag}`}
+                            className="text-text-tertiary hover:text-status-info transition-colors disabled:opacity-30 disabled:hover:text-text-tertiary disabled:cursor-not-allowed"
                           >
                             {posse.entregue ? <Undo2 size={14} /> : <ArrowRightLeft size={14} />}
                           </button>
                           {/* Clonar: o formulário abre em modo criação com os
                               valores deste ativo, sem etiqueta e sem série. */}
-                          <button onClick={() => openClone(asset)} title={`Clonar ${asset.assetTag}`} className="text-text-tertiary hover:text-text-primary transition-colors">
+                          <button onClick={() => openClone(asset)} title={`Clonar ${asset.assetTag}`} aria-label={`Clonar ${asset.assetTag}`} className="text-text-tertiary hover:text-text-primary transition-colors">
                             <Copy size={14} />
                           </button>
-                          <button onClick={() => openEdit(asset)} title="Editar" className="text-text-tertiary hover:text-text-primary transition-colors">
+                          <button onClick={() => openEdit(asset)} title="Editar" aria-label={`Editar ${asset.assetTag}`} className="text-text-tertiary hover:text-text-primary transition-colors">
                             <Edit2 size={14} />
                           </button>
-                          <button onClick={() => void handleDelete(asset)} title="Mover para a lixeira" className="text-text-tertiary hover:text-status-danger transition-colors">
-                            <Trash2 size={14} />
-                          </button>
+                          {ehAdmin && (
+                            <button onClick={() => void handleDelete(asset)} title="Mover para a lixeira" aria-label={`Mover ${asset.assetTag} para a lixeira`} className="text-text-tertiary hover:text-status-danger transition-colors">
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </>
                       )}
                     </div>
@@ -249,40 +269,54 @@ export default function AtivosPage() {
             {assets.length === 0 && (
               <tr>
                 {/* A SOMA, e não um número cravado: as visíveis (que o seletor
-                    muda, F10) mais as que o cliente criou (F9), mais a coluna do
-                    checkbox e a de ações. Esta célula é a única que não percorre
-                    lista nenhuma, então é a única que precisa contar — e com o
-                    número fixo o "nenhum ativo encontrado" deixava de cobrir a
-                    tabela a cada coluna marcada ou desmarcada. */}
+                    muda, F10) mais a coluna de ações. Esta célula é a única que
+                    não percorre lista nenhuma, então é a única que precisa contar
+                    — e com o número fixo o "nenhum ativo encontrado" deixava de
+                    cobrir a tabela a cada coluna marcada ou desmarcada. */}
                 <td
-                  colSpan={2 + colunas.visiveis.length}
+                  colSpan={1 + colunas.visiveis.length}
                   className="px-6 py-16 text-center text-text-tertiary"
                 >
                   <div className="flex flex-col items-center justify-center">
                     <Database size={24} className="mb-4 opacity-50" />
-                    {view === 'trashed' ? (
-                      <span>A lixeira está vazia.</span>
-                    ) : view === 'retired' ? (
-                      <span>Nenhum ativo baixado.</span>
-                    ) : search ? (
-                      <span>Nenhum ativo encontrado para "{search}".</span>
-                    ) : statusId ? (
-                      <span>Nenhum ativo com este status.</span>
-                    ) : categoryId ? (
-                      <span>Nenhum ativo nesta categoria.</span>
-                    ) : (
-                      <>
-                        <span>Nenhum ativo cadastrado.</span>
-                        {/* Um ativo exige um modelo, e o modelo exige fabricante e
-                            categoria — é a ordem do Snipe-IT. Sem esta dica, o
-                            primeiro cadastro esbarra num seletor vazio. */}
-                        <span className="mt-4 text-[10px] max-w-md leading-relaxed">
-                          Todo ativo pertence a um modelo. Cadastre o fabricante e o modelo em{' '}
-                          <Link to="/configuracoes" className="text-status-success hover:underline">Configurações</Link>
-                          {' '}antes do primeiro ativo.
-                        </span>
-                      </>
-                    )}
+                    <EstadoDaLista carregando={loading} erro={erro}>
+                      {view === 'trashed' ? (
+                        <span>A lixeira está vazia.</span>
+                      ) : view === 'retired' ? (
+                        <span>Nenhum ativo baixado.</span>
+                      ) : search ? (
+                        <span>Nenhum ativo encontrado para "{search}".</span>
+                      ) : statusId ? (
+                        <span>Nenhum ativo com este status.</span>
+                      ) : categoryId ? (
+                        <span>Nenhum ativo nesta categoria.</span>
+                      ) : (
+                        <>
+                          <span>Nenhum ativo cadastrado.</span>
+                          {/* Um ativo exige um modelo, e o modelo exige fabricante e
+                              categoria — é a ordem do Snipe-IT. Sem esta dica, o
+                              primeiro cadastro esbarra num seletor vazio.
+                              O LINK é só do ADMIN: Configurações é tela dele, e
+                              para os outros o link levava a uma porta fechada. A
+                              dica fica, porque a ordem vale para todos — muda
+                              quem faz. */}
+                          <span className="mt-4 text-[10px] max-w-md leading-relaxed">
+                            {ehAdmin ? (
+                              <>
+                                Todo ativo pertence a um modelo. Cadastre o fabricante e o modelo em{' '}
+                                <Link to="/configuracoes" className="text-status-success hover:underline">Configurações</Link>
+                                {' '}antes do primeiro ativo.
+                              </>
+                            ) : (
+                              <>
+                                Todo ativo pertence a um modelo. Fabricante e modelo se cadastram em
+                                Configurações — peça a um administrador antes do primeiro ativo.
+                              </>
+                            )}
+                          </span>
+                        </>
+                      )}
+                    </EstadoDaLista>
                   </div>
                 </td>
               </tr>

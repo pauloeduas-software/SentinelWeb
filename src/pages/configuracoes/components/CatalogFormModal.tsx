@@ -7,11 +7,18 @@ import type { CatalogRow } from '../../../domain/shared/catalog.types';
 // Valor inicial de cada campo. Tudo vira string, menos checkbox e lista: é o
 // que o `<input>` controlado espera, e o servidor já converte de volta (o `''`
 // vira `null` no schema, e número vazio vira `null` no `preprocess`).
-function valoresIniciais(spec: CatalogUiSpec, registro: CatalogRow | null): Record<string, unknown> {
+//
+// `padroes` só vale para registro NOVO: é o recorte que estava na tela (o tipo
+// filtrado nas categorias). Na edição quem manda é o que está gravado.
+function valoresIniciais(
+  spec: CatalogUiSpec,
+  registro: CatalogRow | null,
+  padroes?: Record<string, unknown>,
+): Record<string, unknown> {
   const valores: Record<string, unknown> = {};
 
   for (const campo of spec.campos) {
-    const atual = registro?.[campo.key];
+    const atual = registro ? registro[campo.key] : padroes?.[campo.key];
 
     if (campo.tipo === 'checkbox') valores[campo.key] = Boolean(atual);
     else if (campo.tipo === 'select') valores[campo.key] = String(atual ?? campo.opcoes?.[0]?.value ?? '');
@@ -49,15 +56,34 @@ function paraEnvio(spec: CatalogUiSpec, valores: Record<string, unknown>): Recor
   return corpo;
 }
 
+/**
+ * O vínculo com que um campo `reference` abriu, com nome — para o
+ * `ReferenceSelect` nomear a opção que ficou fora da lista (um fabricante
+ * desativado não volta no `/options`).
+ *
+ * Pela convenção das specs: o campo `manufacturerId` tem a relação ao lado, em
+ * `manufacturer`, que é a mesma que a coluna `relacao` da tabela lê. Sem a
+ * relação no registro, `null` — e a opção aparece sem nome, como antes.
+ */
+function referenciaAtual(registro: CatalogRow | null, campo: CampoSpec): { id: string; name: string } | null {
+  if (!registro || campo.tipo !== 'reference') return null;
+  const relacao = registro[campo.key.replace(/Id$/, '')];
+  if (!relacao || typeof relacao !== 'object') return null;
+  const { id, name } = relacao as { id?: unknown; name?: unknown };
+  return typeof id === 'string' && typeof name === 'string' ? { id, name } : null;
+}
+
 interface CatalogFormModalProps {
   spec: CatalogUiSpec;
   registro: CatalogRow | null;
+  /** Valores de partida do registro NOVO — o tipo filtrado na aba. Ignorado na edição. */
+  padroes?: Record<string, unknown>;
   onClose: () => void;
   onSubmit: (data: Record<string, unknown>) => Promise<void>;
 }
 
-export default function CatalogFormModal({ spec, registro, onClose, onSubmit }: CatalogFormModalProps) {
-  const [valores, setValores] = useState(() => valoresIniciais(spec, registro));
+export default function CatalogFormModal({ spec, registro, padroes, onClose, onSubmit }: CatalogFormModalProps) {
+  const [valores, setValores] = useState(() => valoresIniciais(spec, registro, padroes));
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -83,7 +109,7 @@ export default function CatalogFormModal({ spec, registro, onClose, onSubmit }: 
       <div className="relative w-full max-w-2xl bg-surface-card border border-border-sutil shadow-2xl flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border-sutil bg-bg-base/50">
           <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">
-            {registro ? `Editar ${spec.singular}` : `Nova ${spec.singular}`}
+            {registro ? `Editar ${spec.singular}` : `${spec.genero === 'f' ? 'Nova' : 'Novo'} ${spec.singular}`}
           </h2>
           <button onClick={onClose} className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
             <X size={16} />
@@ -110,8 +136,8 @@ export default function CatalogFormModal({ spec, registro, onClose, onSubmit }: 
                 )}
                 <Campo
                   campo={campo}
+                  atual={referenciaAtual(registro, campo)}
                   valor={valores[campo.key]}
-                  registroId={registro?.id}
                   onChange={(valor) => definir(campo.key, valor)}
                 />
                 {campo.ajuda && (
@@ -147,11 +173,11 @@ const CLASSE_CAMPO =
   'w-full p-2 bg-bg-base border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors';
 
 function Campo({
-  campo, valor, registroId, onChange,
+  campo, atual, valor, onChange,
 }: {
   campo: CampoSpec;
+  atual: { id: string; name: string } | null;
   valor: unknown;
-  registroId?: string;
   onChange: (valor: unknown) => void;
 }) {
   if (campo.tipo === 'checkbox') {
@@ -175,9 +201,7 @@ function Campo({
         filtroTipo={campo.filtroTipo}
         valor={String(valor ?? '')}
         obrigatorio={campo.obrigatorio}
-        // Uma localização não pode ser oferecida como pai de si mesma. O ciclo
-        // mais longo (pai de uma filha) ainda é barrado pelo servidor com 409.
-        excluirId={campo.rota === 'locations' ? registroId : undefined}
+        atual={atual}
         onChange={onChange}
       />
     );

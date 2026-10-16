@@ -1,5 +1,6 @@
 import { Plus } from 'lucide-react';
 import CategoriaFiltro from '../components/CategoriaFiltro';
+import EstadoDaLista from '../components/EstadoDaLista';
 import ListToolbar from '../components/ListToolbar';
 import AjusteModal from './components/AjusteModal';
 import EstoqueTable from './components/EstoqueTable';
@@ -7,6 +8,7 @@ import ItemDetalheModal from './components/ItemDetalheModal';
 import ItemFormModal from './components/ItemFormModal';
 import SaidaModal from './components/SaidaModal';
 import { useEstoque } from './hooks/useEstoque';
+import { usePode } from '../../domain/auth/auth.store';
 
 // O ESTOQUE — monitor, teclado, mouse, cabo: o que tem QUANTIDADE e não
 // patrimônio (docs/decisoes/estoque.md). Ativo é computador; o resto entra
@@ -16,12 +18,15 @@ import { useEstoque } from './hooks/useEstoque';
 // (docs/referencia/arquitetura.md).
 export default function EstoquePage() {
   const {
-    itens, total, page, perPage, setPage, search, changeSearch, view, changeView,
+    itens, total, carregando, erro, page, perPage, setPage, search, changeSearch, view, changeView,
     categoryId, changeCategoria,
     modal, itemAberto, abrir, fechar,
     handleCriar, handleEditar, handleAjustar, handleSaida, handleDevolver,
     handleExcluir, handleRestaurar,
   } = useEstoque();
+  // Lixeira e restaurar são `ADMIN` no servidor, como no ativo; o resto da
+  // linha (entrada, saída, editar) é do técnico.
+  const podeApagar = usePode('ADMIN');
 
   return (
     <div className="animate-in fade-in duration-300 flex flex-col pb-6">
@@ -64,24 +69,28 @@ export default function EstoquePage() {
         onAjustar={(item) => abrir('ajustar', item)}
         onSaida={(item) => abrir('saida', item)}
         onEditar={(item) => abrir('editar', item)}
-        onExcluir={(item) => void handleExcluir(item)}
-        onRestaurar={(item) => void handleRestaurar(item)}
+        onExcluir={podeApagar ? (item) => void handleExcluir(item) : undefined}
+        onRestaurar={podeApagar ? (item) => void handleRestaurar(item) : undefined}
         vazio={
-          search ? (
-            <span>Nenhum item encontrado para "{search}".</span>
-          ) : categoryId ? (
-            <span>Nenhum item nesta categoria.</span>
-          ) : view === 'trashed' ? (
-            <span>A lixeira de estoque está vazia.</span>
-          ) : (
-            <>
-              <span>Nenhum item de estoque cadastrado.</span>
-              <span className="mt-4 text-[10px] max-w-md text-center leading-relaxed">
-                Um item é N unidades de uma mesma coisa — monitores, mouses, cabos. Cadastre-o com
-                a quantidade que há hoje; o saldo disponível é calculado a partir das saídas.
-              </span>
-            </>
-          )
+          // Carregando e erro antes do vazio: sem isto, a primeira carga e um
+          // servidor fora do ar diziam "nenhum cadastrado" (`EstadoDaLista`).
+          <EstadoDaLista carregando={carregando} erro={erro}>
+            {search ? (
+              <span>Nenhum item encontrado para "{search}".</span>
+            ) : categoryId ? (
+              <span>Nenhum item nesta categoria.</span>
+            ) : view === 'trashed' ? (
+              <span>A lixeira de estoque está vazia.</span>
+            ) : (
+              <>
+                <span>Nenhum item de estoque cadastrado.</span>
+                <span className="mt-4 text-[10px] max-w-md text-center leading-relaxed">
+                  Um item é N unidades de uma mesma coisa — monitores, mouses, cabos. Cadastre-o com
+                  a quantidade que há hoje; o saldo disponível é calculado a partir das saídas.
+                </span>
+              </>
+            )}
+          </EstadoDaLista>
         }
       />
 

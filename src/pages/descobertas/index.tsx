@@ -36,7 +36,7 @@ export default function DescobertasPage() {
     aba, setAba, erro, limparErro,
     sugestoes, carregandoSugestoes, cobertura, carregandoCobertura,
     ociosos, semVinculo, vinculadas, carregandoMaquinas, ocupado,
-    configuracao, salvandoConfiguracao,
+    configuracao, salvandoConfiguracao, podeConfigurar,
     podeReconciliar, reconciliando, ultimaVarredura, handleReconciliar,
     handleAceitar, handleRecusar, handleTriar, handleVincular, handleSalvarConfiguracao,
   } = useDescobertas();
@@ -87,6 +87,7 @@ export default function DescobertasPage() {
           coisas em telas diferentes esconderia a resposta da pergunta. */}
       <ConfiguracaoDaDescoberta
         configuracao={configuracao}
+        podeEditar={podeConfigurar}
         salvando={salvandoConfiguracao}
         onSalvar={handleSalvarConfiguracao}
       />

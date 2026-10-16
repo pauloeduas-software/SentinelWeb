@@ -26,12 +26,15 @@ export const createStockItemSchema = z.strictObject({
     .min(0, 'quantidade: mínimo de 0')
     .max(1_000_000, 'quantidade: máximo de 1.000.000')
     .default(0),
+  // Onde o que sobra fica guardado — o Depósito de TI. Opcional.
+  locationId: uuidOpcional('localização'),
   notes: textoOpcional('notas', 2_000),
 });
 
 export const updateStockItemSchema = z.strictObject({
   name: nomeObrigatorio('nome').optional(),
   categoryId: uuidObrigatorio('categoria').optional(),
+  locationId: uuidOpcional('localização'),
   notes: textoOpcional('notas', 2_000),
 });
 

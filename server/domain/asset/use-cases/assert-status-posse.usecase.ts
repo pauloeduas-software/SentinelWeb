@@ -69,9 +69,8 @@ export async function assertStatusCoerenteComPosse(
     where: { id: statusIdFinal },
     select: { name: true, type: true },
   });
-  // Status inexistente não é problema desta guarda: a FK do `assets.statusId`
-  // recusa a gravação logo abaixo e o `error-handler` traduz o P2003. Inventar
-  // um 404 aqui só mudaria de lugar o mesmo erro.
+  // Status inexistente não é problema desta guarda: quem chama já passou pelo
+  // `lerStatusTravado`, que dá o 404 com nome.
   if (!status) return;
 
   const motivo = TIPOS_PROIBIDOS_COM_POSSE[status.type];

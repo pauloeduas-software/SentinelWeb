@@ -50,7 +50,7 @@ export function usePostos() {
     [page, view, debouncedSearch],
   );
 
-  const { data, isPending } = useWorkstationsQuery(params);
+  const { data, isPending, error } = useWorkstationsQuery(params);
   const criar = useCreateWorkstation();
   const devolver = useCheckinAsset();
   const devolverItem = useCheckinStock();
@@ -74,7 +74,7 @@ export function usePostos() {
   const ocupantes = useOcupantes(postoId ?? null);
 
   // O erro sobe para o formulário mostrar a mensagem do servidor — é por aqui
-  // que aparece o 409 de nome repetido e o de hierarquia em ciclo.
+  // que aparece o 409 de nome repetido.
   const handleCriar = async (dados: NovoPostoInput) => {
     await criar.mutateAsync(dados);
     setModalAberto(false);
@@ -125,6 +125,8 @@ export function usePostos() {
     postos: data?.rows ?? [],
     total: data?.total ?? 0,
     carregando: isPending,
+    // Para a lista não dizer "nenhum posto cadastrado" quando a consulta falhou.
+    erro: error ? error.message : null,
     page,
     perPage: PER_PAGE,
     setPage,

@@ -8,6 +8,7 @@ import type {
 } from '../../../domain/shared/license.types';
 import type { ListView } from '../../../domain/shared/list.types';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { useNotificacao } from '../../hooks/useNotificacao';
 
 const PER_PAGE = 15;
 
@@ -29,6 +30,7 @@ export interface AvisoDeQueima {
 // Estado da tela de Licenças: página, busca, vista e qual licença está aberta.
 // Tudo de UMA tela — `useState`, não store (docs/referencia/arquitetura.md).
 export function useLicencas() {
+  const notificar = useNotificacao();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [view, setView] = useState<ListView>('active');
@@ -58,7 +60,7 @@ export function useLicencas() {
     [page, view, debouncedSearch, categoryId],
   );
 
-  const { data, isPending } = useLicensesQuery(params);
+  const { data, isPending, error } = useLicensesQuery(params);
   const licencas = data?.rows ?? [];
   const { data: alertas } = useLicenseAlertsQuery();
 
@@ -146,7 +148,7 @@ export function useLicencas() {
     } catch (erro) {
       // O 409 de assento não ocupado: duas abas abertas na mesma grade, a
       // segunda perde.
-      alert((erro as Error).message);
+      notificar.erro((erro as Error).message);
     }
   };
 
@@ -158,7 +160,8 @@ export function useLicencas() {
   // novo. O 409 daqui é escrito para ensinar, e engoli-lo transforma uma recusa
   // explicada numa tela que parece travada.
   //
-  // `alert` é o mesmo do `useAssets` — feio e consistente.
+  // A mensagem sai como notificação de erro (`useNotificacao`), a mesma do
+  // `useAssets`: não trava a tela e fica o tempo de ser lida.
   // ─────────────────────────────────────────────────────────────────────────
 
   const handleExcluir = async (licenca: Licenca) => {
@@ -168,7 +171,7 @@ export function useLicencas() {
       // paginador apontando para uma página que não existe mais.
       if (licencas.length === 1 && page > 1) setPage(page - 1);
     } catch (erro) {
-      alert((erro as Error).message);
+      notificar.erro((erro as Error).message);
     }
   };
 
@@ -179,7 +182,7 @@ export function useLicencas() {
     } catch (erro) {
       // O 409 de nome reaproveitado enquanto a licença estava na lixeira: a
       // unicidade é índice PARCIAL, só entre as vivas.
-      alert((erro as Error).message);
+      notificar.erro((erro as Error).message);
     }
   };
 
@@ -187,6 +190,8 @@ export function useLicencas() {
     licencas,
     total: data?.total ?? 0,
     carregando: isPending,
+    // Para a tabela não dizer "nenhum cadastrado" quando a consulta falhou.
+    erro: error ? error.message : null,
     page,
     perPage: PER_PAGE,
     setPage,

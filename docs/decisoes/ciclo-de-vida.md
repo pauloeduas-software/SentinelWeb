@@ -210,6 +210,10 @@ primeira semana. As três colunas de saída são fatos diferentes (D19) e as tr�
 `deletedAt` é erro de cadastro, `retiredAt` é saída do patrimônio, `ARCHIVED` é saída da operação —
 e nenhum dos três merece cobrança de prazo.
 
+> **O `ARCHIVED` citado acima saiu no status enxuto (commit `505c520`):** o `StatusLabelType` tem
+> quatro tipos, e das três saídas sobram duas — `deletedAt` e `retiredAt` (a baixa). Ver a nota
+> no [D19](./catalogo-e-ativo.md#d19--arquivar-descomissionar-e-apagar-são-três-coisas-com-três-colunas).
+
 ---
 
 ## D128 — A central nasce só com os sinais do ATIVO.

@@ -34,9 +34,6 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
     // O PAPEL (D148). Conta nova nasce `USUARIO`, que é o `@default` da coluna —
     // a porta fechada por padrão da F3 levada à autorização.
     role: user?.role || 'USUARIO',
-    // O VÍNCULO COM A EMPRESA. Só editável na edição: criar alguém já inativo
-    // não é operação que exista.
-    isActive: user?.isActive ?? true,
   });
 
   const [loading, setLoading] = useState(false);
@@ -52,9 +49,10 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
         name: formData.name,
         email: formData.email,
         role: formData.role,
-        // `isActive` só na EDIÇÃO: o `strictObject` do create recusa o campo, e
-        // recusar é o certo — quem nasce, nasce ativo.
-        ...(user ? { isActive: formData.isActive } : {}),
+        // `isActive` NÃO viaja daqui: desativar e ativar são o botão da linha,
+        // em Ações (`useUsers.handleAlternarAtivo`), o mesmo padrão das outras
+        // listas. Quem nasce, nasce ativo — o `strictObject` do create recusa o
+        // campo.
       });
     } catch (err) {
       setError((err as Error).message);
@@ -80,12 +78,12 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
 
           <div className="space-y-1">
             <label className="text-text-secondary uppercase tracking-widest text-[10px]">Nome Completo*</label>
-            <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors" placeholder="Ex: João da Silva" />
+            <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors" />
           </div>
 
           <div className="space-y-1">
             <label className="text-text-secondary uppercase tracking-widest text-[10px]">E-mail*</label>
-            <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors" placeholder="Ex: joao@empresa.com" />
+            <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors" />
           </div>
 
           <div className="space-y-1">
@@ -109,31 +107,6 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
               <option value="ADMIN">Administrador — mais gente, configuração e custo</option>
             </select>
           </div>
-
-          {/* O VÍNCULO COM A EMPRESA — só na edição.
-              Desativar NÃO é apagar: o cadastro fica, com o histórico de posse
-              inteiro. O que ele impede é entrega nova (o checkout de ativo e o
-              de assento recusam com 409) e sessão: a releitura derruba quem foi
-              desativado na requisição seguinte. */}
-          {user && (
-            <label className="flex items-start gap-3 cursor-pointer pt-2">
-              <input
-                type="checkbox"
-                checked={formData.isActive}
-                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                className="accent-status-success w-4 h-4 mt-0.5"
-              />
-              <span className="space-y-1">
-                <span className="block text-text-secondary uppercase tracking-widest text-[10px]">
-                  Ativo na empresa
-                </span>
-                <span className="block text-text-tertiary text-[10px] leading-relaxed">
-                  Desmarcado, a pessoa continua no cadastro e no histórico, mas não recebe
-                  equipamento novo nem entra no sistema. Devolva o que está no nome dela antes.
-                </span>
-              </span>
-            </label>
-          )}
 
           <div className="pt-4 flex justify-end gap-3 border-t border-border-sutil">
             <button type="button" onClick={onClose} className="px-4 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base transition-colors">

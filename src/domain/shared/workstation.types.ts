@@ -1,4 +1,4 @@
-import type { Asset, Referencia } from './asset.types';
+import type { Asset } from './asset.types';
 import type { LocationOccupant, PessoaRef } from './posse.types';
 import type { UnidadeDeEstoque } from './stock.types';
 
@@ -43,10 +43,12 @@ export interface Posto {
   name: string;
   notes: string | null;
   isWorkstation: boolean;
+  /**
+   * `false` = a localização foi DESATIVADA: continua no histórico, mas não
+   * recebe entrega nem ocupante novo.
+   */
+  isActive: boolean;
   createdAt: string;
-
-  parent: Referencia | null;
-  caminho: string[];
 
   ocupantes: PostoOcupante[];
   totalOcupantes: number;
@@ -87,7 +89,6 @@ export interface AtivoDoPosto extends Asset {
  * está no posto.
  */
 export interface PostoDetalhe extends Omit<Posto, 'ocupantes'> {
-  manager: Referencia | null;
   ocupantes: LocationOccupant[];
   /** Os ativos entregues ao posto — posse ABERTA com alvo LOCATION. */
   ativos: AtivoDoPosto[];

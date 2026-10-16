@@ -36,10 +36,12 @@ interface PosseTabProps {
   assignments: Assignment[];
   carregando: boolean;
   onAbrirOperacao: () => void;
+  /** Por que a ENTREGA está travada (status não disponível), ou `null`. */
+  bloqueio: string | null;
 }
 
 export default function PosseTab({
-  posse, assignments, carregando, onAbrirOperacao,
+  posse, assignments, carregando, onAbrirOperacao, bloqueio,
 }: PosseTabProps) {
   // Cálculo fora do JSX: as perguntas da tela, respondidas uma vez.
   const entregue = posse?.assignmentId != null;
@@ -63,7 +65,9 @@ export default function PosseTab({
         <button
           type="button"
           onClick={onAbrirOperacao}
-          className="flex items-center gap-2 px-3 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base transition-colors shrink-0"
+          disabled={bloqueio !== null}
+          title={bloqueio ?? undefined}
+          className="flex items-center gap-2 px-3 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-text-secondary"
         >
           {entregue ? <Undo2 size={13} /> : <ArrowRightLeft size={13} />}
           {entregue ? 'Devolver' : 'Entregar'}

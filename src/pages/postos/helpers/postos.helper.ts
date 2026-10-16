@@ -9,6 +9,11 @@ import type {
 
 export const TRACO = '—';
 
+/** O posto foi DESATIVADO? Aceita o posto ainda não carregado (`null`). */
+export function estaDesativado(posto: Pick<Posto, 'isActive'> | null | undefined): boolean {
+  return posto?.isActive === false;
+}
+
 /** Os três recortes da tela, na ordem em que aparecem. */
 export const VISOES: readonly { valor: PostoView; rotulo: string }[] = [
   { valor: 'todos', rotulo: 'Todos' },
@@ -26,16 +31,6 @@ export function rotuloDaContagem(total: number, view: PostoView): string {
   if (view === 'vagos') return `${total} ${plural} ${total === 1 ? 'vago' : 'vagos'}`;
   if (view === 'ocupados') return `${total} ${plural} ${total === 1 ? 'ocupado' : 'ocupados'}`;
   return `${total} ${plural}`;
-}
-
-/**
- * "Sede › Andar 2 › Sala 3" — onde a mesa fica.
- *
- * Sem ancestral nenhum o posto está na raiz, e escrever isso é mais honesto que
- * um traço: "na raiz" é uma posição; o traço se lê como dado faltando.
- */
-export function caminhoDoPosto(caminho: readonly string[]): string {
-  return caminho.length > 0 ? caminho.join(' › ') : 'na raiz';
 }
 
 /** Uma faixa da escala: o turno e quem o cobre. */
@@ -108,9 +103,8 @@ export function ativosComMaquina(ativos: readonly AtivoDoPosto[]): AtivoComMaqui
 /**
  * Formulário → corpo de `POST /locations`.
  *
- * Campo vazio vira AUSENTE, não `''`: `parentId` em branco precisa dizer "sem
- * pai", e o schema do servidor já traduz ausente para `null`. Mandar `''` num
- * campo de uuid seria 422.
+ * Nota vazia vira AUSENTE, não `''`: o schema do servidor já traduz ausente
+ * para "sem nota".
  *
  * Endereço, CEP e telefone não entram nem como chave: não querem dizer nada
  * numa mesa, e é por misturá-los que a localização virou um formulário onde o
@@ -118,12 +112,10 @@ export function ativosComMaquina(ativos: readonly AtivoDoPosto[]): AtivoComMaqui
  */
 export function montarNovoPosto(valores: {
   name: string;
-  parentId: string;
   notes: string;
 }): NovoPostoInput {
   const corpo: NovoPostoInput = { name: valores.name.trim() };
 
-  if (valores.parentId) corpo.parentId = valores.parentId;
   if (valores.notes.trim()) corpo.notes = valores.notes.trim();
 
   return corpo;

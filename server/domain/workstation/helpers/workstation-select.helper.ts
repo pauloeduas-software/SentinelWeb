@@ -37,10 +37,8 @@ export const WORKSTATION_SELECT = {
   name: true,
   notes: true,
   isWorkstation: true,
+  isActive: true,
   createdAt: true,
-
-  parentId: true,
-  parent: { select: { id: true, name: true } },
 
   _count: { select: { assignments: { where: POSSE_ABERTA } } },
 } as const;
@@ -52,9 +50,6 @@ export const WORKSTATION_SELECT = {
  * mais: aqui os ativos vêm por inteiro, então o `_count` deles seria um segundo
  * número para o mesmo fato — e dois números para o mesmo fato divergem.
  *
- * `manager` só aparece no detalhe: é quem atende quando o posto está vazio —
- * informação de ficha, não de tabela.
- *
  * Os ocupantes reaproveitam o `OCCUPANT_SELECT` do domínio `occupancy` em vez
  * de repetir a lista — quem decide o que é público de uma ocupação continua
  * sendo o dono dela, e uma cópia esquecida aqui vazaria o que lá for fechado.
@@ -64,11 +59,8 @@ export const WORKSTATION_DETAIL_SELECT = {
   name: true,
   notes: true,
   isWorkstation: true,
+  isActive: true,
   createdAt: true,
-
-  parentId: true,
-  parent: { select: { id: true, name: true } },
-  manager: { select: { id: true, name: true } },
 
   occupants: {
     where: { endedAt: null },

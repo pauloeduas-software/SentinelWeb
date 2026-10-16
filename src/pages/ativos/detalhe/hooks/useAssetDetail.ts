@@ -8,12 +8,14 @@ import {
   useAssetAssignmentsQuery, useCheckinAsset, useCheckoutAsset,
   type CheckinInput, type CheckoutInput,
 } from '../../../../domain/assignment/assignment.queries';
+import { useCatalogOptionsQuery } from '../../../../domain/catalog/catalog.queries';
 import { useAssetLicensesQuery } from '../../../../domain/license/license.queries';
 import {
   useDesvincularMaquina, useMaquinaDoAtivoQuery,
 } from '../../../../domain/reconciliation/reconciliation.queries';
 import type { RetireInput } from '../../../../domain/shared/asset.types';
 import type { AbaId } from '../helpers/abas.helper';
+import { useNotificacao } from '../../../hooks/useNotificacao';
 
 // Estado da TELA DE DETALHE. Aba, modais e o ativo em edição são de uma tela
 // só: ficam aqui, em `useState`, e não em store (docs/referencia/arquitetura.md).
@@ -25,6 +27,7 @@ import type { AbaId } from '../helpers/abas.helper';
 type ModalAberto = 'nenhum' | 'editar' | 'clonar' | 'posse' | 'baixa';
 
 export function useAssetDetail() {
+  const notificar = useNotificacao();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -39,6 +42,12 @@ export function useAssetDetail() {
   // A aba Posse lê o histórico de posse pela query do domínio de posse — a
   // mesma rota que a F4 escreve. Esta tela LÊ, não recalcula nada.
   const { data: assignments, isPending: possePendente } = useAssetAssignmentsQuery(id ?? null);
+
+  // O STATUS DO CLONE: o mesmo "primeiro `DEPLOYABLE`" que a listagem usa para
+  // o cadastro novo (`useAssets.ts`). Clonar daqui é criar — e sem isto o clone
+  // de um ativo entregue copiaria o "Em uso" e nasceria em uso sem posse.
+  const { data: disponiveis } = useCatalogOptionsQuery('status-labels', 'DEPLOYABLE');
+  const statusPadraoId = disponiveis?.[0]?.id ?? '';
 
   const criar = useCreateAsset();
   const editar = useUpdateAsset();
@@ -102,12 +111,18 @@ export function useAssetDetail() {
     fecharModal();
   };
 
+  // Reverter apaga a data e o motivo da saída num clique só, e o botão fica ao
+  // lado do selo, onde se clica por engano — por isso o `confirm`, como na
+  // lixeira. O que se perde é o registro no ativo; o histórico guarda a reversão.
   const handleReverterSaida = async () => {
     if (!asset) return;
+    if (!confirm(
+      `Reverter a baixa de ${asset.assetTag}? A data e o motivo da saída são apagados; o histórico guarda a reversão.`,
+    )) return;
     try {
       await reverterSaida.mutateAsync(asset.id);
     } catch (falha) {
-      alert((falha as Error).message);
+      notificar.erro((falha as Error).message);
     }
   };
 
@@ -123,7 +138,7 @@ export function useAssetDetail() {
       await excluir.mutateAsync(asset.id);
       navigate('/ativos');
     } catch (falha) {
-      alert((falha as Error).message);
+      notificar.erro((falha as Error).message);
     }
   };
 
@@ -159,6 +174,7 @@ export function useAssetDetail() {
     },
 
     modal,
+    statusPadraoId,
     abrirEdicao: () => setModal('editar'),
     abrirClone: () => setModal('clonar'),
     abrirPosse: () => setModal('posse'),

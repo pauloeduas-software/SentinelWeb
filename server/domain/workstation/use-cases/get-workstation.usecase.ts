@@ -4,7 +4,6 @@ import { ASSET_SELECT, assetSelect } from '../../asset/helpers/asset-select.help
 import { listLocationStock } from '../../stock/use-cases/list-location-stock.usecase';
 import { WORKSTATION_DETAIL_SELECT } from '../helpers/workstation-select.helper';
 import { ehPostoVago } from '../helpers/workstation-row.helper';
-import { resolverCaminhos } from './resolve-location-paths.usecase';
 
 /**
  * UM posto: quem está nele, o ativo entregue a ele e o estoque na mesa.
@@ -31,7 +30,7 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
 
   if (!local) throw new AppError('Posto de trabalho não encontrado.', 404);
 
-  const [entregues, itens, caminhos] = await Promise.all([
+  const [entregues, itens] = await Promise.all([
     // Consulta em `asset`, e não nas `assignments` do posto, de propósito: no
     // topo da consulta a `softDeleteExtension` age, e o ativo na lixeira fica
     // de fora sozinho. Lido pela relação, ele apareceria como equipamento na
@@ -61,7 +60,6 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
     // mouse não tem etiqueta nem série, e `totalAtivos` continua contando só
     // ativo — é esse número que a invariante 19 limita a um.
     listLocationStock(id),
-    resolverCaminhos([local.parentId]),
   ]);
 
   // A relação vira um CAMPO: a tela quer saber se este ativo tem máquina
@@ -71,11 +69,10 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
     endpointId: endpoint?.id ?? null,
   }));
 
-  const { parentId, occupants, ...posto } = local;
+  const { occupants, ...posto } = local;
 
   return {
     ...posto,
-    caminho: parentId ? caminhos.get(parentId) ?? [] : [],
 
     // Os ocupantes ABERTOS saem aqui para a resposta ser completa por si: um
     // cliente que chame só esta rota precisa saber quem responde pelo posto, e

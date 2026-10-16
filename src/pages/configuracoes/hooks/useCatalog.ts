@@ -4,6 +4,7 @@ import {
 } from '../../../domain/catalog/catalog.queries';
 import type { CatalogRow } from '../../../domain/shared/catalog.types';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { useNotificacao } from '../../hooks/useNotificacao';
 import { CATALOG_UI_SPECS } from '../specs';
 import type { AcaoLinhaId } from '../specs/catalog-ui.types';
 
@@ -27,6 +28,7 @@ const PER_PAGE = 25;
 // busca e qual registro está no modal. Tudo de UMA tela — fica aqui, em
 // useState, e não em store (docs/referencia/arquitetura.md).
 export function useCatalog() {
+  const notificar = useNotificacao();
   const [slug, setSlug] = useState(CATALOG_UI_SPECS[0].slug);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -73,13 +75,23 @@ export function useCatalog() {
     [page, debouncedSearch, campoDoFiltro, tipo],
   );
 
-  const { data, isPending } = useCatalogQuery(spec.slug, params);
+  const { data, isPending, error } = useCatalogQuery(spec.slug, params);
   const criar = useCreateCatalogRow(spec.slug);
   const editar = useUpdateCatalogRow(spec.slug);
   const excluir = useDeleteCatalogRow(spec.slug);
 
   const registros = data?.rows ?? [];
   const total = data?.total ?? 0;
+
+  // O REGISTRO NOVO NASCE NO RECORTE QUE ESTÁ NA TELA. Quem filtrou as
+  // categorias por "Licença" e clicou em "Categoria" quer uma categoria de
+  // licença: abrir o formulário em "Ativo" (a primeira opção) fazia a pessoa
+  // trocar o campo à mão — ou, não reparando, gravar no tipo errado e ver a
+  // linha sumir do filtro que ela mesma tinha ligado.
+  const padroesDoNovo = useMemo(
+    () => (campoDoFiltro && tipo ? { [campoDoFiltro]: tipo } : undefined),
+    [campoDoFiltro, tipo],
+  );
 
   const [modalAberto, setModalAberto] = useState(false);
   const [emEdicao, setEmEdicao] = useState<CatalogRow | null>(null);
@@ -100,7 +112,16 @@ export function useCatalog() {
     setEmEdicao(null);
   };
 
-  const openAcao = (id: AcaoLinhaId, registro: CatalogRow) => setAcaoAberta({ id, registro });
+  // A ação de ALTERNAR (Desativar/Ativar) não abre modal: grava na hora. As
+  // outras abrem o que a tela declarar para elas.
+  const openAcao = (id: AcaoLinhaId, registro: CatalogRow) => {
+    const alterna = spec.acoes?.find((acao) => acao.id === id)?.alterna;
+    if (alterna) {
+      void handleAlternar(registro, alterna.campo);
+      return;
+    }
+    setAcaoAberta({ id, registro });
+  };
   const closeAcao = () => setAcaoAberta(null);
 
   // O erro sobe para o formulário mostrar a mensagem do servidor.
@@ -108,6 +129,22 @@ export function useCatalog() {
     if (emEdicao) await editar.mutateAsync({ id: emEdicao.id, data: valores });
     else await criar.mutateAsync(valores);
     closeModal();
+  };
+
+  // DESATIVAR É UM BOTÃO DA LINHA, não uma caixa no formulário — o mesmo
+  // padrão de Usuários. Grava só o campo alternado. Confirma só na ida:
+  // desativar tira o registro das escolhas; reativar não tem o que perder.
+  const handleAlternar = async (registro: CatalogRow, campo: string) => {
+    const ligado = registro[campo] !== false;
+    if (ligado && !confirm(
+      `Desativar "${registro.name}"? Continua no histórico, mas some das escolhas e não recebe nada novo.`,
+    )) return;
+
+    try {
+      await editar.mutateAsync({ id: registro.id, data: { [campo]: !ligado } });
+    } catch (erro) {
+      notificar.erro((erro as Error).message);
+    }
   };
 
   const handleDelete = async (registro: CatalogRow) => {
@@ -121,7 +158,7 @@ export function useCatalog() {
     } catch (erro) {
       // É aqui que aparece o 409 de "em uso por N registros" — a regra que
       // impede apagar uma categoria que alguém está usando.
-      alert((erro as Error).message);
+      notificar.erro((erro as Error).message);
     }
   };
 
@@ -139,6 +176,10 @@ export function useCatalog() {
     tipo,
     changeTipo,
     loading: isPending,
+    // A mensagem do erro da listagem, para a tabela não dizer "nenhum registro"
+    // quando o que houve foi uma recusa (`EstadoDaLista`).
+    erro: error ? error.message : null,
+    padroesDoNovo,
     modalAberto,
     emEdicao,
     openCreate,

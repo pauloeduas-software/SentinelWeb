@@ -10,8 +10,9 @@ import HistoryTab from './components/HistoryTab';
 import PosseTab from './components/PosseTab';
 import RetireModal from './components/RetireModal';
 import { seloDaSaida } from '../helpers/baixa.helper';
-import { rotuloDaOperacao } from '../helpers/posse.helper';
+import { bloqueioDaEntrega, rotuloDaOperacao } from '../helpers/posse.helper';
 import { useAssetDetail } from './hooks/useAssetDetail';
+import { usePode } from '../../../domain/auth/auth.store';
 
 // A TELA DO ATIVO — `/ativos/:id`.
 //
@@ -30,10 +31,14 @@ export default function AssetDetailPage() {
     assignments, possePendente,
     licencas, licencasPendentes,
     maquina, maquinaPendente, desvinculando, handleDesvincular,
-    modal, abrirEdicao, abrirClone, abrirPosse, abrirBaixa, fecharModal,
+    modal, abrirEdicao, abrirClone, abrirPosse, abrirBaixa, fecharModal, statusPadraoId,
     handleSubmit, handleEntregar, handleDevolver, handleDarBaixa, handleReverterSaida,
     handleDelete,
   } = useAssetDetail();
+  // A lixeira é `ADMIN` no servidor (`DELETE /api/assets/:id`); para o técnico
+  // o botão só levava 403. Antes dos `return` abaixo: hook depois de retorno
+  // condicional é o que as regras do React proíbem.
+  const podeExcluir = usePode('ADMIN');
 
   if (carregando) {
     return <div className="font-mono text-xs text-text-tertiary">Carregando ativo…</div>;
@@ -52,6 +57,9 @@ export default function AssetDetailPage() {
 
   // Cálculo fora do JSX (docs/referencia/arquitetura.md).
   const selo = seloDaSaida(asset);
+  // A MESMA trava da listagem, nas duas portas desta tela (cabeçalho e aba
+  // Posse): só `DEPLOYABLE` se entrega, e o motivo vai no `title`.
+  const bloqueio = bloqueioDaEntrega(asset);
 
   return (
     <div className="animate-in fade-in duration-300 space-y-6 pb-6">
@@ -86,14 +94,14 @@ export default function AssetDetailPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
-          <Acao onClick={abrirPosse} icone={asset.posse?.assignmentId ? Undo2 : ArrowRightLeft}>
+          <Acao onClick={abrirPosse} icone={asset.posse?.assignmentId ? Undo2 : ArrowRightLeft} bloqueio={bloqueio}>
             {rotuloDaOperacao(asset.posse)}
           </Acao>
           <Acao onClick={abrirEdicao} icone={Edit2}>Editar</Acao>
           {/* Clonar é operação DE TELA: abre o formulário em modo criação com os
               valores deste ativo, sem etiqueta e sem série. Não há rota nova. */}
           <Acao onClick={abrirClone} icone={Copy}>Clonar</Acao>
-          <Acao onClick={() => void handleDelete()} icone={Trash2} perigo>Lixeira</Acao>
+          {podeExcluir && <Acao onClick={() => void handleDelete()} icone={Trash2} perigo>Lixeira</Acao>}
         </div>
       </div>
 
@@ -114,6 +122,7 @@ export default function AssetDetailPage() {
             assignments={assignments}
             carregando={possePendente}
             onAbrirOperacao={abrirPosse}
+            bloqueio={bloqueio}
           />
         )}
 
@@ -139,6 +148,7 @@ export default function AssetDetailPage() {
         <AssetFormModal
           asset={asset}
           clonar={modal === 'clonar'}
+          statusPadraoId={statusPadraoId}
           onClose={fecharModal}
           onSubmit={handleSubmit}
         />
@@ -164,15 +174,19 @@ interface AcaoProps {
   onClick: () => void;
   icone: typeof Edit2;
   perigo?: boolean;
+  /** Preenchido, a ação fica travada e o texto vira o `title` — o porquê. */
+  bloqueio?: string | null;
   children: React.ReactNode;
 }
 
-function Acao({ onClick, icone: Icone, perigo, children }: AcaoProps) {
+function Acao({ onClick, icone: Icone, perigo, bloqueio, children }: AcaoProps) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-2 px-3 py-2 border border-border-sutil transition-colors ${
+      disabled={bloqueio != null}
+      title={bloqueio ?? undefined}
+      className={`flex items-center gap-2 px-3 py-2 border border-border-sutil transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
         perigo
           ? 'text-text-tertiary hover:text-status-danger hover:bg-bg-base'
           : 'text-text-secondary hover:text-text-primary hover:bg-bg-base'

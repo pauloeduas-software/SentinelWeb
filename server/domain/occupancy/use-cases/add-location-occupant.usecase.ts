@@ -5,6 +5,7 @@ import { recordActivity } from '../../activity/use-cases/record-activity.usecase
 import { buildSnapshot } from '../../shared/diff.helper';
 import { OCCUPANT_SELECT } from '../helpers/occupant-select.helper';
 import { travarUsuario } from '../../user/use-cases/lock-user.usecase';
+import { assertLocalRecebe } from '../../catalog/helpers/catalog-lock.helper';
 
 export interface AddOccupantData {
   userId: string;
@@ -49,10 +50,6 @@ export async function addLocationOccupant(
 ) {
   try {
     return await prisma.$transaction(async (tx) => {
-      // `findUnique`: `Location` não tem lixeira (o catálogo não tem, D8).
-      const local = await tx.location.findUnique({ where: { id: locationId }, select: { id: true } });
-      if (!local) throw new AppError('Localização não encontrada.', 404);
-
       // A TRAVA na linha do colaborador, antes de lê-lo. Ocupar um posto é
       // assumir responsabilidade derivada por tudo que está nele, então a
       // corrida com a desativação é a mesma da entrega: sem a trava, a
@@ -60,6 +57,15 @@ export async function addLocationOccupant(
       // e gravar `isActive: false`, e o desativado volta a responder pela Mesa
       // 1 (`lock-user.usecase.ts`).
       await travarUsuario(tx, data.userId);
+
+      // O local existe e ainda recebe ocupante? Desativado, não — continua no
+      // histórico, mas ninguém novo passa a responder por ele. Lido `FOR SHARE`
+      // DEPOIS da trava do usuário: é a ordem do grafo (`usuário → ativo →
+      // posto`, `lock-asset.usecase.ts`). Ao contrário — local antes do
+      // usuário —, esta ocupação, uma entrega à mesma pessoa e uma entrega do
+      // mesmo ativo ao posto fechavam um ciclo de três e o Postgres matava uma
+      // com `40P01`.
+      await assertLocalRecebe(tx, locationId, 'ocupante novo');
 
       // `findFirst`: só ele recebe o escopo da lixeira da extension — o `where`
       // do `findUnique` só admite campo único e por isso fica de fora

@@ -11,10 +11,10 @@ import type { ClienteStatusPosse } from './assert-status-posse.usecase';
  * que estado ele voltou e quem recebeu — deixaria de acontecer.
  *
  * ARQUIVO SEPARADO, e não um `if` a mais na guarda de status, porque a pergunta
- * é outra: aquela recusa uma COMBINAÇÃO de tipo de status com posse (2 das 10
- * possíveis); esta recusa a operação inteira, venha de onde vier. O que as duas
- * compartilham — o cliente que serve transação e o formato da mensagem — está
- * importado daqui, não copiado.
+ * é outra: aquela recusa uma COMBINAÇÃO de tipo de status com posse (1 das 8
+ * possíveis: 4 tipos × com/sem posse); esta recusa a operação inteira, venha de
+ * onde vier. O que as duas compartilham — o cliente que serve transação e o
+ * formato da mensagem — está importado daqui, não copiado.
  *
  * BLOQUEIA, NUNCA FECHA A POSSE SOZINHA, pelo mesmo motivo da irmã: "tudo bem,
  * eu devolvo junto" apagaria a única informação de quem estava com o

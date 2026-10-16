@@ -1,7 +1,8 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
-import { travarUsuarioOuFalhar } from '../../user/use-cases/lock-user.usecase';
+import { assertLocalRecebe } from '../../catalog/helpers/catalog-lock.helper';
+import { travarUsuarioOuFalhar, type ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
 import {
   assertDisponivel, contarForaDe, travarItemOuFalhar, type ClienteEstoque,
 } from '../helpers/stock-balance.helper';
@@ -57,15 +58,17 @@ function assertAlvoCoerente(data: CheckoutStockInput): string {
  * O alvo existe e pode receber?
  *
  * Pessoa sai por `findFirst`, que o escopo da lixeira alcança: não se entrega
- * nada a um cadastro apagado. Localização não tem lixeira, então `findUnique`.
+ * nada a um cadastro apagado. Localização não tem lixeira; sai travada, pela
+ * marca de desativada.
  * DESATIVADO é diferente de APAGADO, e os dois são recusados — entregar a quem
  * saiu reabriria, uma linha depois, a pendência que a saída da empresa fechou.
  * 409 e não 404: a pessoa existe, o estado dela é que recusa.
  */
-async function assertAlvoApto(client: ClienteEstoque, tipo: 'USER' | 'LOCATION', alvoId: string): Promise<void> {
+async function assertAlvoApto(client: ClienteEstoque & ClienteQueTrava, tipo: 'USER' | 'LOCATION', alvoId: string): Promise<void> {
   if (tipo === 'LOCATION') {
-    const local = await client.location.findUnique({ where: { id: alvoId }, select: { id: true } });
-    if (!local) throw new AppError('Localização não encontrada.', 404);
+    // Desativada não recebe saída nova. `FOR SHARE` depois do item — a aresta
+    // `item → posto` que o grafo já tinha (`lock-asset.usecase.ts`).
+    await assertLocalRecebe(client, alvoId, 'saída de estoque');
     return;
   }
 

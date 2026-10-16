@@ -13,7 +13,19 @@ interface CategoriaFiltroProps {
 }
 
 export default function CategoriaFiltro({ tipo, valor, onChange }: CategoriaFiltroProps) {
-  const { data: categorias = [] } = useCatalogOptionsQuery('categories', tipo);
+  // `inativos=incluir`: é FILTRO, não escolha — a categoria desativada continua
+  // tendo registros, e quem procura os notebooks antigos precisa achá-la.
+  const { data: categorias = [], isPending } = useCatalogOptionsQuery(
+    'categories', tipo, undefined, { inativos: 'incluir' },
+  );
+
+  // O FILTRO APLICADO PODE NÃO ESTAR NA LISTA: a categoria foi excluída, mudou
+  // de tipo, ou passou do teto do `/options`. Um `<select>` cujo `value` não
+  // casa com nenhuma `<option>` mostra a PRIMEIRA — "Todas as categorias" —
+  // enquanto a listagem continua filtrada: a tela diria "sem filtro" e mostraria
+  // um recorte. A opção abaixo segura o valor e diz o que ele é, o mesmo recurso
+  // do `ReferenceSelect`; escolher "Todas" continua desligando o filtro.
+  const foraDaLista = !isPending && Boolean(valor) && !categorias.some((categoria) => categoria.id === valor);
 
   return (
     <select
@@ -23,6 +35,7 @@ export default function CategoriaFiltro({ tipo, valor, onChange }: CategoriaFilt
       className="px-3 py-2 bg-surface-card border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors"
     >
       <option value="">Todas as categorias</option>
+      {foraDaLista && <option value={valor}>— filtro atual (fora desta lista) —</option>}
       {categorias.map((categoria) => (
         <option key={categoria.id} value={categoria.id}>{categoria.name}</option>
       ))}

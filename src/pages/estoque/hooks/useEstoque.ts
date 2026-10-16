@@ -8,6 +8,7 @@ import type {
 } from '../../../domain/shared/stock.types';
 import type { ListView } from '../../../domain/shared/list.types';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { useNotificacao } from '../../hooks/useNotificacao';
 
 const PER_PAGE = 15;
 
@@ -17,6 +18,7 @@ export type ModalDeEstoque = 'criar' | 'editar' | 'ajustar' | 'saida' | 'detalhe
 // Estado da tela de Estoque: página, busca, vista e qual item está aberto.
 // Tudo de UMA tela — `useState`, não store (docs/referencia/arquitetura.md).
 export function useEstoque() {
+  const notificar = useNotificacao();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [view, setView] = useState<ListView>('active');
@@ -45,7 +47,7 @@ export function useEstoque() {
     [page, view, debouncedSearch, categoryId],
   );
 
-  const { data, isPending } = useStockQuery(params);
+  const { data, isPending, error } = useStockQuery(params);
   const itens = data?.rows ?? [];
 
   const criar = useCreateStockItem();
@@ -110,7 +112,7 @@ export function useEstoque() {
       await devolver.mutateAsync({ movementId });
     } catch (erro) {
       // O 409 de unidade já devolvida: duas abas na mesma ficha, a segunda perde.
-      alert((erro as Error).message);
+      notificar.erro((erro as Error).message);
     }
   };
 
@@ -128,7 +130,7 @@ export function useEstoque() {
       // paginador apontando para uma página que não existe mais.
       if (itens.length === 1 && page > 1) setPage(page - 1);
     } catch (erro) {
-      alert((erro as Error).message);
+      notificar.erro((erro as Error).message);
     }
   };
 
@@ -139,7 +141,7 @@ export function useEstoque() {
     } catch (erro) {
       // O 409 de nome reaproveitado enquanto o item estava na lixeira: a
       // unicidade é índice PARCIAL, só entre os vivos.
-      alert((erro as Error).message);
+      notificar.erro((erro as Error).message);
     }
   };
 
@@ -147,6 +149,8 @@ export function useEstoque() {
     itens,
     total: data?.total ?? 0,
     carregando: isPending,
+    // Para a tabela não dizer "nenhum cadastrado" quando a consulta falhou.
+    erro: error ? error.message : null,
     page,
     perPage: PER_PAGE,
     setPage,

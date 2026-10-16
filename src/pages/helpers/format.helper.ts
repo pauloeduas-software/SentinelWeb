@@ -55,3 +55,17 @@ export function formatarData(valor: unknown): string {
 export function paraCampoDeData(valor: unknown): string {
   return typeof valor === 'string' && valor !== '' ? valor.slice(0, 10) : '';
 }
+
+/**
+ * O dia de HOJE no relógio de quem está usando, em 'AAAA-MM-DD'.
+ *
+ * Montado com os getters LOCAIS de propósito — o oposto de
+ * `toISOString().slice(0, 10)`, que devolve o dia em UTC: às 22h de Brasília já
+ * é o dia seguinte em Greenwich, e o campo nasceria com amanhã.
+ */
+export function hojeNoCampoDeData(): string {
+  const agora = new Date();
+  const mes = String(agora.getMonth() + 1).padStart(2, '0');
+  const dia = String(agora.getDate()).padStart(2, '0');
+  return `${agora.getFullYear()}-${mes}-${dia}`;
+}

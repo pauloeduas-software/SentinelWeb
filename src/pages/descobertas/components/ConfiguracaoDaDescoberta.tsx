@@ -16,6 +16,12 @@ import type {
 
 interface Props {
   configuracao: Configuracao | undefined;
+  /**
+   * Gravar é `ADMIN` no servidor. Sem ele o painel continua abrindo — o técnico
+   * precisa saber POR QUE a fila está como está —, mas só para ler: sem os
+   * botões de modo e sem Salvar, que levavam 403.
+   */
+  podeEditar: boolean;
   salvando: boolean;
   onSalvar: (dados: Partial<Configuracao>) => void;
 }
@@ -125,7 +131,7 @@ function Formulario({ configuracao, salvando, onSalvar }: FormularioProps) {
   );
 }
 
-export default function ConfiguracaoDaDescoberta({ configuracao, salvando, onSalvar }: Props) {
+export default function ConfiguracaoDaDescoberta({ configuracao, podeEditar, salvando, onSalvar }: Props) {
   const [aberta, setAberta] = useState(false);
 
   if (!configuracao) return null;
@@ -157,23 +163,27 @@ export default function ConfiguracaoDaDescoberta({ configuracao, salvando, onSal
               parece ligado nem desligado. */}
           <div className="space-y-2">
             <span className={ROTULO}>O que fazer com máquina que aparece sem cadastro</span>
-            <div className="flex flex-wrap gap-1">
-              {MODOS.map((modo) => (
-                <button
-                  key={modo.valor}
-                  type="button"
-                  disabled={salvando}
-                  onClick={() => onSalvar({ discoveryMode: modo.valor })}
-                  className={`px-3 py-1.5 text-[10px] uppercase tracking-widest border transition-colors disabled:opacity-40 ${
-                    configuracao.discoveryMode === modo.valor
-                      ? 'border-text-primary text-text-primary'
-                      : 'border-border-sutil text-text-tertiary hover:text-text-primary'
-                  }`}
-                >
-                  {modo.rotulo}
-                </button>
-              ))}
-            </div>
+            {podeEditar ? (
+              <div className="flex flex-wrap gap-1">
+                {MODOS.map((modo) => (
+                  <button
+                    key={modo.valor}
+                    type="button"
+                    disabled={salvando}
+                    onClick={() => onSalvar({ discoveryMode: modo.valor })}
+                    className={`px-3 py-1.5 text-[10px] uppercase tracking-widest border transition-colors disabled:opacity-40 ${
+                      configuracao.discoveryMode === modo.valor
+                        ? 'border-text-primary text-text-primary'
+                        : 'border-border-sutil text-text-tertiary hover:text-text-primary'
+                    }`}
+                  >
+                    {modo.rotulo}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className={`text-[10px] uppercase tracking-widest ${modoAtual.cor}`}>{modoAtual.rotulo}</p>
+            )}
             <p className="text-[10px] text-text-tertiary leading-relaxed max-w-2xl">
               {modoAtual.explicacao}
             </p>
@@ -189,12 +199,21 @@ export default function ConfiguracaoDaDescoberta({ configuracao, salvando, onSal
             )}
           </div>
 
-          <Formulario
-            key={assinatura(configuracao)}
-            configuracao={configuracao}
-            salvando={salvando}
-            onSalvar={onSalvar}
-          />
+          {podeEditar ? (
+            <Formulario
+              key={assinatura(configuracao)}
+              configuracao={configuracao}
+              salvando={salvando}
+              onSalvar={onSalvar}
+            />
+          ) : (
+            // Os dois prazos já estão no cabeçalho do painel; aqui só o porquê
+            // de não haver campo para mudá-los.
+            <p className="text-[10px] text-text-tertiary leading-relaxed max-w-2xl">
+              Fantasma em {configuracao.ghostDays} dias, Shadow IT em {configuracao.shadowHours} horas.
+              Só um administrador muda o modo e os prazos.
+            </p>
+          )}
         </div>
       )}
     </div>

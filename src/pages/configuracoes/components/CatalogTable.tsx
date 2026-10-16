@@ -1,4 +1,4 @@
-import { Edit2, Trash2, Check, Minus, Users, type LucideIcon } from 'lucide-react';
+import { Edit2, Trash2, Check, Minus, Power, PowerOff, Users, type LucideIcon } from 'lucide-react';
 import { nomeDaRelacao, rotuloDoEnum } from '../../helpers/format.helper';
 import type { AcaoLinhaId, AcaoLinhaSpec, ColunaSpec } from '../specs/catalog-ui.types';
 import type { CatalogRow } from '../../../domain/shared/catalog.types';
@@ -7,15 +7,27 @@ import type { CatalogRow } from '../../../domain/shared/catalog.types';
 // componente React dentro dela obrigaria `specs/` a importar React só para
 // descrever uma tabela. O `Record` fechado garante que toda ação declarada tem
 // ícone — esquecer um vira erro de tipo.
+//
+// A ação que ALTERNA tem dois ícones: o do que o clique FAZ (desligar quando
+// está ligado, ligar quando está desligado).
 const ICONE_DA_ACAO: Record<AcaoLinhaId, LucideIcon> = {
   ocupantes: Users,
+  ativacao: PowerOff,
 };
+const ICONE_SE_DESLIGADO: Partial<Record<AcaoLinhaId, LucideIcon>> = {
+  ativacao: Power,
+};
+
+/** A linha está com o campo da ação de alternar desligado? (`false`, não ausente.) */
+function desligada(registro: CatalogRow, acoes?: readonly AcaoLinhaSpec[]): AcaoLinhaSpec | undefined {
+  return acoes?.find((acao) => acao.alterna && registro[acao.alterna.campo] === false);
+}
 
 interface CatalogTableProps {
   colunas: readonly ColunaSpec[];
   registros: readonly CatalogRow[];
   vazio: React.ReactNode;
-  /** Ações por linha da aba atual. Ausente nas outras abas que só têm CRUD. */
+  /** Ações por linha da aba, além de editar e excluir (Desativar em todas; Ocupantes em Localizações). */
   acoes?: readonly AcaoLinhaSpec[];
   onEdit: (registro: CatalogRow) => void;
   onDelete: (registro: CatalogRow) => void;
@@ -38,49 +50,65 @@ export default function CatalogTable({
         </thead>
 
         <tbody className="text-text-primary divide-y divide-border-sutil/50">
-          {registros.map((registro) => (
-            <tr key={registro.id} className="hover:bg-bg-base transition-colors group">
-              {colunas.map((coluna) => (
-                <td key={coluna.key} className="px-6 py-4 text-text-secondary">
-                  <Celula coluna={coluna} registro={registro} />
+          {registros.map((registro) => {
+            const apagada = desligada(registro, acoes);
+            return (
+              <tr key={registro.id} className={`hover:bg-bg-base transition-colors group ${apagada ? 'opacity-60' : ''}`}>
+                {colunas.map((coluna, indice) => (
+                  <td key={coluna.key} className="px-6 py-4 text-text-secondary">
+                    <Celula coluna={coluna} registro={registro} />
+                    {/* A marca vai na PRIMEIRA coluna, ao lado do nome: é onde o
+                        olho está ao procurar a linha. */}
+                    {indice === 0 && apagada?.alterna && (
+                      <span className="ml-3 text-[10px] text-status-warning uppercase tracking-widest">
+                        {apagada.alterna.marcaSeDesligado}
+                      </span>
+                    )}
+                  </td>
+                ))}
+                <td className="px-6 py-4 text-right">
+                  {/* Visível ao passar o mouse, ao navegar por Tab (`focus-within`)
+                      e sempre no toque, onde não há hover. */}
+                  <div className="flex items-center justify-end gap-3 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => onEdit(registro)}
+                      title="Editar"
+                      aria-label={`Editar ${String(registro.name ?? '')}`}
+                      className="text-text-tertiary hover:text-text-primary transition-colors"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    {/* A ordem é Editar, as ações da spec (Desativar, Ocupantes) e
+                        Excluir por último — o destrutivo fica na ponta. */}
+                    {acoes?.filter((acao) => !acao.visivelSe || registro[acao.visivelSe] === true).map((acao) => {
+                      const desligado = acao.alterna && registro[acao.alterna.campo] === false;
+                      const Icone = (desligado && ICONE_SE_DESLIGADO[acao.id]) || ICONE_DA_ACAO[acao.id];
+                      const titulo = desligado ? acao.alterna?.tituloSeDesligado : acao.titulo;
+                      return (
+                        <button
+                          key={acao.id}
+                          onClick={() => onAcao?.(acao.id, registro)}
+                          title={titulo}
+                          aria-label={`${titulo ?? ''} ${String(registro.name ?? '')}`}
+                          className="text-text-tertiary hover:text-status-info transition-colors"
+                        >
+                          <Icone size={14} />
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={() => onDelete(registro)}
+                      title="Excluir"
+                      aria-label={`Excluir ${String(registro.name ?? '')}`}
+                      className="text-text-tertiary hover:text-status-danger transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </td>
-              ))}
-              <td className="px-6 py-4 text-right">
-                <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {/* Antes de editar/excluir vêm as ações da spec. Aba sem
-                      `acoes` não renderiza nada aqui — as seis outras seguem
-                      idênticas ao que eram. */}
-                  {acoes?.map((acao) => {
-                    const Icone = ICONE_DA_ACAO[acao.id];
-                    return (
-                      <button
-                        key={acao.id}
-                        onClick={() => onAcao?.(acao.id, registro)}
-                        title={acao.titulo}
-                        className="text-text-tertiary hover:text-status-info transition-colors"
-                      >
-                        <Icone size={14} />
-                      </button>
-                    );
-                  })}
-                  <button
-                    onClick={() => onEdit(registro)}
-                    title="Editar"
-                    className="text-text-tertiary hover:text-text-primary transition-colors"
-                  >
-                    <Edit2 size={14} />
-                  </button>
-                  <button
-                    onClick={() => onDelete(registro)}
-                    title="Excluir"
-                    className="text-text-tertiary hover:text-status-danger transition-colors"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
+              </tr>
+            );
+          })}
 
           {registros.length === 0 && (
             <tr>
@@ -110,9 +138,9 @@ function Celula({ coluna, registro }: { coluna: ColunaSpec; registro: CatalogRow
         ? <Check size={14} className="text-status-success" />
         : <Minus size={14} className="text-text-tertiary" />;
 
-    // Um agregado do `_count` do servidor (F9). Zero aparece como `0` e não como
-    // `—`: "este conjunto tem zero campos" é um fato acionável — é o conjunto
-    // que precisa ser composto —, e um travessão o esconderia entre os "sem
+    // Um agregado do `_count` do servidor. Nenhuma aba de hoje declara coluna
+    // assim; o ramo fica porque o tipo existe. Zero aparece como `0` e não como
+    // `—`: "zero" é um fato contado, e um travessão o esconderia entre os "sem
     // dado".
     case 'contagem': {
       const contagens = registro._count as Record<string, number> | undefined;

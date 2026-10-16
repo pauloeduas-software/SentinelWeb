@@ -7,7 +7,7 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue';
 //
 // É o ÚNICO componente desta pasta que busca dado, e por um motivo concreto: a
 // quantidade de campos-referência muda de aba para aba (Modelos tem dois,
-// Fornecedores nenhum). Buscar no hook da página exigiria chamar um hook por
+// Fabricantes nenhum). Buscar no hook da página exigiria chamar um hook por
 // campo dentro de um laço de tamanho variável — o que as regras dos hooks
 // proíbem. Um componente por campo resolve: cada instância faz a sua chamada, e
 // montar/desmontar ao trocar de aba é o caminho normal do React.
@@ -35,32 +35,53 @@ interface ReferenceSelectProps {
   parametros?: Record<string, string>;
   valor: string;
   obrigatorio?: boolean;
-  /** Some da lista: uma localização não pode ser o próprio pai. */
-  excluirId?: string;
+  /**
+   * Somem da lista — quando a regra recusa alguns de uma vez: os status
+   * `DEPLOYABLE` como destino de uma entrega. O `/options` só
+   * filtra por UM tipo, e não por "todos menos um"; quem sabe os ids a tirar
+   * é quem usa o campo.
+   */
+  excluirIds?: readonly string[];
+  /**
+   * O vínculo com que o formulário ABRIU, com o nome — o que o registro já traz
+   * embutido (`asset.location`, `model.manufacturer`). Serve só para dar nome à
+   * opção "fora desta lista"; sem ele, ela aparece sem nome, como antes.
+   */
+  atual?: { id: string; name: string } | null;
   onChange: (valor: string) => void;
 }
 
 export default function ReferenceSelect({
-  rota, filtroTipo, parametros, valor, obrigatorio, excluirId, onChange,
+  rota, filtroTipo, parametros, valor, obrigatorio, excluirIds, atual, onChange,
 }: ReferenceSelectProps) {
   const [busca, setBusca] = useState('');
+  // A última opção ESCOLHIDA aqui, com o nome. É o outro caminho para o valor
+  // ficar fora da lista: escolher "Dell" e depois buscar "HP". Sem guardar o
+  // nome na hora da escolha, a opção órfã levaria o nome do `atual` — que é o
+  // vínculo de ANTES, não o escolhido.
+  const [escolhida, setEscolhida] = useState<{ id: string; name: string } | null>(null);
   // O MESMO `useDebouncedValue` das cinco listagens: sem ele é uma requisição
   // por tecla, e o `/options` não tem paginação para amortecer.
   const buscaDebounced = useDebouncedValue(busca);
 
   const { data, isPending } = useCatalogOptionsQuery(rota, filtroTipo, buscaDebounced || undefined, parametros);
-  const opcoes = (data ?? []).filter((opcao) => opcao.id !== excluirId);
+  const opcoes = (data ?? []).filter((opcao) => !excluirIds?.includes(opcao.id));
 
   // O `/options` tem teto de 200 (list-catalog-options.usecase.ts). Passando
   // disso, o vínculo atual pode não estar na lista — e um `<select>` cujo
   // `value` não casa com nenhuma `<option>` renderiza VAZIO. Salvar daí mandaria
-  // `''`, que em `parentId`/`managerId`/`locationId` vira `null`: o vínculo
+  // `''`, que em `locationId`/`manufacturerId` vira `null`: o vínculo
   // sumiria sem o usuário ter tocado no campo.
   //
   // A opção abaixo segura o valor para que isso não aconteça. Com a busca ela
   // deixou de ser a única defesa, mas continua necessária: enquanto há termo
   // digitado, o vínculo atual costuma estar FORA da lista filtrada.
   const foraDaLista = !isPending && valor !== '' && !opcoes.some((opcao) => opcao.id === valor);
+  // O nome, quando se sabe SEM requisição: pelo id, nunca por posição — um
+  // nome trocado aqui faria a pessoa salvar achando que é outro vínculo. O caso
+  // mais comum hoje não é o teto, é o registro DESATIVADO, que o `/options` não
+  // devolve e o registro continua apontando.
+  const nomeForaDaLista = [escolhida, atual].find((ref) => ref?.id === valor)?.name;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // A BUSCA APARECE QUANDO A LISTA ESTÁ CHEIA — não sempre (F10, Etapa B).
@@ -103,7 +124,12 @@ export default function ReferenceSelect({
       <select
         required={obrigatorio}
         value={valor}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          const id = event.target.value;
+          const opcao = opcoes.find((item) => item.id === id);
+          setEscolhida(opcao ? { id: opcao.id, name: opcao.name } : null);
+          onChange(id);
+        }}
         className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors disabled:opacity-50"
         // `isPending` é só a PRIMEIRA carga: com `placeholderData` na query, as
         // buscas seguintes mantêm a lista anterior e o campo não trava a cada
@@ -111,7 +137,11 @@ export default function ReferenceSelect({
         disabled={isPending}
       >
         <option value="">{isPending ? 'Carregando...' : obrigatorio ? 'Selecione...' : '— nenhum —'}</option>
-        {foraDaLista && <option value={valor}>— vínculo atual (fora desta lista) —</option>}
+        {foraDaLista && (
+          <option value={valor}>
+            {nomeForaDaLista ? `${nomeForaDaLista} (fora desta lista)` : '— vínculo atual (fora desta lista) —'}
+          </option>
+        )}
         {opcoes.map((opcao) => (
           <option key={opcao.id} value={opcao.id}>{opcao.name}</option>
         ))}

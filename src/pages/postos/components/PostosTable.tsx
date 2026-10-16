@@ -1,7 +1,8 @@
 import { Armchair, TriangleAlert } from 'lucide-react';
 import {
-  TRACO, caminhoDoPosto, explicacaoDoVago, resumoDeAtivos, turnosDoPosto,
+  TRACO, estaDesativado, explicacaoDoVago, resumoDeAtivos, turnosDoPosto,
 } from '../helpers/postos.helper';
+import SeloDesativado from './SeloDesativado';
 import type { Posto } from '../../../domain/shared/workstation.types';
 
 // A lista de postos. Apresentacional: recebe as linhas prontas e devolve o
@@ -45,11 +46,21 @@ export default function PostosTable({ postos, vazio, onAbrir }: PostosTableProps
                   // no canto: é o sinal que a tela existe para dar, e ele
                   // precisa ser visível de relance numa lista de vinte mesas.
                   posto.vago ? 'bg-status-warning/5 hover:bg-status-warning/10' : 'hover:bg-bg-base'
+                } ${
+                  // Desativado ESMAECE, como no `CatalogTable` e em Usuários: o
+                  // selo diz o quê, e o esmaecido faz a linha recuar na lista
+                  // sem sumir — ela está ali pelo passado, não pelo uso.
+                  estaDesativado(posto) ? 'opacity-60' : ''
                 }`}
               >
                 <td className="px-6 py-4">
-                  <div className="font-medium">{posto.name}</div>
-                  <div className="text-[10px] text-text-tertiary mt-1">{caminhoDoPosto(posto.caminho)}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{posto.name}</span>
+                    {/* Selo discreto, sem cor: desativado não é alarme como o
+                        vago, é um fato sobre a mesa — ela está na lista porque
+                        tem passado, não porque espera alguém. */}
+                    {estaDesativado(posto) && <SeloDesativado />}
+                  </div>
                 </td>
 
                 <td className="px-6 py-4">

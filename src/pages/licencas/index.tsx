@@ -1,5 +1,6 @@
 import { Plus } from 'lucide-react';
 import CategoriaFiltro from '../components/CategoriaFiltro';
+import EstadoDaLista from '../components/EstadoDaLista';
 import ListToolbar from '../components/ListToolbar';
 import AlertasLicenca from './components/AlertasLicenca';
 import EntregaAssentoModal from './components/EntregaAssentoModal';
@@ -7,6 +8,7 @@ import LicencaDetalheModal from './components/LicencaDetalheModal';
 import LicencaFormModal from './components/LicencaFormModal';
 import LicencaTable from './components/LicencaTable';
 import { useLicencas } from './hooks/useLicencas';
+import { usePode } from '../../domain/auth/auth.store';
 
 // AS LICENÇAS DE SOFTWARE (docs/historico/fase-06-licencas.md).
 //
@@ -19,13 +21,15 @@ import { useLicencas } from './hooks/useLicencas';
 // (docs/referencia/arquitetura.md).
 export default function LicencasPage() {
   const {
-    licencas, total, page, perPage, setPage, search, changeSearch, view, changeView,
+    licencas, total, carregando, erro, page, perPage, setPage, search, changeSearch, view, changeView,
     categoryId, changeCategoria,
     alertas,
     modal, licencaAberta, abrir, fechar,
     handleCriar, handleEditar, handleEntregar, handleDevolver,
     handleExcluir, handleRestaurar,
   } = useLicencas();
+  // Lixeira e restaurar são `ADMIN` no servidor; entregar e editar, do técnico.
+  const podeApagar = usePode('ADMIN');
 
   return (
     <div className="animate-in fade-in duration-300 flex flex-col pb-6">
@@ -70,24 +74,28 @@ export default function LicencasPage() {
         onAbrir={(licenca) => abrir('detalhe', licenca)}
         onEditar={(licenca) => abrir('editar', licenca)}
         onEntregar={(licenca) => abrir('entregar', licenca)}
-        onExcluir={(licenca) => void handleExcluir(licenca)}
-        onRestaurar={(licenca) => void handleRestaurar(licenca)}
+        onExcluir={podeApagar ? (licenca) => void handleExcluir(licenca) : undefined}
+        onRestaurar={podeApagar ? (licenca) => void handleRestaurar(licenca) : undefined}
         vazio={
-          search ? (
-            <span>Nenhuma licença encontrada para "{search}".</span>
-          ) : categoryId ? (
-            <span>Nenhuma licença nesta categoria.</span>
-          ) : view === 'trashed' ? (
-            <span>A lixeira de licenças está vazia.</span>
-          ) : (
-            <>
-              <span>Nenhuma licença cadastrada.</span>
-              <span className="mt-4 text-[10px] max-w-md text-center leading-relaxed">
-                Uma licença é um contrato com N assentos. Cadastre-a com o total comprado e os
-                assentos nascem junto, prontos para entregar.
-              </span>
-            </>
-          )
+          // Carregando e erro antes do vazio: sem isto, a primeira carga e um
+          // servidor fora do ar diziam "nenhum cadastrado" (`EstadoDaLista`).
+          <EstadoDaLista carregando={carregando} erro={erro}>
+            {search ? (
+              <span>Nenhuma licença encontrada para "{search}".</span>
+            ) : categoryId ? (
+              <span>Nenhuma licença nesta categoria.</span>
+            ) : view === 'trashed' ? (
+              <span>A lixeira de licenças está vazia.</span>
+            ) : (
+              <>
+                <span>Nenhuma licença cadastrada.</span>
+                <span className="mt-4 text-[10px] max-w-md text-center leading-relaxed">
+                  Uma licença é um contrato com N assentos. Cadastre-a com o total comprado e os
+                  assentos nascem junto, prontos para entregar.
+                </span>
+              </>
+            )}
+          </EstadoDaLista>
         }
       />
 

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { $Enums } from '@prisma/client';
 import {
-  dataOpcional, nomeObrigatorio, textoOpcional,
+  dataNaoFutura, dataOpcional, nomeObrigatorio, textoOpcional,
   uuidObrigatorio, uuidOpcional, valorMonetarioOpcional,
 } from '../../shared/fields.schema';
 
@@ -87,8 +87,10 @@ export const updateAssetSchema = z.strictObject({
  */
 export const retireAssetSchema = z.strictObject({
   retiredReason: z.enum($Enums.RetiredReason, 'motivo da saída inválido'),
-  // Ausente = agora. A venda pode ter sido na semana passada e o registro hoje.
-  retiredAt: dataOpcional('data da saída'),
+  // Ausente = agora. A venda pode ter sido na semana passada e o registro hoje
+  // — mas não na semana QUE VEM: uma baixa futura tirava o ativo do inventário
+  // hoje, e toda mensagem dizia "teve baixa em" uma data que não chegou.
+  retiredAt: dataNaoFutura('data da saída'),
   // A justificativa do evento. Vai para o `ActivityLog`, não para uma coluna
   // (ver retire-asset.usecase.ts).
   notes: textoOpcional('observações', 2_000),

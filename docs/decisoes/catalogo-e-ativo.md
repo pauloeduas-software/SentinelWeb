@@ -77,6 +77,13 @@ desatualizado. A posição importa: o Postgres ordena pela ordem de declaração
 status é ordenável por `type` — a migration precisou de `ADD VALUE 'IN_USE' AFTER 'DEPLOYABLE'`
 à mão, porque o `migrate diff` acrescenta no fim.
 
+> **Superada em parte pelo status enxuto (commit `505c520`):** o `ARCHIVED` saiu e o enum voltou
+> a ter **quatro** tipos — `DEPLOYABLE`, `IN_USE`, `PENDING`, `UNDEPLOYABLE`; quem sai de vez da
+> operação tem baixa (D19). Saíram junto a cor e o `showInNav` ("Em destaque") do `StatusLabel`,
+> e o seed deixou de ter nomes próprios: hoje cria um status de cada tipo (Disponível, Em uso,
+> Pendente, Inutilizável). O `IN_USE` e a posição dele continuam valendo; o "cinco, não quatro"
+> acima governou até ali.
+
 ---
 
 ## D8 — Catálogo sem soft delete. O delete é real, bloqueado por uso.
@@ -285,6 +292,11 @@ o erro do `assignedToId` editável (D17), uma camada acima. E as três respondem
 perguntas diferentes (*pode ser entregue?*, *ainda é patrimônio?*, *existe?*):
 colapsá-las obriga a inventar a resposta que falta na hora do relatório.
 
+> **Superada em parte pelo status enxuto (commit `505c520`):** o `ARCHIVED` saiu do
+> `StatusLabelType`, e com ele o *arquivar*. Ficam duas colunas — `retiredAt` + `retiredReason`
+> (o "descomissionar", que passou a se chamar **baixa**) e `deletedAt`. O argumento contra o
+> `archived Boolean` não caiu: o arquivado não virou coluna, deixou de existir.
+
 ---
 
 ## D20 — "Arquivados" e "posto vago" são filtros do domínio, não `view` do `core`.
@@ -295,6 +307,11 @@ colapsá-las obriga a inventar a resposta que falta na hora do relatório.
 "Arquivado" é `status.type = ARCHIVED`, que só existe no ITAM: pôr isso no `core`
 é fazer a infraestrutura conhecer negócio — o que a seta `pages → domain → core`
 proíbe e o lint reprova.
+
+> **Superada em parte pelo status enxuto (commit `505c520`):** sem `ARCHIVED` não há
+> "Arquivados" — o `?arquivados=` (e a vista que o sucedeu, D85) saiu. A regra continua valendo
+> para o que ficou: "Baixado" (`retiredAt`) é filtro do domínio em `asset-filters.helper.ts`, não
+> `view` do `core`.
 
 ---
 
@@ -332,6 +349,11 @@ id é dizer que se quer aquele status.
 **O preço:** `active` deixa de ser um predicado de coluna e passa a ter um join com
 `status_labels`. A tabela é pequena e `assets_statusId_idx` existe; se um dia doer, o caminho é
 desnormalizar o `type` para `assets`, não voltar atrás na regra.
+
+> **Superada pelo status enxuto (commit `505c520`):** o `ARCHIVED` saiu, e com ele a quarta
+> vista, a aba Arquivados e o contador. `ASSET_VIEWS` é `['active','trashed','retired']`, e
+> `active` volta a ser predicado de coluna — exclui só o baixado (`retiredAt`). Quem sai de vez da
+> operação tem baixa.
 
 ---
 

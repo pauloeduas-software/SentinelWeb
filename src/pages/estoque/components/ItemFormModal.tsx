@@ -36,6 +36,7 @@ export default function ItemFormModal({ item, onClose, onSubmit }: ItemFormModal
 
   const [name, setName] = useState(item?.name ?? '');
   const [categoryId, setCategoryId] = useState(item?.categoryId ?? '');
+  const [locationId, setLocationId] = useState(item?.locationId ?? '');
   const [qty, setQty] = useState('0');
   const [notes, setNotes] = useState(item?.notes ?? '');
 
@@ -48,8 +49,8 @@ export default function ItemFormModal({ item, onClose, onSubmit }: ItemFormModal
     setErro('');
 
     const dados: CriarItemDeEstoqueInput = editando
-      ? { name: name.trim(), categoryId, notes: limpar(notes) }
-      : { name: name.trim(), categoryId, qty: Number(qty) || 0, notes: limpar(notes) };
+      ? { name: name.trim(), categoryId, locationId: locationId || null, notes: limpar(notes) }
+      : { name: name.trim(), categoryId, qty: Number(qty) || 0, locationId: locationId || null, notes: limpar(notes) };
 
     try {
       await onSubmit(dados);
@@ -84,7 +85,7 @@ export default function ItemFormModal({ item, onClose, onSubmit }: ItemFormModal
             <span className={ROTULO}>Nome *</span>
             <input
               required value={name} onChange={(e) => setName(e.target.value)}
-              className={CLASSE_CAMPO} placeholder="Mouse óptico"
+              className={CLASSE_CAMPO}
             />
           </label>
 
@@ -92,7 +93,14 @@ export default function ItemFormModal({ item, onClose, onSubmit }: ItemFormModal
             <span className={ROTULO}>Categoria *</span>
             {/* Filtrada por TIPO: o `<select>` não oferece categoria de
                 ativo ou de licença, porque o servidor a recusaria com 422. */}
-            <ReferenceSelect rota="categories" filtroTipo="STOCK" valor={categoryId} obrigatorio onChange={setCategoryId} />
+            <ReferenceSelect rota="categories" filtroTipo="STOCK" valor={categoryId} obrigatorio atual={item?.category} onChange={setCategoryId} />
+          </label>
+
+          <label className="space-y-1.5 block">
+            <span className={ROTULO}>Localização</span>
+            {/* ONDE O QUE SOBRA FICA GUARDADO — o Depósito de TI. A unidade
+                entregue a alguém está com quem a recebeu, não aqui. */}
+            <ReferenceSelect rota="locations" valor={locationId} atual={item?.location} onChange={setLocationId} />
           </label>
 
           {!editando && (

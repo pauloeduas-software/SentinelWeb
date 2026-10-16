@@ -1,16 +1,15 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import ReferenceSelect from '../../components/ReferenceSelect';
 import { montarNovoPosto } from '../helpers/postos.helper';
 import type { NovoPostoInput } from '../../../domain/workstation/workstation.queries';
 
 // Criar a Mesa 1 SEM sair da tela de postos.
 //
-// Três campos, e é decisão: nome, onde a mesa fica e uma nota. Endereço, CEP e
+// Dois campos, e é decisão: nome e uma nota. Endereço, CEP e
 // telefone ficam de fora porque não querem dizer nada numa bancada — foi
-// justamente por misturar mesa e filial num formulário só que o posto sumiu
-// atrás da 6ª aba de Configurações. Quem precisa dos campos de filial edita a
-// localização lá, onde eles fazem sentido.
+// justamente por misturar mesa e filial num formulário só que o posto sumia no
+// meio das localizações, em Configurações. Quem precisa dos campos de filial
+// edita a localização lá, onde eles fazem sentido.
 //
 // Grava em `/locations` com `isWorkstation: true` (ver a query do domínio): o
 // posto É uma `Location`, e não há tabela nova (docs/referencia/modelo-de-posse.md, D15).
@@ -27,7 +26,6 @@ interface PostoFormModalProps {
 
 export default function PostoFormModal({ onClose, onSubmit }: PostoFormModalProps) {
   const [name, setName] = useState('');
-  const [parentId, setParentId] = useState('');
   const [notes, setNotes] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
@@ -38,7 +36,7 @@ export default function PostoFormModal({ onClose, onSubmit }: PostoFormModalProp
     setErro('');
 
     try {
-      await onSubmit(montarNovoPosto({ name, parentId, notes }));
+      await onSubmit(montarNovoPosto({ name, notes }));
     } catch (falha) {
       // O apiClient já traduziu a resposta do servidor em Error.message — é
       // aqui que aparece o 409 de nome repetido.
@@ -70,20 +68,8 @@ export default function PostoFormModal({ onClose, onSubmit }: PostoFormModalProp
               required
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Ex: Mesa 1"
               className={CLASSE_CAMPO}
             />
-          </div>
-
-          <div className="space-y-1">
-            <label className={ROTULO}>Dentro de</label>
-            {/* A sala ou o andar que contém a mesa. `locations` devolve a
-                hierarquia inteira de propósito: o pai de um posto é uma sala, e
-                uma sala não é posto. */}
-            <ReferenceSelect rota="locations" valor={parentId} onChange={setParentId} />
-            <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">
-              Onde a mesa fica: a sala, o andar, a filial. Em branco, o posto nasce na raiz.
-            </p>
           </div>
 
           <div className="space-y-1">
@@ -91,7 +77,6 @@ export default function PostoFormModal({ onClose, onSubmit }: PostoFormModalProp
             <textarea
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
-              placeholder="Ex: bancada da esquerda, junto à janela"
               className={`${CLASSE_CAMPO} h-20 resize-none`}
             />
           </div>

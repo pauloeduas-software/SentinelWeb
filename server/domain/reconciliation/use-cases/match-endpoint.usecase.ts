@@ -107,9 +107,12 @@ export async function reconciliarEndpoint(
 
   // `findMany` e não SQL: a extensão de soft delete escopa esta consulta
   // sozinha, então ativo na LIXEIRA não entra na cascata sem ninguém escrever
-  // filtro (core/database/soft-delete.extension.ts). Ativo APOSENTADO entra de
-  // propósito — máquina que continua mandando handshake de um ativo vendido é
-  // exatamente o achado que o painel de cobertura existe para mostrar.
+  // filtro (core/database/soft-delete.extension.ts). Ativo BAIXADO entra na
+  // CONTAGEM, pelo mesmo motivo do ativo que já tem máquina (abaixo): tirá-lo
+  // de vista transformaria "não sei qual dos dois" em "é este". Mas sai antes
+  // de virar vínculo ou sugestão — o vínculo recusa o baixado
+  // (`link-endpoint-asset.usecase.ts`), e a fila não oferece o que o aceite
+  // negaria.
   //
   // ATIVO QUE JÁ TEM MÁQUINA ENTRA NA CASCATA, E SAI DEPOIS DE PONTUAR.
   //
@@ -130,13 +133,16 @@ export async function reconciliarEndpoint(
       assetTag: true,
       serial: true,
       name: true,
+      retiredAt: true,
       endpoint: { select: { id: true } },
     },
   });
-  const ocupados = new Set(candidatos.filter((ativo) => ativo.endpoint).map((ativo) => ativo.id));
+  const foraDoVinculo = new Set(
+    candidatos.filter((ativo) => ativo.endpoint || ativo.retiredAt).map((ativo) => ativo.id),
+  );
 
   const porAtivo = casarEndpointComAtivos(endpoint, candidatos, lixoDoParque);
-  const casamentos = porAtivo.casamentos.filter((casamento) => !ocupados.has(casamento.alvoId));
+  const casamentos = porAtivo.casamentos.filter((casamento) => !foraDoVinculo.has(casamento.alvoId));
 
   let sugeridas = 0;
   let vinculadas = 0;

@@ -11,6 +11,7 @@ import {
 import { useCatalogOptionsQuery } from '../../../domain/catalog/catalog.queries';
 import type { Asset, AssetView } from '../../../domain/shared/asset.types';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { useNotificacao } from '../../hooks/useNotificacao';
 
 const PER_PAGE = 10;
 
@@ -18,6 +19,7 @@ const PER_PAGE = 10;
 // de UMA tela: ficam aqui, em useState, e não em store (docs/referencia/arquitetura.md).
 
 export function useAssets() {
+  const notificar = useNotificacao();
   const navigate = useNavigate();
 
   const [page, setPage] = useState(1);
@@ -39,7 +41,7 @@ export function useAssets() {
     [page, debouncedSearch, view, statusId, categoryId],
   );
 
-  const { data, isPending } = useAssetsQuery(params);
+  const { data, isPending, error } = useAssetsQuery(params);
   const { data: stats } = useAssetStatsQuery();
   const criar = useCreateAsset();
   const editar = useUpdateAsset();
@@ -56,8 +58,8 @@ export function useAssets() {
   // lista alfabética, que pode ser de qualquer tipo.
   // Só `DEPLOYABLE` pode ser entregue, e o ativo recém-cadastrado está no
   // estoque, pronto. Pelo TIPO e não pelo nome: nome é cadastro de texto livre,
-  // e é a mesma regra que o servidor aplica na devolução sem preferência
-  // configurada (`escolherStatusPorTipo`: o primeiro do tipo, por nome).
+  // e é a mesma regra que o servidor aplica na devolução
+  // (`escolherStatusPorTipo`: o primeiro do tipo, por nome).
   const { data: disponiveis } = useCatalogOptionsQuery('status-labels', 'DEPLOYABLE');
   const statusPadraoId = disponiveis?.[0]?.id ?? '';
 
@@ -144,7 +146,7 @@ export function useAssets() {
       await excluir.mutateAsync(asset.id);
       if (assets.length === 1 && page > 1) setPage(page - 1);
     } catch (erro) {
-      alert((erro as Error).message);
+      notificar.erro((erro as Error).message);
     }
   };
 
@@ -155,7 +157,7 @@ export function useAssets() {
     } catch (erro) {
       // É aqui que aparece o 409 de etiqueta reaproveitada enquanto o ativo
       // estava na lixeira — o índice único é parcial, só entre os vivos.
-      alert((erro as Error).message);
+      notificar.erro((erro as Error).message);
     }
   };
 
@@ -170,9 +172,6 @@ export function useAssets() {
     // não é o tamanho do inventário.
     totalCadastrado: stats?.total ?? total,
     porStatus,
-    // As colunas que o cliente criou. Vazio é o caso NORMAL — a maioria das
-    // instalações não tem campo marcado como coluna —, e a tabela segue
-    // idêntica ao que era.
     baixados: stats?.retired ?? 0,
     page,
     perPage: PER_PAGE,
@@ -188,6 +187,9 @@ export function useAssets() {
     categoryId,
     changeCategoria,
     loading: isPending,
+    // Sem isto, servidor fora do ar virava "Nenhum ativo cadastrado" com a dica
+    // de cadastrar o primeiro (`EstadoDaLista`).
+    erro: error ? error.message : null,
     modalAberto,
     emEdicao,
     clonando,
