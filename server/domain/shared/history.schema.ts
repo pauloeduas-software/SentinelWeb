@@ -17,7 +17,7 @@ import { z } from 'zod';
  * pede nada". Juntá-las obrigaria o schema a importar o use-case, que é a seta
  * ao contrário.
  */
-export const HISTORY_MAX_LIMIT = 200;
+const HISTORY_MAX_LIMIT = 200;
 
 export const historyQuerySchema = z.strictObject({
   limit: z.coerce.number('limite deve ser um número')

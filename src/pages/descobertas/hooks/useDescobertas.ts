@@ -58,8 +58,8 @@ export function useDescobertas() {
     try {
       await operacao();
     } catch (falha) {
-      const resposta = (falha as { response?: { data?: { error?: string } } }).response;
-      setErro(resposta?.data?.error ?? 'Não foi possível concluir a operação.');
+      // `ErroDaApi` já traz a frase do servidor no `message` (`apiClient.ts`).
+      setErro((falha as Error).message || 'Não foi possível concluir a operação.');
     }
   };
 
@@ -83,7 +83,7 @@ export function useDescobertas() {
 
     podeReconciliar,
     // Mudar o modo e os prazos (`PUT /api/settings/discovery`) também é `ADMIN`;
-    // ler é do técnico. Mesmo papel do reconciliar, nome próprio para quem lê a
+    // ler é do técnico. Mesmo cargo do reconciliar, nome próprio para quem lê a
     // página não ter que saber disso.
     podeConfigurar: podeReconciliar,
     reconciliando: reconciliar.isPending,

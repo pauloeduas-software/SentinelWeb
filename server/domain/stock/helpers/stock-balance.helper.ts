@@ -43,7 +43,7 @@ import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
 export type ClienteEstoque = Omit<typeof prisma, `$${string}`>;
 
 /** Quantas unidades estão FORA do estoque, por item. Zero não vem no mapa. */
-export type ForaPorItem = Map<string, number>;
+type ForaPorItem = Map<string, number>;
 
 /**
  * As unidades fora do estoque de VÁRIOS itens, em UMA consulta.
@@ -95,7 +95,7 @@ export async function travarItemOuFalhar(client: ClienteQueTrava, itemId: string
 }
 
 /** O saldo, acrescentado à linha lida do banco. */
-export interface Saldo {
+interface Saldo {
   /** Unidades fora do estoque agora. */
   fora: number;
   /** `qty − fora`. NUNCA vem do banco — ver o cabeçalho deste arquivo. */
@@ -116,8 +116,8 @@ export function comSaldo<T extends { qty: number }>(item: T, fora: number): ComS
 }
 
 /**
- * A recusa da saída sem unidade — com os NÚMEROS, para a tela não ter que
- * recontar.
+ * A recusa da saída sem unidade — com os NÚMEROS na frase, para a tela não ter
+ * que recontar.
  */
 export function assertDisponivel(item: { name: string; qty: number }, pedidas: number, fora: number): void {
   const disponivel = item.qty - fora;
@@ -130,5 +130,5 @@ export function assertDisponivel(item: { name: string; qty: number }, pedidas: n
     : `Sem unidade suficiente de ${item.name}: a saída pede ${pedidas} e há ${disponivel} `
       + `${disponivel === 1 ? 'disponível' : 'disponíveis'} (${fora} de ${item.qty} fora do estoque).`;
 
-  throw new AppError(frase, 409, { qty: item.qty, fora, disponivel, pedidas });
+  throw new AppError(frase, 409);
 }

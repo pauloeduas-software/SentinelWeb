@@ -71,7 +71,7 @@ Nesta ordem — o destrutivo na ponta:
 |---|---|---|
 | ✏️ Editar | todas | abre o formulário preenchido |
 | ⏻ Desativar / Ativar | todas | grava só `isActive`; pede confirmação ao desativar, não ao ativar |
-| 👥 Ocupantes do posto | Localizações | quem ocupa o posto, por turno (`modelo-de-posse.md`, Camada 2) |
+| 👥 Ocupantes do posto | Localizações | quem ocupa o posto, por turno — adicionar, corrigir o turno, encerrar (`modelo-de-posse.md`, Camada 2) |
 | 🗑️ Excluir | todas | confirma e apaga; com uso, a notificação diz por quê |
 
 Desativar é **botão da linha**, nunca caixa no formulário — o mesmo padrão de
@@ -233,7 +233,10 @@ Localização com **qualquer** uso não se exclui — 409 com a dica
 guardado nela (lixeira inclusive), **entrega** feita a
 ela (devolvidas inclusive), **saída de estoque** para ela (devolvidas inclusive)
 e **ocupante** que já passou por ela (encerrados inclusive). É histórico de
-"onde esteve" e "quem respondia", e a FK é `Restrict` em todos.
+"onde esteve" e "quem respondia", e a FK é `Restrict` em todos menos um: a do
+ativo guardado nela é `SetNull`. É por isso que o ativo da lixeira entra na
+contagem — sem ela, excluir o local zeraria em silêncio o `locationId` de uma
+linha ainda restaurável.
 
 **Desativada** (`isActive = false`), ela:
 
@@ -279,7 +282,7 @@ Dois seeds, com regras diferentes:
 | | `npm run db:seed` — o principal | `npm run db:seed:demo` — demonstração |
 |---|---|---|
 | onde roda | todo banco, produção incluída, e antes de cada arquivo de teste | só quando alguém pede: ambiente de desenvolvimento e demonstração |
-| o que cria | o que é do SOFTWARE: as 11 categorias, os 4 status (Disponível, Em uso, Pendente, Inutilizável), a configuração e o administrador | o que é da EMPRESA, como exemplo: fabricantes, modelos e localizações (abaixo). Roda o principal antes |
+| o que cria | o que é do SOFTWARE: as 11 categorias, os 4 status (Disponível, Em uso, Pendente, Inutilizável) e a configuração — nenhuma conta ([T](../decisoes/acesso.md#t--não-há-conta-semeada)) | o que é da EMPRESA, como exemplo: fabricantes, modelos e localizações (abaixo). Roda o principal antes |
 | arquivos | `prisma/seeds/*.seed.ts`, ordem em `prisma/seeds/index.ts` | `prisma/seeds/demo/*.seed.ts`, ordem em `prisma/seeds/demo/index.ts` |
 
 Fabricante, modelo e localização ficam **fora** do principal de propósito:

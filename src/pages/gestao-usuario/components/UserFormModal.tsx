@@ -3,23 +3,13 @@ import { X } from 'lucide-react';
 import type { User } from '../../../domain/shared/user.types';
 import type { UserInput } from '../../../domain/user/user.queries';
 
-// O FORMULÁRIO DE CADASTRO — nome, e-mail e papel.
+// O FORMULÁRIO DE CADASTRO — nome, e-mail, cargo e, para quem entra, senha.
 //
-// ═══════════════════════════════════════════════════════════════════════════
-// POR QUE A IDENTIDADE (matrícula, cargo, telefone, endereço, admissão) NÃO
-// ESTÁ AQUI, apesar de a F11 tê-la criado.
-//
-// Este modal abre da LISTAGEM, e a listagem traz `User` — o
-// `USER_LIST_SELECT` do servidor, que não tem os campos de identidade (eles
-// ficam no `USER_DETAIL_SELECT`, D135). Um campo de cargo aqui abriria vazio ao
-// editar e **apagaria o valor salvo** ao gravar: o clássico formulário que
-// limpa o que não mostrou.
-//
-// Buscar o detalhe aqui resolveria o vazio e criaria outro problema — duas
-// superfícies editando os mesmos nove campos, divergindo na primeira validação
-// nova. Então a divisão é por onde o dado JÁ está: o que a listagem traz se
-// edita aqui; o resto se edita na ficha, onde o detalhe já foi carregado.
-// ═══════════════════════════════════════════════════════════════════════════
+// O e-mail é o login. A SENHA só aparece para Técnico e Administrador, os dois
+// cargos que operam o painel: o `Usuario` só recebe equipamento e o login o
+// recusa de qualquer jeito. No cadastro desses dois a senha é obrigatória; na
+// edição é "Nova senha" — em branco mantém a atual, preenchida troca e encerra
+// as sessões abertas da pessoa. As regras de tamanho são do servidor.
 
 interface UserFormModalProps {
   user?: User | null;
@@ -31,10 +21,17 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
-    // O PAPEL (D148). Conta nova nasce `USUARIO`, que é o `@default` da coluna —
+    // O CARGO (D148). Conta nova nasce `USUARIO`, que é o `@default` da coluna —
     // a porta fechada por padrão da F3 levada à autorização.
     role: user?.role || 'USUARIO',
   });
+  // Fora do `formData` porque nunca vem do registro: o servidor não devolve
+  // senha, e o campo sempre abre vazio.
+  const [password, setPassword] = useState('');
+  const entraNoSistema = formData.role !== 'USUARIO';
+  // Quem já entrava troca a senha se quiser ("Nova senha"); quem está sendo
+  // CRIADO ou PROMOVIDO de Usuário precisa de uma — o servidor recusa sem ela.
+  const senhaObrigatoria = entraNoSistema && (!user || user.role === 'USUARIO');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -49,6 +46,8 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
         name: formData.name,
         email: formData.email,
         role: formData.role,
+        // Só vai quando preenchida: ausente, a edição mantém a senha atual.
+        ...(entraNoSistema && password ? { password } : {}),
         // `isActive` NÃO viaja daqui: desativar e ativar são o botão da linha,
         // em Ações (`useUsers.handleAlternarAtivo`), o mesmo padrão das outras
         // listas. Quem nasce, nasce ativo — o `strictObject` do create recusa o
@@ -87,9 +86,9 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="role" className="text-text-secondary uppercase tracking-widest text-[10px]">Papel</label>
+            <label htmlFor="role" className="text-text-secondary uppercase tracking-widest text-[10px]">Cargo</label>
             {/* `<select>` nativo e não `ReferenceSelect`: os três valores vêm do
-                CÓDIGO (o enum `Papel`), não de uma tabela — não há rota de opções
+                CÓDIGO (o enum `Cargo`), não de uma tabela — não há rota de opções
                 a consultar, e inventar uma seria uma requisição para uma
                 constante.
 
@@ -107,6 +106,28 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
               <option value="ADMIN">Administrador — mais gente, configuração e custo</option>
             </select>
           </div>
+
+          {entraNoSistema && (
+            <div className="space-y-1">
+              <label htmlFor="password" className="text-text-secondary uppercase tracking-widest text-[10px]">
+                {senhaObrigatoria ? 'Senha*' : 'Nova senha'}
+              </label>
+              <input
+                id="password"
+                type="password"
+                required={senhaObrigatoria}
+                autoComplete="new-password"
+                value={password}
+                onChange={(evento) => setPassword(evento.target.value)}
+                className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors"
+              />
+              <p className="text-text-tertiary text-[10px] leading-relaxed">
+                {senhaObrigatoria
+                  ? 'É com o e-mail e esta senha que a pessoa entra no sistema. Mínimo de 12 caracteres.'
+                  : 'Em branco, mantém a senha atual. Trocar encerra as sessões abertas da pessoa. Mínimo de 12 caracteres.'}
+              </p>
+            </div>
+          )}
 
           <div className="pt-4 flex justify-end gap-3 border-t border-border-sutil">
             <button type="button" onClick={onClose} className="px-4 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base transition-colors">

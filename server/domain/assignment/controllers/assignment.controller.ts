@@ -17,8 +17,8 @@ export const assignmentController = {
     // 201: a entrega CRIA uma linha em `assignments`. O corpo devolve a posse e
     // o ativo já atualizado, porque a tela precisa dos dois — o status e o
     // responsável mudaram na mesma operação.
-    // O ator vem da SESSÃO, nunca do corpo: é ele que assina o termo de
-    // entrega em `Assignment.checkoutById` (D25).
+    // O ator vem da SESSÃO, nunca do corpo: é ele que fica gravado como quem
+    // entregou, em `Assignment.checkoutById` (D25).
     const resultado = await checkoutAsset(id, data, atorDaRequisicao(request));
     return reply.status(201).send(resultado);
   },

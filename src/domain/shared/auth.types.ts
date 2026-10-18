@@ -15,12 +15,12 @@ import type { User } from './user.types';
  * O que NÃO existe aqui, e nunca vai existir: token. Ele viaja em cookie
  * httpOnly e o JavaScript do painel nunca o vê (docs/historico/fase-03-autenticacao-e-ator.md, D22).
  */
-export type SessionUser = User & {
+export type SessionUser = Omit<User, 'role' | 'isActive'> & {
   /**
-   * O PAPEL desta pessoa (D148) — `USUARIO`, `TECNICO` ou `ADMIN`.
+   * O CARGO desta pessoa (D148) — `USUARIO`, `TECNICO` ou `ADMIN`.
    *
    * VEM SÓ DE DUAS ROTAS, `POST /api/auth/login` e `GET /api/auth/me`, e nunca
-   * embutido num `assignedTo` ou num ocupante de posto: no servidor ele não está
+   * embutido numa posse ou num ocupante de posto: no servidor ele não está
    * no `USER_PUBLIC_SELECT` de propósito. Por isso é campo de `SessionUser` e não
    * de `User` — o colaborador da listagem não tem isto.
    *
@@ -35,7 +35,8 @@ export type SessionUser = User & {
   role: 'USUARIO' | 'TECNICO' | 'ADMIN';
 };
 
+/** O login é o e-mail do cadastro, e a senha. */
 export interface Credenciais {
-  username: string;
+  email: string;
   password: string;
 }

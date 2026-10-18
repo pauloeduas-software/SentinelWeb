@@ -1,7 +1,7 @@
 import { CATALOG_SPECS } from '../../catalog/specs';
-import type { Papel } from './papel';
+import type { Cargo } from './cargo';
 
-// O MAPA `método + rota → papel mínimo`, exato, sem prefixo e sem herança.
+// O MAPA `método + rota → cargo mínimo`, exato, sem prefixo e sem herança.
 //
 // ═══════════════════════════════════════════════════════════════════════════
 // POR QUE UM MAPA CENTRAL, E NÃO UM `preHandler` POR ROTA (D137).
@@ -18,10 +18,10 @@ import type { Papel } from './papel';
 //
 // POR QUE EXATO E NÃO POR PREFIXO: um mapa de prefixos (`/api/assets/* →
 // TECNICO`) é mais curto e destrói a garantia. `POST /api/assets/:id/wipe`
-// herdaria o papel do vizinho e passaria a existir protegida pelo papel errado,
+// herdaria o cargo do vizinho e passaria a existir protegida pelo cargo errado,
 // sem ninguém declarar nada. Verbosidade aqui é o preço da conferência.
 //
-// O valor da linha é o papel MÍNIMO, e `papelAlcanca()` faz o resto: `ADMIN`
+// O valor da linha é o cargo MÍNIMO, e `cargoAlcanca()` faz o resto: `ADMIN`
 // satisfaz linha de `TECNICO`, e nenhuma linha precisa listar os dois.
 //
 // O CRITÉRIO, escrito uma vez aqui em vez de repetido em cada linha:
@@ -32,7 +32,7 @@ import type { Papel } from './papel';
 //   `ADMIN`    — gente (criar, editar, desativar, trocar senha), configuração do
 //                sistema, EXCLUIR de verdade (e restaurar o excluído) e o custo.
 //
-// `users.view` ficou em `TECNICO` de propósito: entregar equipamento exige
+// `GET /api/users` ficou em `TECNICO` de propósito: entregar equipamento exige
 // escolher a pessoa, e um técnico que não lista gente não faz checkout. O que é
 // de `ADMIN` é MEXER em gente, não vê-la.
 //
@@ -42,15 +42,15 @@ import type { Papel } from './papel';
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * `null` é **dispensa declarada**: a rota exige sessão e nenhum papel acima.
+ * `null` é **dispensa declarada**: a rota exige sessão e nenhum cargo acima.
  *
  * É diferente de ausente. Ausente é esquecimento e derruba o boot; `null` é
  * decisão, e cada uma tem o motivo escrito ao lado.
  */
-export type ExigenciaDaRota = Papel | null;
+type ExigenciaDaRota = Cargo | null;
 
 const DISPENSADAS: Record<string, ExigenciaDaRota> = {
-  // Quem está logado sempre pode saber quem é e sair. Exigir papel para ler a
+  // Quem está logado sempre pode saber quem é e sair. Exigir cargo para ler a
   // própria sessão tornaria impossível desenhar a tela de alguém sem acesso a
   // nada — inclusive a tela que explica que ele não tem acesso a nada.
   'GET /api/auth/me': null,
@@ -114,7 +114,6 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   'PUT /api/users/:id': 'ADMIN',
   'DELETE /api/users/:id': 'ADMIN',
   'POST /api/users/:id/restore': 'ADMIN',
-  'POST /api/users/:id/set-password': 'ADMIN',
   'GET /api/endpoints': 'TECNICO',
   'GET /api/endpoints/:id': 'TECNICO',
   'GET /api/assets/:id/machine': 'TECNICO',
@@ -138,7 +137,7 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   //
   // As especificações do catálogo (D9) registram rotas idênticas por entidade:
   // listar, opções, criar, editar, apagar. Declará-las à mão seria repetir o
-  // mesmo bloco nove vezes e deixar a décima de fora quando alguém acrescentar
+  // mesmo bloco cinco vezes e deixar a sexta de fora quando alguém acrescentar
   // uma spec — exatamente o esquecimento que o D137 existe para pegar.
   //
   // Ler é do técnico (ele escolhe categoria e modelo ao cadastrar); MEXER no
@@ -157,12 +156,12 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
 export const ROTAS_POR_PERMISSAO: Readonly<Record<string, ExigenciaDaRota>> = ROTAS;
 
 /** A chave do mapa: `MÉTODO /padrão`, com o método em maiúsculas. */
-export function chaveDaRota(method: string, url: string): string {
+function chaveDaRota(method: string, url: string): string {
   return `${method.toUpperCase()} ${url}`;
 }
 
 /**
- * O papel mínimo da rota, `null` para dispensa declarada, `undefined` para
+ * O cargo mínimo da rota, `null` para dispensa declarada, `undefined` para
  * **não declarada** — que é o que a conferência do boot procura.
  */
 export function exigenciaDaRota(method: string, url: string): ExigenciaDaRota | undefined {

@@ -1,6 +1,6 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { USER_PUBLIC_SELECT } from '../../user/helpers/user-select.helper';
-import type { Papel } from '../../access/helpers/papel';
+import type { Cargo } from '../../access/helpers/cargo';
 import type { SessionUser } from '../auth.types';
 
 /**
@@ -12,23 +12,15 @@ import type { SessionUser } from '../auth.types';
  * extension de soft delete joga a favor — `findFirst` já não enxerga o apagado,
  * sem código nenhum a mais (server/core/database/soft-delete.extension.ts).
  *
- * `isActive: false` (desligado, F11) cai junto: quem saiu da empresa continua
+ * `isActive: false` (desativado) cai junto: quem saiu da empresa continua
  * no histórico de posse e nos relatórios, mas não opera mais.
  *
  * O `select` é o `USER_PUBLIC_SELECT`, o mesmo de toda rota que devolve
  * usuário: é ele que garante que `passwordHash`, `failedLoginCount` e
  * `lockedUntil` não saiam por aqui.
- */
-export function carregarUsuarioDaSessao(id: string): Promise<SessionUser | null> {
-  return prisma.user.findFirst({
-    where: { id, isActive: true },
-    select: USER_PUBLIC_SELECT,
-  });
-}
-
-/**
- * O mesmo usuário, mais a GERAÇÃO da sessão dele — para o `preHandler` conferir
- * contra o número que veio assinado no token.
+ *
+ * Vem com a GERAÇÃO da sessão — para o `preHandler` conferir contra o número
+ * que veio assinado no token.
  *
  * Existe separado, e o `tokenVersion` NÃO entra no `USER_PUBLIC_SELECT`, porque
  * aquela allowlist é o contrato do que sai para o cliente: um mecanismo interno
@@ -42,10 +34,10 @@ export function carregarUsuarioDaSessao(id: string): Promise<SessionUser | null>
  */
 export async function carregarSessaoParaValidacao(
   id: string,
-): Promise<{ usuario: SessionUser; tokenVersion: number; papel: Papel } | null> {
+): Promise<{ usuario: SessionUser; tokenVersion: number; cargo: Cargo } | null> {
   const linha = await prisma.user.findFirst({
     where: { id, isActive: true },
-    // O PAPEL VEM NA MESMA CONSULTA, por ser uma COLUNA: a releitura por
+    // O CARGO VEM NA MESMA CONSULTA, por ser uma COLUNA: a releitura por
     // requisição é o caminho mais quente do sistema, e um join a mais nela
     // custaria em toda requisição autenticada.
     select: { ...USER_PUBLIC_SELECT, tokenVersion: true, role: true },
@@ -57,5 +49,5 @@ export async function carregarSessaoParaValidacao(
   // mesmo motivo — nenhum dos dois é dado de usuário para exibir, e o
   // `USER_PUBLIC_SELECT` continua sendo a única porta de saída do que o cliente vê.
   const { tokenVersion, role, ...usuario } = linha;
-  return { usuario, tokenVersion, papel: role };
+  return { usuario, tokenVersion, cargo: role };
 }

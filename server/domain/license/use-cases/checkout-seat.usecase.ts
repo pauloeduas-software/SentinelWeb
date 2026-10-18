@@ -100,11 +100,11 @@ async function assertAlvoApto(
   });
   if (!pessoa) throw new AppError('Colaborador não encontrado.', 404);
 
-  // DESLIGADO é diferente de APAGADO (D32). 409 e não 404: a pessoa existe, o
+  // DESATIVADO é diferente de APAGADO (D32). 409 e não 404: a pessoa existe, o
   // estado dela é que recusa. Entregar a quem saiu reabriria, uma linha depois
   // da desativação, exatamente a pendência que a desativação fechou.
   if (!pessoa.isActive) {
-    throw new AppError(`${pessoa.name} está desligado(a) e não pode receber assento de licença.`, 409);
+    throw new AppError(`${pessoa.name} está desativado(a) e não pode receber assento de licença.`, 409);
   }
   return pessoa.name;
 }
@@ -131,9 +131,14 @@ export async function checkoutSeat(
     else await travarAtivoOuFalhar(tx, alvo.id);
 
     // A licença existe? (404 antes de procurar assento em contrato nenhum.)
-    // NÃO trava a licença: entregar é o caminho quente, e travá-la enfileiraria
-    // todo checkout do mesmo contrato — que é exatamente o que o `SKIP LOCKED`
-    // existe para evitar (D90).
+    //
+    // Travada em modo `FOR SHARE`, e não `FOR UPDATE`: duas entregas do mesmo
+    // contrato compartilham a trava e seguem em paralelo — entregar é o caminho
+    // quente, e o `SKIP LOCKED` dos assentos existe para isso (D90) —, mas a
+    // EXCLUSÃO da licença, que trava `FOR UPDATE`, espera. Sem ela, a exclusão
+    // contava zero ocupados entre a leitura daqui e o `INSERT` da ocupação, e o
+    // assento ficava aberto numa licença na lixeira.
+    await tx.$queryRaw`SELECT id FROM licenses WHERE id = ${licenseId}::uuid FOR SHARE`;
     const licenca = await tx.license.findFirst({
       where: { id: licenseId },
       select: {
@@ -160,7 +165,6 @@ export async function checkoutSeat(
         `A licença "${licenca.name}" está ENCERRADA (contrato rescindido) e não recebe assento `
         + 'novo. Se o contrato voltou, limpe a data de encerramento antes de entregar.',
         409,
-        { status },
       );
     }
     if (status === 'EXPIRADA') {
@@ -169,7 +173,6 @@ export async function checkoutSeat(
         `A licença "${licenca.name}" venceu há ${dias} ${dias === 1 ? 'dia' : 'dias'} e não recebe `
         + 'assento novo: renove o contrato e atualize a data de vencimento antes de entregar.',
         409,
-        { status },
       );
     }
 
@@ -190,7 +193,6 @@ export async function checkoutSeat(
         + `ocupados${contagem.queimados > 0 ? `, ${contagem.queimados} queimado(s)` : ''}. `
         + 'Devolva um assento ou aumente o contrato.',
         409,
-        { seatsTotal: licenca.seatsTotal, ...contagem },
       );
     }
 
@@ -202,7 +204,6 @@ export async function checkoutSeat(
         assignedUserId: alvo.tipo === 'USER' ? alvo.id : null,
         assignedAssetId: alvo.tipo === 'ASSET' ? alvo.id : null,
         checkoutNotes: data.notes ?? null,
-        checkoutById: actorId,
       },
       select: SEAT_CHECKOUT_SELECT,
     });

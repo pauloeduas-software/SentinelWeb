@@ -62,7 +62,7 @@ import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
  * Quem decide o que fazer com a lixeira é a consulta seguinte, que passa pelo
  * escopo da `softDeleteExtension`.
  */
-export async function travarAtivo(client: ClienteQueTrava, assetId: string): Promise<boolean> {
+async function travarAtivo(client: ClienteQueTrava, assetId: string): Promise<boolean> {
   // Template tag: o `${assetId}` vira PARÂMETRO do Postgres, não texto
   // concatenado. O `::uuid` é necessário porque o parâmetro chega como texto.
   const linhas = await client.$queryRaw<{ id: string }[]>`

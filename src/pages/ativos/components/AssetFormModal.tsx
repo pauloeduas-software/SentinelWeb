@@ -3,21 +3,20 @@ import { X } from 'lucide-react';
 import ReferenceSelect from '../../components/ReferenceSelect';
 import { paraCampoDeData } from '../../helpers/format.helper';
 import { useNextAssetTagQuery, type AssetInput } from '../../../domain/asset/asset.queries';
+import { usePode } from '../../../domain/auth/auth.store';
 import type { Asset } from '../../../domain/shared/asset.types';
 
 // POSSE NÃO É CAMPO DESTE FORMULÁRIO — e a ausência é a decisão (D14,
 // docs/referencia/modelo-de-posse.md).
 //
-// O campo "Responsável" existia aqui e foi removido na F4. `assignedToId` virou
-// CACHE do caso `USER` da posse, escrito só pelo checkout e pelo checkin: um
-// campo editável à mão AO LADO de uma tabela de posse são duas fontes de verdade
-// para o mesmo fato, e nada impede divergirem. Pior, ele não sabe representar o
-// que o modelo representa — um ativo entregue à Mesa 1 responde por DUAS pessoas
-// (Laura de manhã, Ana à tarde), e um `<select>` de uma pessoa só não tem onde
-// guardar isso.
+// Não há campo "Responsável": um campo editável à mão AO LADO de uma tabela de
+// posse são duas fontes de verdade para o mesmo fato, e nada impede divergirem.
+// Pior, ele não sabe representar o que o modelo representa — um ativo entregue
+// à Mesa 1 responde por DUAS pessoas (Laura de manhã, Ana à tarde), e um
+// `<select>` de uma pessoa só não tem onde guardar isso.
 //
-// Entregar e devolver agora são OPERAÇÃO, pelo `CheckoutModal`, no botão da
-// linha do ativo. O servidor recusa `assignedToId` no corpo de create/update.
+// Entregar e devolver são OPERAÇÃO, pelo `CheckoutModal`, no botão da linha do
+// ativo.
 //
 // `locationId` continua aqui, e não é a mesma coisa: é ONDE o ativo está, não
 // QUEM responde por ele. O mouse reserva na gaveta de uma mesa ocupada está NA
@@ -58,8 +57,6 @@ function valoresIniciais(asset: Asset | null, clonar: boolean, statusPadraoId: s
     statusId: clonar || !asset ? statusPadraoId : asset.statusId,
     modelId: asset?.modelId ?? '',
     locationId: asset?.locationId ?? '',
-    // `assignedToId` NÃO está aqui, e a ausência é a regra: ver o comentário do
-    // topo do arquivo. O servidor recusa o campo no corpo.
     orderNumber: asset?.orderNumber ?? '',
     purchaseDate: paraCampoDeData(asset?.purchaseDate),
     purchaseCost: asset?.purchaseCost ?? '',
@@ -91,6 +88,11 @@ export default function AssetFormModal({
   asset, clonar = false, statusPadraoId = '', onClose, onSubmit,
 }: AssetFormModalProps) {
   const [valores, setValores] = useState(() => valoresIniciais(asset, clonar, statusPadraoId));
+  // O CUSTO É DO ADMIN (D77). O técnico nem recebe o valor do servidor, então
+  // o campo dele abriria vazio — e salvar mandaria esse vazio por cima do custo
+  // que só o administrador enxerga. Sem o campo e sem a chave no corpo, o
+  // técnico edita o resto sem tocar no dinheiro.
+  const veCusto = usePode('ADMIN');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -107,7 +109,9 @@ export default function AssetFormModal({
     setSalvando(true);
     setErro('');
     try {
-      await onSubmit(valores);
+      const corpo: AssetInput = { ...valores };
+      if (!veCusto) delete corpo.purchaseCost;
+      await onSubmit(corpo);
     } catch (falha) {
       setErro((falha as Error).message);
     } finally {
@@ -203,12 +207,14 @@ export default function AssetFormModal({
               <label className={ROTULO}>Data da compra</label>
               <input type="date" value={valores.purchaseDate} onChange={(e) => definir('purchaseDate', e.target.value)} className={CLASSE_CAMPO} />
             </div>
-            <div className="space-y-1">
-              <label className={ROTULO}>Valor (R$)</label>
-              {/* `text`, não `number`: o valor viaja como string do formulário ao
-                  Postgres, sem passar por ponto flutuante em lugar nenhum. */}
-              <input inputMode="decimal" value={valores.purchaseCost} onChange={(e) => definir('purchaseCost', e.target.value)} className={CLASSE_CAMPO} />
-            </div>
+            {veCusto && (
+              <div className="space-y-1">
+                <label className={ROTULO}>Valor (R$)</label>
+                {/* `text`, não `number`: o valor viaja como string do formulário ao
+                    Postgres, sem passar por ponto flutuante em lugar nenhum. */}
+                <input inputMode="decimal" value={valores.purchaseCost} onChange={(e) => definir('purchaseCost', e.target.value)} className={CLASSE_CAMPO} />
+              </div>
+            )}
           </Secao>
 
           <Secao titulo="Notas">

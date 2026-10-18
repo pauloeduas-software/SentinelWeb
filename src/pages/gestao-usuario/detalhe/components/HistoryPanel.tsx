@@ -6,7 +6,7 @@ import { lerEventoDaPessoa, tituloDoEvento } from '../helpers/historico.helper';
 // A LINHA DO TEMPO da pessoa. TRÊS fontes, uma lista:
 //
 //   ATIVIDADE  o `ActivityLog` dela — cadastro, edição com o diff campo a
-//              campo, credencial definida, lixeira, desligamento;
+//              campo, credencial definida, lixeira, desativação;
 //   POSSE      o que ela recebeu e devolveu, com a etiqueta do equipamento;
 //   POSTO      onde ela sentou e quando saiu, com o turno.
 //
@@ -15,7 +15,7 @@ import { lerEventoDaPessoa, tituloDoEvento } from '../helpers/historico.helper';
 // auditoria — e a resposta, dizia a decisão, é o `ActivityLog`.
 //
 // O que esta lista NÃO mostra é o que a pessoa FEZ como operadora: isso é
-// auditoria de operador e vem com o RBAC da F11.
+// auditoria de operador, outro relatório — e o sistema não o tem.
 
 const ICONE = {
   POSSE: ArrowRightLeft,

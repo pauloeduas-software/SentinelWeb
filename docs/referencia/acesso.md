@@ -5,7 +5,7 @@
 > que cada peça está onde está, e o que deliberadamente ainda não existe.
 >
 > A sessão teve três portas (senha, SSO, token pessoal de API) e um segundo fator por TOTP — a F11
-> construiu os três. O [D148](../decisoes/escopo.md#d148--permissão-vira-papel-grupo-diretório-sso-e-segundo-fator-saem)
+> construiu os três. O [D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)
 > e o [D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token) cortaram
 > duas das três portas e o segundo fator inteiro: hoje só existe senha + cookie. O que este
 > documento descreve é o que sobrou, não o que a F11 tinha construído — para isso, leia
@@ -22,19 +22,19 @@
         │  bodyLimit 8 KiB  ·  Cache-Control: no-store  ·  Origin conferida
         │  rate limit 20/min por IP (desligado em NODE_ENV=test — L)
         ▼
-  loginSchema (zod strictObject)      ← campo desconhecido = 422, não "ignorado"
-        │
+  loginSchema (zod strictObject)      ← { email, password }; o e-mail em minúsculas
+        │                                campo desconhecido = 422, não "ignorado"
         ▼
-  login.usecase
-        ├─ usuário não existe / sem senha ──► argon2 descartável ──► 401
+  login.usecase                       ← o login é o e-mail do cadastro (R)
+        ├─ e-mail sem conta / sem senha ──► argon2 descartável ──► 401
         ├─ lockedUntil no futuro ───────────────────────────────► 423
         ├─ senha errada ──► failedLoginCount++ (5 = trava 15min) ─► 401
         ├─ isActive: false ─────────────────────────────────────► 403
         ├─ role === 'USUARIO' ───────────────────────────────────► 403 (P)
         └─ acerto
              ├─ rehash transparente se o hash for de parâmetros antigos
-             ├─ zera contador/trava, grava lastLoginAt
-             ├─ relê pelo USER_PUBLIC_SELECT, com o papel e o tokenVersion
+             ├─ zera contador/trava
+             ├─ relê pelo USER_PUBLIC_SELECT, com o cargo e o tokenVersion
              └─ 200
         │
         ▼
@@ -61,12 +61,12 @@ E em **toda** requisição seguinte:
   `tv` do token == tokenVersion da coluna? ──► não? 401
         │
         ▼
-  request.user = usuário recém-lido;  request.papel = o papel dele
+  request.user = usuário recém-lido;  request.cargo = o cargo dele
         │   └─ daqui sai o actorId de todo ActivityLog e a decisão do permission-guard
 ```
 
 **Não há segundo fator, SSO nem token de API.** As três coisas existiram na F11
-e saíram no [D148](../decisoes/escopo.md#d148--permissão-vira-papel-grupo-diretório-sso-e-segundo-fator-saem)/[D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token) —
+e saíram no [D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)/[D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token) —
 ver a seção *O que saiu, e por quê* abaixo. O agente conversa por `AGENT_TOKEN` fixo no `.env`,
 fora deste fluxo inteiramente (`/agent-hub`, autenticação própria).
 
@@ -81,7 +81,7 @@ em `ROTAS_PUBLICAS` (`server/app.ts`): os dois health checks, o login e o
 `/agent-hub` (que tem autenticação própria) — quatro linhas, cada uma com o motivo ao lado.
 
 **E há uma segunda porta fechada por padrão, do lado da AUTORIZAÇÃO:**
-`core/http/permission-guard.ts` exige que toda rota declare o **papel mínimo** que pede — e
+`core/http/permission-guard.ts` exige que toda rota declare o **cargo mínimo** que pede — e
 rota registrada sem declaração **derruba o boot**, com o nome dela no erro (D137).
 Os dois guards são o mesmo desenho pelo mesmo motivo, e o segundo tem um degrau a
 mais: o esquecimento não vira API aberta em silêncio, vira servidor que não sobe.
@@ -102,7 +102,8 @@ corpo criaria o caminho para o front guardá-lo no `localStorage`, e aí o mesmo
 XSS levaria a sessão embora para sempre.
 
 O preço é CSRF, pago em três camadas: `SameSite=Lax` no cookie, a conferência de
-`Origin` nas rotas de credencial, e o CORS com allowlist.
+`Origin` nas rotas de credencial — login, logout, e o cadastro e a edição de usuário, que
+carregam senha —, e o CORS com allowlist.
 
 > **Por que `Lax` e não `Strict`:** em desenvolvimento o painel roda na 3000 e a
 > API na 3001 (o Vite faz proxy com `changeOrigin`). Com `Strict` o navegador
@@ -131,9 +132,9 @@ O buraco concreto que isso deixava:
 | Admin redefine a senha de alguém | sessões antigas seguem valendo | todas caem |
 
 O mecanismo é um inteiro na linha do usuário, assinado dentro do token como
-`tv` e conferido contra a coluna a cada requisição. `setUserPassword` faz
-`increment: 1` — e todo token emitido antes morre de uma vez, sem tabela de
-sessão e sem lista de revogação.
+`tv` e conferido contra a coluna a cada requisição. Trocar a senha — a **Nova senha**
+da edição do usuário (`updateUser`) — faz `increment: 1`, e todo token emitido antes
+morre de uma vez, sem tabela de sessão e sem lista de revogação.
 
 > `increment`, não `set`: duas redefinições simultâneas leriam o mesmo valor e
 > gravariam o mesmo número, e uma das duas não invalidaria nada.
@@ -146,15 +147,15 @@ sessão e sem lista de revogação.
 
 | Situação | HTTP | Mensagem |
 |---|---|---|
-| Usuário não existe | 401 | `Usuário ou senha inválidos.` |
+| E-mail sem conta | 401 | `E-mail ou senha inválidos.` |
 | Cadastrado sem senha | 401 | *a mesma* |
 | Senha errada | 401 | *a mesma* |
 | Conta travada | 423 | `Conta bloqueada por excesso de tentativas…` |
 | Acesso desativado | 403 | `Acesso desativado. Procure o administrador do sistema.` |
-| Papel `USUARIO` | 403 | frase própria, que diz o que fazer (ver [P](../decisoes/acesso.md#p--usuario-não-entra-no-painel)) |
+| Cargo `USUARIO` | 403 | frase própria, que diz o que fazer (ver [P](../decisoes/acesso.md#p--usuario-não-entra-no-painel)) |
 
 Os três primeiros compartilham a frase porque **duas mensagens diferentes são um
-oráculo de quem trabalha aqui**: bastaria varrer nomes até uma delas mudar.
+oráculo de quem trabalha aqui**: bastaria varrer e-mails até uma delas mudar.
 
 E a mensagem sozinha não basta — **o tempo também vaza**. O caminho do usuário
 inexistente calcula um argon2 descartável (`conferirSenhaInexistente`) para
@@ -162,7 +163,7 @@ gastar os mesmos ~50 ms do caminho real. Sem isso, um volta em 1 ms e o outro em
 50, e o relógio entrega a lista que a mensagem esconde.
 
 Os dois 403 (desativado, `USUARIO`) têm frase própria de propósito: quem chegou ali já provou
-que sabe a senha, não há nada a enumerar, e "usuário ou senha inválidos" mandaria
+que sabe a senha, não há nada a enumerar, e "e-mail ou senha inválidos" mandaria
 essa pessoa procurar um erro de digitação que não existe.
 
 ### 6. Argon2id, e o rehash transparente
@@ -194,41 +195,74 @@ Elas resolvem problemas **diferentes** e só funcionam juntas:
 | Fura se | atacante troca de conta | atacante troca de IP |
 
 A trava é, reconhecidamente, uma negação de serviço contra um usuário conhecido:
-quem sabe o login de alguém trava a conta em cinco tentativas. Por isso a janela
+quem sabe o e-mail de alguém trava a conta em cinco tentativas. Por isso a janela
 é de **minutos** e o desbloqueio é **automático** — bloqueio permanente com
-desbloqueio manual troca um ataque barato por um chamado garantido. Redefinir a
-senha também destrava, que é o caminho de suporte para quem se trancou fora.
+desbloqueio manual troca um ataque barato por um chamado garantido. Trocar a
+senha pela edição do usuário também destrava, que é o caminho de suporte para quem
+se trancou fora.
 
 O teto por IP é desligado em `NODE_ENV=test` ([L](../decisoes/plataforma.md#l--o-teto-de-requisições-é-desligado-em-node_envtest-com-guarda-contra-produção)),
 com uma função pura afirmada por teste garantindo que produção nunca sobe sem ele.
 
 ---
 
-## A autorização: papel, não permissão
+## A autorização: cargo, não permissão
 
-**Três papéis, com ordem** — `USUARIO < TECNICO < ADMIN` (D148). Cada rota declara o papel
+**Três cargos, com ordem** — `USUARIO < TECNICO < ADMIN` (D148). Cada rota declara o cargo
 MÍNIMO que exige em `route-permissions.ts`, e a pergunta de toda requisição é só "a sessão
-alcança esse mínimo?" — aritmética sobre a posição no array, não uma lista de papéis aceitos
+alcança esse mínimo?" — aritmética sobre a posição no array, não uma lista de cargos aceitos
 por rota.
 
 `USUARIO` é o colaborador que **recebe** equipamento — alvo de posse, não operador. Nenhuma
-rota de inventário aceita `USUARIO`, e o login recusa esse papel antes mesmo de abrir uma
+rota de inventário aceita `USUARIO`, e o login recusa esse cargo antes mesmo de abrir uma
 sessão para ele ([P](../decisoes/acesso.md#p--usuario-não-entra-no-painel)): uma sessão que
 abriria um painel vazio, respondendo 403 em tudo, chega como "o painel não carrega" e não
 como "eu não tenho acesso".
 
-`request.papel` é lido na MESMA consulta de sessão que já relê o usuário a cada requisição —
-não há coluna de permissão efetiva para cachear nem para divergir do papel gravado.
+`request.cargo` é lido na MESMA consulta de sessão que já relê o usuário a cada requisição —
+não há coluna de permissão efetiva para cachear nem para divergir do cargo gravado.
 
 **Nunca sem administrador:** `assertSobraAdministrador()` roda no FIM de toda transação que
-toca papel ou `isActive`, dentro dela — ver a invariante 17 em
-[`invariantes.md`](invariantes.md).
+toca cargo ou `isActive` **ou manda alguém para a lixeira**, dentro dela — ver a invariante 17
+em [`invariantes.md`](invariantes.md).
+
+**O custo de compra do ativo é do `ADMIN`** ([D77](../decisoes/acesso.md#d77--dado-sensível-é-filtrado-no-select-não-mascarado-na-resposta)),
+e são quatro portas, todas em `asset/helpers/asset-select.helper.ts` ou ao lado dele:
+
+- **a leitura** (listagem, detalhe, ficha do posto) não lê a coluna para quem não é `ADMIN`;
+- **a resposta das escritas** (criar, editar, entregar, devolver, dar baixa, restaurar) não leva
+  o custo para cargo nenhum (`ASSET_WRITE_SELECT`) — o técnico chama todas elas;
+- **a escrita do técnico** descarta o custo que chegar (`custoSoDoAdmin`): o formulário dele não
+  tem o campo, e um `purchaseCost: ''` apagaria o valor que ele não vê;
+- **o histórico do ativo** tira `purchaseCost` do diff para quem não é `ADMIN`, e a edição que
+  só mexeu no custo some inteira para ele.
+
+A busca do leitor (`/api/search`) devolve só o que identifica o ativo, para todo cargo.
+
+**A senha nasce no cadastro, e o login é o e-mail** ([R](../decisoes/acesso.md#r--a-senha-nasce-no-cadastro-e-o-login-é-o-e-mail)).
+Não há nome de usuário à parte nem ação separada para dar acesso: o formulário de Usuários, que
+já leva o cargo ([D162](../decisoes/escopo.md#d162--minha-conta-sai-e-o-cargo-vira-campo-do-formulário-de-usuário)),
+pede nome, e-mail, cargo e — só quando o cargo é Técnico ou Administrador — a senha: **Senha\***
+obrigatória no cadastro, **Nova senha** opcional na edição. A maior parte dos colaboradores existe
+só para receber equipamento e nunca terá login, e para eles o campo nem aparece.
+
+A regra é do servidor (`user/helpers/credencial.helper.ts`), nas duas rotas do formulário —
+ambas `ADMIN`:
+
+- `POST /api/users` e `PUT /api/users/:id` respondem **422** se a pessoa terminar com cargo
+  `TECNICO` ou `ADMIN` e sem senha — inclusive ao promover a Técnico quem nunca teve uma;
+  `USUARIO` não precisa, porque o login o recusa de qualquer jeito;
+- na edição, `password` ausente mantém a atual; presente troca a senha, destrava a conta
+  (`failedLoginCount` e `lockedUntil` zerados) e incrementa o `tokenVersion`;
+- o `ActivityLog` grava `credencial: 'senha definida'` (cadastro) ou `'senha redefinida'`
+  (edição) — nunca o valor;
+- as duas rotas têm o `verificarOrigem` das rotas de credencial (`user.maestro.ts`).
 
 ---
 
 ## O que saiu, e por quê
 
-Até o [D148](../decisoes/escopo.md#d148--permissão-vira-papel-grupo-diretório-sso-e-segundo-fator-saem)
+Até o [D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)
 e o [D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token) o sistema
 tinha: grupos com uma matriz de permissões nomeadas (`access.manage`, `settings.manage`, …),
 diretório LDAP (sincronização que marcava quem saiu, sem desligar ninguém), SSO por OIDC/PKCE,
@@ -236,12 +270,12 @@ segundo fator por TOTP com códigos de recuperação, uma trilha `AuthEvent` pr�
 de login, e um `ApiToken` com dono polimórfico (agente **ou** pessoa) para integração.
 
 **Por quê:** nenhuma dessas sete peças exercita regra de ITAM — são 2.300 linhas de servidor
-para um sistema que terá três contas, protegendo rotas que um enum de papel protege igual. O
+para um sistema que terá três contas, protegendo rotas que um enum de cargo protege igual. O
 D137 (boot derruba sem exigência declarada) continua de pé; o que mudou é o que a exigência
 diz.
 
 **O que ficou sem a troca que as apoiava:**
-- a autorização por papel (D148) substitui a união de permissões de grupo (D76) — a mesma
+- a autorização por cargo (D148) substitui a união de permissões de grupo (D76) — a mesma
   régua, com menos granularidade e sem tabela `Group`;
 - o agente volta a autenticar por `AGENT_TOKEN` fixo no `.env` (D149) — não há mais token
   pessoal de API, nem rota para emitir um.
@@ -257,14 +291,15 @@ terceiro — encontra ali o que já foi tentado e por que saiu.
 | Falta | Por quê |
 |---|---|
 | **Revogar uma sessão específica** | Exige tabela de sessão: saber QUAIS sessões existem para derrubar uma. O `tokenVersion` derruba **todas** de uma pessoa de uma vez, e é com ele que trocar a senha corta o acesso. "Desconectar este aparelho" continua sem existir |
-| **Logout derrubar as outras sessões** | Hoje `logout` só apaga o cookie local. Quem precisa derrubar tudo usa `set-password`, que incrementa o `tokenVersion` |
+| **Logout derrubar as outras sessões** | Hoje `logout` só apaga o cookie local. Quem precisa derrubar tudo troca a senha pela edição do usuário (**Nova senha**), que incrementa o `tokenVersion` |
+| **Trocar a própria senha sem ser `ADMIN`** | A senha se troca na edição do usuário, que é `ADMIN`, e a tela que daria isso a cada um — "Minha conta" — saiu ([D162](../decisoes/escopo.md#d162--minha-conta-sai-e-o-cargo-vira-campo-do-formulário-de-usuário)). O técnico pede a um administrador |
 | **Política de senha no `.env`** | O mínimo de 12 caracteres é constante em `auth.schema.ts`. Não há demanda para torná-lo configurável |
-| **Segundo fator, SSO, diretório, token pessoal de API** | Existiram e saíram — [D148](../decisoes/escopo.md#d148--permissão-vira-papel-grupo-diretório-sso-e-segundo-fator-saem)/[D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token). Voltar é decisão nova, não bug |
+| **Segundo fator, SSO, diretório, token pessoal de API** | Existiram e saíram — [D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)/[D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token). Voltar é decisão nova, não bug |
 | **Trilha de tentativas de login** (`AuthEvent`) | Saiu com o D148, por não ter leitor que sobrevivesse ao corte. `failedLoginCount`/`lockedUntil` continuam protegendo a conta; o que falta é um registro consultável de *quando* |
-| **Reset de senha por e-mail** | Não há mais e-mail no sistema (segundo de-escopo, O). O caminho é alguém com papel `ADMIN` definir a senha (`POST /api/users/:id/set-password`) |
+| **Reset de senha por e-mail** | Não há mais e-mail no sistema (segundo de-escopo, O). O caminho é alguém com cargo `ADMIN` definir uma **Nova senha** na edição do usuário (`PUT /api/users/:id`) |
 
 > **Nota sobre o mínimo de 12 caracteres:** ele vale para **definir** senha
-> (`setPasswordSchema`), não para o login. No login só existe o teto de 128
+> (`senhaNova`, que o cadastro e a edição de usuário importam), não para o login. No login só existe o teto de 128
 > caracteres — quem já tem uma senha curta precisa continuar entrando, e recusar
 > por tamanho ali entregaria a regra de comprimento a quem está adivinhando.
 
@@ -276,24 +311,30 @@ terceiro — encontra ali o que já foi tentado e por que saiu.
 server/domain/auth/
 ├── auth.maestro.ts                      rotas + ROTA_DE_CREDENCIAL (bodyLimit, no-store, Origin, só cookie)
 ├── auth.types.ts                        SessionUser, SessaoEmitida, o payload do JWT
-├── controllers/auth.controller.ts        só HTTP: assina o JWT, grava o cookie
+├── controllers/auth.controller.ts        só HTTP: assina o JWT, grava o cookie, responde o GET /api/auth/me
 ├── helpers/
-│   ├── actor.helper.ts                  quem está agindo (o actorId do D23) + a sessão das rotas /me
+│   ├── actor.helper.ts                  atorDaRequisicao — quem está agindo (o actorId do D23)
 │   ├── auth-hardening.helper.ts         semCache + verificarOrigem
 │   ├── authenticate-request.helper.ts   o que o preHandler global chama
 │   ├── password.helper.ts               argon2id, hash descartável, precisaRehash
 │   └── session-cookie.helper.ts         atributos do cookie, iguais na gravação e na limpeza
-├── schemas/auth.schema.ts               loginSchema, setPasswordSchema
+├── schemas/auth.schema.ts               loginSchema ({ email, password }) e senhaNova, a regra que o cadastro importa
 └── use-cases/
-    ├── current-user.usecase.ts          releitura por requisição (inclui o papel)
-    ├── login.usecase.ts                 as cinco recusas (D148/P incluídas)
-    └── set-user-password.usecase.ts     senha + username + increment do tokenVersion
+    ├── current-user.usecase.ts          releitura por requisição (inclui o cargo)
+    └── login.usecase.ts                 as cinco recusas (D148/P incluídas)
+
+server/domain/user/                      onde a senha nasce e se troca (R)
+├── user.maestro.ts                      POST/PUT com o verificarOrigem das rotas de credencial
+├── helpers/credencial.helper.ts         quem precisa de senha (TECNICO e ADMIN) e o hash fora da transação
+└── use-cases/
+    ├── create-user.usecase.ts           a senha do cadastro ('senha definida' na trilha)
+    └── update-user.usecase.ts           a Nova senha: troca, destrava, increment do tokenVersion
 
 server/domain/access/                    a OUTRA metade da sessão: o que ela alcança
 ├── access.types.ts
-├── helpers/papel.ts                     os três papéis, com ordem (D148)
-├── helpers/route-permissions.ts         método + rota → papel mínimo (o mapa que o boot confere)
-├── helpers/require-permission.ts        temPapel() e exigirPermissao() (403 que nomeia o papel)
+├── helpers/cargo.ts                     os três cargos, com ordem (D148)
+├── helpers/route-permissions.ts         método + rota → cargo mínimo (o mapa que o boot confere)
+├── helpers/require-permission.ts        temCargo() e exigirPermissao() (403 que nomeia o cargo)
 ├── helpers/ultimo-administrador.ts      a invariante 17 — nunca sem administrador
 └── cli/conceder-administrador.cli.ts    a linha de escape do acesso
 
@@ -301,7 +342,7 @@ server/core/http/require-auth.ts         a porta fechada por padrão (sessão)
 server/core/http/permission-guard.ts     a porta fechada por padrão (autorização) + a conferência do boot
 server/app.ts                            ROTAS_PUBLICAS — a allowlist inteira
 tests/invariantes/sessao.test.ts         a sessão por HTTP
-tests/invariantes/permissao.test.ts      a cobertura do mapa e o "nunca sem administrador"
+tests/invariantes/permissao.test.ts      a cobertura do mapa, o "nunca sem administrador" e a senha no cadastro
 ```
 
 ---
@@ -311,6 +352,6 @@ tests/invariantes/permissao.test.ts      a cobertura do mapa e o "nunca sem admi
 - `docs/historico/fase-03-autenticacao-e-ator.md` — como a autenticação foi construída (D22, D23, Etapas A–G)
 - `docs/historico/fase-11-acesso-avancado.md` — a autorização por grupo, o segundo fator, o token
   pessoal e o SSO como foram construídos (D72–D78, D135–D142) — **metade não existe mais**; ver
-  [D148](../decisoes/escopo.md#d148--permissão-vira-papel-grupo-diretório-sso-e-segundo-fator-saem)/[D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token)/[P](../decisoes/acesso.md#p--usuario-não-entra-no-painel)
+  [D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)/[D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token)/[P](../decisoes/acesso.md#p--usuario-não-entra-no-painel)
 - `docs/referencia/invariantes.md` — as regras que o banco garante
 - `docs/referencia/testes.md` — por que a suíte só fala HTTP

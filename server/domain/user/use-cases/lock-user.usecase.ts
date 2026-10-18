@@ -11,14 +11,14 @@ import { AppError } from '../../../core/errors/app-error';
 //   T2                  grava `isActive = false`                  → COMMIT
 //   T1                  cria a `Assignment`                        → COMMIT
 //
-// Resultado: um colaborador DESLIGADO com posse aberta. Os dois caminhos
+// Resultado: um colaborador DESATIVADO com posse aberta. Os dois caminhos
 // fizeram exatamente o que está escrito neles, e o estado final é o que os dois
 // existem para impedir.
 //
 // E ele é invisível: nada falha, nada é logado como erro, e a pessoa some das
 // listagens de ativos levando um equipamento no nome. Quem descobre é o
 // `DELETE`, meses depois, respondendo 409 "ainda responde por 1 ativo" para um
-// cadastro que a tela mostra como desligado — sem que ninguém entenda por quê.
+// cadastro que a tela mostra como desativado — sem que ninguém entenda por quê.
 //
 // Em READ COMMITTED (o padrão do Postgres, e o nosso) NENHUM `if` pega isso: as
 // duas transações leem um estado consistente de antes, e nenhuma enxerga o que

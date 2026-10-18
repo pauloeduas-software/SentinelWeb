@@ -1,10 +1,10 @@
--- BAIXA E AÇÃO EM MASSA — o que o banco pode conferir sozinho.
+-- BAIXA — o que o banco pode conferir sozinho.
 --
 -- Diferença para `posse-invariantes.sql`: lá as regras vivem no BANCO (índices
 -- parciais), e o SQL prova que elas recusam o que deve recusar. Aqui as regras
--- vivem na APLICAÇÃO — `assert-retire-posse.usecase.ts` e a `$transaction` do
--- lote —, porque cruzam tabelas e porque o valor delas está na MENSAGEM que
--- ensina o que fazer (docs/referencia/invariantes.md, "a regra de onde cada uma mora").
+-- vivem na APLICAÇÃO — `assert-retire-posse.usecase.ts` —, porque cruzam
+-- tabelas e porque o valor delas está na MENSAGEM que ensina o que fazer
+-- (docs/referencia/invariantes.md, "a regra de onde cada uma mora").
 --
 -- Então este arquivo não prova o índice: ele DETECTA a linha que não deveria
 -- existir. Toda consulta abaixo tem que devolver ZERO linhas. Uma linha
@@ -46,31 +46,5 @@ WHERE a."retiredAt" IS NOT NULL
     SELECT 1 FROM activity_logs l
     WHERE l."entityType" = 'Asset' AND l."entityId" = a.id AND l.action = 'RETIRE'
   );
-
-\echo ''
-\echo '### 4. Lote com menos linhas do que ativos  -> esperado: 0 linhas'
--- A acao em massa grava UMA linha de historico POR ATIVO, todas com o mesmo
--- `batchId` e com `batchSize` = quantos ativos o lote tinha. Contagem menor
--- que o tamanho e o sintoma de alguem ter "otimizado" para um log unico pelo
--- lote — e a aba Historico dos outros ativos perderia o evento.
-SELECT l.changes->>'batchId' AS lote,
-       count(*) AS linhas,
-       max((l.changes->>'batchSize')::int) AS esperado
-FROM activity_logs l
-WHERE l.changes ? 'batchId'
-GROUP BY 1
-HAVING count(*) <> max((l.changes->>'batchSize')::int);
-
-\echo ''
-\echo '### 5. Um lote que tocou ativos de tamanhos diferentes  -> esperado: 0 linhas'
--- Tudo ou nada (D21): as N linhas de um `batchId` nasceram na mesma transacao,
--- entao tem o mesmo instante de criacao (a menos do arredondamento do relogio).
--- Um espalhamento grande e sinal de lote aplicado aos poucos.
-SELECT l.changes->>'batchId' AS lote,
-       max(l."createdAt") - min(l."createdAt") AS janela
-FROM activity_logs l
-WHERE l.changes ? 'batchId'
-GROUP BY 1
-HAVING max(l."createdAt") - min(l."createdAt") > interval '30 seconds';
 
 ROLLBACK;

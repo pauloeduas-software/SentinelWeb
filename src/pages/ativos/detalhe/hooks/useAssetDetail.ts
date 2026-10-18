@@ -170,7 +170,12 @@ export function useAssetDetail() {
     desvinculando: desvincular.isPending,
     handleDesvincular: () => {
       if (!maquina?.endpointId) return;
-      desvincular.mutate(maquina.endpointId);
+      // A recusa do servidor (vínculo já desfeito, máquina sumiu) vai para a
+      // notificação, como nas outras ações da ficha — sem ela o clique falhava
+      // em silêncio.
+      desvincular.mutate(maquina.endpointId, {
+        onError: (falha) => notificar.erro((falha as Error).message),
+      });
     },
 
     modal,

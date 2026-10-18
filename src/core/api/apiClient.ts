@@ -8,7 +8,7 @@ import axios from 'axios';
  * - Em produção o próprio Fastify serve o frontend, logo /api é same-origin.
  * - VITE_API_URL cobre o caso de frontend e backend em hosts diferentes.
  */
-export const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
+const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
 
 export const apiClient = axios.create({
   baseURL: API_BASE,
@@ -62,7 +62,7 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     // 401 em QUALQUER rota do painel quer dizer a mesma coisa: o cookie sumiu,
-    // expirou, ou o usuário por trás dele foi apagado/desligado — o servidor
+    // expirou, ou o usuário por trás dele foi apagado/desativado — o servidor
     // relê o usuário a cada requisição. Avisar num lugar só evita que cada tela
     // precise tratar sessão perdida, e a tela de login aparece sem recarregar a
     // página (nada de `window.location`, que jogaria fora o estado do painel).

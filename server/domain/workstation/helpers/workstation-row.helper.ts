@@ -2,14 +2,14 @@
 // os use-cases; aqui só se junta o que eles trouxeram.
 
 /** Pessoa embutida num ocupante. */
-export interface PessoaDoPosto {
+interface PessoaDoPosto {
   id: string;
   name: string;
   email: string;
 }
 
 /** Quem ocupa o posto AGORA, como a listagem mostra: nome e turno. */
-export interface OcupanteDoPosto {
+interface OcupanteDoPosto {
   id: string;
   userId: string;
   /** Texto livre: "Manhã", "Tarde", "12x36 A" (docs/referencia/modelo-de-posse.md, Camada 2). */
@@ -23,7 +23,7 @@ export interface OcupanteDoPosto {
  * ciclo. A forma bate com `WORKSTATION_SELECT`, e o compilador reclama se
  * divergir.
  */
-export interface LocalDePosto {
+interface LocalDePosto {
   id: string;
   name: string;
   notes: string | null;

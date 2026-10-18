@@ -9,9 +9,9 @@ const logger = createLogger('error-handler');
 
 const DEFAULT_MESSAGE = 'Erro interno do servidor';
 
-export interface HttpError {
+interface HttpError {
   status: number;
-  body: Record<string, unknown>;
+  body: { error: string };
   unexpected: boolean;
 }
 
@@ -19,19 +19,17 @@ export interface HttpError {
 // lançam `AppError` com o status certo e ninguém monta resposta de erro na mão.
 // Erro inesperado vira 500 com mensagem genérica — `error.message` de banco ou
 // de biblioteca NUNCA vai para o cliente (só para o log).
-export function toHttpError(error: unknown, fallbackMessage = DEFAULT_MESSAGE): HttpError {
+//
+// O corpo é SEMPRE `{ error }`, a frase que a tela mostra (`app-error.ts`).
+function toHttpError(error: unknown): HttpError {
   if (error instanceof AppError) {
-    return {
-      status: error.status,
-      body: { error: error.message, ...(error.details ?? {}) },
-      unexpected: error.status >= 500,
-    };
+    return { status: error.status, body: { error: error.message }, unexpected: error.status >= 500 };
   }
 
-  // Payload recusado pelo schema do domínio: 422 com o campo que falhou.
-  // Os controllers só chamam `schema.parse()`; a rejeição cai aqui sozinha.
+  // Payload recusado pelo schema do domínio: 422 com a frase dos campos que
+  // falharam. Os controllers só chamam `schema.parse()`; a rejeição cai aqui.
   if (error instanceof ZodError) {
-    return { status: 422, body: { ...formatZodError(error) }, unexpected: false };
+    return { status: 422, body: { error: formatZodError(error) }, unexpected: false };
   }
 
   const code = errorCode(error);
@@ -41,8 +39,7 @@ export function toHttpError(error: unknown, fallbackMessage = DEFAULT_MESSAGE): 
   if (code === 'P2002') return { status: 409, body: { error: 'Registro já existe' }, unexpected: false };
   if (code === 'P2003') return { status: 409, body: { error: 'Registro está em uso por outro cadastro' }, unexpected: false };
 
-  // Fastify: schema recusado, corpo grande demais, JSON malformado
-  if (errorProp(error, 'validation')) return { status: 400, body: { error: 'Requisição inválida' }, unexpected: false };
+  // Fastify: corpo grande demais, JSON malformado
   if (code === 'FST_ERR_CTP_BODY_TOO_LARGE') return { status: 413, body: { error: 'Requisição grande demais' }, unexpected: false };
 
   // Content-Type que o servidor não sabe ler. 415 e não o 400 genérico abaixo: o
@@ -78,7 +75,7 @@ export function toHttpError(error: unknown, fallbackMessage = DEFAULT_MESSAGE): 
     return { status: statusCode, body: { error: 'Requisição inválida' }, unexpected: false };
   }
 
-  return { status: 500, body: { error: fallbackMessage }, unexpected: true };
+  return { status: 500, body: { error: DEFAULT_MESSAGE }, unexpected: true };
 }
 
 // Último tratamento do Fastify: handler async que rejeita cai aqui sozinho,

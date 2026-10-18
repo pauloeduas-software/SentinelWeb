@@ -3,11 +3,11 @@ import type { Endpoint, Telemetry } from '@prisma/client';
 // Os bytes de RAM são BigInt no banco, e BigInt não tem representação em JSON:
 // `JSON.stringify` estoura. A conversão acontece AQUI, na saída do domínio, e
 // não com um `BigInt.prototype.toJSON` global — remendo que mudava o
-// comportamento de toda a aplicação para resolver um campo (docs/ROADMAP.md, F0).
+// comportamento de toda a aplicação para resolver um campo.
 //
 // O formato do fio continua o mesmo de antes (string), então o frontend não muda.
 
-export type PresentedTelemetry = Omit<Telemetry, 'ramTotal' | 'ramUsed'> & {
+type PresentedTelemetry = Omit<Telemetry, 'ramTotal' | 'ramUsed'> & {
   ramTotal: string;
   ramUsed: string;
 };
@@ -24,9 +24,16 @@ export type PresentedTelemetry = Omit<Telemetry, 'ramTotal' | 'ramUsed'> & {
 export type PresentedEndpoint = Omit<Endpoint, 'ramTotalBytes' | 'diskTotalBytes'> & {
   ramTotalBytes: string | null;
   diskTotalBytes: string | null;
-  telemetries: PresentedTelemetry[];
   asset: AtivoDaMaquina | null;
 };
+
+/**
+ * A máquina com a amostra de telemetria ATUAL — só na rota de UMA máquina
+ * (`get-endpoint.usecase.ts`). A listagem não leva: as tabelas de
+ * `/descobertas` não mostram telemetria, e no plural o `take: 1` nem vira
+ * `LIMIT` no SQL.
+ */
+export type EndpointComTelemetria = PresentedEndpoint & { telemetries: PresentedTelemetry[] };
 
 /**
  * O ATIVO a que a máquina está vinculada — o que a lista de máquinas vinculadas
@@ -35,7 +42,7 @@ export type PresentedEndpoint = Omit<Endpoint, 'ramTotalBytes' | 'diskTotalBytes
  * Só o que identifica: `assetId` cru já saía, e um uuid não é uma coluna que
  * alguém leia. O resto do ativo é da ficha dele, para onde a etiqueta leva.
  */
-export interface AtivoDaMaquina {
+interface AtivoDaMaquina {
   id: string;
   assetTag: string;
   name: string | null;
@@ -46,17 +53,21 @@ export const ATIVO_DA_MAQUINA_SELECT = {
   select: { id: true, assetTag: true, name: true },
 } as const;
 
-export function presentTelemetry(telemetry: Telemetry): PresentedTelemetry {
+function presentTelemetry(telemetry: Telemetry): PresentedTelemetry {
   return { ...telemetry, ramTotal: telemetry.ramTotal.toString(), ramUsed: telemetry.ramUsed.toString() };
 }
 
-export function presentEndpoint(
-  endpoint: Endpoint & { telemetries: Telemetry[]; asset: AtivoDaMaquina | null },
-): PresentedEndpoint {
+export function presentEndpoint(endpoint: Endpoint & { asset: AtivoDaMaquina | null }): PresentedEndpoint {
   return {
     ...endpoint,
     ramTotalBytes: endpoint.ramTotalBytes?.toString() ?? null,
     diskTotalBytes: endpoint.diskTotalBytes?.toString() ?? null,
-    telemetries: endpoint.telemetries.map(presentTelemetry),
   };
+}
+
+export function presentEndpointComTelemetria(
+  endpoint: Endpoint & { telemetries: Telemetry[]; asset: AtivoDaMaquina | null },
+): EndpointComTelemetria {
+  const { telemetries, ...maquina } = endpoint;
+  return { ...presentEndpoint(maquina), telemetries: telemetries.map(presentTelemetry) };
 }

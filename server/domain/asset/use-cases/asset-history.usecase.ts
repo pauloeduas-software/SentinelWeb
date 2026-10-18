@@ -4,6 +4,7 @@ import type { ListEnvelope } from '../../../core/http/list-query';
 import { listAssetAssignments } from '../../assignment/use-cases/list-asset-assignments.usecase';
 import { rotuloDoAlvo } from '../../assignment/helpers/target-label.helper';
 import type { AlvoPosse } from '../../assignment/use-cases/resolve-responsibles.usecase';
+import { semCusto } from '../helpers/asset-select.helper';
 
 // A LINHA DO TEMPO DE UM ATIVO — a aba Histórico da tela de detalhe.
 //
@@ -20,10 +21,10 @@ import type { AlvoPosse } from '../../assignment/use-cases/resolve-responsibles.
  * De onde o evento veio. A tela usa para escolher o ícone e o que mostrar —
  * um diff de campos não se lê como uma entrega.
  */
-export type FonteDoEvento = 'ATIVIDADE' | 'POSSE';
+type FonteDoEvento = 'ATIVIDADE' | 'POSSE';
 
 /** O que um evento de posse acrescenta ao que o `ActivityLog` já diria. */
-export interface EventoDePosse {
+interface EventoDePosse {
   assignmentId: string;
   targetType: AlvoPosse;
   /** "Laura Souza", "Mesa 1", "ATV-00012 — Dell Latitude". */
@@ -64,6 +65,23 @@ const LIMITE_PADRAO = 100;
  * `Cascade` de um `DELETE` físico do ativo.
  */
 const POSSE_VEM_DA_TABELA_DE_POSSE = ['CHECKOUT', 'CHECKIN'];
+
+function ehObjeto(valor: Prisma.JsonValue | null): valor is Prisma.JsonObject {
+  return typeof valor === 'object' && valor !== null && !Array.isArray(valor);
+}
+
+/**
+ * O diff como a sessão pode vê-lo: sem o custo para quem não é `ADMIN` (D77) —
+ * a mesma regra da leitura do ativo, que não devolve a coluna.
+ *
+ * Devolve `undefined` quando a edição só mexeu no custo: o evento some inteiro,
+ * porque "editado, sem campo nenhum" ainda contaria que o valor mudou.
+ */
+function diffVisivel(changes: Prisma.JsonValue | null, podeVerCusto: boolean) {
+  if (podeVerCusto || !ehObjeto(changes)) return changes;
+  const visivel = semCusto(changes);
+  return Object.keys(visivel).length === 0 && Object.keys(changes).length > 0 ? undefined : visivel;
+}
 
 /** Uma posse vira UM ou DOIS eventos: a entrega sempre, a devolução se houve. */
 function eventosDaPosse(assignment: Awaited<ReturnType<typeof listAssetAssignments>>[number]): EventoDoAtivo[] {
@@ -119,6 +137,7 @@ function eventosDaPosse(assignment: Awaited<ReturnType<typeof listAssetAssignmen
  */
 export async function getAssetHistory(
   assetId: string,
+  podeVerCusto: boolean,
   limite = LIMITE_PADRAO,
 ): Promise<ListEnvelope<EventoDoAtivo>> {
   const where = {
@@ -141,19 +160,28 @@ export async function getAssetHistory(
     prisma.activityLog.count({ where }),
   ]);
 
-  const doLog: EventoDoAtivo[] = logs.map((linha) => ({
-    id: `log:${linha.id}`,
-    fonte: 'ATIVIDADE',
-    action: linha.action,
-    at: linha.createdAt,
-    actorId: linha.actorId,
-    changes: linha.changes,
-    posse: null,
-  }));
+  const doLog: EventoDoAtivo[] = logs.flatMap((linha) => {
+    const changes = diffVisivel(linha.changes, podeVerCusto);
+    if (changes === undefined) return [];
+    return [{
+      id: `log:${linha.id}`,
+      fonte: 'ATIVIDADE',
+      action: linha.action,
+      at: linha.createdAt,
+      actorId: linha.actorId,
+      changes,
+      posse: null,
+    }];
+  });
 
   const daPosse = assignments.flatMap(eventosDaPosse);
 
   const eventos = [...doLog, ...daPosse].sort((a, b) => b.at.getTime() - a.at.getTime());
 
-  return { total: totalDeLogs + daPosse.length, rows: eventos.slice(0, limite) };
+  // O `total` desconta as edições só de custo que sumiram para quem não é
+  // ADMIN: contadas, a tela diria "N de N+1" e entregaria que houve um evento
+  // escondido. O desconto vale para a janela lida (as `limite` mais recentes),
+  // que é onde a tela compara total e linhas.
+  const escondidos = logs.length - doLog.length;
+  return { total: totalDeLogs - escondidos + daPosse.length, rows: eventos.slice(0, limite) };
 }

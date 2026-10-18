@@ -1,5 +1,5 @@
 import type { Asset } from './asset.types';
-import type { LocationOccupant, PessoaRef } from './posse.types';
+import type { PessoaRef } from './posse.types';
 import type { UnidadeDeEstoque } from './stock.types';
 
 // Contrato do POSTO DE TRABALHO com a API — `GET /api/workstations`.
@@ -31,13 +31,7 @@ export interface PostoOcupante {
   user: PessoaRef | null;
 }
 
-/**
- * Uma linha da lista de postos.
- *
- * `caminho` são os ANCESTRAIS, da raiz para baixo (`['Sede', 'Andar 2',
- * 'Sala 3']`), sem o próprio posto. Vem pronto do servidor porque montá-lo no
- * cliente exigiria a árvore inteira em memória.
- */
+/** Uma linha da lista de postos. */
 export interface Posto {
   id: string;
   name: string;
@@ -84,15 +78,14 @@ export interface AtivoDoPosto extends Asset {
 /**
  * O posto aberto — `GET /api/workstations/:id`.
  *
- * `ocupantes` aqui é a ocupação completa (`LocationOccupant`), com período e
- * notas, e não a versão enxuta da lista: o detalhe mostra desde quando cada um
- * está no posto.
+ * SEM os ocupantes: a ficha os lê da rota de ocupação
+ * (`/api/locations/:id/occupants`), com período e notas, que é também a que o
+ * adicionar/encerrar invalida. Daqui só sai o `vago`, que o servidor deriva
+ * da contagem deles.
  */
-export interface PostoDetalhe extends Omit<Posto, 'ocupantes'> {
-  ocupantes: LocationOccupant[];
+export interface PostoDetalhe extends Omit<Posto, 'ocupantes' | 'totalOcupantes'> {
   /** Os ativos entregues ao posto — posse ABERTA com alvo LOCATION. */
   ativos: AtivoDoPosto[];
   /** As unidades de estoque na mesa — saídas ABERTAS com alvo LOCATION, uma por unidade. */
   itens: UnidadeDeEstoque[];
-  totalItens: number;
 }

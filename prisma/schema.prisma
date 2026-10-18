@@ -26,7 +26,7 @@ model Endpoint {
   // escrevesse a query. O ciclo de vida do ativo é `StatusLabel`, outra tabela,
   // outro eixo (docs/historico/fase-07-convergencia-rmm-itam.md, D98).
   //
-  // DOIS VALORES, e não os três que o TODO pedia: `NEVER_SEEN` seria um valor
+  // DOIS VALORES, e não os três que chegaram a ser propostos: `NEVER_SEEN` seria um valor
   // que NENHUMA linha desta tabela pode ter, porque a linha nasce de um
   // handshake. "Cadastrado e nunca visto" é pergunta do ATIVO, e quem responde é
   // `Asset.lastSeenByAgentAt` no painel de cobertura.
@@ -50,8 +50,8 @@ model Endpoint {
 
   // SPECS COLETADAS — e elas moram AQUI, não em `assets`.
   //
-  // O item do TODO pedia "specs de hardware como atributo do ativo". O que ele
-  // queria de verdade era que o dado parasse de sumir no expurgo da telemetria,
+  // Pedia-se "specs de hardware como atributo do ativo". O que se queria de
+  // verdade era que o dado parasse de sumir no expurgo da telemetria,
   // e coluna nesta tabela resolve isso. Copiá-las para `assets` criaria uma
   // segunda fonte de verdade sobre a MESMA máquina, com um detalhe que a torna
   // pior que as outras: as duas podem divergir com razão (o pente foi trocado) e
@@ -71,15 +71,13 @@ model Endpoint {
   //
   // `@unique` garante o 1:1 sem tabela de junção. `SetNull` garante que apagar
   // um ativo não leve junto a telemetria da máquina — mas note que ele desfaz o
-  // vínculo EM SILÊNCIO, e é por isso que o `unlink` tem linha no ActivityLog.
+  // vínculo EM SILÊNCIO, e é por isso que o `desvincularEndpoint` tem linha no ActivityLog.
   assetId String? @unique @db.Uuid
   asset   Asset?  @relation(fields: [assetId], references: [id], onDelete: SetNull)
 
   telemetries Telemetry[]
   suggestions ReconciliationSuggestion[] @relation("SugestaoDoEndpoint")
-  changes     AssetChange[]
 
-  @@index([assetId])
   @@index([reviewState])
   @@map("endpoints")
 }
@@ -117,12 +115,15 @@ model Telemetry {
   /// é o único leitor da série histórica. Sem este índice as duas eram varredura
   /// sequencial da tabela inteira — ver a migration que o criou.
   @@index([endpointId, timestamp(sort: Desc)])
+  // O expurgo diário (`purge-telemetry.usecase.ts`) apaga por faixa de
+  // data; sem este índice, cada rodada varreria a tabela inteira.
+  @@index([timestamp])
   @@map("telemetries")
 }
 
-/// Os três papéis da autorização (D148). A ordem do enum é a hierarquia, e a
-/// comparação mora em `access/helpers/papel.ts` — nunca num `indexOf` por fora.
-enum Papel {
+/// Os três cargos da autorização (D148). A ordem do enum é a hierarquia, e a
+/// comparação mora em `access/helpers/cargo.ts` — nunca num `indexOf` por fora.
+enum Cargo {
   USUARIO
   TECNICO
   ADMIN
@@ -131,16 +132,16 @@ enum Papel {
 model User {
   id    String @id @default(uuid()) @db.Uuid
   name  String
+  // `email` NÃO é @unique aqui de propósito: a unicidade é um índice parcial
+  // (`WHERE "deletedAt" IS NULL`) criado na migration. Com @unique comum, um
+  // usuário na lixeira bloquearia para sempre o recadastro do mesmo e-mail —
+  // é o `unique_undeleted` do Snipe-IT. E é o LOGIN: quem entra no sistema
+  // digita o e-mail e a senha.
   email String
 
-  // AUTENTICAÇÃO (F3). Nulável porque a base nasceu sem login: um colaborador
-  // cadastrado para receber equipamento não precisa de acesso ao sistema, e
-  // exigir senha de todo mundo tornaria a carga inicial impossível.
-  //
-  // `username` NÃO é @unique aqui: a unicidade é índice PARCIAL
-  // (`WHERE deleted_at IS NULL`) na migration, o mesmo caso de `email` — um
-  // usuário na lixeira travaria para sempre o recadastro do mesmo login.
-  username     String?
+  // AUTENTICAÇÃO (F3). Nulável porque só Técnico e Administrador entram no
+  // painel: o colaborador cadastrado para receber equipamento (`USUARIO`) não
+  // tem senha, e o cadastro só a exige dos dois cargos que entram.
   passwordHash String?
 
   // Bloqueio por tentativa. `lockedUntil` no futuro recusa o login mesmo com a
@@ -151,7 +152,7 @@ model User {
   // A GERAÇÃO DA SESSÃO — o que faz trocar a senha DERRUBAR quem já está dentro.
   //
   // O buraco que isto fecha: a releitura por requisição
-  // (`current-user.usecase.ts`) mata a sessão de quem foi apagado ou desligado,
+  // (`current-user.usecase.ts`) mata a sessão de quem foi apagado ou desativado,
   // mas NÃO a de quem continua sendo um usuário válido. Então quem roubasse o
   // cookie seguia operando por até 8 horas mesmo DEPOIS de a vítima trocar a
   // senha — que é justamente o que a vítima faz ao desconfiar.
@@ -161,71 +162,44 @@ model User {
   // — sem tabela de sessão e sem lista de revogação.
   tokenVersion Int @default(0)
 
-  // Último login bem-sucedido. Não é enfeite de perfil: em inventário, "quem
-  // ainda usa o sistema" é a pergunta que antecede a limpeza de acessos.
-  lastLoginAt DateTime?
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // IDENTIDADE DO COLABORADOR (F11, Etapa E).
-  //
-  // `employeeNumber` tem unicidade por índice PARCIAL (`WHERE "deletedAt" IS
-  // NULL`) na migration, o mesmo caso de `email` e `username`: uma matrícula na
-  // lixeira travaria para sempre o recadastro da mesma pessoa.
-  //
-  // `firstName`/`lastName` NÃO EXISTEM: `name` já é o campo canônico, dividi-lo
-  // exige um backfill que adivinha onde termina o nome em "Maria da Silva
-  // Souza", e um campo que só existe para ser recomposto na exibição é duas
-  // fontes de verdade para o mesmo dado.
-  employeeNumber String?
-  jobTitle       String?
-  phone          String?
-  address        String?
-
-  /// Admissão. Não é `createdAt`: a pessoa trabalha aqui desde antes do sistema.
-  hiredAt DateTime?
-
   // Desativar é diferente de lixeira: quem saiu da empresa continua no histórico
   // de posse, só não opera mais — não entra no sistema e não recebe entrega
   // nova. Editável em `PUT /api/users/:id`, e a mudança vai para o ActivityLog
   // com ator e data.
   isActive Boolean @default(true)
 
-  // O PAPEL (D148), no lugar da matriz de permissões por grupo (D76).
+  // O CARGO (D148), no lugar da matriz de permissões por grupo (D76).
   //
   // `USUARIO` é o padrão e é o que a porta fechada da F3 pede: conta nova não
   // alcança nada além de si mesma, e quem quiser mais escreve a linha. A rede
   // que impede o sistema de ficar sem ninguém que entre está em
   // `access/helpers/ultimo-administrador.ts`, chamada no fim da transação.
-  role             Papel              @default(USUARIO)
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  deletedAt        DateTime?
-  assets           Asset[]
+  role        Cargo              @default(USUARIO)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  deletedAt   DateTime?
   // Posses diretas (alvo USER) e postos de trabalho que esta pessoa ocupa.
   // Responsabilidade real = as duas somadas (docs/referencia/modelo-de-posse.md, Camada 3).
-  assignments      Assignment[]
-  occupancies      LocationOccupant[]
+  assignments Assignment[]
+  occupancies LocationOccupant[]
 
   // LICENÇA (F6). Assento vai para pessoa ou ativo, nunca para um posto (D39).
   licenseSeats LicenseSeatCheckout[]
 
   // ─────────────────────────────────────────────────────────────────────────
-  // AS DUAS PERGUNTAS QUE PASSAM POR UMA PESSOA (D72).
+  // A PERGUNTA QUE PASSA POR UMA PESSOA (D72).
   //
   //   quem RESPONDE pelo ativo?    a posse aberta → pessoa, ou os ocupantes do
   //                                 posto (`resolverResponsaveis`)
   //
   // Em uma linha: *o posto responde pelo ativo, e a pessoa responde pelo posto.*
   // Não há "gestor do espaço": a localização não aponta para pessoa nenhuma.
+  // ─────────────────────────────────────────────────────────────────────────
+  //
   // As unidades de estoque entregues NO NOME desta pessoa (`StockMovement`
   // de alvo USER): é a ponta do estoque na invariante 6.
   stockMovements StockMovement[]
 
-  // `email` NÃO é @unique aqui de propósito: a unicidade é um índice parcial
-  // (`WHERE deleted_at IS NULL`) criado na migration. Com @unique comum, um
-  // usuário na lixeira bloquearia para sempre o recadastro do mesmo e-mail —
-  // é o `unique_undeleted` do Snipe-IT (docs/ROADMAP.md, F2).
-  @@index([email])
   @@index([deletedAt])
   @@map("users")
 }
@@ -240,7 +214,6 @@ model ActivityLog {
   createdAt  DateTime @default(now())
 
   @@index([entityType, entityId, createdAt])
-  @@index([createdAt])
   @@map("activity_logs")
 }
 
@@ -285,7 +258,7 @@ enum CategoryType {
 // torna "quantos ativos estão em uso?" — a métrica principal do módulo —
 // inexpressável pelo tipo.
 //
-// Também não é derivado de `assignedToId`: `statusId` é obrigatório no cadastro,
+// Também não é derivado da posse: `statusId` é obrigatório no cadastro,
 // a carga inicial é feita de equipamento que já está com gente, e existe uso SEM
 // responsável (o monitor parafusado na sala de reunião).
 //
@@ -415,12 +388,12 @@ model Location {
   // inteiro ("Mesa 1 — Filial SP"), então uma árvore matriz › andar › sala não
   // diferenciava nada — só custava guarda de ciclo, trava da árvore e o caminho
   // montado em Postos. Saiu inteira, e o "gestor da localidade" com ela.
-  address  String?
-  city     String?
-  state    String?
-  zip      String?
-  phone    String?
-  notes    String?
+  address String?
+  city    String?
+  state   String?
+  zip     String?
+  phone   String?
+  notes   String?
 
   // POSTO DE TRABALHO — a Mesa 1, a bancada, o guichê.
   //
@@ -496,12 +469,12 @@ model Location {
 //
 // NENHUMA coluna aqui pode se chamar `status`, `lastSeen` ou `hwid`: são os
 // nomes do `Endpoint` (lado RMM), e é a ausência deles que faz o compilador
-// barrar uma query do RMM que aponte para esta tabela (D13). Quando a F7 for
-// registrar o último contato do agente, o campo chama `lastSeenByAgentAt`.
+// barrar uma query do RMM que aponte para esta tabela (D13). O último contato
+// do agente, que a F7 passou a registrar, se chama `lastSeenByAgentAt`.
 model Asset {
   id String @id @default(uuid()) @db.Uuid
 
-  // Unicidade de `assetTag` e `serial` é índice PARCIAL (`WHERE deleted_at IS
+  // Unicidade de `assetTag` e `serial` é índice PARCIAL (`WHERE "deletedAt" IS
   // NULL`), criado à mão na migration — NÃO `@unique`. Com unique comum, um
   // ativo na lixeira travaria para sempre o recadastro da mesma etiqueta. É o
   // `unique_undeleted` do Snipe-IT, o mesmo caso de `User.email` na Fase 0.
@@ -511,25 +484,12 @@ model Asset {
   name  String?
   notes String?
 
-  statusId     String  @db.Uuid
-  modelId      String  @db.Uuid
-  // ONDE o ativo está. NÃO é quem responde por ele — ver `assignedToId` abaixo e
-  // docs/referencia/modelo-de-posse.md: um ativo pode estar EM um lugar sem ser DO lugar (o
-  // mouse reserva na gaveta de uma mesa ocupada).
-  locationId   String? @db.Uuid
-  // CACHE do caso `USER`, e só dele. A fonte de verdade da posse é a
-  // `Assignment` aberta (docs/referencia/modelo-de-posse.md, Camada 1).
-  //
-  // Fica `null` quando o detentor é uma LOCALIZAÇÃO (a Mesa 1, cujos
-  // responsáveis são os ocupantes dela) ou OUTRO ATIVO (a dock presa ao
-  // notebook). Quem lê "quem responde por este ativo" chama
-  // `resolverResponsaveis()`, nunca esta coluna sozinha.
-  //
-  // NÃO é editável pelo formulário de ativo — saiu do `createAssetSchema` e do
-  // `updateAssetSchema` na F4. Escrevem aqui SÓ o checkout e o checkin: campo
-  // editável à mão ao lado de uma tabela de posse são duas fontes de verdade
-  // para o mesmo fato, e nada impede divergirem (D14).
-  assignedToId String? @db.Uuid
+  statusId   String  @db.Uuid
+  modelId    String  @db.Uuid
+  // ONDE o ativo está. NÃO é quem responde por ele — quem responde é a
+  // `Assignment` aberta (docs/referencia/modelo-de-posse.md): um ativo pode estar
+  // EM um lugar sem ser DO lugar.
+  locationId String? @db.Uuid
 
   orderNumber  String?
   purchaseDate DateTime?
@@ -546,27 +506,13 @@ model Asset {
   retiredAt     DateTime?
   retiredReason RetiredReason?
 
-  // QUEM cadastrou e QUEM editou por último.
-  //
-  // Duas colunas AQUI, e não nas catorze tabelas (D26): o `ActivityLog` já
-  // responde "quem criou isto" — a linha `CREATE` está lá, com o ator. A coluna
-  // existe para não fazer essa consulta POR LINHA na tela de detalhe do ativo,
-  // que é a única que mostra o dado.
-  //
-  // SEM relação com `User`, pelo mesmo motivo do `ActivityLog.actorId`: se o
-  // cadastro de quem criou o ativo for excluído, a autoria não pode virar
-  // `SetNull` nem impedir a exclusão. É carimbo, não vínculo.
-  createdById String? @db.Uuid
-  updatedById String? @db.Uuid
-
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  status     StatusLabel @relation(fields: [statusId], references: [id], onDelete: Restrict)
-  model      AssetModel  @relation(fields: [modelId], references: [id], onDelete: Restrict)
-  location   Location?   @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  assignedTo User?       @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  status   StatusLabel @relation(fields: [statusId], references: [id], onDelete: Restrict)
+  model    AssetModel  @relation(fields: [modelId], references: [id], onDelete: Restrict)
+  location Location?   @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
   // A posse deste ativo, aberta e histórica.
   assignments Assignment[] @relation("AssignmentAsset")
@@ -609,7 +555,6 @@ model Asset {
   @@index([statusId])
   @@index([modelId])
   @@index([locationId])
-  @@index([assignedToId])
   // Ver a nota em `Location`: declarado aqui para o `migrate diff` parar de
   // emitir `DROP INDEX` dele a cada migração nova.
   @@index([retiredAt])
@@ -718,7 +663,7 @@ model LocationOccupant {
 }
 
 model JobRun {
-  /// O nome do job — hoje só 'reconciliacao'.
+  /// O nome do job — 'reconciliacao' (de hora em hora) e 'expurgo-da-telemetria' (diário).
   name      String    @id
   lastRunAt DateTime?
   updatedAt DateTime  @updatedAt
@@ -741,10 +686,10 @@ model AppSetting {
   // Moram no singleton que já existe, e não numa tabela de configuração nova:
   // são três valores, não um domínio.
   //
-  // `SUGGEST` é o padrão e isso é o D51: em `ON`, a primeira VM de teste que
-  // alguém subir vira patrimônio — e consome uma etiqueta do contador, que o
-  // `nextAssetTag()` nunca devolve. O estrago não é a linha a mais, é a
-  // sequência de etiquetas furada para sempre.
+  // `SUGGEST` é o padrão e isso é o D51: em `ON`, a varredura vincula sozinha
+  // a máquina ao ativo quando há um único candidato de 100 pontos, sem ninguém
+  // conferir — e um vínculo errado põe o último contato e o uso da máquina no
+  // ativo errado até alguém desvincular.
   discoveryMode DiscoveryMode @default(SUGGEST)
 
   /// Ativo sem contato de agente há mais que isto é FANTASMA.
@@ -762,7 +707,7 @@ model AppSetting {
 // LICENÇAS DE SOFTWARE — docs/historico/fase-06-licencas.md (D39–D94)
 //
 // O que a licença tem e o ativo não tem é ASSENTO: ela não é entregue, é
-// consumida N vezes. Três decisões desenham as tabelas:
+// consumida N vezes. Duas decisões desenham as tabelas:
 //
 //   D40  o assento é MATERIALIZADO (uma linha, não um contador) — é o que se trava
 //   D39  o assento vai para uma pessoa XOR um ativo, nunca para um posto
@@ -781,7 +726,7 @@ model License {
 
   /// `false` = assento devolvido QUEIMA e não volta ao contrato (D43).
   reassignable Boolean @default(true)
-  /// Contrato de manutenção. Informativo e filtro — não tem efeito no inventário.
+  /// Contrato de manutenção. Informativo — não tem efeito no inventário.
   maintained   Boolean @default(false)
 
   expirationDate  DateTime?
@@ -805,10 +750,6 @@ model License {
   purchaseCost Decimal?  @db.Decimal(12, 2)
 
   notes String?
-
-  // Autoria (D26): sem FK, como em `Asset`.
-  createdById String? @db.Uuid
-  updatedById String? @db.Uuid
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -847,8 +788,6 @@ model LicenseSeat {
   /// APOSENTADO: o contrato encolheu. Mudança de contrato — relatório diferente (D43).
   retiredAt DateTime?
 
-  notes String?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -856,7 +795,6 @@ model LicenseSeat {
   checkouts LicenseSeatCheckout[]
 
   @@unique([licenseId, seatNumber], map: "license_seats_numero")
-  @@index([licenseId])
   @@map("license_seats")
 }
 
@@ -876,10 +814,6 @@ model LicenseSeatCheckout {
   checkinAt  DateTime?
 
   checkoutNotes String?
-  checkinNotes  String?
-
-  checkoutById String? @db.Uuid
-  checkinById  String? @db.Uuid
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -976,10 +910,8 @@ model ReconciliationSuggestion {
   /// ISTO" de "já me disseram não sobre este par, faça o que fizer" (D97).
   evidenceHash String
 
-  state        SuggestionState @default(PENDING)
-  resolvedAt   DateTime?
-  /// Sem FK, como `ActivityLog.actorId`: é carimbo de quem decidiu, não vínculo.
-  resolvedById String?         @db.Uuid
+  state      SuggestionState @default(PENDING)
+  resolvedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1002,9 +934,8 @@ model ReconciliationSuggestion {
 // mudou sem avisar. Espremer isto no ActivityLog daria `actorId` nulo em toda
 // linha — e o D23 existe justamente para que ator nulo signifique alguma coisa.
 model AssetChange {
-  id         String  @id @default(uuid()) @db.Uuid
-  assetId    String  @db.Uuid
-  endpointId String? @db.Uuid
+  id      String @id @default(uuid()) @db.Uuid
+  assetId String @db.Uuid
 
   /// O nome do campo como o usuário o vê: "RAM total", "Disco", "Modelo".
   field    String
@@ -1013,8 +944,7 @@ model AssetChange {
 
   detectedAt DateTime @default(now())
 
-  asset    Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  endpoint Endpoint? @relation(fields: [endpointId], references: [id], onDelete: SetNull)
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   @@index([assetId, detectedAt])
   @@map("asset_changes")
@@ -1033,12 +963,10 @@ model AssetUsageDaily {
 
   /// Minutos com sinal de uso no dia, estimados pelas amostras de telemetria.
   activeMinutes Int @default(0)
-  samples       Int @default(0)
 
   asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   @@unique([assetId, day])
-  @@index([assetId, day])
   @@map("asset_usage_daily")
 }
 
@@ -1100,10 +1028,6 @@ model StockItem {
   // entregue a alguém está com quem a recebeu (`StockMovement`).
   locationId String? @db.Uuid
 
-  // Autoria: carimbo, não vínculo, como em `Asset`.
-  createdById String? @db.Uuid
-  updatedById String? @db.Uuid
-
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
@@ -1155,10 +1079,7 @@ model StockMovement {
   returnedAt DateTime?
 
   /// A observação do movimento — por que entrou, por que saiu, para quem.
-  notes       String?
-  /// A observação da DEVOLUÇÃO. Coluna própria: com uma só, a nota da volta
-  /// sobrescreveria a da ida.
-  returnNotes String?
+  notes String?
 
   createdById  String? @db.Uuid
   returnedById String? @db.Uuid

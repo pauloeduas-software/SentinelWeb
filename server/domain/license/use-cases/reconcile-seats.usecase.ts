@@ -37,7 +37,7 @@ import {
 // livre" — o mesmo falso 409 que o D41 já declara como preço.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface ResultadoDaReconciliacao {
+interface ResultadoDaReconciliacao {
   criados: number;
   aposentados: number;
 }
@@ -146,7 +146,6 @@ async function aposentarAssentos(
       + `aposentados e só ${contagem.livres} ${contagem.livres === 1 ? 'está livre' : 'estão livres'}. `
       + saida,
       409,
-      { precisaAposentar: quantos, ...contagem },
     );
   }
 
@@ -182,7 +181,6 @@ async function aposentarAssentos(
       'Falha ao reduzir o contrato: a contagem de assentos livres mudou durante a operação. '
       + 'Tente novamente.',
       409,
-      { esperado: quantos, aposentados: count },
     );
   }
 

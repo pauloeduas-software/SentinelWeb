@@ -13,10 +13,8 @@ import { USER_PUBLIC_SELECT } from '../../user/helpers/user-select.helper';
 // campos de novo: uma cópia esquecida na Fase 3 devolveria o `passwordHash` por
 // aqui.
 //
-// `checkoutById` e `checkinById` ficam de FORA de propósito: são sempre nulos
-// até a autenticação da F3 (mesmo caso do `ActivityLog.actorId`), e devolver um
-// campo que nunca tem valor ensina o frontend a ignorá-lo — justamente o hábito
-// que vai esconder o dado quando ele passar a existir. Entram junto com o login.
+// `checkoutById` e `checkinById` ficam de FORA: quem os lê é o histórico da
+// pessoa (`user-history.usecase.ts`), que monta o ator com o próprio select.
 export const ASSIGNMENT_SELECT = {
   id: true,
   assetId: true,

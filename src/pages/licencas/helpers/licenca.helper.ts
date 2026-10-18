@@ -81,16 +81,13 @@ export const ACOES_DA_LICENCA: Record<string, string> = {
   CHECKOUT: 'Assento entregue',
   CHECKIN: 'Assento devolvido',
   RETIRE: 'Assento queimado',
-  VIEW_KEY: 'Chave revelada',
 };
 
 /**
  * O nome dos campos que a trilha DESTA tela grava, em português.
  *
- * Passado ao `lerEvento` como os rótulos do domínio — pela mesma inversão do
- * `parseListQuery` recebendo a allowlist: um mapa global traduziria `name` para
- * todas as tabelas e erraria no primeiro homônimo.
- *
+ * Passado ao `lerEvento` como os rótulos do domínio: um mapa global
+ * traduziria `name` para todas as tabelas e erraria no primeiro homônimo.
  */
 export const ROTULOS_DA_LICENCA: Record<string, string> = {
   name: 'Nome',
@@ -119,6 +116,4 @@ export const ROTULOS_DA_LICENCA: Record<string, string> = {
   motivo: 'Motivo',
   burnedAt: 'Queimado em',
   checkinAt: 'Devolvido em',
-  revealedAt: 'Revelada em',
-  userId: 'Colaborador',
 };

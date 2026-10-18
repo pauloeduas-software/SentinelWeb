@@ -2,17 +2,13 @@ import type { FastifyInstance, RouteShorthandOptions } from 'fastify';
 import { authController } from './controllers/auth.controller';
 import { semCache, verificarOrigem } from './helpers/auth-hardening.helper';
 import { createLogger } from '../../core/logger/logger';
-import { LOGIN_RATE_LIMIT, WRITE_RATE_LIMIT } from '../../core/http/write-rate-limit';
+import { LOGIN_RATE_LIMIT } from '../../core/http/write-rate-limit';
 
 const logger = createLogger('auth.maestro');
 
-// Login, logout e "quem sou eu".
-//
-// `/api/users/:id/set-password` mora AQUI e não no `user.maestro.ts`: a rota
-// pendura em `/api/users` mas o assunto é credencial, não cadastro. Manter isso
-// separado é o que deixa o CRUD de colaborador continuar sem saber o que é um
-// `passwordHash` — e o `USER_PUBLIC_SELECT` continuar sendo a única porta de
-// saída de um usuário.
+// Login, logout e "quem sou eu". A senha de cada pessoa é definida no cadastro
+// e na edição do usuário (`user.maestro.ts`), que reaproveitam o
+// `verificarOrigem` daqui.
 /**
  * O que TODA rota de credencial ganha a mais, num lugar só.
  *
@@ -31,18 +27,12 @@ const ROTA_DE_CREDENCIAL: RouteShorthandOptions = {
 
 export class AuthMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
-    // A ÚNICA rota pública da API (ver a allowlist do server.ts): é assim que a
+    // A ÚNICA rota pública da API (ver o `ROTAS_PUBLICAS` do app.ts): é assim que a
     // sessão nasce.
     server.post('/api/auth/login', { ...ROTA_DE_CREDENCIAL, ...LOGIN_RATE_LIMIT }, authController.login);
 
     server.post('/api/auth/logout', ROTA_DE_CREDENCIAL, authController.logout);
     server.get('/api/auth/me', { onRequest: semCache }, authController.me);
-
-    server.post(
-      '/api/users/:id/set-password',
-      { ...ROTA_DE_CREDENCIAL, ...WRITE_RATE_LIMIT },
-      authController.setPassword,
-    );
 
     logger.info('[Maestro] Rotas de Autenticação inicializadas.');
   }

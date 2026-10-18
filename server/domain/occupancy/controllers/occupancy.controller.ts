@@ -1,5 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { idParamSchema } from '../../shared/params.schema';
+import { SEM_PARAMETROS } from '../../../core/http/sem-parametros';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import {
   addOccupantSchema, occupancyViewQuerySchema, occupantParamsSchema,
@@ -43,9 +44,11 @@ export const occupancyController = {
     return updateOccupantShift(id, occupantId, shift, atorDaRequisicao(request));
   },
 
+  // Só as ocupações ABERTAS: é o que a ficha da pessoa mostra. O histórico
+  // completo dela vem pelo `/api/users/:id/history`.
   async listByUser(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    const { view } = occupancyViewQuerySchema.parse(request.query ?? {});
-    return listUserOccupancies(id, view);
+    SEM_PARAMETROS.parse(request.query ?? {});
+    return listUserOccupancies(id, 'current');
   },
 };

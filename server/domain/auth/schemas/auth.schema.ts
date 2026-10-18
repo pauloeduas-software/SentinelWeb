@@ -1,20 +1,10 @@
 import { z } from 'zod';
 
-// Contrato de entrada do login e da redefinição de senha. `strictObject` pelo
-// mesmo motivo do resto do sistema: campo desconhecido vira 422 em vez de ser
-// ignorado em silêncio — e aqui "ignorado em silêncio" seria um
-// `{"username":"admin","password":"x","isAdmin":true}` passando batido.
-
-// O `username` é normalizado antes de consultar: `toLowerCase` porque o
-// Postgres compara texto com diferença de maiúscula, e sem isto "Admin" e
-// "admin" seriam duas contas — uma delas impossível de criar pelo índice único,
-// e outra impossível de logar por causa do que o usuário digitou.
-const nomeDeAcesso = z.string('nome de acesso é obrigatório').trim().toLowerCase()
-  .min(3, 'nome de acesso: mínimo de 3 caracteres')
-  .max(64, 'nome de acesso: máximo de 64 caracteres')
-  // Sem espaço nem acento: este texto vai para uma URL, um log e um `WHERE`, e
-  // "joão silva " com espaço no fim é um chamado de suporte por mês.
-  .regex(/^[a-z0-9._-]+$/, 'nome de acesso: use apenas letras, números, ponto, hífen e sublinhado');
+// Contrato de entrada do login, e a regra de senha que o cadastro de usuário
+// reaproveita. `strictObject` pelo mesmo motivo do resto do sistema: campo
+// desconhecido vira 422 em vez de ser ignorado em silêncio — e aqui "ignorado em
+// silêncio" seria um `{"email":"a@b.c","password":"x","isAdmin":true}` passando
+// batido.
 
 // NADA de `trim` na senha: espaço no começo ou no fim é caractere como
 // qualquer outro, e limpá-lo em silêncio faria a senha gravada ser diferente da
@@ -24,20 +14,25 @@ const nomeDeAcesso = z.string('nome de acesso é obrigatório').trim().toLowerCa
 // o comprimento é a única defesa contra força bruta offline num vazamento do
 // banco. Teto de 128 porque argon2 aceita entrada grande e um corpo de 1 MB
 // viraria negação de serviço de uma requisição só.
-const senha = z.string('senha é obrigatória')
+//
+// Mora AQUI, e o cadastro de usuário a importa (`user.schema.ts`): a regra de
+// senha é do domínio de autenticação, e duas cópias divergiriam no primeiro
+// ajuste de tamanho.
+export const senhaNova = z.string('senha é obrigatória')
   .min(12, 'senha: mínimo de 12 caracteres')
   .max(128, 'senha: máximo de 128 caracteres');
 
 export const loginSchema = z.strictObject({
-  username: nomeDeAcesso,
+  // O e-mail é normalizado como no cadastro (`user.schema.ts`): `toLowerCase`
+  // porque o Postgres compara texto com diferença de maiúscula, e "Ana@x.com"
+  // não acharia a conta gravada como "ana@x.com". Sem conferir o FORMATO: um
+  // e-mail malformado simplesmente não acha conta, e cai na mesma recusa de
+  // "e-mail ou senha inválidos".
+  email: z.string('e-mail é obrigatório').trim().toLowerCase()
+    .min(1, 'e-mail é obrigatório')
+    .max(320, 'e-mail: máximo de 320 caracteres'),
   // No LOGIN a senha não tem mínimo: quem já tem uma senha curta de antes
   // precisa continuar entrando, e recusar aqui por tamanho entregaria a regra
   // de comprimento a quem está adivinhando. Só o teto fica, contra corpo gigante.
   password: z.string('senha é obrigatória').max(128, 'senha: máximo de 128 caracteres'),
-});
-
-export const setPasswordSchema = z.strictObject({
-  password: senha,
-  // Opcional: quem já tem nome de acesso só troca a senha.
-  username: nomeDeAcesso.optional(),
 });

@@ -4,7 +4,6 @@ import { parseListQuery } from '../../../core/http/list-query';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { historyQuerySchema } from '../../shared/history.schema';
-import { USER_SORTABLE } from '../helpers/user-filters.helper';
 import { createUserSchema, updateUserSchema } from '../schemas/user.schema';
 import { listUsers } from '../use-cases/list-users.usecase';
 import { listUserOptions } from '../use-cases/list-user-options.usecase';
@@ -23,9 +22,6 @@ const optionsQuerySchema = z.strictObject({
 export const userController = {
   async list(request: FastifyRequest) {
     const query = parseListQuery(request.query, {
-      sortable: USER_SORTABLE,
-      defaultSort: 'createdAt',
-      defaultOrder: 'desc',
       trashable: true,
     });
     return listUsers(query);
@@ -38,9 +34,8 @@ export const userController = {
     return listUserOptions(q);
   },
 
-  // UM colaborador, para a tela de perfil. Vem com o placar de posse aberta
-  // porque é o mesmo número do 409 do DELETE: é ele que mostra, antes de
-  // confirmar, o que ainda está nas mãos da pessoa.
+  // UM colaborador, para a tela de perfil, com as unidades de estoque no nome
+  // dele.
   async get(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     return getUser(id);

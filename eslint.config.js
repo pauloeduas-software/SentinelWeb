@@ -9,7 +9,7 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 // `pages → domain → core`: import que sobe essa seta reprova o lint.
 const CORE_SEM_NEGOCIO = 'core é infraestrutura: não pode conhecer domain nem pages. Inverta a dependência (receba por parâmetro).'
 const DOMAIN_SEM_TELA = 'domain não conhece tela. Se a página precisa disso, exponha pelo store/use-case.'
-const PAGES_SEM_HTTP = 'pages não falam HTTP. Use o store do domínio (src/domain/<nome>/<nome>.store.ts).'
+const PAGES_SEM_HTTP = 'pages não falam HTTP. Use as queries do domínio (src/domain/<nome>/<nome>.queries.ts).'
 const FRONT_SEM_BACK = 'código de servidor NUNCA entra no bundle do frontend (vazaria Prisma e segredos). Compartilhe só tipos, por src/domain/shared.'
 const BACK_SEM_FRONT = 'o backend não importa do frontend. Tipo compartilhado vai em server/domain/shared.'
 

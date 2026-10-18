@@ -193,6 +193,15 @@ garantido **em runtime** pelo `z.enum` do `parseListQuery`, e continua sendo.
 > **uma spec, nenhuma rota escrita à mão**. Quem contar os arquivos em `specs/index.ts` vai
 > achar dez.
 
+> **E depois encolheu, e a decisão continua a mesma.** As duas da F9 saíram com os campos
+> customizados ([D145](./escopo.md#d145--campos-customizados-saem-inteiros)), a depreciação com o
+> valor contábil ([D152](./escopo.md#d152--o-valor-contábil-sai)), e fornecedor e departamento
+> com o [segundo de-escopo](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai).
+> Hoje `specs/index.ts` tem **cinco** — categorias, status, fabricantes, modelos e localizações. E
+> o `sort` do parágrafo acima não existe mais: a varredura
+> [Q](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai) tirou a ordenação
+> genérica das listagens, e o catálogo lista por nome, em ordem fixa.
+
 ---
 
 ## D10 — `type` vira `enum` do Prisma, não `String`.
@@ -338,7 +347,7 @@ arquivar ativo entregue já lê `status.type`. Uma coluna nova seria uma segunda
 mesmo fato — o erro do D17 uma camada acima.
 
 **É uma mudança de comportamento, e está declarada:** ativo arquivado aparecia na listagem
-padrão e a partir daqui não aparece mais. É o que o [`../ROADMAP.md`](../ROADMAP.md) sempre
+padrão e a partir daqui não aparece mais. É o que o roadmap do projeto sempre
 pediu (*"sai das listagens por padrão"*) e o que não tinha sido implementado.
 
 **A armadilha, e a regra que a fecha:** a exclusão de `ARCHIVED` vale **só quando não há

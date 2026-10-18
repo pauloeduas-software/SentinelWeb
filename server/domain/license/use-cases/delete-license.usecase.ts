@@ -39,7 +39,6 @@ export async function deleteLicense(id: string, actorId: string | null): Promise
         `Esta licença ainda tem ${ocupados} ${ocupados === 1 ? 'assento ocupado' : 'assentos ocupados'}. `
         + 'Devolva os assentos antes de excluir.',
         409,
-        { assentosOcupados: ocupados },
       );
     }
 

@@ -17,7 +17,7 @@ export const workstationKeys = {
   detalhe: (id: string) => ['workstations', 'detalhe', id] as const,
 };
 
-export interface PostoListParams {
+interface PostoListParams {
   page?: number;
   perPage?: number;
   q?: string;

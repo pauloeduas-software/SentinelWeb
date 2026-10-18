@@ -2,61 +2,36 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { listUserStock } from '../../stock/use-cases/list-location-stock.usecase';
 import { USER_DETAIL_SELECT } from '../helpers/user-select.helper';
-import { contarPosseAberta, type PosseAbertaDoUsuario } from './count-user-posse.usecase';
 
 /**
- * UM colaborador, com o placar do que ainda o prende ao inventário.
+ * UM colaborador, para a tela de perfil.
  *
  * Nasce com a tela de perfil: a listagem paginada não serve para abrir uma
  * pessoa por id — buscar 25 para usar 1 é o que faz a tela de detalhe depender
  * de por qual página o usuário chegou nela (e quebrar no F5).
- *
- * AS CONTAGENS VÊM JUNTAS, e não em rota separada, porque são as mesmas que o
- * 409 do `DELETE` usa: a tela e a recusa passam a falar o mesmo número, lido da
- * mesma função (`contarPosseAberta`).
  */
-export interface UsuarioComPosse {
+interface UsuarioDaFicha {
   id: string;
   name: string;
   email: string;
   createdAt: Date;
   isActive: boolean;
 
-  // A IDENTIDADE (F11, Etapa E). Só nesta leitura — ver `USER_DETAIL_SELECT`.
-  employeeNumber: string | null;
-  jobTitle: string | null;
-  phone: string | null;
-  address: string | null;
-  hiredAt: Date | null;
-
   /**
-   * O que prende esta pessoa ao inventário, nas QUATRO pontas: ativos em posse
-   * direta, postos ocupados, assentos de licença e itens de estoque no nome
-   * dela (`count-user-posse`).
-   */
-  posseAberta: PosseAbertaDoUsuario;
-
-  /**
-   * As unidades de estoque no NOME dela — a mesma consulta que
-   * `contarEstoqueDoUsuario` conta (`itensEmPosse`), aqui por LINHA: é o que a
-   * ficha precisa para desenhar "o que está com esta pessoa" e oferecer a
-   * devolução por unidade, como a ficha do posto já faz com `itens`
+   * As unidades de estoque no NOME dela, por LINHA: é o que a ficha precisa
+   * para desenhar "o que está com esta pessoa" e oferecer a devolução por
+   * unidade, como a ficha do posto já faz com `itens`
    * (`get-workstation.usecase.ts`).
    */
   itens: Awaited<ReturnType<typeof listUserStock>>;
 }
 
-export async function getUser(id: string): Promise<UsuarioComPosse> {
+export async function getUser(id: string): Promise<UsuarioDaFicha> {
   // `findFirst` pelo escopo da lixeira: colaborador apagado responde 404 aqui,
   // como em toda leitura do sistema. Ele volta pela restauração, não por uma
   // URL que alguém guardou.
   const usuario = await prisma.user.findFirst({ where: { id }, select: USER_DETAIL_SELECT });
   if (!usuario) throw new AppError('Registro não encontrado', 404);
 
-  const [posseAberta, itens] = await Promise.all([
-    contarPosseAberta(prisma, id),
-    listUserStock(id),
-  ]);
-
-  return { ...usuario, posseAberta, itens };
+  return { ...usuario, itens: await listUserStock(id) };
 }

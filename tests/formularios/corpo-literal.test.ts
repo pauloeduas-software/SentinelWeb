@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
+import { prisma } from '../../server/core/database/prismaClient';
 import { criarFabricante, criarModelo, idsDoSeed } from '../helpers/fixtures';
 
 // O CORPO LITERAL DO FORMULÁRIO — o teste que teria pego o defeito 1.
@@ -95,8 +96,10 @@ describe('POST /api/assets com o corpo literal do AssetFormModal', () => {
     expect(body.notes).toBeNull();
     expect(body.orderNumber).toBeNull();
     // Numéricos e datas pelo mesmo caminho: `''` não pode virar `0` nem
-    // `Invalid Date`.
-    expect(body.purchaseCost).toBeNull();
+    // `Invalid Date`. O custo é lido do banco: a resposta da escrita não o leva
+    // para cargo nenhum (D77).
+    const gravado = await prisma.asset.findUniqueOrThrow({ where: { id: String(body.id) }, select: { purchaseCost: true } });
+    expect(gravado.purchaseCost).toBeNull();
     expect(body.purchaseDate).toBeNull();
   });
 
@@ -186,16 +189,14 @@ describe('POST /api/users com o corpo literal do UserFormModal', () => {
 
   it('recusa nome e e-mail vazios com 422 por campo', async () => {
     // O formulário deixa enviar (o `required` do HTML é do navegador, não da
-    // API), então o 422 tem que dizer QUAL campo falhou, e não uma frase solta.
-    // Nenhuma tela pinta o input hoje — todas mostram o `error`; é este teste
-    // que mantém o `fields` no corpo para a primeira que quiser.
-    const { status, body } = await api.post<{ fields?: Record<string, string> }>(
+    // API), então o 422 tem que dizer QUAL campo falhou: a frase nomeia os dois.
+    const { status, body } = await api.post<{ error: string }>(
       '/api/users',
       corpoDoFormularioDeUsuario(),
     );
 
     expect(status).toBe(422);
-    expect(body.fields).toBeDefined();
-    expect(Object.keys(body.fields ?? {})).toContain('email');
+    expect(body.error).toMatch(/nome/);
+    expect(body.error).toMatch(/e-mail/);
   });
 });

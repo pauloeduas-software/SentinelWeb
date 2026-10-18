@@ -1,8 +1,9 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { SEM_PARAMETROS } from '../../../core/http/sem-parametros';
 import { idParamSchema } from '../../shared/params.schema';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import {
-  filtroDeSugestoesSchema, janelaDeOciosidadeSchema, triagemSchema, vinculoComEntregaSchema, vinculoSchema,
+  janelaDeOciosidadeSchema, triagemSchema, vinculoComEntregaSchema, vinculoSchema,
 } from '../schemas/reconciliation.schema';
 import { listarSugestoes } from '../use-cases/list-suggestions.usecase';
 import { aceitarSugestao } from '../use-cases/accept-suggestion.usecase';
@@ -19,10 +20,8 @@ import { rodarReconciliacao } from '../jobs/reconcile.job';
 // 422 com o campo que falhou; o `AppError` dos use-cases sai por lá também.
 export const reconciliationController = {
   async listSuggestions(request: FastifyRequest) {
-    const filtro = filtroDeSugestoesSchema.parse(request.query ?? {});
-    // Teto fixo e generoso: a fila é para ser esvaziada, não paginada. Se ela
-    // passar de 200 itens o problema não é a paginação.
-    return listarSugestoes({ ...filtro, perPage: 200 });
+    SEM_PARAMETROS.parse(request.query ?? {});
+    return listarSugestoes();
   },
 
   async accept(request: FastifyRequest) {
@@ -32,7 +31,7 @@ export const reconciliationController = {
 
   async reject(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return recusarSugestao(id, atorDaRequisicao(request));
+    return recusarSugestao(id);
   },
 
   async coverage(_request: FastifyRequest, reply: FastifyReply) {

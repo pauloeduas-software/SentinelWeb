@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { buildApp, type OpcoesDaAplicacao } from '../../server/app';
 import { COOKIE_SESSAO } from '../../server/domain/auth/helpers/session-cookie.helper';
+import { ADMIN_DE_TESTE } from '../setup/database';
 
 // O CLIENTE DE TESTE — requisições em memória contra a aplicação de verdade.
 //
@@ -24,7 +25,7 @@ export interface Resposta<T = unknown> {
 }
 
 interface Opcoes {
-  /** Sobrescreve/acrescenta cabeçalhos (o `Authorization` do `/agent-hub`, por exemplo). */
+  /** Sobrescreve/acrescenta cabeçalhos (um `origin` de outro site, por exemplo). */
   headers?: Record<string, string>;
 }
 
@@ -38,17 +39,17 @@ export interface Cliente {
 
 export interface ApiDeTeste extends Cliente {
   /**
-   * Uma sessão com o PAPEL pedido (D148).
+   * Uma sessão com o CARGO pedido (D148).
    *
    * É o que permite testar o que o administrador nunca vê: o cliente padrão é
    * `ADMIN` e alcança tudo, então nenhuma asserção sobre "sem acesso" é possível
    * por ele.
    *
-   * Cria um colaborador com senha, define o papel e entra. `TECNICO` é o padrão
+   * Cria um colaborador com senha, define o cargo e entra. `TECNICO` é o padrão
    * porque `USUARIO` NÃO ENTRA: o login o recusa com 403, e é isso que
    * `tests/invariantes/permissao.test.ts` prova.
    */
-  comoUsuario(papel?: 'TECNICO' | 'ADMIN'): Promise<Cliente & { userId: string }>;
+  comoUsuario(cargo?: 'TECNICO' | 'ADMIN'): Promise<Cliente & { userId: string }>;
   /** A instância montada, para o que o cliente não cobre (WebSocket, `app.hasRoute`). */
   app: FastifyInstance;
   /** O id do administrador logado — o ator esperado em todo `ActivityLog`. */
@@ -58,8 +59,6 @@ export interface ApiDeTeste extends Cliente {
   fechar(): Promise<void>;
 }
 
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? 'admin';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? '';
 
 function desempacotar<T>(bruto: { statusCode: number; body: string; headers: Record<string, unknown> }): Resposta<T> {
   // Corpo vazio é legítimo (204, e alguns 4xx do plugin de rate limit). Um
@@ -108,27 +107,6 @@ function clienteCom(app: FastifyInstance, cookie: string | null): Cliente {
 }
 
 /**
- * Um cliente com UM cookie de sessão específico.
- *
- * QUEM PRECISA DISSO: o arquivo que faz login mais de uma vez na mesma conta — o
- * do segundo fator (F11, Etapa H), em que a MESMA pessoa entra sem código, com
- * código errado, com código certo e com código de recuperação. O `criarApi()`
- * guarda um cookie só (o do administrador) e o `comoUsuario()` devolve um cliente
- * já logado sem as credenciais, então nenhum dos dois serve para reentrar.
- *
- * Recebe o VALOR do cookie (o que vem de `resposta.cookies`), não o cabeçalho
- * montado: quem chama acabou de ler a resposta do login e não tem por que
- * conhecer o nome do cookie.
- *
- * Para autenticar por TOKEN pessoal não há função nenhuma — é `api.anonimo` com
- * `{ headers: { authorization: 'Bearer …' } }`. O cabeçalho já é por requisição,
- * e um cliente próprio só esconderia que ali não há sessão.
- */
-export function clienteComSessao(app: FastifyInstance, valorDoCookie: string): Cliente {
-  return clienteCom(app, `${COOKIE_SESSAO}=${valorDoCookie}`);
-}
-
-/**
  * Monta a aplicação e entra como o administrador do seed.
  *
  * Uma por arquivo de teste, em `beforeAll` — com uma exceção, que é o teste do
@@ -156,13 +134,13 @@ export async function criarApi(opcoes: OpcoesDaAplicacao = {}): Promise<ApiDeTes
   const login = await app.inject({
     method: 'POST',
     url: '/api/auth/login',
-    payload: { username: ADMIN_USERNAME, password: ADMIN_PASSWORD },
+    payload: ADMIN_DE_TESTE,
   });
 
   if (login.statusCode !== 200) {
     throw new Error(
       `Login do administrador falhou no harness (${login.statusCode}): ${login.body}\n` +
-        'O seed cria a conta com ADMIN_PASSWORD do .env.test — confira se os dois batem.',
+        'O harness cria a conta em tests/setup/database.ts (ADMIN_DE_TESTE) — confira o ADMIN_PASSWORD do .env.test.',
     );
   }
 
@@ -176,49 +154,37 @@ export async function criarApi(opcoes: OpcoesDaAplicacao = {}): Promise<ApiDeTes
   const padrao = clienteCom(app, cookie);
 
   /**
-   * A sessão com um PAPEL, montada PELA API — nunca por escrita direta no banco.
+   * A sessão com um CARGO, montada PELA API — nunca por escrita direta no banco.
    *
-   * Pelas rotas (`POST /api/users`, `PUT /api/users/:id`,
-   * `POST /api/users/:id/set-password`) porque é o mesmo motivo que este arquivo
+   * Pela rota (`POST /api/users`, com cargo e senha no mesmo corpo) porque é o
+   * mesmo motivo que este arquivo
    * inteiro existe: um teste que gravasse `role` com `prisma.user.update` pularia
    * o zod da borda e passaria a verde com um valor que a aplicação recusaria.
    *
    * ERA `comoUsuario(permissoes: string[])`, com grupo (D76). O D148 trocou a
-   * matriz pelo papel, e o grupo intermediário desapareceu junto.
+   * matriz pelo cargo, e o grupo intermediário desapareceu junto.
    */
-  async function comoUsuario(papel: 'TECNICO' | 'ADMIN' = 'TECNICO') {
-    // `Date.now()` no sufixo porque `email` e `name` são únicos por índice
-    // parcial, e um arquivo de teste chama isto mais de uma vez.
+  async function comoUsuario(cargo: 'TECNICO' | 'ADMIN' = 'TECNICO') {
+    // `Date.now()` no sufixo porque o `email` é único por índice parcial, e um
+    // arquivo de teste chama isto mais de uma vez.
     const marca = `p${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    const email = `${marca}@teste.local`;
     const senha = 'Senha-De-Teste-123';
 
     const pessoa = await padrao.post<{ id: string }>('/api/users', {
       name: `Sessão ${marca}`,
-      email: `${marca}@teste.local`,
-    });
-    if (pessoa.status !== 201 && pessoa.status !== 200) {
-      throw new Error(`comoUsuario: criar pessoa falhou (${pessoa.status}): ${JSON.stringify(pessoa.body)}`);
-    }
-
-    // A coluna nasce `USUARIO`, que não entra no painel: toda sessão de teste
-    // precisa de uma promoção explícita.
-    const promocao = await padrao.put(`/api/users/${pessoa.body.id}`, { role: papel });
-    if (promocao.status !== 200) {
-      throw new Error(`comoUsuario: definir papel falhou (${promocao.status}): ${JSON.stringify(promocao.body)}`);
-    }
-
-    const credencial = await padrao.post(`/api/users/${pessoa.body.id}/set-password`, {
-      username: marca,
+      email,
+      role: cargo,
       password: senha,
     });
-    if (credencial.status !== 200 && credencial.status !== 204) {
-      throw new Error(`comoUsuario: dar senha falhou (${credencial.status}): ${JSON.stringify(credencial.body)}`);
+    if (pessoa.status !== 201) {
+      throw new Error(`comoUsuario: criar pessoa falhou (${pessoa.status}): ${JSON.stringify(pessoa.body)}`);
     }
 
     const entrada = await app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { username: marca, password: senha },
+      payload: { email, password: senha },
     });
     if (entrada.statusCode !== 200) {
       throw new Error(`comoUsuario: login falhou (${entrada.statusCode}): ${entrada.body}`);

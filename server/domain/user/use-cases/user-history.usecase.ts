@@ -14,18 +14,18 @@ import { listUserOccupancies } from '../../occupancy/use-cases/list-user-occupan
 // consulta é por `entityId`, nunca por `actorId`.
 //
 // "O que esta pessoa FEZ" é outro relatório — o de auditoria de operador, que
-// pertence à F11 junto com o RBAC. Misturar os dois aqui responderia as duas
+// o sistema não tem. Misturar os dois aqui responderia as duas
 // perguntas pela metade: quem abre o perfil da Laura para saber o que ela tem
 // na mão leria, no meio, os 400 ativos que ela cadastrou.
 
 /**
  * De onde o evento veio. A tela usa para escolher o ícone e o que mostrar — um
- * diff de campos não se lê como uma entrega nem como uma troca de turno.
+ * diff de campos não se lê como uma entrega nem como uma ocupação de posto.
  */
-export type FonteDoEventoDaPessoa = 'ATIVIDADE' | 'POSSE' | 'POSTO';
+type FonteDoEventoDaPessoa = 'ATIVIDADE' | 'POSSE' | 'POSTO';
 
 /** O que um evento de posse acrescenta: QUAL equipamento ela recebeu. */
-export interface EventoDePosseDaPessoa {
+interface EventoDePosseDaPessoa {
   assignmentId: string;
   assetId: string;
   /** "ATV-00012 — Dell Latitude", ou só a etiqueta quando o ativo não tem nome. */
@@ -36,7 +36,7 @@ export interface EventoDePosseDaPessoa {
 }
 
 /** O que um evento de posto acrescenta: QUAL posto, e em que turno. */
-export interface EventoDePostoDaPessoa {
+interface EventoDePostoDaPessoa {
   occupantId: string;
   locationId: string;
   locationLabel: string;
@@ -197,7 +197,7 @@ function buscarPosses(userId: string) {
       asset: { select: { assetTag: true, name: true } },
     },
     // `createdAt` como desempate, pelo mesmo motivo de `listAssetAssignments`:
-    // numa carga inicial várias entregas nascem com o mesmo `checkoutAt`.
+    // entre entregas com o mesmo `checkoutAt` o Postgres não promete ordem.
     orderBy: [{ checkoutAt: 'desc' }, { createdAt: 'desc' }],
   });
 }
@@ -209,7 +209,7 @@ type OcupacaoDaPessoa = Awaited<ReturnType<typeof listUserOccupancies>>[number];
  * Tudo que aconteceu com uma pessoa, do mais recente para o mais antigo.
  *
  * Três fontes, uma lista: o `ActivityLog` (cadastro, edição com o diff campo a
- * campo, credencial definida, lixeira, restauração, desligamento), as posses
+ * campo, credencial definida, lixeira, restauração, desativação), as posses
  * diretas (o que ela recebeu e devolveu) e as ocupações de posto (onde ela
  * sentou e quando saiu).
  *

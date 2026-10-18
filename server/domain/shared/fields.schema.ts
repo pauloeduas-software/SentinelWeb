@@ -55,20 +55,6 @@ export const uuidOpcional = (rotulo: string) =>
     .pipe(z.uuid(`${rotulo}: identificador inválido`).nullish());
 
 /**
- * Dinheiro. Fica STRING do começo ao fim, de propósito.
- *
- * `z.coerce.number()` converteria para ponto flutuante e reintroduziria o erro
- * de centavo que a coluna `Decimal` existe para evitar (0.1 + 0.2 =
- * 0.30000000000000004). O Prisma aceita string num campo Decimal, então a
- * string do formulário vai direto ao banco sem passar por float em lugar nenhum.
- */
-export const valorMonetario = (rotulo: string) =>
-  z.string(`${rotulo} é obrigatório`)
-    .trim()
-    .regex(/^\d{1,10}([.,]\d{1,2})?$/, `${rotulo}: use um valor como 1234.50`)
-    .transform((valor) => valor.replace(',', '.'));
-
-/**
  * Data vinda de `<input type="date">`, que manda 'AAAA-MM-DD' ou `''`.
  *
  * Interpretada em UTC de propósito. `new Date('2026-09-22')` já é UTC, mas
@@ -136,7 +122,14 @@ export const dataNaoPassada = (rotulo: string) =>
     `${rotulo} não pode ser uma data passada`,
   );
 
-/** Dinheiro opcional. Mesma regra do obrigatório: string do início ao fim. */
+/**
+ * Dinheiro opcional. Fica STRING do começo ao fim, de propósito.
+ *
+ * `z.coerce.number()` converteria para ponto flutuante e reintroduziria o erro
+ * de centavo que a coluna `Decimal` existe para evitar (0.1 + 0.2 =
+ * 0.30000000000000004). O Prisma aceita string num campo Decimal, então a
+ * string do formulário vai direto ao banco sem passar por float em lugar nenhum.
+ */
 export const valorMonetarioOpcional = (rotulo: string) =>
   z.string().trim().nullish()
     .transform((valor) => (valor === undefined ? undefined : valor || null))

@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import type { USER_PUBLIC_SELECT } from '../user/helpers/user-select.helper';
-import type { Papel } from '../access/helpers/papel';
+import type { Cargo } from '../access/helpers/cargo';
 
 // Quem está logado, do ponto de vista do resto do sistema.
 //
@@ -27,14 +27,14 @@ export interface SessaoEmitida {
   usuario: SessionUser;
   tokenVersion: number;
   /**
-   * O papel da sessão (D148).
+   * O cargo da sessão (D148).
    *
    * Terceira coisa com destino PRÓPRIO, somando-se às duas de cima: o usuário vai
    * no corpo, o `tokenVersion` vai dentro do token assinado, e isto vai no corpo
    * **sem** passar pelo `USER_PUBLIC_SELECT` — que continua sendo o contrato do
    * que sai de um usuário, e não de o que ele alcança.
    */
-  papel: Papel;
+  cargo: Cargo;
 }
 
 // `request.user` passa a ter tipo de verdade em todo o backend.

@@ -51,7 +51,7 @@ async function maquina(hwid: string): Promise<string> {
 }
 
 const vincularEEntregar = (endpointId: string, assetId: string, targetLocationId: string) =>
-  api.post<{ error: string; vinculado?: boolean; endpoint: { assetId: string }; assignment: { targetLocationId: string } }>(
+  api.post<{ error: string; endpoint: { assetId: string }; assignment: { targetLocationId: string } }>(
     `/api/endpoints/${endpointId}/link-and-checkout`,
     { assetId, targetLocationId },
   );
@@ -91,7 +91,6 @@ describe('POST /api/endpoints/:id/link-and-checkout', () => {
     expect(status).toBe(409);
     expect(body.error).toMatch(/vinculada ao ativo, mas a entrega/i);
     expect(body.error).toMatch(/dispon[íi]vel/i);
-    expect(body.vinculado).toBe(true);
 
     expect((await prisma.endpoint.findUniqueOrThrow({ where: { id: endpointId } })).assetId).toBe(emUso.id);
     expect(await prisma.assignment.count({ where: { assetId: emUso.id, checkinAt: null } })).toBe(0);

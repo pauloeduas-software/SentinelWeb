@@ -32,7 +32,10 @@ export async function assertCategoriaDeEstoque(
   const categoria = await lerCategoriaTravada(client, categoryId);
   if (!categoria) throw new AppError('Categoria não encontrada.', 404);
   if (categoria.type !== 'STOCK') {
-    throw new AppError('A categoria de um item de estoque precisa ser do tipo Estoque.', 422, { type: categoria.type });
+    throw new AppError(
+      `A categoria de um item de estoque precisa ser do tipo Estoque, e "${categoria.name}" não é.`,
+      422,
+    );
   }
   if (categoryId !== categoriaAtual) assertEscolhaAtiva(categoria, { rotulo: 'A categoria', feminino: true });
 }
@@ -65,8 +68,6 @@ export async function createStockItem(data: CreateStockItemInput, actorId: strin
         qty: data.qty,
         locationId: data.locationId ?? null,
         notes: data.notes ?? null,
-        createdById: actorId,
-        updatedById: actorId,
       },
       select: STOCK_ITEM_SELECT,
     });

@@ -58,9 +58,8 @@ export async function listarAtivosOciosos(dias = 30): Promise<AtivoOcioso[]> {
   });
   if (ociosos.length === 0) return [];
 
-  // A Camada 3 em lote: é ela que traz o `postoVago`, e é por isso que esta
-  // consulta não pergunta "quem é o dono" ao `assignedToId` — ele é null
-  // justamente no caso mais interessante, o do ativo entregue a um posto (D14).
+  // A Camada 3 em lote: é ela que traz o `postoVago` — o caso mais
+  // interessante, o do ativo entregue a um posto (D14).
   const posses = await resolverResponsaveisEmLote(prisma, ociosos.map((ativo) => ativo.id));
 
   const agora = Date.now();

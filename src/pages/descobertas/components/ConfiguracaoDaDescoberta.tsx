@@ -27,7 +27,7 @@ interface Props {
 }
 
 const ROTULO = 'text-[10px] uppercase tracking-widest text-text-tertiary';
-const CAMPO = 'bg-bg-surface border border-border-sutil px-2 py-1.5 text-xs font-mono text-text-primary w-full';
+const CAMPO = 'bg-bg-base border border-border-sutil px-2 py-1.5 text-xs font-mono text-text-primary w-full';
 
 /** Os três modos, com o que cada um faz escrito onde a pessoa decide (D51/D112). */
 const MODOS: { valor: DiscoveryMode; rotulo: string; explicacao: string; cor: string }[] = [
@@ -143,7 +143,7 @@ export default function ConfiguracaoDaDescoberta({ configuracao, podeEditar, sal
       <button
         type="button"
         onClick={() => setAberta((estava) => !estava)}
-        className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-bg-surface/50 transition-colors"
+        className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-bg-base/50 transition-colors"
       >
         <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-text-tertiary">
           <Settings2 size={12} /> Descoberta

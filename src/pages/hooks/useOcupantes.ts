@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  useAddLocationOccupant, useEndLocationOccupancy, useLocationOccupantsQuery,
+  useAddLocationOccupant, useCorrigirTurno, useEndLocationOccupancy, useLocationOccupantsQuery,
   type OccupantInput,
 } from '../../domain/occupancy/occupancy.queries';
 import type { LocationOccupant, OccupantView } from '../../domain/shared/posse.types';
@@ -23,6 +23,7 @@ export function useOcupantes(locationId: string | null) {
   const { data, isPending, error } = useLocationOccupantsQuery(locationId, view);
   const adicionar = useAddLocationOccupant();
   const encerrar = useEndLocationOccupancy();
+  const corrigirTurno = useCorrigirTurno();
 
   // Erro SOBE para o painel mostrar a mensagem do servidor — é por aqui que
   // aparece o 409 de "esta pessoa já ocupa este posto" (o índice único parcial).
@@ -40,6 +41,14 @@ export function useOcupantes(locationId: string | null) {
     await encerrar.mutateAsync({ locationId, occupantId: ocupante.id });
   };
 
+  // Corrigir o turno não pede confirmação: não encerra nada e fica no histórico
+  // da ocupação com o de/para. Campo vazio apaga o turno. O erro sobe para o
+  // painel, como no adicionar.
+  const handleCorrigirTurno = async (ocupante: LocationOccupant, turno: string) => {
+    if (!locationId) return;
+    await corrigirTurno.mutateAsync({ locationId, occupantId: ocupante.id, shift: turno.trim() || null });
+  };
+
   return {
     ocupantes: data ?? [],
     // `isPending` só vale quando há posto: com a query desligada ele fica
@@ -53,5 +62,6 @@ export function useOcupantes(locationId: string | null) {
     changeView: setView,
     handleAdicionar,
     handleEncerrar,
+    handleCorrigirTurno,
   };
 }

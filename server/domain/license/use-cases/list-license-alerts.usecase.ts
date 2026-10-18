@@ -4,8 +4,7 @@ import {
   DIAS_DE_AVISO, diasParaVencer, meiaNoiteUTC, statusDaLicenca, type LicenseStatus,
 } from '../helpers/license-status.helper';
 
-// OS DOIS SINAIS DA LICENÇA, numa rota só: os dois valem para a mesma tela,
-// então o tipo é FILTRO e não rota separada.
+// OS DOIS SINAIS DA LICENÇA, numa rota só: os dois valem para a mesma tela.
 
 export interface LicencaEmAlerta {
   id: string;
@@ -41,13 +40,8 @@ type LinhaDoAlerta = {
   category: { name: string } | null;
 };
 
-export async function listLicenseAlerts(
-  tipo?: 'vencendo' | 'assentosBaixos',
-): Promise<AlertasDeLicenca> {
-  const [vencendo, assentosBaixos] = await Promise.all([
-    tipo === 'assentosBaixos' ? Promise.resolve([]) : licencasVencendo(),
-    tipo === 'vencendo' ? Promise.resolve([]) : licencasComPoucosAssentos(),
-  ]);
+export async function listLicenseAlerts(): Promise<AlertasDeLicenca> {
+  const [vencendo, assentosBaixos] = await Promise.all([licencasVencendo(), licencasComPoucosAssentos()]);
 
   return { vencendo, assentosBaixos };
 }

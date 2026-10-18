@@ -96,38 +96,13 @@ describe('o filtro de vínculo', () => {
     expect(tudo.body.total).toBe(sem.body.total + com.body.total);
   });
 
-  it('convive com paginação, ordenação e busca na MESMA query', async () => {
+  it('convive com paginação e busca na MESMA query', async () => {
     // O caso que o defeito tornava impossível: as chaves dos dois donos juntas.
     // Com a query entregue inteira aos dois schemas, isto dava 422 de um lado ou
     // de outro, dependendo de qual parse rodasse primeiro.
-    const { status, body } = await listar('?vinculo=sem&sort=hostname&order=asc&page=1&perPage=10&q=lista');
+    const { status, body } = await listar('?vinculo=sem&page=1&perPage=10&q=lista');
     expect(status).toBe(200);
     expect(body.rows.every((linha) => linha.assetId === null)).toBe(true);
-  });
-});
-
-describe('o filtro de triagem', () => {
-  it('filtra por reviewState, e o valor inválido é 422', async () => {
-    const id = await maquina('lista-bloqueada');
-    await api.patch(`/api/endpoints/${id}/review`, { reviewState: 'BLOCKED' });
-
-    const bloqueadas = await listar('?reviewState=BLOCKED');
-    expect(bloqueadas.status).toBe(200);
-    expect(bloqueadas.body.rows.map((linha) => linha.id)).toContain(id);
-
-    const naoTriadas = await listar('?reviewState=UNREVIEWED');
-    expect(naoTriadas.body.rows.map((linha) => linha.id)).not.toContain(id);
-
-    // Valor fora do enum é 422 com a frase do domínio — e não filtro ignorado
-    // em silêncio, que era o que um schema aberto entregaria.
-    const invalido = await listar('?reviewState=SEI_LA');
-    expect(invalido.status).toBe(422);
-  });
-
-  it('e os dois filtros valem juntos', async () => {
-    const { status, body } = await listar('?vinculo=sem&reviewState=BLOCKED');
-    expect(status).toBe(200);
-    expect(body.rows.every((linha) => linha.assetId === null && linha.reviewState === 'BLOCKED')).toBe(true);
   });
 });
 
@@ -136,7 +111,9 @@ describe('o que a listagem continua recusando', () => {
     // A estreiteza não foi trocada por permissividade: separar a query por dono
     // deixou os DOIS schemas estritos. Typo em chave de paginação e typo em
     // chave de domínio param na borda.
-    expect((await listar('?ordr=asc')).status).toBe(422);
+    expect((await listar('?pag=2')).status).toBe(422);
+    // A ordenação saiu da API: `?sort=` é chave desconhecida como qualquer outra.
+    expect((await listar('?sort=hostname')).status).toBe(422);
     expect((await listar('?vinculoo=sem')).status).toBe(422);
   });
 });

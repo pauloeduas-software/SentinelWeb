@@ -1,7 +1,7 @@
 import type { Telemetry } from './telemetry.types';
 
 /**
- * O eixo do AGENTE — dois valores, e não os três que o TODO pedia.
+ * O eixo do AGENTE — dois valores, e não três.
  *
  * "Nunca visto pelo agente" é pergunta do ATIVO, não desta tabela: uma linha de
  * endpoint nasce de um handshake (docs/historico/fase-07-convergencia-rmm-itam.md, D98).
@@ -9,7 +9,7 @@ import type { Telemetry } from './telemetry.types';
  * União, e não `string`: com `string`, `endpoint.status === 'Online'` compila e
  * é sempre falso.
  */
-export type AgentStatus = 'ONLINE' | 'OFFLINE';
+type AgentStatus = 'ONLINE' | 'OFFLINE';
 
 /** Triagem do Shadow IT — máquina vista pelo agente e sem cadastro. */
 export type ReviewState = 'UNREVIEWED' | 'ALLOWED' | 'BLOCKED';
@@ -44,7 +44,13 @@ export interface Endpoint {
    */
   asset: { id: string; assetTag: string; name: string | null } | null;
   reviewState?: ReviewState;
+}
 
+/**
+ * UMA máquina com a amostra de telemetria atual — `GET /api/endpoints/:id`.
+ * A listagem não traz a telemetria: as tabelas de `/descobertas` não a mostram.
+ */
+export interface EndpointComTelemetria extends Endpoint {
   /** Só a amostra mais recente: a API devolve `take: 1`. */
   telemetries: Telemetry[];
 }

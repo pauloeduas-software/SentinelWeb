@@ -13,7 +13,7 @@ interface Candidato {
 /**
  * Etiqueta e série livres ENTRE OS VIVOS.
  *
- * A unicidade é um índice PARCIAL (`WHERE deleted_at IS NULL`) escrito à mão na
+ * A unicidade é um índice PARCIAL (`WHERE "deletedAt" IS NULL`) escrito à mão na
  * migration, e o Prisma não o conhece: sem esta checagem, a colisão chegaria
  * como violação crua do banco. Ela vira 409 no error-handler de qualquer forma
  * (P2002), mas com a mensagem genérica "Registro já existe" — que não diz se o

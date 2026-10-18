@@ -28,12 +28,7 @@ export async function createLicense(
     await assertReferenciasDaLicenca(tx, campos);
 
     const licenca = await tx.license.create({
-      data: {
-        ...campos,
-        id,
-        createdById: actorId,
-        updatedById: actorId,
-      },
+      data: { ...campos, id },
       select: LICENSE_SELECT,
     }) as LinhaDeLicenca;
 

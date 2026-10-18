@@ -2,9 +2,9 @@ import type { ReactNode } from 'react';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import type { ListView } from '../../domain/shared/list.types';
 
-// Busca e paginação das listagens. Compartilhado entre Inventário e Usuários
-// para as duas telas não divergirem — é apresentacional puro: recebe valor e
-// callback, não conhece query nem HTTP.
+// Busca e paginação das listagens. Compartilhado por todas elas para as telas
+// não divergirem — é apresentacional puro: recebe valor e callback, não
+// conhece query nem HTTP.
 
 interface ListToolbarProps {
   /** Omitido nas listagens sem lixeira: a aba simplesmente não aparece. */
@@ -12,12 +12,8 @@ interface ListToolbarProps {
   onViewChange?: (view: ListView) => void;
   /**
    * Omitidos onde não há o que buscar, e aí o campo não aparece — é a mesma
-   * opcionalidade que a aba de lixeira já tinha.
-   *
-   * QUEM PRECISA: o relatório do importador (F10, Etapa D), que pagina 5.000
-   * linhas de um arquivo e não tem busca nenhuma. Um campo de busca inerte ali
-   * prometeria uma função que não existe; escrever uma segunda paginação ao lado
-   * desta faria duas barras divergirem no primeiro ajuste.
+   * opcionalidade que a aba de lixeira já tinha. Hoje toda listagem que usa a
+   * barra tem busca; um campo inerte prometeria uma função que não existe.
    */
   search?: string;
   onSearchChange?: (value: string) => void;

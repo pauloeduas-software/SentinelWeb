@@ -11,7 +11,7 @@ import { isProduction } from './env';
 // CORS_ORIGIN aceita uma ou várias origens separadas por vírgula, para o caso de
 // front e back em hosts diferentes. `*` é recusado: liberar qualquer origem em
 // produção é vetor de ataque.
-export type CorsOrigin = string[] | boolean;
+type CorsOrigin = string[] | boolean;
 
 let cachedOrigins: CorsOrigin | null = null;
 

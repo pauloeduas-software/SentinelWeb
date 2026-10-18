@@ -1,6 +1,7 @@
 # Plano de implementação — Fase 7: convergência RMM × ITAM ✅
 
-> Fase do [`../ROADMAP.md`](../ROADMAP.md), **fechada**. Contrato de posse:
+> Fase do roadmap do projeto (apagado depois;
+> o escopo que ficou está em [`../decisoes/escopo.md`](../decisoes/escopo.md)), **fechada**. Contrato de posse:
 > [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md) · camadas: [`../referencia/arquitetura.md`](../referencia/arquitetura.md) ·
 > o que o sistema recusa: [`../referencia/invariantes.md`](../referencia/invariantes.md).
 >
@@ -406,7 +407,7 @@ pessoas diferentes.
 
 > As decisões desta fase moram em [`../decisoes/reconciliacao.md`](../decisoes/reconciliacao.md) — **D45–D51 e D95–D122**. Elas saíram daqui porque decisão se arquiva pelo ASSUNTO que governa, não pela fase que a tomou: quem precisa saber as regras de um assunto não deveria ter que descobrir em que fase ele nasceu.
 
-O índice das 142 está em [`../decisoes/README.md`](../decisoes/README.md).
+O índice das decisões está em [`../decisoes/README.md`](../decisoes/README.md).
 
 ## Riscos e armadilhas
 
@@ -603,7 +604,7 @@ com `criarApi()` e o hub com o helper novo `tests/helpers/agente.ts` (D99).
 
 ---
 
-## O que esta fase acrescenta ao `../ROADMAP.md` e ao `../referencia/invariantes.md`
+## O que esta fase acrescenta ao roadmap e ao `../referencia/invariantes.md`
 
 No **TODO**: registrar `D45`–`D51`, `D95`–`D103` e `D104`–`D108` no índice de decisões;
 marcar que o item

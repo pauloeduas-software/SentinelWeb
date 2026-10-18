@@ -82,7 +82,6 @@ describe('invariante 19 — no máximo um ativo por posto', () => {
     // tela não sabe o que devolver.
     expect(body.error).toContain(primeiro.assetTag);
     expect(body.error).toMatch(/j[áa] tem um ativo/i);
-    expect(body.assetId).toBe(primeiro.id);
   });
 
   it('recusa o segundo desktop mesmo SEM agente: a regra é sobre o ATIVO', async () => {
@@ -169,7 +168,6 @@ describe('invariante 19 — a porta da RESTAURAÇÃO', () => {
     // A MESMA frase da entrega, nomeando quem já está lá.
     expect(body.error).toContain(novo.assetTag);
     expect(body.error).toMatch(/j[áa] tem um ativo/i);
-    expect(body.assetId).toBe(novo.id);
 
     // E nada foi gravado: o ativo continua na lixeira. `findUnique` porque o
     // escopo da lixeira não o alcança — é justamente o que se quer ler aqui.

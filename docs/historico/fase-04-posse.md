@@ -1,10 +1,17 @@
 # Plano de implementação — Fase 4: checkout e checkin
 
-> Plano **prospectivo** da Fase 4 do [`../ROADMAP.md`](../ROADMAP.md). Contrato:
+> Plano **prospectivo** da Fase 4 do roadmap do projeto (apagado depois;
+> o escopo que ficou está em [`../decisoes/escopo.md`](../decisoes/escopo.md)). Contrato:
 > [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md) · porquês:
 > [`../decisoes/posse.md`](../decisoes/posse.md) · o que o sistema recusa:
 > [`../referencia/invariantes.md`](../referencia/invariantes.md) · camadas: [`../referencia/arquitetura.md`](../referencia/arquitetura.md).
 > **Parte desta fase já está em execução** — ver *O que já entrou*.
+>
+> **Status (depois do corte de escopo):** a fase fechou, e boa parte do que ela construiu saiu
+> depois — o termo de aceite, o PDF e o lembrete por e-mail ([D150](../decisoes/escopo.md#d150--o-termo-de-aceite-sai)), o correio,
+> a entrega em massa, o desligamento e os *holdings* do perfil (o segundo de-escopo,
+> [O](../decisoes/escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai)). O que vale hoje está em
+> [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md).
 >
 > Esforço: **P** = até meio dia · **M** = 1 a 3 dias · **G** = mais de 3 dias
 
@@ -325,7 +332,7 @@ a operação mexa em posto — e é essa a metade que se esquece.
 > log — foi para [`../decisoes/plataforma.md`](../decisoes/plataforma.md), porque o correio
 > tem quatro clientes e três são de fases diferentes.
 
-O índice das 142 está em [`../decisoes/README.md`](../decisoes/README.md).
+O índice das decisões está em [`../decisoes/README.md`](../decisoes/README.md).
 
 ## Riscos e armadilhas
 

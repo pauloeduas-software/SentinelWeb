@@ -4,7 +4,7 @@
 // até alguém escrever o nome dele aqui. É isso que impede o `passwordHash`,
 // o `failedLoginCount` e o `lockedUntil` da Fase 3 de vazarem sozinhos por
 // qualquer uma das rotas que devolvem um usuário — listagem, criação, edição,
-// ou o `assignedTo` embutido no inventário.
+// ou a posse embutida no inventário.
 //
 // Mora no domínio `user` de propósito: quem decide o que é público de um
 // usuário é o dono do usuário, não quem o embute na resposta.
@@ -28,18 +28,16 @@ export const USER_PUBLIC_SELECT = {
 export const USER_LIST_SELECT = {
   ...USER_PUBLIC_SELECT,
 
-  // O PAPEL, e ele está aqui por um defeito concreto, não por completude.
+  // O CARGO, e ele está aqui por um defeito concreto, não por completude.
   //
-  // O formulário abre da listagem e edita o papel. Sem este campo, o `<select>`
+  // O formulário abre da listagem e edita o cargo. Sem este campo, o `<select>`
   // dele inicializaria em `USUARIO` e **gravaria** `USUARIO`: corrigir o e-mail
   // de um administrador o rebaixaria, em silêncio. A rede do
   // `ultimo-administrador.ts` pegaria o caso do ÚLTIMO; os outros passariam.
   role: true,
 
-  // `isActive` pelo MESMO motivo, e o defeito aqui é ainda mais calado: o
-  // formulário edita o vínculo com a empresa, e sem o campo na linha o checkbox
-  // nasceria MARCADO — corrigir o telefone de quem foi desativado o reativaria,
-  // devolvendo acesso ao sistema a quem saiu.
+  // `isActive` porque é ele que decide o botão da linha — Desativar ou Ativar —
+  // e esmaece quem saiu da empresa.
   isActive: true,
 } as const;
 
@@ -51,20 +49,11 @@ export const USER_LIST_SELECT = {
 // `OCCUPANT_SELECT`): dois campos acrescentados lá viajariam em cada linha de
 // histórico de todo ativo, para serem usados em uma tela só.
 //
-// Continuam de FORA, e não por esquecimento: `username`, `passwordHash`,
-// `failedLoginCount` e `lockedUntil`. Perfil de colaborador não é tela de
-// credencial, e a allowlist é o que garante que a F3 não os vaze por aqui.
+// Continuam de FORA, e não por esquecimento: `passwordHash`,
+// `failedLoginCount` e `lockedUntil`. A allowlist é o que garante que a F3
+// não os vaze por aqui.
 export const USER_DETAIL_SELECT = {
   ...USER_PUBLIC_SELECT,
   isActive: true,
-
-  // A IDENTIDADE (F11, Etapa E). Só na tela de PERFIL, pelo mesmo motivo de
-  // `isActive`: campos a mais em cada linha de cada histórico de cada ativo,
-  // para serem usados numa tela só.
-  employeeNumber: true,
-  jobTitle: true,
-  phone: true,
-  address: true,
-  hiredAt: true,
 } as const;
 

@@ -6,7 +6,7 @@
 //
 // Mora em arquivo próprio, e não dentro de `asset.types.ts`, porque posse não é
 // um detalhe do ativo: a mesma `Assignment` é lida pela tela do ativo, pela do
-// colaborador (`/users/:id/holdings`) e pela do posto (`/locations/:id/occupants`).
+// colaborador (`/users/:id/history`) e pela do posto (`/workstations/:id`).
 //
 // A dependência é de mão única — `asset.types.ts` importa daqui, e este arquivo
 // não importa de lá. É o que evita ciclo entre dois arquivos de tipo.
@@ -23,7 +23,7 @@ export type AlvoDaPosse = 'USER' | 'LOCATION';
  * Importa na tela: "Laura" por posse direta e "Laura" por ocupar a Mesa 1 são
  * fatos diferentes, e a devolução de cada um é uma operação diferente.
  */
-export type ViaDaResponsabilidade = 'DIRETO' | 'POSTO';
+type ViaDaResponsabilidade = 'DIRETO' | 'POSTO';
 
 /** Uma pessoa que responde pelo ativo. É calculada, nunca lida de coluna. */
 export interface Responsavel {
@@ -70,7 +70,7 @@ export interface PessoaRef {
 }
 
 /** Localização embutida como alvo de uma posse. */
-export interface LocalRef {
+interface LocalRef {
   id: string;
   name: string;
   /**

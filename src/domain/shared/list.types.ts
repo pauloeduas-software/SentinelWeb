@@ -17,8 +17,6 @@ export type ListView = 'active' | 'trashed';
 export interface ListParams {
   page?: number;
   perPage?: number;
-  sort?: string;
-  order?: 'asc' | 'desc';
   q?: string;
   view?: ListView;
 }

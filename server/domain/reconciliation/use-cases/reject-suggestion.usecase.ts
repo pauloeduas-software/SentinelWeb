@@ -15,7 +15,7 @@ import { SUGGESTION_SELECT } from '../helpers/suggestion-select.helper';
  * correta de amanhã — e o rollout do agente vai produzir exatamente isso às
  * centenas, quando máquinas que não mandavam serial passarem a mandar.
  */
-export async function recusarSugestao(id: string, actorId: string | null) {
+export async function recusarSugestao(id: string) {
   const sugestao = await prisma.reconciliationSuggestion.findUnique({
     where: { id },
     select: { id: true, state: true },
@@ -25,9 +25,15 @@ export async function recusarSugestao(id: string, actorId: string | null) {
     throw new AppError('Esta sugestão já foi resolvida.', 409);
   }
 
-  return prisma.reconciliationSuggestion.update({
-    where: { id },
-    data: { state: 'REJECTED', resolvedAt: new Date(), resolvedById: actorId },
-    select: SUGGESTION_SELECT,
+  // `updateMany` com `state: 'PENDING'` no WHERE: a conferência acima e esta
+  // escrita não são atômicas, e um aceite simultâneo pode resolver a sugestão
+  // no meio. Aqui o Postgres decide — se ela não está mais pendente, a linha
+  // não casa e a recusa não grava REJECTED por cima de um vínculo já feito.
+  const { count } = await prisma.reconciliationSuggestion.updateMany({
+    where: { id, state: 'PENDING' },
+    data: { state: 'REJECTED', resolvedAt: new Date() },
   });
+  if (count === 0) throw new AppError('Esta sugestão já foi resolvida.', 409);
+
+  return prisma.reconciliationSuggestion.findUniqueOrThrow({ where: { id }, select: SUGGESTION_SELECT });
 }

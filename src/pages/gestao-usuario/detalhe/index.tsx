@@ -59,7 +59,7 @@ export default function UserDetailPage() {
   }
 
   return (
-    <div className="animate-in fade-in duration-300 space-y-8">
+    <div className="motion-safe:animate-fade-in space-y-8">
 
       <div className="flex justify-between items-end gap-6 flex-wrap">
         <div className="space-y-2">

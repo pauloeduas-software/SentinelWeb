@@ -37,10 +37,11 @@ async function ativoComSerial(serial: string, nome: string) {
 
 async function sugestoesDe(hwid: string) {
   const endpoint = await prisma.endpoint.findUniqueOrThrow({ where: { hwid }, select: { id: true } });
-  const { body } = await api.get<{ rows: { kind: string; signal: string | null; score: number }[] }>(
-    `/api/reconciliation/suggestions?endpointId=${endpoint.id}`,
-  );
-  return body.rows;
+  // A fila não filtra por máquina: o recorte é daqui, sobre as pendentes.
+  const { body } = await api.get<{
+    rows: { kind: string; signal: string | null; score: number; endpoint: { id: string } }[];
+  }>('/api/reconciliation/suggestions');
+  return body.rows.filter((linha) => linha.endpoint.id === endpoint.id);
 }
 
 describe('serial de fábrica em branco não casa com nada', () => {

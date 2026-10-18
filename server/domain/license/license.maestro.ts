@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import { SEM_PARAMETROS } from '../../core/http/sem-parametros';
 import { createLogger } from '../../core/logger/logger';
 import { WRITE_RATE_LIMIT } from '../../core/http/write-rate-limit';
 import { licenseController } from './controllers/license.controller';
@@ -24,12 +24,11 @@ export class LicenseMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
     // ── OS DOIS SINAIS, numa rota só ───────────────────────────────────────
     //
-    // ANTES de `/:id` de propósito (ver o bloco acima). O tipo é FILTRO e não
-    // rota separada porque os dois alertas valem para a mesma tela — a mesma
-    // escolha de quem lê os dois no mesmo painel.
+    // ANTES de `/:id` de propósito (ver o bloco acima). Os dois alertas numa
+    // rota só porque valem para a mesma tela, que lê os dois no mesmo painel.
     server.get('/api/licenses/alerts', async (request: FastifyRequest) => {
-      const { tipo } = alertasQuerySchema.parse(request.query ?? {});
-      return listLicenseAlerts(tipo);
+      SEM_PARAMETROS.parse(request.query ?? {});
+      return listLicenseAlerts();
     });
 
     // ── A DEVOLUÇÃO DE UM ASSENTO ──────────────────────────────────────────
@@ -65,10 +64,3 @@ export class LicenseMaestro {
     logger.info('[Maestro] Rotas de Licenças inicializadas.');
   }
 }
-
-// `strictObject` também na query: `?tip=vencendo` (typo) passaria despercebido
-// devolvendo as duas categorias, que é o mesmo tipo de falha muda que o
-// `parseListQuery` do `core` existe para evitar.
-const alertasQuerySchema = z.strictObject({
-  tipo: z.enum(['vencendo', 'assentosBaixos'], 'tipo inválido: use vencendo ou assentosBaixos').optional(),
-});

@@ -62,13 +62,8 @@ export function createCatalogController(spec: CatalogSpec) {
         delete paginacao[filtroDaLista.campo];
       }
 
-      const query = parseListQuery(paginacao, {
-        sortable: spec.sortable,
-        defaultSort: spec.defaultSort,
-        // Catálogo ordena por nome, não por data: é lista para consultar, não
-        // fila de novidades. E `trashable` fica de fora — aqui não há lixeira (D8).
-        defaultOrder: 'asc',
-      });
+      // Sem `trashable` — aqui não há lixeira (D8).
+      const query = parseListQuery(paginacao);
       return listCatalog(spec, query, filtro);
     },
 

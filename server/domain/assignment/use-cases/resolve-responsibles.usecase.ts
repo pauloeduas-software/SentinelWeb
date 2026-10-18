@@ -28,7 +28,7 @@ export type AlvoPosse = 'USER' | 'LOCATION';
  * da manhã" são fatos diferentes sobre o mesmo ativo: o primeiro se desfaz com
  * uma devolução, o segundo com uma troca de escala.
  */
-export type ViaPosse = 'DIRETO' | 'POSTO';
+type ViaPosse = 'DIRETO' | 'POSTO';
 
 export interface Responsavel {
   id: string;
@@ -172,7 +172,7 @@ export async function resolverResponsaveisEmLote(
   const idsDeLocal = unicos(abertas.map((posse) => posse.targetLocationId));
 
   // `INCLUINDO_LIXEIRA` na pessoa NÃO é descuido com a lixeira: é o contrário.
-  // Filtrado, um colaborador desligado com o notebook na mão devolveria
+  // Filtrado, um colaborador na lixeira com o notebook na mão devolveria
   // `responsaveis: []` — ou seja, "está no estoque", que é falso e é justamente
   // o equipamento que ninguém quer perder de vista. Aparecendo, ele vira a
   // pendência de checkin que é.

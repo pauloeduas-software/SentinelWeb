@@ -4,15 +4,14 @@ import { buildAssetWhere } from '../helpers/asset-filters.helper';
 // Mesmo teto e mesma forma dos outros `/options`: id e nome, sem envelope.
 const MAX_OPCOES = 200;
 
-export interface AssetOption {
+interface AssetOption {
   id: string;
   name: string;
 }
 
 /**
- * Lista enxuta de ativos para `<select>` — hoje a aba **Ativo** do modal de
- * entrega, onde se prende um periférico a outro equipamento (a dock que segura
- * o notebook, o monitor ligado ao desktop).
+ * Lista enxuta de ativos para `<select>` — o seletor de máquina da entrega de
+ * assento de licença e o do vínculo em `/descobertas` (este com `semMaquina`).
  *
  * O `name` que sai daqui é COMPOSTO — `"ATV-00012 — Dell Latitude"` — e não a
  * coluna `name`, que é opcional e quase sempre nula. Num `<select>` de ativos,
@@ -20,10 +19,9 @@ export interface AssetOption {
  * equipamento na prática, e o modelo é o que o torna reconhecível.
  *
  * A lixeira é respeitada sozinha: `Asset` tem `deletedAt` e a extension escopa
- * toda consulta de topo (core/database/soft-delete.extension.ts). Entregar um
- * ativo a outro que está na lixeira não é uma operação que deva existir.
+ * toda consulta de topo (core/database/soft-delete.extension.ts).
  */
-export interface FiltroDeOpcoesDeAtivo {
+interface FiltroDeOpcoesDeAtivo {
   /**
    * Só ativo SEM máquina vinculada. É o seletor de `/descobertas`: vincular a
    * máquina a um ativo que já tem outra é o que `endpoints.assetId @unique`

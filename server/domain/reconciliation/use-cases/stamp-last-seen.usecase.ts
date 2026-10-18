@@ -13,7 +13,7 @@ import { prisma } from '../../../core/database/prismaClient';
  * são máquinas × mensagens por dia de `UPDATE` que quase nunca casa.
  *
  * Pior que o custo: acoplar a tabela de patrimônio ao caminho de ingestão. Um
- * lock em `assets` (um `bulk-update` rodando na tela de ativos) passaria a poder
+ * lock em `assets` (uma entrega ou uma edição segurando a linha) passaria a poder
  * atrasar o batimento do RMM — e um batimento atrasado é o `zombie-cleaner`
  * marcando máquinas vivas como OFFLINE.
  *

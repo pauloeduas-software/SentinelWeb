@@ -8,13 +8,13 @@ import type { ClienteLicenca } from '../helpers/license-seats.helper';
 // As referências da licença existem? E a categoria é do TIPO `LICENSE`?
 //
 // POR QUE CONFERIR ANTES EM VEZ DE DEIXAR A FK FALHAR: o `onDelete: Restrict`
-// das três FKs faz o Postgres recusar um id inexistente com P2003, e o
+// das duas FKs faz o Postgres recusar um id inexistente com P2003, e o
 // error-handler traduz TODO P2003 em 409 "Registro está em uso por outro
-// cadastro" — que não é nem o status nem a frase certa para "esse fornecedor
+// cadastro" — que não é nem o status nem a frase certa para "esse fabricante
 // não existe". Conferir custa uma consulta e devolve 404 com o nome do que
-// faltou. Mesmo desenho do `assertReferenciasDoItem` da F5.
+// faltou. Mesmo desenho do `assertCategoriaDeEstoque` do estoque.
 
-export interface ReferenciasDaLicenca {
+interface ReferenciasDaLicenca {
   categoryId?: string;
   manufacturerId?: string | null;
 }
@@ -48,7 +48,6 @@ export async function assertReferenciasDaLicenca(
       throw new AppError(
         `A categoria "${categoria.name}" é do tipo ${categoria.type} e não serve a uma licença.`,
         422,
-        { categoryType: categoria.type, esperado: 'LICENSE' },
       );
     }
 

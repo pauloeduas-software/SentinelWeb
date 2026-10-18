@@ -72,7 +72,9 @@ describe('a movimentação', () => {
       targetType: 'USER', targetUserId: cenario.laura, notes: 'para o home office',
     });
     expect((await api.post(`/api/stock/items/${fone.id}/adjust`, { kind: 'ENTRADA', qty: 3 })).status).toBe(201);
-    expect((await api.post(`/api/stock/movements/${saida.body.unidades[0].id}/checkin`, { notes: 'voltou' })).status).toBe(200);
+    // A devolução não aceita nota: o corpo com chave é 422, o vazio passa.
+    expect((await api.post(`/api/stock/movements/${saida.body.unidades[0].id}/checkin`, { notes: 'voltou' })).status).toBe(422);
+    expect((await api.post(`/api/stock/movements/${saida.body.unidades[0].id}/checkin`, {})).status).toBe(200);
 
     const { status, body } = await api.get<{ total: number; rows: Evento[] }>(`/api/stock/items/${fone.id}/movements`);
     expect(status).toBe(200);
@@ -152,10 +154,9 @@ describe('a ficha do posto', () => {
     });
     expect(saida.status).toBe(201);
 
-    type Ficha = { itens: { id: string; item: { name: string; category: { name: string } } }[]; totalItens: number; totalAtivos: number };
+    type Ficha = { itens: { id: string; item: { name: string; category: { name: string } } }[]; totalAtivos: number };
     const antes = await api.get<Ficha>(`/api/workstations/${mesa}`);
     expect(antes.status).toBe(200);
-    expect(antes.body.totalItens).toBe(2);
     expect(antes.body.itens.map((u) => u.item.name)).toEqual(['Mouse da ficha do posto', 'Mouse da ficha do posto']);
     // Estoque NÃO conta como ativo: `totalAtivos` é o número que a invariante
     // 19 limita a um, e um mouse não entra nele.
@@ -163,7 +164,6 @@ describe('a ficha do posto', () => {
 
     expect((await api.post(`/api/stock/movements/${saida.body.unidades[0].id}/checkin`, {})).status).toBe(200);
     const depois = await api.get<Ficha>(`/api/workstations/${mesa}`);
-    expect(depois.body.totalItens).toBe(1);
     expect(depois.body.itens.map((u) => u.id)).toEqual([saida.body.unidades[1].id]);
   });
 
@@ -197,15 +197,13 @@ describe('a ficha da pessoa', () => {
     });
     expect(saida.status).toBe(201);
 
-    type Ficha = { itens: { id: string; item: { name: string } }[]; posseAberta: { itensEmPosse: number } };
+    type Ficha = { itens: { id: string; item: { name: string } }[] };
     const antes = await api.get<Ficha>(`/api/users/${pessoa}`);
     expect(antes.status).toBe(200);
     expect(antes.body.itens.map((u) => u.item.name)).toEqual(['Mouse da ficha da pessoa', 'Mouse da ficha da pessoa']);
-    expect(antes.body.posseAberta.itensEmPosse).toBe(antes.body.itens.length);
 
     expect((await api.post(`/api/stock/movements/${saida.body.unidades[0].id}/checkin`, {})).status).toBe(200);
     const depois = await api.get<Ficha>(`/api/users/${pessoa}`);
     expect(depois.body.itens.map((u) => u.id)).toEqual([saida.body.unidades[1].id]);
-    expect(depois.body.posseAberta.itensEmPosse).toBe(1);
   });
 });

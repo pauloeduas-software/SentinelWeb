@@ -19,14 +19,6 @@ import type { Prisma } from '@prisma/client';
  */
 export type WorkstationView = 'todos' | 'vagos' | 'ocupados';
 
-export type WorkstationSortable = 'name' | 'createdAt';
-
-/** Allowlist de ordenação exigida pelo `parseListQuery`. */
-export const WORKSTATION_SORTABLE: readonly [WorkstationSortable, ...WorkstationSortable[]] = [
-  'name',
-  'createdAt',
-];
-
 /**
  * Uma posse ABERTA apontando para o posto — o que faz um ativo "estar entregue"
  * à mesa (docs/referencia/modelo-de-posse.md, Camada 1).

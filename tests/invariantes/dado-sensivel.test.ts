@@ -108,7 +108,7 @@ describe('custo de compra — só `ADMIN` (D148)', () => {
   });
 
   it('quem É ADMIN continua vendo o custo', async () => {
-    // A metade esquecida do teste de permissão: provar que o papel ABRE é o que
+    // A metade esquecida do teste de permissão: provar que o cargo ABRE é o que
     // impede uma implementação que esconde de todos e passa no caso de cima.
     const resposta = await api.get<Record<string, unknown>>(`/api/assets/${assetId}`);
 
@@ -116,12 +116,12 @@ describe('custo de compra — só `ADMIN` (D148)', () => {
   });
 
   it('a BUSCA GLOBAL não traz a propriedade — no acerto exato nem no aproximado', async () => {
-    // A QUARTA PORTA, e ela também faltava. `GET /api/search` devolve o ativo
-    // inteiro com o select da listagem, nos três passos (etiqueta, série,
-    // aproximado): um técnico que bipasse a etiqueta recebia o custo que a
-    // listagem lhe esconde. Os dois caminhos são consultas diferentes, então os
-    // dois são conferidos — um `select` esquecido no aproximado passaria pelo
-    // caso do exato.
+    // A QUARTA PORTA. `GET /api/search` devolvia o ativo inteiro com o select
+    // da listagem: um técnico que bipasse a etiqueta recebia o custo que a
+    // listagem lhe esconde. Hoje a busca devolve só o que identifica o ativo,
+    // para todo cargo. Os dois caminhos são consultas diferentes, então os dois
+    // são conferidos — um `select` esquecido no aproximado passaria pelo caso
+    // do exato.
     type Busca = { tipo: string; ativos: Record<string, unknown>[] };
 
     const exato = await semSegredo.get<Busca>('/api/search?q=ATV-CUSTO-1');
@@ -134,12 +134,48 @@ describe('custo de compra — só `ADMIN` (D148)', () => {
     const linha = aproximado.body.ativos.find((a) => a.assetTag === 'ATV-CUSTO-1');
     expect(linha).toBeDefined();
     expect(Object.hasOwn(linha!, 'purchaseCost')).toBe(false);
+  });
 
-    // E o ADMIN continua vendo, pelos dois caminhos.
-    const comoAdmin = await api.get<Busca>('/api/search?q=ATV-CUSTO-1');
-    expect(comoAdmin.body.ativos[0].purchaseCost).toBe('4250.9');
-    const aproximadoDoAdmin = await api.get<Busca>('/api/search?q=CUSTO');
-    expect(aproximadoDoAdmin.body.ativos.find((a) => a.assetTag === 'ATV-CUSTO-1')?.purchaseCost).toBe('4250.9');
+  it('as respostas de ESCRITA não trazem o custo, para cargo nenhum', async () => {
+    // A QUINTA PORTA: criar, editar, entregar, devolver, dar baixa e restaurar
+    // respondem com o ativo atualizado, e o técnico chama todas elas. A edição
+    // é a que mais importa, porque é a que ele usa todo dia.
+    const doTecnico = await semSegredo.put<Record<string, unknown>>(`/api/assets/${assetId}`, { notes: 'do técnico' });
+    expect(doTecnico.status).toBe(200);
+    expect(Object.hasOwn(doTecnico.body, 'purchaseCost')).toBe(false);
+
+    const doAdmin = await api.put<Record<string, unknown>>(`/api/assets/${assetId}`, { notes: 'do admin' });
+    expect(doAdmin.status).toBe(200);
+    expect(Object.hasOwn(doAdmin.body, 'purchaseCost')).toBe(false);
+  });
+
+  it('o técnico edita sem apagar o custo que não vê', async () => {
+    // O formulário antigo mandava `purchaseCost: ''` — o campo abria vazio para
+    // quem não recebe o valor —, e o servidor gravava `null` por cima. Agora o
+    // custo que chega de quem não é ADMIN é descartado.
+    const resposta = await semSegredo.put(`/api/assets/${assetId}`, { name: 'Renomeado pelo técnico', purchaseCost: '' });
+    expect(resposta.status).toBe(200);
+
+    const gravado = await prisma.asset.findUniqueOrThrow({ where: { id: assetId }, select: { purchaseCost: true } });
+    expect(gravado.purchaseCost?.toString()).toBe('4250.9');
+  });
+
+  it('o HISTÓRICO não mostra a mudança de custo a quem não é ADMIN', async () => {
+    expect((await api.put(`/api/assets/${assetId}`, { purchaseCost: '5000.00' })).status).toBe(200);
+
+    type Historico = { total: number; rows: { action: string; changes: Record<string, unknown> | null }[] };
+    const mexeuNoCusto = (linhas: Historico['rows']) =>
+      linhas.some((linha) => linha.changes !== null && Object.hasOwn(linha.changes, 'purchaseCost'));
+
+    const doAdmin = await api.get<Historico>(`/api/assets/${assetId}/history`);
+    expect(mexeuNoCusto(doAdmin.body.rows)).toBe(true);
+
+    const doTecnico = await semSegredo.get<Historico>(`/api/assets/${assetId}/history`);
+    expect(doTecnico.status).toBe(200);
+    expect(mexeuNoCusto(doTecnico.body.rows)).toBe(false);
+    // E o total não entrega que havia um evento a mais.
+    expect(doTecnico.body.total).toBe(doTecnico.body.rows.length);
+    expect(doAdmin.body.total).toBe(doTecnico.body.total + 1);
   });
 });
 

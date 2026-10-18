@@ -110,7 +110,8 @@ describe('pelo agente de verdade, e só quando há ativo', () => {
       const atual = await prisma.endpoint.findUnique({ where: { hwid } });
       return atual?.ramTotalBytes === 17179869184n ? atual : null;
     });
-    expect(await prisma.assetChange.count({ where: { endpointId: endpoint.id } })).toBe(0);
+    // Sem ativo não há a quem pendurar a mudança: nenhuma linha com a RAM nova.
+    expect(await prisma.assetChange.count({ where: { newValue: '17179869184' } })).toBe(0);
 
     // Agora vincula, e troca de novo.
     const ativo = await criarAtivo(api, { statusId, modelId, name: 'Notebook do teste de hardware' });
@@ -123,7 +124,6 @@ describe('pelo agente de verdade, e só quando há ativo', () => {
 
     expect(mudanca.oldValue).toBe('17179869184');
     expect(mudanca.newValue).toBe('34359738368');
-    expect(mudanca.endpointId).toBe(endpoint.id);
 
     // E a aba Máquina mostra as duas coisas: a spec de agora e de onde ela veio.
     const { body } = await api.get<{

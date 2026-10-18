@@ -11,10 +11,11 @@ import {
 // *"alguém responde por isto quando a pessoa sai?"*.
 //
 // Assento de licença responde SIM: ele custa dinheiro por mês e é nominal. A F5
-// já respondeu isso para o acessório, e a resposta mudou quatro arquivos fora
-// do domínio dela. A F6 responde igual.
+// já respondeu isso para a unidade de estoque, e a resposta mudou quatro
+// arquivos fora do domínio dela. A F6 responde igual.
 //
-// SEM ESTA COSTURA o desligamento fecharia tudo MENOS a licença, e o sintoma
+// SEM ESTA COSTURA a desativação e a exclusão do colaborador cobrariam tudo
+// MENOS a licença, e o sintoma
 // não é um erro — é um número de assentos ocupados que nunca desce. A empresa
 // compra assento novo porque "não tem livre", e os livres estão com gente que
 // saiu. É o D82 outra vez: o passo que não dá erro quando falta é o que precisa
@@ -41,7 +42,7 @@ describe('o 409 do DELETE conhece o assento', () => {
     });
     await api.post(`/api/licenses/${licenca.id}/checkout-seat`, { assignedUserId: pessoa });
 
-    const recusa = await api.delete<{ error: string; assentosEmPosse: number }>(
+    const recusa = await api.delete<{ error: string }>(
       `/api/users/${pessoa}`,
     );
     expect(recusa.status).toBe(409);
@@ -49,11 +50,6 @@ describe('o 409 do DELETE conhece o assento', () => {
     // lugar errado, e a camada da licença é justamente a que ninguém lembra.
     expect(recusa.body.error).toContain('1 assento de licença');
     expect(recusa.body.error).toContain('Devolva o que está com ele e encerre as ocupações');
-    // E O NÚMERO TAMBÉM NOS `details`: é por eles que a tela decide abrir o
-    // modal de desligamento, sem reparsear uma frase em português. Sem
-    // `assentosEmPosse`, quem só ocupa assento recebia um 409 com todos os
-    // números em zero e a tela concluía que não havia nada a desligar.
-    expect(recusa.body.assentosEmPosse).toBe(1);
   });
 
   it('não deixa excluir ativo que ainda ocupa assento', async () => {
@@ -73,7 +69,7 @@ describe('o 409 do DELETE conhece o assento', () => {
 });
 
 describe('quem não pode receber assento', () => {
-  it('desligado responde 409 — a pessoa existe, o estado recusa', async () => {
+  it('desativado responde 409 — a pessoa existe, o estado recusa', async () => {
     const pessoa = await criarColaborador(api, { name: 'Felipe Rocha', email: 'felipe@teste.local' });
     // Desativada pela porta da tela, como no teste de posse: o que este caso
     // prova é a recusa do CHECKOUT DE ASSENTO.
@@ -89,7 +85,7 @@ describe('quem não pode receber assento', () => {
     // Sem esta recusa, entregar a quem saiu da empresa reabriria uma pendência
     // que alguém acabou de fechar à mão.
     expect(recusa.status).toBe(409);
-    expect(recusa.body.error).toContain('desligado');
+    expect(recusa.body.error).toContain('desativado');
   });
 });
 

@@ -20,7 +20,7 @@ import type { LicenseFilters } from '../schemas/license.schema';
  *
  */
 export async function listLicenses(
-  query: ListQuery<string>,
+  query: ListQuery,
   filtros: LicenseFilters,
 ): Promise<ListEnvelope<LicencaNaResposta>> {
   // Espalhamento, e não `AND`: a busca só escreve `OR`, a vista só escreve
@@ -39,7 +39,7 @@ export async function listLicenses(
     rows: await tx.license.findMany({
       where,
       select: LICENSE_SELECT,
-      orderBy: { [query.sort]: query.order },
+      orderBy: { name: 'asc' },
       skip: query.skip,
       take: query.take,
     }) as LinhaDeLicenca[],
@@ -68,7 +68,7 @@ export async function listLicenses(
  * colunas desta tabela: é assim que se procura licença na prática — "as da
  * Microsoft", não o número do pedido.
  */
-export function buildLicenseWhere(q?: string): Prisma.LicenseWhereInput {
+function buildLicenseWhere(q?: string): Prisma.LicenseWhereInput {
   if (!q) return {};
   const contem = { contains: q, mode: 'insensitive' } as const;
 
@@ -88,6 +88,6 @@ export function buildLicenseWhere(q?: string): Prisma.LicenseWhereInput {
  * toda consulta sozinha. `trashed` escreve `deletedAt: { not: null }`, que é o
  * escape hatch documentado da extension.
  */
-export function buildLicenseViewWhere(view: 'active' | 'trashed'): Prisma.LicenseWhereInput {
+function buildLicenseViewWhere(view: 'active' | 'trashed'): Prisma.LicenseWhereInput {
   return view === 'trashed' ? { deletedAt: { not: null } } : {};
 }

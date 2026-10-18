@@ -3,12 +3,11 @@ import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { contarAssentosDe, travarAssento, type ClienteLicenca, type ClienteQueTrava } from '../helpers/license-seats.helper';
 import { SEAT_CHECKOUT_SELECT } from '../helpers/license-select.helper';
-import type { CheckinSeatData } from '../schemas/license.schema';
 
 // A DEVOLUÇÃO DE UM ASSENTO — e a queima, quando a licença não é reatribuível.
 //
 // ═════════════════════════════════════════════════════════════════════════════
-// POR QUE ESTE CHECKIN TRAVA O ASSENTO, SE O DO ACESSÓRIO NÃO TRAVA NADA.
+// POR QUE ESTE CHECKIN TRAVA O ASSENTO, SE O DO ESTOQUE NÃO TRAVA NADA.
 //
 // Duas razões, e a segunda é a que não é óbvia.
 //
@@ -45,7 +44,6 @@ function lerCheckout(tx: ClienteLicenca, checkoutId: string) {
 
 export async function checkinSeat(
   seatId: string,
-  data: CheckinSeatData,
   actorId: string | null,
 ): Promise<ResultadoDaDevolucao> {
   return prisma.$transaction(async (tx) => {
@@ -73,7 +71,6 @@ export async function checkinSeat(
       throw new AppError(
         `O assento ${assento.seatNumber} de "${assento.license.name}" não está ocupado.`,
         409,
-        { seatNumber: assento.seatNumber },
       );
     }
 
@@ -81,7 +78,7 @@ export async function checkinSeat(
 
     await tx.licenseSeatCheckout.update({
       where: { id: aberta.id },
-      data: { checkinAt: devolvidoEm, checkinNotes: data.notes ?? null, checkinById: actorId },
+      data: { checkinAt: devolvidoEm },
     });
 
     // ── A QUEIMA (D43) ───────────────────────────────────────────────────────

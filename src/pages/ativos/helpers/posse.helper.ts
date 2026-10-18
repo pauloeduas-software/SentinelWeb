@@ -20,12 +20,12 @@ export const TRACO = '—';
  * EXATAMENTE como foi digitado: normalizar a caixa aqui estragaria "12x36 A" e
  * reescreveria texto que é do usuário, não nosso.
  */
-export function nomeComTurno(responsavel: Responsavel): string {
+function nomeComTurno(responsavel: Responsavel): string {
   return responsavel.shift ? `${responsavel.name} (${responsavel.shift})` : responsavel.name;
 }
 
 /** "Laura (Manhã), Ana (Tarde)" — a Mesa 1 inteira numa linha. */
-export function formatarResponsaveis(responsaveis: readonly Responsavel[]): string {
+function formatarResponsaveis(responsaveis: readonly Responsavel[]): string {
   return responsaveis.map(nomeComTurno).join(', ');
 }
 

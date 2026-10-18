@@ -2,7 +2,7 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { errorCode } from '../../../core/errors/error-shape';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
-import { ASSET_SELECT } from '../../asset/helpers/asset-select.helper';
+import { ASSET_WRITE_SELECT } from '../../asset/helpers/asset-select.helper';
 import { assertStatusCoerenteComPosse } from '../../asset/use-cases/assert-status-posse.usecase';
 import { travarAtivoOuFalhar } from '../../asset/use-cases/lock-asset.usecase';
 import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
@@ -16,54 +16,18 @@ import type { AlvoPosse, ClientePosse } from './resolve-responsibles.usecase';
 
 // A ENTREGA — Camada 1 do docs/referencia/modelo-de-posse.md.
 //
-// É uma das duas únicas operações que escrevem `Asset.assignedToId` (a outra é
-// a devolução). O formulário de ativo perdeu esse campo na F4 de propósito: um
-// campo editável à mão ao lado de uma tabela de posse são duas fontes de verdade
-// para o mesmo fato, e nada impede divergirem (D14).
+// É uma das duas únicas operações que escrevem posse (a outra é a devolução).
+// O formulário de ativo não tem "responsável" de propósito: um campo editável à
+// mão ao lado de uma tabela de posse são duas fontes de verdade para o mesmo
+// fato, e nada impede divergirem (D14).
 
-export interface CheckoutData {
+interface CheckoutData {
   targetType: AlvoPosse;
   targetUserId?: string | null;
   targetLocationId?: string | null;
   statusId?: string | null;
   expectedCheckinAt?: Date | null;
   checkoutNotes?: string | null;
-
-  // ── AS DUAS CHAVES DA IMPORTAÇÃO (F10, D131) ──────────────────────────────
-  //
-  // NENHUMA DAS DUAS ESTÁ NO `checkoutSchema`, e isso é a defesa: o
-  // `strictObject` da borda recusa com 422 quem as mandar pela API. Elas só
-  // existem para quem chama este use-case de dentro do servidor — hoje, o
-  // importador de CSV.
-
-  /**
-   * QUANDO a entrega aconteceu no mundo físico. Ausente, é agora (o
-   * `@default(now())` da coluna).
-   *
-   * Existe porque a carga inicial de uma empresa é um CSV de equipamento que já
-   * está na mão das pessoas há anos: gravar tudo com a data de hoje faria o
-   * histórico de posse nascer mentindo, e é justamente o histórico que alguém
-   * abre para perguntar "desde quando isto é dele?".
-   *
-   * A data é validada como NÃO FUTURA na borda do importador
-   * (`dataNaoFutura`, em shared/fields.schema.ts) — e não aqui, porque este
-   * use-case recebe `Date` já construído, não string de formulário.
-   */
-  checkoutAt?: Date | null;
-
-  /**
-   * Não emite termo de entrega e não manda e-mail nenhum.
-   *
-   * POR QUE ISTO EXISTE: importar 500 equipamentos já entregues emitiria 500
-   * termos e mandaria 500 convites para assinar o recebimento de um notebook
-   * que a pessoa usa desde 2024. O termo ficaria pendente para sempre — ele
-   * nasce `PENDENTE` e só o aceite o fecha —, então a primeira importação
-   * encheria a tela de pendência que ninguém pode resolver, e o e-mail já teria
-   * saído: não há como desfazer.
-   *
-   * A TELA NUNCA PASSA ISTO. Entrega feita por gente continua emitindo termo e
-   * avisando, que é o fluxo da F4 inteiro.
-   */
 }
 
 /**
@@ -107,7 +71,6 @@ function assertAlvoCoerente(data: CheckoutData): string {
     throw new AppError(
       'Uma entrega tem UM alvo: preencha só a chave que corresponde ao targetType.',
       422,
-      { targetType: data.targetType, sobrando: intrusas.map((tipo) => FK_DO_ALVO[tipo]) },
     );
   }
 
@@ -142,18 +105,19 @@ async function assertAlvoExiste(
     });
     if (!pessoa) throw new AppError('Colaborador não encontrado.', 404);
 
-    // DESLIGADO é diferente de APAGADO, e os dois precisam ser recusados aqui
+    // DESATIVADO é diferente de APAGADO, e os dois precisam ser recusados aqui
     // (D32). Quem saiu da empresa continua no cadastro — é o histórico de posse
     // que exige isso —, mas entregar equipamento a ele reabriria, uma linha
-    // depois do desligamento, exatamente a pendência que o desligamento fechou.
+    // depois da desativação, exatamente a pendência que a desativação exigiu
+    // fechada (`update-user.usecase.ts`).
     // 409 e não 404: a pessoa existe, o estado dela é que recusa.
     if (!pessoa.isActive) {
-      throw new AppError(`${pessoa.name} está desligado(a) e não pode receber equipamento.`, 409);
+      throw new AppError(`${pessoa.name} está desativado(a) e não pode receber equipamento.`, 409);
     }
     return;
   }
 
-  // DESATIVADA é a mesma recusa do colaborador desligado, um degrau acima: o
+  // DESATIVADA é a mesma recusa do colaborador desativado, um degrau acima: o
   // local continua no histórico e não recebe entrega nova. `UPDATE` e não
   // `SHARE`: a invariante 19 trava este mesmo posto `FOR UPDATE` logo adiante,
   // e subir de uma para a outra é deadlock entre duas entregas ao mesmo posto.
@@ -209,12 +173,6 @@ export async function assertStatusEscolhivel(client: ClienteQueTrava, statusId: 
 }
 
 export async function checkoutAsset(assetId: string, data: CheckoutData, actorId: string | null) {
-  const resultado = await executarCheckout(assetId, data, actorId);
-
-  return resultado;
-}
-
-async function executarCheckout(assetId: string, data: CheckoutData, actorId: string | null) {
   // Fora da transação: é validação de FORMATO do corpo, não lê o banco, e
   // abrir transação para recusar um payload incoerente é segurar conexão à toa.
   const alvoId = assertAlvoCoerente(data);
@@ -227,9 +185,9 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
     // A TRAVA, antes de qualquer leitura — e antes do ativo, que é a ordem
     // combinada (`user/use-cases/lock-user.usecase.ts`).
     //
-    // Sem ela, `assertAlvoExiste` lê `isActive: true` de um colaborador que um
-    // desligamento simultâneo está prestes a marcar como desligado, e a posse
-    // nasce NO NOME DE UM DESLIGADO — o estado que o D32 existe para impedir e
+    // Sem ela, `assertAlvoExiste` lê `isActive: true` de um colaborador que uma
+    // desativação simultânea está prestes a marcar como inativo, e a posse
+    // nasce NO NOME DE UM DESATIVADO — o estado que o D32 existe para impedir e
     // que nenhuma consulta acusa, porque nada falhou.
     //
     // Só no alvo `USER`: entrega a posto não disputa linha de usuário nenhuma,
@@ -268,7 +226,6 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
       throw new AppError(
         `${ativo.assetTag} teve baixa em ${diaEmPortugues(ativo.retiredAt)} e não pode ser entregue. Desfaça a baixa antes.`,
         409,
-        { retiredAt: ativo.retiredAt.toISOString() },
       );
     }
 
@@ -278,7 +235,7 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
       where: { assetId, checkinAt: null },
       select: { id: true },
     });
-    if (aberta) throw new AppError(JA_ENTREGUE, 409, { assignmentId: aberta.id });
+    if (aberta) throw new AppError(JA_ENTREGUE, 409);
 
     // A regra que dá sentido ao `StatusLabelType`: só `DEPLOYABLE` é "está no
     // estoque, pode ser entregue". Sem ela o tipo vira enfeite — foi essa a
@@ -288,7 +245,6 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
       throw new AppError(
         `Só ativo disponível pode ser entregue, e este está como "${ativo.status.name}".`,
         409,
-        { statusType: ativo.status.type },
       );
     }
 
@@ -300,7 +256,7 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
     // não é posto de trabalho.
     if (data.targetType === 'LOCATION') {
       const ocupante = await ativoDoPosto(tx, alvoId, assetId);
-      if (ocupante) throw new AppError(jaTemAtivo(ocupante), 409, { assetId: ocupante.id });
+      if (ocupante) throw new AppError(jaTemAtivo(ocupante), 409);
     }
 
     // O status escolhido à mão: existe (404) e NÃO é de estoque (422). A guarda
@@ -314,7 +270,6 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
         throw new AppError(
           `"${escolhido.name}" é um status de estoque e não serve para um ativo entregue. Escolha outro.`,
           422,
-          { statusType: escolhido.type },
         );
       }
     }
@@ -333,15 +288,9 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
           targetLocationId: data.targetType === 'LOCATION' ? alvoId : null,
           expectedCheckinAt: data.expectedCheckinAt ?? null,
           checkoutNotes: data.checkoutNotes ?? null,
-          // `undefined` e não `null`: a coluna é obrigatória com
-          // `@default(now())`, então omitir é o que deixa o banco carimbar a
-          // hora. Um `null` aqui seria violação de NOT NULL, não "use o padrão".
-          checkoutAt: data.checkoutAt ?? undefined,
-          // QUEM ENTREGOU. A coluna nasceu nulável esperando a F3 e a partir
-          // daqui tem nome — e este nome não é trilha de auditoria: ele sai
-          // IMPRESSO no termo de entrega (F4), que é dado de negócio e precisa
-          // sobreviver a qualquer expurgo do ActivityLog (D25). O que ficou
-          // para trás continua nulo de propósito: não há backfill (D24).
+          // QUEM ENTREGOU: é o ator da entrega no histórico da pessoa
+          // (`user-history.usecase.ts`). O que ficou para trás continua nulo
+          // de propósito: não há backfill (D24).
           checkoutById: actorId,
         },
         select: ASSIGNMENT_SELECT,
@@ -366,14 +315,8 @@ async function executarCheckout(assetId: string, data: CheckoutData, actorId: st
 
     const ativoAtualizado = await tx.asset.update({
       where: { id: assetId },
-      data: {
-        statusId,
-        // CACHE do caso `USER`, e só dele: entregue a uma localização, quem
-        // responde são os ocupantes do posto, e um id de pessoa aqui seria uma
-        // resposta que a Camada 3 não daria.
-        assignedToId: data.targetType === 'USER' ? alvoId : null,
-      },
-      select: ASSET_SELECT,
+      data: { statusId },
+      select: ASSET_WRITE_SELECT,
     });
 
     // No histórico do ATIVO, não no da posse: é a linha do tempo do equipamento

@@ -79,6 +79,5 @@ export async function assertStatusCoerenteComPosse(
   throw new AppError(
     `"${status.name}" ${motivo}, e este ativo está entregue. Faça a devolução antes de mudar o status.`,
     409,
-    { assignmentId: posse.id, targetType: posse.targetType, statusType: status.type },
   );
 }

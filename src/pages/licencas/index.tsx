@@ -32,7 +32,7 @@ export default function LicencasPage() {
   const podeApagar = usePode('ADMIN');
 
   return (
-    <div className="animate-in fade-in duration-300 flex flex-col pb-6">
+    <div className="motion-safe:animate-fade-in flex flex-col pb-6">
 
       <div className="flex justify-between items-end mb-6 shrink-0">
         <div>

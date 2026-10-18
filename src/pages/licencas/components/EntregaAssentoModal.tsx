@@ -57,7 +57,7 @@ export default function EntregaAssentoModal({ licenca, onClose, onSubmit }: Entr
       await onSubmit(corpo);
     } catch (falha) {
       // É aqui que aparecem o 409 de sem assento livre (com os números), o 409
-      // do colaborador desligado e o 409 do ativo baixado.
+      // do colaborador desativado e o 409 do ativo baixado.
       setErro((falha as Error).message);
     } finally {
       setSalvando(false);

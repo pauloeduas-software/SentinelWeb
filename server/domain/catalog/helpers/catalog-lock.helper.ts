@@ -76,7 +76,7 @@ export async function travarLocalParaEscrita(client: ClienteQueTrava, id: string
   await client.$queryRaw`SELECT id FROM locations WHERE id = ${id}::uuid FOR NO KEY UPDATE`;
 }
 
-export interface StatusLido {
+interface StatusLido {
   id: string;
   name: string;
   type: $Enums.StatusLabelType;
@@ -98,7 +98,7 @@ export async function lerStatusTravado(client: ClienteQueTrava, id: string): Pro
   return linhas[0];
 }
 
-export interface CategoriaLida {
+interface CategoriaLida {
   id: string;
   name: string;
   type: $Enums.CategoryType;
@@ -142,7 +142,7 @@ export async function assertLocalRecebe(
   }
 }
 
-export interface RegistroLido {
+interface RegistroLido {
   id: string;
   name: string;
   isActive: boolean;

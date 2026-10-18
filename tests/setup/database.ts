@@ -1,6 +1,7 @@
 import { prisma } from '../../server/core/database/prismaClient';
 import { getDatabaseUrl } from '../../server/core/config/env';
 import { semearBanco } from '../../prisma/seeds/index';
+import { hashSenha } from '../../server/domain/auth/helpers/password.helper';
 
 // O BANCO DE TESTE — e a trava que impede o harness de apagar o seu.
 //
@@ -74,7 +75,7 @@ export function exigirBancoDeTeste(): string {
  * disso é dado de um arquivo vazando para o próximo, o bug mais caro de
  * diagnosticar que uma suíte pode ter.
  */
-export async function truncarTudo(): Promise<void> {
+async function truncarTudo(): Promise<void> {
   exigirBancoDeTeste();
 
   const tabelas = await prisma.$queryRaw<{ tablename: string }[]>`
@@ -101,4 +102,29 @@ export async function truncarTudo(): Promise<void> {
 export async function resetarBanco(): Promise<void> {
   await truncarTudo();
   await semearBanco();
+  await criarAdministradorDeTeste();
+}
+
+/**
+ * O administrador com que o harness entra (`tests/helpers/app.ts`).
+ *
+ * O seed não cria conta nenhuma — o primeiro administrador de um ambiente de
+ * verdade é criado à mão por quem instala —, então o harness cria o seu. Direto
+ * no banco, e não pela API, porque é ele que abre a primeira sessão: sem um
+ * administrador, nenhuma rota de cadastro aceita a requisição.
+ */
+export const ADMIN_DE_TESTE = {
+  email: 'admin@sentinel.local',
+  password: process.env.ADMIN_PASSWORD ?? 'senha-do-admin-de-teste',
+};
+
+async function criarAdministradorDeTeste(): Promise<void> {
+  await prisma.user.create({
+    data: {
+      name: 'Administrador',
+      email: ADMIN_DE_TESTE.email,
+      passwordHash: await hashSenha(ADMIN_DE_TESTE.password),
+      role: 'ADMIN',
+    },
+  });
 }

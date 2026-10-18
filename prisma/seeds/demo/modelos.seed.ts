@@ -1,5 +1,6 @@
 import { prisma } from '../../../server/core/database/prismaClient';
 import { logger, type Seeder } from '../seeder';
+import { mesmoNome } from './garantir-por-nome';
 
 // MODELOS DE COMPUTADOR das linhas mais populares no Brasil, por fabricante —
 // ativo é computador, então só Notebook, Desktop e Servidor.
@@ -38,8 +39,6 @@ const MODELOS: readonly { fabricante: string; name: string; categoria: Categoria
   { fabricante: 'Montado', name: 'Servidor montado', categoria: 'Servidor', notes: NOTA_DO_MONTADO },
 ];
 
-const sem = (nome: string) => ({ equals: nome, mode: 'insensitive' as const });
-
 export const modelosDemo: Seeder = {
   name: 'Modelos (demonstração)',
   run: async () => {
@@ -52,8 +51,8 @@ export const modelosDemo: Seeder = {
 
     for (const modelo of MODELOS) {
       const [fabricante, categoria] = await Promise.all([
-        prisma.manufacturer.findFirst({ where: { name: sem(modelo.fabricante) }, select: { id: true } }),
-        prisma.category.findFirst({ where: { name: sem(modelo.categoria), type: 'ASSET' }, select: { id: true } }),
+        prisma.manufacturer.findFirst({ where: mesmoNome(modelo.fabricante), select: { id: true } }),
+        prisma.category.findFirst({ where: { ...mesmoNome(modelo.categoria), type: 'ASSET' }, select: { id: true } }),
       ]);
       if (!fabricante || !categoria) {
         pulados += 1;
@@ -63,7 +62,7 @@ export const modelosDemo: Seeder = {
       // O modelo não tem nome único (o número é que é, por fabricante), então
       // a chave da idempotência é o par fabricante + nome.
       const existe = await prisma.assetModel.findFirst({
-        where: { manufacturerId: fabricante.id, name: sem(modelo.name) },
+        where: { manufacturerId: fabricante.id, ...mesmoNome(modelo.name) },
         select: { id: true },
       });
       if (existe) continue;

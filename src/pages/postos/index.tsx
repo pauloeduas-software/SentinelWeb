@@ -26,7 +26,7 @@ export default function PostosPage() {
   const podeCriar = usePode('ADMIN');
 
   return (
-    <div className="animate-in fade-in duration-300 h-[calc(100vh-4rem)] flex flex-col pb-6">
+    <div className="motion-safe:animate-fade-in h-[calc(100vh-4rem)] flex flex-col pb-6">
 
       <div className="flex justify-between items-end mb-6 shrink-0">
         <div>
@@ -152,6 +152,7 @@ export default function PostosPage() {
           onViewChange={ocupantes.changeView}
           onAdicionar={ocupantes.handleAdicionar}
           onEncerrar={ocupantes.handleEncerrar}
+          onCorrigirTurno={ocupantes.handleCorrigirTurno}
           onDevolver={handleDevolver}
           devolvendo={devolvendo}
           onDevolverItem={handleDevolverItem}

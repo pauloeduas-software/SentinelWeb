@@ -19,7 +19,7 @@ import { contarEstoqueDoUsuario } from '../../stock/use-cases/count-user-stock.u
 // entraram junto com os outros em vez de virarem uma contagem que alguém
 // precisasse lembrar de somar.
 
-export interface PosseAbertaDoUsuario {
+interface PosseAbertaDoUsuario {
   /** `Assignment` abertas com alvo `USER` — o que devolver. */
   ativosEmPosse: number;
   /** `LocationOccupant` abertas — o que encerrar. */
@@ -40,10 +40,9 @@ export interface PosseAbertaDoUsuario {
 }
 
 /**
- * Recebe o cliente (global ou de transação) porque os dois chamadores precisam
- * de coisas diferentes: o `DELETE` conta DENTRO da transação que vai apagar
- * (contar fora deixaria uma janela entre a contagem e o `UPDATE` em que uma
- * entrega nova passaria), e a tela de perfil conta por fora, só para mostrar.
+ * Recebe o cliente de transação porque quem conta é a exclusão e a
+ * desativação, DENTRO da transação que grava: contar fora deixaria uma janela
+ * entre a contagem e o `UPDATE` em que uma entrega nova passaria.
  */
 export async function contarPosseAberta(
   client: ClientePosse,
@@ -74,17 +73,20 @@ function quantos(total: number, singular: string, plural: string): string {
 }
 
 /**
- * A frase do 409 do `DELETE`, montada a partir das duas contagens.
+ * A frase do 409 da exclusão e da desativação, montada a partir das contagens.
  *
  * Mora aqui, ao lado da contagem, porque o texto e os números têm que mudar
  * juntos: um 409 que diz "ainda responde por ativos" sem dizer QUANTOS e por
  * qual das duas camadas manda o operador procurar no lugar errado — e a camada
  * do posto é justamente a que ninguém lembra.
  *
- * Devolve `null` quando não há nada aberto: é o sinal de que o `DELETE` pode
- * seguir, sem o chamador reinterpretar os dois números.
+ * Devolve `null` quando não há nada aberto: é o sinal de que a operação pode
+ * seguir, sem o chamador reinterpretar os números.
  */
-export function motivoParaNaoExcluir(posse: PosseAbertaDoUsuario): string | null {
+export function motivoParaRecusar(
+  posse: PosseAbertaDoUsuario,
+  operacao: 'excluir' | 'desativar',
+): string | null {
   const partes: string[] = [];
   if (posse.ativosEmPosse > 0) partes.push(`responde por ${quantos(posse.ativosEmPosse, 'ativo', 'ativos')}`);
   if (posse.assentosEmPosse > 0) {
@@ -107,5 +109,5 @@ export function motivoParaNaoExcluir(posse: PosseAbertaDoUsuario): string | null
   // A FRASE DIZ O QUE FAZER, e o que ela manda fazer tem que EXISTIR: devolver
   // o ativo, o assento e a unidade de estoque, e encerrar a ocupação, são as
   // quatro operações que zeram as quatro pontas contadas acima.
-  return `Este colaborador ainda ${frase}. Devolva o que está com ele e encerre as ocupações antes de excluir.`;
+  return `Este colaborador ainda ${frase}. Devolva o que está com ele e encerre as ocupações antes de ${operacao}.`;
 }

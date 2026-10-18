@@ -5,17 +5,17 @@ import { recordActivity } from '../../activity/use-cases/record-activity.usecase
 import {
   assertEscolhaAtiva, assertLocalRecebe, lerModeloTravado, lerStatusTravado,
 } from '../../catalog/helpers/catalog-lock.helper';
-import { ASSET_SELECT } from '../helpers/asset-select.helper';
+import { ASSET_SELECT, semCusto } from '../helpers/asset-select.helper';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
 import { assertEtiquetaESerieLivres } from './assert-unique-asset.usecase';
 import { assertStatusCoerenteComPosse } from './assert-status-posse.usecase';
 import type { CreateAssetData } from './create-asset.usecase';
 
-export type UpdateAssetData = Partial<CreateAssetData>;
+type UpdateAssetData = Partial<CreateAssetData>;
 
 const CAMPOS_AUDITADOS = [
   'assetTag', 'serial', 'name', 'notes',
-  'statusId', 'modelId', 'locationId', 'assignedToId',
+  'statusId', 'modelId', 'locationId',
   'orderNumber', 'purchaseDate', 'purchaseCost',
 ] as const;
 
@@ -81,14 +81,9 @@ export async function updateAsset(id: string, data: UpdateAssetData, actorId: st
         name: data.name,
         notes: data.notes,
         locationId: data.locationId,
-        // `assignedToId` NÃO está aqui de propósito: quem escreve nele é só o
-        // checkout/checkin (docs/referencia/modelo-de-posse.md). Continua em
-        // `CAMPOS_AUDITADOS` acima — o checkout grava, e o diff precisa pegar.
         orderNumber: data.orderNumber,
         purchaseDate: data.purchaseDate,
         purchaseCost: data.purchaseCost,
-        // Autoria (D26). `createdById` NÃO entra aqui: quem criou não muda.
-        updatedById: actorId,
       },
       select: ASSET_SELECT,
     });
@@ -103,6 +98,8 @@ export async function updateAsset(id: string, data: UpdateAssetData, actorId: st
       );
     }
 
-    return depois;
+    // O custo é lido porque o diff o audita; a resposta não o leva, para cargo
+    // nenhum (`ASSET_WRITE_SELECT`, D77).
+    return semCusto(depois);
   });
 }

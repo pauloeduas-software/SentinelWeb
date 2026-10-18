@@ -42,7 +42,7 @@ interface ArgsComWhere {
  * Espalhe no `where` para a consulta enxergar TAMBÉM a lixeira.
  *
  * ```ts
- * client.asset.count({ where: { supplierId: id, ...INCLUINDO_LIXEIRA } })
+ * client.asset.count({ where: { locationId: id, ...INCLUINDO_LIXEIRA } })
  * ```
  *
  * Funciona porque o escape hatch abaixo olha a PRESENÇA da chave `deletedAt`,

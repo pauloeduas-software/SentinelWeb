@@ -1,6 +1,6 @@
 import { ZodError } from 'zod';
 
-// Traduz um ZodError na resposta de erro do projeto.
+// Traduz um ZodError na frase de erro do projeto.
 //
 // Fica em `core/errors` junto com o resto da tradução de erro: `zod` é
 // biblioteca, não `domain` — o lint não reclama e o error-handler continua sendo
@@ -8,11 +8,6 @@ import { ZodError } from 'zod';
 
 // Quantos campos entram na mensagem curta antes de virar "e mais N".
 const MAX_NA_MENSAGEM = 3;
-
-export interface ZodErrorBody {
-  error: string;
-  fields: Record<string, string>;
-}
 
 // `unrecognized_keys` (o que `strictObject` recusa) chega com `path` vazio e
 // mensagem em inglês, porque o campo não está no schema — não há onde pendurar
@@ -25,7 +20,7 @@ function descreverIssue(issue: ZodError['issues'][number]): { campo: string; men
   return { campo: issue.path.join('.') || '(corpo)', mensagem: issue.message };
 }
 
-export function formatZodError(error: ZodError): ZodErrorBody {
+export function formatZodError(error: ZodError): string {
   const fields: Record<string, string> = {};
 
   for (const issue of error.issues) {
@@ -37,19 +32,12 @@ export function formatZodError(error: ZodError): ZodErrorBody {
 
   // A mensagem legível não repete o nome técnico do campo: ela vai direto para o
   // formulário, e "category: categoria é obrigatório" é ruído para quem lê. Cada
-  // mensagem do schema já se explica sozinha. O mapa `fields` continua no corpo
-  // com a chave técnica, mas NENHUMA TELA O LÊ: o painel mostra só o `error`. O
-  // campo está de pé pelo tipo `ZodErrorBody` e pelos dois testes do corpo do
-  // 422, para a tela que quiser destacar o input certo não precisar mudar o
-  // servidor.
+  // mensagem do schema já se explica sozinha.
   const mensagens = Object.values(fields);
   const visiveis = mensagens.slice(0, MAX_NA_MENSAGEM);
   const restantes = mensagens.length - visiveis.length;
   const resumo = visiveis.join('; ') + (restantes > 0 ? ` (e mais ${restantes})` : '');
 
-  return {
-    // O frontend mostra esta string direto no formulário (src/core/api/apiClient.ts)
-    error: resumo || 'Dados inválidos.',
-    fields,
-  };
+  // O frontend mostra esta string direto no formulário (src/core/api/apiClient.ts)
+  return resumo || 'Dados inválidos.';
 }

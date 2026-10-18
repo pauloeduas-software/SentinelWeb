@@ -63,10 +63,6 @@ export const checkoutStockSchema = z.strictObject({
   notes: textoOpcional('observações da saída', 2_000),
 });
 
-export const checkinStockSchema = z.strictObject({
-  notes: textoOpcional('observações da devolução', 2_000),
-});
-
 /**
  * Os filtros da LISTAGEM que não são do `parseListQuery`. O controller separa a
  * query antes de qualquer `parse`, como no `endpoint.controller.ts`: os dois
@@ -80,5 +76,4 @@ export type CreateStockItemInput = z.infer<typeof createStockItemSchema>;
 export type UpdateStockItemInput = z.infer<typeof updateStockItemSchema>;
 export type AdjustStockInput = z.infer<typeof adjustStockSchema>;
 export type CheckoutStockInput = z.infer<typeof checkoutStockSchema>;
-export type CheckinStockInput = z.infer<typeof checkinStockSchema>;
 export type StockFilters = z.infer<typeof stockFiltersSchema>;

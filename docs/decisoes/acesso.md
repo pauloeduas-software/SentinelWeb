@@ -6,8 +6,9 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D22–D26, D72–D78, D80, D89, D135–D142, e P da segunda rodada (ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)).
+> Decisões neste arquivo: D22–D26, D72–D78, D80, D89, D135–D142, P da segunda rodada (ver
+> [`README.md`](./README.md#a-segunda-rodada-ap)) e R, S e T, que vieram depois da varredura Q e
+> continuaram a letra.
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
@@ -74,6 +75,11 @@ lá, com o ator. A coluna existe para não fazer essa consulta **por linha** na 
 de detalhe do ativo, que é a única que mostra o dado. Nas outras treze, seria
 desnormalização paga sem ninguém para cobrar. Quando uma tela nova precisar, é
 migração aditiva de duas colunas.
+
+> **Superada pela varredura [Q](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai):** as duas colunas saíram do `Asset` —
+> e do `License` e do `StockItem`, que as tinham ganhado depois. A tela de detalhe do ativo nunca
+> chegou a mostrá-las; quem criou e quem editou continua no `ActivityLog`, que é onde este
+> parágrafo já dizia que a resposta estava.
 
 ---
 
@@ -155,6 +161,14 @@ do custo de compra, e o report builder é a da chave de licença.
 **O alcance real, pela revisão:** não é `assetSelect(perms)`/`licenseSelect(perms)` como o plano
 escrevia. São três mecanismos, porque os três dados sensíveis são diferentes — ver o defeito 4, o
 D138 e o D140.
+
+> **Revisão (varredura Q):** sobrou um dado sensível, o custo de compra do ativo, e ele vazava
+> por três portas que a leitura não cobria: a resposta das escritas (lidas com o select cheio),
+> o diff do histórico e a busca do leitor. As escritas passaram a responder sem o custo para
+> todo cargo, a escrita do técnico descarta o custo que chegar — o formulário dele abria o campo
+> vazio e o salvar apagava o valor —, o histórico tira a coluna do diff de quem não é `ADMIN` e a
+> busca devolve só o que identifica o ativo. O mapa das quatro portas está em
+> [`../referencia/acesso.md`](../referencia/acesso.md#a-autorização-cargo-não-permissão).
 
 ---
 
@@ -334,12 +348,12 @@ notar. É aditivo e barato agora; com linhas dentro, é validação a mais.
 
 ## P — `USUARIO` não entra no painel
 
-**Decidido:** o login recusa o papel `USUARIO` com 403 e uma frase que diz o que fazer, em vez
+**Decidido:** o login recusa o cargo `USUARIO` com 403 e uma frase que diz o que fazer, em vez
 de abrir um painel vazio que responde 403 em tudo. A sessão já emitida de quem for rebaixado
 continua valendo até expirar, respondendo 403 a cada rota — fechar essa janela exigiria mexer na
 releitura de sessão, por um ganho que não compensa o risco de tocar nela.
-**Consequência de:** [D148](./escopo.md#d148--permissão-vira-papel-grupo-diretório-sso-e-segundo-fator-saem)
-— `USUARIO` sempre foi o papel de quem só recebe equipamento, sem conta para operar o sistema; o
+**Consequência de:** [D148](./escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)
+— `USUARIO` sempre foi o cargo de quem só recebe equipamento, sem conta para operar o sistema; o
 que faltava era o login dizer isso antes de abrir um painel sem nada para mostrar.
 
 **Por quê 403 e não 401:** a senha está certa. O que falta é autorização, não autenticação — e
@@ -349,3 +363,111 @@ antes desta decisão.
 **O que isso mudou no harness:** sessões de teste passam a nascer `TECNICO` por padrão, porque
 `USUARIO` não loga — um harness que criasse sessão `USUARIO` por padrão pararia de testar o
 sistema e começaria a testar a tela de recusa em todo lugar.
+
+---
+
+## R — A senha nasce no cadastro, e o login é o e-mail
+
+**Decidido:** o login é `{ email, password }`. `User.username` sai do schema e da `0_init`, com o
+índice `users_username_unique_undeleted` — não existe mais "nome de usuário" à parte. A senha vem
+no cadastro e na edição do usuário: `POST /api/users` e `PUT /api/users/:id` aceitam `password`,
+com a mesma regra `senhaNova` que mora em `auth.schema.ts` (mínimo de 12). Ela é **obrigatória**
+para `TECNICO` e `ADMIN` — 422 se faltar, inclusive ao promover a Técnico quem nunca teve senha —
+e dispensável para `USUARIO`, que o login recusa de qualquer jeito. Na edição, `password` ausente
+mantém a atual; presente troca a senha, destrava a conta e incrementa o `tokenVersion`. Saem
+`POST /api/users/:id/set-password`, o `set-user-password.usecase.ts` e a ação **Definir acesso**
+da ficha do colaborador.
+**Supera:** nada do D1–D164 — o nome de acesso e a rota de senha nasceram de uma decisão da
+EXECUÇÃO da F3, não desta pasta: o item 2 de
+[*Três decisões que a implementação teve de tomar*](../historico/fase-03-autenticacao-e-ator.md#três-decisões-que-a-implementação-teve-de-tomar)
+("credencial não entrou no formulário de colaborador; entrou no `set-password`").
+**Mantém:** [P](#p--usuario-não-entra-no-painel) — é ele que torna a senha do `USUARIO`
+dispensável — e [D162](./escopo.md#d162--minha-conta-sai-e-o-cargo-vira-campo-do-formulário-de-usuário):
+o formulário de Usuários, que já levava o cargo, passa a levar a senha.
+
+**Por quê:** o pedido foi direto — criar usuário com nome, e-mail, cargo e, para quem entra,
+senha. O caminho que existia fazia duas paradas para a mesma pessoa: o cadastro, em Usuários, e
+depois a credencial à parte — a rota `set-password`, com um nome de acesso e uma senha, que
+chegou a ganhar a ação **Definir acesso** na ficha do colaborador antes desta decisão. A
+segunda parada não protegia nada que a primeira não protegesse — as duas exigiam `ADMIN` —, e o
+nome de acesso era um segundo identificador ao lado de um que já era único (índice parcial
+`users_email_unique_undeleted`), já era normalizado em minúsculas e que a pessoa já sabe de cor.
+Duas chaves de entrada eram duas coisas para a pessoa esquecer, dois índices parciais para
+manter e duas metades de uma credencial para manter coerentes — senha sem nome de acesso não
+entrava, e nome de acesso sem senha também não.
+
+**O argumento da F3 era certo no sistema que ela tinha, e o cargo o desfez.** Ela separava *dar
+acesso* de *cadastrar alguém para receber equipamento* porque, na F3, todo cadastro com senha
+entrava: a senha ERA a decisão de acesso, e merecia rota própria. Desde o
+[D148](./escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem) e o
+[P](#p--usuario-não-entra-no-painel), quem decide se a pessoa entra é o CARGO — `USUARIO` é
+recusado mesmo com a senha certa. Escolher Técnico ou Administrador no formulário já é dar
+acesso, e a senha virou o complemento dessa escolha, não uma segunda decisão: é por isso que o
+campo aparece exatamente quando o cargo o pede.
+
+**Por quê a recusa da senha que falta mora no servidor:** a tela esconde o campo para o
+`USUARIO` e o marca **Senha\*** no cadastro dos outros dois, mas o caso que engana é a
+PROMOÇÃO. O colaborador cadastrado só para receber equipamento vira Técnico pela edição, onde o
+campo se chama **Nova senha** e é opcional — e, sem a conferência no `PUT`
+(`credencial.helper.ts`, que olha o `passwordHash` gravado quando o corpo não traz senha), a
+promoção passaria e produziria um operador que não consegue entrar. O defeito só apareceria no
+primeiro login dele, longe de quem o cadastrou. É a mesma divisão do P: a tela antecipa, o
+servidor recusa.
+
+**O que a troca pela edição carrega, e o que a trilha grava:** o mesmo que o `set-password`
+fazia. Destrava a conta (zera `failedLoginCount` e `lockedUntil` — o caminho de suporte para quem
+se trancou fora) e incrementa o `tokenVersion`, que derruba toda sessão aberta da pessoa na
+requisição seguinte. O `ActivityLog` grava `credencial: 'senha definida'` no cadastro e
+`'senha redefinida'` na edição — o QUE mudou, nunca o valor. E como `POST` e `PUT` de usuário
+passaram a carregar senha, ganharam o `verificarOrigem` das rotas de credencial
+(`user.maestro.ts`): a segunda camada anti-CSRF, atrás do `SameSite` do cookie.
+
+**O que mudou junto:** a frase das três recusas indistinguíveis do login virou
+`E-mail ou senha inválidos.`; a tela de login pede E-mail e Senha; `ADMIN_USERNAME` deixou de
+existir (e o seed do administrador saiu depois, no [T](#t--não-há-conta-semeada)); e a linha de
+escape do [D164](./escopo.md#d164--o-default-da-coluna-tranca-o-sistema-e-a-migração-precisa-do-backfill)
+recebe o e-mail — `npm run acesso:administrador -- <e-mail>`.
+
+---
+
+## S — O papel passa a se chamar cargo
+
+**Decidido:** o nível de acesso da pessoa — `USUARIO`, `TECNICO` ou `ADMIN` — se chama **cargo**
+em todo lugar: na interface (o rótulo **Cargo** no formulário de usuário), nas mensagens ("Esta
+ação exige o cargo de …", "peça ao administrador o cargo de Técnico", "Dê o cargo de
+Administrador a outra pessoa…"), no código e nos docs. No código, o
+enum `Papel` vira `Cargo`, `access/helpers/papel.ts` vira `cargo.ts`, `PAPEIS` vira `CARGOS`,
+`papelAlcanca` vira `cargoAlcanca`, `request.papel` vira `request.cargo`, e assim com os demais
+nomes. A coluna continua `role` e os valores continuam os mesmos três; o tipo do Postgres foi
+renomeado de `"Papel"` para `"Cargo"` na `0_init`, editada no lugar como toda mudança de schema
+enquanto não existe banco em produção.
+**Mantém:** [D148](./escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)
+inteiro — muda o nome, não a regra. Por ser troca de nome e não de regra, o texto das decisões e
+da referência passou a usar o nome novo no lugar, inclusive nos títulos do D148, do D162 e do
+D163 (e nas âncoras deles); [`../historico/`](../historico/) continua dizendo "papel", porque
+registra a época.
+
+**Por quê:** pedido do usuário — "cargo" é a palavra que a equipe usa para isso. A troca não
+colide com nada: o campo de RH `jobTitle`, que a tela traduzia como "cargo", saiu na varredura
+[Q](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai), e não sobrou outro
+"cargo" no sistema para confundir com o nível de acesso.
+
+---
+
+## T — Não há conta semeada
+
+**Decidido:** o `npm run db:seed` cria só o que o sistema precisa para funcionar —
+configuração, categorias e status. O seed do administrador (e o que repunha o cargo dele) saiu;
+o primeiro administrador de um ambiente novo é criado à mão por quem instala, no terminal. Saem
+junto as variáveis `ADMIN_EMAIL`, `ADMIN_NAME` e `ADMIN_PASSWORD` do `.env.example`. O harness de
+teste cria o seu próprio administrador (`ADMIN_DE_TESTE`, em `tests/setup/database.ts`), direto
+no banco, porque é ele que abre a primeira sessão.
+
+**Por quê:** a revisão das mudanças da [Q](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai)
+e do [R](#r--a-senha-nasce-no-cadastro-e-o-login-é-o-e-mail) mostrou que, com o e-mail virando
+login e editável na tela, o seed procurava o administrador pelo e-mail do `.env`: bastava o
+administrador trocar o próprio e-mail e alguém rodar o seed de novo para nascer uma segunda conta
+`ADMIN`, com a senha do `.env` — ou, fora de produção, com a senha padrão publicada no código. Uma
+conta que o seed recria sozinha é uma porta que reabre toda vez que ele roda; o usuário preferiu
+que ela não exista.
+

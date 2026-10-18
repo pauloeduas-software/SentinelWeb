@@ -10,9 +10,8 @@ import { createLogger } from '../logger/logger';
 // "a rota nova pede login", que aparece no primeiro teste.
 //
 // POR QUE A ALLOWLIST VEM POR PARÂMETRO: saber que `/agent-hub` tem
-// autenticação própria e que `/aceite/:token` (F4) é público é conhecimento de
-// NEGÓCIO, e `server/core` não pode importar `server/domain`
-// (eslint.config.js). É a mesma inversão do `sortable` do `parseListQuery`.
+// autenticação própria e que o login é público é conhecimento de NEGÓCIO, e
+// `server/core` não pode importar `server/domain` (eslint.config.js).
 //
 // O mesmo vale para `autenticar`: o que é uma sessão — JWT, cookie, usuário no
 // banco — é do domínio `auth`. Aqui só mora a ORDEM: casou com a allowlist,
@@ -29,7 +28,7 @@ export interface RotaPublica {
   motivo: string;
 }
 
-export interface AuthGuardOptions {
+interface AuthGuardOptions {
   rotasPublicas: readonly RotaPublica[];
 
   /**

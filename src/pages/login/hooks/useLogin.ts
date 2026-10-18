@@ -7,7 +7,7 @@ import { useAuthStore } from '../../../domain/auth/auth.store';
 export function useLogin() {
   const entrar = useAuthStore((estado) => estado.entrar);
 
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -18,10 +18,10 @@ export function useLogin() {
     setErro('');
 
     try {
-      await entrar({ username, password });
+      await entrar({ email, password });
     } catch (falha) {
       // `error.message` já vem traduzido pelo `apiClient`: é a frase que o
-      // servidor escreveu ("Usuário ou senha inválidos.", "Conta bloqueada por
+      // servidor escreveu ("E-mail ou senha inválidos.", "Conta bloqueada por
       // excesso de tentativas...").
       setErro((falha as Error).message);
 
@@ -34,7 +34,7 @@ export function useLogin() {
   };
 
   return {
-    username, setUsername,
+    email, setEmail,
     password, setPassword,
     erro, enviando, handleSubmit,
   };

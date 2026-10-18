@@ -13,7 +13,7 @@ import { useNotificacao } from '../../hooks/useNotificacao';
 const PER_PAGE = 15;
 
 /** Qual janela está aberta. Uma de cada vez, como nas outras telas. */
-export type ModalDeEstoque = 'criar' | 'editar' | 'ajustar' | 'saida' | 'detalhe' | null;
+type ModalDeEstoque = 'criar' | 'editar' | 'ajustar' | 'saida' | 'detalhe' | null;
 
 // Estado da tela de Estoque: página, busca, vista e qual item está aberto.
 // Tudo de UMA tela — `useState`, não store (docs/referencia/arquitetura.md).
@@ -85,9 +85,11 @@ export function useEstoque() {
     if (!itemAberto) return;
     // Sem `qty`: o formulário de edição não a mostra, e o `PUT` nem a aceita
     // (`updateStockItemSchema` é `strictObject` — a chave desconhecida vira 422).
+    // A localização vai: é campo do formulário, e sem ela a troca de lugar não
+    // gravava nada, sem erro nenhum.
     await editar.mutateAsync({
       id: itemAberto.id,
-      data: { name: dados.name, categoryId: dados.categoryId, notes: dados.notes },
+      data: { name: dados.name, categoryId: dados.categoryId, locationId: dados.locationId, notes: dados.notes },
     });
     fechar();
   };

@@ -1,4 +1,4 @@
-import { Edit2, Trash2, Check, Minus, Power, PowerOff, Users, type LucideIcon } from 'lucide-react';
+import { Edit2, Trash2, Power, PowerOff, Users, type LucideIcon } from 'lucide-react';
 import { nomeDaRelacao, rotuloDoEnum } from '../../helpers/format.helper';
 import type { AcaoLinhaId, AcaoLinhaSpec, ColunaSpec } from '../specs/catalog-ui.types';
 import type { CatalogRow } from '../../../domain/shared/catalog.types';
@@ -132,34 +132,6 @@ function Celula({ coluna, registro }: { coluna: ColunaSpec; registro: CatalogRow
 
     case 'relacao':
       return <span>{nomeDaRelacao(valor)}</span>;
-
-    case 'booleano':
-      return valor
-        ? <Check size={14} className="text-status-success" />
-        : <Minus size={14} className="text-text-tertiary" />;
-
-    // Um agregado do `_count` do servidor. Nenhuma aba de hoje declara coluna
-    // assim; o ramo fica porque o tipo existe. Zero aparece como `0` e não como
-    // `—`: "zero" é um fato contado, e um travessão o esconderia entre os "sem
-    // dado".
-    case 'contagem': {
-      const contagens = registro._count as Record<string, number> | undefined;
-      const total = contagens?.[coluna.contagemDe ?? ''] ?? 0;
-      return <span className="tabular-nums">{total}</span>;
-    }
-
-    // Um `String[]`. A contagem na célula e os valores no `title`: despejar
-    // vinte opções numa célula de tabela deixaria a linha ilegível, e esconder
-    // que elas existem deixaria a coluna inútil.
-    case 'lista': {
-      const itens = Array.isArray(valor) ? valor.map(String) : [];
-      if (itens.length === 0) return <span>—</span>;
-      return (
-        <span className="tabular-nums" title={itens.join(', ')}>
-          {itens.length} {itens.length === 1 ? 'valor' : 'valores'}
-        </span>
-      );
-    }
 
     default:
       return <span>{valor == null || valor === '' ? '—' : String(valor)}</span>;

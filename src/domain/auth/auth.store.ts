@@ -55,7 +55,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   entrar: async (credenciais) => {
     // O erro PROPAGA de propósito: é um clique do usuário, e a tela precisa
-    // mostrar "usuário ou senha inválidos" ou "conta bloqueada". Quem trata é o
+    // mostrar "e-mail ou senha inválidos" ou "conta bloqueada". Quem trata é o
     // `hooks/useLogin.ts` da página (docs/referencia/arquitetura.md: busca engole erro,
     // mutação propaga).
     const usuario = await loginRequest(credenciais);
@@ -81,20 +81,20 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 }));
 
-// A HIERARQUIA, espelhando `server/domain/access/helpers/papel.ts`.
+// A HIERARQUIA, espelhando `server/domain/access/helpers/cargo.ts`.
 //
 // Duas cópias da mesma ordem, e isso é aceito: a do servidor é a que autoriza, e
 // esta só decide o que desenhar. Fazer a tela consultar uma rota para saber que
 // ADMIN alcança TECNICO seria uma requisição para uma constante de três valores.
-export type Papel = 'USUARIO' | 'TECNICO' | 'ADMIN';
-const ORDEM_DOS_PAPEIS: readonly Papel[] = ['USUARIO', 'TECNICO', 'ADMIN'];
+export type Cargo = 'USUARIO' | 'TECNICO' | 'ADMIN';
+const ORDEM_DOS_CARGOS: readonly Cargo[] = ['USUARIO', 'TECNICO', 'ADMIN'];
 
-function alcanca(papel: Papel, minimo: Papel): boolean {
-  return ORDEM_DOS_PAPEIS.indexOf(papel) >= ORDEM_DOS_PAPEIS.indexOf(minimo);
+function alcanca(cargo: Cargo, minimo: Cargo): boolean {
+  return ORDEM_DOS_CARGOS.indexOf(cargo) >= ORDEM_DOS_CARGOS.indexOf(minimo);
 }
 
 /**
- * ESTA PESSOA ALCANÇA ESTE PAPEL? — o que as telas perguntam (D148).
+ * ESTA PESSOA ALCANÇA ESTE CARGO? — o que as telas perguntam (D148).
  *
  * Hook e não função solta: ele assina o store, então o menu e os botões se
  * redesenham quando a sessão troca — sem isso, quem entrasse com outra conta na
@@ -109,19 +109,19 @@ function alcanca(papel: Papel, minimo: Papel): boolean {
  * milissegundos, e durante ele é melhor não desenhar um item que vai sumir do
  * que desenhar um que vai aparecer.
  */
-export function usePode(minimo: Papel): boolean {
+export function usePode(minimo: Cargo): boolean {
   return useAuthStore((estado) => (estado.usuario ? alcanca(estado.usuario.role, minimo) : false));
 }
 
 /**
- * A versão para quem precisa testar VÁRIOS papéis num render.
+ * A versão para quem precisa testar VÁRIOS cargos num render.
  *
  * `usePode` numa lista de itens quebraria a regra dos hooks (um por item, em
  * número variável). Este devolve a função e assina o store uma vez só.
  */
-export function usePermissoes(): (minimo: Papel) => boolean {
-  const papel = useAuthStore((estado) => estado.usuario?.role);
-  return useCallback((minimo: Papel) => (papel ? alcanca(papel, minimo) : false), [papel]);
+export function usePermissoes(): (minimo: Cargo) => boolean {
+  const cargo = useAuthStore((estado) => estado.usuario?.role);
+  return useCallback((minimo: Cargo) => (cargo ? alcanca(cargo, minimo) : false), [cargo]);
 }
 
 // O elo entre o 401 do `apiClient` e a tela.

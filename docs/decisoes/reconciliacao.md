@@ -148,6 +148,12 @@ uma etiqueta do contador**, que o `nextAssetTag()` nunca devolve (F1, e o `MAX_P
 `app-settings.usecase.ts` prova que a sequência já é assunto delicado). O estrago não é a
 linha a mais: é a sequência de etiquetas furada para sempre.
 
+> **Revisão (varredura Q):** o `ON` que existe hoje não cria ativo nem consome etiqueta. Ele só
+> **vincula sozinho** a máquina ao ativo já cadastrado quando há um candidato único com a
+> pontuação máxima (`match-endpoint.usecase.ts`); fora disso, propõe na fila como o `SUGGEST`. O
+> default continua `SUGGEST` pelo mesmo cuidado — vínculo errado reescreve o inventário —, mas o
+> motivo da etiqueta furada deixou de valer.
+
 ---
 
 ## D95 — Quem carimba o ativo é o **job**, não o handshake
@@ -783,6 +789,12 @@ de [`../referencia/invariantes.md`](../referencia/invariantes.md) junto com a ta
 **Mantém:** [D50](#d50--lastseenbyagentat-existe-e-nunca-se-chama-lastseen) —
 `Endpoint.lastSeenByAgentAt` continua respondendo "quando esta máquina foi vista pela última
 vez", que é pergunta sobre a MÁQUINA, não sobre quem estava logado nela.
+
+> **Revisão:** `lastSeenByAgentAt` é coluna do **ativo** (`Asset`); a da máquina é
+> `Endpoint.lastSeen` ([D13](./catalogo-e-ativo.md#d13--a-segurança-do-rename-depende-de-o-asset-novo-não-ter-status-lastseen-nem-hwid),
+> [D50](#d50--lastseenbyagentat-existe-e-nunca-se-chama-lastseen)). As duas continuam respondendo
+> "quando foi visto pela última vez", cada uma do seu lado — e nenhuma delas fala de quem estava
+> logado, que é o que o argumento acima precisa.
 
 **Por quê:** a conta do sistema operacional é o sinal mais fraco que a descoberta tinha —
 "fulano estava logado" não é "fulano ocupa esta mesa", e as duas sugestões que dependiam disso

@@ -9,8 +9,7 @@ import type { ApiDeTeste } from './app';
 //
 // Porque `inject` não faz upgrade de WebSocket: ele monta uma requisição HTTP e
 // entrega ao Fastify sem socket, e o `/agent-hub` precisa exatamente do socket.
-// Até a F7 isso nunca incomodou — `invariantes/api-token.test.ts` usa `inject` e
-// para no 401 do `preHandler`, que é tudo o que ele queria provar.
+// Até a F7 isso nunca incomodou: nenhum teste precisava de um agente conectado.
 //
 // A F7 mudou o que está em jogo: a borda do agente (parse → normalização →
 // upsert) é justamente onde o agente VELHO e o NOVO se distinguem, e é o risco
@@ -42,7 +41,7 @@ export interface AgenteDeTeste {
 }
 
 /** Sobe a aplicação numa porta efêmera. Uma vez por arquivo de teste. */
-export async function ouvir(api: ApiDeTeste): Promise<number> {
+async function ouvir(api: ApiDeTeste): Promise<number> {
   const endereco = api.app.server.address();
   if (endereco && typeof endereco === 'object') return (endereco as AddressInfo).port;
 

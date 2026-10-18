@@ -78,7 +78,7 @@ necessidade real, a mudança é **derrubar aquele índice** — não reescrever 
 camada. Tudo que depende da cardinalidade (o `assertUmaPosseAberta` do checkout,
 o cache de `assignedToId`, `resolverResponsaveis`) foi escrito sabendo que o
 índice é a fonte da regra. Está anotado na migration
-`20260923011728_posse_e_ocupacao` e no comentário do model, nos dois lugares
+`20260923011728_posse_e_ocupacao` (hoje, no bloco à mão da `0_init`) e no comentário do model, nos dois lugares
 onde alguém olharia antes de mexer.
 
 **O que quebra se for revertido.** Derrubar o índice sem trocar o resto derruba
@@ -134,6 +134,12 @@ computado.
 (F8, que confere um campo só) e obriga a migrar `Assignment.targetLocationId`.
 Trocar `shift` por enum quebra a primeira escala real que não couber nele — e aí
 o valor vira `OUTRO`, que é texto livre com passos extras.
+
+> **Superada em parte pela localização plana (commit `ff34364`):** a árvore que este argumento
+> usa saiu — `Location` não tem mais `parentId`, guarda de ciclo nem gestor; a lista é plana e
+> o nome único diz onde a mesa fica (`Mesa 1 — Filial SP`). A decisão fica de pé pelo outro
+> motivo que ela dá: o ativo já aponta para `Location`, e uma `Workstation` paralela lhe daria
+> dois campos de "onde".
 
 ---
 
@@ -248,6 +254,12 @@ mentiroso para o caso mais comum: o ativo aparece com a Laura na tabela e com a
 Ana na aba Posse. Também quebra o histórico — a posse editada à mão não deixa
 linha em `Assignment`, então "quem teve este notebook antes?" perde períodos
 inteiros sem avisar.
+
+> **Superada pela varredura [Q](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai):** a coluna saiu do schema. O
+> "Descartado: apagar a coluna" acima perdeu o argumento antes de perder a decisão — a listagem
+> passou a derivar a posse em lote (`resolverResponsaveisEmLote`) e deixou de ler o cache, que
+> respondia errado no caso do posto; sem leitor, ele era só mais um lugar para divergir. O que o
+> D17 defendia — a posse tem um dono, a operação — vale mais forte sem a coluna.
 
 ---
 
@@ -494,18 +506,25 @@ caminho de posse de posto.
 entrega, marca e restauração da lixeira — ver a tabela completa em `invariantes.md`. A do vínculo
 saiu porque, na forma final, vincular máquina não decide a vaga; a vaga é decidida na entrega.
 
+> **A varredura [Q](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai) deu tela
+> ao PATCH de correção de turno**, que até ali nenhuma tela chamava: um lápis **Corrigir turno**
+> em cada ocupação aberta do painel de ocupantes (ficha do posto e Configurações › Localizações).
+> A alternativa — encerrar a ocupação e abri-la de novo — fabricaria no histórico uma saída que
+> não aconteceu e perderia a data de entrada.
+
 ---
 
 ## Onde o modelo vive no código — D14 a D17
 
 Para quem for verificar, e para quem for mexer. A tabela cobre as quatro decisões do **modelo**;
-as da operação (D27–D32, D87, D88) estão aplicadas nos use-cases de `assignment/`, `acceptance/`
-e `user/`, e as provas delas estão em `tests/invariantes/posse.test.ts` e
-`tests/corridas/posse.test.ts`.
+as da operação (D27–D32, D87, D88) estavam nos use-cases de `assignment/`, `acceptance/` e
+`user/` — o `acceptance/` saiu com o termo (D150), o desligamento com o segundo de-escopo (O), e o
+que sobrou delas está em `assignment/`, `occupancy/` e `user/`, com as provas em
+`tests/invariantes/posse.test.ts` e `tests/corridas/posse.test.ts`.
 
 | Decisão | Onde está aplicada |
 |---|---|
-| D14 | `prisma/schema.prisma` (model `Assignment`, enum `AssignmentTarget`) · migration `20260923011728_posse_e_ocupacao` (índice `assignments_um_aberto_por_ativo`) |
+| D14 | `prisma/schema.prisma` (model `Assignment`, enum `AssignmentTarget`) · migration `0_init` (índice `assignments_um_aberto_por_ativo`) |
 | D15 | `prisma/schema.prisma` (model `LocationOccupant`, campo `shift`) · mesma migration (índice `location_occupants_um_aberto_por_pessoa_local`) |
 | D16 | use-case de resolução no domínio de posse — **nenhuma coluna** em `Asset` · invariante estado × posse em [`../referencia/invariantes.md`](../referencia/invariantes.md) |
-| D17 | comentário de `Asset.assignedToId` no schema · `server/domain/asset/schemas/asset.schema.ts` (o campo sai dos dois schemas) · checkout/checkin são os únicos gravadores |
+| D17 | superada por [Q](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai): `Asset.assignedToId` não existe mais, e checkout/checkin escrevem só a `Assignment` |

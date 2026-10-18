@@ -13,11 +13,10 @@ import type { prisma } from '../../../core/database/prismaClient';
  * tipo não é exportado publicamente no 5.x.
  *
  * ⚠️ Ela era `Omit<…, `$${string}`>`, que tirava TODOS os métodos com `$` —
- * inclusive `$queryRaw`. A F9 precisa dele: a contagem de ativos com uma chave
- * presente no JsonB só usa o índice GIN por `?`/`@>`, e o Prisma tipado emite
- * `#>` com comparação de expressão, que é varredura sequencial (medido: 0,05ms
- * contra 5,2ms em 50 mil linhas). Tirar `$queryRaw` do tipo empurraria a
- * contagem para FORA da transação do delete — que é justamente onde ela não
+ * inclusive `$queryRaw`. As specs precisam dele: as travas de linha que elas
+ * chamam com este cliente (`catalog-lock.helper.ts`) são `FOR UPDATE`/`FOR
+ * SHARE`, que só se escrevem em SQL. Tirar `$queryRaw` do tipo empurraria a
+ * trava para FORA da transação da escrita — que é justamente onde ela não
  * pode estar.
  */
 export type ClienteCatalogo = Omit<
@@ -64,9 +63,6 @@ export interface CatalogSpec {
    * Aceita `select` aninhado (`{ manufacturer: { select: { id: true, name: true } } }`).
    */
   select: Record<string, unknown>;
-  /** Allowlist de ordenação, exigida pelo core/http/list-query.ts */
-  sortable: readonly [string, ...string[]];
-  defaultSort: string;
   /** Campos varridos pela busca `?q=` */
   searchable: readonly string[];
   /** Campos que entram no diff do ActivityLog */
@@ -81,8 +77,7 @@ export interface CatalogSpec {
    * o de LICENÇA — indistinguíveis num `<select>`. E o formulário de ativo
    * precisa só das categorias de ATIVO.
    *
-   * O campo e os valores são declarados aqui, nunca lidos crus do cliente: é a
-   * mesma regra do `sortable`.
+   * O campo e os valores são declarados aqui, nunca lidos crus do cliente.
    */
   optionFilter?: { campo: string; valores: readonly [string, ...string[]] };
 

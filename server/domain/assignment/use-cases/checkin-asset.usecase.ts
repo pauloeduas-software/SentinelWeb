@@ -13,7 +13,7 @@ import { travarAtivoOuFalhar } from '../../asset/use-cases/lock-asset.usecase';
 // entrega devolvida seguir na tabela — e é essa pergunta que transforma o
 // inventário em prova, num inquérito trabalhista ou num sinistro.
 
-export interface CheckinData {
+interface CheckinData {
   statusId?: string | null;
   checkinNotes?: string | null;
   /**
@@ -31,16 +31,10 @@ export interface CheckinData {
 }
 
 export async function checkinAsset(assetId: string, data: CheckinData, actorId: string | null) {
-  const resultado = await executarCheckin(assetId, data, actorId);
-
-  return resultado;
-}
-
-async function executarCheckin(assetId: string, data: CheckinData, actorId: string | null) {
   // Transação pelo mesmo motivo da entrega: `assignments`, `assets` e
   // `activity_logs` descrevem UM evento. Uma posse fechada com o ativo ainda
-  // apontando para o responsável é o equipamento devolvido que continua
-  // contando como "com a Laura" em todo relatório.
+  // "Em uso" é o equipamento devolvido que continua contando como entregue em
+  // todo relatório.
   return prisma.$transaction(async (tx) => {
     // A TRAVA DO ATIVO, antes de ler a posse — a mesma da entrega, da edição e
     // da baixa (`lock-asset.usecase.ts`). Sem ela, duas devoluções simultâneas
@@ -83,7 +77,6 @@ async function executarCheckin(assetId: string, data: CheckinData, actorId: stri
         `Este ativo não está entregue a este posto${alvo ? `: a posse aberta dele é com ${alvo}` : ''}. `
           + 'Releia a ficha; para devolver mesmo assim, use a ficha do ativo.',
         409,
-        { assignmentId: aberta.id },
       );
     }
 
@@ -98,9 +91,8 @@ async function executarCheckin(assetId: string, data: CheckinData, actorId: stri
     const statusId = data.statusId ?? (await escolherStatusPorTipo(tx, 'DEPLOYABLE', 'Disponível'));
 
     // As três escritas da devolução (fechar a posse, mexer no ativo, gravar o
-    // log) moram em `fecharPosse` porque o desligamento (D32) fecha N posses de
-    // uma pessoa com exatamente a mesma mecânica — e uma segunda cópia delas
-    // divergiria no primeiro ajuste.
+    // log) moram em `fecharPosse`: é onde a próxima porta de devolução entra
+    // sem copiar nada.
     return fecharPosse(
       tx,
       { id: aberta.id, assetId, targetType: aberta.targetType, statusAnteriorId: ativo.statusId },

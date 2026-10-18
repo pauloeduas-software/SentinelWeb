@@ -11,7 +11,8 @@
 > [*O estoque voltou numa forma diferente*](#o-estoque-voltou-numa-forma-diferente-segunda-rodada),
 > no fim deste arquivo, conta a diferença.
 >
-> Plano **prospectivo** da Fase 5 do [`../ROADMAP.md`](../ROADMAP.md), escrito contra o
+> Plano **prospectivo** da Fase 5 do roadmap do projeto (apagado depois;
+> o escopo que ficou está em [`../decisoes/escopo.md`](../decisoes/escopo.md)), escrito contra o
 > código real depois da F1 e contra [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md). Convenções de
 > camada: [`../referencia/arquitetura.md`](../referencia/arquitetura.md).
 >
@@ -168,7 +169,7 @@ Nenhum arquivo novo do lado da posse: esta etapa **estende** o que a F4 escreveu
 
 > As decisões desta fase moram em [`../decisoes/estoque.md`](../decisoes/estoque.md) — **D33–D38**. Elas saíram daqui porque decisão se arquiva pelo ASSUNTO que governa, não pela fase que a tomou: quem precisa saber as regras de um assunto não deveria ter que descobrir em que fase ele nasceu.
 
-O índice das 142 está em [`../decisoes/README.md`](../decisoes/README.md).
+O índice das decisões está em [`../decisoes/README.md`](../decisoes/README.md).
 
 ## Riscos e armadilhas
 
@@ -268,7 +269,7 @@ lista a unidade parada lá.
 
 ## Commits, TODO e perguntas em aberto
 
-Um commit por etapa, na ordem A→G; o lint passa em cada um. No `../ROADMAP.md`:
+Um commit por etapa, na ordem A→G; o lint passa em cada um. No roadmap:
 **(1)** responder a pergunta em aberto do item do `AccessoryCheckout` apontando para o
 **D33**; **(2)** trocar `GET /api/accessories/alerts` por **`/api/stock/alerts`** — o
 alerta vale para os três tipos e a tela é uma só, então o tipo é filtro, e o *posto vago

@@ -243,7 +243,7 @@ describe('quem não está ativo na empresa não recebe equipamento', () => {
 
     // 409 e não 404: a pessoa existe, é o ESTADO dela que recusa.
     expect(recusa.status).toBe(409);
-    expect(recusa.body.error).toMatch(/desligad|inativ/i);
+    expect(recusa.body.error).toMatch(/desativad/i);
 
     // O ativo continua no estoque — a recusa não deixou meia entrega.
     const semPosse = await prisma.assignment.count({
@@ -281,12 +281,51 @@ describe('quem não está ativo na empresa não recebe equipamento', () => {
 
     // Mesmo código e mesma razão do checkout: a pessoa existe, o estado recusa.
     expect(recusa.status).toBe(409);
-    expect(recusa.body.error).toMatch(/desativad|desligad|inativ/i);
+    expect(recusa.body.error).toMatch(/desativad/i);
 
     // E não ficou meia ocupação.
     expect(await prisma.locationOccupant.count({
       where: { locationId: cenario.mesa1, userId: pessoa, endedAt: null },
     })).toBe(0);
+  });
+
+  it('desativar quem ainda responde por algo é 409 — a mesma recusa da exclusão', async () => {
+    // Invariante 6: desativado não responde por nada. A desativação tira a
+    // pessoa dos seletores, e a posse que ficasse aberta naquele nome não teria
+    // mais quem a devolvesse pela tela.
+    const pessoa = await criarColaborador(api, {
+      name: 'Bia Costa', email: 'bia.com.posse@teste.local',
+    });
+    const ativo = await criarAtivo(api, {
+      statusId: cenario.statusDeployableId,
+      modelId: cenario.modelId,
+      name: 'Notebook da Bia',
+    });
+    expect((await api.post(`/api/assets/${ativo.id}/checkout`, {
+      targetType: 'USER', targetUserId: pessoa,
+    })).status).toBe(201);
+
+    const recusa = await api.put<{ error: string }>(`/api/users/${pessoa}`, { isActive: false });
+    expect(recusa.status).toBe(409);
+    expect(recusa.body.error).toMatch(/responde por 1 ativo/);
+    expect(recusa.body.error).toMatch(/antes de desativar/);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: pessoa } })).isActive).toBe(true);
+
+    // Devolvido o equipamento, a desativação passa.
+    expect((await api.post(`/api/assets/${ativo.id}/checkin`, {})).status).toBe(200);
+    expect((await api.put(`/api/users/${pessoa}`, { isActive: false })).status).toBe(200);
+  });
+
+  it('desativado some dos seletores de pessoa', async () => {
+    const pessoa = await criarColaborador(api, {
+      name: 'Caio Seletor', email: 'caio.seletor@teste.local',
+    });
+    const antes = await api.get<{ id: string }[]>('/api/users/options?q=Caio');
+    expect(antes.body.map((opcao) => opcao.id)).toContain(pessoa);
+
+    expect((await api.put(`/api/users/${pessoa}`, { isActive: false })).status).toBe(200);
+    const depois = await api.get<{ id: string }[]>('/api/users/options?q=Caio');
+    expect(depois.body.map((opcao) => opcao.id)).not.toContain(pessoa);
   });
 
   it('reativar pela API libera a entrega de novo', async () => {

@@ -4,7 +4,7 @@ import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { buildChanges } from '../../shared/diff.helper';
 import { diaEmPortugues } from '../helpers/asset-dates.helper';
-import { ASSET_SELECT } from '../helpers/asset-select.helper';
+import { ASSET_WRITE_SELECT } from '../helpers/asset-select.helper';
 import { assertSemPosseParaBaixa } from './assert-retire-posse.usecase';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
 import { contarAssentosDoAtivo } from '../../license/use-cases/count-user-seats.usecase';
@@ -22,7 +22,7 @@ import { contarAssentosDoAtivo } from '../../license/use-cases/count-user-seats.
 // estava quando saiu, e trocá-lo é uma segunda decisão, com linha própria no
 // histórico.
 
-export interface RetireAssetData {
+interface RetireAssetData {
   retiredReason: $Enums.RetiredReason;
   /** Ausente = agora. A saída pode ter acontecido antes de alguém registrar. */
   retiredAt?: Date | null;
@@ -53,7 +53,6 @@ export async function retireAsset(id: string, data: RetireAssetData, actorId: st
       throw new AppError(
         `${antes.assetTag} já teve baixa em ${diaEmPortugues(antes.retiredAt)}.`,
         409,
-        { retiredAt: antes.retiredAt.toISOString(), retiredReason: antes.retiredReason },
       );
     }
 
@@ -71,7 +70,6 @@ export async function retireAsset(id: string, data: RetireAssetData, actorId: st
         `${antes.assetTag} ainda ocupa ${assentos} ${assentos === 1 ? 'assento' : 'assentos'} de licença. `
         + 'Devolva os assentos pela aba Licenças antes de dar baixa.',
         409,
-        { assentosDeLicenca: assentos },
       );
     }
 
@@ -80,7 +78,7 @@ export async function retireAsset(id: string, data: RetireAssetData, actorId: st
     const depois = await tx.asset.update({
       where: { id },
       data: { retiredAt, retiredReason: data.retiredReason },
-      select: ASSET_SELECT,
+      select: ASSET_WRITE_SELECT,
     });
 
     await recordActivity(tx, {

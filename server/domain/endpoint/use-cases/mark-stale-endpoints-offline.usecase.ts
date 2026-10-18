@@ -2,7 +2,7 @@ import { prisma } from '../../../core/database/prismaClient';
 
 // Tolerância antes de considerar a máquina sumida. Precisa ser maior que o
 // intervalo de heartbeat do agente, senão uma rede lenta derruba o status.
-export const STALE_AFTER_MS = 4 * 60 * 1000;
+const STALE_AFTER_MS = 4 * 60 * 1000;
 
 // Agente que morreu sem fechar o WebSocket (queda de energia, cabo arrancado,
 // processo morto) fica ONLINE para sempre: nenhum `close` chega. Este use-case

@@ -7,7 +7,7 @@ import { OCCUPANT_SELECT } from '../helpers/occupant-select.helper';
 import { travarUsuario } from '../../user/use-cases/lock-user.usecase';
 import { assertLocalRecebe } from '../../catalog/helpers/catalog-lock.helper';
 
-export interface AddOccupantData {
+interface AddOccupantData {
   userId: string;
   shift?: string | null;
   notes?: string | null;

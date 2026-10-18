@@ -31,10 +31,10 @@ async function carregarPendente(id: string): Promise<Sugestao> {
 }
 
 /** Fecha a sugestão. Chamado DEPOIS de a ação ter dado certo, nunca antes. */
-async function marcarAceita(id: string, actorId: string | null) {
+async function marcarAceita(id: string) {
   return prisma.reconciliationSuggestion.update({
     where: { id },
-    data: { state: 'ACCEPTED', resolvedAt: new Date(), resolvedById: actorId },
+    data: { state: 'ACCEPTED', resolvedAt: new Date() },
     select: SUGGESTION_SELECT,
   });
 }
@@ -56,7 +56,7 @@ export async function aceitarSugestao(id: string, actorId: string | null) {
   // que `SuggestionKind` crescer por migração, é aqui que o tipo novo entra — e
   // o `vincularEndpointAoAtivo` continua sendo quem grava.
   if (!sugestao.assetId) throw new AppError('Sugestão de vínculo sem ativo.', 422);
-  await vincularEndpointAoAtivo(sugestao.endpointId, sugestao.assetId, actorId, { sugestaoId: id });
+  await vincularEndpointAoAtivo(sugestao.endpointId, sugestao.assetId, actorId);
 
-  return marcarAceita(id, actorId);
+  return marcarAceita(id);
 }

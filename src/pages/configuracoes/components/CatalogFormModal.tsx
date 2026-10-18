@@ -4,9 +4,9 @@ import ReferenceSelect from '../../components/ReferenceSelect';
 import type { CampoSpec, CatalogUiSpec } from '../specs/catalog-ui.types';
 import type { CatalogRow } from '../../../domain/shared/catalog.types';
 
-// Valor inicial de cada campo. Tudo vira string, menos checkbox e lista: é o
-// que o `<input>` controlado espera, e o servidor já converte de volta (o `''`
-// vira `null` no schema, e número vazio vira `null` no `preprocess`).
+// Valor inicial de cada campo. Tudo vira string: é o que o `<input>`
+// controlado espera, e o servidor já converte de volta (o `''` vira `null` no
+// schema).
 //
 // `padroes` só vale para registro NOVO: é o recorte que estava na tela (o tipo
 // filtrado nas categorias). Na edição quem manda é o que está gravado.
@@ -20,40 +20,11 @@ function valoresIniciais(
   for (const campo of spec.campos) {
     const atual = registro ? registro[campo.key] : padroes?.[campo.key];
 
-    if (campo.tipo === 'checkbox') valores[campo.key] = Boolean(atual);
-    else if (campo.tipo === 'select') valores[campo.key] = String(atual ?? campo.opcoes?.[0]?.value ?? '');
-    // `lista` é um `String[]` no banco e um valor POR LINHA na tela. A conversão
-    // acontece nas duas pontas — aqui e no `paraEnvio` —, e não no meio: um
-    // estado que guardasse o array obrigaria o `<textarea>` a recalculá-lo a
-    // cada tecla, e uma linha em branco no meio da digitação sumiria embaixo do
-    // cursor.
-    else if (campo.tipo === 'lista') {
-      valores[campo.key] = Array.isArray(atual) ? atual.join('\n') : '';
-    } else valores[campo.key] = atual == null ? '' : String(atual);
+    if (campo.tipo === 'select') valores[campo.key] = String(atual ?? campo.opcoes?.[0]?.value ?? '');
+    else valores[campo.key] = atual == null ? '' : String(atual);
   }
 
   return valores;
-}
-
-/**
- * O corpo que vai para a API: os campos `lista` voltam a ser `String[]`.
- *
- * Linha vazia é DESCARTADA, e isso é o que faz a edição funcionar: um `Enter`
- * no fim do texto produz uma linha em branco, e mandá-la viraria 422 "valor da
- * lista não pode ser vazio" numa tecla que ninguém considera um valor.
- */
-function paraEnvio(spec: CatalogUiSpec, valores: Record<string, unknown>): Record<string, unknown> {
-  const corpo = { ...valores };
-
-  for (const campo of spec.campos) {
-    if (campo.tipo !== 'lista') continue;
-    corpo[campo.key] = String(valores[campo.key] ?? '')
-      .split('\n')
-      .map((linha) => linha.trim())
-      .filter((linha) => linha !== '');
-  }
-
-  return corpo;
 }
 
 /**
@@ -95,7 +66,7 @@ export default function CatalogFormModal({ spec, registro, padroes, onClose, onS
     setErro('');
 
     try {
-      await onSubmit(paraEnvio(spec, valores));
+      await onSubmit(valores);
     } catch (falha) {
       // O apiClient já traduziu a resposta do servidor em Error.message.
       setErro((falha as Error).message);
@@ -125,15 +96,10 @@ export default function CatalogFormModal({ spec, registro, padroes, onClose, onS
 
           <div className="grid grid-cols-2 gap-4">
             {spec.campos.map((campo) => (
-              <div
-                key={campo.key}
-                className={`space-y-1 ${campo.largura === 'inteira' || campo.tipo === 'checkbox' ? 'col-span-2' : ''}`}
-              >
-                {campo.tipo !== 'checkbox' && (
-                  <label className="text-text-secondary uppercase tracking-widest text-[10px]">
-                    {campo.label}{campo.obrigatorio && '*'}
-                  </label>
-                )}
+              <div key={campo.key} className={`space-y-1 ${campo.largura === 'inteira' ? 'col-span-2' : ''}`}>
+                <label className="text-text-secondary uppercase tracking-widest text-[10px]">
+                  {campo.label}{campo.obrigatorio && '*'}
+                </label>
                 <Campo
                   campo={campo}
                   atual={referenciaAtual(registro, campo)}
@@ -180,20 +146,6 @@ function Campo({
   valor: unknown;
   onChange: (valor: unknown) => void;
 }) {
-  if (campo.tipo === 'checkbox') {
-    return (
-      <label className="flex items-center gap-3 cursor-pointer text-text-secondary">
-        <input
-          type="checkbox"
-          checked={Boolean(valor)}
-          onChange={(event) => onChange(event.target.checked)}
-          className="accent-status-success w-4 h-4"
-        />
-        <span className="uppercase tracking-widest text-[10px]">{campo.label}</span>
-      </label>
-    );
-  }
-
   if (campo.tipo === 'reference') {
     return (
       <ReferenceSelect
@@ -236,43 +188,17 @@ function Campo({
     return (
       <textarea
         value={String(valor ?? '')}
-        placeholder={campo.placeholder}
         onChange={(event) => onChange(event.target.value)}
         className={`${CLASSE_CAMPO} h-20 resize-none`}
       />
     );
   }
 
-  // UM VALOR POR LINHA, e não separado por vírgula: valor de lista pode CONTER
-  // vírgula ("Sim, com ressalva"), e um separador que aparece no conteúdo não é
-  // separador. A quebra de linha não aparece dentro de um `<option>`.
-  if (campo.tipo === 'lista') {
-    const quantos = String(valor ?? '').split('\n').filter((linha) => linha.trim() !== '').length;
-    return (
-      <>
-        <textarea
-          value={String(valor ?? '')}
-          placeholder={campo.placeholder ?? 'Um valor por linha'}
-          onChange={(event) => onChange(event.target.value)}
-          className={`${CLASSE_CAMPO} h-24 resize-y font-mono`}
-        />
-        <p className="text-text-tertiary text-[10px] leading-relaxed pt-1 tabular-nums">
-          {quantos === 0 ? 'nenhum valor' : `${quantos} ${quantos === 1 ? 'valor' : 'valores'}`}
-        </p>
-      </>
-    );
-  }
-
   return (
     <input
-      // `money` é `text` de propósito: o valor viaja como string do formulário
-      // ao Postgres, sem passar por float em ponto nenhum.
-      type={campo.tipo === 'number' ? 'number' : 'text'}
-      inputMode={campo.tipo === 'money' ? 'decimal' : undefined}
+      type="text"
       required={campo.obrigatorio}
-      min={campo.tipo === 'number' ? 0 : undefined}
       value={String(valor ?? '')}
-      placeholder={campo.placeholder}
       onChange={(event) => onChange(event.target.value)}
       className={CLASSE_CAMPO}
     />

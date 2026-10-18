@@ -13,8 +13,6 @@ export const STOCK_ITEM_SELECT = {
   locationId: true,
   notes: true,
 
-  createdById: true,
-  updatedById: true,
   createdAt: true,
   updatedAt: true,
   deletedAt: true,
@@ -43,7 +41,6 @@ export const STOCK_MOVEMENT_SELECT = {
 
   returnedAt: true,
   notes: true,
-  returnNotes: true,
 
   createdById: true,
   returnedById: true,

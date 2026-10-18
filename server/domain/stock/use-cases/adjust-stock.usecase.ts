@@ -40,16 +40,12 @@ export async function adjustStock(itemId: string, data: AdjustStockInput, actorI
         `A baixa de ${data.qty} deixaria o total (${antes.qty}) abaixo do que está fora do estoque (${fora}). `
           + 'Devolva as unidades antes de dar baixa nelas.',
         409,
-        { qty: antes.qty, fora, baixa: data.qty },
       );
     }
 
     const depois = await tx.stockItem.update({
       where: { id: itemId },
-      data: {
-        qty: data.kind === 'ENTRADA' ? { increment: data.qty } : { decrement: data.qty },
-        updatedById: actorId,
-      },
+      data: { qty: data.kind === 'ENTRADA' ? { increment: data.qty } : { decrement: data.qty } },
       select: STOCK_ITEM_SELECT,
     });
 

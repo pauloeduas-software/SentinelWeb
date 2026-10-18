@@ -18,7 +18,7 @@ export default function UsersPage() {
   const podeEscrever = usePode('ADMIN');
 
   return (
-    <div className="animate-in fade-in duration-300">
+    <div className="motion-safe:animate-fade-in">
       <div className="flex justify-between items-end mb-8">
         <div>
           <h2 className="text-xl font-mono text-text-primary uppercase tracking-widest">Usuários</h2>
@@ -41,7 +41,7 @@ export default function UsersPage() {
         onViewChange={changeView}
         search={search}
         onSearchChange={changeSearch}
-        placeholder="Buscar por nome, e-mail ou matrícula..."
+        placeholder="Buscar por nome ou e-mail..."
         page={page}
         perPage={perPage}
         total={total}

@@ -1,12 +1,12 @@
 import { prisma } from '../database/prismaClient';
 
-export interface DependencyHealth {
+interface DependencyHealth {
   database: boolean;
 }
 
 // Dependência travada (banco sem responder) não pode travar o health check
 // junto: passado o prazo, conta como fora do ar.
-export function withTimeout<T>(promise: Promise<T>, ms = 5000): Promise<T> {
+function withTimeout<T>(promise: Promise<T>, ms = 5000): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(() => reject(new Error('timeout')), ms);
@@ -34,7 +34,7 @@ export function isHealthy(health: DependencyHealth): boolean {
   return health.database;
 }
 
-export interface ReadinessReport {
+interface ReadinessReport {
   httpStatus: 200 | 503;
   body: {
     status: 'ok' | 'degraded';

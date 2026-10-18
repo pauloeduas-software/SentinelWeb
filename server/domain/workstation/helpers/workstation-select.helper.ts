@@ -1,5 +1,4 @@
-import { OCCUPANT_SELECT } from '../../occupancy/helpers/occupant-select.helper';
-import { OCUPANTES_ABERTOS_ORDER_BY, POSSE_ABERTA } from './workstation-filters.helper';
+import { POSSE_ABERTA } from './workstation-filters.helper';
 
 // O que de um POSTO pode sair para o cliente — allowlist, nunca `include`.
 //
@@ -50,9 +49,9 @@ export const WORKSTATION_SELECT = {
  * mais: aqui os ativos vêm por inteiro, então o `_count` deles seria um segundo
  * número para o mesmo fato — e dois números para o mesmo fato divergem.
  *
- * Os ocupantes reaproveitam o `OCCUPANT_SELECT` do domínio `occupancy` em vez
- * de repetir a lista — quem decide o que é público de uma ocupação continua
- * sendo o dono dela, e uma cópia esquecida aqui vazaria o que lá for fechado.
+ * Os ocupantes vêm só CONTADOS: é do número que `vago` sai. A lista com nomes
+ * a tela lê da rota de ocupação (`/api/locations/:id/occupants`), onde mora o
+ * histórico e que o adicionar/encerrar invalida.
  */
 export const WORKSTATION_DETAIL_SELECT = {
   id: true,
@@ -62,9 +61,5 @@ export const WORKSTATION_DETAIL_SELECT = {
   isActive: true,
   createdAt: true,
 
-  occupants: {
-    where: { endedAt: null },
-    select: OCCUPANT_SELECT,
-    orderBy: OCUPANTES_ABERTOS_ORDER_BY,
-  },
+  _count: { select: { occupants: { where: { endedAt: null } } } },
 } as const;

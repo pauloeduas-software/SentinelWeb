@@ -1,9 +1,8 @@
 import type { FastifyRequest } from 'fastify';
 import { parseListQuery } from '../../../core/http/list-query';
 import { idParamSchema } from '../../shared/params.schema';
-import { temPapel } from '../../access/helpers/require-permission';
+import { temCargo } from '../../access/helpers/require-permission';
 import { workstationViewQuerySchema } from '../schemas/workstation.schema';
-import { WORKSTATION_SORTABLE } from '../helpers/workstation-filters.helper';
 import { listWorkstations } from '../use-cases/list-workstations.usecase';
 import { getWorkstation } from '../use-cases/get-workstation.usecase';
 
@@ -22,13 +21,8 @@ export const workstationController = {
       visaoCrua === undefined ? {} : { view: visaoCrua },
     );
 
-    const query = parseListQuery(paginacao, {
-      sortable: WORKSTATION_SORTABLE,
-      // Posto é lista para consultar, não fila de novidades: ordena por nome,
-      // como o catálogo. E sem `trashable` — localização não tem lixeira (D8).
-      defaultSort: 'name',
-      defaultOrder: 'asc',
-    });
+    // Sem `trashable` — localização não tem lixeira (D8).
+    const query = parseListQuery(paginacao);
 
     return listWorkstations(query, view);
   },
@@ -45,6 +39,6 @@ export const workstationController = {
     // uma terceira porta, não por decisão: quem lê filtra, e esta é a leitura
     // que faltava. Mesma inversão do `actorId` (D23) — quem sabe quem está
     // pedindo é a borda.
-    return getWorkstation(id, temPapel(request, 'ADMIN'));
+    return getWorkstation(id, temCargo(request, 'ADMIN'));
   },
 };

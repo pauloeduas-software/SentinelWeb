@@ -2,7 +2,7 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { ativoDoPosto, jaTemAtivo } from '../../workstation/helpers/ativo-do-posto.helper';
-import { ASSET_SELECT } from '../helpers/asset-select.helper';
+import { ASSET_WRITE_SELECT } from '../helpers/asset-select.helper';
 import { assertEtiquetaESerieLivres } from './assert-unique-asset.usecase';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
 
@@ -53,13 +53,13 @@ export async function restoreAsset(id: string, actorId: string | null) {
     const postoAtual = naLixeira.assignments[0]?.targetLocationId;
     if (postoAtual) {
       const ocupante = await ativoDoPosto(tx, postoAtual, id);
-      if (ocupante) throw new AppError(jaTemAtivo(ocupante), 409, { assetId: ocupante.id });
+      if (ocupante) throw new AppError(jaTemAtivo(ocupante), 409);
     }
 
     const { count } = await tx.asset.updateMany({ where: { id, deletedAt: { not: null } }, data: { deletedAt: null } });
     if (count === 0) throw new AppError('Ativo não está na lixeira.', 404);
     await recordActivity(tx, { entityType: 'Asset', entityId: id, action: 'RESTORE' }, actorId);
 
-    return tx.asset.findFirstOrThrow({ where: { id }, select: ASSET_SELECT });
+    return tx.asset.findFirstOrThrow({ where: { id }, select: ASSET_WRITE_SELECT });
   });
 }

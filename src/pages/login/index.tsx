@@ -8,12 +8,12 @@ import { useLogin } from './hooks/useLogin';
 // identidade própria parece a de outro sistema.
 export default function LoginPage() {
   const {
-    username, setUsername, password, setPassword, erro, enviando, handleSubmit,
+    email, setEmail, password, setPassword, erro, enviando, handleSubmit,
   } = useLogin();
 
   return (
     <div className="min-h-screen bg-bg-base text-text-primary font-sans flex items-center justify-center p-6">
-      <div className="w-full max-w-sm animate-in fade-in duration-300">
+      <div className="w-full max-w-sm motion-safe:animate-fade-in">
 
         <div className="flex items-center gap-3 mb-8">
           <div className="bg-text-primary p-1 rounded-sm">
@@ -36,16 +36,17 @@ export default function LoginPage() {
             )}
 
             <div className="space-y-1">
-              <label htmlFor="username" className="text-text-secondary uppercase tracking-widest text-[10px]">
-                Usuário
+              <label htmlFor="email" className="text-text-secondary uppercase tracking-widest text-[10px]">
+                E-mail
               </label>
               <input
-                id="username"
+                id="email"
                 required
                 autoFocus
+                type="email"
                 autoComplete="username"
-                value={username}
-                onChange={(evento) => setUsername(evento.target.value)}
+                value={email}
+                onChange={(evento) => setEmail(evento.target.value)}
                 className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors"
               />
             </div>

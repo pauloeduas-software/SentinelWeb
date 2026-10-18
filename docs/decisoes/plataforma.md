@@ -17,6 +17,10 @@
 Uma empresa só. FMCS obriga filtro por `companyId` em toda query do Prisma — caro e fácil de
 furar. A hierarquia de `Location` resolve o que precisamos hoje.
 
+> **Superada em parte pela localização plana (commit `ff34364`):** a `Location` deixou de ter
+> hierarquia — sem `parentId` nem gestor, o nome único diz onde o lugar fica. O descarte do FMCS
+> não dependia dela: uma empresa só continua sendo o escopo.
+
 ---
 
 ## D6 — Baselinar as migrations antes de tocar em qualquer coluna — e NÃO com `migrate dev`
@@ -35,6 +39,13 @@ bunx prisma migrate resolve --applied 0_init
 
 A receita ficou fixada para sempre: `migrate diff --from-url` + `migrate deploy`, **nunca**
 `migrate dev` (é interativo e falha neste ambiente).
+
+> **Enquanto não há produção, a receita é outra:** as migrations foram fundidas numa `0_init`
+> só (`798a3aa`, depois `904af4e`), e mudança de schema edita essa migration no lugar, com o
+> banco de desenvolvimento alinhado à mão — ver
+> [`../guias/criar-uma-migration.md`](../guias/criar-uma-migration.md). O `--from-url` +
+> `migrate deploy` volta no dia em que houver um banco de verdade; o **nunca** `migrate dev`
+> não mudou.
 
 ---
 

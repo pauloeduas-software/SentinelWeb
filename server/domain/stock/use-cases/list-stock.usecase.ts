@@ -5,11 +5,9 @@ import { comSaldo, contarFora, type ComSaldo } from '../helpers/stock-balance.he
 import { STOCK_ITEM_SELECT } from '../helpers/stock-select.helper';
 import type { StockFilters } from '../schemas/stock.schema';
 
-export const STOCK_SORTABLE = ['name', 'qty', 'createdAt'] as const;
-export type StockSortable = (typeof STOCK_SORTABLE)[number];
 
-export type StockItemRow = Prisma.StockItemGetPayload<{ select: typeof STOCK_ITEM_SELECT }>;
-export type StockItemComSaldo = ComSaldo<StockItemRow>;
+type StockItemRow = Prisma.StockItemGetPayload<{ select: typeof STOCK_ITEM_SELECT }>;
+type StockItemComSaldo = ComSaldo<StockItemRow>;
 
 /**
  * A listagem, com o saldo de cada linha calculado em LOTE.
@@ -22,7 +20,7 @@ export type StockItemComSaldo = ComSaldo<StockItemRow>;
  * precisa da garantia.
  */
 export async function listStock(
-  query: ListQuery<StockSortable>,
+  query: ListQuery,
   filtros: StockFilters,
 ): Promise<ListEnvelope<StockItemComSaldo>> {
   const where: Prisma.StockItemWhereInput = {
@@ -36,7 +34,7 @@ export async function listStock(
     prisma.stockItem.findMany({
       where,
       select: STOCK_ITEM_SELECT,
-      orderBy: { [query.sort]: query.order },
+      orderBy: { name: 'asc' },
       skip: query.skip,
       take: query.take,
     }),

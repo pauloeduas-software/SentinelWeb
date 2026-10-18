@@ -2,7 +2,7 @@
 // (docs/historico/fase-07-convergencia-rmm-itam.md).
 
 export type SuggestionKind = 'LINK';
-export type SuggestionState = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SUPERSEDED';
+type SuggestionState = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SUPERSEDED';
 export type MatchSignal = 'SERIAL' | 'UUID' | 'HOSTNAME';
 export type DiscoveryMode = 'OFF' | 'SUGGEST' | 'ON';
 export type ReviewState = 'UNREVIEWED' | 'ALLOWED' | 'BLOCKED';
@@ -37,11 +37,8 @@ export interface Cobertura {
   semAgente: number;
   nuncaVistos: number;
   fantasmas: number;
-  descobertas: number;
   orfaos: number;
   shadowIt: number;
-  bloqueados: number;
-  sugestoesPendentes: number;
 }
 
 /** O placar de uma varredura — `POST /api/reconciliation/run`. */

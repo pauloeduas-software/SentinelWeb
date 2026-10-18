@@ -39,8 +39,6 @@ export const categorySpec: CatalogSpec = {
   select: {
     id: true, name: true, type: true, isActive: true, createdAt: true,
   },
-  sortable: ['name', 'type', 'createdAt'],
-  defaultSort: 'name',
   searchable: ['name'],
   audited: ['name', 'type', 'isActive'],
 
@@ -74,7 +72,6 @@ export const categorySpec: CatalogSpec = {
       throw new AppError(
         `Não é possível mudar o tipo: categoria em uso por ${usos} ${usos === 1 ? 'registro' : 'registros'}.`,
         409,
-        { emUso: usos },
       );
     }
   },

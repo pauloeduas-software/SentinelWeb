@@ -65,8 +65,6 @@ export const statusLabelSpec: CatalogSpec = {
     id: true, name: true, type: true,
     notes: true, isActive: true, createdAt: true,
   },
-  sortable: ['name', 'type', 'createdAt'],
-  defaultSort: 'name',
   searchable: ['name'],
   audited: ['name', 'type', 'notes', 'isActive'],
 
@@ -100,7 +98,7 @@ export const statusLabelSpec: CatalogSpec = {
   // ativo que aponta para ele — sem tocar em nenhum. Mesma guarda do delete.
   //
   // POR QUE AQUI É MAIS GRAVE QUE NA CATEGORIA: o tipo da categoria diz a que
-  // MÓDULO o registro pertence (ativo, licença, consumível) — errar isso põe a
+  // MÓDULO o registro pertence (ativo, licença, estoque) — errar isso põe a
   // linha na tela errada. O tipo do status decide se o equipamento PODE SER
   // ENTREGUE A ALGUÉM: `DEPLOYABLE` é o único que libera o checkout. Trocar o
   // tipo de um status disponível para `UNDEPLOYABLE` inutiliza 200 ativos em
@@ -141,7 +139,6 @@ export const statusLabelSpec: CatalogSpec = {
         throw new AppError(
           `Não é possível mudar o tipo: status em uso por ${usos} ${usos === 1 ? 'registro' : 'registros'}.`,
           409,
-          { emUso: usos },
         );
       }
     }

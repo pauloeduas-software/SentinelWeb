@@ -74,7 +74,6 @@ describe('invariante 19 — a porta da marca de posto de trabalho', () => {
     expect(status).toBe(409);
     expect(body.error).toMatch(/2 ativos/);
     expect(body.error).toMatch(/no máximo um/i);
-    expect(body.ativos).toBe(2);
 
     // E nada foi gravado: a transação inteira voltou atrás.
     const depois = await prisma.location.findUniqueOrThrow({

@@ -1,10 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import type { ListView } from '../../../core/http/list-query';
 
-// A ALLOWLIST DE ORDENAÇÃO.
-export const USER_SORTABLE = ['name', 'email', 'createdAt'] as const;
-export type UserSortable = (typeof USER_SORTABLE)[number];
-
 export function buildUserWhere(q?: string): Prisma.UserWhereInput {
   if (!q) return {};
 
@@ -12,10 +8,6 @@ export function buildUserWhere(q?: string): Prisma.UserWhereInput {
     OR: [
       { name: { contains: q, mode: 'insensitive' } },
       { email: { contains: q, mode: 'insensitive' } },
-      // A MATRÍCULA entra junto (F11, Etapa E): é por ela que o RH procura
-      // alguém, e é o que vem no crachá.
-      { employeeNumber: { contains: q, mode: 'insensitive' } },
-      { jobTitle: { contains: q, mode: 'insensitive' } },
     ],
   };
 }

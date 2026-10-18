@@ -1,15 +1,12 @@
-import { USER_PUBLIC_SELECT } from '../../user/helpers/user-select.helper';
-
 // O que de um ativo pode sair para o cliente — em UM lugar só, usado pela
-// listagem, pela criação, pela edição e pela busca por série.
+// listagem, pelo detalhe e, sem o custo, pelas respostas de escrita.
 //
 // Allowlist, não `include`: coluna nova na tabela não aparece em resposta
 // nenhuma até alguém escrever o nome dela aqui.
 //
 // As relações vêm embutidas com allowlist própria porque a tabela mostra o NOME
 // do status, do modelo e do fabricante, não o uuid — e uma consulta por linha
-// seria N+1. O `assignedTo` reaproveita `USER_PUBLIC_SELECT`: repetido, uma
-// cópia esquecida na Fase 3 devolveria o `passwordHash` por aqui.
+// seria N+1.
 //
 // A CATEGORIA do ativo vem pelo modelo (`model.category`), não por coluna
 // própria — é assim no Snipe-IT, e é o que impede ativo e modelo divergirem.
@@ -23,7 +20,6 @@ export const ASSET_SELECT = {
   statusId: true,
   modelId: true,
   locationId: true,
-  assignedToId: true,
 
   orderNumber: true,
   purchaseDate: true,
@@ -38,11 +34,6 @@ export const ASSET_SELECT = {
   // docs/historico/fase-02-ativos.md).
   retiredAt: true,
   retiredReason: true,
-
-  // Autoria (D26) — as duas colunas que existem para a tela de detalhe não
-  // consultar o `ActivityLog` por linha.
-  createdById: true,
-  updatedById: true,
 
   createdAt: true,
 
@@ -59,46 +50,66 @@ export const ASSET_SELECT = {
     },
   },
   location: { select: { id: true, name: true } },
-  assignedTo: { select: USER_PUBLIC_SELECT },
 } as const;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // O CUSTO POR PERMISSÃO (F11, D77) — e ele é OMITIDO DO SELECT, não mascarado
 // depois.
 //
-
+// Ler a coluna e apagá-la do objeto antes de responder ainda
 // deixa o valor passar pelo processo. Ele entra no objeto, e daí em diante vaza
 // por qualquer caminho que não seja a resposta "feliz" — a linha de log de um
 // erro que serializa o objeto, um `JSON.stringify` num handler de exceção, o
-// `changes` de um `ActivityLog` montado com spread. O dado que não deve sair
-// não é lido.
+// `changes` de um `ActivityLog` montado com spread. Na LEITURA, o dado que não
+// deve sair não é lido. A exceção é a edição, que lê o custo para o diff da
+// auditoria e o tira do objeto antes de responder (`update-asset.usecase.ts`).
 //
 // POR QUE UMA FUNÇÃO E NÃO DOIS `const`: os dois selects têm que ser o MESMO
 // menos uma coluna. Dois literais lado a lado divergem na primeira coluna
 // acrescentada — e a que divergiria é a versão restrita, que ninguém olha no
 // dia a dia porque o administrador vê tudo.
 //
-// ⚠️ O QUE ESTA FUNÇÃO **NÃO** COBRE, de propósito: as 50 chamadas a
-// `ASSET_SELECT` das ESCRITAS internas (`checkoutAsset`, `fecharPosse`,
-// `retireAsset`, `updateAsset`…). Elas leem o ativo para gravar outra coisa e
-// não devolvem custo a ninguém; enfiar a sessão em cada use-case de escrita
-// espalharia autorização por toda a camada de posse para zero ganho. O custo
-// sai por LEITURA, e é a leitura que filtra.
+// AS ESCRITAS devolvem o ativo SEM custo, para qualquer cargo
+// (`ASSET_WRITE_SELECT`). Criar, editar, entregar, devolver, dar baixa e
+// restaurar respondem com o ativo atualizado, e o técnico chama quase todas:
+// com o select cheio, o custo que a leitura esconde saía pela resposta da
+// escrita. Enfiar a sessão em cada use-case de escrita espalharia autorização
+// por toda a camada de posse — e a tela não usa o custo da resposta de escrita
+// nenhuma. O custo sai por LEITURA, e é a leitura que filtra.
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** As colunas que `assets.viewCost` governa. Uma lista, num lugar só. */
+/** As colunas que só o `ADMIN` vê (D77). Uma lista, num lugar só. */
 const COLUNAS_DE_CUSTO = ['purchaseCost'] as const;
 
 /**
- * Remove as colunas de custo de um select quando a sessão não tem a chave.
+ * Remove as colunas de custo de um select — ou de uma linha já lida.
  *
- * Genérica porque serve o select da listagem e o do detalhe: os dois carregam
- * a mesma coluna de dinheiro.
+ * Genérica porque serve o select da listagem, o do detalhe e a resposta da
+ * edição, que lê o custo para o diff e não o devolve.
  */
-function semCusto<T extends Record<string, unknown>>(select: T): T {
-  const copia = { ...select };
+export function semCusto<T extends Record<string, unknown>>(select: T): Omit<T, (typeof COLUNAS_DE_CUSTO)[number]> {
+  const copia: Record<string, unknown> = { ...select };
   for (const coluna of COLUNAS_DE_CUSTO) delete copia[coluna];
-  return copia;
+  // O tipo diz o que o objeto tem: sem a coluna de custo, para o compilador
+  // recusar quem tentar lê-la de uma resposta de escrita.
+  return copia as Omit<T, (typeof COLUNAS_DE_CUSTO)[number]>;
+}
+
+/** O select das RESPOSTAS DE ESCRITA: sem custo, qualquer que seja o cargo. */
+export const ASSET_WRITE_SELECT = semCusto(ASSET_SELECT);
+
+/**
+ * O custo que chega numa ESCRITA de quem não é `ADMIN` é descartado.
+ *
+ * O formulário do técnico não tem o campo, porque ele não vê o valor. Aceitar
+ * o que chegasse deixaria um `purchaseCost: ''` (o campo vazio vira `null`)
+ * apagar o custo que só o administrador enxerga.
+ */
+export function custoSoDoAdmin<T extends { purchaseCost?: string | null }>(
+  data: T,
+  podeVerCusto: boolean,
+): T {
+  return podeVerCusto ? data : { ...data, purchaseCost: undefined };
 }
 
 /** O select da LISTAGEM, conforme a sessão enxergue custo ou não. */

@@ -15,30 +15,23 @@ export interface Cobertura {
   semAgente: number;
   /**
    * Cadastrado e NUNCA visto por agente nenhum. É a resposta do D98: o
-   * "NEVER_SEEN" que o TODO queria não é estado do endpoint — uma linha de
-   * endpoint nasce de um handshake —, é esta contagem, do lado do patrimônio.
+   * "NEVER_SEEN" não é estado do endpoint — uma linha de endpoint nasce de um
+   * handshake —, é esta contagem, do lado do patrimônio.
    */
   nuncaVistos: number;
   /** FANTASMA: já foi visto, e sumiu há mais de `ghostDays`. */
   fantasmas: number;
 
-  /** Máquinas que o agente descobriu. */
-  descobertas: number;
-  /** Delas, quantas não têm cadastro: os órfãos. */
+  /** Máquinas que o agente descobriu e não têm cadastro: os órfãos. */
   orfaos: number;
   /** SHADOW IT: órfão visto há mais de `shadowHours` e ainda sem triagem. */
   shadowIt: number;
-  /** Órfão triado como não autorizado. */
-  bloqueados: number;
-
-  /** Sugestões esperando gente. É o trabalho a fazer. */
-  sugestoesPendentes: number;
 }
 
 /**
  * Tudo em uma `$transaction`.
  *
- * Não é por atomicidade — é leitura pura. É para os dez números descreverem o
+ * Não é por atomicidade — é leitura pura. É para os números descreverem o
  * MESMO instante: contados um a um, um handshake no meio faria `comAgente` e
  * `semAgente` não fecharem com `cadastrados`, e um painel que não soma é um
  * painel em que ninguém confia.
@@ -54,16 +47,12 @@ export async function calcularCobertura(): Promise<Cobertura> {
   // painel de acertos contábeis (D19).
   const vivos = { retiredAt: null };
 
-  const [
-    cadastrados, comAgente, nuncaVistos, fantasmas,
-    descobertas, orfaos, shadowIt, bloqueados, sugestoesPendentes,
-  ] = await prisma.$transaction([
+  const [cadastrados, comAgente, nuncaVistos, fantasmas, orfaos, shadowIt] = await prisma.$transaction([
     prisma.asset.count({ where: vivos }),
     prisma.asset.count({ where: { ...vivos, endpoint: { isNot: null } } }),
     prisma.asset.count({ where: { ...vivos, lastSeenByAgentAt: null } }),
     prisma.asset.count({ where: { ...vivos, lastSeenByAgentAt: { lt: limiteFantasma } } }),
 
-    prisma.endpoint.count(),
     prisma.endpoint.count({ where: { assetId: null } }),
     prisma.endpoint.count({
       where: {
@@ -72,9 +61,6 @@ export async function calcularCobertura(): Promise<Cobertura> {
         lastSeen: { lt: limiteShadow },
       },
     }),
-    prisma.endpoint.count({ where: { reviewState: 'BLOCKED' } }),
-
-    prisma.reconciliationSuggestion.count({ where: { state: 'PENDING' } }),
   ]);
 
   return {
@@ -83,10 +69,7 @@ export async function calcularCobertura(): Promise<Cobertura> {
     semAgente: cadastrados - comAgente,
     nuncaVistos,
     fantasmas,
-    descobertas,
     orfaos,
     shadowIt,
-    bloqueados,
-    sugestoesPendentes,
   };
 }

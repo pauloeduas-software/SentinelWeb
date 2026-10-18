@@ -22,8 +22,6 @@ export const assetModelSpec: CatalogSpec = {
     manufacturer: { select: { id: true, name: true } },
     category: { select: { id: true, name: true, type: true } },
   },
-  sortable: ['name', 'modelNumber', 'createdAt'],
-  defaultSort: 'name',
   searchable: ['name', 'modelNumber'],
   audited: [
     'name', 'modelNumber', 'notes', 'manufacturerId', 'categoryId', 'isActive',

@@ -6,7 +6,7 @@ import { nextAssetTag } from '../../settings/use-cases/app-settings.usecase';
 import {
   assertEscolhaAtiva, assertLocalRecebe, lerModeloTravado, lerStatusTravado,
 } from '../../catalog/helpers/catalog-lock.helper';
-import { ASSET_SELECT } from '../helpers/asset-select.helper';
+import { ASSET_WRITE_SELECT } from '../helpers/asset-select.helper';
 import { assertEtiquetaESerieLivres } from './assert-unique-asset.usecase';
 
 export interface CreateAssetData {
@@ -20,7 +20,6 @@ export interface CreateAssetData {
   orderNumber?: string | null;
   purchaseDate?: Date | null;
   purchaseCost?: string | null;
-  /** Campo customizado: `slug` → valor cru. Validado no use-case, não na borda. */
 }
 
 export async function createAsset(data: CreateAssetData, actorId: string | null) {
@@ -60,19 +59,14 @@ export async function createAsset(data: CreateAssetData, actorId: string | null)
         name: data.name ?? null,
         notes: data.notes ?? null,
         locationId: data.locationId ?? null,
-        // `assignedToId` nasce nulo e só o CHECKOUT o preenche
-        // (docs/referencia/modelo-de-posse.md). Ativo que já está com alguém entra pelo
-        // cadastro e recebe um checkout em seguida — a operação que existe
-        // para isso e que deixa histórico.
+        // Ativo que já está com alguém entra pelo cadastro e recebe um checkout
+        // em seguida — a operação que existe para isso e que deixa histórico
+        // (docs/referencia/modelo-de-posse.md).
         orderNumber: data.orderNumber ?? null,
         purchaseDate: data.purchaseDate ?? null,
         purchaseCost: data.purchaseCost ?? null,
-        // Autoria (D26). Duas colunas SÓ aqui, para a tela de detalhe não
-        // consultar o `ActivityLog` por linha. `createdById` nunca muda depois.
-        createdById: actorId,
-        updatedById: actorId,
       },
-      select: ASSET_SELECT,
+      select: ASSET_WRITE_SELECT,
     });
 
     await recordActivity(

@@ -94,7 +94,7 @@ export async function criarLicenca(
     expirationDate?: string;
     terminationDate?: string;
   },
-): Promise<{ id: string; seatsTotal: number; livres: number; hasProductKey: boolean }> {
+): Promise<{ id: string; seatsTotal: number; livres: number }> {
   const corpo: Record<string, unknown> = {
     name: opcoes.name,
     categoryId: opcoes.categoryId,
@@ -184,15 +184,14 @@ export async function criarAtivo(
  * `Manufacturer.name` e `Location.name` são `@unique`, e `User.email` tem índice
  * único parcial. Chamar esta função DUAS vezes no mesmo arquivo colide nos três —
  * 409 "Registro já existe" vindo de dentro do fixture, que se lê como defeito da
- * aplicação e não do teste. Foi o que aconteceu com `ciclo-de-vida/auditoria.test.ts`,
- * que a monta uma vez por `it`.
+ * aplicação e não do teste.
  *
- * O padrão fica VAZIO de propósito: quatro testes já passando dependem dos nomes
- * LITERAIS que ela produz — `invariantes/posse.test.ts` compara
- * `['Ana Lima', 'Laura Souza']`, `aceite/fluxo.test.ts` confere o `signerName` e
- * `listagens/historico-da-pessoa.test.ts` espera `locationLabel === 'Mesa 1'`.
- * Trocar os nomes por gerados quebraria os quatro para consertar um. Quem chama
- * mais de uma vez passa o sufixo; quem chama uma vez não muda nada.
+ * O padrão fica VAZIO de propósito: há testes que dependem dos nomes LITERAIS
+ * que ela produz — `invariantes/posse.test.ts` compara
+ * `['Ana Lima', 'Laura Souza']` e `listagens/historico-da-pessoa.test.ts` espera
+ * `locationLabel === 'Mesa 1'`. Trocar os nomes por gerados quebraria esses
+ * testes. Quem chama mais de uma vez passa o sufixo; quem chama uma vez não
+ * muda nada.
  * ═════════════════════════════════════════════════════════════════════════════
  */
 export async function cenarioDePosse(api: ApiDeTeste, sufixo = '') {
@@ -205,8 +204,8 @@ export async function cenarioDePosse(api: ApiDeTeste, sufixo = '') {
   // `laura (posto-vago)@teste.local`, que o zod da borda recusa com 422 — e o teste
   // morre dizendo "e-mail inválido", que não tem nada a ver com o que ele testa.
   //
-  // Sanitizar aqui é a mesma escolha do `method` na auditoria pelo agente: a regra
-  // mora onde ninguém pode esquecer dela, porque quem chama é quem erra.
+  // Sanitizar aqui põe a regra onde ninguém pode esquecer dela, porque quem
+  // chama é quem erra.
   const parteDeEmail = sufixo.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const noEmail = parteDeEmail ? `.${parteDeEmail}` : '';
 
@@ -226,7 +225,7 @@ export async function cenarioDePosse(api: ApiDeTeste, sufixo = '') {
 // ── O CICLO DE VIDA (F8) ────────────────────────────────────────────────────
 
 /** `AAAA-MM-DD` de N dias atrás — o que os testes de prazo precisam. */
-export function diasAtras(dias: number): string {
+function diasAtras(dias: number): string {
   const data = new Date();
   data.setUTCDate(data.getUTCDate() - dias);
   return data.toISOString().slice(0, 10);
@@ -236,5 +235,3 @@ export function diasAtras(dias: number): string {
 export function diasAFrente(dias: number): string {
   return diasAtras(-dias);
 }
-
-// ── CAMPOS CUSTOMIZADOS (F9) ────────────────────────────────────────────────

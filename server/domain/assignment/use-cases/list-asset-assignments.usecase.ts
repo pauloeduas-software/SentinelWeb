@@ -23,9 +23,8 @@ export async function listAssetAssignments(assetId: string) {
   return prisma.assignment.findMany({
     where: { assetId },
     select: ASSIGNMENT_SELECT,
-    // `createdAt` como desempate: numa carga inicial várias entregas nascem com
-    // o MESMO `checkoutAt` (a data que veio da planilha), e sem o segundo
-    // critério o Postgres não promete ordem nenhuma entre elas — a lista
+    // `createdAt` como desempate: entre entregas com o MESMO `checkoutAt`, sem
+    // o segundo critério o Postgres não promete ordem nenhuma — a lista
     // trocaria de ordem entre dois refreshes iguais.
     orderBy: [{ checkoutAt: 'desc' }, { createdAt: 'desc' }],
   });

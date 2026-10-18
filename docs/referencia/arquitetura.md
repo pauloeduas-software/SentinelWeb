@@ -50,11 +50,10 @@ server/
 │   ├── database/                # prismaClient, soft-delete.extension (acha a lixeira pelo DMMF)
 │   ├── errors/                  # app-error (AppError), error-handler, error-shape, zod-error
 │   ├── http/                    # require-auth (sessão), permission-guard (autorização + boot, D137),
-│   │                            #   list-query (paginação + allowlist de ordenação), write-rate-limit
-│   ├── jobs/                    # claim-window — o CAS por linha de JobRun (D79)
+│   │                            #   list-query (paginação, busca e a vista da lixeira), write-rate-limit
+│   ├── jobs/                    # claim-window — o CAS por linha de JobRun (D79) e `inicioDoDia`
 │   ├── lifecycle/               # health (readiness), shutdown (onShutdown)
-│   ├── logger/                  # logger (createLogger), sanitize, request-logger
-│   └── time/                    # local-day — em que fuso é "hoje" (D123)
+│   └── logger/                  # logger (createLogger), sanitize, request-logger
 └── domain/<nome>/               # FATIA VERTICAL — sempre o mesmo esqueleto
     ├── <nome>.maestro.ts        # registra as rotas do domínio. Só rota.
     ├── controllers/             # só HTTP: lê a requisição, chama use-case, responde
@@ -69,10 +68,10 @@ server/
 | Domínio | O que é | Model do Prisma |
 |---|---|---|
 | `agent` | Conversa WebSocket com o Agente Sentinel (C#). Só transporte. | — |
-| `endpoint` | Máquina descoberta pelo agente (lado RMM) + telemetria + comandos | `Endpoint`, `Telemetry` |
+| `endpoint` | Máquina descoberta pelo agente (lado RMM) + telemetria (a crua fica 3 dias, com expurgo uma vez por dia depois da agregação; o uso diário agregado, para sempre) + comandos | `Endpoint`, `Telemetry` |
 | `asset` | Ativo do ITAM — o `Asset` do vocabulário do Snipe-IT | `Asset` |
 | `catalog` | As CINCO tabelas de catálogo, com UM CRUD genérico dirigido por spec | `Category`, `StatusLabel`, `Manufacturer`, `AssetModel`, `Location` |
-| `settings` | Configuração global: etiqueta automática, os botões da descoberta e o formato de número, data e moeda | `AppSetting` |
+| `settings` | Configuração global: a etiqueta automática (prefixo, zeros, próximo número) e os botões da descoberta (`discoveryMode`, `ghostDays`, `shadowHours`). Idioma, moeda e formato de data são fixos no código (`src/pages/helpers/format.helper.ts`) | `AppSetting` |
 | `activity` | Trilha de auditoria, gravada na transação de quem a origina | `ActivityLog` |
 | `user` | Colaborador da empresa | `User` |
 | `assignment` | **Posse**: entrega e devolução de ativo, com alvo polimórfico (pessoa ou posto) e o histórico de quem teve o quê | `Assignment` |
@@ -80,7 +79,7 @@ server/
 | `license` | **Licenças**: o contrato e seus ASSENTOS materializados — cadastro simples, sem conformidade de software nem chave cifrada ([G](../decisoes/licencas.md#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples)) | `License`, `LicenseSeat`, `LicenseSeatCheckout` |
 | `stock` | **Estoque**: o que tem quantidade em vez de patrimônio individual — um tipo, saldo sempre calculado ([J](../decisoes/estoque.md#j--o-estoque-volta-como-stockitem--stockmovement)) | `StockItem`, `StockMovement` |
 | `reconciliation` | **Convergência RMM × ITAM**: o vínculo entre a máquina descoberta e o ativo cadastrado e a fila de sugestões — sem inferência por conta do sistema operacional ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)) nem fusão de máquinas ([H](../decisoes/reconciliacao.md#h--a-fusão-de-máquinas-sai)) | `ReconciliationSuggestion`, `AssetChange`, `AssetUsageDaily` |
-| `access` | **Autorização**: o papel da sessão, o mapa de rotas × papel mínimo e a invariante "nunca sem administrador" | — |
+| `access` | **Autorização**: o cargo da sessão, o mapa de rotas × cargo mínimo e a invariante "nunca sem administrador" | — |
 | `auth` | **Sessão e credencial**: login, cookie e a geração da sessão (`tokenVersion`) | — |
 | `workstation` | **O posto como tela**: a leitura de `Location` + ocupantes que a `/postos` mostra, e onde `ehPostoVago()` mora | — |
 | `shared` | Tipos e helpers usados por mais de um domínio (`diff.helper`, `fields.schema`, `history.schema`) | — |
@@ -91,14 +90,14 @@ server/
 >
 > ⚠️ **`Asset` nunca pode ter coluna `status`, `lastSeen` ou `hwid`** — são as do
 > `Endpoint`. É essa ausência que faz o compilador barrar uma query do RMM
-> apontando para a tabela errada (`../ROADMAP.md`, D13).
+> apontando para a tabela errada ([D13](../decisoes/catalogo-e-ativo.md#d13--a-segurança-do-rename-depende-de-o-asset-novo-não-ter-status-lastseen-nem-hwid)).
 
 ### `catalog` é a exceção à fatia vertical
 
 As CINCO tabelas de catálogo são o MESMO CRUD: nome, listagem paginada, busca,
-ordenação, `ActivityLog`, 409 quando a linha está em uso. Nove fatias verticais
-completas seriam ~99 arquivos quase idênticos — o que esta mesma página chama de
-cerimônia, não arquitetura.
+`ActivityLog`, 409 quando a linha está em uso. Cinco fatias verticais completas
+seriam ~55 arquivos quase idênticos (onze por fatia, a conta do D9) — o que esta
+mesma página chama de cerimônia, não arquitetura.
 
 > **O número está escrito aqui de propósito, e precisa ser corrigido junto.** É
 > o mesmo tipo de referência envelhecida que o `invariantes.md` pede para
@@ -107,7 +106,7 @@ cerimônia, não arquitetura.
 
 Então elas compartilham um CRUD genérico, e o que varia mora em `specs/`: um
 arquivo por tabela declarando o slug da rota, o schema de entrada, a allowlist de
-resposta, as colunas ordenáveis e a regra de "em uso". **Acrescentar uma tabela
+resposta, as colunas de busca e a regra de "em uso". **Acrescentar uma tabela
 de catálogo é escrever a spec e incluí-la em `specs/index.ts`** — nenhuma rota é
 escrita à mão.
 
@@ -139,10 +138,15 @@ resposta de erro.
 | `AppError('O agente de … não está conectado agora.', 409)` | 409 + a mensagem | use-case |
 | Prisma `P2025` (não achou) | 404 "Registro não encontrado" | error-handler |
 | Prisma `P2002` (unique) | 409 "Registro já existe" | error-handler |
+| `ZodError` (corpo, query ou parâmetro inválido) | 422 + a frase dos primeiros campos | error-handler (`zod-error.ts`) |
 | JSON malformado / corpo grande | 400 / 413 | error-handler |
 | Qualquer outro erro | 500 genérico + log completo | error-handler |
 
-`error.message` de banco ou de biblioteca **nunca** vai para o cliente.
+`error.message` de banco ou de biblioteca **nunca** vai para o cliente. E o corpo de
+toda resposta de erro é `{ error }` — a frase, e nada mais: o `AppError` não carrega
+campo extra e o 422 de validação não manda o mapa por campo
+([Q](../decisoes/escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai)).
+A frase é o contrato; a tela mostra só ela.
 
 ---
 
@@ -214,8 +218,8 @@ Regras práticas:
 - **Cálculo sai do JSX.** Parse de coluna Json, conversão de bytes e cor de
   status moram em `helpers/`.
 - **O `apiClient` traduz o erro num lugar só.** Toda tela mostra
-  `error.message`; o `fields` por campo que o 422 traz no corpo não é lido por
-  nenhuma delas, e o cliente não o desembrulha mais.
+  `error.message`, que vem do `error` do corpo — o único campo que uma resposta
+  de erro tem.
 
 ---
 
@@ -304,11 +308,14 @@ respondem 409 para quem está inativo, com a trava de linha em
 `lock-user.usecase.ts` como primeira instrução de cada transação. A ocupação de
 posto foi a que faltou mais tempo, e o motivo é instrutivo: ocupação de posto
 não *parece* posse, mas responsabilidade por ativo em posto é DERIVADA dela.
+E a própria desativação também é recusada (409) enquanto a pessoa responde por
+alguma das quatro — como a exclusão já era: desativar não fecha nada sozinho.
 
-O que isso proíbe, e o lint não pega: **escrever em `Asset.assignedToId` fora do
-checkout/checkin**. Aquela coluna é cache do caso `USER`; um segundo lugar que a
-escreva recria a divergência que o modelo existe para impedir — e a defesa é a
-chave não existir no schema de edição, não uma checagem. As invariantes estão em
+O que isso proíbe, e o lint não pega: **guardar quem responde numa coluna**. O
+`Asset.assignedToId`, que era cache do caso `USER`, saiu do schema
+([Q](../decisoes/escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai)):
+quem responde é a `Assignment` aberta, e um segundo lugar com a mesma resposta
+recria a divergência que o modelo existe para impedir. As invariantes estão em
 [`invariantes.md`](invariantes.md) e são provadas por `tests/invariantes/`
 (`npm test`) e por `prisma/verificacoes/posse-invariantes.sql`.
 
@@ -344,5 +351,5 @@ linha 460 de um documento chamado "Arquitetura". Elas viraram guias:
 
 - [`../guias/criar-uma-migration.md`](../guias/criar-uma-migration.md) — a receita do
   `migrate diff`, por que **nunca** `migrate dev`, e o teste de reconstruir o banco do zero;
-- [`../guias/adicionar-um-dominio.md`](../guias/adicionar-um-dominio.md) — os cinco passos, mais
+- [`../guias/adicionar-um-dominio.md`](../guias/adicionar-um-dominio.md) — os seis passos, mais
   a regra de corte de quando quebrar em `use-cases/`.

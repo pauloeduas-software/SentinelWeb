@@ -4,16 +4,16 @@ import { conferirSenha, conferirSenhaInexistente, hashSenha, precisaRehash } fro
 import type { SessaoEmitida } from '../auth.types';
 import { carregarSessaoParaValidacao } from './current-user.usecase';
 
-// O login. Quatro recusas, e três frases.
+// O login. Cinco recusas, e quatro frases.
 
 /**
- * A MESMA mensagem para "esse usuário não existe" e para "a senha está errada".
+ * A MESMA mensagem para "esse e-mail não tem conta" e para "a senha está errada".
  *
  * Duas frases diferentes seriam um oráculo de quem trabalha aqui: bastaria
- * varrer nomes até uma delas mudar. E o mesmo raciocínio vale para quem está na
- * lixeira e para quem nunca teve senha — todos caem aqui.
+ * varrer e-mails até uma delas mudar. E o mesmo raciocínio vale para quem está
+ * na lixeira e para quem nunca teve senha — todos caem aqui.
  */
-const CREDENCIAL_INVALIDA = 'Usuário ou senha inválidos.';
+const CREDENCIAL_INVALIDA = 'E-mail ou senha inválidos.';
 
 /**
  * Quantos erros até travar, e por quanto tempo.
@@ -28,37 +28,33 @@ const CREDENCIAL_INVALIDA = 'Usuário ou senha inválidos.';
 const MAX_TENTATIVAS = 5;
 const BLOQUEIO_MINUTOS = 15;
 
-export interface LoginInput {
-  username: string;
+interface LoginInput {
+  email: string;
   password: string;
-  /** Um dos oito códigos de recuperação. Caminho de quem perdeu o celular. */
 }
 
 export async function login(
-  { username, password }: LoginInput,
+  { email, password }: LoginInput,
 ): Promise<SessaoEmitida> {
-  // `findFirst`, não `findUnique`: `username` não é @unique no Prisma — a
+  // O LOGIN É O E-MAIL do cadastro: não existe "nome de usuário" à parte.
+  //
+  // `findFirst`, não `findUnique`: `email` não é @unique no Prisma — a
   // unicidade é índice PARCIAL (`WHERE deletedAt IS NULL`), para um usuário na
-  // lixeira não travar o recadastro do mesmo login. O efeito colateral é
+  // lixeira não travar o recadastro do mesmo e-mail. O efeito colateral é
   // exatamente o desejado: `findFirst` passa pelo escopo da lixeira, então
   // quem está apagado não encontra conta nenhuma para entrar.
   const usuario = await prisma.user.findFirst({
-    where: { username },
+    where: { email },
     select: {
       id: true,
       passwordHash: true,
       failedLoginCount: true,
       lockedUntil: true,
       isActive: true,
-      // O PAPEL, na consulta que já estava acontecendo: é ele que decide se
+      // O CARGO, na consulta que já estava acontecendo: é ele que decide se
       // esta conta opera o painel (ver a recusa abaixo).
       role: true,
       tokenVersion: true,
-      username: true,
-      // AS TRÊS COLUNAS DO SEGUNDO FATOR, na consulta que já estava acontecendo
-      // (F11, Etapa H). É o mesmo argumento do D136 um nível abaixo: ler o fator
-      // à parte dobraria as idas ao banco no caminho do login para buscar duas
-      // datas e um array que caberiam neste `select`.
     },
   });
 
@@ -66,11 +62,6 @@ export async function login(
   // (sem `passwordHash`). Os dois gastam o mesmo tempo de um argon2 de verdade:
   // sem isto, o caminho do usuário inexistente volta em 1 ms contra os 50 ms do
   // usuário real, e o relógio entrega a lista que a mensagem esconde.
-  //
-  // O EVENTO também não distingue os dois: `userId` nulo quando não há conta é
-  // o fato, mas o TIPO é o mesmo `LOGIN_FAIL` da senha errada. Registrar
-  // "usuário não existe" separado seria construir dentro de casa o oráculo de
-  // enumeração que a resposta HTTP esconde.
   if (!usuario?.passwordHash) {
     await conferirSenhaInexistente(password);
     throw new AppError(CREDENCIAL_INVALIDA, 401);
@@ -102,14 +93,10 @@ export async function login(
     throw new AppError(CREDENCIAL_INVALIDA, 401);
   }
 
-  // Desligado (F11) é diferente de apagado: a pessoa existe, o histórico dela
+  // Desativado é diferente de apagado: a pessoa existe, o histórico dela
   // continua, ela só não opera mais. A frase é PRÓPRIA porque quem chegou aqui
-  // já provou que sabe a senha — não há nada a enumerar, e "usuário ou senha
+  // já provou que sabe a senha — não há nada a enumerar, e "e-mail ou senha
   // inválidos" mandaria essa pessoa procurar um erro de digitação que não há.
-  //
-  // O evento tem tipo PRÓPRIO pelo mesmo motivo: alguém que saiu da empresa
-  // ainda sabendo a senha e ainda tentando entrar é um fato que merece ser
-  // visto, não mais uma falha no meio das outras.
   if (!usuario.isActive) {
     throw new AppError('Acesso desativado. Procure o administrador do sistema.', 403);
   }
@@ -117,10 +104,10 @@ export async function login(
   // ─────────────────────────────────────────────────────────────────────────
   // `USUARIO` NÃO ENTRA NO PAINEL, e a recusa é AQUI — não na tela.
   //
-  // O papel existe para quem RECEBE equipamento: ele é o alvo de uma entrega,
+  // O cargo existe para quem RECEBE equipamento: ele é o alvo de uma entrega,
   // não um operador. Nenhuma rota de inventário aceita `USUARIO` (o mapa de
   // `route-permissions.ts` só tem `null` para ler a própria sessão e sair), e
-  // nenhum item do menu dispensa papel — então deixá-lo entrar produzia uma
+  // nenhum item do menu dispensa cargo — então deixá-lo entrar produzia uma
   // sessão que abre um painel VAZIO e responde 403 em tudo que a pessoa tentar.
   // Isso parece defeito do sistema, e o chamado que chega é "o painel não
   // carrega", não "eu não tenho acesso".
@@ -134,13 +121,13 @@ export async function login(
   //
   // A sessão JÁ EMITIDA de quem for rebaixado para `USUARIO` depois do login
   // continua valendo até expirar, respondendo 403 em tudo — a releitura por
-  // requisição confere a lixeira e o `isActive`, não o papel. Fechar isso é
+  // requisição confere a lixeira e o `isActive`, não o cargo. Fechar isso é
   // mexer em `carregarSessaoParaValidacao`, e é decisão separada desta.
   // ─────────────────────────────────────────────────────────────────────────
   if (usuario.role === 'USUARIO') {
     throw new AppError(
       'Este acesso é de colaborador: ele serve para você receber equipamento, não para entrar '
-      + 'no painel. Se você precisa operar o sistema, peça ao administrador o papel de Técnico.',
+      + 'no painel. Se você precisa operar o sistema, peça ao administrador o cargo de Técnico.',
       403,
     );
   }
@@ -158,7 +145,6 @@ export async function login(
     data: {
       failedLoginCount: 0,
       lockedUntil: null,
-      lastLoginAt: new Date(),
       ...(novoHash ? { passwordHash: novoHash } : {}),
     },
   });
@@ -167,8 +153,8 @@ export async function login(
   // autenticada: o login não pode ter uma allowlist própria, senão é por ela
   // que o `passwordHash` escapa um dia.
   //
-  // É `carregarSessaoParaValidacao` e não `carregarUsuarioDaSessao` porque ela
-  // traz TAMBÉM a geração da sessão e o papel, na MESMA consulta. Duas razões:
+  // É `carregarSessaoParaValidacao` porque ela traz TAMBÉM a geração da sessão
+  // e o cargo, na MESMA consulta. Duas razões:
   //
   // 1. o `tokenVersion` passa a vir da releitura, não da leitura de cima. É o
   //    mesmo número em condições normais, e o certo quando não é: entre as duas
@@ -176,7 +162,7 @@ export async function login(
   //    emitiria um token que a próxima requisição recusaria — login "bem-sucedido"
   //    que não funciona;
   //
-  // 2. o papel chega na resposta do login. Sem isso o painel se desenha com o
+  // 2. o cargo chega na resposta do login. Sem isso o painel se desenha com o
   //    menu completo até a primeira releitura de `/api/auth/me`, e a pessoa vê
   //    por um instante itens que não alcança.
   const sessao = await carregarSessaoParaValidacao(usuario.id);
@@ -185,5 +171,5 @@ export async function login(
   // Os três saem daqui juntos porque quem ASSINA o token é o controller
   // (transporte), e ele não pode ir ao banco buscar o número por conta própria —
   // seria uma segunda leitura, capaz de divergir desta.
-  return { usuario: sessao.usuario, tokenVersion: sessao.tokenVersion, papel: sessao.papel };
+  return { usuario: sessao.usuario, tokenVersion: sessao.tokenVersion, cargo: sessao.cargo };
 }

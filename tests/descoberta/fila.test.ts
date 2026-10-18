@@ -138,14 +138,12 @@ describe('o painel de cobertura fecha a conta', () => {
   it('cadastrados = comAgente + semAgente', async () => {
     const { status, body } = await api.get<{
       cadastrados: number; comAgente: number; semAgente: number;
-      orfaos: number; descobertas: number; sugestoesPendentes: number;
     }>('/api/reconciliation/coverage');
 
     expect(status).toBe(200);
     // Contados um a um, um handshake no meio faria os números não fecharem — e
-    // um painel que não soma é um painel em que ninguém confia. Por isso os dez
+    // um painel que não soma é um painel em que ninguém confia. Por isso todos
     // saem da mesma `$transaction`.
     expect(body.comAgente + body.semAgente).toBe(body.cadastrados);
-    expect(body.orfaos).toBeLessThanOrEqual(body.descobertas);
   });
 });

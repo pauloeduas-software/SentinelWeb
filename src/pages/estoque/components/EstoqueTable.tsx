@@ -19,7 +19,7 @@ interface EstoqueTableProps {
   onEditar: (item: ItemDeEstoque) => void;
   /**
    * Lixeira e restaurar são `ADMIN` no servidor. Ausentes, os botões somem —
-   * quem decide é a página, que sabe o papel; a tabela só desenha.
+   * quem decide é a página, que sabe o cargo; a tabela só desenha.
    */
   onExcluir?: (item: ItemDeEstoque) => void;
   onRestaurar?: (item: ItemDeEstoque) => void;

@@ -69,7 +69,7 @@ function numeros(cobertura: Cobertura): Numero[] {
 
 export default function PainelDeCobertura({ cobertura, carregando }: Props) {
   if (carregando || !cobertura) {
-    return <div className="h-24 border border-border-sutil mb-6 animate-pulse bg-bg-surface" />;
+    return <div className="h-24 border border-border-sutil mb-6 animate-pulse bg-bg-base/50" />;
   }
 
   return (

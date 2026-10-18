@@ -1,6 +1,7 @@
 # Plano de implementação — Fase 0 ✅ CONCLUÍDA
 
-> Plano de execução da Fase 0 do [`../ROADMAP.md`](../ROADMAP.md), escrito contra o
+> Plano de execução da Fase 0 do roadmap do projeto (apagado depois;
+> o escopo que ficou está em [`../decisoes/escopo.md`](../decisoes/escopo.md)), escrito contra o
 > código real depois da reestruturação em `server/domain/` e `src/domain/`.
 > Convenções de camada: [`../referencia/arquitetura.md`](../referencia/arquitetura.md) — o `npm run lint` é
 > quem verifica, não o code review.
@@ -58,7 +59,8 @@ itens, porém, são de arquivos **desta** fase:
    para. Não foi preenchido na época de propósito: definir um token ali faria o `/agent-hub`
    recusar o agente C# que então conectava sem nenhum. Resolvido de vez na **Leva 5 da F3**,
    que trocou o token compartilhado pelo `ApiToken` por agente (D89) — com convivência e log
-   de depreciação, exatamente para não derrubar a frota.
+   de depreciação, exatamente para não derrubar a frota. *(Não durou: o `ApiToken` saiu no
+   corte de escopo e o agente voltou ao `AGENT_TOKEN` do `.env` — [D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token).)*
 
 E um terceiro, que é da F0 pela origem e da F1 pelo sintoma: o `buildChanges` de
 `shared/diff.helper.ts` não tratava `Decimal` (defeito 4 da auditoria). O helper é desta fase;
@@ -458,7 +460,7 @@ F3, E sobe para primeiro).
 
 ---
 
-## Mapa de volta para o `../ROADMAP.md`
+## Mapa de volta para o roadmap
 
 | Item da F0 | Etapa |
 |---|---|

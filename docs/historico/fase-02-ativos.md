@@ -1,6 +1,7 @@
 # Plano de implementação — Fase 2: ativos, o que se faz com eles
 
-> Plano **prospectivo** da Fase 2 do [`../ROADMAP.md`](../ROADMAP.md), escrito
+> Plano **prospectivo** da Fase 2 do roadmap do projeto (apagado depois;
+> o escopo que ficou está em [`../decisoes/escopo.md`](../decisoes/escopo.md)), escrito
 > contra o código real depois da F1 e do modelo de posse entrar no schema.
 > Camadas: [`../referencia/arquitetura.md`](../referencia/arquitetura.md) · posse:
 > [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md) e [`../referencia/invariantes.md`](../referencia/invariantes.md).
@@ -197,7 +198,7 @@ duas vezes não pode furar a sequência.
 > [`../decisoes/plataforma.md`](../decisoes/plataforma.md), porque guardar bytes é
 > infraestrutura e serve também ao termo de entrega da F4.
 
-O índice das 142 está em [`../decisoes/README.md`](../decisoes/README.md).
+O índice das decisões está em [`../decisoes/README.md`](../decisoes/README.md).
 
 ## Riscos e armadilhas
 
@@ -471,7 +472,7 @@ neste repositório**.
 
 ## As catorze pontas, levantadas contra o código
 
-Levantado lendo o repositório, não o `../ROADMAP.md` — que na época marcava a F2 e a F3
+Levantado lendo o repositório, não o roadmap — que na época marcava a F2 e a F3
 inteiras como pendentes.
 
 | # | O que faltava | Fase | Prova de que faltava |
@@ -491,7 +492,7 @@ inteiras como pendentes.
 | 13 | Relatório de não aceitos + reenvio | F4 | dependia do 11 |
 | 14 | `ApiToken` por agente | F3 (G) | `/agent-hub` com o `AGENT_TOKEN` compartilhado da F0 |
 
-Quatro itens do `../ROADMAP.md` **não** entraram porque já estavam feitos e o documento não
+Quatro itens do roadmap **não** entraram porque já estavam feitos e o documento não
 tinha sido atualizado: painel de ocupantes no posto, checkout em massa, perfil do colaborador
 (menos o histórico) e o desligamento.
 

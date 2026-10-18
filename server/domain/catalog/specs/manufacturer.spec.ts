@@ -15,8 +15,6 @@ export const manufacturerSpec: CatalogSpec = {
     id: true, name: true, url: true,
     supportPhone: true, supportEmail: true, isActive: true, createdAt: true,
   },
-  sortable: ['name', 'createdAt'],
-  defaultSort: 'name',
   searchable: ['name'],
   audited: ['name', 'url', 'supportPhone', 'supportEmail', 'isActive'],
 

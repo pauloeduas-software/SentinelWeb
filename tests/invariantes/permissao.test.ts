@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { prisma } from '../../server/core/database/prismaClient';
-import { PAPEIS, papelAlcanca, ehPapel } from '../../server/domain/access/helpers/papel';
+import { CARGOS, cargoAlcanca, ehCargo } from '../../server/domain/access/helpers/cargo';
 import Fastify, { type HTTPMethods } from 'fastify';
 import { registerPermissionGuard } from '../../server/core/http/permission-guard';
 import { ROTAS_POR_PERMISSAO } from '../../server/domain/access/helpers/route-permissions';
@@ -16,8 +16,8 @@ import { ROTAS_POR_PERMISSAO } from '../../server/domain/access/helpers/route-pe
 // `assets.view`, não achava `assets.viw`, e a pessoa simplesmente não via
 // ativo), e rota sem exigência declarada ficava aberta a qualquer sessão.
 //
-// O primeiro sentido MORREU com o papel: não há mais string a digitar errado —
-// `Papel` é um enum de três valores e o compilador recusa o quarto.
+// O primeiro sentido MORREU com o cargo: não há mais string a digitar errado —
+// `Cargo` é um enum de três valores e o compilador recusa o quarto.
 //
 // O SEGUNDO CONTINUA INTEIRO, e é por isso que este arquivo não desapareceu com
 // os grupos: rota nova sem linha no mapa é rota que qualquer sessão alcança, e
@@ -31,9 +31,9 @@ beforeAll(async () => { api = await criarApi(); });
 afterAll(async () => { await api.fechar(); });
 
 describe('o mapa de rotas × a tabela do Fastify (D137)', () => {
-  it('toda exigência declarada é um papel que existe', () => {
+  it('toda exigência declarada é um cargo que existe', () => {
     const invalidas = Object.entries(ROTAS_POR_PERMISSAO)
-      .filter(([, exigencia]) => exigencia !== null && !ehPapel(exigencia))
+      .filter(([, exigencia]) => exigencia !== null && !ehCargo(exigencia))
       .map(([chave]) => chave);
     expect(invalidas).toEqual([]);
   });
@@ -95,29 +95,29 @@ describe('o mapa de rotas × a tabela do Fastify (D137)', () => {
 
 describe('a hierarquia — três valores, uma comparação', () => {
   it('ADMIN alcança tudo', () => {
-    for (const papel of PAPEIS) expect(papelAlcanca('ADMIN', papel)).toBe(true);
+    for (const cargo of CARGOS) expect(cargoAlcanca('ADMIN', cargo)).toBe(true);
   });
 
   it('USUARIO alcança só a si mesmo', () => {
-    expect(papelAlcanca('USUARIO', 'USUARIO')).toBe(true);
-    expect(papelAlcanca('USUARIO', 'TECNICO')).toBe(false);
-    expect(papelAlcanca('USUARIO', 'ADMIN')).toBe(false);
+    expect(cargoAlcanca('USUARIO', 'USUARIO')).toBe(true);
+    expect(cargoAlcanca('USUARIO', 'TECNICO')).toBe(false);
+    expect(cargoAlcanca('USUARIO', 'ADMIN')).toBe(false);
   });
 
   it('TECNICO não vira ADMIN por comparação', () => {
-    expect(papelAlcanca('TECNICO', 'TECNICO')).toBe(true);
-    expect(papelAlcanca('TECNICO', 'ADMIN')).toBe(false);
+    expect(cargoAlcanca('TECNICO', 'TECNICO')).toBe(true);
+    expect(cargoAlcanca('TECNICO', 'ADMIN')).toBe(false);
   });
 
   it('a ordem do array É a hierarquia, e ninguém a inverteu', () => {
-    expect([...PAPEIS]).toEqual(['USUARIO', 'TECNICO', 'ADMIN']);
+    expect([...CARGOS]).toEqual(['USUARIO', 'TECNICO', 'ADMIN']);
   });
 });
 
 describe('nunca sem administrador (D148)', () => {
   it('recusa (409) rebaixar o último administrador que entra', async () => {
     // O cliente padrão da suíte É o administrador do `.env`, e o seed garante
-    // que ele é o único com papel e senha num banco de teste limpo.
+    // que ele é o único com cargo e senha num banco de teste limpo.
     const admins = await prisma.user.findMany({
       where: { role: 'ADMIN', isActive: true, passwordHash: { not: null } },
       select: { id: true },
@@ -144,27 +144,99 @@ describe('nunca sem administrador (D148)', () => {
       await prisma.user.update({ where: { id: admin.id }, data: { role: 'ADMIN' } });
     }
   });
+
+  it('recusa (409) mandar para a lixeira o último administrador — inclusive a si mesmo', async () => {
+    // A edição conferia, a exclusão não: o administrador único apagava a si
+    // mesmo e o sistema ficava sem ninguém que entrasse.
+    const admins = await prisma.user.findMany({
+      where: { role: 'ADMIN', isActive: true, passwordHash: { not: null } },
+      select: { id: true },
+    });
+    expect(admins).toHaveLength(1);
+
+    const resposta = await api.delete<{ error: string }>(`/api/users/${api.adminId}`);
+    expect(resposta.status).toBe(409);
+    expect(resposta.body.error).toMatch(/sem nenhum administrador/i);
+
+    // A transação voltou atrás: ele continua fora da lixeira.
+    const depois = await prisma.user.findUniqueOrThrow({
+      where: { id: api.adminId }, select: { deletedAt: true },
+    });
+    expect(depois.deletedAt).toBeNull();
+  });
+});
+
+describe('a senha no cadastro — só de quem entra', () => {
+  it('Técnico e Administrador nascem com senha: sem ela é 422', async () => {
+    for (const role of ['TECNICO', 'ADMIN']) {
+      const resposta = await api.post<{ error: string }>('/api/users', {
+        name: `Sem Senha ${role}`, email: `sem.senha.${role.toLowerCase()}@teste.local`, role,
+      });
+      expect(resposta.status).toBe(422);
+      expect(resposta.body.error).toMatch(/senha/i);
+    }
+  });
+
+  it('o colaborador que só recebe equipamento nasce sem senha', async () => {
+    const resposta = await api.post('/api/users', {
+      name: 'Só Recebe', email: 'so.recebe@teste.local',
+    });
+    expect(resposta.status).toBe(201);
+  });
+
+  it('promover a Técnico quem nunca teve senha exige uma, no mesmo PUT', async () => {
+    const email = 'vai.virar.tecnico@teste.local';
+    const pessoa = await api.post<{ id: string }>('/api/users', { name: 'Vai Virar Técnico', email });
+    expect(pessoa.status).toBe(201);
+
+    const semSenha = await api.put<{ error: string }>(`/api/users/${pessoa.body.id}`, { role: 'TECNICO' });
+    expect(semSenha.status).toBe(422);
+    expect(semSenha.body.error).toMatch(/senha/i);
+
+    const comSenha = await api.put(`/api/users/${pessoa.body.id}`, {
+      role: 'TECNICO', password: 'Senha-Do-Tecnico-1',
+    });
+    expect(comSenha.status).toBe(200);
+    expect((await api.anonimo.post('/api/auth/login', { email, password: 'Senha-Do-Tecnico-1' })).status)
+      .toBe(200);
+  });
+
+  it('a trilha diz que a senha mudou, e nunca o valor', async () => {
+    const email = 'trilha.da.senha@teste.local';
+    const pessoa = await api.post<{ id: string }>('/api/users', {
+      name: 'Trilha da Senha', email, role: 'TECNICO', password: 'Senha-Original-123',
+    });
+    expect((await api.put(`/api/users/${pessoa.body.id}`, { password: 'Senha-Nova-123456' })).status).toBe(200);
+
+    const linhas = await prisma.activityLog.findMany({
+      where: { entityType: 'User', entityId: pessoa.body.id },
+      select: { changes: true },
+    });
+    const texto = JSON.stringify(linhas);
+    expect(texto).toContain('senha definida');
+    expect(texto).toContain('senha redefinida');
+    expect(texto).not.toContain('Senha-Nova-123456');
+    expect(texto).not.toContain('argon2');
+  });
 });
 
 describe('a porta fechada por padrão', () => {
   it('USUARIO não entra no painel, e a recusa explica por quê', async () => {
-    // O papel existe para quem RECEBE equipamento. Como nenhuma rota de
-    // inventário o aceita e nenhum item do menu dispensa papel, deixá-lo entrar
+    // O cargo existe para quem RECEBE equipamento. Como nenhuma rota de
+    // inventário o aceita e nenhum item do menu dispensa cargo, deixá-lo entrar
     // produzia um painel vazio respondendo 403 em tudo — que parece defeito.
-    const marca = `colab${Date.now()}`;
+    // A tela nem mostra o campo de senha para `USUARIO`, mas a API aceita: é o
+    // jeito de provar que a recusa é do CARGO, com a senha certa na mão.
+    const email = `colab${Date.now()}@teste.local`;
+    const senha = 'Senha-De-Teste-123';
     const pessoa = await api.post<{ id: string }>('/api/users', {
-      name: 'Colaborador Sem Painel', email: `${marca}@teste.local`,
+      name: 'Colaborador Sem Painel', email, password: senha,
     });
     expect(pessoa.status).toBe(201);
 
-    const senha = 'Senha-De-Teste-123';
-    expect((await api.post(`/api/users/${pessoa.body.id}/set-password`, {
-      username: marca, password: senha,
-    })).status).toBe(200);
-
     // A conta nasce `USUARIO` pelo `@default` da coluna — ninguém a rebaixou.
     const entrada = await api.anonimo.post<{ error: string }>('/api/auth/login', {
-      username: marca, password: senha,
+      email, password: senha,
     });
 
     // 403 e não 401: a senha está CERTA, o que falta é autorização.
@@ -174,25 +246,24 @@ describe('a porta fechada por padrão', () => {
   });
 
   it('promovido a TECNICO, o mesmo login passa', async () => {
-    // A outra metade: provar que o bloqueio é do PAPEL e não da conta, senão
+    // A outra metade: provar que o bloqueio é do CARGO e não da conta, senão
     // uma implementação que recusa todo mundo passaria no caso de cima.
-    const marca = `promovido${Date.now()}`;
-    const pessoa = await api.post<{ id: string }>('/api/users', {
-      name: 'Colaborador Promovido', email: `${marca}@teste.local`,
-    });
+    const email = `promovido${Date.now()}@teste.local`;
     const senha = 'Senha-De-Teste-123';
-    await api.post(`/api/users/${pessoa.body.id}/set-password`, { username: marca, password: senha });
+    const pessoa = await api.post<{ id: string }>('/api/users', {
+      name: 'Colaborador Promovido', email, password: senha,
+    });
 
-    expect((await api.anonimo.post('/api/auth/login', { username: marca, password: senha })).status)
+    expect((await api.anonimo.post('/api/auth/login', { email, password: senha })).status)
       .toBe(403);
 
     expect((await api.put(`/api/users/${pessoa.body.id}`, { role: 'TECNICO' })).status).toBe(200);
 
-    expect((await api.anonimo.post('/api/auth/login', { username: marca, password: senha })).status)
+    expect((await api.anonimo.post('/api/auth/login', { email, password: senha })).status)
       .toBe(200);
   });
 
-  it('o 403 das rotas NOMEIA o papel que falta', async () => {
+  it('o 403 das rotas NOMEIA o cargo que falta', async () => {
     // Agora pelo TECNICO numa rota de ADMIN: é a mesma mensagem do guard, e o
     // caminho que sobrou agora que `USUARIO` não tem sessão.
     const tecnico = await api.comoUsuario('TECNICO');
@@ -215,11 +286,11 @@ describe('a porta fechada por padrão', () => {
     expect((await tecnico.post('/api/categories', { name: 'Nova', type: 'ASSET' })).status).toBe(403);
   });
 
-  it('o papel é relido a cada requisição, como o usuário', async () => {
+  it('o cargo é relido a cada requisição, como o usuário', async () => {
     const pessoa = await api.comoUsuario('TECNICO');
     expect((await pessoa.get('/api/assets')).status).toBe(200);
 
-    // Rebaixa POR FORA da sessão dela: o cookie continua válido, o papel não.
+    // Rebaixa POR FORA da sessão dela: o cookie continua válido, o cargo não.
     await prisma.user.update({ where: { id: pessoa.userId }, data: { role: 'USUARIO' } });
 
     // Sem novo login: a releitura por requisição é que decide (o mesmo desenho

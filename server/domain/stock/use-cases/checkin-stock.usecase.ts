@@ -2,7 +2,7 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { STOCK_MOVEMENT_SELECT } from '../helpers/stock-select.helper';
-import type { CheckinStockInput } from '../schemas/stock.schema';
+import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
 
 /**
  * A DEVOLUÇÃO de UMA unidade — a linha de SAIDA identificada.
@@ -30,13 +30,13 @@ import type { CheckinStockInput } from '../schemas/stock.schema';
  * outra pessoa, porque uma unidade entregue de novo é OUTRA linha.
  * ─────────────────────────────────────────────────────────────────────────────
  */
-export async function checkinStock(movementId: string, data: CheckinStockInput, actorId: string | null) {
+export async function checkinStock(movementId: string, actorId: string | null) {
   return prisma.$transaction(async (tx) => {
     const devolvidaEm = new Date();
 
     const { count } = await tx.stockMovement.updateMany({
       where: { id: movementId, kind: 'SAIDA', returnedAt: null },
-      data: { returnedAt: devolvidaEm, returnNotes: data.notes ?? null, returnedById: actorId },
+      data: { returnedAt: devolvidaEm, returnedById: actorId },
     });
 
     if (count === 0) {
@@ -49,9 +49,12 @@ export async function checkinStock(movementId: string, data: CheckinStockInput, 
       });
       if (!existente) throw new AppError('Nenhuma saída com este identificador.', 404);
       if (existente.kind !== 'SAIDA') throw new AppError('Este movimento não é uma saída: não há o que devolver.', 409);
-      throw new AppError('Esta unidade já foi devolvida.', 409, {
-        returnedAt: existente.returnedAt?.toISOString() ?? null,
-      });
+      throw new AppError(
+        existente.returnedAt
+          ? `Esta unidade já foi devolvida em ${diaEmPortugues(existente.returnedAt)}.`
+          : 'Esta unidade já foi devolvida.',
+        409,
+      );
     }
 
     const unidade = await tx.stockMovement.findUniqueOrThrow({

@@ -1,10 +1,11 @@
-import { executarUmaVezPorJanela } from '../../../core/jobs/claim-window';
+import { executarUmaVezPorJanela, inicioDoDia } from '../../../core/jobs/claim-window';
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { createLogger } from '../../../core/logger/logger';
 import { reconciliarEndpoint, valoresRepetidosNoParque } from '../use-cases/match-endpoint.usecase';
 import { carimbarUltimoContatoNosAtivos } from '../use-cases/stamp-last-seen.usecase';
 import { agregarUsoDosAtivos } from '../use-cases/aggregate-usage.usecase';
+import { expurgarTelemetriaAntiga } from '../../endpoint/use-cases/purge-telemetry.usecase';
 import {
   encerrarSugestoesObsoletas, expurgarSugestoesSubstituidas,
 } from '../use-cases/invalidate-suggestions.usecase';
@@ -125,6 +126,14 @@ async function executarVarredura(): Promise<ResultadoDaVarredura> {
   // O USO AGREGADO dos últimos dias (Etapa I): uma instrução para a frota
   // inteira, e é ela que faz a pergunta do ativo ocioso caber numa consulta.
   await agregarUsoDosAtivos();
+
+  // O EXPURGO da telemetria crua, DEPOIS da agregação: o dia já está somado em
+  // `asset_usage_daily` quando as amostras que o compuseram saem. Uma vez por
+  // DIA, e não a cada rodada: a janela diária é tomada no banco, então o botão
+  // "Reconciliar agora" e os reinícios do servidor não o repetem.
+  await executarUmaVezPorJanela('expurgo-da-telemetria', inicioDoDia(), async () => {
+    await expurgarTelemetriaAntiga();
+  });
 
   // O EXPURGO do histórico da fila: só as linhas SUBSTITUÍDAS, nunca as recusadas
   // (são a memória do D97) nem as aceitas (são a trilha de quem decidiu).
