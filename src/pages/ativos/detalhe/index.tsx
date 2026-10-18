@@ -62,7 +62,7 @@ export default function AssetDetailPage() {
   const bloqueio = bloqueioDaEntrega(asset);
 
   return (
-    <div className="animate-in fade-in duration-300 space-y-6 pb-6">
+    <div className="motion-safe:animate-fade-in space-y-6 pb-6">
       <Link
         to="/ativos"
         className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary transition-colors"

@@ -13,11 +13,9 @@ import { travarAtivoOuFalhar } from '../../asset/use-cases/lock-asset.usecase';
 
 const JA_TEM_MAQUINA = 'Este ativo já está vinculado a outra máquina. Desfaça aquele vínculo antes, pela aba Máquina do ativo.';
 
-export interface OrigemDoVinculo {
+interface OrigemDoVinculo {
   automatico?: boolean;
   sinal?: string | null;
-  valor?: string | null;
-  sugestaoId?: string | null;
 }
 
 /**

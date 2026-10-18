@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LogOut, UserPlus } from 'lucide-react';
+import { Check, LogOut, Pencil, UserPlus, X } from 'lucide-react';
 import ReferenceSelect from './ReferenceSelect';
 import { usePode } from '../../domain/auth/auth.store';
 import {
@@ -44,6 +44,13 @@ interface OccupantsPanelProps {
   onViewChange: (view: OccupantView) => void;
   onAdicionar: (data: OccupantInput) => Promise<void>;
   onEncerrar: (ocupante: LocationOccupant) => Promise<void>;
+  /**
+   * Corrige o TURNO de uma ocupação aberta, na própria linha. É texto livre
+   * ("Manhã", "08h–14h"), então corrigir serve tanto ao nome quanto ao horário
+   * escrito. Encerrar e reabrir faria o histórico dizer que a pessoa saiu e
+   * voltou, e perderia a data de entrada.
+   */
+  onCorrigirTurno: (ocupante: LocationOccupant, turno: string) => Promise<void>;
   /** Some no detalhe do posto, que tem o seu próprio rodapé. */
   onFechar?: () => void;
   /**
@@ -56,8 +63,8 @@ interface OccupantsPanelProps {
 }
 
 export default function OccupantsPanel({
-  ocupantes, carregando, erro: erroAoCarregar = null, view, onViewChange, onAdicionar, onEncerrar, onFechar,
-  desativado = false,
+  ocupantes, carregando, erro: erroAoCarregar = null, view, onViewChange, onAdicionar, onEncerrar,
+  onCorrigirTurno, onFechar, desativado = false,
 }: OccupantsPanelProps) {
   // Reativar a localização é `ADMIN` (é uma edição do catálogo); o aviso de
   // posto desativado só aponta Configurações para quem pode usá-la.
@@ -86,6 +93,43 @@ export default function OccupantsPanel({
       setErro((falha as Error).message);
     } finally {
       setSalvando(false);
+    }
+  };
+
+  // A linha em edição de turno — uma por vez — e o texto que está no campo.
+  const [editandoTurno, setEditandoTurno] = useState<string | null>(null);
+  const [turnoEditado, setTurnoEditado] = useState('');
+  // Uma correção por vez: Enter repetido ou clique duplo no ✓ não manda dois PATCH.
+  const [salvandoTurno, setSalvandoTurno] = useState(false);
+
+  const abrirEdicaoDoTurno = (ocupante: LocationOccupant) => {
+    setErro('');
+    setEditandoTurno(ocupante.id);
+    setTurnoEditado(ocupante.shift ?? '');
+  };
+
+  const cancelarTurno = () => {
+    setEditandoTurno(null);
+    setErro('');
+  };
+
+  const salvarTurno = async (ocupante: LocationOccupant) => {
+    if (salvandoTurno) return;
+    // Nada mudou: fecha o campo sem ir ao servidor.
+    if (turnoEditado.trim() === (ocupante.shift ?? '')) {
+      cancelarTurno();
+      return;
+    }
+    setErro('');
+    setSalvandoTurno(true);
+    try {
+      await onCorrigirTurno(ocupante, turnoEditado);
+      setEditandoTurno(null);
+    } catch (falha) {
+      // O campo continua aberto com o que foi digitado, para corrigir.
+      setErro((falha as Error).message);
+    } finally {
+      setSalvandoTurno(false);
     }
   };
 
@@ -147,7 +191,45 @@ export default function OccupantsPanel({
                     <div className="text-[10px] text-text-tertiary mt-1">{ocupante.user.email}</div>
                   )}
                 </td>
-                <td className="px-4 py-3 text-text-secondary">{turnoDoOcupante(ocupante)}</td>
+                <td className="px-4 py-3 text-text-secondary">
+                  {editandoTurno === ocupante.id ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        autoFocus
+                        aria-label={`Turno de ${nomeDoOcupante(ocupante)}`}
+                        value={turnoEditado}
+                        maxLength={60}
+                        onChange={(event) => setTurnoEditado(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') void salvarTurno(ocupante);
+                          if (event.key === 'Escape') cancelarTurno();
+                        }}
+                        className="w-40 p-1 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void salvarTurno(ocupante)}
+                        disabled={salvandoTurno}
+                        title="Salvar turno"
+                        aria-label="Salvar turno"
+                        className="text-text-tertiary hover:text-status-success transition-colors"
+                      >
+                        <Check size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelarTurno}
+                        title="Cancelar"
+                        aria-label="Cancelar a edição do turno"
+                        className="text-text-tertiary hover:text-text-primary transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    turnoDoOcupante(ocupante)
+                  )}
+                </td>
                 <td className="px-4 py-3 text-text-tertiary tabular-nums">{periodoDaOcupacao(ocupante)}</td>
                 <td className="px-4 py-3 text-right">
                   {/* Ocupação já encerrada não tem o que encerrar: a linha
@@ -155,16 +237,27 @@ export default function OccupantsPanel({
                       Visível ao passar o mouse, ao navegar por Tab e sempre no
                       toque — o desenho do `CatalogTable`. Com `opacity-0` puro,
                       no celular encerrar uma ocupação era impossível. */}
-                  {estaAberta(ocupante) && (
-                    <button
-                      type="button"
-                      onClick={() => void encerrar(ocupante)}
-                      title="Encerrar ocupação"
-                      aria-label={`Encerrar a ocupação de ${nomeDoOcupante(ocupante)}`}
-                      className="text-text-tertiary hover:text-status-danger transition-colors md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
-                    >
-                      <LogOut size={14} />
-                    </button>
+                  {estaAberta(ocupante) && editandoTurno !== ocupante.id && (
+                    <div className="inline-flex items-center gap-3 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+                      <button
+                        type="button"
+                        onClick={() => abrirEdicaoDoTurno(ocupante)}
+                        title="Corrigir turno"
+                        aria-label={`Corrigir o turno de ${nomeDoOcupante(ocupante)}`}
+                        className="text-text-tertiary hover:text-text-primary transition-colors"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void encerrar(ocupante)}
+                        title="Encerrar ocupação"
+                        aria-label={`Encerrar a ocupação de ${nomeDoOcupante(ocupante)}`}
+                        className="text-text-tertiary hover:text-status-danger transition-colors"
+                      >
+                        <LogOut size={14} />
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>

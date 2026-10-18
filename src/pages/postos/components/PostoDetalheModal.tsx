@@ -63,6 +63,7 @@ interface PostoDetalheModalProps {
   onViewChange: (view: OccupantView) => void;
   onAdicionar: (data: OccupantInput) => Promise<void>;
   onEncerrar: (ocupante: LocationOccupant) => Promise<void>;
+  onCorrigirTurno: (ocupante: LocationOccupant, turno: string) => Promise<void>;
   /** Tira o ativo desta mesa e devolve ao estoque. O `confirm` é do hook. */
   onDevolver: (ativo: AtivoDoPosto) => Promise<void>;
   devolvendo: boolean;
@@ -74,7 +75,7 @@ interface PostoDetalheModalProps {
 
 export default function PostoDetalheModal({
   posto, detalhe, carregando, ocupantes, ocupantesCarregando, ocupantesErro,
-  view, onViewChange, onAdicionar, onEncerrar, onDevolver, devolvendo,
+  view, onViewChange, onAdicionar, onEncerrar, onCorrigirTurno, onDevolver, devolvendo,
   onDevolverItem, devolvendoItem, onClose,
 }: PostoDetalheModalProps) {
   // Enquanto o detalhe não chega, vale o que a linha já dizia: o cabeçalho e o
@@ -163,6 +164,7 @@ export default function PostoDetalheModal({
             onViewChange={onViewChange}
             onAdicionar={onAdicionar}
             onEncerrar={onEncerrar}
+            onCorrigirTurno={onCorrigirTurno}
             desativado={desativado}
           />
 

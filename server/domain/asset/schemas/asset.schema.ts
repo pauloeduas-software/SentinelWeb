@@ -16,14 +16,11 @@ import {
 //
 // NÃO existe `quantity`: um ativo é UM equipamento (D3).
 //
-// NÃO existe mais `assignedToId`: a operação foi para o CHECKOUT/CHECKIN
-// (docs/referencia/modelo-de-posse.md). A coluna continua no banco e continua saindo na
-// resposta (`ASSET_SELECT`), mas virou cache do caso `targetType: USER` da
-// `Assignment` — quem escreve nela é só a entrega e a devolução. Um campo
-// editável à mão ao lado de uma tabela de posse são duas fontes de verdade para
-// o mesmo fato, e nada impede divergirem. Como `strictObject` recusa chave
-// desconhecida, mandar `assignedToId` para /api/assets agora responde 422, que
-// é a resposta certa: a operação existe, só não é esta.
+// NÃO existe "responsável" no ativo: quem responde por ele é a posse, gravada
+// pelo CHECKOUT/CHECKIN (docs/referencia/modelo-de-posse.md). Como
+// `strictObject` recusa chave desconhecida, mandar `assignedToId` para
+// /api/assets responde 422, que é a resposta certa: a operação existe, só não
+// é esta.
 
 /**
  * Etiqueta do ativo. Chave AUSENTE **ou** valor vazio significam a mesma coisa:
@@ -51,9 +48,6 @@ const camposComuns = {
   orderNumber: textoOpcional('número do pedido', 100),
   purchaseDate: dataOpcional('data de compra'),
   purchaseCost: valorMonetarioOpcional('valor de compra'),
-
-  // ── OS CAMPOS CUSTOMIZADOS (F9, Etapa B) ─────────────────────────────────
-  //
 };
 
 export const createAssetSchema = z.strictObject({
@@ -96,5 +90,3 @@ export const retireAssetSchema = z.strictObject({
   notes: textoOpcional('observações', 2_000),
 });
 
-// O `historyQuerySchema` da aba Histórico mudou para `shared/history.schema.ts`
-// quando a pessoa ganhou o dela — o ativo não é mais o único a ter histórico.

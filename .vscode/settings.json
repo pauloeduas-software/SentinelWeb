@@ -1,0 +1,6 @@
+{
+  // `@theme` e `@apply` são diretivas do Tailwind 4 (src/index.css): o validador
+  // de CSS embutido no VS Code não as conhece e acusa "Unknown at rule". Quem as
+  // processa é o `@tailwindcss/postcss`, no build.
+  "css.lint.unknownAtRules": "ignore"
+}

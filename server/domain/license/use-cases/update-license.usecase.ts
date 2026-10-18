@@ -32,9 +32,6 @@ export async function updateLicense(
 ): Promise<LicencaNaResposta> {
   const campos = data;
 
-  // FORA da transação: é checagem de configuração do servidor, não do banco.
-  // O `id` já existe aqui — é o da rota —, então o AAD é o certo.
-
   const licenca = await prisma.$transaction(async (tx) => {
     await travarLicencaOuFalhar(tx, id);
 
@@ -51,7 +48,7 @@ export async function updateLicense(
 
     const depois = await tx.license.update({
       where: { id },
-      data: { ...campos, updatedById: actorId },
+      data: campos,
       select: LICENSE_SELECT,
     }) as LinhaDeLicenca;
 

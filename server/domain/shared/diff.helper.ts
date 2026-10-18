@@ -1,6 +1,6 @@
 // Diferença entre o antes e o depois de uma edição — função pura, sem I/O.
 //
-// A lista de campos é explícita de propósito: sem ela, um `assignedTo` (objeto
+// A lista de campos é explícita de propósito: sem ela, uma relação (objeto
 // aninhado) entraria na comparação e `===` entre duas instâncias sempre difere,
 // marcando como "alterado" um campo que ninguém tocou.
 //
@@ -8,16 +8,16 @@
 // edição transformaria o histórico em cópia da tabela.
 
 /** O resultado vai para uma coluna JsonB — só escalar entra. */
-export type ValorJson = string | number | boolean | null;
+type ValorJson = string | number | boolean | null;
 
 // `type`, não `interface`: interface não ganha índice implícito e por isso não é
 // atribuível ao `InputJsonValue` do Prisma.
-export type CampoAlterado = {
+type CampoAlterado = {
   de: ValorJson;
   para: ValorJson;
 };
 
-export type Changes = Record<string, CampoAlterado>;
+type Changes = Record<string, CampoAlterado>;
 
 export function buildChanges(
   antes: Record<string, unknown>,
@@ -31,7 +31,7 @@ export function buildChanges(
     //
     // `===` entre dois objetos compara identidade, não valor — e as colunas que
     // chegam aqui como objeto são mais de uma: `Date` (duas instâncias do mesmo
-    // instante) e `Prisma.Decimal` (`purchaseCost`, `floorValue`). Comparar cru
+    // instante) e `Prisma.Decimal` (`purchaseCost`). Comparar cru
     // marcava esses campos como alterados em TODA edição, e como o chamador só
     // grava o log quando há mudança, um PUT que não mudou nada ainda assim
     // escrevia `{"purchaseCost":{"de":"1234.56","para":"1234.56"}}` no

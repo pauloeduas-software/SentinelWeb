@@ -131,9 +131,8 @@ describe('Category — a licença conta como uso', () => {
     const id = await categoria('Família só de licença', 'LICENSE');
     await criarLicenca(api, { name: 'Licença que segura a categoria', categoryId: id, seatsTotal: 1 });
 
-    const { status, body } = await api.delete<{ error: string; emUso: number }>(`/api/categories/${id}`);
+    const { status, body } = await api.delete<{ error: string }>(`/api/categories/${id}`);
     expect(status).toBe(409);
-    expect(body.emUso).toBe(1);
     expect(body.error).toMatch(/1 registro/);
   });
 
@@ -142,9 +141,9 @@ describe('Category — a licença conta como uso', () => {
     const licenca = await criarLicenca(api, { name: 'Licença apagada', categoryId: id, seatsTotal: 1 });
     expect((await api.delete(`/api/licenses/${licenca.id}`)).status).toBe(204);
 
-    const { status, body } = await api.delete<{ emUso: number }>(`/api/categories/${id}`);
+    const { status, body } = await api.delete<{ error: string }>(`/api/categories/${id}`);
     expect(status).toBe(409);
-    expect(body.emUso).toBe(1);
+    expect(body.error).toMatch(/1 registro/);
   });
 
   it('recusa trocar o tipo da categoria de LICENÇA que tem licença dentro', async () => {
@@ -153,9 +152,9 @@ describe('Category — a licença conta como uso', () => {
     const id = await categoria('Família que não muda', 'LICENSE');
     await criarLicenca(api, { name: 'Licença que prende o tipo', categoryId: id, seatsTotal: 1 });
 
-    const { status, body } = await api.put<{ emUso: number }>(`/api/categories/${id}`, { type: 'ASSET' });
+    const { status, body } = await api.put<{ error: string }>(`/api/categories/${id}`, { type: 'ASSET' });
     expect(status).toBe(409);
-    expect(body.emUso).toBe(1);
+    expect(body.error).toMatch(/1 registro/);
   });
 });
 
@@ -173,9 +172,8 @@ describe('Manufacturer — a licença conta como uso', () => {
     const id = await criarFabricante(api, 'Fabricante só de licença');
     await licencaDoFabricante('Licença do fabricante', id);
 
-    const { status, body } = await api.delete<{ error: string; emUso: number }>(`/api/manufacturers/${id}`);
+    const { status, body } = await api.delete<{ error: string }>(`/api/manufacturers/${id}`);
     expect(status).toBe(409);
-    expect(body.emUso).toBe(1);
     expect(body.error).toMatch(/1 registro/);
   });
 
@@ -184,9 +182,9 @@ describe('Manufacturer — a licença conta como uso', () => {
     const licenca = await licencaDoFabricante('Licença apagada do fabricante', id);
     expect((await api.delete(`/api/licenses/${licenca}`)).status).toBe(204);
 
-    const { status, body } = await api.delete<{ emUso: number }>(`/api/manufacturers/${id}`);
+    const { status, body } = await api.delete<{ error: string }>(`/api/manufacturers/${id}`);
     expect(status).toBe(409);
-    expect(body.emUso).toBe(1);
+    expect(body.error).toMatch(/1 registro/);
   });
 });
 

@@ -10,7 +10,7 @@ import { hashDaAfirmacao, type Afirmacao, type Evidencia } from '../helpers/evid
 // 168 cópias de cada sugestão — e a fila que deveria ser lida por uma pessoa
 // vira uma lista que ninguém abre duas vezes.
 
-export interface SugestaoProposta {
+interface SugestaoProposta {
   kind: SuggestionKind;
   endpointId: string;
   assetId?: string | null;
@@ -31,7 +31,7 @@ export interface SugestaoProposta {
  * O que aconteceu com a proposta. Devolvido para o job contar e logar — três
  * rodadas seguidas com `criadas: 0` é a prova de que a idempotência funciona.
  */
-export type ResultadoDaProposta =
+type ResultadoDaProposta =
   | 'CRIADA' | 'RENOVADA' | 'INALTERADA' | 'JA_RESOLVIDA';
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -146,12 +146,11 @@ function CampoDeCanal({ canal }: { canal: CanalDeSuporte }) {
   );
 }
 
-function Campo({ rotulo, valor, nota }: { rotulo: string; valor?: string | null; nota?: string }) {
+function Campo({ rotulo, valor }: { rotulo: string; valor?: string | null }) {
   return (
     <div className="space-y-1">
       <div className="text-text-tertiary uppercase tracking-widest text-[10px]">{rotulo}</div>
       <div className="text-text-primary break-words">{valor || '—'}</div>
-      {nota && <div className="text-text-tertiary text-[10px]">{nota}</div>}
     </div>
   );
 }

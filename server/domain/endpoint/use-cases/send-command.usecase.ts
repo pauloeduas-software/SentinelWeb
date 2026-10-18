@@ -7,7 +7,7 @@ import { createLogger } from '../../../core/logger/logger';
 
 const logger = createLogger('endpoint.command');
 
-export interface SentCommand {
+interface SentCommand {
   commandId: string;
 }
 
@@ -38,7 +38,7 @@ export interface SentCommand {
  * máquina, porque é coluna do `Endpoint`, e a aba Máquina do ativo o mostra com
  * um botão de copiar — é o que se cola num chamado. O que sai da URL é a
  * identidade de HARDWARE como ENDEREÇO, e com ela sai o `{ hwid }` que o
- * `details` do erro espalhava no corpo da resposta.
+ * erro espalhava no corpo da resposta.
  *
  * E ISSO SEPAROU DOIS ERROS QUE ERAM UM. Com o hwid na URL, "máquina não existe"
  * e "máquina existe e está offline" eram o mesmo 404 — não havia como distinguir,
@@ -73,7 +73,6 @@ export async function sendCommand(endpointId: string, action: string): Promise<S
       `O agente de ${maquina.hostname} não está conectado agora. `
         + 'O comando não fica em fila: ele só chega em máquina online.',
       409,
-      { endpointId },
     );
   }
 
@@ -87,7 +86,6 @@ export async function sendCommand(endpointId: string, action: string): Promise<S
       `O envio ao agente de ${maquina.hostname} falhou: a conexão caiu antes de o comando sair. `
         + 'Nada foi entregue — tente de novo em instantes.',
       502,
-      { endpointId },
     );
   }
 

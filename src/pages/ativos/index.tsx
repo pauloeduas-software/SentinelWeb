@@ -38,7 +38,7 @@ export default function AtivosPage() {
   const colunas = useColunas();
 
   return (
-    <div className="animate-in fade-in duration-300 h-[calc(100vh-4rem)] flex flex-col pb-6">
+    <div className="motion-safe:animate-fade-in h-[calc(100vh-4rem)] flex flex-col pb-6">
 
       <div className="flex justify-between items-end mb-6 shrink-0">
         <div>

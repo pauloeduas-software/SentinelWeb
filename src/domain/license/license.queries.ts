@@ -15,7 +15,7 @@ import type {
 // listagem, o detalhe, a grade de assentos e os alertas — que mudam a cada
 // entrega, sem ninguém ter tocado neles.
 
-export const licenseKeys = {
+const licenseKeys = {
   all: ['licenses'] as const,
   list: (params: ListParamsComCategoria) => ['licenses', 'list', params] as const,
   item: (id: string) => ['licenses', 'item', id] as const,
@@ -53,13 +53,8 @@ export function useLicenseSeatsQuery(id: string | null) {
 }
 
 /**
- * A TRILHA DA LICENÇA — e é a única tela que responde "quem viu esta chave?".
- *
- * `VIEW_KEY` é a primeira ação do projeto que registra uma LEITURA, e ela só
- * serve para alguma coisa se alguém puder lê-la: o log existir sem tela é o
- * mesmo que não existir, porque a pergunta que ele responde ninguém consegue
- * fazer. Entra aqui junto das entregas, devoluções e queimas — a trilha é uma
- * (D18), não uma por tipo de evento.
+ * A TRILHA DA LICENÇA — edições, entregas, devoluções e queimas numa lista só:
+ * a trilha é uma (D18), não uma por tipo de evento.
  */
 export function useLicenseHistoryQuery(id: string | null) {
   return useQuery({
@@ -89,7 +84,7 @@ export function useAssetLicensesQuery(assetId: string | null) {
 /**
  * Por que toda mutação daqui invalida ativos e usuários, e não só licenças.
  *
- * O assento é POSSE (D93): entregá-lo a alguém muda o `holdings` daquela pessoa
+ * O assento é POSSE (D93): entregá-lo a alguém muda a ficha daquela pessoa
  * e o 409 do `DELETE` dela; entregá-lo a uma máquina muda a aba Licenças do
  * ativo e o 409 do `DELETE` dele. Invalidar só `licenses` deixaria essas telas
  * mentindo até o próximo refetch: operação que atravessa domínios invalida os
@@ -153,8 +148,8 @@ export function useCheckoutSeat() {
 export function useCheckinSeat() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ seatId, notes }: { seatId: string; notes?: string | null }) =>
-      apiClient.post<ResultadoDaDevolucao>(`/licenses/seats/${seatId}/checkin`, { notes }),
+    mutationFn: ({ seatId }: { seatId: string }) =>
+      apiClient.post<ResultadoDaDevolucao>(`/licenses/seats/${seatId}/checkin`),
     onSuccess: () => invalidarLicencaEPosse(queryClient),
   });
 }

@@ -21,7 +21,7 @@ import type {
 // vínculo máquina↔ativo. Quem não invalidasse `assets` e `endpoints` junto
 // deixaria a aba Máquina do ativo vazia até alguém recarregar a página.
 
-export const reconciliationKeys = {
+const reconciliationKeys = {
   all: ['reconciliation'] as const,
   sugestoes: () => ['reconciliation', 'sugestoes'] as const,
   cobertura: () => ['reconciliation', 'cobertura'] as const,

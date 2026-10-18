@@ -6,7 +6,7 @@ import { cenarioDePosse } from '../helpers/fixtures';
 //
 // TRÊS fontes numa lista só, e é uma a mais que o histórico do ativo tem:
 //
-//   ATIVIDADE  o `ActivityLog` dela (cadastro, edição com diff, desligamento);
+//   ATIVIDADE  o `ActivityLog` dela (cadastro, edição com diff, desativação);
 //   POSSE      o que ela recebeu e devolveu, com a etiqueta do equipamento;
 //   POSTO      onde ela sentou e quando saiu, com o turno.
 //
@@ -47,11 +47,11 @@ beforeAll(async () => {
   cenario = await cenarioDePosse(api);
 
   // A HISTÓRIA que o teste vai ler, montada pela API na ordem em que aconteceu.
-  await api.put(`/api/users/${cenario.laura}`, {
+  const editou = await api.put(`/api/users/${cenario.laura}`, {
     name: 'Laura Souza',
-    email: 'laura@teste.local',
-    jobTitle: 'Analista',
+    email: 'laura.souza@teste.local',
   });
+  expect(editou.status).toBe(200);
 
   const ocupou = await api.post<{ id: string }>(`/api/locations/${cenario.mesa1}/occupants`, {
     userId: cenario.laura,

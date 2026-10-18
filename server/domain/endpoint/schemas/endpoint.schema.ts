@@ -28,5 +28,4 @@ export const sendCommandSchema = z.strictObject({
  */
 export const endpointFilterSchema = z.strictObject({
   vinculo: z.enum(['com', 'sem'], 'vínculo inválido: use com ou sem').optional(),
-  reviewState: z.enum(['UNREVIEWED', 'ALLOWED', 'BLOCKED'], 'situação inválida').optional(),
 });

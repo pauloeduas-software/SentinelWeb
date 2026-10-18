@@ -27,16 +27,15 @@ import { casaRotaPublica, type RotaPublica } from './require-auth';
 // POR QUE A EXIGÊNCIA VEM POR PARÂMETRO: que chave uma rota pede é conhecimento
 // de NEGÓCIO, e `server/core` não pode importar `server/domain`
 // (eslint.config.js). Aqui mora só a ORDEM — resolveu, autoriza; não resolveu,
-// derruba. É a mesma inversão do `autenticar` do `require-auth.ts` e do
-// `sortable` do `parseListQuery`.
+// derruba. É a mesma inversão do `autenticar` do `require-auth.ts`.
 // ═══════════════════════════════════════════════════════════════════════════
 
 const logger = createLogger('permission-guard');
 
 /** O que o domínio responde sobre uma rota. `undefined` = não declarada. */
-export type ExigenciaResolvida = string | null | undefined;
+type ExigenciaResolvida = string | null | undefined;
 
-export interface PermissionGuardOptions {
+interface PermissionGuardOptions {
   /**
    * A exigência declarada para `método + padrão de rota`. O padrão é o do
    * roteador (`/api/users/:id`), não a URL concreta.
@@ -59,9 +58,10 @@ export interface PermissionGuardOptions {
   /**
    * Rotas registradas que ficam FORA da conferência, com o motivo.
    *
-   * É para o que não é rota de API de verdade: o WebSocket do agente, o
-   * catch-all do painel estático. Lista curta e explícita — o contrário de um
-   * prefixo que engole o que vier.
+   * É para o que não é rota de API de verdade: o catch-all do painel
+   * estático, as sondas de saúde. (O WebSocket do agente nem chega aqui — é
+   * rota pública e já é pulado por `rotasPublicas`.) Lista curta e explícita —
+   * o contrário de um prefixo que engole o que vier.
    */
   foraDaConferencia: readonly { method: string; path: string; motivo: string }[];
 }
@@ -71,7 +71,7 @@ interface RotaRegistrada {
   url: string;
 }
 
-export interface PermissionGuard {
+interface PermissionGuard {
   /**
    * Confere a cobertura. Chamada DEPOIS de todos os maestros — é esse o momento
    * em que a tabela de rotas está completa.

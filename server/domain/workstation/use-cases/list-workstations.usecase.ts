@@ -2,7 +2,7 @@ import { prisma } from '../../../core/database/prismaClient';
 import type { ListEnvelope, ListQuery } from '../../../core/http/list-query';
 import {
   OCUPANTES_ABERTOS_ORDER_BY, buildWorkstationWhere,
-  type WorkstationSortable, type WorkstationView,
+  type WorkstationView,
 } from '../helpers/workstation-filters.helper';
 import {
   WORKSTATION_OCCUPANT_SELECT, WORKSTATION_SELECT,
@@ -25,7 +25,7 @@ import { agruparOcupantes, montarLinhaDePosto, type WorkstationRow } from '../he
  * uma página que vai a 100.
  */
 export async function listWorkstations(
-  query: ListQuery<WorkstationSortable>,
+  query: ListQuery,
   view: WorkstationView,
 ): Promise<ListEnvelope<WorkstationRow>> {
   const where = buildWorkstationWhere(query.q, view);
@@ -38,7 +38,7 @@ export async function listWorkstations(
     prisma.location.findMany({
       where,
       select: WORKSTATION_SELECT,
-      orderBy: { [query.sort]: query.order },
+      orderBy: { name: 'asc' },
       skip: query.skip,
       take: query.take,
     }),

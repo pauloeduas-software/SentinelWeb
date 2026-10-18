@@ -7,8 +7,9 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. O índice está em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D143–D164, e O (segunda rodada, numerada por letra — ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)).
+> Decisões neste arquivo: D143–D164, O (segunda rodada, numerada por letra — ver
+> [`README.md`](./README.md#a-segunda-rodada-ap)) e Q (a varredura do código morto, que veio
+> depois e continuou a letra).
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
@@ -110,7 +111,7 @@ continua sendo a identidade do ativo; o que sai é desenhar o papel.
 
 ---
 
-## D148 — Permissão vira **papel**. Grupo, diretório, SSO e segundo fator saem
+## D148 — Permissão vira **cargo**. Grupo, diretório, SSO e segundo fator saem
 
 **Decidido:** `User.role` com três valores (`ADMIN`, `TECNICO`, `USUARIO`) no lugar da matriz de
 permissões. Saem o modelo `Group`, o `AuthEvent`, o LDAP, o OIDC/PKCE e o TOTP.
@@ -122,7 +123,7 @@ permissões. Saem o modelo `Group`, o `AuthEvent`, o LDAP, o OIDC/PKCE e o TOTP.
 
 **Por quê:** são 2.300 linhas de servidor para um sistema que terá três contas, e nenhuma delas
 exercita regra de ITAM. O que elas protegem — *esta rota exige mais que uma sessão* — um enum de
-papel protege igual.
+cargo protege igual.
 
 **O D137 fica, e é a razão de isto não ser um downgrade.** A conferência de cobertura no boot
 continua: rota sem exigência declarada derruba o processo. O que muda é o que a exigência diz —
@@ -307,6 +308,11 @@ fica sem objeto sem que nada mais no job se mexa.
 respondendo "quando esta máquina foi vista pela última vez", que é a pergunta que levava alguém à
 conferência. A resposta fica; o registro formal de que ela foi feita é que sai.
 
+> **Revisão:** a coluna é `Asset.lastSeenByAgentAt` — do **ativo**, não da máquina; o `Endpoint`
+> tem `lastSeen` ([D13](./catalogo-e-ativo.md#d13--a-segurança-do-rename-depende-de-o-asset-novo-não-ter-status-lastseen-nem-hwid),
+> [D50](./reconciliacao.md#d50--lastseenbyagentat-existe-e-nunca-se-chama-lastseen)). O argumento não
+> muda: a resposta continua de pé, e no ativo ela sobrevive mesmo que a linha da máquina suma.
+
 ---
 
 ## D158 — Manutenção sai **inteira**
@@ -394,39 +400,39 @@ view do responsável ficou.
 
 ---
 
-## D162 — "Minha conta" sai, e o papel vira campo do formulário de usuário
+## D162 — "Minha conta" sai, e o cargo vira campo do formulário de usuário
 
-**Decidido:** sai a tela `/minha-conta`. O papel se edita em `PUT /api/users/:id`, pelo formulário
+**Decidido:** sai a tela `/minha-conta`. O cargo se edita em `PUT /api/users/:id`, pelo formulário
 de Usuários, e entra no `USER_LIST_SELECT`.
-**Consequência de:** [D148](#d148--permissão-vira-papel-grupo-diretório-sso-e-segundo-fator-saem) e
+**Consequência de:** [D148](#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem) e
 [D149](#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token).
 
 **Por quê a tela caiu:** ela tinha exatamente dois painéis — segundo fator e tokens pessoais. Os
 dois saíram, e sobrou uma página com um cabeçalho. O D148 e o D149 não previram isso porque
 olhavam o que removiam, não o que restava.
 
-**Por quê o papel NÃO ganhou rota própria:** a matriz tinha
+**Por quê o cargo NÃO ganhou rota própria:** a matriz tinha
 `PUT /api/users/:id/groups` porque o dono do dado era o grupo — quem decidia o que uma permissão
-concedia era o domínio de acesso, e `user` não tinha o que opinar. Com papel o dono é a COLUNA, e
+concedia era o domínio de acesso, e `user` não tinha o que opinar. Com cargo o dono é a COLUNA, e
 uma rota própria para gravar um enum de três valores seria cerimônia. O `PUT /api/users/:id` já
 exigia `ADMIN`, que é a mesma exigência que a rota de grupos tinha: ninguém se promove sozinho.
 
 **POR QUE ELE ENTRA NO `USER_LIST_SELECT`, e isto é um defeito evitado:** o formulário abre da
-LISTAGEM. Sem o campo na linha, o `<select>` do papel inicializaria em `USUARIO` e **gravaria**
+LISTAGEM. Sem o campo na linha, o `<select>` do cargo inicializaria em `USUARIO` e **gravaria**
 `USUARIO` — corrigir o e-mail de um administrador o rebaixaria, em silêncio. É palavra por palavra
 o defeito que o `managerId` já tinha causado e que o comentário daquele select descreve;
 a rede do `ultimo-administrador.ts` pegaria o caso do ÚLTIMO administrador, e os outros passariam.
 
 ---
 
-## D163 — O mapa de coluna protegida é tipado `Papel`, porque `indexOf` de string estranha é **-1**
+## D163 — O mapa de coluna protegida é tipado `Cargo`, porque `indexOf` de string estranha é **-1**
 
 **Decidido:** `COLUNAS_COM_PERMISSAO` (export de ativos) e `TOKENS_COM_PERMISSAO` (relatório) têm
-`Papel` no tipo do valor, não `string`.
+`Cargo` no tipo do valor, não `string`.
 
 **O defeito que isto fecha, e ele ACONTECEU durante o de-escopo:** os dois mapas guardavam chaves
-de permissão (`purchaseCost: 'assets.viewCost'`). A troca para papel passou pelo compilador porque
-o tipo era `string` — e `papelAlcanca()` compara por `indexOf` na hierarquia. O `indexOf` de
+de permissão (`purchaseCost: 'assets.viewCost'`). A troca para cargo passou pelo compilador porque
+o tipo era `string` — e `cargoAlcanca()` compara por `indexOf` na hierarquia. O `indexOf` de
 `'assets.viewCost'` é **-1**, e `USUARIO >= -1` é verdadeiro: a coluna de custo passou a sair no
 CSV para qualquer sessão.
 
@@ -437,19 +443,19 @@ de "porta dos fundos" do dado sensível, e a porta abriu — por um `as string` 
 passar.
 
 **Por quê o tipo e não só a correção:** corrigir os dois valores deixaria a próxima troca livre
-para repetir o erro. Com `Papel` no tipo, o compilador recusa a string que não é papel, e o modo
+para repetir o erro. Com `Cargo` no tipo, o compilador recusa a string que não é cargo, e o modo
 de falhar deixa de existir em vez de ser lembrado.
 
 ---
 
 ## D164 — O `DEFAULT` da coluna **tranca o sistema**, e a migração precisa do backfill
 
-**Decidido:** a migração do de-escopo traduz grupo → papel **antes** de derrubar `groups` e
+**Decidido:** a migração do de-escopo traduz grupo → cargo **antes** de derrubar `groups` e
 `_GroupToUser`. `access.manage` ou `settings.manage` vira `ADMIN`; qualquer outra chave vira
 `TECNICO`; sem grupo fica no `DEFAULT`.
 
 **O DEFEITO QUE ISTO CONSERTA, E ELE ACONTECEU.** A coluna nasceu
-`role Papel NOT NULL DEFAULT 'USUARIO'`, e esse `DEFAULT` é a decisão certa para conta NOVA — é a
+`role Cargo NOT NULL DEFAULT 'USUARIO'`, e esse `DEFAULT` é a decisão certa para conta NOVA — é a
 porta fechada por padrão da F3 levada à autorização (D148). Aplicado a um banco que **já tem
 gente**, ele rebaixou todos de uma vez, e os grupos foram derrubados na mesma migração: a
 informação de quem era administrador deixou de existir no mesmo passo que a tornou necessária.
@@ -462,8 +468,12 @@ administrador.
 
 **A saída quando já é tarde** (o banco onde a migração já rodou e os grupos já foram embora):
 `npm run acesso:administrador -- <login ou e-mail>`, que é a linha de escape que existe
-exatamente para o sistema trancado, ou `npm run db:seed`, que repõe o papel do administrador do
+exatamente para o sistema trancado, ou `npm run db:seed`, que repõe o cargo do administrador do
 `.env`.
+
+> **Desde o [R](./acesso.md#r--a-senha-nasce-no-cadastro-e-o-login-é-o-e-mail):** não há mais
+> login à parte do e-mail, e é só ele que o comando recebe —
+> `npm run acesso:administrador -- <e-mail>`.
 
 **POR QUE A TRADUÇÃO ERRA PARA `TECNICO` E NÃO PARA `USUARIO`:** quem tinha qualquer chave mexia
 no inventário, e `TECNICO` é o que alcança o inventário. Rebaixar essa gente para `USUARIO` seria
@@ -513,6 +523,16 @@ presume uma operação de desligar que não existe mais), D75/D135/[D156](#d156-
 **Mantém:** [D143](#d143--o-escopo-é-itam--rmm-e-o-critério-de-corte-é-a-ponte) — a régua é a
 mesma; o que muda é até onde ela foi aplicada.
 
+> **Revisão do "Supera":** a lista acima esqueceu três decisões que o mesmo corte deixou sem
+> objeto — [D69](./relatorios-import-etiquetas.md#d69--o-export-manda-número-cru-e-data-iso--e-trata-fórmula)
+> (o formato do export: sem export, não há CSV para formatar),
+> [D138](./acesso.md#d138--relatório-que-é-sobre-dinheiro-exige-a-permissão-na-rota-não-na-coluna)
+> (relatório sobre dinheiro com a exigência na rota: sem relatório) e
+> [D163](#d163--o-mapa-de-coluna-protegida-é-tipado-cargo-porque-indexof-de-string-estranha-é--1)
+> (o mapa de coluna protegida tipado `Cargo`: os dois mapas saíram, um com o export de ativos e
+> o outro com o relatório). O "Mantém" do D146, que guardava o D69, e o do D148, que guardava o
+> D138, governaram até aqui.
+
 **Por quê uma segunda rodada, e não a primeira corrigida:** a primeira cortou pelo critério certo
 e mesmo assim manteve itens que não o atravessam — o D86 justificou o e-mail pelo lembrete de
 atraso, o D154/D161 por já existir export nos domínios, o D156 por `Department` estar "entranhado"
@@ -527,3 +547,117 @@ como item e movimento — ver o índice da segunda rodada em
 [`README.md`](./README.md#a-segunda-rodada-ap). `Location.managerId` fica: é gestor de espaço,
 lido pela spec de localização, e não carrega nenhum dos usos que levaram o `User.managerId`
 embora.
+
+> **Superada em parte pela localização plana (commit `ff34364`):** o `Location.managerId` que o
+> parágrafo acima mantém saiu depois, junto com o `parentId` — a lista de localizações ficou
+> plana, sem "dentro de" nem gestor, e o nome único diz onde o lugar fica
+> ([`../referencia/configuracoes.md`](../referencia/configuracoes.md#localizações)). Nenhuma tela
+> decidia nada pelo gestor.
+
+---
+
+## Q — A varredura do código morto: o que não tem leitor sai
+
+**Decidido:** uma passada pelo que as duas rodadas deixaram de pé, com uma pergunta por item —
+*quem lê isto?* Sem leitor, sai:
+
+- **as cópias e os carimbos.** `Asset.assignedToId`, a cópia do responsável — quem responde é
+  a `Assignment` aberta, e a Camada 3 deriva o resto; `createdById`/`updatedById` de `Asset`,
+  `License` e `StockItem` — o `ActivityLog` já guarda o ator de cada escrita;
+  `LicenseSeatCheckout.checkoutById`/`checkinById` — o histórico da licença já registra quem
+  entregou e quem devolveu; `ReconciliationSuggestion.resolvedById`; e `User.lastLoginAt`;
+- **os campos que nenhuma tela editava.** `User.employeeNumber`, `jobTitle`, `phone`,
+  `address` e `hiredAt` — a busca de pessoas fica só por nome e e-mail; `LicenseSeat.notes`;
+  `AssetChange.endpointId`; `AssetUsageDaily.samples`; e as notas de devolução,
+  `LicenseSeatCheckout.checkinNotes` e `StockMovement.returnNotes` — a devolução de assento e
+  de estoque não aceita mais nota. E os índices duplicados;
+- **os detalhes estruturados dos erros.** O `details` do `AppError` e o `fields` do 422 de
+  validação: o corpo de erro é só `{ error }`, com a frase;
+- **o que as listagens aceitavam e ninguém mandava.** `sort`/`order` genéricos (o front nunca
+  os enviou — cada listagem tem a sua ordem fixa), `?locationId=` em `/api/assets`, o filtro da
+  fila de sugestões (`state`, `endpointId`, `assetId` — a fila é só a das pendentes),
+  `?reviewState=` em `/api/endpoints`, `?tipo=` nos alertas de licença e `?view=` nas ocupações
+  da pessoa. Os três últimos só os testes usavam.
+
+E entra o que faltava para duas regras que já estavam escritas:
+
+- **desativar colaborador com posse aberta passa a ser recusado (409)**, como a exclusão já
+  era — a mesma contagem das quatro pontas, com a mesma trava da linha do usuário;
+- **a exclusão passa a conferir que sobra um administrador** — antes só a edição conferia.
+
+E duas coisas pequenas que a mesma pergunta pediu:
+
+- **a telemetria crua é expurgada depois de 3 dias**, uma vez por dia: dentro da varredura de
+  hora em hora, depois da agregação do uso diário, mas com a janela do DIA. O uso diário
+  agregado fica para sempre;
+- a correção de turno do ocupante **ganha tela** — um lápis **Corrigir turno** em cada ocupação
+  aberta do painel de ocupantes (a ficha do posto e o modal de Configurações › Localizações),
+  sobre a rota que já existia e que nenhuma tela chamava,
+  `PATCH /api/locations/:id/occupants/:occupantId`. Rota sem chamador é a mesma pergunta pelo
+  outro lado, e aqui a resposta foi a inversa: sem a ação, a única saída para um turno digitado
+  errado era encerrar a ocupação e abri-la de novo — e isso fabrica no histórico uma saída que
+  não aconteceu e perde a data de entrada.
+
+A outra rota que nenhuma tela chamava, `POST /api/users/:id/set-password`, teve resposta
+própria, e maior: a senha foi para o cadastro do usuário e o login passou a ser o e-mail —
+ver [R](./acesso.md#r--a-senha-nasce-no-cadastro-e-o-login-é-o-e-mail).
+
+**Supera:** [D17](./posse.md#d17--assetassignedtoid-deixa-de-ser-editável-pelo-formulário) (a
+coluna deixa de ser editável → deixa de existir) e
+[D26](./acesso.md#d26--createdbyidupdatedbyid-só-onde-a-tela-mostra) (`createdById`/`updatedById`
+"só onde a tela mostra" → em lugar nenhum, porque nenhuma tela mostrava).
+**Mantém:** [D16](./posse.md#d16--responsabilidade-é-derivada-nunca-coluna) — é ele que torna a
+saída do `assignedToId` barata —,
+[D18](./catalogo-e-ativo.md#d18--assetlog-não-nasce-a-aba-histórico-lê-o-activitylog), o
+`ActivityLog` como o lugar do histórico, e
+[B](./posse.md#b--invariante-19-na-forma-final-um-ativo-por-posto-de-trabalho), com o PATCH de
+correção de turno que ela registrou — agora com quem o chame.
+
+**Por quê:** o critério do D143 decide o que o sistema faz; esta varredura aplica a mesma régua
+ao que o código **guarda**. Coluna sem leitor é a mais barata de esquecer e a mais cara de
+manter: entra em cada `select`, em cada tipo do contrato, em cada formulário que precisa
+reenviá-la, e não responde pergunta nenhuma. O D17 recusava apagar o `assignedToId` porque "a
+listagem mostra o responsável em toda linha" — e a listagem já tinha deixado de ler a coluna:
+ela deriva a posse em lote (`resolverResponsaveisEmLote`, um número fixo de consultas por
+página), justamente porque a coluna respondia errado no caso do posto. O D26 justificava as
+duas colunas de autoria pela tela de detalhe do ativo, e a tela nunca as mostrou. Os
+`details` e o `fields` dos erros, o painel nunca leu: toda tela mostra a frase.
+
+**As duas recusas não são regra nova, e é por isso que entram aqui.** A invariante 6 diz que
+desativado não tem posse aberta, e a desativação era a única porta que a deixava falsa — a
+pessoa saía das listas de escolha com equipamento no nome. A invariante 17 diz que sempre
+existe um administrador que entra, e a exclusão era o caminho que ela mesma previa como o
+esquecido: apagar o último administrador com login — inclusive a si mesmo — trancava o sistema
+por fora. As duas estavam escritas em
+[`../referencia/invariantes.md`](../referencia/invariantes.md); o código é que não as cumpria.
+
+**Por quê a telemetria crua tem prazo, e por quê três dias:** cada máquina manda uma amostra a
+cada poucos segundos, e a tabela cresce sem teto. Quem lê a amostra crua são as telas (só a
+última) e a agregação do uso diário, que recalcula a janela aberta à meia-noite UTC de dois dias
+atrás; fora dessa janela a linha não tem leitor, e o que ela dizia já está no uso diário agregado, que é
+o que a pergunta do ativo ocioso consulta. O corte de 72 horas cai sempre ANTES daquela
+meia-noite — então a agregação nunca recalcula um dia já expurgado, e nenhuma folga a mais
+compraria resposta nova. Três dias é constante (`DIAS_DE_TELEMETRIA`), não coluna de
+`AppSetting` — como os 180 do histórico da fila.
+
+**E uma vez por dia, não a cada rodada:** a reconciliação toma a janela da hora, e o expurgo,
+dentro dela e depois da agregação, toma a do dia
+(`executarUmaVezPorJanela('expurgo-da-telemetria', inicioDoDia(), …)`). Retenção contada em
+dias pede faxina diária, e a janela é gravada no banco: nem "Reconciliar agora" nem um reinício
+do servidor repetem o `DELETE` no mesmo dia.
+
+**O que fica, e por quê:**
+
+- **os históricos que nenhuma tela mostra** continuam gravando — a auditoria se faz pelo banco,
+  e histórico que só começa a gravar no dia em que alguém pede a tela começa vazio;
+- **o prefixo e os zeros da etiqueta** (`AppSetting.assetTagPrefix`, `assetTagZerofill`)
+  continuam no banco, sem tela — a etiqueta automática os lê a cada cadastro;
+- **o `?limit=` dos históricos** — nenhuma tela o manda, mas é ele que deixa os testes provarem
+  o corte da lista e a recontagem do lote no limite sem criar cem eventos;
+- **o `isWorkstation` na edição de localização** e o **`?type=` da listagem de status** — o
+  primeiro é a porta da invariante 19 na edição, e o segundo é o mesmo filtro genérico que
+  separa as categorias por tipo;
+- **o protocolo do agente** (`installedSoftware`, `loggedOnUser` no tipo e no parser do
+  handshake) — o agente vive fora deste repositório, e tirar um campo do contrato sem conferir
+  o que o agente instalado manda é renegociá-lo às cegas. Fica a conferir no agente real,
+  pela mesma razão do [A](./reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional).

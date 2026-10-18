@@ -13,7 +13,7 @@ import { useNotificacao } from '../../hooks/useNotificacao';
 const PER_PAGE = 15;
 
 /** Qual janela está aberta. Uma de cada vez, como nas outras telas. */
-export type ModalDeLicenca = 'criar' | 'editar' | 'detalhe' | 'entregar' | null;
+type ModalDeLicenca = 'criar' | 'editar' | 'detalhe' | 'entregar' | null;
 
 /**
  * Os números do contrato NA HORA DO CLIQUE, para a frase da confirmação.
@@ -88,8 +88,8 @@ export function useLicencas() {
   };
 
   // Os erros sobem para o formulário mostrar a mensagem do servidor — é por
-  // aqui que aparecem o 422 de categoria do tipo errado, o 422 de chave sem
-  // criptografia configurada e o 409 de reduzir o contrato abaixo do ocupado.
+  // aqui que aparecem o 422 de categoria do tipo errado e o 409 de reduzir o
+  // contrato abaixo do ocupado.
   const handleCriar = async (dados: LicencaInput) => {
     await criar.mutateAsync(dados);
     fechar();

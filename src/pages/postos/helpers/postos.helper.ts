@@ -34,7 +34,7 @@ export function rotuloDaContagem(total: number, view: PostoView): string {
 }
 
 /** Uma faixa da escala: o turno e quem o cobre. */
-export interface TurnoDoPosto {
+interface TurnoDoPosto {
   turno: string;
   pessoas: string[];
 }
@@ -92,7 +92,7 @@ export function explicacaoDoVago(posto: Pick<Posto, 'totalAtivos'>): string {
  * inclusive a sala de reunião, onde a regra não vale e dois computadores são
  * estado normal. Quem usa a lista decide o que dizer sobre a segunda.
  */
-export type AtivoComMaquina = AtivoDoPosto & { endpointId: string };
+type AtivoComMaquina = AtivoDoPosto & { endpointId: string };
 
 export function ativosComMaquina(ativos: readonly AtivoDoPosto[]): AtivoComMaquina[] {
   // Predicado de tipo, e não `filter` + `as`: é o filtro que sabe que o campo

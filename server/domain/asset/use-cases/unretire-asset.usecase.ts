@@ -2,7 +2,7 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { buildChanges } from '../../shared/diff.helper';
-import { ASSET_SELECT } from '../helpers/asset-select.helper';
+import { ASSET_WRITE_SELECT } from '../helpers/asset-select.helper';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
 
 /**
@@ -41,7 +41,7 @@ export async function unretireAsset(id: string, actorId: string | null = null) {
     const depois = await tx.asset.update({
       where: { id },
       data: { retiredAt: null, retiredReason: null },
-      select: ASSET_SELECT,
+      select: ASSET_WRITE_SELECT,
     });
 
     await recordActivity(tx, {

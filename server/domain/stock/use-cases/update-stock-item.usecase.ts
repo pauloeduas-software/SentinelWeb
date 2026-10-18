@@ -33,7 +33,6 @@ export async function updateStockItem(id: string, data: UpdateStockItemInput, ac
         categoryId: data.categoryId,
         locationId: data.locationId,
         notes: data.notes,
-        updatedById: actorId,
       },
       select: STOCK_ITEM_SELECT,
     });

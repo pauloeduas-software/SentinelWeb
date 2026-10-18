@@ -1,10 +1,11 @@
 # Plano de implementação — Fase 9: campos customizados
 
-> Plano **prospectivo** da Fase 9 do [`../ROADMAP.md`](../ROADMAP.md), escrito contra o código
+> Plano **prospectivo** da Fase 9 do roadmap do projeto (apagado depois;
+> o escopo que ficou está em [`../decisoes/escopo.md`](../decisoes/escopo.md)), escrito contra o código
 > real depois da F1. Convenções de camada: [`../referencia/arquitetura.md`](../referencia/arquitetura.md).
 >
 > Esforço: **P** = até meio dia · **M** = 1 a 3 dias · **G** = mais de 3 dias · Decisões **D58–D64**, na
-> numeração contínua do projeto (D1–D13 no TODO, D14–D17 em `../decisoes/posse.md`).
+> numeração contínua do projeto (D1–D13 em `../decisoes/catalogo-e-ativo.md` e afins, D14–D17 em `../decisoes/posse.md`).
 
 ---
 
@@ -146,7 +147,7 @@ a promoção acontece hoje ou depois do backfill (D61).
 
 > As decisões desta fase moram em [`../decisoes/campos-customizados.md`](../decisoes/campos-customizados.md) — **D58–D64**. Elas saíram daqui porque decisão se arquiva pelo ASSUNTO que governa, não pela fase que a tomou: quem precisa saber as regras de um assunto não deveria ter que descobrir em que fase ele nasceu.
 
-O índice das 142 está em [`../decisoes/README.md`](../decisoes/README.md).
+O índice das decisões está em [`../decisoes/README.md`](../decisoes/README.md).
 
 ## Riscos e armadilhas
 

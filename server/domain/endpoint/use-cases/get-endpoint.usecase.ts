@@ -1,7 +1,7 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import {
-  ATIVO_DA_MAQUINA_SELECT, presentEndpoint, type PresentedEndpoint,
+  ATIVO_DA_MAQUINA_SELECT, presentEndpointComTelemetria, type EndpointComTelemetria,
 } from '../helpers/present-endpoint.helper';
 
 /**
@@ -30,7 +30,7 @@ import {
  * responde "como está esta máquina".
  * ═══════════════════════════════════════════════════════════════════════════
  */
-export async function getEndpoint(id: string): Promise<PresentedEndpoint> {
+export async function getEndpoint(id: string): Promise<EndpointComTelemetria> {
   const endpoint = await prisma.endpoint.findUnique({
     where: { id },
     include: {
@@ -54,5 +54,5 @@ export async function getEndpoint(id: string): Promise<PresentedEndpoint> {
   // comando ter deixado de usar 404 para os dois casos (ver send-command).
   if (!endpoint) throw new AppError('Máquina não encontrada.', 404);
 
-  return presentEndpoint(endpoint);
+  return presentEndpointComTelemetria(endpoint);
 }

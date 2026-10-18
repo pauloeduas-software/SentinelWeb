@@ -32,7 +32,7 @@ function equalsSeguro(a: string, b: string): boolean {
  * Continua sendo um objeto, e não um booleano, porque o `agent.maestro` ramifica
  * sobre ele — e porque um dia pode voltar a ter mais de uma forma.
  */
-export type FormaDeAutenticacao = { via: 'COMPARTILHADO' } | null;
+type FormaDeAutenticacao = { via: 'COMPARTILHADO' } | null;
 
 function extrairBearer(header: string | undefined): string | null {
   const prefixo = 'Bearer ';

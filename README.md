@@ -1,8 +1,8 @@
 # Sentinel Web Dashboard 📊
 > **Cyber-Industrial Control Panel for Fleet Management**
 
-![React](https://img.shields.io/badge/React-18.x-61DAFB?logo=react)
-![Tailwind](https://img.shields.io/badge/Tailwind-3.x-38B2AC?logo=tailwind-css)
+![React](https://img.shields.io/badge/React-19.x-61DAFB?logo=react)
+![Tailwind](https://img.shields.io/badge/Tailwind-4.x-38B2AC?logo=tailwind-css)
 
 O **Sentinel Web** fornece a interface visual para o gerenciamento de ativos. É focado em densidade de informação e baixa latência de resposta.
 
@@ -49,18 +49,18 @@ Toda resposta leva `X-Request-Id`, que aparece na linha de log da requisição.
 
 ## 🚀 Telas
 
-| Rota | O que é | Papel mínimo |
+| Rota | O que é | Cargo mínimo |
 | --- | --- | --- |
 | `/ativos` | Listagem de ativos (computadores) — filtros, busca por etiqueta/série, ações de ciclo de vida | TECNICO |
 | `/ativos/:id` | Ficha do ativo — abas **Detalhes**, **Posse**, **Histórico**, **Licenças**, **Máquina** (telemetria e comando, quando há agente) | TECNICO |
 | `/postos` | Listagem de postos de trabalho (mesas) | TECNICO |
-| `/postos/:id` | Ficha do posto — ocupantes, o computador da mesa (com telemetria), ativos entregues e estoque da mesa | TECNICO |
+| `/postos/:id` | Ficha do posto — ocupantes (adicionar, corrigir o turno, encerrar), o computador da mesa (com telemetria), ativos entregues e estoque da mesa | TECNICO |
 | `/estoque` | O que tem quantidade em vez de patrimônio — saldo, entrada/baixa, saída e devolução por unidade | TECNICO (apagar/restaurar: ADMIN) |
 | `/licencas` | Contratos de software e os assentos materializados | TECNICO (apagar/restaurar: ADMIN) |
 | `/descobertas` | O que o agente vê e o cadastro não sabe — máquinas sem vínculo, vínculo manual, fila de sugestões e "Reconciliar agora" | TECNICO (Reconciliar agora e a configuração da descoberta: ADMIN) |
-| `/users` | Listagem de colaboradores | TECNICO (criar/editar/excluir: ADMIN) |
-| `/users/:id` | Ficha da pessoa — postos ocupados, itens de estoque no nome dela, histórico | TECNICO |
-| `/configuracoes` | Catálogo (categorias, status, fabricantes, modelos, localizações) e configuração do sistema | ADMIN |
+| `/users` | Listagem de colaboradores — o cadastro pede nome, e-mail, cargo e, para Técnico e Administrador, a senha com que a pessoa entra (o login é o e-mail) | TECNICO (criar/editar/excluir: ADMIN) |
+| `/users/:id` | Ficha da pessoa — postos ocupados, itens de estoque no nome dela e histórico | TECNICO |
+| `/configuracoes` | As cinco abas do catálogo — categorias, status, fabricantes, modelos, localizações. A configuração da descoberta fica em `/descobertas` | ADMIN |
 
 A convergência RMM × ITAM — vínculo entre a máquina que o agente descobre e o ativo cadastrado,
 telemetria em tempo real e comando remoto — vive dentro das fichas do ativo e do posto, não numa
@@ -86,7 +86,8 @@ Ao trocar `POSTGRES_PORT`, ajuste também a porta dentro de `DATABASE_URL` — o
 não expande `${VAR}` no `.env`.
 
 O frontend nunca aponta para uma porta fixa: as chamadas saem em `/api` relativo
-(`src/core/api/apiClient.ts`) e o Vite faz o proxy para o backend em dev.
+(`src/core/api/apiClient.ts`) e o Vite faz o proxy para o backend em dev. Só quando painel e
+API ficam em hosts diferentes o build lê `VITE_API_URL`.
 
 As variáveis ficam num `.env` só, na raiz — modelo em [`.env.example`](./.env.example).
 O servidor valida o que é obrigatório no boot e não sobe sem isso.
@@ -104,6 +105,7 @@ cp .env.example .env
 docker compose up -d
 bun run db:migrate
 bun run db:generate
+bun run db:seed      # configuração, categorias e status — sem conta nenhuma
 
 # 4. Rodar modo dev (Vite + API, com reload nos dois)
 bun run dev
@@ -113,25 +115,20 @@ bun run dev
 | --- | --- |
 | `dev` | Vite + API juntos, com reload |
 | `dev:server` | Só a API |
-| `build` | Typecheck dos 3 projetos TS + build do front |
+| `build` | Typecheck dos 2 projetos TS (front e Node) + build do front |
 | `start` | Produção: a API serve o `dist` |
 | `lint` | ESLint em `src/`, `server/` e `tests/` |
 | `test` / `test:watch` | Vitest contra o banco `sentineldb_test` (descartável). Ver [`docs/referencia/testes.md`](./docs/referencia/testes.md) |
 | `db:migrate` / `db:generate` / `db:studio` | Prisma |
-| `db:seed` | O seed principal: categorias, status, configuração e administrador. Roda em todo banco |
+| `db:seed` | O seed principal: categorias, status e configuração. Não cria conta: o primeiro administrador é criado à mão por quem instala ([T](./docs/decisoes/acesso.md#t--não-há-conta-semeada)). Roda em todo banco |
 | `db:seed:demo` | O principal mais dados de exemplo — fabricantes, modelos e localizações. Só para desenvolvimento e demonstração. Ver [`docs/referencia/configuracoes.md`](./docs/referencia/configuracoes.md#o-que-vem-semeado) |
+| `acesso:administrador` | A linha de escape do sistema trancado: `-- <e-mail>` dá o cargo `ADMIN` a essa pessoa. Roda no servidor, fora da API — ver [`docs/referencia/invariantes.md`](./docs/referencia/invariantes.md) (invariante 17) |
 | `agente:falso` | Um agente de mentira no `/agent-hub` (`scripts/agente-falso.ts`): handshake e telemetria a cada 3 s, para ver a aba Máquina e a ficha do posto sem o agente real. Lê `PORT` e `AGENT_TOKEN` do `.env`; `-- <hwid> <hostname>` para uma segunda máquina |
 
 ### Migrations
 
-`prisma migrate dev` é interativo e falha em terminal não interativo. Para criar uma
-migração nova:
-
-```bash
-set -a && . ./.env && set +a
-DIR="prisma/migrations/$(date +%Y%m%d%H%M%S)_nome_da_mudanca"
-mkdir -p "$DIR"
-bunx prisma migrate diff --from-url "$DATABASE_URL" \
-  --to-schema-datamodel prisma/schema.prisma --script > "$DIR/migration.sql"
-bunx prisma migrate deploy
-```
+`prisma migrate dev` é interativo e falha em terminal não interativo — **nunca** o use aqui.
+Enquanto não existe banco em produção, o schema inteiro vive numa migration só, a `0_init`,
+editada no lugar a cada mudança de `schema.prisma`. A receita — regerar a `0_init`, alinhar o
+banco de desenvolvimento e conferir que nada divergiu — está em
+[`docs/guias/criar-uma-migration.md`](./docs/guias/criar-uma-migration.md).

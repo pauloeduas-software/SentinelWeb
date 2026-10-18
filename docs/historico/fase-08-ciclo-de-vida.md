@@ -1,6 +1,7 @@
 # Plano de implementação — Fase 8: ciclo de vida
 
-> Plano da Fase 8 do [`../ROADMAP.md`](../ROADMAP.md), **reescrito contra a árvore depois de a F7
+> Plano da Fase 8 do roadmap do projeto (apagado depois;
+> o escopo que ficou está em [`../decisoes/escopo.md`](../decisoes/escopo.md)), **reescrito contra a árvore depois de a F7
 > fechar**. Convenções de camada: [`../referencia/arquitetura.md`](../referencia/arquitetura.md). Contrato de posse:
 > [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md) e [`../referencia/invariantes.md`](../referencia/invariantes.md).
 >
@@ -14,6 +15,14 @@
 > `AppSetting`. Nada disso vale — a F4 trouxe o correio e a janela de job, a F6 a cifra, a F7 a
 > convergência. O que **não** mudou foram as seis decisões: D52 a D57 seguem de pé, e é por isso que
 > este arquivo é uma revisão e não um plano novo.
+>
+> **Status (depois do corte de escopo):** o "seguem de pé" valeu até o corte. D52, D53 e D54 saíram
+> com a conferência ([D144](../decisoes/escopo.md#d144--a-conferência-manual-sai-a-conferência-pelo-agente-fica), [D157](../decisoes/escopo.md#d157--a-conferência-sai-inteira-inclusive-a-do-agente)), D55 com o valor
+> contábil ([D152](../decisoes/escopo.md#d152--o-valor-contábil-sai)) e D57 com os alertas ([D151](../decisoes/escopo.md#d151--a-central-de-alertas-e-o-webhook-saem)); fica o
+> D56, o tick curto com *compare-and-set*. As cinco entregas desta fase — manutenção
+> ([D158](../decisoes/escopo.md#d158--manutenção-sai-inteira)), conferência, valor contábil, `/relatorios`
+> ([D154](../decisoes/escopo.md#d154--relatório-vira-três-consultas-fixas), e o resto no segundo de-escopo) e
+> alertas — saíram inteiras.
 
 ---
 
@@ -224,7 +233,7 @@ rodada e as que uma falha de SMTP deixou para trás (D126). `startDailyAlertsJob
 
 > As decisões desta fase moram em [`../decisoes/ciclo-de-vida.md`](../decisoes/ciclo-de-vida.md) — **D52–D57 e D123–D128**. Elas saíram daqui porque decisão se arquiva pelo ASSUNTO que governa, não pela fase que a tomou: quem precisa saber as regras de um assunto não deveria ter que descobrir em que fase ele nasceu.
 
-O índice das 142 está em [`../decisoes/README.md`](../decisoes/README.md).
+O índice das decisões está em [`../decisoes/README.md`](../decisoes/README.md).
 
 ## Riscos e armadilhas
 
@@ -400,7 +409,8 @@ tinha conseguido rodar.
 
 **Onze correções no código de produção**, em três famílias, mais **quatro defeitos de teste** que só
 apareceram quando a suíte finalmente executou (no fim desta seção). As decisões D52–D57 e D123–D128
-seguem todas de pé: nenhuma correção mudou uma decisão, e três delas existem porque o código **não
+seguem todas de pé *(na data — depois, o corte de escopo superou todas menos D56 e D123; ver o status
+no topo)*: nenhuma correção mudou uma decisão, e três delas existem porque o código **não
 fazia o que a decisão dizia** — o que é o tipo de divergência que só uma releitura pega, porque
 compila, passa no lint e parece certo.
 

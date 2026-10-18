@@ -9,13 +9,13 @@
 //
 // O `changes` do `ActivityLog` é `Json`: o formato muda com a operação, de
 // propósito. Uma edição grava `{ campo: { de, para } }`; um checkout grava ids
-// soltos; um lote grava `batchId` junto com o diff. Tipar isso campo a campo
+// soltos junto com o diff do status. Tipar isso campo a campo
 // obrigaria a mexer neste arquivo a cada operação nova — e a alternativa
 // (`JSON.stringify` na tela) mostraria chave crua para quem só quer saber o que
 // mudou. Então aqui ele é LIDO, não tipado.
 
 /** O mínimo que um evento precisa ter para ser lido. */
-export interface EventoComChanges {
+interface EventoComChanges {
   changes: unknown;
 }
 
@@ -23,7 +23,7 @@ export interface EventoComChanges {
  * As ações que QUALQUER trilha pode ter — as do soft delete e do ciclo de vida
  * comum a toda tabela.
  *
- * O que é de um domínio só (`RETIRE` do ativo, `OFFBOARD` da pessoa) não entra
+ * O que é de um domínio só (o `RETIRE` do ativo e o da licença) não entra
  * aqui: entra no mapa que o domínio passa a `rotuloDaAcao`. Uma lista central
  * com tudo faria a próxima fase acrescentar vocabulário de licença e de
  * manutenção num arquivo que nenhuma das duas telas lê inteiro.
@@ -35,7 +35,6 @@ const ROTULO_DA_ACAO: Record<string, string> = {
   RESTORE: 'Restaurado da lixeira',
   CHECKOUT: 'Entregue',
   CHECKIN: 'Devolvido',
-  END: 'Vínculo encerrado',
 };
 
 /**
@@ -75,7 +74,7 @@ export function valorLegivel(valor: unknown): string {
 }
 
 /** Um campo que mudou de valor: o par que a edição gravou. */
-export interface Mudanca {
+interface Mudanca {
   campo: string;
   rotulo: string;
   de: string;
@@ -84,8 +83,8 @@ export interface Mudanca {
   cru: string;
 }
 
-/** Um dado solto do evento (o `batchId` do lote, a observação da saída). */
-export interface Detalhe {
+/** Um dado solto do evento (o id da posse, a observação da saída). */
+interface Detalhe {
   campo: string;
   rotulo: string;
   valor: string;
@@ -111,7 +110,7 @@ function ehDiff(valor: unknown): valor is { de: unknown; para: unknown } {
  * futura que grave um par `{de, para}` aparece como mudança sozinha.
  *
  * Os RÓTULOS vêm por parâmetro, e não de um mapa global: é a mesma inversão do
- * `parseListQuery` recebendo a allowlist do domínio (docs/referencia/arquitetura.md). Um
+ * `permission-guard` recebendo do domínio a exigência de cada rota. Um
  * mapa único com as colunas de `assets` e de `users` juntas traduziria `name`
  * como "Nome" nos dois e erraria no primeiro campo homônimo com sentidos
  * diferentes.

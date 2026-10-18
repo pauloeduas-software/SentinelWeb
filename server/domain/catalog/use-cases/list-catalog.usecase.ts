@@ -5,7 +5,7 @@ import type { CatalogSpec } from '../specs/catalog-spec.types';
 
 export async function listCatalog(
   spec: CatalogSpec,
-  query: ListQuery<string>,
+  query: ListQuery,
   filtro?: string,
 ): Promise<ListEnvelope<Record<string, unknown>>> {
   const where = {
@@ -24,7 +24,8 @@ export async function listCatalog(
     const rows = await delegate.findMany({
       where,
       select: spec.select,
-      orderBy: { [query.sort]: query.order },
+      // Catálogo é lista para consultar, não fila de novidades: por nome.
+      orderBy: { name: 'asc' },
       skip: query.skip,
       take: query.take,
     });

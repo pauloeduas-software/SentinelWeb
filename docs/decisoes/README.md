@@ -4,7 +4,8 @@
 > fase que a tomou. A numeração `D1`…`D164` é contínua e global: ela é o nome da decisão e não
 > muda, mesmo que o arquivo onde ela vive mude. Depois do D164 veio uma segunda rodada, com 15
 > decisões próprias, nomeadas por letra (`A`…`P`, sem `N`) em vez de número — ver
-> [*A segunda rodada*](#a-segunda-rodada-ap) abaixo.
+> [*A segunda rodada*](#a-segunda-rodada-ap) abaixo. A varredura do código morto, que veio
+> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S` e `T`.
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve.** Se a realidade mudou, ela é
 > **superada** por outra, com link entre as duas. O log é o que diz por quanto tempo cada regra
@@ -45,6 +46,7 @@ que corrigem algo anterior:
 | **D5** (cinco tipos de status) | commit `505c520` (status enxuto) | o `ARCHIVED` sai: **quatro** tipos; cor e `showInNav` saem do `StatusLabel`; o seed cria um status por tipo |
 | **D19** (três colunas de saída), **D127** | commit `505c520` (status enxuto) | sem `ARCHIVED`, sobram duas: `retiredAt` (a baixa) e `deletedAt` |
 | **D20** (`?arquivados=`), **D85** (`?view=archived`) | commit `505c520` (status enxuto) | a vista, a aba e o contador de arquivados saem; `active` exclui só o baixado |
+| **D4** e **D15** (a árvore de `Location`), **O** (`Location.managerId` fica) | commit `ff34364` (localização plana) | `parentId` e `managerId` saem: a lista é plana, e o nome único diz onde o lugar fica |
 
 **O de-escopo (D143–D156) supera por subtração**, e é o maior grupo de supersessões do projeto:
 a decisão antiga não estava errada, o que ela governava deixou de existir. Está inteiro em
@@ -70,6 +72,21 @@ ponte ITAM×RMM.
 | **D153** (estoque em item + movimento) | **D160** | o único item que REESCREVIA; não foi executado, e o log diz isso |
 | **D154** (três relatórios) | **D161** | são dois: licença e estoque já exportavam pelos domínios deles |
 
+**As decisões por letra também superam.** A segunda rodada e a varredura que veio depois dela
+registram o "Supera:" do mesmo jeito, e o log só fica completo com elas na tabela:
+
+| Corrige | É corrigida por | O que mudou |
+|---|---|---|
+| **D47**, **D48**, **D49** (inferência pela conta do sistema operacional) | **A** | a fila deixa de inferir pessoa; sai a invariante 14, e o D50 fica |
+| **D115** (a rota da aba de telemetria) | **D** | a telemetria e o comando vão para a ficha do ativo e a do posto |
+| **D42**, **D91** (a cifra), **D102** (licença ↔ pacote) | **G** | licença vira cadastro simples, sem conformidade de software nem chave cifrada |
+| **D103**, **D104** (fusão de máquinas) | **H** | o `hwid` é estável entre reinstalações; não há o que fundir |
+| **D36**, **D37**, **D38**, **D153**, **D160** (estoque) | **J** | `StockItem` + `StockMovement`, saída por unidade, alvo em pessoa ou posto |
+| **D14** (o `ASSET` como alvo), **D87** | **K** | a posse tem dois alvos: pessoa e posto |
+| **D21**, **D31**, **D32**, **D82** (massa e desligamento), **D57**, **D86** (e-mail), **D66**, **D129**, **D130** (a view do responsável), **D73**, **D74**, **D75**, **D135**, **D156** (`Department`), **D154**, **D161** (relatórios), **D69**, **D138**, **D163** (export e relatório) | **O** | o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada |
+| **D17** (`assignedToId`), **D26** (`createdById`/`updatedById`) | **Q** | a varredura do código morto: coluna, rota e parâmetro sem leitor saem |
+| a credencial à parte da F3 (`username` + `set-password` — decisão da execução, sem número) | **R** | a senha nasce no cadastro do usuário e o login é o e-mail |
+
 Quatro decisões nasceram para resolver **conflito entre dois planos**, e não de uma fase só:
 **D79** (cada job tem a própria linha), **D80** (um `ApiToken` com dono polimórfico), **D81** (uma
 cifra para os dois usos) e **D82** (`terminate` não existe; o `offboard` é estendido). Elas estão
@@ -87,8 +104,8 @@ arquivadas no assunto que governam, com o conflito original descrito dentro de c
 O corte do ITAM (D143–D164) foi a **primeira** rodada de de-escopo, com numeração contínua D1–D164.
 Depois dela o projeto passou por uma **segunda** rodada — mais de-escopo (O), a forma final da
 invariante 19 (B), o retorno do estoque numa forma diferente da que o D153 previu (J) e meia dúzia
-de outras decisões que não vieram de uma fase do `ROADMAP.md`, e sim da revisão do que ficou depois
-do corte. Elas usam **letra**, não número: a numeração D é contínua porque corresponde à ordem em
+de outras decisões que não vieram de uma das onze fases do roadmap, e sim da revisão do que ficou
+depois do corte. Elas usam **letra**, não número: a numeração D é contínua porque corresponde à ordem em
 que o código citava "invariante N" e "D N" — recomeçá-la nesta rodada criaria colisão com os D's
 que o código ainda cita. Letra deixa claro, só pelo nome, que a decisão é desta rodada.
 
@@ -109,6 +126,10 @@ que o código ainda cita. Letra deixa claro, só pelo nome, que a decisão é de
 | **M** | Um lockfile só, o do `bun` | [Plataforma](./plataforma.md#m--um-lockfile-só-o-do-bun) |
 | **O** | O segundo de-escopo: o que a primeira rodada manteve, ou não enxergou, sai | [Escopo](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai) |
 | **P** | `USUARIO` não entra no painel | [Acesso](./acesso.md#p--usuario-não-entra-no-painel) |
+| **Q** | A varredura do código morto: o que não tem leitor sai | [Escopo](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai) |
+| **R** | A senha nasce no cadastro, e o login é o e-mail | [Acesso](./acesso.md#r--a-senha-nasce-no-cadastro-e-o-login-é-o-e-mail) |
+| **S** | O papel passa a se chamar cargo | [Acesso](./acesso.md#s--o-papel-passa-a-se-chamar-cargo) |
+| **T** | Não há conta semeada | [Acesso](./acesso.md#t--não-há-conta-semeada) |
 
 **`N` não existe, de propósito.** As correções de segurança e consistência desta rodada (custo
 de compra vazando por uma quarta porta, comando que respondia sucesso sem confirmação do socket,
@@ -116,6 +137,14 @@ status padrão do ativo novo, unidade de rede em bit misturada com byte) não s�
 arquitetura — são a aplicação de regras já decididas (D77, acima de tudo) em um lugar que tinha
 escapado. Ficam só no histórico da fase, não aqui: decisão registrada sem ser decisão nova é
 ruído para quem lê o índice procurando o que mudou de ideia.
+
+**`Q` não é da segunda rodada: veio depois dela**, numa varredura do que as duas rodadas
+deixaram de pé — coluna, rota e parâmetro sem leitor, e duas recusas que as invariantes 6 e 17
+já prometiam e o código não cumpria. Continua a letra pelo mesmo motivo de a rodada tê-la
+adotado: a numeração `D` corresponde ao que o código cita, e recomeçá-la colidiria. A `R` veio
+logo depois dela, pelo mesmo caminho: a varredura achou a rota de senha sem chamador, e a
+resposta foi levar a senha para o cadastro. A `S` é o renomeio do papel para cargo, a palavra
+que a equipe usa. A `T` tira o seed da conta de administrador. A próxima decisão é a `U`.
 
 ## O índice
 
@@ -268,7 +297,7 @@ ruído para quem lê o índice procurando o que mudou de ideia.
 | **D145** | Campos customizados saem inteiros | [Escopo](./escopo.md#d145--campos-customizados-saem-inteiros) |
 | **D146** | A importação de CSV sai. A carga é a descoberta | [Escopo](./escopo.md#d146--a-importação-de-csv-sai-a-carga-é-a-descoberta) |
 | **D147** | As etiquetas saem | [Escopo](./escopo.md#d147--as-etiquetas-saem) |
-| **D148** | Permissão vira **papel**. Grupo, diretório, SSO e segundo fator saem | [Escopo](./escopo.md#d148--permissão-vira-papel-grupo-diretório-sso-e-segundo-fator-saem) |
+| **D148** | Permissão vira **cargo**. Grupo, diretório, SSO e segundo fator saem | [Escopo](./escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem) |
 | **D149** | O `ApiToken` sai, e o agente volta ao `AGENT_TOKEN` | [Escopo](./escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token) |
 | **D150** | O termo de aceite sai | [Escopo](./escopo.md#d150--o-termo-de-aceite-sai) |
 | **D151** | A central de alertas e o webhook saem | [Escopo](./escopo.md#d151--a-central-de-alertas-e-o-webhook-saem) |
@@ -282,6 +311,6 @@ ruído para quem lê o índice procurando o que mudou de ideia.
 | **D159** | A tela da convergência fica, e é a única das cinco que fica | [Escopo](./escopo.md#d159--a-tela-da-convergência-fica-e-é-a-única-das-cinco-que-fica) |
 | **D160** | O estoque **não** foi achatado | [Escopo](./escopo.md#d160--o-estoque-não-foi-achatado) |
 | **D161** | Os relatórios que sobraram são **dois**, e não três | [Escopo](./escopo.md#d161--os-relatórios-que-sobraram-são-dois-e-não-três) |
-| **D162** | "Minha conta" sai, e o papel vira campo do formulário de usuário | [Escopo](./escopo.md#d162--minha-conta-sai-e-o-papel-vira-campo-do-formulário-de-usuário) |
-| **D163** | O mapa de coluna protegida é tipado `Papel`, porque `indexOf` de string estranha é **-1** | [Escopo](./escopo.md#d163--o-mapa-de-coluna-protegida-é-tipado-papel-porque-indexof-de-string-estranha-é--1) |
+| **D162** | "Minha conta" sai, e o cargo vira campo do formulário de usuário | [Escopo](./escopo.md#d162--minha-conta-sai-e-o-cargo-vira-campo-do-formulário-de-usuário) |
+| **D163** | O mapa de coluna protegida é tipado `Cargo`, porque `indexOf` de string estranha é **-1** | [Escopo](./escopo.md#d163--o-mapa-de-coluna-protegida-é-tipado-cargo-porque-indexof-de-string-estranha-é--1) |
 | **D164** | O `DEFAULT` da coluna **tranca o sistema**, e a migração precisa do backfill | [Escopo](./escopo.md#d164--o-default-da-coluna-tranca-o-sistema-e-a-migração-precisa-do-backfill) |

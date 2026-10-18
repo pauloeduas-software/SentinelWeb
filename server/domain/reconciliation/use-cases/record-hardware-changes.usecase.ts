@@ -18,8 +18,8 @@ const logger = createLogger('reconciliation.hardware');
 // POR QUE ISTO NÃO CONTRARIA O D95
 //
 // O D95 tirou do caminho de ingestão a escrita em `assets` — a tabela de
-// PATRIMÔNIO, que a tela de ativos tranca em `bulk-update` e cujo lock atrasaria
-// o batimento do RMM. Aqui a escrita é em `asset_changes`, que é tabela de LOG:
+// PATRIMÔNIO, que a entrega e a edição trancam (`lock-asset.usecase.ts`) e
+// cujo lock atrasaria o batimento do RMM. Aqui a escrita é em `asset_changes`, que é tabela de LOG:
 // append-only, sem ninguém trancando, sem ninguém editando. São dois custos
 // diferentes com o mesmo nome.
 //
@@ -59,7 +59,6 @@ export async function registrarMudancasDeHardware(
     const { count } = await prisma.assetChange.createMany({
       data: mudancas.map((mudanca) => ({
         assetId,
-        endpointId,
         field: mudanca.field,
         oldValue: mudanca.oldValue,
         newValue: mudanca.newValue,
@@ -77,12 +76,15 @@ export async function registrarMudancasDeHardware(
   }
 }
 
+/** Quantas mudanças a aba Máquina mostra. */
+const MUDANCAS_NA_TELA = 50;
+
 /** As mudanças detectadas num ativo, da mais recente para a mais antiga. */
-export async function listarMudancasDoAtivo(assetId: string, limite = 50) {
+export async function listarMudancasDoAtivo(assetId: string) {
   return prisma.assetChange.findMany({
     where: { assetId },
     orderBy: { detectedAt: 'desc' },
-    take: limite,
+    take: MUDANCAS_NA_TELA,
     select: { id: true, field: true, oldValue: true, newValue: true, detectedAt: true },
   });
 }

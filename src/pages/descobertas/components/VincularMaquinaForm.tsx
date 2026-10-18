@@ -92,7 +92,7 @@ export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCa
         <button
           type="button"
           onClick={onCancelar}
-          className="px-3 py-1.5 border border-border-sutil text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary hover:bg-bg-surface transition-colors"
+          className="px-3 py-1.5 border border-border-sutil text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary hover:bg-bg-base transition-colors"
         >
           Cancelar
         </button>

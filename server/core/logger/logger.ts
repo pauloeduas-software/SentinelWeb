@@ -30,7 +30,7 @@ export const rootLogger = pino({
       }),
 });
 
-export interface Logger {
+interface Logger {
   debug: (message: string, ...details: unknown[]) => void;
   info: (message: string, ...details: unknown[]) => void;
   warn: (message: string, ...details: unknown[]) => void;
@@ -61,10 +61,9 @@ function split(details: unknown[]): Record<string, unknown> {
   return fields;
 }
 
-// `context`: de onde vem o log (ex.: 'agent.maestro'). Campos fixos extras
-// (hwid, jobId...) entram com o segundo parâmetro.
-export function createLogger(context: string, bindings: Record<string, unknown> = {}): Logger {
-  const child = rootLogger.child({ context, ...bindings });
+// `context`: de onde vem o log (ex.: 'agent.maestro').
+export function createLogger(context: string): Logger {
+  const child = rootLogger.child({ context });
   return {
     debug: (message, ...details) => child.debug(split(details), message),
     info: (message, ...details) => child.info(split(details), message),

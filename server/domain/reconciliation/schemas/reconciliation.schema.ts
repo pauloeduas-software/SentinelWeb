@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { uuidObrigatorio, uuidOpcional } from '../../shared/fields.schema';
+import { uuidObrigatorio } from '../../shared/fields.schema';
 
 // Contrato de entrada das rotas de reconciliação.
 //
@@ -7,12 +7,6 @@ import { uuidObrigatorio, uuidOpcional } from '../../shared/fields.schema';
 // gravação silenciosa. Aqui isso fecha uma porta específica — não existe jeito
 // de mandar `state: 'ACCEPTED'` pelo corpo e fechar uma sugestão sem executar o
 // que ela propõe. O aceite não tem corpo: a sugestão já diz tudo que ela afirma.
-
-export const filtroDeSugestoesSchema = z.strictObject({
-  state: z.enum(['PENDING', 'ACCEPTED', 'REJECTED', 'SUPERSEDED']).optional(),
-  endpointId: uuidOpcional('máquina'),
-  assetId: uuidOpcional('ativo'),
-});
 
 export const vinculoSchema = z.strictObject({
   assetId: uuidObrigatorio('ativo'),

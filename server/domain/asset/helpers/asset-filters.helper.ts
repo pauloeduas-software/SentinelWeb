@@ -1,12 +1,6 @@
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 
-// Colunas que a listagem de ativos aceita ordenar. Allowlist do DOMÍNIO: o
-// parser em core/http/list-query.ts a recebe por parâmetro, porque `core` não
-// pode conhecer negócio.
-export const ASSET_SORTABLE = ['assetTag', 'name', 'serial', 'purchaseDate', 'createdAt'] as const;
-export type AssetSortable = (typeof ASSET_SORTABLE)[number];
-
 // `mode: 'insensitive'` é obrigatório: sem ele buscar "latitude" não acha
 // "Latitude". A busca alcança o modelo e o fabricante porque é assim que se
 // procura um ativo na prática — "o Dell do fulano", não a etiqueta decorada.
@@ -32,23 +26,21 @@ export function buildAssetWhere(q?: string): Prisma.AssetWhereInput {
 // ---------------------------------------------------------------------------
 //
 // `trashed` é genérico: toda tabela com `deletedAt` o entende, e por isso mora
-// no `core`. "Baixado" é `retiredAt IS NOT NULL` e "posto vago" é um
-// join em `assignments` × `location_occupants` — os dois só existem no ITAM.
+// no `core`. "Baixado" é `retiredAt IS NOT NULL`, e só existe no ITAM.
 // Pôr isso em `core/http/list-query.ts` seria fazer a infraestrutura conhecer
 // negócio, que é o que a seta `pages → domain → core` proíbe e o lint reprova.
 //
 // A consequência prática: a vista do ATIVO é parseada AQUI, inteira, e o
-// controller entrega ao parser genérico só o que sobrou (página, ordem, busca).
+// controller entrega ao parser genérico só o que sobrou (página e busca).
 // Uma vista, um lugar — traduzir `retired` para `active` antes do `core` e
 // guardar a real aqui deixaria duas verdades sobre a mesma chave.
 
-export const ASSET_VIEWS = ['active', 'trashed', 'retired'] as const;
+const ASSET_VIEWS = ['active', 'trashed', 'retired'] as const;
 export type AssetView = (typeof ASSET_VIEWS)[number];
 
 export interface AssetFilters {
   view: AssetView;
   statusId?: string;
-  locationId?: string;
   categoryId?: string;
 }
 
@@ -81,12 +73,11 @@ export const EM_POSTO_DE_TRABALHO: Prisma.AssetWhereInput = {
 };
 
 // `z.object`, e NÃO `strictObject`: aqui só se lê o que é do domínio e o resto
-// (page, perPage, sort, order, q) segue intacto para o parser do `core`, que é
+// (page, perPage, q) segue intacto para o parser do `core`, que é
 // estrito e continua recusando typo em chave dele.
 const assetFiltersSchema = z.object({
   view: z.enum(ASSET_VIEWS, `vista inválida: use ${ASSET_VIEWS.join(', ')}`).default('active'),
   statusId: z.uuid('status: identificador inválido').optional(),
-  locationId: z.uuid('localização: identificador inválido').optional(),
   categoryId: z.uuid('categoria: identificador inválido').optional(),
 });
 
@@ -98,7 +89,7 @@ const CHAVES_DO_DOMINIO = Object.keys(assetFiltersSchema.shape);
  * genérico do `core` entende.
  *
  * Precisa acontecer ANTES do `parseListQuery`: ele valida com `strictObject` e
- * responderia 422 a `?statusId=` — a mesma proteção que pega `?ordr=asc`.
+ * responderia 422 a `?statusId=` — a mesma proteção que pega `?pag=2`.
  */
 export function separarFiltrosDeAtivo(raw: unknown): {
   filtros: AssetFilters;
@@ -151,7 +142,6 @@ export function buildAssetFilterWhere(filtros: AssetFilters): Prisma.AssetWhereI
   return {
     ...whereDaVista(filtros.view),
     ...(filtros.statusId ? { statusId: filtros.statusId } : {}),
-    ...(filtros.locationId ? { locationId: filtros.locationId } : {}),
     // Pelo MODELO: o ativo não tem `categoryId`, a categoria dele é a do modelo.
     ...(filtros.categoryId ? { model: { categoryId: filtros.categoryId } } : {}),
   };

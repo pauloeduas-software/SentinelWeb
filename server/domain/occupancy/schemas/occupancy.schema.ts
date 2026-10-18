@@ -45,7 +45,7 @@ export const addOccupantSchema = z.strictObject({
 });
 
 /**
- * `?view=` das duas listagens.
+ * `?view=` da listagem de ocupantes do posto (a da pessoa traz só as abertas).
  *
  * `current` é o padrão porque é a pergunta da operação — quem ocupa o posto
  * AGORA. `all` traz o histórico inteiro, aberto e encerrado.

@@ -22,7 +22,7 @@ O Snipe-IT cria uma coluna por campo customizado. Isso é inviável com `prisma 
 **Decidido:** `Category.fieldsetId` é o padrão; `AssetModel.fieldsetId` sobrepõe quando preenchido.
 **Descartado:** só por modelo; só por categoria; e herança em três níveis.
 
-O `../ROADMAP.md` (versão de 23/09) diz *por modelo*; o briefing desta fase dizia *por categoria*.
+O roadmap do projeto (versão de 23/09) diz *por modelo*; o briefing desta fase dizia *por categoria*.
 Os dois têm razão em metades diferentes. **Por categoria** carrega a empresa inteira em seis
 atribuições, e os campos que o cliente realmente quer — IP, hostname, patrimônio — são da categoria
 *Notebook*, não do *Latitude 5420*. **Por modelo** é o que o Snipe-IT faz e o único jeito de

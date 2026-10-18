@@ -42,7 +42,7 @@ export default function DescobertasPage() {
   } = useDescobertas();
 
   return (
-    <div className="animate-in fade-in duration-300 flex flex-col pb-6">
+    <div className="motion-safe:animate-fade-in flex flex-col pb-6">
 
       <div className="mb-6 shrink-0 flex flex-wrap items-end justify-between gap-4">
         <div>

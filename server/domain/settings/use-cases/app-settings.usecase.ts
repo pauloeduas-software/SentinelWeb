@@ -100,9 +100,11 @@ export async function peekNextAssetTag(): Promise<{ assetTag: string }> {
  * Salva os botões da convergência RMM × ITAM.
  *
  * `discoveryMode` é o mais perigoso dos três e por isso vale reler o D51 antes
- * de mexer: em `ON`, a primeira VM de teste que alguém subir vira patrimônio — e
- * consome uma etiqueta do contador, que o `nextAssetTag()` acima nunca devolve.
- * O estrago não é a linha a mais: é a sequência furada para sempre.
+ * de mexer: em `ON`, a varredura VINCULA sozinha a máquina ao ativo quando há um
+ * único candidato de 100 pontos (`match-endpoint.usecase.ts`), sem ninguém
+ * conferir. Não cria ativo nem consome etiqueta — máquina sem candidato segue
+ * sem cadastro —, mas um vínculo errado põe o último contato e o uso da máquina
+ * no ativo errado até alguém desvincular.
  *
  * A validação dos limites é do schema, não daqui: `ghostDays: 0` transformaria
  * a frota inteira em fantasma no dia seguinte, e `shadowHours: 0` faria toda

@@ -4,23 +4,11 @@ import type { Prisma } from '@prisma/client';
 // envelope existe para a API ter UMA forma de resposta, não porque a tela pagina.
 // Por isso o padrão é generoso (ver endpoint.controller.ts).
 
-/**
- * As colunas ordenáveis.
- *
- * Chamava-se `ASSET_SORTABLE` até a F7 — nome herdado do D1, de quando `asset/`
- * era o domínio do RMM. O rename saiu junto com a primeira mexida no arquivo em
- * vez de depois, porque nome errado é copiado: a próxima fatia que precisasse de
- * uma lista dessas olharia esta para seguir o padrão.
- */
-export const ENDPOINT_SORTABLE = ['hostname', 'status', 'lastSeen', 'osVersion'] as const;
-export type EndpointSortable = (typeof ENDPOINT_SORTABLE)[number];
-
 /** O que a listagem aceita filtrar além da busca por texto (F7). */
 export interface FiltrosDeEndpoint {
   q?: string;
   /** `com` = já é um ativo; `sem` = órfão, o candidato a Shadow IT. */
   vinculo?: 'com' | 'sem';
-  reviewState?: 'UNREVIEWED' | 'ALLOWED' | 'BLOCKED';
 }
 
 export function buildEndpointWhere(filtros: FiltrosDeEndpoint = {}): Prisma.EndpointWhereInput {
@@ -28,7 +16,6 @@ export function buildEndpointWhere(filtros: FiltrosDeEndpoint = {}): Prisma.Endp
 
   if (filtros.vinculo === 'com') where.assetId = { not: null };
   if (filtros.vinculo === 'sem') where.assetId = null;
-  if (filtros.reviewState) where.reviewState = filtros.reviewState;
 
   if (filtros.q) {
     where.OR = [

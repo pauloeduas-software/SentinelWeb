@@ -7,7 +7,7 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 //
 // O buraco que a maior parte deste arquivo cobre: até o `tokenVersion` existir,
 // trocar a senha NÃO expulsava ninguém. A releitura por requisição
-// (`current-user.usecase.ts`) só barra quem foi apagado ou desligado — quem
+// (`current-user.usecase.ts`) só barra quem foi apagado ou desativado — quem
 // roubasse o cookie continuava sendo um usuário válido e ativo, e seguia dentro
 // pelas 8 horas do TTL mesmo depois de a vítima fazer exatamente o que se faz
 // ao desconfiar.
@@ -26,14 +26,14 @@ afterAll(async () => {
 });
 
 /** Entra como alguém e devolve o cookie pronto para o `header`. */
-async function logar(username: string, password: string): Promise<string> {
+async function logar(email: string, password: string): Promise<string> {
   const resposta = await api.app.inject({
     method: 'POST',
     url: '/api/auth/login',
-    payload: { username, password },
+    payload: { email, password },
   });
   if (resposta.statusCode !== 200) {
-    throw new Error(`login de "${username}" falhou (${resposta.statusCode}): ${resposta.body}`);
+    throw new Error(`login de "${email}" falhou (${resposta.statusCode}): ${resposta.body}`);
   }
   const token = resposta.cookies.find((c) => c.name === COOKIE_SESSAO)?.value;
   if (!token) throw new Error('login respondeu 200 sem gravar o cookie de sessão.');
@@ -42,31 +42,27 @@ async function logar(username: string, password: string): Promise<string> {
 
 /** Um colaborador com credencial própria, para não mexer na sessão do harness. */
 async function criarUsuarioComAcesso(sufixo: string) {
+  // `TECNICO`, e não o `USUARIO` que a coluna dá por padrão: o login recusa
+  // `USUARIO` com 403 (ele é o cargo de quem RECEBE equipamento, não de quem
+  // opera o painel). Este arquivo é sobre SESSÃO — ele precisa de alguém que
+  // entre. Cargo e senha vêm no mesmo cadastro.
+  const email = `fulano.${sufixo}@empresa.com`;
+  const password = 'senha-comprida-do-teste';
   const criado = await api.post<{ id: string }>('/api/users', {
     name: `Fulano ${sufixo}`,
-    email: `fulano.${sufixo}@empresa.com`,
+    email,
+    role: 'TECNICO',
+    password,
   });
   expect(criado.status).toBe(201);
 
-  // `TECNICO`, e não o `USUARIO` que a coluna dá por padrão: o login recusa
-  // `USUARIO` com 403 (ele é o papel de quem RECEBE equipamento, não de quem
-  // opera o painel). Este arquivo é sobre SESSÃO — ele precisa de alguém que
-  // entre.
-  const promocao = await api.put(`/api/users/${criado.body.id}`, { role: 'TECNICO' });
-  expect(promocao.status).toBe(200);
-
-  const username = `fulano.${sufixo}`;
-  const password = 'senha-comprida-do-teste';
-  const credencial = await api.post(`/api/users/${criado.body.id}/set-password`, { username, password });
-  expect(credencial.status).toBe(200);
-
-  return { id: criado.body.id, username, password };
+  return { id: criado.body.id, email, password };
 }
 
 describe('tokenVersion — trocar a senha derruba quem já está dentro', () => {
   it('mantém a sessão viva enquanto ninguém mexe na credencial', async () => {
     const usuario = await criarUsuarioComAcesso('estavel');
-    const cookie = await logar(usuario.username, usuario.password);
+    const cookie = await logar(usuario.email, usuario.password);
 
     const antes = await api.app.inject({ method: 'GET', url: '/api/auth/me', headers: { cookie } });
     expect(antes.statusCode).toBe(200);
@@ -80,13 +76,13 @@ describe('tokenVersion — trocar a senha derruba quem já está dentro', () => 
 
   it('INVALIDA a sessão aberta quando a senha é redefinida', async () => {
     const usuario = await criarUsuarioComAcesso('invalidado');
-    const cookie = await logar(usuario.username, usuario.password);
+    const cookie = await logar(usuario.email, usuario.password);
 
     // O cookie funciona ANTES — senão o 401 depois não provaria nada.
     const antes = await api.app.inject({ method: 'GET', url: '/api/auth/me', headers: { cookie } });
     expect(antes.statusCode).toBe(200);
 
-    const troca = await api.post(`/api/users/${usuario.id}/set-password`, {
+    const troca = await api.put(`/api/users/${usuario.id}`, {
       password: 'outra-senha-comprida',
     });
     expect(troca.status).toBe(200);
@@ -99,10 +95,10 @@ describe('tokenVersion — trocar a senha derruba quem já está dentro', () => 
 
   it('a senha NOVA entra normalmente logo depois', async () => {
     const usuario = await criarUsuarioComAcesso('renovado');
-    await api.post(`/api/users/${usuario.id}/set-password`, { password: 'a-senha-que-passa-a-valer' });
+    await api.put(`/api/users/${usuario.id}`, { password: 'a-senha-que-passa-a-valer' });
 
     // Derrubar as sessões não pode derrubar a CONTA: quem sabe a senha nova entra.
-    const cookie = await logar(usuario.username, 'a-senha-que-passa-a-valer');
+    const cookie = await logar(usuario.email, 'a-senha-que-passa-a-valer');
     const me = await api.app.inject({ method: 'GET', url: '/api/auth/me', headers: { cookie } });
     expect(me.statusCode).toBe(200);
   });
@@ -111,10 +107,10 @@ describe('tokenVersion — trocar a senha derruba quem já está dentro', () => 
     const alvo = await criarUsuarioComAcesso('alvo');
     const vizinho = await criarUsuarioComAcesso('vizinho');
 
-    const cookieAlvo = await logar(alvo.username, alvo.password);
-    const cookieVizinho = await logar(vizinho.username, vizinho.password);
+    const cookieAlvo = await logar(alvo.email, alvo.password);
+    const cookieVizinho = await logar(vizinho.email, vizinho.password);
 
-    await api.post(`/api/users/${alvo.id}/set-password`, { password: 'senha-nova-do-alvo' });
+    await api.put(`/api/users/${alvo.id}`, { password: 'senha-nova-do-alvo' });
 
     const doAlvo = await api.app.inject({ method: 'GET', url: '/api/auth/me', headers: { cookie: cookieAlvo } });
     expect(doAlvo.statusCode).toBe(401);
@@ -136,8 +132,8 @@ describe('tokenVersion — trocar a senha derruba quem já está dentro', () => 
       select: { tokenVersion: true },
     });
 
-    await api.post(`/api/users/${usuario.id}/set-password`, { password: 'primeira-troca-longa' });
-    await api.post(`/api/users/${usuario.id}/set-password`, { password: 'segunda-troca-longa1' });
+    await api.put(`/api/users/${usuario.id}`, { password: 'primeira-troca-longa' });
+    await api.put(`/api/users/${usuario.id}`, { password: 'segunda-troca-longa1' });
 
     const depois = await prisma.user.findUniqueOrThrow({
       where: { id: usuario.id },
@@ -156,7 +152,7 @@ describe('endurecimento das rotas de credencial', () => {
     const resposta = await api.app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { username: usuario.username, password: usuario.password },
+      payload: { email: usuario.email, password: usuario.password },
     });
 
     // A resposta carrega `Set-Cookie` de sessão: um proxy corporativo ou CDN
@@ -171,7 +167,7 @@ describe('endurecimento das rotas de credencial', () => {
       method: 'POST',
       url: '/api/auth/login',
       headers: { origin: 'https://site-do-atacante.example' },
-      payload: { username: usuario.username, password: usuario.password },
+      payload: { email: usuario.email, password: usuario.password },
     });
 
     // Segunda camada anti-CSRF, atrás do `SameSite` do cookie: a credencial
@@ -191,7 +187,7 @@ describe('endurecimento das rotas de credencial', () => {
       method: 'POST',
       url: '/api/auth/login',
       headers: { origin: 'http://localhost:3000' },
-      payload: { username: usuario.username, password: usuario.password },
+      payload: { email: usuario.email, password: usuario.password },
     });
 
     expect(resposta.statusCode).toBe(200);
@@ -202,13 +198,13 @@ describe('endurecimento das rotas de credencial', () => {
     // uma vítima, então exigir o cabeçalho quebraria a automação sem fechar
     // ataque nenhum.
     const usuario = await criarUsuarioComAcesso('sem-origem');
-    const cookie = await logar(usuario.username, usuario.password);
+    const cookie = await logar(usuario.email, usuario.password);
     expect(cookie).toBeTruthy();
   });
 
   it('recusa corpo grande demais no login', async () => {
     const resposta = await api.anonimo.post('/api/auth/login', {
-      username: 'admin',
+      email: 'admin@sentinel.local',
       password: 'x'.repeat(64 * 1024),
     });
 

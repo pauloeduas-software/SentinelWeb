@@ -49,6 +49,3 @@ export const checkinSchema = z.strictObject({
   // por cima de uma tela velha (`checkin-asset.usecase.ts`).
   targetLocationId: uuidOpcional('posto'),
 });
-
-export type CheckoutInput = z.infer<typeof checkoutSchema>;
-export type CheckinInput = z.infer<typeof checkinSchema>;

@@ -23,33 +23,33 @@ import {
 // numa coluna de 220px, e a lista cresce para baixo, onde há espaço.
 // ═══════════════════════════════════════════════════════════════════════════
 
-export interface ItemDeMenu {
+interface ItemDeMenu {
   to: string;
   label: string;
   icon: LucideIcon;
   /**
-   * A chave que a tela deste item exige (F11).
+   * O cargo mínimo que a tela deste item exige.
    *
-   * É a MESMA que o servidor exige na rota principal da tela — não uma segunda
-   * regra. O item sem a chave não é desenhado: um item que leva a uma tela que
-   * não carrega é pior do que um menu com um item a menos.
+   * É o MESMO que o servidor exige na rota principal da tela — não uma segunda
+   * regra. O item que o cargo da sessão não alcança não é desenhado: um item que
+   * leva a uma tela que não carrega é pior do que um menu com um item a menos.
    *
    * ⚠️ Esconder NÃO protege: a autorização é o `preHandler` do servidor
    * (`server/core/http/permission-guard.ts`), que recusa a requisição antes de
-   * qualquer tela existir. Isto é interface, e é por isso que a lista de chaves
-   * daqui pode estar incompleta sem consequência de segurança — o pior caso é
+   * qualquer tela existir. Isto é interface, e é por isso que os cargos
+   * daqui podem estar incompletos sem consequência de segurança — o pior caso é
    * um item visível que responde 403.
    *
-   * **AUSENTE quer dizer "todo mundo vê"**, e hoje nenhum item dispensa papel:
+   * **AUSENTE quer dizer "todo mundo vê"**, e hoje nenhum item dispensa cargo:
    * toda sessão é `TECNICO` ou `ADMIN`, porque `USUARIO` não entra no painel —
    * o login o recusa com 403 (`login.usecase.ts`). O campo continua opcional
    * porque a próxima tela desse tipo não deve precisar de mudança de tipo para
    * existir.
    */
-  papel?: 'TECNICO' | 'ADMIN';
+  cargo?: 'TECNICO' | 'ADMIN';
 }
 
-export interface GrupoDeMenu {
+interface GrupoDeMenu {
   /** Vira o rótulo da seção. `null` deixa o grupo sem cabeçalho. */
   titulo: string | null;
   itens: readonly ItemDeMenu[];
@@ -70,16 +70,16 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
       // foi para a ficha do ativo e a do posto, onde a máquina tem nome. A raiz
       // passou a redirecionar para cá (src/App.tsx), então nenhum item aponta
       // mais para `/`.
-      { to: '/ativos', label: 'Ativos', icon: Database, papel: 'TECNICO' },
+      { to: '/ativos', label: 'Ativos', icon: Database, cargo: 'TECNICO' },
       // Logo depois de Ativos: é a mesma operação vista do outro lado — o ativo
       // está na mesa, e a mesa é de quem a ocupa (docs/referencia/modelo-de-posse.md).
-      { to: '/postos', label: 'Postos', icon: Armchair, papel: 'TECNICO' },
+      { to: '/postos', label: 'Postos', icon: Armchair, cargo: 'TECNICO' },
       // Depois de Postos: o que sai do almoxarifado costuma ir para a mesa
       // (docs/decisoes/estoque.md).
-      { to: '/estoque', label: 'Estoque', icon: Boxes, papel: 'TECNICO' },
+      { to: '/estoque', label: 'Estoque', icon: Boxes, cargo: 'TECNICO' },
       // Depois de Estoque porque licença também é posse: o assento é uma LINHA
       // que se trava (D40).
-      { to: '/licencas', label: 'Licenças', icon: ScrollText, papel: 'TECNICO' },
+      { to: '/licencas', label: 'Licenças', icon: ScrollText, cargo: 'TECNICO' },
     ],
   },
   {
@@ -87,25 +87,25 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
     itens: [
       // O que o agente VÊ e o cadastro não sabe (F7). Perto do inventário
       // porque é dele que a tela fala, não do RMM.
-      { to: '/descobertas', label: 'Descobertas', icon: Radar, papel: 'TECNICO' },
+      { to: '/descobertas', label: 'Descobertas', icon: Radar, cargo: 'TECNICO' },
     ],
   },
   {
     titulo: 'Gestão',
     itens: [
-      { to: '/users', label: 'Usuários', icon: Users, papel: 'TECNICO' },
+      { to: '/users', label: 'Usuários', icon: Users, cargo: 'TECNICO' },
     ],
   },
   {
     titulo: 'Sistema',
     itens: [
-      { to: '/configuracoes', label: 'Configurações', icon: SlidersHorizontal, papel: 'ADMIN' },
+      { to: '/configuracoes', label: 'Configurações', icon: SlidersHorizontal, cargo: 'ADMIN' },
     ],
   },
 ];
 
 /** Todos os itens, achatados — para quem precisa procurar sem olhar grupo. */
-export const ITENS_DE_MENU: readonly ItemDeMenu[] = GRUPOS_DE_MENU.flatMap((grupo) => grupo.itens);
+const ITENS_DE_MENU: readonly ItemDeMenu[] = GRUPOS_DE_MENU.flatMap((grupo) => grupo.itens);
 
 /**
  * Este item está ativo para o caminho atual?

@@ -18,15 +18,15 @@ import { logger, type Seeder } from './seeder';
 import { configuracaoSeeder } from './configuracao.seed';
 import { categoriasSeeder } from './categorias.seed';
 import { statusSeeder } from './status.seed';
-import { administradorSeeder, papelDoAdministradorSeeder } from './administrador.seed';
 
+// NÃO HÁ SEED DE CONTA. O seed só cria o que o sistema precisa para funcionar
+// (configuração, categorias, status); o primeiro administrador é criado à mão,
+// por quem instala — uma conta semeada com senha de `.env` era uma porta que
+// reabria sozinha toda vez que alguém rodava o seed de novo.
 const seeders: Seeder[] = [
   configuracaoSeeder,
   categoriasSeeder,
   statusSeeder,
-  // O administrador vem por ÚLTIMO: é o único seeder que pode parar o processo.
-  administradorSeeder,
-  papelDoAdministradorSeeder,
 ];
 
 /**

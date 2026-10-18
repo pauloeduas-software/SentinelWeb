@@ -55,7 +55,7 @@ export async function valoresRepetidosNoParque(): Promise<Set<string>> {
   return repetidos;
 }
 
-export interface ResultadoDoMatch {
+interface ResultadoDoMatch {
   sugeridas: number;
   vinculadas: number;
   colisoes: number;
@@ -86,7 +86,7 @@ export async function reconciliarEndpoint(
   if (!endpoint) throw new AppError('Máquina não encontrada.', 404);
 
   // Já vinculada: não há o que reconciliar. Quem mexe num vínculo existente é o
-  // `unlink`, e é humano — nunca o job.
+  // `desvincularEndpoint`, e é humano — nunca o job.
   if (endpoint.assetId) return { sugeridas: 0, vinculadas: 0, colisoes: 0 };
 
   const configuracao = configuracaoDaRodada ?? (await lerConfiguracaoDaDescoberta());
@@ -157,7 +157,6 @@ export async function reconciliarEndpoint(
     await vincularEndpointAoAtivo(endpoint.id, casamentos[0].alvoId, null, {
       automatico: true,
       sinal: casamentos[0].signal,
-      valor: casamentos[0].valor,
     });
     vinculadas += 1;
   } else {

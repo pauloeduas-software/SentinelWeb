@@ -23,16 +23,9 @@ const ROTULO_DA_ACAO_NO_POSTO: Record<string, string> = {
 const ROTULO_DO_CAMPO: Record<string, string> = {
   name: 'Nome',
   email: 'E-mail',
-  employeeNumber: 'Matrícula',
-  jobTitle: 'Cargo',
-  phone: 'Telefone',
-  address: 'Endereço',
-  hiredAt: 'Admissão',
-  username: 'Usuário de acesso',
   credencial: 'Credencial',
   isActive: 'Ativo',
-  role: 'Papel',
-  notes: 'Observações',
+  role: 'Cargo',
 };
 
 export function lerEventoDaPessoa(evento: EventoDaPessoa): LeituraDoEvento {

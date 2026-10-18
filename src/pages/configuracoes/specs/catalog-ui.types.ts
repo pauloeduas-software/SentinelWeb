@@ -6,18 +6,10 @@
 // na tela. Mora em `pages/` porque é decisão de tela — e por isso não importa
 // nada de `core/api` (o lint recusa).
 
-export type TipoCampo =
-  | 'text' | 'textarea' | 'number' | 'checkbox'
+type TipoCampo =
+  | 'text' | 'textarea'
   | 'select'    // valores fixos, vindos de um enum do banco
-  | 'reference' // valores vindos de outra tabela, por /options
-  | 'money'
-  // `lista` é um `String[]` no banco, editado como um valor por linha.
-  //
-  // Ele entra como tipo NOVO em vez de um `textarea` que a tela separe por
-  // vírgula, por um motivo de dado: valor de lista pode CONTER vírgula ("Sim,
-  // com ressalva"), e um separador que aparece no conteúdo não é separador. A
-  // quebra de linha não aparece dentro de um `<option>`.
-  | 'lista';
+  | 'reference'; // valores vindos de outra tabela, por /options
 
 export interface OpcaoFixa {
   value: string;
@@ -38,7 +30,6 @@ export interface CampoSpec {
   label: string;
   tipo: TipoCampo;
   obrigatorio?: boolean;
-  placeholder?: string;
   /** `select`: a lista fixa */
   opcoes?: readonly OpcaoFixa[];
   /** `reference`: de onde vêm as opções ('manufacturers', 'users'…) */
@@ -47,22 +38,11 @@ export interface CampoSpec {
   filtroTipo?: string;
   /** Ocupa a linha inteira do formulário em vez de meia */
   largura?: 'inteira';
-  /**
-   * Uma linha sob o campo. Usada sobretudo para marcar o que ainda NÃO tem
-   * efeito: um checkbox que grava o dado mas não muda comportamento nenhum é
-   * tão enganoso quanto um rótulo errado.
-   */
+  /** Uma linha sob o campo, explicando o que o rótulo não cabe. */
   ajuda?: string;
 }
 
-export type RenderColuna =
-  | 'texto' | 'enum' | 'relacao' | 'booleano'
-  // `contagem` lê um agregado do `_count` do servidor. Não é coluna da tabela:
-  // é conta, e por isso não entraria no `audited` da spec do servidor.
-  | 'contagem'
-  // `lista` desenha um `String[]` como "3 valores", com os primeiros no `title`.
-  // Despejar vinte valores numa célula de tabela deixaria a linha ilegível.
-  | 'lista';
+type RenderColuna = 'texto' | 'enum' | 'relacao';
 
 export interface ColunaSpec {
   key: string;
@@ -70,8 +50,6 @@ export interface ColunaSpec {
   render?: RenderColuna;
   /** `enum`: para traduzir o valor do banco no rótulo em português */
   opcoes?: readonly OpcaoFixa[];
-  /** `contagem`: qual chave dentro de `_count` ler ('fields', 'categories'…) */
-  contagemDe?: string;
 }
 
 /**

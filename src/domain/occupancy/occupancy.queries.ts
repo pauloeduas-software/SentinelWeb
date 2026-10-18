@@ -11,7 +11,7 @@ import type { LocationOccupant, OccupantView } from '../shared/posse.types';
 // A chave inclui o recorte (`current`/`all`): sem isso o histórico seria servido
 // do cache dos atuais. `['occupancies']` continua sendo o prefixo, então
 // invalidar depois de gravar alcança os dois e também a tela do colaborador.
-export const occupancyKeys = {
+const occupancyKeys = {
   all: ['occupancies'] as const,
   doPosto: (locationId: string, view: OccupantView) =>
     ['occupancies', 'location', locationId, view] as const,
@@ -76,6 +76,24 @@ export function useAddLocationOccupant() {
   return useMutation({
     mutationFn: ({ locationId, data }: { locationId: string; data: OccupantInput }) =>
       apiClient.post(`/locations/${locationId}/occupants`, data),
+    onSuccess: () => invalidarPosseDerivada(queryClient),
+  });
+}
+
+/**
+ * CORRIGE O TURNO de uma ocupação aberta — "manha" para "manhã", "08h–14h" para
+ * "08h–15h". A linha continua a mesma, com o mesmo início: encerrar e reabrir
+ * fabricaria no histórico uma saída que não aconteceu.
+ *
+ * Invalida o mesmo que adicionar e encerrar: o turno não muda QUEM responde,
+ * mas aparece junto do nome na coluna Responsável dos ativos ("Laura (Manhã)"),
+ * na posse do ativo e na lista de postos.
+ */
+export function useCorrigirTurno() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ locationId, occupantId, shift }: { locationId: string; occupantId: string; shift: string | null }) =>
+      apiClient.patch(`/locations/${locationId}/occupants/${occupantId}`, { shift }),
     onSuccess: () => invalidarPosseDerivada(queryClient),
   });
 }

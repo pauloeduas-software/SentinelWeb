@@ -1,6 +1,7 @@
 # Plano de implementação — Fase 6: licenças de software ✅
 
-> Fase do [`../ROADMAP.md`](../ROADMAP.md), **fechada**. Contrato de posse:
+> Fase do roadmap do projeto (apagado depois;
+> o escopo que ficou está em [`../decisoes/escopo.md`](../decisoes/escopo.md)), **fechada**. Contrato de posse:
 > [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md) · camadas: [`../referencia/arquitetura.md`](../referencia/arquitetura.md) ·
 > o que o sistema recusa: [`../referencia/invariantes.md`](../referencia/invariantes.md).
 >
@@ -430,7 +431,7 @@ src/pages/licencas/
 
 > As decisões desta fase moram em [`../decisoes/licencas.md`](../decisoes/licencas.md) — **D39–D44 e D90–D94**. Elas saíram daqui porque decisão se arquiva pelo ASSUNTO que governa, não pela fase que a tomou: quem precisa saber as regras de um assunto não deveria ter que descobrir em que fase ele nasceu.
 
-O índice das 142 está em [`../decisoes/README.md`](../decisoes/README.md).
+O índice das decisões está em [`../decisoes/README.md`](../decisoes/README.md).
 
 ## Riscos e armadilhas
 
@@ -599,7 +600,7 @@ Pelo harness de [`../referencia/testes.md`](../referencia/testes.md) — `app.in
   `20260923105500_check_do_assignment`. A assimetria que este plano apontava
   não existe mais.
 
-## O que esta fase acrescentou ao `../ROADMAP.md` e ao `../referencia/invariantes.md`
+## O que esta fase acrescentou ao roadmap e ao `../referencia/invariantes.md`
 
 No **TODO**: `D90`–`D94` registradas; o item de anexo de licença marcado como dependente
 de dono polimórfico em `Attachment` (D94); o item de export CSV da F10 anotado com a

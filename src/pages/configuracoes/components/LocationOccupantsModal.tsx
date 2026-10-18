@@ -24,11 +24,12 @@ interface LocationOccupantsModalProps {
   onViewChange: (view: OccupantView) => void;
   onAdicionar: (data: OccupantInput) => Promise<void>;
   onEncerrar: (ocupante: LocationOccupant) => Promise<void>;
+  onCorrigirTurno: (ocupante: LocationOccupant, turno: string) => Promise<void>;
   onClose: () => void;
 }
 
 export default function LocationOccupantsModal({
-  posto, ocupantes, carregando, erro, view, onViewChange, onAdicionar, onEncerrar, onClose,
+  posto, ocupantes, carregando, erro, view, onViewChange, onAdicionar, onEncerrar, onCorrigirTurno, onClose,
 }: LocationOccupantsModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
@@ -59,6 +60,7 @@ export default function LocationOccupantsModal({
             onViewChange={onViewChange}
             onAdicionar={onAdicionar}
             onEncerrar={onEncerrar}
+            onCorrigirTurno={onCorrigirTurno}
             onFechar={onClose}
             // `=== false`, e não `!isActive`: linha sem o campo (servidor de
             // antes dele) é ativa, que é o que toda localização era.

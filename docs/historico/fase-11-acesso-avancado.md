@@ -1,6 +1,7 @@
 # Plano de implementação — Fase 11: acesso avançado ✅ CONCLUÍDA
 
-> Fase 11 do [`../ROADMAP.md`](../ROADMAP.md). Convenções de camada:
+> Fase 11 do roadmap do projeto (apagado depois;
+> o escopo que ficou está em [`../decisoes/escopo.md`](../decisoes/escopo.md)). Convenções de camada:
 > [`../referencia/arquitetura.md`](../referencia/arquitetura.md). Contrato de posse: [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md),
 > [`../decisoes/posse.md`](../decisoes/posse.md) e [`../referencia/invariantes.md`](../referencia/invariantes.md). Conflitos
 > entre planos: [`../decisoes/README.md`](../decisoes/README.md).
@@ -16,11 +17,18 @@
 >
 > Esforço: **P** = até meio dia · **M** = 1 a 3 dias · **G** = mais de 3 dias · Decisões
 > **D72–D78** (do plano) e **D135–D142** (da revisão), na numeração contínua do projeto
-> (D1–D13 no TODO, D14–D17 em `../decisoes/posse.md`).
+> (D1–D13 em `../decisoes/catalogo-e-ativo.md` e afins, D14–D17 em `../decisoes/posse.md`).
 >
 > **A FASE FECHOU.** As dez etapas (A–J) estão aplicadas — ver o
 > [Fechamento da F11](#fechamento-da-f11), no fim deste arquivo, com o que a execução
 > decidiu por conta própria e o que ficou de fora com o motivo.
+>
+> **Status (depois do corte de escopo):** metade do que esta fase construiu não existe mais —
+> grupos e permissões nomeadas, LDAP, SSO por OIDC, segundo fator e `ApiToken` saíram no
+> [D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)/[D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token); departamento, gestor e desligamento, no
+> segundo de-escopo ([O](../decisoes/escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai)); a identidade do colaborador (matrícula, cargo,
+> telefone, endereço, admissão), na varredura [Q](../decisoes/escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai). O que vale hoje está em
+> [`../referencia/acesso.md`](../referencia/acesso.md).
 
 ---
 
@@ -564,7 +572,7 @@ não sobra código para mudar — é o objetivo de ter feito naquela ordem.
 
 > As decisões desta fase moram em [`../decisoes/acesso.md`](../decisoes/acesso.md) — **D72–D78 e D135–D142**. Elas saíram daqui porque decisão se arquiva pelo ASSUNTO que governa, não pela fase que a tomou: quem precisa saber as regras de um assunto não deveria ter que descobrir em que fase ele nasceu.
 
-O índice das 142 está em [`../decisoes/README.md`](../decisoes/README.md).
+O índice das decisões está em [`../decisoes/README.md`](../decisoes/README.md).
 
 ## Riscos e armadilhas
 
@@ -716,7 +724,8 @@ dá sentido a isso. J por último, sozinho, por ser irreversível.
 
 # Fechamento da F11
 
-> Escrito depois de executar, e contra a árvore: as dez etapas (A–J) estão aplicadas.
+> Escrito depois de executar, e contra a árvore: as dez etapas (A–J) estão aplicadas
+> (na data — o que saiu depois está no status do topo deste arquivo).
 > `npm run lint` limpo, `npm test` com **874 testes em 76 arquivos**, e a cadeia de
 > migrações aplicada **do zero** num banco descartável com o seed por cima — que
 > nesta fase não é zelo: é a exigência da única migração não aditiva do projeto.
@@ -795,9 +804,12 @@ colaborador.
 | SAML | OIDC cobre o Entra ID. A segunda biblioteca seria um segundo caminho de login para manter |
 | 2FA obrigatório por grupo | decisão nova: precisa de um lugar para morar e de uma resposta para quem entra hoje sem ter cadastrado |
 | revogar UMA sessão | exige tabela de sessão. O `tokenVersion` derruba todas, e é o que o desligamento usa |
-| anexo de licença (D94) | dono polimórfico em `Attachment`. É o único item em aberto do `../ROADMAP.md` |
+| anexo de licença (D94) | dono polimórfico em `Attachment`. É o único item em aberto do roadmap *(não mais: os anexos saíram inteiros no segundo de-escopo, e o roadmap foi apagado)* |
 
 ## As duas provas que não são comando
+
+> **Status:** não valem mais — SSO e LDAP saíram no [D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem). Ficam como
+> registro do que a fase deixou sem prova automática.
 
 Elas continuam valendo e **não** estão na suíte, porque exigem um diretório e um
 provedor de identidade de verdade:

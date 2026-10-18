@@ -9,7 +9,7 @@ import { prisma } from '../../server/core/database/prismaClient';
 // é o assunto: um CHECK existe justamente para quem NÃO passa pela API. A
 // validação de aplicação (`assertAlvoCoerente`) já é testada pela porta HTTP em
 // `formularios/` e `invariantes/posse.test.ts`; aqui se prova a rede de baixo,
-// a que pega o seed, o `psql` à mão e o importador de CSV da F10.
+// a que pega o seed e o `psql` à mão.
 //
 // Testar isto por HTTP seria impossível por construção: o use-case recusa antes
 // de chegar ao banco, então o teste passaria sem o CHECK existir.
@@ -113,8 +113,8 @@ describe('CHECK 2 — a devolução não antecede a entrega', () => {
   });
 
   it('ACEITA entrega e devolução no mesmo instante', async () => {
-    // É o desligamento no mesmo dia da entrega — caso real, e é por isso que o
-    // CHECK é `>=` e não `>`.
+    // É a devolução no mesmo dia da entrega — quem sai da empresa no dia em que
+    // recebeu, caso real —, e é por isso que o CHECK é `>=` e não `>`.
     const instante = '2026-03-10T10:00:00';
     const erro = await inserirPosseCrua({
       assetId: cenario.ativo.id,

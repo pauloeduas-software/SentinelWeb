@@ -1,9 +1,17 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, RouteShorthandOptions } from 'fastify';
 import { userController } from './controllers/user.controller';
 import { createLogger } from '../../core/logger/logger';
 import { WRITE_RATE_LIMIT } from '../../core/http/write-rate-limit';
+import { verificarOrigem } from '../auth/helpers/auth-hardening.helper';
 
 const logger = createLogger('user.maestro');
+
+/**
+ * Criar e editar usuário RECEBEM SENHA (Técnico e Administrador entram no
+ * sistema), então ganham a segunda camada anti-CSRF das rotas de credencial,
+ * atrás do `SameSite` do cookie (`auth-hardening.helper.ts`).
+ */
+const ESCRITA_COM_SENHA: RouteShorthandOptions = { ...WRITE_RATE_LIMIT, preValidation: verificarOrigem };
 
 export class UserMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
@@ -15,10 +23,10 @@ export class UserMaestro {
     server.get('/api/users/:id', userController.get);
     // O que aconteceu COM esta pessoa — `ActivityLog` + posses diretas +
     // ocupações de posto, numa lista só. Não é o que ela FEZ: isso é auditoria
-    // de operador e vem com o RBAC da F11 (ver o use-case).
+    // de operador, que o sistema não tem (ver o use-case).
     server.get('/api/users/:id/history', userController.history);
-    server.post('/api/users', WRITE_RATE_LIMIT, userController.create);
-    server.put('/api/users/:id', WRITE_RATE_LIMIT, userController.update);
+    server.post('/api/users', ESCRITA_COM_SENHA, userController.create);
+    server.put('/api/users/:id', ESCRITA_COM_SENHA, userController.update);
     server.delete('/api/users/:id', WRITE_RATE_LIMIT, userController.remove);
 
     server.post('/api/users/:id/restore', WRITE_RATE_LIMIT, userController.restore);

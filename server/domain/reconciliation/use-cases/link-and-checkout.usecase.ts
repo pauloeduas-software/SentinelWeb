@@ -46,7 +46,6 @@ export async function vincularEEntregar(
       throw new AppError(
         `A máquina foi vinculada ao ativo, mas a entrega ao posto não aconteceu: ${erro.message}`,
         erro.status,
-        { ...(erro.details ?? {}), endpointId, vinculado: true },
       );
     }
     throw erro;

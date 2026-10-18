@@ -3,11 +3,11 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 // Um log por requisição, com `reqId` (também devolvido em X-Request-Id, para
 // casar reclamação do usuário com o log). O log automático do Fastify fica
-// desligado (`disableRequestLogging` no server.ts) porque são DUAS linhas por
+// desligado (`disableRequestLogging` no app.ts) porque são DUAS linhas por
 // requisição — com o painel consultando a cada 5s, o log vira ruído.
 //
-// Corpo de requisição NUNCA é logado. A query string sai da URL: pode carregar
-// token quando o agente passar a se autenticar.
+// Corpo de requisição NUNCA é logado. A query string sai da URL
+// (`caminhoSemQuery`, abaixo).
 
 // Gera/reaproveita o id da requisição. Um id vindo de fora só é aceito no
 // formato esperado — senão qualquer cliente injetaria texto no log.

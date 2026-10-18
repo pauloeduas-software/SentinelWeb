@@ -1,35 +1,24 @@
-import type { Prisma, SuggestionState } from '@prisma/client';
 import { prisma } from '../../../core/database/prismaClient';
 import type { ListEnvelope } from '../../../core/http/list-query';
 import { SUGGESTION_SELECT } from '../helpers/suggestion-select.helper';
 
-export interface FiltroDeSugestoes {
-  state?: SuggestionState;
-  // `null` aceito ao lado de `undefined`: o `uuidOpcional` do schema devolve
-  // null para campo vazio, e obrigar o controller a converter seria espalhar
-  // tradução de contrato pela borda.
-  endpointId?: string | null;
-  assetId?: string | null;
-  perPage: number;
-}
+/**
+ * Teto fixo e generoso: a fila é para ser esvaziada, não paginada. Se ela
+ * passar de 200 itens o problema não é a paginação.
+ */
+const TETO_DA_FILA = 200;
 
 /**
- * A fila.
+ * A fila — só as PENDENTES, que é a pergunta da operação: quem abre a tela
+ * quer trabalho a fazer.
  *
  * ORDENADA POR PONTUAÇÃO e depois por idade, não por data de criação: quem abre
  * a tela tem tempo para as dez primeiras, e as dez primeiras têm que ser as mais
  * confiáveis. Uma fila em ordem cronológica mostraria primeiro a sugestão de 60
  * pontos de terça e enterraria a de 100 pontos de hoje.
- *
- * `state` tem padrão `PENDING` porque é a pergunta da operação — o histórico
- * existe e sai com `?state=REJECTED`, mas quem não pede quer trabalho a fazer.
  */
-export async function listarSugestoes(filtro: FiltroDeSugestoes) {
-  const where: Prisma.ReconciliationSuggestionWhereInput = {
-    state: filtro.state ?? 'PENDING',
-    ...(filtro.endpointId ? { endpointId: filtro.endpointId } : {}),
-    ...(filtro.assetId ? { assetId: filtro.assetId } : {}),
-  };
+export async function listarSugestoes() {
+  const where = { state: 'PENDING' as const };
 
   const [total, rows] = await prisma.$transaction([
     prisma.reconciliationSuggestion.count({ where }),
@@ -37,7 +26,7 @@ export async function listarSugestoes(filtro: FiltroDeSugestoes) {
       where,
       select: SUGGESTION_SELECT,
       orderBy: [{ score: 'desc' }, { createdAt: 'asc' }],
-      take: filtro.perPage,
+      take: TETO_DA_FILA,
     }),
   ]);
 

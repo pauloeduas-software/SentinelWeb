@@ -3,12 +3,12 @@
 // ⚠️ `purchaseCost` é STRING, e não `number` — a coluna é `Decimal` no Postgres
 // e o JSON a serializa assim. É a armadilha nº 7 da F1, pela quarta vez.
 //
-export interface ReferenciaNomeada {
+interface ReferenciaNomeada {
   id: string;
   name: string;
 }
 
-export interface CategoriaDaLicenca extends ReferenciaNomeada {
+interface CategoriaDaLicenca extends ReferenciaNomeada {
   type: string;
 }
 
@@ -72,13 +72,13 @@ export interface Licenca {
 
 }
 
-export interface PessoaDoAssento {
+interface PessoaDoAssento {
   id: string;
   name: string;
   email: string;
 }
 
-export interface AtivoDoAssento {
+interface AtivoDoAssento {
   id: string;
   assetTag: string;
   name: string | null;
@@ -86,7 +86,7 @@ export interface AtivoDoAssento {
 }
 
 /** Uma ocupação de assento. `checkinAt` nulo = ocupado agora. */
-export interface OcupacaoDeAssento {
+interface OcupacaoDeAssento {
   id: string;
   seatId: string;
   assignedUserId: string | null;
@@ -94,7 +94,6 @@ export interface OcupacaoDeAssento {
   checkoutAt: string;
   checkinAt: string | null;
   checkoutNotes: string | null;
-  checkinNotes: string | null;
   assignedUser: PessoaDoAssento | null;
   assignedAsset: AtivoDoAssento | null;
 }
@@ -111,7 +110,6 @@ export interface AssentoDeLicenca {
   seatNumber: number;
   burnedAt: string | null;
   retiredAt: string | null;
-  notes: string | null;
   checkouts: OcupacaoDeAssento[];
 }
 
@@ -131,8 +129,7 @@ export interface EntregaDeAssento extends OcupacaoDeAssento {
  * Um evento da trilha da licença — `GET /api/licenses/:id/history`.
  *
  * `changes` é `unknown` de propósito: o formato muda com a operação (diff
- * `{de, para}` na edição, ids soltos no checkout, `revealedAt` no `VIEW_KEY`),
- * e quem o lê é o `lerEvento` compartilhado. Tipar campo a campo obrigaria a
+ * `{de, para}` na edição, ids soltos no checkout), e quem o lê é o `lerEvento` compartilhado. Tipar campo a campo obrigaria a
  * mexer aqui a cada operação nova.
  */
 export interface EventoDaLicenca {

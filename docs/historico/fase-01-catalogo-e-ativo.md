@@ -1,6 +1,7 @@
 # Plano de implementação — Fase 1: catálogo e o ativo do ITAM ✅ CONCLUÍDA
 
-> Plano de execução da Fase 1 do [`../ROADMAP.md`](../ROADMAP.md), escrito contra o
+> Plano de execução da Fase 1 do roadmap do projeto (apagado depois;
+> o escopo que ficou está em [`../decisoes/escopo.md`](../decisoes/escopo.md)), escrito contra o
 > código real depois da Fase 0 e **verificado contra o banco, o Prisma e o
 > TypeScript** antes de virar plano (ver *O que foi provado*).
 > Convenções de camada: [`../referencia/arquitetura.md`](../referencia/arquitetura.md).
@@ -133,7 +134,7 @@ Os artefatos do teste ficaram fora do repositório e o banco está intacto
 
 > As decisões desta fase moram em [`../decisoes/catalogo-e-ativo.md`](../decisoes/catalogo-e-ativo.md) — **D8–D13**. Elas saíram daqui porque decisão se arquiva pelo ASSUNTO que governa, não pela fase que a tomou: quem precisa saber as regras de um assunto não deveria ter que descobrir em que fase ele nasceu.
 
-O índice das 142 está em [`../decisoes/README.md`](../decisoes/README.md).
+O índice das decisões está em [`../decisoes/README.md`](../decisoes/README.md).
 
 ## Armadilhas — todas verificadas
 
@@ -430,7 +431,7 @@ manual, por `curl` e pela tela, como descrito em cada etapa.
 
 ---
 
-## O que muda no `../ROADMAP.md`
+## O que muda no roadmap
 
 1. Marcar os itens da F1 conforme as etapas fecham.
 2. Mover **imagem** do `AssetModel` para a F2 e **fieldset** para a F9 — dois
@@ -617,7 +618,7 @@ sem rótulo.
 
 **O que quebrava.** Nada ainda — nenhuma consulta filtrava por `DEPLOYABLE` (verificado: as
 únicas ocorrências eram o seed, a allowlist do `/options` e o rótulo da tela). O defeito era
-latente e detonaria na F4, em dois pontos que o `../ROADMAP.md` já listava: *"duplo
+latente e detonaria na F4, em dois pontos que o roadmap já listava: *"duplo
 checkout"* (a regra "só `DEPLOYABLE` libera o checkout" deixaria passar ativo que já está
 com outra pessoa) e *"status derivado do checkout"* (o status deixaria de ser derivável,
 porque passaria a existir um rótulo competindo com o `Assignment`). E um relatório trivial
@@ -873,7 +874,8 @@ Nada dos 5 defeitos. O que sobrou eram escolhas, não pendências:
    é o que impede o status e a posse divergirem, já que as duas coisas são graváveis em
    separado. Fechado na F4, e a invariante está no [`../referencia/invariantes.md`](../referencia/invariantes.md).
 4. **Seletor com busca** (observação 7) — entrou na F10 — e **`AGENT_TOKEN`**
-   (observação 9), que a Leva 5 da F3 substituiu pelo `ApiToken` (D89).
+   (observação 9), que a Leva 5 da F3 substituiu pelo `ApiToken` (D89) — e que voltou a valer
+   quando o `ApiToken` saiu no corte de escopo ([D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token)).
 
 ## O teste que faltou
 

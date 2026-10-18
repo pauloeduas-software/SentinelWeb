@@ -22,7 +22,7 @@ CREATE TYPE "AgentStatus" AS ENUM ('ONLINE', 'OFFLINE');
 CREATE TYPE "ReviewState" AS ENUM ('UNREVIEWED', 'ALLOWED', 'BLOCKED');
 
 -- CreateEnum
-CREATE TYPE "Papel" AS ENUM ('USUARIO', 'TECNICO', 'ADMIN');
+CREATE TYPE "Cargo" AS ENUM ('USUARIO', 'TECNICO', 'ADMIN');
 
 -- CreateEnum
 CREATE TYPE "CategoryType" AS ENUM ('ASSET', 'LICENSE', 'STOCK');
@@ -98,19 +98,12 @@ CREATE TABLE "users" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "username" TEXT,
     "passwordHash" TEXT,
     "failedLoginCount" INTEGER NOT NULL DEFAULT 0,
     "lockedUntil" TIMESTAMP(3),
     "tokenVersion" INTEGER NOT NULL DEFAULT 0,
-    "lastLoginAt" TIMESTAMP(3),
-    "employeeNumber" TEXT,
-    "jobTitle" TEXT,
-    "phone" TEXT,
-    "address" TEXT,
-    "hiredAt" TIMESTAMP(3),
     "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "role" "Papel" NOT NULL DEFAULT 'USUARIO',
+    "role" "Cargo" NOT NULL DEFAULT 'USUARIO',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
@@ -213,14 +206,11 @@ CREATE TABLE "assets" (
     "statusId" UUID NOT NULL,
     "modelId" UUID NOT NULL,
     "locationId" UUID,
-    "assignedToId" UUID,
     "orderNumber" TEXT,
     "purchaseDate" TIMESTAMP(3),
     "purchaseCost" DECIMAL(12,2),
     "retiredAt" TIMESTAMP(3),
     "retiredReason" "RetiredReason",
-    "createdById" UUID,
-    "updatedById" UUID,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
@@ -306,8 +296,6 @@ CREATE TABLE "licenses" (
     "purchaseDate" TIMESTAMP(3),
     "purchaseCost" DECIMAL(12,2),
     "notes" TEXT,
-    "createdById" UUID,
-    "updatedById" UUID,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
@@ -322,7 +310,6 @@ CREATE TABLE "license_seats" (
     "seatNumber" INTEGER NOT NULL,
     "burnedAt" TIMESTAMP(3),
     "retiredAt" TIMESTAMP(3),
-    "notes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -338,9 +325,6 @@ CREATE TABLE "license_seat_checkouts" (
     "checkoutAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "checkinAt" TIMESTAMP(3),
     "checkoutNotes" TEXT,
-    "checkinNotes" TEXT,
-    "checkoutById" UUID,
-    "checkinById" UUID,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -359,7 +343,6 @@ CREATE TABLE "reconciliation_suggestions" (
     "evidenceHash" TEXT NOT NULL,
     "state" "SuggestionState" NOT NULL DEFAULT 'PENDING',
     "resolvedAt" TIMESTAMP(3),
-    "resolvedById" UUID,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -370,7 +353,6 @@ CREATE TABLE "reconciliation_suggestions" (
 CREATE TABLE "asset_changes" (
     "id" UUID NOT NULL,
     "assetId" UUID NOT NULL,
-    "endpointId" UUID,
     "field" TEXT NOT NULL,
     "oldValue" TEXT,
     "newValue" TEXT NOT NULL,
@@ -385,7 +367,6 @@ CREATE TABLE "asset_usage_daily" (
     "assetId" UUID NOT NULL,
     "day" DATE NOT NULL,
     "activeMinutes" INTEGER NOT NULL DEFAULT 0,
-    "samples" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "asset_usage_daily_pkey" PRIMARY KEY ("id")
 );
@@ -398,8 +379,6 @@ CREATE TABLE "stock_items" (
     "categoryId" UUID NOT NULL,
     "notes" TEXT,
     "locationId" UUID,
-    "createdById" UUID,
-    "updatedById" UUID,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
@@ -418,7 +397,6 @@ CREATE TABLE "stock_movements" (
     "targetLocationId" UUID,
     "returnedAt" TIMESTAMP(3),
     "notes" TEXT,
-    "returnNotes" TEXT,
     "createdById" UUID,
     "returnedById" UUID,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -433,25 +411,19 @@ CREATE UNIQUE INDEX "endpoints_hwid_key" ON "endpoints"("hwid");
 CREATE UNIQUE INDEX "endpoints_assetId_key" ON "endpoints"("assetId");
 
 -- CreateIndex
-CREATE INDEX "endpoints_assetId_idx" ON "endpoints"("assetId");
-
--- CreateIndex
 CREATE INDEX "endpoints_reviewState_idx" ON "endpoints"("reviewState");
 
 -- CreateIndex
 CREATE INDEX "telemetries_endpointId_timestamp_idx" ON "telemetries"("endpointId", "timestamp" DESC);
 
 -- CreateIndex
-CREATE INDEX "users_email_idx" ON "users"("email");
+CREATE INDEX "telemetries_timestamp_idx" ON "telemetries"("timestamp");
 
 -- CreateIndex
 CREATE INDEX "users_deletedAt_idx" ON "users"("deletedAt");
 
 -- CreateIndex
 CREATE INDEX "activity_logs_entityType_entityId_createdAt_idx" ON "activity_logs"("entityType", "entityId", "createdAt");
-
--- CreateIndex
-CREATE INDEX "activity_logs_createdAt_idx" ON "activity_logs"("createdAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "categories_name_type_key" ON "categories"("name", "type");
@@ -487,9 +459,6 @@ CREATE INDEX "assets_modelId_idx" ON "assets"("modelId");
 CREATE INDEX "assets_locationId_idx" ON "assets"("locationId");
 
 -- CreateIndex
-CREATE INDEX "assets_assignedToId_idx" ON "assets"("assignedToId");
-
--- CreateIndex
 CREATE INDEX "assets_retiredAt_idx" ON "assets"("retiredAt");
 
 -- CreateIndex
@@ -523,9 +492,6 @@ CREATE INDEX "licenses_manufacturerId_idx" ON "licenses"("manufacturerId");
 CREATE INDEX "licenses_expirationDate_idx" ON "licenses"("expirationDate");
 
 -- CreateIndex
-CREATE INDEX "license_seats_licenseId_idx" ON "license_seats"("licenseId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "license_seats_numero" ON "license_seats"("licenseId", "seatNumber");
 
 -- CreateIndex
@@ -548,9 +514,6 @@ CREATE INDEX "reconciliation_suggestions_assetId_idx" ON "reconciliation_suggest
 
 -- CreateIndex
 CREATE INDEX "asset_changes_assetId_detectedAt_idx" ON "asset_changes"("assetId", "detectedAt");
-
--- CreateIndex
-CREATE INDEX "asset_usage_daily_assetId_day_idx" ON "asset_usage_daily"("assetId", "day");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "asset_usage_daily_assetId_day_key" ON "asset_usage_daily"("assetId", "day");
@@ -598,9 +561,6 @@ ALTER TABLE "assets" ADD CONSTRAINT "assets_modelId_fkey" FOREIGN KEY ("modelId"
 ALTER TABLE "assets" ADD CONSTRAINT "assets_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "assets" ADD CONSTRAINT "assets_assignedToId_fkey" FOREIGN KEY ("assignedToId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "assignments" ADD CONSTRAINT "assignments_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "assets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -643,9 +603,6 @@ ALTER TABLE "reconciliation_suggestions" ADD CONSTRAINT "reconciliation_suggesti
 ALTER TABLE "asset_changes" ADD CONSTRAINT "asset_changes_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "assets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "asset_changes" ADD CONSTRAINT "asset_changes_endpointId_fkey" FOREIGN KEY ("endpointId") REFERENCES "endpoints"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "asset_usage_daily" ADD CONSTRAINT "asset_usage_daily_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "assets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -682,12 +639,6 @@ ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_targetLocationId_f
 -- do mesmo valor. O `WHERE` é o que deixa a lixeira fora do índice.
 CREATE UNIQUE INDEX "users_email_unique_undeleted"
   ON "users"("email") WHERE "deletedAt" IS NULL;
-
-CREATE UNIQUE INDEX "users_username_unique_undeleted"
-  ON "users"("username") WHERE "deletedAt" IS NULL AND "username" IS NOT NULL;
-
-CREATE UNIQUE INDEX "users_employeeNumber_unico_ativo"
-  ON "users"("employeeNumber") WHERE "employeeNumber" IS NOT NULL AND "deletedAt" IS NULL;
 
 CREATE UNIQUE INDEX "assets_assetTag_unique_undeleted"
   ON "assets"("assetTag") WHERE "deletedAt" IS NULL;
@@ -775,8 +726,8 @@ ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_qty_nao_negativa"
 -- `targetType IS NOT NULL` explícito no ramo da SAIDA, porque a coluna é
 -- nulável aqui (ENTRADA e BAIXA não têm alvo) e sem isso a comparação
 -- `"targetType" = 'USER'` com NULL vira NULL em vez de FALSE, e CHECK só
--- recusa FALSE. ENTRADA e BAIXA não têm alvo nem devolução. A nota e o autor
--- da devolução só existem com `returnedAt` preenchido.
+-- recusa FALSE. ENTRADA e BAIXA não têm alvo nem devolução. O autor da
+-- devolução só existe com `returnedAt` preenchido.
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_forma" CHECK (
   (
     "kind" = 'SAIDA'
@@ -787,14 +738,13 @@ ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_forma" CHECK (
          ("targetType" = 'USER'     AND "targetUserId"     IS NOT NULL)
       OR ("targetType" = 'LOCATION' AND "targetLocationId" IS NOT NULL)
     )
-    AND ("returnedAt" IS NOT NULL OR ("returnNotes" IS NULL AND "returnedById" IS NULL))
+    AND ("returnedAt" IS NOT NULL OR "returnedById" IS NULL)
   ) OR (
     "kind" <> 'SAIDA'
     AND "targetType" IS NULL
     AND "targetUserId" IS NULL
     AND "targetLocationId" IS NULL
     AND "returnedAt" IS NULL
-    AND "returnNotes" IS NULL
     AND "returnedById" IS NULL
   )
 );

@@ -2,9 +2,10 @@
 // (docs/referencia/arquitetura.md: "cálculo sai do JSX").
 //
 // Idioma pt-BR, moeda BRL, data DD/MM/YYYY: fixos, sem configuração de tela
-// nem leitura do servidor (o F10 saiu — não há mais o que trocar).
+// nem leitura do servidor (a configuração de formato saiu no corte de escopo —
+// não há mais o que trocar).
 
-/** Nome de uma relação embutida (`manufacturer.name`, `parent.name`). */
+/** Nome de uma relação embutida (`manufacturer.name`, `category.name`). */
 export function nomeDaRelacao(valor: unknown): string {
   if (valor && typeof valor === 'object' && 'name' in valor) {
     return String((valor as { name: unknown }).name ?? '—');

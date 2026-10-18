@@ -3,17 +3,18 @@ import { createLogger } from '../logger/logger';
 
 // A JANELA DE EXECUÇÃO DE UM JOB — o D79 em código.
 //
-// Infraestrutura: recebe o NOME do job por parâmetro e não sabe o que é um
-// alerta, um atraso ou uma sincronização. É por isso que mora em `core`.
+// Infraestrutura: recebe o NOME do job por parâmetro e não sabe o que é uma
+// reconciliação ou um expurgo. É por isso que mora em `core`.
 //
 // O QUE ELA RESOLVE: `setInterval` sozinho não sobrevive a deploy. O
 // `zombie-cleaner.job.ts` reinicia o contador a cada `npm start`, e para um job
-// que roda a cada 2 minutos isso é inofensivo. Para um que roda UMA VEZ POR
-// DIA, não é: subir o servidor três vezes numa manhã manda o lembrete de
-// atraso três vezes, e subir só depois do horário não o manda nenhuma.
+// que roda a cada minuto isso é inofensivo. Para um que roda UMA VEZ POR
+// JANELA (a varredura de reconciliação, de hora em hora), não é: ela roda já no
+// boot, e subir o servidor três vezes na mesma hora varreria o parque três
+// vezes.
 //
 // A resposta é o banco, não o relógio do processo: antes de executar, o job
-// tenta TOMAR a janela do dia com um `UPDATE` condicional. Um só ganha.
+// tenta TOMAR a janela corrente com um `UPDATE` condicional. Um só ganha.
 
 const logger = createLogger('jobs');
 
@@ -26,7 +27,7 @@ const logger = createLogger('jobs');
  * devolve `count: 1`, o outro devolve `count: 0`.
  *
  * `count === 0` significa "outro já tomou", e NÃO é erro: é o caminho normal de
- * quem sobe duas vezes no mesmo dia.
+ * quem sobe duas vezes na mesma janela.
  *
  * A linha é criada na primeira tentativa. `upsert` não serve aqui — ele não tem
  * como expressar "só atualize se a condição bater", e o `create` dele venceria
@@ -66,8 +67,8 @@ export async function tomarJanela(nome: string, inicioDaJanela: Date): Promise<b
  * ⚠️ "Hoje" aqui é o dia do SERVIDOR: ele roda em UTC em produção e no fuso de
  * quem desenvolve na máquina local.
  *
- * A janela de HORA da reconciliação usa a própria (`inicioDaHora`), então esta
- * não tem chamador de produção hoje — só o teste, que fixa o relógio.
+ * É a janela do expurgo diário da telemetria (`reconcile.job.ts`). A janela de
+ * HORA da reconciliação usa a própria (`inicioDaHora`).
  */
 export function inicioDoDia(): Date {
   const inicio = new Date();
@@ -82,10 +83,10 @@ export function inicioDoDia(): Date {
  * `setInterval` que o chama, senão uma falha transitória (banco reiniciando)
  * desliga o agendamento até o próximo deploy.
  *
- * A janela FICA TOMADA mesmo quando a tarefa falha. É deliberado: um job de
- * e-mail que falha no meio já mandou parte das mensagens, e reexecutar em cinco
- * minutos as mandaria de novo. Quem perde um dia de lembrete descobre no dia
- * seguinte; quem recebe quatro cobranças do mesmo notebook, não perdoa.
+ * A janela FICA TOMADA mesmo quando a tarefa falha. É deliberado: a rodada que
+ * caiu no meio já fez parte do trabalho, e reexecutá-la na mesma janela (a cada
+ * boot) repetiria essa parte. Quem tenta de novo é a próxima janela — na
+ * reconciliação, uma hora depois.
  */
 export async function executarUmaVezPorJanela(
   nome: string,

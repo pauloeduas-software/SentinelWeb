@@ -29,7 +29,6 @@ export async function deleteStockItem(id: string, actorId: string | null): Promi
         `Este item tem ${fora} ${fora === 1 ? 'unidade' : 'unidades'} fora do estoque. `
           + 'Devolva-as antes de excluir.',
         409,
-        { fora },
       );
     }
 

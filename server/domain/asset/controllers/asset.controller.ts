@@ -4,7 +4,8 @@ import { parseListQuery } from '../../../core/http/list-query';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { historyQuerySchema } from '../../shared/history.schema';
-import { ASSET_SORTABLE, separarFiltrosDeAtivo } from '../helpers/asset-filters.helper';
+import { separarFiltrosDeAtivo } from '../helpers/asset-filters.helper';
+import { custoSoDoAdmin } from '../helpers/asset-select.helper';
 import { createAssetSchema, retireAssetSchema, updateAssetSchema } from '../schemas/asset.schema';
 import { listAssets } from '../use-cases/list-assets.usecase';
 import { listAssetOptions } from '../use-cases/list-asset-options.usecase';
@@ -17,7 +18,7 @@ import { restoreAsset } from '../use-cases/restore-asset.usecase';
 import { findAssetById } from '../use-cases/find-asset-by-id.usecase';
 // A BORDA é quem sabe quem está pedindo (D23, mesma inversão do `actorId`): o
 // use-case recebe um booleano e não conhece `request`.
-import { temPapel } from '../../access/helpers/require-permission';
+import { temCargo } from '../../access/helpers/require-permission';
 import { getAssetHistory } from '../use-cases/asset-history.usecase';
 import { retireAsset } from '../use-cases/retire-asset.usecase';
 import { unretireAsset } from '../use-cases/unretire-asset.usecase';
@@ -57,9 +58,6 @@ export const assetController = {
     const { filtros, paraOCore } = separarFiltrosDeAtivo(request.query);
 
     const query = parseListQuery(paraOCore, {
-      sortable: ASSET_SORTABLE,
-      defaultSort: 'createdAt',
-      defaultOrder: 'desc',
       // `trashable` fica FALSO mesmo havendo lixeira: quem cuida de `?view=`
       // aqui é o domínio, que entende as três vistas em vez de duas. Ligado, o
       // `core` também declararia a chave e as duas validações brigariam pela
@@ -67,18 +65,19 @@ export const assetController = {
       trashable: false,
     });
 
-    return listAssets(query, filtros, temPapel(request, 'ADMIN'));
+    return listAssets(query, filtros, temCargo(request, 'ADMIN'));
   },
 
   async byId(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return findAssetById(id, temPapel(request, 'ADMIN'));
+    return findAssetById(id, temCargo(request, 'ADMIN'));
   },
 
   async history(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     const { limit } = historyQuerySchema.parse(request.query ?? {});
-    return getAssetHistory(id, limit);
+    // O custo sai do diff para quem não é ADMIN, como sai da leitura (D77).
+    return getAssetHistory(id, temCargo(request, 'ADMIN'), limit);
   },
 
   async stats() {
@@ -94,8 +93,7 @@ export const assetController = {
    */
   async search(request: FastifyRequest) {
     const { q } = buscaGlobalSchema.parse(request.query ?? {});
-    // O custo é de `ADMIN` (D77), aqui como na listagem e no detalhe.
-    return globalSearch(q, temPapel(request, 'ADMIN'));
+    return globalSearch(q);
   },
 
   async options(request: FastifyRequest) {
@@ -104,7 +102,7 @@ export const assetController = {
   },
 
   async create(request: FastifyRequest, reply: FastifyReply) {
-    const data = createAssetSchema.parse(request.body ?? {});
+    const data = custoSoDoAdmin(createAssetSchema.parse(request.body ?? {}), temCargo(request, 'ADMIN'));
     // O ator vem da SESSÃO, nunca do corpo (auth/helpers/actor.helper.ts).
     const ativo = await createAsset(data, atorDaRequisicao(request));
     return reply.status(201).send(ativo);
@@ -112,7 +110,7 @@ export const assetController = {
 
   async update(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    const data = updateAssetSchema.parse(request.body ?? {});
+    const data = custoSoDoAdmin(updateAssetSchema.parse(request.body ?? {}), temCargo(request, 'ADMIN'));
     return updateAsset(id, data, atorDaRequisicao(request));
   },
 

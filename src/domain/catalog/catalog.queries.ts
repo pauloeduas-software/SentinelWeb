@@ -23,10 +23,10 @@ export const catalogKeys = {
     ['catalog', rota, 'options', tipo ?? null, q ?? null, parametros ?? null] as const,
 };
 
-export type CatalogInput = Record<string, unknown>;
+type CatalogInput = Record<string, unknown>;
 
 /** A listagem aceita, além do comum, o filtro que a spec declara (`type` nas categorias). */
-export type CatalogListParams = ListParams & Record<string, unknown>;
+type CatalogListParams = ListParams & Record<string, unknown>;
 
 export function useCatalogQuery(slug: string, params: CatalogListParams) {
   return useQuery({

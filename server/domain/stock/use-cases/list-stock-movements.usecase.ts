@@ -87,7 +87,8 @@ function eventosDe(movimento: Movimento): EventoDeEstoque[] {
       action: 'DEVOLUCAO',
       at: movimento.returnedAt,
       qty: movimento.qty,
-      notes: movimento.returnNotes,
+      // A devolução não leva observação: a da linha é a da SAÍDA.
+      notes: null,
       actorId: movimento.returnedById,
     });
   }

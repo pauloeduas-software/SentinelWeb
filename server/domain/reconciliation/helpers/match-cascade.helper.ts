@@ -19,7 +19,7 @@ import { normalizeHostname, normalizeSerial, normalizeUuid } from './normalize-i
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Quanto vale cada sinal. Ver o D46 para por que hostname não vale 100. */
-export const PONTOS: Record<MatchSignal, number> = {
+const PONTOS: Record<MatchSignal, number> = {
   SERIAL: 100,
   UUID: 100,
   // Renomeável, e volta atrás: "PC-ANA" vira "PC-ANA-NOVO" e depois "PC-ANA".
@@ -29,20 +29,20 @@ export const PONTOS: Record<MatchSignal, number> = {
 /** O piso para um vínculo AUTOMÁTICO, e só em `discoveryMode = ON` (D51). */
 export const PONTOS_PARA_VINCULO_AUTOMATICO = 100;
 
-export interface IdentidadeDoEndpoint {
+interface IdentidadeDoEndpoint {
   biosSerial: string | null;
   systemUuid: string | null;
   hostname: string;
 }
 
-export interface CandidatoAtivo {
+interface CandidatoAtivo {
   id: string;
   assetTag: string;
   serial: string | null;
   name: string | null;
 }
 
-export interface Casamento {
+interface Casamento {
   /** O id do ativo que casou. */
   alvoId: string;
   signal: MatchSignal;
@@ -51,13 +51,13 @@ export interface Casamento {
   valor: string;
 }
 
-export interface ColisaoDeEvidencia {
+interface ColisaoDeEvidencia {
   signal: MatchSignal;
   valor: string;
   alvoIds: string[];
 }
 
-export interface ResultadoDaCascata {
+interface ResultadoDaCascata {
   /** No máximo um por alvo: o sinal de maior pontuação que casou com ele. */
   casamentos: Casamento[];
   /**

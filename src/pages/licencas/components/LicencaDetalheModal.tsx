@@ -10,19 +10,6 @@ import { corDoStatus, textoDoPrazo } from '../helpers/licenca.helper';
 import { formatarMoeda } from '../../helpers/format.helper';
 
 // O DETALHE DA LICENÇA: a grade de assentos e o histórico.
-//
-// ═════════════════════════════════════════════════════════════════════════════
-// A CHAVE REVELADA VIVE EM `useState`, NUNCA NO CACHE.
-//
-// `useRevealProductKey` é `useMutation` mesmo sendo um GET, e a razão está do
-// lado do servidor: cada leitura daquela rota grava `VIEW_KEY` no
-// `ActivityLog`. Com `useQuery`, o refetch automático do TanStack encheria a
-// trilha de "quem viu o segredo" com leituras que ninguém pediu — e a única
-// pergunta que ela existe para responder ficaria afogada.
-//
-// Aqui ela fica num `useState` que morre junto com o modal. Fechar a janela
-// apaga a chave da memória do navegador.
-// ═════════════════════════════════════════════════════════════════════════════
 
 interface LicencaDetalheModalProps {
   licenca: Licenca;

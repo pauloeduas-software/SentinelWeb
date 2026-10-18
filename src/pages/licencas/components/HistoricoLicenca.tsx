@@ -1,20 +1,9 @@
-import { Eye, Flame, History } from 'lucide-react';
+import { Flame, History } from 'lucide-react';
 import type { EventoDaLicenca } from '../../../domain/shared/license.types';
 import { lerEvento, momentoDoEvento, rotuloDaAcao } from '../../helpers/historico.helper';
 import { ACOES_DA_LICENCA, ROTULOS_DA_LICENCA } from '../helpers/licenca.helper';
 
-// A TRILHA DA LICENÇA — entregas, devoluções, queimas e REVELAÇÕES DA CHAVE.
-//
-// ═════════════════════════════════════════════════════════════════════════════
-// SEM ESTA LISTA, O `VIEW_KEY` NÃO SERVE PARA NADA.
-//
-// Ele é a primeira ação do projeto que registra uma LEITURA, e existe para
-// responder UMA pergunta: *"quem viu esta chave, e quando?"*. Um log que
-// ninguém consegue abrir responde essa pergunta só para quem tem acesso ao
-// banco — que é exatamente quem já podia ler a coluna cifrada. O aviso da tela
-// de revelação ("fica registrado no histórico") também passaria a ser uma
-// ameaça vazia.
-// ═════════════════════════════════════════════════════════════════════════════
+// A TRILHA DA LICENÇA — edições, entregas, devoluções e queimas de assento.
 //
 // O VOCABULÁRIO É DAQUI, não do `historico.helper.ts` compartilhado: aquele
 // arquivo tem o que vale para qualquer trilha (CREATE, UPDATE, lixeira), e
@@ -27,15 +16,13 @@ interface HistoricoLicencaProps {
   carregando: boolean;
 }
 
-/** As duas ações que merecem destaque: uma destrói valor, a outra expõe segredo. */
-const ICONE: Record<string, typeof Eye> = {
+/** A ação que merece destaque: a queima destrói valor. */
+const ICONE: Record<string, typeof Flame> = {
   RETIRE: Flame,
-  VIEW_KEY: Eye,
 };
 
 const COR_DA_ACAO: Record<string, string> = {
   RETIRE: 'text-status-danger',
-  VIEW_KEY: 'text-status-warning',
 };
 
 export default function HistoricoLicenca({ eventos, carregando }: HistoricoLicencaProps) {
@@ -94,7 +81,7 @@ function Evento({ evento }: { evento: EventoDaLicenca }) {
         </div>
       )}
 
-      {/* O ATOR sai da sessão (D23), e é ele que faz "quem viu esta chave?" ter
+      {/* O ATOR sai da sessão (D23), e é ele que faz "quem fez isto?" ter
           resposta. Id curto pelo mesmo motivo do `valorLegivel`: o nome de
           quem operou pode ter mudado desde então, e resolvê-lo aqui exigiria
           guardar a história da tabela de usuários. */}

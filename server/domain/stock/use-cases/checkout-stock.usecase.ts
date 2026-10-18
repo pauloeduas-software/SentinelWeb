@@ -14,8 +14,8 @@ import type { CheckoutStockInput } from '../schemas/stock.schema';
 // ─────────────────────────────────────────────────────────────────────────────
 // O ALVO PODE SER UM POSTO, e é a mesma razão da posse de ativo: entregar 5
 // mouses à Mesa 1 é o caso real do modelo de posse, e forçar a escolha de uma
-// pessoa faria o estoque mentir do mesmo jeito que `Asset.assignedToId`
-// mentiria. A unidade entregue ao posto é UMA, qualquer que seja o número de
+// pessoa faria o estoque mentir do mesmo jeito que mentiria na posse de ativo.
+// A unidade entregue ao posto é UMA, qualquer que seja o número de
 // ocupantes — o saldo do almoxarifado não pode depender da escala do RH. Quem
 // responde por ela são os ocupantes ABERTOS do posto, resolvidos na leitura, e
 // posto sem ocupante resolve para ninguém — não é erro, é a mesa preparada
@@ -43,9 +43,8 @@ function assertAlvoCoerente(data: CheckoutStockInput): string {
 
   if (intrusa) {
     throw new AppError(
-      'Uma saída tem UM alvo: preencha só a chave que corresponde ao targetType.',
+      `Uma saída tem UM alvo: preencha só a chave que corresponde ao targetType (${data.targetType}).`,
       422,
-      { targetType: data.targetType, sobrando: FK_DO_ALVO[data.targetType === 'USER' ? 'LOCATION' : 'USER'] },
     );
   }
   if (!alvoId) {

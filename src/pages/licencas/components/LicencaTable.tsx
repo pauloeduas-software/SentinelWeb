@@ -20,7 +20,7 @@ interface LicencaTableProps {
   onEntregar: (licenca: Licenca) => void;
   /**
    * Lixeira e restaurar são `ADMIN` no servidor. Ausentes, os botões somem —
-   * quem decide é a página, que sabe o papel; a tabela só desenha.
+   * quem decide é a página, que sabe o cargo; a tabela só desenha.
    */
   onExcluir?: (licenca: Licenca) => void;
   onRestaurar?: (licenca: Licenca) => void;

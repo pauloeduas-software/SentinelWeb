@@ -1,5 +1,4 @@
 import { prisma } from '../../../core/database/prismaClient';
-import { ASSET_SELECT, assetSelect } from '../helpers/asset-select.helper';
 import { buildAssetWhere } from '../helpers/asset-filters.helper';
 
 // A BUSCA DO LEITOR DE CÓDIGO DE BARRAS (F10, Etapa G).
@@ -21,10 +20,18 @@ import { buildAssetWhere } from '../helpers/asset-filters.helper';
 /** Teto da busca aproximada. Quem precisa de mais usa a listagem, com filtro. */
 const MAX_PARCIAL = 20;
 
-export type TipoDeAcerto = 'EXATO' | 'PARCIAL' | 'NENHUM';
+/**
+ * O ativo como a busca o devolve: o que identifica, e nada mais. A tela do
+ * leitor mostra etiqueta, nome e série e leva à ficha — que é quem tem o resto
+ * (e quem decide o custo por cargo, D77). Sem o custo no select, a busca deixa
+ * de ser uma porta para ele.
+ */
+const ATIVO_DA_BUSCA = { id: true, assetTag: true, serial: true, name: true } as const;
+
+type TipoDeAcerto = 'EXATO' | 'PARCIAL' | 'NENHUM';
 
 /** O posto onde o ativo está montado, quando está. */
-export interface PostoDoAcerto {
+interface PostoDoAcerto {
   id: string;
   name: string;
 }
@@ -38,7 +45,7 @@ export interface ResultadoDaBusca {
   /** `assetTag`, `serial` ou `aproximado`. É o que a tela explica ao usuário. */
   por: string;
   total: number;
-  ativos: unknown[];
+  ativos: { id: string; assetTag: string; serial: string | null; name: string | null }[];
   /**
    * O POSTO DO ACERTO EXATO, quando o ativo está montado numa mesa.
    *
@@ -79,31 +86,17 @@ async function postoDoAtivo(assetId: string): Promise<PostoDoAcerto | null> {
   return posse?.targetLocation ?? null;
 }
 
-export async function globalSearch(
-  q: string,
-  /**
-   * A sessão enxerga custo de compra? (D77)
-   *
-   * Por parâmetro, da borda, como na listagem e no detalhe: o use-case não
-   * conhece `request`. A busca devolve ativos INTEIROS com o mesmo select da
-   * listagem, então era a terceira porta do custo depois de `/api/assets` e
-   * `/api/assets/:id` — e vazava: um técnico que bipasse uma etiqueta recebia
-   * o `purchaseCost` que a listagem lhe esconde.
-   */
-  podeVerCusto: boolean,
-): Promise<ResultadoDaBusca> {
+export async function globalSearch(q: string): Promise<ResultadoDaBusca> {
   // `trim` SEM mexer em mais nada: zero à esquerda é parte da etiqueta
   // (`ATV-00042`), e um `replace` esperto comeria justamente o que identifica o
   // ativo. O leitor manda exatamente o que está impresso.
   const termo = q.trim();
   if (termo === '') return { tipo: 'NENHUM', por: 'vazio', total: 0, ativos: [], posto: null };
 
-  // O select DEPENDE DA SESSÃO (D77): sem a chave, `purchaseCost` não é lido
-  // do banco. O `as` fixa o tipo no select completo, como na listagem.
-  const select = assetSelect(podeVerCusto) as typeof ASSET_SELECT;
+  const select = ATIVO_DA_BUSCA;
 
   // 1. A ETIQUETA. `findFirst` e não `findUnique`: a unicidade é índice PARCIAL
-  // (`WHERE deleted_at IS NULL`), que o Prisma não conhece — e é o `findFirst`
+  // (`WHERE "deletedAt" IS NULL`), que o Prisma não conhece — e é o `findFirst`
   // que recebe o escopo da lixeira.
   const porEtiqueta = await prisma.asset.findFirst({
     where: { assetTag: termo },

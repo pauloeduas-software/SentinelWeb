@@ -45,9 +45,9 @@ describe('excluir localização — o histórico segura', () => {
     expect(ocupacao.status).toBe(201);
     expect((await api.delete(`/api/locations/${mesa}/occupants/${ocupacao.body.id}`)).status).toBe(200);
 
-    const { status, body } = await api.delete<{ error: string; emUso: number }>(`/api/locations/${mesa}`);
+    const { status, body } = await api.delete<{ error: string }>(`/api/locations/${mesa}`);
     expect(status).toBe(409);
-    expect(body.emUso).toBe(1);
+    expect(body.error).toMatch(/1 registro/);
     // A recusa ensina a saída — sem a dica, o operador fica sem caminho.
     expect(body.error).toContain('Desative-a em vez de excluir');
   });
@@ -60,9 +60,9 @@ describe('excluir localização — o histórico segura', () => {
     })).status).toBe(201);
     expect((await api.post(`/api/assets/${ativo.id}/checkin`, {})).status).toBe(200);
 
-    const { status, body } = await api.delete<{ emUso: number }>(`/api/locations/${sala}`);
+    const { status, body } = await api.delete<{ error: string }>(`/api/locations/${sala}`);
     expect(status).toBe(409);
-    expect(body.emUso).toBe(1);
+    expect(body.error).toMatch(/1 registro/);
   });
 
   it('apaga a que está vazia de verdade', async () => {

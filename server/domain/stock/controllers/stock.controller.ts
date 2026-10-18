@@ -1,10 +1,11 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { SEM_PARAMETROS } from '../../../core/http/sem-parametros';
 import { parseListQuery } from '../../../core/http/list-query';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { historyQuerySchema } from '../../shared/history.schema';
 import { idParamSchema } from '../../shared/params.schema';
 import {
-  adjustStockSchema, checkinStockSchema, checkoutStockSchema, createStockItemSchema, stockFiltersSchema,
+  adjustStockSchema, checkoutStockSchema, createStockItemSchema, stockFiltersSchema,
   updateStockItemSchema,
 } from '../schemas/stock.schema';
 import { adjustStock } from '../use-cases/adjust-stock.usecase';
@@ -13,7 +14,7 @@ import { checkoutStock } from '../use-cases/checkout-stock.usecase';
 import { createStockItem } from '../use-cases/create-stock-item.usecase';
 import { deleteStockItem } from '../use-cases/delete-stock-item.usecase';
 import { getStockItem } from '../use-cases/get-stock-item.usecase';
-import { listStock, STOCK_SORTABLE } from '../use-cases/list-stock.usecase';
+import { listStock } from '../use-cases/list-stock.usecase';
 import { listStockMovements } from '../use-cases/list-stock-movements.usecase';
 import { restoreStockItem } from '../use-cases/restore-stock-item.usecase';
 import { updateStockItem } from '../use-cases/update-stock-item.usecase';
@@ -29,9 +30,6 @@ export const stockController = {
     const filtros = stockFiltersSchema.parse(categoryId === undefined ? {} : { categoryId });
 
     const query = parseListQuery(paginacao, {
-      sortable: STOCK_SORTABLE,
-      defaultSort: 'name',
-      defaultOrder: 'asc',
       // O item tem lixeira: `?view=trashed` a lista.
       trashable: true,
     });
@@ -91,8 +89,9 @@ export const stockController = {
 
   async checkin(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    const data = checkinStockSchema.parse(request.body ?? {});
+    // A devolução não leva nota nem nada: o corpo, se vier, é vazio.
+    SEM_PARAMETROS.parse(request.body ?? {});
     // 200, e não 201: a devolução FECHA a linha que já existia.
-    return checkinStock(id, data, atorDaRequisicao(request));
+    return checkinStock(id, atorDaRequisicao(request));
   },
 };

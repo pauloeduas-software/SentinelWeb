@@ -28,7 +28,7 @@ import { prisma } from '../../../core/database/prismaClient';
 // removido" — dois eventos diferentes que um `DELETE` para ambos apagaria.
 // `CHECKOUT` e `CHECKIN` são a ENTREGA e a DEVOLUÇÃO de um ativo
 // (`Assignment`). Separadas de `UPDATE` porque não são uma edição de campo:
-// são as duas únicas operações que escrevem `Asset.assignedToId`, e o
+// são as duas únicas operações que escrevem posse, e o
 // histórico do ativo precisa mostrá-las como evento, não como diff
 // (docs/referencia/modelo-de-posse.md).
 // `LINK` e `UNLINK` são o vínculo endpoint↔ativo da convergência com o RMM
@@ -45,12 +45,12 @@ import { prisma } from '../../../core/database/prismaClient';
 // A UNIÃO LISTA O QUE O SISTEMA GRAVA, e nada além. A coluna é `String` no
 // banco, então encurtá-la não pede migração — e as linhas antigas de ações que
 // não existem mais continuam legíveis, com o valor cru no lugar do rótulo.
-export type ActivityAction =
+type ActivityAction =
   | 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE' | 'END'
   | 'CHECKOUT' | 'CHECKIN' | 'RETIRE' | 'UNRETIRE'
   | 'LINK' | 'UNLINK';
 
-export interface RecordActivityInput {
+interface RecordActivityInput {
   entityType: string;
   entityId: string;
   action: ActivityAction;

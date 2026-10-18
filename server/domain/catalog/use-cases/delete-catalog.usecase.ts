@@ -27,7 +27,6 @@ export async function deleteCatalog(spec: CatalogSpec, id: string, actorId: stri
       throw new AppError(
         `Não é possível excluir: ${spec.rotulo} em uso por ${emUso} ${emUso === 1 ? 'registro' : 'registros'}.${dica}`,
         409,
-        { emUso },
       );
     }
 

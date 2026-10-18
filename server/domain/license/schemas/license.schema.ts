@@ -23,7 +23,7 @@ const assentosObrigatorios = z.coerce.number('total de assentos deve ser um núm
  * O `preprocess` não é zelo: `z.coerce.number()` roda `Number('')`, que é **0**
  * — e `minSeats = 0` significa "alerte quando os livres ficarem abaixo de
  * zero", ou seja, nunca. Deixar o campo em branco gravaria um piso mudo em vez
- * de `null`. É a mesma armadilha do `minQty` da F5.
+ * de `null`.
  */
 const minimoOpcional = z.preprocess(
   (valor) => (valor === '' ? null : valor),
@@ -102,10 +102,6 @@ export const checkoutSeatSchema = z.strictObject({
   notes: textoOpcional('observações', 2_000),
 });
 
-export const checkinSeatSchema = z.strictObject({
-  notes: textoOpcional('observações', 2_000),
-});
-
 /**
  * Os filtros da LISTAGEM que não são do `parseListQuery`. O controller separa a
  * query antes de qualquer `parse`, como no `endpoint.controller.ts`: os dois
@@ -118,5 +114,4 @@ export const licenseFiltersSchema = z.strictObject({
 export type CreateLicenseData = z.infer<typeof createLicenseSchema>;
 export type UpdateLicenseData = z.infer<typeof updateLicenseSchema>;
 export type CheckoutSeatData = z.infer<typeof checkoutSeatSchema>;
-export type CheckinSeatData = z.infer<typeof checkinSeatSchema>;
 export type LicenseFilters = z.infer<typeof licenseFiltersSchema>;

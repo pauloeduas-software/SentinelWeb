@@ -1,6 +1,5 @@
 import type { AlvoDaPosse, PosseResolvida } from './posse.types';
 import type { ListParams } from './list.types';
-import type { User } from './user.types';
 
 // Contrato do ativo com a API. Espelha `ASSET_SELECT`
 // (server/domain/asset/helpers/asset-select.helper.ts).
@@ -25,11 +24,11 @@ export interface Referencia {
  * que decide se o ativo pode ser entregue, e uma comparação com um valor que
  * não existe (`'AVAILABLE'`) precisa ser erro de tipo, não um `false` calado.
  */
-export interface StatusRef extends Referencia {
+interface StatusRef extends Referencia {
   type: TipoDeStatus;
 }
 
-export interface CategoriaRef extends Referencia {
+interface CategoriaRef extends Referencia {
   type: string;
 }
 
@@ -48,7 +47,7 @@ export interface FabricanteRef extends Referencia {
   supportEmail: string | null;
 }
 
-export interface ModeloRef extends Referencia {
+interface ModeloRef extends Referencia {
   modelNumber: string | null;
   manufacturer: FabricanteRef;
   category: CategoriaRef;
@@ -76,18 +75,11 @@ export interface Asset {
   statusId: string;
   modelId: string;
   locationId: string | null;
-  /**
-   * CACHE do caso `USER` da posse, e só dele (docs/referencia/modelo-de-posse.md).
-   *
-   * É `null` quando o detentor é uma LOCALIZAÇÃO ou OUTRO ATIVO. Não é campo de
-   * formulário: quem escreve aqui é o checkout/checkin. Para mostrar quem
-   * responde pelo ativo, leia `posse`, nunca esta coluna sozinha.
-   */
-  assignedToId: string | null;
 
   orderNumber: string | null;
   purchaseDate: string | null;
-  purchaseCost: string | null;
+  /** Ausente para quem não é `ADMIN`: o servidor nem lê a coluna (D77). */
+  purchaseCost?: string | null;
 
   /**
    * BAIXA — o ativo saiu do PATRIMÔNIO.
@@ -99,16 +91,11 @@ export interface Asset {
   retiredAt: string | null;
   retiredReason: MotivoDaSaida | null;
 
-  /** Quem cadastrou e quem editou por último (D26). Nulos no que é anterior à F3. */
-  createdById: string | null;
-  updatedById: string | null;
-
   createdAt: string;
 
   status: StatusRef;
   model: ModeloRef;
   location: Referencia | null;
-  assignedTo: User | null;
 
   /**
    * A responsabilidade RESOLVIDA desta linha (Camada 3 do docs/referencia/modelo-de-posse.md),
@@ -132,7 +119,7 @@ export interface Asset {
  * Os rótulos em português e a ajuda de cada um moram em
  * `pages/configuracoes/specs/catalog-ui.types.ts` — aqui é só o contrato.
  */
-export type TipoDeStatus = 'DEPLOYABLE' | 'IN_USE' | 'PENDING' | 'UNDEPLOYABLE';
+type TipoDeStatus = 'DEPLOYABLE' | 'IN_USE' | 'PENDING' | 'UNDEPLOYABLE';
 
 export interface AssetStats {
   /** O que a listagem PADRÃO mostra: nem baixado, nem em posto. */
@@ -169,7 +156,6 @@ export type AssetView = 'active' | 'trashed' | 'retired';
 export type AssetListParams = Omit<ListParams, 'view'> & {
   view?: AssetView;
   statusId?: string;
-  locationId?: string;
   categoryId?: string;
 };
 
@@ -190,8 +176,8 @@ export interface EventoDoAtivo {
   actorId: string | null;
   /**
    * O diff (`{ campo: { de, para } }`) misturado com valores soltos
-   * (`batchId`, `notes`): o formato varia com a operação, e por isso é lido por
-   * `lerMudancas()` em vez de ser tipado campo a campo.
+   * (`notes`): o formato varia com a operação, e por isso é lido por
+   * `lerEvento()` em vez de ser tipado campo a campo.
    */
   changes: unknown;
   posse: {

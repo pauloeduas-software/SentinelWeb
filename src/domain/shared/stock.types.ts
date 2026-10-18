@@ -7,10 +7,10 @@ import type { Referencia } from './asset.types';
 // `StockItem`: N unidades intercambiáveis, sem patrimônio individual. Espelha
 // `server/domain/stock/helpers/stock-select.helper.ts`.
 
-export type TipoDeMovimento = 'ENTRADA' | 'BAIXA' | 'SAIDA';
-export type AlvoDaSaida = 'USER' | 'LOCATION';
+type TipoDeMovimento = 'ENTRADA' | 'BAIXA' | 'SAIDA';
+type AlvoDaSaida = 'USER' | 'LOCATION';
 
-export interface CategoriaDoItem extends Referencia {
+interface CategoriaDoItem extends Referencia {
   type: string;
 }
 
@@ -31,8 +31,6 @@ export interface ItemDeEstoque {
   locationId: string | null;
   notes: string | null;
 
-  createdById: string | null;
-  updatedById: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -47,7 +45,7 @@ export interface ItemDeEstoque {
 }
 
 /** Local embutido como alvo de uma saída. */
-export interface LocalDaSaida extends Referencia {
+interface LocalDaSaida extends Referencia {
   isWorkstation: boolean;
 }
 
@@ -69,7 +67,6 @@ export interface MovimentoDeEstoque {
 
   returnedAt: string | null;
   notes: string | null;
-  returnNotes: string | null;
 
   createdById: string | null;
   returnedById: string | null;

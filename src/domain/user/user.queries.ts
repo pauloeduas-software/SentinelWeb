@@ -17,19 +17,19 @@ export const userKeys = {
 export interface UserInput {
   name: string;
   email: string;
-  /** O papel (D148). Ausente, numa criação, nasce `USUARIO` pelo `@default`. */
+  /** O cargo (D148). Ausente, numa criação, nasce `USUARIO` pelo `@default`. */
   role?: 'USUARIO' | 'TECNICO' | 'ADMIN';
   /**
    * SÓ na edição, e só pelo botão Desativar/Ativar da lista: desativar impede
    * entrega nova e derruba a sessão da pessoa.
    */
   isActive?: boolean;
-  employeeNumber?: string | null;
-  jobTitle?: string | null;
-  phone?: string | null;
-  address?: string | null;
-  /** `AAAA-MM-DD`. */
-  hiredAt?: string | null;
+  /**
+   * A senha de quem entra no sistema (Técnico e Administrador). No cadastro
+   * desses dois cargos é obrigatória; na edição, ausente mantém a atual e
+   * presente troca e derruba as sessões abertas da pessoa.
+   */
+  password?: string;
 }
 
 export function useUsersQuery(params: ListParams) {

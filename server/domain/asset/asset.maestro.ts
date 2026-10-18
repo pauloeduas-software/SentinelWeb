@@ -15,8 +15,8 @@ export class AssetMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
     server.get('/api/assets', assetController.list);
     server.get('/api/assets/stats', assetController.stats);
-    // Lista enxuta para o `<select>` da aba "Ativo" do modal de entrega: é assim
-    // que se prende um periférico a outro equipamento (docs/referencia/modelo-de-posse.md).
+    // Lista enxuta para os `<select>` que escolhem um ativo: o assento de licença
+    // entregue a uma máquina e o vínculo de `/descobertas` (`?maquina=sem`).
     server.get('/api/assets/options', assetController.options);
 
     // A BUSCA DO LEITOR DE CÓDIGO DE BARRAS (F10, Etapa G).

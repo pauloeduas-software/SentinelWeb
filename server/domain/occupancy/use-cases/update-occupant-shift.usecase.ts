@@ -44,13 +44,27 @@ export async function updateOccupantShift(
 
     // Ocupação ENCERRADA não muda de turno: ela é histórico, e histórico que se
     // edita não serve para responder nada.
-    if (antes.endedAt !== null) {
-      throw new AppError('Esta ocupação já foi encerrada e não pode ser alterada.', 409);
+    const ENCERRADA = 'Esta ocupação já foi encerrada e não pode ser alterada.';
+    if (antes.endedAt !== null) throw new AppError(ENCERRADA, 409);
+
+    // O MESMO turno não é correção: sem escrita e sem linha no histórico — um
+    // "de Manhã para Manhã" na trilha só faria barulho.
+    if (antes.shift === shift) {
+      return tx.locationOccupant.findUniqueOrThrow({ where: { id: occupantId }, select: OCCUPANT_SELECT });
     }
 
-    const atualizada = await tx.locationOccupant.update({
-      where: { id: occupantId },
+    // `updateMany` com `endedAt: null` no WHERE, e não `update` por id: é o
+    // mesmo padrão atômico do encerramento. Se ela foi encerrada entre a
+    // leitura acima e esta escrita, a linha não casa, e o turno de uma ocupação
+    // já fechada não é reescrito.
+    const { count } = await tx.locationOccupant.updateMany({
+      where: { id: occupantId, locationId, endedAt: null },
       data: { shift },
+    });
+    if (count === 0) throw new AppError(ENCERRADA, 409);
+
+    const atualizada = await tx.locationOccupant.findUniqueOrThrow({
+      where: { id: occupantId },
       select: OCCUPANT_SELECT,
     });
 

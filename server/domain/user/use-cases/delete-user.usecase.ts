@@ -1,7 +1,8 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
-import { contarPosseAberta, motivoParaNaoExcluir } from './count-user-posse.usecase';
+import { assertSobraAdministrador, travarAdministracao } from '../../access/helpers/ultimo-administrador';
+import { contarPosseAberta, motivoParaRecusar } from './count-user-posse.usecase';
 import { travarUsuarioOuFalhar } from './lock-user.usecase';
 
 /**
@@ -12,7 +13,7 @@ import { travarUsuarioOuFalhar } from './lock-user.usecase';
  *
  * `Assignment.targetUserId` e `LocationOccupant.userId` são `onDelete: Restrict`
  * no schema, o que parece resolver — e não resolve. Apagar um usuário aqui é
- * `UPDATE users SET deleted_at = now()`: o Postgres não vê `DELETE` nenhum, a
+ * `UPDATE users SET "deletedAt" = now()`: o Postgres não vê `DELETE` nenhum, a
  * FK não é consultada e a rede NÃO EXISTE. É o primeiro dos dois pontos cegos
  * do soft delete, e ele cai exatamente aqui.
  *
@@ -36,22 +37,15 @@ export async function deleteUser(id: string, actorId: string | null): Promise<vo
     // colaborador vai para a lixeira levando um equipamento no nome — o 409
     // que este bloco existe para dar simplesmente não dispara
     // (`lock-user.usecase.ts`).
+    // A fila do último administrador primeiro, depois a linha do usuário — a
+    // mesma ordem da edição (`ultimo-administrador.ts`).
+    await travarAdministracao(tx);
     await travarUsuarioOuFalhar(tx, id);
 
     // Antes de qualquer escrita: recusar depois de apagar seria contar com o
     // rollback para desfazer o que nem devia ter começado.
-    const posse = await contarPosseAberta(tx, id);
-    const motivo = motivoParaNaoExcluir(posse);
-    if (motivo) {
-      // TODAS as pontas também nos `details`, além da frase: a tela precisa
-      // saber O QUE está aberto sem reparsear a mensagem em português.
-      throw new AppError(motivo, 409, {
-        ativosEmPosse: posse.ativosEmPosse,
-        assentosEmPosse: posse.assentosEmPosse,
-        itensEmPosse: posse.itensEmPosse,
-        postosOcupados: posse.postosOcupados,
-      });
-    }
+    const motivo = motivoParaRecusar(await contarPosseAberta(tx, id), 'excluir');
+    if (motivo) throw new AppError(motivo, 409);
 
     const { count } = await tx.user.updateMany({
       where: { id, deletedAt: null },
@@ -61,5 +55,9 @@ export async function deleteUser(id: string, actorId: string | null): Promise<vo
     if (count === 0) throw new AppError('Registro não encontrado', 404);
 
     await recordActivity(tx, { entityType: 'User', entityId: id, action: 'DELETE' }, actorId);
+
+    // A REDE do último administrador, como na edição (D148): apagar o único que
+    // entra — inclusive a si mesmo — trancaria o sistema por fora.
+    await assertSobraAdministrador(tx);
   });
 }

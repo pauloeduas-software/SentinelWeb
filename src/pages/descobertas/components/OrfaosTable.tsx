@@ -58,7 +58,7 @@ export default function OrfaosTable({ orfaos, carregando, ocupado, onTriar, onVi
 
   return (
     <table className="w-full border border-border-sutil text-xs font-mono">
-      <thead className="bg-bg-surface border-b border-border-sutil">
+      <thead className="bg-bg-base/50 border-b border-border-sutil">
         <tr>
           <th className={CABECALHO}>Máquina</th>
           <th className={CABECALHO}>Sistema</th>

@@ -122,7 +122,7 @@ function Mudancas({ mudancas }: { mudancas: MudancaDeHardware[] }) {
     <div>
       <h3 className={`${ROTULO} mb-2 block`}>Mudanças detectadas — {mudancas.length}</h3>
       <table className="w-full border border-border-sutil text-xs font-mono">
-        <thead className="bg-bg-surface border-b border-border-sutil">
+        <thead className="bg-bg-base/50 border-b border-border-sutil">
           <tr>
             <th className={CABECALHO}>Campo</th>
             <th className={CABECALHO}>Era</th>

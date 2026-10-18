@@ -42,7 +42,7 @@ function asRecords(raw: unknown): [string, Record<string, unknown>][] {
   );
 }
 
-export function bytesToGb(bytes: string | number | undefined): number {
+function bytesToGb(bytes: string | number | undefined): number {
   const value = Number(bytes ?? 0);
   return Number.isFinite(value) ? value / BYTES_IN_GB : 0;
 }
@@ -51,7 +51,7 @@ export function usagePercent(used: number, total: number): number {
   return total > 0 ? (used / total) * 100 : 0;
 }
 
-export function parseDisks(raw: unknown): DiskMetrics[] {
+function parseDisks(raw: unknown): DiskMetrics[] {
   return asRecords(raw).map(([key, disk], index) => ({
     // Em mapa, a chave é o nome do disco ("C:"); em lista, é o índice
     name: readString(disk, 'name') ?? (Number.isNaN(Number(key)) ? key : `Disco ${index + 1}`),
@@ -105,7 +105,7 @@ export function parseNetwork(raw: unknown): NetworkMetrics {
 // ═════════════════════════════════════════════════════════════════════════════
 
 /** Um número já formatado com a unidade que o acompanha. */
-export interface Medida {
+interface Medida {
   valor: string;
   unidade: string;
 }
@@ -135,7 +135,7 @@ export function formatarVolume(bytes: number): Medida {
   return { valor: (bytes / 1024 ** 2).toFixed(0), unidade: 'MB' };
 }
 
-export function parseProcesses(raw: unknown): ProcessMetrics[] {
+function parseProcesses(raw: unknown): ProcessMetrics[] {
   return asRecords(raw).map(([, process]) => ({
     pid: readNumber(process, 'pid'),
     name: readString(process, 'name') ?? 'desconhecido',
@@ -144,7 +144,7 @@ export function parseProcesses(raw: unknown): ProcessMetrics[] {
 }
 
 /** Tudo que uma tela precisa de uma amostra, já calculado. */
-export interface TelemetrySnapshot {
+interface TelemetrySnapshot {
   cpuUsage: number;
   ramTotalGb: number;
   ramUsedGb: number;

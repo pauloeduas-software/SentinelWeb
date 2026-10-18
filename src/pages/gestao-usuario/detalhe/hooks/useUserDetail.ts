@@ -10,7 +10,7 @@ import { useCheckinStock } from '../../../../domain/stock/stock.queries';
 //
 // TRÊS consultas, e nenhuma delas é redundante:
 //
-//   `useUserQuery`            quem é a pessoa + o placar de posse aberta;
+//   `useUserQuery`            quem é a pessoa e o estoque no nome dela;
 //   `useUserOccupanciesQuery` os POSTOS que ela ocupa, com o turno;
 //   `useUserHistoryQuery`     o que JÁ aconteceu — as duas primeiras são o
 //                             estado de hoje, esta é a linha do tempo.
@@ -39,7 +39,7 @@ export function useUserDetail() {
 
   return {
     user,
-    // Só as ABERTAS: a rota responde `?view=current` por padrão.
+    // Só as ABERTAS: é o que a rota da pessoa devolve.
     ocupacoes: ocupacoes ?? [],
     // `total` vem separado das linhas de propósito: ele conta o universo, e as
     // linhas vêm cortadas no teto — é o que deixa a tela dizer "100 de 340" em

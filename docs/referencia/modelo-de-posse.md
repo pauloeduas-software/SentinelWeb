@@ -86,6 +86,13 @@ Uma linha por pessoa que ocupa uma localização, com o turno.
 - **Aberta** = `endedAt IS NULL`. É ocupante atual.
 - `shift` é **texto livre** (`"Manhã"`, `"Tarde"`, `"12x36 A"`). Enum engessaria
   escalas reais; faixa de horário seria agenda, não inventário.
+- **O turno se corrige no lugar, na ocupação aberta.** O lápis **Corrigir turno** do
+  painel de ocupantes (ficha do posto e Configurações › Localizações) abre o campo na
+  própria linha — Enter salva, Esc cancela, vazio apaga o turno — e grava só o `shift`
+  (`PATCH /api/locations/:id/occupants/:occupantId`, com trilha no `ActivityLog`). A linha
+  continua a mesma, com o mesmo `startedAt`: encerrar e reabrir fabricaria no histórico
+  uma saída que não aconteceu e perderia a data de entrada. Ocupação **encerrada** não
+  muda de turno (409) — é histórico ([Q](../decisoes/escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai)).
 - **A mesma pessoa não ocupa o mesmo posto duas vezes ao mesmo tempo:**
 
   ```sql
@@ -162,25 +169,18 @@ Se um dia alguém precisar responder pelo posto vazio, a forma já existe: ele v
 
 ---
 
-## O que acontece com `Asset.assignedToId`
+## Não há coluna de "quem responde" no ativo
 
-**A coluna continua, o significado muda.** Ela passa a ser **cache do caso
-`USER`**, e só:
+`Asset.assignedToId` existiu como **cache do caso `USER`** — o id da pessoa quando a
+posse aberta era direta, `null` quando o ativo estava num posto ou no estoque — e saiu
+do schema ([Q](../decisoes/escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai)).
+Quem responde pelo ativo é a `Assignment` aberta, e só ela; a Camada 3 deriva o resto.
 
-| Situação | `assignedToId` | Fonte de verdade |
-|---|---|---|
-| Entregue para a Laura | id da Laura | `Assignment` (targetType USER) |
-| Na Mesa 1 (Laura + Ana) | **`null`** | `Assignment` (targetType LOCATION) → ocupantes |
-| No estoque | `null` | não há assignment aberta |
-
-E — **isto é a parte que muda comportamento** — ela deixa de ser editável pelo
-formulário de ativo. Sai do `createAssetSchema`/`updateAssetSchema` e do modal.
-Quem escreve é **só** o checkout e o checkin.
-
-**Por quê:** um campo editável à mão *ao lado* de uma tabela de posse são duas
-fontes de verdade para o mesmo fato, e nada impede divergirem. É exatamente o
-erro que a auditoria da F1 encontrou no tipo do status ("Em Uso" tipado
-`DEPLOYABLE`), um nível acima. A carga inicial de equipamento que já está com
+**Por quê:** uma coluna com a mesma resposta *ao lado* de uma tabela de posse são duas
+fontes de verdade para o mesmo fato, e nada impede divergirem. É exatamente o erro que a
+auditoria da F1 encontrou no tipo do status ("Em Uso" tipado `DEPLOYABLE`), um nível
+acima. A defesa não é uma checagem de que as duas batem: é não haver a
+segunda. A carga inicial de equipamento que já está com
 alguém se faz pelo **checkout**, que é a operação que existe para isso.
 
 ---

@@ -37,9 +37,6 @@ export const LICENSE_SELECT = {
 
   notes: true,
 
-  createdById: true,
-  updatedById: true,
-
   createdAt: true,
   updatedAt: true,
   deletedAt: true,
@@ -49,10 +46,10 @@ export const LICENSE_SELECT = {
 } as const;
 
 /** A pessoa embutida numa linha de ocupação. Mesma forma do estoque. */
-export const PESSOA_DO_ASSENTO = { id: true, name: true, email: true } as const;
+const PESSOA_DO_ASSENTO = { id: true, name: true, email: true } as const;
 
 /** O ativo embutido. `assetTag` porque é por ela que se procura na tela. */
-export const ATIVO_DO_ASSENTO = {
+const ATIVO_DO_ASSENTO = {
   id: true, assetTag: true, name: true,
   model: { select: { name: true } },
 } as const;
@@ -66,7 +63,6 @@ export const SEAT_CHECKOUT_SELECT = {
   checkoutAt: true,
   checkinAt: true,
   checkoutNotes: true,
-  checkinNotes: true,
   assignedUser: { select: PESSOA_DO_ASSENTO },
   assignedAsset: { select: ATIVO_DO_ASSENTO },
 } as const;
@@ -78,7 +74,6 @@ export const SEAT_SELECT = {
   seatNumber: true,
   burnedAt: true,
   retiredAt: true,
-  notes: true,
   checkouts: {
     where: { checkinAt: null },
     select: SEAT_CHECKOUT_SELECT,

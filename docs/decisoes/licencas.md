@@ -255,7 +255,7 @@ Ele não é da pessoa.
 
 ## D94 — Anexo de licença sai da fase
 
-**Decidido:** a F6 não entrega anexo de licença. O item continua no `../ROADMAP.md`, com
+**Decidido:** a F6 não entrega anexo de licença. O item continua no roadmap do projeto, com
 o pré-requisito escrito.
 **Descartado:** "depende do upload que nasce na F2", como os pré-requisitos anotavam.
 
@@ -268,6 +268,10 @@ etapa inteira, e não é sobre licença: é sobre anexo.
 **O que se perde, declarado:** a nota fiscal e o contrato da licença continuam fora do
 sistema por mais uma fase. Contra isso, `orderNumber`, `purchaseDate` e `purchaseCost`
 já entram na F6 — a *referência* ao documento existe, o arquivo é que não.
+
+> **Sem objeto desde o [segundo de-escopo](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** os anexos saíram
+> inteiros (domínio `attachment`, `core/storage`), e com eles o upload de ativo que este item
+> estenderia. O roadmap que guardava o pendente também foi apagado; não há item em aberto.
 
 ---
 
@@ -308,3 +312,7 @@ fórmula de `livres` (D92) continuam exatamente como eram.
 
 **O protocolo não muda:** `installedSoftware` e `softwareHash` continuam no tipo e no parser do
 handshake, com a nota de que o servidor não guarda — mesma escolha do A para `loggedOnUser`.
+
+> **Revisão:** só `installedSoftware` ficou no tipo e no parser (`agent-protocol.types.ts`,
+> `normalize-payload.helper.ts`); `softwareHash` não existe no protocolo de hoje. O argumento não
+> muda — o que o agente manda e o servidor ignora continua no fio, sem renegociar o contrato.

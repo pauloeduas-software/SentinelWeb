@@ -17,8 +17,7 @@
 // divergir de nada, porque não guarda nada.
 // ═════════════════════════════════════════════════════════════════════════════
 
-export const LICENSE_STATUS = ['ATIVA', 'VENCENDO', 'EXPIRADA', 'ENCERRADA'] as const;
-export type LicenseStatus = (typeof LICENSE_STATUS)[number];
+export type LicenseStatus = 'ATIVA' | 'VENCENDO' | 'EXPIRADA' | 'ENCERRADA';
 
 /**
  * A janela do aviso de vencimento, em dias.
@@ -29,7 +28,7 @@ export type LicenseStatus = (typeof LICENSE_STATUS)[number];
  */
 export const DIAS_DE_AVISO = 30;
 
-export interface DatasDaLicenca {
+interface DatasDaLicenca {
   expirationDate: Date | null;
   terminationDate: Date | null;
 }

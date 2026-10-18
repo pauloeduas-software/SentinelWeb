@@ -55,8 +55,9 @@ sobre outra coisa.
 > A verificação roda duas vezes — no `globalSetup` e no setup de cada arquivo —
 > porque são **processos diferentes**, cada um com o seu `process.env`.
 
-O `.env.test` é **versionado**: não há segredo nele, o banco é descartável e o
-administrador é o mesmo do seed. Quem clonar o repositório roda `npm test` sem
+O `.env.test` é **versionado**: não há segredo nele, o banco é descartável e a
+senha é a do administrador que o próprio harness cria (`ADMIN_DE_TESTE`, em
+`tests/setup/database.ts` — o seed não cria conta). Quem clonar o repositório roda `npm test` sem
 configurar nada (só precisa do Postgres de pé: `docker compose up -d`).
 
 ---
@@ -70,15 +71,14 @@ configurar nada (só precisa do Postgres de pé: `docker compose up -d`).
 | `tests/invariantes/` | as do [`invariantes.md`](invariantes.md) | vermelho aqui = o dado já pode estar errado no banco |
 | `tests/corridas/` | duas requisições simultâneas, e o placar | o que "passa no teste com um usuário" |
 | `tests/listagens/` | o que cada vista e cada leitura DEVOLVE, e o que ela esconde | filtro que esconde demais não dá erro: some linha e ninguém percebe |
-| `tests/estoque/` | o saldo derivado, a trava da linha do item e as operações do `StockItem`/`StockMovement` | é a única pasta POR DOMÍNIO que sobrou, e é de propósito: invariante, corrida e operação contam a mesma história sobre as mesmas duas tabelas, e separá-las faria quem investiga um saldo errado abrir três arquivos distantes |
+| `tests/estoque/` | o saldo derivado, a trava da linha do item e as operações do `StockItem`/`StockMovement` | é uma das três pastas POR DOMÍNIO (com `descoberta/` e `licencas/`), e é de propósito: invariante, corrida e operação contam a mesma história sobre as mesmas duas tabelas, e separá-las faria quem investiga um saldo errado abrir três arquivos distantes |
 | `tests/descoberta/` | a borda do agente, a cascata de matching por hardware, a fila, o vínculo manual e o comando — sem inferência por usuário logado ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)) nem fusão de máquinas ([H](../decisoes/reconciliacao.md#h--a-fusão-de-máquinas-sai)) | a segunda pasta por domínio, pelo mesmo motivo: a história é uma só, do handshake até o cadastro que uma pessoa aceita ou vincula à mão |
 | `tests/licencas/` | o assento materializado e a corrida do `SKIP LOCKED` — sem chave cifrada nem canário, que saíram com a conformidade de software ([G](../decisoes/licencas.md#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples)) | terceira pasta por domínio: contrato e assento contam a mesma história |
 | `tests/jobs/` | a janela de execução de um job (o D79) | o cenário que ela impede — dois jobs disputando a mesma coluna — não dá erro nenhum: o segundo simplesmente nunca roda |
-| `tests/configuracoes/` | o recorte de `GET/PUT /api/settings` e o que ele NÃO leva ao navegador | o `AppSetting` encolheu junto com cada corte de escopo; este arquivo prova que o que saiu do schema também saiu do contrato |
 
 ### `estoque/` — a que falharia em silêncio
 
-**`invariantes.test.ts` › o CHECK do banco recusa a linha incoerente mesmo por fora da API.**
+**`invariantes.test.ts` › o CHECK do Postgres recusa a linha incoerente mesmo por fora da API.**
 `stock_movements_forma` (SAIDA com exatamente um alvo e uma unidade), `stock_items_qty_nao_negativa`
 e a devolução que não antecede a saída existem para quem não passa pelo use-case — o `psql` à mão,
 um script. Testar isso por HTTP seria impossível por construção; o teste insere direto no banco e
@@ -212,7 +212,7 @@ suíte provaria coisas sobre um schema que produção não tem). `each-file.ts`
 trunca e semeia **por arquivo**.
 
 **3. `tests/helpers/` — o cliente.** `criarApi()` monta a aplicação e entra como
-o administrador do seed; `api.anonimo` é o mesmo app sem cookie, para testar a
+o administrador do harness; `api.anonimo` é o mesmo app sem cookie, para testar a
 porta fechada. Os fixtures criam cenário **pela API**, nunca por `prisma.create`
 — um registro criado por Prisma pula o zod da borda, o `strictObject`, a etiqueta
 automática e o `ActivityLog`, e o teste passaria a provar coisas sobre um dado que
@@ -222,9 +222,10 @@ nenhum usuário consegue criar.
 dois arquivos truncariam a tabela no meio do teste do outro, e a falha mudaria de
 lugar a cada execução — suíte que falha sem repetir ensina a ignorar o vermelho.
 
-Hoje há **um projeto só** (`banco`) — o par de projetos (`banco` + `puro`) saiu quando o
-corte de escopo levou o último arquivo `.puro.test.ts`, e um projeto com zero arquivos não é
-separação. Volta junto com o próximo teste que não precisar do banco.
+Hoje **não há projeto nenhum** — uma configuração só, a do `vitest.config.ts`. O par de
+projetos (`banco` + `puro`) saiu quando o corte de escopo levou o último arquivo
+`.puro.test.ts`, e um projeto com zero arquivos não é separação. Volta junto com o próximo
+teste que não precisar do banco.
 
 ---
 

@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../core/api/apiClient';
-import type { AgentAction, Endpoint } from '../shared/endpoint.types';
+import type { AgentAction, Endpoint, EndpointComTelemetria } from '../shared/endpoint.types';
 import type { ListEnvelope } from '../shared/list.types';
 
 // Chaves de cache do domínio, num lugar só: quem invalida não precisa adivinhar
@@ -12,14 +12,15 @@ export const endpointKeys = {
 };
 
 /** O recorte de `GET /api/endpoints?vinculo=`: `com` ativo, ou `sem`. */
-export type Vinculo = 'com' | 'sem';
+type Vinculo = 'com' | 'sem';
 
 // Ritmo da revalidação. O agente manda amostra a cada poucos segundos; abaixo
 // disso só geraria requisição sem dado novo.
 const POLL_INTERVAL_MS = 5_000;
 
 /**
- * Máquinas descobertas pelo agente, com a amostra de telemetria mais recente.
+ * Máquinas descobertas pelo agente — sem telemetria: a amostra de UMA máquina
+ * vem por `useEndpointQuery`.
  * Revalida sozinha: não há `setInterval` nem limpeza de timer para manter.
  *
  * Quem a consome é `/descobertas`, nas DUAS listas — as máquinas sem vínculo e
@@ -55,7 +56,7 @@ export function useEndpointsQuery(vinculo?: Vinculo) {
 export function useEndpointQuery(id: string | null) {
   return useQuery({
     queryKey: endpointKeys.detalhe(id ?? ''),
-    queryFn: async () => (await apiClient.get<Endpoint>(`/endpoints/${id}`)).data,
+    queryFn: async () => (await apiClient.get<EndpointComTelemetria>(`/endpoints/${id}`)).data,
     enabled: id != null,
     refetchInterval: POLL_INTERVAL_MS,
   });

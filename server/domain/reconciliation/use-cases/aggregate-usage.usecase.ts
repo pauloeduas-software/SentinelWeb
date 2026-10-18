@@ -3,10 +3,10 @@ import { prisma } from '../../../core/database/prismaClient';
 // ATIVO OCIOSO — a telemetria agregada por dia, por ativo.
 //
 // Pelo mesmo motivo do D49: sem agregação, "quem não usa este notebook há 30
-// dias" varre milhões de linhas de `telemetries`. E há um segundo motivo, que é
-// o item do TODO: a telemetria é dado de série temporal e um dia vai ter
-// expurgo — o agregado sobrevive a ele, e é o agregado que responde a pergunta
-// de inventário.
+// dias" varre milhões de linhas de `telemetries`. E há um segundo motivo: a
+// telemetria crua é expurgada depois de 3 dias (`purge-telemetry.usecase.ts`)
+// — o agregado sobrevive a ele, e é o agregado que responde a pergunta de
+// inventário.
 
 /**
  * O tamanho do balde de atividade. Cinco minutos, e o número não é gosto: é a
@@ -39,31 +39,33 @@ export async function agregarUsoDosAtivos(dias = 3): Promise<number> {
   // última hora dele, para sempre, sem erro nenhum aparecer.
   //
   // Alinhado à meia-noite UTC, todo dia que entra na janela entra COMPLETO, e é
-  // o mesmo eixo do `(t."timestamp" AT TIME ZONE 'UTC')::date` do agrupamento.
+  // o mesmo eixo do `t."timestamp"::date` do agrupamento. A coluna é `timestamp`
+  // SEM fuso e o Prisma grava em UTC, então o `::date` direto já é o dia UTC.
+  // Um `AT TIME ZONE 'UTC'` aqui viraria `timestamptz`, e o `::date` passaria a
+  // usar o fuso da SESSÃO do Postgres: com o banco fora de UTC, o dia agrupado
+  // deixaria de bater com esta janela.
   const agora = new Date();
   const desde = new Date(Date.UTC(
     agora.getUTCFullYear(), agora.getUTCMonth(), agora.getUTCDate() - (dias - 1),
   ));
 
   return prisma.$executeRaw`
-    INSERT INTO "asset_usage_daily" ("id", "assetId", "day", "activeMinutes", "samples")
+    INSERT INTO "asset_usage_daily" ("id", "assetId", "day", "activeMinutes")
     SELECT
       gen_random_uuid(),
       e."assetId",
-      (t."timestamp" AT TIME ZONE 'UTC')::date,
+      t."timestamp"::date,
       LEAST(
         1440,
         COUNT(DISTINCT floor(extract(epoch FROM t."timestamp") / (${MINUTOS_POR_BALDE} * 60)))::int
           * ${MINUTOS_POR_BALDE}
-      ),
-      COUNT(*)::int
+      )
     FROM "telemetries" t
     JOIN "endpoints" e ON e."id" = t."endpointId"
     WHERE e."assetId" IS NOT NULL
       AND t."timestamp" >= ${desde}
-    GROUP BY e."assetId", (t."timestamp" AT TIME ZONE 'UTC')::date
+    GROUP BY e."assetId", t."timestamp"::date
     ON CONFLICT ("assetId", "day") DO UPDATE
-      SET "activeMinutes" = EXCLUDED."activeMinutes",
-          "samples" = EXCLUDED."samples"
+      SET "activeMinutes" = EXCLUDED."activeMinutes"
   `;
 }

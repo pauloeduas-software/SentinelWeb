@@ -1,11 +1,11 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { SEM_PARAMETROS } from '../../../core/http/sem-parametros';
 import { parseListQuery } from '../../../core/http/list-query';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { historyQuerySchema } from '../../shared/history.schema';
-import { LICENSE_SORTABLE } from '../helpers/license-audited.helper';
 import {
-  checkinSeatSchema, checkoutSeatSchema,
+  checkoutSeatSchema,
   createLicenseSchema, licenseFiltersSchema, updateLicenseSchema,
 } from '../schemas/license.schema';
 import { listLicenses } from '../use-cases/list-licenses.usecase';
@@ -25,7 +25,7 @@ import { listAssetSeats } from '../use-cases/list-asset-seats.usecase';
 // Sem try/catch em lugar nenhum — no Fastify, handler async que rejeita cai
 // sozinho no `errorHandler`. O `parse` do schema devolve 422 com o campo que
 // falhou, e os `AppError` dos use-cases (409 de sem assento, 404 de licença
-// inexistente, 422 de chave sem criptografia) saem pelo mesmo caminho.
+// inexistente) saem pelo mesmo caminho.
 
 export const licenseController = {
   async list(request: FastifyRequest) {
@@ -35,9 +35,6 @@ export const licenseController = {
     const filtros = licenseFiltersSchema.parse(categoryId === undefined ? {} : { categoryId });
 
     const query = parseListQuery(paginacao, {
-      sortable: LICENSE_SORTABLE,
-      defaultSort: 'name',
-      defaultOrder: 'asc',
       // A licença TEM lixeira, como o estoque (D36) e pelo mesmo motivo: apagar
       // de verdade levaria junto o histórico de quem ocupou cada assento, que é
       // a única coisa da fase que não se reconstrói.
@@ -101,8 +98,9 @@ export const licenseController = {
    */
   async checkinSeat(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    const data = checkinSeatSchema.parse(request.body ?? {});
-    return checkinSeat(id, data, atorDaRequisicao(request));
+    // A devolução não leva nota nem nada: o corpo, se vier, é vazio.
+    SEM_PARAMETROS.parse(request.body ?? {});
+    return checkinSeat(id, atorDaRequisicao(request));
   },
 
   async history(request: FastifyRequest) {

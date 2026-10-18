@@ -207,27 +207,6 @@ describe('o alerta de assentos abaixo do mínimo', () => {
     const semPiso = body.assentosBaixos.find((linha) => linha.id !== comPiso.id);
     expect(semPiso).toBeUndefined();
   });
-
-  it('o tipo é FILTRO: `?tipo=` devolve uma categoria e a outra vazia', async () => {
-    const soVencendo = await api.get<{ vencendo: unknown[]; assentosBaixos: unknown[] }>(
-      '/api/licenses/alerts?tipo=vencendo',
-    );
-    expect(soVencendo.body.vencendo.length).toBeGreaterThan(0);
-    expect(soVencendo.body.assentosBaixos).toEqual([]);
-
-    const soAssentos = await api.get<{ vencendo: unknown[]; assentosBaixos: unknown[] }>(
-      '/api/licenses/alerts?tipo=assentosBaixos',
-    );
-    expect(soAssentos.body.assentosBaixos.length).toBeGreaterThan(0);
-    expect(soAssentos.body.vencendo).toEqual([]);
-  });
-
-  it('tipo escrito errado é 422, não silêncio', async () => {
-    // Sem o `strictObject` na query, `?tip=vencendo` devolveria as duas
-    // categorias e ninguém saberia que o filtro não pegou.
-    expect((await api.get('/api/licenses/alerts?tipo=vencerndo')).status).toBe(422);
-    expect((await api.get('/api/licenses/alerts?tip=vencendo')).status).toBe(422);
-  });
 });
 
 describe('o piso do contrato quando a perda já aconteceu', () => {

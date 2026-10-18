@@ -70,7 +70,7 @@ const logger = createLogger('app');
 // o `/agent-hub` tem autenticação própria é conhecimento de NEGÓCIO — e `core`
 // não importa `domain`. Rota nova nasce protegida: quem quiser abrir uma
 // escreve a linha e o motivo aqui, onde a decisão fica visível na revisão.
-export const ROTAS_PUBLICAS: readonly RotaPublica[] = [
+const ROTAS_PUBLICAS: readonly RotaPublica[] = [
   { method: 'GET', path: '/health', motivo: 'liveness do container, que não tem sessão' },
   { method: 'GET', path: '/health/ready', motivo: 'readiness do monitoramento, que também não tem' },
   { method: 'POST', path: '/api/auth/login', motivo: 'é por onde a sessão nasce' },
@@ -210,7 +210,7 @@ export async function buildApp(
   // ordem: hook de instância vale para as rotas registradas depois dele.
   //
   // `preHandler` roda na ordem de registro, então este sempre vê o
-  // `request.permissions` que o guard de sessão acabou de pendurar.
+  // `request.cargo` que o guard de sessão acabou de pendurar.
   //
   // O `verificarCobertura` devolvido é chamado DEPOIS de todos os maestros: é
   // só lá que a tabela de rotas está completa (D137).

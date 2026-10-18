@@ -18,7 +18,7 @@ import type {
 // POSTOS (a ficha mostra as unidades da mesa), do mesmo jeito que a licença
 // invalida posse ao entregar um assento.
 
-export const stockKeys = {
+const stockKeys = {
   all: ['stock'] as const,
   list: (params: ListParamsComCategoria) => ['stock', 'list', params] as const,
   item: (id: string) => ['stock', 'item', id] as const,
@@ -114,8 +114,8 @@ export function useCheckoutStock() {
 export function useCheckinStock() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ movementId, notes }: { movementId: string; notes?: string | null }) =>
-      apiClient.post<MovimentoDeEstoque>(`/stock/movements/${movementId}/checkin`, { notes }),
+    mutationFn: ({ movementId }: { movementId: string }) =>
+      apiClient.post<MovimentoDeEstoque>(`/stock/movements/${movementId}/checkin`),
     onSuccess: () => invalidarEstoqueEPosse(queryClient),
   });
 }

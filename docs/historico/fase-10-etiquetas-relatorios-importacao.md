@@ -1,6 +1,7 @@
 # Plano de implementação — Fase 10: etiquetas, relatórios e importação ✅ CONCLUÍDA
 
-> Fase 10 do [`../ROADMAP.md`](../ROADMAP.md). Convenções de camada:
+> Fase 10 do roadmap do projeto (apagado depois;
+> o escopo que ficou está em [`../decisoes/escopo.md`](../decisoes/escopo.md)). Convenções de camada:
 > [`../referencia/arquitetura.md`](../referencia/arquitetura.md). Contrato de posse: [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md).
 >
 > Escrito em **24/09/2026** como plano prospectivo e **revisado em 01/10/2026** contra a
@@ -12,12 +13,19 @@
 >
 > Esforço: **P** = até meio dia · **M** = 1 a 3 dias · **G** = mais de 3 dias · Decisões
 > **D65–D71** (do plano) e **D129–D134** (da revisão), na numeração contínua do projeto
-> (D1–D13 no TODO, D14–D17 em [`../decisoes/posse.md`](../decisoes/posse.md)).
+> (D1–D13 em [`../decisoes/catalogo-e-ativo.md`](../decisoes/catalogo-e-ativo.md) e afins, D14–D17 em [`../decisoes/posse.md`](../decisoes/posse.md)).
 >
 > **A FASE FECHOU.** As oito levas (D0 e A–G) estão aplicadas — ver o
 > [Fechamento da F10](#fechamento-da-f10), no fim deste arquivo, com o que a execução
 > decidiu por conta própria, os cinco defeitos que a revisão do código encontrou depois, e
 > o que ficou de fora com o motivo.
+>
+> **Status (depois do corte de escopo):** a maior parte do que esta fase entregou não existe
+> mais — as etiquetas ([D147](../decisoes/escopo.md#d147--as-etiquetas-saem)), a importação ([D146](../decisoes/escopo.md#d146--a-importação-de-csv-sai-a-carga-é-a-descoberta)), o
+> backup ([D156](../decisoes/escopo.md#d156--o-portal-do-colaborador-e-o-backup-saem)), o builder de relatório ([D154](../decisoes/escopo.md#d154--relatório-vira-três-consultas-fixas)) e, no
+> segundo de-escopo ([O](../decisoes/escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai)), os relatórios que sobraram, o export CSV e a view
+> `vw_asset_responsibles`. A aba *Sistema* saiu depois (commit `e05e2c7`). Do `AppSetting` que a
+> Etapa A fez crescer, ficam a etiqueta automática e os botões da descoberta.
 
 ---
 
@@ -240,7 +248,7 @@ feita antes de existir o segundo chamador.
 
 #### 🟡 11 — O export de licença: a allowlist existia e o plano não a citava
 
-O `../ROADMAP.md` marca em ⚠️ que `productKey` não pode entrar no CSV; o plano da F10 não repetia
+O roadmap marca em ⚠️ que `productKey` não pode entrar no CSV; o plano da F10 não repetia
 isso em lugar nenhum. E a peça certa já existia: `license/helpers/license-select.helper.ts` devolve
 **`productKeyMask`** e nunca a coluna cifrada.
 
@@ -511,7 +519,7 @@ folha*.
 
 > As decisões desta fase moram em [`../decisoes/relatorios-import-etiquetas.md`](../decisoes/relatorios-import-etiquetas.md) — **D65–D71 e D129–D134**. Elas saíram daqui porque decisão se arquiva pelo ASSUNTO que governa, não pela fase que a tomou: quem precisa saber as regras de um assunto não deveria ter que descobrir em que fase ele nasceu.
 
-O índice das 142 está em [`../decisoes/README.md`](../decisoes/README.md).
+O índice das decisões está em [`../decisoes/README.md`](../decisoes/README.md).
 
 ## Riscos e armadilhas
 
@@ -866,6 +874,7 @@ prometendo mais do que o código faz.
   cliente do Postgres na máquina da suíte, na mesma versão major do servidor. O que
   é testado é a tradução da falha (binário ausente → 503 com instrução), o ciclo de
   retenção e as duas recusas de caminho. Está escrito no cabeçalho do arquivo de
-  teste.
+  teste. *(O backup saiu depois, no [D156](../decisoes/escopo.md#d156--o-portal-do-colaborador-e-o-backup-saem), e o arquivo de teste com ele.)*
 - **Materializar a view** continua *não, por ora* (D66), e o gatilho segue sendo o
-  `EXPLAIN` com volume real.
+  `EXPLAIN` com volume real. *(A view saiu no segundo de-escopo, sem leitor —
+  [O](../decisoes/escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai); não há o que materializar.)*

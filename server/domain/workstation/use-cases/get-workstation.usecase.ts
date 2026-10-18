@@ -6,13 +6,12 @@ import { WORKSTATION_DETAIL_SELECT } from '../helpers/workstation-select.helper'
 import { ehPostoVago } from '../helpers/workstation-row.helper';
 
 /**
- * UM posto: quem está nele, o ativo entregue a ele e o estoque na mesa.
+ * UM posto: o ativo entregue a ele, o estoque na mesa e se está vago.
  *
- * São as duas metades do modelo numa tela só (docs/referencia/modelo-de-posse.md): a Camada 2
- * — os ocupantes, com turno — e a Camada 1 vista do lado do posto — as posses
- * abertas cujo alvo é esta localização, mais as unidades de ESTOQUE entregues a
- * ele. É a junção que responde "quem é responsável pelo computador e pelos
- * cinco mouses da Mesa 1": os mesmos ocupantes, pelos dois.
+ * É a Camada 1 vista do lado do posto (docs/referencia/modelo-de-posse.md) — as
+ * posses abertas cujo alvo é esta localização, mais as unidades de ESTOQUE
+ * entregues a ele. Os OCUPANTES (Camada 2) a ficha lê da rota de ocupação; daqui
+ * só sai a contagem deles, de onde vem o `vago`.
  *
  * NÃO exige `isWorkstation` para responder, e isso é decisão. A marca não é só
  * de apresentação: ela é a porta da marca na invariante 19, e ligá-la num local
@@ -69,26 +68,17 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
     endpointId: endpoint?.id ?? null,
   }));
 
-  const { occupants, ...posto } = local;
+  const { _count, ...posto } = local;
 
   return {
     ...posto,
-
-    // Os ocupantes ABERTOS saem aqui para a resposta ser completa por si: um
-    // cliente que chame só esta rota precisa saber quem responde pelo posto, e
-    // é deles que `vago` é derivado. A TELA de detalhe consome a rota de
-    // ocupação (`/api/locations/:id/occupants`) para a mesma lista, porque lá
-    // também mora o histórico e é ela que o adicionar/encerrar invalida.
-    ocupantes: occupants,
-    totalOcupantes: occupants.length,
     ativos,
     totalAtivos: ativos.length,
     itens,
-    totalItens: itens.length,
 
     // `vago` olha só os ATIVOS, e isso é decisão: o sinal existe para o
     // equipamento caro parado em mesa sem ninguém. Um posto com um mouse na
     // gaveta e nenhum ocupante não é o caso que o selo existe para acender.
-    vago: ehPostoVago(occupants.length, ativos.length),
+    vago: ehPostoVago(_count.occupants, ativos.length),
   };
 }

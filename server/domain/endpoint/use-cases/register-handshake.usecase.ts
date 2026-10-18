@@ -29,7 +29,7 @@ const SELECT_ESPECIFICACOES = {
   diskTotalBytes: true,
 } as const;
 
-export interface HandshakeRegistrado {
+interface HandshakeRegistrado {
   id: string;
   /** O ativo vinculado, se houver. Quem detecta mudança de hardware precisa dele. */
   assetId: string | null;

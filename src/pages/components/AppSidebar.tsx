@@ -62,9 +62,9 @@ export default function AppSidebar() {
     () => GRUPOS_DE_MENU
       .map((grupo) => ({
         ...grupo,
-        // SEM PAPEL = TODO MUNDO VÊ. Hoje nenhum item está nesse caso (D148,
+        // SEM CARGO = TODO MUNDO VÊ. Hoje nenhum item está nesse caso (D148,
         // D156), e o campo segue opcional para a próxima tela desse tipo.
-        itens: grupo.itens.filter((item) => item.papel === undefined || pode(item.papel)),
+        itens: grupo.itens.filter((item) => item.cargo === undefined || pode(item.cargo)),
       }))
       .filter((grupo) => grupo.itens.length > 0),
     [pode],

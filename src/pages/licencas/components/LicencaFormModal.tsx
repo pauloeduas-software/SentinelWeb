@@ -84,8 +84,8 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
       await onSubmit(dados);
     } catch (falha) {
       // O apiClient já traduziu a resposta do servidor — é aqui que aparecem o
-      // 422 de categoria do tipo errado, o 422 de chave sem criptografia
-      // configurada e o 409 de reduzir o contrato abaixo do ocupado.
+      // 422 de categoria do tipo errado e o 409 de reduzir o contrato abaixo do
+      // ocupado.
       setErro((falha as Error).message);
     } finally {
       setSalvando(false);
@@ -207,7 +207,8 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
               // depois — quando o assento já queimou não há o que fazer.
               <p className="col-span-2 p-2.5 bg-status-warning/10 border border-status-warning/20 text-status-warning text-[10px] leading-relaxed">
                 Licença não reatribuível: todo assento DEVOLVIDO é queimado e não volta ao
-                contrato. Isso vale também para a devolução automática do desligamento.
+                contrato. Isso vale também para a devolução feita antes de desativar ou excluir o
+                colaborador.
               </p>
             )}
 

@@ -3,6 +3,7 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { conectarAgente, esperarPor } from '../helpers/agente';
 import { cenarioDePosse, criarAtivo } from '../helpers/fixtures';
 import { agregarUsoDosAtivos } from '../../server/domain/reconciliation/use-cases/aggregate-usage.usecase';
+import { expurgarTelemetriaAntiga } from '../../server/domain/endpoint/use-cases/purge-telemetry.usecase';
 import { prisma } from '../../server/core/database/prismaClient';
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -72,17 +73,15 @@ describe('o recálculo é idempotente de verdade', () => {
       where: { assetId: ativo.id, day: diaDeTrabalho },
     });
     expect(inteiro.activeMinutes).toBe(25);
-    expect(inteiro.samples).toBe(5);
 
     // ⚠️ AGORA A JANELA DO JOB. Com o corte em "há N×24 horas", esta chamada
-    // reescrevia o dia com a fração posterior ao corte — 20 minutos e 4
-    // amostras, e cada rodada seguinte tirava mais um pedaço.
+    // reescrevia o dia com a fração posterior ao corte — 20 minutos, e cada
+    // rodada seguinte tirava mais um pedaço.
     await agregarUsoDosAtivos(3);
     const depois = await prisma.assetUsageDaily.findFirstOrThrow({
       where: { assetId: ativo.id, day: diaDeTrabalho },
     });
     expect(depois.activeMinutes).toBe(25);
-    expect(depois.samples).toBe(5);
 
     // E de novo, porque "idempotente" quer dizer quantas vezes forem.
     await agregarUsoDosAtivos(3);
@@ -96,5 +95,48 @@ describe('o recálculo é idempotente de verdade', () => {
   it('o ativo com uso recente não aparece na lista de ociosos', async () => {
     const { body } = await api.get<{ rows: { hostname: string | null }[] }>('/api/reconciliation/idle?dias=30');
     expect(body.rows.map((row) => row.hostname)).not.toContain('pc-uso');
+  });
+});
+
+describe('o expurgo da telemetria crua', () => {
+  it('apaga a amostra com mais de 3 dias e mantém a recente e o uso diário', async () => {
+    const endpoint = await prisma.endpoint.findUniqueOrThrow({ where: { hwid: 'uso-1' } });
+    const amostra = (diasAtras: number) => prisma.telemetry.create({
+      data: {
+        endpointId: endpoint.id,
+        timestamp: diaUtc(diasAtras),
+        cpuUsage: 10,
+        ramTotal: 17179869184n,
+        ramUsed: 8589934592n,
+      },
+    });
+    const velha = await amostra(4);
+    const recente = await amostra(2);
+    const diasAntes = await prisma.assetUsageDaily.count();
+
+    expect(await expurgarTelemetriaAntiga()).toBeGreaterThanOrEqual(1);
+
+    expect(await prisma.telemetry.findUnique({ where: { id: velha.id } })).toBeNull();
+    expect(await prisma.telemetry.findUnique({ where: { id: recente.id } })).not.toBeNull();
+    // O agregado é o que fica: o expurgo não toca `asset_usage_daily`.
+    expect(await prisma.assetUsageDaily.count()).toBe(diasAntes);
+  });
+
+  it('mantém a ÚLTIMA amostra da máquina parada, mesmo velha', async () => {
+    // A máquina desligada há uma semana: a única leitura dela é velha, e é ela
+    // que a aba Máquina mostra. Apagá-la faria a tela dizer "nunca mandou".
+    const parada = await prisma.endpoint.create({
+      data: { hwid: 'parada-1', hostname: 'pc-parado', osVersion: 'Windows 11', status: 'OFFLINE' },
+    });
+    const amostraDe = (diasAtras: number) => prisma.telemetry.create({
+      data: { endpointId: parada.id, timestamp: diaUtc(diasAtras), cpuUsage: 5, ramTotal: 1n, ramUsed: 1n },
+    });
+    const maisVelha = await amostraDe(8);
+    const ultima = await amostraDe(7);
+
+    await expurgarTelemetriaAntiga();
+
+    expect(await prisma.telemetry.findUnique({ where: { id: maisVelha.id } })).toBeNull();
+    expect(await prisma.telemetry.findUnique({ where: { id: ultima.id } })).not.toBeNull();
   });
 });

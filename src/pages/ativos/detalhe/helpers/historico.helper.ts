@@ -27,7 +27,6 @@ const ROTULO_DO_CAMPO: Record<string, string> = {
   statusId: 'Status',
   modelId: 'Modelo',
   locationId: 'Localização',
-  assignedToId: 'Responsável direto',
   orderNumber: 'Número do pedido',
   purchaseDate: 'Data da compra',
   purchaseCost: 'Valor de compra',
@@ -37,9 +36,6 @@ const ROTULO_DO_CAMPO: Record<string, string> = {
   // `notes`: com `notes` ela saía como "Notas" e se confundia com as notas do
   // ativo, que são outra coisa (um campo da ficha, não um registro do evento).
   observacao: 'Observação da baixa',
-  assignmentId: 'Posse',
-  targetType: 'Tipo de alvo',
-  targetId: 'Alvo',
   // O que o `LINK`/`UNLINK` grava no `changes` (F7).
   hostname: 'Máquina',
   hwid: 'Identificador da máquina',

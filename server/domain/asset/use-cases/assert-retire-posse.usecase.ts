@@ -38,6 +38,5 @@ export async function assertSemPosseParaBaixa(
   throw new AppError(
     `${etiqueta} está entregue e não pode receber baixa. Faça a devolução antes.`,
     409,
-    { assetId, assignmentId: posse.id, targetType: posse.targetType },
   );
 }

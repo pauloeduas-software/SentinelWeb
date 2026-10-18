@@ -1,6 +1,7 @@
 # Plano de implementação — Fase 3: autenticação e ator
 
-> Plano **prospectivo** da Fase 3 do [`../ROADMAP.md`](../ROADMAP.md), escrito
+> Plano **prospectivo** da Fase 3 do roadmap do projeto (apagado depois;
+> o escopo que ficou está em [`../decisoes/escopo.md`](../decisoes/escopo.md)), escrito
 > contra o código real depois da F1 e do modelo de posse entrar no schema.
 > Camadas: [`../referencia/arquitetura.md`](../referencia/arquitetura.md) · posse:
 > [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md) e [`../decisoes/posse.md`](../decisoes/posse.md).
@@ -151,7 +152,7 @@ faz polling dela.
 
 > As decisões desta fase moram em [`../decisoes/acesso.md`](../decisoes/acesso.md) — **D22–D26 e o D89**. Elas saíram daqui porque decisão se arquiva pelo ASSUNTO que governa, não pela fase que a tomou: quem precisa saber as regras de um assunto não deveria ter que descobrir em que fase ele nasceu.
 
-O índice das 142 está em [`../decisoes/README.md`](../decisoes/README.md).
+O índice das decisões está em [`../decisoes/README.md`](../decisoes/README.md).
 
 ## Riscos e armadilhas
 
@@ -332,6 +333,10 @@ compilador aponta o que sobrou.
 `username` não loga e `username` sem senha também não: são duas metades da mesma
 decisão — *dar acesso* —, que é diferente de *cadastrar alguém para receber
 equipamento*. Uma rota, uma transação, um lugar para o RBAC da F11 filtrar.
+
+> **Status:** revertida no [R](../decisoes/acesso.md#r--a-senha-nasce-no-cadastro-e-o-login-é-o-e-mail) —
+> a senha entra no cadastro e na edição do usuário, o login é o e-mail, e `username` e
+> `set-password` saíram. Com papel, quem decide o acesso é o papel, não a senha.
 
 **3. `COOKIE_SECRET` não existe.** O plano o listava como pré-requisito. O cookie
 guarda um JWT que **já é assinado** com o `JWT_SECRET`: assinar a assinatura é

@@ -37,7 +37,6 @@ export async function deleteAsset(id: string, actorId: string | null): Promise<v
         `Este ativo ainda ocupa ${assentos} ${assentos === 1 ? 'assento' : 'assentos'} de licença. `
         + 'Devolva os assentos pela aba Licenças antes de excluir.',
         409,
-        { assentosDeLicenca: assentos },
       );
     }
 

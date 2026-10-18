@@ -39,7 +39,7 @@ export function countAgentsOnline(): number {
  *   `DESCONECTADO`  não há socket aberto para este HWID neste processo.
  *   `FALHOU`        havia socket, e a escrita nele falhou.
  */
-export type EntregaAoAgente = 'ENTREGUE' | 'DESCONECTADO' | 'FALHOU';
+type EntregaAoAgente = 'ENTREGUE' | 'DESCONECTADO' | 'FALHOU';
 
 /**
  * Entrega um pacote ao agente, e só diz `ENTREGUE` quando o socket confirmou.

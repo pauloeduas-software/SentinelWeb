@@ -2,7 +2,7 @@
  * Linha de uma tabela de catálogo.
  *
  * Os campos variam por tabela — quem diz quais existem e como mostrá-los é a
- * spec de interface (src/pages/configuracoes/specs/). Tipar as sete linhas
+ * spec de interface (src/pages/configuracoes/specs/). Tipar as cinco linhas
  * separadamente aqui só duplicaria, em TypeScript, o que o servidor já garante
  * com o `select` de cada spec.
  */

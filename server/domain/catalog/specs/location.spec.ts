@@ -18,11 +18,6 @@ export const locationSpec: CatalogSpec = {
     id: true, name: true, isWorkstation: true, isActive: true,
     address: true, city: true, state: true, zip: true, phone: true, notes: true, createdAt: true,
   },
-  // `isWorkstation` ordena junto porque é o corte que a lista de localizações
-  // pede primeiro: as mesas de um lado, as filiais do outro. Booleano ordena
-  // false → true no Postgres, então `order=desc` traz os postos ao topo.
-  sortable: ['name', 'city', 'isWorkstation', 'isActive', 'createdAt'],
-  defaultSort: 'name',
   searchable: ['name', 'city', 'address'],
   audited: [
     'name', 'isWorkstation', 'isActive',
@@ -105,7 +100,6 @@ export const locationSpec: CatalogSpec = {
         `Este local tem ${quantos} ativos entregues e um posto de trabalho tem no máximo um. `
           + 'Devolva os que não ficam nele antes de marcá-lo como posto.',
         409,
-        { ativos: quantos },
       );
     }
   },

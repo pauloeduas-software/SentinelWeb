@@ -1,24 +1,13 @@
-// O CATÁLOGO DE COLUNAS DA LISTAGEM DE ATIVOS (F10, Etapa B) — o de INTERFACE.
+// O CATÁLOGO DE COLUNAS DA LISTAGEM DE ATIVOS — o que o seletor de colunas
+// oferece.
 //
-// ═════════════════════════════════════════════════════════════════════════════
-// ELE É DECLARADO DUAS VEZES NO PROJETO, DE PROPÓSITO (D71).
-//
-// Aqui vive o catálogo da TELA: qual é o rótulo de cada coluna, quais nascem
-// visíveis e qual nunca pode ser escondida. No servidor vive a ALLOWLIST, ao
-// lado do `ASSET_SORTABLE` que já mora em `asset/helpers/asset-filters.helper.ts`
-// — e é ela que decide o que o export e o report builder aceitam.
-//
-// Um arquivo compartilhado seria o óbvio e está proibido: o lint impede `src/`
-// importar de `server/` (eslint.config.js), e a regra existe para o Prisma não
-// acabar no bundle do navegador. Não vale furá-la por uma lista de strings.
-//
-// A DIVERGÊNCIA ENTRE AS DUAS É BARULHENTA, e é isso que torna a duplicação
-// aceitável: token que o servidor não conhece volta 422 com a lista dos
-// válidos. O modo de falha é uma mensagem, não uma coluna em branco.
-// ═════════════════════════════════════════════════════════════════════════════
+// Só a TELA conhece este catálogo: qual é o rótulo de cada coluna, quais nascem
+// visíveis e qual nunca pode ser escondida. O servidor não sabe de coluna
+// nenhuma — a listagem devolve sempre o mesmo `ASSET_SELECT`, e escolher o que
+// mostrar é decisão de quem olha, guardada no navegador (`asset.store.ts`).
 
 export interface ColunaDeAtivo {
-  /** O MESMO token que o export manda para o servidor. */
+  /** A chave da coluna — é o que a preferência salva guarda. */
   token: string;
   rotulo: string;
   /**
@@ -37,17 +26,15 @@ export interface ColunaDeAtivo {
 }
 
 export const COLUNAS_DE_ATIVO: readonly ColunaDeAtivo[] = [
-  // A célula da etiqueta mostra a SÉRIE embaixo; no arquivo elas são duas
-  // colunas, porque é por uma delas que se procura e pela outra que se confere.
+  // A célula da etiqueta mostra a SÉRIE embaixo.
   { token: 'assetTag', rotulo: 'Etiqueta', padrao: true, fixa: true },
-  // A célula do modelo mostra o FABRICANTE embaixo, pelo mesmo motivo.
+  // A célula do modelo mostra o FABRICANTE embaixo.
   { token: 'model', rotulo: 'Modelo', padrao: true },
   { token: 'category', rotulo: 'Categoria', padrao: true },
   { token: 'status', rotulo: 'Status', padrao: true },
   { token: 'location', rotulo: 'Localização', padrao: true },
   { token: 'responsible', rotulo: 'Responsável', padrao: true },
-  // Custo e data juntos na tela; separados no arquivo, porque ninguém soma uma
-  // coluna com data e dinheiro dentro.
+  // Custo e data da compra juntos, numa célula só.
   { token: 'purchase', rotulo: 'Compra', padrao: true },
 
   // As que a tela não mostrava, e que o payload da listagem JÁ TRAZ. Nenhuma

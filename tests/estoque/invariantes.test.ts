@@ -84,8 +84,8 @@ describe('o saldo é calculado, nunca coluna', () => {
     const { status, body } = await paraLaura(teclado.id);
     expect(status).toBe(409);
     expect(body.error).toMatch(/sem unidade dispon[íi]vel/i);
-    // Os números vão no corpo para a tela não ter que recontar.
-    expect(body).toMatchObject({ qty: 1, fora: 1, disponivel: 0 });
+    // Os números vão na frase, para a tela não ter que recontar.
+    expect(body.error).toMatch(/1 de 1 fora do estoque/);
   });
 
   it('a saída de n unidades grava n linhas de 1, e pede n de uma vez', async () => {
@@ -198,22 +198,22 @@ describe('a quantidade não é campo do formulário', () => {
   });
 
   it('a ENTRADA soma ao total e grava o movimento; a BAIXA subtrai', async () => {
-    const papel = await item('Resma da entrada', 2);
+    const cargo = await item('Resma da entrada', 2);
 
     const entrada = await api.post<{ item: { qty: number; disponivel: number }; movimento: { kind: string; qty: number } }>(
-      `/api/stock/items/${papel.id}/adjust`, { kind: 'ENTRADA', qty: 3, notes: 'nota fiscal 123' },
+      `/api/stock/items/${cargo.id}/adjust`, { kind: 'ENTRADA', qty: 3, notes: 'nota fiscal 123' },
     );
     expect(entrada.status).toBe(201);
     expect(entrada.body.item).toMatchObject({ qty: 5, disponivel: 5 });
     expect(entrada.body.movimento).toMatchObject({ kind: 'ENTRADA', qty: 3 });
 
-    const baixa = await api.post<{ item: { qty: number } }>(`/api/stock/items/${papel.id}/adjust`, { kind: 'BAIXA', qty: 1 });
+    const baixa = await api.post<{ item: { qty: number } }>(`/api/stock/items/${cargo.id}/adjust`, { kind: 'BAIXA', qty: 1 });
     expect(baixa.status).toBe(201);
     expect(baixa.body.item.qty).toBe(4);
 
     // O cadastro inicial é a primeira ENTRADA: a história começa do zero.
     const movimentos = await prisma.stockMovement.findMany({
-      where: { itemId: papel.id }, orderBy: { createdAt: 'asc' }, select: { kind: true, qty: true },
+      where: { itemId: cargo.id }, orderBy: { createdAt: 'asc' }, select: { kind: true, qty: true },
     });
     expect(movimentos).toEqual([
       { kind: 'ENTRADA', qty: 2 }, { kind: 'ENTRADA', qty: 3 }, { kind: 'BAIXA', qty: 1 },
@@ -226,12 +226,11 @@ describe('a quantidade não é campo do formulário', () => {
 
     // Dar baixa de 2 deixaria o total em 1 com 2 unidades na rua: a baixa diz
     // que sumiram unidades que estão com gente.
-    const { status, body } = await api.post<{ error: string; fora: number }>(
+    const { status, body } = await api.post<{ error: string }>(
       `/api/stock/items/${fone.id}/adjust`, { kind: 'BAIXA', qty: 2 },
     );
     expect(status).toBe(409);
-    expect(body.error).toMatch(/abaixo do que está fora/i);
-    expect(body.fora).toBe(2);
+    expect(body.error).toMatch(/abaixo do que está fora do estoque \(2\)/i);
     expect((await lerItem(fone.id)).body.qty).toBe(3);
 
     // Baixa de 1 cabe: o total fica igual ao que está fora.
@@ -275,9 +274,9 @@ describe('a lixeira é protegida por 409, e o nome fica livre nela', () => {
     const webcam = await item('Webcam da lixeira', 1);
     const saida = await paraLaura(webcam.id);
 
-    const recusa = await api.delete<{ error: string; fora: number }>(`/api/stock/items/${webcam.id}`);
+    const recusa = await api.delete<{ error: string }>(`/api/stock/items/${webcam.id}`);
     expect(recusa.status).toBe(409);
-    expect(recusa.body.fora).toBe(1);
+    expect(recusa.body.error).toMatch(/1 unidade fora do estoque/);
 
     expect((await api.post(`/api/stock/movements/${saida.body.unidades[0].id}/checkin`, {})).status).toBe(200);
     expect((await api.delete(`/api/stock/items/${webcam.id}`)).status).toBe(200);
@@ -309,14 +308,13 @@ describe('invariante 6 — a ponta do estoque', () => {
     const mouse = await item('Mouse do Pedro', 1);
     expect((await sair(mouse.id, { targetType: 'USER', targetUserId: pessoa })).status).toBe(201);
 
-    const { status, body } = await api.delete<{ error: string; itensEmPosse: number }>(`/api/users/${pessoa}`);
+    const { status, body } = await api.delete<{ error: string }>(`/api/users/${pessoa}`);
     expect(status).toBe(409);
     expect(body.error).toMatch(/1 item de estoque/);
-    expect(body.itensEmPosse).toBe(1);
 
-    // A ficha da pessoa conta a mesma ponta.
-    const ficha = await api.get<{ posseAberta: { itensEmPosse: number } }>(`/api/users/${pessoa}`);
-    expect(ficha.body.posseAberta.itensEmPosse).toBe(1);
+    // A ficha da pessoa mostra a mesma ponta, por unidade.
+    const ficha = await api.get<{ itens: unknown[] }>(`/api/users/${pessoa}`);
+    expect(ficha.body.itens).toHaveLength(1);
   });
 
   it('a unidade do POSTO não conta para a pessoa que o ocupa', async () => {
@@ -324,9 +322,10 @@ describe('invariante 6 — a ponta do estoque', () => {
     // ocupa a Mesa 1 (caso acima), a mesa tem unidade, e nada saiu no NOME dela
     // neste arquivo — a contagem dela é zero. (A Laura não serve de prova: ela
     // recebeu as unidades dos casos de saldo.)
-    const ficha = await api.get<{ posseAberta: { itensEmPosse: number; postosOcupados: number } }>(`/api/users/${cenario.ana}`);
-    expect(ficha.body.posseAberta.postosOcupados).toBeGreaterThanOrEqual(1);
-    expect(ficha.body.posseAberta.itensEmPosse).toBe(0);
+    const postos = await api.get<unknown[]>(`/api/users/${cenario.ana}/occupancies`);
+    expect(postos.body.length).toBeGreaterThanOrEqual(1);
+    const ficha = await api.get<{ itens: unknown[] }>(`/api/users/${cenario.ana}`);
+    expect(ficha.body.itens).toHaveLength(0);
   });
 
   it('desativado não recebe unidade (409), e cadastro na lixeira também não (404)', async () => {
@@ -344,7 +343,7 @@ describe('invariante 6 — a ponta do estoque', () => {
   });
 });
 
-describe('a porta fechada e o papel', () => {
+describe('a porta fechada e o cargo', () => {
   it('as DEZ rotas do domínio exigem sessão — a garantia é por OMISSÃO', async () => {
     // Rota nova sem linha no mapa de permissão é rota que QUALQUER sessão
     // alcança, e nada falha: o boot derruba isso (D137/D148), mas o que se

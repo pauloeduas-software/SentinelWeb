@@ -15,7 +15,7 @@ import type { AcaoLinhaId } from '../specs/catalog-ui.types';
  * cada uma faz. Quem sabe é quem trata o `id` — hoje, o `useOcupantes`. Assim
  * uma ação nova não mexe neste arquivo.
  */
-export interface AcaoLinhaAberta {
+interface AcaoLinhaAberta {
   id: AcaoLinhaId;
   registro: CatalogRow;
 }

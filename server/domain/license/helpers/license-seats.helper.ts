@@ -65,7 +65,7 @@ interface LinhaDaContagem {
 /**
  * A contagem de VÁRIAS licenças, em UMA consulta.
  *
- * Em lote e não por linha pelo mesmo motivo do `contarEmUso` do estoque: a
+ * Em lote e não por linha pelo mesmo motivo do `contarFora` do estoque: a
  * listagem mostra até 100 licenças e uma consulta por linha seria N+1 para
  * pintar uma página — com a agravante de que aqui a conta é a COLUNA PRINCIPAL
  * da tela, então ninguém poderia deixá-la para depois.
@@ -249,7 +249,7 @@ export async function travarAssento(client: ClienteQueTrava, seatId: string): Pr
  * continua sendo uma linha que o restore vai disputar. Quem decide o que fazer
  * com a lixeira é a consulta seguinte, que passa pelo escopo da extension.
  */
-export async function travarLicenca(client: ClienteQueTrava, licenseId: string): Promise<boolean> {
+async function travarLicenca(client: ClienteQueTrava, licenseId: string): Promise<boolean> {
   const linhas = await client.$queryRaw<{ id: string }[]>(
     Prisma.sql`SELECT id FROM licenses WHERE id = ${licenseId}::uuid FOR UPDATE`,
   );

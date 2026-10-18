@@ -30,7 +30,7 @@ export interface EspecificacoesColetadas {
   diskTotalBytes: bigint | null;
 }
 
-export interface MudancaDetectada {
+interface MudancaDetectada {
   field: keyof EspecificacoesColetadas;
   oldValue: string;
   newValue: string;

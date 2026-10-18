@@ -8,23 +8,20 @@ import { assetDetailSelect, ASSET_SELECT } from '../helpers/asset-select.helper'
 // deve abrir tela de detalhe — ele volta pela restauração, não pela URL.
 function buscarAtivo(id: string, podeVerCusto: boolean) {
   return prisma.asset.findFirst({
-    // O select DEPENDE DA SESSÃO (D77). Sem `assets.viewCost` não vêm nem a
-    // coluna de custo nem a REGRA de depreciação — ver `assetDetailSelect`.
+    // O select DEPENDE DA SESSÃO (D77). Quem não é `ADMIN` não recebe a coluna
+    // de custo — ver `assetDetailSelect`.
     where: { id },
     select: assetDetailSelect(podeVerCusto) as typeof ASSET_SELECT,
   });
 }
 
 /**
- * O ativo com a responsabilidade resolvida (Camada 3 do docs/referencia/modelo-de-posse.md) e
- * o valor contábil calculado (F8, D55).
+ * O ativo com a responsabilidade resolvida (Camada 3 do docs/referencia/modelo-de-posse.md).
  *
- * Os dois são DERIVADOS e nenhum é coluna, pelo mesmo motivo com um detalhe
- * invertido: a responsabilidade muda quando um evento acontece, e o valor
- * contábil muda quando nada acontece. O segundo é o que torna a coluna
- * impossível — ela envelheceria sozinha.
+ * DERIVADA, não coluna: a responsabilidade muda quando um evento de posse ou de
+ * ocupação acontece, e uma coluna no ativo teria que ser lembrada em cada um.
  */
-export type AssetDetail = NonNullable<Awaited<ReturnType<typeof buscarAtivo>>> & {
+type AssetDetail = NonNullable<Awaited<ReturnType<typeof buscarAtivo>>> & {
   posse: PosseResolvida;
 };
 
@@ -33,11 +30,10 @@ export type AssetDetail = NonNullable<Awaited<ReturnType<typeof buscarAtivo>>> &
  * fazendo e que não existia: até aqui o modal recebia a linha que a listagem já
  * tinha em memória, e uma URL colada no navegador não tem essa linha.
  *
- * Devolve pelo `ASSET_SELECT` da listagem — a regra
- * de depreciação, que só esta leitura usa. Allowlist, nunca
- * `include` — mais a posse resolvida, pelo mesmo `resolverResponsaveis` da
- * listagem. Recalcular a Camada 3 aqui com outra consulta seria uma segunda
- * implementação da mesma regra, e as duas divergiriam no primeiro ajuste.
+ * Devolve pelo `ASSET_SELECT` da listagem — allowlist, nunca `include` — mais
+ * a posse resolvida, pelo mesmo `resolverResponsaveis` da listagem. Recalcular
+ * a Camada 3 aqui com outra consulta seria uma segunda implementação da mesma
+ * regra, e as duas divergiriam no primeiro ajuste.
  *
  * 404 fora da lixeira: "esse id não existe" e "esse ativo está apagado" são a
  * mesma resposta para quem chegou pela URL.

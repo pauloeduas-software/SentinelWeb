@@ -31,7 +31,7 @@ import type { AgentAction } from '../../domain/shared/endpoint.types';
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** O que aconteceu com o último comando, para a tela dizer algo. */
-export interface RetornoDoComando {
+interface RetornoDoComando {
   tipo: 'enviado' | 'falhou';
   texto: string;
 }

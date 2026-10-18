@@ -92,8 +92,7 @@ export default function ColunasMenu({
               <RotateCcw size={11} /> Restaurar padrão
             </button>
             <p className="text-[10px] text-text-tertiary leading-relaxed">
-              A escolha vale só neste navegador. As colunas criadas em
-              Configurações › Campos aparecem sozinhas quando marcadas como coluna.
+              A escolha vale só neste navegador.
             </p>
           </div>
         </div>

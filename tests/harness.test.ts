@@ -3,6 +3,7 @@ import { criarApi, type ApiDeTeste } from './helpers/app';
 import { nomeDoBanco } from './setup/database';
 import { prisma } from '../server/core/database/prismaClient';
 import { semearBanco } from '../prisma/seeds/index';
+import { ADMIN_DE_TESTE } from './setup/database';
 
 // O teste DO HARNESS. Se este arquivo falha, nenhum outro resultado da suíte
 // significa coisa alguma — então ele prova as premissas antes das regras.
@@ -41,7 +42,7 @@ describe('o harness', () => {
     expect(api.app.server.listening).toBe(false);
   });
 
-  it('entra com o administrador do seed e devolve a sessão em cookie httpOnly', async () => {
+  it('entra com o administrador do harness e devolve a sessão em cookie httpOnly', async () => {
     const { status, body } = await api.get<{ id: string }>('/api/auth/me');
     expect(status).toBe(200);
     expect(body.id).toBe(api.adminId);
@@ -62,7 +63,7 @@ describe('a porta fechada (D22 / F3 Etapa C)', () => {
     const resposta = await api.app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { username: process.env.ADMIN_USERNAME ?? 'admin', password: process.env.ADMIN_PASSWORD },
+      payload: ADMIN_DE_TESTE,
     });
 
     expect(resposta.statusCode).toBe(200);
