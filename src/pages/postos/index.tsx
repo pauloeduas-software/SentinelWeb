@@ -8,18 +8,16 @@ import { VISOES, rotuloDaContagem } from './helpers/postos.helper';
 import { usePostos } from './hooks/usePostos';
 import { usePode } from '../../domain/auth/auth.store';
 
-// O POSTO DE TRABALHO — a Mesa 1, a bancada, o guichê.
+// O POSTO DE TRABALHO — a MesaEscritório, a bancada, o guichê.
 //
-// É o coração do modelo de posse (docs/referencia/modelo-de-posse.md) e estava invisível:
-// montar a Mesa 1 com Laura de manhã e Ana à tarde exigia ir a Configurações,
-// achar a linha no meio das filiais e clicar num ícone pequeno de pessoas.
-// Hoje Configurações nem marca posto; esta tela é a superfície
-// que faltava; o modelo não mudou — o posto continua sendo uma `Location`
-// marcada com `isWorkstation` (D15), e nenhuma tabela nasceu para ela.
+// É o coração do modelo de posse (docs/referencia/modelo-de-posse.md): quem
+// está em cada mesa, o que foi entregue a ela, e se ela está vaga. E é aqui que
+// o posto se CADASTRA — criar, editar, desativar e excluir —, cada um dentro
+// de uma localização de Configurações (decisão Y).
 export default function PostosPage() {
   const {
     postos, total, carregando, erro, page, perPage, setPage, search, changeSearch, view, changeView,
-    modalAberto, openCreate, closeModal, handleCriar,
+    modalAberto, emEdicao, openCreate, openEdit, closeModal, handleSalvar, handleAlternar, handleExcluir,
     postoId, postoAberto, openDetalhe, closeDetalhe, detalhe, detalhePendente, detalheErro, ocupantes,
     devolvendo, handleDevolver, devolvendoItem, handleDevolverItem,
   } = usePostos();
@@ -42,7 +40,7 @@ export default function PostosPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {/* Criar posto grava em `/locations`, que é `ADMIN`; o técnico lê. */}
+          {/* O cadastro do posto é `ADMIN`; o técnico lê e opera a mesa. */}
           {podeCriar && (
             <button
               onClick={openCreate}
@@ -87,6 +85,10 @@ export default function PostosPage() {
       <PostosTable
         postos={postos}
         onAbrir={openDetalhe}
+        podeEditar={podeCriar}
+        onEditar={openEdit}
+        onAlternar={(posto) => void handleAlternar(posto)}
+        onExcluir={(posto) => void handleExcluir(posto)}
         vazio={
           <EstadoDaLista carregando={carregando} erro={erro}>
             {search ? (
@@ -98,19 +100,14 @@ export default function PostosPage() {
             ) : (
               <>
                 <span>Nenhum posto de trabalho cadastrado.</span>
-                {/* A dica é necessária: quem já criou "Mesa 1" como localização
-                    antes desta tela existir não a encontra aqui, porque a marca
-                    de posto nasce desmarcada. Sem isto, a tela pareceria quebrada
-                    justamente para quem tem mais dado.
-                    "O botão acima" só existe para o ADMIN (`podeCriar`): para o
+                {/* "O botão acima" só existe para o ADMIN (`podeCriar`): para o
                     técnico, apontar para um botão que ele não vê era mandá-lo
                     procurar o que não está lá. */}
                 <span className="mt-4 text-[10px] max-w-md leading-relaxed">
                   {podeCriar
                     ? 'Crie a primeira mesa no botão acima. '
                     : 'Postos são criados por um administrador — peça a um. '}
-                  Posto se cria aqui: as localizações de Configurações são gerais e não
-                  viram posto.
+                  Cada posto fica numa localização de Configurações — a Matriz, a Filial.
                 </span>
               </>
             )}
@@ -122,7 +119,9 @@ export default function PostosPage() {
           no mesmo z-index: com a URL de um posto e o formulário aberto pelo
           histórico do navegador, a ficha pintava em cima e fechá-la revelava o
           formulário ainda aberto por baixo. */}
-      {modalAberto && !postoId && <PostoFormModal onClose={closeModal} onSubmit={handleCriar} />}
+      {modalAberto && !postoId && (
+        <PostoFormModal posto={emEdicao} onClose={closeModal} onSubmit={handleSalvar} />
+      )}
 
       {postoId && detalheErro && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">

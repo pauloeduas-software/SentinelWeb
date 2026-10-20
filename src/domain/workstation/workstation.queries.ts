@@ -43,38 +43,46 @@ export function useWorkstationQuery(id: string | null) {
   });
 }
 
-/** Corpo do cadastro de um posto. */
-export interface NovoPostoInput {
-  name: string;
-  notes?: string;
+/** Corpo do cadastro de um posto. Na edição, só o que mudou. */
+export interface PostoInput {
+  name?: string;
+  /** A localização onde o posto fica — obrigatória ao criar. */
+  locationId?: string;
+  notes?: string | null;
+  isActive?: boolean;
 }
 
 /**
- * Cria um posto — gravando em `/locations`, não numa rota própria.
+ * O CADASTRO do posto — `POST`, `PUT` e `DELETE /workstations`, o mesmo CRUD
+ * das tabelas de catálogo no servidor (`workstationSpec`): nome único, 409 pelo
+ * que está nele agora, `ActivityLog`.
  *
- * O posto É uma `Location` (docs/referencia/modelo-de-posse.md, D15): uma rota de escrita
- * separada seria um segundo lugar para criar a mesma linha, e com ela um
- * segundo lugar para esquecer a recusa de nome repetido e o `ActivityLog`. O que esta mutação acrescenta é `isWorkstation: true` — a
- * marca que faz a mesa aparecer em /postos em vez de se perder no meio das
- * filiais.
- *
- * ENDEREÇO, CEP E TELEFONE NÃO SÃO ENVIADOS, e não é omissão: eles não querem
- * dizer nada numa mesa. Quem precisar deles numa localização usa o formulário
- * completo em Configurações.
- *
- * Invalida os DOIS caches porque a linha criada aparece em dois lugares: a
- * lista de postos e a aba Localizações do catálogo. Invalidar só um deixaria o
- * outro mentindo até o próximo refetch.
+ * Invalidam DOIS caches: a lista de postos e as OPÇÕES de posto
+ * (`catalogKeys.tabela('workstations')`), que os seletores da entrega, da saída
+ * de estoque e do vínculo de máquina leem. Sem a segunda, o posto criado não
+ * aparecia no seletor — e o desativado continuava sendo oferecido — até o
+ * `staleTime` vencer.
  */
-export function useCreateWorkstation() {
+function useMutacaoDePosto<T>(mutationFn: (dados: T) => Promise<unknown>) {
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: (data: NovoPostoInput) =>
-      apiClient.post('/locations', { ...data, isWorkstation: true }),
+    mutationFn,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: workstationKeys.all });
-      void queryClient.invalidateQueries({ queryKey: catalogKeys.tabela('locations') });
+      void queryClient.invalidateQueries({ queryKey: catalogKeys.tabela('workstations') });
     },
   });
+}
+
+export function useCreateWorkstation() {
+  return useMutacaoDePosto((data: PostoInput) => apiClient.post('/workstations', data));
+}
+
+export function useUpdateWorkstation() {
+  return useMutacaoDePosto(({ id, data }: { id: string; data: PostoInput }) =>
+    apiClient.put(`/workstations/${id}`, data));
+}
+
+export function useDeleteWorkstation() {
+  return useMutacaoDePosto((id: string) => apiClient.delete(`/workstations/${id}`));
 }

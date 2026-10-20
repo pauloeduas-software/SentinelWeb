@@ -75,7 +75,7 @@ export interface Licenca {
 interface PessoaDoAssento {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
 }
 
 interface AtivoDoAssento {
@@ -89,12 +89,12 @@ interface AtivoDoAssento {
 interface OcupacaoDeAssento {
   id: string;
   seatId: string;
-  assignedUserId: string | null;
+  assignedPersonId: string | null;
   assignedAssetId: string | null;
   checkoutAt: string;
   checkinAt: string | null;
   checkoutNotes: string | null;
-  assignedUser: PessoaDoAssento | null;
+  assignedPerson: PessoaDoAssento | null;
   assignedAsset: AtivoDoAssento | null;
 }
 
@@ -136,7 +136,6 @@ export interface EventoDaLicenca {
   id: string;
   action: string;
   changes: unknown;
-  actorId: string | null;
   createdAt: string;
 }
 
@@ -199,5 +198,5 @@ export interface LicencaInput {
 
 /** O alvo da entrega: pessoa XOR ativo. Nunca um posto (D39). */
 export type AlvoDoAssento =
-  | { assignedUserId: string; notes?: string | null }
+  | { assignedPersonId: string; notes?: string | null }
   | { assignedAssetId: string; notes?: string | null };

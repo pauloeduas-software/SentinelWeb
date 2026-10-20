@@ -1,7 +1,8 @@
 # Configurações
 
-> As cinco tabelas de catálogo — Categorias, Status, Fabricantes, Modelos e
-> Localizações: o que cada uma é, quem aponta para ela e o que o sistema recusa.
+> As seis tabelas de catálogo — Categorias, Status, Fabricantes, Modelos,
+> Localizações e Colaboradores: o que cada uma é, quem aponta para ela e o que o
+> sistema recusa.
 >
 > As regras que viram fato permanente no banco estão também em
 > [`invariantes.md`](invariantes.md) (a 3 e a 21); aqui está o funcionamento da
@@ -25,11 +26,13 @@ Fabricante (Dell)
 ```
 
 A ordem prática de cadastro é essa: **categorias e fabricantes**, depois
-**modelos** (que pedem os dois), depois **localizações**, e só então ativos.
+**modelos** (que pedem os dois), depois **localizações**, e só então ativos. Os
+**colaboradores** — quem recebe o equipamento — entram quando houver o que
+entregar.
 
 ### Como o código é montado
 
-Uma tela e um CRUD para as cinco, dirigidos por **spec** — acrescentar uma tabela
+Uma tela e um CRUD para as seis, dirigidos por **spec** — acrescentar uma tabela
 é escrever a spec, não copiar uma fatia.
 
 | | Servidor | Tela |
@@ -38,23 +41,24 @@ Uma tela e um CRUD para as cinco, dirigidos por **spec** — acrescentar uma tab
 | o contrato da spec | `catalog-spec.types.ts` | `catalog-ui.types.ts` |
 | o CRUD | `use-cases/{list,create,update,delete}-catalog.usecase.ts` | `hooks/useCatalog.ts`, `components/Catalog*.tsx` |
 | as rotas | `catalog.maestro.ts`, cinco por tabela, em laço | — |
+| a ficha do colaborador | `server/domain/person/` (só leitura) | `colaborador/` — `/configuracoes/colaboradores/:id` |
 
 As duas listas (`CATALOG_SPECS` e `CATALOG_UI_SPECS`) estão **na mesma ordem**:
 a tela e o maestro as percorrem em paralelo.
 
 ---
 
-## O que vale para as cinco
+## O que vale para as seis
 
 | Regra | Como funciona | Onde |
 |---|---|---|
 | **Quem lê e quem escreve** | `GET` é `TECNICO` (os formulários de ativo, licença e estoque leem as listas); `POST`, `PUT` e `DELETE` são `ADMIN`. A **tela** de Configurações é só de `ADMIN`: o menu a esconde e a rota redireciona quem não é | `access/helpers/route-permissions.ts`, `SoAdmin` em `src/App.tsx` |
 | **Campo desconhecido é recusado** | `strictObject` em todo schema: 422, nunca ignorado em silêncio | `schemas/catalog-entities.schema.ts` |
 | **Nome único, sem diferença de maiúscula** | "dell" é recusado quando há "Dell": 409 `Já existe fabricante com o nome "Dell".` `%` e `_` contam como letras, não como curingas. Categoria é única **por tipo**; modelo não tem nome único (ver abaixo) | `helpers/nome-unico.helper.ts`, campo `nomeUnicoPor` da spec |
-| **Exclusão só sem uso** | `DELETE` de linha que alguém usa é 409 com a contagem e a saída: `Não é possível excluir: fabricante em uso por 3 registros. Desative-o em vez de excluir: …` A tela mostra isso numa **notificação do sistema** | `countUsages` e `dicaEmUso` de cada spec, `delete-catalog.usecase.ts` |
-| **Desativar em vez de excluir** | o desativado some das listas de escolha e é **recusado** (409) quando escolhido de novo; continua no histórico e em tudo que já o usa. Detalhes abaixo | `isActive` nas cinco, `optionsWhere`, `assertEscolhaAtiva` |
+| **Exclusão só sem uso** | `DELETE` de linha que alguém usa **agora** é 409 com a contagem e a saída: `Não é possível excluir: fabricante em uso por 3 registros. Desative-o em vez de excluir: …` A tela mostra isso numa **notificação do sistema**. O colaborador diz *o quê* em vez de quantos (`motivoParaNaoExcluir`) | `countUsages` e `dicaEmUso` de cada spec, `delete-catalog.usecase.ts` |
+| **Desativar em vez de excluir** | o desativado some das listas de escolha e é **recusado** (409) quando escolhido de novo; continua no histórico e em tudo que já o usa. Detalhes abaixo | `isActive` nas seis, `optionsWhere`, `assertEscolhaAtiva` |
 | **A contagem inclui a lixeira** | ativo, licença e item de estoque na lixeira continuam apontando — e podem voltar | `INCLUINDO_LIXEIRA` nos `countUsages` |
-| **Não há lixeira no catálogo** | exclusão é definitiva (D8). O que protege é o 409 por uso | — |
+| **Lixeira só em Colaboradores** | nas outras cinco, exclusão é definitiva (D8) e o que protege é o 409 por uso. O colaborador vai para a lixeira, com Restaurar ([V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira)) | `lixeira` da spec, `restore-catalog.usecase.ts` |
 | **Tudo vai para o histórico** | criar, editar e excluir gravam `ActivityLog` na **mesma transação**; a edição grava só o que mudou | `recordActivity` nos use-cases |
 | **Listas de escolha** | `GET /api/<tabela>/options` devolve `{ id, name }` dos **ativos**, até 200, com busca `?q=`. É ele que alimenta todo `<select>`. Um **filtro** de listagem pede `?inativos=incluir`, porque o desativado ainda tem registros | `list-catalog-options.usecase.ts` |
 
@@ -71,7 +75,7 @@ Nesta ordem — o destrutivo na ponta:
 |---|---|---|
 | ✏️ Editar | todas | abre o formulário preenchido |
 | ⏻ Desativar / Ativar | todas | grava só `isActive`; pede confirmação ao desativar, não ao ativar |
-| 👥 Ocupantes do posto | Localizações | quem ocupa o posto, por turno — adicionar, corrigir o turno, encerrar (`modelo-de-posse.md`, Camada 2) |
+| 📄 Ficha do colaborador | Colaboradores | abre a ficha da pessoa — ver Colaboradores |
 | 🗑️ Excluir | todas | confirma e apaga; com uso, a notificação diz por quê |
 
 Desativar é **botão da linha**, nunca caixa no formulário — o mesmo padrão de
@@ -99,7 +103,8 @@ Onde a escolha é recusada:
 | status | ativo novo, troca de status do ativo, status escolhido na entrega ou na devolução. A escolha **automática** só considera status ativos, e o último ativo de Disponível e de Em uso não pode sair (ver Status) |
 | fabricante | modelo novo ou trocado, licença |
 | modelo | ativo novo, troca de modelo do ativo |
-| localização | entrega de ativo, saída de estoque, ocupante novo, ativo ou item de estoque novo guardado nela — ver Localizações |
+| localização | ativo, item de estoque ou posto novo guardado nela — ver Localizações |
+| colaborador | entrega de ativo, de assento de licença e de estoque, ocupante novo — ver Colaboradores |
 
 **O que a desativação não alcança, de propósito:**
 - **o que já existe por baixo.** Desativar a categoria "Servidor" ou o fabricante
@@ -219,24 +224,24 @@ Intel, AMD ou Nvidia como fabricante para montar um modelo.
 - **O estoque também tem lugar.** O item de estoque tem uma localização
   opcional — onde fica guardado o que sobra, normalmente o Depósito de TI. A
   unidade entregue a alguém está com quem a recebeu (a saída), não ali.
-- **O posto de trabalho** é uma localização com a marca `isWorkstation`. Ele se
-  cria e se acompanha na tela **Postos**, que já grava a marca; a aba de
-  Configurações não a mostra nem a edita. A regra de um computador por posto é a
-  invariante 19.
+- **O posto de trabalho fica numa localização**, mas não é uma: é cadastro
+  próprio, criado e editado na tela **Postos** ([`postos.md`](postos.md)). A
+  localização **não recebe** — nem entrega, nem saída de estoque, nem ocupante;
+  quem recebe é o posto
+  ([Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)).
 
 ### Uso e desativação
 
-Localização com **qualquer** uso não se exclui — 409 com a dica
-`Desative-a em vez de excluir: ela some das escolhas e continua no histórico.`
+Localização tem a regra do **status**: só o que aponta para ela **agora**
+impede a exclusão
+([Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)). É 409 com a dica
+`Mova o que está guardado nela e os postos que ficam nela, ou desative-a: …`
 
-**Uso**, aqui, é: ativo guardado nela (lixeira inclusive), **item de estoque**
-guardado nela (lixeira inclusive), **entrega** feita a
-ela (devolvidas inclusive), **saída de estoque** para ela (devolvidas inclusive)
-e **ocupante** que já passou por ela (encerrados inclusive). É histórico de
-"onde esteve" e "quem respondia", e a FK é `Restrict` em todos menos um: a do
-ativo guardado nela é `SetNull`. É por isso que o ativo da lixeira entra na
-contagem — sem ela, excluir o local zeraria em silêncio o `locationId` de uma
-linha ainda restaurável.
+**Uso**, aqui, é: **ativo** guardado nela (lixeira inclusive), **item de
+estoque** guardado nela (lixeira inclusive) e **posto** que fica nela. O ativo e
+o item da lixeira entram porque continuam apontando e podem voltar. Como ela não
+recebe nada, não há passado preso a ela: sem nada disso, ela sai de verdade, sem
+nome por escrito para guardar.
 
 **Desativada** (`isActive = false`), ela:
 
@@ -244,13 +249,59 @@ linha ainda restaurável.
 |---|---|
 | continua | na lista de Configurações (esmaecida), no histórico, nos relatórios, com tudo o que já estava nela |
 | **some** | das listas de escolha (`/options` só devolve as ativas); o vínculo que já aponta para ela aparece como "fora desta lista" e não se perde |
-| **recusa** (409) | entrega de ativo, saída de estoque, ocupante novo, ativo ou item de estoque novo guardado nela — `"Filial SP" está desativada e não recebe entrega nova.` |
-| **deixa passar** | editar o ativo que **já** está nela sem trocar o local; devolver e encerrar ocupação — desativar não esvazia nada |
+| **recusa** (409) | ativo, item de estoque ou posto novo guardado nela — `"Filial SP" está desativada e não recebe ativo novo.` |
+| **deixa passar** | editar o ativo, o item ou o posto que **já** está nela sem trocar o local — desativar não esvazia nada |
 
-Na tela Postos, o posto desativado aparece com o selo "Desativado" e deixa de
-oferecer ocupante e entrega novos. **Ativar** desfaz tudo.
+**Ativar** desfaz tudo. É a invariante 21.
 
-É a invariante 21. Vazia de verdade, a localização sai normalmente.
+## Colaboradores
+
+**O que é:** quem RECEBE equipamento — ativo, posto, assento de licença, unidade
+de estoque. Não entra no sistema: quem opera o painel é **usuário**, na tela
+Usuários, e é outra tabela
+([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)).
+Um não vira o outro: o Técnico que também tem um notebook é cadastrado aqui à
+parte, à mão — nada cria colaborador a partir de usuário.
+**Campos:** nome completo e e-mail.
+
+- **O e-mail é opcional** — o colaborador não faz login — e único quando
+  preenchido entre os que não estão na lixeira, gravado em minúsculas:
+  `E-mail já está em uso por outro colaborador.`
+  O nome **não** é único: dois "João Silva" existem, e é o e-mail que os separa.
+- **A lista de escolha** (`/api/people/options`) é o seletor de pessoa da
+  entrega de ativo, do posto, do assento e da saída de estoque. O técnico a lê;
+  cadastrar é do administrador.
+
+### A ficha
+
+O botão 📄 abre `/configuracoes/colaboradores/:id`: os **postos** que a pessoa
+ocupa (com o turno), os **itens de estoque** no nome dela — com o botão
+**Devolver** por unidade — e o **histórico**: cadastro e edições, entregas e
+devoluções de ativo, entradas e saídas de posto. Só leitura, fora o Devolver.
+
+### Exclusão, lixeira e desativação
+
+**Excluir manda para a lixeira** ([V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira)). O colaborador tem histórico de posse
+**próprio** — "o que já esteve com a Laura" —, e recadastrá-lo depois de excluir
+o partiria em dois: os equipamentos antigos ficariam presos a um cadastro que
+ninguém abre. Na lixeira a linha fica: o histórico dos ativos, do estoque e das
+licenças continua com o nome dele, e ele some das listas, dos seletores e da
+ficha (404).
+
+Só não se exclui quem responde por algo **agora** (invariante 6) — 409 com a
+conta, a mesma da desativação:
+`Este colaborador ainda responde por 1 ativo e ocupa 1 posto. Devolva o que está com ele e encerre as ocupações antes de excluir.`
+
+**A aba Lixeira** fica dentro de Colaboradores. **Restaurar** devolve a mesma
+pessoa, com o histórico inteiro; se o e-mail dela foi reaproveitado por outro
+cadastro enquanto ela estava lá, é 409 `O e-mail deste colaborador já está em uso por outro cadastro.`
+Não há "apagar de vez": seria apagar o histórico que a lixeira existe para
+guardar.
+
+**Desativar** é para quem continua na lista — o afastado que volta —, e tem a
+mesma regra: só desativa quem não responde por nada agora. Desativado, ele some
+das escolhas e é recusado (409) em entrega nova e ocupação nova. **Ativar**
+desfaz.
 
 ---
 
@@ -266,9 +317,9 @@ segue o grafo de `asset/use-cases/lock-asset.usecase.ts`.
 | trocar o tipo do status × editar/entregar/devolver ativo com ele | ativo entregue com status de estoque | idem, na linha do status |
 | devolver o mesmo ativo duas vezes, ou devolver atrasado depois de uma entrega nova | posse errada fechada, ativo entregue marcado "Disponível" | a devolução trava o ativo e só fecha a posse ABERTA |
 | desativar, trocar o tipo ou excluir dois status do mesmo tipo automático | nenhum "Disponível" ou "Em uso" ativo sobrando | `FOR UPDATE` em todos os status do tipo, na mesma ordem |
-| marcar como posto × entregar o 2º ativo ao local | posto com dois computadores | `FOR NO KEY UPDATE` na escrita do local × `FOR UPDATE` da entrega |
-| desativar a localização × entregar ou ocupar | entrega num local que acabou de fechar | a mesma, × `FOR SHARE` de quem confere a marca |
+| desativar a localização × guardar algo nela | ativo, item ou posto num local que acabou de fechar | `FOR NO KEY UPDATE` na escrita do local × `FOR SHARE` de quem confere o `isActive` |
 | desativar categoria, status, fabricante ou modelo × escolhê-lo | escolha aprovada com o valor velho | o `UPDATE` da desativação × `FOR SHARE` da leitura (`lerCategoriaTravada`, `lerStatusTravado`, `lerFabricanteTravado`, `lerModeloTravado`) |
+| desativar o colaborador × entregar a ele ou pô-lo num posto | desativado com posse aberta | `FOR UPDATE` na linha da pessoa nos dois lados (`lock-person.usecase.ts`) |
 
 A exceção aceita: dois cadastros **simultâneos** de "Dell" e "dell" passam os dois
 (a checagem é da aplicação; o `@unique` do banco só pega a grafia idêntica).
@@ -308,7 +359,7 @@ aviso, o modelo cujo fabricante ou categoria foi renomeado ou excluído.
 | Assunto | Arquivo |
 |---|---|
 | contagem de uso, troca de tipo, modelo, nome único, URL, desativar | `tests/invariantes/catalogo.test.ts` |
-| localização: exclusão, desativação, lista plana, estoque guardado nela | `tests/invariantes/localizacao.test.ts` |
-| marca de posto | `tests/invariantes/ativo-por-posto-marca.test.ts` |
+| localização: exclusão pelo presente, não recebe entrega, desativação, lista plana, estoque guardado nela | `tests/invariantes/localizacao.test.ts` |
+| colaborador: lixeira, restaurar, a recusa que diz o quê, desativação, `/options` | `tests/invariantes/colaborador.test.ts`, `tests/invariantes/posse.test.ts` |
 | filtro por tipo e `/options` | `tests/listagens/filtro-por-categoria.test.ts`, `opcoes-com-busca.test.ts` |
 | as corridas | `tests/corridas/posse.test.ts`, `tests/corridas/ativo-por-posto.test.ts`, `tests/estoque/corridas.test.ts` |

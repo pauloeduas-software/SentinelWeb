@@ -1,59 +1,39 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { USER_PUBLIC_SELECT } from '../helpers/user-select.helper';
-import { assertTemSenha, hashSeHouver } from '../helpers/credencial.helper';
+import { hashSenha } from '../../auth/helpers/password.helper';
 
 interface CreateUserData {
   name: string;
   email: string;
-  /** O cargo (D148). Ausente nasce `USUARIO`, pelo `@default` do schema. */
-  role?: 'USUARIO' | 'TECNICO' | 'ADMIN';
-  /** Obrigatória para Técnico e Administrador (`credencial.helper.ts`). */
-  password?: string;
+  /** O cargo (D148). Ausente nasce `TECNICO`, pelo `@default` do schema. */
+  role?: 'TECNICO' | 'ADMIN';
+  /** É com o e-mail e esta senha que a pessoa entra no sistema. */
+  password: string;
 }
 
-export async function createUser(data: CreateUserData, actorId: string | null) {
-  // Antes da transação: é validação do corpo, e o hash é lento.
-  assertTemSenha(data.role ?? 'USUARIO', data.password !== undefined);
-  const passwordHash = await hashSeHouver(data.password);
+export async function createUser(data: CreateUserData) {
+  // O hash FORA da transação: argon2 leva ~50 ms, e segurar uma conexão do
+  // pool durante o cálculo é transformar cadastro em fila de banco.
+  const passwordHash = await hashSenha(data.password);
 
   return prisma.$transaction(async (tx) => {
-    // `findFirst`, não `findUnique`: `email` deixou de ser @unique no Prisma — a
-    // unicidade virou índice PARCIAL (`WHERE "deletedAt" IS NULL`), para um
-    // usuário na lixeira não bloquear o recadastro do mesmo e-mail. E
-    // `findFirst` passa pelo escopo da lixeira, então só colide com quem vive.
-    const exists = await tx.user.findFirst({ where: { email: data.email } });
+    // O `@unique` do e-mail pegaria a colisão, mas com o "Registro já existe"
+    // genérico do P2002; conferir antes devolve a frase que diz o quê.
+    const exists = await tx.user.findUnique({ where: { email: data.email } });
     if (exists) throw new AppError('E-mail já está em uso.', 409);
 
-    const user = await tx.user.create({
+    // Sem `ActivityLog` (X): ninguém lê a trilha de quem opera o sistema.
+    return tx.user.create({
       data: {
         name: data.name,
         email: data.email,
-        // Ausente cai no `@default(USUARIO)` do schema — e é por isso que aqui
-        // não há `?? 'USUARIO'`: a porta fechada por padrão mora num lugar só.
+        // Ausente cai no `@default(TECNICO)` do schema — e é por isso que aqui
+        // não há `?? 'TECNICO'`: o padrão mora num lugar só.
         role: data.role,
         passwordHash,
       },
       select: USER_PUBLIC_SELECT,
     });
-
-    await recordActivity(
-      tx,
-      {
-        entityType: 'User',
-        entityId: user.id,
-        action: 'CREATE',
-        // O QUE mudou, nunca o VALOR: hash em trilha de auditoria é o mesmo
-        // vazamento do log com senha, só que permanente e com data.
-        changes: {
-          name: user.name, email: user.email,
-          ...(passwordHash ? { credencial: 'senha definida' } : {}),
-        },
-      },
-      actorId,
-    );
-
-    return user;
   });
 }

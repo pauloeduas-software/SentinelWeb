@@ -40,11 +40,9 @@ interface ItemDeMenu {
    * daqui podem estar incompletos sem consequência de segurança — o pior caso é
    * um item visível que responde 403.
    *
-   * **AUSENTE quer dizer "todo mundo vê"**, e hoje nenhum item dispensa cargo:
-   * toda sessão é `TECNICO` ou `ADMIN`, porque `USUARIO` não entra no painel —
-   * o login o recusa com 403 (`login.usecase.ts`). O campo continua opcional
-   * porque a próxima tela desse tipo não deve precisar de mudança de tipo para
-   * existir.
+   * **AUSENTE quer dizer "todo mundo vê"**, e hoje nenhum item dispensa cargo.
+   * O campo continua opcional porque a próxima tela desse tipo não deve
+   * precisar de mudança de tipo para existir.
    */
   cargo?: 'TECNICO' | 'ADMIN';
 }
@@ -93,7 +91,7 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
   {
     titulo: 'Gestão',
     itens: [
-      { to: '/users', label: 'Usuários', icon: Users, cargo: 'TECNICO' },
+      { to: '/usuarios', label: 'Usuários', icon: Users, cargo: 'ADMIN' },
     ],
   },
   {
@@ -127,8 +125,8 @@ export function itemEstaAtivo(to: string, caminho: string): boolean {
 /**
  * O nome da tela atual, para o cabeçalho.
  *
- * O item MAIS específico ganha: `/users/:id` casa `/users`, e se um dia houver
- * `/users/algo` as duas casariam — a mais longa é a certa.
+ * O item MAIS específico ganha: `/ativos/:id` casa `/ativos`, e se um dia houver
+ * `/ativos/algo` as duas casariam — a mais longa é a certa.
  */
 export function nomeDaTela(caminho: string): string | null {
   const casados = ITENS_DE_MENU.filter((item) => itemEstaAtivo(item.to, caminho));

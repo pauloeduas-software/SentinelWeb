@@ -44,7 +44,6 @@ export interface EventoDoAtivo {
   fonte: FonteDoEvento;
   action: string;
   at: Date;
-  actorId: string | null;
   changes: Prisma.JsonValue | null;
   posse: EventoDePosse | null;
 }
@@ -97,8 +96,6 @@ function eventosDaPosse(assignment: Awaited<ReturnType<typeof listAssetAssignmen
     fonte: 'POSSE',
     action: 'CHECKOUT',
     at: assignment.checkoutAt,
-    // Quem operou só existe a partir da F3 (mesmo caso do `ActivityLog.actorId`).
-    actorId: null,
     changes: null,
     posse: { ...alvo, notes: assignment.checkoutNotes },
   };
@@ -111,7 +108,6 @@ function eventosDaPosse(assignment: Awaited<ReturnType<typeof listAssetAssignmen
       fonte: 'POSSE',
       action: 'CHECKIN',
       at: assignment.checkinAt,
-      actorId: null,
       changes: null,
       posse: { ...alvo, notes: assignment.checkinNotes },
     },
@@ -153,7 +149,7 @@ export async function getAssetHistory(
     listAssetAssignments(assetId),
     prisma.activityLog.findMany({
       where,
-      select: { id: true, action: true, changes: true, actorId: true, createdAt: true },
+      select: { id: true, action: true, changes: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
       take: limite,
     }),
@@ -168,7 +164,6 @@ export async function getAssetHistory(
       fonte: 'ATIVIDADE',
       action: linha.action,
       at: linha.createdAt,
-      actorId: linha.actorId,
       changes,
       posse: null,
     }];

@@ -58,12 +58,12 @@ const ATIVO_DO_ASSENTO = {
 export const SEAT_CHECKOUT_SELECT = {
   id: true,
   seatId: true,
-  assignedUserId: true,
+  assignedPersonId: true,
   assignedAssetId: true,
   checkoutAt: true,
   checkinAt: true,
   checkoutNotes: true,
-  assignedUser: { select: PESSOA_DO_ASSENTO },
+  assignedPerson: { select: PESSOA_DO_ASSENTO },
   assignedAsset: { select: ATIVO_DO_ASSENTO },
 } as const;
 

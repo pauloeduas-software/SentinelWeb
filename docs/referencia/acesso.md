@@ -26,11 +26,10 @@
         │                                campo desconhecido = 422, não "ignorado"
         ▼
   login.usecase                       ← o login é o e-mail do cadastro (R)
-        ├─ e-mail sem conta / sem senha ──► argon2 descartável ──► 401
+        ├─ e-mail sem conta ──────────► argon2 descartável ──► 401
         ├─ lockedUntil no futuro ───────────────────────────────► 423
         ├─ senha errada ──► failedLoginCount++ (5 = trava 15min) ─► 401
         ├─ isActive: false ─────────────────────────────────────► 403
-        ├─ role === 'USUARIO' ───────────────────────────────────► 403 (P)
         └─ acerto
              ├─ rehash transparente se o hash for de parâmetros antigos
              ├─ zera contador/trava
@@ -55,14 +54,14 @@ E em **toda** requisição seguinte:
   jwtVerify lê o cookie ──► falhou? 401 genérico
         │
         ▼
-  RELÊ o usuário no banco (isActive: true, fora da lixeira)
+  RELÊ o usuário no banco (isActive: true; o excluído não tem mais linha)
         │   └─ não achou? 401
         ▼
   `tv` do token == tokenVersion da coluna? ──► não? 401
         │
         ▼
   request.user = usuário recém-lido;  request.cargo = o cargo dele
-        │   └─ daqui sai o actorId de todo ActivityLog e a decisão do permission-guard
+        │   └─ daqui sai a decisão do permission-guard
 ```
 
 **Não há segundo fator, SSO nem token de API.** As três coisas existiram na F11
@@ -113,7 +112,7 @@ carregam senha —, e o CORS com allowlist.
 ### 3. O usuário é relido a cada requisição
 
 Parece caro e é a defesa principal contra o token que sobrevive ao usuário:
-mandar alguém para a lixeira não apaga o JWT que já está no navegador dele.
+excluir alguém não apaga o JWT que já está no navegador dele.
 
 A extension de soft delete joga a favor sem código extra — `findFirst` já não
 enxerga o apagado. `isActive: false` cai junto.
@@ -148,13 +147,11 @@ morre de uma vez, sem tabela de sessão e sem lista de revogação.
 | Situação | HTTP | Mensagem |
 |---|---|---|
 | E-mail sem conta | 401 | `E-mail ou senha inválidos.` |
-| Cadastrado sem senha | 401 | *a mesma* |
 | Senha errada | 401 | *a mesma* |
 | Conta travada | 423 | `Conta bloqueada por excesso de tentativas…` |
 | Acesso desativado | 403 | `Acesso desativado. Procure o administrador do sistema.` |
-| Cargo `USUARIO` | 403 | frase própria, que diz o que fazer (ver [P](../decisoes/acesso.md#p--usuario-não-entra-no-painel)) |
 
-Os três primeiros compartilham a frase porque **duas mensagens diferentes são um
+Os dois primeiros compartilham a frase porque **duas mensagens diferentes são um
 oráculo de quem trabalha aqui**: bastaria varrer e-mails até uma delas mudar.
 
 E a mensagem sozinha não basta — **o tempo também vaza**. O caminho do usuário
@@ -162,9 +159,9 @@ inexistente calcula um argon2 descartável (`conferirSenhaInexistente`) para
 gastar os mesmos ~50 ms do caminho real. Sem isso, um volta em 1 ms e o outro em
 50, e o relógio entrega a lista que a mensagem esconde.
 
-Os dois 403 (desativado, `USUARIO`) têm frase própria de propósito: quem chegou ali já provou
-que sabe a senha, não há nada a enumerar, e "e-mail ou senha inválidos" mandaria
-essa pessoa procurar um erro de digitação que não existe.
+O 403 do desativado tem frase própria de propósito: quem chegou ali já provou que sabe a
+senha, não há nada a enumerar, e "e-mail ou senha inválidos" mandaria essa pessoa procurar
+um erro de digitação que não existe.
 
 ### 6. Argon2id, e o rehash transparente
 
@@ -208,23 +205,35 @@ com uma função pura afirmada por teste garantindo que produção nunca sobe se
 
 ## A autorização: cargo, não permissão
 
-**Três cargos, com ordem** — `USUARIO < TECNICO < ADMIN` (D148). Cada rota declara o cargo
-MÍNIMO que exige em `route-permissions.ts`, e a pergunta de toda requisição é só "a sessão
-alcança esse mínimo?" — aritmética sobre a posição no array, não uma lista de cargos aceitos
-por rota.
+**Dois cargos, com ordem** — `TECNICO < ADMIN` (D148). Cada rota declara o cargo MÍNIMO que
+exige em `route-permissions.ts`, e a pergunta de toda requisição é só "a sessão alcança esse
+mínimo?" — aritmética sobre a posição no array, não uma lista de cargos aceitos por rota.
 
-`USUARIO` é o colaborador que **recebe** equipamento — alvo de posse, não operador. Nenhuma
-rota de inventário aceita `USUARIO`, e o login recusa esse cargo antes mesmo de abrir uma
-sessão para ele ([P](../decisoes/acesso.md#p--usuario-não-entra-no-painel)): uma sessão que
-abriria um painel vazio, respondendo 403 em tudo, chega como "o painel não carrega" e não
-como "eu não tenho acesso".
+**Usuário é quem opera o sistema; colaborador é quem recebe equipamento**
+([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)).
+São duas tabelas: `users` (Técnico e Administrador, todos com senha) e `people` (o colaborador,
+alvo de posse, sem conta — a aba Colaboradores de Configurações). O Técnico que também tem um
+notebook é cadastrado nos dois lugares. A tela Usuários é toda `ADMIN`, leitura inclusive; o
+técnico escolhe o colaborador da entrega por `GET /api/people/options`.
 
 `request.cargo` é lido na MESMA consulta de sessão que já relê o usuário a cada requisição —
 não há coluna de permissão efetiva para cachear nem para divergir do cargo gravado.
 
 **Nunca sem administrador:** `assertSobraAdministrador()` roda no FIM de toda transação que
-toca cargo ou `isActive` **ou manda alguém para a lixeira**, dentro dela — ver a invariante 17
-em [`invariantes.md`](invariantes.md).
+toca cargo ou `isActive` **ou exclui um usuário**, dentro dela — ver a invariante 17 em
+[`invariantes.md`](invariantes.md).
+
+**Ninguém tira a própria conta do jogo** ([W](../decisoes/acesso.md#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo)):
+com o id da própria sessão, rebaixar (`role` diferente do atual), desativar (`isActive: false`)
+e excluir são 409 — `Você não pode rebaixar a si mesmo. Peça a outro administrador.`, e o mesmo
+com *desativar* e *excluir*. O formulário trava o campo Cargo quando a pessoa edita a si mesma, e
+a lista desliga os botões Desativar e Excluir da própria linha. O cargo igual ao atual passa.
+
+**Excluir usuário apaga a linha** ([W](../decisoes/acesso.md#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo)):
+sem lixeira e sem Restaurar, e o e-mail fica livre para um cadastro novo. A sessão aberta cai
+na requisição seguinte, porque a releitura não encontra mais a conta. Nada aponta para `users`:
+o histórico não guarda quem fez ([X](../decisoes/acesso.md#x--o-histórico-não-guarda-quem-fez)), e usuário não grava
+histórico.
 
 **O custo de compra do ativo é do `ADMIN`** ([D77](../decisoes/acesso.md#d77--dado-sensível-é-filtrado-no-select-não-mascarado-na-resposta)),
 e são quatro portas, todas em `asset/helpers/asset-select.helper.ts` ou ao lado dele:
@@ -242,16 +251,12 @@ A busca do leitor (`/api/search`) devolve só o que identifica o ativo, para tod
 **A senha nasce no cadastro, e o login é o e-mail** ([R](../decisoes/acesso.md#r--a-senha-nasce-no-cadastro-e-o-login-é-o-e-mail)).
 Não há nome de usuário à parte nem ação separada para dar acesso: o formulário de Usuários, que
 já leva o cargo ([D162](../decisoes/escopo.md#d162--minha-conta-sai-e-o-cargo-vira-campo-do-formulário-de-usuário)),
-pede nome, e-mail, cargo e — só quando o cargo é Técnico ou Administrador — a senha: **Senha\***
-obrigatória no cadastro, **Nova senha** opcional na edição. A maior parte dos colaboradores existe
-só para receber equipamento e nunca terá login, e para eles o campo nem aparece.
+pede nome, e-mail, cargo e senha: **Senha\*** obrigatória no cadastro, **Nova senha** opcional
+na edição.
 
-A regra é do servidor (`user/helpers/credencial.helper.ts`), nas duas rotas do formulário —
-ambas `ADMIN`:
+A regra é do servidor, nas duas rotas do formulário — ambas `ADMIN`:
 
-- `POST /api/users` e `PUT /api/users/:id` respondem **422** se a pessoa terminar com cargo
-  `TECNICO` ou `ADMIN` e sem senha — inclusive ao promover a Técnico quem nunca teve uma;
-  `USUARIO` não precisa, porque o login o recusa de qualquer jeito;
+- `POST /api/users` responde **422** sem senha (`createUserSchema`);
 - na edição, `password` ausente mantém a atual; presente troca a senha, destrava a conta
   (`failedLoginCount` e `lockedUntil` zerados) e incrementa o `tokenVersion`;
 - o `ActivityLog` grava `credencial: 'senha definida'` (cadastro) ou `'senha redefinida'`
@@ -313,7 +318,6 @@ server/domain/auth/
 ├── auth.types.ts                        SessionUser, SessaoEmitida, o payload do JWT
 ├── controllers/auth.controller.ts        só HTTP: assina o JWT, grava o cookie, responde o GET /api/auth/me
 ├── helpers/
-│   ├── actor.helper.ts                  atorDaRequisicao — quem está agindo (o actorId do D23)
 │   ├── auth-hardening.helper.ts         semCache + verificarOrigem
 │   ├── authenticate-request.helper.ts   o que o preHandler global chama
 │   ├── password.helper.ts               argon2id, hash descartável, precisaRehash
@@ -321,18 +325,18 @@ server/domain/auth/
 ├── schemas/auth.schema.ts               loginSchema ({ email, password }) e senhaNova, a regra que o cadastro importa
 └── use-cases/
     ├── current-user.usecase.ts          releitura por requisição (inclui o cargo)
-    └── login.usecase.ts                 as cinco recusas (D148/P incluídas)
+    └── login.usecase.ts                 as quatro recusas
 
-server/domain/user/                      onde a senha nasce e se troca (R)
+server/domain/user/                      quem opera o sistema — onde a senha nasce e se troca (R, U)
 ├── user.maestro.ts                      POST/PUT com o verificarOrigem das rotas de credencial
-├── helpers/credencial.helper.ts         quem precisa de senha (TECNICO e ADMIN) e o hash fora da transação
+├── helpers/credencial.helper.ts         o hash da Nova senha, fora da transação
 └── use-cases/
     ├── create-user.usecase.ts           a senha do cadastro ('senha definida' na trilha)
     └── update-user.usecase.ts           a Nova senha: troca, destrava, increment do tokenVersion
 
 server/domain/access/                    a OUTRA metade da sessão: o que ela alcança
 ├── access.types.ts
-├── helpers/cargo.ts                     os três cargos, com ordem (D148)
+├── helpers/cargo.ts                     os dois cargos, com ordem (D148)
 ├── helpers/route-permissions.ts         método + rota → cargo mínimo (o mapa que o boot confere)
 ├── helpers/require-permission.ts        temCargo() e exigirPermissao() (403 que nomeia o cargo)
 ├── helpers/ultimo-administrador.ts      a invariante 17 — nunca sem administrador

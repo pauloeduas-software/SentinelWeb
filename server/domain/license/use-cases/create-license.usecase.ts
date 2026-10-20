@@ -19,7 +19,6 @@ import { reconciliarAssentos } from './reconcile-seats.usecase';
  */
 export async function createLicense(
   data: CreateLicenseData,
-  actorId: string | null,
 ): Promise<LicencaNaResposta> {
   const campos = data;
   const id = randomUUID();
@@ -42,7 +41,7 @@ export async function createLicense(
       entityId: id,
       action: 'CREATE',
       changes: buildSnapshot(licenca, LICENSE_AUDITED),
-    }, actorId);
+    });
 
     return licenca;
   });

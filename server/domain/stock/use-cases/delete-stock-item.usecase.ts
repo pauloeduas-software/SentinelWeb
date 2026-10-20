@@ -19,7 +19,7 @@ import { contarForaDe, travarItemOuFalhar } from '../helpers/stock-balance.helpe
  * A TRAVA vem antes da contagem: sem ela, uma saída simultânea cria a linha
  * DEPOIS deste `count`.
  */
-export async function deleteStockItem(id: string, actorId: string | null): Promise<void> {
+export async function deleteStockItem(id: string): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await travarItemOuFalhar(tx, id);
 
@@ -38,6 +38,6 @@ export async function deleteStockItem(id: string, actorId: string | null): Promi
     });
     if (count === 0) throw new AppError('Este item já está na lixeira.', 409);
 
-    await recordActivity(tx, { entityType: 'StockItem', entityId: id, action: 'DELETE' }, actorId);
+    await recordActivity(tx, { entityType: 'StockItem', entityId: id, action: 'DELETE' });
   });
 }

@@ -41,10 +41,6 @@ export default function HistoryTab({ eventos, total, carregando }: HistoryTabPro
         </p>
       )}
 
-      <p className="text-text-tertiary text-[10px] leading-relaxed border-t border-border-sutil pt-3">
-        Quem fez cada operação passa a ser registrado a partir da autenticação (Fase 3) — o que já
-        aconteceu continua sem autor, de propósito: preencher agora seria inventar.
-      </p>
     </div>
   );
 }

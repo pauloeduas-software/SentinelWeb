@@ -3,7 +3,7 @@ import {
   type AcaoLinhaSpec, type CatalogUiSpec,
 } from './catalog-ui.types';
 
-// O BOTÃO DESATIVAR/ATIVAR, igual nas cinco abas (e em Usuários): grava só
+// O BOTÃO DESATIVAR/ATIVAR, igual nas seis abas (e em Usuários): grava só
 // `isActive`. Desativado some das listas de escolha e não é escolhido de novo —
 // o servidor recusa —, e continua no histórico e em tudo que já o usa. É a
 // saída de quem não pode ser excluído por ter uso.
@@ -15,7 +15,7 @@ function desativar(feminino: boolean): AcaoLinhaSpec {
   };
 }
 
-// As CINCO abas da tela de Configurações, na ordem em que aparecem: do que se
+// As SEIS abas da tela de Configurações, na ordem em que aparecem: do que se
 // mexe mais para o que se mexe menos. A ordem espelha CATALOG_SPECS do servidor.
 
 const categoria: CatalogUiSpec = {
@@ -112,12 +112,11 @@ const localizacao: CatalogUiSpec = {
   aba: 'Localizações',
   singular: 'Localização',
   genero: 'f',
-  descricao: 'Onde o ativo fica: a filial, a sala, o depósito, a mesa. Os postos de trabalho se criam e se acompanham na tela Postos. Localização em uso não se exclui: se desativa.',
+  descricao: 'Onde as coisas ficam guardadas: a matriz, a filial, o depósito, o home office. Os postos de trabalho ficam dentro delas e se cadastram na tela Postos. Só não se exclui a localização que tem algo guardado ou um posto nela agora.',
   placeholderBusca: 'Buscar localização, cidade ou endereço...',
   colunas: [
-    // Lista GERAL: sem coluna de "é posto" nem de "ativa". A localização
-    // desativada aparece esmaecida e marcada (a ação `ativacao` abaixo), e o
-    // posto se gerencia na tela Postos.
+    // Sem coluna de "ativa": a localização desativada aparece esmaecida e
+    // marcada (a ação `ativacao` abaixo).
     { key: 'name', label: 'Nome' },
     { key: 'city', label: 'Cidade' },
     { key: 'state', label: 'Estado' },
@@ -134,17 +133,40 @@ const localizacao: CatalogUiSpec = {
     { key: 'state', label: 'Estado', tipo: 'text' },
     { key: 'notes', label: 'Notas', tipo: 'textarea', largura: 'inteira' },
   ],
-  // Além do Desativar, os ocupantes: um posto tem, e nenhuma outra tabela de
-  // catálogo tem (docs/referencia/modelo-de-posse.md, Camada 2).
-  acoes: [
-    desativar(true),
-    { id: 'ocupantes', titulo: 'Ocupantes do posto', visivelSe: 'isWorkstation' },
-  ],
+  acoes: [desativar(true)],
 };
 
 // Mesma ordem do `CATALOG_SPECS` do servidor — as duas listas são percorridas
 // em paralelo pela tela e pelo maestro, e divergir faria a aba apontar para a
 // spec errada.
+// QUEM RECEBE EQUIPAMENTO — ativo, posto, assento de licença, estoque. Não
+// entra no sistema: quem opera é usuário, na tela Usuários, e um não vira o
+// outro. As duas coisas a mais são a FICHA, a única aba com tela de detalhe —
+// é lá que se vê o que está com a pessoa e o que já esteve —, e a LIXEIRA: o
+// histórico de posse é dela, e restaurar devolve a mesma pessoa com ele.
+const colaborador: CatalogUiSpec = {
+  slug: 'people',
+  aba: 'Colaboradores',
+  singular: 'Colaborador',
+  genero: 'm',
+  descricao: 'Quem recebe equipamento: ativo, posto, licença e estoque. Não entra no sistema — quem opera o painel fica em Usuários. Excluir manda para a lixeira; só não se exclui quem está com algo agora.',
+  placeholderBusca: 'Buscar por nome ou e-mail...',
+  colunas: [
+    { key: 'name', label: 'Nome' },
+    { key: 'email', label: 'E-mail' },
+  ],
+  campos: [
+    { key: 'name', label: 'Nome completo', tipo: 'text', obrigatorio: true, largura: 'inteira' },
+    { key: 'email', label: 'E-mail', tipo: 'text', largura: 'inteira',
+      ajuda: 'Opcional. O colaborador não entra no sistema; o e-mail só ajuda a separar dois nomes iguais.' },
+  ],
+  acoes: [
+    desativar(false),
+    { id: 'ficha', titulo: 'Ficha do colaborador' },
+  ],
+  lixeira: true,
+};
+
 export const CATALOG_UI_SPECS: readonly CatalogUiSpec[] = [
-  categoria, status, fabricante, modelo, localizacao,
+  categoria, status, fabricante, modelo, localizacao, colaborador,
 ];

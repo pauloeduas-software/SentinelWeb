@@ -7,8 +7,8 @@
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D22–D26, D72–D78, D80, D89, D135–D142, P da segunda rodada (ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)) e R, S e T, que vieram depois da varredura Q e
-> continuaram a letra.
+> [`README.md`](./README.md#a-segunda-rodada-ap)) e R, S, T, U, W e X, que vieram depois da varredura
+> Q e continuaram a letra.
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
@@ -28,6 +28,9 @@ consegue *usar* a sessão enquanto a aba está aberta, mas não *exportá-la*. O
 
 ## D23 — `actorId` é parâmetro obrigatório, não `AsyncLocalStorage`.
 
+> **Superada por [X](#x--o-histórico-não-guarda-quem-fez):** o histórico deixou de guardar quem fez, e o
+> parâmetro saiu de todos os use-cases.
+
 **Decidido:** o controller lê `request.user.id` e passa adiante; a assinatura do
 use-case **exige** o argumento.
 **Descartado:** `AsyncLocalStorage` em `core` guardando o ator da requisição.
@@ -42,6 +45,8 @@ O preço é tocar ~20 assinaturas **uma vez**.
 
 ## D24 — O histórico anterior fica sem ator. Não há backfill.
 
+> **Superada por [X](#x--o-histórico-não-guarda-quem-fez):** não há mais autor em histórico nenhum, antigo ou novo.
+
 **Decidido:** tudo que foi gravado antes do login continua com `actorId: null`, e
 a tela mostra "—".
 **Descartado:** atribuir os registros antigos ao primeiro administrador, ou criar
@@ -55,6 +60,9 @@ registro sem ator é registro; registro com ator errado é dano.
 ---
 
 ## D25 — Ocupação de posto não ganha coluna de ator.
+
+> **Superada por [X](#x--o-histórico-não-guarda-quem-fez):** as colunas de autor saíram também da entrega e do
+> estoque, e a pergunta "quem cadastrou a Laura na Mesa 1?" deixou de ter resposta.
 
 **Decidido:** `LocationOccupant` continua sem `openedById`/`closedById`.
 **Descartado:** espelhar `checkoutById`/`checkinById` por simetria.
@@ -80,6 +88,8 @@ migração aditiva de duas colunas.
 > e do `License` e do `StockItem`, que as tinham ganhado depois. A tela de detalhe do ativo nunca
 > chegou a mostrá-las; quem criou e quem editou continua no `ActivityLog`, que é onde este
 > parágrafo já dizia que a resposta estava.
+>
+> **E depois, [X](#x--o-histórico-não-guarda-quem-fez):** o `ActivityLog` também deixou de guardar o autor.
 
 ---
 
@@ -348,6 +358,9 @@ notar. É aditivo e barato agora; com linhas dentro, é validação a mais.
 
 ## P — `USUARIO` não entra no painel
 
+> **Superada por [U](#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos):**
+> o cargo `USUARIO` saiu. Quem recebe equipamento é colaborador, outra tabela, e não tem conta.
+
 **Decidido:** o login recusa o cargo `USUARIO` com 403 e uma frase que diz o que fazer, em vez
 de abrir um painel vazio que responde 403 em tudo. A sessão já emitida de quem for rebaixado
 continua valendo até expirar, respondendo 403 a cada rota — fechar essa janela exigiria mexer na
@@ -367,6 +380,10 @@ sistema e começaria a testar a tela de recusa em todo lugar.
 ---
 
 ## R — A senha nasce no cadastro, e o login é o e-mail
+
+> **Superada em parte por [U](#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos):**
+> a senha é obrigatória para todo usuário, e a conferência da promoção saiu com o `USUARIO`. O
+> login pelo e-mail e a "Nova senha" continuam como estão aqui.
 
 **Decidido:** o login é `{ email, password }`. `User.username` sai do schema e da `0_init`, com o
 índice `users_username_unique_undeleted` — não existe mais "nome de usuário" à parte. A senha vem
@@ -471,3 +488,160 @@ administrador trocar o próprio e-mail e alguém rodar o seed de novo para nasce
 conta que o seed recria sozinha é uma porta que reabre toda vez que ele roda; o usuário preferiu
 que ela não exista.
 
+
+---
+
+## U — Quem recebe equipamento sai de `User`: colaborador vira catálogo, e sobram dois cargos
+
+> **Superada em parte por [V](./posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira):**
+> excluir colaborador passou a mandar para a lixeira, recusando só quem está com algo agora — e
+> não mais "apagar de verdade, e só sem histórico". O resto continua como está aqui.
+>
+> **Completada por [W](#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo):** a linha
+> do usuário excluído, que ficava no banco com `deletedAt`, passou a ser apagada; e o
+> administrador não rebaixa, não desativa e não exclui a si mesmo.
+
+**Decidido:** a tabela `users` passa a guardar só quem OPERA o sistema — Técnico e
+Administrador. Quem RECEBE equipamento é **colaborador**, uma tabela própria (`Person`, `people`)
+que é a sexta aba do catálogo em Configurações: nome, e-mail opcional, desativar, excluir. As
+quatro posses (`Assignment.targetPersonId`, `LocationOccupant.personId`,
+`LicenseSeatCheckout.assignedPersonId`, `StockMovement.targetPersonId`) apontam para `people`, e
+o alvo `USER` dos enums de posse virou `PERSON`. O cargo `USUARIO` sai do enum `Cargo`; a senha
+passa a ser obrigatória (`passwordHash` não nulo) e o cargo padrão passa a ser `TECNICO`. A tela
+Usuários (`/usuarios`) é toda do `ADMIN`, leitura inclusive, sem lixeira e sem restaurar; a
+ficha de quem recebe equipamento foi para `/configuracoes/colaboradores/:id`.
+**Supera:** [P](#p--usuario-não-entra-no-painel) — não há mais `USUARIO` para o login recusar —
+e, no [R](#r--a-senha-nasce-no-cadastro-e-o-login-é-o-e-mail), a senha dispensável e a
+conferência da promoção: todo usuário tem senha desde o cadastro, e não há de onde promover.
+**Mantém:** [D148](./escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)
+(cargo com ordem, a rede do último administrador) e o resto do R (o login é o e-mail, a "Nova
+senha" destrava e derruba as sessões).
+
+**Por quê:** pedido do usuário — a página de Usuários é para quem faz a gestão do sistema, e as
+pessoas que só terão a posse de um PC se cadastram em Configurações. A mistura custava em todo
+lugar: o login precisava recusar um cargo que só existia para dizer "esse não entra", o
+formulário escondia a senha conforme o cargo, a edição tinha de conferir a senha na promoção, e a
+mesma linha respondia por login e por posse.
+
+**Por quê duas tabelas, e não uma com o cargo opcional:** com uma tabela só, as duas telas
+mexeriam no mesmo registro — excluir o colaborador tiraria o acesso, desativar num lugar
+desativaria no outro. Com duas, cada tela é dona do que mostra. O custo é o Técnico que também
+tem um notebook: ele é cadastrado nos dois lugares, uma conta para entrar e um colaborador para
+receber.
+
+**Por quê catálogo:** o cadastro de colaborador é o mesmo das outras cinco abas — nome,
+desativar em vez de excluir quando há uso, `/options` só com os ativos —, e o CRUD genérico já
+fazia tudo isso (`catalog/specs/person.spec.ts`). Excluir apaga de verdade, como no resto do
+catálogo: só sai quem nunca recebeu nada (o cadastro feito errado), porque as quatro FKs são
+`Restrict` em cada linha de posse, devolvida inclusive. Quem tem histórico se desativa, e a
+invariante 6 continua valendo na desativação: só desativa quem não responde por nada, com a
+mesma frase que conta ativo, assento, item de estoque e posto.
+
+**O que mudou junto:** os colaboradores existentes saíram de `users` com o MESMO id, então as
+posses não foram tocadas e `/users/:id` redireciona para a ficha nova; o `ActivityLog` deles
+passou a `entityType: 'Person'`. A tela Usuários ordena por nome, perdeu a aba Lixeira e o
+Restaurar (excluído não volta — cadastra de novo), e as iniciais coloridas saíram de todas as
+telas. `GET /api/users/options`, `/:id` e `/:id/history` saíram; o seletor de pessoa da entrega
+é `GET /api/people/options`.
+
+---
+
+## W — Excluir usuário apaga a linha, e ninguém rebaixa, desativa ou exclui a si mesmo
+
+> **Superada em parte por [X](#x--o-histórico-não-guarda-quem-fez):** a exclusão de usuário não grava mais
+> `ActivityLog`, e o histórico não guarda o autor de nada. O resto continua como está aqui.
+
+**Decidido:** duas regras da tela Usuários.
+
+- **Excluir apaga de verdade.** `DELETE /api/users/:id` faz `DELETE` na linha, e `users` perde
+  o `deletedAt`. O índice parcial `users_email_unique_undeleted` vira o `@unique` comum do
+  e-mail: sem linha apagada, não há o que deixar fora do índice. A exclusão continua gravando
+  `ActivityLog` (`entityType: 'User'`, `DELETE`) e continua recusando o último administrador.
+- **Ninguém tira a própria conta do jogo.** Com o id da própria sessão, três coisas são 409,
+  cada uma com a sua frase (`Você não pode rebaixar a si mesmo. Peça a outro administrador.`,
+  e o mesmo com *desativar* e *excluir*):
+  - `PUT /api/users/:id` com um `role` diferente do atual. Só o administrador chega à rota,
+    então mudar o próprio cargo é sempre rebaixar. Reenviar o cargo igual passa, porque o
+    formulário manda todo campo;
+  - `PUT /api/users/:id` com `isActive: false`;
+  - `DELETE /api/users/:id`.
+
+  Na tela, o campo Cargo fica travado quando a pessoa edita a si mesma, e os botões Desativar e
+  Excluir da própria linha ficam desligados, com o motivo no balão de ajuda.
+- **A lista mostra o cargo**, numa coluna entre E-mail e Ações. Antes ele só aparecia dentro do
+  formulário.
+
+**Supera:** a lixeira do usuário que vinha da F0 — o `deletedAt` e o `unique_undeleted` do
+e-mail —, que o [U](#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)
+já tinha tirado da tela (sem aba Lixeira, sem Restaurar) mas deixado no banco.
+**Mantém:** o U inteiro, e a rede do último administrador do
+[D148](./escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem).
+
+**Por quê apagar:** pedido do usuário, depois de perguntar para que servia a linha excluída. A
+resposta foi "para nada": nenhuma FK aponta para `users` — o `actorId` do `ActivityLog`, o
+`checkoutById` da entrega e o `createdById` do estoque são colunas soltas, sem relação — e
+nenhuma tela busca o nome do autor por esse id: o histórico mostra os oito primeiros
+caracteres do id (`por 3f2a1b4c…`), com a linha existindo ou não. A linha guardada só servia a
+quem abrisse o banco à mão para descobrir de quem era aquele id, e custava o índice parcial
+escrito à mão e o escopo da lixeira em toda leitura de usuário.
+
+**O que se perde, e foi aceito:** depois da exclusão, o id do autor no histórico não leva mais a
+um nome, nem no banco. Se um dia o histórico passar a mostrar o nome de quem fez, a saída é a
+da [V](./posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira):
+gravar o nome por escrito na exclusão — e não trazer a lixeira de volta.
+
+**Por quê a própria conta:** pedido do usuário — primeiro o rebaixar, depois o desativar e o
+excluir, que são o mesmo caso. O que a regra fecha: a rede do último administrador só impede o
+sistema de ficar sem ninguém, e deixava um de dois administradores tirar a si mesmo do jogo —
+perdendo a tela Usuários, ou o sistema inteiro, no mesmo clique, sem ter como desfazer sozinho.
+Com a regra, quem rebaixa, desativa ou exclui um administrador é sempre outro administrador.
+
+**O que muda na rede do último administrador:** o último não a alcança mais sozinho — tudo o
+que ele faria contra a própria conta é recusado antes. Ela continua cobrindo a corrida: dois
+administradores rebaixando, desativando ou excluindo um ao outro no mesmo instante, cada um
+contando "sobra eu". A trava `travarAdministracao` põe os dois em fila e o segundo é 409.
+
+---
+
+## X — O histórico não guarda quem fez
+
+**Decidido:** saem as cinco colunas de autor — `activity_logs.actorId`,
+`assignments.checkoutById`/`checkinById` e `stock_movements.createdById`/`returnedById` — e o
+parâmetro `actorId` que descia do controller até cada use-case, com o
+`auth/helpers/actor.helper.ts` que o lia da sessão. O histórico continua gravando o que mudou e
+quando, na mesma transação da operação. Junto:
+
+- **usuário não grava histórico:** cadastrar, editar e excluir usuário não escrevem mais
+  `ActivityLog`;
+- **as telas perdem o autor:** Movimentações de Estoque e Histórico da Licença deixam de mostrar
+  `por 3f2a1b4c…` / "sem autor registrado", e a aba Histórico do ativo perde o aviso de que o
+  autor só existe a partir da F3;
+- **a regra da própria conta fica:** `updateUser` e `deleteUser` continuam recebendo quem pede
+  (`sessaoId`, de `request.user.id`) — é o que o [W](#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo)
+  compara;
+- o `CHECK` `stock_movements_forma` perde a cláusula que amarrava `returnedById` a `returnedAt`.
+
+**Supera:** [D23](#d23--actorid-é-parâmetro-obrigatório-não-asynclocalstorage) (o autor
+obrigatório por parâmetro), [D24](#d24--o-histórico-anterior-fica-sem-ator-não-há-backfill) (o
+histórico antigo sem autor — agora não há autor em histórico nenhum) e
+[D25](#d25--ocupação-de-posto-não-ganha-coluna-de-ator) (a ocupação sem coluna de autor, por
+simetria com uma coluna que deixou de existir); e, em parte, o
+[W](#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo), que
+mantinha o `ActivityLog` da exclusão de usuário.
+**Mantém:** a sessão relida a cada requisição, o cargo e `request.user` — a autorização nunca
+dependeu do autor gravado no histórico.
+
+**Por quê:** pedido do usuário, depois de ver que nenhuma tela mostrava o nome de quem fez. As duas
+que mostravam alguma coisa mostravam os oito primeiros caracteres do id; as outras, nada. O que
+sobrava era auditoria — responder "quem entregou o notebook da Laura" —, e o sistema não vai ter
+auditoria. Sem leitor, a coluna era só custo: um parâmetro em cada use-case e um arquivo de teste
+inteiro (`ator.test.ts`) provando que um dado sem uso chegava ao banco.
+
+**Por quê o histórico de usuário também:** nenhuma tela lê o `ActivityLog` com
+`entityType: 'User'` desde o U, que tirou a ficha de usuário. Sem o autor, era uma trilha que
+ninguém abria.
+
+**O que se perde, e foi aceito:** "quem fez" deixa de ter resposta, inclusive no banco. Se a
+auditoria voltar, o caminho é gravar o NOME por escrito na linha do histórico — como a
+[V](./posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira)
+faz com a localização —, e não o id: o id de um usuário excluído não leva a ninguém (W).

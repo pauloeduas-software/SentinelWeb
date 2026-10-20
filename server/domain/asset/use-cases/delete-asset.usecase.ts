@@ -1,7 +1,7 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
-import { contarAssentosDoAtivo } from '../../license/use-cases/count-user-seats.usecase';
+import { contarAssentosDoAtivo } from '../../license/use-cases/count-person-seats.usecase';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
 
 /**
@@ -24,7 +24,7 @@ import { travarAtivoOuFalhar } from './lock-asset.usecase';
  * entrega simultânea cria a linha DEPOIS deste `count` (`lock-asset.usecase.ts`).
  * ─────────────────────────────────────────────────────────────────────────────
  */
-export async function deleteAsset(id: string, actorId: string | null): Promise<void> {
+export async function deleteAsset(id: string): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await travarAtivoOuFalhar(tx, id);
 
@@ -50,6 +50,6 @@ export async function deleteAsset(id: string, actorId: string | null): Promise<v
     // chegar neste ponto.
     if (count === 0) throw new AppError('Este ativo já está na lixeira.', 409);
 
-    await recordActivity(tx, { entityType: 'Asset', entityId: id, action: 'DELETE' }, actorId);
+    await recordActivity(tx, { entityType: 'Asset', entityId: id, action: 'DELETE' });
   });
 }

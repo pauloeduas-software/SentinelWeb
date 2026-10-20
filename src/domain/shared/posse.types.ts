@@ -1,24 +1,24 @@
 // Contrato de POSSE com a API — as três camadas de docs/referencia/modelo-de-posse.md:
 //
-//   Camada 1  Assignment        a posse, com alvo polimórfico (USER|LOCATION)
-//   Camada 2  LocationOccupant  quem ocupa o posto, com o turno
-//   Camada 3  PosseResolvida    a responsabilidade DERIVADA — nunca coluna
+//   Camada 1  Assignment           a posse, com alvo polimórfico (PERSON|WORKSTATION)
+//   Camada 2  WorkstationOccupant  quem ocupa o posto, com o turno
+//   Camada 3  PosseResolvida       a responsabilidade DERIVADA — nunca coluna
 //
 // Mora em arquivo próprio, e não dentro de `asset.types.ts`, porque posse não é
 // um detalhe do ativo: a mesma `Assignment` é lida pela tela do ativo, pela do
-// colaborador (`/users/:id/history`) e pela do posto (`/workstations/:id`).
+// colaborador (`/people/:id/history`) e pela do posto (`/workstations/:id`).
 //
 // A dependência é de mão única — `asset.types.ts` importa daqui, e este arquivo
 // não importa de lá. É o que evita ciclo entre dois arquivos de tipo.
 
 /** Para QUEM um ativo foi entregue. Espelha o enum `AssignmentTarget`. */
-export type AlvoDaPosse = 'USER' | 'LOCATION';
+export type AlvoDaPosse = 'PERSON' | 'WORKSTATION';
 
 /**
  * COMO a pessoa virou responsável — o caminho que a Camada 3 percorreu:
  *
- * - `DIRETO`  a posse aponta para ela (`targetType: 'USER'`)
- * - `POSTO`   ela ocupa a localização para a qual o ativo foi entregue
+ * - `DIRETO`  a posse aponta para ela (`targetType: 'PERSON'`)
+ * - `POSTO`   ela ocupa o posto para o qual o ativo foi entregue
  *
  * Importa na tela: "Laura" por posse direta e "Laura" por ocupar a Mesa 1 são
  * fatos diferentes, e a devolução de cada um é uma operação diferente.
@@ -29,15 +29,15 @@ type ViaDaResponsabilidade = 'DIRETO' | 'POSTO';
 export interface Responsavel {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
   via: ViaDaResponsabilidade;
   /**
-   * Texto livre vindo de `LocationOccupant.shift` ("Manhã", "12x36 A"). Só
+   * Texto livre vindo de `WorkstationOccupant.shift` ("Manhã", "12x36 A"). Só
    * existe quando `via` é `POSTO` — é o que distingue Laura de Ana na Mesa 1.
    */
   shift: string | null;
   /** O posto pelo qual a responsabilidade passou, quando passou por um. */
-  locationName: string | null;
+  workstationName: string | null;
 }
 
 /**
@@ -54,7 +54,7 @@ export interface PosseResolvida {
   targetLabel: string | null;
   responsaveis: Responsavel[];
   /**
-   * Posse apontando para uma localização SEM ocupante aberto: equipamento
+   * Posse apontando para um posto SEM ocupante aberto: equipamento
    * parado em posto vazio. É sinal operacional, não erro de dado — por isso
    * vem no contrato e aparece na listagem (docs/referencia/modelo-de-posse.md, "Como amarra no
    * status", item 3).
@@ -66,21 +66,14 @@ export interface PosseResolvida {
 export interface PessoaRef {
   id: string;
   name: string;
-  email: string;
+  /** Opcional no cadastro do colaborador: ele não faz login. */
+  email: string | null;
 }
 
-/** Localização embutida como alvo de uma posse. */
-interface LocalRef {
+/** Posto embutido como alvo de uma posse ou numa ocupação. */
+interface PostoRef {
   id: string;
   name: string;
-  /**
-   * É um POSTO DE TRABALHO, e não um depósito ou uma filial?
-   *
-   * Quem pergunta é a aba Posse do ativo: só o posto tem ficha própria
-   * (`/postos/:id`) para onde levar. Opcional porque não toda rota que devolve um
-   * `LocalRef` o manda.
-   */
-  isWorkstation?: boolean;
 }
 
 /**
@@ -99,8 +92,8 @@ export interface Assignment {
   assetId: string;
 
   targetType: AlvoDaPosse;
-  targetUserId: string | null;
-  targetLocationId: string | null;
+  targetPersonId: string | null;
+  targetWorkstationId: string | null;
 
   checkoutAt: string;
   expectedCheckinAt: string | null;
@@ -109,40 +102,44 @@ export interface Assignment {
   checkoutNotes: string | null;
   checkinNotes: string | null;
 
-  targetUser?: PessoaRef | null;
-  targetLocation?: LocalRef | null;
+  targetPerson?: PessoaRef | null;
+  targetWorkstation?: PostoRef | null;
+  /** O nome do posto, por escrito, quando ele foi excluído — `targetWorkstation` vem nulo. */
+  targetWorkstationName?: string | null;
 }
 
 /**
- * Uma pessoa ocupando um posto — `GET /api/locations/:id/occupants`.
+ * Uma pessoa ocupando um posto — `GET /api/workstations/:id/occupants`.
  *
  * Aberta = `endedAt` nulo. Encerrar é preencher a data: "quem respondia pela
  * Mesa 1 em março?" continua respondível.
  */
-export interface LocationOccupant {
+export interface WorkstationOccupant {
   id: string;
-  locationId: string;
-  userId: string;
+  /** Nulo só na ocupação encerrada de um posto excluído — o nome fica em `workstationName`. */
+  workstationId: string | null;
+  workstationName?: string | null;
+  personId: string;
   shift: string | null;
   startedAt: string;
   endedAt: string | null;
   notes: string | null;
-  user?: PessoaRef | null;
+  person?: PessoaRef | null;
   /**
    * O posto, embutido — `OCCUPANT_SELECT` já o devolve nas duas listagens.
    *
    * É o que permite a tela do COLABORADOR escrever "Mesa 1" sem uma consulta
    * por linha: lida pelo lado da pessoa, a lista traz postos diferentes, e só o
-   * `locationId` obrigaria a um N+1 para escrever o nome de cada um.
+   * `workstationId` obrigaria a um N+1 para escrever o nome de cada um.
    *
    * Opcional como `user`: lida pelo lado do POSTO, quem já sabe o nome é a
    * própria tela, e nada obriga o servidor a repeti-lo em cada linha.
    */
-  location?: LocalRef | null;
+  workstation?: PostoRef | null;
 }
 
 /**
- * O recorte que `GET /api/locations/:id/occupants` devolve:
+ * O recorte que `GET /api/workstations/:id/occupants` devolve:
  *
  * - `current` só as ocupações abertas — quem responde pelo posto AGORA
  * - `all` também as encerradas — o histórico, que nunca é apagado

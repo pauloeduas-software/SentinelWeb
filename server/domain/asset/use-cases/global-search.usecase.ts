@@ -64,26 +64,23 @@ export interface ResultadoDaBusca {
 /**
  * O posto de trabalho onde este ativo está, ou `null`.
  *
- * `isWorkstation: true` e não qualquer localização, pelo mesmo motivo da
- * listagem: o ativo guardado no depósito continua sendo parque e a ficha dele é
- * a do ativo.
+ * Pela POSSE aberta, e não pela localização onde ele está guardado: o ativo
+ * guardado no depósito continua sendo parque e a ficha dele é a do ativo.
  */
 async function postoDoAtivo(assetId: string): Promise<PostoDoAcerto | null> {
   const posse = await prisma.assignment.findFirst({
     where: {
       assetId,
       checkinAt: null,
-      // `targetType` é inócuo aqui (só o alvo LOCATION preenche a FK), e está
-      // escrito para este `where` ficar IDÊNTICO ao `EM_POSTO_DE_TRABALHO` da
-      // listagem. É a concordância dos dois que garante que não exista ativo
-      // que sai de `/ativos` e a busca não saiba para onde mandar.
-      targetType: 'LOCATION',
-      targetLocation: { isWorkstation: true },
+      // O MESMO `where` do `EM_POSTO_DE_TRABALHO` da listagem. É a
+      // concordância dos dois que garante que não exista ativo que sai de
+      // `/ativos` e a busca não saiba para onde mandar.
+      targetType: 'WORKSTATION',
     },
-    select: { targetLocation: { select: { id: true, name: true } } },
+    select: { targetWorkstation: { select: { id: true, name: true } } },
   });
 
-  return posse?.targetLocation ?? null;
+  return posse?.targetWorkstation ?? null;
 }
 
 export async function globalSearch(q: string): Promise<ResultadoDaBusca> {

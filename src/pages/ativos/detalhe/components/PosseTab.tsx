@@ -26,7 +26,7 @@ const VIA: Record<Responsavel['via'], { rotulo: string; explicacao: string }> = 
   },
   POSTO: {
     rotulo: 'por ocupar o posto',
-    explicacao: 'Responde porque ocupa a localização que detém o ativo. Sai da escala, sai a responsabilidade.',
+    explicacao: 'Responde porque ocupa o posto que detém o ativo. Sai da escala, sai a responsabilidade.',
   },
 };
 
@@ -99,7 +99,7 @@ export default function PosseTab({
               <div className="text-text-tertiary text-[10px]">{responsavel.email}</div>
               <div className="text-text-tertiary text-[10px] leading-relaxed">
                 {VIA[responsavel.via].explicacao}
-                {responsavel.locationName && ` Posto: ${responsavel.locationName}.`}
+                {responsavel.workstationName && ` Posto: ${responsavel.workstationName}.`}
               </div>
             </li>
           ))}
@@ -114,8 +114,8 @@ export default function PosseTab({
             {/* O NOME DO POSTO LEVA ATÉ ELE. A ficha dizia "Mesa 1" e parava
                 aí; quem precisava ver o resto da mesa — os outros ativos, quem a
                 ocupa, em que turno, e agora a telemetria do computador — tinha de
-                ir a /postos e procurar pelo nome. Só POSTO vira link: depósito e
-                pessoa não têm ficha de posto para onde ir. */}
+                ir a /postos e procurar pelo nome. Só POSTO vira link: pessoa não
+                tem ficha de posto para onde ir. */}
             {posto ? (
               <Link
                 to={`/postos/${posto.id}`}
@@ -135,18 +135,9 @@ export default function PosseTab({
             <div className="flex items-start gap-2 text-status-warning text-[10px] leading-relaxed">
               <TriangleAlert size={12} className="mt-0.5 shrink-0" />
               <span>
-                {/* ONDE SE RESOLVE, e a frase depende de HAVER ficha.
-                    `postoVago` vale para qualquer alvo LOCATION sem ocupante — o
-                    depósito inclusive —, e o link acima só existe para posto
-                    marcado. Mandar quem está num depósito para "a ficha dele, no
-                    nome logo acima" seria apontar para um link que não está lá.
-                    Para esse caso vale o caminho de sempre, que é o de antes
-                    desta etapa: a aba Localizações das Configurações. */}
-                POSTO VAGO: o ativo está entregue a uma localização sem nenhum ocupante aberto —
-                equipamento parado em mesa vazia. Devolva ao estoque, ou coloque alguém{' '}
-                {posto
-                  ? 'no posto pela ficha dele, no nome logo acima.'
-                  : 'na localização, em Configurações › Localizações.'}
+                POSTO VAGO: o ativo está entregue a um posto sem nenhum ocupante aberto —
+                equipamento parado em mesa vazia. Devolva ao estoque, ou coloque alguém
+                no posto pela ficha dele, no nome logo acima.
               </span>
             </div>
           )}

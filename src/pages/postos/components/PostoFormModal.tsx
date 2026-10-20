@@ -1,18 +1,17 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import { montarNovoPosto } from '../helpers/postos.helper';
-import type { NovoPostoInput } from '../../../domain/workstation/workstation.queries';
+import ReferenceSelect from '../../components/ReferenceSelect';
+import { montarPosto } from '../helpers/postos.helper';
+import type { PostoInput } from '../../../domain/workstation/workstation.queries';
+import type { Posto } from '../../../domain/shared/workstation.types';
 
-// Criar a Mesa 1 SEM sair da tela de postos.
+// Criar ou editar a Mesa 1 SEM sair da tela de postos.
 //
-// Dois campos, e é decisão: nome e uma nota. Endereço, CEP e
-// telefone ficam de fora porque não querem dizer nada numa bancada — foi
-// justamente por misturar mesa e filial num formulário só que o posto sumia no
-// meio das localizações, em Configurações. Quem precisa dos campos de filial
-// edita a localização lá, onde eles fazem sentido.
+// Três campos: nome, a LOCALIZAÇÃO onde a mesa fica e uma nota. Endereço, CEP e
+// telefone são da localização, não da mesa — quem precisa deles edita a
+// localização em Configurações, onde eles fazem sentido.
 //
-// Grava em `/locations` com `isWorkstation: true` (ver a query do domínio): o
-// posto É uma `Location`, e não há tabela nova (docs/referencia/modelo-de-posse.md, D15).
+// Grava em `/workstations`, o cadastro do posto (decisão Y).
 
 const CLASSE_CAMPO =
   'w-full p-2 bg-bg-base border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors';
@@ -20,13 +19,16 @@ const CLASSE_CAMPO =
 const ROTULO = 'text-text-secondary uppercase tracking-widest text-[10px]';
 
 interface PostoFormModalProps {
+  /** O posto em edição; `null` cria um novo. */
+  posto: Posto | null;
   onClose: () => void;
-  onSubmit: (data: NovoPostoInput) => Promise<void>;
+  onSubmit: (data: PostoInput) => Promise<void>;
 }
 
-export default function PostoFormModal({ onClose, onSubmit }: PostoFormModalProps) {
-  const [name, setName] = useState('');
-  const [notes, setNotes] = useState('');
+export default function PostoFormModal({ posto, onClose, onSubmit }: PostoFormModalProps) {
+  const [name, setName] = useState(posto?.name ?? '');
+  const [locationId, setLocationId] = useState(posto?.locationId ?? '');
+  const [notes, setNotes] = useState(posto?.notes ?? '');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -36,10 +38,10 @@ export default function PostoFormModal({ onClose, onSubmit }: PostoFormModalProp
     setErro('');
 
     try {
-      await onSubmit(montarNovoPosto({ name, notes }));
+      await onSubmit(montarPosto({ name, locationId, notes }, posto !== null));
     } catch (falha) {
       // O apiClient já traduziu a resposta do servidor em Error.message — é
-      // aqui que aparece o 409 de nome repetido.
+      // aqui que aparece o 409 de nome repetido e o de localização desativada.
       setErro((falha as Error).message);
     } finally {
       setSalvando(false);
@@ -51,7 +53,9 @@ export default function PostoFormModal({ onClose, onSubmit }: PostoFormModalProp
       <div className="relative w-full max-w-xl bg-surface-card border border-border-sutil shadow-2xl flex flex-col">
 
         <div className="flex items-center justify-between px-6 py-4 border-b border-border-sutil bg-bg-base/50">
-          <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">Novo posto</h2>
+          <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">
+            {posto ? 'Editar posto' : 'Novo posto'}
+          </h2>
           <button onClick={onClose} className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
             <X size={16} />
           </button>
@@ -68,7 +72,19 @@ export default function PostoFormModal({ onClose, onSubmit }: PostoFormModalProp
               required
               value={name}
               onChange={(event) => setName(event.target.value)}
+              placeholder="MesaEscritório, MesaRecepção..."
               className={CLASSE_CAMPO}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className={ROTULO}>Localização*</label>
+            <ReferenceSelect
+              rota="locations"
+              valor={locationId}
+              obrigatorio
+              atual={posto?.location}
+              onChange={setLocationId}
             />
           </div>
 
@@ -82,9 +98,8 @@ export default function PostoFormModal({ onClose, onSubmit }: PostoFormModalProp
           </div>
 
           <p className="text-text-tertiary text-[10px] leading-relaxed">
-            Quem ocupa o posto se define depois de criado, com o turno de cada um. Endereço e
-            telefone não aparecem aqui: são de filial, não de mesa — quem precisar deles usa
-            Configurações › Localizações.
+            Quem ocupa o posto se define na ficha dele, com o turno de cada um. A localização é
+            onde a mesa fica — a Matriz, a Filial —, e se cadastra em Configurações › Localizações.
           </p>
 
           <div className="pt-4 flex justify-end gap-3 border-t border-border-sutil">
@@ -97,10 +112,10 @@ export default function PostoFormModal({ onClose, onSubmit }: PostoFormModalProp
             </button>
             <button
               type="submit"
-              disabled={salvando || !name.trim()}
+              disabled={salvando || !name.trim() || !locationId}
               className="px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary transition-colors disabled:opacity-50"
             >
-              {salvando ? 'Criando...' : 'Criar posto'}
+              {salvando ? 'Salvando...' : posto ? 'Salvar' : 'Criar posto'}
             </button>
           </div>
         </form>

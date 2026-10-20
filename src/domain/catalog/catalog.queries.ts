@@ -35,7 +35,7 @@ export function useCatalogQuery(slug: string, params: CatalogListParams) {
       (await apiClient.get<ListEnvelope<CatalogRow>>(`/${slug}`, { params })).data,
     // Sem isto a tabela pisca em branco a cada troca de página ou tecla da busca.
     //
-    // MAS SÓ DENTRO DA MESMA TABELA. As cinco abas dividem este hook, e o
+    // MAS SÓ DENTRO DA MESMA TABELA. As seis abas dividem este hook, e o
     // `keepPreviousData` puro reaproveitava a resposta de QUALQUER chave
     // anterior: trocar de Categorias para Status mostrava as categorias sob o
     // cabeçalho de Status até a resposta chegar — e elas respondiam a clique,
@@ -47,11 +47,12 @@ export function useCatalogQuery(slug: string, params: CatalogListParams) {
 }
 
 /**
- * Opções para `<select>`. `rota` é o slug do catálogo ou `users` — as duas
- * respondem no mesmo formato, então um hook só atende as duas.
+ * Opções para `<select>`. `rota` é o slug do catálogo — colaboradores
+ * (`people`) inclusive — ou `assets`: as duas respondem no mesmo formato, então
+ * um hook só atende as duas.
  *
- * `q` É BUSCA DO SERVIDOR, e já era aceita por `/options` desde a F1 — as três
- * rotas (catálogo, ativos e usuários) a leem e a aplicam no `where`. O que
+ * `q` É BUSCA DO SERVIDOR, e já era aceita por `/options` desde a F1 — as duas
+ * rotas (catálogo e ativos) a leem e a aplicam no `where`. O que
  * faltava era a tela mandar: acima do teto de 200 opções, escolher a 201ª era
  * impossível pelo formulário (observação 7 da auditoria da F1).
  *
@@ -105,6 +106,15 @@ export function useDeleteCatalogRow(slug: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiClient.delete(`/${slug}/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: catalogKeys.tabela(slug) }),
+  });
+}
+
+/** Tira da lixeira — só na tabela que a tem (hoje, colaboradores). */
+export function useRestoreCatalogRow(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.post(`/${slug}/${id}/restore`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: catalogKeys.tabela(slug) }),
   });
 }

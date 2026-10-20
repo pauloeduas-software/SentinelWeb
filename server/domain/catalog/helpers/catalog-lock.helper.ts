@@ -1,6 +1,6 @@
 import type { $Enums } from '@prisma/client';
 import { AppError } from '../../../core/errors/app-error';
-import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
+import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
 
 // AS TRAVAS DAS LINHAS DE CATÁLOGO que outro domínio LÊ para decidir.
 //
@@ -16,8 +16,9 @@ import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
 //
 // Resultado: um item de estoque numa categoria de ATIVO, que nenhuma guarda
 // recusou. O mesmo vale para o tipo do status (um ativo entregue com status de
-// estoque) e para a localização desativada (uma entrega a um local que não
-// recebe mais nada).
+// estoque), para o posto desativado (uma entrega a um posto que não recebe mais
+// nada) e para a localização desativada (um ativo guardado onde não cabe mais
+// nada).
 //
 // A FK NÃO cobre: o `FOR KEY SHARE` que ela toma não conflita com o `UPDATE`
 // de uma coluna que não é chave. Por isso os DOIS lados travam de verdade:
@@ -31,8 +32,9 @@ import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
 // catálogo vêm por último: usuário → ativo → posto → status, item → posto,
 // item → categoria, licença → categoria. A troca de tipo trava `FOR UPDATE` e
 // só CONTA depois — não espera mais nada. A exceção é a ocupação de posto, que
-// lê o local ANTES de travar o usuário; a escrita de localização trava só a
-// própria linha e não pede usuário nenhum, então as duas não se cruzam.
+// lê o posto ANTES de travar o usuário; a escrita do posto trava só a própria
+// linha (e lê a localização dele) e não pede usuário nenhum, então as duas não
+// se cruzam.
 
 /** Trava a linha para quem vai MUDAR o tipo — antes de contar os usos. */
 export async function travarCategoriaParaEscrita(client: ClienteQueTrava, id: string): Promise<void> {
@@ -61,19 +63,27 @@ export async function travarStatusDoTipo(client: ClienteQueTrava, tipo: $Enums.S
 /**
  * Trava a localização para escrita.
  *
- * É o que serializa "marcar como posto" com a entrega a este local — a entrega
- * trava o posto `FOR UPDATE` (`ativo-do-posto.helper.ts`), e sem a trava daqui
- * a marca contava os ativos ANTES de uma entrega simultânea confirmar. E é o
- * que faz a desativação esperar quem está lendo a marca `FOR SHARE`.
+ * É o que faz a desativação esperar quem está lendo o `isActive` dela `FOR
+ * SHARE` (`assertLocalRecebe`) — o ativo, o item ou o posto que vai ficar nela.
  *
  * `FOR NO KEY UPDATE`, e não `FOR UPDATE` como a troca de tipo: `FOR UPDATE`
  * conflitaria com o `FOR KEY SHARE` que toda FK escrita para este local toma —
- * o ativo guardado aqui, a saída de estoque —, criando arestas novas no grafo
- * de travas. `NO KEY UPDATE` conflita com o que precisa (`SHARE` e `UPDATE`) e
- * deixa as FKs passarem.
+ * o ativo guardado aqui, o posto que fica nele —, criando arestas novas no
+ * grafo de travas. `NO KEY UPDATE` conflita com o que precisa (`SHARE` e
+ * `UPDATE`) e deixa as FKs passarem.
  */
 export async function travarLocalParaEscrita(client: ClienteQueTrava, id: string): Promise<void> {
   await client.$queryRaw`SELECT id FROM locations WHERE id = ${id}::uuid FOR NO KEY UPDATE`;
+}
+
+/**
+ * Trava o posto para escrita — a mesma trava da localização, pelo mesmo motivo:
+ * a desativação espera quem está lendo o `isActive` dele (`assertPostoRecebe`).
+ * `NO KEY UPDATE` deixa passar o `FOR KEY SHARE` das FKs que apontam para cá
+ * (a entrega, a saída de estoque, o ocupante).
+ */
+export async function travarPostoParaEscrita(client: ClienteQueTrava, id: string): Promise<void> {
+  await client.$queryRaw`SELECT id FROM workstations WHERE id = ${id}::uuid FOR NO KEY UPDATE`;
 }
 
 interface StatusLido {
@@ -116,15 +126,30 @@ export async function lerCategoriaTravada(client: ClienteQueTrava, id: string): 
 /**
  * A localização existe e ainda RECEBE coisa nova? 404 / 409.
  *
- * `finalidade` completa a frase do 409 — "não recebe <finalidade>" —, para a
- * recusa dizer o que foi tentado.
- *
- * `modo`: `SHARE` para quem só lê a marca; `UPDATE` para a entrega de ativo,
- * que logo depois trava o posto `FOR UPDATE` na invariante 19 — subir de
- * `SHARE` para `UPDATE` na mesma linha é o deadlock clássico entre duas
- * entregas ao mesmo posto, então ela trava forte desde o começo.
+ * "Receber", aqui, é guardar: o ativo ou o item de estoque que passa a ficar
+ * nela, e o posto novo. `finalidade` completa a frase do 409 — "não recebe
+ * <finalidade>" —, para a recusa dizer o que foi tentado.
  */
-export async function assertLocalRecebe(
+export async function assertLocalRecebe(client: ClienteQueTrava, id: string, finalidade: string): Promise<void> {
+  const linhas = await client.$queryRaw<{ name: string; isActive: boolean }[]>`
+    SELECT name, "isActive" FROM locations WHERE id = ${id}::uuid FOR SHARE`;
+
+  if (linhas.length === 0) throw new AppError('Localização não encontrada.', 404);
+  if (!linhas[0].isActive) {
+    throw new AppError(`"${linhas[0].name}" está desativada e não recebe ${finalidade}.`, 409);
+  }
+}
+
+/**
+ * O posto existe e ainda RECEBE coisa nova — entrega de ativo, saída de
+ * estoque, ocupante? 404 / 409.
+ *
+ * `modo`: `SHARE` para a saída de estoque e o ocupante; `UPDATE` para a entrega
+ * de ativo, que logo depois trava o posto `FOR UPDATE` na invariante 19 —
+ * subir de `SHARE` para `UPDATE` na mesma linha é o deadlock clássico entre
+ * duas entregas ao mesmo posto, então ela trava forte desde o começo.
+ */
+export async function assertPostoRecebe(
   client: ClienteQueTrava,
   id: string,
   finalidade: string,
@@ -132,13 +157,13 @@ export async function assertLocalRecebe(
 ): Promise<void> {
   const linhas = modo === 'UPDATE'
     ? await client.$queryRaw<{ name: string; isActive: boolean }[]>`
-        SELECT name, "isActive" FROM locations WHERE id = ${id}::uuid FOR UPDATE`
+        SELECT name, "isActive" FROM workstations WHERE id = ${id}::uuid FOR UPDATE`
     : await client.$queryRaw<{ name: string; isActive: boolean }[]>`
-        SELECT name, "isActive" FROM locations WHERE id = ${id}::uuid FOR SHARE`;
+        SELECT name, "isActive" FROM workstations WHERE id = ${id}::uuid FOR SHARE`;
 
-  if (linhas.length === 0) throw new AppError('Localização não encontrada.', 404);
+  if (linhas.length === 0) throw new AppError('Posto não encontrado.', 404);
   if (!linhas[0].isActive) {
-    throw new AppError(`"${linhas[0].name}" está desativada e não recebe ${finalidade}.`, 409);
+    throw new AppError(`"${linhas[0].name}" está desativado e não recebe ${finalidade}.`, 409);
   }
 }
 

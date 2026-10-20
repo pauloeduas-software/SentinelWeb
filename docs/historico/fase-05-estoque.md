@@ -11,6 +11,9 @@
 > [*O estoque voltou numa forma diferente*](#o-estoque-voltou-numa-forma-diferente-segunda-rodada),
 > no fim deste arquivo, conta a diferença.
 >
+> **Depois da volta (U, X e Y):** a saída de estoque vai para `PERSON` ou `WORKSTATION`, não mais
+> `USER`/`LOCATION` ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos), [Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)), e `createdById`/`returnedById` saíram ([X](../decisoes/acesso.md#x--o-histórico-não-guarda-quem-fez)).
+>
 > Plano **prospectivo** da Fase 5 do roadmap do projeto (apagado depois;
 > o escopo que ficou está em [`../decisoes/escopo.md`](../decisoes/escopo.md)), escrito contra o
 > código real depois da F1 e contra [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md). Convenções de

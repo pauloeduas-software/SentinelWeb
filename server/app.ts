@@ -29,6 +29,7 @@ import { CatalogMaestro } from './domain/catalog/catalog.maestro';
 import { AssetMaestro } from './domain/asset/asset.maestro';
 import { SettingsMaestro } from './domain/settings/settings.maestro';
 import { UserMaestro } from './domain/user/user.maestro';
+import { PersonMaestro } from './domain/person/person.maestro';
 import { AssignmentMaestro } from './domain/assignment/assignment.maestro';
 import { OccupancyMaestro } from './domain/occupancy/occupancy.maestro';
 import { WorkstationMaestro } from './domain/workstation/workstation.maestro';
@@ -237,13 +238,14 @@ export async function buildApp(
   await AssetMaestro.setupRoutes(server);
   await SettingsMaestro.setupRoutes(server);
   await UserMaestro.setupRoutes(server);
-  // Posse e ocupação vêm DEPOIS de asset e user: as rotas deles pendem de
-  // `/api/assets/:id` e `/api/users/:id`, e registrar na ordem em que o
+  await PersonMaestro.setupRoutes(server);
+  // Posse e ocupação vêm DEPOIS de asset e person: as rotas deles pendem de
+  // `/api/assets/:id` e `/api/people/:id`, e registrar na ordem em que o
   // recurso principal nasce é o que mantém o arquivo legível (docs/referencia/modelo-de-posse.md).
   await AssignmentMaestro.setupRoutes(server);
   await OccupancyMaestro.setupRoutes(server);
-  // Posto vem por ÚLTIMO da fatia de posse: ele só lê o que os três acima
-  // escrevem (localização, posse e ocupação), e nada depende dele.
+  // Posto vem por ÚLTIMO da fatia de posse: a tela dele lê o que os de cima
+  // escrevem (posse e ocupação), e nenhuma rota depende das dele.
   await WorkstationMaestro.setupRoutes(server);
   // ESTOQUE depois da posse: a saída de uma unidade aponta para pessoa e posto,
   // e a ficha do posto lê as unidades entregues a ele.

@@ -1,13 +1,13 @@
 import { z } from 'zod';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { parseListQuery } from '../../../core/http/list-query';
-import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { listCatalog } from '../use-cases/list-catalog.usecase';
 import { listCatalogOptions } from '../use-cases/list-catalog-options.usecase';
 import { createCatalog } from '../use-cases/create-catalog.usecase';
 import { updateCatalog } from '../use-cases/update-catalog.usecase';
 import { deleteCatalog } from '../use-cases/delete-catalog.usecase';
+import { restoreCatalog } from '../use-cases/restore-catalog.usecase';
 import type { CatalogSpec } from '../specs/catalog-spec.types';
 
 // O schema do /options é montado a partir da spec: a tabela que não declara
@@ -63,7 +63,8 @@ export function createCatalogController(spec: CatalogSpec) {
       }
 
       // Sem `trashable` — aqui não há lixeira (D8).
-      const query = parseListQuery(paginacao);
+      // `?view=trashed` só existe na tabela com lixeira: nas outras, a chave é 422.
+      const query = parseListQuery(paginacao, { trashable: spec.lixeira === true });
       return listCatalog(spec, query, filtro);
     },
 
@@ -75,20 +76,25 @@ export function createCatalogController(spec: CatalogSpec) {
 
     async create(request: FastifyRequest, reply: FastifyReply) {
       const data = spec.createSchema.parse(request.body ?? {}) as Record<string, unknown>;
-      const registro = await createCatalog(spec, data, atorDaRequisicao(request));
+      const registro = await createCatalog(spec, data);
       return reply.status(201).send(registro);
     },
 
     async update(request: FastifyRequest) {
       const { id } = idParamSchema.parse(request.params);
       const data = spec.updateSchema.parse(request.body ?? {}) as Record<string, unknown>;
-      return updateCatalog(spec, id, data, atorDaRequisicao(request));
+      return updateCatalog(spec, id, data);
     },
 
     async remove(request: FastifyRequest) {
       const { id } = idParamSchema.parse(request.params);
-      await deleteCatalog(spec, id, atorDaRequisicao(request));
+      await deleteCatalog(spec, id);
       return { success: true };
+    },
+
+    async restore(request: FastifyRequest) {
+      const { id } = idParamSchema.parse(request.params);
+      return restoreCatalog(spec, id);
     },
   };
 }

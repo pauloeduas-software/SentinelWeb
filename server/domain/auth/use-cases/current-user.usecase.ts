@@ -7,10 +7,9 @@ import type { SessionUser } from '../auth.types';
  * O usuário por trás de um token — relido do banco a CADA requisição.
  *
  * Parece caro e é a defesa principal contra o token que sobrevive ao usuário:
- * mandar alguém para a lixeira não apaga o JWT que ele já tem no navegador, e
- * sem esta consulta ele continuaria operando até o token expirar. Aqui a
- * extension de soft delete joga a favor — `findFirst` já não enxerga o apagado,
- * sem código nenhum a mais (server/core/database/soft-delete.extension.ts).
+ * excluir alguém não apaga o JWT que ele já tem no navegador, e sem esta
+ * consulta ele continuaria operando até o token expirar. A exclusão apaga a
+ * linha (W), então aqui o excluído simplesmente não é encontrado.
  *
  * `isActive: false` (desativado) cai junto: quem saiu da empresa continua
  * no histórico de posse e nos relatórios, mas não opera mais.

@@ -6,7 +6,7 @@ import { ASSET_WRITE_SELECT } from '../helpers/asset-select.helper';
 import { assertEtiquetaESerieLivres } from './assert-unique-asset.usecase';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
 
-export async function restoreAsset(id: string, actorId: string | null) {
+export async function restoreAsset(id: string) {
   return prisma.$transaction(async (tx) => {
     // A trava ANTES de ler: sem ela, um duplo clique restaurava duas vezes e o
     // histórico ganhava dois RESTORE para um fato só. A trava é sobre a LINHA
@@ -20,8 +20,8 @@ export async function restoreAsset(id: string, actorId: string | null) {
         serial: true,
         // A pergunta da porta abaixo: o ativo está entregue a um posto?
         assignments: {
-          where: { checkinAt: null, targetLocationId: { not: null } },
-          select: { targetLocationId: true },
+          where: { checkinAt: null, targetWorkstationId: { not: null } },
+          select: { targetWorkstationId: true },
         },
       },
     });
@@ -40,17 +40,17 @@ export async function restoreAsset(id: string, actorId: string | null) {
     // A PORTA DA RESTAURAÇÃO na invariante 19 — no máximo um ativo por posto.
     //
     // O `delete-asset` só carimba `deletedAt`: a posse aberta FICA, e as outras
-    // portas (entrega e marca) a ignoram de propósito, porque um ativo que
+    // porta (a entrega) a ignora de propósito, porque um ativo que
     // nenhuma tela mostra não pode trancar a mesa. É isso que abre o caminho:
     // entregue o ativo A à mesa, mande A para a lixeira, entregue B — e restaure
-    // A. Sem esta guarda a mesa marcada ficava com dois ativos sem nenhuma porta
+    // A. Sem esta guarda a mesa ficava com dois ativos sem nenhuma porta
     // ter sido consultada, e a ficha do posto era quem avisava, depois.
     //
     // Mesma frase e mesmo helper da porta de entrega, inclusive a trava: o
     // helper tranca o ativo e depois o posto, que é a ordem do grafo
     // (`lock-asset.usecase.ts`), e a trava do ativo não filtra a lixeira — é
     // sobre a LINHA, e a linha existe.
-    const postoAtual = naLixeira.assignments[0]?.targetLocationId;
+    const postoAtual = naLixeira.assignments[0]?.targetWorkstationId;
     if (postoAtual) {
       const ocupante = await ativoDoPosto(tx, postoAtual, id);
       if (ocupante) throw new AppError(jaTemAtivo(ocupante), 409);
@@ -58,7 +58,7 @@ export async function restoreAsset(id: string, actorId: string | null) {
 
     const { count } = await tx.asset.updateMany({ where: { id, deletedAt: { not: null } }, data: { deletedAt: null } });
     if (count === 0) throw new AppError('Ativo não está na lixeira.', 404);
-    await recordActivity(tx, { entityType: 'Asset', entityId: id, action: 'RESTORE' }, actorId);
+    await recordActivity(tx, { entityType: 'Asset', entityId: id, action: 'RESTORE' });
 
     return tx.asset.findFirstOrThrow({ where: { id }, select: ASSET_WRITE_SELECT });
   });

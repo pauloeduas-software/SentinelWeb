@@ -21,7 +21,7 @@ export async function listLicenseHistory(licenseId: string, limit = PADRAO) {
 
   return prisma.activityLog.findMany({
     where: { entityType: 'License', entityId: licenseId },
-    select: { id: true, action: true, changes: true, actorId: true, createdAt: true },
+    select: { id: true, action: true, changes: true, createdAt: true },
     orderBy: { createdAt: 'desc' },
     take: limit,
   });

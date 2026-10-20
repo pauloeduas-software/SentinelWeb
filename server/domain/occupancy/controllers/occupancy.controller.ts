@@ -1,31 +1,30 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { idParamSchema } from '../../shared/params.schema';
 import { SEM_PARAMETROS } from '../../../core/http/sem-parametros';
-import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import {
   addOccupantSchema, occupancyViewQuerySchema, occupantParamsSchema,
   updateOccupantShiftSchema,
 } from '../schemas/occupancy.schema';
-import { listLocationOccupants } from '../use-cases/list-location-occupants.usecase';
-import { addLocationOccupant } from '../use-cases/add-location-occupant.usecase';
-import { endLocationOccupancy } from '../use-cases/end-location-occupancy.usecase';
+import { listWorkstationOccupants } from '../use-cases/list-workstation-occupants.usecase';
+import { addWorkstationOccupant } from '../use-cases/add-workstation-occupant.usecase';
+import { endWorkstationOccupancy } from '../use-cases/end-workstation-occupancy.usecase';
 import { updateOccupantShift } from '../use-cases/update-occupant-shift.usecase';
-import { listUserOccupancies } from '../use-cases/list-user-occupancies.usecase';
+import { listPersonOccupancies } from '../use-cases/list-person-occupancies.usecase';
 
 // Só HTTP. Sem try/catch: o `parse` do schema rejeita e a rejeição cai no
 // errorHandler, que devolve 422 com o campo que falhou — e o `AppError` dos
 // use-cases (404 / 409) sai por lá também, com a mensagem que eles escreveram.
 export const occupancyController = {
-  async listByLocation(request: FastifyRequest) {
+  async listByWorkstation(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     const { view } = occupancyViewQuerySchema.parse(request.query ?? {});
-    return listLocationOccupants(id, view);
+    return listWorkstationOccupants(id, view);
   },
 
   async add(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
     const data = addOccupantSchema.parse(request.body ?? {});
-    const ocupacao = await addLocationOccupant(id, data, atorDaRequisicao(request));
+    const ocupacao = await addWorkstationOccupant(id, data);
     return reply.status(201).send(ocupacao);
   },
 
@@ -33,7 +32,7 @@ export const occupancyController = {
   // use-case — histórico de posto é append-only.
   async end(request: FastifyRequest) {
     const { id, occupantId } = occupantParamsSchema.parse(request.params);
-    return endLocationOccupancy(id, occupantId, atorDaRequisicao(request));
+    return endWorkstationOccupancy(id, occupantId);
   },
 
   // PATCH e não PUT: corrige UM atributo do vínculo aberto, e o resto da
@@ -41,14 +40,14 @@ export const occupancyController = {
   async updateShift(request: FastifyRequest) {
     const { id, occupantId } = occupantParamsSchema.parse(request.params);
     const { shift } = updateOccupantShiftSchema.parse(request.body ?? {});
-    return updateOccupantShift(id, occupantId, shift, atorDaRequisicao(request));
+    return updateOccupantShift(id, occupantId, shift);
   },
 
   // Só as ocupações ABERTAS: é o que a ficha da pessoa mostra. O histórico
-  // completo dela vem pelo `/api/users/:id/history`.
-  async listByUser(request: FastifyRequest) {
+  // completo dela vem pelo `/api/people/:id/history`.
+  async listByPerson(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     SEM_PARAMETROS.parse(request.query ?? {});
-    return listUserOccupancies(id, 'current');
+    return listPersonOccupancies(id, 'current');
   },
 };

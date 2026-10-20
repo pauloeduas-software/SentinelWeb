@@ -80,14 +80,6 @@ function Evento({ evento }: { evento: EventoDaLicenca }) {
           ))}
         </div>
       )}
-
-      {/* O ATOR sai da sessão (D23), e é ele que faz "quem fez isto?" ter
-          resposta. Id curto pelo mesmo motivo do `valorLegivel`: o nome de
-          quem operou pode ter mudado desde então, e resolvê-lo aqui exigiria
-          guardar a história da tabela de usuários. */}
-      <p className="text-[10px] text-text-tertiary">
-        {evento.actorId ? `por ${evento.actorId.slice(0, 8)}…` : 'sem autor registrado'}
-      </p>
     </li>
   );
 }

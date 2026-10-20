@@ -152,9 +152,7 @@ export async function reconciliarEndpoint(
     && casamentos[0].score >= PONTOS_PARA_VINCULO_AUTOMATICO;
 
   if (automatico) {
-    // Ator `null`: quem vinculou foi o sistema, e o D24 manda não inventar
-    // ator — auditoria falsificada é pior que auditoria ausente.
-    await vincularEndpointAoAtivo(endpoint.id, casamentos[0].alvoId, null, {
+    await vincularEndpointAoAtivo(endpoint.id, casamentos[0].alvoId, {
       automatico: true,
       sinal: casamentos[0].signal,
     });

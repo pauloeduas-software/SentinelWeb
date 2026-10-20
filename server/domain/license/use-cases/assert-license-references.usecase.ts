@@ -2,7 +2,7 @@ import { AppError } from '../../../core/errors/app-error';
 import {
   assertEscolhaAtiva, lerCategoriaTravada, lerFabricanteTravado,
 } from '../../catalog/helpers/catalog-lock.helper';
-import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
+import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
 import type { ClienteLicenca } from '../helpers/license-seats.helper';
 
 // As referências da licença existem? E a categoria é do TIPO `LICENSE`?

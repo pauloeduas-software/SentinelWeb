@@ -29,6 +29,10 @@
 > segundo de-escopo ([O](../decisoes/escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai)); a identidade do colaborador (matrícula, cargo,
 > telefone, endereço, admissão), na varredura [Q](../decisoes/escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai). O que vale hoje está em
 > [`../referencia/acesso.md`](../referencia/acesso.md).
+>
+> **E depois (U, W e X):** o cargo `USUARIO` saiu, com o colaborador indo de `users` para o
+> catálogo ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)); a lixeira do usuário saiu — excluir apaga a linha ([W](../decisoes/acesso.md#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo)); e o histórico deixou de
+> guardar quem fez ([X](../decisoes/acesso.md#x--o-histórico-não-guarda-quem-fez)).
 
 ---
 

@@ -1,35 +1,31 @@
 import { Plus, SlidersHorizontal } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import CatalogFormModal from './components/CatalogFormModal';
 import CatalogTable from './components/CatalogTable';
-import LocationOccupantsModal from './components/LocationOccupantsModal';
 import TipoFiltro from './components/TipoFiltro';
 import EstadoDaLista from '../components/EstadoDaLista';
 import ListToolbar from '../components/ListToolbar';
 import { useCatalog } from './hooks/useCatalog';
-import { useOcupantes } from '../hooks/useOcupantes';
 
 // As tabelas de catálogo do ITAM — o menu *Settings* do Snipe-IT.
 //
-// Uma tela para as CINCO tabelas, dirigida pelas specs de `specs/`: acrescentar
+// Uma tela para as SEIS tabelas, dirigida pelas specs de `specs/`: acrescentar
 // uma tabela é escrever a spec, não copiar uma página.
 export default function ConfiguracoesPage() {
   const {
     specs, spec, changeTab, registros, total, page, perPage, setPage,
-    search, changeSearch, tipo, changeTipo, loading, erro, padroesDoNovo, modalAberto, emEdicao,
-    openCreate, openEdit, closeModal, handleSubmit, handleDelete,
-    acaoAberta, openAcao, closeAcao,
+    search, changeSearch, tipo, changeTipo, view, changeView, loading, erro, padroesDoNovo, modalAberto, emEdicao,
+    openCreate, openEdit, closeModal, handleSubmit, handleDelete, handleRestore,
+    openAcao,
   } = useCatalog();
 
-  // As ações de linha declaradas pelas specs. Traduzir a ação genérica em "qual
-  // posto" é trabalho DESTA tela: o `useCatalog` guarda QUAL
-  // ação e SOBRE QUEM, e não sabe o que cada uma faz — assim uma ação nova não
-  // mexe naquele arquivo.
-  //
-  // `useOcupantes` é compartilhado com /postos, que não tem ação de linha nenhuma
-  // para conhecer.
-
-  const posto = acaoAberta?.id === 'ocupantes' ? acaoAberta.registro : null;
-  const ocupantes = useOcupantes(posto?.id ?? null);
+  // A FICHA não abre modal: é uma tela (`/configuracoes/colaboradores/:id`),
+  // para poder ser aberta direto, colada de um chamado ou recarregada.
+  const navigate = useNavigate();
+  const abrirAcao: typeof openAcao = (id, registro) => {
+    if (id === 'ficha') navigate(`/configuracoes/colaboradores/${registro.id}`);
+    else openAcao(id, registro);
+  };
 
   return (
     <div className="motion-safe:animate-fade-in h-[calc(100vh-4rem)] flex flex-col pb-6">
@@ -67,6 +63,7 @@ export default function ConfiguracoesPage() {
       </div>
 
       <ListToolbar
+        {...(spec.lixeira ? { view, onViewChange: changeView } : {})}
         search={search}
         onSearchChange={changeSearch}
         placeholder={spec.placeholderBusca}
@@ -85,12 +82,15 @@ export default function ConfiguracoesPage() {
         acoes={spec.acoes}
         onEdit={openEdit}
         onDelete={handleDelete}
-        onAcao={openAcao}
+        onAcao={abrirAcao}
+        onRestore={spec.lixeira && view === 'trashed' ? handleRestore : undefined}
         vazio={
           <div className="flex flex-col items-center justify-center">
             <SlidersHorizontal size={24} className="mb-4 opacity-50" />
             <EstadoDaLista carregando={loading} erro={erro}>
-              {search ? (
+              {spec.lixeira && view === 'trashed' ? (
+                <span>A lixeira está vazia.</span>
+              ) : search ? (
                 <span>Nada encontrado para "{search}".</span>
               ) : tipo ? (
                 <span>Nada cadastrado neste tipo.</span>
@@ -114,21 +114,6 @@ export default function ConfiguracoesPage() {
           padroes={padroesDoNovo}
           onClose={closeModal}
           onSubmit={handleSubmit}
-        />
-      )}
-
-      {posto && (
-        <LocationOccupantsModal
-          posto={posto}
-          ocupantes={ocupantes.ocupantes}
-          carregando={ocupantes.carregando}
-          erro={ocupantes.erro}
-          view={ocupantes.view}
-          onViewChange={ocupantes.changeView}
-          onAdicionar={ocupantes.handleAdicionar}
-          onEncerrar={ocupantes.handleEncerrar}
-          onCorrigirTurno={ocupantes.handleCorrigirTurno}
-          onClose={closeAcao}
         />
       )}
     </div>

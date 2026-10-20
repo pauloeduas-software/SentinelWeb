@@ -1,24 +1,14 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
-  useCatalogQuery, useCreateCatalogRow, useDeleteCatalogRow, useUpdateCatalogRow,
+  useCatalogQuery, useCreateCatalogRow, useDeleteCatalogRow, useRestoreCatalogRow, useUpdateCatalogRow,
 } from '../../../domain/catalog/catalog.queries';
+import type { ListView } from '../../../domain/shared/list.types';
 import type { CatalogRow } from '../../../domain/shared/catalog.types';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useNotificacao } from '../../hooks/useNotificacao';
 import { CATALOG_UI_SPECS } from '../specs';
 import type { AcaoLinhaId } from '../specs/catalog-ui.types';
-
-/**
- * A ação de linha que está aberta, com o registro que a disparou.
- *
- * Genérico de propósito: o hook guarda QUAL ação e SOBRE QUEM, e não sabe o que
- * cada uma faz. Quem sabe é quem trata o `id` — hoje, o `useOcupantes`. Assim
- * uma ação nova não mexe neste arquivo.
- */
-interface AcaoLinhaAberta {
-  id: AcaoLinhaId;
-  registro: CatalogRow;
-}
 
 // Catálogo é lista curta: com 10, onze categorias já viravam duas páginas. A
 // tabela rola por dentro, então 25 não estoura a tela.
@@ -29,12 +19,21 @@ const PER_PAGE = 25;
 // useState, e não em store (docs/referencia/arquitetura.md).
 export function useCatalog() {
   const notificar = useNotificacao();
-  const [slug, setSlug] = useState(CATALOG_UI_SPECS[0].slug);
+  // `?aba=` só escolhe a aba de ENTRADA — é como a ficha do colaborador volta
+  // para Colaboradores. Depois disso a aba é estado da tela, e a URL não a
+  // acompanha.
+  const [parametros] = useSearchParams();
+  const [slug, setSlug] = useState(() => {
+    const pedida = parametros.get('aba');
+    return CATALOG_UI_SPECS.some((item) => item.slug === pedida) ? pedida! : CATALOG_UI_SPECS[0].slug;
+  });
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search);
   // O valor do `filtroPorTipo` da aba. `undefined` é "todos".
   const [tipo, setTipo] = useState<string | undefined>();
+  // A lixeira, só na aba que a tem (`spec.lixeira`).
+  const [view, setView] = useState<ListView>('active');
 
   const spec = useMemo(
     () => CATALOG_UI_SPECS.find((item) => item.slug === slug) ?? CATALOG_UI_SPECS[0],
@@ -50,8 +49,8 @@ export function useCatalog() {
     setSearch('');
     // O tipo é da aba: "Ativo" nas categorias não quer dizer nada nos status.
     setTipo(undefined);
-    // Trocar de aba fecha a ação aberta: o registro dela é da aba anterior.
-    setAcaoAberta(null);
+    // E a lixeira também: a próxima aba começa no cadastro, não na lixeira.
+    setView('active');
   };
 
   const changeSearch = (valor: string) => {
@@ -64,6 +63,11 @@ export function useCatalog() {
     setPage(1);
   };
 
+  const changeView = (proxima: ListView) => {
+    setView(proxima);
+    setPage(1);
+  };
+
   const campoDoFiltro = spec.filtroPorTipo?.campo;
   const params = useMemo(
     () => ({
@@ -71,14 +75,17 @@ export function useCatalog() {
       perPage: PER_PAGE,
       q: debouncedSearch || undefined,
       ...(campoDoFiltro && tipo ? { [campoDoFiltro]: tipo } : {}),
+      // Só a aba com lixeira manda `view`: nas outras o servidor recusa a chave.
+      ...(spec.lixeira ? { view } : {}),
     }),
-    [page, debouncedSearch, campoDoFiltro, tipo],
+    [page, debouncedSearch, campoDoFiltro, tipo, spec.lixeira, view],
   );
 
   const { data, isPending, error } = useCatalogQuery(spec.slug, params);
   const criar = useCreateCatalogRow(spec.slug);
   const editar = useUpdateCatalogRow(spec.slug);
   const excluir = useDeleteCatalogRow(spec.slug);
+  const restaurar = useRestoreCatalogRow(spec.slug);
 
   const registros = data?.rows ?? [];
   const total = data?.total ?? 0;
@@ -95,7 +102,6 @@ export function useCatalog() {
 
   const [modalAberto, setModalAberto] = useState(false);
   const [emEdicao, setEmEdicao] = useState<CatalogRow | null>(null);
-  const [acaoAberta, setAcaoAberta] = useState<AcaoLinhaAberta | null>(null);
 
   const openCreate = () => {
     setEmEdicao(null);
@@ -112,17 +118,12 @@ export function useCatalog() {
     setEmEdicao(null);
   };
 
-  // A ação de ALTERNAR (Desativar/Ativar) não abre modal: grava na hora. As
-  // outras abrem o que a tela declarar para elas.
+  // A ação de ALTERNAR (Desativar/Ativar) não abre modal: grava na hora. A
+  // Ficha é navegação, e quem a trata é a tela.
   const openAcao = (id: AcaoLinhaId, registro: CatalogRow) => {
     const alterna = spec.acoes?.find((acao) => acao.id === id)?.alterna;
-    if (alterna) {
-      void handleAlternar(registro, alterna.campo);
-      return;
-    }
-    setAcaoAberta({ id, registro });
+    if (alterna) void handleAlternar(registro, alterna.campo);
   };
-  const closeAcao = () => setAcaoAberta(null);
 
   // O erro sobe para o formulário mostrar a mensagem do servidor.
   const handleSubmit = async (valores: Record<string, unknown>) => {
@@ -148,7 +149,10 @@ export function useCatalog() {
   };
 
   const handleDelete = async (registro: CatalogRow) => {
-    if (!confirm(`Excluir "${registro.name}"? Esta ação não tem lixeira.`)) return;
+    const aviso = spec.lixeira
+      ? `Excluir "${registro.name}"? Vai para a lixeira e pode ser restaurado.`
+      : `Excluir "${registro.name}"? Esta ação não tem lixeira.`;
+    if (!confirm(aviso)) return;
 
     try {
       await excluir.mutateAsync(registro.id);
@@ -158,6 +162,17 @@ export function useCatalog() {
     } catch (erro) {
       // É aqui que aparece o 409 de "em uso por N registros" — a regra que
       // impede apagar uma categoria que alguém está usando.
+      notificar.erro((erro as Error).message);
+    }
+  };
+
+  const handleRestore = async (registro: CatalogRow) => {
+    try {
+      await restaurar.mutateAsync(registro.id);
+      // Restaurar o último da página da lixeira deixaria a tela vazia.
+      if (registros.length === 1 && page > 1) setPage(page - 1);
+    } catch (erro) {
+      // O 409 do e-mail que foi reaproveitado enquanto ele estava na lixeira.
       notificar.erro((erro as Error).message);
     }
   };
@@ -175,6 +190,8 @@ export function useCatalog() {
     changeSearch,
     tipo,
     changeTipo,
+    view,
+    changeView,
     loading: isPending,
     // A mensagem do erro da listagem, para a tabela não dizer "nenhum registro"
     // quando o que houve foi uma recusa (`EstadoDaLista`).
@@ -187,8 +204,7 @@ export function useCatalog() {
     closeModal,
     handleSubmit,
     handleDelete,
-    acaoAberta,
+    handleRestore,
     openAcao,
-    closeAcao,
   };
 }

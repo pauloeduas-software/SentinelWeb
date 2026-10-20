@@ -56,9 +56,9 @@ export const adjustStockSchema = z.strictObject({
  * `AppError(…, 422)` com o texto que ensina o modelo.
  */
 export const checkoutStockSchema = z.strictObject({
-  targetType: z.enum(['USER', 'LOCATION'], 'tipo de alvo inválido: use USER ou LOCATION'),
-  targetUserId: uuidOpcional('colaborador'),
-  targetLocationId: uuidOpcional('localização'),
+  targetType: z.enum(['PERSON', 'WORKSTATION'], 'tipo de alvo inválido: use PERSON ou WORKSTATION'),
+  targetPersonId: uuidOpcional('colaborador'),
+  targetWorkstationId: uuidOpcional('posto'),
   qty: quantidade('quantidade', 100).default(1),
   notes: textoOpcional('observações da saída', 2_000),
 });

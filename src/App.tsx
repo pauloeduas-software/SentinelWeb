@@ -8,9 +8,9 @@ import PostosPage from './pages/postos';
 import EstoquePage from './pages/estoque';
 import LicencasPage from './pages/licencas';
 import DescobertasPage from './pages/descobertas';
-import UsersPage from './pages/gestao-usuario';
-import UserDetailPage from './pages/gestao-usuario/detalhe';
+import UsuariosPage from './pages/usuarios';
 import ConfiguracoesPage from './pages/configuracoes';
+import ColaboradorPage from './pages/configuracoes/colaborador';
 import LoginPage from './pages/login';
 import { useAuthStore, usePode } from './domain/auth/auth.store';
 
@@ -26,7 +26,19 @@ function RedirecionarAtivo() {
 }
 
 /**
- * A ROTA QUE SÓ O ADMIN ABRE — Configurações, hoje.
+ * `/users/:id` → a ficha do colaborador, preservando o id.
+ *
+ * `/users/:id` ERA a ficha de quem recebe equipamento, quando colaborador e
+ * usuário eram a mesma tabela. Os colaboradores saíram de lá com o MESMO id, então
+ * o link guardado num chamado continua levando à pessoa certa.
+ */
+function RedirecionarColaborador() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/configuracoes/colaboradores/${id ?? ''}`} replace />;
+}
+
+/**
+ * A ROTA QUE SÓ O ADMIN ABRE — Configurações e Usuários, hoje.
  *
  * O menu já escondia o item, mas esconder o item não fecha a URL: quem colava
  * `/configuracoes` (ou seguia um link antigo) via a tela inteira, com o botão de
@@ -105,13 +117,18 @@ function Layout() {
                 por trás: `/reconciliacao` seria o mesmo erro que `/itam` foi até
                 a F6, nomear a tela pelo assunto em vez de pelo conteúdo. */}
             <Route path="/descobertas" element={<DescobertasPage />} />
-            <Route path="/users" element={<UsersPage />} />
-            {/* Perfil do colaborador: os dois baldes de posse
-                (docs/referencia/modelo-de-posse.md, Camada 3). Depois de `/users` porque o
-                react-router escolhe a rota MAIS específica, não a primeira — a
-                ordem aqui é para quem lê. */}
-            <Route path="/users/:id" element={<UserDetailPage />} />
+            {/* QUEM OPERA O SISTEMA — Técnico e Administrador — é assunto do
+                Administrador: o técnico nem vê o item no menu (navegacao.ts), e a
+                URL digitada volta para a raiz. `/users` era o nome antigo. */}
+            <Route path="/usuarios" element={<SoAdmin><UsuariosPage /></SoAdmin>} />
+            <Route path="/users" element={<Navigate to="/usuarios" replace />} />
+            <Route path="/users/:id" element={<RedirecionarColaborador />} />
             <Route path="/configuracoes" element={<SoAdmin><ConfiguracoesPage /></SoAdmin>} />
+            {/* A FICHA DO COLABORADOR: os dois baldes de posse
+                (docs/referencia/modelo-de-posse.md, Camada 3). Debaixo de
+                Configurações porque é de lá que ela abre — a aba Colaboradores —,
+                e é isso que acende o item certo no menu. */}
+            <Route path="/configuracoes/colaboradores/:id" element={<SoAdmin><ColaboradorPage /></SoAdmin>} />
           </Routes>
         </main>
       </div>

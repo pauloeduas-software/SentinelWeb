@@ -26,9 +26,7 @@ beforeAll(async () => {
   const fabricanteId = await criarFabricante(api, 'Fabricante da Listagem');
   modelId = await criarModelo(api, { categoriaId: seed.categoriaId, fabricanteId });
 
-  const dep = await prisma.location.create({
-    data: { name: 'Depósito da Listagem', isWorkstation: false }, select: { id: true },
-  });
+  const dep = await prisma.location.create({ data: { name: 'Depósito da Listagem' }, select: { id: true } });
   deposito = dep.id;
 });
 
@@ -37,14 +35,17 @@ beforeAll(async () => {
  * 19), então os casos não podem dividir a mesma mesa — o segundo levaria 409.
  */
 async function mesa(nome: string) {
-  return prisma.location.create({ data: { name: nome, isWorkstation: true }, select: { id: true, name: true } });
+  return prisma.workstation.create({
+    data: { name: nome, location: { create: { name: `Local de ${nome}` } } },
+    select: { id: true, name: true },
+  });
 }
 
 afterAll(async () => {
   await api.fechar();
 });
 
-async function ativo(nome: string, serial: string) {
+async function ativo(nome: string, serial: string, locationId?: string) {
   contador += 1;
   return criarAtivo(api, {
     statusId: seed.statusDeployableId,
@@ -52,13 +53,14 @@ async function ativo(nome: string, serial: string) {
     name: nome,
     serial,
     assetTag: `LISTA-${String(contador).padStart(3, '0')}`,
+    locationId,
   });
 }
 
-async function entregarA(assetId: string, locationId: string) {
+async function entregarA(assetId: string, workstationId: string) {
   const r = await api.post(`/api/assets/${assetId}/checkout`, {
-    targetType: 'LOCATION',
-    targetLocationId: locationId,
+    targetType: 'WORKSTATION',
+    targetWorkstationId: workstationId,
   });
   expect(r.status, `entrega falhou: ${JSON.stringify(r.body)}`).toBe(201);
 }
@@ -100,24 +102,23 @@ describe('o ativo entregue a um posto sai da listagem', () => {
     expect((await listar('?perPage=100')).rows.map((l) => l.id)).toContain(item.id);
   });
 
-  it('entregue a um local que NÃO é posto continua na lista: depósito é parque', async () => {
-    const item = await ativo('Desktop do depósito', 'SN-LISTA-3');
-    await entregarA(item.id, deposito);
+  it('GUARDADO numa localização continua na lista: depósito é parque', async () => {
+    const item = await ativo('Desktop do depósito', 'SN-LISTA-3', deposito);
 
     expect((await listar('?perPage=100')).rows.map((l) => l.id)).toContain(item.id);
   });
 
   it('entregue a uma PESSOA continua na lista', async () => {
     const item = await ativo('Notebook da Laura', 'SN-LISTA-4');
-    const pessoa = await api.post<{ id: string }>('/api/users', {
+    const pessoa = await api.post<{ id: string }>('/api/people', {
       name: 'Laura da Listagem',
       email: 'laura.listagem@teste.local',
     });
     expect(pessoa.status).toBe(201);
 
     const entrega = await api.post(`/api/assets/${item.id}/checkout`, {
-      targetType: 'USER',
-      targetUserId: pessoa.body.id,
+      targetType: 'PERSON',
+      targetPersonId: pessoa.body.id,
     });
     expect(entrega.status).toBe(201);
 
@@ -186,26 +187,25 @@ describe('o ativo entregue a um posto sai da listagem', () => {
     expect(body.posto).toBeNull();
   });
 
-  it('é null para o ativo entregue a um local que não é posto', async () => {
-    const item = await ativo('Desktop no depósito 2', 'SN-LISTA-10');
-    await entregarA(item.id, deposito);
+  it('é null para o ativo só GUARDADO numa localização', async () => {
+    const item = await ativo('Desktop no depósito 2', 'SN-LISTA-10', deposito);
 
     const { body } = await api.get<{ posto: unknown }>(`/api/search?q=${item.assetTag}`);
     expect(body.posto).toBeNull();
   });
 
   it('é null para o ativo entregue a uma PESSOA', async () => {
-    // É o caso que o `targetType: 'LOCATION'` do `where` governa: posse de
-    // pessoa deixa `targetLocationId` nulo e não pode virar posto nenhum.
+    // É o caso que o `targetType: 'WORKSTATION'` do `where` governa: posse de
+    // pessoa deixa `targetWorkstationId` nulo e não pode virar posto nenhum.
     const item = await ativo('Notebook da Ana', 'SN-LISTA-11');
-    const pessoa = await api.post<{ id: string }>('/api/users', {
+    const pessoa = await api.post<{ id: string }>('/api/people', {
       name: 'Ana da Busca',
       email: 'ana.busca@teste.local',
     });
     expect(pessoa.status).toBe(201);
     const entrega = await api.post(`/api/assets/${item.id}/checkout`, {
-      targetType: 'USER',
-      targetUserId: pessoa.body.id,
+      targetType: 'PERSON',
+      targetPersonId: pessoa.body.id,
     });
     expect(entrega.status).toBe(201);
 

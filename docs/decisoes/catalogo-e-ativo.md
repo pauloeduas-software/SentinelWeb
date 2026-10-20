@@ -88,6 +88,10 @@ status é ordenável por `type` — a migration precisou de `ADD VALUE 'IN_USE' 
 
 ## D8 — Catálogo sem soft delete. O delete é real, bloqueado por uso.
 
+> **Superada em parte por [V](./posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira):**
+> o colaborador — que entrou no catálogo depois — tem lixeira, por ter histórico de posse próprio.
+> As outras cinco tabelas continuam como está aqui.
+
 **O que o Snipe-IT faz, de verdade:** ele tem as duas coisas, e a que protege é a
 primeira. `CategoriesController::destroy` **recusa** apagar categoria com item
 associado; o `SoftDeletes` é rede secundária. **Esta fase reproduz a proteção
@@ -420,3 +424,8 @@ o defeito que ele existe para não ter. O relatório de posto vago, que ocupava 
 
 **Só onde `isWorkstation` é true:** depósito e sala de reunião não são mesa de ninguém, e o
 ativo guardado ali continua sendo parque.
+
+> **Mantida por [Y](./posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe), com
+> um recorte a menos:** o posto virou cadastro próprio e só ele recebe entrega, então "só onde
+> `isWorkstation` é true" ficou sem objeto — toda posse aberta para posto tira o ativo de
+> `/ativos`, e o ativo guardado no depósito continua parque.

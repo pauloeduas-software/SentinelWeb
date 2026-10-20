@@ -34,22 +34,26 @@ afterAll(async () => {
   await api.fechar();
 });
 
-describe('o 409 do DELETE conhece o assento', () => {
-  it('não deixa excluir quem ainda ocupa assento, e diz quantos', async () => {
+describe('o 409 conhece o assento', () => {
+  it('não deixa desativar nem excluir quem ainda ocupa assento, e diz quantos', async () => {
     const pessoa = await criarColaborador(api, { name: 'Elisa Gomes', email: 'elisa@teste.local' });
     const licenca = await criarLicenca(api, {
       name: 'Jira', categoryId: cenario.categoriaLicencaId, seatsTotal: 2,
     });
-    await api.post(`/api/licenses/${licenca.id}/checkout-seat`, { assignedUserId: pessoa });
+    await api.post(`/api/licenses/${licenca.id}/checkout-seat`, { assignedPersonId: pessoa });
 
-    const recusa = await api.delete<{ error: string }>(
-      `/api/users/${pessoa}`,
-    );
+    const recusa = await api.put<{ error: string }>(`/api/people/${pessoa}`, { isActive: false });
     expect(recusa.status).toBe(409);
     // A frase diz QUANTOS e por qual camada — sem isso o operador procura no
     // lugar errado, e a camada da licença é justamente a que ninguém lembra.
     expect(recusa.body.error).toContain('1 assento de licença');
-    expect(recusa.body.error).toContain('Devolva o que está com ele e encerre as ocupações');
+    expect(recusa.body.error).toContain('Devolva o que está com ele e encerre as ocupações antes de desativar');
+
+    // Excluir também não, com a mesma conta.
+    const exclusao = await api.delete<{ error: string }>(`/api/people/${pessoa}`);
+    expect(exclusao.status).toBe(409);
+    expect(exclusao.body.error).toContain('1 assento de licença');
+    expect(exclusao.body.error).toContain('antes de excluir');
   });
 
   it('não deixa excluir ativo que ainda ocupa assento', async () => {
@@ -73,14 +77,14 @@ describe('quem não pode receber assento', () => {
     const pessoa = await criarColaborador(api, { name: 'Felipe Rocha', email: 'felipe@teste.local' });
     // Desativada pela porta da tela, como no teste de posse: o que este caso
     // prova é a recusa do CHECKOUT DE ASSENTO.
-    expect((await api.put(`/api/users/${pessoa}`, { isActive: false })).status).toBe(200);
+    expect((await api.put(`/api/people/${pessoa}`, { isActive: false })).status).toBe(200);
 
     const licenca = await criarLicenca(api, {
       name: 'Slack', categoryId: cenario.categoriaLicencaId, seatsTotal: 5,
     });
 
     const recusa = await api.post<{ error: string }>(
-      `/api/licenses/${licenca.id}/checkout-seat`, { assignedUserId: pessoa },
+      `/api/licenses/${licenca.id}/checkout-seat`, { assignedPersonId: pessoa },
     );
     // Sem esta recusa, entregar a quem saiu da empresa reabriria uma pendência
     // que alguém acabou de fechar à mão.

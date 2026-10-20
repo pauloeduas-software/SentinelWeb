@@ -1,4 +1,4 @@
-import type { NovoPostoInput } from '../../../domain/workstation/workstation.queries';
+import type { PostoInput } from '../../../domain/workstation/workstation.queries';
 import type {
   AtivoDoPosto, Posto, PostoOcupante, PostoView,
 } from '../../../domain/shared/workstation.types';
@@ -53,7 +53,7 @@ export function turnosDoPosto(ocupantes: readonly PostoOcupante[]): TurnoDoPosto
 
   for (const ocupante of ocupantes) {
     const turno = ocupante.shift?.trim() || 'sem turno';
-    const nome = ocupante.user?.name ?? ocupante.userId;
+    const nome = ocupante.person?.name ?? ocupante.personId;
 
     const faixa = faixas.find((item) => item.turno === turno);
     if (faixa) faixa.pessoas.push(nome);
@@ -83,14 +83,11 @@ export function explicacaoDoVago(posto: Pick<Posto, 'totalAtivos'>): string {
 /**
  * Os ativos deste posto que TÊM MÁQUINA VINCULADA — os que têm telemetria.
  *
- * Todo ativo é um computador (o que não é máquina é estoque), e um posto marcado
- * tem no máximo um — é a invariante 19. O que varia é se o agente já foi
- * vinculado a ele: sem máquina, o computador está na mesa mas a ficha não tem o
- * que medir.
- *
- * A resposta é uma LISTA mesmo assim: a ficha responde por QUALQUER localização,
- * inclusive a sala de reunião, onde a regra não vale e dois computadores são
- * estado normal. Quem usa a lista decide o que dizer sobre a segunda.
+ * Todo ativo é um computador (o que não é máquina é estoque), e um posto tem
+ * no máximo um — é a invariante 19. O que varia é se o agente já foi vinculado
+ * a ele: sem máquina, o computador está na mesa mas a ficha não tem o que
+ * medir. A resposta é uma LISTA para a ficha conseguir mostrar o dado de antes
+ * da regra, se ele existir.
  */
 type AtivoComMaquina = AtivoDoPosto & { endpointId: string };
 
@@ -101,22 +98,21 @@ export function ativosComMaquina(ativos: readonly AtivoDoPosto[]): AtivoComMaqui
 }
 
 /**
- * Formulário → corpo de `POST /locations`.
+ * Formulário → corpo de `POST` (criar) ou `PUT` (editar) `/workstations`.
  *
- * Nota vazia vira AUSENTE, não `''`: o schema do servidor já traduz ausente
- * para "sem nota".
- *
- * Endereço, CEP e telefone não entram nem como chave: não querem dizer nada
- * numa mesa, e é por misturá-los que a localização virou um formulário onde o
- * posto se perdia.
+ * Na CRIAÇÃO, nota vazia vira AUSENTE. Na EDIÇÃO ela vai como `null`: é como
+ * se apaga uma nota que existia — ausente diria "não mexe" e a nota velha
+ * ficaria.
  */
-export function montarNovoPosto(valores: {
-  name: string;
-  notes: string;
-}): NovoPostoInput {
-  const corpo: NovoPostoInput = { name: valores.name.trim() };
+export function montarPosto(
+  valores: { name: string; locationId: string; notes: string },
+  edicao: boolean,
+): PostoInput {
+  const corpo: PostoInput = { name: valores.name.trim(), locationId: valores.locationId };
+  const nota = valores.notes.trim();
 
-  if (valores.notes.trim()) corpo.notes = valores.notes.trim();
+  if (nota) corpo.notes = nota;
+  else if (edicao) corpo.notes = null;
 
   return corpo;
 }

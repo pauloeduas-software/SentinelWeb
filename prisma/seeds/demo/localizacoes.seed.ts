@@ -5,9 +5,9 @@ import { garantirPorNome, mesmoNome } from './garantir-por-nome';
 // LOCALIZAÇÕES GERAIS de uma empresa pequena, para a tela não abrir vazia.
 //
 // Lista plana: o nome é quem diz onde o lugar fica (configuracoes.md). E SÓ
-// localização geral — posto de trabalho se cria na tela Postos, que grava a
-// marca; semear "Mesa 1" aqui seria criar uma mesa que a tela de Postos não
-// mostra.
+// localização — posto de trabalho é outro cadastro (`Workstation`, decisão Y)
+// e se cria na tela Postos; "Mesa 1" aqui seria um lugar de guardar, não uma
+// mesa que recebe entrega.
 const LOCALIZACOES = [
   { name: 'Matriz' },
   // Exemplo de unidade fora da sede — a empresa renomeia com a cidade.

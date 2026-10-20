@@ -1,7 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { SEM_PARAMETROS } from '../../../core/http/sem-parametros';
 import { idParamSchema } from '../../shared/params.schema';
-import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import {
   janelaDeOciosidadeSchema, triagemSchema, vinculoComEntregaSchema, vinculoSchema,
 } from '../schemas/reconciliation.schema';
@@ -26,7 +25,7 @@ export const reconciliationController = {
 
   async accept(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return aceitarSugestao(id, atorDaRequisicao(request));
+    return aceitarSugestao(id);
   },
 
   async reject(request: FastifyRequest) {
@@ -47,21 +46,21 @@ export const reconciliationController = {
   async link(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
     const { assetId } = vinculoSchema.parse(request.body ?? {});
-    const vinculado = await vincularEndpointAoAtivo(id, assetId, atorDaRequisicao(request));
+    const vinculado = await vincularEndpointAoAtivo(id, assetId);
     return reply.status(201).send(vinculado);
   },
 
   async linkAndCheckout(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
-    const { assetId, targetLocationId } = vinculoComEntregaSchema.parse(request.body ?? {});
+    const { assetId, targetWorkstationId } = vinculoComEntregaSchema.parse(request.body ?? {});
     // 201 como o vínculo e a entrega sozinhos: duas linhas nascem.
-    const resultado = await vincularEEntregar(id, assetId, targetLocationId, atorDaRequisicao(request));
+    const resultado = await vincularEEntregar(id, assetId, targetWorkstationId);
     return reply.status(201).send(resultado);
   },
 
   async unlink(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return desvincularEndpoint(id, atorDaRequisicao(request));
+    return desvincularEndpoint(id);
   },
 
   async idle(request: FastifyRequest) {
@@ -78,6 +77,6 @@ export const reconciliationController = {
   async review(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     const { reviewState } = triagemSchema.parse(request.body ?? {});
-    return triarEndpoint(id, reviewState, atorDaRequisicao(request));
+    return triarEndpoint(id, reviewState);
   },
 };

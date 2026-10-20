@@ -13,6 +13,10 @@
 > [O](../decisoes/escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai)). O que vale hoje está em
 > [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md).
 >
+> **E depois (U, X e Y):** o alvo da posse não é mais `USER`/`LOCATION` — é `PERSON`, o colaborador
+> ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)), ou `WORKSTATION`, o posto, que saiu de `Location` e virou cadastro próprio ([Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)).
+> `LocationOccupant` virou `WorkstationOccupant`, e as colunas de autor da entrega saíram ([X](../decisoes/acesso.md#x--o-histórico-não-guarda-quem-fez)).
+>
 > Esforço: **P** = até meio dia · **M** = 1 a 3 dias · **G** = mais de 3 dias
 
 ## Objetivo

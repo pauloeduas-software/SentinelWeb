@@ -14,8 +14,8 @@ import type { Endpoint } from '../../../domain/shared/endpoint.types';
 //
 // O seletor de ativos pede `?maquina=sem`: ativo que já tem máquina é opção
 // que o `endpoints.assetId @unique` recusaria no clique, então a lista nem
-// oferece. O de posto é o `/locations/options` inteiro, como na entrega da
-// tela de Ativos — a mesa é uma localização, e a sala de reunião também recebe.
+// oferece. O de posto é o `/workstations/options`, como na entrega da tela de
+// Ativos: só posto recebe entrega.
 //
 // Não fala HTTP: recebe `onVincular` e mostra o que ele rejeitar. O erro mora
 // AQUI porque é aqui que a pessoa decide — "este posto já tem um ativo"
@@ -26,13 +26,13 @@ const ROTULO = 'text-[10px] uppercase tracking-widest text-text-tertiary';
 interface Props {
   maquina: Endpoint;
   ocupado: boolean;
-  onVincular: (endpointId: string, assetId: string, targetLocationId: string | null) => Promise<void>;
+  onVincular: (endpointId: string, assetId: string, targetWorkstationId: string | null) => Promise<void>;
   onCancelar: () => void;
 }
 
 export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCancelar }: Props) {
   const [assetId, setAssetId] = useState('');
-  const [locationId, setLocationId] = useState('');
+  const [workstationId, setWorkstationId] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -41,7 +41,7 @@ export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCa
     setSalvando(true);
     setErro('');
     try {
-      await onVincular(maquina.id, assetId, locationId || null);
+      await onVincular(maquina.id, assetId, workstationId || null);
       // Sem `onCancelar` no sucesso: a linha some da lista "Sem vínculo" na
       // revalidação, e o formulário desmonta com ela.
     } catch (falha) {
@@ -80,7 +80,7 @@ export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCa
         </div>
         <div className="space-y-1">
           <label className={ROTULO}>E entregar ao posto</label>
-          <ReferenceSelect rota="locations" valor={locationId} onChange={setLocationId} />
+          <ReferenceSelect rota="workstations" valor={workstationId} onChange={setWorkstationId} />
           <p className="text-[10px] text-text-tertiary leading-relaxed">
             Opcional. Com posto, o ativo é entregue à mesa na mesma operação — e um posto que já
             tem ativo recusa.
@@ -101,7 +101,7 @@ export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCa
           disabled={salvando || ocupado || !assetId}
           className="px-3 py-1.5 bg-text-primary text-bg-base text-[10px] uppercase tracking-widest hover:bg-text-secondary transition-colors disabled:opacity-40"
         >
-          {salvando ? 'Vinculando…' : locationId ? 'Vincular e entregar' : 'Vincular'}
+          {salvando ? 'Vinculando…' : workstationId ? 'Vincular e entregar' : 'Vincular'}
         </button>
       </div>
     </form>

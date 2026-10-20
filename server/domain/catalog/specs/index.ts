@@ -2,6 +2,7 @@ import { assetModelSpec } from './asset-model.spec';
 import { categorySpec } from './category.spec';
 import { locationSpec } from './location.spec';
 import { manufacturerSpec } from './manufacturer.spec';
+import { personSpec } from './person.spec';
 import { statusLabelSpec } from './status-label.spec';
 import type { CatalogSpec } from './catalog-spec.types';
 
@@ -16,4 +17,5 @@ export const CATALOG_SPECS: readonly CatalogSpec[] = [
   manufacturerSpec,
   assetModelSpec,
   locationSpec,
+  personSpec,
 ];

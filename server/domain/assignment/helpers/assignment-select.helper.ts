@@ -1,4 +1,4 @@
-import { USER_PUBLIC_SELECT } from '../../user/helpers/user-select.helper';
+import { PERSON_PUBLIC_SELECT } from '../../person/helpers/person-select.helper';
 
 // O que de uma posse pode sair para o cliente — em UM lugar só, usado pela
 // entrega, pela devolução e pelo histórico do ativo.
@@ -9,19 +9,19 @@ import { USER_PUBLIC_SELECT } from '../../user/helpers/user-select.helper';
 //
 // Os dois alvos vêm embutidos com allowlist própria porque a tela mostra o NOME
 // de quem recebeu, não o uuid — e uma consulta por linha do histórico seria
-// N+1. O `targetUser` reaproveita `USER_PUBLIC_SELECT` em vez de listar os
-// campos de novo: uma cópia esquecida na Fase 3 devolveria o `passwordHash` por
-// aqui.
-//
-// `checkoutById` e `checkinById` ficam de FORA: quem os lê é o histórico da
-// pessoa (`user-history.usecase.ts`), que monta o ator com o próprio select.
+// N+1. O `targetPerson` reaproveita `PERSON_PUBLIC_SELECT` em vez de listar os
+// campos de novo: quem decide o que é público de um colaborador é o domínio
+// `person`.
 export const ASSIGNMENT_SELECT = {
   id: true,
   assetId: true,
 
   targetType: true,
-  targetUserId: true,
-  targetLocationId: true,
+  targetPersonId: true,
+  targetWorkstationId: true,
+  // O nome por escrito do posto que foi excluído: sem ele, o histórico do ativo
+  // diria "Entregue:" e nada.
+  targetWorkstationName: true,
 
   checkoutAt: true,
   expectedCheckinAt: true,
@@ -32,10 +32,6 @@ export const ASSIGNMENT_SELECT = {
 
   createdAt: true,
 
-  targetUser: { select: USER_PUBLIC_SELECT },
-  // `isWorkstation` sai junto com o nome porque a tela do ativo precisa decidir
-  // se o alvo é um POSTO ou um depósito: só o posto tem ficha para onde levar
-  // (`/postos/:id`), e um link que leva um depósito para uma tela chamada
-  // "posto" seria o nome errado na cara do usuário.
-  targetLocation: { select: { id: true, name: true, isWorkstation: true } },
+  targetPerson: { select: PERSON_PUBLIC_SELECT },
+  targetWorkstation: { select: { id: true, name: true } },
 } as const;

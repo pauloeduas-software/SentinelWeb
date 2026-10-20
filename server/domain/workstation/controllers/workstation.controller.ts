@@ -21,7 +21,7 @@ export const workstationController = {
       visaoCrua === undefined ? {} : { view: visaoCrua },
     );
 
-    // Sem `trashable` — localização não tem lixeira (D8).
+    // Sem `trashable` — o posto não tem lixeira.
     const query = parseListQuery(paginacao);
 
     return listWorkstations(query, view);
@@ -37,8 +37,7 @@ export const workstationController = {
     // exatamente o que `tests/invariantes/dado-sensivel.test.ts` prova que
     // `/api/assets` e `/api/assets/:id` não fazem. O vazamento era por falta de
     // uma terceira porta, não por decisão: quem lê filtra, e esta é a leitura
-    // que faltava. Mesma inversão do `actorId` (D23) — quem sabe quem está
-    // pedindo é a borda.
+    // que faltava. Quem sabe quem está pedindo é a borda.
     return getWorkstation(id, temCargo(request, 'ADMIN'));
   },
 };

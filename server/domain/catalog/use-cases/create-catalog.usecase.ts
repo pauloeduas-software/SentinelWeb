@@ -7,7 +7,6 @@ import type { CatalogSpec } from '../specs/catalog-spec.types';
 export async function createCatalog(
   spec: CatalogSpec,
   data: Record<string, unknown>,
-  actorId: string | null,
 ): Promise<Record<string, unknown>> {
   // O log entra na MESMA transação da gravação: fora dela, o histórico
   // registraria um cadastro que depois falhou.
@@ -22,7 +21,7 @@ export async function createCatalog(
       entityId: String(registro.id),
       action: 'CREATE',
       changes: buildSnapshot(registro, spec.audited),
-    }, actorId);
+    });
 
     return registro;
   });

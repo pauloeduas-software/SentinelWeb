@@ -1,7 +1,7 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
-import { travarUsuarioOuFalhar } from '../../user/use-cases/lock-user.usecase';
+import { travarPessoaOuFalhar } from '../../person/use-cases/lock-person.usecase';
 import { travarAtivoOuFalhar } from '../../asset/use-cases/lock-asset.usecase';
 import {
   contarAssentosDe, pegarAssentoLivre, type ClienteLicenca,
@@ -43,10 +43,10 @@ import type { CheckoutSeatData } from '../schemas/license.schema';
  * mais lê as duas chaves do corpo. É o que garante que a outra fique nula, em
  * vez de depender de o cliente ter mandado só uma.
  */
-function assertAlvoCoerente(data: CheckoutSeatData): { tipo: 'USER' | 'ASSET'; id: string } {
-  const { assignedUserId, assignedAssetId } = data;
+function assertAlvoCoerente(data: CheckoutSeatData): { tipo: 'PERSON' | 'ASSET'; id: string } {
+  const { assignedPersonId, assignedAssetId } = data;
 
-  if (assignedUserId && assignedAssetId) {
+  if (assignedPersonId && assignedAssetId) {
     throw new AppError(
       'Um assento tem UM alvo: informe o colaborador OU o ativo, nunca os dois. '
       + 'Se a licença é por usuário nomeado e duas pessoas usam a mesma máquina, são dois assentos.',
@@ -54,11 +54,11 @@ function assertAlvoCoerente(data: CheckoutSeatData): { tipo: 'USER' | 'ASSET'; i
     );
   }
 
-  if (assignedUserId) return { tipo: 'USER', id: assignedUserId };
+  if (assignedPersonId) return { tipo: 'PERSON', id: assignedPersonId };
   if (assignedAssetId) return { tipo: 'ASSET', id: assignedAssetId };
 
   throw new AppError(
-    'A entrega de um assento exige um alvo: assignedUserId (colaborador) ou assignedAssetId (ativo). '
+    'A entrega de um assento exige um alvo: assignedPersonId (colaborador) ou assignedAssetId (ativo). '
     + 'Posto de trabalho não é alvo de licença — entregue ao ativo que está na mesa.',
     422,
   );
@@ -72,7 +72,7 @@ function assertAlvoCoerente(data: CheckoutSeatData): { tipo: 'USER' | 'ASSET'; i
  */
 async function assertAlvoApto(
   client: ClienteLicenca,
-  alvo: { tipo: 'USER' | 'ASSET'; id: string },
+  alvo: { tipo: 'PERSON' | 'ASSET'; id: string },
 ): Promise<string> {
   if (alvo.tipo === 'ASSET') {
     const ativo = await client.asset.findFirst({
@@ -94,7 +94,8 @@ async function assertAlvoApto(
     return ativo.assetTag;
   }
 
-  const pessoa = await client.user.findFirst({
+  // `findFirst`, que o escopo da lixeira alcança: colaborador na lixeira é 404.
+  const pessoa = await client.person.findFirst({
     where: { id: alvo.id },
     select: { id: true, name: true, isActive: true },
   });
@@ -112,7 +113,6 @@ async function assertAlvoApto(
 export async function checkoutSeat(
   licenseId: string,
   data: CheckoutSeatData,
-  actorId: string | null,
 ) {
   // Fora da transação: é validação de FORMATO do corpo, não lê o banco, e abrir
   // transação para recusar um payload incoerente é segurar conexão à toa.
@@ -120,14 +120,14 @@ export async function checkoutSeat(
 
   return prisma.$transaction(async (tx) => {
     // ORDEM DE TRAVAMENTO: **alvo antes do assento**, a mesma regra que a F4
-    // fixou para usuário antes de ativo e a F5 para usuário antes do item. Duas
+    // fixou para pessoa antes de ativo e a F5 para pessoa antes do item. Duas
     // transações que travam os mesmos dois recursos em ordens opostas travam
     // uma à outra, e o Postgres mata uma delas.
     //
-    // No alvo `USER` a trava protege a contagem que o `DELETE` do colaborador
-    // lê: sem ela, uma entrega simultânea nasceria depois da leitura e a pessoa
-    // seria apagada com assento na mão.
-    if (alvo.tipo === 'USER') await travarUsuarioOuFalhar(tx, alvo.id);
+    // No alvo `PERSON` a trava protege a contagem que a desativação do
+    // colaborador lê: sem ela, uma entrega simultânea nasceria depois da
+    // leitura e a pessoa seria desativada com assento na mão.
+    if (alvo.tipo === 'PERSON') await travarPessoaOuFalhar(tx, alvo.id);
     else await travarAtivoOuFalhar(tx, alvo.id);
 
     // A licença existe? (404 antes de procurar assento em contrato nenhum.)
@@ -201,7 +201,7 @@ export async function checkoutSeat(
         seatId: assento.id,
         // As duas escritas a partir do alvo JÁ ESCOLHIDO, nunca do corpo: é o
         // que garante que a outra fique nula em vez de depender do cliente.
-        assignedUserId: alvo.tipo === 'USER' ? alvo.id : null,
+        assignedPersonId: alvo.tipo === 'PERSON' ? alvo.id : null,
         assignedAssetId: alvo.tipo === 'ASSET' ? alvo.id : null,
         checkoutNotes: data.notes ?? null,
       },
@@ -220,7 +220,7 @@ export async function checkoutSeat(
         alvoId: alvo.id,
         alvoNome: nomeDoAlvo,
       },
-    }, actorId);
+    });
 
     return { ...checkout, seatNumber: assento.seatNumber };
   });

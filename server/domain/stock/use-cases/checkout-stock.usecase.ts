@@ -1,8 +1,8 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
-import { assertLocalRecebe } from '../../catalog/helpers/catalog-lock.helper';
-import { travarUsuarioOuFalhar, type ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
+import { assertPostoRecebe } from '../../catalog/helpers/catalog-lock.helper';
+import { travarPessoaOuFalhar, type ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
 import {
   assertDisponivel, contarForaDe, travarItemOuFalhar, type ClienteEstoque,
 } from '../helpers/stock-balance.helper';
@@ -26,10 +26,10 @@ import type { CheckoutStockInput } from '../schemas/stock.schema';
 // dividir, e o saldo é um `COUNT`.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const FK_DO_ALVO = { USER: 'targetUserId', LOCATION: 'targetLocationId' } as const;
+const FK_DO_ALVO = { PERSON: 'targetPersonId', WORKSTATION: 'targetWorkstationId' } as const;
 const ROTULO_DO_ALVO = {
-  USER: 'um colaborador (targetUserId)',
-  LOCATION: 'uma localização (targetLocationId)',
+  PERSON: 'um colaborador (targetPersonId)',
+  WORKSTATION: 'um posto (targetWorkstationId)',
 } as const;
 
 /**
@@ -39,7 +39,7 @@ const ROTULO_DO_ALVO = {
  */
 function assertAlvoCoerente(data: CheckoutStockInput): string {
   const alvoId = data[FK_DO_ALVO[data.targetType]];
-  const intrusa = data.targetType === 'USER' ? data.targetLocationId : data.targetUserId;
+  const intrusa = data.targetType === 'PERSON' ? data.targetWorkstationId : data.targetPersonId;
 
   if (intrusa) {
     throw new AppError(
@@ -57,37 +57,37 @@ function assertAlvoCoerente(data: CheckoutStockInput): string {
  * O alvo existe e pode receber?
  *
  * Pessoa sai por `findFirst`, que o escopo da lixeira alcança: não se entrega
- * nada a um cadastro apagado. Localização não tem lixeira; sai travada, pela
- * marca de desativada.
+ * nada a um cadastro na lixeira. Posto sai travado, pela marca de
+ * desativado.
  * DESATIVADO é diferente de APAGADO, e os dois são recusados — entregar a quem
  * saiu reabriria, uma linha depois, a pendência que a saída da empresa fechou.
  * 409 e não 404: a pessoa existe, o estado dela é que recusa.
  */
-async function assertAlvoApto(client: ClienteEstoque & ClienteQueTrava, tipo: 'USER' | 'LOCATION', alvoId: string): Promise<void> {
-  if (tipo === 'LOCATION') {
-    // Desativada não recebe saída nova. `FOR SHARE` depois do item — a aresta
+async function assertAlvoApto(client: ClienteEstoque & ClienteQueTrava, tipo: 'PERSON' | 'WORKSTATION', alvoId: string): Promise<void> {
+  if (tipo === 'WORKSTATION') {
+    // Desativado não recebe saída nova. `FOR SHARE` depois do item — a aresta
     // `item → posto` que o grafo já tinha (`lock-asset.usecase.ts`).
-    await assertLocalRecebe(client, alvoId, 'saída de estoque');
+    await assertPostoRecebe(client, alvoId, 'saída de estoque');
     return;
   }
 
-  const pessoa = await client.user.findFirst({ where: { id: alvoId }, select: { id: true, name: true, isActive: true } });
+  const pessoa = await client.person.findFirst({ where: { id: alvoId }, select: { id: true, name: true, isActive: true } });
   if (!pessoa) throw new AppError('Colaborador não encontrado.', 404);
   if (!pessoa.isActive) {
     throw new AppError(`${pessoa.name} está desativado(a) e não pode receber equipamento.`, 409);
   }
 }
 
-export async function checkoutStock(itemId: string, data: CheckoutStockInput, actorId: string | null) {
+export async function checkoutStock(itemId: string, data: CheckoutStockInput) {
   // Fora da transação: é validação de FORMATO do corpo, não lê o banco.
   const alvoId = assertAlvoCoerente(data);
 
   return prisma.$transaction(async (tx) => {
     // ORDEM DE TRAVAMENTO: usuário antes do item — a regra do grafo de travas
-    // (`lock-asset.usecase.ts`). Só no alvo USER, e pelo motivo da invariante 6:
+    // (`lock-asset.usecase.ts`). Só no alvo PERSON, e pelo motivo da invariante 6:
     // sem a trava, a saída nasce no intervalo entre o `DELETE` ler a pessoa e
     // apagá-la, e o cadastro na lixeira fica com unidade no nome.
-    if (data.targetType === 'USER') await travarUsuarioOuFalhar(tx, alvoId);
+    if (data.targetType === 'PERSON') await travarPessoaOuFalhar(tx, alvoId);
 
     // A TRAVA DA LINHA DO ITEM — o mutex do saldo. Contar não é travar: duas
     // requisições podem contar "4 de 5 fora" e as duas inserirem, dando 6 de 5.
@@ -114,10 +114,9 @@ export async function checkoutStock(itemId: string, data: CheckoutStockInput, ac
         kind: 'SAIDA' as const,
         qty: 1,
         targetType: data.targetType,
-        targetUserId: data.targetType === 'USER' ? alvoId : null,
-        targetLocationId: data.targetType === 'LOCATION' ? alvoId : null,
+        targetPersonId: data.targetType === 'PERSON' ? alvoId : null,
+        targetWorkstationId: data.targetType === 'WORKSTATION' ? alvoId : null,
         notes: data.notes ?? null,
-        createdById: actorId,
       })),
       select: STOCK_MOVEMENT_SELECT,
     });
@@ -130,7 +129,7 @@ export async function checkoutStock(itemId: string, data: CheckoutStockInput, ac
       entityId: itemId,
       action: 'CHECKOUT',
       changes: { targetType: data.targetType, targetId: alvoId, qty: data.qty, disponivel: item.qty - fora - data.qty },
-    }, actorId);
+    });
 
     return { unidades, disponivel: item.qty - fora - data.qty };
   });

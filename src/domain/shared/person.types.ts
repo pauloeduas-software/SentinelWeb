@@ -1,0 +1,65 @@
+import type { UnidadeDeEstoque } from './stock.types';
+
+/**
+ * UM colaborador, como `GET /api/people/:id` o devolve — a ficha.
+ *
+ * Colaborador é quem RECEBE equipamento e não entra no sistema; quem opera é
+ * `User`. O cadastro dele é a aba Colaboradores de Configurações (catálogo), e
+ * a linha daquela tabela é um `CatalogRow`: este tipo é só o da ficha.
+ *
+ * DESATIVAR NÃO É EXCLUIR. Quem saiu da empresa continua no cadastro, com o
+ * histórico de posse apontando para ele; excluir é para cadastro criado errado,
+ * e o servidor só deixa quando não há histórico nenhum.
+ */
+export interface PessoaDaFicha {
+  id: string;
+  name: string;
+  /** Opcional: o colaborador não faz login. */
+  email: string | null;
+  createdAt: string;
+  isActive: boolean;
+  /** As unidades de estoque no NOME dela — como a ficha do posto mostra `itens`. */
+  itens: UnidadeDeEstoque[];
+}
+
+/**
+ * Um evento da aba Histórico da pessoa — `GET /api/people/:id/history`.
+ *
+ * TRÊS fontes numa lista só, e é uma a mais que o ativo tem: o `ActivityLog`
+ * (cadastro, edição com diff, desativação), as posses
+ * DIRETAS dela e as OCUPAÇÕES de posto.
+ *
+ * Responde o que aconteceu COM a pessoa: a consulta do servidor é por
+ * `entityId`. Colaborador não opera o sistema, então não há o que ela FEZ.
+ */
+export interface EventoDaPessoa {
+  id: string;
+  fonte: 'ATIVIDADE' | 'POSSE' | 'POSTO';
+  action: string;
+  /** ISO — `JSON.parse` não reconstrói `Date`. */
+  at: string;
+  /**
+   * O diff (`{ campo: { de, para } }`) misturado com valores soltos: o formato
+   * varia com a operação, e por isso é lido por `lerEvento()` em vez de ser
+   * tipado campo a campo.
+   */
+  changes: unknown;
+  /** Preenchido só quando `fonte === 'POSSE'`. */
+  posse: {
+    assignmentId: string;
+    assetId: string;
+    /** "ATV-00012 — Dell Latitude". */
+    assetLabel: string;
+    notes: string | null;
+    expectedCheckinAt: string | null;
+  } | null;
+  /** Preenchido só quando `fonte === 'POSTO'`. */
+  posto: {
+    occupantId: string;
+    /** Nulo quando o posto foi excluído: o nome continua em `workstationLabel`. */
+    workstationId: string | null;
+    workstationLabel: string;
+    shift: string | null;
+    notes: string | null;
+  } | null;
+}

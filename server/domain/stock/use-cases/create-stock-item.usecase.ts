@@ -5,7 +5,7 @@ import { buildSnapshot } from '../../shared/diff.helper';
 import {
   assertEscolhaAtiva, assertLocalRecebe, lerCategoriaTravada,
 } from '../../catalog/helpers/catalog-lock.helper';
-import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
+import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
 import { comSaldo, type ClienteEstoque } from '../helpers/stock-balance.helper';
 import { STOCK_ITEM_SELECT } from '../helpers/stock-select.helper';
 import type { CreateStockItemInput } from '../schemas/stock.schema';
@@ -53,7 +53,7 @@ export async function assertNomeLivre(client: ClienteEstoque, name: string, igno
   if (outro) throw new AppError(`Já existe um item de estoque chamado "${name}".`, 409);
 }
 
-export async function createStockItem(data: CreateStockItemInput, actorId: string | null) {
+export async function createStockItem(data: CreateStockItemInput) {
   return prisma.$transaction(async (tx) => {
     await assertCategoriaDeEstoque(tx, data.categoryId);
     await assertNomeLivre(tx, data.name);
@@ -77,7 +77,7 @@ export async function createStockItem(data: CreateStockItemInput, actorId: strin
     // que as explicasse — e o total deixaria de ser a soma do que entrou.
     if (data.qty > 0) {
       await tx.stockMovement.create({
-        data: { itemId: item.id, kind: 'ENTRADA', qty: data.qty, notes: 'cadastro', createdById: actorId },
+        data: { itemId: item.id, kind: 'ENTRADA', qty: data.qty, notes: 'cadastro' },
       });
     }
 
@@ -86,7 +86,7 @@ export async function createStockItem(data: CreateStockItemInput, actorId: strin
       entityId: item.id,
       action: 'CREATE',
       changes: buildSnapshot(item, CAMPOS_AUDITADOS),
-    }, actorId);
+    });
 
     // COM SALDO, como a listagem e o detalhe: uma forma só de item na API.
     // `fora` é zero por construção — nada saiu de um item que acabou de nascer.

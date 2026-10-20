@@ -37,7 +37,10 @@ async function ativo(nome: string, statusId = seed.statusDeployableId) {
 }
 
 async function posto(nome: string) {
-  const criado = await prisma.location.create({ data: { name: nome, isWorkstation: true }, select: { id: true } });
+  const criado = await prisma.workstation.create({
+    data: { name: nome, location: { create: { name: `Local de ${nome}` } } },
+    select: { id: true },
+  });
   return criado.id;
 }
 
@@ -50,10 +53,10 @@ async function maquina(hwid: string): Promise<string> {
   return endpoint.id;
 }
 
-const vincularEEntregar = (endpointId: string, assetId: string, targetLocationId: string) =>
-  api.post<{ error: string; endpoint: { assetId: string }; assignment: { targetLocationId: string } }>(
+const vincularEEntregar = (endpointId: string, assetId: string, targetWorkstationId: string) =>
+  api.post<{ error: string; endpoint: { assetId: string }; assignment: { targetWorkstationId: string } }>(
     `/api/endpoints/${endpointId}/link-and-checkout`,
-    { assetId, targetLocationId },
+    { assetId, targetWorkstationId },
   );
 
 describe('POST /api/endpoints/:id/link-and-checkout', () => {
@@ -66,11 +69,11 @@ describe('POST /api/endpoints/:id/link-and-checkout', () => {
 
     expect(status).toBe(201);
     expect(body.endpoint.assetId).toBe(desktop.id);
-    expect(body.assignment.targetLocationId).toBe(mesa);
+    expect(body.assignment.targetWorkstationId).toBe(mesa);
 
     // As duas linhas no banco, e o histórico do ativo com os dois eventos.
     expect((await prisma.endpoint.findUniqueOrThrow({ where: { id: endpointId } })).assetId).toBe(desktop.id);
-    expect(await prisma.assignment.count({ where: { assetId: desktop.id, checkinAt: null, targetLocationId: mesa } })).toBe(1);
+    expect(await prisma.assignment.count({ where: { assetId: desktop.id, checkinAt: null, targetWorkstationId: mesa } })).toBe(1);
     const acoes = await prisma.activityLog.findMany({
       where: { entityType: 'Asset', entityId: desktop.id }, select: { action: true },
     });

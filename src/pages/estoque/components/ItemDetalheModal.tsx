@@ -71,8 +71,8 @@ export default function ItemDetalheModal({ item, onClose, onDevolver }: ItemDeta
                   <li key={unidade.id} className="border border-border-sutil p-3 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-text-secondary">
-                        {unidade.targetType === 'USER' ? 'Colaborador: ' : 'Posto: '}
-                        {unidade.targetUser?.name ?? unidade.targetLocation?.name ?? '—'}
+                        {unidade.targetType === 'PERSON' ? 'Colaborador: ' : 'Posto: '}
+                        {unidade.targetPerson?.name ?? unidade.targetWorkstation?.name ?? '—'}
                       </p>
                       <p className="text-[10px] text-text-tertiary mt-1">
                         desde {momentoDoEvento(unidade.createdAt)}

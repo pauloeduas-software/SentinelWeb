@@ -5,7 +5,7 @@ import {
   nomeObrigatorio, textoOpcional, urlOpcional, uuidObrigatorio,
 } from '../../shared/fields.schema';
 
-// Contrato de entrada das cinco tabelas de catálogo, num lugar só.
+// Contrato de entrada das seis tabelas de catálogo, num lugar só.
 //
 // `strictObject` em tudo: campo desconhecido é recusado em vez de ignorado em
 // silêncio — é o que fecha o mass assignment (docs/historico/fase-00-base-tecnica.md).
@@ -76,16 +76,8 @@ export const updateAssetModelSchema = z.strictObject({
 });
 
 // ---------------------------------------------------------------- Location
+// Sem marca de posto: o posto é cadastro próprio, na tela Postos (decisão Y).
 const camposLocalizacao = {
-
-  // Marca a localização que é MESA, e não filial: é o que separa "Mesa 1"
-  // de "Filial São Paulo" nas telas e o que alimenta /postos.
-  //
-  // E ELA É REGRA, pela invariante 19: um local sem a marca continua podendo
-  // receber ativo e ocupante, mas LIGAR a marca num local que já tem mais de um
-  // ativo é 409 — a guarda está no `beforeWrite` da spec de localização. Fora
-  // da marca não há limite (prisma/schema.prisma).
-  isWorkstation: booleano('é posto de trabalho').optional(),
   address: textoOpcional('endereço', 300),
   city: textoOpcional('cidade', 100),
   state: textoOpcional('estado', 100),
@@ -98,4 +90,23 @@ export const createLocationSchema = z.strictObject({ name: nomeObrigatorio(), ..
 // `isActive` só na EDIÇÃO, como nas outras quatro: é o botão Desativar/Ativar.
 export const updateLocationSchema = z.strictObject({
   name: nomeObrigatorio().optional(), ...camposLocalizacao, isActive: booleano('ativa').optional(),
+});
+
+// ------------------------------------------------------------------ Person
+// O e-mail do colaborador é OPCIONAL — ele não faz login, e há quem não tenha
+// um — e único quando preenchido. `toLowerCase` antes do formato pela mesma
+// razão do e-mail de usuário (`user.schema.ts`): "Ana@x.com" e "ana@x.com"
+// seriam dois cadastros, e o `@unique` do banco compara byte a byte.
+const emailDoColaborador = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .nullish()
+  .transform((valor) => (valor === undefined ? undefined : valor || null))
+  .pipe(z.email('e-mail inválido').max(320, 'e-mail: máximo de 320 caracteres').nullish());
+
+export const createPersonSchema = z.strictObject({ name: nomeObrigatorio(), email: emailDoColaborador });
+// `isActive` só na EDIÇÃO, como nas outras cinco: é o botão Desativar/Ativar.
+export const updatePersonSchema = z.strictObject({
+  name: nomeObrigatorio().optional(), email: emailDoColaborador, isActive: booleano('ativo').optional(),
 });

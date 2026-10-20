@@ -12,7 +12,7 @@ import { assertNomeLivre } from './create-stock-item.usecase';
  * sido reaproveitado enquanto este item estava na lixeira. Restaurar às cegas
  * estouraria uma violação de unicidade crua vinda do banco.
  */
-export async function restoreStockItem(id: string, actorId: string | null) {
+export async function restoreStockItem(id: string) {
   return prisma.$transaction(async (tx) => {
     const naLixeira = await tx.stockItem.findFirst({
       where: { id, deletedAt: { not: null } },
@@ -23,7 +23,7 @@ export async function restoreStockItem(id: string, actorId: string | null) {
     await assertNomeLivre(tx, naLixeira.name, id);
 
     await tx.stockItem.updateMany({ where: { id, deletedAt: { not: null } }, data: { deletedAt: null } });
-    await recordActivity(tx, { entityType: 'StockItem', entityId: id, action: 'RESTORE' }, actorId);
+    await recordActivity(tx, { entityType: 'StockItem', entityId: id, action: 'RESTORE' });
 
     const item = await tx.stockItem.findFirstOrThrow({ where: { id }, select: STOCK_ITEM_SELECT });
     // Zero por construção — item só vai para a lixeira sem unidade fora —, mas

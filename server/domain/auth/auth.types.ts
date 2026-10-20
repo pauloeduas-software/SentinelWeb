@@ -40,8 +40,8 @@ export interface SessaoEmitida {
 // `request.user` passa a ter tipo de verdade em todo o backend.
 //
 // Sem isto, `request.user` é `{ [k: string]: any }` do @fastify/jwt e
-// `request.user.id` compila mesmo quando não existe — exatamente o silêncio que
-// o D23 quer evitar ao exigir o ator por parâmetro.
+// `request.user.id` compila mesmo quando não existe, e o erro só aparece na
+// requisição.
 //
 // `payload` é o que ASSINAMOS (o `sub` e a geração da sessão); `user` é o que o
 // `preHandler` coloca na requisição depois de reler o usuário no banco. São

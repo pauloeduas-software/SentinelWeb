@@ -31,7 +31,6 @@ interface OrigemDoVinculo {
 export async function vincularEndpointAoAtivo(
   endpointId: string,
   assetId: string,
-  actorId: string | null,
   origem: OrigemDoVinculo = {},
 ) {
   try {
@@ -94,7 +93,7 @@ export async function vincularEndpointAoAtivo(
           origem: { de: null, para: origem.automatico ? 'automatico' : 'manual' },
           sinal: { de: null, para: origem.sinal ?? null },
         },
-      }, actorId);
+      });
 
       return vinculado;
     });
@@ -119,7 +118,7 @@ export async function vincularEndpointAoAtivo(
  * encerrar — a rodada seguinte do job é que volta a propor, com a máquina já
  * sem vínculo.
  */
-export async function desvincularEndpoint(endpointId: string, actorId: string | null) {
+export async function desvincularEndpoint(endpointId: string) {
   return prisma.$transaction(async (tx) => {
     const endpoint = await tx.endpoint.findUnique({
       where: { id: endpointId },
@@ -142,7 +141,7 @@ export async function desvincularEndpoint(endpointId: string, actorId: string | 
         hostname: { de: endpoint.hostname, para: null },
         hwid: { de: endpoint.hwid, para: null },
       },
-    }, actorId);
+    });
 
     return desvinculado;
   });

@@ -1,4 +1,4 @@
-import { Armchair, TriangleAlert } from 'lucide-react';
+import { Armchair, Edit2, Power, PowerOff, Trash2, TriangleAlert } from 'lucide-react';
 import {
   TRACO, estaDesativado, explicacaoDoVago, resumoDeAtivos, turnosDoPosto,
 } from '../helpers/postos.helper';
@@ -11,23 +11,42 @@ import type { Posto } from '../../../domain/shared/workstation.types';
 // O que cada linha responde, e que nenhuma tela de ITAM de prateleira responde:
 // QUEM está na mesa, EM QUE TURNO, QUANTO equipamento ela segura, e se está
 // VAGA — equipamento parado sem ninguém respondendo (docs/referencia/modelo-de-posse.md).
+//
+// E, para o ADMIN, o CADASTRO na própria linha — Editar, Desativar/Ativar e
+// Excluir, na ordem de Configurações: o destrutivo fica na ponta.
 
 interface PostosTableProps {
   postos: readonly Posto[];
   vazio: React.ReactNode;
   onAbrir: (posto: Posto) => void;
+  /** Mexer no cadastro é `ADMIN`; o técnico só abre a ficha. */
+  podeEditar: boolean;
+  onEditar: (posto: Posto) => void;
+  onAlternar: (posto: Posto) => void;
+  onExcluir: (posto: Posto) => void;
 }
 
-export default function PostosTable({ postos, vazio, onAbrir }: PostosTableProps) {
+export default function PostosTable({
+  postos, vazio, onAbrir, podeEditar, onEditar, onAlternar, onExcluir,
+}: PostosTableProps) {
+  // O clique na linha abre a ficha; o do botão não pode abrir junto.
+  const acao = (fazer: (posto: Posto) => void, posto: Posto) => (event: React.MouseEvent) => {
+    event.stopPropagation();
+    fazer(posto);
+  };
+  const colunas = podeEditar ? 6 : 5;
+
   return (
     <div className="bg-surface-card border border-border-sutil flex-1 overflow-auto">
       <table className="w-full text-left font-mono text-xs whitespace-nowrap">
         <thead className="bg-bg-base/50 text-text-secondary border-b border-border-sutil uppercase tracking-widest sticky top-0 z-10">
           <tr>
             <th className="px-6 py-4 font-normal">Posto</th>
+            <th className="px-6 py-4 font-normal">Localização</th>
             <th className="px-6 py-4 font-normal">Quem está</th>
             <th className="px-6 py-4 font-normal">Ativos</th>
             <th className="px-6 py-4 font-normal">Situação</th>
+            {podeEditar && <th className="px-6 py-4 font-normal text-right">Ações</th>}
           </tr>
         </thead>
 
@@ -62,6 +81,8 @@ export default function PostosTable({ postos, vazio, onAbrir }: PostosTableProps
                     {estaDesativado(posto) && <SeloDesativado />}
                   </div>
                 </td>
+
+                <td className="px-6 py-4 text-text-secondary">{posto.location.name}</td>
 
                 <td className="px-6 py-4">
                   {turnos.length > 0 ? (
@@ -103,13 +124,44 @@ export default function PostosTable({ postos, vazio, onAbrir }: PostosTableProps
                     <span className="text-text-tertiary uppercase tracking-widest text-[10px]">Sem uso</span>
                   )}
                 </td>
+
+                {podeEditar && (
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-end gap-3">
+                      <button
+                        onClick={acao(onEditar, posto)}
+                        title="Editar"
+                        aria-label={`Editar ${posto.name}`}
+                        className="text-text-tertiary hover:text-text-primary transition-colors"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        onClick={acao(onAlternar, posto)}
+                        title={posto.isActive ? 'Desativar' : 'Ativar'}
+                        aria-label={`${posto.isActive ? 'Desativar' : 'Ativar'} ${posto.name}`}
+                        className="text-text-tertiary hover:text-status-info transition-colors"
+                      >
+                        {posto.isActive ? <PowerOff size={14} /> : <Power size={14} />}
+                      </button>
+                      <button
+                        onClick={acao(onExcluir, posto)}
+                        title="Excluir"
+                        aria-label={`Excluir ${posto.name}`}
+                        className="text-text-tertiary hover:text-status-danger transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
+                )}
               </tr>
             );
           })}
 
           {postos.length === 0 && (
             <tr>
-              <td colSpan={4} className="px-6 py-16 text-center text-text-tertiary">
+              <td colSpan={colunas} className="px-6 py-16 text-center text-text-tertiary">
                 <div className="flex flex-col items-center justify-center">
                   <Armchair size={24} className="mb-4 opacity-50" />
                   {vazio}

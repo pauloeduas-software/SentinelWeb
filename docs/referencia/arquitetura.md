@@ -70,18 +70,19 @@ server/
 | `agent` | Conversa WebSocket com o Agente Sentinel (C#). Só transporte. | — |
 | `endpoint` | Máquina descoberta pelo agente (lado RMM) + telemetria (a crua fica 3 dias, com expurgo uma vez por dia depois da agregação; o uso diário agregado, para sempre) + comandos | `Endpoint`, `Telemetry` |
 | `asset` | Ativo do ITAM — o `Asset` do vocabulário do Snipe-IT | `Asset` |
-| `catalog` | As CINCO tabelas de catálogo, com UM CRUD genérico dirigido por spec | `Category`, `StatusLabel`, `Manufacturer`, `AssetModel`, `Location` |
+| `catalog` | As SEIS tabelas de catálogo, com UM CRUD genérico dirigido por spec — o colaborador inclusive | `Category`, `StatusLabel`, `Manufacturer`, `AssetModel`, `Location`, `Person` |
 | `settings` | Configuração global: a etiqueta automática (prefixo, zeros, próximo número) e os botões da descoberta (`discoveryMode`, `ghostDays`, `shadowHours`). Idioma, moeda e formato de data são fixos no código (`src/pages/helpers/format.helper.ts`) | `AppSetting` |
-| `activity` | Trilha de auditoria, gravada na transação de quem a origina | `ActivityLog` |
-| `user` | Colaborador da empresa | `User` |
+| `activity` | O histórico — o que mudou e quando, nunca quem fez ([X](../decisoes/acesso.md#x--o-histórico-não-guarda-quem-fez)) —, gravado na transação de quem o origina | `ActivityLog` |
+| `user` | **Quem opera o sistema** — Técnico e Administrador, com senha ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)) | `User` |
+| `person` | **O colaborador** — quem recebe equipamento. O cadastro é do `catalog` (a única aba com lixeira); aqui ficam a ficha, o histórico, a contagem da posse aberta e a trava da linha | `Person` |
 | `assignment` | **Posse**: entrega e devolução de ativo, com alvo polimórfico (pessoa ou posto) e o histórico de quem teve o quê | `Assignment` |
-| `occupancy` | **Ocupação do posto**: quem trabalha em qual localização, e em que turno | `LocationOccupant` |
+| `occupancy` | **Ocupação do posto**: quem trabalha em qual posto, e em que turno | `WorkstationOccupant` |
 | `license` | **Licenças**: o contrato e seus ASSENTOS materializados — cadastro simples, sem conformidade de software nem chave cifrada ([G](../decisoes/licencas.md#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples)) | `License`, `LicenseSeat`, `LicenseSeatCheckout` |
 | `stock` | **Estoque**: o que tem quantidade em vez de patrimônio individual — um tipo, saldo sempre calculado ([J](../decisoes/estoque.md#j--o-estoque-volta-como-stockitem--stockmovement)) | `StockItem`, `StockMovement` |
 | `reconciliation` | **Convergência RMM × ITAM**: o vínculo entre a máquina descoberta e o ativo cadastrado e a fila de sugestões — sem inferência por conta do sistema operacional ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)) nem fusão de máquinas ([H](../decisoes/reconciliacao.md#h--a-fusão-de-máquinas-sai)) | `ReconciliationSuggestion`, `AssetChange`, `AssetUsageDaily` |
 | `access` | **Autorização**: o cargo da sessão, o mapa de rotas × cargo mínimo e a invariante "nunca sem administrador" | — |
 | `auth` | **Sessão e credencial**: login, cookie e a geração da sessão (`tokenVersion`) | — |
-| `workstation` | **O posto como tela**: a leitura de `Location` + ocupantes que a `/postos` mostra, e onde `ehPostoVago()` mora | — |
+| `workstation` | **O posto de trabalho**: o cadastro (o CRUD do catálogo, com a `workstationSpec` — fora das seis abas) e a leitura de posto + ocupantes que a `/postos` mostra, onde `ehPostoVago()` mora ([Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)) | `Workstation` |
 | `shared` | Tipos e helpers usados por mais de um domínio (`diff.helper`, `fields.schema`, `history.schema`) | — |
 
 > **A decisão D1 foi executada na Fase 1.** `asset/` (RMM) virou `endpoint/`, e o
@@ -94,7 +95,7 @@ server/
 
 ### `catalog` é a exceção à fatia vertical
 
-As CINCO tabelas de catálogo são o MESMO CRUD: nome, listagem paginada, busca,
+As SEIS tabelas de catálogo — e o posto, pela `workstationSpec` — são o MESMO CRUD: nome, listagem paginada, busca,
 `ActivityLog`, 409 quando a linha está em uso. Cinco fatias verticais completas
 seriam ~55 arquivos quase idênticos (onze por fatia, a conta do D9) — o que esta
 mesma página chama de cerimônia, não arquitetura.
@@ -291,7 +292,7 @@ Leia [`modelo-de-posse.md`](modelo-de-posse.md) antes de mexer em `assignment`,
 
 1. **`Assignment`** é a fonte de verdade da posse. Alvo polimórfico — pessoa ou
    **posto**. Uma aberta por ativo, garantida por índice único parcial no banco.
-2. **`LocationOccupant`** é quem ocupa o posto, com turno. É a camada que permite
+2. **`WorkstationOccupant`** é quem ocupa o posto, com turno. É a camada que permite
    a Mesa 1 ser da Laura de manhã e da Ana à tarde **sem o ativo apontar para
    duas pessoas**.
 3. **Responsabilidade é derivada** (`resolverResponsaveis`), nunca coluna.
@@ -299,20 +300,22 @@ Leia [`modelo-de-posse.md`](modelo-de-posse.md) antes de mexer em `assignment`,
 **A F6 estendeu as três camadas à licença, sem criar paralelo nenhum (D93):**
 assento é posse pelos mesmos três critérios — alguém responde por ele, ele
 impede o cadastro de sumir, e ele fecha quando a pessoa sai. Então
-`count-user-posse` e o 409 do `DELETE` (de pessoa **e** de ativo) contam
-assento, em vez de o domínio de licença ganhar versões próprias.
+`count-person-posse` (o 409 da exclusão e da desativação da pessoa) e o 409 do
+`DELETE` do ativo contam assento, em vez de o domínio de licença ganhar versões
+próprias.
 
 **E a desativação de uma pessoa é recusada nas QUATRO pontas, não em uma:**
-`checkoutAsset`, `checkoutSeat`, `checkoutStock` e `addLocationOccupant`
+`checkoutAsset`, `checkoutSeat`, `checkoutStock` e `addWorkstationOccupant`
 respondem 409 para quem está inativo, com a trava de linha em
-`lock-user.usecase.ts` como primeira instrução de cada transação. A ocupação de
+`lock-person.usecase.ts` como primeira instrução de cada transação. A ocupação de
 posto foi a que faltou mais tempo, e o motivo é instrutivo: ocupação de posto
 não *parece* posse, mas responsabilidade por ativo em posto é DERIVADA dela.
 E a própria desativação também é recusada (409) enquanto a pessoa responde por
-alguma das quatro — como a exclusão já era: desativar não fecha nada sozinho.
+alguma das quatro — como a exclusão, que manda para a lixeira: nenhuma das duas
+fecha nada sozinha.
 
 O que isso proíbe, e o lint não pega: **guardar quem responde numa coluna**. O
-`Asset.assignedToId`, que era cache do caso `USER`, saiu do schema
+`Asset.assignedToId`, que era cache do caso pessoa, saiu do schema
 ([Q](../decisoes/escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai)):
 quem responde é a `Assignment` aberta, e um segundo lugar com a mesma resposta
 recria a divergência que o modelo existe para impedir. As invariantes estão em

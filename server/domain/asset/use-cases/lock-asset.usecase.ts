@@ -1,7 +1,7 @@
 import { AppError } from '../../../core/errors/app-error';
-import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
+import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
 
-// A TRAVA DA LINHA DO ATIVO — irmã da `lock-user.usecase.ts`, e nasceu pelo
+// A TRAVA DA LINHA DO ATIVO — irmã da `lock-person.usecase.ts`, e nasceu pelo
 // mesmo tipo de bug, uma fase depois.
 //
 // ─────────────────────────────────────────────────────────────────────────────
@@ -35,29 +35,30 @@ import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
 //                     edição (`update-asset`) e a baixa (`retire-asset`)
 //   usuário → item    a saída de estoque a pessoa (`stock/use-cases/checkout-stock.usecase.ts`)
 //   item → posto      implícita: o INSERT da saída a posto toma `FOR KEY SHARE`
-//                     na linha do local, com o item já travado. Nenhum caminho
+//                     na linha do posto, com o item já travado. Nenhum caminho
 //                     trava posto e depois item, e nenhum trava item e depois
 //                     usuário — é o que mantém o grafo sem ciclo.
 //
 // E AS TRAVAS QUE O POSTGRES TOMA SOZINHO CONTAM. `update-asset.usecase.ts`
 // grava `locationId`: o `UPDATE` trava a linha do ativo e o gatilho da FK
 // `assets.locationId` adquire `FOR KEY SHARE` na linha do local — que conflita
-// com `FOR UPDATE`. É uma aresta `ativo → posto` que nenhum `grep` por
-// `FOR UPDATE` mostra, e foi ela que obrigou a invariante 19 a travar o ativo
-// ANTES do posto. Uma aresta implícita assim existe em toda FK escrita.
+// com `FOR UPDATE`. É uma aresta `ativo → localização` que nenhum `grep` por
+// `FOR UPDATE` mostra; quando o posto ainda era uma localização, foi ela que
+// obrigou a invariante 19 a travar o ativo ANTES do posto. Uma aresta
+// implícita assim existe em toda FK escrita.
 //
 // Este arquivo não é o inventário completo das travas — o domínio de licença
 // trava `licenses` e `license_seats` por conta própria (`license-seats.helper.ts`),
 // e o de estoque trava `stock_items` em `stock-balance.helper.ts`. É o
 // inventário de quem disputa USUÁRIO, ATIVO, ITEM e POSTO, que são as quatro
 // linhas que mais de um domínio pede. As linhas de CATÁLOGO (categoria, status,
-// fabricante, modelo, localização) vêm sempre por último, e as travas delas
-// estão em `catalog/helpers/catalog-lock.helper.ts`.
+// fabricante, modelo, localização) vêm sempre por último, e as travas delas —
+// e as do posto — estão em `catalog/helpers/catalog-lock.helper.ts`.
 
 /**
  * Trava a linha do ativo até o fim da transação atual.
  *
- * NÃO filtra `deletedAt`, pelo mesmo motivo do `travarUsuario`: travar é sobre a
+ * NÃO filtra `deletedAt`, pelo mesmo motivo do `travarPessoa`: travar é sobre a
  * LINHA, e um ativo na lixeira continua sendo uma linha que o restore disputa.
  * Quem decide o que fazer com a lixeira é a consulta seguinte, que passa pelo
  * escopo da `softDeleteExtension`.

@@ -3,7 +3,7 @@ import { apiClient } from '../../core/api/apiClient';
 import { assetKeys } from '../asset/asset.queries';
 import { assignmentKeys } from '../assignment/assignment.queries';
 import { workstationKeys } from '../workstation/workstation.queries';
-import type { LocationOccupant, OccupantView } from '../shared/posse.types';
+import type { WorkstationOccupant, OccupantView } from '../shared/posse.types';
 
 // QUEM OCUPA O POSTO — Camada 2 de docs/referencia/modelo-de-posse.md, a que o Snipe-IT não
 // tem. É aqui que a Mesa 1 vira "Laura de manhã, Ana à tarde".
@@ -13,14 +13,14 @@ import type { LocationOccupant, OccupantView } from '../shared/posse.types';
 // invalidar depois de gravar alcança os dois e também a tela do colaborador.
 const occupancyKeys = {
   all: ['occupancies'] as const,
-  doPosto: (locationId: string, view: OccupantView) =>
-    ['occupancies', 'location', locationId, view] as const,
-  doUsuario: (userId: string) => ['occupancies', 'user', userId] as const,
+  doPosto: (workstationId: string, view: OccupantView) =>
+    ['occupancies', 'workstation', workstationId, view] as const,
+  daPessoa: (personId: string) => ['occupancies', 'person', personId] as const,
 };
 
-/** Corpo de `POST /api/locations/:id/occupants`. */
+/** Corpo de `POST /api/workstations/:id/occupants`. */
 export interface OccupantInput {
-  userId: string;
+  personId: string;
   /** Texto livre: "Manhã", "Tarde", "12x36 A". Enum engessaria escala real. */
   shift?: string;
   notes?: string;
@@ -28,24 +28,24 @@ export interface OccupantInput {
   startedAt?: string;
 }
 
-export function useLocationOccupantsQuery(locationId: string | null, view: OccupantView) {
+export function useWorkstationOccupantsQuery(workstationId: string | null, view: OccupantView) {
   return useQuery({
-    queryKey: occupancyKeys.doPosto(locationId ?? '', view),
+    queryKey: occupancyKeys.doPosto(workstationId ?? '', view),
     queryFn: async () =>
-      (await apiClient.get<LocationOccupant[]>(`/locations/${locationId}/occupants`, {
+      (await apiClient.get<WorkstationOccupant[]>(`/workstations/${workstationId}/occupants`, {
         params: { view },
       })).data,
-    enabled: locationId != null,
+    enabled: workstationId != null,
   });
 }
 
 /** Os postos que uma pessoa ocupa — a outra ponta da mesma tabela. */
-export function useUserOccupanciesQuery(userId: string | null) {
+export function usePersonOccupanciesQuery(personId: string | null) {
   return useQuery({
-    queryKey: occupancyKeys.doUsuario(userId ?? ''),
+    queryKey: occupancyKeys.daPessoa(personId ?? ''),
     queryFn: async () =>
-      (await apiClient.get<LocationOccupant[]>(`/users/${userId}/occupancies`)).data,
-    enabled: userId != null,
+      (await apiClient.get<WorkstationOccupant[]>(`/people/${personId}/occupancies`)).data,
+    enabled: personId != null,
   });
 }
 
@@ -71,11 +71,11 @@ function invalidarPosseDerivada(queryClient: ReturnType<typeof useQueryClient>) 
   void queryClient.invalidateQueries({ queryKey: workstationKeys.all });
 }
 
-export function useAddLocationOccupant() {
+export function useAddWorkstationOccupant() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ locationId, data }: { locationId: string; data: OccupantInput }) =>
-      apiClient.post(`/locations/${locationId}/occupants`, data),
+    mutationFn: ({ workstationId, data }: { workstationId: string; data: OccupantInput }) =>
+      apiClient.post(`/workstations/${workstationId}/occupants`, data),
     onSuccess: () => invalidarPosseDerivada(queryClient),
   });
 }
@@ -92,8 +92,8 @@ export function useAddLocationOccupant() {
 export function useCorrigirTurno() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ locationId, occupantId, shift }: { locationId: string; occupantId: string; shift: string | null }) =>
-      apiClient.patch(`/locations/${locationId}/occupants/${occupantId}`, { shift }),
+    mutationFn: ({ workstationId, occupantId, shift }: { workstationId: string; occupantId: string; shift: string | null }) =>
+      apiClient.patch(`/workstations/${workstationId}/occupants/${occupantId}`, { shift }),
     onSuccess: () => invalidarPosseDerivada(queryClient),
   });
 }
@@ -105,11 +105,11 @@ export function useCorrigirTurno() {
  * Mesa 1"); no banco ele preenche `endedAt`, e "quem respondia pela Mesa 1 em
  * março?" continua respondível.
  */
-export function useEndLocationOccupancy() {
+export function useEndWorkstationOccupancy() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ locationId, occupantId }: { locationId: string; occupantId: string }) =>
-      apiClient.delete(`/locations/${locationId}/occupants/${occupantId}`),
+    mutationFn: ({ workstationId, occupantId }: { workstationId: string; occupantId: string }) =>
+      apiClient.delete(`/workstations/${workstationId}/occupants/${occupantId}`),
     onSuccess: () => invalidarPosseDerivada(queryClient),
   });
 }

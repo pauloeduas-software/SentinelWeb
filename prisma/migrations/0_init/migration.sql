@@ -22,7 +22,7 @@ CREATE TYPE "AgentStatus" AS ENUM ('ONLINE', 'OFFLINE');
 CREATE TYPE "ReviewState" AS ENUM ('UNREVIEWED', 'ALLOWED', 'BLOCKED');
 
 -- CreateEnum
-CREATE TYPE "Cargo" AS ENUM ('USUARIO', 'TECNICO', 'ADMIN');
+CREATE TYPE "Cargo" AS ENUM ('TECNICO', 'ADMIN');
 
 -- CreateEnum
 CREATE TYPE "CategoryType" AS ENUM ('ASSET', 'LICENSE', 'STOCK');
@@ -34,7 +34,7 @@ CREATE TYPE "StatusLabelType" AS ENUM ('DEPLOYABLE', 'IN_USE', 'PENDING', 'UNDEP
 CREATE TYPE "RetiredReason" AS ENUM ('VENDIDO', 'DESCARTADO', 'DOADO', 'EXTRAVIADO', 'ROUBADO', 'GARANTIA');
 
 -- CreateEnum
-CREATE TYPE "AssignmentTarget" AS ENUM ('USER', 'LOCATION');
+CREATE TYPE "AssignmentTarget" AS ENUM ('PERSON', 'WORKSTATION');
 
 -- CreateEnum
 CREATE TYPE "DiscoveryMode" AS ENUM ('OFF', 'SUGGEST', 'ON');
@@ -52,7 +52,7 @@ CREATE TYPE "SuggestionState" AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED', 'SUPER
 CREATE TYPE "StockMovementKind" AS ENUM ('ENTRADA', 'BAIXA', 'SAIDA');
 
 -- CreateEnum
-CREATE TYPE "StockTarget" AS ENUM ('USER', 'LOCATION');
+CREATE TYPE "StockTarget" AS ENUM ('PERSON', 'WORKSTATION');
 
 -- CreateTable
 CREATE TABLE "endpoints" (
@@ -98,17 +98,29 @@ CREATE TABLE "users" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "passwordHash" TEXT,
+    "passwordHash" TEXT NOT NULL,
     "failedLoginCount" INTEGER NOT NULL DEFAULT 0,
     "lockedUntil" TIMESTAMP(3),
     "tokenVersion" INTEGER NOT NULL DEFAULT 0,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "role" "Cargo" NOT NULL DEFAULT 'USUARIO',
+    "role" "Cargo" NOT NULL DEFAULT 'TECNICO',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "users_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "people" (
+    "id" UUID NOT NULL,
+    "name" TEXT NOT NULL,
+    "email" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
 
-    CONSTRAINT "users_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "people_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -118,7 +130,6 @@ CREATE TABLE "activity_logs" (
     "entityId" UUID NOT NULL,
     "action" TEXT NOT NULL,
     "changes" JSONB,
-    "actorId" UUID,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "activity_logs_pkey" PRIMARY KEY ("id")
@@ -188,12 +199,24 @@ CREATE TABLE "locations" (
     "zip" TEXT,
     "phone" TEXT,
     "notes" TEXT,
-    "isWorkstation" BOOLEAN NOT NULL DEFAULT false,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "locations_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "workstations" (
+    "id" UUID NOT NULL,
+    "name" TEXT NOT NULL,
+    "locationId" UUID NOT NULL,
+    "notes" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "workstations_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -224,15 +247,14 @@ CREATE TABLE "assignments" (
     "id" UUID NOT NULL,
     "assetId" UUID NOT NULL,
     "targetType" "AssignmentTarget" NOT NULL,
-    "targetUserId" UUID,
-    "targetLocationId" UUID,
+    "targetPersonId" UUID,
+    "targetWorkstationId" UUID,
+    "targetWorkstationName" TEXT,
     "checkoutAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "expectedCheckinAt" TIMESTAMP(3),
     "checkinAt" TIMESTAMP(3),
     "checkoutNotes" TEXT,
     "checkinNotes" TEXT,
-    "checkoutById" UUID,
-    "checkinById" UUID,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -240,10 +262,11 @@ CREATE TABLE "assignments" (
 );
 
 -- CreateTable
-CREATE TABLE "location_occupants" (
+CREATE TABLE "workstation_occupants" (
     "id" UUID NOT NULL,
-    "locationId" UUID NOT NULL,
-    "userId" UUID NOT NULL,
+    "workstationId" UUID,
+    "personId" UUID NOT NULL,
+    "workstationName" TEXT,
     "shift" TEXT,
     "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "endedAt" TIMESTAMP(3),
@@ -251,7 +274,7 @@ CREATE TABLE "location_occupants" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "location_occupants_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "workstation_occupants_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -320,7 +343,7 @@ CREATE TABLE "license_seats" (
 CREATE TABLE "license_seat_checkouts" (
     "id" UUID NOT NULL,
     "seatId" UUID NOT NULL,
-    "assignedUserId" UUID,
+    "assignedPersonId" UUID,
     "assignedAssetId" UUID,
     "checkoutAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "checkinAt" TIMESTAMP(3),
@@ -393,12 +416,11 @@ CREATE TABLE "stock_movements" (
     "kind" "StockMovementKind" NOT NULL,
     "qty" INTEGER NOT NULL,
     "targetType" "StockTarget",
-    "targetUserId" UUID,
-    "targetLocationId" UUID,
+    "targetPersonId" UUID,
+    "targetWorkstationId" UUID,
+    "targetWorkstationName" TEXT,
     "returnedAt" TIMESTAMP(3),
     "notes" TEXT,
-    "createdById" UUID,
-    "returnedById" UUID,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "stock_movements_pkey" PRIMARY KEY ("id")
@@ -420,7 +442,10 @@ CREATE INDEX "telemetries_endpointId_timestamp_idx" ON "telemetries"("endpointId
 CREATE INDEX "telemetries_timestamp_idx" ON "telemetries"("timestamp");
 
 -- CreateIndex
-CREATE INDEX "users_deletedAt_idx" ON "users"("deletedAt");
+CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+
+-- CreateIndex
+CREATE INDEX "people_deletedAt_idx" ON "people"("deletedAt");
 
 -- CreateIndex
 CREATE INDEX "activity_logs_entityType_entityId_createdAt_idx" ON "activity_logs"("entityType", "entityId", "createdAt");
@@ -444,7 +469,10 @@ CREATE UNIQUE INDEX "asset_models_manufacturerId_modelNumber_key" ON "asset_mode
 CREATE UNIQUE INDEX "locations_name_key" ON "locations"("name");
 
 -- CreateIndex
-CREATE INDEX "locations_isWorkstation_idx" ON "locations"("isWorkstation");
+CREATE UNIQUE INDEX "workstations_name_key" ON "workstations"("name");
+
+-- CreateIndex
+CREATE INDEX "workstations_locationId_idx" ON "workstations"("locationId");
 
 -- CreateIndex
 CREATE INDEX "assets_deletedAt_idx" ON "assets"("deletedAt");
@@ -468,16 +496,16 @@ CREATE INDEX "assets_lastSeenByAgentAt_idx" ON "assets"("lastSeenByAgentAt");
 CREATE INDEX "assignments_assetId_checkinAt_idx" ON "assignments"("assetId", "checkinAt");
 
 -- CreateIndex
-CREATE INDEX "assignments_targetUserId_checkinAt_idx" ON "assignments"("targetUserId", "checkinAt");
+CREATE INDEX "assignments_targetPersonId_checkinAt_idx" ON "assignments"("targetPersonId", "checkinAt");
 
 -- CreateIndex
-CREATE INDEX "assignments_targetLocationId_checkinAt_idx" ON "assignments"("targetLocationId", "checkinAt");
+CREATE INDEX "assignments_targetWorkstationId_checkinAt_idx" ON "assignments"("targetWorkstationId", "checkinAt");
 
 -- CreateIndex
-CREATE INDEX "location_occupants_locationId_endedAt_idx" ON "location_occupants"("locationId", "endedAt");
+CREATE INDEX "workstation_occupants_workstationId_endedAt_idx" ON "workstation_occupants"("workstationId", "endedAt");
 
 -- CreateIndex
-CREATE INDEX "location_occupants_userId_endedAt_idx" ON "location_occupants"("userId", "endedAt");
+CREATE INDEX "workstation_occupants_personId_endedAt_idx" ON "workstation_occupants"("personId", "endedAt");
 
 -- CreateIndex
 CREATE INDEX "licenses_deletedAt_idx" ON "licenses"("deletedAt");
@@ -498,7 +526,7 @@ CREATE UNIQUE INDEX "license_seats_numero" ON "license_seats"("licenseId", "seat
 CREATE INDEX "license_seat_checkouts_seatId_checkinAt_idx" ON "license_seat_checkouts"("seatId", "checkinAt");
 
 -- CreateIndex
-CREATE INDEX "license_seat_checkouts_assignedUserId_checkinAt_idx" ON "license_seat_checkouts"("assignedUserId", "checkinAt");
+CREATE INDEX "license_seat_checkouts_assignedPersonId_checkinAt_idx" ON "license_seat_checkouts"("assignedPersonId", "checkinAt");
 
 -- CreateIndex
 CREATE INDEX "license_seat_checkouts_assignedAssetId_checkinAt_idx" ON "license_seat_checkouts"("assignedAssetId", "checkinAt");
@@ -534,10 +562,10 @@ CREATE INDEX "stock_movements_itemId_kind_returnedAt_idx" ON "stock_movements"("
 CREATE INDEX "stock_movements_itemId_createdAt_idx" ON "stock_movements"("itemId", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "stock_movements_targetUserId_returnedAt_idx" ON "stock_movements"("targetUserId", "returnedAt");
+CREATE INDEX "stock_movements_targetPersonId_returnedAt_idx" ON "stock_movements"("targetPersonId", "returnedAt");
 
 -- CreateIndex
-CREATE INDEX "stock_movements_targetLocationId_returnedAt_idx" ON "stock_movements"("targetLocationId", "returnedAt");
+CREATE INDEX "stock_movements_targetWorkstationId_returnedAt_idx" ON "stock_movements"("targetWorkstationId", "returnedAt");
 
 -- AddForeignKey
 ALTER TABLE "endpoints" ADD CONSTRAINT "endpoints_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "assets"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -552,28 +580,31 @@ ALTER TABLE "asset_models" ADD CONSTRAINT "asset_models_manufacturerId_fkey" FOR
 ALTER TABLE "asset_models" ADD CONSTRAINT "asset_models_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "workstations" ADD CONSTRAINT "workstations_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "assets" ADD CONSTRAINT "assets_statusId_fkey" FOREIGN KEY ("statusId") REFERENCES "status_labels"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "assets" ADD CONSTRAINT "assets_modelId_fkey" FOREIGN KEY ("modelId") REFERENCES "asset_models"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "assets" ADD CONSTRAINT "assets_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "assets" ADD CONSTRAINT "assets_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "assignments" ADD CONSTRAINT "assignments_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "assets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "assignments" ADD CONSTRAINT "assignments_targetUserId_fkey" FOREIGN KEY ("targetUserId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "assignments" ADD CONSTRAINT "assignments_targetPersonId_fkey" FOREIGN KEY ("targetPersonId") REFERENCES "people"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "assignments" ADD CONSTRAINT "assignments_targetLocationId_fkey" FOREIGN KEY ("targetLocationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "assignments" ADD CONSTRAINT "assignments_targetWorkstationId_fkey" FOREIGN KEY ("targetWorkstationId") REFERENCES "workstations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "location_occupants" ADD CONSTRAINT "location_occupants_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "workstation_occupants" ADD CONSTRAINT "workstation_occupants_workstationId_fkey" FOREIGN KEY ("workstationId") REFERENCES "workstations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "location_occupants" ADD CONSTRAINT "location_occupants_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "workstation_occupants" ADD CONSTRAINT "workstation_occupants_personId_fkey" FOREIGN KEY ("personId") REFERENCES "people"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "licenses" ADD CONSTRAINT "licenses_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -588,7 +619,7 @@ ALTER TABLE "license_seats" ADD CONSTRAINT "license_seats_licenseId_fkey" FOREIG
 ALTER TABLE "license_seat_checkouts" ADD CONSTRAINT "license_seat_checkouts_seatId_fkey" FOREIGN KEY ("seatId") REFERENCES "license_seats"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "license_seat_checkouts" ADD CONSTRAINT "license_seat_checkouts_assignedUserId_fkey" FOREIGN KEY ("assignedUserId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "license_seat_checkouts" ADD CONSTRAINT "license_seat_checkouts_assignedPersonId_fkey" FOREIGN KEY ("assignedPersonId") REFERENCES "people"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "license_seat_checkouts" ADD CONSTRAINT "license_seat_checkouts_assignedAssetId_fkey" FOREIGN KEY ("assignedAssetId") REFERENCES "assets"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -615,10 +646,10 @@ ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_locationId_fkey" FOREIGN K
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "stock_items"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_targetUserId_fkey" FOREIGN KEY ("targetUserId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_targetPersonId_fkey" FOREIGN KEY ("targetPersonId") REFERENCES "people"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_targetLocationId_fkey" FOREIGN KEY ("targetLocationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_targetWorkstationId_fkey" FOREIGN KEY ("targetWorkstationId") REFERENCES "workstations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 
 
@@ -636,9 +667,14 @@ ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_targetLocationId_f
 -- ── UNICIDADE QUE IGNORA A LIXEIRA (o `unique_undeleted` do Snipe-IT) ──────
 --
 -- Com `@unique` comum, uma linha na lixeira travaria para sempre o recadastro
--- do mesmo valor. O `WHERE` é o que deixa a lixeira fora do índice.
-CREATE UNIQUE INDEX "users_email_unique_undeleted"
-  ON "users"("email") WHERE "deletedAt" IS NULL;
+-- do mesmo valor. O `WHERE` é o que deixa a lixeira fora do índice. O e-mail
+-- do usuário não está aqui: usuário não tem lixeira, e o índice dele é o
+-- `@unique` comum, na metade gerada.
+
+-- O e-mail do colaborador é opcional: dois `NULL` nunca colidem num índice
+-- único, então o `WHERE` só precisa deixar a lixeira de fora.
+CREATE UNIQUE INDEX "people_email_unique_undeleted"
+  ON "people"("email") WHERE "deletedAt" IS NULL;
 
 CREATE UNIQUE INDEX "assets_assetTag_unique_undeleted"
   ON "assets"("assetTag") WHERE "deletedAt" IS NULL;
@@ -660,8 +696,14 @@ CREATE UNIQUE INDEX "assignments_um_aberto_por_ativo"
   ON "assignments"("assetId") WHERE "checkinAt" IS NULL;
 
 -- ── INVARIANTE 2: UMA OCUPAÇÃO ABERTA POR (POSTO, PESSOA) ─────────────────
-CREATE UNIQUE INDEX "location_occupants_um_aberto_por_pessoa_local"
-  ON "location_occupants"("locationId", "userId") WHERE "endedAt" IS NULL;
+CREATE UNIQUE INDEX "workstation_occupants_um_aberto_por_pessoa_posto"
+  ON "workstation_occupants"("workstationId", "personId") WHERE "endedAt" IS NULL;
+
+-- A ocupação ABERTA aponta sempre para o posto; só a encerrada de um posto
+-- excluído fica sem ele — e então com o nome por escrito (`workstationName`).
+ALTER TABLE "workstation_occupants" ADD CONSTRAINT "workstation_occupants_posto_presente" CHECK (
+  "workstationId" IS NOT NULL OR ("endedAt" IS NOT NULL AND "workstationName" IS NOT NULL)
+);
 
 -- ── INVARIANTE 10: UM ASSENTO NÃO ESTÁ EM DUAS MÃOS (D40) ─────────────────
 CREATE UNIQUE INDEX "license_seat_uma_aberta_por_assento"
@@ -684,15 +726,20 @@ CREATE UNIQUE INDEX "sugestao_pendente_por_alvo"
 -- ── INVARIANTE 5: A FORMA DA POSSE — dois CHECKs ──────────────────────────
 --
 -- O alvo é UM, pessoa OU posto — não há mais alvo `ASSET` (K): um computador
--- não é entregue a outro. As duas metades são necessárias: sem a primeira,
--- `USER` com duas FKs passaria; sem a segunda, `USER` com só
--- `targetLocationId` passaria.
+-- não é entregue a outro. Cada ramo diz qual FK está preenchida e que a outra
+-- está vazia: sem isso, `PERSON` com duas FKs, ou `PERSON` com só
+-- `targetWorkstationId`, passariam.
+--
+-- O POSTO EXCLUÍDO é a única posse sem FK nenhuma: o posto segue a regra do
+-- status e sai quando nada está nele agora. A posse JÁ DEVOLVIDA perde a
+-- ligação e guarda o nome por escrito (`targetWorkstationName`) — e só ela: a
+-- aberta aponta sempre para o posto.
 ALTER TABLE "assignments" ADD CONSTRAINT "assignments_alvo_coerente" CHECK (
-  num_nonnulls("targetUserId", "targetLocationId") = 1
-  AND (
-       ("targetType" = 'USER'     AND "targetUserId"     IS NOT NULL)
-    OR ("targetType" = 'LOCATION' AND "targetLocationId" IS NOT NULL)
-  )
+     ("targetType" = 'PERSON' AND "targetPersonId" IS NOT NULL AND "targetWorkstationId" IS NULL)
+  OR ("targetType" = 'WORKSTATION' AND "targetPersonId" IS NULL AND (
+          "targetWorkstationId" IS NOT NULL
+       OR ("checkinAt" IS NOT NULL AND "targetWorkstationName" IS NOT NULL)
+     ))
 );
 
 -- A DEVOLUÇÃO NÃO ANTECEDE A ENTREGA. `>=` e não `>`: entrega e devolução no
@@ -703,7 +750,7 @@ ALTER TABLE "assignments" ADD CONSTRAINT "assignments_devolucao_nao_antecede_ent
 
 -- ── INVARIANTE 9: O ALVO DO ASSENTO É UM — pessoa XOR ativo (D39) ─────────
 ALTER TABLE "license_seat_checkouts" ADD CONSTRAINT "license_seat_alvo_xor"
-  CHECK (num_nonnulls("assignedUserId", "assignedAssetId") = 1);
+  CHECK (num_nonnulls("assignedPersonId", "assignedAssetId") = 1);
 
 ALTER TABLE "license_seat_checkouts" ADD CONSTRAINT "license_seat_checkin_nao_antecede"
   CHECK ("checkinAt" IS NULL OR "checkinAt" >= "checkoutAt");
@@ -725,27 +772,28 @@ ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_qty_nao_negativa"
 -- A SAIDA é UMA unidade com exatamente UM alvo, o que o discriminante diz —
 -- `targetType IS NOT NULL` explícito no ramo da SAIDA, porque a coluna é
 -- nulável aqui (ENTRADA e BAIXA não têm alvo) e sem isso a comparação
--- `"targetType" = 'USER'` com NULL vira NULL em vez de FALSE, e CHECK só
--- recusa FALSE. ENTRADA e BAIXA não têm alvo nem devolução. O autor da
--- devolução só existe com `returnedAt` preenchido.
+-- `"targetType" = 'PERSON'` com NULL vira NULL em vez de FALSE, e CHECK só
+-- recusa FALSE. ENTRADA e BAIXA não têm alvo nem devolução. A saída JÁ DEVOLVIDA para um
+-- posto excluído fica sem FK, com o nome por escrito — como na `Assignment`.
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_forma" CHECK (
   (
     "kind" = 'SAIDA'
     AND "qty" = 1
     AND "targetType" IS NOT NULL
-    AND num_nonnulls("targetUserId", "targetLocationId") = 1
     AND (
-         ("targetType" = 'USER'     AND "targetUserId"     IS NOT NULL)
-      OR ("targetType" = 'LOCATION' AND "targetLocationId" IS NOT NULL)
+         ("targetType" = 'PERSON' AND "targetPersonId" IS NOT NULL AND "targetWorkstationId" IS NULL)
+      OR ("targetType" = 'WORKSTATION' AND "targetPersonId" IS NULL AND (
+              "targetWorkstationId" IS NOT NULL
+           OR ("returnedAt" IS NOT NULL AND "targetWorkstationName" IS NOT NULL)
+         ))
     )
-    AND ("returnedAt" IS NOT NULL OR "returnedById" IS NULL)
   ) OR (
     "kind" <> 'SAIDA'
     AND "targetType" IS NULL
-    AND "targetUserId" IS NULL
-    AND "targetLocationId" IS NULL
+    AND "targetPersonId" IS NULL
+    AND "targetWorkstationId" IS NULL
+    AND "targetWorkstationName" IS NULL
     AND "returnedAt" IS NULL
-    AND "returnedById" IS NULL
   )
 );
 

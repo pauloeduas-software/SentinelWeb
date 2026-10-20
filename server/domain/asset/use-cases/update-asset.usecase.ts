@@ -24,7 +24,7 @@ function valorFinal<T>(novo: T | undefined, atual: T): T {
   return novo === undefined ? atual : novo;
 }
 
-export async function updateAsset(id: string, data: UpdateAssetData, actorId: string | null) {
+export async function updateAsset(id: string, data: UpdateAssetData) {
   return prisma.$transaction(async (tx) => {
     // A TRAVA, antes de qualquer leitura. Estar dentro da transação não basta
     // para a guarda estado × posse abaixo: em READ COMMITTED a entrega
@@ -94,7 +94,6 @@ export async function updateAsset(id: string, data: UpdateAssetData, actorId: st
       await recordActivity(
         tx,
         { entityType: 'Asset', entityId: id, action: 'UPDATE', changes },
-        actorId,
       );
     }
 

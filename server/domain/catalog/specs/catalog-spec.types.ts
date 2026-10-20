@@ -92,6 +92,30 @@ export interface CatalogSpec {
   dicaEmUso?: string;
 
   /**
+   * A recusa da exclusão com frase PRÓPRIA, no lugar de "em uso por N
+   * registros" + `dicaEmUso`. Devolve `null` quando pode excluir.
+   *
+   * Para a tabela em que o número não diz o que fazer: o colaborador que
+   * "está em uso por 3 registros" pode estar com um ativo, um assento e um
+   * posto, e cada um se resolve numa tela diferente. Roda na transação da
+   * exclusão, e pode travar a linha antes de contar.
+   */
+  motivoParaNaoExcluir?: (client: ClienteCatalogo, id: string) => Promise<string | null>;
+
+  /**
+   * A tabela tem LIXEIRA: excluir grava `deletedAt` em vez de apagar, a
+   * listagem aceita `?view=trashed` e existe `POST /:id/restore`.
+   *
+   * Só o colaborador — o único do catálogo com histórico de posse PRÓPRIO, que
+   * recadastrar partiria em dois. O model precisa da coluna `deletedAt`, e é a
+   * extension de soft delete que o esconde de toda leitura.
+   */
+  lixeira?: boolean;
+
+  /** Regra que roda antes de RESTAURAR — a unicidade que a lixeira libera. */
+  beforeRestore?: (client: ClienteCatalogo, id: string) => Promise<void>;
+
+  /**
    * O nome é único SEM diferença de maiúscula, dentro destes campos.
    *
    * `[]` = único na tabela inteira; `['type']` = único por tipo (categoria).

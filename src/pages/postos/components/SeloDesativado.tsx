@@ -11,7 +11,7 @@ export default function SeloDesativado() {
   return (
     <span
       className="px-1.5 py-0.5 border border-border-sutil rounded-[2px] text-text-tertiary text-[10px] uppercase tracking-widest"
-      title="Localização desativada: continua no histórico, mas não recebe entrega nem ocupante novo."
+      title="Posto desativado: continua no histórico, mas não recebe entrega nem ocupante novo."
     >
       Desativado
     </span>

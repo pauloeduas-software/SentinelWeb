@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { cenarioDePosse, criarAtivo, criarColaborador, criarLocal } from '../helpers/fixtures';
+import { cenarioDePosse, criarAtivo, criarColaborador, criarPosto } from '../helpers/fixtures';
 
 // AS DUAS BORDAS DO CALENDÁRIO — `dataNaoFutura` e `dataNaoPassada`.
 //
@@ -63,7 +63,7 @@ describe('devolução prevista', () => {
   it('recusa ONTEM com 422, e a mensagem diz o que está errado', async () => {
     const { status, body } = await api.post<{ error: string }>(
       `/api/assets/${await ativoNovo()}/checkout`,
-      { targetType: 'USER', targetUserId: cenario.laura, expectedCheckinAt: dia(-1) },
+      { targetType: 'PERSON', targetPersonId: cenario.laura, expectedCheckinAt: dia(-1) },
     );
 
     expect(status).toBe(422);
@@ -72,8 +72,8 @@ describe('devolução prevista', () => {
 
   it('aceita HOJE — "devolve hoje" é prazo legítimo', async () => {
     const { status } = await api.post(`/api/assets/${await ativoNovo()}/checkout`, {
-      targetType: 'USER',
-      targetUserId: cenario.laura,
+      targetType: 'PERSON',
+      targetPersonId: cenario.laura,
       expectedCheckinAt: dia(0),
     });
 
@@ -82,8 +82,8 @@ describe('devolução prevista', () => {
 
   it('aceita o FUTURO, que é o caso normal do empréstimo', async () => {
     const { status } = await api.post(`/api/assets/${await ativoNovo()}/checkout`, {
-      targetType: 'USER',
-      targetUserId: cenario.laura,
+      targetType: 'PERSON',
+      targetPersonId: cenario.laura,
       expectedCheckinAt: dia(30),
     });
 
@@ -92,8 +92,8 @@ describe('devolução prevista', () => {
 
   it('aceita a entrega SEM prazo — equipamento de trabalho não tem devolução marcada', async () => {
     const { status } = await api.post(`/api/assets/${await ativoNovo()}/checkout`, {
-      targetType: 'USER',
-      targetUserId: cenario.laura,
+      targetType: 'PERSON',
+      targetPersonId: cenario.laura,
     });
 
     expect(status).toBe(201);
@@ -103,12 +103,12 @@ describe('devolução prevista', () => {
 describe('início da ocupação', () => {
   it('recusa AMANHÃ com 422 — escala futura é agenda, e agenda está fora do modelo', async () => {
     const [mesa, pessoa] = await Promise.all([
-      criarLocal(api, { name: 'Mesa do futuro', isWorkstation: true }),
+      criarPosto(api, { name: 'Mesa do futuro' }),
       criarColaborador(api, { name: 'Pessoa do futuro', email: 'futuro@teste.local' }),
     ]);
 
-    const { status, body } = await api.post<{ error: string }>(`/api/locations/${mesa}/occupants`, {
-      userId: pessoa,
+    const { status, body } = await api.post<{ error: string }>(`/api/workstations/${mesa}/occupants`, {
+      personId: pessoa,
       startedAt: dia(1),
     });
 
@@ -118,12 +118,12 @@ describe('início da ocupação', () => {
 
   it('aceita o PASSADO — a carga inicial é "ocupa a Mesa 1 desde março"', async () => {
     const [mesa, pessoa] = await Promise.all([
-      criarLocal(api, { name: 'Mesa do passado', isWorkstation: true }),
+      criarPosto(api, { name: 'Mesa do passado' }),
       criarColaborador(api, { name: 'Pessoa do passado', email: 'passado@teste.local' }),
     ]);
 
-    const { status } = await api.post(`/api/locations/${mesa}/occupants`, {
-      userId: pessoa,
+    const { status } = await api.post(`/api/workstations/${mesa}/occupants`, {
+      personId: pessoa,
       startedAt: dia(-180),
     });
 

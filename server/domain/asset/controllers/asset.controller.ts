@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { parseListQuery } from '../../../core/http/list-query';
-import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { historyQuerySchema } from '../../shared/history.schema';
 import { separarFiltrosDeAtivo } from '../helpers/asset-filters.helper';
@@ -16,8 +15,8 @@ import { updateAsset } from '../use-cases/update-asset.usecase';
 import { deleteAsset } from '../use-cases/delete-asset.usecase';
 import { restoreAsset } from '../use-cases/restore-asset.usecase';
 import { findAssetById } from '../use-cases/find-asset-by-id.usecase';
-// A BORDA é quem sabe quem está pedindo (D23, mesma inversão do `actorId`): o
-// use-case recebe um booleano e não conhece `request`.
+// A BORDA é quem sabe quem está pedindo: o use-case recebe um booleano e não
+// conhece `request`.
 import { temCargo } from '../../access/helpers/require-permission';
 import { getAssetHistory } from '../use-cases/asset-history.usecase';
 import { retireAsset } from '../use-cases/retire-asset.usecase';
@@ -103,36 +102,35 @@ export const assetController = {
 
   async create(request: FastifyRequest, reply: FastifyReply) {
     const data = custoSoDoAdmin(createAssetSchema.parse(request.body ?? {}), temCargo(request, 'ADMIN'));
-    // O ator vem da SESSÃO, nunca do corpo (auth/helpers/actor.helper.ts).
-    const ativo = await createAsset(data, atorDaRequisicao(request));
+    const ativo = await createAsset(data);
     return reply.status(201).send(ativo);
   },
 
   async update(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     const data = custoSoDoAdmin(updateAssetSchema.parse(request.body ?? {}), temCargo(request, 'ADMIN'));
-    return updateAsset(id, data, atorDaRequisicao(request));
+    return updateAsset(id, data);
   },
 
   async remove(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    await deleteAsset(id, atorDaRequisicao(request));
+    await deleteAsset(id);
     return { success: true };
   },
 
   async restore(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return restoreAsset(id, atorDaRequisicao(request));
+    return restoreAsset(id);
   },
 
   async retire(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     const data = retireAssetSchema.parse(request.body ?? {});
-    return retireAsset(id, data, atorDaRequisicao(request));
+    return retireAsset(id, data);
   },
 
   async unretire(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return unretireAsset(id, atorDaRequisicao(request));
+    return unretireAsset(id);
   },
 };

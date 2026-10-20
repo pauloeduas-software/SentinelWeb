@@ -1,13 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '../../server/core/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { criarAtivo, criarFabricante, criarLocal, criarModelo, idsDoSeed } from '../helpers/fixtures';
+import { criarAtivo, criarFabricante, criarModelo, criarPosto, idsDoSeed } from '../helpers/fixtures';
 
 // A CORRIDA DA INVARIANTE 19 — dois ativos entregues ao mesmo posto, ao mesmo
 // tempo.
 //
-// Esta é a invariante que NÃO tem rede no banco: a regra cruza `assignments`,
-// `assets` e `locations`, e índice único é sobre uma tabela só. Então o `if` do
+// Esta é a invariante que NÃO tem rede no banco: a regra cruza `assignments` e
+// `assets`, e o índice único da posse aberta é por ativo, não por posto. Então o `if` do
 // use-case é tudo que existe — e `if` de aplicação é exatamente o que as duas
 // requisições atravessam juntas em READ COMMITTED.
 //
@@ -49,12 +49,12 @@ async function ativo(nome: string) {
   });
 }
 
-const entregar = (assetId: string, locationId: string) =>
-  api.post(`/api/assets/${assetId}/checkout`, { targetType: 'LOCATION', targetLocationId: locationId });
+const entregar = (assetId: string, workstationId: string) =>
+  api.post(`/api/assets/${assetId}/checkout`, { targetType: 'WORKSTATION', targetWorkstationId: workstationId });
 
 describe('dois ativos entregues ao MESMO posto, ao mesmo tempo', () => {
   it('deixa passar exatamente UM', async () => {
-    const posto = await criarLocal(api, { name: 'Mesa da Corrida', isWorkstation: true });
+    const posto = await criarPosto(api, { name: 'Mesa da Corrida' });
     const um = await ativo('Desktop A');
     const dois = await ativo('Desktop B');
 
@@ -65,12 +65,12 @@ describe('dois ativos entregues ao MESMO posto, ao mesmo tempo', () => {
     expect(placar(respostas)[201]).toBe(1);
     expect(placar(respostas)[409]).toBe(1);
 
-    const noPosto = await prisma.assignment.count({ where: { targetLocationId: posto, checkinAt: null } });
+    const noPosto = await prisma.assignment.count({ where: { targetWorkstationId: posto, checkinAt: null } });
     expect(noPosto).toBe(1);
   });
 
   it('e a perdedora não deixa posse fechada de consolação', async () => {
-    const posto = await criarLocal(api, { name: 'Mesa da Corrida 2', isWorkstation: true });
+    const posto = await criarPosto(api, { name: 'Mesa da Corrida 2' });
     const um = await ativo('Desktop C');
     const dois = await ativo('Desktop D');
 
@@ -78,48 +78,8 @@ describe('dois ativos entregues ao MESMO posto, ao mesmo tempo', () => {
 
     // A recusa tem que ser TOTAL: uma `Assignment` com `checkinAt` preenchido
     // seria histórico de uma entrega que nunca aconteceu.
-    const total = await prisma.assignment.count({ where: { targetLocationId: posto } });
+    const total = await prisma.assignment.count({ where: { targetWorkstationId: posto } });
     expect(total).toBe(1);
   });
 
-  it('o posto NÃO marcado deixa os dois passarem, mesmo na corrida', async () => {
-    const sala = await criarLocal(api, { name: 'Sala da Corrida', isWorkstation: false });
-    const um = await ativo('Desktop E');
-    const dois = await ativo('Desktop F');
-
-    const respostas = await Promise.all([entregar(um.id, sala), entregar(dois.id, sala)]);
-
-    expect(placar(respostas)[201]).toBe(2);
-  });
-});
-
-describe('marcar como posto × entregar o SEGUNDO ativo ao mesmo local', () => {
-  it('nunca termina com um posto de dois ativos', async () => {
-    // A porta da marca contava os ativos ANTES de a entrega simultânea
-    // confirmar: uma via "1, pode marcar", a outra via "não é posto, pode
-    // entregar", e as duas passavam. A trava da linha do local na marca é o
-    // que as põe em fila. Várias rodadas: a ordem de chegada varia.
-    for (let rodada = 0; rodada < 6; rodada += 1) {
-      const sala = await criarLocal(api, { name: `Sala da marca ${rodada}` });
-      const primeiro = await ativo(`Desktop da marca ${rodada}`);
-      const segundo = await ativo(`Notebook da marca ${rodada}`);
-      expect((await entregar(primeiro.id, sala)).status).toBe(201);
-
-      const [marca, entrega] = await Promise.all([
-        api.put(`/api/locations/${sala}`, { isWorkstation: true }),
-        entregar(segundo.id, sala),
-      ]);
-
-      // Exatamente uma vence: marcou e a entrega bateu no posto ocupado, ou
-      // entregou e a marca viu dois ativos.
-      const venceu = [marca.status === 200, entrega.status === 201].filter(Boolean).length;
-      expect(venceu, `marca ${marca.status}, entrega ${entrega.status}`).toBe(1);
-
-      const [local, noLocal] = await Promise.all([
-        prisma.location.findUniqueOrThrow({ where: { id: sala }, select: { isWorkstation: true } }),
-        prisma.assignment.count({ where: { targetLocationId: sala, checkinAt: null } }),
-      ]);
-      if (local.isWorkstation) expect(noLocal).toBe(1);
-    }
-  });
 });

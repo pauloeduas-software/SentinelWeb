@@ -111,7 +111,7 @@ export async function criarLicenca(
 export async function assentosDa(api: ApiDeTeste, licenseId: string) {
   const resposta = await api.get<{
     id: string; seatNumber: number; burnedAt: string | null; retiredAt: string | null;
-    checkouts: { id: string; assignedUserId: string | null; assignedAssetId: string | null }[];
+    checkouts: { id: string; assignedPersonId: string | null; assignedAssetId: string | null }[];
   }[]>(`/api/licenses/${licenseId}/seats`);
   return exigir201<typeof resposta.body>('assentos', resposta);
 }
@@ -133,17 +133,23 @@ export async function criarModelo(
   return criado.id;
 }
 
-/** Uma localização, pela API. A lista é plana: só nome e a marca de posto. */
-export async function criarLocal(
-  api: ApiDeTeste,
-  opcoes: { name: string; isWorkstation?: boolean },
-): Promise<string> {
-  const corpo: Record<string, unknown> = {
-    name: opcoes.name,
-    isWorkstation: opcoes.isWorkstation ?? false,
-  };
+/** Uma localização, pela API. A lista é plana: só o nome importa aqui. */
+export async function criarLocal(api: ApiDeTeste, opcoes: { name: string }): Promise<string> {
+  const criado = exigir201<Criado>('localização', await api.post('/api/locations', { name: opcoes.name }));
+  return criado.id;
+}
 
-  const criado = exigir201<Criado>('localização', await api.post('/api/locations', corpo));
+/**
+ * Um posto de trabalho, pela API. Sem `locationId`, cria antes uma localização
+ * só para ele — `Local de <nome>` —: quem testa o posto raramente quer saber
+ * onde ele fica, e o posto não existe sem uma.
+ */
+export async function criarPosto(
+  api: ApiDeTeste,
+  opcoes: { name: string; locationId?: string },
+): Promise<string> {
+  const locationId = opcoes.locationId ?? await criarLocal(api, { name: `Local de ${opcoes.name}` });
+  const criado = exigir201<Criado>('posto', await api.post('/api/workstations', { name: opcoes.name, locationId }));
   return criado.id;
 }
 
@@ -151,7 +157,7 @@ export async function criarColaborador(
   api: ApiDeTeste,
   opcoes: { name: string; email: string },
 ): Promise<string> {
-  const criado = exigir201<Criado>('colaborador', await api.post('/api/users', opcoes));
+  const criado = exigir201<Criado>('colaborador', await api.post('/api/people', opcoes));
   return criado.id;
 }
 
@@ -181,7 +187,7 @@ export async function criarAtivo(
  * ═════════════════════════════════════════════════════════════════════════════
  * O `sufixo` E POR QUE O PADRÃO DELE É VAZIO.
  *
- * `Manufacturer.name` e `Location.name` são `@unique`, e `User.email` tem índice
+ * `Manufacturer.name` e `Workstation.name` são `@unique`, e `Person.email` tem índice
  * único parcial. Chamar esta função DUAS vezes no mesmo arquivo colide nos três —
  * 409 "Registro já existe" vindo de dentro do fixture, que se lê como defeito da
  * aplicação e não do teste.
@@ -189,7 +195,7 @@ export async function criarAtivo(
  * O padrão fica VAZIO de propósito: há testes que dependem dos nomes LITERAIS
  * que ela produz — `invariantes/posse.test.ts` compara
  * `['Ana Lima', 'Laura Souza']` e `listagens/historico-da-pessoa.test.ts` espera
- * `locationLabel === 'Mesa 1'`. Trocar os nomes por gerados quebraria esses
+ * `workstationLabel === 'Mesa 1'`. Trocar os nomes por gerados quebraria esses
  * testes. Quem chama mais de uma vez passa o sufixo; quem chama uma vez não
  * muda nada.
  * ═════════════════════════════════════════════════════════════════════════════
@@ -213,7 +219,7 @@ export async function cenarioDePosse(api: ApiDeTeste, sufixo = '') {
   const modelId = await criarModelo(api, { categoriaId: seed.categoriaId, fabricanteId });
 
   const [mesa1, laura, ana, ativo] = await Promise.all([
-    criarLocal(api, { name: `Mesa 1${sufixo}`, isWorkstation: true }),
+    criarPosto(api, { name: `Mesa 1${sufixo}` }),
     criarColaborador(api, { name: `Laura Souza${sufixo}`, email: `laura${noEmail}@teste.local` }),
     criarColaborador(api, { name: `Ana Lima${sufixo}`, email: `ana${noEmail}@teste.local` }),
     criarAtivo(api, { statusId: seed.statusDeployableId, modelId }),

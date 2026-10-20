@@ -45,18 +45,15 @@ export interface AssetFilters {
 }
 
 /**
- * ENTREGUE A UM POSTO DE TRABALHO — posse aberta cujo alvo é um local marcado.
+ * ENTREGUE A UM POSTO DE TRABALHO — posse aberta cujo alvo é um posto.
  *
  * É o recorte que a listagem padrão EXCLUI: o equipamento que está numa mesa
  * tem endereço, e o endereço dele é a mesa. Quem pergunta "o que há no parque"
  * quer o que está em estoque ou com gente; o que está montado num posto se
  * pergunta em `/postos`, onde ele aparece junto dos ocupantes que respondem por
  * ele. Sem isto, o mesmo computador aparece nas duas telas e nenhuma das duas
- * responde uma pergunta inteira.
- *
- * SÓ ONDE `isWorkstation` É VERDADE, pelo mesmo motivo da invariante 19: o
- * depósito e a sala de reunião não são mesa de ninguém, e o ativo guardado lá
- * continua sendo parque.
+ * responde uma pergunta inteira. O ativo GUARDADO no depósito ou na sala de
+ * reunião (`locationId`) não é entregue a ninguém e continua sendo parque.
  *
  * FILTRO DO PRISMA, nunca `.filter()` depois da consulta: filtrando no cliente,
  * a página 1 mostraria 3 de 25 linhas e o `total` do envelope mentiria — a
@@ -66,8 +63,7 @@ export const EM_POSTO_DE_TRABALHO: Prisma.AssetWhereInput = {
   assignments: {
     some: {
       checkinAt: null,
-      targetType: 'LOCATION',
-      targetLocation: { isWorkstation: true },
+      targetType: 'WORKSTATION',
     },
   },
 };

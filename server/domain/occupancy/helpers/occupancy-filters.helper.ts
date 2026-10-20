@@ -25,7 +25,7 @@ export type OccupancyView = 'current' | 'all';
  * significa tudo, aberto inclusive — a tela que mostra o histórico de um posto
  * precisa mostrar quem ainda está nele no meio da lista.
  */
-export function buildViewWhere(view: OccupancyView): Prisma.LocationOccupantWhereInput {
+export function buildViewWhere(view: OccupancyView): Prisma.WorkstationOccupantWhereInput {
   return view === 'current' ? { endedAt: null } : {};
 }
 
@@ -41,7 +41,7 @@ export function buildViewWhere(view: OccupancyView): Prisma.LocationOccupantWher
  * existe para a `all`, e manter UMA ordem para as duas é o que permite a mesma
  * tabela renderizar as duas visões.
  */
-export const OCCUPANT_ORDER_BY: Prisma.LocationOccupantOrderByWithRelationInput[] = [
+export const OCCUPANT_ORDER_BY: Prisma.WorkstationOccupantOrderByWithRelationInput[] = [
   { endedAt: { sort: 'asc', nulls: 'first' } },
   { startedAt: 'desc' },
 ];

@@ -115,7 +115,7 @@ describe('encolher abaixo do que está ocupado', () => {
       name: 'Contrato apertado', categoryId: cenario.categoriaLicencaId, seatsTotal: 3,
     });
 
-    for (const alvo of [{ assignedUserId: cenario.laura }, { assignedUserId: cenario.ana }]) {
+    for (const alvo of [{ assignedPersonId: cenario.laura }, { assignedPersonId: cenario.ana }]) {
       expect((await api.post(`/api/licenses/${licenca.id}/checkout-seat`, alvo)).status).toBe(201);
     }
 
@@ -153,7 +153,7 @@ describe('a queima interage com o contrato', () => {
     });
 
     const entrega = await api.post<{ seatId: string }>(
-      `/api/licenses/${licenca.id}/checkout-seat`, { assignedUserId: cenario.laura },
+      `/api/licenses/${licenca.id}/checkout-seat`, { assignedPersonId: cenario.laura },
     );
     expect(entrega.status).toBe(201);
 
@@ -208,7 +208,7 @@ describe('a queima interage com o contrato', () => {
     });
 
     const entrega = await api.post<{ seatId: string }>(
-      `/api/licenses/${licenca.id}/checkout-seat`, { assignedUserId: cenario.laura },
+      `/api/licenses/${licenca.id}/checkout-seat`, { assignedPersonId: cenario.laura },
     );
     await api.post(`/api/licenses/seats/${entrega.body.seatId}/checkin`, {});
 

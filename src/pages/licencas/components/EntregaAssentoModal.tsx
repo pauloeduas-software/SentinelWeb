@@ -32,14 +32,14 @@ interface EntregaAssentoModalProps {
 }
 
 export default function EntregaAssentoModal({ licenca, onClose, onSubmit }: EntregaAssentoModalProps) {
-  const [alvo, setAlvo] = useState<'USER' | 'ASSET'>('USER');
-  const [userId, setUserId] = useState('');
+  const [alvo, setAlvo] = useState<'PERSON' | 'ASSET'>('PERSON');
+  const [personId, setPersonId] = useState('');
   const [assetId, setAssetId] = useState('');
   const [notes, setNotes] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
-  const pronto = alvo === 'USER' ? userId !== '' : assetId !== '';
+  const pronto = alvo === 'PERSON' ? personId !== '' : assetId !== '';
 
   const enviar = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -49,8 +49,8 @@ export default function EntregaAssentoModal({ licenca, onClose, onSubmit }: Entr
     // SÓ a chave do alvo escolhido vai no corpo. Mandar as duas responde 422
     // pelo use-case, e o banco tem o CHECK por baixo — mas montar o corpo certo
     // aqui é o que faz o erro nunca acontecer por descuido da tela.
-    const corpo: AlvoDoAssento = alvo === 'USER'
-      ? { assignedUserId: userId, notes: notes.trim() || null }
+    const corpo: AlvoDoAssento = alvo === 'PERSON'
+      ? { assignedPersonId: personId, notes: notes.trim() || null }
       : { assignedAssetId: assetId, notes: notes.trim() || null };
 
     try {
@@ -86,7 +86,7 @@ export default function EntregaAssentoModal({ licenca, onClose, onSubmit }: Entr
           )}
 
           <div className="flex border border-border-sutil w-fit">
-            {([['USER', 'Colaborador', User], ['ASSET', 'Ativo', Laptop]] as const).map(([valor, rotulo, Icone]) => (
+            {([['PERSON', 'Colaborador', User], ['ASSET', 'Ativo', Laptop]] as const).map(([valor, rotulo, Icone]) => (
               <button
                 key={valor}
                 type="button"
@@ -102,10 +102,10 @@ export default function EntregaAssentoModal({ licenca, onClose, onSubmit }: Entr
             ))}
           </div>
 
-          {alvo === 'USER' ? (
+          {alvo === 'PERSON' ? (
             <label className="space-y-1.5 block">
               <span className={ROTULO}>Colaborador *</span>
-              <ReferenceSelect rota="users" valor={userId} obrigatorio onChange={setUserId} />
+              <ReferenceSelect rota="people" valor={personId} obrigatorio onChange={setPersonId} />
             </label>
           ) : (
             <label className="space-y-1.5 block">

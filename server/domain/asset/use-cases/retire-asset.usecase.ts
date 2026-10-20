@@ -7,7 +7,7 @@ import { diaEmPortugues } from '../helpers/asset-dates.helper';
 import { ASSET_WRITE_SELECT } from '../helpers/asset-select.helper';
 import { assertSemPosseParaBaixa } from './assert-retire-posse.usecase';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
-import { contarAssentosDoAtivo } from '../../license/use-cases/count-user-seats.usecase';
+import { contarAssentosDoAtivo } from '../../license/use-cases/count-person-seats.usecase';
 
 // DAR BAIXA — o ativo saiu do PATRIMÔNIO: foi vendido, descartado, doado,
 // extraviado, roubado ou trocado em garantia.
@@ -30,7 +30,7 @@ interface RetireAssetData {
   notes?: string | null;
 }
 
-export async function retireAsset(id: string, data: RetireAssetData, actorId: string | null = null) {
+export async function retireAsset(id: string, data: RetireAssetData) {
   // Transação porque são duas escritas que descrevem o MESMO fato: o ativo
   // baixado e a linha de histórico que diz por quê. Uma sem a outra é
   // um equipamento que sumiu do inventário sem explicação.
@@ -94,7 +94,7 @@ export async function retireAsset(id: string, data: RetireAssetData, actorId: st
         // não `notes`: na tela, `notes` é o rótulo "Notas" das notas do ATIVO.
         ...(data.notes ? { observacao: data.notes } : {}),
       },
-    }, actorId);
+    });
 
     return depois;
   });

@@ -17,7 +17,7 @@ import { ROTAS_POR_PERMISSAO } from '../../server/domain/access/helpers/route-pe
 // ativo), e rota sem exigência declarada ficava aberta a qualquer sessão.
 //
 // O primeiro sentido MORREU com o cargo: não há mais string a digitar errado —
-// `Cargo` é um enum de três valores e o compilador recusa o quarto.
+// `Cargo` é um enum de dois valores e o compilador recusa o terceiro.
 //
 // O SEGUNDO CONTINUA INTEIRO, e é por isso que este arquivo não desapareceu com
 // os grupos: rota nova sem linha no mapa é rota que qualquer sessão alcança, e
@@ -93,15 +93,9 @@ describe('o mapa de rotas × a tabela do Fastify (D137)', () => {
   });
 });
 
-describe('a hierarquia — três valores, uma comparação', () => {
+describe('a hierarquia — dois valores, uma comparação', () => {
   it('ADMIN alcança tudo', () => {
     for (const cargo of CARGOS) expect(cargoAlcanca('ADMIN', cargo)).toBe(true);
-  });
-
-  it('USUARIO alcança só a si mesmo', () => {
-    expect(cargoAlcanca('USUARIO', 'USUARIO')).toBe(true);
-    expect(cargoAlcanca('USUARIO', 'TECNICO')).toBe(false);
-    expect(cargoAlcanca('USUARIO', 'ADMIN')).toBe(false);
   });
 
   it('TECNICO não vira ADMIN por comparação', () => {
@@ -110,63 +104,82 @@ describe('a hierarquia — três valores, uma comparação', () => {
   });
 
   it('a ordem do array É a hierarquia, e ninguém a inverteu', () => {
-    expect([...CARGOS]).toEqual(['USUARIO', 'TECNICO', 'ADMIN']);
+    expect([...CARGOS]).toEqual(['TECNICO', 'ADMIN']);
+  });
+});
+
+describe('ninguém tira a si mesmo do jogo (W)', () => {
+  // O cliente padrão da suíte É o administrador do `.env`, e o seed garante que
+  // ele é o único administrador num banco de teste limpo. Cada caso põe um
+  // segundo administrador: com dois, a rede do último deixaria passar, e quem
+  // recusa é a regra da própria conta.
+  let outro: Awaited<ReturnType<ApiDeTeste['comoUsuario']>>;
+
+  beforeAll(async () => { outro = await api.comoUsuario('ADMIN'); });
+  // Volta a um administrador só, como os casos seguintes esperam.
+  afterAll(async () => { await prisma.user.deleteMany({ where: { id: outro.userId } }); });
+
+  it('rebaixar a si mesmo é 409 — e rebaixar o outro continua podendo', async () => {
+    const resposta = await api.put<{ error: string }>(`/api/users/${api.adminId}`, { role: 'TECNICO' });
+    expect(resposta.status).toBe(409);
+    expect(resposta.body.error).toMatch(/rebaixar a si mesmo/i);
+    const depois = await prisma.user.findUniqueOrThrow({ where: { id: api.adminId }, select: { role: true } });
+    expect(depois.role).toBe('ADMIN');
+
+    // A mesma regra pelo outro lado: ele também não se rebaixa...
+    expect((await outro.put(`/api/users/${outro.userId}`, { role: 'TECNICO' })).status).toBe(409);
+    // ...mas rebaixar OUTRA pessoa continua sendo do administrador.
+    expect((await api.put(`/api/users/${outro.userId}`, { role: 'TECNICO' })).status).toBe(200);
+    expect((await api.put(`/api/users/${outro.userId}`, { role: 'ADMIN' })).status).toBe(200);
+  });
+
+  it('desativar a si mesmo é 409', async () => {
+    const resposta = await api.put<{ error: string }>(`/api/users/${api.adminId}`, { isActive: false });
+    expect(resposta.status).toBe(409);
+    expect(resposta.body.error).toMatch(/desativar a si mesmo/i);
+    const depois = await prisma.user.findUniqueOrThrow({ where: { id: api.adminId }, select: { isActive: true } });
+    expect(depois.isActive).toBe(true);
+  });
+
+  it('excluir a si mesmo é 409', async () => {
+    const resposta = await api.delete<{ error: string }>(`/api/users/${api.adminId}`);
+    expect(resposta.status).toBe(409);
+    expect(resposta.body.error).toMatch(/excluir a si mesmo/i);
+    expect(await prisma.user.findUnique({ where: { id: api.adminId } })).not.toBeNull();
+  });
+
+  it('reenviar o próprio cargo sem mudá-lo passa: o formulário manda todo campo', async () => {
+    const resposta = await api.put(`/api/users/${api.adminId}`, { role: 'ADMIN' });
+    expect(resposta.status).toBe(200);
   });
 });
 
 describe('nunca sem administrador (D148)', () => {
-  it('recusa (409) rebaixar o último administrador que entra', async () => {
-    // O cliente padrão da suíte É o administrador do `.env`, e o seed garante
-    // que ele é o único com cargo e senha num banco de teste limpo.
-    const admins = await prisma.user.findMany({
-      where: { role: 'ADMIN', isActive: true, passwordHash: { not: null } },
-      select: { id: true },
-    });
-    expect(admins.length).toBeGreaterThan(0);
+  // Com a regra da própria conta (W), o último administrador não alcança mais a
+  // rede sozinho: rebaixar, desativar e excluir a si mesmo são recusados antes.
+  // O caminho que sobra é a CORRIDA — dois administradores tirando um ao outro
+  // no mesmo instante, cada um contando "sobra eu".
+  it('dois administradores desativando um ao outro ao mesmo tempo: sobra um', async () => {
+    const outro = await api.comoUsuario('ADMIN');
+    expect(await prisma.user.count({ where: { role: 'ADMIN', isActive: true } })).toBe(2);
 
-    // Rebaixa todos menos o último, e então tenta o último.
-    for (const admin of admins.slice(0, -1)) {
-      await prisma.user.update({ where: { id: admin.id }, data: { role: 'TECNICO' } });
-    }
+    // SEM `await` entre as duas (ver `tests/corridas/posse.test.ts`). A
+    // perdedora volta 409 — a rede, depois da fila do `travarAdministracao` —
+    // ou 401, se a sessão dela já caiu antes de entrar.
+    const respostas = await Promise.all([
+      api.put(`/api/users/${outro.userId}`, { isActive: false }),
+      outro.put(`/api/users/${api.adminId}`, { isActive: false }),
+    ]);
+    expect(respostas.filter((r) => r.status === 200)).toHaveLength(1);
+    expect(await prisma.user.count({ where: { role: 'ADMIN', isActive: true } })).toBe(1);
 
-    const ultimo = admins[admins.length - 1];
-    const resposta = await api.put(`/api/users/${ultimo.id}`, { role: 'TECNICO' });
-    expect(resposta.status).toBe(409);
-
-    // E a transação voltou atrás: ele continua ADMIN.
-    const depois = await prisma.user.findUniqueOrThrow({
-      where: { id: ultimo.id }, select: { role: true },
-    });
-    expect(depois.role).toBe('ADMIN');
-
-    // Repõe o que o caso rebaixou, para os seguintes não herdarem o estado.
-    for (const admin of admins.slice(0, -1)) {
-      await prisma.user.update({ where: { id: admin.id }, data: { role: 'ADMIN' } });
-    }
-  });
-
-  it('recusa (409) mandar para a lixeira o último administrador — inclusive a si mesmo', async () => {
-    // A edição conferia, a exclusão não: o administrador único apagava a si
-    // mesmo e o sistema ficava sem ninguém que entrasse.
-    const admins = await prisma.user.findMany({
-      where: { role: 'ADMIN', isActive: true, passwordHash: { not: null } },
-      select: { id: true },
-    });
-    expect(admins).toHaveLength(1);
-
-    const resposta = await api.delete<{ error: string }>(`/api/users/${api.adminId}`);
-    expect(resposta.status).toBe(409);
-    expect(resposta.body.error).toMatch(/sem nenhum administrador/i);
-
-    // A transação voltou atrás: ele continua fora da lixeira.
-    const depois = await prisma.user.findUniqueOrThrow({
-      where: { id: api.adminId }, select: { deletedAt: true },
-    });
-    expect(depois.deletedAt).toBeNull();
+    // Repõe: o administrador da suíte ativo, o outro fora.
+    await prisma.user.update({ where: { id: api.adminId }, data: { isActive: true } });
+    await prisma.user.delete({ where: { id: outro.userId } });
   });
 });
 
-describe('a senha no cadastro — só de quem entra', () => {
+describe('a senha no cadastro — todo usuário entra', () => {
   it('Técnico e Administrador nascem com senha: sem ela é 422', async () => {
     for (const role of ['TECNICO', 'ADMIN']) {
       const resposta = await api.post<{ error: string }>('/api/users', {
@@ -177,95 +190,31 @@ describe('a senha no cadastro — só de quem entra', () => {
     }
   });
 
-  it('o colaborador que só recebe equipamento nasce sem senha', async () => {
-    const resposta = await api.post('/api/users', {
-      name: 'Só Recebe', email: 'so.recebe@teste.local',
+  it('sem cargo, nasce Técnico — o menor dos dois — e entra com a senha', async () => {
+    const email = 'nasce.tecnico@teste.local';
+    const resposta = await api.post<{ id: string }>('/api/users', {
+      name: 'Nasce Técnico', email, password: 'Senha-Do-Tecnico-1',
     });
     expect(resposta.status).toBe(201);
-  });
 
-  it('promover a Técnico quem nunca teve senha exige uma, no mesmo PUT', async () => {
-    const email = 'vai.virar.tecnico@teste.local';
-    const pessoa = await api.post<{ id: string }>('/api/users', { name: 'Vai Virar Técnico', email });
-    expect(pessoa.status).toBe(201);
-
-    const semSenha = await api.put<{ error: string }>(`/api/users/${pessoa.body.id}`, { role: 'TECNICO' });
-    expect(semSenha.status).toBe(422);
-    expect(semSenha.body.error).toMatch(/senha/i);
-
-    const comSenha = await api.put(`/api/users/${pessoa.body.id}`, {
-      role: 'TECNICO', password: 'Senha-Do-Tecnico-1',
-    });
-    expect(comSenha.status).toBe(200);
+    const linha = await prisma.user.findUniqueOrThrow({ where: { id: resposta.body.id }, select: { role: true } });
+    expect(linha.role).toBe('TECNICO');
     expect((await api.anonimo.post('/api/auth/login', { email, password: 'Senha-Do-Tecnico-1' })).status)
       .toBe(200);
   });
 
-  it('a trilha diz que a senha mudou, e nunca o valor', async () => {
-    const email = 'trilha.da.senha@teste.local';
-    const pessoa = await api.post<{ id: string }>('/api/users', {
-      name: 'Trilha da Senha', email, role: 'TECNICO', password: 'Senha-Original-123',
+  it('o cargo antigo de quem só recebia equipamento não existe mais: 422', async () => {
+    const resposta = await api.post<{ error: string }>('/api/users', {
+      name: 'Só Recebe', email: 'so.recebe@teste.local', role: 'USUARIO', password: 'Senha-Qualquer-123',
     });
-    expect((await api.put(`/api/users/${pessoa.body.id}`, { password: 'Senha-Nova-123456' })).status).toBe(200);
-
-    const linhas = await prisma.activityLog.findMany({
-      where: { entityType: 'User', entityId: pessoa.body.id },
-      select: { changes: true },
-    });
-    const texto = JSON.stringify(linhas);
-    expect(texto).toContain('senha definida');
-    expect(texto).toContain('senha redefinida');
-    expect(texto).not.toContain('Senha-Nova-123456');
-    expect(texto).not.toContain('argon2');
+    expect(resposta.status).toBe(422);
+    expect(resposta.body.error).toMatch(/cargo/i);
   });
 });
 
 describe('a porta fechada por padrão', () => {
-  it('USUARIO não entra no painel, e a recusa explica por quê', async () => {
-    // O cargo existe para quem RECEBE equipamento. Como nenhuma rota de
-    // inventário o aceita e nenhum item do menu dispensa cargo, deixá-lo entrar
-    // produzia um painel vazio respondendo 403 em tudo — que parece defeito.
-    // A tela nem mostra o campo de senha para `USUARIO`, mas a API aceita: é o
-    // jeito de provar que a recusa é do CARGO, com a senha certa na mão.
-    const email = `colab${Date.now()}@teste.local`;
-    const senha = 'Senha-De-Teste-123';
-    const pessoa = await api.post<{ id: string }>('/api/users', {
-      name: 'Colaborador Sem Painel', email, password: senha,
-    });
-    expect(pessoa.status).toBe(201);
-
-    // A conta nasce `USUARIO` pelo `@default` da coluna — ninguém a rebaixou.
-    const entrada = await api.anonimo.post<{ error: string }>('/api/auth/login', {
-      email, password: senha,
-    });
-
-    // 403 e não 401: a senha está CERTA, o que falta é autorização.
-    expect(entrada.status).toBe(403);
-    expect(entrada.body.error).toMatch(/colaborador/i);
-    expect(entrada.body.error).toContain('Técnico');
-  });
-
-  it('promovido a TECNICO, o mesmo login passa', async () => {
-    // A outra metade: provar que o bloqueio é do CARGO e não da conta, senão
-    // uma implementação que recusa todo mundo passaria no caso de cima.
-    const email = `promovido${Date.now()}@teste.local`;
-    const senha = 'Senha-De-Teste-123';
-    const pessoa = await api.post<{ id: string }>('/api/users', {
-      name: 'Colaborador Promovido', email, password: senha,
-    });
-
-    expect((await api.anonimo.post('/api/auth/login', { email, password: senha })).status)
-      .toBe(403);
-
-    expect((await api.put(`/api/users/${pessoa.body.id}`, { role: 'TECNICO' })).status).toBe(200);
-
-    expect((await api.anonimo.post('/api/auth/login', { email, password: senha })).status)
-      .toBe(200);
-  });
-
   it('o 403 das rotas NOMEIA o cargo que falta', async () => {
-    // Agora pelo TECNICO numa rota de ADMIN: é a mesma mensagem do guard, e o
-    // caminho que sobrou agora que `USUARIO` não tem sessão.
+    // Pelo TECNICO numa rota de ADMIN: é a mensagem do guard.
     const tecnico = await api.comoUsuario('TECNICO');
     // `PUT /api/settings/discovery` é de ADMIN (o `GET` é de técnico): a recusa
     // vem do `preHandler`, antes de o corpo ser lido.
@@ -286,15 +235,27 @@ describe('a porta fechada por padrão', () => {
     expect((await tecnico.post('/api/categories', { name: 'Nova', type: 'ASSET' })).status).toBe(403);
   });
 
+  it('TECNICO não abre a tela de Usuários, mas escolhe o colaborador da entrega', async () => {
+    const tecnico = await api.comoUsuario('TECNICO');
+
+    // A tela inteira é do administrador — leitura inclusive.
+    expect((await tecnico.get('/api/users')).status).toBe(403);
+
+    // O seletor de pessoa do checkout é de colaborador, e continua dele: sem
+    // isto não há entrega.
+    expect((await tecnico.get('/api/people/options')).status).toBe(200);
+  });
+
   it('o cargo é relido a cada requisição, como o usuário', async () => {
-    const pessoa = await api.comoUsuario('TECNICO');
-    expect((await pessoa.get('/api/assets')).status).toBe(200);
+    const pessoa = await api.comoUsuario('ADMIN');
+    expect((await pessoa.get('/api/users')).status).toBe(200);
 
     // Rebaixa POR FORA da sessão dela: o cookie continua válido, o cargo não.
-    await prisma.user.update({ where: { id: pessoa.userId }, data: { role: 'USUARIO' } });
+    await prisma.user.update({ where: { id: pessoa.userId }, data: { role: 'TECNICO' } });
 
     // Sem novo login: a releitura por requisição é que decide (o mesmo desenho
-    // que faz a lixeira derrubar um token já emitido).
-    expect((await pessoa.get('/api/assets')).status).toBe(403);
+    // que faz a exclusão derrubar um token já emitido).
+    expect((await pessoa.get('/api/users')).status).toBe(403);
+    expect((await pessoa.get('/api/assets')).status).toBe(200);
   });
 });

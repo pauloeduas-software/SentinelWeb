@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../core/api/apiClient';
 import { assetKeys } from '../asset/asset.queries';
-import { userKeys } from '../user/user.queries';
+import { personKeys } from '../person/person.queries';
 import type { ListEnvelope, ListParamsComCategoria } from '../shared/list.types';
 import type {
   AlertasDeLicenca, AlvoDoAssento, AssentoDeLicenca,
@@ -82,10 +82,10 @@ export function useAssetLicensesQuery(assetId: string | null) {
 }
 
 /**
- * Por que toda mutação daqui invalida ativos e usuários, e não só licenças.
+ * Por que toda mutação daqui invalida ativos e colaboradores, e não só licenças.
  *
  * O assento é POSSE (D93): entregá-lo a alguém muda a ficha daquela pessoa
- * e o 409 do `DELETE` dela; entregá-lo a uma máquina muda a aba Licenças do
+ * e o 409 da desativação dela; entregá-lo a uma máquina muda a aba Licenças do
  * ativo e o 409 do `DELETE` dele. Invalidar só `licenses` deixaria essas telas
  * mentindo até o próximo refetch: operação que atravessa domínios invalida os
  * dois lados.
@@ -93,7 +93,7 @@ export function useAssetLicensesQuery(assetId: string | null) {
 function invalidarLicencaEPosse(queryClient: ReturnType<typeof useQueryClient>) {
   void queryClient.invalidateQueries({ queryKey: licenseKeys.all });
   void queryClient.invalidateQueries({ queryKey: assetKeys.all });
-  void queryClient.invalidateQueries({ queryKey: userKeys.all });
+  void queryClient.invalidateQueries({ queryKey: personKeys.all });
 }
 
 export function useCreateLicense() {
