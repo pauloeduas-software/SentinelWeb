@@ -97,7 +97,7 @@ export const updateLicenseSchema = z.strictObject({
  * remover depois.
  */
 export const checkoutSeatSchema = z.strictObject({
-  assignedUserId: uuidObrigatorio('colaborador').optional(),
+  assignedPersonId: uuidObrigatorio('colaborador').optional(),
   assignedAssetId: uuidObrigatorio('ativo').optional(),
   notes: textoOpcional('observações', 2_000),
 });

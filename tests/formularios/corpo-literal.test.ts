@@ -172,15 +172,21 @@ describe('PUT /api/assets/:id com o corpo literal do formulário de edição', (
 });
 
 describe('POST /api/users com o corpo literal do UserFormModal', () => {
-  /** Cópia fiel de `src/pages/gestao-usuario/components/UserFormModal.tsx`. */
+  /**
+   * Cópia fiel de `src/pages/usuarios/components/UserFormModal.tsx`. A senha
+   * só vai quando preenchida — no cadastro, o `required` do campo garante que
+   * vá.
+   */
   function corpoDoFormularioDeUsuario(sobrescrever: Record<string, unknown> = {}) {
-    return { name: '', email: '', role: 'USUARIO', ...sobrescrever };
+    return { name: '', email: '', role: 'TECNICO', ...sobrescrever };
   }
 
   it('aceita o corpo mínimo da tela', async () => {
     const { status, body } = await api.post<Record<string, unknown>>(
       '/api/users',
-      corpoDoFormularioDeUsuario({ name: 'Laura Souza', email: 'laura.formulario@teste.local' }),
+      corpoDoFormularioDeUsuario({
+        name: 'Laura Souza', email: 'laura.formulario@teste.local', password: 'Senha-Do-Formulario-1',
+      }),
     );
 
     expect(status).toBe(201);
@@ -198,5 +204,38 @@ describe('POST /api/users com o corpo literal do UserFormModal', () => {
     expect(status).toBe(422);
     expect(body.error).toMatch(/nome/);
     expect(body.error).toMatch(/e-mail/);
+  });
+});
+
+describe('POST /api/people com o corpo literal da aba Colaboradores', () => {
+  /** Os `campos` da spec `colaborador` (src/pages/configuracoes/specs/index.ts), em branco. */
+  function corpoDoFormularioDeColaborador(sobrescrever: Record<string, unknown> = {}) {
+    return { name: '', email: '', ...sobrescrever };
+  }
+
+  it('aceita o e-mail em branco, e grava nulo — colaborador não faz login', async () => {
+    const { status, body } = await api.post<{ email: string | null }>(
+      '/api/people',
+      corpoDoFormularioDeColaborador({ name: 'Sem E-mail' }),
+    );
+
+    expect(status).toBe(201);
+    expect(body.email).toBeNull();
+  });
+
+  it('e-mail é único e gravado em minúsculas', async () => {
+    const primeiro = await api.post<{ email: string }>(
+      '/api/people',
+      corpoDoFormularioDeColaborador({ name: 'Com E-mail', email: '  Colab.Unico@Teste.Local ' }),
+    );
+    expect(primeiro.status).toBe(201);
+    expect(primeiro.body.email).toBe('colab.unico@teste.local');
+
+    const repetido = await api.post<{ error: string }>(
+      '/api/people',
+      corpoDoFormularioDeColaborador({ name: 'Outro', email: 'colab.unico@teste.local' }),
+    );
+    expect(repetido.status).toBe(409);
+    expect(repetido.body.error).toMatch(/e-mail/i);
   });
 });

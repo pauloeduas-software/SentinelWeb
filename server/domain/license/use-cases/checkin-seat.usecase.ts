@@ -44,7 +44,6 @@ function lerCheckout(tx: ClienteLicenca, checkoutId: string) {
 
 export async function checkinSeat(
   seatId: string,
-  actorId: string | null,
 ): Promise<ResultadoDaDevolucao> {
   return prisma.$transaction(async (tx) => {
     if (!(await travarAssento(tx, seatId))) {
@@ -61,7 +60,7 @@ export async function checkinSeat(
 
     const aberta = await tx.licenseSeatCheckout.findFirst({
       where: { seatId, checkinAt: null },
-      select: { id: true, assignedUserId: true, assignedAssetId: true },
+      select: { id: true, assignedPersonId: true, assignedAssetId: true },
     });
 
     // 409 e não 404: o assento existe, o ESTADO dele é que recusa — mesma
@@ -109,12 +108,12 @@ export async function checkinSeat(
         checkoutId: aberta.id,
         seatId,
         seatNumber: assento.seatNumber,
-        alvo: aberta.assignedUserId ? 'USER' : 'ASSET',
-        alvoId: aberta.assignedUserId ?? aberta.assignedAssetId,
+        alvo: aberta.assignedPersonId ? 'PERSON' : 'ASSET',
+        alvoId: aberta.assignedPersonId ?? aberta.assignedAssetId,
         queimado,
         checkinAt: devolvidoEm.toISOString(),
       },
-    }, actorId);
+    });
 
     // A QUEIMA TEM LOG PRÓPRIO, além do CHECKIN. São dois fatos: um assento
     // voltou (operação de rotina) e um assento deixou de existir para sempre
@@ -131,7 +130,7 @@ export async function checkinSeat(
           seatNumber: assento.seatNumber,
           burnedAt: devolvidoEm.toISOString(),
         },
-      }, actorId);
+      });
     }
 
     // A contagem DEPOIS de tudo, dentro da transação: é o número que a tela

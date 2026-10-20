@@ -6,8 +6,8 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D14–D17, D27–D32, D82, D87–D88, e B/K da segunda rodada (ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)).
+> Decisões neste arquivo: D14–D17, D27–D32, D82, D87–D88, B/K da segunda rodada (ver
+> [`README.md`](./README.md#a-segunda-rodada-ap)), V e Y.
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
@@ -140,6 +140,11 @@ o valor vira `OUTRO`, que é texto livre com passos extras.
 > o nome único diz onde a mesa fica (`Mesa 1 — Filial SP`). A decisão fica de pé pelo outro
 > motivo que ela dá: o ativo já aponta para `Location`, e uma `Workstation` paralela lhe daria
 > dois campos de "onde".
+>
+> **Superada por [Y](#y--o-posto-sai-de-location-localização-guarda-posto-recebe):** o posto sai
+> de `Location` e vira `Workstation`. O motivo que tinha ficado de pé também caiu — o posto não é
+> um segundo campo de "onde", é quem RECEBE, como a pessoa. Fica de pé o resto desta decisão: o
+> ocupante como tabela (`WorkstationOccupant`), vários por posto, e o `shift` como texto livre.
 
 ---
 
@@ -512,6 +517,131 @@ saiu porque, na forma final, vincular máquina não decide a vaga; a vaga é dec
 > A alternativa — encerrar a ocupação e abri-la de novo — fabricaria no histórico uma saída que
 > não aconteceu e perderia a data de entrada.
 
+> **Superada em parte por [Y](#y--o-posto-sai-de-location-localização-guarda-posto-recebe):** a
+> marca `isWorkstation` saiu com o posto virando cadastro próprio, e com ela a porta da marca —
+> sobram duas portas, a entrega e a restauração. A rota do turno passou a
+> `PATCH /api/workstations/:id/occupants/:occupantId`, e o painel de ocupantes só existe na ficha
+> do posto.
+
+---
+
+## V — Excluir não apaga o passado: localização por referência, colaborador pela lixeira
+
+**Decidido:** a exclusão de localização e de colaborador passa a ser recusada só pelo que está com
+eles **agora** — e o histórico de posse dos itens continua mostrando o nome dos dois depois.
+
+- **Localização funciona como status e categoria:** cadastro de referência. O 409 conta só o
+  presente — ativo ou item de estoque guardado nela (lixeira inclusive), entrega e saída de estoque
+  abertas, ocupante atual. Sem nada disso, ela é **apagada de verdade**, sem lixeira. Antes do
+  `DELETE`, as linhas já fechadas que apontam para ela — entrega devolvida, saída devolvida,
+  ocupação encerrada — perdem a ligação e guardam o nome por escrito (`targetLocationName` em
+  `assignments` e `stock_movements`, `locationName` em `location_occupants`). Os CHECKs da forma
+  da posse aceitam a linha sem FK só quando ela está fechada e com o nome preenchido. As FKs
+  continuam `Restrict`, como rede.
+- **Colaborador vai para a lixeira:** a única tabela do catálogo com `deletedAt`, aba Lixeira e
+  Restaurar. O 409 conta só a posse aberta, com a frase da invariante 6 (*"…antes de excluir"*); o
+  que já foi devolvido não segura, porque a linha da pessoa fica e o histórico continua apontando
+  para ela. O e-mail fica livre enquanto ela está na lixeira (índice parcial), e restaurar recusa
+  se ele foi reaproveitado. Não há "apagar de vez".
+- **Desativar continua** nas duas, com a mesma regra da exclusão no colaborador.
+
+**Supera:** em parte, o [D8](./catalogo-e-ativo.md#d8--catálogo-sem-soft-delete-o-delete-é-real-bloqueado-por-uso)
+— uma tabela do catálogo ganha lixeira — e, no
+[U](./acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos),
+o colaborador que "exclui de verdade, e só sem histórico".
+**Mantém:** o 409 por uso do D8 para as outras cinco tabelas, e a invariante 6 inteira.
+
+**Por quê:** o pedido do usuário — poder excluir localização e colaborador sem perder o histórico
+dos itens, recusando só quem está com algo agora. O que segurava os dois era o passado: o
+histórico de posse guardava só o id e buscava o nome no cadastro, então as FKs `Restrict`
+recusavam apagar qualquer um que já tivesse aparecido numa linha, mesmo devolvida.
+
+**Por quê dois caminhos, e não um:** a pergunta é *de quem é o histórico*. O do colaborador é
+**dele** — a ficha existe para responder "o que já esteve com a Laura" —, e recadastrá-lo depois de
+excluir partiria esse histórico em dois, com os equipamentos antigos presos a um cadastro que
+ninguém abre. Excluir por engano e recontratar acontecem, e a lixeira com Restaurar devolve a
+mesma pessoa. A localização é referência: quando ela sai, o lugar acabou, ninguém quer a "Mesa 7"
+de volta, e recriar uma "Mesa 7" não estraga nada — o histórico de cada item continua dizendo onde
+ele esteve. Foi a correção do usuário a uma primeira proposta que tratava os dois igual.
+
+**Por quê o nome é gravado na exclusão, e não em cada entrega:** o resultado na tela é o mesmo
+— enquanto o local existe, o histórico mostra o nome atual dele, como sempre mostrou; quando ele
+sai, mostra o último nome que teve —, e não toca nenhum caminho de escrita da posse nem pede
+preencher os registros antigos.
+
+**Como os outros fazem:** o Snipe-IT esconde o excluído (soft delete) e tem lista de excluídos com
+Restaurar para usuários e ativos; o GLPI tem lixeira e "apagar de vez", e só consegue apagar de
+vez porque o histórico dele guarda o nome por escrito. Aqui o colaborador segue o primeiro e a
+localização, o segundo — sem lixeira, porque ninguém precisa dela de volta.
+
+> **Superada em parte por [Y](#y--o-posto-sai-de-location-localização-guarda-posto-recebe):** o
+> que recebia — entrega, saída de estoque, ocupante — era o posto, e o posto saiu de `Location`.
+> A metade da localização desta decisão passa a ele: o 409 pelo presente e o nome por escrito
+> (`targetWorkstationName`, `workstationName`) são do posto agora. A localização ficou só com o
+> que guarda, sem passado preso a ela — a regra do status, sem `beforeDelete`.
+
+---
+
+## Y — O posto sai de `Location`: localização guarda, posto recebe
+
+**Decidido:** o posto de trabalho vira cadastro próprio — `Workstation`, com nome, a localização
+onde ele fica (`locationId`, obrigatória), notas e `isActive` — e a `Location` volta a ser só lugar.
+
+- **Localização diz onde a coisa está guardada:** o ativo (`Asset.locationId`), o item de estoque
+  (`StockItem.locationId`) e, agora, o posto. Ela não recebe entrega, saída de estoque nem
+  ocupante. A regra é a do status: o 409 conta só o que aponta para ela agora — ativo e item
+  guardados (lixeira inclusive) e postos que ficam nela —, e sem isso ela é apagada de verdade,
+  sem `beforeDelete` e sem nome por escrito, porque nenhum histórico aponta para ela.
+  `Asset.location` passa de `SetNull` a `Restrict`, a mesma rede do status e do item.
+- **Posto é quem recebe:** o alvo da entrega (`AssignmentTarget` = `PERSON | WORKSTATION`), da saída
+  de estoque (`StockTarget` = `PERSON | WORKSTATION`) e da ocupação (`WorkstationOccupant`, que era
+  `LocationOccupant`). O cadastro tem a regra do status e passa pelo MESMO CRUD do catálogo
+  (`workstationSpec`, fora de `CATALOG_SPECS`): nome único, desativar, 409 só pelo que está nele
+  agora — entrega e saída abertas, ocupante atual — e exclusão de verdade, com o passado desligado e
+  o nome por escrito (`targetWorkstationName`, `workstationName`), exatamente como V fazia com o
+  local. Ele se cria, edita, desativa e exclui na tela **Postos**; Configurações não tem aba de posto.
+- **A invariante 19 vale para todo posto**, com duas portas — a entrega e a restauração da lixeira.
+  A porta da marca sai com a marca: não há mais como fazer "virar posto" um lugar que já tem dois
+  ativos.
+- **A entrega a um lugar que não é posto deixa de existir.** A sala de reunião com dois
+  computadores é dois ativos **guardados** nela, com status "Em uso" — o uso sem responsável que o
+  `StatusLabelType` já previa.
+
+**Supera:** [D15](#d15--o-posto-de-trabalho-é-uma-location-não-uma-entidade-nova), no que ela
+decide — o posto é uma `Location`; fica de pé o resto dela: o ocupante como tabela, vários por
+posto, e o `shift` como texto livre. [B](#b--invariante-19-na-forma-final-um-ativo-por-posto-de-trabalho),
+na porta da marca. [V](#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira),
+na metade da localização: a regra do presente e do nome por escrito passa ao posto, e a localização
+fica sem passado para guardar.
+**Mantém:** [C](./catalogo-e-ativo.md#c--o-ativo-entregue-a-um-posto-sai-de-ativos-a-ficha-do-posto-é-rota)
+— o ativo entregue a um posto sai de `/ativos`; o recorte "só onde `isWorkstation` é true" fica
+sem objeto, porque só posto recebe —, a invariante 19 inteira, a Camada 3 (`resolverResponsaveis`,
+`postoVago`) e a lixeira só no colaborador.
+
+**Por quê:** o pedido do usuário, ao rever a tela de Localizações: categoria, status e fabricante
+funcionam do mesmo jeito, e a localização não — o 409 dela somava cinco contagens, um
+`beforeDelete` gravava nome, havia a trava da marca e a ação de ocupantes. A diferença não era de
+regra (V já a pusera na regra do status), era de **papel**: a mesma tabela dizia onde a coisa
+está guardada e recebia coisas como um colaborador. O segundo papel era o do posto, e o servidor
+o aceitava em qualquer lugar — entrega e ocupante iam até para o "Depósito de TI", e só a tela
+escondia.
+
+**Por quê o argumento do D15 não segura mais:** ele dizia que uma `Workstation` paralela daria
+ao ativo dois campos de "onde". Não dá: o posto não é "onde", é **quem recebe** — como a pessoa.
+O ativo continua com um campo de onde (`locationId`), e a entrega aponta para quem o recebeu,
+pessoa ou posto. A árvore que o D15 também usava já tinha saído com a localização plana.
+
+**O nome do posto continua único no sistema**, e não por localização: os seletores da entrega,
+da saída de estoque e do vínculo de máquina mostram só o nome, e duas "Mesa 1" lado a lado seriam
+a mesma escolha duas vezes.
+
+**O que a migração faz:** zero postos e zero posses para local nos bancos deste projeto, então é
+só DDL — a tabela `workstations`; o valor `LOCATION` renomeado para `WORKSTATION` nos dois enums;
+as colunas e FKs de alvo de `assignments` e `stock_movements` passando para o posto;
+`location_occupants` virando `workstation_occupants`; e `locations.isWorkstation` saindo. Os CHECKs
+da forma da posse (invariante 5) e o índice parcial da ocupação (invariante 2) são reescritos antes
+de as colunas mudarem: `DROP COLUMN` derruba em silêncio o CHECK inteiro que a cita.
+
 ---
 
 ## Onde o modelo vive no código — D14 a D17
@@ -525,6 +655,6 @@ que sobrou delas está em `assignment/`, `occupancy/` e `user/`, com as provas e
 | Decisão | Onde está aplicada |
 |---|---|
 | D14 | `prisma/schema.prisma` (model `Assignment`, enum `AssignmentTarget`) · migration `0_init` (índice `assignments_um_aberto_por_ativo`) |
-| D15 | `prisma/schema.prisma` (model `LocationOccupant`, campo `shift`) · mesma migration (índice `location_occupants_um_aberto_por_pessoa_local`) |
+| D15 (o que ficou de pé, ver Y) | `prisma/schema.prisma` (model `WorkstationOccupant`, campo `shift`) · mesma migration (índice `workstation_occupants_um_aberto_por_pessoa_posto`) |
 | D16 | use-case de resolução no domínio de posse — **nenhuma coluna** em `Asset` · invariante estado × posse em [`../referencia/invariantes.md`](../referencia/invariantes.md) |
 | D17 | superada por [Q](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai): `Asset.assignedToId` não existe mais, e checkout/checkin escrevem só a `Assignment` |

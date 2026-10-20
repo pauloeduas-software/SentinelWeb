@@ -20,7 +20,7 @@ import { recordActivity } from '../../activity/use-cases/record-activity.usecase
  * é justamente esse o assunto. É a única ação da fase que registra na entidade
  * do RMM, e por isso ela não aparece no histórico de ativo nenhum.
  */
-export async function triarEndpoint(endpointId: string, reviewState: ReviewState, actorId: string | null) {
+export async function triarEndpoint(endpointId: string, reviewState: ReviewState) {
   return prisma.$transaction(async (tx) => {
     const endpoint = await tx.endpoint.findUnique({
       where: { id: endpointId },
@@ -41,7 +41,7 @@ export async function triarEndpoint(endpointId: string, reviewState: ReviewState
       entityId: endpointId,
       action: 'UPDATE',
       changes: { reviewState: { de: endpoint.reviewState, para: reviewState } },
-    }, actorId);
+    });
 
     return triado;
   });

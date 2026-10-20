@@ -7,7 +7,7 @@ const logger = createLogger('assignment.maestro');
 
 // A POSSE — entrega, devolução e quem responde pelo quê (docs/referencia/modelo-de-posse.md).
 //
-// As rotas penduram em `/api/assets` e `/api/users`, mas o domínio é próprio, e
+// As rotas penduram em `/api/assets`, mas o domínio é próprio, e
 // não uma pasta a mais dentro de `asset/`: a entrega não é uma edição de ativo,
 // é a operação que escreve posse — a única, junto com a devolução. Mantê-la
 // aqui é o que deixa o CRUD do ativo continuar sem saber o que é uma posse.

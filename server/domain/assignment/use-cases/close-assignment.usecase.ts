@@ -42,8 +42,6 @@ export async function fecharPosse(
   client: ClientePosse,
   posse: PosseParaFechar,
   dados: DadosDaDevolucao,
-  /** Quem operou a devolução (D23). Último parâmetro, como em `recordActivity`. */
-  actorId: string | null,
 ) {
   // A posse fecha ANTES de o status mudar, e a ordem não é estética: enquanto a
   // posse está aberta, um status de estoque contradiz a Camada 1 — é exatamente
@@ -58,10 +56,6 @@ export async function fecharPosse(
     data: {
       checkinAt: new Date(),
       checkinNotes: dados.checkinNotes ?? null,
-      // QUEM RECEBEU de volta: é o ator da devolução no histórico da pessoa
-      // (`user-history.usecase.ts`). O que ficou para trás continua nulo de
-      // propósito: não há backfill (D24).
-      checkinById: actorId,
     },
   });
   if (count === 0) throw new AppError('Este ativo não está entregue.', 409);
@@ -88,7 +82,7 @@ export async function fecharPosse(
       targetType: posse.targetType,
       statusId: { de: posse.statusAnteriorId, para: dados.statusId },
     },
-  }, actorId);
+  });
 
   return { assignment, asset };
 }

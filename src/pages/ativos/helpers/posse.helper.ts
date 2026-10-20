@@ -40,7 +40,7 @@ export interface ResumoPosse {
   /**
    * De onde a responsabilidade veio, quando NÃO veio direto da pessoa.
    *
-   * No caso `USER` fica nulo de propósito: o alvo e o responsável são a mesma
+   * No caso `PERSON` fica nulo de propósito: o alvo e o responsável são a mesma
    * pessoa, e repetir o nome embaixo dele não informa nada.
    */
   detalheAlvo: string | null;
@@ -74,7 +74,7 @@ export function resumoDaPosse(posse: PosseResolvida | null | undefined): ResumoP
 /** "no posto Mesa 1" — vazio quando o alvo é a pessoa. */
 function detalheDoAlvo(posse: PosseResolvida | null | undefined): string | null {
   if (!posse?.targetLabel) return null;
-  return posse.targetType === 'LOCATION' ? `no posto ${posse.targetLabel}` : null;
+  return posse.targetType === 'WORKSTATION' ? `no posto ${posse.targetLabel}` : null;
 }
 
 /**
@@ -132,8 +132,8 @@ export function montarEntrega(valores: {
 }): CheckoutInput {
   const corpo: CheckoutInput = { targetType: valores.targetType };
 
-  if (valores.targetType === 'USER') corpo.targetUserId = valores.alvoId;
-  if (valores.targetType === 'LOCATION') corpo.targetLocationId = valores.alvoId;
+  if (valores.targetType === 'PERSON') corpo.targetPersonId = valores.alvoId;
+  if (valores.targetType === 'WORKSTATION') corpo.targetWorkstationId = valores.alvoId;
 
   if (valores.statusId) corpo.statusId = valores.statusId;
   if (valores.expectedCheckinAt) corpo.expectedCheckinAt = valores.expectedCheckinAt;

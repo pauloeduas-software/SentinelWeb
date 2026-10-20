@@ -1,7 +1,7 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { ASSET_SELECT, assetSelect } from '../../asset/helpers/asset-select.helper';
-import { listLocationStock } from '../../stock/use-cases/list-location-stock.usecase';
+import { listWorkstationStock } from '../../stock/use-cases/list-workstation-stock.usecase';
 import { WORKSTATION_DETAIL_SELECT } from '../helpers/workstation-select.helper';
 import { ehPostoVago } from '../helpers/workstation-row.helper';
 
@@ -9,25 +9,18 @@ import { ehPostoVago } from '../helpers/workstation-row.helper';
  * UM posto: o ativo entregue a ele, o estoque na mesa e se está vago.
  *
  * É a Camada 1 vista do lado do posto (docs/referencia/modelo-de-posse.md) — as
- * posses abertas cujo alvo é esta localização, mais as unidades de ESTOQUE
- * entregues a ele. Os OCUPANTES (Camada 2) a ficha lê da rota de ocupação; daqui
- * só sai a contagem deles, de onde vem o `vago`.
- *
- * NÃO exige `isWorkstation` para responder, e isso é decisão. A marca não é só
- * de apresentação: ela é a porta da marca na invariante 19, e ligá-la num local
- * com mais de um ativo é 409 (`catalog/specs/location.spec.ts`). O que ela não
- * faz é trancar LEITURA: uma sala de reunião que recebeu ativo e ocupante
- * continua respondendo aqui, e `isWorkstation` sai na resposta para o cliente
- * saber qual é o caso. 404 é só para id que não existe.
+ * posses abertas cujo alvo é este posto, mais as unidades de ESTOQUE entregues
+ * a ele. Os OCUPANTES (Camada 2) a ficha lê da rota de ocupação; daqui só sai a
+ * contagem deles, de onde vem o `vago`.
  */
 export async function getWorkstation(id: string, podeVerCusto: boolean) {
-  // `findUnique`: `Location` não tem `deletedAt`, o catálogo não tem lixeira (D8).
-  const local = await prisma.location.findUnique({
+  // `findUnique`: `Workstation` não tem `deletedAt` — o posto não tem lixeira.
+  const lido = await prisma.workstation.findUnique({
     where: { id },
     select: WORKSTATION_DETAIL_SELECT,
   });
 
-  if (!local) throw new AppError('Posto de trabalho não encontrado.', 404);
+  if (!lido) throw new AppError('Posto de trabalho não encontrado.', 404);
 
   const [entregues, itens] = await Promise.all([
     // Consulta em `asset`, e não nas `assignments` do posto, de propósito: no
@@ -35,7 +28,7 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
     // de fora sozinho. Lido pela relação, ele apareceria como equipamento na
     // mesa até alguém lembrar de filtrar à mão.
     prisma.asset.findMany({
-      where: { assignments: { some: { targetLocationId: id, checkinAt: null } } },
+      where: { assignments: { some: { targetWorkstationId: id, checkinAt: null } } },
       // O SELECT DO ATIVO, MAIS UM CAMPO E MENOS UM.
       //
       // MAIS a máquina vinculada, e o acréscimo é local de propósito: ela
@@ -58,7 +51,7 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
     // cinco mouses em cima dele. Lista PRÓPRIA, e não somada aos ativos: um
     // mouse não tem etiqueta nem série, e `totalAtivos` continua contando só
     // ativo — é esse número que a invariante 19 limita a um.
-    listLocationStock(id),
+    listWorkstationStock(id),
   ]);
 
   // A relação vira um CAMPO: a tela quer saber se este ativo tem máquina
@@ -68,7 +61,7 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
     endpointId: endpoint?.id ?? null,
   }));
 
-  const { _count, ...posto } = local;
+  const { _count, ...posto } = lido;
 
   return {
     ...posto,

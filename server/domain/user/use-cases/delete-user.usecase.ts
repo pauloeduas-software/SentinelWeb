@@ -1,63 +1,47 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
 import { assertSobraAdministrador, travarAdministracao } from '../../access/helpers/ultimo-administrador';
-import { contarPosseAberta, motivoParaRecusar } from './count-user-posse.usecase';
-import { travarUsuarioOuFalhar } from './lock-user.usecase';
 
 /**
- * Lixeira do colaborador — e o 409 que protege as DUAS pontas da posse (D32).
+ * Excluir um usuário — quem opera o sistema.
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * POR QUE A RECUSA É DE APLICAÇÃO, E NÃO DO BANCO
+ * APAGA A LINHA (W): sem lixeira e sem volta — errou, cadastra de novo. A
+ * sessão aberta cai na requisição seguinte, porque `current-user.usecase.ts`
+ * relê a conta a cada requisição e não a encontra mais.
  *
- * `Assignment.targetUserId` e `LocationOccupant.userId` são `onDelete: Restrict`
- * no schema, o que parece resolver — e não resolve. Apagar um usuário aqui é
- * `UPDATE users SET "deletedAt" = now()`: o Postgres não vê `DELETE` nenhum, a
- * FK não é consultada e a rede NÃO EXISTE. É o primeiro dos dois pontos cegos
- * do soft delete, e ele cai exatamente aqui.
+ * Nada aponta para `users`: o histórico não guarda quem fez (X), e a exclusão
+ * também não vai para ele.
  *
- * Sem esta checagem, apagar a Laura some com ela da tela mantendo intactas as
- * posses e as ocupações dela — e a Camada 3 continua devolvendo o nome de uma
- * pessoa que nenhuma listagem mais mostra.
- * ─────────────────────────────────────────────────────────────────────────────
- *
- * A contagem roda DENTRO da transação que apaga: contar fora deixaria uma
- * janela entre a contagem e o `UPDATE` em que uma entrega nova passaria — e o
- * ativo terminaria no nome de um cadastro na lixeira.
- *
- * A saída que o 409 ensina é DEVOLVER o que está com a pessoa e ENCERRAR as
- * ocupações dela, não um `DELETE` com força: são coisas diferentes. Fechar a
- * posse preserva o histórico; a lixeira é para cadastro criado errado.
+ * Usuário não responde por equipamento — quem recebe é colaborador (`Person`)
+ * —, então não há posse a contar aqui. A única rede é a do último
+ * administrador.
  */
-export async function deleteUser(id: string, actorId: string | null): Promise<void> {
+/**
+ * @param sessaoId quem está pedindo — o `request.user.id` da sessão, que a regra
+ * da própria conta compara (W).
+ */
+export async function deleteUser(id: string, sessaoId: string): Promise<void> {
+  // NINGUÉM EXCLUI A SI MESMO (W) — como no rebaixar e no desativar
+  // (`update-user.usecase.ts`): tirar a própria conta é com outro administrador.
+  if (id === sessaoId) {
+    throw new AppError('Você não pode excluir a si mesmo. Peça a outro administrador.', 409);
+  }
+
   await prisma.$transaction(async (tx) => {
-    // A TRAVA vem antes da contagem, e é o que torna a contagem confiável: sem
-    // ela, uma entrega simultânea cria a posse DEPOIS deste `count` e o
-    // colaborador vai para a lixeira levando um equipamento no nome — o 409
-    // que este bloco existe para dar simplesmente não dispara
-    // (`lock-user.usecase.ts`).
-    // A fila do último administrador primeiro, depois a linha do usuário — a
-    // mesma ordem da edição (`ultimo-administrador.ts`).
+    // A fila do último administrador ANTES de qualquer escrita
+    // (`ultimo-administrador.ts`): dois administradores excluídos ao mesmo
+    // tempo contariam "sobra o outro" e deixariam zero.
     await travarAdministracao(tx);
-    await travarUsuarioOuFalhar(tx, id);
 
-    // Antes de qualquer escrita: recusar depois de apagar seria contar com o
-    // rollback para desfazer o que nem devia ter começado.
-    const motivo = motivoParaRecusar(await contarPosseAberta(tx, id), 'excluir');
-    if (motivo) throw new AppError(motivo, 409);
-
-    const { count } = await tx.user.updateMany({
-      where: { id, deletedAt: null },
-      data: { deletedAt: new Date() },
-    });
+    // `deleteMany` e não `delete`: o id inexistente vira `count: 0` e o 404
+    // abaixo, em vez do `P2025` cru do Prisma.
+    const { count } = await tx.user.deleteMany({ where: { id } });
 
     if (count === 0) throw new AppError('Registro não encontrado', 404);
 
-    await recordActivity(tx, { entityType: 'User', entityId: id, action: 'DELETE' }, actorId);
-
     // A REDE do último administrador, como na edição (D148): apagar o único que
-    // entra — inclusive a si mesmo — trancaria o sistema por fora.
+    // entra trancaria o sistema por fora. Com a regra de cima, só a corrida de
+    // dois administradores excluindo um ao outro chega aqui.
     await assertSobraAdministrador(tx);
   });
 }

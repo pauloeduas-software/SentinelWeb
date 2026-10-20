@@ -39,8 +39,8 @@ export async function listAssets(
    * A sessão enxerga custo de compra? (F11, D77)
    *
    * Vem por PARÂMETRO, do controller, e não de um `request` importado aqui: o
-   * use-case não conhece HTTP (docs/referencia/arquitetura.md), e é a mesma inversão do
-   * `actorId` do D23 — quem sabe quem está pedindo é a borda.
+   * use-case não conhece HTTP (docs/referencia/arquitetura.md) — quem sabe quem
+   * está pedindo é a borda.
    */
   podeVerCusto: boolean,
 ): Promise<ListEnvelope<AssetRowComPosse>> {

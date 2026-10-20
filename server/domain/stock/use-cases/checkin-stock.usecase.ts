@@ -30,13 +30,13 @@ import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
  * outra pessoa, porque uma unidade entregue de novo é OUTRA linha.
  * ─────────────────────────────────────────────────────────────────────────────
  */
-export async function checkinStock(movementId: string, actorId: string | null) {
+export async function checkinStock(movementId: string) {
   return prisma.$transaction(async (tx) => {
     const devolvidaEm = new Date();
 
     const { count } = await tx.stockMovement.updateMany({
       where: { id: movementId, kind: 'SAIDA', returnedAt: null },
-      data: { returnedAt: devolvidaEm, returnedById: actorId },
+      data: { returnedAt: devolvidaEm },
     });
 
     if (count === 0) {
@@ -69,10 +69,10 @@ export async function checkinStock(movementId: string, actorId: string | null) {
       changes: {
         movementId: unidade.id,
         targetType: unidade.targetType,
-        targetId: unidade.targetUserId ?? unidade.targetLocationId,
+        targetId: unidade.targetPersonId ?? unidade.targetWorkstationId,
         returnedAt: devolvidaEm.toISOString(),
       },
-    }, actorId);
+    });
 
     return unidade;
   });

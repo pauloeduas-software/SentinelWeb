@@ -1,7 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { SEM_PARAMETROS } from '../../../core/http/sem-parametros';
 import { parseListQuery } from '../../../core/http/list-query';
-import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { historyQuerySchema } from '../../shared/history.schema';
 import {
@@ -51,25 +50,25 @@ export const licenseController = {
 
   async create(request: FastifyRequest, reply: FastifyReply) {
     const data = createLicenseSchema.parse(request.body ?? {});
-    const licenca = await createLicense(data, atorDaRequisicao(request));
+    const licenca = await createLicense(data);
     return reply.status(201).send(licenca);
   },
 
   async update(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     const data = updateLicenseSchema.parse(request.body ?? {});
-    return updateLicense(id, data, atorDaRequisicao(request));
+    return updateLicense(id, data);
   },
 
   async remove(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
-    await deleteLicense(id, atorDaRequisicao(request));
+    await deleteLicense(id);
     return reply.status(204).send();
   },
 
   async restore(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return restoreLicense(id, atorDaRequisicao(request));
+    return restoreLicense(id);
   },
 
   /** A grade de assentos: livre · pessoa · ativo · queimado · aposentado. */
@@ -85,7 +84,7 @@ export const licenseController = {
   async checkoutSeat(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
     const data = checkoutSeatSchema.parse(request.body ?? {});
-    const checkout = await checkoutSeat(id, data, atorDaRequisicao(request));
+    const checkout = await checkoutSeat(id, data);
     return reply.status(201).send(checkout);
   },
 
@@ -100,7 +99,7 @@ export const licenseController = {
     const { id } = idParamSchema.parse(request.params);
     // A devolução não leva nota nem nada: o corpo, se vier, é vazio.
     SEM_PARAMETROS.parse(request.body ?? {});
-    return checkinSeat(id, atorDaRequisicao(request));
+    return checkinSeat(id);
   },
 
   async history(request: FastifyRequest) {

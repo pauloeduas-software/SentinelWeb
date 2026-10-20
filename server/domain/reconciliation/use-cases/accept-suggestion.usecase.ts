@@ -49,14 +49,14 @@ async function marcarAceita(id: string) {
  * continua `PENDING` e alguém a vê de novo numa fila que já reflete o cadastro
  * novo. O contrário deixaria uma sugestão "aceita" que nunca aconteceu.
  */
-export async function aceitarSugestao(id: string, actorId: string | null) {
+export async function aceitarSugestao(id: string) {
   const sugestao = await carregarPendente(id);
 
   // UM TIPO SÓ, então nenhum `switch`: a fila propõe vínculo, e é isso. O dia
   // que `SuggestionKind` crescer por migração, é aqui que o tipo novo entra — e
   // o `vincularEndpointAoAtivo` continua sendo quem grava.
   if (!sugestao.assetId) throw new AppError('Sugestão de vínculo sem ativo.', 422);
-  await vincularEndpointAoAtivo(sugestao.endpointId, sugestao.assetId, actorId);
+  await vincularEndpointAoAtivo(sugestao.endpointId, sugestao.assetId);
 
   return marcarAceita(id);
 }

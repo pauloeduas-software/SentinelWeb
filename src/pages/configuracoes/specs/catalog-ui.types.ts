@@ -32,7 +32,7 @@ export interface CampoSpec {
   obrigatorio?: boolean;
   /** `select`: a lista fixa */
   opcoes?: readonly OpcaoFixa[];
-  /** `reference`: de onde vêm as opções ('manufacturers', 'users'…) */
+  /** `reference`: de onde vêm as opções ('manufacturers', 'people'…) */
   rota?: string;
   /** `reference`: filtra o /options (só categorias de ATIVO, por exemplo) */
   filtroTipo?: string;
@@ -55,25 +55,24 @@ export interface ColunaSpec {
 /**
  * Uma ação por LINHA além de editar e excluir.
  *
- * Por que isto existe: as cinco abas são o MESMO CRUD, e foi essa igualdade que
- * permitiu uma tela só. Duas ações quebram a igualdade sem quebrar a tela:
- * Desativar/Ativar, que as cinco abas declaram (com a marca no gênero de cada
- * uma), e Ocupantes, que só Localizações tem — um posto tem ocupantes
- * (docs/referencia/modelo-de-posse.md, Camada 2), e as outras tabelas não têm
- * nada parecido.
+ * Por que isto existe: as seis abas são o MESMO CRUD, e foi essa igualdade que
+ * permitiu uma tela só. Três ações quebram a igualdade sem quebrar a tela:
+ * Desativar/Ativar, que as seis abas declaram (com a marca no gênero de cada
+ * uma); e Ficha, que só Colaboradores tem, e que leva à tela do que está com a
+ * pessoa.
  *
  * As duas saídas ruins eram: uma tela separada por aba diferente (volta a
- * duplicação que a spec eliminou) ou um `if (slug === 'locations')` no meio do
+ * duplicação que a spec eliminou) ou um `if (slug === 'people')` no meio do
  * componente genérico (a exceção escondida, que a próxima pessoa copia). A
  * saída é esta: a tabela desenha as ações que a SPEC declarar, e uma aba que
  * não declarasse nenhuma ficaria só com editar e excluir — sem botão a mais,
  * sem `if`.
  *
  * O `id` é uma união fechada, e não `string`, de propósito: quem adicionar uma
- * ação nova é obrigado pelo compilador a tratá-la no `switch` de quem abre o
- * modal. Ação declarada e não tratada vira erro de tipo, não botão morto.
+ * ação nova é obrigado pelo compilador a dar a ela um ícone (`CatalogTable`).
+ * Quem a trata é a tela de Configurações, que grava na hora ou abre a ficha.
  */
-export type AcaoLinhaId = 'ocupantes' | 'ativacao';
+export type AcaoLinhaId = 'ativacao' | 'ficha';
 
 export interface AcaoLinhaSpec {
   id: AcaoLinhaId;
@@ -86,12 +85,6 @@ export interface AcaoLinhaSpec {
    * passar o mouse no botão.
    */
   alterna?: { campo: string; tituloSeDesligado: string; marcaSeDesligado: string };
-  /**
-   * A ação só aparece na linha em que este campo booleano é VERDADEIRO — os
-   * ocupantes só fazem sentido num posto de trabalho, e a aba de localizações
-   * lista filial, sala e depósito juntos.
-   */
-  visivelSe?: string;
 }
 
 export interface CatalogUiSpec {
@@ -104,15 +97,20 @@ export interface CatalogUiSpec {
    *
    * Declarado, e não deduzido da última letra: "Status" e "Fabricante" não
    * terminam em `o` e são masculinos, "Localização" não termina em `a` e é
-   * feminina. A regra da letra erraria três das cinco abas.
+   * feminina. A regra da letra erraria três das seis abas.
    */
   genero: 'm' | 'f';
   descricao: string;
   placeholderBusca: string;
   colunas: readonly ColunaSpec[];
   campos: readonly CampoSpec[];
-  /** As ações além de editar e excluir — Desativar nas cinco abas. Ver `AcaoLinhaSpec`. */
+  /** As ações além de editar e excluir — Desativar nas seis abas. Ver `AcaoLinhaSpec`. */
   acoes?: readonly AcaoLinhaSpec[];
+  /**
+   * A aba tem LIXEIRA: excluir manda para lá, e a barra ganha a aba Lixeira com
+   * Restaurar. Bate com `lixeira` da spec do servidor — hoje só colaboradores.
+   */
+  lixeira?: boolean;
   /**
    * Botões que recortam a listagem por um campo de valores fixos — o tipo da
    * categoria. O servidor só aceita o campo que a spec dele declara em

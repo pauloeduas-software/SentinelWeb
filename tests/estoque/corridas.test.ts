@@ -31,7 +31,7 @@ function placar(respostas: { status: number }[]): Record<number, number> {
 
 const sair = (itemId: string) =>
   api.post<{ unidades: { id: string }[] }>(`/api/stock/items/${itemId}/checkout`, {
-    targetType: 'USER', targetUserId: cenario.laura,
+    targetType: 'PERSON', targetPersonId: cenario.laura,
   });
 
 const abertas = (itemId: string) =>

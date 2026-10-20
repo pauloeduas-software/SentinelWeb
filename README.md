@@ -53,14 +53,14 @@ Toda resposta leva `X-Request-Id`, que aparece na linha de log da requisição.
 | --- | --- | --- |
 | `/ativos` | Listagem de ativos (computadores) — filtros, busca por etiqueta/série, ações de ciclo de vida | TECNICO |
 | `/ativos/:id` | Ficha do ativo — abas **Detalhes**, **Posse**, **Histórico**, **Licenças**, **Máquina** (telemetria e comando, quando há agente) | TECNICO |
-| `/postos` | Listagem de postos de trabalho (mesas) | TECNICO |
+| `/postos` | Postos de trabalho (mesas), cada um numa localização — quem está, quantos ativos, se está vago; criar, editar, desativar e excluir posto | TECNICO (cadastro: ADMIN) |
 | `/postos/:id` | Ficha do posto — ocupantes (adicionar, corrigir o turno, encerrar), o computador da mesa (com telemetria), ativos entregues e estoque da mesa | TECNICO |
 | `/estoque` | O que tem quantidade em vez de patrimônio — saldo, entrada/baixa, saída e devolução por unidade | TECNICO (apagar/restaurar: ADMIN) |
 | `/licencas` | Contratos de software e os assentos materializados | TECNICO (apagar/restaurar: ADMIN) |
 | `/descobertas` | O que o agente vê e o cadastro não sabe — máquinas sem vínculo, vínculo manual, fila de sugestões e "Reconciliar agora" | TECNICO (Reconciliar agora e a configuração da descoberta: ADMIN) |
-| `/users` | Listagem de colaboradores — o cadastro pede nome, e-mail, cargo e, para Técnico e Administrador, a senha com que a pessoa entra (o login é o e-mail) | TECNICO (criar/editar/excluir: ADMIN) |
-| `/users/:id` | Ficha da pessoa — postos ocupados, itens de estoque no nome dela e histórico | TECNICO |
-| `/configuracoes` | As cinco abas do catálogo — categorias, status, fabricantes, modelos, localizações. A configuração da descoberta fica em `/descobertas` | ADMIN |
+| `/usuarios` | Quem opera o sistema — Técnico e Administrador. O cadastro pede nome, e-mail, cargo e a senha com que a pessoa entra (o login é o e-mail) | ADMIN |
+| `/configuracoes` | As seis abas do catálogo — categorias, status, fabricantes, modelos, localizações e **colaboradores** (quem recebe equipamento). A configuração da descoberta fica em `/descobertas` | ADMIN |
+| `/configuracoes/colaboradores/:id` | Ficha do colaborador — postos ocupados, itens de estoque no nome dele e histórico | ADMIN |
 
 A convergência RMM × ITAM — vínculo entre a máquina que o agente descobre e o ativo cadastrado,
 telemetria em tempo real e comando remoto — vive dentro das fichas do ativo e do posto, não numa

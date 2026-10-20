@@ -69,14 +69,14 @@ describe('custo de compra — só `ADMIN` (D148)', () => {
     // `/api/assets`.
     //
     // A mesa vem pelo Prisma porque o que está sob teste é a LEITURA do posto, e
-    // não o cadastro de localização.
-    const mesa = await prisma.location.create({
-      data: { name: 'Mesa do Custo', isWorkstation: true },
+    // não o cadastro dele.
+    const mesa = await prisma.workstation.create({
+      data: { name: 'Mesa do Custo', location: { create: { name: 'Local da Mesa do Custo' } } },
       select: { id: true },
     });
     expect((await api.post(`/api/assets/${assetId}/checkout`, {
-      targetType: 'LOCATION',
-      targetLocationId: mesa.id,
+      targetType: 'WORKSTATION',
+      targetWorkstationId: mesa.id,
     })).status).toBe(201);
 
     const resposta = await semSegredo.get<{ ativos: Record<string, unknown>[] }>(

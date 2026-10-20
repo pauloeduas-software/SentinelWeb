@@ -6,20 +6,15 @@ import { criarAtivo, criarFabricante, criarModelo, idsDoSeed } from '../helpers/
 // INVARIANTE 19 — no máximo UM ativo por posto de trabalho.
 //
 // Ativo é computador: o que não é máquina (monitor, teclado, mouse) é estoque,
-// por quantidade, e não passa por aqui. A regra vale só onde `isWorkstation` é
-// verdade, e não depende de a máquina estar vinculada ao ativo — o agente
-// instalado ou não não muda o que o equipamento é.
+// por quantidade, e não passa por aqui. A regra vale para todo posto, e não
+// depende de a máquina estar vinculada ao ativo — o agente instalado ou não não
+// muda o que o equipamento é.
 //
 // O primeiro `describe` é a porta da ENTREGA, que recusa. O segundo cobre o
 // outro lado: a regra é "no máximo um", não "exatamente um", e os caminhos que
 // LIBERAM a vaga precisam funcionar, ou a regra tranca o posto em vez de
 // protegê-lo. O terceiro é a porta da RESTAURAÇÃO — a entrada no posto outra
 // vez, pela porta de trás.
-//
-// A porta da MARCA — marcar como posto um local que já tem dois ativos — fica
-// em `ativo-por-posto-marca.test.ts`. Aquela separação é por ASSUNTO: ela não
-// guarda a entrada do ativo no posto, guarda a transição da marca, e tem cenário
-// próprio (salas sem marca, ativo na lixeira, PUT que não menciona a marca).
 
 let api: ApiDeTeste;
 let seed: Awaited<ReturnType<typeof idsDoSeed>>;
@@ -44,8 +39,11 @@ afterAll(async () => {
  * a mesma escolha do teste das 205 localizações: `createMany` em vez de 205
  * `POST`, porque o que se exercita é outra coisa.
  */
-async function criarPosto(name: string, isWorkstation = true) {
-  const criado = await prisma.location.create({ data: { name, isWorkstation }, select: { id: true } });
+async function criarPosto(name: string) {
+  const criado = await prisma.workstation.create({
+    data: { name, location: { create: { name: `Local de ${name}` } } },
+    select: { id: true },
+  });
   return criado.id;
 }
 
@@ -60,10 +58,10 @@ async function ativo(nome: string) {
   });
 }
 
-async function entregarAoPosto(assetId: string, locationId: string) {
+async function entregarAoPosto(assetId: string, workstationId: string) {
   return api.post<{ error: string; assetId?: string }>(`/api/assets/${assetId}/checkout`, {
-    targetType: 'LOCATION',
-    targetLocationId: locationId,
+    targetType: 'WORKSTATION',
+    targetWorkstationId: workstationId,
   });
 }
 
@@ -98,16 +96,6 @@ describe('invariante 19 — no máximo um ativo por posto', () => {
 
     const segundo = await ativo('Segundo desktop sem agente');
     expect((await entregarAoPosto(segundo.id, posto)).status).toBe(409);
-  });
-
-  it('dois ativos na SALA DE REUNIÃO passam: a regra é só do posto marcado', async () => {
-    const sala = await criarPosto('Sala de Reunião', false);
-
-    const um = await ativo('Desktop da sala 1');
-    expect((await entregarAoPosto(um.id, sala)).status).toBe(201);
-
-    const dois = await ativo('Desktop da sala 2');
-    expect((await entregarAoPosto(dois.id, sala)).status).toBe(201);
   });
 });
 

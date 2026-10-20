@@ -29,7 +29,7 @@ import { dataNaoFutura, textoOpcional, uuidObrigatorio } from '../../shared/fiel
 const inicioOpcional = dataNaoFutura('início da ocupação');
 
 export const addOccupantSchema = z.strictObject({
-  userId: uuidObrigatorio('colaborador'),
+  personId: uuidObrigatorio('colaborador'),
 
   // TEXTO LIVRE, com teto de 60 caracteres: "Manhã", "Tarde", "12x36 A". Enum
   // engessaria escalas reais e faixa de horário seria agenda, não inventário
@@ -73,11 +73,11 @@ export const updateOccupantShiftSchema = z.strictObject({
 
 /**
  * Params do encerramento e da correção de turno:
- * `/api/locations/:id/occupants/:occupantId`.
+ * `/api/workstations/:id/occupants/:occupantId`.
  *
  * São DOIS uuids porque a ocupação é encerrada e corrigida DENTRO do posto a que
  * pertence — os dois use-cases filtram pelos dois juntos. Sem o `:id` na
- * consulta, uma ocupação de outro local seria encerrada ou corrigida por estas
+ * consulta, uma ocupação de outro posto seria encerrada ou corrigida por estas
  * rotas, e a URL deixaria de descrever o que aconteceu.
  */
 export const occupantParamsSchema = z.strictObject({

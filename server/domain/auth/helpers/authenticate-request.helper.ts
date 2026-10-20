@@ -54,7 +54,7 @@ export async function autenticarRequisicao(request: FastifyRequest): Promise<voi
   }
 
   // Sobrescreve o que o @fastify/jwt colocou (o payload cru) pelo usuário
-  // recém-lido. É daqui que sai o `actorId` de todo ActivityLog (D23).
+  // recém-lido.
   request.user = sessao.usuario;
 
   // O CARGO, num campo IRMÃO e não dentro de `request.user`: a allowlist do

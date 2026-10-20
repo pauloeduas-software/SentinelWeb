@@ -1,4 +1,4 @@
-import { Edit2, Trash2, Power, PowerOff, Users, type LucideIcon } from 'lucide-react';
+import { Edit2, FileText, RotateCcw, Trash2, Power, PowerOff, type LucideIcon } from 'lucide-react';
 import { nomeDaRelacao, rotuloDoEnum } from '../../helpers/format.helper';
 import type { AcaoLinhaId, AcaoLinhaSpec, ColunaSpec } from '../specs/catalog-ui.types';
 import type { CatalogRow } from '../../../domain/shared/catalog.types';
@@ -11,8 +11,8 @@ import type { CatalogRow } from '../../../domain/shared/catalog.types';
 // A ação que ALTERNA tem dois ícones: o do que o clique FAZ (desligar quando
 // está ligado, ligar quando está desligado).
 const ICONE_DA_ACAO: Record<AcaoLinhaId, LucideIcon> = {
-  ocupantes: Users,
   ativacao: PowerOff,
+  ficha: FileText,
 };
 const ICONE_SE_DESLIGADO: Partial<Record<AcaoLinhaId, LucideIcon>> = {
   ativacao: Power,
@@ -27,15 +27,21 @@ interface CatalogTableProps {
   colunas: readonly ColunaSpec[];
   registros: readonly CatalogRow[];
   vazio: React.ReactNode;
-  /** Ações por linha da aba, além de editar e excluir (Desativar em todas; Ocupantes em Localizações). */
+  /** Ações por linha da aba, além de editar e excluir (Desativar em todas; Ficha em Colaboradores). */
   acoes?: readonly AcaoLinhaSpec[];
   onEdit: (registro: CatalogRow) => void;
   onDelete: (registro: CatalogRow) => void;
   onAcao?: (id: AcaoLinhaId, registro: CatalogRow) => void;
+  /**
+   * A LIXEIRA está na tela: a linha oferece só Restaurar. Editar, desativar e
+   * excluir um registro que está na lixeira não existem — o servidor responde
+   * 404 —, então o botão nem aparece.
+   */
+  onRestore?: (registro: CatalogRow) => void;
 }
 
 export default function CatalogTable({
-  colunas, registros, vazio, acoes, onEdit, onDelete, onAcao,
+  colunas, registros, vazio, acoes, onEdit, onDelete, onAcao, onRestore,
 }: CatalogTableProps) {
   return (
     <div className="bg-surface-card border border-border-sutil flex-1 overflow-auto">
@@ -70,40 +76,53 @@ export default function CatalogTable({
                   {/* Visível ao passar o mouse, ao navegar por Tab (`focus-within`)
                       e sempre no toque, onde não há hover. */}
                   <div className="flex items-center justify-end gap-3 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => onEdit(registro)}
-                      title="Editar"
-                      aria-label={`Editar ${String(registro.name ?? '')}`}
-                      className="text-text-tertiary hover:text-text-primary transition-colors"
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    {/* A ordem é Editar, as ações da spec (Desativar, Ocupantes) e
-                        Excluir por último — o destrutivo fica na ponta. */}
-                    {acoes?.filter((acao) => !acao.visivelSe || registro[acao.visivelSe] === true).map((acao) => {
-                      const desligado = acao.alterna && registro[acao.alterna.campo] === false;
-                      const Icone = (desligado && ICONE_SE_DESLIGADO[acao.id]) || ICONE_DA_ACAO[acao.id];
-                      const titulo = desligado ? acao.alterna?.tituloSeDesligado : acao.titulo;
-                      return (
+                    {onRestore ? (
+                      <button
+                        onClick={() => onRestore(registro)}
+                        title="Restaurar"
+                        aria-label={`Restaurar ${String(registro.name ?? '')}`}
+                        className="text-text-tertiary hover:text-status-success transition-colors"
+                      >
+                        <RotateCcw size={14} />
+                      </button>
+                    ) : (
+                      <>
                         <button
-                          key={acao.id}
-                          onClick={() => onAcao?.(acao.id, registro)}
-                          title={titulo}
-                          aria-label={`${titulo ?? ''} ${String(registro.name ?? '')}`}
-                          className="text-text-tertiary hover:text-status-info transition-colors"
+                          onClick={() => onEdit(registro)}
+                          title="Editar"
+                          aria-label={`Editar ${String(registro.name ?? '')}`}
+                          className="text-text-tertiary hover:text-text-primary transition-colors"
                         >
-                          <Icone size={14} />
+                          <Edit2 size={14} />
                         </button>
-                      );
-                    })}
-                    <button
-                      onClick={() => onDelete(registro)}
-                      title="Excluir"
-                      aria-label={`Excluir ${String(registro.name ?? '')}`}
-                      className="text-text-tertiary hover:text-status-danger transition-colors"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                        {/* A ordem é Editar, as ações da spec (Desativar, Ficha) e
+                            Excluir por último — o destrutivo fica na ponta. */}
+                        {acoes?.map((acao) => {
+                          const desligado = acao.alterna && registro[acao.alterna.campo] === false;
+                          const Icone = (desligado && ICONE_SE_DESLIGADO[acao.id]) || ICONE_DA_ACAO[acao.id];
+                          const titulo = desligado ? acao.alterna?.tituloSeDesligado : acao.titulo;
+                          return (
+                            <button
+                              key={acao.id}
+                              onClick={() => onAcao?.(acao.id, registro)}
+                              title={titulo}
+                              aria-label={`${titulo ?? ''} ${String(registro.name ?? '')}`}
+                              className="text-text-tertiary hover:text-status-info transition-colors"
+                            >
+                              <Icone size={14} />
+                            </button>
+                          );
+                        })}
+                        <button
+                          onClick={() => onDelete(registro)}
+                          title="Excluir"
+                          aria-label={`Excluir ${String(registro.name ?? '')}`}
+                          className="text-text-tertiary hover:text-status-danger transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>

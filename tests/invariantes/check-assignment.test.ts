@@ -30,14 +30,14 @@ afterAll(async () => {
 async function inserirPosseCrua(colunas: {
   assetId: string;
   targetType: string;
-  targetUserId?: string | null;
-  targetLocationId?: string | null;
+  targetPersonId?: string | null;
+  targetWorkstationId?: string | null;
   checkoutAt?: string;
   checkinAt?: string | null;
 }): Promise<string | null> {
   const sql = `
     INSERT INTO assignments
-      (id, "assetId", "targetType", "targetUserId", "targetLocationId",
+      (id, "assetId", "targetType", "targetPersonId", "targetWorkstationId",
        "checkoutAt", "checkinAt", "createdAt", "updatedAt")
     VALUES
       (gen_random_uuid(), $1::uuid, $2::"AssignmentTarget", $3::uuid, $4::uuid,
@@ -49,8 +49,8 @@ async function inserirPosseCrua(colunas: {
       sql,
       colunas.assetId,
       colunas.targetType,
-      colunas.targetUserId ?? null,
-      colunas.targetLocationId ?? null,
+      colunas.targetPersonId ?? null,
+      colunas.targetWorkstationId ?? null,
       colunas.checkoutAt ?? '2026-01-01T10:00:00',
       colunas.checkinAt ?? null,
     );
@@ -64,8 +64,8 @@ describe('CHECK 1 — o alvo polimórfico é coerente', () => {
   it('aceita a linha bem formada', async () => {
     const erro = await inserirPosseCrua({
       assetId: cenario.ativo.id,
-      targetType: 'USER',
-      targetUserId: cenario.laura,
+      targetType: 'PERSON',
+      targetPersonId: cenario.laura,
     });
     expect(erro).toBeNull();
 
@@ -73,13 +73,13 @@ describe('CHECK 1 — o alvo polimórfico é coerente', () => {
     await prisma.$executeRawUnsafe(`DELETE FROM assignments WHERE "assetId" = $1::uuid`, cenario.ativo.id);
   });
 
-  it('recusa `targetType` USER apontando para uma localização', async () => {
+  it('recusa `targetType` PERSON apontando para uma localização', async () => {
     // A linha que o Postgres aceitaria sem o CHECK — e que a Camada 3
     // resolveria como "sem responsável", em silêncio.
     const erro = await inserirPosseCrua({
       assetId: cenario.ativo.id,
-      targetType: 'USER',
-      targetLocationId: cenario.mesa1,
+      targetType: 'PERSON',
+      targetWorkstationId: cenario.mesa1,
     });
     expect(erro).toMatch(/assignments_alvo_coerente/);
   });
@@ -87,15 +87,15 @@ describe('CHECK 1 — o alvo polimórfico é coerente', () => {
   it('recusa DUAS FKs preenchidas ao mesmo tempo', async () => {
     const erro = await inserirPosseCrua({
       assetId: cenario.ativo.id,
-      targetType: 'USER',
-      targetUserId: cenario.laura,
-      targetLocationId: cenario.mesa1,
+      targetType: 'PERSON',
+      targetPersonId: cenario.laura,
+      targetWorkstationId: cenario.mesa1,
     });
     expect(erro).toMatch(/assignments_alvo_coerente/);
   });
 
   it('recusa posse SEM alvo nenhum', async () => {
-    const erro = await inserirPosseCrua({ assetId: cenario.ativo.id, targetType: 'LOCATION' });
+    const erro = await inserirPosseCrua({ assetId: cenario.ativo.id, targetType: 'WORKSTATION' });
     expect(erro).toMatch(/assignments_alvo_coerente/);
   });
 });
@@ -104,8 +104,8 @@ describe('CHECK 2 — a devolução não antecede a entrega', () => {
   it('recusa duração negativa', async () => {
     const erro = await inserirPosseCrua({
       assetId: cenario.ativo.id,
-      targetType: 'USER',
-      targetUserId: cenario.laura,
+      targetType: 'PERSON',
+      targetPersonId: cenario.laura,
       checkoutAt: '2026-03-10T10:00:00',
       checkinAt: '2026-03-01T10:00:00',
     });
@@ -118,8 +118,8 @@ describe('CHECK 2 — a devolução não antecede a entrega', () => {
     const instante = '2026-03-10T10:00:00';
     const erro = await inserirPosseCrua({
       assetId: cenario.ativo.id,
-      targetType: 'USER',
-      targetUserId: cenario.laura,
+      targetType: 'PERSON',
+      targetPersonId: cenario.laura,
       checkoutAt: instante,
       checkinAt: instante,
     });

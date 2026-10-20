@@ -84,7 +84,7 @@ describe('GET /api/locations/options', () => {
 
 describe('As outras duas rotas de /options têm a mesma busca', () => {
   it('usuários', async () => {
-    const { status, body } = await api.get<Opcao[]>('/api/users/options?q=admin');
+    const { status, body } = await api.get<Opcao[]>('/api/people/options?q=admin');
     expect(status).toBe(200);
     // O seed cria o administrador; o que importa é a rota aceitar o parâmetro e
     // filtrar, não quantos ela devolve.

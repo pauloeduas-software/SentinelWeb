@@ -28,7 +28,7 @@ import { contarAssentosDe, travarTodosOsAssentos, travarLicencaOuFalhar } from '
  * ordem do D90, porque esta operação é do lado do contrato, não do caminho
  * quente de entrega.
  */
-export async function deleteLicense(id: string, actorId: string | null): Promise<void> {
+export async function deleteLicense(id: string): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await travarLicencaOuFalhar(tx, id);
     await travarTodosOsAssentos(tx, id);
@@ -54,6 +54,6 @@ export async function deleteLicense(id: string, actorId: string | null): Promise
     // Por isso 409 e não 404: o registro existe, o ESTADO dele é que recusa.
     if (count === 0) throw new AppError('Esta licença já está na lixeira.', 409);
 
-    await recordActivity(tx, { entityType: 'License', entityId: id, action: 'DELETE' }, actorId);
+    await recordActivity(tx, { entityType: 'License', entityId: id, action: 'DELETE' });
   });
 }

@@ -28,7 +28,6 @@ import { reconciliarAssentos } from './reconcile-seats.usecase';
 export async function updateLicense(
   id: string,
   data: UpdateLicenseData,
-  actorId: string | null,
 ): Promise<LicencaNaResposta> {
   const campos = data;
 
@@ -65,7 +64,7 @@ export async function updateLicense(
     if (Object.keys(changes).length > 0) {
       await recordActivity(tx, {
         entityType: 'License', entityId: id, action: 'UPDATE', changes: changes as never,
-      }, actorId);
+      });
     }
 
     return depois;

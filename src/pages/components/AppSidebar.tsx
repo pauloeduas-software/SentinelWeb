@@ -1,7 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronsLeft, ChevronsRight, LayoutDashboard, LogOut, X } from 'lucide-react';
-import Iniciais from './Iniciais';
 import { GRUPOS_DE_MENU, itemEstaAtivo } from './navegacao';
 import { useBarraLateral } from '../hooks/useBarraLateral';
 import { useAuthStore, usePermissoes } from '../../domain/auth/auth.store';
@@ -52,9 +51,9 @@ export default function AppSidebar() {
 
   // SÓ O QUE A PESSOA ALCANÇA (F11) — e o GRUPO VAZIO SOME JUNTO.
   //
-  // Filtrar só os itens deixaria "Convergência" como um título com nada
-  // embaixo para quem é `USUARIO`: um cabeçalho de seção vazio é
-  // pior do que a seção não existir, porque parece coisa que não carregou.
+  // Filtrar só os itens deixaria "Gestão" como um título com nada embaixo para
+  // quem é `TECNICO`: um cabeçalho de seção vazio é pior do que a seção não
+  // existir, porque parece coisa que não carregou.
   //
   // `useMemo` porque `pode` só troca quando a sessão troca: sem ele, a lista
   // inteira é remontada a cada render da barra, que acontece em toda navegação.
@@ -177,17 +176,11 @@ export default function AppSidebar() {
         {/* ── QUEM ESTÁ OPERANDO ────────────────────────────────────────────
             Saiu do cabeçalho e veio para cá: é informação de sessão, não de
             tela, e no cabeçalho ela disputava largura com a busca do leitor.
-            Continua sendo a metade visível do `actorId` de cada ActivityLog
-            (D23) — num computador compartilhado, é o que diz em nome de quem se
-            está clicando. */}
+            Num computador compartilhado, é o que diz em nome de quem se está
+            clicando. */}
         {usuario && (
           <div className="shrink-0 border-t border-border-sutil p-3 font-mono text-xs">
             <div className={`flex items-center gap-2 ${recolhida ? 'justify-center' : ''}`}>
-              {/* AS INICIAIS (F11): aqui elas são o que sobra quando a barra está
-                  recolhida — 64px não cabem nome, e um ícone genérico de usuário
-                  não diria EM NOME DE QUEM se está clicando, que é a razão de este
-                  rodapé existir (D23). */}
-              <Iniciais nome={usuario.name} />
               {!recolhida && (
                 <div className="flex min-w-0 flex-col leading-tight">
                   <span className="truncate text-text-primary">{usuario.name}</span>

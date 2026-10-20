@@ -5,16 +5,16 @@
 interface PessoaDoPosto {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
 }
 
 /** Quem ocupa o posto AGORA, como a listagem mostra: nome e turno. */
 interface OcupanteDoPosto {
   id: string;
-  userId: string;
+  personId: string;
   /** Texto livre: "Manhã", "Tarde", "12x36 A" (docs/referencia/modelo-de-posse.md, Camada 2). */
   shift: string | null;
-  user: PessoaDoPosto | null;
+  person: PessoaDoPosto | null;
 }
 
 /**
@@ -23,13 +23,14 @@ interface OcupanteDoPosto {
  * ciclo. A forma bate com `WORKSTATION_SELECT`, e o compilador reclama se
  * divergir.
  */
-interface LocalDePosto {
+interface PostoLido {
   id: string;
   name: string;
   notes: string | null;
-  isWorkstation: boolean;
   isActive: boolean;
   createdAt: Date;
+  locationId: string;
+  location: { id: string; name: string };
   _count: { assignments: number };
 }
 
@@ -37,9 +38,10 @@ export interface WorkstationRow {
   id: string;
   name: string;
   notes: string | null;
-  isWorkstation: boolean;
   isActive: boolean;
   createdAt: Date;
+  locationId: string;
+  location: { id: string; name: string };
   ocupantes: OcupanteDoPosto[];
   totalOcupantes: number;
   totalAtivos: number;
@@ -69,43 +71,48 @@ export function ehPostoVago(totalOcupantes: number, totalAtivos: number): boolea
  * junção em memória — o mesmo desenho do `resolverResponsaveisEmLote`.
  */
 export function agruparOcupantes(
-  ocupacoes: readonly (OcupanteDoPosto & { locationId: string })[],
+  ocupacoes: readonly (OcupanteDoPosto & { workstationId: string | null })[],
 ): Map<string, OcupanteDoPosto[]> {
   const porPosto = new Map<string, OcupanteDoPosto[]>();
 
   for (const ocupacao of ocupacoes) {
-    // `locationId` fica FORA da linha devolvida: ele é a chave do agrupamento,
+    // Aberta aponta sempre para o posto (CHECK `workstation_occupants_posto_presente`);
+    // nulo só na encerrada de um posto excluído, que quem chama nem consulta.
+    if (!ocupacao.workstationId) continue;
+
+    // `workstationId` fica FORA da linha devolvida: ele é a chave do agrupamento,
     // e repetido dentro de cada ocupante de um posto que já se sabe qual é
     // seria o mesmo uuid escrito M vezes por linha da tabela.
     const ocupante: OcupanteDoPosto = {
       id: ocupacao.id,
-      userId: ocupacao.userId,
+      personId: ocupacao.personId,
       shift: ocupacao.shift,
-      user: ocupacao.user,
+      person: ocupacao.person,
     };
 
-    const lista = porPosto.get(ocupacao.locationId);
+    const lista = porPosto.get(ocupacao.workstationId);
     if (lista) lista.push(ocupante);
-    else porPosto.set(ocupacao.locationId, [ocupante]);
+    else porPosto.set(ocupacao.workstationId, [ocupante]);
   }
 
   return porPosto;
 }
 
 export function montarLinhaDePosto(
-  local: LocalDePosto,
+  posto: PostoLido,
   ocupantesPorPosto: Map<string, OcupanteDoPosto[]>,
 ): WorkstationRow {
-  const ocupantes = ocupantesPorPosto.get(local.id) ?? [];
-  const totalAtivos = local._count.assignments;
+  const ocupantes = ocupantesPorPosto.get(posto.id) ?? [];
+  const totalAtivos = posto._count.assignments;
 
   return {
-    id: local.id,
-    name: local.name,
-    notes: local.notes,
-    isWorkstation: local.isWorkstation,
-    isActive: local.isActive,
-    createdAt: local.createdAt,
+    id: posto.id,
+    name: posto.name,
+    notes: posto.notes,
+    isActive: posto.isActive,
+    createdAt: posto.createdAt,
+    locationId: posto.locationId,
+    location: posto.location,
     ocupantes,
     // Sai do MESMO array que a tela renderiza, e não de um `_count` paralelo:
     // duas contagens do mesmo fato podem divergir, e a que o usuário confere

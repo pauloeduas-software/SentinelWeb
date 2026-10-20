@@ -1,0 +1,37 @@
+import { prisma } from '../../../core/database/prismaClient';
+import { AppError } from '../../../core/errors/app-error';
+import { listPersonStock } from '../../stock/use-cases/list-workstation-stock.usecase';
+import { PERSON_DETAIL_SELECT } from '../helpers/person-select.helper';
+
+/**
+ * UM colaborador, para a ficha.
+ *
+ * A listagem paginada (a aba de Configurações) não serve para abrir uma pessoa
+ * por id — buscar 25 para usar 1 é o que faz a ficha depender de por qual
+ * página se chegou nela (e quebrar no F5).
+ */
+interface PessoaDaFicha {
+  id: string;
+  name: string;
+  email: string | null;
+  createdAt: Date;
+  isActive: boolean;
+
+  /**
+   * As unidades de estoque no NOME dela, por LINHA: é o que a ficha precisa
+   * para desenhar "o que está com esta pessoa" e oferecer a devolução por
+   * unidade, como a ficha do posto já faz com `itens`
+   * (`get-workstation.usecase.ts`).
+   */
+  itens: Awaited<ReturnType<typeof listPersonStock>>;
+}
+
+export async function getPerson(id: string): Promise<PessoaDaFicha> {
+  // `findFirst` pelo escopo da lixeira: colaborador excluído responde 404 aqui,
+  // como em toda leitura do sistema. Ele volta pela restauração, não por uma
+  // URL que alguém guardou.
+  const pessoa = await prisma.person.findFirst({ where: { id }, select: PERSON_DETAIL_SELECT });
+  if (!pessoa) throw new AppError('Colaborador não encontrado.', 404);
+
+  return { ...pessoa, itens: await listPersonStock(id) };
+}

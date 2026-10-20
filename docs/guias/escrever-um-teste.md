@@ -22,7 +22,7 @@ afterAll(async () => { await api.fechar(); });
 
 it('descreve a regra, não o código', async () => {
   const { status } = await api.post(`/api/assets/${cenario.ativo.id}/checkout`, {
-    targetType: 'USER', targetUserId: cenario.laura,
+    targetType: 'PERSON', targetPersonId: cenario.laura,
   });
   expect(status).toBe(201);
 });
@@ -35,7 +35,7 @@ const cenario = await cenarioDePosse(api, ' (posto-vago)');
 ```
 
 `cenarioDePosse` cria fabricante, posto e dois colaboradores com nomes **fixos**, e os três têm
-unicidade no banco (`@unique` em `Manufacturer.name` e `Location.name`, índice parcial no e-mail). A
+unicidade no banco (`@unique` em `Manufacturer.name` e `Workstation.name`, índice parcial no e-mail). A
 segunda chamada no mesmo arquivo devolve **409 "Registro já existe" vindo de dentro do fixture** — que
 se lê como defeito da aplicação, não do teste. Foi exatamente o que escondeu sete dos oito `it` do
 arquivo da conferência física (`ciclo-de-vida/auditoria.test.ts`, que saiu com ela no corte de escopo — D144, D157) até a

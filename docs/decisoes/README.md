@@ -5,7 +5,7 @@
 > muda, mesmo que o arquivo onde ela vive mude. Depois do D164 veio uma segunda rodada, com 15
 > decisões próprias, nomeadas por letra (`A`…`P`, sem `N`) em vez de número — ver
 > [*A segunda rodada*](#a-segunda-rodada-ap) abaixo. A varredura do código morto, que veio
-> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S` e `T`.
+> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S`, `T`, `U`, `V`, `W`, `X` e `Y`.
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve.** Se a realidade mudou, ela é
 > **superada** por outra, com link entre as duas. O log é o que diz por quanto tempo cada regra
@@ -19,10 +19,10 @@
 | Arquivo | Assunto | Decisões |
 |---|---|---|
 | [`reconciliacao.md`](./reconciliacao.md) | Reconciliação | 35 |
-| [`acesso.md`](./acesso.md) | Acesso | 22 |
+| [`acesso.md`](./acesso.md) | Acesso | 25 |
 | [`escopo.md`](./escopo.md) | **Escopo** — o que o sistema deixou de fazer | 22 |
 | [`catalogo-e-ativo.md`](./catalogo-e-ativo.md) | Catálogo e ativo | 15 |
-| [`posse.md`](./posse.md) | Posse | 13 |
+| [`posse.md`](./posse.md) | Posse | 17 |
 | [`relatorios-import-etiquetas.md`](./relatorios-import-etiquetas.md) | Relatórios, import e etiquetas | 13 |
 | [`ciclo-de-vida.md`](./ciclo-de-vida.md) | Ciclo de vida | 12 |
 | [`licencas.md`](./licencas.md) | Licenças | 11 |
@@ -47,6 +47,11 @@ que corrigem algo anterior:
 | **D19** (três colunas de saída), **D127** | commit `505c520` (status enxuto) | sem `ARCHIVED`, sobram duas: `retiredAt` (a baixa) e `deletedAt` |
 | **D20** (`?arquivados=`), **D85** (`?view=archived`) | commit `505c520` (status enxuto) | a vista, a aba e o contador de arquivados saem; `active` exclui só o baixado |
 | **D4** e **D15** (a árvore de `Location`), **O** (`Location.managerId` fica) | commit `ff34364` (localização plana) | `parentId` e `managerId` saem: a lista é plana, e o nome único diz onde o lugar fica |
+| **P** (`USUARIO` não entra), **R** (em parte) | **U** | quem recebe equipamento sai de `User` e vira colaborador (catálogo); sobram dois cargos, e todo usuário tem senha |
+| **D8** (catálogo sem lixeira, em parte), **U** (em parte) | **V** | só o presente segura a exclusão: a localização sai de verdade e o histórico guarda o nome por escrito; o colaborador vai para a lixeira, com Restaurar |
+| a lixeira do usuário da F0 (`deletedAt`, `users_email_unique_undeleted`) | **W** | excluir usuário apaga a linha; ninguém rebaixa, desativa ou exclui a si mesmo |
+| **D23**, **D24**, **D25**, **W** (em parte) | **X** | o histórico não guarda quem fez: as cinco colunas de autor e o parâmetro `actorId` saem, e usuário não grava histórico |
+| **D15**, **B** (a porta da marca), **V** (a metade da localização) | **Y** | o posto sai de `Location` e vira `Workstation`: a localização só guarda, com a regra do status; o posto recebe entrega, estoque e ocupante |
 
 **O de-escopo (D143–D156) supera por subtração**, e é o maior grupo de supersessões do projeto:
 a decisão antiga não estava errada, o que ela governava deixou de existir. Está inteiro em
@@ -130,6 +135,11 @@ que o código ainda cita. Letra deixa claro, só pelo nome, que a decisão é de
 | **R** | A senha nasce no cadastro, e o login é o e-mail | [Acesso](./acesso.md#r--a-senha-nasce-no-cadastro-e-o-login-é-o-e-mail) |
 | **S** | O papel passa a se chamar cargo | [Acesso](./acesso.md#s--o-papel-passa-a-se-chamar-cargo) |
 | **T** | Não há conta semeada | [Acesso](./acesso.md#t--não-há-conta-semeada) |
+| **U** | Quem recebe equipamento sai de `User`: colaborador vira catálogo, e sobram dois cargos | [Acesso](./acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos) |
+| **V** | Excluir não apaga o passado: localização por referência, colaborador pela lixeira | [Posse](./posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira) |
+| **W** | Excluir usuário apaga a linha, e ninguém rebaixa, desativa ou exclui a si mesmo | [Acesso](./acesso.md#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo) |
+| **X** | O histórico não guarda quem fez | [Acesso](./acesso.md#x--o-histórico-não-guarda-quem-fez) |
+| **Y** | O posto sai de `Location`: localização guarda, posto recebe | [Posse](./posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe) |
 
 **`N` não existe, de propósito.** As correções de segurança e consistência desta rodada (custo
 de compra vazando por uma quarta porta, comando que respondia sucesso sem confirmação do socket,
@@ -144,7 +154,7 @@ já prometiam e o código não cumpria. Continua a letra pelo mesmo motivo de a 
 adotado: a numeração `D` corresponde ao que o código cita, e recomeçá-la colidiria. A `R` veio
 logo depois dela, pelo mesmo caminho: a varredura achou a rota de senha sem chamador, e a
 resposta foi levar a senha para o cadastro. A `S` é o renomeio do papel para cargo, a palavra
-que a equipe usa. A `T` tira o seed da conta de administrador. A próxima decisão é a `U`.
+que a equipe usa. A `T` tira o seed da conta de administrador. A próxima decisão é a `Z`.
 
 ## O índice
 

@@ -46,7 +46,7 @@ export function estadoDoAssento(assento: AssentoDeLicenca): EstadoDoAssento {
 
   const aberta = assento.checkouts[0];
   if (!aberta) return 'livre';
-  return aberta.assignedUserId ? 'pessoa' : 'ativo';
+  return aberta.assignedPersonId ? 'pessoa' : 'ativo';
 }
 
 export const ROTULO_DO_ESTADO: Record<EstadoDoAssento, string> = {
@@ -61,7 +61,7 @@ export const ROTULO_DO_ESTADO: Record<EstadoDoAssento, string> = {
 export function ocupanteDoAssento(assento: AssentoDeLicenca): string | null {
   const aberta = assento.checkouts[0];
   if (!aberta) return null;
-  if (aberta.assignedUser) return aberta.assignedUser.name;
+  if (aberta.assignedPerson) return aberta.assignedPerson.name;
   if (aberta.assignedAsset) {
     return aberta.assignedAsset.name
       ? `${aberta.assignedAsset.assetTag} — ${aberta.assignedAsset.name}`

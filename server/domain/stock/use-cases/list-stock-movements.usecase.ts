@@ -38,7 +38,7 @@ export interface EventoDeEstoque {
   at: Date;
   /**
    * Quantas unidades o evento moveu. Na SAIDA é o tamanho do LOTE: as N linhas
-   * de uma mesma saída (mesmo instante, mesmo alvo, mesmo autor) viram um
+   * de uma mesma saída (mesmo instante, mesmo alvo, mesma observação) viram um
    * evento só — "5 mouses para a Mesa 1", não cinco linhas de um. A devolução
    * é por unidade, e fica por unidade.
    */
@@ -46,17 +46,19 @@ export interface EventoDeEstoque {
   /** "Laura Souza", "Mesa 1". Nulo na entrada e na baixa. */
   targetLabel: string | null;
   targetType: Movimento['targetType'];
-  targetUserId: string | null;
-  targetLocationId: string | null;
+  targetPersonId: string | null;
+  targetWorkstationId: string | null;
   notes: string | null;
-  actorId: string | null;
 }
 
 const LIMITE_PADRAO = 100;
 
 function rotuloDoAlvo(movimento: Movimento): string | null {
-  if (movimento.targetType === 'USER') return movimento.targetUser?.name ?? null;
-  if (movimento.targetType === 'LOCATION') return movimento.targetLocation?.name ?? null;
+  if (movimento.targetType === 'PERSON') return movimento.targetPerson?.name ?? null;
+  // O posto excluído deixou o nome por escrito (`workstationSpec.beforeDelete`).
+  if (movimento.targetType === 'WORKSTATION') {
+    return movimento.targetWorkstation?.name ?? movimento.targetWorkstationName ?? null;
+  }
   return null;
 }
 
@@ -66,8 +68,8 @@ function eventosDe(movimento: Movimento): EventoDeEstoque[] {
     movementId: movimento.id,
     targetLabel: rotuloDoAlvo(movimento),
     targetType: movimento.targetType,
-    targetUserId: movimento.targetUserId,
-    targetLocationId: movimento.targetLocationId,
+    targetPersonId: movimento.targetPersonId,
+    targetWorkstationId: movimento.targetWorkstationId,
   };
 
   const eventos: EventoDeEstoque[] = [{
@@ -77,7 +79,6 @@ function eventosDe(movimento: Movimento): EventoDeEstoque[] {
     at: movimento.createdAt,
     qty: movimento.qty,
     notes: movimento.notes,
-    actorId: movimento.createdById,
   }];
 
   if (movimento.kind === 'SAIDA' && movimento.returnedAt) {
@@ -89,7 +90,6 @@ function eventosDe(movimento: Movimento): EventoDeEstoque[] {
       qty: movimento.qty,
       // A devolução não leva observação: a da linha é a da SAÍDA.
       notes: null,
-      actorId: movimento.returnedById,
     });
   }
 
@@ -99,8 +99,10 @@ function eventosDe(movimento: Movimento): EventoDeEstoque[] {
 /** A chave do lote: o que faz N linhas de uma saída serem o MESMO evento. */
 function chaveDoLote(evento: EventoDeEstoque): string {
   return [
-    evento.action, evento.at.getTime(), evento.targetType, evento.targetUserId,
-    evento.targetLocationId, evento.actorId, evento.notes,
+    evento.action, evento.at.getTime(), evento.targetType, evento.targetPersonId,
+    // O rótulo também: dois postos excluídos têm os dois `targetWorkstationId`
+    // nulo, e só o nome por escrito os separa.
+    evento.targetWorkstationId, evento.targetLabel, evento.notes,
   ].join('|');
 }
 
@@ -182,8 +184,12 @@ export async function listStockMovements(itemId: string, limite = LIMITE_PADRAO)
     evento.qty = await prisma.stockMovement.count({
       where: {
         itemId, kind: 'SAIDA', createdAt: evento.at,
-        targetType: evento.targetType, targetUserId: evento.targetUserId,
-        targetLocationId: evento.targetLocationId, createdById: evento.actorId, notes: evento.notes,
+        targetType: evento.targetType, targetPersonId: evento.targetPersonId,
+        targetWorkstationId: evento.targetWorkstationId, notes: evento.notes,
+        // Posto excluído: sem FK, quem fecha o lote é o nome por escrito.
+        ...(evento.targetType === 'WORKSTATION' && !evento.targetWorkstationId
+          ? { targetWorkstationName: evento.targetLabel }
+          : {}),
       },
     });
   }));

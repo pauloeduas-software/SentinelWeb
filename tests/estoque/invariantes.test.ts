@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '../../server/core/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { cenarioDePosse, criarColaborador, criarItemDeEstoque, criarLocal } from '../helpers/fixtures';
+import { cenarioDePosse, criarColaborador, criarItemDeEstoque, criarPosto } from '../helpers/fixtures';
 
 // AS INVARIANTES DO ESTOQUE — o saldo calculado, a forma do movimento, a
 // quantidade que não é campo, a categoria do tipo certo, a lixeira protegida e
@@ -41,7 +41,7 @@ const sair = (itemId: string, corpo: Record<string, unknown>) =>
   api.post<Saida>(`/api/stock/items/${itemId}/checkout`, corpo);
 
 const paraLaura = (itemId: string, qty = 1) =>
-  sair(itemId, { targetType: 'USER', targetUserId: cenario.laura, qty });
+  sair(itemId, { targetType: 'PERSON', targetPersonId: cenario.laura, qty });
 
 const lerItem = (itemId: string) =>
   api.get<{ qty: number; fora: number; disponivel: number; unidadesFora: { id: string }[] }>(`/api/stock/items/${itemId}`);
@@ -109,23 +109,23 @@ describe('a entrega ao posto não multiplica por ocupante', () => {
     // qualquer que seja a escala: o saldo do almoxarifado não pode depender do
     // RH — a mesa ganharia uma terceira ocupante e, sem ninguém tocar numa
     // unidade física, o disponível cairia.
-    for (const userId of [cenario.laura, cenario.ana]) {
-      const ocupacao = await api.post(`/api/locations/${cenario.mesa1}/occupants`, { userId, shift: 'Manhã' });
+    for (const personId of [cenario.laura, cenario.ana]) {
+      const ocupacao = await api.post(`/api/workstations/${cenario.mesa1}/occupants`, { personId, shift: 'Manhã' });
       expect(ocupacao.status).toBe(201);
     }
 
     const mouse = await item('Mouse da mesa compartilhada', 2);
-    const { status } = await sair(mouse.id, { targetType: 'LOCATION', targetLocationId: cenario.mesa1 });
+    const { status } = await sair(mouse.id, { targetType: 'WORKSTATION', targetWorkstationId: cenario.mesa1 });
     expect(status).toBe(201);
 
     expect((await lerItem(mouse.id)).body).toMatchObject({ fora: 1, disponivel: 1 });
   });
 
   it('aceita a entrega a um posto VAZIO: é a mesa preparada antes de a pessoa chegar', async () => {
-    const vazio = await criarLocal(api, { name: 'Mesa vazia do estoque', isWorkstation: true });
+    const vazio = await criarPosto(api, { name: 'Mesa vazia do estoque' });
     const headset = await item('Headset da mesa vazia', 1);
 
-    const { status } = await sair(headset.id, { targetType: 'LOCATION', targetLocationId: vazio });
+    const { status } = await sair(headset.id, { targetType: 'WORKSTATION', targetWorkstationId: vazio });
     expect(status).toBe(201);
   });
 });
@@ -135,12 +135,12 @@ describe('o alvo da saída é UM — e quem garante é o banco', () => {
     const dock = await item('Dock dos dois alvos', 2);
 
     const duas = await sair(dock.id, {
-      targetType: 'USER', targetUserId: cenario.laura, targetLocationId: cenario.mesa1,
+      targetType: 'PERSON', targetPersonId: cenario.laura, targetWorkstationId: cenario.mesa1,
     });
     expect(duas.status).toBe(422);
     expect(duas.body.error).toMatch(/UM alvo/);
 
-    const nenhuma = await sair(dock.id, { targetType: 'LOCATION' });
+    const nenhuma = await sair(dock.id, { targetType: 'WORKSTATION' });
     expect(nenhuma.status).toBe(422);
   });
 
@@ -149,25 +149,25 @@ describe('o alvo da saída é UM — e quem garante é o banco', () => {
     // mão, um script. Testar por HTTP seria impossível por construção.
     const dock = await item('Dock do CHECK', 1);
     const inserir = (colunas: Record<string, unknown>) => prisma.$executeRawUnsafe(
-      `INSERT INTO stock_movements (id, "itemId", kind, qty, "targetType", "targetUserId", "targetLocationId", "returnedAt", "createdAt")
+      `INSERT INTO stock_movements (id, "itemId", kind, qty, "targetType", "targetPersonId", "targetWorkstationId", "returnedAt", "createdAt")
        VALUES (gen_random_uuid(), $1::uuid, $2::"StockMovementKind", $3::int, $4::"StockTarget", $5::uuid, $6::uuid, $7::timestamp, now())`,
-      dock.id, colunas.kind, colunas.qty, colunas.targetType ?? null, colunas.targetUserId ?? null,
-      colunas.targetLocationId ?? null, colunas.returnedAt ?? null,
+      dock.id, colunas.kind, colunas.qty, colunas.targetType ?? null, colunas.targetPersonId ?? null,
+      colunas.targetWorkstationId ?? null, colunas.returnedAt ?? null,
     ).then(() => null, (erro: Error) => erro.message);
 
     // SAIDA com as duas FKs.
-    expect(await inserir({ kind: 'SAIDA', qty: 1, targetType: 'USER', targetUserId: cenario.laura, targetLocationId: cenario.mesa1 }))
+    expect(await inserir({ kind: 'SAIDA', qty: 1, targetType: 'PERSON', targetPersonId: cenario.laura, targetWorkstationId: cenario.mesa1 }))
       .toMatch(/stock_movements_forma/);
     // SAIDA de duas unidades numa linha só: a unidade é UMA por linha.
-    expect(await inserir({ kind: 'SAIDA', qty: 2, targetType: 'USER', targetUserId: cenario.laura }))
+    expect(await inserir({ kind: 'SAIDA', qty: 2, targetType: 'PERSON', targetPersonId: cenario.laura }))
       .toMatch(/stock_movements_forma/);
     // ENTRADA com alvo: entrada não vai para ninguém.
-    expect(await inserir({ kind: 'ENTRADA', qty: 1, targetType: 'USER', targetUserId: cenario.laura }))
+    expect(await inserir({ kind: 'ENTRADA', qty: 1, targetType: 'PERSON', targetPersonId: cenario.laura }))
       .toMatch(/stock_movements_forma/);
     // Movimento de zero.
     expect(await inserir({ kind: 'ENTRADA', qty: 0 })).toMatch(/stock_movements_qty_positiva/);
     // E a linha bem formada entra.
-    expect(await inserir({ kind: 'SAIDA', qty: 1, targetType: 'LOCATION', targetLocationId: cenario.mesa1 })).toBeNull();
+    expect(await inserir({ kind: 'SAIDA', qty: 1, targetType: 'WORKSTATION', targetWorkstationId: cenario.mesa1 })).toBeNull();
   });
 
   it('as três constraints existem no banco, e o índice parcial do nome também', async () => {
@@ -240,7 +240,7 @@ describe('a quantidade não é campo do formulário', () => {
   it('uma quantidade de zero é recusada antes de virar linha', async () => {
     const zero = await item('Item do ajuste zero', 1);
     expect((await api.post(`/api/stock/items/${zero.id}/adjust`, { kind: 'ENTRADA', qty: 0 })).status).toBe(422);
-    expect((await sair(zero.id, { targetType: 'USER', targetUserId: cenario.laura, qty: 0 })).status).toBe(422);
+    expect((await sair(zero.id, { targetType: 'PERSON', targetPersonId: cenario.laura, qty: 0 })).status).toBe(422);
   });
 });
 
@@ -303,17 +303,23 @@ describe('a lixeira é protegida por 409, e o nome fica livre nela', () => {
 });
 
 describe('invariante 6 — a ponta do estoque', () => {
-  it('pessoa com unidade no nome não vai para a lixeira, e o 409 diz quantas', async () => {
+  it('pessoa com unidade no nome não se desativa nem se exclui, e o 409 diz quantas', async () => {
     const pessoa = await criarColaborador(api, { name: 'Pedro do Estoque', email: 'pedro.estoque@teste.local' });
     const mouse = await item('Mouse do Pedro', 1);
-    expect((await sair(mouse.id, { targetType: 'USER', targetUserId: pessoa })).status).toBe(201);
+    expect((await sair(mouse.id, { targetType: 'PERSON', targetPersonId: pessoa })).status).toBe(201);
 
-    const { status, body } = await api.delete<{ error: string }>(`/api/users/${pessoa}`);
+    const { status, body } = await api.put<{ error: string }>(`/api/people/${pessoa}`, { isActive: false });
     expect(status).toBe(409);
     expect(body.error).toMatch(/1 item de estoque/);
 
+    // E não vai para a lixeira: a mesma conta, com o fim da frase trocado.
+    const exclusao = await api.delete<{ error: string }>(`/api/people/${pessoa}`);
+    expect(exclusao.status).toBe(409);
+    expect(exclusao.body.error).toMatch(/1 item de estoque/);
+    expect(exclusao.body.error).toContain('antes de excluir');
+
     // A ficha da pessoa mostra a mesma ponta, por unidade.
-    const ficha = await api.get<{ itens: unknown[] }>(`/api/users/${pessoa}`);
+    const ficha = await api.get<{ itens: unknown[] }>(`/api/people/${pessoa}`);
     expect(ficha.body.itens).toHaveLength(1);
   });
 
@@ -322,24 +328,24 @@ describe('invariante 6 — a ponta do estoque', () => {
     // ocupa a Mesa 1 (caso acima), a mesa tem unidade, e nada saiu no NOME dela
     // neste arquivo — a contagem dela é zero. (A Laura não serve de prova: ela
     // recebeu as unidades dos casos de saldo.)
-    const postos = await api.get<unknown[]>(`/api/users/${cenario.ana}/occupancies`);
+    const postos = await api.get<unknown[]>(`/api/people/${cenario.ana}/occupancies`);
     expect(postos.body.length).toBeGreaterThanOrEqual(1);
-    const ficha = await api.get<{ itens: unknown[] }>(`/api/users/${cenario.ana}`);
+    const ficha = await api.get<{ itens: unknown[] }>(`/api/people/${cenario.ana}`);
     expect(ficha.body.itens).toHaveLength(0);
   });
 
   it('desativado não recebe unidade (409), e cadastro na lixeira também não (404)', async () => {
     const desligada = await criarColaborador(api, { name: 'Dani Desligada', email: 'dani.desligada@teste.local' });
-    expect((await api.put(`/api/users/${desligada}`, { isActive: false })).status).toBe(200);
+    expect((await api.put(`/api/people/${desligada}`, { isActive: false })).status).toBe(200);
 
     const mouse = await item('Mouse da desativada', 1);
-    const recusa = await sair(mouse.id, { targetType: 'USER', targetUserId: desligada });
+    const recusa = await sair(mouse.id, { targetType: 'PERSON', targetPersonId: desligada });
     expect(recusa.status).toBe(409);
     expect(recusa.body.error).toMatch(/desativad/i);
 
     const apagada = await criarColaborador(api, { name: 'Ana Apagada', email: 'ana.apagada@teste.local' });
-    expect((await api.delete(`/api/users/${apagada}`)).status).toBe(200);
-    expect((await sair(mouse.id, { targetType: 'USER', targetUserId: apagada })).status).toBe(404);
+    expect((await api.delete(`/api/people/${apagada}`)).status).toBe(200);
+    expect((await sair(mouse.id, { targetType: 'PERSON', targetPersonId: apagada })).status).toBe(404);
   });
 });
 

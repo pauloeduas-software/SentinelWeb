@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  useCreateWorkstation, useWorkstationQuery, useWorkstationsQuery,
-  type NovoPostoInput,
+  useCreateWorkstation, useDeleteWorkstation, useUpdateWorkstation, useWorkstationQuery,
+  useWorkstationsQuery, type PostoInput,
 } from '../../../domain/workstation/workstation.queries';
 import { useCheckinAsset } from '../../../domain/assignment/assignment.queries';
 import { useCheckinStock } from '../../../domain/stock/stock.queries';
 import type { AtivoDoPosto, Posto, PostoView } from '../../../domain/shared/workstation.types';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
-import { useOcupantes } from '../../hooks/useOcupantes';
+import { useNotificacao } from '../../hooks/useNotificacao';
+import { useOcupantes } from './useOcupantes';
 
 const PER_PAGE = 10;
 
@@ -52,10 +53,15 @@ export function usePostos() {
 
   const { data, isPending, error } = useWorkstationsQuery(params);
   const criar = useCreateWorkstation();
+  const editar = useUpdateWorkstation();
+  const excluir = useDeleteWorkstation();
   const devolver = useCheckinAsset();
   const devolverItem = useCheckinStock();
+  const notificar = useNotificacao();
 
+  // O formulário serve às duas operações: `emEdicao` nulo é criar.
   const [modalAberto, setModalAberto] = useState(false);
+  const [emEdicao, setEmEdicao] = useState<Posto | null>(null);
 
   const { id: postoId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -68,16 +74,50 @@ export function usePostos() {
     data: detalhe, isPending: detalhePendente, error: detalheErro,
   } = useWorkstationQuery(postoId ?? null);
 
-  // Os ocupantes vêm do hook COMPARTILHADO com a aba Localizações: adicionar e
-  // encerrar são a mesma operação nas duas telas, e é ele que também serve o
-  // histórico — que o detalhe do posto (`GET /api/workstations/:id`) não traz.
+  // Os ocupantes vêm de hook próprio, que também serve o histórico — que o
+  // detalhe do posto (`GET /api/workstations/:id`) não traz.
   const ocupantes = useOcupantes(postoId ?? null);
+
+  const fecharFormulario = () => {
+    setModalAberto(false);
+    setEmEdicao(null);
+  };
 
   // O erro sobe para o formulário mostrar a mensagem do servidor — é por aqui
   // que aparece o 409 de nome repetido.
-  const handleCriar = async (dados: NovoPostoInput) => {
-    await criar.mutateAsync(dados);
-    setModalAberto(false);
+  const handleSalvar = async (dados: PostoInput) => {
+    if (emEdicao) await editar.mutateAsync({ id: emEdicao.id, data: dados });
+    else await criar.mutateAsync(dados);
+    fecharFormulario();
+  };
+
+  // DESATIVAR/ATIVAR e EXCLUIR são os botões da linha, com as mesmas frases de
+  // Configurações (`configuracoes/hooks/useCatalog.ts`): o posto segue a regra
+  // do status. Confirma só na ida — reativar não tem o que perder.
+  const handleAlternar = async (posto: Posto) => {
+    if (posto.isActive && !confirm(
+      `Desativar "${posto.name}"? Continua no histórico, mas some das escolhas e não recebe nada novo.`,
+    )) return;
+
+    try {
+      await editar.mutateAsync({ id: posto.id, data: { isActive: !posto.isActive } });
+    } catch (erro) {
+      notificar.erro((erro as Error).message);
+    }
+  };
+
+  const handleExcluir = async (posto: Posto) => {
+    if (!confirm(`Excluir "${posto.name}"? Esta ação não tem lixeira.`)) return;
+
+    try {
+      await excluir.mutateAsync(posto.id);
+      // Apagar o último posto da última página deixaria a tela vazia numa
+      // página que não existe mais.
+      if (data?.rows.length === 1 && page > 1) setPage(page - 1);
+    } catch (erro) {
+      // É aqui que aparece o 409 do posto com algo nele agora.
+      notificar.erro((erro as Error).message);
+    }
   };
 
   /**
@@ -95,7 +135,7 @@ export function usePostos() {
    * da devolução — status de volta e observação — continua na tela de Ativos,
    * onde cabe; aqui o que se quer é tirar o equipamento DESTA mesa.
    *
-   * E é por isso que o `targetLocationId` vai: a ficha pode estar velha. Entre
+   * E é por isso que o `targetWorkstationId` vai: a ficha pode estar velha. Entre
    * ela carregar e o clique, o ativo pode ter sido devolvido e entregue à Laura,
    * e um corpo vazio fecharia a posse dela. Com o posto no corpo, o servidor
    * recusa com 409 e diz com quem o ativo está — a mensagem sobe para a ficha.
@@ -108,7 +148,7 @@ export function usePostos() {
     const qual = ativo.name ? `${ativo.assetTag} (${ativo.name})` : ativo.assetTag;
     if (!confirm(`Devolver ${qual} ao estoque? Ele sai deste posto e volta para a lista de Ativos.`)) return;
 
-    await devolver.mutateAsync({ id: ativo.id, data: { targetLocationId: postoId } });
+    await devolver.mutateAsync({ id: ativo.id, data: { targetWorkstationId: postoId } });
   };
 
   /**
@@ -136,9 +176,16 @@ export function usePostos() {
     changeView,
 
     modalAberto,
+    emEdicao,
     openCreate: () => setModalAberto(true),
-    closeModal: () => setModalAberto(false),
-    handleCriar,
+    openEdit: (posto: Posto) => {
+      setEmEdicao(posto);
+      setModalAberto(true);
+    },
+    closeModal: fecharFormulario,
+    handleSalvar,
+    handleAlternar,
+    handleExcluir,
 
     postoId: postoId ?? null,
     postoAberto,

@@ -45,14 +45,13 @@ export interface ApiDeTeste extends Cliente {
    * `ADMIN` e alcança tudo, então nenhuma asserção sobre "sem acesso" é possível
    * por ele.
    *
-   * Cria um colaborador com senha, define o cargo e entra. `TECNICO` é o padrão
-   * porque `USUARIO` NÃO ENTRA: o login o recusa com 403, e é isso que
-   * `tests/invariantes/permissao.test.ts` prova.
+   * Cria um usuário com senha e o cargo pedido, e entra. `TECNICO` é o padrão
+   * porque é o menor dos dois — o que precisa provar "sem acesso".
    */
   comoUsuario(cargo?: 'TECNICO' | 'ADMIN'): Promise<Cliente & { userId: string }>;
   /** A instância montada, para o que o cliente não cobre (WebSocket, `app.hasRoute`). */
   app: FastifyInstance;
-  /** O id do administrador logado — o ator esperado em todo `ActivityLog`. */
+  /** O id do administrador logado. */
   adminId: string;
   /** O MESMO app, sem o cookie de sessão: é com ele que se testa a porta fechada. */
   anonimo: Cliente;
@@ -165,8 +164,8 @@ export async function criarApi(opcoes: OpcoesDaAplicacao = {}): Promise<ApiDeTes
    * matriz pelo cargo, e o grupo intermediário desapareceu junto.
    */
   async function comoUsuario(cargo: 'TECNICO' | 'ADMIN' = 'TECNICO') {
-    // `Date.now()` no sufixo porque o `email` é único por índice parcial, e um
-    // arquivo de teste chama isto mais de uma vez.
+    // `Date.now()` no sufixo porque o `email` é único, e um arquivo de teste
+    // chama isto mais de uma vez.
     const marca = `p${Date.now()}${Math.floor(Math.random() * 1000)}`;
     const email = `${marca}@teste.local`;
     const senha = 'Senha-De-Teste-123';

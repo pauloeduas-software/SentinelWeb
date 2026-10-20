@@ -29,12 +29,13 @@ import type { Cargo } from './cargo';
 //   `null`     — a sessão basta. Duas rotas, e as duas são sobre si mesmo.
 //   `TECNICO`  — todo o inventário: ver, criar, editar, entregar, devolver,
 //                aposentar, reconciliar. É o trabalho do dia.
-//   `ADMIN`    — gente (criar, editar, desativar, trocar senha), configuração do
-//                sistema, EXCLUIR de verdade (e restaurar o excluído) e o custo.
+//   `ADMIN`    — usuários (criar, editar, desativar, trocar senha), configuração
+//                do sistema — colaboradores inclusive —, EXCLUIR de verdade (e
+//                restaurar o excluído) e o custo.
 //
-// `GET /api/users` ficou em `TECNICO` de propósito: entregar equipamento exige
-// escolher a pessoa, e um técnico que não lista gente não faz checkout. O que é
-// de `ADMIN` é MEXER em gente, não vê-la.
+// A tela de Usuários — quem opera o sistema — é toda `ADMIN`, leitura
+// inclusive. Quem RECEBE equipamento é colaborador (`/api/people`), catálogo:
+// o técnico o escolhe no `/options` para fazer a entrega.
 //
 // Aposentar ficou em `TECNICO` embora a chave antiga fosse `assets.delete`:
 // aposentadoria é ciclo de vida (D19), e a decisão de que `retiredAt` não é
@@ -75,13 +76,20 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   'GET /api/assets/:id/assignments': 'TECNICO',
   'POST /api/assets/:id/checkout': 'TECNICO',
   'POST /api/assets/:id/checkin': 'TECNICO',
-  'GET /api/locations/:id/occupants': 'TECNICO',
-  'POST /api/locations/:id/occupants': 'TECNICO',
-  'DELETE /api/locations/:id/occupants/:occupantId': 'TECNICO',
-  'PATCH /api/locations/:id/occupants/:occupantId': 'TECNICO',
-  'GET /api/users/:id/occupancies': 'TECNICO',
+  'GET /api/workstations/:id/occupants': 'TECNICO',
+  'POST /api/workstations/:id/occupants': 'TECNICO',
+  'DELETE /api/workstations/:id/occupants/:occupantId': 'TECNICO',
+  'PATCH /api/workstations/:id/occupants/:occupantId': 'TECNICO',
+  'GET /api/people/:id/occupancies': 'TECNICO',
+  // O POSTO: ler é do técnico, que entrega e ocupa; o CADASTRO é do ADMIN,
+  // como o do catálogo — é a mesma `CatalogSpec`, fora da lista gerada abaixo
+  // só porque a tela dele é Postos, não Configurações.
   'GET /api/workstations': 'TECNICO',
+  'GET /api/workstations/options': 'TECNICO',
   'GET /api/workstations/:id': 'TECNICO',
+  'POST /api/workstations': 'ADMIN',
+  'PUT /api/workstations/:id': 'ADMIN',
+  'DELETE /api/workstations/:id': 'ADMIN',
   // O ESTOQUE: o trabalho do dia é do técnico; apagar e restaurar, do ADMIN,
   // como no ativo.
   'GET /api/stock/items': 'TECNICO',
@@ -106,14 +114,15 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   'POST /api/licenses/:id/restore': 'ADMIN',
   'POST /api/licenses/:id/checkout-seat': 'TECNICO',
   'POST /api/licenses/seats/:id/checkin': 'TECNICO',
-  'GET /api/users': 'TECNICO',
-  'GET /api/users/:id': 'TECNICO',
-  'GET /api/users/:id/history': 'TECNICO',
-  'GET /api/users/options': 'TECNICO',
+  // A FICHA DO COLABORADOR — leitura, como o resto do catálogo: o cadastro
+  // (`/api/people`) vem gerado lá embaixo, com as outras cinco abas.
+  'GET /api/people/:id': 'TECNICO',
+  'GET /api/people/:id/history': 'TECNICO',
+  // Quem opera o sistema: tudo `ADMIN`, leitura inclusive.
+  'GET /api/users': 'ADMIN',
   'POST /api/users': 'ADMIN',
   'PUT /api/users/:id': 'ADMIN',
   'DELETE /api/users/:id': 'ADMIN',
-  'POST /api/users/:id/restore': 'ADMIN',
   'GET /api/endpoints': 'TECNICO',
   'GET /api/endpoints/:id': 'TECNICO',
   'GET /api/assets/:id/machine': 'TECNICO',
@@ -137,7 +146,7 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   //
   // As especificações do catálogo (D9) registram rotas idênticas por entidade:
   // listar, opções, criar, editar, apagar. Declará-las à mão seria repetir o
-  // mesmo bloco cinco vezes e deixar a sexta de fora quando alguém acrescentar
+  // mesmo bloco seis vezes e deixar a sétima de fora quando alguém acrescentar
   // uma spec — exatamente o esquecimento que o D137 existe para pegar.
   //
   // Ler é do técnico (ele escolhe categoria e modelo ao cadastrar); MEXER no
@@ -149,6 +158,8 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
       [`POST /api/${spec.slug}`, 'ADMIN' as const],
       [`PUT /api/${spec.slug}/:id`, 'ADMIN' as const],
       [`DELETE /api/${spec.slug}/:id`, 'ADMIN' as const],
+      // Restaurar, só na tabela com lixeira — o colaborador.
+      ...(spec.lixeira ? [[`POST /api/${spec.slug}/:id/restore`, 'ADMIN' as const] as const] : []),
     ]),
   ),
 };

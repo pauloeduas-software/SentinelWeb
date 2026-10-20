@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { cenarioDePosse, criarItemDeEstoque, criarLocal } from '../helpers/fixtures';
+import { cenarioDePosse, criarItemDeEstoque, criarPosto } from '../helpers/fixtures';
 
 // AS OPERAÇÕES DO ESTOQUE do lado de quem LÊ: a listagem com o saldo, a
 // movimentação como linha do tempo e a ficha do posto com as unidades na mesa.
@@ -38,7 +38,7 @@ describe('a listagem', () => {
     const mouse = await item('Mouse da listagem', 4);
     const teclado = await item('Teclado da listagem', 2);
     expect((await api.post(`/api/stock/items/${mouse.id}/checkout`, {
-      targetType: 'USER', targetUserId: cenario.laura, qty: 3,
+      targetType: 'PERSON', targetPersonId: cenario.laura, qty: 3,
     })).status).toBe(201);
 
     const { status, body } = await api.get<{ total: number; rows: { id: string; qty: number; fora: number; disponivel: number }[] }>(
@@ -69,7 +69,7 @@ describe('a movimentação', () => {
   it('é a linha do tempo do item: entrada, saída e devolução, mais recente primeiro', async () => {
     const fone = await item('Fone da movimentação', 2);
     const saida = await api.post<{ unidades: { id: string }[] }>(`/api/stock/items/${fone.id}/checkout`, {
-      targetType: 'USER', targetUserId: cenario.laura, notes: 'para o home office',
+      targetType: 'PERSON', targetPersonId: cenario.laura, notes: 'para o home office',
     });
     expect((await api.post(`/api/stock/items/${fone.id}/adjust`, { kind: 'ENTRADA', qty: 3 })).status).toBe(201);
     // A devolução não aceita nota: o corpo com chave é 422, o vazio passa.
@@ -95,7 +95,7 @@ describe('a movimentação', () => {
     // 1", não cinco eventos de um.
     const mouse = await item('Mouse do lote na linha do tempo', 5);
     const saida = await api.post<{ unidades: { id: string }[] }>(`/api/stock/items/${mouse.id}/checkout`, {
-      targetType: 'LOCATION', targetLocationId: cenario.mesa1, qty: 5,
+      targetType: 'WORKSTATION', targetWorkstationId: cenario.mesa1, qty: 5,
     });
     expect(saida.status).toBe(201);
 
@@ -113,7 +113,7 @@ describe('a movimentação', () => {
     // arquivo já descreve para a devolução antiga, agora para o lote.
     const cabo = await item('Cabo do lote truncado pela janela', 10);
     const saida = await api.post<{ unidades: { id: string }[] }>(`/api/stock/items/${cabo.id}/checkout`, {
-      targetType: 'LOCATION', targetLocationId: cenario.mesa1, qty: 3,
+      targetType: 'WORKSTATION', targetWorkstationId: cenario.mesa1, qty: 3,
     });
     expect(saida.status).toBe(201);
     expect((await api.post(`/api/stock/items/${cabo.id}/adjust`, { kind: 'ENTRADA', qty: 1 })).status).toBe(201);
@@ -131,7 +131,7 @@ describe('a movimentação', () => {
     // a linha não entraria no `take` e a devolução sumiria sem erro.
     const cabo = await item('Cabo da devolução antiga', 1);
     const saida = await api.post<{ unidades: { id: string }[] }>(`/api/stock/items/${cabo.id}/checkout`, {
-      targetType: 'LOCATION', targetLocationId: cenario.mesa1,
+      targetType: 'WORKSTATION', targetWorkstationId: cenario.mesa1,
     });
     for (let i = 0; i < 3; i += 1) {
       expect((await api.post(`/api/stock/items/${cabo.id}/adjust`, { kind: 'ENTRADA', qty: 1 })).status).toBe(201);
@@ -147,10 +147,10 @@ describe('a movimentação', () => {
 
 describe('a ficha do posto', () => {
   it('lista as unidades de estoque na mesa, uma por unidade, e a devolução as tira dali', async () => {
-    const mesa = await criarLocal(api, { name: 'Mesa com estoque', isWorkstation: true });
+    const mesa = await criarPosto(api, { name: 'Mesa com estoque' });
     const mouse = await item('Mouse da ficha do posto', 3);
     const saida = await api.post<{ unidades: { id: string }[] }>(`/api/stock/items/${mouse.id}/checkout`, {
-      targetType: 'LOCATION', targetLocationId: mesa, qty: 2,
+      targetType: 'WORKSTATION', targetWorkstationId: mesa, qty: 2,
     });
     expect(saida.status).toBe(201);
 
@@ -170,7 +170,7 @@ describe('a ficha do posto', () => {
   it('a devolução de uma unidade já devolvida é 409, e a de um id que não é saída também', async () => {
     const dock = await item('Dock da devolução repetida', 1);
     const saida = await api.post<{ unidades: { id: string }[] }>(`/api/stock/items/${dock.id}/checkout`, {
-      targetType: 'USER', targetUserId: cenario.ana,
+      targetType: 'PERSON', targetPersonId: cenario.ana,
     });
     const unidade = saida.body.unidades[0].id;
 
@@ -193,17 +193,17 @@ describe('a ficha da pessoa', () => {
     const pessoa = cenario.ana;
     const mouse = await item('Mouse da ficha da pessoa', 2);
     const saida = await api.post<{ unidades: { id: string }[] }>(`/api/stock/items/${mouse.id}/checkout`, {
-      targetType: 'USER', targetUserId: pessoa, qty: 2,
+      targetType: 'PERSON', targetPersonId: pessoa, qty: 2,
     });
     expect(saida.status).toBe(201);
 
     type Ficha = { itens: { id: string; item: { name: string } }[] };
-    const antes = await api.get<Ficha>(`/api/users/${pessoa}`);
+    const antes = await api.get<Ficha>(`/api/people/${pessoa}`);
     expect(antes.status).toBe(200);
     expect(antes.body.itens.map((u) => u.item.name)).toEqual(['Mouse da ficha da pessoa', 'Mouse da ficha da pessoa']);
 
     expect((await api.post(`/api/stock/movements/${saida.body.unidades[0].id}/checkin`, {})).status).toBe(200);
-    const depois = await api.get<Ficha>(`/api/users/${pessoa}`);
+    const depois = await api.get<Ficha>(`/api/people/${pessoa}`);
     expect(depois.body.itens.map((u) => u.id)).toEqual([saida.body.unidades[1].id]);
   });
 });

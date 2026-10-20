@@ -172,8 +172,6 @@ export interface EventoDoAtivo {
   action: string;
   /** ISO — `JSON.parse` não reconstrói `Date`. */
   at: string;
-  /** Sempre nulo antes da F3: não havia sessão para dizer quem fez. */
-  actorId: string | null;
   /**
    * O diff (`{ campo: { de, para } }`) misturado com valores soltos
    * (`notes`): o formato varia com a operação, e por isso é lido por

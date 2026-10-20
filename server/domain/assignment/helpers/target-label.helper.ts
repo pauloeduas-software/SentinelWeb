@@ -2,8 +2,10 @@ import type { AlvoPosse } from '../use-cases/resolve-responsibles.usecase';
 
 interface AlvoDaPosse {
   targetType: AlvoPosse;
-  targetUser: { name: string } | null;
-  targetLocation: { name: string } | null;
+  targetPerson: { name: string } | null;
+  targetWorkstation: { name: string } | null;
+  /** O nome por escrito do posto excluído — ver `Assignment.targetWorkstationName`. */
+  targetWorkstationName?: string | null;
 }
 
 /**
@@ -23,6 +25,6 @@ interface AlvoDaPosse {
  * são garantidas pelo CHECK de coerência no banco.
  */
 export function rotuloDoAlvo(assignment: AlvoDaPosse): string | null {
-  if (assignment.targetType === 'USER') return assignment.targetUser?.name ?? null;
-  return assignment.targetLocation?.name ?? null;
+  if (assignment.targetType === 'PERSON') return assignment.targetPerson?.name ?? null;
+  return assignment.targetWorkstation?.name ?? assignment.targetWorkstationName ?? null;
 }

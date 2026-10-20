@@ -11,6 +11,9 @@ export async function listCatalog(
   const where = {
     ...buildCatalogWhere(spec.searchable, query.q),
     ...(filtro && spec.optionFilter ? { [spec.optionFilter.campo]: filtro } : {}),
+    // A lixeira, na tabela que a tem: `deletedAt` explícito faz a extension de
+    // soft delete sair do caminho. Sem `?view=trashed`, a extension esconde.
+    ...(spec.lixeira && query.view === 'trashed' ? { deletedAt: { not: null } } : {}),
   };
 
   // Transação para a contagem e a página saírem do MESMO instante: em duas

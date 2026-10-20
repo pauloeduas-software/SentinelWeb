@@ -30,13 +30,13 @@ export type WorkstationView = 'todos' | 'vagos' | 'ocupados';
  * equipamento nenhum.
  */
 export const POSSE_ABERTA: Prisma.AssignmentWhereInput = {
-  targetType: 'LOCATION',
+  targetType: 'WORKSTATION',
   checkinAt: null,
   asset: { deletedAt: null },
 };
 
 /** Ocupação ABERTA — `endedAt` nulo. É quem responde pelo posto agora. */
-const OCUPACAO_ABERTA: Prisma.LocationOccupantWhereInput = { endedAt: null };
+const OCUPACAO_ABERTA: Prisma.WorkstationOccupantWhereInput = { endedAt: null };
 
 /**
  * Ordem dos ocupantes abertos de um posto.
@@ -46,13 +46,13 @@ const OCUPACAO_ABERTA: Prisma.LocationOccupantWhereInput = { endedAt: null };
  * a lista sair igual a cada consulta — ordem instável faz a tabela "piscar"
  * entre dois refreshes idênticos. É a mesma ordem do `resolve-responsibles`.
  */
-export const OCUPANTES_ABERTOS_ORDER_BY: Prisma.LocationOccupantOrderByWithRelationInput[] = [
+export const OCUPANTES_ABERTOS_ORDER_BY: Prisma.WorkstationOccupantOrderByWithRelationInput[] = [
   { shift: 'asc' },
   { startedAt: 'asc' },
 ];
 
 /** A busca `?q=` varre nome e notas. */
-function buildBuscaWhere(q?: string): Prisma.LocationWhereInput {
+function buildBuscaWhere(q?: string): Prisma.WorkstationWhereInput {
   if (!q) return {};
 
   // `mode: 'insensitive'` é obrigatório: sem ele "mesa" não acha "Mesa 1".
@@ -66,7 +66,7 @@ function buildBuscaWhere(q?: string): Prisma.LocationWhereInput {
  * Tem que ser assim: filtrar a página já paginada faria o `total` do envelope
  * contar postos que a tela não mostra, e a paginação passaria a pular linhas.
  */
-function buildVisaoWhere(view: WorkstationView): Prisma.LocationWhereInput {
+function buildVisaoWhere(view: WorkstationView): Prisma.WorkstationWhereInput {
   if (view === 'ocupados') return { occupants: { some: OCUPACAO_ABERTA } };
 
   // VAGO = tem equipamento e não tem ninguém. As duas metades são necessárias:
@@ -79,19 +79,12 @@ function buildVisaoWhere(view: WorkstationView): Prisma.LocationWhereInput {
   return {};
 }
 
-/**
- * O `where` da listagem.
- *
- * `isWorkstation: true` é o corte da rota inteira: /postos mostra MESA, não
- * filial. A marca nasce com o posto, criado na própria tela de Postos; a aba
- * de Configurações lista localizações gerais e não a mostra nem a edita.
- */
+/** O `where` da listagem: a busca e o recorte de ocupação. */
 export function buildWorkstationWhere(
   q: string | undefined,
   view: WorkstationView,
-): Prisma.LocationWhereInput {
+): Prisma.WorkstationWhereInput {
   return {
-    isWorkstation: true,
     ...buildBuscaWhere(q),
     ...buildVisaoWhere(view),
   };

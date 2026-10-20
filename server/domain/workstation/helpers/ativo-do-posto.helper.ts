@@ -1,7 +1,6 @@
-import type { prisma } from '../../../core/database/prismaClient';
 import type { ClientePosse } from '../../assignment/use-cases/resolve-responsibles.usecase';
 import { travarAtivoOuFalhar } from '../../asset/use-cases/lock-asset.usecase';
-import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
+import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
 
 // NO MÁXIMO UM ATIVO POR POSTO DE TRABALHO.
 //
@@ -12,8 +11,9 @@ import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
 // máquina vinculada" — o agente instalado ou não instalado não muda o que o
 // equipamento é, só o que a ficha dele consegue mostrar.
 //
-// SÓ ONDE `isWorkstation` É VERDADE. Numa sala de reunião ou num depósito a
-// regra não vale — proibir dois computadores lá quebraria o uso que já existe.
+// Vale para TODO posto: só posto recebe entrega de ativo (decisão Y). A sala de
+// reunião com dois computadores não é posto — os dois ficam GUARDADOS nela
+// (`Asset.locationId`), e a localização não tem limite.
 // ═════════════════════════════════════════════════════════════════════════════
 
 /** O ativo que o posto já tem. */
@@ -26,10 +26,6 @@ export interface AtivoDoPosto {
 /**
  * O ativo que já está neste posto, ou `null` quando não há nenhum.
  *
- * `null` também quando a localização NÃO é posto de trabalho: quem chama lê a
- * resposta como "pode entrar", e concentrar a leitura do `isWorkstation` aqui é
- * o que evita as portas divergirem sobre onde a regra vale.
- *
  * `assetId` é o ativo da operação em curso, e ele é EXCLUÍDO da busca: na
  * restauração da lixeira o ativo já tem a posse aberta apontando para o posto, e
  * sem a exclusão ele seria encontrado como "o ativo que já está lá" — a operação
@@ -41,46 +37,31 @@ export interface AtivoDoPosto {
  * POR QUE TRAVAR. Estar dentro da transação não bastaria: em READ COMMITTED
  * duas entregas simultâneas de dois ativos ao mesmo posto leem as duas um
  * estado de antes, nenhuma enxerga a posse que a outra não confirmou, e as duas
- * passam pela guarda — o mesmo furo que a `travarUsuario` fecha na exclusão de
+ * passam pela guarda — o mesmo furo que a `travarPessoa` fecha na exclusão de
  * pessoa, e pelo mesmo motivo nenhum `if` pega. Aqui não há rede no banco: a
- * regra cruza `assignments`, `assets` e `locations`, e índice único é sobre UMA
- * tabela.
+ * regra cruza `assignments` e `assets`, e o índice único da posse aberta é por
+ * ATIVO, não por posto.
  *
- * POR QUE O ATIVO PRIMEIRO, e não só o posto. `update-asset.usecase.ts` grava
- * `locationId`: ele trava a linha do ATIVO no `UPDATE` e depois pede a linha do
- * POSTO, porque o gatilho da FK `assets.locationId` adquire `FOR KEY SHARE` lá
- * — e `FOR KEY SHARE` conflita com `FOR UPDATE`. Travar só o posto aqui
- * inverteria a ordem e fecharia um ciclo: editar o local do ativo A junto com a
- * entrega do ativo A ao local L dava `40P01`, que o error-handler não mapeia e
- * devolve como 500. Com o ativo primeiro, todo caminho do sistema pede ativo
- * antes de posto. O grafo está documentado em `lock-asset.usecase.ts`.
- *
- * A trava do posto é INCONDICIONAL, antes de ler o `isWorkstation`: é uma
- * instrução, sem ramo, e mantém a trava como primeira coisa da função, que é a
- * disciplina de ordem que a `lock-user.usecase.ts` descreve. A contenção é só
- * entre operações que miram o MESMO posto.
+ * POR QUE O ATIVO PRIMEIRO, e não só o posto: é a ordem do sistema inteiro —
+ * usuário → ativo → posto (`lock-asset.usecase.ts`). Quem trava os dois em
+ * ordem oposta fecha um ciclo, e o `40P01` que sai dele o error-handler não
+ * mapeia: vira 500. A contenção é só entre operações que miram o MESMO posto.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 export async function ativoDoPosto(
   client: ClientePosse & ClienteQueTrava,
-  locationId: string,
+  workstationId: string,
   assetId: string,
 ): Promise<AtivoDoPosto | null> {
   await travarAtivoOuFalhar(client, assetId);
 
-  // `${locationId}` vira parâmetro do Postgres, não texto concatenado; o
+  // `${workstationId}` vira parâmetro do Postgres, não texto concatenado; o
   // `::uuid` porque o parâmetro chega como texto e a coluna é `uuid`.
-  await client.$queryRaw`SELECT id FROM locations WHERE id = ${locationId}::uuid FOR UPDATE`;
-
-  const local = await client.location.findUnique({
-    where: { id: locationId },
-    select: { isWorkstation: true },
-  });
-  if (!local?.isWorkstation) return null;
+  await client.$queryRaw`SELECT id FROM workstations WHERE id = ${workstationId}::uuid FOR UPDATE`;
 
   const posse = await client.assignment.findFirst({
     where: {
-      targetLocationId: locationId,
+      targetWorkstationId: workstationId,
       checkinAt: null,
       asset: {
         // `deletedAt: null` À MÃO: a `softDeleteExtension` só age no model do
@@ -98,33 +79,6 @@ export async function ativoDoPosto(
   });
 
   return posse?.asset ?? null;
-}
-
-/**
- * QUANTOS ativos estão entregues a este local, posto de trabalho ou não.
- *
- * Irmão do `ativoDoPosto`, e as diferenças são as que a porta da marca exige:
- * ela CONTA em vez de devolver o primeiro (é a diferença entre "tem um" e "tem
- * três"); não tem ativo em operação para excluir; e NÃO olha o `isWorkstation`,
- * porque quem chama está justamente no ato de ligar a marca — o irmão devolveria
- * `null` aqui, sempre.
- *
- * Sem trava: ligar a marca é operação de cadastro, feita uma vez por mesa, e a
- * guarda existe para impedir o erro de quem marca o local errado — não uma
- * corrida. As portas de posse continuam sendo as que travam.
- */
-export async function contarAtivosNoLocal(
-  client: Pick<typeof prisma, 'assignment'>,
-  locationId: string,
-): Promise<number> {
-  return client.assignment.count({
-    where: {
-      targetLocationId: locationId,
-      checkinAt: null,
-      // O MESMO `deletedAt` do irmão, pelo mesmo motivo: o topo é `assignment`.
-      asset: { deletedAt: null },
-    },
-  });
 }
 
 /** A frase das portas que recusam o segundo ativo. */

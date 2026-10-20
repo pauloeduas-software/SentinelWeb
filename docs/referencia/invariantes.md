@@ -42,17 +42,17 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 2 | Uma ocupação aberta por (posto, pessoa) | **banco** — índice único parcial | 409 `Esta pessoa já ocupa este posto.` (idem) |
 | 3 | O tipo de um status ou de uma categoria em uso não muda | **aplicação** — `status-label.spec.ts`, `category.spec.ts`, com a linha travada | 409 `Não é possível mudar o tipo: status em uso por 200 registros.` |
 | 4 | Estado × posse: ativo entregue não fica `DEPLOYABLE` | **aplicação** — `assert-status-posse.usecase.ts` | 409 `"Disponível" é um status de estoque, e este ativo está entregue. Faça a devolução antes de mudar o status.` |
-| 5 | A forma da posse: um alvo coerente, devolução depois da entrega | **banco** — dois `CHECK` | 409 `Registro já existe` (a API recusa antes, com frase própria) |
-| 6 | Colaborador desativado ou na lixeira não tem posse direta, **assento de licença**, **unidade de estoque** nem ocupação aberta | **aplicação** — 409 na desativação, no `DELETE`, no `checkout` e no cadastro de ocupante + trava de linha | 409 `Este colaborador ainda responde por 2 ativos, ocupa 1 assento de licença, está com 3 itens de estoque e ocupa 1 posto. Devolva o que está com ele e encerre as ocupações antes de excluir.` (ou *antes de desativar*) |
+| 5 | A forma da posse: um alvo coerente, devolução depois da entrega — e só a posse **devolvida** de um posto excluído fica sem FK, com o nome por escrito | **banco** — dois `CHECK` | 409 `Registro já existe` (a API recusa antes, com frase própria) |
+| 6 | Colaborador desativado ou na lixeira não tem posse direta, **assento de licença**, **unidade de estoque** nem ocupação aberta | **aplicação** — 409 na desativação (`personSpec.beforeWrite`), na exclusão (`personSpec.motivoParaNaoExcluir`), no `checkout` e no cadastro de ocupante + trava de linha | 409 `Este colaborador ainda responde por 2 ativos, ocupa 1 assento de licença, está com 3 itens de estoque e ocupa 1 posto. Devolva o que está com ele e encerre as ocupações antes de excluir.` (ou *antes de desativar*) |
 | 9 | O alvo de um assento de licença é UM: pessoa **ou** ativo, nunca os dois, nunca nenhum | **banco** — CHECK `license_seat_alvo_xor` | 422 com o campo que falta (a API recusa antes, com frase própria) |
 | 10 | Um assento de licença não está em duas mãos | **banco** — índice único parcial `license_seat_uma_aberta_por_assento` | 409 `Sem assento livre em "Office 2024": 5 de 5 ocupados.` |
 | 11 | `COUNT(assentos sem retiredAt)` **é** `seatsTotal` | **aplicação** — `reconcile-seats.usecase.ts`, na transação da gravação | 409 `Não há assentos livres suficientes para reduzir o contrato: 2 precisariam ser aposentados e só 1 está livre.` |
 | 12 | Uma máquina é no máximo um ativo, e um ativo no máximo uma máquina | **banco** — `@unique` em `Endpoint.assetId` | 409 `Este ativo já está vinculado a outra máquina. Desfaça aquele vínculo antes, pela aba Máquina do ativo.` |
 | 13 | A mesma sugestão não empilha na fila | **banco** — índice único parcial `sugestao_pendente_por_alvo` | nada: o job trata o `P2002` como "outro já criou" |
-| 17 | Sempre existe alguém, com login, que é `ADMIN` | **aplicação** — `assertSobraAdministrador()`, DEPOIS da escrita e dentro da transação, na edição e na exclusão de usuário | 409 `Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. Dê o cargo de Administrador a outra pessoa com login antes de seguir.` |
-| 19 | No máximo um ativo por posto de trabalho | **aplicação** — três portas: a entrega e a restauração da lixeira (`ativoDoPosto()`, com `FOR UPDATE` na linha do posto) e a da marca (`locationSpec.beforeWrite`, com a linha travada) | 409 `Este posto de trabalho já tem um ativo: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.` |
+| 17 | Sempre existe alguém ativo que é `ADMIN` | **aplicação** — `assertSobraAdministrador()`, DEPOIS da escrita e dentro da transação, na edição e na exclusão de usuário | 409 `Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. Dê o cargo de Administrador a outra pessoa com login antes de seguir.` |
+| 19 | No máximo um ativo por posto de trabalho | **aplicação** — duas portas: a entrega e a restauração da lixeira (`ativoDoPosto()`, com `FOR UPDATE` na linha do posto) | 409 `Este posto de trabalho já tem um ativo: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.` |
 | 20 | Ativo baixado não tem posse aberta nem assento de licença | **aplicação** — duas portas: a baixa (`assertSemPosseParaBaixa` e a contagem de assentos) e a entrega (`checkout-asset`, `checkout-seat`), as duas com o ativo travado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Desfaça a baixa antes.` |
-| 21 | Localização desativada não recebe nada novo | **aplicação** — `assertLocalRecebe()`, em cada porta que entrega, ocupa ou guarda, com a linha do local travada | 409 `"Filial SP" está desativada e não recebe entrega nova.` |
+| 21 | Localização ou posto desativado não recebe nada novo | **aplicação** — `assertLocalRecebe()` em cada porta que guarda (ativo, item, posto) e `assertPostoRecebe()` em cada porta que entrega ou ocupa, com a linha travada | 409 `"Mesa 1" está desativado e não recebe entrega nova.` |
 
 ---
 
@@ -84,11 +84,11 @@ mesmo ativo pode ter sido entregue cem vezes.
 > de ocupante faz o mesmo com a invariante 2 (*"Esta pessoa já ocupa este
 > posto."*).
 
-### 2 — `location_occupants_um_aberto_por_pessoa_local`
+### 2 — `workstation_occupants_um_aberto_por_pessoa_posto`
 
 ```sql
-CREATE UNIQUE INDEX "location_occupants_um_aberto_por_pessoa_local"
-  ON "location_occupants"("locationId", "userId") WHERE "endedAt" IS NULL;
+CREATE UNIQUE INDEX "workstation_occupants_um_aberto_por_pessoa_posto"
+  ON "workstation_occupants"("workstationId", "personId") WHERE "endedAt" IS NULL;
 ```
 
 A mesma pessoa não ocupa o mesmo posto duas vezes ao mesmo tempo. Sem isto,
@@ -187,9 +187,11 @@ posse errada nem gravam "Disponível" num ativo entregue.
 
 ```sql
 ALTER TABLE "assignments" ADD CONSTRAINT "assignments_alvo_coerente" CHECK (
-  num_nonnulls("targetUserId", "targetLocationId") = 1
-  AND (   ("targetType" = 'USER'     AND "targetUserId"     IS NOT NULL)
-       OR ("targetType" = 'LOCATION' AND "targetLocationId" IS NOT NULL))
+     ("targetType" = 'PERSON' AND "targetPersonId" IS NOT NULL AND "targetWorkstationId" IS NULL)
+  OR ("targetType" = 'WORKSTATION' AND "targetPersonId" IS NULL AND (
+          "targetWorkstationId" IS NOT NULL
+       OR ("checkinAt" IS NOT NULL AND "targetWorkstationName" IS NOT NULL)
+     ))
 );
 ALTER TABLE "assignments" ADD CONSTRAINT "assignments_devolucao_nao_antecede_entrega" CHECK (
   "checkinAt" IS NULL OR "checkinAt" >= "checkoutAt"
@@ -200,10 +202,18 @@ Duas afirmações sobre a mesma linha: o alvo polimórfico é **coerente** (uma 
 preenchida, e é a que casa com o `targetType`), e a posse **não fecha antes de
 abrir**.
 
+**A exceção é o posto excluído** ([V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira),
+[Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)): o posto segue a regra do status e
+sai quando nada está nele agora. A posse JÁ DEVOLVIDA para ele perde a FK e
+guarda o nome por escrito em `targetWorkstationName` — e só a devolvida: a aberta
+aponta sempre para o posto. A saída de estoque (`stock_movements_forma`) e a
+ocupação (`workstation_occupants_posto_presente`) têm a mesma exceção, com a mesma
+condição.
+
 **Por que no banco, se o `assertAlvoCoerente` já valida:** porque a validação da
 aplicação defende quem passa pela API, e esta tabela tem outros escritores — o
-seed, um `psql` à mão, uma migração futura. Uma linha com `targetType: 'USER'` e
-`targetLocationId` preenchido é aceita pelo Postgres sem CHECK, e a Camada 3 a resolve como *"sem responsável"* — em
+seed, um `psql` à mão, uma migração futura. Uma linha com `targetType: 'PERSON'` e
+`targetWorkstationId` preenchido é aceita pelo Postgres sem CHECK, e a Camada 3 a resolve como *"sem responsável"* — em
 silêncio, que é o pior jeito de um equipamento sumir de vista.
 
 A `Assignment` era a **única** tabela do modelo de posse sem CHECK: a ocupação é
@@ -222,31 +232,35 @@ a rede de baixo.
 
 ### 6 — Desativado não fica com posse aberta
 
-`server/domain/user/use-cases/lock-user.usecase.ts`, chamada como **primeira**
-instrução da transação em `deleteUser`, `updateUser` (quando a edição desativa),
-`checkoutAsset` (alvo `USER`), `checkoutSeat` (alvo `USER`), `checkoutStock`
-(alvo `USER`) e `addLocationOccupant`.
+`server/domain/person/use-cases/lock-person.usecase.ts`, chamada como **primeira**
+trava da transação na edição do colaborador (`personSpec.beforeWrite`),
+`checkoutAsset` (alvo `PERSON`), `checkoutSeat` (alvo `PERSON`), `checkoutStock`
+(alvo `PERSON`) e `addWorkstationOccupant`.
 
 **QUATRO PONTAS, e são as quatro que fazem alguém responder por equipamento:**
-ativo no nome (`Assignment` alvo `USER`), assento de licença
-(`LicenseSeatCheckout.assignedUserId`), unidade de estoque no nome
-(`StockMovement` de SAIDA alvo `USER`) e ocupação de posto (`LocationOccupant`)
+ativo no nome (`Assignment` alvo `PERSON`), assento de licença
+(`LicenseSeatCheckout.assignedPersonId`), unidade de estoque no nome
+(`StockMovement` de SAIDA alvo `PERSON`) e ocupação de posto (`WorkstationOccupant`)
 — esta última porque ocupante responde pelos ativos e pelo estoque do posto por
 derivação da Camada 3. A pergunta que decide se algo entra aqui não é *"tem
 tabela própria?"*, é ***"alguém responde por isto quando a pessoa sai?"***.
 
-**Desativar é recusado como excluir.** A edição que desliga `isActive` conta as
-mesmas quatro pontas (`count-user-posse.usecase.ts`), com a mesma trava como
-primeira instrução, e responde o mesmo 409 — a frase só troca o fim: *"…antes de
-desativar."* Desativar não fecha nada sozinho: quem sai da empresa some das
-listas de escolha, e a posse que ficasse aberta não teria mais quem a devolvesse
-pela tela.
+**Desativar e excluir contam as quatro pontas abertas.** A edição que desliga
+`isActive` e a exclusão contam as quatro (`count-person-posse.usecase.ts`), com
+a trava antes, e o 409 diz quantas de cada — a frase só troca o fim, *"…antes
+de excluir"* ou *"…antes de desativar"*. Nenhuma das duas fecha nada sozinha:
+quem sai da empresa some das listas de escolha, e a posse que ficasse aberta
+não teria mais quem a devolvesse pela tela.
+
+**Excluir manda para a lixeira** ([V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira)): o histórico — o que já foi devolvido —
+não segura, porque a linha da pessoa fica e continua sendo o que o histórico
+dos ativos aponta.
 
 **As três guardas de leitura são furáveis por corrida**, e a trava é a metade que
 faltava:
 
 ```
-T1 (entrega)       lê o usuário  → isActive: true, segue
+T1 (entrega)       lê a pessoa   → isActive: true, segue
 T2 (desativação)   lê as posses  → não há nenhuma, segue
 T2                 grava isActive = false                 → COMMIT
 T1                 cria a Assignment                      → COMMIT
@@ -257,12 +271,11 @@ que está escrito neles. Em `READ COMMITTED` — o padrão do Postgres e o nosso
 nenhum `if` pega isso: as duas transações leem um estado consistente de antes, e
 nenhuma enxerga o que a outra ainda não confirmou.
 
-E o estado é **invisível**: nada falha, nada é logado como erro. Quem descobre é
-o `DELETE`, meses depois, respondendo 409 *"ainda responde por 1 ativo"* sobre um
-cadastro que a tela mostra como inativo.
+E o estado é **invisível**: nada falha, nada é logado como erro, e a pessoa some
+dos seletores levando um equipamento no nome.
 
 > **A assimetria que existia até o corte do ITAM:** `checkoutAsset` recusava
-> entregar ativo a quem está desativado e `addLocationOccupant` só conferia
+> entregar ativo a quem está desativado e o cadastro de ocupante só conferia
 > existência. Como responsável de posto é DERIVADO da ocupação, a brecha reabria
 > por fora do checkout exatamente a responsabilidade que a desativação fecha — e
 > a fila de reconciliação chegava a oferecer o botão que fazia isso, porque o
@@ -271,16 +284,17 @@ cadastro que a tela mostra como inativo.
 > [A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional).
 
 **A saída** é serializar as duas na linha que as duas disputam: `SELECT … FOR
-UPDATE` na linha do usuário. A segunda transação espera a primeira confirmar, e a
-releitura enxerga o estado novo — aí as guardas que já existem funcionam.
+UPDATE` na linha da pessoa (`people`). A segunda transação espera a primeira
+confirmar, e a releitura enxerga o estado novo — aí as guardas que já existem
+funcionam.
 
-**Ordem de travamento: usuário antes de ativo**, em todo caminho que trave os
+**Ordem de travamento: pessoa antes de ativo**, em todo caminho que trave os
 dois. Duas transações que travam os mesmos recursos em ordens opostas travam uma
 à outra, e o Postgres mata uma com erro. É por isso que a chamada é a **primeira**
-instrução de cada transação, antes de ler ativo e antes de contar posse.
+trava de cada transação, antes de ler ativo e antes de contar posse.
 
-**Por que na aplicação:** um CHECK não faz join, e a regra cruza `users`,
-`assignments` e `location_occupants`. O que o banco oferece aqui é a trava, não
+**Por que na aplicação:** um CHECK não faz join, e a regra cruza `people`,
+`assignments` e `workstation_occupants`. O que o banco oferece aqui é a trava, não
 a verificação.
 
 > **A corrida é testada, não argumentada.** `tests/corridas/posse.test.ts`
@@ -294,7 +308,7 @@ a verificação.
 
 ```sql
 ALTER TABLE "license_seat_checkouts" ADD CONSTRAINT "license_seat_alvo_xor"
-  CHECK (num_nonnulls("assignedUserId", "assignedAssetId") = 1);
+  CHECK (num_nonnulls("assignedPersonId", "assignedAssetId") = 1);
 ```
 
 Duas colunas nuláveis admitem quatro estados, e **dois são mentira**: as duas
@@ -458,38 +472,37 @@ administrador responde 409 sem ninguém ter escrito uma linha para isso.
 
 **E o terceiro caminho foi, de fato, o esquecido.** Até a varredura
 [Q](../decisoes/escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai),
-só a edição chamava a checagem: mandar para a lixeira o único administrador com
-login — inclusive a si mesmo — passava, e o sistema ficava trancado por fora. Hoje
-`deleteUser` a chama no fim da transação, como a edição.
+só a edição chamava a checagem: excluir o único administrador — inclusive a si
+mesmo — passava, e o sistema ficava trancado por fora. Hoje `deleteUser` a chama
+no fim da transação, como a edição.
 
-**Quem conta como administrador precisa poder ENTRAR**: `passwordHash` não nulo
-(a base nasceu sem login — a maior parte dos cadastros existe só para receber
-equipamento), `isActive`, `role = ADMIN` e fora da lixeira. Um "administrador"
-que não faz login não destrava nada. Pela tela ele nem nasce mais: cadastrar ou
-promover alguém a `ADMIN` sem senha é 422
-([R](../decisoes/acesso.md#r--a-senha-nasce-no-cadastro-e-o-login-é-o-e-mail)) — ele só
-aparece por fora dela, pela linha de escape abaixo ou num banco anterior à regra.
+**O último administrador não alcança mais a rede sozinho** desde o
+[W](../decisoes/acesso.md#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo): rebaixar,
+desativar e excluir a si mesmo são recusados antes. Ela continua cobrindo a corrida — dois
+administradores tirando um ao outro no mesmo instante, cada um contando "sobra eu" —, que
+`travarAdministracao` põe em fila. Provado em `tests/invariantes/permissao.test.ts`.
+
+**Quem conta como administrador precisa poder ENTRAR**: `isActive`,
+`role = ADMIN` e a linha existir — excluir apaga (W). A senha não entra na conta porque todo usuário
+tem uma — `passwordHash` é obrigatório desde
+[U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos).
 
 > **O que esta invariante NÃO cobre, e por isso existe a linha de escape:** o
 > caminho da tela. Um restore parcial deixa o sistema de pé e **trancado**, e a
 > saída é `npm run acesso:administrador -- <e-mail>`, que exige acesso ao
 > servidor — e **não** uma rota de emergência, que seria uma rota concedendo
-> `ADMIN` sem ser `ADMIN`. O comando só dá o cargo, a quem já tem senha: se a
-> única conta `ADMIN` perdeu a senha, a troca é direto no banco.
+> `ADMIN` sem ser `ADMIN`. O comando só dá o cargo a um usuário que já existe:
+> se a única conta `ADMIN` perdeu a senha, a troca é direto no banco.
 
 ---
 
 ### 19 — No máximo um ativo por posto de trabalho
 
 ```ts
-// workstation/helpers/ativo-do-posto.helper.ts, nas duas portas que TRAVAM
-// (entrega e restauração da lixeira), dentro da transação
-const ocupante = await ativoDoPosto(tx, locationId, assetId);
+// workstation/helpers/ativo-do-posto.helper.ts, nas duas portas (entrega e
+// restauração da lixeira), dentro da transação
+const ocupante = await ativoDoPosto(tx, workstationId, assetId);
 if (ocupante) throw new AppError(jaTemAtivo(ocupante), 409);
-
-// catalog/specs/location.spec.ts — a porta da MARCA
-const quantos = await contarAtivosNoLocal(client, id);
-if (quantos > 1) throw new AppError(/* … */, 409);
 ```
 
 Um posto de trabalho é uma mesa, uma bancada, um guichê: uma pessoa por turno,
@@ -504,38 +517,36 @@ máquina vinculada": o agente instalado ou não instalado não muda o que o
 equipamento é, só o que a ficha dele consegue mostrar. Um desktop cujo agente
 ainda não chegou já é o computador da mesa, e o segundo é recusado na entrega.
 
-**Por que na aplicação:** a regra cruza `assignments`, `assets` e `locations`
-(`isWorkstation` numa, `deletedAt` noutra). Não é a forma nem a unicidade de uma
-tabela só, então não há índice que a expresse — é o mesmo argumento da
-invariante 6.
+**Por que na aplicação:** a regra cruza `assignments` e `assets` (o `deletedAt`
+do ativo). Não é a forma nem a unicidade de uma tabela só — o índice único da
+posse aberta é por ativo, não por posto —, então não há índice que a expresse.
+É o mesmo argumento da invariante 6.
 
 **E por isso ela trava a linha do posto.** Estar dentro da transação não basta:
 em READ COMMITTED duas entregas simultâneas de dois ativos ao mesmo posto leem
 as duas um estado de antes, nenhuma enxerga a posse que a outra não confirmou, e
-as duas passam. É o mesmo furo que a invariante 6 fecha com `travarUsuario`, e
+as duas passam. É o mesmo furo que a invariante 6 fecha com `travarPessoa`, e
 nenhum `if` o pega. Sem rede no banco, a serialização é explícita:
-`SELECT id FROM locations WHERE id = $1 FOR UPDATE` antes da leitura, na linha
+`SELECT id FROM workstations WHERE id = $1 FOR UPDATE` antes da leitura, na linha
 que as duas transações disputam — depois de travar o ativo, que é a ordem do
 grafo de travas (`lock-asset.usecase.ts`).
 
-**São TRÊS portas, e nenhuma é redundante:**
+**São DUAS portas, e nenhuma é redundante:**
 
 | porta | o que ela impede |
 | --- | --- |
 | `checkout-asset.usecase.ts` | entregar ao posto um segundo ativo |
-| `locationSpec.beforeWrite` | **marcar como posto** um local que já tem mais de um ativo |
 | `restore-asset.usecase.ts` | **restaurar da lixeira** um ativo cuja posse aberta aponta para um posto que, enquanto ele estava fora, recebeu outro |
 
-Sem a segunda, a regra seria contornável pela marca: entregar dois ativos a uma
-sala de reunião, onde a regra não vale, e marcar a sala como posto depois. É
-`mais de um`, e não `um`, porque a regra é "no máximo um": marcar uma sala que
-já tem exatamente um ativo é legítimo, e é como um posto nasce com o
-equipamento já lá. A guarda só dispara na TRANSIÇÃO — um PUT que não menciona a
-marca, ou que a reafirma, não passa por ela.
+Houve uma terceira, a da **marca**: enquanto o posto era uma localização com
+`isWorkstation`, marcar como posto uma sala que já tinha dois ativos contornava
+a entrega. Ela saiu com a marca
+([Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)):
+o posto nasce posto, e só ele recebe entrega.
 
-Sem a terceira, seria contornável pela lixeira: o `delete-asset` só carimba
-`deletedAt` e **não fecha a posse**, e as outras duas portas ignoram o ativo na
-lixeira de propósito — um ativo que nenhuma tela mostra não pode trancar a mesa.
+Sem a segunda, seria contornável pela lixeira: o `delete-asset` só carimba
+`deletedAt` e **não fecha a posse**, e a entrega ignora o ativo na lixeira de
+propósito — um ativo que nenhuma tela mostra não pode trancar a mesa.
 Juntas, as duas decisões abrem o caminho: a vaga é ocupada enquanto o ativo
 está na lixeira, e restaurá-lo o devolve a uma mesa que já não tem lugar para
 ele. A porta reconfere na volta, com o mesmo helper e a mesma frase.
@@ -546,26 +557,18 @@ contornava a entrega, e o vínculo tinha de reconferir. Com a regra sobre o
 ativo, a vaga é decidida na entrega e o vínculo só muda o que a ficha mostra.
 
 **Note o que ela NÃO proíbe:** vários ocupantes no posto, que são o desenho da
-Camada 2; dois ativos em local **sem** `isWorkstation` — a sala de reunião e o
-depósito continuam livres, porque proibir ali quebraria o uso que já existe; e
-o estoque na mesa, que não é ativo. **Posto sem ativo continua válido**: a regra
+Camada 2; dois ativos **guardados** numa localização — a sala de reunião e o
+depósito não recebem entrega, e o que fica guardado neles não tem limite; e o
+estoque na mesa, que não é ativo. **Posto sem ativo continua válido**: a regra
 é "no máximo um", não "exatamente um". (O `postoVago` é outra coisa, e não tem
 relação com esta invariante: ele é posto **sem ocupante** — gente, não máquina.)
 
-**A porta da marca também trava.** Ela trava a linha do local
-(`FOR NO KEY UPDATE`) antes de contar os ativos, e a entrega trava a mesma linha
-`FOR UPDATE`: marcar a sala como posto ao mesmo tempo em que alguém entrega o
-segundo ativo a ela termina com exatamente uma das duas.
-
 > **A regra é testada, não argumentada.** `tests/invariantes/ativo-por-posto.test.ts`
-> cobre a porta da entrega sem agente, os dois ativos na sala de reunião, o que
-> libera a vaga e a porta da restauração; `tests/descoberta/vincular-e-entregar.test.ts`
-> cobre a entrega com agente e prova que desvincular a máquina NÃO libera a vaga;
-> `…-marca.test.ts` cobre a porta da marca, incluindo a sala com UM ativo que
-> vira posto e o PUT que não menciona a marca. **A corrida também:**
-> `tests/corridas/ativo-por-posto.test.ts` dispara duas entregas simultâneas ao
-> mesmo posto e exige que exatamente uma entre, e dispara a marca contra a
-> entrega do segundo ativo.
+> cobre a porta da entrega sem agente, o que libera a vaga e a porta da
+> restauração; `tests/descoberta/vincular-e-entregar.test.ts` cobre a entrega com
+> agente e prova que desvincular a máquina NÃO libera a vaga. **A corrida
+> também:** `tests/corridas/ativo-por-posto.test.ts` dispara duas entregas
+> simultâneas ao mesmo posto e exige que exatamente uma entre.
 
 ---
 
@@ -612,27 +615,32 @@ tela está em [`baixa.md`](baixa.md).
 
 ---
 
-### 21 — Localização desativada não recebe nada novo
+### 21 — Localização ou posto desativado não recebe nada novo
 
 ```ts
 // catalog/helpers/catalog-lock.helper.ts
-await assertLocalRecebe(tx, locationId, 'entrega nova');   // 404 ou 409
+await assertLocalRecebe(tx, locationId, 'ativo novo');            // 404 ou 409
+await assertPostoRecebe(tx, workstationId, 'entrega nova', 'UPDATE');
 ```
 
-A localização com uso não se exclui — apagá-la apagaria **onde** as coisas
-estiveram e **quem** respondia por elas. Ela se desativa (`isActive = false`), e
-desativada não **recebe**: entrega de ativo, saída de estoque, ocupante novo,
-ativo guardado nela. O que já está lá fica — desativar não devolve nem encerra
+A localização e o posto com algo neles **agora** não se excluem
+([V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira),
+[Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)). Desativar
+(`isActive = false`) é outra coisa: continuam na lista, e desativados não
+**recebem** nada novo. O que já está lá fica — desativar não devolve nem encerra
 nada, igual ao colaborador desativado.
 
-**As portas:** `checkout-asset` (entrega), `checkout-stock` (saída de estoque),
-`add-location-occupant` (ocupante), `create-asset` e `update-asset` (o local do
-ativo), `create-stock-item` e `update-stock-item` (o local de guarda do item de
-estoque) — nas duas edições, só quando o local **muda**: o formulário reenvia
-todo campo.
+**As portas da localização** — o que passa a ficar GUARDADO nela: `create-asset`
+e `update-asset` (o local do ativo), `create-stock-item` e `update-stock-item`
+(o local de guarda do item de estoque) e o cadastro do posto
+(`workstationSpec.beforeWrite`, o posto novo ou que se muda para ela) — nas
+edições, só quando o local **muda**: o formulário reenvia todo campo.
 
-**Por que na aplicação:** depende do estado do local no momento da escrita, e
-cruza tabelas. **E por isso trava:** a desativação trava a linha do local
+**As portas do posto** — o que ele RECEBE: `checkout-asset` (entrega),
+`checkout-stock` (saída de estoque) e `add-workstation-occupant` (ocupante).
+
+**Por que na aplicação:** depende do estado do local ou do posto no momento da
+escrita, e cruza tabelas. **E por isso trava:** a desativação trava a linha
 (`FOR NO KEY UPDATE`), e cada porta a lê `FOR SHARE` — a entrega de ativo,
 `FOR UPDATE`, porque logo depois trava o mesmo posto pela invariante 19.
 
@@ -641,14 +649,14 @@ não são **escolhidos** de novo (`assertEscolhaAtiva`) —, mas ali é regra de
 formulário, não fato sobre o lugar: está em
 [`configuracoes.md`](configuracoes.md).
 
-> **Testado:** `tests/invariantes/localizacao.test.ts`.
+> **Testado:** `tests/invariantes/localizacao.test.ts` e `tests/invariantes/posto.test.ts`.
 
 ---
 
 ## O que **não** é invariante, e por isso não está aqui
 
 - **"Quem responde" numa coluna do ativo bate com a `Assignment` aberta.** Não
-  há coluna: o `Asset.assignedToId`, que era cache do caso `USER`, saiu do schema
+  há coluna: o `Asset.assignedToId`, que era cache do caso pessoa, saiu do schema
   ([Q](../decisoes/escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai)),
   e com ele a pergunta de se ele batia. A defesa é **não ter a coluna**, não ter
   uma checagem (`modelo-de-posse.md`).

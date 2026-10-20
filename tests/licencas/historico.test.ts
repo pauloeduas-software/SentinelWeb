@@ -62,8 +62,8 @@ describe('o histórico da licença é legível pela tela', () => {
 
     // Três ocupados: é o caso em que a fórmula antiga do aviso mentia.
     const entregas = await Promise.all([
-      api.post<{ seatId: string }>(`/api/licenses/${trilhaId}/checkout-seat`, { assignedUserId: cenario.laura }),
-      api.post<{ seatId: string }>(`/api/licenses/${trilhaId}/checkout-seat`, { assignedUserId: cenario.ana }),
+      api.post<{ seatId: string }>(`/api/licenses/${trilhaId}/checkout-seat`, { assignedPersonId: cenario.laura }),
+      api.post<{ seatId: string }>(`/api/licenses/${trilhaId}/checkout-seat`, { assignedPersonId: cenario.ana }),
       api.post<{ seatId: string }>(`/api/licenses/${trilhaId}/checkout-seat`, { assignedAssetId: cenario.ativo.id }),
     ]);
     for (const entrega of entregas) expect(entrega.status, JSON.stringify(entrega.body)).toBe(201);

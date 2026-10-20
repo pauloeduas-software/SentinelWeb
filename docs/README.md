@@ -19,7 +19,7 @@ fazer, e por quê, está em [`decisoes/escopo.md`](./decisoes/escopo.md).
 ## Por onde entrar
 
 **Vou mexer no código.** Comece em [`referencia/arquitetura.md`](./referencia/arquitetura.md) —
-as três camadas, os 16 domínios e o que o lint recusa. Se o que você vai mexer tem a ver com
+as três camadas, os 17 domínios e o que o lint recusa. Se o que você vai mexer tem a ver com
 quem responde por um equipamento, [`referencia/modelo-de-posse.md`](./referencia/modelo-de-posse.md)
 é pré-requisito, não leitura opcional.
 
@@ -28,8 +28,11 @@ Rota nova nasce negada, e rota sem permissão declarada **derruba o boot** — �
 antes.
 
 **Vou mexer nas Configurações ou na saída de um ativo.** [`referencia/configuracoes.md`](./referencia/configuracoes.md)
-diz o que cada uma das cinco tabelas é, o que a exclusão e a desativação recusam e quem as usa;
+diz o que cada uma das seis tabelas é, o que a exclusão e a desativação recusam e quem as usa;
 [`referencia/baixa.md`](./referencia/baixa.md), o que é dar baixa — e por que não é status nem lixeira.
+
+**Vou mexer nos postos.** [`referencia/postos.md`](./referencia/postos.md) diz o que o posto é, onde
+se cadastra e o que a exclusão e a desativação recusam.
 
 **Vou mexer no banco.** [`referencia/invariantes.md`](./referencia/invariantes.md) diz o que
 nunca pode ser falso e onde cada regra é defendida, e
@@ -68,7 +71,7 @@ Se você está escrevendo a mesma frase na segunda zona, uma das duas está no l
 2. **Auditoria e revisão não ganham arquivo.** Elas atualizam o documento que revisaram: a
    revisão de um plano entra no plano, a correção de uma referência substitui o parágrafo errado.
    Documento de referência não carrega a lista das suas próprias correções — isso é o `git log`.
-3. **Decisão nova continua a letra** (a próxima é a `U`; a numeração `D` parou no `D164`, pelo
+3. **Decisão nova continua a letra** (a próxima é a `Z`; a numeração `D` parou no `D164`, pelo
    motivo escrito em [*A segunda rodada*](./decisoes/README.md#a-segunda-rodada-ap)), entra no
    arquivo do assunto que ela governa e ganha linha no índice. Se ela corrige uma anterior, as
    duas apontam uma para a outra e a tabela de supersessões cresce.

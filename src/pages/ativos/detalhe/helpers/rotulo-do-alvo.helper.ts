@@ -10,16 +10,18 @@ import type { Assignment } from '../../../../domain/shared/posse.types';
 const TRACO = '—';
 
 export function rotuloDoAlvo(assignment: Assignment): string {
-  if (assignment.targetType === 'USER') {
-    return assignment.targetUser?.name ?? curto(assignment.targetUserId);
+  if (assignment.targetType === 'PERSON') {
+    return assignment.targetPerson?.name ?? curto(assignment.targetPersonId);
   }
 
-  return assignment.targetLocation?.name ?? curto(assignment.targetLocationId);
+  // O posto excluído deixou o nome por escrito: a posse já devolvida perdeu a
+  // ligação com o cadastro, e é este campo que diz por onde o ativo passou.
+  return assignment.targetWorkstation?.name ?? assignment.targetWorkstationName ?? curto(assignment.targetWorkstationId);
 }
 
 /** "no posto Mesa 1" — vazio quando o alvo é a pessoa. */
 export function comoChegouAoAlvo(assignment: Assignment): string | null {
-  return assignment.targetType === 'LOCATION' ? `no posto ${rotuloDoAlvo(assignment)}` : null;
+  return assignment.targetType === 'WORKSTATION' ? `no posto ${rotuloDoAlvo(assignment)}` : null;
 }
 
 /**
@@ -29,13 +31,11 @@ export function comoChegouAoAlvo(assignment: Assignment): string | null {
  * parava ali, e quem precisava ver o resto da mesa (os outros ativos, quem a
  * ocupa, em que turno) tinha que ir a `/postos` e procurar pelo nome.
  *
- * Três condições, e cada uma recusa um caso diferente:
+ * Duas condições, e cada uma recusa um caso diferente:
  *
- *   a posse ABERTA  — o histórico tem mesas antigas, e levar a elas diria que o
- *                     ativo está lá;
- *   alvo LOCATION   — pessoa não tem ficha de posto;
- *   `isWorkstation` — depósito e filial também são `Location`, e mandá-los para
- *                     uma tela chamada "posto" seria o nome errado na tela.
+ *   a posse ABERTA     — o histórico tem mesas antigas, e levar a elas diria
+ *                        que o ativo está lá;
+ *   alvo WORKSTATION   — pessoa não tem ficha de posto.
  *
  * A relação embutida é opcional no contrato (o histórico pode vir enxuto), então
  * sem ela a resposta é `null`: sem id não há para onde ir, e o nome continua
@@ -43,12 +43,10 @@ export function comoChegouAoAlvo(assignment: Assignment): string | null {
  */
 export function postoDaPosseAberta(assignments: readonly Assignment[]): { id: string; name: string } | null {
   const aberta = assignments.find(estaAberta);
-  if (!aberta || aberta.targetType !== 'LOCATION') return null;
+  if (!aberta || aberta.targetType !== 'WORKSTATION') return null;
 
-  const local = aberta.targetLocation;
-  if (!local?.isWorkstation) return null;
-
-  return { id: local.id, name: local.name };
+  const posto = aberta.targetWorkstation;
+  return posto ? { id: posto.id, name: posto.name } : null;
 }
 
 /** A posse está aberta? É `checkinAt` nulo, e é o que decide o rótulo da linha. */

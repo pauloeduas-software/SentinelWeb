@@ -21,7 +21,7 @@ import { travarAtivoOuFalhar } from './lock-asset.usecase';
  * A guarda existe na ida (`assert-retire-posse.usecase.ts`), que é onde o
  * inventário perderia o rastro de quem está com o equipamento.
  */
-export async function unretireAsset(id: string, actorId: string | null = null) {
+export async function unretireAsset(id: string) {
   return prisma.$transaction(async (tx) => {
     // A trava ANTES de ler, a mesma da baixa: sem ela, um duplo clique gravava
     // dois UNRETIRE, e uma reversão atrasada podia apagar uma baixa NOVA feita
@@ -52,7 +52,7 @@ export async function unretireAsset(id: string, actorId: string | null = null) {
       // "voltou ao patrimônio" sem dizer como vendido ou como roubado ele
       // estava — e é justamente essa a pergunta de quem audita a reversão.
       changes: buildChanges(antes, depois, ['retiredAt', 'retiredReason']),
-    }, actorId);
+    });
 
     return depois;
   });

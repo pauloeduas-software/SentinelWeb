@@ -4,7 +4,7 @@ import { INCLUINDO_LIXEIRA } from '../../../core/database/soft-delete.extension'
 // CAMADA 3 do docs/referencia/modelo-de-posse.md — a responsabilidade DERIVADA.
 //
 // Ela NUNCA é coluna. Seria uma quarta fonte de verdade para o que a
-// `Assignment` (Camada 1) e o `LocationOccupant` (Camada 2) já dizem, e a
+// `Assignment` (Camada 1) e o `WorkstationOccupant` (Camada 2) já dizem, e a
 // divergência entre as três seria silenciosa. Aqui ela é calculada na hora, em
 // cima das duas — e é por isso que este arquivo é só leitura: ele não grava nada.
 
@@ -19,7 +19,7 @@ import { INCLUINDO_LIXEIRA } from '../../../core/database/soft-delete.extension'
  */
 export type ClientePosse = Omit<typeof prisma, `$${string}`>;
 
-export type AlvoPosse = 'USER' | 'LOCATION';
+export type AlvoPosse = 'PERSON' | 'WORKSTATION';
 
 /**
  * COMO a responsabilidade chegou até a pessoa.
@@ -33,12 +33,12 @@ type ViaPosse = 'DIRETO' | 'POSTO';
 export interface Responsavel {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
   via: ViaPosse;
   /** Só quando `via === 'POSTO'`: turno é atributo do vínculo pessoa↔posto. */
   shift: string | null;
   /** Só quando `via === 'POSTO'`. */
-  locationName: string | null;
+  workstationName: string | null;
 }
 
 export interface PosseResolvida {
@@ -48,7 +48,7 @@ export interface PosseResolvida {
   targetLabel: string | null;
   responsaveis: Responsavel[];
   /**
-   * Alvo LOCATION sem NENHUM ocupante aberto — equipamento parado em posto
+   * Alvo WORKSTATION sem NENHUM ocupante aberto — equipamento parado em posto
    * vazio. Não é erro: é o sinal operacional que o docs/referencia/modelo-de-posse.md pede e que
    * nenhum ITAM de prateleira responde. Candidato a voltar para o estoque.
    */
@@ -69,35 +69,35 @@ const SELECT_POSSE = {
   id: true,
   assetId: true,
   targetType: true,
-  targetUserId: true,
-  targetLocationId: true,
+  targetPersonId: true,
+  targetWorkstationId: true,
 } as const;
 
 interface PosseAberta {
   id: string;
   assetId: string;
   targetType: AlvoPosse;
-  targetUserId: string | null;
-  targetLocationId: string | null;
+  targetPersonId: string | null;
+  targetWorkstationId: string | null;
 }
 
 interface Pessoa {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
 }
 
 interface OcupanteAberto {
-  locationId: string;
+  workstationId: string;
   shift: string | null;
-  user: Pessoa;
+  person: Pessoa;
 }
 
 /** Tudo que as consultas em lote trouxeram, indexado por id, para o `montar` ser memória pura. */
 interface Dicionarios {
   pessoas: Map<string, Pessoa>;
-  nomesDeLocal: Map<string, string>;
-  ocupantesPorLocal: Map<string, OcupanteAberto[]>;
+  nomesDePosto: Map<string, string>;
+  ocupantesPorPosto: Map<string, OcupanteAberto[]>;
 }
 
 function unicos(ids: (string | null)[]): string[] {
@@ -105,32 +105,32 @@ function unicos(ids: (string | null)[]): string[] {
 }
 
 function pessoaComoResponsavel(pessoa: Pessoa): Responsavel {
-  return { ...pessoa, via: 'DIRETO', shift: null, locationName: null };
+  return { ...pessoa, via: 'DIRETO', shift: null, workstationName: null };
 }
 
-function ocupanteComoResponsavel(ocupante: OcupanteAberto, nomeDoLocal: string | null): Responsavel {
-  return { ...ocupante.user, via: 'POSTO', shift: ocupante.shift, locationName: nomeDoLocal };
+function ocupanteComoResponsavel(ocupante: OcupanteAberto, nomeDoPosto: string | null): Responsavel {
+  return { ...ocupante.person, via: 'POSTO', shift: ocupante.shift, workstationName: nomeDoPosto };
 }
 
 function montar(posse: PosseAberta, dicionarios: Dicionarios): PosseResolvida {
-  if (posse.targetType === 'USER') {
-    const pessoa = posse.targetUserId ? dicionarios.pessoas.get(posse.targetUserId) : undefined;
+  if (posse.targetType === 'PERSON') {
+    const pessoa = posse.targetPersonId ? dicionarios.pessoas.get(posse.targetPersonId) : undefined;
     return {
       assignmentId: posse.id,
-      targetType: 'USER',
+      targetType: 'PERSON',
       targetLabel: pessoa?.name ?? null,
       responsaveis: pessoa ? [pessoaComoResponsavel(pessoa)] : [],
       postoVago: false,
     };
   }
 
-  const nomeDoLocal = posse.targetLocationId ? dicionarios.nomesDeLocal.get(posse.targetLocationId) ?? null : null;
-  const ocupantes = posse.targetLocationId ? dicionarios.ocupantesPorLocal.get(posse.targetLocationId) ?? [] : [];
+  const nomeDoPosto = posse.targetWorkstationId ? dicionarios.nomesDePosto.get(posse.targetWorkstationId) ?? null : null;
+  const ocupantes = posse.targetWorkstationId ? dicionarios.ocupantesPorPosto.get(posse.targetWorkstationId) ?? [] : [];
   return {
     assignmentId: posse.id,
-    targetType: 'LOCATION',
-    targetLabel: nomeDoLocal,
-    responsaveis: ocupantes.map((ocupante) => ocupanteComoResponsavel(ocupante, nomeDoLocal)),
+    targetType: 'WORKSTATION',
+    targetLabel: nomeDoPosto,
+    responsaveis: ocupantes.map((ocupante) => ocupanteComoResponsavel(ocupante, nomeDoPosto)),
     postoVago: ocupantes.length === 0,
   };
 }
@@ -144,7 +144,7 @@ function montar(posse: PosseAberta, dicionarios: Dicionarios): PosseResolvida {
  * para pintar uma página.
  *
  * São no máximo QUATRO `findMany` com `in: [...]`, independentemente de virem 1
- * ou 100 ativos: as posses abertas, as pessoas, os locais e os ocupantes. O
+ * ou 100 ativos: as posses abertas, as pessoas, os postos e os ocupantes. O
  * resto é junção em memória.
  *
  * A versão de um ativo só (`resolverResponsaveis`) chama esta — uma
@@ -168,45 +168,49 @@ export async function resolverResponsaveisEmLote(
   // Frota inteira no estoque: nada mais a perguntar ao banco.
   if (abertas.length === 0) return resultado;
 
-  const idsDePessoa = unicos(abertas.map((posse) => posse.targetUserId));
-  const idsDeLocal = unicos(abertas.map((posse) => posse.targetLocationId));
+  const idsDePessoa = unicos(abertas.map((posse) => posse.targetPersonId));
+  const idsDePosto = unicos(abertas.map((posse) => posse.targetWorkstationId));
 
-  // `INCLUINDO_LIXEIRA` na pessoa NÃO é descuido com a lixeira: é o contrário.
-  // Filtrado, um colaborador na lixeira com o notebook na mão devolveria
-  // `responsaveis: []` — ou seja, "está no estoque", que é falso e é justamente
-  // o equipamento que ninguém quer perder de vista. Aparecendo, ele vira a
-  // pendência de checkin que é.
-  const pessoas = idsDePessoa.length === 0 ? [] : await client.user.findMany({
+  // `INCLUINDO_LIXEIRA` e desativados inclusive. A invariante 6 impede excluir
+  // ou desativar quem está com algo, mas um banco antigo pode ter: filtrado,
+  // esse colaborador devolveria `responsaveis: []` — "está no estoque", que é
+  // falso e é justamente o equipamento que ninguém quer perder de vista.
+  const pessoas = idsDePessoa.length === 0 ? [] : await client.person.findMany({
     where: { id: { in: idsDePessoa }, ...INCLUINDO_LIXEIRA },
     select: { id: true, name: true, email: true },
   });
 
-  // O nome do local vem em consulta própria, e não do ocupante, porque o posto
+  // O nome do posto vem em consulta própria, e não do ocupante, porque o posto
   // VAGO também precisa de rótulo — e ele, por definição, não tem ocupante.
-  const locais = idsDeLocal.length === 0 ? [] : await client.location.findMany({
-    where: { id: { in: idsDeLocal } },
+  const postos = idsDePosto.length === 0 ? [] : await client.workstation.findMany({
+    where: { id: { in: idsDePosto } },
     select: { id: true, name: true },
   });
 
-  const ocupacoes = idsDeLocal.length === 0 ? [] : await client.locationOccupant.findMany({
-    where: { locationId: { in: idsDeLocal }, endedAt: null },
-    select: { locationId: true, shift: true, user: { select: { id: true, name: true, email: true } } },
+  const ocupacoes = idsDePosto.length === 0 ? [] : await client.workstationOccupant.findMany({
+    where: { workstationId: { in: idsDePosto }, endedAt: null },
+    select: { workstationId: true, shift: true, person: { select: { id: true, name: true, email: true } } },
     // Turno e depois antiguidade: a lista sai na mesma ordem a cada chamada, e
     // ordem instável faz a tela "piscar" entre dois refreshes idênticos.
     orderBy: [{ shift: 'asc' }, { startedAt: 'asc' }],
   });
 
-  const ocupantesPorLocal = new Map<string, OcupanteAberto[]>();
-  for (const ocupacao of ocupacoes) {
-    const lista = ocupantesPorLocal.get(ocupacao.locationId);
-    if (lista) lista.push(ocupacao);
-    else ocupantesPorLocal.set(ocupacao.locationId, [ocupacao]);
+  const ocupantesPorPosto = new Map<string, OcupanteAberto[]>();
+  for (const { workstationId, ...ocupacao } of ocupacoes) {
+    // Aberta aponta sempre para o posto (CHECK `workstation_occupants_posto_presente`);
+    // `workstationId` só é nulo na encerrada de um posto excluído, que esta
+    // consulta nem traz. O `if` é para o tipo, não para o dado.
+    if (!workstationId) continue;
+    const ocupante = { ...ocupacao, workstationId };
+    const lista = ocupantesPorPosto.get(workstationId);
+    if (lista) lista.push(ocupante);
+    else ocupantesPorPosto.set(workstationId, [ocupante]);
   }
 
   const dicionarios: Dicionarios = {
     pessoas: new Map(pessoas.map((pessoa) => [pessoa.id, pessoa])),
-    nomesDeLocal: new Map(locais.map((local) => [local.id, local.name])),
-    ocupantesPorLocal,
+    nomesDePosto: new Map(postos.map((posto) => [posto.id, posto.name])),
+    ocupantesPorPosto,
   };
 
   for (const posse of abertas) resultado.set(posse.assetId, montar(posse, dicionarios));

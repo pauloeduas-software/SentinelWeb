@@ -192,7 +192,7 @@ describe('o alerta de assentos abaixo do mínimo', () => {
     expect(body.assentosBaixos.map((linha) => linha.id)).not.toContain(comPiso.id);
 
     // Duas entregas deixam 1 livre, abaixo do piso 2.
-    for (const alvo of [{ assignedUserId: cenario.laura }, { assignedUserId: cenario.ana }]) {
+    for (const alvo of [{ assignedPersonId: cenario.laura }, { assignedPersonId: cenario.ana }]) {
       expect((await api.post(`/api/licenses/${comPiso.id}/checkout-seat`, alvo)).status).toBe(201);
     }
 
@@ -219,7 +219,7 @@ describe('o piso do contrato quando a perda já aconteceu', () => {
       reassignable: false,
     });
 
-    for (const alvo of [{ assignedUserId: cenario.laura }, { assignedUserId: cenario.ana }]) {
+    for (const alvo of [{ assignedPersonId: cenario.laura }, { assignedPersonId: cenario.ana }]) {
       const entrega = await api.post<{ seatId: string }>(
         `/api/licenses/${licenca.id}/checkout-seat`, alvo,
       );
@@ -252,7 +252,7 @@ describe('entregar assento exige contrato de pé', () => {
     });
 
     const recusa = await api.post<{ error: string; status: string }>(
-      `/api/licenses/${licenca.id}/checkout-seat`, { assignedUserId: cenario.laura },
+      `/api/licenses/${licenca.id}/checkout-seat`, { assignedPersonId: cenario.laura },
     );
     expect(recusa.status).toBe(409);
     expect(recusa.body.error).toContain('ENCERRADA');
@@ -265,7 +265,7 @@ describe('entregar assento exige contrato de pé', () => {
     });
 
     const recusa = await api.post<{ error: string }>(
-      `/api/licenses/${licenca.id}/checkout-seat`, { assignedUserId: cenario.laura },
+      `/api/licenses/${licenca.id}/checkout-seat`, { assignedPersonId: cenario.laura },
     );
     expect(recusa.status).toBe(409);
     expect(recusa.body.error).toContain('venceu há 1 dia');
@@ -282,7 +282,7 @@ describe('entregar assento exige contrato de pé', () => {
     });
 
     const entrega = await api.post(
-      `/api/licenses/${licenca.id}/checkout-seat`, { assignedUserId: cenario.laura },
+      `/api/licenses/${licenca.id}/checkout-seat`, { assignedPersonId: cenario.laura },
     );
     expect(entrega.status).toBe(201);
   });

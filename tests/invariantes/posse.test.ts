@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import {
-  cenarioDePosse, criarAtivo, criarColaborador, criarLicenca, criarLocal, diasAFrente, idsDoSeed,
+  cenarioDePosse, criarAtivo, criarColaborador, criarLicenca, criarPosto, diasAFrente, idsDoSeed,
 } from '../helpers/fixtures';
 import { prisma } from '../../server/core/database/prismaClient';
 
@@ -30,16 +30,16 @@ afterAll(async () => {
 describe('invariante 1 — uma posse aberta por ativo', () => {
   it('recusa entregar um ativo que já está com alguém', async () => {
     const primeira = await api.post(`/api/assets/${cenario.ativo.id}/checkout`, {
-      targetType: 'USER',
-      targetUserId: cenario.laura,
+      targetType: 'PERSON',
+      targetPersonId: cenario.laura,
     });
     expect(primeira.status).toBe(201);
 
     // O duplo checkout: dois responsáveis pelo mesmo notebook, nenhum dos dois
     // sabendo — e a Camada 3 sem como escolher entre eles.
     const segunda = await api.post(`/api/assets/${cenario.ativo.id}/checkout`, {
-      targetType: 'USER',
-      targetUserId: cenario.ana,
+      targetType: 'PERSON',
+      targetPersonId: cenario.ana,
     });
     expect(segunda.status).toBe(409);
 
@@ -57,8 +57,8 @@ describe('invariante 1 — uma posse aberta por ativo', () => {
     expect(devolucao.status).toBe(200);
 
     const denovo = await api.post(`/api/assets/${cenario.ativo.id}/checkout`, {
-      targetType: 'USER',
-      targetUserId: cenario.ana,
+      targetType: 'PERSON',
+      targetPersonId: cenario.ana,
     });
     expect(denovo.status).toBe(201);
 
@@ -71,16 +71,16 @@ describe('invariante 1 — uma posse aberta por ativo', () => {
 
 describe('invariante 2 — uma ocupação aberta por (posto, pessoa)', () => {
   it('recusa a mesma pessoa duas vezes no mesmo posto', async () => {
-    const primeira = await api.post(`/api/locations/${cenario.mesa1}/occupants`, {
-      userId: cenario.laura,
+    const primeira = await api.post(`/api/workstations/${cenario.mesa1}/occupants`, {
+      personId: cenario.laura,
       shift: 'Manhã',
     });
     expect(primeira.status).toBe(201);
 
     // Sem esta recusa, a Laura apareceria DUPLICADA em toda resolução de
     // responsável da Mesa 1, e "quantas pessoas usam esta mesa?" mentiria.
-    const segunda = await api.post(`/api/locations/${cenario.mesa1}/occupants`, {
-      userId: cenario.laura,
+    const segunda = await api.post(`/api/workstations/${cenario.mesa1}/occupants`, {
+      personId: cenario.laura,
       shift: 'Tarde',
     });
     expect(segunda.status).toBe(409);
@@ -90,14 +90,14 @@ describe('invariante 2 — uma ocupação aberta por (posto, pessoa)', () => {
     // A chave do índice é o PAR (posto, pessoa). Laura de manhã e Ana à tarde
     // na mesma Mesa 1 é o caso que o Snipe-IT não modela e que o
     // docs/referencia/modelo-de-posse.md existe para resolver (D48).
-    const ana = await api.post(`/api/locations/${cenario.mesa1}/occupants`, {
-      userId: cenario.ana,
+    const ana = await api.post(`/api/workstations/${cenario.mesa1}/occupants`, {
+      personId: cenario.ana,
       shift: 'Tarde',
     });
     expect(ana.status).toBe(201);
 
-    const ocupantes = await prisma.locationOccupant.count({
-      where: { locationId: cenario.mesa1, endedAt: null },
+    const ocupantes = await prisma.workstationOccupant.count({
+      where: { workstationId: cenario.mesa1, endedAt: null },
     });
     expect(ocupantes).toBe(2);
   });
@@ -107,8 +107,8 @@ describe('invariante 2 — uma ocupação aberta por (posto, pessoa)', () => {
     // separadas: ninguém escreveu "Laura e Ana respondem por este monitor" —
     // o sistema deduz de quem ocupa a mesa AGORA.
     const entrega = await api.post(`/api/assets/${cenario.ativo.id}/checkout`, {
-      targetType: 'LOCATION',
-      targetLocationId: cenario.mesa1,
+      targetType: 'WORKSTATION',
+      targetWorkstationId: cenario.mesa1,
     });
     expect(entrega.status).toBe(201);
 
@@ -132,8 +132,8 @@ describe('invariante 4 — estado × posse', () => {
     });
 
     await api.post(`/api/assets/${ativo.id}/checkout`, {
-      targetType: 'USER',
-      targetUserId: cenario.laura,
+      targetType: 'PERSON',
+      targetPersonId: cenario.laura,
     });
 
     // `DEPLOYABLE` ("Disponível", no seed) quer dizer *está no estoque, pode
@@ -159,8 +159,8 @@ describe('invariante 4 — estado × posse', () => {
     });
 
     await api.post(`/api/assets/${ativo.id}/checkout`, {
-      targetType: 'USER',
-      targetUserId: cenario.laura,
+      targetType: 'PERSON',
+      targetPersonId: cenario.laura,
     });
 
     const manutencao = await prisma.statusLabel.findFirstOrThrow({
@@ -174,21 +174,21 @@ describe('invariante 4 — estado × posse', () => {
 });
 
 describe('a devolução escopada ao posto', () => {
-  // A ficha do posto manda `targetLocationId` no checkin: a posse só fecha se
+  // A ficha do posto manda `targetWorkstationId` no checkin: a posse só fecha se
   // for DAQUELE posto. Sem isso, uma ficha velha — o ativo foi devolvido e
   // entregue a outra pessoa entre o carregar e o clique — fecharia a posse da
   // pessoa achando que tirava um mouse da mesa.
   it('recusa fechar a posse que não é deste posto, e diz com quem o ativo está', async () => {
-    const mesa2 = await criarLocal(api, { name: 'Mesa 2 do escopo', isWorkstation: true });
+    const mesa2 = await criarPosto(api, { name: 'Mesa 2 do escopo' });
     const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
 
     // Entregue à Laura, não à Mesa 1: é a ficha velha da Mesa 1 clicando.
     expect((await api.post(`/api/assets/${ativo.id}/checkout`, {
-      targetType: 'USER', targetUserId: cenario.laura,
+      targetType: 'PERSON', targetPersonId: cenario.laura,
     })).status).toBe(201);
 
     const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/checkin`, {
-      targetLocationId: cenario.mesa1,
+      targetWorkstationId: cenario.mesa1,
     });
     expect(status).toBe(409);
     expect(body.error).toMatch(/n[ãa]o est[áa] entregue a este posto/i);
@@ -196,22 +196,22 @@ describe('a devolução escopada ao posto', () => {
 
     // E a posse da Laura continua aberta: é o que o escopo existe para proteger.
     const aberta = await prisma.assignment.findFirst({ where: { assetId: ativo.id, checkinAt: null } });
-    expect(aberta?.targetUserId).toBe(cenario.laura);
+    expect(aberta?.targetPersonId).toBe(cenario.laura);
 
     // Posse em OUTRO posto é a mesma recusa: Mesa 2 não devolve o que é da Mesa 1.
     expect((await api.post(`/api/assets/${ativo.id}/checkin`, {})).status).toBe(200);
     expect((await api.post(`/api/assets/${ativo.id}/checkout`, {
-      targetType: 'LOCATION', targetLocationId: cenario.mesa1,
+      targetType: 'WORKSTATION', targetWorkstationId: cenario.mesa1,
     })).status).toBe(201);
     const deOutraMesa = await api.post<{ error: string }>(`/api/assets/${ativo.id}/checkin`, {
-      targetLocationId: mesa2,
+      targetWorkstationId: mesa2,
     });
     expect(deOutraMesa.status).toBe(409);
     expect(deOutraMesa.body.error).toContain('Mesa 1');
 
     // Do posto certo, fecha.
     expect((await api.post(`/api/assets/${ativo.id}/checkin`, {
-      targetLocationId: cenario.mesa1,
+      targetWorkstationId: cenario.mesa1,
     })).status).toBe(200);
     expect(await prisma.assignment.count({ where: { assetId: ativo.id, checkinAt: null } })).toBe(0);
   });
@@ -223,11 +223,11 @@ describe('quem não está ativo na empresa não recebe equipamento', () => {
       name: 'Marcos Lima', email: 'marcos.inativo@teste.local',
     });
 
-    // A DESATIVAÇÃO PELA PORTA DA TELA — `PUT /api/users/:id` com `isActive`.
+    // A DESATIVAÇÃO PELA PORTA DA TELA — `PUT /api/people/:id` com `isActive`.
     // É o caminho que o formulário usa, e é ele que precisa estar fechado: a
     // guarda do checkout já existia, mas até aqui nada na API sabia desativar
     // alguém, então a recusa era inalcançável por quem usa o sistema.
-    const desativada = await api.put<{ id: string }>(`/api/users/${pessoa}`, { isActive: false });
+    const desativada = await api.put<{ id: string }>(`/api/people/${pessoa}`, { isActive: false });
     expect(desativada.status).toBe(200);
 
     const ativo = await criarAtivo(api, {
@@ -237,8 +237,8 @@ describe('quem não está ativo na empresa não recebe equipamento', () => {
     });
 
     const recusa = await api.post<{ error: string }>(`/api/assets/${ativo.id}/checkout`, {
-      targetType: 'USER',
-      targetUserId: pessoa,
+      targetType: 'PERSON',
+      targetPersonId: pessoa,
     });
 
     // 409 e não 404: a pessoa existe, é o ESTADO dela que recusa.
@@ -251,10 +251,10 @@ describe('quem não está ativo na empresa não recebe equipamento', () => {
     });
     expect(semPosse).toBe(0);
 
-    // E a mudança FICA NO HISTÓRICO da pessoa, com ator: é o que responde
-    // "quem desativou, e quando" agora que não há coluna de data.
+    // E a mudança FICA NO HISTÓRICO da pessoa: é o que responde "quando foi
+    // desativada" agora que não há coluna de data.
     const historico = await api.get<{ rows: { action: string; changes: Record<string, unknown> }[] }>(
-      `/api/users/${pessoa}/history`,
+      `/api/people/${pessoa}/history`,
     );
     const desativacao = historico.body.rows.find(
       (evento) => evento.action === 'UPDATE' && 'isActive' in (evento.changes ?? {}),
@@ -265,17 +265,17 @@ describe('quem não está ativo na empresa não recebe equipamento', () => {
 
   it('e também não ocupa posto de trabalho (409 simétrico)', async () => {
     // A ASSIMETRIA QUE EXISTIA ATÉ AQUI: `checkoutAsset` recusava quem saiu da
-    // empresa, e `addLocationOccupant` só conferia existência. Como responsável
+    // empresa, e `addWorkstationOccupant` só conferia existência. Como responsável
     // de ativo em posto é DERIVADO da ocupação (`resolverResponsaveis`), a
     // brecha reabria por fora do checkout a posse que a desativação fecha — e a
     // fila de reconciliação chegava a oferecer o botão que fazia isso.
     const pessoa = await criarColaborador(api, {
       name: 'Rita Alves', email: 'rita.inativa@teste.local',
     });
-    expect((await api.put(`/api/users/${pessoa}`, { isActive: false })).status).toBe(200);
+    expect((await api.put(`/api/people/${pessoa}`, { isActive: false })).status).toBe(200);
 
-    const recusa = await api.post<{ error: string }>(`/api/locations/${cenario.mesa1}/occupants`, {
-      userId: pessoa,
+    const recusa = await api.post<{ error: string }>(`/api/workstations/${cenario.mesa1}/occupants`, {
+      personId: pessoa,
       shift: 'Manhã',
     });
 
@@ -284,12 +284,12 @@ describe('quem não está ativo na empresa não recebe equipamento', () => {
     expect(recusa.body.error).toMatch(/desativad/i);
 
     // E não ficou meia ocupação.
-    expect(await prisma.locationOccupant.count({
-      where: { locationId: cenario.mesa1, userId: pessoa, endedAt: null },
+    expect(await prisma.workstationOccupant.count({
+      where: { workstationId: cenario.mesa1, personId: pessoa, endedAt: null },
     })).toBe(0);
   });
 
-  it('desativar quem ainda responde por algo é 409 — a mesma recusa da exclusão', async () => {
+  it('desativar quem ainda responde por algo é 409, e a frase diz o quê', async () => {
     // Invariante 6: desativado não responde por nada. A desativação tira a
     // pessoa dos seletores, e a posse que ficasse aberta naquele nome não teria
     // mais quem a devolvesse pela tela.
@@ -302,29 +302,29 @@ describe('quem não está ativo na empresa não recebe equipamento', () => {
       name: 'Notebook da Bia',
     });
     expect((await api.post(`/api/assets/${ativo.id}/checkout`, {
-      targetType: 'USER', targetUserId: pessoa,
+      targetType: 'PERSON', targetPersonId: pessoa,
     })).status).toBe(201);
 
-    const recusa = await api.put<{ error: string }>(`/api/users/${pessoa}`, { isActive: false });
+    const recusa = await api.put<{ error: string }>(`/api/people/${pessoa}`, { isActive: false });
     expect(recusa.status).toBe(409);
     expect(recusa.body.error).toMatch(/responde por 1 ativo/);
     expect(recusa.body.error).toMatch(/antes de desativar/);
-    expect((await prisma.user.findUniqueOrThrow({ where: { id: pessoa } })).isActive).toBe(true);
+    expect((await prisma.person.findUniqueOrThrow({ where: { id: pessoa } })).isActive).toBe(true);
 
     // Devolvido o equipamento, a desativação passa.
     expect((await api.post(`/api/assets/${ativo.id}/checkin`, {})).status).toBe(200);
-    expect((await api.put(`/api/users/${pessoa}`, { isActive: false })).status).toBe(200);
+    expect((await api.put(`/api/people/${pessoa}`, { isActive: false })).status).toBe(200);
   });
 
   it('desativado some dos seletores de pessoa', async () => {
     const pessoa = await criarColaborador(api, {
       name: 'Caio Seletor', email: 'caio.seletor@teste.local',
     });
-    const antes = await api.get<{ id: string }[]>('/api/users/options?q=Caio');
+    const antes = await api.get<{ id: string }[]>('/api/people/options?q=Caio');
     expect(antes.body.map((opcao) => opcao.id)).toContain(pessoa);
 
-    expect((await api.put(`/api/users/${pessoa}`, { isActive: false })).status).toBe(200);
-    const depois = await api.get<{ id: string }[]>('/api/users/options?q=Caio');
+    expect((await api.put(`/api/people/${pessoa}`, { isActive: false })).status).toBe(200);
+    const depois = await api.get<{ id: string }[]>('/api/people/options?q=Caio');
     expect(depois.body.map((opcao) => opcao.id)).not.toContain(pessoa);
   });
 
@@ -332,8 +332,8 @@ describe('quem não está ativo na empresa não recebe equipamento', () => {
     const pessoa = await criarColaborador(api, {
       name: 'Rita Alves', email: 'rita.volta@teste.local',
     });
-    await api.put(`/api/users/${pessoa}`, { isActive: false });
-    expect((await api.put(`/api/users/${pessoa}`, { isActive: true })).status).toBe(200);
+    await api.put(`/api/people/${pessoa}`, { isActive: false });
+    expect((await api.put(`/api/people/${pessoa}`, { isActive: true })).status).toBe(200);
 
     const ativo = await criarAtivo(api, {
       statusId: cenario.statusDeployableId,
@@ -342,8 +342,8 @@ describe('quem não está ativo na empresa não recebe equipamento', () => {
     });
 
     const entrega = await api.post(`/api/assets/${ativo.id}/checkout`, {
-      targetType: 'USER',
-      targetUserId: pessoa,
+      targetType: 'PERSON',
+      targetPersonId: pessoa,
     });
     expect(entrega.status).toBe(201);
   });
@@ -352,7 +352,7 @@ describe('quem não está ativo na empresa não recebe equipamento', () => {
 describe('a baixa recusa', () => {
   it('o ativo entregue — devolva antes', async () => {
     const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
-    await api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'USER', targetUserId: cenario.laura });
+    await api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'PERSON', targetPersonId: cenario.laura });
 
     const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/retire`, { retiredReason: 'VENDIDO' });
     expect(status).toBe(409);
@@ -391,7 +391,7 @@ describe('ativo baixado', () => {
     expect(baixa.status).toBe(200);
 
     const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/checkout`, {
-      targetType: 'USER', targetUserId: cenario.laura,
+      targetType: 'PERSON', targetPersonId: cenario.laura,
     });
     expect(status).toBe(409);
     expect(body.error).toMatch(/teve baixa/);
@@ -399,7 +399,7 @@ describe('ativo baixado', () => {
 
     // Desfeita a baixa, volta a poder sair.
     expect((await api.post(`/api/assets/${ativo.id}/unretire`)).status).toBe(200);
-    const entrega = await api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'USER', targetUserId: cenario.laura });
+    const entrega = await api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'PERSON', targetPersonId: cenario.laura });
     expect(entrega.status).toBe(201);
   });
 });
@@ -435,7 +435,7 @@ describe('o status escolhido à mão', () => {
     const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
 
     const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/checkout`, {
-      targetType: 'USER', targetUserId: cenario.laura, statusId: cenario.statusDeployableId,
+      targetType: 'PERSON', targetPersonId: cenario.laura, statusId: cenario.statusDeployableId,
     });
     expect(status).toBe(422);
     expect(body.error).toMatch(/status de estoque/);
@@ -446,7 +446,7 @@ describe('o status escolhido à mão', () => {
     const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
 
     const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/checkout`, {
-      targetType: 'USER', targetUserId: cenario.laura, statusId: INEXISTENTE,
+      targetType: 'PERSON', targetPersonId: cenario.laura, statusId: INEXISTENTE,
     });
     expect(status).toBe(404);
     expect(body.error).toBe('Status não encontrado.');

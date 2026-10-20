@@ -1,13 +1,12 @@
-import type { Asset } from './asset.types';
+import type { Asset, Referencia } from './asset.types';
 import type { PessoaRef } from './posse.types';
 import type { UnidadeDeEstoque } from './stock.types';
 
 // Contrato do POSTO DE TRABALHO com a API — `GET /api/workstations`.
 //
-// O posto NÃO é uma entidade nova: é uma `Location` marcada com
-// `isWorkstation` (docs/referencia/modelo-de-posse.md, D15). O que este arquivo tipa é a
-// LEITURA que a tela de postos faz — a localização somada ao que o modelo de
-// posse diz sobre ela: quem a ocupa e o que foi entregue a ela.
+// O posto é cadastro próprio, que FICA numa localização (decisão Y). O que este
+// arquivo tipa é a LEITURA que a tela de postos faz — o posto somado ao que o
+// modelo de posse diz sobre ele: quem o ocupa e o que foi entregue a ele.
 //
 // Mora em arquivo próprio, e não dentro de `catalog.types.ts`, porque a linha
 // de catálogo é `Record<string, unknown>` dirigida por spec: aqui os campos são
@@ -25,10 +24,10 @@ export type PostoView = 'todos' | 'vagos' | 'ocupados';
 /** Quem ocupa o posto AGORA, como a listagem mostra: nome e turno. */
 export interface PostoOcupante {
   id: string;
-  userId: string;
+  personId: string;
   /** Texto livre: "Manhã", "Tarde", "12x36 A". Enum engessaria escala real. */
   shift: string | null;
-  user: PessoaRef | null;
+  person: PessoaRef | null;
 }
 
 /** Uma linha da lista de postos. */
@@ -36,13 +35,15 @@ export interface Posto {
   id: string;
   name: string;
   notes: string | null;
-  isWorkstation: boolean;
   /**
-   * `false` = a localização foi DESATIVADA: continua no histórico, mas não
-   * recebe entrega nem ocupante novo.
+   * `false` = o posto foi DESATIVADO: continua no histórico, mas não recebe
+   * entrega nem ocupante novo.
    */
   isActive: boolean;
   createdAt: string;
+  /** A localização onde o posto fica — a Matriz, a Filial. */
+  locationId: string;
+  location: Referencia;
 
   ocupantes: PostoOcupante[];
   totalOcupantes: number;
@@ -79,13 +80,13 @@ export interface AtivoDoPosto extends Asset {
  * O posto aberto — `GET /api/workstations/:id`.
  *
  * SEM os ocupantes: a ficha os lê da rota de ocupação
- * (`/api/locations/:id/occupants`), com período e notas, que é também a que o
+ * (`/api/workstations/:id/occupants`), com período e notas, que é também a que o
  * adicionar/encerrar invalida. Daqui só sai o `vago`, que o servidor deriva
  * da contagem deles.
  */
 export interface PostoDetalhe extends Omit<Posto, 'ocupantes' | 'totalOcupantes'> {
-  /** Os ativos entregues ao posto — posse ABERTA com alvo LOCATION. */
+  /** Os ativos entregues ao posto — posse ABERTA com alvo WORKSTATION. */
   ativos: AtivoDoPosto[];
-  /** As unidades de estoque na mesa — saídas ABERTAS com alvo LOCATION, uma por unidade. */
+  /** As unidades de estoque na mesa — saídas ABERTAS com alvo WORKSTATION, uma por unidade. */
   itens: UnidadeDeEstoque[];
 }

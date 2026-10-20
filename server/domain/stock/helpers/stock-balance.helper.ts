@@ -1,6 +1,6 @@
 import { AppError } from '../../../core/errors/app-error';
 import type { prisma } from '../../../core/database/prismaClient';
-import type { ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
+import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
 
 // O SALDO — a invariante que sustenta o estoque inteiro.
 //
@@ -81,9 +81,9 @@ export async function contarForaDe(client: ClienteEstoque, id: string): Promise<
  * Quem decide o que fazer com a lixeira é a consulta seguinte.
  *
  * ORDEM DE TRAVAMENTO: usuário antes do item. A saída para pessoa trava o
- * colaborador primeiro (`lock-user.usecase.ts`), pelo mesmo motivo da entrega de
+ * colaborador primeiro (`lock-person.usecase.ts`), pelo mesmo motivo da entrega de
  * ativo — e nenhum caminho do sistema trava item e depois usuário. A saída a
- * posto ainda toma `FOR KEY SHARE` na linha do local pelo INSERT (aresta
+ * posto ainda toma `FOR KEY SHARE` na linha do posto pelo INSERT (aresta
  * implícita item → posto), e nenhum caminho trava posto antes de item. O grafo
  * inteiro está em `lock-asset.usecase.ts`.
  */

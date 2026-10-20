@@ -34,8 +34,8 @@ const ROTULO = 'text-text-secondary uppercase tracking-widest text-[10px]';
  * Não há aba "Ativo": ativo é computador, e um computador não é entregue a
  * outro. O que acompanha a máquina (dock, monitor, cabo) é estoque.
  *
- * `rota` é o slug de `/options`. Para pessoas é `users` (GET /api/users/options,
- * server/domain/user/user.maestro.ts) — não `people` nem `colaboradores`.
+ * `rota` é o slug de `/options`. Para pessoas é `people` (GET /api/people/options,
+ * a aba Colaboradores do catálogo) — não `users`, que é quem opera o sistema.
  */
 const ABAS: readonly {
   tipo: AlvoDaPosse;
@@ -46,20 +46,20 @@ const ABAS: readonly {
   ajuda: string;
 }[] = [
   {
-    tipo: 'USER',
+    tipo: 'PERSON',
     rotulo: 'Pessoa',
     icone: User,
-    rota: 'users',
+    rota: 'people',
     rotuloAlvo: 'Colaborador',
     ajuda: 'A posse fica no nome dela: um responsável, direto. É o caso simples.',
   },
   {
-    tipo: 'LOCATION',
+    tipo: 'WORKSTATION',
     rotulo: 'Posto',
     icone: MapPin,
-    rota: 'locations',
-    rotuloAlvo: 'Localização',
-    ajuda: 'A posse fica no LUGAR. Quem responde são os ocupantes dele — podem ser vários, em turnos diferentes. Os ocupantes de cada posto se gerenciam na ficha do posto, em Postos.',
+    rota: 'workstations',
+    rotuloAlvo: 'Posto',
+    ajuda: 'A posse fica no POSTO. Quem responde são os ocupantes dele — podem ser vários, em turnos diferentes. Os ocupantes de cada posto se gerenciam na ficha do posto, em Postos.',
   },
 ];
 
@@ -73,7 +73,7 @@ interface CheckoutModalProps {
 export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }: CheckoutModalProps) {
   const posse = resumoDaPosse(asset.posse);
 
-  const [aba, setAba] = useState<AlvoDaPosse>('USER');
+  const [aba, setAba] = useState<AlvoDaPosse>('PERSON');
   const [alvoId, setAlvoId] = useState('');
   const [statusId, setStatusId] = useState('');
   const [expectedCheckinAt, setExpectedCheckinAt] = useState('');

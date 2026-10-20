@@ -20,9 +20,9 @@ import { dataNaoPassada, textoOpcional, uuidOpcional } from '../../shared/fields
  * `AppError(…, 422)` com o texto que ensina o modelo.
  */
 export const checkoutSchema = z.strictObject({
-  targetType: z.enum(['USER', 'LOCATION'], 'tipo de alvo inválido: use USER ou LOCATION'),
-  targetUserId: uuidOpcional('colaborador'),
-  targetLocationId: uuidOpcional('localização'),
+  targetType: z.enum(['PERSON', 'WORKSTATION'], 'tipo de alvo inválido: use PERSON ou WORKSTATION'),
+  targetPersonId: uuidOpcional('colaborador'),
+  targetWorkstationId: uuidOpcional('posto'),
 
   // Status DEPOIS da entrega. Ausente, o use-case escolhe o primeiro de tipo
   // `IN_USE` — o formulário não deveria precisar saber o id dele.
@@ -44,8 +44,8 @@ export const checkinSchema = z.strictObject({
   // explícita.
   statusId: uuidOpcional('status'),
   checkinNotes: textoOpcional('observações da devolução', 2_000),
-  // O ESCOPO: fecha a posse só se ela aponta para esta localização, senão 409.
+  // O ESCOPO: fecha a posse só se ela aponta para este posto, senão 409.
   // É o que a ficha do posto manda, para não fechar a posse de outra pessoa
   // por cima de uma tela velha (`checkin-asset.usecase.ts`).
-  targetLocationId: uuidOpcional('posto'),
+  targetWorkstationId: uuidOpcional('posto'),
 });

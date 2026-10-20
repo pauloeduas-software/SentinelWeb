@@ -12,9 +12,9 @@ import { criarAtivo, criarFabricante, criarModelo, idsDoSeed } from '../helpers/
 //
 //   `GET /api/workstations/:id`        — se o ativo da mesa tem MÁQUINA
 //                                        vinculada, e qual máquina consultar;
-//   `GET /api/assets/:id/assignments`  — se o alvo da posse aberta é um POSTO,
-//                                        porque só posto tem ficha para onde ir
-//                                        (um depósito também é `Location`).
+//   `GET /api/assets/:id/assignments`  — o POSTO da posse aberta, com id,
+//                                        porque é pelo id que o link leva à
+//                                        ficha dele.
 //
 // Arquivo próprio, e não dentro de `ativo-em-posto.test.ts`: aquele prova que o
 // ativo entregue SAI da listagem, e é `inject` puro. Estes dois abrem uma porta
@@ -26,7 +26,6 @@ let modelId: string;
 let contador = 0;
 
 let posto: string;
-let deposito: string;
 
 beforeAll(async () => {
   api = await criarApi();
@@ -34,13 +33,17 @@ beforeAll(async () => {
   const fabricanteId = await criarFabricante(api, 'Fabricante da Ficha');
   modelId = await criarModelo(api, { categoriaId: seed.categoriaId, fabricanteId });
 
-  const [mesa, dep] = await Promise.all([
-    prisma.location.create({ data: { name: 'Mesa da Ficha', isWorkstation: true }, select: { id: true } }),
-    prisma.location.create({ data: { name: 'Depósito da Ficha', isWorkstation: false }, select: { id: true } }),
-  ]);
-  posto = mesa.id;
-  deposito = dep.id;
+  posto = await criarMesa('Mesa da Ficha');
 });
+
+/** Um posto pelo Prisma: o que se testa aqui é a ficha, não o cadastro. */
+async function criarMesa(name: string): Promise<string> {
+  const criado = await prisma.workstation.create({
+    data: { name, location: { create: { name: `Local de ${name}` } } },
+    select: { id: true },
+  });
+  return criado.id;
+}
 
 afterAll(async () => {
   await api.fechar();
@@ -57,10 +60,10 @@ async function ativo(nome: string, serial: string) {
   });
 }
 
-async function entregarA(assetId: string, locationId: string) {
+async function entregarA(assetId: string, workstationId: string) {
   const r = await api.post(`/api/assets/${assetId}/checkout`, {
-    targetType: 'LOCATION',
-    targetLocationId: locationId,
+    targetType: 'WORKSTATION',
+    targetWorkstationId: workstationId,
   });
   // Pré-condição afirmada: uma entrega que falha em silêncio faz o caso seguinte
   // falhar dizendo outra coisa.
@@ -76,8 +79,8 @@ describe('o que a ficha do posto lê', () => {
     // em outra rota. Duas mesas, porque um posto tem um ativo só (invariante
     // 19): a do desktop com agente e a do desktop cujo agente ainda não chegou.
     const [comAgente, semAgente] = await Promise.all([
-      prisma.location.create({ data: { name: 'Mesa com agente', isWorkstation: true }, select: { id: true } }),
-      prisma.location.create({ data: { name: 'Mesa sem agente', isWorkstation: true }, select: { id: true } }),
+      criarMesa('Mesa com agente'),
+      criarMesa('Mesa sem agente'),
     ]);
 
     const computador = await ativo('Desktop com agente da ficha', 'SN-FICHA-20');
@@ -90,14 +93,14 @@ describe('o que a ficha do posto lê', () => {
     expect((await api.post(`/api/endpoints/${maquina.id}/link`, { assetId: computador.id })).status).toBe(201);
     await agente.fechar();
 
-    await entregarA(computador.id, comAgente.id);
-    await entregarA(semMaquina.id, semAgente.id);
+    await entregarA(computador.id, comAgente);
+    await entregarA(semMaquina.id, semAgente);
 
     const lerMesa = async (id: string) => (await api.get<{ ativos: { id: string; endpointId: string | null }[] }>(
       `/api/workstations/${id}`,
     )).body.ativos;
 
-    const naComAgente = await lerMesa(comAgente.id);
+    const naComAgente = await lerMesa(comAgente);
     expect(naComAgente.map((a) => a.id)).toEqual([computador.id]);
     expect(naComAgente[0].endpointId).toBe(maquina.id);
 
@@ -105,34 +108,20 @@ describe('o que a ficha do posto lê', () => {
     // entre "ainda sem agente" e "a tela não sabe". `toBeNull` recusa
     // `undefined`, então esta linha também pega a relação que não foi
     // selecionada.
-    const naSemAgente = await lerMesa(semAgente.id);
+    const naSemAgente = await lerMesa(semAgente);
     expect(naSemAgente.map((a) => a.id)).toEqual([semMaquina.id]);
     expect(naSemAgente[0].endpointId).toBeNull();
   });
 
-  it('a posse aberta diz se o alvo é POSTO, e não só o nome dele', async () => {
+  it('a posse aberta traz o POSTO com id, e não só o nome dele', async () => {
     // É o que faz a aba Posse do ativo poder LEVAR até a mesa: `PosseResolvida`
-    // carrega o rótulo do alvo e não o id, então o link sai da posse aberta. E
-    // `isWorkstation` é o que separa a mesa do DEPÓSITO — mandar um depósito para
-    // uma tela chamada "posto" seria o nome errado na cara do usuário.
+    // carrega o rótulo do alvo e não o id, então o link sai da posse aberta.
     const naMesa = await ativo('Desktop do alvo', 'SN-FICHA-30');
     await entregarA(naMesa.id, posto);
 
-    const noDeposito = await ativo('Caixa do depósito', 'SN-FICHA-31');
-    await entregarA(noDeposito.id, deposito);
-
-    const daMesa = await api.get<{ targetLocation: { id: string; name: string; isWorkstation: boolean } | null }[]>(
+    const daMesa = await api.get<{ targetWorkstation: { id: string; name: string } | null }[]>(
       `/api/assets/${naMesa.id}/assignments`,
     );
-    expect(daMesa.body[0].targetLocation).toEqual({
-      id: posto,
-      name: 'Mesa da Ficha',
-      isWorkstation: true,
-    });
-
-    const doDeposito = await api.get<{ targetLocation: { isWorkstation: boolean } | null }[]>(
-      `/api/assets/${noDeposito.id}/assignments`,
-    );
-    expect(doDeposito.body[0].targetLocation?.isWorkstation).toBe(false);
+    expect(daMesa.body[0].targetWorkstation).toEqual({ id: posto, name: 'Mesa da Ficha' });
   });
 });

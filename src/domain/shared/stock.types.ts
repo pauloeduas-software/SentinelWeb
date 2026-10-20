@@ -8,7 +8,7 @@ import type { Referencia } from './asset.types';
 // `server/domain/stock/helpers/stock-select.helper.ts`.
 
 type TipoDeMovimento = 'ENTRADA' | 'BAIXA' | 'SAIDA';
-type AlvoDaSaida = 'USER' | 'LOCATION';
+type AlvoDaSaida = 'PERSON' | 'WORKSTATION';
 
 interface CategoriaDoItem extends Referencia {
   type: string;
@@ -44,11 +44,6 @@ export interface ItemDeEstoque {
   disponivel: number;
 }
 
-/** Local embutido como alvo de uma saída. */
-interface LocalDaSaida extends Referencia {
-  isWorkstation: boolean;
-}
-
 /**
  * Um movimento — `GET /api/stock/items/:id` (as unidades fora) e o que a
  * saída, a entrada e a devolução devolvem.
@@ -62,18 +57,18 @@ export interface MovimentoDeEstoque {
   qty: number;
 
   targetType: AlvoDaSaida | null;
-  targetUserId: string | null;
-  targetLocationId: string | null;
+  targetPersonId: string | null;
+  targetWorkstationId: string | null;
+  /** O nome do posto, por escrito, quando ele foi excluído — `targetWorkstation` vem nulo. */
+  targetWorkstationName: string | null;
 
   returnedAt: string | null;
   notes: string | null;
 
-  createdById: string | null;
-  returnedById: string | null;
   createdAt: string;
 
-  targetUser: PessoaRef | null;
-  targetLocation: LocalDaSaida | null;
+  targetPerson: PessoaRef | null;
+  targetWorkstation: Referencia | null;
 }
 
 /** O item aberto: a linha com o saldo e as unidades que estão fora. */
@@ -93,8 +88,8 @@ export interface UnidadeDeEstoque {
   createdAt: string;
   notes: string | null;
   targetType: AlvoDaSaida | null;
-  targetUserId: string | null;
-  targetLocationId: string | null;
+  targetPersonId: string | null;
+  targetWorkstationId: string | null;
   item: {
     id: string;
     name: string;
@@ -119,10 +114,9 @@ export interface EventoDeEstoque {
   qty: number;
   targetLabel: string | null;
   targetType: AlvoDaSaida | null;
-  targetUserId: string | null;
-  targetLocationId: string | null;
+  targetPersonId: string | null;
+  targetWorkstationId: string | null;
   notes: string | null;
-  actorId: string | null;
 }
 
 /**
@@ -176,5 +170,5 @@ export interface AjustarEstoqueInput {
 
 /** O alvo da saída: colaborador OU posto, nunca os dois (checkout-stock.usecase.ts). */
 export type AlvoDaSaidaInput =
-  | { targetType: 'USER'; targetUserId: string; qty: number; notes?: string | null }
-  | { targetType: 'LOCATION'; targetLocationId: string; qty: number; notes?: string | null };
+  | { targetType: 'PERSON'; targetPersonId: string; qty: number; notes?: string | null }
+  | { targetType: 'WORKSTATION'; targetWorkstationId: string; qty: number; notes?: string | null };

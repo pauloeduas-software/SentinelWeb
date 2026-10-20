@@ -5,6 +5,9 @@
 > [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md) · camadas: [`../referencia/arquitetura.md`](../referencia/arquitetura.md) ·
 > o que o sistema recusa: [`../referencia/invariantes.md`](../referencia/invariantes.md).
 >
+> **Status (depois de U):** o assento vai para o colaborador (`assignedPersonId`), não mais para
+> `User`. O que vale hoje está em [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md).
+>
 > Esforço: **P** = até meio dia · **M** = 1 a 3 dias · **G** = mais de 3 dias
 >
 > **Decisões em duas levas, e é de propósito que as duas estejam aqui:**

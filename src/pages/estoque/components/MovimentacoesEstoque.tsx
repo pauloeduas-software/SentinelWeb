@@ -36,15 +36,11 @@ export default function MovimentacoesEstoque({ eventos, carregando }: Movimentac
 
           {evento.targetLabel && (
             <p className="text-[10px] text-text-secondary">
-              {evento.targetType === 'USER' ? 'Colaborador: ' : 'Posto: '}{evento.targetLabel}
+              {evento.targetType === 'PERSON' ? 'Colaborador: ' : 'Posto: '}{evento.targetLabel}
             </p>
           )}
 
           {evento.notes && <p className="text-[10px] text-text-tertiary">{evento.notes}</p>}
-
-          <p className="text-[10px] text-text-tertiary">
-            {evento.actorId ? `por ${evento.actorId.slice(0, 8)}…` : 'sem autor registrado'}
-          </p>
         </li>
       ))}
     </ul>

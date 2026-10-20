@@ -105,9 +105,9 @@ export function useDescobertas() {
      * computador", ou "a máquina foi vinculada, mas a entrega não aconteceu".
      * A faixa de erro no topo da tela ficaria longe de quem clicou.
      */
-    handleVincular: async (endpointId: string, assetId: string, targetLocationId: string | null) => {
-      if (targetLocationId) {
-        await vincularEEntregar.mutateAsync({ endpointId, assetId, targetLocationId });
+    handleVincular: async (endpointId: string, assetId: string, targetWorkstationId: string | null) => {
+      if (targetWorkstationId) {
+        await vincularEEntregar.mutateAsync({ endpointId, assetId, targetWorkstationId });
       } else {
         await vincular.mutateAsync({ endpointId, assetId });
       }

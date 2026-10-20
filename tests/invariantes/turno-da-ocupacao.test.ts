@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '../../server/core/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { cenarioDePosse, criarLocal } from '../helpers/fixtures';
+import { cenarioDePosse, criarPosto } from '../helpers/fixtures';
 
-// CORRIGIR O TURNO DE UMA OCUPAÇÃO ABERTA — `PATCH /api/locations/:id/occupants/:occupantId`.
+// CORRIGIR O TURNO DE UMA OCUPAÇÃO ABERTA — `PATCH /api/workstations/:id/occupants/:occupantId`.
 //
 // O use-case existia desde a F10 e não tinha rota. O que ele resolve é o typo:
 // "manha" cadastrado, "manhã" correto. As duas alternativas erradas estão
@@ -46,10 +46,10 @@ interface Ocupacao {
 let contador = 0;
 async function postoComOcupacao(shift: string | null) {
   contador += 1;
-  const postoId = await criarLocal(api, { name: `Mesa do Turno ${contador}` });
+  const postoId = await criarPosto(api, { name: `Mesa do Turno ${contador}` });
 
-  const { status, body } = await api.post<Ocupacao>(`/api/locations/${postoId}/occupants`, {
-    userId: cenario.laura,
+  const { status, body } = await api.post<Ocupacao>(`/api/workstations/${postoId}/occupants`, {
+    personId: cenario.laura,
     shift,
   });
   expect(status, `ocupação não abriu: ${JSON.stringify(body)}`).toBe(201);
@@ -57,12 +57,12 @@ async function postoComOcupacao(shift: string | null) {
   return { postoId, ocupacao: body };
 }
 
-describe('PATCH /api/locations/:id/occupants/:occupantId', () => {
+describe('PATCH /api/workstations/:id/occupants/:occupantId', () => {
   it('corrige o turno e mantém a MESMA linha, com o mesmo início', async () => {
     const { postoId, ocupacao: aberta } = await postoComOcupacao('manha');
 
     const { status, body } = await api.patch<Ocupacao>(
-      `/api/locations/${postoId}/occupants/${aberta.id}`,
+      `/api/workstations/${postoId}/occupants/${aberta.id}`,
       { shift: 'Manhã' },
     );
 
@@ -77,7 +77,7 @@ describe('PATCH /api/locations/:id/occupants/:occupantId', () => {
   it('deixa a trilha com o de/para do turno', async () => {
     const { postoId, ocupacao: aberta } = await postoComOcupacao('tarde');
     const { status } = await api.patch(
-      `/api/locations/${postoId}/occupants/${aberta.id}`,
+      `/api/workstations/${postoId}/occupants/${aberta.id}`,
       { shift: 'Tarde' },
     );
     // Sem esta linha, um 422 apareceria como "o log é null", que não diz o que
@@ -85,21 +85,19 @@ describe('PATCH /api/locations/:id/occupants/:occupantId', () => {
     expect(status).toBe(200);
 
     const log = await prisma.activityLog.findFirst({
-      where: { entityType: 'LocationOccupant', entityId: aberta.id, action: 'UPDATE' },
+      where: { entityType: 'WorkstationOccupant', entityId: aberta.id, action: 'UPDATE' },
       orderBy: { createdAt: 'desc' },
-      select: { changes: true, actorId: true },
+      select: { changes: true },
     });
 
     expect(log).not.toBeNull();
     expect(log?.changes).toEqual({ shift: { de: 'tarde', para: 'Tarde' } });
-    // O ator sai da sessão, nunca do corpo.
-    expect(log?.actorId).not.toBeNull();
   });
 
   it('aceita `null` para apagar o turno', async () => {
     const { postoId, ocupacao: aberta } = await postoComOcupacao('A definir');
     const { status, body } = await api.patch<Ocupacao>(
-      `/api/locations/${postoId}/occupants/${aberta.id}`,
+      `/api/workstations/${postoId}/occupants/${aberta.id}`,
       { shift: null },
     );
 
@@ -111,7 +109,7 @@ describe('PATCH /api/locations/:id/occupants/:occupantId', () => {
     // É o corpo que a tela manda quando alguém apaga o campo: `''`, não `null`.
     const { postoId, ocupacao: aberta } = await postoComOcupacao('Manhã');
     const vazio = await api.patch<Ocupacao>(
-      `/api/locations/${postoId}/occupants/${aberta.id}`,
+      `/api/workstations/${postoId}/occupants/${aberta.id}`,
       { shift: '' },
     );
     expect(vazio.status).toBe(200);
@@ -120,7 +118,7 @@ describe('PATCH /api/locations/:id/occupants/:occupantId', () => {
     // E só espaços também: o `trim` corre antes.
     const branco = await postoComOcupacao('Tarde');
     const so_espacos = await api.patch<Ocupacao>(
-      `/api/locations/${branco.postoId}/occupants/${branco.ocupacao.id}`,
+      `/api/workstations/${branco.postoId}/occupants/${branco.ocupacao.id}`,
       { shift: '   ' },
     );
     expect(so_espacos.status).toBe(200);
@@ -131,7 +129,7 @@ describe('PATCH /api/locations/:id/occupants/:occupantId', () => {
     const { postoId, ocupacao: aberta } = await postoComOcupacao('Manhã');
 
     const { status } = await api.patch(
-      `/api/locations/${postoId}/occupants/${aberta.id}`,
+      `/api/workstations/${postoId}/occupants/${aberta.id}`,
       { shift: 'x'.repeat(61) },
     );
     expect(status).toBe(422);
@@ -139,10 +137,10 @@ describe('PATCH /api/locations/:id/occupants/:occupantId', () => {
 
   it('recusa ocupação ENCERRADA com 409: histórico não se edita', async () => {
     const { postoId, ocupacao: aberta } = await postoComOcupacao('Manhã');
-    await api.delete(`/api/locations/${postoId}/occupants/${aberta.id}`);
+    await api.delete(`/api/workstations/${postoId}/occupants/${aberta.id}`);
 
     const { status, body } = await api.patch<{ error: string }>(
-      `/api/locations/${postoId}/occupants/${aberta.id}`,
+      `/api/workstations/${postoId}/occupants/${aberta.id}`,
       { shift: 'Tarde' },
     );
 
@@ -152,16 +150,16 @@ describe('PATCH /api/locations/:id/occupants/:occupantId', () => {
 
   it('é ESCOPADA PELO POSTO: o id de outro posto na URL dá 404 e nada muda', async () => {
     const { ocupacao: aberta } = await postoComOcupacao('Manhã');
-    const outroPosto = await criarLocal(api, { name: 'Mesa de Outro Posto' });
+    const outroPosto = await criarPosto(api, { name: 'Mesa de Outro Posto' });
 
     const { status } = await api.patch(
-      `/api/locations/${outroPosto}/occupants/${aberta.id}`,
+      `/api/workstations/${outroPosto}/occupants/${aberta.id}`,
       { shift: 'Noite' },
     );
 
     expect(status).toBe(404);
 
-    const depois = await prisma.locationOccupant.findUniqueOrThrow({
+    const depois = await prisma.workstationOccupant.findUniqueOrThrow({
       where: { id: aberta.id },
       select: { shift: true },
     });
@@ -172,7 +170,7 @@ describe('PATCH /api/locations/:id/occupants/:occupantId', () => {
     const { postoId, ocupacao: aberta } = await postoComOcupacao('Manhã');
 
     const { status } = await api.patch(
-      `/api/locations/${postoId}/occupants/${aberta.id}`,
+      `/api/workstations/${postoId}/occupants/${aberta.id}`,
       {},
     );
     expect(status).toBe(422);

@@ -25,15 +25,15 @@ interface SaidaModalProps {
 }
 
 export default function SaidaModal({ item, onClose, onSubmit }: SaidaModalProps) {
-  const [tipo, setTipo] = useState<'USER' | 'LOCATION'>('USER');
-  const [userId, setUserId] = useState('');
-  const [locationId, setLocationId] = useState('');
+  const [tipo, setTipo] = useState<'PERSON' | 'WORKSTATION'>('PERSON');
+  const [personId, setPersonId] = useState('');
+  const [workstationId, setWorkstationId] = useState('');
   const [qty, setQty] = useState('1');
   const [notes, setNotes] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
-  const alvoId = tipo === 'USER' ? userId : locationId;
+  const alvoId = tipo === 'PERSON' ? personId : workstationId;
   const pronto = alvoId !== '';
 
   const enviar = async (event: React.FormEvent) => {
@@ -42,9 +42,9 @@ export default function SaidaModal({ item, onClose, onSubmit }: SaidaModalProps)
     setErro('');
 
     const quantidade = Number(qty) || 0;
-    const corpo: AlvoDaSaidaInput = tipo === 'USER'
-      ? { targetType: 'USER', targetUserId: userId, qty: quantidade, notes: notes.trim() || null }
-      : { targetType: 'LOCATION', targetLocationId: locationId, qty: quantidade, notes: notes.trim() || null };
+    const corpo: AlvoDaSaidaInput = tipo === 'PERSON'
+      ? { targetType: 'PERSON', targetPersonId: personId, qty: quantidade, notes: notes.trim() || null }
+      : { targetType: 'WORKSTATION', targetWorkstationId: workstationId, qty: quantidade, notes: notes.trim() || null };
 
     try {
       await onSubmit(corpo);
@@ -79,7 +79,7 @@ export default function SaidaModal({ item, onClose, onSubmit }: SaidaModalProps)
           )}
 
           <div className="flex border border-border-sutil w-fit">
-            {([['USER', 'Colaborador', User], ['LOCATION', 'Posto', Armchair]] as const).map(([valor, rotulo, Icone]) => (
+            {([['PERSON', 'Colaborador', User], ['WORKSTATION', 'Posto', Armchair]] as const).map(([valor, rotulo, Icone]) => (
               <button
                 key={valor}
                 type="button"
@@ -95,15 +95,15 @@ export default function SaidaModal({ item, onClose, onSubmit }: SaidaModalProps)
             ))}
           </div>
 
-          {tipo === 'USER' ? (
+          {tipo === 'PERSON' ? (
             <label className="space-y-1.5 block">
               <span className={ROTULO}>Colaborador *</span>
-              <ReferenceSelect rota="users" valor={userId} obrigatorio onChange={setUserId} />
+              <ReferenceSelect rota="people" valor={personId} obrigatorio onChange={setPersonId} />
             </label>
           ) : (
             <label className="space-y-1.5 block">
               <span className={ROTULO}>Posto *</span>
-              <ReferenceSelect rota="locations" valor={locationId} obrigatorio onChange={setLocationId} />
+              <ReferenceSelect rota="workstations" valor={workstationId} obrigatorio onChange={setWorkstationId} />
             </label>
           )}
 

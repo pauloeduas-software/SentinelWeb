@@ -7,10 +7,10 @@ import { assertStatusCoerenteComPosse } from '../../asset/use-cases/assert-statu
 import { travarAtivoOuFalhar } from '../../asset/use-cases/lock-asset.usecase';
 import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
 import {
-  assertEscolhaAtiva, assertLocalRecebe, lerStatusTravado,
+  assertEscolhaAtiva, assertPostoRecebe, lerStatusTravado,
 } from '../../catalog/helpers/catalog-lock.helper';
 import { ASSIGNMENT_SELECT } from '../helpers/assignment-select.helper';
-import { travarUsuarioOuFalhar, type ClienteQueTrava } from '../../user/use-cases/lock-user.usecase';
+import { travarPessoaOuFalhar, type ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
 import { ativoDoPosto, jaTemAtivo } from '../../workstation/helpers/ativo-do-posto.helper';
 import type { AlvoPosse, ClientePosse } from './resolve-responsibles.usecase';
 
@@ -23,8 +23,8 @@ import type { AlvoPosse, ClientePosse } from './resolve-responsibles.usecase';
 
 interface CheckoutData {
   targetType: AlvoPosse;
-  targetUserId?: string | null;
-  targetLocationId?: string | null;
+  targetPersonId?: string | null;
+  targetWorkstationId?: string | null;
   statusId?: string | null;
   expectedCheckinAt?: Date | null;
   checkoutNotes?: string | null;
@@ -37,17 +37,17 @@ interface CheckoutData {
  */
 const JA_ENTREGUE = 'Este ativo já está entregue. Faça a devolução antes.';
 
-const TIPOS_DE_ALVO = ['USER', 'LOCATION'] as const;
+const TIPOS_DE_ALVO = ['PERSON', 'WORKSTATION'] as const;
 
 /** Qual das duas FKs nuláveis pertence a cada `targetType`. */
 const FK_DO_ALVO = {
-  USER: 'targetUserId',
-  LOCATION: 'targetLocationId',
+  PERSON: 'targetPersonId',
+  WORKSTATION: 'targetWorkstationId',
 } as const;
 
 const ROTULO_DO_ALVO = {
-  USER: 'um colaborador (targetUserId)',
-  LOCATION: 'uma localização (targetLocationId)',
+  PERSON: 'um colaborador (targetPersonId)',
+  WORKSTATION: 'um posto (targetWorkstationId)',
 } as const;
 
 /**
@@ -90,16 +90,16 @@ function assertAlvoCoerente(data: CheckoutData): string {
  * consulta e devolve 404 com o nome do que faltou.
  *
  * Pessoa sai por `findFirst`, que o escopo da lixeira alcança: NÃO se entrega
- * equipamento a um cadastro na lixeira. Localização não tem lixeira; ela sai
- * travada, pela marca de desativada.
+ * equipamento a um cadastro na lixeira. Posto sai travado, pela marca de
+ * desativado.
  */
 async function assertAlvoExiste(
   client: ClientePosse & ClienteQueTrava,
   tipo: AlvoPosse,
   alvoId: string,
 ): Promise<void> {
-  if (tipo === 'USER') {
-    const pessoa = await client.user.findFirst({
+  if (tipo === 'PERSON') {
+    const pessoa = await client.person.findFirst({
       where: { id: alvoId },
       select: { id: true, name: true, isActive: true },
     });
@@ -109,7 +109,7 @@ async function assertAlvoExiste(
     // (D32). Quem saiu da empresa continua no cadastro — é o histórico de posse
     // que exige isso —, mas entregar equipamento a ele reabriria, uma linha
     // depois da desativação, exatamente a pendência que a desativação exigiu
-    // fechada (`update-user.usecase.ts`).
+    // fechada (`personSpec.beforeWrite`).
     // 409 e não 404: a pessoa existe, o estado dela é que recusa.
     if (!pessoa.isActive) {
       throw new AppError(`${pessoa.name} está desativado(a) e não pode receber equipamento.`, 409);
@@ -117,11 +117,11 @@ async function assertAlvoExiste(
     return;
   }
 
-  // DESATIVADA é a mesma recusa do colaborador desativado, um degrau acima: o
-  // local continua no histórico e não recebe entrega nova. `UPDATE` e não
+  // DESATIVADO é a mesma recusa do colaborador desativado, um degrau acima: o
+  // posto continua no histórico e não recebe entrega nova. `UPDATE` e não
   // `SHARE`: a invariante 19 trava este mesmo posto `FOR UPDATE` logo adiante,
   // e subir de uma para a outra é deadlock entre duas entregas ao mesmo posto.
-  await assertLocalRecebe(client, alvoId, 'entrega nova', 'UPDATE');
+  await assertPostoRecebe(client, alvoId, 'entrega nova', 'UPDATE');
 }
 
 /**
@@ -172,7 +172,7 @@ export async function assertStatusEscolhivel(client: ClienteQueTrava, statusId: 
   assertEscolhaAtiva(await lerStatusTravado(client, statusId), { rotulo: 'O status' });
 }
 
-export async function checkoutAsset(assetId: string, data: CheckoutData, actorId: string | null) {
+export async function checkoutAsset(assetId: string, data: CheckoutData) {
   // Fora da transação: é validação de FORMATO do corpo, não lê o banco, e
   // abrir transação para recusar um payload incoerente é segurar conexão à toa.
   const alvoId = assertAlvoCoerente(data);
@@ -183,18 +183,18 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, actorId
   // está com alguém — exatamente o estado que o modelo existe para impedir.
   return prisma.$transaction(async (tx) => {
     // A TRAVA, antes de qualquer leitura — e antes do ativo, que é a ordem
-    // combinada (`user/use-cases/lock-user.usecase.ts`).
+    // combinada (`person/use-cases/lock-person.usecase.ts`).
     //
     // Sem ela, `assertAlvoExiste` lê `isActive: true` de um colaborador que uma
     // desativação simultânea está prestes a marcar como inativo, e a posse
     // nasce NO NOME DE UM DESATIVADO — o estado que o D32 existe para impedir e
     // que nenhuma consulta acusa, porque nada falhou.
     //
-    // Só no alvo `USER`: entrega a posto não disputa linha de usuário nenhuma,
+    // Só no alvo `PERSON`: entrega a posto não disputa linha de pessoa nenhuma,
     // e travar à toa só aumentaria a chance de deadlock.
-    if (data.targetType === 'USER') await travarUsuarioOuFalhar(tx, alvoId);
+    if (data.targetType === 'PERSON') await travarPessoaOuFalhar(tx, alvoId);
 
-    // E O ATIVO, logo depois do usuário — a ordem do grafo (`lock-asset.usecase.ts`).
+    // E O ATIVO, logo depois da pessoa — a ordem do grafo (`lock-asset.usecase.ts`).
     //
     // Sem ela, a edição do ativo e a entrega corriam: a edição trocava o status
     // para um de estoque, a guarda estado × posse não via posse nenhuma, a
@@ -248,13 +248,11 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, actorId
       );
     }
 
-    // NO MÁXIMO UM ATIVO POR POSTO — a primeira das TRÊS portas; as outras são
-    // a marca de posto (`catalog/specs/location.spec.ts`) e a restauração da
-    // lixeira (`asset/use-cases/restore-asset.usecase.ts`). Depois de todas as
-    // recusas baratas, e DENTRO da transação: não há índice único embaixo,
-    // porque a regra cruza três tabelas. O helper devolve `null` para local que
-    // não é posto de trabalho.
-    if (data.targetType === 'LOCATION') {
+    // NO MÁXIMO UM ATIVO POR POSTO — a primeira das DUAS portas; a outra é a
+    // restauração da lixeira (`asset/use-cases/restore-asset.usecase.ts`).
+    // Depois de todas as recusas baratas, e DENTRO da transação: não há índice
+    // único embaixo, porque a regra cruza duas tabelas.
+    if (data.targetType === 'WORKSTATION') {
       const ocupante = await ativoDoPosto(tx, alvoId, assetId);
       if (ocupante) throw new AppError(jaTemAtivo(ocupante), 409);
     }
@@ -284,14 +282,10 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, actorId
           // As duas FKs saem do alvo já validado, e não do corpo: gravar a
           // partir de UMA variável é o que garante que a outra fique nula, em
           // vez de depender de o cliente ter mandado só uma.
-          targetUserId: data.targetType === 'USER' ? alvoId : null,
-          targetLocationId: data.targetType === 'LOCATION' ? alvoId : null,
+          targetPersonId: data.targetType === 'PERSON' ? alvoId : null,
+          targetWorkstationId: data.targetType === 'WORKSTATION' ? alvoId : null,
           expectedCheckinAt: data.expectedCheckinAt ?? null,
           checkoutNotes: data.checkoutNotes ?? null,
-          // QUEM ENTREGOU: é o ator da entrega no histórico da pessoa
-          // (`user-history.usecase.ts`). O que ficou para trás continua nulo
-          // de propósito: não há backfill (D24).
-          checkoutById: actorId,
         },
         select: ASSIGNMENT_SELECT,
       });
@@ -334,7 +328,6 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, actorId
           statusId: { de: ativo.statusId, para: statusId },
         },
       },
-      actorId,
     );
 
     return { assignment: posse, asset: ativoAtualizado };

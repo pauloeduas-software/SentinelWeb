@@ -17,7 +17,7 @@ import type { AdjustStockInput } from '../schemas/stock.schema';
 // partir do mesmo estado antigo e uma sumiria sem erro. O delta é aplicado com
 // `increment`/`decrement`, que o Postgres resolve dentro da linha já travada.
 
-export async function adjustStock(itemId: string, data: AdjustStockInput, actorId: string | null) {
+export async function adjustStock(itemId: string, data: AdjustStockInput) {
   return prisma.$transaction(async (tx) => {
     // A TRAVA antes de qualquer leitura, como em toda operação que compara um
     // número lido com o que vai gravar.
@@ -50,7 +50,7 @@ export async function adjustStock(itemId: string, data: AdjustStockInput, actorI
     });
 
     const movimento = await tx.stockMovement.create({
-      data: { itemId, kind: data.kind, qty: data.qty, notes: data.notes ?? null, createdById: actorId },
+      data: { itemId, kind: data.kind, qty: data.qty, notes: data.notes ?? null },
       select: STOCK_MOVEMENT_SELECT,
     });
 
@@ -59,7 +59,7 @@ export async function adjustStock(itemId: string, data: AdjustStockInput, actorI
       entityId: itemId,
       action: 'UPDATE',
       changes: { qty: { de: antes.qty, para: depois.qty }, movimento: { de: null, para: data.kind } },
-    }, actorId);
+    });
 
     return { item: comSaldo(depois, fora), movimento };
   });

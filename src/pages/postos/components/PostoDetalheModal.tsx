@@ -3,7 +3,7 @@ import {
   Armchair, Boxes, MonitorSmartphone, TriangleAlert, Undo2, X,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import OccupantsPanel from '../../components/OccupantsPanel';
+import OccupantsPanel from './OccupantsPanel';
 import TelemetriaDaMaquina from '../../components/TelemetriaDaMaquina';
 import SeloDesativado from './SeloDesativado';
 import {
@@ -11,7 +11,7 @@ import {
 } from '../helpers/postos.helper';
 import { momentoDoEvento } from '../../helpers/historico.helper';
 import type { OccupantInput } from '../../../domain/occupancy/occupancy.queries';
-import type { LocationOccupant, OccupantView } from '../../../domain/shared/posse.types';
+import type { WorkstationOccupant, OccupantView } from '../../../domain/shared/posse.types';
 import type { AtivoDoPosto, Posto, PostoDetalhe } from '../../../domain/shared/workstation.types';
 
 // UM POSTO ABERTO: quem está nele, o que foi entregue a ele e como está a
@@ -30,17 +30,16 @@ import type { AtivoDoPosto, Posto, PostoDetalhe } from '../../../domain/shared/w
 //
 // JANELA SOBRE A ROTA `/postos/:id`, e as duas coisas ao mesmo tempo.
 //
-// Era só janela, e a decisão de então listava três motivos: as operações daqui
-// são feitas e a pessoa volta para a lista, e uma rota desmontaria a listagem
-// perdendo a busca e a página em que ela estava; a mesma operação já é um painel
-// dentro de uma janela na aba Localizações; e um link que ninguém precisava
-// compartilhar não pagava o estado de "id que não existe".
+// Era só janela, por dois motivos: as operações daqui são feitas e a pessoa
+// volta para a lista, e uma rota desmontaria a listagem perdendo a busca e a
+// página em que ela estava; e um link que ninguém precisava compartilhar não
+// pagava o estado de "id que não existe".
 //
-// O TERCEIRO MOTIVO CAIU: o ativo entregue a um posto saiu da listagem de
+// O SEGUNDO MOTIVO CAIU: o ativo entregue a um posto saiu da listagem de
 // ativos, e a busca por etiqueta passou a largar AQUI quem bipou o computador
 // de uma mesa. Virou link que alguém precisa.
 //
-// Os outros dois continuam de pé, e é por isso que a ficha é rota SEM deixar de
+// O primeiro continua de pé, e é por isso que a ficha é rota SEM deixar de
 // ser janela: `/postos/:id` renderiza a mesma tela de `/postos`, com a listagem
 // atrás. Fechar é navegar para `/postos`, e a listagem está lá, como estava.
 // O componente não mudou de forma — só passou a aceitar `posto` nulo, que é o
@@ -55,15 +54,15 @@ interface PostoDetalheModalProps {
   posto: Posto | null;
   detalhe: PostoDetalhe | null;
   carregando: boolean;
-  ocupantes: readonly LocationOccupant[];
+  ocupantes: readonly WorkstationOccupant[];
   ocupantesCarregando: boolean;
   /** A lista de ocupantes falhou — o painel mostra o erro, não "posto vago". */
   ocupantesErro: string | null;
   view: OccupantView;
   onViewChange: (view: OccupantView) => void;
   onAdicionar: (data: OccupantInput) => Promise<void>;
-  onEncerrar: (ocupante: LocationOccupant) => Promise<void>;
-  onCorrigirTurno: (ocupante: LocationOccupant, turno: string) => Promise<void>;
+  onEncerrar: (ocupante: WorkstationOccupant) => Promise<void>;
+  onCorrigirTurno: (ocupante: WorkstationOccupant, turno: string) => Promise<void>;
   /** Tira o ativo desta mesa e devolve ao estoque. O `confirm` é do hook. */
   onDevolver: (ativo: AtivoDoPosto) => Promise<void>;
   devolvendo: boolean;
@@ -112,10 +111,9 @@ export default function PostoDetalheModal({
 
   const ativos = detalhe?.ativos ?? [];
   const itens = detalhe?.itens ?? [];
-  // Cálculo fora do JSX (docs/referencia/arquitetura.md). Num posto marcado a
-  // lista tem no máximo um ativo — é a invariante 19 —, mas esta ficha responde
-  // por qualquer localização, e a sala de reunião pode ter dois. Com máquina
-  // vinculada é o que tem telemetria para mostrar.
+  // Cálculo fora do JSX (docs/referencia/arquitetura.md). A lista tem no
+  // máximo um ativo — é a invariante 19 —, e com máquina vinculada é o que tem
+  // telemetria para mostrar.
   const comMaquina = ativosComMaquina(ativos);
   const vago = detalhe?.vago ?? posto?.vago ?? false;
   const totalAtivos = detalhe?.totalAtivos ?? posto?.totalAtivos ?? 0;
@@ -135,6 +133,10 @@ export default function PostoDetalheModal({
               <Armchair size={16} /> {detalhe?.name ?? posto?.name ?? '…'}
               {desativado && <SeloDesativado />}
             </h2>
+            {/* ONDE a mesa fica: o nome do posto não precisa carregar a filial. */}
+            <p className="mt-1 font-mono text-[10px] text-text-tertiary uppercase tracking-widest">
+              {detalhe?.location.name ?? posto?.location.name ?? ''}
+            </p>
           </div>
           <button onClick={onClose} className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
             <X size={16} />
@@ -177,8 +179,8 @@ export default function PostoDetalheModal({
             </div>
 
             <p className="text-text-tertiary text-[10px] leading-relaxed">
-              São os ativos cuja posse aberta aponta para esta localização — não os que estão
-              guardados aqui. Um ativo pode estar EM um lugar sem ser DO lugar.
+              São os ativos cuja posse aberta aponta para este posto — não os que estão
+              guardados na localização dele. Um ativo pode estar EM um lugar sem ser DO lugar.
               {/* A ENTREGA continua sendo na tela de Ativos, e a DEVOLUÇÃO não é
                   mais: ela saiu de lá para cá porque o ativo entregue a um posto
                   saiu da listagem de Ativos, e a operação ficou na tela que já não
@@ -306,12 +308,9 @@ export default function PostoDetalheModal({
               </p>
             ) : comMaquina.length === 0 ? (
               <p className="text-text-tertiary text-[10px] leading-relaxed border border-border-sutil px-4 py-6 text-center">
-                {/* A frase olha a marca: num posto o ativo é O computador da
-                    mesa; numa sala sem marca pode haver vários, e nenhum deles é
-                    "o" da sala. */}
-                {detalhe?.isWorkstation && ativos.length === 1
+                {ativos.length === 1
                   ? `O computador deste posto é o ${ativos[0].assetTag}${ativos[0].name ? ` (${ativos[0].name})` : ''}, e ele ainda não tem máquina vinculada.`
-                  : `Nenhum dos ${ativos.length} ativos deste local tem máquina vinculada.`}
+                  : `Nenhum dos ${ativos.length} ativos deste posto tem máquina vinculada.`}
                 <span className="block mt-2">
                   A telemetria aparece quando a máquina é vinculada ao ativo, em{' '}
                   <Link to="/descobertas" className="text-status-success hover:underline">Descobertas</Link>.
@@ -319,9 +318,8 @@ export default function PostoDetalheModal({
               </p>
             ) : (
               <>
-                {/* QUAL ativo é este painel: numa sala sem a marca a mesa tem
-                    vários, e sem a etiqueta a telemetria ficaria flutuando sem
-                    dono dentro da ficha. */}
+                {/* QUAL ativo é este painel: sem a etiqueta a telemetria
+                    ficaria flutuando sem dono dentro da ficha. */}
                 <p className="text-text-tertiary text-[10px]">
                   {comMaquina[0].assetTag}
                   {comMaquina[0].name && ` · ${comMaquina[0].name}`}
@@ -334,28 +332,14 @@ export default function PostoDetalheModal({
             {ativos.length > 1 && (
               <p className="flex items-start gap-2 text-status-warning text-[10px] leading-relaxed">
                 <TriangleAlert size={12} className="shrink-0 mt-0.5" />
-                {/* A FRASE OLHA A MARCA em vez de afirmar o que ela é. Dois
-                    ativos num local SEM a marca é estado normal — a sala de
-                    reunião. Num local COM a marca é estado que a invariante 19
-                    recusa nas três portas, e que ainda assim pode existir: dado
-                    de antes da regra, ou a corrida da marca, que não trava a
-                    linha do local. Dizer "a marca está desligada" nos dois casos
-                    seria mentir no segundo, que é justamente o que precisa ser
-                    visto. */}
-                {detalhe?.isWorkstation ? (
-                  <span>
-                    Este posto tem {ativos.length} ativos, e um posto de trabalho tem no máximo UM. É
-                    estado que a regra recusa — ele vem de antes dela, ou de uma marca ligada no mesmo
-                    instante da segunda entrega. Devolva os que não ficam nesta mesa. O painel acima é
-                    do primeiro com máquina; a telemetria de cada um está na ficha dele, na aba Máquina.
-                  </span>
-                ) : (
-                  <span>
-                    Este local tem {ativos.length} ativos. A regra de no máximo um por posto vale para
-                    POSTO DE TRABALHO, e este local não está marcado como um — então aqui é estado
-                    normal. A telemetria de cada um está na ficha dele, na aba Máquina.
-                  </span>
-                )}
+                {/* Estado que a invariante 19 recusa nas duas portas, e que só
+                    um dado de antes da regra traria. Se aparecer, precisa ser
+                    visto — não escondido atrás do primeiro ativo. */}
+                <span>
+                  Este posto tem {ativos.length} ativos, e um posto de trabalho tem no máximo UM.
+                  Devolva os que não ficam nesta mesa. O painel acima é do primeiro com máquina; a
+                  telemetria de cada um está na ficha dele, na aba Máquina.
+                </span>
               </p>
             )}
           </section>

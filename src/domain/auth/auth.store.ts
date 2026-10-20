@@ -85,9 +85,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 //
 // Duas cópias da mesma ordem, e isso é aceito: a do servidor é a que autoriza, e
 // esta só decide o que desenhar. Fazer a tela consultar uma rota para saber que
-// ADMIN alcança TECNICO seria uma requisição para uma constante de três valores.
-export type Cargo = 'USUARIO' | 'TECNICO' | 'ADMIN';
-const ORDEM_DOS_CARGOS: readonly Cargo[] = ['USUARIO', 'TECNICO', 'ADMIN'];
+// ADMIN alcança TECNICO seria uma requisição para uma constante de dois valores.
+export type Cargo = 'TECNICO' | 'ADMIN';
+const ORDEM_DOS_CARGOS: readonly Cargo[] = ['TECNICO', 'ADMIN'];
 
 function alcanca(cargo: Cargo, minimo: Cargo): boolean {
   return ORDEM_DOS_CARGOS.indexOf(cargo) >= ORDEM_DOS_CARGOS.indexOf(minimo);

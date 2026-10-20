@@ -25,7 +25,7 @@ interface Props {
   carregando: boolean;
   ocupado: boolean;
   onTriar: (id: string, reviewState: ReviewState) => void;
-  onVincular: (endpointId: string, assetId: string, targetLocationId: string | null) => Promise<void>;
+  onVincular: (endpointId: string, assetId: string, targetWorkstationId: string | null) => Promise<void>;
 }
 
 const CABECALHO = 'px-3 py-2 text-left text-[10px] uppercase tracking-widest text-text-tertiary font-normal';

@@ -25,6 +25,7 @@ export class CatalogMaestro {
       server.post(base, WRITE_RATE_LIMIT, controller.create);
       server.put(`${base}/:id`, WRITE_RATE_LIMIT, controller.update);
       server.delete(`${base}/:id`, WRITE_RATE_LIMIT, controller.remove);
+      if (spec.lixeira) server.post(`${base}/:id/restore`, WRITE_RATE_LIMIT, controller.restore);
     }
 
     logger.info(`[Maestro] Rotas de Catálogo inicializadas (${CATALOG_SPECS.length} tabelas).`);

@@ -4,14 +4,14 @@ import { conferirSenha, conferirSenhaInexistente, hashSenha, precisaRehash } fro
 import type { SessaoEmitida } from '../auth.types';
 import { carregarSessaoParaValidacao } from './current-user.usecase';
 
-// O login. Cinco recusas, e quatro frases.
+// O login. Quatro recusas, e três frases.
 
 /**
  * A MESMA mensagem para "esse e-mail não tem conta" e para "a senha está errada".
  *
  * Duas frases diferentes seriam um oráculo de quem trabalha aqui: bastaria
- * varrer e-mails até uma delas mudar. E o mesmo raciocínio vale para quem está
- * na lixeira e para quem nunca teve senha — todos caem aqui.
+ * varrer e-mails até uma delas mudar. E o mesmo raciocínio vale para quem foi
+ * excluído — todos caem aqui.
  */
 const CREDENCIAL_INVALIDA = 'E-mail ou senha inválidos.';
 
@@ -36,14 +36,9 @@ interface LoginInput {
 export async function login(
   { email, password }: LoginInput,
 ): Promise<SessaoEmitida> {
-  // O LOGIN É O E-MAIL do cadastro: não existe "nome de usuário" à parte.
-  //
-  // `findFirst`, não `findUnique`: `email` não é @unique no Prisma — a
-  // unicidade é índice PARCIAL (`WHERE deletedAt IS NULL`), para um usuário na
-  // lixeira não travar o recadastro do mesmo e-mail. O efeito colateral é
-  // exatamente o desejado: `findFirst` passa pelo escopo da lixeira, então
-  // quem está apagado não encontra conta nenhuma para entrar.
-  const usuario = await prisma.user.findFirst({
+  // O LOGIN É O E-MAIL do cadastro: não existe "nome de usuário" à parte. Quem
+  // foi excluído não tem mais linha (W), então não encontra conta para entrar.
+  const usuario = await prisma.user.findUnique({
     where: { email },
     select: {
       id: true,
@@ -51,18 +46,14 @@ export async function login(
       failedLoginCount: true,
       lockedUntil: true,
       isActive: true,
-      // O CARGO, na consulta que já estava acontecendo: é ele que decide se
-      // esta conta opera o painel (ver a recusa abaixo).
-      role: true,
       tokenVersion: true,
     },
   });
 
-  // Usuário inexistente, ou colaborador cadastrado só para RECEBER equipamento
-  // (sem `passwordHash`). Os dois gastam o mesmo tempo de um argon2 de verdade:
-  // sem isto, o caminho do usuário inexistente volta em 1 ms contra os 50 ms do
-  // usuário real, e o relógio entrega a lista que a mensagem esconde.
-  if (!usuario?.passwordHash) {
+  // Usuário inexistente gasta o mesmo tempo de um argon2 de verdade: sem isto,
+  // o caminho dele volta em 1 ms contra os 50 ms do usuário real, e o relógio
+  // entrega a lista que a mensagem esconde.
+  if (!usuario) {
     await conferirSenhaInexistente(password);
     throw new AppError(CREDENCIAL_INVALIDA, 401);
   }
@@ -99,37 +90,6 @@ export async function login(
   // inválidos" mandaria essa pessoa procurar um erro de digitação que não há.
   if (!usuario.isActive) {
     throw new AppError('Acesso desativado. Procure o administrador do sistema.', 403);
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // `USUARIO` NÃO ENTRA NO PAINEL, e a recusa é AQUI — não na tela.
-  //
-  // O cargo existe para quem RECEBE equipamento: ele é o alvo de uma entrega,
-  // não um operador. Nenhuma rota de inventário aceita `USUARIO` (o mapa de
-  // `route-permissions.ts` só tem `null` para ler a própria sessão e sair), e
-  // nenhum item do menu dispensa cargo — então deixá-lo entrar produzia uma
-  // sessão que abre um painel VAZIO e responde 403 em tudo que a pessoa tentar.
-  // Isso parece defeito do sistema, e o chamado que chega é "o painel não
-  // carrega", não "eu não tenho acesso".
-  //
-  // A FRASE É PRÓPRIA pelo mesmo motivo da conta desativada: quem chegou aqui
-  // já provou que sabe a senha, então não há nada a enumerar — e ela diz o que
-  // fazer, em vez de mandar a pessoa procurar um erro de digitação que não há.
-  //
-  // 403 e não 401: a credencial está certa. O que falta é autorização, e é o
-  // mesmo código que o `permission-guard` usa para a mesma falta.
-  //
-  // A sessão JÁ EMITIDA de quem for rebaixado para `USUARIO` depois do login
-  // continua valendo até expirar, respondendo 403 em tudo — a releitura por
-  // requisição confere a lixeira e o `isActive`, não o cargo. Fechar isso é
-  // mexer em `carregarSessaoParaValidacao`, e é decisão separada desta.
-  // ─────────────────────────────────────────────────────────────────────────
-  if (usuario.role === 'USUARIO') {
-    throw new AppError(
-      'Este acesso é de colaborador: ele serve para você receber equipamento, não para entrar '
-      + 'no painel. Se você precisa operar o sistema, peça ao administrador o cargo de Técnico.',
-      403,
-    );
   }
 
   // O REHASH TRANSPARENTE: hash gerado com parâmetros antigos é regravado agora,

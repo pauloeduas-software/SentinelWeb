@@ -22,7 +22,7 @@ export interface CreateAssetData {
   purchaseCost?: string | null;
 }
 
-export async function createAsset(data: CreateAssetData, actorId: string | null) {
+export async function createAsset(data: CreateAssetData) {
   // Tudo numa transação: a etiqueta é consumida de um contador global, e se a
   // criação falhar depois disso o número precisa voltar — senão a sequência
   // ganha um buraco a cada erro de validação.
@@ -79,7 +79,6 @@ export async function createAsset(data: CreateAssetData, actorId: string | null)
           assetTag: ativo.assetTag, serial: ativo.serial, modelId: ativo.modelId, statusId: ativo.statusId,
         },
       },
-      actorId,
     );
 
     return ativo;

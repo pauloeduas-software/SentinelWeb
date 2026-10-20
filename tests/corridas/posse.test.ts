@@ -43,12 +43,12 @@ describe('duplo checkout simultâneo do mesmo ativo', () => {
   it('deixa passar exatamente UM', async () => {
     const respostas = await Promise.all([
       api.post(`/api/assets/${cenario.ativo.id}/checkout`, {
-        targetType: 'USER',
-        targetUserId: cenario.laura,
+        targetType: 'PERSON',
+        targetPersonId: cenario.laura,
       }),
       api.post(`/api/assets/${cenario.ativo.id}/checkout`, {
-        targetType: 'USER',
-        targetUserId: cenario.ana,
+        targetType: 'PERSON',
+        targetPersonId: cenario.ana,
       }),
     ]);
 
@@ -74,14 +74,14 @@ describe('duplo checkout simultâneo do mesmo ativo', () => {
 describe('a mesma pessoa cadastrada duas vezes no mesmo posto, ao mesmo tempo', () => {
   it('deixa passar exatamente UMA ocupação', async () => {
     const respostas = await Promise.all([
-      api.post(`/api/locations/${cenario.mesa1}/occupants`, { userId: cenario.ana, shift: 'Manhã' }),
-      api.post(`/api/locations/${cenario.mesa1}/occupants`, { userId: cenario.ana, shift: 'Tarde' }),
+      api.post(`/api/workstations/${cenario.mesa1}/occupants`, { personId: cenario.ana, shift: 'Manhã' }),
+      api.post(`/api/workstations/${cenario.mesa1}/occupants`, { personId: cenario.ana, shift: 'Tarde' }),
     ]);
 
     expect(placar(respostas)[201]).toBe(1);
 
-    const abertas = await prisma.locationOccupant.count({
-      where: { locationId: cenario.mesa1, userId: cenario.ana, endedAt: null },
+    const abertas = await prisma.workstationOccupant.count({
+      where: { workstationId: cenario.mesa1, personId: cenario.ana, endedAt: null },
     });
     expect(abertas).toBe(1);
   });
@@ -127,7 +127,7 @@ describe('edição do ativo para status de ESTOQUE × entrega, ao mesmo tempo', 
 
       const [edicao, entrega] = await Promise.all([
         api.put(`/api/assets/${ativo.id}`, { statusId: outro.body.id }),
-        api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'USER', targetUserId: cenario.laura }),
+        api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'PERSON', targetPersonId: cenario.laura }),
       ]);
       // A entrega sempre passa (o status das duas pontas é disponível); a
       // edição passa se chegou antes e leva 409 se chegou depois.
@@ -153,7 +153,7 @@ describe('baixa × entrega do mesmo ativo, ao mesmo tempo', () => {
 
       const [baixa, entrega] = await Promise.all([
         api.post(`/api/assets/${ativo.id}/retire`, { retiredReason: 'VENDIDO' }),
-        api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'USER', targetUserId: cenario.laura }),
+        api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'PERSON', targetPersonId: cenario.laura }),
       ]);
       // Exatamente uma vence: a que chegar depois encontra a outra feita e
       // leva 409.
@@ -174,7 +174,7 @@ describe('duas devoluções do mesmo ativo, ao mesmo tempo', () => {
     // respondiam 200 — duas linhas de CHECKIN para uma devolução.
     for (let rodada = 0; rodada < 6; rodada += 1) {
       const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
-      const entrega = await api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'USER', targetUserId: cenario.laura });
+      const entrega = await api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'PERSON', targetPersonId: cenario.laura });
       expect(entrega.status).toBe(201);
 
       const respostas = await Promise.all([

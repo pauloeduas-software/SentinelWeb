@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../core/api/apiClient';
-import { userKeys } from '../user/user.queries';
+import { personKeys } from '../person/person.queries';
 import { workstationKeys } from '../workstation/workstation.queries';
 import type { ListEnvelope, ListParamsComCategoria } from '../shared/list.types';
 import type {
@@ -53,7 +53,7 @@ export function useStockMovementsQuery(id: string | null) {
 
 function invalidarEstoqueEPosse(queryClient: ReturnType<typeof useQueryClient>) {
   void queryClient.invalidateQueries({ queryKey: stockKeys.all });
-  void queryClient.invalidateQueries({ queryKey: userKeys.all });
+  void queryClient.invalidateQueries({ queryKey: personKeys.all });
   void queryClient.invalidateQueries({ queryKey: workstationKeys.all });
 }
 

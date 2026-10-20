@@ -25,7 +25,6 @@ import {
  */
 export async function restoreLicense(
   id: string,
-  actorId: string | null,
 ): Promise<LicencaNaResposta> {
   const licenca = await prisma.$transaction(async (tx) => {
     let count: number;
@@ -46,7 +45,7 @@ export async function restoreLicense(
 
     if (count === 0) throw new AppError('Nenhuma licença na lixeira com este identificador.', 404);
 
-    await recordActivity(tx, { entityType: 'License', entityId: id, action: 'RESTORE' }, actorId);
+    await recordActivity(tx, { entityType: 'License', entityId: id, action: 'RESTORE' });
 
     return await tx.license.findFirst({ where: { id }, select: LICENSE_SELECT }) as LinhaDeLicenca;
   });

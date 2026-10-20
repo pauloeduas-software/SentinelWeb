@@ -1,19 +1,18 @@
-import { USER_PUBLIC_SELECT } from '../../user/helpers/user-select.helper';
+import { PERSON_PUBLIC_SELECT } from '../../person/helpers/person-select.helper';
 
 // O que de uma ocupação pode sair para o cliente — em UM lugar só, usado pelas
 // duas listagens, pela criação e pelo encerramento.
 //
-// Allowlist, não `include`: coluna nova em `location_occupants` não aparece em
+// Allowlist, não `include`: coluna nova em `workstation_occupants` não aparece em
 // resposta nenhuma até alguém escrever o nome dela aqui. Com `include`, o
 // contrário — toda coluna nova vaza sozinha, e a Camada 2 guarda vínculo de
 // pessoa com posto de trabalho, que é exatamente o tipo de dado que não pode
 // vazar por descuido.
 //
-// `user` reaproveita `USER_PUBLIC_SELECT` em vez de repetir a lista: uma cópia
-// esquecida na Fase 3 devolveria o `passwordHash` por aqui. Quem decide o que é
-// público de um usuário continua sendo o domínio `user`.
+// `person` reaproveita `PERSON_PUBLIC_SELECT` em vez de repetir a lista: quem
+// decide o que é público de um colaborador é o domínio `person`.
 //
-// `location` vem com id e nome porque a resposta de `/api/users/:id/occupancies`
+// `workstation` vem com id e nome porque a resposta de `/api/people/:id/occupancies`
 // precisa dizer QUAL posto a pessoa ocupa — devolver só o uuid obrigaria a tela
 // a uma consulta por linha (N+1) para escrever "Mesa 1".
 //
@@ -23,8 +22,11 @@ import { USER_PUBLIC_SELECT } from '../../user/helpers/user-select.helper';
 // componente.
 export const OCCUPANT_SELECT = {
   id: true,
-  locationId: true,
-  userId: true,
+  workstationId: true,
+  personId: true,
+  // O nome do posto por escrito, quando ele foi excluído — o histórico da
+  // pessoa o lê no lugar de `workstation`, que vem nulo.
+  workstationName: true,
 
   // Texto livre: "Manhã", "Tarde", "12x36 A" (docs/referencia/modelo-de-posse.md, Camada 2).
   shift: true,
@@ -35,6 +37,6 @@ export const OCCUPANT_SELECT = {
 
   createdAt: true,
 
-  user: { select: USER_PUBLIC_SELECT },
-  location: { select: { id: true, name: true } },
+  person: { select: PERSON_PUBLIC_SELECT },
+  workstation: { select: { id: true, name: true } },
 } as const;

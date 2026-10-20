@@ -6,6 +6,11 @@
 > Camadas: [`../referencia/arquitetura.md`](../referencia/arquitetura.md) · posse:
 > [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md) e [`../decisoes/posse.md`](../decisoes/posse.md).
 >
+> **Status (depois de U e X):** o "ator" desta fase não existe mais — o histórico não guarda quem
+> fez, e `actorId`, `checkoutById`/`checkinById` e o `actor.helper.ts` saíram ([X](../decisoes/acesso.md#x--o-histórico-não-guarda-quem-fez)). O cargo `USUARIO`
+> também: `users` guarda só quem entra no sistema, todos com senha, e quem recebe equipamento é
+> colaborador ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)). O que vale hoje está em [`../referencia/acesso.md`](../referencia/acesso.md).
+>
 > Esforço: **P** = até meio dia · **M** = 1 a 3 dias · **G** = mais de 3 dias
 
 ## Objetivo

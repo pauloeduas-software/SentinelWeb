@@ -149,9 +149,9 @@ export function useVincularEEntregar() {
     void queryClient.invalidateQueries({ queryKey: workstationKeys.all });
   };
   return useMutation({
-    mutationFn: async ({ endpointId, assetId, targetLocationId }: {
-      endpointId: string; assetId: string; targetLocationId: string;
-    }) => (await apiClient.post(`/endpoints/${endpointId}/link-and-checkout`, { assetId, targetLocationId })).data,
+    mutationFn: async ({ endpointId, assetId, targetWorkstationId }: {
+      endpointId: string; assetId: string; targetWorkstationId: string;
+    }) => (await apiClient.post(`/endpoints/${endpointId}/link-and-checkout`, { assetId, targetWorkstationId })).data,
     onSuccess: invalidarComPosto,
     onError: invalidarComPosto,
   });

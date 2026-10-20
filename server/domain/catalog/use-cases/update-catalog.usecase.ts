@@ -9,7 +9,6 @@ export async function updateCatalog(
   spec: CatalogSpec,
   id: string,
   data: Record<string, unknown>,
-  actorId: string | null,
 ): Promise<Record<string, unknown>> {
   return prisma.$transaction(async (tx) => {
     const delegate = spec.delegate(tx);
@@ -31,7 +30,7 @@ export async function updateCatalog(
         entityId: id,
         action: 'UPDATE',
         changes,
-      }, actorId);
+      });
     }
 
     return depois;

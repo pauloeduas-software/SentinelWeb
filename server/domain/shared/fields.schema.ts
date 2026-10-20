@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // Construtores de campo reaproveitados pelos schemas de vários domínios — as
-// cinco tabelas de catálogo e o ativo. Um lugar só para as regras que se repetem:
+// seis tabelas de catálogo e o ativo. Um lugar só para as regras que se repetem:
 // nome, texto livre, e-mail, site, dinheiro, data.
 //
 // Todos seguem o mesmo padrão: `''` vira `null`

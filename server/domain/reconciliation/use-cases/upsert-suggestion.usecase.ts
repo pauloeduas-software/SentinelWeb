@@ -146,7 +146,7 @@ export async function proporSugestao(proposta: SugestaoProposta): Promise<Result
     // P2002 = o índice parcial `sugestao_pendente_por_alvo` recusou. Não é erro:
     // é outra rodada do job (ou outro processo) tendo criado a mesma sugestão
     // entre a consulta e o `create`. A checagem acima é pela DECISÃO; o índice
-    // é a GARANTIA — mesmo par de guardas do `addLocationOccupant`.
+    // é a GARANTIA — mesmo par de guardas do `addWorkstationOccupant`.
     if (errorCode(error) === 'P2002') return 'INALTERADA';
     throw error;
   }

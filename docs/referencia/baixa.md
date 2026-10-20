@@ -55,7 +55,7 @@ permitida a `TECNICO`.
   aba Detalhes, com o botão **Reverter**.
 - **Na lista de Ativos:** o ativo sai da vista **Ativos** e passa a aparecer só na
   vista **Baixados**, que tem contador próprio. A **Lixeira** não olha a baixa.
-- **No histórico:** a linha "Baixa do patrimônio", com quem fez, quando, o motivo
+- **No histórico:** a linha "Baixa do patrimônio", com quando, o motivo
   ("Vendido") e a "Observação da baixa".
 - **O status não muda.** Trocar o status é uma segunda decisão, com linha
   própria no histórico.

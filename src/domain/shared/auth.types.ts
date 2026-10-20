@@ -17,12 +17,11 @@ import type { User } from './user.types';
  */
 export type SessionUser = Omit<User, 'role' | 'isActive'> & {
   /**
-   * O CARGO desta pessoa (D148) — `USUARIO`, `TECNICO` ou `ADMIN`.
+   * O CARGO desta pessoa (D148) — `TECNICO` ou `ADMIN`.
    *
-   * VEM SÓ DE DUAS ROTAS, `POST /api/auth/login` e `GET /api/auth/me`, e nunca
-   * embutido numa posse ou num ocupante de posto: no servidor ele não está
-   * no `USER_PUBLIC_SELECT` de propósito. Por isso é campo de `SessionUser` e não
-   * de `User` — o colaborador da listagem não tem isto.
+   * Na sessão VEM SÓ DE DUAS ROTAS, `POST /api/auth/login` e `GET /api/auth/me`:
+   * no servidor ele não está no `USER_PUBLIC_SELECT` de propósito, e sai na
+   * mesma consulta que relê a sessão.
    *
    * PARA QUE A TELA USA: para não desenhar o que vai dar 403. Isto **não é
    * segurança** — a segurança é o `preHandler` do servidor, que recusa antes de
@@ -32,7 +31,7 @@ export type SessionUser = Omit<User, 'role' | 'isActive'> & {
    * ERA UM ARRAY de chaves `<módulo>.<ação>`, a união dos grupos (D76). Virou uma
    * string com ordem, e quem compara é o `usePode()` do store.
    */
-  role: 'USUARIO' | 'TECNICO' | 'ADMIN';
+  role: 'TECNICO' | 'ADMIN';
 };
 
 /** O login é o e-mail do cadastro, e a senha. */

@@ -15,7 +15,7 @@ export const vinculoSchema = z.strictObject({
 /** Vincular e entregar ao posto numa operação (`link-and-checkout.usecase.ts`). */
 export const vinculoComEntregaSchema = z.strictObject({
   assetId: uuidObrigatorio('ativo'),
-  targetLocationId: uuidObrigatorio('posto'),
+  targetWorkstationId: uuidObrigatorio('posto'),
 });
 
 export const triagemSchema = z.strictObject({

@@ -49,8 +49,8 @@ describe('duas entregas simultâneas numa licença de UM assento', () => {
     });
 
     const respostas = await Promise.all([
-      api.post(`/api/licenses/${licenca.id}/checkout-seat`, { assignedUserId: cenario.laura }),
-      api.post(`/api/licenses/${licenca.id}/checkout-seat`, { assignedUserId: cenario.ana }),
+      api.post(`/api/licenses/${licenca.id}/checkout-seat`, { assignedPersonId: cenario.laura }),
+      api.post(`/api/licenses/${licenca.id}/checkout-seat`, { assignedPersonId: cenario.ana }),
     ]);
 
     expect(placar(respostas)).toMatchObject({ 201: 1, 409: 1 });
@@ -121,14 +121,14 @@ describe('devolver e entregar ao mesmo tempo', () => {
     });
 
     const primeira = await api.post<{ seatId: string }>(
-      `/api/licenses/${licenca.id}/checkout-seat`, { assignedUserId: cenario.laura },
+      `/api/licenses/${licenca.id}/checkout-seat`, { assignedPersonId: cenario.laura },
     );
     expect(primeira.status).toBe(201);
 
     await api.post(`/api/licenses/seats/${primeira.body.seatId}/checkin`, {});
 
     const segunda = await api.post(
-      `/api/licenses/${licenca.id}/checkout-seat`, { assignedUserId: cenario.ana },
+      `/api/licenses/${licenca.id}/checkout-seat`, { assignedPersonId: cenario.ana },
     );
     expect(segunda.status).toBe(201);
     expect(await ocupacoesAbertas(licenca.id)).toBe(1);

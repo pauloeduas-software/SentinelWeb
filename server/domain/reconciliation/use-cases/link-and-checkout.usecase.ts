@@ -33,13 +33,12 @@ import { vincularEndpointAoAtivo } from './link-endpoint-asset.usecase';
 export async function vincularEEntregar(
   endpointId: string,
   assetId: string,
-  targetLocationId: string,
-  actorId: string | null,
+  targetWorkstationId: string,
 ) {
-  const endpoint = await vincularEndpointAoAtivo(endpointId, assetId, actorId);
+  const endpoint = await vincularEndpointAoAtivo(endpointId, assetId);
 
   try {
-    const entrega = await checkoutAsset(assetId, { targetType: 'LOCATION', targetLocationId }, actorId);
+    const entrega = await checkoutAsset(assetId, { targetType: 'WORKSTATION', targetWorkstationId });
     return { endpoint, assignment: entrega.assignment, asset: entrega.asset };
   } catch (erro) {
     if (erro instanceof AppError) {

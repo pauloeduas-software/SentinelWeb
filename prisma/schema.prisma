@@ -121,28 +121,29 @@ model Telemetry {
   @@map("telemetries")
 }
 
-/// Os três cargos da autorização (D148). A ordem do enum é a hierarquia, e a
+/// Os dois cargos da autorização (D148). A ordem do enum é a hierarquia, e a
 /// comparação mora em `access/helpers/cargo.ts` — nunca num `indexOf` por fora.
 enum Cargo {
-  USUARIO
   TECNICO
   ADMIN
 }
 
+// QUEM OPERA O SISTEMA — Técnico e Administrador, e mais ninguém.
+//
+// Quem RECEBE equipamento é outra tabela (`Person`): conta de acesso e pessoa
+// que tem posse são perguntas diferentes, e misturá-las obrigava o login a
+// recusar o cargo que só existia para dizer "esse não entra".
+
 model User {
   id    String @id @default(uuid()) @db.Uuid
   name  String
-  // `email` NÃO é @unique aqui de propósito: a unicidade é um índice parcial
-  // (`WHERE "deletedAt" IS NULL`) criado na migration. Com @unique comum, um
-  // usuário na lixeira bloquearia para sempre o recadastro do mesmo e-mail —
-  // é o `unique_undeleted` do Snipe-IT. E é o LOGIN: quem entra no sistema
-  // digita o e-mail e a senha.
-  email String
+  // É o LOGIN: quem entra no sistema digita o e-mail e a senha. `@unique`
+  // comum, sem índice parcial: usuário não tem lixeira — excluir apaga a linha
+  // (W) —, então não há linha apagada segurando o e-mail de ninguém.
+  email String @unique
 
-  // AUTENTICAÇÃO (F3). Nulável porque só Técnico e Administrador entram no
-  // painel: o colaborador cadastrado para receber equipamento (`USUARIO`) não
-  // tem senha, e o cadastro só a exige dos dois cargos que entram.
-  passwordHash String?
+  // AUTENTICAÇÃO (F3). Obrigatória: todo usuário entra no painel.
+  passwordHash String
 
   // Bloqueio por tentativa. `lockedUntil` no futuro recusa o login mesmo com a
   // senha certa; quem zera os dois é o login bem-sucedido.
@@ -162,26 +163,51 @@ model User {
   // — sem tabela de sessão e sem lista de revogação.
   tokenVersion Int @default(0)
 
-  // Desativar é diferente de lixeira: quem saiu da empresa continua no histórico
-  // de posse, só não opera mais — não entra no sistema e não recebe entrega
-  // nova. Editável em `PUT /api/users/:id`, e a mudança vai para o ActivityLog
-  // com ator e data.
+  // Desativar é diferente de excluir: a conta continua na lista e volta com
+  // Ativar, só não entra mais no sistema. Editável em `PUT /api/users/:id`.
   isActive Boolean @default(true)
 
   // O CARGO (D148), no lugar da matriz de permissões por grupo (D76).
   //
-  // `USUARIO` é o padrão e é o que a porta fechada da F3 pede: conta nova não
-  // alcança nada além de si mesma, e quem quiser mais escreve a linha. A rede
-  // que impede o sistema de ficar sem ninguém que entre está em
-  // `access/helpers/ultimo-administrador.ts`, chamada no fim da transação.
-  role        Cargo              @default(USUARIO)
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  deletedAt   DateTime?
-  // Posses diretas (alvo USER) e postos de trabalho que esta pessoa ocupa.
+  // `TECNICO` é o padrão: o menor dos dois. A rede que impede o sistema de
+  // ficar sem ninguém que entre está em `access/helpers/ultimo-administrador.ts`,
+  // chamada no fim da transação.
+  role      Cargo    @default(TECNICO)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+// O COLABORADOR — quem RECEBE equipamento. Não entra no sistema.
+//
+// Uma tabela de catálogo (a sexta aba de Configurações) e a ÚNICA dele com
+// lixeira: o colaborador tem histórico de posse PRÓPRIO — "o que já esteve com a
+// Laura" —, e recadastrá-lo depois de excluir o partiria em dois. Excluir manda
+// para a lixeira, e só recusa quem responde por algo AGORA (invariante 6).
+model Person {
+  id   String @id @default(uuid()) @db.Uuid
+  name String
+
+  // Opcional: o colaborador não faz login, e há quem não tenha e-mail. NÃO é
+  // @unique aqui: a unicidade é índice PARCIAL (`WHERE "deletedAt" IS NULL`) na
+  // migration, para o excluído não travar o recadastro do mesmo e-mail. Dois
+  // `NULL` não colidem; gravado em minúsculas.
+  email String?
+
+  // DESATIVAR é o caminho de quem não pode excluir: quem saiu da empresa
+  // continua no histórico de posse, só não recebe entrega nova. Só desativa
+  // quem não responde por nada (invariante 6, `personSpec.beforeWrite`).
+  isActive Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  // Posses diretas (alvo PERSON) e postos de trabalho que esta pessoa ocupa.
   // Responsabilidade real = as duas somadas (docs/referencia/modelo-de-posse.md, Camada 3).
   assignments Assignment[]
-  occupancies LocationOccupant[]
+  occupancies WorkstationOccupant[]
 
   // LICENÇA (F6). Assento vai para pessoa ou ativo, nunca para um posto (D39).
   licenseSeats LicenseSeatCheckout[]
@@ -197,11 +223,11 @@ model User {
   // ─────────────────────────────────────────────────────────────────────────
   //
   // As unidades de estoque entregues NO NOME desta pessoa (`StockMovement`
-  // de alvo USER): é a ponta do estoque na invariante 6.
+  // de alvo PERSON): é a ponta do estoque na invariante 6.
   stockMovements StockMovement[]
 
   @@index([deletedAt])
-  @@map("users")
+  @@map("people")
 }
 
 model ActivityLog {
@@ -210,7 +236,6 @@ model ActivityLog {
   entityId   String   @db.Uuid
   action     String
   changes    Json?
-  actorId    String?  @db.Uuid
   createdAt  DateTime @default(now())
 
   @@index([entityType, entityId, createdAt])
@@ -384,10 +409,10 @@ model Location {
   id   String @id @default(uuid()) @db.Uuid
   name String @unique
 
-  // LISTA PLANA, sem hierarquia e sem gestor. O nome já é único no sistema
-  // inteiro ("Mesa 1 — Filial SP"), então uma árvore matriz › andar › sala não
-  // diferenciava nada — só custava guarda de ciclo, trava da árvore e o caminho
-  // montado em Postos. Saiu inteira, e o "gestor da localidade" com ela.
+  // LISTA PLANA, sem hierarquia e sem gestor: a matriz, a filial, o depósito,
+  // o home office. Uma árvore matriz › andar › sala não diferenciava nada —
+  // só custava guarda de ciclo e trava da árvore. Saiu inteira, e o "gestor da
+  // localidade" com ela.
   address String?
   city    String?
   state   String?
@@ -395,63 +420,73 @@ model Location {
   phone   String?
   notes   String?
 
-  // POSTO DE TRABALHO — a Mesa 1, a bancada, o guichê.
+  // Cadastro de REFERÊNCIA, como status e categoria: diz ONDE a coisa está
+  // guardada e não recebe nada — quem recebe entrega, estoque e ocupante é o
+  // POSTO (`Workstation`, decisão Y).
   //
-  // O posto É uma `Location` (D15): o ativo já aponta para ela, e criar uma
-  // `Workstation` paralela duplicaria o cadastro de lugares. Mas uma
-  // bancada NÃO é uma filial: endereço, CEP e telefone não querem dizer nada
-  // numa mesa, e misturar as duas numa lista só foi o que tornou o posto
-  // invisível na interface.
-  //
-  // A flag separa as duas coisas nas telas e habilita a página /postos. E ela
-  // É REGRA pela invariante 19: no máximo UM ativo por local marcado — ativo é
-  // computador. Fora da marca não há limite — a sala de reunião com dois
-  // computadores continua valendo, que é o uso que proibir quebraria — e por
-  // isso LIGAR a marca também é guardado: uma sala com mais de um ativo não vira
-  // posto (`locationSpec.beforeWrite`).
-  //
-  // O que a marca NÃO restringe, dentro ou fora dela: o estoque entregue ao
-  // posto (monitor, teclado, mouse — `StockMovement`), que entra sem limite, e
-  // os ocupantes, que são vários por desenho (a Camada 2 do modelo de posse).
-  isWorkstation Boolean @default(false)
-
-  // DESATIVAR é o caminho de quem não pode excluir — a mesma ideia do
-  // `User.isActive`. Localização com qualquer uso (ativo, entrega, saída de
-  // estoque, ocupante — histórico incluído) é recusada no delete com 409, e a
-  // filial que fechou continua respondendo "por onde este ativo passou".
-  // Desativada, ela não RECEBE nada novo: entrega de ativo ou de estoque,
-  // ocupante, ativo guardado nela. O que já está lá fica —
-  // desativar não devolve nem encerra nada, igual ao colaborador desativado.
+  // DESATIVAR tira o local das escolhas sem excluí-lo. Excluir só é recusado
+  // (409) pelo que está nele AGORA: ativo ou item de estoque guardado, posto
+  // que fica nele. Desativada, ela não recebe ativo, item ou posto novo; o que
+  // já está lá fica.
   isActive Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  assets Asset[]
-
-  // Ativos entregues A ESTE LOCAL (alvo LOCATION) e as pessoas que o ocupam.
-  // É a junção das duas que responde "quem é responsável pelo computador da
-  // Mesa 1". E as unidades de ESTOQUE entregues ao posto — os 5 mouses da Mesa
-  // 1 —, pelas quais respondem os mesmos ocupantes.
-  assignments    Assignment[]
-  occupants      LocationOccupant[]
-  stockMovements StockMovement[]
+  assets       Asset[]
   // Os itens de estoque GUARDADOS aqui (não os entregues — esses são as saídas).
-  stockItems     StockItem[]
+  stockItems   StockItem[]
+  workstations Workstation[]
 
-  // DECLARADO AQUI, e não só na migration que o criou.
-  //
-  // Nasceu à mão numa migration (hoje consolidada na `0_init`) e ficou de fora
-  // do schema. Consequência: o `migrate diff` não o via, achava que era lixo do
-  // banco e emitia `DROP INDEX` em TODA migração seguinte — derrubando índice
-  // útil em silêncio para quem aplicasse o SQL sem ler.
-  //
-  // São índices COMUNS, que o Prisma expressa. Os PARCIAIS (`WHERE …`) continuam
-  // só no SQL porque ele não os expressa, e esses o `migrate diff` ignora em vez
-  // de tentar remover — a diferença é essa, e é o que separa "mora na migration
-  // de propósito" de "ficou para trás".
-  @@index([isWorkstation])
   @@map("locations")
+}
+
+// POSTO DE TRABALHO — a MesaEscritório, a bancada, o guichê (decisão Y).
+//
+// Cadastro próprio, e não uma `Location` marcada: o lugar diz onde a coisa está
+// guardada, o posto RECEBE — o computador (`Assignment`), o estoque entregue à
+// mesa (`StockMovement`) e as pessoas que o ocupam (`WorkstationOccupant`).
+// Misturados numa tabela só, o depósito recebia entrega como se fosse mesa.
+//
+// O posto FICA numa localização (`locationId`, obrigatória), e é só isso que
+// os liga: o ativo continua com UM campo de "onde" (`Asset.locationId`).
+//
+// A regra de cadastro é a do status: nome único, desativar em vez de excluir,
+// e a exclusão recusada só pelo que está nele AGORA — entrega ou saída aberta,
+// ocupante atual (`workstationSpec`). O passado não segura: as linhas já
+// fechadas guardam o nome por escrito.
+//
+// No máximo UM ativo por posto — ativo é computador (invariante 19). O estoque
+// entregue à mesa entra sem limite, e os ocupantes são vários por desenho (a
+// Camada 2 do modelo de posse).
+model Workstation {
+  id   String @id @default(uuid()) @db.Uuid
+  name String @unique
+
+  locationId String  @db.Uuid
+  notes      String?
+
+  // Desativado some das escolhas e não RECEBE nada novo: entrega de ativo ou
+  // de estoque, ocupante. O que já está nele fica — desativar não devolve nem
+  // encerra nada, igual ao colaborador desativado.
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Restrict: a localização com posto é "em uso" e se desativa, não se exclui.
+  location Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  // Ativos entregues A ESTE POSTO e as pessoas que o ocupam. É a junção das
+  // duas que responde "quem é responsável pelo computador da Mesa 1". E as
+  // unidades de ESTOQUE entregues à mesa — os 5 mouses da Mesa 1 —, pelas
+  // quais respondem os mesmos ocupantes.
+  assignments    Assignment[]
+  occupants      WorkstationOccupant[]
+  stockMovements StockMovement[]
+
+  @@index([locationId])
+  @@map("workstations")
 }
 
 // ============================================================================
@@ -512,7 +547,9 @@ model Asset {
 
   status   StatusLabel @relation(fields: [statusId], references: [id], onDelete: Restrict)
   model    AssetModel  @relation(fields: [modelId], references: [id], onDelete: Restrict)
-  location Location?   @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  // Restrict, como o status: a localização com ativo guardado — lixeira
+  // inclusive — é "em uso" e se desativa, não se exclui (`locationSpec`).
+  location Location?   @relation(fields: [locationId], references: [id], onDelete: Restrict)
 
   // A posse deste ativo, aberta e histórica.
   assignments Assignment[] @relation("AssignmentAsset")
@@ -545,9 +582,9 @@ model Asset {
   usageDays AssetUsageDaily[]
 
   // `suggestions`, e não o `ReconciliationSuggestion` que o `prisma format`
-  // escreveu sozinho: o nome gerado não é convenção nenhuma e destoa dos outros
-  // três lados da mesma relação (`Endpoint`, `User` e `Location` todos a chamam
-  // de `suggestions`). Nome de campo de relação não existe no banco, então isto
+  // escreveu sozinho: o nome gerado não é convenção nenhuma e destoa do outro
+  // lado da relação (`Endpoint` a chama de `suggestions`). Nome de campo de
+  // relação não existe no banco, então isto
   // NÃO pede migração — o que ele muda é o que se lê no `include`.
   suggestions ReconciliationSuggestion[]
 
@@ -555,8 +592,10 @@ model Asset {
   @@index([statusId])
   @@index([modelId])
   @@index([locationId])
-  // Ver a nota em `Location`: declarado aqui para o `migrate diff` parar de
-  // emitir `DROP INDEX` dele a cada migração nova.
+  // DECLARADO AQUI, e não só na migration que o criou: nasceu à mão e, fora do
+  // schema, o `migrate diff` o tomava por lixo e emitia `DROP INDEX` dele a
+  // cada migração nova. Índice COMUM o Prisma expressa; só os PARCIAIS
+  // (`WHERE …`) moram de propósito só no SQL.
   @@index([retiredAt])
   @@index([lastSeenByAgentAt])
   @@map("assets")
@@ -568,17 +607,20 @@ model Asset {
 
 // Para QUEM um ativo foi entregue.
 //
-// Polimórfico — pessoa ou localização —, com uma diferença que o Snipe-IT não
-// tem: quando o alvo é `LOCATION`, os responsáveis são os OCUPANTES daquele
-// local, que podem ser vários e em turnos diferentes (`LocationOccupant`). É o
-// que permite a Mesa 1 ser da Laura de manhã e da Ana à tarde sem o ativo
-// precisar apontar para duas pessoas.
+// Polimórfico — pessoa ou posto —, com uma diferença que o Snipe-IT não tem:
+// quando o alvo é `WORKSTATION`, os responsáveis são os OCUPANTES daquele posto,
+// que podem ser vários e em turnos diferentes (`WorkstationOccupant`). É o que
+// permite a Mesa 1 ser da Laura de manhã e da Ana à tarde sem o ativo precisar
+// apontar para duas pessoas.
+//
+// Localização NÃO é alvo: ela diz onde a coisa está guardada, não quem a
+// recebeu (decisão Y).
 //
 // Não há alvo ATIVO: ativo é computador, e um computador não é entregue a outro
 // computador. O que acompanha a máquina (dock, monitor, cabo) é estoque.
 enum AssignmentTarget {
-  USER
-  LOCATION
+  PERSON
+  WORKSTATION
 }
 
 // Uma linha por entrega. `checkinAt` nulo = posse ABERTA (a atual).
@@ -600,9 +642,17 @@ model Assignment {
   // preenchida é validada no use-case (`assertAlvoCoerente`) e pelo CHECK
   // `assignments_alvo_coerente`, escrito à mão na migration: CHECK constraint
   // não é expressável no schema do Prisma e ficaria invisível aqui.
-  targetType       AssignmentTarget
-  targetUserId     String?          @db.Uuid
-  targetLocationId String?          @db.Uuid
+  targetType          AssignmentTarget
+  targetPersonId      String?          @db.Uuid
+  targetWorkstationId String?          @db.Uuid
+
+  // O NOME DO POSTO, por escrito — preenchido quando o posto é excluído.
+  //
+  // Posto segue a regra do status: só o que está nele agora impede excluí-lo.
+  // A posse já devolvida perde a ligação (`targetWorkstationId` vira nulo) e
+  // guarda aqui o nome que o posto tinha, para o histórico do ativo continuar
+  // dizendo "Entregue: Mesa 7" (`workstationSpec.beforeDelete`).
+  targetWorkstationName String?
 
   checkoutAt        DateTime  @default(now())
   expectedCheckinAt DateTime?
@@ -611,32 +661,33 @@ model Assignment {
   checkoutNotes String?
   checkinNotes  String?
 
-  // Quem operou a entrega e a devolução. Nulável e SEM relação com `User` pelo
-  // mesmo motivo do `ActivityLog.actorId`: autenticação é a F3, e esperar por
-  // ela significaria perder o registro de tudo que rodar até lá.
-  checkoutById String? @db.Uuid
-  checkinById  String? @db.Uuid
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Cascade no ativo dono da posse: apagar o ativo de verdade leva o histórico
-  // dele junto. Restrict nos ALVOS: não se apaga uma pessoa ou um local que
-  // ainda segura alguma coisa — é o 409 por uso do catálogo.
-  asset          Asset     @relation("AssignmentAsset", fields: [assetId], references: [id], onDelete: Cascade)
-  targetUser     User?     @relation(fields: [targetUserId], references: [id], onDelete: Restrict)
-  targetLocation Location? @relation(fields: [targetLocationId], references: [id], onDelete: Restrict)
+  // dele junto. Restrict nos ALVOS: é a rede embaixo do 409 por uso. A exclusão
+  // do posto desliga ANTES as posses já devolvidas (`targetWorkstationName`),
+  // então o que a FK ainda pega é a posse aberta — e essa o 409 já recusou.
+  asset             Asset        @relation("AssignmentAsset", fields: [assetId], references: [id], onDelete: Cascade)
+  targetPerson      Person?      @relation(fields: [targetPersonId], references: [id], onDelete: Restrict)
+  targetWorkstation Workstation? @relation(fields: [targetWorkstationId], references: [id], onDelete: Restrict)
 
   @@index([assetId, checkinAt])
-  @@index([targetUserId, checkinAt])
-  @@index([targetLocationId, checkinAt])
+  @@index([targetPersonId, checkinAt])
+  @@index([targetWorkstationId, checkinAt])
   @@map("assignments")
 }
 
-model LocationOccupant {
-  id         String @id @default(uuid()) @db.Uuid
-  locationId String @db.Uuid
-  userId     String @db.Uuid
+model WorkstationOccupant {
+  id            String  @id @default(uuid()) @db.Uuid
+  // Nulo só na ocupação ENCERRADA de um posto que foi excluído — o nome dele
+  // fica em `workstationName`, pelo mesmo motivo da `Assignment`. Aberta, aponta
+  // sempre para o posto (CHECK `workstation_occupants_posto_presente`).
+  workstationId String? @db.Uuid
+  personId      String  @db.Uuid
+
+  /// O nome do posto, por escrito, quando ele foi excluído.
+  workstationName String?
 
   // Texto livre de propósito: "Manhã", "Tarde", "12x36 A". Enum engessaria
   // escalas reais e faixa de horário seria agenda, não inventário (D15).
@@ -650,16 +701,17 @@ model LocationOccupant {
   updatedAt DateTime @updatedAt
 
   // Restrict, não Cascade: quem ocupou a Mesa 1 e em que turno é histórico de
-  // responsabilidade, e apagar o posto não pode apagá-lo junto. O posto com
-  // ocupação se desativa (`Location.isActive`), não se exclui.
-  location Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  // responsabilidade, e apagar o posto não pode apagá-lo junto. Com ocupante
+  // AGORA, o posto não se exclui; as ocupações encerradas são desligadas antes,
+  // com o nome em `workstationName` (`workstationSpec.beforeDelete`).
+  workstation Workstation? @relation(fields: [workstationId], references: [id], onDelete: Restrict)
+  person      Person       @relation(fields: [personId], references: [id], onDelete: Restrict)
 
   // A mesma pessoa não ocupa o mesmo posto duas vezes ao mesmo tempo: índice
   // único PARCIAL (`WHERE "endedAt" IS NULL`) criado na migration.
-  @@index([locationId, endedAt])
-  @@index([userId, endedAt])
-  @@map("location_occupants")
+  @@index([workstationId, endedAt])
+  @@index([personId, endedAt])
+  @@map("workstation_occupants")
 }
 
 model JobRun {
@@ -806,8 +858,8 @@ model LicenseSeatCheckout {
 
   // XOR garantido por CHECK na migration (`license_seat_alvo_xor`). Sem
   // discriminante: com dois alvos, a FK preenchida já diz qual é.
-  assignedUserId  String? @db.Uuid
-  assignedAssetId String? @db.Uuid
+  assignedPersonId String? @db.Uuid
+  assignedAssetId  String? @db.Uuid
 
   checkoutAt DateTime  @default(now())
   /// Nulo = assento OCUPADO. É o que a conta de livres desconta.
@@ -820,12 +872,12 @@ model LicenseSeatCheckout {
 
   // Cascade no assento; Restrict nos alvos — é a rede embaixo do 409 que
   // impede apagar pessoa ou ativo que ainda ocupa assento.
-  seat          LicenseSeat @relation(fields: [seatId], references: [id], onDelete: Cascade)
-  assignedUser  User?       @relation(fields: [assignedUserId], references: [id], onDelete: Restrict)
-  assignedAsset Asset?      @relation(fields: [assignedAssetId], references: [id], onDelete: Restrict)
+  seat           LicenseSeat @relation(fields: [seatId], references: [id], onDelete: Cascade)
+  assignedPerson Person?     @relation(fields: [assignedPersonId], references: [id], onDelete: Restrict)
+  assignedAsset  Asset?      @relation(fields: [assignedAssetId], references: [id], onDelete: Restrict)
 
   @@index([seatId, checkinAt])
-  @@index([assignedUserId, checkinAt])
+  @@index([assignedPersonId, checkinAt])
   @@index([assignedAssetId, checkinAt])
   @@map("license_seat_checkouts")
 }
@@ -930,9 +982,7 @@ model ReconciliationSuggestion {
 // MUDANÇA DE HARDWARE DETECTADA — trocou o HD, tiraram pente de RAM.
 //
 // Detectada, não digitada: a diferença com o `ActivityLog` é essa. Lá a linha
-// tem ator e diz o que alguém FEZ; aqui não tem ator nenhum e diz o que o mundo
-// mudou sem avisar. Espremer isto no ActivityLog daria `actorId` nulo em toda
-// linha — e o D23 existe justamente para que ator nulo signifique alguma coisa.
+// diz o que alguém FEZ no sistema; aqui, o que o mundo mudou sem avisar.
 model AssetChange {
   id      String @id @default(uuid()) @db.Uuid
   assetId String @db.Uuid
@@ -1006,8 +1056,8 @@ enum StockMovementKind {
 
 // Para QUEM uma unidade saiu. Só nos movimentos de SAIDA.
 enum StockTarget {
-  USER
-  LOCATION
+  PERSON
+  WORKSTATION
 }
 
 model StockItem {
@@ -1071,9 +1121,11 @@ model StockMovement {
   qty Int
 
   // Discriminante + duas FKs nuláveis, como no `Assignment`. Só na SAIDA.
-  targetType       StockTarget?
-  targetUserId     String?      @db.Uuid
-  targetLocationId String?      @db.Uuid
+  targetType            StockTarget?
+  targetPersonId        String?      @db.Uuid
+  targetWorkstationId   String?      @db.Uuid
+  /// O nome do posto, por escrito, quando ele foi excluído — como na `Assignment`.
+  targetWorkstationName String?
 
   /// Só na SAIDA. Nulo = unidade FORA do estoque. É o que o saldo conta.
   returnedAt DateTime?
@@ -1081,22 +1133,19 @@ model StockMovement {
   /// A observação do movimento — por que entrou, por que saiu, para quem.
   notes String?
 
-  createdById  String? @db.Uuid
-  returnedById String? @db.Uuid
-
   createdAt DateTime @default(now())
 
-  // Cascade no item dono do movimento. Restrict nos ALVOS, e os dois 409 têm
-  // donos diferentes: o posto é catálogo e o `countUsages` da localização conta
-  // as unidades; a pessoa só vai para a lixeira (soft), então a FK nunca é
-  // consultada — quem recusa é a invariante 6 (`contarPosseAberta`).
-  item           StockItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  targetUser     User?     @relation(fields: [targetUserId], references: [id], onDelete: Restrict)
-  targetLocation Location? @relation(fields: [targetLocationId], references: [id], onDelete: Restrict)
+  // Cascade no item dono do movimento. Restrict nos ALVOS: posto e pessoa são
+  // catálogo, e o 409 de cada um conta as unidades fora — a FK é a rede embaixo
+  // dele. A saída já devolvida para um posto excluído é desligada antes, com o
+  // nome em `targetWorkstationName`.
+  item              StockItem    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  targetPerson      Person?      @relation(fields: [targetPersonId], references: [id], onDelete: Restrict)
+  targetWorkstation Workstation? @relation(fields: [targetWorkstationId], references: [id], onDelete: Restrict)
 
   @@index([itemId, kind, returnedAt])
   @@index([itemId, createdAt])
-  @@index([targetUserId, returnedAt])
-  @@index([targetLocationId, returnedAt])
+  @@index([targetPersonId, returnedAt])
+  @@index([targetWorkstationId, returnedAt])
   @@map("stock_movements")
 }

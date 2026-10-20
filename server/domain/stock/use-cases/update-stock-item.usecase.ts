@@ -13,7 +13,7 @@ import { assertCategoriaDeEstoque, assertNomeLivre } from './create-stock-item.u
 // nem existe no schema de edição — o `strictObject` devolve 422 sozinho.
 const CAMPOS_AUDITADOS = ['name', 'categoryId', 'locationId', 'notes'] as const;
 
-export async function updateStockItem(id: string, data: UpdateStockItemInput, actorId: string | null) {
+export async function updateStockItem(id: string, data: UpdateStockItemInput) {
   return prisma.$transaction(async (tx) => {
     const antes = await tx.stockItem.findFirst({ where: { id }, select: STOCK_ITEM_SELECT });
     if (!antes) throw new AppError('Item de estoque não encontrado.', 404);
@@ -39,7 +39,7 @@ export async function updateStockItem(id: string, data: UpdateStockItemInput, ac
 
     const changes = buildChanges(antes, depois, CAMPOS_AUDITADOS);
     if (Object.keys(changes).length > 0) {
-      await recordActivity(tx, { entityType: 'StockItem', entityId: id, action: 'UPDATE', changes }, actorId);
+      await recordActivity(tx, { entityType: 'StockItem', entityId: id, action: 'UPDATE', changes });
     }
 
     // Com saldo, como toda leitura de item: a tela substitui a linha pela

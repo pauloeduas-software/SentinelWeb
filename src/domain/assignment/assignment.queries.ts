@@ -17,7 +17,6 @@ import type { AlvoDaPosse, Assignment } from '../shared/posse.types';
 export const assignmentKeys = {
   all: ['assignments'] as const,
   doAtivo: (assetId: string) => ['assignments', 'asset', assetId] as const,
-  doUsuario: (userId: string) => ['assignments', 'user', userId] as const,
   minhas: ['assignments', 'me'] as const,
 };
 
@@ -30,8 +29,8 @@ export const assignmentKeys = {
  */
 export interface CheckoutInput {
   targetType: AlvoDaPosse;
-  targetUserId?: string;
-  targetLocationId?: string;
+  targetPersonId?: string;
+  targetWorkstationId?: string;
   /** Em branco, o servidor decide (a entrega força o ativo para "em uso"). */
   statusId?: string;
   expectedCheckinAt?: string;
@@ -44,10 +43,10 @@ export interface CheckinInput {
   statusId?: string;
   checkinNotes?: string;
   /**
-   * Só fecha a posse se ela aponta para esta localização (409 se não). A ficha
+   * Só fecha a posse se ela aponta para este posto (409 se não). A ficha
    * do posto manda o id dela; a tela de Ativos, que olha a posse, não manda.
    */
-  targetLocationId?: string;
+  targetWorkstationId?: string;
 }
 
 /** O histórico de posse de um ativo: a aberta primeiro, depois as fechadas. */
