@@ -17,29 +17,21 @@ import type { Cargo } from './cargo';
 // boot que não sobe — que aparece no primeiro `npm test`.
 //
 // POR QUE EXATO E NÃO POR PREFIXO: um mapa de prefixos (`/api/assets/* →
-// TECNICO`) é mais curto e destrói a garantia. `POST /api/assets/:id/wipe`
-// herdaria o cargo do vizinho e passaria a existir protegida pelo cargo errado,
-// sem ninguém declarar nada. Verbosidade aqui é o preço da conferência.
+// ADMIN`) é mais curto e destrói a garantia. `POST /api/assets/:id/wipe`
+// herdaria o cargo do vizinho e passaria a existir sem ninguém declarar qual
+// cargo ela exige. Verbosidade aqui é o preço da conferência.
 //
-// O valor da linha é o cargo MÍNIMO, e `cargoAlcanca()` faz o resto: `ADMIN`
-// satisfaz linha de `TECNICO`, e nenhuma linha precisa listar os dois.
+// O valor da linha é o cargo MÍNIMO, e `cargoAlcanca()` faz o resto: o cargo
+// maior satisfaz a linha do menor, e nenhuma linha precisa listar os dois.
 //
 // O CRITÉRIO, escrito uma vez aqui em vez de repetido em cada linha:
 //
 //   `null`     — a sessão basta. Duas rotas, e as duas são sobre si mesmo.
-//   `TECNICO`  — todo o inventário: ver, criar, editar, entregar, devolver,
-//                aposentar, reconciliar. É o trabalho do dia.
-//   `ADMIN`    — usuários (criar, editar, desativar, trocar senha), configuração
-//                do sistema — colaboradores inclusive —, EXCLUIR de verdade (e
-//                restaurar o excluído) e o custo.
+//   `ADMIN`    — todo o resto. É o único cargo (Z); a separação de cargos é
+//                decisão a tomar.
 //
-// A tela de Usuários — quem opera o sistema — é toda `ADMIN`, leitura
-// inclusive. Quem RECEBE equipamento é colaborador (`/api/people`), catálogo:
-// o técnico o escolhe no `/options` para fazer a entrega.
-//
-// Aposentar ficou em `TECNICO` embora a chave antiga fosse `assets.delete`:
-// aposentadoria é ciclo de vida (D19), e a decisão de que `retiredAt` não é
-// exclusão está escrita lá. Quem apaga de verdade é `ADMIN`.
+// Quem RECEBE equipamento é colaborador (`/api/people`), catálogo, e não tem
+// conta: não entra no mapa como cargo.
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
@@ -61,85 +53,82 @@ const DISPENSADAS: Record<string, ExigenciaDaRota> = {
 const ROTAS: Record<string, ExigenciaDaRota> = {
   ...DISPENSADAS,
 
-  'GET /api/assets': 'TECNICO',
-  'GET /api/assets/:id': 'TECNICO',
-  'GET /api/assets/:id/history': 'TECNICO',
-  'GET /api/assets/options': 'TECNICO',
-  'GET /api/assets/stats': 'TECNICO',
-  'GET /api/search': 'TECNICO',
-  'POST /api/assets': 'TECNICO',
-  'PUT /api/assets/:id': 'TECNICO',
+  'GET /api/assets': 'ADMIN',
+  'GET /api/assets/:id': 'ADMIN',
+  'GET /api/assets/:id/history': 'ADMIN',
+  'GET /api/assets/options': 'ADMIN',
+  'GET /api/assets/stats': 'ADMIN',
+  'GET /api/search': 'ADMIN',
+  'POST /api/assets': 'ADMIN',
+  'PUT /api/assets/:id': 'ADMIN',
   'DELETE /api/assets/:id': 'ADMIN',
   'POST /api/assets/:id/restore': 'ADMIN',
-  'POST /api/assets/:id/retire': 'TECNICO',
-  'POST /api/assets/:id/unretire': 'TECNICO',
-  'GET /api/assets/:id/assignments': 'TECNICO',
-  'POST /api/assets/:id/checkout': 'TECNICO',
-  'POST /api/assets/:id/checkin': 'TECNICO',
-  'GET /api/workstations/:id/occupants': 'TECNICO',
-  'POST /api/workstations/:id/occupants': 'TECNICO',
-  'DELETE /api/workstations/:id/occupants/:occupantId': 'TECNICO',
-  'PATCH /api/workstations/:id/occupants/:occupantId': 'TECNICO',
-  'GET /api/people/:id/occupancies': 'TECNICO',
-  // O POSTO: ler é do técnico, que entrega e ocupa; o CADASTRO é do ADMIN,
-  // como o do catálogo — é a mesma `CatalogSpec`, fora da lista gerada abaixo
-  // só porque a tela dele é Postos, não Configurações.
-  'GET /api/workstations': 'TECNICO',
-  'GET /api/workstations/options': 'TECNICO',
-  'GET /api/workstations/:id': 'TECNICO',
+  'POST /api/assets/:id/retire': 'ADMIN',
+  'POST /api/assets/:id/unretire': 'ADMIN',
+  'GET /api/assets/:id/assignments': 'ADMIN',
+  'POST /api/assets/:id/checkout': 'ADMIN',
+  'POST /api/assets/:id/checkin': 'ADMIN',
+  'GET /api/workstations/:id/occupants': 'ADMIN',
+  'POST /api/workstations/:id/occupants': 'ADMIN',
+  'DELETE /api/workstations/:id/occupants/:occupantId': 'ADMIN',
+  'PATCH /api/workstations/:id/occupants/:occupantId': 'ADMIN',
+  'GET /api/people/:id/occupancies': 'ADMIN',
+  // O POSTO: é a mesma `CatalogSpec` do catálogo, fora da lista gerada abaixo
+  // porque a tela dele é Postos, não Configurações.
+  'GET /api/workstations': 'ADMIN',
+  'GET /api/workstations/options': 'ADMIN',
+  'GET /api/workstations/:id': 'ADMIN',
   'POST /api/workstations': 'ADMIN',
   'PUT /api/workstations/:id': 'ADMIN',
   'DELETE /api/workstations/:id': 'ADMIN',
-  // O ESTOQUE: o trabalho do dia é do técnico; apagar e restaurar, do ADMIN,
-  // como no ativo.
-  'GET /api/stock/items': 'TECNICO',
-  'GET /api/stock/items/:id': 'TECNICO',
-  'GET /api/stock/items/:id/movements': 'TECNICO',
-  'POST /api/stock/items': 'TECNICO',
-  'PUT /api/stock/items/:id': 'TECNICO',
+  // O ESTOQUE.
+  'GET /api/stock/items': 'ADMIN',
+  'GET /api/stock/items/:id': 'ADMIN',
+  'GET /api/stock/items/:id/movements': 'ADMIN',
+  'POST /api/stock/items': 'ADMIN',
+  'PUT /api/stock/items/:id': 'ADMIN',
   'DELETE /api/stock/items/:id': 'ADMIN',
   'POST /api/stock/items/:id/restore': 'ADMIN',
-  'POST /api/stock/items/:id/adjust': 'TECNICO',
-  'POST /api/stock/items/:id/checkout': 'TECNICO',
-  'POST /api/stock/movements/:id/checkin': 'TECNICO',
-  'GET /api/licenses': 'TECNICO',
-  'GET /api/licenses/:id': 'TECNICO',
-  'GET /api/licenses/:id/history': 'TECNICO',
-  'GET /api/licenses/:id/seats': 'TECNICO',
-  'GET /api/licenses/alerts': 'TECNICO',
-  'GET /api/assets/:id/licenses': 'TECNICO',
-  'POST /api/licenses': 'TECNICO',
-  'PUT /api/licenses/:id': 'TECNICO',
+  'POST /api/stock/items/:id/adjust': 'ADMIN',
+  'POST /api/stock/items/:id/checkout': 'ADMIN',
+  'POST /api/stock/movements/:id/checkin': 'ADMIN',
+  'GET /api/licenses': 'ADMIN',
+  'GET /api/licenses/:id': 'ADMIN',
+  'GET /api/licenses/:id/history': 'ADMIN',
+  'GET /api/licenses/:id/seats': 'ADMIN',
+  'GET /api/licenses/alerts': 'ADMIN',
+  'GET /api/assets/:id/licenses': 'ADMIN',
+  'POST /api/licenses': 'ADMIN',
+  'PUT /api/licenses/:id': 'ADMIN',
   'DELETE /api/licenses/:id': 'ADMIN',
   'POST /api/licenses/:id/restore': 'ADMIN',
-  'POST /api/licenses/:id/checkout-seat': 'TECNICO',
-  'POST /api/licenses/seats/:id/checkin': 'TECNICO',
-  // A FICHA DO COLABORADOR — leitura, como o resto do catálogo: o cadastro
-  // (`/api/people`) vem gerado lá embaixo, com as outras cinco abas.
-  'GET /api/people/:id': 'TECNICO',
-  'GET /api/people/:id/history': 'TECNICO',
-  // Quem opera o sistema: tudo `ADMIN`, leitura inclusive.
+  'POST /api/licenses/:id/checkout-seat': 'ADMIN',
+  'POST /api/licenses/seats/:id/checkin': 'ADMIN',
+  // A FICHA DO COLABORADOR — leitura: o cadastro (`/api/people`) vem gerado lá
+  // embaixo, com as outras cinco abas.
+  'GET /api/people/:id': 'ADMIN',
+  'GET /api/people/:id/history': 'ADMIN',
+  // Quem opera o sistema.
   'GET /api/users': 'ADMIN',
   'POST /api/users': 'ADMIN',
   'PUT /api/users/:id': 'ADMIN',
   'DELETE /api/users/:id': 'ADMIN',
-  'GET /api/endpoints': 'TECNICO',
-  'GET /api/endpoints/:id': 'TECNICO',
-  'GET /api/assets/:id/machine': 'TECNICO',
-  'GET /api/reconciliation/coverage': 'TECNICO',
-  'GET /api/reconciliation/idle': 'TECNICO',
-  'GET /api/reconciliation/suggestions': 'TECNICO',
-  // Varrer a frota inteira é operação de administração, não do chamado do dia.
+  'GET /api/endpoints': 'ADMIN',
+  'GET /api/endpoints/:id': 'ADMIN',
+  'GET /api/assets/:id/machine': 'ADMIN',
+  'GET /api/reconciliation/coverage': 'ADMIN',
+  'GET /api/reconciliation/idle': 'ADMIN',
+  'GET /api/reconciliation/suggestions': 'ADMIN',
   'POST /api/reconciliation/run': 'ADMIN',
-  'POST /api/reconciliation/suggestions/:id/accept': 'TECNICO',
-  'POST /api/reconciliation/suggestions/:id/reject': 'TECNICO',
-  'POST /api/endpoints/:id/link': 'TECNICO',
-  'POST /api/endpoints/:id/link-and-checkout': 'TECNICO',
-  'DELETE /api/endpoints/:id/link': 'TECNICO',
-  'PATCH /api/endpoints/:id/review': 'TECNICO',
-  'POST /api/endpoints/:id/command': 'TECNICO',
-  'GET /api/settings/next-asset-tag': 'TECNICO',
-  'GET /api/settings/discovery': 'TECNICO',
+  'POST /api/reconciliation/suggestions/:id/accept': 'ADMIN',
+  'POST /api/reconciliation/suggestions/:id/reject': 'ADMIN',
+  'POST /api/endpoints/:id/link': 'ADMIN',
+  'POST /api/endpoints/:id/link-and-checkout': 'ADMIN',
+  'DELETE /api/endpoints/:id/link': 'ADMIN',
+  'PATCH /api/endpoints/:id/review': 'ADMIN',
+  'POST /api/endpoints/:id/command': 'ADMIN',
+  'GET /api/settings/next-asset-tag': 'ADMIN',
+  'GET /api/settings/discovery': 'ADMIN',
   'PUT /api/settings/discovery': 'ADMIN',
 
   // ── O CATÁLOGO, gerado ────────────────────────────────────────────────────
@@ -149,12 +138,12 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   // mesmo bloco seis vezes e deixar a sétima de fora quando alguém acrescentar
   // uma spec — exatamente o esquecimento que o D137 existe para pegar.
   //
-  // Ler é do técnico (ele escolhe categoria e modelo ao cadastrar); MEXER no
-  // catálogo é do administrador, porque é a forma do inventário inteiro.
+  // A exclusão é guardada pelo 409 de uso (D8), e o colaborador vai para a
+  // lixeira (V).
   ...Object.fromEntries(
     CATALOG_SPECS.flatMap((spec) => [
-      [`GET /api/${spec.slug}`, 'TECNICO' as const],
-      [`GET /api/${spec.slug}/options`, 'TECNICO' as const],
+      [`GET /api/${spec.slug}`, 'ADMIN' as const],
+      [`GET /api/${spec.slug}/options`, 'ADMIN' as const],
       [`POST /api/${spec.slug}`, 'ADMIN' as const],
       [`PUT /api/${spec.slug}/:id`, 'ADMIN' as const],
       [`DELETE /api/${spec.slug}/:id`, 'ADMIN' as const],

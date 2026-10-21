@@ -40,7 +40,7 @@ export default function PostosPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {/* O cadastro do posto é `ADMIN`; o técnico lê e opera a mesa. */}
+          {/* O cadastro do posto é `ADMIN`. */}
           {podeCriar && (
             <button
               onClick={openCreate}
@@ -100,9 +100,9 @@ export default function PostosPage() {
             ) : (
               <>
                 <span>Nenhum posto de trabalho cadastrado.</span>
-                {/* "O botão acima" só existe para o ADMIN (`podeCriar`): para o
-                    técnico, apontar para um botão que ele não vê era mandá-lo
-                    procurar o que não está lá. */}
+                {/* "O botão acima" só existe para o ADMIN (`podeCriar`): para
+                    quem não é, apontar para um botão que não aparece seria
+                    mandar procurar o que não está lá. */}
                 <span className="mt-4 text-[10px] max-w-md leading-relaxed">
                   {podeCriar
                     ? 'Crie a primeira mesa no botão acima. '

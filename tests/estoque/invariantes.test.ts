@@ -377,14 +377,4 @@ describe('a porta fechada e o cargo', () => {
       expect(resposta.status, `${metodo.toUpperCase()} ${url}`).toBe(401);
     }
   });
-
-  it('apagar e restaurar são do ADMIN; o técnico opera o resto', async () => {
-    const tecnico = await api.comoUsuario('TECNICO');
-    const mouse = await item('Mouse do técnico', 1);
-    // O técnico opera: cria, entrega, devolve.
-    expect((await tecnico.post('/api/stock/items', { name: 'Item do técnico', categoryId: cenario.categoriaEstoqueId })).status).toBe(201);
-    // Mas não apaga nem restaura.
-    expect((await tecnico.delete(`/api/stock/items/${mouse.id}`)).status).toBe(403);
-    expect((await tecnico.post(`/api/stock/items/${mouse.id}/restore`)).status).toBe(403);
-  });
 });

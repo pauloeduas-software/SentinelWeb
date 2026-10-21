@@ -47,7 +47,7 @@ formulário próprio — é uma operação, não um campo do cadastro:
 | **Observações** | a justificativa ("lote 2026/03, nota 1187"). Vai para o **histórico**, não para o ativo |
 
 A API é `POST /api/assets/:id/retire` (`{ retiredReason, retiredAt?, notes? }`),
-permitida a `TECNICO`.
+permitida a `ADMIN`, o único cargo ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)).
 
 ### Depois da baixa
 
@@ -89,7 +89,7 @@ vinculada a um ativo que acabou de ter baixa.
 ## Reverter
 
 Para a venda que não saiu, o roubado que apareceu, o clique errado.
-`POST /api/assets/:id/unretire`, `TECNICO`, botão **Reverter** na ficha, que pede
+`POST /api/assets/:id/unretire`, `ADMIN`, botão **Reverter** na ficha, que pede
 confirmação.
 
 - Limpa **as duas** colunas juntas: `retiredAt` sem motivo seria "saiu, não se sabe

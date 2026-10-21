@@ -19,7 +19,7 @@ interface PostosTableProps {
   postos: readonly Posto[];
   vazio: React.ReactNode;
   onAbrir: (posto: Posto) => void;
-  /** Mexer no cadastro é `ADMIN`; o técnico só abre a ficha. */
+  /** Mexer no cadastro é `ADMIN`. */
   podeEditar: boolean;
   onEditar: (posto: Posto) => void;
   onAlternar: (posto: Posto) => void;

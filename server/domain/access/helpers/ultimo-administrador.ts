@@ -7,7 +7,7 @@ import type { ClientePosse } from '../../assignment/use-cases/resolve-responsibl
 // A CHECAGEM RODA **DEPOIS** DA ESCRITA, DENTRO DA TRANSAÇÃO.
 //
 // É contraintuitivo e é o que a torna completa. Tentar prever se uma operação
-// vai deixar o sistema sem administrador exigiria simular cada caminho — rebaixar
+// vai deixar o sistema sem administrador exigiria simular cada caminho — mudar
 // o cargo, apagar a pessoa, desligá-la — e o terceiro seria o esquecido.
 //
 // Aplicando e CONTANDO depois, há uma pergunta só: *"ainda existe alguém?"*. Se
@@ -33,9 +33,9 @@ const SEM_SAIDA =
 
 /**
  * A TRAVA DA ADMINISTRAÇÃO — a primeira instrução de toda transação que pode
- * tirar um administrador do jogo (rebaixar, desativar, excluir).
+ * tirar um administrador do jogo (desativar, excluir, mudar o cargo).
  *
- * Sem ela, dois administradores rebaixados ao mesmo tempo contavam, cada um,
+ * Sem ela, dois administradores desativados ao mesmo tempo contavam, cada um,
  * "sobra 1" — a outra escrita ainda não confirmada — e as duas transações
  * passavam, deixando o sistema sem ninguém. Uma trava de transação do Postgres
  * (`pg_advisory_xact_lock`) põe essas operações em fila: a segunda só conta

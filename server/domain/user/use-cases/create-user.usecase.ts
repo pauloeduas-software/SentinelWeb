@@ -2,12 +2,13 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { USER_PUBLIC_SELECT } from '../helpers/user-select.helper';
 import { hashSenha } from '../../auth/helpers/password.helper';
+import type { Cargo } from '../../access/helpers/cargo';
 
 interface CreateUserData {
   name: string;
   email: string;
-  /** O cargo (D148). Ausente nasce `TECNICO`, pelo `@default` do schema. */
-  role?: 'TECNICO' | 'ADMIN';
+  /** O cargo (D148). Ausente nasce `ADMIN`, pelo `@default` do schema. */
+  role?: Cargo;
   /** É com o e-mail e esta senha que a pessoa entra no sistema. */
   password: string;
 }
@@ -28,8 +29,8 @@ export async function createUser(data: CreateUserData) {
       data: {
         name: data.name,
         email: data.email,
-        // Ausente cai no `@default(TECNICO)` do schema — e é por isso que aqui
-        // não há `?? 'TECNICO'`: o padrão mora num lugar só.
+        // Ausente cai no `@default(ADMIN)` do schema — e é por isso que aqui
+        // não há `?? 'ADMIN'`: o padrão mora num lugar só.
         role: data.role,
         passwordHash,
       },

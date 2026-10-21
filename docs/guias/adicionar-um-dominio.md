@@ -27,7 +27,7 @@ server/domain/licenca/
 
 ## Quando quebrar em `use-cases/`
 
-Os 16 domínios de hoje (`server/domain/`) já têm o esqueleto que lhes cabe. Para um domínio **novo**,
+Os 17 domínios de hoje (`server/domain/`) já têm o esqueleto que lhes cabe. Para um domínio **novo**,
 comece simples e quebre quando um dos dois acontecer:
 
 1. o arquivo do domínio passar de ~250 linhas; **ou**

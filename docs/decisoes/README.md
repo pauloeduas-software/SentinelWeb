@@ -5,7 +5,7 @@
 > muda, mesmo que o arquivo onde ela vive mude. Depois do D164 veio uma segunda rodada, com 15
 > decisões próprias, nomeadas por letra (`A`…`P`, sem `N`) em vez de número — ver
 > [*A segunda rodada*](#a-segunda-rodada-ap) abaixo. A varredura do código morto, que veio
-> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S`, `T`, `U`, `V`, `W`, `X` e `Y`.
+> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y` e `Z`.
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve.** Se a realidade mudou, ela é
 > **superada** por outra, com link entre as duas. O log é o que diz por quanto tempo cada regra
@@ -19,7 +19,7 @@
 | Arquivo | Assunto | Decisões |
 |---|---|---|
 | [`reconciliacao.md`](./reconciliacao.md) | Reconciliação | 35 |
-| [`acesso.md`](./acesso.md) | Acesso | 25 |
+| [`acesso.md`](./acesso.md) | Acesso | 30 |
 | [`escopo.md`](./escopo.md) | **Escopo** — o que o sistema deixou de fazer | 22 |
 | [`catalogo-e-ativo.md`](./catalogo-e-ativo.md) | Catálogo e ativo | 15 |
 | [`posse.md`](./posse.md) | Posse | 17 |
@@ -52,6 +52,7 @@ que corrigem algo anterior:
 | a lixeira do usuário da F0 (`deletedAt`, `users_email_unique_undeleted`) | **W** | excluir usuário apaga a linha; ninguém rebaixa, desativa ou exclui a si mesmo |
 | **D23**, **D24**, **D25**, **W** (em parte) | **X** | o histórico não guarda quem fez: as cinco colunas de autor e o parâmetro `actorId` saem, e usuário não grava histórico |
 | **D15**, **B** (a porta da marca), **V** (a metade da localização) | **Y** | o posto sai de `Location` e vira `Workstation`: a localização só guarda, com a regra do status; o posto recebe entrega, estoque e ocupante |
+| **U** (os dois cargos), **W** (o rebaixar) | **Z** | sobra um cargo só, `ADMIN`, com toda a validação dele; a separação de cargos é decisão a tomar |
 
 **O de-escopo (D143–D156) supera por subtração**, e é o maior grupo de supersessões do projeto:
 a decisão antiga não estava errada, o que ela governava deixou de existir. Está inteiro em
@@ -140,6 +141,7 @@ que o código ainda cita. Letra deixa claro, só pelo nome, que a decisão é de
 | **W** | Excluir usuário apaga a linha, e ninguém rebaixa, desativa ou exclui a si mesmo | [Acesso](./acesso.md#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo) |
 | **X** | O histórico não guarda quem fez | [Acesso](./acesso.md#x--o-histórico-não-guarda-quem-fez) |
 | **Y** | O posto sai de `Location`: localização guarda, posto recebe | [Posse](./posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe) |
+| **Z** | Sobra um cargo só: Administrador, e a separação de cargos fica para decidir | [Acesso](./acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir) |
 
 **`N` não existe, de propósito.** As correções de segurança e consistência desta rodada (custo
 de compra vazando por uma quarta porta, comando que respondia sucesso sem confirmação do socket,
@@ -154,7 +156,7 @@ já prometiam e o código não cumpria. Continua a letra pelo mesmo motivo de a 
 adotado: a numeração `D` corresponde ao que o código cita, e recomeçá-la colidiria. A `R` veio
 logo depois dela, pelo mesmo caminho: a varredura achou a rota de senha sem chamador, e a
 resposta foi levar a senha para o cadastro. A `S` é o renomeio do papel para cargo, a palavra
-que a equipe usa. A `T` tira o seed da conta de administrador. A próxima decisão é a `Z`.
+que a equipe usa. A `T` tira o seed da conta de administrador. A próxima decisão é a `AA`: acabado o alfabeto, a letra continua com duas.
 
 ## O índice
 

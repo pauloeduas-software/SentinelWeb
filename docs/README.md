@@ -8,7 +8,7 @@
 |---|---|---|
 | [`referencia/`](./referencia/) | **É verdade AGORA.** Mudou o código, muda aqui. Não conta história, não dá instrução. | o que o sistema é: camadas, modelo de posse, invariantes, acesso, testes, configurações, baixa do ativo |
 | [`guias/`](./guias/) | **Começa com um verbo.** Receita para quem já sabe o que quer. | criar uma migration, adicionar um domínio, escrever um teste |
-| [`decisoes/`](./decisoes/) | **Não se reescreve.** Se a realidade mudou, a decisão é *superada* por outra, com link entre as duas. | as decisões numeradas (`D1`…`D164`) e as por letra (`A`…`T`), um arquivo por assunto |
+| [`decisoes/`](./decisoes/) | **Não se reescreve.** Se a realidade mudou, a decisão é *superada* por outra, com link entre as duas. | as decisões numeradas (`D1`…`D164`) e as por letra (`A`…`Z`), um arquivo por assunto |
 | [`historico/`](./historico/) | **Congelado na data.** Não se reescreve: o que ali se apresenta como vigente e deixou de ser ganha uma nota curta de status, com o link do que mudou. | os planos, as revisões e os fechamentos das onze fases |
 
 E um arquivo na raiz: este mapa. Não há lista do que falta fazer — o que o sistema deixou de
@@ -71,7 +71,7 @@ Se você está escrevendo a mesma frase na segunda zona, uma das duas está no l
 2. **Auditoria e revisão não ganham arquivo.** Elas atualizam o documento que revisaram: a
    revisão de um plano entra no plano, a correção de uma referência substitui o parágrafo errado.
    Documento de referência não carrega a lista das suas próprias correções — isso é o `git log`.
-3. **Decisão nova continua a letra** (a próxima é a `Z`; a numeração `D` parou no `D164`, pelo
+3. **Decisão nova continua a letra** (a próxima é a `AA`; a numeração `D` parou no `D164`, pelo
    motivo escrito em [*A segunda rodada*](./decisoes/README.md#a-segunda-rodada-ap)), entra no
    arquivo do assunto que ela governa e ganha linha no índice. Se ela corrige uma anterior, as
    duas apontam uma para a outra e a tabela de supersessões cresce.

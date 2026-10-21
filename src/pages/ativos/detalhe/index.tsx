@@ -35,8 +35,8 @@ export default function AssetDetailPage() {
     handleSubmit, handleEntregar, handleDevolver, handleDarBaixa, handleReverterSaida,
     handleDelete,
   } = useAssetDetail();
-  // A lixeira é `ADMIN` no servidor (`DELETE /api/assets/:id`); para o técnico
-  // o botão só levava 403. Antes dos `return` abaixo: hook depois de retorno
+  // A lixeira é `ADMIN` no servidor (`DELETE /api/assets/:id`); para quem não
+  // é, o botão só levaria 403. Antes dos `return` abaixo: hook depois de retorno
   // condicional é o que as regras do React proíbem.
   const podeExcluir = usePode('ADMIN');
 

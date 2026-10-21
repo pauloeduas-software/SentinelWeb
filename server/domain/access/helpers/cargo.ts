@@ -1,29 +1,29 @@
-// O CARGO DA SESSÃO — dois valores, com ordem (D148).
+// O CARGO DA SESSÃO — com ordem (D148), e hoje com um valor só (Z).
 //
 // ═══════════════════════════════════════════════════════════════════════════
-// POR QUE COM ORDEM, E NÃO DOIS VALORES SOLTOS: a pergunta de toda rota é "tem
-// ao MENOS este cargo?". Sem ordem, cada linha do mapa teria que listar os
-// cargos aceitos (`['ADMIN', 'TECNICO']`) e a lista cresceria errada — alguém
-// acrescentaria `ADMIN` em rota nova e esqueceria em outra. Com ordem, a linha
-// declara o MÍNIMO e o resto é aritmética.
+// UM CARGO SÓ: todo usuário é `ADMIN` (Z), e a separação de cargos é decisão
+// a tomar. A validação de `ADMIN` fica inteira — o mapa de rotas, o `temCargo`
+// dos `select` por cargo, o `usePode` da tela.
 //
-// POR QUE NÃO UM BOOLEANO `isAdmin`: com dois cargos ele caberia, e o enum
-// custa o mesmo. A linha do mapa continua dizendo QUAL cargo, e não "precisa
-// de admin?" — o terceiro cargo, se um dia vier, entra no array e não reescreve
-// rota nenhuma.
+// POR QUE COM ORDEM: a pergunta de toda rota é "tem ao MENOS este cargo?".
+// Sem ordem, cada linha do mapa teria que listar os cargos aceitos, e a lista
+// cresceria errada — alguém acrescentaria um cargo em rota nova e esqueceria
+// em outra. Com ordem, a linha declara o MÍNIMO e o resto é aritmética.
+//
+// POR QUE NÃO UM BOOLEANO `isAdmin`: ele caberia, e o enum custa o mesmo. A
+// linha do mapa continua dizendo QUAL cargo, e não "precisa de admin?".
 //
 // Quem RECEBE equipamento não tem cargo: é colaborador (`Person`), outra
 // tabela, e não entra no sistema.
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** Os dois cargos, do menor para o maior. A ordem do array **é** a hierarquia. */
-export const CARGOS = ['TECNICO', 'ADMIN'] as const;
+/** Os cargos, do menor para o maior. A ordem do array **é** a hierarquia. */
+export const CARGOS = ['ADMIN'] as const;
 
 export type Cargo = (typeof CARGOS)[number];
 
 /** O nome que aparece na tela e na mensagem de 403. */
 export const NOME_DO_CARGO: Readonly<Record<Cargo, string>> = {
-  TECNICO: 'Técnico',
   ADMIN: 'Administrador',
 };
 
@@ -40,7 +40,7 @@ export function ehCargo(valor: unknown): valor is Cargo {
 /**
  * `cargo` alcança `minimo`?
  *
- * `ADMIN` alcança tudo; `TECNICO`, só o que exige `TECNICO`. É a única
+ * Cargo maior alcança o que o menor alcança. É a única
  * função que conhece a hierarquia — quem precisa comparar cargo chama esta, e
  * não o `indexOf` por fora.
  */

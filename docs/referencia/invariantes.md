@@ -461,7 +461,7 @@ await assertSobraAdministrador(tx);
 
 **A checagem roda DEPOIS da escrita, dentro da transação** — e é isso que a torna
 completa. Prever se uma operação vai deixar o sistema sem administrador exigiria
-simular cada caminho (rebaixar o cargo, desativar a pessoa, apagar a pessoa), e o
+simular cada caminho (mudar o cargo, desativar a pessoa, apagar a pessoa), e o
 terceiro seria o esquecido. Aplicando e **contando depois**, há uma pergunta só:
 *ainda existe alguém?* Se não, o `throw` desfaz tudo e nada aconteceu.
 
@@ -477,8 +477,8 @@ mesmo — passava, e o sistema ficava trancado por fora. Hoje `deleteUser` a cha
 no fim da transação, como a edição.
 
 **O último administrador não alcança mais a rede sozinho** desde o
-[W](../decisoes/acesso.md#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo): rebaixar,
-desativar e excluir a si mesmo são recusados antes. Ela continua cobrindo a corrida — dois
+[W](../decisoes/acesso.md#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo): desativar
+e excluir a si mesmo são recusados antes. Ela continua cobrindo a corrida — dois
 administradores tirando um ao outro no mesmo instante, cada um contando "sobra eu" —, que
 `travarAdministracao` põe em fila. Provado em `tests/invariantes/permissao.test.ts`.
 

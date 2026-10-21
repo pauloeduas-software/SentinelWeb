@@ -7,7 +7,7 @@
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D22–D26, D72–D78, D80, D89, D135–D142, P da segunda rodada (ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)) e R, S, T, U, W e X, que vieram depois da varredura
+> [`README.md`](./README.md#a-segunda-rodada-ap)) e R, S, T, U, W, X e Z, que vieram depois da varredura
 > Q e continuaram a letra.
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
@@ -497,6 +497,9 @@ que ela não exista.
 > excluir colaborador passou a mandar para a lixeira, recusando só quem está com algo agora — e
 > não mais "apagar de verdade, e só sem histórico". O resto continua como está aqui.
 >
+> **Superada em parte por [Z](#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir):** sobra um cargo só, `ADMIN`, e a
+> separação de cargos é decisão a tomar.
+>
 > **Completada por [W](#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo):** a linha
 > do usuário excluído, que ficava no banco com `deletedAt`, passou a ser apagada; e o
 > administrador não rebaixa, não desativa e não exclui a si mesmo.
@@ -550,6 +553,10 @@ telas. `GET /api/users/options`, `/:id` e `/:id/history` saíram; o seletor de p
 
 > **Superada em parte por [X](#x--o-histórico-não-guarda-quem-fez):** a exclusão de usuário não grava mais
 > `ActivityLog`, e o histórico não guarda o autor de nada. O resto continua como está aqui.
+>
+> **Superada em parte por [Z](#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir):** com um cargo só, não há para onde
+> rebaixar, e a regra de não rebaixar a si mesmo saiu. Desativar e excluir a si mesmo continuam
+> recusados.
 
 **Decidido:** duas regras da tela Usuários.
 
@@ -645,3 +652,40 @@ ninguém abria.
 auditoria voltar, o caminho é gravar o NOME por escrito na linha do histórico — como a
 [V](./posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira)
 faz com a localização —, e não o id: o id de um usuário excluído não leva a ninguém (W).
+
+---
+
+## Z — Sobra um cargo só: Administrador, e a separação de cargos fica para decidir
+
+**Decidido:** o cargo `TECNICO` sai. O enum `Cargo` fica só com `ADMIN`, que passa a ser o
+`@default` da coluna `users.role`; a `0_init` foi editada no lugar, e o banco de
+desenvolvimento, alinhado. Toda rota que exigia `TECNICO` passa a exigir `ADMIN` no mapa de
+rotas, e o menu inteiro passa a ser `ADMIN`. O formulário de usuário perde o campo Cargo — não
+há o que escolher —, e a lista de Usuários mantém a coluna Cargo, que mostra Administrador. A
+API continua aceitando `role`, e um cargo que não existe é 422. Sai junto a regra de não
+rebaixar a si mesmo do [W](#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo):
+sem cargo abaixo de `ADMIN`, não há para onde rebaixar.
+**Supera:** o [U](#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)
+na parte "sobram dois cargos", e o W na parte do rebaixar.
+**Mantém:** toda a validação de `ADMIN` — o cargo com ordem do
+[D148](./escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)
+(`CARGOS` e `cargoAlcanca`), o mapa de rotas conferido no boot (D137), o `temCargo` dos
+`select` por cargo (D77), o `usePode` e o `SoAdmin` da tela —, a rede do último administrador e
+o resto do W (não desativar nem excluir a si mesmo).
+
+**Por quê:** pedido do usuário — ele ainda não decidiu como separar os cargos e prefere todo
+mundo Administrador até decidir. A conferência de `ADMIN` fica inteira; o que era do Técnico —
+as rotas que ele alcançava, o rebaixar, as menções a ele no código, nos testes e nos docs — sai.
+Se a separação vier, ela é construída do zero, e não a partir do desenho antigo.
+
+**O que se perdeu, e foi aceito:** os testes que provavam o que quem não é `ADMIN` não vê nem
+alcança precisavam de uma sessão abaixo de `ADMIN`, e saíram. A mensagem do 403 continua provada
+direto no `exigirPermissao`, e o que o `ADMIN` vê continua provado pela API.
+
+**A decidir — a separação de cargos:**
+
+- **quais cargos existem** além do `ADMIN`, e em que ordem;
+- **o que cada um alcança**, linha a linha do mapa de rotas;
+- **qual cargo nasce por padrão** — o `@default` da coluna, que já trancou o sistema uma vez
+  ([D164](./escopo.md#d164--o-default-da-coluna-tranca-o-sistema-e-a-migração-precisa-do-backfill));
+- **o que a tela de Usuários precisa** para escolher o cargo, e quem pode mudar o de quem.

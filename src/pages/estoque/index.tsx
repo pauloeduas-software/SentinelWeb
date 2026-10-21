@@ -24,8 +24,7 @@ export default function EstoquePage() {
     handleCriar, handleEditar, handleAjustar, handleSaida, handleDevolver,
     handleExcluir, handleRestaurar,
   } = useEstoque();
-  // Lixeira e restaurar são `ADMIN` no servidor, como no ativo; o resto da
-  // linha (entrada, saída, editar) é do técnico.
+  // Lixeira e restaurar são `ADMIN` no servidor, como no ativo.
   const podeApagar = usePode('ADMIN');
 
   return (

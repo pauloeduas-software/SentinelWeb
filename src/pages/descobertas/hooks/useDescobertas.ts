@@ -82,9 +82,9 @@ export function useDescobertas() {
       || vincular.isPending || vincularEEntregar.isPending || reconciliar.isPending,
 
     podeReconciliar,
-    // Mudar o modo e os prazos (`PUT /api/settings/discovery`) também é `ADMIN`;
-    // ler é do técnico. Mesmo cargo do reconciliar, nome próprio para quem lê a
-    // página não ter que saber disso.
+    // Mudar o modo e os prazos (`PUT /api/settings/discovery`) também é `ADMIN`.
+    // Mesmo cargo do reconciliar, nome próprio para quem lê a página não ter
+    // que saber disso.
     podeConfigurar: podeReconciliar,
     reconciliando: reconciliar.isPending,
     ultimaVarredura,

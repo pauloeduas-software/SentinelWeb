@@ -22,7 +22,7 @@ CREATE TYPE "AgentStatus" AS ENUM ('ONLINE', 'OFFLINE');
 CREATE TYPE "ReviewState" AS ENUM ('UNREVIEWED', 'ALLOWED', 'BLOCKED');
 
 -- CreateEnum
-CREATE TYPE "Cargo" AS ENUM ('TECNICO', 'ADMIN');
+CREATE TYPE "Cargo" AS ENUM ('ADMIN');
 
 -- CreateEnum
 CREATE TYPE "CategoryType" AS ENUM ('ASSET', 'LICENSE', 'STOCK');
@@ -103,7 +103,7 @@ CREATE TABLE "users" (
     "lockedUntil" TIMESTAMP(3),
     "tokenVersion" INTEGER NOT NULL DEFAULT 0,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "role" "Cargo" NOT NULL DEFAULT 'TECNICO',
+    "role" "Cargo" NOT NULL DEFAULT 'ADMIN',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 

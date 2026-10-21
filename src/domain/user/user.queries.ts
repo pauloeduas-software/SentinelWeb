@@ -3,7 +3,7 @@ import { apiClient } from '../../core/api/apiClient';
 import type { User } from '../shared/user.types';
 import type { ListEnvelope, ListParams } from '../shared/list.types';
 
-// QUEM OPERA O SISTEMA — Técnico e Administrador. Quem recebe equipamento é
+// QUEM OPERA O SISTEMA — hoje, só Administrador (Z). Quem recebe equipamento é
 // colaborador (`person.queries.ts`, e o cadastro na aba de Configurações).
 export const userKeys = {
   all: ['users'] as const,
@@ -13,8 +13,8 @@ export const userKeys = {
 export interface UserInput {
   name: string;
   email: string;
-  /** O cargo (D148). Ausente, numa criação, nasce `TECNICO` pelo `@default`. */
-  role?: 'TECNICO' | 'ADMIN';
+  /** O cargo (D148). Ausente, numa criação, nasce `ADMIN` pelo `@default`. */
+  role?: 'ADMIN';
   /**
    * SÓ na edição, e só pelo botão Desativar/Ativar da lista: desativar recusa
    * o login e derruba a sessão da pessoa.

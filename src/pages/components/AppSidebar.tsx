@@ -52,8 +52,8 @@ export default function AppSidebar() {
   // SÓ O QUE A PESSOA ALCANÇA (F11) — e o GRUPO VAZIO SOME JUNTO.
   //
   // Filtrar só os itens deixaria "Gestão" como um título com nada embaixo para
-  // quem é `TECNICO`: um cabeçalho de seção vazio é pior do que a seção não
-  // existir, porque parece coisa que não carregou.
+  // quem não alcança o cargo dela: um cabeçalho de seção vazio é pior do que a
+  // seção não existir, porque parece coisa que não carregou.
   //
   // `useMemo` porque `pode` só troca quando a sessão troca: sem ele, a lista
   // inteira é remontada a cada render da barra, que acontece em toda navegação.

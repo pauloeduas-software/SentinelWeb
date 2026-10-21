@@ -41,8 +41,8 @@ export const ASSET_SELECT = {
   model: {
     select: {
       id: true, name: true, modelNumber: true,
-      // Os canais de suporte vêm junto: é na ficha do ativo que o técnico
-      // precisa do telefone da garantia, não na tela de Configurações.
+      // Os canais de suporte vêm junto: é na ficha do ativo que se precisa do
+      // telefone da garantia, não na tela de Configurações.
       manufacturer: {
         select: { id: true, name: true, url: true, supportPhone: true, supportEmail: true },
       },
@@ -71,9 +71,9 @@ export const ASSET_SELECT = {
 //
 // AS ESCRITAS devolvem o ativo SEM custo, para qualquer cargo
 // (`ASSET_WRITE_SELECT`). Criar, editar, entregar, devolver, dar baixa e
-// restaurar respondem com o ativo atualizado, e o técnico chama quase todas:
-// com o select cheio, o custo que a leitura esconde saía pela resposta da
-// escrita. Enfiar a sessão em cada use-case de escrita espalharia autorização
+// restaurar respondem com o ativo atualizado, e quem não é `ADMIN` chamaria
+// quase todas: com o select cheio, o custo que a leitura esconde sairia pela
+// resposta da escrita. Enfiar a sessão em cada use-case de escrita espalharia autorização
 // por toda a camada de posse — e a tela não usa o custo da resposta de escrita
 // nenhuma. O custo sai por LEITURA, e é a leitura que filtra.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -101,9 +101,9 @@ export const ASSET_WRITE_SELECT = semCusto(ASSET_SELECT);
 /**
  * O custo que chega numa ESCRITA de quem não é `ADMIN` é descartado.
  *
- * O formulário do técnico não tem o campo, porque ele não vê o valor. Aceitar
- * o que chegasse deixaria um `purchaseCost: ''` (o campo vazio vira `null`)
- * apagar o custo que só o administrador enxerga.
+ * O formulário de quem não é `ADMIN` não tem o campo, porque não vê o valor.
+ * Aceitar o que chegasse deixaria um `purchaseCost: ''` (o campo vazio vira
+ * `null`) apagar o custo que só o administrador enxerga.
  */
 export function custoSoDoAdmin<T extends { purchaseCost?: string | null }>(
   data: T,

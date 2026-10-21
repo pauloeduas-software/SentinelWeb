@@ -28,7 +28,7 @@ export default function LicencasPage() {
     handleCriar, handleEditar, handleEntregar, handleDevolver,
     handleExcluir, handleRestaurar,
   } = useLicencas();
-  // Lixeira e restaurar são `ADMIN` no servidor; entregar e editar, do técnico.
+  // Lixeira e restaurar são `ADMIN` no servidor.
   const podeApagar = usePode('ADMIN');
 
   return (

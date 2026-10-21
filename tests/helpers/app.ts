@@ -45,10 +45,12 @@ export interface ApiDeTeste extends Cliente {
    * `ADMIN` e alcança tudo, então nenhuma asserção sobre "sem acesso" é possível
    * por ele.
    *
-   * Cria um usuário com senha e o cargo pedido, e entra. `TECNICO` é o padrão
-   * porque é o menor dos dois — o que precisa provar "sem acesso".
+   * Cria um usuário com senha e o cargo pedido, e entra. Hoje o único cargo é
+   * `ADMIN` (Z), então "sem acesso" não tem como ser provado por aqui: serve
+   * para ter uma SEGUNDA sessão, outra conta além do administrador padrão. A
+   * separação de cargos é decisão a tomar.
    */
-  comoUsuario(cargo?: 'TECNICO' | 'ADMIN'): Promise<Cliente & { userId: string }>;
+  comoUsuario(cargo?: 'ADMIN'): Promise<Cliente & { userId: string }>;
   /** A instância montada, para o que o cliente não cobre (WebSocket, `app.hasRoute`). */
   app: FastifyInstance;
   /** O id do administrador logado. */
@@ -106,7 +108,7 @@ function clienteCom(app: FastifyInstance, cookie: string | null): Cliente {
 }
 
 /**
- * Monta a aplicação e entra como o administrador do seed.
+ * Monta a aplicação e entra como o administrador do harness.
  *
  * Uma por arquivo de teste, em `beforeAll` — com uma exceção, que é o teste do
  * teto: ele monta DUAS, uma de cada montagem, porque o que ele prova é a
@@ -163,7 +165,7 @@ export async function criarApi(opcoes: OpcoesDaAplicacao = {}): Promise<ApiDeTes
    * ERA `comoUsuario(permissoes: string[])`, com grupo (D76). O D148 trocou a
    * matriz pelo cargo, e o grupo intermediário desapareceu junto.
    */
-  async function comoUsuario(cargo: 'TECNICO' | 'ADMIN' = 'TECNICO') {
+  async function comoUsuario(cargo: 'ADMIN' = 'ADMIN') {
     // `Date.now()` no sufixo porque o `email` é único, e um arquivo de teste
     // chama isto mais de uma vez.
     const marca = `p${Date.now()}${Math.floor(Math.random() * 1000)}`;

@@ -27,9 +27,8 @@ export default function AtivosPage() {
     handleSubmit, handleDelete, handleRestore,
     emPosse, openPosse, closePosse, handleEntregar, handleDevolver,
   } = useAssets();
-  // Mandar para a lixeira e tirar de lá é `ADMIN` no servidor (excluir de
-  // verdade é dele); o resto da linha é o trabalho do técnico. Sem isto o
-  // técnico via a lixeira e o restaurar, e os dois só levavam 403.
+  // Mandar para a lixeira e tirar de lá é `ADMIN` no servidor. Sem isto, quem
+  // não é veria a lixeira e o restaurar, e os dois só levariam 403.
   const ehAdmin = usePode('ADMIN');
 
   // AS COLUNAS VISÍVEIS (F10, Etapa B). Preferência do navegador, não do
@@ -295,24 +294,11 @@ export default function AtivosPage() {
                           <span>Nenhum ativo cadastrado.</span>
                           {/* Um ativo exige um modelo, e o modelo exige fabricante e
                               categoria — é a ordem do Snipe-IT. Sem esta dica, o
-                              primeiro cadastro esbarra num seletor vazio.
-                              O LINK é só do ADMIN: Configurações é tela dele, e
-                              para os outros o link levava a uma porta fechada. A
-                              dica fica, porque a ordem vale para todos — muda
-                              quem faz. */}
+                              primeiro cadastro esbarra num seletor vazio. */}
                           <span className="mt-4 text-[10px] max-w-md leading-relaxed">
-                            {ehAdmin ? (
-                              <>
-                                Todo ativo pertence a um modelo. Cadastre o fabricante e o modelo em{' '}
-                                <Link to="/configuracoes" className="text-status-success hover:underline">Configurações</Link>
-                                {' '}antes do primeiro ativo.
-                              </>
-                            ) : (
-                              <>
-                                Todo ativo pertence a um modelo. Fabricante e modelo se cadastram em
-                                Configurações — peça a um administrador antes do primeiro ativo.
-                              </>
-                            )}
+                            Todo ativo pertence a um modelo. Cadastre o fabricante e o modelo em{' '}
+                            <Link to="/configuracoes" className="text-status-success hover:underline">Configurações</Link>
+                            {' '}antes do primeiro ativo.
                           </span>
                         </>
                       )}
