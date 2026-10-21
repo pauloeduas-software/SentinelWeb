@@ -7,7 +7,6 @@ import type { User } from '../../domain/shared/user.types';
 import { useAuthStore } from '../../domain/auth/auth.store';
 
 const NOME_DO_CARGO: Record<User['role'], string> = {
-  TECNICO: 'Técnico',
   ADMIN: 'Administrador',
 };
 

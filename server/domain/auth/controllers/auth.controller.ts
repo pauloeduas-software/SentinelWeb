@@ -55,10 +55,10 @@ export const authController = {
    * o único lugar onde a resposta "o que eu alcanço" faz sentido.
    *
    * PARA QUE O PAINEL PRECISA DISSO: para não desenhar o que vai dar 403. Um
-   * menu de Configurações para quem é `TECNICO` é um clique que leva a uma tela
-   * que não carrega. Esconder não protege nada — a proteção é o `preHandler` do
-   * servidor, que já recusou antes de qualquer tela existir —, mas mostrar o que
-   * não funciona é defeito de interface.
+   * item de menu que o cargo da sessão não alcança é um clique que leva a uma
+   * tela que não carrega. Esconder não protege nada — a proteção é o
+   * `preHandler` do servidor, que já recusou antes de qualquer tela existir —,
+   * mas mostrar o que não funciona é defeito de interface.
    */
   async me(request: FastifyRequest) {
     return { ...request.user, role: request.cargo };

@@ -21,7 +21,7 @@ import { assertSobraAdministrador, travarAdministracao } from '../../access/help
  * da própria conta compara (W).
  */
 export async function deleteUser(id: string, sessaoId: string): Promise<void> {
-  // NINGUÉM EXCLUI A SI MESMO (W) — como no rebaixar e no desativar
+  // NINGUÉM EXCLUI A SI MESMO (W) — como no desativar
   // (`update-user.usecase.ts`): tirar a própria conta é com outro administrador.
   if (id === sessaoId) {
     throw new AppError('Você não pode excluir a si mesmo. Peça a outro administrador.', 409);

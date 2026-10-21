@@ -42,14 +42,13 @@ async function logar(email: string, password: string): Promise<string> {
 
 /** Um colaborador com credencial própria, para não mexer na sessão do harness. */
 async function criarUsuarioComAcesso(sufixo: string) {
-  // Este arquivo é sobre SESSÃO — ele precisa de alguém que entre. Cargo e
-  // senha vêm no mesmo cadastro.
+  // Este arquivo é sobre SESSÃO — ele precisa de alguém que entre. A senha vem
+  // no mesmo cadastro, e o cargo nasce `ADMIN` pelo `@default` (Z).
   const email = `fulano.${sufixo}@empresa.com`;
   const password = 'senha-comprida-do-teste';
   const criado = await api.post<{ id: string }>('/api/users', {
     name: `Fulano ${sufixo}`,
     email,
-    role: 'TECNICO',
     password,
   });
   expect(criado.status).toBe(201);

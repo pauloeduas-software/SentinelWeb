@@ -38,16 +38,16 @@ function RedirecionarColaborador() {
 }
 
 /**
- * A ROTA QUE SÓ O ADMIN ABRE — Configurações e Usuários, hoje.
+ * A ROTA QUE SÓ O ADMIN ABRE — Usuários, hoje.
  *
  * O menu já escondia o item, mas esconder o item não fecha a URL: quem colava
- * `/configuracoes` (ou seguia um link antigo) via a tela inteira, com o botão de
- * cadastrar e as ações de linha, e cada clique voltava 403 — o catálogo é
- * `ADMIN` para escrever (`server/domain/access/helpers/route-permissions.ts`).
+ * `/usuarios` (ou seguia um link antigo) via a tela inteira, com o botão de
+ * cadastrar e as ações de linha, e tudo voltava 403 — a tela é `ADMIN` até para
+ * ler (`server/domain/access/helpers/route-permissions.ts`).
  * Uma tela em que tudo falha é pior do que não chegar nela.
  *
  * Redireciona para a raiz, e não para uma tela de "sem acesso": a raiz já leva
- * para Ativos, que é onde o técnico trabalha. `replace` pelo mesmo motivo do
+ * para Ativos, que é a tela do trabalho do dia. `replace` pelo mesmo motivo do
  * redirecionamento da raiz — voltar não pode cair aqui de novo.
  *
  * Como o `usePode`, isto é INTERFACE, não segurança: quem autoriza é o servidor.
@@ -117,18 +117,19 @@ function Layout() {
                 por trás: `/reconciliacao` seria o mesmo erro que `/itam` foi até
                 a F6, nomear a tela pelo assunto em vez de pelo conteúdo. */}
             <Route path="/descobertas" element={<DescobertasPage />} />
-            {/* QUEM OPERA O SISTEMA — Técnico e Administrador — é assunto do
-                Administrador: o técnico nem vê o item no menu (navegacao.ts), e a
-                URL digitada volta para a raiz. `/users` era o nome antigo. */}
+            {/* QUEM OPERA O SISTEMA é assunto do Administrador: quem não é nem
+                vê o item no menu (navegacao.ts), e a URL digitada volta para a
+                raiz. Com um cargo só (Z), todo mundo passa. `/users` era o
+                nome antigo. */}
             <Route path="/usuarios" element={<SoAdmin><UsuariosPage /></SoAdmin>} />
             <Route path="/users" element={<Navigate to="/usuarios" replace />} />
             <Route path="/users/:id" element={<RedirecionarColaborador />} />
-            <Route path="/configuracoes" element={<SoAdmin><ConfiguracoesPage /></SoAdmin>} />
+            <Route path="/configuracoes" element={<ConfiguracoesPage />} />
             {/* A FICHA DO COLABORADOR: os dois baldes de posse
                 (docs/referencia/modelo-de-posse.md, Camada 3). Debaixo de
                 Configurações porque é de lá que ela abre — a aba Colaboradores —,
                 e é isso que acende o item certo no menu. */}
-            <Route path="/configuracoes/colaboradores/:id" element={<SoAdmin><ColaboradorPage /></SoAdmin>} />
+            <Route path="/configuracoes/colaboradores/:id" element={<ColaboradorPage />} />
           </Routes>
         </main>
       </div>

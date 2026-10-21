@@ -32,7 +32,7 @@ export const workstationController = {
     // O CUSTO DOS ATIVOS DA MESA É DE `ADMIN` (D77), e esta rota vazava.
     //
     // A ficha do posto devolve os ativos entregues com o `ASSET_SELECT`
-    // completo, e `purchaseCost` está nele: um `TECNICO` que abrisse
+    // completo, e `purchaseCost` está nele: quem não fosse `ADMIN` e abrisse
     // `/postos/:id` recebia o custo de compra de cada equipamento da mesa —
     // exatamente o que `tests/invariantes/dado-sensivel.test.ts` prova que
     // `/api/assets` e `/api/assets/:id` não fazem. O vazamento era por falta de

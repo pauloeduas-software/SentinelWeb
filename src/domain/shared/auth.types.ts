@@ -17,7 +17,7 @@ import type { User } from './user.types';
  */
 export type SessionUser = Omit<User, 'role' | 'isActive'> & {
   /**
-   * O CARGO desta pessoa (D148) — `TECNICO` ou `ADMIN`.
+   * O CARGO desta pessoa (D148) — hoje sempre `ADMIN` (Z).
    *
    * Na sessão VEM SÓ DE DUAS ROTAS, `POST /api/auth/login` e `GET /api/auth/me`:
    * no servidor ele não está no `USER_PUBLIC_SELECT` de propósito, e sai na
@@ -31,7 +31,7 @@ export type SessionUser = Omit<User, 'role' | 'isActive'> & {
    * ERA UM ARRAY de chaves `<módulo>.<ação>`, a união dos grupos (D76). Virou uma
    * string com ordem, e quem compara é o `usePode()` do store.
    */
-  role: 'TECNICO' | 'ADMIN';
+  role: 'ADMIN';
 };
 
 /** O login é o e-mail do cadastro, e a senha. */

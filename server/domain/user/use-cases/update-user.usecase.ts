@@ -3,6 +3,7 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { USER_PUBLIC_SELECT } from '../helpers/user-select.helper';
 import { hashSeHouver } from '../helpers/credencial.helper';
+import type { Cargo } from '../../access/helpers/cargo';
 
 // Campos que o formulário edita. A lista é explícita de propósito: a rota antiga
 // repassava `request.body` inteiro para o Prisma, e qualquer campo enviado a
@@ -11,7 +12,7 @@ interface UpdateUserData {
   name?: string;
   email?: string;
   /** O cargo (D148). Ausente = não mexe. */
-  role?: 'TECNICO' | 'ADMIN';
+  role?: Cargo;
   /** Desativar derruba a sessão na requisição seguinte e recusa o login. */
   isActive?: boolean;
   /** "Nova senha". Ausente mantém a atual; presente troca e derruba as sessões. */
@@ -35,21 +36,13 @@ export async function updateUser(id: string, data: UpdateUserData, sessaoId: str
     // (`ultimo-administrador.ts`): só quando a edição pode tirar alguém do jogo.
     if (data.role !== undefined || data.isActive === false) await travarAdministracao(tx);
 
-    const antes = await tx.user.findFirst({ where: { id }, select: { email: true, role: true } });
+    const antes = await tx.user.findFirst({ where: { id }, select: { email: true } });
     if (!antes) throw new AppError('Registro não encontrado', 404);
 
-    // NINGUÉM TIRA A SI MESMO DO JOGO (W): rebaixar e desativar a própria conta
-    // é com outro administrador (a exclusão está em `delete-user.usecase.ts`).
-    // Só o administrador chega a esta rota, então mudar o próprio cargo é sempre
-    // rebaixar. O cargo IGUAL ao atual passa: o formulário reenvia todo campo, e
-    // corrigir o próprio nome não pode virar 409.
-    if (id === sessaoId) {
-      if (data.role !== undefined && data.role !== antes.role) {
-        throw new AppError('Você não pode rebaixar a si mesmo. Peça a outro administrador.', 409);
-      }
-      if (data.isActive === false) {
-        throw new AppError('Você não pode desativar a si mesmo. Peça a outro administrador.', 409);
-      }
+    // NINGUÉM TIRA A SI MESMO DO JOGO (W): desativar a própria conta é com outro
+    // administrador (a exclusão está em `delete-user.usecase.ts`).
+    if (id === sessaoId && data.isActive === false) {
+      throw new AppError('Você não pode desativar a si mesmo. Peça a outro administrador.', 409);
     }
 
     // O índice único do e-mail pegaria a colisão, mas com o "Registro já
@@ -81,7 +74,7 @@ export async function updateUser(id: string, data: UpdateUserData, sessaoId: str
       select: USER_PUBLIC_SELECT,
     });
 
-    // A REDE, como ÚLTIMA instrução da transação (D148): rebaixar o único
+    // A REDE, como ÚLTIMA instrução da transação (D148): tirar do jogo o único
     // administrador que entra desfaz a transação inteira. Roda sempre, e não
     // só quando `data.role` veio — o custo é um `count` e a alternativa é lembrar
     // de chamá-la em cada caminho novo que mexa em cargo.

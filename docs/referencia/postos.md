@@ -32,7 +32,7 @@ de saída para o posto) e é ele que as pessoas ocupam, por turno
 |---|---|
 | **a lista** | Posto, Localização, Quem está (por turno), Ativos e Situação — *Posto vago* (tem ativo e ninguém responde), *Ocupado* ou *Sem uso*. Recortes Todos, Vagos e Ocupados; busca por nome e nota |
 | **a ficha** (`/postos/:id`) | os ocupantes — colocar alguém, corrigir o turno, encerrar —, os ativos entregues com **Devolver**, o computador da mesa ao vivo e o estoque da mesa com **Devolver** por unidade |
-| **o cadastro** | **Novo posto** e, em cada linha, ✏️ Editar, ⏻ Desativar / Ativar e 🗑️ Excluir — só `ADMIN`. O técnico vê a lista e a ficha e opera a mesa: ocupa, devolve |
+| **o cadastro** | **Novo posto** e, em cada linha, ✏️ Editar, ⏻ Desativar / Ativar e 🗑️ Excluir — `ADMIN`, como tudo hoje ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)) |
 
 Desativar e excluir pedem confirmação, com as mesmas frases de Configurações, e a
 recusa aparece numa notificação do sistema.
@@ -47,11 +47,11 @@ O cadastro passa pelo **mesmo CRUD das tabelas de catálogo**, com a
 
 | Rota | Quem | O que é |
 |---|---|---|
-| `GET /api/workstations` | `TECNICO` | a lista, com ocupantes e ativos por linha (`?view=todos\|vagos\|ocupados`) |
-| `GET /api/workstations/:id` | `TECNICO` | a ficha |
-| `GET /api/workstations/options` | `TECNICO` | o seletor: só postos ativos |
+| `GET /api/workstations` | `ADMIN` | a lista, com ocupantes e ativos por linha (`?view=todos\|vagos\|ocupados`) |
+| `GET /api/workstations/:id` | `ADMIN` | a ficha |
+| `GET /api/workstations/options` | `ADMIN` | o seletor: só postos ativos |
 | `POST`, `PUT /:id`, `DELETE /:id` | `ADMIN` | o cadastro |
-| `/api/workstations/:id/occupants` | `TECNICO` | os ocupantes — domínio `occupancy` |
+| `/api/workstations/:id/occupants` | `ADMIN` | os ocupantes — domínio `occupancy` |
 
 ## Uso e desativação
 

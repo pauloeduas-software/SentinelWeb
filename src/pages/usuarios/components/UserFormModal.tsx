@@ -2,9 +2,13 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import type { User } from '../../../domain/shared/user.types';
 import type { UserInput } from '../../../domain/user/user.queries';
-import { useAuthStore } from '../../../domain/auth/auth.store';
 
-// O FORMULÁRIO DE USUÁRIO — quem opera o sistema: nome, e-mail, cargo e senha.
+// O FORMULÁRIO DE USUÁRIO — quem opera o sistema: nome, e-mail e senha.
+//
+// SEM CAMPO DE CARGO: hoje há um cargo só, Administrador (Z), e não há o que
+// escolher. A conta nova nasce `ADMIN` pelo `@default` da coluna, e a edição não
+// manda `role`, então não mexe nele. O campo volta com a separação de cargos,
+// que é decisão a tomar.
 //
 // O e-mail é o login. No cadastro a senha é obrigatória; na edição é "Nova
 // senha" — em branco mantém a atual, preenchida troca e encerra as sessões
@@ -23,9 +27,6 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
-    // O CARGO (D148). Conta nova nasce `TECNICO`, o menor dos dois — o mesmo
-    // `@default` da coluna.
-    role: user?.role || 'TECNICO',
   });
   // Fora do `formData` porque nunca vem do registro: o servidor não devolve
   // senha, e o campo sempre abre vazio.
@@ -33,10 +34,6 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
   // Quem já existe troca a senha se quiser ("Nova senha"); quem está sendo
   // CRIADO precisa de uma — o servidor recusa sem ela.
   const senhaObrigatoria = !user;
-  // O administrador editando a SI MESMO não troca o cargo (W): o servidor
-  // recusa com 409, e aqui o campo só deixa de oferecer o que vai voltar
-  // recusado. O valor continua indo, igual ao atual — o servidor aceita.
-  const editandoASiMesmo = useAuthStore((estado) => !!user && estado.usuario?.id === user.id);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -50,7 +47,6 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
       await onSubmit({
         name: formData.name,
         email: formData.email,
-        role: formData.role,
         // Só vai quando preenchida: ausente, a edição mantém a senha atual.
         ...(password ? { password } : {}),
         // `isActive` NÃO viaja daqui: desativar e ativar são o botão da linha,
@@ -88,33 +84,6 @@ export default function UserFormModal({ user, onClose, onSubmit }: UserFormModal
           <div className="space-y-1">
             <label className="text-text-secondary uppercase tracking-widest text-[10px]">E-mail*</label>
             <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors" />
-          </div>
-
-          <div className="space-y-1">
-            <label htmlFor="role" className="text-text-secondary uppercase tracking-widest text-[10px]">Cargo</label>
-            {/* `<select>` nativo e não `ReferenceSelect`: os dois valores vêm do
-                CÓDIGO (o enum `Cargo`), não de uma tabela — não há rota de opções
-                a consultar, e inventar uma seria uma requisição para uma
-                constante.
-
-                O servidor exige `ADMIN` em `PUT /api/users/:id` e recusa (409)
-                rebaixar o último administrador que entra e rebaixar a si mesmo
-                — esta tela só deixa de oferecer o segundo. */}
-            <select
-              id="role"
-              disabled={editandoASiMesmo}
-              value={formData.role}
-              onChange={(evento) => setFormData({ ...formData, role: evento.target.value as typeof formData.role })}
-              className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors disabled:opacity-60"
-            >
-              <option value="TECNICO">Técnico — o inventário inteiro</option>
-              <option value="ADMIN">Administrador — também usuários, configuração e custo</option>
-            </select>
-            {editandoASiMesmo && (
-              <p className="text-text-tertiary text-[10px] leading-relaxed">
-                Você não pode rebaixar a si mesmo. Peça a outro administrador.
-              </p>
-            )}
           </div>
 
           <div className="space-y-1">

@@ -28,12 +28,7 @@ export const USER_PUBLIC_SELECT = {
 export const USER_LIST_SELECT = {
   ...USER_PUBLIC_SELECT,
 
-  // O CARGO, e ele está aqui por um defeito concreto, não por completude.
-  //
-  // O formulário abre da listagem e edita o cargo. Sem este campo, o `<select>`
-  // dele inicializaria em `TECNICO` e **gravaria** `TECNICO`: corrigir o e-mail
-  // de um administrador o rebaixaria, em silêncio. A rede do
-  // `ultimo-administrador.ts` pegaria o caso do ÚLTIMO; os outros passariam.
+  // O CARGO, para a coluna Cargo da lista. Hoje é sempre Administrador (Z).
   role: true,
 
   // `isActive` porque é ele que decide o botão da linha — Desativar ou Ativar —

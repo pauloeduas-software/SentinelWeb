@@ -178,7 +178,7 @@ describe('POST /api/users com o corpo literal do UserFormModal', () => {
    * vá.
    */
   function corpoDoFormularioDeUsuario(sobrescrever: Record<string, unknown> = {}) {
-    return { name: '', email: '', role: 'TECNICO', ...sobrescrever };
+    return { name: '', email: '', ...sobrescrever };
   }
 
   it('aceita o corpo mínimo da tela', async () => {

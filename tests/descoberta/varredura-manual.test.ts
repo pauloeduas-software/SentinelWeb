@@ -11,9 +11,9 @@ import { criarAtivo, criarFabricante, criarModelo, idsDoSeed } from '../helpers/
 // o servidor — e reiniciar dentro da mesma hora não roda nada, porque a janela
 // já foi tomada. A rota é a mesma função do job, sem a janela.
 //
-// Três coisas, e a terceira é a que não se vê: o placar sai na resposta; é de
-// `ADMIN`; e é UMA por vez — a segunda chamada enquanto a primeira roda é 409,
-// não uma segunda varredura por cima da primeira.
+// Duas coisas, e a segunda é a que não se vê: o placar sai na resposta; e é UMA
+// por vez — a segunda chamada enquanto a primeira roda é 409, não uma segunda
+// varredura por cima da primeira.
 
 let api: ApiDeTeste;
 let modelId: string;
@@ -56,12 +56,6 @@ describe('POST /api/reconciliation/run', () => {
       where: { endpointId: maquina.id, kind: 'LINK', state: 'PENDING' },
     });
     expect(sugestao?.assetId).toBe(ativo.id);
-  });
-
-  it('é de ADMIN: o técnico leva 403', async () => {
-    const tecnico = await api.comoUsuario('TECNICO');
-    const { status } = await tecnico.post('/api/reconciliation/run');
-    expect(status).toBe(403);
   });
 
   it('duas ao mesmo tempo: uma varre, a outra é 409', async () => {

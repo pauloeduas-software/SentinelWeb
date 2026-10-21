@@ -121,14 +121,14 @@ model Telemetry {
   @@map("telemetries")
 }
 
-/// Os dois cargos da autorização (D148). A ordem do enum é a hierarquia, e a
-/// comparação mora em `access/helpers/cargo.ts` — nunca num `indexOf` por fora.
+/// Os cargos da autorização (D148). Hoje um só, `ADMIN` (Z): a separação de
+/// cargos é decisão a tomar. A ordem do enum é a hierarquia, e a comparação mora
+/// em `access/helpers/cargo.ts` — nunca num `indexOf` por fora.
 enum Cargo {
-  TECNICO
   ADMIN
 }
 
-// QUEM OPERA O SISTEMA — Técnico e Administrador, e mais ninguém.
+// QUEM OPERA O SISTEMA — hoje, só Administrador (Z).
 //
 // Quem RECEBE equipamento é outra tabela (`Person`): conta de acesso e pessoa
 // que tem posse são perguntas diferentes, e misturá-las obrigava o login a
@@ -169,10 +169,10 @@ model User {
 
   // O CARGO (D148), no lugar da matriz de permissões por grupo (D76).
   //
-  // `TECNICO` é o padrão: o menor dos dois. A rede que impede o sistema de
+  // `ADMIN` é o padrão porque é o único (Z). A rede que impede o sistema de
   // ficar sem ninguém que entre está em `access/helpers/ultimo-administrador.ts`,
   // chamada no fim da transação.
-  role      Cargo    @default(TECNICO)
+  role      Cargo    @default(ADMIN)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

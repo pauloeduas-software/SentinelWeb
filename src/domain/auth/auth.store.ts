@@ -84,10 +84,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 // A HIERARQUIA, espelhando `server/domain/access/helpers/cargo.ts`.
 //
 // Duas cópias da mesma ordem, e isso é aceito: a do servidor é a que autoriza, e
-// esta só decide o que desenhar. Fazer a tela consultar uma rota para saber que
-// ADMIN alcança TECNICO seria uma requisição para uma constante de dois valores.
-export type Cargo = 'TECNICO' | 'ADMIN';
-const ORDEM_DOS_CARGOS: readonly Cargo[] = ['TECNICO', 'ADMIN'];
+// esta só decide o que desenhar. Fazer a tela consultar uma rota para saber a
+// ordem dos cargos seria uma requisição para uma constante.
+//
+// Hoje um cargo só (Z): todo `usePode('ADMIN')` do painel responde `true` para
+// quem está logado, e os ramos "de quem não é ADMIN" estão dormentes até a
+// separação de cargos, que é decisão a tomar.
+export type Cargo = 'ADMIN';
+const ORDEM_DOS_CARGOS: readonly Cargo[] = ['ADMIN'];
 
 function alcanca(cargo: Cargo, minimo: Cargo): boolean {
   return ORDEM_DOS_CARGOS.indexOf(cargo) >= ORDEM_DOS_CARGOS.indexOf(minimo);

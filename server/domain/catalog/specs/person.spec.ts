@@ -6,8 +6,8 @@ import type { CatalogDelegate, CatalogSpec } from './catalog-spec.types';
 
 // O COLABORADOR — quem RECEBE equipamento: ativo, posto, assento de licença,
 // unidade de estoque. Não entra no sistema; quem opera é usuário (`user`), e um
-// não vira o outro: o Técnico que também tem um notebook é cadastrado aqui à
-// parte.
+// não vira o outro: quem opera o sistema e também tem um notebook é cadastrado
+// aqui à parte.
 //
 // É catálogo, e não domínio próprio, porque o cadastro é o mesmo das outras
 // cinco abas: nome, desativar, excluir. O que ele tem a mais é a LIXEIRA — o

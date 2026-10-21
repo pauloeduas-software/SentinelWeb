@@ -8,8 +8,8 @@
 //   vazio      — a resposta chegou e não tem nada. Cadastrar, mudar a busca.
 //
 // Antes as três desenhavam o terceiro caso: a primeira carga piscava "Nenhum
-// registro… Cadastrar" por um instante, e um servidor fora do ar dizia ao
-// técnico que o inventário estava vazio — com um botão de cadastrar o primeiro
+// registro… Cadastrar" por um instante, e um servidor fora do ar dizia a quem
+// abria a tela que o inventário estava vazio — com um botão de cadastrar o primeiro
 // item embaixo. É a mentira mais perigosa que uma lista pode contar, porque
 // convida a recadastrar o que existe.
 //

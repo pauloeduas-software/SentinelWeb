@@ -88,10 +88,10 @@ export default function AssetFormModal({
   asset, clonar = false, statusPadraoId = '', onClose, onSubmit,
 }: AssetFormModalProps) {
   const [valores, setValores] = useState(() => valoresIniciais(asset, clonar, statusPadraoId));
-  // O CUSTO É DO ADMIN (D77). O técnico nem recebe o valor do servidor, então
-  // o campo dele abriria vazio — e salvar mandaria esse vazio por cima do custo
-  // que só o administrador enxerga. Sem o campo e sem a chave no corpo, o
-  // técnico edita o resto sem tocar no dinheiro.
+  // O CUSTO É DO ADMIN (D77). Quem não é nem recebe o valor do servidor, então
+  // o campo abriria vazio — e salvar mandaria esse vazio por cima do custo que
+  // só o administrador enxerga. Sem o campo e sem a chave no corpo, edita-se o
+  // resto sem tocar no dinheiro.
   const veCusto = usePode('ADMIN');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');

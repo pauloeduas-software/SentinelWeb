@@ -17,9 +17,9 @@ import type {
 interface Props {
   configuracao: Configuracao | undefined;
   /**
-   * Gravar é `ADMIN` no servidor. Sem ele o painel continua abrindo — o técnico
-   * precisa saber POR QUE a fila está como está —, mas só para ler: sem os
-   * botões de modo e sem Salvar, que levavam 403.
+   * Gravar é `ADMIN` no servidor. Sem ele o painel continua abrindo — saber POR
+   * QUE a fila está como está vale para todos —, mas só para ler: sem os botões
+   * de modo e sem Salvar, que levariam 403.
    */
   podeEditar: boolean;
   salvando: boolean;

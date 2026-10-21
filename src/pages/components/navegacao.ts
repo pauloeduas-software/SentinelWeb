@@ -44,7 +44,7 @@ interface ItemDeMenu {
    * O campo continua opcional porque a próxima tela desse tipo não deve
    * precisar de mudança de tipo para existir.
    */
-  cargo?: 'TECNICO' | 'ADMIN';
+  cargo?: 'ADMIN';
 }
 
 interface GrupoDeMenu {
@@ -68,16 +68,16 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
       // foi para a ficha do ativo e a do posto, onde a máquina tem nome. A raiz
       // passou a redirecionar para cá (src/App.tsx), então nenhum item aponta
       // mais para `/`.
-      { to: '/ativos', label: 'Ativos', icon: Database, cargo: 'TECNICO' },
+      { to: '/ativos', label: 'Ativos', icon: Database, cargo: 'ADMIN' },
       // Logo depois de Ativos: é a mesma operação vista do outro lado — o ativo
       // está na mesa, e a mesa é de quem a ocupa (docs/referencia/modelo-de-posse.md).
-      { to: '/postos', label: 'Postos', icon: Armchair, cargo: 'TECNICO' },
+      { to: '/postos', label: 'Postos', icon: Armchair, cargo: 'ADMIN' },
       // Depois de Postos: o que sai do almoxarifado costuma ir para a mesa
       // (docs/decisoes/estoque.md).
-      { to: '/estoque', label: 'Estoque', icon: Boxes, cargo: 'TECNICO' },
+      { to: '/estoque', label: 'Estoque', icon: Boxes, cargo: 'ADMIN' },
       // Depois de Estoque porque licença também é posse: o assento é uma LINHA
       // que se trava (D40).
-      { to: '/licencas', label: 'Licenças', icon: ScrollText, cargo: 'TECNICO' },
+      { to: '/licencas', label: 'Licenças', icon: ScrollText, cargo: 'ADMIN' },
     ],
   },
   {
@@ -85,7 +85,7 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
     itens: [
       // O que o agente VÊ e o cadastro não sabe (F7). Perto do inventário
       // porque é dele que a tela fala, não do RMM.
-      { to: '/descobertas', label: 'Descobertas', icon: Radar, cargo: 'TECNICO' },
+      { to: '/descobertas', label: 'Descobertas', icon: Radar, cargo: 'ADMIN' },
     ],
   },
   {

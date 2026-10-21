@@ -205,16 +205,19 @@ com uma função pura afirmada por teste garantindo que produção nunca sobe se
 
 ## A autorização: cargo, não permissão
 
-**Dois cargos, com ordem** — `TECNICO < ADMIN` (D148). Cada rota declara o cargo MÍNIMO que
-exige em `route-permissions.ts`, e a pergunta de toda requisição é só "a sessão alcança esse
-mínimo?" — aritmética sobre a posição no array, não uma lista de cargos aceitos por rota.
+**Um cargo só, hoje: `ADMIN`** ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)), e todo usuário é Administrador. **A separação de
+cargos é decisão a tomar** — ver *O que ainda não existe*, abaixo. A validação de `ADMIN` é a
+do D148: os cargos têm ordem, cada rota declara o cargo MÍNIMO que exige em
+`route-permissions.ts`, e a pergunta de toda requisição é só "a sessão alcança esse mínimo?" —
+aritmética sobre a posição no array, não uma lista de cargos aceitos por rota. Hoje toda rota
+autenticada exige `ADMIN`.
 
 **Usuário é quem opera o sistema; colaborador é quem recebe equipamento**
 ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)).
-São duas tabelas: `users` (Técnico e Administrador, todos com senha) e `people` (o colaborador,
-alvo de posse, sem conta — a aba Colaboradores de Configurações). O Técnico que também tem um
-notebook é cadastrado nos dois lugares. A tela Usuários é toda `ADMIN`, leitura inclusive; o
-técnico escolhe o colaborador da entrega por `GET /api/people/options`.
+São duas tabelas: `users` (quem entra, todos com senha) e `people` (o colaborador, alvo de
+posse, sem conta — a aba Colaboradores de Configurações). Quem opera o sistema e também tem um
+notebook é cadastrado nos dois lugares. O colaborador da entrega se escolhe por
+`GET /api/people/options`.
 
 `request.cargo` é lido na MESMA consulta de sessão que já relê o usuário a cada requisição —
 não há coluna de permissão efetiva para cachear nem para divergir do cargo gravado.
@@ -224,10 +227,10 @@ toca cargo ou `isActive` **ou exclui um usuário**, dentro dela — ver a invari
 [`invariantes.md`](invariantes.md).
 
 **Ninguém tira a própria conta do jogo** ([W](../decisoes/acesso.md#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo)):
-com o id da própria sessão, rebaixar (`role` diferente do atual), desativar (`isActive: false`)
-e excluir são 409 — `Você não pode rebaixar a si mesmo. Peça a outro administrador.`, e o mesmo
-com *desativar* e *excluir*. O formulário trava o campo Cargo quando a pessoa edita a si mesma, e
-a lista desliga os botões Desativar e Excluir da própria linha. O cargo igual ao atual passa.
+com o id da própria sessão, desativar (`isActive: false`) e excluir são 409 —
+`Você não pode desativar a si mesmo. Peça a outro administrador.`, e o mesmo com *excluir*. A
+lista desliga os botões Desativar e Excluir da própria linha. Um `role` que não existe é 422
+na borda.
 
 **Excluir usuário apaga a linha** ([W](../decisoes/acesso.md#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo)):
 sem lixeira e sem Restaurar, e o e-mail fica livre para um cadastro novo. A sessão aberta cai
@@ -236,31 +239,32 @@ o histórico não guarda quem fez ([X](../decisoes/acesso.md#x--o-histórico-nã
 histórico.
 
 **O custo de compra do ativo é do `ADMIN`** ([D77](../decisoes/acesso.md#d77--dado-sensível-é-filtrado-no-select-não-mascarado-na-resposta)),
-e são quatro portas, todas em `asset/helpers/asset-select.helper.ts` ou ao lado dele:
+e são quatro portas, todas em `asset/helpers/asset-select.helper.ts` ou ao lado dele. Com um
+cargo só, todo mundo vê o custo:
 
 - **a leitura** (listagem, detalhe, ficha do posto) não lê a coluna para quem não é `ADMIN`;
 - **a resposta das escritas** (criar, editar, entregar, devolver, dar baixa, restaurar) não leva
-  o custo para cargo nenhum (`ASSET_WRITE_SELECT`) — o técnico chama todas elas;
-- **a escrita do técnico** descarta o custo que chegar (`custoSoDoAdmin`): o formulário dele não
-  tem o campo, e um `purchaseCost: ''` apagaria o valor que ele não vê;
+  o custo para cargo nenhum (`ASSET_WRITE_SELECT`);
+- **a escrita de quem não é `ADMIN`** descarta o custo que chegar (`custoSoDoAdmin`): o
+  formulário não tem o campo, e um `purchaseCost: ''` apagaria o valor que não se vê;
 - **o histórico do ativo** tira `purchaseCost` do diff para quem não é `ADMIN`, e a edição que
   só mexeu no custo some inteira para ele.
 
 A busca do leitor (`/api/search`) devolve só o que identifica o ativo, para todo cargo.
 
 **A senha nasce no cadastro, e o login é o e-mail** ([R](../decisoes/acesso.md#r--a-senha-nasce-no-cadastro-e-o-login-é-o-e-mail)).
-Não há nome de usuário à parte nem ação separada para dar acesso: o formulário de Usuários, que
-já leva o cargo ([D162](../decisoes/escopo.md#d162--minha-conta-sai-e-o-cargo-vira-campo-do-formulário-de-usuário)),
-pede nome, e-mail, cargo e senha: **Senha\*** obrigatória no cadastro, **Nova senha** opcional
-na edição.
+Não há nome de usuário à parte nem ação separada para dar acesso: o formulário de Usuários
+pede nome, e-mail e senha — **Senha\*** obrigatória no cadastro, **Nova senha** opcional na
+edição. O campo Cargo, que o [D162](../decisoes/escopo.md#d162--minha-conta-sai-e-o-cargo-vira-campo-do-formulário-de-usuário)
+pôs no formulário, saiu com o [Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir): não há o que escolher.
 
 A regra é do servidor, nas duas rotas do formulário — ambas `ADMIN`:
 
 - `POST /api/users` responde **422** sem senha (`createUserSchema`);
 - na edição, `password` ausente mantém a atual; presente troca a senha, destrava a conta
   (`failedLoginCount` e `lockedUntil` zerados) e incrementa o `tokenVersion`;
-- o `ActivityLog` grava `credencial: 'senha definida'` (cadastro) ou `'senha redefinida'`
-  (edição) — nunca o valor;
+- nenhuma das duas grava `ActivityLog` — usuário não tem histórico
+  ([X](../decisoes/acesso.md#x--o-histórico-não-guarda-quem-fez));
 - as duas rotas têm o `verificarOrigem` das rotas de credencial (`user.maestro.ts`).
 
 ---
@@ -297,7 +301,8 @@ terceiro — encontra ali o que já foi tentado e por que saiu.
 |---|---|
 | **Revogar uma sessão específica** | Exige tabela de sessão: saber QUAIS sessões existem para derrubar uma. O `tokenVersion` derruba **todas** de uma pessoa de uma vez, e é com ele que trocar a senha corta o acesso. "Desconectar este aparelho" continua sem existir |
 | **Logout derrubar as outras sessões** | Hoje `logout` só apaga o cookie local. Quem precisa derrubar tudo troca a senha pela edição do usuário (**Nova senha**), que incrementa o `tokenVersion` |
-| **Trocar a própria senha sem ser `ADMIN`** | A senha se troca na edição do usuário, que é `ADMIN`, e a tela que daria isso a cada um — "Minha conta" — saiu ([D162](../decisoes/escopo.md#d162--minha-conta-sai-e-o-cargo-vira-campo-do-formulário-de-usuário)). O técnico pede a um administrador |
+| **A separação de cargos** — **decisão a tomar** | Hoje há um cargo só, `ADMIN` ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)). Falta decidir quais cargos existem, o que cada um alcança, qual nasce por padrão e como a tela de Usuários escolhe o cargo. A validação de `ADMIN` está de pé (`CARGOS` em `access/helpers/cargo.ts`, o mapa de `route-permissions.ts`, o `usePode` da tela); a separação se constrói do zero |
+| **Trocar a própria senha sem passar por Usuários** | A senha se troca na edição do usuário, e a tela que daria isso a cada um — "Minha conta" — saiu ([D162](../decisoes/escopo.md#d162--minha-conta-sai-e-o-cargo-vira-campo-do-formulário-de-usuário)). Com todo mundo `ADMIN`, cada um troca a sua editando a si mesmo em Usuários |
 | **Política de senha no `.env`** | O mínimo de 12 caracteres é constante em `auth.schema.ts`. Não há demanda para torná-lo configurável |
 | **Segundo fator, SSO, diretório, token pessoal de API** | Existiram e saíram — [D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)/[D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token). Voltar é decisão nova, não bug |
 | **Trilha de tentativas de login** (`AuthEvent`) | Saiu com o D148, por não ter leitor que sobrevivesse ao corte. `failedLoginCount`/`lockedUntil` continuam protegendo a conta; o que falta é um registro consultável de *quando* |
@@ -331,12 +336,12 @@ server/domain/user/                      quem opera o sistema — onde a senha n
 ├── user.maestro.ts                      POST/PUT com o verificarOrigem das rotas de credencial
 ├── helpers/credencial.helper.ts         o hash da Nova senha, fora da transação
 └── use-cases/
-    ├── create-user.usecase.ts           a senha do cadastro ('senha definida' na trilha)
+    ├── create-user.usecase.ts           a senha do cadastro
     └── update-user.usecase.ts           a Nova senha: troca, destrava, increment do tokenVersion
 
 server/domain/access/                    a OUTRA metade da sessão: o que ela alcança
 ├── access.types.ts
-├── helpers/cargo.ts                     os dois cargos, com ordem (D148)
+├── helpers/cargo.ts                     os cargos, com ordem (D148) — hoje só ADMIN (Z)
 ├── helpers/route-permissions.ts         método + rota → cargo mínimo (o mapa que o boot confere)
 ├── helpers/require-permission.ts        temCargo() e exigirPermissao() (403 que nomeia o cargo)
 ├── helpers/ultimo-administrador.ts      a invariante 17 — nunca sem administrador

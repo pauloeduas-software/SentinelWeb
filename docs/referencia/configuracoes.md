@@ -52,7 +52,7 @@ a tela e o maestro as percorrem em paralelo.
 
 | Regra | Como funciona | Onde |
 |---|---|---|
-| **Quem lê e quem escreve** | `GET` é `TECNICO` (os formulários de ativo, licença e estoque leem as listas); `POST`, `PUT` e `DELETE` são `ADMIN`. A **tela** de Configurações é só de `ADMIN`: o menu a esconde e a rota redireciona quem não é | `access/helpers/route-permissions.ts`, `SoAdmin` em `src/App.tsx` |
+| **Quem lê e quem escreve** | `ADMIN`, o único cargo ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)) — `GET`, `POST`, `PUT`, `DELETE` e o `restore` do colaborador. A exclusão é guardada pelo uso (o 409 abaixo), não pelo cargo | `access/helpers/route-permissions.ts` |
 | **Campo desconhecido é recusado** | `strictObject` em todo schema: 422, nunca ignorado em silêncio | `schemas/catalog-entities.schema.ts` |
 | **Nome único, sem diferença de maiúscula** | "dell" é recusado quando há "Dell": 409 `Já existe fabricante com o nome "Dell".` `%` e `_` contam como letras, não como curingas. Categoria é única **por tipo**; modelo não tem nome único (ver abaixo) | `helpers/nome-unico.helper.ts`, campo `nomeUnicoPor` da spec |
 | **Exclusão só sem uso** | `DELETE` de linha que alguém usa **agora** é 409 com a contagem e a saída: `Não é possível excluir: fabricante em uso por 3 registros. Desative-o em vez de excluir: …` A tela mostra isso numa **notificação do sistema**. O colaborador diz *o quê* em vez de quantos (`motivoParaNaoExcluir`) | `countUsages` e `dicaEmUso` de cada spec, `delete-catalog.usecase.ts` |
@@ -260,8 +260,8 @@ nome por escrito para guardar.
 de estoque. Não entra no sistema: quem opera o painel é **usuário**, na tela
 Usuários, e é outra tabela
 ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)).
-Um não vira o outro: o Técnico que também tem um notebook é cadastrado aqui à
-parte, à mão — nada cria colaborador a partir de usuário.
+Um não vira o outro: quem opera o sistema e também tem um notebook é cadastrado
+aqui à parte, à mão — nada cria colaborador a partir de usuário.
 **Campos:** nome completo e e-mail.
 
 - **O e-mail é opcional** — o colaborador não faz login — e único quando
@@ -269,8 +269,7 @@ parte, à mão — nada cria colaborador a partir de usuário.
   `E-mail já está em uso por outro colaborador.`
   O nome **não** é único: dois "João Silva" existem, e é o e-mail que os separa.
 - **A lista de escolha** (`/api/people/options`) é o seletor de pessoa da
-  entrega de ativo, do posto, do assento e da saída de estoque. O técnico a lê;
-  cadastrar é do administrador.
+  entrega de ativo, do posto, do assento e da saída de estoque.
 
 ### A ficha
 
