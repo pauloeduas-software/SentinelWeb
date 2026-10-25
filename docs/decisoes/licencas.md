@@ -401,6 +401,14 @@ handshake, com a nota de que o servidor não guarda — mesma escolha do A para 
 - **A entrega e a devolução têm dia.** Vêm com hoje e podem voltar para registrar o que já
   aconteceu; futuro é recusado, e a devolução nunca fica antes da entrega. O dia passado é gravado
   ao meio-dia de Brasília, e as telas mostram só o dia.
+- **A entrega no passado não se sobrepõe.** O dia não antecede a data da compra, nem o dia em que
+  o mesmo alvo devolveu esta licença — o histórico o mostraria com ela duas vezes no mesmo
+  período. As duas recusas são 422; no próprio dia da devolução passa. **A quantidade no passado
+  não é conferida**: quantas estavam em uso naquele dia fica de fora, e a conta de livres é
+  sempre a de agora.
+- **O valor da compra tem máscara na tela** (`R$ 1.234,56`, enviado como `1234.56`). O servidor
+  continua sem ponto de milhar, e a recusa diz o campo: `valor de compra: use um valor como
+  1234.50`.
 - **O mesmo alvo não recebe a mesma licença duas vezes** enquanto a primeira está aberta
   (invariante 23, índices únicos parciais). O caso real que pediria duas — servidor licenciado por
   núcleo — não é deste inventário; se vier, é um campo de quantidade na entrega.
@@ -446,7 +454,10 @@ teste de corrida que não corria. A lixeira não se pagava: a licença que acabo
 (Encerradas), e a cadastrada errado não tem passado próprio que valha guardar — o passado que
 importa é o do computador e o da pessoa, e esse fica com o nome por escrito. O alerta de mínimo
 não tinha uso no ambiente do usuário. Na revisão item a item, o usuário tirou o reatribuível com a
-queima e a manutenção, pôs o piso de 1 na quantidade e a ordem das datas com a compra.
+queima e a manutenção, pôs o piso de 1 na quantidade e a ordem das datas com a compra. Na
+revisão linha a linha que veio depois, recusou a entrega no passado que se sobrepõe à do mesmo
+alvo, deixou de fora a conta da quantidade no passado e tirou o ponto de milhar do servidor —
+quem resolve é a máscara do campo.
 
 **O que a migração faz:** zero licenças no banco de desenvolvimento, então é só DDL — as duas
 tabelas de assento saem, `license_checkouts` entra com `licenseId` obrigatório, a chave, dois
