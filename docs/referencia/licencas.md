@@ -18,8 +18,8 @@ encerramento, licenciado para (nome e e-mail), fabricante, pedido, data e valor 
 notas e chave do produto, opcionais. O cadastro não entra em histórico nenhum: o sistema não
 tem trilha de auditoria.
 
-- **A quantidade vai de 1 a 100.000** (CHECK `licenses_seats_positivo`): zero não é contrato, e
-  a licença que acabou se encerra.
+- **A quantidade vai de 1 a 100.000**: zero não é contrato, e a licença que acabou se encerra. O
+  piso tem o CHECK `licenses_seats_positivo`; o teto é só da aplicação.
 - **O vencimento e o encerramento não antecedem a data da compra.** Cada um só é comparado
   quando os dois lados estão preenchidos, e o encerramento não é comparado com o vencimento — dá
   para encerrar antes do fim do período pago. A recusa é 422 com as duas datas
@@ -70,15 +70,20 @@ O **vencimento** é até quando o contrato foi pago, e se renova editando a data
 
 | | |
 |---|---|
-| **as abas** | **Atuais** (ativas, vencendo e vencidas — a vencida ainda pede decisão) e **Encerradas** (pela mais recente). Busca por nome, licenciado, e-mail, pedido, categoria e fabricante; filtro de categoria; na aba Atuais, filtro de status (Todos, Ativas, Vencendo, Vencidas); na aba Encerradas, "Ainda em uso". Trocar de aba desliga os dois |
+| **as abas** | **Atuais** (ativas, vencendo e vencidas — a vencida ainda pede decisão) e **Encerradas** (pela mais recente). Busca por nome, licenciado, e-mail, pedido, categoria e fabricante — o texto ao pé da letra, `%` e `_` não são curinga; filtro de categoria; na aba Atuais, filtro de status (Todos, Ativas, Vencendo, Vencidas); na aba Encerradas, "Ainda em uso". Trocar de aba desliga os dois |
 | **a linha** | nome, fabricante, status, "10 compradas · 7 em uso · 3 livres", prazo (ou a data do encerramento, na aba Encerradas), custo. Sem cor por status |
 | **as ações** | Entregar (desabilitado sem livre, vencida ou encerrada, com o motivo no `title`), Editar, Encerrar, Excluir (desabilitado na que já foi entregue: "Já foi entregue: use Encerrar") — com confirmação no Encerrar e no Excluir |
 | **o detalhe** | no cabeçalho, o status com a conta ("Vencida · 10 compradas · 7 em uso · 3 livres") e as ações da lista, com as mesmas regras (Entregar e Editar voltam ao detalhe ao fechar; excluída, a janela fecha). Depois, a **chave do produto** e todos os campos do cadastro — o valor da compra é o total, com o preço de cada licença ao lado: "R$ 5.000,00 (R$ 500,00 por licença)". **Com quem está**: as entregas abertas, 15 por página, com busca pelo nome do colaborador ou do computador, a chave de cada uma, e Chave e Devolver em cada linha. **Histórico**: só entregas e devoluções, 15 por página, do mais recente para o mais antigo |
 | **o alerta** | só nesta tela, numa caixa só, do mais urgente para o menos: encerrada ainda em uso, vencida (a mais recente primeiro), vencendo em 30 dias (a mais próxima primeiro). Embaixo, a contagem de cada motivo com link — "2 encerradas em uso · 5 vencidas · 3 vencendo" —, que leva à aba e ao filtro que mostram todas aquelas. Não existe alerta de mínimo |
 
 A edição manda **só o que mudou**: um formulário aberto há tempo não desfaz a edição que outra
-pessoa salvou no meio. Ela abre com o **detalhe** da licença, e não com a linha da listagem: é
-o detalhe que traz a chave.
+pessoa salvou no meio. "O que mudou" é contra a licença **como estava quando o formulário
+abriu** — a nova busca que chega com ele aberto (voltar para a aba do navegador) não muda a
+base. Ela abre com o **detalhe** da licença, e não com a linha da listagem: é o detalhe que
+traz a chave.
+
+**O valor da compra** tem máscara de dinheiro: o campo mostra `R$ 1.234,56` e manda `1234.56`.
+Os dígitos entram pelos centavos, e por isso não há ponto de milhar para o servidor recusar.
 
 ## Encerrar, reabrir e excluir
 
@@ -101,7 +106,10 @@ o detalhe que traz a chave.
 **A entrega** escolhe o colaborador (o seletor mostra nome e e-mail — é o que separa dois "João
 Silva"; o cadastro de colaborador não tem setor) ou o computador, a **chave** desta entrega
 (opcional, uma linha), uma observação opcional e o **dia da entrega**: vem com hoje e pode
-voltar para registrar a entrega que já aconteceu; futuro é 422.
+voltar para registrar a entrega que já aconteceu; futuro é 422. O dia passado não antecede a
+data da compra, nem o dia em que o **mesmo alvo** devolveu esta licença — ele não fica com ela
+duas vezes no mesmo período (422). No próprio dia da devolução passa. A quantidade no passado
+(quantas estavam em uso naquele dia) não é conferida.
 
 **A devolução** pede só o **dia**, na própria linha de "Com quem está", no detalhe da licença —
 o único lugar do sistema que devolve licença. Vem com hoje; pode ser passado, mas nunca futuro
@@ -120,6 +128,8 @@ que dia é hoje; "não antes da entrega" tem também o CHECK.
 | ativo baixado / colaborador desativado | 409 — ativo ou colaborador na lixeira é 404 |
 | dois alvos, nenhum, ou posto | 422 |
 | entrega ou devolução num dia futuro | 422 `data da entrega não pode ser uma data futura` |
+| entrega antes da data da compra | 422 `A entrega (05/03/2026) não pode ser antes da data da compra (10/03/2026).` |
+| entrega antes do dia em que o mesmo alvo devolveu | 422 `A entrega (05/03/2026) não pode ser antes de 10/03/2026: até esse dia Laura Souza estava com "Office 2021".` |
 | devolução antes do dia da entrega | 422 `A devolução (09/03/2026) não pode ser antes da entrega (10/03/2026).` |
 | devolver uma entrega já devolvida | 409 `Esta entrega de "Office 2021" já foi devolvida.` |
 
@@ -208,7 +218,7 @@ alvo → licença → entrega é o que mantém o grafo sem ciclo.
 | Assunto | Arquivo |
 |---|---|
 | a conta, a quantidade, as datas do contrato, a entrega, a devolução e os dias de cada uma | `tests/licencas/operacoes.test.ts` |
-| o status, o dia de Brasília e o filtro de status | `tests/licencas/status.test.ts` |
+| o status, o dia de Brasília, o filtro de status, a busca da lista e a ordem das Encerradas | `tests/licencas/status.test.ts` |
 | as duas listas do detalhe, de 15 em 15, e a busca | `tests/licencas/detalhe.test.ts` |
 | Encerrar com alguém usando, o filtro "ainda em uso", excluir só a nunca entregue e o alerta | `tests/licencas/ciclo.test.ts` |
 | a chave da licença e da entrega, a troca, onde ela não aparece e como a tela a esconde | `tests/licencas/chave.test.ts` |

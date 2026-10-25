@@ -19,8 +19,11 @@ interface EntregasAbertasProps {
   /** A frase da lista vazia quando ela é vazia por causa da busca. */
   vazio?: string;
   ocupado: boolean;
-  /** `checkinAt` é o dia, 'AAAA-MM-DD'. */
-  onDevolver: (checkoutId: string, checkinAt: string) => void;
+  /**
+   * `checkinAt` é o dia, 'AAAA-MM-DD'. Resolve `true` quando a devolução deu
+   * certo — só então a linha fecha, e a recusa deixa o dia escolhido no campo.
+   */
+  onDevolver: (checkoutId: string, checkinAt: string) => Promise<boolean>;
   /** Resolve `true` quando a troca deu certo — só então a linha sai da edição. */
   onTrocarChave: (checkoutId: string, productKey: string | null) => Promise<boolean>;
 }
@@ -50,6 +53,10 @@ export default function EntregasAbertas({ entregas, vazio, ocupado, onDevolver, 
 
   const salvarChave = async (checkoutId: string, valor: string) => {
     if (await onTrocarChave(checkoutId, valor.trim() || null)) setPedido(null);
+  };
+
+  const confirmarDevolucao = async (checkoutId: string, dia: string) => {
+    if (await onDevolver(checkoutId, dia)) setPedido(null);
   };
 
   return (
@@ -86,10 +93,7 @@ export default function EntregasAbertas({ entregas, vazio, ocupado, onDevolver, 
                   </label>
                   <button
                     type="button"
-                    onClick={() => {
-                      onDevolver(entrega.id, meu.valor);
-                      setPedido(null);
-                    }}
+                    onClick={() => void confirmarDevolucao(entrega.id, meu.valor)}
                     disabled={ocupado || meu.valor === ''}
                     className={BOTAO}
                   >

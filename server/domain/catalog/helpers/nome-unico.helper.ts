@@ -1,16 +1,10 @@
 import { AppError } from '../../../core/errors/app-error';
+import { escaparCuringas } from '../../shared/busca.helper';
 import type { CatalogSpec, ClienteCatalogo } from '../specs/catalog-spec.types';
 
-/**
- * Escapa os curingas do `ILIKE`.
- *
- * O Prisma traduz `equals` + `mode: 'insensitive'` para `ILIKE` no Postgres, e
- * lá `%` e `_` são curingas: sem escapar, "Z%" colidia com "Zeta Corp" e
- * "Mesa _0" com "Mesa 10". A barra é o caractere de escape padrão do `ILIKE`.
- */
-export function escaparCuringas(texto: string): string {
-  return texto.replace(/[\\%_]/g, (caractere) => `\\${caractere}`);
-}
+// O Prisma traduz `equals` + `mode: 'insensitive'` para `ILIKE` no Postgres, e
+// lá `%` e `_` são curingas: sem `escaparCuringas`, "Z%" colidia com "Zeta Corp"
+// e "Mesa _0" com "Mesa 10".
 
 /**
  * Recusa o nome que já existe com outra grafia — "dell" quando há "Dell".

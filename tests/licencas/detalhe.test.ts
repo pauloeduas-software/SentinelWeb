@@ -81,6 +81,12 @@ describe('o histórico', () => {
     expect(segunda.body.rows).toHaveLength(3);
   });
 
+  it('uma página além do fim vem vazia — mesmo a que passa do inteiro do Postgres', async () => {
+    const alem = await api.get<Pagina<Evento>>(`/api/licenses/${licencaId}/history?page=200000000`);
+    expect(alem.status).toBe(200);
+    expect(alem.body).toMatchObject({ total: 18, rows: [] });
+  });
+
   it('não tem busca: `?q=` é 422, e o `?limit=` antigo também', async () => {
     expect((await api.get(`/api/licenses/${licencaId}/history?q=Pessoa`)).status).toBe(422);
     expect((await api.get(`/api/licenses/${licencaId}/history?limit=5`)).status).toBe(422);

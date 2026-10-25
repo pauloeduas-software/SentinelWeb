@@ -93,6 +93,14 @@ export function useLicencas() {
 
   const { data, isPending, error } = useLicensesQuery(params);
   const licencas = data?.rows ?? [];
+
+  // A página que deixou de existir volta para a última — a linha saiu da aba ou
+  // do filtro por edição, devolução, encerramento, exclusão, ou por outra
+  // pessoa. Ajuste DURANTE o render, guardado pela condição (o padrão do React
+  // para estado derivado do anterior), e não num `useEffect`: `setState` em
+  // efeito encadeia renders e o lint do react-hooks recusa.
+  const ultimaPagina = data ? Math.max(1, Math.ceil(data.total / PER_PAGE)) : page;
+  if (page > ultimaPagina) setPage(ultimaPagina);
   const { data: alertas } = useLicenseAlertsQuery();
 
   const criar = useCreateLicense();
@@ -143,12 +151,6 @@ export function useLicencas() {
         return atuais;
       }, { replace: true });
     }
-  };
-
-  // Última linha da página saiu da aba: volta uma, senão a tabela abre vazia
-  // com o paginador apontando para uma página que não existe mais.
-  const voltarSeEsvaziou = () => {
-    if (licencas.length === 1 && page > 1) setPage(page - 1);
   };
 
   // Os erros sobem para o formulário mostrar a mensagem do servidor — é por
@@ -223,7 +225,6 @@ export function useLicencas() {
     if (!window.confirm(pergunta)) return;
     try {
       await encerrar.mutateAsync(licenca.id);
-      voltarSeEsvaziou();
     } catch (erro) {
       // O 409 da licença que já estava encerrada (duas abas).
       notificar.erro((erro as Error).message);
@@ -238,7 +239,6 @@ export function useLicencas() {
       await excluir.mutateAsync(licenca.id);
       // Excluída do detalhe: a janela não tem mais o que mostrar.
       if (licencaAtual?.id === licenca.id) fechar();
-      voltarSeEsvaziou();
     } catch (erro) {
       notificar.erro((erro as Error).message);
     }

@@ -1,3 +1,4 @@
+import { hojeNoBrasil } from '../../shared/hoje.helper';
 import {
   diasParaVencer, statusDaLicenca, type LicenseStatus,
 } from './license-status.helper';
@@ -118,13 +119,19 @@ export type LicencaNaResposta = LinhaDeLicenca & ContagemDaLicenca & {
  * A ÚNICA saída desta camada. Acrescenta o que é derivado.
  *
  * Função pura: o uso chega pronto, e a conta, o status e o prazo saem dele e
- * das datas da própria linha.
+ * das datas da própria linha. A listagem passa o `hoje` do `where`: uma
+ * requisição que cruza a meia-noite não devolve, no filtro Vencendo, uma linha
+ * já Vencida.
  */
-export function paraResposta<L extends LinhaDeLicenca>(linha: L, uso: UsoDaLicenca): L & LicencaNaResposta {
+export function paraResposta<L extends LinhaDeLicenca>(
+  linha: L,
+  uso: UsoDaLicenca,
+  hoje = hojeNoBrasil(),
+): L & LicencaNaResposta {
   return {
     ...linha,
     ...contarLivres(linha.seatsTotal, uso),
-    status: statusDaLicenca(linha),
-    diasParaVencer: diasParaVencer(linha.expirationDate),
+    status: statusDaLicenca(linha, hoje),
+    diasParaVencer: diasParaVencer(linha.expirationDate, hoje),
   };
 }

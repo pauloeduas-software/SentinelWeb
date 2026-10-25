@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { contemTexto } from '../../shared/busca.helper';
 
 // `/descobertas` lê a frota inteira de uma vez e não tem controle de página: o
 // envelope existe para a API ter UMA forma de resposta, não porque a tela pagina.
@@ -19,12 +20,12 @@ export function buildEndpointWhere(filtros: FiltrosDeEndpoint = {}): Prisma.Endp
 
   if (filtros.q) {
     where.OR = [
-      { hostname: { contains: filtros.q, mode: 'insensitive' } },
-      { osVersion: { contains: filtros.q, mode: 'insensitive' } },
-      { localIp: { contains: filtros.q, mode: 'insensitive' } },
+      { hostname: contemTexto(filtros.q) },
+      { osVersion: contemTexto(filtros.q) },
+      { localIp: contemTexto(filtros.q) },
       // O serial entra na busca porque é por ele que se procura uma máquina
       // específica quando o chamado chega com a etiqueta na mão.
-      { biosSerial: { contains: filtros.q, mode: 'insensitive' } },
+      { biosSerial: contemTexto(filtros.q) },
     ];
   }
 

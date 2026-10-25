@@ -80,6 +80,11 @@ describe('o fim do contrato contra a entrega', () => {
     expect([exclusao.status, entrega.status].sort()).toEqual(
       exclusao.status === 204 ? [204, 404] : [201, 409],
     );
+    // A exclusão que perde recusa pela REGRA, com a licença travada — e não pela
+    // FK, que daria o 409 genérico e passaria mesmo sem a trava.
+    if (exclusao.status === 409) {
+      expect((exclusao.body as { error: string }).error).toContain('já foi entregue e não pode ser excluída');
+    }
   });
 
   it('encerrar enquanto entregam: nenhuma entrega passa depois do Encerrar', async () => {

@@ -109,10 +109,11 @@ export default function LicencaDetalheModal({
 
   // A última linha da página foi devolvida: volta uma, senão a lista abre vazia
   // com o paginador apontando para uma página que não existe mais.
-  const devolver = async (checkoutId: string, checkinAt: string) => {
+  const devolver = async (checkoutId: string, checkinAt: string): Promise<boolean> => {
     const linhasNaPagina = entregas.data?.rows.length ?? 0;
     const devolveu = await onDevolver(checkoutId, checkinAt);
     if (devolveu && linhasNaPagina === 1 && paginaDasEntregas > 1) setPaginaDasEntregas(paginaDasEntregas - 1);
+    return devolveu;
   };
 
   const totalDoHistorico = historico.data?.total ?? 0;
@@ -173,9 +174,13 @@ export default function LicencaDetalheModal({
             <p role="alert" className="text-status-danger">Não foi possível atualizar a licença: {erroDoDetalhe.message}</p>
           )}
 
-          {/* A chave só chega com o detalhe: a linha da listagem não a traz. */}
+          {/* A chave só chega com o detalhe: a linha da listagem não a traz. O
+              `key` pela licença: trocar de licença pelo link com a janela aberta
+              não leva o "Mostrar" ligado para a chave da outra. */}
           <Campo rotulo="Chave do produto">
-            {detalhe?.productKey ? <ChaveEscondida chave={detalhe.productKey} /> : detalhe ? '—' : 'Carregando…'}
+            {detalhe?.productKey
+              ? <ChaveEscondida key={detalhe.id} chave={detalhe.productKey} />
+              : detalhe ? '—' : erroDoDetalhe ? 'Não foi possível carregar' : 'Carregando…'}
           </Campo>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -212,7 +217,7 @@ export default function LicencaDetalheModal({
                 entregas={entregas.data?.rows ?? []}
                 vazio={buscaAdiada ? `Ninguém com "${buscaAdiada}" está com esta licença.` : undefined}
                 ocupado={ocupado}
-                onDevolver={(checkoutId, checkinAt) => void devolver(checkoutId, checkinAt)}
+                onDevolver={devolver}
                 onTrocarChave={onTrocarChave}
               />
             </Estado>

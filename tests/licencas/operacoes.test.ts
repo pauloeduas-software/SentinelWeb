@@ -4,6 +4,8 @@ import {
   cenarioDePosse, criarAtivo, criarColaborador, criarLicenca, diaNoBrasil, entregarLicenca,
 } from '../helpers/fixtures';
 import { prisma } from '../../server/core/database/prismaClient';
+// A máscara do campo de dinheiro: o teste prova o que a tela manda ao servidor.
+import { centavosDigitados, dinheiroNoCampo } from '../../src/pages/helpers/format.helper';
 
 // AS OPERAÇÕES SOBRE A LICENÇA — a conta, as datas, a entrega e a devolução.
 //
@@ -107,6 +109,15 @@ describe('a quantidade', () => {
     expect((await api.put(`/api/licenses/${licenca.id}`, { seatsTotal: 1 })).status).toBe(200);
   });
 
+  it('o teto é 100.000 — e ele é só da aplicação: o CHECK do banco garante o piso', async () => {
+    const licenca = await criarLicenca(api, { name: 'Contrato de volume', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
+    expect((await api.put(`/api/licenses/${licenca.id}`, { seatsTotal: 100_000 })).status).toBe(200);
+    expect((await api.put(`/api/licenses/${licenca.id}`, { seatsTotal: 100_001 })).status).toBe(422);
+    expect((await api.post('/api/licenses', {
+      name: 'Contrato grande demais', categoryId: cenario.categoriaLicencaId, seatsTotal: 100_001,
+    })).status).toBe(422);
+  });
+
   it('quantidade nula ou vazia é 422 — nunca vira zero', async () => {
     const licenca = await criarLicenca(api, { name: 'Teams', categoryId: cenario.categoriaLicencaId, seatsTotal: 4 });
 
@@ -131,6 +142,35 @@ describe('a quantidade', () => {
       name: 'Microsoft 365', categoryId: cenario.categoriaLicencaId, seatsTotal: 1,
     });
     expect(status).toBe(201);
+  });
+});
+
+describe('o valor da compra', () => {
+  it('aceita ponto ou vírgula nos centavos; o ponto de milhar é 422 com o nome do campo', async () => {
+    const licenca = await criarLicenca(api, { name: 'Contrato com valor', categoryId: cenario.categoriaLicencaId, seatsTotal: 2 });
+    const editar = (purchaseCost: unknown) =>
+      api.put<{ error: string; purchaseCost: string | null }>(`/api/licenses/${licenca.id}`, { purchaseCost });
+
+    expect((await editar('1234.56')).body.purchaseCost).toBe('1234.56');
+    expect((await editar('1234,5')).body.purchaseCost).toBe('1234.5');
+
+    const comMilhar = await editar('1.234,56');
+    expect(comMilhar.status).toBe(422);
+    expect(comMilhar.body.error).toBe('valor de compra: use um valor como 1234.50');
+
+    expect((await editar('')).body.purchaseCost).toBeNull();
+  });
+
+  it('o campo da tela lê os dígitos como centavos e manda o número sem milhar', () => {
+    expect(centavosDigitados('R$ 1.234,567')).toBe('12345.67');
+    expect(centavosDigitados('5')).toBe('0.05');
+    expect(centavosDigitados('R$ 0,0')).toBe('');
+    expect(centavosDigitados('')).toBe('');
+    // Nunca mais que os 10 dígitos e 2 casas que o servidor aceita.
+    expect(centavosDigitados('9'.repeat(15))).toBe('9999999999.99');
+
+    expect(dinheiroNoCampo('1234.56').replace(/\s/g, ' ')).toBe('R$ 1.234,56');
+    expect(dinheiroNoCampo('')).toBe('');
   });
 });
 
@@ -265,6 +305,21 @@ describe('a entrega recusa', () => {
 
     expect((await api.post(`/api/licenses/${licenca.id}/checkout`, { assignedPersonId: apagado })).status).toBe(404);
   });
+
+  it('o alvo vem antes da licença: na lixeira é 404 mesmo com a licença vencida, e o ativo inexistente diz "Ativo"', async () => {
+    const vencida = await criarLicenca(api, {
+      name: 'Vencida da lixeira', categoryId: cenario.categoriaLicencaId, seatsTotal: 5, expirationDate: diaNoBrasil(-1),
+    });
+    const apagado = await colaborador('Helena Lixeira');
+    expect((await api.delete(`/api/people/${apagado}`)).status).toBe(200);
+    expect((await api.post(`/api/licenses/${vencida.id}/checkout`, { assignedPersonId: apagado })).status).toBe(404);
+
+    const inexistente = await api.post<{ error: string }>(`/api/licenses/${vencida.id}/checkout`, {
+      assignedAssetId: '00000000-0000-4000-8000-000000000000',
+    });
+    expect(inexistente.status).toBe(404);
+    expect(inexistente.body.error).toBe('Ativo não encontrado.');
+  });
 });
 
 describe('a data da entrega e da devolução', () => {
@@ -282,6 +337,49 @@ describe('a data da entrega e da devolução', () => {
     });
     expect(futura.status).toBe(422);
     expect(futura.body.error).toContain('não pode ser uma data futura');
+  });
+
+  it('a entrega não antecede a data da compra', async () => {
+    const licenca = await criarLicenca(api, { name: 'Comprada há pouco', categoryId: cenario.categoriaLicencaId, seatsTotal: 2 });
+    expect((await api.put(`/api/licenses/${licenca.id}`, { purchaseDate: diaNoBrasil(-5) })).status).toBe(200);
+
+    const antes = await api.post<{ error: string }>(`/api/licenses/${licenca.id}/checkout`, {
+      assignedPersonId: cenario.laura, checkoutAt: diaNoBrasil(-6),
+    });
+    expect(antes.status).toBe(422);
+    expect(antes.body.error).toMatch(/^A entrega \(.+\) não pode ser antes da data da compra \(.+\)\.$/);
+
+    // O próprio dia da compra passa.
+    expect((await api.post(`/api/licenses/${licenca.id}/checkout`, {
+      assignedPersonId: cenario.laura, checkoutAt: diaNoBrasil(-5),
+    })).status).toBe(201);
+  });
+
+  it('a entrega no passado não se sobrepõe a outra do mesmo alvo; no dia da devolução, passa', async () => {
+    const licenca = await criarLicenca(api, { name: 'Volta no tempo', categoryId: cenario.categoriaLicencaId, seatsTotal: 2 });
+    const primeira = await api.post<{ id: string }>(`/api/licenses/${licenca.id}/checkout`, {
+      assignedPersonId: cenario.laura, checkoutAt: diaNoBrasil(-10),
+    });
+    expect((await api.post(`/api/licenses/checkouts/${primeira.body.id}/checkin`, { checkinAt: diaNoBrasil(-4) })).status).toBe(200);
+
+    // Antes do dia em que ela devolveu: a Laura teria a licença duas vezes.
+    const sobreposta = await api.post<{ error: string }>(`/api/licenses/${licenca.id}/checkout`, {
+      assignedPersonId: cenario.laura, checkoutAt: diaNoBrasil(-7),
+    });
+    expect(sobreposta.status).toBe(422);
+    expect(sobreposta.body.error).toMatch(/^A entrega \(.+\) não pode ser antes de .+: até esse dia Laura Souza estava com "Volta no tempo"\.$/);
+
+    // Outro alvo no mesmo período não é sobreposição — a quantidade no passado não é conferida.
+    expect((await api.post(`/api/licenses/${licenca.id}/checkout`, {
+      assignedPersonId: cenario.ana, checkoutAt: diaNoBrasil(-7),
+    })).status).toBe(201);
+
+    // No dia da devolução, recebe de novo — e a entrega fica depois da devolução.
+    const nova = await api.post<{ checkoutAt: string }>(`/api/licenses/${licenca.id}/checkout`, {
+      assignedPersonId: cenario.laura, checkoutAt: diaNoBrasil(-4),
+    });
+    expect(nova.status).toBe(201);
+    expect(new Date(nova.body.checkoutAt).getTime()).toBe(new Date(`${diaNoBrasil(-4)}T15:00:00.000Z`).getTime() + 1);
   });
 
   it('a devolução aceita um dia passado, mas nunca futuro nem antes da entrega', async () => {
@@ -325,7 +423,9 @@ describe('a data da entrega e da devolução', () => {
 
     const hoje = await api.post<{ checkinAt: string }>(`/api/licenses/checkouts/${entrega.id}/checkin`);
     expect(hoje.status).toBe(200);
-    expect(hoje.body.checkinAt.slice(0, 10) >= diaNoBrasil(-1)).toBe(true);
+    // Hoje grava a HORA REAL — nem o meio-dia de um dia passado, nem a
+    // meia-noite UTC, que em Brasília ainda é 21h de ontem.
+    expect(Math.abs(Date.now() - new Date(hoje.body.checkinAt).getTime())).toBeLessThan(60_000);
   });
 });
 

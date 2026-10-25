@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import type { ListEnvelope, ListQuery } from '../../../core/http/list-query';
+import { contemTexto } from '../../shared/busca.helper';
 import { CHECKOUT_COM_CHAVE_SELECT } from '../helpers/license-select.helper';
 
 type Entrega = Prisma.LicenseCheckoutGetPayload<{ select: typeof CHECKOUT_COM_CHAVE_SELECT }>;
@@ -21,7 +22,7 @@ export async function listLicenseCheckouts(licenseId: string, query: ListQuery):
   const licenca = await prisma.license.findUnique({ where: { id: licenseId }, select: { id: true } });
   if (!licenca) throw new AppError('Nenhuma licença com este identificador.', 404);
 
-  const contem = query.q ? { contains: query.q, mode: 'insensitive' } as const : undefined;
+  const contem = query.q ? contemTexto(query.q) : undefined;
   const where: Prisma.LicenseCheckoutWhereInput = {
     licenseId,
     checkinAt: null,
@@ -39,7 +40,9 @@ export async function listLicenseCheckouts(licenseId: string, query: ListQuery):
     prisma.licenseCheckout.findMany({
       where,
       select: CHECKOUT_COM_CHAVE_SELECT,
-      orderBy: [{ checkoutAt: 'desc' }, { createdAt: 'desc' }],
+      // `id` fecha o desempate: duas entregas do mesmo dia passado têm o mesmo
+      // `checkoutAt`, e sem ordem total a mesma linha podia aparecer em duas páginas.
+      orderBy: [{ checkoutAt: 'desc' }, { createdAt: 'desc' }, { id: 'asc' }],
       skip: query.skip,
       take: query.take,
     }),

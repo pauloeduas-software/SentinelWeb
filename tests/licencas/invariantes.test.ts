@@ -97,7 +97,9 @@ describe('a mesma chave não fica em duas entregas abertas da licença', () => {
     expect(await inserir({ licenseId: outra, personId: cenario.laura, productKey: chave })).toBeNull();
     expect(await inserir({ licenseId: outra, personId: cenario.ana, productKey: chave }))
       .toMatch(/23505[\s\S]*"licenseId", \\?"productKey/);
+    // Duas abertas SEM chave na mesma licença: o NULL não colide.
     expect(await inserir({ licenseId: outra, personId: cenario.ana })).toBeNull();
+    expect(await inserir({ licenseId: outra, assetId: cenario.ativo.id })).toBeNull();
   });
 });
 
