@@ -1,8 +1,9 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { travarPessoaOuFalhar } from '../../person/use-cases/lock-person.usecase';
-import { travarAtivoOuFalhar } from '../../asset/use-cases/lock-asset.usecase';
-import { instanteDoDia } from '../../shared/hoje.helper';
+import { travarAtivo } from '../../asset/use-cases/lock-asset.usecase';
+import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
+import { hojeNoBrasil, instanteDoDia } from '../../shared/hoje.helper';
 import { fraseSemVaga } from '../helpers/license-count.helper';
 import { CHECKOUT_SELECT } from '../helpers/license-select.helper';
 import { diasParaVencer, statusDaLicenca } from '../helpers/license-status.helper';
@@ -94,6 +95,11 @@ async function assertAlvoApto(client: ClienteLicenca, alvo: AlvoDaEntrega): Prom
   return pessoa.name;
 }
 
+/** As entregas daquele alvo, no `where`. */
+function doAlvo(alvo: AlvoDaEntrega) {
+  return alvo.tipo === 'PERSON' ? { assignedPersonId: alvo.id } : { assignedAssetId: alvo.id };
+}
+
 /** O mesmo alvo não fica com duas entregas abertas da mesma licença (invariante 23). */
 async function assertAlvoSemEntregaAberta(
   client: ClienteLicenca,
@@ -103,11 +109,7 @@ async function assertAlvoSemEntregaAberta(
   nomeDoAlvo: string,
 ): Promise<void> {
   const aberta = await client.licenseCheckout.findFirst({
-    where: {
-      licenseId,
-      checkinAt: null,
-      ...(alvo.tipo === 'PERSON' ? { assignedPersonId: alvo.id } : { assignedAssetId: alvo.id }),
-    },
+    where: { licenseId, checkinAt: null, ...doAlvo(alvo) },
     select: { id: true },
   });
   if (aberta) {
@@ -147,6 +149,55 @@ export async function assertChaveLivre(
   }
 }
 
+/**
+ * O DIA DA ENTREGA contra o passado da licença — e o instante a gravar.
+ *
+ * O dia não antecede a data da compra, nem o dia em que o mesmo alvo devolveu
+ * esta licença: a entrega que volta no tempo para antes da devolução poria o
+ * alvo com a licença duas vezes no mesmo período (invariante 23, no histórico).
+ * Os dois dias no calendário de Brasília, como na devolução.
+ *
+ * A QUANTIDADE no passado não é conferida — quantas estavam em uso naquele dia.
+ *
+ * No mesmo dia da devolução, o meio-dia do dia passado pode cair antes da hora
+ * real dela; a entrega fica um milissegundo depois, e não no mesmo instante:
+ * no empate, os históricos poriam a devolução antiga acima da entrega nova.
+ */
+async function instanteDaEntrega(
+  client: ClienteLicenca,
+  licenca: { id: string; name: string; purchaseDate: Date | null },
+  alvo: AlvoDaEntrega,
+  nomeDoAlvo: string,
+  checkoutAt: Date | undefined,
+): Promise<Date | undefined> {
+  const dia = checkoutAt ?? hojeNoBrasil();
+  if (licenca.purchaseDate && dia < licenca.purchaseDate) {
+    throw new AppError(
+      `A entrega (${diaEmPortugues(dia)}) não pode ser antes da data da compra (${diaEmPortugues(licenca.purchaseDate)}).`,
+      422,
+    );
+  }
+
+  const anterior = await client.licenseCheckout.findFirst({
+    where: { licenseId: licenca.id, checkinAt: { not: null }, ...doAlvo(alvo) },
+    orderBy: { checkinAt: 'desc' },
+    select: { checkinAt: true },
+  });
+  const devolvidaEm = anterior?.checkinAt;
+  if (devolvidaEm && dia < hojeNoBrasil(devolvidaEm)) {
+    throw new AppError(
+      `A entrega (${diaEmPortugues(dia)}) não pode ser antes de ${diaEmPortugues(hojeNoBrasil(devolvidaEm))}: `
+      + `até esse dia ${nomeDoAlvo} estava com "${licenca.name}".`,
+      422,
+    );
+  }
+
+  // Ausente, quem preenche é o `@default(now())` — depois de qualquer devolução.
+  if (!checkoutAt) return undefined;
+  const instante = instanteDoDia(checkoutAt);
+  return devolvidaEm && instante <= devolvidaEm ? new Date(devolvidaEm.getTime() + 1) : instante;
+}
+
 /** Vencida e encerrada não recebem entrega nova. VENCENDO entrega normalmente. */
 function assertLicencaVigente(
   licenca: { name: string; expirationDate: Date | null; terminationDate: Date | null },
@@ -180,22 +231,26 @@ export async function checkoutLicense(licenseId: string, data: CheckoutLicenseDa
     // ORDEM DE TRAVAMENTO: **alvo, depois licença** (`lock-license.usecase.ts`).
     // A trava do alvo protege a contagem que a desativação do colaborador e a
     // baixa do ativo leem; a da licença, a conta de livres.
+    // O ativo inexistente diz "Ativo", como o colaborador diz "Colaborador" — e
+    // não o "Registro não encontrado" das telas de ativo.
     if (alvo.tipo === 'PERSON') await travarPessoaOuFalhar(tx, alvo.id);
-    else await travarAtivoOuFalhar(tx, alvo.id);
+    else if (!(await travarAtivo(tx, alvo.id))) throw new AppError('Ativo não encontrado.', 404);
 
     await travarLicencaOuFalhar(tx, licenseId);
     const licenca = await tx.license.findUniqueOrThrow({
       where: { id: licenseId },
       select: {
         id: true, name: true, seatsTotal: true,
-        expirationDate: true, terminationDate: true,
+        expirationDate: true, terminationDate: true, purchaseDate: true,
       },
     });
 
-    assertLicencaVigente(licenca);
-
+    // O alvo antes da licença: o colaborador na lixeira é 404 mesmo com a
+    // licença vencida.
     const nomeDoAlvo = await assertAlvoApto(tx, alvo);
+    assertLicencaVigente(licenca);
     await assertAlvoSemEntregaAberta(tx, licenseId, licenca.name, alvo, nomeDoAlvo);
+    const checkoutAt = await instanteDaEntrega(tx, licenca, alvo, nomeDoAlvo, data.checkoutAt ?? undefined);
     await assertChaveLivre(tx, licenseId, licenca.name, data.productKey);
 
     // A CONTA, com a licença travada: nenhuma outra entrega desta licença está
@@ -213,8 +268,7 @@ export async function checkoutLicense(licenseId: string, data: CheckoutLicenseDa
         assignedAssetId: alvo.tipo === 'ASSET' ? alvo.id : null,
         checkoutNotes: data.notes ?? null,
         productKey: data.productKey ?? null,
-        // Ausente, quem preenche é o `@default(now())`.
-        checkoutAt: data.checkoutAt ? instanteDoDia(data.checkoutAt) : undefined,
+        checkoutAt,
       },
       select: CHECKOUT_SELECT,
     });

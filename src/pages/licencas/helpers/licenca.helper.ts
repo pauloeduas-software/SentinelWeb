@@ -68,15 +68,23 @@ export function motivoParaNaoExcluir(licenca: Pick<Licenca, 'jaEntregue'>): stri
  * resto em pontos — "ABCDE-FGHIJ-•••••-•••••-•••••". O começo basta para achar
  * a chave certa numa lista; o resto não fica na tela de quem passa atrás.
  *
- * Com três grupos ou mais, ficam os dois primeiros; com dois, o primeiro; sem
- * hífen, os primeiros caracteres (um terço, até quatro).
+ * Com três grupos ou mais, ficam os dois primeiros; com dois, o primeiro. Os
+ * grupos só valem quando nenhum é vazio e o que fica escondido pesa ao menos
+ * metade do que aparece — com o hífen no fim ou perto dele ("…XY-Z"), o
+ * primeiro grupo seria quase a chave inteira. Fora disso, os primeiros
+ * caracteres (um terço, até quatro). Linha vazia continua vazia.
  */
 export function esconderChave(chave: string): string {
   return chave.split('\n').map((linha) => {
+    if (linha === '') return '';
     const grupos = linha.split('-');
-    if (grupos.length >= 2) {
+    if (grupos.length >= 2 && grupos.every((grupo) => grupo !== '')) {
       const visiveis = grupos.length >= 3 ? 2 : 1;
-      return grupos.map((grupo, indice) => (indice < visiveis ? grupo : '•'.repeat(grupo.length))).join('-');
+      const mostrados = grupos.slice(0, visiveis).join('').length;
+      const escondidos = grupos.slice(visiveis).join('').length;
+      if (escondidos * 2 >= mostrados) {
+        return grupos.map((grupo, indice) => (indice < visiveis ? grupo : '•'.repeat(grupo.length))).join('-');
+      }
     }
     const visiveis = Math.min(4, Math.floor(linha.length / 3));
     return linha.slice(0, visiveis) + '•'.repeat(Math.max(4, linha.length - visiveis));

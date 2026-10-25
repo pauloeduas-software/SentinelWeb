@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../../core/database/prismaClient';
 import type { ListEnvelope, ListQuery } from '../../../core/http/list-query';
+import { contemTexto } from '../../shared/busca.helper';
 import { hojeNoBrasil, somarDias } from '../../shared/hoje.helper';
 import { SEM_USO } from '../helpers/license-count.helper';
 import { DIAS_DE_AVISO } from '../helpers/license-status.helper';
@@ -59,7 +60,7 @@ export async function listLicenses(
   // A contagem em lote: uma consulta para a página inteira.
   const uso = await contarUso(prisma, rows.map((linha) => linha.id));
 
-  return { total, rows: rows.map((linha) => paraResposta(linha, uso.get(linha.id) ?? SEM_USO)) };
+  return { total, rows: rows.map((linha) => paraResposta(linha, uso.get(linha.id) ?? SEM_USO, hoje)) };
 }
 
 /** Os campos da própria licença que a busca `?q=` varre. */
@@ -72,7 +73,7 @@ const CAMPOS_DA_BUSCA = ['name', 'licensedToName', 'licensedToEmail', 'orderNumb
  */
 function buildLicenseWhere(q?: string): Prisma.LicenseWhereInput {
   if (!q) return {};
-  const contem = { contains: q, mode: 'insensitive' } as const;
+  const contem = contemTexto(q);
 
   return {
     OR: [

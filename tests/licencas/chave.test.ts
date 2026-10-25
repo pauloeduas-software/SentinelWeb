@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { cenarioDePosse, criarColaborador, criarLicenca } from '../helpers/fixtures';
+import { cenarioDePosse, criarColaborador, criarLicenca, diaNoBrasil } from '../helpers/fixtures';
 // A função PURA que a tela usa para esconder a chave: o teste prova o que o
 // operador VÊ antes de "Mostrar".
 import { esconderChave } from '../../src/pages/licencas/helpers/licenca.helper';
@@ -75,9 +75,17 @@ describe('a chave da entrega', () => {
 
   it('o "Com quem está" traz a chave; aba do ativo, ficha, alerta e históricos, não', async () => {
     const pessoa = await criarColaborador(api, { name: 'Rita Chaves', email: 'rita@chave.local' });
-    const licenca = await criarLicenca(api, { name: 'Chave escondida', categoryId: cenario.categoriaLicencaId, seatsTotal: 2 });
+    // Vence hoje, para estar no alerta; e com a chave da própria licença, além
+    // das duas das entregas — nenhuma das três pode vazar.
+    const licenca = await criarLicenca(api, {
+      name: 'Chave escondida', categoryId: cenario.categoriaLicencaId, seatsTotal: 2, expirationDate: diaNoBrasil(0),
+    });
+    expect((await api.put(`/api/licenses/${licenca.id}`, { productKey: 'SEGREDO-DA-LICENCA' })).status).toBe(200);
     await entregar(licenca.id, { assignedPersonId: pessoa }, 'SEGREDO-PESSOA');
     await entregar(licenca.id, { assignedAssetId: cenario.ativo.id }, 'SEGREDO-ATIVO');
+
+    const alerta = await api.get<{ rows: { id: string }[] }>('/api/licenses/alerts');
+    expect(alerta.body.rows.map((linha) => linha.id)).toContain(licenca.id);
 
     const comQuem = await api.get<{ rows: Entrega[] }>(`/api/licenses/${licenca.id}/checkouts`);
     expect(comQuem.body.rows.map((e) => e.productKey).sort()).toEqual(['SEGREDO-ATIVO', 'SEGREDO-PESSOA']);
@@ -137,5 +145,10 @@ describe('a chave escondida na tela', () => {
     expect(esconderChave('XXXX-YYYY')).toBe('XXXX-••••');
     expect(esconderChave('ABCDEFGHIJKL')).toBe('ABCD••••••••');
     expect(esconderChave('AAAA-BBBB-CCCC\nDDDD-EEEE-FFFF')).toBe('AAAA-BBBB-••••\nDDDD-EEEE-••••');
+    // O hífen no fim ou perto dele não deixa o primeiro grupo à mostra inteiro.
+    expect(esconderChave('ABCDEFGHIJKLMNOPQRSTUVWXY-')).toBe(`ABCD${'•'.repeat(22)}`);
+    expect(esconderChave('ABCDEFGHIJKLMNOPQRSTUVWXY-Z')).toBe(`ABCD${'•'.repeat(23)}`);
+    expect(esconderChave('Senha: Abc-123')).toBe(`Senh${'•'.repeat(10)}`);
+    expect(esconderChave('AAAA-BBBB-CCCC\n\nDDDD-EEEE-FFFF')).toBe('AAAA-BBBB-••••\n\nDDDD-EEEE-••••');
   });
 });

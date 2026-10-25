@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import CampoDeDinheiro from '../../components/CampoDeDinheiro';
 import ReferenceSelect from '../../components/ReferenceSelect';
 import { paraCampoDeData } from '../../helpers/format.helper';
 import { useLicenseQuery } from '../../../domain/license/license.queries';
@@ -101,6 +102,12 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
   const [notes, setNotes] = useState(licenca?.notes ?? '');
   const [productKey, setProductKey] = useState(licenca?.productKey ?? '');
 
+  // A BASE do "só o que mudou", congelada quando o formulário abre — como os
+  // campos. O `licenca` que chega é o da query, e uma nova busca no meio (voltar
+  // para a aba do navegador) traria a edição de outra pessoa para a base: o
+  // campo que ela mudou pareceria alterado aqui e iria com o valor velho.
+  const [base] = useState(() => (licenca ? comoFoiSalva(licenca) : null));
+
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -134,7 +141,7 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
     };
 
     try {
-      await onSubmit(licenca ? camposAlterados(comoFoiSalva(licenca), dados) as LicencaInput : dados);
+      await onSubmit(base ? camposAlterados(base, dados) as LicencaInput : dados);
     } catch (falha) {
       // O apiClient já traduziu a resposta do servidor — é aqui que aparecem o
       // 422 de categoria do tipo errado e o 409 de reduzir abaixo do que está
@@ -234,7 +241,7 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
 
             <label className="space-y-1.5">
               <span className={ROTULO}>Valor da compra</span>
-              <input value={purchaseCost} onChange={(e) => setPurchaseCost(e.target.value)} placeholder="1234,56" className={CLASSE_CAMPO} />
+              <CampoDeDinheiro valor={purchaseCost} onChange={setPurchaseCost} className={CLASSE_CAMPO} />
             </label>
 
             <label className="space-y-1.5 col-span-2">

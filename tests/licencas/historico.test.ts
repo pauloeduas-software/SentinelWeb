@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { cenarioDePosse, criarAtivo, criarColaborador, criarLicenca, entregarLicenca } from '../helpers/fixtures';
+import { cenarioDePosse, criarAtivo, criarColaborador, criarLicenca, diaNoBrasil, entregarLicenca } from '../helpers/fixtures';
 import { prisma } from '../../server/core/database/prismaClient';
 // O vocabulário que a tela usa, importado para o teste provar que toda ação do
 // histórico tem rótulo — não só o que o banco guarda.
@@ -81,9 +81,10 @@ describe('o histórico da licença é só movimentação', () => {
     await entregarLicenca(api, licencaId, { assignedPersonId: pessoa }, 'pedido do chamado 42');
     await entregarLicenca(api, licencaId, { assignedAssetId: cenario.ativo.id });
     const doOtavio = await entregarLicenca(api, licencaId, { assignedPersonId: outra });
-    await api.post(`/api/licenses/checkouts/${doOtavio.id}/checkin`);
-    // A edição não deixa rastro.
-    await api.put(`/api/licenses/${licencaId}`, { name: 'Trilha (renomeada)', seatsTotal: 5 });
+    expect((await api.post(`/api/licenses/checkouts/${doOtavio.id}/checkin`)).status).toBe(200);
+    // A edição não deixa rastro — e ela tem que ter acontecido, senão os testes
+    // de "não aparece" passariam sem edição nenhuma.
+    expect((await api.put(`/api/licenses/${licencaId}`, { name: 'Trilha (renomeada)', seatsTotal: 5 })).status).toBe(200);
   });
 
   it('a entrega e a devolução trazem o NOME de quem recebeu e a observação', async () => {
@@ -124,9 +125,26 @@ describe('o histórico da licença é só movimentação', () => {
     const instantes = inteira.rows.map((e) => new Date(e.at).getTime());
     expect(instantes).toEqual([...instantes].sort((a, b) => b - a));
 
-    // A devolução do Otávio vem antes da entrega dele, mesmo no mesmo instante.
+    // A devolução do Otávio vem antes da entrega dele.
     const doOtavio = inteira.rows.filter((e) => e.entrega.alvoLabel === 'Otávio Reis').map((e) => e.action);
     expect(doOtavio).toEqual(['CHECKIN', 'CHECKOUT']);
+  });
+
+  it('no mesmo instante, a devolução vem antes da entrega — o desempate do banco', async () => {
+    // Entrega e devolução no mesmo dia passado: as duas ficam no meio-dia de
+    // Brasília, e só o desempate por ação as põe na ordem.
+    const pessoa = await criarColaborador(api, { name: 'Paula Empate', email: 'paula@teste.local' });
+    const licenca = await criarLicenca(api, { name: 'Empate', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
+    const entrega = await api.post<{ id: string; checkoutAt: string }>(
+      `/api/licenses/${licenca.id}/checkout`, { assignedPersonId: pessoa, checkoutAt: diaNoBrasil(-3) },
+    );
+    const devolvida = await api.post<{ checkinAt: string }>(
+      `/api/licenses/checkouts/${entrega.body.id}/checkin`, { checkinAt: diaNoBrasil(-3) },
+    );
+    expect(devolvida.body.checkinAt).toBe(entrega.body.checkoutAt);
+
+    const { body } = await api.get<{ rows: EventoDaLicenca[] }>(`/api/licenses/${licenca.id}/history`);
+    expect(body.rows.map((e) => e.action)).toEqual(['CHECKIN', 'CHECKOUT']);
   });
 
   it('a licença não grava nada na trilha de auditoria', async () => {

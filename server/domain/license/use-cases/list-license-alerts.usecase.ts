@@ -68,17 +68,17 @@ export async function listLicenseAlerts(): Promise<AlertasDaLicenca> {
     {
       motivo: 'ENCERRADA_EM_USO',
       where: { terminationDate: { lte: hoje }, checkouts: { some: { checkinAt: null } } },
-      orderBy: [{ terminationDate: 'desc' }, { name: 'asc' }],
+      orderBy: [{ terminationDate: 'desc' }, { name: 'asc' }, { id: 'asc' }],
     },
     {
       motivo: 'VENCIDA',
       where: { AND: [naoEncerrada, { expirationDate: { lt: hoje } }] },
-      orderBy: [{ expirationDate: 'desc' }, { name: 'asc' }],
+      orderBy: [{ expirationDate: 'desc' }, { name: 'asc' }, { id: 'asc' }],
     },
     {
       motivo: 'VENCENDO',
       where: { AND: [naoEncerrada, { expirationDate: { gte: hoje, lte: somarDias(hoje, DIAS_DE_AVISO) } }] },
-      orderBy: [{ expirationDate: 'asc' }, { name: 'asc' }],
+      orderBy: [{ expirationDate: 'asc' }, { name: 'asc' }, { id: 'asc' }],
     },
   ];
 

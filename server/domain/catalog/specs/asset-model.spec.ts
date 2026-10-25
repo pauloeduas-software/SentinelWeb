@@ -3,7 +3,7 @@ import { AppError } from '../../../core/errors/app-error';
 import { assertEscolhaAtiva, lerCategoriaTravada, lerFabricanteTravado } from '../helpers/catalog-lock.helper';
 import { createAssetModelSchema, updateAssetModelSchema } from '../schemas/catalog-entities.schema';
 import type { CatalogDelegate, CatalogSpec } from './catalog-spec.types';
-import { escaparCuringas } from '../helpers/nome-unico.helper';
+import { escaparCuringas } from '../../shared/busca.helper';
 
 export const assetModelSpec: CatalogSpec = {
   slug: 'asset-models',

@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { contemTexto } from '../../shared/busca.helper';
 
 // Recortes e ordem da listagem de postos — funções puras, sem I/O.
 
@@ -55,8 +56,8 @@ export const OCUPANTES_ABERTOS_ORDER_BY: Prisma.WorkstationOccupantOrderByWithRe
 function buildBuscaWhere(q?: string): Prisma.WorkstationWhereInput {
   if (!q) return {};
 
-  // `mode: 'insensitive'` é obrigatório: sem ele "mesa" não acha "Mesa 1".
-  const contem = { contains: q, mode: 'insensitive' as const };
+  // Sem diferença de maiúscula: "mesa" acha "Mesa 1".
+  const contem = contemTexto(q);
   return { OR: [{ name: contem }, { notes: contem }] };
 }
 

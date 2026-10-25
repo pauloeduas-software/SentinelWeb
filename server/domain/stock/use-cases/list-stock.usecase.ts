@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../../core/database/prismaClient';
+import { contemTexto } from '../../shared/busca.helper';
 import type { ListEnvelope, ListQuery } from '../../../core/http/list-query';
 import { comSaldo, contarFora, type ComSaldo } from '../helpers/stock-balance.helper';
 import { STOCK_ITEM_SELECT } from '../helpers/stock-select.helper';
@@ -25,7 +26,7 @@ export async function listStock(
 ): Promise<ListEnvelope<StockItemComSaldo>> {
   const where: Prisma.StockItemWhereInput = {
     ...(query.view === 'trashed' ? { deletedAt: { not: null } } : {}),
-    ...(query.q ? { name: { contains: query.q, mode: 'insensitive' } } : {}),
+    ...(query.q ? { name: contemTexto(query.q) } : {}),
     ...(filtros.categoryId ? { categoryId: filtros.categoryId } : {}),
   };
 

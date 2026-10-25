@@ -84,7 +84,7 @@ export async function listLicenseHistory(
          WHERE "licenseId" = ${licenseId}::uuid AND "checkinAt" IS NOT NULL
       ) AS eventos
       ORDER BY at DESC, action ASC, "createdAt" DESC, "checkoutId" DESC
-      LIMIT ${query.take}::int OFFSET ${query.skip}::int
+      LIMIT ${query.take}::int OFFSET ${query.skip}::bigint
     `,
   ]);
 

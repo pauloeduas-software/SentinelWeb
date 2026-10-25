@@ -35,6 +35,10 @@ describe('encerrar', () => {
   it('com alguém usando, encerra, muda de aba e entra no alerta até tudo voltar', async () => {
     const licenca = await criarLicenca(api, { name: 'Encerrar Office 2016', categoryId: cenario.categoriaLicencaId, seatsTotal: 2 });
     const entrega = await entregarLicenca(api, licenca.id, { assignedPersonId: cenario.laura });
+    // A contagem, e não só as linhas: a caixa corta em seis.
+    const encerradasEmUso = async () => (await api.get<{ contagem: { ENCERRADA_EM_USO: number } }>('/api/licenses/alerts'))
+      .body.contagem.ENCERRADA_EM_USO;
+    const antes = await encerradasEmUso();
 
     const encerrada = await api.post<{ status: string; terminationDate: string; emUso: number }>(
       `/api/licenses/${licenca.id}/terminate`,
@@ -46,11 +50,13 @@ describe('encerrar', () => {
     const motivo = async () => (await api.get<{ rows: { id: string; motivo: string }[] }>('/api/licenses/alerts'))
       .body.rows.find((alerta) => alerta.id === licenca.id)?.motivo;
     expect(await motivo()).toBe('ENCERRADA_EM_USO');
+    expect(await encerradasEmUso()).toBe(antes + 1);
 
     // Encerrada não recebe entrega nova; devolver continua podendo, e tira do alerta.
     expect((await api.post(`/api/licenses/${licenca.id}/checkout`, { assignedPersonId: cenario.ana })).status).toBe(409);
     expect((await api.post(`/api/licenses/checkouts/${entrega.id}/checkin`)).status).toBe(200);
     expect(await motivo()).toBeUndefined();
+    expect(await encerradasEmUso()).toBe(antes);
 
     expect(await idsDaAba('encerradas', 'Encerrar Office 2016')).toEqual([licenca.id]);
     expect(await idsDaAba('atuais', 'Encerrar Office 2016')).toEqual([]);
@@ -116,7 +122,7 @@ describe('excluir de vez', () => {
     expect(emUso.status).toBe(409);
     expect(emUso.body.error).toContain('Encerre-a em vez de excluir');
 
-    await api.post(`/api/licenses/checkouts/${entrega.id}/checkin`);
+    expect((await api.post(`/api/licenses/checkouts/${entrega.id}/checkin`)).status).toBe(200);
     const devolvida = await api.delete<{ error: string }>(`/api/licenses/${licenca.id}`);
     expect(devolvida.status).toBe(409);
     expect(devolvida.body.error).toBe(
@@ -145,7 +151,7 @@ describe('excluir de vez', () => {
     expect(await jaEntregue()).toBe(false);
     const entrega = await entregarLicenca(api, licenca.id, { assignedPersonId: cenario.ana });
     expect(await jaEntregue()).toBe(true);
-    await api.post(`/api/licenses/checkouts/${entrega.id}/checkin`);
+    expect((await api.post(`/api/licenses/checkouts/${entrega.id}/checkin`)).status).toBe(200);
     expect(await jaEntregue()).toBe(true);
   });
 
@@ -179,6 +185,14 @@ describe('excluir de vez', () => {
 
 describe('o alerta', () => {
   interface Alerta { id: string; motivo: string }
+
+  // A caixa corta em seis, e os testes de cima deixam encerradas em uso e datas
+  // que entram no alerta. Zerado aqui, a ordem deste bloco não depende de
+  // quantas sobraram lá.
+  beforeAll(async () => {
+    await prisma.licenseCheckout.updateMany({ where: { checkinAt: null }, data: { checkinAt: new Date() } });
+    await prisma.license.updateMany({ data: { expirationDate: null } });
+  });
 
   it('encerrada em uso primeiro, depois vencidas, depois vencendo — e encerrada sem uso fica fora', async () => {
     const vencendo = await criarLicenca(api, {

@@ -65,12 +65,13 @@ export const uuidOpcional = (rotulo: string) =>
 export const dataOpcional = (rotulo: string) =>
   z.string().trim().nullish()
     .transform((valor) => (valor === undefined ? undefined : valor || null))
+    // `.nullish()` no fim, e não `z.union([z.null(), z.undefined(), …])`: a união
+    // que falha em todos os ramos responde só "Invalid input", e a frase do
+    // campo se perde.
     .pipe(
-      z.union([
-        z.null(),
-        z.undefined(),
-        z.iso.date(`${rotulo}: use uma data no formato AAAA-MM-DD`).transform((valor) => new Date(`${valor}T00:00:00.000Z`)),
-      ]),
+      z.iso.date(`${rotulo}: use uma data no formato AAAA-MM-DD`)
+        .transform((valor) => new Date(`${valor}T00:00:00.000Z`))
+        .nullish(),
     );
 
 /** Meia-noite UTC de HOJE — o primeiro instante que ainda é hoje. */
@@ -133,11 +134,9 @@ export const dataNaoPassada = (rotulo: string) =>
 export const valorMonetarioOpcional = (rotulo: string) =>
   z.string().trim().nullish()
     .transform((valor) => (valor === undefined ? undefined : valor || null))
+    // `.nullish()` no fim pelo mesmo motivo do `dataOpcional`: a frase do campo.
     .pipe(
-      z.union([
-        z.null(),
-        z.undefined(),
-        z.string().regex(/^\d{1,10}([.,]\d{1,2})?$/, `${rotulo}: use um valor como 1234.50`)
-          .transform((valor) => valor.replace(',', '.')),
-      ]),
+      z.string().regex(/^\d{1,10}([.,]\d{1,2})?$/, `${rotulo}: use um valor como 1234.50`)
+        .transform((valor) => valor.replace(',', '.'))
+        .nullish(),
     );

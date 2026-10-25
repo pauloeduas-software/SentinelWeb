@@ -1,13 +1,14 @@
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
+import { contemTexto } from '../../shared/busca.helper';
 
-// `mode: 'insensitive'` é obrigatório: sem ele buscar "latitude" não acha
-// "Latitude". A busca alcança o modelo e o fabricante porque é assim que se
+// Sem diferença de maiúscula — buscar "latitude" acha "Latitude" — e com os
+// curingas escapados (`contemTexto`). A busca alcança o modelo e o fabricante porque é assim que se
 // procura um ativo na prática — "o Dell do fulano", não a etiqueta decorada.
 export function buildAssetWhere(q?: string): Prisma.AssetWhereInput {
   if (!q) return {};
 
-  const contem = { contains: q, mode: 'insensitive' } as const;
+  const contem = contemTexto(q);
 
   return {
     OR: [

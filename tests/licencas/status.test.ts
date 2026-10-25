@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { cenarioDePosse, criarLicenca, diaNoBrasil } from '../helpers/fixtures';
+import { cenarioDePosse, criarFabricante, criarLicenca, diaNoBrasil } from '../helpers/fixtures';
 import { prisma } from '../../server/core/database/prismaClient';
 import { hojeNoBrasil } from '../../server/domain/shared/hoje.helper';
 import { diasParaVencer, statusDaLicenca } from '../../server/domain/license/helpers/license-status.helper';
@@ -157,5 +157,41 @@ describe('o filtro de status da aba Atuais', () => {
   it('na aba Encerradas, ou com um status que não existe, é 422', async () => {
     expect((await api.get('/api/licenses?view=encerradas&status=ATIVA')).status).toBe(422);
     expect((await api.get('/api/licenses?status=ENCERRADA')).status).toBe(422);
+  });
+});
+
+describe('a busca e a ordem da lista', () => {
+  async function acha(q: string, view = 'atuais'): Promise<string[]> {
+    const { status, body } = await api.get<{ rows: { id: string }[] }>(
+      `/api/licenses?view=${view}&perPage=100&q=${encodeURIComponent(q)}`,
+    );
+    expect(status).toBe(200);
+    return body.rows.map((linha) => linha.id);
+  }
+
+  it('a busca alcança licenciado, e-mail, pedido, categoria e fabricante — e "_" é texto, não curinga', async () => {
+    const categoria = (await api.post<{ id: string }>('/api/categories', { name: 'Família Buscável', type: 'LICENSE' })).body.id;
+    const fabricante = await criarFabricante(api, 'Fabricante Buscável');
+    const criar = async (name: string, orderNumber: string) => (await api.post<{ id: string }>('/api/licenses', {
+      name, categoryId: categoria, manufacturerId: fabricante, seatsTotal: 1,
+      licensedToName: 'Gabriela Licenciada', licensedToEmail: 'gabi@busca.local', orderNumber,
+    })).body.id;
+    const alvo = await criar('Contrato da busca', 'PED_7781');
+    const parecida = await criar('Contrato parecido', 'PEDX7781');
+
+    for (const q of ['gabriela licenciada', 'GABI@BUSCA', 'família buscável', 'fabricante busc']) {
+      expect((await acha(q)).sort(), q).toEqual([alvo, parecida].sort());
+    }
+    // Sem escapar, o "_" casaria com o "X" da outra.
+    expect(await acha('PED_7781')).toEqual([alvo]);
+  });
+
+  it('a aba Encerradas vem pela mais recente', async () => {
+    const encerrada = (dias: number) => criarLicenca(api, {
+      name: `Ordem encerrada ${dias}`, categoryId: cenario.categoriaLicencaId, seatsTotal: 1, terminationDate: diaNoBrasil(dias),
+    });
+    const [cinco, uma, tres] = [await encerrada(-5), await encerrada(-1), await encerrada(-3)];
+
+    expect(await acha('Ordem encerrada', 'encerradas')).toEqual([uma.id, tres.id, cinco.id]);
   });
 });

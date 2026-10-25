@@ -105,11 +105,18 @@ export function useAssetLicensesQuery(assetId: string | null) {
  * pessoa, o histórico dela e o 409 da desativação; entregá-la a uma máquina
  * muda a aba Licenças e o histórico do ativo. Operação que atravessa domínios
  * invalida os dois lados.
+ *
+ * Devolve a promessa, e o `onSuccess` a devolve também: a mutação só termina
+ * quando as listas abertas já foram buscadas de novo. Sem isso o botão
+ * destravava com a linha devolvida, encerrada ou excluída ainda na tela, e o
+ * segundo clique dava "já foi devolvida".
  */
 function invalidarLicencaEPosse(queryClient: ReturnType<typeof useQueryClient>) {
-  void queryClient.invalidateQueries({ queryKey: licenseKeys.all });
-  void queryClient.invalidateQueries({ queryKey: assetKeys.all });
-  void queryClient.invalidateQueries({ queryKey: personKeys.all });
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: licenseKeys.all }),
+    queryClient.invalidateQueries({ queryKey: assetKeys.all }),
+    queryClient.invalidateQueries({ queryKey: personKeys.all }),
+  ]);
 }
 
 export function useCreateLicense() {

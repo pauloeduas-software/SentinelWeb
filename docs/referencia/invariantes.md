@@ -616,8 +616,8 @@ a redução contava "2 em uso" enquanto uma entrega gravava a terceira.
 
 **A ordem das travas é alvo → licença**, na entrega, o caminho que trava os dois. A devolução
 trava só a linha da entrega — ela só diminui o que está em uso, e travar a licença depois da
-entrega fecharia um ciclo com a exclusão, que trava a licença e depois atualiza as entregas
-devolvidas.
+entrega fecharia um ciclo com a troca de chave, que trava a licença e depois a linha da
+entrega.
 
 **A frase diz quantas estão em uso**, e que devolver libera: `Não dá para reduzir "Office
 2021" para 6: 7 estão em uso. Devolva para liberar.`
@@ -649,6 +649,11 @@ linha.
 **Dois índices, um por alvo**: num índice só, com uma das colunas sempre nula, o Postgres
 nunca acusaria colisão. A aplicação confere antes, com o nome do alvo na frase; o índice é a
 rede.
+
+**No passado também.** A entrega com dia passado não fica antes do dia em que o mesmo alvo
+devolveu esta licença (422) — senão o histórico mostraria o alvo com ela duas vezes no mesmo
+período. O índice só enxerga as abertas; essa conferência é só da aplicação, com o alvo
+travado. No próprio dia da devolução a entrega passa, gravada um milissegundo depois dela.
 
 **A chave da entrega** segue a mesma lógica: a mesma chave não fica em duas entregas abertas da
 licença. A entrega sem chave (licença de volume) e a devolvida ficam fora do índice. A entrega
