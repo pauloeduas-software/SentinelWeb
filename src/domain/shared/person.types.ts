@@ -1,3 +1,4 @@
+import type { EntregaDoAlvo, EventoDeLicencaDoAlvo } from './license.types';
 import type { UnidadeDeEstoque } from './stock.types';
 
 /**
@@ -20,21 +21,23 @@ export interface PessoaDaFicha {
   isActive: boolean;
   /** As unidades de estoque no NOME dela — como a ficha do posto mostra `itens`. */
   itens: UnidadeDeEstoque[];
+  /** As licenças entregues A ELA e ainda abertas — não as do computador que ela usa. */
+  licencas: EntregaDoAlvo[];
 }
 
 /**
  * Um evento da aba Histórico da pessoa — `GET /api/people/:id/history`.
  *
- * TRÊS fontes numa lista só, e é uma a mais que o ativo tem: o `ActivityLog`
- * (cadastro, edição com diff, desativação), as posses
- * DIRETAS dela e as OCUPAÇÕES de posto.
+ * QUATRO fontes numa lista só: o `ActivityLog` (cadastro, edição com diff,
+ * desativação), as posses DIRETAS dela, as OCUPAÇÕES de posto e as licenças
+ * entregues A ELA.
  *
  * Responde o que aconteceu COM a pessoa: a consulta do servidor é por
  * `entityId`. Colaborador não opera o sistema, então não há o que ela FEZ.
  */
 export interface EventoDaPessoa {
   id: string;
-  fonte: 'ATIVIDADE' | 'POSSE' | 'POSTO';
+  fonte: 'ATIVIDADE' | 'POSSE' | 'POSTO' | 'LICENCA';
   action: string;
   /** ISO — `JSON.parse` não reconstrói `Date`. */
   at: string;
@@ -62,4 +65,6 @@ export interface EventoDaPessoa {
     shift: string | null;
     notes: string | null;
   } | null;
+  /** Preenchido só quando `fonte === 'LICENCA'`. */
+  licenca: EventoDeLicencaDoAlvo | null;
 }

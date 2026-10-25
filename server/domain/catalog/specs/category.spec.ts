@@ -13,16 +13,16 @@ import type { CatalogDelegate, CatalogSpec, ClienteCatalogo } from './catalog-sp
 // que ficava sem guarda: o tipo trocava com licenças dentro, e toda edição delas
 // passava a dar 422 no `assertReferenciasDaLicenca` até alguém trocar a categoria.
 //
-// `INCLUINDO_LIXEIRA` no ativo, no item e na licença: os três continuam presos à
+// `INCLUINDO_LIXEIRA` no ativo e no item: os dois continuam presos à
 // categoria, e trocar o tipo dela por baixo deles mudaria a semântica de um
-// registro que ainda pode voltar. `assetModel` não precisa do mesmo cuidado:
-// não tem lixeira.
+// registro que ainda pode voltar. `assetModel` e licença não precisam do mesmo
+// cuidado: não têm lixeira.
 const contarUsos = async (client: ClienteCatalogo, id: string) => {
   const [modelos, ativos, itens, licencas] = await Promise.all([
     client.assetModel.count({ where: { categoryId: id } }),
     client.asset.count({ where: { model: { categoryId: id }, ...INCLUINDO_LIXEIRA } }),
     client.stockItem.count({ where: { categoryId: id, ...INCLUINDO_LIXEIRA } }),
-    client.license.count({ where: { categoryId: id, ...INCLUINDO_LIXEIRA } }),
+    client.license.count({ where: { categoryId: id } }),
   ]);
   return modelos + ativos + itens + licencas;
 };

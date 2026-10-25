@@ -2,12 +2,14 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../../../core/database/prismaClient';
 import type { ListEnvelope } from '../../../core/http/list-query';
 import { listPersonOccupancies } from '../../occupancy/use-cases/list-person-occupancies.usecase';
+import { buscarEntregasDaPessoa } from '../../license/use-cases/list-target-checkouts.usecase';
+import { eventosDaEntregaDeLicenca, type EventoDeLicenca } from '../../license/helpers/license-events.helper';
 
 // A LINHA DO TEMPO DE UMA PESSOA — o Histórico da ficha do colaborador.
 //
 // O espelho de `asset/use-cases/asset-history.usecase.ts`, e ele é o modelo:
 // mesma forma de evento, mesmo envelope, mesma regra de corte. O que muda é o
-// número de fontes — aqui são TRÊS, porque a pessoa participa de duas relações
+// número de fontes — aqui são QUATRO, porque a pessoa participa de relações
 // que o ativo não tem dos dois lados.
 //
 // O QUE ESTA LEITURA RESPONDE: *o que aconteceu COM esta pessoa.* Por isso a
@@ -18,7 +20,7 @@ import { listPersonOccupancies } from '../../occupancy/use-cases/list-person-occ
  * De onde o evento veio. A tela usa para escolher o ícone e o que mostrar — um
  * diff de campos não se lê como uma entrega nem como uma ocupação de posto.
  */
-type FonteDoEventoDaPessoa = 'ATIVIDADE' | 'POSSE' | 'POSTO';
+type FonteDoEventoDaPessoa = 'ATIVIDADE' | 'POSSE' | 'POSTO' | 'LICENCA';
 
 /** O que um evento de posse acrescenta: QUAL equipamento ela recebeu. */
 interface EventoDePosseDaPessoa {
@@ -43,9 +45,9 @@ interface EventoDePostoDaPessoa {
 
 export interface EventoDaPessoa {
   /**
-   * Chave ESTÁVEL para a tela, com prefixo da fonte: as três têm uuid próprio,
-   * e tanto uma posse quanto uma ocupação rendem DOIS eventos (a abertura e o
-   * fechamento), que colidiriam se a chave fosse só o id da linha.
+   * Chave ESTÁVEL para a tela, com prefixo da fonte: todas têm uuid próprio,
+   * e uma posse, uma ocupação ou uma entrega de licença rendem DOIS eventos (a
+   * abertura e o fechamento), que colidiriam se a chave fosse só o id da linha.
    */
   id: string;
   fonte: FonteDoEventoDaPessoa;
@@ -54,6 +56,8 @@ export interface EventoDaPessoa {
   changes: Prisma.JsonValue | null;
   posse: EventoDePosseDaPessoa | null;
   posto: EventoDePostoDaPessoa | null;
+  /** Só as licenças entregues A ELA — as do computador que ela usa são dele (AA). */
+  licenca: EventoDeLicenca | null;
 }
 
 /** Quanto a tela recebe quando não pede nada. O TETO é do schema, na borda. */
@@ -68,10 +72,10 @@ const LIMITE_PADRAO = 100;
  * entrega com mais dado. Contar as duas seria contar a entrega em dobro.
  *
  * Do lado da pessoa isso não acontece: a entrega é gravada no ATIVO
- * (`entityType: 'Asset'`) e a ocupação é gravada na OCUPAÇÃO
- * (`entityType: 'WorkstationOccupant'`) — nenhuma das duas cai numa consulta por
- * `entityType: 'Person'`. As três fontes são disjuntas por construção, e é por
- * isso que a soma dos totais fecha sem subtrair nada.
+ * (`entityType: 'Asset'`), a ocupação na OCUPAÇÃO
+ * (`entityType: 'WorkstationOccupant'`), e a entrega de licença não vai para o
+ * log — nenhuma cai numa consulta por `entityType: 'Person'`. As fontes são disjuntas por construção, e é por isso
+ * que a soma dos totais fecha sem subtrair nada.
  */
 const ENTITY_TYPE = 'Person';
 
@@ -96,6 +100,7 @@ function eventosDaPosse(posse: PosseDaPessoa): EventoDaPessoa[] {
     changes: null,
     posse: { ...base, notes: posse.checkoutNotes },
     posto: null,
+    licenca: null,
   };
 
   if (!posse.checkinAt) return [entrega];
@@ -109,6 +114,7 @@ function eventosDaPosse(posse: PosseDaPessoa): EventoDaPessoa[] {
       changes: null,
       posse: { ...base, notes: posse.checkinNotes },
       posto: null,
+      licenca: null,
     },
     entrega,
   ];
@@ -139,6 +145,7 @@ function eventosDoPosto(ocupacao: OcupacaoDaPessoa): EventoDaPessoa[] {
     changes: null,
     posse: null,
     posto: base,
+    licenca: null,
   };
 
   if (!ocupacao.endedAt) return [entrada];
@@ -152,6 +159,7 @@ function eventosDoPosto(ocupacao: OcupacaoDaPessoa): EventoDaPessoa[] {
       changes: null,
       posse: null,
       posto: base,
+      licenca: null,
     },
     entrada,
   ];
@@ -194,10 +202,10 @@ type OcupacaoDaPessoa = Awaited<ReturnType<typeof listPersonOccupancies>>[number
 /**
  * Tudo que aconteceu com uma pessoa, do mais recente para o mais antigo.
  *
- * Três fontes, uma lista: o `ActivityLog` (cadastro, edição com o diff campo a
- * campo, desativação), as posses
- * diretas (o que ela recebeu e devolveu) e as ocupações de posto (onde ela
- * sentou e quando saiu).
+ * Quatro fontes, uma lista: o `ActivityLog` (cadastro, edição com o diff campo
+ * a campo, desativação), as posses diretas (o que ela recebeu e devolveu), as
+ * ocupações de posto (onde ela sentou e quando saiu) e as licenças entregues a
+ * ela.
  *
  * Buscar o topo de cada fonte e cortar depois do merge devolve o topo REAL: um
  * log que ficou fora da janela é, por construção, mais antigo que os que
@@ -212,9 +220,10 @@ export async function getPersonHistory(
   // `listPersonOccupancies` é quem confere se a pessoa existe (404) — o mesmo
   // 404 da ficha, escrito uma vez só. Importado do domínio de ocupação, nunca
   // recopiado: a leitura da Camada 2 é de lá.
-  const [ocupacoes, posses, logs, totalDeLogs] = await Promise.all([
+  const [ocupacoes, posses, entregasDeLicenca, logs, totalDeLogs] = await Promise.all([
     listPersonOccupancies(personId, 'all'),
     buscarPosses(personId),
+    buscarEntregasDaPessoa(personId, { abertas: false }),
     prisma.activityLog.findMany({
       where,
       select: { id: true, action: true, changes: true, createdAt: true },
@@ -232,15 +241,22 @@ export async function getPersonHistory(
     changes: linha.changes,
     posse: null,
     posto: null,
+    licenca: null,
   }));
 
   const daPosse = posses.flatMap(eventosDaPosse);
   const doPosto = ocupacoes.flatMap(eventosDoPosto);
+  const daLicenca: EventoDaPessoa[] = entregasDeLicenca.flatMap((entrega) => eventosDaEntregaDeLicenca(entrega)
+    .map((evento) => ({ ...evento, fonte: 'LICENCA' as const, changes: null, posse: null, posto: null })));
 
-  const eventos = [...doLog, ...daPosse, ...doPosto].sort((a, b) => b.at.getTime() - a.at.getTime());
+  const eventos = [...doLog, ...daPosse, ...doPosto, ...daLicenca]
+    .sort((a, b) => b.at.getTime() - a.at.getTime());
 
-  // `total` conta as TRÊS fontes: é ele que diz à tela que existe história além
-  // do teto — sem ele, uma lista cortada em 100 é indistinguível de uma pessoa
-  // com exatamente 100 eventos.
-  return { total: totalDeLogs + daPosse.length + doPosto.length, rows: eventos.slice(0, limite) };
+  // `total` conta TODAS as fontes: é ele que diz à tela que existe história
+  // além do teto — sem ele, uma lista cortada em 100 é indistinguível de uma
+  // pessoa com exatamente 100 eventos.
+  return {
+    total: totalDeLogs + daPosse.length + doPosto.length + daLicenca.length,
+    rows: eventos.slice(0, limite),
+  };
 }

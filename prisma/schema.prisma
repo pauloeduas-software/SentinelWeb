@@ -209,8 +209,8 @@ model Person {
   assignments Assignment[]
   occupancies WorkstationOccupant[]
 
-  // LICENÇA (F6). Assento vai para pessoa ou ativo, nunca para um posto (D39).
-  licenseSeats LicenseSeatCheckout[]
+  // LICENÇA. Entregue a uma pessoa ou a um ativo, nunca a um posto (D39, AA).
+  licenseCheckouts LicenseCheckout[]
 
   // ─────────────────────────────────────────────────────────────────────────
   // A PERGUNTA QUE PASSA POR UMA PESSOA (D72).
@@ -554,8 +554,8 @@ model Asset {
   // A posse deste ativo, aberta e histórica.
   assignments Assignment[] @relation("AssignmentAsset")
 
-  // Os assentos de licença que esta máquina ocupa (F6).
-  licenseSeats LicenseSeatCheckout[]
+  // As licenças entregues a esta máquina (AA).
+  licenseCheckouts LicenseCheckout[]
 
   // ── A CONVERGÊNCIA COM O RMM (F7) ────────────────────────────────────────
   //
@@ -756,130 +756,106 @@ model AppSetting {
 }
 
 // ============================================================================
-// LICENÇAS DE SOFTWARE — docs/historico/fase-06-licencas.md (D39–D94)
+// LICENÇAS DE SOFTWARE — docs/decisoes/licencas.md (D39–D94, AA)
 //
-// O que a licença tem e o ativo não tem é ASSENTO: ela não é entregue, é
-// consumida N vezes. Duas decisões desenham as tabelas:
-//
-//   D40  o assento é MATERIALIZADO (uma linha, não um contador) — é o que se trava
-//   D39  o assento vai para uma pessoa XOR um ativo, nunca para um posto
-//
-// Nenhuma coluna de saldo (livres é conta sobre as linhas, D92) e nenhuma
-// coluna de status (é função das datas e de hoje, D44).
+// A licença é o contrato com a QUANTIDADE comprada; cada uso é uma linha de
+// entrega (AA). Não há vaga numerada: livres é conta sobre as entregas
+// (compradas − em uso), e o status é função das datas e de hoje
+// (D44). Entrega vai para uma pessoa XOR um ativo, nunca para um posto (D39).
 // ============================================================================
 
 model License {
   // SEM `@default(uuid())`: o id vem da aplicação (create-license.usecase.ts).
   id   String @id @db.Uuid
+  /// Pode repetir: a renovação convive com o contrato encerrado de mesmo nome (AA).
   name String
 
-  /// Assentos do contrato hoje. Invariante 11: COUNT(assentos sem retiredAt) = este número.
+  /// Quantas licenças o contrato comprou, ao menos uma (CHECK
+  /// `licenses_seats_positivo`). Em uso nunca passa disto (invariante 22,
+  /// garantida sob a trava da licença).
   seatsTotal Int
 
-  /// `false` = assento devolvido QUEIMA e não volta ao contrato (D43).
-  reassignable Boolean @default(true)
-  /// Contrato de manutenção. Informativo — não tem efeito no inventário.
-  maintained   Boolean @default(false)
-
   expirationDate  DateTime?
-  /// Rescisão. Vence tudo: JÁ PASSADA, a licença é ENCERRADA mesmo com
-  /// vencimento futuro. Data FUTURA ainda não encerra nada — o contrato vale
-  /// até o dia marcado (`license-status.helper.ts` compara com hoje).
+  /// Encerramento. Vence tudo: chegado o dia, a licença é ENCERRADA mesmo com
+  /// vencimento futuro, e sai da lista para a aba Encerradas
+  /// (`license-status.helper.ts` compara com o dia de hoje em Brasília).
   terminationDate DateTime?
 
   licensedToName  String?
   licensedToEmail String?
 
-  /// Piso do alerta de assentos livres. Nulo = não alerta.
-  minSeats Int?
-
   categoryId     String  @db.Uuid
   manufacturerId String? @db.Uuid
 
   orderNumber  String?
+  /// O vencimento e o encerramento não antecedem esta data, quando as duas
+  /// estão preenchidas (CHECKs `licenses_*_nao_antecede_compra`).
   purchaseDate DateTime?
   /// Decimal, nunca Float. Sai no JSON como STRING.
   purchaseCost Decimal?  @db.Decimal(12, 2)
 
   notes String?
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  /// A chave de produto do contrato: a de volume, ou a lista das compradas — uma
+  /// por linha. Em texto: a cifra saiu na G. Só o detalhe a devolve, e a tela a
+  /// mostra escondida até alguém pedir (AA).
+  productKey String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   category     Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
 
-  seats LicenseSeat[]
+  checkouts LicenseCheckout[]
 
-  // `name` não é @unique: a unicidade é índice PARCIAL na migration.
-  @@index([deletedAt])
   @@index([categoryId])
   // O `countUsages` do fabricante e o `Restrict` no delete dele varrem esta
   // coluna; sem índice, cada exclusão de fabricante lê a tabela inteira.
   @@index([manufacturerId])
   @@index([expirationDate])
+  @@index([terminationDate])
   @@map("licenses")
 }
 
-// Uma linha por assento comprado — a unidade contável e travável (D40).
-//
-// NÃO tem `deletedAt`: a `softDeleteExtension` escopa todo model que tenha a
-// coluna, e com lixeira o saldo pararia de enxergar ocupação aberta. Assento se
-// aposenta, não some.
-model LicenseSeat {
-  id        String @id @default(uuid()) @db.Uuid
+// Uma linha por entrega. Devolver preenche `checkinAt` e NUNCA apaga a linha —
+// é dela que saem as contas e o histórico da licença, do ativo e da pessoa (AA).
+model LicenseCheckout {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Sempre aponta para a licença: a licença que já foi entregue não se exclui
+  // (AA), e a FK `Restrict` é a rede.
   licenseId String @db.Uuid
 
-  /// Único por licença. Assento novo nasce com MAX+1, nunca COUNT+1 — a linha
-  /// aposentada continua na tabela e a contagem colidiria.
-  seatNumber Int
-
-  /// QUEIMADO: devolvido numa licença não reatribuível. Perda de dinheiro.
-  burnedAt  DateTime?
-  /// APOSENTADO: o contrato encolheu. Mudança de contrato — relatório diferente (D43).
-  retiredAt DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  license   License               @relation(fields: [licenseId], references: [id], onDelete: Cascade)
-  checkouts LicenseSeatCheckout[]
-
-  @@unique([licenseId, seatNumber], map: "license_seats_numero")
-  @@map("license_seats")
-}
-
-// A ocupação. Devolver preenche `checkinAt` e NUNCA apaga a linha — mesmo
-// princípio do `Assignment` (D40).
-model LicenseSeatCheckout {
-  id     String @id @default(uuid()) @db.Uuid
-  seatId String @db.Uuid
-
-  // XOR garantido por CHECK na migration (`license_seat_alvo_xor`). Sem
+  // XOR garantido por CHECK na migration (`license_checkouts_alvo_xor`). Sem
   // discriminante: com dois alvos, a FK preenchida já diz qual é.
   assignedPersonId String? @db.Uuid
   assignedAssetId  String? @db.Uuid
 
   checkoutAt DateTime  @default(now())
-  /// Nulo = assento OCUPADO. É o que a conta de livres desconta.
+  /// Nulo = EM USO. É o que a conta de livres desconta.
   checkinAt  DateTime?
 
   checkoutNotes String?
 
+  /// A chave desta entrega, quando a licença não é de volume. Uma linha. A mesma
+  /// chave não fica em duas entregas ABERTAS da licença (índice único parcial).
+  productKey String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Cascade no assento; Restrict nos alvos — é a rede embaixo do 409 que
-  // impede apagar pessoa ou ativo que ainda ocupa assento.
-  seat           LicenseSeat @relation(fields: [seatId], references: [id], onDelete: Cascade)
-  assignedPerson Person?     @relation(fields: [assignedPersonId], references: [id], onDelete: Restrict)
-  assignedAsset  Asset?      @relation(fields: [assignedAssetId], references: [id], onDelete: Restrict)
+  // Restrict nos três. A licença com entrega não se exclui (o 409 vem antes);
+  // pessoa e ativo não se apagam de verdade enquanto têm histórico.
+  license        License @relation(fields: [licenseId], references: [id], onDelete: Restrict)
+  assignedPerson Person? @relation(fields: [assignedPersonId], references: [id], onDelete: Restrict)
+  assignedAsset  Asset?  @relation(fields: [assignedAssetId], references: [id], onDelete: Restrict)
 
-  @@index([seatId, checkinAt])
+  // Uma entrega ABERTA por alvo e licença: índices únicos PARCIAIS na migration.
+  @@index([licenseId, checkinAt])
   @@index([assignedPersonId, checkinAt])
   @@index([assignedAssetId, checkinAt])
-  @@map("license_seat_checkouts")
+  @@map("license_checkouts")
 }
 
 // ============================================================================

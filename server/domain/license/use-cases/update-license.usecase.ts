@@ -1,74 +1,62 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
-import { buildChanges } from '../../shared/diff.helper';
-import { LICENSE_AUDITED } from '../helpers/license-audited.helper';
-import { contarAssentosDe, travarLicencaOuFalhar } from '../helpers/license-seats.helper';
+import { fraseDoPiso } from '../helpers/license-count.helper';
+import { assertDatasNaoAntecedemACompra } from '../helpers/license-dates.helper';
 import {
   LICENSE_SELECT, paraResposta,
   type LicencaNaResposta, type LinhaDeLicenca,
 } from '../helpers/license-select.helper';
 import type { UpdateLicenseData } from '../schemas/license.schema';
 import { assertReferenciasDaLicenca } from './assert-license-references.usecase';
-import { reconciliarAssentos } from './reconcile-seats.usecase';
+import { contarUsoDe } from './count-license-checkouts.usecase';
+import { travarLicencaOuFalhar } from './lock-license.usecase';
 
 /**
- * A EDIÇÃO — e ela pode mudar o tamanho do contrato.
+ * A EDIÇÃO — e ela pode mudar a quantidade comprada.
  *
- * `seatsTotal` ENTRA aqui, ao contrário do `qty` do estoque, e a diferença é
- * real: `qty` é consequência de movimentação, enquanto `seatsTotal` é o NÚMERO
- * DO CONTRATO — alguém comprou mais assentos, e digitar isso É a operação. O
- * que não pode é ele mudar sem as linhas mudarem junto, e por isso a
- * reconciliação acontece na MESMA transação (invariante 11).
+ * `seatsTotal` é o NÚMERO DO CONTRATO: alguém comprou mais, e digitar isso É a
+ * operação. Aumentar sempre pode. Reduzir não passa do que está em uso
+ * (invariante 22).
  *
- * A TRAVA DA LICENÇA vem primeiro (D90) e serializa duas edições simultâneas:
- * sem ela, as duas leem 5, uma grava 8 e a outra 6, e as duas inserem assentos
- * — o `seatNumber` colide no índice único e o P2002 vira "Registro já existe".
+ * A TRAVA DA LICENÇA vem primeiro e serializa a edição com a entrega: sem ela,
+ * a edição contava "2 em uso", uma entrega gravava a terceira, e a quantidade
+ * descia abaixo do que está na rua.
  */
-export async function updateLicense(
-  id: string,
-  data: UpdateLicenseData,
-): Promise<LicencaNaResposta> {
-  const campos = data;
-
+export async function updateLicense(id: string, data: UpdateLicenseData): Promise<LicencaNaResposta> {
   const licenca = await prisma.$transaction(async (tx) => {
     await travarLicencaOuFalhar(tx, id);
 
-    const antes = await tx.license.findFirst({
-      where: { id },
-      select: LICENSE_SELECT,
-    }) as LinhaDeLicenca | null;
-    if (!antes) throw new AppError('Nenhuma licença com este identificador.', 404);
+    const antes = await tx.license.findUniqueOrThrow({ where: { id }, select: LICENSE_SELECT }) as LinhaDeLicenca;
 
-    await assertReferenciasDaLicenca(tx, campos, {
+    await assertReferenciasDaLicenca(tx, data, {
       categoryId: antes.categoryId as string,
       manufacturerId: antes.manufacturerId as string | null,
     });
 
-    const depois = await tx.license.update({
+    // As datas como ficarão: a que não veio no corpo é a que já está gravada.
+    assertDatasNaoAntecedemACompra({
+      purchaseDate: data.purchaseDate !== undefined ? data.purchaseDate : antes.purchaseDate,
+      expirationDate: data.expirationDate !== undefined ? data.expirationDate : antes.expirationDate,
+      terminationDate: data.terminationDate !== undefined ? data.terminationDate : antes.terminationDate,
+    });
+
+    if (data.seatsTotal !== undefined && data.seatsTotal < antes.seatsTotal) {
+      const uso = await contarUsoDe(tx, id);
+      if (data.seatsTotal < uso.emUso) {
+        throw new AppError(fraseDoPiso(antes.name, data.seatsTotal, uso), 409);
+      }
+    }
+
+    // O ENCERRAMENTO PELO FORMULÁRIO segue a regra do botão: passa mesmo com
+    // alguém usando (`terminate-license.usecase.ts`), e a licença cai no
+    // alerta "encerrada, ainda em uso".
+
+    return tx.license.update({
       where: { id },
-      data: campos,
+      data,
       select: LICENSE_SELECT,
-    }) as LinhaDeLicenca;
-
-    // O CONTRATO E AS LINHAS, JUNTOS. Só quando `seatsTotal` veio no corpo:
-    // reconciliar numa edição que não o mencionou seria trabalho — e travas —
-    // à toa em toda troca de observação.
-    if (data.seatsTotal !== undefined) {
-      await reconciliarAssentos(tx, id, data.seatsTotal);
-    }
-
-    // Só o que REALMENTE mudou vai para o log.
-    const changes = buildChanges(antes, depois, LICENSE_AUDITED);
-
-    if (Object.keys(changes).length > 0) {
-      await recordActivity(tx, {
-        entityType: 'License', entityId: id, action: 'UPDATE', changes: changes as never,
-      });
-    }
-
-    return depois;
+    }) as Promise<LinhaDeLicenca>;
   });
 
-  return paraResposta(licenca, await contarAssentosDe(prisma, id));
+  return paraResposta(licenca, await contarUsoDe(prisma, id));
 }

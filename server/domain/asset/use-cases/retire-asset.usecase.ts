@@ -7,7 +7,9 @@ import { diaEmPortugues } from '../helpers/asset-dates.helper';
 import { ASSET_WRITE_SELECT } from '../helpers/asset-select.helper';
 import { assertSemPosseParaBaixa } from './assert-retire-posse.usecase';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
-import { contarAssentosDoAtivo } from '../../license/use-cases/count-person-seats.usecase';
+import {
+  comoReferencias, licencasDoAtivo, nomesDasLicencas,
+} from '../../license/use-cases/count-license-checkouts.usecase';
 
 // DAR BAIXA — o ativo saiu do PATRIMÔNIO: foi vendido, descartado, doado,
 // extraviado, roubado ou trocado em garantia.
@@ -60,16 +62,17 @@ export async function retireAsset(id: string, data: RetireAssetData) {
     // travado, a entrega simultânea espera esta transação terminar.
     await assertSemPosseParaBaixa(tx, id, antes.assetTag);
 
-    // E o ASSENTO DE LICENÇA, pelo mesmo motivo da exclusão (`delete-asset`): o
-    // assento continuaria descontado do contrato, preso a uma máquina vendida —
-    // e a entrega de assento já recusa o baixado (`checkout-seat`), então ele
-    // nunca mais sairia por um caminho normal.
-    const assentos = await contarAssentosDoAtivo(tx, id);
-    if (assentos > 0) {
+    // E a LICENÇA, pelo mesmo motivo da exclusão (`delete-asset`): ela
+    // continuaria descontada do contrato, presa a uma máquina vendida.
+    // Pelo NOME, e como `refs`: a tela põe um link para o detalhe de cada uma,
+    // onde mora o Devolver.
+    const licencas = await licencasDoAtivo(tx, id);
+    if (licencas.length > 0) {
       throw new AppError(
-        `${antes.assetTag} ainda ocupa ${assentos} ${assentos === 1 ? 'assento' : 'assentos'} de licença. `
-        + 'Devolva os assentos pela aba Licenças antes de dar baixa.',
+        `${antes.assetTag} ainda tem ${licencas.length === 1 ? 'a licença' : 'as licenças'} ${nomesDasLicencas(licencas)}. `
+        + 'Devolva pela tela de Licenças antes de dar baixa.',
         409,
+        comoReferencias(licencas),
       );
     }
 

@@ -5,6 +5,8 @@ import { listAssetAssignments } from '../../assignment/use-cases/list-asset-assi
 import { rotuloDoAlvo } from '../../assignment/helpers/target-label.helper';
 import type { AlvoPosse } from '../../assignment/use-cases/resolve-responsibles.usecase';
 import { semCusto } from '../helpers/asset-select.helper';
+import { buscarEntregasDoAtivo } from '../../license/use-cases/list-target-checkouts.usecase';
+import { eventosDaEntregaDeLicenca, type EventoDeLicenca } from '../../license/helpers/license-events.helper';
 
 // A LINHA DO TEMPO DE UM ATIVO — a aba Histórico da tela de detalhe.
 //
@@ -21,7 +23,7 @@ import { semCusto } from '../helpers/asset-select.helper';
  * De onde o evento veio. A tela usa para escolher o ícone e o que mostrar —
  * um diff de campos não se lê como uma entrega.
  */
-type FonteDoEvento = 'ATIVIDADE' | 'POSSE';
+type FonteDoEvento = 'ATIVIDADE' | 'POSSE' | 'LICENCA';
 
 /** O que um evento de posse acrescenta ao que o `ActivityLog` já diria. */
 interface EventoDePosse {
@@ -46,6 +48,7 @@ export interface EventoDoAtivo {
   at: Date;
   changes: Prisma.JsonValue | null;
   posse: EventoDePosse | null;
+  licenca: EventoDeLicenca | null;
 }
 
 /** Quanto a tela recebe quando não pede nada. O TETO é do schema, na borda. */
@@ -98,6 +101,7 @@ function eventosDaPosse(assignment: Awaited<ReturnType<typeof listAssetAssignmen
     at: assignment.checkoutAt,
     changes: null,
     posse: { ...alvo, notes: assignment.checkoutNotes },
+    licenca: null,
   };
 
   if (!assignment.checkinAt) return [entrega];
@@ -110,6 +114,7 @@ function eventosDaPosse(assignment: Awaited<ReturnType<typeof listAssetAssignmen
       at: assignment.checkinAt,
       changes: null,
       posse: { ...alvo, notes: assignment.checkinNotes },
+      licenca: null,
     },
     entrega,
   ];
@@ -118,9 +123,12 @@ function eventosDaPosse(assignment: Awaited<ReturnType<typeof listAssetAssignmen
 /**
  * Tudo que aconteceu com um ativo, do mais recente para o mais antigo.
  *
- * Duas fontes, uma lista: o `ActivityLog` (cadastro, edição com o diff campo a
- * campo, lixeira, restauração, baixa) e `assignments` (entregas e
- * devoluções, com o nome de quem recebeu).
+ * Três fontes, uma lista: o `ActivityLog` (cadastro, edição com o diff campo a
+ * campo, lixeira, restauração, baixa), `assignments` (entregas e devoluções,
+ * com o nome de quem recebeu) e `license_checkouts` (as licenças entregues A
+ * ESTA MÁQUINA — as da pessoa que responde por ela ficam no histórico dela).
+ * As fontes são disjuntas: a entrega de licença não vai para o log — só existe
+ * na tabela dela.
  *
  * O envelope é o `{ total, rows }` de toda listagem, mas `total` aqui conta os
  * eventos das DUAS fontes: é ele que diz à tela que existe história além do
@@ -145,8 +153,9 @@ export async function getAssetHistory(
   // `listAssetAssignments` é quem confere se o ativo existe (404) — o mesmo
   // 404 da tela de detalhe, escrito uma vez só. Importado do domínio de posse,
   // nunca recopiado: a leitura da posse é de lá.
-  const [assignments, logs, totalDeLogs] = await Promise.all([
+  const [assignments, entregasDeLicenca, logs, totalDeLogs] = await Promise.all([
     listAssetAssignments(assetId),
+    buscarEntregasDoAtivo(assetId, { abertas: false }),
     prisma.activityLog.findMany({
       where,
       select: { id: true, action: true, changes: true, createdAt: true },
@@ -166,17 +175,20 @@ export async function getAssetHistory(
       at: linha.createdAt,
       changes,
       posse: null,
+      licenca: null,
     }];
   });
 
   const daPosse = assignments.flatMap(eventosDaPosse);
+  const daLicenca: EventoDoAtivo[] = entregasDeLicenca.flatMap((entrega) => eventosDaEntregaDeLicenca(entrega)
+    .map((evento) => ({ ...evento, fonte: 'LICENCA' as const, changes: null, posse: null })));
 
-  const eventos = [...doLog, ...daPosse].sort((a, b) => b.at.getTime() - a.at.getTime());
+  const eventos = [...doLog, ...daPosse, ...daLicenca].sort((a, b) => b.at.getTime() - a.at.getTime());
 
   // O `total` desconta as edições só de custo que sumiram para quem não é
   // ADMIN: contadas, a tela diria "N de N+1" e entregaria que houve um evento
   // escondido. O desconto vale para a janela lida (as `limite` mais recentes),
   // que é onde a tela compara total e linhas.
   const escondidos = logs.length - doLog.length;
-  return { total: totalDeLogs - escondidos + daPosse.length, rows: eventos.slice(0, limite) };
+  return { total: totalDeLogs - escondidos + daPosse.length + daLicenca.length, rows: eventos.slice(0, limite) };
 }

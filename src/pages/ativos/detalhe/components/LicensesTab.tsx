@@ -1,43 +1,39 @@
 import { KeyRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import type { LicencaDoAtivo } from '../../../../domain/shared/license.types';
-import { momentoDoEvento } from '../../../helpers/historico.helper';
+import type { EntregaDoAlvo } from '../../../../domain/shared/license.types';
+import { formatarDiaDoInstante } from '../../../helpers/format.helper';
+import { ROTULO_DO_STATUS, caminhoDaLicenca, textoDoPrazo } from '../../../helpers/licenca.helper';
 
-// A ABA LICENÇAS — "o que está licenciado NESTA máquina".
+// A ABA LICENÇAS — "o que está licenciado NESTA máquina agora".
 //
-// SÓ AS OCUPAÇÕES ABERTAS: a pergunta é de ESTADO. Os assentos que já foram
-// devolvidos estão na trilha da LICENÇA, não na do ativo.
+// SÓ AS ENTREGAS ABERTAS AO ATIVO: as que já foram devolvidas estão na aba
+// Histórico; as da pessoa que responde pela máquina são dela, e ficam na ficha
+// dela (AA).
 //
-// ─────────────────────────────────────────────────────────────────────────────
-// NÃO HÁ BOTÃO DE DEVOLVER AQUI, e a ausência é deliberada.
-//
-// Devolver pode QUEIMAR o assento, e a confirmação que explica isso precisa do
-// número de assentos que vão restar — que é dado da LICENÇA, não do ativo. Um
-// botão aqui teria que buscar aquele contexto para dizer a mesma frase, ou
-// diria menos; o link leva para onde a operação já está inteira.
-// ─────────────────────────────────────────────────────────────────────────────
+// SEM DEVOLVER: a devolução mora só na tela de Licenças, e o nome de cada
+// licença leva até o detalhe dela, onde está o botão.
 
 interface LicensesTabProps {
-  licencas: LicencaDoAtivo[];
+  licencas: EntregaDoAlvo[];
   carregando: boolean;
+  erro: string | null;
 }
 
 const CABECALHO = 'px-3 py-2 text-left text-[10px] uppercase tracking-widest text-text-tertiary font-normal';
 
-export default function LicensesTab({ licencas, carregando }: LicensesTabProps) {
+export default function LicensesTab({ licencas, carregando, erro }: LicensesTabProps) {
   if (carregando) return <p className="text-text-tertiary">Carregando licenças…</p>;
+  if (erro) return <p role="alert" className="text-status-danger">Não foi possível carregar as licenças: {erro}</p>;
 
   if (licencas.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-text-tertiary gap-3">
         <KeyRound size={24} className="opacity-50" />
-        <span>Nenhuma licença atribuída a este ativo.</span>
+        <span>Nenhuma licença entregue a este ativo.</span>
         <span className="text-[10px] max-w-md text-center leading-relaxed">
-          O assento de uma{' '}
-          <Link to="/licencas" className="text-status-success hover:underline">licença</Link>{' '}
-          vai para uma pessoa OU para uma máquina. Se o software é licenciado por dispositivo,
-          é a este ativo que o assento se entrega — e se for por usuário nomeado, cada pessoa
-          que usa esta máquina precisa do seu.
+          Licença por computador vai para o ativo, pela tela de{' '}
+          <Link to="/licencas" className="text-text-secondary underline-offset-2 hover:underline">Licenças</Link>.
+          A de assinatura de uma pessoa vai para o colaborador, e aparece na ficha dele.
         </span>
       </div>
     );
@@ -49,34 +45,36 @@ export default function LicensesTab({ licencas, carregando }: LicensesTabProps) 
         <thead className="border-b border-border-sutil bg-bg-base/40">
           <tr>
             <th className={CABECALHO}>Licença</th>
-            <th className={CABECALHO}>Fabricante</th>
-            <th className={CABECALHO}>Assento</th>
+            <th className={CABECALHO}>Situação</th>
             <th className={CABECALHO}>Desde</th>
           </tr>
         </thead>
         <tbody>
-          {licencas.map((item) => (
-            <tr key={item.id} className="border-b border-border-sutil/50 last:border-0">
-              <td className="px-3 py-2">
-                <Link to="/licencas" className="text-text-primary hover:text-status-success transition-colors">
-                  {item.seat.license.name}
-                </Link>
-                {!item.seat.license.reassignable && (
-                  // O aviso aparece aqui porque é aqui que alguém decide
-                  // dar baixa na máquina — e devolver o assento no caminho
-                  // destrói valor.
-                  <span className="ml-2 text-[10px] text-status-warning">não reatribuível</span>
-                )}
-              </td>
-              <td className="px-3 py-2 text-text-secondary">
-                {item.seat.license.manufacturer?.name ?? item.seat.license.category?.name ?? '—'}
-              </td>
-              <td className="px-3 py-2 text-text-secondary">
-                #{item.seat.seatNumber} de {item.seat.license.seatsTotal}
-              </td>
-              <td className="px-3 py-2 text-text-tertiary">{momentoDoEvento(item.checkoutAt)}</td>
-            </tr>
-          ))}
+          {licencas.map((entrega) => {
+            const licenca = entrega.license;
+            return (
+              <tr key={entrega.id} className="border-b border-border-sutil/50 last:border-0">
+                <td className="px-3 py-2">
+                  <Link to={caminhoDaLicenca(licenca.id)} className="text-text-primary hover:underline underline-offset-2">
+                    {licenca.name}
+                  </Link>
+                  <div className="text-[10px] text-text-tertiary mt-0.5">
+                    {licenca.manufacturer?.name ?? licenca.category?.name ?? '—'}
+                  </div>
+                  {entrega.checkoutNotes && (
+                    <div className="text-[10px] text-text-secondary mt-0.5">{entrega.checkoutNotes}</div>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-text-secondary">
+                  {entrega.status ? ROTULO_DO_STATUS[entrega.status] : '—'}
+                  {entrega.status !== 'ENCERRADA' && licenca.expirationDate && (
+                    <span className="text-text-tertiary"> · {textoDoPrazo(entrega.diasParaVencer)}</span>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-text-tertiary">{formatarDiaDoInstante(entrega.checkoutAt)}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

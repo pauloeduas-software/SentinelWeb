@@ -1,5 +1,6 @@
 import type { ZodType } from 'zod';
 import type { prisma } from '../../../core/database/prismaClient';
+import type { ReferenciaDoErro } from '../../../core/errors/app-error';
 
 // O contrato de UMA tabela de catálogo. Cinco arquivos preenchem isto e o CRUD
 // genérico (use-cases/) atende às cinco — em vez de cinco fatias verticais quase
@@ -96,11 +97,14 @@ export interface CatalogSpec {
    * registros" + `dicaEmUso`. Devolve `null` quando pode excluir.
    *
    * Para a tabela em que o número não diz o que fazer: o colaborador que
-   * "está em uso por 3 registros" pode estar com um ativo, um assento e um
+   * "está em uso por 3 registros" pode estar com um ativo, uma licença e um
    * posto, e cada um se resolve numa tela diferente. Roda na transação da
    * exclusão, e pode travar a linha antes de contar.
    */
-  motivoParaNaoExcluir?: (client: ClienteCatalogo, id: string) => Promise<string | null>;
+  motivoParaNaoExcluir?: (
+    client: ClienteCatalogo,
+    id: string,
+  ) => Promise<{ mensagem: string; refs?: ReferenciaDoErro[] } | null>;
 
   /**
    * A tabela tem LIXEIRA: excluir grava `deletedAt` em vez de apagar, a
@@ -130,6 +134,12 @@ export interface CatalogSpec {
 
   /** Filtro fixo do `/options`: o que não pode ser ESCOLHIDO num formulário. */
   optionsWhere?: Record<string, unknown>;
+
+  /**
+   * A coluna que vai ao lado do nome no `/options`, como `detalhe` — o que
+   * separa dois registros de mesmo nome num `<select>` (o e-mail do colaborador).
+   */
+  optionDetail?: string;
 
   /**
    * Regra que roda antes de EXCLUIR, depois da contagem de uso — para o que não

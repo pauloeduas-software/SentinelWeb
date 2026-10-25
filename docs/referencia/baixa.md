@@ -67,17 +67,17 @@ permitida a `ADMIN`, o único cargo ([Z](../decisoes/acesso.md#z--sobra-um-cargo
 | Tentativa | Resposta | Por quê |
 |---|---|---|
 | dar baixa em ativo **entregue** (a pessoa ou a posto) | 409 `ATV-00042 está entregue e não pode receber baixa. Faça a devolução antes.` | "vendido" e "na mão da Laura" não podem ser verdade juntos. O sistema **não devolve sozinho**: apagaria quem estava com o equipamento e em que estado voltou |
-| dar baixa em ativo que **ocupa assento de licença** | 409 `ATV-00042 ainda ocupa 1 assento de licença. Devolva os assentos pela aba Licenças antes de dar baixa.` | o assento ficaria descontado do contrato, preso a uma máquina vendida — e nunca mais sairia, porque o baixado não recebe nem devolve assento por caminho normal |
+| dar baixa em ativo que **tem licença** | 409 `ATV-00042 ainda tem a licença SolidWorks. Devolva pela tela de Licenças antes de dar baixa.` | a licença ficaria descontada do contrato, presa a uma máquina vendida. A recusa traz um link para o detalhe de cada licença, onde está o Devolver |
 | dar baixa **duas vezes** | 409 `ATV-00042 já teve baixa em 15/10/2026.` | reescreveria a data em que ele deixou de ser patrimônio |
 | data da saída **futura** | 422 | a baixa tiraria o ativo do inventário hoje por um fato que não aconteceu |
 | **entregar** ativo baixado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Desfaça a baixa antes.` | ele não é mais da empresa — vale com **qualquer** status, inclusive "Disponível" |
-| dar **assento de licença** a ativo baixado | 409 `O ativo ATV-00042 teve baixa e não pode receber assento de licença.` | o assento ficaria preso a uma máquina que não existe mais |
+| entregar **licença** a ativo baixado | 409 `O ativo ATV-00042 teve baixa e não pode receber licença.` | a licença ficaria presa a uma máquina que não existe mais |
 | **vincular máquina** descoberta a ativo baixado | 409 `ATV-00042 teve baixa e não recebe máquina. Desfaça a baixa antes.` | o vínculo o traria de volta à cobertura e à telemetria. A descoberta automática também não o propõe nem o vincula — ele só conta para detectar ambiguidade |
 | **Reverter** um ativo que não teve baixa | 409 `ATV-00042 não teve baixa.` | |
 
 Na tela, o botão **Entregar** já vem desabilitado no ativo baixado, com o motivo
 no `title` — na lista, no cabeçalho da ficha e na aba Posse —, e os seletores de
-ativo (assento de licença, vínculo de máquina) não oferecem baixados.
+ativo (entrega de licença, vínculo de máquina) não oferecem baixados.
 
 **A baixa e a entrega do mesmo ativo, ao mesmo tempo,** não terminam com ele
 baixado e entregue: as duas travam a linha do ativo antes de olhar a posse
@@ -128,7 +128,7 @@ pedir:
 | dar baixa | `server/domain/asset/use-cases/retire-asset.usecase.ts` |
 | a guarda da posse | `assert-retire-posse.usecase.ts` |
 | reverter | `unretire-asset.usecase.ts` |
-| a recusa na entrega | `assignment/use-cases/checkout-asset.usecase.ts`; na licença, `license/use-cases/checkout-seat.usecase.ts` |
+| a recusa na entrega | `assignment/use-cases/checkout-asset.usecase.ts`; na licença, `license/use-cases/checkout-license.usecase.ts` |
 | as vistas Ativos / Baixados | `asset/helpers/asset-filters.helper.ts` |
 | a tela | `src/pages/ativos/detalhe/components/{RetireModal,DetalhesTab}.tsx`, `src/pages/ativos/helpers/baixa.helper.ts` |
-| testes | `tests/invariantes/posse.test.ts` (a baixa recusa entregue, assento, data futura e repetição; baixado não é entregue; reverter libera), `tests/corridas/posse.test.ts` (baixa × entrega), `tests/listagens/vistas-do-ativo.test.ts` (as vistas) |
+| testes | `tests/invariantes/posse.test.ts` (a baixa recusa entregue, licença, data futura e repetição; baixado não é entregue; reverter libera), `tests/corridas/posse.test.ts` (baixa × entrega), `tests/listagens/vistas-do-ativo.test.ts` (as vistas) |

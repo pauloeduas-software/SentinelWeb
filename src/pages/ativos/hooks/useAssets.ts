@@ -12,6 +12,7 @@ import { useCatalogOptionsQuery } from '../../../domain/catalog/catalog.queries'
 import type { Asset, AssetView } from '../../../domain/shared/asset.types';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useNotificacao } from '../../hooks/useNotificacao';
+import { linksDoErro } from '../../helpers/erro.helper';
 
 const PER_PAGE = 10;
 
@@ -146,7 +147,8 @@ export function useAssets() {
       await excluir.mutateAsync(asset.id);
       if (assets.length === 1 && page > 1) setPage(page - 1);
     } catch (erro) {
-      notificar.erro((erro as Error).message);
+      // O 409 do ativo com licença traz cada uma em link.
+      notificar.erro((erro as Error).message, linksDoErro(erro));
     }
   };
 

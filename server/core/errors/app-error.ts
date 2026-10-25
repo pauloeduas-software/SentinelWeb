@@ -1,13 +1,26 @@
+/**
+ * Um registro que a frase do erro cita e que a tela pode abrir — a licença que
+ * precisa voltar antes de desativar quem está com ela (AA).
+ */
+export interface ReferenciaDoErro {
+  tipo: 'licenca';
+  id: string;
+  nome: string;
+}
+
 export class AppError extends Error {
   status: number;
+  /** O que a frase cita, para a tela pôr um link em cada um. */
+  refs?: ReferenciaDoErro[];
 
-  // O corpo de erro é só a FRASE (`{ error }`): ela já diz o que aconteceu e o
-  // que fazer, e é tudo que a tela mostra. Um campo estruturado ao lado dela
-  // seria um segundo contrato que nenhum cliente lê — e que divergiria da frase
-  // no primeiro ajuste de texto.
-  constructor(message: string, status: number) {
+  // O corpo de erro é a FRASE (`{ error }`): ela já diz o que aconteceu e o que
+  // fazer, e é o que a tela mostra. `refs` vai ao lado só quando a frase cita
+  // registros que a tela pode abrir — e a frase continua completa sem ele, com
+  // os nomes escritos nela.
+  constructor(message: string, status: number, refs?: ReferenciaDoErro[]) {
     super(message);
     this.name = 'AppError';
     this.status = status;
+    if (refs && refs.length > 0) this.refs = refs;
   }
 }

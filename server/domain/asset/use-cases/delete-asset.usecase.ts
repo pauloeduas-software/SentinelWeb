@@ -1,7 +1,9 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
-import { contarAssentosDoAtivo } from '../../license/use-cases/count-person-seats.usecase';
+import {
+  comoReferencias, licencasDoAtivo, nomesDasLicencas,
+} from '../../license/use-cases/count-license-checkouts.usecase';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
 
 /**
@@ -10,15 +12,15 @@ import { travarAtivoOuFalhar } from './lock-asset.usecase';
  * verdade é perda de dado, não de cadastro.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * O 409 QUE PROTEGE A LICENÇA (F6)
+ * O 409 QUE PROTEGE A LICENÇA
  *
- * Um ativo com assento de licença atribuído não vai para a lixeira. Sem a
- * recusa, o assento fica PRESO: a contagem olha `license_seat_checkouts`, que
- * não tem `deletedAt` e não sabe que o ativo sumiu.
+ * Um ativo com licença entregue não vai para a lixeira. Sem a recusa, a
+ * licença fica PRESA: a contagem olha `license_checkouts`, que não tem
+ * `deletedAt` e não sabe que o ativo sumiu.
  *
  * POR QUE NÃO O BANCO: apagar aqui é `UPDATE assets SET "deletedAt"`, o
- * Postgres não vê `DELETE` nenhum e a FK não é consultada. É o ponto cego do
- * soft delete, o mesmo que o `deleteUser` documenta.
+ * Postgres não vê `DELETE` nenhum e a FK não é consultada — o ponto cego do
+ * soft delete.
  *
  * A TRAVA vem antes da contagem, e é o que a torna confiável: sem ela, uma
  * entrega simultânea cria a linha DEPOIS deste `count` (`lock-asset.usecase.ts`).
@@ -28,15 +30,17 @@ export async function deleteAsset(id: string): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await travarAtivoOuFalhar(tx, id);
 
-    // O 409 pela licença (F6): o assento continuaria descontado do contrato
-    // para sempre, e a aba Licenças que ofereceria a devolução responde 404 —
-    // a empresa pagaria por um assento preso a uma máquina que não existe mais.
-    const assentos = await contarAssentosDoAtivo(tx, id);
-    if (assentos > 0) {
+    // O 409 pela licença: ela continuaria descontada do contrato, e a empresa
+    // pagaria por uma licença presa a uma máquina que saiu do inventário.
+    // Pelo NOME, e como `refs`: a tela põe um link para o detalhe de cada uma,
+    // onde mora o Devolver.
+    const licencas = await licencasDoAtivo(tx, id);
+    if (licencas.length > 0) {
       throw new AppError(
-        `Este ativo ainda ocupa ${assentos} ${assentos === 1 ? 'assento' : 'assentos'} de licença. `
-        + 'Devolva os assentos pela aba Licenças antes de excluir.',
+        `Este ativo ainda tem ${licencas.length === 1 ? 'a licença' : 'as licenças'} ${nomesDasLicencas(licencas)}. `
+        + 'Devolva pela tela de Licenças antes de excluir.',
         409,
+        comoReferencias(licencas),
       );
     }
 

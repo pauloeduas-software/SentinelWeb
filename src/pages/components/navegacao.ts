@@ -75,8 +75,8 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
       // Depois de Postos: o que sai do almoxarifado costuma ir para a mesa
       // (docs/decisoes/estoque.md).
       { to: '/estoque', label: 'Estoque', icon: Boxes, cargo: 'ADMIN' },
-      // Depois de Estoque porque licença também é posse: o assento é uma LINHA
-      // que se trava (D40).
+      // Depois de Estoque porque licença também é posse: cada entrega é uma
+      // linha, a um colaborador ou a um computador (AA).
       { to: '/licencas', label: 'Licenças', icon: ScrollText, cargo: 'ADMIN' },
     ],
   },

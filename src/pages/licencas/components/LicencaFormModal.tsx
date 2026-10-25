@@ -2,18 +2,23 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import ReferenceSelect from '../../components/ReferenceSelect';
 import { paraCampoDeData } from '../../helpers/format.helper';
-import type { Licenca, LicencaInput } from '../../../domain/shared/license.types';
+import { useLicenseQuery } from '../../../domain/license/license.queries';
+import type { Licenca, LicencaDetalhe, LicencaInput } from '../../../domain/shared/license.types';
+import { camposAlterados } from '../helpers/licenca.helper';
 
 // Cadastro e edição de uma licença.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// `seatsTotal` É EDITÁVEL, e é o NÚMERO DO CONTRATO: alguém comprou mais
-// assentos, e digitar isso É a operação.
+// A QUANTIDADE É EDITÁVEL, e é o NÚMERO DO CONTRATO: alguém comprou mais, e
+// digitar isso É a operação. Reduzir não passa do que está em uso — o servidor
+// responde 409 com o número, e a frase embaixo do campo diz o piso antes de
+// alguém tentar.
 //
-// O que o servidor garante é que ele nunca muda sozinho: a reconciliação cria
-// ou aposenta linhas na MESMA transação, e reduzir abaixo do que está ocupado
-// responde 409 com os números. A frase embaixo do campo diz isso, porque quem
-// reduz um contrato precisa saber antes de tentar.
+// NA EDIÇÃO, A LICENÇA VEM DO DETALHE, e não da linha da listagem: é o detalhe
+// que traz a chave de produto (a listagem não a devolve), e ele chega fresco.
+//
+// NA EDIÇÃO, SÓ O QUE MUDOU VAI AO SERVIDOR (`camposAlterados`): o formulário
+// aberto há tempo não desfaz a edição que outra pessoa salvou no meio.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const CLASSE_CAMPO =
@@ -30,18 +35,59 @@ interface LicencaFormModalProps {
   /** Preenchido = edição. `null` = cadastro. */
   licenca: Licenca | null;
   onClose: () => void;
+  /** No cadastro, o corpo inteiro; na edição, só o que mudou. */
   onSubmit: (data: LicencaInput) => Promise<void>;
 }
 
+/** O formulário como o servidor devolveu a licença — a base da comparação na edição. */
+function comoFoiSalva(licenca: LicencaDetalhe): LicencaInput {
+  return {
+    name: licenca.name,
+    categoryId: licenca.categoryId,
+    seatsTotal: licenca.seatsTotal,
+    expirationDate: licenca.expirationDate,
+    terminationDate: licenca.terminationDate,
+    licensedToName: licenca.licensedToName,
+    licensedToEmail: licenca.licensedToEmail,
+    manufacturerId: licenca.manufacturerId,
+    orderNumber: licenca.orderNumber,
+    purchaseDate: licenca.purchaseDate,
+    purchaseCost: licenca.purchaseCost,
+    notes: licenca.notes,
+    productKey: licenca.productKey,
+  };
+}
+
 export default function LicencaFormModal({ licenca, onClose, onSubmit }: LicencaFormModalProps) {
+  if (!licenca) return <Formulario licenca={null} onClose={onClose} onSubmit={onSubmit} />;
+  return <EdicaoDaLicenca id={licenca.id} onClose={onClose} onSubmit={onSubmit} />;
+}
+
+/** A edição espera o detalhe chegar: o formulário nasce com a chave já preenchida. */
+function EdicaoDaLicenca({ id, onClose, onSubmit }: Omit<LicencaFormModalProps, 'licenca'> & { id: string }) {
+  const { data, error } = useLicenseQuery(id);
+  if (data) return <Formulario licenca={data} onClose={onClose} onSubmit={onSubmit} />;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
+      <div className="w-full max-w-md bg-surface-card border border-border-sutil p-6 font-mono text-xs space-y-4">
+        {error
+          ? <p role="alert" className="text-status-danger">Não foi possível carregar a licença: {error.message}</p>
+          : <p className="text-text-tertiary">Carregando…</p>}
+        <button type="button" onClick={onClose} className="px-4 py-2 border border-border-sutil text-text-tertiary hover:text-text-primary uppercase tracking-widest transition-colors">
+          Fechar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 'licenca'> & { licenca: LicencaDetalhe | null }) {
   const editando = licenca !== null;
 
   const [name, setName] = useState(licenca?.name ?? '');
   const [categoryId, setCategoryId] = useState(licenca?.categoryId ?? '');
   const [seatsTotal, setSeatsTotal] = useState(licenca ? String(licenca.seatsTotal) : '1');
-  const [minSeats, setMinSeats] = useState(licenca?.minSeats != null ? String(licenca.minSeats) : '');
-  const [reassignable, setReassignable] = useState(licenca?.reassignable ?? true);
-  const [maintained, setMaintained] = useState(licenca?.maintained ?? false);
   const [expirationDate, setExpirationDate] = useState(paraCampoDeData(licenca?.expirationDate));
   const [terminationDate, setTerminationDate] = useState(paraCampoDeData(licenca?.terminationDate));
   const [licensedToName, setLicensedToName] = useState(licenca?.licensedToName ?? '');
@@ -53,22 +99,28 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
   // centavo entra (a coluna é `Decimal`).
   const [purchaseCost, setPurchaseCost] = useState(licenca?.purchaseCost ?? '');
   const [notes, setNotes] = useState(licenca?.notes ?? '');
+  const [productKey, setProductKey] = useState(licenca?.productKey ?? '');
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
   const enviar = async (event: React.FormEvent) => {
     event.preventDefault();
-    setSalvando(true);
     setErro('');
 
+    // A quantidade em branco não vira 0, e zero não é contrato: a licença que
+    // acabou se encerra.
+    const quantidade = Number(seatsTotal);
+    if (seatsTotal.trim() === '' || !Number.isInteger(quantidade) || quantidade < 1) {
+      setErro('Informe a quantidade comprada: um número inteiro, 1 ou mais.');
+      return;
+    }
+
+    setSalvando(true);
     const dados: LicencaInput = {
       name: name.trim(),
       categoryId,
-      seatsTotal: Number(seatsTotal) || 0,
-      minSeats: minSeats.trim() === '' ? null : Number(minSeats),
-      reassignable,
-      maintained,
+      seatsTotal: quantidade,
       expirationDate: limpar(expirationDate),
       terminationDate: limpar(terminationDate),
       licensedToName: limpar(licensedToName),
@@ -78,14 +130,15 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
       purchaseDate: limpar(purchaseDate),
       purchaseCost: limpar(purchaseCost),
       notes: limpar(notes),
+      productKey: limpar(productKey),
     };
 
     try {
-      await onSubmit(dados);
+      await onSubmit(licenca ? camposAlterados(comoFoiSalva(licenca), dados) as LicencaInput : dados);
     } catch (falha) {
       // O apiClient já traduziu a resposta do servidor — é aqui que aparecem o
-      // 422 de categoria do tipo errado e o 409 de reduzir o contrato abaixo do
-      // ocupado.
+      // 422 de categoria do tipo errado e o 409 de reduzir abaixo do que está
+      // em uso.
       setErro((falha as Error).message);
     } finally {
       setSalvando(false);
@@ -100,7 +153,7 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
           <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">
             {editando ? 'Editar licença' : 'Nova licença'}
           </h2>
-          <button onClick={onClose} className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
+          <button onClick={onClose} aria-label="Fechar" title="Fechar" className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
             <X size={16} />
           </button>
         </div>
@@ -131,25 +184,17 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
               <ReferenceSelect rota="manufacturers" valor={manufacturerId} atual={licenca?.manufacturer} onChange={setManufacturerId} />
             </label>
 
-            <label className="space-y-1.5">
-              <span className={ROTULO}>Total de assentos *</span>
+            <label className="space-y-1.5 col-span-2">
+              <span className={ROTULO}>Quantidade comprada *</span>
               <input
-                required type="number" min={0} value={seatsTotal}
+                required type="number" min={1} step={1} value={seatsTotal}
                 onChange={(e) => setSeatsTotal(e.target.value)} className={CLASSE_CAMPO}
               />
-              <span className="block text-[10px] text-text-tertiary leading-relaxed">
-                Os assentos são criados ou aposentados na mesma gravação. Reduzir abaixo do que
-                está ocupado é recusado — devolva antes.
-              </span>
-            </label>
-
-            <label className="space-y-1.5">
-              <span className={ROTULO}>Mínimo de livres</span>
-              <input
-                type="number" min={0} value={minSeats}
-                onChange={(e) => setMinSeats(e.target.value)} className={CLASSE_CAMPO}
-                placeholder="em branco = não alerta"
-              />
+              {licenca && licenca.emUso > 0 && (
+                <span className="block text-[10px] text-text-tertiary leading-relaxed">
+                  O mínimo é {licenca.emUso}: é o que está em uso.
+                </span>
+              )}
             </label>
 
             <label className="space-y-1.5">
@@ -161,8 +206,9 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
               <span className={ROTULO}>Encerramento</span>
               <input type="date" value={terminationDate} onChange={(e) => setTerminationDate(e.target.value)} className={CLASSE_CAMPO} />
               <span className="block text-[10px] text-text-tertiary">
-                Rescisão do contrato. A partir dessa data a licença fica ENCERRADA mesmo que o
-                vencimento seja depois — e uma data futura não encerra nada hoje.
+                O fim do contrato. No dia marcado a licença vai para Encerradas, mesmo que o
+                vencimento seja depois. Com alguém usando, ela fica no alerta até tudo ser devolvido.
+                Apagar a data reabre a licença.
               </span>
             </label>
 
@@ -188,33 +234,24 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
 
             <label className="space-y-1.5">
               <span className={ROTULO}>Valor da compra</span>
-              <input value={purchaseCost} onChange={(e) => setPurchaseCost(e.target.value)} className={CLASSE_CAMPO} />
+              <input value={purchaseCost} onChange={(e) => setPurchaseCost(e.target.value)} placeholder="1234,56" className={CLASSE_CAMPO} />
             </label>
-
-            <div className="col-span-2 flex flex-wrap gap-6 py-1">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={reassignable} onChange={(e) => setReassignable(e.target.checked)} />
-                <span className="text-text-secondary">Reatribuível</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={maintained} onChange={(e) => setMaintained(e.target.checked)} />
-                <span className="text-text-secondary">Com manutenção</span>
-              </label>
-            </div>
-
-            {!reassignable && (
-              // O aviso aparece no momento em que a caixa é desmarcada, não
-              // depois — quando o assento já queimou não há o que fazer.
-              <p className="col-span-2 p-2.5 bg-status-warning/10 border border-status-warning/20 text-status-warning text-[10px] leading-relaxed">
-                Licença não reatribuível: todo assento DEVOLVIDO é queimado e não volta ao
-                contrato. Isso vale também para a devolução feita antes de desativar ou excluir o
-                colaborador.
-              </p>
-            )}
 
             <label className="space-y-1.5 col-span-2">
               <span className={ROTULO}>Notas</span>
               <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={CLASSE_CAMPO} />
+            </label>
+
+            <label className="space-y-1.5 col-span-2">
+              <span className={ROTULO}>Chave do produto</span>
+              <textarea
+                rows={3} value={productKey} onChange={(e) => setProductKey(e.target.value)}
+                spellCheck={false} autoComplete="off" className={`${CLASSE_CAMPO} font-mono`}
+              />
+              <span className="block text-[10px] text-text-tertiary leading-relaxed">
+                A chave de volume, ou as chaves compradas, uma por linha. Só aparece no detalhe da
+                licença, escondida até alguém pedir para mostrar.
+              </span>
             </label>
           </div>
 

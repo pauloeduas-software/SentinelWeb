@@ -13,6 +13,7 @@ import ConfiguracoesPage from './pages/configuracoes';
 import ColaboradorPage from './pages/configuracoes/colaborador';
 import LoginPage from './pages/login';
 import { useAuthStore, usePode } from './domain/auth/auth.store';
+import Notificacoes from './pages/components/Notificacoes';
 
 /**
  * `/itam/assets/:id` → `/ativos/:id`, preservando o id.
@@ -170,16 +171,21 @@ export default function App() {
     void conferirSessao();
   }, [conferirSessao]);
 
-  if (verificando) return <Verificando />;
-
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Já logado em /login: volta para o painel, em vez de mostrar um
-            formulário que não tem o que fazer. */}
-        <Route path="/login" element={usuario ? <Navigate to="/" replace /> : <LoginPage />} />
-        <Route path="/*" element={usuario ? <Layout /> : <Navigate to="/login" replace />} />
-      </Routes>
+      {verificando ? <Verificando /> : (
+        <Routes>
+          {/* Já logado em /login: volta para o painel, em vez de mostrar um
+              formulário que não tem o que fazer. */}
+          <Route path="/login" element={usuario ? <Navigate to="/" replace /> : <LoginPage />} />
+          <Route path="/*" element={usuario ? <Layout /> : <Navigate to="/login" replace />} />
+        </Routes>
+      )}
+      {/* Fora das rotas, mas DENTRO do roteador: a pilha sobrevive à troca de
+          tela e vale também no login, e o cartão pode ter link — a recusa que
+          aponta para cada licença a devolver. A fila é um store
+          (pages/hooks/useNotificacao), não um contexto. */}
+      <Notificacoes />
     </BrowserRouter>
   );
 }

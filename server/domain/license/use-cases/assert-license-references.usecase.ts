@@ -3,7 +3,7 @@ import {
   assertEscolhaAtiva, lerCategoriaTravada, lerFabricanteTravado,
 } from '../../catalog/helpers/catalog-lock.helper';
 import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
-import type { ClienteLicenca } from '../helpers/license-seats.helper';
+import type { ClienteLicenca } from './count-license-checkouts.usecase';
 
 // As referências da licença existem? E a categoria é do TIPO `LICENSE`?
 //

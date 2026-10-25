@@ -2,7 +2,7 @@ import { Undo2, X } from 'lucide-react';
 import MovimentacoesEstoque from './MovimentacoesEstoque';
 import { useStockItemQuery, useStockMovementsQuery } from '../../../domain/stock/stock.queries';
 import type { ItemDeEstoque } from '../../../domain/shared/stock.types';
-import { corDoSaldo } from '../helpers/estoque.helper';
+import { classeDoSaldo } from '../helpers/estoque.helper';
 import { momentoDoEvento } from '../../helpers/historico.helper';
 
 // O DETALHE DO ITEM: quem está com as unidades que saíram, e a linha do tempo.
@@ -55,7 +55,7 @@ export default function ItemDetalheModal({ item, onClose, onDevolver }: ItemDeta
 
           <div className="grid grid-cols-3 gap-4">
             <Campo rotulo="Total">{atual.qty}</Campo>
-            <Campo rotulo="Disponível"><span style={{ color: corDoSaldo(atual) }}>{atual.disponivel}</span></Campo>
+            <Campo rotulo="Disponível"><span className={classeDoSaldo(atual)}>{atual.disponivel}</span></Campo>
             <Campo rotulo="Fora">{atual.fora}</Campo>
           </div>
 

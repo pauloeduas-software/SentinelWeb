@@ -10,6 +10,8 @@ const MAX_OPCOES = 200;
 export interface CatalogOption {
   id: string;
   name: string;
+  /** A coluna `optionDetail` da spec, quando ela declara uma. */
+  detalhe?: string | null;
 }
 
 /**
@@ -32,10 +34,14 @@ export async function listCatalogOptions(
       ...(incluirInativos ? {} : spec.optionsWhere),
       ...(filtro && spec.optionFilter ? { [spec.optionFilter.campo]: filtro } : {}),
     },
-    select: { id: true, name: true },
+    select: { id: true, name: true, ...(spec.optionDetail ? { [spec.optionDetail]: true } : {}) },
     orderBy: { name: 'asc' },
     take: MAX_OPCOES,
-  });
+  }) as unknown as Record<string, unknown>[];
 
-  return rows as unknown as CatalogOption[];
+  return rows.map((linha) => ({
+    id: linha.id as string,
+    name: linha.name as string,
+    ...(spec.optionDetail ? { detalhe: (linha[spec.optionDetail] as string | null) ?? null } : {}),
+  }));
 }

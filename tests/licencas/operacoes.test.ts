@@ -1,26 +1,15 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { cenarioDePosse, criarLicenca } from '../helpers/fixtures';
+import {
+  cenarioDePosse, criarAtivo, criarColaborador, criarLicenca, diaNoBrasil, entregarLicenca,
+} from '../helpers/fixtures';
 import { prisma } from '../../server/core/database/prismaClient';
 
-// O STATUS DERIVADO E OS DOIS ALERTAS — a parte da F6 que não é corrida nem
-// segredo, e a que o plano de execução listava sem ter arquivo.
+// AS OPERAÇÕES SOBRE A LICENÇA — a conta, as datas, a entrega e a devolução.
 //
-// ═════════════════════════════════════════════════════════════════════════════
-// POR QUE O STATUS PRECISA DE TESTE DE BORDA, SE É UM HELPER PURO
-//
-// Porque ele é uma função do DIA DE HOJE, e todo erro dele é de um dia: a
-// licença que vence hoje virando EXPIRADA às 00:00:01, a que vence em 30 dias
-// caindo fora do aviso por uma hora de fuso, a rescisão marcada para o mês que
-// vem encerrando o contrato hoje. Nada disso aparece num teste que usa "daqui a
-// um ano" e "no ano passado" — e todos os três mudam o que a tela cobra de quem
-// a lê.
-//
-// As datas aqui são construídas a partir de MEIA-NOITE UTC, a mesma referência
-// que o `dataOpcional` usa para gravar e que o `license-status.helper.ts` usa
-// para comparar. Escrever `new Date()` em vez disso daria um teste que passa de
-// manhã e falha à noite, conforme o fuso da máquina.
-// ═════════════════════════════════════════════════════════════════════════════
+// Cada `it` cria a SUA licença e os SEUS alvos quando vai mudá-los: o banco é do
+// arquivo inteiro (`setup/each-file.ts`), e um teste que dependesse do anterior
+// falharia rodado sozinho com `-t`.
 
 let api: ApiDeTeste;
 let cenario: Awaited<ReturnType<typeof cenarioDePosse>>;
@@ -34,256 +23,336 @@ afterAll(async () => {
   await api.fechar();
 });
 
-/** `AAAA-MM-DD` a N dias de hoje, em UTC. Negativo é passado. */
-function emDias(dias: number): string {
-  const data = new Date();
-  data.setUTCHours(0, 0, 0, 0);
-  data.setUTCDate(data.getUTCDate() + dias);
-  return data.toISOString().slice(0, 10);
-}
+interface Contagem { seatsTotal: number; emUso: number; livres: number }
 
-interface LicencaLida {
-  status: string;
-  diasParaVencer: number | null;
-  livres: number;
-}
-
-async function lerStatus(id: string): Promise<LicencaLida> {
-  const { status, body } = await api.get<LicencaLida>(`/api/licenses/${id}`);
+async function contas(id: string): Promise<Contagem> {
+  const { status, body } = await api.get<Contagem>(`/api/licenses/${id}`);
   expect(status).toBe(200);
-  return body;
+  return { seatsTotal: body.seatsTotal, emUso: body.emUso, livres: body.livres };
 }
 
-describe('o status sai das datas, e as bordas são de um dia', () => {
-  it('sem data de vencimento é ATIVA, e não há dias a contar', async () => {
-    const licenca = await criarLicenca(api, {
-      name: 'Perpétua', categoryId: cenario.categoriaLicencaId, seatsTotal: 1,
-    });
+/** Um colaborador novo, com e-mail próprio — para o teste que muda o estado dele. */
+async function colaborador(nome: string) {
+  return criarColaborador(api, { name: nome, email: `${nome.toLowerCase().replace(/\W+/g, '.')}@teste.local` });
+}
 
-    expect(await lerStatus(licenca.id)).toMatchObject({ status: 'ATIVA', diasParaVencer: null });
+async function maquina(name: string) {
+  return criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId, name });
+}
+
+describe('a conta: compradas − em uso', () => {
+  it('nasce com tudo livre, e cada entrega desconta uma', async () => {
+    const licenca = await criarLicenca(api, { name: 'Office 2021', categoryId: cenario.categoriaLicencaId, seatsTotal: 3 });
+    expect(await contas(licenca.id)).toEqual({ seatsTotal: 3, emUso: 0, livres: 3 });
+
+    await entregarLicenca(api, licenca.id, { assignedPersonId: cenario.laura });
+    await entregarLicenca(api, licenca.id, { assignedAssetId: cenario.ativo.id });
+
+    expect(await contas(licenca.id)).toEqual({ seatsTotal: 3, emUso: 2, livres: 1 });
   });
 
-  it('fora da janela de aviso é ATIVA', async () => {
-    const licenca = await criarLicenca(api, {
-      name: 'Renova em 40 dias', categoryId: cenario.categoriaLicencaId, seatsTotal: 1,
-      expirationDate: emDias(40),
-    });
+  it('a devolução libera a licença', async () => {
+    const licenca = await criarLicenca(api, { name: 'Visio', categoryId: cenario.categoriaLicencaId, seatsTotal: 2 });
+    const entrega = await entregarLicenca(api, licenca.id, { assignedPersonId: cenario.laura });
 
-    expect(await lerStatus(licenca.id)).toMatchObject({ status: 'ATIVA', diasParaVencer: 40 });
+    const devolucao = await api.post<{ id: string; checkinAt: string | null }>(`/api/licenses/checkouts/${entrega.id}/checkin`);
+    expect(devolucao.status).toBe(200);
+    expect(devolucao.body).toMatchObject({ id: entrega.id, checkinAt: expect.any(String) });
+    expect(await contas(licenca.id)).toEqual({ seatsTotal: 2, emUso: 0, livres: 2 });
   });
 
-  it('dentro da janela é VENCENDO, e os dias vêm do SERVIDOR', async () => {
-    const licenca = await criarLicenca(api, {
-      name: 'Renova em 10 dias', categoryId: cenario.categoriaLicencaId, seatsTotal: 1,
-      expirationDate: emDias(10),
+  it('não existe reatribuível nem queima: o campo é recusado e não sai na resposta', async () => {
+    const recusa = await api.post('/api/licenses', {
+      name: 'Windows OEM', categoryId: cenario.categoriaLicencaId, seatsTotal: 2, reassignable: false,
     });
+    expect(recusa.status).toBe(422);
 
-    // `diasParaVencer` na resposta porque "VENCENDO" sozinho não diz se é para
-    // agir hoje ou no mês que vem — e a tela não pode recalcular: o "hoje" do
-    // navegador pode não ser o do servidor.
-    expect(await lerStatus(licenca.id)).toMatchObject({ status: 'VENCENDO', diasParaVencer: 10 });
-  });
-
-  it('A BORDA EXATA: vence HOJE ainda é VENCENDO, nunca EXPIRADA', async () => {
-    // Se a comparação fosse contra `new Date()` em vez de meia-noite UTC, esta
-    // licença viraria EXPIRADA às 00:00:01 — e o inventário cobraria renovação
-    // de um contrato que ainda vale o dia inteiro.
-    const licenca = await criarLicenca(api, {
-      name: 'Vence hoje', categoryId: cenario.categoriaLicencaId, seatsTotal: 1,
-      expirationDate: emDias(0),
-    });
-
-    expect(await lerStatus(licenca.id)).toMatchObject({ status: 'VENCENDO', diasParaVencer: 0 });
-  });
-
-  it('vencida ontem é EXPIRADA, e os dias saem NEGATIVOS', async () => {
-    const licenca = await criarLicenca(api, {
-      name: 'Venceu ontem', categoryId: cenario.categoriaLicencaId, seatsTotal: 1,
-      expirationDate: emDias(-1),
-    });
-
-    expect(await lerStatus(licenca.id)).toMatchObject({ status: 'EXPIRADA', diasParaVencer: -1 });
-  });
-
-  it('rescisão JÁ PASSADA vence tudo: ENCERRADA mesmo com vencimento futuro', async () => {
-    // A ordem é a regra (D44): um contrato rescindido não fica "vencendo", ele
-    // acabou por decisão. Com a ordem invertida, esta licença sairia ATIVA.
-    const licenca = await criarLicenca(api, {
-      name: 'Rescindida', categoryId: cenario.categoriaLicencaId, seatsTotal: 1,
-      expirationDate: emDias(40), terminationDate: emDias(-5),
-    });
-
-    expect(await lerStatus(licenca.id)).toMatchObject({ status: 'ENCERRADA' });
-  });
-
-  it('rescisão FUTURA não encerra nada — o contrato vale até o dia marcado', async () => {
-    // A contraparte do teste acima, e a que o texto do plano deixava ambígua ao
-    // dizer só "preenchida": rescindir PARA o dia 30 não tira o direito de uso
-    // hoje. Quem manda é a comparação com hoje.
-    const licenca = await criarLicenca(api, {
-      name: 'Rescinde no mês que vem', categoryId: cenario.categoriaLicencaId, seatsTotal: 1,
-      expirationDate: emDias(10), terminationDate: emDias(30),
-    });
-
-    expect(await lerStatus(licenca.id)).toMatchObject({ status: 'VENCENDO' });
-  });
-
-  it('e NÃO existe coluna de status: ele não pode divergir porque não guarda nada', async () => {
-    // A prova do D44 no banco. Uma coluna exigiria um job diário para continuar
-    // verdadeira, e no dia em que ele falhasse o inventário mentiria sem
-    // sintoma: a tela mostraria "ATIVA" e nada discordaria, porque a coluna
-    // *seria* a resposta.
-    const colunas = await prisma.$queryRaw<{ column_name: string }[]>`
-      SELECT column_name FROM information_schema.columns
-       WHERE table_name = 'licenses' AND column_name IN ('status', 'livres')
-    `;
-    expect(colunas).toEqual([]);
+    const licenca = await criarLicenca(api, { name: 'Sem queima', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
+    const { body } = await api.get<Record<string, unknown>>(`/api/licenses/${licenca.id}`);
+    expect(body).not.toHaveProperty('reassignable');
+    expect(body).not.toHaveProperty('queimadas');
   });
 });
 
-describe('os alertas de vencimento', () => {
-  it('trazem a que vence na janela e a que JÁ venceu, e deixam de fora a de 40 dias', async () => {
-    const { body } = await api.get<{ vencendo: { name: string; status: string }[] }>(
-      '/api/licenses/alerts',
-    );
-    const nomes = body.vencendo.map((linha) => linha.name);
+describe('a quantidade', () => {
+  it('aumentar sempre pode', async () => {
+    const licenca = await criarLicenca(api, { name: 'Acrobat', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
+    await entregarLicenca(api, licenca.id, { assignedPersonId: cenario.laura });
 
-    // A VENCIDA ENTRA de propósito: software em uso sem direito de uso é o
-    // achado mais caro de uma auditoria de fornecedor, e sumir com ela da lista
-    // no dia seguinte ao vencimento esconderia o problema no instante em que
-    // ele passa a existir.
-    expect(nomes).toContain('Venceu ontem');
-    expect(nomes).toContain('Vence hoje');
-    expect(nomes).toContain('Renova em 10 dias');
-
-    expect(nomes).not.toContain('Renova em 40 dias');
-    expect(nomes).not.toContain('Perpétua');
+    expect((await api.put(`/api/licenses/${licenca.id}`, { seatsTotal: 5 })).status).toBe(200);
+    expect(await contas(licenca.id)).toEqual({ seatsTotal: 5, emUso: 1, livres: 4 });
   });
 
-  it('e deixam de fora a ENCERRADA: alguém já tratou', async () => {
-    // Continuar cobrando ação sobre contrato rescindido treina quem lê a tela a
-    // ignorar a lista.
-    const { body } = await api.get<{ vencendo: { name: string }[] }>('/api/licenses/alerts');
-    expect(body.vencendo.map((linha) => linha.name)).not.toContain('Rescindida');
-  });
-
-  it('ordenados por vencimento: o mais urgente primeiro', async () => {
-    const { body } = await api.get<{ vencendo: { expirationDate: string }[] }>(
-      '/api/licenses/alerts',
-    );
-    const datas = body.vencendo.map((linha) => linha.expirationDate);
-    expect([...datas].sort()).toEqual(datas);
-  });
-});
-
-describe('o alerta de assentos abaixo do mínimo', () => {
-  it('só entra quem TEM piso e está abaixo dele', async () => {
-    const comPiso = await criarLicenca(api, {
-      name: 'Com piso', categoryId: cenario.categoriaLicencaId, seatsTotal: 3, minSeats: 2,
-    });
-    await criarLicenca(api, {
-      name: 'Sem piso', categoryId: cenario.categoriaLicencaId, seatsTotal: 3,
-    });
-
-    let { body } = await api.get<{ assentosBaixos: { id: string; livres: number }[] }>(
-      '/api/licenses/alerts',
-    );
-    // 3 livres e piso 2: ainda não é alerta.
-    expect(body.assentosBaixos.map((linha) => linha.id)).not.toContain(comPiso.id);
-
-    // Duas entregas deixam 1 livre, abaixo do piso 2.
-    for (const alvo of [{ assignedPersonId: cenario.laura }, { assignedPersonId: cenario.ana }]) {
-      expect((await api.post(`/api/licenses/${comPiso.id}/checkout-seat`, alvo)).status).toBe(201);
-    }
-
-    ({ body } = await api.get('/api/licenses/alerts'));
-    expect(body.assentosBaixos).toContainEqual(
-      expect.objectContaining({ id: comPiso.id, livres: 1 }),
-    );
-
-    // `minSeats` nulo NUNCA entra: sem piso, sem alerta. E é por isso que o
-    // schema transforma string vazia em `null` em vez de deixar o
-    // `z.coerce.number()` gravar 0.
-    const semPiso = body.assentosBaixos.find((linha) => linha.id !== comPiso.id);
-    expect(semPiso).toBeUndefined();
-  });
-});
-
-describe('o piso do contrato quando a perda já aconteceu', () => {
-  it('encolher abaixo dos assentos QUEIMADOS é 409, e a frase não manda devolver nada', async () => {
-    // Não há o que devolver: os dois assentos já voltaram e queimaram. A frase
-    // antiga ("Devolva assentos antes de reduzir") mandava o operador tentar
-    // uma ação que não existe.
-    const licenca = await criarLicenca(api, {
-      name: 'OEM no piso', categoryId: cenario.categoriaLicencaId, seatsTotal: 2,
-      reassignable: false,
-    });
-
-    for (const alvo of [{ assignedPersonId: cenario.laura }, { assignedPersonId: cenario.ana }]) {
-      const entrega = await api.post<{ seatId: string }>(
-        `/api/licenses/${licenca.id}/checkout-seat`, alvo,
-      );
-      expect(entrega.status).toBe(201);
-      expect((await api.post(`/api/licenses/seats/${entrega.body.seatId}/checkin`, {})).status).toBe(200);
-    }
+  it('reduzir até o que está em uso pode; abaixo disso não, e a frase diz quantas estão em uso', async () => {
+    const licenca = await criarLicenca(api, { name: 'Project', categoryId: cenario.categoriaLicencaId, seatsTotal: 5 });
+    await entregarLicenca(api, licenca.id, { assignedPersonId: cenario.laura });
+    await entregarLicenca(api, licenca.id, { assignedPersonId: cenario.ana });
 
     const recusa = await api.put<{ error: string }>(`/api/licenses/${licenca.id}`, { seatsTotal: 1 });
     expect(recusa.status).toBe(409);
-    expect(recusa.body.error).toContain('queimados');
-    expect(recusa.body.error).not.toContain('Devolva assentos');
+    expect(recusa.body.error).toBe('Não dá para reduzir "Project" para 1: 2 estão em uso. Devolva para liberar.');
 
-    // E o contrato não mudou: 2 comprados, 0 utilizáveis, 2 queimados.
-    const { body } = await api.get<{ seatsTotal: number; livres: number; queimados: number }>(
-      `/api/licenses/${licenca.id}`,
-    );
-    expect(body).toMatchObject({ seatsTotal: 2, livres: 0, queimados: 2 });
+    expect((await api.put(`/api/licenses/${licenca.id}`, { seatsTotal: 2 })).status).toBe(200);
+    expect(await contas(licenca.id)).toMatchObject({ seatsTotal: 2, livres: 0 });
+  });
+
+  it('o mínimo é 1: zero é 422 no cadastro e na edição', async () => {
+    const cadastro = await api.post('/api/licenses', {
+      name: 'Contrato vazio', categoryId: cenario.categoriaLicencaId, seatsTotal: 0,
+    });
+    expect(cadastro.status).toBe(422);
+
+    const licenca = await criarLicenca(api, { name: 'Slack', categoryId: cenario.categoriaLicencaId, seatsTotal: 2 });
+    expect((await api.put(`/api/licenses/${licenca.id}`, { seatsTotal: 0 })).status).toBe(422);
+    expect((await api.put(`/api/licenses/${licenca.id}`, { seatsTotal: 1 })).status).toBe(200);
+  });
+
+  it('quantidade nula ou vazia é 422 — nunca vira zero', async () => {
+    const licenca = await criarLicenca(api, { name: 'Teams', categoryId: cenario.categoriaLicencaId, seatsTotal: 4 });
+
+    for (const valor of [null, '', '3']) {
+      const { status } = await api.put(`/api/licenses/${licenca.id}`, { seatsTotal: valor });
+      expect(status, `seatsTotal = ${JSON.stringify(valor)}`).toBe(422);
+    }
+    expect(await contas(licenca.id)).toMatchObject({ seatsTotal: 4 });
+  });
+
+  it('a edição parcial não toca no que não veio', async () => {
+    const licenca = await criarLicenca(api, { name: 'Zoom', categoryId: cenario.categoriaLicencaId, seatsTotal: 7 });
+
+    expect((await api.put(`/api/licenses/${licenca.id}`, { notes: 'renovar em março' })).status).toBe(200);
+    const { body } = await api.get<{ seatsTotal: number; notes: string; name: string }>(`/api/licenses/${licenca.id}`);
+    expect(body).toMatchObject({ seatsTotal: 7, notes: 'renovar em março', name: 'Zoom' });
+  });
+
+  it('o nome pode repetir: a renovação convive com o contrato velho', async () => {
+    await criarLicenca(api, { name: 'Microsoft 365', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
+    const { status } = await api.post('/api/licenses', {
+      name: 'Microsoft 365', categoryId: cenario.categoriaLicencaId, seatsTotal: 1,
+    });
+    expect(status).toBe(201);
   });
 });
 
-describe('entregar assento exige contrato de pé', () => {
-  // A REGRA MORAVA SÓ NA TELA: `LicencaTable` desabilita o botão em licença
-  // EXPIRADA e ENCERRADA, com um comentário dizendo que o servidor responderia
-  // 409 — e ele não respondia. Quem chamasse a API registrava, no próprio
-  // inventário, software em uso sem direito de uso.
+describe('as datas não antecedem a compra', () => {
+  const base = () => ({ categoryId: cenario.categoriaLicencaId, seatsTotal: 1, purchaseDate: '2026-03-10' });
 
-  it('licença ENCERRADA responde 409 e diz como voltar atrás', async () => {
-    const licenca = await prisma.license.findFirstOrThrow({
-      where: { name: 'Rescindida' }, select: { id: true },
+  it('vencimento ou encerramento antes da compra é 422, com as duas datas na frase', async () => {
+    const vencimento = await api.post<{ error: string }>('/api/licenses', {
+      ...base(), name: 'Vence antes da compra', expirationDate: '2026-03-05',
     });
+    expect(vencimento.status).toBe(422);
+    expect(vencimento.body.error).toBe('O vencimento (05/03/2026) não pode ser antes da data da compra (10/03/2026).');
 
-    const recusa = await api.post<{ error: string; status: string }>(
-      `/api/licenses/${licenca.id}/checkout-seat`, { assignedPersonId: cenario.laura },
-    );
-    expect(recusa.status).toBe(409);
-    expect(recusa.body.error).toContain('ENCERRADA');
-    expect(recusa.body.error).toContain('limpe a data de encerramento');
+    const encerramento = await api.post<{ error: string }>('/api/licenses', {
+      ...base(), name: 'Encerra antes da compra', terminationDate: '2026-03-09',
+    });
+    expect(encerramento.status).toBe(422);
+    expect(encerramento.body.error).toContain('O encerramento (09/03/2026)');
   });
 
-  it('licença EXPIRADA responde 409 e diz há quanto tempo venceu', async () => {
-    const licenca = await prisma.license.findFirstOrThrow({
-      where: { name: 'Venceu ontem' }, select: { id: true },
+  it('o mesmo dia passa, e o encerramento antes do vencimento também — os dois não se comparam', async () => {
+    const { status } = await api.post('/api/licenses', {
+      ...base(), name: 'Encerrada antes do fim pago', expirationDate: '2026-12-31', terminationDate: '2026-03-10',
     });
-
-    const recusa = await api.post<{ error: string }>(
-      `/api/licenses/${licenca.id}/checkout-seat`, { assignedPersonId: cenario.laura },
-    );
-    expect(recusa.status).toBe(409);
-    expect(recusa.body.error).toContain('venceu há 1 dia');
-    // A saída é atualizar o contrato, não tentar de novo.
-    expect(recusa.body.error).toContain('atualize a data de vencimento');
+    expect(status).toBe(201);
   });
 
-  it('VENCENDO entrega normalmente — é a janela em que se renova', async () => {
-    // Recusar aqui seria pior que o problema: a licença ainda VALE, e travar a
-    // entrega no mês da renovação impediria o trabalho que a renovação existe
-    // para continuar.
-    const licenca = await prisma.license.findFirstOrThrow({
-      where: { name: 'Vence hoje' }, select: { id: true },
+  it('sem a data da compra, não há o que comparar', async () => {
+    const { status } = await api.post('/api/licenses', {
+      name: 'Sem data de compra', categoryId: cenario.categoriaLicencaId, seatsTotal: 1, expirationDate: '2020-01-01',
     });
+    expect(status).toBe(201);
+  });
 
-    const entrega = await api.post(
-      `/api/licenses/${licenca.id}/checkout-seat`, { assignedPersonId: cenario.laura },
+  it('na edição, a data que não veio é a que está gravada', async () => {
+    const criada = await api.post<{ id: string }>('/api/licenses', {
+      ...base(), name: 'Compra que anda', expirationDate: '2026-04-10',
+    });
+    expect(criada.status).toBe(201);
+
+    // Só a compra muda — e passa do vencimento que já estava lá.
+    const recusa = await api.put<{ error: string }>(`/api/licenses/${criada.body.id}`, { purchaseDate: '2026-04-20' });
+    expect(recusa.status).toBe(422);
+    expect(recusa.body.error).toContain('O vencimento (10/04/2026)');
+
+    // Apagar a compra tira a comparação.
+    expect((await api.put(`/api/licenses/${criada.body.id}`, { purchaseDate: null })).status).toBe(200);
+    expect((await api.put(`/api/licenses/${criada.body.id}`, { expirationDate: '2020-01-01' })).status).toBe(200);
+  });
+});
+
+describe('a entrega recusa', () => {
+  it('sem licença livre — e a frase diz os números', async () => {
+    const licenca = await criarLicenca(api, { name: 'Slack única', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
+    await entregarLicenca(api, licenca.id, { assignedPersonId: cenario.laura });
+
+    const { status, body } = await api.post<{ error: string }>(
+      `/api/licenses/${licenca.id}/checkout`, { assignedPersonId: cenario.ana },
     );
-    expect(entrega.status).toBe(201);
+    expect(status).toBe(409);
+    expect(body.error).toContain('1 comprada, 1 em uso');
+    expect(body.error).toContain('Devolva uma entrega ou aumente');
+  });
+
+  it('o mesmo alvo duas vezes', async () => {
+    const licenca = await criarLicenca(api, { name: 'Notion', categoryId: cenario.categoriaLicencaId, seatsTotal: 5 });
+    await entregarLicenca(api, licenca.id, { assignedAssetId: cenario.ativo.id });
+
+    const { status, body } = await api.post<{ error: string }>(
+      `/api/licenses/${licenca.id}/checkout`, { assignedAssetId: cenario.ativo.id },
+    );
+    expect(status).toBe(409);
+    expect(body.error).toContain('já está com "Notion"');
+  });
+
+  it('dois alvos ou nenhum é 422; posto não é campo', async () => {
+    const licenca = await criarLicenca(api, { name: 'Jira', categoryId: cenario.categoriaLicencaId, seatsTotal: 5 });
+    const url = `/api/licenses/${licenca.id}/checkout`;
+
+    expect((await api.post(url, { assignedPersonId: cenario.laura, assignedAssetId: cenario.ativo.id })).status).toBe(422);
+    expect((await api.post(url, {})).status).toBe(422);
+    expect((await api.post(url, { assignedWorkstationId: cenario.mesa1 })).status).toBe(422);
+  });
+
+  it('licença vencida e licença encerrada; vencendo entrega', async () => {
+    const vencida = await criarLicenca(api, {
+      name: 'Vencida ontem', categoryId: cenario.categoriaLicencaId, seatsTotal: 5, expirationDate: diaNoBrasil(-1),
+    });
+    const encerrada = await criarLicenca(api, {
+      name: 'Encerrada ontem', categoryId: cenario.categoriaLicencaId, seatsTotal: 5, terminationDate: diaNoBrasil(-1),
+    });
+    const vencendo = await criarLicenca(api, {
+      name: 'Vence em 5 dias', categoryId: cenario.categoriaLicencaId, seatsTotal: 5, expirationDate: diaNoBrasil(5),
+    });
+    const alvo = { assignedPersonId: cenario.laura };
+
+    const r1 = await api.post<{ error: string }>(`/api/licenses/${vencida.id}/checkout`, alvo);
+    expect(r1.status).toBe(409);
+    expect(r1.body.error).toContain('venceu há 1 dia');
+
+    const r2 = await api.post<{ error: string }>(`/api/licenses/${encerrada.id}/checkout`, alvo);
+    expect(r2.status).toBe(409);
+    expect(r2.body.error).toContain('ENCERRADA');
+
+    expect((await api.post(`/api/licenses/${vencendo.id}/checkout`, alvo)).status).toBe(201);
+  });
+
+  it('ativo baixado é 409; ativo na lixeira é 404', async () => {
+    const licenca = await criarLicenca(api, { name: 'Antivírus', categoryId: cenario.categoriaLicencaId, seatsTotal: 5 });
+    const baixado = await maquina('Vendido');
+    const apagado = await maquina('Apagado');
+    expect((await api.post(`/api/assets/${baixado.id}/retire`, { retiredReason: 'VENDIDO' })).status).toBe(200);
+    expect((await api.delete(`/api/assets/${apagado.id}`)).status).toBe(200);
+
+    const r1 = await api.post<{ error: string }>(`/api/licenses/${licenca.id}/checkout`, { assignedAssetId: baixado.id });
+    expect(r1.status).toBe(409);
+    expect(r1.body.error).toContain('teve baixa');
+
+    expect((await api.post(`/api/licenses/${licenca.id}/checkout`, { assignedAssetId: apagado.id })).status).toBe(404);
+  });
+
+  it('colaborador desativado é 409; na lixeira é 404', async () => {
+    const licenca = await criarLicenca(api, { name: 'Canva', categoryId: cenario.categoriaLicencaId, seatsTotal: 5 });
+    const desativado = await colaborador('Felipe Rocha');
+    const apagado = await colaborador('Gustavo Lixeira');
+    expect((await api.put(`/api/people/${desativado}`, { isActive: false })).status).toBe(200);
+    expect((await api.delete(`/api/people/${apagado}`)).status).toBe(200);
+
+    const r1 = await api.post<{ error: string }>(`/api/licenses/${licenca.id}/checkout`, { assignedPersonId: desativado });
+    expect(r1.status).toBe(409);
+    expect(r1.body.error).toContain('desativado');
+
+    expect((await api.post(`/api/licenses/${licenca.id}/checkout`, { assignedPersonId: apagado })).status).toBe(404);
+  });
+});
+
+describe('a data da entrega e da devolução', () => {
+  it('a entrega aceita um dia passado; futura é 422', async () => {
+    const licenca = await criarLicenca(api, { name: 'Entrega antiga', categoryId: cenario.categoriaLicencaId, seatsTotal: 3 });
+    const antiga = await api.post<{ checkoutAt: string }>(`/api/licenses/${licenca.id}/checkout`, {
+      assignedPersonId: cenario.laura, checkoutAt: diaNoBrasil(-10),
+    });
+    expect(antiga.status).toBe(201);
+    // Meio-dia de Brasília: lido no fuso de quem usa, continua sendo aquele dia.
+    expect(antiga.body.checkoutAt).toBe(`${diaNoBrasil(-10)}T15:00:00.000Z`);
+
+    const futura = await api.post<{ error: string }>(`/api/licenses/${licenca.id}/checkout`, {
+      assignedPersonId: cenario.ana, checkoutAt: diaNoBrasil(1),
+    });
+    expect(futura.status).toBe(422);
+    expect(futura.body.error).toContain('não pode ser uma data futura');
+  });
+
+  it('a devolução aceita um dia passado, mas nunca futuro nem antes da entrega', async () => {
+    const licenca = await criarLicenca(api, { name: 'Devolução antiga', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
+    const entrega = await api.post<{ id: string }>(`/api/licenses/${licenca.id}/checkout`, {
+      assignedPersonId: cenario.laura, checkoutAt: diaNoBrasil(-10),
+    });
+    const devolver = (checkinAt: string) =>
+      api.post<{ error: string; checkinAt: string }>(`/api/licenses/checkouts/${entrega.body.id}/checkin`, { checkinAt });
+
+    expect((await devolver(diaNoBrasil(1))).status).toBe(422);
+
+    const antes = await devolver(diaNoBrasil(-11));
+    expect(antes.status).toBe(422);
+    expect(antes.body.error).toMatch(/^A devolução \(.+\) não pode ser antes da entrega \(.+\)\.$/);
+
+    const passada = await devolver(diaNoBrasil(-3));
+    expect(passada.status).toBe(200);
+    expect(passada.body.checkinAt).toBe(`${diaNoBrasil(-3)}T15:00:00.000Z`);
+    expect(await contas(licenca.id)).toMatchObject({ emUso: 0, livres: 1 });
+  });
+
+  it('no mesmo dia, a devolução nunca fica antes da hora real da entrega', async () => {
+    // A entrega das 23h de ontem: o meio-dia de ontem cairia antes dela.
+    const licenca = await criarLicenca(api, { name: 'Entrega da noite', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
+    const entrega = await entregarLicenca(api, licenca.id, { assignedPersonId: cenario.laura });
+    const dasOnzeDaNoite = new Date(`${diaNoBrasil(0)}T02:00:00.000Z`); // 23h de ontem em Brasília
+    await prisma.licenseCheckout.update({ where: { id: entrega.id }, data: { checkoutAt: dasOnzeDaNoite } });
+
+    const devolvida = await api.post<{ checkinAt: string }>(
+      `/api/licenses/checkouts/${entrega.id}/checkin`, { checkinAt: diaNoBrasil(-1) },
+    );
+    expect(devolvida.status).toBe(200);
+    expect(devolvida.body.checkinAt).toBe(dasOnzeDaNoite.toISOString());
+  });
+
+  it('sem corpo, a devolução é hoje — e campo desconhecido é 422', async () => {
+    const licenca = await criarLicenca(api, { name: 'Devolução de hoje', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
+    const entrega = await entregarLicenca(api, licenca.id, { assignedPersonId: cenario.laura });
+    expect((await api.post(`/api/licenses/checkouts/${entrega.id}/checkin`, { notes: 'x' })).status).toBe(422);
+
+    const hoje = await api.post<{ checkinAt: string }>(`/api/licenses/checkouts/${entrega.id}/checkin`);
+    expect(hoje.status).toBe(200);
+    expect(hoje.body.checkinAt.slice(0, 10) >= diaNoBrasil(-1)).toBe(true);
+  });
+});
+
+describe('a devolução', () => {
+  it('é pela ENTREGA: a já devolvida é 409, e a inexistente 404', async () => {
+    const licenca = await criarLicenca(api, { name: 'Figma', categoryId: cenario.categoriaLicencaId, seatsTotal: 2 });
+    const entrega = await entregarLicenca(api, licenca.id, { assignedPersonId: cenario.laura });
+
+    expect((await api.post(`/api/licenses/checkouts/${entrega.id}/checkin`)).status).toBe(200);
+
+    const segunda = await api.post<{ error: string }>(`/api/licenses/checkouts/${entrega.id}/checkin`);
+    expect(segunda.status).toBe(409);
+    expect(segunda.body.error).toContain('já foi devolvida');
+
+    expect((await api.post('/api/licenses/checkouts/00000000-0000-4000-8000-000000000000/checkin')).status).toBe(404);
+  });
+
+  it('a tela velha não devolve quem recebeu depois', async () => {
+    // O defeito da devolução pela VAGA: a tela via Laura na vaga 3, outra aba
+    // devolvia e entregava a Ana, e o clique velho devolvia a Ana. Pela
+    // entrega, o clique velho só encontra a entrega da Laura, já fechada.
+    const licenca = await criarLicenca(api, { name: 'Photoshop', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
+    const daLaura = await entregarLicenca(api, licenca.id, { assignedPersonId: cenario.laura });
+    expect((await api.post(`/api/licenses/checkouts/${daLaura.id}/checkin`)).status).toBe(200);
+    await entregarLicenca(api, licenca.id, { assignedPersonId: cenario.ana });
+
+    expect((await api.post(`/api/licenses/checkouts/${daLaura.id}/checkin`)).status).toBe(409);
+    expect(await contas(licenca.id)).toMatchObject({ emUso: 1 });
   });
 });

@@ -56,7 +56,7 @@ Toda resposta leva `X-Request-Id`, que aparece na linha de log da requisição.
 | `/postos` | Postos de trabalho (mesas), cada um numa localização — quem está, quantos ativos, se está vago; criar, editar, desativar e excluir posto | ADMIN |
 | `/postos/:id` | Ficha do posto — ocupantes (adicionar, corrigir o turno, encerrar), o computador da mesa (com telemetria), ativos entregues e estoque da mesa | ADMIN |
 | `/estoque` | O que tem quantidade em vez de patrimônio — saldo, entrada/baixa, saída e devolução por unidade | ADMIN |
-| `/licencas` | Contratos de software e os assentos materializados | ADMIN |
+| `/licencas` | Contratos de software: quantidade comprada, entregas a colaborador ou computador, abas Atuais e Encerradas | ADMIN |
 | `/descobertas` | O que o agente vê e o cadastro não sabe — máquinas sem vínculo, vínculo manual, fila de sugestões e "Reconciliar agora" | ADMIN |
 | `/usuarios` | Quem opera o sistema — hoje só Administrador, o único cargo (Z). O cadastro pede nome, e-mail e a senha com que a pessoa entra (o login é o e-mail) | ADMIN |
 | `/configuracoes` | As seis abas do catálogo — categorias, status, fabricantes, modelos, localizações e **colaboradores** (quem recebe equipamento). A configuração da descoberta fica em `/descobertas` | ADMIN |

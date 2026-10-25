@@ -97,6 +97,9 @@ e o helper; o segundo só acrescenta a linha com o próprio nome.
 
 ## D81 — Um arquivo e um formato de cifra, para os dois usos.
 
+> **Superada por [G](./licencas.md#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples):** os dois usos saíram — os campos customizados com o D145, a chave
+> de produto com G. Não há mais cifra no projeto.
+
 **O conflito.** A F6 usa `server/core/crypto/aes-gcm.ts` com `v1:iv:tag:ct`. A F9
 usa `server/core/crypto/cipher.ts` com `enc:v1:iv:tag:ct`. Os dois planos dizem
 "quem chegar primeiro cria" — e o que chegasse segundo encontraria um arquivo com

@@ -60,6 +60,9 @@ carimbo de "alguém viu".
 
 ## D145 — Campos customizados saem inteiros
 
+> **Superada em parte por [G](./licencas.md#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples):** "a cifra continua existindo" deixou de valer — o único
+> uso que sobrou, a chave de produto da licença, saiu com G, e a cifra com ele.
+
 **Decidido:** saem o domínio `custom-field`, os três modelos, os dois enums e a parte plana que
 morava na spec de catálogo (D64).
 **Supera:** [D7](./campos-customizados.md#d7--campos-customizados-em-jsonb-não-em-ddl-dinâmico) e
@@ -557,6 +560,10 @@ embora.
 ---
 
 ## Q — A varredura do código morto: o que não tem leitor sai
+
+> **Superada em parte por [AA](./licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas):**
+> o corpo de erro deixa de ser só `{ error }` — a recusa que cita licenças manda `refs` ao lado,
+> e agora há leitor: a tela põe um link em cada uma. A frase continua completa sem ele.
 
 **Decidido:** uma passada pelo que as duas rodadas deixaram de pé, com uma pergunta por item —
 *quem lê isto?* Sem leitor, sai:

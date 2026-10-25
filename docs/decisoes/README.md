@@ -5,7 +5,7 @@
 > muda, mesmo que o arquivo onde ela vive mude. Depois do D164 veio uma segunda rodada, com 15
 > decisões próprias, nomeadas por letra (`A`…`P`, sem `N`) em vez de número — ver
 > [*A segunda rodada*](#a-segunda-rodada-ap) abaixo. A varredura do código morto, que veio
-> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y` e `Z`.
+> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y`, `Z` e, acabado o alfabeto, `AA`.
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve.** Se a realidade mudou, ela é
 > **superada** por outra, com link entre as duas. O log é o que diz por quanto tempo cada regra
@@ -25,7 +25,7 @@
 | [`posse.md`](./posse.md) | Posse | 17 |
 | [`relatorios-import-etiquetas.md`](./relatorios-import-etiquetas.md) | Relatórios, import e etiquetas | 13 |
 | [`ciclo-de-vida.md`](./ciclo-de-vida.md) | Ciclo de vida | 12 |
-| [`licencas.md`](./licencas.md) | Licenças | 11 |
+| [`licencas.md`](./licencas.md) | Licenças | 13 |
 | [`campos-customizados.md`](./campos-customizados.md) | Campos customizados | 8 |
 | [`plataforma.md`](./plataforma.md) | Plataforma | 7 |
 | [`estoque.md`](./estoque.md) | Estoque | 6 |
@@ -85,13 +85,14 @@ registram o "Supera:" do mesmo jeito, e o log só fica completo com elas na tabe
 |---|---|---|
 | **D47**, **D48**, **D49** (inferência pela conta do sistema operacional) | **A** | a fila deixa de inferir pessoa; sai a invariante 14, e o D50 fica |
 | **D115** (a rota da aba de telemetria) | **D** | a telemetria e o comando vão para a ficha do ativo e a do posto |
-| **D42**, **D91** (a cifra), **D102** (licença ↔ pacote) | **G** | licença vira cadastro simples, sem conformidade de software nem chave cifrada |
+| **D42**, **D91** (a cifra), **D102** (licença ↔ pacote), **D81**, **D145** (em parte: a cifra que sobrava) | **G** | licença vira cadastro simples, sem conformidade de software nem chave cifrada |
 | **D103**, **D104** (fusão de máquinas) | **H** | o `hwid` é estável entre reinstalações; não há o que fundir |
 | **D36**, **D37**, **D38**, **D153**, **D160** (estoque) | **J** | `StockItem` + `StockMovement`, saída por unidade, alvo em pessoa ou posto |
 | **D14** (o `ASSET` como alvo), **D87** | **K** | a posse tem dois alvos: pessoa e posto |
-| **D21**, **D31**, **D32**, **D82** (massa e desligamento), **D57**, **D86** (e-mail), **D66**, **D129**, **D130** (a view do responsável), **D73**, **D74**, **D75**, **D135**, **D156** (`Department`), **D154**, **D161** (relatórios), **D69**, **D138**, **D163** (export e relatório) | **O** | o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada |
+| **D21**, **D31**, **D32**, **D82** (massa e desligamento), **D93** (em parte: o `offboard`), **D57**, **D86** (e-mail), **D66**, **D129**, **D130** (a view do responsável), **D73**, **D74**, **D75**, **D135**, **D156** (`Department`), **D154**, **D161** (relatórios), **D69**, **D138**, **D163** (export e relatório) | **O** | o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada |
 | **D17** (`assignedToId`), **D26** (`createdById`/`updatedById`) | **Q** | a varredura do código morto: coluna, rota e parâmetro sem leitor saem |
 | a credencial à parte da F3 (`username` + `set-password` — decisão da execução, sem número) | **R** | a senha nasce no cadastro do usuário e o login é o e-mail |
+| **D40**, **D41**, **D43**, **D90**, **D92**, **D44** (em parte), a lixeira da licença da F6 | **AA** | a licença vira quantidade e entregas: sem vaga numerada, sem lixeira, sem reatribuível nem queima, com Encerradas e o "hoje" de Brasília |
 
 Quatro decisões nasceram para resolver **conflito entre dois planos**, e não de uma fase só:
 **D79** (cada job tem a própria linha), **D80** (um `ApiToken` com dono polimórfico), **D81** (uma
@@ -142,6 +143,7 @@ que o código ainda cita. Letra deixa claro, só pelo nome, que a decisão é de
 | **X** | O histórico não guarda quem fez | [Acesso](./acesso.md#x--o-histórico-não-guarda-quem-fez) |
 | **Y** | O posto sai de `Location`: localização guarda, posto recebe | [Posse](./posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe) |
 | **Z** | Sobra um cargo só: Administrador, e a separação de cargos fica para decidir | [Acesso](./acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir) |
+| **AA** | A licença vira quantidade e entregas: sem vaga numerada, sem lixeira, com Encerradas | [Licenças](./licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas) |
 
 **`N` não existe, de propósito.** As correções de segurança e consistência desta rodada (custo
 de compra vazando por uma quarta porta, comando que respondia sucesso sem confirmação do socket,
@@ -156,7 +158,7 @@ já prometiam e o código não cumpria. Continua a letra pelo mesmo motivo de a 
 adotado: a numeração `D` corresponde ao que o código cita, e recomeçá-la colidiria. A `R` veio
 logo depois dela, pelo mesmo caminho: a varredura achou a rota de senha sem chamador, e a
 resposta foi levar a senha para o cadastro. A `S` é o renomeio do papel para cargo, a palavra
-que a equipe usa. A `T` tira o seed da conta de administrador. A próxima decisão é a `AA`: acabado o alfabeto, a letra continua com duas.
+que a equipe usa. A `T` tira o seed da conta de administrador. A `AA` veio da revisão da página de Licenças — acabado o alfabeto, a letra continua com duas —, e a próxima é a `AB`.
 
 ## O índice
 

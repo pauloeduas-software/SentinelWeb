@@ -1,19 +1,22 @@
 import type { ClientePosse } from '../../assignment/use-cases/resolve-responsibles.usecase';
-import { contarAssentosDaPessoa } from '../../license/use-cases/count-person-seats.usecase';
+import type { ReferenciaDoErro } from '../../../core/errors/app-error';
+import {
+  comoReferencias, licencasDaPessoa, nomesDasLicencas, type LicencaComAlguem,
+} from '../../license/use-cases/count-license-checkouts.usecase';
 import { contarEstoqueDaPessoa } from '../../stock/use-cases/count-person-stock.usecase';
 
 // O QUE AINDA PRENDE UMA PESSOA AO INVENTÁRIO — as pontas, contadas juntas.
 //
 // São QUATRO, e vêm do mesmo lugar (docs/referencia/modelo-de-posse.md): o que
-// está no NOME da pessoa — ativo (`Assignment` alvo `PERSON`), assento de licença
-// (`LicenseSeatCheckout.assignedPersonId`) e unidade de estoque (`StockMovement`
+// está no NOME da pessoa — ativo (`Assignment` alvo `PERSON`), licença
+// (`LicenseCheckout.assignedPersonId`) e unidade de estoque (`StockMovement`
 // de SAIDA alvo `PERSON`) — e o que ela responde por OCUPAR um posto
 // (`WorkstationOccupant`). Contar só a primeira é o erro que o D32 descreve: quem
 // saiu continua respondendo por tudo que está na Mesa 1, e nenhuma consulta
 // acusa, porque a Camada 3 é derivada.
 //
 // A PERGUNTA QUE DECIDE se algo entra aqui não é "tem tabela própria?", é
-// *"alguém responde por isto quando a pessoa sai?"*. Assento de licença responde
+// *"alguém responde por isto quando a pessoa sai?"*. Licença entregue a ela responde
 // sim — ele custa dinheiro por mês e é nominal; o mouse no nome dela também: é
 // patrimônio, por quantidade, com uma pessoa respondendo. Por isso os dois
 // entraram junto com os outros em vez de virarem uma contagem que alguém
@@ -25,12 +28,13 @@ interface PosseAbertaDaPessoa {
   /** `WorkstationOccupant` abertas — o que encerrar. */
   postosOcupados: number;
   /**
-   * `LicenseSeatCheckout` abertas com `assignedPersonId` — a terceira ponta, da F6.
+   * `LicenseCheckout` abertas com `assignedPersonId` — a terceira ponta —, com
+   * o NOME de cada licença: a recusa diz quais voltam.
    *
-   * SÓ as da pessoa. Os assentos de ATIVO não entram: eles são da máquina
-   * (`license/use-cases/count-person-seats.usecase.ts`).
+   * SÓ as da pessoa. As licenças de ATIVO não entram: elas são da máquina
+   * (`license/use-cases/count-license-checkouts.usecase.ts`).
    */
-  assentosEmPosse: number;
+  licencas: LicencaComAlguem[];
   /**
    * `StockMovement` de SAIDA abertas com alvo `PERSON` — a quarta ponta, a do
    * estoque. SÓ as da pessoa: as unidades do POSTO são do posto, e quem sai da
@@ -51,7 +55,7 @@ export async function contarPosseAberta(
   client: ClientePosse,
   personId: string,
 ): Promise<PosseAbertaDaPessoa> {
-  const [ativosEmPosse, postosOcupados, assentosEmPosse, itensEmPosse] = await Promise.all([
+  const [ativosEmPosse, postosOcupados, licencas, itensEmPosse] = await Promise.all([
     client.assignment.count({
       // `asset: { deletedAt: null }` EXPLÍCITO. `assignments` não tem
       // `deletedAt`, então a extension não escopa esta contagem — e ela não
@@ -63,16 +67,22 @@ export async function contarPosseAberta(
       where: { targetType: 'PERSON', targetPersonId: personId, checkinAt: null, asset: { deletedAt: null } },
     }),
     client.workstationOccupant.count({ where: { personId, endedAt: null } }),
-    contarAssentosDaPessoa(client, personId),
+    licencasDaPessoa(client, personId),
     contarEstoqueDaPessoa(client, personId),
   ]);
 
-  return { ativosEmPosse, postosOcupados, assentosEmPosse, itensEmPosse };
+  return { ativosEmPosse, postosOcupados, licencas, itensEmPosse };
 }
 
 /** "2 ativos", "1 ativo" — plural à mão porque é uma frase, não um dado. */
 function quantos(total: number, singular: string, plural: string): string {
   return `${total} ${total === 1 ? singular : plural}`;
+}
+
+/** A recusa: a frase, e as licenças que ela cita, para a tela pôr link. */
+export interface RecusaDaPessoa {
+  mensagem: string;
+  refs: ReferenciaDoErro[];
 }
 
 /**
@@ -83,17 +93,21 @@ function quantos(total: number, singular: string, plural: string): string {
  * qual das duas camadas manda o operador procurar no lugar errado — e a camada
  * do posto é justamente a que ninguém lembra.
  *
+ * AS LICENÇAS VÊM PELO NOME — "tem 3 licenças (AutoCAD, Office e VPN)" — e
+ * como `refs`: o Devolver só existe no detalhe da licença, e quem desliga um
+ * funcionário que sai vai direto a cada uma pelo link.
+ *
  * Devolve `null` quando não há nada aberto: é o sinal de que a operação pode
  * seguir, sem o chamador reinterpretar os números.
  */
 export function motivoParaRecusar(
   posse: PosseAbertaDaPessoa,
   operacao: 'excluir' | 'desativar',
-): string | null {
+): RecusaDaPessoa | null {
   const partes: string[] = [];
   if (posse.ativosEmPosse > 0) partes.push(`responde por ${quantos(posse.ativosEmPosse, 'ativo', 'ativos')}`);
-  if (posse.assentosEmPosse > 0) {
-    partes.push(`ocupa ${quantos(posse.assentosEmPosse, 'assento de licença', 'assentos de licença')}`);
+  if (posse.licencas.length > 0) {
+    partes.push(`tem ${quantos(posse.licencas.length, 'licença', 'licenças')} (${nomesDasLicencas(posse.licencas)})`);
   }
   if (posse.itensEmPosse > 0) {
     partes.push(`está com ${quantos(posse.itensEmPosse, 'item de estoque', 'itens de estoque')}`);
@@ -102,15 +116,12 @@ export function motivoParaRecusar(
 
   if (partes.length === 0) return null;
 
-  // Vírgula entre as primeiras e " e " antes da última: com quatro pontas, um
-  // `join(' e ')` produziria "responde por 1 ativo e ocupa 1 assento de licença
-  // e ocupa 1 posto" — uma frase que ninguém lê até o fim.
   const frase = partes.length === 1
     ? partes[0]
     : `${partes.slice(0, -1).join(', ')} e ${partes[partes.length - 1]}`;
 
-  // A FRASE DIZ O QUE FAZER, e o que ela manda fazer tem que EXISTIR: devolver
-  // o ativo, o assento e a unidade de estoque, e encerrar a ocupação, são as
-  // quatro operações que zeram as quatro pontas contadas acima.
-  return `Este colaborador ainda ${frase}. Devolva o que está com ele e encerre as ocupações antes de ${operacao}.`;
+  return {
+    mensagem: `Este colaborador ainda ${frase}. Devolva o que está com ele e encerre as ocupações antes de ${operacao}.`,
+    refs: comoReferencias(posse.licencas),
+  };
 }

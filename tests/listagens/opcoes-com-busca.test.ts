@@ -91,6 +91,14 @@ describe('As outras duas rotas de /options têm a mesma busca', () => {
     expect(Array.isArray(body)).toBe(true);
   });
 
+  it('o colaborador vem com o e-mail como detalhe — é o que separa dois de mesmo nome', async () => {
+    for (const email of ['joao.silva@um.local', 'joao.silva@dois.local']) {
+      expect((await api.post('/api/people', { name: 'João Silva', email })).status).toBe(201);
+    }
+    const { body } = await api.get<(Opcao & { detalhe?: string | null })[]>('/api/people/options?q=João Silva');
+    expect(body.map((opcao) => opcao.detalhe).sort()).toEqual(['joao.silva@dois.local', 'joao.silva@um.local']);
+  });
+
   it('ativos', async () => {
     const { status } = await api.get<Opcao[]>('/api/assets/options?q=ATV');
     expect(status).toBe(200);

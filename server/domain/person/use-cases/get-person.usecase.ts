@@ -1,6 +1,7 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { listPersonStock } from '../../stock/use-cases/list-workstation-stock.usecase';
+import { buscarEntregasDaPessoa, comStatus } from '../../license/use-cases/list-target-checkouts.usecase';
 import { PERSON_DETAIL_SELECT } from '../helpers/person-select.helper';
 
 /**
@@ -24,6 +25,13 @@ interface PessoaDaFicha {
    * (`get-workstation.usecase.ts`).
    */
   itens: Awaited<ReturnType<typeof listPersonStock>>;
+
+  /**
+   * As licenças entregues A ELA e ainda abertas, cada uma com o link para o
+   * detalhe da licença, onde está o Devolver. É o que o 409 da desativação manda
+   * devolver — e a ficha é o único lugar que as mostra pela pessoa.
+   */
+  licencas: ReturnType<typeof comStatus>;
 }
 
 export async function getPerson(id: string): Promise<PessoaDaFicha> {
@@ -33,5 +41,9 @@ export async function getPerson(id: string): Promise<PessoaDaFicha> {
   const pessoa = await prisma.person.findFirst({ where: { id }, select: PERSON_DETAIL_SELECT });
   if (!pessoa) throw new AppError('Colaborador não encontrado.', 404);
 
-  return { ...pessoa, itens: await listPersonStock(id) };
+  const [itens, licencas] = await Promise.all([
+    listPersonStock(id),
+    buscarEntregasDaPessoa(id, { abertas: true }),
+  ]);
+  return { ...pessoa, itens, licencas: comStatus(licencas) };
 }

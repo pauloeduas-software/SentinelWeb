@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
-  useCheckinSeat, useCheckoutSeat, useCreateLicense, useDeleteLicense,
-  useLicenseAlertsQuery, useLicensesQuery, useRestoreLicense, useUpdateLicense,
+  useCheckinLicense, useCheckoutLicense, useCreateLicense, useDeleteLicense,
+  useLicenseAlertsQuery, useLicenseQuery, useLicensesQuery, useTerminateLicense, useUpdateCheckoutKey,
+  useUpdateLicense,
 } from '../../../domain/license/license.queries';
 import type {
-  AlvoDoAssento, Licenca, LicencaInput,
+  AlvoDaEntrega, Licenca, LicencaInput, MotivoDoAlerta, RecorteDaLicenca, StatusDoFiltro,
 } from '../../../domain/shared/license.types';
-import type { ListView } from '../../../domain/shared/list.types';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useNotificacao } from '../../hooks/useNotificacao';
 
@@ -15,26 +16,18 @@ const PER_PAGE = 15;
 /** Qual janela está aberta. Uma de cada vez, como nas outras telas. */
 type ModalDeLicenca = 'criar' | 'editar' | 'detalhe' | 'entregar' | null;
 
-/**
- * Os números do contrato NA HORA DO CLIQUE, para a frase da confirmação.
- *
- * Vem de quem desenhou a grade — `null` significa "não queima, não pergunte".
- * Um booleano aqui obrigaria este hook a adivinhar os números, e o único lugar
- * que os tem frescos é a janela de detalhe.
- */
-export interface AvisoDeQueima {
-  seatsTotal: number;
-  queimados: number;
-}
-
-// Estado da tela de Licenças: página, busca, vista e qual licença está aberta.
+// Estado da tela de Licenças: página, busca, aba e qual licença está aberta.
 // Tudo de UMA tela — `useState`, não store (docs/referencia/arquitetura.md).
 export function useLicencas() {
   const notificar = useNotificacao();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [view, setView] = useState<ListView>('active');
+  const [view, setView] = useState<RecorteDaLicenca>('atuais');
   const [categoryId, setCategoryId] = useState<string | undefined>();
+  const [status, setStatus] = useState<StatusDoFiltro | undefined>();
+  // Só as que alguém ainda usa — o filtro da aba Encerradas, para onde o alerta
+  // "encerradas em uso" leva.
+  const [soEmUso, setSoEmUso] = useState(false);
   const debouncedSearch = useDebouncedValue(search);
 
   // Zerar a página no mesmo handler que muda o recorte, e não num `useEffect`
@@ -45,8 +38,43 @@ export function useLicencas() {
     setPage(1);
   };
 
-  const changeView = (proxima: ListView) => {
+  // O status é filtro da aba Atuais: trocar de aba o desliga, senão a volta
+  // para Atuais mostraria um recorte que ninguém escolheu de novo — e em
+  // Encerradas o servidor responde 422.
+  const changeView = (proxima: RecorteDaLicenca) => {
     setView(proxima);
+    setStatus(undefined);
+    setSoEmUso(false);
+    setPage(1);
+  };
+
+  const changeSoEmUso = (ligado: boolean) => {
+    setSoEmUso(ligado);
+    setPage(1);
+  };
+
+  /**
+   * Os links do alerta: cada contagem leva à aba e ao filtro que mostram
+   * exatamente aquelas. A busca e a categoria saem, para a lista bater com o
+   * número que foi clicado.
+   */
+  const irParaAlerta = (motivo: MotivoDoAlerta) => {
+    setSearch('');
+    setCategoryId(undefined);
+    setPage(1);
+    if (motivo === 'ENCERRADA_EM_USO') {
+      setView('encerradas');
+      setStatus(undefined);
+      setSoEmUso(true);
+      return;
+    }
+    setView('atuais');
+    setSoEmUso(false);
+    setStatus(motivo === 'VENCIDA' ? 'EXPIRADA' : 'VENCENDO');
+  };
+
+  const changeStatus = (proximo: StatusDoFiltro | undefined) => {
+    setStatus(proximo);
     setPage(1);
   };
 
@@ -56,8 +84,11 @@ export function useLicencas() {
   };
 
   const params = useMemo(
-    () => ({ page, perPage: PER_PAGE, view, q: debouncedSearch || undefined, categoryId }),
-    [page, view, debouncedSearch, categoryId],
+    () => ({
+      page, perPage: PER_PAGE, view, q: debouncedSearch || undefined, categoryId, status,
+      emUso: soEmUso ? 'sim' as const : undefined,
+    }),
+    [page, view, debouncedSearch, categoryId, status, soEmUso],
   );
 
   const { data, isPending, error } = useLicensesQuery(params);
@@ -67,29 +98,62 @@ export function useLicencas() {
   const criar = useCreateLicense();
   const editar = useUpdateLicense();
   const excluir = useDeleteLicense();
-  const restaurar = useRestoreLicense();
-  const entregar = useCheckoutSeat();
-  const devolver = useCheckinSeat();
+  const encerrar = useTerminateLicense();
+  const entregar = useCheckoutLicense();
+  const devolver = useCheckinLicense();
+  const trocarChave = useUpdateCheckoutKey();
 
   const [modal, setModal] = useState<ModalDeLicenca>(null);
   // A LICENÇA ABERTA é guardada como a LINHA inteira, não só o id: a janela
   // precisa do nome e das contagens para desenhar o cabeçalho no primeiro
   // quadro, e a consulta do detalhe chega depois.
   const [licencaAberta, setLicencaAberta] = useState<Licenca | null>(null);
+  // Entregar e Editar abertos DE DENTRO do detalhe voltam para ele ao fechar —
+  // salvando ou cancelando: quem estava olhando a licença continua nela.
+  const [voltarAoDetalhe, setVoltarAoDetalhe] = useState(false);
+
+  // O LINK DE OUTRA TELA — `?licenca=<id>`, que a aba Licenças do ativo e a
+  // ficha do colaborador usam (`caminhoDaLicenca`) para levar à devolução. Abre
+  // o detalhe daquela licença assim que ela chega, sem efeito: enquanto nenhuma
+  // janela foi aberta aqui, a janela aberta é a do link. Fechar tira o link.
+  const [parametros, setParametros] = useSearchParams();
+  const idDoLink = parametros.get('licenca');
+  const doLink = useLicenseQuery(idDoLink);
+  const pelaUrl = modal === null && doLink.data ? doLink.data : null;
+  const modalAtual: ModalDeLicenca = pelaUrl ? 'detalhe' : modal;
+  const licencaAtual = pelaUrl ?? licencaAberta;
 
   const abrir = (proximo: ModalDeLicenca, licenca: Licenca | null = null) => {
+    setVoltarAoDetalhe(modalAtual === 'detalhe' && (proximo === 'entregar' || proximo === 'editar'));
     setLicencaAberta(licenca);
     setModal(proximo);
   };
 
   const fechar = () => {
+    if (voltarAoDetalhe) {
+      setVoltarAoDetalhe(false);
+      setModal('detalhe');
+      return;
+    }
     setModal(null);
     setLicencaAberta(null);
+    if (idDoLink) {
+      setParametros((atuais) => {
+        atuais.delete('licenca');
+        return atuais;
+      }, { replace: true });
+    }
+  };
+
+  // Última linha da página saiu da aba: volta uma, senão a tabela abre vazia
+  // com o paginador apontando para uma página que não existe mais.
+  const voltarSeEsvaziou = () => {
+    if (licencas.length === 1 && page > 1) setPage(page - 1);
   };
 
   // Os erros sobem para o formulário mostrar a mensagem do servidor — é por
-  // aqui que aparecem o 422 de categoria do tipo errado e o 409 de reduzir o
-  // contrato abaixo do ocupado.
+  // aqui que aparecem o 422 de categoria do tipo errado e o 409 de reduzir a
+  // quantidade abaixo do que está em uso.
   const handleCriar = async (dados: LicencaInput) => {
     await criar.mutateAsync(dados);
     fechar();
@@ -97,91 +161,85 @@ export function useLicencas() {
 
   const handleEditar = async (dados: Partial<LicencaInput>) => {
     if (!licencaAberta) return;
-    await editar.mutateAsync({ id: licencaAberta.id, data: dados });
+    // Nada mudou: fechar é a resposta inteira, sem ida ao servidor.
+    if (Object.keys(dados).length > 0) await editar.mutateAsync({ id: licencaAberta.id, data: dados });
     fechar();
   };
 
-  const handleEntregar = async (alvo: AlvoDoAssento) => {
+  const handleEntregar = async (alvo: AlvoDaEntrega) => {
     if (!licencaAberta) return;
     await entregar.mutateAsync({ licenseId: licencaAberta.id, alvo });
     fechar();
   };
 
-  /**
-   * A DEVOLUÇÃO — e ela pode DESTRUIR VALOR.
-   *
-   * Quando `reassignable = false`, devolver QUEIMA o assento: ele não volta ao
-   * contrato. Por isso este é o único handler da tela com confirmação, e a
-   * confirmação diz o NÚMERO que vai sobrar — "restarão 4 de 5 utilizáveis" é
-   * a informação que faz alguém parar; "tem certeza?" não é.
-   *
-   * ═══════════════════════════════════════════════════════════════════════════
-   * O NÚMERO É `seatsTotal − queimados − 1`, E NÃO `livres`.
-   *
-   * UTILIZÁVEL é o que não queimou: `seatsTotal − queimados` (o aposentado já
-   * saiu de `seatsTotal` quando o contrato encolheu, D92). Este assento está
-   * OCUPADO agora — devolvê-lo e queimá-lo tira um dos utilizáveis e não muda
-   * `livres`, que continua sendo o que já estava vazio.
-   *
-   * Usar `livres` acertava por coincidência quando havia exatamente UM assento
-   * ocupado, e mentia em todo o resto: num contrato de 5 com 3 ocupados e 2
-   * livres, o aviso prometia "restarão 2" quando restam 4.
-   *
-   * E os números vêm de quem está OLHANDO a grade (o detalhe, que refaz a
-   * consulta), não da linha da listagem capturada quando o modal abriu: depois
-   * de duas devoluções na mesma janela, aquela linha já está velha.
-   * ═══════════════════════════════════════════════════════════════════════════
-   */
-  const handleDevolver = async (seatId: string, queima: AvisoDeQueima | null) => {
-    if (queima) {
-      const restarao = Math.max(queima.seatsTotal - queima.queimados - 1, 0);
-      const ok = window.confirm(
-        `Esta licença NÃO é reatribuível: devolver este assento o QUEIMA, e ele não volta ao contrato.\n\n`
-        + `Restarão ${restarao} de ${queima.seatsTotal} assentos utilizáveis.\n\n`
-        + 'Isto não tem volta. Continuar?',
-      );
-      if (!ok) return;
-    }
+  // ─────────────────────────────────────────────────────────────────────────
+  // OS CLIQUES DIRETOS — devolver, encerrar, excluir — não
+  // têm campo de erro para a mensagem subir, e por isso cada um tem o seu
+  // `try/catch` com notificação (`useNotificacao`). Sem ele a rejeição vira
+  // *unhandled rejection* e a tela não faz NADA: o 409 daqui é escrito para
+  // ensinar, e engoli-lo transforma uma recusa explicada numa tela que parece
+  // travada.
+  // ─────────────────────────────────────────────────────────────────────────
 
+  /**
+   * A devolução, no dia escolhido: a licença volta a ficar livre. Diz se deu
+   * certo, para o detalhe voltar uma página quando a última linha dela saiu.
+   */
+  const handleDevolver = async (checkoutId: string, checkinAt: string): Promise<boolean> => {
     try {
-      await devolver.mutateAsync({ seatId });
+      await devolver.mutateAsync({ checkoutId, checkinAt });
+      return true;
     } catch (erro) {
-      // O 409 de assento não ocupado: duas abas abertas na mesma grade, a
-      // segunda perde.
+      // O 409 de entrega já devolvida (duas abas abertas na mesma licença) e o
+      // 422 da data — futura, ou antes da entrega.
       notificar.erro((erro as Error).message);
+      return false;
     }
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // EXCLUIR E RESTAURAR precisam do `try/catch`: o clique é direto na linha da
-  // tabela e não há campo de erro para a mensagem subir. Sem ele a rejeição
-  // vira *unhandled rejection* e a tela não faz NADA — o operador clica em
-  // "Lixeira" numa licença com assento ocupado, nada acontece, e ele clica de
-  // novo. O 409 daqui é escrito para ensinar, e engoli-lo transforma uma recusa
-  // explicada numa tela que parece travada.
-  //
-  // A mensagem sai como notificação de erro (`useNotificacao`), a mesma do
-  // `useAssets`: não trava a tela e fica o tempo de ser lida.
-  // ─────────────────────────────────────────────────────────────────────────
+  /**
+   * A troca da chave de uma entrega aberta. Diz se deu certo, para a linha só
+   * sair da edição quando a chave foi gravada.
+   */
+  const handleTrocarChave = async (checkoutId: string, productKey: string | null): Promise<boolean> => {
+    try {
+      await trocarChave.mutateAsync({ checkoutId, productKey });
+      return true;
+    } catch (erro) {
+      // O 409 da chave que já está em outra entrega aberta, e o da entrega que
+      // foi devolvida enquanto a tela estava aberta.
+      notificar.erro((erro as Error).message);
+      return false;
+    }
+  };
+
+  // ENCERRA MESMO COM ALGUÉM USANDO, e por isso a pergunta diz quantos: a
+  // licença vai para Encerradas e fica no alerta até tudo voltar.
+  const handleEncerrar = async (licenca: Licenca) => {
+    const pergunta = licenca.emUso > 0
+      ? `"${licenca.name}" ainda está com ${licenca.emUso}. Encerrar mesmo assim? `
+        + 'Ela vai para Encerradas e fica no alerta até tudo ser devolvido.'
+      : `Encerrar "${licenca.name}" hoje? Ela sai da lista e vai para Encerradas.`;
+    if (!window.confirm(pergunta)) return;
+    try {
+      await encerrar.mutateAsync(licenca.id);
+      voltarSeEsvaziou();
+    } catch (erro) {
+      // O 409 da licença que já estava encerrada (duas abas).
+      notificar.erro((erro as Error).message);
+    }
+  };
 
   const handleExcluir = async (licenca: Licenca) => {
+    if (!window.confirm(
+      `Excluir "${licenca.name}" de vez? É para o cadastro errado: a licença que já foi entregue não se exclui, se encerra.`,
+    )) return;
     try {
       await excluir.mutateAsync(licenca.id);
-      // Última linha da página: volta uma, senão a tabela abre vazia com o
-      // paginador apontando para uma página que não existe mais.
-      if (licencas.length === 1 && page > 1) setPage(page - 1);
+      // Excluída do detalhe: a janela não tem mais o que mostrar.
+      if (licencaAtual?.id === licenca.id) fechar();
+      voltarSeEsvaziou();
     } catch (erro) {
-      notificar.erro((erro as Error).message);
-    }
-  };
-
-  const handleRestaurar = async (licenca: Licenca) => {
-    try {
-      await restaurar.mutateAsync(licenca.id);
-      if (licencas.length === 1 && page > 1) setPage(page - 1);
-    } catch (erro) {
-      // O 409 de nome reaproveitado enquanto a licença estava na lixeira: a
-      // unicidade é índice PARCIAL, só entre as vivas.
       notificar.erro((erro as Error).message);
     }
   };
@@ -190,7 +248,7 @@ export function useLicencas() {
     licencas,
     total: data?.total ?? 0,
     carregando: isPending,
-    // Para a tabela não dizer "nenhum cadastrado" quando a consulta falhou.
+    // Para a tabela não dizer "nenhuma cadastrada" quando a consulta falhou.
     erro: error ? error.message : null,
     page,
     perPage: PER_PAGE,
@@ -201,19 +259,31 @@ export function useLicencas() {
     changeView,
     categoryId,
     changeCategoria,
+    status,
+    changeStatus,
+    soEmUso,
+    changeSoEmUso,
+    irParaAlerta,
 
-    alertas: alertas ?? { vencendo: [], assentosBaixos: [] },
+    alertas: alertas ?? { total: 0, contagem: { ENCERRADA_EM_USO: 0, VENCIDA: 0, VENCENDO: 0 }, rows: [] },
 
-    modal,
-    licencaAberta,
+    modal: modalAtual,
+    licencaAberta: licencaAtual,
+    // O link apontava para uma licença que não existe mais (excluída).
+    erroDoLink: idDoLink && modal === null && doLink.error ? doLink.error.message : null,
     abrir,
     fechar,
+
+    // Enquanto uma ação corre, os botões dela ficam desabilitados: o duplo
+    // clique dava "já foi devolvida" DEPOIS de a devolução ter dado certo.
+    ocupado: excluir.isPending || encerrar.isPending || devolver.isPending || trocarChave.isPending,
 
     handleCriar,
     handleEditar,
     handleEntregar,
     handleDevolver,
+    handleTrocarChave,
+    handleEncerrar,
     handleExcluir,
-    handleRestaurar,
   };
 }

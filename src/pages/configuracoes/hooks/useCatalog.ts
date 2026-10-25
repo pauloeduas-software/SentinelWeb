@@ -9,6 +9,7 @@ import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useNotificacao } from '../../hooks/useNotificacao';
 import { CATALOG_UI_SPECS } from '../specs';
 import type { AcaoLinhaId } from '../specs/catalog-ui.types';
+import { linksDoErro } from '../../helpers/erro.helper';
 
 // Catálogo é lista curta: com 10, onze categorias já viravam duas páginas. A
 // tabela rola por dentro, então 25 não estoura a tela.
@@ -144,7 +145,8 @@ export function useCatalog() {
     try {
       await editar.mutateAsync({ id: registro.id, data: { [campo]: !ligado } });
     } catch (erro) {
-      notificar.erro((erro as Error).message);
+      // A desativação do colaborador recusada traz as licenças dele, com link.
+      notificar.erro((erro as Error).message, linksDoErro(erro));
     }
   };
 
@@ -161,8 +163,9 @@ export function useCatalog() {
       if (registros.length === 1 && page > 1) setPage(page - 1);
     } catch (erro) {
       // É aqui que aparece o 409 de "em uso por N registros" — a regra que
-      // impede apagar uma categoria que alguém está usando.
-      notificar.erro((erro as Error).message);
+      // impede apagar uma categoria que alguém está usando — e o do
+      // colaborador, com as licenças dele em link.
+      notificar.erro((erro as Error).message, linksDoErro(erro));
     }
   };
 

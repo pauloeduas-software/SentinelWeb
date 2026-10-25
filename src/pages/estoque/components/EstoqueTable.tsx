@@ -1,7 +1,7 @@
 import { Edit2, PackageMinus, PackagePlus, RotateCcw, Trash2 } from 'lucide-react';
 import type { ItemDeEstoque } from '../../../domain/shared/stock.types';
 import type { ListView } from '../../../domain/shared/list.types';
-import { corDoSaldo } from '../helpers/estoque.helper';
+import { classeDoSaldo } from '../helpers/estoque.helper';
 
 // A tabela de estoque. Apresentacional puro: recebe valor e callback, não
 // conhece query nem HTTP.
@@ -80,7 +80,7 @@ export default function EstoqueTable({
                 </td>
 
                 <td className="px-4 py-3 text-right">
-                  <span style={{ color: corDoSaldo(item) }}>{item.disponivel}</span>
+                  <span className={classeDoSaldo(item)}>{item.disponivel}</span>
                   <span className="text-text-tertiary"> / {item.qty}</span>
                   {item.fora > 0 && (
                     <div className="text-[10px] text-text-tertiary mt-1">{item.fora} fora</div>

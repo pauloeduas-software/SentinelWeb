@@ -48,9 +48,17 @@ export function registrarPerdaDeSessao(handler: () => void): void {
  * console. Nenhuma tela faz `instanceof` hoje — todas leem só o `message`.
  */
 export class ErroDaApi extends Error {
-  constructor(message: string, options?: ErrorOptions) {
+  /**
+   * O corpo da resposta de erro, como veio. A frase já está em `message`; o
+   * resto — as `refs` que a recusa cita — quem interpreta é a tela
+   * (`pages/helpers/erro.helper.ts`): o `core` não conhece domínio.
+   */
+  corpo?: unknown;
+
+  constructor(message: string, options?: ErrorOptions & { corpo?: unknown }) {
     super(message, options);
     this.name = 'ErroDaApi';
+    this.corpo = options?.corpo;
   }
 }
 
@@ -84,6 +92,6 @@ apiClient.interceptors.response.use(
     // `ErroDaApi` e não `Error`: continua sendo um `Error` para todo código que
     // só lê `.message` (que é todo ele hoje), e o `cause` guarda o erro do axios
     // para quem for depurar.
-    return Promise.reject(new ErroDaApi(message, { cause: error }));
+    return Promise.reject(new ErroDaApi(message, { cause: error, corpo: error?.response?.data }));
   },
 );

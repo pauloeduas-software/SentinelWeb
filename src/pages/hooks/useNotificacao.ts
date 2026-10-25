@@ -22,10 +22,18 @@ import { create } from 'zustand';
 
 export type TipoNotificacao = 'erro' | 'aviso' | 'sucesso';
 
+/** Um link no cartão — a licença que a recusa manda devolver. */
+export interface LinkDaNotificacao {
+  rotulo: string;
+  para: string;
+}
+
 export interface Notificacao {
   id: number;
   tipo: TipoNotificacao;
   mensagem: string;
+  /** Com links, o cartão fica até alguém fechar: é para clicar, não só ler. */
+  links?: LinkDaNotificacao[];
 }
 
 // QUANTO TEMPO CADA UMA FICA. O erro fica o dobro do sucesso porque é o que se
@@ -62,7 +70,7 @@ function duracao(tipo: TipoNotificacao, mensagem: string): number {
 const MAXIMO_NA_TELA = 4;
 
 interface AcoesDeNotificacao {
-  erro: (mensagem: string) => void;
+  erro: (mensagem: string, links?: LinkDaNotificacao[]) => void;
   aviso: (mensagem: string) => void;
   sucesso: (mensagem: string) => void;
   fechar: (id: number) => void;
@@ -89,10 +97,10 @@ export const useNotificacoes = create<EstadoDasNotificacoes>()((set) => {
     set((estado) => ({ fila: estado.fila.filter((item) => item.id !== id) }));
   };
 
-  const mostrar = (tipo: TipoNotificacao, mensagem: string) => {
+  const mostrar = (tipo: TipoNotificacao, mensagem: string, links?: LinkDaNotificacao[]) => {
     const id = proximoId++;
     set((estado) => {
-      const fila = [...estado.fila, { id, tipo, mensagem }];
+      const fila = [...estado.fila, { id, tipo, mensagem, ...(links?.length ? { links } : {}) }];
       // As que saem pelo teto levam o temporizador junto, senão ele dispararia
       // um `fechar` para um id que já não está na fila.
       for (const antiga of fila.slice(0, Math.max(0, fila.length - MAXIMO_NA_TELA))) {
@@ -101,13 +109,14 @@ export const useNotificacoes = create<EstadoDasNotificacoes>()((set) => {
       }
       return { fila: fila.slice(-MAXIMO_NA_TELA) };
     });
+    if (links?.length) return;
     temporizadores.set(id, setTimeout(() => fechar(id), duracao(tipo, mensagem)));
   };
 
   return {
     fila: [],
     acoes: {
-      erro: (mensagem) => mostrar('erro', mensagem),
+      erro: (mensagem, links) => mostrar('erro', mensagem, links),
       aviso: (mensagem) => mostrar('aviso', mensagem),
       sucesso: (mensagem) => mostrar('sucesso', mensagem),
       fechar,

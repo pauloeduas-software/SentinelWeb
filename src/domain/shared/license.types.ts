@@ -1,4 +1,4 @@
-// O CONTRATO DAS LICENÇAS com a API (F6).
+// O CONTRATO DAS LICENÇAS com a API (docs/referencia/licencas.md).
 //
 // ⚠️ `purchaseCost` é STRING, e não `number` — a coluna é `Decimal` no Postgres
 // e o JSON a serializa assim. É a armadilha nº 7 da F1, pela quarta vez.
@@ -15,31 +15,28 @@ interface CategoriaDaLicenca extends ReferenciaNomeada {
 /** Derivado das datas e do dia de hoje, nunca coluna (D44). */
 export type StatusDaLicenca = 'ATIVA' | 'VENCENDO' | 'EXPIRADA' | 'ENCERRADA';
 
+/** As abas da tela: o que não encerrou, e o que encerrou. */
+export type RecorteDaLicenca = 'atuais' | 'encerradas';
+
+/** O filtro de status da aba Atuais — a encerrada tem aba própria. */
+export type StatusDoFiltro = Exclude<StatusDaLicenca, 'ENCERRADA'>;
+
 /**
- * Uma licença, com as contagens que o servidor calculou.
+ * Uma licença, com as contas que o servidor fez.
  *
- * `livres` NÃO é coluna do banco (D92): é a contagem dos assentos sem
- * aposentadoria, sem queima e sem ocupação aberta. Chega junto com `seatsTotal`
- * e não o substitui — a coluna principal da tela é o par `livres / seatsTotal`,
- * e mostrar só um dos dois esconde metade da informação.
- *
- * `aposentados` NÃO entra na subtração de `livres`: ele já saiu de `seatsTotal`
- * quando o contrato encolheu. Ele existe para explicar por que a grade tem mais
- * quadrados que o contrato.
+ * `livres` NÃO é coluna do banco: é `seatsTotal − emUso`, contado
+ * nas entregas. Chega junto com `seatsTotal` e não o substitui.
  */
 export interface Licenca {
   id: string;
   name: string;
+  /** Quantas foram compradas. */
   seatsTotal: number;
-  reassignable: boolean;
-  maintained: boolean;
 
   expirationDate: string | null;
   terminationDate: string | null;
   licensedToName: string | null;
   licensedToEmail: string | null;
-
-  minSeats: number | null;
 
   categoryId: string;
   manufacturerId: string | null;
@@ -53,128 +50,134 @@ export interface Licenca {
 
   createdAt: string;
   updatedAt: string;
-  deletedAt: string | null;
 
   category: CategoriaDaLicenca | null;
   manufacturer: ReferenciaNomeada | null;
 
   // ── O que o servidor CALCULOU ──────────────────────────────────────────────
-  ocupados: number;
-  queimados: number;
-  aposentados: number;
+  emUso: number;
   livres: number;
+  /** Já teve entrega, mesmo devolvida: não se exclui, se encerra. */
+  jaEntregue: boolean;
 
   status: StatusDaLicenca;
   /** Negativo = já venceu há tantos dias. Nulo quando não há vencimento. */
   diasParaVencer: number | null;
-  /** `livres < minSeats`. Falso quando não há piso. */
-  assentosBaixos: boolean;
-
 }
 
-interface PessoaDoAssento {
+/**
+ * A licença do DETALHE — `GET /api/licenses/:id`, a única leitura que traz a
+ * chave de produto. A listagem e a busca não a devolvem.
+ */
+export interface LicencaDetalhe extends Licenca {
+  /** A de volume, ou a lista das compradas, uma por linha. */
+  productKey: string | null;
+}
+
+interface PessoaDaEntrega {
   id: string;
   name: string;
   email: string | null;
 }
 
-interface AtivoDoAssento {
+interface AtivoDaEntrega {
   id: string;
   assetTag: string;
   name: string | null;
   model: { name: string } | null;
 }
 
-/** Uma ocupação de assento. `checkinAt` nulo = ocupado agora. */
-interface OcupacaoDeAssento {
+/** A licença embutida numa entrega. */
+interface LicencaDaEntrega {
   id: string;
-  seatId: string;
+  name: string;
+  seatsTotal: number;
+  expirationDate: string | null;
+  terminationDate: string | null;
+  category: { name: string } | null;
+  manufacturer: { name: string } | null;
+}
+
+/** Uma entrega de licença. `checkinAt` nulo = em uso agora. */
+export interface EntregaDeLicenca {
+  id: string;
+  /** Sempre presente: a licença que já foi entregue não se exclui. */
+  licenseId: string;
   assignedPersonId: string | null;
   assignedAssetId: string | null;
   checkoutAt: string;
   checkinAt: string | null;
   checkoutNotes: string | null;
-  assignedPerson: PessoaDoAssento | null;
-  assignedAsset: AtivoDoAssento | null;
+  assignedPerson: PessoaDaEntrega | null;
+  assignedAsset: AtivoDaEntrega | null;
+  license: LicencaDaEntrega;
+}
+
+/** Uma entrega com a chave dela — só o "Com quem está" do detalhe a traz. */
+export interface EntregaComChave extends EntregaDeLicenca {
+  productKey: string | null;
 }
 
 /**
- * Um assento da grade.
- *
- * `checkouts` traz NO MÁXIMO uma linha — a aberta —, e quem garante isso é o
- * índice único parcial do banco. Sem ele a tela teria que escolher qual mostrar.
+ * Uma entrega aberta vista DO ALVO — a aba Licenças do ativo e a ficha do
+ * colaborador —, com o status da licença ao lado.
  */
-export interface AssentoDeLicenca {
-  id: string;
-  licenseId: string;
-  seatNumber: number;
-  burnedAt: string | null;
-  retiredAt: string | null;
-  checkouts: OcupacaoDeAssento[];
-}
-
-/** O que a devolução responde — é o número que o aviso de queima prometeu. */
-export interface ResultadoDaDevolucao {
-  checkout: OcupacaoDeAssento;
-  queimado: boolean;
-  livres: number;
-}
-
-/** O que a entrega responde. */
-export interface EntregaDeAssento extends OcupacaoDeAssento {
-  seatNumber: number;
+export interface EntregaDoAlvo extends EntregaDeLicenca {
+  status: StatusDaLicenca | null;
+  diasParaVencer: number | null;
 }
 
 /**
- * Um evento da trilha da licença — `GET /api/licenses/:id/history`.
+ * Um evento do histórico da licença — `GET /api/licenses/:id/history`.
  *
- * `changes` é `unknown` de propósito: o formato muda com a operação (diff
- * `{de, para}` na edição, ids soltos no checkout), e quem o lê é o `lerEvento` compartilhado. Tipar campo a campo obrigaria a
- * mexer aqui a cada operação nova.
+ * Só movimentação: cada entrega e cada devolução, com o nome de quem recebeu.
+ * Sem trilha de cadastro e edição — o sistema não tem auditoria.
  */
 export interface EventoDaLicenca {
   id: string;
-  action: string;
-  changes: unknown;
-  createdAt: string;
+  action: 'CHECKOUT' | 'CHECKIN';
+  /** ISO — `JSON.parse` não reconstrói `Date`. */
+  at: string;
+  entrega: {
+    checkoutId: string;
+    alvo: 'PERSON' | 'ASSET';
+    alvoId: string;
+    alvoLabel: string;
+    notes: string | null;
+  };
 }
+
+/**
+ * Uma entrega de licença como evento do histórico DO ALVO — do ativo ou da
+ * pessoa. Só as entregues àquele alvo.
+ */
+export interface EventoDeLicencaDoAlvo {
+  checkoutId: string;
+  licenseId: string;
+  licenseLabel: string;
+  notes: string | null;
+}
+
+/** Por que a licença está no alerta, do mais urgente para o menos. */
+export type MotivoDoAlerta = 'ENCERRADA_EM_USO' | 'VENCIDA' | 'VENCENDO';
 
 export interface LicencaEmAlerta {
   id: string;
   name: string;
-  seatsTotal: number;
-  minSeats: number | null;
-  livres: number;
+  motivo: MotivoDoAlerta;
   status: StatusDaLicenca;
   diasParaVencer: number | null;
   expirationDate: string | null;
+  terminationDate: string | null;
+  emUso: number;
   categoryName: string | null;
 }
 
-export interface AlertasDeLicenca {
-  vencendo: LicencaEmAlerta[];
-  assentosBaixos: LicencaEmAlerta[];
-}
-
-/** Uma licença instalada num ativo — a aba Licenças da tela do ativo. */
-export interface LicencaDoAtivo {
-  id: string;
-  checkoutAt: string;
-  checkoutNotes: string | null;
-  seat: {
-    id: string;
-    seatNumber: number;
-    license: {
-      id: string;
-      name: string;
-      seatsTotal: number;
-      expirationDate: string | null;
-      terminationDate: string | null;
-      reassignable: boolean;
-      category: { name: string } | null;
-      manufacturer: { name: string } | null;
-    };
-  };
+/** `GET /api/licenses/alerts`: a lista, o total e quantas há de cada motivo. */
+export interface AlertasDaLicenca {
+  total: number;
+  contagem: Record<MotivoDoAlerta, number>;
+  rows: LicencaEmAlerta[];
 }
 
 /** O corpo do formulário. */
@@ -182,21 +185,26 @@ export interface LicencaInput {
   name: string;
   categoryId: string;
   seatsTotal: number;
-  reassignable?: boolean;
-  maintained?: boolean;
   expirationDate?: string | null;
   terminationDate?: string | null;
   licensedToName?: string | null;
   licensedToEmail?: string | null;
-  minSeats?: number | null;
   manufacturerId?: string | null;
   orderNumber?: string | null;
   purchaseDate?: string | null;
   purchaseCost?: string | null;
   notes?: string | null;
+  productKey?: string | null;
 }
 
 /** O alvo da entrega: pessoa XOR ativo. Nunca um posto (D39). */
-export type AlvoDoAssento =
-  | { assignedPersonId: string; notes?: string | null }
-  | { assignedAssetId: string; notes?: string | null };
+export type AlvoDaEntrega = (
+  | { assignedPersonId: string }
+  | { assignedAssetId: string }
+) & {
+  notes?: string | null;
+  /** O dia da entrega, 'AAAA-MM-DD'. Hoje ou antes. */
+  checkoutAt?: string | null;
+  /** A chave desta entrega. Vazia na licença de volume. */
+  productKey?: string | null;
+};

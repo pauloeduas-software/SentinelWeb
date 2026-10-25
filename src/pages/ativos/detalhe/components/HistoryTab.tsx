@@ -1,11 +1,13 @@
-import { ArrowRightLeft, Clock, FileText } from 'lucide-react';
+import { ArrowRightLeft, Clock, FileText, KeyRound } from 'lucide-react';
 import type { EventoDoAtivo } from '../../../../domain/shared/asset.types';
+import { formatarDiaDoInstante } from '../../../helpers/format.helper';
 import { momentoDoEvento } from '../../../helpers/historico.helper';
 import { lerEventoDoAtivo, tituloDoEvento } from '../helpers/historico.helper';
 
-// A LINHA DO TEMPO do ativo. Duas fontes, uma lista (D18): o `ActivityLog` —
-// cadastro, edição com o diff campo a campo, lixeira, baixa — e o
-// histórico de posse, que traz o nome de quem recebeu.
+// A LINHA DO TEMPO do ativo. Três fontes, uma lista (D18): o `ActivityLog` —
+// cadastro, edição com o diff campo a campo, lixeira, baixa —, o histórico de
+// posse, que traz o nome de quem recebeu, e as licenças entregues a esta
+// máquina (as da pessoa responsável ficam na ficha dela).
 //
 // NÃO existe tabela `AssetLog`: o `ActivityLog` já grava o diff na mesma
 // transação da operação, e uma segunda trilha só criaria a pergunta "por que as
@@ -50,6 +52,8 @@ function Evento({ evento }: { evento: EventoDoAtivo }) {
   // separação entre diff e dado solto é regra, não marcação.
   const { mudancas, detalhes } = lerEventoDoAtivo(evento);
   const dePosse = evento.fonte === 'POSSE';
+  const deLicenca = evento.fonte === 'LICENCA';
+  const notas = evento.posse?.notes ?? evento.licenca?.notes;
 
   return (
     <li className="border border-border-sutil p-3 space-y-2">
@@ -57,17 +61,20 @@ function Evento({ evento }: { evento: EventoDoAtivo }) {
         <div className="flex items-center gap-2">
           {dePosse
             ? <ArrowRightLeft size={13} className="text-status-info shrink-0" />
-            : <FileText size={13} className="text-text-tertiary shrink-0" />}
+            : deLicenca
+              ? <KeyRound size={13} className="text-text-tertiary shrink-0" />
+              : <FileText size={13} className="text-text-tertiary shrink-0" />}
           <span className="text-text-primary">{tituloDoEvento(evento)}</span>
         </div>
 
         <span className="flex items-center gap-1.5 text-text-tertiary text-[10px] tabular-nums shrink-0">
-          <Clock size={11} /> {momentoDoEvento(evento.at)}
+          {/* A licença é registrada por dia: a hora de um dia passado seria inventada. */}
+          <Clock size={11} /> {deLicenca ? formatarDiaDoInstante(evento.at) : momentoDoEvento(evento.at)}
         </span>
       </div>
 
-      {evento.posse?.notes && (
-        <div className="text-text-secondary text-[10px]">{evento.posse.notes}</div>
+      {notas && (
+        <div className="text-text-secondary text-[10px]">{notas}</div>
       )}
 
       {mudancas.length > 0 && (

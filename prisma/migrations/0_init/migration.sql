@@ -306,52 +306,37 @@ CREATE TABLE "licenses" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
     "seatsTotal" INTEGER NOT NULL,
-    "reassignable" BOOLEAN NOT NULL DEFAULT true,
-    "maintained" BOOLEAN NOT NULL DEFAULT false,
     "expirationDate" TIMESTAMP(3),
     "terminationDate" TIMESTAMP(3),
     "licensedToName" TEXT,
     "licensedToEmail" TEXT,
-    "minSeats" INTEGER,
     "categoryId" UUID NOT NULL,
     "manufacturerId" UUID,
     "orderNumber" TEXT,
     "purchaseDate" TIMESTAMP(3),
     "purchaseCost" DECIMAL(12,2),
     "notes" TEXT,
+    "productKey" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "licenses_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "license_seats" (
+CREATE TABLE "license_checkouts" (
     "id" UUID NOT NULL,
     "licenseId" UUID NOT NULL,
-    "seatNumber" INTEGER NOT NULL,
-    "burnedAt" TIMESTAMP(3),
-    "retiredAt" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "license_seats_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "license_seat_checkouts" (
-    "id" UUID NOT NULL,
-    "seatId" UUID NOT NULL,
     "assignedPersonId" UUID,
     "assignedAssetId" UUID,
     "checkoutAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "checkinAt" TIMESTAMP(3),
     "checkoutNotes" TEXT,
+    "productKey" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "license_seat_checkouts_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "license_checkouts_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -508,9 +493,6 @@ CREATE INDEX "workstation_occupants_workstationId_endedAt_idx" ON "workstation_o
 CREATE INDEX "workstation_occupants_personId_endedAt_idx" ON "workstation_occupants"("personId", "endedAt");
 
 -- CreateIndex
-CREATE INDEX "licenses_deletedAt_idx" ON "licenses"("deletedAt");
-
--- CreateIndex
 CREATE INDEX "licenses_categoryId_idx" ON "licenses"("categoryId");
 
 -- CreateIndex
@@ -520,16 +502,16 @@ CREATE INDEX "licenses_manufacturerId_idx" ON "licenses"("manufacturerId");
 CREATE INDEX "licenses_expirationDate_idx" ON "licenses"("expirationDate");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "license_seats_numero" ON "license_seats"("licenseId", "seatNumber");
+CREATE INDEX "licenses_terminationDate_idx" ON "licenses"("terminationDate");
 
 -- CreateIndex
-CREATE INDEX "license_seat_checkouts_seatId_checkinAt_idx" ON "license_seat_checkouts"("seatId", "checkinAt");
+CREATE INDEX "license_checkouts_licenseId_checkinAt_idx" ON "license_checkouts"("licenseId", "checkinAt");
 
 -- CreateIndex
-CREATE INDEX "license_seat_checkouts_assignedPersonId_checkinAt_idx" ON "license_seat_checkouts"("assignedPersonId", "checkinAt");
+CREATE INDEX "license_checkouts_assignedPersonId_checkinAt_idx" ON "license_checkouts"("assignedPersonId", "checkinAt");
 
 -- CreateIndex
-CREATE INDEX "license_seat_checkouts_assignedAssetId_checkinAt_idx" ON "license_seat_checkouts"("assignedAssetId", "checkinAt");
+CREATE INDEX "license_checkouts_assignedAssetId_checkinAt_idx" ON "license_checkouts"("assignedAssetId", "checkinAt");
 
 -- CreateIndex
 CREATE INDEX "reconciliation_suggestions_state_kind_idx" ON "reconciliation_suggestions"("state", "kind");
@@ -613,16 +595,13 @@ ALTER TABLE "licenses" ADD CONSTRAINT "licenses_categoryId_fkey" FOREIGN KEY ("c
 ALTER TABLE "licenses" ADD CONSTRAINT "licenses_manufacturerId_fkey" FOREIGN KEY ("manufacturerId") REFERENCES "manufacturers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "license_seats" ADD CONSTRAINT "license_seats_licenseId_fkey" FOREIGN KEY ("licenseId") REFERENCES "licenses"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_licenseId_fkey" FOREIGN KEY ("licenseId") REFERENCES "licenses"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "license_seat_checkouts" ADD CONSTRAINT "license_seat_checkouts_seatId_fkey" FOREIGN KEY ("seatId") REFERENCES "license_seats"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_assignedPersonId_fkey" FOREIGN KEY ("assignedPersonId") REFERENCES "people"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "license_seat_checkouts" ADD CONSTRAINT "license_seat_checkouts_assignedPersonId_fkey" FOREIGN KEY ("assignedPersonId") REFERENCES "people"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "license_seat_checkouts" ADD CONSTRAINT "license_seat_checkouts_assignedAssetId_fkey" FOREIGN KEY ("assignedAssetId") REFERENCES "assets"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_assignedAssetId_fkey" FOREIGN KEY ("assignedAssetId") REFERENCES "assets"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "reconciliation_suggestions" ADD CONSTRAINT "reconciliation_suggestions_endpointId_fkey" FOREIGN KEY ("endpointId") REFERENCES "endpoints"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -650,8 +629,6 @@ ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_targetPersonId_fke
 
 -- AddForeignKey
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_targetWorkstationId_fkey" FOREIGN KEY ("targetWorkstationId") REFERENCES "workstations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
-
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- O QUE O PRISMA NÃO EXPRESSA, E O PROJETO DEPENDE: índices PARCIAIS e CHECKs.
@@ -682,9 +659,6 @@ CREATE UNIQUE INDEX "assets_assetTag_unique_undeleted"
 CREATE UNIQUE INDEX "assets_serial_unique_undeleted"
   ON "assets"("serial") WHERE "deletedAt" IS NULL;
 
-CREATE UNIQUE INDEX "licenses_name_unico_ativo"
-  ON "licenses"("name") WHERE "deletedAt" IS NULL;
-
 CREATE UNIQUE INDEX "stock_items_name_unique_undeleted"
   ON "stock_items"("name") WHERE "deletedAt" IS NULL;
 
@@ -704,10 +678,6 @@ CREATE UNIQUE INDEX "workstation_occupants_um_aberto_por_pessoa_posto"
 ALTER TABLE "workstation_occupants" ADD CONSTRAINT "workstation_occupants_posto_presente" CHECK (
   "workstationId" IS NOT NULL OR ("endedAt" IS NOT NULL AND "workstationName" IS NOT NULL)
 );
-
--- ── INVARIANTE 10: UM ASSENTO NÃO ESTÁ EM DUAS MÃOS (D40) ─────────────────
-CREATE UNIQUE INDEX "license_seat_uma_aberta_por_assento"
-  ON "license_seat_checkouts"("seatId") WHERE "checkinAt" IS NULL;
 
 -- ── INVARIANTE 13: A MESMA SUGESTÃO NÃO EMPILHA NA FILA ───────────────────
 --
@@ -748,16 +718,50 @@ ALTER TABLE "assignments" ADD CONSTRAINT "assignments_devolucao_nao_antecede_ent
   "checkinAt" IS NULL OR "checkinAt" >= "checkoutAt"
 );
 
--- ── INVARIANTE 9: O ALVO DO ASSENTO É UM — pessoa XOR ativo (D39) ─────────
-ALTER TABLE "license_seat_checkouts" ADD CONSTRAINT "license_seat_alvo_xor"
+-- ── INVARIANTE 9: A FORMA DA ENTREGA DE LICENÇA (D39, AA) ─────────────────
+--
+-- O alvo é UM, pessoa XOR ativo — nunca posto.
+ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_alvo_xor"
   CHECK (num_nonnulls("assignedPersonId", "assignedAssetId") = 1);
 
-ALTER TABLE "license_seat_checkouts" ADD CONSTRAINT "license_seat_checkin_nao_antecede"
+-- A DEVOLUÇÃO NÃO ANTECEDE A ENTREGA. `>=` e não `>`, como na posse.
+ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_devolucao_nao_antecede"
   CHECK ("checkinAt" IS NULL OR "checkinAt" >= "checkoutAt");
 
--- ── O CONTRATO NÃO É NEGATIVO, E O ASSENTO É NUMERADO A PARTIR DE 1 ───────
-ALTER TABLE "licenses"      ADD CONSTRAINT "licenses_seats_nao_negativo"  CHECK ("seatsTotal" >= 0);
-ALTER TABLE "license_seats" ADD CONSTRAINT "license_seat_numero_positivo" CHECK ("seatNumber" >= 1);
+-- ── INVARIANTE 23: UMA ENTREGA ABERTA POR ALVO E LICENÇA (AA) ─────────────
+--
+-- Dois índices, um por alvo: com uma coluna nula no par, o Postgres nunca
+-- acusaria colisão. O `IS NOT NULL` deixa cada índice só com o seu alvo.
+CREATE UNIQUE INDEX "license_checkouts_uma_aberta_por_pessoa"
+  ON "license_checkouts"("licenseId", "assignedPersonId")
+  WHERE "checkinAt" IS NULL AND "assignedPersonId" IS NOT NULL;
+
+CREATE UNIQUE INDEX "license_checkouts_uma_aberta_por_ativo"
+  ON "license_checkouts"("licenseId", "assignedAssetId")
+  WHERE "checkinAt" IS NULL AND "assignedAssetId" IS NOT NULL;
+
+-- ── A MESMA CHAVE NÃO FICA EM DUAS ENTREGAS ABERTAS DA LICENÇA (AA) ───────
+--
+-- A entrega sem chave (licença de volume) não entra: o `IS NOT NULL` a deixa
+-- fora do índice. A devolvida também não — a chave volta a poder ser entregue.
+CREATE UNIQUE INDEX "license_checkouts_chave_aberta_unica"
+  ON "license_checkouts"("licenseId", "productKey")
+  WHERE "checkinAt" IS NULL AND "productKey" IS NOT NULL;
+
+-- ── O CONTRATO: AO MENOS UMA, E AS DATAS NÃO ANTECEDEM A COMPRA ───────────
+--
+-- Zero não é contrato: a licença que acabou se encerra. As datas só se comparam
+-- quando as duas estão preenchidas, e o encerramento não se compara com o
+-- vencimento — dá para encerrar antes do fim do período pago.
+ALTER TABLE "licenses" ADD CONSTRAINT "licenses_seats_positivo" CHECK ("seatsTotal" >= 1);
+
+ALTER TABLE "licenses" ADD CONSTRAINT "licenses_vencimento_nao_antecede_compra" CHECK (
+  "purchaseDate" IS NULL OR "expirationDate" IS NULL OR "expirationDate" >= "purchaseDate"
+);
+
+ALTER TABLE "licenses" ADD CONSTRAINT "licenses_encerramento_nao_antecede_compra" CHECK (
+  "purchaseDate" IS NULL OR "terminationDate" IS NULL OR "terminationDate" >= "purchaseDate"
+);
 
 -- ── O ESTOQUE: A FORMA DO MOVIMENTO (docs/decisoes/estoque.md, J) ─────────
 --

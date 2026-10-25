@@ -359,16 +359,16 @@ describe('a baixa recusa', () => {
     expect(body.error).toMatch(/Faça a devolução antes/);
   });
 
-  it('o ativo que ocupa assento de licença — o assento ficaria preso a uma máquina vendida', async () => {
+  it('o ativo com licença entregue — a licença ficaria presa a uma máquina vendida', async () => {
     const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
     const { categoriaLicencaId } = await idsDoSeed();
     const licenca = await criarLicenca(api, { name: 'Office da máquina vendida', categoryId: categoriaLicencaId, seatsTotal: 1 });
-    const assento = await api.post(`/api/licenses/${licenca.id}/checkout-seat`, { assignedAssetId: ativo.id });
-    expect(assento.status).toBe(201);
+    const entrega = await api.post(`/api/licenses/${licenca.id}/checkout`, { assignedAssetId: ativo.id });
+    expect(entrega.status).toBe(201);
 
     const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/retire`, { retiredReason: 'VENDIDO' });
     expect(status).toBe(409);
-    expect(body.error).toMatch(/assento/);
+    expect(body.error).toMatch(/licença/);
   });
 
   it('a data futura — a baixa não acontece na semana que vem', async () => {

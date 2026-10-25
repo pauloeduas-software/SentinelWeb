@@ -17,6 +17,8 @@
 // divergir de nada, porque não guarda nada.
 // ═════════════════════════════════════════════════════════════════════════════
 
+import { hojeNoBrasil, somarDias } from '../../shared/hoje.helper';
+
 export type LicenseStatus = 'ATIVA' | 'VENCENDO' | 'EXPIRADA' | 'ENCERRADA';
 
 /**
@@ -42,20 +44,23 @@ interface DatasDaLicenca {
  * mostraria como ATIVA. Os dois campos existem separados porque respondem a
  * perguntas diferentes: *"até quando eu posso usar"* e *"até quando eu paguei"*.
  *
- * A comparação é contra MEIA-NOITE UTC de hoje, a mesma referência que o
- * `dataOpcional` usa para construir a data — `expirationDate` é dia de
- * calendário, não instante, e comparar contra `new Date()` faria uma licença
- * que vence hoje virar EXPIRADA às 00:00:01.
+ * A comparação é contra o DIA DE HOJE EM BRASÍLIA (`hojeNoBrasil`), no mesmo
+ * formato em que o `dataOpcional` grava a data — `expirationDate` é dia de
+ * calendário, não instante. Comparar com `new Date()` faria uma licença que
+ * vence hoje virar EXPIRADA às 00:00:01, e com a meia-noite UTC, às 21h.
+ *
+ * O ENCERRAMENTO NO PRÓPRIO DIA JÁ ENCERRA (`<=`), e o vencimento no próprio dia
+ * ainda vale (`<`). A diferença é de propósito: o botão Encerrar grava o dia de
+ * hoje e a licença tem que sair da lista na hora; o vencimento é até quando o
+ * contrato foi pago, e o dia pago ainda é dia de uso.
  */
-export function statusDaLicenca(datas: DatasDaLicenca, hoje = meiaNoiteUTC()): LicenseStatus {
+export function statusDaLicenca(datas: DatasDaLicenca, hoje = hojeNoBrasil()): LicenseStatus {
   if (datas.terminationDate && datas.terminationDate <= hoje) return 'ENCERRADA';
   if (!datas.expirationDate) return 'ATIVA';
 
   if (datas.expirationDate < hoje) return 'EXPIRADA';
 
-  const aviso = new Date(hoje);
-  aviso.setUTCDate(aviso.getUTCDate() + DIAS_DE_AVISO);
-  return datas.expirationDate <= aviso ? 'VENCENDO' : 'ATIVA';
+  return datas.expirationDate <= somarDias(hoje, DIAS_DE_AVISO) ? 'VENCENDO' : 'ATIVA';
 }
 
 /**
@@ -65,15 +70,8 @@ export function statusDaLicenca(datas: DatasDaLicenca, hoje = meiaNoiteUTC()): L
  * para agir hoje ou no mês que vem — e a tela não pode recalcular, porque o
  * "hoje" do navegador pode não ser o do servidor.
  */
-export function diasParaVencer(expirationDate: Date | null, hoje = meiaNoiteUTC()): number | null {
+export function diasParaVencer(expirationDate: Date | null, hoje = hojeNoBrasil()): number | null {
   if (!expirationDate) return null;
   const DIA = 24 * 60 * 60 * 1000;
   return Math.round((expirationDate.getTime() - hoje.getTime()) / DIA);
-}
-
-/** Meia-noite UTC de hoje — a mesma referência do `shared/fields.schema.ts`. */
-export function meiaNoiteUTC(): Date {
-  const hoje = new Date();
-  hoje.setUTCHours(0, 0, 0, 0);
-  return hoje;
 }

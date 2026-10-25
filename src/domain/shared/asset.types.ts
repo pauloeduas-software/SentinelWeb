@@ -1,4 +1,5 @@
 import type { AlvoDaPosse, PosseResolvida } from './posse.types';
+import type { EventoDeLicencaDoAlvo } from './license.types';
 import type { ListParams } from './list.types';
 
 // Contrato do ativo com a API. Espelha `ASSET_SELECT`
@@ -168,7 +169,7 @@ export type AssetListParams = Omit<ListParams, 'view'> & {
  */
 export interface EventoDoAtivo {
   id: string;
-  fonte: 'ATIVIDADE' | 'POSSE';
+  fonte: 'ATIVIDADE' | 'POSSE' | 'LICENCA';
   action: string;
   /** ISO — `JSON.parse` não reconstrói `Date`. */
   at: string;
@@ -185,6 +186,8 @@ export interface EventoDoAtivo {
     notes: string | null;
     expectedCheckinAt: string | null;
   } | null;
+  /** Só as licenças entregues A ESTE ATIVO — as da pessoa responsável ficam nela. */
+  licenca: EventoDeLicencaDoAlvo | null;
 }
 
 /** Corpo de `POST /api/assets/:id/retire`. */
