@@ -1,4 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { checkinSchema, checkoutSchema } from '../schemas/assignment.schema';
 import { checkoutAsset } from '../use-cases/checkout-asset.usecase';
@@ -16,7 +17,8 @@ export const assignmentController = {
     // 201: a entrega CRIA uma linha em `assignments`. O corpo devolve a posse e
     // o ativo já atualizado, porque a tela precisa dos dois — o status e o
     // responsável mudaram na mesma operação.
-    const resultado = await checkoutAsset(id, data);
+    // O autor vem da SESSÃO, nunca do corpo (auth/helpers/actor.helper.ts).
+    const resultado = await checkoutAsset(id, data, atorDaRequisicao(request));
     return reply.status(201).send(resultado);
   },
 
@@ -24,7 +26,7 @@ export const assignmentController = {
     const { id } = idParamSchema.parse(request.params);
     const data = checkinSchema.parse(request.body ?? {});
     // 200, e não 201: a devolução FECHA a posse que já existia.
-    return checkinAsset(id, data);
+    return checkinAsset(id, data, atorDaRequisicao(request));
   },
 
   async history(request: FastifyRequest) {

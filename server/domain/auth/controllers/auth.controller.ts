@@ -2,6 +2,8 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { COOKIE_SESSAO, opcoesCookieSessao, opcoesLimparSessao } from '../helpers/session-cookie.helper';
 import { loginSchema } from '../schemas/auth.schema';
 import { login } from '../use-cases/login.usecase';
+import { recordAuditDoQueJaAconteceu } from '../../audit/use-cases/record-audit.usecase';
+import { atorDaRequisicao } from '../helpers/actor.helper';
 
 // Só HTTP. Sem try/catch: os `AppError` do use-case (401 de credencial, 423 de
 // conta travada, 403 de acesso desativado) caem no errorHandler, que é o único
@@ -13,7 +15,7 @@ import { login } from '../use-cases/login.usecase';
 export const authController = {
   async login(request: FastifyRequest, reply: FastifyReply) {
     const credenciais = loginSchema.parse(request.body ?? {});
-    const { usuario, tokenVersion, cargo } = await login(credenciais);
+    const { usuario, tokenVersion, cargo } = await login(credenciais, request.id);
 
     // `tv` é a geração da sessão: conferida contra o banco a cada requisição
     // (authenticate-request.helper.ts), é ela que faz a troca de senha derrubar
@@ -32,7 +34,11 @@ export const authController = {
       .send({ ...usuario, role: cargo });
   },
 
-  async logout(_request: FastifyRequest, reply: FastifyReply) {
+  async logout(request: FastifyRequest, reply: FastifyReply) {
+    // A gravação que falhar não segura a sessão: o cookie sai do mesmo jeito.
+    await recordAuditDoQueJaAconteceu({
+      entityType: 'User', entityId: request.user.id, entityLabel: request.user.email, action: 'LOGOUT',
+    }, atorDaRequisicao(request));
     // Sessão sem estado no servidor: sair é apagar o cookie. NÃO existe
     // `logout.usecase.ts` porque não há regra de negócio nenhuma aqui — o que
     // faltaria para haver (revogar UMA sessão específica, sessão por

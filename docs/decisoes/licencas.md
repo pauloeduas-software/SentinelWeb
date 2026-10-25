@@ -365,6 +365,11 @@ handshake, com a nota de que o servidor não guarda — mesma escolha do A para 
 
 ## AA — A licença vira quantidade e entregas: sem vaga numerada, sem lixeira, com Encerradas
 
+> **Superada em parte por [AB](./acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco):** a licença
+> deixa de ficar sem trilha. Cadastro, edição, entrega, troca de chave, devolução, encerramento e
+> exclusão gravam na auditoria, com quem fez — a chave só como "informada", "alterada" ou
+> "removida". O histórico da licença na tela continua só entregas e devoluções.
+
 **Decidido** (na revisão da página de Licenças, de 2026-10-22 a 2026-10-24):
 
 - **Sem vaga numerada.** `LicenseSeat` e `LicenseSeatCheckout` viram uma tabela só,

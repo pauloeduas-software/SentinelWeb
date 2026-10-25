@@ -1,6 +1,7 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
 import { comSaldo, contarForaDe, travarItemOuFalhar } from '../helpers/stock-balance.helper';
 import { STOCK_ITEM_SELECT, STOCK_MOVEMENT_SELECT } from '../helpers/stock-select.helper';
 import type { AdjustStockInput } from '../schemas/stock.schema';
@@ -17,7 +18,7 @@ import type { AdjustStockInput } from '../schemas/stock.schema';
 // partir do mesmo estado antigo e uma sumiria sem erro. O delta é aplicado com
 // `increment`/`decrement`, que o Postgres resolve dentro da linha já travada.
 
-export async function adjustStock(itemId: string, data: AdjustStockInput) {
+export async function adjustStock(itemId: string, data: AdjustStockInput, ator: Ator) {
   return prisma.$transaction(async (tx) => {
     // A TRAVA antes de qualquer leitura, como em toda operação que compara um
     // número lido com o que vai gravar.
@@ -54,12 +55,17 @@ export async function adjustStock(itemId: string, data: AdjustStockInput) {
       select: STOCK_MOVEMENT_SELECT,
     });
 
-    await recordActivity(tx, {
+    await recordAudit(tx, {
       entityType: 'StockItem',
       entityId: itemId,
+      entityLabel: antes.name,
       action: 'UPDATE',
-      changes: { qty: { de: antes.qty, para: depois.qty }, movimento: { de: null, para: data.kind } },
-    });
+      changes: {
+        qty: { de: antes.qty, para: depois.qty },
+        movimento: { de: null, para: data.kind },
+        movementId: movimento.id,
+      },
+    }, ator);
 
     return { item: comSaldo(depois, fora), movimento };
   });

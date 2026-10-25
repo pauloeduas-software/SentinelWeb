@@ -1,9 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { prisma } from '../../../core/database/prismaClient';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
+import { buildSnapshot } from '../../shared/diff.helper';
 import { SEM_USO } from '../helpers/license-count.helper';
 import { assertDatasNaoAntecedemACompra } from '../helpers/license-dates.helper';
 import {
-  LICENSE_SELECT, paraResposta,
+  CAMPOS_AUDITADOS_DA_LICENCA, LICENSE_SELECT, marcaDaChave, paraResposta,
   type LicencaNaResposta, type LinhaDeLicenca,
 } from '../helpers/license-select.helper';
 import type { CreateLicenseData } from '../schemas/license.schema';
@@ -15,7 +18,7 @@ import { assertReferenciasDaLicenca } from './assert-license-references.usecase'
  * O `id` é gerado aqui, e não pelo Prisma: `License.id` não tem default no
  * schema.
  */
-export async function createLicense(data: CreateLicenseData): Promise<LicencaNaResposta> {
+export async function createLicense(data: CreateLicenseData, ator: Ator): Promise<LicencaNaResposta> {
   const id = randomUUID();
 
   assertDatasNaoAntecedemACompra({
@@ -31,6 +34,17 @@ export async function createLicense(data: CreateLicenseData): Promise<LicencaNaR
       data: { ...data, id },
       select: LICENSE_SELECT,
     }) as LinhaDeLicenca;
+
+    await recordAudit(tx, {
+      entityType: 'License',
+      entityId: id,
+      entityLabel: licenca.name,
+      action: 'CREATE',
+      changes: {
+        ...buildSnapshot(licenca, CAMPOS_AUDITADOS_DA_LICENCA),
+        chave: marcaDaChave(null, data.productKey ?? null),
+      },
+    }, ator);
 
     return licenca;
   });

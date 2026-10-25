@@ -45,6 +45,31 @@ export const LICENSE_SELECT = {
   manufacturer: { select: { id: true, name: true } },
 } as const;
 
+/**
+ * Os campos da licença que a auditoria guarda (AB): o retrato no cadastro e na
+ * exclusão, o `{ de, para }` na edição. A CHAVE fica fora: ela vai à auditoria
+ * só como "informada", "alterada" ou "removida" (`marcaDaChave`), nunca o valor.
+ */
+export const CAMPOS_AUDITADOS_DA_LICENCA = [
+  'name', 'seatsTotal',
+  'expirationDate', 'terminationDate',
+  'licensedToName', 'licensedToEmail',
+  'categoryId', 'manufacturerId',
+  'orderNumber', 'purchaseDate', 'purchaseCost',
+  'notes',
+] as const;
+
+/**
+ * O que a auditoria diz de uma chave que mudou — sem o valor. A auditoria guarda
+ * para sempre, e a chave é o que a licença tem de credencial.
+ */
+export function marcaDaChave(antes: string | null, depois: string | null): string | null {
+  if (antes === depois) return null;
+  if (!antes) return 'informada';
+  if (!depois) return 'removida';
+  return 'alterada';
+}
+
 /** A pessoa embutida numa entrega. Mesma forma do estoque. */
 const PESSOA_DA_ENTREGA = { id: true, name: true, email: true } as const;
 

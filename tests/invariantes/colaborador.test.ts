@@ -90,10 +90,13 @@ describe('a lixeira de colaboradores', () => {
     expect((await api.post(`/api/people/${pessoa}/restore`)).status).toBe(200);
     expect((await api.get(`/api/people/${pessoa}`)).status).toBe(200);
 
-    // O histórico da ficha conta a ida e a volta.
-    const historico = await api.get<{ rows: { fonte: string; action: string }[] }>(`/api/people/${pessoa}/history`);
-    const acoes = historico.body.rows.filter((evento) => evento.fonte === 'ATIVIDADE').map((evento) => evento.action);
-    expect(acoes).toEqual(expect.arrayContaining(['DELETE', 'RESTORE']));
+    // A auditoria conta a ida e a volta, com a conta que as fez (AB).
+    const auditoria = await prisma.auditLog.findMany({
+      where: { entityType: 'Person', entityId: pessoa, action: { in: ['DELETE', 'RESTORE'] } },
+      select: { action: true, actorId: true },
+    });
+    expect(auditoria.map((l) => l.action).sort()).toEqual(['DELETE', 'RESTORE']);
+    expect(auditoria.every((l) => l.actorId === api.adminId)).toBe(true);
   });
 
   it('o e-mail fica livre na lixeira, e restaurar recusa (409) se ele foi reaproveitado', async () => {

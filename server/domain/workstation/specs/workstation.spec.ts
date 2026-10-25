@@ -6,13 +6,14 @@ import { createWorkstationSchema, updateWorkstationSchema } from '../schemas/wor
 // em vez de excluir, exclusão de verdade recusada só pelo que está nele agora.
 //
 // É uma `CatalogSpec` para passar pelo MESMO CRUD das tabelas de catálogo
-// (`catalog/use-cases/`) — o 409 por uso, a unicidade do nome e o `ActivityLog`
+// (`catalog/use-cases/`) — o 409 por uso, a unicidade do nome e o `AuditLog`
 // num lugar só. Mas fica FORA de `CATALOG_SPECS`: o posto se cadastra na tela
 // Postos, não numa aba de Configurações, e as rotas dele são registradas pelo
 // `workstation.maestro.ts`.
 export const workstationSpec: CatalogSpec = {
   slug: 'workstations',
   entityType: 'Workstation',
+  tabela: 'workstations',
   rotulo: 'posto',
 
   delegate: (client) => client.workstation as unknown as CatalogDelegate,

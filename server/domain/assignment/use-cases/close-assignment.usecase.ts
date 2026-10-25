@@ -1,6 +1,8 @@
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
 import { ASSET_WRITE_SELECT } from '../../asset/helpers/asset-select.helper';
 import { ASSIGNMENT_SELECT } from '../helpers/assignment-select.helper';
+import { rotuloDoAlvo } from '../helpers/target-label.helper';
 import type { AlvoPosse, ClientePosse } from './resolve-responsibles.usecase';
 import { AppError } from '../../../core/errors/app-error';
 
@@ -23,7 +25,7 @@ import { AppError } from '../../../core/errors/app-error';
  *
  * `statusAnteriorId` é o status do ATIVO antes da devolução, e vem de fora
  * porque quem chama já o leu para decidir o que gravar. Serve só ao diff do
- * `ActivityLog`: ler de novo aqui seria uma consulta a mais.
+ * `AuditLog`: ler de novo aqui seria uma consulta a mais.
  */
 interface PosseParaFechar {
   id: string;
@@ -42,6 +44,8 @@ export async function fecharPosse(
   client: ClientePosse,
   posse: PosseParaFechar,
   dados: DadosDaDevolucao,
+  /** Quem operou a devolução (AB). Último parâmetro, como em `recordAudit`. */
+  ator: Ator,
 ) {
   // A posse fecha ANTES de o status mudar, e a ordem não é estética: enquanto a
   // posse está aberta, um status de estoque contradiz a Camada 1 — é exatamente
@@ -73,16 +77,18 @@ export async function fecharPosse(
 
   // No histórico do ATIVO, não no da posse: é a linha do tempo do equipamento
   // que alguém abre para perguntar "por onde isto andou".
-  await recordActivity(client, {
+  await recordAudit(client, {
     entityType: 'Asset',
     entityId: posse.assetId,
+    entityLabel: asset.assetTag,
     action: 'CHECKIN',
     changes: {
       assignmentId: posse.id,
       targetType: posse.targetType,
+      targetName: rotuloDoAlvo(assignment),
       statusId: { de: posse.statusAnteriorId, para: dados.statusId },
     },
-  });
+  }, ator);
 
   return { assignment, asset };
 }

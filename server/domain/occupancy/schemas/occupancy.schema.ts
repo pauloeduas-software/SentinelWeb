@@ -8,7 +8,7 @@ import { dataNaoFutura, textoOpcional, uuidObrigatorio } from '../../shared/fiel
 // 422 em vez de gravação silenciosa. Aqui isso também fecha uma porta
 // específica — `endedAt` NÃO está no schema, então não existe jeito de encerrar
 // uma ocupação pelo corpo do POST. Encerrar é o DELETE, e o DELETE deixa linha
-// no `ActivityLog`.
+// no `AuditLog`.
 
 /**
  * Início da ocupação. Dia de calendário, não instante — `dataNaoFutura`

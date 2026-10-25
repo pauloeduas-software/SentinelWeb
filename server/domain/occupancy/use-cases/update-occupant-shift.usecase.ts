@@ -1,7 +1,8 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
-import { OCCUPANT_SELECT } from '../helpers/occupant-select.helper';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
+import { OCCUPANT_SELECT, rotuloDaOcupacao } from '../helpers/occupant-select.helper';
 
 // O TURNO DE UMA OCUPAÇÃO ABERTA, corrigido.
 //
@@ -32,6 +33,7 @@ export async function updateOccupantShift(
   workstationId: string,
   occupantId: string,
   shift: string | null,
+  ator: Ator,
 ) {
   return prisma.$transaction(async (tx) => {
     const antes = await tx.workstationOccupant.findFirst({
@@ -67,12 +69,13 @@ export async function updateOccupantShift(
       select: OCCUPANT_SELECT,
     });
 
-    await recordActivity(tx, {
+    await recordAudit(tx, {
       entityType: 'WorkstationOccupant',
       entityId: occupantId,
+      entityLabel: rotuloDaOcupacao(atualizada),
       action: 'UPDATE',
       changes: { shift: { de: antes.shift, para: shift } },
-    });
+    }, ator);
 
     return atualizada;
   });

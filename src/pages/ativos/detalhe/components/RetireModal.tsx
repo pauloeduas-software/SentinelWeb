@@ -139,7 +139,7 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
               className={`${CLASSE_CAMPO} h-20 resize-none`}
             />
             <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">
-              Fica na aba Histórico, presa a este evento — não é um campo do ativo.
+              Aparece na aba Detalhes enquanto a baixa valer, e sai se a baixa for desfeita.
             </p>
           </div>
 

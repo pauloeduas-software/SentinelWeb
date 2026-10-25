@@ -11,7 +11,7 @@ import { criarFabricante, criarModelo, idsDoSeed } from '../helpers/fixtures';
 // A diferença entre "o campo veio nulo" e "o campo não veio" é o D77 inteiro.
 // Nulo significa que o valor foi LIDO do banco e chegou até a serialização — e
 // aí ele já passou por qualquer log, qualquer `JSON.stringify` de handler de
-// erro e qualquer `changes` de ActivityLog montado com spread no caminho.
+// erro e qualquer `changes` de AuditLog montado com spread no caminho.
 // Ausente significa que ele nunca foi lido.
 //
 // Um teste que aceitasse `purchaseCost === null` passaria com a implementação

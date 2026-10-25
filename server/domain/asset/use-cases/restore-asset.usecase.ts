@@ -1,12 +1,13 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
 import { ativoDoPosto, jaTemAtivo } from '../../workstation/helpers/ativo-do-posto.helper';
 import { ASSET_WRITE_SELECT } from '../helpers/asset-select.helper';
 import { assertEtiquetaESerieLivres } from './assert-unique-asset.usecase';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
 
-export async function restoreAsset(id: string) {
+export async function restoreAsset(id: string, ator: Ator) {
   return prisma.$transaction(async (tx) => {
     // A trava ANTES de ler: sem ela, um duplo clique restaurava duas vezes e o
     // histórico ganhava dois RESTORE para um fato só. A trava é sobre a LINHA
@@ -58,7 +59,7 @@ export async function restoreAsset(id: string) {
 
     const { count } = await tx.asset.updateMany({ where: { id, deletedAt: { not: null } }, data: { deletedAt: null } });
     if (count === 0) throw new AppError('Ativo não está na lixeira.', 404);
-    await recordActivity(tx, { entityType: 'Asset', entityId: id, action: 'RESTORE' });
+    await recordAudit(tx, { entityType: 'Asset', entityId: id, entityLabel: naLixeira.assetTag, action: 'RESTORE' }, ator);
 
     return tx.asset.findFirstOrThrow({ where: { id }, select: ASSET_WRITE_SELECT });
   });

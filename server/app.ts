@@ -145,7 +145,7 @@ export async function buildApp(
     logController: new LogController({ disableRequestLogging: true }),
     // Id da requisição (devolvido em X-Request-Id) sempre pelo nosso gerador
     requestIdHeader: false,
-    genReqId: (req) => generateRequestId(req as unknown as { headers: Record<string, unknown> }),
+    genReqId: () => generateRequestId(),
   });
 
   // Traduz qualquer erro dos handlers em resposta HTTP, num lugar só

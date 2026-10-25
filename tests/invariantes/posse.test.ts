@@ -251,16 +251,14 @@ describe('quem não está ativo na empresa não recebe equipamento', () => {
     });
     expect(semPosse).toBe(0);
 
-    // E a mudança FICA NO HISTÓRICO da pessoa: é o que responde "quando foi
-    // desativada" agora que não há coluna de data.
-    const historico = await api.get<{ rows: { action: string; changes: Record<string, unknown> }[] }>(
-      `/api/people/${pessoa}/history`,
-    );
-    const desativacao = historico.body.rows.find(
-      (evento) => evento.action === 'UPDATE' && 'isActive' in (evento.changes ?? {}),
-    );
-    expect(desativacao, JSON.stringify(historico.body.rows)).toBeDefined();
-    expect(desativacao!.changes.isActive).toMatchObject({ de: true, para: false });
+    // E a mudança FICA NA AUDITORIA, com a conta: é o que responde "quando foi
+    // desativada, e por quem" agora que não há coluna de data (AB).
+    const desativacao = await prisma.auditLog.findFirst({
+      where: { entityType: 'Person', entityId: pessoa, action: 'UPDATE' },
+      select: { changes: true, actorId: true },
+    });
+    expect(desativacao?.changes).toMatchObject({ isActive: { de: true, para: false } });
+    expect(desativacao?.actorId).toBe(api.adminId);
   });
 
   it('e também não ocupa posto de trabalho (409 simétrico)', async () => {
@@ -401,6 +399,20 @@ describe('ativo baixado', () => {
     expect((await api.post(`/api/assets/${ativo.id}/unretire`)).status).toBe(200);
     const entrega = await api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'PERSON', targetPersonId: cenario.laura });
     expect(entrega.status).toBe(201);
+  });
+
+  it('guarda a observação enquanto a baixa vale, e a perde quando ela é desfeita', async () => {
+    // A observação é do ativo (`retiredNotes`), e a aba Detalhes a mostra — a
+    // aba Histórico não lê mais a auditoria (AB), onde ela ficava antes.
+    const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
+    expect((await api.post(`/api/assets/${ativo.id}/retire`, { retiredReason: 'DOADO', notes: 'Doado à escola' })).status)
+      .toBe(200);
+    const baixado = await api.get<{ retiredNotes: string | null }>(`/api/assets/${ativo.id}`);
+    expect(baixado.body.retiredNotes).toBe('Doado à escola');
+
+    expect((await api.post(`/api/assets/${ativo.id}/unretire`)).status).toBe(200);
+    const devolvido = await api.get<{ retiredNotes: string | null; retiredAt: string | null }>(`/api/assets/${ativo.id}`);
+    expect(devolvido.body).toMatchObject({ retiredNotes: null, retiredAt: null });
   });
 });
 

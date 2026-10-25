@@ -8,6 +8,7 @@ import { escaparCuringas } from '../../shared/busca.helper';
 export const assetModelSpec: CatalogSpec = {
   slug: 'asset-models',
   entityType: 'AssetModel',
+  tabela: 'asset_models',
   rotulo: 'modelo',
 
   delegate: (client) => client.assetModel as unknown as CatalogDelegate,

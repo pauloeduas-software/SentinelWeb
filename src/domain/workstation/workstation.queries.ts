@@ -55,7 +55,7 @@ export interface PostoInput {
 /**
  * O CADASTRO do posto — `POST`, `PUT` e `DELETE /workstations`, o mesmo CRUD
  * das tabelas de catálogo no servidor (`workstationSpec`): nome único, 409 pelo
- * que está nele agora, `ActivityLog`.
+ * que está nele agora, `AuditLog`.
  *
  * Invalidam DOIS caches: a lista de postos e as OPÇÕES de posto
  * (`catalogKeys.tabela('workstations')`), que os seletores da entrega, da saída

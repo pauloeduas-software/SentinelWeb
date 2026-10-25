@@ -31,6 +31,7 @@ export default function DetalhesTab({
               <PackageX size={13} /> Fora do patrimônio
             </div>
             <div className="text-text-primary">{selo}</div>
+            {asset.retiredNotes && <div className="text-text-secondary">{asset.retiredNotes}</div>}
             <p className="text-text-tertiary text-[10px] leading-relaxed max-w-xl">
               Saiu do patrimônio — não é o mesmo que estar na lixeira (cadastro errado). O
               ativo continua no histórico e na vista "Baixados" da tela de Ativos, com a data

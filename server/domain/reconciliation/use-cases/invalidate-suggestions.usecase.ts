@@ -100,7 +100,7 @@ export async function encerrarSugestoesObsoletas(): Promise<number> {
  *
  * Só o `SUPERSEDED`, e isso é a decisão inteira: `REJECTED` é a MEMÓRIA do D97 e
  * apagá-lo reoferece o que uma pessoa já recusou; `ACCEPTED` é a trilha do
- * vínculo que veio da fila, e vive ao lado do `ActivityLog` (que guarda quem). O que
+ * vínculo que veio da fila, e vive ao lado do `AuditLog` (que guarda quem). O que
  * sobra — a linha substituída porque o mundo andou — não responde pergunta
  * nenhuma depois de meio ano.
  *

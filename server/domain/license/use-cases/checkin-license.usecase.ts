@@ -1,8 +1,10 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
 import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
 import { hojeNoBrasil, instanteDoDia } from '../../shared/hoje.helper';
-import { CHECKOUT_SELECT } from '../helpers/license-select.helper';
+import { CHECKOUT_SELECT, rotuloDoAlvoDaEntrega } from '../helpers/license-select.helper';
 import type { CheckinLicenseData } from '../schemas/license.schema';
 
 // A DEVOLUÇÃO DE UMA LICENÇA — e ela volta a ficar livre.
@@ -19,7 +21,7 @@ import type { CheckinLicenseData } from '../schemas/license.schema';
 // segundo depois não seria). Travar a licença aqui, depois da linha, fecharia
 // um ciclo com a troca de chave — ver `lock-license.usecase.ts`.
 
-export async function checkinLicense(checkoutId: string, data: Partial<CheckinLicenseData> = {}) {
+export async function checkinLicense(checkoutId: string, data: Partial<CheckinLicenseData>, ator: Ator) {
   await prisma.$transaction(async (tx) => {
     const travada = await tx.$queryRaw<{ id: string }[]>`
       SELECT id FROM license_checkouts WHERE id = ${checkoutId}::uuid FOR UPDATE
@@ -54,10 +56,25 @@ export async function checkinLicense(checkoutId: string, data: Partial<CheckinLi
     // real da entrega — a feita às 23h. A devolução nunca fica antes dela: é o
     // CHECK `license_checkouts_devolucao_nao_antecede`.
     const instante = instanteDoDia(dia);
+    const checkinAt = instante < entrega.checkoutAt ? entrega.checkoutAt : instante;
     await tx.licenseCheckout.update({
       where: { id: checkoutId },
-      data: { checkinAt: instante < entrega.checkoutAt ? entrega.checkoutAt : instante },
+      data: { checkinAt },
     });
+
+    await recordAudit(tx, {
+      entityType: 'License',
+      entityId: entrega.licenseId,
+      entityLabel: entrega.license.name,
+      action: 'CHECKIN',
+      changes: {
+        checkoutId,
+        targetType: entrega.assignedPersonId ? 'PERSON' : 'ASSET',
+        targetId: entrega.assignedPersonId ?? entrega.assignedAssetId,
+        targetName: rotuloDoAlvoDaEntrega(entrega),
+        checkinAt: checkinAt.toISOString(),
+      },
+    }, ator);
   });
 
   return prisma.licenseCheckout.findUniqueOrThrow({ where: { id: checkoutId }, select: CHECKOUT_SELECT });

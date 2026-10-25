@@ -74,10 +74,14 @@ describe('POST /api/endpoints/:id/link-and-checkout', () => {
     // As duas linhas no banco, e o histórico do ativo com os dois eventos.
     expect((await prisma.endpoint.findUniqueOrThrow({ where: { id: endpointId } })).assetId).toBe(desktop.id);
     expect(await prisma.assignment.count({ where: { assetId: desktop.id, checkinAt: null, targetWorkstationId: mesa } })).toBe(1);
-    const acoes = await prisma.activityLog.findMany({
-      where: { entityType: 'Asset', entityId: desktop.id }, select: { action: true },
+    const acoes = await prisma.auditLog.findMany({
+      where: { entityType: 'Asset', entityId: desktop.id, action: { in: ['LINK', 'CHECKOUT'] } },
+      select: { action: true, actorId: true, requestId: true },
     });
     expect(acoes.map((a) => a.action)).toEqual(expect.arrayContaining(['LINK', 'CHECKOUT']));
+    // Uma requisição, duas linhas: a mesma conta e o mesmo `requestId` nas duas (AB).
+    expect(acoes.every((a) => a.actorId === api.adminId)).toBe(true);
+    expect(new Set(acoes.map((a) => a.requestId)).size).toBe(1);
   });
 
   it('quando a entrega falha, o vínculo FICA e a resposta diz isso', async () => {

@@ -8,7 +8,7 @@ import { hojeNoBrasil, somarDias } from '../../server/domain/shared/hoje.helper'
 // precisa CONSULTAR (os ids do catálogo que o seed criou) sai do Prisma direto.
 //
 // A distinção importa. Criar o ativo com `prisma.asset.create` pularia o zod da
-// borda, o `strictObject`, a etiqueta automática e o `ActivityLog` — e o teste
+// borda, o `strictObject`, a etiqueta automática e o `AuditLog` — e o teste
 // passaria a provar coisas sobre um ativo que nenhum usuário consegue criar.
 // Já buscar o id de um status `DEPLOYABLE` não é operação nenhuma: é o mesmo
 // que ler a tela antes de clicar.
@@ -55,7 +55,7 @@ export async function idsDoSeed() {
  * Um item de estoque, pela API — nunca por `prisma.stockItem.create`.
  *
  * O motivo é o do topo deste arquivo: criar pelo Prisma pularia o zod da borda,
- * a guarda de tipo da categoria, a ENTRADA inicial e o `ActivityLog`, e o teste
+ * a guarda de tipo da categoria, a ENTRADA inicial e o `AuditLog`, e o teste
  * passaria a provar coisas sobre um item que nenhum usuário consegue cadastrar.
  *
  * O NOME é único entre os vivos, então quem chama passa um nome próprio por
@@ -74,7 +74,7 @@ export async function criarItemDeEstoque(
 
 /**
  * Uma licença, pela API — nunca por `prisma.license.create`, que pularia o zod
- * da borda, a guarda de tipo da categoria e o `ActivityLog`.
+ * da borda, a guarda de tipo da categoria e o `AuditLog`.
  *
  * O nome pode repetir (AA), mas cada teste dá o seu: é por ele que a asserção
  * se lê.

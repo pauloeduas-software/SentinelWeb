@@ -1,6 +1,7 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
 import { buildSnapshot } from '../../shared/diff.helper';
 import type { CatalogSpec } from '../specs/catalog-spec.types';
 
@@ -16,10 +17,10 @@ import type { CatalogSpec } from '../specs/catalog-spec.types';
  * apagar uma categoria com item associado. A tabela que precisa dizer O QUÊ, e
  * não quantos, declara `motivoParaNaoExcluir`.
  *
- * O `ActivityLog` guarda o retrato da linha em `changes`, então um apagão
+ * O `AuditLog` guarda o retrato da linha em `changes`, então um apagão
  * acidental continua recuperável à mão.
  */
-export async function deleteCatalog(spec: CatalogSpec, id: string): Promise<void> {
+export async function deleteCatalog(spec: CatalogSpec, id: string, ator: Ator): Promise<void> {
   await prisma.$transaction(async (tx) => {
     const delegate = spec.delegate(tx);
 
@@ -48,11 +49,12 @@ export async function deleteCatalog(spec: CatalogSpec, id: string): Promise<void
       await delegate.delete({ where: { id } });
     }
 
-    await recordActivity(tx, {
+    await recordAudit(tx, {
       entityType: spec.entityType,
       entityId: id,
+      entityLabel: String(antes.name),
       action: 'DELETE',
       changes: buildSnapshot(antes, spec.audited),
-    });
+    }, ator);
   });
 }

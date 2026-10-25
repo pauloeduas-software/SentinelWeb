@@ -41,15 +41,16 @@ export class AssetMaestro {
     // colada no navegador não tem a linha que a listagem tinha em memória.
     server.get('/api/assets/:id', assetController.byId);
 
-    // A aba Histórico: o `ActivityLog` do ativo unido ao histórico de posse, do
-    // mais recente para o mais antigo. NÃO existe tabela `AssetLog` (D18).
+    // A aba Histórico: as entregas e as licenças do ativo, do mais recente
+    // para o mais antigo. Só movimentação: a auditoria fica no banco (AB). NÃO
+    // existe tabela `AssetLog` (D18).
     server.get('/api/assets/:id/history', assetController.history);
 
     server.post('/api/assets', WRITE_RATE_LIMIT, assetController.create);
     server.put('/api/assets/:id', WRITE_RATE_LIMIT, assetController.update);
     server.delete('/api/assets/:id', WRITE_RATE_LIMIT, assetController.remove);
     // Restaurar da lixeira: POST porque muda estado e cada restauração vira uma
-    // linha no ActivityLog.
+    // linha no AuditLog.
     server.post('/api/assets/:id/restore', WRITE_RATE_LIMIT, assetController.restore);
 
     // DAR BAIXA: o ativo saiu do PATRIMÔNIO (vendido, descartado,

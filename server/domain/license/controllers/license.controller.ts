@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { SEM_PARAMETROS } from '../../../core/http/sem-parametros';
 import { parseListQuery } from '../../../core/http/list-query';
 import { idParamSchema } from '../../shared/params.schema';
+import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import {
   checkinLicenseSchema, checkoutKeySchema, checkoutLicenseSchema,
   createLicenseSchema, licenseFiltersSchema, updateLicenseSchema,
@@ -53,27 +54,27 @@ export const licenseController = {
 
   async create(request: FastifyRequest, reply: FastifyReply) {
     const data = createLicenseSchema.parse(request.body ?? {});
-    const licenca = await createLicense(data);
+    const licenca = await createLicense(data, atorDaRequisicao(request));
     return reply.status(201).send(licenca);
   },
 
   async update(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     const data = updateLicenseSchema.parse(request.body ?? {});
-    return updateLicense(id, data);
+    return updateLicense(id, data, atorDaRequisicao(request));
   },
 
   /** Exclusão DEFINITIVA — para o cadastro errado. A licença que acabou se encerra. */
   async remove(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
-    await deleteLicense(id);
+    await deleteLicense(id, atorDaRequisicao(request));
     return reply.status(204).send();
   },
 
   async terminate(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     SEM_PARAMETROS.parse(request.body ?? {});
-    return terminateLicense(id);
+    return terminateLicense(id, atorDaRequisicao(request));
   },
 
   /** Quem está com a licença agora — 15 por página, com busca pelo nome. */
@@ -86,7 +87,7 @@ export const licenseController = {
   async checkout(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
     const data = checkoutLicenseSchema.parse(request.body ?? {});
-    const entrega = await checkoutLicense(id, data);
+    const entrega = await checkoutLicense(id, data, atorDaRequisicao(request));
     return reply.status(201).send(entrega);
   },
 
@@ -94,13 +95,13 @@ export const licenseController = {
   async checkin(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     // Só a data da devolução, e opcional: ausente é hoje.
-    return checkinLicense(id, checkinLicenseSchema.parse(request.body ?? {}));
+    return checkinLicense(id, checkinLicenseSchema.parse(request.body ?? {}), atorDaRequisicao(request));
   },
 
   /** Troca SÓ a chave de uma entrega aberta. O `:id` é o da ENTREGA. */
   async checkoutKey(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return updateCheckoutKey(id, checkoutKeySchema.parse(request.body ?? {}));
+    return updateCheckoutKey(id, checkoutKeySchema.parse(request.body ?? {}), atorDaRequisicao(request));
   },
 
   /** Por onde a licença passou — 15 por página, sem busca. */

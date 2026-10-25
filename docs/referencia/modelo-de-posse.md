@@ -99,7 +99,7 @@ Uma linha por pessoa que ocupa um posto, com o turno.
 - **O turno se corrige no lugar, na ocupação aberta.** O lápis **Corrigir turno** do
   painel de ocupantes da ficha do posto abre o campo na própria linha — Enter salva,
   Esc cancela, vazio apaga o turno — e grava só o `shift`
-  (`PATCH /api/workstations/:id/occupants/:occupantId`, com trilha no `ActivityLog`). A linha
+  (`PATCH /api/workstations/:id/occupants/:occupantId`, com trilha na auditoria). A linha
   continua a mesma, com o mesmo `startedAt`: encerrar e reabrir fabricaria no histórico
   uma saída que não aconteceu e perderia a data de entrada. Ocupação **encerrada** não
   muda de turno (409) — é histórico ([Q](../decisoes/escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai)).

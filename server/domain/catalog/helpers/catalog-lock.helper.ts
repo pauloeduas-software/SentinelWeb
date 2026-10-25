@@ -148,13 +148,16 @@ export async function assertLocalRecebe(client: ClienteQueTrava, id: string, fin
  * de ativo, que logo depois trava o posto `FOR UPDATE` na invariante 19 —
  * subir de `SHARE` para `UPDATE` na mesma linha é o deadlock clássico entre
  * duas entregas ao mesmo posto, então ela trava forte desde o começo.
+ *
+ * Devolve o NOME do posto, já lido aqui: é como a entrega e a saída o gravam
+ * na auditoria.
  */
 export async function assertPostoRecebe(
   client: ClienteQueTrava,
   id: string,
   finalidade: string,
   modo: 'SHARE' | 'UPDATE' = 'SHARE',
-): Promise<void> {
+): Promise<string> {
   const linhas = modo === 'UPDATE'
     ? await client.$queryRaw<{ name: string; isActive: boolean }[]>`
         SELECT name, "isActive" FROM workstations WHERE id = ${id}::uuid FOR UPDATE`
@@ -165,6 +168,7 @@ export async function assertPostoRecebe(
   if (!linhas[0].isActive) {
     throw new AppError(`"${linhas[0].name}" está desativado e não recebe ${finalidade}.`, 409);
   }
+  return linhas[0].name;
 }
 
 interface RegistroLido {

@@ -16,6 +16,7 @@
 > **E depois (U, X e Y):** o alvo da posse não é mais `USER`/`LOCATION` — é `PERSON`, o colaborador
 > ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)), ou `WORKSTATION`, o posto, que saiu de `Location` e virou cadastro próprio ([Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)).
 > `LocationOccupant` virou `WorkstationOccupant`, e as colunas de autor da entrega saíram ([X](../decisoes/acesso.md#x--o-histórico-não-guarda-quem-fez)).
+> Quem entregou voltou a ter resposta na auditoria, não em coluna ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)).
 >
 > Esforço: **P** = até meio dia · **M** = 1 a 3 dias · **G** = mais de 3 dias
 

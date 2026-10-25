@@ -114,13 +114,14 @@ export function useAssetDetail() {
     fecharModal();
   };
 
-  // Reverter apaga a data e o motivo da saída num clique só, e o botão fica ao
-  // lado do selo, onde se clica por engano — por isso o `confirm`, como na
-  // lixeira. O que se perde é o registro no ativo; o histórico guarda a reversão.
+  // Reverter apaga a data, o motivo e a observação da saída num clique só, e o
+  // botão fica ao lado do selo, onde se clica por engano — por isso o `confirm`,
+  // como na lixeira. O que se perde é o registro no ativo; a auditoria, no
+  // banco, guarda a baixa e a reversão (AB).
   const handleReverterSaida = async () => {
     if (!asset) return;
     if (!confirm(
-      `Reverter a baixa de ${asset.assetTag}? A data e o motivo da saída são apagados; o histórico guarda a reversão.`,
+      `Reverter a baixa de ${asset.assetTag}? A data, o motivo e a observação da saída são apagados.`,
     )) return;
     try {
       await reverterSaida.mutateAsync(asset.id);

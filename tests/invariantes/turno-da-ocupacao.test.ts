@@ -84,14 +84,17 @@ describe('PATCH /api/workstations/:id/occupants/:occupantId', () => {
     // quebrou.
     expect(status).toBe(200);
 
-    const log = await prisma.activityLog.findFirst({
+    const log = await prisma.auditLog.findFirst({
       where: { entityType: 'WorkstationOccupant', entityId: aberta.id, action: 'UPDATE' },
       orderBy: { createdAt: 'desc' },
-      select: { changes: true },
+      select: { changes: true, actorType: true, actorId: true, source: true, requestId: true },
     });
 
     expect(log).not.toBeNull();
     expect(log?.changes).toEqual({ shift: { de: 'tarde', para: 'Tarde' } });
+    // A conta da SESSÃO assina a correção (AB).
+    expect(log).toMatchObject({ actorType: 'USER', actorId: api.adminId, source: 'painel' });
+    expect(log?.requestId).toBeTruthy();
   });
 
   it('aceita `null` para apagar o turno', async () => {

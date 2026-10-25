@@ -28,25 +28,16 @@ export interface PessoaDaFicha {
 /**
  * Um evento da aba Histórico da pessoa — `GET /api/people/:id/history`.
  *
- * QUATRO fontes numa lista só: o `ActivityLog` (cadastro, edição com diff,
- * desativação), as posses DIRETAS dela, as OCUPAÇÕES de posto e as licenças
- * entregues A ELA.
- *
- * Responde o que aconteceu COM a pessoa: a consulta do servidor é por
- * `entityId`. Colaborador não opera o sistema, então não há o que ela FEZ.
+ * TRÊS fontes numa lista só: as posses DIRETAS dela, as OCUPAÇÕES de posto e
+ * as licenças entregues A ELA. Só movimentação: cadastro, edição e desativação
+ * ficam na auditoria, no banco (AB).
  */
 export interface EventoDaPessoa {
   id: string;
-  fonte: 'ATIVIDADE' | 'POSSE' | 'POSTO' | 'LICENCA';
+  fonte: 'POSSE' | 'POSTO' | 'LICENCA';
   action: string;
   /** ISO — `JSON.parse` não reconstrói `Date`. */
   at: string;
-  /**
-   * O diff (`{ campo: { de, para } }`) misturado com valores soltos: o formato
-   * varia com a operação, e por isso é lido por `lerEvento()` em vez de ser
-   * tipado campo a campo.
-   */
-  changes: unknown;
   /** Preenchido só quando `fonte === 'POSSE'`. */
   posse: {
     assignmentId: string;

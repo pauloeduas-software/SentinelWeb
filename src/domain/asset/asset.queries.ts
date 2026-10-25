@@ -65,7 +65,7 @@ export function useAssetQuery(id: string | undefined) {
   });
 }
 
-/** A aba Histórico: `ActivityLog` + posse, do mais recente para o mais antigo. */
+/** A aba Histórico: as entregas e as licenças do ativo, do mais recente para o mais antigo. */
 export function useAssetHistoryQuery(id: string | undefined) {
   return useQuery({
     queryKey: assetKeys.history(id ?? ''),

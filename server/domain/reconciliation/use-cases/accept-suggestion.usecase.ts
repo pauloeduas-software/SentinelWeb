@@ -1,5 +1,6 @@
 import type { ReconciliationSuggestion } from '@prisma/client';
 import { prisma } from '../../../core/database/prismaClient';
+import type { Ator } from '../../audit/audit.types';
 import { AppError } from '../../../core/errors/app-error';
 import { SUGGESTION_SELECT } from '../helpers/suggestion-select.helper';
 import { vincularEndpointAoAtivo } from './link-endpoint-asset.usecase';
@@ -9,7 +10,7 @@ import { vincularEndpointAoAtivo } from './link-endpoint-asset.usecase';
 // ─────────────────────────────────────────────────────────────────────────────
 // A REGRA: nada aqui escreve direto.
 //
-// Aceitar chama o `vincularEndpointAoAtivo`, que já carrega o `ActivityLog` e o
+// Aceitar chama o `vincularEndpointAoAtivo`, que já carrega o `AuditLog` e o
 // encerramento das sugestões que o vínculo tornou obsoletas — e uma segunda
 // escrita, direta, divergiria dele no primeiro ajuste. A fila PROPÕE; quem GRAVA
 // é o dono do assunto.
@@ -30,33 +31,23 @@ async function carregarPendente(id: string): Promise<Sugestao> {
   return sugestao;
 }
 
-/** Fecha a sugestão. Chamado DEPOIS de a ação ter dado certo, nunca antes. */
-async function marcarAceita(id: string) {
-  return prisma.reconciliationSuggestion.update({
-    where: { id },
-    data: { state: 'ACCEPTED', resolvedAt: new Date() },
-    select: SUGGESTION_SELECT,
-  });
-}
-
 /**
  * Executa o que a sugestão propõe.
  *
- * A ação e o fechamento NÃO estão na mesma transação, e isso é deliberado: as
- * ações chamam use-cases que abrem transação própria, e aninhar transação do
- * Prisma dentro de transação não é suportado. A ordem — agir, depois fechar — é
- * a que erra para o lado certo: se o processo morrer no meio, a sugestão
- * continua `PENDING` e alguém a vê de novo numa fila que já reflete o cadastro
- * novo. O contrário deixaria uma sugestão "aceita" que nunca aconteceu.
+ * O fechamento vai DENTRO do vínculo (`origem.sugestaoId`), na mesma transação
+ * que o grava: a sugestão vira `ACCEPTED` junto com a máquina ligada ao ativo,
+ * ou nada acontece. Separados, o vínculo encerrava esta sugestão como
+ * `SUPERSEDED` com as outras, e uma falha antes do fechamento a deixava assim
+ * — e o expurgo a apagava na rodada seguinte.
  */
-export async function aceitarSugestao(id: string) {
+export async function aceitarSugestao(id: string, ator: Ator) {
   const sugestao = await carregarPendente(id);
 
   // UM TIPO SÓ, então nenhum `switch`: a fila propõe vínculo, e é isso. O dia
   // que `SuggestionKind` crescer por migração, é aqui que o tipo novo entra — e
   // o `vincularEndpointAoAtivo` continua sendo quem grava.
   if (!sugestao.assetId) throw new AppError('Sugestão de vínculo sem ativo.', 422);
-  await vincularEndpointAoAtivo(sugestao.endpointId, sugestao.assetId);
+  await vincularEndpointAoAtivo(sugestao.endpointId, sugestao.assetId, ator, { sugestaoId: id });
 
-  return marcarAceita(id);
+  return prisma.reconciliationSuggestion.findUniqueOrThrow({ where: { id }, select: SUGGESTION_SELECT });
 }

@@ -91,6 +91,8 @@ export interface Asset {
    */
   retiredAt: string | null;
   retiredReason: MotivoDaSaida | null;
+  /** A observação da baixa, enquanto ela vale. Desfazer a baixa a limpa. */
+  retiredNotes: string | null;
 
   createdAt: string;
 
@@ -163,22 +165,15 @@ export type AssetListParams = Omit<ListParams, 'view'> & {
 /**
  * Um evento da aba Histórico — `GET /api/assets/:id/history`.
  *
- * Duas fontes numa lista só: o `ActivityLog` (cadastro, edição com diff,
- * lixeira, baixa) e o histórico de posse. NÃO existe tabela
- * `AssetLog` (D18).
+ * Só movimentação: as entregas e devoluções do ativo e as licenças entregues
+ * a ele. Cadastro, edição, baixa e vínculo ficam na auditoria, no banco (AB).
  */
 export interface EventoDoAtivo {
   id: string;
-  fonte: 'ATIVIDADE' | 'POSSE' | 'LICENCA';
+  fonte: 'POSSE' | 'LICENCA';
   action: string;
   /** ISO — `JSON.parse` não reconstrói `Date`. */
   at: string;
-  /**
-   * O diff (`{ campo: { de, para } }`) misturado com valores soltos
-   * (`notes`): o formato varia com a operação, e por isso é lido por
-   * `lerEvento()` em vez de ser tipado campo a campo.
-   */
-  changes: unknown;
   posse: {
     assignmentId: string;
     targetType: AlvoDaPosse;

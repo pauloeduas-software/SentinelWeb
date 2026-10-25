@@ -131,7 +131,7 @@ export interface EntregaDoAlvo extends EntregaDeLicenca {
  * Um evento do histórico da licença — `GET /api/licenses/:id/history`.
  *
  * Só movimentação: cada entrega e cada devolução, com o nome de quem recebeu.
- * Sem trilha de cadastro e edição — o sistema não tem auditoria.
+ * Cadastro e edição ficam na auditoria, no banco (AB), e não chegam aqui.
  */
 export interface EventoDaLicenca {
   id: string;

@@ -30,6 +30,7 @@ const contarUsos = async (client: ClienteCatalogo, id: string) => {
 export const categorySpec: CatalogSpec = {
   slug: 'categories',
   entityType: 'Category',
+  tabela: 'categories',
   rotulo: 'categoria',
 
   delegate: (client) => client.category as unknown as CatalogDelegate,

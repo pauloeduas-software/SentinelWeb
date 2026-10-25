@@ -1,6 +1,7 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
 import type { CatalogSpec } from '../specs/catalog-spec.types';
 
 /**
@@ -13,6 +14,7 @@ import type { CatalogSpec } from '../specs/catalog-spec.types';
 export async function restoreCatalog(
   spec: CatalogSpec,
   id: string,
+  ator: Ator,
 ): Promise<Record<string, unknown>> {
   return prisma.$transaction(async (tx) => {
     const delegate = spec.delegate(tx);
@@ -28,7 +30,9 @@ export async function restoreCatalog(
       select: spec.select,
     });
 
-    await recordActivity(tx, { entityType: spec.entityType, entityId: id, action: 'RESTORE' });
+    await recordAudit(tx, {
+      entityType: spec.entityType, entityId: id, entityLabel: String(depois.name), action: 'RESTORE',
+    }, ator);
 
     return depois;
   });

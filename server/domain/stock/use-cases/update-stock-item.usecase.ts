@@ -1,8 +1,9 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
 import { buildChanges } from '../../shared/diff.helper';
-import { comSaldo, contarForaDe } from '../helpers/stock-balance.helper';
+import { comSaldo, contarForaDe, travarItemOuFalhar } from '../helpers/stock-balance.helper';
 import { STOCK_ITEM_SELECT } from '../helpers/stock-select.helper';
 import { assertLocalRecebe } from '../../catalog/helpers/catalog-lock.helper';
 import type { UpdateStockItemInput } from '../schemas/stock.schema';
@@ -13,8 +14,11 @@ import { assertCategoriaDeEstoque, assertNomeLivre } from './create-stock-item.u
 // nem existe no schema de edição — o `strictObject` devolve 422 sozinho.
 const CAMPOS_AUDITADOS = ['name', 'categoryId', 'locationId', 'notes'] as const;
 
-export async function updateStockItem(id: string, data: UpdateStockItemInput) {
+export async function updateStockItem(id: string, data: UpdateStockItemInput, ator: Ator) {
   return prisma.$transaction(async (tx) => {
+    // A trava do item primeiro, como a saída: o "de" da auditoria é lido com a
+    // linha presa, e o grafo continua item → categoria, item → posto.
+    await travarItemOuFalhar(tx, id);
     const antes = await tx.stockItem.findFirst({ where: { id }, select: STOCK_ITEM_SELECT });
     if (!antes) throw new AppError('Item de estoque não encontrado.', 404);
 
@@ -39,7 +43,9 @@ export async function updateStockItem(id: string, data: UpdateStockItemInput) {
 
     const changes = buildChanges(antes, depois, CAMPOS_AUDITADOS);
     if (Object.keys(changes).length > 0) {
-      await recordActivity(tx, { entityType: 'StockItem', entityId: id, action: 'UPDATE', changes });
+      await recordAudit(tx, {
+        entityType: 'StockItem', entityId: id, entityLabel: depois.name, action: 'UPDATE', changes,
+      }, ator);
     }
 
     // Com saldo, como toda leitura de item: a tela substitui a linha pela

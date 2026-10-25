@@ -1,17 +1,13 @@
-import { ArrowRightLeft, Clock, FileText, KeyRound } from 'lucide-react';
+import { ArrowRightLeft, Clock, KeyRound } from 'lucide-react';
 import type { EventoDoAtivo } from '../../../../domain/shared/asset.types';
 import { formatarDiaDoInstante } from '../../../helpers/format.helper';
 import { momentoDoEvento } from '../../../helpers/historico.helper';
-import { lerEventoDoAtivo, tituloDoEvento } from '../helpers/historico.helper';
+import { tituloDoEvento } from '../helpers/historico.helper';
 
-// A LINHA DO TEMPO do ativo. Três fontes, uma lista (D18): o `ActivityLog` —
-// cadastro, edição com o diff campo a campo, lixeira, baixa —, o histórico de
-// posse, que traz o nome de quem recebeu, e as licenças entregues a esta
-// máquina (as da pessoa responsável ficam na ficha dela).
-//
-// NÃO existe tabela `AssetLog`: o `ActivityLog` já grava o diff na mesma
-// transação da operação, e uma segunda trilha só criaria a pergunta "por que as
-// duas não batem?".
+// A LINHA DO TEMPO do ativo: por onde ele passou. Duas fontes, uma lista: o
+// histórico de posse, que traz o nome de quem recebeu, e as licenças entregues
+// a esta máquina (as da pessoa responsável ficam na ficha dela). Cadastro,
+// edição e baixa ficam na auditoria, no banco (AB).
 
 interface HistoryTabProps {
   eventos: EventoDoAtivo[];
@@ -26,7 +22,7 @@ export default function HistoryTab({ eventos, total, carregando }: HistoryTabPro
   if (carregando) return <div className="text-text-tertiary">Carregando…</div>;
 
   if (eventos.length === 0) {
-    return <div className="text-text-tertiary">Nada aconteceu com este ativo ainda.</div>;
+    return <div className="text-text-tertiary">Nenhuma entrega nem licença ainda.</div>;
   }
 
   return (
@@ -48,9 +44,6 @@ export default function HistoryTab({ eventos, total, carregando }: HistoryTabPro
 }
 
 function Evento({ evento }: { evento: EventoDoAtivo }) {
-  // Leitura do `changes` fora do JSX: o formato varia com a operação e a
-  // separação entre diff e dado solto é regra, não marcação.
-  const { mudancas, detalhes } = lerEventoDoAtivo(evento);
   const dePosse = evento.fonte === 'POSSE';
   const deLicenca = evento.fonte === 'LICENCA';
   const notas = evento.posse?.notes ?? evento.licenca?.notes;
@@ -61,9 +54,7 @@ function Evento({ evento }: { evento: EventoDoAtivo }) {
         <div className="flex items-center gap-2">
           {dePosse
             ? <ArrowRightLeft size={13} className="text-status-info shrink-0" />
-            : deLicenca
-              ? <KeyRound size={13} className="text-text-tertiary shrink-0" />
-              : <FileText size={13} className="text-text-tertiary shrink-0" />}
+            : <KeyRound size={13} className="text-text-tertiary shrink-0" />}
           <span className="text-text-primary">{tituloDoEvento(evento)}</span>
         </div>
 
@@ -77,28 +68,6 @@ function Evento({ evento }: { evento: EventoDoAtivo }) {
         <div className="text-text-secondary text-[10px]">{notas}</div>
       )}
 
-      {mudancas.length > 0 && (
-        <ul className="space-y-1">
-          {mudancas.map((mudanca) => (
-            <li key={mudanca.campo} className="flex flex-wrap items-center gap-2 text-[10px]" title={mudanca.cru}>
-              <span className="text-text-tertiary uppercase tracking-widest">{mudanca.rotulo}</span>
-              <span className="text-text-tertiary line-through">{mudanca.de}</span>
-              <span className="text-text-tertiary">→</span>
-              <span className="text-text-primary">{mudanca.para}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {detalhes.length > 0 && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-text-tertiary">
-          {detalhes.map((detalhe) => (
-            <span key={detalhe.campo} title={detalhe.cru}>
-              {detalhe.rotulo}: <span className="text-text-secondary">{detalhe.valor}</span>
-            </span>
-          ))}
-        </div>
-      )}
     </li>
   );
 }

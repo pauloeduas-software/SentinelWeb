@@ -1,8 +1,9 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
 import { buildSnapshot } from '../../shared/diff.helper';
-import { OCCUPANT_SELECT } from '../helpers/occupant-select.helper';
+import { OCCUPANT_SELECT, rotuloDaOcupacao } from '../helpers/occupant-select.helper';
 
 const CAMPOS_AUDITADOS = ['workstationId', 'personId', 'shift', 'startedAt', 'endedAt', 'notes'] as const;
 
@@ -10,7 +11,7 @@ const CAMPOS_AUDITADOS = ['workstationId', 'personId', 'shift', 'startedAt', 'en
  * ENCERRA uma ocupação. Não apaga.
  *
  * A linha continua na tabela e só ganha `endedAt`. É a mesma razão do
- * `ActivityLog` ser append-only: "quem respondia pela Mesa 1 em março?" precisa
+ * `AuditLog` ser append-only: "quem respondia pela Mesa 1 em março?" precisa
  * continuar respondível depois que a Laura saiu do posto, e um `DELETE` de
  * verdade apagaria a única linha que sabe disso. A rota é `DELETE` porque é o
  * verbo de "tira esta pessoa daqui" na tela — o que ele faz com a linha é
@@ -30,6 +31,7 @@ const CAMPOS_AUDITADOS = ['workstationId', 'personId', 'shift', 'startedAt', 'en
 export async function endWorkstationOccupancy(
   workstationId: string,
   occupantId: string,
+  ator: Ator,
 ) {
   return prisma.$transaction(async (tx) => {
     // `workstationId` entra no `where` junto com o id: a ocupação é encerrada
@@ -64,12 +66,13 @@ export async function endWorkstationOccupancy(
     // responde "quem saiu de onde, e desde quando estava lá". Um log com
     // apenas a data de saída obrigaria a cruzar com a tabela para entender o
     // evento — e a tabela pode ser corrigida depois, o log não.
-    await recordActivity(tx, {
+    await recordAudit(tx, {
       entityType: 'WorkstationOccupant',
       entityId: occupantId,
+      entityLabel: rotuloDaOcupacao(encerrada),
       action: 'END',
       changes: buildSnapshot(encerrada, CAMPOS_AUDITADOS),
-    });
+    }, ator);
 
     // Devolve a ocupação encerrada, e não `{ success: true }` como o DELETE do
     // ativo: lá a linha some, aqui ela continua existindo em outro estado — e é

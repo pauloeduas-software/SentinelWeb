@@ -1,6 +1,7 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
 import { STOCK_MOVEMENT_SELECT } from '../helpers/stock-select.helper';
 import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
 
@@ -30,7 +31,7 @@ import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
  * outra pessoa, porque uma unidade entregue de novo é OUTRA linha.
  * ─────────────────────────────────────────────────────────────────────────────
  */
-export async function checkinStock(movementId: string) {
+export async function checkinStock(movementId: string, ator: Ator) {
   return prisma.$transaction(async (tx) => {
     const devolvidaEm = new Date();
 
@@ -62,17 +63,24 @@ export async function checkinStock(movementId: string) {
       select: STOCK_MOVEMENT_SELECT,
     });
 
-    await recordActivity(tx, {
+    // O nome do item e o de quem devolveu, por escrito, como na saída.
+    // `findUnique` e não `findFirst`: item com unidade fora não vai para a
+    // lixeira (`delete-stock-item`), mas a auditoria não depende disso.
+    const item = await tx.stockItem.findUniqueOrThrow({ where: { id: unidade.itemId }, select: { name: true } });
+
+    await recordAudit(tx, {
       entityType: 'StockItem',
       entityId: unidade.itemId,
+      entityLabel: item.name,
       action: 'CHECKIN',
       changes: {
         movementId: unidade.id,
         targetType: unidade.targetType,
         targetId: unidade.targetPersonId ?? unidade.targetWorkstationId,
+        targetName: unidade.targetPerson?.name ?? unidade.targetWorkstation?.name ?? unidade.targetWorkstationName,
         returnedAt: devolvidaEm.toISOString(),
       },
-    });
+    }, ator);
 
     return unidade;
   });

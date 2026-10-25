@@ -55,6 +55,7 @@ async function assertSobraOutroAtivo(
 export const statusLabelSpec: CatalogSpec = {
   slug: 'status-labels',
   entityType: 'StatusLabel',
+  tabela: 'status_labels',
   rotulo: 'status',
 
   delegate: (client) => client.statusLabel as unknown as CatalogDelegate,
@@ -103,7 +104,7 @@ export const statusLabelSpec: CatalogSpec = {
   // ENTREGUE A ALGUÉM: `DEPLOYABLE` é o único que libera o checkout. Trocar o
   // tipo de um status disponível para `UNDEPLOYABLE` inutiliza 200 ativos em
   // silêncio, em uma requisição, sem nenhuma
-  // linha de `assets` ser escrita — e o `ActivityLog` dos 200 fica vazio,
+  // linha de `assets` ser escrita — e o `AuditLog` dos 200 fica vazio,
   // porque do ponto de vista deles nada mudou.
   //
   // A saída correta é a mesma do delete: criar o status novo e mover os ativos

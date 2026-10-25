@@ -1,6 +1,8 @@
 import { randomUUID } from 'crypto';
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
+import { recordAuditDoQueJaAconteceu } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
 import { sendToAgent } from '../../agent/agent.registry';
 import { shortHwid } from '../helpers/hwid.helper';
 import { createLogger } from '../../../core/logger/logger';
@@ -50,7 +52,7 @@ interface SentCommand {
  *         porque quem está na tela precisa saber qual não respondeu.
  * ═══════════════════════════════════════════════════════════════════════════
  */
-export async function sendCommand(endpointId: string, action: string): Promise<SentCommand> {
+export async function sendCommand(endpointId: string, action: string, ator: Ator): Promise<SentCommand> {
   const maquina = await prisma.endpoint.findUnique({
     where: { id: endpointId },
     select: { hwid: true, hostname: true },
@@ -90,5 +92,20 @@ export async function sendCommand(endpointId: string, action: string): Promise<S
   }
 
   logger.info(`[Endpoint] Comando ${action} entregue a ${shortHwid(maquina.hwid)}`, { commandId });
+
+  // Só o que SAIU para a máquina (AB): o desconectado e a falha não entregaram
+  // nada. Depois do envio, porque o comando não volta atrás — gravado antes, a
+  // auditoria afirmaria um desligamento que nunca saiu. "Saiu" é a conexão ter
+  // aceitado os bytes: o agente não confirma a execução, e a máquina que perdeu
+  // a rede sem fechar o socket não recebe o que a linha diz que foi mandado.
+  // E a gravação que falhar não vira 500: o comando já saiu.
+  await recordAuditDoQueJaAconteceu({
+    entityType: 'Endpoint',
+    entityId: endpointId,
+    entityLabel: maquina.hostname,
+    action: 'COMMAND',
+    changes: { comando: action, commandId },
+  }, ator);
+
   return { commandId };
 }

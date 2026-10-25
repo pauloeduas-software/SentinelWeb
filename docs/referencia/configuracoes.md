@@ -59,7 +59,7 @@ a tela e o maestro as percorrem em paralelo.
 | **Desativar em vez de excluir** | o desativado some das listas de escolha e é **recusado** (409) quando escolhido de novo; continua no histórico e em tudo que já o usa. Detalhes abaixo | `isActive` nas seis, `optionsWhere`, `assertEscolhaAtiva` |
 | **A contagem inclui a lixeira** | ativo e item de estoque na lixeira continuam apontando — e podem voltar. A licença não tem lixeira: a encerrada conta, a excluída não existe mais | `INCLUINDO_LIXEIRA` nos `countUsages` |
 | **Lixeira só em Colaboradores** | nas outras cinco, exclusão é definitiva (D8) e o que protege é o 409 por uso. O colaborador vai para a lixeira, com Restaurar ([V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira)) | `lixeira` da spec, `restore-catalog.usecase.ts` |
-| **Tudo vai para o histórico** | criar, editar e excluir gravam `ActivityLog` na **mesma transação**; a edição grava só o que mudou | `recordActivity` nos use-cases |
+| **Tudo vai para a auditoria** | criar, editar e excluir gravam `audit_logs` na **mesma transação**, com quem fez ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)); a edição grava só o que mudou | `recordAudit` nos use-cases |
 | **Listas de escolha** | `GET /api/<tabela>/options` devolve `{ id, name }` dos **ativos**, até 200, com busca `?q=` — e o colaborador vem também com `detalhe`, o e-mail (`optionDetail` da spec), que o seletor da entrega de licença mostra ao lado do nome. É ele que alimenta todo `<select>`. Um **filtro** de listagem pede `?inativos=incluir`, porque o desativado ainda tem registros | `list-catalog-options.usecase.ts` |
 
 > **A contagem de uso é a regra inteira.** Se uma tabela nova passar a apontar
@@ -277,7 +277,7 @@ aqui à parte, à mão — nada cria colaborador a partir de usuário.
 
 O botão 📄 abre `/configuracoes/colaboradores/:id`: os **postos** que a pessoa
 ocupa (com o turno), os **itens de estoque** e as **licenças** no nome dela — com
-o botão **Devolver** em cada um — e o **histórico**: cadastro e edições, entregas e
+o botão **Devolver** em cada um — e o **histórico**, que é só movimentação: entregas e
 devoluções de ativo, entradas e saídas de posto, licenças recebidas e devolvidas. Só
 as licenças entregues a ELA: as do computador que ela usa ficam na aba Licenças do
 ativo. Só leitura, fora o Devolver.

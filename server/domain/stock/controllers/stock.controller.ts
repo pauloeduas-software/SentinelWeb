@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { SEM_PARAMETROS } from '../../../core/http/sem-parametros';
 import { parseListQuery } from '../../../core/http/list-query';
 import { historyQuerySchema } from '../../shared/history.schema';
+import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import {
   adjustStockSchema, checkoutStockSchema, createStockItemSchema, stockFiltersSchema,
@@ -48,32 +49,33 @@ export const stockController = {
 
   async create(request: FastifyRequest, reply: FastifyReply) {
     const data = createStockItemSchema.parse(request.body ?? {});
-    const item = await createStockItem(data);
+    // O autor vem da SESSÃO, nunca do corpo (auth/helpers/actor.helper.ts).
+    const item = await createStockItem(data, atorDaRequisicao(request));
     return reply.status(201).send(item);
   },
 
   async update(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     const data = updateStockItemSchema.parse(request.body ?? {});
-    return updateStockItem(id, data);
+    return updateStockItem(id, data, atorDaRequisicao(request));
   },
 
   async remove(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    await deleteStockItem(id);
+    await deleteStockItem(id, atorDaRequisicao(request));
     return { success: true };
   },
 
   async restore(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return restoreStockItem(id);
+    return restoreStockItem(id, atorDaRequisicao(request));
   },
 
   async adjust(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
     const data = adjustStockSchema.parse(request.body ?? {});
     // 201: a entrada ou a baixa CRIA uma linha de movimento.
-    const resultado = await adjustStock(id, data);
+    const resultado = await adjustStock(id, data, atorDaRequisicao(request));
     return reply.status(201).send(resultado);
   },
 
@@ -82,7 +84,7 @@ export const stockController = {
     const data = checkoutStockSchema.parse(request.body ?? {});
     // 201: a saída CRIA uma linha por unidade. O corpo devolve as unidades e o
     // disponível que ficou, porque a tela precisa dos dois.
-    const resultado = await checkoutStock(id, data);
+    const resultado = await checkoutStock(id, data, atorDaRequisicao(request));
     return reply.status(201).send(resultado);
   },
 
@@ -91,6 +93,6 @@ export const stockController = {
     // A devolução não leva nota nem nada: o corpo, se vier, é vazio.
     SEM_PARAMETROS.parse(request.body ?? {});
     // 200, e não 201: a devolução FECHA a linha que já existia.
-    return checkinStock(id);
+    return checkinStock(id, atorDaRequisicao(request));
   },
 };

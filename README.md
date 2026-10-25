@@ -45,7 +45,7 @@ fica em `src/index.css`, com variáveis CSS do Tailwind.
 | `GET /health` | Liveness: o processo está de pé. É o health check do container |
 | `GET /health/ready` | Readiness: banco respondendo + agentes conectados. 503 se o banco cair |
 
-Toda resposta leva `X-Request-Id`, que aparece na linha de log da requisição.
+Toda resposta leva `X-Request-Id`, que aparece na linha de log da requisição e na auditoria (`audit_logs.requestId`). O número é sempre gerado pelo servidor: o que o cliente mandar é ignorado.
 
 ## 🚀 Telas
 

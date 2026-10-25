@@ -6,6 +6,7 @@ import {
 import { normalizeSerial, normalizeUuid } from '../helpers/normalize-identity.helper';
 import { proporSugestao } from './upsert-suggestion.usecase';
 import { vincularEndpointAoAtivo } from './link-endpoint-asset.usecase';
+import type { Ator } from '../../audit/audit.types';
 import {
   lerConfiguracaoDaDescoberta, type ConfiguracaoDaDescoberta,
 } from '../helpers/discovery-settings.helper';
@@ -60,6 +61,14 @@ interface ResultadoDoMatch {
   vinculadas: number;
   colisoes: number;
 }
+
+/**
+ * O autor do vínculo AUTOMÁTICO: o sistema, não uma conta. Mesmo quando a
+ * rodada foi pedida pelo "Reconciliar agora", quem decidiu ligar a máquina ao
+ * ativo foi a regra da descoberta em `ON` — e é essa a diferença que a
+ * auditoria existe para mostrar (AB).
+ */
+const JOB_DA_RECONCILIACAO: Ator = { tipo: 'SYSTEM', origem: 'job:reconciliacao' };
 
 /**
  * Roda a cascata para UM endpoint e transforma o resultado em fila (ou em
@@ -152,7 +161,7 @@ export async function reconciliarEndpoint(
     && casamentos[0].score >= PONTOS_PARA_VINCULO_AUTOMATICO;
 
   if (automatico) {
-    await vincularEndpointAoAtivo(endpoint.id, casamentos[0].alvoId, {
+    await vincularEndpointAoAtivo(endpoint.id, casamentos[0].alvoId, JOB_DA_RECONCILIACAO, {
       automatico: true,
       sinal: casamentos[0].signal,
     });

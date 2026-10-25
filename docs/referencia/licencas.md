@@ -15,8 +15,9 @@
 **Um contrato com uma quantidade comprada**, entregue um a um a quem usa. **Campos:** nome,
 categoria (do tipo Licença, ativa) e quantidade comprada, obrigatórios; vencimento,
 encerramento, licenciado para (nome e e-mail), fabricante, pedido, data e valor da compra,
-notas e chave do produto, opcionais. O cadastro não entra em histórico nenhum: o sistema não
-tem trilha de auditoria.
+notas e chave do produto, opcionais. O cadastro não entra no histórico da tela, que é só
+entregas e devoluções; ele fica na auditoria, no banco, com quem fez ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)) — e a chave só
+como "informada", "alterada" ou "removida", nunca o valor.
 
 - **A quantidade vai de 1 a 100.000**: zero não é contrato, e a licença que acabou se encerra. O
   piso tem o CHECK `licenses_seats_positivo`; o teto é só da aplicação.
@@ -230,7 +231,7 @@ terminam em `id`, para a mesma linha não aparecer em duas páginas.
 - entregar ou devolver fora da tela de Licenças;
 - anexo, conferência com o software instalado, exportação;
 - observação na devolução (só existe na entrega);
-- trilha de auditoria (quem cadastrou, editou ou excluiu, e quando).
+- tela de auditoria: quem cadastrou, editou ou excluiu está só no banco.
 
 ## Onde é testado
 

@@ -91,7 +91,8 @@ os números (`qty`, `fora`, `baixa`) para a tela não precisar recontar.
 
 **`corridas.test.ts` › 1 de 1 e 3 de 5.** Duas saídas simultâneas de um item com uma unidade só:
 sem a trava da linha do item (`travarItemOuFalhar`), as duas contam "0 de 1 fora" e as duas inserem.
-Prova também a BAIXA concorrente com a SAÍDA no mesmo item, pela mesma trava.
+Prova também a BAIXA concorrente com a SAÍDA no mesmo item, pela mesma trava, e as duas
+restaurações do mesmo item da lixeira: restaura uma vez, e a auditoria tem um `RESTORE` só.
 
 Em todos os casos a asserção central é sobre o BANCO — a contagem de `StockMovement` abertas —, não
 sobre a resposta HTTP: é o estado final que precisa estar certo, e é exatamente o que uma resposta
@@ -135,7 +136,7 @@ licença e os seus alvos quando vai mudá-los: rodado sozinho com `-t`, ele pass
   entrega (única entre as abertas da licença), a troca da chave, as rotas que nunca a devolvem
   — o alerta incluído, com uma licença que está nele —, e como a tela a esconde.
 - **`historico.test.ts`** — o histórico separado por alvo, e o da licença só com entregas e
-  devoluções: cadastro e edição não gravam nada no `activity_logs`. A paginação sai do banco, e
+  devoluções: cadastro e edição ficam na auditoria, e o histórico não os lê. A paginação sai do banco, e
   a entrega e a devolução no mesmo dia passado — o mesmo instante — vêm devolução primeiro.
 - **`posse.test.ts`** — o 409 da pessoa e do ativo, com o nome de cada licença e as `refs` que
   a tela transforma em link, e a ficha e a aba Licenças que listam só o que é de cada um.
@@ -202,6 +203,20 @@ vazia. `.optional()` do zod aceita a chave **ausente**, não a chave vazia. Os d
 corpos são diferentes e só um existe na vida real — foi essa distinção que custou
 o defeito 1, e ela volta a cada campo novo.
 
+### `invariantes/auditoria.test.ts` — toda escrita tem dono
+
+O teste central passa por cada rota de escrita da tela e confere que **toda** requisição 2xx
+deixou ao menos uma linha em `audit_logs` com o número dela e a conta da sessão (`auditada()`).
+Rota nova de escrita entra nessa lista. O mesmo arquivo prova o resto da [AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco):
+o autor no corpo é 422; uma segunda conta assina o que ela fez; o login grava a entrada como a
+conta e a senha errada sem autor, e o bloqueio uma linha só por janela; a configuração salva num
+banco sem a linha diz só o que a conta mandou; o vínculo repetido não
+grava nada, e o aceite fecha a sugestão junto com o vínculo; `UPDATE` e `DELETE` na tabela são
+recusados pelo banco, e o texto em branco também; o agente
+e o job em `SUGGEST` não mexem em cadastro, posse nem estoque e não gravam; o
+`conceder-administrador` não grava o que não mudou; e senha, hash e chave de licença nunca chegam à
+tabela. `id-da-requisicao.test.ts` prova que o `X-Request-Id` do cliente é ignorado.
+
 ### `corridas/` — o placar, nunca "deu certo"
 
 A asserção de um teste de corrida nunca é *"a requisição funcionou"*: é
@@ -214,6 +229,13 @@ pool para cada. Quem serializa é o Postgres, que é o que se quer provar.
 > Foi aqui que a invariante 6 nasceu: o teste de "desligar e entregar ao mesmo
 > tempo" ficou vermelho com `{ posses: 1 }` na primeira execução, contra código
 > que parecia certo e cujos comentários afirmavam ser seguro.
+
+`vinculo.test.ts` é a corrida da máquina: dois vínculos da mesma máquina para ativos diferentes,
+duas desvinculações e dois aceites da mesma sugestão — passa um de cada, e a auditoria tem um
+`LINK` e um `UNLINK` só. Sem a trava da máquina, o segundo vínculo apagava o primeiro sem deixar
+rastro. `login.test.ts` é a rajada de dez senhas erradas na mesma conta: o contador chega a dez, a
+conta trava, e cada linha da auditoria leva o seu número, de 1 a 10. E a de dez tentativas na conta
+já bloqueada: uma linha "bloqueada" só — sem a trava da conta, eram oito.
 
 ---
 
@@ -235,7 +257,7 @@ trunca e semeia **por arquivo**.
 o administrador do harness; `api.anonimo` é o mesmo app sem cookie, para testar a
 porta fechada. Os fixtures criam cenário **pela API**, nunca por `prisma.create`
 — um registro criado por Prisma pula o zod da borda, o `strictObject`, a etiqueta
-automática e o `ActivityLog`, e o teste passaria a provar coisas sobre um dado que
+automática e a auditoria, e o teste passaria a provar coisas sobre um dado que
 nenhum usuário consegue criar.
 
 **Um arquivo por vez** (`fileParallelism: false`): é um banco só. Com paralelismo,

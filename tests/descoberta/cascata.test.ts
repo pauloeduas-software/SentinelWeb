@@ -117,11 +117,44 @@ describe('serial único casa, e casa com 100', () => {
     const vinculado = await prisma.endpoint.findUniqueOrThrow({ where: { hwid: 'unico-1' } });
     expect(vinculado.assetId).toBe(ativo.id);
 
-    // E deixou rastro no histórico DO ATIVO, que é onde alguém vai procurar.
-    const log = await prisma.activityLog.findFirst({
+    // E deixou rastro no histórico DO ATIVO, que é onde alguém vai procurar —
+    // assinado pela CONTA que aceitou: em `SUGGEST`, quem vincula é uma pessoa (AB).
+    const log = await prisma.auditLog.findFirst({
       where: { entityType: 'Asset', entityId: ativo.id, action: 'LINK' },
     });
     expect(log).not.toBeNull();
+    expect(log).toMatchObject({ actorType: 'USER', actorId: api.adminId, source: 'painel' });
+  });
+});
+
+describe('em ON, o vínculo automático é assinado pelo sistema', () => {
+  it('a linha do LINK diz SYSTEM e o job, sem conta nenhuma', async () => {
+    const ativo = await ativoComSerial('SN-AUTOMATICO-7', 'Desktop vinculado sozinho');
+
+    const agente = await conectarAgente(api, 'automatico-1');
+    await agente.handshake({ BiosSerial: 'SN-AUTOMATICO-7', Hostname: 'pc-automatico' });
+    await esperarPor('a máquina do modo ON', () => prisma.endpoint.findUnique({ where: { hwid: 'automatico-1' } }));
+    await agente.fechar();
+
+    await api.put('/api/settings/discovery', { discoveryMode: 'ON' });
+    try {
+      await rodarReconciliacao();
+    } finally {
+      await api.put('/api/settings/discovery', { discoveryMode: 'SUGGEST' });
+    }
+
+    const endpoint = await prisma.endpoint.findUniqueOrThrow({ where: { hwid: 'automatico-1' } });
+    expect(endpoint.assetId).toBe(ativo.id);
+
+    // Ninguém clicou: quem decidiu foi a regra do `ON`. É a diferença entre "o
+    // sistema fez" e "a conta X fez" que a auditoria existe para mostrar (AB).
+    const log = await prisma.auditLog.findFirstOrThrow({
+      where: { entityType: 'Asset', entityId: ativo.id, action: 'LINK' },
+    });
+    expect(log).toMatchObject({
+      actorType: 'SYSTEM', actorId: null, actorName: null, actorEmail: null, requestId: null,
+      source: 'job:reconciliacao', entityLabel: ativo.assetTag,
+    });
   });
 });
 

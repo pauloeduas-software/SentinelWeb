@@ -44,7 +44,7 @@ formulário próprio — é uma operação, não um campo do cadastro:
 |---|---|
 | **Motivo** (obrigatório) | um de seis, lista fechada: Vendido, Descartado, Doado, Devolvido em garantia, Extraviado, Roubado |
 | **Data da saída** (obrigatório) | vem preenchida com **hoje**, no fuso do navegador. Pode ser uma data passada — a venda foi na semana passada e o registro, hoje —, nunca futura (422) |
-| **Observações** | a justificativa ("lote 2026/03, nota 1187"). Vai para o **histórico**, não para o ativo |
+| **Observações** | a justificativa ("lote 2026/03, nota 1187"). Fica no ativo (`retiredNotes`) e aparece na aba Detalhes enquanto a baixa valer; a de cada baixa fica também na auditoria, no banco ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)) |
 
 A API é `POST /api/assets/:id/retire` (`{ retiredReason, retiredAt?, notes? }`),
 permitida a `ADMIN`, o único cargo ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)).
@@ -55,10 +55,11 @@ permitida a `ADMIN`, o único cargo ([Z](../decisoes/acesso.md#z--sobra-um-cargo
   aba Detalhes, com o botão **Reverter**.
 - **Na lista de Ativos:** o ativo sai da vista **Ativos** e passa a aparecer só na
   vista **Baixados**, que tem contador próprio. A **Lixeira** não olha a baixa.
-- **No histórico:** a linha "Baixa do patrimônio", com quando, o motivo
-  ("Vendido") e a "Observação da baixa".
+- **Na aba Detalhes:** a observação, abaixo do selo.
+- **Na auditoria, no banco:** a linha `RETIRE`, com quem fez, quando, o motivo e a
+  observação. A aba Histórico é só movimentação e não a mostra ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)).
 - **O status não muda.** Trocar o status é uma segunda decisão, com linha
-  própria no histórico.
+  própria na auditoria.
 
 ---
 
@@ -92,10 +93,11 @@ Para a venda que não saiu, o roubado que apareceu, o clique errado.
 `POST /api/assets/:id/unretire`, `ADMIN`, botão **Reverter** na ficha, que pede
 confirmação.
 
-- Limpa **as duas** colunas juntas: `retiredAt` sem motivo seria "saiu, não se sabe
-  por quê".
+- Limpa **as três** colunas juntas — `retiredAt`, `retiredReason` e `retiredNotes`:
+  `retiredAt` sem motivo seria "saiu, não se sabe por quê", e a observação explicaria
+  uma saída que não existe mais.
 - **Não confere posse**: um ativo que volta ao patrimônio não contradiz nada.
-- O histórico grava "Voltou ao patrimônio" **com o motivo e a data de onde ele
+- A auditoria grava o `UNRETIRE` **com o motivo, a data e a observação de onde ele
   voltou** — é a pergunta de quem audita a reversão.
 
 ---

@@ -110,7 +110,7 @@ Camada 2 existe para permitir (Laura + Ana na Mesa 1).
 
 Trocar o `type` de um `StatusLabel` que 200 ativos usam muda o significado dos
 200 de uma vez, **sem escrever uma linha em `assets`** — e portanto sem
-`ActivityLog` nenhum. Um status disponível virando `UNDEPLOYABLE` inutiliza a
+linha de auditoria para nenhum deles. Um status disponível virando `UNDEPLOYABLE` inutiliza a
 frota em silêncio.
 
 **Por que na aplicação:** a regra é *"mudou de X para Y **e** há quem aponte"* —
@@ -359,7 +359,7 @@ resolvia não acontece mais).
 
 > `onDelete: SetNull` é o outro lado: apagar um ativo de verdade **não** leva
 > junto a telemetria da máquina. O preço é que o vínculo se desfaz em silêncio, e
-> é por isso que existe linha de `ActivityLog` para `UNLINK`.
+> é por isso que existe linha de auditoria para `UNLINK`.
 
 ### 13 — `sugestao_pendente_por_alvo`
 

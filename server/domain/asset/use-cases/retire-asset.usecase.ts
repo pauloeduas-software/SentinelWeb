@@ -1,7 +1,8 @@
 import type { $Enums } from '@prisma/client';
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
 import { buildChanges } from '../../shared/diff.helper';
 import { diaEmPortugues } from '../helpers/asset-dates.helper';
 import { ASSET_WRITE_SELECT } from '../helpers/asset-select.helper';
@@ -28,11 +29,11 @@ interface RetireAssetData {
   retiredReason: $Enums.RetiredReason;
   /** Ausente = agora. A saída pode ter acontecido antes de alguém registrar. */
   retiredAt?: Date | null;
-  /** A justificativa. Vai para o `ActivityLog`, não para a tabela — ver abaixo. */
+  /** A justificativa. Vai para `retiredNotes`, que a aba Detalhes mostra (AB). */
   notes?: string | null;
 }
 
-export async function retireAsset(id: string, data: RetireAssetData) {
+export async function retireAsset(id: string, data: RetireAssetData, ator: Ator) {
   // Transação porque são duas escritas que descrevem o MESMO fato: o ativo
   // baixado e a linha de histórico que diz por quê. Uma sem a outra é
   // um equipamento que sumiu do inventário sem explicação.
@@ -45,7 +46,7 @@ export async function retireAsset(id: string, data: RetireAssetData) {
 
     const antes = await tx.asset.findFirst({
       where: { id },
-      select: { id: true, assetTag: true, retiredAt: true, retiredReason: true },
+      select: { id: true, assetTag: true, retiredAt: true, retiredReason: true, retiredNotes: true },
     });
     if (!antes) throw new AppError('Registro não encontrado', 404);
 
@@ -80,24 +81,19 @@ export async function retireAsset(id: string, data: RetireAssetData) {
 
     const depois = await tx.asset.update({
       where: { id },
-      data: { retiredAt, retiredReason: data.retiredReason },
+      data: { retiredAt, retiredReason: data.retiredReason, retiredNotes: data.notes ?? null },
       select: ASSET_WRITE_SELECT,
     });
 
-    await recordActivity(tx, {
+    await recordAudit(tx, {
       entityType: 'Asset',
       entityId: id,
+      entityLabel: antes.assetTag,
       action: 'RETIRE',
       changes: {
-        ...buildChanges(antes, depois, ['retiredAt', 'retiredReason']),
-        // A justificativa NÃO vira coluna: ela descreve o EVENTO, não o ativo.
-        // No `changes` ela fica presa à linha do histórico que a explica e
-        // aparece na aba Histórico; numa coluna `retiredNotes`, um segundo
-        // baixa a sobrescreveria (D18 — uma trilha só). Chave `observacao`, e
-        // não `notes`: na tela, `notes` é o rótulo "Notas" das notas do ATIVO.
-        ...(data.notes ? { observacao: data.notes } : {}),
+        ...buildChanges(antes, depois, ['retiredAt', 'retiredReason', 'retiredNotes']),
       },
-    });
+    }, ator);
 
     return depois;
   });

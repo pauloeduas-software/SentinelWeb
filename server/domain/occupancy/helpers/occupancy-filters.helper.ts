@@ -9,7 +9,7 @@ import type { Prisma } from '@prisma/client';
  *
  * `all` — o histórico inteiro, aberto e encerrado. Existe porque encerrar não é
  * apagar: "quem respondia pela Mesa 1 em março?" precisa continuar respondível,
- * pelo mesmo motivo que o `ActivityLog` é append-only.
+ * pelo mesmo motivo que o `AuditLog` é append-only.
  *
  * NÃO são o `active`/`trashed` do `core/http/list-query.ts`, e os nomes são
  * diferentes de propósito: lá o par fala de lixeira (linha apagada), aqui fala
