@@ -53,7 +53,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 20 | Ativo baixado não tem posse aberta nem licença | **aplicação** — duas portas: a baixa (`assertSemPosseParaBaixa` e a contagem de licenças) e a entrega (`checkout-asset`, `checkout-license`), as duas com o ativo travado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Desfaça a baixa antes.` |
 | 21 | Localização ou posto desativado não recebe nada novo | **aplicação** — `assertLocalRecebe()` em cada porta que guarda (ativo, item, posto) e `assertPostoRecebe()` em cada porta que entrega ou ocupa, com a linha travada | 409 `"Mesa 1" está desativado e não recebe entrega nova.` |
 | 22 | O que está em uso nunca passa da quantidade comprada | **aplicação** — a entrega e a edição contam com a linha da licença travada (`lock-license.usecase.ts`) | 409 `Sem licença livre em "Office 2024": 5 compradas, 5 em uso. Devolva uma entrega ou aumente a quantidade comprada.` |
-| 23 | Uma entrega aberta por alvo e licença — e a mesma chave em uma entrega aberta só | **banco** — três índices únicos parciais: um por alvo e um pela chave | 409 `Laura Souza já está com "Office 2024".` / `Esta chave já está em outra entrega aberta de "Office 2024".` (a API confere antes) |
+| 23 | Uma entrega aberta por alvo e licença — e a mesma chave em uma entrega aberta só | **banco** — três índices únicos parciais: um por alvo e um pela chave. No passado, a entrega que se sobrepõe à última devolução do mesmo alvo é só da **aplicação** (422) | 409 `Laura Souza já está com "Office 2024".` / `Esta chave já está em outra entrega aberta de "Office 2024".` (a API confere antes) |
 
 ---
 

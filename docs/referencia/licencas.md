@@ -64,7 +64,9 @@ Calculado das datas e do dia de hoje **em Brasília** (`hojeNoBrasil`), nunca gr
 | **Ativa** | o resto, inclusive sem vencimento |
 
 O **vencimento** é até quando o contrato foi pago, e se renova editando a data. O
-**encerramento** é o fim do contrato.
+**encerramento** é o fim do contrato. Numa listagem, o filtro e o status de cada linha usam o
+mesmo hoje: a requisição que cruza a meia-noite não devolve, no filtro Vencendo, uma linha já
+vencida.
 
 ## A tela
 
@@ -73,7 +75,7 @@ O **vencimento** é até quando o contrato foi pago, e se renova editando a data
 | **as abas** | **Atuais** (ativas, vencendo e vencidas — a vencida ainda pede decisão) e **Encerradas** (pela mais recente). Busca por nome, licenciado, e-mail, pedido, categoria e fabricante — o texto ao pé da letra, `%` e `_` não são curinga; filtro de categoria; na aba Atuais, filtro de status (Todos, Ativas, Vencendo, Vencidas); na aba Encerradas, "Ainda em uso". Trocar de aba desliga os dois |
 | **a linha** | nome, fabricante, status, "10 compradas · 7 em uso · 3 livres", prazo (ou a data do encerramento, na aba Encerradas), custo. Sem cor por status |
 | **as ações** | Entregar (desabilitado sem livre, vencida ou encerrada, com o motivo no `title`), Editar, Encerrar, Excluir (desabilitado na que já foi entregue: "Já foi entregue: use Encerrar") — com confirmação no Encerrar e no Excluir |
-| **o detalhe** | no cabeçalho, o status com a conta ("Vencida · 10 compradas · 7 em uso · 3 livres") e as ações da lista, com as mesmas regras (Entregar e Editar voltam ao detalhe ao fechar; excluída, a janela fecha). Depois, a **chave do produto** e todos os campos do cadastro — o valor da compra é o total, com o preço de cada licença ao lado: "R$ 5.000,00 (R$ 500,00 por licença)". **Com quem está**: as entregas abertas, 15 por página, com busca pelo nome do colaborador ou do computador, a chave de cada uma, e Chave e Devolver em cada linha. **Histórico**: só entregas e devoluções, 15 por página, do mais recente para o mais antigo |
+| **o detalhe** | no cabeçalho, o status com a conta ("Vencida · 10 compradas · 7 em uso · 3 livres") e as ações da lista, com as mesmas regras (Entregar e Editar voltam ao detalhe ao fechar; excluída, a janela fecha). Depois, a **chave do produto** e todos os campos do cadastro — o valor da compra é o total, com o preço de cada licença ao lado: "R$ 5.000,00 (R$ 500,00 por licença)". **Com quem está**: as entregas abertas, da mais recente para a mais antiga, 15 por página, com busca pelo nome do colaborador ou do computador, a chave de cada uma, e Chave e Devolver em cada linha. **Histórico**: só entregas e devoluções, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
 | **o alerta** | só nesta tela, numa caixa só, do mais urgente para o menos: encerrada ainda em uso, vencida (a mais recente primeiro), vencendo em 30 dias (a mais próxima primeiro). Embaixo, a contagem de cada motivo com link — "2 encerradas em uso · 5 vencidas · 3 vencendo" —, que leva à aba e ao filtro que mostram todas aquelas. Não existe alerta de mínimo |
 
 A edição manda **só o que mudou**: um formulário aberto há tempo não desfaz a edição que outra
@@ -83,7 +85,14 @@ base. Ela abre com o **detalhe** da licença, e não com a linha da listagem: é
 traz a chave.
 
 **O valor da compra** tem máscara de dinheiro: o campo mostra `R$ 1.234,56` e manda `1234.56`.
-Os dígitos entram pelos centavos, e por isso não há ponto de milhar para o servidor recusar.
+Os dígitos entram pelos centavos — apagar o último de `R$ 1.234,50` deixa `R$ 123,45` —, e
+param nos 10 dígitos e 2 casas que o servidor aceita. O servidor aceita ponto ou vírgula nos
+centavos e nenhum ponto de milhar: `1.234,56` é 422 com o nome do campo,
+`valor de compra: use um valor como 1234.50`. As datas vêm do seletor.
+
+**Quando a última linha de uma página sai** — excluída, encerrada, devolvida —, a lista e o "Com
+quem está" voltam para a última página que existe. **A devolução que o servidor recusa** deixa a
+linha aberta, com o dia escolhido, para tentar de novo.
 
 ## Encerrar, reabrir e excluir
 
@@ -108,8 +117,9 @@ Silva"; o cadastro de colaborador não tem setor) ou o computador, a **chave** d
 (opcional, uma linha), uma observação opcional e o **dia da entrega**: vem com hoje e pode
 voltar para registrar a entrega que já aconteceu; futuro é 422. O dia passado não antecede a
 data da compra, nem o dia em que o **mesmo alvo** devolveu esta licença — ele não fica com ela
-duas vezes no mesmo período (422). No próprio dia da devolução passa. A quantidade no passado
-(quantas estavam em uso naquele dia) não é conferida.
+duas vezes no mesmo período (422). No próprio dia da devolução passa, gravada um milissegundo
+depois dela, e o histórico fica na ordem. A quantidade no passado (quantas estavam em uso
+naquele dia) não é conferida: a conta de livres é sempre a de agora.
 
 **A devolução** pede só o **dia**, na própria linha de "Com quem está", no detalhe da licença —
 o único lugar do sistema que devolve licença. Vem com hoje; pode ser passado, mas nunca futuro
@@ -119,17 +129,21 @@ telas mostram a entrega e a devolução **só pelo dia**. No mesmo dia, a devolu
 antes da hora real da entrega. "Não futuro" é conferido pela aplicação — o banco não sabe bem
 que dia é hoje; "não antes da entrega" tem também o CHECK.
 
+A entrega confere **na ordem da tabela** e responde a primeira recusa — o colaborador na
+lixeira é 404 mesmo com a licença vencida. As duas últimas linhas são da devolução.
+
 | Tentativa | Resposta |
 |---|---|
-| sem licença livre | 409 `Sem licença livre em "Office 2021": 10 compradas, 10 em uso. Devolva uma entrega ou aumente a quantidade comprada.` |
-| o mesmo alvo de novo | 409 `Laura Souza já está com "Office 2021".` |
-| a chave já está em outra entrega aberta da licença | 409 `Esta chave já está em outra entrega aberta de "Office 2021".` |
-| licença vencida ou encerrada | 409 — a vencendo entrega normalmente |
-| ativo baixado / colaborador desativado | 409 — ativo ou colaborador na lixeira é 404 |
-| dois alvos, nenhum, ou posto | 422 |
 | entrega ou devolução num dia futuro | 422 `data da entrega não pode ser uma data futura` |
+| dois alvos, nenhum, ou posto | 422 — com dois: `Uma entrega tem UM alvo: informe o colaborador OU o ativo, nunca os dois.`; o posto nem é campo |
+| ativo ou colaborador que não existe, ou na lixeira | 404 `Ativo não encontrado.` / `Colaborador não encontrado.` |
+| ativo baixado / colaborador desativado | 409 `O ativo ATV-00042 teve baixa e não pode receber licença.` / `Laura Souza está desativado(a) e não pode receber licença.` |
+| licença encerrada ou vencida | 409 `A licença "Office 2021" venceu há 3 dias e não recebe entrega: renove o contrato e atualize a data de vencimento antes.` — a vencendo entrega normalmente |
+| o mesmo alvo de novo | 409 `Laura Souza já está com "Office 2021". Uma licença vai uma vez para cada computador ou colaborador.` |
 | entrega antes da data da compra | 422 `A entrega (05/03/2026) não pode ser antes da data da compra (10/03/2026).` |
 | entrega antes do dia em que o mesmo alvo devolveu | 422 `A entrega (05/03/2026) não pode ser antes de 10/03/2026: até esse dia Laura Souza estava com "Office 2021".` |
+| a chave já está em outra entrega aberta da licença | 409 `Esta chave já está em outra entrega aberta de "Office 2021".` |
+| sem licença livre | 409 `Sem licença livre em "Office 2021": 10 compradas, 10 em uso. Devolva uma entrega ou aumente a quantidade comprada.` |
 | devolução antes do dia da entrega | 422 `A devolução (09/03/2026) não pode ser antes da entrega (10/03/2026).` |
 | devolver uma entrega já devolvida | 409 `Esta entrega de "Office 2021" já foi devolvida.` |
 
@@ -145,7 +159,8 @@ livre.
 | **da licença** | texto de várias linhas: a chave de volume, ou a lista das chaves compradas, uma por linha. Vazio ou só espaço vira nulo |
 | **da entrega** | uma linha, informada ao entregar; vazia na licença de volume. A mesma chave não fica em duas entregas **abertas** da licença — índice único parcial `license_checkouts_chave_aberta_unica`, 409 —; a devolvida e a sem chave não contam |
 | **trocar** | só a chave de uma entrega **aberta**, na linha de "Com quem está" (`PATCH`). O corpo traz `productKey` sempre — `null` ou vazio limpa; sem ela é 422, e não apaga. Devolvida é 409; a repetida, 409 |
-| **onde aparece** | **só no detalhe da licença**: a da licença, no topo; a de cada entrega, em "Com quem está". Sempre escondida — `ABCDE-FGHIJ-•••••-•••••-•••••` —, com **Mostrar** e **Copiar** |
+| **onde aparece** | **só no detalhe da licença**: a da licença, no topo; a de cada entrega, em "Com quem está". Sempre escondida — `ABCDE-FGHIJ-•••••-•••••-•••••` —, com **Mostrar** e **Copiar**. Trocar de licença com a janela aberta desliga o Mostrar |
+| **como se esconde** | linha a linha: com três grupos ou mais, ficam os dois primeiros; com dois, o primeiro. Sem hífen, com um grupo vazio, ou quando o que ficaria à mostra é quase a chave inteira (`…XY-Z`), ficam só os primeiros caracteres — um terço, até quatro. Linha vazia fica vazia |
 | **onde não** | a lista, a busca (que também não procura por ela), o alerta, o histórico, a aba Licenças do ativo e a ficha do colaborador. As rotas delas não devolvem a chave |
 
 A chave fica **em texto** no banco: a cifra saiu inteira na
@@ -199,6 +214,10 @@ Todas `ADMIN` ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a
 licença (a troca, depois a linha da entrega); a devolução trava só a linha da entrega. A ordem
 alvo → licença → entrega é o que mantém o grafo sem ciclo.
 
+**A busca** das listas é a `contemTexto` (`server/domain/shared/busca.helper.ts`), a mesma de
+todas as listagens do sistema: sem diferença de maiúscula e com `%` e `_` escapados. As ordens
+terminam em `id`, para a mesma linha não aparecer em duas páginas.
+
 ## O que não existe
 
 - reatribuível e queima — devolvida, toda licença volta a ficar livre;
@@ -217,12 +236,12 @@ alvo → licença → entrega é o que mantém o grafo sem ciclo.
 
 | Assunto | Arquivo |
 |---|---|
-| a conta, a quantidade, as datas do contrato, a entrega, a devolução e os dias de cada uma | `tests/licencas/operacoes.test.ts` |
+| a conta, a quantidade e o teto, as datas e o valor do contrato (e a máscara do campo), a entrega, a devolução, os dias de cada uma e a ordem das recusas | `tests/licencas/operacoes.test.ts` |
 | o status, o dia de Brasília, o filtro de status, a busca da lista e a ordem das Encerradas | `tests/licencas/status.test.ts` |
-| as duas listas do detalhe, de 15 em 15, e a busca | `tests/licencas/detalhe.test.ts` |
+| as duas listas do detalhe, de 15 em 15, a busca e a página além do fim | `tests/licencas/detalhe.test.ts` |
 | Encerrar com alguém usando, o filtro "ainda em uso", excluir só a nunca entregue e o alerta | `tests/licencas/ciclo.test.ts` |
 | a chave da licença e da entrega, a troca, onde ela não aparece e como a tela a esconde | `tests/licencas/chave.test.ts` |
-| o histórico por alvo | `tests/licencas/historico.test.ts` |
+| o histórico por alvo, a paginação e o desempate no mesmo instante | `tests/licencas/historico.test.ts` |
 | o 409 da pessoa e do ativo com as licenças e as `refs`, a ficha e a aba | `tests/licencas/posse.test.ts` |
 | o e-mail no seletor de colaborador | `tests/listagens/opcoes-com-busca.test.ts` |
 | os CHECKs e os índices | `tests/licencas/invariantes.test.ts` |

@@ -110,25 +110,33 @@ Nove arquivos, e cada um prova uma coisa que passaria despercebida. Cada `it` cr
 licença e os seus alvos quando vai mudá-los: rodado sozinho com `-t`, ele passa.
 
 - **`operacoes.test.ts`** — a conta (compradas − em uso), a devolução que libera, o piso da
-  redução e a frase, a quantidade mínima de 1 e a nula ou vazia como 422, as datas que não
-  antecedem a compra (também na edição, contra a data gravada), o dia da entrega e o da
-  devolução (passado pode, futuro não, devolução nunca antes da entrega), e cada recusa da entrega: sem livre, mesmo alvo, dois
-  alvos ou nenhum, vencida, encerrada, ativo baixado ou na lixeira, colaborador desativado ou
-  na lixeira. E a devolução pela entrega: o clique velho não devolve quem recebeu depois.
+  redução e a frase, a quantidade de 1 a 100.000 e a nula ou vazia como 422, as datas que não
+  antecedem a compra (também na edição, contra a data gravada), o valor da compra (vírgula
+  aceita, ponto de milhar 422 com o nome do campo) e a máscara do campo, que a tela usa. O dia
+  da entrega e o da devolução: passado pode, futuro não, devolução nunca antes da entrega;
+  a entrega no passado nunca antes da compra nem da última devolução do mesmo alvo, e no dia
+  dela passa, depois dela. E cada recusa da entrega: sem livre, mesmo alvo, dois alvos ou
+  nenhum, vencida, encerrada, ativo baixado, na lixeira ou inexistente, colaborador desativado
+  ou na lixeira — e o alvo conferido antes da licença. E a devolução pela entrega: o clique
+  velho não devolve quem recebeu depois.
 - **`status.test.ts`** — o status nas bordas do calendário, e o dia de Brasília provado nas
   funções puras com o instante na mão (22h30 de Brasília ainda é o mesmo dia). E o filtro de
-  status da aba Atuais, com as mesmas fronteiras, e o 422 dele em Encerradas.
+  status da aba Atuais, com as mesmas fronteiras, e o 422 dele em Encerradas; a busca da lista
+  por licenciado, e-mail, pedido, categoria e fabricante, com `_` como texto, e a ordem das
+  Encerradas.
 - **`detalhe.test.ts`** — com quem está e o histórico de 15 em 15, e a busca pelo nome do
-  colaborador ou do computador; o histórico recusa `?q=`.
+  colaborador ou do computador; o histórico recusa `?q=`, e a página além do fim vem vazia.
 - **`ciclo.test.ts`** — Encerrar (com alguém usando, encerra e entra no alerta; muda de aba;
   reabre ao apagar a data), o filtro "ainda em uso" das Encerradas, excluir de vez só a que
   nunca foi entregue (a FK recusa por fora) e o alerta, na ordem de urgência e com a contagem
-  de cada motivo.
+  de cada motivo. O bloco do alerta começa devolvendo tudo e apagando os vencimentos que os
+  testes de cima deixaram: a caixa corta em seis.
 - **`chave.test.ts`** — a chave da licença (várias linhas, só o detalhe a devolve) e a de cada
-  entrega (única entre as abertas da licença), a troca da chave, as rotas que nunca a devolvem,
-  e como a tela a esconde.
+  entrega (única entre as abertas da licença), a troca da chave, as rotas que nunca a devolvem
+  — o alerta incluído, com uma licença que está nele —, e como a tela a esconde.
 - **`historico.test.ts`** — o histórico separado por alvo, e o da licença só com entregas e
-  devoluções: cadastro e edição não gravam nada no `activity_logs`.
+  devoluções: cadastro e edição não gravam nada no `activity_logs`. A paginação sai do banco, e
+  a entrega e a devolução no mesmo dia passado — o mesmo instante — vêm devolução primeiro.
 - **`posse.test.ts`** — o 409 da pessoa e do ativo, com o nome de cada licença e as `refs` que
   a tela transforma em link, e a ficha e a aba Licenças que listam só o que é de cada um.
 - **`invariantes.test.ts`** — os dois CHECKs da entrega e o `licenseId` obrigatório, os três
@@ -136,7 +144,8 @@ licença e os seus alvos quando vai mudá-los: rodado sozinho com `-t`, ele pass
 - **`corridas.test.ts`** — oito entregas a oito pessoas DIFERENTES numa licença de três:
   passam três. Pessoas diferentes de propósito — com o mesmo alvo, a trava do alvo
   serializaria tudo antes da licença, e o teste passaria sem provar a trava que importa. E a
-  redução, a exclusão e o Encerrar contra a entrega, e a devolução dupla.
+  redução, a exclusão e o Encerrar contra a entrega, e a devolução dupla. A exclusão que perde
+  tem que perder pela regra, com a frase dela — o 409 genérico da FK passaria sem a trava.
 
 
 ### `descoberta/` — a única pasta que fala WebSocket

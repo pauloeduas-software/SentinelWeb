@@ -305,9 +305,10 @@ Leia [`modelo-de-posse.md`](modelo-de-posse.md) antes de mexer em `assignment`,
 responde por ela, e ela impede o cadastro de sumir. Então `count-person-posse`
 (o 409 da exclusão e da desativação da pessoa) e o 409 da baixa e da exclusão do
 ativo contam as licenças abertas, em vez de o domínio de licença ganhar versões
-próprias. Nada fecha sozinho: o 409 manda devolver, e a ficha do colaborador e a
-aba Licenças do ativo têm o botão. A licença do computador não é da pessoa que
-responde por ele.
+próprias. Nada fecha sozinho: o 409 manda devolver, com um link para cada
+licença, e a ficha do colaborador e a aba Licenças do ativo levam ao detalhe da
+licença, o único lugar com o Devolver. A licença do computador não é da pessoa
+que responde por ele.
 
 **E a desativação de uma pessoa é recusada nas QUATRO pontas, não em uma:**
 `checkoutAsset`, `checkoutLicense`, `checkoutStock` e `addWorkstationOccupant`
