@@ -136,10 +136,9 @@ describe('Category — a licença conta como uso', () => {
     expect(body.error).toMatch(/1 registro/);
   });
 
-  it('e a licença na LIXEIRA também segura: ela ainda pode voltar', async () => {
-    const id = await categoria('Família da lixeira', 'LICENSE');
-    const licenca = await criarLicenca(api, { name: 'Licença apagada', categoryId: id, seatsTotal: 1 });
-    expect((await api.delete(`/api/licenses/${licenca.id}`)).status).toBe(204);
+  it('e a licença ENCERRADA também segura: ela continua na aba Encerradas', async () => {
+    const id = await categoria('Família da encerrada', 'LICENSE');
+    await criarLicenca(api, { name: 'Licença encerrada', categoryId: id, seatsTotal: 1, terminationDate: '2020-01-01' });
 
     const { status, body } = await api.delete<{ error: string }>(`/api/categories/${id}`);
     expect(status).toBe(409);
@@ -177,14 +176,12 @@ describe('Manufacturer — a licença conta como uso', () => {
     expect(body.error).toMatch(/1 registro/);
   });
 
-  it('e a licença na LIXEIRA também segura', async () => {
+  it('e a licença excluída de vez solta o fabricante', async () => {
     const id = await criarFabricante(api, 'Fabricante da licença apagada');
     const licenca = await licencaDoFabricante('Licença apagada do fabricante', id);
     expect((await api.delete(`/api/licenses/${licenca}`)).status).toBe(204);
 
-    const { status, body } = await api.delete<{ error: string }>(`/api/manufacturers/${id}`);
-    expect(status).toBe(409);
-    expect(body.error).toMatch(/1 registro/);
+    expect((await api.delete(`/api/manufacturers/${id}`)).status).toBe(200);
   });
 });
 

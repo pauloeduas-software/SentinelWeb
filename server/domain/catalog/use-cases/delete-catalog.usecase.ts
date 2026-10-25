@@ -28,7 +28,7 @@ export async function deleteCatalog(spec: CatalogSpec, id: string): Promise<void
 
     if (spec.motivoParaNaoExcluir) {
       const motivo = await spec.motivoParaNaoExcluir(tx, id);
-      if (motivo) throw new AppError(motivo, 409);
+      if (motivo) throw new AppError(motivo.mensagem, 409, motivo.refs);
     } else {
       const emUso = await spec.countUsages(tx, id);
       if (emUso > 0) {

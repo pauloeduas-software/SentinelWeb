@@ -73,7 +73,7 @@ configurar nada (só precisa do Postgres de pé: `docker compose up -d`).
 | `tests/listagens/` | o que cada vista e cada leitura DEVOLVE, e o que ela esconde | filtro que esconde demais não dá erro: some linha e ninguém percebe |
 | `tests/estoque/` | o saldo derivado, a trava da linha do item e as operações do `StockItem`/`StockMovement` | é uma das três pastas POR DOMÍNIO (com `descoberta/` e `licencas/`), e é de propósito: invariante, corrida e operação contam a mesma história sobre as mesmas duas tabelas, e separá-las faria quem investiga um saldo errado abrir três arquivos distantes |
 | `tests/descoberta/` | a borda do agente, a cascata de matching por hardware, a fila, o vínculo manual e o comando — sem inferência por usuário logado ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)) nem fusão de máquinas ([H](../decisoes/reconciliacao.md#h--a-fusão-de-máquinas-sai)) | a segunda pasta por domínio, pelo mesmo motivo: a história é uma só, do handshake até o cadastro que uma pessoa aceita ou vincula à mão |
-| `tests/licencas/` | o assento materializado e a corrida do `SKIP LOCKED` — sem chave cifrada nem canário, que saíram com a conformidade de software ([G](../decisoes/licencas.md#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples)) | terceira pasta por domínio: contrato e assento contam a mesma história |
+| `tests/licencas/` | a conta da licença (compradas, em uso, livres), as entregas e as corridas na trava da licença ([AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)) | terceira pasta por domínio: contrato e entrega contam a mesma história |
 | `tests/jobs/` | a janela de execução de um job (o D79) | o cenário que ela impede — dois jobs disputando a mesma coluna — não dá erro nenhum: o segundo simplesmente nunca roda |
 
 ### `estoque/` — a que falharia em silêncio
@@ -104,28 +104,39 @@ que **não** apareceu. Um filtro errado para mais não quebra nada: ele some com
 linha, a tela fica plausível, e a falta só é notada quando alguém procura um
 equipamento que o sistema jurava não ter.
 
-### `licencas/` — a corrida que o `SKIP LOCKED` ganha
+### `licencas/` — a conta, as entregas e a trava da licença
 
-Cinco arquivos (sem `chave.test.ts` nem `canario.test.ts`, que saíram com a cifra —
-[G](../decisoes/licencas.md#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples)),
-e cada um prova uma coisa que passaria despercebida:
+Nove arquivos, e cada um prova uma coisa que passaria despercebida. Cada `it` cria a sua
+licença e os seus alvos quando vai mudá-los: rodado sozinho com `-t`, ele passa.
 
-- **`corridas.test.ts`** — oito entregas numa licença de cinco assentos, sem
-  `await` entre elas. Passam cinco `201` e três `409`, **em assentos distintos**.
-  A asserção dos assentos distintos é o que separa `SKIP LOCKED` de fila: com
-  `FOR UPDATE` puro o placar seria o mesmo e todo mundo teria esperado. O
-  terceiro caso cobre a corrida que o D41 não cita — devolver e entregar em
-  seguida, que só funciona porque o checkin trava a linha do assento.
-- **`reconciliacao.test.ts`** — a invariante 11 (`COUNT(sem retiredAt) =
-  seatsTotal`) através de 5→8→6→8, provando que a numeração usa `MAX+1` e não
-  colide com os aposentados; e a aritmética do D92, que a fórmula do plano
-  prospectivo erraria.
-- **`operacoes.test.ts`** — a queima na devolução e o status derivado nas quatro
-  bordas do calendário, onde um `<=` trocado por `<` só apareceria no dia exato.
-- **`historico.test.ts`** — a trilha da licença.
-- **`posse.test.ts`** — o 409 do `DELETE` de pessoa e de ativo cita o assento que ainda está
-  ocupado, com o número; e desativar a pessoa pela edição recusa o checkout de assento com 409 —
-  a mesma régua das outras três pontas da invariante 6.
+- **`operacoes.test.ts`** — a conta (compradas − em uso), a devolução que libera, o piso da
+  redução e a frase, a quantidade mínima de 1 e a nula ou vazia como 422, as datas que não
+  antecedem a compra (também na edição, contra a data gravada), o dia da entrega e o da
+  devolução (passado pode, futuro não, devolução nunca antes da entrega), e cada recusa da entrega: sem livre, mesmo alvo, dois
+  alvos ou nenhum, vencida, encerrada, ativo baixado ou na lixeira, colaborador desativado ou
+  na lixeira. E a devolução pela entrega: o clique velho não devolve quem recebeu depois.
+- **`status.test.ts`** — o status nas bordas do calendário, e o dia de Brasília provado nas
+  funções puras com o instante na mão (22h30 de Brasília ainda é o mesmo dia). E o filtro de
+  status da aba Atuais, com as mesmas fronteiras, e o 422 dele em Encerradas.
+- **`detalhe.test.ts`** — com quem está e o histórico de 15 em 15, e a busca pelo nome do
+  colaborador ou do computador; o histórico recusa `?q=`.
+- **`ciclo.test.ts`** — Encerrar (com alguém usando, encerra e entra no alerta; muda de aba;
+  reabre ao apagar a data), o filtro "ainda em uso" das Encerradas, excluir de vez só a que
+  nunca foi entregue (a FK recusa por fora) e o alerta, na ordem de urgência e com a contagem
+  de cada motivo.
+- **`chave.test.ts`** — a chave da licença (várias linhas, só o detalhe a devolve) e a de cada
+  entrega (única entre as abertas da licença), a troca da chave, as rotas que nunca a devolvem,
+  e como a tela a esconde.
+- **`historico.test.ts`** — o histórico separado por alvo, e o da licença só com entregas e
+  devoluções: cadastro e edição não gravam nada no `activity_logs`.
+- **`posse.test.ts`** — o 409 da pessoa e do ativo, com o nome de cada licença e as `refs` que
+  a tela transforma em link, e a ficha e a aba Licenças que listam só o que é de cada um.
+- **`invariantes.test.ts`** — os dois CHECKs da entrega e o `licenseId` obrigatório, os três
+  índices parciais (alvo e chave) e os três CHECKs da licença (quantidade e datas), por SQL cru.
+- **`corridas.test.ts`** — oito entregas a oito pessoas DIFERENTES numa licença de três:
+  passam três. Pessoas diferentes de propósito — com o mesmo alvo, a trava do alvo
+  serializaria tudo antes da licença, e o teste passaria sem provar a trava que importa. E a
+  redução, a exclusão e o Encerrar contra a entrega, e a devolução dupla.
 
 
 ### `descoberta/` — a única pasta que fala WebSocket

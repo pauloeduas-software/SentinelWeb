@@ -29,7 +29,7 @@ export default function AssetDetailPage() {
     aba, setAba,
     eventos, totalDeEventos, historicoPendente,
     assignments, possePendente,
-    licencas, licencasPendentes,
+    licencas, licencasPendentes, erroDasLicencas,
     maquina, maquinaPendente, desvinculando, handleDesvincular,
     modal, abrirEdicao, abrirClone, abrirPosse, abrirBaixa, fecharModal, statusPadraoId,
     handleSubmit, handleEntregar, handleDevolver, handleDarBaixa, handleReverterSaida,
@@ -131,7 +131,11 @@ export default function AssetDetailPage() {
         )}
 
         {aba === 'licencas' && (
-          <LicensesTab licencas={licencas} carregando={licencasPendentes} />
+          <LicensesTab
+            licencas={licencas}
+            carregando={licencasPendentes}
+            erro={erroDasLicencas}
+          />
         )}
 
         {aba === 'maquina' && (

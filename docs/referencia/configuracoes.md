@@ -57,10 +57,10 @@ a tela e o maestro as percorrem em paralelo.
 | **Nome único, sem diferença de maiúscula** | "dell" é recusado quando há "Dell": 409 `Já existe fabricante com o nome "Dell".` `%` e `_` contam como letras, não como curingas. Categoria é única **por tipo**; modelo não tem nome único (ver abaixo) | `helpers/nome-unico.helper.ts`, campo `nomeUnicoPor` da spec |
 | **Exclusão só sem uso** | `DELETE` de linha que alguém usa **agora** é 409 com a contagem e a saída: `Não é possível excluir: fabricante em uso por 3 registros. Desative-o em vez de excluir: …` A tela mostra isso numa **notificação do sistema**. O colaborador diz *o quê* em vez de quantos (`motivoParaNaoExcluir`) | `countUsages` e `dicaEmUso` de cada spec, `delete-catalog.usecase.ts` |
 | **Desativar em vez de excluir** | o desativado some das listas de escolha e é **recusado** (409) quando escolhido de novo; continua no histórico e em tudo que já o usa. Detalhes abaixo | `isActive` nas seis, `optionsWhere`, `assertEscolhaAtiva` |
-| **A contagem inclui a lixeira** | ativo, licença e item de estoque na lixeira continuam apontando — e podem voltar | `INCLUINDO_LIXEIRA` nos `countUsages` |
+| **A contagem inclui a lixeira** | ativo e item de estoque na lixeira continuam apontando — e podem voltar. A licença não tem lixeira: a encerrada conta, a excluída não existe mais | `INCLUINDO_LIXEIRA` nos `countUsages` |
 | **Lixeira só em Colaboradores** | nas outras cinco, exclusão é definitiva (D8) e o que protege é o 409 por uso. O colaborador vai para a lixeira, com Restaurar ([V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira)) | `lixeira` da spec, `restore-catalog.usecase.ts` |
 | **Tudo vai para o histórico** | criar, editar e excluir gravam `ActivityLog` na **mesma transação**; a edição grava só o que mudou | `recordActivity` nos use-cases |
-| **Listas de escolha** | `GET /api/<tabela>/options` devolve `{ id, name }` dos **ativos**, até 200, com busca `?q=`. É ele que alimenta todo `<select>`. Um **filtro** de listagem pede `?inativos=incluir`, porque o desativado ainda tem registros | `list-catalog-options.usecase.ts` |
+| **Listas de escolha** | `GET /api/<tabela>/options` devolve `{ id, name }` dos **ativos**, até 200, com busca `?q=` — e o colaborador vem também com `detalhe`, o e-mail (`optionDetail` da spec), que o seletor da entrega de licença mostra ao lado do nome. É ele que alimenta todo `<select>`. Um **filtro** de listagem pede `?inativos=incluir`, porque o desativado ainda tem registros | `list-catalog-options.usecase.ts` |
 
 > **A contagem de uso é a regra inteira.** Se uma tabela nova passar a apontar
 > para uma destas e o `countUsages` não a conhecer, a exclusão cai no erro cru do
@@ -84,7 +84,9 @@ com a marca "desativado"/"desativada" ao lado do nome.
 
 Erros de ação (exclusão recusada, desativação recusada) aparecem numa
 **notificação do sistema**, no canto inferior direito, e somem sozinhos
-(`src/pages/components/Notificacoes.tsx`, `src/pages/hooks/useNotificacao.ts`).
+(`src/pages/components/Notificacoes.tsx`, `src/pages/hooks/useNotificacao.ts`). A recusa do
+colaborador que ainda tem licença diz quais, e a notificação traz um link para cada uma — o
+Devolver mora no detalhe da licença; com link, ela fica até alguém fechar.
 
 ### Desativar e ativar
 
@@ -104,7 +106,7 @@ Onde a escolha é recusada:
 | fabricante | modelo novo ou trocado, licença |
 | modelo | ativo novo, troca de modelo do ativo |
 | localização | ativo, item de estoque ou posto novo guardado nela — ver Localizações |
-| colaborador | entrega de ativo, de assento de licença e de estoque, ocupante novo — ver Colaboradores |
+| colaborador | entrega de ativo, de licença e de estoque, ocupante novo — ver Colaboradores |
 
 **O que a desativação não alcança, de propósito:**
 - **o que já existe por baixo.** Desativar a categoria "Servidor" ou o fabricante
@@ -184,7 +186,7 @@ O nome é seu; o tipo é uma de quatro caixas que o sistema entende:
 - **Os canais aparecem na ficha do ativo** (aba Detalhes, seção "Suporte ·
   fabricante"): site como link, telefone como `tel:`, e-mail como `mailto:`.
   Campo vazio não aparece; sem nenhum, a seção some.
-- **Em uso:** modelos e licenças (a licença na lixeira inclusive). A licença tem
+- **Em uso:** modelos e licenças (a encerrada inclusive). A licença tem
   fabricante **opcional**; o modelo, obrigatório.
 
 ## Modelos
@@ -256,7 +258,7 @@ nome por escrito para guardar.
 
 ## Colaboradores
 
-**O que é:** quem RECEBE equipamento — ativo, posto, assento de licença, unidade
+**O que é:** quem RECEBE equipamento — ativo, posto, licença, unidade
 de estoque. Não entra no sistema: quem opera o painel é **usuário**, na tela
 Usuários, e é outra tabela
 ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)).
@@ -269,14 +271,16 @@ aqui à parte, à mão — nada cria colaborador a partir de usuário.
   `E-mail já está em uso por outro colaborador.`
   O nome **não** é único: dois "João Silva" existem, e é o e-mail que os separa.
 - **A lista de escolha** (`/api/people/options`) é o seletor de pessoa da
-  entrega de ativo, do posto, do assento e da saída de estoque.
+  entrega de ativo, do posto, da licença e da saída de estoque.
 
 ### A ficha
 
 O botão 📄 abre `/configuracoes/colaboradores/:id`: os **postos** que a pessoa
-ocupa (com o turno), os **itens de estoque** no nome dela — com o botão
-**Devolver** por unidade — e o **histórico**: cadastro e edições, entregas e
-devoluções de ativo, entradas e saídas de posto. Só leitura, fora o Devolver.
+ocupa (com o turno), os **itens de estoque** e as **licenças** no nome dela — com
+o botão **Devolver** em cada um — e o **histórico**: cadastro e edições, entregas e
+devoluções de ativo, entradas e saídas de posto, licenças recebidas e devolvidas. Só
+as licenças entregues a ELA: as do computador que ela usa ficam na aba Licenças do
+ativo. Só leitura, fora o Devolver.
 
 ### Exclusão, lixeira e desativação
 

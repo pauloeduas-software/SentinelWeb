@@ -16,7 +16,7 @@ import type {
 // listagem E o detalhe aberto — e também a entrada e a saída precisam invalidar
 // USUÁRIOS (invariante 6: unidade no nome de alguém trava o `DELETE` dele) e
 // POSTOS (a ficha mostra as unidades da mesa), do mesmo jeito que a licença
-// invalida posse ao entregar um assento.
+// invalida posse ao entregar uma licença.
 
 const stockKeys = {
   all: ['stock'] as const,

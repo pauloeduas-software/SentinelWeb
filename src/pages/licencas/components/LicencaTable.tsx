@@ -1,43 +1,34 @@
-import { Edit2, RotateCcw, Trash2, UserPlus } from 'lucide-react';
-import type { Licenca } from '../../../domain/shared/license.types';
-import type { ListView } from '../../../domain/shared/list.types';
-import { corDoStatus, textoDoPrazo } from '../helpers/licenca.helper';
-import { formatarMoeda } from '../../helpers/format.helper';
+import { Archive, Edit2, Trash2, UserPlus } from 'lucide-react';
+import type { Licenca, RecorteDaLicenca } from '../../../domain/shared/license.types';
+import { ROTULO_DO_STATUS, resumoDaContagem, textoDoPrazo } from '../../helpers/licenca.helper';
+import { motivoParaNaoEntregar, motivoParaNaoExcluir } from '../helpers/licenca.helper';
+import { formatarData, formatarMoeda } from '../../helpers/format.helper';
 
 // A tabela de licenças. Apresentacional puro: recebe valor e callback, não
 // conhece query nem HTTP.
 //
-// A COLUNA PRINCIPAL É `livres / seatsTotal`, e os dois números sempre
-// aparecem. Mostrar só os livres esconde metade da informação — "4" não diz se
-// sobrou muito ou pouco —, e mostrar só o total seria o inventário de antes da
-// F6, que não sabia o que estava em uso.
+// A COLUNA PRINCIPAL É A CONTA — compradas, em uso, livres —, e os
+// números aparecem todos: "2 livres" sozinho não diz se sobrou muito ou pouco.
 
 interface LicencaTableProps {
   licencas: Licenca[];
-  view: ListView;
+  view: RecorteDaLicenca;
+  /** Uma ação está correndo: os botões esperam, para o duplo clique não virar erro. */
+  ocupado: boolean;
   onAbrir: (licenca: Licenca) => void;
   onEditar: (licenca: Licenca) => void;
   onEntregar: (licenca: Licenca) => void;
-  /**
-   * Lixeira e restaurar são `ADMIN` no servidor. Ausentes, os botões somem —
-   * quem decide é a página, que sabe o cargo; a tabela só desenha.
-   */
+  onEncerrar: (licenca: Licenca) => void;
+  /** Excluir é `ADMIN` no servidor. Ausente, o botão some — quem decide é a página. */
   onExcluir?: (licenca: Licenca) => void;
-  onRestaurar?: (licenca: Licenca) => void;
   vazio: React.ReactNode;
 }
 
 const CABECALHO = 'px-4 py-3 text-left text-[10px] uppercase tracking-widest text-text-tertiary font-normal';
-
-/** Verde quando sobra, âmbar quando está no piso, vermelho quando acabou. */
-function corDosAssentos(licenca: Licenca): string {
-  if (licenca.livres === 0) return '#ef4444';
-  if (licenca.assentosBaixos) return '#f59e0b';
-  return '#22c55e';
-}
+const BOTAO = 'p-1.5 text-text-tertiary transition-colors disabled:opacity-30 disabled:hover:text-text-tertiary';
 
 export default function LicencaTable({
-  licencas, view, onAbrir, onEditar, onEntregar, onExcluir, onRestaurar, vazio,
+  licencas, view, ocupado, onAbrir, onEditar, onEntregar, onEncerrar, onExcluir, vazio,
 }: LicencaTableProps) {
   if (licencas.length === 0) {
     return (
@@ -47,6 +38,8 @@ export default function LicencaTable({
     );
   }
 
+  const encerradas = view === 'encerradas';
+
   return (
     <div className="border border-border-sutil bg-surface-card overflow-x-auto">
       <table className="w-full font-mono text-xs">
@@ -54,19 +47,16 @@ export default function LicencaTable({
           <tr>
             <th className={CABECALHO}>Licença</th>
             <th className={CABECALHO}>Status</th>
-            <th className={`${CABECALHO} text-right`}>Livres / total</th>
-            <th className={CABECALHO}>Vencimento</th>
+            <th className={CABECALHO}>Quantidade</th>
+            <th className={CABECALHO}>{encerradas ? 'Encerrada em' : 'Vencimento'}</th>
             <th className={`${CABECALHO} text-right`}>Custo</th>
             <th className={`${CABECALHO} text-right`}>Ações</th>
           </tr>
         </thead>
         <tbody>
           {licencas.map((licenca) => {
-            const naLixeira = view === 'trashed';
-            // Entregar só faz sentido com assento livre e contrato de pé:
-            // oferecer o botão numa licença ENCERRADA seria convidar a um 409.
-            const podeEntregar = licenca.livres > 0
-              && licenca.status !== 'ENCERRADA' && licenca.status !== 'EXPIRADA';
+            const motivoSemEntrega = motivoParaNaoEntregar(licenca);
+            const motivoSemExcluir = motivoParaNaoExcluir(licenca);
 
             return (
               <tr key={licenca.id} className="border-b border-border-sutil/50 last:border-0 hover:bg-bg-base/40 transition-colors">
@@ -74,41 +64,21 @@ export default function LicencaTable({
                   <button
                     type="button"
                     onClick={() => onAbrir(licenca)}
-                    className="text-text-primary hover:text-status-success transition-colors text-left"
+                    className="text-text-primary hover:text-text-secondary underline-offset-2 hover:underline text-left"
                   >
                     {licenca.name}
                   </button>
                   <div className="text-[10px] text-text-tertiary mt-1">
                     {licenca.manufacturer?.name ?? licenca.category?.name ?? '—'}
-                    {!licenca.reassignable && (
-                      // O aviso precisa estar na LISTAGEM, não só no detalhe:
-                      // é ele que explica por que a devolução vai pedir
-                      // confirmação, antes de alguém clicar.
-                      <span className="ml-2 text-status-warning">· não reatribuível</span>
-                    )}
                   </div>
                 </td>
 
-                <td className="px-4 py-3">
-                  <span style={{ color: corDoStatus(licenca.status) }}>{licenca.status}</span>
-                </td>
+                <td className="px-4 py-3 text-text-secondary">{ROTULO_DO_STATUS[licenca.status]}</td>
 
-                <td className="px-4 py-3 text-right">
-                  <span style={{ color: corDosAssentos(licenca) }}>{licenca.livres}</span>
-                  <span className="text-text-tertiary"> / {licenca.seatsTotal}</span>
-                  {/* Queimado e aposentado explicam a diferença entre o que foi
-                      comprado e o que ainda dá para usar. Sem eles, "3 / 10"
-                      com 7 ocupados não fecha a conta na cabeça de ninguém. */}
-                  {(licenca.queimados > 0 || licenca.aposentados > 0) && (
-                    <div className="text-[10px] text-text-tertiary mt-1">
-                      {licenca.queimados > 0 && <span className="text-status-danger">{licenca.queimados} queimado(s) </span>}
-                      {licenca.aposentados > 0 && <span>{licenca.aposentados} aposentado(s)</span>}
-                    </div>
-                  )}
-                </td>
+                <td className="px-4 py-3 text-text-secondary">{resumoDaContagem(licenca)}</td>
 
                 <td className="px-4 py-3 text-text-secondary">
-                  {textoDoPrazo(licenca.diasParaVencer)}
+                  {encerradas ? formatarData(licenca.terminationDate) : textoDoPrazo(licenca.diasParaVencer)}
                 </td>
 
                 <td className="px-4 py-3 text-right text-text-secondary">
@@ -117,47 +87,50 @@ export default function LicencaTable({
 
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
-                    {naLixeira ? (
-                      onRestaurar && (
-                        <button
-                          type="button"
-                          onClick={() => onRestaurar(licenca)}
-                          title="Restaurar"
-                          className="p-1.5 text-text-tertiary hover:text-status-success transition-colors"
-                        >
-                          <RotateCcw size={14} />
-                        </button>
-                      )
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => onEntregar(licenca)}
-                          disabled={!podeEntregar}
-                          title={podeEntregar ? 'Entregar assento' : 'Sem assento livre ou contrato encerrado'}
-                          className="p-1.5 text-text-tertiary hover:text-status-success transition-colors disabled:opacity-30 disabled:hover:text-text-tertiary"
-                        >
-                          <UserPlus size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onEditar(licenca)}
-                          title="Editar"
-                          className="p-1.5 text-text-tertiary hover:text-text-primary transition-colors"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        {onExcluir && (
-                          <button
-                            type="button"
-                            onClick={() => onExcluir(licenca)}
-                            title="Mover para a lixeira"
-                            className="p-1.5 text-text-tertiary hover:text-status-danger transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </>
+                    {!encerradas && (
+                      <button
+                        type="button"
+                        onClick={() => onEntregar(licenca)}
+                        disabled={motivoSemEntrega !== null}
+                        title={motivoSemEntrega ?? 'Entregar'}
+                        aria-label="Entregar"
+                        className={`${BOTAO} hover:text-text-primary`}
+                      >
+                        <UserPlus size={14} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => onEditar(licenca)}
+                      title="Editar"
+                      aria-label="Editar"
+                      className={`${BOTAO} hover:text-text-primary`}
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    {!encerradas && (
+                      <button
+                        type="button"
+                        onClick={() => onEncerrar(licenca)}
+                        disabled={ocupado}
+                        title="Encerrar — o contrato acabou"
+                        aria-label="Encerrar"
+                        className={`${BOTAO} hover:text-text-primary`}
+                      >
+                        <Archive size={14} />
+                      </button>
+                    )}
+                    {onExcluir && (
+                      <button
+                        type="button"
+                        onClick={() => onExcluir(licenca)}
+                        disabled={ocupado || motivoSemExcluir !== null}
+                        title={motivoSemExcluir ?? 'Excluir de vez — cadastro errado'}
+                        aria-label="Excluir"
+                        className={`${BOTAO} hover:text-status-danger`}
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     )}
                   </div>
                 </td>

@@ -30,10 +30,11 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 > (acessório, estoque, campo customizado, token de API); a segunda rodada levou a
 > 14 junto com `EndpointUserDaily`, quando a reconciliação deixou de inferir
 > pessoa pela conta do sistema operacional
-> ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)).
+> ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional));
+> e a [AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas) levou a 10 e a 11 junto com a vaga numerada da licença, e trouxe a 22 e a 23.
 > Renumerar as que ficaram quebraria as citações no código —
-> `assert-retire-posse.usecase.ts` diz "Invariante 4", `reconcile-seats.usecase.ts`
-> diz "invariante 11" —, e um número que muda de significado é pior que um
+> `assert-retire-posse.usecase.ts` diz "Invariante 4", `license-count.helper.ts`
+> diz "invariante 22" —, e um número que muda de significado é pior que um
 > número que falta.
 
 | # | Invariante | Onde | O que o usuário vê |
@@ -43,16 +44,16 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 3 | O tipo de um status ou de uma categoria em uso não muda | **aplicação** — `status-label.spec.ts`, `category.spec.ts`, com a linha travada | 409 `Não é possível mudar o tipo: status em uso por 200 registros.` |
 | 4 | Estado × posse: ativo entregue não fica `DEPLOYABLE` | **aplicação** — `assert-status-posse.usecase.ts` | 409 `"Disponível" é um status de estoque, e este ativo está entregue. Faça a devolução antes de mudar o status.` |
 | 5 | A forma da posse: um alvo coerente, devolução depois da entrega — e só a posse **devolvida** de um posto excluído fica sem FK, com o nome por escrito | **banco** — dois `CHECK` | 409 `Registro já existe` (a API recusa antes, com frase própria) |
-| 6 | Colaborador desativado ou na lixeira não tem posse direta, **assento de licença**, **unidade de estoque** nem ocupação aberta | **aplicação** — 409 na desativação (`personSpec.beforeWrite`), na exclusão (`personSpec.motivoParaNaoExcluir`), no `checkout` e no cadastro de ocupante + trava de linha | 409 `Este colaborador ainda responde por 2 ativos, ocupa 1 assento de licença, está com 3 itens de estoque e ocupa 1 posto. Devolva o que está com ele e encerre as ocupações antes de excluir.` (ou *antes de desativar*) |
-| 9 | O alvo de um assento de licença é UM: pessoa **ou** ativo, nunca os dois, nunca nenhum | **banco** — CHECK `license_seat_alvo_xor` | 422 com o campo que falta (a API recusa antes, com frase própria) |
-| 10 | Um assento de licença não está em duas mãos | **banco** — índice único parcial `license_seat_uma_aberta_por_assento` | 409 `Sem assento livre em "Office 2024": 5 de 5 ocupados.` |
-| 11 | `COUNT(assentos sem retiredAt)` **é** `seatsTotal` | **aplicação** — `reconcile-seats.usecase.ts`, na transação da gravação | 409 `Não há assentos livres suficientes para reduzir o contrato: 2 precisariam ser aposentados e só 1 está livre.` |
+| 6 | Colaborador desativado ou na lixeira não tem posse direta, **licença**, **unidade de estoque** nem ocupação aberta | **aplicação** — 409 na desativação (`personSpec.beforeWrite`), na exclusão (`personSpec.motivoParaNaoExcluir`), no `checkout` e no cadastro de ocupante + trava de linha | 409 `Este colaborador ainda responde por 2 ativos, tem 1 licença (Office), está com 3 itens de estoque e ocupa 1 posto. Devolva o que está com ele e encerre as ocupações antes de excluir.` (ou *antes de desativar*), com as licenças como `refs` — a tela põe um link em cada uma |
+| 9 | A forma da entrega de licença: o alvo é UM (pessoa **ou** ativo), a devolução vem depois da entrega, e toda entrega aponta para a licença | **banco** — dois `CHECK` e o `NOT NULL` de `licenseId` em `license_checkouts`, com a FK `Restrict` | 422 com o campo que falta (a API recusa antes, com frase própria) |
 | 12 | Uma máquina é no máximo um ativo, e um ativo no máximo uma máquina | **banco** — `@unique` em `Endpoint.assetId` | 409 `Este ativo já está vinculado a outra máquina. Desfaça aquele vínculo antes, pela aba Máquina do ativo.` |
 | 13 | A mesma sugestão não empilha na fila | **banco** — índice único parcial `sugestao_pendente_por_alvo` | nada: o job trata o `P2002` como "outro já criou" |
 | 17 | Sempre existe alguém ativo que é `ADMIN` | **aplicação** — `assertSobraAdministrador()`, DEPOIS da escrita e dentro da transação, na edição e na exclusão de usuário | 409 `Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. Dê o cargo de Administrador a outra pessoa com login antes de seguir.` |
 | 19 | No máximo um ativo por posto de trabalho | **aplicação** — duas portas: a entrega e a restauração da lixeira (`ativoDoPosto()`, com `FOR UPDATE` na linha do posto) | 409 `Este posto de trabalho já tem um ativo: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.` |
-| 20 | Ativo baixado não tem posse aberta nem assento de licença | **aplicação** — duas portas: a baixa (`assertSemPosseParaBaixa` e a contagem de assentos) e a entrega (`checkout-asset`, `checkout-seat`), as duas com o ativo travado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Desfaça a baixa antes.` |
+| 20 | Ativo baixado não tem posse aberta nem licença | **aplicação** — duas portas: a baixa (`assertSemPosseParaBaixa` e a contagem de licenças) e a entrega (`checkout-asset`, `checkout-license`), as duas com o ativo travado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Desfaça a baixa antes.` |
 | 21 | Localização ou posto desativado não recebe nada novo | **aplicação** — `assertLocalRecebe()` em cada porta que guarda (ativo, item, posto) e `assertPostoRecebe()` em cada porta que entrega ou ocupa, com a linha travada | 409 `"Mesa 1" está desativado e não recebe entrega nova.` |
+| 22 | O que está em uso nunca passa da quantidade comprada | **aplicação** — a entrega e a edição contam com a linha da licença travada (`lock-license.usecase.ts`) | 409 `Sem licença livre em "Office 2024": 5 compradas, 5 em uso. Devolva uma entrega ou aumente a quantidade comprada.` |
+| 23 | Uma entrega aberta por alvo e licença — e a mesma chave em uma entrega aberta só | **banco** — três índices únicos parciais: um por alvo e um pela chave | 409 `Laura Souza já está com "Office 2024".` / `Esta chave já está em outra entrega aberta de "Office 2024".` (a API confere antes) |
 
 ---
 
@@ -217,8 +218,8 @@ seed, um `psql` à mão, uma migração futura. Uma linha com `targetType: 'PERS
 silêncio, que é o pior jeito de um equipamento sumir de vista.
 
 A `Assignment` era a **única** tabela do modelo de posse sem CHECK: a ocupação é
-defendida pelo índice único parcial (#2) e o assento de licença tem o
-`license_seat_alvo_xor` (#9). A tabela que carrega a Camada 1 ficaria a mais
+defendida pelo índice único parcial (#2) e a entrega de licença tem os CHECKs
+da #9. A tabela que carrega a Camada 1 ficaria a mais
 frouxa das três.
 
 **`>=` e não `>`** na data: entrega e devolução no mesmo instante é real — é a
@@ -234,12 +235,12 @@ a rede de baixo.
 
 `server/domain/person/use-cases/lock-person.usecase.ts`, chamada como **primeira**
 trava da transação na edição do colaborador (`personSpec.beforeWrite`),
-`checkoutAsset` (alvo `PERSON`), `checkoutSeat` (alvo `PERSON`), `checkoutStock`
+`checkoutAsset` (alvo `PERSON`), `checkoutLicense` (alvo `PERSON`), `checkoutStock`
 (alvo `PERSON`) e `addWorkstationOccupant`.
 
 **QUATRO PONTAS, e são as quatro que fazem alguém responder por equipamento:**
-ativo no nome (`Assignment` alvo `PERSON`), assento de licença
-(`LicenseSeatCheckout.assignedPersonId`), unidade de estoque no nome
+ativo no nome (`Assignment` alvo `PERSON`), licença no nome
+(`LicenseCheckout.assignedPersonId`), unidade de estoque no nome
 (`StockMovement` de SAIDA alvo `PERSON`) e ocupação de posto (`WorkstationOccupant`)
 — esta última porque ocupante responde pelos ativos e pelo estoque do posto por
 derivação da Camada 3. A pergunta que decide se algo entra aqui não é *"tem
@@ -304,86 +305,35 @@ a verificação.
 
 ---
 
-### 9 — `license_seat_alvo_xor`
+### 9 — A forma da entrega de licença
 
 ```sql
-ALTER TABLE "license_seat_checkouts" ADD CONSTRAINT "license_seat_alvo_xor"
+ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_alvo_xor"
   CHECK (num_nonnulls("assignedPersonId", "assignedAssetId") = 1);
+ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_devolucao_nao_antecede"
+  CHECK ("checkinAt" IS NULL OR "checkinAt" >= "checkoutAt");
+-- e "licenseId" UUID NOT NULL, com a FK ON DELETE RESTRICT
 ```
 
-Duas colunas nuláveis admitem quatro estados, e **dois são mentira**: as duas
-preenchidas ("este assento está com a Laura E com o notebook") e nenhuma
-preenchida ("este assento está ocupado por ninguém"). Nenhum dos dois dá erro
-sozinho — o assento sai da conta de livres sem aparecer em lista nenhuma: pago,
-indisponível e invisível.
+Duas colunas de alvo nuláveis admitem quatro estados, e **dois são mentira**: as duas
+preenchidas ("esta licença está com a Laura E com o notebook") e nenhuma preenchida
+("está em uso por ninguém"). Nenhum dos dois dá erro sozinho — a licença sai da conta de
+livres sem aparecer em lista nenhuma: paga, indisponível e invisível.
 
-É o irmão do `assignments_alvo_coerente` (#5), com uma diferença: aqui **não há
-discriminante** para conferir, porque com dois alvos possíveis a FK preenchida já
-diz qual é. Um `targetType` ao lado seria uma terceira coisa capaz de discordar
-das outras duas.
+É o irmão da forma da posse (#5), com uma diferença: aqui **não há discriminante** para
+conferir, porque com dois alvos possíveis a FK preenchida já diz qual é.
 
-A aplicação recusa antes, com 422 e a frase que ensina o modelo (*"Posto de
-trabalho não é alvo de licença — entregue ao ativo que está na mesa"*, D39); o
-CHECK é a rede para quem não passa pelo use-case.
+O outro é a forma no tempo: a devolução não antecede a entrega (`>=`, como na posse). E
+**toda entrega aponta para a licença** — aberta ou devolvida: a licença que já foi entregue não
+se exclui, se encerra, e a FK `Restrict` é o que impede excluir por fora
+([AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)).
 
-> **Provado só pelo `psql`, não pela suíte.** Nenhum teste insere direto em
-> `license_seat_checkouts`: a prova é à mão — o `INSERT` com as duas FKs e o
-> `INSERT` com nenhuma são recusados pelo banco. O equivalente da posse está na
-> suíte (`tests/invariantes/check-assignment.test.ts`); o deste CHECK, não.
+A aplicação recusa antes, com 422 e a frase que ensina o modelo (*"Posto de trabalho não é
+alvo de licença — entregue ao ativo que está na mesa"*, D39); os CHECKs são a rede para quem
+não passa pelo use-case.
 
-### 10 — `license_seat_uma_aberta_por_assento`
-
-```sql
-CREATE UNIQUE INDEX "license_seat_uma_aberta_por_assento"
-  ON "license_seat_checkouts"("seatId") WHERE "checkinAt" IS NULL;
-```
-
-Mesma forma da invariante 1, um nível abaixo: lá o que não se duplica é a posse
-de um ativo, aqui é a ocupação de um assento.
-
-**Quem a defende no caminho quente não é o índice**, e essa é a diferença: a
-escolha do assento livre é `SELECT … FOR UPDATE OF s SKIP LOCKED` dentro da
-transação (D41), então duas entregas simultâneas pegam assentos **diferentes** e
-nunca disputam esta linha. O índice é a rede para o `psql` à mão e qualquer
-caminho futuro.
-
-Ele também sustenta a contagem: o `LEFT JOIN` de `contarAssentos` só não
-multiplica linhas porque cada assento tem no máximo uma ocupação aberta para
-casar. É a mesma invariante servindo a duas coisas.
-
-> **Provado por corrida.** `tests/licencas/corridas.test.ts` dispara oito
-> entregas numa licença de cinco assentos sem `await` entre elas: passam cinco
-> `201` e três `409`, os cinco em assentos **distintos**, e nenhum assento fica
-> com duas ocupações abertas. Reproduzido contra o servidor real com
-> `xargs -P8`.
-
-### 11 — `COUNT(assentos sem retiredAt)` **é** `seatsTotal`
-
-A única invariante da F6 que o **banco não garante sozinho**: ela atravessa duas
-tabelas, e um CHECK não enxerga a outra. Mora em
-`license/use-cases/reconcile-seats.usecase.ts`, na mesma transação que grava a
-licença.
-
-Mudar `seatsTotal` **cria ou aposenta linhas junto**: aumentar insere assentos
-numerados a partir de `MAX(seatNumber) + 1` — nunca `COUNT + 1`, porque a linha
-aposentada continua na tabela e a contagem colidiria com `license_seats_numero`
-—; diminuir marca `retiredAt` nos **livres de maior número**, e recusa com 409
-quando não há livres suficientes.
-
-Em dois passos, haveria a janela em que o relatório mostra 50 comprados e 40
-existentes. E sem a trava de **todos** os assentos antes de contar (D90), uma
-entrega simultânea levaria o assento que a redução está aposentando — ele
-terminaria ocupado **e** aposentado: fora da conta de livres, fora da conta de
-comprados, e na mão de alguém.
-
-> **A conta que depende dela** é o `livres` (D92), e ela corrige a fórmula do
-> plano prospectivo: `livres = seatsTotal − ocupados − queimados`, com
-> `aposentados` **exibido e nunca subtraído** — ele já saiu de `seatsTotal`
-> quando o contrato encolheu, e subtraí-lo de novo o contaria duas vezes.
->
-> **Provado em** `tests/licencas/reconciliacao.test.ts`: sobe 5→8, desce 8→6,
-> volta 6→8 (conferindo que a numeração não colide com os aposentados), e tenta
-> descer abaixo do ocupado — 409, com a transação inteira voltando atrás.
+> **Provado em** `tests/licencas/invariantes.test.ts`, por `INSERT` cru — como a #5 em
+> `tests/invariantes/check-assignment.test.ts`.
 
 ---
 
@@ -591,12 +541,11 @@ registra em que estado ele voltou e quem recebeu — não aconteceria.
 
 | porta | o que ela impede |
 | --- | --- |
-| `retire-asset.usecase.ts` | dar baixa em ativo **entregue** — `Faça a devolução antes.` — ou que **ocupa assento de licença** — `Devolva os assentos … antes de dar baixa.` |
+| `retire-asset.usecase.ts` | dar baixa em ativo **entregue** — `Faça a devolução antes.` — ou que **tem licença** — `Devolva pela tela de Licenças antes de dar baixa.` |
 | `checkout-asset.usecase.ts` | **entregar** ativo baixado — e isso vale com **qualquer** status, porque a baixa não mexe no status: um vendido pode estar "Disponível" |
 
-A entrega de **assento de licença** a ativo (`checkout-seat.usecase.ts`) recusa
-o baixado pelo mesmo motivo: o assento ficaria preso a uma máquina que não
-existe mais.
+A entrega de **licença** a ativo (`checkout-license.usecase.ts`) recusa o baixado
+pelo mesmo motivo: a licença ficaria presa a uma máquina que não existe mais.
 
 **Bloqueia, nunca fecha a posse sozinha** — o mesmo argumento da invariante 4.
 
@@ -650,6 +599,64 @@ formulário, não fato sobre o lugar: está em
 [`configuracoes.md`](configuracoes.md).
 
 > **Testado:** `tests/invariantes/localizacao.test.ts` e `tests/invariantes/posto.test.ts`.
+
+---
+
+### 22 — O que está em uso nunca passa da quantidade comprada
+
+A conta da licença é `livres = seatsTotal − em uso`, sobre as linhas de
+`license_checkouts` ([AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)), e esta é a invariante que a mantém de pé. O
+banco **não garante sozinho**: ela cruza a licença com as entregas, e um CHECK não enxerga a
+outra tabela.
+
+Mora em quem conta e grava: a **entrega** (`checkout-license.usecase.ts`) e a **edição** que
+reduz a quantidade (`update-license.usecase.ts`). As duas contam com a linha da licença travada
+(`lock-license.usecase.ts`): sem a trava, duas entregas liam "1 livre" e as duas gravavam, e
+a redução contava "2 em uso" enquanto uma entrega gravava a terceira.
+
+**A ordem das travas é alvo → licença**, na entrega, o caminho que trava os dois. A devolução
+trava só a linha da entrega — ela só diminui o que está em uso, e travar a licença depois da
+entrega fecharia um ciclo com a exclusão, que trava a licença e depois atualiza as entregas
+devolvidas.
+
+**A frase diz quantas estão em uso**, e que devolver libera: `Não dá para reduzir "Office
+2021" para 6: 7 estão em uso. Devolva para liberar.`
+
+> **Provado em** `tests/licencas/corridas.test.ts` (oito entregas a oito pessoas diferentes
+> numa licença de três: passam três, e o banco tem três abertas; a redução contra a entrega
+> nunca deixa a conta passar do contrato) e `tests/licencas/operacoes.test.ts` (o piso e a
+> frase).
+
+### 23 — Uma entrega aberta por alvo e licença — e uma chave por entrega aberta
+
+```sql
+CREATE UNIQUE INDEX "license_checkouts_uma_aberta_por_pessoa"
+  ON "license_checkouts"("licenseId", "assignedPersonId")
+  WHERE "checkinAt" IS NULL AND "assignedPersonId" IS NOT NULL;
+CREATE UNIQUE INDEX "license_checkouts_uma_aberta_por_ativo"
+  ON "license_checkouts"("licenseId", "assignedAssetId")
+  WHERE "checkinAt" IS NULL AND "assignedAssetId" IS NOT NULL;
+CREATE UNIQUE INDEX "license_checkouts_chave_aberta_unica"
+  ON "license_checkouts"("licenseId", "productKey")
+  WHERE "checkinAt" IS NULL AND "productKey" IS NOT NULL;
+```
+
+O mesmo computador ou colaborador não fica com a mesma licença duas vezes. Computador de
+mesa, notebook e pessoa nunca precisam de duas; o caso que pediria (servidor licenciado por
+núcleo) não é deste inventário, e se vier é um campo de quantidade na entrega, não uma segunda
+linha.
+
+**Dois índices, um por alvo**: num índice só, com uma das colunas sempre nula, o Postgres
+nunca acusaria colisão. A aplicação confere antes, com o nome do alvo na frase; o índice é a
+rede.
+
+**A chave da entrega** segue a mesma lógica: a mesma chave não fica em duas entregas abertas da
+licença. A entrega sem chave (licença de volume) e a devolvida ficam fora do índice. A entrega
+e a troca de chave conferem antes, com a licença travada.
+
+> **Provado em** `tests/licencas/invariantes.test.ts` (o `INSERT` cru da segunda aberta é
+> recusado; a devolvida não conta), `tests/licencas/operacoes.test.ts` e
+> `tests/licencas/chave.test.ts` (os 409 da API).
 
 ---
 

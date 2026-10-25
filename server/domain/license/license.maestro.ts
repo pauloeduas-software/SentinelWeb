@@ -7,54 +7,48 @@ import { listLicenseAlerts } from './use-cases/list-license-alerts.usecase';
 
 const logger = createLogger('license.maestro');
 
-// AS LICENÇAS DE SOFTWARE (docs/historico/fase-06-licencas.md).
+// AS LICENÇAS DE SOFTWARE (docs/referencia/licencas.md).
 //
 // FATIA VERTICAL INTEIRA, e não uma spec no motor do catálogo: a coluna
-// principal da listagem é DERIVADA (`livres / seatsTotal`) e o `select` da
-// `CatalogSpec` é allowlist estática. Nem a ideia de spec local da F5 se aplica
-// — ali havia três tipos compartilhando uma invariante; aqui há um.
+// principal da listagem é DERIVADA (livres de quantas foram compradas) e o
+// `select` da `CatalogSpec` é allowlist estática.
 //
 // ORDEM DAS ROTAS. O segmento LITERAL vem antes do parâmetro:
-// `/api/licenses/alerts` antes de `/api/licenses/:id`, e
-// `/api/licenses/seats/:seatId/checkin` antes de `/api/licenses/:id/...`. O
-// find-my-way prefere o literal ao parâmetro sozinho, mas manter a ordem aqui é
-// o que deixa isso óbvio para quem acrescentar a próxima — foi a mesma regra
-// que vale para todo maestro desta casa.
+// `/api/licenses/alerts` e `/api/licenses/checkouts/:id/...` antes de
+// `/api/licenses/:id`. O find-my-way prefere o literal ao parâmetro sozinho,
+// mas manter a ordem aqui é o que deixa isso óbvio para quem acrescentar a
+// próxima.
 export class LicenseMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
-    // ── OS DOIS SINAIS, numa rota só ───────────────────────────────────────
-    //
-    // ANTES de `/:id` de propósito (ver o bloco acima). Os dois alertas numa
-    // rota só porque valem para a mesma tela, que lê os dois no mesmo painel.
+    // O ALERTA — vencendo, vencida, encerrada ainda em uso. ANTES de `/:id`.
     server.get('/api/licenses/alerts', async (request: FastifyRequest) => {
       SEM_PARAMETROS.parse(request.query ?? {});
       return listLicenseAlerts();
     });
 
-    // ── A DEVOLUÇÃO DE UM ASSENTO ──────────────────────────────────────────
+    // ── A DEVOLUÇÃO E A CHAVE DA ENTREGA ───────────────────────────────────
     //
-    // O `:id` é o do ASSENTO, não o da licença nem o da ocupação: a tela tem a
-    // grade na mão e clica no quadrado. Segmento literal `seats` antes de
-    // `/:id`, pela mesma regra de ordenação.
-    server.post('/api/licenses/seats/:id/checkin', WRITE_RATE_LIMIT, licenseController.checkinSeat);
+    // O `:id` é o da ENTREGA, não o da licença nem o do alvo: é o que impede a
+    // tela velha de devolver quem recebeu depois. Segmento literal
+    // `checkouts` antes de `/:id`, pela mesma regra de ordenação.
+    server.post('/api/licenses/checkouts/:id/checkin', WRITE_RATE_LIMIT, licenseController.checkin);
+    // Só a chave da entrega aberta (AA).
+    server.patch('/api/licenses/checkouts/:id', WRITE_RATE_LIMIT, licenseController.checkoutKey);
 
     // ── O CONTRATO ─────────────────────────────────────────────────────────
     server.get('/api/licenses', licenseController.list);
 
     server.get('/api/licenses/:id', licenseController.byId);
-    server.get('/api/licenses/:id/seats', licenseController.seats);
+    server.get('/api/licenses/:id/checkouts', licenseController.checkouts);
     server.get('/api/licenses/:id/history', licenseController.history);
 
     server.post('/api/licenses', WRITE_RATE_LIMIT, licenseController.create);
     server.put('/api/licenses/:id', WRITE_RATE_LIMIT, licenseController.update);
     server.delete('/api/licenses/:id', WRITE_RATE_LIMIT, licenseController.remove);
-    server.post('/api/licenses/:id/restore', WRITE_RATE_LIMIT, licenseController.restore);
+    server.post('/api/licenses/:id/terminate', WRITE_RATE_LIMIT, licenseController.terminate);
 
-    // A ENTREGA. Sem `seatId` no corpo: quem escolhe o assento é o servidor,
-    // com `FOR UPDATE … SKIP LOCKED` (D41). Deixar o cliente escolher reabriria
-    // a corrida inteira — duas telas mostrando "assento 3 livre" mandariam as
-    // duas o mesmo número.
-    server.post('/api/licenses/:id/checkout-seat', WRITE_RATE_LIMIT, licenseController.checkoutSeat);
+    // A ENTREGA. Para colaborador XOR ativo — o corpo diz qual.
+    server.post('/api/licenses/:id/checkout', WRITE_RATE_LIMIT, licenseController.checkout);
 
     // O QUE ESTÁ LICENCIADO NESTE ATIVO — o que a aba Licenças do ativo mostra.
     // Pendura em `/api/assets/:id` como as rotas de posse fazem, e pelo mesmo

@@ -3,32 +3,40 @@ import CategoriaFiltro from '../components/CategoriaFiltro';
 import EstadoDaLista from '../components/EstadoDaLista';
 import ListToolbar from '../components/ListToolbar';
 import AlertasLicenca from './components/AlertasLicenca';
-import EntregaAssentoModal from './components/EntregaAssentoModal';
+import EntregaLicencaModal from './components/EntregaLicencaModal';
 import LicencaDetalheModal from './components/LicencaDetalheModal';
 import LicencaFormModal from './components/LicencaFormModal';
 import LicencaTable from './components/LicencaTable';
+import EmUsoFiltro from './components/EmUsoFiltro';
+import StatusFiltro from './components/StatusFiltro';
 import { useLicencas } from './hooks/useLicencas';
+import type { RecorteDaLicenca } from '../../domain/shared/license.types';
 import { usePode } from '../../domain/auth/auth.store';
 
-// AS LICENÇAS DE SOFTWARE (docs/historico/fase-06-licencas.md).
+// AS LICENÇAS DE SOFTWARE (docs/referencia/licencas.md).
 //
-// O que a licença tem e o ativo não tem é ASSENTO: ela não é entregue, é
-// consumida N vezes — e a pergunta que esta tela existe para responder é
-// "quantos assentos sobraram e quem está com eles", com a resposta valendo em
-// auditoria de fornecedor.
+// A licença não é entregue uma vez: é usada até a quantidade comprada — e a
+// pergunta que esta tela existe para responder é "quantas sobraram e com quem
+// estão as outras".
 //
 // Markup e mais nada: estado e chamadas ficam no `useLicencas`
 // (docs/referencia/arquitetura.md).
+
+/** As abas: o que não encerrou (inclusive a vencida, que pede decisão) e o que encerrou. */
+const ABAS: readonly { valor: RecorteDaLicenca; rotulo: string }[] = [
+  { valor: 'atuais', rotulo: 'Atuais' },
+  { valor: 'encerradas', rotulo: 'Encerradas' },
+];
+
 export default function LicencasPage() {
   const {
     licencas, total, carregando, erro, page, perPage, setPage, search, changeSearch, view, changeView,
-    categoryId, changeCategoria,
+    categoryId, changeCategoria, status, changeStatus, soEmUso, changeSoEmUso, irParaAlerta,
     alertas,
-    modal, licencaAberta, abrir, fechar,
-    handleCriar, handleEditar, handleEntregar, handleDevolver,
-    handleExcluir, handleRestaurar,
+    modal, licencaAberta, erroDoLink, abrir, fechar, ocupado,
+    handleCriar, handleEditar, handleEntregar, handleDevolver, handleTrocarChave, handleEncerrar, handleExcluir,
   } = useLicencas();
-  // Lixeira e restaurar são `ADMIN` no servidor.
+  // Excluir é `ADMIN` no servidor.
   const podeApagar = usePode('ADMIN');
 
   return (
@@ -38,9 +46,9 @@ export default function LicencasPage() {
         <div>
           <h2 className="text-xl font-mono text-text-primary uppercase tracking-widest">Licenças</h2>
           <p className="text-xs text-text-tertiary mt-2 font-mono max-w-2xl leading-relaxed">
-            O que não é entregue, e sim consumido N vezes. Cada assento é uma linha que alguém
-            ocupa — uma pessoa ou uma máquina.
-            <span className="text-text-secondary"> Posto de trabalho não é alvo: o computador da mesa é.</span>
+            O contrato e a quantidade comprada. Cada uso é uma entrega — a um colaborador ou a um
+            computador.
+            <span className="text-text-secondary"> Posto de trabalho não recebe licença: o computador da mesa recebe.</span>
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -53,15 +61,29 @@ export default function LicencasPage() {
         </div>
       </div>
 
-      <AlertasLicenca alertas={alertas} />
+      {erroDoLink && (
+        <p role="alert" className="mb-4 p-3 bg-status-danger/10 text-status-danger border border-status-danger/20 font-mono text-xs flex justify-between gap-4">
+          <span>Não foi possível abrir a licença do link: {erroDoLink}</span>
+          <button type="button" onClick={fechar} className="uppercase tracking-widest text-[10px] hover:underline">Dispensar</button>
+        </p>
+      )}
+
+      <AlertasLicenca alertas={alertas.rows} total={alertas.total} contagem={alertas.contagem} onIrPara={irParaAlerta} />
 
       <ListToolbar
         view={view}
         onViewChange={changeView}
+        abas={ABAS}
         search={search}
         onSearchChange={changeSearch}
-        placeholder="Buscar por nome, licenciado, fabricante ou pedido..."
-        filtros={<CategoriaFiltro tipo="LICENSE" valor={categoryId} onChange={changeCategoria} />}
+        placeholder="Buscar por nome, licenciado, categoria, fabricante ou pedido..."
+        filtros={
+          <>
+            {view === 'atuais' && <StatusFiltro valor={status} onChange={changeStatus} />}
+            {view === 'encerradas' && <EmUsoFiltro ligado={soEmUso} onChange={changeSoEmUso} />}
+            <CategoriaFiltro tipo="LICENSE" valor={categoryId} onChange={changeCategoria} />
+          </>
+        }
         page={page}
         perPage={perPage}
         total={total}
@@ -71,27 +93,28 @@ export default function LicencasPage() {
       <LicencaTable
         licencas={licencas}
         view={view}
+        ocupado={ocupado}
         onAbrir={(licenca) => abrir('detalhe', licenca)}
         onEditar={(licenca) => abrir('editar', licenca)}
         onEntregar={(licenca) => abrir('entregar', licenca)}
+        onEncerrar={(licenca) => void handleEncerrar(licenca)}
         onExcluir={podeApagar ? (licenca) => void handleExcluir(licenca) : undefined}
-        onRestaurar={podeApagar ? (licenca) => void handleRestaurar(licenca) : undefined}
         vazio={
           // Carregando e erro antes do vazio: sem isto, a primeira carga e um
-          // servidor fora do ar diziam "nenhum cadastrado" (`EstadoDaLista`).
+          // servidor fora do ar diziam "nenhuma cadastrada" (`EstadoDaLista`).
           <EstadoDaLista carregando={carregando} erro={erro}>
             {search ? (
               <span>Nenhuma licença encontrada para "{search}".</span>
-            ) : categoryId ? (
-              <span>Nenhuma licença nesta categoria.</span>
-            ) : view === 'trashed' ? (
-              <span>A lixeira de licenças está vazia.</span>
+            ) : status || soEmUso || categoryId ? (
+              <span>Nenhuma licença com este filtro.</span>
+            ) : view === 'encerradas' ? (
+              <span>Nenhuma licença encerrada.</span>
             ) : (
               <>
                 <span>Nenhuma licença cadastrada.</span>
                 <span className="mt-4 text-[10px] max-w-md text-center leading-relaxed">
-                  Uma licença é um contrato com N assentos. Cadastre-a com o total comprado e os
-                  assentos nascem junto, prontos para entregar.
+                  Uma licença é um contrato com uma quantidade comprada. Cadastre-a com o total e
+                  entregue a colaboradores ou computadores até ele acabar.
                 </span>
               </>
             )}
@@ -108,11 +131,21 @@ export default function LicencasPage() {
       )}
 
       {modal === 'entregar' && licencaAberta && (
-        <EntregaAssentoModal licenca={licencaAberta} onClose={fechar} onSubmit={handleEntregar} />
+        <EntregaLicencaModal licenca={licencaAberta} onClose={fechar} onSubmit={handleEntregar} />
       )}
 
       {modal === 'detalhe' && licencaAberta && (
-        <LicencaDetalheModal licenca={licencaAberta} onClose={fechar} onDevolver={handleDevolver} />
+        <LicencaDetalheModal
+          licenca={licencaAberta}
+          ocupado={ocupado}
+          onClose={fechar}
+          onEntregar={(licenca) => abrir('entregar', licenca)}
+          onEditar={(licenca) => abrir('editar', licenca)}
+          onEncerrar={(licenca) => void handleEncerrar(licenca)}
+          onExcluir={podeApagar ? (licenca) => void handleExcluir(licenca) : undefined}
+          onDevolver={handleDevolver}
+          onTrocarChave={handleTrocarChave}
+        />
       )}
     </div>
   );

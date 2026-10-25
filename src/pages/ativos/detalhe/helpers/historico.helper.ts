@@ -18,6 +18,12 @@ const ROTULO_DA_ACAO: Record<string, string> = {
   UNLINK: 'Máquina desvinculada',
 };
 
+/** As entregas de licença ao ativo — a fonte `LICENCA`. */
+const ROTULO_DA_LICENCA: Record<string, string> = {
+  CHECKOUT: 'Licença entregue',
+  CHECKIN: 'Licença devolvida',
+};
+
 /** Os nomes de coluna que aparecem no diff, em português. */
 const ROTULO_DO_CAMPO: Record<string, string> = {
   assetTag: 'Etiqueta',
@@ -76,6 +82,11 @@ export function lerEventoDoAtivo(evento: EventoDoAtivo): LeituraDoEvento {
  * informação que o operador procura quando abre a aba ("para quem foi?").
  */
 export function tituloDoEvento(evento: EventoDoAtivo): string {
+  if (evento.licenca) {
+    const acao = rotuloDaAcao(evento.action, ROTULO_DA_LICENCA);
+    return `${acao}: ${evento.licenca.licenseLabel}`;
+  }
+
   const acao = rotuloDaAcao(evento.action, ROTULO_DA_ACAO);
   if (!evento.posse?.targetLabel) return acao;
 

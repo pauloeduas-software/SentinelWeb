@@ -1,18 +1,24 @@
 # Decisões das licenças
 
-> O contrato de software e seus assentos materializados, com a chave de produto cifrada em repouso.
+> O contrato de software, a quantidade comprada e as entregas a colaborador ou computador.
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve**. Se a realidade mudou, a
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D39–D44, D90–D94, e G da segunda rodada (ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)).
+> Decisões neste arquivo: D39–D44, D90–D94, G da segunda rodada (ver
+> [`README.md`](./README.md#a-segunda-rodada-ap)) e AA.
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
 
 ## D39 — Assento de licença **não** vai para um posto
+
+> **Superada em parte por [U](./acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos),
+> [Y](./posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe) e [G](#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples):**
+> a decisão fica de pé com os nomes de hoje — o alvo é colaborador (`Person`) **XOR** ativo, e o
+> posto é `Workstation`, que também não é alvo. O argumento 2 (o join até `SoftwareInstallation`)
+> perdeu o objeto com G. Desde [AA](#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas) não há mais "assento": o alvo é da ENTREGA.
 
 **Decidido:** o alvo do assento é `User` **XOR** `Asset`. `Location` não é alvo.
 **Descartado:** acrescentar `assignedLocationId` para o caso real do posto com desktop fixo.
@@ -44,6 +50,9 @@ coluna que tornaria o dado ambíguo.
 
 ## D40 — Assento materializado, ocupação em tabela própria
 
+> **Superada por [AA](#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas):** a vaga numerada saiu. A licença guarda a quantidade, e cada uso
+> é uma linha em `license_checkouts`; o que se trava é a linha da licença.
+
 **Decidido:** `LicenseSeat` é a linha do assento (existe mesmo vazio) e
 `LicenseSeatCheckout` é a ocupação, aberta/fechada como toda posse do projeto.
 **Descartado:** `assignedUserId`/`assignedAssetId` mutáveis **no próprio assento**, com um
@@ -63,6 +72,9 @@ para ser bloqueada.
 
 ## D41 — `FOR UPDATE SKIP LOCKED`, e o preço dele
 
+> **Superada por [AA](#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas):** sem vaga para escolher, não há o que pular. A entrega trava o
+> alvo e a licença, conta e insere — e o falso 409 deste preço deixou de existir.
+
 **Decidido:** a escolha do assento livre é `$queryRaw` com `FOR UPDATE OF s SKIP LOCKED`,
 **dentro** de `$transaction`. **Descartado:** `isolationLevel: 'Serializable'` no Prisma.
 
@@ -79,6 +91,10 @@ novo é melhor do que enfileirar requisições HTTP.
 ---
 
 ## D42 — Chave cifrada numa coluna versionada, sem plano B em claro
+
+> **Superada por [D81](./plataforma.md#d81--um-arquivo-e-um-formato-de-cifra-para-os-dois-usos) (o formato) e, inteira, por
+> [G](#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples):** a
+> chave de produto e a cifra saíram.
 
 > ⚠️ **Reconciliado — ver [`README.md`](README.md), D81.** O formato é `enc:v1:<kid>:<iv>:<tag>:<ct>`, com o identificador da chave e AAD amarrando o
 > valor ao lugar onde ele mora — o mesmo da F9, num arquivo só (`core/crypto/cipher.ts`).
@@ -108,6 +124,10 @@ funcionaria** — o regex de lá não casa com `productKey`.
 
 ## D43 — `burnedAt` e `retiredAt` são fatos diferentes
 
+> **Superada por [AA](#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas):** a licença não tem mais reatribuível nem queima —
+> devolvida, ela volta a ficar livre —, e o aposentado saiu com a vaga numerada: reduzir a
+> quantidade só muda o número.
+
 > ⚠️ **A aritmética desta decisão está ERRADA e foi corrigida pelo D92.** A fórmula
 > continua escrita abaixo, tachada, porque apagá-la esconderia o erro que ela causa — e
 > ele é o tipo de erro que volta: subtrair o aposentado de um total do qual ele já saiu.
@@ -128,6 +148,9 @@ exibido, nunca subtraído.
 
 ## D44 — Status da licença é derivado, nunca coluna
 
+> **Superada em parte por [AA](#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas):** continua derivado; o "hoje" passou a ser o dia de
+> Brasília, não a meia-noite UTC.
+
 **Decidido:** `ATIVA / VENCENDO / EXPIRADA / ENCERRADA` sai de um helper puro sobre
 `terminationDate`, `expirationDate` e a data de hoje.
 
@@ -138,6 +161,11 @@ inventário mentiria sem sintoma. É o D16 aplicado ao tempo em vez de à posse.
 ---
 
 ## D90 — Quem reconcilia trava tudo; quem entrega trava um assento
+
+> **Superada por [AA](#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas):** não há reconciliação. A edição, a entrega, o Encerrar e a
+> exclusão travam a mesma linha — a da licença —, e a entrega ESPERA a edição em vez de receber o
+> 409 que este preço declarava. Antes de AA, a entrega já tinha passado a travar a licença
+> `FOR SHARE`, sem decisão registrada; AA é o registro.
 
 **Decidido:** `reconcile-seats` trava a linha da licença **e todos os assentos dela**
 (`FOR UPDATE`, sem `SKIP LOCKED`, `ORDER BY "seatNumber"`) antes de contar.
@@ -168,6 +196,9 @@ livre". É o mesmo falso 409 do D41, na mesma moeda: falhar rápido em vez de en
 ---
 
 ## D91 — Chaveiro, não chave: o `kid` vem da própria chave
+
+> **Superada por [G](#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples):**
+> a cifra saiu inteira, e o chaveiro com ela.
 
 **Decidido:** `APP_ENCRYPTION_KEY` é a chave **ativa** (32 bytes, hex ou base64) e
 `APP_ENCRYPTION_KEYS_ANTIGAS` é a lista separada por vírgula das chaves que ainda
@@ -206,6 +237,9 @@ uma chave que se pode copiar de uma licença para outra e o sistema revela como 
 
 ## D92 — `livres` sai das linhas; `aposentados` não entra na subtração
 
+> **Superada por [AA](#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas):** `livres` continua saindo das linhas, agora as de entrega:
+> compradas − em uso − queimadas. `aposentados` saiu com a vaga numerada.
+
 **Decidido:** `livres = COUNT(assentos sem burnedAt, sem retiredAt, sem ocupação aberta)`,
 e a invariante do contrato é `COUNT(retiredAt IS NULL) = seatsTotal`.
 **Corrige** a fórmula do D43, que subtrai os aposentados de `seatsTotal`.
@@ -231,6 +265,12 @@ disjuntos na prática sem precisar de um CHECK para isso.
 ---
 
 ## D93 — Assento é posse, e a posse do projeto já tem três lugares
+
+> **Superada em parte por [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai)
+> e [AA](#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas):** o `offboard` saiu com O; a regra fica — a licença aberta entra no 409 da
+> desativação e da exclusão do colaborador (`count-person-posse`) e no da baixa e da exclusão do
+> ativo, e a do ativo continua não sendo da pessoa. Com AA, o 409 escreve o nome de cada
+> licença com um link para o detalhe dela — o único lugar que devolve.
 
 **Decidido:** assento de licença entra em `count-user-posse`, no `offboard` e no 409 do
 `DELETE` de ativo, na Etapa G — antes das telas.
@@ -277,6 +317,10 @@ já entram na F6 — a *referência* ao documento existe, o arquivo é que não.
 
 ## G — Software instalado e conformidade de licença saem; licença vira cadastro simples
 
+> **Superada em parte por [AA](#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas):**
+> a chave de produto volta — a da licença e a de cada entrega —, em texto, sem a cifra que saiu
+> aqui. O que a protege é só o detalhe devolvê-la e a tela mostrá-la escondida.
+
 **Decidido:** saem `license-compliance`, `normalize-software`, `list-software-packages` e
 `software-key.helper`; `SoftwarePackage`, `SoftwareInstallation` e `LicenseSoftware` saem do
 schema, com os sete índices deles. `Endpoint` perde `installedSoftware` e os dois hashes de
@@ -316,3 +360,99 @@ handshake, com a nota de que o servidor não guarda — mesma escolha do A para 
 > **Revisão:** só `installedSoftware` ficou no tipo e no parser (`agent-protocol.types.ts`,
 > `normalize-payload.helper.ts`); `softwareHash` não existe no protocolo de hoje. O argumento não
 > muda — o que o agente manda e o servidor ignora continua no fio, sem renegociar o contrato.
+
+---
+
+## AA — A licença vira quantidade e entregas: sem vaga numerada, sem lixeira, com Encerradas
+
+**Decidido** (na revisão da página de Licenças, de 2026-10-22 a 2026-10-24):
+
+- **Sem vaga numerada.** `LicenseSeat` e `LicenseSeatCheckout` viram uma tabela só,
+  `license_checkouts`: cada linha é uma entrega (colaborador **XOR** ativo, entrega, devolução).
+  A licença guarda `seatsTotal`, a quantidade comprada, e `livres = seatsTotal − em uso`. Saem a
+  reconciliação, a numeração MAX+1, o "aposentado" e o `SKIP LOCKED`. A entrega trava o alvo e
+  depois a licença; a edição, o Encerrar e a exclusão travam a licença. Reduzir não passa do que
+  está em uso (invariante 22).
+- **Sem reatribuível nem queima.** O campo `reassignable` sai, e com ele toda a lógica de queima:
+  a marca `burned` da entrega, a conta de queimadas, o "Devolver e queimar" e o desfazer queima.
+  Devolvida, a licença volta a ficar livre.
+- **Sem "com manutenção".** O campo `maintained` era só anotação; o que for preciso registrar
+  sobre suporte vai nas notas.
+- **A quantidade é ao menos 1.** Zero não é contrato: a licença que acabou se encerra.
+- **O vencimento e o encerramento não antecedem a data da compra**, cada um conferido só com os
+  dois lados preenchidos. O encerramento não é comparado com o vencimento. A aplicação responde 422
+  com as duas datas; na edição, a data que não veio é a que está gravada.
+- **A chave de produto volta**, em texto: a da licença (a de volume, ou a lista das compradas) e a
+  de cada entrega, que não se repete entre as entregas abertas da licença (índice único parcial).
+  Só o detalhe a devolve, e a tela a mostra escondida, com Mostrar e Copiar. Na entrega aberta,
+  troca-se só a chave.
+- **A recusa diz quais licenças voltam.** Desativar ou excluir o colaborador, dar baixa ou excluir
+  o ativo com licença aberta: o 409 escreve os nomes e manda cada uma como `refs`, e a tela põe um
+  link para o detalhe de cada licença — o Devolver só existe lá.
+- **O alerta conta cada motivo**, com link para a aba e o filtro que mostram todas aquelas
+  ("2 encerradas em uso · 5 vencidas · 3 vencendo"), e aparece só na tela de Licenças.
+- **Sem trilha de auditoria.** Cadastro, edição, encerramento e exclusão da licença não gravam no
+  `activity_logs`; o histórico da licença é só entregas e devoluções. É a regra do sistema inteiro
+  (*"o único histórico que teremos é o de onde cada item passou e com quem"*), aplicada aqui
+  primeiro.
+- **A devolução é pela entrega**, não pela vaga: a tela velha não devolve mais quem recebeu depois.
+  E mora **só no detalhe da licença**: a aba Licenças do ativo e a ficha do colaborador mostram o
+  que está com cada um e levam até lá por link.
+- **A entrega e a devolução têm dia.** Vêm com hoje e podem voltar para registrar o que já
+  aconteceu; futuro é recusado, e a devolução nunca fica antes da entrega. O dia passado é gravado
+  ao meio-dia de Brasília, e as telas mostram só o dia.
+- **O mesmo alvo não recebe a mesma licença duas vezes** enquanto a primeira está aberta
+  (invariante 23, índices únicos parciais). O caso real que pediria duas — servidor licenciado por
+  núcleo — não é deste inventário; se vier, é um campo de quantidade na entrega.
+- **Sem lixeira.** A licença que acabou se **encerra** (botão Encerrar, que grava hoje em
+  `terminationDate`; limpar a data reabre) e vai para a aba **Encerradas** — **mesmo com alguém
+  usando**: a tela pergunta com a contagem, e a licença fica no alerta "encerrada, ainda em uso"
+  até tudo voltar. É o padrão do sistema para o que tem data (a vencida também só alerta) e para o
+  que se desativa (não recebe nada novo, o que está fica); recusar não impediria nada, porque a
+  data futura do formulário chega sozinha. Só a licença que **nunca foi entregue** se **exclui de
+  vez** — a que já foi tem o histórico de quem a usou, e se encerra. Por isso toda entrega aponta
+  para a licença (`licenseId` obrigatório, FK `Restrict`), sem nome guardado por escrito. Sem
+  restaurar. O nome deixa de ser único: a renovação convive com o contrato encerrado.
+- **Histórico separado por alvo.** A entrega ao computador aparece no histórico do computador, e
+  não no da pessoa que responde por ele; a entrega à pessoa aparece no dela. A licença lê o seu da
+  tabela de entregas, com o nome de quem recebeu e a observação.
+- **Sem alerta de mínimo** — no sistema inteiro, e ele só existia aqui (`minSeats`). Fica o alerta
+  de prazo, numa lista só: encerrada ainda em uso, vencida (até ser renovada ou encerrada) e
+  vencendo em 30 dias, nessa ordem.
+- **O "hoje" do status é o dia de Brasília** (`hojeNoBrasil`). Com a meia-noite UTC, a licença que
+  vence hoje virava vencida às 21h.
+- **A tela mostra contagem e lista** ("10 compradas · 7 em uso · 3 livres"), sem
+  grade nem "#3 de 10", e sem cor por status.
+
+**Supera:** [D40](#d40--assento-materializado-ocupação-em-tabela-própria),
+[D41](#d41--for-update-skip-locked-e-o-preço-dele),
+[D43](#d43--burnedat-e-retiredat-são-fatos-diferentes) (a queima e o aposentado),
+[D90](#d90--quem-reconcilia-trava-tudo-quem-entrega-trava-um-assento),
+[D92](#d92--livres-sai-das-linhas-aposentados-não-entra-na-subtração), em parte
+[D44](#d44--status-da-licença-é-derivado-nunca-coluna) (o "hoje"), em parte
+[G](#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples) (a chave de
+produto volta, sem a cifra), em parte [Q](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai)
+(o erro ganha `refs`, que a tela lê), e a lixeira da licença da F6 (`deletedAt`,
+`licenses_name_unico_ativo`, a rota de restaurar).
+**Mantém:** [D39](#d39--assento-de-licença-não-vai-para-um-posto) (o alvo),
+D44 (o status derivado), [D93](#d93--assento-é-posse-e-a-posse-do-projeto-já-tem-três-lugares)
+(a licença aberta é posse) e a regra do encerramento: chegado o dia marcado, a licença está
+encerrada; o vencimento no próprio dia ainda vale.
+
+**Por quê:** a auditoria da página achou o modelo maior do que a tela. A vaga numerada só servia
+para travar e para desenhar a grade, e o usuário pediu contagem e lista; com ela foram a
+reconciliação e boa parte dos defeitos achados — a devolução pela vaga, o "#7 de 5", o falso 409, o
+teste de corrida que não corria. A lixeira não se pagava: a licença que acabou tem lugar
+(Encerradas), e a cadastrada errado não tem passado próprio que valha guardar — o passado que
+importa é o do computador e o da pessoa, e esse fica com o nome por escrito. O alerta de mínimo
+não tinha uso no ambiente do usuário. Na revisão item a item, o usuário tirou o reatribuível com a
+queima e a manutenção, pôs o piso de 1 na quantidade e a ordem das datas com a compra.
+
+**O que a migração faz:** zero licenças no banco de desenvolvimento, então é só DDL — as duas
+tabelas de assento saem, `license_checkouts` entra com `licenseId` obrigatório, a chave, dois
+CHECKs (alvo XOR, devolução não antecede a entrega) e três índices parciais (uma aberta por pessoa,
+uma por ativo, a chave aberta única), e `licenses` perde `minSeats`, `deletedAt`, `reassignable`,
+`maintained` e o índice de nome único, e ganha a chave e três CHECKs: a quantidade de ao menos 1
+(`licenses_seats_positivo`, no lugar do `licenses_seats_nao_negativo`) e o vencimento e o
+encerramento que não antecedem a compra.
+

@@ -1,20 +1,18 @@
 import type { AcaoDoMovimento, ItemDeEstoque } from '../../../domain/shared/stock.types';
 
-// O VOCABULÁRIO DO ESTOQUE — cor do saldo e rótulo de cada ação da linha do
-// tempo. Local à tela, como `licenca.helper.ts`: o que só faz sentido aqui não
-// mora no helper compartilhado.
+// O VOCABULÁRIO DO ESTOQUE — o aviso do saldo e o rótulo de cada ação da linha
+// do tempo. Local à tela: o que só faz sentido aqui não mora no helper
+// compartilhado.
 
 /**
- * Vermelho quando zerou OU ficou negativo, verde enquanto sobra. Sem piso —
- * o item não tem coluna de mínimo (ao contrário da licença).
- *
- * `<= 0`, e não `=== 0`: o servidor calcula `disponivel = qty − fora` sem
- * travar no zero (`stock-balance.helper.ts`), de propósito — um negativo é a
- * inconsistência (saída gravada fora da trava) que a tela precisa mostrar, não
- * esconder atrás da mesma cor de um saldo saudável.
+ * O saldo não tem cor pelo valor — zero e positivo são só números. A única
+ * marca é o NEGATIVO, que é aviso e não dado: o servidor calcula
+ * `disponivel = qty − fora` sem travar no zero (`stock-balance.helper.ts`), e
+ * um negativo é a inconsistência (saída gravada fora da trava) que a tela
+ * precisa mostrar.
  */
-export function corDoSaldo(item: Pick<ItemDeEstoque, 'disponivel'>): string {
-  return item.disponivel <= 0 ? '#ef4444' : '#22c55e';
+export function classeDoSaldo(item: Pick<ItemDeEstoque, 'disponivel'>): string {
+  return item.disponivel < 0 ? 'text-status-danger' : '';
 }
 
 export const ROTULO_DA_ACAO: Record<AcaoDoMovimento, string> = {

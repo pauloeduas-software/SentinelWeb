@@ -124,8 +124,7 @@ export interface EventoDeEstoque {
  *
  * As unidades vêm no formato de `MovimentoDeEstoque`, prontas para a tela
  * listar "o que acabou de sair"; `disponivel` é o saldo JÁ COM a saída
- * aplicada, do mesmo jeito que `ResultadoDaDevolucao` traz `livres` depois da
- * devolução — a tela não recalcula, só lê.
+ * aplicada — a tela não recalcula, só lê.
  */
 export interface ResultadoDaSaida {
   unidades: MovimentoDeEstoque[];

@@ -19,6 +19,12 @@ const ROTULO_DA_ACAO_NO_POSTO: Record<string, string> = {
   END: 'Saiu do posto',
 };
 
+/** As entregas de licença A ELA — a fonte `LICENCA`. */
+const ROTULO_DA_ACAO_NA_LICENCA: Record<string, string> = {
+  CHECKOUT: 'Recebeu a licença',
+  CHECKIN: 'Devolveu a licença',
+};
+
 /** Os nomes de coluna que aparecem no diff, em português. */
 const ROTULO_DO_CAMPO: Record<string, string> = {
   name: 'Nome',
@@ -33,10 +39,11 @@ export function lerEventoDaPessoa(evento: EventoDaPessoa): LeituraDoEvento {
 /**
  * A linha de assunto do evento, do ponto de vista da pessoa.
  *
- * As três fontes falam de coisas diferentes e por isso a frase muda: a posse
- * nomeia o EQUIPAMENTO ("Entregue: ATV-00012 — Dell Latitude"), o posto nomeia
- * o LUGAR e o turno ("Entrou no posto: Mesa 1 (Manhã)"), e a atividade fala da
- * própria pessoa ("Editado").
+ * As fontes falam de coisas diferentes e por isso a frase muda: a posse nomeia
+ * o EQUIPAMENTO ("Entregue: ATV-00012 — Dell Latitude"), o posto nomeia o LUGAR
+ * e o turno ("Entrou no posto: Mesa 1 (Manhã)"), a licença nomeia o SOFTWARE
+ * ("Recebeu a licença: Microsoft 365"), e a atividade fala da própria pessoa
+ * ("Editado").
  *
  * É o espelho do título do ativo, que nomeia o ALVO — lá a pergunta é "para
  * quem foi?", aqui é "o que ela recebeu?".
@@ -50,6 +57,11 @@ export function tituloDoEvento(evento: EventoDaPessoa): string {
     const acao = rotuloDaAcao(evento.action, ROTULO_DA_ACAO_NO_POSTO);
     const turno = evento.posto.shift ? ` (${evento.posto.shift})` : '';
     return `${acao}: ${evento.posto.workstationLabel}${turno}`;
+  }
+
+  if (evento.fonte === 'LICENCA' && evento.licenca) {
+    const acao = rotuloDaAcao(evento.action, ROTULO_DA_ACAO_NA_LICENCA);
+    return `${acao}: ${evento.licenca.licenseLabel}`;
   }
 
   return rotuloDaAcao(evento.action);

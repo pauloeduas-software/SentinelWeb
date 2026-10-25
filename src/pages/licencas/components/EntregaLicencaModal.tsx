@@ -1,45 +1,44 @@
 import { useState } from 'react';
 import { Laptop, User, X } from 'lucide-react';
 import ReferenceSelect from '../../components/ReferenceSelect';
-import type { AlvoDoAssento, Licenca } from '../../../domain/shared/license.types';
+import type { AlvoDaEntrega, Licenca } from '../../../domain/shared/license.types';
+import { hojeNoCampoDeData } from '../../helpers/format.helper';
 
-// A ENTREGA DE UM ASSENTO.
+// A ENTREGA DE UMA LICENÇA.
 //
 // ═════════════════════════════════════════════════════════════════════════════
-// SÃO DOIS ALVOS, E NÃO TRÊS — posto de trabalho NÃO é alvo de licença (D39).
+// SÃO DOIS ALVOS, E NÃO TRÊS — posto de trabalho NÃO recebe licença (D39).
 //
 // A ausência é a decisão, e a frase do rodapé existe para quem for procurar o
-// botão que falta: o desktop fixo da Mesa 1 é um ATIVO, e o assento vai para
-// ele. E se a licença for por usuário nomeado, Laura e Ana precisam de DOIS
-// assentos — um pendurado na mesa esconderia duas pessoas atrás de um móvel,
-// que é exatamente a exposição de conformidade que o módulo deveria apontar.
+// botão que falta: o desktop fixo da Mesa 1 é um ATIVO, e a licença vai para
+// ele. Licença por assinatura de pessoa (Microsoft 365, Adobe) vai para o
+// colaborador.
 // ═════════════════════════════════════════════════════════════════════════════
-//
-// NÃO HÁ CAMPO DE ASSENTO, e a ausência também é regra: quem escolhe é o
-// SERVIDOR, com `FOR UPDATE … SKIP LOCKED`. Deixar a tela escolher reabriria a
-// corrida — duas telas mostrando "assento 3 livre" mandariam as duas o mesmo
-// número.
 
 const CLASSE_CAMPO =
   'w-full p-2 bg-bg-base border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors';
 
 const ROTULO = 'text-text-secondary uppercase tracking-widest text-[10px]';
 
-interface EntregaAssentoModalProps {
+interface EntregaLicencaModalProps {
   licenca: Licenca;
   onClose: () => void;
-  onSubmit: (alvo: AlvoDoAssento) => Promise<void>;
+  onSubmit: (alvo: AlvoDaEntrega) => Promise<void>;
 }
 
-export default function EntregaAssentoModal({ licenca, onClose, onSubmit }: EntregaAssentoModalProps) {
+export default function EntregaLicencaModal({ licenca, onClose, onSubmit }: EntregaLicencaModalProps) {
   const [alvo, setAlvo] = useState<'PERSON' | 'ASSET'>('PERSON');
   const [personId, setPersonId] = useState('');
   const [assetId, setAssetId] = useState('');
   const [notes, setNotes] = useState('');
+  const [productKey, setProductKey] = useState('');
+  // Vem com hoje; pode voltar para registrar a entrega que já aconteceu.
+  const hoje = hojeNoCampoDeData();
+  const [checkoutAt, setCheckoutAt] = useState(hoje);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
-  const pronto = alvo === 'PERSON' ? personId !== '' : assetId !== '';
+  const pronto = (alvo === 'PERSON' ? personId !== '' : assetId !== '') && checkoutAt !== '';
 
   const enviar = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -49,15 +48,17 @@ export default function EntregaAssentoModal({ licenca, onClose, onSubmit }: Entr
     // SÓ a chave do alvo escolhido vai no corpo. Mandar as duas responde 422
     // pelo use-case, e o banco tem o CHECK por baixo — mas montar o corpo certo
     // aqui é o que faz o erro nunca acontecer por descuido da tela.
-    const corpo: AlvoDoAssento = alvo === 'PERSON'
-      ? { assignedPersonId: personId, notes: notes.trim() || null }
-      : { assignedAssetId: assetId, notes: notes.trim() || null };
+    const comum = { notes: notes.trim() || null, checkoutAt, productKey: productKey.trim() || null };
+    const corpo: AlvoDaEntrega = alvo === 'PERSON'
+      ? { assignedPersonId: personId, ...comum }
+      : { assignedAssetId: assetId, ...comum };
 
     try {
       await onSubmit(corpo);
     } catch (falha) {
-      // É aqui que aparecem o 409 de sem assento livre (com os números), o 409
-      // do colaborador desativado e o 409 do ativo baixado.
+      // É aqui que aparecem o 409 de sem licença livre (com os números), o do
+      // alvo que já está com ela, o da chave que já está em outra entrega, o do
+      // colaborador desativado e o do ativo baixado.
       setErro((falha as Error).message);
     } finally {
       setSalvando(false);
@@ -70,12 +71,12 @@ export default function EntregaAssentoModal({ licenca, onClose, onSubmit }: Entr
 
         <div className="flex items-center justify-between px-6 py-4 border-b border-border-sutil bg-bg-base/50">
           <div>
-            <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">Entregar assento</h2>
+            <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">Entregar licença</h2>
             <p className="font-mono text-[10px] text-text-tertiary mt-1">
               {licenca.name} · {licenca.livres} de {licenca.seatsTotal} livre(s)
             </p>
           </div>
-          <button onClick={onClose} className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
+          <button onClick={onClose} aria-label="Fechar" title="Fechar" className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
             <X size={16} />
           </button>
         </div>
@@ -105,7 +106,7 @@ export default function EntregaAssentoModal({ licenca, onClose, onSubmit }: Entr
           {alvo === 'PERSON' ? (
             <label className="space-y-1.5 block">
               <span className={ROTULO}>Colaborador *</span>
-              <ReferenceSelect rota="people" valor={personId} obrigatorio onChange={setPersonId} />
+              <ReferenceSelect rota="people" valor={personId} obrigatorio comDetalhe onChange={setPersonId} />
             </label>
           ) : (
             <label className="space-y-1.5 block">
@@ -115,15 +116,34 @@ export default function EntregaAssentoModal({ licenca, onClose, onSubmit }: Entr
           )}
 
           <label className="space-y-1.5 block">
+            <span className={ROTULO}>Data da entrega *</span>
+            <input
+              type="date" required max={hoje} value={checkoutAt}
+              onChange={(e) => setCheckoutAt(e.target.value)} className={CLASSE_CAMPO}
+            />
+          </label>
+
+          <label className="space-y-1.5 block">
+            <span className={ROTULO}>Chave</span>
+            <input
+              value={productKey} onChange={(e) => setProductKey(e.target.value)}
+              spellCheck={false} autoComplete="off" className={`${CLASSE_CAMPO} font-mono`}
+            />
+            <span className="block text-[10px] text-text-tertiary">
+              A chave desta entrega. Deixe vazia quando a licença usa chave de volume.
+            </span>
+          </label>
+
+          <label className="space-y-1.5 block">
             <span className={ROTULO}>Observações</span>
             <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={CLASSE_CAMPO} />
           </label>
 
           <p className="text-[10px] text-text-tertiary leading-relaxed border-t border-border-sutil pt-3">
-            O assento é escolhido pelo servidor — o primeiro livre. Posto de trabalho não é alvo
-            de licença: o computador da mesa é um <span className="text-text-secondary">ativo</span>, e
-            é a ele que o assento vai. Se a licença é por usuário nomeado, duas pessoas na mesma
-            máquina precisam de dois assentos.
+            Licença por computador (Windows, Office avulso) vai para o{' '}
+            <span className="text-text-secondary">ativo</span>; por assinatura de pessoa (Microsoft
+            365, Adobe), para o <span className="text-text-secondary">colaborador</span>. Posto de
+            trabalho não recebe licença: o computador da mesa recebe.
           </p>
 
           <div className="flex justify-end gap-2 pt-1">

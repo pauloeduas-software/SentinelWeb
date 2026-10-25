@@ -48,11 +48,16 @@ interface ReferenceSelectProps {
    * opção "fora desta lista"; sem ele, ela aparece sem nome, como antes.
    */
   atual?: { id: string; name: string } | null;
+  /**
+   * Mostra o `detalhe` da opção ao lado do nome — "Laura Souza — laura@empresa.com".
+   * Onde a tela pediu; nas outras o seletor continua só com o nome.
+   */
+  comDetalhe?: boolean;
   onChange: (valor: string) => void;
 }
 
 export default function ReferenceSelect({
-  rota, filtroTipo, parametros, valor, obrigatorio, excluirIds, atual, onChange,
+  rota, filtroTipo, parametros, valor, obrigatorio, excluirIds, atual, comDetalhe = false, onChange,
 }: ReferenceSelectProps) {
   const [busca, setBusca] = useState('');
   // A última opção ESCOLHIDA aqui, com o nome. É o outro caminho para o valor
@@ -143,7 +148,9 @@ export default function ReferenceSelect({
           </option>
         )}
         {opcoes.map((opcao) => (
-          <option key={opcao.id} value={opcao.id}>{opcao.name}</option>
+          <option key={opcao.id} value={opcao.id}>
+            {comDetalhe && opcao.detalhe ? `${opcao.name} — ${opcao.detalhe}` : opcao.name}
+          </option>
         ))}
       </select>
 

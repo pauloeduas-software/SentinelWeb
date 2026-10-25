@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { ZodError } from 'zod';
-import { AppError } from './app-error';
+import { AppError, type ReferenciaDoErro } from './app-error';
 import { formatZodError } from './zod-error';
 import { errorCode, errorProp } from './error-shape';
 import { createLogger } from '../logger/logger';
@@ -11,7 +11,7 @@ const DEFAULT_MESSAGE = 'Erro interno do servidor';
 
 interface HttpError {
   status: number;
-  body: { error: string };
+  body: { error: string; refs?: ReferenciaDoErro[] };
   unexpected: boolean;
 }
 
@@ -20,10 +20,15 @@ interface HttpError {
 // Erro inesperado vira 500 com mensagem genérica — `error.message` de banco ou
 // de biblioteca NUNCA vai para o cliente (só para o log).
 //
-// O corpo é SEMPRE `{ error }`, a frase que a tela mostra (`app-error.ts`).
+// O corpo é SEMPRE `{ error }`, a frase que a tela mostra, com `refs` ao lado
+// quando ela cita o que a tela pode abrir (`app-error.ts`).
 function toHttpError(error: unknown): HttpError {
   if (error instanceof AppError) {
-    return { status: error.status, body: { error: error.message }, unexpected: error.status >= 500 };
+    return {
+      status: error.status,
+      body: { error: error.message, ...(error.refs ? { refs: error.refs } : {}) },
+      unexpected: error.status >= 500,
+    };
   }
 
   // Payload recusado pelo schema do domínio: 422 com a frase dos campos que

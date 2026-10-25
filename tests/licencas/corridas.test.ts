@@ -1,136 +1,121 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { cenarioDePosse, criarLicenca } from '../helpers/fixtures';
+import { criarApi, type ApiDeTeste, type Resposta } from '../helpers/app';
+import { cenarioDePosse, criarColaborador, criarLicenca, entregarLicenca } from '../helpers/fixtures';
 import { prisma } from '../../server/core/database/prismaClient';
 
-// AS CORRIDAS DO ASSENTO — o que "passa no teste com um usuário".
+// AS CORRIDAS — requisições SIMULTÂNEAS contra a mesma licença.
 //
-// CONTAR NÃO É TRAVAR, e aqui há uma volta a mais do que no estoque: lá o que
-// se disputa é um NÚMERO (o saldo), e a trava é na linha-pai. Aqui o que se
-// disputa é uma LINHA — o assento —, e é por isso que ele é materializado
-// (D40): sem a linha, "pegue um livre" é uma conta sobre um contador e duas
-// requisições simultâneas chegam ao mesmo resultado.
-//
-// A escolha e a trava acontecem na MESMA instrução (`FOR UPDATE … SKIP
-// LOCKED`), e o `SKIP LOCKED` faz a segunda pegar o assento SEGUINTE em vez de
-// esperar (D41). Por isso estes testes disparam as requisições sem `await`
-// entre elas e contam os status. A asserção nunca é "deu certo": é "exatamente
-// N passaram, e o banco tem exatamente N linhas".
+// A conta (em uso ≤ compradas, invariante 22) só se mantém porque
+// a entrega, a edição, o Encerrar e a exclusão contam com a LICENÇA travada.
+// Cada corrida aqui usa ALVOS DIFERENTES: com o mesmo alvo, a trava do alvo
+// serializaria as requisições antes de chegarem à licença, e o teste passaria
+// sem provar a trava que importa.
 
 let api: ApiDeTeste;
 let cenario: Awaited<ReturnType<typeof cenarioDePosse>>;
+let pessoas: string[];
 
 beforeAll(async () => {
   api = await criarApi();
   cenario = await cenarioDePosse(api);
+  pessoas = await Promise.all(Array.from({ length: 8 }, (_, i) =>
+    criarColaborador(api, { name: `Corredor ${i + 1}`, email: `corredor${i + 1}@teste.local` })));
 });
 
 afterAll(async () => {
   await api.fechar();
 });
 
-/** Quantas respostas de cada status — é a única forma da asserção de corrida. */
-function placar(respostas: { status: number }[]): Record<number, number> {
+function placar(respostas: Resposta[]): Record<number, number> {
   const contagem: Record<number, number> = {};
-  for (const r of respostas) contagem[r.status] = (contagem[r.status] ?? 0) + 1;
+  for (const { status } of respostas) contagem[status] = (contagem[status] ?? 0) + 1;
   return contagem;
 }
 
-async function ocupacoesAbertas(licenseId: string): Promise<number> {
-  return prisma.licenseSeatCheckout.count({
-    where: { seat: { licenseId }, checkinAt: null },
-  });
+function abertas(licenseId: string) {
+  return prisma.licenseCheckout.count({ where: { licenseId, checkinAt: null } });
 }
 
-describe('duas entregas simultâneas numa licença de UM assento', () => {
-  it('deixa passar exatamente UMA', async () => {
-    const licenca = await criarLicenca(api, {
-      name: 'Licença da corrida', categoryId: cenario.categoriaLicencaId, seatsTotal: 1,
-    });
+describe('oito entregas simultâneas, oito pessoas, três licenças compradas', () => {
+  it('deixa passar exatamente TRÊS', async () => {
+    const licenca = await criarLicenca(api, { name: 'Corrida das três', categoryId: cenario.categoriaLicencaId, seatsTotal: 3 });
 
-    const respostas = await Promise.all([
-      api.post(`/api/licenses/${licenca.id}/checkout-seat`, { assignedPersonId: cenario.laura }),
-      api.post(`/api/licenses/${licenca.id}/checkout-seat`, { assignedPersonId: cenario.ana }),
+    const respostas = await Promise.all(pessoas.map((pessoa) =>
+      api.post(`/api/licenses/${licenca.id}/checkout`, { assignedPersonId: pessoa })));
+
+    expect(placar(respostas)).toEqual({ 201: 3, 409: 5 });
+    expect(await abertas(licenca.id)).toBe(3);
+  });
+});
+
+describe('a edição contra a entrega', () => {
+  it('reduzir enquanto entregam nunca deixa a conta passar do contrato', async () => {
+    const licenca = await criarLicenca(api, { name: 'Corrida da redução', categoryId: cenario.categoriaLicencaId, seatsTotal: 4 });
+    await entregarLicenca(api, licenca.id, { assignedPersonId: pessoas[0] });
+
+    const [reducao, ...entregas] = await Promise.all([
+      api.put(`/api/licenses/${licenca.id}`, { seatsTotal: 2 }),
+      ...pessoas.slice(1, 4).map((pessoa) => api.post(`/api/licenses/${licenca.id}/checkout`, { assignedPersonId: pessoa })),
     ]);
 
-    expect(placar(respostas)).toMatchObject({ 201: 1, 409: 1 });
-    expect(await ocupacoesAbertas(licenca.id)).toBe(1);
-  });
-
-  it('não deixa a perdedora gravar uma ocupação já devolvida de consolação', async () => {
-    // Uma linha com `checkinAt` preenchido criada pela requisição perdedora
-    // seria histórico de uma entrega que nunca aconteceu, e o relatório de
-    // "quem esteve com este assento" mentiria.
-    const licenca = await prisma.license.findFirstOrThrow({
-      where: { name: 'Licença da corrida' }, select: { id: true },
-    });
-    expect(await prisma.licenseSeatCheckout.count({ where: { seat: { licenseId: licenca.id } } })).toBe(1);
+    const { body } = await api.get<{ seatsTotal: number; emUso: number }>(`/api/licenses/${licenca.id}`);
+    expect(body.emUso).toBeLessThanOrEqual(body.seatsTotal);
+    expect(await abertas(licenca.id)).toBe(body.emUso);
+    // A redução passou e sobrou espaço para UMA entrega, ou foi recusada porque
+    // as entregas chegaram antes. As duas ordens são válidas; a conta estourada não.
+    expect([200, 409]).toContain(reducao.status);
+    expect(entregas.every((r) => r.status === 201 || r.status === 409)).toBe(true);
   });
 });
 
-describe('oito entregas simultâneas numa licença de CINCO assentos', () => {
-  it('deixa passar exatamente CINCO, e em assentos DIFERENTES', async () => {
-    const licenca = await criarLicenca(api, {
-      name: 'Licença do onboarding', categoryId: cenario.categoriaLicencaId, seatsTotal: 5,
-    });
+describe('o fim do contrato contra a entrega', () => {
+  it('excluir enquanto entregam: ou a exclusão perde, ou a entrega perde — nunca as duas passam', async () => {
+    const licenca = await criarLicenca(api, { name: 'Corrida da exclusão', categoryId: cenario.categoriaLicencaId, seatsTotal: 5 });
 
-    const respostas = await Promise.all(
-      Array.from({ length: 8 }, () =>
-        api.post(`/api/licenses/${licenca.id}/checkout-seat`, { assignedAssetId: cenario.ativo.id })),
+    const [exclusao, entrega] = await Promise.all([
+      api.delete(`/api/licenses/${licenca.id}`),
+      api.post(`/api/licenses/${licenca.id}/checkout`, { assignedPersonId: pessoas[4] }),
+    ]);
+
+    expect([exclusao.status, entrega.status].sort()).toEqual(
+      exclusao.status === 204 ? [204, 404] : [201, 409],
     );
-
-    expect(placar(respostas)).toMatchObject({ 201: 5, 409: 3 });
-    expect(await ocupacoesAbertas(licenca.id)).toBe(5);
-
-    // O QUE O `SKIP LOCKED` COMPRA: as cinco vencedoras pegaram assentos
-    // DIFERENTES. Sem ele, ou elas esperariam em fila, ou — pior — duas
-    // escolheriam o mesmo número e uma esbarraria no índice único, virando um
-    // 409 que não deveria existir.
-    const ocupados = await prisma.licenseSeatCheckout.findMany({
-      where: { seat: { licenseId: licenca.id }, checkinAt: null },
-      select: { seatId: true },
-    });
-    expect(new Set(ocupados.map((o) => o.seatId)).size).toBe(5);
-
-    const depois = await api.get<{ seatsTotal: number; livres: number; ocupados: number }>(
-      `/api/licenses/${licenca.id}`,
-    );
-    // NUNCA negativo, e nunca acima do contrato: é isso que a trava compra.
-    expect(depois.body).toMatchObject({ seatsTotal: 5, livres: 0, ocupados: 5 });
   });
 
-  it('nenhum assento ficou com duas ocupações abertas', async () => {
-    // A rede do banco: `license_seat_uma_aberta_por_assento`. Esta consulta é a
-    // mesma que o docs/referencia/invariantes.md manda rodar contra produção.
-    const duplicados = await prisma.$queryRaw<{ seatId: string }[]>`
-      SELECT "seatId" FROM license_seat_checkouts
-       WHERE "checkinAt" IS NULL GROUP BY "seatId" HAVING COUNT(*) > 1
-    `;
-    expect(duplicados).toEqual([]);
+  it('encerrar enquanto entregam: nenhuma entrega passa depois do Encerrar', async () => {
+    const licenca = await criarLicenca(api, { name: 'Corrida do encerrar', categoryId: cenario.categoriaLicencaId, seatsTotal: 5 });
+
+    const [encerrar, entrega] = await Promise.all([
+      api.post(`/api/licenses/${licenca.id}/terminate`),
+      api.post(`/api/licenses/${licenca.id}/checkout`, { assignedPersonId: pessoas[5] }),
+    ]);
+
+    // O Encerrar passa com alguém usando, então ele nunca perde. A entrega que
+    // chegou antes fica aberta; a que chegou depois encontra a licença encerrada.
+    expect(encerrar.status).toBe(200);
+    expect([201, 409]).toContain(entrega.status);
+    const { body } = await api.get<{ status: string; emUso: number }>(`/api/licenses/${licenca.id}`);
+    expect(body.status).toBe('ENCERRADA');
+    expect(body.emUso).toBe(entrega.status === 201 ? 1 : 0);
   });
 });
 
-describe('devolver e entregar ao mesmo tempo', () => {
-  it('não perde o assento que acabou de ser liberado', async () => {
-    // A SEGUNDA CORRIDA, a que o D41 não cita: sem o checkin travar a linha do
-    // ASSENTO, em READ COMMITTED o `FOR UPDATE OF s` da entrega não reavalia o
-    // `WHERE` — o assento liberado um instante antes ficaria invisível e a
-    // entrega responderia 409 com assento livre no banco.
+describe('a devolução dupla', () => {
+  it('duas devoluções da mesma entrega: uma passa, a outra é 409', async () => {
     const licenca = await criarLicenca(api, {
-      name: 'Licença do vaivém', categoryId: cenario.categoriaLicencaId, seatsTotal: 1,
+      name: 'Corrida da devolução', categoryId: cenario.categoriaLicencaId, seatsTotal: 2,
     });
+    const entrega = await entregarLicenca(api, licenca.id, { assignedPersonId: pessoas[6] });
 
-    const primeira = await api.post<{ seatId: string }>(
-      `/api/licenses/${licenca.id}/checkout-seat`, { assignedPersonId: cenario.laura },
-    );
-    expect(primeira.status).toBe(201);
+    const respostas = await Promise.all([
+      api.post(`/api/licenses/checkouts/${entrega.id}/checkin`),
+      api.post(`/api/licenses/checkouts/${entrega.id}/checkin`),
+    ]);
 
-    await api.post(`/api/licenses/seats/${primeira.body.seatId}/checkin`, {});
-
-    const segunda = await api.post(
-      `/api/licenses/${licenca.id}/checkout-seat`, { assignedPersonId: cenario.ana },
-    );
-    expect(segunda.status).toBe(201);
-    expect(await ocupacoesAbertas(licenca.id)).toBe(1);
+    expect(placar(respostas)).toEqual({ 200: 1, 409: 1 });
+    // A segunda esperou a trava da linha e encontrou a entrega fechada: a conta
+    // não liberou duas.
+    const { body } = await api.get<{ emUso: number; livres: number }>(`/api/licenses/${licenca.id}`);
+    expect(body).toMatchObject({ emUso: 0, livres: 2 });
   });
 });

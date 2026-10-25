@@ -70,3 +70,25 @@ export function hojeNoCampoDeData(): string {
   const dia = String(agora.getDate()).padStart(2, '0');
   return `${agora.getFullYear()}-${mes}-${dia}`;
 }
+
+/**
+ * O DIA de um instante no relógio de quem está usando, em 'AAAA-MM-DD' — o
+ * `min` do campo da devolução é o dia da entrega.
+ *
+ * Getters LOCAIS, pelo mesmo motivo do `hojeNoCampoDeData`.
+ */
+export function diaDoInstante(iso: string): string {
+  const data = new Date(iso);
+  const mes = String(data.getMonth() + 1).padStart(2, '0');
+  const dia = String(data.getDate()).padStart(2, '0');
+  return `${data.getFullYear()}-${mes}-${dia}`;
+}
+
+/**
+ * O dia de um instante, em DD/MM/YYYY e SEM a hora — para a entrega e a
+ * devolução de licença, que a tela registra por dia: a hora de um dia passado
+ * é a que o servidor escolheu (meio-dia), e mostrá-la seria inventar.
+ */
+export function formatarDiaDoInstante(iso: string): string {
+  return formatarData(diaDoInstante(iso));
+}

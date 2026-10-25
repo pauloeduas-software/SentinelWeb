@@ -6,7 +6,9 @@
 > o que o sistema recusa: [`../referencia/invariantes.md`](../referencia/invariantes.md).
 >
 > **Status (depois de U):** o assento vai para o colaborador (`assignedPersonId`), não mais para
-> `User`. O que vale hoje está em [`../referencia/modelo-de-posse.md`](../referencia/modelo-de-posse.md).
+> `User`. **Depois de [AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)**
+> não há mais assento numerado nem lixeira; o que vale hoje está em
+> [`../referencia/licencas.md`](../referencia/licencas.md).
 >
 > Esforço: **P** = até meio dia · **M** = 1 a 3 dias · **G** = mais de 3 dias
 >

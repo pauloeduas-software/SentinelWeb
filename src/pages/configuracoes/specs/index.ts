@@ -139,7 +139,7 @@ const localizacao: CatalogUiSpec = {
 // Mesma ordem do `CATALOG_SPECS` do servidor — as duas listas são percorridas
 // em paralelo pela tela e pelo maestro, e divergir faria a aba apontar para a
 // spec errada.
-// QUEM RECEBE EQUIPAMENTO — ativo, posto, assento de licença, estoque. Não
+// QUEM RECEBE EQUIPAMENTO — ativo, posto, licença, estoque. Não
 // entra no sistema: quem opera é usuário, na tela Usuários, e um não vira o
 // outro. As duas coisas a mais são a FICHA, a única aba com tela de detalhe —
 // é lá que se vê o que está com a pessoa e o que já esteve —, e a LIXEIRA: o

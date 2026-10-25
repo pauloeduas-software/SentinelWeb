@@ -1,26 +1,30 @@
-import { ArrowRightLeft, Clock, FileText, MapPin } from 'lucide-react';
+import { ArrowRightLeft, Clock, FileText, KeyRound, MapPin } from 'lucide-react';
 import type { EventoDaPessoa } from '../../../../domain/shared/person.types';
+import { formatarDiaDoInstante } from '../../../helpers/format.helper';
 import { momentoDoEvento } from '../../../helpers/historico.helper';
 import { lerEventoDaPessoa, tituloDoEvento } from '../helpers/historico.helper';
 
-// A LINHA DO TEMPO da pessoa. TRÊS fontes, uma lista:
+// A LINHA DO TEMPO da pessoa. QUATRO fontes, uma lista:
 //
 //   ATIVIDADE  o `ActivityLog` dela — cadastro, edição com o diff campo a
 //              campo, desativação;
 //   POSSE      o que ela recebeu e devolveu, com a etiqueta do equipamento;
-//   POSTO      onde ela sentou e quando saiu, com o turno.
+//   POSTO      onde ela sentou e quando saiu, com o turno;
+//   LICENCA    as licenças entregues A ELA — não as do computador que ela usa.
 //
 // Colaborador não opera o sistema: não há o que ele FEZ para mostrar aqui.
 
 const ICONE = {
   POSSE: ArrowRightLeft,
   POSTO: MapPin,
+  LICENCA: KeyRound,
   ATIVIDADE: FileText,
 } as const;
 
 const COR = {
   POSSE: 'text-status-info',
   POSTO: 'text-status-warning',
+  LICENCA: 'text-text-tertiary',
   ATIVIDADE: 'text-text-tertiary',
 } as const;
 
@@ -64,7 +68,7 @@ function Evento({ evento }: { evento: EventoDaPessoa }) {
   // separação entre diff e dado solto é regra, não marcação.
   const { mudancas, detalhes } = lerEventoDaPessoa(evento);
   const Icone = ICONE[evento.fonte];
-  const nota = evento.posse?.notes ?? evento.posto?.notes ?? null;
+  const nota = evento.posse?.notes ?? evento.posto?.notes ?? evento.licenca?.notes ?? null;
 
   return (
     <li className="border border-border-sutil p-3 space-y-2">
@@ -75,7 +79,9 @@ function Evento({ evento }: { evento: EventoDaPessoa }) {
         </div>
 
         <span className="flex items-center gap-1.5 text-text-tertiary text-[10px] tabular-nums shrink-0">
-          <Clock size={11} /> {momentoDoEvento(evento.at)}
+          {/* A licença é registrada por dia: a hora de um dia passado seria inventada. */}
+          <Clock size={11} />{' '}
+          {evento.fonte === 'LICENCA' ? formatarDiaDoInstante(evento.at) : momentoDoEvento(evento.at)}
         </span>
       </div>
 

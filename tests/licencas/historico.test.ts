@@ -1,31 +1,18 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { assentosDa, cenarioDePosse, criarLicenca } from '../helpers/fixtures';
-// As funções PURAS que a tela usa para renderizar a trilha. Importadas aqui
-// para que o teste prove o que o operador VÊ, não só o que o banco guarda.
-import { lerEvento, rotuloDaAcao } from '../../src/pages/helpers/historico.helper';
-import { ACOES_DA_LICENCA, ROTULOS_DA_LICENCA } from '../../src/pages/licencas/helpers/licenca.helper';
+import { cenarioDePosse, criarAtivo, criarColaborador, criarLicenca, entregarLicenca } from '../helpers/fixtures';
+import { prisma } from '../../server/core/database/prismaClient';
+// O vocabulário que a tela usa, importado para o teste provar que toda ação do
+// histórico tem rótulo — não só o que o banco guarda.
+import { ACOES_DA_LICENCA } from '../../src/pages/licencas/helpers/licenca.helper';
 import type { EventoDaLicenca } from '../../src/domain/shared/license.types';
 
-// ARQUIVO PRÓPRIO, e o motivo ERA o teto de escrita: `WRITE_RATE_LIMIT` é 40 por
-// minuto contado em memória por instância, e `operacoes.test.ts` já gastava 35
-// com uma instância só. Esse motivo caiu — o limitador não é registrado no teste
-// (`server/app.ts`, `comTetoDeRequisicao`). O arquivo fica separado pelo assunto:
-// aqui é o HISTÓRICO do assento, lá são as operações sobre ele.
-
-// ═════════════════════════════════════════════════════════════════════════════
-// A TRILHA COMO A TELA A LÊ — e a aritmética que o aviso de queima promete.
+// O HISTÓRICO, SEPARADO POR ALVO (AA), e legível pela tela.
 //
-// Este projeto não tem suíte de front (não há jsdom nem testing-library), então
-// componente React não se executa aqui. O que SE EXECUTA são as funções puras
-// que a tela usa para renderizar — `rotuloDaAcao`, `lerEvento` e os mapas do
-// domínio — alimentadas pelo `changes` REAL que a API acabou de gravar.
-//
-// É o que separa "o histórico existe no banco" de "o histórico é legível":
-// ação sem rótulo aparece em CAIXA ALTA na tela, e campo sem rótulo aparece com
-// o nome da coluna. Os dois são defeito de leitura que nenhum teste de servidor
-// pegaria.
-// ═════════════════════════════════════════════════════════════════════════════
+// A entrega ao computador aparece no histórico do COMPUTADOR, e não no da
+// pessoa que responde por ele; a entrega à pessoa aparece no histórico DELA, e
+// não no do computador que ela usa. A licença tem o seu: por onde passou — só
+// movimentação, sem trilha de cadastro e edição.
 
 let api: ApiDeTeste;
 let cenario: Awaited<ReturnType<typeof cenarioDePosse>>;
@@ -39,96 +26,110 @@ afterAll(async () => {
   await api.fechar();
 });
 
-describe('o histórico da licença é legível pela tela', () => {
-  let trilhaId: string;
+interface EventoDoAlvo { fonte: string; action: string; licenca: { licenseLabel: string; notes: string | null } | null }
+
+async function daLicencaNoHistorico(url: string): Promise<EventoDoAlvo[]> {
+  const { status, body } = await api.get<{ rows: EventoDoAlvo[] }>(url);
+  expect(status).toBe(200);
+  return body.rows.filter((evento) => evento.fonte === 'LICENCA');
+}
+
+describe('cada alvo vê só o que é dele', () => {
+  it('a do computador fica no computador; a da pessoa, na pessoa — mesmo ela tendo o computador', async () => {
+    const pessoa = await criarColaborador(api, { name: 'Marta Alves', email: 'marta@teste.local' });
+    const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId, name: 'PC da Marta' });
+    // A Marta responde pelo computador: a posse liga os dois.
+    expect((await api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'PERSON', targetPersonId: pessoa })).status).toBe(201);
+
+    const doPc = await criarLicenca(api, { name: 'Windows do PC', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
+    const daMarta = await criarLicenca(api, { name: 'M365 da Marta', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
+    await entregarLicenca(api, doPc.id, { assignedAssetId: ativo.id }, 'instalado na formatação');
+    await entregarLicenca(api, daMarta.id, { assignedPersonId: pessoa });
+
+    const noAtivo = await daLicencaNoHistorico(`/api/assets/${ativo.id}/history`);
+    expect(noAtivo.map((e) => e.licenca?.licenseLabel)).toEqual(['Windows do PC']);
+    expect(noAtivo[0].licenca?.notes).toBe('instalado na formatação');
+
+    const naPessoa = await daLicencaNoHistorico(`/api/people/${pessoa}/history`);
+    expect(naPessoa.map((e) => e.licenca?.licenseLabel)).toEqual(['M365 da Marta']);
+  });
+
+  it('a devolução aparece como evento próprio', async () => {
+    const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId, name: 'PC da devolução' });
+    const licenca = await criarLicenca(api, {
+      name: 'Licença do PC', categoryId: cenario.categoriaLicencaId, seatsTotal: 1,
+    });
+    const entrega = await entregarLicenca(api, licenca.id, { assignedAssetId: ativo.id });
+    await api.post(`/api/licenses/checkouts/${entrega.id}/checkin`);
+
+    const eventos = await daLicencaNoHistorico(`/api/assets/${ativo.id}/history`);
+    expect(eventos.map((e) => [e.action, e.licenca?.licenseLabel])).toEqual([['CHECKIN', 'Licença do PC'], ['CHECKOUT', 'Licença do PC']]);
+  });
+});
+
+describe('o histórico da licença é só movimentação', () => {
+  let licencaId: string;
 
   beforeAll(async () => {
+    const pessoa = await criarColaborador(api, { name: 'Nina Torres', email: 'nina@teste.local' });
+    const outra = await criarColaborador(api, { name: 'Otávio Reis', email: 'otavio@teste.local' });
     const licenca = await criarLicenca(api, {
-      name: 'OEM da trilha', categoryId: cenario.categoriaLicencaId, seatsTotal: 5,
-      reassignable: false,
+      name: 'Trilha', categoryId: cenario.categoriaLicencaId, seatsTotal: 4,
     });
-    trilhaId = licenca.id;
+    licencaId = licenca.id;
 
-    // PRÉ-CONDIÇÃO EXPLÍCITA, e ela existe por um motivo concreto: durante a
-    // escrita deste arquivo uma das três entregas abaixo respondeu 409 UMA vez,
-    // e não reproduziu em 17 execuções do arquivo nem em 144 entregas
-    // simultâneas de estresse. Sem esta asserção, uma volta do sintoma deixaria
-    // as duas explicações possíveis indistinguíveis — o contrato ter nascido
-    // sem assento, ou a entrega ter recusado assento livre. Com ela, a falha já
-    // vem separada, e a mensagem do `expect` abaixo carrega o corpo do 409.
-    const recemCriada = await assentosDa(api, trilhaId);
-    expect(recemCriada.filter((a) => a.checkouts.length === 0), 'assentos livres ao criar')
-      .toHaveLength(5);
-
-    // Três ocupados: é o caso em que a fórmula antiga do aviso mentia.
-    const entregas = await Promise.all([
-      api.post<{ seatId: string }>(`/api/licenses/${trilhaId}/checkout-seat`, { assignedPersonId: cenario.laura }),
-      api.post<{ seatId: string }>(`/api/licenses/${trilhaId}/checkout-seat`, { assignedPersonId: cenario.ana }),
-      api.post<{ seatId: string }>(`/api/licenses/${trilhaId}/checkout-seat`, { assignedAssetId: cenario.ativo.id }),
-    ]);
-    for (const entrega of entregas) expect(entrega.status, JSON.stringify(entrega.body)).toBe(201);
-
-    // Um evento de cada forma que o `changes` assume: diff e ids soltos.
-    expect((await api.put(`/api/licenses/${trilhaId}`, { name: 'OEM da trilha (renomeada)' })).status).toBe(200);
-
-    const antes = await api.get<{ seatsTotal: number; queimados: number; livres: number }>(
-      `/api/licenses/${trilhaId}`,
-    );
-    // ⬇ A ARITMÉTICA DO AVISO, antes de devolver: 5 comprados, nenhum queimado,
-    // 3 ocupados, 2 livres. O que vai RESTAR de utilizável é 4 — e `livres` (2)
-    // era o número que a tela prometia antes da correção.
-    expect(antes.body).toMatchObject({ seatsTotal: 5, queimados: 0, livres: 2 });
-    expect(antes.body.seatsTotal - antes.body.queimados - 1).toBe(4);
-
-    expect((await api.post(`/api/licenses/seats/${entregas[0].body.seatId}/checkin`, {})).status).toBe(200);
-
-    const depois = await api.get<{ seatsTotal: number; queimados: number; livres: number }>(
-      `/api/licenses/${trilhaId}`,
-    );
-    // E a promessa era verdadeira: utilizáveis = seatsTotal − queimados = 4.
-    // `livres` subiu para 2 e continua sendo outra pergunta.
-    expect(depois.body.seatsTotal - depois.body.queimados).toBe(4);
-    expect(depois.body).toMatchObject({ seatsTotal: 5, queimados: 1, livres: 2 });
+    await entregarLicenca(api, licencaId, { assignedPersonId: pessoa }, 'pedido do chamado 42');
+    await entregarLicenca(api, licencaId, { assignedAssetId: cenario.ativo.id });
+    const doOtavio = await entregarLicenca(api, licencaId, { assignedPersonId: outra });
+    await api.post(`/api/licenses/checkouts/${doOtavio.id}/checkin`);
+    // A edição não deixa rastro.
+    await api.put(`/api/licenses/${licencaId}`, { name: 'Trilha (renomeada)', seatsTotal: 5 });
   });
 
-  it('nenhuma ação aparece em CAIXA ALTA: todas têm rótulo em português', async () => {
-    const { body } = await api.get<EventoDaLicenca[]>(`/api/licenses/${trilhaId}/history`);
-    expect(body.length).toBeGreaterThanOrEqual(6);
+  it('a entrega e a devolução trazem o NOME de quem recebeu e a observação', async () => {
+    const { body } = await api.get<{ total: number; rows: EventoDaLicenca[] }>(`/api/licenses/${licencaId}/history`);
 
-    for (const evento of body) {
-      const rotulo = rotuloDaAcao(evento.action, ACOES_DA_LICENCA);
-      // `rotuloDaAcao` devolve a ação CRUA quando nenhum mapa a conhece — é o
-      // sinal de que falta uma linha em `ACOES_DA_LICENCA`.
-      expect(rotulo, `ação sem rótulo: ${evento.action}`).not.toBe(evento.action);
-    }
-  });
-
-  it('nenhum campo aparece com o nome da coluna: todos têm rótulo', async () => {
-    const { body } = await api.get<EventoDaLicenca[]>(`/api/licenses/${trilhaId}/history`);
-
-    for (const evento of body) {
-      const { mudancas, detalhes } = lerEvento(evento, ROTULOS_DA_LICENCA);
-      for (const item of [...mudancas, ...detalhes]) {
-        expect(item.rotulo, `campo sem rótulo em ${evento.action}: ${item.campo}`)
-          .not.toBe(item.campo);
-      }
-    }
-  });
-
-  it('a queima e a edição aparecem legíveis, cada uma na sua forma', async () => {
-    const { body } = await api.get<EventoDaLicenca[]>(`/api/licenses/${trilhaId}/history`);
-
-    const queima = body.find((evento) => evento.action === 'RETIRE');
-    expect(rotuloDaAcao(queima!.action, ACOES_DA_LICENCA)).toBe('Assento queimado');
-    expect(lerEvento(queima!, ROTULOS_DA_LICENCA).detalhes.map((d) => d.rotulo))
-      .toEqual(expect.arrayContaining(['Motivo', 'Assento']));
-
-    // A edição é a OUTRA forma do `changes`: par `{de, para}`, que a tela
-    // desenha como "de → para" em vez de valor solto.
-    const edicao = body.find((evento) => evento.action === 'UPDATE');
-    const { mudancas } = lerEvento(edicao!, ROTULOS_DA_LICENCA);
-    expect(mudancas).toEqual(expect.arrayContaining([
-      expect.objectContaining({ rotulo: 'Nome', de: 'OEM da trilha', para: 'OEM da trilha (renomeada)' }),
+    expect(body.rows.map((e) => [e.action, e.entrega.alvoLabel])).toEqual(expect.arrayContaining([
+      ['CHECKOUT', 'Nina Torres'],
+      ['CHECKOUT', cenario.ativo.assetTag],
+      ['CHECKOUT', 'Otávio Reis'],
+      ['CHECKIN', 'Otávio Reis'],
     ]));
+    const daNina = body.rows.find((e) => e.entrega.alvoLabel === 'Nina Torres');
+    expect(daNina?.entrega.notes).toBe('pedido do chamado 42');
+    expect(body.total).toBe(body.rows.length);
+  });
+
+  it('cadastro e edição não aparecem: só entregas e devoluções', async () => {
+    const { body } = await api.get<{ rows: EventoDaLicenca[] }>(`/api/licenses/${licencaId}/history`);
+    // Nina, computador e Otávio entregues; só o Otávio devolveu.
+    expect(body.rows).toHaveLength(4);
+
+    for (const evento of body.rows) {
+      expect(Object.keys(ACOES_DA_LICENCA), `ação sem rótulo: ${evento.action}`).toContain(evento.action);
+    }
+  });
+
+  it('a página sai do banco: nenhum evento some nem se repete entre as páginas', async () => {
+    type Pagina = { total: number; rows: EventoDaLicenca[] };
+    const url = `/api/licenses/${licencaId}/history`;
+    const inteira = (await api.get<Pagina>(url)).body;
+    const primeira = (await api.get<Pagina>(`${url}?perPage=3`)).body;
+    const segunda = (await api.get<Pagina>(`${url}?perPage=3&page=2`)).body;
+
+    expect([primeira.total, segunda.total]).toEqual([4, 4]);
+    expect([primeira.rows.length, segunda.rows.length]).toEqual([3, 1]);
+    expect([...primeira.rows, ...segunda.rows].map((e) => e.id)).toEqual(inteira.rows.map((e) => e.id));
+
+    const instantes = inteira.rows.map((e) => new Date(e.at).getTime());
+    expect(instantes).toEqual([...instantes].sort((a, b) => b - a));
+
+    // A devolução do Otávio vem antes da entrega dele, mesmo no mesmo instante.
+    const doOtavio = inteira.rows.filter((e) => e.entrega.alvoLabel === 'Otávio Reis').map((e) => e.action);
+    expect(doOtavio).toEqual(['CHECKIN', 'CHECKOUT']);
+  });
+
+  it('a licença não grava nada na trilha de auditoria', async () => {
+    expect(await prisma.activityLog.count({ where: { entityType: 'License' } })).toBe(0);
   });
 });

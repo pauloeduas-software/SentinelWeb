@@ -4,7 +4,7 @@ import { travarPessoa } from '../../person/use-cases/lock-person.usecase';
 import { createPersonSchema, updatePersonSchema } from '../schemas/catalog-entities.schema';
 import type { CatalogDelegate, CatalogSpec } from './catalog-spec.types';
 
-// O COLABORADOR — quem RECEBE equipamento: ativo, posto, assento de licença,
+// O COLABORADOR — quem RECEBE equipamento: ativo, posto, licença,
 // unidade de estoque. Não entra no sistema; quem opera é usuário (`user`), e um
 // não vira o outro: quem opera o sistema e também tem um notebook é cadastrado
 // aqui à parte.
@@ -29,10 +29,12 @@ export const personSpec: CatalogSpec = {
   // SEM `nomeUnicoPor`: dois "João Silva" existem, e quem os separa é o
   // e-mail (`beforeWrite`).
 
-  // O seletor de pessoa da entrega, do posto, do assento e do estoque só
+  // O seletor de pessoa da entrega, do posto, da licença e do estoque só
   // oferece quem está ativo: desativado não recebe nada novo, e oferecê-lo era
   // convidar ao 409. O da lixeira, a extension de soft delete já esconde.
   optionsWhere: { isActive: true },
+  // O e-mail ao lado do nome: é ele que separa os dois "João Silva" no seletor.
+  optionDetail: 'email',
 
   // EXCLUIR VAI PARA A LIXEIRA: a linha fica, e o histórico de posse — o dos
   // ativos e o da ficha dela — continua apontando para ela e mostrando o nome.
@@ -43,7 +45,7 @@ export const personSpec: CatalogSpec = {
   // segura: ele fica com a linha na lixeira.
   countUsages: async (client, id) => {
     const posse = await contarPosseAberta(client, id);
-    return posse.ativosEmPosse + posse.postosOcupados + posse.assentosEmPosse + posse.itensEmPosse;
+    return posse.ativosEmPosse + posse.postosOcupados + posse.licencas.length + posse.itensEmPosse;
   },
 
   // A recusa diz O QUÊ — "responde por 1 ativo e ocupa 1 posto" —, e não "em
@@ -93,6 +95,6 @@ export const personSpec: CatalogSpec = {
     if (!atual?.isActive) return;
 
     const motivo = motivoParaRecusar(await contarPosseAberta(client, id), 'desativar');
-    if (motivo) throw new AppError(motivo, 409);
+    if (motivo) throw new AppError(motivo.mensagem, 409, motivo.refs);
   },
 };

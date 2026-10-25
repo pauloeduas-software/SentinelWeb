@@ -1,65 +1,69 @@
-import { AlertTriangle, CalendarClock } from 'lucide-react';
-import type { AlertasDeLicenca } from '../../../domain/shared/license.types';
-import { corDoStatus, textoDoPrazo } from '../helpers/licenca.helper';
+import { CalendarClock } from 'lucide-react';
+import type { LicencaEmAlerta, MotivoDoAlerta } from '../../../domain/shared/license.types';
+import { textoDoPrazo } from '../../helpers/licenca.helper';
 
-// OS DOIS SINAIS DA LICENÇA, lado a lado.
+// O ALERTA DA LICENÇA — um só: o que encerrou com alguém ainda usando, o que
+// venceu e o que vence nos próximos 30 dias, nessa ordem de urgência. Não
+// existe alerta de "abaixo do mínimo" (AA). Só nesta tela.
 //
-// Eles respondem perguntas DIFERENTES e por isso não se somam num número só:
-// *"o que vence"* é prazo de contrato e *"o que está sem assento"* é capacidade.
-// Um contrato vencendo com assentos de sobra e um vigente sem assento livre são
-// problemas opostos, e cada um manda procurar outra pessoa na empresa.
+// EMBAIXO, A CONTAGEM DE CADA MOTIVO, com link — "2 encerradas em uso · 5
+// vencidas · 3 vencendo": cada uma leva à aba e ao filtro que mostram todas
+// aquelas, e a lista de cima pode ficar curta.
 
 interface AlertasLicencaProps {
-  alertas: AlertasDeLicenca;
+  alertas: LicencaEmAlerta[];
+  /** Quantas são de verdade — a lista pode vir cortada. */
+  total: number;
+  contagem: Record<MotivoDoAlerta, number>;
+  onIrPara: (motivo: MotivoDoAlerta) => void;
 }
 
-export default function AlertasLicenca({ alertas }: AlertasLicencaProps) {
-  const { vencendo, assentosBaixos } = alertas;
-  if (vencendo.length === 0 && assentosBaixos.length === 0) return null;
+/** A ordem do alerta, e o texto de cada contagem. */
+const MOTIVOS: readonly { motivo: MotivoDoAlerta; texto: (n: number) => string }[] = [
+  { motivo: 'ENCERRADA_EM_USO', texto: (n) => `${n} ${n === 1 ? 'encerrada' : 'encerradas'} em uso` },
+  { motivo: 'VENCIDA', texto: (n) => `${n} ${n === 1 ? 'vencida' : 'vencidas'}` },
+  { motivo: 'VENCENDO', texto: (n) => `${n} vencendo` },
+];
+
+function motivoEmTexto(alerta: LicencaEmAlerta): string {
+  if (alerta.motivo === 'ENCERRADA_EM_USO') {
+    return `encerrada, ainda em uso (${alerta.emUso})`;
+  }
+  return textoDoPrazo(alerta.diasParaVencer);
+}
+
+export default function AlertasLicenca({ alertas, total, contagem, onIrPara }: AlertasLicencaProps) {
+  if (alertas.length === 0) return null;
+
+  const comAlgum = MOTIVOS.filter(({ motivo }) => contagem[motivo] > 0);
 
   return (
-    <div className="grid gap-3 md:grid-cols-2 mb-4">
-      {vencendo.length > 0 && (
-        <div className="border border-status-warning/30 bg-surface-card p-3 font-mono text-xs">
-          <div className="flex items-center gap-2 text-status-warning uppercase tracking-widest text-[10px] mb-2">
-            <CalendarClock size={12} /> Vencendo ou vencida ({vencendo.length})
-          </div>
-          <ul className="space-y-1">
-            {vencendo.slice(0, 6).map((alerta) => (
-              <li key={alerta.id} className="flex justify-between gap-3">
-                <span className="text-text-secondary truncate">{alerta.name}</span>
-                <span style={{ color: corDoStatus(alerta.status) }} className="shrink-0">
-                  {textoDoPrazo(alerta.diasParaVencer)}
-                </span>
-              </li>
-            ))}
-          </ul>
-          {vencendo.length > 6 && (
-            <p className="text-[10px] text-text-tertiary mt-2">e mais {vencendo.length - 6}…</p>
-          )}
-        </div>
-      )}
-
-      {assentosBaixos.length > 0 && (
-        <div className="border border-status-danger/30 bg-surface-card p-3 font-mono text-xs">
-          <div className="flex items-center gap-2 text-status-danger uppercase tracking-widest text-[10px] mb-2">
-            <AlertTriangle size={12} /> Assentos abaixo do mínimo ({assentosBaixos.length})
-          </div>
-          <ul className="space-y-1">
-            {assentosBaixos.slice(0, 6).map((alerta) => (
-              <li key={alerta.id} className="flex justify-between gap-3">
-                <span className="text-text-secondary truncate">{alerta.name}</span>
-                <span className="text-status-danger shrink-0">
-                  {alerta.livres} livre(s), mínimo {alerta.minSeats}
-                </span>
-              </li>
-            ))}
-          </ul>
-          {assentosBaixos.length > 6 && (
-            <p className="text-[10px] text-text-tertiary mt-2">e mais {assentosBaixos.length - 6}…</p>
-          )}
-        </div>
-      )}
+    <div className="border border-status-warning/30 bg-surface-card p-3 font-mono text-xs mb-4">
+      <div className="flex items-center gap-2 text-status-warning uppercase tracking-widest text-[10px] mb-2">
+        <CalendarClock size={12} /> Vencendo, vencidas e encerradas em uso ({total})
+      </div>
+      <ul className="space-y-1">
+        {alertas.map((alerta) => (
+          <li key={alerta.id} className="flex justify-between gap-3">
+            <span className="text-text-secondary truncate">{alerta.name}</span>
+            <span className="text-text-tertiary shrink-0">{motivoEmTexto(alerta)}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="flex flex-wrap gap-x-2 text-[10px] text-text-tertiary mt-2">
+        {comAlgum.map(({ motivo, texto }, indice) => (
+          <span key={motivo} className="flex gap-2">
+            {indice > 0 && <span aria-hidden>·</span>}
+            <button
+              type="button"
+              onClick={() => onIrPara(motivo)}
+              className="text-text-secondary hover:text-text-primary underline underline-offset-2"
+            >
+              {texto(contagem[motivo])}
+            </button>
+          </span>
+        ))}
+      </p>
     </div>
   );
 }

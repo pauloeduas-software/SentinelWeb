@@ -130,7 +130,7 @@ export const TIPOS_CATEGORIA: readonly OpcaoFixa[] = [
   { value: 'STOCK', label: 'Estoque',
     ajuda: 'Item por quantidade, sem patrimônio individual: monitor, teclado, mouse, cabo.' },
   { value: 'LICENSE', label: 'Licença',
-    ajuda: 'Software, com assentos atribuídos a pessoas ou a máquinas.' },
+    ajuda: 'Software, com a quantidade comprada entregue a pessoas ou a máquinas.' },
 ];
 
 // Os quatro tipos de status, em palavras distintas entre si. As distinções que

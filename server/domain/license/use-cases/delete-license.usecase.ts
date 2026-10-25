@@ -1,59 +1,32 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
-import { contarAssentosDe, travarTodosOsAssentos, travarLicencaOuFalhar } from '../helpers/license-seats.helper';
+import { travarLicencaOuFalhar } from './lock-license.usecase';
 
 /**
- * A LIXEIRA da licença — e o 409 que protege os assentos ocupados.
+ * EXCLUIR DE VEZ — só a licença que NUNCA FOI ENTREGUE: o cadastro errado (AA).
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * POR QUE A RECUSA É DE APLICAÇÃO, E NÃO DO BANCO.
- *
- * Apagar aqui é `UPDATE licenses SET "deletedAt" = now()`. O Postgres não vê
- * `DELETE` nenhum, o `Cascade` para `license_seats` não dispara e a FK
- * `Restrict` dos alvos não é consultada — a rede NÃO EXISTE. É o ponto cego do
- * soft delete, o mesmo que `deleteUser` e `deleteAsset`
- * documentam.
- *
- * Sem a recusa, mandar a licença para a lixeira deixa os assentos ocupados
- * presos: eles continuam contando no 409 do `DELETE` do colaborador — a
- * consulta olha `license_seat_checkouts`, que não tem `deletedAt` —, e a tela
- * que ofereceria a devolução responde 404, porque a licença não existe mais
- * para o inventário.
- * ─────────────────────────────────────────────────────────────────────────────
- *
- * A TRAVA vem antes da contagem, e é o que a torna confiável: sem ela, uma
- * entrega simultânea cria a ocupação DEPOIS deste `count` e a licença vai para
- * a lixeira com assento na rua. Trava a licença E os assentos — os dois na
- * ordem do D90, porque esta operação é do lado do contrato, não do caminho
- * quente de entrega.
+ * A que já foi entregue alguma vez tem passado — o histórico do computador e o
+ * do colaborador contam por onde ela andou —, e por isso não se exclui:
+ * encerra. Sem lixeira e sem nome guardado por escrito: como nenhuma entrega
+ * fica sem licença, a FK `Restrict` de `license_checkouts` é a rede, e esta
+ * conferência existe para responder a frase que manda encerrar.
  */
 export async function deleteLicense(id: string): Promise<void> {
   await prisma.$transaction(async (tx) => {
+    // A trava antes da contagem: sem ela, uma entrega simultânea nasceria
+    // depois deste `count`, e a FK recusaria o DELETE com uma frase genérica.
     await travarLicencaOuFalhar(tx, id);
-    await travarTodosOsAssentos(tx, id);
+    const licenca = await tx.license.findUniqueOrThrow({ where: { id }, select: { name: true } });
 
-    const { ocupados } = await contarAssentosDe(tx, id);
-    if (ocupados > 0) {
+    const entregas = await tx.licenseCheckout.count({ where: { licenseId: id } });
+    if (entregas > 0) {
       throw new AppError(
-        `Esta licença ainda tem ${ocupados} ${ocupados === 1 ? 'assento ocupado' : 'assentos ocupados'}. `
-        + 'Devolva os assentos antes de excluir.',
+        `"${licenca.name}" já foi entregue e não pode ser excluída: o histórico de quem a usou `
+        + 'depende dela. Encerre-a em vez de excluir.',
         409,
       );
     }
 
-    const { count } = await tx.license.updateMany({
-      where: { id, deletedAt: null },
-      data: { deletedAt: new Date() },
-    });
-
-    // Zero linhas aqui só pode ser UMA coisa: a licença já estava na lixeira. O
-    // id inexistente foi separado pela trava lá em cima, que responde 404 antes
-    // de chegar neste ponto.
-    //
-    // Por isso 409 e não 404: o registro existe, o ESTADO dele é que recusa.
-    if (count === 0) throw new AppError('Esta licença já está na lixeira.', 409);
-
-    await recordActivity(tx, { entityType: 'License', entityId: id, action: 'DELETE' });
+    await tx.license.delete({ where: { id } });
   });
 }

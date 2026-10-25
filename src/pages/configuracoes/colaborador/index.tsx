@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { ArrowLeft, Boxes, History, MapPin, Undo2, UserX } from 'lucide-react';
+import { ArrowLeft, Boxes, History, KeyRound, MapPin, Undo2, UserX } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import HistoryPanel from './components/HistoryPanel';
 import { useColaborador } from './hooks/useColaborador';
-import { formatarData } from '../../helpers/format.helper';
+import { formatarData, formatarDiaDoInstante } from '../../helpers/format.helper';
 import { momentoDoEvento } from '../../helpers/historico.helper';
+import { caminhoDaLicenca, textoDoPrazo } from '../../helpers/licenca.helper';
 
-// FICHA DO COLABORADOR — quem é a pessoa, os POSTOS que ela ocupa, o estoque
-// no nome dela e o HISTÓRICO (docs/referencia/modelo-de-posse.md). Abre da aba
+// FICHA DO COLABORADOR — quem é a pessoa, os POSTOS que ela ocupa, o estoque e
+// as licenças no nome dela, e o HISTÓRICO (docs/referencia/modelo-de-posse.md). Abre da aba
 // Colaboradores de Configurações.
 //
 // Os postos aparecem inclusive quando não têm ativo nenhum entregue: é uma
@@ -186,6 +187,57 @@ export default function ColaboradorPage() {
                 <tr>
                   <td colSpan={4} className="px-6 py-10 text-center text-text-tertiary">
                     Não está com nenhum item de estoque.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <div className="flex items-center gap-3 mb-3">
+          <KeyRound size={14} className="text-text-tertiary" />
+          <h3 className="font-mono text-xs uppercase tracking-widest text-text-secondary">
+            Licenças com esta pessoa <span className="text-text-tertiary">({pessoa.licencas.length})</span>
+          </h3>
+        </div>
+        <p className="font-mono text-[10px] text-text-tertiary mb-3 leading-relaxed">
+          Licenças entregues a ELA, como uma assinatura do Microsoft 365 — nunca as do
+          computador que ela usa, que ficam na aba Licenças do ativo. É o que precisa voltar
+          antes de desativá-la — pelo detalhe da licença, aberto no nome dela.
+        </p>
+
+        <div className="bg-surface-card border border-border-sutil overflow-x-auto">
+          <table className="w-full text-left font-mono text-xs whitespace-nowrap">
+            <thead className="bg-bg-base/50 text-text-secondary border-b border-border-sutil uppercase tracking-widest">
+              <tr>
+                <th className={CABECALHO}>Licença</th>
+                <th className={CABECALHO}>Vencimento</th>
+                <th className={CABECALHO}>Desde</th>
+              </tr>
+            </thead>
+            <tbody className="text-text-primary divide-y divide-border-sutil/50">
+              {pessoa.licencas.map((entrega) => (
+                <tr key={entrega.id} className="hover:bg-bg-base transition-colors">
+                  <td className={CELULA}>
+                    <Link to={caminhoDaLicenca(entrega.license.id)} className="hover:underline underline-offset-2">
+                      {entrega.license.name}
+                    </Link>
+                    {entrega.checkoutNotes && (
+                      <div className="text-[10px] text-text-tertiary mt-0.5">{entrega.checkoutNotes}</div>
+                    )}
+                  </td>
+                  <td className={`${CELULA} text-text-tertiary`}>
+                    {entrega.status === 'ENCERRADA' ? 'encerrada' : textoDoPrazo(entrega.diasParaVencer)}
+                  </td>
+                  <td className={`${CELULA} text-text-tertiary`}>{formatarDiaDoInstante(entrega.checkoutAt)}</td>
+                </tr>
+              ))}
+              {pessoa.licencas.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-6 py-10 text-center text-text-tertiary">
+                    Não está com nenhuma licença.
                   </td>
                 </tr>
               )}

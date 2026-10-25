@@ -16,4 +16,6 @@ export interface CatalogRow {
 export interface CatalogOption {
   id: string;
   name: string;
+  /** O que separa dois de mesmo nome — o e-mail do colaborador. Só onde a tabela declara. */
+  detalhe?: string | null;
 }

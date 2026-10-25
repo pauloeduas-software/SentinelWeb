@@ -1,5 +1,6 @@
 import { prisma } from '../../server/core/database/prismaClient';
 import type { ApiDeTeste } from './app';
+import { hojeNoBrasil, somarDias } from '../../server/domain/shared/hoje.helper';
 
 // O CENÁRIO de cada teste, montado PELA API.
 //
@@ -72,16 +73,11 @@ export async function criarItemDeEstoque(
 }
 
 /**
- * Uma licença, pela API — nunca por `prisma.license.create`.
+ * Uma licença, pela API — nunca por `prisma.license.create`, que pularia o zod
+ * da borda, a guarda de tipo da categoria e o `ActivityLog`.
  *
- * Criar pelo Prisma pularia o zod da borda, a guarda de tipo da categoria, a
- * criação dos assentos na
- * mesma transação. O teste passaria a provar coisas sobre uma licença de 5
- * assentos com zero linhas em `license_seats`, que nenhum usuário consegue
- * cadastrar.
- *
- * O NOME é único por índice parcial, então quem chama passa um sufixo próprio
- * quando cria mais de uma no mesmo arquivo.
+ * O nome pode repetir (AA), mas cada teste dá o seu: é por ele que a asserção
+ * se lê.
  */
 export async function criarLicenca(
   api: ApiDeTeste,
@@ -89,8 +85,6 @@ export async function criarLicenca(
     name: string;
     categoryId: string;
     seatsTotal: number;
-    reassignable?: boolean;
-    minSeats?: number;
     expirationDate?: string;
     terminationDate?: string;
   },
@@ -100,20 +94,36 @@ export async function criarLicenca(
     categoryId: opcoes.categoryId,
     seatsTotal: opcoes.seatsTotal,
   };
-  for (const chave of ['reassignable', 'minSeats', 'expirationDate', 'terminationDate'] as const) {
+  for (const chave of ['expirationDate', 'terminationDate'] as const) {
     if (opcoes[chave] !== undefined) corpo[chave] = opcoes[chave];
   }
 
   return exigir201('licença', await api.post('/api/licenses', corpo));
 }
 
-/** Os assentos de uma licença, como a grade da tela os mostra. */
-export async function assentosDa(api: ApiDeTeste, licenseId: string) {
-  const resposta = await api.get<{
-    id: string; seatNumber: number; burnedAt: string | null; retiredAt: string | null;
-    checkouts: { id: string; assignedPersonId: string | null; assignedAssetId: string | null }[];
-  }[]>(`/api/licenses/${licenseId}/seats`);
-  return exigir201<typeof resposta.body>('assentos', resposta);
+/** O alvo de uma entrega de licença: colaborador XOR ativo. */
+export type AlvoDeLicenca = { assignedPersonId: string } | { assignedAssetId: string };
+
+/** Uma entrega de licença, pela API. Explode se o servidor recusar. */
+export async function entregarLicenca(
+  api: ApiDeTeste,
+  licenseId: string,
+  alvo: AlvoDeLicenca,
+  notes?: string,
+): Promise<{ id: string }> {
+  return exigir201('entrega de licença', await api.post(
+    `/api/licenses/${licenseId}/checkout`,
+    notes === undefined ? alvo : { ...alvo, notes },
+  ));
+}
+
+/**
+ * `AAAA-MM-DD` a N dias do DIA DE BRASÍLIA — o "hoje" que o status da licença
+ * usa (`hojeNoBrasil`). O `diasAFrente` lá embaixo conta em UTC, e às 21h de
+ * Brasília os dois discordam em um dia.
+ */
+export function diaNoBrasil(dias: number): string {
+  return somarDias(hojeNoBrasil(), dias).toISOString().slice(0, 10);
 }
 
 export async function criarFabricante(api: ApiDeTeste, name = 'Fabricante de Teste'): Promise<string> {

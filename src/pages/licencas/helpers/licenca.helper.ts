@@ -1,119 +1,84 @@
-import type { AssentoDeLicenca, StatusDaLicenca } from '../../../domain/shared/license.types';
+import type { EventoDaLicenca, Licenca, LicencaInput } from '../../../domain/shared/license.types';
+import { paraCampoDeData } from '../../helpers/format.helper';
 
-// Funções puras da tela de licenças — cálculo e cor fora do JSX
-// (docs/referencia/arquitetura.md).
-
-/** A cor de cada status. Hex, porque o Tailwind não gera classe de runtime. */
-const COR_DO_STATUS: Record<StatusDaLicenca, string> = {
-  ATIVA: '#22c55e',
-  VENCENDO: '#f59e0b',
-  EXPIRADA: '#ef4444',
-  ENCERRADA: '#888888',
-};
-
-export function corDoStatus(status: StatusDaLicenca): string {
-  return COR_DO_STATUS[status];
-}
+// Funções puras da tela de licenças (docs/referencia/arquitetura.md). O que as
+// outras telas também mostram — prazo, resumo da conta, devolução — mora em
+// `src/pages/helpers/licenca.helper.ts`.
 
 /**
- * O prazo, em português, a partir do número que o SERVIDOR calculou.
+ * SÓ OS CAMPOS QUE MUDARAM, para a edição.
  *
- * A conta não é refeita aqui de propósito: o "hoje" do navegador pode não ser o
- * do servidor, e uma licença que vence hoje apareceria como vencida para quem
- * está num fuso a oeste.
- */
-export function textoDoPrazo(dias: number | null): string {
-  if (dias === null) return 'sem vencimento';
-  if (dias < 0) return `venceu há ${Math.abs(dias)} dia${Math.abs(dias) === 1 ? '' : 's'}`;
-  if (dias === 0) return 'vence hoje';
-  return `vence em ${dias} dia${dias === 1 ? '' : 's'}`;
-}
-
-/** Os cinco estados possíveis de um quadrado da grade. */
-export type EstadoDoAssento = 'livre' | 'pessoa' | 'ativo' | 'queimado' | 'aposentado';
-
-/**
- * A ORDEM DAS PERGUNTAS É A REGRA.
+ * Mandar o formulário inteiro fazia um formulário aberto há tempo desfazer a
+ * edição que outra pessoa salvou no meio — a quantidade voltava ao número
+ * velho sem ninguém ter mexido nela.
  *
- * Aposentado vem primeiro porque ele não existe mais no contrato — mostrar um
- * assento aposentado como "livre" convidaria alguém a tentar entregá-lo, e o
- * servidor recusaria sem que a tela tivesse explicado por quê. Queimado vem em
- * seguida pelo mesmo motivo: ele parece livre e não é.
+ * A comparação normaliza o que o servidor devolve de outro jeito: data chega
+ * como ISO e o campo tem `AAAA-MM-DD`; custo chega como "1234.5" e o campo pode
+ * ter "1234.50". Sem isso, todo campo "mudaria" e iria no corpo — e voltaria a
+ * desfazer a edição de quem salvou no meio.
  */
-export function estadoDoAssento(assento: AssentoDeLicenca): EstadoDoAssento {
-  if (assento.retiredAt) return 'aposentado';
-  if (assento.burnedAt) return 'queimado';
+export function camposAlterados(original: LicencaInput, dados: LicencaInput): Partial<LicencaInput> {
+  const normalizar = (campo: keyof LicencaInput, valor: unknown): unknown => {
+    if (valor === undefined || valor === '') return null;
+    if (campo.endsWith('Date')) return paraCampoDeData(valor) || null;
+    if (campo === 'purchaseCost' && valor !== null) return Number(String(valor).replace(',', '.'));
+    return valor;
+  };
 
-  const aberta = assento.checkouts[0];
-  if (!aberta) return 'livre';
-  return aberta.assignedPersonId ? 'pessoa' : 'ativo';
-}
-
-export const ROTULO_DO_ESTADO: Record<EstadoDoAssento, string> = {
-  livre: 'Livre',
-  pessoa: 'Pessoa',
-  ativo: 'Ativo',
-  queimado: 'Queimado',
-  aposentado: 'Aposentado',
-};
-
-/** Quem está no assento, em uma linha. `null` quando ninguém está. */
-export function ocupanteDoAssento(assento: AssentoDeLicenca): string | null {
-  const aberta = assento.checkouts[0];
-  if (!aberta) return null;
-  if (aberta.assignedPerson) return aberta.assignedPerson.name;
-  if (aberta.assignedAsset) {
-    return aberta.assignedAsset.name
-      ? `${aberta.assignedAsset.assetTag} — ${aberta.assignedAsset.name}`
-      : aberta.assignedAsset.assetTag;
+  const alterados: Partial<LicencaInput> = {};
+  for (const campo of Object.keys(dados) as (keyof LicencaInput)[]) {
+    if (normalizar(campo, dados[campo]) !== normalizar(campo, original[campo])) {
+      (alterados as Record<string, unknown>)[campo] = dados[campo];
+    }
   }
+  return alterados;
+}
+
+/** O vocabulário do histórico DESTA tela: só entrega e devolução. */
+export const ACOES_DA_LICENCA: Record<EventoDaLicenca['action'], string> = {
+  CHECKOUT: 'Entregue',
+  CHECKIN: 'Devolvida',
+};
+
+/**
+ * Por que esta licença não pode ser entregue agora — `null` quando pode.
+ *
+ * A mesma regra na tabela e no detalhe: o servidor recusa vencida, encerrada e
+ * sem livre, e o botão não convida ao 409. O texto vai no `title` do botão.
+ */
+export function motivoParaNaoEntregar(licenca: Pick<Licenca, 'status' | 'livres'>): string | null {
+  if (licenca.status === 'ENCERRADA') return 'Encerrada';
+  if (licenca.status === 'EXPIRADA') return 'Vencida: renove a data de vencimento para entregar';
+  if (licenca.livres <= 0) return 'Sem licença livre';
   return null;
 }
 
 /**
- * O vocabulário do histórico DESTA tela.
+ * Por que esta licença não pode ser excluída — `null` quando pode.
  *
- * Mora aqui e não no `historico.helper.ts` compartilhado: uma lista central com
- * o vocabulário de todos os domínios seria um arquivo que nenhuma das telas lê
- * inteiro — é a nota que aquele arquivo já traz.
+ * Só a que nunca foi entregue se exclui (o cadastro errado). O 409 do servidor
+ * continua sendo a rede; o botão desabilitado só não convida a ele.
  */
-export const ACOES_DA_LICENCA: Record<string, string> = {
-  CHECKOUT: 'Assento entregue',
-  CHECKIN: 'Assento devolvido',
-  RETIRE: 'Assento queimado',
-};
+export function motivoParaNaoExcluir(licenca: Pick<Licenca, 'jaEntregue'>): string | null {
+  return licenca.jaEntregue ? 'Já foi entregue: use Encerrar' : null;
+}
 
 /**
- * O nome dos campos que a trilha DESTA tela grava, em português.
+ * A chave como a tela a mostra ANTES de "Mostrar": o começo de cada linha e o
+ * resto em pontos — "ABCDE-FGHIJ-•••••-•••••-•••••". O começo basta para achar
+ * a chave certa numa lista; o resto não fica na tela de quem passa atrás.
  *
- * Passado ao `lerEvento` como os rótulos do domínio: um mapa global
- * traduziria `name` para todas as tabelas e erraria no primeiro homônimo.
+ * Com três grupos ou mais, ficam os dois primeiros; com dois, o primeiro; sem
+ * hífen, os primeiros caracteres (um terço, até quatro).
  */
-export const ROTULOS_DA_LICENCA: Record<string, string> = {
-  name: 'Nome',
-  seatsTotal: 'Total de assentos',
-  minSeats: 'Mínimo de livres',
-  reassignable: 'Reatribuível',
-  maintained: 'Com manutenção',
-  expirationDate: 'Vencimento',
-  terminationDate: 'Encerramento',
-  licensedToName: 'Licenciado para',
-  licensedToEmail: 'E-mail do licenciado',
-  categoryId: 'Categoria',
-  manufacturerId: 'Fabricante',
-  orderNumber: 'Pedido',
-  purchaseDate: 'Data da compra',
-  purchaseCost: 'Valor da compra',
-  notes: 'Notas',
-
-  seatNumber: 'Assento',
-  seatId: 'Assento (id)',
-  checkoutId: 'Ocupação',
-  alvo: 'Alvo',
-  alvoId: 'Alvo (id)',
-  alvoNome: 'Alvo',
-  queimado: 'Queimado',
-  motivo: 'Motivo',
-  burnedAt: 'Queimado em',
-  checkinAt: 'Devolvido em',
-};
+export function esconderChave(chave: string): string {
+  return chave.split('\n').map((linha) => {
+    const grupos = linha.split('-');
+    if (grupos.length >= 2) {
+      const visiveis = grupos.length >= 3 ? 2 : 1;
+      return grupos.map((grupo, indice) => (indice < visiveis ? grupo : '•'.repeat(grupo.length))).join('-');
+    }
+    const visiveis = Math.min(4, Math.floor(linha.length / 3));
+    return linha.slice(0, visiveis) + '•'.repeat(Math.max(4, linha.length - visiveis));
+  }).join('\n');
+}

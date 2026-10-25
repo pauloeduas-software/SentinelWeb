@@ -7,7 +7,7 @@ import { useCheckinStock } from '../../../../domain/stock/stock.queries';
 //
 // TRÊS consultas, e nenhuma delas é redundante:
 //
-//   `usePersonQuery`            quem é a pessoa e o estoque no nome dela;
+//   `usePersonQuery`            quem é a pessoa, o estoque e as licenças no nome dela;
 //   `usePersonOccupanciesQuery` os POSTOS que ela ocupa, com o turno;
 //   `usePersonHistoryQuery`     o que JÁ aconteceu — as duas primeiras são o
 //                               estado de hoje, esta é a linha do tempo.

@@ -1,109 +1,238 @@
-import { X } from 'lucide-react';
-import AssentosGrade from './AssentosGrade';
+import { Archive, Edit2, Trash2, UserPlus, X, type LucideIcon } from 'lucide-react';
+import { useState } from 'react';
+import ChaveEscondida from './ChaveEscondida';
+import EntregasAbertas from './EntregasAbertas';
 import HistoricoLicenca from './HistoricoLicenca';
+import ListToolbar from '../../components/ListToolbar';
 import {
-  useLicenseHistoryQuery, useLicenseQuery, useLicenseSeatsQuery,
+  useLicenseCheckoutsQuery, useLicenseHistoryQuery, useLicenseQuery,
 } from '../../../domain/license/license.queries';
 import type { Licenca } from '../../../domain/shared/license.types';
-import type { AvisoDeQueima } from '../hooks/useLicencas';
-import { corDoStatus, textoDoPrazo } from '../helpers/licenca.helper';
-import { formatarMoeda } from '../../helpers/format.helper';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import {
+  ROTULO_DO_STATUS, resumoDaContagem, textoDoPrazo, textoDoValorDaCompra,
+} from '../../helpers/licenca.helper';
+import { formatarData } from '../../helpers/format.helper';
+import { motivoParaNaoEntregar, motivoParaNaoExcluir } from '../helpers/licenca.helper';
 
-// O DETALHE DA LICENÇA: a grade de assentos e o histórico.
+// O DETALHE DA LICENÇA: o status e a conta, as ações da lista, todos os campos
+// do cadastro, quem está com ela agora e o histórico — as duas listas de 15 em 15.
+//
+// É A ÚNICA TELA COM A CHAVE DE PRODUTO: a da licença, no topo, e a de cada
+// entrega, em "Com quem está" — as duas escondidas até "Mostrar".
 
 interface LicencaDetalheModalProps {
   licenca: Licenca;
+  ocupado: boolean;
   onClose: () => void;
-  /**
-   * `aviso` nulo = devolução comum. Preenchido = a devolução QUEIMA, e são
-   * estes números — os do `detalhe`, recém-consultados — que entram na frase
-   * da confirmação. A linha da listagem não serve: depois de duas devoluções
-   * nesta mesma janela ela já está velha.
-   */
-  onDevolver: (seatId: string, aviso: AvisoDeQueima | null) => void;
+  onEntregar: (licenca: Licenca) => void;
+  onEditar: (licenca: Licenca) => void;
+  onEncerrar: (licenca: Licenca) => void;
+  /** Excluir é `ADMIN` no servidor. Ausente, o botão some — quem decide é a página. */
+  onExcluir?: (licenca: Licenca) => void;
+  /** `checkinAt` é o dia, 'AAAA-MM-DD'. Resolve `true` quando a devolução deu certo. */
+  onDevolver: (checkoutId: string, checkinAt: string) => Promise<boolean>;
+  /** Troca só a chave de uma entrega aberta. Resolve `true` quando deu certo. */
+  onTrocarChave: (checkoutId: string, productKey: string | null) => Promise<boolean>;
 }
+
+/** As duas listas do detalhe andam de 15 em 15. */
+const POR_PAGINA = 15;
 
 const ROTULO = 'text-text-tertiary uppercase tracking-widest text-[10px]';
 
-function Campo({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+function Campo({ rotulo, children, largo = false }: { rotulo: string; children: React.ReactNode; largo?: boolean }) {
   return (
-    <div className="space-y-1">
+    <div className={`space-y-1 ${largo ? 'col-span-2' : ''}`}>
       <span className={ROTULO}>{rotulo}</span>
-      <div className="text-text-secondary">{children}</div>
+      <div className="text-text-secondary whitespace-pre-wrap break-words">{children}</div>
     </div>
   );
 }
 
-export default function LicencaDetalheModal({ licenca, onClose, onDevolver }: LicencaDetalheModalProps) {
+function Acao({ icone: Icone, rotulo, onClick, disabled = false, title, perigo = false }: {
+  icone: LucideIcon;
+  rotulo: string;
+  onClick: () => void;
+  disabled?: boolean;
+  title?: string;
+  perigo?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title ?? rotulo}
+      className={`flex items-center gap-1.5 px-2.5 py-1 border border-border-sutil text-[10px] uppercase tracking-widest text-text-secondary transition-colors disabled:opacity-30 ${
+        perigo ? 'hover:text-status-danger' : 'hover:text-text-primary'
+      }`}
+    >
+      <Icone size={12} /> {rotulo}
+    </button>
+  );
+}
+
+/** Carregando e erro antes do conteúdo: lista vazia não pode ser o que a tela diz enquanto espera. */
+function Estado({ carregando, erro, children }: { carregando: boolean; erro: Error | null; children: React.ReactNode }) {
+  if (carregando) return <p className="text-text-tertiary">Carregando…</p>;
+  if (erro) return <p role="alert" className="text-status-danger">Não foi possível carregar: {erro.message}</p>;
+  return <>{children}</>;
+}
+
+export default function LicencaDetalheModal({
+  licenca, ocupado, onClose, onEntregar, onEditar, onEncerrar, onExcluir, onDevolver, onTrocarChave,
+}: LicencaDetalheModalProps) {
   // A linha da listagem desenha o cabeçalho no primeiro quadro; a consulta
-  // abaixo traz a MÁSCARA e as contagens frescas logo em seguida.
-  const { data: detalhe } = useLicenseQuery(licenca.id);
-  const { data: assentos } = useLicenseSeatsQuery(licenca.id);
-  const { data: eventos, isPending: historicoPendente } = useLicenseHistoryQuery(licenca.id);
+  // abaixo traz as contagens frescas logo em seguida.
+  const { data: detalhe, error: erroDoDetalhe } = useLicenseQuery(licenca.id);
+
+  const [paginaDasEntregas, setPaginaDasEntregas] = useState(1);
+  const [busca, setBusca] = useState('');
+  const buscaAdiada = useDebouncedValue(busca);
+  const entregas = useLicenseCheckoutsQuery(licenca.id, {
+    page: paginaDasEntregas, perPage: POR_PAGINA, q: buscaAdiada || undefined,
+  });
+
+  const [paginaDoHistorico, setPaginaDoHistorico] = useState(1);
+  const historico = useLicenseHistoryQuery(licenca.id, { page: paginaDoHistorico, perPage: POR_PAGINA });
 
   const atual = detalhe ?? licenca;
+  const encerrada = atual.status === 'ENCERRADA';
+  const motivoSemEntrega = motivoParaNaoEntregar(atual);
+  const motivoSemExcluir = motivoParaNaoExcluir(atual);
+
+  const mudarBusca = (valor: string) => {
+    setBusca(valor);
+    setPaginaDasEntregas(1);
+  };
+
+  // A última linha da página foi devolvida: volta uma, senão a lista abre vazia
+  // com o paginador apontando para uma página que não existe mais.
+  const devolver = async (checkoutId: string, checkinAt: string) => {
+    const linhasNaPagina = entregas.data?.rows.length ?? 0;
+    const devolveu = await onDevolver(checkoutId, checkinAt);
+    if (devolveu && linhasNaPagina === 1 && paginaDasEntregas > 1) setPaginaDasEntregas(paginaDasEntregas - 1);
+  };
+
+  const totalDoHistorico = historico.data?.total ?? 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
-      <div className="relative w-full max-w-3xl bg-surface-card border border-border-sutil shadow-2xl flex flex-col max-h-[85vh]">
+      <div role="dialog" aria-label={atual.name} className="relative w-full max-w-3xl bg-surface-card border border-border-sutil shadow-2xl flex flex-col max-h-[85vh]">
 
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-sutil bg-bg-base/50 shrink-0">
-          <div>
-            <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">{atual.name}</h2>
-            <p className="font-mono text-[10px] mt-1">
-              <span style={{ color: corDoStatus(atual.status) }}>{atual.status}</span>
-              <span className="text-text-tertiary"> · {textoDoPrazo(atual.diasParaVencer)}</span>
-              {!atual.reassignable && <span className="text-status-warning"> · não reatribuível</span>}
-            </p>
+        <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-border-sutil bg-bg-base/50 shrink-0">
+          <div className="min-w-0 space-y-3">
+            <div>
+              <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase break-words">{atual.name}</h2>
+              <p className="font-mono text-[10px] mt-1 text-text-tertiary">
+                {ROTULO_DO_STATUS[atual.status]} · {resumoDaContagem(atual)}
+              </p>
+            </div>
+            {/* As ações da lista, com as mesmas regras: a encerrada não entrega
+                nem encerra de novo. */}
+            <div className="flex flex-wrap gap-2 font-mono">
+              {!encerrada && (
+                <Acao
+                  icone={UserPlus}
+                  rotulo="Entregar"
+                  onClick={() => onEntregar(atual)}
+                  disabled={motivoSemEntrega !== null}
+                  title={motivoSemEntrega ?? 'Entregar'}
+                />
+              )}
+              <Acao icone={Edit2} rotulo="Editar" onClick={() => onEditar(atual)} />
+              {!encerrada && (
+                <Acao
+                  icone={Archive}
+                  rotulo="Encerrar"
+                  onClick={() => onEncerrar(atual)}
+                  disabled={ocupado}
+                  title="Encerrar — o contrato acabou"
+                />
+              )}
+              {onExcluir && (
+                <Acao
+                  icone={Trash2}
+                  rotulo="Excluir"
+                  onClick={() => onExcluir(atual)}
+                  disabled={ocupado || motivoSemExcluir !== null}
+                  title={motivoSemExcluir ?? 'Excluir de vez — cadastro errado'}
+                  perigo
+                />
+              )}
+            </div>
           </div>
-          <button onClick={onClose} className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
+          <button onClick={onClose} aria-label="Fechar" title="Fechar" className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
             <X size={16} />
           </button>
         </div>
 
         <div className="p-6 font-mono text-xs space-y-6 overflow-y-auto">
+          {erroDoDetalhe && (
+            <p role="alert" className="text-status-danger">Não foi possível atualizar a licença: {erroDoDetalhe.message}</p>
+          )}
 
-          {/* A CONTA, aberta. `livres + ocupados + queimados` fecha em
-              `seatsTotal`; `aposentados` fica de fora porque já saiu do
-              contrato quando ele encolheu — mostrá-lo ao lado é o que explica
-              a grade ter mais quadrados que o total. */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <Campo rotulo="Contrato">{atual.seatsTotal}</Campo>
-            <Campo rotulo="Livres"><span className="text-status-success">{atual.livres}</span></Campo>
-            <Campo rotulo="Ocupados">{atual.ocupados}</Campo>
-            <Campo rotulo="Queimados"><span className={atual.queimados > 0 ? 'text-status-danger' : ''}>{atual.queimados}</span></Campo>
-            <Campo rotulo="Aposentados">{atual.aposentados}</Campo>
-          </div>
+          {/* A chave só chega com o detalhe: a linha da listagem não a traz. */}
+          <Campo rotulo="Chave do produto">
+            {detalhe?.productKey ? <ChaveEscondida chave={detalhe.productKey} /> : detalhe ? '—' : 'Carregando…'}
+          </Campo>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Campo rotulo="Vencimento">
+              {formatarData(atual.expirationDate)}
+              {atual.expirationDate && !encerrada && (
+                <span className="text-text-tertiary"> · {textoDoPrazo(atual.diasParaVencer)}</span>
+              )}
+            </Campo>
+            <Campo rotulo="Encerramento">{formatarData(atual.terminationDate)}</Campo>
             <Campo rotulo="Categoria">{atual.category?.name ?? '—'}</Campo>
             <Campo rotulo="Fabricante">{atual.manufacturer?.name ?? '—'}</Campo>
-            <Campo rotulo="Custo">{formatarMoeda(atual.purchaseCost)}</Campo>
             <Campo rotulo="Licenciado para">{atual.licensedToName ?? '—'}</Campo>
-            <Campo rotulo="E-mail">{atual.licensedToEmail ?? '—'}</Campo>
-            <Campo rotulo="Pedido">{atual.orderNumber ?? '—'}</Campo>
-            <Campo rotulo="Manutenção">{atual.maintained ? 'Sim' : 'Não'}</Campo>
+            <Campo rotulo="E-mail do licenciado">{atual.licensedToEmail ?? '—'}</Campo>
+            <Campo rotulo="Nº do pedido">{atual.orderNumber ?? '—'}</Campo>
+            <Campo rotulo="Data da compra">{formatarData(atual.purchaseDate)}</Campo>
+            <Campo rotulo="Valor da compra" largo>{textoDoValorDaCompra(atual)}</Campo>
+            <Campo rotulo="Notas" largo>{atual.notes ?? '—'}</Campo>
           </div>
 
-          {atual.notes && <Campo rotulo="Notas">{atual.notes}</Campo>}
-
           <div className="space-y-3">
-            <span className={ROTULO}>Assentos</span>
-            <AssentosGrade
-              assentos={assentos ?? []}
-              queimaAoDevolver={!atual.reassignable}
-              onDevolver={(seatId) => onDevolver(
-                seatId,
-                atual.reassignable
-                  ? null
-                  : { seatsTotal: atual.seatsTotal, queimados: atual.queimados },
-              )}
+            <span className={ROTULO}>Com quem está</span>
+            <ListToolbar
+              search={busca}
+              onSearchChange={mudarBusca}
+              placeholder="Buscar por colaborador ou computador..."
+              page={paginaDasEntregas}
+              perPage={POR_PAGINA}
+              total={entregas.data?.total ?? 0}
+              onPageChange={setPaginaDasEntregas}
             />
+            <Estado carregando={entregas.isPending} erro={entregas.error}>
+              <EntregasAbertas
+                entregas={entregas.data?.rows ?? []}
+                vazio={buscaAdiada ? `Ninguém com "${buscaAdiada}" está com esta licença.` : undefined}
+                ocupado={ocupado}
+                onDevolver={(checkoutId, checkinAt) => void devolver(checkoutId, checkinAt)}
+                onTrocarChave={onTrocarChave}
+              />
+            </Estado>
           </div>
 
           <div className="space-y-3">
             <span className={ROTULO}>Histórico</span>
-            <HistoricoLicenca eventos={eventos ?? []} carregando={historicoPendente} />
+            {/* O paginador só quando há mais de uma página: com três eventos,
+                "1–3 de 3" é ruído. */}
+            {totalDoHistorico > POR_PAGINA && (
+              <ListToolbar
+                page={paginaDoHistorico}
+                perPage={POR_PAGINA}
+                total={totalDoHistorico}
+                onPageChange={setPaginaDoHistorico}
+              />
+            )}
+            <Estado carregando={historico.isPending} erro={historico.error}>
+              <HistoricoLicenca eventos={historico.data?.rows ?? []} />
+            </Estado>
           </div>
         </div>
       </div>

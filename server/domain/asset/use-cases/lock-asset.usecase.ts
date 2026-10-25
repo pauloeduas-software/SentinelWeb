@@ -7,37 +7,40 @@ import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase
 // ─────────────────────────────────────────────────────────────────────────────
 // O QUE ELA FECHA
 //
-//   T1 (entregar um assento  conta o que está aberto, vai gravar
-//       de licença ao ativo)
-//   T2 (mandar o ativo       conta o que está aberto → zero, segue
+//   T1 (entregar uma licença  conta o que está aberto, vai gravar
+//       ao ativo)
+//   T2 (mandar o ativo        conta o que está aberto → zero, segue
 //       para a lixeira)
-//   T2                       grava `deletedAt` no ativo            → COMMIT
-//   T1                       grava o assento no ativo              → COMMIT
+//   T2                        grava `deletedAt` no ativo            → COMMIT
+//   T1                        grava a entrega no ativo              → COMMIT
 //
-// Resultado: um ativo na lixeira com assento pago em cima dele, e nenhuma tela
-// que o devolva — o ativo não existe mais para o inventário. É o mesmo desenho
-// do 409 que o `deleteUser` dá do outro lado, e sem a trava ele não dispara.
+// Resultado: um ativo na lixeira com licença paga em cima dele, e nenhuma tela
+// que a devolva — o ativo não existe mais para o inventário.
 //
 // A FK `Restrict` NÃO cobre isto: apagar aqui é `UPDATE assets SET "deletedAt"
 // = now()`. O Postgres não vê `DELETE` nenhum, a FK não é consultada e a rede
-// não existe — o ponto cego do soft delete que o `deleteUser` também documenta.
+// não existe — o ponto cego do soft delete.
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// O GRAFO DE TRAVAS do sistema, e por que a ORDEM é sempre `usuário → ativo →
+// O GRAFO DE TRAVAS do sistema, e por que a ORDEM é sempre `pessoa → ativo →
 // posto`. Duas transações que travam os mesmos dois recursos em ordens opostas
 // travam uma à outra, e o Postgres mata uma com `40P01` — que o `error-handler`
 // não mapeia e devolve como 500.
 //
-//   usuário → ativo   o checkout a pessoa, e a entrega de assento a pessoa
+//   pessoa → ativo    o checkout de ativo a pessoa
 //   ativo → posto     o checkout a posto e a restauração da lixeira, pela
 //                     invariante 19 (`workstation/helpers/ativo-do-posto.helper.ts`)
-//   ativo             o soft delete do ativo, a entrega de assento a ativo, a
-//                     edição (`update-asset`) e a baixa (`retire-asset`)
-//   usuário → item    a saída de estoque a pessoa (`stock/use-cases/checkout-stock.usecase.ts`)
+//   ativo             o soft delete do ativo, a edição (`update-asset`) e a
+//                     baixa (`retire-asset`)
+//   pessoa → licença  a entrega de licença a pessoa
+//   ativo → licença   a entrega de licença a ativo
+//                     (`license/use-cases/lock-license.usecase.ts`). A devolução
+//                     de licença trava só a linha da entrega.
+//   pessoa → item     a saída de estoque a pessoa (`stock/use-cases/checkout-stock.usecase.ts`)
 //   item → posto      implícita: o INSERT da saída a posto toma `FOR KEY SHARE`
 //                     na linha do posto, com o item já travado. Nenhum caminho
 //                     trava posto e depois item, e nenhum trava item e depois
-//                     usuário — é o que mantém o grafo sem ciclo.
+//                     pessoa — é o que mantém o grafo sem ciclo.
 //
 // E AS TRAVAS QUE O POSTGRES TOMA SOZINHO CONTAM. `update-asset.usecase.ts`
 // grava `locationId`: o `UPDATE` trava a linha do ativo e o gatilho da FK
@@ -48,12 +51,13 @@ import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase
 // implícita assim existe em toda FK escrita.
 //
 // Este arquivo não é o inventário completo das travas — o domínio de licença
-// trava `licenses` e `license_seats` por conta própria (`license-seats.helper.ts`),
-// e o de estoque trava `stock_items` em `stock-balance.helper.ts`. É o
-// inventário de quem disputa USUÁRIO, ATIVO, ITEM e POSTO, que são as quatro
-// linhas que mais de um domínio pede. As linhas de CATÁLOGO (categoria, status,
-// fabricante, modelo, localização) vêm sempre por último, e as travas delas —
-// e as do posto — estão em `catalog/helpers/catalog-lock.helper.ts`.
+// trava `licenses` e `license_checkouts` por conta própria
+// (`lock-license.usecase.ts`), e o de estoque trava `stock_items` em
+// `stock-balance.helper.ts`. É o inventário de quem disputa PESSOA, ATIVO, ITEM
+// e POSTO, que são as quatro linhas que mais de um domínio pede. As linhas de
+// CATÁLOGO (categoria, status, fabricante, modelo, localização) vêm sempre por
+// último, e as travas delas — e as do posto — estão em
+// `catalog/helpers/catalog-lock.helper.ts`.
 
 /**
  * Trava a linha do ativo até o fim da transação atual.

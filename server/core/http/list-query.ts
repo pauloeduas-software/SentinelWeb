@@ -44,6 +44,12 @@ interface ListQueryOptions {
    * efeito é o mesmo tipo de falha muda que o `strictObject` existe para evitar.
    */
   trashable?: boolean;
+  /**
+   * A listagem tem busca e aceita `?q=`. Padrão `true`; a que não busca nada
+   * desliga, pelo mesmo motivo do `trashable`: aceitar em silêncio um `?q=` sem
+   * efeito faria a tela dizer "filtrado" sobre uma lista inteira.
+   */
+  searchable?: boolean;
 }
 
 export function parseListQuery(raw: unknown, options: ListQueryOptions = {}): ListQuery {
@@ -51,6 +57,7 @@ export function parseListQuery(raw: unknown, options: ListQueryOptions = {}): Li
     perPage = PER_PAGE_PADRAO,
     maxPerPage = MAX_PER_PAGE_PADRAO,
     trashable = false,
+    searchable = true,
   } = options;
 
   // `strictObject` também na query: `?pag=2` (typo) passaria despercebido
@@ -68,9 +75,13 @@ export function parseListQuery(raw: unknown, options: ListQueryOptions = {}): Li
       .max(maxPerPage, `perPage máximo é ${maxPerPage}`)
       .default(perPage),
 
-    q: z.string().trim().max(MAX_BUSCA, `busca: máximo de ${MAX_BUSCA} caracteres`)
-      .optional()
-      .transform(valor => valor || undefined),
+    ...(searchable
+      ? {
+          q: z.string().trim().max(MAX_BUSCA, `busca: máximo de ${MAX_BUSCA} caracteres`)
+            .optional()
+            .transform(valor => valor || undefined),
+        }
+      : {}),
 
     // Domínio sem lixeira nem aceita a chave: `?view=` vira 422 em vez de ser
     // ignorado (`strictObject` recusa o que não está no schema).
@@ -83,6 +94,7 @@ export function parseListQuery(raw: unknown, options: ListQueryOptions = {}): Li
 
   return {
     ...query,
+    q: 'q' in query ? query.q as string | undefined : undefined,
     view: ('view' in query ? query.view : 'active') as ListView,
     skip: (query.page - 1) * query.perPage,
     take: query.perPage,

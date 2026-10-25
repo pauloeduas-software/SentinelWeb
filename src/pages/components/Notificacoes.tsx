@@ -16,6 +16,7 @@
 
 import { CircleAlert, CircleCheck, TriangleAlert, X } from 'lucide-react';
 import { useNotificacoes, type Notificacao, type TipoNotificacao } from '../hooks/useNotificacao';
+import { Link } from 'react-router-dom';
 
 // A cor está na borda e no ícone, e NUNCA sozinha: o ícone muda de forma junto
 // (círculo com !, triângulo, check), e quem não distingue vermelho de verde
@@ -42,7 +43,20 @@ function Cartao({ notificacao, onFechar }: { notificacao: Notificacao; onFechar:
       <Icone size={14} className={`${cor} mt-0.5 shrink-0`} aria-hidden="true" />
       {/* `break-words` porque a mensagem vem do servidor e às vezes carrega um
           identificador comprido sem espaço — sem isso, o cartão estoura. */}
-      <p className="flex-1 min-w-0 break-words leading-relaxed">{notificacao.mensagem}</p>
+      <div className="flex-1 min-w-0 space-y-1.5">
+        <p className="break-words leading-relaxed">{notificacao.mensagem}</p>
+        {/* Os links da recusa — cada licença que precisa voltar, até o
+            detalhe dela, onde mora o Devolver. Clicar fecha o cartão. */}
+        {notificacao.links && (
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            {notificacao.links.map((link) => (
+              <Link key={link.para} to={link.para} onClick={onFechar} className="underline underline-offset-2 hover:text-text-secondary">
+                {link.rotulo}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
       <button
         type="button"
         onClick={onFechar}

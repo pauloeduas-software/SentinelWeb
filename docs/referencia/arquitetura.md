@@ -77,7 +77,7 @@ server/
 | `person` | **O colaborador** — quem recebe equipamento. O cadastro é do `catalog` (a única aba com lixeira); aqui ficam a ficha, o histórico, a contagem da posse aberta e a trava da linha | `Person` |
 | `assignment` | **Posse**: entrega e devolução de ativo, com alvo polimórfico (pessoa ou posto) e o histórico de quem teve o quê | `Assignment` |
 | `occupancy` | **Ocupação do posto**: quem trabalha em qual posto, e em que turno | `WorkstationOccupant` |
-| `license` | **Licenças**: o contrato e seus ASSENTOS materializados — cadastro simples, sem conformidade de software nem chave cifrada ([G](../decisoes/licencas.md#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples)) | `License`, `LicenseSeat`, `LicenseSeatCheckout` |
+| `license` | **Licenças**: o contrato, a quantidade comprada e as entregas a colaborador ou computador — sem vaga numerada nem lixeira ([AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)); ver [`licencas.md`](licencas.md) | `License`, `LicenseCheckout` |
 | `stock` | **Estoque**: o que tem quantidade em vez de patrimônio individual — um tipo, saldo sempre calculado ([J](../decisoes/estoque.md#j--o-estoque-volta-como-stockitem--stockmovement)) | `StockItem`, `StockMovement` |
 | `reconciliation` | **Convergência RMM × ITAM**: o vínculo entre a máquina descoberta e o ativo cadastrado e a fila de sugestões — sem inferência por conta do sistema operacional ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)) nem fusão de máquinas ([H](../decisoes/reconciliacao.md#h--a-fusão-de-máquinas-sai)) | `ReconciliationSuggestion`, `AssetChange`, `AssetUsageDaily` |
 | `access` | **Autorização**: o cargo da sessão, o mapa de rotas × cargo mínimo e a invariante "nunca sem administrador" | — |
@@ -144,10 +144,14 @@ resposta de erro.
 | Qualquer outro erro | 500 genérico + log completo | error-handler |
 
 `error.message` de banco ou de biblioteca **nunca** vai para o cliente. E o corpo de
-toda resposta de erro é `{ error }` — a frase, e nada mais: o `AppError` não carrega
-campo extra e o 422 de validação não manda o mapa por campo
-([Q](../decisoes/escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai)).
-A frase é o contrato; a tela mostra só ela.
+toda resposta de erro é `{ error }` — a frase —, com uma exceção só: quando a frase cita
+registros que a tela pode abrir, `refs` vai ao lado (`AppError(mensagem, status, refs)`) — a
+recusa do colaborador e do ativo com licença aberta manda as licenças, e a tela põe um link em
+cada uma ([AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)).
+O 422 de validação não manda o mapa por campo
+([Q](../decisoes/escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai)). A frase
+é o contrato e continua completa sem `refs`: no front, `ErroDaApi` guarda o corpo (`corpo`), e
+quem lê as referências é `pages/helpers/erro.helper.ts` — o `core` não conhece domínio.
 
 ---
 
@@ -297,15 +301,16 @@ Leia [`modelo-de-posse.md`](modelo-de-posse.md) antes de mexer em `assignment`,
    duas pessoas**.
 3. **Responsabilidade é derivada** (`resolverResponsaveis`), nunca coluna.
 
-**A F6 estendeu as três camadas à licença, sem criar paralelo nenhum (D93):**
-assento é posse pelos mesmos três critérios — alguém responde por ele, ele
-impede o cadastro de sumir, e ele fecha quando a pessoa sai. Então
-`count-person-posse` (o 409 da exclusão e da desativação da pessoa) e o 409 do
-`DELETE` do ativo contam assento, em vez de o domínio de licença ganhar versões
-próprias.
+**A licença entregue também é posse, sem paralelo nenhum (D93):** alguém
+responde por ela, e ela impede o cadastro de sumir. Então `count-person-posse`
+(o 409 da exclusão e da desativação da pessoa) e o 409 da baixa e da exclusão do
+ativo contam as licenças abertas, em vez de o domínio de licença ganhar versões
+próprias. Nada fecha sozinho: o 409 manda devolver, e a ficha do colaborador e a
+aba Licenças do ativo têm o botão. A licença do computador não é da pessoa que
+responde por ele.
 
 **E a desativação de uma pessoa é recusada nas QUATRO pontas, não em uma:**
-`checkoutAsset`, `checkoutSeat`, `checkoutStock` e `addWorkstationOccupant`
+`checkoutAsset`, `checkoutLicense`, `checkoutStock` e `addWorkstationOccupant`
 respondem 409 para quem está inativo, com a trava de linha em
 `lock-person.usecase.ts` como primeira instrução de cada transação. A ocupação de
 posto foi a que faltou mais tempo, e o motivo é instrutivo: ocupação de posto

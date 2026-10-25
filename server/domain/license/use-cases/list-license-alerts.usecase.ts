@@ -1,123 +1,115 @@
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../../../core/database/prismaClient';
-import { contarAssentos } from '../helpers/license-seats.helper';
-import {
-  DIAS_DE_AVISO, diasParaVencer, meiaNoiteUTC, statusDaLicenca, type LicenseStatus,
-} from '../helpers/license-status.helper';
+import type { ListEnvelope } from '../../../core/http/list-query';
+import { hojeNoBrasil, somarDias } from '../../shared/hoje.helper';
+import { DIAS_DE_AVISO, diasParaVencer, statusDaLicenca, type LicenseStatus } from '../helpers/license-status.helper';
+import { contarUso } from './count-license-checkouts.usecase';
 
-// OS DOIS SINAIS DA LICENÇA, numa rota só: os dois valem para a mesma tela.
+// O ALERTA DA LICENÇA — um só: o que venceu, o que vai vencer, e o que encerrou
+// com alguém ainda usando. Não existe alerta de "abaixo do mínimo" (AA).
+
+export type MotivoDoAlerta = 'ENCERRADA_EM_USO' | 'VENCIDA' | 'VENCENDO';
 
 export interface LicencaEmAlerta {
   id: string;
   name: string;
-  seatsTotal: number;
-  minSeats: number | null;
-  livres: number;
+  motivo: MotivoDoAlerta;
   status: LicenseStatus;
   diasParaVencer: number | null;
   expirationDate: Date | null;
+  terminationDate: Date | null;
+  emUso: number;
   categoryName: string | null;
 }
 
-export interface AlertasDeLicenca {
-  /** Vence dentro da janela de aviso, ou já venceu e ninguém tratou. */
-  vencendo: LicencaEmAlerta[];
-  /** `livres < minSeats`. Licença sem `minSeats` nunca entra: sem piso, sem alerta. */
-  assentosBaixos: LicencaEmAlerta[];
+/** O alerta: a lista, o total, e quantas há de cada motivo — a linha de links da caixa. */
+export interface AlertasDaLicenca extends ListEnvelope<LicencaEmAlerta> {
+  contagem: Record<MotivoDoAlerta, number>;
 }
 
-/** Teto por categoria — alerta é lista para agir, não relatório. */
-const LIMITE = 200;
+/**
+ * Quantas a caixa do alerta lista. O resto ela não mostra: a contagem de cada
+ * motivo, embaixo, leva à aba e ao filtro que mostram todas.
+ */
+const NA_CAIXA = 6;
 
 const SELECT_DO_ALERTA = {
-  id: true, name: true, seatsTotal: true, minSeats: true,
-  expirationDate: true, terminationDate: true,
+  id: true, name: true, expirationDate: true, terminationDate: true,
   category: { select: { name: true } },
 } as const;
 
 type LinhaDoAlerta = {
-  id: string; name: string; seatsTotal: number; minSeats: number | null;
+  id: string; name: string;
   expirationDate: Date | null; terminationDate: Date | null;
   category: { name: string } | null;
 };
 
-export async function listLicenseAlerts(): Promise<AlertasDeLicenca> {
-  const [vencendo, assentosBaixos] = await Promise.all([licencasVencendo(), licencasComPoucosAssentos()]);
-
-  return { vencendo, assentosBaixos };
-}
-
 /**
- * As que vencem dentro da janela — e as que JÁ venceram.
+ * Os três motivos, do mais urgente para o menos:
  *
- * As vencidas entram de propósito: uma licença que passou do prazo e continua
- * com assentos ocupados é software em uso sem direito de uso, que é o achado
- * mais caro de uma auditoria de fornecedor. Sumir com ela da lista no dia
- * seguinte ao vencimento esconderia exatamente o problema no momento em que ele
- * passa a existir.
+ * 1. ENCERRADA E AINDA EM USO — o contrato acabou e tem gente usando: uso sem
+ *    direito, agora. O Encerrar e a data marcada deixam passar com alguém
+ *    usando, e é aqui que isso aparece.
+ * 2. VENCIDA — da mais recente para a mais antiga. Fica no alerta até alguém
+ *    renovar a data ou encerrar a licença: é uma decisão pendente.
+ * 3. VENCENDO nos próximos 30 dias — da mais próxima para a mais distante.
  *
- * As ENCERRADAS não entram: o contrato foi rescindido de propósito, alguém já
- * tratou. Continuar cobrando ação sobre elas treinaria quem lê a tela a ignorar
- * a lista.
- *
- * O FILTRO GROSSO VAI AO BANCO (`expirationDate <= limite`), e o fino —
- * distinguir ENCERRADA — sai do helper puro. A divisão é essa: o que é coluna
- * filtra no Postgres, o que é derivado filtra aqui.
+ * TODO FILTRO NO BANCO, e o teto DEPOIS dele: cortar antes de filtrar deixava
+ * de fora justamente as que importavam. `total` diz à tela quantas são de
+ * verdade quando a lista é cortada.
  */
-async function licencasVencendo(): Promise<LicencaEmAlerta[]> {
-  const limite = meiaNoiteUTC();
-  limite.setUTCDate(limite.getUTCDate() + DIAS_DE_AVISO);
+export async function listLicenseAlerts(): Promise<AlertasDaLicenca> {
+  const hoje = hojeNoBrasil();
+  const naoEncerrada: Prisma.LicenseWhereInput = {
+    OR: [{ terminationDate: null }, { terminationDate: { gt: hoje } }],
+  };
 
-  const linhas = await prisma.license.findMany({
-    where: { expirationDate: { not: null, lte: limite } },
-    select: SELECT_DO_ALERTA,
-    orderBy: { expirationDate: 'asc' },
-    take: LIMITE,
-  }) as LinhaDoAlerta[];
+  const recortes: { motivo: MotivoDoAlerta; where: Prisma.LicenseWhereInput; orderBy: Prisma.LicenseOrderByWithRelationInput[] }[] = [
+    {
+      motivo: 'ENCERRADA_EM_USO',
+      where: { terminationDate: { lte: hoje }, checkouts: { some: { checkinAt: null } } },
+      orderBy: [{ terminationDate: 'desc' }, { name: 'asc' }],
+    },
+    {
+      motivo: 'VENCIDA',
+      where: { AND: [naoEncerrada, { expirationDate: { lt: hoje } }] },
+      orderBy: [{ expirationDate: 'desc' }, { name: 'asc' }],
+    },
+    {
+      motivo: 'VENCENDO',
+      where: { AND: [naoEncerrada, { expirationDate: { gte: hoje, lte: somarDias(hoje, DIAS_DE_AVISO) } }] },
+      orderBy: [{ expirationDate: 'asc' }, { name: 'asc' }],
+    },
+  ];
 
-  const contagens = await contarAssentos(prisma, linhas.map((linha) => linha.id));
+  const blocos = await Promise.all(recortes.map(async ({ motivo, where, orderBy }) => {
+    const [total, linhas] = await Promise.all([
+      prisma.license.count({ where }),
+      prisma.license.findMany({ where, select: SELECT_DO_ALERTA, orderBy, take: NA_CAIXA }) as Promise<LinhaDoAlerta[]>,
+    ]);
+    return { motivo, total, linhas };
+  }));
 
-  return linhas
-    .filter((linha) => statusDaLicenca(linha) !== 'ENCERRADA')
-    .map((linha) => paraAlerta(linha, contagens.get(linha.id)?.livres ?? 0));
-}
+  // As primeiras na ordem de urgência. Cada motivo traz até `NA_CAIXA` porque o
+  // anterior pode ter menos que isso.
+  const naCaixa = blocos
+    .flatMap(({ motivo, linhas }) => linhas.map((linha) => ({ motivo, linha })))
+    .slice(0, NA_CAIXA);
 
-/**
- * As que têm piso e estão abaixo dele.
- *
- * O FILTRO FINO (`livres < minSeats`) NÃO CABE EM `where` porque `livres` não é
- * coluna — é a conta do D92 —, e esse é o preço declarado da decisão. Ele é
- * pequeno: a lista de licenças COM piso é o que a TI escolheu vigiar, não o
- * catálogo inteiro.
- *
- * As ENCERRADAS ficam de fora: cobrar "compre mais assentos" de um contrato
- * rescindido é a única coisa que a lista não deveria dizer.
- */
-async function licencasComPoucosAssentos(): Promise<LicencaEmAlerta[]> {
-  const linhas = await prisma.license.findMany({
-    where: { minSeats: { not: null } },
-    select: SELECT_DO_ALERTA,
-    orderBy: { name: 'asc' },
-    take: LIMITE,
-  }) as LinhaDoAlerta[];
+  const uso = await contarUso(prisma, naCaixa.map(({ linha }) => linha.id));
 
-  const contagens = await contarAssentos(prisma, linhas.map((linha) => linha.id));
-
-  return linhas
-    .filter((linha) => statusDaLicenca(linha) !== 'ENCERRADA')
-    .map((linha) => paraAlerta(linha, contagens.get(linha.id)?.livres ?? 0))
-    .filter((alerta) => alerta.minSeats !== null && alerta.livres < alerta.minSeats);
-}
-
-function paraAlerta(linha: LinhaDoAlerta, livres: number): LicencaEmAlerta {
-  return {
+  const rows = naCaixa.map(({ motivo, linha }): LicencaEmAlerta => ({
     id: linha.id,
     name: linha.name,
-    seatsTotal: linha.seatsTotal,
-    minSeats: linha.minSeats,
-    livres,
-    status: statusDaLicenca(linha),
-    diasParaVencer: diasParaVencer(linha.expirationDate),
+    motivo,
+    status: statusDaLicenca(linha, hoje),
+    diasParaVencer: diasParaVencer(linha.expirationDate, hoje),
     expirationDate: linha.expirationDate,
+    terminationDate: linha.terminationDate,
+    emUso: uso.get(linha.id)?.emUso ?? 0,
     categoryName: linha.category?.name ?? null,
-  };
+  }));
+
+  const contagem = Object.fromEntries(blocos.map(({ motivo, total }) => [motivo, total])) as Record<MotivoDoAlerta, number>;
+  return { total: blocos.reduce((soma, bloco) => soma + bloco.total, 0), contagem, rows };
 }

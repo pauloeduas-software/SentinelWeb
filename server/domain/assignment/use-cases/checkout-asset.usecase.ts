@@ -219,8 +219,8 @@ export async function checkoutAsset(assetId: string, data: CheckoutData) {
     // vendido, doado, roubado —, e o status dele pode muito bem ser
     // "Disponível", porque a baixa não mexe no status. Sem esta guarda, o
     // notebook vendido era entregue como se estivesse no estoque. É o que o
-    // `Archived` do Snipe-IT garante, e o que a entrega de ASSENTO de licença
-    // já recusava (`checkout-seat.usecase.ts`). A trava do ativo acima fecha a
+    // `Archived` do Snipe-IT garante, e o que a entrega de licença também
+    // recusa (`checkout-license.usecase.ts`). A trava do ativo acima fecha a
     // corrida com a baixa simultânea.
     if (ativo.retiredAt) {
       throw new AppError(

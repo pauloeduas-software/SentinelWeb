@@ -10,11 +10,11 @@ import { contarForaDe, travarItemOuFalhar } from '../helpers/stock-balance.helpe
  * item na saída de março), e apagar de verdade levaria o histórico junto. Mas
  * um item com unidade na rua não some de vista: a unidade continuaria contando
  * como fora, na mão de alguém, e a tela que ofereceria a devolução responderia
- * 404 — é o mesmo 409 que o ativo dá pelo assento de licença.
+ * 404 — é o mesmo 409 que o ativo dá pela licença entregue a ele.
  *
  * POR QUE NÃO O BANCO: apagar aqui é `UPDATE stock_items SET "deletedAt"`, o
  * Postgres não vê `DELETE` nenhum e a FK não é consultada — o ponto cego do
- * soft delete, o mesmo do `deleteUser`.
+ * soft delete.
  *
  * A TRAVA vem antes da contagem: sem ela, uma saída simultânea cria a linha
  * DEPOIS deste `count`.

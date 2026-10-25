@@ -16,6 +16,7 @@ import {
 import type { RetireInput } from '../../../../domain/shared/asset.types';
 import type { AbaId } from '../helpers/abas.helper';
 import { useNotificacao } from '../../../hooks/useNotificacao';
+import { linksDoErro } from '../../../helpers/erro.helper';
 
 // Estado da TELA DE DETALHE. Aba, modais e o ativo em edição são de uma tela
 // só: ficam aqui, em `useState`, e não em store (docs/referencia/arquitetura.md).
@@ -57,9 +58,11 @@ export function useAssetDetail() {
   const entregar = useCheckoutAsset();
   const devolver = useCheckinAsset();
 
-  // A aba Licenças (F6). Só leitura: devolver assento é operação da tela de
-  // licenças, onde o aviso de queima tem os números para explicar.
-  const { data: licencas, isPending: licencasPendentes } = useAssetLicensesQuery(id ?? null);
+  // A aba Licenças: o que está entregue a esta máquina. A devolução mora na
+  // tela de Licenças, e a aba aponta para lá.
+  const {
+    data: licencas, isPending: licencasPendentes, error: erroDasLicencas,
+  } = useAssetLicensesQuery(id ?? null);
 
   // A MÁQUINA (F7): especificações coletadas, último contato e as trocas de peça
   // que o agente percebeu — tudo do endpoint vinculado. E desvincular, que é a
@@ -138,7 +141,8 @@ export function useAssetDetail() {
       await excluir.mutateAsync(asset.id);
       navigate('/ativos');
     } catch (falha) {
-      notificar.erro((falha as Error).message);
+      // O 409 do ativo com licença traz cada uma em link.
+      notificar.erro((falha as Error).message, linksDoErro(falha));
     }
   };
 
@@ -163,6 +167,7 @@ export function useAssetDetail() {
     // LICENÇAS — o que está licenciado neste ativo.
     licencas: licencas ?? [],
     licencasPendentes,
+    erroDasLicencas: erroDasLicencas ? (erroDasLicencas as Error).message : null,
 
     // MÁQUINA — a aba que nasceu pronta na F7.
     maquina,

@@ -3,6 +3,9 @@ import { PackageX, X } from 'lucide-react';
 import type { Asset, RetireInput } from '../../../../domain/shared/asset.types';
 import { hojeNoCampoDeData } from '../../../helpers/format.helper';
 import { MOTIVOS_DA_SAIDA } from '../../helpers/baixa.helper';
+import { Link } from 'react-router-dom';
+import type { LinkDaNotificacao } from '../../../hooks/useNotificacao';
+import { linksDoErro } from '../../../helpers/erro.helper';
 
 // DAR BAIXA — registrar que o ativo saiu do PATRIMÔNIO.
 //
@@ -38,11 +41,14 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
   const [observacoes, setObservacoes] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
+  // A baixa recusada por licença traz cada uma em link, até o detalhe dela.
+  const [links, setLinks] = useState<LinkDaNotificacao[]>([]);
 
   const enviar = async (event: React.FormEvent) => {
     event.preventDefault();
     setSalvando(true);
     setErro('');
+    setLinks([]);
 
     try {
       // A data vai sempre: o campo é obrigatório e nasce com hoje (ver o
@@ -53,9 +59,10 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
         ...(observacoes.trim() ? { notes: observacoes.trim() } : {}),
       });
     } catch (falha) {
-      // É aqui que aparece o 409 de ativo entregue e o 422 de data futura, já
-      // traduzidos pelo apiClient.
+      // É aqui que aparece o 409 de ativo entregue, o de ativo com licença e o
+      // 422 de data futura, já traduzidos pelo apiClient.
       setErro((falha as Error).message);
+      setLinks(linksDoErro(falha) ?? []);
     } finally {
       setSalvando(false);
     }
@@ -75,7 +82,16 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
 
         <form onSubmit={enviar} className="p-6 font-mono text-xs space-y-5">
           {erro && (
-            <div className="p-3 bg-status-danger/10 text-status-danger border border-status-danger/20">{erro}</div>
+            <div role="alert" className="p-3 bg-status-danger/10 text-status-danger border border-status-danger/20 space-y-1.5">
+              <p>{erro}</p>
+              {links.length > 0 && (
+                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                  {links.map((link) => (
+                    <Link key={link.para} to={link.para} className="underline underline-offset-2">{link.rotulo}</Link>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           <p className="text-text-tertiary text-[10px] leading-relaxed">
