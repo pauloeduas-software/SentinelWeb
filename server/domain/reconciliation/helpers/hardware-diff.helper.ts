@@ -64,7 +64,7 @@ function comoTexto(valor: string | bigint | null): string | null {
  *    peça. O rollout do agente vai produzir isso às centenas no mesmo dia —
  *    500 máquinas ganhando `biosSerial` de uma vez —, e gravar tudo como
  *    "mudança de hardware" transformaria o histórico de cada ativo num relatório
- *    de deploy. Quem quer saber quando o campo apareceu tem o `ActivityLog` do
+ *    de deploy. Quem quer saber quando o campo apareceu tem o `AuditLog` do
  *    vínculo.
  *
  * 2. **valor → `null`.** É o D106 do lado da detecção: o `registerHandshake`

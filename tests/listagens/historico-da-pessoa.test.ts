@@ -1,25 +1,22 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { prisma } from '../../server/core/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { cenarioDePosse } from '../helpers/fixtures';
 
 // A LINHA DO TEMPO DA PESSOA — `GET /api/people/:id/history`.
 //
-// TRÊS fontes numa lista só, e é uma a mais que o histórico do ativo tem:
+// SÓ MOVIMENTAÇÃO, e uma fonte a mais que o histórico do ativo tem:
 //
-//   ATIVIDADE  o `ActivityLog` dela (cadastro, edição com diff, desativação);
 //   POSSE      o que ela recebeu e devolveu, com a etiqueta do equipamento;
 //   POSTO      onde ela sentou e quando saiu, com o turno.
 //
-// AS TRÊS FONTES SÃO DISJUNTAS por construção, e é isso que o teste do `total`
-// prova: a entrega é gravada no ATIVO (`entityType: 'Asset'`) e a ocupação na
-// OCUPAÇÃO (`entityType: 'WorkstationOccupant'`) — nenhuma cai numa consulta por
-// `entityType: 'User'`. Por isso a soma fecha sem subtrair nada, ao contrário
-// do histórico do ativo, que precisa tirar CHECKOUT/CHECKIN do log para não
-// contar a mesma entrega duas vezes.
+// (As licenças entregues a ela são a terceira fonte, testadas em
+// `tests/licencas`.) Cadastro, edição e desativação ficam na auditoria, no
+// banco (AB): a ficha não os mostra.
 
 interface Evento {
   id: string;
-  fonte: 'ATIVIDADE' | 'POSSE' | 'POSTO';
+  fonte: 'POSSE' | 'POSTO' | 'LICENCA';
   action: string;
   at: string;
   posse: { assetLabel: string; notes: string | null } | null;
@@ -80,11 +77,16 @@ async function historico(query = ''): Promise<Envelope> {
 const de = (eventos: Evento[], fonte: Evento['fonte']) => eventos.filter((e) => e.fonte === fonte);
 
 describe('as três fontes', () => {
-  it('traz o cadastro e a edição', async () => {
+  it('não traz o cadastro nem a edição: eles ficam na auditoria, com a conta', async () => {
     const { rows } = await historico();
-    const atividade = de(rows, 'ATIVIDADE');
+    expect(rows.every((e) => e.fonte === 'POSSE' || e.fonte === 'POSTO')).toBe(true);
 
-    expect(atividade.map((e) => e.action)).toEqual(expect.arrayContaining(['CREATE', 'UPDATE']));
+    const auditoria = await prisma.auditLog.findMany({
+      where: { entityType: 'Person', entityId: cenario.laura },
+      select: { action: true, actorType: true, actorId: true },
+    });
+    expect(auditoria.map((l) => l.action)).toEqual(expect.arrayContaining(['CREATE', 'UPDATE']));
+    expect(auditoria.every((l) => l.actorType === 'USER' && l.actorId === api.adminId)).toBe(true);
   });
 
   it('traz a entrega e a devolução, nomeando o EQUIPAMENTO', async () => {

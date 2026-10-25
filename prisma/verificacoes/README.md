@@ -15,10 +15,15 @@ docker exec -i sentinel-postgres psql -U sentinel -d sentineldb -q -f - \
   < prisma/verificacoes/posse-invariantes.sql      # ou baixa.sql
 ```
 
+`auditoria.sql` é de outro tipo: não prova nem detecta regra — é onde se **consulta** a auditoria,
+que tela nenhuma lê (decisão AB). As perguntas recebem variáveis do `psql` (`-v registro=...`,
+`-v conta=...`); a forma de chamar está no começo do arquivo.
+
 | Arquivo | O que prova |
 |---|---|
 | `posse-invariantes.sql` | Os 7 cenários do modelo de posse (`docs/referencia/modelo-de-posse.md`): duas pessoas no mesmo posto passam; a mesma pessoa duas vezes falha; duplo checkout falha; a Camada 3 resolve o mouse da Mesa 1 para Laura (manhã) e Ana (tarde); devolver libera nova entrega; e o check-in fecha a linha sem apagar o histórico |
-| `baixa.sql` | **Detecção, não prova.** As regras da baixa vivem na aplicação (`assert-retire-posse.usecase.ts`, `docs/referencia/baixa.md`), e as consultas procuram a linha que escapou delas: ativo baixado com posse aberta, motivo de baixa sem data (ou data sem motivo) e baixa sem o `RETIRE` no histórico |
+| `baixa.sql` | **Detecção, não prova.** As regras da baixa vivem na aplicação (`assert-retire-posse.usecase.ts`, `docs/referencia/baixa.md`), e as consultas procuram a linha que escapou delas: ativo baixado com posse aberta, motivo de baixa sem data (ou data sem motivo), baixa sem o `RETIRE` na auditoria e observação de baixa num ativo que não saiu |
+| `auditoria.sql` | **Consulta, não prova.** Quem fez o quê, no horário de Brasília: tudo de um registro (mesmo renomeado), o que uma conta fez e o que aconteceu com ela, busca por pedaço do nome, uma requisição pelo `X-Request-Id`, senha errada e bloqueio por conta, o que o sistema fez sozinho e quem fez quanto |
 
 **Como ler o resultado:** os passos marcados `-> esperado: FALHA` devem imprimir
 um `ERROR: duplicate key ... um_aberto_por_...`. Ausência de erro ali é a

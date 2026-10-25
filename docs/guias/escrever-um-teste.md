@@ -68,3 +68,7 @@ Três regras:
 3. **Sem depender da ordem dos testes.** Os testes do mesmo arquivo compartilham
    banco (semear custa um argon2, e pagá-lo por `it` levaria minutos), então cada
    um cria o que precisa com nome próprio.
+4. **Rota nova de escrita entra no teste da auditoria.** `invariantes/auditoria.test.ts`
+   passa cada escrita da tela por `auditada()`, que confere a linha em `audit_logs` com o
+   número da requisição e a conta da sessão ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)).
+   A rota que ficar fora da lista não é conferida — e a que esquecer a auditoria só aparece ali.

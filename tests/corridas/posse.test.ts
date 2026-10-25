@@ -183,7 +183,7 @@ describe('duas devoluções do mesmo ativo, ao mesmo tempo', () => {
       ]);
       expect(respostas.map((r) => r.status).sort()).toEqual([200, 409]);
 
-      const checkins = await prisma.activityLog.count({ where: { entityId: ativo.id, action: 'CHECKIN' } });
+      const checkins = await prisma.auditLog.count({ where: { entityId: ativo.id, action: 'CHECKIN' } });
       expect(checkins).toBe(1);
     }
   });

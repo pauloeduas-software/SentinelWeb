@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { parseListQuery } from '../../../core/http/list-query';
+import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { historyQuerySchema } from '../../shared/history.schema';
 import { separarFiltrosDeAtivo } from '../helpers/asset-filters.helper';
@@ -75,8 +76,7 @@ export const assetController = {
   async history(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     const { limit } = historyQuerySchema.parse(request.query ?? {});
-    // O custo sai do diff para quem não é ADMIN, como sai da leitura (D77).
-    return getAssetHistory(id, temCargo(request, 'ADMIN'), limit);
+    return getAssetHistory(id, limit);
   },
 
   async stats() {
@@ -102,35 +102,36 @@ export const assetController = {
 
   async create(request: FastifyRequest, reply: FastifyReply) {
     const data = custoSoDoAdmin(createAssetSchema.parse(request.body ?? {}), temCargo(request, 'ADMIN'));
-    const ativo = await createAsset(data);
+    // O autor vem da SESSÃO, nunca do corpo (auth/helpers/actor.helper.ts).
+    const ativo = await createAsset(data, atorDaRequisicao(request));
     return reply.status(201).send(ativo);
   },
 
   async update(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     const data = custoSoDoAdmin(updateAssetSchema.parse(request.body ?? {}), temCargo(request, 'ADMIN'));
-    return updateAsset(id, data);
+    return updateAsset(id, data, atorDaRequisicao(request));
   },
 
   async remove(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    await deleteAsset(id);
+    await deleteAsset(id, atorDaRequisicao(request));
     return { success: true };
   },
 
   async restore(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return restoreAsset(id);
+    return restoreAsset(id, atorDaRequisicao(request));
   },
 
   async retire(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     const data = retireAssetSchema.parse(request.body ?? {});
-    return retireAsset(id, data);
+    return retireAsset(id, data, atorDaRequisicao(request));
   },
 
   async unretire(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return unretireAsset(id);
+    return unretireAsset(id, atorDaRequisicao(request));
   },
 };

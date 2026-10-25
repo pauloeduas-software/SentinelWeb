@@ -1,6 +1,9 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
+import { buildSnapshot } from '../../shared/diff.helper';
+import { ASSET_SELECT, CAMPOS_AUDITADOS_DO_ATIVO } from '../helpers/asset-select.helper';
 import {
   comoReferencias, licencasDoAtivo, nomesDasLicencas,
 } from '../../license/use-cases/count-license-checkouts.usecase';
@@ -26,7 +29,7 @@ import { travarAtivoOuFalhar } from './lock-asset.usecase';
  * entrega simultânea cria a linha DEPOIS deste `count` (`lock-asset.usecase.ts`).
  * ─────────────────────────────────────────────────────────────────────────────
  */
-export async function deleteAsset(id: string): Promise<void> {
+export async function deleteAsset(id: string, ator: Ator): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await travarAtivoOuFalhar(tx, id);
 
@@ -44,6 +47,11 @@ export async function deleteAsset(id: string): Promise<void> {
       );
     }
 
+    // O RETRATO, antes de a linha sair de vista: é ele que diz, na auditoria, o
+    // que foi para a lixeira — o ativo pode ser restaurado ou não, a linha não.
+    // Com a BAIXA junto: excluir um ativo baixado precisa dizer que ele estava.
+    const antes = await tx.asset.findFirst({ where: { id }, select: ASSET_SELECT });
+
     const { count } = await tx.asset.updateMany({
       where: { id, deletedAt: null },
       data: { deletedAt: new Date() },
@@ -52,8 +60,14 @@ export async function deleteAsset(id: string): Promise<void> {
     // Zero linhas aqui só pode ser UMA coisa: o ativo já estava na lixeira. O id
     // inexistente foi separado pela trava lá em cima, que responde 404 antes de
     // chegar neste ponto.
-    if (count === 0) throw new AppError('Este ativo já está na lixeira.', 409);
+    if (count === 0 || !antes) throw new AppError('Este ativo já está na lixeira.', 409);
 
-    await recordActivity(tx, { entityType: 'Asset', entityId: id, action: 'DELETE' });
+    await recordAudit(tx, {
+      entityType: 'Asset',
+      entityId: id,
+      entityLabel: antes.assetTag,
+      action: 'DELETE',
+      changes: buildSnapshot(antes, [...CAMPOS_AUDITADOS_DO_ATIVO, 'retiredAt', 'retiredReason', 'retiredNotes']),
+    }, ator);
   });
 }

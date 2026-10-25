@@ -33,8 +33,10 @@ import type { SessionUser } from '../auth.types';
  */
 export async function carregarSessaoParaValidacao(
   id: string,
+  // A transação do login, que relê a conta junto com a escrita e a auditoria.
+  client: Pick<typeof prisma, 'user'> = prisma,
 ): Promise<{ usuario: SessionUser; tokenVersion: number; cargo: Cargo } | null> {
-  const linha = await prisma.user.findFirst({
+  const linha = await client.user.findFirst({
     where: { id, isActive: true },
     // O CARGO VEM NA MESMA CONSULTA, por ser uma COLUNA: a releitura por
     // requisição é o caminho mais quente do sistema, e um join a mais nela

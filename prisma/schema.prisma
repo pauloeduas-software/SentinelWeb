@@ -71,7 +71,7 @@ model Endpoint {
   //
   // `@unique` garante o 1:1 sem tabela de junção. `SetNull` garante que apagar
   // um ativo não leve junto a telemetria da máquina — mas note que ele desfaz o
-  // vínculo EM SILÊNCIO, e é por isso que o `desvincularEndpoint` tem linha no ActivityLog.
+  // vínculo EM SILÊNCIO, e é por isso que o `desvincularEndpoint` tem linha no AuditLog.
   assetId String? @unique @db.Uuid
   asset   Asset?  @relation(fields: [assetId], references: [id], onDelete: SetNull)
 
@@ -230,16 +230,65 @@ model Person {
   @@map("people")
 }
 
-model ActivityLog {
-  id         String   @id @default(uuid()) @db.Uuid
-  entityType String
-  entityId   String   @db.Uuid
-  action     String
-  changes    Json?
-  createdAt  DateTime @default(now())
+// Quem fez uma linha da auditoria: uma conta do painel, ou o próprio sistema
+// (um job, um comando de terminal). É a separação que a auditoria existe para
+// provar — "foi o sistema" e "foi a conta X" são respostas diferentes (AB).
+enum AuditActorType {
+  USER
+  SYSTEM
+  ANONYMOUS
+}
 
-  @@index([entityType, entityId, createdAt])
-  @@map("activity_logs")
+// A AUDITORIA — quem fez o quê, em qual registro, e quando (AB).
+//
+// O AUTOR fica só no banco: tela nenhuma o mostra — as abas de histórico do
+// ativo e do colaborador leem o que mudou, nunca quem. Ele existe para o
+// administrador responder, com o banco na mão, se um erro foi do sistema ou de
+// uma conta.
+//
+// SEM FK NENHUMA, de propósito: excluir o ativo, a licença ou a conta não pode
+// levar junto a linha que diz quem os excluiu. Por isso o autor e o registro vão
+// POR ESCRITO (`actorName`, `actorEmail`, `entityLabel`) — o id de algo que foi
+// apagado não leva a ninguém. O `actorId` fica só para desempatar um e-mail
+// reaproveitado depois de uma exclusão.
+//
+// A coerência do autor é CHECK (`audit_logs_autor_coerente`, e
+// `audit_logs_registro_por_escrito` para o texto em branco), e a linha não se
+// altera nem se apaga: um trigger recusa `UPDATE` e `DELETE`
+// (`audit_logs_imutavel`). Estão escritos à mão na migration.
+model AuditLog {
+  id          String  @id @default(uuid()) @db.Uuid
+  entityType  String
+  /// Nulo na configuração da descoberta e na rodada de reconciliação.
+  entityId    String? @db.Uuid
+  /// O registro por escrito: a etiqueta do ativo, o nome do item, do posto.
+  entityLabel String
+  action      String
+  changes     Json?
+
+  actorType  AuditActorType
+  /// Nulos no SYSTEM, com o `requestId`: o sistema não é uma conta. No
+  /// ANONYMOUS (o login sem sessão) só o `requestId` fica.
+  actorId    String?        @db.Uuid
+  actorName  String?
+  actorEmail String?
+  /// De onde veio: 'painel', 'job:reconciliacao', 'cli:conceder-administrador:<usuário do SO>'.
+  source     String
+  /// O `X-Request-Id` da requisição — o mesmo do log do servidor. Nulo no SYSTEM.
+  requestId  String?
+
+  createdAt DateTime @default(now())
+
+  // Um por pergunta de `prisma/verificacoes/auditoria.sql`: o registro (pelo
+  // id, que segue o registro renomeado), a conta (pelo e-mail e pelo id, que
+  // segue a troca de e-mail), o nome, a requisição e os últimos dias.
+  @@index([entityId, createdAt])
+  @@index([actorEmail, createdAt])
+  @@index([actorId, createdAt])
+  @@index([entityLabel])
+  @@index([requestId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
 
 // ============================================================================
@@ -540,6 +589,10 @@ model Asset {
   // lixeira é um erro de digitação e não deveria ter existido.
   retiredAt     DateTime?
   retiredReason RetiredReason?
+  // A observação da baixa, enquanto ela vale: a aba Detalhes a mostra ao lado
+  // do motivo, e desfazer a baixa a limpa junto. A de cada baixa passada fica na
+  // auditoria (AB), que a tela não lê.
+  retiredNotes  String?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -626,7 +679,7 @@ enum AssignmentTarget {
 // Uma linha por entrega. `checkinAt` nulo = posse ABERTA (a atual).
 //
 // O histórico NUNCA é apagado: a devolução preenche `checkinAt`, não deleta a
-// linha. É o mesmo princípio do `ActivityLog`.
+// linha. É o mesmo princípio do `AuditLog`.
 //
 // UMA aberta por ativo, garantida por índice único PARCIAL criado na migration
 // (`WHERE "checkinAt" IS NULL`) — regra do banco, não da aplicação, pelo mesmo
@@ -867,7 +920,7 @@ model LicenseCheckout {
 //
 // A regra que atravessa a fase inteira: nada aqui escreve posse sozinho. A fila
 // propõe, um humano aceita, e quem grava é o use-case da F4 — com o zod da
-// borda, o ActivityLog e as invariantes 1, 2 e 4 que já existem.
+// borda, o AuditLog e as invariantes 1, 2 e 4 que já existem.
 // ============================================================================
 
 /// O que o sistema faz quando descobre máquina sem cadastro. `SUGGEST` por
@@ -957,7 +1010,7 @@ model ReconciliationSuggestion {
 
 // MUDANÇA DE HARDWARE DETECTADA — trocou o HD, tiraram pente de RAM.
 //
-// Detectada, não digitada: a diferença com o `ActivityLog` é essa. Lá a linha
+// Detectada, não digitada: a diferença com o `AuditLog` é essa. Lá a linha
 // diz o que alguém FEZ no sistema; aqui, o que o mundo mudou sem avisar.
 model AssetChange {
   id      String @id @default(uuid()) @db.Uuid

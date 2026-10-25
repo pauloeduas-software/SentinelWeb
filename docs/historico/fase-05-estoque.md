@@ -13,6 +13,7 @@
 >
 > **Depois da volta (U, X e Y):** a saída de estoque vai para `PERSON` ou `WORKSTATION`, não mais
 > `USER`/`LOCATION` ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos), [Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)), e `createdById`/`returnedById` saíram ([X](../decisoes/acesso.md#x--o-histórico-não-guarda-quem-fez)).
+> Quem deu a saída voltou a ter resposta na auditoria, não em coluna ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)).
 >
 > Plano **prospectivo** da Fase 5 do roadmap do projeto (apagado depois;
 > o escopo que ficou está em [`../decisoes/escopo.md`](../decisoes/escopo.md)), escrito contra o

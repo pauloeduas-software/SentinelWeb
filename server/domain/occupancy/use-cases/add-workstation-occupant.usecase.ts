@@ -1,9 +1,10 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { errorCode } from '../../../core/errors/error-shape';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
 import { buildSnapshot } from '../../shared/diff.helper';
-import { OCCUPANT_SELECT } from '../helpers/occupant-select.helper';
+import { OCCUPANT_SELECT, rotuloDaOcupacao } from '../helpers/occupant-select.helper';
 import { travarPessoa } from '../../person/use-cases/lock-person.usecase';
 import { assertPostoRecebe } from '../../catalog/helpers/catalog-lock.helper';
 
@@ -30,7 +31,7 @@ const JA_OCUPA = 'Esta pessoa já ocupa este posto.';
  * 2. **Duplicata.** A mesma pessoa não ocupa o mesmo posto duas vezes ao mesmo
  *    tempo — dois vínculos abertos idênticos não significam nada e quebrariam
  *    a contagem de ocupantes da Camada 3.
- * 3. **Transação com o `ActivityLog`.** Gravado fora, o histórico registraria
+ * 3. **Transação com o `AuditLog`.** Gravado fora, a auditoria registraria
  *    uma ocupação que depois falhou.
  *
  * SOBRE A DUPLA GUARDA DA DUPLICATA: a checagem em SQL e o `catch` do `P2002`
@@ -46,6 +47,7 @@ const JA_OCUPA = 'Esta pessoa já ocupa este posto.';
 export async function addWorkstationOccupant(
   workstationId: string,
   data: AddOccupantData,
+  ator: Ator,
 ) {
   try {
     return await prisma.$transaction(async (tx) => {
@@ -109,12 +111,13 @@ export async function addWorkstationOccupant(
         select: OCCUPANT_SELECT,
       });
 
-      await recordActivity(tx, {
+      await recordAudit(tx, {
         entityType: 'WorkstationOccupant',
         entityId: ocupacao.id,
+        entityLabel: rotuloDaOcupacao(ocupacao),
         action: 'CREATE',
         changes: buildSnapshot(ocupacao, CAMPOS_AUDITADOS),
-      });
+      }, ator);
 
       return ocupacao;
     });

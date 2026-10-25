@@ -6,6 +6,7 @@ import type { CatalogDelegate, CatalogSpec } from './catalog-spec.types';
 export const locationSpec: CatalogSpec = {
   slug: 'locations',
   entityType: 'Location',
+  tabela: 'locations',
   rotulo: 'localização',
 
   delegate: (client) => client.location as unknown as CatalogDelegate,

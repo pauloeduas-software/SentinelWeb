@@ -284,6 +284,10 @@ atualizado a tabela errada em silêncio. Daí a regra, que vale para sempre:
 
 ## D18 — `AssetLog` não nasce. A aba Histórico lê o `ActivityLog`.
 
+> **Superada em parte por [AB](./acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco):** a trilha
+> continua uma só — `audit_logs`, com quem fez —, mas a aba Histórico não a lê mais: ela é só
+> movimentação (posse e licenças), e a auditoria fica no banco.
+
 **Decidido:** uma trilha só, filtrada por `entityType`/`entityId`.
 **Descartado:** tabela `AssetLog` com campo, valor antigo e valor novo por linha.
 **Por quê:** o `ActivityLog` já grava o diff em `changes` **na mesma transação** da

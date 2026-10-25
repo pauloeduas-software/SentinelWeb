@@ -1,6 +1,11 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { USER_PUBLIC_SELECT } from '../helpers/user-select.helper';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
+import { buildSnapshot } from '../../shared/diff.helper';
+import {
+  CAMPOS_AUDITADOS_DO_USUARIO, USER_AUDIT_SELECT, USER_PUBLIC_SELECT, soPublico,
+} from '../helpers/user-select.helper';
 import { hashSenha } from '../../auth/helpers/password.helper';
 import type { Cargo } from '../../access/helpers/cargo';
 
@@ -13,7 +18,7 @@ interface CreateUserData {
   password: string;
 }
 
-export async function createUser(data: CreateUserData) {
+export async function createUser(data: CreateUserData, ator: Ator) {
   // O hash FORA da transação: argon2 leva ~50 ms, e segurar uma conexão do
   // pool durante o cálculo é transformar cadastro em fila de banco.
   const passwordHash = await hashSenha(data.password);
@@ -24,8 +29,7 @@ export async function createUser(data: CreateUserData) {
     const exists = await tx.user.findUnique({ where: { email: data.email } });
     if (exists) throw new AppError('E-mail já está em uso.', 409);
 
-    // Sem `ActivityLog` (X): ninguém lê a trilha de quem opera o sistema.
-    return tx.user.create({
+    const usuario = await tx.user.create({
       data: {
         name: data.name,
         email: data.email,
@@ -34,7 +38,18 @@ export async function createUser(data: CreateUserData) {
         role: data.role,
         passwordHash,
       },
-      select: USER_PUBLIC_SELECT,
+      select: { ...USER_PUBLIC_SELECT, ...USER_AUDIT_SELECT },
     });
+
+    // A conta nova por escrito, sem a senha (AB).
+    await recordAudit(tx, {
+      entityType: 'User',
+      entityId: usuario.id,
+      entityLabel: usuario.email,
+      action: 'CREATE',
+      changes: buildSnapshot(usuario, CAMPOS_AUDITADOS_DO_USUARIO),
+    }, ator);
+
+    return soPublico(usuario);
   });
 }

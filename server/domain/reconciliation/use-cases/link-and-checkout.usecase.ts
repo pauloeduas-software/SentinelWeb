@@ -1,4 +1,5 @@
 import { AppError } from '../../../core/errors/app-error';
+import type { Ator } from '../../audit/audit.types';
 import { checkoutAsset } from '../../assignment/use-cases/checkout-asset.usecase';
 import { vincularEndpointAoAtivo } from './link-endpoint-asset.usecase';
 
@@ -14,8 +15,8 @@ import { vincularEndpointAoAtivo } from './link-endpoint-asset.usecase';
 //
 // `vincularEndpointAoAtivo` e `checkoutAsset` abrem cada um a SUA `$transaction`,
 // e o Prisma não suporta aninhar uma na outra (o aviso em caixa alta está no
-// `upsert-suggestion.usecase.ts`). É a mesma escolha do `aceitarSugestao`:
-// agir em sequência, e deixar a ordem errar para o lado certo.
+// `upsert-suggestion.usecase.ts`). A escolha é agir em sequência, e deixar a
+// ordem errar para o lado certo.
 //
 // A ORDEM É VINCULAR PRIMEIRO. Se a entrega falhar, o que fica é um vínculo
 // verdadeiro — esta máquina É aquele patrimônio — sem posse, que é um estado
@@ -26,19 +27,20 @@ import { vincularEndpointAoAtivo } from './link-endpoint-asset.usecase';
 //
 // A RESPOSTA DIZ O QUE ACONTECEU. Quando a entrega falha, a recusa sobe com o
 // status dela e a frase diz que o vínculo ficou: quem clicou precisa saber que
-// metade aconteceu, senão repete a operação e colhe "esta máquina já está
-// vinculada" sem entender por quê.
+// metade aconteceu. Repetir a operação funciona: o vínculo ao mesmo ativo não
+// muda nada nem grava linha, e só a entrega é tentada de novo.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function vincularEEntregar(
   endpointId: string,
   assetId: string,
   targetWorkstationId: string,
+  ator: Ator,
 ) {
-  const endpoint = await vincularEndpointAoAtivo(endpointId, assetId);
+  const endpoint = await vincularEndpointAoAtivo(endpointId, assetId, ator);
 
   try {
-    const entrega = await checkoutAsset(assetId, { targetType: 'WORKSTATION', targetWorkstationId });
+    const entrega = await checkoutAsset(assetId, { targetType: 'WORKSTATION', targetWorkstationId }, ator);
     return { endpoint, assignment: entrega.assignment, asset: entrega.asset };
   } catch (erro) {
     if (erro instanceof AppError) {

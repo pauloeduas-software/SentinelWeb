@@ -40,3 +40,15 @@ export const OCCUPANT_SELECT = {
   person: { select: PERSON_PUBLIC_SELECT },
   workstation: { select: { id: true, name: true } },
 } as const;
+
+/**
+ * A ocupação por escrito, para a auditoria: "Laura Souza — Mesa 1". O posto
+ * pelo nome guardado quando ele foi excluído (`workstationName`).
+ */
+export function rotuloDaOcupacao(ocupacao: {
+  person: { name: string };
+  workstation: { name: string } | null;
+  workstationName: string | null;
+}): string {
+  return `${ocupacao.person.name} — ${ocupacao.workstation?.name ?? ocupacao.workstationName ?? ''}`;
+}

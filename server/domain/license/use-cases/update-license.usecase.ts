@@ -1,9 +1,12 @@
 import { prisma } from '../../../core/database/prismaClient';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
+import { buildChanges } from '../../shared/diff.helper';
 import { AppError } from '../../../core/errors/app-error';
 import { fraseDoPiso } from '../helpers/license-count.helper';
 import { assertDatasNaoAntecedemACompra } from '../helpers/license-dates.helper';
 import {
-  LICENSE_SELECT, paraResposta,
+  CAMPOS_AUDITADOS_DA_LICENCA, LICENSE_DETAIL_SELECT, LICENSE_SELECT, marcaDaChave, paraResposta,
   type LicencaNaResposta, type LinhaDeLicenca,
 } from '../helpers/license-select.helper';
 import type { UpdateLicenseData } from '../schemas/license.schema';
@@ -22,11 +25,13 @@ import { travarLicencaOuFalhar } from './lock-license.usecase';
  * a edição contava "2 em uso", uma entrega gravava a terceira, e a quantidade
  * descia abaixo do que está na rua.
  */
-export async function updateLicense(id: string, data: UpdateLicenseData): Promise<LicencaNaResposta> {
+export async function updateLicense(id: string, data: UpdateLicenseData, ator: Ator): Promise<LicencaNaResposta> {
   const licenca = await prisma.$transaction(async (tx) => {
     await travarLicencaOuFalhar(tx, id);
 
-    const antes = await tx.license.findUniqueOrThrow({ where: { id }, select: LICENSE_SELECT }) as LinhaDeLicenca;
+    // Com a chave, que só serve para saber SE ela mudou: o valor não sai daqui.
+    const antes = await tx.license.findUniqueOrThrow({ where: { id }, select: LICENSE_DETAIL_SELECT }) as
+      LinhaDeLicenca & { productKey: string | null };
 
     await assertReferenciasDaLicenca(tx, data, {
       categoryId: antes.categoryId as string,
@@ -51,11 +56,25 @@ export async function updateLicense(id: string, data: UpdateLicenseData): Promis
     // alguém usando (`terminate-license.usecase.ts`), e a licença cai no
     // alerta "encerrada, ainda em uso".
 
-    return tx.license.update({
+    const depois = await tx.license.update({
       where: { id },
       data,
       select: LICENSE_SELECT,
-    }) as Promise<LinhaDeLicenca>;
+    }) as LinhaDeLicenca;
+
+    const chave = data.productKey === undefined ? null : marcaDaChave(antes.productKey, data.productKey ?? null);
+    const changes = {
+      ...buildChanges(antes, depois, CAMPOS_AUDITADOS_DA_LICENCA),
+      ...(chave ? { chave } : {}),
+    };
+
+    if (Object.keys(changes).length > 0) {
+      await recordAudit(tx, {
+        entityType: 'License', entityId: id, entityLabel: depois.name, action: 'UPDATE', changes,
+      }, ator);
+    }
+
+    return depois;
   });
 
   return paraResposta(licenca, await contarUsoDe(prisma, id));

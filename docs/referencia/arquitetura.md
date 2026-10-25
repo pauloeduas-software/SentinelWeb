@@ -72,7 +72,7 @@ server/
 | `asset` | Ativo do ITAM — o `Asset` do vocabulário do Snipe-IT | `Asset` |
 | `catalog` | As SEIS tabelas de catálogo, com UM CRUD genérico dirigido por spec — o colaborador inclusive | `Category`, `StatusLabel`, `Manufacturer`, `AssetModel`, `Location`, `Person` |
 | `settings` | Configuração global: a etiqueta automática (prefixo, zeros, próximo número) e os botões da descoberta (`discoveryMode`, `ghostDays`, `shadowHours`). Idioma, moeda e formato de data são fixos no código (`src/pages/helpers/format.helper.ts`) | `AppSetting` |
-| `activity` | O histórico — o que mudou e quando, nunca quem fez ([X](../decisoes/acesso.md#x--o-histórico-não-guarda-quem-fez)) —, gravado na transação de quem o origina | `ActivityLog` |
+| `audit` | A auditoria — quem fez o quê, em qual registro e quando ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)) —, gravada na transação de quem a origina. Só no banco: tela nenhuma a lê | `AuditLog` |
 | `user` | **Quem opera o sistema** — hoje só Administrador ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)), com senha ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)) | `User` |
 | `person` | **O colaborador** — quem recebe equipamento. O cadastro é do `catalog` (a única aba com lixeira); aqui ficam a ficha, o histórico, a contagem da posse aberta e a trava da linha | `Person` |
 | `assignment` | **Posse**: entrega e devolução de ativo, com alvo polimórfico (pessoa ou posto) e o histórico de quem teve o quê | `Assignment` |
@@ -96,7 +96,7 @@ server/
 ### `catalog` é a exceção à fatia vertical
 
 As SEIS tabelas de catálogo — e o posto, pela `workstationSpec` — são o MESMO CRUD: nome, listagem paginada, busca,
-`ActivityLog`, 409 quando a linha está em uso. Cinco fatias verticais completas
+auditoria, 409 quando a linha está em uso. Cinco fatias verticais completas
 seriam ~55 arquivos quase idênticos (onze por fatia, a conta do D9) — o que esta
 mesma página chama de cerimônia, não arquitetura.
 
@@ -250,7 +250,10 @@ Estão em `server/server.ts` e existem para o sistema falhar cedo e limpo.
   por último.
 - **Log estruturado com contexto.** `createLogger('asset.maestro')`. Nada de
   `console.log`. Toda resposta leva `X-Request-Id`, que aparece no log da
-  requisição. Credenciais são removidas em `core/logger/sanitize.ts`.
+  requisição e na auditoria (`audit_logs.requestId`). O servidor sempre gera o
+  número (`generateRequestId`) e ignora o do cliente: aceito, uma conta poderia
+  repetir o número de outra requisição. Credenciais são removidas em
+  `core/logger/sanitize.ts`.
 
 ---
 

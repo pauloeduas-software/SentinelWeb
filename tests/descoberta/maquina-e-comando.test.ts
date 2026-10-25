@@ -132,6 +132,12 @@ describe('POST /api/endpoints/:id/command', () => {
       Type: 'Command',
       Payload: { Action: 'REBOOT', CommandId: body.commandId },
     });
+
+    // E a AUDITORIA diz quem mandou reiniciar (AB).
+    const linha = await prisma.auditLog.findFirstOrThrow({ where: { action: 'COMMAND', entityId: endpointId } });
+    expect(linha).toMatchObject({
+      actorType: 'USER', actorId: api.adminId, changes: { comando: 'REBOOT', commandId: body.commandId },
+    });
   });
 
   it('sem ação no corpo é 422', async () => {
@@ -187,6 +193,9 @@ describe('POST /api/endpoints/:id/command', () => {
     // NOMEIA A MÁQUINA: quem está na tela precisa saber qual não respondeu.
     expect(body.error).toContain('pc-que-cai');
     expect(body.error).toMatch(/n[ãa]o fica em fila/i);
+
+    // Nada chegou à máquina, então a auditoria não afirma comando nenhum.
+    expect(await prisma.auditLog.count({ where: { action: 'COMMAND', entityId: caida.id } })).toBe(0);
   });
 
   // ── O SOCKET QUE ESTÁ NO MAPA E NÃO ENTREGA ─────────────────────────────

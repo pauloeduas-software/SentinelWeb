@@ -1,13 +1,11 @@
-import { ArrowRightLeft, Clock, FileText, KeyRound, MapPin } from 'lucide-react';
+import { ArrowRightLeft, Clock, KeyRound, MapPin } from 'lucide-react';
 import type { EventoDaPessoa } from '../../../../domain/shared/person.types';
 import { formatarDiaDoInstante } from '../../../helpers/format.helper';
 import { momentoDoEvento } from '../../../helpers/historico.helper';
-import { lerEventoDaPessoa, tituloDoEvento } from '../helpers/historico.helper';
+import { tituloDoEvento } from '../helpers/historico.helper';
 
-// A LINHA DO TEMPO da pessoa. QUATRO fontes, uma lista:
+// A LINHA DO TEMPO da pessoa: por onde ela passou. TRÊS fontes, uma lista:
 //
-//   ATIVIDADE  o `ActivityLog` dela — cadastro, edição com o diff campo a
-//              campo, desativação;
 //   POSSE      o que ela recebeu e devolveu, com a etiqueta do equipamento;
 //   POSTO      onde ela sentou e quando saiu, com o turno;
 //   LICENCA    as licenças entregues A ELA — não as do computador que ela usa.
@@ -18,14 +16,12 @@ const ICONE = {
   POSSE: ArrowRightLeft,
   POSTO: MapPin,
   LICENCA: KeyRound,
-  ATIVIDADE: FileText,
 } as const;
 
 const COR = {
   POSSE: 'text-status-info',
   POSTO: 'text-status-warning',
   LICENCA: 'text-text-tertiary',
-  ATIVIDADE: 'text-text-tertiary',
 } as const;
 
 interface HistoryPanelProps {
@@ -43,7 +39,7 @@ export default function HistoryPanel({ eventos, total, carregando }: HistoryPane
   }
 
   if (eventos.length === 0) {
-    return <p className="font-mono text-xs text-text-tertiary">Nada aconteceu com esta pessoa ainda.</p>;
+    return <p className="font-mono text-xs text-text-tertiary">Nenhuma entrega, posto nem licença ainda.</p>;
   }
 
   return (
@@ -64,9 +60,6 @@ export default function HistoryPanel({ eventos, total, carregando }: HistoryPane
 }
 
 function Evento({ evento }: { evento: EventoDaPessoa }) {
-  // Leitura do `changes` fora do JSX: o formato varia com a operação e a
-  // separação entre diff e dado solto é regra, não marcação.
-  const { mudancas, detalhes } = lerEventoDaPessoa(evento);
   const Icone = ICONE[evento.fonte];
   const nota = evento.posse?.notes ?? evento.posto?.notes ?? evento.licenca?.notes ?? null;
 
@@ -87,28 +80,6 @@ function Evento({ evento }: { evento: EventoDaPessoa }) {
 
       {nota && <div className="text-text-secondary text-[10px]">{nota}</div>}
 
-      {mudancas.length > 0 && (
-        <ul className="space-y-1">
-          {mudancas.map((mudanca) => (
-            <li key={mudanca.campo} className="flex flex-wrap items-center gap-2 text-[10px]" title={mudanca.cru}>
-              <span className="text-text-tertiary uppercase tracking-widest">{mudanca.rotulo}</span>
-              <span className="text-text-tertiary line-through">{mudanca.de}</span>
-              <span className="text-text-tertiary">→</span>
-              <span className="text-text-primary">{mudanca.para}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {detalhes.length > 0 && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-text-tertiary">
-          {detalhes.map((detalhe) => (
-            <span key={detalhe.campo} title={detalhe.cru}>
-              {detalhe.rotulo}: <span className="text-text-secondary">{detalhe.valor}</span>
-            </span>
-          ))}
-        </div>
-      )}
     </li>
   );
 }

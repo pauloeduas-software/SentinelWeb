@@ -1,4 +1,5 @@
 import { prisma } from '../../../core/database/prismaClient';
+import type { Ator } from '../../audit/audit.types';
 import { AppError } from '../../../core/errors/app-error';
 import { rotuloDoAlvo } from '../helpers/target-label.helper';
 import { assertStatusEscolhivel, escolherStatusPorTipo } from './checkout-asset.usecase';
@@ -30,9 +31,9 @@ interface CheckinData {
   targetWorkstationId?: string | null;
 }
 
-export async function checkinAsset(assetId: string, data: CheckinData) {
+export async function checkinAsset(assetId: string, data: CheckinData, ator: Ator) {
   // Transação pelo mesmo motivo da entrega: `assignments`, `assets` e
-  // `activity_logs` descrevem UM evento. Uma posse fechada com o ativo ainda
+  // `audit_logs` descrevem UM evento. Uma posse fechada com o ativo ainda
   // "Em uso" é o equipamento devolvido que continua contando como entregue em
   // todo relatório.
   return prisma.$transaction(async (tx) => {
@@ -97,6 +98,7 @@ export async function checkinAsset(assetId: string, data: CheckinData) {
       tx,
       { id: aberta.id, assetId, targetType: aberta.targetType, statusAnteriorId: ativo.statusId },
       { statusId, checkinNotes: data.checkinNotes },
+      ator,
     );
   });
 }

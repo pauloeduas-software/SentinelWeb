@@ -1,7 +1,8 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { errorCode } from '../../../core/errors/error-shape';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
 import { ASSET_WRITE_SELECT } from '../../asset/helpers/asset-select.helper';
 import { assertStatusCoerenteComPosse } from '../../asset/use-cases/assert-status-posse.usecase';
 import { travarAtivoOuFalhar } from '../../asset/use-cases/lock-asset.usecase';
@@ -82,7 +83,7 @@ function assertAlvoCoerente(data: CheckoutData): string {
 }
 
 /**
- * O alvo existe?
+ * O alvo existe? Devolve o NOME dele, que a auditoria grava.
  *
  * Deixar a FK falhar responderia 409 "Registro está em uso por outro cadastro"
  * — o texto que o `error-handler` dá a todo `P2003` —, que não é nem o status
@@ -97,7 +98,7 @@ async function assertAlvoExiste(
   client: ClientePosse & ClienteQueTrava,
   tipo: AlvoPosse,
   alvoId: string,
-): Promise<void> {
+): Promise<string> {
   if (tipo === 'PERSON') {
     const pessoa = await client.person.findFirst({
       where: { id: alvoId },
@@ -114,14 +115,14 @@ async function assertAlvoExiste(
     if (!pessoa.isActive) {
       throw new AppError(`${pessoa.name} está desativado(a) e não pode receber equipamento.`, 409);
     }
-    return;
+    return pessoa.name;
   }
 
   // DESATIVADO é a mesma recusa do colaborador desativado, um degrau acima: o
   // posto continua no histórico e não recebe entrega nova. `UPDATE` e não
   // `SHARE`: a invariante 19 trava este mesmo posto `FOR UPDATE` logo adiante,
   // e subir de uma para a outra é deadlock entre duas entregas ao mesmo posto.
-  await assertPostoRecebe(client, alvoId, 'entrega nova', 'UPDATE');
+  return assertPostoRecebe(client, alvoId, 'entrega nova', 'UPDATE');
 }
 
 /**
@@ -172,13 +173,13 @@ export async function assertStatusEscolhivel(client: ClienteQueTrava, statusId: 
   assertEscolhaAtiva(await lerStatusTravado(client, statusId), { rotulo: 'O status' });
 }
 
-export async function checkoutAsset(assetId: string, data: CheckoutData) {
+export async function checkoutAsset(assetId: string, data: CheckoutData, ator: Ator) {
   // Fora da transação: é validação de FORMATO do corpo, não lê o banco, e
   // abrir transação para recusar um payload incoerente é segurar conexão à toa.
   const alvoId = assertAlvoCoerente(data);
 
   // TUDO o mais em UMA transação. A entrega escreve em três lugares
-  // (`assignments`, `assets` e `activity_logs`) e os três descrevem o mesmo
+  // (`assignments`, `assets` e `audit_logs`) e os três descrevem o mesmo
   // evento: uma posse aberta sem o status novo é um ativo "disponível" que já
   // está com alguém — exatamente o estado que o modelo existe para impedir.
   return prisma.$transaction(async (tx) => {
@@ -229,7 +230,7 @@ export async function checkoutAsset(assetId: string, data: CheckoutData) {
       );
     }
 
-    await assertAlvoExiste(tx, data.targetType, alvoId);
+    const nomeDoAlvo = await assertAlvoExiste(tx, data.targetType, alvoId);
 
     const aberta = await tx.assignment.findFirst({
       where: { assetId, checkinAt: null },
@@ -315,19 +316,24 @@ export async function checkoutAsset(assetId: string, data: CheckoutData) {
 
     // No histórico do ATIVO, não no da posse: é a linha do tempo do equipamento
     // que alguém abre para perguntar "por onde isto andou".
-    await recordActivity(
+    // O alvo vai também POR ESCRITO: a pessoa ou o posto podem ser excluídos
+    // depois, e o id sozinho deixaria de dizer a quem o ativo foi entregue.
+    await recordAudit(
       tx,
       {
         entityType: 'Asset',
         entityId: assetId,
+        entityLabel: ativo.assetTag,
         action: 'CHECKOUT',
         changes: {
           assignmentId: posse.id,
           targetType: data.targetType,
           targetId: alvoId,
+          targetName: nomeDoAlvo,
           statusId: { de: ativo.statusId, para: statusId },
         },
       },
+      ator,
     );
 
     return { assignment: posse, asset: ativoAtualizado };

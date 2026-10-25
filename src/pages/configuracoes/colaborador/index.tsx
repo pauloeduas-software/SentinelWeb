@@ -80,7 +80,7 @@ export default function ColaboradorPage() {
             ) : (
               // Estar desativado é a primeira coisa que a tela precisa dizer: todo
               // número abaixo tem que ser lido como histórico. Quando e por
-              // quem está no histórico, logo embaixo.
+              // quem foi desativado fica na auditoria, no banco (AB).
               <span className="flex items-center gap-2 text-status-warning">
                 <UserX size={12} /> desativado
               </span>

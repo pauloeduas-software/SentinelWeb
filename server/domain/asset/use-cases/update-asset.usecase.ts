@@ -1,11 +1,12 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { buildChanges } from '../../shared/diff.helper';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
 import {
   assertEscolhaAtiva, assertLocalRecebe, lerModeloTravado, lerStatusTravado,
 } from '../../catalog/helpers/catalog-lock.helper';
-import { ASSET_SELECT, semCusto } from '../helpers/asset-select.helper';
+import { ASSET_SELECT, CAMPOS_AUDITADOS_DO_ATIVO, semCusto } from '../helpers/asset-select.helper';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
 import { assertEtiquetaESerieLivres } from './assert-unique-asset.usecase';
 import { assertStatusCoerenteComPosse } from './assert-status-posse.usecase';
@@ -13,18 +14,12 @@ import type { CreateAssetData } from './create-asset.usecase';
 
 type UpdateAssetData = Partial<CreateAssetData>;
 
-const CAMPOS_AUDITADOS = [
-  'assetTag', 'serial', 'name', 'notes',
-  'statusId', 'modelId', 'locationId',
-  'orderNumber', 'purchaseDate', 'purchaseCost',
-] as const;
-
 /** `undefined` significa "não mexe"; qualquer outro valor, inclusive `null`, vence. */
 function valorFinal<T>(novo: T | undefined, atual: T): T {
   return novo === undefined ? atual : novo;
 }
 
-export async function updateAsset(id: string, data: UpdateAssetData) {
+export async function updateAsset(id: string, data: UpdateAssetData, ator: Ator) {
   return prisma.$transaction(async (tx) => {
     // A TRAVA, antes de qualquer leitura. Estar dentro da transação não basta
     // para a guarda estado × posse abaixo: em READ COMMITTED a entrega
@@ -88,12 +83,13 @@ export async function updateAsset(id: string, data: UpdateAssetData) {
       select: ASSET_SELECT,
     });
 
-    const changes = buildChanges(antes, depois, CAMPOS_AUDITADOS);
+    const changes = buildChanges(antes, depois, CAMPOS_AUDITADOS_DO_ATIVO);
 
     if (Object.keys(changes).length > 0) {
-      await recordActivity(
+      await recordAudit(
         tx,
-        { entityType: 'Asset', entityId: id, action: 'UPDATE', changes },
+        { entityType: 'Asset', entityId: id, entityLabel: depois.assetTag, action: 'UPDATE', changes },
+        ator,
       );
     }
 

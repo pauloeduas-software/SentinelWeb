@@ -1,7 +1,8 @@
 import type { ReviewState } from '@prisma/client';
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
 
 /**
  * A TRIAGEM DO SHADOW IT — o que fazer com a máquina que apareceu sozinha.
@@ -20,8 +21,13 @@ import { recordActivity } from '../../activity/use-cases/record-activity.usecase
  * é justamente esse o assunto. É a única ação da fase que registra na entidade
  * do RMM, e por isso ela não aparece no histórico de ativo nenhum.
  */
-export async function triarEndpoint(endpointId: string, reviewState: ReviewState) {
+export async function triarEndpoint(endpointId: string, reviewState: ReviewState, ator: Ator) {
   return prisma.$transaction(async (tx) => {
+    // A trava antes de ler o "de": duas triagens ao mesmo tempo leriam as duas
+    // o estado velho, e a auditoria teria duas trocas a partir dele. NO KEY,
+    // como no catálogo: `reviewState` não é chave, e o FOR UPDATE do vínculo
+    // seguraria a telemetria que chega da máquina enquanto isso.
+    await tx.$queryRaw`SELECT id FROM endpoints WHERE id = ${endpointId}::uuid FOR NO KEY UPDATE`;
     const endpoint = await tx.endpoint.findUnique({
       where: { id: endpointId },
       select: { id: true, hostname: true, reviewState: true },
@@ -36,12 +42,13 @@ export async function triarEndpoint(endpointId: string, reviewState: ReviewState
       select: { id: true, hostname: true, reviewState: true },
     });
 
-    await recordActivity(tx, {
+    await recordAudit(tx, {
       entityType: 'Endpoint',
       entityId: endpointId,
+      entityLabel: endpoint.hostname,
       action: 'UPDATE',
       changes: { reviewState: { de: endpoint.reviewState, para: reviewState } },
-    });
+    }, ator);
 
     return triado;
   });

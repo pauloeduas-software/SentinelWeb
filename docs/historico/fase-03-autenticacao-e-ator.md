@@ -11,6 +11,9 @@
 > também: `users` guarda só quem entra no sistema, todos com senha, e quem recebe equipamento é
 > colaborador ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)). O que vale hoje está em [`../referencia/acesso.md`](../referencia/acesso.md).
 >
+> **E depois (AB):** o ator voltou, só no banco — a `audit_logs` grava quem fez, por escrito, e o
+> `actor.helper.ts` voltou a montá-lo da sessão, como parâmetro obrigatório ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)).
+>
 > Esforço: **P** = até meio dia · **M** = 1 a 3 dias · **G** = mais de 3 dias
 
 ## Objetivo

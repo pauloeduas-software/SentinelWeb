@@ -1,5 +1,8 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
+import { buildChanges } from '../../shared/diff.helper';
 import { hojeNoBrasil } from '../../shared/hoje.helper';
 import { assertDatasNaoAntecedemACompra } from '../helpers/license-dates.helper';
 import {
@@ -24,7 +27,7 @@ import { travarLicencaOuFalhar } from './lock-license.usecase';
  *
  * Reabrir é limpar a data na edição — não precisa de rota própria.
  */
-export async function terminateLicense(id: string): Promise<LicencaNaResposta> {
+export async function terminateLicense(id: string, ator: Ator): Promise<LicencaNaResposta> {
   const licenca = await prisma.$transaction(async (tx) => {
     // A trava serializa o Encerrar com a entrega: a entrega que chega depois
     // encontra a licença encerrada e é recusada.
@@ -40,11 +43,21 @@ export async function terminateLicense(id: string): Promise<LicencaNaResposta> {
     const hoje = hojeNoBrasil();
     assertDatasNaoAntecedemACompra({ ...antes, terminationDate: hoje });
 
-    return tx.license.update({
+    const depois = await tx.license.update({
       where: { id },
       data: { terminationDate: hoje },
       select: LICENSE_SELECT,
-    }) as Promise<LinhaDeLicenca>;
+    }) as LinhaDeLicenca;
+
+    await recordAudit(tx, {
+      entityType: 'License',
+      entityId: id,
+      entityLabel: depois.name,
+      action: 'END',
+      changes: buildChanges(antes, depois, ['terminationDate']),
+    }, ator);
+
+    return depois;
   });
 
   return paraResposta(licenca, await contarUsoDe(prisma, id));

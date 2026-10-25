@@ -41,7 +41,7 @@ recusa aparece numa notificação do sistema.
 
 O cadastro passa pelo **mesmo CRUD das tabelas de catálogo**, com a
 `workstationSpec` (`server/domain/workstation/specs/workstation.spec.ts`) — nome
-único, 409 por uso e `ActivityLog` vêm de lá. Ela fica **fora** de
+único, 409 por uso e auditoria vêm de lá. Ela fica **fora** de
 `CATALOG_SPECS`, então não vira aba de Configurações; as rotas são do
 `workstation.maestro.ts`.
 

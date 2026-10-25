@@ -1,6 +1,7 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
 import { assertPostoRecebe } from '../../catalog/helpers/catalog-lock.helper';
 import { travarPessoaOuFalhar, type ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
 import {
@@ -54,7 +55,7 @@ function assertAlvoCoerente(data: CheckoutStockInput): string {
 }
 
 /**
- * O alvo existe e pode receber?
+ * O alvo existe e pode receber? Devolve o NOME dele, que a auditoria grava.
  *
  * Pessoa sai por `findFirst`, que o escopo da lixeira alcança: não se entrega
  * nada a um cadastro na lixeira. Posto sai travado, pela marca de
@@ -63,12 +64,11 @@ function assertAlvoCoerente(data: CheckoutStockInput): string {
  * saiu reabriria, uma linha depois, a pendência que a saída da empresa fechou.
  * 409 e não 404: a pessoa existe, o estado dela é que recusa.
  */
-async function assertAlvoApto(client: ClienteEstoque & ClienteQueTrava, tipo: 'PERSON' | 'WORKSTATION', alvoId: string): Promise<void> {
+async function assertAlvoApto(client: ClienteEstoque & ClienteQueTrava, tipo: 'PERSON' | 'WORKSTATION', alvoId: string): Promise<string> {
   if (tipo === 'WORKSTATION') {
     // Desativado não recebe saída nova. `FOR SHARE` depois do item — a aresta
     // `item → posto` que o grafo já tinha (`lock-asset.usecase.ts`).
-    await assertPostoRecebe(client, alvoId, 'saída de estoque');
-    return;
+    return assertPostoRecebe(client, alvoId, 'saída de estoque');
   }
 
   const pessoa = await client.person.findFirst({ where: { id: alvoId }, select: { id: true, name: true, isActive: true } });
@@ -76,9 +76,10 @@ async function assertAlvoApto(client: ClienteEstoque & ClienteQueTrava, tipo: 'P
   if (!pessoa.isActive) {
     throw new AppError(`${pessoa.name} está desativado(a) e não pode receber equipamento.`, 409);
   }
+  return pessoa.name;
 }
 
-export async function checkoutStock(itemId: string, data: CheckoutStockInput) {
+export async function checkoutStock(itemId: string, data: CheckoutStockInput, ator: Ator) {
   // Fora da transação: é validação de FORMATO do corpo, não lê o banco.
   const alvoId = assertAlvoCoerente(data);
 
@@ -98,7 +99,7 @@ export async function checkoutStock(itemId: string, data: CheckoutStockInput) {
     const item = await tx.stockItem.findFirst({ where: { id: itemId }, select: { id: true, name: true, qty: true } });
     if (!item) throw new AppError('Item de estoque não encontrado.', 404);
 
-    await assertAlvoApto(tx, data.targetType, alvoId);
+    const nomeDoAlvo = await assertAlvoApto(tx, data.targetType, alvoId);
 
     // A conta, DEPOIS da trava. Antes dela seria a mesma leitura suja que o
     // `if` sozinho faz.
@@ -124,12 +125,25 @@ export async function checkoutStock(itemId: string, data: CheckoutStockInput) {
     // No histórico do ITEM: é onde alguém abre para perguntar "para onde foram
     // os 5 mouses". O `disponivel` DEPOIS da saída explica o evento sem obrigar
     // quem lê a recontar as linhas daquele dia.
-    await recordActivity(tx, {
+    //
+    // O alvo vai também POR ESCRITO: a pessoa ou o posto podem ser excluídos
+    // depois, e o id sozinho deixaria de dizer para quem as unidades saíram. E
+    // os ids das N linhas de saída, como o `assignmentId` da entrega de ativo:
+    // é o que liga cada unidade à conta que a entregou.
+    await recordAudit(tx, {
       entityType: 'StockItem',
       entityId: itemId,
+      entityLabel: item.name,
       action: 'CHECKOUT',
-      changes: { targetType: data.targetType, targetId: alvoId, qty: data.qty, disponivel: item.qty - fora - data.qty },
-    });
+      changes: {
+        targetType: data.targetType,
+        targetId: alvoId,
+        targetName: nomeDoAlvo,
+        qty: data.qty,
+        disponivel: item.qty - fora - data.qty,
+        movementIds: unidades.map((unidade) => unidade.id),
+      },
+    }, ator);
 
     return { unidades, disponivel: item.qty - fora - data.qty };
   });

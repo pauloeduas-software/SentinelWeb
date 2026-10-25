@@ -364,6 +364,11 @@ Ela descreve o EVENTO, não o ativo: numa coluna `retiredNotes`, um segundo
 descomissionamento sobrescreveria a justificativa do primeiro. No `changes` ela
 fica presa à linha que a explica (D18 — uma trilha só).
 
+> **E depois (AB):** a observação virou a coluna `retiredNotes`, porque a aba Histórico deixou de
+> ler a trilha e era o único lugar que a mostrava ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)). A sobrescrita que este parágrafo
+> temia não perde nada: desfazer a baixa limpa a coluna, e a observação de cada baixa continua
+> na auditoria, presa à linha `RETIRE`.
+
 **Descomissionar NÃO mexe no status.** São três colunas com três significados
 (D19). Quem vende um notebook pode querer arquivá-lo também, e isso é uma
 segunda decisão, com uma segunda linha no histórico.

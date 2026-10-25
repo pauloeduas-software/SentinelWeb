@@ -34,6 +34,7 @@ export const ASSET_SELECT = {
   // docs/historico/fase-02-ativos.md).
   retiredAt: true,
   retiredReason: true,
+  retiredNotes: true,
 
   createdAt: true,
 
@@ -60,9 +61,11 @@ export const ASSET_SELECT = {
 // deixa o valor passar pelo processo. Ele entra no objeto, e daí em diante vaza
 // por qualquer caminho que não seja a resposta "feliz" — a linha de log de um
 // erro que serializa o objeto, um `JSON.stringify` num handler de exceção, o
-// `changes` de um `ActivityLog` montado com spread. Na LEITURA, o dado que não
-// deve sair não é lido. A exceção é a edição, que lê o custo para o diff da
-// auditoria e o tira do objeto antes de responder (`update-asset.usecase.ts`).
+// `changes` de um `AuditLog` montado com spread. Na LEITURA, o dado que não
+// deve sair não é lido. As exceções são as escritas que a auditoria retrata — o
+// cadastro, a edição e a exclusão (`create-asset`, `update-asset`,
+// `delete-asset`): leem o custo para o retrato ou o diff, e o cadastro e a
+// edição o tiram do objeto antes de responder.
 //
 // POR QUE UMA FUNÇÃO E NÃO DOIS `const`: os dois selects têm que ser o MESMO
 // menos uma coluna. Dois literais lado a lado divergem na primeira coluna
@@ -84,8 +87,8 @@ const COLUNAS_DE_CUSTO = ['purchaseCost'] as const;
 /**
  * Remove as colunas de custo de um select — ou de uma linha já lida.
  *
- * Genérica porque serve o select da listagem, o do detalhe e a resposta da
- * edição, que lê o custo para o diff e não o devolve.
+ * Genérica porque serve o select da listagem, o do detalhe e as respostas do
+ * cadastro e da edição, que leem o custo para a auditoria e não o devolvem.
  */
 export function semCusto<T extends Record<string, unknown>>(select: T): Omit<T, (typeof COLUNAS_DE_CUSTO)[number]> {
   const copia: Record<string, unknown> = { ...select };
@@ -94,6 +97,16 @@ export function semCusto<T extends Record<string, unknown>>(select: T): Omit<T, 
   // recusar quem tentar lê-la de uma resposta de escrita.
   return copia as Omit<T, (typeof COLUNAS_DE_CUSTO)[number]>;
 }
+
+/**
+ * Os campos do ativo que a auditoria guarda: o diff da edição e o retrato do
+ * cadastro e da exclusão. Uma lista só, para os três falarem do mesmo ativo.
+ */
+export const CAMPOS_AUDITADOS_DO_ATIVO = [
+  'assetTag', 'serial', 'name', 'notes',
+  'statusId', 'modelId', 'locationId',
+  'orderNumber', 'purchaseDate', 'purchaseCost',
+] as const;
 
 /** O select das RESPOSTAS DE ESCRITA: sem custo, qualquer que seja o cargo. */
 export const ASSET_WRITE_SELECT = semCusto(ASSET_SELECT);

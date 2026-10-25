@@ -147,7 +147,17 @@ describe('o histórico da licença é só movimentação', () => {
     expect(body.rows.map((e) => e.action)).toEqual(['CHECKIN', 'CHECKOUT']);
   });
 
-  it('a licença não grava nada na trilha de auditoria', async () => {
-    expect(await prisma.activityLog.count({ where: { entityType: 'License' } })).toBe(0);
+  it('a auditoria grava a licença, e o histórico continua sem lê-la', async () => {
+    // A auditoria fica no banco (AB): o cadastro e a edição estão lá, com a
+    // conta. O histórico da tela é só movimentação — nenhum dos dois aparece nele.
+    const licenca = await criarLicenca(api, { name: 'Editada', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
+    expect((await api.put(`/api/licenses/${licenca.id}`, { seatsTotal: 2 })).status).toBe(200);
+
+    const linhas = await prisma.auditLog.findMany({ where: { entityId: licenca.id }, orderBy: { createdAt: 'asc' } });
+    expect(linhas.map((l) => [l.action, l.actorId])).toEqual([['CREATE', api.adminId], ['UPDATE', api.adminId]]);
+    expect(linhas[1].changes).toEqual({ seatsTotal: { de: 1, para: 2 } });
+
+    const { body } = await api.get<{ rows: EventoDaLicenca[] }>(`/api/licenses/${licenca.id}/history`);
+    expect(body.rows).toEqual([]);
   });
 });

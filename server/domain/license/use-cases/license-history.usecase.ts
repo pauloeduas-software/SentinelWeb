@@ -8,7 +8,7 @@ import { CHECKOUT_SELECT, rotuloDoAlvoDaEntrega } from '../helpers/license-selec
 //
 // Só movimentação: cada entrega e cada devolução, lidas de `license_checkouts`
 // com o nome de quem recebeu e a observação. Cadastro, edição e encerramento
-// não entram — o sistema não tem trilha de auditoria.
+// não entram: ficam na auditoria (`audit_logs`, AB), que tela nenhuma lê.
 
 export interface EventoDaLicenca {
   /** Uma entrega rende DOIS eventos, e o sufixo é o que os separa. */

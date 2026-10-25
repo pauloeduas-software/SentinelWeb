@@ -1,5 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { SEM_PARAMETROS } from '../../../core/http/sem-parametros';
+import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import {
   janelaDeOciosidadeSchema, triagemSchema, vinculoComEntregaSchema, vinculoSchema,
@@ -13,7 +14,7 @@ import { vincularEEntregar } from '../use-cases/link-and-checkout.usecase';
 import { triarEndpoint } from '../use-cases/review-endpoint.usecase';
 import { listarAtivosOciosos } from '../use-cases/list-idle-assets.usecase';
 import { obterMaquinaDoAtivo } from '../use-cases/get-asset-machine.usecase';
-import { rodarReconciliacao } from '../jobs/reconcile.job';
+import { reconciliarAgora } from '../use-cases/run-reconciliation.usecase';
 
 // Só HTTP. Sem try/catch: o `parse` rejeita e cai no errorHandler, que devolve
 // 422 com o campo que falhou; o `AppError` dos use-cases sai por lá também.
@@ -25,12 +26,13 @@ export const reconciliationController = {
 
   async accept(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return aceitarSugestao(id);
+    // O autor vem da SESSÃO, nunca do corpo (auth/helpers/actor.helper.ts).
+    return aceitarSugestao(id, atorDaRequisicao(request));
   },
 
   async reject(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return recusarSugestao(id);
+    return recusarSugestao(id, atorDaRequisicao(request));
   },
 
   async coverage(_request: FastifyRequest, reply: FastifyReply) {
@@ -39,14 +41,14 @@ export const reconciliationController = {
 
   // A VARREDURA AGORA. Mesma função da rodada da hora, sem a janela: devolve o
   // placar da rodada, e o 409 de "já tem uma rodando" sai pelo errorHandler.
-  async runNow() {
-    return rodarReconciliacao();
+  async runNow(request: FastifyRequest) {
+    return reconciliarAgora(atorDaRequisicao(request));
   },
 
   async link(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
     const { assetId } = vinculoSchema.parse(request.body ?? {});
-    const vinculado = await vincularEndpointAoAtivo(id, assetId);
+    const vinculado = await vincularEndpointAoAtivo(id, assetId, atorDaRequisicao(request));
     return reply.status(201).send(vinculado);
   },
 
@@ -54,13 +56,13 @@ export const reconciliationController = {
     const { id } = idParamSchema.parse(request.params);
     const { assetId, targetWorkstationId } = vinculoComEntregaSchema.parse(request.body ?? {});
     // 201 como o vínculo e a entrega sozinhos: duas linhas nascem.
-    const resultado = await vincularEEntregar(id, assetId, targetWorkstationId);
+    const resultado = await vincularEEntregar(id, assetId, targetWorkstationId, atorDaRequisicao(request));
     return reply.status(201).send(resultado);
   },
 
   async unlink(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return desvincularEndpoint(id);
+    return desvincularEndpoint(id, atorDaRequisicao(request));
   },
 
   async idle(request: FastifyRequest) {
@@ -77,6 +79,6 @@ export const reconciliationController = {
   async review(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     const { reviewState } = triagemSchema.parse(request.body ?? {});
-    return triarEndpoint(id, reviewState);
+    return triarEndpoint(id, reviewState, atorDaRequisicao(request));
   },
 };

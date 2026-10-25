@@ -13,7 +13,7 @@ import { prisma } from '../../server/core/database/prismaClient';
 //
 // O que ela impede é uma escrita que não deixa rastro: trocar o `type` de um
 // `StatusLabel` que 200 ativos usam muda o significado dos 200 DE UMA VEZ, sem
-// escrever uma linha em `assets` e portanto sem `ActivityLog` nenhum.
+// escrever uma linha em `assets` e portanto sem `AuditLog` nenhum.
 // Um status disponível virando `UNDEPLOYABLE` inutiliza a frota em silêncio.
 
 let api: ApiDeTeste;

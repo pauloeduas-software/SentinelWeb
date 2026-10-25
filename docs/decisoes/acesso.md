@@ -7,7 +7,7 @@
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D22–D26, D72–D78, D80, D89, D135–D142, P da segunda rodada (ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)) e R, S, T, U, W, X e Z, que vieram depois da varredura
+> [`README.md`](./README.md#a-segunda-rodada-ap)) e R, S, T, U, W, X, Z e AB, que vieram depois da varredura
 > Q e continuaram a letra.
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
@@ -30,6 +30,9 @@ consegue *usar* a sessão enquanto a aba está aberta, mas não *exportá-la*. O
 
 > **Superada por [X](#x--o-histórico-não-guarda-quem-fez):** o histórico deixou de guardar quem fez, e o
 > parâmetro saiu de todos os use-cases.
+>
+> **E revivida por [AB](#ab--a-auditoria-volta-quem-fez-só-no-banco):** o autor volta, obrigatório por parâmetro, como último argumento
+> de cada use-case — agora um `Ator` (conta, sistema ou login sem sessão), não só o `actorId`.
 
 **Decidido:** o controller lê `request.user.id` e passa adiante; a assinatura do
 use-case **exige** o argumento.
@@ -46,6 +49,9 @@ O preço é tocar ~20 assinaturas **uma vez**.
 ## D24 — O histórico anterior fica sem ator. Não há backfill.
 
 > **Superada por [X](#x--o-histórico-não-guarda-quem-fez):** não há mais autor em histórico nenhum, antigo ou novo.
+>
+> **E de volta com [AB](#ab--a-auditoria-volta-quem-fez-só-no-banco):** o autor volta só daqui para a frente. As linhas gravadas sem autor não
+> foram carimbadas em ninguém — ficaram fora da tabela nova, guardadas fora do projeto.
 
 **Decidido:** tudo que foi gravado antes do login continua com `actorId: null`, e
 a tela mostra "—".
@@ -63,6 +69,9 @@ registro sem ator é registro; registro com ator errado é dano.
 
 > **Superada por [X](#x--o-histórico-não-guarda-quem-fez):** as colunas de autor saíram também da entrega e do
 > estoque, e a pergunta "quem cadastrou a Laura na Mesa 1?" deixou de ter resposta.
+>
+> **E de volta com [AB](#ab--a-auditoria-volta-quem-fez-só-no-banco):** a pergunta volta a ter resposta, e no lugar que este parágrafo
+> dizia — a auditoria (`audit_logs`), não uma coluna na ocupação.
 
 **Decidido:** `LocationOccupant` continua sem `openedById`/`closedById`.
 **Descartado:** espelhar `checkoutById`/`checkinById` por simetria.
@@ -90,6 +99,8 @@ migração aditiva de duas colunas.
 > parágrafo já dizia que a resposta estava.
 >
 > **E depois, [X](#x--o-histórico-não-guarda-quem-fez):** o `ActivityLog` também deixou de guardar o autor.
+>
+> **E depois, [AB](#ab--a-auditoria-volta-quem-fez-só-no-banco):** o autor volta, na `audit_logs`. As colunas continuam fora.
 
 ---
 
@@ -179,6 +190,10 @@ D138 e o D140.
 > vazio e o salvar apagava o valor —, o histórico tira a coluna do diff de quem não é `ADMIN` e a
 > busca devolve só o que identifica o ativo. O mapa das quatro portas está em
 > [`../referencia/acesso.md`](../referencia/acesso.md#a-autorização-cargo-não-permissão).
+>
+> **E depois, [AB](#ab--a-auditoria-volta-quem-fez-só-no-banco):** o histórico do ativo deixou de
+> ter diff — é só movimentação —, e a porta do diff fechou. A edição do custo fica na auditoria,
+> que tela nenhuma lê.
 
 ---
 
@@ -554,6 +569,9 @@ telas. `GET /api/users/options`, `/:id` e `/:id/history` saíram; o seletor de p
 > **Superada em parte por [X](#x--o-histórico-não-guarda-quem-fez):** a exclusão de usuário não grava mais
 > `ActivityLog`, e o histórico não guarda o autor de nada. O resto continua como está aqui.
 >
+> **E de volta em parte com [AB](#ab--a-auditoria-volta-quem-fez-só-no-banco):** cadastrar, editar e excluir usuário voltam a gravar — na
+> auditoria, com quem fez.
+>
 > **Superada em parte por [Z](#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir):** com um cargo só, não há para onde
 > rebaixar, e a regra de não rebaixar a si mesmo saiu. Desativar e excluir a si mesmo continuam
 > recusados.
@@ -611,6 +629,9 @@ contando "sobra eu". A trava `travarAdministracao` põe os dois em fila e o segu
 ---
 
 ## X — O histórico não guarda quem fez
+
+> **Superada por [AB](#ab--a-auditoria-volta-quem-fez-só-no-banco):** a auditoria de quem fez volta, só no banco. As telas continuam sem
+> mostrar o autor, e os históricos das telas passam a ser só movimentação.
 
 **Decidido:** saem as cinco colunas de autor — `activity_logs.actorId`,
 `assignments.checkoutById`/`checkinById` e `stock_movements.createdById`/`returnedById` — e o
@@ -689,3 +710,108 @@ direto no `exigirPermissao`, e o que o `ADMIN` vê continua provado pela API.
 - **qual cargo nasce por padrão** — o `@default` da coluna, que já trancou o sistema uma vez
   ([D164](./escopo.md#d164--o-default-da-coluna-tranca-o-sistema-e-a-migração-precisa-do-backfill));
 - **o que a tela de Usuários precisa** para escolher o cargo, e quem pode mudar o de quem.
+
+---
+
+## AB — A auditoria volta: quem fez, só no banco
+
+**Decidido** (2026-10-25): `activity_logs` vira `audit_logs` (`AuditLog`), e toda escrita grava
+QUEM fez, na mesma transação da operação. A tabela é do administrador, consultada no banco: tela
+nenhuma a lê.
+
+- **O autor, por escrito.** `actorType` diz de onde veio: `USER` (a conta da sessão), `SYSTEM`
+  (o job, ou o comando de terminal) ou `ANONYMOUS` (a tela de login, sem sessão). A conta vai com
+  `actorId`, `actorName` e `actorEmail` como estavam no momento — a conta pode mudar de nome ou
+  ser excluída, e a linha continua dizendo quem fez. `source` é a origem (`painel`,
+  `job:reconciliacao`, `cli:conceder-administrador:<usuário do sistema operacional>`), e
+  `requestId` é o número da requisição, o mesmo do `X-Request-Id` e da linha do log.
+- **O registro, por escrito.** `entityLabel` é a etiqueta do ativo, o nome do item, da licença, o
+  e-mail da conta, o hostname da máquina. `entityId` é nulo só no que não é um registro: a
+  configuração da descoberta e a rodada de reconciliação (`CHECK` `audit_logs_registro_com_id`).
+- **Sem FK, e a linha não muda.** Excluir o registro ou a conta não leva junto a linha que diz
+  quem os excluiu. O `CHECK` `audit_logs_autor_coerente` exige a conta inteira no `USER`, nada no
+  `SYSTEM` e só a requisição no `ANONYMOUS`; ele e o `audit_logs_registro_por_escrito` recusam o
+  texto em branco, inclusive o que é só espaço; e o trigger `audit_logs_imutavel` recusa `UPDATE`
+  e `DELETE`.
+- **O "de" é lido com a linha travada.** Toda edição que grava `{ de, para }` trava a linha antes
+  de ler o "de" — duas edições ao mesmo tempo, e a segunda diria "de A" quando a mudança foi de B.
+  A exclusão de conta trava antes do retrato, pelo mesmo motivo.
+- **O autor é parâmetro obrigatório** ([D23](#d23--actorid-é-parâmetro-obrigatório-não-asynclocalstorage)
+  de volta): o controller monta o `Ator` da sessão (`atorDaRequisicao`) e ele desce como último
+  argumento até `recordAudit`. Nunca do corpo: o `strictObject` recusa um autor no corpo com 422.
+- **O número da requisição é do servidor.** O `X-Request-Id` que o cliente mande é ignorado: aceito,
+  uma conta repetiria o número de outra requisição — até de outra conta.
+- **O que grava:** cadastros e catálogo, colaborador, posto e ocupação; ativo (cadastro, edição,
+  posse, baixa, lixeira); estoque; vínculo, aceite, recusa, triagem e a rodada pedida pela tela;
+  licença (cadastro, edição, entrega, troca de chave, devolução, encerramento, exclusão); conta de
+  usuário; configuração da descoberta; comando à máquina; login e logout; e o
+  `conceder-administrador` quando o cargo muda — com um cargo só (Z), hoje ele nunca muda, e
+  "de ADMIN para ADMIN" não é linha. Como toda edição, só grava o que mudou — e vincular a máquina
+  ao ativo a que ela já está vinculada não grava `LINK` nenhum.
+- **O aceite é uma coisa só.** A sugestão vira `ACCEPTED` na mesma transação do vínculo, e a
+  linha `LINK` leva o `sugestaoId`. Separados, uma falha entre os dois deixava a sugestão encerrada
+  como substituída pelo próprio vínculo, e o expurgo a apagava. Dois aceites ao mesmo tempo: passa
+  um, o outro recebe 409.
+- **Dado sensível não entra.** A senha vai só como `senha: 'alterada'`, nem o hash. A chave de
+  licença vai só como `chave: 'informada' | 'alterada' | 'removida'`, nunca o valor.
+- **O comando à máquina** grava só o que saiu para o agente, e depois do envio: o desconectado e
+  a falha não entregaram nada, e uma linha antes do envio afirmaria um desligamento que nunca
+  saiu. "Saiu" é a conexão aberta ter aceitado o envio — o agente não confirma a execução, e a
+  máquina que perdeu a rede sem fechar a conexão não recebe o que a linha diz que foi mandado.
+- **O que já aconteceu fora do banco não vira erro.** O comando que saiu, a rodada pedida e a
+  saída da conta gravam sem transação para desfazer junto. Se a gravação falhar, a resposta diz o
+  que aconteceu, e a linha vai inteira para o log do servidor no lugar dela: um 500 depois do
+  comando diria que ele não saiu, e o clique de novo mandaria o segundo desligamento; no logout,
+  o cookie ficaria no navegador.
+- **O login.** A entrada é da conta (`USER`). A senha errada, a conta bloqueada e a desativada
+  gravam na conta, mas como `ANONYMOUS`: quem digitou não provou ser a dona dela, e gravar como a
+  conta a acusaria de uma tentativa que pode ser de outro. E-mail que não existe não grava nada.
+  O contador de erros é somado pelo banco (`increment`), e cada linha leva o número certo mesmo
+  em rajada. Durante o bloqueio fica **uma** linha por bloqueio, e não uma por tentativa: a senha
+  nem é conferida ali, e cada tentativa custaria só uma linha numa tabela que não se apaga —
+  qualquer um que soubesse o e-mail a encheria. A conta é travada antes de procurar a linha, senão
+  uma rajada procuraria toda antes de qualquer uma gravar.
+- **O que roda sozinho.** O único caminho `SYSTEM` do servidor é o vínculo automático da
+  reconciliação em `ON` (`job:reconciliacao`) — também quando a rodada foi pedida pela tela: a
+  linha `RUN` diz quem pediu, e o vínculo diz que quem decidiu foi a regra. A rodada pedida que
+  quebrou no meio também grava o `RUN`, com `concluida: false`: os vínculos que ela já fez estão no
+  banco, e sem a linha não se saberia que foi uma conta que a pediu. O agente e o resto do
+  job (telemetria, online e offline, último contato, uso agregado, sugestões, mudança de hardware,
+  expurgo) não mexem em cadastro, posse nem estoque, e não gravam.
+- **As telas não leem a auditoria.** As abas Histórico do ativo e do colaborador passam a ser só
+  movimentação — entregas, devoluções, postos e licenças. A observação da baixa, que só aparecia
+  lá, vira a coluna `assets.retiredNotes`: a aba Detalhes a mostra enquanto a baixa vale, e
+  desfazer a baixa a limpa (a de cada baixa fica na auditoria).
+- **A máquina é travada no vincular e no desvincular**, depois do ativo. Dois vínculos da mesma
+  máquina ao mesmo tempo passavam os dois, e o segundo apagava o primeiro sem `UNLINK` nenhum.
+
+**Supera:** o [X](#x--o-histórico-não-guarda-quem-fez); revive o D23; devolve a resposta do
+[D25](#d25--ocupação-de-posto-não-ganha-coluna-de-ator) e, em parte, do
+[W](#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo); e, em
+parte, o [D18](./catalogo-e-ativo.md#d18--assetlog-não-nasce-a-aba-histórico-lê-o-activitylog)
+(a aba Histórico não lê mais a trilha), a revisão do
+[D77](#d77--dado-sensível-é-filtrado-no-select-não-mascarado-na-resposta) (a porta do diff do
+histórico fechou) e o
+[AA](./licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)
+(a licença deixa de ficar sem trilha).
+**Mantém:** o [D24](#d24--o-histórico-anterior-fica-sem-ator-não-há-backfill) — nada foi carimbado
+em ninguém: as linhas antigas, sem autor, ficaram fora da tabela nova e estão guardadas fora do
+projeto —, as colunas de autor fora das tabelas (D26, Q, X), a sessão relida a cada requisição e
+as regras da própria conta do W.
+
+**Por quê:** pedido do usuário — *"a ideia é deixar apenas no banco de dados, não vamos usar isso
+em nenhuma tela, é realmente para o admin fazer a auditoria para não acusarem o sistema de um erro
+que foi um usuário que cometeu"*. Por isso a separação entre conta e sistema é o centro, e a linha
+não pode ser reescrita pela aplicação.
+
+**Por quê sem IP:** *"não precisa de IP real, só a conta mesmo, não é para duas pessoas usarem a
+mesma conta"*. Cada pessoa tem a própria conta, e conta compartilhada não é cenário.
+
+**O que fica de fora, e foi aceito:** as leituras (inclusive ver a chave da licença), o seed e o
+SQL à mão não gravam. O trigger barra o `UPDATE` e o `DELETE` da aplicação e de SQL comum, não o
+dono da tabela — e o usuário de banco da aplicação é o dono: ele ainda pode desligar o trigger ou
+esvaziar a tabela. Nenhum código faz isso. Se for preciso mais, o caminho é um usuário de banco
+para a aplicação que só faça `INSERT` na auditoria, o que muda a implantação.
+
+**Como consultar:** [`prisma/verificacoes/auditoria.sql`](../../prisma/verificacoes/auditoria.sql),
+com as perguntas prontas no horário de Brasília.

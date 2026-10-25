@@ -9,11 +9,13 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 // Corpo de requisição NUNCA é logado. A query string sai da URL
 // (`caminhoSemQuery`, abaixo).
 
-// Gera/reaproveita o id da requisição. Um id vindo de fora só é aceito no
-// formato esperado — senão qualquer cliente injetaria texto no log.
-export function generateRequestId(req: { headers: Record<string, unknown> }): string {
-  const incoming = req.headers['x-request-id'];
-  return typeof incoming === 'string' && /^[\w-]{8,64}$/.test(incoming) ? incoming : randomUUID();
+// O id da requisição é SEMPRE gerado aqui; o `X-Request-Id` que o cliente
+// mande é ignorado. Ele vai para a auditoria (AB) como a prova de qual
+// requisição fez a alteração, e um id escolhido por quem pede deixaria duas
+// linhas com o mesmo número — ou uma apontando para a requisição de outra
+// conta. Não há proxy na frente cujo id valesse a pena aproveitar.
+export function generateRequestId(): string {
+  return randomUUID();
 }
 
 // Requisição que só faria ruído: health check e arquivo estático (GET fora da API)

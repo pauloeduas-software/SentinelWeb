@@ -25,6 +25,9 @@ CREATE TYPE "ReviewState" AS ENUM ('UNREVIEWED', 'ALLOWED', 'BLOCKED');
 CREATE TYPE "Cargo" AS ENUM ('ADMIN');
 
 -- CreateEnum
+CREATE TYPE "AuditActorType" AS ENUM ('USER', 'SYSTEM', 'ANONYMOUS');
+
+-- CreateEnum
 CREATE TYPE "CategoryType" AS ENUM ('ASSET', 'LICENSE', 'STOCK');
 
 -- CreateEnum
@@ -124,15 +127,22 @@ CREATE TABLE "people" (
 );
 
 -- CreateTable
-CREATE TABLE "activity_logs" (
+CREATE TABLE "audit_logs" (
     "id" UUID NOT NULL,
     "entityType" TEXT NOT NULL,
-    "entityId" UUID NOT NULL,
+    "entityId" UUID,
+    "entityLabel" TEXT NOT NULL,
     "action" TEXT NOT NULL,
     "changes" JSONB,
+    "actorType" "AuditActorType" NOT NULL,
+    "actorId" UUID,
+    "actorName" TEXT,
+    "actorEmail" TEXT,
+    "source" TEXT NOT NULL,
+    "requestId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "activity_logs_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "audit_logs_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -234,6 +244,7 @@ CREATE TABLE "assets" (
     "purchaseCost" DECIMAL(12,2),
     "retiredAt" TIMESTAMP(3),
     "retiredReason" "RetiredReason",
+    "retiredNotes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
@@ -433,7 +444,22 @@ CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 CREATE INDEX "people_deletedAt_idx" ON "people"("deletedAt");
 
 -- CreateIndex
-CREATE INDEX "activity_logs_entityType_entityId_createdAt_idx" ON "activity_logs"("entityType", "entityId", "createdAt");
+CREATE INDEX "audit_logs_entityId_createdAt_idx" ON "audit_logs"("entityId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "audit_logs_actorEmail_createdAt_idx" ON "audit_logs"("actorEmail", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "audit_logs_actorId_createdAt_idx" ON "audit_logs"("actorId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "audit_logs_entityLabel_idx" ON "audit_logs"("entityLabel");
+
+-- CreateIndex
+CREATE INDEX "audit_logs_requestId_idx" ON "audit_logs"("requestId");
+
+-- CreateIndex
+CREATE INDEX "audit_logs_createdAt_idx" ON "audit_logs"("createdAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "categories_name_type_key" ON "categories"("name", "type");
@@ -805,3 +831,65 @@ ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_forma" CHECK (
 -- instante é real.
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_devolucao_nao_antecede_saida"
   CHECK ("returnedAt" IS NULL OR "returnedAt" >= "createdAt");
+
+-- ── A AUDITORIA: O AUTOR COERENTE E A LINHA QUE NÃO SE REESCREVE (AB) ─────
+--
+-- A linha de uma conta diz qual conta, por escrito, e de qual requisição; a do
+-- sistema não tem conta nenhuma — nem nome, nem requisição. O login sem sessão
+-- (senha errada, conta bloqueada) tem só a requisição: quem digitou não provou
+-- ser a conta. Sem isto, um autor pela metade passaria por linha de auditoria
+-- válida, e o que ela existe para provar é justamente quem. Texto em branco
+-- conta como ausente: `''` e `'   '` não são um nome — `~ '\S'` exige ao
+-- menos um caractere que não seja espaço, tabulação ou quebra de linha.
+-- `IS NOT NULL` explícito ao lado de cada `~`, porque `NULL ~ '\S'` dá NULL
+-- e CHECK só recusa FALSE.
+ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_autor_coerente" CHECK (
+  (
+    "actorType" = 'USER'
+    AND "actorId" IS NOT NULL
+    AND "actorName" IS NOT NULL AND "actorName" ~ '\S'
+    AND "actorEmail" IS NOT NULL AND "actorEmail" ~ '\S'
+    AND "requestId" IS NOT NULL AND "requestId" ~ '\S'
+  ) OR (
+    "actorType" = 'SYSTEM'
+    AND "actorId" IS NULL
+    AND "actorName" IS NULL
+    AND "actorEmail" IS NULL
+    AND "requestId" IS NULL
+  ) OR (
+    "actorType" = 'ANONYMOUS'
+    AND "actorId" IS NULL
+    AND "actorName" IS NULL
+    AND "actorEmail" IS NULL
+    AND "requestId" IS NOT NULL AND "requestId" ~ '\S'
+  )
+);
+
+-- O registro e a origem por escrito também não ficam em branco: são por eles
+-- que o administrador procura.
+ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_registro_por_escrito" CHECK (
+  "entityLabel" ~ '\S' AND "source" ~ '\S'
+);
+
+-- O registro sem id só onde não há registro: a configuração da descoberta, que
+-- é uma linha só, e a rodada de reconciliação. Em todo o resto, o id é o que
+-- segue o registro renomeado.
+ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_registro_com_id" CHECK (
+  "entityId" IS NOT NULL OR "entityType" IN ('AppSetting', 'Reconciliation')
+);
+
+-- A linha não se altera nem se apaga. O trigger barra o UPDATE e o DELETE
+-- comuns — os do Prisma e os de SQL à mão. Não barra quem é DONO da tabela e
+-- decide desligá-lo (`DISABLE TRIGGER`) ou esvaziá-la (`TRUNCATE`), e o usuário
+-- do banco da aplicação é o dono: nenhum código faz isso, mas a garantia é essa,
+-- e não mais. O `TRUNCATE` do reset dos testes passa, porque trigger de linha
+-- não dispara nele.
+CREATE FUNCTION "audit_logs_imutavel"() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'audit_logs não se altera nem se apaga (AB)';
+END;
+$$;
+
+CREATE TRIGGER "audit_logs_imutavel"
+  BEFORE UPDATE OR DELETE ON "audit_logs"
+  FOR EACH ROW EXECUTE FUNCTION "audit_logs_imutavel"();

@@ -235,11 +235,11 @@ na borda.
 **Excluir usuário apaga a linha** ([W](../decisoes/acesso.md#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo)):
 sem lixeira e sem Restaurar, e o e-mail fica livre para um cadastro novo. A sessão aberta cai
 na requisição seguinte, porque a releitura não encontra mais a conta. Nada aponta para `users`:
-o histórico não guarda quem fez ([X](../decisoes/acesso.md#x--o-histórico-não-guarda-quem-fez)), e usuário não grava
-histórico.
+a auditoria guarda quem fez POR ESCRITO, nome e e-mail, sem FK ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)) — a
+exclusão grava o retrato da conta, e as linhas antigas dela continuam dizendo quem foi.
 
 **O custo de compra do ativo é do `ADMIN`** ([D77](../decisoes/acesso.md#d77--dado-sensível-é-filtrado-no-select-não-mascarado-na-resposta)),
-e são quatro portas, todas em `asset/helpers/asset-select.helper.ts` ou ao lado dele. Com um
+e são três portas, todas em `asset/helpers/asset-select.helper.ts` ou ao lado dele. Com um
 cargo só, todo mundo vê o custo:
 
 - **a leitura** (listagem, detalhe, ficha do posto) não lê a coluna para quem não é `ADMIN`;
@@ -247,8 +247,9 @@ cargo só, todo mundo vê o custo:
   o custo para cargo nenhum (`ASSET_WRITE_SELECT`);
 - **a escrita de quem não é `ADMIN`** descarta o custo que chegar (`custoSoDoAdmin`): o
   formulário não tem o campo, e um `purchaseCost: ''` apagaria o valor que não se vê;
-- **o histórico do ativo** tira `purchaseCost` do diff para quem não é `ADMIN`, e a edição que
-  só mexeu no custo some inteira para ele.
+
+A quarta porta era o diff do histórico do ativo, e ela fechou: o histórico é só movimentação, e a
+edição do custo fica na auditoria, que tela nenhuma lê ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)).
 
 A busca do leitor (`/api/search`) devolve só o que identifica o ativo, para todo cargo.
 
@@ -263,9 +264,30 @@ A regra é do servidor, nas duas rotas do formulário — ambas `ADMIN`:
 - `POST /api/users` responde **422** sem senha (`createUserSchema`);
 - na edição, `password` ausente mantém a atual; presente troca a senha, destrava a conta
   (`failedLoginCount` e `lockedUntil` zerados) e incrementa o `tokenVersion`;
-- nenhuma das duas grava `ActivityLog` — usuário não tem histórico
-  ([X](../decisoes/acesso.md#x--o-histórico-não-guarda-quem-fez));
+- as duas gravam na auditoria, com quem fez ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)): o retrato da conta no cadastro, o
+  `{ de, para }` na edição, e a senha só como `senha: 'alterada'` — nem o hash entra;
 - as duas rotas têm o `verificarOrigem` das rotas de credencial (`user.maestro.ts`).
+
+---
+
+## A auditoria — quem fez, só no banco
+
+Toda escrita grava em `audit_logs` quem a fez, na mesma transação ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)). Tela nenhuma a lê: é
+do administrador, no banco, para responder se um erro foi de uma conta ou do sistema.
+
+- **`USER`** — a conta da sessão (`atorDaRequisicao`), com nome e e-mail por escrito e o número
+  da requisição, que o servidor gera sempre (o `X-Request-Id` do cliente é ignorado);
+- **`SYSTEM`** — o vínculo automático da reconciliação em `ON` (`job:reconciliacao`) e o
+  `conceder-administrador` (`cli:conceder-administrador:<usuário do sistema operacional>`), quando
+  o cargo muda — com um cargo só (Z), hoje nunca;
+- **`ANONYMOUS`** — a tela de login sem sessão: a senha errada, a conta bloqueada e a desativada
+  gravam na conta, mas sem autor, porque quem digitou não provou ser ela. Na conta bloqueada, uma
+  linha por bloqueio, e não uma por tentativa. A entrada certa é `USER` (`LOGIN`), e a saída
+  também (`LOGOUT`). E-mail que não existe não grava nada.
+
+A linha não se altera nem se apaga (trigger `audit_logs_imutavel`), e a coerência do autor é
+`CHECK`. As consultas prontas estão em
+[`prisma/verificacoes/auditoria.sql`](../../prisma/verificacoes/auditoria.sql).
 
 ---
 

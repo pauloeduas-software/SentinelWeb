@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { parseListQuery } from '../../../core/http/list-query';
 import { endpointFilterSchema, sendCommandSchema } from '../schemas/endpoint.schema';
 import { idParamSchema } from '../../shared/params.schema';
+import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { listEndpoints } from '../use-cases/list-endpoints.usecase';
 import { getEndpoint } from '../use-cases/get-endpoint.usecase';
 import { sendCommand } from '../use-cases/send-command.usecase';
@@ -52,7 +53,7 @@ export const endpointController = {
     const { id } = idParamSchema.parse(request.params);
     const { action } = sendCommandSchema.parse(request.body ?? {});
 
-    const { commandId } = await sendCommand(id, action);
+    const { commandId } = await sendCommand(id, action, atorDaRequisicao(request));
     return reply.status(200).send({ message: 'Comando enviado.', commandId });
   },
 };

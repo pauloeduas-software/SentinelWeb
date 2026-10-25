@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { parseListQuery } from '../../../core/http/list-query';
+import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { listCatalog } from '../use-cases/list-catalog.usecase';
 import { listCatalogOptions } from '../use-cases/list-catalog-options.usecase';
@@ -76,25 +77,26 @@ export function createCatalogController(spec: CatalogSpec) {
 
     async create(request: FastifyRequest, reply: FastifyReply) {
       const data = spec.createSchema.parse(request.body ?? {}) as Record<string, unknown>;
-      const registro = await createCatalog(spec, data);
+      // O autor vem da SESSÃO, nunca do corpo (auth/helpers/actor.helper.ts).
+      const registro = await createCatalog(spec, data, atorDaRequisicao(request));
       return reply.status(201).send(registro);
     },
 
     async update(request: FastifyRequest) {
       const { id } = idParamSchema.parse(request.params);
       const data = spec.updateSchema.parse(request.body ?? {}) as Record<string, unknown>;
-      return updateCatalog(spec, id, data);
+      return updateCatalog(spec, id, data, atorDaRequisicao(request));
     },
 
     async remove(request: FastifyRequest) {
       const { id } = idParamSchema.parse(request.params);
-      await deleteCatalog(spec, id);
+      await deleteCatalog(spec, id, atorDaRequisicao(request));
       return { success: true };
     },
 
     async restore(request: FastifyRequest) {
       const { id } = idParamSchema.parse(request.params);
-      return restoreCatalog(spec, id);
+      return restoreCatalog(spec, id, atorDaRequisicao(request));
     },
   };
 }

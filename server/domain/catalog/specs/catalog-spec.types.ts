@@ -48,8 +48,10 @@ export interface CatalogDelegate {
 export interface CatalogSpec {
   /** Vira a rota: 'categories' → /api/categories */
   slug: string;
-  /** Vira o `entityType` do ActivityLog: 'Category' */
+  /** Vira o `entityType` do AuditLog: 'Category' */
   entityType: string;
+  /** A tabela no banco, para a trava da edição (`update-catalog.usecase.ts`). */
+  tabela: string;
   /** Nome em português, para a mensagem de erro do 409 */
   rotulo: string;
 
@@ -60,13 +62,13 @@ export interface CatalogSpec {
 
   /**
    * Allowlist de resposta. Precisa conter todo campo de `audited`, senão o diff
-   * do ActivityLog compara contra `undefined` e marca como alterado o que não foi.
+   * do AuditLog compara contra `undefined` e marca como alterado o que não foi.
    * Aceita `select` aninhado (`{ manufacturer: { select: { id: true, name: true } } }`).
    */
   select: Record<string, unknown>;
   /** Campos varridos pela busca `?q=` */
   searchable: readonly string[];
-  /** Campos que entram no diff do ActivityLog */
+  /** Campos que entram no diff do AuditLog */
   audited: readonly string[];
 
   /**

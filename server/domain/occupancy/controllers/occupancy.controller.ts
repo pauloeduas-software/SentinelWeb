@@ -1,4 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { SEM_PARAMETROS } from '../../../core/http/sem-parametros';
 import {
@@ -24,7 +25,8 @@ export const occupancyController = {
   async add(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
     const data = addOccupantSchema.parse(request.body ?? {});
-    const ocupacao = await addWorkstationOccupant(id, data);
+    // O autor vem da SESSÃO, nunca do corpo (auth/helpers/actor.helper.ts).
+    const ocupacao = await addWorkstationOccupant(id, data, atorDaRequisicao(request));
     return reply.status(201).send(ocupacao);
   },
 
@@ -32,7 +34,7 @@ export const occupancyController = {
   // use-case — histórico de posto é append-only.
   async end(request: FastifyRequest) {
     const { id, occupantId } = occupantParamsSchema.parse(request.params);
-    return endWorkstationOccupancy(id, occupantId);
+    return endWorkstationOccupancy(id, occupantId, atorDaRequisicao(request));
   },
 
   // PATCH e não PUT: corrige UM atributo do vínculo aberto, e o resto da
@@ -40,7 +42,7 @@ export const occupancyController = {
   async updateShift(request: FastifyRequest) {
     const { id, occupantId } = occupantParamsSchema.parse(request.params);
     const { shift } = updateOccupantShiftSchema.parse(request.body ?? {});
-    return updateOccupantShift(id, occupantId, shift);
+    return updateOccupantShift(id, occupantId, shift, atorDaRequisicao(request));
   },
 
   // Só as ocupações ABERTAS: é o que a ficha da pessoa mostra. O histórico

@@ -1,12 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
 import { nextAssetTag } from '../../settings/use-cases/app-settings.usecase';
 import {
   assertEscolhaAtiva, assertLocalRecebe, lerModeloTravado, lerStatusTravado,
 } from '../../catalog/helpers/catalog-lock.helper';
-import { ASSET_WRITE_SELECT } from '../helpers/asset-select.helper';
+import { buildSnapshot } from '../../shared/diff.helper';
+import { ASSET_SELECT, CAMPOS_AUDITADOS_DO_ATIVO, semCusto } from '../helpers/asset-select.helper';
 import { assertEtiquetaESerieLivres } from './assert-unique-asset.usecase';
 
 export interface CreateAssetData {
@@ -22,7 +24,7 @@ export interface CreateAssetData {
   purchaseCost?: string | null;
 }
 
-export async function createAsset(data: CreateAssetData) {
+export async function createAsset(data: CreateAssetData, ator: Ator) {
   // Tudo numa transação: a etiqueta é consumida de um contador global, e se a
   // criação falhar depois disso o número precisa voltar — senão a sequência
   // ganha um buraco a cada erro de validação.
@@ -66,21 +68,23 @@ export async function createAsset(data: CreateAssetData) {
         purchaseDate: data.purchaseDate ?? null,
         purchaseCost: data.purchaseCost ?? null,
       },
-      select: ASSET_WRITE_SELECT,
+      select: ASSET_SELECT,
     });
 
-    await recordActivity(
+    await recordAudit(
       tx,
       {
         entityType: 'Asset',
         entityId: ativo.id,
+        entityLabel: ativo.assetTag,
         action: 'CREATE',
-        changes: {
-          assetTag: ativo.assetTag, serial: ativo.serial, modelId: ativo.modelId, statusId: ativo.statusId,
-        },
+        changes: buildSnapshot(ativo, CAMPOS_AUDITADOS_DO_ATIVO),
       },
+      ator,
     );
 
-    return ativo;
+    // O custo é lido porque o retrato o audita; a resposta não o leva (D77),
+    // como na edição.
+    return semCusto(ativo);
   });
 }

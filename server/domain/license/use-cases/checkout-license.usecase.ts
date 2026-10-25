@@ -1,11 +1,13 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
 import { travarPessoaOuFalhar } from '../../person/use-cases/lock-person.usecase';
 import { travarAtivo } from '../../asset/use-cases/lock-asset.usecase';
 import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
 import { hojeNoBrasil, instanteDoDia } from '../../shared/hoje.helper';
 import { fraseSemVaga } from '../helpers/license-count.helper';
-import { CHECKOUT_SELECT } from '../helpers/license-select.helper';
+import { CHECKOUT_SELECT, marcaDaChave } from '../helpers/license-select.helper';
 import { diasParaVencer, statusDaLicenca } from '../helpers/license-status.helper';
 import type { CheckoutLicenseData } from '../schemas/license.schema';
 import { contarUsoDe, type ClienteLicenca } from './count-license-checkouts.usecase';
@@ -223,7 +225,7 @@ function assertLicencaVigente(
   }
 }
 
-export async function checkoutLicense(licenseId: string, data: CheckoutLicenseData) {
+export async function checkoutLicense(licenseId: string, data: CheckoutLicenseData, ator: Ator) {
   // Fora da transação: é validação de FORMATO do corpo, não lê o banco.
   const alvo = assertAlvoCoerente(data);
 
@@ -260,7 +262,7 @@ export async function checkoutLicense(licenseId: string, data: CheckoutLicenseDa
       throw new AppError(fraseSemVaga(licenca.name, licenca.seatsTotal, uso), 409);
     }
 
-    return tx.licenseCheckout.create({
+    const entrega = await tx.licenseCheckout.create({
       data: {
         licenseId,
         // As duas escritas a partir do alvo JÁ ESCOLHIDO, nunca do corpo.
@@ -272,5 +274,22 @@ export async function checkoutLicense(licenseId: string, data: CheckoutLicenseDa
       },
       select: CHECKOUT_SELECT,
     });
+
+    await recordAudit(tx, {
+      entityType: 'License',
+      entityId: licenseId,
+      entityLabel: licenca.name,
+      action: 'CHECKOUT',
+      changes: {
+        checkoutId: entrega.id,
+        targetType: alvo.tipo,
+        targetId: alvo.id,
+        targetName: nomeDoAlvo,
+        checkoutAt: entrega.checkoutAt.toISOString(),
+        chave: marcaDaChave(null, data.productKey ?? null),
+      },
+    }, ator);
+
+    return entrega;
   });
 }

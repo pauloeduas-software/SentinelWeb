@@ -19,6 +19,35 @@ export const USER_PUBLIC_SELECT = {
 } as const;
 
 /**
+ * Os campos da conta que a auditoria guarda (AB). A SENHA nunca: nem o hash
+ * entra — a troca vai só como `senha: 'alterada'`.
+ */
+export const CAMPOS_AUDITADOS_DO_USUARIO = ['name', 'email', 'role', 'isActive'] as const;
+
+/**
+ * O que a auditoria lê da conta para o retrato e o diff — tirado da lista de
+ * cima, para as duas não divergirem: campo na lista e fora do select seria
+ * `undefined` dos dois lados, e nunca apareceria na auditoria.
+ */
+export const USER_AUDIT_SELECT = Object.fromEntries(
+  CAMPOS_AUDITADOS_DO_USUARIO.map((campo) => [campo, true]),
+) as { [K in (typeof CAMPOS_AUDITADOS_DO_USUARIO)[number]]: true };
+
+type ContaPublica = { [K in keyof typeof USER_PUBLIC_SELECT]: unknown };
+
+/**
+ * Da linha lida com o select da auditoria, só o que a resposta pode levar — a
+ * mesma lista do `USER_PUBLIC_SELECT`, para as duas não divergirem.
+ */
+export function soPublico<T extends ContaPublica>(linha: T): Pick<T, keyof typeof USER_PUBLIC_SELECT> {
+  const publico: Record<string, unknown> = {};
+  for (const campo of Object.keys(USER_PUBLIC_SELECT) as (keyof typeof USER_PUBLIC_SELECT)[]) {
+    publico[campo] = linha[campo];
+  }
+  return publico as Pick<T, keyof typeof USER_PUBLIC_SELECT>;
+}
+
+/**
  * A LISTAGEM de usuários — o público mais o que a tabela de Usuários mostra e
  * a sessão não precisa.
  *

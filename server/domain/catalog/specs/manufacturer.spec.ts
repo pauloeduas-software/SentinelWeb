@@ -4,6 +4,7 @@ import type { CatalogDelegate, CatalogSpec } from './catalog-spec.types';
 export const manufacturerSpec: CatalogSpec = {
   slug: 'manufacturers',
   entityType: 'Manufacturer',
+  tabela: 'manufacturers',
   rotulo: 'fabricante',
 
   delegate: (client) => client.manufacturer as unknown as CatalogDelegate,

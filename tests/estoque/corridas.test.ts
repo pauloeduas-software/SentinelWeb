@@ -144,3 +144,18 @@ describe('troca do tipo da categoria STOCK → ASSET × cadastro de item nela', 
     }
   });
 });
+
+describe('restaurar o mesmo item duas vezes ao mesmo tempo', () => {
+  it('restaura UMA vez, e a auditoria tem um RESTORE só', async () => {
+    const item = await criarItemDeEstoque(api, { name: 'Teclado da lixeira disputada', categoryId: cenario.categoriaEstoqueId });
+    expect((await api.delete(`/api/stock/items/${item.id}`)).status).toBe(200);
+
+    const respostas = await Promise.all([
+      api.post(`/api/stock/items/${item.id}/restore`),
+      api.post(`/api/stock/items/${item.id}/restore`),
+    ]);
+
+    expect(placar(respostas)).toEqual({ 200: 1, 404: 1 });
+    expect(await prisma.auditLog.count({ where: { action: 'RESTORE', entityId: item.id } })).toBe(1);
+  });
+});

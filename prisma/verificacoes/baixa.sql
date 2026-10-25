@@ -35,16 +35,25 @@ FROM assets a
 WHERE (a."retiredAt" IS NULL) <> (a."retiredReason" IS NULL);
 
 \echo ''
-\echo '### 3. Saida do patrimonio sem linha no historico  -> esperado: 0 linhas'
--- RETIRE grava `assets` e `activity_logs` na MESMA transacao. Um ativo
+\echo '### 3. Saida do patrimonio sem linha na auditoria  -> esperado: 0 linhas'
+-- RETIRE grava `assets` e `audit_logs` na MESMA transacao. Um ativo
 -- baixado sem o evento correspondente significa escrita fora do
 -- use-case — e um ativo que sumiu do parque sem explicacao.
 SELECT a."assetTag", a."retiredAt"
 FROM assets a
 WHERE a."retiredAt" IS NOT NULL
   AND NOT EXISTS (
-    SELECT 1 FROM activity_logs l
+    SELECT 1 FROM audit_logs l
     WHERE l."entityType" = 'Asset' AND l."entityId" = a.id AND l.action = 'RETIRE'
   );
+
+\echo ''
+\echo '### 4. Observacao de baixa num ativo que nao saiu  -> esperado: 0 linhas'
+-- Desfazer a baixa limpa a observacao junto com o motivo e a data. Sobrou
+-- observacao sem baixa: a tela nao a mostra, e ela explicaria uma saida que
+-- nao existe mais.
+SELECT a."assetTag", a."retiredNotes"
+FROM assets a
+WHERE a."retiredAt" IS NULL AND a."retiredNotes" IS NOT NULL;
 
 ROLLBACK;

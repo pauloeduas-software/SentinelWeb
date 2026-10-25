@@ -1,6 +1,7 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
-import { recordActivity } from '../../activity/use-cases/record-activity.usecase';
+import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
+import type { Ator } from '../../audit/audit.types';
 import { buildSnapshot } from '../../shared/diff.helper';
 import {
   assertEscolhaAtiva, assertLocalRecebe, lerCategoriaTravada,
@@ -10,7 +11,8 @@ import { comSaldo, type ClienteEstoque } from '../helpers/stock-balance.helper';
 import { STOCK_ITEM_SELECT } from '../helpers/stock-select.helper';
 import type { CreateStockItemInput } from '../schemas/stock.schema';
 
-const CAMPOS_AUDITADOS = ['name', 'qty', 'categoryId', 'locationId', 'notes'] as const;
+/** O retrato do item na auditoria — o cadastro e a exclusão (`delete-stock-item`). */
+export const CAMPOS_AUDITADOS = ['name', 'qty', 'categoryId', 'locationId', 'notes'] as const;
 
 /**
  * A categoria do item tem que ser do tipo ESTOQUE.
@@ -53,7 +55,7 @@ export async function assertNomeLivre(client: ClienteEstoque, name: string, igno
   if (outro) throw new AppError(`Já existe um item de estoque chamado "${name}".`, 409);
 }
 
-export async function createStockItem(data: CreateStockItemInput) {
+export async function createStockItem(data: CreateStockItemInput, ator: Ator) {
   return prisma.$transaction(async (tx) => {
     await assertCategoriaDeEstoque(tx, data.categoryId);
     await assertNomeLivre(tx, data.name);
@@ -81,12 +83,13 @@ export async function createStockItem(data: CreateStockItemInput) {
       });
     }
 
-    await recordActivity(tx, {
+    await recordAudit(tx, {
       entityType: 'StockItem',
       entityId: item.id,
+      entityLabel: item.name,
       action: 'CREATE',
       changes: buildSnapshot(item, CAMPOS_AUDITADOS),
-    });
+    }, ator);
 
     // COM SALDO, como a listagem e o detalhe: uma forma só de item na API.
     // `fora` é zero por construção — nada saiu de um item que acabou de nascer.

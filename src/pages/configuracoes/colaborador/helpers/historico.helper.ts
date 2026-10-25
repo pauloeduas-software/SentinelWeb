@@ -1,18 +1,17 @@
 import type { EventoDaPessoa } from '../../../../domain/shared/person.types';
-import { lerEvento, rotuloDaAcao, type LeituraDoEvento } from '../../../helpers/historico.helper';
+import { rotuloDaAcao } from '../../../helpers/historico.helper';
 
 // O que o Histórico da PESSOA acrescenta ao leitor genérico
-// (`src/pages/helpers/historico.helper.ts`): os nomes das colunas de `people`, o
-// segundo mapa de ação (o do POSTO) e a frase do título — que aqui depende da
-// FONTE, e não só da ação.
+// (`src/pages/helpers/historico.helper.ts`): o segundo mapa de ação (o do POSTO)
+// e a frase do título — que aqui depende da FONTE, e não só da ação.
 
 /**
  * `CREATE` e `END` vindos da fonte POSTO querem dizer outra coisa.
  *
- * O servidor usa o vocabulário do `ActivityLog` para a ocupação — é uma palavra
+ * O servidor usa o vocabulário da auditoria para a ocupação — é uma palavra
  * só para o mesmo evento em todo o sistema (ver `person-history.usecase.ts`) —, e
- * quem desfaz a ambiguidade é a fonte. Sem este segundo mapa, "entrou na Mesa 1"
- * apareceria como "Cadastrado" no meio da linha do tempo da pessoa.
+ * quem o traduz é a fonte. Sem este mapa, "entrou na Mesa 1" apareceria como
+ * "CREATE" no meio da linha do tempo da pessoa.
  */
 const ROTULO_DA_ACAO_NO_POSTO: Record<string, string> = {
   CREATE: 'Entrou no posto',
@@ -25,25 +24,13 @@ const ROTULO_DA_ACAO_NA_LICENCA: Record<string, string> = {
   CHECKIN: 'Devolveu a licença',
 };
 
-/** Os nomes de coluna que aparecem no diff, em português. */
-const ROTULO_DO_CAMPO: Record<string, string> = {
-  name: 'Nome',
-  email: 'E-mail',
-  isActive: 'Ativo',
-};
-
-export function lerEventoDaPessoa(evento: EventoDaPessoa): LeituraDoEvento {
-  return lerEvento(evento, ROTULO_DO_CAMPO);
-}
-
 /**
  * A linha de assunto do evento, do ponto de vista da pessoa.
  *
  * As fontes falam de coisas diferentes e por isso a frase muda: a posse nomeia
  * o EQUIPAMENTO ("Entregue: ATV-00012 — Dell Latitude"), o posto nomeia o LUGAR
  * e o turno ("Entrou no posto: Mesa 1 (Manhã)"), a licença nomeia o SOFTWARE
- * ("Recebeu a licença: Microsoft 365"), e a atividade fala da própria pessoa
- * ("Editado").
+ * ("Recebeu a licença: Microsoft 365").
  *
  * É o espelho do título do ativo, que nomeia o ALVO — lá a pergunta é "para
  * quem foi?", aqui é "o que ela recebeu?".
