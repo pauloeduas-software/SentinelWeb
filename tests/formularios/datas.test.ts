@@ -14,8 +14,7 @@ import { cenarioDePosse, criarAtivo, criarColaborador, criarPosto } from '../hel
 //
 //   devolução   recusa o PASSADO — uma entrega com prazo para ontem NASCE
 //   prevista    vencida: o prazo expira no mesmo segundo em que o
-//               e, com o lembrete automático da Leva 3, cobraria de volta o
-//               que acabou de sair do estoque.
+//               equipamento sai, que é um cadastro que ninguém quis fazer.
 //
 // HOJE é aceito nos dois: "ocupa desde hoje" e "devolve hoje" são pedidos
 // legítimos, e a comparação é contra meia-noite UTC — a mesma referência que o
