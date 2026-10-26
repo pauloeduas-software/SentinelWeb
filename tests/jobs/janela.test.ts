@@ -7,9 +7,10 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 //
 // O QUE ESTA SUÍTE EXISTE PARA IMPEDIR é o bug que a decisão descreve e que
 // NINGUÉM notaria em produção: com uma coluna só (`AppSetting.lastAlertRunAt`),
-// o lembrete de atraso e os alertas diários fariam compare-and-set no mesmo
-// lugar. O primeiro a acordar venceria; o segundo receberia `count: 0`, leria
-// como "já rodou hoje" e nunca executaria. Todo dia, sem erro e sem log.
+// dois jobs — hoje, a reconciliação e o expurgo da telemetria — fariam
+// compare-and-set no mesmo lugar. O primeiro a acordar venceria; o segundo
+// receberia `count: 0`, leria como "já rodou hoje" e nunca executaria. Todo
+// dia, sem erro e sem log.
 //
 // O primeiro teste deste arquivo é exatamente esse cenário — dois jobs, o mesmo
 // dia — e ele só passa porque a tabela tem uma LINHA POR JOB.

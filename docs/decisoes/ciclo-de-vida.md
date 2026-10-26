@@ -83,6 +83,10 @@ vez por dia — `tsx watch`, dois deploys num dia — **nunca chega aos 24 h e o
 
 ## D57 — A central no app é o canal primário; SMTP mora no `.env`.
 
+> **Superada por [D151](./escopo.md#d151--a-central-de-alertas-e-o-webhook-saem) e pelo
+> [segundo de-escopo](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):**
+> a central saiu, e o correio inteiro com ela. O sistema não envia e-mail.
+
 **Decidido:** toda notificação vira linha em `alerts` **antes** de virar mensagem, e o transporte
 continua lendo `SMTP_URL`/`MAIL_FROM` do ambiente, em modo no-op quando falta.
 **Descartado:** disparar e-mail direto do job; e guardar senha de SMTP no banco.
@@ -179,6 +183,11 @@ string `frota` na posição, nunca `null` interpolado.
 
 ## D126 — O webhook tem allowlist de destino; `notifiedAt` é do ALERTA, e a rodada seguinte reenvia o nulo.
 
+> **Superada por [D151](./escopo.md#d151--a-central-de-alertas-e-o-webhook-saem):** o webhook e a
+> central saíram, e o `mailer.ts` com o
+> [segundo de-escopo](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai).
+> O sistema não envia e-mail.
+
 **Decidido:** `server/core/webhook/webhook.ts`, irmão do `mailer.ts` — mesmo contrato (não lança,
 loga, best-effort). A URL vem de `AppSetting.alertWebhookUrl` e **é validada antes de cada POST**:
 só `https:`, e host que não seja loopback, link-local (`169.254.0.0/16`), privado (RFC 1918) nem
@@ -217,6 +226,10 @@ e nenhum dos três merece cobrança de prazo.
 ---
 
 ## D128 — A central nasce só com os sinais do ATIVO.
+
+> **Superada por [D151](./escopo.md#d151--a-central-de-alertas-e-o-webhook-saem):** a central saiu.
+> Os alertas de licença e de estoque ficam onde esta decisão os deixou, na própria tela; o e-mail de
+> licença vencendo que ela previa não nasce — o sistema não envia e-mail.
 
 **Decidido:** os quatro valores de `AlertType` são todos do ativo. Os alertas de **licença**
 (`/api/licenses/alerts` — vencendo, assentos baixos, F6) e de **estoque** (`/api/stock/alerts`, F5)
