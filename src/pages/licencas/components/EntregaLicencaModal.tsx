@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Laptop, User, X } from 'lucide-react';
 import ReferenceSelect from '../../components/ReferenceSelect';
+import { useLicenseQuery } from '../../../domain/license/license.queries';
 import type { AlvoDaEntrega, Licenca } from '../../../domain/shared/license.types';
 import { hojeNoCampoDeData } from '../../helpers/format.helper';
+import { chavesComLugar, lugarDaChave, rotuloDaChave } from '../helpers/licenca.helper';
 
 // A ENTREGA DE UMA LICENÇA.
 //
@@ -14,6 +16,11 @@ import { hojeNoCampoDeData } from '../../helpers/format.helper';
 // ele. Licença por assinatura de pessoa (Microsoft 365, Adobe) vai para o
 // colaborador.
 // ═════════════════════════════════════════════════════════════════════════════
+//
+// A CHAVE É ESCOLHIDA DA LISTA DA LICENÇA (AC), e não digitada: é o que diz
+// qual chave está com cada um. A lista vem do detalhe, que é a leitura com as
+// chaves. Com chaves cadastradas, escolher é obrigatório; só aparecem as que têm
+// lugar, e com uma só ela já vem escolhida. A licença sem chave entrega sem.
 
 const CLASSE_CAMPO =
   'w-full p-2 bg-bg-base border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors';
@@ -31,14 +38,21 @@ export default function EntregaLicencaModal({ licenca, onClose, onSubmit }: Entr
   const [personId, setPersonId] = useState('');
   const [assetId, setAssetId] = useState('');
   const [notes, setNotes] = useState('');
-  const [productKey, setProductKey] = useState('');
+  const [chaveEscolhida, setChaveEscolhida] = useState('');
   // Vem com hoje; pode voltar para registrar a entrega que já aconteceu.
   const hoje = hojeNoCampoDeData();
   const [checkoutAt, setCheckoutAt] = useState(hoje);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
-  const pronto = (alvo === 'PERSON' ? personId !== '' : assetId !== '') && checkoutAt !== '';
+  const { data: detalhe, error: erroDoDetalhe } = useLicenseQuery(licenca.id);
+  const chaves = detalhe?.keys ?? [];
+  const comLugar = chavesComLugar(chaves);
+  // Com uma chave só com lugar, ela já vem escolhida.
+  const licenseKeyId = chaveEscolhida || (comLugar.length === 1 ? comLugar[0].id : '');
+  const chaveResolvida = detalhe !== undefined && (chaves.length === 0 || licenseKeyId !== '');
+
+  const pronto = (alvo === 'PERSON' ? personId !== '' : assetId !== '') && checkoutAt !== '' && chaveResolvida;
 
   const enviar = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -48,7 +62,7 @@ export default function EntregaLicencaModal({ licenca, onClose, onSubmit }: Entr
     // SÓ a chave do alvo escolhido vai no corpo. Mandar as duas responde 422
     // pelo use-case, e o banco tem o CHECK por baixo — mas montar o corpo certo
     // aqui é o que faz o erro nunca acontecer por descuido da tela.
-    const comum = { notes: notes.trim() || null, checkoutAt, productKey: productKey.trim() || null };
+    const comum = { notes: notes.trim() || null, checkoutAt, ...(licenseKeyId ? { licenseKeyId } : {}) };
     const corpo: AlvoDaEntrega = alvo === 'PERSON'
       ? { assignedPersonId: personId, ...comum }
       : { assignedAssetId: assetId, ...comum };
@@ -57,7 +71,7 @@ export default function EntregaLicencaModal({ licenca, onClose, onSubmit }: Entr
       await onSubmit(corpo);
     } catch (falha) {
       // É aqui que aparecem o 409 de sem licença livre (com os números), o do
-      // alvo que já está com ela, o da chave que já está em outra entrega, o do
+      // alvo que já está com ela, o da chave que outra aba tomou no meio, o do
       // colaborador desativado e o do ativo baixado.
       setErro((falha as Error).message);
     } finally {
@@ -123,16 +137,33 @@ export default function EntregaLicencaModal({ licenca, onClose, onSubmit }: Entr
             />
           </label>
 
-          <label className="space-y-1.5 block">
-            <span className={ROTULO}>Chave</span>
-            <input
-              value={productKey} onChange={(e) => setProductKey(e.target.value)}
-              spellCheck={false} autoComplete="off" className={`${CLASSE_CAMPO} font-mono`}
-            />
-            <span className="block text-[10px] text-text-tertiary">
-              A chave desta entrega. Deixe vazia quando a licença usa chave de volume.
-            </span>
-          </label>
+          {erroDoDetalhe ? (
+            <p role="alert" className="text-status-danger">Não foi possível carregar as chaves: {erroDoDetalhe.message}</p>
+          ) : !detalhe ? (
+            <p className="text-text-tertiary">Carregando as chaves…</p>
+          ) : chaves.length > 0 && (
+            comLugar.length === 0 ? (
+              <p className="text-text-secondary leading-relaxed">
+                Todas as chaves desta licença estão em uso. Cadastre a chave da próxima licença, em
+                Editar, antes de entregar.
+              </p>
+            ) : (
+              <label className="space-y-1.5 block">
+                <span className={ROTULO}>Chave *</span>
+                <select
+                  required value={licenseKeyId} onChange={(e) => setChaveEscolhida(e.target.value)}
+                  className={`${CLASSE_CAMPO} font-mono`}
+                >
+                  <option value="">Escolha a chave…</option>
+                  {chaves.map((chave, indice) => comLugar.includes(chave) && (
+                    <option key={chave.id} value={chave.id}>
+                      {rotuloDaChave(chave, indice + 1)} — {lugarDaChave(chave)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )
+          )}
 
           <label className="space-y-1.5 block">
             <span className={ROTULO}>Observações</span>

@@ -327,11 +327,22 @@ CREATE TABLE "licenses" (
     "purchaseDate" TIMESTAMP(3),
     "purchaseCost" DECIMAL(12,2),
     "notes" TEXT,
-    "productKey" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "licenses_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "license_keys" (
+    "id" UUID NOT NULL,
+    "licenseId" UUID NOT NULL,
+    "productKey" TEXT NOT NULL,
+    "seats" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "license_keys_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -343,7 +354,7 @@ CREATE TABLE "license_checkouts" (
     "checkoutAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "checkinAt" TIMESTAMP(3),
     "checkoutNotes" TEXT,
-    "productKey" TEXT,
+    "licenseKeyId" UUID,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -531,7 +542,16 @@ CREATE INDEX "licenses_expirationDate_idx" ON "licenses"("expirationDate");
 CREATE INDEX "licenses_terminationDate_idx" ON "licenses"("terminationDate");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "license_keys_licenseId_productKey_key" ON "license_keys"("licenseId", "productKey");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "license_keys_id_licenseId_key" ON "license_keys"("id", "licenseId");
+
+-- CreateIndex
 CREATE INDEX "license_checkouts_licenseId_checkinAt_idx" ON "license_checkouts"("licenseId", "checkinAt");
+
+-- CreateIndex
+CREATE INDEX "license_checkouts_licenseKeyId_checkinAt_idx" ON "license_checkouts"("licenseKeyId", "checkinAt");
 
 -- CreateIndex
 CREATE INDEX "license_checkouts_assignedPersonId_checkinAt_idx" ON "license_checkouts"("assignedPersonId", "checkinAt");
@@ -621,6 +641,9 @@ ALTER TABLE "licenses" ADD CONSTRAINT "licenses_categoryId_fkey" FOREIGN KEY ("c
 ALTER TABLE "licenses" ADD CONSTRAINT "licenses_manufacturerId_fkey" FOREIGN KEY ("manufacturerId") REFERENCES "manufacturers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "license_keys" ADD CONSTRAINT "license_keys_licenseId_fkey" FOREIGN KEY ("licenseId") REFERENCES "licenses"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_licenseId_fkey" FOREIGN KEY ("licenseId") REFERENCES "licenses"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -628,6 +651,9 @@ ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_assignedPerson
 
 -- AddForeignKey
 ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_assignedAssetId_fkey" FOREIGN KEY ("assignedAssetId") REFERENCES "assets"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_licenseKeyId_licenseId_fkey" FOREIGN KEY ("licenseKeyId", "licenseId") REFERENCES "license_keys"("id", "licenseId") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
 ALTER TABLE "reconciliation_suggestions" ADD CONSTRAINT "reconciliation_suggestions_endpointId_fkey" FOREIGN KEY ("endpointId") REFERENCES "endpoints"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -766,13 +792,16 @@ CREATE UNIQUE INDEX "license_checkouts_uma_aberta_por_ativo"
   ON "license_checkouts"("licenseId", "assignedAssetId")
   WHERE "checkinAt" IS NULL AND "assignedAssetId" IS NOT NULL;
 
--- ── A MESMA CHAVE NÃO FICA EM DUAS ENTREGAS ABERTAS DA LICENÇA (AA) ───────
+-- ── INVARIANTE 24: A CHAVE DA ENTREGA É DA LICENÇA, E COBRE AO MENOS UMA (AC) ─
 --
--- A entrega sem chave (licença de volume) não entra: o `IS NOT NULL` a deixa
--- fora do índice. A devolvida também não — a chave volta a poder ser entregue.
-CREATE UNIQUE INDEX "license_checkouts_chave_aberta_unica"
-  ON "license_checkouts"("licenseId", "productKey")
-  WHERE "checkinAt" IS NULL AND "productKey" IS NOT NULL;
+-- Que a chave é DA PRÓPRIA licença, a FK composta (`licenseKeyId`, `licenseId`)
+-- já garante, lá em cima. Aqui, a forma da chave: cobre ao menos uma licença,
+-- e não é vazia. Quantas entregas abertas cada chave tem, e quanto as chaves
+-- somam contra o comprado, cruzam tabelas — são da aplicação, sob a trava da
+-- licença.
+ALTER TABLE "license_keys" ADD CONSTRAINT "license_keys_seats_positivo" CHECK ("seats" >= 1);
+
+ALTER TABLE "license_keys" ADD CONSTRAINT "license_keys_chave_preenchida" CHECK (btrim("productKey") <> '');
 
 -- ── O CONTRATO: AO MENOS UMA, E AS DATAS NÃO ANTECEDEM A COMPRA ───────────
 --

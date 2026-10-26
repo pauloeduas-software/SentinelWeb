@@ -200,16 +200,16 @@ export function useLicencas() {
   };
 
   /**
-   * A troca da chave de uma entrega aberta. Diz se deu certo, para a linha só
-   * sair da edição quando a chave foi gravada.
+   * A troca da chave de uma entrega aberta, por outra da lista. Diz se deu
+   * certo, para a linha só sair da edição quando a chave foi gravada.
    */
-  const handleTrocarChave = async (checkoutId: string, productKey: string | null): Promise<boolean> => {
+  const handleTrocarChave = async (checkoutId: string, licenseKeyId: string): Promise<boolean> => {
     try {
-      await trocarChave.mutateAsync({ checkoutId, productKey });
+      await trocarChave.mutateAsync({ checkoutId, licenseKeyId });
       return true;
     } catch (erro) {
-      // O 409 da chave que já está em outra entrega aberta, e o da entrega que
-      // foi devolvida enquanto a tela estava aberta.
+      // O 409 da chave que ficou sem lugar (outra aba tomou o último), e o da
+      // entrega que foi devolvida enquanto a tela estava aberta.
       notificar.erro((erro as Error).message);
       return false;
     }

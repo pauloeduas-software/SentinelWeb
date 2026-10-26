@@ -13,13 +13,14 @@ import {
   ROTULO_DO_STATUS, resumoDaContagem, textoDoPrazo, textoDoValorDaCompra,
 } from '../../helpers/licenca.helper';
 import { formatarData } from '../../helpers/format.helper';
-import { motivoParaNaoEntregar, motivoParaNaoExcluir } from '../helpers/licenca.helper';
+import { lugarDaChave, motivoParaNaoEntregar, motivoParaNaoExcluir } from '../helpers/licenca.helper';
 
 // O DETALHE DA LICENÇA: o status e a conta, as ações da lista, todos os campos
 // do cadastro, quem está com ela agora e o histórico — as duas listas de 15 em 15.
 //
-// É A ÚNICA TELA COM A CHAVE DE PRODUTO: a da licença, no topo, e a de cada
-// entrega, em "Com quem está" — as duas escondidas até "Mostrar".
+// É A ÚNICA TELA COM AS CHAVES DE PRODUTO: as da licença, no topo, numeradas e
+// com quanto cada uma cobre, e a de cada entrega, em "Com quem está" — todas
+// escondidas até "Mostrar" (AC).
 
 interface LicencaDetalheModalProps {
   licenca: Licenca;
@@ -32,8 +33,8 @@ interface LicencaDetalheModalProps {
   onExcluir?: (licenca: Licenca) => void;
   /** `checkinAt` é o dia, 'AAAA-MM-DD'. Resolve `true` quando a devolução deu certo. */
   onDevolver: (checkoutId: string, checkinAt: string) => Promise<boolean>;
-  /** Troca só a chave de uma entrega aberta. Resolve `true` quando deu certo. */
-  onTrocarChave: (checkoutId: string, productKey: string | null) => Promise<boolean>;
+  /** Troca só a chave de uma entrega aberta, por outra da lista. Resolve `true` quando deu certo. */
+  onTrocarChave: (checkoutId: string, licenseKeyId: string) => Promise<boolean>;
 }
 
 /** As duas listas do detalhe andam de 15 em 15. */
@@ -174,13 +175,22 @@ export default function LicencaDetalheModal({
             <p role="alert" className="text-status-danger">Não foi possível atualizar a licença: {erroDoDetalhe.message}</p>
           )}
 
-          {/* A chave só chega com o detalhe: a linha da listagem não a traz. O
-              `key` pela licença: trocar de licença pelo link com a janela aberta
+          {/* As chaves só chegam com o detalhe: a linha da listagem não as traz.
+              O `key` pela chave: trocar de licença pelo link com a janela aberta
               não leva o "Mostrar" ligado para a chave da outra. */}
-          <Campo rotulo="Chave do produto">
-            {detalhe?.productKey
-              ? <ChaveEscondida key={detalhe.id} chave={detalhe.productKey} />
-              : detalhe ? '—' : erroDoDetalhe ? 'Não foi possível carregar' : 'Carregando…'}
+          <Campo rotulo="Chaves do produto">
+            {!detalhe ? (erroDoDetalhe ? 'Não foi possível carregar' : 'Carregando…')
+              : detalhe.keys.length === 0 ? '—' : (
+                <ol className="space-y-1.5">
+                  {detalhe.keys.map((chave, indice) => (
+                    <li key={chave.id} className="flex flex-wrap items-start gap-x-3 gap-y-1">
+                      <span className="text-text-tertiary">{indice + 1}.</span>
+                      <ChaveEscondida chave={chave.productKey} />
+                      <span className="text-[10px] text-text-tertiary">{lugarDaChave(chave)}</span>
+                    </li>
+                  ))}
+                </ol>
+              )}
           </Campo>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -215,6 +225,7 @@ export default function LicencaDetalheModal({
             <Estado carregando={entregas.isPending} erro={entregas.error}>
               <EntregasAbertas
                 entregas={entregas.data?.rows ?? []}
+                chaves={detalhe?.keys ?? []}
                 vazio={buscaAdiada ? `Ninguém com "${buscaAdiada}" está com esta licença.` : undefined}
                 ocupado={ocupado}
                 onDevolver={devolver}

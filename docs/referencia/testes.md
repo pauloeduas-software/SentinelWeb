@@ -132,20 +132,24 @@ licença e os seus alvos quando vai mudá-los: rodado sozinho com `-t`, ele pass
   nunca foi entregue (a FK recusa por fora) e o alerta, na ordem de urgência e com a contagem
   de cada motivo. O bloco do alerta começa devolvendo tudo e apagando os vencimentos que os
   testes de cima deixaram: a caixa corta em seis.
-- **`chave.test.ts`** — a chave da licença (várias linhas, só o detalhe a devolve) e a de cada
-  entrega (única entre as abertas da licença), a troca da chave, as rotas que nunca a devolvem
-  — o alerta incluído, com uma licença que está nele —, e como a tela a esconde.
+- **`chave.test.ts`** — a lista de chaves da licença (a ordem digitada, o "cobre", a soma contra o
+  comprado, a repetida; a edição que inclui, corrige e tira, a já entregue que não sai nem
+  encolhe, e a correção que troca o texto entre duas chaves), a chave escolhida na entrega (obrigatória com chaves, cada uma até o que cobre, a de
+  outra licença é 404), a troca, as rotas que nunca a devolvem — o alerta incluído, com uma
+  licença que está nele —, a exclusão que leva as chaves junto, e como a tela a esconde.
 - **`historico.test.ts`** — o histórico separado por alvo, e o da licença só com entregas e
   devoluções: cadastro e edição ficam na auditoria, e o histórico não os lê. A paginação sai do banco, e
   a entrega e a devolução no mesmo dia passado — o mesmo instante — vêm devolução primeiro.
 - **`posse.test.ts`** — o 409 da pessoa e do ativo, com o nome de cada licença e as `refs` que
   a tela transforma em link, e a ficha e a aba Licenças que listam só o que é de cada um.
-- **`invariantes.test.ts`** — os dois CHECKs da entrega e o `licenseId` obrigatório, os três
-  índices parciais (alvo e chave) e os três CHECKs da licença (quantidade e datas), por SQL cru.
+- **`invariantes.test.ts`** — os dois CHECKs da entrega e o `licenseId` obrigatório, os dois
+  índices parciais do alvo, a FK composta que recusa a chave de outra licença, os dois CHECKs e a
+  unicidade da chave, e os três CHECKs da licença (quantidade e datas), por SQL cru.
 - **`corridas.test.ts`** — oito entregas a oito pessoas DIFERENTES numa licença de três:
   passam três. Pessoas diferentes de propósito — com o mesmo alvo, a trava do alvo
-  serializaria tudo antes da licença, e o teste passaria sem provar a trava que importa. E a
-  redução, a exclusão e o Encerrar contra a entrega, e a devolução dupla. A exclusão que perde
+  serializaria tudo antes da licença, e o teste passaria sem provar a trava que importa. Oito
+  entregas simultâneas na mesma chave que cobre duas: passam duas. E a redução, a exclusão e o
+  Encerrar contra a entrega, e a devolução dupla. A exclusão que perde
   tem que perder pela regra, com a frase dela — o 409 genérico da FK passaria sem a trava.
 
 

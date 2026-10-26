@@ -7,7 +7,7 @@
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D39–D44, D90–D94, G da segunda rodada (ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)) e AA.
+> [`README.md`](./README.md#a-segunda-rodada-ap)), AA, AC e AD.
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
@@ -365,6 +365,15 @@ handshake, com a nota de que o servidor não guarda — mesma escolha do A para 
 
 ## AA — A licença vira quantidade e entregas: sem vaga numerada, sem lixeira, com Encerradas
 
+> **Superada em parte por [AD](#ad--renovar-é-editar-o-vencimento-o-suporte-a-oem-e-o-comprovante-não-viram-campo):**
+> a renovação é a mesma licença, com o vencimento editado; o nome repetido é o contrato novo, que
+> convive com o antigo encerrado.
+
+> **Superada em parte por [AC](#ac--a-chave-vira-lista-cada-uma-cobre-uma-quantidade-e-a-entrega-escolhe-uma):**
+> a chave da licença deixa de ser texto de várias linhas e a da entrega deixa de ser digitada —
+> a licença tem uma lista de chaves, cada uma com quanto cobre, e a entrega escolhe uma. O índice
+> `license_checkouts_chave_aberta_unica` sai.
+
 > **Superada em parte por [AB](./acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco):** a licença
 > deixa de ficar sem trilha. Cadastro, edição, entrega, troca de chave, devolução, encerramento e
 > exclusão gravam na auditoria, com quem fez — a chave só como "informada", "alterada" ou
@@ -472,3 +481,111 @@ uma por ativo, a chave aberta única), e `licenses` perde `minSeats`, `deletedAt
 (`licenses_seats_positivo`, no lugar do `licenses_seats_nao_negativo`) e o vencimento e o
 encerramento que não antecedem a compra.
 
+---
+
+## AC — A chave vira lista: cada uma cobre uma quantidade, e a entrega escolhe uma
+
+**Decidido** (2026-10-26, na conversa sobre o que falta para a licença ficar completa):
+
+- **A chave de produto vira uma lista**, `license_keys`: uma linha por chave, cada uma com
+  quantas licenças cobre (`seats`) — 1 na chave individual, mais na de volume. O formulário tem
+  "Adicionar chave", uma embaixo da outra, e colar uma lista com várias linhas cria uma chave por
+  linha. Sai `License.productKey`, o texto de várias linhas.
+- **As chaves somam no máximo o que foi comprado**: 422 no formulário, e 409 ao reduzir a
+  quantidade abaixo do que elas cobrem. A mesma chave não aparece duas vezes na licença.
+- **A entrega escolhe uma das chaves**, pelo id (`licenseKeyId`), em vez de digitar: é o que diz
+  qual chave está com cada pessoa ou computador. Sai `LicenseCheckout.productKey`.
+  - Com chaves cadastradas, escolher é **obrigatório** (422).
+  - A chave não vai para mais entregas abertas do que cobre (409).
+  - Se todas as chaves estão tomadas e ainda há licença livre, a recusa manda cadastrar a chave
+    da próxima (409).
+  - A conta da quantidade vem antes: sem licença livre, a frase é a de sempre.
+  - A licença **sem chave nenhuma** — a assinatura por conta, como o Microsoft 365 — entrega sem
+    chave.
+- **A chave da entrega é da própria licença no banco**: a FK composta (`licenseKeyId`,
+  `licenseId`) → `license_keys(id, licenseId)` recusa a chave de outra licença até pelo `psql`.
+  O índice `license_checkouts_chave_aberta_unica` sai: a chave de volume vai, de propósito, para
+  várias entregas abertas, e quem conta quantas é a aplicação, com a licença travada
+  (invariante 24).
+- **Trocar a chave da entrega aberta é escolher outra da lista** (`PATCH` com `licenseKeyId`), e
+  "limpar" não existe. É também como a entrega feita antes de a licença ter chaves ganha a sua.
+- **A edição recebe a lista inteira como ficará.**
+  - A chave com `id` pode mudar o texto (a correção de digitação, que vale para as entregas
+    dela) e o "cobre", que nunca fica abaixo das entregas abertas com ela.
+  - A chave sem `id` entra.
+  - A que ficou fora da lista sai, e só se nunca foi entregue, como a licença.
+  - Sem a lista no corpo, as chaves ficam como estão.
+- **A auditoria nunca guarda o texto.** No cadastro e na edição, conta as chaves
+  (`chaves: { incluidas, alteradas, removidas }`). Na entrega e na troca, guarda qual chave, pelo
+  `licenseKeyId`.
+- **A tela numera as chaves**, com a mesma posição no detalhe, no "Com quem está" e na entrega, e
+  as mostra escondidas, com Mostrar e Copiar, como antes.
+
+**Supera em parte:** [AA](#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)
+(a chave da licença em texto de várias linhas, e a da entrega digitada, única entre as abertas) e
+[AB](./acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco) (a marca "informada", "alterada" ou
+"removida" da chave na auditoria).
+
+**Por quê:** com o campo livre, a chave da entrega era um texto qualquer — nada garantia que fosse
+uma das compradas. E a mesma chave de volume, entregue a dez pessoas, colidia no índice que proibia
+repetir. A lista resolve as duas coisas: cada entrega aponta para uma chave comprada, e a de volume
+diz para quantas serve.
+
+**Por que "Adicionar chave", e não um campo para cada licença comprada:** uma assinatura de 300
+licenças, que não tem chave, abriria 300 campos vazios, e a chave de volume deixaria os outros
+campos sobrando. O "cobre" diz a mesma coisa com uma linha, e o "Adicionar" para quando as chaves
+chegam à quantidade comprada.
+
+**O que se perde, declarado:** a licença que tem chaves não entrega sem chave. Quem cadastrou 8
+chaves para 10 licenças cadastra a nona antes da nona entrega. É o preço de a resposta "qual chave
+está com quem" ser sempre completa.
+
+---
+
+## AD — Renovar é editar o vencimento; o suporte, a OEM e o comprovante não viram campo
+
+**Decidido** (2026-10-26, nos quatro casos de uso que a AC deixou sugeridos):
+
+- **Renovar é editar o vencimento da mesma licença.** Quem está com ela continua com ela, e o
+  pedido, a data e o valor da compra podem passar a ser os da renovação: a licença mostra a compra
+  que dá o direito de hoje. Se a renovação trouxe chave nova, troca-se o texto da chave na lista,
+  e vale para quem está com ela. Não existe botão Renovar nem lista de renovações na tela: o
+  vencimento, o pedido e o valor de antes ficam na auditoria, no banco, com quem mudou (AB).
+- **O nome repetido é o contrato novo**, não a renovação: outra versão (o Office 2021 que vira
+  Office 2024), outro fornecedor, outra forma de licenciar. A licença nova recebe as entregas, e a
+  antiga se encerra quando a última for devolvida.
+- **O vencimento é até quando pode usar**, e só isso. A licença perpétua fica sem vencimento — e
+  entrega sempre. O fim do suporte, seja o contrato de manutenção, seja o fim da versão no
+  fabricante, vai nas notas, como a AA já tinha decidido para o "com manutenção". O formulário diz
+  as duas coisas embaixo do Vencimento, que é onde se errava.
+- **A licença OEM não entra em Licenças.** O Windows ou o Office que veio de fábrica no computador
+  é do computador: não passa para outro e acaba com ele. O comprovante é o pedido do próprio ativo,
+  e o sistema instalado aparece na aba Máquina do ativo, pelo que o agente reporta. O formulário da licença nova diz isso
+  embaixo do Nome.
+- **O comprovante é o número do pedido**, que já existe e que a busca encontra. Sem campo de link
+  e sem arquivo. O formulário diz embaixo do campo que ali vai o pedido ou a nota fiscal.
+
+**Supera em parte:** [AA](#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)
+("a renovação convive com o contrato encerrado": quem convive é o contrato novo; a renovação é a
+mesma licença).
+
+**Por quê, caso a caso:**
+
+- **Renovar.** Licença nova a cada renovação obrigaria a devolver e entregar de novo, uma por uma,
+  cada pessoa e computador, porque não existe ação em lote. Editar a data não mexe em ninguém. Uma
+  lista de renovações na tela seria um segundo histórico, e o da tela é só por onde a licença
+  passou e com quem. Quem precisar do valor do ano passado acha na auditoria.
+- **Fim do suporte.** O problema era a perpétua com suporte: quem punha o fim do suporte no
+  Vencimento via a licença vencer e parar de entregar, mas o direito de usar continuava. Um campo
+  próprio traria de volta, com data e alerta, o "com manutenção" que a AA tirou. O que travava era
+  o campo ser ambíguo, e a frase embaixo dele resolve isso.
+- **OEM.** Ela só caberia com o reatribuível e a queima, que a AA tirou: devolvida, a OEM ficaria
+  "livre" para outro computador, o que ela não pode. E a baixa do computador pediria antes a
+  devolução de uma licença que morre com ele.
+- **Comprovante.** O anexo saiu inteiro no segundo de-escopo (O). Um link aponta para fora do
+  sistema e quebra quando o arquivo muda de pasta. O número do pedido é o que o financeiro usa
+  para achar a nota.
+
+**O que se perde, declarado:** o fim do suporte não tem alerta, e quem renova perde de vista na
+tela o valor e o pedido de antes. Se a data da compra passar a ser a da renovação, a entrega
+registrada no passado não vai antes dela.
