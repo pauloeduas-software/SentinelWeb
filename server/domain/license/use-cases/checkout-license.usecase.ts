@@ -7,10 +7,11 @@ import { travarAtivo } from '../../asset/use-cases/lock-asset.usecase';
 import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
 import { hojeNoBrasil, instanteDoDia } from '../../shared/hoje.helper';
 import { fraseSemVaga } from '../helpers/license-count.helper';
-import { CHECKOUT_SELECT, marcaDaChave } from '../helpers/license-select.helper';
+import { CHECKOUT_SELECT } from '../helpers/license-select.helper';
 import { diasParaVencer, statusDaLicenca } from '../helpers/license-status.helper';
 import type { CheckoutLicenseData } from '../schemas/license.schema';
 import { contarUsoDe, type ClienteLicenca } from './count-license-checkouts.usecase';
+import { chaveDaEntrega } from './license-keys.usecase';
 import { travarLicencaOuFalhar } from './lock-license.usecase';
 
 // A ENTREGA DE UMA LICENÇA.
@@ -124,34 +125,6 @@ async function assertAlvoSemEntregaAberta(
 }
 
 /**
- * A mesma chave não fica em duas entregas ABERTAS da licença. A conferência é a
- * frase; o índice único parcial `license_checkouts_chave_aberta_unica` é a rede.
- * Quem chama segura a trava da licença: duas entregas com a mesma chave não
- * passam juntas por aqui.
- */
-export async function assertChaveLivre(
-  client: ClienteLicenca,
-  licenseId: string,
-  nomeDaLicenca: string,
-  productKey: string | null | undefined,
-  excetoEntregaId?: string,
-): Promise<void> {
-  if (!productKey) return;
-  const outra = await client.licenseCheckout.findFirst({
-    where: {
-      licenseId,
-      productKey,
-      checkinAt: null,
-      ...(excetoEntregaId ? { id: { not: excetoEntregaId } } : {}),
-    },
-    select: { id: true },
-  });
-  if (outra) {
-    throw new AppError(`Esta chave já está em outra entrega aberta de "${nomeDaLicenca}".`, 409);
-  }
-}
-
-/**
  * O DIA DA ENTREGA contra o passado da licença — e o instante a gravar.
  *
  * O dia não antecede a data da compra, nem o dia em que o mesmo alvo devolveu
@@ -253,7 +226,6 @@ export async function checkoutLicense(licenseId: string, data: CheckoutLicenseDa
     assertLicencaVigente(licenca);
     await assertAlvoSemEntregaAberta(tx, licenseId, licenca.name, alvo, nomeDoAlvo);
     const checkoutAt = await instanteDaEntrega(tx, licenca, alvo, nomeDoAlvo, data.checkoutAt ?? undefined);
-    await assertChaveLivre(tx, licenseId, licenca.name, data.productKey);
 
     // A CONTA, com a licença travada: nenhuma outra entrega desta licença está
     // em voo, e o número que sai daqui é o que o INSERT vai encontrar.
@@ -262,6 +234,10 @@ export async function checkoutLicense(licenseId: string, data: CheckoutLicenseDa
       throw new AppError(fraseSemVaga(licenca.name, licenca.seatsTotal, uso), 409);
     }
 
+    // A CHAVE depois da conta: sem licença livre, a frase certa é essa, e não a
+    // de que as chaves acabaram (AC).
+    const licenseKeyId = await chaveDaEntrega(tx, licenca, data.licenseKeyId);
+
     const entrega = await tx.licenseCheckout.create({
       data: {
         licenseId,
@@ -269,7 +245,7 @@ export async function checkoutLicense(licenseId: string, data: CheckoutLicenseDa
         assignedPersonId: alvo.tipo === 'PERSON' ? alvo.id : null,
         assignedAssetId: alvo.tipo === 'ASSET' ? alvo.id : null,
         checkoutNotes: data.notes ?? null,
-        productKey: data.productKey ?? null,
+        licenseKeyId,
         checkoutAt,
       },
       select: CHECKOUT_SELECT,
@@ -286,7 +262,8 @@ export async function checkoutLicense(licenseId: string, data: CheckoutLicenseDa
         targetId: alvo.id,
         targetName: nomeDoAlvo,
         checkoutAt: entrega.checkoutAt.toISOString(),
-        chave: marcaDaChave(null, data.productKey ?? null),
+        // Qual chave, pelo id: o texto nunca entra na auditoria.
+        ...(licenseKeyId ? { licenseKeyId } : {}),
       },
     }, ator);
 

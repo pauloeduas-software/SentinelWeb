@@ -13,9 +13,10 @@ import { contarLivres, type ContagemDaLicenca, type UsoDaLicenca } from './licen
 // NÃO EXISTE `status` AQUI, e é por construção (D44): ele é função das datas e
 // do dia de hoje.
 //
-// NEM A CHAVE DE PRODUTO (`productKey`): a listagem, a busca, o alerta, a aba do
-// ativo, a ficha e os históricos não a devolvem. Só o DETALHE —
-// `LICENSE_DETAIL_SELECT` e `CHECKOUT_COM_CHAVE_SELECT`, mais abaixo.
+// NEM AS CHAVES DE PRODUTO (AC): a listagem, a busca, o alerta, a aba do
+// ativo, a ficha e os históricos não as devolvem. Só o DETALHE — as chaves da
+// licença (`listarChaves`) e a de cada entrega (`CHECKOUT_COM_CHAVE_SELECT`,
+// mais abaixo).
 
 export const LICENSE_SELECT = {
   id: true,
@@ -47,8 +48,8 @@ export const LICENSE_SELECT = {
 
 /**
  * Os campos da licença que a auditoria guarda (AB): o retrato no cadastro e na
- * exclusão, o `{ de, para }` na edição. A CHAVE fica fora: ela vai à auditoria
- * só como "informada", "alterada" ou "removida" (`marcaDaChave`), nunca o valor.
+ * exclusão, o `{ de, para }` na edição. As CHAVES ficam fora: a auditoria conta
+ * quantas entraram, mudaram e saíram (`gravarChaves`), nunca o texto.
  */
 export const CAMPOS_AUDITADOS_DA_LICENCA = [
   'name', 'seatsTotal',
@@ -58,17 +59,6 @@ export const CAMPOS_AUDITADOS_DA_LICENCA = [
   'orderNumber', 'purchaseDate', 'purchaseCost',
   'notes',
 ] as const;
-
-/**
- * O que a auditoria diz de uma chave que mudou — sem o valor. A auditoria guarda
- * para sempre, e a chave é o que a licença tem de credencial.
- */
-export function marcaDaChave(antes: string | null, depois: string | null): string | null {
-  if (antes === depois) return null;
-  if (!antes) return 'informada';
-  if (!depois) return 'removida';
-  return 'alterada';
-}
 
 /** A pessoa embutida numa entrega. Mesma forma do estoque. */
 const PESSOA_DA_ENTREGA = { id: true, name: true, email: true } as const;
@@ -105,11 +95,15 @@ export const CHECKOUT_SELECT = {
   license: { select: LICENCA_DA_ENTREGA },
 } as const;
 
-/** O detalhe da licença: a linha da listagem, mais a chave de produto. */
-export const LICENSE_DETAIL_SELECT = { ...LICENSE_SELECT, productKey: true } as const;
-
-/** Uma entrega com a chave dela — só para o "Com quem está" do detalhe. */
-export const CHECKOUT_COM_CHAVE_SELECT = { ...CHECKOUT_SELECT, productKey: true } as const;
+/**
+ * Uma entrega com a chave dela — só para o "Com quem está" do detalhe. Uma das
+ * chaves da licença, ou nula na entrega sem chave (AC).
+ */
+export const CHECKOUT_COM_CHAVE_SELECT = {
+  ...CHECKOUT_SELECT,
+  licenseKeyId: true,
+  licenseKey: { select: { id: true, productKey: true, seats: true } },
+} as const;
 
 interface EntregaComRotulos {
   assignedPerson: { name: string } | null;

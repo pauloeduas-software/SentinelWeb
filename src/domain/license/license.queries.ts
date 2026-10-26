@@ -176,12 +176,12 @@ export function useCheckinLicense() {
   });
 }
 
-/** Troca só a chave de uma entrega aberta — o "Com quem está" do detalhe. */
+/** Troca só a chave de uma entrega aberta, por outra da lista — o "Com quem está" do detalhe. */
 export function useUpdateCheckoutKey() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ checkoutId, productKey }: { checkoutId: string; productKey: string | null }) =>
-      apiClient.patch<EntregaComChave>(`/licenses/checkouts/${checkoutId}`, { productKey }),
+    mutationFn: ({ checkoutId, licenseKeyId }: { checkoutId: string; licenseKeyId: string }) =>
+      apiClient.patch<EntregaComChave>(`/licenses/checkouts/${checkoutId}`, { licenseKeyId }),
     onSuccess: () => invalidarLicencaEPosse(queryClient),
   });
 }

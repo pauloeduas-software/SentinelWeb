@@ -5,7 +5,8 @@ import { prisma } from '../../server/core/database/prismaClient';
 
 // AS CORRIDAS — requisições SIMULTÂNEAS contra a mesma licença.
 //
-// A conta (em uso ≤ compradas, invariante 22) só se mantém porque
+// A conta (em uso ≤ compradas, invariante 22; cada chave ≤ o que ela cobre,
+// invariante 24) só se mantém porque
 // a entrega, a edição, o Encerrar e a exclusão contam com a LICENÇA travada.
 // Cada corrida aqui usa ALVOS DIFERENTES: com o mesmo alvo, a trava do alvo
 // serializaria as requisições antes de chegarem à licença, e o teste passaria
@@ -45,6 +46,23 @@ describe('oito entregas simultâneas, oito pessoas, três licenças compradas', 
 
     expect(placar(respostas)).toEqual({ 201: 3, 409: 5 });
     expect(await abertas(licenca.id)).toBe(3);
+  });
+});
+
+describe('a mesma chave, oito entregas simultâneas (AC)', () => {
+  it('a chave que cobre duas vai para exatamente DUAS, mesmo com licença livre sobrando', async () => {
+    const criada = await api.post<{ id: string }>('/api/licenses', {
+      name: 'Corrida da chave', categoryId: cenario.categoriaLicencaId, seatsTotal: 8,
+      keys: [{ productKey: 'CORRIDA-VOLUME', seats: 2 }],
+    });
+    const { body } = await api.get<{ keys: { id: string }[] }>(`/api/licenses/${criada.body.id}`);
+    const licenseKeyId = body.keys[0].id;
+
+    const respostas = await Promise.all(pessoas.map((pessoa) =>
+      api.post(`/api/licenses/${criada.body.id}/checkout`, { assignedPersonId: pessoa, licenseKeyId })));
+
+    expect(placar(respostas)).toEqual({ 201: 2, 409: 6 });
+    expect(await prisma.licenseCheckout.count({ where: { licenseKeyId, checkinAt: null } })).toBe(2);
   });
 });
 

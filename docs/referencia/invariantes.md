@@ -23,7 +23,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 
 ---
 
-## As quinze
+## As dezesseis
 
 > **A numeração é a original, e por isso salta.** O corte do ITAM levou as
 > invariantes 7, 8, 15, 16 e 18 junto com as tabelas que elas defendiam
@@ -31,7 +31,8 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 > 14 junto com `EndpointUserDaily`, quando a reconciliação deixou de inferir
 > pessoa pela conta do sistema operacional
 > ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional));
-> e a [AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas) levou a 10 e a 11 junto com a vaga numerada da licença, e trouxe a 22 e a 23.
+> e a [AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas) levou a 10 e a 11 junto com a vaga numerada da licença, e trouxe a 22 e a 23;
+> a [AC](../decisoes/licencas.md#ac--a-chave-vira-lista-cada-uma-cobre-uma-quantidade-e-a-entrega-escolhe-uma) trouxe a 24.
 > Renumerar as que ficaram quebraria as citações no código —
 > `assert-retire-posse.usecase.ts` diz "Invariante 4", `license-count.helper.ts`
 > diz "invariante 22" —, e um número que muda de significado é pior que um
@@ -53,7 +54,8 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 20 | Ativo baixado não tem posse aberta nem licença | **aplicação** — duas portas: a baixa (`assertSemPosseParaBaixa` e a contagem de licenças) e a entrega (`checkout-asset`, `checkout-license`), as duas com o ativo travado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Desfaça a baixa antes.` |
 | 21 | Localização ou posto desativado não recebe nada novo | **aplicação** — `assertLocalRecebe()` em cada porta que guarda (ativo, item, posto) e `assertPostoRecebe()` em cada porta que entrega ou ocupa, com a linha travada | 409 `"Mesa 1" está desativado e não recebe entrega nova.` |
 | 22 | O que está em uso nunca passa da quantidade comprada | **aplicação** — a entrega e a edição contam com a linha da licença travada (`lock-license.usecase.ts`) | 409 `Sem licença livre em "Office 2024": 5 compradas, 5 em uso. Devolva uma entrega ou aumente a quantidade comprada.` |
-| 23 | Uma entrega aberta por alvo e licença — e a mesma chave em uma entrega aberta só | **banco** — três índices únicos parciais: um por alvo e um pela chave. No passado, a entrega que se sobrepõe à última devolução do mesmo alvo é só da **aplicação** (422) | 409 `Laura Souza já está com "Office 2024".` / `Esta chave já está em outra entrega aberta de "Office 2024".` (a API confere antes) |
+| 23 | Uma entrega aberta por alvo e licença | **banco** — dois índices únicos parciais, um por alvo. No passado, a entrega que se sobrepõe à última devolução do mesmo alvo é só da **aplicação** (422) | 409 `Laura Souza já está com "Office 2024".` (a API confere antes) |
+| 24 | A chave da entrega é uma das chaves da licença; nenhuma chave vai para mais entregas abertas do que cobre; e as chaves cobrem no máximo o que foi comprado | **banco** — a FK composta (chave, licença) e os `CHECK`s da chave. A conta de cada chave e a soma contra o comprado são da **aplicação**, com a licença travada | 409 `Esta chave já está em outra entrega aberta de "Office 2024". Escolha outra.` / 422 `As chaves cobrem 12, mais do que 10 compradas em "Office 2024". …` |
 
 ---
 
@@ -627,7 +629,7 @@ entrega.
 > nunca deixa a conta passar do contrato) e `tests/licencas/operacoes.test.ts` (o piso e a
 > frase).
 
-### 23 — Uma entrega aberta por alvo e licença — e uma chave por entrega aberta
+### 23 — Uma entrega aberta por alvo e licença
 
 ```sql
 CREATE UNIQUE INDEX "license_checkouts_uma_aberta_por_pessoa"
@@ -636,9 +638,6 @@ CREATE UNIQUE INDEX "license_checkouts_uma_aberta_por_pessoa"
 CREATE UNIQUE INDEX "license_checkouts_uma_aberta_por_ativo"
   ON "license_checkouts"("licenseId", "assignedAssetId")
   WHERE "checkinAt" IS NULL AND "assignedAssetId" IS NOT NULL;
-CREATE UNIQUE INDEX "license_checkouts_chave_aberta_unica"
-  ON "license_checkouts"("licenseId", "productKey")
-  WHERE "checkinAt" IS NULL AND "productKey" IS NOT NULL;
 ```
 
 O mesmo computador ou colaborador não fica com a mesma licença duas vezes. Computador de
@@ -655,13 +654,48 @@ devolveu esta licença (422) — senão o histórico mostraria o alvo com ela du
 período. O índice só enxerga as abertas; essa conferência é só da aplicação, com o alvo
 travado. No próprio dia da devolução a entrega passa, gravada um milissegundo depois dela.
 
-**A chave da entrega** segue a mesma lógica: a mesma chave não fica em duas entregas abertas da
-licença. A entrega sem chave (licença de volume) e a devolvida ficam fora do índice. A entrega
-e a troca de chave conferem antes, com a licença travada.
-
 > **Provado em** `tests/licencas/invariantes.test.ts` (o `INSERT` cru da segunda aberta é
-> recusado; a devolvida não conta), `tests/licencas/operacoes.test.ts` e
-> `tests/licencas/chave.test.ts` (os 409 da API).
+> recusado; a devolvida não conta) e `tests/licencas/operacoes.test.ts` (os 409 da API).
+
+### 24 — A chave da entrega é da licença, e não passa do que cobre
+
+```sql
+ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_licenseKeyId_licenseId_fkey"
+  FOREIGN KEY ("licenseKeyId", "licenseId") REFERENCES "license_keys"("id", "licenseId")
+  ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "license_keys" ADD CONSTRAINT "license_keys_seats_positivo" CHECK ("seats" >= 1);
+ALTER TABLE "license_keys" ADD CONSTRAINT "license_keys_chave_preenchida" CHECK (btrim("productKey") <> '');
+```
+
+Cada chave da licença cobre `seats` licenças: 1 na individual, mais na de volume
+([AC](../decisoes/licencas.md#ac--a-chave-vira-lista-cada-uma-cobre-uma-quantidade-e-a-entrega-escolhe-uma)).
+A invariante tem uma metade no banco e outra na aplicação.
+
+**No banco, a forma.** A FK é **composta**: a entrega aponta para a chave **e** para a licença, e
+o par tem de existir em `license_keys` (o `@@unique([id, licenseId])` é o alvo dela). Nem o `psql`
+põe a chave de uma licença na entrega de outra. Com `licenseKeyId` nulo, o Postgres não confere
+(MATCH SIMPLE): é a entrega sem chave, a da licença que não tem nenhuma. A chave cobre ao menos
+uma, não é vazia, e não repete na licença (`license_keys_licenseId_productKey_key`).
+
+**Na aplicação, as duas contas** — elas cruzam tabelas, e um CHECK não enxerga a outra:
+
+- **nenhuma chave vai para mais entregas abertas do que cobre.** A entrega e a troca de chave
+  (`chaveDaEntrega`, em `license-keys.usecase.ts`) contam com a linha da licença travada, como a
+  invariante 22. Sem a trava, duas entregas viam "1 lugar" na mesma chave e as duas gravavam;
+- **as chaves somam no máximo o que foi comprado.** O cadastro e a edição (`gravarChaves`)
+  conferem a lista contra a quantidade, e a edição que reduz a quantidade sem mandar a lista
+  confere contra as chaves gravadas.
+
+**A frase diz o que fazer**: `Esta chave de "Office 2024" cobre 2, e as 2 estão em uso. Escolha
+outra.`; `Todas as chaves de "Office 2024" estão em uso. Cadastre a chave da próxima licença, em
+Editar, antes de entregar.`; `Não dá para reduzir "Office 2024" para 3: as chaves cobrem 4. Tire
+uma chave ou diminua o que ela cobre antes.`
+
+> **Provado em** `tests/licencas/invariantes.test.ts` (a chave de outra licença é recusada pela
+> FK; a segunda aberta na mesma chave de 1 passa no `INSERT` cru, porque a conta não é do banco;
+> os dois CHECKs e a chave repetida), `tests/licencas/corridas.test.ts` (oito entregas
+> simultâneas na mesma chave de volume que cobre duas: passam duas) e
+> `tests/licencas/chave.test.ts` (as frases da API).
 
 ---
 

@@ -56,6 +56,12 @@ async function auditada<T>(pedido: Promise<Resposta<T>>, contaId = api.adminId):
   return resposta;
 }
 
+/** Os ids das chaves da licença, na ordem em que foram digitadas. */
+async function chavesDaLicenca(licenseId: string): Promise<string[]> {
+  const { body } = await api.get<{ keys: { id: string }[] }>(`/api/licenses/${licenseId}`);
+  return body.keys.map((chave) => chave.id);
+}
+
 describe('toda escrita do painel deixa rastro com a conta da sessão', () => {
   it('catálogo, colaborador e posto', async () => {
     const fabricante = await auditada(api.post<{ id: string }>('/api/manufacturers', { name: `Fab ${proximo()}` }));
@@ -147,13 +153,19 @@ describe('toda escrita do painel deixa rastro com a conta da sessão', () => {
     const id = licenca.body.id;
 
     await auditada(api.put(`/api/licenses/${id}`, { seatsTotal: 3 }));
-    const entrega = await auditada(api.post<{ id: string }>(`/api/licenses/${id}/checkout`, {
-      assignedPersonId: pessoa, productKey: 'AAAAA-11111',
+    await auditada(api.put(`/api/licenses/${id}`, {
+      keys: [{ productKey: 'AAAAA-11111', seats: 1 }, { productKey: 'BBBBB-22222', seats: 1 }],
     }));
-    await auditada(api.patch(`/api/licenses/checkouts/${entrega.body.id}`, { productKey: 'BBBBB-22222' }));
+    const [primeira, segunda] = await chavesDaLicenca(id);
+    const entrega = await auditada(api.post<{ id: string }>(`/api/licenses/${id}/checkout`, {
+      assignedPersonId: pessoa, licenseKeyId: primeira,
+    }));
+    await auditada(api.patch(`/api/licenses/checkouts/${entrega.body.id}`, { licenseKeyId: segunda }));
     await auditada(api.post(`/api/licenses/checkouts/${entrega.body.id}/checkin`, {}));
     const maquina = await criarAtivo(api, { statusId: seed.statusDeployableId, modelId, assetTag: `AUD-${proximo()}` });
-    const daMaquina = await auditada(api.post<{ id: string }>(`/api/licenses/${id}/checkout`, { assignedAssetId: maquina.id }));
+    const daMaquina = await auditada(api.post<{ id: string }>(`/api/licenses/${id}/checkout`, {
+      assignedAssetId: maquina.id, licenseKeyId: primeira,
+    }));
     await auditada(api.post(`/api/licenses/checkouts/${daMaquina.body.id}/checkin`, {}));
     await auditada(api.post(`/api/licenses/${id}/terminate`, {}));
 
@@ -419,14 +431,19 @@ describe('dado sensível não entra na auditoria', () => {
 
     const pessoa = await criarColaborador(api, { name: 'Usa a Chave', email: `chave.${proximo()}@teste.local` });
     const licenca = await api.post<{ id: string }>('/api/licenses', {
-      name: `Chave ${proximo()}`, categoryId: seed.categoriaLicencaId, seatsTotal: 1, productKey: `${chave}-VOLUME`,
+      name: `Chave ${proximo()}`, categoryId: seed.categoriaLicencaId, seatsTotal: 2,
+      keys: [{ productKey: `${chave}-1`, seats: 1 }, { productKey: `${chave}-2`, seats: 1 }],
     });
     expect(licenca.status).toBe(201);
+    const [primeira, segunda] = await chavesDaLicenca(licenca.body.id);
     const entrega = await api.post<{ id: string }>(`/api/licenses/${licenca.body.id}/checkout`, {
-      assignedPersonId: pessoa, productKey: `${chave}-1`,
+      assignedPersonId: pessoa, licenseKeyId: primeira,
     });
     expect(entrega.status).toBe(201);
-    expect((await api.patch(`/api/licenses/checkouts/${entrega.body.id}`, { productKey: `${chave}-2` })).status).toBe(200);
+    expect((await api.patch(`/api/licenses/checkouts/${entrega.body.id}`, { licenseKeyId: segunda })).status).toBe(200);
+    expect((await api.put(`/api/licenses/${licenca.body.id}`, {
+      keys: [{ id: primeira, productKey: `${chave}-1-CORRIGIDA`, seats: 1 }, { id: segunda, productKey: `${chave}-2`, seats: 1 }],
+    })).status).toBe(200);
 
     const vazou = await prisma.$queryRaw<{ n: bigint }[]>`
       SELECT count(*) AS n FROM audit_logs
@@ -440,9 +457,14 @@ describe('dado sensível não entra na auditoria', () => {
 
     const troca = await prisma.auditLog.findFirstOrThrow({ where: { entityId: usuario.body.id, action: 'UPDATE' } });
     expect(troca.changes).toEqual({ senha: 'alterada' });
-    const daChave = await prisma.auditLog.findFirstOrThrow({
+    // Qual chave, pelo id, na troca; quantas, na lista — nunca o texto.
+    const [daTroca, daLista] = await prisma.auditLog.findMany({
       where: { entityId: licenca.body.id, action: 'UPDATE' },
+      orderBy: { createdAt: 'asc' },
     });
-    expect(daChave.changes).toMatchObject({ checkoutId: entrega.body.id, chave: 'alterada' });
+    expect(daTroca.changes).toMatchObject({ checkoutId: entrega.body.id, licenseKeyId: { de: primeira, para: segunda } });
+    expect(daLista.changes).toEqual({ chaves: { alteradas: 1 } });
+    const criacao = await prisma.auditLog.findFirstOrThrow({ where: { entityId: licenca.body.id, action: 'CREATE' } });
+    expect(criacao.changes).toMatchObject({ chaves: { incluidas: 2 } });
   });
 });

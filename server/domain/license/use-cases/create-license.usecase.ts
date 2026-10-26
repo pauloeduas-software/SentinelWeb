@@ -6,11 +6,12 @@ import { buildSnapshot } from '../../shared/diff.helper';
 import { SEM_USO } from '../helpers/license-count.helper';
 import { assertDatasNaoAntecedemACompra } from '../helpers/license-dates.helper';
 import {
-  CAMPOS_AUDITADOS_DA_LICENCA, LICENSE_SELECT, marcaDaChave, paraResposta,
+  CAMPOS_AUDITADOS_DA_LICENCA, LICENSE_SELECT, paraResposta,
   type LicencaNaResposta, type LinhaDeLicenca,
 } from '../helpers/license-select.helper';
 import type { CreateLicenseData } from '../schemas/license.schema';
 import { assertReferenciasDaLicenca } from './assert-license-references.usecase';
+import { gravarChaves } from './license-keys.usecase';
 
 /**
  * O CADASTRO DE UMA LICENÇA.
@@ -20,6 +21,7 @@ import { assertReferenciasDaLicenca } from './assert-license-references.usecase'
  */
 export async function createLicense(data: CreateLicenseData, ator: Ator): Promise<LicencaNaResposta> {
   const id = randomUUID();
+  const { keys, ...campos } = data;
 
   assertDatasNaoAntecedemACompra({
     purchaseDate: data.purchaseDate ?? null,
@@ -31,9 +33,12 @@ export async function createLicense(data: CreateLicenseData, ator: Ator): Promis
     await assertReferenciasDaLicenca(tx, data);
 
     const licenca = await tx.license.create({
-      data: { ...data, id },
+      data: { ...campos, id },
       select: LICENSE_SELECT,
     }) as LinhaDeLicenca;
+
+    // As chaves (AC): só quantas, nunca o texto.
+    const chaves = keys?.length ? await gravarChaves(tx, licenca, keys) : null;
 
     await recordAudit(tx, {
       entityType: 'License',
@@ -42,7 +47,7 @@ export async function createLicense(data: CreateLicenseData, ator: Ator): Promis
       action: 'CREATE',
       changes: {
         ...buildSnapshot(licenca, CAMPOS_AUDITADOS_DA_LICENCA),
-        chave: marcaDaChave(null, data.productKey ?? null),
+        ...(chaves ? { chaves } : {}),
       },
     }, ator);
 

@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import CampoDeDinheiro from '../../components/CampoDeDinheiro';
 import ReferenceSelect from '../../components/ReferenceSelect';
+import ChavesDoFormulario from './ChavesDoFormulario';
 import { paraCampoDeData } from '../../helpers/format.helper';
 import { useLicenseQuery } from '../../../domain/license/license.queries';
-import type { Licenca, LicencaDetalhe, LicencaInput } from '../../../domain/shared/license.types';
-import { camposAlterados } from '../helpers/licenca.helper';
+import type {
+  ChaveDaLicenca, ChaveNoFormulario, Licenca, LicencaDetalhe, LicencaInput,
+} from '../../../domain/shared/license.types';
+import { camposAlterados, type LinhaDeChave } from '../helpers/licenca.helper';
 
 // Cadastro e edição de uma licença.
 //
@@ -16,7 +19,7 @@ import { camposAlterados } from '../helpers/licenca.helper';
 // alguém tentar.
 //
 // NA EDIÇÃO, A LICENÇA VEM DO DETALHE, e não da linha da listagem: é o detalhe
-// que traz a chave de produto (a listagem não a devolve), e ele chega fresco.
+// que traz as chaves de produto (a listagem não as devolve), e ele chega fresco.
 //
 // NA EDIÇÃO, SÓ O QUE MUDOU VAI AO SERVIDOR (`camposAlterados`): o formulário
 // aberto há tempo não desfaz a edição que outra pessoa salvou no meio.
@@ -40,6 +43,19 @@ interface LicencaFormModalProps {
   onSubmit: (data: LicencaInput) => Promise<void>;
 }
 
+/** Uma chave como o servidor a recebe — a mesma forma na base e no envio, para a comparação. */
+function chaveParaEnvio(chave: { id?: string; productKey: string; seats: number }): ChaveNoFormulario {
+  return { ...(chave.id ? { id: chave.id } : {}), productKey: chave.productKey, seats: chave.seats };
+}
+
+/** Uma chave gravada como linha do formulário. */
+function comoLinha(chave: ChaveDaLicenca): LinhaDeChave {
+  return {
+    uid: chave.id, id: chave.id, productKey: chave.productKey, seats: String(chave.seats),
+    emUso: chave.emUso, jaEntregue: chave.jaEntregue,
+  };
+}
+
 /** O formulário como o servidor devolveu a licença — a base da comparação na edição. */
 function comoFoiSalva(licenca: LicencaDetalhe): LicencaInput {
   return {
@@ -55,7 +71,7 @@ function comoFoiSalva(licenca: LicencaDetalhe): LicencaInput {
     purchaseDate: licenca.purchaseDate,
     purchaseCost: licenca.purchaseCost,
     notes: licenca.notes,
-    productKey: licenca.productKey,
+    keys: licenca.keys.map(chaveParaEnvio),
   };
 }
 
@@ -64,7 +80,7 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
   return <EdicaoDaLicenca id={licenca.id} onClose={onClose} onSubmit={onSubmit} />;
 }
 
-/** A edição espera o detalhe chegar: o formulário nasce com a chave já preenchida. */
+/** A edição espera o detalhe chegar: o formulário nasce com as chaves já preenchidas. */
 function EdicaoDaLicenca({ id, onClose, onSubmit }: Omit<LicencaFormModalProps, 'licenca'> & { id: string }) {
   const { data, error } = useLicenseQuery(id);
   if (data) return <Formulario licenca={data} onClose={onClose} onSubmit={onSubmit} />;
@@ -100,7 +116,7 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
   // centavo entra (a coluna é `Decimal`).
   const [purchaseCost, setPurchaseCost] = useState(licenca?.purchaseCost ?? '');
   const [notes, setNotes] = useState(licenca?.notes ?? '');
-  const [productKey, setProductKey] = useState(licenca?.productKey ?? '');
+  const [chaves, setChaves] = useState<LinhaDeChave[]>(() => licenca?.keys.map(comoLinha) ?? []);
 
   // A BASE do "só o que mudou", congelada quando o formulário abre — como os
   // campos. O `licenca` que chega é o da query, e uma nova busca no meio (voltar
@@ -123,6 +139,25 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
       return;
     }
 
+    // A linha NOVA deixada em branco não é chave: sai sem aviso. A que já existia
+    // e ficou em branco pede o ✕ — apagar o texto não é o jeito de tirá-la.
+    // As posições são as da tela, contando a linha em branco.
+    const semTexto = chaves.findIndex((linha) => linha.id && linha.productKey.trim() === '');
+    if (semTexto >= 0) {
+      setErro(`A chave ${semTexto + 1} ficou em branco. Para tirá-la, use o ✕.`);
+      return;
+    }
+    const semCobre = chaves.findIndex((linha) => {
+      const cobre = Number(linha.seats);
+      return linha.productKey.trim() !== ''
+        && (linha.seats.trim() === '' || !Number.isInteger(cobre) || cobre < 1);
+    });
+    if (semCobre >= 0) {
+      setErro(`Informe quantas licenças a chave ${semCobre + 1} cobre: um número inteiro, 1 ou mais.`);
+      return;
+    }
+    const preenchidas = chaves.filter((linha) => linha.productKey.trim() !== '');
+
     setSalvando(true);
     const dados: LicencaInput = {
       name: name.trim(),
@@ -137,15 +172,17 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
       purchaseDate: limpar(purchaseDate),
       purchaseCost: limpar(purchaseCost),
       notes: limpar(notes),
-      productKey: limpar(productKey),
+      keys: preenchidas.map((linha) => chaveParaEnvio({
+        id: linha.id, productKey: linha.productKey.trim(), seats: Number(linha.seats),
+      })),
     };
 
     try {
       await onSubmit(base ? camposAlterados(base, dados) as LicencaInput : dados);
     } catch (falha) {
       // O apiClient já traduziu a resposta do servidor — é aqui que aparecem o
-      // 422 de categoria do tipo errado e o 409 de reduzir abaixo do que está
-      // em uso.
+      // 422 de categoria do tipo errado, o 409 de reduzir abaixo do que está
+      // em uso ou do que as chaves cobrem, e o 422 da chave repetida.
       setErro((falha as Error).message);
     } finally {
       setSalvando(false);
@@ -177,6 +214,12 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
                 required value={name} onChange={(e) => setName(e.target.value)}
                 className={CLASSE_CAMPO}
               />
+              {!editando && (
+                <span className="block text-[10px] text-text-tertiary leading-relaxed">
+                  O Windows ou o Office que veio de fábrica no computador (OEM) não entra aqui: é do
+                  computador, e não passa para outro.
+                </span>
+              )}
             </label>
 
             <label className="space-y-1.5">
@@ -207,6 +250,10 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
             <label className="space-y-1.5">
               <span className={ROTULO}>Vencimento</span>
               <input type="date" value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} className={CLASSE_CAMPO} />
+              <span className="block text-[10px] text-text-tertiary">
+                Até quando pode usar: vencida, não recebe entrega. Renovou? Mude esta data — quem está
+                com ela continua. A perpétua fica sem vencimento, e o fim do suporte vai nas notas.
+              </span>
             </label>
 
             <label className="space-y-1.5">
@@ -232,6 +279,10 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
             <label className="space-y-1.5">
               <span className={ROTULO}>Número do pedido</span>
               <input value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} className={CLASSE_CAMPO} />
+              <span className="block text-[10px] text-text-tertiary">
+                O pedido ou a nota fiscal: é por ele que se acha o comprovante, e a busca encontra a
+                licença por este número.
+              </span>
             </label>
 
             <label className="space-y-1.5">
@@ -249,17 +300,15 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
               <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={CLASSE_CAMPO} />
             </label>
 
-            <label className="space-y-1.5 col-span-2">
-              <span className={ROTULO}>Chave do produto</span>
-              <textarea
-                rows={3} value={productKey} onChange={(e) => setProductKey(e.target.value)}
-                spellCheck={false} autoComplete="off" className={`${CLASSE_CAMPO} font-mono`}
+            <div className="space-y-1.5 col-span-2">
+              <span className={ROTULO}>Chaves do produto</span>
+              <ChavesDoFormulario
+                linhas={chaves}
+                compradas={Number.isInteger(Number(seatsTotal)) && seatsTotal.trim() !== '' ? Number(seatsTotal) : null}
+                onChange={setChaves}
+                classeCampo={CLASSE_CAMPO}
               />
-              <span className="block text-[10px] text-text-tertiary leading-relaxed">
-                A chave de volume, ou as chaves compradas, uma por linha. Só aparece no detalhe da
-                licença, escondida até alguém pedir para mostrar.
-              </span>
-            </label>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

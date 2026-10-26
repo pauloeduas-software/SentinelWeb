@@ -65,13 +65,25 @@ export interface Licenca {
   diasParaVencer: number | null;
 }
 
+/** Uma chave de produto da licença (AC): o texto, quanto cobre e o uso. */
+export interface ChaveDaLicenca {
+  id: string;
+  productKey: string;
+  /** Quantas licenças ela cobre: 1 na individual, mais na de volume. */
+  seats: number;
+  /** Entregas abertas com ela agora. */
+  emUso: number;
+  /** Já teve entrega, mesmo devolvida: não sai da lista. */
+  jaEntregue: boolean;
+}
+
 /**
- * A licença do DETALHE — `GET /api/licenses/:id`, a única leitura que traz a
- * chave de produto. A listagem e a busca não a devolvem.
+ * A licença do DETALHE — `GET /api/licenses/:id`, a única leitura que traz as
+ * chaves de produto. A listagem e a busca não as devolvem.
  */
 export interface LicencaDetalhe extends Licenca {
-  /** A de volume, ou a lista das compradas, uma por linha. */
-  productKey: string | null;
+  /** Na ordem em que foram digitadas. */
+  keys: ChaveDaLicenca[];
 }
 
 interface PessoaDaEntrega {
@@ -115,7 +127,9 @@ export interface EntregaDeLicenca {
 
 /** Uma entrega com a chave dela — só o "Com quem está" do detalhe a traz. */
 export interface EntregaComChave extends EntregaDeLicenca {
-  productKey: string | null;
+  licenseKeyId: string | null;
+  /** Uma das chaves da licença; nula na entrega sem chave. */
+  licenseKey: { id: string; productKey: string; seats: number } | null;
 }
 
 /**
@@ -194,7 +208,15 @@ export interface LicencaInput {
   purchaseDate?: string | null;
   purchaseCost?: string | null;
   notes?: string | null;
-  productKey?: string | null;
+  /** A lista inteira como ficará. Na edição, a com `id` já existe e a sem `id` é nova. */
+  keys?: ChaveNoFormulario[];
+}
+
+/** Uma chave como o formulário a manda. */
+export interface ChaveNoFormulario {
+  id?: string;
+  productKey: string;
+  seats: number;
 }
 
 /** O alvo da entrega: pessoa XOR ativo. Nunca um posto (D39). */
@@ -205,6 +227,6 @@ export type AlvoDaEntrega = (
   notes?: string | null;
   /** O dia da entrega, 'AAAA-MM-DD'. Hoje ou antes. */
   checkoutAt?: string | null;
-  /** A chave desta entrega. Vazia na licença de volume. */
-  productKey?: string | null;
+  /** Uma das chaves da licença — obrigatória quando ela tem chaves. */
+  licenseKeyId?: string;
 };

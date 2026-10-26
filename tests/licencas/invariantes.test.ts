@@ -30,7 +30,7 @@ interface Linha {
   assetId?: string | null;
   checkoutAt?: string;
   checkinAt?: string | null;
-  productKey?: string | null;
+  licenseKeyId?: string | null;
 }
 
 /** Um INSERT cru. Devolve o erro do banco, ou `null` se passou. */
@@ -39,15 +39,15 @@ async function inserir(linha: Linha): Promise<string | null> {
     await prisma.$executeRawUnsafe(
       `INSERT INTO license_checkouts
          (id, "licenseId", "assignedPersonId", "assignedAssetId",
-          "checkoutAt", "checkinAt", "productKey", "createdAt", "updatedAt")
+          "checkoutAt", "checkinAt", "licenseKeyId", "createdAt", "updatedAt")
        VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3::uuid,
-               $4::timestamp, $5::timestamp, $6, now(), now())`,
+               $4::timestamp, $5::timestamp, $6::uuid, now(), now())`,
       linha.licenseId === undefined ? licenseId : linha.licenseId,
       linha.personId ?? null,
       linha.assetId ?? null,
       linha.checkoutAt ?? '2026-01-10T10:00:00',
       linha.checkinAt ?? null,
-      linha.productKey ?? null,
+      linha.licenseKeyId ?? null,
     );
     return null;
   } catch (erro) {
@@ -88,18 +88,41 @@ describe('invariante 23: uma entrega aberta por alvo e licença', () => {
   });
 });
 
-describe('a mesma chave não fica em duas entregas abertas da licença', () => {
-  it('a segunda aberta com a mesma chave colide; a devolvida e a sem chave não contam', async () => {
-    // Licença própria: nas outras, a Ana e o ativo já têm entrega aberta.
-    const outra = (await criarLicenca(api, { name: 'Licença das chaves', categoryId: cenario.categoriaLicencaId, seatsTotal: 10 })).id;
-    const chave = 'CHAVE-RED-01';
-    expect(await inserir({ licenseId: outra, personId: cenario.laura, productKey: chave, checkinAt: '2026-01-11T10:00:00' })).toBeNull();
-    expect(await inserir({ licenseId: outra, personId: cenario.laura, productKey: chave })).toBeNull();
-    expect(await inserir({ licenseId: outra, personId: cenario.ana, productKey: chave }))
-      .toMatch(/23505[\s\S]*"licenseId", \\?"productKey/);
-    // Duas abertas SEM chave na mesma licença: o NULL não colide.
-    expect(await inserir({ licenseId: outra, personId: cenario.ana })).toBeNull();
-    expect(await inserir({ licenseId: outra, assetId: cenario.ativo.id })).toBeNull();
+describe('invariante 24: a chave da entrega é da licença, e a forma da chave', () => {
+  /** Um INSERT cru de chave. Devolve o id, ou o erro do banco. */
+  async function chave(licenca: string, productKey: string, seats = 1): Promise<{ id?: string; erro?: string }> {
+    try {
+      const [linha] = await prisma.$queryRawUnsafe<{ id: string }[]>(
+        `INSERT INTO license_keys (id, "licenseId", "productKey", seats, "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1::uuid, $2, $3, now(), now()) RETURNING id`,
+        licenca, productKey, seats,
+      );
+      return { id: linha.id };
+    } catch (erro) {
+      return { erro: (erro as Error).message };
+    }
+  }
+
+  it('a entrega não aponta para a chave de outra licença', async () => {
+    const outra = (await criarLicenca(api, { name: 'Licença da chave alheia', categoryId: cenario.categoriaLicencaId, seatsTotal: 5 })).id;
+    const daOutra = await chave(outra, 'CHAVE-ALHEIA');
+
+    expect(await inserir({ personId: cenario.laura, licenseKeyId: daOutra.id })).toMatch(/23503/);
+    expect(await inserir({ licenseId: outra, personId: cenario.laura, licenseKeyId: daOutra.id })).toBeNull();
+    // A rede é a forma, não a conta: a segunda aberta na mesma chave de 1 passa
+    // aqui — quem conta é a aplicação, com a licença travada.
+    expect(await inserir({ licenseId: outra, personId: cenario.ana, licenseKeyId: daOutra.id })).toBeNull();
+  });
+
+  it('a chave cobre ao menos uma, não é vazia, e não repete na licença', async () => {
+    expect((await chave(licenseId, 'ZERO', 0)).erro).toMatch(/license_keys_seats_positivo/);
+    expect((await chave(licenseId, '   ')).erro).toMatch(/license_keys_chave_preenchida/);
+    expect((await chave(licenseId, 'REPETIDA')).id).toBeDefined();
+    expect((await chave(licenseId, 'REPETIDA')).erro).toMatch(/23505[\s\S]*"licenseId", \\?"productKey/);
+
+    // A mesma chave em OUTRA licença passa: a unicidade é dentro do contrato.
+    const outra = (await criarLicenca(api, { name: 'Licença da mesma chave', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 })).id;
+    expect((await chave(outra, 'REPETIDA')).id).toBeDefined();
   });
 });
 

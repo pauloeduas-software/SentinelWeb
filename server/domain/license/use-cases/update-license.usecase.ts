@@ -6,12 +6,13 @@ import { AppError } from '../../../core/errors/app-error';
 import { fraseDoPiso } from '../helpers/license-count.helper';
 import { assertDatasNaoAntecedemACompra } from '../helpers/license-dates.helper';
 import {
-  CAMPOS_AUDITADOS_DA_LICENCA, LICENSE_DETAIL_SELECT, LICENSE_SELECT, marcaDaChave, paraResposta,
+  CAMPOS_AUDITADOS_DA_LICENCA, LICENSE_SELECT, paraResposta,
   type LicencaNaResposta, type LinhaDeLicenca,
 } from '../helpers/license-select.helper';
 import type { UpdateLicenseData } from '../schemas/license.schema';
 import { assertReferenciasDaLicenca } from './assert-license-references.usecase';
 import { contarUsoDe } from './count-license-checkouts.usecase';
+import { assertChavesCabem, gravarChaves, somaDasChaves } from './license-keys.usecase';
 import { travarLicencaOuFalhar } from './lock-license.usecase';
 
 /**
@@ -19,19 +20,22 @@ import { travarLicencaOuFalhar } from './lock-license.usecase';
  *
  * `seatsTotal` é o NÚMERO DO CONTRATO: alguém comprou mais, e digitar isso É a
  * operação. Aumentar sempre pode. Reduzir não passa do que está em uso
- * (invariante 22).
+ * (invariante 22), nem do que as chaves cobrem (invariante 24).
+ *
+ * `keys` é a lista inteira das chaves como ficará (AC); ausente, elas ficam
+ * como estão.
  *
  * A TRAVA DA LICENÇA vem primeiro e serializa a edição com a entrega: sem ela,
  * a edição contava "2 em uso", uma entrega gravava a terceira, e a quantidade
  * descia abaixo do que está na rua.
  */
 export async function updateLicense(id: string, data: UpdateLicenseData, ator: Ator): Promise<LicencaNaResposta> {
+  const { keys, ...campos } = data;
+
   const licenca = await prisma.$transaction(async (tx) => {
     await travarLicencaOuFalhar(tx, id);
 
-    // Com a chave, que só serve para saber SE ela mudou: o valor não sai daqui.
-    const antes = await tx.license.findUniqueOrThrow({ where: { id }, select: LICENSE_DETAIL_SELECT }) as
-      LinhaDeLicenca & { productKey: string | null };
+    const antes = await tx.license.findUniqueOrThrow({ where: { id }, select: LICENSE_SELECT }) as LinhaDeLicenca;
 
     await assertReferenciasDaLicenca(tx, data, {
       categoryId: antes.categoryId as string,
@@ -50,6 +54,9 @@ export async function updateLicense(id: string, data: UpdateLicenseData, ator: A
       if (data.seatsTotal < uso.emUso) {
         throw new AppError(fraseDoPiso(antes.name, data.seatsTotal, uso), 409);
       }
+      // Sem lista nova no corpo, as chaves gravadas é que não podem passar do
+      // número novo. Com a lista, quem confere é o `gravarChaves`, abaixo.
+      if (!keys) assertChavesCabem(antes.name, data.seatsTotal, await somaDasChaves(tx, id), 409);
     }
 
     // O ENCERRAMENTO PELO FORMULÁRIO segue a regra do botão: passa mesmo com
@@ -58,14 +65,16 @@ export async function updateLicense(id: string, data: UpdateLicenseData, ator: A
 
     const depois = await tx.license.update({
       where: { id },
-      data,
+      data: campos,
       select: LICENSE_SELECT,
     }) as LinhaDeLicenca;
 
-    const chave = data.productKey === undefined ? null : marcaDaChave(antes.productKey, data.productKey ?? null);
+    // As chaves contra a quantidade como ficou. Na auditoria, só quantas
+    // entraram, mudaram e saíram — nunca o texto.
+    const chaves = keys ? await gravarChaves(tx, depois, keys) : {};
     const changes = {
       ...buildChanges(antes, depois, CAMPOS_AUDITADOS_DA_LICENCA),
-      ...(chave ? { chave } : {}),
+      ...(Object.keys(chaves).length > 0 ? { chaves } : {}),
     };
 
     if (Object.keys(changes).length > 0) {

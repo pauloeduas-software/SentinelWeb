@@ -5,7 +5,7 @@
 > muda, mesmo que o arquivo onde ela vive mude. Depois do D164 veio uma segunda rodada, com 15
 > decisões próprias, nomeadas por letra (`A`…`P`, sem `N`) em vez de número — ver
 > [*A segunda rodada*](#a-segunda-rodada-ap) abaixo. A varredura do código morto, que veio
-> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y`, `Z` e, acabado o alfabeto, `AA` e `AB`.
+> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y`, `Z` e, acabado o alfabeto, `AA`, `AB`, `AC` e `AD`.
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve.** Se a realidade mudou, ela é
 > **superada** por outra, com link entre as duas. O log é o que diz por quanto tempo cada regra
@@ -25,7 +25,7 @@
 | [`posse.md`](./posse.md) | Posse | 17 |
 | [`relatorios-import-etiquetas.md`](./relatorios-import-etiquetas.md) | Relatórios, import e etiquetas | 13 |
 | [`ciclo-de-vida.md`](./ciclo-de-vida.md) | Ciclo de vida | 12 |
-| [`licencas.md`](./licencas.md) | Licenças | 13 |
+| [`licencas.md`](./licencas.md) | Licenças | 15 |
 | [`campos-customizados.md`](./campos-customizados.md) | Campos customizados | 8 |
 | [`plataforma.md`](./plataforma.md) | Plataforma | 7 |
 | [`estoque.md`](./estoque.md) | Estoque | 6 |
@@ -94,6 +94,8 @@ registram o "Supera:" do mesmo jeito, e o log só fica completo com elas na tabe
 | a credencial à parte da F3 (`username` + `set-password` — decisão da execução, sem número) | **R** | a senha nasce no cadastro do usuário e o login é o e-mail |
 | **D40**, **D41**, **D43**, **D90**, **D92**, **D44** (em parte), a lixeira da licença da F6 | **AA** | a licença vira quantidade e entregas: sem vaga numerada, sem lixeira, sem reatribuível nem queima, com Encerradas e o "hoje" de Brasília |
 | **X**, **D18** (em parte), **AA** (a licença sem trilha) | **AB** | a auditoria de quem fez volta, só no banco: conta, sistema ou login sem sessão, por escrito, numa linha que não se reescreve; os históricos das telas ficam só movimentação |
+| **AA** (em parte: a chave em texto), **AB** (em parte: a marca da chave na auditoria) | **AC** | a chave vira lista: cada uma cobre uma quantidade, e a entrega escolhe uma, obrigatória quando a licença tem chaves |
+| **AA** (em parte: a renovação de mesmo nome) | **AD** | renovar é editar o vencimento; o fim do suporte vai nas notas, a OEM fica com o computador e o comprovante é o número do pedido |
 
 Quatro decisões nasceram para resolver **conflito entre dois planos**, e não de uma fase só:
 **D79** (cada job tem a própria linha), **D80** (um `ApiToken` com dono polimórfico), **D81** (uma
@@ -146,6 +148,8 @@ que o código ainda cita. Letra deixa claro, só pelo nome, que a decisão é de
 | **Z** | Sobra um cargo só: Administrador, e a separação de cargos fica para decidir | [Acesso](./acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir) |
 | **AA** | A licença vira quantidade e entregas: sem vaga numerada, sem lixeira, com Encerradas | [Licenças](./licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas) |
 | **AB** | A auditoria volta: quem fez, só no banco | [Acesso](./acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco) |
+| **AC** | A chave vira lista: cada uma cobre uma quantidade, e a entrega escolhe uma | [Licenças](./licencas.md#ac--a-chave-vira-lista-cada-uma-cobre-uma-quantidade-e-a-entrega-escolhe-uma) |
+| **AD** | Renovar é editar o vencimento; o suporte, a OEM e o comprovante não viram campo | [Licenças](./licencas.md#ad--renovar-é-editar-o-vencimento-o-suporte-a-oem-e-o-comprovante-não-viram-campo) |
 
 **`N` não existe, de propósito.** As correções de segurança e consistência desta rodada (custo
 de compra vazando por uma quarta porta, comando que respondia sucesso sem confirmação do socket,
@@ -160,7 +164,7 @@ já prometiam e o código não cumpria. Continua a letra pelo mesmo motivo de a 
 adotado: a numeração `D` corresponde ao que o código cita, e recomeçá-la colidiria. A `R` veio
 logo depois dela, pelo mesmo caminho: a varredura achou a rota de senha sem chamador, e a
 resposta foi levar a senha para o cadastro. A `S` é o renomeio do papel para cargo, a palavra
-que a equipe usa. A `T` tira o seed da conta de administrador. A `AA` veio da revisão da página de Licenças — acabado o alfabeto, a letra continua com duas. A `AB` traz de volta a auditoria de quem fez, só no banco, e a próxima é a `AC`.
+que a equipe usa. A `T` tira o seed da conta de administrador. A `AA` veio da revisão da página de Licenças — acabado o alfabeto, a letra continua com duas. A `AB` traz de volta a auditoria de quem fez, só no banco. A `AC` veio da conversa sobre o que faltava na licença: a chave virou lista. A `AD` respondeu os casos de uso que a `AC` deixou sugeridos, e a próxima é a `AE`.
 
 ## O índice
 

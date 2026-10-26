@@ -809,7 +809,7 @@ model AppSetting {
 }
 
 // ============================================================================
-// LICENÇAS DE SOFTWARE — docs/decisoes/licencas.md (D39–D94, AA)
+// LICENÇAS DE SOFTWARE — docs/decisoes/licencas.md (D39–D94, AA, AC)
 //
 // A licença é o contrato com a QUANTIDADE comprada; cada uso é uma linha de
 // entrega (AA). Não há vaga numerada: livres é conta sobre as entregas
@@ -849,17 +849,14 @@ model License {
 
   notes String?
 
-  /// A chave de produto do contrato: a de volume, ou a lista das compradas — uma
-  /// por linha. Em texto: a cifra saiu na G. Só o detalhe a devolve, e a tela a
-  /// mostra escondida até alguém pedir (AA).
-  productKey String?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   category     Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
 
+  /// As chaves compradas (AC): a de volume, ou uma por licença.
+  keys      LicenseKey[]
   checkouts LicenseCheckout[]
 
   @@index([categoryId])
@@ -869,6 +866,36 @@ model License {
   @@index([expirationDate])
   @@index([terminationDate])
   @@map("licenses")
+}
+
+// Uma chave de produto do contrato (AC). Cobre `seats` licenças: 1 na chave
+// individual, mais na de volume. As chaves de uma licença cobrem no máximo o que
+// foi comprado, e nenhuma vai para mais entregas abertas do que cobre
+// (invariante 24, sob a trava da licença). Em texto: a cifra saiu na G. Só o
+// detalhe a devolve, e a tela a mostra escondida até alguém pedir.
+model LicenseKey {
+  id String @id @default(uuid()) @db.Uuid
+
+  licenseId String @db.Uuid
+
+  /// Uma linha, única na licença.
+  productKey String
+  /// Quantas licenças esta chave cobre, ao menos uma (CHECK `license_keys_seats_positivo`).
+  seats      Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Cascade: a chave é parte do contrato. Só a licença nunca entregue se exclui
+  // (AA), e a chave já entregue segura a sua pelo `Restrict` de `license_checkouts`.
+  license   License           @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+  checkouts LicenseCheckout[]
+
+  @@unique([licenseId, productKey])
+  // O alvo da FK composta de `license_checkouts`: a entrega só aponta para uma
+  // chave DA PRÓPRIA licença.
+  @@unique([id, licenseId])
+  @@map("license_keys")
 }
 
 // Uma linha por entrega. Devolver preenche `checkinAt` e NUNCA apaga a linha —
@@ -891,21 +918,27 @@ model LicenseCheckout {
 
   checkoutNotes String?
 
-  /// A chave desta entrega, quando a licença não é de volume. Uma linha. A mesma
-  /// chave não fica em duas entregas ABERTAS da licença (índice único parcial).
-  productKey String?
+  /// A chave desta entrega (AC), uma das chaves da licença. Nula na licença sem
+  /// chave cadastrada. Quando a licença tem chaves, a entrega nova escolhe uma.
+  licenseKeyId String? @db.Uuid
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Restrict nos três. A licença com entrega não se exclui (o 409 vem antes);
-  // pessoa e ativo não se apagam de verdade enquanto têm histórico.
-  license        License @relation(fields: [licenseId], references: [id], onDelete: Restrict)
-  assignedPerson Person? @relation(fields: [assignedPersonId], references: [id], onDelete: Restrict)
-  assignedAsset  Asset?  @relation(fields: [assignedAssetId], references: [id], onDelete: Restrict)
+  // Restrict nos quatro. A licença com entrega não se exclui (o 409 vem antes);
+  // pessoa e ativo não se apagam de verdade enquanto têm histórico; a chave já
+  // entregue não sai da lista.
+  license        License     @relation(fields: [licenseId], references: [id], onDelete: Restrict)
+  assignedPerson Person?     @relation(fields: [assignedPersonId], references: [id], onDelete: Restrict)
+  assignedAsset  Asset?      @relation(fields: [assignedAssetId], references: [id], onDelete: Restrict)
+  // FK COMPOSTA (chave, licença): a chave de outra licença não entra nem por
+  // `psql`. Com `licenseKeyId` nulo, o Postgres não confere (MATCH SIMPLE).
+  licenseKey     LicenseKey? @relation(fields: [licenseKeyId, licenseId], references: [id, licenseId], onDelete: Restrict, onUpdate: Restrict)
 
   // Uma entrega ABERTA por alvo e licença: índices únicos PARCIAIS na migration.
   @@index([licenseId, checkinAt])
+  // Quantas entregas abertas cada chave tem — a conta da invariante 24.
+  @@index([licenseKeyId, checkinAt])
   @@index([assignedPersonId, checkinAt])
   @@index([assignedAssetId, checkinAt])
   @@map("license_checkouts")

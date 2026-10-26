@@ -1,4 +1,4 @@
-import type { EventoDaLicenca, Licenca, LicencaInput } from '../../../domain/shared/license.types';
+import type { ChaveDaLicenca, EventoDaLicenca, Licenca, LicencaInput } from '../../../domain/shared/license.types';
 import { paraCampoDeData } from '../../helpers/format.helper';
 
 // Funções puras da tela de licenças (docs/referencia/arquitetura.md). O que as
@@ -19,6 +19,8 @@ import { paraCampoDeData } from '../../helpers/format.helper';
  */
 export function camposAlterados(original: LicencaInput, dados: LicencaInput): Partial<LicencaInput> {
   const normalizar = (campo: keyof LicencaInput, valor: unknown): unknown => {
+    // A lista de chaves vai inteira ou não vai: muda se qualquer chave mudou.
+    if (campo === 'keys') return JSON.stringify(valor ?? []);
     if (valor === undefined || valor === '') return null;
     if (campo.endsWith('Date')) return paraCampoDeData(valor) || null;
     if (campo === 'purchaseCost' && valor !== null) return Number(String(valor).replace(',', '.'));
@@ -89,4 +91,56 @@ export function esconderChave(chave: string): string {
     const visiveis = Math.min(4, Math.floor(linha.length / 3));
     return linha.slice(0, visiveis) + '•'.repeat(Math.max(4, linha.length - visiveis));
   }).join('\n');
+}
+
+/**
+ * Uma chave como as listas a nomeiam: a posição na licença e o começo, escondido
+ * — "3. ABCDE-FGHIJ-•••••-•••••-•••••". A posição separa duas chaves que começam
+ * igual, e é o mesmo número no detalhe, no "Com quem está" e na entrega.
+ */
+export function rotuloDaChave(chave: Pick<ChaveDaLicenca, 'productKey'>, posicao: number): string {
+  return `${posicao}. ${esconderChave(chave.productKey)}`;
+}
+
+/** Quanto da chave está tomado: "livre", "em uso", ou "cobre 10 · 3 livres". */
+export function lugarDaChave(chave: Pick<ChaveDaLicenca, 'seats' | 'emUso'>): string {
+  const livres = chave.seats - chave.emUso;
+  if (chave.seats === 1) return livres > 0 ? 'livre' : 'em uso';
+  return `cobre ${chave.seats} · ${livres} ${livres === 1 ? 'livre' : 'livres'}`;
+}
+
+/** As chaves que ainda recebem entrega: as que cobrem mais do que está com elas. */
+export function chavesComLugar(chaves: readonly ChaveDaLicenca[]): ChaveDaLicenca[] {
+  return chaves.filter((chave) => chave.emUso < chave.seats);
+}
+
+/**
+ * Uma chave no formulário (AC). `seats` é texto até o envio, como todo campo
+ * numérico.
+ */
+export interface LinhaDeChave {
+  /** A identidade da linha na tela — o `id` da chave, ou um provisório da nova. */
+  uid: string;
+  /** Ausente na chave nova. */
+  id?: string;
+  productKey: string;
+  seats: string;
+  emUso: number;
+  jaEntregue: boolean;
+}
+
+let proximaLinha = 0;
+
+/** Uma linha nova, vazia ou com o texto colado. */
+export function linhaNova(productKey = ''): LinhaDeChave {
+  proximaLinha += 1;
+  return { uid: `nova-${proximaLinha}`, productKey, seats: '1', emUso: 0, jaEntregue: false };
+}
+
+/** Quanto as linhas cobrem juntas — o "cobre" que ainda não é número conta zero. */
+export function cobertasPelas(linhas: readonly LinhaDeChave[]): number {
+  return linhas.reduce((soma, linha) => {
+    const seats = Number(linha.seats);
+    return soma + (linha.seats.trim() !== '' && Number.isInteger(seats) ? seats : 0);
+  }, 0);
 }

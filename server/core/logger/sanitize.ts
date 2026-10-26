@@ -7,8 +7,9 @@
 // `chave|productkey|product_key` entrou na F6, quando a licença guardava chave
 // de produto: `productKey` NÃO casava com `apikey` nem com nenhum outro termo
 // da lista, e um `logger.error({ dados })` num caminho de erro publicaria a
-// chave EM CLARO no log estruturado. A chave voltou com AA — na licença e em
-// cada entrega, em texto no banco —, e é estes termos que a tiram do log.
+// chave EM CLARO no log estruturado. A chave voltou com AA e virou lista com AC
+// — `keys[].productKey` no corpo da licença, em texto no banco —, e é estes
+// termos que a tiram do log.
 const SENSITIVE_KEY = /senha|password|passwd|token|secret|segredo|apikey|api_key|chave|productkey|product_key|authorization|cookie|jwt/i;
 const MAX_DEPTH = 6;
 const MAX_STRING = 1000; // payload de handshake traz a lista de software instalado

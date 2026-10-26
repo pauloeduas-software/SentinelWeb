@@ -50,19 +50,43 @@ const camposComuns = {
   purchaseCost: valorMonetarioOpcional('valor de compra'),
 
   notes: textoOpcional('notas', 2_000),
-
-  /**
-   * A chave de volume, ou a lista das chaves compradas — uma por linha. Vazio ou
-   * só espaço vira nulo (`textoOpcional`).
-   */
-  productKey: textoOpcional('chave do produto', 20_000),
 };
+
+/** O texto de uma chave: uma linha, nunca vazia. */
+const textoDaChave = z.string('chave: informe a chave')
+  .trim()
+  .min(1, 'chave: não pode ser vazia')
+  .max(500, 'chave: máximo de 500 caracteres')
+  .refine((valor) => !/[\r\n]/.test(valor), 'chave: uma linha só');
+
+/** Quantas licenças a chave cobre: 1 na chave individual, mais na de volume. */
+const coberturaDaChave = z.number('chave: informe quantas licenças ela cobre')
+  .int('chave: cobre um número inteiro de licenças')
+  .min(1, 'chave: cobre ao menos 1 licença')
+  .max(MAX_LICENCAS, `chave: cobre no máximo ${MAX_LICENCAS}`);
+
+/**
+ * AS CHAVES DA LICENÇA (AC) — a lista inteira, como ficará. No cadastro, só
+ * chaves novas. Na edição, a que traz `id` é uma que já existe (o texto ou o
+ * "cobre" podem mudar), a sem `id` é nova, e a que ficou fora da lista sai.
+ * Ausente na edição é "mantém as chaves como estão".
+ */
+const chavesNovas = z.array(
+  z.strictObject({ productKey: textoDaChave, seats: coberturaDaChave }),
+  'chaves: envie uma lista',
+).max(MAX_LICENCAS, `chaves: no máximo ${MAX_LICENCAS}`);
+
+const chavesDaEdicao = z.array(
+  z.strictObject({ id: uuidObrigatorio('chave').optional(), productKey: textoDaChave, seats: coberturaDaChave }),
+  'chaves: envie uma lista',
+).max(MAX_LICENCAS, `chaves: no máximo ${MAX_LICENCAS}`);
 
 export const createLicenseSchema = z.strictObject({
   name: nomeObrigatorio('nome'),
   categoryId: uuidObrigatorio('categoria'),
   seatsTotal: quantidadeObrigatoria,
   ...camposComuns,
+  keys: chavesNovas.optional(),
 });
 
 /**
@@ -75,16 +99,8 @@ export const updateLicenseSchema = z.strictObject({
   categoryId: uuidObrigatorio('categoria').optional(),
   seatsTotal: quantidadeObrigatoria.optional(),
   ...camposComuns,
+  keys: chavesDaEdicao.optional(),
 });
-
-/**
- * A chave de UMA entrega: uma linha só. Vazio ou só espaço vira nulo — é a
- * entrega de uma licença de volume, que não tem chave própria.
- */
-const chaveDaEntrega = textoOpcional('chave', 500).refine(
-  (valor) => !valor || !/[\r\n]/.test(valor),
-  'chave: uma linha só',
-);
 
 /**
  * A ENTREGA de uma licença.
@@ -102,17 +118,19 @@ export const checkoutLicenseSchema = z.strictObject({
   notes: textoOpcional('observações', 2_000),
   /** Ausente é hoje. Passado é o caso real: registrar a entrega que já aconteceu. */
   checkoutAt: diaNaoFuturo('data da entrega'),
-  productKey: chaveDaEntrega,
+  /**
+   * Uma das chaves da licença (AC). Obrigatória quando a licença tem chaves —
+   * quem confere é o use-case, que sabe se ela tem.
+   */
+  licenseKeyId: uuidObrigatorio('chave').optional(),
 });
 
-/** Trocar a chave de uma entrega ABERTA — e só a chave. */
+/**
+ * Trocar a chave de uma entrega ABERTA — e só a chave — por outra da lista. Sem
+ * "limpar": a licença que tem chaves pede uma em toda entrega.
+ */
 export const checkoutKeySchema = z.strictObject({
-  productKey: chaveDaEntrega,
-}).refine((corpo) => corpo.productKey !== undefined, {
-  // Sem a chave no corpo, o `?? null` da gravação apagaria a que está lá. Limpar
-  // é mandar `null` ou vazio.
-  message: 'chave: informe a chave, ou vazio para limpar',
-  path: ['productKey'],
+  licenseKeyId: uuidObrigatorio('chave'),
 });
 
 /**
@@ -148,6 +166,7 @@ export type UpdateLicenseData = z.infer<typeof updateLicenseSchema>;
 export type CheckoutLicenseData = z.infer<typeof checkoutLicenseSchema>;
 export type CheckinLicenseData = z.infer<typeof checkinLicenseSchema>;
 export type CheckoutKeyData = z.infer<typeof checkoutKeySchema>;
+export type ChaveNoCorpo = NonNullable<UpdateLicenseData['keys']>[number];
 export type LicenseFilters = z.infer<typeof licenseFiltersSchema>;
 export type RecorteDaLicenca = LicenseFilters['view'];
 export type StatusDoFiltro = NonNullable<LicenseFilters['status']>;
