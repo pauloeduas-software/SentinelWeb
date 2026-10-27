@@ -52,7 +52,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 13 | A mesma sugestão não empilha na fila | **banco** — índice único parcial `sugestao_pendente_por_alvo` | nada: o job trata o `P2002` como "outro já criou" |
 | 17 | Sempre existe alguém ativo que é `ADMIN` | **aplicação** — `assertSobraAdministrador()`, DEPOIS da escrita e dentro da transação, na edição e na exclusão de usuário | 409 `Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. Dê o cargo de Administrador a outra pessoa com login antes de seguir.` |
 | 19 | No máximo um ativo por posto de trabalho | **aplicação** — duas portas: a entrega e a restauração da lixeira (`ativoDoPosto()`, com `FOR UPDATE` na linha do posto) | 409 `Este posto de trabalho já tem um ativo: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.` |
-| 20 | Ativo baixado não tem posse aberta nem licença | **aplicação** — duas portas: a baixa (`assertSemPosseParaBaixa` e a contagem de licenças) e a entrega (`checkout-asset`, `checkout-license`), as duas com o ativo travado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Desfaça a baixa antes.` |
+| 20 | Ativo baixado não tem posse aberta, licença nem componente | **aplicação** — duas portas: a baixa (`assertSemPosseParaBaixa` e as contagens de licenças e de componentes) e a entrega (`checkout-asset`, `checkout-license`, `checkout-stock`), as duas com o ativo travado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Desfaça a baixa antes.` |
 | 21 | Localização ou posto desativado não recebe nada novo | **aplicação** — `assertLocalRecebe()` em cada porta que guarda (ativo, item, posto) e `assertPostoRecebe()` em cada porta que entrega ou ocupa, com a linha travada | 409 `"Mesa 1" está desativado e não recebe entrega nova.` |
 | 22 | O que está em uso nunca passa da quantidade comprada | **aplicação** — a entrega e a edição contam com a linha da licença travada (`lock-license.usecase.ts`) | 409 `Sem licença livre em "Office 2024": 5 compradas, 5 em uso. Devolva uma entrega ou aumente a quantidade comprada.` |
 | 23 | Uma entrega aberta por alvo e licença | **banco** — dois índices únicos parciais, um por alvo. No passado, a entrega que se sobrepõe à última devolução do mesmo alvo é só da **aplicação** (422) | 409 `Laura Souza já está com "Office 2024".` (a API confere antes) |
@@ -158,7 +158,7 @@ está na mão de alguém.
 | Tipo do status | Sem posse aberta — *estoque* | Com posse aberta — *entregue* |
 |---|---|---|
 | `DEPLOYABLE` | ✅ o caso normal do estoque | ❌ **proibido** — não está no estoque |
-| `IN_USE` | ✅ posto vago: sinal operacional, volta ao estoque | ✅ o caso normal |
+| `IN_USE` | ✅ posto vago: sinal operacional, candidato à devolução | ✅ o caso normal |
 | `PENDING` | ✅ aguardando, em trânsito | ✅ foi ao conserto e **volta para a mesma pessoa** |
 | `UNDEPLOYABLE` | ✅ quebrado, no depósito | ✅ notebook quebrado **ainda na gaveta dela** |
 
@@ -551,11 +551,12 @@ registra em que estado ele voltou e quem recebeu — não aconteceria.
 
 | porta | o que ela impede |
 | --- | --- |
-| `retire-asset.usecase.ts` | dar baixa em ativo **entregue** — `Faça a devolução antes.` — ou que **tem licença** — `Devolva pela tela de Licenças antes de dar baixa.` |
+| `retire-asset.usecase.ts` | dar baixa em ativo **entregue** — `Faça a devolução antes.` —, que **tem licença** — `Devolva pela tela de Licenças antes de dar baixa.` — ou que **tem componente** instalado — `Retire pela tela de Estoque antes de dar baixa.` ([AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar)) |
 | `checkout-asset.usecase.ts` | **entregar** ativo baixado — e isso vale com **qualquer** status, porque a baixa não mexe no status: um vendido pode estar "Disponível" |
 
-A entrega de **licença** a ativo (`checkout-license.usecase.ts`) recusa o baixado
-pelo mesmo motivo: a licença ficaria presa a uma máquina que não existe mais.
+A entrega de **licença** a ativo (`checkout-license.usecase.ts`) e a de
+**componente** (`checkout-stock.usecase.ts`) recusam o baixado pelo mesmo motivo:
+a licença ou a peça ficaria presa a uma máquina que não existe mais.
 
 **Bloqueia, nunca fecha a posse sozinha** — o mesmo argumento da invariante 4.
 
@@ -710,11 +711,14 @@ uma chave ou diminua o que ela cobre antes.`
 ```sql
 ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_qty_positiva" CHECK ("qty" >= 1);
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_forma" CHECK (
-     ("targetType" = 'PERSON' AND "targetPersonId" IS NOT NULL AND "targetWorkstationId" IS NULL)
-  OR ("targetType" = 'WORKSTATION' AND "targetPersonId" IS NULL AND (
+     ("targetType" = 'PERSON' AND "targetPersonId" IS NOT NULL AND "targetWorkstationId" IS NULL
+      AND "targetAssetId" IS NULL)
+  OR ("targetType" = 'WORKSTATION' AND "targetPersonId" IS NULL AND "targetAssetId" IS NULL AND (
           "targetWorkstationId" IS NOT NULL
        OR ("returnedAt" IS NOT NULL AND "targetWorkstationName" IS NOT NULL)
      ))
+  OR ("targetType" = 'ASSET' AND "targetAssetId" IS NOT NULL AND "targetPersonId" IS NULL
+      AND "targetWorkstationId" IS NULL)
 );
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_devolucao_nao_antecede_entrega"
   CHECK ("returnedAt" IS NULL OR "returnedAt" >= "checkoutAt");
@@ -731,7 +735,8 @@ O estoque segue a conta da licença
 entregue**. A invariante tem, como a 24, uma metade no banco e outra na aplicação.
 
 **No banco, a forma.** O total é ao menos 1 — o item que acabou se desativa. A linha tem UM alvo,
-o que o `targetType` diz, e a devolução não fica antes da entrega e tem o dia e o instante do
+o que o `targetType` diz — o computador (`ASSET`) é só do componente, e quem confere a categoria
+é a aplicação ([AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar)) —, e a devolução não fica antes da entrega e tem o dia e o instante do
 registro juntos — o instante é o que separa duas devoluções no mesmo dia; a entrega devolvida de um posto
 excluído fica sem FK, com o nome por escrito, como a `Assignment` (5). E a do **item** excluído
 também (AG): toda entrega em uso aponta para o item (CHECK `stock_movements_item_presente`), e a FK
@@ -742,7 +747,7 @@ também (AG): toda entrega em uso aponta para o item (CHECK `stock_movements_ite
 tabela. Mora em quem conta e grava: a **entrega** (`checkout-stock.usecase.ts`) e a **edição**
 que reduz o total (`update-stock-item.usecase.ts`), as duas com a linha do item travada
 (`travarItemOuFalhar`). Sem a trava, duas entregas liam "1 disponível" e as duas gravavam. A
-ordem é colaborador → item → posto; a devolução trava só as linhas da entrega, porque só diminui o
+ordem é colaborador ou computador → item → posto; a devolução trava só as linhas da entrega, porque só diminui o
 que está em uso.
 
 **O disponível negativo se mostra.** Só nasce de uma linha criada por fora da trava, e a tela o

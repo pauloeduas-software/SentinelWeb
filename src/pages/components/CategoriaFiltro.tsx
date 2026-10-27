@@ -3,11 +3,12 @@ import { useCatalogOptionsQuery } from '../../domain/catalog/catalog.queries';
 // O FILTRO POR CATEGORIA das listagens de Computadores, Licenças e Estoque.
 //
 // Pelo TIPO, como o `<select>` dos formulários: a tela de Licenças oferece só
-// categorias de licença. Vazio é "todas" — e é o único jeito de desligar o
+// categorias de licença, e a de Estoque as de estoque e as de componente (AI). Vazio é "todas" — e é o único jeito de desligar o
 // filtro, então a opção fica sempre no topo.
 
 interface CategoriaFiltroProps {
-  tipo: 'ASSET' | 'LICENSE' | 'STOCK';
+  /** Um tipo, ou vários separados por vírgula — o `?type=` do `/options`. */
+  tipo: 'ASSET' | 'LICENSE' | 'STOCK,COMPONENT';
   valor: string | undefined;
   onChange: (valor: string | undefined) => void;
 }

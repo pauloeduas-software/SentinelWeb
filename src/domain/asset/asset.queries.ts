@@ -1,5 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../core/api/apiClient';
+import { catalogKeys } from '../catalog/catalog.queries';
 import type {
   Asset, AssetListParams, AssetStats, EventoDoAtivo, RetireInput,
 } from '../shared/asset.types';
@@ -99,6 +100,18 @@ export function useNextAssetTagQuery(habilitado: boolean) {
 }
 
 /**
+ * Invalida DOIS caches, como o posto (`workstation.queries.ts`): o do ativo e as
+ * OPÇÕES de ativo (`catalogKeys.tabela('assets')`), que os seletores da entrega
+ * de licença e de componente leem. Sem a segunda, o computador criado não
+ * aparecia no seletor — e o baixado continuava sendo oferecido — até o
+ * `staleTime` vencer.
+ */
+function invalidarAtivos(queryClient: ReturnType<typeof useQueryClient>) {
+  void queryClient.invalidateQueries({ queryKey: assetKeys.all });
+  void queryClient.invalidateQueries({ queryKey: catalogKeys.tabela('assets') });
+}
+
+/**
  * Criar — e é também a mutação do CLONE: clonar é abrir o formulário com os
  * valores de outro ativo e gravar um NOVO, sem rota própria no servidor.
  *
@@ -109,7 +122,7 @@ export function useCreateAsset() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: AssetInput) => (await apiClient.post<Asset>('/assets', data)).data,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: assetKeys.all }),
+    onSuccess: () => invalidarAtivos(queryClient),
   });
 }
 
@@ -118,7 +131,7 @@ export function useUpdateAsset() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: AssetInput }) => apiClient.put(`/assets/${id}`, data),
     // No erro também: depois do 409 de versão, o Editar reaberto vem com o ativo novo (AF).
-    onSettled: () => queryClient.invalidateQueries({ queryKey: assetKeys.all }),
+    onSettled: () => invalidarAtivos(queryClient),
   });
 }
 
@@ -126,7 +139,7 @@ export function useDeleteAsset() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiClient.delete(`/assets/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: assetKeys.all }),
+    onSuccess: () => invalidarAtivos(queryClient),
   });
 }
 
@@ -134,7 +147,7 @@ export function useRestoreAsset() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiClient.post(`/assets/${id}/restore`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: assetKeys.all }),
+    onSuccess: () => invalidarAtivos(queryClient),
   });
 }
 
@@ -149,7 +162,7 @@ export function useRetireAsset() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: RetireInput }) =>
       apiClient.post(`/assets/${id}/retire`, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: assetKeys.all }),
+    onSuccess: () => invalidarAtivos(queryClient),
   });
 }
 
@@ -158,7 +171,7 @@ export function useUnretireAsset() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiClient.post(`/assets/${id}/unretire`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: assetKeys.all }),
+    onSuccess: () => invalidarAtivos(queryClient),
   });
 }
 

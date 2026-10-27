@@ -306,10 +306,15 @@ model AuditLog {
 // A que MÓDULO a categoria pertence. `STOCK` é o item por quantidade — monitor,
 // teclado, mouse, cabo —, sem patrimônio individual: o que não é máquina não é
 // ativo (ver `StockItem`).
+//
+// `COMPONENT` também é item de estoque, mas o que vai PARA DENTRO do computador
+// — memória, SSD (AI). É a categoria que decide para onde o item vai: o de
+// `STOCK` só a colaborador ou posto, o de `COMPONENT` só a computador.
 enum CategoryType {
   ASSET
   LICENSE
   STOCK
+  COMPONENT
 }
 
 // O tipo do status responde: *o que dá para fazer com este ativo agora?*
@@ -609,6 +614,9 @@ model Asset {
 
   // As licenças entregues a esta máquina (AA).
   licenseCheckouts LicenseCheckout[]
+
+  // Os componentes instalados nela — a memória, o SSD (AI).
+  stockMovements StockMovement[]
 
   // ── A CONVERGÊNCIA COM O RMM (F7) ────────────────────────────────────────
   //
@@ -1094,6 +1102,9 @@ model AssetUsageDaily {
 // série individual. Uma linha de `StockItem` é o item; cada unidade que sai é
 // uma linha de `StockMovement`.
 //
+// A memória e o SSD também são estoque, na categoria de tipo COMPONENTE (AI):
+// vão para dentro de um computador, e só para ele.
+//
 // A MESMA LÓGICA DA LICENÇA (AE): o total é campo da edição, o disponível é
 // `qty − COUNT(entregas abertas)` — calculado, nunca coluna —, e reduzir não passa
 // do que está em uso. Sem lixeira, e a regra do POSTO (AG): só o que está em
@@ -1101,10 +1112,12 @@ model AssetUsageDaily {
 // guardam o nome dele por escrito. O que pode voltar a ser comprado se desativa.
 // ============================================================================
 
-// Para QUEM uma unidade saiu.
+// Para QUEM uma unidade saiu. `ASSET` é só do COMPONENTE, e o componente só vai
+// para `ASSET` (AI): a categoria do item decide, no `checkout-stock`.
 enum StockTarget {
   PERSON
   WORKSTATION
+  ASSET
 }
 
 model StockItem {
@@ -1166,12 +1179,15 @@ model StockMovement {
   /// O nome do item, por escrito, quando ele foi excluído.
   itemName String?
 
-  // Discriminante + duas FKs nuláveis, como no `Assignment`.
+  // Discriminante + três FKs nuláveis, como no `Assignment`.
   targetType            StockTarget
   targetPersonId        String?     @db.Uuid
   targetWorkstationId   String?     @db.Uuid
   /// O nome do posto, por escrito, quando ele foi excluído — como na `Assignment`.
   targetWorkstationName String?
+  /// O computador que recebeu o COMPONENTE (AI). Sem nome por escrito: o
+  /// computador não se exclui de verdade, vai para a lixeira.
+  targetAssetId         String?     @db.Uuid
 
   /// O DIA da entrega, como o `checkoutAt` da licença: hoje é a hora real, um dia
   /// passado é o meio-dia de Brasília (`instanteDoDia`).
@@ -1191,17 +1207,20 @@ model StockMovement {
   /// O instante do INSERT — o mesmo nas N linhas de uma entrega: é a chave do lote.
   createdAt DateTime @default(now())
 
-  // Restrict nos três: item, posto e pessoa com unidade em uso não se excluem
+  // Restrict nos quatro: item, posto e pessoa com unidade em uso não se excluem
   // (o 409 de cada um vem antes, e conta as unidades). A entrega já devolvida de
   // um item ou de um posto excluído é desligada antes, com o nome por escrito
-  // em `itemName` ou em `targetWorkstationName`.
+  // em `itemName` ou em `targetWorkstationName`. O computador não tem DELETE:
+  // a baixa e a lixeira dele recusam o componente instalado (AI).
   item              StockItem?   @relation(fields: [itemId], references: [id], onDelete: Restrict)
   targetPerson      Person?      @relation(fields: [targetPersonId], references: [id], onDelete: Restrict)
   targetWorkstation Workstation? @relation(fields: [targetWorkstationId], references: [id], onDelete: Restrict)
+  targetAsset       Asset?       @relation(fields: [targetAssetId], references: [id], onDelete: Restrict)
 
   @@index([itemId, returnedAt])
   @@index([itemId, checkoutAt])
   @@index([targetPersonId, returnedAt])
   @@index([targetWorkstationId, returnedAt])
+  @@index([targetAssetId, returnedAt])
   @@map("stock_movements")
 }

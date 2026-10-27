@@ -7,10 +7,14 @@ import type { Referencia } from './asset.types';
 // Ativo é computador; o que não é máquina (monitor, teclado, mouse, cabo) é
 // `StockItem`: N unidades intercambiáveis, sem patrimônio individual. Espelha
 // `server/domain/stock/helpers/stock-select.helper.ts`.
+//
+// O item de categoria COMPONENTE (memória, SSD) vai só para computador — o
+// alvo `ASSET` — e o resto nunca vai (AI).
 
-type AlvoDaEntrega = 'PERSON' | 'WORKSTATION';
+type AlvoDaEntrega = 'PERSON' | 'WORKSTATION' | 'ASSET';
 
 interface CategoriaDoItem extends Referencia {
+  /** `STOCK` ou `COMPONENT` — é ele que diz para onde o item vai (AI). */
   type: string;
 }
 
@@ -56,6 +60,7 @@ export interface EntregaAberta {
   targetType: AlvoDaEntrega;
   targetPersonId: string | null;
   targetWorkstationId: string | null;
+  targetAssetId: string | null;
   targetLabel: string;
   checkoutAt: string;
   notes: string | null;
@@ -72,12 +77,14 @@ export interface EventoDoItem {
   targetType: AlvoDaEntrega;
   targetPersonId: string | null;
   targetWorkstationId: string | null;
+  targetAssetId: string | null;
   targetLabel: string;
   notes: string | null;
 }
 
 /**
- * Uma entrega aberta como a FICHA DO POSTO e a da PESSOA a recebem: o item, a
+ * Uma entrega aberta como a FICHA DO POSTO, a da PESSOA e a aba Componentes do
+ * computador a recebem: o item, a
  * categoria, quantas e desde quando. `item.isActive` vem porque a unidade de um
  * item desativado continua na mesa, e a ficha precisa mostrá-la para alguém
  * devolvê-la — no detalhe do item, para onde a linha aponta.
@@ -109,13 +116,14 @@ export interface ItemDeEstoqueInput {
 }
 
 /**
- * O alvo da entrega: colaborador OU posto, nunca os dois
- * (`checkout-stock.usecase.ts`). `checkoutAt` é o dia, 'AAAA-MM-DD': hoje ou
+ * O alvo da entrega: colaborador, posto ou — só o componente — computador; um
+ * só (`checkout-stock.usecase.ts`). `checkoutAt` é o dia, 'AAAA-MM-DD': hoje ou
  * antes.
  */
 export type AlvoDaEntregaDeEstoque = { qty: number; notes?: string | null; checkoutAt: string } & (
   | { targetType: 'PERSON'; targetPersonId: string }
   | { targetType: 'WORKSTATION'; targetWorkstationId: string }
+  | { targetType: 'ASSET'; targetAssetId: string }
 );
 
 /** O que a devolução responde: quantas voltaram e quantas da entrega ficaram. */

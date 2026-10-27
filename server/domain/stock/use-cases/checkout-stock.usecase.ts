@@ -2,16 +2,26 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
+import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
+import { travarAtivo } from '../../asset/use-cases/lock-asset.usecase';
 import { assertPostoRecebe } from '../../catalog/helpers/catalog-lock.helper';
 import { travarPessoaOuFalhar, type ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
-import { instanteDoDia } from '../../shared/hoje.helper';
+import { hojeNoBrasil, instanteDoDia } from '../../shared/hoje.helper';
 import {
   assertDisponivel, contarUsoDe, travarItemOuFalhar, type ClienteEstoque,
 } from '../helpers/stock-balance.helper';
-import { STOCK_MOVEMENT_SELECT } from '../helpers/stock-select.helper';
+import { rotuloDoComputador, STOCK_MOVEMENT_SELECT } from '../helpers/stock-select.helper';
 import type { CheckoutStockInput } from '../schemas/stock.schema';
 
-// A ENTREGA — `qty` unidades de um item para UMA pessoa ou UM posto, num dia.
+// A ENTREGA — `qty` unidades de um item para UMA pessoa, UM posto ou UM
+// computador, num dia.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// A CATEGORIA DECIDE PARA ONDE (AI). O item de categoria ESTOQUE — mouse,
+// monitor, cabo — vai a colaborador ou a posto, nunca a computador. O de
+// categoria COMPONENTE — memória, SSD — vai SÓ a computador: ele fica dentro da
+// máquina, e é lá que está "em uso". Sai pelo Retirar (a devolução), na troca
+// de peça, na máquina que vai ser descartada e no lançamento errado.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // O ALVO PODE SER UM POSTO, e é a mesma razão da posse de ativo: entregar 5
@@ -34,22 +44,32 @@ import type { CheckoutStockInput } from '../schemas/stock.schema';
 // sistema, não do almoxarifado — o mouse entregue no mês passado se registra
 // num item cadastrado hoje. Nem a do "mesmo alvo depois da devolução": o mesmo
 // alvo fica com várias unidades ao mesmo tempo.
+//
+// O COMPONENTE tem a recusa "antes da compra" — a do COMPUTADOR, como a
+// licença instalada nele: a peça não entra numa máquina que ainda não tinha
+// sido comprada.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const FK_DO_ALVO = { PERSON: 'targetPersonId', WORKSTATION: 'targetWorkstationId' } as const;
+const FK_DO_ALVO = {
+  PERSON: 'targetPersonId', WORKSTATION: 'targetWorkstationId', ASSET: 'targetAssetId',
+} as const;
 const ROTULO_DO_ALVO = {
   PERSON: 'um colaborador (targetPersonId)',
   WORKSTATION: 'um posto (targetWorkstationId)',
+  ASSET: 'um computador (targetAssetId)',
 } as const;
 
+type TipoDoAlvo = CheckoutStockInput['targetType'];
+
 /**
- * Coerência do alvo: exatamente UMA das duas FKs preenchida, e a que casa com o
+ * Coerência do alvo: exatamente UMA das três FKs preenchida, e a que casa com o
  * `targetType`. O banco também garante (`stock_movements_forma`); esta função
  * existe para dar 422 com o nome do campo que falta.
  */
 function assertAlvoCoerente(data: CheckoutStockInput): string {
   const alvoId = data[FK_DO_ALVO[data.targetType]];
-  const intrusa = data.targetType === 'PERSON' ? data.targetWorkstationId : data.targetPersonId;
+  const intrusa = (Object.keys(FK_DO_ALVO) as TipoDoAlvo[])
+    .some((tipo) => tipo !== data.targetType && data[FK_DO_ALVO[tipo]]);
 
   if (intrusa) {
     throw new AppError(
@@ -64,20 +84,57 @@ function assertAlvoCoerente(data: CheckoutStockInput): string {
 }
 
 /**
- * O alvo existe e pode receber? Devolve o NOME dele, que a auditoria grava.
+ * A categoria do item contra o alvo (AI): o componente vai só a computador, e
+ * o resto do estoque nunca vai. 422, como o alvo incoerente: o pedido é que
+ * não faz sentido, e nada no estado do banco mudaria isso.
+ */
+function assertAlvoDaCategoria(item: { name: string; category: { type: string } }, tipo: TipoDoAlvo): void {
+  const componente = item.category.type === 'COMPONENT';
+  if (componente && tipo !== 'ASSET') {
+    throw new AppError(`"${item.name}" é componente e vai só para um computador.`, 422);
+  }
+  if (!componente && tipo === 'ASSET') {
+    throw new AppError(
+      `"${item.name}" não é componente: vai para um colaborador ou um posto, não para um computador.`,
+      422,
+    );
+  }
+}
+
+/**
+ * O alvo existe e pode receber? Devolve o NOME dele, que a auditoria grava, e
+ * a data de compra do computador, que o dia da entrega não antecede.
  *
- * Pessoa sai por `findFirst`, que o escopo da lixeira alcança: não se entrega
- * nada a um cadastro na lixeira. Posto sai travado, pela marca de
- * desativado.
+ * Pessoa e computador saem por `findFirst`, que o escopo da lixeira alcança:
+ * não se entrega nada a um cadastro na lixeira. Posto sai travado, pela marca
+ * de desativado.
  * DESATIVADO é diferente de APAGADO, e os dois são recusados — entregar a quem
  * saiu reabriria, uma linha depois, a pendência que a entrega da empresa fechou.
- * 409 e não 404: a pessoa existe, o estado dela é que recusa.
+ * 409 e não 404: a pessoa existe, o estado dela é que recusa. O computador
+ * BAIXADO, pelo mesmo motivo: a peça iria para uma máquina que saiu do
+ * patrimônio.
  */
-async function assertAlvoApto(client: ClienteEstoque & ClienteQueTrava, tipo: 'PERSON' | 'WORKSTATION', alvoId: string): Promise<string> {
+async function assertAlvoApto(
+  client: ClienteEstoque & ClienteQueTrava,
+  tipo: TipoDoAlvo,
+  alvoId: string,
+): Promise<{ nome: string; compra: Date | null }> {
   if (tipo === 'WORKSTATION') {
     // Desativado não recebe entrega nova. `FOR SHARE` depois do item — a aresta
     // `item → posto` que o grafo já tinha (`lock-asset.usecase.ts`).
-    return assertPostoRecebe(client, alvoId, 'entrega de estoque');
+    return { nome: await assertPostoRecebe(client, alvoId, 'entrega de estoque'), compra: null };
+  }
+
+  if (tipo === 'ASSET') {
+    const ativo = await client.asset.findFirst({
+      where: { id: alvoId },
+      select: { assetTag: true, name: true, retiredAt: true, purchaseDate: true },
+    });
+    if (!ativo) throw new AppError('Ativo não encontrado.', 404);
+    if (ativo.retiredAt) {
+      throw new AppError(`O ativo ${ativo.assetTag} teve baixa e não pode receber componente.`, 409);
+    }
+    return { nome: rotuloDoComputador(ativo), compra: ativo.purchaseDate };
   }
 
   const pessoa = await client.person.findFirst({ where: { id: alvoId }, select: { id: true, name: true, isActive: true } });
@@ -85,7 +142,7 @@ async function assertAlvoApto(client: ClienteEstoque & ClienteQueTrava, tipo: 'P
   if (!pessoa.isActive) {
     throw new AppError(`${pessoa.name} está desativado(a) e não pode receber equipamento.`, 409);
   }
-  return pessoa.name;
+  return { nome: pessoa.name, compra: null };
 }
 
 export async function checkoutStock(itemId: string, data: CheckoutStockInput, ator: Ator) {
@@ -94,22 +151,28 @@ export async function checkoutStock(itemId: string, data: CheckoutStockInput, at
 
   return prisma.$transaction(async (tx) => {
     // ORDEM DE TRAVAMENTO: colaborador antes do item — a regra do grafo de
-    // travas (`lock-asset.usecase.ts`). Só no alvo PERSON, e pelo motivo da
+    // travas (`lock-asset.usecase.ts`). No alvo PERSON, pelo motivo da
     // invariante 6: sem a trava, a entrega nasce no intervalo entre o `DELETE`
     // ler a pessoa e apagá-la, e o cadastro na lixeira fica com unidade no nome.
+    // No alvo ASSET, o computador antes do item, pelo mesmo motivo: a baixa e a
+    // lixeira dele travam a linha e contam os componentes (AI).
     if (data.targetType === 'PERSON') await travarPessoaOuFalhar(tx, alvoId);
+    else if (data.targetType === 'ASSET' && !(await travarAtivo(tx, alvoId))) {
+      throw new AppError('Ativo não encontrado.', 404);
+    }
 
     // A TRAVA DA LINHA DO ITEM — o mutex do saldo. Contar não é travar: duas
     // requisições podem contar "4 de 5 em uso" e as duas inserirem, dando 6 de 5.
     await travarItemOuFalhar(tx, itemId);
     const item = await tx.stockItem.findUniqueOrThrow({
       where: { id: itemId },
-      select: { id: true, name: true, qty: true, isActive: true },
+      select: { id: true, name: true, qty: true, isActive: true, category: { select: { type: true } } },
     });
+    assertAlvoDaCategoria(item, data.targetType);
 
     // O alvo antes do item, como na licença: o colaborador na lixeira é 404
     // mesmo com o item desativado.
-    const nomeDoAlvo = await assertAlvoApto(tx, data.targetType, alvoId);
+    const { nome: nomeDoAlvo, compra: compraDoAlvo } = await assertAlvoApto(tx, data.targetType, alvoId);
 
     // O DESATIVADO é o encerrado da licença: não recebe entrega nova.
     if (!item.isActive) {
@@ -124,6 +187,14 @@ export async function checkoutStock(itemId: string, data: CheckoutStockInput, at
     const { emUso } = await contarUsoDe(tx, itemId);
     assertDisponivel(item, data.qty, emUso);
 
+    const dia = data.checkoutAt ?? hojeNoBrasil();
+    if (compraDoAlvo && dia < compraDoAlvo) {
+      throw new AppError(
+        `A entrega (${diaEmPortugues(dia)}) não pode ser antes da compra de ${nomeDoAlvo} (${diaEmPortugues(compraDoAlvo)}).`,
+        422,
+      );
+    }
+
     // Ausente, quem preenche é o `@default(now())`.
     const checkoutAt = data.checkoutAt ? instanteDoDia(data.checkoutAt) : undefined;
 
@@ -136,6 +207,7 @@ export async function checkoutStock(itemId: string, data: CheckoutStockInput, at
         targetType: data.targetType,
         targetPersonId: data.targetType === 'PERSON' ? alvoId : null,
         targetWorkstationId: data.targetType === 'WORKSTATION' ? alvoId : null,
+        targetAssetId: data.targetType === 'ASSET' ? alvoId : null,
         notes: data.notes ?? null,
         checkoutAt,
       })),
@@ -145,8 +217,8 @@ export async function checkoutStock(itemId: string, data: CheckoutStockInput, at
     const disponivel = item.qty - emUso - data.qty;
 
     // No histórico do ITEM: é onde alguém abre para perguntar "para onde foram
-    // os 5 mouses". O alvo vai também POR ESCRITO: a pessoa ou o posto podem ser
-    // excluídos depois, e o id sozinho deixaria de dizer para quem as unidades
+    // os 5 mouses". O alvo vai também POR ESCRITO: a pessoa, o posto ou o
+    // computador podem ser excluídos depois, e o id sozinho deixaria de dizer para quem as unidades
     // saíram. E os ids das N linhas, como o `checkoutId` da licença: é o que liga
     // cada unidade à conta que a entregou.
     await recordAudit(tx, {

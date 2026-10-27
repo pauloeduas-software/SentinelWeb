@@ -17,13 +17,14 @@ interface UnidadeDoLote {
   targetPersonId: string | null;
   targetWorkstationId: string | null;
   targetWorkstationName: string | null;
+  targetAssetId: string | null;
 }
 
 /** A chave do lote: o mesmo INSERT, o mesmo item, o mesmo alvo. */
 export function chaveDoLote(unidade: UnidadeDoLote): string {
   return [
     unidade.itemId, unidade.itemName, unidade.createdAt.getTime(), unidade.targetType,
-    unidade.targetPersonId, unidade.targetWorkstationId, unidade.targetWorkstationName,
+    unidade.targetPersonId, unidade.targetWorkstationId, unidade.targetWorkstationName, unidade.targetAssetId,
   ].join('|');
 }
 

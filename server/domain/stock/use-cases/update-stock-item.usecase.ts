@@ -20,6 +20,10 @@ import { assertCategoriaDeEstoque, assertNomeLivre } from './create-stock-item.u
  * com alguém, e o total que diz menos do que isso é uma afirmação falsa sobre o
  * almoxarifado.
  *
+ * TROCAR ENTRE ESTOQUE E COMPONENTE (a categoria de outro tipo, AI) só sem
+ * unidade em uso: a que está com a Laura viraria componente fora de um
+ * computador, e a instalada num computador viraria mouse dentro da máquina.
+ *
  * `isActive: false` é o DESATIVAR, e passa MESMO COM UNIDADE FORA — a tela
  * pergunta antes, com a frase das Configurações. É o Encerrar da licença:
  * avisa, não recusa.
@@ -36,7 +40,21 @@ export async function updateStockItem(id: string, data: UpdateStockItemInput, at
     // O formulário aberto antes de outra pessoa mudar o total ou desativar (AF).
     assertVersaoLida(antes.updatedAt, data.updatedAt, antes.name);
 
-    if (data.categoryId !== undefined) await assertCategoriaDeEstoque(tx, data.categoryId, antes.categoryId);
+    if (data.categoryId !== undefined) {
+      const tipo = await assertCategoriaDeEstoque(tx, data.categoryId, antes.categoryId);
+      if (tipo !== antes.category.type) {
+        const { emUso } = await contarUsoDe(tx, id);
+        if (emUso > 0) {
+          const de = antes.category.type === 'COMPONENT' ? 'componente' : 'estoque';
+          const para = tipo === 'COMPONENT' ? 'componente' : 'estoque';
+          throw new AppError(
+            `"${antes.name}" tem ${emUso === 1 ? '1 unidade em uso' : `${emUso} unidades em uso`} e não pode `
+            + `passar de ${de} para ${para}. ${de === 'componente' ? 'Retire' : 'Devolva'} antes de trocar a categoria.`,
+            409,
+          );
+        }
+      }
+    }
     if (data.name !== undefined) await assertNomeLivre(tx, data.name, id);
     // Local desativado não recebe estoque NOVO — só quando o local muda.
     if (data.locationId && data.locationId !== antes.locationId) {

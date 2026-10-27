@@ -1,11 +1,11 @@
 import { ArrowRightLeft } from 'lucide-react';
 import type { EventoDoItem } from '../../../domain/shared/stock.types';
 import { formatarDiaDoInstante } from '../../helpers/format.helper';
-import { textoDeUnidades } from '../../helpers/estoque.helper';
-import { ACOES_DO_ITEM } from '../helpers/estoque.helper';
+import { tituloDoEvento } from '../helpers/estoque.helper';
 
-// POR ONDE O ITEM PASSOU — entregas e devoluções, e mais nada: o total, a
-// edição e a desativação ficam só na auditoria, como na licença.
+// POR ONDE O ITEM PASSOU — entregas e devoluções (no componente, instalação e
+// retirada, AI), e mais nada: o total, a edição e a desativação ficam só na
+// auditoria, como na licença.
 
 interface HistoricoItemProps {
   /** Uma página, do mais recente para o mais antigo — o paginador mora no detalhe. */
@@ -22,12 +22,6 @@ export default function HistoricoItem({ eventos }: HistoricoItemProps) {
       {eventos.map((evento) => <Evento key={evento.id} evento={evento} />)}
     </ul>
   );
-}
-
-/** "Entregue a Mesa 1 · 5 unidades", "Devolvida por Laura Souza · 1 unidade". */
-function tituloDoEvento(evento: EventoDoItem): string {
-  const acao = ACOES_DO_ITEM[evento.action];
-  return `${acao} ${evento.action === 'CHECKOUT' ? 'a' : 'por'} ${evento.targetLabel} · ${textoDeUnidades(evento.unidades)}`;
 }
 
 function Evento({ evento }: { evento: EventoDoItem }) {

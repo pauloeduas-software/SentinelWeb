@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import ReferenceSelect from '../../components/ReferenceSelect';
+import { useCatalogOptionsQuery } from '../../../domain/catalog/catalog.queries';
 import type { ItemDeEstoque, ItemDeEstoqueInput } from '../../../domain/shared/stock.types';
 
 // Cadastro e edição de um item de estoque.
@@ -13,6 +14,10 @@ import type { ItemDeEstoque, ItemDeEstoqueInput } from '../../../domain/shared/s
 // NA EDIÇÃO, O FORMULÁRIO INTEIRO VAI AO SERVIDOR, como nas Configurações (AF).
 // O preço, declarado: o formulário aberto há tempo desfaz a edição que outra
 // pessoa salvou no meio. O servidor continua barrando o que quebra regra.
+//
+// A CATEGORIA DECIDE PARA ONDE O ITEM VAI (AI): a de Estoque a colaborador ou
+// posto, a de Componente só a computador. O `<select>` oferece as duas, e a
+// linha abaixo dele diz quando a escolhida é de componente.
 
 const CLASSE_CAMPO =
   'w-full p-2 bg-bg-base border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors';
@@ -37,6 +42,12 @@ export default function ItemFormModal({ item, onClose, onSubmit }: ItemFormModal
 
   const [name, setName] = useState(item?.name ?? '');
   const [categoryId, setCategoryId] = useState(item?.categoryId ?? '');
+  // As categorias de componente, para a linha de aviso — a mesma consulta do
+  // `<select>`, recortada pelo tipo. A desativada que o item já usa vem pelo
+  // tipo dela no próprio item.
+  const { data: componentes } = useCatalogOptionsQuery('categories', 'COMPONENT');
+  const categoriaDeComponente = (item?.categoryId === categoryId && item.category.type === 'COMPONENT')
+    || (componentes ?? []).some((categoria) => categoria.id === categoryId);
   const [locationId, setLocationId] = useState(item?.locationId ?? '');
   const [qty, setQty] = useState(item ? String(item.qty) : '1');
   const [notes, setNotes] = useState(item?.notes ?? '');
@@ -113,7 +124,12 @@ export default function ItemFormModal({ item, onClose, onSubmit }: ItemFormModal
             <span className={ROTULO}>Categoria *</span>
             {/* Filtrada por TIPO: o `<select>` não oferece categoria de
                 ativo ou de licença, porque o servidor a recusaria com 422. */}
-            <ReferenceSelect rota="categories" filtroTipo="STOCK" valor={categoryId} obrigatorio atual={item?.category} onChange={setCategoryId} />
+            <ReferenceSelect rota="categories" filtroTipo="STOCK,COMPONENT" valor={categoryId} obrigatorio atual={item?.category} onChange={setCategoryId} />
+            {categoriaDeComponente && (
+              <span className="block text-[10px] text-text-tertiary leading-relaxed">
+                Categoria de componente: o item vai só para computador, e sai dele pelo Retirar.
+              </span>
+            )}
           </label>
 
           <label className="space-y-1.5 block">

@@ -7,6 +7,7 @@ import { ASSET_SELECT, CAMPOS_AUDITADOS_DO_ATIVO } from '../helpers/asset-select
 import {
   comoReferencias, licencasDoAtivo, nomesDasLicencas,
 } from '../../license/use-cases/count-license-checkouts.usecase';
+import { componentesDoAtivo } from '../../stock/use-cases/count-person-stock.usecase';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
 
 /**
@@ -46,6 +47,10 @@ export async function deleteAsset(id: string, ator: Ator): Promise<void> {
         comoReferencias(licencas),
       );
     }
+
+    // E o COMPONENTE (AI), pelo mesmo motivo: a peça ficaria "em uso" numa
+    // máquina que saiu do inventário, e nenhuma tela a retiraria.
+    await componentesDoAtivo(tx, id, 'Este ativo', 'excluir');
 
     // O RETRATO, antes de a linha sair de vista: é ele que diz, na auditoria, o
     // que foi para a lixeira — o ativo pode ser restaurado ou não, a linha não.

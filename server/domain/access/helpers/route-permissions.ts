@@ -91,6 +91,7 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   'DELETE /api/stock/items/:id': 'ADMIN',
   'POST /api/stock/items/:id/checkout': 'ADMIN',
   'POST /api/stock/checkouts/:id/checkin': 'ADMIN',
+  'GET /api/assets/:id/components': 'ADMIN',
   'GET /api/licenses': 'ADMIN',
   'GET /api/licenses/:id': 'ADMIN',
   'GET /api/licenses/:id/history': 'ADMIN',

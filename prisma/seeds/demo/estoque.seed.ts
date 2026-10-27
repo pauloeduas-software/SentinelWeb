@@ -5,8 +5,8 @@ import { mesmoNome } from './garantir-por-nome';
 // ITENS DE ESTOQUE DE EXEMPLO — o que qualquer empresa tem na prateleira, como
 // se tivessem acabado de ser cadastrados: ativos, com o total e sem entrega.
 //
-// Um ou dois por categoria de estoque (`categorias.seed.ts`), todos guardados no
-// Depósito de TI.
+// Um ou dois por categoria de estoque e de componente (`categorias.seed.ts`),
+// todos guardados no Depósito de TI.
 const LOCAL = 'Depósito de TI';
 
 const ITENS: readonly { name: string; categoria: string; qty: number }[] = [
@@ -32,7 +32,7 @@ export const estoqueDemo: Seeder = {
 
     for (const item of ITENS) {
       const categoria = await prisma.category.findFirst({
-        where: { ...mesmoNome(item.categoria), type: 'STOCK' },
+        where: { ...mesmoNome(item.categoria), type: { in: ['STOCK', 'COMPONENT'] } },
         select: { id: true },
       });
       if (!categoria || !local) {

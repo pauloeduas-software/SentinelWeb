@@ -73,21 +73,32 @@ export async function updateAsset(id: string, data: UpdateAssetData, ator: Ator)
       await assertLocalRecebe(tx, data.locationId, 'ativo novo');
     }
 
-    // A COMPRA não fica depois da primeira licença entregue a este computador —
-    // a entrega já recusa o dia antes dela. Só quando a data MUDA, pelo mesmo
-    // motivo do status.
+    // A COMPRA não fica depois da primeira licença entregue a este computador,
+    // nem do primeiro componente instalado nele (AI) — as duas entregas já
+    // recusam o dia antes dela. Só quando a data MUDA, pelo mesmo motivo do
+    // status.
     const compra = data.purchaseDate;
     if (compra && compra.getTime() !== antes.purchaseDate?.getTime()) {
-      const primeira = await tx.licenseCheckout.findFirst({
-        where: { assignedAssetId: id }, orderBy: { checkoutAt: 'asc' }, select: { checkoutAt: true },
-      });
-      const dia = primeira && hojeNoBrasil(primeira.checkoutAt);
-      if (dia && compra > dia) {
-        throw new AppError(
-          `A data de compra (${diaEmPortugues(compra)}) não pode ser depois da primeira licença entregue a `
-          + `${antes.assetTag} (${diaEmPortugues(dia)}).`,
-          422,
-        );
+      const [licenca, componente] = await Promise.all([
+        tx.licenseCheckout.findFirst({
+          where: { assignedAssetId: id }, orderBy: { checkoutAt: 'asc' }, select: { checkoutAt: true },
+        }),
+        tx.stockMovement.findFirst({
+          where: { targetAssetId: id }, orderBy: { checkoutAt: 'asc' }, select: { checkoutAt: true },
+        }),
+      ]);
+      const primeiras = [
+        { oque: 'da primeira licença entregue a', dia: licenca && hojeNoBrasil(licenca.checkoutAt) },
+        { oque: 'do primeiro componente instalado em', dia: componente && hojeNoBrasil(componente.checkoutAt) },
+      ];
+      for (const { oque, dia } of primeiras) {
+        if (dia && compra > dia) {
+          throw new AppError(
+            `A data de compra (${diaEmPortugues(compra)}) não pode ser depois ${oque} ${antes.assetTag} `
+            + `(${diaEmPortugues(dia)}).`,
+            422,
+          );
+        }
       }
     }
 

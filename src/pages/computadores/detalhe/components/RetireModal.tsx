@@ -41,7 +41,7 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
   const [observacoes, setObservacoes] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
-  // A baixa recusada por licença traz cada uma em link, até o detalhe dela.
+  // A baixa recusada por licença ou componente traz cada um em link, até o detalhe dele.
   const [links, setLinks] = useState<LinkDaNotificacao[]>([]);
 
   const enviar = async (event: React.FormEvent) => {

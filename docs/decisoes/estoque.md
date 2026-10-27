@@ -10,7 +10,7 @@
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D33–D38, J da segunda rodada (ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)) e AE.
+> [`README.md`](./README.md#a-segunda-rodada-ap)), AE, AG e AI.
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
@@ -138,6 +138,10 @@ trabalho de apresentação, não de schema.
 > e com elas o `kind` e o `qty` da linha. A lixeira do item sai: o item que acabou se desativa, e
 > só o que nunca foi entregue se exclui. A devolução deixa de ser de uma unidade por vez: é de N
 > unidades de uma entrega. Ficam a unidade por linha, o alvo em posto e o saldo calculado.
+>
+> **Superada em parte por [AI](#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar):**
+> o alvo deixa de ser só pessoa ou posto — o item de categoria Componente vai só para
+> computador.
 
 **Decidido:** `Accessory`, `Consumable`, `Component` e os três `Checkout` — removidos inteiros
 pelo segundo de-escopo (ver [`escopo.md`](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai))
@@ -313,3 +317,62 @@ o nome por escrito", mas a entrega não guardava nome nenhum; a AG é o que faz 
 
 **O que a migração faz:** `itemId` e `licenseId` passam a nuláveis, `itemName` e `licenseName`
 nascem nulos, e os dois CHECKs entram. Nenhuma linha existente fica sem dono, então é só DDL.
+
+---
+
+## AI — O componente é uma categoria: vai só para computador, e sai pelo Retirar
+
+**Decidido** (na conversa sobre a memória e o SSD, em 2026-10-27 — primeiro o usuário disse que
+estoque não vai para computador, só para colaborador e posto; depois, que um item "não volta"
+poderia ir para o computador; e propôs ele mesmo chamar de **componente** e mandar só para o
+computador. Da proposta de pôr o tipo na categoria, e não um campo no item, disse: "mtt boa essa
+sacada de fazer um novo tipo de categoria"; e "pode fazer tudo de uma vez"):
+
+- **A categoria ganha o tipo Componente**, ao lado de Ativo, Licença e Estoque. É ela que decide
+  para onde o item vai: o item de categoria **Estoque** (mouse, monitor, cabo) vai a colaborador
+  ou posto, **nunca** a computador; o de categoria **Componente** (memória, SSD) vai **só** a
+  computador. O pedido ao contrário é 422, com o nome do item. O item não tem campo próprio
+  para isso: não há como ele contradizer a categoria em que está.
+- **A "Peça de reposição" do seed passa a ser Componente**, com a memória e o SSD do seed demo.
+- **O componente fica "em uso" no computador**, como a licença por máquina: o total continua
+  sendo quantas existem, e o disponível é o que sobra na prateleira — "10 no total · 3 em uso
+  · 7 disponíveis". Fica no computador quando ele muda de mãos: a peça está dentro da máquina.
+- **Sai pelo Retirar**, a devolução do componente — N unidades da entrega, num dia, no detalhe
+  do item. Serve à troca de peça, à máquina que vai ser descartada (a peça volta ao disponível)
+  e à entrega lançada errado. Se a peça saiu junto com a máquina, retirar e depois diminuir o
+  total do item é o registro honesto.
+- **O computador baixado não recebe** componente (409), e o da lixeira é 404, como na licença.
+  A entrega não vem antes da compra do computador, e a compra editada não vai para depois do
+  primeiro componente instalado — a mesma regra da licença por máquina.
+- **O computador com componente instalado não recebe baixa nem vai para a lixeira** (409, com
+  cada item em link para o detalhe dele, onde está o Retirar) — a regra da licença por máquina.
+- **Trocar a categoria do item entre Estoque e Componente** só sem unidade em uso: a que está com
+  a Laura viraria componente fora de um computador.
+- **Nas telas:** o Entregar do componente só oferece computador; no detalhe do item, "Com quem
+  está" vira "Em quais computadores", com busca pela etiqueta, e o Devolver vira Retirar; o
+  computador ganha a aba **Componentes**, e o histórico dele e o do item mostram a instalação e
+  a retirada.
+- **No banco:** `StockTarget` ganha `ASSET`, a entrega ganha `targetAssetId` (FK `Restrict`, sem
+  nome por escrito: o computador não se exclui de verdade, vai para a lixeira), e o CHECK
+  `stock_movements_forma` passa a exigir, no alvo `ASSET`, o computador e só ele.
+
+**Supera:** em parte [J](#j--o-estoque-volta-como-stockitem--stockmovement) (o alvo em pessoa ou
+posto: o componente vai a computador).
+**Mantém:** [AE](#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira)
+(o total na edição, a entrega e a devolução com dia, o desativar), [AG](#ag--a-regra-do-posto-vale-para-o-estoque-e-a-licença-só-o-que-está-em-uso-impede-a-exclusão)
+(só o que está em uso impede excluir o item — o componente instalado é "em uso") e o saldo
+calculado ([D34](#d34--saldo-é-sempre-calculado-nunca-coluna)).
+
+**Por quê:** a memória entregue a um colaborador ficava "em uso" com uma pessoa, quando ela está
+dentro de uma máquina. Um item "que não volta" resolveria o computador, mas mudaria o sentido do
+total ("quantas já entraram") e deixaria o lançamento errado sem saída. O Snipe-IT separa o que
+vai para uma pessoa (acessório) do que vai para dentro de um ativo (componente), e o tipo mora
+na categoria; o GLPI também tem o componente como peça de um computador. Como componente, a peça
+continua contada no lugar certo, e o Retirar resolve a troca, o descarte e o erro com uma
+operação só, que já existia.
+
+**O que a migração faz:** `CategoryType` ganha `COMPONENT`, `StockTarget` ganha `ASSET`,
+`stock_movements` ganha `targetAssetId` (com índice e FK) e o CHECK `stock_movements_forma` é
+reescrito. No banco de desenvolvimento, a categoria "Peça de reposição" mudou de tipo, sem
+entrega nenhuma nos itens dela.
+

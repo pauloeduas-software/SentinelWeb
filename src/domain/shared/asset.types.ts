@@ -166,12 +166,13 @@ export type AssetListParams = Omit<ListParams, 'view'> & {
 /**
  * Um evento da aba Histórico — `GET /api/assets/:id/history`.
  *
- * Só movimentação: as entregas e devoluções do ativo e as licenças entregues
- * a ele. Cadastro, edição, baixa e vínculo ficam na auditoria, no banco (AB).
+ * Só movimentação: as entregas e devoluções do ativo, as licenças entregues
+ * a ele e os componentes instalados e retirados (AI). Cadastro, edição, baixa e
+ * vínculo ficam na auditoria, no banco (AB).
  */
 export interface EventoDoAtivo {
   id: string;
-  fonte: 'POSSE' | 'LICENCA';
+  fonte: 'POSSE' | 'LICENCA' | 'COMPONENTE';
   action: string;
   /** ISO — `JSON.parse` não reconstrói `Date`. */
   at: string;
@@ -184,6 +185,14 @@ export interface EventoDoAtivo {
   } | null;
   /** Só as licenças entregues A ESTE ATIVO — as da pessoa responsável ficam nela. */
   licenca: EventoDeLicencaDoAlvo | null;
+  /** Preenchido só quando `fonte === 'COMPONENTE'` — a entrega, não a unidade. */
+  componente: {
+    /** Nulo quando o item foi excluído: o nome continua em `itemLabel`. */
+    itemId: string | null;
+    itemLabel: string;
+    unidades: number;
+    notes: string | null;
+  } | null;
 }
 
 /** Corpo de `POST /api/assets/:id/retire`. */

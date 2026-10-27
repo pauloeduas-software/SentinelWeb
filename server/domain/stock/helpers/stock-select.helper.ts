@@ -25,7 +25,7 @@ export const STOCK_ITEM_SELECT = {
 export const CAMPOS_AUDITADOS_DO_ITEM = ['name', 'qty', 'categoryId', 'locationId', 'notes', 'isActive'] as const;
 
 /**
- * A unidade, com os dois alvos embutidos: a tela mostra PARA QUEM ela foi, não
+ * A unidade, com os três alvos embutidos: a tela mostra PARA QUEM ela foi, não
  * o uuid. `targetPerson` reaproveita `PERSON_PUBLIC_SELECT`: quem decide o que
  * é público de um colaborador é o domínio `person`.
  */
@@ -39,6 +39,7 @@ export const STOCK_MOVEMENT_SELECT = {
   // O nome por escrito do posto excluído — o histórico do item o lê quando
   // `targetWorkstation` vem nulo.
   targetWorkstationName: true,
+  targetAssetId: true,
 
   checkoutAt: true,
   returnedAt: true,
@@ -48,13 +49,23 @@ export const STOCK_MOVEMENT_SELECT = {
 
   targetPerson: { select: PERSON_PUBLIC_SELECT },
   targetWorkstation: { select: { id: true, name: true } },
+  // O computador na lixeira continua com etiqueta: a leitura aninhada não
+  // passa pelo escopo da lixeira.
+  targetAsset: { select: { id: true, assetTag: true, name: true } },
 } as const;
 
-/** Quem recebeu, por escrito — o colaborador, o posto, ou o nome que o posto excluído deixou. */
+/** "ATV-00012 — Dell do financeiro", ou só a etiqueta — como a licença escreve o computador. */
+export function rotuloDoComputador(ativo: { assetTag: string; name: string | null }): string {
+  return ativo.name ? `${ativo.assetTag} — ${ativo.name}` : ativo.assetTag;
+}
+
+/** Quem recebeu, por escrito — o colaborador, o posto, o computador, ou o nome que o posto excluído deixou. */
 export function rotuloDoAlvo(unidade: {
   targetPerson: { name: string } | null;
   targetWorkstation: { name: string } | null;
   targetWorkstationName: string | null;
+  targetAsset?: { assetTag: string; name: string | null } | null;
 }): string {
+  if (unidade.targetAsset) return rotuloDoComputador(unidade.targetAsset);
   return unidade.targetPerson?.name ?? unidade.targetWorkstation?.name ?? unidade.targetWorkstationName ?? '—';
 }

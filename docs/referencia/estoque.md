@@ -1,11 +1,11 @@
 # Estoque
 
-> A tela `/estoque`: o que não é computador — monitor, teclado, mouse, cabo —, com um total e a
-> quem as unidades foram entregues. O que o item é, as contas, o que a entrega e a devolução
-> recusam, e onde o estoque aparece fora da própria tela. É a lógica da licença
-> ([`licencas.md`](licencas.md)), com quantidade. As decisões estão em
-> [`../decisoes/estoque.md`](../decisoes/estoque.md) (a última é a
-> [AE](../decisoes/estoque.md#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira));
+> A tela `/estoque`: o que não é computador — monitor, teclado, mouse, cabo, e os componentes que
+> vão para dentro dele, como memória e SSD —, com um total e a quem as unidades foram entregues. O
+> que o item é, as contas, o que a entrega e a devolução recusam, e onde o estoque aparece fora da
+> própria tela. É a lógica da licença ([`licencas.md`](licencas.md)), com quantidade. As decisões
+> estão em [`../decisoes/estoque.md`](../decisoes/estoque.md) (a última é a
+> [AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar));
 > as regras que viram fato permanente no banco estão em [`invariantes.md`](invariantes.md)
 > (a 6, a 21 e a 25).
 
@@ -15,13 +15,18 @@
 
 **N unidades intercambiáveis de uma mesma coisa**, sem patrimônio individual, entregues a quem
 usa. Ativo é computador; o resto entra aqui, por quantidade. **Campos:** nome, categoria (do
-tipo Estoque, ativa) e quantidade, obrigatórios; localização (onde o que sobra fica guardado — o
+tipo Estoque ou Componente, ativa) e quantidade, obrigatórios; localização (onde o que sobra fica guardado — o
 Depósito de TI) e notas, opcionais. O cadastro não entra no histórico da tela, que é só entregas
 e devoluções; ele fica na auditoria, no banco, com quem fez
 ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)).
 
 - **A quantidade é o total, de 1 a 100.000**, no cadastro e depois dele: zero não é item, e o que
   acabou se desativa. O piso tem o CHECK `stock_items_qty_positiva`; o teto é só da aplicação.
+- **A categoria decide para onde o item vai**
+  ([AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar)):
+  o de categoria Estoque vai a colaborador ou posto, e o de categoria **Componente** vai só a
+  computador — ver [O componente](#o-componente). O formulário oferece as categorias dos dois
+  tipos, e diz abaixo do campo quando a escolhida é de componente.
 - **A entrega vai para um colaborador OU para um posto**, nunca os dois
   ([D33](../decisoes/estoque.md#d33--o-acessório-entregue-a-um-posto-é-do-posto-os-ocupantes-respondem-solidariamente)).
   Entregar 5 mouses à Mesa 1 vale **5**, qualquer que seja o número de ocupantes: quem responde
@@ -144,6 +149,38 @@ A entrega confere **na ordem da tabela** e responde a primeira recusa — o cola
 e o clique de uma tela velha encontra a entrega antiga já fechada, sem devolver a de quem recebeu
 depois. Devolver sempre pode, mesmo com o item desativado, e não pede confirmação.
 
+## O componente
+
+**O item cuja categoria é do tipo Componente** — memória, SSD — vai **só para um computador**,
+e fica "em uso" nele ([AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar)).
+A "Peça de reposição" do seed é Componente. As contas, o total, o desativar e o excluir são os
+mesmos do resto do estoque.
+
+- **O Entregar** do componente não tem a escolha entre colaborador e posto, só o computador (o
+  seletor dos computadores sem baixa). A entrega não vem antes da compra do computador.
+- **Fica no computador** quando ele é entregue a alguém ou devolvido: a peça está dentro da
+  máquina.
+- **Sai pelo Retirar**, que é a devolução: quantas e o dia, na linha de **Em quais computadores**
+  (o "Com quem está" do componente, com busca pela etiqueta ou pelo nome do computador). Serve à
+  troca de peça, à máquina que vai ser descartada e à entrega lançada errado. Se a peça saiu junto
+  com a máquina, retire e depois diminua o total do item.
+- **O computador com componente instalado não recebe baixa nem vai para a lixeira** — a regra da
+  licença por máquina. O 409 diz quais, com cada item em link para o detalhe dele.
+- **A compra do computador** editada não vai para depois do primeiro componente instalado.
+- **Trocar a categoria** do item entre Estoque e Componente só sem unidade em uso.
+
+| Tentativa | Resposta |
+|---|---|
+| componente para colaborador ou posto | 422 `"Memória RAM 8 GB" é componente e vai só para um computador.` |
+| item de estoque para computador | 422 `"Mouse USB" não é componente: vai para um colaborador ou um posto, não para um computador.` |
+| computador inexistente ou na lixeira | 404 `Ativo não encontrado.` |
+| computador baixado | 409 `O ativo ATV-00012 teve baixa e não pode receber componente.` |
+| entrega antes da compra do computador | 422 `A entrega (09/03/2026) não pode ser antes da compra de ATV-00012 — Dell do financeiro (10/03/2026).` |
+| retirar antes do dia da entrega, ou de novo | 422 `A retirada (…) não pode ser antes da entrega (…).` / 409 `Esta entrega de "Memória RAM 8 GB" para ATV-00012 já foi retirada.` |
+| baixa ou lixeira do computador com componente | 409 `ATV-00012 ainda tem os componentes Memória RAM 8 GB ×2. Retire pela tela de Estoque antes de dar baixa.` (na lixeira, `Este ativo ainda tem … antes de excluir.`) |
+| compra do computador depois do primeiro componente | 422 `A data de compra (…) não pode ser depois do primeiro componente instalado em ATV-00012 (…).` |
+| trocar a categoria com unidade em uso | 409 `"Memória RAM 8 GB" tem 2 unidades em uso e não pode passar de componente para estoque. Retire antes de trocar a categoria.` |
+
 ## Fora da tela de Estoque
 
 | Onde | O quê |
@@ -151,6 +188,8 @@ depois. Devolver sempre pode, mesmo com o item desativado, e não pede confirma�
 | **ficha do posto** | o estoque **da mesa**, por entrega, com quantas e desde quando; o nome leva ao detalhe do item com "Com quem está" já filtrado pelo posto (`/estoque?item=<id>&busca=Mesa 1`), onde está o Devolver. O item desativado aparece marcado. Não conta como ativo do posto |
 | **ficha do colaborador** | o estoque **no nome dela**, com o mesmo link, filtrado pelo nome dela; o título conta as unidades, como a ficha do posto e o 409 da desativação |
 | **histórico do colaborador** | entregas e devoluções de estoque **a ela**, por entrega ("Recebeu: Mouse USB · 2 unidades") |
+| **aba Componentes do computador** | os componentes instalados **nele**, por entrega, com categoria, quantas e desde quando; o nome leva ao detalhe do item já filtrado pela etiqueta, onde está o Retirar |
+| **histórico do computador** | a instalação e a retirada de cada componente, por entrega ("Componente instalado: Memória RAM 8 GB · 2 unidades") |
 
 **Separado por alvo:** o que foi entregue ao posto é da mesa, e não aparece na pessoa que o ocupa
 — quem sai da empresa não leva o mouse da Mesa 1.
@@ -175,13 +214,15 @@ lista é derivada
 | `GET /api/stock/items/:id/checkouts` | quem está com ele, por entrega (`?page=`, `?q=` pelo nome; 15 por página) |
 | `GET /api/stock/items/:id/history` | o histórico, por entrega (`?page=`; 15 por página, sem busca — `?q=` é 422) |
 | `POST`, `PUT /:id`, `DELETE /:id` | o cadastro; a edição muda também o total e o `isActive` (Desativar e Ativar); excluir o que não está em uso (204), soltando as entregas devolvidas com o nome por escrito |
-| `POST /api/stock/items/:id/checkout` | entregar (`targetType`, `targetPersonId` XOR `targetWorkstationId`, `qty`, `notes`, `checkoutAt` — o dia) |
-| `POST /api/stock/checkouts/:id/checkin` | devolver (`qty` — ausente é todas —, `checkinAt` — o dia; ausente é hoje) — o `:id` é o de uma unidade da **entrega** |
+| `POST /api/stock/items/:id/checkout` | entregar (`targetType`, um só de `targetPersonId`, `targetWorkstationId` e `targetAssetId` — este, só no componente —, `qty`, `notes`, `checkoutAt` — o dia) |
+| `POST /api/stock/checkouts/:id/checkin` | devolver, ou retirar o componente (`qty` — ausente é todas —, `checkinAt` — o dia; ausente é hoje) — o `:id` é o de uma unidade da **entrega** |
+| `GET /api/assets/:id/components` | os componentes instalados num computador — a aba Componentes |
 
 Todas `ADMIN` ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)).
 
-**As travas:** a entrega trava o **colaborador** (no alvo pessoa) e depois o **item**; o posto
-é lido `FOR SHARE` depois do item. A edição e a exclusão travam o item. A devolução trava só as
+**As travas:** a entrega trava o **colaborador** (no alvo pessoa) ou o **computador** (no
+componente) e depois o **item**; o posto é lido `FOR SHARE` depois do item. A baixa e a lixeira do
+computador o travam antes de contar os componentes. A edição e a exclusão travam o item. A devolução trava só as
 linhas da entrega: ela só diminui o que está em uso. A entrega agrupada mora em
 `helpers/stock-lote.helper.ts`; a conta, em `helpers/stock-balance.helper.ts`.
 
@@ -205,4 +246,5 @@ listagens. As ordens terminam em `id`, para a mesma linha não aparecer em duas 
 |---|---|
 | a lista (conta, busca, o desativado na mesma lista), "Com quem está" por entrega, a devolução parcial, o histórico por entrega (duas devoluções no mesmo dia são duas), os dias, as fichas e o histórico do colaborador | `tests/estoque/operacoes.test.ts` |
 | o saldo calculado, as frases sem unidade, o posto que não multiplica, os CHECKs, o total na edição e na auditoria, a quantidade que é número de verdade, o nome único sem diferença de maiúscula, a categoria, desativar e excluir (a regra do posto, com o nome por escrito), a invariante 6 e o 409 do posto com os itens, as rotas | `tests/estoque/invariantes.test.ts` |
+| o componente: a categoria que decide o alvo, o computador baixado e na lixeira, as datas contra a compra, o componente que fica quando o computador muda de mãos, o Retirar, os dois históricos, a busca pela etiqueta, a baixa e a lixeira recusadas, a troca de categoria, o seletor com os dois tipos e o CHECK | `tests/estoque/componente.test.ts` |
 | as corridas: entregas simultâneas, total × entrega, devoluções da mesma entrega, a troca do tipo da categoria × cadastro, exclusão × entrega e o item e o posto excluídos ao mesmo tempo | `tests/estoque/corridas.test.ts` |

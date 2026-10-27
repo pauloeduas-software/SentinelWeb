@@ -146,7 +146,7 @@ export function usePostos() {
   const handleDevolver = async (ativo: AtivoDoPosto) => {
     if (!postoId) return;
     const qual = ativo.name ? `${ativo.assetTag} (${ativo.name})` : ativo.assetTag;
-    if (!confirm(`Devolver ${qual} ao estoque? Ele sai deste posto e volta para a lista de Computadores.`)) return;
+    if (!confirm(`Devolver ${qual}? Ele sai deste posto e volta para a lista de Computadores.`)) return;
 
     await devolver.mutateAsync({ id: ativo.id, data: { targetWorkstationId: postoId } });
   };

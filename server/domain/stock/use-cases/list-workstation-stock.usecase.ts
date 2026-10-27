@@ -1,8 +1,9 @@
 import { prisma } from '../../../core/database/prismaClient';
+import { AppError } from '../../../core/errors/app-error';
 import { agruparPorLote } from '../helpers/stock-lote.helper';
 
-// O ESTOQUE NUMA FICHA — a do posto e a do colaborador: o que está com ele
-// AGORA, uma linha por ENTREGA ("Mouse USB · 3 unidades"), com o item e desde
+// O ESTOQUE NUMA FICHA — a do posto, a do colaborador e a aba Componentes do
+// computador (AI): o que está com ele AGORA, uma linha por ENTREGA ("Mouse USB · 3 unidades"), com o item e desde
 // quando. A devolução mora no detalhe do item, como a da licença: a ficha
 // mostra e aponta para lá.
 //
@@ -20,6 +21,7 @@ const UNIDADE_DA_FICHA = {
   targetPersonId: true,
   targetWorkstationId: true,
   targetWorkstationName: true,
+  targetAssetId: true,
   item: {
     select: {
       id: true, name: true, isActive: true,
@@ -28,7 +30,9 @@ const UNIDADE_DA_FICHA = {
   },
 } as const;
 
-async function entregasAbertas(alvo: { targetWorkstationId: string } | { targetPersonId: string }) {
+async function entregasAbertas(
+  alvo: { targetWorkstationId: string } | { targetPersonId: string } | { targetAssetId: string },
+) {
   const unidades = await prisma.stockMovement.findMany({
     where: { ...alvo, returnedAt: null },
     select: UNIDADE_DA_FICHA,
@@ -53,4 +57,17 @@ export function listWorkstationStock(workstationId: string) {
 /** O mesmo, para a PESSOA: as unidades no nome dela. */
 export function listPersonStock(personId: string) {
   return entregasAbertas({ targetPersonId: personId });
+}
+
+/**
+ * Os COMPONENTES instalados neste computador (AI) — a aba Componentes. O
+ * Retirar mora no detalhe do item, como a devolução de licença mora na tela de
+ * Licenças.
+ *
+ * O computador na lixeira é 404, como a aba Licenças.
+ */
+export async function listAssetComponents(assetId: string) {
+  const ativo = await prisma.asset.findFirst({ where: { id: assetId }, select: { id: true } });
+  if (!ativo) throw new AppError('Ativo não encontrado.', 404);
+  return entregasAbertas({ targetAssetId: assetId });
 }

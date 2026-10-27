@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Armchair, User } from 'lucide-react';
+import { Armchair, Monitor, User } from 'lucide-react';
 import type { EntregaAberta } from '../../../domain/shared/stock.types';
 import { diaDoInstante, formatarDiaDoInstante, hojeNoCampoDeData } from '../../helpers/format.helper';
 import { textoDeUnidades } from '../../helpers/estoque.helper';
@@ -12,6 +12,9 @@ import { textoDeUnidades } from '../../helpers/estoque.helper';
 // hoje; voltam menos quando só parte voltou, e o dia pode voltar até o da
 // entrega — o registro da devolução que já aconteceu. É o único lugar do
 // sistema que devolve estoque; as fichas mostram e apontam para cá.
+//
+// No COMPONENTE (AI), a linha é o computador e o botão é RETIRAR: a peça sai da
+// máquina e volta ao disponível. A pergunta é a mesma, quantas e o dia.
 
 interface EntregasAbertasProps {
   entregas: EntregaAberta[];
@@ -27,6 +30,8 @@ interface EntregasAbertasProps {
 
 /** O que a linha aberta está pedindo: quantas e o dia. */
 type Pedido = { id: string; qty: string; dia: string } | null;
+
+const ICONE_DO_ALVO = { PERSON: User, WORKSTATION: Armchair, ASSET: Monitor } as const;
 
 const BOTAO = 'px-3 py-1 border border-border-sutil uppercase tracking-widest text-[10px] text-text-secondary hover:text-text-primary transition-colors disabled:opacity-40';
 const CAMPO = 'p-1 bg-bg-base border border-border-sutil text-text-primary normal-case tracking-normal focus:outline-none focus:border-text-secondary';
@@ -48,7 +53,8 @@ export default function EntregasAbertas({ entregas, vazio, ocupado, onDevolver }
   return (
     <ul className="divide-y divide-border-sutil/50 border border-border-sutil">
       {entregas.map((entrega) => {
-        const Icone = entrega.targetType === 'PERSON' ? User : Armchair;
+        const Icone = ICONE_DO_ALVO[entrega.targetType];
+        const componente = entrega.targetType === 'ASSET';
         const meu = pedido?.id === entrega.id ? pedido : null;
         const quantas = meu ? Number(meu.qty) : 0;
         const quantasValem = meu !== null && meu.qty.trim() !== '' && Number.isInteger(quantas)
@@ -85,7 +91,7 @@ export default function EntregasAbertas({ entregas, vazio, ocupado, onDevolver }
                   </label>
                 )}
                 <label className="flex items-center gap-2 text-[10px] text-text-tertiary uppercase tracking-widest">
-                  Devolvida em
+                  {componente ? 'Retirada em' : 'Devolvida em'}
                   <input
                     type="date"
                     value={meu.dia}
@@ -113,7 +119,7 @@ export default function EntregasAbertas({ entregas, vazio, ocupado, onDevolver }
                 disabled={ocupado}
                 className={BOTAO}
               >
-                Devolver
+                {componente ? 'Retirar' : 'Devolver'}
               </button>
             )}
           </li>

@@ -3,7 +3,7 @@ import type { ListEnvelope } from '../../../core/http/list-query';
 import { listPersonOccupancies } from '../../occupancy/use-cases/list-person-occupancies.usecase';
 import { buscarEntregasDaPessoa } from '../../license/use-cases/list-target-checkouts.usecase';
 import { eventosDaEntregaDeLicenca, type EventoDeLicenca } from '../../license/helpers/license-events.helper';
-import { agruparPorLote, chaveDoLote } from '../../stock/helpers/stock-lote.helper';
+import { buscarUnidadesDoAlvo, eventosDasUnidades, type EventoDeEstoque } from '../../stock/helpers/stock-events.helper';
 
 // A LINHA DO TEMPO DE UMA PESSOA — o Histórico da ficha do colaborador.
 //
@@ -40,19 +40,6 @@ interface EventoDePostoDaPessoa {
   notes: string | null;
 }
 
-/**
- * O que um evento de estoque acrescenta: QUAL item e quantas unidades. É a
- * ENTREGA, não a unidade — "recebeu 3 Mouse USB", como o histórico do item.
- */
-interface EventoDeEstoqueDaPessoa {
-  /** Nulo quando o item foi excluído: o nome continua em `itemLabel` (AG). */
-  itemId: string | null;
-  itemLabel: string;
-  unidades: number;
-  /** A observação é da entrega; a devolução não tem a sua. */
-  notes: string | null;
-}
-
 export interface EventoDaPessoa {
   /**
    * Chave ESTÁVEL para a tela, com prefixo da fonte: todas têm uuid próprio,
@@ -68,7 +55,7 @@ export interface EventoDaPessoa {
   /** Só as licenças entregues A ELA — as do computador que ela usa são dele (AA). */
   licenca: EventoDeLicenca | null;
   /** Só o estoque no NOME dela — o da mesa que ela ocupa é do posto. */
-  estoque: EventoDeEstoqueDaPessoa | null;
+  estoque: EventoDeEstoque | null;
 }
 
 /** Quanto a tela recebe quando não pede nada. O TETO é do schema, na borda. */
@@ -189,83 +176,6 @@ function buscarPosses(personId: string) {
   });
 }
 
-/**
- * As unidades de estoque que já estiveram no NOME da pessoa — abertas e
- * devolvidas. O item desativado continua aparecendo: a entrega aconteceu.
- */
-function buscarUnidades(personId: string) {
-  return prisma.stockMovement.findMany({
-    where: { targetPersonId: personId },
-    select: {
-      id: true,
-      itemId: true,
-      itemName: true,
-      createdAt: true,
-      checkoutAt: true,
-      returnedAt: true,
-      returnRecordedAt: true,
-      notes: true,
-      targetType: true,
-      targetPersonId: true,
-      targetWorkstationId: true,
-      targetWorkstationName: true,
-      item: { select: { name: true } },
-    },
-    orderBy: [{ checkoutAt: 'desc' }, { createdAt: 'desc' }, { id: 'asc' }],
-  });
-}
-
-/**
- * As unidades viram eventos POR ENTREGA, como no histórico do item: a entrega é
- * um evento com todas as unidades; cada devolução, as unidades dela registradas juntas (o mesmo
- * `returnRecordedAt` — duas devoluções no mesmo dia são duas). No mesmo
- * instante, a devolução vem antes da entrega.
- */
-function eventosDoEstoque(unidades: Awaited<ReturnType<typeof buscarUnidades>>): EventoDaPessoa[] {
-  const eventos: EventoDaPessoa[] = [];
-  for (const { primeira, unidades: quantas } of agruparPorLote(unidades)) {
-    const doLote = unidades.filter((unidade) => chaveDoLote(unidade) === chaveDoLote(primeira));
-    // O item excluído deixa o nome por escrito na entrega (AG).
-    const base = { itemId: primeira.itemId, itemLabel: primeira.item?.name ?? primeira.itemName ?? '—' };
-
-    // Chave: o instante do registro; valor: o dia da devolução e quantas.
-    const devolucoes = new Map<number, { at: Date; devolvidas: number }>();
-    for (const unidade of doLote) {
-      if (!unidade.returnedAt || !unidade.returnRecordedAt) continue;
-      const registro = unidade.returnRecordedAt.getTime();
-      const devolucao = devolucoes.get(registro);
-      if (devolucao) devolucao.devolvidas += 1;
-      else devolucoes.set(registro, { at: unidade.returnedAt, devolvidas: 1 });
-    }
-    // A mais recente primeiro: no mesmo dia, o `sort` estável do merge mantém
-    // esta ordem.
-    for (const [registro, { at, devolvidas }] of [...devolucoes].sort(([a], [b]) => b - a)) {
-      eventos.push({
-        id: `estoque:${primeira.id}:devolucao:${registro}`,
-        fonte: 'ESTOQUE',
-        action: 'CHECKIN',
-        at,
-        posse: null,
-        posto: null,
-        licenca: null,
-        estoque: { ...base, unidades: devolvidas, notes: null },
-      });
-    }
-
-    eventos.push({
-      id: `estoque:${primeira.id}:entrega`,
-      fonte: 'ESTOQUE',
-      action: 'CHECKOUT',
-      at: primeira.checkoutAt,
-      posse: null,
-      posto: null,
-      licenca: null,
-      estoque: { ...base, unidades: quantas, notes: primeira.notes },
-    });
-  }
-  return eventos;
-}
-
 type PosseDaPessoa = Awaited<ReturnType<typeof buscarPosses>>[number];
 type OcupacaoDaPessoa = Awaited<ReturnType<typeof listPersonOccupancies>>[number];
 
@@ -288,14 +198,15 @@ export async function getPersonHistory(
     listPersonOccupancies(personId, 'all'),
     buscarPosses(personId),
     buscarEntregasDaPessoa(personId, { abertas: false }),
-    buscarUnidades(personId),
+    buscarUnidadesDoAlvo({ targetPersonId: personId }),
   ]);
 
   const daPosse = posses.flatMap(eventosDaPosse);
   const doPosto = ocupacoes.flatMap(eventosDoPosto);
   const daLicenca: EventoDaPessoa[] = entregasDeLicenca.flatMap((entrega) => eventosDaEntregaDeLicenca(entrega)
     .map((evento) => ({ ...evento, fonte: 'LICENCA' as const, posse: null, posto: null, estoque: null })));
-  const doEstoque = eventosDoEstoque(unidades);
+  const doEstoque: EventoDaPessoa[] = eventosDasUnidades(unidades)
+    .map((evento) => ({ ...evento, fonte: 'ESTOQUE' as const, posse: null, posto: null, licenca: null }));
 
   const eventos = [...daPosse, ...doPosto, ...daLicenca, ...doEstoque]
     .sort((a, b) => b.at.getTime() - a.at.getTime());

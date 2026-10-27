@@ -28,7 +28,7 @@ function exigir201<T>(o_que: string, resposta: { status: number; body: unknown }
 /** Os ids que o seed deixa prontos. Lidos, nunca criados. */
 export async function idsDoSeed() {
   const [
-    deployable, emUso, categoria, licenca, estoque,
+    deployable, emUso, categoria, licenca, estoque, componente,
   ] = await Promise.all([
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'DEPLOYABLE' }, select: { id: true } }),
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'IN_USE' }, select: { id: true } }),
@@ -40,6 +40,9 @@ export async function idsDoSeed() {
     // A do estoque: "Periférico", "Monitor"… nascem `STOCK` no seed, e é o tipo
     // que o use-case confere — categoria de ATIVO num item de estoque é 422.
     prisma.category.findFirstOrThrow({ where: { type: 'STOCK' }, select: { id: true } }),
+    // A do componente (AI): "Peça de reposição" nasce `COMPONENT` no seed — o
+    // item dela vai só para computador.
+    prisma.category.findFirstOrThrow({ where: { type: 'COMPONENT' }, select: { id: true } }),
   ]);
 
   return {
@@ -48,6 +51,7 @@ export async function idsDoSeed() {
     categoriaId: categoria.id,
     categoriaLicencaId: licenca.id,
     categoriaEstoqueId: estoque.id,
+    categoriaComponenteId: componente.id,
   };
 }
 

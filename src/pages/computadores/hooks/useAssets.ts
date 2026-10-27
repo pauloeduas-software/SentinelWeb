@@ -147,7 +147,7 @@ export function useAssets() {
       await excluir.mutateAsync(asset.id);
       if (assets.length === 1 && page > 1) setPage(page - 1);
     } catch (erro) {
-      // O 409 do ativo com licença traz cada uma em link.
+      // O 409 do ativo com licença ou componente traz cada um em link.
       notificar.erro((erro as Error).message, linksDoErro(erro));
     }
   };
