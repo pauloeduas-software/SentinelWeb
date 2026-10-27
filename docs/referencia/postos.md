@@ -13,7 +13,7 @@
 
 **Quem RECEBE equipamento sem ser pessoa.** Ao posto se entrega o computador da
 mesa (`Assignment` de alvo `WORKSTATION`), o estoque que fica nela (`StockMovement`
-de saída para o posto) e é ele que as pessoas ocupam, por turno
+de alvo `WORKSTATION`) e é ele que as pessoas ocupam, por turno
 (`WorkstationOccupant`). **Campos:** nome, localização e notas.
 
 - **Fica numa localização** — a Matriz, a Filial —, obrigatória. A localização
@@ -21,7 +21,7 @@ de saída para o posto) e é ele que as pessoas ocupam, por turno
   localização, é cadastro próprio
   ([Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)).
 - **O nome é único no sistema**, sem diferença de maiúscula: os seletores da
-  entrega, da saída de estoque e do vínculo de máquina mostram só o nome.
+  entrega de ativo, da de estoque e do vínculo de máquina mostram só o nome.
 - **No máximo um ativo por posto** — ativo é computador (invariante 19). O
   estoque na mesa entra sem limite, e os ocupantes são vários por desenho.
 - **Não tem lixeira.** Excluir apaga de verdade, como o status.
@@ -31,7 +31,7 @@ de saída para o posto) e é ele que as pessoas ocupam, por turno
 | | |
 |---|---|
 | **a lista** | Posto, Localização, Quem está (por turno), Ativos e Situação — *Posto vago* (tem ativo e ninguém responde), *Ocupado* ou *Sem uso*. Recortes Todos, Vagos e Ocupados; busca por nome e nota |
-| **a ficha** (`/postos/:id`) | os ocupantes — colocar alguém, corrigir o turno, encerrar —, os ativos entregues com **Devolver**, o computador da mesa ao vivo e o estoque da mesa, por saída, com o link para o detalhe do item, onde está o Devolver ([`estoque.md`](estoque.md)) |
+| **a ficha** (`/postos/:id`) | os ocupantes — colocar alguém, corrigir o turno, encerrar —, os ativos entregues com **Devolver**, o computador da mesa ao vivo e o estoque da mesa, por entrega, com o link para o detalhe do item, onde está o Devolver ([`estoque.md`](estoque.md)) |
 | **o cadastro** | **Novo posto** e, em cada linha, ✏️ Editar, ⏻ Desativar / Ativar e 🗑️ Excluir — `ADMIN`, como tudo hoje ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)) |
 
 Desativar e excluir pedem confirmação, com as mesmas frases de Configurações, e a
@@ -59,10 +59,10 @@ A regra do **status**: só o que está nele **agora** impede a exclusão. É 409
 com a dica `Tire o que está nele agora — devolva o que foi entregue e encerre as
 ocupações — ou desative-o: …`
 
-**Uso**, aqui, é: **entrega** de ativo aberta para ele, **saída de estoque**
+**Uso**, aqui, é: **entrega** de ativo aberta para ele, **entrega de estoque**
 aberta para ele e **ocupante** atual.
 
-**O passado não segura, e não se perde.** Entrega devolvida, saída de estoque
+**O passado não segura, e não se perde.** Entrega de ativo ou de estoque
 devolvida e ocupação encerrada perdem a ligação com o posto na exclusão e
 guardam o nome dele por escrito (`targetWorkstationName`, `workstationName`): o
 histórico do ativo continua dizendo "Entregue: Mesa 7", o do item "para a Mesa
@@ -75,8 +75,8 @@ dentro da mesma transação. As FKs continuam `Restrict`: o que ninguém desligo
 | | |
 |---|---|
 | continua | na lista (esmaecido, com a marca "desativado" das Configurações), no histórico, com tudo o que já estava nele |
-| **some** | dos seletores da entrega, da saída de estoque e do vínculo de máquina |
-| **recusa** (409) | entrega de ativo, saída de estoque e ocupante novo — `"Mesa 1" está desativado e não recebe entrega nova.` |
+| **some** | dos seletores da entrega de ativo, da de estoque e do vínculo de máquina |
+| **recusa** (409) | entrega de ativo, entrega de estoque e ocupante novo — `"Mesa 1" está desativado e não recebe entrega nova.` |
 | **deixa passar** | devolver e encerrar ocupação — desativar não esvazia a mesa |
 
 **Ativar** desfaz tudo. É a invariante 21. E a **localização** desativada não

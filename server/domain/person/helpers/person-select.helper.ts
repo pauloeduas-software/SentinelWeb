@@ -1,5 +1,5 @@
 // O que de um colaborador sai para o cliente quando vem EMBUTIDO numa posse,
-// numa ocupação ou numa saída de estoque — em UM lugar só.
+// numa ocupação ou numa entrega de estoque — em UM lugar só.
 //
 // Mora no domínio `person` de propósito: quem decide o que é público de um
 // colaborador é o dono dele, não quem o embute na resposta. Espelha o contrato

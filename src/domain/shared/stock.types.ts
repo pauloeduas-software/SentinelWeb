@@ -8,7 +8,7 @@ import type { Referencia } from './asset.types';
 // `StockItem`: N unidades intercambiáveis, sem patrimônio individual. Espelha
 // `server/domain/stock/helpers/stock-select.helper.ts`.
 
-type AlvoDaSaida = 'PERSON' | 'WORKSTATION';
+type AlvoDaEntrega = 'PERSON' | 'WORKSTATION';
 
 interface CategoriaDoItem extends Referencia {
   type: string;
@@ -48,18 +48,18 @@ export interface ItemDeEstoque {
 
 /**
  * Uma linha de "Com quem está" — `GET /api/stock/items/:id/checkouts`. É a
- * SAÍDA ("Mesa 1 · 5 unidades"), não a unidade; `id` é o de uma unidade dela,
+ * ENTREGA ("Mesa 1 · 5 unidades"), não a unidade; `id` é o de uma unidade dela,
  * e é por ele que a devolução vai.
  */
-export interface SaidaAberta {
+export interface EntregaAberta {
   id: string;
-  targetType: AlvoDaSaida;
+  targetType: AlvoDaEntrega;
   targetPersonId: string | null;
   targetWorkstationId: string | null;
   targetLabel: string;
   checkoutAt: string;
   notes: string | null;
-  /** Quantas desta saída ainda estão com o alvo. */
+  /** Quantas desta entrega ainda estão com o alvo. */
   unidades: number;
 }
 
@@ -69,7 +69,7 @@ export interface EventoDoItem {
   action: 'CHECKOUT' | 'CHECKIN';
   at: string;
   unidades: number;
-  targetType: AlvoDaSaida;
+  targetType: AlvoDaEntrega;
   targetPersonId: string | null;
   targetWorkstationId: string | null;
   targetLabel: string;
@@ -77,12 +77,12 @@ export interface EventoDoItem {
 }
 
 /**
- * Uma saída aberta como a FICHA DO POSTO e a da PESSOA a recebem: o item, a
+ * Uma entrega aberta como a FICHA DO POSTO e a da PESSOA a recebem: o item, a
  * categoria, quantas e desde quando. `item.isActive` vem porque a unidade de um
  * item desativado continua na mesa, e a ficha precisa mostrá-la para alguém
  * devolvê-la — no detalhe do item, para onde a linha aponta.
  */
-export interface SaidaNaFicha {
+export interface EntregaNaFicha {
   id: string;
   itemId: string;
   checkoutAt: string;
@@ -116,7 +116,7 @@ export type AlvoDaEntregaDeEstoque = { qty: number; notes?: string | null; check
   | { targetType: 'WORKSTATION'; targetWorkstationId: string }
 );
 
-/** O que a devolução responde: quantas voltaram e quantas da saída ficaram. */
+/** O que a devolução responde: quantas voltaram e quantas da entrega ficaram. */
 export interface ResultadoDaDevolucao {
   devolvidas: number;
   ficaram: number;

@@ -11,13 +11,13 @@ import type { ListEnvelope, ListQuery } from '../../../core/http/list-query';
 // a observação. Cadastro, edição (o total inclusive) e desativação não entram:
 // ficam na auditoria (`audit_logs`, AB), que tela nenhuma lê.
 //
-// A ENTREGA É A SAÍDA, não a unidade: as N linhas do mesmo INSERT para o mesmo
+// A ENTREGA É UMA SÓ, não uma por unidade: as N linhas do mesmo INSERT para o mesmo
 // alvo são UM evento ("Entregue a Mesa 1 · 5 unidades"), e as que voltaram na
 // mesma devolução (o mesmo `returnRecordedAt`) são UMA devolução — duas no mesmo
 // dia são duas.
 
 export interface EventoDoItem {
-  /** Estável para a tela: a saída e qual dos dois eventos dela. */
+  /** Estável para a tela: a entrega e qual dos dois eventos dela. */
   id: string;
   action: 'CHECKOUT' | 'CHECKIN';
   at: Date;
@@ -36,7 +36,7 @@ interface EventoNaPagina {
   action: EventoDoItem['action'];
   at: Date;
   lote: Date;
-  /** O instante do registro: o da saída (`createdAt`) ou o da devolução. */
+  /** O instante do registro: o da entrega (`createdAt`) ou o da devolução. */
   registro: Date;
   targetType: StockTarget;
   targetPersonId: string | null;
@@ -49,8 +49,8 @@ interface EventoNaPagina {
 /**
  * Paginado NO BANCO, do mais recente para o mais antigo.
  *
- * As saídas e as devoluções são lidas lado a lado pelo `UNION ALL`, cada uma
- * já agrupada — a saída pelo INSERT e pelo alvo, a devolução também pelo
+ * As entregas e as devoluções são lidas lado a lado pelo `UNION ALL`, cada uma
+ * já agrupada — a entrega pelo INSERT e pelo alvo, a devolução também pelo
  * instante em que foi registrada —, e o `LIMIT` corta a página já ordenada.
  *
  * No mesmo instante, a devolução vem antes da entrega ('CHECKIN' < 'CHECKOUT'),
@@ -71,7 +71,7 @@ export async function listStockHistory(
         (SELECT count(*) FROM (
           SELECT 1 FROM stock_movements WHERE "itemId" = ${itemId}::uuid
            GROUP BY "createdAt", "targetType", "targetPersonId", "targetWorkstationId", "targetWorkstationName"
-        ) AS saidas)
+        ) AS entregas)
         + (SELECT count(*) FROM (
           SELECT 1 FROM stock_movements WHERE "itemId" = ${itemId}::uuid AND "returnedAt" IS NOT NULL
            GROUP BY "createdAt", "targetType", "targetPersonId", "targetWorkstationId", "targetWorkstationName", "returnRecordedAt"

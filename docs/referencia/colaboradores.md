@@ -42,7 +42,7 @@ aqui à parte, à mão — nada cria colaborador a partir de usuário.
   `E-mail já está em uso por outro colaborador.`
   O nome **não** é único: dois "João Silva" existem, e é o e-mail que os separa.
 - **A lista de escolha** (`/api/people/options`) é o seletor de pessoa da
-  entrega de ativo, do posto, da licença e da saída de estoque.
+  entrega de ativo, do posto, da licença e da entrega de estoque.
 
 ## A ficha
 

@@ -227,8 +227,8 @@ prateleira responde isso.
 Declarado aqui para não ser redescoberto em auditoria como se fosse defeito. São
 limites escolhidos, não esquecimentos.
 
-- **Mouse reserva na gaveta de uma mesa ocupada.** Se alguém der saída dele
-  para a Mesa 1, ele aparece como responsabilidade da Laura e da Ana — que não
+- **Mouse reserva na gaveta de uma mesa ocupada.** Se alguém entregá-lo
+  à Mesa 1, ele aparece como responsabilidade da Laura e da Ana — que não
   sabem que ele existe. A saída é **não** entregar item de reserva:
   `locationId` (*onde está guardado*) continua separado da entrega (*quem responde*).
   Um ativo pode estar **em** um lugar sem ser **do** lugar. O modelo não impede o

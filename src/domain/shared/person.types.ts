@@ -1,5 +1,5 @@
 import type { EntregaDoAlvo, EventoDeLicencaDoAlvo } from './license.types';
-import type { SaidaNaFicha } from './stock.types';
+import type { EntregaNaFicha } from './stock.types';
 
 /**
  * UM colaborador, como `GET /api/people/:id` o devolve — a ficha.
@@ -19,8 +19,8 @@ export interface PessoaDaFicha {
   email: string | null;
   createdAt: string;
   isActive: boolean;
-  /** O estoque no NOME dela, uma linha por saída — como a ficha do posto mostra `itens`. */
-  itens: SaidaNaFicha[];
+  /** O estoque no NOME dela, uma linha por entrega — como a ficha do posto mostra `itens`. */
+  itens: EntregaNaFicha[];
   /** As licenças entregues A ELA e ainda abertas — não as do computador que ela usa. */
   licencas: EntregaDoAlvo[];
 }
@@ -58,7 +58,7 @@ export interface EventoDaPessoa {
   } | null;
   /** Preenchido só quando `fonte === 'LICENCA'`. */
   licenca: EventoDeLicencaDoAlvo | null;
-  /** Preenchido só quando `fonte === 'ESTOQUE'` — a saída, não a unidade. */
+  /** Preenchido só quando `fonte === 'ESTOQUE'` — a entrega, não a unidade. */
   estoque: {
     /** Nulo quando o item foi excluído: o nome continua em `itemLabel`. */
     itemId: string | null;

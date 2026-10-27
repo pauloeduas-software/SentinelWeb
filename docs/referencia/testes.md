@@ -80,7 +80,7 @@ configurar nada (só precisa do Postgres de pé: `docker compose up -d`).
 
 **`invariantes.test.ts` › os CHECKs do Postgres recusam a linha incoerente mesmo por fora da API.**
 `stock_movements_forma` (uma unidade com exatamente um alvo), `stock_items_qty_positiva`, a
-devolução que não antecede a saída, a que tem o dia sem o instante do registro e a saída em uso
+devolução que não antecede a entrega, a que tem o dia sem o instante do registro e a entrega em uso
 sem item existem para quem não passa pelo use-case — o `psql` à mão, um
 script. Testar isso por HTTP seria impossível por construção; o teste insere direto no banco e lê a
 mensagem do Postgres.
@@ -93,8 +93,8 @@ a mesma da licença ([AE](../decisoes/estoque.md#ae--o-estoque-segue-a-lógica-d
 **`corridas.test.ts` › 1 de 1 e 3 de 5.** Duas entregas simultâneas de um item com uma unidade só:
 sem a trava da linha do item (`travarItemOuFalhar`), as duas contam "0 de 1 em uso" e as duas
 inserem. Prova também a redução do total concorrente com a entrega, pela mesma trava, e as duas
-devoluções da mesma saída: fecha uma vez, e o carimbo da devolução não é reescrito. E o item e o
-posto excluídos ao mesmo tempo, com saídas devolvidas em comum: os dois passam, e as saídas ficam
+devoluções da mesma entrega: fecha uma vez, e o carimbo da devolução não é reescrito. E o item e o
+posto excluídos ao mesmo tempo, com entregas devolvidas em comum: os dois passam, e as entregas ficam
 com os dois nomes por escrito. A trava das linhas na ordem do id, que evita o deadlock entre os
 dois, não se prova aqui: numa tabela pequena o Postgres lê as linhas na mesma ordem pelos dois
 caminhos.

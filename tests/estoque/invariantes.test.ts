@@ -3,7 +3,7 @@ import { prisma } from '../../server/core/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { cenarioDePosse, criarColaborador, criarItemDeEstoque, criarPosto } from '../helpers/fixtures';
 
-// AS INVARIANTES DO ESTOQUE — o saldo calculado, a forma da saída, o total que
+// AS INVARIANTES DO ESTOQUE — o saldo calculado, a forma da entrega, o total que
 // nunca desce do que está em uso nem de 1, a categoria do tipo certo, o
 // desativar e o excluir, e a ponta da invariante 6. A mesma lógica da licença
 // (AE).
@@ -60,12 +60,12 @@ describe('o saldo é calculado, nunca coluna', () => {
   it('o disponível cai com a entrega e volta com a devolução', async () => {
     const mouse = await item('Mouse do saldo', 3);
 
-    const saida = await paraLaura(mouse.id, 2);
-    expect(saida.status).toBe(201);
-    expect(saida.body.disponivel).toBe(1);
+    const entrega = await paraLaura(mouse.id, 2);
+    expect(entrega.status).toBe(201);
+    expect(entrega.body.disponivel).toBe(1);
     expect((await lerItem(mouse.id)).body).toMatchObject({ qty: 3, emUso: 2, disponivel: 1 });
 
-    expect((await api.post(`/api/stock/checkouts/${saida.body.unidades[0].id}/checkin`, { qty: 1 })).status).toBe(200);
+    expect((await api.post(`/api/stock/checkouts/${entrega.body.unidades[0].id}/checkin`, { qty: 1 })).status).toBe(200);
     expect((await lerItem(mouse.id)).body).toMatchObject({ qty: 3, emUso: 1, disponivel: 2 });
   });
 
@@ -150,13 +150,13 @@ describe('o alvo da entrega é UM — e quem garante é o banco', () => {
       .toMatch(/stock_movements_forma/);
     expect(await inserir({ targetType: 'WORKSTATION', targetPersonId: cenario.laura })).toMatch(/stock_movements_forma/);
     expect(await inserir({ targetType: 'PERSON', targetPersonId: cenario.laura, returnedAt: '2000-01-01', returnRecordedAt: '2000-01-01' }))
-      .toMatch(/stock_movements_devolucao_nao_antecede_saida/);
+      .toMatch(/stock_movements_devolucao_nao_antecede_entrega/);
     // O dia da devolução sem o instante do registro — ou o contrário — não entra.
     expect(await inserir({ targetType: 'PERSON', targetPersonId: cenario.laura, returnedAt: '2999-01-01' }))
       .toMatch(/stock_movements_devolucao_registrada/);
     expect(await inserir({ targetType: 'PERSON', targetPersonId: cenario.laura, returnRecordedAt: '2999-01-01' }))
       .toMatch(/stock_movements_devolucao_registrada/);
-    // Sem item, só a saída devolvida e com o nome por escrito (AG).
+    // Sem item, só a entrega devolvida e com o nome por escrito (AG).
     expect(await inserir({ semItem: true, targetType: 'PERSON', targetPersonId: cenario.laura }))
       .toMatch(/stock_movements_item_presente/);
     // E a linha bem formada entra.
@@ -176,7 +176,7 @@ describe('o alvo da entrega é UM — e quem garante é o banco', () => {
     `;
     expect(constraints.map((c) => c.conname).sort()).toEqual([
       'stock_items_qty_positiva',
-      'stock_movements_devolucao_nao_antecede_saida',
+      'stock_movements_devolucao_nao_antecede_entrega',
       'stock_movements_devolucao_registrada',
       'stock_movements_forma',
       'stock_movements_item_presente',
@@ -228,9 +228,9 @@ describe('o total é campo da edição, como a quantidade comprada da licença',
     for (const qty of [null, true]) {
       expect((await paraLaura(cabo.id, qty as unknown as number)).status).toBe(422);
     }
-    const saida = await paraLaura(cabo.id, 2);
-    expect(saida.status).toBe(201);
-    const devolucao = await api.post(`/api/stock/checkouts/${saida.body.unidades[0].id}/checkin`, { qty: null });
+    const entrega = await paraLaura(cabo.id, 2);
+    expect(entrega.status).toBe(201);
+    const devolucao = await api.post(`/api/stock/checkouts/${entrega.body.unidades[0].id}/checkin`, { qty: null });
     expect(devolucao.status).toBe(422);
     expect((await lerItem(cabo.id)).body).toMatchObject({ qty: 3, emUso: 2 });
   });
@@ -305,7 +305,7 @@ describe('a categoria precisa ser de estoque', () => {
 describe('desativar e excluir', () => {
   it('desativa mesmo com unidade fora: não recebe entrega nova, e a que está fora volta', async () => {
     const webcam = await item('Webcam desativada', 3);
-    const saida = await paraLaura(webcam.id);
+    const entrega = await paraLaura(webcam.id);
     expect((await api.put(`/api/stock/items/${webcam.id}`, { isActive: false })).status).toBe(200);
     expect((await lerItem(webcam.id)).body).toMatchObject({ isActive: false, emUso: 1 });
 
@@ -313,7 +313,7 @@ describe('desativar e excluir', () => {
     expect(recusa.status).toBe(409);
     expect(recusa.body.error).toMatch(/está desativado e não recebe entrega\. .*reative-o antes/);
 
-    expect((await api.post(`/api/stock/checkouts/${saida.body.unidades[0].id}/checkin`, {})).status).toBe(200);
+    expect((await api.post(`/api/stock/checkouts/${entrega.body.unidades[0].id}/checkin`, {})).status).toBe(200);
 
     // Reativado, volta a entregar.
     expect((await api.put(`/api/stock/items/${webcam.id}`, { isActive: true })).status).toBe(200);
@@ -331,15 +331,15 @@ describe('desativar e excluir', () => {
     expect((await lerItem(leitor.id)).status).toBe(200);
   });
 
-  it('o já entregue e devolvido se exclui (AG): as saídas guardam o nome, e o histórico da pessoa continua', async () => {
+  it('o já entregue e devolvido se exclui (AG): as entregas guardam o nome, e o histórico da pessoa continua', async () => {
     const pessoa = await criarColaborador(api, { name: 'Elisa do Item Excluído', email: 'elisa.excluido@teste.local' });
     const leitor = await item('Leitor que saiu de linha', 2);
-    const saida = await entregar(leitor.id, { targetType: 'PERSON', targetPersonId: pessoa, qty: 2 });
-    expect((await api.post(`/api/stock/checkouts/${saida.body.unidades[0].id}/checkin`, {})).status).toBe(200);
+    const entrega = await entregar(leitor.id, { targetType: 'PERSON', targetPersonId: pessoa, qty: 2 });
+    expect((await api.post(`/api/stock/checkouts/${entrega.body.unidades[0].id}/checkin`, {})).status).toBe(200);
 
     expect((await api.delete(`/api/stock/items/${leitor.id}`)).status).toBe(204);
     expect((await lerItem(leitor.id)).status).toBe(404);
-    const linhas = await prisma.stockMovement.findMany({ where: { id: { in: saida.body.unidades.map((u) => u.id) } } });
+    const linhas = await prisma.stockMovement.findMany({ where: { id: { in: entrega.body.unidades.map((u) => u.id) } } });
     expect(linhas.map((l) => [l.itemId, l.itemName])).toEqual([[null, 'Leitor que saiu de linha'], [null, 'Leitor que saiu de linha']]);
 
     type Historico = { rows: { fonte: string; action: string; estoque: { itemId: string | null; itemLabel: string; unidades: number } | null }[] };
@@ -349,8 +349,8 @@ describe('desativar e excluir', () => {
       ['CHECKOUT', 'Leitor que saiu de linha', null, 2],
     ]);
 
-    // A tela velha que ainda mostrava a saída recebe o 409 de "já devolvida".
-    const velha = await api.post<{ error: string }>(`/api/stock/checkouts/${saida.body.unidades[0].id}/checkin`, {});
+    // A tela velha que ainda mostrava a entrega recebe o 409 de "já devolvida".
+    const velha = await api.post<{ error: string }>(`/api/stock/checkouts/${entrega.body.unidades[0].id}/checkin`, {});
     expect(velha.status).toBe(409);
     expect(velha.body.error).toMatch(/"Leitor que saiu de linha" para Elisa do Item Excluído já foi devolvida/);
 
@@ -370,7 +370,7 @@ describe('desativar e excluir', () => {
     expect(retrato.changes).toMatchObject({ name: 'Cadastro errado', qty: 4 });
   });
 
-  it('o banco também recusa: a FK não deixa apagar item com saída', async () => {
+  it('o banco também recusa: a FK não deixa apagar item com entrega', async () => {
     const preso = await item('Item preso pela FK', 1);
     expect((await paraLaura(preso.id)).status).toBe(201);
     const erro = await prisma.$executeRawUnsafe('DELETE FROM stock_items WHERE id = $1::uuid', preso.id)

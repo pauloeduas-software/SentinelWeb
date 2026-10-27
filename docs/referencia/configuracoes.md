@@ -246,10 +246,10 @@ Intel, AMD ou Nvidia como fabricante para montar um modelo.
   inteiro, é quem diz onde o lugar fica ("Mesa 1 — Filial SP").
 - **O estoque também tem lugar.** O item de estoque tem uma localização
   opcional — onde fica guardado o que sobra, normalmente o Depósito de TI. A
-  unidade entregue a alguém está com quem a recebeu (a saída), não ali.
+  unidade entregue a alguém está com quem a recebeu (a entrega), não ali.
 - **O posto de trabalho fica numa localização**, mas não é uma: é cadastro
   próprio, criado e editado na tela **Postos** ([`postos.md`](postos.md)). A
-  localização **não recebe** — nem entrega, nem saída de estoque, nem ocupante;
+  localização **não recebe** — nem entrega de ativo, nem de estoque, nem ocupante;
   quem recebe é o posto
   ([Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)).
 

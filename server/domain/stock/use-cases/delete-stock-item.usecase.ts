@@ -11,12 +11,12 @@ import { CAMPOS_AUDITADOS_DO_ITEM, rotuloDoAlvo, STOCK_ITEM_SELECT } from '../he
  *
  * O item com unidade com alguém recebe 409, que diz com quem e manda devolver:
  * excluir não pode fazer sumir uma unidade que está numa mesa. O que já foi
- * entregue e voltou se exclui: as saídas devolvidas perdem a ligação e guardam
+ * entregue e voltou se exclui: as entregas devolvidas perdem a ligação e guardam
  * o nome do item por escrito, e o histórico do colaborador continua dizendo
  * "Recebeu: Mouse USB". O histórico do próprio item vai junto com ele — é o
  * preço, e o Desativar continua para o que pode voltar a ser comprado.
  *
- * Sem lixeira: a FK `Restrict` é a rede — nenhuma saída em uso fica sem item
+ * Sem lixeira: a FK `Restrict` é a rede — nenhuma entrega em uso fica sem item
  * (CHECK `stock_movements_item_presente`).
  */
 export async function deleteStockItem(id: string, ator: Ator): Promise<void> {
@@ -42,7 +42,7 @@ export async function deleteStockItem(id: string, ator: Ator): Promise<void> {
       );
     }
 
-    // O PASSADO SOLTA O ITEM, como no posto: as saídas devolvidas guardam o
+    // O PASSADO SOLTA O ITEM, como no posto: as entregas devolvidas guardam o
     // nome, e a FK deixa o DELETE passar. As linhas são travadas antes, na
     // ordem do id, como o posto faz (`workstation.spec.ts`): o item e o posto
     // excluídos ao mesmo tempo desligam linhas em comum, e na mesma ordem um

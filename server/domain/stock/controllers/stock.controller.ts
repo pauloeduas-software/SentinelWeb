@@ -41,7 +41,7 @@ export const stockController = {
     return getStockItem(id);
   },
 
-  /** Quem está com o item agora — 15 saídas por página, com busca pelo nome. */
+  /** Quem está com o item agora — 15 entregas por página, com busca pelo nome. */
   async checkouts(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     return listStockCheckouts(id, parseListQuery(request.query, { perPage: POR_PAGINA_NO_DETALHE }));
@@ -81,7 +81,7 @@ export const stockController = {
     return reply.status(201).send(resultado);
   },
 
-  /** 200: a devolução FECHA unidades que já existiam. O `:id` é o de uma unidade da SAÍDA. */
+  /** 200: a devolução FECHA unidades que já existiam. O `:id` é o de uma unidade da ENTREGA. */
   async checkin(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     return checkinStock(id, checkinStockSchema.parse(request.body ?? {}), atorDaRequisicao(request));

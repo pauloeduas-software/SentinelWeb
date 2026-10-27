@@ -136,10 +136,10 @@ describe('toda escrita do painel deixa rastro com a conta da sessão', () => {
 
     await auditada(api.put(`/api/stock/items/${id}`, { notes: 'Gaveta 2' }));
     await auditada(api.put(`/api/stock/items/${id}`, { qty: 5 }));
-    const saida = await auditada(api.post<{ unidades: { id: string }[] }>(`/api/stock/items/${id}/checkout`, {
+    const entrega = await auditada(api.post<{ unidades: { id: string }[] }>(`/api/stock/items/${id}/checkout`, {
       targetType: 'PERSON', targetPersonId: pessoa, qty: 1,
     }));
-    await auditada(api.post(`/api/stock/checkouts/${saida.body.unidades[0].id}/checkin`, {}));
+    await auditada(api.post(`/api/stock/checkouts/${entrega.body.unidades[0].id}/checkin`, {}));
     await auditada(api.put(`/api/stock/items/${id}`, { isActive: false }));
 
     const errado = await auditada(api.post<{ id: string }>('/api/stock/items', {

@@ -2,11 +2,11 @@ import { prisma } from '../../../core/database/prismaClient';
 import { agruparPorLote } from '../helpers/stock-lote.helper';
 
 // O ESTOQUE NUMA FICHA — a do posto e a do colaborador: o que está com ele
-// AGORA, uma linha por SAÍDA ("Mouse USB · 3 unidades"), com o item e desde
+// AGORA, uma linha por ENTREGA ("Mouse USB · 3 unidades"), com o item e desde
 // quando. A devolução mora no detalhe do item, como a da licença: a ficha
 // mostra e aponta para lá.
 //
-// Consulta nas saídas, e não no item, de propósito: a pergunta é "o que está
+// Consulta nas entregas, e não no item, de propósito: a pergunta é "o que está
 // nesta mesa", e a resposta são as unidades abertas. O item desativado vem
 // junto: a unidade continua na mesa até alguém devolvê-la.
 
@@ -28,7 +28,7 @@ const UNIDADE_DA_FICHA = {
   },
 } as const;
 
-async function saidasAbertas(alvo: { targetWorkstationId: string } | { targetPersonId: string }) {
+async function entregasAbertas(alvo: { targetWorkstationId: string } | { targetPersonId: string }) {
   const unidades = await prisma.stockMovement.findMany({
     where: { ...alvo, returnedAt: null },
     select: UNIDADE_DA_FICHA,
@@ -47,10 +47,10 @@ async function saidasAbertas(alvo: { targetWorkstationId: string } | { targetPer
 
 /** O que está NESTA MESA — qualquer ocupante aberto dela responde por isto. */
 export function listWorkstationStock(workstationId: string) {
-  return saidasAbertas({ targetWorkstationId: workstationId });
+  return entregasAbertas({ targetWorkstationId: workstationId });
 }
 
 /** O mesmo, para a PESSOA: as unidades no nome dela. */
 export function listPersonStock(personId: string) {
-  return saidasAbertas({ targetPersonId: personId });
+  return entregasAbertas({ targetPersonId: personId });
 }

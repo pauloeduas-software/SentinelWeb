@@ -21,7 +21,7 @@ import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase
 // `UPDATE … SET x = x − 1` resolve só ESSE caso.
 //
 // A segunda é pior porque é silenciosa e permanente: A COLUNA PODE DIVERGIR DAS
-// LINHAS. Basta um INSERT de saída que não passe pelo decremento — falha no
+// LINHAS. Basta um INSERT de entrega que não passe pelo decremento — falha no
 // meio de uma operação sem transação, correção à mão no psql. A partir daí a
 // coluna mente PARA SEMPRE e nada detecta, porque a coluna *é* a resposta: não
 // existe ninguém para discordar dela. Com `COUNT` a resposta não pode divergir
@@ -44,7 +44,7 @@ import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase
  */
 export type ClienteEstoque = Omit<typeof prisma, `$${string}`>;
 
-/** O que a conta de um item precisa das linhas de saída. */
+/** O que a conta de um item precisa das linhas de entrega. */
 export interface UsoDoItem {
   /** Unidades com alguém agora. */
   emUso: number;
@@ -97,10 +97,10 @@ export async function contarUsoDe(client: ClienteEstoque, id: string): Promise<U
 /**
  * Trava a linha do item até o fim da transação atual — o mutex do saldo.
  *
- * ORDEM DE TRAVAMENTO: colaborador antes do item. A saída para pessoa trava o
+ * ORDEM DE TRAVAMENTO: colaborador antes do item. A entrega para pessoa trava o
  * colaborador primeiro (`lock-person.usecase.ts`), pelo mesmo motivo da entrega
  * de ativo e de licença — e nenhum caminho do sistema trava item e depois
- * colaborador. A saída a posto ainda toma `FOR KEY SHARE` na linha do posto
+ * colaborador. A entrega a posto ainda toma `FOR KEY SHARE` na linha do posto
  * pelo INSERT (aresta implícita item → posto), e nenhum caminho trava posto
  * antes de item. O grafo inteiro está em `lock-asset.usecase.ts`.
  */
@@ -123,7 +123,7 @@ export type ComContagem<T> = T & ContagemDoItem;
  * Junta a conta à linha. Função PURA: quem foi ao banco foi o `contarUso`.
  *
  * `disponivel` pode ficar NEGATIVO, e isso é de propósito: acontece quando uma
- * linha de saída é criada à mão no psql, por fora da trava. Zerar o número aqui
+ * linha de entrega é criada à mão no psql, por fora da trava. Zerar o número aqui
  * esconderia exatamente a inconsistência que a tela precisa mostrar.
  */
 export function comContagem<T extends { qty: number }>(item: T, uso: UsoDoItem): ComContagem<T> {

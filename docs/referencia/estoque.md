@@ -27,7 +27,7 @@ e devoluções; ele fica na auditoria, no banco, com quem fez
   Entregar 5 mouses à Mesa 1 vale **5**, qualquer que seja o número de ocupantes: quem responde
   por eles são os ocupantes abertos da mesa, e o posto vazio recebe — é a mesa preparada antes de
   a pessoa chegar.
-- **O mesmo alvo recebe quantas vezes for**, e cada entrega é uma saída própria.
+- **O mesmo alvo recebe quantas vezes for**, e cada vez é uma entrega própria.
 - **O nome é único entre todos os itens**, desativados inclusive, e sem diferença de maiúscula,
   como nas Configurações — "mouse usb" é o "Mouse USB" com outra grafia, e o 409 diz a grafia que
   existe: o item que volta a ser usado se reativa, com o histórico junto. `Já existe um item de
@@ -61,7 +61,7 @@ criada por fora da trava (o `psql` à mão), e esconder a inconsistência seria 
 | **a lista** | **uma só**, pelo nome, com os desativados — sem abas, como nas Configurações. Busca por nome, categoria e localização — o texto ao pé da letra, `%` e `_` não são curinga; filtro de categoria |
 | **a linha** | nome (e as notas), categoria, localização e "10 no total · 7 em uso · 3 disponíveis". Sem cor pelo valor. A do desativado fica esmaecida, com a marca "desativado" ao lado do nome |
 | **as ações** | as das Configurações, que aparecem ao passar o mouse: Entregar (desabilitado sem disponível, com o motivo no `title`; some no desativado), Editar, Desativar/Ativar e Excluir — com confirmação no Desativar e no Excluir |
-| **o detalhe** | no cabeçalho, a conta ("Desativado · 10 no total · 7 em uso · 3 disponíveis") e as ações da lista, com as mesmas regras (Entregar e Editar voltam ao detalhe ao fechar; excluído, a janela fecha). Depois, todos os campos do cadastro. **Com quem está**: as saídas abertas, da mais recente para a mais antiga, 15 por página, com busca pelo nome do colaborador ou do posto — "Mesa 1 · 5 unidades · desde 12/10/2026", com a observação —, e Devolver em cada linha. **Histórico**: só entregas e devoluções, por saída, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
+| **o detalhe** | no cabeçalho, a conta ("Desativado · 10 no total · 7 em uso · 3 disponíveis") e as ações da lista, com as mesmas regras (Entregar e Editar voltam ao detalhe ao fechar; excluído, a janela fecha). Depois, todos os campos do cadastro. **Com quem está**: as entregas abertas, da mais recente para a mais antiga, 15 por página, com busca pelo nome do colaborador ou do posto — "Mesa 1 · 5 unidades · desde 12/10/2026", com a observação —, e Devolver em cada linha. **Histórico**: só entregas e devoluções, por entrega, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
 
 A edição mostra o **total** e manda **o formulário inteiro**, como em todas as telas
 ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)): um formulário aberto há tempo desfaz a edição que outra pessoa salvou no meio, e o
@@ -86,12 +86,12 @@ O cadastro é o das Configurações — os mesmos botões, a mesma ordem e as me
   está **em uso agora** impede. O botão sempre clica, e pergunta `Excluir "Mouse USB"? Esta ação
   não tem lixeira.` Com unidade com alguém, a notificação diz com quem: `"Mouse USB" ainda tem 3
   unidades em uso (Laura Souza ×2 e Mesa 1). Devolva antes de excluir.` O que já foi entregue e
-  voltou se exclui: as saídas devolvidas perdem a ligação e guardam o nome por escrito
+  voltou se exclui: as entregas devolvidas perdem a ligação e guardam o nome por escrito
   (`itemName`), e o histórico do colaborador continua dizendo "Recebeu: Mouse USB". O histórico do
-  **próprio item** vai junto com ele — e com ele a única tela que mostrava as saídas devolvidas de
+  **próprio item** vai junto com ele — e com ele a única tela que mostrava as entregas devolvidas de
   um posto, que só mostra o que está nele agora. É o preço da exclusão; por isso o que pode voltar a ser
   comprado se desativa. A FK `Restrict` de `stock_movements` é a rede, e o CHECK
-  `stock_movements_item_presente` não deixa a saída em uso sem item. O excluído solta a categoria e
+  `stock_movements_item_presente` não deixa a entrega em uso sem item. O excluído solta a categoria e
   a localização; o desativado continua segurando.
 
 ## A entrega e a devolução
@@ -105,12 +105,12 @@ recusas de estado olham **hoje**: o item, o colaborador e o posto desativados re
 no passado mesmo que, naquele dia, estivessem em ordem.
 
 **Cada unidade é uma linha**, e as N de uma entrega nascem no mesmo `INSERT`, com o mesmo
-`createdAt`: é o que faz delas **uma saída**. As listas mostram a saída, e a devolução fecha
+`createdAt`: é o que faz delas **uma entrega**. As listas mostram a entrega, e a devolução fecha
 unidades dela. **A devolução também é uma só** pelo instante em que foi registrada
-(`returnRecordedAt`, gravado junto com o dia): duas devoluções da mesma saída no mesmo dia
+(`returnRecordedAt`, gravado junto com o dia): duas devoluções da mesma entrega no mesmo dia
 passado — as duas ao meio-dia — continuam sendo duas no histórico do item e no da pessoa.
 
-**A devolução** pergunta **quantas** — por padrão, todas as que ainda estão fora nesta saída — e
+**A devolução** pergunta **quantas** — por padrão, todas as que ainda estão fora nesta entrega — e
 o **dia**, na própria linha de "Com quem está", no detalhe do item — o único lugar do sistema que
 devolve estoque. Com uma unidade só, não pergunta quantas. O dia vem com hoje; pode ser passado,
 mas nunca futuro nem antes do dia da entrega (422, com as duas datas). Hoje grava a hora real; um
@@ -127,24 +127,24 @@ A entrega confere **na ordem da tabela** e responde a primeira recusa — o cola
 | quantidade zero, ou mais de 100 numa entrega | 422 |
 | dois alvos, ou nenhum | 422 `Uma entrega tem UM alvo: preencha só a chave que corresponde ao targetType (PERSON).` / `Entrega do tipo "WORKSTATION" exige um posto (targetWorkstationId).` |
 | item, colaborador ou posto que não existe, ou colaborador na lixeira | 404 |
-| colaborador ou posto desativado | 409 `Laura Souza está desativado(a) e não pode receber equipamento.` / `"Mesa 1" está desativado e não recebe saída de estoque.` |
+| colaborador ou posto desativado | 409 `Laura Souza está desativado(a) e não pode receber equipamento.` / `"Mesa 1" está desativado e não recebe entrega de estoque.` |
 | item desativado | 409 `O item "Mouse USB" está desativado e não recebe entrega. …` |
 | sem unidade | 409 `Sem unidade disponível de "Mouse USB": 10 no total, 10 em uso. Devolva uma unidade ou aumente o total.` — ou, com menos do que a entrega pede, `Sem unidade suficiente de "Mouse USB": a entrega pede 3 e há 2 disponíveis (10 no total, 8 em uso).` |
 | devolução antes do dia da entrega | 422 `A devolução (09/03/2026) não pode ser antes da entrega (10/03/2026).` |
-| devolver mais do que ainda está fora na saída | 409 `Só 2 unidades desta entrega de "Mouse USB" ainda estão com Mesa 1.` |
-| devolver uma saída já devolvida | 409 `Esta entrega de "Mouse USB" para Mesa 1 já foi devolvida.` |
+| devolver mais do que ainda está fora na entrega | 409 `Só 2 unidades desta entrega de "Mouse USB" ainda estão com Mesa 1.` |
+| devolver uma entrega já devolvida | 409 `Esta entrega de "Mouse USB" para Mesa 1 já foi devolvida.` |
 
-**A devolução é pela saída**, não pelo item nem pelo alvo: o `:id` é o de qualquer unidade dela,
-e o clique de uma tela velha encontra a saída antiga já fechada, sem devolver a de quem recebeu
+**A devolução é pela entrega**, não pelo item nem pelo alvo: o `:id` é o de qualquer unidade dela,
+e o clique de uma tela velha encontra a entrega antiga já fechada, sem devolver a de quem recebeu
 depois. Devolver sempre pode, mesmo com o item desativado, e não pede confirmação.
 
 ## Fora da tela de Estoque
 
 | Onde | O quê |
 |---|---|
-| **ficha do posto** | o estoque **da mesa**, por saída, com quantas e desde quando; o nome leva ao detalhe do item (`/estoque?item=<id>`), onde está o Devolver. O item desativado aparece marcado. Não conta como ativo do posto |
+| **ficha do posto** | o estoque **da mesa**, por entrega, com quantas e desde quando; o nome leva ao detalhe do item (`/estoque?item=<id>`), onde está o Devolver. O item desativado aparece marcado. Não conta como ativo do posto |
 | **ficha do colaborador** | o estoque **no nome dela**, com o mesmo link |
-| **histórico do colaborador** | entregas e devoluções de estoque **a ela**, por saída ("Recebeu: Mouse USB · 2 unidades") |
+| **histórico do colaborador** | entregas e devoluções de estoque **a ela**, por entrega ("Recebeu: Mouse USB · 2 unidades") |
 
 **Separado por alvo:** o que foi entregue ao posto é da mesa, e não aparece na pessoa que o ocupa
 — quem sai da empresa não leva o mouse da Mesa 1.
@@ -166,17 +166,17 @@ lista é derivada
 |---|---|
 | `GET /api/stock/items` | a lista, com os desativados (`?categoryId=`, `?q=`; `view` e `emUso` são 422) |
 | `GET /api/stock/items/:id` | o item, com a conta |
-| `GET /api/stock/items/:id/checkouts` | quem está com ele, por saída (`?page=`, `?q=` pelo nome; 15 por página) |
-| `GET /api/stock/items/:id/history` | o histórico, por saída (`?page=`; 15 por página, sem busca — `?q=` é 422) |
-| `POST`, `PUT /:id`, `DELETE /:id` | o cadastro; a edição muda também o total e o `isActive` (Desativar e Ativar); excluir o que não está em uso (204), soltando as saídas devolvidas com o nome por escrito |
+| `GET /api/stock/items/:id/checkouts` | quem está com ele, por entrega (`?page=`, `?q=` pelo nome; 15 por página) |
+| `GET /api/stock/items/:id/history` | o histórico, por entrega (`?page=`; 15 por página, sem busca — `?q=` é 422) |
+| `POST`, `PUT /:id`, `DELETE /:id` | o cadastro; a edição muda também o total e o `isActive` (Desativar e Ativar); excluir o que não está em uso (204), soltando as entregas devolvidas com o nome por escrito |
 | `POST /api/stock/items/:id/checkout` | entregar (`targetType`, `targetPersonId` XOR `targetWorkstationId`, `qty`, `notes`, `checkoutAt` — o dia) |
-| `POST /api/stock/checkouts/:id/checkin` | devolver (`qty` — ausente é todas —, `checkinAt` — o dia; ausente é hoje) — o `:id` é o de uma unidade da **saída** |
+| `POST /api/stock/checkouts/:id/checkin` | devolver (`qty` — ausente é todas —, `checkinAt` — o dia; ausente é hoje) — o `:id` é o de uma unidade da **entrega** |
 
 Todas `ADMIN` ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)).
 
 **As travas:** a entrega trava o **colaborador** (no alvo pessoa) e depois o **item**; o posto
 é lido `FOR SHARE` depois do item. A edição e a exclusão travam o item. A devolução trava só as
-linhas da saída: ela só diminui o que está em uso. A saída agrupada mora em
+linhas da entrega: ela só diminui o que está em uso. A entrega agrupada mora em
 `helpers/stock-lote.helper.ts`; a conta, em `helpers/stock-balance.helper.ts`.
 
 **A busca** é a `contemTexto` (`server/domain/shared/busca.helper.ts`), a mesma de todas as
@@ -197,6 +197,6 @@ listagens. As ordens terminam em `id`, para a mesma linha não aparecer em duas 
 
 | Assunto | Arquivo |
 |---|---|
-| a lista (conta, busca, o desativado na mesma lista), "Com quem está" por saída, a devolução parcial, o histórico por saída (duas devoluções no mesmo dia são duas), os dias, as fichas e o histórico do colaborador | `tests/estoque/operacoes.test.ts` |
+| a lista (conta, busca, o desativado na mesma lista), "Com quem está" por entrega, a devolução parcial, o histórico por entrega (duas devoluções no mesmo dia são duas), os dias, as fichas e o histórico do colaborador | `tests/estoque/operacoes.test.ts` |
 | o saldo calculado, as frases sem unidade, o posto que não multiplica, os CHECKs, o total na edição e na auditoria, a quantidade que é número de verdade, o nome único sem diferença de maiúscula, a categoria, desativar e excluir (a regra do posto, com o nome por escrito), a invariante 6 e o 409 do posto com os itens, as rotas | `tests/estoque/invariantes.test.ts` |
-| as corridas: entregas simultâneas, total × entrega, devoluções da mesma saída, a troca do tipo da categoria × cadastro, exclusão × entrega e o item e o posto excluídos ao mesmo tempo | `tests/estoque/corridas.test.ts` |
+| as corridas: entregas simultâneas, total × entrega, devoluções da mesma entrega, a troca do tipo da categoria × cadastro, exclusão × entrega e o item e o posto excluídos ao mesmo tempo | `tests/estoque/corridas.test.ts` |

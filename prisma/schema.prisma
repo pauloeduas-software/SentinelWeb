@@ -483,7 +483,7 @@ model Location {
   updatedAt DateTime @updatedAt
 
   assets       Asset[]
-  // Os itens de estoque GUARDADOS aqui (não os entregues — esses são as saídas).
+  // Os itens de estoque GUARDADOS aqui (não os entregues — esses estão nas entregas).
   stockItems   StockItem[]
   workstations Workstation[]
 
@@ -501,7 +501,7 @@ model Location {
 // os liga: o ativo continua com UM campo de "onde" (`Asset.locationId`).
 //
 // A regra de cadastro é a do status: nome único, desativar em vez de excluir,
-// e a exclusão recusada só pelo que está nele AGORA — entrega ou saída aberta,
+// e a exclusão recusada só pelo que está nele AGORA — entrega de ativo ou de estoque aberta,
 // ocupante atual (`workstationSpec`). O passado não segura: as linhas já
 // fechadas guardam o nome por escrito.
 //
@@ -1095,9 +1095,9 @@ model AssetUsageDaily {
 // uma linha de `StockMovement`.
 //
 // A MESMA LÓGICA DA LICENÇA (AE): o total é campo da edição, o disponível é
-// `qty − COUNT(saídas abertas)` — calculado, nunca coluna —, e reduzir não passa
+// `qty − COUNT(entregas abertas)` — calculado, nunca coluna —, e reduzir não passa
 // do que está em uso. Sem lixeira, e a regra do POSTO (AG): só o que está em
-// uso agora impede excluir o item; as saídas já devolvidas perdem a ligação e
+// uso agora impede excluir o item; as entregas já devolvidas perdem a ligação e
 // guardam o nome dele por escrito. O que pode voltar a ser comprado se desativa.
 // ============================================================================
 
@@ -1127,7 +1127,7 @@ model StockItem {
   locationId String? @db.Uuid
 
   // DESATIVADO é o encerrado da licença: fica na lista, esmaecido, não recebe
-  // saída nova, e o que ainda está com alguém continua até voltar.
+  // entrega nova, e o que ainda está com alguém continua até voltar.
   isActive Boolean @default(true)
 
   createdAt DateTime @default(now())
@@ -1149,7 +1149,7 @@ model StockItem {
 // UMA LINHA POR UNIDADE QUE SAIU — a entrega da licença, com quantidade.
 //
 // Entregar 5 mouses à Mesa 1 grava 5 linhas, no mesmo INSERT: o `createdAt`
-// igual é o que faz delas UMA saída (o lote) nas listas, e a devolução fecha N
+// igual é o que faz delas UMA entrega (o lote) nas listas, e a devolução fecha N
 // linhas do lote. O saldo é um `COUNT`. Entregar a um posto vale UMA unidade,
 // qualquer que seja o número de ocupantes — o saldo do almoxarifado não pode
 // depender da escala do RH. Quem responde por ela são os ocupantes abertos
@@ -1159,7 +1159,7 @@ model StockItem {
 // (`stock_movements_forma`): exatamente um alvo, o que o discriminante diz.
 model StockMovement {
   id     String  @id @default(uuid()) @db.Uuid
-  // Nulo só na saída DEVOLVIDA de um item que foi excluído — o nome dele fica
+  // Nulo só na entrega DEVOLVIDA de um item que foi excluído — o nome dele fica
   // em `itemName`, como o do posto em `targetWorkstationName`. Em uso, aponta
   // sempre para o item (CHECK `stock_movements_item_presente`).
   itemId String? @db.Uuid
@@ -1173,26 +1173,26 @@ model StockMovement {
   /// O nome do posto, por escrito, quando ele foi excluído — como na `Assignment`.
   targetWorkstationName String?
 
-  /// O DIA da saída, como o `checkoutAt` da licença: hoje é a hora real, um dia
+  /// O DIA da entrega, como o `checkoutAt` da licença: hoje é a hora real, um dia
   /// passado é o meio-dia de Brasília (`instanteDoDia`).
   checkoutAt DateTime  @default(now())
-  /// Nulo = unidade EM USO. É o que o saldo conta. Nunca antes da saída (CHECK).
+  /// Nulo = unidade EM USO. É o que o saldo conta. Nunca antes da entrega (CHECK).
   /// É o DIA da devolução, como o `checkoutAt`: duas devoluções no mesmo dia
   /// passado têm o mesmo — por isso a chave da devolução é a coluna de baixo.
   returnedAt DateTime?
   /// O instante em que a devolução foi REGISTRADA — o mesmo nas N linhas que
-  /// voltaram juntas: é a chave da devolução, como o `createdAt` é a da saída.
+  /// voltaram juntas: é a chave da devolução, como o `createdAt` é a da entrega.
   /// Nula junto com `returnedAt`, e só (CHECK `stock_movements_devolucao_registrada`).
   returnRecordedAt DateTime?
 
-  /// A observação da saída. A devolução não tem a sua.
+  /// A observação da entrega. A devolução não tem a sua.
   notes String?
 
-  /// O instante do INSERT — o mesmo nas N linhas de uma saída: é a chave do lote.
+  /// O instante do INSERT — o mesmo nas N linhas de uma entrega: é a chave do lote.
   createdAt DateTime @default(now())
 
   // Restrict nos três: item, posto e pessoa com unidade em uso não se excluem
-  // (o 409 de cada um vem antes, e conta as unidades). A saída já devolvida de
+  // (o 409 de cada um vem antes, e conta as unidades). A entrega já devolvida de
   // um item ou de um posto excluído é desligada antes, com o nome por escrito
   // em `itemName` ou em `targetWorkstationName`.
   item              StockItem?   @relation(fields: [itemId], references: [id], onDelete: Restrict)

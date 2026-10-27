@@ -57,7 +57,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 22 | O que está em uso nunca passa da quantidade comprada | **aplicação** — a entrega e a edição contam com a linha da licença travada (`lock-license.usecase.ts`) | 409 `Sem licença livre em "Office 2024": 5 compradas, 5 em uso. Devolva uma entrega ou aumente a quantidade comprada.` |
 | 23 | Uma entrega aberta por alvo e licença | **banco** — dois índices únicos parciais, um por alvo. No passado, a entrega que se sobrepõe à última devolução do mesmo alvo é só da **aplicação** (422) | 409 `Laura Souza já está com "Office 2024".` (a API confere antes) |
 | 24 | A chave da entrega é uma das chaves da licença; nenhuma chave vai para mais entregas abertas do que cobre; e as chaves cobrem no máximo o que foi comprado | **banco** — a FK composta (chave, licença) e os `CHECK`s da chave. A conta de cada chave e a soma contra o comprado são da **aplicação**, com a licença travada | 409 `Esta chave já está em outra entrega aberta de "Office 2024". Escolha outra.` / 422 `As chaves cobrem 12, mais do que 10 compradas em "Office 2024". …` |
-| 25 | A forma da saída de estoque, e o que está em uso nunca passa do total | **banco** — o CHECK do total (`stock_items_qty_positiva`), os quatro `CHECK` da linha e a FK `Restrict` para o item. A conta contra o total é da **aplicação**, com a linha do item travada | 409 `Sem unidade disponível de "Mouse USB": 10 no total, 10 em uso. Devolva uma unidade ou aumente o total.` / `Não dá para reduzir "Mouse USB" para 1: 2 estão em uso. Devolva para liberar.` |
+| 25 | A forma da entrega de estoque, e o que está em uso nunca passa do total | **banco** — o CHECK do total (`stock_items_qty_positiva`), os quatro `CHECK` da linha e a FK `Restrict` para o item. A conta contra o total é da **aplicação**, com a linha do item travada | 409 `Sem unidade disponível de "Mouse USB": 10 no total, 10 em uso. Devolva uma unidade ou aumente o total.` / `Não dá para reduzir "Mouse USB" para 1: 2 estão em uso. Devolva para liberar.` |
 
 ---
 
@@ -211,7 +211,7 @@ abrir**.
 [Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)): o posto segue a regra do status e
 sai quando nada está nele agora. A posse JÁ DEVOLVIDA para ele perde a FK e
 guarda o nome por escrito em `targetWorkstationName` — e só a devolvida: a aberta
-aponta sempre para o posto. A saída de estoque (`stock_movements_forma`) e a
+aponta sempre para o posto. A entrega de estoque (`stock_movements_forma`) e a
 ocupação (`workstation_occupants_posto_presente`) têm a mesma exceção, com a mesma
 condição.
 
@@ -596,7 +596,7 @@ e `update-asset` (o local do ativo), `create-stock-item` e `update-stock-item`
 edições, só quando o local **muda**: o formulário reenvia todo campo.
 
 **As portas do posto** — o que ele RECEBE: `checkout-asset` (entrega),
-`checkout-stock` (saída de estoque) e `add-workstation-occupant` (ocupante).
+`checkout-stock` (entrega de estoque) e `add-workstation-occupant` (ocupante).
 
 **Por que na aplicação:** depende do estado do local ou do posto no momento da
 escrita, e cruza tabelas. **E por isso trava:** a desativação trava a linha
@@ -705,7 +705,7 @@ uma chave ou diminua o que ela cobre antes.`
 > simultâneas na mesma chave de volume que cobre duas: passam duas) e
 > `tests/licencas/chave.test.ts` (as frases da API).
 
-### 25 — A saída de estoque, e o total que não fica abaixo do que está em uso
+### 25 — A entrega de estoque, e o total que não fica abaixo do que está em uso
 
 ```sql
 ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_qty_positiva" CHECK ("qty" >= 1);
@@ -716,7 +716,7 @@ ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_forma" CHECK (
        OR ("returnedAt" IS NOT NULL AND "targetWorkstationName" IS NOT NULL)
      ))
 );
-ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_devolucao_nao_antecede_saida"
+ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_devolucao_nao_antecede_entrega"
   CHECK ("returnedAt" IS NULL OR "returnedAt" >= "checkoutAt");
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_devolucao_registrada"
   CHECK (("returnedAt" IS NULL) = ("returnRecordedAt" IS NULL));
@@ -732,24 +732,24 @@ entregue**. A invariante tem, como a 24, uma metade no banco e outra na aplicaç
 
 **No banco, a forma.** O total é ao menos 1 — o item que acabou se desativa. A linha tem UM alvo,
 o que o `targetType` diz, e a devolução não fica antes da entrega e tem o dia e o instante do
-registro juntos — o instante é o que separa duas devoluções no mesmo dia; a saída devolvida de um posto
+registro juntos — o instante é o que separa duas devoluções no mesmo dia; a entrega devolvida de um posto
 excluído fica sem FK, com o nome por escrito, como a `Assignment` (5). E a do **item** excluído
-também (AG): toda saída em uso aponta para o item (CHECK `stock_movements_item_presente`), e a FK
+também (AG): toda entrega em uso aponta para o item (CHECK `stock_movements_item_presente`), e a FK
 `Restrict` não deixa apagar o item com unidade em uso; a devolvida é desligada antes, com o nome em
 `itemName`.
 
-**Na aplicação, a conta** — ela cruza o item com as saídas, e um CHECK não enxerga a outra
+**Na aplicação, a conta** — ela cruza o item com as entregas, e um CHECK não enxerga a outra
 tabela. Mora em quem conta e grava: a **entrega** (`checkout-stock.usecase.ts`) e a **edição**
 que reduz o total (`update-stock-item.usecase.ts`), as duas com a linha do item travada
 (`travarItemOuFalhar`). Sem a trava, duas entregas liam "1 disponível" e as duas gravavam. A
-ordem é colaborador → item → posto; a devolução trava só as linhas da saída, porque só diminui o
+ordem é colaborador → item → posto; a devolução trava só as linhas da entrega, porque só diminui o
 que está em uso.
 
 **O disponível negativo se mostra.** Só nasce de uma linha criada por fora da trava, e a tela o
 mostra em vermelho em vez de zerá-lo: esconder seria apagar o sintoma.
 
 > **Provado em** `tests/estoque/invariantes.test.ts` (o `INSERT` cru da linha incoerente é
-> recusado, as constraints existem, o total nunca é zero, a FK não deixa apagar item com saída) e
+> recusado, as constraints existem, o total nunca é zero, a FK não deixa apagar item com entrega) e
 > `tests/estoque/corridas.test.ts` (cinco entregas simultâneas num estoque de três: passam três; a
 > redução do total contra a entrega nunca deixa a conta passar dele).
 
