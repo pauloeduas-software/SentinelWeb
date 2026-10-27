@@ -4,7 +4,7 @@ import type { Ator } from '../../audit/audit.types';
 import { buildChanges } from '../../shared/diff.helper';
 import { AppError } from '../../../core/errors/app-error';
 import { fraseDoPiso } from '../helpers/license-count.helper';
-import { assertDatasNaoAntecedemACompra } from '../helpers/license-dates.helper';
+import { assertDatasCobremAsEntregas, assertDatasNaoAntecedemACompra } from '../helpers/license-dates.helper';
 import {
   CAMPOS_AUDITADOS_DA_LICENCA, LICENSE_SELECT, paraResposta,
   type LicencaNaResposta, type LinhaDeLicenca,
@@ -47,6 +47,11 @@ export async function updateLicense(id: string, data: UpdateLicenseData, ator: A
       purchaseDate: data.purchaseDate !== undefined ? data.purchaseDate : antes.purchaseDate,
       expirationDate: data.expirationDate !== undefined ? data.expirationDate : antes.expirationDate,
       terminationDate: data.terminationDate !== undefined ? data.terminationDate : antes.terminationDate,
+    });
+    const mesmoDia = (a: Date | null | undefined, b: Date | null) => (a?.getTime() ?? null) === (b?.getTime() ?? null);
+    await assertDatasCobremAsEntregas(tx, id, {
+      purchaseDate: mesmoDia(data.purchaseDate, antes.purchaseDate) ? undefined : data.purchaseDate,
+      terminationDate: mesmoDia(data.terminationDate, antes.terminationDate) ? undefined : data.terminationDate,
     });
 
     if (data.seatsTotal !== undefined && data.seatsTotal < antes.seatsTotal) {

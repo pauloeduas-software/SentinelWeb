@@ -1,6 +1,8 @@
 import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { buildChanges } from '../../shared/diff.helper';
+import { hojeNoBrasil } from '../../shared/hoje.helper';
+import { diaEmPortugues } from '../helpers/asset-dates.helper';
 import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
 import {
@@ -64,6 +66,24 @@ export async function updateAsset(id: string, data: UpdateAssetData, ator: Ator)
     // mesmo motivo do status: o formulário reenvia todo campo.
     if (data.locationId && data.locationId !== antes.locationId) {
       await assertLocalRecebe(tx, data.locationId, 'ativo novo');
+    }
+
+    // A COMPRA não fica depois da primeira licença entregue a este computador —
+    // a entrega já recusa o dia antes dela. Só quando a data MUDA, pelo mesmo
+    // motivo do status.
+    const compra = data.purchaseDate;
+    if (compra && compra.getTime() !== antes.purchaseDate?.getTime()) {
+      const primeira = await tx.licenseCheckout.findFirst({
+        where: { assignedAssetId: id }, orderBy: { checkoutAt: 'asc' }, select: { checkoutAt: true },
+      });
+      const dia = primeira && hojeNoBrasil(primeira.checkoutAt);
+      if (dia && compra > dia) {
+        throw new AppError(
+          `A data de compra (${diaEmPortugues(compra)}) não pode ser depois da primeira licença entregue a `
+          + `${antes.assetTag} (${diaEmPortugues(dia)}).`,
+          422,
+        );
+      }
     }
 
     const depois = await tx.asset.update({

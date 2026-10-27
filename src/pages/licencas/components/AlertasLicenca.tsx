@@ -25,11 +25,12 @@ const MOTIVOS: readonly { motivo: MotivoDoAlerta; texto: (n: number) => string }
   { motivo: 'VENCENDO', texto: (n) => `${n} vencendo` },
 ];
 
+// QUANTAS ESTÃO EM USO diz a urgência, nos três motivos e na mesma frase: a
+// vencida com sete pessoas usando é software sem direito de uso; a vencida que
+// ninguém usa é só um lembrete de renovar ou encerrar.
 function motivoEmTexto(alerta: LicencaEmAlerta): string {
-  if (alerta.motivo === 'ENCERRADA_EM_USO') {
-    return `encerrada, ainda em uso (${alerta.emUso})`;
-  }
-  return textoDoPrazo(alerta.diasParaVencer);
+  const prazo = alerta.motivo === 'ENCERRADA_EM_USO' ? 'encerrada' : textoDoPrazo(alerta.diasParaVencer);
+  return alerta.emUso > 0 ? `${prazo}, ainda em uso (${alerta.emUso})` : prazo;
 }
 
 export default function AlertasLicenca({ alertas, total, contagem, onIrPara }: AlertasLicencaProps) {

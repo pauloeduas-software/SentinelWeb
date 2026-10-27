@@ -81,6 +81,14 @@ describe('a lista de chaves da licença', () => {
     expect(repetida.status).toBe(422);
     expect(repetida.body.error).toBe('A mesma chave aparece duas vezes na lista.');
 
+    // Só a maiúscula muda: é a mesma chave, e contaria a mesma compra duas vezes.
+    const outraCaixa = await api.post<{ error: string }>('/api/licenses', {
+      name: 'Chave em outra caixa', categoryId: cenario.categoriaLicencaId, seatsTotal: 3,
+      keys: [{ productKey: 'abcd-1234', seats: 1 }, { productKey: 'ABCD-1234', seats: 1 }],
+    });
+    expect(outraCaixa.status).toBe(422);
+    expect(outraCaixa.body.error).toBe('A mesma chave aparece duas vezes na lista.');
+
     for (const keys of [
       [{ productKey: 'ABC\nDEF', seats: 1 }],
       [{ productKey: '   ', seats: 1 }],

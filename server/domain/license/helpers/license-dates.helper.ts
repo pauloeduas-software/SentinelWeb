@@ -1,5 +1,7 @@
 import { AppError } from '../../../core/errors/app-error';
 import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
+import { hojeNoBrasil } from '../../shared/hoje.helper';
+import type { ClienteLicenca } from '../use-cases/count-license-checkouts.usecase';
 
 // AS DATAS DA LICENÇA NÃO ANTECEDEM A COMPRA.
 //
@@ -33,6 +35,51 @@ export function assertDatasNaoAntecedemACompra(datas: DatasDaLicenca): void {
     if (data && data < compra) {
       throw new AppError(
         `${rotulo} (${diaEmPortugues(data)}) não pode ser antes da data da compra (${diaEmPortugues(compra)}).`,
+        422,
+      );
+    }
+  }
+}
+
+/**
+ * AS DATAS DA LICENÇA CONTRA AS ENTREGAS QUE ELA JÁ TEM — a edição que muda a
+ * compra ou o encerramento não deixa uma entrega fora do contrato:
+ *
+ * - a compra não fica DEPOIS da primeira entrega — a entrega já recusa o dia
+ *   antes da compra, e a edição não pode desfazer isso por trás;
+ * - o encerramento não fica ANTES da última — o histórico diria "entregue em
+ *   10/10" num contrato que acabou em 01/10.
+ *
+ * Só a data que MUDA é conferida: o formulário reenvia todas, e a licença
+ * antiga com a ordem trocada continua editável nos outros campos. O Encerrar do
+ * botão grava hoje, que nunca vem antes de entrega nenhuma.
+ */
+export async function assertDatasCobremAsEntregas(
+  client: ClienteLicenca,
+  licenseId: string,
+  mudou: { purchaseDate?: Date | null; terminationDate?: Date | null },
+): Promise<void> {
+  const { purchaseDate: compra, terminationDate: encerramento } = mudou;
+  if (compra) {
+    const primeira = await client.licenseCheckout.findFirst({
+      where: { licenseId }, orderBy: { checkoutAt: 'asc' }, select: { checkoutAt: true },
+    });
+    const dia = primeira && hojeNoBrasil(primeira.checkoutAt);
+    if (dia && compra > dia) {
+      throw new AppError(
+        `A data da compra (${diaEmPortugues(compra)}) não pode ser depois da primeira entrega (${diaEmPortugues(dia)}).`,
+        422,
+      );
+    }
+  }
+  if (encerramento) {
+    const ultima = await client.licenseCheckout.findFirst({
+      where: { licenseId }, orderBy: { checkoutAt: 'desc' }, select: { checkoutAt: true },
+    });
+    const dia = ultima && hojeNoBrasil(ultima.checkoutAt);
+    if (dia && encerramento < dia) {
+      throw new AppError(
+        `O encerramento (${diaEmPortugues(encerramento)}) não pode ser antes da última entrega (${diaEmPortugues(dia)}).`,
         422,
       );
     }

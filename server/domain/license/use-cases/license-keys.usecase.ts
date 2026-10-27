@@ -132,7 +132,10 @@ export async function gravarChaves(
   licenca: { id: string; name: string; seatsTotal: number },
   lista: readonly ChaveNoCorpo[],
 ): Promise<MudancaDasChaves> {
-  const textos = new Set(lista.map((chave) => chave.productKey));
+  // Sem diferença de maiúscula: chave de Windows e de Office não distingue, e
+  // `abcd-1234` ao lado de `ABCD-1234` contaria a mesma compra duas vezes na
+  // cobertura. A chave é gravada como foi digitada.
+  const textos = new Set(lista.map((chave) => chave.productKey.toUpperCase()));
   if (textos.size < lista.length) throw new AppError('A mesma chave aparece duas vezes na lista.', 422);
 
   assertChavesCabem(licenca.name, licenca.seatsTotal, lista.reduce((soma, chave) => soma + chave.seats, 0), 422);
