@@ -23,7 +23,7 @@ export const personSpec: CatalogSpec = {
   createSchema: createPersonSchema,
   updateSchema: updatePersonSchema,
 
-  select: { id: true, name: true, email: true, isActive: true, createdAt: true },
+  select: { id: true, name: true, email: true, isActive: true, createdAt: true, updatedAt: true },
   searchable: ['name', 'email'],
   audited: ['name', 'email', 'isActive'],
 

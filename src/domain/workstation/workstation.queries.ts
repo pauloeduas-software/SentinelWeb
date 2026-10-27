@@ -50,6 +50,8 @@ export interface PostoInput {
   locationId?: string;
   notes?: string | null;
   isActive?: boolean;
+  /** A versão que o formulário leu ao abrir (AF) — só no Editar; o servidor recusa se a linha mudou. */
+  updatedAt?: string;
 }
 
 /**
@@ -67,7 +69,9 @@ function useMutacaoDePosto<T>(mutationFn: (dados: T) => Promise<unknown>) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn,
-    onSuccess: () => {
+    // No erro também: o 409 quase sempre quer dizer que a tela está velha, e o
+    // Editar reaberto precisa da versão nova (AF).
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: workstationKeys.all });
       void queryClient.invalidateQueries({ queryKey: catalogKeys.tabela('workstations') });
     },

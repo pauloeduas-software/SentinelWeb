@@ -95,6 +95,7 @@ export interface Asset {
   retiredNotes: string | null;
 
   createdAt: string;
+  updatedAt: string;
 
   status: StatusRef;
   model: ModeloRef;

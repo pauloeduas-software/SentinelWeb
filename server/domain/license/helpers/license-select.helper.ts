@@ -128,6 +128,7 @@ export interface LinhaDeLicenca extends Record<string, unknown> {
   terminationDate: Date | null;
   purchaseDate: Date | null;
   seatsTotal: number;
+  updatedAt: Date;
 }
 
 /** O que o cliente recebe. */

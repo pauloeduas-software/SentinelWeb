@@ -88,6 +88,9 @@ export default function AssetFormModal({
   asset, clonar = false, statusPadraoId = '', onClose, onSubmit,
 }: AssetFormModalProps) {
   const [valores, setValores] = useState(() => valoresIniciais(asset, clonar, statusPadraoId));
+  // A versão DESTA abertura (AF): o registro pode chegar mais novo enquanto o
+  // formulário está aberto (o clone é cadastro novo, sem versão), e o que ele mostra continua sendo o desta leitura.
+  const [versao] = useState(asset && !clonar ? asset.updatedAt : undefined);
   // O CUSTO É DO ADMIN (D77). Quem não é nem recebe o valor do servidor, então
   // o campo abriria vazio — e salvar mandaria esse vazio por cima do custo que
   // só o administrador enxerga. Sem o campo e sem a chave no corpo, edita-se o
@@ -109,7 +112,7 @@ export default function AssetFormModal({
     setSalvando(true);
     setErro('');
     try {
-      const corpo: AssetInput = { ...valores };
+      const corpo: AssetInput = { ...valores, ...(versao ? { updatedAt: versao } : {}) };
       if (!veCusto) delete corpo.purchaseCost;
       await onSubmit(corpo);
     } catch (falha) {

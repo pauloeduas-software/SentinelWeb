@@ -15,7 +15,7 @@ export const locationSpec: CatalogSpec = {
 
   select: {
     id: true, name: true, isActive: true,
-    address: true, city: true, state: true, zip: true, phone: true, notes: true, createdAt: true,
+    address: true, city: true, state: true, zip: true, phone: true, notes: true, createdAt: true, updatedAt: true,
   },
   searchable: ['name', 'city', 'address'],
   audited: ['name', 'isActive', 'address', 'city', 'state', 'zip', 'phone', 'notes'],

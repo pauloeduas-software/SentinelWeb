@@ -2,6 +2,7 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { buildChanges } from '../../shared/diff.helper';
 import { hojeNoBrasil } from '../../shared/hoje.helper';
+import { assertVersaoLida } from '../../shared/versao.helper';
 import { diaEmPortugues } from '../helpers/asset-dates.helper';
 import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
@@ -14,7 +15,8 @@ import { assertEtiquetaESerieLivres } from './assert-unique-asset.usecase';
 import { assertStatusCoerenteComPosse } from './assert-status-posse.usecase';
 import type { CreateAssetData } from './create-asset.usecase';
 
-type UpdateAssetData = Partial<CreateAssetData>;
+/** `updatedAt`: a versão que o formulário leu (AF). */
+type UpdateAssetData = Partial<CreateAssetData> & { updatedAt?: Date };
 
 /** `undefined` significa "não mexe"; qualquer outro valor, inclusive `null`, vence. */
 function valorFinal<T>(novo: T | undefined, atual: T): T {
@@ -32,6 +34,9 @@ export async function updateAsset(id: string, data: UpdateAssetData, ator: Ator)
 
     const antes = await tx.asset.findFirst({ where: { id }, select: ASSET_SELECT });
     if (!antes) throw new AppError('Registro não encontrado', 404);
+    // O formulário aberto antes de uma entrega, devolução ou edição de outra
+    // pessoa: o status que ele reenvia desfaria a da entrega (AF).
+    assertVersaoLida(antes.updatedAt, data.updatedAt, antes.assetTag);
 
     await assertEtiquetaESerieLivres(tx, {
       assetTag: data.assetTag,

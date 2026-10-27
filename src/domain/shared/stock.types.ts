@@ -104,6 +104,8 @@ export interface ItemDeEstoqueInput {
   qty: number;
   locationId: string | null;
   notes: string | null;
+  /** A versão que o formulário leu ao abrir (AF) — só no Editar; o servidor recusa se a linha mudou. */
+  updatedAt?: string;
 }
 
 /**

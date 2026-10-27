@@ -13,7 +13,7 @@ export const manufacturerSpec: CatalogSpec = {
 
   select: {
     id: true, name: true, url: true,
-    supportPhone: true, supportEmail: true, isActive: true, createdAt: true,
+    supportPhone: true, supportEmail: true, isActive: true, createdAt: true, updatedAt: true,
   },
   searchable: ['name'],
   audited: ['name', 'url', 'supportPhone', 'supportEmail', 'isActive'],

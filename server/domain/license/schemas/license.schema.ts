@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import {
   dataOpcional, diaNaoFuturo, emailOpcional, nomeObrigatorio, textoOpcional,
-  uuidObrigatorio, uuidOpcional, valorMonetarioOpcional,
+  uuidObrigatorio, uuidOpcional, valorMonetarioOpcional, versaoLida
 } from '../../shared/fields.schema';
 
 // Contrato de entrada das rotas de licença.
@@ -87,6 +87,7 @@ export const updateLicenseSchema = z.strictObject({
   seatsTotal: quantidadeObrigatoria.optional(),
   ...camposComuns,
   keys: chavesDaEdicao.optional(),
+  updatedAt: versaoLida,
 });
 
 /**

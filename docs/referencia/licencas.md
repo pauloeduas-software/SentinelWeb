@@ -93,8 +93,10 @@ vencida.
 | **o alerta** | só nesta tela, numa caixa só, do mais urgente para o menos: encerrada ainda em uso, vencida (a mais recente primeiro; fica até alguém renovar ou encerrar, mesmo sem ninguém usando — é decisão pendente), vencendo em 30 dias (a mais próxima primeiro). Cada linha diz quantas estão em uso, na mesma frase nos três motivos — "venceu há 3 dias, ainda em uso (7)"; sem ninguém usando, só o prazo. Embaixo, a contagem de cada motivo com link — "2 encerradas em uso · 5 vencidas · 3 vencendo" —, que leva ao filtro que mostra todas aquelas (encerradas em uso: o status Encerradas com "Ainda em uso"). Não existe alerta de mínimo |
 
 A edição manda **o formulário inteiro**, a lista de chaves junto, como em todas as telas
-([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)). O preço é declarado: um formulário aberto há tempo desfaz a edição que outra pessoa
-salvou no meio, e o servidor só barra o que quebraria regra. Ela abre com o **detalhe** da
+([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)), com o `updatedAt` que leu ao abrir: se outra pessoa salvou, encerrou ou
+reabriu no meio, é 409 `Outra pessoa salvou "Office 2021" enquanto você editava. Feche e abra de
+novo para ver o que mudou.`, e nada se grava. A entrega não esbarra nisso: grava em outra tabela.
+Ela abre com o **detalhe** da
 licença, e não com a linha da listagem: é o detalhe que traz as chaves. E com o detalhe **buscado
 na hora**, nunca o que sobrou no cache de uma visita anterior: o guardado podia ser de antes de um
 Encerrar, e salvar só as notas reabria a licença.

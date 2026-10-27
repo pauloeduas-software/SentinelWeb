@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { $Enums } from '@prisma/client';
 import {
   dataNaoFutura, dataOpcional, nomeObrigatorio, textoOpcional,
-  uuidObrigatorio, uuidOpcional, valorMonetarioOpcional,
+  uuidObrigatorio, uuidOpcional, valorMonetarioOpcional, versaoLida
 } from '../../shared/fields.schema';
 
 // Contrato de entrada das rotas de ativo.
@@ -67,6 +67,7 @@ export const updateAssetSchema = z.strictObject({
   statusId: uuidObrigatorio('status').optional(),
   modelId: uuidObrigatorio('modelo').optional(),
   ...camposComuns,
+  updatedAt: versaoLida,
 });
 
 // ---------------------------------------------------------------------------

@@ -9,6 +9,8 @@
 export interface CatalogRow {
   id: string;
   name: string;
+  /** A versão da linha: o Editar a devolve, e o servidor recusa se ela mudou (AF). */
+  updatedAt: string;
   [campo: string]: unknown;
 }
 

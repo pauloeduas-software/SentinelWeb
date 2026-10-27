@@ -41,6 +41,7 @@ export interface Posto {
    */
   isActive: boolean;
   createdAt: string;
+  updatedAt: string;
   /** A localização onde o posto fica — a Matriz, a Filial. */
   locationId: string;
   location: Referencia;

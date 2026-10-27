@@ -3,6 +3,7 @@ import { AppError } from '../../../core/errors/app-error';
 import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
 import { buildChanges } from '../../shared/diff.helper';
+import { assertVersaoLida } from '../../shared/versao.helper';
 import { assertLocalRecebe } from '../../catalog/helpers/catalog-lock.helper';
 import { comContagem, contarUsoDe, fraseDoPiso, travarItemOuFalhar } from '../helpers/stock-balance.helper';
 import { CAMPOS_AUDITADOS_DO_ITEM, STOCK_ITEM_SELECT } from '../helpers/stock-select.helper';
@@ -32,6 +33,8 @@ export async function updateStockItem(id: string, data: UpdateStockItemInput, at
   return prisma.$transaction(async (tx) => {
     await travarItemOuFalhar(tx, id);
     const antes = await tx.stockItem.findUniqueOrThrow({ where: { id }, select: STOCK_ITEM_SELECT });
+    // O formulário aberto antes de outra pessoa mudar o total ou desativar (AF).
+    assertVersaoLida(antes.updatedAt, data.updatedAt, antes.name);
 
     if (data.categoryId !== undefined) await assertCategoriaDeEstoque(tx, data.categoryId, antes.categoryId);
     if (data.name !== undefined) await assertNomeLivre(tx, data.name, id);

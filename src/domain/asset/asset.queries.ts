@@ -117,7 +117,8 @@ export function useUpdateAsset() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: AssetInput }) => apiClient.put(`/assets/${id}`, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: assetKeys.all }),
+    // No erro também: depois do 409 de versão, o Editar reaberto vem com o ativo novo (AF).
+    onSettled: () => queryClient.invalidateQueries({ queryKey: assetKeys.all }),
   });
 }
 

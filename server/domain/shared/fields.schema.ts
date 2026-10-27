@@ -153,3 +153,12 @@ export const valorMonetarioOpcional = (rotulo: string) =>
         .transform((valor) => valor.replace(',', '.'))
         .nullish(),
     );
+
+/**
+ * A VERSÃO QUE O FORMULÁRIO LEU (AF) — o `updatedAt` do registro quando o Editar
+ * abriu, devolvido como veio. Ausente, a edição não confere: é o Desativar, o
+ * Reabrir, quem chama a API por fora. A conferência é `assertVersaoLida`.
+ */
+export const versaoLida = z.iso.datetime({ offset: true, error: 'updatedAt: use a data e hora que a leitura devolveu' })
+  .transform((valor) => new Date(valor))
+  .optional();
