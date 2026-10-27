@@ -105,7 +105,7 @@ export default function LicencaTable({
                         onClick={() => onEntregar(licenca)}
                         disabled={motivoSemEntrega !== null}
                         title={motivoSemEntrega ?? 'Entregar'}
-                        aria-label="Entregar"
+                        aria-label={`Entregar ${licenca.name}`}
                         className={`${BOTAO} hover:text-text-primary`}
                       >
                         <UserPlus size={14} />
@@ -115,7 +115,7 @@ export default function LicencaTable({
                       type="button"
                       onClick={() => onEditar(licenca)}
                       title="Editar"
-                      aria-label="Editar"
+                      aria-label={`Editar ${licenca.name}`}
                       className={`${BOTAO} hover:text-text-primary`}
                     >
                       <Edit2 size={14} />
@@ -125,7 +125,7 @@ export default function LicencaTable({
                       onClick={() => onAlternarEncerrada(licenca)}
                       disabled={ocupado}
                       title={encerrada ? 'Reabrir' : 'Encerrar'}
-                      aria-label={encerrada ? 'Reabrir' : 'Encerrar'}
+                      aria-label={`${encerrada ? 'Reabrir' : 'Encerrar'} ${licenca.name}`}
                       className={`${BOTAO} hover:text-status-info`}
                     >
                       {encerrada ? <Power size={14} /> : <PowerOff size={14} />}
@@ -136,7 +136,7 @@ export default function LicencaTable({
                         onClick={() => onExcluir(licenca)}
                         disabled={ocupado}
                         title="Excluir"
-                        aria-label="Excluir"
+                        aria-label={`Excluir ${licenca.name}`}
                         className={`${BOTAO} hover:text-status-danger`}
                       >
                         <Trash2 size={14} />
