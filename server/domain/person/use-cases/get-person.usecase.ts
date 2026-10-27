@@ -19,9 +19,9 @@ interface PessoaDaFicha {
   isActive: boolean;
 
   /**
-   * As unidades de estoque no NOME dela, por LINHA: é o que a ficha precisa
-   * para desenhar "o que está com esta pessoa" e oferecer a devolução por
-   * unidade, como a ficha do posto já faz com `itens`
+   * O estoque no NOME dela, uma linha por SAÍDA ("Mouse USB · 2 unidades"),
+   * cada uma com o link para o detalhe do item, onde está o Devolver — como as
+   * licenças abaixo, e como a ficha do posto faz com `itens`
    * (`get-workstation.usecase.ts`).
    */
   itens: Awaited<ReturnType<typeof listPersonStock>>;

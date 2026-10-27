@@ -57,7 +57,7 @@ a tela e o maestro as percorrem em paralelo.
 | **Nome único, sem diferença de maiúscula** | "dell" é recusado quando há "Dell": 409 `Já existe fabricante com o nome "Dell".` `%` e `_` contam como letras, não como curingas. Categoria é única **por tipo**; modelo não tem nome único (ver abaixo) | `helpers/nome-unico.helper.ts`, campo `nomeUnicoPor` da spec |
 | **Exclusão só sem uso** | `DELETE` de linha que alguém usa **agora** é 409 com a contagem e a saída: `Não é possível excluir: fabricante em uso por 3 registros. Desative-o em vez de excluir: …` A tela mostra isso numa **notificação do sistema**. O colaborador diz *o quê* em vez de quantos (`motivoParaNaoExcluir`) | `countUsages` e `dicaEmUso` de cada spec, `delete-catalog.usecase.ts` |
 | **Desativar em vez de excluir** | o desativado some das listas de escolha e é **recusado** (409) quando escolhido de novo; continua no histórico e em tudo que já o usa. Detalhes abaixo | `isActive` nas seis, `optionsWhere`, `assertEscolhaAtiva` |
-| **A contagem inclui a lixeira** | ativo e item de estoque na lixeira continuam apontando — e podem voltar. A licença não tem lixeira: a encerrada conta, a excluída não existe mais | `INCLUINDO_LIXEIRA` nos `countUsages` |
+| **A contagem inclui a lixeira** | o ativo na lixeira continua apontando — e pode voltar. O item de estoque e a licença não têm lixeira: o desativado e a encerrada contam, o excluído não existe mais | `INCLUINDO_LIXEIRA` nos `countUsages` do ativo |
 | **Lixeira só em Colaboradores** | nas outras cinco, exclusão é definitiva (D8) e o que protege é o 409 por uso. O colaborador vai para a lixeira, com Restaurar ([V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira)) | `lixeira` da spec, `restore-catalog.usecase.ts` |
 | **Tudo vai para a auditoria** | criar, editar e excluir gravam `audit_logs` na **mesma transação**, com quem fez ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)); a edição grava só o que mudou | `recordAudit` nos use-cases |
 | **Listas de escolha** | `GET /api/<tabela>/options` devolve `{ id, name }` dos **ativos**, até 200, com busca `?q=` — e o colaborador vem também com `detalhe`, o e-mail (`optionDetail` da spec), que o seletor da entrega de licença mostra ao lado do nome. É ele que alimenta todo `<select>`. Um **filtro** de listagem pede `?inativos=incluir`, porque o desativado ainda tem registros | `list-catalog-options.usecase.ts` |
@@ -78,9 +78,26 @@ Nesta ordem — o destrutivo na ponta:
 | 📄 Ficha do colaborador | Colaboradores | abre a ficha da pessoa — ver Colaboradores |
 | 🗑️ Excluir | todas | confirma e apaga; com uso, a notificação diz por quê |
 
-Desativar é **botão da linha**, nunca caixa no formulário — o mesmo padrão de
-Usuários (Editar, Desativar, Excluir). A linha desativada aparece esmaecida,
-com a marca "desativado"/"desativada" ao lado do nome.
+Desativar é **botão da linha**, nunca caixa no formulário. A linha desativada
+aparece esmaecida, com a marca "desativado"/"desativada" ao lado do nome, e
+continua na mesma lista — sem aba à parte. Os botões aparecem ao passar o mouse,
+ao navegar por Tab e sempre no toque.
+
+**É o padrão do cadastro no sistema inteiro** ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)): Postos, Usuários,
+Estoque e Licenças têm os mesmos botões, a mesma marca e as mesmas frases —
+`Desativar "X"? Continua no histórico, mas some das escolhas e não recebe nada
+novo.` e `Excluir "X"? Esta ação não tem lixeira.` —, e o Excluir sempre clica:
+quem decide é o 409 do servidor. **O Editar manda o formulário inteiro** em todas
+as telas. As diferenças são de propósito:
+
+- Usuários diz o que é desativar uma conta (`… não entra mais no sistema.`) e
+  não deixa ninguém agir sobre si mesmo.
+- Na Licença, o Desativar é o **Encerrar**, e o Ativar é o **Reabrir**: o fim é
+  uma data, que entra no status e no alerta. A encerrada fica na lista, marcada.
+- O Ativo não se desativa: os status dele são outros, e o fim é a baixa
+  ([`baixa.md`](baixa.md)). O Excluir dele manda para a lixeira, como o do
+  Colaborador, com a mesma frase: `Excluir "X"? Vai para a lixeira e pode ser
+  restaurado.`
 
 Erros de ação (exclusão recusada, desativação recusada) aparecem numa
 **notificação do sistema**, no canto inferior direito, e somem sozinhos
@@ -240,8 +257,8 @@ impede a exclusão
 `Mova o que está guardado nela e os postos que ficam nela, ou desative-a: …`
 
 **Uso**, aqui, é: **ativo** guardado nela (lixeira inclusive), **item de
-estoque** guardado nela (lixeira inclusive) e **posto** que fica nela. O ativo e
-o item da lixeira entram porque continuam apontando e podem voltar. Como ela não
+estoque** guardado nela (desativado inclusive) e **posto** que fica nela. O ativo
+da lixeira e o item desativado entram porque continuam apontando e podem voltar. Como ela não
 recebe nada, não há passado preso a ela: sem nada disso, ela sai de verdade, sem
 nome por escrito para guardar.
 
@@ -276,11 +293,12 @@ aqui à parte, à mão — nada cria colaborador a partir de usuário.
 ### A ficha
 
 O botão 📄 abre `/configuracoes/colaboradores/:id`: os **postos** que a pessoa
-ocupa (com o turno), os **itens de estoque** e as **licenças** no nome dela — com
-o botão **Devolver** em cada um — e o **histórico**, que é só movimentação: entregas e
-devoluções de ativo, entradas e saídas de posto, licenças recebidas e devolvidas. Só
-as licenças entregues a ELA: as do computador que ela usa ficam na aba Licenças do
-ativo. Só leitura, fora o Devolver.
+ocupa (com o turno), os **itens de estoque** e as **licenças** no nome dela — cada
+um com o link para o detalhe do item ou da licença, onde está o Devolver — e o
+**histórico**, que é só movimentação: entregas e devoluções de ativo, entradas e
+saídas de posto, licenças e estoque recebidos e devolvidos. Só o que foi entregue a
+ELA: as licenças do computador que ela usa ficam na aba Licenças do ativo, e o
+estoque da mesa que ela ocupa, na ficha do posto. Só leitura.
 
 ### Exclusão, lixeira e desativação
 

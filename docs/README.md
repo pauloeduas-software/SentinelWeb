@@ -34,8 +34,10 @@ diz o que cada uma das seis tabelas é, o que a exclusão e a desativação recu
 **Vou mexer nos postos.** [`referencia/postos.md`](./referencia/postos.md) diz o que o posto é, onde
 se cadastra e o que a exclusão e a desativação recusam.
 
-**Vou mexer nas licenças.** [`referencia/licencas.md`](./referencia/licencas.md) diz as contas, o
-status, o que a entrega e a devolução recusam, e onde a licença aparece fora da própria tela.
+**Vou mexer nas licenças ou no estoque.** [`referencia/licencas.md`](./referencia/licencas.md) diz as
+contas, o status, o que a entrega e a devolução recusam, e onde a licença aparece fora da própria
+tela; [`referencia/estoque.md`](./referencia/estoque.md) diz o mesmo do estoque, que segue a mesma
+lógica.
 
 **Vou mexer no banco.** [`referencia/invariantes.md`](./referencia/invariantes.md) diz o que
 nunca pode ser falso e onde cada regra é defendida, e
@@ -74,7 +76,7 @@ Se você está escrevendo a mesma frase na segunda zona, uma das duas está no l
 2. **Auditoria e revisão não ganham arquivo.** Elas atualizam o documento que revisaram: a
    revisão de um plano entra no plano, a correção de uma referência substitui o parágrafo errado.
    Documento de referência não carrega a lista das suas próprias correções — isso é o `git log`.
-3. **Decisão nova continua a letra** (a próxima é a `AB`; a numeração `D` parou no `D164`, pelo
+3. **Decisão nova continua a letra** (a próxima é a `AG`; a numeração `D` parou no `D164`, pelo
    motivo escrito em [*A segunda rodada*](./decisoes/README.md#a-segunda-rodada-ap)), entra no
    arquivo do assunto que ela governa e ganha linha no índice. Se ela corrige uma anterior, as
    duas apontam uma para a outra e a tabela de supersessões cresce.

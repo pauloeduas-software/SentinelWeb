@@ -8,7 +8,7 @@ import { useLicenseQuery } from '../../../domain/license/license.queries';
 import type {
   ChaveDaLicenca, ChaveNoFormulario, Licenca, LicencaDetalhe, LicencaInput,
 } from '../../../domain/shared/license.types';
-import { camposAlterados, type LinhaDeChave } from '../helpers/licenca.helper';
+import type { LinhaDeChave } from '../helpers/licenca.helper';
 
 // Cadastro e edição de uma licença.
 //
@@ -21,8 +21,9 @@ import { camposAlterados, type LinhaDeChave } from '../helpers/licenca.helper';
 // NA EDIÇÃO, A LICENÇA VEM DO DETALHE, e não da linha da listagem: é o detalhe
 // que traz as chaves de produto (a listagem não as devolve), e ele chega fresco.
 //
-// NA EDIÇÃO, SÓ O QUE MUDOU VAI AO SERVIDOR (`camposAlterados`): o formulário
-// aberto há tempo não desfaz a edição que outra pessoa salvou no meio.
+// NA EDIÇÃO, O FORMULÁRIO INTEIRO VAI AO SERVIDOR, como nas Configurações (AF).
+// O preço, declarado: o formulário aberto há tempo desfaz a edição que outra
+// pessoa salvou no meio. O servidor continua barrando o que quebra regra.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const CLASSE_CAMPO =
@@ -39,11 +40,11 @@ interface LicencaFormModalProps {
   /** Preenchido = edição. `null` = cadastro. */
   licenca: Licenca | null;
   onClose: () => void;
-  /** No cadastro, o corpo inteiro; na edição, só o que mudou. */
+  /** O corpo inteiro, no cadastro e na edição. */
   onSubmit: (data: LicencaInput) => Promise<void>;
 }
 
-/** Uma chave como o servidor a recebe — a mesma forma na base e no envio, para a comparação. */
+/** Uma chave como o servidor a recebe. */
 function chaveParaEnvio(chave: { id?: string; productKey: string; seats: number }): ChaveNoFormulario {
   return { ...(chave.id ? { id: chave.id } : {}), productKey: chave.productKey, seats: chave.seats };
 }
@@ -53,25 +54,6 @@ function comoLinha(chave: ChaveDaLicenca): LinhaDeChave {
   return {
     uid: chave.id, id: chave.id, productKey: chave.productKey, seats: String(chave.seats),
     emUso: chave.emUso, jaEntregue: chave.jaEntregue,
-  };
-}
-
-/** O formulário como o servidor devolveu a licença — a base da comparação na edição. */
-function comoFoiSalva(licenca: LicencaDetalhe): LicencaInput {
-  return {
-    name: licenca.name,
-    categoryId: licenca.categoryId,
-    seatsTotal: licenca.seatsTotal,
-    expirationDate: licenca.expirationDate,
-    terminationDate: licenca.terminationDate,
-    licensedToName: licenca.licensedToName,
-    licensedToEmail: licenca.licensedToEmail,
-    manufacturerId: licenca.manufacturerId,
-    orderNumber: licenca.orderNumber,
-    purchaseDate: licenca.purchaseDate,
-    purchaseCost: licenca.purchaseCost,
-    notes: licenca.notes,
-    keys: licenca.keys.map(chaveParaEnvio),
   };
 }
 
@@ -117,12 +99,6 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
   const [purchaseCost, setPurchaseCost] = useState(licenca?.purchaseCost ?? '');
   const [notes, setNotes] = useState(licenca?.notes ?? '');
   const [chaves, setChaves] = useState<LinhaDeChave[]>(() => licenca?.keys.map(comoLinha) ?? []);
-
-  // A BASE do "só o que mudou", congelada quando o formulário abre — como os
-  // campos. O `licenca` que chega é o da query, e uma nova busca no meio (voltar
-  // para a aba do navegador) traria a edição de outra pessoa para a base: o
-  // campo que ela mudou pareceria alterado aqui e iria com o valor velho.
-  const [base] = useState(() => (licenca ? comoFoiSalva(licenca) : null));
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
@@ -178,7 +154,7 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
     };
 
     try {
-      await onSubmit(base ? camposAlterados(base, dados) as LicencaInput : dados);
+      await onSubmit(dados);
     } catch (falha) {
       // O apiClient já traduziu a resposta do servidor — é aqui que aparecem o
       // 422 de categoria do tipo errado, o 409 de reduzir abaixo do que está
@@ -260,7 +236,7 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
               <span className={ROTULO}>Encerramento</span>
               <input type="date" value={terminationDate} onChange={(e) => setTerminationDate(e.target.value)} className={CLASSE_CAMPO} />
               <span className="block text-[10px] text-text-tertiary">
-                O fim do contrato. No dia marcado a licença vai para Encerradas, mesmo que o
+                O fim do contrato. No dia marcado a licença fica encerrada, mesmo que o
                 vencimento seja depois. Com alguém usando, ela fica no alerta até tudo ser devolvido.
                 Apagar a data reabre a licença.
               </span>

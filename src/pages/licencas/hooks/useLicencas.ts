@@ -6,7 +6,7 @@ import {
   useUpdateLicense,
 } from '../../../domain/license/license.queries';
 import type {
-  AlvoDaEntrega, Licenca, LicencaInput, MotivoDoAlerta, RecorteDaLicenca, StatusDoFiltro,
+  AlvoDaEntrega, Licenca, LicencaInput, MotivoDoAlerta, StatusDoFiltro,
 } from '../../../domain/shared/license.types';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useNotificacao } from '../../hooks/useNotificacao';
@@ -16,17 +16,18 @@ const PER_PAGE = 15;
 /** Qual janela está aberta. Uma de cada vez, como nas outras telas. */
 type ModalDeLicenca = 'criar' | 'editar' | 'detalhe' | 'entregar' | null;
 
-// Estado da tela de Licenças: página, busca, aba e qual licença está aberta.
-// Tudo de UMA tela — `useState`, não store (docs/referencia/arquitetura.md).
+// Estado da tela de Licenças: página, busca, filtros e qual licença está aberta.
+// É o cadastro das Configurações (`useCatalog`, AF): uma lista só, com a
+// encerrada junto, e Encerrar/Reabrir no lugar do Desativar/Ativar. Tudo de
+// UMA tela — `useState`, não store (docs/referencia/arquitetura.md).
 export function useLicencas() {
   const notificar = useNotificacao();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [view, setView] = useState<RecorteDaLicenca>('atuais');
   const [categoryId, setCategoryId] = useState<string | undefined>();
   const [status, setStatus] = useState<StatusDoFiltro | undefined>();
-  // Só as que alguém ainda usa — o filtro da aba Encerradas, para onde o alerta
-  // "encerradas em uso" leva.
+  // Só as que alguém ainda usa — o filtro do status Encerradas, para onde o
+  // alerta "encerradas em uso" leva.
   const [soEmUso, setSoEmUso] = useState(false);
   const debouncedSearch = useDebouncedValue(search);
 
@@ -38,24 +39,14 @@ export function useLicencas() {
     setPage(1);
   };
 
-  // O status é filtro da aba Atuais: trocar de aba o desliga, senão a volta
-  // para Atuais mostraria um recorte que ninguém escolheu de novo — e em
-  // Encerradas o servidor responde 422.
-  const changeView = (proxima: RecorteDaLicenca) => {
-    setView(proxima);
-    setStatus(undefined);
-    setSoEmUso(false);
-    setPage(1);
-  };
-
   const changeSoEmUso = (ligado: boolean) => {
     setSoEmUso(ligado);
     setPage(1);
   };
 
   /**
-   * Os links do alerta: cada contagem leva à aba e ao filtro que mostram
-   * exatamente aquelas. A busca e a categoria saem, para a lista bater com o
+   * Os links do alerta: cada contagem leva ao filtro que mostra exatamente
+   * aquelas. A busca e a categoria saem, para a lista bater com o
    * número que foi clicado.
    */
   const irParaAlerta = (motivo: MotivoDoAlerta) => {
@@ -63,18 +54,19 @@ export function useLicencas() {
     setCategoryId(undefined);
     setPage(1);
     if (motivo === 'ENCERRADA_EM_USO') {
-      setView('encerradas');
-      setStatus(undefined);
+      setStatus('ENCERRADA');
       setSoEmUso(true);
       return;
     }
-    setView('atuais');
     setSoEmUso(false);
     setStatus(motivo === 'VENCIDA' ? 'EXPIRADA' : 'VENCENDO');
   };
 
+  // O "em uso" é filtro das encerradas: sair delas o desliga, senão a lista
+  // ficaria num recorte que o seletor nem mostra mais.
   const changeStatus = (proximo: StatusDoFiltro | undefined) => {
     setStatus(proximo);
+    if (proximo !== 'ENCERRADA') setSoEmUso(false);
     setPage(1);
   };
 
@@ -85,18 +77,17 @@ export function useLicencas() {
 
   const params = useMemo(
     () => ({
-      page, perPage: PER_PAGE, view, q: debouncedSearch || undefined, categoryId, status,
+      page, perPage: PER_PAGE, q: debouncedSearch || undefined, categoryId, status,
       emUso: soEmUso ? 'sim' as const : undefined,
     }),
-    [page, view, debouncedSearch, categoryId, status, soEmUso],
+    [page, debouncedSearch, categoryId, status, soEmUso],
   );
 
   const { data, isPending, error } = useLicensesQuery(params);
   const licencas = data?.rows ?? [];
 
-  // A página que deixou de existir volta para a última — a linha saiu da aba ou
-  // do filtro por edição, devolução, encerramento, exclusão, ou por outra
-  // pessoa. Ajuste DURANTE o render, guardado pela condição (o padrão do React
+  // A página que deixou de existir volta para a última — a linha saiu do
+  // filtro por edição, devolução, encerramento, exclusão, ou por outra pessoa. Ajuste DURANTE o render, guardado pela condição (o padrão do React
   // para estado derivado do anterior), e não num `useEffect`: `setState` em
   // efeito encadeia renders e o lint do react-hooks recusa.
   const ultimaPagina = data ? Math.max(1, Math.ceil(data.total / PER_PAGE)) : page;
@@ -161,10 +152,10 @@ export function useLicencas() {
     fechar();
   };
 
-  const handleEditar = async (dados: Partial<LicencaInput>) => {
+  // O formulário inteiro vai, como nas Configurações (AF).
+  const handleEditar = async (dados: LicencaInput) => {
     if (!licencaAberta) return;
-    // Nada mudou: fechar é a resposta inteira, sem ida ao servidor.
-    if (Object.keys(dados).length > 0) await editar.mutateAsync({ id: licencaAberta.id, data: dados });
+    await editar.mutateAsync({ id: licencaAberta.id, data: dados });
     fechar();
   };
 
@@ -175,7 +166,7 @@ export function useLicencas() {
   };
 
   // ─────────────────────────────────────────────────────────────────────────
-  // OS CLIQUES DIRETOS — devolver, encerrar, excluir — não
+  // OS CLIQUES DIRETOS — devolver, encerrar, reabrir, excluir — não
   // têm campo de erro para a mensagem subir, e por isso cada um tem o seu
   // `try/catch` com notificação (`useNotificacao`). Sem ele a rejeição vira
   // *unhandled rejection* e a tela não faz NADA: o 409 daqui é escrito para
@@ -215,26 +206,32 @@ export function useLicencas() {
     }
   };
 
-  // ENCERRA MESMO COM ALGUÉM USANDO, e por isso a pergunta diz quantos: a
-  // licença vai para Encerradas e fica no alerta até tudo voltar.
-  const handleEncerrar = async (licenca: Licenca) => {
-    const pergunta = licenca.emUso > 0
-      ? `"${licenca.name}" ainda está com ${licenca.emUso}. Encerrar mesmo assim? `
-        + 'Ela vai para Encerradas e fica no alerta até tudo ser devolvido.'
-      : `Encerrar "${licenca.name}" hoje? Ela sai da lista e vai para Encerradas.`;
-    if (!window.confirm(pergunta)) return;
+  // ENCERRAR/REABRIR é o Desativar/Ativar das Configurações (AF), com data: o
+  // encerramento grava hoje em `terminationDate`, e reabrir apaga a data — a
+  // mesma edição do formulário. Confirma só na ida, com a frase do padrão.
+  // Encerra MESMO COM ALGUÉM USANDO, e por isso a pergunta diz quantos: a
+  // licença fica no alerta até tudo voltar.
+  const handleAlternarEncerrada = async (licenca: Licenca) => {
+    const encerrada = licenca.status === 'ENCERRADA';
+    if (!encerrada && !window.confirm(
+      `Encerrar "${licenca.name}" hoje? Continua no histórico, mas some das escolhas e não recebe nada novo.`
+        + (licenca.emUso > 0 ? ` Ainda está com ${licenca.emUso}: fica no alerta até tudo voltar.` : ''),
+    )) return;
     try {
-      await encerrar.mutateAsync(licenca.id);
+      if (encerrada) await editar.mutateAsync({ id: licenca.id, data: { terminationDate: null } });
+      else await encerrar.mutateAsync(licenca.id);
     } catch (erro) {
-      // O 409 da licença que já estava encerrada (duas abas).
+      // O 409 da licença que já estava encerrada (duas abas), e o 422 do
+      // encerramento antes da data da compra.
       notificar.erro((erro as Error).message);
     }
   };
 
+  // EXCLUIR, com a frase de Configurações (`useCatalog`). O botão sempre clica:
+  // a licença em uso recebe o 409 do servidor, que diz com quem e manda
+  // devolver (AG).
   const handleExcluir = async (licenca: Licenca) => {
-    if (!window.confirm(
-      `Excluir "${licenca.name}" de vez? É para o cadastro errado: a licença que já foi entregue não se exclui, se encerra.`,
-    )) return;
+    if (!window.confirm(`Excluir "${licenca.name}"? Esta ação não tem lixeira.`)) return;
     try {
       await excluir.mutateAsync(licenca.id);
       // Excluída do detalhe: a janela não tem mais o que mostrar.
@@ -255,8 +252,6 @@ export function useLicencas() {
     setPage,
     search,
     changeSearch,
-    view,
-    changeView,
     categoryId,
     changeCategoria,
     status,
@@ -276,14 +271,14 @@ export function useLicencas() {
 
     // Enquanto uma ação corre, os botões dela ficam desabilitados: o duplo
     // clique dava "já foi devolvida" DEPOIS de a devolução ter dado certo.
-    ocupado: excluir.isPending || encerrar.isPending || devolver.isPending || trocarChave.isPending,
+    ocupado: excluir.isPending || encerrar.isPending || editar.isPending || devolver.isPending || trocarChave.isPending,
 
     handleCriar,
     handleEditar,
     handleEntregar,
     handleDevolver,
     handleTrocarChave,
-    handleEncerrar,
+    handleAlternarEncerrada,
     handleExcluir,
   };
 }

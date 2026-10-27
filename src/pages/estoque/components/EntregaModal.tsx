@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { Armchair, User, X } from 'lucide-react';
 import ReferenceSelect from '../../components/ReferenceSelect';
-import type { AlvoDaSaidaInput, ItemDeEstoque } from '../../../domain/shared/stock.types';
+import type { AlvoDaEntregaDeEstoque, ItemDeEstoque } from '../../../domain/shared/stock.types';
+import { hojeNoCampoDeData } from '../../helpers/format.helper';
 
-// A SAÍDA: `qty` unidades para UM colaborador ou UM posto.
+// A ENTREGA: `qty` unidades para UM colaborador ou UM posto, num dia — a
+// entrega da licença com quantidade (AE).
 //
 // O POSTO PODE SER ALVO, ao contrário da licença (D39 é de licença, não de
 // estoque): entregar 5 mouses à Mesa 1 é o caso real do almoxarifado, e a
 // unidade entregue ao posto vale UMA, qualquer que seja o número de ocupantes
 // (D33). Quem responde por ela são os ocupantes abertos, resolvidos na leitura.
 //
-// CADA UNIDADE VIRA UMA LINHA, e por isso há um teto de 100 por requisição
+// CADA UNIDADE VIRA UMA LINHA, e por isso há um teto de 100 por entrega
 // (`checkoutStockSchema`) — ninguém entrega mil mouses de uma vez pela tela.
 
 const CLASSE_CAMPO =
@@ -18,39 +20,53 @@ const CLASSE_CAMPO =
 
 const ROTULO = 'text-text-secondary uppercase tracking-widest text-[10px]';
 
-interface SaidaModalProps {
+interface EntregaModalProps {
   item: ItemDeEstoque;
   onClose: () => void;
-  onSubmit: (alvo: AlvoDaSaidaInput) => Promise<void>;
+  onSubmit: (alvo: AlvoDaEntregaDeEstoque) => Promise<void>;
 }
 
-export default function SaidaModal({ item, onClose, onSubmit }: SaidaModalProps) {
+export default function EntregaModal({ item, onClose, onSubmit }: EntregaModalProps) {
   const [tipo, setTipo] = useState<'PERSON' | 'WORKSTATION'>('PERSON');
   const [personId, setPersonId] = useState('');
   const [workstationId, setWorkstationId] = useState('');
   const [qty, setQty] = useState('1');
   const [notes, setNotes] = useState('');
+  // Vem com hoje; pode voltar para registrar a entrega que já aconteceu.
+  const hoje = hojeNoCampoDeData();
+  const [checkoutAt, setCheckoutAt] = useState(hoje);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
   const alvoId = tipo === 'PERSON' ? personId : workstationId;
-  const pronto = alvoId !== '';
+  const pronto = alvoId !== '' && checkoutAt !== '';
 
   const enviar = async (event: React.FormEvent) => {
     event.preventDefault();
+
+    // Em branco não vira 0 — a mesma regra da quantidade do cadastro.
+    const quantidade = Number(qty);
+    if (qty.trim() === '' || !Number.isInteger(quantidade) || quantidade < 1) {
+      setErro('Informe a quantidade: um número inteiro, 1 ou mais.');
+      return;
+    }
+
     setSalvando(true);
     setErro('');
 
-    const quantidade = Number(qty) || 0;
-    const corpo: AlvoDaSaidaInput = tipo === 'PERSON'
-      ? { targetType: 'PERSON', targetPersonId: personId, qty: quantidade, notes: notes.trim() || null }
-      : { targetType: 'WORKSTATION', targetWorkstationId: workstationId, qty: quantidade, notes: notes.trim() || null };
+    // SÓ a chave do alvo escolhido vai no corpo. Mandar as duas responde 422
+    // pelo use-case, e o banco tem o CHECK por baixo.
+    const comum = { qty: quantidade, notes: notes.trim() || null, checkoutAt };
+    const corpo: AlvoDaEntregaDeEstoque = tipo === 'PERSON'
+      ? { targetType: 'PERSON', targetPersonId: personId, ...comum }
+      : { targetType: 'WORKSTATION', targetWorkstationId: workstationId, ...comum };
 
     try {
       await onSubmit(corpo);
     } catch (falha) {
-      // É aqui que aparece o 409 de sem unidade disponível (com os números) e
-      // o 409 do colaborador desativado.
+      // É aqui que aparecem o 409 de sem unidade disponível (com os números), o
+      // do item desativado no meio, o do colaborador desativado e o do posto
+      // desativado.
       setErro((falha as Error).message);
     } finally {
       setSalvando(false);
@@ -63,12 +79,12 @@ export default function SaidaModal({ item, onClose, onSubmit }: SaidaModalProps)
 
         <div className="flex items-center justify-between px-6 py-4 border-b border-border-sutil bg-bg-base/50">
           <div>
-            <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">Saída</h2>
+            <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">Entregar</h2>
             <p className="font-mono text-[10px] text-text-tertiary mt-1">
-              {item.name} · {item.disponivel} disponível
+              {item.name} · {item.disponivel} de {item.qty} {item.disponivel === 1 ? 'disponível' : 'disponíveis'}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
+          <button onClick={onClose} aria-label="Fechar" title="Fechar" className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
             <X size={16} />
           </button>
         </div>
@@ -98,7 +114,7 @@ export default function SaidaModal({ item, onClose, onSubmit }: SaidaModalProps)
           {tipo === 'PERSON' ? (
             <label className="space-y-1.5 block">
               <span className={ROTULO}>Colaborador *</span>
-              <ReferenceSelect rota="people" valor={personId} obrigatorio onChange={setPersonId} />
+              <ReferenceSelect rota="people" valor={personId} obrigatorio comDetalhe onChange={setPersonId} />
             </label>
           ) : (
             <label className="space-y-1.5 block">
@@ -107,13 +123,23 @@ export default function SaidaModal({ item, onClose, onSubmit }: SaidaModalProps)
             </label>
           )}
 
-          <label className="space-y-1.5 block">
-            <span className={ROTULO}>Quantidade *</span>
-            <input
-              required type="number" min={1} max={100} value={qty}
-              onChange={(e) => setQty(e.target.value)} className={CLASSE_CAMPO}
-            />
-          </label>
+          <div className="grid grid-cols-2 gap-4">
+            <label className="space-y-1.5 block">
+              <span className={ROTULO}>Quantidade *</span>
+              <input
+                required type="number" min={1} max={100} value={qty}
+                onChange={(e) => setQty(e.target.value)} className={CLASSE_CAMPO}
+              />
+            </label>
+
+            <label className="space-y-1.5 block">
+              <span className={ROTULO}>Data da entrega *</span>
+              <input
+                type="date" required max={hoje} value={checkoutAt}
+                onChange={(e) => setCheckoutAt(e.target.value)} className={CLASSE_CAMPO}
+              />
+            </label>
+          </div>
 
           <label className="space-y-1.5 block">
             <span className={ROTULO}>Observações</span>
@@ -122,7 +148,7 @@ export default function SaidaModal({ item, onClose, onSubmit }: SaidaModalProps)
 
           <p className="text-[10px] text-text-tertiary leading-relaxed border-t border-border-sutil pt-3">
             Entregar a um posto vale pela mesa, não pela pessoa: qualquer ocupante aberto dela
-            responde pela unidade. Cada unidade sai como uma linha própria, devolvida uma a uma.
+            responde pelas unidades. A devolução é feita no detalhe do item, quantas voltarem.
           </p>
 
           <div className="flex justify-end gap-2 pt-1">

@@ -1,10 +1,9 @@
-import { useState } from 'react';
-import { ArrowLeft, Boxes, History, KeyRound, MapPin, Undo2, UserX } from 'lucide-react';
+import { ArrowLeft, Boxes, History, KeyRound, MapPin, UserX } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import HistoryPanel from './components/HistoryPanel';
 import { useColaborador } from './hooks/useColaborador';
 import { formatarData, formatarDiaDoInstante } from '../../helpers/format.helper';
-import { momentoDoEvento } from '../../helpers/historico.helper';
+import { caminhoDoItem, textoDeUnidades } from '../../helpers/estoque.helper';
 import { caminhoDaLicenca, textoDoPrazo } from '../../helpers/licenca.helper';
 
 // FICHA DO COLABORADOR — quem é a pessoa, os POSTOS que ela ocupa, o estoque e
@@ -28,24 +27,7 @@ export default function ColaboradorPage() {
   const {
     pessoa, ocupacoes, carregando, erro,
     historico, totalDoHistorico, carregandoHistorico,
-    handleDevolverItem, devolvendoItem,
   } = useColaborador();
-
-  // O ERRO DA DEVOLUÇÃO mora na PÁGINA, como na ficha do posto: a mutação
-  // propaga a rejeição (docs/referencia/arquitetura.md) e quem a mostra é quem
-  // chamou. Sem este `catch`, o 409 de "unidade já devolvida" — duas abas
-  // nesta mesma ficha — viraria uma rejeição não tratada, e o clique não
-  // diria nada.
-  const [erroDaDevolucao, setErroDaDevolucao] = useState('');
-
-  const devolver = async (movementId: string) => {
-    setErroDaDevolucao('');
-    try {
-      await handleDevolverItem(movementId);
-    } catch (falha) {
-      setErroDaDevolucao((falha as Error).message);
-    }
-  };
 
   if (carregando) {
     return <p className="font-mono text-xs text-text-tertiary">Carregando colaborador...</p>;
@@ -140,14 +122,8 @@ export default function ColaboradorPage() {
         </div>
         <p className="font-mono text-[10px] text-text-tertiary mb-3 leading-relaxed">
           Unidades de estoque no NOME dela — nunca as do posto que ocupa. É o que precisa
-          voltar antes de desativá-la, e o que ela leva se saísse da empresa hoje.
+          voltar antes de desativá-la — pelo detalhe do item, aberto no nome dela.
         </p>
-
-        {erroDaDevolucao && (
-          <div className="p-3 mb-3 bg-status-danger/10 text-status-danger border border-status-danger/20 font-mono text-xs" role="alert">
-            {erroDaDevolucao}
-          </div>
-        )}
 
         <div className="bg-surface-card border border-border-sutil overflow-x-auto">
           <table className="w-full text-left font-mono text-xs whitespace-nowrap">
@@ -155,32 +131,27 @@ export default function ColaboradorPage() {
               <tr>
                 <th className={CABECALHO}>Item</th>
                 <th className={CABECALHO}>Categoria</th>
+                <th className={CABECALHO}>Quantidade</th>
                 <th className={CABECALHO}>Desde</th>
-                <th className={`${CABECALHO} text-right`}>Ação</th>
               </tr>
             </thead>
             <tbody className="text-text-primary divide-y divide-border-sutil/50">
-              {pessoa.itens.map((unidade) => (
-                <tr key={unidade.id} className="hover:bg-bg-base transition-colors">
+              {pessoa.itens.map((saida) => (
+                <tr key={saida.id} className="hover:bg-bg-base transition-colors">
                   <td className={CELULA}>
-                    {unidade.item.name}
-                    {unidade.item.deletedAt && (
-                      <span className="ml-2 text-[10px] uppercase tracking-widest text-text-tertiary">na lixeira</span>
+                    <Link to={caminhoDoItem(saida.item.id)} className="hover:underline underline-offset-2">
+                      {saida.item.name}
+                    </Link>
+                    {!saida.item.isActive && (
+                      <span className="ml-2 text-[10px] uppercase tracking-widest text-text-tertiary">desativado</span>
+                    )}
+                    {saida.notes && (
+                      <div className="text-[10px] text-text-tertiary mt-0.5">{saida.notes}</div>
                     )}
                   </td>
-                  <td className={`${CELULA} text-text-tertiary`}>{unidade.item.category.name}</td>
-                  <td className={`${CELULA} text-text-tertiary`}>{momentoDoEvento(unidade.createdAt)}</td>
-                  <td className={`${CELULA} text-right`}>
-                    <button
-                      type="button"
-                      disabled={devolvendoItem}
-                      onClick={() => void devolver(unidade.id)}
-                      title={`Devolver ${unidade.item.name} ao estoque`}
-                      className="inline-flex items-center gap-1.5 px-2 py-1 border border-border-sutil text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary hover:bg-bg-base disabled:opacity-30 transition-colors"
-                    >
-                      <Undo2 size={11} /> Devolver
-                    </button>
-                  </td>
+                  <td className={`${CELULA} text-text-tertiary`}>{saida.item.category.name}</td>
+                  <td className={`${CELULA} text-text-tertiary`}>{textoDeUnidades(saida.unidades)}</td>
+                  <td className={`${CELULA} text-text-tertiary`}>{formatarDiaDoInstante(saida.checkoutAt)}</td>
                 </tr>
               ))}
               {pessoa.itens.length === 0 && (

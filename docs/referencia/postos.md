@@ -31,7 +31,7 @@ de saída para o posto) e é ele que as pessoas ocupam, por turno
 | | |
 |---|---|
 | **a lista** | Posto, Localização, Quem está (por turno), Ativos e Situação — *Posto vago* (tem ativo e ninguém responde), *Ocupado* ou *Sem uso*. Recortes Todos, Vagos e Ocupados; busca por nome e nota |
-| **a ficha** (`/postos/:id`) | os ocupantes — colocar alguém, corrigir o turno, encerrar —, os ativos entregues com **Devolver**, o computador da mesa ao vivo e o estoque da mesa com **Devolver** por unidade |
+| **a ficha** (`/postos/:id`) | os ocupantes — colocar alguém, corrigir o turno, encerrar —, os ativos entregues com **Devolver**, o computador da mesa ao vivo e o estoque da mesa, por saída, com o link para o detalhe do item, onde está o Devolver ([`estoque.md`](estoque.md)) |
 | **o cadastro** | **Novo posto** e, em cada linha, ✏️ Editar, ⏻ Desativar / Ativar e 🗑️ Excluir — `ADMIN`, como tudo hoje ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)) |
 
 Desativar e excluir pedem confirmação, com as mesmas frases de Configurações, e a
@@ -74,7 +74,7 @@ dentro da mesma transação. As FKs continuam `Restrict`: o que ninguém desligo
 
 | | |
 |---|---|
-| continua | na lista (esmaecido, com o selo "Desativado"), no histórico, com tudo o que já estava nele |
+| continua | na lista (esmaecido, com a marca "desativado" das Configurações), no histórico, com tudo o que já estava nele |
 | **some** | dos seletores da entrega, da saída de estoque e do vínculo de máquina |
 | **recusa** (409) | entrega de ativo, saída de estoque e ocupante novo — `"Mesa 1" está desativado e não recebe entrega nova.` |
 | **deixa passar** | devolver e encerrar ocupação — desativar não esvazia a mesa |

@@ -26,6 +26,7 @@ afterAll(async () => {
 
 interface Linha {
   licenseId?: string | null;
+  licenseName?: string | null;
   personId?: string | null;
   assetId?: string | null;
   checkoutAt?: string;
@@ -39,15 +40,16 @@ async function inserir(linha: Linha): Promise<string | null> {
     await prisma.$executeRawUnsafe(
       `INSERT INTO license_checkouts
          (id, "licenseId", "assignedPersonId", "assignedAssetId",
-          "checkoutAt", "checkinAt", "licenseKeyId", "createdAt", "updatedAt")
+          "checkoutAt", "checkinAt", "licenseKeyId", "licenseName", "createdAt", "updatedAt")
        VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3::uuid,
-               $4::timestamp, $5::timestamp, $6::uuid, now(), now())`,
+               $4::timestamp, $5::timestamp, $6::uuid, $7, now(), now())`,
       linha.licenseId === undefined ? licenseId : linha.licenseId,
       linha.personId ?? null,
       linha.assetId ?? null,
       linha.checkoutAt ?? '2026-01-10T10:00:00',
       linha.checkinAt ?? null,
       linha.licenseKeyId ?? null,
+      linha.licenseName ?? null,
     );
     return null;
   } catch (erro) {
@@ -66,11 +68,23 @@ describe('a forma da entrega', () => {
       .toMatch(/license_checkouts_devolucao_nao_antecede/);
   });
 
-  it('toda entrega tem licença — aberta ou devolvida', async () => {
-    // 23502 é o NOT NULL: o Prisma não repete o nome da coluna na mensagem.
-    expect(await inserir({ licenseId: null, personId: cenario.laura })).toMatch(/23502/);
+  it('a entrega em uso tem licença; sem ela, só a devolvida, com o nome e sem a chave (AG)', async () => {
+    expect(await inserir({ licenseId: null, personId: cenario.laura, licenseName: 'Office' }))
+      .toMatch(/license_checkouts_licenca_presente/);
     expect(await inserir({ licenseId: null, personId: cenario.laura, checkinAt: '2026-01-11T10:00:00' }))
-      .toMatch(/23502/);
+      .toMatch(/license_checkouts_licenca_presente/);
+    // Com a licença nula a FK composta não confere a chave — o CHECK recusa a chave solta.
+    const [chaveSolta] = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `INSERT INTO license_keys (id, "licenseId", "productKey", seats, "createdAt", "updatedAt")
+       VALUES (gen_random_uuid(), $1::uuid, 'CHAVE-SOLTA', 1, now(), now()) RETURNING id`,
+      licenseId,
+    );
+    expect(await inserir({
+      licenseId: null, personId: cenario.laura, checkinAt: '2026-01-11T10:00:00', licenseName: 'Office', licenseKeyId: chaveSolta.id,
+    })).toMatch(/license_checkouts_licenca_presente/);
+    // A devolvida da licença excluída, com o nome por escrito, entra.
+    expect(await inserir({ licenseId: null, personId: cenario.laura, checkinAt: '2026-01-11T10:00:00', licenseName: 'Office' }))
+      .toBeNull();
   });
 });
 

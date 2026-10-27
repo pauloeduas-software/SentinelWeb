@@ -63,10 +63,9 @@ export async function idsDoSeed() {
  */
 export async function criarItemDeEstoque(
   api: ApiDeTeste,
-  opcoes: { name: string; categoryId: string; qty?: number; notes?: string },
+  opcoes: { name: string; categoryId: string; qty: number; notes?: string },
 ): Promise<{ id: string; name: string; qty: number }> {
-  const corpo: Record<string, unknown> = { name: opcoes.name, categoryId: opcoes.categoryId };
-  if (opcoes.qty !== undefined) corpo.qty = opcoes.qty;
+  const corpo: Record<string, unknown> = { name: opcoes.name, categoryId: opcoes.categoryId, qty: opcoes.qty };
   if (opcoes.notes !== undefined) corpo.notes = opcoes.notes;
 
   return exigir201('item de estoque', await api.post('/api/stock/items', corpo));

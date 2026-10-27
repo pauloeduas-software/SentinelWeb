@@ -1,4 +1,4 @@
-import { Users, Plus, Edit2, Trash2, UserCheck, UserX } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, Power, PowerOff } from 'lucide-react';
 import UserFormModal from './components/UserFormModal';
 import EstadoDaLista from '../components/EstadoDaLista';
 import ListToolbar from '../components/ListToolbar';
@@ -91,9 +91,9 @@ export default function UsersPage() {
                       disabled={user.id === meuId}
                       title={user.id === meuId ? 'Você não pode desativar a si mesmo' : user.isActive ? 'Desativar' : 'Ativar'}
                       aria-label={`${user.isActive ? 'Desativar' : 'Ativar'} ${user.name}`}
-                      className={`text-text-tertiary transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${user.id === meuId ? '' : user.isActive ? 'hover:text-status-warning' : 'hover:text-status-success'}`}
+                      className={`text-text-tertiary transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${user.id === meuId ? '' : 'hover:text-status-info'}`}
                     >
-                      {user.isActive ? <UserX size={14} /> : <UserCheck size={14} />}
+                      {user.isActive ? <PowerOff size={14} /> : <Power size={14} />}
                     </button>
                     <button
                       onClick={() => void handleDelete(user)}

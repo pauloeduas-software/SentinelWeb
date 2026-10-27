@@ -3,17 +3,17 @@
 // primeira troca de rótulo.
 
 /**
- * O selo de posto DESATIVADO — o mesmo desenho do selo de status na ficha do
- * posto (borda fina, caixa alta, sem cor), para não competir com o amarelo do
- * vago, que é o sinal que esta tela existe para dar.
+ * A marca de posto DESATIVADO — a mesma das Configurações (`CatalogTable`) e
+ * de Usuários: o padrão do cadastro é um só, e a mesma palavra do botão que a
+ * causou.
  */
 export default function SeloDesativado() {
   return (
     <span
-      className="px-1.5 py-0.5 border border-border-sutil rounded-[2px] text-text-tertiary text-[10px] uppercase tracking-widest"
+      className="text-[10px] text-status-warning uppercase tracking-widest"
       title="Posto desativado: continua no histórico, mas não recebe entrega nem ocupante novo."
     >
-      Desativado
+      desativado
     </span>
   );
 }

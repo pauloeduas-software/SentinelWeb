@@ -1,5 +1,5 @@
 import type { EntregaDoAlvo, EventoDeLicencaDoAlvo } from './license.types';
-import type { UnidadeDeEstoque } from './stock.types';
+import type { SaidaNaFicha } from './stock.types';
 
 /**
  * UM colaborador, como `GET /api/people/:id` o devolve — a ficha.
@@ -19,8 +19,8 @@ export interface PessoaDaFicha {
   email: string | null;
   createdAt: string;
   isActive: boolean;
-  /** As unidades de estoque no NOME dela — como a ficha do posto mostra `itens`. */
-  itens: UnidadeDeEstoque[];
+  /** O estoque no NOME dela, uma linha por saída — como a ficha do posto mostra `itens`. */
+  itens: SaidaNaFicha[];
   /** As licenças entregues A ELA e ainda abertas — não as do computador que ela usa. */
   licencas: EntregaDoAlvo[];
 }
@@ -28,13 +28,13 @@ export interface PessoaDaFicha {
 /**
  * Um evento da aba Histórico da pessoa — `GET /api/people/:id/history`.
  *
- * TRÊS fontes numa lista só: as posses DIRETAS dela, as OCUPAÇÕES de posto e
- * as licenças entregues A ELA. Só movimentação: cadastro, edição e desativação
- * ficam na auditoria, no banco (AB).
+ * QUATRO fontes numa lista só: as posses DIRETAS dela, as OCUPAÇÕES de posto,
+ * as licenças entregues A ELA e o estoque no NOME dela. Só movimentação:
+ * cadastro, edição e desativação ficam na auditoria, no banco (AB).
  */
 export interface EventoDaPessoa {
   id: string;
-  fonte: 'POSSE' | 'POSTO' | 'LICENCA';
+  fonte: 'POSSE' | 'POSTO' | 'LICENCA' | 'ESTOQUE';
   action: string;
   /** ISO — `JSON.parse` não reconstrói `Date`. */
   at: string;
@@ -58,4 +58,12 @@ export interface EventoDaPessoa {
   } | null;
   /** Preenchido só quando `fonte === 'LICENCA'`. */
   licenca: EventoDeLicencaDoAlvo | null;
+  /** Preenchido só quando `fonte === 'ESTOQUE'` — a saída, não a unidade. */
+  estoque: {
+    /** Nulo quando o item foi excluído: o nome continua em `itemLabel`. */
+    itemId: string | null;
+    itemLabel: string;
+    unidades: number;
+    notes: string | null;
+  } | null;
 }

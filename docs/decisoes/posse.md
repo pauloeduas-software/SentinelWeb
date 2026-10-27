@@ -527,6 +527,10 @@ saiu porque, na forma final, vincular máquina não decide a vaga; a vaga é dec
 
 ## V — Excluir não apaga o passado: localização por referência, colaborador pela lixeira
 
+> **Superada em parte por [AE](./estoque.md#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira):**
+> o item de estoque não tem mais lixeira. Na contagem da localização, o item desativado conta
+> como qualquer outro: continua guardado nela e pode ser reativado.
+
 **Decidido:** a exclusão de localização e de colaborador passa a ser recusada só pelo que está com
 eles **agora** — e o histórico de posse dos itens continua mostrando o nome dos dois depois.
 

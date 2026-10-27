@@ -1,9 +1,9 @@
 /**
- * Um registro que a frase do erro cita e que a tela pode abrir — a licença que
- * precisa voltar antes de desativar quem está com ela (AA).
+ * Um registro que a frase do erro cita e que a tela pode abrir — a licença ou o
+ * item de estoque que precisa voltar antes de desativar quem está com ele (AA, AE).
  */
 export interface ReferenciaDoErro {
-  tipo: 'licenca';
+  tipo: 'licenca' | 'estoque';
   id: string;
   nome: string;
 }

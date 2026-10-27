@@ -1,35 +1,38 @@
-import { Edit2, PackageMinus, PackagePlus, RotateCcw, Trash2 } from 'lucide-react';
+import { Edit2, Power, PowerOff, Trash2, UserPlus } from 'lucide-react';
 import type { ItemDeEstoque } from '../../../domain/shared/stock.types';
-import type { ListView } from '../../../domain/shared/list.types';
-import { classeDoSaldo } from '../helpers/estoque.helper';
+import { classeDaConta, motivoParaNaoEntregar, resumoDaContagem } from '../helpers/estoque.helper';
 
 // A tabela de estoque. Apresentacional puro: recebe valor e callback, não
 // conhece query nem HTTP.
 //
-// A COLUNA PRINCIPAL É `disponível / total`, e os dois números sempre
-// aparecem — mostrar só o disponível esconde quanto já foi comprado, e só o
-// total esconde o que está na rua agora (mesmo motivo do `LicencaTable`).
+// A COLUNA PRINCIPAL É A CONTA — total, em uso, disponíveis —, e os números
+// aparecem todos, como na `LicencaTable`: "3 disponíveis" sozinho não diz se
+// sobrou muito ou pouco.
+//
+// O CADASTRO É O DAS CONFIGURAÇÕES (`CatalogTable`): Editar, Desativar/Ativar
+// e Excluir, nessa ordem; o desativado fica na lista, esmaecido e marcado; e
+// Excluir sempre clica — o item já entregue recebe o 409 do servidor, que
+// manda desativar.
 
 interface EstoqueTableProps {
   itens: ItemDeEstoque[];
-  view: ListView;
+  /** Uma ação está correndo: os botões esperam, para o duplo clique não virar erro. */
+  ocupado: boolean;
   onAbrir: (item: ItemDeEstoque) => void;
-  onAjustar: (item: ItemDeEstoque) => void;
-  onSaida: (item: ItemDeEstoque) => void;
+  onEntregar: (item: ItemDeEstoque) => void;
   onEditar: (item: ItemDeEstoque) => void;
-  /**
-   * Lixeira e restaurar são `ADMIN` no servidor. Ausentes, os botões somem —
-   * quem decide é a página, que sabe o cargo; a tabela só desenha.
-   */
+  /** Desativar e ativar — o mesmo botão, pelo estado do item. */
+  onAlternarAtivo: (item: ItemDeEstoque) => void;
+  /** Excluir é `ADMIN` no servidor. Ausente, o botão some — quem decide é a página. */
   onExcluir?: (item: ItemDeEstoque) => void;
-  onRestaurar?: (item: ItemDeEstoque) => void;
   vazio: React.ReactNode;
 }
 
 const CABECALHO = 'px-4 py-3 text-left text-[10px] uppercase tracking-widest text-text-tertiary font-normal';
+const BOTAO = 'text-text-tertiary transition-colors disabled:opacity-30 disabled:hover:text-text-tertiary';
 
 export default function EstoqueTable({
-  itens, view, onAbrir, onAjustar, onSaida, onEditar, onExcluir, onRestaurar, vazio,
+  itens, ocupado, onAbrir, onEntregar, onEditar, onAlternarAtivo, onExcluir, vazio,
 }: EstoqueTableProps) {
   if (itens.length === 0) {
     return (
@@ -47,97 +50,87 @@ export default function EstoqueTable({
             <th className={CABECALHO}>Item</th>
             <th className={CABECALHO}>Categoria</th>
             <th className={CABECALHO}>Localização</th>
-            <th className={`${CABECALHO} text-right`}>Disponível / total</th>
+            <th className={CABECALHO}>Quantidade</th>
             <th className={`${CABECALHO} text-right`}>Ações</th>
           </tr>
         </thead>
         <tbody>
           {itens.map((item) => {
-            const naLixeira = view === 'trashed';
-            const podeSair = item.disponivel > 0;
+            const motivoSemEntrega = motivoParaNaoEntregar(item);
 
             return (
-              <tr key={item.id} className="border-b border-border-sutil/50 last:border-0 hover:bg-bg-base/40 transition-colors">
+              <tr
+                key={item.id}
+                className={`border-b border-border-sutil/50 last:border-0 hover:bg-bg-base/40 transition-colors group ${item.isActive ? '' : 'opacity-60'}`}
+              >
                 <td className="px-4 py-3">
                   <button
                     type="button"
                     onClick={() => onAbrir(item)}
-                    className="text-text-primary hover:text-status-success transition-colors text-left"
+                    className="text-text-primary hover:text-text-secondary underline-offset-2 hover:underline text-left"
                   >
                     {item.name}
                   </button>
+                  {!item.isActive && (
+                    <span className="ml-3 text-[10px] text-status-warning uppercase tracking-widest">desativado</span>
+                  )}
                   {item.notes && (
                     <div className="text-[10px] text-text-tertiary mt-1 line-clamp-1">{item.notes}</div>
                   )}
                 </td>
 
-                <td className="px-4 py-3 text-text-secondary">
-                  {item.category.name}
-                </td>
+                <td className="px-4 py-3 text-text-secondary">{item.category.name}</td>
 
-                <td className="px-4 py-3 text-text-secondary">
-                  {item.location?.name ?? '—'}
-                </td>
+                <td className="px-4 py-3 text-text-secondary">{item.location?.name ?? '—'}</td>
 
-                <td className="px-4 py-3 text-right">
-                  <span className={classeDoSaldo(item)}>{item.disponivel}</span>
-                  <span className="text-text-tertiary"> / {item.qty}</span>
-                  {item.fora > 0 && (
-                    <div className="text-[10px] text-text-tertiary mt-1">{item.fora} fora</div>
-                  )}
-                </td>
+                <td className={`px-4 py-3 ${classeDaConta(item)}`}>{resumoDaContagem(item)}</td>
 
                 <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-1">
-                    {naLixeira ? (
-                      onRestaurar && (
-                        <button
-                          type="button"
-                          onClick={() => onRestaurar(item)}
-                          title="Restaurar"
-                          className="p-1.5 text-text-tertiary hover:text-status-success transition-colors"
-                        >
-                          <RotateCcw size={14} />
-                        </button>
-                      )
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => onAjustar(item)}
-                          title="Entrada ou baixa"
-                          className="p-1.5 text-text-tertiary hover:text-status-success transition-colors"
-                        >
-                          <PackagePlus size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onSaida(item)}
-                          disabled={!podeSair}
-                          title={podeSair ? 'Saída' : 'Sem unidade disponível'}
-                          className="p-1.5 text-text-tertiary hover:text-status-warning transition-colors disabled:opacity-30 disabled:hover:text-text-tertiary"
-                        >
-                          <PackageMinus size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onEditar(item)}
-                          title="Editar"
-                          className="p-1.5 text-text-tertiary hover:text-text-primary transition-colors"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        {onExcluir && (
-                          <button
-                            type="button"
-                            onClick={() => onExcluir(item)}
-                            title="Mover para a lixeira"
-                            className="p-1.5 text-text-tertiary hover:text-status-danger transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </>
+                  {/* Visível ao passar o mouse, ao navegar por Tab
+                      (`focus-within`) e sempre no toque, como na `CatalogTable`. */}
+                  <div className="flex items-center justify-end gap-3 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
+                    {item.isActive && (
+                      <button
+                        type="button"
+                        onClick={() => onEntregar(item)}
+                        disabled={motivoSemEntrega !== null}
+                        title={motivoSemEntrega ?? 'Entregar'}
+                        aria-label="Entregar"
+                        className={`${BOTAO} hover:text-text-primary`}
+                      >
+                        <UserPlus size={14} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => onEditar(item)}
+                      title="Editar"
+                      aria-label="Editar"
+                      className={`${BOTAO} hover:text-text-primary`}
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onAlternarAtivo(item)}
+                      disabled={ocupado}
+                      title={item.isActive ? 'Desativar' : 'Ativar'}
+                      aria-label={item.isActive ? 'Desativar' : 'Ativar'}
+                      className={`${BOTAO} hover:text-status-info`}
+                    >
+                      {item.isActive ? <PowerOff size={14} /> : <Power size={14} />}
+                    </button>
+                    {onExcluir && (
+                      <button
+                        type="button"
+                        onClick={() => onExcluir(item)}
+                        disabled={ocupado}
+                        title="Excluir"
+                        aria-label="Excluir"
+                        className={`${BOTAO} hover:text-status-danger`}
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     )}
                   </div>
                 </td>

@@ -29,7 +29,7 @@ export interface AlertasDaLicenca extends ListEnvelope<LicencaEmAlerta> {
 
 /**
  * Quantas a caixa do alerta lista. O resto ela não mostra: a contagem de cada
- * motivo, embaixo, leva à aba e ao filtro que mostram todas.
+ * motivo, embaixo, leva ao filtro que mostra todas.
  */
 const NA_CAIXA = 6;
 

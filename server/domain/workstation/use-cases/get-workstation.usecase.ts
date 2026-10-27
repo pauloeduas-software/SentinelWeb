@@ -46,7 +46,7 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
       },
       orderBy: { assetTag: 'asc' },
     }),
-    // AS UNIDADES DE ESTOQUE NA MESA — uma linha por unidade. É o "o que esta
+    // O ESTOQUE NA MESA — uma linha por saída. É o "o que esta
     // mesa tem" completo: sem elas a ficha mostrava o computador e escondia os
     // cinco mouses em cima dele. Lista PRÓPRIA, e não somada aos ativos: um
     // mouse não tem etiqueta nem série, e `totalAtivos` continua contando só

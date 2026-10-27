@@ -16,7 +16,7 @@ export interface ContagemDaLicenca {
   emUso: number;
   /** O que ainda pode ser entregue. */
   livres: number;
-  /** Já teve entrega, aberta ou devolvida: não se exclui mais, se encerra. A tela desabilita o Excluir. */
+  /** Já teve entrega, aberta ou devolvida: a licença tem passado. Não impede excluir — só a em uso impede (AG). */
   jaEntregue: boolean;
 }
 

@@ -127,7 +127,7 @@ describe('toda escrita do painel deixa rastro com a conta da sessão', () => {
     await auditada(api.post(`/api/assets/${id}/restore`));
   });
 
-  it('estoque: cadastro, ajuste, saída, devolução e lixeira', async () => {
+  it('estoque: cadastro, edição do total, entrega, devolução, desativação e exclusão', async () => {
     const pessoa = await criarColaborador(api, { name: 'Recebe Estoque', email: `estoque.${proximo()}@teste.local` });
     const item = await auditada(api.post<{ id: string }>('/api/stock/items', {
       name: `Mouse ${proximo()}`, categoryId: seed.categoriaEstoqueId, qty: 3,
@@ -135,14 +135,17 @@ describe('toda escrita do painel deixa rastro com a conta da sessão', () => {
     const id = item.body.id;
 
     await auditada(api.put(`/api/stock/items/${id}`, { notes: 'Gaveta 2' }));
-    await auditada(api.post(`/api/stock/items/${id}/adjust`, { kind: 'ENTRADA', qty: 2 }));
-    await auditada(api.post(`/api/stock/items/${id}/adjust`, { kind: 'BAIXA', qty: 1 }));
+    await auditada(api.put(`/api/stock/items/${id}`, { qty: 5 }));
     const saida = await auditada(api.post<{ unidades: { id: string }[] }>(`/api/stock/items/${id}/checkout`, {
       targetType: 'PERSON', targetPersonId: pessoa, qty: 1,
     }));
-    await auditada(api.post(`/api/stock/movements/${saida.body.unidades[0].id}/checkin`, {}));
-    await auditada(api.delete(`/api/stock/items/${id}`));
-    await auditada(api.post(`/api/stock/items/${id}/restore`));
+    await auditada(api.post(`/api/stock/checkouts/${saida.body.unidades[0].id}/checkin`, {}));
+    await auditada(api.put(`/api/stock/items/${id}`, { isActive: false }));
+
+    const errado = await auditada(api.post<{ id: string }>('/api/stock/items', {
+      name: `Cadastro errado ${proximo()}`, categoryId: seed.categoriaEstoqueId, qty: 1,
+    }));
+    await auditada(api.delete(`/api/stock/items/${errado.body.id}`));
   });
 
   it('licença: cadastro, edição, entrega, chave, devolução, encerramento e exclusão', async () => {

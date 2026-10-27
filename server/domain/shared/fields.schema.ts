@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { hojeNoBrasil } from './hoje.helper';
 
 // Construtores de campo reaproveitados pelos schemas de vários domínios — as
 // seis tabelas de catálogo e o ativo. Um lugar só para as regras que se repetem:
@@ -114,6 +115,18 @@ function amanhaUTC(): Date {
 export const dataNaoFutura = (rotulo: string) =>
   dataOpcional(rotulo).refine(
     (valor) => !valor || valor < amanhaUTC(),
+    `${rotulo} não pode ser uma data futura`,
+  );
+
+/**
+ * O DIA de uma entrega ou de uma devolução — de licença e de estoque: hoje ou
+ * antes, contra o dia de BRASÍLIA. Não é o `dataNaoFutura` acima, que compara
+ * com a meia-noite UTC e recusaria "hoje" depois das 21h — o defeito que ainda
+ * está pendente lá (`hoje.helper.ts`).
+ */
+export const diaNaoFuturo = (rotulo: string) =>
+  dataOpcional(rotulo).refine(
+    (valor) => !valor || valor <= hojeNoBrasil(),
     `${rotulo} não pode ser uma data futura`,
   );
 

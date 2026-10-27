@@ -253,7 +253,7 @@ export default function AtivosPage() {
                             <Edit2 size={14} />
                           </button>
                           {ehAdmin && (
-                            <button onClick={() => void handleDelete(asset)} title="Mover para a lixeira" aria-label={`Mover ${asset.assetTag} para a lixeira`} className="text-text-tertiary hover:text-status-danger transition-colors">
+                            <button onClick={() => void handleDelete(asset)} title="Excluir" aria-label={`Excluir ${asset.assetTag}`} className="text-text-tertiary hover:text-status-danger transition-colors">
                               <Trash2 size={14} />
                             </button>
                           )}

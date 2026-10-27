@@ -7,7 +7,7 @@
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D39–D44, D90–D94, G da segunda rodada (ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)), AA, AC e AD.
+> [`README.md`](./README.md#a-segunda-rodada-ap)), AA, AC, AD e AF.
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
@@ -365,6 +365,16 @@ handshake, com a nota de que o servidor não guarda — mesma escolha do A para 
 
 ## AA — A licença vira quantidade e entregas: sem vaga numerada, sem lixeira, com Encerradas
 
+> **Superada em parte por [AG](./estoque.md#ag--a-regra-do-posto-vale-para-o-estoque-e-a-licença-só-o-que-está-em-uso-impede-a-exclusão):**
+> a licença que já foi entregue também se exclui, se nenhuma entrega está aberta — as devolvidas
+> perdem a ligação e a chave, e guardam o nome por escrito, que até ali a entrega não guardava. Só
+> a licença em uso recusa, e o 409 diz com quem. O Encerrar continua, para o contrato que se quer
+> guardar.
+
+> **Superada em parte por [AF](#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro):**
+> a aba Encerradas sai — a encerrada fica na lista, esmaecida e marcada, e o filtro de status a
+> separa —, e o Encerrar vira o botão do Desativar, com Reabrir na volta. A data continua mandando.
+
 > **Superada em parte por [AD](#ad--renovar-é-editar-o-vencimento-o-suporte-a-oem-e-o-comprovante-não-viram-campo):**
 > a renovação é a mesma licença, com o vencimento editado; o nome repetido é o contrato novo, que
 > convive com o antigo encerrado.
@@ -589,3 +599,51 @@ mesma licença).
 **O que se perde, declarado:** o fim do suporte não tem alerta, e quem renova perde de vista na
 tela o valor e o pedido de antes. Se a data da compra passar a ser a da renovação, a entrega
 registrada no passado não vai antes dela.
+
+---
+
+## AF — A licença entra no cadastro das Configurações, e o Editar manda o formulário inteiro
+
+**Decidido** (2026-10-26, no levantamento do Editar, do Desativar e do Excluir no sistema inteiro):
+
+- **O cadastro é o das Configurações em todas as telas.** Editar, Desativar/Ativar e Excluir,
+  nessa ordem, com os mesmos ícones e as mesmas frases. O desativado fica na mesma lista,
+  esmaecido e marcado, sem aba. O Excluir sempre clica, e o 409 diz por quê e manda desativar. Os
+  botões aparecem ao passar o mouse. O estoque entrou pela
+  [AE](./estoque.md#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira);
+  Postos e Usuários, pelo visual. Usuários fica com as frases da conta de login e com a trava de
+  não agir sobre si mesmo.
+- **Na licença, o Desativar é o Encerrar, e continua com data.** `terminationDate` segue mandando
+  no status, no alerta e no filtro (AA,
+  [D44](#d44--status-da-licença-é-derivado-nunca-coluna)). O que muda é a tela:
+  - a aba Encerradas sai. A encerrada fica na lista, por nome, esmaecida e com a marca
+    "encerrada", e a coluna Vencimento diz "encerrada em" e a data;
+  - o botão do meio é Encerrar/Reabrir, com os ícones do Desativar/Ativar. Encerrar pergunta com a
+    frase do padrão e, com alguém usando, diz quantos ainda estão com ela. Reabrir apaga a data
+    sem perguntar — a mesma edição que o formulário já fazia;
+  - o filtro de status ganha "Encerradas", pela mais recente. Só com ele aparece o "Ainda em uso",
+    que é para onde leva o link do alerta "encerradas em uso";
+  - a rota recusa `view` (422), e `status=ENCERRADA` passa a valer.
+- **O Editar manda o formulário inteiro, em todas as telas.** A licença e o estoque deixam de
+  mandar só o que mudou, como as Configurações, Postos, Usuários e Ativos já faziam.
+- **Ativos e colaboradores ficam como estão.** O ativo não se desativa: os status dele são outros,
+  e o fim é a baixa. O Excluir dos dois manda para a lixeira, com a mesma frase (`Excluir "X"? Vai
+  para a lixeira e pode ser restaurado.`). Descobertas não tem cadastro, e fica fora.
+
+**Supera em parte:** [AA](#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)
+(a aba Encerradas, o Encerrar sem volta na linha e a pergunta própria dele).
+**Mantém:** AA (o encerramento por data, mesmo com alguém usando, e o alerta até tudo voltar) e
+D44.
+
+**Por quê:** o usuário pediu o sistema inteiro num padrão só: quem aprendeu a desativar uma
+categoria sabe encerrar uma licença. A data não podia sair, porque é ela que diz desde quando a
+licença acabou e que põe no alerta a encerrada ainda em uso. Por isso o Encerrar ficou no lugar
+do Desativar, com o nome que tem. A aba tirava a encerrada da lista; esmaecida, ela fica à vista,
+como o desativado.
+
+**O que se perde, declarado:** com o formulário inteiro, quem salva um formulário aberto há tempo
+desfaz a edição que outra pessoa salvou nesse meio-tempo — o total do estoque, a lista de chaves,
+a data de encerramento. O servidor continua barrando o que quebraria regra: o total abaixo do que
+está em uso, a chave já entregue que sai da lista, as datas fora de ordem. No resto, vale a
+última gravação, como nas Configurações. Com um cargo só
+([Z](./acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)), o caso é raro.

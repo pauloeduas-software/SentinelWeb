@@ -1,40 +1,8 @@
-import type { ChaveDaLicenca, EventoDaLicenca, Licenca, LicencaInput } from '../../../domain/shared/license.types';
-import { paraCampoDeData } from '../../helpers/format.helper';
+import type { ChaveDaLicenca, EventoDaLicenca, Licenca } from '../../../domain/shared/license.types';
 
 // Funções puras da tela de licenças (docs/referencia/arquitetura.md). O que as
 // outras telas também mostram — prazo, resumo da conta, devolução — mora em
 // `src/pages/helpers/licenca.helper.ts`.
-
-/**
- * SÓ OS CAMPOS QUE MUDARAM, para a edição.
- *
- * Mandar o formulário inteiro fazia um formulário aberto há tempo desfazer a
- * edição que outra pessoa salvou no meio — a quantidade voltava ao número
- * velho sem ninguém ter mexido nela.
- *
- * A comparação normaliza o que o servidor devolve de outro jeito: data chega
- * como ISO e o campo tem `AAAA-MM-DD`; custo chega como "1234.5" e o campo pode
- * ter "1234.50". Sem isso, todo campo "mudaria" e iria no corpo — e voltaria a
- * desfazer a edição de quem salvou no meio.
- */
-export function camposAlterados(original: LicencaInput, dados: LicencaInput): Partial<LicencaInput> {
-  const normalizar = (campo: keyof LicencaInput, valor: unknown): unknown => {
-    // A lista de chaves vai inteira ou não vai: muda se qualquer chave mudou.
-    if (campo === 'keys') return JSON.stringify(valor ?? []);
-    if (valor === undefined || valor === '') return null;
-    if (campo.endsWith('Date')) return paraCampoDeData(valor) || null;
-    if (campo === 'purchaseCost' && valor !== null) return Number(String(valor).replace(',', '.'));
-    return valor;
-  };
-
-  const alterados: Partial<LicencaInput> = {};
-  for (const campo of Object.keys(dados) as (keyof LicencaInput)[]) {
-    if (normalizar(campo, dados[campo]) !== normalizar(campo, original[campo])) {
-      (alterados as Record<string, unknown>)[campo] = dados[campo];
-    }
-  }
-  return alterados;
-}
 
 /** O vocabulário do histórico DESTA tela: só entrega e devolução. */
 export const ACOES_DA_LICENCA: Record<EventoDaLicenca['action'], string> = {
@@ -53,16 +21,6 @@ export function motivoParaNaoEntregar(licenca: Pick<Licenca, 'status' | 'livres'
   if (licenca.status === 'EXPIRADA') return 'Vencida: renove a data de vencimento para entregar';
   if (licenca.livres <= 0) return 'Sem licença livre';
   return null;
-}
-
-/**
- * Por que esta licença não pode ser excluída — `null` quando pode.
- *
- * Só a que nunca foi entregue se exclui (o cadastro errado). O 409 do servidor
- * continua sendo a rede; o botão desabilitado só não convida a ele.
- */
-export function motivoParaNaoExcluir(licenca: Pick<Licenca, 'jaEntregue'>): string | null {
-  return licenca.jaEntregue ? 'Já foi entregue: use Encerrar' : null;
 }
 
 /**

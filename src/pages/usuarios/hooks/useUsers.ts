@@ -79,7 +79,7 @@ export function useUsers() {
       await deleteUser.mutateAsync(user.id);
       if (users.length === 1 && page > 1) setPage(page - 1);
     } catch (error) {
-      notificar.erro(`Erro ao deletar usuário: ${(error as Error).message}`);
+      notificar.erro((error as Error).message);
     }
   };
 

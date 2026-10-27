@@ -46,7 +46,7 @@ export const personSpec: CatalogSpec = {
   // segura: ele fica com a linha na lixeira.
   countUsages: async (client, id) => {
     const posse = await contarPosseAberta(client, id);
-    return posse.ativosEmPosse + posse.postosOcupados + posse.licencas.length + posse.itensEmPosse;
+    return posse.ativosEmPosse + posse.postosOcupados + posse.licencas.length + posse.itens.length;
   },
 
   // A recusa diz O QUÊ — "responde por 1 ativo e ocupa 1 posto" —, e não "em

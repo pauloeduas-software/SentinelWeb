@@ -8,31 +8,31 @@ const logger = createLogger('stock.maestro');
 // O ESTOQUE — o que tem quantidade e não patrimônio: monitor, teclado, mouse,
 // cabo. Ativo é computador; tudo o mais entra aqui, por quantidade.
 //
-// UM tipo de item e UMA tabela de movimento (entrada, baixa, saída com
-// devolução por unidade). O saldo é calculado, nunca coluna
+// A MESMA LÓGICA DA LICENÇA (AE), e as rotas têm a mesma forma: o total é campo
+// da edição, a entrega e a devolução têm dia, o item que acabou se desativa e
+// só o que nunca saiu se exclui. O saldo é calculado, nunca coluna
 // (`helpers/stock-balance.helper.ts`).
 //
-// ORDEM DAS ROTAS: `/api/stock/movements/:id/checkin` e `/api/stock/items/:id`
+// ORDEM DAS ROTAS: `/api/stock/checkouts/:id/checkin` e `/api/stock/items/:id`
 // têm prefixos literais diferentes, então não disputam. O `:id` da devolução é
-// o do MOVIMENTO, não o do item: a devolução é de UMA unidade identificada, e é
-// ela que a tela tem na mão.
+// o de uma unidade da SAÍDA, não o do item: é ela que diz qual entrega volta.
 export class StockMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
+    // A DEVOLUÇÃO: N unidades de uma saída, num dia.
+    server.post('/api/stock/checkouts/:id/checkin', WRITE_RATE_LIMIT, stockController.checkin);
+
     server.get('/api/stock/items', stockController.list);
     server.get('/api/stock/items/:id', stockController.byId);
-    server.get('/api/stock/items/:id/movements', stockController.movements);
+    server.get('/api/stock/items/:id/checkouts', stockController.checkouts);
+    server.get('/api/stock/items/:id/history', stockController.history);
 
     server.post('/api/stock/items', WRITE_RATE_LIMIT, stockController.create);
+    // A edição muda também o total, e `isActive` é o Desativar e o Ativar.
     server.put('/api/stock/items/:id', WRITE_RATE_LIMIT, stockController.update);
     server.delete('/api/stock/items/:id', WRITE_RATE_LIMIT, stockController.remove);
-    server.post('/api/stock/items/:id/restore', WRITE_RATE_LIMIT, stockController.restore);
 
-    // ENTRADA e BAIXA: a única porta para o total do item.
-    server.post('/api/stock/items/:id/adjust', WRITE_RATE_LIMIT, stockController.adjust);
-    // SAÍDA: N unidades a uma pessoa ou a um posto.
+    // A ENTREGA: N unidades a um colaborador ou a um posto.
     server.post('/api/stock/items/:id/checkout', WRITE_RATE_LIMIT, stockController.checkout);
-    // DEVOLUÇÃO: de uma unidade, pelo id da saída dela.
-    server.post('/api/stock/movements/:id/checkin', WRITE_RATE_LIMIT, stockController.checkin);
 
     logger.info('[Maestro] Rotas de Estoque inicializadas.');
   }

@@ -5,7 +5,7 @@ import { personKeys } from '../person/person.queries';
 import type { ListEnvelope, ListParams } from '../shared/list.types';
 import type {
   AlertasDaLicenca, AlvoDaEntrega, EntregaComChave, EntregaDeLicenca, EntregaDoAlvo, EventoDaLicenca,
-  Licenca, LicencaDetalhe, LicencaInput, RecorteDaLicenca, StatusDoFiltro,
+  Licenca, LicencaDetalhe, LicencaInput, StatusDoFiltro,
 } from '../shared/license.types';
 
 // AS LICENÇAS DE SOFTWARE (docs/referencia/licencas.md).
@@ -14,13 +14,11 @@ import type {
 // listagem, o detalhe, as entregas, o histórico e os alertas — que mudam a cada
 // entrega, sem ninguém ter tocado neles.
 
-/** A listagem: o que toda lista aceita, a aba no lugar da lixeira, a categoria e o status. */
+/** A listagem: o que toda lista aceita, sem lixeira nem abas (AF), a categoria e o status. */
 export type ParamsDaLicenca = Omit<ListParams, 'view'> & {
-  view: RecorteDaLicenca;
   categoryId?: string;
-  /** Só na aba Atuais — o servidor recusa com 422 em Encerradas. */
   status?: StatusDoFiltro;
-  /** Só as que alguém ainda usa — para onde o alerta "encerradas em uso" leva. */
+  /** Só as que alguém ainda usa — com `ENCERRADA`, para onde o alerta "encerradas em uso" leva. */
   emUso?: 'sim';
 };
 
@@ -146,7 +144,7 @@ export function useDeleteLicense() {
   });
 }
 
-/** Encerrar: o contrato acabou, a licença vai para a aba Encerradas. */
+/** Encerrar: o contrato acabou — a licença fica na lista, esmaecida, e não recebe nada novo. */
 export function useTerminateLicense() {
   const queryClient = useQueryClient();
   return useMutation({

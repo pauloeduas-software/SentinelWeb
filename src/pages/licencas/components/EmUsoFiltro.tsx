@@ -1,5 +1,6 @@
-// O FILTRO DA ABA ENCERRADAS: todas, ou só as que alguém ainda usa — a lista
-// para onde o alerta "encerradas em uso" leva, e de onde se devolve uma a uma.
+// O FILTRO DAS ENCERRADAS — aparece com o status Encerradas: todas, ou só as
+// que alguém ainda usa — a lista para onde o alerta "encerradas em uso" leva,
+// e de onde se devolve uma a uma.
 
 interface EmUsoFiltroProps {
   ligado: boolean;

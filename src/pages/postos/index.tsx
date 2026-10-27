@@ -19,7 +19,7 @@ export default function PostosPage() {
     postos, total, carregando, erro, page, perPage, setPage, search, changeSearch, view, changeView,
     modalAberto, emEdicao, openCreate, openEdit, closeModal, handleSalvar, handleAlternar, handleExcluir,
     postoId, postoAberto, openDetalhe, closeDetalhe, detalhe, detalhePendente, detalheErro, ocupantes,
-    devolvendo, handleDevolver, devolvendoItem, handleDevolverItem,
+    devolvendo, handleDevolver,
   } = usePostos();
   const podeCriar = usePode('ADMIN');
 
@@ -154,8 +154,6 @@ export default function PostosPage() {
           onCorrigirTurno={ocupantes.handleCorrigirTurno}
           onDevolver={handleDevolver}
           devolvendo={devolvendo}
-          onDevolverItem={handleDevolverItem}
-          devolvendoItem={devolvendoItem}
           onClose={closeDetalhe}
         />
       )}

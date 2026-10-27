@@ -4,13 +4,14 @@ import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
 import { assertPostoRecebe } from '../../catalog/helpers/catalog-lock.helper';
 import { travarPessoaOuFalhar, type ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
+import { instanteDoDia } from '../../shared/hoje.helper';
 import {
-  assertDisponivel, contarForaDe, travarItemOuFalhar, type ClienteEstoque,
+  assertDisponivel, contarUsoDe, travarItemOuFalhar, type ClienteEstoque,
 } from '../helpers/stock-balance.helper';
 import { STOCK_MOVEMENT_SELECT } from '../helpers/stock-select.helper';
 import type { CheckoutStockInput } from '../schemas/stock.schema';
 
-// A SAÍDA — `qty` unidades de um item para UMA pessoa ou UM posto.
+// A ENTREGA — `qty` unidades de um item para UMA pessoa ou UM posto, num dia.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // O ALVO PODE SER UM POSTO, e é a mesma razão da posse de ativo: entregar 5
@@ -22,9 +23,17 @@ import type { CheckoutStockInput } from '../schemas/stock.schema';
 // posto sem ocupante resolve para ninguém — não é erro, é a mesa preparada
 // antes de a pessoa chegar.
 //
-// CADA UNIDADE É UMA LINHA. `qty: 5` grava cinco movimentos de SAIDA de 1: a
-// devolução é de uma unidade identificada, sem quantidade parcial para
-// dividir, e o saldo é um `COUNT`.
+// CADA UNIDADE É UMA LINHA. `qty: 5` grava cinco linhas, no mesmo INSERT: o
+// `createdAt` igual é o que faz delas UMA saída nas listas, e o saldo é um
+// `COUNT`.
+//
+// O DIA, como na entrega de licença: hoje por padrão, e o passado pode — o
+// registro da entrega que já aconteceu. A QUANTIDADE no passado não é
+// conferida; a conta é sempre a de agora. Sem a recusa "antes da compra" da
+// licença: o item não tem data de compra, e o dia do cadastro dele é do
+// sistema, não do almoxarifado — o mouse entregue no mês passado se registra
+// num item cadastrado hoje. Nem a do "mesmo alvo depois da devolução": o mesmo
+// alvo fica com várias unidades ao mesmo tempo.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const FK_DO_ALVO = { PERSON: 'targetPersonId', WORKSTATION: 'targetWorkstationId' } as const;
@@ -44,12 +53,12 @@ function assertAlvoCoerente(data: CheckoutStockInput): string {
 
   if (intrusa) {
     throw new AppError(
-      `Uma saída tem UM alvo: preencha só a chave que corresponde ao targetType (${data.targetType}).`,
+      `Uma entrega tem UM alvo: preencha só a chave que corresponde ao targetType (${data.targetType}).`,
       422,
     );
   }
   if (!alvoId) {
-    throw new AppError(`Saída do tipo "${data.targetType}" exige ${ROTULO_DO_ALVO[data.targetType]}.`, 422);
+    throw new AppError(`Entrega do tipo "${data.targetType}" exige ${ROTULO_DO_ALVO[data.targetType]}.`, 422);
   }
   return alvoId;
 }
@@ -84,52 +93,62 @@ export async function checkoutStock(itemId: string, data: CheckoutStockInput, at
   const alvoId = assertAlvoCoerente(data);
 
   return prisma.$transaction(async (tx) => {
-    // ORDEM DE TRAVAMENTO: usuário antes do item — a regra do grafo de travas
-    // (`lock-asset.usecase.ts`). Só no alvo PERSON, e pelo motivo da invariante 6:
-    // sem a trava, a saída nasce no intervalo entre o `DELETE` ler a pessoa e
-    // apagá-la, e o cadastro na lixeira fica com unidade no nome.
+    // ORDEM DE TRAVAMENTO: colaborador antes do item — a regra do grafo de
+    // travas (`lock-asset.usecase.ts`). Só no alvo PERSON, e pelo motivo da
+    // invariante 6: sem a trava, a entrega nasce no intervalo entre o `DELETE`
+    // ler a pessoa e apagá-la, e o cadastro na lixeira fica com unidade no nome.
     if (data.targetType === 'PERSON') await travarPessoaOuFalhar(tx, alvoId);
 
     // A TRAVA DA LINHA DO ITEM — o mutex do saldo. Contar não é travar: duas
-    // requisições podem contar "4 de 5 fora" e as duas inserirem, dando 6 de 5.
+    // requisições podem contar "4 de 5 em uso" e as duas inserirem, dando 6 de 5.
     await travarItemOuFalhar(tx, itemId);
+    const item = await tx.stockItem.findUniqueOrThrow({
+      where: { id: itemId },
+      select: { id: true, name: true, qty: true, isActive: true },
+    });
 
-    // `findFirst`, nunca `findUnique`: o escopo da lixeira não alcança o
-    // `findUnique`, e item na lixeira não sai.
-    const item = await tx.stockItem.findFirst({ where: { id: itemId }, select: { id: true, name: true, qty: true } });
-    if (!item) throw new AppError('Item de estoque não encontrado.', 404);
-
+    // O alvo antes do item, como na licença: o colaborador na lixeira é 404
+    // mesmo com o item desativado.
     const nomeDoAlvo = await assertAlvoApto(tx, data.targetType, alvoId);
+
+    // O DESATIVADO é o encerrado da licença: não recebe entrega nova.
+    if (!item.isActive) {
+      throw new AppError(
+        `O item "${item.name}" está desativado e não recebe entrega. Se ele voltou a ser usado, reative-o antes.`,
+        409,
+      );
+    }
 
     // A conta, DEPOIS da trava. Antes dela seria a mesma leitura suja que o
     // `if` sozinho faz.
-    const fora = await contarForaDe(tx, itemId);
-    assertDisponivel(item, data.qty, fora);
+    const { emUso } = await contarUsoDe(tx, itemId);
+    assertDisponivel(item, data.qty, emUso);
+
+    // Ausente, quem preenche é o `@default(now())`.
+    const checkoutAt = data.checkoutAt ? instanteDoDia(data.checkoutAt) : undefined;
 
     // UMA ida ao banco para as N linhas, com as duas travas seguradas o menor
-    // tempo possível — e as N unidades com o MESMO `createdAt`, que é o que
-    // deixa a linha do tempo mostrá-las como uma saída de N, não N saídas.
+    // tempo possível — e as N com o MESMO `createdAt` (o `now()` da transação),
+    // que é o que faz delas uma saída de N, e não N saídas.
     const unidades = await tx.stockMovement.createManyAndReturn({
       data: Array.from({ length: data.qty }, () => ({
         itemId,
-        kind: 'SAIDA' as const,
-        qty: 1,
         targetType: data.targetType,
         targetPersonId: data.targetType === 'PERSON' ? alvoId : null,
         targetWorkstationId: data.targetType === 'WORKSTATION' ? alvoId : null,
         notes: data.notes ?? null,
+        checkoutAt,
       })),
       select: STOCK_MOVEMENT_SELECT,
     });
 
+    const disponivel = item.qty - emUso - data.qty;
+
     // No histórico do ITEM: é onde alguém abre para perguntar "para onde foram
-    // os 5 mouses". O `disponivel` DEPOIS da saída explica o evento sem obrigar
-    // quem lê a recontar as linhas daquele dia.
-    //
-    // O alvo vai também POR ESCRITO: a pessoa ou o posto podem ser excluídos
-    // depois, e o id sozinho deixaria de dizer para quem as unidades saíram. E
-    // os ids das N linhas de saída, como o `assignmentId` da entrega de ativo:
-    // é o que liga cada unidade à conta que a entregou.
+    // os 5 mouses". O alvo vai também POR ESCRITO: a pessoa ou o posto podem ser
+    // excluídos depois, e o id sozinho deixaria de dizer para quem as unidades
+    // saíram. E os ids das N linhas, como o `checkoutId` da licença: é o que liga
+    // cada unidade à conta que a entregou.
     await recordAudit(tx, {
       entityType: 'StockItem',
       entityId: itemId,
@@ -140,11 +159,12 @@ export async function checkoutStock(itemId: string, data: CheckoutStockInput, at
         targetId: alvoId,
         targetName: nomeDoAlvo,
         qty: data.qty,
-        disponivel: item.qty - fora - data.qty,
+        checkoutAt: unidades[0].checkoutAt.toISOString(),
+        disponivel,
         movementIds: unidades.map((unidade) => unidade.id),
       },
     }, ator);
 
-    return { unidades, disponivel: item.qty - fora - data.qty };
+    return { unidades, disponivel };
   });
 }

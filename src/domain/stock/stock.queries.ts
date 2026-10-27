@@ -2,34 +2,45 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { apiClient } from '../../core/api/apiClient';
 import { personKeys } from '../person/person.queries';
 import { workstationKeys } from '../workstation/workstation.queries';
-import type { ListEnvelope, ListParamsComCategoria } from '../shared/list.types';
+import type { ListEnvelope, ListParams } from '../shared/list.types';
 import type {
-  AjustarEstoqueInput, AlvoDaSaidaInput, CriarItemDeEstoqueInput, EditarItemDeEstoqueInput,
-  EventoDeEstoque, ItemDeEstoque, ItemDeEstoqueDetalhe, MovimentoDeEstoque,
-  ResultadoDaSaida, ResultadoDoAjuste,
+  AlvoDaEntregaDeEstoque, EventoDoItem, ItemDeEstoque, ItemDeEstoqueInput,
+  ResultadoDaDevolucao, SaidaAberta,
 } from '../shared/stock.types';
 
 // O ESTOQUE — monitor, teclado, mouse, cabo: o que tem quantidade e não
-// patrimônio (docs/decisoes/estoque.md).
+// patrimônio (docs/decisoes/estoque.md). A mesma forma da licença (AE).
 //
 // `['stock']` é o prefixo, então invalidar depois de gravar alcança a
-// listagem E o detalhe aberto — e também a entrada e a saída precisam invalidar
-// USUÁRIOS (invariante 6: unidade no nome de alguém trava o `DELETE` dele) e
-// POSTOS (a ficha mostra as unidades da mesa), do mesmo jeito que a licença
-// invalida posse ao entregar uma licença.
+// listagem, o detalhe, com quem está e o histórico — e a entrega e a devolução
+// invalidam também COLABORADORES (a unidade no nome de alguém trava a
+// desativação dele) e POSTOS (a ficha mostra o estoque da mesa).
+
+/** A listagem: o que toda lista aceita, sem lixeira e sem abas, e a categoria. */
+export type ParamsDoEstoque = Omit<ListParams, 'view'> & {
+  categoryId?: string;
+};
+
+/** As duas listas do detalhe: a página e, na de quem está com o item, a busca pelo nome. */
+export interface ParamsDoDetalhe {
+  page: number;
+  perPage: number;
+  q?: string;
+}
 
 const stockKeys = {
   all: ['stock'] as const,
-  list: (params: ListParamsComCategoria) => ['stock', 'list', params] as const,
+  list: (params: ParamsDoEstoque) => ['stock', 'list', params] as const,
   item: (id: string) => ['stock', 'item', id] as const,
-  movements: (id: string) => ['stock', 'movements', id] as const,
+  saidas: (id: string, params: ParamsDoDetalhe) => ['stock', 'saidas', id, params] as const,
+  historico: (id: string, params: ParamsDoDetalhe) => ['stock', 'historico', id, params] as const,
 };
 
-export function useStockQuery(params: ListParamsComCategoria) {
+export function useStockQuery(params: ParamsDoEstoque) {
   return useQuery({
     queryKey: stockKeys.list(params),
     queryFn: async () => (await apiClient.get<ListEnvelope<ItemDeEstoque>>('/stock/items', { params })).data,
-    // Sem isto a tabela pisca em branco a cada troca de página, de vista ou tecla da busca.
+    // Sem isto a tabela pisca em branco a cada troca de página, de filtro ou tecla da busca.
     placeholderData: keepPreviousData,
   });
 }
@@ -37,43 +48,70 @@ export function useStockQuery(params: ListParamsComCategoria) {
 export function useStockItemQuery(id: string | null) {
   return useQuery({
     queryKey: stockKeys.item(id ?? ''),
-    queryFn: async () => (await apiClient.get<ItemDeEstoqueDetalhe>(`/stock/items/${id}`)).data,
+    queryFn: async () => (await apiClient.get<ItemDeEstoque>(`/stock/items/${id}`)).data,
     enabled: id != null,
   });
 }
 
-export function useStockMovementsQuery(id: string | null) {
+/** Quem está com o item agora — as saídas abertas, por página, com busca pelo nome. */
+export function useStockCheckoutsQuery(id: string | null, params: ParamsDoDetalhe) {
   return useQuery({
-    queryKey: stockKeys.movements(id ?? ''),
+    queryKey: stockKeys.saidas(id ?? '', params),
     queryFn: async () =>
-      (await apiClient.get<{ total: number; rows: EventoDeEstoque[] }>(`/stock/items/${id}/movements`)).data,
+      (await apiClient.get<ListEnvelope<SaidaAberta>>(`/stock/items/${id}/checkouts`, { params })).data,
     enabled: id != null,
+    // Sem isto a lista pisca em branco a cada página e a cada tecla da busca.
+    placeholderData: keepPreviousData,
   });
 }
 
+/** Por onde o item passou: as entregas e as devoluções, por página. */
+export function useStockHistoryQuery(id: string | null, params: Omit<ParamsDoDetalhe, 'q'>) {
+  return useQuery({
+    queryKey: stockKeys.historico(id ?? '', params),
+    queryFn: async () =>
+      (await apiClient.get<ListEnvelope<EventoDoItem>>(`/stock/items/${id}/history`, { params })).data,
+    enabled: id != null,
+    placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Devolve a promessa, e o `onSuccess` a devolve também: a mutação só termina
+ * quando as listas abertas já foram buscadas de novo. Sem isso o botão
+ * destravava com a saída devolvida ainda na tela, e o segundo clique dava "já
+ * foi devolvida" — o mesmo cuidado do `invalidarLicencaEPosse`.
+ */
 function invalidarEstoqueEPosse(queryClient: ReturnType<typeof useQueryClient>) {
-  void queryClient.invalidateQueries({ queryKey: stockKeys.all });
-  void queryClient.invalidateQueries({ queryKey: personKeys.all });
-  void queryClient.invalidateQueries({ queryKey: workstationKeys.all });
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: stockKeys.all }),
+    queryClient.invalidateQueries({ queryKey: personKeys.all }),
+    queryClient.invalidateQueries({ queryKey: workstationKeys.all }),
+  ]);
 }
 
 export function useCreateStockItem() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: CriarItemDeEstoqueInput) => apiClient.post<ItemDeEstoque>('/stock/items', data),
+    mutationFn: (data: ItemDeEstoqueInput) => apiClient.post<ItemDeEstoque>('/stock/items', data),
     onSuccess: () => invalidarEstoqueEPosse(queryClient),
   });
 }
 
+/**
+ * Manda SÓ o que mudou: um formulário aberto há tempo não desfaz a edição de
+ * outro. `isActive` é o Desativar e o Ativar.
+ */
 export function useUpdateStockItem() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: EditarItemDeEstoqueInput }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<ItemDeEstoqueInput> & { isActive?: boolean } }) =>
       apiClient.put<ItemDeEstoque>(`/stock/items/${id}`, data),
     onSuccess: () => invalidarEstoqueEPosse(queryClient),
   });
 }
 
+/** Exclusão DEFINITIVA — para o cadastro errado. */
 export function useDeleteStockItem() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -82,40 +120,23 @@ export function useDeleteStockItem() {
   });
 }
 
-export function useRestoreStockItem() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => apiClient.post(`/stock/items/${id}/restore`),
-    onSuccess: () => invalidarEstoqueEPosse(queryClient),
-  });
-}
-
-/** Entrada e baixa — a única porta para o total do item. */
-export function useAdjustStock() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ itemId, data }: { itemId: string; data: AjustarEstoqueInput }) =>
-      apiClient.post<ResultadoDoAjuste>(`/stock/items/${itemId}/adjust`, data),
-    onSuccess: () => invalidarEstoqueEPosse(queryClient),
-  });
-}
-
-/** A saída: `qty` unidades para um colaborador ou um posto. */
+/** A ENTREGA: `qty` unidades a um colaborador ou a um posto, num dia. */
 export function useCheckoutStock() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ itemId, alvo }: { itemId: string; alvo: AlvoDaSaidaInput }) =>
-      apiClient.post<ResultadoDaSaida>(`/stock/items/${itemId}/checkout`, alvo),
+    mutationFn: ({ itemId, alvo }: { itemId: string; alvo: AlvoDaEntregaDeEstoque }) =>
+      apiClient.post(`/stock/items/${itemId}/checkout`, alvo),
     onSuccess: () => invalidarEstoqueEPosse(queryClient),
   });
 }
 
-/** A devolução — pelo id do MOVIMENTO (a unidade), não do item. */
+/** A devolução, pela SAÍDA — `saidaId` é o de qualquer unidade dela. */
 export function useCheckinStock() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ movementId }: { movementId: string }) =>
-      apiClient.post<MovimentoDeEstoque>(`/stock/movements/${movementId}/checkin`),
+    /** `checkinAt` é o dia, 'AAAA-MM-DD': hoje ou antes, nunca antes da entrega. */
+    mutationFn: ({ saidaId, qty, checkinAt }: { saidaId: string; qty: number; checkinAt: string }) =>
+      apiClient.post<ResultadoDaDevolucao>(`/stock/checkouts/${saidaId}/checkin`, { qty, checkinAt }),
     onSuccess: () => invalidarEstoqueEPosse(queryClient),
   });
 }

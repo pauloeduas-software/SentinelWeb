@@ -33,13 +33,13 @@ const POR_PAGINA_NO_DETALHE = 15;
 export const licenseController = {
   async list(request: FastifyRequest) {
     // A query tem DOIS donos e é separada antes de qualquer `parse`, como no
-    // `workstation.controller.ts`: `categoryId`, `view`, `status` e `emUso` são
-    // nossos, o resto é do `parseListQuery`, que é estrito e responderia 422 a
-    // uma chave que não conhece. Sem `trashable` — a licença não tem lixeira (AA).
-    const { categoryId, view, status, emUso, ...paginacao } = (request.query ?? {}) as Record<string, unknown>;
+    // `workstation.controller.ts`: `categoryId`, `status` e `emUso` são nossos,
+    // o resto é do `parseListQuery`, que é estrito e responde 422 a uma chave
+    // que não conhece — inclusive o `view` das abas que saíram (AF). Sem
+    // `trashable` — a licença não tem lixeira (AA).
+    const { categoryId, status, emUso, ...paginacao } = (request.query ?? {}) as Record<string, unknown>;
     const filtros = licenseFiltersSchema.parse({
       ...(categoryId === undefined ? {} : { categoryId }),
-      ...(view === undefined ? {} : { view }),
       ...(status === undefined ? {} : { status }),
       ...(emUso === undefined ? {} : { emUso }),
     });

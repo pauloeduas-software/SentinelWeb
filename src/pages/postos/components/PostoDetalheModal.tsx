@@ -9,7 +9,8 @@ import SeloDesativado from './SeloDesativado';
 import {
   ativosComMaquina, estaDesativado, explicacaoDoVago, resumoDeAtivos,
 } from '../helpers/postos.helper';
-import { momentoDoEvento } from '../../helpers/historico.helper';
+import { caminhoDoItem, textoDeUnidades } from '../../helpers/estoque.helper';
+import { formatarDiaDoInstante } from '../../helpers/format.helper';
 import type { OccupantInput } from '../../../domain/occupancy/occupancy.queries';
 import type { WorkstationOccupant, OccupantView } from '../../../domain/shared/posse.types';
 import type { AtivoDoPosto, Posto, PostoDetalhe } from '../../../domain/shared/workstation.types';
@@ -66,16 +67,12 @@ interface PostoDetalheModalProps {
   /** Tira o ativo desta mesa e devolve ao estoque. O `confirm` é do hook. */
   onDevolver: (ativo: AtivoDoPosto) => Promise<void>;
   devolvendo: boolean;
-  /** Devolve UMA unidade de estoque da mesa, pelo id do movimento. */
-  onDevolverItem: (movementId: string) => Promise<unknown>;
-  devolvendoItem: boolean;
   onClose: () => void;
 }
 
 export default function PostoDetalheModal({
   posto, detalhe, carregando, ocupantes, ocupantesCarregando, ocupantesErro,
-  view, onViewChange, onAdicionar, onEncerrar, onCorrigirTurno, onDevolver, devolvendo,
-  onDevolverItem, devolvendoItem, onClose,
+  view, onViewChange, onAdicionar, onEncerrar, onCorrigirTurno, onDevolver, devolvendo, onClose,
 }: PostoDetalheModalProps) {
   // Enquanto o detalhe não chega, vale o que a linha já dizia: o cabeçalho e o
   // selo de vago aparecem no primeiro quadro em vez de piscar depois.
@@ -95,22 +92,9 @@ export default function PostoDetalheModal({
     }
   };
 
-  // O MESMO DESENHO, para a devolução de ITEM DE ESTOQUE — erro próprio: as
-  // duas seções devolvem coisas diferentes, e misturar as mensagens faria uma
-  // devolução de mouse mostrar o erro deixado pela de ativo, ou o contrário.
-  const [erroDaDevolucaoDeItem, setErroDaDevolucaoDeItem] = useState('');
-
-  const devolverItem = async (movementId: string) => {
-    setErroDaDevolucaoDeItem('');
-    try {
-      await onDevolverItem(movementId);
-    } catch (falha) {
-      setErroDaDevolucaoDeItem((falha as Error).message);
-    }
-  };
-
   const ativos = detalhe?.ativos ?? [];
   const itens = detalhe?.itens ?? [];
+  const totalDeUnidades = itens.reduce((soma, saida) => soma + saida.unidades, 0);
   // Cálculo fora do JSX (docs/referencia/arquitetura.md). A lista tem no
   // máximo um ativo — é a invariante 19 —, e com máquina vinculada é o que tem
   // telemetria para mostrar.
@@ -354,19 +338,13 @@ export default function PostoDetalheModal({
               <h3 className="text-text-secondary uppercase tracking-widest text-[10px] flex items-center gap-2">
                 <Boxes size={12} /> Estoque desta mesa
               </h3>
-              <span className="text-text-tertiary tabular-nums">{itens.length} unidade(s)</span>
+              <span className="text-text-tertiary tabular-nums">{textoDeUnidades(totalDeUnidades)}</span>
             </div>
 
             <p className="text-text-tertiary text-[10px] leading-relaxed">
               Unidades de estoque entregues a este posto — qualquer ocupante aberto dela responde
-              por elas, independente de quem fez a entrega.
+              por elas, independente de quem fez a entrega. A devolução é feita no detalhe do item.
             </p>
-
-            {erroDaDevolucaoDeItem && (
-              <div className="p-3 bg-status-danger/10 text-status-danger border border-status-danger/20" role="alert">
-                {erroDaDevolucaoDeItem}
-              </div>
-            )}
 
             <div className="border border-border-sutil overflow-x-auto">
               <table className="w-full text-left whitespace-nowrap">
@@ -374,33 +352,28 @@ export default function PostoDetalheModal({
                   <tr>
                     <th className="px-4 py-3 font-normal">Item</th>
                     <th className="px-4 py-3 font-normal">Categoria</th>
+                    <th className="px-4 py-3 font-normal">Quantidade</th>
                     <th className="px-4 py-3 font-normal">Desde</th>
-                    <th className="px-4 py-3 font-normal text-right">Ação</th>
                   </tr>
                 </thead>
 
                 <tbody className="divide-y divide-border-sutil/50">
-                  {itens.map((unidade) => (
-                    <tr key={unidade.id} className="hover:bg-bg-base transition-colors">
+                  {itens.map((saida) => (
+                    <tr key={saida.id} className="hover:bg-bg-base transition-colors">
                       <td className="px-4 py-3 text-text-primary">
-                        {unidade.item.name}
-                        {unidade.item.deletedAt && (
-                          <span className="ml-2 text-[10px] uppercase tracking-widest text-text-tertiary">na lixeira</span>
+                        <Link to={caminhoDoItem(saida.item.id)} className="hover:underline underline-offset-2">
+                          {saida.item.name}
+                        </Link>
+                        {!saida.item.isActive && (
+                          <span className="ml-2 text-[10px] uppercase tracking-widest text-text-tertiary">desativado</span>
+                        )}
+                        {saida.notes && (
+                          <div className="text-[10px] text-text-tertiary mt-0.5">{saida.notes}</div>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-text-tertiary">{unidade.item.category.name}</td>
-                      <td className="px-4 py-3 text-text-tertiary">{momentoDoEvento(unidade.createdAt)}</td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          type="button"
-                          disabled={devolvendoItem}
-                          onClick={() => void devolverItem(unidade.id)}
-                          title={`Devolver ${unidade.item.name} ao estoque`}
-                          className="inline-flex items-center gap-1.5 px-2 py-1 border border-border-sutil text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary hover:bg-bg-base disabled:opacity-30 transition-colors"
-                        >
-                          <Undo2 size={11} /> Devolver
-                        </button>
-                      </td>
+                      <td className="px-4 py-3 text-text-tertiary">{saida.item.category.name}</td>
+                      <td className="px-4 py-3 text-text-tertiary">{textoDeUnidades(saida.unidades)}</td>
+                      <td className="px-4 py-3 text-text-tertiary">{formatarDiaDoInstante(saida.checkoutAt)}</td>
                     </tr>
                   ))}
 

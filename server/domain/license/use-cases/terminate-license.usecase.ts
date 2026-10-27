@@ -14,7 +14,8 @@ import { contarUsoDe } from './count-license-checkouts.usecase';
 import { travarLicencaOuFalhar } from './lock-license.usecase';
 
 /**
- * ENCERRAR — o contrato acabou, e a licença sai da lista para a aba Encerradas.
+ * ENCERRAR — o contrato acabou: a licença fica na lista, esmaecida (AF), e não
+ * recebe nada novo.
  *
  * Grava o dia de hoje em `terminationDate`; é a data que manda (o status
  * ENCERRADA é derivado dela, D44).

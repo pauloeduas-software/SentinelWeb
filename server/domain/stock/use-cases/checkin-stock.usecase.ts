@@ -2,71 +2,106 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
-import { STOCK_MOVEMENT_SELECT } from '../helpers/stock-select.helper';
 import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
+import { hojeNoBrasil, instanteDoDia } from '../../shared/hoje.helper';
+import { rotuloDoAlvo, STOCK_MOVEMENT_SELECT } from '../helpers/stock-select.helper';
+import type { CheckinStockInput } from '../schemas/stock.schema';
 
-/**
- * A DEVOLUÇÃO de UMA unidade — a linha de SAIDA identificada.
- *
- * Preenche `returnedAt` e NUNCA apaga a linha: "quem estava com o mouse em
- * março?" continua respondível depois da devolução.
- *
- * ─────────────────────────────────────────────────────────────────────────────
- * POR QUE AQUI NÃO HÁ `FOR UPDATE`, se a saída tem.
- *
- * A trava da saída existe porque ela COMPARA um número lido (`disponivel`)
- * antes de gravar — e a leitura fica velha entre o `if` e o `INSERT`. A
- * devolução não compara nada: ela fecha UMA linha específica, e o único risco é
- * duas requisições fecharem a mesma.
- *
- * Quem resolve isso é o `updateMany` com `returnedAt: null` no WHERE: o
- * Postgres aplica a condição na hora do `UPDATE`, então a segunda transação
- * afeta ZERO linhas e recebe o 409 — sem lock, sem janela. E devolução só
- * AUMENTA o disponível: o erro que se evita aqui é de HISTÓRICO (duas
- * devoluções da mesma unidade), não de saldo.
- *
- * E É POR ISSO QUE A FICHA DO POSTO NÃO PRECISA DE ESCOPO, ao contrário da
- * devolução de ativo: a unidade é identificada pelo id da linha. Uma ficha
- * velha devolve uma linha já devolvida e leva 409 — não fecha a unidade de
- * outra pessoa, porque uma unidade entregue de novo é OUTRA linha.
- * ─────────────────────────────────────────────────────────────────────────────
- */
-export async function checkinStock(movementId: string, ator: Ator) {
+// A DEVOLUÇÃO DE UMA SAÍDA — N unidades dela, num dia. É a devolução da
+// licença (`checkin-license.usecase.ts`), com quantidade.
+//
+// PELA SAÍDA, nunca pelo item ou pelo alvo: o `:id` é o de qualquer unidade da
+// saída, e é ela que diz QUAL entrega (o mesmo INSERT, o mesmo alvo). É o que
+// impede a tela velha de devolver a unidade errada: a saída que já voltou
+// responde 409, em vez de fechar a entrega que outra pessoa abriu depois — que
+// é OUTRA saída.
+//
+// Preenche `returnedAt` e NUNCA apaga a linha: "quem estava com o mouse em
+// março?" continua respondível depois da devolução.
+//
+// TRAVA SÓ AS LINHAS DA SAÍDA. É o que impede a devolução dupla: a segunda
+// espera, relê, e encontra menos unidades com o alvo. O item não é travado: a
+// devolução só diminui o que está em uso, e uma entrega concorrente que conte
+// antes dela só erra para o lado seguro (um 409 de "sem unidade" que um
+// segundo depois não seria).
+
+function quantas(total: number, singular: string, plural: string): string {
+  return `${total} ${total === 1 ? singular : plural}`;
+}
+
+export async function checkinStock(movementId: string, data: Partial<CheckinStockInput>, ator: Ator) {
   return prisma.$transaction(async (tx) => {
-    const devolvidaEm = new Date();
-
-    const { count } = await tx.stockMovement.updateMany({
-      where: { id: movementId, kind: 'SAIDA', returnedAt: null },
-      data: { returnedAt: devolvidaEm },
+    const unidade = await tx.stockMovement.findUnique({
+      where: { id: movementId },
+      select: { ...STOCK_MOVEMENT_SELECT, itemName: true, item: { select: { name: true } } },
     });
+    if (!unidade) throw new AppError('Nenhuma saída de estoque com este identificador.', 404);
+    // O ITEM EXCLUÍDO (AG) só deixa saída já devolvida — a em uso segura a
+    // exclusão. A tela velha que ainda mostra a linha recebe o mesmo 409.
+    const item = unidade.item;
+    if (!item || !unidade.itemId) {
+      throw new AppError(`Esta entrega de "${unidade.itemName ?? 'item excluído'}" para ${rotuloDoAlvo(unidade)} já foi devolvida.`, 409);
+    }
 
-    if (count === 0) {
-      // Zero linhas é "não existe", "não é saída" OU "já foi devolvida" — e as
-      // três precisam de respostas diferentes. Só aqui vale a consulta extra: no
-      // caminho feliz ela não acontece.
-      const existente = await tx.stockMovement.findUnique({
-        where: { id: movementId },
-        select: { kind: true, returnedAt: true },
-      });
-      if (!existente) throw new AppError('Nenhuma saída com este identificador.', 404);
-      if (existente.kind !== 'SAIDA') throw new AppError('Este movimento não é uma saída: não há o que devolver.', 409);
+    // AS UNIDADES DA SAÍDA QUE AINDA ESTÃO COM O ALVO — lidas pelo Prisma, que
+    // compara o `createdAt` sem depender do fuso da sessão, e TRAVADAS em
+    // seguida. A trava relê `returnedAt` depois de esperar: a devolução
+    // simultânea que fechou parte delas tira essas linhas daqui. Todas, e não
+    // `LIMIT qty`: com o limite, a segunda devolução ficaria com menos do que
+    // existe — um 409 falso.
+    const daSaida = await tx.stockMovement.findMany({
+      where: {
+        itemId: unidade.itemId,
+        createdAt: unidade.createdAt,
+        targetType: unidade.targetType,
+        targetPersonId: unidade.targetPersonId,
+        targetWorkstationId: unidade.targetWorkstationId,
+        returnedAt: null,
+      },
+      select: { id: true },
+    });
+    const abertas = daSaida.length === 0 ? [] : await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM stock_movements
+       WHERE id = ANY(${daSaida.map((linha) => linha.id)}::uuid[]) AND "returnedAt" IS NULL
+       ORDER BY id
+       FOR UPDATE
+    `;
+
+    const alvo = rotuloDoAlvo(unidade);
+    // 409 e não 404: a saída existe, o ESTADO dela é que recusa.
+    if (abertas.length === 0) {
+      throw new AppError(`Esta entrega de "${item.name}" para ${alvo} já foi devolvida.`, 409);
+    }
+    const pedidas = data.qty ?? abertas.length;
+    if (pedidas > abertas.length) {
       throw new AppError(
-        existente.returnedAt
-          ? `Esta unidade já foi devolvida em ${diaEmPortugues(existente.returnedAt)}.`
-          : 'Esta unidade já foi devolvida.',
+        `Só ${quantas(abertas.length, 'unidade', 'unidades')} desta entrega de "${item.name}" `
+        + `${abertas.length === 1 ? 'ainda está' : 'ainda estão'} com ${alvo}.`,
         409,
       );
     }
 
-    const unidade = await tx.stockMovement.findUniqueOrThrow({
-      where: { id: movementId },
-      select: STOCK_MOVEMENT_SELECT,
-    });
+    // O DIA da devolução não antecede o DIA da entrega — os dois no calendário
+    // de Brasília, que é o que a tela mostra.
+    const dia = data.checkinAt ?? hojeNoBrasil();
+    const diaDaEntrega = hojeNoBrasil(unidade.checkoutAt);
+    if (dia < diaDaEntrega) {
+      throw new AppError(
+        `A devolução (${diaEmPortugues(dia)}) não pode ser antes da entrega (${diaEmPortugues(diaDaEntrega)}).`,
+        422,
+      );
+    }
 
-    // O nome do item e o de quem devolveu, por escrito, como na saída.
-    // `findUnique` e não `findFirst`: item com unidade fora não vai para a
-    // lixeira (`delete-stock-item`), mas a auditoria não depende disso.
-    const item = await tx.stockItem.findUniqueOrThrow({ where: { id: unidade.itemId }, select: { name: true } });
+    // No MESMO dia, o instante do dia passado (meio-dia) pode cair antes da hora
+    // real da entrega — a feita às 23h. A devolução nunca fica antes dela: é o
+    // CHECK `stock_movements_devolucao_nao_antecede_saida`.
+    const instante = instanteDoDia(dia);
+    const returnedAt = instante < unidade.checkoutAt ? unidade.checkoutAt : instante;
+
+    const ids = abertas.slice(0, pedidas).map((linha) => linha.id);
+    // O DIA e o INSTANTE do registro: o instante é o que separa esta devolução
+    // de outra da mesma saída no mesmo dia — o dia passado é sempre o meio-dia.
+    await tx.stockMovement.updateMany({ where: { id: { in: ids } }, data: { returnedAt, returnRecordedAt: new Date() } });
 
     await recordAudit(tx, {
       entityType: 'StockItem',
@@ -74,14 +109,15 @@ export async function checkinStock(movementId: string, ator: Ator) {
       entityLabel: item.name,
       action: 'CHECKIN',
       changes: {
-        movementId: unidade.id,
+        movementIds: ids,
+        qty: ids.length,
         targetType: unidade.targetType,
         targetId: unidade.targetPersonId ?? unidade.targetWorkstationId,
-        targetName: unidade.targetPerson?.name ?? unidade.targetWorkstation?.name ?? unidade.targetWorkstationName,
-        returnedAt: devolvidaEm.toISOString(),
+        targetName: alvo,
+        returnedAt: returnedAt.toISOString(),
       },
     }, ator);
 
-    return unidade;
+    return { devolvidas: ids.length, ficaram: abertas.length - ids.length, returnedAt };
   });
 }

@@ -1,9 +1,8 @@
 import { z } from 'zod';
 import {
-  dataOpcional, emailOpcional, nomeObrigatorio, textoOpcional,
+  dataOpcional, diaNaoFuturo, emailOpcional, nomeObrigatorio, textoOpcional,
   uuidObrigatorio, uuidOpcional, valorMonetarioOpcional,
 } from '../../shared/fields.schema';
-import { hojeNoBrasil } from '../../shared/hoje.helper';
 
 // Contrato de entrada das rotas de licença.
 //
@@ -23,18 +22,6 @@ const quantidadeObrigatoria = z.number('quantidade comprada deve ser um número'
   .int('quantidade comprada deve ser um número inteiro')
   .min(1, 'quantidade comprada: mínimo de 1')
   .max(MAX_LICENCAS, `quantidade comprada: máximo de ${MAX_LICENCAS}`);
-
-/**
- * O dia de uma entrega ou de uma devolução: hoje ou antes, contra o dia de
- * BRASÍLIA. Não é o `dataNaoFutura` de `fields.schema.ts`, que compara com a
- * meia-noite UTC e recusaria "hoje" depois das 21h — o defeito que ainda está
- * pendente lá (`hoje.helper.ts`).
- */
-const diaNaoFuturo = (rotulo: string) =>
-  dataOpcional(rotulo).refine(
-    (valor) => !valor || valor <= hojeNoBrasil(),
-    `${rotulo} não pode ser uma data futura`,
-  );
 
 const camposComuns = {
   expirationDate: dataOpcional('data de vencimento'),
@@ -148,17 +135,17 @@ export const checkinLicenseSchema = z.strictObject({
  */
 export const licenseFiltersSchema = z.strictObject({
   categoryId: z.uuid('categoria: identificador inválido').optional(),
-  /** As abas: `atuais` (o que não encerrou) e `encerradas`. */
-  view: z.enum(['atuais', 'encerradas'], 'view inválida: use atuais ou encerradas').default('atuais'),
-  /** Um dos três status da aba Atuais. `EXPIRADA` é a que a tela chama de vencida. */
-  status: z.enum(['ATIVA', 'VENCENDO', 'EXPIRADA'], 'status inválido: use ATIVA, VENCENDO ou EXPIRADA').optional(),
+  /**
+   * Um dos quatro status. Sem abas (AF): a encerrada fica na mesma lista, e
+   * `ENCERRADA` é o filtro que a separa. `EXPIRADA` é a que a tela chama de
+   * vencida.
+   */
+  status: z.enum(
+    ['ATIVA', 'VENCENDO', 'EXPIRADA', 'ENCERRADA'],
+    'status inválido: use ATIVA, VENCENDO, EXPIRADA ou ENCERRADA',
+  ).optional(),
   /** `sim`: só as que alguém ainda usa — a encerrada em uso, do alerta. */
   emUso: z.enum(['sim'], 'emUso inválido: use sim').optional(),
-}).refine((filtros) => !(filtros.status && filtros.view === 'encerradas'), {
-  // 422 e não silêncio: ignorar o filtro mostraria a aba inteira como se fosse
-  // o recorte pedido.
-  message: 'status: o filtro de status vale só para a aba atuais',
-  path: ['status'],
 });
 
 export type CreateLicenseData = z.infer<typeof createLicenseSchema>;
@@ -168,5 +155,4 @@ export type CheckinLicenseData = z.infer<typeof checkinLicenseSchema>;
 export type CheckoutKeyData = z.infer<typeof checkoutKeySchema>;
 export type ChaveNoCorpo = NonNullable<UpdateLicenseData['keys']>[number];
 export type LicenseFilters = z.infer<typeof licenseFiltersSchema>;
-export type RecorteDaLicenca = LicenseFilters['view'];
 export type StatusDoFiltro = NonNullable<LicenseFilters['status']>;

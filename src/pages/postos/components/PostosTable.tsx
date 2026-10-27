@@ -60,7 +60,7 @@ export default function PostosTable({
               <tr
                 key={posto.id}
                 onClick={() => onAbrir(posto)}
-                className={`cursor-pointer transition-colors ${
+                className={`cursor-pointer transition-colors group ${
                   // O posto vago fica marcado na LINHA inteira, não num ícone
                   // no canto: é o sinal que a tela existe para dar, e ele
                   // precisa ser visível de relance numa lista de vinte mesas.
@@ -73,11 +73,10 @@ export default function PostosTable({
                 }`}
               >
                 <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <span className="font-medium">{posto.name}</span>
-                    {/* Selo discreto, sem cor: desativado não é alarme como o
-                        vago, é um fato sobre a mesa — ela está na lista porque
-                        tem passado, não porque espera alguém. */}
+                    {/* A marca das Configurações, ao lado do nome: é onde o olho
+                        está ao procurar a linha. */}
                     {estaDesativado(posto) && <SeloDesativado />}
                   </div>
                 </td>
@@ -127,7 +126,9 @@ export default function PostosTable({
 
                 {podeEditar && (
                   <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-3">
+                    {/* Visível ao passar o mouse, ao navegar por Tab
+                        (`focus-within`) e sempre no toque, como na `CatalogTable`. */}
+                    <div className="flex items-center justify-end gap-3 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
                       <button
                         onClick={acao(onEditar, posto)}
                         title="Editar"
