@@ -44,7 +44,7 @@ export const assetModelSpec: CatalogSpec = {
   // Sem isto o modelo aceitava qualquer categoria pela API (o filtro "só de
   // ATIVO" morava só na tela), e o ativo herda a categoria do modelo: um PUT
   // movia todos os ativos dele para uma categoria de licença ou de estoque, onde
-  // nenhum filtro de Ativos os encontra. E um id inexistente caía no P2003, que
+  // nenhum filtro de Computadores os encontra. E um id inexistente caía no P2003, que
   // responde "em uso por outro cadastro" — status e frase errados para "não
   // existe".
   async beforeWrite(client, id, data) {

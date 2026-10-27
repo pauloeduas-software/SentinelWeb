@@ -40,7 +40,7 @@ afterAll(async () => {
 
 /**
  * CÓPIA FIEL de `valoresIniciais(null)` de
- * `src/pages/ativos/components/AssetFormModal.tsx`.
+ * `src/pages/computadores/components/AssetFormModal.tsx`.
  *
  * Os dois `ReferenceSelect` obrigatórios (modelo e status) chegam preenchidos
  * porque o formulário não envia sem eles — e o status já NASCE preenchido com
@@ -207,8 +207,8 @@ describe('POST /api/users com o corpo literal do UserFormModal', () => {
   });
 });
 
-describe('POST /api/people com o corpo literal da aba Colaboradores', () => {
-  /** Os `campos` da spec `colaborador` (src/pages/configuracoes/specs/index.ts), em branco. */
+describe('POST /api/people com o corpo literal da página Colaboradores', () => {
+  /** Os `campos` da spec `colaborador` (src/pages/colaboradores/specs/index.ts), em branco. */
   function corpoDoFormularioDeColaborador(sobrescrever: Record<string, unknown> = {}) {
     return { name: '', email: '', ...sobrescrever };
   }

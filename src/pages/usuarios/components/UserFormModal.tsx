@@ -14,8 +14,8 @@ import type { UserInput } from '../../../domain/user/user.queries';
 // senha" — em branco mantém a atual, preenchida troca e encerra as sessões
 // abertas da pessoa. As regras de tamanho são do servidor.
 //
-// Quem só RECEBE equipamento não é usuário: é colaborador, cadastrado na aba
-// Colaboradores de Configurações.
+// Quem só RECEBE equipamento não é usuário: é colaborador, cadastrado na página
+// Colaboradores.
 
 interface UserFormModalProps {
   user?: User | null;

@@ -44,7 +44,7 @@ export interface CheckinInput {
   checkinNotes?: string;
   /**
    * Só fecha a posse se ela aponta para este posto (409 se não). A ficha
-   * do posto manda o id dela; a tela de Ativos, que olha a posse, não manda.
+   * do posto manda o id dela; a tela Computadores, que olha a posse, não manda.
    */
   targetWorkstationId?: string;
 }
@@ -66,7 +66,7 @@ export function useAssetAssignmentsQuery(assetId: string | null) {
  *
  *   posses  — a linha que acabou de abrir ou fechar;
  *   ativos  — a coluna Responsável e o status são consequência da operação, e
- *             um ativo entregue a um posto SAI da listagem `/ativos`
+ *             um ativo entregue a um posto SAI da listagem `/computadores`
  *             (`asset-filters.helper.ts`), então a tabela muda de tamanho;
  *   postos  — a ficha do posto lista os ativos entregues a ele, conta quantos
  *             são e deriva o selo de POSTO VAGO desses dois números.
@@ -79,7 +79,7 @@ export function useAssetAssignmentsQuery(assetId: string | null) {
  * sobre o número de antes.
  *
  * A entrega entra pelo mesmo caminho por simetria, e não por defeito observado:
- * entregar é feito em `/ativos`, com `/postos` desmontada, e `staleTime: 0` já
+ * entregar é feito em `/computadores`, com `/postos` desmontada, e `staleTime: 0` já
  * faz a ficha reler ao montar.
  *
  * É o mesmo desenho do `invalidarPosseDerivada` da ocupação, pelo mesmo motivo:

@@ -1,5 +1,5 @@
 import {
-  Armchair, Boxes, Database, Radar, ScrollText, SlidersHorizontal, Users, type LucideIcon,
+  Armchair, Boxes, Contact, Database, Radar, ScrollText, SlidersHorizontal, Users, type LucideIcon,
 } from 'lucide-react';
 
 // O MENU, declarado em um lugar só — a barra lateral desenha, o cabeçalho lê
@@ -59,24 +59,34 @@ interface GrupoDeMenu {
 // "Config" por ter sobrado ali. Em coluna há onde escrever o título da seção, e
 // a ordem passa a dizer algo — operação diária em cima, sistema embaixo, porque
 // é essa a frequência de uso.
+//
+// AS SEÇÕES SÃO POR ASSUNTO (AH): o que se patrimonia e onde fica, o que se
+// conta e se distribui, o que o agente vê, e quem recebe.
 export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
   {
-    titulo: 'Operação',
+    titulo: 'Ativos',
     itens: [
-      // ATIVOS É O PRIMEIRO ITEM, e antes dele havia Telemetria em `/`. A tela
-      // da frota saiu: ela media as máquinas sem saber de quem são, e a medida
-      // foi para a ficha do ativo e a do posto, onde a máquina tem nome. A raiz
-      // passou a redirecionar para cá (src/App.tsx), então nenhum item aponta
-      // mais para `/`.
-      { to: '/ativos', label: 'Ativos', icon: Database, cargo: 'ADMIN' },
-      // Logo depois de Ativos: é a mesma operação vista do outro lado — o ativo
+      // COMPUTADORES É O PRIMEIRO ITEM, e antes dele havia Telemetria em `/`. A
+      // tela da frota saiu: ela media as máquinas sem saber de quem são, e a
+      // medida foi para a ficha do ativo e a do posto, onde a máquina tem nome.
+      // A raiz passou a redirecionar para cá (src/App.tsx), então nenhum item
+      // aponta mais para `/`. Chamava-se Ativos, e virou o nome da seção: o que
+      // a tela lista são computadores — ativo é computador (decisão I).
+      { to: '/computadores', label: 'Computadores', icon: Database, cargo: 'ADMIN' },
+      // Logo depois: é a mesma operação vista do outro lado — o computador
       // está na mesa, e a mesa é de quem a ocupa (docs/referencia/modelo-de-posse.md).
       { to: '/postos', label: 'Postos', icon: Armchair, cargo: 'ADMIN' },
-      // Depois de Postos: o que sai do almoxarifado costuma ir para a mesa
-      // (docs/decisoes/estoque.md).
+    ],
+  },
+  {
+    // O que se CONTA em vez de patrimoniar: quantos há e com quem estão os
+    // outros — a mesma lógica nos dois (AE).
+    titulo: 'Recursos',
+    itens: [
+      // O que sai do almoxarifado costuma ir para a mesa (docs/decisoes/estoque.md).
       { to: '/estoque', label: 'Estoque', icon: Boxes, cargo: 'ADMIN' },
-      // Depois de Estoque porque licença também é posse: cada entrega é uma
-      // linha, a um colaborador ou a um computador (AA).
+      // Licença também é posse: cada entrega é uma linha, a um colaborador ou a
+      // um computador (AA).
       { to: '/licencas', label: 'Licenças', icon: ScrollText, cargo: 'ADMIN' },
     ],
   },
@@ -89,15 +99,25 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
     ],
   },
   {
-    titulo: 'Gestão',
+    // Quem RECEBE equipamento. Saiu de Configurações por ser operação de toda
+    // semana, não referência (AH). Seção à parte de Gestão de propósito: conta
+    // de login e colaborador são coisas diferentes (U).
+    titulo: 'Pessoas',
     itens: [
-      { to: '/usuarios', label: 'Usuários', icon: Users, cargo: 'ADMIN' },
+      { to: '/colaboradores', label: 'Colaboradores', icon: Contact, cargo: 'ADMIN' },
     ],
   },
   {
     titulo: 'Sistema',
     itens: [
       { to: '/configuracoes', label: 'Configurações', icon: SlidersHorizontal, cargo: 'ADMIN' },
+    ],
+  },
+  {
+    // A última, por escolha do usuário (AH).
+    titulo: 'Gestão',
+    itens: [
+      { to: '/usuarios', label: 'Usuários', icon: Users, cargo: 'ADMIN' },
     ],
   },
 ];
@@ -108,13 +128,13 @@ const ITENS_DE_MENU: readonly ItemDeMenu[] = GRUPOS_DE_MENU.flatMap((grupo) => g
 /**
  * Este item está ativo para o caminho atual?
  *
- * PREFIXO, e não igualdade: a tela de detalhe do ativo mora em `/ativos/:id` e
- * precisa manter *Ativos* aceso — com igualdade, o menu apagava inteiro assim
+ * PREFIXO, e não igualdade: a tela de detalhe do ativo mora em `/computadores/:id` e
+ * precisa manter *Computadores* aceso — com igualdade, o menu apagava inteiro assim
  * que se abria um ativo.
  *
  * O prefixo é comparado com a BARRA no fim (`${to}/`), e é isso que torna a raiz
  * um caso comum em vez de especial: havia aqui um ramo `to === '/'` pela
- * preocupação de que todo caminho comece com `/`, mas `'/ativos'.startsWith('//')`
+ * preocupação de que todo caminho comece com `/`, mas `'/computadores'.startsWith('//')`
  * é falso — o ramo nunca mudou resposta nenhuma. Ele saiu junto com o item de
  * Telemetria, que era o único a morar em `/`.
  */
@@ -125,8 +145,8 @@ export function itemEstaAtivo(to: string, caminho: string): boolean {
 /**
  * O nome da tela atual, para o cabeçalho.
  *
- * O item MAIS específico ganha: `/ativos/:id` casa `/ativos`, e se um dia houver
- * `/ativos/algo` as duas casariam — a mais longa é a certa.
+ * O item MAIS específico ganha: `/computadores/:id` casa `/computadores`, e se um dia houver
+ * `/computadores/algo` as duas casariam — a mais longa é a certa.
  */
 export function nomeDaTela(caminho: string): string | null {
   const casados = ITENS_DE_MENU.filter((item) => itemEstaAtivo(item.to, caminho));

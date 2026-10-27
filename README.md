@@ -49,18 +49,21 @@ Toda resposta leva `X-Request-Id`, que aparece na linha de log da requisição e
 
 ## 🚀 Telas
 
-| Rota | O que é | Cargo mínimo |
-| --- | --- | --- |
-| `/ativos` | Listagem de ativos (computadores) — filtros, busca por etiqueta/série, ações de ciclo de vida | ADMIN |
-| `/ativos/:id` | Ficha do ativo — abas **Detalhes**, **Posse**, **Histórico**, **Licenças**, **Máquina** (telemetria e comando, quando há agente) | ADMIN |
-| `/postos` | Postos de trabalho (mesas), cada um numa localização — quem está, quantos ativos, se está vago; criar, editar, desativar e excluir posto | ADMIN |
-| `/postos/:id` | Ficha do posto — ocupantes (adicionar, corrigir o turno, encerrar), o computador da mesa (com telemetria), ativos entregues e estoque da mesa | ADMIN |
-| `/estoque` | O que tem quantidade em vez de patrimônio — saldo, entrada/baixa, saída e devolução por unidade | ADMIN |
-| `/licencas` | Contratos de software: quantidade comprada, entregas a colaborador ou computador, abas Atuais e Encerradas | ADMIN |
-| `/descobertas` | O que o agente vê e o cadastro não sabe — máquinas sem vínculo, vínculo manual, fila de sugestões e "Reconciliar agora" | ADMIN |
-| `/usuarios` | Quem opera o sistema — hoje só Administrador, o único cargo (Z). O cadastro pede nome, e-mail e a senha com que a pessoa entra (o login é o e-mail) | ADMIN |
-| `/configuracoes` | As seis abas do catálogo — categorias, status, fabricantes, modelos, localizações e **colaboradores** (quem recebe equipamento). A configuração da descoberta fica em `/descobertas` | ADMIN |
-| `/configuracoes/colaboradores/:id` | Ficha do colaborador — postos ocupados, itens de estoque no nome dele e histórico | ADMIN |
+Na ordem do menu, que se agrupa por assunto ([AH](./docs/decisoes/acesso.md#ah--o-menu-por-assunto-o-colaborador-ganha-página-própria-e-ativos-vira-computadores)). Os endereços antigos — `/ativos`, `/itam`, `/users/:id` e `/configuracoes/colaboradores/:id` — redirecionam para os novos.
+
+| Seção do menu | Rota | O que é | Cargo mínimo |
+| --- | --- | --- | --- |
+| **Ativos** | `/computadores` | Listagem de ativos (computadores) — filtros, busca por etiqueta/série, ações de ciclo de vida | ADMIN |
+|  | `/computadores/:id` | Ficha do ativo — abas **Detalhes**, **Posse**, **Histórico**, **Licenças**, **Máquina** (telemetria e comando, quando há agente) | ADMIN |
+|  | `/postos` | Postos de trabalho (mesas), cada um numa localização — quem está, quantos ativos, se está vago; criar, editar, desativar e excluir posto | ADMIN |
+|  | `/postos/:id` | Ficha do posto — ocupantes (adicionar, corrigir o turno, encerrar), o computador da mesa (com telemetria), ativos entregues e estoque da mesa | ADMIN |
+| **Recursos** | `/estoque` | O que tem quantidade em vez de patrimônio — o total, quantos em uso e com quem; entrega e devolução a colaborador ou posto, com o dia | ADMIN |
+|  | `/licencas` | Contratos de software: quantidade comprada, chaves, entregas a colaborador ou computador; a encerrada fica na lista, com Reabrir | ADMIN |
+| **Convergência** | `/descobertas` | O que o agente vê e o cadastro não sabe — máquinas sem vínculo, vínculo manual, fila de sugestões e "Reconciliar agora" | ADMIN |
+| **Pessoas** | `/colaboradores` | Quem recebe equipamento — criar, editar, desativar, excluir para a lixeira e restaurar. Não entra no sistema: quem opera é usuário | ADMIN |
+|  | `/colaboradores/:id` | Ficha do colaborador — postos ocupados, estoque e licenças no nome dele e histórico | ADMIN |
+| **Sistema** | `/configuracoes` | As cinco abas de referência — categorias, status, fabricantes, modelos e localizações. A configuração da descoberta fica em `/descobertas` | ADMIN |
+| **Gestão** | `/usuarios` | Quem opera o sistema — hoje só Administrador, o único cargo (Z). O cadastro pede nome, e-mail e a senha com que a pessoa entra (o login é o e-mail) | ADMIN |
 
 A convergência RMM × ITAM — vínculo entre a máquina que o agente descobre e o ativo cadastrado,
 telemetria em tempo real e comando remoto — vive dentro das fichas do ativo e do posto, não numa

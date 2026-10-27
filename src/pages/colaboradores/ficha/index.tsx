@@ -7,8 +7,8 @@ import { caminhoDoItem, textoDeUnidades } from '../../helpers/estoque.helper';
 import { caminhoDaLicenca, textoDoPrazo } from '../../helpers/licenca.helper';
 
 // FICHA DO COLABORADOR — quem é a pessoa, os POSTOS que ela ocupa, o estoque e
-// as licenças no nome dela, e o HISTÓRICO (docs/referencia/modelo-de-posse.md). Abre da aba
-// Colaboradores de Configurações.
+// as licenças no nome dela, e o HISTÓRICO (docs/referencia/modelo-de-posse.md). Abre da
+// página Colaboradores.
 //
 // Os postos aparecem inclusive quando não têm ativo nenhum entregue: é uma
 // ocupação aberta, e é ela que a desativação cobra.
@@ -20,8 +20,8 @@ import { caminhoDaLicenca, textoDoPrazo } from '../../helpers/licenca.helper';
 const CELULA = 'px-6 py-3';
 const CABECALHO = 'px-6 py-3 font-normal';
 
-/** Volta para Configurações já na aba Colaboradores (`useCatalog` lê o `?aba=`). */
-const VOLTAR = '/configuracoes?aba=people';
+/** Volta para a lista de Colaboradores. */
+const VOLTAR = '/colaboradores';
 
 export default function ColaboradorPage() {
   const {

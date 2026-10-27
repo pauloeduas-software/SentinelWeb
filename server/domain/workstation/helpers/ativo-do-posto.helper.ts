@@ -5,7 +5,7 @@ import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase
 // NO MÁXIMO UM ATIVO POR POSTO DE TRABALHO.
 //
 // ═════════════════════════════════════════════════════════════════════════════
-// ATIVO É COMPUTADOR. Nada que não seja máquina é cadastrado em /ativos: monitor,
+// ATIVO É COMPUTADOR. Nada que não seja máquina é cadastrado em /computadores: monitor,
 // teclado, mouse e cabo são ESTOQUE, por quantidade, sem patrimônio individual.
 // Com essa definição a regra do posto é sobre o ativo, e não sobre "ativo com
 // máquina vinculada" — o agente instalado ou não instalado não muda o que o

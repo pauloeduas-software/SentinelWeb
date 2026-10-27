@@ -35,7 +35,7 @@ const ROTULO = 'text-text-secondary uppercase tracking-widest text-[10px]';
  * outro. O que acompanha a máquina (dock, monitor, cabo) é estoque.
  *
  * `rota` é o slug de `/options`. Para pessoas é `people` (GET /api/people/options,
- * a aba Colaboradores do catálogo) — não `users`, que é quem opera o sistema.
+ * a página Colaboradores) — não `users`, que é quem opera o sistema.
  */
 const ABAS: readonly {
   tipo: AlvoDaPosse;
@@ -89,7 +89,7 @@ export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }
   // levar 422 sai da lista. O `/options` filtra por UM tipo e não por "todos
   // menos um"; pedir a lista dos disponíveis e tirá-los é o recorte que a rota
   // permite. É a mesma consulta (e a mesma chave de cache) que a listagem usa
-  // para o status padrão do cadastro — na tela de Ativos ela já está pronta.
+  // para o status padrão do cadastro — na tela Computadores ela já está pronta.
   const { data: disponiveis } = useCatalogOptionsQuery('status-labels', 'DEPLOYABLE');
   const idsDisponiveis = (disponiveis ?? []).map((opcao) => opcao.id);
 

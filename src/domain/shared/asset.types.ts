@@ -8,7 +8,7 @@ import type { ListParams } from './list.types';
 /**
  * Por que um ativo saiu do patrimônio. Espelha o enum `RetiredReason`.
  *
- * Os rótulos em português ficam na tela (pages/ativos/helpers), não aqui:
+ * Os rótulos em português ficam na tela (pages/computadores/helpers), não aqui:
  * este arquivo é o CONTRATO com a API, e o contrato são os valores que viajam.
  */
 export type MotivoDaSaida =
@@ -105,7 +105,7 @@ export interface Asset {
    * calculada pelo servidor para a tela não fazer uma consulta por ativo.
    *
    * Vem no contrato de `GET /api/assets`. Continua sendo lida por
-   * `resumoDaPosse()` (pages/ativos/helpers), que trata a ausência: entre
+   * `resumoDaPosse()` (pages/computadores/helpers), que trata a ausência: entre
    * a subida do frontend e a do backend da F4, o campo simplesmente não chega.
    */
   posse: PosseResolvida | null;
@@ -120,7 +120,7 @@ export interface Asset {
  * vez é baixado (`retiredAt`).
  *
  * Os rótulos em português e a ajuda de cada um moram em
- * `pages/configuracoes/specs/catalog-ui.types.ts` — aqui é só o contrato.
+ * `pages/components/catalogo/catalog-ui.types.ts` — aqui é só o contrato.
  */
 type TipoDeStatus = 'DEPLOYABLE' | 'IN_USE' | 'PENDING' | 'UNDEPLOYABLE';
 

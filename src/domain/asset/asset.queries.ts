@@ -51,7 +51,7 @@ export function useAssetsQuery(params: AssetListParams) {
 }
 
 /**
- * UM ativo por id — a tela de detalhe (`/ativos/:id`).
+ * UM ativo por id — a tela de detalhe (`/computadores/:id`).
  *
  * `enabled` porque a rota entrega `id` como `string | undefined` no primeiro
  * render: sem ele, a primeira consulta iria para `/assets/undefined` e voltaria

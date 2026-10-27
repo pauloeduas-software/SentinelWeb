@@ -165,14 +165,14 @@ export default function PostoDetalheModal({
             <p className="text-text-tertiary text-[10px] leading-relaxed">
               São os ativos cuja posse aberta aponta para este posto — não os que estão
               guardados na localização dele. Um ativo pode estar EM um lugar sem ser DO lugar.
-              {/* A ENTREGA continua sendo na tela de Ativos, e a DEVOLUÇÃO não é
+              {/* A ENTREGA continua sendo na tela Computadores, e a DEVOLUÇÃO não é
                   mais: ela saiu de lá para cá porque o ativo entregue a um posto
-                  saiu da listagem de Ativos, e a operação ficou na tela que já não
+                  saiu da listagem de Computadores, e a operação ficou na tela que já não
                   mostra o ativo. A entrega não tem esse problema — o ativo está na
                   listagem justamente até ser entregue. */}
               {desativado
-                ? ' Posto desativado: não recebe entrega nova. A devolução continua, aqui ou em Ativos.'
-                : ' A entrega é feita em Ativos; a devolução, aqui ou lá.'}
+                ? ' Posto desativado: não recebe entrega nova. A devolução continua, aqui ou em Computadores.'
+                : ' A entrega é feita em Computadores; a devolução, aqui ou lá.'}
             </p>
 
             {erroDaDevolucao && (
@@ -200,9 +200,9 @@ export default function PostoDetalheModal({
                         {/* A ETIQUETA LEVA À FICHA DO ATIVO. É o caminho de volta
                             do par: a ficha do ativo leva ao posto pelo nome da
                             mesa, e a do posto leva ao ativo pela etiqueta. Sem
-                            ele, um ativo que saiu da listagem de /ativos só se
+                            ele, um ativo que saiu da listagem de /computadores só se
                             alcançava por busca ou por URL decorada. */}
-                        <Link to={`/ativos/${ativo.id}`} className="text-status-info hover:underline">
+                        <Link to={`/computadores/${ativo.id}`} className="text-status-info hover:underline">
                           {ativo.assetTag}
                         </Link>
                         {/* Todo ativo é computador; o que a linha avisa é o
@@ -257,7 +257,7 @@ export default function PostoDetalheModal({
                             Nenhum ativo entregue a este posto.
                             <span className="block mt-3 text-[10px] leading-relaxed">
                               A entrega é feita em{' '}
-                              <Link to="/ativos" className="text-status-success hover:underline">Ativos</Link>
+                              <Link to="/computadores" className="text-status-success hover:underline">Computadores</Link>
                               , escolhendo este posto como destino.
                             </span>
                           </>

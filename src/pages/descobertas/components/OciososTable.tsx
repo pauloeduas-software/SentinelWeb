@@ -44,7 +44,7 @@ export default function OciososTable({ ociosos }: Props) {
         {ociosos.map((ativo) => (
           <tr key={ativo.assetId} className="border-b border-border-sutil last:border-0">
             <td className="px-3 py-2">
-              <Link to={`/ativos/${ativo.assetId}`} className="text-status-info hover:underline">
+              <Link to={`/computadores/${ativo.assetId}`} className="text-status-info hover:underline">
                 {ativo.assetTag}
               </Link>
               {ativo.name && <span className="text-text-tertiary"> — {ativo.name}</span>}

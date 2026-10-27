@@ -1,4 +1,4 @@
-import type { OpcaoFixa } from '../specs/catalog-ui.types';
+import type { OpcaoFixa } from './catalog-ui.types';
 
 // OS BOTÕES QUE SEPARAM A ABA POR TIPO — "Todos / Ativo / Estoque / Licença" nas
 // categorias. Aparece só na aba cuja spec declara `filtroPorTipo`.

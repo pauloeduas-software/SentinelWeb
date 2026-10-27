@@ -3,7 +3,7 @@ import { prisma } from '../../server/core/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { cenarioDePosse, criarAtivo, criarColaborador } from '../helpers/fixtures';
 
-// O COLABORADOR — a sexta aba de Configurações, e a única com LIXEIRA.
+// O COLABORADOR — a sexta tabela do catálogo, com página própria, e a única com LIXEIRA.
 //
 // Ele tem histórico de posse PRÓPRIO ("o que já esteve com a Laura"), e
 // recadastrá-lo depois de excluir o partiria em dois. Então excluir manda para

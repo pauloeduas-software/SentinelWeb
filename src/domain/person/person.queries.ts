@@ -4,7 +4,7 @@ import type { EventoDaPessoa, PessoaDaFicha } from '../shared/person.types';
 import type { ListEnvelope } from '../shared/list.types';
 
 // A FICHA DO COLABORADOR — só leitura. O cadastro (listar, criar, editar,
-// desativar, excluir) é a aba Colaboradores de Configurações, pelo catálogo
+// desativar, excluir) é a página Colaboradores, pelo catálogo
 // genérico (`catalog.queries.ts`, slug `people`).
 export const personKeys = {
   all: ['people'] as const,

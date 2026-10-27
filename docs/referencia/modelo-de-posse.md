@@ -67,7 +67,7 @@ por quantidade. E não há alvo **localização**: ela diz onde a coisa está
 guardada, não quem a recebeu
 ([Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)).
 
-A pessoa é o **colaborador** (`Person`, a aba Colaboradores de Configurações) — nunca
+A pessoa é o **colaborador** (`Person`, a página Colaboradores) — nunca
 a conta de quem opera o sistema, que é `User` e não recebe equipamento
 ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)).
 

@@ -10,7 +10,7 @@ import type { CatalogSpec } from './catalog-spec.types';
 // uma tabela nova é escrever a spec e incluí-la aqui; nenhuma rota é escrita à mão.
 //
 // A ordem é a que a tela de Configurações usa nas abas: do que é mais usado para
-// o que é mais raro.
+// o que é mais raro. O colaborador, o último, tem página própria (AH).
 export const CATALOG_SPECS: readonly CatalogSpec[] = [
   categorySpec,
   statusLabelSpec,

@@ -91,7 +91,7 @@ export function usePostos() {
   };
 
   // DESATIVAR/ATIVAR e EXCLUIR são os botões da linha, com as mesmas frases de
-  // Configurações (`configuracoes/hooks/useCatalog.ts`): o posto segue a regra
+  // Configurações (`components/catalogo/useCatalog.ts`): o posto segue a regra
   // do status. Confirma só na ida — reativar não tem o que perder.
   const handleAlternar = async (posto: Posto) => {
     if (posto.isActive && !confirm(
@@ -123,7 +123,7 @@ export function usePostos() {
   /**
    * DEVOLVER O ATIVO DA MESA, daqui mesmo.
    *
-   * Antes a devolução só existia na tela de Ativos — e o ativo entregue a um
+   * Antes a devolução só existia na tela Computadores — e o ativo entregue a um
    * posto SAIU dela (`asset-filters.helper.ts`). O computador da Mesa 1 ficava
    * visível só nesta ficha, e a única operação possível sobre ele estava na tela
    * que não o mostrava mais: para devolvê-lo era preciso chegar à ficha do ativo
@@ -132,7 +132,7 @@ export function usePostos() {
    *
    * SÓ O ESCOPO no corpo, e mais nada: o servidor resolve o status de volta para
    * o primeiro `DEPLOYABLE` (`checkin-asset.usecase.ts`). O formulário completo
-   * da devolução — status de volta e observação — continua na tela de Ativos,
+   * da devolução — status de volta e observação — continua na tela Computadores,
    * onde cabe; aqui o que se quer é tirar o equipamento DESTA mesa.
    *
    * E é por isso que o `targetWorkstationId` vai: a ficha pode estar velha. Entre
@@ -146,7 +146,7 @@ export function usePostos() {
   const handleDevolver = async (ativo: AtivoDoPosto) => {
     if (!postoId) return;
     const qual = ativo.name ? `${ativo.assetTag} (${ativo.name})` : ativo.assetTag;
-    if (!confirm(`Devolver ${qual} ao estoque? Ele sai deste posto e volta para a lista de Ativos.`)) return;
+    if (!confirm(`Devolver ${qual} ao estoque? Ele sai deste posto e volta para a lista de Computadores.`)) return;
 
     await devolver.mutateAsync({ id: ativo.id, data: { targetWorkstationId: postoId } });
   };

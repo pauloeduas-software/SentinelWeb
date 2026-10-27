@@ -51,7 +51,7 @@ export default function VinculadasTable({ maquinas, carregando }: Props) {
                   duas revalidações; o rótulo diz isso em vez de quebrar. */}
               {maquina.asset ? (
                 <>
-                  <Link to={`/ativos/${maquina.asset.id}`} className="text-status-info hover:underline">
+                  <Link to={`/computadores/${maquina.asset.id}`} className="text-status-info hover:underline">
                     {maquina.asset.assetTag}
                   </Link>
                   {maquina.asset.name && <span className="text-text-tertiary"> — {maquina.asset.name}</span>}

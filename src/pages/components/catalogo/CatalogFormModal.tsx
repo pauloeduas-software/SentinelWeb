@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import ReferenceSelect from '../../components/ReferenceSelect';
-import type { CampoSpec, CatalogUiSpec } from '../specs/catalog-ui.types';
+import ReferenceSelect from '../ReferenceSelect';
+import type { CampoSpec, CatalogUiSpec } from './catalog-ui.types';
 import type { CatalogRow } from '../../../domain/shared/catalog.types';
 
 // Valor inicial de cada campo. Tudo vira string: é o que o `<input>`
