@@ -67,11 +67,14 @@ function assertAlvoCoerente(data: CheckoutLicenseData): AlvoDaEntrega {
  * lixeira é 404. O ESTADO que recusa é 409: ativo baixado, colaborador
  * desativado.
  */
-async function assertAlvoApto(client: ClienteLicenca, alvo: AlvoDaEntrega): Promise<string> {
+async function assertAlvoApto(
+  client: ClienteLicenca,
+  alvo: AlvoDaEntrega,
+): Promise<{ nome: string; compra: Date | null }> {
   if (alvo.tipo === 'ASSET') {
     const ativo = await client.asset.findFirst({
       where: { id: alvo.id },
-      select: { id: true, assetTag: true, name: true, retiredAt: true },
+      select: { id: true, assetTag: true, name: true, retiredAt: true, purchaseDate: true },
     });
     if (!ativo) throw new AppError('Ativo não encontrado.', 404);
 
@@ -80,7 +83,7 @@ async function assertAlvoApto(client: ClienteLicenca, alvo: AlvoDaEntrega): Prom
     if (ativo.retiredAt) {
       throw new AppError(`O ativo ${ativo.assetTag} teve baixa e não pode receber licença.`, 409);
     }
-    return ativo.name ? `${ativo.assetTag} — ${ativo.name}` : ativo.assetTag;
+    return { nome: ativo.name ? `${ativo.assetTag} — ${ativo.name}` : ativo.assetTag, compra: ativo.purchaseDate };
   }
 
   const pessoa = await client.person.findFirst({
@@ -95,7 +98,7 @@ async function assertAlvoApto(client: ClienteLicenca, alvo: AlvoDaEntrega): Prom
   if (!pessoa.isActive) {
     throw new AppError(`${pessoa.name} está desativado(a) e não pode receber licença.`, 409);
   }
-  return pessoa.name;
+  return { nome: pessoa.name, compra: null };
 }
 
 /** As entregas daquele alvo, no `where`. */
@@ -127,7 +130,9 @@ async function assertAlvoSemEntregaAberta(
 /**
  * O DIA DA ENTREGA contra o passado da licença — e o instante a gravar.
  *
- * O dia não antecede a data da compra, nem o dia em que o mesmo alvo devolveu
+ * O dia não antecede a data da compra da licença, nem a do computador que a
+ * recebe — a licença instalada numa máquina que ainda não tinha sido comprada —,
+ * nem o dia em que o mesmo alvo devolveu
  * esta licença: a entrega que volta no tempo para antes da devolução poria o
  * alvo com a licença duas vezes no mesmo período (invariante 23, no histórico).
  * Os dois dias no calendário de Brasília, como na devolução.
@@ -142,13 +147,19 @@ async function instanteDaEntrega(
   client: ClienteLicenca,
   licenca: { id: string; name: string; purchaseDate: Date | null },
   alvo: AlvoDaEntrega,
-  nomeDoAlvo: string,
+  { nome: nomeDoAlvo, compra: compraDoAlvo }: { nome: string; compra: Date | null },
   checkoutAt: Date | undefined,
 ): Promise<Date | undefined> {
   const dia = checkoutAt ?? hojeNoBrasil();
   if (licenca.purchaseDate && dia < licenca.purchaseDate) {
     throw new AppError(
       `A entrega (${diaEmPortugues(dia)}) não pode ser antes da data da compra (${diaEmPortugues(licenca.purchaseDate)}).`,
+      422,
+    );
+  }
+  if (compraDoAlvo && dia < compraDoAlvo) {
+    throw new AppError(
+      `A entrega (${diaEmPortugues(dia)}) não pode ser antes da compra de ${nomeDoAlvo} (${diaEmPortugues(compraDoAlvo)}).`,
       422,
     );
   }
@@ -222,10 +233,11 @@ export async function checkoutLicense(licenseId: string, data: CheckoutLicenseDa
 
     // O alvo antes da licença: o colaborador na lixeira é 404 mesmo com a
     // licença vencida.
-    const nomeDoAlvo = await assertAlvoApto(tx, alvo);
+    const apto = await assertAlvoApto(tx, alvo);
+    const nomeDoAlvo = apto.nome;
     assertLicencaVigente(licenca);
     await assertAlvoSemEntregaAberta(tx, licenseId, licenca.name, alvo, nomeDoAlvo);
-    const checkoutAt = await instanteDaEntrega(tx, licenca, alvo, nomeDoAlvo, data.checkoutAt ?? undefined);
+    const checkoutAt = await instanteDaEntrega(tx, licenca, alvo, apto, data.checkoutAt ?? undefined);
 
     // A CONTA, com a licença travada: nenhuma outra entrega desta licença está
     // em voo, e o número que sai daqui é o que o INSERT vai encontrar.

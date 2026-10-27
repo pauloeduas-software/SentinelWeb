@@ -222,6 +222,63 @@ describe('as datas não antecedem a compra', () => {
   });
 });
 
+describe('as datas contra as entregas que já existem', () => {
+  /** '2026-03-10' → '10/03/2026', como a frase do servidor. */
+  const naFrase = (dia: string) => dia.split('-').reverse().join('/');
+
+  it('o encerramento não fica antes da última entrega; no mesmo dia passa', async () => {
+    const licenca = await criarLicenca(api, { name: 'Encerra antes da entrega', categoryId: cenario.categoriaLicencaId, seatsTotal: 2 });
+    await api.post(`/api/licenses/${licenca.id}/checkout`, { assignedPersonId: cenario.laura, checkoutAt: diaNoBrasil(-8) });
+    await api.post(`/api/licenses/${licenca.id}/checkout`, { assignedPersonId: cenario.ana, checkoutAt: diaNoBrasil(-5) });
+
+    const antes = await api.put<{ error: string }>(`/api/licenses/${licenca.id}`, { terminationDate: diaNoBrasil(-6) });
+    expect(antes.status).toBe(422);
+    expect(antes.body.error).toBe(
+      `O encerramento (${naFrase(diaNoBrasil(-6))}) não pode ser antes da última entrega (${naFrase(diaNoBrasil(-5))}).`,
+    );
+    expect((await api.put(`/api/licenses/${licenca.id}`, { terminationDate: diaNoBrasil(-5) })).status).toBe(200);
+  });
+
+  it('a compra não fica depois da primeira entrega; no mesmo dia passa', async () => {
+    const licenca = await criarLicenca(api, { name: 'Compra depois da entrega', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
+    await api.post(`/api/licenses/${licenca.id}/checkout`, { assignedPersonId: cenario.laura, checkoutAt: diaNoBrasil(-5) });
+
+    const depois = await api.put<{ error: string }>(`/api/licenses/${licenca.id}`, { purchaseDate: diaNoBrasil(-4) });
+    expect(depois.status).toBe(422);
+    expect(depois.body.error).toBe(
+      `A data da compra (${naFrase(diaNoBrasil(-4))}) não pode ser depois da primeira entrega (${naFrase(diaNoBrasil(-5))}).`,
+    );
+    expect((await api.put(`/api/licenses/${licenca.id}`, { purchaseDate: diaNoBrasil(-5) })).status).toBe(200);
+  });
+
+  it('o computador: a entrega não vem antes da compra dele, nem a compra depois da primeira licença', async () => {
+    const pc = await maquina('Comprado depois');
+    expect((await api.put(`/api/assets/${pc.id}`, { purchaseDate: diaNoBrasil(-3) })).status).toBe(200);
+    const licenca = await criarLicenca(api, { name: 'Antes do computador', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
+
+    const cedo = await api.post<{ error: string }>(`/api/licenses/${licenca.id}/checkout`, {
+      assignedAssetId: pc.id, checkoutAt: diaNoBrasil(-4),
+    });
+    expect(cedo.status).toBe(422);
+    expect(cedo.body.error).toBe(
+      `A entrega (${naFrase(diaNoBrasil(-4))}) não pode ser antes da compra de ${pc.assetTag} — Comprado depois `
+      + `(${naFrase(diaNoBrasil(-3))}).`,
+    );
+    expect((await api.post(`/api/licenses/${licenca.id}/checkout`, {
+      assignedAssetId: pc.id, checkoutAt: diaNoBrasil(-3),
+    })).status).toBe(201);
+
+    const compra = await api.put<{ error: string }>(`/api/assets/${pc.id}`, { purchaseDate: diaNoBrasil(-2) });
+    expect(compra.status).toBe(422);
+    expect(compra.body.error).toBe(
+      `A data de compra (${naFrase(diaNoBrasil(-2))}) não pode ser depois da primeira licença entregue a `
+      + `${pc.assetTag} (${naFrase(diaNoBrasil(-3))}).`,
+    );
+    // Mandar a mesma data de novo, com outro campo, não é mudança.
+    expect((await api.put(`/api/assets/${pc.id}`, { purchaseDate: diaNoBrasil(-3), name: 'Comprado depois' })).status).toBe(200);
+  });
+});
+
 describe('a entrega recusa', () => {
   it('sem licença livre — e a frase diz os números', async () => {
     const licenca = await criarLicenca(api, { name: 'Slack única', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
