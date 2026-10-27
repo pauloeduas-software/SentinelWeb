@@ -515,6 +515,10 @@ que ela não exista.
 > **Superada em parte por [Z](#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir):** sobra um cargo só, `ADMIN`, e a
 > separação de cargos é decisão a tomar.
 >
+> **Superada em parte por [AH](#ah--o-menu-por-assunto-o-colaborador-ganha-página-própria-e-ativos-vira-computadores):** o colaborador saiu de Configurações para uma página
+> própria, `/colaboradores`, na seção Pessoas do menu, com a ficha em `/colaboradores/:id`. O
+> cadastro e a API são os mesmos.
+>
 > **Completada por [W](#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo):** a linha
 > do usuário excluído, que ficava no banco com `deletedAt`, passou a ser apagada; e o
 > administrador não rebaixa, não desativa e não exclui a si mesmo.
@@ -820,3 +824,60 @@ para a aplicação que só faça `INSERT` na auditoria, o que muda a implantaç�
 
 **Como consultar:** [`prisma/verificacoes/auditoria.sql`](../../prisma/verificacoes/auditoria.sql),
 com as perguntas prontas no horário de Brasília.
+
+## AH — O menu por assunto: o colaborador ganha página própria, e Ativos vira Computadores
+
+**Decidido** (em 2026-10-27, na conferência das telas padronizadas — o usuário perguntou se o
+colaborador não devia sair de Configurações e ter uma página só para ele; dada a recomendação,
+respondeu "ok, faça". No meio do trabalho, pediu as seções do menu por assunto, com o nome da
+página Ativos trocado, e escolheu os nomes entre os sugeridos — Computadores, Recursos e
+Pessoas —, com Pessoas abaixo de Convergência e Gestão por último):
+
+- **O menu se agrupa por assunto**, nesta ordem, que é a do usuário:
+
+  | Seção | Itens |
+  |---|---|
+  | **Ativos** | Computadores, Postos |
+  | **Recursos** | Estoque, Licenças |
+  | **Convergência** | Descobertas |
+  | **Pessoas** | Colaboradores |
+  | **Sistema** | Configurações |
+  | **Gestão** | Usuários |
+
+  "Operação", que juntava tudo de cima, sai. Ativos é o que se patrimonia e onde fica;
+  Recursos, o que se conta e se distribui, com a mesma lógica nos dois (AE).
+- **A página Ativos vira Computadores**, em `/computadores` e `/computadores/:id`: "Ativos"
+  passou a nomear a seção, e a tela leva o nome do que lista — ativo é computador (decisão I), e
+  as categorias de ativo são Notebook, Desktop e Servidor. A palavra **ativo** continua sendo a
+  do item: a etiqueta, a ficha do ativo, "Nenhum ativo entregue".
+- **Colaboradores vira página**, sozinha na seção Pessoas: a lista em `/colaboradores` e a
+  ficha em `/colaboradores/:id`. Configurações fica com as cinco abas de referência —
+  categorias, status, fabricantes, modelos e localizações.
+- **O cadastro não muda.** É o mesmo componente das abas (`CadastroDoCatalogo`, que passa a
+  morar em `src/pages/components/catalogo/` por servir a duas páginas), com a mesma spec, os
+  mesmos botões e frases, a lixeira e o Restaurar. A API também não muda: o colaborador continua
+  uma das seis tabelas do CRUD do catálogo, em `/api/people`.
+- **Pessoas fica fora de Gestão**, de propósito: conta de login e colaborador são tabelas e
+  telas diferentes ([U](#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)), e lado a lado na mesma seção trariam a confusão de volta.
+- **Os endereços antigos redirecionam**, com o mesmo id: `/ativos` e `/ativos/:id` (e o `/itam`
+  de antes) levam a `/computadores`; `/configuracoes/colaboradores/:id` e `/users/:id`, a
+  `/colaboradores/:id`. O `?aba=` de Configurações sai: só existia para a ficha voltar à aba
+  Colaboradores.
+
+**Supera:** em parte [U](#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos) (o cadastro como sexta aba de Configurações e a ficha em
+`/configuracoes/colaboradores/:id`). E o endereço `/ativos`, que tinha substituído o `/itam` sem
+decisão própria.
+**Mantém:** a [U](#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos) no resto — duas tabelas, o colaborador não entra no sistema, o CRUD do
+catálogo — e a [V](./posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira) (a lixeira).
+
+**Por quê:** quando a U pôs o colaborador em Configurações, ele era nome e e-mail, como as outras
+abas. Depois ganhou a lixeira (V), a ficha com o que está com ele e o histórico de quatro fontes,
+e virou o alvo de ativo, posto, licença e estoque. As outras cinco abas são referência que se
+monta uma vez; o colaborador se mexe toda semana — contratação, entrega, desligamento —, e o
+menu é ordenado pela frequência de uso. O posto fez o mesmo caminho ([Y](./posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)): saiu de
+Localizações, em Configurações, quando ficou claro que ele recebe. No Snipe-IT e no GLPI as
+pessoas também ficam no menu principal, não nas configurações. As seções vieram do usuário: uma
+lista de cinco telas sob "Operação" não dizia o que cada uma era, e por assunto o menu se lê
+sozinho.
+
+**O que a migração faz:** nada — a mudança é só de tela, rota e menu.

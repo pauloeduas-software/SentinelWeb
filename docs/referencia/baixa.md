@@ -53,7 +53,7 @@ permitida a `ADMIN`, o único cargo ([Z](../decisoes/acesso.md#z--sobra-um-cargo
 
 - **Na ficha:** o selo "Vendido em 15/10/2026" no cabeçalho e uma faixa no topo da
   aba Detalhes, com o botão **Reverter**.
-- **Na lista de Ativos:** o ativo sai da vista **Ativos** e passa a aparecer só na
+- **Na lista de Computadores:** o ativo sai da vista **Ativos** e passa a aparecer só na
   vista **Baixados**, que tem contador próprio. A **Lixeira** não olha a baixa.
 - **Na aba Detalhes:** a observação, abaixo do selo.
 - **Na auditoria, no banco:** a linha `RETIRE`, com quem fez, quando, o motivo e a
@@ -132,5 +132,5 @@ pedir:
 | reverter | `unretire-asset.usecase.ts` |
 | a recusa na entrega | `assignment/use-cases/checkout-asset.usecase.ts`; na licença, `license/use-cases/checkout-license.usecase.ts` |
 | as vistas Ativos / Baixados | `asset/helpers/asset-filters.helper.ts` |
-| a tela | `src/pages/ativos/detalhe/components/{RetireModal,DetalhesTab}.tsx`, `src/pages/ativos/helpers/baixa.helper.ts` |
+| a tela | `src/pages/computadores/detalhe/components/{RetireModal,DetalhesTab}.tsx`, `src/pages/computadores/helpers/baixa.helper.ts` |
 | testes | `tests/invariantes/posse.test.ts` (a baixa recusa entregue, licença, data futura e repetição; baixado não é entregue; reverter libera), `tests/corridas/posse.test.ts` (baixa × entrega), `tests/listagens/vistas-do-ativo.test.ts` (as vistas) |

@@ -20,7 +20,7 @@ interface CheckinData {
   /**
    * O ESCOPO da devolução: só fecha a posse se ela aponta para ESTE
    * posto. Sem ele, fecha a posse aberta que o ativo tiver, seja com quem
-   * for — é o caminho da tela de Ativos, onde a pessoa está olhando a posse.
+   * for — é o caminho da tela Computadores, onde a pessoa está olhando a posse.
    *
    * Existe para a ficha do posto. Ela lista os ativos entregues à mesa e tem o
    * botão Devolver em cada linha; entre a ficha carregar e o clique, o ativo

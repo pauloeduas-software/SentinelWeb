@@ -4,7 +4,7 @@ import type { User } from '../shared/user.types';
 import type { ListEnvelope, ListParams } from '../shared/list.types';
 
 // QUEM OPERA O SISTEMA — hoje, só Administrador (Z). Quem recebe equipamento é
-// colaborador (`person.queries.ts`, e o cadastro na aba de Configurações).
+// colaborador (`person.queries.ts`, e o cadastro na página Colaboradores).
 export const userKeys = {
   all: ['users'] as const,
   list: (params: ListParams) => ['users', 'list', params] as const,

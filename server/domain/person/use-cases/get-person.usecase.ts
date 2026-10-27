@@ -7,7 +7,7 @@ import { PERSON_DETAIL_SELECT } from '../helpers/person-select.helper';
 /**
  * UM colaborador, para a ficha.
  *
- * A listagem paginada (a aba de Configurações) não serve para abrir uma pessoa
+ * A listagem paginada (a página Colaboradores) não serve para abrir uma pessoa
  * por id — buscar 25 para usar 1 é o que faz a ficha depender de por qual
  * página se chegou nela (e quebrar no F5).
  */

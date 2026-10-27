@@ -49,7 +49,7 @@ export interface ResultadoDaBusca {
   /**
    * O POSTO DO ACERTO EXATO, quando o ativo está montado numa mesa.
    *
-   * Existe porque o ativo entregue a um posto saiu da listagem `/ativos`. A
+   * Existe porque o ativo entregue a um posto saiu da listagem `/computadores`. A
    * ficha do ativo diz o NOME da mesa e para aí: não leva até ela, e não mostra
    * o resto do que está montado nela nem quem responde por ela. Com o posto, a
    * busca larga em `/postos/:id`, que responde as três coisas.
@@ -74,7 +74,7 @@ async function postoDoAtivo(assetId: string): Promise<PostoDoAcerto | null> {
       checkinAt: null,
       // O MESMO `where` do `EM_POSTO_DE_TRABALHO` da listagem. É a
       // concordância dos dois que garante que não exista ativo que sai de
-      // `/ativos` e a busca não saiba para onde mandar.
+      // `/computadores` e a busca não saiba para onde mandar.
       targetType: 'WORKSTATION',
     },
     select: { targetWorkstation: { select: { id: true, name: true } } },

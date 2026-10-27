@@ -470,7 +470,7 @@ um computador. Duas máquinas entregues à mesma mesa não são um cenário de
 inventário — são um cadastro errado que ninguém percebe, porque a tela do posto
 mostraria duas e a telemetria somaria o uso das duas como se fosse daquele posto.
 
-**Ativo é computador.** Nada que não seja máquina é cadastrado em `/ativos`:
+**Ativo é computador.** Nada que não seja máquina é cadastrado em `/computadores`:
 monitor, teclado, mouse e cabo são estoque, por quantidade, sem patrimônio
 individual. É isso que faz a regra ser sobre o **ativo**, e não sobre "ativo com
 máquina vinculada": o agente instalado ou não instalado não muda o que o

@@ -6,7 +6,7 @@ import { listarMudancasDoAtivo } from './record-hardware-changes.usecase';
 //
 // A ROTA CHAMA `/machine`, e não o nome de um dos conteúdos: ela devolve
 // especificação coletada, os dois últimos contatos e a mudança de hardware
-// detectada. É a mesma regra que aposentou `/itam` em favor de `/ativos` e que
+// detectada. É a mesma regra que aposentou `/itam` em favor de `/ativos` (hoje `/computadores`) e que
 // fez a tela se chamar `/descobertas`: o nome é do que a coisa É, não do que ela
 // era quando nasceu.
 // ═════════════════════════════════════════════════════════════════════════════

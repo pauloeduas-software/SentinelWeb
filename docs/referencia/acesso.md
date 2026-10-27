@@ -215,7 +215,7 @@ autenticada exige `ADMIN`.
 **Usuário é quem opera o sistema; colaborador é quem recebe equipamento**
 ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)).
 São duas tabelas: `users` (quem entra, todos com senha) e `people` (o colaborador, alvo de
-posse, sem conta — a aba Colaboradores de Configurações). Quem opera o sistema e também tem um
+posse, sem conta — a página Colaboradores). Quem opera o sistema e também tem um
 notebook é cadastrado nos dois lugares. O colaborador da entrega se escolhe por
 `GET /api/people/options`.
 

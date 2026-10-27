@@ -6,7 +6,7 @@
 
 | Pasta | A regra | O que mora lá |
 |---|---|---|
-| [`referencia/`](./referencia/) | **É verdade AGORA.** Mudou o código, muda aqui. Não conta história, não dá instrução. | o que o sistema é: camadas, modelo de posse, invariantes, acesso, testes, configurações, baixa do ativo, postos, licenças |
+| [`referencia/`](./referencia/) | **É verdade AGORA.** Mudou o código, muda aqui. Não conta história, não dá instrução. | o que o sistema é: camadas, modelo de posse, invariantes, acesso, testes, configurações, baixa do ativo, postos, colaboradores, licenças, estoque |
 | [`guias/`](./guias/) | **Começa com um verbo.** Receita para quem já sabe o que quer. | criar uma migration, adicionar um domínio, escrever um teste |
 | [`decisoes/`](./decisoes/) | **Não se reescreve.** Se a realidade mudou, a decisão é *superada* por outra, com link entre as duas. | as decisões numeradas (`D1`…`D164`) e as por letra (`A`…`Z`), um arquivo por assunto |
 | [`historico/`](./historico/) | **Congelado na data.** Não se reescreve: o que ali se apresenta como vigente e deixou de ser ganha uma nota curta de status, com o link do que mudou. | os planos, as revisões e os fechamentos das onze fases |
@@ -28,11 +28,14 @@ Rota nova nasce negada, e rota sem permissão declarada **derruba o boot** — �
 antes.
 
 **Vou mexer nas Configurações ou na saída de um ativo.** [`referencia/configuracoes.md`](./referencia/configuracoes.md)
-diz o que cada uma das seis tabelas é, o que a exclusão e a desativação recusam e quem as usa;
+diz o que cada uma das cinco tabelas de referência é, o que a exclusão e a desativação recusam e quem as usa;
 [`referencia/baixa.md`](./referencia/baixa.md), o que é dar baixa — e por que não é status nem lixeira.
 
 **Vou mexer nos postos.** [`referencia/postos.md`](./referencia/postos.md) diz o que o posto é, onde
 se cadastra e o que a exclusão e a desativação recusam.
+
+**Vou mexer nos colaboradores.** [`referencia/colaboradores.md`](./referencia/colaboradores.md) diz o
+que o colaborador é, o que a ficha mostra e o que a exclusão, a lixeira e a desativação recusam.
 
 **Vou mexer nas licenças ou no estoque.** [`referencia/licencas.md`](./referencia/licencas.md) diz as
 contas, o status, o que a entrega e a devolução recusam, e onde a licença aparece fora da própria

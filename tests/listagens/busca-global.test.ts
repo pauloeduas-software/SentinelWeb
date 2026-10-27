@@ -92,7 +92,7 @@ describe('GET /api/search', () => {
   });
 
   it('a URL do painel não abre mais o ativo: o passo do QR saiu', async () => {
-    const url = encodeURIComponent(`http://localhost:3000/ativos/${idDoAtivo}`);
+    const url = encodeURIComponent(`http://localhost:3000/computadores/${idDoAtivo}`);
     const { status, body } = await api.get<Resultado>(`/api/search?q=${url}`);
 
     // Não é 422: o texto é uma busca válida, só não acha nada. O id dentro da

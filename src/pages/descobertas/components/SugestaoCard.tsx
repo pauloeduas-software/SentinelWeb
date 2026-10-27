@@ -38,7 +38,7 @@ export default function SugestaoCard({ sugestao, ocupado, onAceitar, onRecusar }
 
           {sugestao.asset && (
             <Link
-              to={`/ativos/${sugestao.asset.id}`}
+              to={`/computadores/${sugestao.asset.id}`}
               className="text-[10px] text-status-info hover:underline mt-2 inline-block"
             >
               abrir {sugestao.asset.assetTag}

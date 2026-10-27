@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import {
   useCatalogQuery, useCreateCatalogRow, useDeleteCatalogRow, useRestoreCatalogRow, useUpdateCatalogRow,
 } from '../../../domain/catalog/catalog.queries';
@@ -7,27 +6,20 @@ import type { ListView } from '../../../domain/shared/list.types';
 import type { CatalogRow } from '../../../domain/shared/catalog.types';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useNotificacao } from '../../hooks/useNotificacao';
-import { CATALOG_UI_SPECS } from '../specs';
-import type { AcaoLinhaId } from '../specs/catalog-ui.types';
+import type { AcaoLinhaId, CatalogUiSpec } from './catalog-ui.types';
 import { linksDoErro } from '../../helpers/erro.helper';
 
 // Catálogo é lista curta: com 10, onze categorias já viravam duas páginas. A
 // tabela rola por dentro, então 25 não estoura a tela.
 const PER_PAGE = 25;
 
-// Estado da tela de Configurações: qual aba, que página, o que está no campo de
-// busca e qual registro está no modal. Tudo de UMA tela — fica aqui, em
-// useState, e não em store (docs/referencia/arquitetura.md).
-export function useCatalog() {
+// Estado de uma tela de catálogo — Configurações, com as cinco abas, ou
+// Colaboradores, com uma só: qual aba, que página, o que está no campo de busca
+// e qual registro está no modal. Tudo de UMA tela — fica aqui, em useState, e
+// não em store (docs/referencia/arquitetura.md).
+export function useCatalog(specs: readonly CatalogUiSpec[]) {
   const notificar = useNotificacao();
-  // `?aba=` só escolhe a aba de ENTRADA — é como a ficha do colaborador volta
-  // para Colaboradores. Depois disso a aba é estado da tela, e a URL não a
-  // acompanha.
-  const [parametros] = useSearchParams();
-  const [slug, setSlug] = useState(() => {
-    const pedida = parametros.get('aba');
-    return CATALOG_UI_SPECS.some((item) => item.slug === pedida) ? pedida! : CATALOG_UI_SPECS[0].slug;
-  });
+  const [slug, setSlug] = useState(specs[0].slug);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search);
@@ -37,8 +29,8 @@ export function useCatalog() {
   const [view, setView] = useState<ListView>('active');
 
   const spec = useMemo(
-    () => CATALOG_UI_SPECS.find((item) => item.slug === slug) ?? CATALOG_UI_SPECS[0],
-    [slug],
+    () => specs.find((item) => item.slug === slug) ?? specs[0],
+    [specs, slug],
   );
 
   // Zerar a página acontece no mesmo handler que muda a aba ou a busca, e não
@@ -181,7 +173,7 @@ export function useCatalog() {
   };
 
   return {
-    specs: CATALOG_UI_SPECS,
+    specs,
     spec,
     changeTab,
     registros,

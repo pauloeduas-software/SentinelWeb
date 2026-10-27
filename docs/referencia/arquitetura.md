@@ -82,7 +82,7 @@ server/
 | `reconciliation` | **Convergência RMM × ITAM**: o vínculo entre a máquina descoberta e o ativo cadastrado e a fila de sugestões — sem inferência por conta do sistema operacional ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)) nem fusão de máquinas ([H](../decisoes/reconciliacao.md#h--a-fusão-de-máquinas-sai)) | `ReconciliationSuggestion`, `AssetChange`, `AssetUsageDaily` |
 | `access` | **Autorização**: o cargo da sessão, o mapa de rotas × cargo mínimo e a invariante "nunca sem administrador" | — |
 | `auth` | **Sessão e credencial**: login, cookie e a geração da sessão (`tokenVersion`) | — |
-| `workstation` | **O posto de trabalho**: o cadastro (o CRUD do catálogo, com a `workstationSpec` — fora das seis abas) e a leitura de posto + ocupantes que a `/postos` mostra, onde `ehPostoVago()` mora ([Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)) | `Workstation` |
+| `workstation` | **O posto de trabalho**: o cadastro (o CRUD do catálogo, com a `workstationSpec` — fora das seis tabelas) e a leitura de posto + ocupantes que a `/postos` mostra, onde `ehPostoVago()` mora ([Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)) | `Workstation` |
 | `shared` | Tipos e helpers usados por mais de um domínio (`diff.helper`, `fields.schema`, `history.schema`) | — |
 
 > **A decisão D1 foi executada na Fase 1.** `asset/` (RMM) virou `endpoint/`, e o
@@ -167,7 +167,7 @@ src/
 │   ├── shared/*.types.ts        # tipos do contrato com a API
 │   └── <nome>/<nome>.queries.ts # TanStack Query: busca e mutação do domínio
 └── pages/
-    ├── components/              # UI compartilhada entre páginas (AppHeader)
+    ├── components/              # UI compartilhada entre páginas (AppHeader; catalogo/, o cadastro de Configurações e Colaboradores)
     └── <contexto>/
         ├── index.tsx            # markup. Nenhum fetch, nenhum cálculo.
         ├── hooks/use<Nome>.ts   # estado de tela: modal, seleção, confirmações

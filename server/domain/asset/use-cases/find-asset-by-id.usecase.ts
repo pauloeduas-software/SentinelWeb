@@ -26,7 +26,7 @@ type AssetDetail = NonNullable<Awaited<ReturnType<typeof buscarAtivo>>> & {
 };
 
 /**
- * UM ativo por id — a leitura que a tela de detalhe (`/ativos/:id`) começa
+ * UM ativo por id — a leitura que a tela de detalhe (`/computadores/:id`) começa
  * fazendo e que não existia: até aqui o modal recebia a linha que a listagem já
  * tinha em memória, e uma URL colada no navegador não tem essa linha.
  *

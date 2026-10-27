@@ -85,7 +85,7 @@ export function useAssetDetail() {
     if (modal === 'clonar') {
       const novo = await criar.mutateAsync(valores);
       fecharModal();
-      navigate(`/ativos/${novo.id}`);
+      navigate(`/computadores/${novo.id}`);
       return;
     }
 
@@ -140,7 +140,7 @@ export function useAssetDetail() {
 
     try {
       await excluir.mutateAsync(asset.id);
-      navigate('/ativos');
+      navigate('/computadores');
     } catch (falha) {
       // O 409 do ativo com licença traz cada uma em link.
       notificar.erro((falha as Error).message, linksDoErro(falha));

@@ -75,7 +75,7 @@ export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCa
             onChange={setAssetId}
           />
           <p className="text-[10px] text-text-tertiary leading-relaxed">
-            Só ativos ainda sem máquina. Cadastre o ativo em Ativos se ele não existe.
+            Só ativos ainda sem máquina. Cadastre o ativo em Computadores se ele não existe.
           </p>
         </div>
         <div className="space-y-1">

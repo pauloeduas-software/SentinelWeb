@@ -2,40 +2,46 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import AppHeader from './pages/components/AppHeader';
 import AppSidebar from './pages/components/AppSidebar';
-import AtivosPage from './pages/ativos';
-import AssetDetailPage from './pages/ativos/detalhe';
+import ComputadoresPage from './pages/computadores';
+import AssetDetailPage from './pages/computadores/detalhe';
 import PostosPage from './pages/postos';
 import EstoquePage from './pages/estoque';
 import LicencasPage from './pages/licencas';
 import DescobertasPage from './pages/descobertas';
 import UsuariosPage from './pages/usuarios';
 import ConfiguracoesPage from './pages/configuracoes';
-import ColaboradorPage from './pages/configuracoes/colaborador';
+import ColaboradoresPage from './pages/colaboradores';
+import ColaboradorPage from './pages/colaboradores/ficha';
+import { caminhoDoColaborador } from './pages/helpers/colaborador.helper';
 import LoginPage from './pages/login';
 import { useAuthStore, usePode } from './domain/auth/auth.store';
 import Notificacoes from './pages/components/Notificacoes';
 
 /**
- * `/itam/assets/:id` → `/ativos/:id`, preservando o id.
+ * Os endereços antigos da tela do ativo → `/computadores/:id`, preservando o id:
+ * `/itam/assets/:id`, até a F6, e `/ativos/:id`, até a tela virar Computadores
+ * (AH).
  *
  * Um `Navigate` com caminho literal não serve aqui: o id está na URL, e é ele
  * que a URL antiga carrega.
  */
 function RedirecionarAtivo() {
   const { id } = useParams<{ id: string }>();
-  return <Navigate to={`/ativos/${id ?? ''}`} replace />;
+  return <Navigate to={`/computadores/${id ?? ''}`} replace />;
 }
 
 /**
- * `/users/:id` → a ficha do colaborador, preservando o id.
+ * Os endereços antigos da ficha do colaborador → `/colaboradores/:id`,
+ * preservando o id.
  *
  * `/users/:id` ERA a ficha de quem recebe equipamento, quando colaborador e
- * usuário eram a mesma tabela. Os colaboradores saíram de lá com o MESMO id, então
- * o link guardado num chamado continua levando à pessoa certa.
+ * usuário eram a mesma tabela; depois ela morou em `/configuracoes/colaboradores/:id`,
+ * até ganhar página própria (AH). O id nunca mudou, então o link guardado num
+ * chamado continua levando à pessoa certa.
  */
 function RedirecionarColaborador() {
   const { id } = useParams<{ id: string }>();
-  return <Navigate to={`/configuracoes/colaboradores/${id ?? ''}`} replace />;
+  return <Navigate to={caminhoDoColaborador(id ?? '')} replace />;
 }
 
 /**
@@ -48,7 +54,7 @@ function RedirecionarColaborador() {
  * Uma tela em que tudo falha é pior do que não chegar nela.
  *
  * Redireciona para a raiz, e não para uma tela de "sem acesso": a raiz já leva
- * para Ativos, que é a tela do trabalho do dia. `replace` pelo mesmo motivo do
+ * para Computadores, que é a tela do trabalho do dia. `replace` pelo mesmo motivo do
  * redirecionamento da raiz — voltar não pode cair aqui de novo.
  *
  * Como o `usePode`, isto é INTERFACE, não segurança: quem autoriza é o servidor.
@@ -88,24 +94,27 @@ function Layout() {
                 perguntar nada — ela sabia a medida da máquina e não sabia de quem
                 a máquina é. A telemetria foi para a ficha do ativo e a do posto, e
                 a raiz passou a levar para a tela que se usa de verdade, que é a
-                lista de ATIVOS. `replace` para que o botão de voltar não jogue a
-                pessoa de volta na raiz, num pingue-pongue. */}
-            <Route path="/" element={<Navigate to="/ativos" replace />} />
-            <Route path="/ativos" element={<AtivosPage />} />
+                lista de COMPUTADORES. `replace` para que o botão de voltar não
+                jogue a pessoa de volta na raiz, num pingue-pongue. */}
+            <Route path="/" element={<Navigate to="/computadores" replace />} />
+            <Route path="/computadores" element={<ComputadoresPage />} />
             {/* A tela do ativo. Rota própria, e não modal: é uma URL que se cola
                 no chamado, se abre em outra aba e se guarda nos favoritos. */}
-            <Route path="/ativos/:id" element={<AssetDetailPage />} />
+            <Route path="/computadores/:id" element={<AssetDetailPage />} />
             {/* AS ROTAS ANTIGAS, redirecionando. `/itam` era o nome da tela até a
                 F6; ele saiu porque "ITAM" é o nome do ASSUNTO do sistema inteiro,
-                não desta tela — que lista ATIVOS, como /licencas lista licenças.
-                O redirecionamento fica porque quem colar uma URL antiga tem que
-                chegar na tela, não num 404. */}
-            <Route path="/itam" element={<Navigate to="/ativos" replace />} />
+                não desta tela. `/ativos` veio depois, e saiu quando "Ativos" virou
+                o nome da seção do menu e a tela passou a ter o nome do que lista:
+                computadores (AH). O redirecionamento fica porque quem colar uma
+                URL antiga tem que chegar na tela, não num 404. */}
+            <Route path="/ativos" element={<Navigate to="/computadores" replace />} />
+            <Route path="/ativos/:id" element={<RedirecionarAtivo />} />
+            <Route path="/itam" element={<Navigate to="/computadores" replace />} />
             <Route path="/itam/assets/:id" element={<RedirecionarAtivo />} />
             <Route path="/postos" element={<PostosPage />} />
             {/* A FICHA DO POSTO É ROTA, e é a mesma tela: a listagem fica atrás
                 da janela. É destino de link porque a busca por etiqueta larga
-                aqui quem bipou o computador de uma mesa — ele saiu de /ativos. */}
+                aqui quem bipou o computador de uma mesa — ele saiu de /computadores. */}
             <Route path="/postos/:id" element={<PostosPage />} />
             {/* O ESTOQUE: monitor, teclado, mouse, cabo — o que tem
                 quantidade e não patrimônio (docs/decisoes/estoque.md). Perto
@@ -125,12 +134,14 @@ function Layout() {
             <Route path="/usuarios" element={<SoAdmin><UsuariosPage /></SoAdmin>} />
             <Route path="/users" element={<Navigate to="/usuarios" replace />} />
             <Route path="/users/:id" element={<RedirecionarColaborador />} />
-            <Route path="/configuracoes" element={<ConfiguracoesPage />} />
+            <Route path="/colaboradores" element={<ColaboradoresPage />} />
             {/* A FICHA DO COLABORADOR: os dois baldes de posse
                 (docs/referencia/modelo-de-posse.md, Camada 3). Debaixo de
-                Configurações porque é de lá que ela abre — a aba Colaboradores —,
-                e é isso que acende o item certo no menu. */}
-            <Route path="/configuracoes/colaboradores/:id" element={<ColaboradorPage />} />
+                Colaboradores porque é de lá que ela abre, e é isso que acende o
+                item certo no menu. */}
+            <Route path="/colaboradores/:id" element={<ColaboradorPage />} />
+            <Route path="/configuracoes" element={<ConfiguracoesPage />} />
+            <Route path="/configuracoes/colaboradores/:id" element={<RedirecionarColaborador />} />
           </Routes>
         </main>
       </div>

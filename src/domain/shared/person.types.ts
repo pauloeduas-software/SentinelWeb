@@ -5,7 +5,7 @@ import type { SaidaNaFicha } from './stock.types';
  * UM colaborador, como `GET /api/people/:id` o devolve — a ficha.
  *
  * Colaborador é quem RECEBE equipamento e não entra no sistema; quem opera é
- * `User`. O cadastro dele é a aba Colaboradores de Configurações (catálogo), e
+ * `User`. O cadastro dele é a página Colaboradores (o CRUD do catálogo), e
  * a linha daquela tabela é um `CatalogRow`: este tipo é só o da ficha.
  *
  * DESATIVAR NÃO É EXCLUIR. Quem saiu da empresa continua no cadastro, com o

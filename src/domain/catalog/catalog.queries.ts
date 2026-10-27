@@ -35,7 +35,7 @@ export function useCatalogQuery(slug: string, params: CatalogListParams) {
       (await apiClient.get<ListEnvelope<CatalogRow>>(`/${slug}`, { params })).data,
     // Sem isto a tabela pisca em branco a cada troca de página ou tecla da busca.
     //
-    // MAS SÓ DENTRO DA MESMA TABELA. As seis abas dividem este hook, e o
+    // MAS SÓ DENTRO DA MESMA TABELA. As seis tabelas do catálogo dividem este hook, e o
     // `keepPreviousData` puro reaproveitava a resposta de QUALQUER chave
     // anterior: trocar de Categorias para Status mostrava as categorias sob o
     // cabeçalho de Status até a resposta chegar — e elas respondiam a clique,

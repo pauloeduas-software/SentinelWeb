@@ -48,7 +48,7 @@ export function useMaquinaAoVivo(endpointId: string | null) {
   const enviarComando = useSendCommand();
 
   // O retorno guarda A QUAL MÁQUINA pertence. A tela do ativo é reaproveitada
-  // pelo roteador de um `/ativos/:id` para outro, então sem isto o "comando
+  // pelo roteador de um `/computadores/:id` para outro, então sem isto o "comando
   // entregue" da máquina anterior ficaria embaixo dos botões da seguinte.
   const [retorno, setRetorno] = useState<(RetornoDoComando & { endpointId: string }) | null>(null);
 

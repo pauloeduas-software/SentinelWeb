@@ -16,7 +16,7 @@ import {
 import { useAssets } from './hooks/useAssets';
 import { useColunas } from './hooks/useColunas';
 
-export default function AtivosPage() {
+export default function ComputadoresPage() {
   const {
     assets, total, totalCadastrado, porStatus,
     baixados, page, perPage, setPage,
@@ -41,7 +41,7 @@ export default function AtivosPage() {
 
       <div className="flex justify-between items-end mb-6 shrink-0">
         <div>
-          <h2 className="text-xl font-mono text-text-primary uppercase tracking-widest">Ativos</h2>
+          <h2 className="text-xl font-mono text-text-primary uppercase tracking-widest">Computadores</h2>
           <div className="flex flex-wrap items-center gap-4 mt-2 font-mono text-xs text-text-tertiary">
             <span>{totalCadastrado} {totalCadastrado === 1 ? 'ativo' : 'ativos'}</span>
             {porStatus.map((status) => (

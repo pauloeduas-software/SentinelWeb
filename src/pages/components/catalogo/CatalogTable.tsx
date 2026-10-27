@@ -1,6 +1,6 @@
 import { Edit2, FileText, RotateCcw, Trash2, Power, PowerOff, type LucideIcon } from 'lucide-react';
 import { nomeDaRelacao, rotuloDoEnum } from '../../helpers/format.helper';
-import type { AcaoLinhaId, AcaoLinhaSpec, ColunaSpec } from '../specs/catalog-ui.types';
+import type { AcaoLinhaId, AcaoLinhaSpec, ColunaSpec } from './catalog-ui.types';
 import type { CatalogRow } from '../../../domain/shared/catalog.types';
 
 // O ícone de cada ação mora AQUI, e não na spec, porque a spec é dado puro: um

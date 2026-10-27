@@ -46,7 +46,7 @@ export default function BuscaDoLeitor() {
       // mesa saiu da listagem de ativos, e a tela que explica onde ele está é a
       // do posto — com os ocupantes que respondem por ele. O resto vai para a
       // ficha do ativo, como sempre.
-      navigate(achado.posto ? `/postos/${achado.posto.id}` : `/ativos/${achado.ativos[0].id}`);
+      navigate(achado.posto ? `/postos/${achado.posto.id}` : `/computadores/${achado.ativos[0].id}`);
       campo.current?.focus();
       return;
     }
@@ -90,7 +90,7 @@ export default function BuscaDoLeitor() {
                       onMouseDown={() => {
                         setTermo('');
                         setResultado(null);
-                        navigate(`/ativos/${ativo.id}`);
+                        navigate(`/computadores/${ativo.id}`);
                       }}
                       className="w-full text-left px-3 py-2 text-[11px] hover:bg-bg-base transition-colors"
                     >

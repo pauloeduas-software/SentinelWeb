@@ -1,6 +1,6 @@
 import { useCatalogOptionsQuery } from '../../domain/catalog/catalog.queries';
 
-// O FILTRO POR CATEGORIA das listagens de Ativos, Licenças e Estoque.
+// O FILTRO POR CATEGORIA das listagens de Computadores, Licenças e Estoque.
 //
 // Pelo TIPO, como o `<select>` dos formulários: a tela de Licenças oferece só
 // categorias de licença. Vazio é "todas" — e é o único jeito de desligar o

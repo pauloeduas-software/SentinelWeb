@@ -14,7 +14,7 @@ import { bloqueioDaEntrega, rotuloDaOperacao } from '../helpers/posse.helper';
 import { useAssetDetail } from './hooks/useAssetDetail';
 import { usePode } from '../../../domain/auth/auth.store';
 
-// A TELA DO ATIVO — `/ativos/:id`.
+// A TELA DO ATIVO — `/computadores/:id`.
 //
 // Existe porque uma URL colada no navegador não tem a linha que a listagem
 // tinha em memória: até a F2 o modal recebia o ativo já carregado pela tabela, e
@@ -48,8 +48,8 @@ export default function AssetDetailPage() {
     return (
       <div className="font-mono text-xs space-y-4">
         <div className="text-status-danger">{erro ?? 'Ativo não encontrado.'}</div>
-        <Link to="/ativos" className="flex items-center gap-2 text-text-tertiary hover:text-text-primary transition-colors">
-          <ArrowLeft size={14} /> Voltar para os ativos
+        <Link to="/computadores" className="flex items-center gap-2 text-text-tertiary hover:text-text-primary transition-colors">
+          <ArrowLeft size={14} /> Voltar para os computadores
         </Link>
       </div>
     );
@@ -64,10 +64,10 @@ export default function AssetDetailPage() {
   return (
     <div className="motion-safe:animate-fade-in space-y-6 pb-6">
       <Link
-        to="/ativos"
+        to="/computadores"
         className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary transition-colors"
       >
-        <ArrowLeft size={13} /> Ativos
+        <ArrowLeft size={13} /> Computadores
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">

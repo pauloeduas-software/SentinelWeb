@@ -12,7 +12,7 @@ import { useDescobertas, type AbaDaTela } from './hooks/useDescobertas';
 //
 // A tela se chama DESCOBERTAS, e não "Reconciliação": ela leva o nome do que
 // LISTA, não o do processo que roda por trás. É a mesma correção que aposentou
-// `/itam` em favor de `/ativos` — "ITAM" era o nome do assunto do sistema
+// `/itam` em favor de `/ativos` (hoje `/computadores`) — "ITAM" era o nome do assunto do sistema
 // inteiro, não daquela tela.
 //
 // AS DUAS LISTAS DE MÁQUINAS, separadas pelo vínculo: o que o agente vê e o

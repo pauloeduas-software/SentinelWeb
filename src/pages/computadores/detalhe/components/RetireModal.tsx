@@ -96,7 +96,7 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
 
           <p className="text-text-tertiary text-[10px] leading-relaxed">
             O ativo sai do PATRIMÔNIO e das listagens do dia a dia, mas continua existindo: segue
-            no histórico e na vista "Baixados" da tela de Ativos, com a data e o motivo da saída.
+            no histórico e na vista "Baixados" da tela Computadores, com a data e o motivo da saída.
             Para desfazer um cadastro errado, use a lixeira.
           </p>
 

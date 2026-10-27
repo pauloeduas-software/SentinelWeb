@@ -72,7 +72,7 @@ export default function UsersPage() {
                     {/* Sem esta marca, quem foi desativado pelo botão some de vista:
                         a linha continua igual às outras. "Desativado", e não
                         "inativo": é a mesma palavra do botão que a causou e a
-                        mesma das seis abas de Configurações. */}
+                        mesma de Configurações e de Colaboradores. */}
                     {!user.isActive && (
                       <span className="text-[10px] text-status-warning uppercase tracking-widest">desativado</span>
                     )}

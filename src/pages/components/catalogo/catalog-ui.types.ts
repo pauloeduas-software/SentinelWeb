@@ -55,11 +55,12 @@ export interface ColunaSpec {
 /**
  * Uma ação por LINHA além de editar e excluir.
  *
- * Por que isto existe: as seis abas são o MESMO CRUD, e foi essa igualdade que
- * permitiu uma tela só. Três ações quebram a igualdade sem quebrar a tela:
- * Desativar/Ativar, que as seis abas declaram (com a marca no gênero de cada
- * uma); e Ficha, que só Colaboradores tem, e que leva à tela do que está com a
- * pessoa.
+ * Por que isto existe: as seis tabelas são o MESMO CRUD — as cinco abas de
+ * Configurações e a página Colaboradores —, e foi essa igualdade que permitiu
+ * um componente só (`CadastroDoCatalogo`). Duas ações quebram a igualdade sem
+ * quebrar o componente: Desativar/Ativar, que as seis declaram (com a marca no
+ * gênero de cada uma); e Ficha, que só Colaboradores tem, e que leva à tela do
+ * que está com a pessoa.
  *
  * As duas saídas ruins eram: uma tela separada por aba diferente (volta a
  * duplicação que a spec eliminou) ou um `if (slug === 'people')` no meio do
@@ -70,7 +71,8 @@ export interface ColunaSpec {
  *
  * O `id` é uma união fechada, e não `string`, de propósito: quem adicionar uma
  * ação nova é obrigado pelo compilador a dar a ela um ícone (`CatalogTable`).
- * Quem a trata é a tela de Configurações, que grava na hora ou abre a ficha.
+ * Quem a trata é o `CadastroDoCatalogo`: grava na hora, ou abre a ficha pelo
+ * caminho que a página lhe dá.
  */
 export type AcaoLinhaId = 'ativacao' | 'ficha';
 
@@ -97,14 +99,14 @@ export interface CatalogUiSpec {
    *
    * Declarado, e não deduzido da última letra: "Status" e "Fabricante" não
    * terminam em `o` e são masculinos, "Localização" não termina em `a` e é
-   * feminina. A regra da letra erraria três das seis abas.
+   * feminina. A regra da letra erraria três das seis tabelas.
    */
   genero: 'm' | 'f';
   descricao: string;
   placeholderBusca: string;
   colunas: readonly ColunaSpec[];
   campos: readonly CampoSpec[];
-  /** As ações além de editar e excluir — Desativar nas seis abas. Ver `AcaoLinhaSpec`. */
+  /** As ações além de editar e excluir — Desativar nas seis tabelas. Ver `AcaoLinhaSpec`. */
   acoes?: readonly AcaoLinhaSpec[];
   /**
    * A aba tem LIXEIRA: excluir manda para lá, e a barra ganha a aba Lixeira com
@@ -117,6 +119,18 @@ export interface CatalogUiSpec {
    * `optionFilter`; aqui ficam os rótulos.
    */
   filtroPorTipo?: { campo: string; opcoes: readonly OpcaoFixa[] };
+}
+
+// O BOTÃO DESATIVAR/ATIVAR, igual nas seis tabelas (e em Usuários): grava só
+// `isActive`. Desativado some das listas de escolha e não é escolhido de novo —
+// o servidor recusa —, e continua no histórico e em tudo que já o usa. É a
+// saída de quem não pode ser excluído por ter uso.
+export function desativar(feminino: boolean): AcaoLinhaSpec {
+  return {
+    id: 'ativacao',
+    titulo: 'Desativar',
+    alterna: { campo: 'isActive', tituloSeDesligado: 'Ativar', marcaSeDesligado: feminino ? 'desativada' : 'desativado' },
+  };
 }
 
 // Traduções dos enums do banco. Ficam aqui, num lugar só, porque a tabela e o

@@ -123,7 +123,7 @@ function Numero({ rotulo, valor, unidade }: { rotulo: string; valor: string; uni
 export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaProps) {
   const { maquina, carregando, erro, enviando, retorno, handleComando } = useMaquinaAoVivo(endpointId);
   // GUARDA QUAL hwid foi copiado, não um booleano: o roteador reaproveita a
-  // tela de `/ativos/:id` de um ativo para outro (a busca do leitor navega
+  // tela de `/computadores/:id` de um ativo para outro (a busca do leitor navega
   // assim), e um `true` sobreviveria à troca — a máquina seguinte apareceria
   // com "copiado" sem ninguém ter copiado. É a mesma guarda que o retorno do
   // comando tem no `useMaquinaAoVivo`.

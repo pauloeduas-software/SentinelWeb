@@ -3,7 +3,7 @@ import { prisma } from '../../server/core/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { criarAtivo, criarFabricante, criarModelo, idsDoSeed } from '../helpers/fixtures';
 
-// O ATIVO ENTREGUE A UM POSTO SAI DA LISTAGEM `/ativos`.
+// O ATIVO ENTREGUE A UM POSTO SAI DA LISTAGEM `/computadores`.
 //
 // O computador montado numa mesa tem endereço, e o endereço dele é a mesa:
 // quem pergunta "o que há no parque" quer o que está em estoque ou com gente.
