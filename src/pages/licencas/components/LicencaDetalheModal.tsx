@@ -36,6 +36,8 @@ interface LicencaDetalheModalProps {
   onDevolver: (checkoutId: string, checkinAt: string) => Promise<boolean>;
   /** Troca só a chave de uma entrega aberta, por outra da lista. Resolve `true` quando deu certo. */
   onTrocarChave: (checkoutId: string, licenseKeyId: string) => Promise<boolean>;
+  /** A busca de "Com quem está" já preenchida — o link da ficha traz o nome de quem está com ela. */
+  buscaInicial?: string;
 }
 
 /** As duas listas do detalhe andam de 15 em 15. */
@@ -84,13 +86,14 @@ function Estado({ carregando, erro, children }: { carregando: boolean; erro: Err
 
 export default function LicencaDetalheModal({
   licenca, ocupado, onClose, onEntregar, onEditar, onAlternarEncerrada, onExcluir, onDevolver, onTrocarChave,
+  buscaInicial = '',
 }: LicencaDetalheModalProps) {
   // A linha da listagem desenha o cabeçalho no primeiro quadro; a consulta
   // abaixo traz as contagens frescas logo em seguida.
   const { data: detalhe, error: erroDoDetalhe } = useLicenseQuery(licenca.id);
 
   const [paginaDasEntregas, setPaginaDasEntregas] = useState(1);
-  const [busca, setBusca] = useState('');
+  const [busca, setBusca] = useState(buscaInicial);
   const buscaAdiada = useDebouncedValue(busca);
   const entregas = useLicenseCheckoutsQuery(licenca.id, {
     page: paginaDasEntregas, perPage: POR_PAGINA, q: buscaAdiada || undefined,
@@ -108,14 +111,13 @@ export default function LicencaDetalheModal({
     setPaginaDasEntregas(1);
   };
 
-  // A última linha da página foi devolvida: volta uma, senão a lista abre vazia
-  // com o paginador apontando para uma página que não existe mais.
-  const devolver = async (checkoutId: string, checkinAt: string): Promise<boolean> => {
-    const linhasNaPagina = entregas.data?.rows.length ?? 0;
-    const devolveu = await onDevolver(checkoutId, checkinAt);
-    if (devolveu && linhasNaPagina === 1 && paginaDasEntregas > 1) setPaginaDasEntregas(paginaDasEntregas - 1);
-    return devolveu;
-  };
+  // A página que deixou de existir volta para a última — a entrega voltou, aqui
+  // ou por outra pessoa —, senão a lista abre vazia dizendo que ninguém está
+  // com a licença. Ajuste DURANTE o render, guardado pela condição, como na lista.
+  const ultimaPaginaDasEntregas = entregas.data
+    ? Math.max(1, Math.ceil(entregas.data.total / POR_PAGINA))
+    : paginaDasEntregas;
+  if (paginaDasEntregas > ultimaPaginaDasEntregas) setPaginaDasEntregas(ultimaPaginaDasEntregas);
 
   const totalDoHistorico = historico.data?.total ?? 0;
 
@@ -224,7 +226,7 @@ export default function LicencaDetalheModal({
                 chaves={detalhe?.keys ?? []}
                 vazio={buscaAdiada ? `Ninguém com "${buscaAdiada}" está com esta licença.` : undefined}
                 ocupado={ocupado}
-                onDevolver={devolver}
+                onDevolver={onDevolver}
                 onTrocarChave={onTrocarChave}
               />
             </Estado>

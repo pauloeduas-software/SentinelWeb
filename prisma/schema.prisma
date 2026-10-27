@@ -886,8 +886,8 @@ model LicenseKey {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Cascade: a chave é parte do contrato. Só a licença nunca entregue se exclui
-  // (AA), e a chave já entregue segura a sua pelo `Restrict` de `license_checkouts`.
+  // Cascade: a chave é parte do contrato e vai junto com a licença excluída —
+  // que só se exclui sem nada em uso (AG); a entrega devolvida perde a chave antes.
   license   License           @relation(fields: [licenseId], references: [id], onDelete: Cascade)
   checkouts LicenseCheckout[]
 

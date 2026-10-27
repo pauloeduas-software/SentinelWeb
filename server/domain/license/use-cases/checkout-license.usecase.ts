@@ -183,8 +183,8 @@ function assertLicencaVigente(
   const status = statusDaLicenca(licenca);
   if (status === 'ENCERRADA') {
     throw new AppError(
-      `A licença "${licenca.name}" está ENCERRADA e não recebe entrega. `
-      + 'Se o contrato voltou, limpe a data de encerramento antes.',
+      `A licença "${licenca.name}" está encerrada e não recebe entrega. `
+      + 'Se o contrato voltou, reabra-a antes.',
       409,
     );
   }

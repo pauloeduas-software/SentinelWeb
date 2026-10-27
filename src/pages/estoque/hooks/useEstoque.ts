@@ -73,6 +73,9 @@ export function useEstoque() {
   // Fechar tira o link.
   const [parametros, setParametros] = useSearchParams();
   const idDoLink = parametros.get('item');
+  // `?busca=<nome>`: quem veio da ficha do colaborador ou da do posto já abre
+  // "Com quem está" filtrado por ele.
+  const buscaDoLink = parametros.get('busca') ?? '';
   const doLink = useStockItemQuery(idDoLink);
   const pelaUrl = modal === null && doLink.data ? doLink.data : null;
   const modalAtual: ModalDeEstoque = pelaUrl ? 'detalhe' : modal;
@@ -95,6 +98,7 @@ export function useEstoque() {
     if (idDoLink) {
       setParametros((atuais) => {
         atuais.delete('item');
+        atuais.delete('busca');
         return atuais;
       }, { replace: true });
     }
@@ -190,6 +194,8 @@ export function useEstoque() {
 
     modal: modalAtual,
     itemAberto: itemAtual,
+    // Só para o item do link: o outro, aberto pela lista, abre sem busca.
+    buscaDoLink: itemAtual && itemAtual.id === idDoLink ? buscaDoLink : '',
     // O link apontava para um item que não existe mais (excluído).
     erroDoLink: idDoLink && modal === null && doLink.error ? doLink.error.message : null,
     abrir,

@@ -15,7 +15,9 @@ import { cobertasPelas, linhaNova, type LinhaDeChave } from '../helpers/licenca.
 // a correção de digitação, e vale para as entregas dela.
 //
 // COLAR UMA LISTA com várias linhas num campo cria uma chave para cada linha:
-// ninguém digita cinquenta chaves uma a uma.
+// ninguém digita cinquenta chaves uma a uma. As novas vão para o FIM da lista,
+// que é onde o servidor as grava (depois das que já existem): o número que a
+// chave tem aqui é o que ela tem no detalhe e na entrega.
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface ChavesDoFormularioProps {
@@ -45,14 +47,14 @@ export default function ChavesDoFormulario({ linhas, compradas, onChange, classe
     const indice = linhas.findIndex((linha) => linha.uid === uid);
     const atual = linhas[indice];
     // No campo vazio, a primeira linha colada fica nele; as outras viram chaves
-    // novas logo abaixo.
+    // novas no fim da lista.
     const [primeira, ...resto] = atual.productKey.trim() === '' ? coladas : ['', ...coladas];
     const novas = resto.map((chave) => linhaNova(chave));
     onChange([
       ...linhas.slice(0, indice),
       primeira ? { ...atual, productKey: primeira } : atual,
-      ...novas,
       ...linhas.slice(indice + 1),
+      ...novas,
     ]);
   };
 

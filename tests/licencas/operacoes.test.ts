@@ -273,7 +273,7 @@ describe('a entrega recusa', () => {
 
     const r2 = await api.post<{ error: string }>(`/api/licenses/${encerrada.id}/checkout`, alvo);
     expect(r2.status).toBe(409);
-    expect(r2.body.error).toContain('ENCERRADA');
+    expect(r2.body.error).toContain('está encerrada e não recebe entrega');
 
     expect((await api.post(`/api/licenses/${vencendo.id}/checkout`, alvo)).status).toBe(201);
   });

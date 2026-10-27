@@ -29,6 +29,8 @@ interface ItemDetalheModalProps {
   onExcluir?: (item: ItemDeEstoque) => void;
   /** `checkinAt` é o dia, 'AAAA-MM-DD'. Resolve `true` quando a devolução deu certo. */
   onDevolver: (entregaId: string, qty: number, checkinAt: string) => Promise<boolean>;
+  /** A busca de "Com quem está" já preenchida — o link de uma ficha traz o nome de quem está com ele. */
+  buscaInicial?: string;
 }
 
 /** As duas listas do detalhe andam de 15 em 15. */
@@ -76,14 +78,14 @@ function Estado({ carregando, erro, children }: { carregando: boolean; erro: Err
 }
 
 export default function ItemDetalheModal({
-  item, ocupado, onClose, onEntregar, onEditar, onAlternarAtivo, onExcluir, onDevolver,
+  item, ocupado, onClose, onEntregar, onEditar, onAlternarAtivo, onExcluir, onDevolver, buscaInicial = '',
 }: ItemDetalheModalProps) {
   // A linha da listagem desenha o cabeçalho no primeiro quadro; a consulta
   // abaixo traz a conta fresca logo em seguida.
   const { data: detalhe, error: erroDoDetalhe } = useStockItemQuery(item.id);
 
   const [paginaDasEntregas, setPaginaDasEntregas] = useState(1);
-  const [busca, setBusca] = useState('');
+  const [busca, setBusca] = useState(buscaInicial);
   const buscaAdiada = useDebouncedValue(busca);
   const entregas = useStockCheckoutsQuery(item.id, {
     page: paginaDasEntregas, perPage: POR_PAGINA, q: buscaAdiada || undefined,
@@ -100,15 +102,14 @@ export default function ItemDetalheModal({
     setPaginaDasEntregas(1);
   };
 
-  // A última linha da página voltou inteira: volta uma página, senão a lista
-  // abre vazia com o paginador apontando para uma página que não existe mais.
-  const devolver = async (entregaId: string, qty: number, checkinAt: string): Promise<boolean> => {
-    const linhasNaPagina = entregas.data?.rows.length ?? 0;
-    const entregaInteira = entregas.data?.rows.find((entrega) => entrega.id === entregaId)?.unidades === qty;
-    const devolveu = await onDevolver(entregaId, qty, checkinAt);
-    if (devolveu && entregaInteira && linhasNaPagina === 1 && paginaDasEntregas > 1) setPaginaDasEntregas(paginaDasEntregas - 1);
-    return devolveu;
-  };
+  // A página que deixou de existir volta para a última — a entrega voltou
+  // inteira, aqui ou por outra pessoa —, senão a lista abre vazia dizendo que
+  // ninguém está com o item. Ajuste DURANTE o render, guardado pela condição,
+  // como na lista.
+  const ultimaPaginaDasEntregas = entregas.data
+    ? Math.max(1, Math.ceil(entregas.data.total / POR_PAGINA))
+    : paginaDasEntregas;
+  if (paginaDasEntregas > ultimaPaginaDasEntregas) setPaginaDasEntregas(ultimaPaginaDasEntregas);
 
   const totalDoHistorico = historico.data?.total ?? 0;
 
@@ -187,7 +188,7 @@ export default function ItemDetalheModal({
                 entregas={entregas.data?.rows ?? []}
                 vazio={buscaAdiada ? `Ninguém com "${buscaAdiada}" está com este item.` : undefined}
                 ocupado={ocupado}
-                onDevolver={devolver}
+                onDevolver={onDevolver}
               />
             </Estado>
           </div>

@@ -133,6 +133,7 @@ export default function AssetDetailPage() {
         {aba === 'licencas' && (
           <LicensesTab
             licencas={licencas}
+            assetTag={asset.assetTag}
             carregando={licencasPendentes}
             erro={erroDasLicencas}
           />

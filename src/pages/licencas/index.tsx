@@ -27,7 +27,7 @@ export default function LicencasPage() {
     licencas, total, carregando, erro, page, perPage, setPage, search, changeSearch,
     categoryId, changeCategoria, status, changeStatus, soEmUso, changeSoEmUso, irParaAlerta,
     alertas,
-    modal, licencaAberta, erroDoLink, abrir, fechar, ocupado,
+    modal, licencaAberta, buscaDoLink, erroDoLink, abrir, fechar, ocupado,
     handleCriar, handleEditar, handleEntregar, handleDevolver, handleTrocarChave, handleAlternarEncerrada, handleExcluir,
   } = useLicencas();
   // Excluir é `ADMIN` no servidor.
@@ -124,7 +124,10 @@ export default function LicencasPage() {
 
       {modal === 'detalhe' && licencaAberta && (
         <LicencaDetalheModal
+          // Outra licença é outra janela: página e busca não passam de uma para a outra.
+          key={licencaAberta.id}
           licenca={licencaAberta}
+          buscaInicial={buscaDoLink}
           ocupado={ocupado}
           onClose={fechar}
           onEntregar={(licenca) => abrir('entregar', licenca)}

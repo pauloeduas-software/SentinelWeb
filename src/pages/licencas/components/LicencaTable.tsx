@@ -2,7 +2,7 @@ import { Edit2, Power, PowerOff, Trash2, UserPlus } from 'lucide-react';
 import type { Licenca } from '../../../domain/shared/license.types';
 import { ROTULO_DO_STATUS, resumoDaContagem, textoDoPrazo } from '../../helpers/licenca.helper';
 import { motivoParaNaoEntregar } from '../helpers/licenca.helper';
-import { formatarData, formatarMoeda } from '../../helpers/format.helper';
+import { formatarData } from '../../helpers/format.helper';
 
 // A tabela de licenças. Apresentacional puro: recebe valor e callback, não
 // conhece query nem HTTP.
@@ -12,9 +12,9 @@ import { formatarData, formatarMoeda } from '../../helpers/format.helper';
 //
 // O CADASTRO É O DAS CONFIGURAÇÕES (`CatalogTable`, AF): Editar,
 // Encerrar/Reabrir no lugar do Desativar/Ativar, e Excluir; a encerrada fica na
-// lista, esmaecida e marcada; e Excluir sempre clica — a licença já entregue
-// recebe o 409 do servidor, que manda encerrar. Encerrar grava a data do fim do
-// contrato, que entra no status e no alerta.
+// lista, esmaecida e marcada; e Excluir sempre clica — a licença em uso recebe
+// o 409 do servidor, que diz com quem está e manda devolver (AG). Encerrar grava
+// a data do fim do contrato, que entra no status e no alerta.
 
 interface LicencaTableProps {
   licencas: Licenca[];
@@ -50,10 +50,10 @@ export default function LicencaTable({
         <thead className="border-b border-border-sutil bg-bg-base/40">
           <tr>
             <th className={CABECALHO}>Licença</th>
+            <th className={CABECALHO}>Categoria</th>
             <th className={CABECALHO}>Status</th>
             <th className={CABECALHO}>Quantidade</th>
             <th className={CABECALHO}>Vencimento</th>
-            <th className={`${CABECALHO} text-right`}>Custo</th>
             <th className={`${CABECALHO} text-right`}>Ações</th>
           </tr>
         </thead>
@@ -78,10 +78,9 @@ export default function LicencaTable({
                   {encerrada && (
                     <span className="ml-3 text-[10px] text-status-warning uppercase tracking-widest">encerrada</span>
                   )}
-                  <div className="text-[10px] text-text-tertiary mt-1">
-                    {licenca.manufacturer?.name ?? licenca.category?.name ?? '—'}
-                  </div>
                 </td>
+
+                <td className="px-4 py-3 text-text-secondary">{licenca.category?.name ?? '—'}</td>
 
                 <td className="px-4 py-3 text-text-secondary">{ROTULO_DO_STATUS[licenca.status]}</td>
 
@@ -89,10 +88,6 @@ export default function LicencaTable({
 
                 <td className="px-4 py-3 text-text-secondary">
                   {encerrada ? `encerrada em ${formatarData(licenca.terminationDate)}` : textoDoPrazo(licenca.diasParaVencer)}
-                </td>
-
-                <td className="px-4 py-3 text-right text-text-secondary">
-                  {formatarMoeda(licenca.purchaseCost)}
                 </td>
 
                 <td className="px-4 py-3">

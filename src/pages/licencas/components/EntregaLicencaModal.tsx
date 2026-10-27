@@ -46,6 +46,9 @@ export default function EntregaLicencaModal({ licenca, onClose, onSubmit }: Entr
   const [erro, setErro] = useState('');
 
   const { data: detalhe, error: erroDoDetalhe } = useLicenseQuery(licenca.id);
+  // A conta do cabeçalho vem do detalhe, e não da linha da lista: depois de um
+  // 409 de "sem livre", a consulta é buscada de novo e o número acompanha.
+  const atual = detalhe ?? licenca;
   const chaves = detalhe?.keys ?? [];
   const comLugar = chavesComLugar(chaves);
   // Com uma chave só com lugar, ela já vem escolhida.
@@ -87,7 +90,7 @@ export default function EntregaLicencaModal({ licenca, onClose, onSubmit }: Entr
           <div>
             <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">Entregar licença</h2>
             <p className="font-mono text-[10px] text-text-tertiary mt-1">
-              {licenca.name} · {licenca.livres} de {licenca.seatsTotal} livre(s)
+              {atual.name} · {atual.livres} de {atual.seatsTotal} {atual.livres === 1 ? 'livre' : 'livres'}
             </p>
           </div>
           <button onClick={onClose} aria-label="Fechar" title="Fechar" className="p-2 text-text-tertiary hover:text-text-primary transition-colors">

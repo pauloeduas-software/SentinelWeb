@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Armchair, User, X } from 'lucide-react';
 import ReferenceSelect from '../../components/ReferenceSelect';
+import { useStockItemQuery } from '../../../domain/stock/stock.queries';
 import type { AlvoDaEntregaDeEstoque, ItemDeEstoque } from '../../../domain/shared/stock.types';
 import { hojeNoCampoDeData } from '../../helpers/format.helper';
 
@@ -37,6 +38,11 @@ export default function EntregaModal({ item, onClose, onSubmit }: EntregaModalPr
   const [checkoutAt, setCheckoutAt] = useState(hoje);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
+
+  // A conta do cabeçalho vem do detalhe, e não da linha da lista: depois de um
+  // 409 de "sem unidade", a consulta é buscada de novo e o número acompanha.
+  const { data: detalhe } = useStockItemQuery(item.id);
+  const atual = detalhe ?? item;
 
   const alvoId = tipo === 'PERSON' ? personId : workstationId;
   const pronto = alvoId !== '' && checkoutAt !== '';
@@ -81,7 +87,7 @@ export default function EntregaModal({ item, onClose, onSubmit }: EntregaModalPr
           <div>
             <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">Entregar</h2>
             <p className="font-mono text-[10px] text-text-tertiary mt-1">
-              {item.name} · {item.disponivel} de {item.qty} {item.disponivel === 1 ? 'disponível' : 'disponíveis'}
+              {atual.name} · {atual.disponivel} de {atual.qty} {atual.disponivel === 1 ? 'disponível' : 'disponíveis'}
             </p>
           </div>
           <button onClick={onClose} aria-label="Fechar" title="Fechar" className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
