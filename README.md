@@ -124,7 +124,7 @@ bun run dev
 | `test` / `test:watch` | Vitest contra o banco `sentineldb_test` (descartável). Ver [`docs/referencia/testes.md`](./docs/referencia/testes.md) |
 | `db:migrate` / `db:generate` / `db:studio` | Prisma |
 | `db:seed` | O seed principal: categorias, status e configuração. Não cria conta: o primeiro administrador é criado à mão por quem instala ([T](./docs/decisoes/acesso.md#t--não-há-conta-semeada)). Roda em todo banco |
-| `db:seed:demo` | O principal mais dados de exemplo — fabricantes, modelos e localizações. Só para desenvolvimento e demonstração. Ver [`docs/referencia/configuracoes.md`](./docs/referencia/configuracoes.md#o-que-vem-semeado) |
+| `db:seed:demo` | O principal mais dados de exemplo — a conta `admin@sentinel.com` (senha `admin`), fabricantes, modelos, localizações, cinco colaboradores, licenças e itens de estoque. Só para desenvolvimento e demonstração. Ver [`docs/referencia/configuracoes.md`](./docs/referencia/configuracoes.md#o-que-vem-semeado) |
 | `acesso:administrador` | A linha de escape do sistema trancado: `-- <e-mail>` dá o cargo `ADMIN` a essa pessoa. Roda no servidor, fora da API — ver [`docs/referencia/invariantes.md`](./docs/referencia/invariantes.md) (invariante 17) |
 | `agente:falso` | Um agente de mentira no `/agent-hub` (`scripts/agente-falso.ts`): handshake e telemetria a cada 3 s, para ver a aba Máquina e a ficha do posto sem o agente real. Lê `PORT` e `AGENT_TOKEN` do `.env`; `-- <hwid> <hostname>` para uma segunda máquina |
 

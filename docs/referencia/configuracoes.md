@@ -307,7 +307,7 @@ Dois seeds, com regras diferentes:
 | | `npm run db:seed` — o principal | `npm run db:seed:demo` — demonstração |
 |---|---|---|
 | onde roda | todo banco, produção incluída, e antes de cada arquivo de teste | só quando alguém pede: ambiente de desenvolvimento e demonstração |
-| o que cria | o que é do SOFTWARE: as 11 categorias, os 4 status (Disponível, Em uso, Pendente, Inutilizável) e a configuração — nenhuma conta ([T](../decisoes/acesso.md#t--não-há-conta-semeada)) | o que é da EMPRESA, como exemplo: fabricantes, modelos e localizações (abaixo). Roda o principal antes |
+| o que cria | o que é do SOFTWARE: as 11 categorias, os 4 status (Disponível, Em uso, Pendente, Inutilizável) e a configuração — nenhuma conta ([T](../decisoes/acesso.md#t--não-há-conta-semeada)) | o que é da EMPRESA, como exemplo: fabricantes, modelos, localizações, colaboradores, licenças e itens de estoque (abaixo), e a conta de entrar. Roda o principal antes |
 | arquivos | `prisma/seeds/*.seed.ts`, ordem em `prisma/seeds/index.ts` | `prisma/seeds/demo/*.seed.ts`, ordem em `prisma/seeds/demo/index.ts` |
 
 Fabricante, modelo e localização ficam **fora** do principal de propósito:
@@ -320,6 +320,10 @@ cadastram os próprios.
 |---|---|
 | **Modelos** | um por fabricante, a linha mais popular — Inspiron 15, IdeaPad 3, Vivobook 15, Aspire 5, MacBook Air, Galaxy Book —, a Microsoft sem modelo, e Desktop montado e Servidor montado. Sem número de modelo: cada linha tem dezenas de variações, e um número inventado seria dado errado |
 | **Localizações** | Matriz, Filial (exemplo), Depósito de TI (onde fica o estoque) e Home office (uma só para todo mundo de casa, sem endereço) |
+| **Colaboradores** | PESSOA1 a PESSOA5, com e-mail `pessoa1@gmail.com` a `pessoa5@gmail.com` |
+| **Licenças** | duas por categoria: Windows 11 Pro e Windows 10 Pro, Microsoft 365 e WinRAR (uma licença só, para a empresa inteira), Norton 360 e McAfee Total Protection, Adobe Photoshop e Canva Pro (só as da Microsoft com fabricante). Como recém-cadastradas: sem data, por isso sempre ativas, sem chave e sem entrega |
+| **Estoque** | Mouse USB, Teclado USB, Headset, Webcam, Monitor 24", Cabo HDMI, Adaptador USB-C para HDMI, Memória RAM 8 GB e SSD 480 GB, no Depósito de TI. Todos ativos e sem entrega |
+| **Conta** | Administrador, `admin@sentinel.com`, senha `admin` — só aqui, nunca no principal ([T](../decisoes/acesso.md#t--não-há-conta-semeada)) |
 
 Os dois são **idempotentes**: rodar de novo não duplica nem desfaz o que foi
 editado pela tela. O de demonstração confere o nome **sem diferença de

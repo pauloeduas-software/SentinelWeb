@@ -503,6 +503,11 @@ administrador trocar o próprio e-mail e alguém rodar o seed de novo para nasce
 conta que o seed recria sozinha é uma porta que reabre toda vez que ele roda; o usuário preferiu
 que ela não exista.
 
+**Depois:** a conta voltou só no seed de **demonstração** (`npm run db:seed:demo`), que não roda em
+produção nem nos testes: `admin@sentinel.com`, senha `admin`, para o ambiente de desenvolvimento
+abrir com um login. A porta descrita acima continua valendo lá — quem trocar esse e-mail e rodar o
+demo de novo ganha uma segunda conta `ADMIN` —, e é aceita por ser banco de desenvolvimento.
+
 
 ---
 
