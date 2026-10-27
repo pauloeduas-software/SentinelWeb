@@ -2,17 +2,15 @@ import { prisma } from '../../../core/database/prismaClient';
 import { AppError } from '../../../core/errors/app-error';
 import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
+import { escaparCuringas } from '../../shared/busca.helper';
 import { buildSnapshot } from '../../shared/diff.helper';
 import {
   assertEscolhaAtiva, assertLocalRecebe, lerCategoriaTravada,
 } from '../../catalog/helpers/catalog-lock.helper';
 import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
-import { comSaldo, type ClienteEstoque } from '../helpers/stock-balance.helper';
-import { STOCK_ITEM_SELECT } from '../helpers/stock-select.helper';
+import { comContagem, SEM_USO, type ClienteEstoque } from '../helpers/stock-balance.helper';
+import { CAMPOS_AUDITADOS_DO_ITEM, STOCK_ITEM_SELECT } from '../helpers/stock-select.helper';
 import type { CreateStockItemInput } from '../schemas/stock.schema';
-
-/** O retrato do item na auditoria — o cadastro e a exclusão (`delete-stock-item`). */
-export const CAMPOS_AUDITADOS = ['name', 'qty', 'categoryId', 'locationId', 'notes'] as const;
 
 /**
  * A categoria do item tem que ser do tipo ESTOQUE.
@@ -43,16 +41,28 @@ export async function assertCategoriaDeEstoque(
 }
 
 /**
- * O nome é único entre os vivos (índice parcial). Conferir antes é o que
- * transforma o P2002 cru num 409 que diz o nome — e que deixa o item da lixeira
- * fora da conta, porque é ela que pode ser restaurada.
+ * O nome é único entre TODOS os itens, desativados inclusive: o item que volta
+ * a ser comprado se reativa, e o histórico dele continua junto. Conferir antes
+ * é o que transforma o P2002 cru num 409 que diz o nome — e o que fazer.
  */
 export async function assertNomeLivre(client: ClienteEstoque, name: string, ignorarId?: string): Promise<void> {
+  // Sem distinguir maiúsculas, como nas Configurações (`nome-unico.helper.ts`):
+  // "mouse usb" é o "Mouse USB" com outra grafia. O `insensitive` vira ILIKE, e
+  // lá `%` e `_` são curingas — por isso o escape.
   const outro = await client.stockItem.findFirst({
-    where: { name, ...(ignorarId ? { id: { not: ignorarId } } : {}) },
-    select: { id: true },
+    where: {
+      name: { equals: escaparCuringas(name), mode: 'insensitive' },
+      ...(ignorarId ? { id: { not: ignorarId } } : {}),
+    },
+    select: { name: true, isActive: true },
   });
-  if (outro) throw new AppError(`Já existe um item de estoque chamado "${name}".`, 409);
+  if (!outro) return;
+  throw new AppError(
+    outro.isActive
+      ? `Já existe um item de estoque chamado "${outro.name}".`
+      : `Já existe um item de estoque chamado "${outro.name}", desativado. Reative-o em vez de cadastrar outro.`,
+    409,
+  );
 }
 
 export async function createStockItem(data: CreateStockItemInput, ator: Ator) {
@@ -74,25 +84,18 @@ export async function createStockItem(data: CreateStockItemInput, ator: Ator) {
       select: STOCK_ITEM_SELECT,
     });
 
-    // A QUANTIDADE INICIAL É A PRIMEIRA ENTRADA. Sem esta linha, a movimentação
-    // do item começaria "do nada" com 10 unidades no total e nenhum movimento
-    // que as explicasse — e o total deixaria de ser a soma do que entrou.
-    if (data.qty > 0) {
-      await tx.stockMovement.create({
-        data: { itemId: item.id, kind: 'ENTRADA', qty: data.qty, notes: 'cadastro' },
-      });
-    }
-
+    // O total entra na auditoria, no retrato do cadastro, como a quantidade
+    // comprada da licença. O histórico da tela é só entregas e devoluções.
     await recordAudit(tx, {
       entityType: 'StockItem',
       entityId: item.id,
       entityLabel: item.name,
       action: 'CREATE',
-      changes: buildSnapshot(item, CAMPOS_AUDITADOS),
+      changes: buildSnapshot(item, CAMPOS_AUDITADOS_DO_ITEM),
     }, ator);
 
-    // COM SALDO, como a listagem e o detalhe: uma forma só de item na API.
-    // `fora` é zero por construção — nada saiu de um item que acabou de nascer.
-    return comSaldo(item, 0);
+    // COM A CONTA, como a listagem e o detalhe: uma forma só de item na API.
+    // Zero em uso por construção — nada saiu de um item que acabou de nascer.
+    return comContagem(item, SEM_USO);
   });
 }

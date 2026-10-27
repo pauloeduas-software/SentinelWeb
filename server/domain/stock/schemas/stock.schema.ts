@@ -1,54 +1,67 @@
 import { z } from 'zod';
-import { nomeObrigatorio, textoOpcional, uuidObrigatorio, uuidOpcional } from '../../shared/fields.schema';
+import {
+  diaNaoFuturo, nomeObrigatorio, textoOpcional, uuidObrigatorio, uuidOpcional,
+} from '../../shared/fields.schema';
 
-// Contrato de entrada do ESTOQUE.
+// Contrato de entrada do ESTOQUE — a mesma forma do da licença
+// (`license.schema.ts`), porque a lógica é a mesma (AE).
 //
 // `strictObject` como no resto do sistema: campo desconhecido vira 422 em vez
-// de gravação silenciosa. Aqui isso fecha uma porta específica — `qty` NÃO
-// está no schema de EDIÇÃO: quantidade muda por ENTRADA e BAIXA, que deixam
-// linha de movimento; um `PUT` que a aceitasse seria o segundo caminho, sem
-// histórico.
+// de gravação silenciosa.
 
-const quantidade = (rotulo: string, max: number) =>
-  z.coerce.number(`${rotulo} deve ser um número`)
+/** Teto do total — o mesmo da quantidade comprada da licença. */
+const MAX_UNIDADES = 100_000;
+
+/**
+ * `z.number` e não `z.coerce.number`, como na licença: o `coerce` roda
+ * `Number(null)`, `Number(true)` e `Number([5])`, e um `{"qty": null}` virava 0
+ * — 422 de "mínimo" em vez de "todas" na devolução. A tela manda número.
+ */
+const quantidade = (rotulo: string, max: number, min = 1) =>
+  z.number(`${rotulo} deve ser um número`)
     .int(`${rotulo} deve ser um número inteiro`)
-    .min(1, `${rotulo}: mínimo de 1`)
+    .min(min, `${rotulo}: mínimo de ${min}`)
     .max(max, `${rotulo}: máximo de ${max}`);
+
+/**
+ * O TOTAL, ao menos UM — no cadastro e na edição —, como a quantidade comprada
+ * da licença: o item que acabou se desativa, e o total nunca é zero (CHECK
+ * `stock_items_qty_positiva`).
+ */
+const total = quantidade('quantidade', MAX_UNIDADES);
 
 export const createStockItemSchema = z.strictObject({
   name: nomeObrigatorio('nome'),
   categoryId: uuidObrigatorio('categoria'),
-  // A quantidade INICIAL — vira a primeira ENTRADA, para a movimentação contar
-  // a história desde o cadastro. Zero é legítimo: o item existe e ainda não
-  // chegou.
-  qty: z.coerce.number('quantidade deve ser um número')
-    .int('quantidade deve ser um número inteiro')
-    .min(0, 'quantidade: mínimo de 0')
-    .max(1_000_000, 'quantidade: máximo de 1.000.000')
-    .default(0),
+  qty: total,
   // Onde o que sobra fica guardado — o Depósito de TI. Opcional.
   locationId: uuidOpcional('localização'),
   notes: textoOpcional('notas', 2_000),
 });
 
+/**
+ * Edição: todo campo é opcional — ausente significa "mantém o valor atual". A
+ * tela manda o formulário inteiro (AF); o Desativar manda só `isActive`.
+ *
+ * `qty` ESTÁ AQUI, como o `seatsTotal` da licença: chegou mais, a recontagem
+ * deu outro número — digitar o total É a correção. Aumentar sempre pode;
+ * reduzir não passa do que está em uso (`update-stock-item`).
+ *
+ * `isActive` é o Desativar e o Reativar da tela.
+ */
 export const updateStockItemSchema = z.strictObject({
   name: nomeObrigatorio('nome').optional(),
   categoryId: uuidObrigatorio('categoria').optional(),
+  qty: total.optional(),
   locationId: uuidOpcional('localização'),
   notes: textoOpcional('notas', 2_000),
-});
-
-/** ENTRADA soma ao total; BAIXA subtrai, nunca abaixo do que está fora. */
-export const adjustStockSchema = z.strictObject({
-  kind: z.enum(['ENTRADA', 'BAIXA'], 'tipo inválido: use ENTRADA ou BAIXA'),
-  qty: quantidade('quantidade', 1_000_000),
-  notes: textoOpcional('observação', 2_000),
+  isActive: z.boolean('ativo: use true ou false').optional(),
 });
 
 /**
- * A SAÍDA: `qty` unidades a UM alvo. Cada unidade vira uma linha; o teto por
- * requisição existe porque são N `INSERT`s numa transação, e ninguém entrega
- * mil mouses de uma vez pela tela.
+ * A ENTREGA: `qty` unidades a UM alvo, num dia. Cada unidade vira uma linha; o
+ * teto por requisição existe porque são N `INSERT`s numa transação, e ninguém
+ * entrega mil mouses de uma vez pela tela.
  *
  * As duas FKs são opcionais aqui e a obrigatoriedade de UMA fica no use-case
  * (`assertAlvoCoerente`), pelo mesmo motivo do checkout de ativo: a regra é
@@ -60,12 +73,25 @@ export const checkoutStockSchema = z.strictObject({
   targetPersonId: uuidOpcional('colaborador'),
   targetWorkstationId: uuidOpcional('posto'),
   qty: quantidade('quantidade', 100).default(1),
-  notes: textoOpcional('observações da saída', 2_000),
+  notes: textoOpcional('observações', 2_000),
+  /** Ausente é hoje. Passado é o caso real: registrar a entrega que já aconteceu. */
+  checkoutAt: diaNaoFuturo('data da entrega'),
+});
+
+/**
+ * A DEVOLUÇÃO de uma saída: quantas voltam e o dia. `qty` ausente é TODAS as
+ * que ainda estão com o alvo nesta saída — a devolução da entrega inteira, como
+ * na licença. O dia ausente é hoje; nunca futuro, e nunca antes do dia da
+ * entrega — esta conta precisa da saída, e mora no use-case.
+ */
+export const checkinStockSchema = z.strictObject({
+  qty: quantidade('quantidade', 100).optional(),
+  checkinAt: diaNaoFuturo('data da devolução'),
 });
 
 /**
  * Os filtros da LISTAGEM que não são do `parseListQuery`. O controller separa a
- * query antes de qualquer `parse`, como no `endpoint.controller.ts`: os dois
+ * query antes de qualquer `parse`, como no `license.controller.ts`: os dois
  * schemas são estritos e cada um recebe só o que é seu.
  */
 export const stockFiltersSchema = z.strictObject({
@@ -74,6 +100,6 @@ export const stockFiltersSchema = z.strictObject({
 
 export type CreateStockItemInput = z.infer<typeof createStockItemSchema>;
 export type UpdateStockItemInput = z.infer<typeof updateStockItemSchema>;
-export type AdjustStockInput = z.infer<typeof adjustStockSchema>;
 export type CheckoutStockInput = z.infer<typeof checkoutStockSchema>;
+export type CheckinStockInput = z.infer<typeof checkinStockSchema>;
 export type StockFilters = z.infer<typeof stockFiltersSchema>;

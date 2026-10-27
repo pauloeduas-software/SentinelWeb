@@ -12,25 +12,26 @@ export const STOCK_ITEM_SELECT = {
   categoryId: true,
   locationId: true,
   notes: true,
+  isActive: true,
 
   createdAt: true,
   updatedAt: true,
-  deletedAt: true,
 
   category: { select: { id: true, name: true, type: true } },
   location: { select: { id: true, name: true } },
 } as const;
 
+/** Os campos do item que a auditoria guarda (AB): o retrato no cadastro e na exclusão, o `{ de, para }` na edição. */
+export const CAMPOS_AUDITADOS_DO_ITEM = ['name', 'qty', 'categoryId', 'locationId', 'notes', 'isActive'] as const;
+
 /**
- * O movimento, com os dois alvos embutidos: a tela mostra PARA QUEM a unidade
- * foi, não o uuid. `targetPerson` reaproveita `PERSON_PUBLIC_SELECT`: quem
- * decide o que é público de um colaborador é o domínio `person`.
+ * A unidade, com os dois alvos embutidos: a tela mostra PARA QUEM ela foi, não
+ * o uuid. `targetPerson` reaproveita `PERSON_PUBLIC_SELECT`: quem decide o que
+ * é público de um colaborador é o domínio `person`.
  */
 export const STOCK_MOVEMENT_SELECT = {
   id: true,
   itemId: true,
-  kind: true,
-  qty: true,
 
   targetType: true,
   targetPersonId: true,
@@ -39,6 +40,7 @@ export const STOCK_MOVEMENT_SELECT = {
   // `targetWorkstation` vem nulo.
   targetWorkstationName: true,
 
+  checkoutAt: true,
   returnedAt: true,
   notes: true,
 
@@ -48,19 +50,11 @@ export const STOCK_MOVEMENT_SELECT = {
   targetWorkstation: { select: { id: true, name: true } },
 } as const;
 
-/** A unidade fora do estoque como a ficha do POSTO e a da PESSOA a recebem. */
-export const STOCK_UNIT_SELECT = {
-  id: true,
-  itemId: true,
-  createdAt: true,
-  notes: true,
-  targetType: true,
-  targetPersonId: true,
-  targetWorkstationId: true,
-  item: {
-    select: {
-      id: true, name: true, deletedAt: true,
-      category: { select: { id: true, name: true } },
-    },
-  },
-} as const;
+/** Quem recebeu, por escrito — o colaborador, o posto, ou o nome que o posto excluído deixou. */
+export function rotuloDoAlvo(unidade: {
+  targetPerson: { name: string } | null;
+  targetWorkstation: { name: string } | null;
+  targetWorkstationName: string | null;
+}): string {
+  return unidade.targetPerson?.name ?? unidade.targetWorkstation?.name ?? unidade.targetWorkstationName ?? '—';
+}

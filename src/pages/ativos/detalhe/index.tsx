@@ -101,7 +101,7 @@ export default function AssetDetailPage() {
           {/* Clonar é operação DE TELA: abre o formulário em modo criação com os
               valores deste ativo, sem etiqueta e sem série. Não há rota nova. */}
           <Acao onClick={abrirClone} icone={Copy}>Clonar</Acao>
-          {podeExcluir && <Acao onClick={() => void handleDelete()} icone={Trash2} perigo>Lixeira</Acao>}
+          {podeExcluir && <Acao onClick={() => void handleDelete()} icone={Trash2} perigo>Excluir</Acao>}
         </div>
       </div>
 

@@ -81,7 +81,7 @@ describe('excluir posto — só o presente segura', () => {
 
     const { status, body } = await api.delete<{ error: string }>(`/api/workstations/${mesa}`);
     expect(status).toBe(409);
-    expect(body.error).toMatch(/1 registro/);
+    expect(body.error).toMatch(/^Este posto ainda tem 1 ativo\. /);
     expect(body.error).toContain('Tire o que está nele agora');
   });
 
@@ -130,15 +130,16 @@ describe('excluir posto — só o presente segura', () => {
       targetType: 'WORKSTATION', targetWorkstationId: mesa, qty: 1,
     });
     expect(saida.status).toBe(201);
-    expect((await api.post(`/api/stock/movements/${saida.body.unidades[0].id}/checkin`, {})).status).toBe(200);
+    expect((await api.post(`/api/stock/checkouts/${saida.body.unidades[0].id}/checkin`, {})).status).toBe(200);
 
     expect((await api.delete(`/api/workstations/${mesa}`)).status).toBe(200);
 
-    const movimentos = await api.get<{ rows: { action: string; targetLabel: string | null }[] }>(
-      `/api/stock/items/${mouse.id}/movements`,
+    const historico = await api.get<{ rows: { action: string; targetLabel: string }[] }>(
+      `/api/stock/items/${mouse.id}/history`,
     );
-    const paraAMesa = movimentos.body.rows.filter((evento) => evento.action === 'SAIDA');
-    expect(paraAMesa.map((evento) => evento.targetLabel)).toEqual(['Mesa com mouse antigo']);
+    expect(historico.body.rows.map((evento) => [evento.action, evento.targetLabel])).toEqual([
+      ['CHECKIN', 'Mesa com mouse antigo'], ['CHECKOUT', 'Mesa com mouse antigo'],
+    ]);
   });
 
   it('apaga o que está vazio de verdade', async () => {

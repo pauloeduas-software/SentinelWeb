@@ -1,4 +1,5 @@
 import type { EventoDaPessoa } from '../../../../domain/shared/person.types';
+import { textoDeUnidades } from '../../../helpers/estoque.helper';
 import { rotuloDaAcao } from '../../../helpers/historico.helper';
 
 // O que o Histórico da PESSOA acrescenta ao leitor genérico
@@ -24,13 +25,20 @@ const ROTULO_DA_ACAO_NA_LICENCA: Record<string, string> = {
   CHECKIN: 'Devolveu a licença',
 };
 
+/** O estoque no NOME dela — a fonte `ESTOQUE`, por saída. */
+const ROTULO_DA_ACAO_NO_ESTOQUE: Record<string, string> = {
+  CHECKOUT: 'Recebeu',
+  CHECKIN: 'Devolveu',
+};
+
 /**
  * A linha de assunto do evento, do ponto de vista da pessoa.
  *
  * As fontes falam de coisas diferentes e por isso a frase muda: a posse nomeia
  * o EQUIPAMENTO ("Entregue: ATV-00012 — Dell Latitude"), o posto nomeia o LUGAR
  * e o turno ("Entrou no posto: Mesa 1 (Manhã)"), a licença nomeia o SOFTWARE
- * ("Recebeu a licença: Microsoft 365").
+ * ("Recebeu a licença: Microsoft 365"), e o estoque, o item e quantas
+ * ("Recebeu: Mouse USB · 2 unidades").
  *
  * É o espelho do título do ativo, que nomeia o ALVO — lá a pergunta é "para
  * quem foi?", aqui é "o que ela recebeu?".
@@ -49,6 +57,11 @@ export function tituloDoEvento(evento: EventoDaPessoa): string {
   if (evento.fonte === 'LICENCA' && evento.licenca) {
     const acao = rotuloDaAcao(evento.action, ROTULO_DA_ACAO_NA_LICENCA);
     return `${acao}: ${evento.licenca.licenseLabel}`;
+  }
+
+  if (evento.fonte === 'ESTOQUE' && evento.estoque) {
+    const acao = rotuloDaAcao(evento.action, ROTULO_DA_ACAO_NO_ESTOQUE);
+    return `${acao}: ${evento.estoque.itemLabel} · ${textoDeUnidades(evento.estoque.unidades)}`;
   }
 
   return rotuloDaAcao(evento.action);

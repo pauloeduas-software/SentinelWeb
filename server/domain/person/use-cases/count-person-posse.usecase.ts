@@ -3,14 +3,16 @@ import type { ReferenciaDoErro } from '../../../core/errors/app-error';
 import {
   comoReferencias, licencasDaPessoa, nomesDasLicencas, type LicencaComAlguem,
 } from '../../license/use-cases/count-license-checkouts.usecase';
-import { contarEstoqueDaPessoa } from '../../stock/use-cases/count-person-stock.usecase';
+import {
+  itensComoReferencias, itensDaPessoa, nomesDosItens, totalDeUnidades, type ItemComAlguem,
+} from '../../stock/use-cases/count-person-stock.usecase';
 
 // O QUE AINDA PRENDE UMA PESSOA AO INVENTÁRIO — as pontas, contadas juntas.
 //
 // São QUATRO, e vêm do mesmo lugar (docs/referencia/modelo-de-posse.md): o que
 // está no NOME da pessoa — ativo (`Assignment` alvo `PERSON`), licença
 // (`LicenseCheckout.assignedPersonId`) e unidade de estoque (`StockMovement`
-// de SAIDA alvo `PERSON`) — e o que ela responde por OCUPAR um posto
+// aberto alvo `PERSON`) — e o que ela responde por OCUPAR um posto
 // (`WorkstationOccupant`). Contar só a primeira é o erro que o D32 descreve: quem
 // saiu continua respondendo por tudo que está na Mesa 1, e nenhuma consulta
 // acusa, porque a Camada 3 é derivada.
@@ -36,11 +38,12 @@ interface PosseAbertaDaPessoa {
    */
   licencas: LicencaComAlguem[];
   /**
-   * `StockMovement` de SAIDA abertas com alvo `PERSON` — a quarta ponta, a do
-   * estoque. SÓ as da pessoa: as unidades do POSTO são do posto, e quem sai da
-   * empresa não leva o mouse da Mesa 1 (`stock/use-cases/count-person-stock.usecase.ts`).
+   * As unidades de estoque abertas com alvo `PERSON` — a quarta ponta —, por
+   * ITEM e com o nome: a recusa diz quais voltam, como as licenças. SÓ as da
+   * pessoa: as unidades do POSTO são do posto, e quem sai da empresa não leva o
+   * mouse da Mesa 1 (`stock/use-cases/count-person-stock.usecase.ts`).
    */
-  itensEmPosse: number;
+  itens: ItemComAlguem[];
 }
 
 /**
@@ -55,7 +58,7 @@ export async function contarPosseAberta(
   client: ClientePosse,
   personId: string,
 ): Promise<PosseAbertaDaPessoa> {
-  const [ativosEmPosse, postosOcupados, licencas, itensEmPosse] = await Promise.all([
+  const [ativosEmPosse, postosOcupados, licencas, itens] = await Promise.all([
     client.assignment.count({
       // `asset: { deletedAt: null }` EXPLÍCITO. `assignments` não tem
       // `deletedAt`, então a extension não escopa esta contagem — e ela não
@@ -68,10 +71,10 @@ export async function contarPosseAberta(
     }),
     client.workstationOccupant.count({ where: { personId, endedAt: null } }),
     licencasDaPessoa(client, personId),
-    contarEstoqueDaPessoa(client, personId),
+    itensDaPessoa(client, personId),
   ]);
 
-  return { ativosEmPosse, postosOcupados, licencas, itensEmPosse };
+  return { ativosEmPosse, postosOcupados, licencas, itens };
 }
 
 /** "2 ativos", "1 ativo" — plural à mão porque é uma frase, não um dado. */
@@ -93,9 +96,10 @@ export interface RecusaDaPessoa {
  * qual das duas camadas manda o operador procurar no lugar errado — e a camada
  * do posto é justamente a que ninguém lembra.
  *
- * AS LICENÇAS VÊM PELO NOME — "tem 3 licenças (AutoCAD, Office e VPN)" — e
- * como `refs`: o Devolver só existe no detalhe da licença, e quem desliga um
- * funcionário que sai vai direto a cada uma pelo link.
+ * AS LICENÇAS E OS ITENS VÊM PELO NOME — "tem 3 licenças (AutoCAD, Office e
+ * VPN)", "está com 3 unidades de estoque (Mouse USB ×2 e Teclado)" — e como
+ * `refs`: o Devolver só existe no detalhe da licença e no do item, e quem
+ * desliga um funcionário que sai vai direto a cada um pelo link.
  *
  * Devolve `null` quando não há nada aberto: é o sinal de que a operação pode
  * seguir, sem o chamador reinterpretar os números.
@@ -109,8 +113,9 @@ export function motivoParaRecusar(
   if (posse.licencas.length > 0) {
     partes.push(`tem ${quantos(posse.licencas.length, 'licença', 'licenças')} (${nomesDasLicencas(posse.licencas)})`);
   }
-  if (posse.itensEmPosse > 0) {
-    partes.push(`está com ${quantos(posse.itensEmPosse, 'item de estoque', 'itens de estoque')}`);
+  if (posse.itens.length > 0) {
+    const unidades = totalDeUnidades(posse.itens);
+    partes.push(`está com ${quantos(unidades, 'unidade de estoque', 'unidades de estoque')} (${nomesDosItens(posse.itens)})`);
   }
   if (posse.postosOcupados > 0) partes.push(`ocupa ${quantos(posse.postosOcupados, 'posto', 'postos')}`);
 
@@ -122,6 +127,6 @@ export function motivoParaRecusar(
 
   return {
     mensagem: `Este colaborador ainda ${frase}. Devolva o que está com ele e encerre as ocupações antes de ${operacao}.`,
-    refs: comoReferencias(posse.licencas),
+    refs: [...comoReferencias(posse.licencas), ...itensComoReferencias(posse.itens)],
   };
 }

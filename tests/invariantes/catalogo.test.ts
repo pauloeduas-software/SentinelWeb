@@ -136,7 +136,7 @@ describe('Category — a licença conta como uso', () => {
     expect(body.error).toMatch(/1 registro/);
   });
 
-  it('e a licença ENCERRADA também segura: ela continua na aba Encerradas', async () => {
+  it('e a licença ENCERRADA também segura: ela continua na lista, encerrada', async () => {
     const id = await categoria('Família da encerrada', 'LICENSE');
     await criarLicenca(api, { name: 'Licença encerrada', categoryId: id, seatsTotal: 1, terminationDate: '2020-01-01' });
 

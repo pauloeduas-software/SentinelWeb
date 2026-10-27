@@ -23,7 +23,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 
 ---
 
-## As dezesseis
+## As dezessete
 
 > **A numeração é a original, e por isso salta.** O corte do ITAM levou as
 > invariantes 7, 8, 15, 16 e 18 junto com as tabelas que elas defendiam
@@ -32,7 +32,8 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 > pessoa pela conta do sistema operacional
 > ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional));
 > e a [AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas) levou a 10 e a 11 junto com a vaga numerada da licença, e trouxe a 22 e a 23;
-> a [AC](../decisoes/licencas.md#ac--a-chave-vira-lista-cada-uma-cobre-uma-quantidade-e-a-entrega-escolhe-uma) trouxe a 24.
+> a [AC](../decisoes/licencas.md#ac--a-chave-vira-lista-cada-uma-cobre-uma-quantidade-e-a-entrega-escolhe-uma) trouxe a 24, e a
+> [AE](../decisoes/estoque.md#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira), a 25.
 > Renumerar as que ficaram quebraria as citações no código —
 > `assert-retire-posse.usecase.ts` diz "Invariante 4", `license-count.helper.ts`
 > diz "invariante 22" —, e um número que muda de significado é pior que um
@@ -45,8 +46,8 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 3 | O tipo de um status ou de uma categoria em uso não muda | **aplicação** — `status-label.spec.ts`, `category.spec.ts`, com a linha travada | 409 `Não é possível mudar o tipo: status em uso por 200 registros.` |
 | 4 | Estado × posse: ativo entregue não fica `DEPLOYABLE` | **aplicação** — `assert-status-posse.usecase.ts` | 409 `"Disponível" é um status de estoque, e este ativo está entregue. Faça a devolução antes de mudar o status.` |
 | 5 | A forma da posse: um alvo coerente, devolução depois da entrega — e só a posse **devolvida** de um posto excluído fica sem FK, com o nome por escrito | **banco** — dois `CHECK` | 409 `Registro já existe` (a API recusa antes, com frase própria) |
-| 6 | Colaborador desativado ou na lixeira não tem posse direta, **licença**, **unidade de estoque** nem ocupação aberta | **aplicação** — 409 na desativação (`personSpec.beforeWrite`), na exclusão (`personSpec.motivoParaNaoExcluir`), no `checkout` e no cadastro de ocupante + trava de linha | 409 `Este colaborador ainda responde por 2 ativos, tem 1 licença (Office), está com 3 itens de estoque e ocupa 1 posto. Devolva o que está com ele e encerre as ocupações antes de excluir.` (ou *antes de desativar*), com as licenças como `refs` — a tela põe um link em cada uma |
-| 9 | A forma da entrega de licença: o alvo é UM (pessoa **ou** ativo), a devolução vem depois da entrega, e toda entrega aponta para a licença | **banco** — dois `CHECK` e o `NOT NULL` de `licenseId` em `license_checkouts`, com a FK `Restrict` | 422 com o campo que falta (a API recusa antes, com frase própria) |
+| 6 | Colaborador desativado ou na lixeira não tem posse direta, **licença**, **unidade de estoque** nem ocupação aberta | **aplicação** — 409 na desativação (`personSpec.beforeWrite`), na exclusão (`personSpec.motivoParaNaoExcluir`), no `checkout` e no cadastro de ocupante + trava de linha | 409 `Este colaborador ainda responde por 2 ativos, tem 1 licença (Office), está com 3 unidades de estoque (Mouse USB ×2 e Teclado) e ocupa 1 posto. Devolva o que está com ele e encerre as ocupações antes de excluir.` (ou *antes de desativar*), com as licenças e os itens como `refs` — a tela põe um link em cada um |
+| 9 | A forma da entrega de licença: o alvo é UM (pessoa **ou** ativo), a devolução vem depois da entrega, e toda entrega em uso aponta para a licença | **banco** — três `CHECK` em `license_checkouts`, com a FK `Restrict` | 422 com o campo que falta (a API recusa antes, com frase própria) |
 | 12 | Uma máquina é no máximo um ativo, e um ativo no máximo uma máquina | **banco** — `@unique` em `Endpoint.assetId` | 409 `Este ativo já está vinculado a outra máquina. Desfaça aquele vínculo antes, pela aba Máquina do ativo.` |
 | 13 | A mesma sugestão não empilha na fila | **banco** — índice único parcial `sugestao_pendente_por_alvo` | nada: o job trata o `P2002` como "outro já criou" |
 | 17 | Sempre existe alguém ativo que é `ADMIN` | **aplicação** — `assertSobraAdministrador()`, DEPOIS da escrita e dentro da transação, na edição e na exclusão de usuário | 409 `Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. Dê o cargo de Administrador a outra pessoa com login antes de seguir.` |
@@ -56,6 +57,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 22 | O que está em uso nunca passa da quantidade comprada | **aplicação** — a entrega e a edição contam com a linha da licença travada (`lock-license.usecase.ts`) | 409 `Sem licença livre em "Office 2024": 5 compradas, 5 em uso. Devolva uma entrega ou aumente a quantidade comprada.` |
 | 23 | Uma entrega aberta por alvo e licença | **banco** — dois índices únicos parciais, um por alvo. No passado, a entrega que se sobrepõe à última devolução do mesmo alvo é só da **aplicação** (422) | 409 `Laura Souza já está com "Office 2024".` (a API confere antes) |
 | 24 | A chave da entrega é uma das chaves da licença; nenhuma chave vai para mais entregas abertas do que cobre; e as chaves cobrem no máximo o que foi comprado | **banco** — a FK composta (chave, licença) e os `CHECK`s da chave. A conta de cada chave e a soma contra o comprado são da **aplicação**, com a licença travada | 409 `Esta chave já está em outra entrega aberta de "Office 2024". Escolha outra.` / 422 `As chaves cobrem 12, mais do que 10 compradas em "Office 2024". …` |
+| 25 | A forma da saída de estoque, e o que está em uso nunca passa do total | **banco** — o CHECK do total (`stock_items_qty_positiva`), os quatro `CHECK` da linha e a FK `Restrict` para o item. A conta contra o total é da **aplicação**, com a linha do item travada | 409 `Sem unidade disponível de "Mouse USB": 10 no total, 10 em uso. Devolva uma unidade ou aumente o total.` / `Não dá para reduzir "Mouse USB" para 1: 2 estão em uso. Devolva para liberar.` |
 
 ---
 
@@ -119,8 +121,8 @@ frota em silêncio.
 precisa do valor anterior e de um `COUNT` em outra tabela. Nem índice nem CHECK
 fazem isso. E o 409 genérico do banco não diria **quantos**.
 
-A mesma guarda existe em `category.spec.ts` — contando modelos, ativos, itens
-de estoque **e licenças**, lixeira inclusive — e **aqui é mais grave**: o tipo da
+A mesma guarda existe em `category.spec.ts` — contando modelos, ativos (lixeira
+inclusive), itens de estoque (desativados inclusive) **e licenças** — e **aqui é mais grave**: o tipo da
 categoria diz a que módulo o registro pertence; o tipo do status decide se o
 equipamento pode ser entregue a alguém.
 
@@ -243,7 +245,7 @@ trava da transação na edição do colaborador (`personSpec.beforeWrite`),
 **QUATRO PONTAS, e são as quatro que fazem alguém responder por equipamento:**
 ativo no nome (`Assignment` alvo `PERSON`), licença no nome
 (`LicenseCheckout.assignedPersonId`), unidade de estoque no nome
-(`StockMovement` de SAIDA alvo `PERSON`) e ocupação de posto (`WorkstationOccupant`)
+(`StockMovement` aberto, alvo `PERSON`) e ocupação de posto (`WorkstationOccupant`)
 — esta última porque ocupante responde pelos ativos e pelo estoque do posto por
 derivação da Camada 3. A pergunta que decide se algo entra aqui não é *"tem
 tabela própria?"*, é ***"alguém responde por isto quando a pessoa sai?"***.
@@ -314,7 +316,11 @@ ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_alvo_xor"
   CHECK (num_nonnulls("assignedPersonId", "assignedAssetId") = 1);
 ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_devolucao_nao_antecede"
   CHECK ("checkinAt" IS NULL OR "checkinAt" >= "checkoutAt");
--- e "licenseId" UUID NOT NULL, com a FK ON DELETE RESTRICT
+ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_licenca_presente" CHECK (
+  "licenseId" IS NOT NULL
+  OR ("checkinAt" IS NOT NULL AND "licenseName" IS NOT NULL AND "licenseKeyId" IS NULL)
+);
+-- e a FK de "licenseId" ON DELETE RESTRICT
 ```
 
 Duas colunas de alvo nuláveis admitem quatro estados, e **dois são mentira**: as duas
@@ -326,9 +332,11 @@ livres sem aparecer em lista nenhuma: paga, indisponível e invisível.
 conferir, porque com dois alvos possíveis a FK preenchida já diz qual é.
 
 O outro é a forma no tempo: a devolução não antecede a entrega (`>=`, como na posse). E
-**toda entrega aponta para a licença** — aberta ou devolvida: a licença que já foi entregue não
-se exclui, se encerra, e a FK `Restrict` é o que impede excluir por fora
-([AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)).
+**toda entrega em uso aponta para a licença**: a licença com entrega aberta não se exclui, e a
+FK `Restrict` é o que impede excluir por fora. A devolvida de uma licença excluída fica sem
+ligação, com o nome por escrito em `licenseName` e sem a chave — as chaves vão junto com a
+licença, e a FK composta da chave, com `licenseId` nulo, não conferiria mais nada
+([AG](../decisoes/estoque.md#ag--a-regra-do-posto-vale-para-o-estoque-e-a-licença-só-o-que-está-em-uso-impede-a-exclusão)).
 
 A aplicação recusa antes, com 422 e a frase que ensina o modelo (*"Posto de trabalho não é
 alvo de licença — entregue ao ativo que está na mesa"*, D39); os CHECKs são a rede para quem
@@ -696,6 +704,54 @@ uma chave ou diminua o que ela cobre antes.`
 > os dois CHECKs e a chave repetida), `tests/licencas/corridas.test.ts` (oito entregas
 > simultâneas na mesma chave de volume que cobre duas: passam duas) e
 > `tests/licencas/chave.test.ts` (as frases da API).
+
+### 25 — A saída de estoque, e o total que não fica abaixo do que está em uso
+
+```sql
+ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_qty_positiva" CHECK ("qty" >= 1);
+ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_forma" CHECK (
+     ("targetType" = 'PERSON' AND "targetPersonId" IS NOT NULL AND "targetWorkstationId" IS NULL)
+  OR ("targetType" = 'WORKSTATION' AND "targetPersonId" IS NULL AND (
+          "targetWorkstationId" IS NOT NULL
+       OR ("returnedAt" IS NOT NULL AND "targetWorkstationName" IS NOT NULL)
+     ))
+);
+ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_devolucao_nao_antecede_saida"
+  CHECK ("returnedAt" IS NULL OR "returnedAt" >= "checkoutAt");
+ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_devolucao_registrada"
+  CHECK (("returnedAt" IS NULL) = ("returnRecordedAt" IS NULL));
+ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_item_presente" CHECK (
+  "itemId" IS NOT NULL OR ("returnedAt" IS NOT NULL AND "itemName" IS NOT NULL)
+);
+```
+
+O estoque segue a conta da licença
+([AE](../decisoes/estoque.md#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira)):
+`disponível = qty − unidades abertas`, e cada linha de `stock_movements` é **uma unidade
+entregue**. A invariante tem, como a 24, uma metade no banco e outra na aplicação.
+
+**No banco, a forma.** O total é ao menos 1 — o item que acabou se desativa. A linha tem UM alvo,
+o que o `targetType` diz, e a devolução não fica antes da entrega e tem o dia e o instante do
+registro juntos — o instante é o que separa duas devoluções no mesmo dia; a saída devolvida de um posto
+excluído fica sem FK, com o nome por escrito, como a `Assignment` (5). E a do **item** excluído
+também (AG): toda saída em uso aponta para o item (CHECK `stock_movements_item_presente`), e a FK
+`Restrict` não deixa apagar o item com unidade em uso; a devolvida é desligada antes, com o nome em
+`itemName`.
+
+**Na aplicação, a conta** — ela cruza o item com as saídas, e um CHECK não enxerga a outra
+tabela. Mora em quem conta e grava: a **entrega** (`checkout-stock.usecase.ts`) e a **edição**
+que reduz o total (`update-stock-item.usecase.ts`), as duas com a linha do item travada
+(`travarItemOuFalhar`). Sem a trava, duas entregas liam "1 disponível" e as duas gravavam. A
+ordem é colaborador → item → posto; a devolução trava só as linhas da saída, porque só diminui o
+que está em uso.
+
+**O disponível negativo se mostra.** Só nasce de uma linha criada por fora da trava, e a tela o
+mostra em vermelho em vez de zerá-lo: esconder seria apagar o sintoma.
+
+> **Provado em** `tests/estoque/invariantes.test.ts` (o `INSERT` cru da linha incoerente é
+> recusado, as constraints existem, o total nunca é zero, a FK não deixa apagar item com saída) e
+> `tests/estoque/corridas.test.ts` (cinco entregas simultâneas num estoque de três: passam três; a
+> redução do total contra a entrega nunca deixa a conta passar dele).
 
 ---
 

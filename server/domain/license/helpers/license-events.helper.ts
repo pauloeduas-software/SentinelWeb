@@ -9,15 +9,17 @@
 /** O que um evento de licença acrescenta: QUAL licença entrou ou saiu. */
 export interface EventoDeLicenca {
   checkoutId: string;
-  licenseId: string;
+  /** Nulo quando a licença foi excluída: o nome continua em `licenseLabel` (AG). */
+  licenseId: string | null;
   licenseLabel: string;
   notes: string | null;
 }
 
 interface EntregaParaEvento {
   id: string;
-  licenseId: string;
-  license: { name: string };
+  licenseId: string | null;
+  licenseName: string | null;
+  license: { name: string } | null;
   assignedPerson: { name: string } | null;
   assignedAsset: { assetTag: string; name: string | null } | null;
   checkoutAt: Date;
@@ -37,7 +39,8 @@ export function eventosDaEntregaDeLicenca(entrega: EntregaParaEvento): EventoBas
   const base = {
     checkoutId: entrega.id,
     licenseId: entrega.licenseId,
-    licenseLabel: entrega.license.name,
+    // A licença excluída deixa o nome por escrito na entrega (AG).
+    licenseLabel: entrega.license?.name ?? entrega.licenseName ?? '—',
   };
 
   const saida: EventoBaseDeLicenca = {

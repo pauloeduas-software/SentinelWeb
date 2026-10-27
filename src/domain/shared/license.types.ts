@@ -15,11 +15,8 @@ interface CategoriaDaLicenca extends ReferenciaNomeada {
 /** Derivado das datas e do dia de hoje, nunca coluna (D44). */
 export type StatusDaLicenca = 'ATIVA' | 'VENCENDO' | 'EXPIRADA' | 'ENCERRADA';
 
-/** As abas da tela: o que não encerrou, e o que encerrou. */
-export type RecorteDaLicenca = 'atuais' | 'encerradas';
-
-/** O filtro de status da aba Atuais — a encerrada tem aba própria. */
-export type StatusDoFiltro = Exclude<StatusDaLicenca, 'ENCERRADA'>;
+/** O filtro de status: os quatro. Sem abas (AF) — `ENCERRADA` separa as encerradas. */
+export type StatusDoFiltro = StatusDaLicenca;
 
 /**
  * Uma licença, com as contas que o servidor fez.
@@ -57,7 +54,7 @@ export interface Licenca {
   // ── O que o servidor CALCULOU ──────────────────────────────────────────────
   emUso: number;
   livres: number;
-  /** Já teve entrega, mesmo devolvida: não se exclui, se encerra. */
+  /** Já teve entrega, mesmo devolvida. Não impede excluir: só a entrega em uso impede (AG). */
   jaEntregue: boolean;
 
   status: StatusDaLicenca;
@@ -113,8 +110,12 @@ interface LicencaDaEntrega {
 /** Uma entrega de licença. `checkinAt` nulo = em uso agora. */
 export interface EntregaDeLicenca {
   id: string;
-  /** Sempre presente: a licença que já foi entregue não se exclui. */
-  licenseId: string;
+  /**
+   * Nulo só na entrega devolvida de uma licença excluída (AG) — o nome fica em
+   * `licenseName`. A em uso sempre aponta para a licença.
+   */
+  licenseId: string | null;
+  licenseName: string | null;
   assignedPersonId: string | null;
   assignedAssetId: string | null;
   checkoutAt: string;
@@ -167,7 +168,8 @@ export interface EventoDaLicenca {
  */
 export interface EventoDeLicencaDoAlvo {
   checkoutId: string;
-  licenseId: string;
+  /** Nulo quando a licença foi excluída: o nome continua em `licenseLabel`. */
+  licenseId: string | null;
   licenseLabel: string;
   notes: string | null;
 }

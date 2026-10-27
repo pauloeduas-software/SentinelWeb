@@ -52,7 +52,6 @@ CREATE TYPE "SuggestionKind" AS ENUM ('LINK');
 CREATE TYPE "SuggestionState" AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED', 'SUPERSEDED');
 
 -- CreateEnum
-CREATE TYPE "StockMovementKind" AS ENUM ('ENTRADA', 'BAIXA', 'SAIDA');
 
 -- CreateEnum
 CREATE TYPE "StockTarget" AS ENUM ('PERSON', 'WORKSTATION');
@@ -348,7 +347,8 @@ CREATE TABLE "license_keys" (
 -- CreateTable
 CREATE TABLE "license_checkouts" (
     "id" UUID NOT NULL,
-    "licenseId" UUID NOT NULL,
+    "licenseId" UUID,
+    "licenseName" TEXT,
     "assignedPersonId" UUID,
     "assignedAssetId" UUID,
     "checkoutAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -409,9 +409,9 @@ CREATE TABLE "stock_items" (
     "categoryId" UUID NOT NULL,
     "notes" TEXT,
     "locationId" UUID,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "stock_items_pkey" PRIMARY KEY ("id")
 );
@@ -419,14 +419,15 @@ CREATE TABLE "stock_items" (
 -- CreateTable
 CREATE TABLE "stock_movements" (
     "id" UUID NOT NULL,
-    "itemId" UUID NOT NULL,
-    "kind" "StockMovementKind" NOT NULL,
-    "qty" INTEGER NOT NULL,
-    "targetType" "StockTarget",
+    "itemId" UUID,
+    "itemName" TEXT,
+    "targetType" "StockTarget" NOT NULL,
     "targetPersonId" UUID,
     "targetWorkstationId" UUID,
     "targetWorkstationName" TEXT,
+    "checkoutAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "returnedAt" TIMESTAMP(3),
+    "returnRecordedAt" TIMESTAMP(3),
     "notes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -575,7 +576,10 @@ CREATE INDEX "asset_changes_assetId_detectedAt_idx" ON "asset_changes"("assetId"
 CREATE UNIQUE INDEX "asset_usage_daily_assetId_day_key" ON "asset_usage_daily"("assetId", "day");
 
 -- CreateIndex
-CREATE INDEX "stock_items_deletedAt_idx" ON "stock_items"("deletedAt");
+CREATE UNIQUE INDEX "stock_items_name_key" ON "stock_items"("name");
+
+-- CreateIndex
+CREATE INDEX "stock_items_isActive_idx" ON "stock_items"("isActive");
 
 -- CreateIndex
 CREATE INDEX "stock_items_categoryId_idx" ON "stock_items"("categoryId");
@@ -584,10 +588,10 @@ CREATE INDEX "stock_items_categoryId_idx" ON "stock_items"("categoryId");
 CREATE INDEX "stock_items_locationId_idx" ON "stock_items"("locationId");
 
 -- CreateIndex
-CREATE INDEX "stock_movements_itemId_kind_returnedAt_idx" ON "stock_movements"("itemId", "kind", "returnedAt");
+CREATE INDEX "stock_movements_itemId_returnedAt_idx" ON "stock_movements"("itemId", "returnedAt");
 
 -- CreateIndex
-CREATE INDEX "stock_movements_itemId_createdAt_idx" ON "stock_movements"("itemId", "createdAt");
+CREATE INDEX "stock_movements_itemId_checkoutAt_idx" ON "stock_movements"("itemId", "checkoutAt");
 
 -- CreateIndex
 CREATE INDEX "stock_movements_targetPersonId_returnedAt_idx" ON "stock_movements"("targetPersonId", "returnedAt");
@@ -674,7 +678,7 @@ ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_categoryId_fkey" FOREIGN K
 ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "stock_items"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "stock_items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_targetPersonId_fkey" FOREIGN KEY ("targetPersonId") REFERENCES "people"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -710,9 +714,6 @@ CREATE UNIQUE INDEX "assets_assetTag_unique_undeleted"
 
 CREATE UNIQUE INDEX "assets_serial_unique_undeleted"
   ON "assets"("serial") WHERE "deletedAt" IS NULL;
-
-CREATE UNIQUE INDEX "stock_items_name_unique_undeleted"
-  ON "stock_items"("name") WHERE "deletedAt" IS NULL;
 
 -- ── INVARIANTE 1: UMA POSSE ABERTA POR ATIVO (D14) ────────────────────────
 --
@@ -780,6 +781,14 @@ ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_alvo_xor"
 ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_devolucao_nao_antecede"
   CHECK ("checkinAt" IS NULL OR "checkinAt" >= "checkoutAt");
 
+-- A LICENÇA EXCLUÍDA (AG): só a entrega JÁ DEVOLVIDA fica sem ela, com o nome
+-- por escrito e sem a chave — as chaves vão junto com a licença, e a FK
+-- composta, com `licenseId` nulo, não conferiria mais de quem a chave é.
+ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_licenca_presente" CHECK (
+  "licenseId" IS NOT NULL
+  OR ("checkinAt" IS NOT NULL AND "licenseName" IS NOT NULL AND "licenseKeyId" IS NULL)
+);
+
 -- ── INVARIANTE 23: UMA ENTREGA ABERTA POR ALVO E LICENÇA (AA) ─────────────
 --
 -- Dois índices, um por alvo: com uma coluna nula no par, o Postgres nunca
@@ -818,48 +827,41 @@ ALTER TABLE "licenses" ADD CONSTRAINT "licenses_encerramento_nao_antecede_compra
   "purchaseDate" IS NULL OR "terminationDate" IS NULL OR "terminationDate" >= "purchaseDate"
 );
 
--- ── O ESTOQUE: A FORMA DO MOVIMENTO (docs/decisoes/estoque.md, J) ─────────
+-- ── O ESTOQUE: A FORMA DA SAÍDA (docs/decisoes/estoque.md, J e AE) ───────
 --
--- Nenhum movimento move zero ou menos, e o total nunca fica negativo por um
--- caminho que não seja a aplicação recusando antes.
-ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_qty_positiva"
-  CHECK ("qty" > 0);
+-- O total é ao menos 1, no cadastro e na edição, como a quantidade comprada da
+-- licença: o item que acabou se desativa, e o disponível chega a zero pela
+-- entrega, o total nunca.
+ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_qty_positiva"
+  CHECK ("qty" >= 1);
 
-ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_qty_nao_negativa"
-  CHECK ("qty" >= 0);
-
--- A SAIDA é UMA unidade com exatamente UM alvo, o que o discriminante diz —
--- `targetType IS NOT NULL` explícito no ramo da SAIDA, porque a coluna é
--- nulável aqui (ENTRADA e BAIXA não têm alvo) e sem isso a comparação
--- `"targetType" = 'PERSON'` com NULL vira NULL em vez de FALSE, e CHECK só
--- recusa FALSE. ENTRADA e BAIXA não têm alvo nem devolução. A saída JÁ DEVOLVIDA para um
--- posto excluído fica sem FK, com o nome por escrito — como na `Assignment`.
+-- Cada linha é UMA unidade com exatamente UM alvo, o que o discriminante diz.
+-- A saída JÁ DEVOLVIDA para um posto excluído fica sem FK, com o nome por
+-- escrito — como na `Assignment`.
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_forma" CHECK (
-  (
-    "kind" = 'SAIDA'
-    AND "qty" = 1
-    AND "targetType" IS NOT NULL
-    AND (
-         ("targetType" = 'PERSON' AND "targetPersonId" IS NOT NULL AND "targetWorkstationId" IS NULL)
-      OR ("targetType" = 'WORKSTATION' AND "targetPersonId" IS NULL AND (
-              "targetWorkstationId" IS NOT NULL
-           OR ("returnedAt" IS NOT NULL AND "targetWorkstationName" IS NOT NULL)
-         ))
-    )
-  ) OR (
-    "kind" <> 'SAIDA'
-    AND "targetType" IS NULL
-    AND "targetPersonId" IS NULL
-    AND "targetWorkstationId" IS NULL
-    AND "targetWorkstationName" IS NULL
-    AND "returnedAt" IS NULL
-  )
+     ("targetType" = 'PERSON' AND "targetPersonId" IS NOT NULL AND "targetWorkstationId" IS NULL)
+  OR ("targetType" = 'WORKSTATION' AND "targetPersonId" IS NULL AND (
+          "targetWorkstationId" IS NOT NULL
+       OR ("returnedAt" IS NOT NULL AND "targetWorkstationName" IS NOT NULL)
+     ))
+);
+
+-- O ITEM EXCLUÍDO (AG): só a saída JÁ DEVOLVIDA fica sem ele, com o nome por
+-- escrito — a regra do posto. A que está em uso aponta sempre para o item.
+ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_item_presente" CHECK (
+  "itemId" IS NOT NULL OR ("returnedAt" IS NOT NULL AND "itemName" IS NOT NULL)
 );
 
 -- A DEVOLUÇÃO NÃO ANTECEDE A SAÍDA. `>=` e não `>`: saída e devolução no mesmo
 -- instante é real.
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_devolucao_nao_antecede_saida"
-  CHECK ("returnedAt" IS NULL OR "returnedAt" >= "createdAt");
+  CHECK ("returnedAt" IS NULL OR "returnedAt" >= "checkoutAt");
+
+-- A DEVOLUÇÃO REGISTRADA: o dia e o instante do registro andam juntos — os dois
+-- nulos (em uso) ou os dois preenchidos. O instante é a chave da devolução: o
+-- dia passado é sempre o meio-dia, e duas devoluções no mesmo dia viravam uma.
+ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_devolucao_registrada"
+  CHECK (("returnedAt" IS NULL) = ("returnRecordedAt" IS NULL));
 
 -- ── A AUDITORIA: O AUTOR COERENTE E A LINHA QUE NÃO SE REESCREVE (AB) ─────
 --

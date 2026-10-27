@@ -5,8 +5,8 @@ import {
   useWorkstationsQuery, type PostoInput,
 } from '../../../domain/workstation/workstation.queries';
 import { useCheckinAsset } from '../../../domain/assignment/assignment.queries';
-import { useCheckinStock } from '../../../domain/stock/stock.queries';
 import type { AtivoDoPosto, Posto, PostoView } from '../../../domain/shared/workstation.types';
+import { linksDoErro } from '../../helpers/erro.helper';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useNotificacao } from '../../hooks/useNotificacao';
 import { useOcupantes } from './useOcupantes';
@@ -56,7 +56,6 @@ export function usePostos() {
   const editar = useUpdateWorkstation();
   const excluir = useDeleteWorkstation();
   const devolver = useCheckinAsset();
-  const devolverItem = useCheckinStock();
   const notificar = useNotificacao();
 
   // O formulário serve às duas operações: `emEdicao` nulo é criar.
@@ -115,8 +114,9 @@ export function usePostos() {
       // página que não existe mais.
       if (data?.rows.length === 1 && page > 1) setPage(page - 1);
     } catch (erro) {
-      // É aqui que aparece o 409 do posto com algo nele agora.
-      notificar.erro((erro as Error).message);
+      // É aqui que aparece o 409 do posto com algo nele agora — com um link
+      // para cada item de estoque, onde mora o Devolver.
+      notificar.erro((erro as Error).message, linksDoErro(erro));
     }
   };
 
@@ -150,16 +150,6 @@ export function usePostos() {
 
     await devolver.mutateAsync({ id: ativo.id, data: { targetWorkstationId: postoId } });
   };
-
-  /**
-   * DEVOLVER UMA UNIDADE DE ESTOQUE da mesa — a mesma operação que a tela de
-   * Estoque oferece, pelo id do MOVIMENTO (a unidade), não do item
-   * (`checkin-stock.usecase.ts`). Sem o escopo que o ativo precisa: a unidade
-   * é identificada pela própria linha, e uma ficha velha devolvendo uma
-   * unidade já devolvida leva 409, sem fechar a de outro posto — a mesma razão
-   * que o docblock do `checkin-stock.usecase.ts` explica.
-   */
-  const handleDevolverItem = (movementId: string) => devolverItem.mutateAsync({ movementId });
 
   return {
     postos: data?.rows ?? [],
@@ -199,8 +189,6 @@ export function usePostos() {
     detalheErro: detalheErro ? detalheErro.message : null,
     devolvendo: devolver.isPending,
     handleDevolver,
-    devolvendoItem: devolverItem.isPending,
-    handleDevolverItem,
 
     ocupantes,
   };

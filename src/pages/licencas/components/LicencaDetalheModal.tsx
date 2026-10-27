@@ -1,4 +1,4 @@
-import { Archive, Edit2, Trash2, UserPlus, X, type LucideIcon } from 'lucide-react';
+import { Edit2, Power, PowerOff, Trash2, UserPlus, X, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import ChaveEscondida from './ChaveEscondida';
 import EntregasAbertas from './EntregasAbertas';
@@ -13,7 +13,7 @@ import {
   ROTULO_DO_STATUS, resumoDaContagem, textoDoPrazo, textoDoValorDaCompra,
 } from '../../helpers/licenca.helper';
 import { formatarData } from '../../helpers/format.helper';
-import { lugarDaChave, motivoParaNaoEntregar, motivoParaNaoExcluir } from '../helpers/licenca.helper';
+import { lugarDaChave, motivoParaNaoEntregar } from '../helpers/licenca.helper';
 
 // O DETALHE DA LICENÇA: o status e a conta, as ações da lista, todos os campos
 // do cadastro, quem está com ela agora e o histórico — as duas listas de 15 em 15.
@@ -28,7 +28,8 @@ interface LicencaDetalheModalProps {
   onClose: () => void;
   onEntregar: (licenca: Licenca) => void;
   onEditar: (licenca: Licenca) => void;
-  onEncerrar: (licenca: Licenca) => void;
+  /** Encerrar e reabrir — o mesmo botão, pelo status da licença. */
+  onAlternarEncerrada: (licenca: Licenca) => void;
   /** Excluir é `ADMIN` no servidor. Ausente, o botão some — quem decide é a página. */
   onExcluir?: (licenca: Licenca) => void;
   /** `checkinAt` é o dia, 'AAAA-MM-DD'. Resolve `true` quando a devolução deu certo. */
@@ -82,7 +83,7 @@ function Estado({ carregando, erro, children }: { carregando: boolean; erro: Err
 }
 
 export default function LicencaDetalheModal({
-  licenca, ocupado, onClose, onEntregar, onEditar, onEncerrar, onExcluir, onDevolver, onTrocarChave,
+  licenca, ocupado, onClose, onEntregar, onEditar, onAlternarEncerrada, onExcluir, onDevolver, onTrocarChave,
 }: LicencaDetalheModalProps) {
   // A linha da listagem desenha o cabeçalho no primeiro quadro; a consulta
   // abaixo traz as contagens frescas logo em seguida.
@@ -101,7 +102,6 @@ export default function LicencaDetalheModal({
   const atual = detalhe ?? licenca;
   const encerrada = atual.status === 'ENCERRADA';
   const motivoSemEntrega = motivoParaNaoEntregar(atual);
-  const motivoSemExcluir = motivoParaNaoExcluir(atual);
 
   const mudarBusca = (valor: string) => {
     setBusca(valor);
@@ -131,8 +131,8 @@ export default function LicencaDetalheModal({
                 {ROTULO_DO_STATUS[atual.status]} · {resumoDaContagem(atual)}
               </p>
             </div>
-            {/* As ações da lista, com as mesmas regras: a encerrada não entrega
-                nem encerra de novo. */}
+            {/* As ações da lista, com as mesmas regras: a encerrada não
+                entrega, e se reabre pelo mesmo botão. */}
             <div className="flex flex-wrap gap-2 font-mono">
               {!encerrada && (
                 <Acao
@@ -144,22 +144,18 @@ export default function LicencaDetalheModal({
                 />
               )}
               <Acao icone={Edit2} rotulo="Editar" onClick={() => onEditar(atual)} />
-              {!encerrada && (
-                <Acao
-                  icone={Archive}
-                  rotulo="Encerrar"
-                  onClick={() => onEncerrar(atual)}
-                  disabled={ocupado}
-                  title="Encerrar — o contrato acabou"
-                />
-              )}
+              <Acao
+                icone={encerrada ? Power : PowerOff}
+                rotulo={encerrada ? 'Reabrir' : 'Encerrar'}
+                onClick={() => onAlternarEncerrada(atual)}
+                disabled={ocupado}
+              />
               {onExcluir && (
                 <Acao
                   icone={Trash2}
                   rotulo="Excluir"
                   onClick={() => onExcluir(atual)}
-                  disabled={ocupado || motivoSemExcluir !== null}
-                  title={motivoSemExcluir ?? 'Excluir de vez — cadastro errado'}
+                  disabled={ocupado}
                   perigo
                 />
               )}

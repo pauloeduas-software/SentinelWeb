@@ -33,10 +33,12 @@ export async function checkinLicense(checkoutId: string, data: Partial<CheckinLi
       select: CHECKOUT_SELECT,
     });
 
-    // 409 e não 404: a entrega existe, o ESTADO dela é que recusa.
-    if (entrega.checkinAt) {
+    // 409 e não 404: a entrega existe, o ESTADO dela é que recusa. A da
+    // licença excluída (AG) é sempre devolvida — a em uso segura a exclusão.
+    const licenca = entrega.license;
+    if (entrega.checkinAt || !licenca || !entrega.licenseId) {
       throw new AppError(
-        `Esta entrega de "${entrega.license.name}" já foi devolvida.`,
+        `Esta entrega de "${licenca?.name ?? entrega.licenseName}" já foi devolvida.`,
         409,
       );
     }
@@ -65,7 +67,7 @@ export async function checkinLicense(checkoutId: string, data: Partial<CheckinLi
     await recordAudit(tx, {
       entityType: 'License',
       entityId: entrega.licenseId,
-      entityLabel: entrega.license.name,
+      entityLabel: licenca.name,
       action: 'CHECKIN',
       changes: {
         checkoutId,

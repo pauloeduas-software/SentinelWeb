@@ -1,30 +1,56 @@
 import { prisma } from '../../../core/database/prismaClient';
-import { STOCK_UNIT_SELECT } from '../helpers/stock-select.helper';
+import { agruparPorLote } from '../helpers/stock-lote.helper';
 
-/**
- * As unidades de estoque FORA, entregues a este posto — uma linha por unidade,
- * como a ficha do posto as mostra: o item, a categoria, desde quando.
- *
- * Consulta na movimentação, e não no item, de propósito: a pergunta é "o que
- * está nesta mesa", e a resposta são as saídas abertas. O item na lixeira vem
- * junto (`item.deletedAt` sai no select): a unidade continua na mesa, e a ficha
- * precisa mostrá-la para alguém devolvê-la — é a condição para o item poder
- * ser apagado.
- */
-export async function listWorkstationStock(workstationId: string) {
-  return prisma.stockMovement.findMany({
-    where: { targetWorkstationId: workstationId, kind: 'SAIDA', returnedAt: null },
-    select: STOCK_UNIT_SELECT,
+// O ESTOQUE NUMA FICHA — a do posto e a do colaborador: o que está com ele
+// AGORA, uma linha por SAÍDA ("Mouse USB · 3 unidades"), com o item e desde
+// quando. A devolução mora no detalhe do item, como a da licença: a ficha
+// mostra e aponta para lá.
+//
+// Consulta nas saídas, e não no item, de propósito: a pergunta é "o que está
+// nesta mesa", e a resposta são as unidades abertas. O item desativado vem
+// junto: a unidade continua na mesa até alguém devolvê-la.
+
+const UNIDADE_DA_FICHA = {
+  id: true,
+  itemId: true,
+  createdAt: true,
+  checkoutAt: true,
+  notes: true,
+  targetType: true,
+  targetPersonId: true,
+  targetWorkstationId: true,
+  targetWorkstationName: true,
+  item: {
+    select: {
+      id: true, name: true, isActive: true,
+      category: { select: { id: true, name: true } },
+    },
+  },
+} as const;
+
+async function saidasAbertas(alvo: { targetWorkstationId: string } | { targetPersonId: string }) {
+  const unidades = await prisma.stockMovement.findMany({
+    where: { ...alvo, returnedAt: null },
+    select: UNIDADE_DA_FICHA,
     // Agrupadas por item e, dentro dele, na ordem em que saíram.
-    orderBy: [{ item: { name: 'asc' } }, { createdAt: 'asc' }],
+    orderBy: [{ item: { name: 'asc' } }, { checkoutAt: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
   });
+  return agruparPorLote(unidades).map(({ primeira, unidades: quantas }) => ({
+    id: primeira.id,
+    itemId: primeira.itemId,
+    item: primeira.item,
+    checkoutAt: primeira.checkoutAt,
+    notes: primeira.notes,
+    unidades: quantas,
+  }));
+}
+
+/** O que está NESTA MESA — qualquer ocupante aberto dela responde por isto. */
+export function listWorkstationStock(workstationId: string) {
+  return saidasAbertas({ targetWorkstationId: workstationId });
 }
 
 /** O mesmo, para a PESSOA: as unidades no nome dela. */
-export async function listPersonStock(personId: string) {
-  return prisma.stockMovement.findMany({
-    where: { targetPersonId: personId, kind: 'SAIDA', returnedAt: null },
-    select: STOCK_UNIT_SELECT,
-    orderBy: [{ item: { name: 'asc' } }, { createdAt: 'asc' }],
-  });
+export function listPersonStock(personId: string) {
+  return saidasAbertas({ targetPersonId: personId });
 }

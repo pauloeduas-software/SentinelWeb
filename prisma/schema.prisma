@@ -830,7 +830,7 @@ model License {
 
   expirationDate  DateTime?
   /// Encerramento. Vence tudo: chegado o dia, a licença é ENCERRADA mesmo com
-  /// vencimento futuro, e sai da lista para a aba Encerradas
+  /// vencimento futuro, e fica na lista, esmaecida (AF)
   /// (`license-status.helper.ts` compara com o dia de hoje em Brasília).
   terminationDate DateTime?
 
@@ -903,9 +903,12 @@ model LicenseKey {
 model LicenseCheckout {
   id String @id @default(uuid()) @db.Uuid
 
-  // Sempre aponta para a licença: a licença que já foi entregue não se exclui
-  // (AA), e a FK `Restrict` é a rede.
-  licenseId String @db.Uuid
+  // Nulo só na entrega DEVOLVIDA de uma licença que foi excluída — o nome dela
+  // fica em `licenseName`, a regra do posto (AG). Em uso, aponta sempre para a
+  // licença (CHECK `license_checkouts_licenca_presente`).
+  licenseId String? @db.Uuid
+  /// O nome da licença, por escrito, quando ela foi excluída.
+  licenseName String?
 
   // XOR garantido por CHECK na migration (`license_checkouts_alvo_xor`). Sem
   // discriminante: com dois alvos, a FK preenchida já diz qual é.
@@ -925,10 +928,11 @@ model LicenseCheckout {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Restrict nos quatro. A licença com entrega não se exclui (o 409 vem antes);
-  // pessoa e ativo não se apagam de verdade enquanto têm histórico; a chave já
-  // entregue não sai da lista.
-  license        License     @relation(fields: [licenseId], references: [id], onDelete: Restrict)
+  // Restrict nos quatro. A licença em uso não se exclui (o 409 vem antes), e a
+  // devolvida é desligada antes, com o nome em `licenseName` e sem a chave — as
+  // chaves vão junto com a licença (AG); pessoa e ativo não se apagam de verdade
+  // enquanto têm histórico; a chave já entregue não sai da lista.
+  license        License?    @relation(fields: [licenseId], references: [id], onDelete: Restrict)
   assignedPerson Person?     @relation(fields: [assignedPersonId], references: [id], onDelete: Restrict)
   assignedAsset  Asset?      @relation(fields: [assignedAssetId], references: [id], onDelete: Restrict)
   // FK COMPOSTA (chave, licença): a chave de outra licença não entra nem por
@@ -1090,33 +1094,14 @@ model AssetUsageDaily {
 // série individual. Uma linha de `StockItem` é o item; cada unidade que sai é
 // uma linha de `StockMovement`.
 //
-// O ITEM NÃO TEM COLUNA DE SALDO, e isso é decisão. `qty` é *quanto há no
-// total* — só muda por ENTRADA e BAIXA, nunca pelo formulário —, e o disponível
-// é `qty − COUNT(saídas abertas)`, calculado num helper só. Uma coluna
-// `disponivel` mantida por decremento pode DIVERGIR das linhas — basta um
-// INSERT que não passe pelo decremento — e a partir daí ela mente para sempre,
-// porque ela *é* a resposta: não existe ninguém para discordar dela.
-//
-// O ITEM TEM LIXEIRA, ao contrário do catálogo: a leitura aninhada aqui é de
-// HISTÓRICO — o nome do item na saída de março —, e mostrar o item apagado ali
-// é o certo. O delete real levaria junto o histórico, que não se reconstrói.
+// A MESMA LÓGICA DA LICENÇA (AE): o total é campo da edição, o disponível é
+// `qty − COUNT(saídas abertas)` — calculado, nunca coluna —, e reduzir não passa
+// do que está em uso. Sem lixeira, e a regra do POSTO (AG): só o que está em
+// uso agora impede excluir o item; as saídas já devolvidas perdem a ligação e
+// guardam o nome dele por escrito. O que pode voltar a ser comprado se desativa.
 // ============================================================================
 
-// O que uma movimentação faz com o item.
-//
-//   ENTRADA  soma `qty` ao total — chegou nota, recontagem para cima.
-//   BAIXA    subtrai `qty` do total — quebrou, perdeu, recontagem para baixo.
-//            Nunca abaixo do que está fora (`adjust-stock`).
-//   SAIDA    UMA unidade entregue a pessoa ou posto; `returnedAt` nulo é a
-//            unidade fora do estoque, e é o que o saldo conta. A devolução
-//            preenche `returnedAt` e NUNCA apaga a linha.
-enum StockMovementKind {
-  ENTRADA
-  BAIXA
-  SAIDA
-}
-
-// Para QUEM uma unidade saiu. Só nos movimentos de SAIDA.
+// Para QUEM uma unidade saiu.
 enum StockTarget {
   PERSON
   WORKSTATION
@@ -1124,12 +1109,13 @@ enum StockTarget {
 
 model StockItem {
   id   String @id @default(uuid()) @db.Uuid
-  name String
+  // Único entre TODOS, desativados inclusive: o item que volta a ser comprado
+  // se reativa, e o histórico dele continua junto.
+  name String @unique
 
-  // QUANTO HÁ NO TOTAL — não quanto sobra. Só muda por movimento de ENTRADA ou
-  // BAIXA, na mesma transação que grava a linha; a chave NÃO existe no schema
-  // de edição (`strictObject` devolve 422 a chave desconhecida, e não declarar
-  // é a defesa).
+  // QUANTO HÁ NO TOTAL — não quanto sobra. Ao menos 1, no cadastro e na edição
+  // (CHECK `stock_items_qty_positiva`): o item que acabou se desativa. Reduzir
+  // não passa do que está em uso (`update-stock-item`).
   qty Int
 
   categoryId String  @db.Uuid
@@ -1140,9 +1126,12 @@ model StockItem {
   // entregue a alguém está com quem a recebeu (`StockMovement`).
   locationId String? @db.Uuid
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  // DESATIVADO é o encerrado da licença: fica na lista, esmaecido, não recebe
+  // saída nova, e o que ainda está com alguém continua até voltar.
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Restrict: é o 409 por uso do catálogo, e a FK é a rede embaixo dele.
   category  Category        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
@@ -1151,62 +1140,67 @@ model StockItem {
   location  Location?       @relation(fields: [locationId], references: [id], onDelete: Restrict)
   movements StockMovement[]
 
-  // `name` NÃO é @unique aqui: a unicidade é índice PARCIAL
-  // (`WHERE "deletedAt" IS NULL`) na migration — o `unique_undeleted` de novo.
-  // Com @unique comum, um item na lixeira travaria para sempre o recadastro do
-  // mesmo nome.
-  @@index([deletedAt])
+  @@index([isActive])
   @@index([categoryId])
   @@index([locationId])
   @@map("stock_items")
 }
 
-// UMA LINHA POR MOVIMENTO, e a saída é UMA UNIDADE por linha.
+// UMA LINHA POR UNIDADE QUE SAIU — a entrega da licença, com quantidade.
 //
-// Entregar 5 mouses à Mesa 1 grava 5 linhas de SAIDA, e devolver é por linha:
-// é o que faz a devolução ser de uma unidade identificada, sem quantidade
-// parcial para dividir, e faz o saldo ser um `COUNT`. Entregar a um posto vale
-// UMA unidade, qualquer que seja o número de ocupantes — o saldo do
-// almoxarifado não pode depender da escala do RH. Quem responde por ela são os
-// ocupantes abertos daquele posto, resolvidos na leitura.
+// Entregar 5 mouses à Mesa 1 grava 5 linhas, no mesmo INSERT: o `createdAt`
+// igual é o que faz delas UMA saída (o lote) nas listas, e a devolução fecha N
+// linhas do lote. O saldo é um `COUNT`. Entregar a um posto vale UMA unidade,
+// qualquer que seja o número de ocupantes — o saldo do almoxarifado não pode
+// depender da escala do RH. Quem responde por ela são os ocupantes abertos
+// daquele posto, resolvidos na leitura.
 //
 // A forma da linha é CHECK do banco, escrito à mão na migration
-// (`stock_movements_forma`): SAIDA tem exatamente um alvo, o discriminante
-// preenchido e `qty = 1`; ENTRADA e BAIXA não têm alvo nem devolução. E o
-// total do item não fica negativo (`stock_items_qty_nao_negativa`).
+// (`stock_movements_forma`): exatamente um alvo, o que o discriminante diz.
 model StockMovement {
-  id     String            @id @default(uuid()) @db.Uuid
-  itemId String            @db.Uuid
-  kind   StockMovementKind
+  id     String  @id @default(uuid()) @db.Uuid
+  // Nulo só na saída DEVOLVIDA de um item que foi excluído — o nome dele fica
+  // em `itemName`, como o do posto em `targetWorkstationName`. Em uso, aponta
+  // sempre para o item (CHECK `stock_movements_item_presente`).
+  itemId String? @db.Uuid
+  /// O nome do item, por escrito, quando ele foi excluído.
+  itemName String?
 
-  /// Quantas unidades este movimento moveu. Sempre 1 na SAIDA.
-  qty Int
-
-  // Discriminante + duas FKs nuláveis, como no `Assignment`. Só na SAIDA.
-  targetType            StockTarget?
-  targetPersonId        String?      @db.Uuid
-  targetWorkstationId   String?      @db.Uuid
+  // Discriminante + duas FKs nuláveis, como no `Assignment`.
+  targetType            StockTarget
+  targetPersonId        String?     @db.Uuid
+  targetWorkstationId   String?     @db.Uuid
   /// O nome do posto, por escrito, quando ele foi excluído — como na `Assignment`.
   targetWorkstationName String?
 
-  /// Só na SAIDA. Nulo = unidade FORA do estoque. É o que o saldo conta.
+  /// O DIA da saída, como o `checkoutAt` da licença: hoje é a hora real, um dia
+  /// passado é o meio-dia de Brasília (`instanteDoDia`).
+  checkoutAt DateTime  @default(now())
+  /// Nulo = unidade EM USO. É o que o saldo conta. Nunca antes da saída (CHECK).
+  /// É o DIA da devolução, como o `checkoutAt`: duas devoluções no mesmo dia
+  /// passado têm o mesmo — por isso a chave da devolução é a coluna de baixo.
   returnedAt DateTime?
+  /// O instante em que a devolução foi REGISTRADA — o mesmo nas N linhas que
+  /// voltaram juntas: é a chave da devolução, como o `createdAt` é a da saída.
+  /// Nula junto com `returnedAt`, e só (CHECK `stock_movements_devolucao_registrada`).
+  returnRecordedAt DateTime?
 
-  /// A observação do movimento — por que entrou, por que saiu, para quem.
+  /// A observação da saída. A devolução não tem a sua.
   notes String?
 
+  /// O instante do INSERT — o mesmo nas N linhas de uma saída: é a chave do lote.
   createdAt DateTime @default(now())
 
-  // Cascade no item dono do movimento. Restrict nos ALVOS: posto e pessoa são
-  // catálogo, e o 409 de cada um conta as unidades fora — a FK é a rede embaixo
-  // dele. A saída já devolvida para um posto excluído é desligada antes, com o
-  // nome em `targetWorkstationName`.
-  item              StockItem    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  // Restrict nos três: item, posto e pessoa com unidade em uso não se excluem
+  // (o 409 de cada um vem antes, e conta as unidades). A saída já devolvida de
+  // um item ou de um posto excluído é desligada antes, com o nome por escrito
+  // em `itemName` ou em `targetWorkstationName`.
+  item              StockItem?   @relation(fields: [itemId], references: [id], onDelete: Restrict)
   targetPerson      Person?      @relation(fields: [targetPersonId], references: [id], onDelete: Restrict)
   targetWorkstation Workstation? @relation(fields: [targetWorkstationId], references: [id], onDelete: Restrict)
 
-  @@index([itemId, kind, returnedAt])
-  @@index([itemId, createdAt])
+  @@index([itemId, returnedAt])
+  @@index([itemId, checkoutAt])
   @@index([targetPersonId, returnedAt])
   @@index([targetWorkstationId, returnedAt])
   @@map("stock_movements")

@@ -10,7 +10,6 @@ import LicencaTable from './components/LicencaTable';
 import EmUsoFiltro from './components/EmUsoFiltro';
 import StatusFiltro from './components/StatusFiltro';
 import { useLicencas } from './hooks/useLicencas';
-import type { RecorteDaLicenca } from '../../domain/shared/license.types';
 import { usePode } from '../../domain/auth/auth.store';
 
 // AS LICENÇAS DE SOFTWARE (docs/referencia/licencas.md).
@@ -20,21 +19,16 @@ import { usePode } from '../../domain/auth/auth.store';
 // estão as outras".
 //
 // Markup e mais nada: estado e chamadas ficam no `useLicencas`
-// (docs/referencia/arquitetura.md).
-
-/** As abas: o que não encerrou (inclusive a vencida, que pede decisão) e o que encerrou. */
-const ABAS: readonly { valor: RecorteDaLicenca; rotulo: string }[] = [
-  { valor: 'atuais', rotulo: 'Atuais' },
-  { valor: 'encerradas', rotulo: 'Encerradas' },
-];
+// (docs/referencia/arquitetura.md). Sem abas: a encerrada fica na lista, como o
+// desativado nas Configurações (AF).
 
 export default function LicencasPage() {
   const {
-    licencas, total, carregando, erro, page, perPage, setPage, search, changeSearch, view, changeView,
+    licencas, total, carregando, erro, page, perPage, setPage, search, changeSearch,
     categoryId, changeCategoria, status, changeStatus, soEmUso, changeSoEmUso, irParaAlerta,
     alertas,
     modal, licencaAberta, erroDoLink, abrir, fechar, ocupado,
-    handleCriar, handleEditar, handleEntregar, handleDevolver, handleTrocarChave, handleEncerrar, handleExcluir,
+    handleCriar, handleEditar, handleEntregar, handleDevolver, handleTrocarChave, handleAlternarEncerrada, handleExcluir,
   } = useLicencas();
   // Excluir é `ADMIN` no servidor.
   const podeApagar = usePode('ADMIN');
@@ -71,16 +65,13 @@ export default function LicencasPage() {
       <AlertasLicenca alertas={alertas.rows} total={alertas.total} contagem={alertas.contagem} onIrPara={irParaAlerta} />
 
       <ListToolbar
-        view={view}
-        onViewChange={changeView}
-        abas={ABAS}
         search={search}
         onSearchChange={changeSearch}
         placeholder="Buscar por nome, licenciado, categoria, fabricante ou pedido..."
         filtros={
           <>
-            {view === 'atuais' && <StatusFiltro valor={status} onChange={changeStatus} />}
-            {view === 'encerradas' && <EmUsoFiltro ligado={soEmUso} onChange={changeSoEmUso} />}
+            <StatusFiltro valor={status} onChange={changeStatus} />
+            {status === 'ENCERRADA' && <EmUsoFiltro ligado={soEmUso} onChange={changeSoEmUso} />}
             <CategoriaFiltro tipo="LICENSE" valor={categoryId} onChange={changeCategoria} />
           </>
         }
@@ -92,12 +83,11 @@ export default function LicencasPage() {
 
       <LicencaTable
         licencas={licencas}
-        view={view}
         ocupado={ocupado}
         onAbrir={(licenca) => abrir('detalhe', licenca)}
         onEditar={(licenca) => abrir('editar', licenca)}
         onEntregar={(licenca) => abrir('entregar', licenca)}
-        onEncerrar={(licenca) => void handleEncerrar(licenca)}
+        onAlternarEncerrada={(licenca) => void handleAlternarEncerrada(licenca)}
         onExcluir={podeApagar ? (licenca) => void handleExcluir(licenca) : undefined}
         vazio={
           // Carregando e erro antes do vazio: sem isto, a primeira carga e um
@@ -107,8 +97,6 @@ export default function LicencasPage() {
               <span>Nenhuma licença encontrada para "{search}".</span>
             ) : status || soEmUso || categoryId ? (
               <span>Nenhuma licença com este filtro.</span>
-            ) : view === 'encerradas' ? (
-              <span>Nenhuma licença encerrada.</span>
             ) : (
               <>
                 <span>Nenhuma licença cadastrada.</span>
@@ -141,7 +129,7 @@ export default function LicencasPage() {
           onClose={fechar}
           onEntregar={(licenca) => abrir('entregar', licenca)}
           onEditar={(licenca) => abrir('editar', licenca)}
-          onEncerrar={(licenca) => void handleEncerrar(licenca)}
+          onAlternarEncerrada={(licenca) => void handleAlternarEncerrada(licenca)}
           onExcluir={podeApagar ? (licenca) => void handleExcluir(licenca) : undefined}
           onDevolver={handleDevolver}
           onTrocarChave={handleTrocarChave}

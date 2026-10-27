@@ -7,8 +7,8 @@ import { textoDoPrazo } from '../../helpers/licenca.helper';
 // existe alerta de "abaixo do mínimo" (AA). Só nesta tela.
 //
 // EMBAIXO, A CONTAGEM DE CADA MOTIVO, com link — "2 encerradas em uso · 5
-// vencidas · 3 vencendo": cada uma leva à aba e ao filtro que mostram todas
-// aquelas, e a lista de cima pode ficar curta.
+// vencidas · 3 vencendo": cada uma leva ao filtro que mostra todas aquelas,
+// e a lista de cima pode ficar curta.
 
 interface AlertasLicencaProps {
   alertas: LicencaEmAlerta[];

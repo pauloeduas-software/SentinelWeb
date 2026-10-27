@@ -1,13 +1,14 @@
 import type { StatusDoFiltro } from '../../../domain/shared/license.types';
 
-// O FILTRO POR STATUS da aba Atuais. A encerrada tem aba própria, então não é
-// opção aqui. Vazio é "todos", e fica no topo pelo mesmo motivo do
+// O FILTRO POR STATUS. Sem abas (AF): a encerrada fica na lista, e é por aqui
+// que se vê só elas. Vazio é "todos", e fica no topo pelo mesmo motivo do
 // `CategoriaFiltro`: é o único jeito de desligar o filtro.
 
 const OPCOES: readonly { valor: StatusDoFiltro; rotulo: string }[] = [
   { valor: 'ATIVA', rotulo: 'Ativas' },
   { valor: 'VENCENDO', rotulo: 'Vencendo' },
   { valor: 'EXPIRADA', rotulo: 'Vencidas' },
+  { valor: 'ENCERRADA', rotulo: 'Encerradas' },
 ];
 
 interface StatusFiltroProps {

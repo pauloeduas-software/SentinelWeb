@@ -1,39 +1,39 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { SEM_PARAMETROS } from '../../../core/http/sem-parametros';
 import { parseListQuery } from '../../../core/http/list-query';
-import { historyQuerySchema } from '../../shared/history.schema';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import {
-  adjustStockSchema, checkoutStockSchema, createStockItemSchema, stockFiltersSchema,
+  checkinStockSchema, checkoutStockSchema, createStockItemSchema, stockFiltersSchema,
   updateStockItemSchema,
 } from '../schemas/stock.schema';
-import { adjustStock } from '../use-cases/adjust-stock.usecase';
 import { checkinStock } from '../use-cases/checkin-stock.usecase';
 import { checkoutStock } from '../use-cases/checkout-stock.usecase';
 import { createStockItem } from '../use-cases/create-stock-item.usecase';
 import { deleteStockItem } from '../use-cases/delete-stock-item.usecase';
 import { getStockItem } from '../use-cases/get-stock-item.usecase';
 import { listStock } from '../use-cases/list-stock.usecase';
-import { listStockMovements } from '../use-cases/list-stock-movements.usecase';
-import { restoreStockItem } from '../use-cases/restore-stock-item.usecase';
+import { listStockCheckouts } from '../use-cases/list-stock-checkouts.usecase';
+import { listStockHistory } from '../use-cases/stock-history.usecase';
 import { updateStockItem } from '../use-cases/update-stock-item.usecase';
 
 // Só HTTP. Sem try/catch: o `parse` do schema rejeita e a rejeição cai no
 // errorHandler, que devolve 422 com o campo que falhou — e os `AppError` dos
 // use-cases (409 sem unidade, 404) saem pelo mesmo caminho.
+
+/** As duas listas do detalhe — com quem está e o histórico — andam de 15 em 15, como as da licença. */
+const POR_PAGINA_NO_DETALHE = 15;
+
 export const stockController = {
   async list(request: FastifyRequest) {
-    // `categoryId` sai ANTES do `parseListQuery`, que é estrito e responderia
-    // 422 a uma chave que não conhece — o mesmo corte do `endpoint.controller.ts`.
+    // A query tem DOIS donos e é separada antes de qualquer `parse`, como no
+    // `license.controller.ts`: `categoryId` é nosso, o resto é do
+    // `parseListQuery`, que é estrito e responderia 422 a uma chave que não
+    // conhece. Sem `trashable` — o item não tem lixeira (AE) —, e sem abas: o
+    // desativado fica na mesma lista, como nas Configurações.
     const { categoryId, ...paginacao } = (request.query ?? {}) as Record<string, unknown>;
     const filtros = stockFiltersSchema.parse(categoryId === undefined ? {} : { categoryId });
 
-    const query = parseListQuery(paginacao, {
-      // O item tem lixeira: `?view=trashed` a lista.
-      trashable: true,
-    });
-    return listStock(query, filtros);
+    return listStock(parseListQuery(paginacao), filtros);
   },
 
   async byId(request: FastifyRequest) {
@@ -41,10 +41,16 @@ export const stockController = {
     return getStockItem(id);
   },
 
-  async movements(request: FastifyRequest) {
+  /** Quem está com o item agora — 15 saídas por página, com busca pelo nome. */
+  async checkouts(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    const { limit } = historyQuerySchema.parse(request.query ?? {});
-    return listStockMovements(id, limit);
+    return listStockCheckouts(id, parseListQuery(request.query, { perPage: POR_PAGINA_NO_DETALHE }));
+  },
+
+  /** Por onde o item passou — 15 por página, sem busca. */
+  async history(request: FastifyRequest) {
+    const { id } = idParamSchema.parse(request.params);
+    return listStockHistory(id, parseListQuery(request.query, { perPage: POR_PAGINA_NO_DETALHE, searchable: false }));
   },
 
   async create(request: FastifyRequest, reply: FastifyReply) {
@@ -60,39 +66,24 @@ export const stockController = {
     return updateStockItem(id, data, atorDaRequisicao(request));
   },
 
-  async remove(request: FastifyRequest) {
+  /** Exclusão DEFINITIVA — para o cadastro errado. O item que já saiu se desativa. */
+  async remove(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
     await deleteStockItem(id, atorDaRequisicao(request));
-    return { success: true };
+    return reply.status(204).send();
   },
 
-  async restore(request: FastifyRequest) {
-    const { id } = idParamSchema.parse(request.params);
-    return restoreStockItem(id, atorDaRequisicao(request));
-  },
-
-  async adjust(request: FastifyRequest, reply: FastifyReply) {
-    const { id } = idParamSchema.parse(request.params);
-    const data = adjustStockSchema.parse(request.body ?? {});
-    // 201: a entrada ou a baixa CRIA uma linha de movimento.
-    const resultado = await adjustStock(id, data, atorDaRequisicao(request));
-    return reply.status(201).send(resultado);
-  },
-
+  /** 201: a entrega CRIA uma linha por unidade. O corpo devolve as unidades e o disponível que ficou. */
   async checkout(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
     const data = checkoutStockSchema.parse(request.body ?? {});
-    // 201: a saída CRIA uma linha por unidade. O corpo devolve as unidades e o
-    // disponível que ficou, porque a tela precisa dos dois.
     const resultado = await checkoutStock(id, data, atorDaRequisicao(request));
     return reply.status(201).send(resultado);
   },
 
+  /** 200: a devolução FECHA unidades que já existiam. O `:id` é o de uma unidade da SAÍDA. */
   async checkin(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    // A devolução não leva nota nem nada: o corpo, se vier, é vazio.
-    SEM_PARAMETROS.parse(request.body ?? {});
-    // 200, e não 201: a devolução FECHA a linha que já existia.
-    return checkinStock(id, atorDaRequisicao(request));
+    return checkinStock(id, checkinStockSchema.parse(request.body ?? {}), atorDaRequisicao(request));
   },
 };

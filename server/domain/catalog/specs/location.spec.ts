@@ -32,13 +32,13 @@ export const locationSpec: CatalogSpec = {
 
   // A mesma lógica do status: localização é cadastro de REFERÊNCIA e só o que
   // aponta para ela AGORA a segura — os ativos e itens de estoque guardados
-  // aqui e os postos que ficam aqui. Os da lixeira contam porque continuam
-  // apontando e podem voltar. Ela não recebe entrega nem ocupante — quem
+  // aqui e os postos que ficam aqui. Os ativos da lixeira e os itens
+  // desativados contam porque continuam apontando e podem voltar. Ela não recebe entrega nem ocupante — quem
   // recebe é o posto (decisão Y) —, então não há passado preso a ela.
   countUsages: async (client, id) => {
     const [ativos, itens, postos] = await Promise.all([
       client.asset.count({ where: { locationId: id, ...INCLUINDO_LIXEIRA } }),
-      client.stockItem.count({ where: { locationId: id, ...INCLUINDO_LIXEIRA } }),
+      client.stockItem.count({ where: { locationId: id } }),
       client.workstation.count({ where: { locationId: id } }),
     ]);
     return ativos + itens + postos;

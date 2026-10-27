@@ -6,21 +6,16 @@ import type { ListView } from '../../domain/shared/list.types';
 // não divergirem — é apresentacional puro: recebe valor e callback, não
 // conhece query nem HTTP.
 
-/** As abas padrão: a listagem e a lixeira. */
+/** As abas: a listagem e a lixeira — a única tela com abas aqui é a do colaborador. */
 const ABAS_DA_LIXEIRA: readonly { valor: ListView; rotulo: string }[] = [
   { valor: 'active', rotulo: 'Ativos' },
   { valor: 'trashed', rotulo: 'Lixeira' },
 ];
 
-interface ListToolbarProps<V extends string> {
+interface ListToolbarProps {
   /** Omitido nas listagens sem abas: elas simplesmente não aparecem. */
-  view?: V;
-  onViewChange?: (view: V) => void;
-  /**
-   * As abas, quando não são as da lixeira — Licenças troca a lixeira por
-   * "Atuais | Encerradas". Omitido, valem `Ativos | Lixeira`.
-   */
-  abas?: readonly { valor: V; rotulo: string }[];
+  view?: ListView;
+  onViewChange?: (view: ListView) => void;
   /**
    * Omitidos onde não há o que buscar, e aí o campo não aparece — é a mesma
    * opcionalidade que a aba de lixeira já tinha. Hoje toda listagem que usa a
@@ -37,10 +32,9 @@ interface ListToolbarProps<V extends string> {
   onPageChange: (page: number) => void;
 }
 
-export default function ListToolbar<V extends string = ListView>({
+export default function ListToolbar({
   view,
   onViewChange,
-  abas = ABAS_DA_LIXEIRA as unknown as readonly { valor: V; rotulo: string }[],
   search,
   onSearchChange,
   placeholder,
@@ -49,7 +43,7 @@ export default function ListToolbar<V extends string = ListView>({
   perPage,
   total,
   onPageChange,
-}: ListToolbarProps<V>) {
+}: ListToolbarProps) {
   const totalPages = Math.max(1, Math.ceil(total / perPage));
   const primeiro = total === 0 ? 0 : (page - 1) * perPage + 1;
   const ultimo = Math.min(page * perPage, total);
@@ -58,7 +52,7 @@ export default function ListToolbar<V extends string = ListView>({
     <div className="flex flex-wrap items-center justify-between gap-4 mb-4 font-mono text-xs">
       {view && onViewChange && (
         <div className="flex border border-border-sutil">
-          {abas.map(aba => (
+          {ABAS_DA_LIXEIRA.map(aba => (
             <button
               key={aba.valor}
               type="button"

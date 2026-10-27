@@ -177,11 +177,11 @@ describe('o estoque guardado numa localização', () => {
   it('localização desativada não recebe estoque novo — mas o item que já estava lá continua editável', async () => {
     const deposito = await criarLocal(api, { name: 'Depósito antigo de estoque' });
     const item = await api.post<{ id: string }>(
-      '/api/stock/items', { name: 'Teclado guardado', categoryId: seed.categoriaEstoqueId, locationId: deposito },
+      '/api/stock/items', { name: 'Teclado guardado', categoryId: seed.categoriaEstoqueId, qty: 1, locationId: deposito },
     );
     await desativar(deposito);
 
-    const novo = await api.post('/api/stock/items', { name: 'Cabo novo', categoryId: seed.categoriaEstoqueId, locationId: deposito });
+    const novo = await api.post('/api/stock/items', { name: 'Cabo novo', categoryId: seed.categoriaEstoqueId, qty: 1, locationId: deposito });
     expect(novo.status).toBe(409);
 
     const edicao = await api.put(`/api/stock/items/${item.body.id}`, {

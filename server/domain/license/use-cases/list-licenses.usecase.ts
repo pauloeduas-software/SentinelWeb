@@ -9,7 +9,7 @@ import {
   LICENSE_SELECT, paraResposta,
   type LicencaNaResposta, type LinhaDeLicenca,
 } from '../helpers/license-select.helper';
-import type { LicenseFilters, RecorteDaLicenca, StatusDoFiltro } from '../schemas/license.schema';
+import type { LicenseFilters, StatusDoFiltro } from '../schemas/license.schema';
 import { contarUso } from './count-license-checkouts.usecase';
 
 /**
@@ -17,32 +17,31 @@ import { contarUso } from './count-license-checkouts.usecase';
  * compradas). É por isso que a licença é fatia vertical inteira e não uma spec
  * no motor do catálogo: o `select` da `CatalogSpec` é allowlist estática.
  *
- * DUAS ABAS (AA): `atuais` são as que não encerraram — ativas, vencendo e
- * vencidas, porque a vencida ainda pede decisão (renovar ou encerrar);
- * `encerradas` são as que chegaram ao dia do encerramento. Dentro de `atuais`,
- * `status` recorta uma das três; `emUso` deixa só as que alguém ainda usa — é
- * para onde o alerta "encerradas em uso" leva.
+ * UMA LISTA SÓ (AF), como nas Configurações: a encerrada fica junto, e a tela
+ * a esmaece. `status` recorta um dos quatro — `ENCERRADA` é o que a aba
+ * Encerradas mostrava —, e `emUso` deixa só as que alguém ainda usa: com
+ * `ENCERRADA`, é para onde o alerta "encerradas em uso" leva.
  */
 export async function listLicenses(
   query: ListQuery,
   filtros: LicenseFilters,
 ): Promise<ListEnvelope<LicencaNaResposta>> {
-  // `AND`, e não espalhamento: a busca escreve `OR` e o recorte das atuais
-  // também — espalhados, um apagaria o outro em silêncio.
+  // `AND`, e não espalhamento: a busca escreve `OR` e o status também —
+  // espalhados, um apagaria o outro em silêncio.
   const hoje = hojeNoBrasil();
   const where: Prisma.LicenseWhereInput = {
     AND: [
       buildLicenseWhere(query.q),
-      buildRecorteWhere(filtros.view, hoje),
       filtros.status ? buildStatusWhere(filtros.status, hoje) : {},
       filtros.emUso ? { checkouts: { some: { checkinAt: null } } } : {},
       filtros.categoryId ? { categoryId: filtros.categoryId } : {},
     ],
   };
 
-  // As encerradas pela mais recente: quem abre a aba procura o que acabou de
-  // sair. `id` desempata nomes repetidos (a renovação pode ter o mesmo nome).
-  const orderBy: Prisma.LicenseOrderByWithRelationInput[] = filtros.view === 'encerradas'
+  // As encerradas pela mais recente: quem filtra por elas procura o que acabou
+  // de sair. `id` desempata nomes repetidos (o contrato novo pode ter o mesmo
+  // nome).
+  const orderBy: Prisma.LicenseOrderByWithRelationInput[] = filtros.status === 'ENCERRADA'
     ? [{ terminationDate: 'desc' }, { name: 'asc' }, { id: 'asc' }]
     : [{ name: 'asc' }, { id: 'asc' }];
 
@@ -85,25 +84,19 @@ function buildLicenseWhere(q?: string): Prisma.LicenseWhereInput {
 }
 
 /**
- * O recorte das abas, contra o MESMO "hoje" do status (`hojeNoBrasil`): a
- * licença que o status chama de ENCERRADA é exatamente a que esta consulta põe
- * na aba Encerradas.
- */
-function buildRecorteWhere(view: RecorteDaLicenca, hoje: Date): Prisma.LicenseWhereInput {
-  return view === 'encerradas'
-    ? { terminationDate: { lte: hoje } }
-    : { OR: [{ terminationDate: null }, { terminationDate: { gt: hoje } }] };
-}
-
-/**
- * O filtro de status da aba Atuais — as mesmas fronteiras do
- * `statusDaLicenca`, escritas como `where`: vencida é vencimento antes de hoje
- * (o dia do vencimento ainda vale), vencendo vai de hoje a hoje + 30, e ativa é
- * o resto, inclusive sem vencimento. O encerramento já saiu pelo recorte.
+ * O filtro de status — as mesmas fronteiras do `statusDaLicenca`, contra o
+ * MESMO "hoje" (`hojeNoBrasil`), escritas como `where`. O encerramento vem
+ * primeiro, como lá: chegado o dia marcado, a licença é ENCERRADA, vencida ou
+ * não, e os outros três status são só das que não encerraram. Vencida é
+ * vencimento antes de hoje (o dia do vencimento ainda vale), vencendo vai de
+ * hoje a hoje + 30, e ativa é o resto, inclusive sem vencimento.
  */
 function buildStatusWhere(status: StatusDoFiltro, hoje: Date): Prisma.LicenseWhereInput {
+  if (status === 'ENCERRADA') return { terminationDate: { lte: hoje } };
+
+  const naoEncerrada: Prisma.LicenseWhereInput = { OR: [{ terminationDate: null }, { terminationDate: { gt: hoje } }] };
   const fimDoAviso = somarDias(hoje, DIAS_DE_AVISO);
-  if (status === 'EXPIRADA') return { expirationDate: { lt: hoje } };
-  if (status === 'VENCENDO') return { expirationDate: { gte: hoje, lte: fimDoAviso } };
-  return { OR: [{ expirationDate: null }, { expirationDate: { gt: fimDoAviso } }] };
+  if (status === 'EXPIRADA') return { AND: [naoEncerrada, { expirationDate: { lt: hoje } }] };
+  if (status === 'VENCENDO') return { AND: [naoEncerrada, { expirationDate: { gte: hoje, lte: fimDoAviso } }] };
+  return { AND: [naoEncerrada, { OR: [{ expirationDate: null }, { expirationDate: { gt: fimDoAviso } }] }] };
 }

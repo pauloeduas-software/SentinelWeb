@@ -1,14 +1,15 @@
-import { ArrowRightLeft, Clock, KeyRound, MapPin } from 'lucide-react';
+import { ArrowRightLeft, Boxes, Clock, KeyRound, MapPin } from 'lucide-react';
 import type { EventoDaPessoa } from '../../../../domain/shared/person.types';
 import { formatarDiaDoInstante } from '../../../helpers/format.helper';
 import { momentoDoEvento } from '../../../helpers/historico.helper';
 import { tituloDoEvento } from '../helpers/historico.helper';
 
-// A LINHA DO TEMPO da pessoa: por onde ela passou. TRÊS fontes, uma lista:
+// A LINHA DO TEMPO da pessoa: por onde ela passou. QUATRO fontes, uma lista:
 //
 //   POSSE      o que ela recebeu e devolveu, com a etiqueta do equipamento;
 //   POSTO      onde ela sentou e quando saiu, com o turno;
-//   LICENCA    as licenças entregues A ELA — não as do computador que ela usa.
+//   LICENCA    as licenças entregues A ELA — não as do computador que ela usa;
+//   ESTOQUE    o estoque no NOME dela, por saída — não o da mesa que ela ocupa.
 //
 // Colaborador não opera o sistema: não há o que ele FEZ para mostrar aqui.
 
@@ -16,12 +17,14 @@ const ICONE = {
   POSSE: ArrowRightLeft,
   POSTO: MapPin,
   LICENCA: KeyRound,
+  ESTOQUE: Boxes,
 } as const;
 
 const COR = {
   POSSE: 'text-status-info',
   POSTO: 'text-status-warning',
   LICENCA: 'text-text-tertiary',
+  ESTOQUE: 'text-text-tertiary',
 } as const;
 
 interface HistoryPanelProps {
@@ -39,7 +42,7 @@ export default function HistoryPanel({ eventos, total, carregando }: HistoryPane
   }
 
   if (eventos.length === 0) {
-    return <p className="font-mono text-xs text-text-tertiary">Nenhuma entrega, posto nem licença ainda.</p>;
+    return <p className="font-mono text-xs text-text-tertiary">Nenhuma entrega, posto, licença nem estoque ainda.</p>;
   }
 
   return (
@@ -61,7 +64,7 @@ export default function HistoryPanel({ eventos, total, carregando }: HistoryPane
 
 function Evento({ evento }: { evento: EventoDaPessoa }) {
   const Icone = ICONE[evento.fonte];
-  const nota = evento.posse?.notes ?? evento.posto?.notes ?? evento.licenca?.notes ?? null;
+  const nota = evento.posse?.notes ?? evento.posto?.notes ?? evento.licenca?.notes ?? evento.estoque?.notes ?? null;
 
   return (
     <li className="border border-border-sutil p-3 space-y-2">
@@ -72,9 +75,11 @@ function Evento({ evento }: { evento: EventoDaPessoa }) {
         </div>
 
         <span className="flex items-center gap-1.5 text-text-tertiary text-[10px] tabular-nums shrink-0">
-          {/* A licença é registrada por dia: a hora de um dia passado seria inventada. */}
+          {/* A licença e o estoque são registrados por dia: a hora de um dia
+              passado seria inventada. */}
           <Clock size={11} />{' '}
-          {evento.fonte === 'LICENCA' ? formatarDiaDoInstante(evento.at) : momentoDoEvento(evento.at)}
+          {evento.fonte === 'LICENCA' || evento.fonte === 'ESTOQUE'
+            ? formatarDiaDoInstante(evento.at) : momentoDoEvento(evento.at)}
         </span>
       </div>
 

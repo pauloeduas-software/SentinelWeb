@@ -136,7 +136,7 @@ export function useAssetDetail() {
    */
   const handleDelete = async () => {
     if (!asset) return;
-    if (!confirm(`Mover ${asset.assetTag} para a lixeira?`)) return;
+    if (!confirm(`Excluir "${asset.assetTag}"? Vai para a lixeira e pode ser restaurado.`)) return;
 
     try {
       await excluir.mutateAsync(asset.id);

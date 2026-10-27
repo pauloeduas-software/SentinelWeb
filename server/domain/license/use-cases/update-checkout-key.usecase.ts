@@ -21,11 +21,18 @@ import { travarLicencaOuFalhar } from './lock-license.usecase';
  */
 export async function updateCheckoutKey(checkoutId: string, data: CheckoutKeyData, ator: Ator) {
   // Sem trava, só para saber QUAL licença travar.
-  const previa = await prisma.licenseCheckout.findUnique({ where: { id: checkoutId }, select: { licenseId: true } });
+  const previa = await prisma.licenseCheckout.findUnique({
+    where: { id: checkoutId }, select: { licenseId: true, licenseName: true },
+  });
   if (!previa) throw new AppError('Nenhuma entrega de licença com este identificador.', 404);
+  // A da licença excluída (AG) é sempre devolvida: a em uso segura a exclusão.
+  const licenseId = previa.licenseId;
+  if (!licenseId) {
+    throw new AppError(`Esta entrega de "${previa.licenseName}" já foi devolvida: a chave não muda mais.`, 409);
+  }
 
   return prisma.$transaction(async (tx) => {
-    await travarLicencaOuFalhar(tx, previa.licenseId);
+    await travarLicencaOuFalhar(tx, licenseId);
     await tx.$queryRaw`SELECT id FROM license_checkouts WHERE id = ${checkoutId}::uuid FOR UPDATE`;
 
     const entrega = await tx.licenseCheckout.findUniqueOrThrow({
@@ -38,11 +45,13 @@ export async function updateCheckoutKey(checkoutId: string, data: CheckoutKeyDat
         assignedAsset: { select: { assetTag: true, name: true } },
       },
     });
-    if (entrega.checkinAt) {
-      throw new AppError(`Esta entrega de "${entrega.license.name}" já foi devolvida: a chave não muda mais.`, 409);
+    // Com a licença travada, ela existe: a entrega sem licença é a devolvida.
+    const licenca = entrega.license;
+    if (entrega.checkinAt || !licenca) {
+      throw new AppError(`Esta entrega de "${licenca?.name ?? previa.licenseName}" já foi devolvida: a chave não muda mais.`, 409);
     }
 
-    const licenseKeyId = await chaveDaEntrega(tx, entrega.license, data.licenseKeyId, checkoutId);
+    const licenseKeyId = await chaveDaEntrega(tx, licenca, data.licenseKeyId, checkoutId);
 
     const atualizada = await tx.licenseCheckout.update({
       where: { id: checkoutId },
@@ -54,8 +63,8 @@ export async function updateCheckoutKey(checkoutId: string, data: CheckoutKeyDat
     if (entrega.licenseKeyId !== licenseKeyId) {
       await recordAudit(tx, {
         entityType: 'License',
-        entityId: previa.licenseId,
-        entityLabel: entrega.license.name,
+        entityId: licenseId,
+        entityLabel: licenca.name,
         action: 'UPDATE',
         changes: {
           checkoutId,

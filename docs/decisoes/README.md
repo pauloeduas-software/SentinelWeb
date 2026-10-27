@@ -5,7 +5,7 @@
 > muda, mesmo que o arquivo onde ela vive mude. Depois do D164 veio uma segunda rodada, com 15
 > decisões próprias, nomeadas por letra (`A`…`P`, sem `N`) em vez de número — ver
 > [*A segunda rodada*](#a-segunda-rodada-ap) abaixo. A varredura do código morto, que veio
-> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y`, `Z` e, acabado o alfabeto, `AA`, `AB`, `AC` e `AD`.
+> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y`, `Z` e, acabado o alfabeto, `AA`, `AB`, `AC`, `AD`, `AE`, `AF` e `AG`.
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve.** Se a realidade mudou, ela é
 > **superada** por outra, com link entre as duas. O log é o que diz por quanto tempo cada regra
@@ -25,10 +25,10 @@
 | [`posse.md`](./posse.md) | Posse | 17 |
 | [`relatorios-import-etiquetas.md`](./relatorios-import-etiquetas.md) | Relatórios, import e etiquetas | 13 |
 | [`ciclo-de-vida.md`](./ciclo-de-vida.md) | Ciclo de vida | 12 |
-| [`licencas.md`](./licencas.md) | Licenças | 15 |
+| [`licencas.md`](./licencas.md) | Licenças | 16 |
 | [`campos-customizados.md`](./campos-customizados.md) | Campos customizados | 8 |
 | [`plataforma.md`](./plataforma.md) | Plataforma | 7 |
-| [`estoque.md`](./estoque.md) | Estoque | 6 |
+| [`estoque.md`](./estoque.md) | Estoque | 9 |
 
 ## Correções e supersessões
 
@@ -96,6 +96,9 @@ registram o "Supera:" do mesmo jeito, e o log só fica completo com elas na tabe
 | **X**, **D18** (em parte), **AA** (a licença sem trilha) | **AB** | a auditoria de quem fez volta, só no banco: conta, sistema ou login sem sessão, por escrito, numa linha que não se reescreve; os históricos das telas ficam só movimentação |
 | **AA** (em parte: a chave em texto), **AB** (em parte: a marca da chave na auditoria) | **AC** | a chave vira lista: cada uma cobre uma quantidade, e a entrega escolhe uma, obrigatória quando a licença tem chaves |
 | **AA** (em parte: a renovação de mesmo nome) | **AD** | renovar é editar o vencimento; o fim do suporte vai nas notas, a OEM fica com o computador e o comprovante é o número do pedido |
+| **J** (em parte: a entrada e a baixa, a lixeira e a devolução por unidade), **V** (em parte: a lixeira do item na contagem da localização) | **AE** | o estoque segue a lógica da licença: o total é campo da edição, a entrega e a devolução têm dia, a devolução é de N unidades da saída, e o item que acabou se desativa |
+| **AA** (em parte: a aba Encerradas e o Encerrar sem volta na linha) | **AF** | a licença entra no cadastro das Configurações: a encerrada fica na lista, e Encerrar/Reabrir é o Desativar/Ativar dela, com a data; o Editar manda o formulário inteiro em todas as telas |
+| **AE** (em parte: só o item nunca entregue se exclui), **AA** (em parte: a licença já entregue não se exclui) | **AG** | o item e a licença excluem pela regra do posto: só o que está em uso recusa, e o passado fica com o nome por escrito; as chaves vão junto com a licença |
 
 Quatro decisões nasceram para resolver **conflito entre dois planos**, e não de uma fase só:
 **D79** (cada job tem a própria linha), **D80** (um `ApiToken` com dono polimórfico), **D81** (uma
@@ -150,6 +153,9 @@ que o código ainda cita. Letra deixa claro, só pelo nome, que a decisão é de
 | **AB** | A auditoria volta: quem fez, só no banco | [Acesso](./acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco) |
 | **AC** | A chave vira lista: cada uma cobre uma quantidade, e a entrega escolhe uma | [Licenças](./licencas.md#ac--a-chave-vira-lista-cada-uma-cobre-uma-quantidade-e-a-entrega-escolhe-uma) |
 | **AD** | Renovar é editar o vencimento; o suporte, a OEM e o comprovante não viram campo | [Licenças](./licencas.md#ad--renovar-é-editar-o-vencimento-o-suporte-a-oem-e-o-comprovante-não-viram-campo) |
+| **AE** | O estoque segue a lógica da licença: total na edição, entrega com dia, desativar em vez de lixeira | [Estoque](./estoque.md#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira) |
+| **AF** | A licença entra no cadastro das Configurações, e o Editar manda o formulário inteiro | [Licenças](./licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro) |
+| **AG** | A regra do posto vale para o estoque e a licença: só o que está em uso impede a exclusão | [Estoque](./estoque.md#ag--a-regra-do-posto-vale-para-o-estoque-e-a-licença-só-o-que-está-em-uso-impede-a-exclusão) |
 
 **`N` não existe, de propósito.** As correções de segurança e consistência desta rodada (custo
 de compra vazando por uma quarta porta, comando que respondia sucesso sem confirmação do socket,
@@ -164,7 +170,7 @@ já prometiam e o código não cumpria. Continua a letra pelo mesmo motivo de a 
 adotado: a numeração `D` corresponde ao que o código cita, e recomeçá-la colidiria. A `R` veio
 logo depois dela, pelo mesmo caminho: a varredura achou a rota de senha sem chamador, e a
 resposta foi levar a senha para o cadastro. A `S` é o renomeio do papel para cargo, a palavra
-que a equipe usa. A `T` tira o seed da conta de administrador. A `AA` veio da revisão da página de Licenças — acabado o alfabeto, a letra continua com duas. A `AB` traz de volta a auditoria de quem fez, só no banco. A `AC` veio da conversa sobre o que faltava na licença: a chave virou lista. A `AD` respondeu os casos de uso que a `AC` deixou sugeridos, e a próxima é a `AE`.
+que a equipe usa. A `T` tira o seed da conta de administrador. A `AA` veio da revisão da página de Licenças — acabado o alfabeto, a letra continua com duas. A `AB` traz de volta a auditoria de quem fez, só no banco. A `AC` veio da conversa sobre o que faltava na licença: a chave virou lista. A `AD` respondeu os casos de uso que a `AC` deixou sugeridos. A `AE` pôs o estoque na lógica da licença. A `AF` pôs a licença no cadastro das Configurações, e o Editar com o formulário inteiro em todas as telas. A `AG` veio da pergunta sobre excluir o que já foi devolvido: o item e a licença passaram à regra do posto; a próxima é a `AH`.
 
 ## O índice
 

@@ -112,7 +112,7 @@ describe('o status pela API, nas bordas', () => {
   });
 });
 
-describe('o filtro de status da aba Atuais', () => {
+describe('o filtro de status', () => {
   const PREFIXO = 'Filtro de status';
   let ids: Record<'semVencimento' | 'longe' | 'limite' | 'hoje' | 'ontem' | 'encerrada', string>;
 
@@ -134,7 +134,7 @@ describe('o filtro de status da aba Atuais', () => {
 
   async function filtrar(status: string) {
     const { status: http, body } = await api.get<{ rows: { id: string; status: string }[] }>(
-      `/api/licenses?view=atuais&status=${status}&perPage=100&q=${encodeURIComponent(PREFIXO)}`,
+      `/api/licenses?status=${status}&perPage=100&q=${encodeURIComponent(PREFIXO)}`,
     );
     expect(http).toBe(200);
     return body.rows;
@@ -154,16 +154,27 @@ describe('o filtro de status da aba Atuais', () => {
     }
   });
 
-  it('na aba Encerradas, ou com um status que não existe, é 422', async () => {
-    expect((await api.get('/api/licenses?view=encerradas&status=ATIVA')).status).toBe(422);
-    expect((await api.get('/api/licenses?status=ENCERRADA')).status).toBe(422);
+  it('o filtro ENCERRADA traz só a encerrada, que a lista sem filtro mostra junto das outras', async () => {
+    expect((await filtrar('ENCERRADA')).map((l) => l.id)).toEqual([ids.encerrada]);
+
+    const { body } = await api.get<{ rows: { id: string; status: string }[] }>(
+      `/api/licenses?perPage=100&q=${encodeURIComponent(PREFIXO)}`,
+    );
+    expect(body.rows.map((l) => l.id).sort()).toEqual(Object.values(ids).sort());
+    expect(body.rows.find((l) => l.id === ids.encerrada)?.status).toBe('ENCERRADA');
+  });
+
+  it('sem abas: o `view` e um status que não existe são 422', async () => {
+    expect((await api.get('/api/licenses?view=encerradas')).status).toBe(422);
+    expect((await api.get('/api/licenses?view=atuais')).status).toBe(422);
+    expect((await api.get('/api/licenses?status=CANCELADA')).status).toBe(422);
   });
 });
 
 describe('a busca e a ordem da lista', () => {
-  async function acha(q: string, view = 'atuais'): Promise<string[]> {
+  async function acha(q: string, filtro = ''): Promise<string[]> {
     const { status, body } = await api.get<{ rows: { id: string }[] }>(
-      `/api/licenses?view=${view}&perPage=100&q=${encodeURIComponent(q)}`,
+      `/api/licenses?perPage=100&q=${encodeURIComponent(q)}${filtro}`,
     );
     expect(status).toBe(200);
     return body.rows.map((linha) => linha.id);
@@ -186,12 +197,12 @@ describe('a busca e a ordem da lista', () => {
     expect(await acha('PED_7781')).toEqual([alvo]);
   });
 
-  it('a aba Encerradas vem pela mais recente', async () => {
+  it('o filtro das encerradas vem pela mais recente', async () => {
     const encerrada = (dias: number) => criarLicenca(api, {
       name: `Ordem encerrada ${dias}`, categoryId: cenario.categoriaLicencaId, seatsTotal: 1, terminationDate: diaNoBrasil(dias),
     });
     const [cinco, uma, tres] = [await encerrada(-5), await encerrada(-1), await encerrada(-3)];
 
-    expect(await acha('Ordem encerrada', 'encerradas')).toEqual([uma.id, tres.id, cinco.id]);
+    expect(await acha('Ordem encerrada', '&status=ENCERRADA')).toEqual([uma.id, tres.id, cinco.id]);
   });
 });

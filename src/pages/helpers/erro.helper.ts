@@ -1,5 +1,6 @@
 import type { ReferenciaDoErro } from '../../domain/shared/erro.types';
 import type { LinkDaNotificacao } from '../hooks/useNotificacao';
+import { caminhoDoItem } from './estoque.helper';
 import { caminhoDaLicenca } from './licenca.helper';
 
 // OS LINKS DE UMA RECUSA — as `refs` que o servidor manda ao lado da frase
@@ -8,6 +9,7 @@ import { caminhoDaLicenca } from './licenca.helper';
 
 const CAMINHO: Record<ReferenciaDoErro['tipo'], (id: string) => string> = {
   licenca: caminhoDaLicenca,
+  estoque: caminhoDoItem,
 };
 
 /** Só as referências bem formadas: o corpo do erro vem de fora. */

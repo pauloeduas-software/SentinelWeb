@@ -84,6 +84,8 @@ const LICENCA_DA_ENTREGA = {
 export const CHECKOUT_SELECT = {
   id: true,
   licenseId: true,
+  // O nome por escrito da licença excluída (AG) — `license` vem nulo.
+  licenseName: true,
   assignedPersonId: true,
   assignedAssetId: true,
   checkoutAt: true,

@@ -7,8 +7,8 @@ import { prisma } from '../../server/core/database/prismaClient';
 
 // O CICLO DO CONTRATO (AA): encerrar, reabrir, excluir de vez, e o alerta.
 //
-// Sem lixeira: a licença que ACABOU se encerra e vai para a aba Encerradas —
-// mesmo com alguém usando, e então ela fica no alerta. Só a que NUNCA foi
+// Sem lixeira: a licença que ACABOU se encerra e fica na lista, encerrada (AF)
+// — mesmo com alguém usando, e então ela fica no alerta. Só a que NUNCA foi
 // entregue se exclui de vez: a que já foi tem histórico, e se encerra.
 
 let api: ApiDeTeste;
@@ -23,16 +23,22 @@ afterAll(async () => {
   await api.fechar();
 });
 
-async function idsDaAba(view: 'atuais' | 'encerradas', q: string): Promise<string[]> {
-  const { status, body } = await api.get<{ rows: { id: string }[] }>(
-    `/api/licenses?view=${view}&perPage=100&q=${encodeURIComponent(q)}`,
+/**
+ * As licenças da busca de um lado do encerramento. Sem abas (AF): as
+ * encerradas vêm pelo filtro `ENCERRADA`, e as outras são as da lista inteira
+ * que não têm esse status.
+ */
+async function idsDaLista(lado: 'encerradas' | 'outras', q: string): Promise<string[]> {
+  const filtro = lado === 'encerradas' ? '&status=ENCERRADA' : '';
+  const { status, body } = await api.get<{ rows: { id: string; status: string }[] }>(
+    `/api/licenses?perPage=100&q=${encodeURIComponent(q)}${filtro}`,
   );
   expect(status).toBe(200);
-  return body.rows.map((linha) => linha.id);
+  return body.rows.filter((linha) => (linha.status === 'ENCERRADA') === (lado === 'encerradas')).map((linha) => linha.id);
 }
 
 describe('encerrar', () => {
-  it('com alguém usando, encerra, muda de aba e entra no alerta até tudo voltar', async () => {
+  it('com alguém usando, encerra, passa a ser encerrada na lista e entra no alerta até tudo voltar', async () => {
     const licenca = await criarLicenca(api, { name: 'Encerrar Office 2016', categoryId: cenario.categoriaLicencaId, seatsTotal: 2 });
     const entrega = await entregarLicenca(api, licenca.id, { assignedPersonId: cenario.laura });
     // A contagem, e não só as linhas: a caixa corta em seis.
@@ -58,8 +64,8 @@ describe('encerrar', () => {
     expect(await motivo()).toBeUndefined();
     expect(await encerradasEmUso()).toBe(antes);
 
-    expect(await idsDaAba('encerradas', 'Encerrar Office 2016')).toEqual([licenca.id]);
-    expect(await idsDaAba('atuais', 'Encerrar Office 2016')).toEqual([]);
+    expect(await idsDaLista('encerradas', 'Encerrar Office 2016')).toEqual([licenca.id]);
+    expect(await idsDaLista('outras', 'Encerrar Office 2016')).toEqual([]);
 
     // Encerrar duas vezes reescreveria a data do fim.
     expect((await api.post(`/api/licenses/${licenca.id}/terminate`)).status).toBe(409);
@@ -72,17 +78,17 @@ describe('encerrar', () => {
     const encerrar = await api.post<{ error: string }>(`/api/licenses/${licenca.id}/terminate`);
     expect(encerrar.status).toBe(422);
     expect(encerrar.body.error).toMatch(/^O encerramento \(.+\) não pode ser antes da data da compra \(.+\)\.$/);
-    expect(await idsDaAba('atuais', 'Compra adiantada')).toEqual([licenca.id]);
+    expect(await idsDaLista('outras', 'Compra adiantada')).toEqual([licenca.id]);
   });
 
   it('apagar a data reabre a licença', async () => {
     const licenca = await criarLicenca(api, {
       name: 'Reabrir Visio', categoryId: cenario.categoriaLicencaId, seatsTotal: 1, terminationDate: diaNoBrasil(-3),
     });
-    expect(await idsDaAba('encerradas', 'Reabrir Visio')).toEqual([licenca.id]);
+    expect(await idsDaLista('encerradas', 'Reabrir Visio')).toEqual([licenca.id]);
 
     expect((await api.put(`/api/licenses/${licenca.id}`, { terminationDate: null })).status).toBe(200);
-    expect(await idsDaAba('atuais', 'Reabrir Visio')).toEqual([licenca.id]);
+    expect(await idsDaLista('outras', 'Reabrir Visio')).toEqual([licenca.id]);
   });
 
   it('pelo formulário segue a mesma regra: a data de hoje passa com alguém usando', async () => {
@@ -92,10 +98,10 @@ describe('encerrar', () => {
     const editada = await api.put<{ status: string }>(`/api/licenses/${licenca.id}`, { terminationDate: diaNoBrasil(0) });
     expect(editada.status).toBe(200);
     expect(editada.body.status).toBe('ENCERRADA');
-    expect(await idsDaAba('encerradas', 'Encerrar pelo form')).toEqual([licenca.id]);
+    expect(await idsDaLista('encerradas', 'Encerrar pelo form')).toEqual([licenca.id]);
   });
 
-  it('a aba Encerradas filtra as que alguém ainda usa — para onde o alerta leva', async () => {
+  it('o filtro das encerradas separa as que alguém ainda usa — para onde o alerta leva', async () => {
     const emUso = await criarLicenca(api, { name: 'Filtro em uso A', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
     await entregarLicenca(api, emUso.id, { assignedAssetId: cenario.ativo.id });
     await api.post(`/api/licenses/${emUso.id}/terminate`);
@@ -103,9 +109,9 @@ describe('encerrar', () => {
       name: 'Filtro em uso B', categoryId: cenario.categoriaLicencaId, seatsTotal: 1, terminationDate: diaNoBrasil(-2),
     });
 
-    expect((await idsDaAba('encerradas', 'Filtro em uso')).sort()).toEqual([emUso.id, semUso.id].sort());
+    expect((await idsDaLista('encerradas', 'Filtro em uso')).sort()).toEqual([emUso.id, semUso.id].sort());
     const { body } = await api.get<{ rows: { id: string }[] }>(
-      `/api/licenses?view=encerradas&emUso=sim&q=${encodeURIComponent('Filtro em uso')}`,
+      `/api/licenses?status=ENCERRADA&emUso=sim&q=${encodeURIComponent('Filtro em uso')}`,
     );
     expect(body.rows.map((linha) => linha.id)).toEqual([emUso.id]);
     expect((await api.get('/api/licenses?emUso=talvez')).status).toBe(422);
@@ -113,31 +119,57 @@ describe('encerrar', () => {
 });
 
 describe('excluir de vez', () => {
-  it('a que já foi entregue não se exclui, mesmo devolvida — o 409 manda encerrar', async () => {
+  it('em uso não se exclui — o 409 diz com quem e manda devolver', async () => {
     const pessoa = await criarColaborador(api, { name: 'Helena Prado', email: 'helena@teste.local' });
-    const licenca = await criarLicenca(api, { name: 'Já entregue', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
-    const entrega = await entregarLicenca(api, licenca.id, { assignedPersonId: pessoa });
+    const licenca = await criarLicenca(api, { name: 'Em uso', categoryId: cenario.categoriaLicencaId, seatsTotal: 2 });
+    await entregarLicenca(api, licenca.id, { assignedPersonId: pessoa });
+    await entregarLicenca(api, licenca.id, { assignedAssetId: cenario.ativo.id });
 
     const emUso = await api.delete<{ error: string }>(`/api/licenses/${licenca.id}`);
     expect(emUso.status).toBe(409);
-    expect(emUso.body.error).toContain('Encerre-a em vez de excluir');
-
-    expect((await api.post(`/api/licenses/checkouts/${entrega.id}/checkin`)).status).toBe(200);
-    const devolvida = await api.delete<{ error: string }>(`/api/licenses/${licenca.id}`);
-    expect(devolvida.status).toBe(409);
-    expect(devolvida.body.error).toBe(
-      '"Já entregue" já foi entregue e não pode ser excluída: o histórico de quem a usou depende dela. '
-      + 'Encerre-a em vez de excluir.',
-    );
-    // O histórico da pessoa continua com o nome — a licença está lá.
-    const historico = await api.get<{ rows: { fonte: string; licenca: { licenseLabel: string } | null }[] }>(
-      `/api/people/${pessoa}/history`,
-    );
-    expect(historico.body.rows.filter((e) => e.fonte === 'LICENCA').map((e) => e.licenca?.licenseLabel))
-      .toEqual(['Já entregue', 'Já entregue']);
+    expect(emUso.body.error).toMatch(/^"Em uso" ainda tem 2 entregas em uso \(.+ e Helena Prado\)\. Devolva antes de excluir\.$/);
+    expect((await api.get(`/api/licenses/${licenca.id}`)).status).toBe(200);
   });
 
-  it('a resposta diz se já foi entregue — é o que desabilita o Excluir na tela', async () => {
+  it('a já entregue e devolvida se exclui (AG): as entregas guardam o nome, perdem a chave, e o histórico continua', async () => {
+    const pessoa = await criarColaborador(api, { name: 'Igor Contrato Antigo', email: 'igor.contrato@teste.local' });
+    const criada = await api.post<{ id: string }>('/api/licenses', {
+      name: 'Contrato que acabou', categoryId: cenario.categoriaLicencaId, seatsTotal: 1,
+      keys: [{ productKey: 'CHAVE-QUE-VAI-JUNTO', seats: 1 }],
+    });
+    expect(criada.status).toBe(201);
+    const licencaId = criada.body.id;
+    const [chave] = (await api.get<{ keys: { id: string }[] }>(`/api/licenses/${licencaId}`)).body.keys;
+    const entrega = await api.post<{ id: string }>(`/api/licenses/${licencaId}/checkout`, {
+      assignedPersonId: pessoa, licenseKeyId: chave.id,
+    });
+    expect(entrega.status).toBe(201);
+    expect((await api.post(`/api/licenses/checkouts/${entrega.body.id}/checkin`)).status).toBe(200);
+
+    expect((await api.delete(`/api/licenses/${licencaId}`)).status).toBe(204);
+    expect((await api.get(`/api/licenses/${licencaId}`)).status).toBe(404);
+    const linha = await prisma.licenseCheckout.findUniqueOrThrow({ where: { id: entrega.body.id } });
+    expect([linha.licenseId, linha.licenseName, linha.licenseKeyId]).toEqual([null, 'Contrato que acabou', null]);
+    // As chaves vão junto: o texto da chave não fica em lugar nenhum.
+    expect(await prisma.licenseKey.count({ where: { productKey: 'CHAVE-QUE-VAI-JUNTO' } })).toBe(0);
+
+    // O histórico da pessoa continua com o nome, sem a ligação.
+    const historico = await api.get<{ rows: { fonte: string; licenca: { licenseId: string | null; licenseLabel: string } | null }[] }>(
+      `/api/people/${pessoa}/history`,
+    );
+    expect(historico.body.rows.filter((e) => e.fonte === 'LICENCA').map((e) => [e.licenca?.licenseLabel, e.licenca?.licenseId]))
+      .toEqual([['Contrato que acabou', null], ['Contrato que acabou', null]]);
+
+    // A tela velha que ainda mostrava a entrega recebe o 409 de "já devolvida".
+    const devolver = await api.post<{ error: string }>(`/api/licenses/checkouts/${entrega.body.id}/checkin`);
+    expect(devolver.status).toBe(409);
+    expect(devolver.body.error).toBe('Esta entrega de "Contrato que acabou" já foi devolvida.');
+    const trocar = await api.patch<{ error: string }>(`/api/licenses/checkouts/${entrega.body.id}`, { licenseKeyId: chave.id });
+    expect(trocar.status).toBe(409);
+    expect(trocar.body.error).toBe('Esta entrega de "Contrato que acabou" já foi devolvida: a chave não muda mais.');
+  });
+
+  it('a resposta diz se já foi entregue — a licença tem passado', async () => {
     const licenca = await criarLicenca(api, { name: 'Marca de entregue', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
     const jaEntregue = async () => {
       const detalhe = await api.get<{ jaEntregue: boolean }>(`/api/licenses/${licenca.id}`);
@@ -155,7 +187,7 @@ describe('excluir de vez', () => {
     expect(await jaEntregue()).toBe(true);
   });
 
-  it('a que nunca foi entregue some de verdade', async () => {
+  it('a que nunca foi entregue também some de verdade', async () => {
     const licenca = await criarLicenca(api, { name: 'Cadastrada errado', categoryId: cenario.categoriaLicencaId, seatsTotal: 2 });
     expect((await api.delete(`/api/licenses/${licenca.id}`)).status).toBe(204);
     expect((await api.get(`/api/licenses/${licenca.id}`)).status).toBe(404);

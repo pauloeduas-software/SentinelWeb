@@ -1,13 +1,13 @@
-import type { PessoaRef } from './posse.types';
 import type { Referencia } from './asset.types';
 
-// O CONTRATO DO ESTOQUE com a API — o item por quantidade e a movimentação.
+// O CONTRATO DO ESTOQUE com a API — o item por quantidade, a entrega e o
+// histórico. A mesma forma da licença (AE): o total é campo da edição, a
+// entrega e a devolução têm dia, o item que acabou se desativa.
 //
 // Ativo é computador; o que não é máquina (monitor, teclado, mouse, cabo) é
 // `StockItem`: N unidades intercambiáveis, sem patrimônio individual. Espelha
 // `server/domain/stock/helpers/stock-select.helper.ts`.
 
-type TipoDeMovimento = 'ENTRADA' | 'BAIXA' | 'SAIDA';
 type AlvoDaSaida = 'PERSON' | 'WORKSTATION';
 
 interface CategoriaDoItem extends Referencia {
@@ -15,159 +15,110 @@ interface CategoriaDoItem extends Referencia {
 }
 
 /**
- * Uma linha de estoque, já com o saldo que o servidor calculou.
+ * Um item, já com a conta que o servidor calculou.
  *
- * `disponivel` NÃO é coluna do banco: é `qty − fora`, contado a cada leitura. Por
- * isso ele chega junto com `qty` e não substitui: a coluna principal da tela é o
- * par `disponivel / qty`, e mostrar só um dos dois esconde metade da informação.
+ * `emUso` e `disponivel` NÃO são colunas: são contadas a cada leitura. Por isso
+ * chegam junto com `qty` e não a substituem — a tela mostra os três.
  */
 export interface ItemDeEstoque {
   id: string;
   name: string;
-  /** O TOTAL — só muda por entrada e baixa. */
+  /** O TOTAL — muda pela edição, nunca abaixo do que está em uso. */
   qty: number;
   categoryId: string;
   /** Onde o que sobra fica guardado (o Depósito de TI). */
   locationId: string | null;
   notes: string | null;
+  /** Desativado: não recebe entrega; o que está com alguém continua até voltar. */
+  isActive: boolean;
 
   createdAt: string;
   updatedAt: string;
-  deletedAt: string | null;
 
   category: CategoriaDoItem;
   location: Referencia | null;
 
-  /** Unidades fora do estoque agora. */
-  fora: number;
-  /** `qty − fora`. */
+  /** Unidades com alguém agora. */
+  emUso: number;
+  /** Já saiu alguma vez, devolvida ou não. Não impede excluir: só a unidade em uso impede (AG). */
+  jaEntregue: boolean;
+  /** `qty − emUso`. */
   disponivel: number;
 }
 
 /**
- * Um movimento — `GET /api/stock/items/:id` (as unidades fora) e o que a
- * saída, a entrada e a devolução devolvem.
- *
- * `returnedAt` nulo numa SAIDA é a unidade fora do estoque.
+ * Uma linha de "Com quem está" — `GET /api/stock/items/:id/checkouts`. É a
+ * SAÍDA ("Mesa 1 · 5 unidades"), não a unidade; `id` é o de uma unidade dela,
+ * e é por ele que a devolução vai.
  */
-export interface MovimentoDeEstoque {
+export interface SaidaAberta {
   id: string;
-  itemId: string;
-  kind: TipoDeMovimento;
-  qty: number;
-
-  targetType: AlvoDaSaida | null;
+  targetType: AlvoDaSaida;
   targetPersonId: string | null;
   targetWorkstationId: string | null;
-  /** O nome do posto, por escrito, quando ele foi excluído — `targetWorkstation` vem nulo. */
-  targetWorkstationName: string | null;
-
-  returnedAt: string | null;
+  targetLabel: string;
+  checkoutAt: string;
   notes: string | null;
-
-  createdAt: string;
-
-  targetPerson: PessoaRef | null;
-  targetWorkstation: Referencia | null;
+  /** Quantas desta saída ainda estão com o alvo. */
+  unidades: number;
 }
 
-/** O item aberto: a linha com o saldo e as unidades que estão fora. */
-export interface ItemDeEstoqueDetalhe extends ItemDeEstoque {
-  unidadesFora: MovimentoDeEstoque[];
+/** Um evento do histórico — `GET /api/stock/items/:id/history`. */
+export interface EventoDoItem {
+  id: string;
+  action: 'CHECKOUT' | 'CHECKIN';
+  at: string;
+  unidades: number;
+  targetType: AlvoDaSaida;
+  targetPersonId: string | null;
+  targetWorkstationId: string | null;
+  targetLabel: string;
+  notes: string | null;
 }
 
 /**
- * Uma unidade fora do estoque como a FICHA DO POSTO e a da PESSOA a recebem:
- * o item, a categoria, desde quando. `item.deletedAt` vem porque a unidade de
- * um item na lixeira continua na mesa, e a ficha precisa mostrá-la para alguém
- * devolvê-la.
+ * Uma saída aberta como a FICHA DO POSTO e a da PESSOA a recebem: o item, a
+ * categoria, quantas e desde quando. `item.isActive` vem porque a unidade de um
+ * item desativado continua na mesa, e a ficha precisa mostrá-la para alguém
+ * devolvê-la — no detalhe do item, para onde a linha aponta.
  */
-export interface UnidadeDeEstoque {
+export interface SaidaNaFicha {
   id: string;
   itemId: string;
-  createdAt: string;
+  checkoutAt: string;
   notes: string | null;
-  targetType: AlvoDaSaida | null;
-  targetPersonId: string | null;
-  targetWorkstationId: string | null;
+  unidades: number;
   item: {
     id: string;
     name: string;
-    deletedAt: string | null;
+    isActive: boolean;
     category: { id: string; name: string };
   };
 }
 
-/**
- * Um evento da movimentação — `GET /api/stock/items/:id/movements`.
- *
- * Uma saída rende DOIS eventos (a saída e a devolução), por isso `action` tem
- * quatro valores e `movementId` repete nos dois.
- */
-export type AcaoDoMovimento = TipoDeMovimento | 'DEVOLUCAO';
-
-export interface EventoDeEstoque {
-  id: string;
-  movementId: string;
-  action: AcaoDoMovimento;
-  at: string;
+/** O cadastro e a edição — as duas mandam o formulário inteiro (AF). */
+export interface ItemDeEstoqueInput {
+  name: string;
+  categoryId: string;
+  /** O total: ao menos 1, no cadastro e na edição, e nunca abaixo do que está em uso. */
   qty: number;
-  targetLabel: string | null;
-  targetType: AlvoDaSaida | null;
-  targetPersonId: string | null;
-  targetWorkstationId: string | null;
+  locationId: string | null;
   notes: string | null;
 }
 
 /**
- * O que a saída responde — `POST /api/stock/items/:id/checkout`.
- *
- * As unidades vêm no formato de `MovimentoDeEstoque`, prontas para a tela
- * listar "o que acabou de sair"; `disponivel` é o saldo JÁ COM a saída
- * aplicada — a tela não recalcula, só lê.
+ * O alvo da entrega: colaborador OU posto, nunca os dois
+ * (`checkout-stock.usecase.ts`). `checkoutAt` é o dia, 'AAAA-MM-DD': hoje ou
+ * antes.
  */
-export interface ResultadoDaSaida {
-  unidades: MovimentoDeEstoque[];
-  disponivel: number;
-}
+export type AlvoDaEntregaDeEstoque = { qty: number; notes?: string | null; checkoutAt: string } & (
+  | { targetType: 'PERSON'; targetPersonId: string }
+  | { targetType: 'WORKSTATION'; targetWorkstationId: string }
+);
 
-/**
- * O que a entrada e a baixa respondem — `POST /api/stock/items/:id/adjust`.
- *
- * `item` já vem com o saldo (`ItemDeEstoque`), e `movimento` é a linha que a
- * operação gravou — a tela troca o item da listagem por `item` e pode mostrar
- * `movimento` na linha do tempo sem esperar o próximo GET.
- */
-export interface ResultadoDoAjuste {
-  item: ItemDeEstoque;
-  movimento: MovimentoDeEstoque;
+/** O que a devolução responde: quantas voltaram e quantas da saída ficaram. */
+export interface ResultadoDaDevolucao {
+  devolvidas: number;
+  ficaram: number;
+  returnedAt: string;
 }
-
-/** O corpo do cadastro — `qty` é a quantidade INICIAL, e vira a primeira entrada. */
-export interface CriarItemDeEstoqueInput {
-  name: string;
-  categoryId: string;
-  qty?: number;
-  locationId?: string | null;
-  notes?: string | null;
-}
-
-/** O corpo da edição. Sem `qty`: o total muda por entrada e baixa, nunca por aqui. */
-export interface EditarItemDeEstoqueInput {
-  name?: string;
-  categoryId?: string;
-  locationId?: string | null;
-  notes?: string | null;
-}
-
-/** Entrada soma ao total; baixa subtrai, nunca abaixo do que está fora. */
-export interface AjustarEstoqueInput {
-  kind: 'ENTRADA' | 'BAIXA';
-  qty: number;
-  notes?: string | null;
-}
-
-/** O alvo da saída: colaborador OU posto, nunca os dois (checkout-stock.usecase.ts). */
-export type AlvoDaSaidaInput =
-  | { targetType: 'PERSON'; targetPersonId: string; qty: number; notes?: string | null }
-  | { targetType: 'WORKSTATION'; targetWorkstationId: string; qty: number; notes?: string | null };

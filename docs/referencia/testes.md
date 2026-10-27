@@ -78,21 +78,26 @@ configurar nada (só precisa do Postgres de pé: `docker compose up -d`).
 
 ### `estoque/` — a que falharia em silêncio
 
-**`invariantes.test.ts` › o CHECK do Postgres recusa a linha incoerente mesmo por fora da API.**
-`stock_movements_forma` (SAIDA com exatamente um alvo e uma unidade), `stock_items_qty_nao_negativa`
-e a devolução que não antecede a saída existem para quem não passa pelo use-case — o `psql` à mão,
-um script. Testar isso por HTTP seria impossível por construção; o teste insere direto no banco e
-lê a mensagem do Postgres.
+**`invariantes.test.ts` › os CHECKs do Postgres recusam a linha incoerente mesmo por fora da API.**
+`stock_movements_forma` (uma unidade com exatamente um alvo), `stock_items_qty_positiva`, a
+devolução que não antecede a saída, a que tem o dia sem o instante do registro e a saída em uso
+sem item existem para quem não passa pelo use-case — o `psql` à mão, um
+script. Testar isso por HTTP seria impossível por construção; o teste insere direto no banco e lê a
+mensagem do Postgres.
 
-**`invariantes.test.ts` › recusa a BAIXA abaixo do que está fora.** Dar baixa de mais unidades do
-que há fora do estoque gravaria `qty` menor que o número de unidades que ainda estão com gente — o
-saldo (`qty − fora`) ficaria negativo por um caminho que não é o psql à mão, e a frase do 409 carrega
-os números (`qty`, `fora`, `baixa`) para a tela não precisar recontar.
+**`invariantes.test.ts` › reduz o total até o que está em uso, e não abaixo.** Reduzir o total
+abaixo das unidades que ainda estão com gente deixaria o disponível (`qty − em uso`) negativo por um
+caminho que não é o psql à mão, e a frase do 409 carrega a conta para a tela não precisar recontar —
+a mesma da licença ([AE](../decisoes/estoque.md#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira)).
 
-**`corridas.test.ts` › 1 de 1 e 3 de 5.** Duas saídas simultâneas de um item com uma unidade só:
-sem a trava da linha do item (`travarItemOuFalhar`), as duas contam "0 de 1 fora" e as duas inserem.
-Prova também a BAIXA concorrente com a SAÍDA no mesmo item, pela mesma trava, e as duas
-restaurações do mesmo item da lixeira: restaura uma vez, e a auditoria tem um `RESTORE` só.
+**`corridas.test.ts` › 1 de 1 e 3 de 5.** Duas entregas simultâneas de um item com uma unidade só:
+sem a trava da linha do item (`travarItemOuFalhar`), as duas contam "0 de 1 em uso" e as duas
+inserem. Prova também a redução do total concorrente com a entrega, pela mesma trava, e as duas
+devoluções da mesma saída: fecha uma vez, e o carimbo da devolução não é reescrito. E o item e o
+posto excluídos ao mesmo tempo, com saídas devolvidas em comum: os dois passam, e as saídas ficam
+com os dois nomes por escrito. A trava das linhas na ordem do id, que evita o deadlock entre os
+dois, não se prova aqui: numa tabela pequena o Postgres lê as linhas na mesma ordem pelos dois
+caminhos.
 
 Em todos os casos a asserção central é sobre o BANCO — a contagem de `StockMovement` abertas —, não
 sobre a resposta HTTP: é o estado final que precisa estar certo, e é exatamente o que uma resposta
@@ -122,14 +127,15 @@ licença e os seus alvos quando vai mudá-los: rodado sozinho com `-t`, ele pass
   velho não devolve quem recebeu depois.
 - **`status.test.ts`** — o status nas bordas do calendário, e o dia de Brasília provado nas
   funções puras com o instante na mão (22h30 de Brasília ainda é o mesmo dia). E o filtro de
-  status da aba Atuais, com as mesmas fronteiras, e o 422 dele em Encerradas; a busca da lista
-  por licenciado, e-mail, pedido, categoria e fabricante, com `_` como texto, e a ordem das
-  Encerradas.
+  status, com as mesmas fronteiras: a encerrada só no `ENCERRADA`, e junto das outras na lista
+  sem filtro; o `view` das abas que saíram é 422. A busca da lista por licenciado, e-mail,
+  pedido, categoria e fabricante, com `_` como texto, e a ordem das encerradas.
 - **`detalhe.test.ts`** — com quem está e o histórico de 15 em 15, e a busca pelo nome do
   colaborador ou do computador; o histórico recusa `?q=`, e a página além do fim vem vazia.
-- **`ciclo.test.ts`** — Encerrar (com alguém usando, encerra e entra no alerta; muda de aba;
-  reabre ao apagar a data), o filtro "ainda em uso" das Encerradas, excluir de vez só a que
-  nunca foi entregue (a FK recusa por fora) e o alerta, na ordem de urgência e com a contagem
+- **`ciclo.test.ts`** — Encerrar (com alguém usando, encerra e entra no alerta; passa a ser
+  encerrada na lista; reabre ao apagar a data), o filtro "ainda em uso" das encerradas, excluir de vez pela
+  regra do posto (a em uso recusa com quem; a devolvida some com as chaves, e as entregas ficam com
+  o nome; a FK recusa por fora) e o alerta, na ordem de urgência e com a contagem
   de cada motivo. O bloco do alerta começa devolvendo tudo e apagando os vencimentos que os
   testes de cima deixaram: a caixa corta em seis.
 - **`chave.test.ts`** — a lista de chaves da licença (a ordem digitada, o "cobre", a soma contra o
@@ -142,7 +148,7 @@ licença e os seus alvos quando vai mudá-los: rodado sozinho com `-t`, ele pass
   a entrega e a devolução no mesmo dia passado — o mesmo instante — vêm devolução primeiro.
 - **`posse.test.ts`** — o 409 da pessoa e do ativo, com o nome de cada licença e as `refs` que
   a tela transforma em link, e a ficha e a aba Licenças que listam só o que é de cada um.
-- **`invariantes.test.ts`** — os dois CHECKs da entrega e o `licenseId` obrigatório, os dois
+- **`invariantes.test.ts`** — os três CHECKs da entrega (a em uso tem licença), os dois
   índices parciais do alvo, a FK composta que recusa a chave de outra licença, os dois CHECKs e a
   unicidade da chave, e os três CHECKs da licença (quantidade e datas), por SQL cru.
 - **`corridas.test.ts`** — oito entregas a oito pessoas DIFERENTES numa licença de três:

@@ -26,7 +26,7 @@ export async function contarUso(
       where: { licenseId: { in: [...licenseIds] }, checkinAt: null },
       _count: { _all: true },
     }),
-    // Abertas e devolvidas: basta uma para a licença não se excluir mais.
+    // Abertas e devolvidas: a licença tem passado (`jaEntregue`).
     client.licenseCheckout.groupBy({
       by: ['licenseId'],
       where: { licenseId: { in: [...licenseIds] } },
@@ -34,8 +34,9 @@ export async function contarUso(
   ]);
 
   const emUso = new Map(abertas.map((grupo) => [grupo.licenseId, grupo._count._all]));
+  // `licenseId` nunca é nulo aqui — o filtro é por ele —, mas o tipo da coluna é.
   for (const { licenseId } of entregues) {
-    uso.set(licenseId, { emUso: emUso.get(licenseId) ?? 0, jaEntregue: true });
+    if (licenseId) uso.set(licenseId, { emUso: emUso.get(licenseId) ?? 0, jaEntregue: true });
   }
   return uso;
 }
@@ -60,7 +61,8 @@ async function licencasAbertas(
     select: { license: { select: { id: true, name: true } } },
     orderBy: { license: { name: 'asc' } },
   });
-  return entregas.map(({ license }) => ({ id: license.id, nome: license.name }));
+  // A entrega em uso sempre tem licença (CHECK `license_checkouts_licenca_presente`).
+  return entregas.flatMap(({ license }) => (license ? [{ id: license.id, nome: license.name }] : []));
 }
 
 /**
@@ -69,7 +71,7 @@ async function licencasAbertas(
  * SÓ `assignedPersonId`. As licenças entregues a um ATIVO não entram: são da
  * máquina, não dela. A Laura sai e o desktop da Mesa 1 continua com o mesmo
  * Office — contá-las aqui faria a desativação responder 409 sobre licença que
- * ela não tem como devolver. É a mesma linha do `contarEstoqueDaPessoa`.
+ * ela não tem como devolver. É a mesma linha do `itensDaPessoa` do estoque.
  *
  * Recebe o cliente de transação porque quem lê é a desativação e a exclusão,
  * DENTRO da transação que grava, com a pessoa já travada.
