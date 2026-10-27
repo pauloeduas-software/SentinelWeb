@@ -33,11 +33,11 @@ interface EventoNaPagina {
   action: EventoDaLicenca['action'];
 }
 
-/** Um dos dois eventos de uma entrega: a saída, ou a devolução. */
+/** Um dos dois eventos de uma entrega: a entrega, ou a devolução. */
 function eventoDaEntrega(entrega: Entrega, action: EventoDaLicenca['action']): EventoDaLicenca {
   const devolucao = action === 'CHECKIN';
   return {
-    id: `${entrega.id}:${devolucao ? 'devolucao' : 'saida'}`,
+    id: `${entrega.id}:${devolucao ? 'devolucao' : 'entrega'}`,
     action,
     at: devolucao ? entrega.checkinAt as Date : entrega.checkoutAt,
     entrega: {
@@ -54,12 +54,12 @@ function eventoDaEntrega(entrega: Entrega, action: EventoDaLicenca['action']): E
 /**
  * Paginado NO BANCO, do mais recente para o mais antigo.
  *
- * Uma entrega rende um ou dois eventos — a saída sempre, a devolução se houve —,
+ * Uma entrega rende um ou dois eventos — a entrega sempre, a devolução se houve —,
  * então a página não sai de `license_checkouts` direto: o `UNION ALL` põe os
  * eventos lado a lado e o `LIMIT` corta a página já ordenada. Só as entregas
  * da página são lidas depois.
  *
- * No mesmo instante, a devolução vem antes da saída ('CHECKIN' < 'CHECKOUT'):
+ * No mesmo instante, a devolução vem antes da entrega ('CHECKIN' < 'CHECKOUT'):
  * a devolvida no mesmo minuto da entrega se lê de cima para baixo. `createdAt`
  * e `id` desempatam o resto, para a página não variar entre duas leituras.
  */

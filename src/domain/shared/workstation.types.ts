@@ -1,6 +1,6 @@
 import type { Asset, Referencia } from './asset.types';
 import type { PessoaRef } from './posse.types';
-import type { SaidaNaFicha } from './stock.types';
+import type { EntregaNaFicha } from './stock.types';
 
 // Contrato do POSTO DE TRABALHO com a API — `GET /api/workstations`.
 //
@@ -87,6 +87,6 @@ export interface AtivoDoPosto extends Asset {
 export interface PostoDetalhe extends Omit<Posto, 'ocupantes' | 'totalOcupantes'> {
   /** Os ativos entregues ao posto — posse ABERTA com alvo WORKSTATION. */
   ativos: AtivoDoPosto[];
-  /** O estoque na mesa — as saídas ABERTAS com alvo WORKSTATION, uma linha por saída. */
-  itens: SaidaNaFicha[];
+  /** O estoque na mesa — as entregas ABERTAS com alvo WORKSTATION, uma linha por entrega. */
+  itens: EntregaNaFicha[];
 }

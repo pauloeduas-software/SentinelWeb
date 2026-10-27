@@ -43,14 +43,14 @@ export function eventosDaEntregaDeLicenca(entrega: EntregaParaEvento): EventoBas
     licenseLabel: entrega.license?.name ?? entrega.licenseName ?? '—',
   };
 
-  const saida: EventoBaseDeLicenca = {
+  const entregou: EventoBaseDeLicenca = {
     id: `licenca:${entrega.id}:entrega`,
     action: 'CHECKOUT',
     at: entrega.checkoutAt,
     licenca: { ...base, notes: entrega.checkoutNotes },
   };
 
-  if (!entrega.checkinAt) return [saida];
+  if (!entrega.checkinAt) return [entregou];
 
   return [
     {
@@ -59,6 +59,6 @@ export function eventosDaEntregaDeLicenca(entrega: EntregaParaEvento): EventoBas
       at: entrega.checkinAt,
       licenca: { ...base, notes: null },
     },
-    saida,
+    entregou,
   ];
 }

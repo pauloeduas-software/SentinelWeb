@@ -15,10 +15,10 @@ const logger = createLogger('stock.maestro');
 //
 // ORDEM DAS ROTAS: `/api/stock/checkouts/:id/checkin` e `/api/stock/items/:id`
 // têm prefixos literais diferentes, então não disputam. O `:id` da devolução é
-// o de uma unidade da SAÍDA, não o do item: é ela que diz qual entrega volta.
+// o de uma unidade da ENTREGA, não o do item: é ela que diz qual entrega volta.
 export class StockMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
-    // A DEVOLUÇÃO: N unidades de uma saída, num dia.
+    // A DEVOLUÇÃO: N unidades de uma entrega, num dia.
     server.post('/api/stock/checkouts/:id/checkin', WRITE_RATE_LIMIT, stockController.checkin);
 
     server.get('/api/stock/items', stockController.list);

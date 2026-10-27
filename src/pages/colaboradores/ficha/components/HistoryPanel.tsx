@@ -9,7 +9,7 @@ import { tituloDoEvento } from '../helpers/historico.helper';
 //   POSSE      o que ela recebeu e devolveu, com a etiqueta do equipamento;
 //   POSTO      onde ela sentou e quando saiu, com o turno;
 //   LICENCA    as licenças entregues A ELA — não as do computador que ela usa;
-//   ESTOQUE    o estoque no NOME dela, por saída — não o da mesa que ela ocupa.
+//   ESTOQUE    o estoque no NOME dela, por entrega — não o da mesa que ela ocupa.
 //
 // Colaborador não opera o sistema: não há o que ele FEZ para mostrar aqui.
 

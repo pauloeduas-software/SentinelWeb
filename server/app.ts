@@ -247,7 +247,7 @@ export async function buildApp(
   // Posto vem por ÚLTIMO da fatia de posse: a tela dele lê o que os de cima
   // escrevem (posse e ocupação), e nenhuma rota depende das dele.
   await WorkstationMaestro.setupRoutes(server);
-  // ESTOQUE depois da posse: a saída de uma unidade aponta para pessoa e posto,
+  // ESTOQUE depois da posse: a entrega de uma unidade aponta para pessoa e posto,
   // e a ficha do posto lê as unidades entregues a ele.
   await StockMaestro.setupRoutes(server);
   // LICENÇA depois de posse: as rotas dela pendem de `/api/assets/:id` (a aba

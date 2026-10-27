@@ -25,7 +25,7 @@ const ROTULO_DA_ACAO_NA_LICENCA: Record<string, string> = {
   CHECKIN: 'Devolveu a licença',
 };
 
-/** O estoque no NOME dela — a fonte `ESTOQUE`, por saída. */
+/** O estoque no NOME dela — a fonte `ESTOQUE`, por entrega. */
 const ROTULO_DA_ACAO_NO_ESTOQUE: Record<string, string> = {
   CHECKOUT: 'Recebeu',
   CHECKIN: 'Devolveu',

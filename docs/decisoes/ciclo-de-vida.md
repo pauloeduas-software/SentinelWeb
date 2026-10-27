@@ -238,7 +238,7 @@ continuam onde estão: painel na própria tela, derivado sob demanda.
 
 Escrito como decisão porque a ausência dele constrói um segundo sino. Os dois sinais já são
 **derivados** — `status` de licença é função das datas (D44) e saldo de estoque é conta sobre as
-linhas de saída (D34) —, e materializá-los em `alerts` pediria o inverso do que essas duas decisões
+linhas de entrega (D34) —, e materializá-los em `alerts` pediria o inverso do que essas duas decisões
 protegem. O que falta para eles entrarem é um **alvo polimórfico** em `Alert` (`licenseId`,
 `stockItemId`, ou `targetType` + `targetId`), que é aditivo e cabe numa fase que precise de
 notificação por e-mail de licença vencendo. Enquanto isso, o sino conta ativo, e a frase dele diz

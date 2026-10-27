@@ -40,7 +40,7 @@ estoque, candidato a voltar, listado em `/api/stock/alerts`.
 ## D34 — Saldo é sempre **calculado**, nunca coluna
 
 **Decidido:** `qty` (quanto entrou) é coluna; `disponivel` é `COUNT`/`SUM` sobre as linhas
-de saída, num helper só. **Descartado:** uma coluna `qtyAvailable` mantida por decremento.
+de entrega, num helper só. **Descartado:** uma coluna `qtyAvailable` mantida por decremento.
 
 **Por quê — qual corrida a coluna cria.** A óbvia é a do *ler-e-depois-escrever*, a mesma
 que o `nextAssetTag()` da F1 documenta: duas requisições leem `qtyAvailable = 1`, as duas
@@ -55,7 +55,7 @@ ninguém para discordar dela. Com `COUNT` a resposta não pode divergir das linh
 **são** as linhas. É o D16 uma camada abaixo.
 
 **O que o `COUNT` sozinho não resolve.** Duas requisições podem contar "4 de 5 ocupados" e
-as duas inserirem: 6 de 5. Contar não é travar. Então **toda saída tranca a linha-pai**:
+as duas inserirem: 6 de 5. Contar não é travar. Então **toda entrega tranca a linha-pai**:
 
 ```ts
 await prisma.$transaction(async (tx) => {
@@ -94,7 +94,7 @@ clientes — abstração que passa a custar mais do que economiza.
 ## D36 — Os três têm lixeira; aqui o D8 não se aplica
 
 **Decidido:** `deletedAt` nos três, `name` único por índice parcial, `DELETE` respondendo
-**409 enquanto houver saída aberta**.
+**409 enquanto houver entrega aberta**.
 
 **Por quê o catálogo não tem e estes têm:** o vazamento que o D8 evitou é o de um registro
 apagado aparecendo como valor **atual** de outra linha (a categoria na lixeira ainda sendo
@@ -137,7 +137,7 @@ trabalho de apresentação, não de schema.
 > `ENTRADA` e `BAIXA` saem — o total vira campo da edição, como a quantidade comprada da licença —,
 > e com elas o `kind` e o `qty` da linha. A lixeira do item sai: o item que acabou se desativa, e
 > só o que nunca foi entregue se exclui. A devolução deixa de ser de uma unidade por vez: é de N
-> unidades de uma saída. Ficam a unidade por linha, o alvo em posto e o saldo calculado.
+> unidades de uma entrega. Ficam a unidade por linha, o alvo em posto e o saldo calculado.
 
 **Decidido:** `Accessory`, `Consumable`, `Component` e os três `Checkout` — removidos inteiros
 pelo segundo de-escopo (ver [`escopo.md`](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai))
@@ -150,7 +150,7 @@ um), [D37](#d37--consumable-não-tem-devolução-não-é-validação-é-ausênci
 tipo sem devolução — toda `SAIDA` pode ser devolvida) e
 [D38](#d38--devolução-parcial-de-componente-divide-a-linha) (não existe mais devolução parcial de
 uma linha — cada unidade é a sua própria linha, e devolver é fechar UMA), além de
-[D153](./escopo.md#d153--estoque-vira-item-e-movimento) (que previu a forma, sem definir a saída
+[D153](./escopo.md#d153--estoque-vira-item-e-movimento) (que previu a forma, sem definir a entrega
 por unidade nem o alvo em posto) e [D160](./escopo.md#d160--o-estoque-não-foi-achatado) (que
 registrou que a troca não tinha sido feita — agora foi).
 **Mantém:** [D33](#d33--o-acessório-entregue-a-um-posto-é-do-posto-os-ocupantes-respondem-solidariamente)
@@ -163,7 +163,7 @@ verdadeiro ainda com um tipo só).
 **Por quê a forma é diferente da que o D153 previu:** o D153 falava em "item + movimento" sem
 decidir dois pontos que só apareceram ao implementar — **cada unidade de `SAIDA` é uma linha**
 (`qty: 1` por linha; pedir 5 grava cinco linhas, não uma linha com `qty: 5`), porque a devolução é
-de uma unidade identificada, sem quantidade parcial para dividir; e o alvo da saída pode ser
+de uma unidade identificada, sem quantidade parcial para dividir; e o alvo da entrega pode ser
 **posto**, não só pessoa — herdando o D33 que os sete modelos antigos já tinham. `BAIXA` é a
 única porta para reduzir o total, e é recusada se deixaria `qty` abaixo do que está fora
 (devolva antes de dar baixa) — a frase do 409 carrega os números para a tela não recontar.
@@ -183,7 +183,7 @@ que mostrá-la. A cor do saldo na tela usa `<= 0`, não `=== 0`, por este motivo
 ## AE — O estoque segue a lógica da licença: total na edição, entrega com dia, desativar em vez de lixeira
 
 > **Superada em parte por [AG](#ag--a-regra-do-posto-vale-para-o-estoque-e-a-licença-só-o-que-está-em-uso-impede-a-exclusão):**
-> o item que já foi entregue também se exclui, se nada está em uso agora — as saídas devolvidas
+> o item que já foi entregue também se exclui, se nada está em uso agora — as entregas devolvidas
 > perdem a ligação e guardam o nome por escrito. Só o item com unidade em uso recusa, e o 409 diz
 > com quem. O Desativar continua, para o que se quer guardar.
 
@@ -203,16 +203,16 @@ Configurações, como o sistema inteiro):
   entregas e devoluções.
 - **A entrega e a devolução têm dia.** Vêm com hoje e podem voltar para registrar o que já
   aconteceu; futuro é 422, e a devolução nunca fica antes da entrega (CHECK
-  `stock_movements_devolucao_nao_antecede_saida`, contra a coluna nova `checkoutAt`). O dia
+  `stock_movements_devolucao_nao_antecede_entrega`, contra a coluna nova `checkoutAt`). O dia
   passado é gravado ao meio-dia de Brasília, e as telas mostram só o dia. **Sem as duas recusas
   de passado da licença:** o item não tem data de compra, e o mesmo alvo fica com várias unidades
   ao mesmo tempo, então não há sobreposição a conferir.
-- **A saída é a entrega inteira.** Cada unidade continua uma linha, e as N de uma entrega nascem
-  no mesmo `INSERT`: o mesmo `createdAt` com o mesmo alvo faz delas **uma saída**. "Com quem
-  está", as fichas e os históricos mostram a saída — "Mesa 1 · 5 unidades · desde 12/10/2026" —,
-  e o mesmo alvo que recebe de novo ganha outra saída, não a mesma somada.
-- **A devolução é pela saída**, e pergunta quantas — por padrão, todas — e o dia, na própria
-  linha. O `:id` é o de qualquer unidade da saída. A tela velha não devolve a saída de outra
+- **A entrega é uma só, com N unidades.** Cada unidade continua uma linha, e as N de uma entrega nascem
+  no mesmo `INSERT`: o mesmo `createdAt` com o mesmo alvo faz delas **uma entrega**. "Com quem
+  está", as fichas e os históricos mostram a entrega — "Mesa 1 · 5 unidades · desde 12/10/2026" —,
+  e o mesmo alvo que recebe de novo ganha outra entrega, não a mesma somada.
+- **A devolução é pela entrega**, e pergunta quantas — por padrão, todas — e o dia, na própria
+  linha. O `:id` é o de qualquer unidade da entrega. A tela velha não devolve a entrega de outra
   pessoa: a que já voltou responde 409. E mora **só no detalhe do item**: a ficha do posto e a do
   colaborador mostram o que está com eles e levam até lá por link (`/estoque?item=<id>`).
 - **Sem lixeira, e o cadastro das Configurações.** O item que saiu de uso se **desativa**
@@ -221,7 +221,7 @@ Configurações, como o sistema inteiro):
   Desativado, não recebe entrega; o que está com alguém continua até voltar, e a conta da linha
   diz quantas. Ativa pelo mesmo botão. Só o item que **nunca foi entregue** se **exclui de vez** —
   o cadastro errado. O Excluir sempre clica, e o que já saiu recebe o 409 que manda desativar: tem
-  o histórico de quem o usou. Toda saída aponta para o item (FK `Restrict`). Sem restaurar.
+  o histórico de quem o usou. Toda entrega aponta para o item (FK `Restrict`). Sem restaurar.
 - **O nome é único entre todos os itens**, desativados inclusive (índice único simples): o item
   que volta a ser comprado se reativa, e o histórico continua junto. O 409 do nome repetido diz
   isso.
@@ -230,7 +230,7 @@ Configurações, como o sistema inteiro):
   (Mouse USB ×2 e Teclado)` —, e manda cada um como `refs` (tipo `estoque`), e a tela põe um link
   para o detalhe de cada item. A do posto passa a dizer também os ativos e os ocupantes, pelo
   número.
-- **O histórico do colaborador ganha o estoque** no nome dele, por saída ("Recebeu: Mouse USB · 2
+- **O histórico do colaborador ganha o estoque** no nome dele, por entrega ("Recebeu: Mouse USB · 2
   unidades"). O da mesa que ele ocupa é do posto, e não entra.
 - **A tela é a da licença**: a conta escrita ("10 no total · 7 em uso · 3 disponíveis"), a busca
   por nome, categoria e localização, o detalhe com as ações no cabeçalho, "Com quem está" e o
@@ -239,7 +239,7 @@ Configurações, como o sistema inteiro):
 
 **Fica diferente da licença, por natureza:** o alvo (colaborador ou **posto**,
 [D33](#d33--o-acessório-entregue-a-um-posto-é-do-posto-os-ocupantes-respondem-solidariamente);
-a licença vai a colaborador ou computador); a quantidade por entrega (até 100, e várias saídas
+a licença vai a colaborador ou computador); a quantidade por entrega (até 100, e várias entregas
 para o mesmo alvo); o nome único; e o que é só do contrato — vencimento, encerramento, status,
 chaves e dados de compra. E o fim: a licença se **encerra** numa data, que entra no status e no
 alerta, e o Encerrar fica no lugar do Desativar ([AF](./licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)); o item se **desativa**, como o
@@ -275,28 +275,28 @@ comparação, aceitou a recomendação: "o que você sugere é o melhor, se for 
   e Mesa 1). Devolva antes de excluir.`, `"Office 2021" ainda tem 2 entregas em uso (ATV-00012 —
   Dell Latitude e Laura Souza). Devolva antes de excluir.` A linha do item ou da licença é travada
   antes da conta.
-- **O que já voltou se exclui de verdade.** As saídas e as entregas devolvidas perdem a ligação
+- **O que já voltou se exclui de verdade.** As entregas devolvidas, de estoque e de licença, perdem a ligação
   (`itemId` e `licenseId` nulos) e guardam o nome por escrito (`itemName`, `licenseName`): o
   histórico do colaborador e o do computador continuam dizendo "Recebeu: Mouse USB" e "Office
   2021". O histórico **do próprio** item ou licença vai junto com ele — é o preço, e por isso
   Desativar e Encerrar continuam: são para o que se quer guardar. O nome do item fica livre, e o
   cadastro novo nasce sem passado.
-- **A saída para um posto vai junto com o item, na tela.** O posto mostra só o que está nele
+- **A entrega para um posto vai junto com o item, na tela.** O posto mostra só o que está nele
   agora, e o passado dele ficava no histórico do item; excluído o item, a linha continua no
   banco, com os dois nomes por escrito, e na auditoria, mas nenhuma tela a mostra. É o mesmo
   preço do histórico do item, e fica aceito: o posto não ganha histórico de estoque por isso.
-- **O item e o posto excluídos ao mesmo tempo** desligam as mesmas saídas devolvidas. Os dois
+- **O item e o posto excluídos ao mesmo tempo** desligam as mesmas entregas devolvidas. Os dois
   travam as linhas na ordem do id antes de desligar, e um espera o outro.
 - **As chaves da licença vão junto**, e a entrega devolvida perde também a dela: a chave só
   aparecia no detalhe da própria licença, e é dado sensível, que não se copia para o histórico.
 - **No banco, a rede:** a FK `Restrict` fica, e um CHECK em cada tabela não deixa a linha em uso
-  sem o dono — `stock_movements_item_presente` (sem item, só a saída devolvida, com o nome) e
+  sem o dono — `stock_movements_item_presente` (sem item, só a entrega devolvida, com o nome) e
   `license_checkouts_licenca_presente` (sem licença, só a entrega devolvida, com o nome e sem a
   chave: com `licenseId` nulo, a FK composta da chave não conferiria mais nada).
 - **A tela velha** que tenta devolver, ou trocar a chave, de uma entrega cujo dono foi excluído
   recebe o 409 de "já devolvida", com o nome por escrito.
 
-**Supera:** em parte [AE](#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira) (só o item que nunca foi entregue se exclui; toda saída aponta
+**Supera:** em parte [AE](#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira) (só o item que nunca foi entregue se exclui; toda entrega aponta
 para o item) e em parte [AA](./licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas) (a licença que já foi entregue não se exclui; toda entrega
 aponta para a licença).
 **Mantém:** sem lixeira nos dois ([AE](#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira), [AA](./licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)), o Desativar do item e o Encerrar da

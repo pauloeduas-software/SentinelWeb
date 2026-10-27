@@ -80,7 +80,7 @@ export async function travarLocalParaEscrita(client: ClienteQueTrava, id: string
  * Trava o posto para escrita — a mesma trava da localização, pelo mesmo motivo:
  * a desativação espera quem está lendo o `isActive` dele (`assertPostoRecebe`).
  * `NO KEY UPDATE` deixa passar o `FOR KEY SHARE` das FKs que apontam para cá
- * (a entrega, a saída de estoque, o ocupante).
+ * (a entrega de ativo, a de estoque, o ocupante).
  */
 export async function travarPostoParaEscrita(client: ClienteQueTrava, id: string): Promise<void> {
   await client.$queryRaw`SELECT id FROM workstations WHERE id = ${id}::uuid FOR NO KEY UPDATE`;
@@ -141,15 +141,15 @@ export async function assertLocalRecebe(client: ClienteQueTrava, id: string, fin
 }
 
 /**
- * O posto existe e ainda RECEBE coisa nova — entrega de ativo, saída de
+ * O posto existe e ainda RECEBE coisa nova — entrega de ativo, entrega de
  * estoque, ocupante? 404 / 409.
  *
- * `modo`: `SHARE` para a saída de estoque e o ocupante; `UPDATE` para a entrega
+ * `modo`: `SHARE` para a entrega de estoque e o ocupante; `UPDATE` para a entrega
  * de ativo, que logo depois trava o posto `FOR UPDATE` na invariante 19 —
  * subir de `SHARE` para `UPDATE` na mesma linha é o deadlock clássico entre
  * duas entregas ao mesmo posto, então ela trava forte desde o começo.
  *
- * Devolve o NOME do posto, já lido aqui: é como a entrega e a saída o gravam
+ * Devolve o NOME do posto, já lido aqui: é como a entrega de ativo e a de estoque o gravam
  * na auditoria.
  */
 export async function assertPostoRecebe(

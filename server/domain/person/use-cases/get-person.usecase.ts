@@ -19,7 +19,7 @@ interface PessoaDaFicha {
   isActive: boolean;
 
   /**
-   * O estoque no NOME dela, uma linha por SAÍDA ("Mouse USB · 2 unidades"),
+   * O estoque no NOME dela, uma linha por ENTREGA ("Mouse USB · 2 unidades"),
    * cada uma com o link para o detalhe do item, onde está o Devolver — como as
    * licenças abaixo, e como a ficha do posto faz com `itens`
    * (`get-workstation.usecase.ts`).

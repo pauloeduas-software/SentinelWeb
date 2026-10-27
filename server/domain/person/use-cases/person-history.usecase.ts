@@ -42,7 +42,7 @@ interface EventoDePostoDaPessoa {
 
 /**
  * O que um evento de estoque acrescenta: QUAL item e quantas unidades. É a
- * SAÍDA, não a unidade — "recebeu 3 Mouse USB", como o histórico do item.
+ * ENTREGA, não a unidade — "recebeu 3 Mouse USB", como o histórico do item.
  */
 interface EventoDeEstoqueDaPessoa {
   /** Nulo quando o item foi excluído: o nome continua em `itemLabel` (AG). */
@@ -216,8 +216,8 @@ function buscarUnidades(personId: string) {
 }
 
 /**
- * As unidades viram eventos POR SAÍDA, como no histórico do item: a entrega é
- * a saída inteira; cada devolução, as unidades dela registradas juntas (o mesmo
+ * As unidades viram eventos POR ENTREGA, como no histórico do item: a entrega é
+ * um evento com todas as unidades; cada devolução, as unidades dela registradas juntas (o mesmo
  * `returnRecordedAt` — duas devoluções no mesmo dia são duas). No mesmo
  * instante, a devolução vem antes da entrega.
  */
@@ -225,7 +225,7 @@ function eventosDoEstoque(unidades: Awaited<ReturnType<typeof buscarUnidades>>):
   const eventos: EventoDaPessoa[] = [];
   for (const { primeira, unidades: quantas } of agruparPorLote(unidades)) {
     const doLote = unidades.filter((unidade) => chaveDoLote(unidade) === chaveDoLote(primeira));
-    // O item excluído deixa o nome por escrito na saída (AG).
+    // O item excluído deixa o nome por escrito na entrega (AG).
     const base = { itemId: primeira.itemId, itemLabel: primeira.item?.name ?? primeira.itemName ?? '—' };
 
     // Chave: o instante do registro; valor: o dia da devolução e quantas.

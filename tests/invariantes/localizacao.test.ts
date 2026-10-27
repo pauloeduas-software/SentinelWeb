@@ -76,7 +76,7 @@ describe('localização não recebe — quem recebe é o posto', () => {
     expect(await prisma.assignment.count({ where: { assetId: ativo.id } })).toBe(0);
   });
 
-  it('a saída de estoque para uma localização também é 422', async () => {
+  it('a entrega de estoque para uma localização também é 422', async () => {
     const sala = await criarLocal(api, { name: 'Sala sem estoque' });
     const mouse = await criarItemDeEstoque(api, { name: 'Mouse sem destino', categoryId: seed.categoriaEstoqueId, qty: 1 });
 

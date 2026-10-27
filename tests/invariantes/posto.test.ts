@@ -8,8 +8,8 @@ import {
 // O POSTO: o cadastro, o que segura o delete e o que a desativação fecha.
 //
 // O posto segue a regra do status (decisão Y): nome único, desativar em vez de
-// excluir, e só o que está nele AGORA segura o delete — entrega ou saída
-// aberta, ocupante atual. O passado não segura: a entrega devolvida e a
+// excluir, e só o que está nele AGORA segura o delete — entrega de ativo ou de
+// estoque aberta, ocupante atual. O passado não segura: a entrega devolvida e a
 // ocupação encerrada perdem a ligação e guardam o nome por escrito, e o
 // histórico continua dizendo onde o ativo esteve. Desativado, ele some das
 // escolhas e não recebe nada novo.
@@ -126,11 +126,11 @@ describe('excluir posto — só o presente segura', () => {
   it('exclui o que só recebeu estoque JÁ DEVOLVIDO, e o histórico do item continua com o nome', async () => {
     const mesa = await posto('Mesa com mouse antigo');
     const mouse = await criarItemDeEstoque(api, { name: 'Mouse que passou pela mesa', categoryId: seed.categoriaEstoqueId, qty: 1 });
-    const saida = await api.post<{ unidades: { id: string }[] }>(`/api/stock/items/${mouse.id}/checkout`, {
+    const entrega = await api.post<{ unidades: { id: string }[] }>(`/api/stock/items/${mouse.id}/checkout`, {
       targetType: 'WORKSTATION', targetWorkstationId: mesa, qty: 1,
     });
-    expect(saida.status).toBe(201);
-    expect((await api.post(`/api/stock/checkouts/${saida.body.unidades[0].id}/checkin`, {})).status).toBe(200);
+    expect(entrega.status).toBe(201);
+    expect((await api.post(`/api/stock/checkouts/${entrega.body.unidades[0].id}/checkin`, {})).status).toBe(200);
 
     expect((await api.delete(`/api/workstations/${mesa}`)).status).toBe(200);
 
@@ -175,7 +175,7 @@ describe('posto desativado não recebe nada NOVO', () => {
     expect(await prisma.assignment.count({ where: { assetId: ativo.id } })).toBe(0);
   });
 
-  it('recusa a saída de estoque para ele', async () => {
+  it('recusa a entrega de estoque para ele', async () => {
     const mesa = await posto('Mesa fechada para estoque');
     await desativar(mesa);
     const mouse = await criarItemDeEstoque(api, { name: 'Mouse barrado', categoryId: seed.categoriaEstoqueId, qty: 1 });

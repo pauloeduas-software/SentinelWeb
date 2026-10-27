@@ -136,22 +136,22 @@ export default function ColaboradorPage() {
               </tr>
             </thead>
             <tbody className="text-text-primary divide-y divide-border-sutil/50">
-              {pessoa.itens.map((saida) => (
-                <tr key={saida.id} className="hover:bg-bg-base transition-colors">
+              {pessoa.itens.map((entrega) => (
+                <tr key={entrega.id} className="hover:bg-bg-base transition-colors">
                   <td className={CELULA}>
-                    <Link to={caminhoDoItem(saida.item.id)} className="hover:underline underline-offset-2">
-                      {saida.item.name}
+                    <Link to={caminhoDoItem(entrega.item.id)} className="hover:underline underline-offset-2">
+                      {entrega.item.name}
                     </Link>
-                    {!saida.item.isActive && (
+                    {!entrega.item.isActive && (
                       <span className="ml-2 text-[10px] uppercase tracking-widest text-text-tertiary">desativado</span>
                     )}
-                    {saida.notes && (
-                      <div className="text-[10px] text-text-tertiary mt-0.5">{saida.notes}</div>
+                    {entrega.notes && (
+                      <div className="text-[10px] text-text-tertiary mt-0.5">{entrega.notes}</div>
                     )}
                   </td>
-                  <td className={`${CELULA} text-text-tertiary`}>{saida.item.category.name}</td>
-                  <td className={`${CELULA} text-text-tertiary`}>{textoDeUnidades(saida.unidades)}</td>
-                  <td className={`${CELULA} text-text-tertiary`}>{formatarDiaDoInstante(saida.checkoutAt)}</td>
+                  <td className={`${CELULA} text-text-tertiary`}>{entrega.item.category.name}</td>
+                  <td className={`${CELULA} text-text-tertiary`}>{textoDeUnidades(entrega.unidades)}</td>
+                  <td className={`${CELULA} text-text-tertiary`}>{formatarDiaDoInstante(entrega.checkoutAt)}</td>
                 </tr>
               ))}
               {pessoa.itens.length === 0 && (

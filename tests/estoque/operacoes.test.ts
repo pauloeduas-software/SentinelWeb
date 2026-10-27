@@ -32,12 +32,12 @@ const entregar = (itemId: string, corpo: Record<string, unknown>) =>
     `/api/stock/items/${itemId}/checkout`, corpo,
   );
 
-const devolver = (saidaId: string, corpo: Record<string, unknown> = {}) =>
+const devolver = (entregaId: string, corpo: Record<string, unknown> = {}) =>
   api.post<{ devolvidas: number; ficaram: number; returnedAt: string; error: string }>(
-    `/api/stock/checkouts/${saidaId}/checkin`, corpo,
+    `/api/stock/checkouts/${entregaId}/checkin`, corpo,
   );
 
-interface Saida { id: string; targetLabel: string; unidades: number; checkoutAt: string; notes: string | null }
+interface Entrega { id: string; targetLabel: string; unidades: number; checkoutAt: string; notes: string | null }
 interface Evento { id: string; action: string; at: string; unidades: number; targetLabel: string; notes: string | null }
 
 describe('a listagem', () => {
@@ -98,19 +98,19 @@ describe('a listagem', () => {
 });
 
 describe('com quem está', () => {
-  it('uma linha por SAÍDA, com quantas unidades dela ainda estão fora', async () => {
-    const mouse = await item('Mouse das saídas', 10);
+  it('uma linha por ENTREGA, com quantas unidades dela ainda estão fora', async () => {
+    const mouse = await item('Mouse das entregas', 10);
     const mesa = await entregar(mouse.id, {
       targetType: 'WORKSTATION', targetWorkstationId: cenario.mesa1, qty: 5, notes: 'laboratório',
     });
     expect(mesa.status).toBe(201);
     expect(mesa.body.unidades).toHaveLength(5);
     expect(mesa.body.disponivel).toBe(5);
-    // O mesmo alvo recebe de novo: é OUTRA saída, e não a mesma somada.
+    // O mesmo alvo recebe de novo: é OUTRA entrega, e não a mesma somada.
     expect((await entregar(mouse.id, { targetType: 'WORKSTATION', targetWorkstationId: cenario.mesa1, qty: 2 })).status).toBe(201);
     expect((await entregar(mouse.id, { targetType: 'PERSON', targetPersonId: cenario.laura })).status).toBe(201);
 
-    const { status, body } = await api.get<{ total: number; rows: Saida[] }>(`/api/stock/items/${mouse.id}/checkouts`);
+    const { status, body } = await api.get<{ total: number; rows: Entrega[] }>(`/api/stock/items/${mouse.id}/checkouts`);
     expect(status).toBe(200);
     expect(body.total).toBe(3);
     expect(body.rows.map((s) => [s.targetLabel, s.unidades]).sort()).toEqual([
@@ -120,35 +120,35 @@ describe('com quem está', () => {
   });
 
   it('15 por página, e a busca acha pelo nome de quem recebeu', async () => {
-    const cabo = await item('Cabo das quinze saídas', 20);
+    const cabo = await item('Cabo das quinze entregas', 20);
     const pessoas = await Promise.all(Array.from({ length: 17 }, (_, i) =>
       criarColaborador(api, { name: `Recebedor ${String(i).padStart(2, '0')}`, email: `recebedor${i}@teste.local` })));
     for (const pessoa of pessoas) {
       expect((await entregar(cabo.id, { targetType: 'PERSON', targetPersonId: pessoa })).status).toBe(201);
     }
 
-    const primeira = await api.get<{ total: number; rows: Saida[] }>(`/api/stock/items/${cabo.id}/checkouts`);
+    const primeira = await api.get<{ total: number; rows: Entrega[] }>(`/api/stock/items/${cabo.id}/checkouts`);
     expect(primeira.body.total).toBe(17);
     expect(primeira.body.rows).toHaveLength(15);
-    const segunda = await api.get<{ rows: Saida[] }>(`/api/stock/items/${cabo.id}/checkouts?page=2`);
+    const segunda = await api.get<{ rows: Entrega[] }>(`/api/stock/items/${cabo.id}/checkouts?page=2`);
     expect(segunda.body.rows).toHaveLength(2);
     const todas = [...primeira.body.rows, ...segunda.body.rows].map((s) => s.id);
     expect(new Set(todas).size).toBe(17);
 
-    const busca = await api.get<{ rows: Saida[] }>(`/api/stock/items/${cabo.id}/checkouts?q=recebedor%2003`);
+    const busca = await api.get<{ rows: Entrega[] }>(`/api/stock/items/${cabo.id}/checkouts?q=recebedor%2003`);
     expect(busca.body.rows.map((s) => s.targetLabel)).toEqual(['Recebedor 03']);
   });
 
   it('a devolução pergunta quantas: por padrão todas, e a parcial deixa o resto na linha', async () => {
     const fone = await item('Fone da devolução parcial', 5);
-    const saida = await entregar(fone.id, { targetType: 'WORKSTATION', targetWorkstationId: cenario.mesa1, qty: 4 });
-    // Qualquer unidade da saída serve de `:id`: é a saída que volta.
-    const qualquer = saida.body.unidades[2].id;
+    const entrega = await entregar(fone.id, { targetType: 'WORKSTATION', targetWorkstationId: cenario.mesa1, qty: 4 });
+    // Qualquer unidade da entrega serve de `:id`: é a entrega que volta.
+    const qualquer = entrega.body.unidades[2].id;
 
     const parcial = await devolver(qualquer, { qty: 3 });
     expect(parcial.status).toBe(200);
     expect(parcial.body).toMatchObject({ devolvidas: 3, ficaram: 1 });
-    const depois = await api.get<{ rows: Saida[] }>(`/api/stock/items/${fone.id}/checkouts`);
+    const depois = await api.get<{ rows: Entrega[] }>(`/api/stock/items/${fone.id}/checkouts`);
     expect(depois.body.rows.map((s) => s.unidades)).toEqual([1]);
 
     // Mais do que ficou é 409 com a conta; o resto, sem `qty`, volta inteiro.
@@ -156,7 +156,7 @@ describe('com quem está', () => {
     expect(demais.status).toBe(409);
     expect(demais.body.error).toMatch(/Só 1 unidade desta entrega .* ainda está com Mesa 1/);
     expect((await devolver(qualquer)).body).toMatchObject({ devolvidas: 1, ficaram: 0 });
-    expect((await api.get<{ rows: Saida[] }>(`/api/stock/items/${fone.id}/checkouts`)).body.rows).toEqual([]);
+    expect((await api.get<{ rows: Entrega[] }>(`/api/stock/items/${fone.id}/checkouts`)).body.rows).toEqual([]);
 
     const repetida = await devolver(qualquer);
     expect(repetida.status).toBe(409);
@@ -166,13 +166,13 @@ describe('com quem está', () => {
 });
 
 describe('o histórico', () => {
-  it('a saída de N é UM evento, e cada devolução é o seu — com o nome e a observação', async () => {
+  it('a entrega de N é UM evento, e cada devolução é o seu — com o nome e a observação', async () => {
     const dock = await item('Dock do histórico', 6);
-    const saida = await entregar(dock.id, {
+    const entrega = await entregar(dock.id, {
       targetType: 'PERSON', targetPersonId: cenario.laura, qty: 3, notes: 'home office', checkoutAt: diaNoBrasil(-5),
     });
-    expect((await devolver(saida.body.unidades[0].id, { qty: 1, checkinAt: diaNoBrasil(-2) })).status).toBe(200);
-    expect((await devolver(saida.body.unidades[0].id, { qty: 2 })).status).toBe(200);
+    expect((await devolver(entrega.body.unidades[0].id, { qty: 1, checkinAt: diaNoBrasil(-2) })).status).toBe(200);
+    expect((await devolver(entrega.body.unidades[0].id, { qty: 2 })).status).toBe(200);
 
     const { body } = await api.get<{ total: number; rows: Evento[] }>(`/api/stock/items/${dock.id}/history`);
     expect(body.total).toBe(3);
@@ -185,14 +185,14 @@ describe('o histórico', () => {
     expect(body.rows[0].notes).toBeNull();
   });
 
-  it('duas devoluções da mesma saída no mesmo dia passado são DOIS eventos — no item e na pessoa', async () => {
+  it('duas devoluções da mesma entrega no mesmo dia passado são DOIS eventos — no item e na pessoa', async () => {
     // O dia passado é sempre o meio-dia de Brasília: agrupar a devolução pelo
     // dia juntava as duas num "Devolvida · 2 unidades".
     const pessoa = await criarColaborador(api, { name: 'Davi das Devoluções', email: 'davi.devolucoes@teste.local' });
     const cabo = await item('Cabo das duas devoluções', 3);
-    const saida = await entregar(cabo.id, { targetType: 'PERSON', targetPersonId: pessoa, qty: 3, checkoutAt: diaNoBrasil(-10) });
-    const primeira = await devolver(saida.body.unidades[0].id, { qty: 1, checkinAt: diaNoBrasil(-5) });
-    const segunda = await devolver(saida.body.unidades[0].id, { qty: 1, checkinAt: diaNoBrasil(-5) });
+    const entrega = await entregar(cabo.id, { targetType: 'PERSON', targetPersonId: pessoa, qty: 3, checkoutAt: diaNoBrasil(-10) });
+    const primeira = await devolver(entrega.body.unidades[0].id, { qty: 1, checkinAt: diaNoBrasil(-5) });
+    const segunda = await devolver(entrega.body.unidades[0].id, { qty: 1, checkinAt: diaNoBrasil(-5) });
     expect([primeira.status, segunda.status]).toEqual([200, 200]);
     expect(segunda.body.returnedAt).toBe(primeira.body.returnedAt);
 
@@ -219,8 +219,8 @@ describe('o histórico', () => {
   it('15 por página, nenhum evento some nem se repete — e não tem busca', async () => {
     const pilha = await item('Pilha das páginas', 20);
     for (let i = 0; i < 9; i += 1) {
-      const saida = await entregar(pilha.id, { targetType: 'PERSON', targetPersonId: cenario.ana });
-      expect((await devolver(saida.body.unidades[0].id)).status).toBe(200);
+      const entrega = await entregar(pilha.id, { targetType: 'PERSON', targetPersonId: cenario.ana });
+      expect((await devolver(entrega.body.unidades[0].id)).status).toBe(200);
     }
 
     const primeira = await api.get<{ total: number; rows: Evento[] }>(`/api/stock/items/${pilha.id}/history`);
@@ -251,8 +251,8 @@ describe('o dia da entrega e da devolução', () => {
 
   it('a devolução aceita um dia passado, mas nunca futuro nem antes da entrega', async () => {
     const teclado = await item('Teclado da devolução antiga', 1);
-    const saida = await entregar(teclado.id, { targetType: 'PERSON', targetPersonId: cenario.laura, checkoutAt: diaNoBrasil(-10) });
-    const unidade = saida.body.unidades[0].id;
+    const entrega = await entregar(teclado.id, { targetType: 'PERSON', targetPersonId: cenario.laura, checkoutAt: diaNoBrasil(-10) });
+    const unidade = entrega.body.unidades[0].id;
 
     expect((await devolver(unidade, { checkinAt: diaNoBrasil(1) })).status).toBe(422);
     const antes = await devolver(unidade, { checkinAt: diaNoBrasil(-11) });
@@ -266,16 +266,16 @@ describe('o dia da entrega e da devolução', () => {
 
   it('a devolução não aceita observação nem campo desconhecido', async () => {
     const cabo = await item('Cabo da devolução com nota', 1);
-    const saida = await entregar(cabo.id, { targetType: 'PERSON', targetPersonId: cenario.ana });
-    expect((await devolver(saida.body.unidades[0].id, { notes: 'voltou' })).status).toBe(422);
+    const entrega = await entregar(cabo.id, { targetType: 'PERSON', targetPersonId: cenario.ana });
+    expect((await devolver(entrega.body.unidades[0].id, { notes: 'voltou' })).status).toBe(422);
   });
 });
 
 describe('as fichas', () => {
-  it('a do posto lista o estoque da mesa por saída, e não conta como ativo', async () => {
+  it('a do posto lista o estoque da mesa por entrega, e não conta como ativo', async () => {
     const mesa = await criarPosto(api, { name: 'Mesa com estoque' });
     const mouse = await item('Mouse da ficha do posto', 5);
-    const saida = await entregar(mouse.id, { targetType: 'WORKSTATION', targetWorkstationId: mesa, qty: 3 });
+    const entrega = await entregar(mouse.id, { targetType: 'WORKSTATION', targetWorkstationId: mesa, qty: 3 });
 
     type Ficha = { itens: { id: string; unidades: number; item: { id: string; name: string; isActive: boolean } }[]; totalAtivos: number };
     const antes = await api.get<Ficha>(`/api/workstations/${mesa}`);
@@ -285,7 +285,7 @@ describe('as fichas', () => {
     // 19 limita a um, e um mouse não entra nele.
     expect(antes.body.totalAtivos).toBe(0);
 
-    expect((await devolver(saida.body.unidades[0].id, { qty: 2 })).status).toBe(200);
+    expect((await devolver(entrega.body.unidades[0].id, { qty: 2 })).status).toBe(200);
     expect((await api.get<Ficha>(`/api/workstations/${mesa}`)).body.itens.map((s) => s.unidades)).toEqual([1]);
   });
 
@@ -300,11 +300,11 @@ describe('as fichas', () => {
     expect(ficha.body.itens).toEqual([expect.objectContaining({ unidades: 2, item: expect.objectContaining({ isActive: false }) })]);
   });
 
-  it('o histórico da pessoa traz o estoque no nome dela, por saída', async () => {
+  it('o histórico da pessoa traz o estoque no nome dela, por entrega', async () => {
     const pessoa = await criarColaborador(api, { name: 'Caio do Histórico', email: 'caio.historico@teste.local' });
     const hub = await item('Hub do histórico da pessoa', 3);
-    const saida = await entregar(hub.id, { targetType: 'PERSON', targetPersonId: pessoa, qty: 2, checkoutAt: diaNoBrasil(-4) });
-    expect((await devolver(saida.body.unidades[0].id, { qty: 1 })).status).toBe(200);
+    const entrega = await entregar(hub.id, { targetType: 'PERSON', targetPersonId: pessoa, qty: 2, checkoutAt: diaNoBrasil(-4) });
+    expect((await devolver(entrega.body.unidades[0].id, { qty: 1 })).status).toBe(200);
     // O que vai para a MESA dele não é dele.
     expect((await entregar(hub.id, { targetType: 'WORKSTATION', targetWorkstationId: cenario.mesa1 })).status).toBe(201);
 

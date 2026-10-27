@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Armchair, User } from 'lucide-react';
-import type { SaidaAberta } from '../../../domain/shared/stock.types';
+import type { EntregaAberta } from '../../../domain/shared/stock.types';
 import { diaDoInstante, formatarDiaDoInstante, hojeNoCampoDeData } from '../../helpers/format.helper';
 import { textoDeUnidades } from '../../helpers/estoque.helper';
 
-// QUEM ESTÁ COM O ITEM AGORA — uma linha por SAÍDA ("Mesa 1 · 5 unidades ·
+// QUEM ESTÁ COM O ITEM AGORA — uma linha por ENTREGA ("Mesa 1 · 5 unidades ·
 // desde…"), com o botão de devolver. É o "Com quem está" da licença
 // (`EntregasAbertas.tsx`), com quantidade.
 //
@@ -13,8 +13,8 @@ import { textoDeUnidades } from '../../helpers/estoque.helper';
 // entrega — o registro da devolução que já aconteceu. É o único lugar do
 // sistema que devolve estoque; as fichas mostram e apontam para cá.
 
-interface SaidasAbertasProps {
-  saidas: SaidaAberta[];
+interface EntregasAbertasProps {
+  entregas: EntregaAberta[];
   /** A frase da lista vazia quando ela é vazia por causa da busca. */
   vazio?: string;
   ocupado: boolean;
@@ -22,7 +22,7 @@ interface SaidasAbertasProps {
    * `checkinAt` é o dia, 'AAAA-MM-DD'. Resolve `true` quando a devolução deu
    * certo — só então a linha fecha, e a recusa deixa o que foi escolhido nos campos.
    */
-  onDevolver: (saidaId: string, qty: number, checkinAt: string) => Promise<boolean>;
+  onDevolver: (entregaId: string, qty: number, checkinAt: string) => Promise<boolean>;
 }
 
 /** O que a linha aberta está pedindo: quantas e o dia. */
@@ -31,54 +31,54 @@ type Pedido = { id: string; qty: string; dia: string } | null;
 const BOTAO = 'px-3 py-1 border border-border-sutil uppercase tracking-widest text-[10px] text-text-secondary hover:text-text-primary transition-colors disabled:opacity-40';
 const CAMPO = 'p-1 bg-bg-base border border-border-sutil text-text-primary normal-case tracking-normal focus:outline-none focus:border-text-secondary';
 
-export default function SaidasAbertas({ saidas, vazio, ocupado, onDevolver }: SaidasAbertasProps) {
+export default function EntregasAbertas({ entregas, vazio, ocupado, onDevolver }: EntregasAbertasProps) {
   // Um pedido aberto de cada vez, na linha que o abriu.
   const [pedido, setPedido] = useState<Pedido>(null);
 
-  if (saidas.length === 0) {
+  if (entregas.length === 0) {
     return <p className="text-text-tertiary">{vazio ?? 'Ninguém está com este item agora.'}</p>;
   }
 
   const hoje = hojeNoCampoDeData();
 
-  const confirmar = async (saida: SaidaAberta, meu: NonNullable<Pedido>) => {
-    if (await onDevolver(saida.id, Number(meu.qty), meu.dia)) setPedido(null);
+  const confirmar = async (entrega: EntregaAberta, meu: NonNullable<Pedido>) => {
+    if (await onDevolver(entrega.id, Number(meu.qty), meu.dia)) setPedido(null);
   };
 
   return (
     <ul className="divide-y divide-border-sutil/50 border border-border-sutil">
-      {saidas.map((saida) => {
-        const Icone = saida.targetType === 'PERSON' ? User : Armchair;
-        const meu = pedido?.id === saida.id ? pedido : null;
+      {entregas.map((entrega) => {
+        const Icone = entrega.targetType === 'PERSON' ? User : Armchair;
+        const meu = pedido?.id === entrega.id ? pedido : null;
         const quantas = meu ? Number(meu.qty) : 0;
         const quantasValem = meu !== null && meu.qty.trim() !== '' && Number.isInteger(quantas)
-          && quantas >= 1 && quantas <= saida.unidades;
+          && quantas >= 1 && quantas <= entrega.unidades;
 
         return (
-          <li key={saida.id} className="px-3 py-2 flex flex-wrap items-center justify-between gap-3">
+          <li key={entrega.id} className="px-3 py-2 flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0 space-y-0.5">
               <div className="flex items-center gap-2 text-text-primary">
                 <Icone size={12} className="text-text-tertiary shrink-0" />
-                <span className="truncate">{saida.targetLabel}</span>
-                <span className="text-text-secondary shrink-0">· {textoDeUnidades(saida.unidades)}</span>
+                <span className="truncate">{entrega.targetLabel}</span>
+                <span className="text-text-secondary shrink-0">· {textoDeUnidades(entrega.unidades)}</span>
               </div>
               <div className="text-[10px] text-text-tertiary">
-                desde {formatarDiaDoInstante(saida.checkoutAt)}
-                {saida.notes && <span className="text-text-secondary"> · {saida.notes}</span>}
+                desde {formatarDiaDoInstante(entrega.checkoutAt)}
+                {entrega.notes && <span className="text-text-secondary"> · {entrega.notes}</span>}
               </div>
             </div>
 
             {meu ? (
               <div className="flex flex-wrap items-center gap-2">
                 {/* Com uma unidade só, não há o que perguntar. */}
-                {saida.unidades > 1 && (
+                {entrega.unidades > 1 && (
                   <label className="flex items-center gap-2 text-[10px] text-text-tertiary uppercase tracking-widest">
                     Quantas
                     <input
                       type="number"
                       value={meu.qty}
                       min={1}
-                      max={saida.unidades}
+                      max={entrega.unidades}
                       onChange={(evento) => setPedido({ ...meu, qty: evento.target.value })}
                       className={`${CAMPO} w-16`}
                     />
@@ -89,7 +89,7 @@ export default function SaidasAbertas({ saidas, vazio, ocupado, onDevolver }: Sa
                   <input
                     type="date"
                     value={meu.dia}
-                    min={diaDoInstante(saida.checkoutAt)}
+                    min={diaDoInstante(entrega.checkoutAt)}
                     max={hoje}
                     onChange={(evento) => setPedido({ ...meu, dia: evento.target.value })}
                     className={CAMPO}
@@ -97,9 +97,9 @@ export default function SaidasAbertas({ saidas, vazio, ocupado, onDevolver }: Sa
                 </label>
                 <button
                   type="button"
-                  onClick={() => void confirmar(saida, meu)}
+                  onClick={() => void confirmar(entrega, meu)}
                   disabled={ocupado || meu.dia === '' || !quantasValem}
-                  title={quantasValem ? 'Confirmar' : `De 1 a ${saida.unidades}`}
+                  title={quantasValem ? 'Confirmar' : `De 1 a ${entrega.unidades}`}
                   className={BOTAO}
                 >
                   Confirmar
@@ -109,7 +109,7 @@ export default function SaidasAbertas({ saidas, vazio, ocupado, onDevolver }: Sa
             ) : (
               <button
                 type="button"
-                onClick={() => setPedido({ id: saida.id, qty: String(saida.unidades), dia: hoje })}
+                onClick={() => setPedido({ id: entrega.id, qty: String(entrega.unidades), dia: hoje })}
                 disabled={ocupado}
                 className={BOTAO}
               >

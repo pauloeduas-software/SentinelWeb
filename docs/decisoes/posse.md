@@ -535,9 +535,9 @@ saiu porque, na forma final, vincular máquina não decide a vaga; a vaga é dec
 eles **agora** — e o histórico de posse dos itens continua mostrando o nome dos dois depois.
 
 - **Localização funciona como status e categoria:** cadastro de referência. O 409 conta só o
-  presente — ativo ou item de estoque guardado nela (lixeira inclusive), entrega e saída de estoque
+  presente — ativo ou item de estoque guardado nela (lixeira inclusive), entrega de ativo e de estoque
   abertas, ocupante atual. Sem nada disso, ela é **apagada de verdade**, sem lixeira. Antes do
-  `DELETE`, as linhas já fechadas que apontam para ela — entrega devolvida, saída devolvida,
+  `DELETE`, as linhas já fechadas que apontam para ela — entrega de ativo ou de estoque devolvida,
   ocupação encerrada — perdem a ligação e guardam o nome por escrito (`targetLocationName` em
   `assignments` e `stock_movements`, `locationName` em `location_occupants`). Os CHECKs da forma
   da posse aceitam a linha sem FK só quando ela está fechada e com o nome preenchido. As FKs
@@ -579,7 +579,7 @@ vez porque o histórico dele guarda o nome por escrito. Aqui o colaborador segue
 localização, o segundo — sem lixeira, porque ninguém precisa dela de volta.
 
 > **Superada em parte por [Y](#y--o-posto-sai-de-location-localização-guarda-posto-recebe):** o
-> que recebia — entrega, saída de estoque, ocupante — era o posto, e o posto saiu de `Location`.
+> que recebia — entrega de ativo, entrega de estoque, ocupante — era o posto, e o posto saiu de `Location`.
 > A metade da localização desta decisão passa a ele: o 409 pelo presente e o nome por escrito
 > (`targetWorkstationName`, `workstationName`) são do posto agora. A localização ficou só com o
 > que guarda, sem passado preso a ela — a regra do status, sem `beforeDelete`.
@@ -592,16 +592,16 @@ localização, o segundo — sem lixeira, porque ninguém precisa dela de volta.
 onde ele fica (`locationId`, obrigatória), notas e `isActive` — e a `Location` volta a ser só lugar.
 
 - **Localização diz onde a coisa está guardada:** o ativo (`Asset.locationId`), o item de estoque
-  (`StockItem.locationId`) e, agora, o posto. Ela não recebe entrega, saída de estoque nem
+  (`StockItem.locationId`) e, agora, o posto. Ela não recebe entrega de ativo, de estoque nem
   ocupante. A regra é a do status: o 409 conta só o que aponta para ela agora — ativo e item
   guardados (lixeira inclusive) e postos que ficam nela —, e sem isso ela é apagada de verdade,
   sem `beforeDelete` e sem nome por escrito, porque nenhum histórico aponta para ela.
   `Asset.location` passa de `SetNull` a `Restrict`, a mesma rede do status e do item.
-- **Posto é quem recebe:** o alvo da entrega (`AssignmentTarget` = `PERSON | WORKSTATION`), da saída
+- **Posto é quem recebe:** o alvo da entrega de ativo (`AssignmentTarget` = `PERSON | WORKSTATION`), da entrega
   de estoque (`StockTarget` = `PERSON | WORKSTATION`) e da ocupação (`WorkstationOccupant`, que era
   `LocationOccupant`). O cadastro tem a regra do status e passa pelo MESMO CRUD do catálogo
   (`workstationSpec`, fora de `CATALOG_SPECS`): nome único, desativar, 409 só pelo que está nele
-  agora — entrega e saída abertas, ocupante atual — e exclusão de verdade, com o passado desligado e
+  agora — entregas de ativo e de estoque abertas, ocupante atual — e exclusão de verdade, com o passado desligado e
   o nome por escrito (`targetWorkstationName`, `workstationName`), exatamente como V fazia com o
   local. Ele se cria, edita, desativa e exclui na tela **Postos**; Configurações não tem aba de posto.
 - **A invariante 19 vale para todo posto**, com duas portas — a entrega e a restauração da lixeira.
@@ -636,7 +636,7 @@ O ativo continua com um campo de onde (`locationId`), e a entrega aponta para qu
 pessoa ou posto. A árvore que o D15 também usava já tinha saído com a localização plana.
 
 **O nome do posto continua único no sistema**, e não por localização: os seletores da entrega,
-da saída de estoque e do vínculo de máquina mostram só o nome, e duas "Mesa 1" lado a lado seriam
+da entrega de estoque e do vínculo de máquina mostram só o nome, e duas "Mesa 1" lado a lado seriam
 a mesma escolha duas vezes.
 
 **O que a migração faz:** zero postos e zero posses para local nos bancos deste projeto, então é

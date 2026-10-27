@@ -118,7 +118,7 @@ function Layout() {
             <Route path="/postos/:id" element={<PostosPage />} />
             {/* O ESTOQUE: monitor, teclado, mouse, cabo — o que tem
                 quantidade e não patrimônio (docs/decisoes/estoque.md). Perto
-                de Postos porque a saída pode ir para uma mesa, e perto de
+                de Postos porque a entrega pode ir para uma mesa, e perto de
                 Licenças porque as duas são posse consumida em unidade. */}
             <Route path="/estoque" element={<EstoquePage />} />
             <Route path="/licencas" element={<LicencasPage />} />

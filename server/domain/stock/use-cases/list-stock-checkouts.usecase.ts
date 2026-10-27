@@ -8,9 +8,9 @@ import { rotuloDoAlvo, STOCK_MOVEMENT_SELECT } from '../helpers/stock-select.hel
 
 type Unidade = Prisma.StockMovementGetPayload<{ select: typeof STOCK_MOVEMENT_SELECT }>;
 
-/** Uma linha de "Com quem está": uma saída, com quantas unidades dela ainda estão fora. */
-export interface SaidaAberta {
-  /** Uma unidade da saída — o `:id` da devolução. */
+/** Uma linha de "Com quem está": uma entrega, com quantas unidades dela ainda estão fora. */
+export interface EntregaAberta {
+  /** Uma unidade da entrega — o `:id` da devolução. */
   id: string;
   targetType: Unidade['targetType'];
   targetPersonId: string | null;
@@ -19,22 +19,22 @@ export interface SaidaAberta {
   targetLabel: string;
   checkoutAt: Date;
   notes: string | null;
-  /** Quantas desta saída ainda estão com o alvo. */
+  /** Quantas desta entrega ainda estão com o alvo. */
   unidades: number;
 }
 
 /**
  * QUEM ESTÁ COM ESTE ITEM AGORA — a lista do detalhe, com o botão de devolver
  * em cada linha. O que já foi devolvido mora no histórico. É o "Com quem está"
- * da licença, com uma diferença que é do estoque: a linha é a SAÍDA ("Mesa 1 ·
+ * da licença, com uma diferença que é do estoque: a linha é a ENTREGA ("Mesa 1 ·
  * 5 unidades"), não a unidade.
  *
  * Paginada e com busca pelo nome de quem recebeu — o colaborador ou o posto.
  *
- * AS SAÍDAS SÃO MONTADAS EM MEMÓRIA, e é barato: são só as unidades ABERTAS
+ * AS ENTREGAS SÃO MONTADAS EM MEMÓRIA, e é barato: são só as unidades ABERTAS
  * deste item, e o total limita quantas existem.
  */
-export async function listStockCheckouts(itemId: string, query: ListQuery): Promise<ListEnvelope<SaidaAberta>> {
+export async function listStockCheckouts(itemId: string, query: ListQuery): Promise<ListEnvelope<EntregaAberta>> {
   const item = await prisma.stockItem.findUnique({ where: { id: itemId }, select: { id: true } });
   if (!item) throw new AppError('Item de estoque não encontrado.', 404);
 
@@ -46,13 +46,13 @@ export async function listStockCheckouts(itemId: string, query: ListQuery): Prom
       ...(contem ? { OR: [{ targetPerson: { name: contem } }, { targetWorkstation: { name: contem } }] } : {}),
     },
     select: STOCK_MOVEMENT_SELECT,
-    // A mais recente primeiro, como a licença. `createdAt` separa as saídas do
+    // A mais recente primeiro, como a licença. `createdAt` separa as entregas do
     // mesmo dia passado, e `id` fecha a ordem: a mesma linha não aparece em
     // duas páginas.
     orderBy: [{ checkoutAt: 'desc' }, { createdAt: 'desc' }, { id: 'asc' }],
   });
 
-  const saidas = agruparPorLote(unidades).map(({ primeira, unidades: quantas }): SaidaAberta => ({
+  const entregas = agruparPorLote(unidades).map(({ primeira, unidades: quantas }): EntregaAberta => ({
     id: primeira.id,
     targetType: primeira.targetType,
     targetPersonId: primeira.targetPersonId,
@@ -63,5 +63,5 @@ export async function listStockCheckouts(itemId: string, query: ListQuery): Prom
     unidades: quantas,
   }));
 
-  return { total: saidas.length, rows: saidas.slice(query.skip, query.skip + query.take) };
+  return { total: entregas.length, rows: entregas.slice(query.skip, query.skip + query.take) };
 }

@@ -1,7 +1,7 @@
 import { Edit2, Power, PowerOff, Trash2, UserPlus, X, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import HistoricoItem from './HistoricoItem';
-import SaidasAbertas from './SaidasAbertas';
+import EntregasAbertas from './EntregasAbertas';
 import ListToolbar from '../../components/ListToolbar';
 import {
   useStockCheckoutsQuery, useStockHistoryQuery, useStockItemQuery,
@@ -28,7 +28,7 @@ interface ItemDetalheModalProps {
   /** Excluir é `ADMIN` no servidor. Ausente, o botão some — quem decide é a página. */
   onExcluir?: (item: ItemDeEstoque) => void;
   /** `checkinAt` é o dia, 'AAAA-MM-DD'. Resolve `true` quando a devolução deu certo. */
-  onDevolver: (saidaId: string, qty: number, checkinAt: string) => Promise<boolean>;
+  onDevolver: (entregaId: string, qty: number, checkinAt: string) => Promise<boolean>;
 }
 
 /** As duas listas do detalhe andam de 15 em 15. */
@@ -82,11 +82,11 @@ export default function ItemDetalheModal({
   // abaixo traz a conta fresca logo em seguida.
   const { data: detalhe, error: erroDoDetalhe } = useStockItemQuery(item.id);
 
-  const [paginaDasSaidas, setPaginaDasSaidas] = useState(1);
+  const [paginaDasEntregas, setPaginaDasEntregas] = useState(1);
   const [busca, setBusca] = useState('');
   const buscaAdiada = useDebouncedValue(busca);
-  const saidas = useStockCheckoutsQuery(item.id, {
-    page: paginaDasSaidas, perPage: POR_PAGINA, q: buscaAdiada || undefined,
+  const entregas = useStockCheckoutsQuery(item.id, {
+    page: paginaDasEntregas, perPage: POR_PAGINA, q: buscaAdiada || undefined,
   });
 
   const [paginaDoHistorico, setPaginaDoHistorico] = useState(1);
@@ -97,16 +97,16 @@ export default function ItemDetalheModal({
 
   const mudarBusca = (valor: string) => {
     setBusca(valor);
-    setPaginaDasSaidas(1);
+    setPaginaDasEntregas(1);
   };
 
   // A última linha da página voltou inteira: volta uma página, senão a lista
   // abre vazia com o paginador apontando para uma página que não existe mais.
-  const devolver = async (saidaId: string, qty: number, checkinAt: string): Promise<boolean> => {
-    const linhasNaPagina = saidas.data?.rows.length ?? 0;
-    const saidaInteira = saidas.data?.rows.find((saida) => saida.id === saidaId)?.unidades === qty;
-    const devolveu = await onDevolver(saidaId, qty, checkinAt);
-    if (devolveu && saidaInteira && linhasNaPagina === 1 && paginaDasSaidas > 1) setPaginaDasSaidas(paginaDasSaidas - 1);
+  const devolver = async (entregaId: string, qty: number, checkinAt: string): Promise<boolean> => {
+    const linhasNaPagina = entregas.data?.rows.length ?? 0;
+    const entregaInteira = entregas.data?.rows.find((entrega) => entrega.id === entregaId)?.unidades === qty;
+    const devolveu = await onDevolver(entregaId, qty, checkinAt);
+    if (devolveu && entregaInteira && linhasNaPagina === 1 && paginaDasEntregas > 1) setPaginaDasEntregas(paginaDasEntregas - 1);
     return devolveu;
   };
 
@@ -177,14 +177,14 @@ export default function ItemDetalheModal({
               search={busca}
               onSearchChange={mudarBusca}
               placeholder="Buscar por colaborador ou posto..."
-              page={paginaDasSaidas}
+              page={paginaDasEntregas}
               perPage={POR_PAGINA}
-              total={saidas.data?.total ?? 0}
-              onPageChange={setPaginaDasSaidas}
+              total={entregas.data?.total ?? 0}
+              onPageChange={setPaginaDasEntregas}
             />
-            <Estado carregando={saidas.isPending} erro={saidas.error}>
-              <SaidasAbertas
-                saidas={saidas.data?.rows ?? []}
+            <Estado carregando={entregas.isPending} erro={entregas.error}>
+              <EntregasAbertas
+                entregas={entregas.data?.rows ?? []}
                 vazio={buscaAdiada ? `Ninguém com "${buscaAdiada}" está com este item.` : undefined}
                 ocupado={ocupado}
                 onDevolver={devolver}

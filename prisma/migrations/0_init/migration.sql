@@ -827,7 +827,7 @@ ALTER TABLE "licenses" ADD CONSTRAINT "licenses_encerramento_nao_antecede_compra
   "purchaseDate" IS NULL OR "terminationDate" IS NULL OR "terminationDate" >= "purchaseDate"
 );
 
--- ── O ESTOQUE: A FORMA DA SAÍDA (docs/decisoes/estoque.md, J e AE) ───────
+-- ── O ESTOQUE: A FORMA DA ENTREGA (docs/decisoes/estoque.md, J e AE) ───────
 --
 -- O total é ao menos 1, no cadastro e na edição, como a quantidade comprada da
 -- licença: o item que acabou se desativa, e o disponível chega a zero pela
@@ -836,7 +836,7 @@ ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_qty_positiva"
   CHECK ("qty" >= 1);
 
 -- Cada linha é UMA unidade com exatamente UM alvo, o que o discriminante diz.
--- A saída JÁ DEVOLVIDA para um posto excluído fica sem FK, com o nome por
+-- A entrega JÁ DEVOLVIDA para um posto excluído fica sem FK, com o nome por
 -- escrito — como na `Assignment`.
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_forma" CHECK (
      ("targetType" = 'PERSON' AND "targetPersonId" IS NOT NULL AND "targetWorkstationId" IS NULL)
@@ -846,15 +846,15 @@ ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_forma" CHECK (
      ))
 );
 
--- O ITEM EXCLUÍDO (AG): só a saída JÁ DEVOLVIDA fica sem ele, com o nome por
+-- O ITEM EXCLUÍDO (AG): só a entrega JÁ DEVOLVIDA fica sem ele, com o nome por
 -- escrito — a regra do posto. A que está em uso aponta sempre para o item.
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_item_presente" CHECK (
   "itemId" IS NOT NULL OR ("returnedAt" IS NOT NULL AND "itemName" IS NOT NULL)
 );
 
--- A DEVOLUÇÃO NÃO ANTECEDE A SAÍDA. `>=` e não `>`: saída e devolução no mesmo
+-- A DEVOLUÇÃO NÃO ANTECEDE A ENTREGA. `>=` e não `>`: entrega e devolução no mesmo
 -- instante é real.
-ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_devolucao_nao_antecede_saida"
+ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_devolucao_nao_antecede_entrega"
   CHECK ("returnedAt" IS NULL OR "returnedAt" >= "checkoutAt");
 
 -- A DEVOLUÇÃO REGISTRADA: o dia e o instante do registro andam juntos — os dois

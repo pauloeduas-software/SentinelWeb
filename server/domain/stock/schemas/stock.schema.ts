@@ -79,10 +79,10 @@ export const checkoutStockSchema = z.strictObject({
 });
 
 /**
- * A DEVOLUÇÃO de uma saída: quantas voltam e o dia. `qty` ausente é TODAS as
- * que ainda estão com o alvo nesta saída — a devolução da entrega inteira, como
+ * A DEVOLUÇÃO de uma entrega: quantas voltam e o dia. `qty` ausente é TODAS as
+ * que ainda estão com o alvo nesta entrega — a devolução dela inteira, como
  * na licença. O dia ausente é hoje; nunca futuro, e nunca antes do dia da
- * entrega — esta conta precisa da saída, e mora no use-case.
+ * entrega — esta conta precisa da entrega, e mora no use-case.
  */
 export const checkinStockSchema = z.strictObject({
   qty: quantidade('quantidade', 100).optional(),

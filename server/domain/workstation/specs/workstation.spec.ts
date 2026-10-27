@@ -39,22 +39,22 @@ export const workstationSpec: CatalogSpec = {
 
   nomeUnicoPor: [],
 
-  // O seletor da entrega, da saída de estoque e do vínculo de máquina só
+  // O seletor da entrega de ativo, da de estoque e do vínculo de máquina só
   // oferece posto ativo: desativado não recebe nada novo.
   optionsWhere: { isActive: true },
 
   dicaEmUso: DICA_DO_POSTO_EM_USO,
 
-  // SÓ O QUE ESTÁ NELE AGORA: entrega e saída de estoque abertas, ocupante
+  // SÓ O QUE ESTÁ NELE AGORA: entrega de ativo e de estoque abertas, ocupante
   // atual. O que já foi devolvido e encerrado não conta: o `beforeDelete`
   // desliga essas linhas guardando o nome por escrito.
   countUsages: async (client, id) => {
-    const [entregas, saidas, ocupacoes] = await Promise.all([
+    const [ativos, estoque, ocupacoes] = await Promise.all([
       client.assignment.count({ where: { targetWorkstationId: id, checkinAt: null } }),
       client.stockMovement.count({ where: { targetWorkstationId: id, returnedAt: null } }),
       client.workstationOccupant.count({ where: { workstationId: id, endedAt: null } }),
     ]);
-    return entregas + saidas + ocupacoes;
+    return ativos + estoque + ocupacoes;
   },
 
   // A RECUSA DIZ O QUÊ, como a do colaborador: "tem 1 ativo, 3 unidades de

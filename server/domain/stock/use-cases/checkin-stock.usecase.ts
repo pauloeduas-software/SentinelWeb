@@ -7,19 +7,19 @@ import { hojeNoBrasil, instanteDoDia } from '../../shared/hoje.helper';
 import { rotuloDoAlvo, STOCK_MOVEMENT_SELECT } from '../helpers/stock-select.helper';
 import type { CheckinStockInput } from '../schemas/stock.schema';
 
-// A DEVOLUÇÃO DE UMA SAÍDA — N unidades dela, num dia. É a devolução da
+// A DEVOLUÇÃO DE UMA ENTREGA — N unidades dela, num dia. É a devolução da
 // licença (`checkin-license.usecase.ts`), com quantidade.
 //
-// PELA SAÍDA, nunca pelo item ou pelo alvo: o `:id` é o de qualquer unidade da
-// saída, e é ela que diz QUAL entrega (o mesmo INSERT, o mesmo alvo). É o que
-// impede a tela velha de devolver a unidade errada: a saída que já voltou
+// PELA ENTREGA, nunca pelo item ou pelo alvo: o `:id` é o de qualquer unidade da
+// entrega, e é ela que diz QUAL (o mesmo INSERT, o mesmo alvo). É o que
+// impede a tela velha de devolver a unidade errada: a entrega que já voltou
 // responde 409, em vez de fechar a entrega que outra pessoa abriu depois — que
-// é OUTRA saída.
+// é OUTRA entrega.
 //
 // Preenche `returnedAt` e NUNCA apaga a linha: "quem estava com o mouse em
 // março?" continua respondível depois da devolução.
 //
-// TRAVA SÓ AS LINHAS DA SAÍDA. É o que impede a devolução dupla: a segunda
+// TRAVA SÓ AS LINHAS DA ENTREGA. É o que impede a devolução dupla: a segunda
 // espera, relê, e encontra menos unidades com o alvo. O item não é travado: a
 // devolução só diminui o que está em uso, e uma entrega concorrente que conte
 // antes dela só erra para o lado seguro (um 409 de "sem unidade" que um
@@ -35,21 +35,21 @@ export async function checkinStock(movementId: string, data: Partial<CheckinStoc
       where: { id: movementId },
       select: { ...STOCK_MOVEMENT_SELECT, itemName: true, item: { select: { name: true } } },
     });
-    if (!unidade) throw new AppError('Nenhuma saída de estoque com este identificador.', 404);
-    // O ITEM EXCLUÍDO (AG) só deixa saída já devolvida — a em uso segura a
+    if (!unidade) throw new AppError('Nenhuma entrega de estoque com este identificador.', 404);
+    // O ITEM EXCLUÍDO (AG) só deixa entrega já devolvida — a em uso segura a
     // exclusão. A tela velha que ainda mostra a linha recebe o mesmo 409.
     const item = unidade.item;
     if (!item || !unidade.itemId) {
       throw new AppError(`Esta entrega de "${unidade.itemName ?? 'item excluído'}" para ${rotuloDoAlvo(unidade)} já foi devolvida.`, 409);
     }
 
-    // AS UNIDADES DA SAÍDA QUE AINDA ESTÃO COM O ALVO — lidas pelo Prisma, que
+    // AS UNIDADES DA ENTREGA QUE AINDA ESTÃO COM O ALVO — lidas pelo Prisma, que
     // compara o `createdAt` sem depender do fuso da sessão, e TRAVADAS em
     // seguida. A trava relê `returnedAt` depois de esperar: a devolução
     // simultânea que fechou parte delas tira essas linhas daqui. Todas, e não
     // `LIMIT qty`: com o limite, a segunda devolução ficaria com menos do que
     // existe — um 409 falso.
-    const daSaida = await tx.stockMovement.findMany({
+    const daEntrega = await tx.stockMovement.findMany({
       where: {
         itemId: unidade.itemId,
         createdAt: unidade.createdAt,
@@ -60,15 +60,15 @@ export async function checkinStock(movementId: string, data: Partial<CheckinStoc
       },
       select: { id: true },
     });
-    const abertas = daSaida.length === 0 ? [] : await tx.$queryRaw<{ id: string }[]>`
+    const abertas = daEntrega.length === 0 ? [] : await tx.$queryRaw<{ id: string }[]>`
       SELECT id FROM stock_movements
-       WHERE id = ANY(${daSaida.map((linha) => linha.id)}::uuid[]) AND "returnedAt" IS NULL
+       WHERE id = ANY(${daEntrega.map((linha) => linha.id)}::uuid[]) AND "returnedAt" IS NULL
        ORDER BY id
        FOR UPDATE
     `;
 
     const alvo = rotuloDoAlvo(unidade);
-    // 409 e não 404: a saída existe, o ESTADO dela é que recusa.
+    // 409 e não 404: a entrega existe, o ESTADO dela é que recusa.
     if (abertas.length === 0) {
       throw new AppError(`Esta entrega de "${item.name}" para ${alvo} já foi devolvida.`, 409);
     }
@@ -94,13 +94,13 @@ export async function checkinStock(movementId: string, data: Partial<CheckinStoc
 
     // No MESMO dia, o instante do dia passado (meio-dia) pode cair antes da hora
     // real da entrega — a feita às 23h. A devolução nunca fica antes dela: é o
-    // CHECK `stock_movements_devolucao_nao_antecede_saida`.
+    // CHECK `stock_movements_devolucao_nao_antecede_entrega`.
     const instante = instanteDoDia(dia);
     const returnedAt = instante < unidade.checkoutAt ? unidade.checkoutAt : instante;
 
     const ids = abertas.slice(0, pedidas).map((linha) => linha.id);
     // O DIA e o INSTANTE do registro: o instante é o que separa esta devolução
-    // de outra da mesma saída no mesmo dia — o dia passado é sempre o meio-dia.
+    // de outra da mesma entrega no mesmo dia — o dia passado é sempre o meio-dia.
     await tx.stockMovement.updateMany({ where: { id: { in: ids } }, data: { returnedAt, returnRecordedAt: new Date() } });
 
     await recordAudit(tx, {

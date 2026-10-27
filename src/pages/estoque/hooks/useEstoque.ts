@@ -129,16 +129,16 @@ export function useEstoque() {
   // ─────────────────────────────────────────────────────────────────────────
 
   /**
-   * A devolução de N unidades de uma saída, no dia escolhido. Diz se deu certo,
+   * A devolução de N unidades de uma entrega, no dia escolhido. Diz se deu certo,
    * para a linha fechar só então, e para o detalhe voltar uma página quando a
    * última linha dela saiu.
    */
-  const handleDevolver = async (saidaId: string, qty: number, checkinAt: string): Promise<boolean> => {
+  const handleDevolver = async (entregaId: string, qty: number, checkinAt: string): Promise<boolean> => {
     try {
-      await devolver.mutateAsync({ saidaId, qty, checkinAt });
+      await devolver.mutateAsync({ entregaId, qty, checkinAt });
       return true;
     } catch (erro) {
-      // O 409 da saída já devolvida (duas abas abertas no mesmo item), o de
+      // O 409 da entrega já devolvida (duas abas abertas no mesmo item), o de
       // menos unidades do que se pediu, e o 422 da data — futura, ou antes da
       // entrega.
       notificar.erro((erro as Error).message);

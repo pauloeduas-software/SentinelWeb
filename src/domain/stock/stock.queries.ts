@@ -5,7 +5,7 @@ import { workstationKeys } from '../workstation/workstation.queries';
 import type { ListEnvelope, ListParams } from '../shared/list.types';
 import type {
   AlvoDaEntregaDeEstoque, EventoDoItem, ItemDeEstoque, ItemDeEstoqueInput,
-  ResultadoDaDevolucao, SaidaAberta,
+  ResultadoDaDevolucao, EntregaAberta,
 } from '../shared/stock.types';
 
 // O ESTOQUE — monitor, teclado, mouse, cabo: o que tem quantidade e não
@@ -32,7 +32,7 @@ const stockKeys = {
   all: ['stock'] as const,
   list: (params: ParamsDoEstoque) => ['stock', 'list', params] as const,
   item: (id: string) => ['stock', 'item', id] as const,
-  saidas: (id: string, params: ParamsDoDetalhe) => ['stock', 'saidas', id, params] as const,
+  entregas: (id: string, params: ParamsDoDetalhe) => ['stock', 'entregas', id, params] as const,
   historico: (id: string, params: ParamsDoDetalhe) => ['stock', 'historico', id, params] as const,
 };
 
@@ -53,12 +53,12 @@ export function useStockItemQuery(id: string | null) {
   });
 }
 
-/** Quem está com o item agora — as saídas abertas, por página, com busca pelo nome. */
+/** Quem está com o item agora — as entregas abertas, por página, com busca pelo nome. */
 export function useStockCheckoutsQuery(id: string | null, params: ParamsDoDetalhe) {
   return useQuery({
-    queryKey: stockKeys.saidas(id ?? '', params),
+    queryKey: stockKeys.entregas(id ?? '', params),
     queryFn: async () =>
-      (await apiClient.get<ListEnvelope<SaidaAberta>>(`/stock/items/${id}/checkouts`, { params })).data,
+      (await apiClient.get<ListEnvelope<EntregaAberta>>(`/stock/items/${id}/checkouts`, { params })).data,
     enabled: id != null,
     // Sem isto a lista pisca em branco a cada página e a cada tecla da busca.
     placeholderData: keepPreviousData,
@@ -79,7 +79,7 @@ export function useStockHistoryQuery(id: string | null, params: Omit<ParamsDoDet
 /**
  * Devolve a promessa, e o `onSuccess` a devolve também: a mutação só termina
  * quando as listas abertas já foram buscadas de novo. Sem isso o botão
- * destravava com a saída devolvida ainda na tela, e o segundo clique dava "já
+ * destravava com a entrega devolvida ainda na tela, e o segundo clique dava "já
  * foi devolvida" — o mesmo cuidado do `invalidarLicencaEPosse`.
  */
 function invalidarEstoqueEPosse(queryClient: ReturnType<typeof useQueryClient>) {
@@ -130,13 +130,13 @@ export function useCheckoutStock() {
   });
 }
 
-/** A devolução, pela SAÍDA — `saidaId` é o de qualquer unidade dela. */
+/** A devolução, pela ENTREGA — `entregaId` é o de qualquer unidade dela. */
 export function useCheckinStock() {
   const queryClient = useQueryClient();
   return useMutation({
     /** `checkinAt` é o dia, 'AAAA-MM-DD': hoje ou antes, nunca antes da entrega. */
-    mutationFn: ({ saidaId, qty, checkinAt }: { saidaId: string; qty: number; checkinAt: string }) =>
-      apiClient.post<ResultadoDaDevolucao>(`/stock/checkouts/${saidaId}/checkin`, { qty, checkinAt }),
+    mutationFn: ({ entregaId, qty, checkinAt }: { entregaId: string; qty: number; checkinAt: string }) =>
+      apiClient.post<ResultadoDaDevolucao>(`/stock/checkouts/${entregaId}/checkin`, { qty, checkinAt }),
     onSuccess: () => invalidarEstoqueEPosse(queryClient),
   });
 }

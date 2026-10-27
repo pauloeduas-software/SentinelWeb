@@ -5,7 +5,7 @@ import { cenarioDePosse, criarItemDeEstoque, criarPosto } from '../helpers/fixtu
 
 // AS CORRIDAS DO ESTOQUE — o que "passa no teste com um usuário".
 //
-// O saldo é `COUNT` das saídas abertas, e contar não é travar: duas requisições
+// O saldo é `COUNT` das entregas abertas, e contar não é travar: duas requisições
 // podem contar "4 de 5 em uso" e as duas inserirem, dando 6 de 5. Quem fecha
 // isso é o `FOR UPDATE` na linha do item, dentro da transação — e este arquivo é
 // a prova de que ele trava. A asserção nunca é "deu certo": é "exatamente N
@@ -78,11 +78,11 @@ describe('reduzir o total ao mesmo tempo que uma entrega, no item de DUAS unidad
   });
 });
 
-describe('devolver a mesma saída duas vezes ao mesmo tempo', () => {
+describe('devolver a mesma entrega duas vezes ao mesmo tempo', () => {
   it('fecha UMA vez — e o carimbo de devolução não é reescrito', async () => {
     const teclado = await criarItemDeEstoque(api, { name: 'Teclado devolvido duas vezes', categoryId: cenario.categoriaEstoqueId, qty: 2 });
-    const saida = await entregar(teclado.id, 2);
-    const unidade = saida.body.unidades[0].id;
+    const entrega = await entregar(teclado.id, 2);
+    const unidade = entrega.body.unidades[0].id;
 
     const devolver = () => api.post<{ returnedAt: string }>(`/api/stock/checkouts/${unidade}/checkin`, {});
     const respostas = await Promise.all([devolver(), devolver()]);
@@ -97,8 +97,8 @@ describe('devolver a mesma saída duas vezes ao mesmo tempo', () => {
 
   it('duas devoluções parciais que cabem passam as duas — sem 409 falso', async () => {
     const fone = await criarItemDeEstoque(api, { name: 'Fone das devoluções parciais', categoryId: cenario.categoriaEstoqueId, qty: 4 });
-    const saida = await entregar(fone.id, 4);
-    const unidade = saida.body.unidades[0].id;
+    const entrega = await entregar(fone.id, 4);
+    const unidade = entrega.body.unidades[0].id;
 
     const devolver = () => api.post(`/api/stock/checkouts/${unidade}/checkin`, { qty: 2 });
     const respostas = await Promise.all([devolver(), devolver()]);
@@ -153,22 +153,22 @@ describe('excluir o item ao mesmo tempo que ele é entregue', () => {
 // aparece com a tabela grande, quando cada exclusão lê por um índice diferente
 // (`itemId, checkoutAt` × `targetWorkstationId, returnedAt`). Este teste prova o
 // resultado das duas juntas, não a ordem.
-describe('excluir o item e o posto ao mesmo tempo, com saídas devolvidas em comum', () => {
-  it('os dois passam, e as saídas ficam com os dois nomes por escrito', async () => {
+describe('excluir o item e o posto ao mesmo tempo, com entregas devolvidas em comum', () => {
+  it('os dois passam, e as entregas ficam com os dois nomes por escrito', async () => {
     for (let rodada = 0; rodada < 5; rodada++) {
       const nome = `Cabo da rodada ${rodada}`;
       const posto = await criarPosto(api, { name: `Bancada da rodada ${rodada}` });
       const cabo = await criarItemDeEstoque(api, { name: nome, categoryId: cenario.categoriaEstoqueId, qty: 6 });
-      const saida = await api.post<{ unidades: { id: string }[] }>(`/api/stock/items/${cabo.id}/checkout`, {
+      const entrega = await api.post<{ unidades: { id: string }[] }>(`/api/stock/items/${cabo.id}/checkout`, {
         targetType: 'WORKSTATION', targetWorkstationId: posto, qty: 6,
       });
-      expect(saida.status).toBe(201);
-      expect((await api.post(`/api/stock/checkouts/${saida.body.unidades[0].id}/checkin`, {})).status).toBe(200);
+      expect(entrega.status).toBe(201);
+      expect((await api.post(`/api/stock/checkouts/${entrega.body.unidades[0].id}/checkin`, {})).status).toBe(200);
 
       const respostas = await Promise.all([api.delete(`/api/stock/items/${cabo.id}`), api.delete(`/api/workstations/${posto}`)]);
       expect(respostas.map((r) => r.status)).toEqual([204, 200]);
 
-      const linhas = await prisma.stockMovement.findMany({ where: { id: { in: saida.body.unidades.map((u) => u.id) } } });
+      const linhas = await prisma.stockMovement.findMany({ where: { id: { in: entrega.body.unidades.map((u) => u.id) } } });
       expect(linhas).toHaveLength(6);
       for (const linha of linhas) {
         expect([linha.itemId, linha.itemName, linha.targetWorkstationId, linha.targetWorkstationName])

@@ -94,7 +94,7 @@ export default function PostoDetalheModal({
 
   const ativos = detalhe?.ativos ?? [];
   const itens = detalhe?.itens ?? [];
-  const totalDeUnidades = itens.reduce((soma, saida) => soma + saida.unidades, 0);
+  const totalDeUnidades = itens.reduce((soma, entrega) => soma + entrega.unidades, 0);
   // Cálculo fora do JSX (docs/referencia/arquitetura.md). A lista tem no
   // máximo um ativo — é a invariante 19 —, e com máquina vinculada é o que tem
   // telemetria para mostrar.
@@ -358,22 +358,22 @@ export default function PostoDetalheModal({
                 </thead>
 
                 <tbody className="divide-y divide-border-sutil/50">
-                  {itens.map((saida) => (
-                    <tr key={saida.id} className="hover:bg-bg-base transition-colors">
+                  {itens.map((entrega) => (
+                    <tr key={entrega.id} className="hover:bg-bg-base transition-colors">
                       <td className="px-4 py-3 text-text-primary">
-                        <Link to={caminhoDoItem(saida.item.id)} className="hover:underline underline-offset-2">
-                          {saida.item.name}
+                        <Link to={caminhoDoItem(entrega.item.id)} className="hover:underline underline-offset-2">
+                          {entrega.item.name}
                         </Link>
-                        {!saida.item.isActive && (
+                        {!entrega.item.isActive && (
                           <span className="ml-2 text-[10px] uppercase tracking-widest text-text-tertiary">desativado</span>
                         )}
-                        {saida.notes && (
-                          <div className="text-[10px] text-text-tertiary mt-0.5">{saida.notes}</div>
+                        {entrega.notes && (
+                          <div className="text-[10px] text-text-tertiary mt-0.5">{entrega.notes}</div>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-text-tertiary">{saida.item.category.name}</td>
-                      <td className="px-4 py-3 text-text-tertiary">{textoDeUnidades(saida.unidades)}</td>
-                      <td className="px-4 py-3 text-text-tertiary">{formatarDiaDoInstante(saida.checkoutAt)}</td>
+                      <td className="px-4 py-3 text-text-tertiary">{entrega.item.category.name}</td>
+                      <td className="px-4 py-3 text-text-tertiary">{textoDeUnidades(entrega.unidades)}</td>
+                      <td className="px-4 py-3 text-text-tertiary">{formatarDiaDoInstante(entrega.checkoutAt)}</td>
                     </tr>
                   ))}
 

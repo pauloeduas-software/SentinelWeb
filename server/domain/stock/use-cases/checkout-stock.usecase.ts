@@ -24,7 +24,7 @@ import type { CheckoutStockInput } from '../schemas/stock.schema';
 // antes de a pessoa chegar.
 //
 // CADA UNIDADE É UMA LINHA. `qty: 5` grava cinco linhas, no mesmo INSERT: o
-// `createdAt` igual é o que faz delas UMA saída nas listas, e o saldo é um
+// `createdAt` igual é o que faz delas UMA entrega nas listas, e o saldo é um
 // `COUNT`.
 //
 // O DIA, como na entrega de licença: hoje por padrão, e o passado pode — o
@@ -70,14 +70,14 @@ function assertAlvoCoerente(data: CheckoutStockInput): string {
  * nada a um cadastro na lixeira. Posto sai travado, pela marca de
  * desativado.
  * DESATIVADO é diferente de APAGADO, e os dois são recusados — entregar a quem
- * saiu reabriria, uma linha depois, a pendência que a saída da empresa fechou.
+ * saiu reabriria, uma linha depois, a pendência que a entrega da empresa fechou.
  * 409 e não 404: a pessoa existe, o estado dela é que recusa.
  */
 async function assertAlvoApto(client: ClienteEstoque & ClienteQueTrava, tipo: 'PERSON' | 'WORKSTATION', alvoId: string): Promise<string> {
   if (tipo === 'WORKSTATION') {
-    // Desativado não recebe saída nova. `FOR SHARE` depois do item — a aresta
+    // Desativado não recebe entrega nova. `FOR SHARE` depois do item — a aresta
     // `item → posto` que o grafo já tinha (`lock-asset.usecase.ts`).
-    return assertPostoRecebe(client, alvoId, 'saída de estoque');
+    return assertPostoRecebe(client, alvoId, 'entrega de estoque');
   }
 
   const pessoa = await client.person.findFirst({ where: { id: alvoId }, select: { id: true, name: true, isActive: true } });
@@ -129,7 +129,7 @@ export async function checkoutStock(itemId: string, data: CheckoutStockInput, at
 
     // UMA ida ao banco para as N linhas, com as duas travas seguradas o menor
     // tempo possível — e as N com o MESMO `createdAt` (o `now()` da transação),
-    // que é o que faz delas uma saída de N, e não N saídas.
+    // que é o que faz delas uma entrega de N, e não N entregas.
     const unidades = await tx.stockMovement.createManyAndReturn({
       data: Array.from({ length: data.qty }, () => ({
         itemId,
