@@ -78,8 +78,8 @@ export const createLicenseSchema = z.strictObject({
 
 /**
  * Edição: todo campo é opcional — ausente significa "mantém o valor atual". A
- * tela manda só o que mudou, para um formulário aberto há tempo não desfazer a
- * edição que outra pessoa salvou no meio.
+ * tela manda o formulário inteiro (AF); quem chama por fora pode mandar só o que
+ * muda.
  */
 export const updateLicenseSchema = z.strictObject({
   name: nomeObrigatorio('nome').optional(),

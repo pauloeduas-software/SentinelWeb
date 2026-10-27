@@ -117,6 +117,9 @@ export function useLicencas() {
   // janela foi aberta aqui, a janela aberta é a do link. Fechar tira o link.
   const [parametros, setParametros] = useSearchParams();
   const idDoLink = parametros.get('licenca');
+  // `?busca=<nome>`: quem veio da ficha do colaborador ou da aba do computador
+  // já abre "Com quem está" filtrado por ele.
+  const buscaDoLink = parametros.get('busca') ?? '';
   const doLink = useLicenseQuery(idDoLink);
   const pelaUrl = modal === null && doLink.data ? doLink.data : null;
   const modalAtual: ModalDeLicenca = pelaUrl ? 'detalhe' : modal;
@@ -139,6 +142,7 @@ export function useLicencas() {
     if (idDoLink) {
       setParametros((atuais) => {
         atuais.delete('licenca');
+        atuais.delete('busca');
         return atuais;
       }, { replace: true });
     }
@@ -264,6 +268,8 @@ export function useLicencas() {
 
     modal: modalAtual,
     licencaAberta: licencaAtual,
+    // Só para a licença do link: a outra, aberta pela lista, abre sem busca.
+    buscaDoLink: licencaAtual && licencaAtual.id === idDoLink ? buscaDoLink : '',
     // O link apontava para uma licença que não existe mais (excluída).
     erroDoLink: idDoLink && modal === null && doLink.error ? doLink.error.message : null,
     abrir,

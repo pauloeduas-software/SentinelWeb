@@ -58,8 +58,11 @@ describe('encerrar', () => {
     expect(await motivo()).toBe('ENCERRADA_EM_USO');
     expect(await encerradasEmUso()).toBe(antes + 1);
 
-    // Encerrada não recebe entrega nova; devolver continua podendo, e tira do alerta.
-    expect((await api.post(`/api/licenses/${licenca.id}/checkout`, { assignedPersonId: cenario.ana })).status).toBe(409);
+    // Encerrada não recebe entrega nova, e a frase manda Reabrir — o botão que a
+    // tela tem. Devolver continua podendo, e tira do alerta.
+    const nova = await api.post<{ error: string }>(`/api/licenses/${licenca.id}/checkout`, { assignedPersonId: cenario.ana });
+    expect(nova.status).toBe(409);
+    expect(nova.body.error).toBe('A licença "Encerrar Office 2016" está encerrada e não recebe entrega. Se o contrato voltou, reabra-a antes.');
     expect((await api.post(`/api/licenses/checkouts/${entrega.id}/checkin`)).status).toBe(200);
     expect(await motivo()).toBeUndefined();
     expect(await encerradasEmUso()).toBe(antes);
@@ -163,10 +166,10 @@ describe('excluir de vez', () => {
     // A tela velha que ainda mostrava a entrega recebe o 409 de "já devolvida".
     const devolver = await api.post<{ error: string }>(`/api/licenses/checkouts/${entrega.body.id}/checkin`);
     expect(devolver.status).toBe(409);
-    expect(devolver.body.error).toBe('Esta entrega de "Contrato que acabou" já foi devolvida.');
+    expect(devolver.body.error).toBe('Esta entrega de "Contrato que acabou" para Igor Contrato Antigo já foi devolvida.');
     const trocar = await api.patch<{ error: string }>(`/api/licenses/checkouts/${entrega.body.id}`, { licenseKeyId: chave.id });
     expect(trocar.status).toBe(409);
-    expect(trocar.body.error).toBe('Esta entrega de "Contrato que acabou" já foi devolvida: a chave não muda mais.');
+    expect(trocar.body.error).toBe('Esta entrega de "Contrato que acabou" para Igor Contrato Antigo já foi devolvida: a chave não muda mais.');
   });
 
   it('a resposta diz se já foi entregue — a licença tem passado', async () => {

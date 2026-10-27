@@ -2,7 +2,7 @@ import { KeyRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { EntregaDoAlvo } from '../../../../domain/shared/license.types';
 import { formatarDiaDoInstante } from '../../../helpers/format.helper';
-import { ROTULO_DO_STATUS, caminhoDaLicenca, textoDoPrazo } from '../../../helpers/licenca.helper';
+import { caminhoDaLicenca, textoDaSituacao } from '../../../helpers/licenca.helper';
 
 // A ABA LICENÇAS — "o que está licenciado NESTA máquina agora".
 //
@@ -15,13 +15,15 @@ import { ROTULO_DO_STATUS, caminhoDaLicenca, textoDoPrazo } from '../../../helpe
 
 interface LicensesTabProps {
   licencas: EntregaDoAlvo[];
+  /** A etiqueta do computador: o link leva ao detalhe da licença já filtrado por ela. */
+  assetTag: string;
   carregando: boolean;
   erro: string | null;
 }
 
 const CABECALHO = 'px-3 py-2 text-left text-[10px] uppercase tracking-widest text-text-tertiary font-normal';
 
-export default function LicensesTab({ licencas, carregando, erro }: LicensesTabProps) {
+export default function LicensesTab({ licencas, assetTag, carregando, erro }: LicensesTabProps) {
   if (carregando) return <p className="text-text-tertiary">Carregando licenças…</p>;
   if (erro) return <p role="alert" className="text-status-danger">Não foi possível carregar as licenças: {erro}</p>;
 
@@ -45,6 +47,7 @@ export default function LicensesTab({ licencas, carregando, erro }: LicensesTabP
         <thead className="border-b border-border-sutil bg-bg-base/40">
           <tr>
             <th className={CABECALHO}>Licença</th>
+            <th className={CABECALHO}>Categoria</th>
             <th className={CABECALHO}>Situação</th>
             <th className={CABECALHO}>Desde</th>
           </tr>
@@ -55,22 +58,15 @@ export default function LicensesTab({ licencas, carregando, erro }: LicensesTabP
             return (
               <tr key={entrega.id} className="border-b border-border-sutil/50 last:border-0">
                 <td className="px-3 py-2">
-                  <Link to={caminhoDaLicenca(licenca.id)} className="text-text-primary hover:underline underline-offset-2">
+                  <Link to={caminhoDaLicenca(licenca.id, assetTag)} className="text-text-primary hover:underline underline-offset-2">
                     {licenca.name}
                   </Link>
-                  <div className="text-[10px] text-text-tertiary mt-0.5">
-                    {licenca.manufacturer?.name ?? licenca.category?.name ?? '—'}
-                  </div>
                   {entrega.checkoutNotes && (
                     <div className="text-[10px] text-text-secondary mt-0.5">{entrega.checkoutNotes}</div>
                   )}
                 </td>
-                <td className="px-3 py-2 text-text-secondary">
-                  {entrega.status ? ROTULO_DO_STATUS[entrega.status] : '—'}
-                  {entrega.status !== 'ENCERRADA' && licenca.expirationDate && (
-                    <span className="text-text-tertiary"> · {textoDoPrazo(entrega.diasParaVencer)}</span>
-                  )}
-                </td>
+                <td className="px-3 py-2 text-text-secondary">{licenca.category?.name ?? '—'}</td>
+                <td className="px-3 py-2 text-text-secondary">{textoDaSituacao(entrega)}</td>
                 <td className="px-3 py-2 text-text-tertiary">{formatarDiaDoInstante(entrega.checkoutAt)}</td>
               </tr>
             );

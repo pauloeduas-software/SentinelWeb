@@ -16,10 +16,15 @@ import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase
 // de entrega, e travar a licença depois dessa linha fecharia um ciclo com a
 // troca de chave, que trava a licença e depois a linha da entrega.
 
-/** Trava a licença até o fim da transação. 404 quando ela não existe. */
-export async function travarLicencaOuFalhar(client: ClienteQueTrava, licenseId: string): Promise<void> {
+/** Trava a licença até o fim da transação. `false` quando ela não existe. */
+export async function travarLicenca(client: ClienteQueTrava, licenseId: string): Promise<boolean> {
   const linhas = await client.$queryRaw<{ id: string }[]>`
     SELECT id FROM licenses WHERE id = ${licenseId}::uuid FOR UPDATE
   `;
-  if (linhas.length === 0) throw new AppError('Nenhuma licença com este identificador.', 404);
+  return linhas.length > 0;
+}
+
+/** Trava a licença até o fim da transação. 404 quando ela não existe. */
+export async function travarLicencaOuFalhar(client: ClienteQueTrava, licenseId: string): Promise<void> {
+  if (!(await travarLicenca(client, licenseId))) throw new AppError('Nenhuma licença com este identificador.', 404);
 }

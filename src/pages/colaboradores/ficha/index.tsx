@@ -4,7 +4,7 @@ import HistoryPanel from './components/HistoryPanel';
 import { useColaborador } from './hooks/useColaborador';
 import { formatarData, formatarDiaDoInstante } from '../../helpers/format.helper';
 import { caminhoDoItem, textoDeUnidades } from '../../helpers/estoque.helper';
-import { caminhoDaLicenca, textoDoPrazo } from '../../helpers/licenca.helper';
+import { caminhoDaLicenca, textoDaSituacao } from '../../helpers/licenca.helper';
 
 // FICHA DO COLABORADOR — quem é a pessoa, os POSTOS que ela ocupa, o estoque e
 // as licenças no nome dela, e o HISTÓRICO (docs/referencia/modelo-de-posse.md). Abre da
@@ -117,7 +117,10 @@ export default function ColaboradorPage() {
         <div className="flex items-center gap-3 mb-3">
           <Boxes size={14} className="text-text-tertiary" />
           <h3 className="font-mono text-xs uppercase tracking-widest text-text-secondary">
-            Itens de estoque com esta pessoa <span className="text-text-tertiary">({pessoa.itens.length})</span>
+            Itens de estoque com esta pessoa{' '}
+            <span className="text-text-tertiary">
+              ({textoDeUnidades(pessoa.itens.reduce((soma, entrega) => soma + entrega.unidades, 0))})
+            </span>
           </h3>
         </div>
         <p className="font-mono text-[10px] text-text-tertiary mb-3 leading-relaxed">
@@ -139,11 +142,11 @@ export default function ColaboradorPage() {
               {pessoa.itens.map((entrega) => (
                 <tr key={entrega.id} className="hover:bg-bg-base transition-colors">
                   <td className={CELULA}>
-                    <Link to={caminhoDoItem(entrega.item.id)} className="hover:underline underline-offset-2">
+                    <Link to={caminhoDoItem(entrega.item.id, pessoa.name)} className="hover:underline underline-offset-2">
                       {entrega.item.name}
                     </Link>
                     {!entrega.item.isActive && (
-                      <span className="ml-2 text-[10px] uppercase tracking-widest text-text-tertiary">desativado</span>
+                      <span className="ml-2 text-[10px] uppercase tracking-widest text-status-warning">desativado</span>
                     )}
                     {entrega.notes && (
                       <div className="text-[10px] text-text-tertiary mt-0.5">{entrega.notes}</div>
@@ -184,7 +187,8 @@ export default function ColaboradorPage() {
             <thead className="bg-bg-base/50 text-text-secondary border-b border-border-sutil uppercase tracking-widest">
               <tr>
                 <th className={CABECALHO}>Licença</th>
-                <th className={CABECALHO}>Vencimento</th>
+                <th className={CABECALHO}>Categoria</th>
+                <th className={CABECALHO}>Situação</th>
                 <th className={CABECALHO}>Desde</th>
               </tr>
             </thead>
@@ -192,22 +196,21 @@ export default function ColaboradorPage() {
               {pessoa.licencas.map((entrega) => (
                 <tr key={entrega.id} className="hover:bg-bg-base transition-colors">
                   <td className={CELULA}>
-                    <Link to={caminhoDaLicenca(entrega.license.id)} className="hover:underline underline-offset-2">
+                    <Link to={caminhoDaLicenca(entrega.license.id, pessoa.name)} className="hover:underline underline-offset-2">
                       {entrega.license.name}
                     </Link>
                     {entrega.checkoutNotes && (
                       <div className="text-[10px] text-text-tertiary mt-0.5">{entrega.checkoutNotes}</div>
                     )}
                   </td>
-                  <td className={`${CELULA} text-text-tertiary`}>
-                    {entrega.status === 'ENCERRADA' ? 'encerrada' : textoDoPrazo(entrega.diasParaVencer)}
-                  </td>
+                  <td className={`${CELULA} text-text-tertiary`}>{entrega.license.category?.name ?? '—'}</td>
+                  <td className={`${CELULA} text-text-tertiary`}>{textoDaSituacao(entrega)}</td>
                   <td className={`${CELULA} text-text-tertiary`}>{formatarDiaDoInstante(entrega.checkoutAt)}</td>
                 </tr>
               ))}
               {pessoa.licencas.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-6 py-10 text-center text-text-tertiary">
+                  <td colSpan={4} className="px-6 py-10 text-center text-text-tertiary">
                     Não está com nenhuma licença.
                   </td>
                 </tr>

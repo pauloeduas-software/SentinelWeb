@@ -48,7 +48,8 @@ aqui à parte, à mão — nada cria colaborador a partir de usuário.
 
 O botão 📄 abre `/colaboradores/:id`: os **postos** que a pessoa
 ocupa (com o turno), os **itens de estoque** e as **licenças** no nome dela — cada
-um com o link para o detalhe do item ou da licença, onde está o Devolver — e o
+um com o link para o detalhe do item ou da licença, já filtrado pelo nome dela, onde está o
+Devolver — e o
 **histórico**, que é só movimentação: entregas e devoluções de ativo, entradas e
 saídas de posto, licenças e estoque recebidos e devolvidos. Só o que foi entregue a
 ELA: as licenças do computador que ela usa ficam na aba Licenças do ativo, e o

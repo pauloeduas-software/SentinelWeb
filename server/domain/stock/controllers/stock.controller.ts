@@ -66,7 +66,7 @@ export const stockController = {
     return updateStockItem(id, data, atorDaRequisicao(request));
   },
 
-  /** Exclusão DEFINITIVA — para o cadastro errado. O item que já saiu se desativa. */
+  /** Exclusão DEFINITIVA. Só o que está em uso impede (AG); o que pode voltar a ser comprado se desativa. */
   async remove(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
     await deleteStockItem(id, atorDaRequisicao(request));

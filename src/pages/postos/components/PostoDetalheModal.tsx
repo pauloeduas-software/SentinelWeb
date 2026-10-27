@@ -361,11 +361,11 @@ export default function PostoDetalheModal({
                   {itens.map((entrega) => (
                     <tr key={entrega.id} className="hover:bg-bg-base transition-colors">
                       <td className="px-4 py-3 text-text-primary">
-                        <Link to={caminhoDoItem(entrega.item.id)} className="hover:underline underline-offset-2">
+                        <Link to={caminhoDoItem(entrega.item.id, detalhe?.name ?? posto?.name)} className="hover:underline underline-offset-2">
                           {entrega.item.name}
                         </Link>
                         {!entrega.item.isActive && (
-                          <span className="ml-2 text-[10px] uppercase tracking-widest text-text-tertiary">desativado</span>
+                          <span className="ml-2 text-[10px] uppercase tracking-widest text-status-warning">desativado</span>
                         )}
                         {entrega.notes && (
                           <div className="text-[10px] text-text-tertiary mt-0.5">{entrega.notes}</div>

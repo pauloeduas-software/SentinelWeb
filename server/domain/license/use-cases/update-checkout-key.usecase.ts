@@ -5,7 +5,7 @@ import type { Ator } from '../../audit/audit.types';
 import { CHECKOUT_COM_CHAVE_SELECT, rotuloDoAlvoDaEntrega } from '../helpers/license-select.helper';
 import type { CheckoutKeyData } from '../schemas/license.schema';
 import { chaveDaEntrega } from './license-keys.usecase';
-import { travarLicencaOuFalhar } from './lock-license.usecase';
+import { travarLicenca } from './lock-license.usecase';
 
 /**
  * TROCAR A CHAVE DE UMA ENTREGA ABERTA por outra da lista da licença (AC) — e só
@@ -19,20 +19,35 @@ import { travarLicencaOuFalhar } from './lock-license.usecase';
  * ela; de todo jeito, a releitura com a linha travada é que decide se ainda
  * está aberta.
  */
+const ALVO_SELECT = {
+  assignedPerson: { select: { name: true } },
+  assignedAsset: { select: { assetTag: true, name: true } },
+} as const;
+
+/** O 409 da entrega que já voltou, com quem ela estava — como o do estoque. */
+function jaDevolvida(nome: string | null | undefined, entrega: Parameters<typeof rotuloDoAlvoDaEntrega>[0]): AppError {
+  return new AppError(
+    `Esta entrega de "${nome ?? 'licença excluída'}" para ${rotuloDoAlvoDaEntrega(entrega)} já foi devolvida: a chave não muda mais.`,
+    409,
+  );
+}
+
 export async function updateCheckoutKey(checkoutId: string, data: CheckoutKeyData, ator: Ator) {
   // Sem trava, só para saber QUAL licença travar.
   const previa = await prisma.licenseCheckout.findUnique({
-    where: { id: checkoutId }, select: { licenseId: true, licenseName: true },
+    where: { id: checkoutId },
+    select: { licenseId: true, licenseName: true, license: { select: { name: true } }, ...ALVO_SELECT },
   });
   if (!previa) throw new AppError('Nenhuma entrega de licença com este identificador.', 404);
   // A da licença excluída (AG) é sempre devolvida: a em uso segura a exclusão.
   const licenseId = previa.licenseId;
-  if (!licenseId) {
-    throw new AppError(`Esta entrega de "${previa.licenseName}" já foi devolvida: a chave não muda mais.`, 409);
-  }
+  if (!licenseId) throw jaDevolvida(previa.licenseName, previa);
 
   return prisma.$transaction(async (tx) => {
-    await travarLicencaOuFalhar(tx, licenseId);
+    // A licença sumiu entre a prévia e a trava: a exclusão só passa com tudo
+    // devolvido (AG), então esta entrega também já voltou — 409, e não o 404 da
+    // licença, que diria à tela velha que a entrega nunca existiu.
+    if (!(await travarLicenca(tx, licenseId))) throw jaDevolvida(previa.license?.name, previa);
     await tx.$queryRaw`SELECT id FROM license_checkouts WHERE id = ${checkoutId}::uuid FOR UPDATE`;
 
     const entrega = await tx.licenseCheckout.findUniqueOrThrow({
@@ -41,15 +56,12 @@ export async function updateCheckoutKey(checkoutId: string, data: CheckoutKeyDat
         checkinAt: true,
         licenseKeyId: true,
         license: { select: { id: true, name: true } },
-        assignedPerson: { select: { name: true } },
-        assignedAsset: { select: { assetTag: true, name: true } },
+        ...ALVO_SELECT,
       },
     });
     // Com a licença travada, ela existe: a entrega sem licença é a devolvida.
     const licenca = entrega.license;
-    if (entrega.checkinAt || !licenca) {
-      throw new AppError(`Esta entrega de "${licenca?.name ?? previa.licenseName}" já foi devolvida: a chave não muda mais.`, 409);
-    }
+    if (entrega.checkinAt || !licenca) throw jaDevolvida(licenca?.name ?? previa.licenseName, entrega);
 
     const licenseKeyId = await chaveDaEntrega(tx, licenca, data.licenseKeyId, checkoutId);
 

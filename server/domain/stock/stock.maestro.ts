@@ -10,7 +10,7 @@ const logger = createLogger('stock.maestro');
 //
 // A MESMA LÓGICA DA LICENÇA (AE), e as rotas têm a mesma forma: o total é campo
 // da edição, a entrega e a devolução têm dia, o item que acabou se desativa e
-// só o que nunca saiu se exclui. O saldo é calculado, nunca coluna
+// só o que está em uso impede excluir (AG). O saldo é calculado, nunca coluna
 // (`helpers/stock-balance.helper.ts`).
 //
 // ORDEM DAS ROTAS: `/api/stock/checkouts/:id/checkin` e `/api/stock/items/:id`

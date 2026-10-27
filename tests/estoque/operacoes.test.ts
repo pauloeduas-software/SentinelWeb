@@ -163,6 +163,17 @@ describe('com quem está', () => {
     expect(repetida.body.error).toMatch(/já foi devolvida/);
     expect((await devolver('00000000-0000-0000-0000-000000000000')).status).toBe(404);
   });
+
+  it('a devolução parcial não muda o id da entrega: voltam as unidades de cima', async () => {
+    const cabo = await item('Cabo da linha que fica', 5);
+    await entregar(cabo.id, { targetType: 'WORKSTATION', targetWorkstationId: cenario.mesa1, qty: 3 });
+    const [linha] = (await api.get<{ rows: Entrega[] }>(`/api/stock/items/${cabo.id}/checkouts`)).body.rows;
+
+    // A tela casa o Devolver aberto pelo id da linha: ele continua o mesmo.
+    expect((await devolver(linha.id, { qty: 2 })).status).toBe(200);
+    const depois = await api.get<{ rows: Entrega[] }>(`/api/stock/items/${cabo.id}/checkouts`);
+    expect(depois.body.rows.map((entrega) => [entrega.id, entrega.unidades])).toEqual([[linha.id, 1]]);
+  });
 });
 
 describe('o histórico', () => {

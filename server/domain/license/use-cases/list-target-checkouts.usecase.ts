@@ -52,7 +52,7 @@ export function comStatus(entregas: EntregaDoAlvo[]) {
 /** A aba Licenças do ativo: o que está nesta máquina agora. */
 export async function listAssetLicenses(assetId: string) {
   const ativo = await prisma.asset.findFirst({ where: { id: assetId }, select: { id: true } });
-  if (!ativo) throw new AppError('Nenhum ativo com este identificador.', 404);
+  if (!ativo) throw new AppError('Ativo não encontrado.', 404);
 
   return comStatus(await buscarEntregasDoAtivo(assetId, { abertas: true }));
 }

@@ -38,7 +38,7 @@ export async function checkinLicense(checkoutId: string, data: Partial<CheckinLi
     const licenca = entrega.license;
     if (entrega.checkinAt || !licenca || !entrega.licenseId) {
       throw new AppError(
-        `Esta entrega de "${licenca?.name ?? entrega.licenseName}" já foi devolvida.`,
+        `Esta entrega de "${licenca?.name ?? entrega.licenseName}" para ${rotuloDoAlvoDaEntrega(entrega)} já foi devolvida.`,
         409,
       );
     }

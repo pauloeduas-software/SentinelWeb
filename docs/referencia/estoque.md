@@ -67,9 +67,11 @@ A edição mostra o **total** e manda **o formulário inteiro**, como em todas a
 ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)): um formulário aberto há tempo desfaz a edição que outra pessoa salvou no meio, e o
 servidor só barra o total abaixo do que está em uso. Com unidades em uso, o campo diz o mínimo.
 
-**Quando a última linha de uma página sai** — excluída, devolvida —, a lista e o
-"Com quem está" voltam para a última página que existe. **A devolução que o servidor recusa**
-deixa a linha aberta, com o que foi escolhido, para tentar de novo.
+**Quando a última linha de uma página sai** — excluída, devolvida, aqui ou por outra pessoa —, a
+lista e o "Com quem está" voltam para a última página que existe. **A devolução que o servidor
+recusa** deixa a linha aberta, com o que foi escolhido, para tentar de novo — e a tela busca de
+novo o que mudou, como na licença: toda ação, recusada ou não, atualiza a lista, o detalhe e as
+contas. O cabeçalho do Entregar também lê o detalhe, e acompanha.
 
 ## Desativar, ativar e excluir
 
@@ -109,6 +111,8 @@ no passado mesmo que, naquele dia, estivessem em ordem.
 unidades dela. **A devolução também é uma só** pelo instante em que foi registrada
 (`returnRecordedAt`, gravado junto com o dia): duas devoluções da mesma entrega no mesmo dia
 passado — as duas ao meio-dia — continuam sendo duas no histórico do item e no da pessoa.
+**A devolução parcial fecha as unidades de maior id**: a entrega é identificada pela menor unidade
+ainda aberta, e assim ela continua com o mesmo `:id` depois de devolver parte.
 
 **A devolução** pergunta **quantas** — por padrão, todas as que ainda estão fora nesta entrega — e
 o **dia**, na própria linha de "Com quem está", no detalhe do item — o único lugar do sistema que
@@ -123,7 +127,7 @@ A entrega confere **na ordem da tabela** e responde a primeira recusa — o cola
 
 | Tentativa | Resposta |
 |---|---|
-| entrega ou devolução num dia futuro | 422 `data da entrega não pode ser uma data futura` |
+| entrega ou devolução num dia futuro | 422 `data da entrega não pode ser uma data futura` / `data da devolução não pode ser uma data futura` |
 | quantidade zero, ou mais de 100 numa entrega | 422 |
 | dois alvos, ou nenhum | 422 `Uma entrega tem UM alvo: preencha só a chave que corresponde ao targetType (PERSON).` / `Entrega do tipo "WORKSTATION" exige um posto (targetWorkstationId).` |
 | item, colaborador ou posto que não existe, ou colaborador na lixeira | 404 |
@@ -142,8 +146,8 @@ depois. Devolver sempre pode, mesmo com o item desativado, e não pede confirma�
 
 | Onde | O quê |
 |---|---|
-| **ficha do posto** | o estoque **da mesa**, por entrega, com quantas e desde quando; o nome leva ao detalhe do item (`/estoque?item=<id>`), onde está o Devolver. O item desativado aparece marcado. Não conta como ativo do posto |
-| **ficha do colaborador** | o estoque **no nome dela**, com o mesmo link |
+| **ficha do posto** | o estoque **da mesa**, por entrega, com quantas e desde quando; o nome leva ao detalhe do item com "Com quem está" já filtrado pelo posto (`/estoque?item=<id>&busca=Mesa 1`), onde está o Devolver. O item desativado aparece marcado. Não conta como ativo do posto |
+| **ficha do colaborador** | o estoque **no nome dela**, com o mesmo link, filtrado pelo nome dela; o título conta as unidades, como a ficha do posto e o 409 da desativação |
 | **histórico do colaborador** | entregas e devoluções de estoque **a ela**, por entrega ("Recebeu: Mouse USB · 2 unidades") |
 
 **Separado por alvo:** o que foi entregue ao posto é da mesa, e não aparece na pessoa que o ocupa

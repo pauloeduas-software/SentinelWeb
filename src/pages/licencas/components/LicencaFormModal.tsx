@@ -19,7 +19,10 @@ import type { LinhaDeChave } from '../helpers/licenca.helper';
 // alguém tentar.
 //
 // NA EDIÇÃO, A LICENÇA VEM DO DETALHE, e não da linha da listagem: é o detalhe
-// que traz as chaves de produto (a listagem não as devolve), e ele chega fresco.
+// que traz as chaves de produto (a listagem não as devolve). E da busca FEITA
+// NESTA ABERTURA, não do cache: o detalhe guardado de uma visita anterior pode
+// ser de antes de um Encerrar ou da edição de outra pessoa, e o formulário
+// inteiro o gravaria de volta — reabrindo a licença sem ninguém pedir.
 //
 // NA EDIÇÃO, O FORMULÁRIO INTEIRO VAI AO SERVIDOR, como nas Configurações (AF).
 // O preço, declarado: o formulário aberto há tempo desfaz a edição que outra
@@ -64,8 +67,10 @@ export default function LicencaFormModal({ licenca, onClose, onSubmit }: Licenca
 
 /** A edição espera o detalhe chegar: o formulário nasce com as chaves já preenchidas. */
 function EdicaoDaLicenca({ id, onClose, onSubmit }: Omit<LicencaFormModalProps, 'licenca'> & { id: string }) {
-  const { data, error } = useLicenseQuery(id);
-  if (data) return <Formulario licenca={data} onClose={onClose} onSubmit={onSubmit} />;
+  // `isFetchedAfterMount`: o que estava no cache aparece na hora, mas o
+  // formulário só nasce com o que a busca desta abertura trouxe.
+  const { data, error, isFetchedAfterMount } = useLicenseQuery(id);
+  if (data && isFetchedAfterMount && !error) return <Formulario licenca={data} onClose={onClose} onSubmit={onSubmit} />;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">

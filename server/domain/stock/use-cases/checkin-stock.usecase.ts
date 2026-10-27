@@ -98,7 +98,10 @@ export async function checkinStock(movementId: string, data: Partial<CheckinStoc
     const instante = instanteDoDia(dia);
     const returnedAt = instante < unidade.checkoutAt ? unidade.checkoutAt : instante;
 
-    const ids = abertas.slice(0, pedidas).map((linha) => linha.id);
+    // As de MAIOR id voltam primeiro: a entrega é identificada pela menor unidade
+    // aberta (`agruparPorLote`), e devolver as de cima deixa esse id igual depois
+    // da devolução parcial — a linha da tela, e o Devolver aberto nela, continuam.
+    const ids = abertas.slice(abertas.length - pedidas).map((linha) => linha.id);
     // O DIA e o INSTANTE do registro: o instante é o que separa esta devolução
     // de outra da mesma entrega no mesmo dia — o dia passado é sempre o meio-dia.
     await tx.stockMovement.updateMany({ where: { id: { in: ids } }, data: { returnedAt, returnRecordedAt: new Date() } });

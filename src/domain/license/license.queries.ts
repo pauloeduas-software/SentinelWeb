@@ -104,14 +104,25 @@ export function useAssetLicensesQuery(assetId: string | null) {
  * muda a aba Licenças e o histórico do ativo. Operação que atravessa domínios
  * invalida os dois lados.
  *
- * Devolve a promessa, e o `onSuccess` a devolve também: a mutação só termina
+ * Devolve a promessa, e o `onSettled` a devolve também: a mutação só termina
  * quando as listas abertas já foram buscadas de novo. Sem isso o botão
  * destravava com a linha devolvida, encerrada ou excluída ainda na tela, e o
  * segundo clique dava "já foi devolvida".
+ *
+ * NO ERRO TAMBÉM (`onSettled`): o 409 quase sempre quer dizer que a tela está
+ * velha — outra pessoa devolveu, entregou ou encerrou no meio. Sem buscar de
+ * novo, a linha continuava oferecendo o que o servidor acabou de recusar.
+ *
+ * `excluida`: a licença que acabou de ser apagada. As consultas DELA ficam de
+ * fora — buscá-las de novo é um 404 garantido, que a janela do detalhe ainda
+ * aberta mostrava antes de fechar.
  */
-function invalidarLicencaEPosse(queryClient: ReturnType<typeof useQueryClient>) {
+function invalidarLicencaEPosse(queryClient: ReturnType<typeof useQueryClient>, excluida?: string) {
   return Promise.all([
-    queryClient.invalidateQueries({ queryKey: licenseKeys.all }),
+    queryClient.invalidateQueries({
+      queryKey: licenseKeys.all,
+      predicate: (consulta) => excluida === undefined || consulta.queryKey[2] !== excluida,
+    }),
     queryClient.invalidateQueries({ queryKey: assetKeys.all }),
     queryClient.invalidateQueries({ queryKey: personKeys.all }),
   ]);
@@ -121,17 +132,17 @@ export function useCreateLicense() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: LicencaInput) => apiClient.post<Licenca>('/licenses', data),
-    onSuccess: () => invalidarLicencaEPosse(queryClient),
+    onSettled: () => invalidarLicencaEPosse(queryClient),
   });
 }
 
-/** Manda SÓ o que mudou: um formulário aberto há tempo não desfaz a edição de outro. */
+/** O formulário inteiro (AF): o aberto há tempo desfaz a edição de outro — o preço aceito. */
 export function useUpdateLicense() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<LicencaInput> }) =>
       apiClient.put<Licenca>(`/licenses/${id}`, data),
-    onSuccess: () => invalidarLicencaEPosse(queryClient),
+    onSettled: () => invalidarLicencaEPosse(queryClient),
   });
 }
 
@@ -140,7 +151,7 @@ export function useDeleteLicense() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiClient.delete(`/licenses/${id}`),
-    onSuccess: () => invalidarLicencaEPosse(queryClient),
+    onSettled: (_resposta, erro, id) => invalidarLicencaEPosse(queryClient, erro ? undefined : id),
   });
 }
 
@@ -149,7 +160,7 @@ export function useTerminateLicense() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiClient.post<Licenca>(`/licenses/${id}/terminate`),
-    onSuccess: () => invalidarLicencaEPosse(queryClient),
+    onSettled: () => invalidarLicencaEPosse(queryClient),
   });
 }
 
@@ -159,7 +170,7 @@ export function useCheckoutLicense() {
   return useMutation({
     mutationFn: ({ licenseId, alvo }: { licenseId: string; alvo: AlvoDaEntrega }) =>
       apiClient.post<EntregaDeLicenca>(`/licenses/${licenseId}/checkout`, alvo),
-    onSuccess: () => invalidarLicencaEPosse(queryClient),
+    onSettled: () => invalidarLicencaEPosse(queryClient),
   });
 }
 
@@ -170,7 +181,7 @@ export function useCheckinLicense() {
     /** `checkinAt` é o dia da devolução, 'AAAA-MM-DD': hoje ou antes, nunca antes da entrega. */
     mutationFn: ({ checkoutId, checkinAt }: { checkoutId: string; checkinAt: string }) =>
       apiClient.post<EntregaDeLicenca>(`/licenses/checkouts/${checkoutId}/checkin`, { checkinAt }),
-    onSuccess: () => invalidarLicencaEPosse(queryClient),
+    onSettled: () => invalidarLicencaEPosse(queryClient),
   });
 }
 
@@ -180,6 +191,6 @@ export function useUpdateCheckoutKey() {
   return useMutation({
     mutationFn: ({ checkoutId, licenseKeyId }: { checkoutId: string; licenseKeyId: string }) =>
       apiClient.patch<EntregaComChave>(`/licenses/checkouts/${checkoutId}`, { licenseKeyId }),
-    onSuccess: () => invalidarLicencaEPosse(queryClient),
+    onSettled: () => invalidarLicencaEPosse(queryClient),
   });
 }

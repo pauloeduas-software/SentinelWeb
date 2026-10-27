@@ -11,8 +11,8 @@ import { classeDaConta, motivoParaNaoEntregar, resumoDaContagem } from '../helpe
 //
 // O CADASTRO É O DAS CONFIGURAÇÕES (`CatalogTable`): Editar, Desativar/Ativar
 // e Excluir, nessa ordem; o desativado fica na lista, esmaecido e marcado; e
-// Excluir sempre clica — o item já entregue recebe o 409 do servidor, que
-// manda desativar.
+// Excluir sempre clica — o item em uso recebe o 409 do servidor, que diz com
+// quem está e manda devolver (AG).
 
 interface EstoqueTableProps {
   itens: ItemDeEstoque[];

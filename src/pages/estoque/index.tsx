@@ -21,7 +21,7 @@ export default function EstoquePage() {
   const {
     itens, total, carregando, erro, page, perPage, setPage, search, changeSearch,
     categoryId, changeCategoria,
-    modal, itemAberto, erroDoLink, abrir, fechar, ocupado,
+    modal, itemAberto, buscaDoLink, erroDoLink, abrir, fechar, ocupado,
     handleCriar, handleEditar, handleEntregar, handleDevolver, handleAlternarAtivo, handleExcluir,
   } = useEstoque();
   // Excluir é `ADMIN` no servidor.
@@ -109,7 +109,10 @@ export default function EstoquePage() {
 
       {modal === 'detalhe' && itemAberto && (
         <ItemDetalheModal
+          // Outro item é outra janela: página e busca não passam de um para o outro.
+          key={itemAberto.id}
           item={itemAberto}
+          buscaInicial={buscaDoLink}
           ocupado={ocupado}
           onClose={fechar}
           onEntregar={(item) => abrir('entregar', item)}

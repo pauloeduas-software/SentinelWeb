@@ -1,4 +1,4 @@
-import type { Licenca, StatusDaLicenca } from '../../domain/shared/license.types';
+import type { EntregaDoAlvo, Licenca, StatusDaLicenca } from '../../domain/shared/license.types';
 import { formatarMoeda } from './format.helper';
 
 // A LICENÇA LIDA EM TEXTO — funções puras compartilhadas pelas três telas que
@@ -9,10 +9,12 @@ import { formatarMoeda } from './format.helper';
 /**
  * O endereço do detalhe de uma licença: a tela de Licenças abre a janela dela.
  * É por ele que o ativo e a ficha do colaborador apontam para a licença — a
- * devolução mora lá.
+ * devolução mora lá. `busca` é quem está com ela — o nome do colaborador ou a
+ * etiqueta do computador —, e "Com quem está" já abre filtrado.
  */
-export function caminhoDaLicenca(licenseId: string): string {
-  return `/licencas?licenca=${licenseId}`;
+export function caminhoDaLicenca(licenseId: string, busca?: string): string {
+  const parametros = new URLSearchParams({ licenca: licenseId, ...(busca ? { busca } : {}) });
+  return `/licencas?${parametros.toString()}`;
 }
 
 /** O status no vocabulário da tela: `EXPIRADA` é a que a tela chama de vencida. */
@@ -46,6 +48,18 @@ export function textoDoPrazo(dias: number | null): string {
   if (dias < 0) return `venceu há ${Math.abs(dias)} dia${Math.abs(dias) === 1 ? '' : 's'}`;
   if (dias === 0) return 'vence hoje';
   return `vence em ${dias} dia${dias === 1 ? '' : 's'}`;
+}
+
+/**
+ * A situação de uma licença entregue, vista de quem a recebeu — a aba Licenças
+ * do computador e a ficha do colaborador dizem a mesma frase: "Ativa · vence em
+ * 20 dias", "Vencida · venceu há 3 dias", "Encerrada".
+ */
+export function textoDaSituacao(entrega: Pick<EntregaDoAlvo, 'status' | 'diasParaVencer' | 'license'>): string {
+  if (!entrega.status) return '—';
+  const rotulo = ROTULO_DO_STATUS[entrega.status];
+  if (entrega.status === 'ENCERRADA' || !entrega.license.expirationDate) return rotulo;
+  return `${rotulo} · ${textoDoPrazo(entrega.diasParaVencer)}`;
 }
 
 /** "10 compradas · 7 em uso · 3 livres". */

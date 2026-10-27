@@ -77,14 +77,18 @@ export function useStockHistoryQuery(id: string | null, params: Omit<ParamsDoDet
 }
 
 /**
- * Devolve a promessa, e o `onSuccess` a devolve também: a mutação só termina
+ * Devolve a promessa, e o `onSettled` a devolve também: a mutação só termina
  * quando as listas abertas já foram buscadas de novo. Sem isso o botão
  * destravava com a entrega devolvida ainda na tela, e o segundo clique dava "já
- * foi devolvida" — o mesmo cuidado do `invalidarLicencaEPosse`.
+ * foi devolvida" — o mesmo cuidado do `invalidarLicencaEPosse`, que explica o
+ * erro (`onSettled`) e a `excluida`.
  */
-function invalidarEstoqueEPosse(queryClient: ReturnType<typeof useQueryClient>) {
+function invalidarEstoqueEPosse(queryClient: ReturnType<typeof useQueryClient>, excluida?: string) {
   return Promise.all([
-    queryClient.invalidateQueries({ queryKey: stockKeys.all }),
+    queryClient.invalidateQueries({
+      queryKey: stockKeys.all,
+      predicate: (consulta) => excluida === undefined || consulta.queryKey[2] !== excluida,
+    }),
     queryClient.invalidateQueries({ queryKey: personKeys.all }),
     queryClient.invalidateQueries({ queryKey: workstationKeys.all }),
   ]);
@@ -94,20 +98,20 @@ export function useCreateStockItem() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: ItemDeEstoqueInput) => apiClient.post<ItemDeEstoque>('/stock/items', data),
-    onSuccess: () => invalidarEstoqueEPosse(queryClient),
+    onSettled: () => invalidarEstoqueEPosse(queryClient),
   });
 }
 
 /**
- * Manda SÓ o que mudou: um formulário aberto há tempo não desfaz a edição de
- * outro. `isActive` é o Desativar e o Ativar.
+ * O formulário inteiro (AF), como na licença; `isActive` sozinho é o Desativar e
+ * o Ativar.
  */
 export function useUpdateStockItem() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<ItemDeEstoqueInput> & { isActive?: boolean } }) =>
       apiClient.put<ItemDeEstoque>(`/stock/items/${id}`, data),
-    onSuccess: () => invalidarEstoqueEPosse(queryClient),
+    onSettled: () => invalidarEstoqueEPosse(queryClient),
   });
 }
 
@@ -116,7 +120,7 @@ export function useDeleteStockItem() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiClient.delete(`/stock/items/${id}`),
-    onSuccess: () => invalidarEstoqueEPosse(queryClient),
+    onSettled: (_resposta, erro, id) => invalidarEstoqueEPosse(queryClient, erro ? undefined : id),
   });
 }
 
@@ -126,7 +130,7 @@ export function useCheckoutStock() {
   return useMutation({
     mutationFn: ({ itemId, alvo }: { itemId: string; alvo: AlvoDaEntregaDeEstoque }) =>
       apiClient.post(`/stock/items/${itemId}/checkout`, alvo),
-    onSuccess: () => invalidarEstoqueEPosse(queryClient),
+    onSettled: () => invalidarEstoqueEPosse(queryClient),
   });
 }
 
@@ -137,6 +141,6 @@ export function useCheckinStock() {
     /** `checkinAt` é o dia, 'AAAA-MM-DD': hoje ou antes, nunca antes da entrega. */
     mutationFn: ({ entregaId, qty, checkinAt }: { entregaId: string; qty: number; checkinAt: string }) =>
       apiClient.post<ResultadoDaDevolucao>(`/stock/checkouts/${entregaId}/checkin`, { qty, checkinAt }),
-    onSuccess: () => invalidarEstoqueEPosse(queryClient),
+    onSettled: () => invalidarEstoqueEPosse(queryClient),
   });
 }
