@@ -7,21 +7,31 @@
 // de um cliente é adivinhar o parque dele (`categorias.seed.ts`).
 //
 // Este aqui é para o ambiente de desenvolvimento e para demonstrar o sistema:
-// abre as telas com dado plausível. Roda o seed principal ANTES — os modelos
+// abre as telas com dado plausível, e cria a conta de entrar
+// (`administrador.seed.ts`). Roda o seed principal ANTES — os modelos
 // precisam das categorias — e é idempotente: rodar de novo não duplica nem
 // desfaz o que foi editado pela tela.
 import { closeDatabase } from '../../../server/core/database/prismaClient';
 import { semearBanco } from '../index';
 import { logger, type Seeder } from '../seeder';
+import { administradorDemo } from './administrador.seed';
+import { colaboradoresDemo } from './colaboradores.seed';
+import { estoqueDemo } from './estoque.seed';
 import { fabricantesDemo } from './fabricantes.seed';
+import { licencasDemo } from './licencas.seed';
 import { localizacoesDemo } from './localizacoes.seed';
 import { modelosDemo } from './modelos.seed';
 
-// Os modelos DEPOIS dos fabricantes: cada modelo aponta para um.
+// Os modelos e as licenças DEPOIS dos fabricantes, e o estoque DEPOIS das
+// localizações: cada um aponta para o anterior.
 const seeders: Seeder[] = [
+  administradorDemo,
   fabricantesDemo,
   modelosDemo,
   localizacoesDemo,
+  colaboradoresDemo,
+  licencasDemo,
+  estoqueDemo,
 ];
 
 async function semearDemonstracao(): Promise<void> {
