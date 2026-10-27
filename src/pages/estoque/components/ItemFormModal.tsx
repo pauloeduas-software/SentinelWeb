@@ -40,6 +40,9 @@ export default function ItemFormModal({ item, onClose, onSubmit }: ItemFormModal
   const [locationId, setLocationId] = useState(item?.locationId ?? '');
   const [qty, setQty] = useState(item ? String(item.qty) : '1');
   const [notes, setNotes] = useState(item?.notes ?? '');
+  // A versão DESTA abertura (AF): o registro pode chegar mais novo enquanto o
+  // formulário está aberto, e o que ele mostra continua sendo o desta leitura.
+  const [versao] = useState(item?.updatedAt);
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
@@ -66,6 +69,7 @@ export default function ItemFormModal({ item, onClose, onSubmit }: ItemFormModal
       qty: quantidade,
       locationId: locationId || null,
       notes: limpar(notes),
+      ...(versao ? { updatedAt: versao } : {}),
     };
 
     try {

@@ -88,6 +88,9 @@ function EdicaoDaLicenca({ id, onClose, onSubmit }: Omit<LicencaFormModalProps, 
 
 function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 'licenca'> & { licenca: LicencaDetalhe | null }) {
   const editando = licenca !== null;
+  // A versão DESTA abertura (AF): o registro pode chegar mais novo enquanto o
+  // formulário está aberto, e o que ele mostra continua sendo o desta leitura.
+  const [versao] = useState(licenca?.updatedAt);
 
   const [name, setName] = useState(licenca?.name ?? '');
   const [categoryId, setCategoryId] = useState(licenca?.categoryId ?? '');
@@ -156,6 +159,7 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
       keys: preenchidas.map((linha) => chaveParaEnvio({
         id: linha.id, productKey: linha.productKey.trim(), seats: Number(linha.seats),
       })),
+      ...(versao ? { updatedAt: versao } : {}),
     };
 
     try {

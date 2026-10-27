@@ -19,7 +19,7 @@ export const assetModelSpec: CatalogSpec = {
   // o uuid — e uma segunda consulta por linha seria N+1 na tela.
   select: {
     id: true, name: true, modelNumber: true, notes: true, isActive: true,
-    manufacturerId: true, categoryId: true, createdAt: true,
+    manufacturerId: true, categoryId: true, createdAt: true, updatedAt: true,
     manufacturer: { select: { id: true, name: true } },
     category: { select: { id: true, name: true, type: true } },
   },

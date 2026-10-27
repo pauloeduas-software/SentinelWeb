@@ -98,7 +98,8 @@ export function useUpdateCatalogRow(slug: string) {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: CatalogInput }) =>
       apiClient.put(`/${slug}/${id}`, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: catalogKeys.tabela(slug) }),
+    // No erro também: depois do 409 de versão, o Editar reaberto vem com a linha nova (AF).
+    onSettled: () => queryClient.invalidateQueries({ queryKey: catalogKeys.tabela(slug) }),
   });
 }
 

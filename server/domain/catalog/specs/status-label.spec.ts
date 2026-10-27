@@ -64,7 +64,7 @@ export const statusLabelSpec: CatalogSpec = {
 
   select: {
     id: true, name: true, type: true,
-    notes: true, isActive: true, createdAt: true,
+    notes: true, isActive: true, createdAt: true, updatedAt: true,
   },
   searchable: ['name'],
   audited: ['name', 'type', 'notes', 'isActive'],

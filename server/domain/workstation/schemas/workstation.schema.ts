@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { booleano, nomeObrigatorio, textoOpcional, uuidObrigatorio } from '../../shared/fields.schema';
+import { booleano, nomeObrigatorio, textoOpcional, uuidObrigatorio, versaoLida } from '../../shared/fields.schema';
 
 // Contrato de entrada das rotas de posto.
 //
@@ -17,6 +17,7 @@ export const updateWorkstationSchema = z.strictObject({
   locationId: uuidObrigatorio('localização').optional(),
   notes: textoOpcional('notas', 2_000),
   isActive: booleano('ativo').optional(),
+  updatedAt: versaoLida,
 });
 
 /**

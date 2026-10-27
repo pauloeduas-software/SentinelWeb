@@ -2,6 +2,7 @@ import { prisma } from '../../../core/database/prismaClient';
 import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
 import { buildChanges } from '../../shared/diff.helper';
+import { assertVersaoLida } from '../../shared/versao.helper';
 import { AppError } from '../../../core/errors/app-error';
 import { fraseDoPiso } from '../helpers/license-count.helper';
 import { assertDatasCobremAsEntregas, assertDatasNaoAntecedemACompra } from '../helpers/license-dates.helper';
@@ -30,12 +31,14 @@ import { travarLicencaOuFalhar } from './lock-license.usecase';
  * descia abaixo do que está na rua.
  */
 export async function updateLicense(id: string, data: UpdateLicenseData, ator: Ator): Promise<LicencaNaResposta> {
-  const { keys, ...campos } = data;
+  const { keys, updatedAt: lida, ...campos } = data;
 
   const licenca = await prisma.$transaction(async (tx) => {
     await travarLicencaOuFalhar(tx, id);
 
     const antes = await tx.license.findUniqueOrThrow({ where: { id }, select: LICENSE_SELECT }) as LinhaDeLicenca;
+    // O formulário aberto antes de um Encerrar ou da edição de outra pessoa (AF).
+    assertVersaoLida(antes.updatedAt, lida, antes.name);
 
     await assertReferenciasDaLicenca(tx, data, {
       categoryId: antes.categoryId as string,

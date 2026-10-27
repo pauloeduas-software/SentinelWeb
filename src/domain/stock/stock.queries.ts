@@ -103,8 +103,8 @@ export function useCreateStockItem() {
 }
 
 /**
- * O formulário inteiro (AF), como na licença; `isActive` sozinho é o Desativar e
- * o Ativar.
+ * O formulário inteiro (AF), com a versão que ele leu, como na licença;
+ * `isActive` sozinho é o Desativar e o Ativar, e não confere versão.
  */
 export function useUpdateStockItem() {
   const queryClient = useQueryClient();

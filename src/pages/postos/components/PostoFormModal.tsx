@@ -29,6 +29,9 @@ export default function PostoFormModal({ posto, onClose, onSubmit }: PostoFormMo
   const [name, setName] = useState(posto?.name ?? '');
   const [locationId, setLocationId] = useState(posto?.locationId ?? '');
   const [notes, setNotes] = useState(posto?.notes ?? '');
+  // A versão DESTA abertura (AF): o registro pode chegar mais novo enquanto o
+  // formulário está aberto, e o que ele mostra continua sendo o desta leitura.
+  const [versao] = useState(posto?.updatedAt);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -38,7 +41,7 @@ export default function PostoFormModal({ posto, onClose, onSubmit }: PostoFormMo
     setErro('');
 
     try {
-      await onSubmit(montarPosto({ name, locationId, notes }, posto !== null));
+      await onSubmit({ ...montarPosto({ name, locationId, notes }, posto !== null), ...(versao ? { updatedAt: versao } : {}) });
     } catch (falha) {
       // O apiClient já traduziu a resposta do servidor em Error.message — é
       // aqui que aparece o 409 de nome repetido e o de localização desativada.

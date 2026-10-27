@@ -92,7 +92,10 @@ Estoque e Licenças têm os mesmos botões, a mesma marca e as mesmas frases —
 `Desativar "X"? Continua no histórico, mas some das escolhas e não recebe nada
 novo.` e `Excluir "X"? Esta ação não tem lixeira.` —, e o Excluir sempre clica:
 quem decide é o 409 do servidor. **O Editar manda o formulário inteiro** em todas
-as telas. As diferenças são de propósito:
+as telas, com o `updatedAt` que leu ao abrir: se outra pessoa salvou no meio, é 409
+`Outra pessoa salvou "X" enquanto você editava. Feche e abra de novo para ver o que mudou.`, e
+nada se grava ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)) — menos em Usuários, onde o login grava na conta a cada
+entrada. As diferenças são de propósito:
 
 - Usuários diz o que é desativar uma conta (`… não entra mais no sistema.`) e
   não deixa ninguém agir sobre si mesmo.

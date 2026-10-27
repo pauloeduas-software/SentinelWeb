@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { $Enums } from '@prisma/client';
 import {
   booleano, emailOpcional,
-  nomeObrigatorio, textoOpcional, urlOpcional, uuidObrigatorio,
+  nomeObrigatorio, textoOpcional, urlOpcional, uuidObrigatorio, versaoLida
 } from '../../shared/fields.schema';
 
 // Contrato de entrada das seis tabelas de catálogo, num lugar só.
@@ -24,6 +24,7 @@ export const updateCategorySchema = z.strictObject({
   name: nomeObrigatorio().optional(),
   type: z.enum($Enums.CategoryType, 'tipo de categoria inválido').optional(),
   isActive: booleano('ativa').optional(),
+  updatedAt: versaoLida,
 });
 
 // ------------------------------------------------------------- StatusLabel
@@ -38,6 +39,7 @@ export const updateStatusLabelSchema = z.strictObject({
   type: z.enum($Enums.StatusLabelType, 'tipo de status inválido').optional(),
   notes: textoOpcional('notas', 2_000),
   isActive: booleano('ativo').optional(),
+  updatedAt: versaoLida,
 });
 
 // ------------------------------------------------------------ Manufacturer
@@ -52,6 +54,7 @@ export const createManufacturerSchema = z.strictObject({ name: nomeObrigatorio()
 // Desativar/Ativar da linha. Quem nasce, nasce ativo — o create o recusa.
 export const updateManufacturerSchema = z.strictObject({
   name: nomeObrigatorio().optional(), ...camposFabricante, isActive: booleano('ativo').optional(),
+  updatedAt: versaoLida,
 });
 
 // -------------------------------------------------------------- AssetModel
@@ -73,6 +76,7 @@ export const updateAssetModelSchema = z.strictObject({
   categoryId: uuidObrigatorio('categoria').optional(),
   ...camposModelo,
   isActive: booleano('ativo').optional(),
+  updatedAt: versaoLida,
 });
 
 // ---------------------------------------------------------------- Location
@@ -90,6 +94,7 @@ export const createLocationSchema = z.strictObject({ name: nomeObrigatorio(), ..
 // `isActive` só na EDIÇÃO, como nas outras quatro: é o botão Desativar/Ativar.
 export const updateLocationSchema = z.strictObject({
   name: nomeObrigatorio().optional(), ...camposLocalizacao, isActive: booleano('ativa').optional(),
+  updatedAt: versaoLida,
 });
 
 // ------------------------------------------------------------------ Person
@@ -109,4 +114,5 @@ export const createPersonSchema = z.strictObject({ name: nomeObrigatorio(), emai
 // `isActive` só na EDIÇÃO, como nas outras cinco: é o botão Desativar/Ativar.
 export const updatePersonSchema = z.strictObject({
   name: nomeObrigatorio().optional(), email: emailDoColaborador, isActive: booleano('ativo').optional(),
+  updatedAt: versaoLida,
 });

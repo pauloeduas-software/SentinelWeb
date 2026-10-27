@@ -58,6 +58,7 @@ export const WORKSTATION_DETAIL_SELECT = {
   notes: true,
   isActive: true,
   createdAt: true,
+  updatedAt: true,
   locationId: true,
   location: { select: { id: true, name: true } },
 

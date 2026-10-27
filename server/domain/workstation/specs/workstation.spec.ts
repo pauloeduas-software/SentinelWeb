@@ -31,7 +31,7 @@ export const workstationSpec: CatalogSpec = {
   updateSchema: updateWorkstationSchema,
 
   select: {
-    id: true, name: true, notes: true, isActive: true, createdAt: true,
+    id: true, name: true, notes: true, isActive: true, createdAt: true, updatedAt: true,
     locationId: true, location: { select: { id: true, name: true } },
   },
   searchable: ['name'],

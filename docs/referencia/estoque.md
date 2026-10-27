@@ -64,8 +64,10 @@ criada por fora da trava (o `psql` à mão), e esconder a inconsistência seria 
 | **o detalhe** | no cabeçalho, a conta ("Desativado · 10 no total · 7 em uso · 3 disponíveis") e as ações da lista, com as mesmas regras (Entregar e Editar voltam ao detalhe ao fechar; excluído, a janela fecha). Depois, todos os campos do cadastro. **Com quem está**: as entregas abertas, da mais recente para a mais antiga, 15 por página, com busca pelo nome do colaborador ou do posto — "Mesa 1 · 5 unidades · desde 12/10/2026", com a observação —, e Devolver em cada linha. **Histórico**: só entregas e devoluções, por entrega, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
 
 A edição mostra o **total** e manda **o formulário inteiro**, como em todas as telas
-([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)): um formulário aberto há tempo desfaz a edição que outra pessoa salvou no meio, e o
-servidor só barra o total abaixo do que está em uso. Com unidades em uso, o campo diz o mínimo.
+([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)), com o `updatedAt` que leu ao abrir: se outra pessoa salvou no meio, é 409
+`Outra pessoa salvou "Mouse USB" enquanto você editava. Feche e abra de novo para ver o que
+mudou.`, e o total dela não volta. O servidor barra também o total abaixo do que está em uso. Com
+unidades em uso, o campo diz o mínimo.
 
 **Quando a última linha de uma página sai** — excluída, devolvida, aqui ou por outra pessoa —, a
 lista e o "Com quem está" voltam para a última página que existe. **A devolução que o servidor

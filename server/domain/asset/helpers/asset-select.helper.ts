@@ -37,6 +37,7 @@ export const ASSET_SELECT = {
   retiredNotes: true,
 
   createdAt: true,
+  updatedAt: true,
 
   status: { select: { id: true, name: true, type: true } },
   model: {

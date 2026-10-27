@@ -212,6 +212,8 @@ export interface LicencaInput {
   notes?: string | null;
   /** A lista inteira como ficará. Na edição, a com `id` já existe e a sem `id` é nova. */
   keys?: ChaveNoFormulario[];
+  /** A versão que o formulário leu ao abrir (AF) — só no Editar; o servidor recusa se a linha mudou. */
+  updatedAt?: string;
 }
 
 /** Uma chave como o formulário a manda. */

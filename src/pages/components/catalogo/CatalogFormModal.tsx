@@ -55,6 +55,9 @@ interface CatalogFormModalProps {
 
 export default function CatalogFormModal({ spec, registro, padroes, onClose, onSubmit }: CatalogFormModalProps) {
   const [valores, setValores] = useState(() => valoresIniciais(spec, registro, padroes));
+  // A versão DESTA abertura (AF): o registro pode chegar mais novo enquanto o
+  // formulário está aberto, e o que ele mostra continua sendo o desta leitura.
+  const [versao] = useState(registro?.updatedAt);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -66,7 +69,7 @@ export default function CatalogFormModal({ spec, registro, padroes, onClose, onS
     setErro('');
 
     try {
-      await onSubmit(valores);
+      await onSubmit(versao ? { ...valores, updatedAt: versao } : valores);
     } catch (falha) {
       // O apiClient já traduziu a resposta do servidor em Error.message.
       setErro((falha as Error).message);

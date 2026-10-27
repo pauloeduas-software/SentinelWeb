@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import {
-  diaNaoFuturo, nomeObrigatorio, textoOpcional, uuidObrigatorio, uuidOpcional,
+  diaNaoFuturo, nomeObrigatorio, textoOpcional, uuidObrigatorio, uuidOpcional, versaoLida
 } from '../../shared/fields.schema';
 
 // Contrato de entrada do ESTOQUE — a mesma forma do da licença
@@ -56,6 +56,7 @@ export const updateStockItemSchema = z.strictObject({
   locationId: uuidOpcional('localização'),
   notes: textoOpcional('notas', 2_000),
   isActive: z.boolean('ativo: use true ou false').optional(),
+  updatedAt: versaoLida,
 });
 
 /**

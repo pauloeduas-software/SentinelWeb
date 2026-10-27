@@ -227,6 +227,13 @@ e o job em `SUGGEST` não mexem em cadastro, posse nem estoque e não gravam; o
 `conceder-administrador` não grava o que não mudou; e senha, hash e chave de licença nunca chegam à
 tabela. `id-da-requisicao.test.ts` prova que o `X-Request-Id` do cliente é ignorado.
 
+### `invariantes/versao.test.ts` — o Editar velho não grava por cima
+
+O Editar manda o `updatedAt` que leu ao abrir ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)). Cada caso salva no meio — outra edição, o
+Encerrar da licença, o total do item, a entrega do computador — e prova que a versão velha é 409,
+com a frase, e que nada foi gravado; a versão atual e a ausente passam, e a que não é data e hora
+é 422. Cadastro novo com Editar entra nesta lista.
+
 ### `corridas/` — o placar, nunca "deu certo"
 
 A asserção de um teste de corrida nunca é *"a requisição funcionou"*: é

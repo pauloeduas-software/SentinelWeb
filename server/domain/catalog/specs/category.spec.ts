@@ -38,7 +38,7 @@ export const categorySpec: CatalogSpec = {
   updateSchema: updateCategorySchema,
 
   select: {
-    id: true, name: true, type: true, isActive: true, createdAt: true,
+    id: true, name: true, type: true, isActive: true, createdAt: true, updatedAt: true,
   },
   searchable: ['name'],
   audited: ['name', 'type', 'isActive'],

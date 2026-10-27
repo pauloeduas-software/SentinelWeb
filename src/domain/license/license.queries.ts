@@ -136,7 +136,7 @@ export function useCreateLicense() {
   });
 }
 
-/** O formulário inteiro (AF): o aberto há tempo desfaz a edição de outro — o preço aceito. */
+/** O formulário inteiro (AF), com a versão que ele leu: o aberto há tempo recebe 409, e não grava por cima. */
 export function useUpdateLicense() {
   const queryClient = useQueryClient();
   return useMutation({

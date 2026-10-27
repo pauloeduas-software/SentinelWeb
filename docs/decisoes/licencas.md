@@ -647,3 +647,15 @@ a data de encerramento. O servidor continua barrando o que quebraria regra: o to
 está em uso, a chave já entregue que sai da lista, as datas fora de ordem. No resto, vale a
 última gravação, como nas Configurações. Com um cargo só
 ([Z](./acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)), o caso é raro.
+
+**Depois (2026-10-27): a perda declarada acima saiu.** O Editar continua mandando o formulário
+inteiro, e manda junto o `updatedAt` que leu ao abrir — o controle de concorrência otimista. O
+servidor compara com o da linha travada; se ela mudou, responde 409 `Outra pessoa salvou "X"
+enquanto você editava. Feche e abra de novo para ver o que mudou.` e não grava nada. Vale nos
+dez cadastros que o Editar grava: licença, item de estoque, computador, posto e as seis tabelas
+das Configurações (categoria, status, fabricante, modelo, localização, colaborador). Sem a versão
+no corpo — o Desativar, o Encerrar, o Reabrir, quem chama a API por fora —, não confere.
+**Usuários ficam de fora:** o login grava na linha da conta a cada entrada, e o Editar aberto
+daria 409 sem ninguém ter editado. A entrega e a devolução de licença e de estoque gravam em outra
+tabela, e não esbarram no Editar aberto; a do computador troca o status dele, e esbarra — é o
+caso que a conferência existe para pegar.
