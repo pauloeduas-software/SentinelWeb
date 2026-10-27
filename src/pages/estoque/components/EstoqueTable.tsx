@@ -95,7 +95,7 @@ export default function EstoqueTable({
                         onClick={() => onEntregar(item)}
                         disabled={motivoSemEntrega !== null}
                         title={motivoSemEntrega ?? 'Entregar'}
-                        aria-label="Entregar"
+                        aria-label={`Entregar ${item.name}`}
                         className={`${BOTAO} hover:text-text-primary`}
                       >
                         <UserPlus size={14} />
@@ -105,7 +105,7 @@ export default function EstoqueTable({
                       type="button"
                       onClick={() => onEditar(item)}
                       title="Editar"
-                      aria-label="Editar"
+                      aria-label={`Editar ${item.name}`}
                       className={`${BOTAO} hover:text-text-primary`}
                     >
                       <Edit2 size={14} />
@@ -115,7 +115,7 @@ export default function EstoqueTable({
                       onClick={() => onAlternarAtivo(item)}
                       disabled={ocupado}
                       title={item.isActive ? 'Desativar' : 'Ativar'}
-                      aria-label={item.isActive ? 'Desativar' : 'Ativar'}
+                      aria-label={`${item.isActive ? 'Desativar' : 'Ativar'} ${item.name}`}
                       className={`${BOTAO} hover:text-status-info`}
                     >
                       {item.isActive ? <PowerOff size={14} /> : <Power size={14} />}
@@ -126,7 +126,7 @@ export default function EstoqueTable({
                         onClick={() => onExcluir(item)}
                         disabled={ocupado}
                         title="Excluir"
-                        aria-label="Excluir"
+                        aria-label={`Excluir ${item.name}`}
                         className={`${BOTAO} hover:text-status-danger`}
                       >
                         <Trash2 size={14} />
