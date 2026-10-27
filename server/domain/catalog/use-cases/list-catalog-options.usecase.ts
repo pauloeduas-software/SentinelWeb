@@ -25,14 +25,15 @@ export interface CatalogOption {
 export async function listCatalogOptions(
   spec: CatalogSpec,
   q?: string,
-  filtro?: string,
+  /** Os valores aceitos no campo do `optionFilter` — um ou vários. */
+  filtro?: readonly string[],
   incluirInativos = false,
 ): Promise<CatalogOption[]> {
   const rows = await spec.delegate(prisma).findMany({
     where: {
       ...buildCatalogWhere(spec.searchable, q),
       ...(incluirInativos ? {} : spec.optionsWhere),
-      ...(filtro && spec.optionFilter ? { [spec.optionFilter.campo]: filtro } : {}),
+      ...(filtro && spec.optionFilter ? { [spec.optionFilter.campo]: { in: filtro } } : {}),
     },
     select: { id: true, name: true, ...(spec.optionDetail ? { [spec.optionDetail]: true } : {}) },
     orderBy: { name: 'asc' },

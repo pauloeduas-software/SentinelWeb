@@ -10,6 +10,8 @@ import type { Seeder } from './seeder';
 // ESTOQUE é item por quantidade, sem patrimônio individual. A categoria é a
 // FAMÍLIA, não o item: "Mouse" é nome de item na página de Estoque, e a
 // categoria dele é "Periférico".
+// COMPONENTE também é item de estoque, o que vai para dentro do computador
+// (AI): a memória e o SSD, que só um computador recebe.
 // LICENÇA agrupa por família de software.
 const CATEGORIES = [
   { name: 'Notebook', type: 'ASSET' },
@@ -19,7 +21,8 @@ const CATEGORIES = [
   { name: 'Periférico', type: 'STOCK' },
   { name: 'Monitor', type: 'STOCK' },
   { name: 'Cabo e adaptador', type: 'STOCK' },
-  { name: 'Peça de reposição', type: 'STOCK' },
+
+  { name: 'Peça de reposição', type: 'COMPONENT' },
 
   { name: 'Sistema operacional', type: 'LICENSE' },
   { name: 'Produtividade', type: 'LICENSE' },

@@ -1,4 +1,5 @@
 import type { EventoDoAtivo } from '../../../../domain/shared/asset.types';
+import { textoDeUnidades } from '../../../helpers/estoque.helper';
 import { rotuloDaAcao } from '../../../helpers/historico.helper';
 
 // O que a aba Histórico do ATIVO acrescenta ao leitor genérico
@@ -11,6 +12,12 @@ const ROTULO_DA_LICENCA: Record<string, string> = {
   CHECKIN: 'Licença devolvida',
 };
 
+/** Os componentes instalados e retirados — a fonte `COMPONENTE` (AI). */
+const ROTULO_DO_COMPONENTE: Record<string, string> = {
+  CHECKOUT: 'Componente instalado',
+  CHECKIN: 'Componente retirado',
+};
+
 /**
  * A linha de assunto do evento: "Entregue para Laura Souza".
  *
@@ -21,6 +28,11 @@ export function tituloDoEvento(evento: EventoDoAtivo): string {
   if (evento.licenca) {
     const acao = rotuloDaAcao(evento.action, ROTULO_DA_LICENCA);
     return `${acao}: ${evento.licenca.licenseLabel}`;
+  }
+
+  if (evento.componente) {
+    const acao = rotuloDaAcao(evento.action, ROTULO_DO_COMPONENTE);
+    return `${acao}: ${evento.componente.itemLabel} · ${textoDeUnidades(evento.componente.unidades)}`;
   }
 
   const acao = rotuloDaAcao(evento.action);

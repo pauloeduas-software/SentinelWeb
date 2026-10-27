@@ -1,20 +1,22 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../core/api/apiClient';
+import { assetKeys } from '../asset/asset.queries';
 import { personKeys } from '../person/person.queries';
 import { workstationKeys } from '../workstation/workstation.queries';
 import type { ListEnvelope, ListParams } from '../shared/list.types';
 import type {
   AlvoDaEntregaDeEstoque, EventoDoItem, ItemDeEstoque, ItemDeEstoqueInput,
-  ResultadoDaDevolucao, EntregaAberta,
+  ResultadoDaDevolucao, EntregaAberta, EntregaNaFicha,
 } from '../shared/stock.types';
 
 // O ESTOQUE — monitor, teclado, mouse, cabo: o que tem quantidade e não
 // patrimônio (docs/decisoes/estoque.md). A mesma forma da licença (AE).
 //
 // `['stock']` é o prefixo, então invalidar depois de gravar alcança a
-// listagem, o detalhe, com quem está e o histórico — e a entrega e a devolução
-// invalidam também COLABORADORES (a unidade no nome de alguém trava a
-// desativação dele) e POSTOS (a ficha mostra o estoque da mesa).
+// listagem, o detalhe, com quem está, o histórico e a aba Componentes do
+// computador — e a entrega e a devolução invalidam também COLABORADORES (a
+// unidade no nome de alguém trava a desativação dele), POSTOS (a ficha mostra o
+// estoque da mesa) e COMPUTADORES (o histórico mostra o componente, AI).
 
 /** A listagem: o que toda lista aceita, sem lixeira e sem abas, e a categoria. */
 export type ParamsDoEstoque = Omit<ListParams, 'view'> & {
@@ -34,6 +36,7 @@ const stockKeys = {
   item: (id: string) => ['stock', 'item', id] as const,
   entregas: (id: string, params: ParamsDoDetalhe) => ['stock', 'entregas', id, params] as const,
   historico: (id: string, params: ParamsDoDetalhe) => ['stock', 'historico', id, params] as const,
+  doAtivo: (assetId: string) => ['stock', 'do-ativo', assetId] as const,
 };
 
 export function useStockQuery(params: ParamsDoEstoque) {
@@ -76,6 +79,15 @@ export function useStockHistoryQuery(id: string | null, params: Omit<ParamsDoDet
   });
 }
 
+/** Os componentes instalados num computador — a aba Componentes (AI). */
+export function useAssetComponentsQuery(assetId: string | null) {
+  return useQuery({
+    queryKey: stockKeys.doAtivo(assetId ?? ''),
+    queryFn: async () => (await apiClient.get<EntregaNaFicha[]>(`/assets/${assetId}/components`)).data,
+    enabled: assetId != null,
+  });
+}
+
 /**
  * Devolve a promessa, e o `onSettled` a devolve também: a mutação só termina
  * quando as listas abertas já foram buscadas de novo. Sem isso o botão
@@ -91,6 +103,7 @@ function invalidarEstoqueEPosse(queryClient: ReturnType<typeof useQueryClient>, 
     }),
     queryClient.invalidateQueries({ queryKey: personKeys.all }),
     queryClient.invalidateQueries({ queryKey: workstationKeys.all }),
+    queryClient.invalidateQueries({ queryKey: assetKeys.all }),
   ]);
 }
 

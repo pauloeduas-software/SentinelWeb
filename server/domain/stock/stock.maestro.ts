@@ -31,8 +31,13 @@ export class StockMaestro {
     server.put('/api/stock/items/:id', WRITE_RATE_LIMIT, stockController.update);
     server.delete('/api/stock/items/:id', WRITE_RATE_LIMIT, stockController.remove);
 
-    // A ENTREGA: N unidades a um colaborador ou a um posto.
+    // A ENTREGA: N unidades a um colaborador ou a um posto — ou, o componente,
+    // a um computador (AI).
     server.post('/api/stock/items/:id/checkout', WRITE_RATE_LIMIT, stockController.checkout);
+
+    // Os componentes instalados num computador: a aba Componentes, irmã da
+    // `/api/assets/:id/licenses`.
+    server.get('/api/assets/:id/components', stockController.doAtivo);
 
     logger.info('[Maestro] Rotas de Estoque inicializadas.');
   }

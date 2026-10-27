@@ -14,6 +14,9 @@ import type { CatalogSpec } from '../specs/catalog-spec.types';
 // O schema do /options é montado a partir da spec: a tabela que não declara
 // `optionFilter` nem aceita a chave — `?type=` nela vira 422 em vez de ser
 // ignorado em silêncio, como no resto do sistema.
+//
+// Um valor ou vários, separados por vírgula: o item de estoque escolhe entre as
+// categorias de Estoque e as de Componente (`?type=STOCK,COMPONENT`, AI).
 function buildOptionsQuerySchema(spec: CatalogSpec) {
   return z.strictObject({
     q: z.string().trim().max(200, 'busca: máximo de 200 caracteres').optional()
@@ -26,7 +29,9 @@ function buildOptionsQuerySchema(spec: CatalogSpec) {
     ...(spec.optionFilter
       ? {
           [spec.optionFilter.campo]: z
-            .enum(spec.optionFilter.valores, `${spec.optionFilter.campo}: valor inválido`)
+            .string()
+            .transform((valor) => valor.split(','))
+            .pipe(z.array(z.enum(spec.optionFilter.valores, `${spec.optionFilter.campo}: valor inválido`)))
             .optional(),
         }
       : {}),
@@ -70,8 +75,8 @@ export function createCatalogController(spec: CatalogSpec) {
     },
 
     async options(request: FastifyRequest) {
-      const query = optionsQuerySchema.parse(request.query ?? {}) as Record<string, string | undefined>;
-      const filtro = spec.optionFilter ? query[spec.optionFilter.campo] : undefined;
+      const query = optionsQuerySchema.parse(request.query ?? {}) as { q?: string; inativos?: string } & Record<string, unknown>;
+      const filtro = spec.optionFilter ? query[spec.optionFilter.campo] as string[] | undefined : undefined;
       return listCatalogOptions(spec, query.q, filtro, query.inativos === 'incluir');
     },
 

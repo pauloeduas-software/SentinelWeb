@@ -61,7 +61,7 @@ export default function OciososTable({ ociosos }: Props) {
                   {ativo.responsaveis.map((pessoa) => pessoa.name).join(', ')}
                 </span>
               ) : (
-                <span className="text-text-tertiary">no estoque</span>
+                <span className="text-text-tertiary">não entregue</span>
               )}
             </td>
           </tr>

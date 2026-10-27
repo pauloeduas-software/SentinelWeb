@@ -216,7 +216,7 @@ export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }
               <label className={ROTULO}>Status de volta</label>
               <ReferenceSelect rota="status-labels" valor={statusId} onChange={setStatusId} />
               <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">
-                Para onde o ativo volta: estoque, conserto, inutilizável. Em branco, o servidor decide.
+                Como o ativo volta: disponível, em conserto, inutilizável. Em branco, o servidor decide.
               </p>
             </div>
           )}
@@ -279,7 +279,7 @@ function PosseAtual({ posse }: { posse: ResumoPosse }) {
         <div className="flex items-start gap-2 text-status-warning text-[10px] leading-relaxed">
           <TriangleAlert size={12} className="mt-0.5 shrink-0" />
           <span>
-            Posto sem ocupante aberto: o ativo está parado numa mesa vazia. Devolver ao estoque
+            Posto sem ocupante aberto: o ativo está parado numa mesa vazia. Devolver o computador
             ou colocar alguém no posto, na ficha do posto em Postos.
           </span>
         </div>

@@ -19,6 +19,9 @@ import type { CheckinStockInput } from '../schemas/stock.schema';
 // Preenche `returnedAt` e NUNCA apaga a linha: "quem estava com o mouse em
 // março?" continua respondível depois da devolução.
 //
+// No COMPONENTE (AI), a devolução é o RETIRAR — a peça sai do computador e volta
+// ao disponível —, e as frases dizem "retirada".
+//
 // TRAVA SÓ AS LINHAS DA ENTREGA. É o que impede a devolução dupla: a segunda
 // espera, relê, e encontra menos unidades com o alvo. O item não é travado: a
 // devolução só diminui o que está em uso, e uma entrega concorrente que conte
@@ -38,9 +41,14 @@ export async function checkinStock(movementId: string, data: Partial<CheckinStoc
     if (!unidade) throw new AppError('Nenhuma entrega de estoque com este identificador.', 404);
     // O ITEM EXCLUÍDO (AG) só deixa entrega já devolvida — a em uso segura a
     // exclusão. A tela velha que ainda mostra a linha recebe o mesmo 409.
+    const componente = unidade.targetType === 'ASSET';
     const item = unidade.item;
     if (!item || !unidade.itemId) {
-      throw new AppError(`Esta entrega de "${unidade.itemName ?? 'item excluído'}" para ${rotuloDoAlvo(unidade)} já foi devolvida.`, 409);
+      throw new AppError(
+        `Esta entrega de "${unidade.itemName ?? 'item excluído'}" para ${rotuloDoAlvo(unidade)} `
+        + `já foi ${componente ? 'retirada' : 'devolvida'}.`,
+        409,
+      );
     }
 
     // AS UNIDADES DA ENTREGA QUE AINDA ESTÃO COM O ALVO — lidas pelo Prisma, que
@@ -56,6 +64,7 @@ export async function checkinStock(movementId: string, data: Partial<CheckinStoc
         targetType: unidade.targetType,
         targetPersonId: unidade.targetPersonId,
         targetWorkstationId: unidade.targetWorkstationId,
+        targetAssetId: unidade.targetAssetId,
         returnedAt: null,
       },
       select: { id: true },
@@ -70,13 +79,16 @@ export async function checkinStock(movementId: string, data: Partial<CheckinStoc
     const alvo = rotuloDoAlvo(unidade);
     // 409 e não 404: a entrega existe, o ESTADO dela é que recusa.
     if (abertas.length === 0) {
-      throw new AppError(`Esta entrega de "${item.name}" para ${alvo} já foi devolvida.`, 409);
+      throw new AppError(
+        `Esta entrega de "${item.name}" para ${alvo} já foi ${componente ? 'retirada' : 'devolvida'}.`,
+        409,
+      );
     }
     const pedidas = data.qty ?? abertas.length;
     if (pedidas > abertas.length) {
       throw new AppError(
         `Só ${quantas(abertas.length, 'unidade', 'unidades')} desta entrega de "${item.name}" `
-        + `${abertas.length === 1 ? 'ainda está' : 'ainda estão'} com ${alvo}.`,
+        + `${abertas.length === 1 ? 'ainda está' : 'ainda estão'} ${componente ? 'em' : 'com'} ${alvo}.`,
         409,
       );
     }
@@ -87,7 +99,8 @@ export async function checkinStock(movementId: string, data: Partial<CheckinStoc
     const diaDaEntrega = hojeNoBrasil(unidade.checkoutAt);
     if (dia < diaDaEntrega) {
       throw new AppError(
-        `A devolução (${diaEmPortugues(dia)}) não pode ser antes da entrega (${diaEmPortugues(diaDaEntrega)}).`,
+        `A ${componente ? 'retirada' : 'devolução'} (${diaEmPortugues(dia)}) não pode ser antes da entrega `
+        + `(${diaEmPortugues(diaDaEntrega)}).`,
         422,
       );
     }
@@ -115,7 +128,7 @@ export async function checkinStock(movementId: string, data: Partial<CheckinStoc
         movementIds: ids,
         qty: ids.length,
         targetType: unidade.targetType,
-        targetId: unidade.targetPersonId ?? unidade.targetWorkstationId,
+        targetId: unidade.targetPersonId ?? unidade.targetWorkstationId ?? unidade.targetAssetId,
         targetName: alvo,
         returnedAt: returnedAt.toISOString(),
       },

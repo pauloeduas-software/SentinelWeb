@@ -142,7 +142,11 @@ export const TIPOS_CATEGORIA: readonly OpcaoFixa[] = [
   { value: 'ASSET', label: 'Ativo',
     ajuda: 'Computador, com etiqueta e número de série. Uma linha por máquina.' },
   { value: 'STOCK', label: 'Estoque',
-    ajuda: 'Item por quantidade, sem patrimônio individual: monitor, teclado, mouse, cabo.' },
+    ajuda: 'Item por quantidade, sem patrimônio individual: monitor, teclado, mouse, cabo. '
+      + 'Vai para um colaborador ou um posto.' },
+  { value: 'COMPONENT', label: 'Componente',
+    ajuda: 'Item por quantidade que vai para dentro do computador: memória, SSD. '
+      + 'Só um computador recebe, e sai dele pelo Retirar.' },
   { value: 'LICENSE', label: 'Licença',
     ajuda: 'Software, com a quantidade comprada entregue a pessoas ou a máquinas.' },
 ];

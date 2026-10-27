@@ -11,7 +11,8 @@ interface AssetOption {
 
 /**
  * Lista enxuta de ativos para `<select>` — o seletor de máquina da entrega de
- * licença e o do vínculo em `/descobertas` (este com `semMaquina`).
+ * licença, o da entrega de componente (AI) e o do vínculo em `/descobertas`
+ * (este com `semMaquina`).
  *
  * O `name` que sai daqui é COMPOSTO — `"ATV-00012 — Dell Latitude"` — e não a
  * coluna `name`, que é opcional e quase sempre nula. Num `<select>` de ativos,
@@ -37,9 +38,9 @@ export async function listAssetOptions(
   const rows = await prisma.asset.findMany({
     where: {
       ...buildAssetWhere(q),
-      // Sem os BAIXADOS: os dois seletores que usam esta lista — a entrega de
-      // licença e o vínculo de máquina — recusam o ativo que saiu do
-      // patrimônio, então oferecê-lo seria oferecer um 409.
+      // Sem os BAIXADOS: os três seletores que usam esta lista — a entrega de
+      // licença, a de componente e o vínculo de máquina — recusam o ativo que
+      // saiu do patrimônio, então oferecê-lo seria oferecer um 409.
       retiredAt: null,
       ...(filtro.semMaquina ? { endpoint: null } : {}),
     },

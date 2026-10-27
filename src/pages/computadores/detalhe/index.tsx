@@ -4,6 +4,7 @@ import AssetFormModal from '../components/AssetFormModal';
 import CheckoutModal from '../components/CheckoutModal';
 import AssetTabs from './components/AssetTabs';
 import LicensesTab from './components/LicensesTab';
+import ComponentesTab from './components/ComponentesTab';
 import MaquinaTab from './components/MaquinaTab';
 import DetalhesTab from './components/DetalhesTab';
 import HistoryTab from './components/HistoryTab';
@@ -30,6 +31,7 @@ export default function AssetDetailPage() {
     eventos, totalDeEventos, historicoPendente,
     assignments, possePendente,
     licencas, licencasPendentes, erroDasLicencas,
+    componentes, componentesPendentes, erroDosComponentes,
     maquina, maquinaPendente, desvinculando, handleDesvincular,
     modal, abrirEdicao, abrirClone, abrirPosse, abrirBaixa, fecharModal, statusPadraoId,
     handleSubmit, handleEntregar, handleDevolver, handleDarBaixa, handleReverterSaida,
@@ -136,6 +138,15 @@ export default function AssetDetailPage() {
             assetTag={asset.assetTag}
             carregando={licencasPendentes}
             erro={erroDasLicencas}
+          />
+        )}
+
+        {aba === 'componentes' && (
+          <ComponentesTab
+            componentes={componentes}
+            assetTag={asset.assetTag}
+            carregando={componentesPendentes}
+            erro={erroDosComponentes}
           />
         )}
 

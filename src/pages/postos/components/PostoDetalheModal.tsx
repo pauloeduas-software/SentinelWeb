@@ -64,7 +64,7 @@ interface PostoDetalheModalProps {
   onAdicionar: (data: OccupantInput) => Promise<void>;
   onEncerrar: (ocupante: WorkstationOccupant) => Promise<void>;
   onCorrigirTurno: (ocupante: WorkstationOccupant, turno: string) => Promise<void>;
-  /** Tira o ativo desta mesa e devolve ao estoque. O `confirm` é do hook. */
+  /** Tira o ativo desta mesa: a devolução. O `confirm` é do hook. */
   onDevolver: (ativo: AtivoDoPosto) => Promise<void>;
   devolvendo: boolean;
   onClose: () => void;
@@ -136,8 +136,8 @@ export default function PostoDetalheModal({
                 {/* Posto desativado não recebe ocupante: "alguém assume" seria
                     oferecer a saída que o formulário logo abaixo não tem. */}
                 {desativado
-                  ? 'O posto está desativado e não recebe ocupante: o equipamento volta para o estoque.'
-                  : 'Ou alguém assume o posto abaixo, ou o equipamento volta para o estoque.'}
+                  ? 'O posto está desativado e não recebe ocupante: devolva o equipamento.'
+                  : 'Ou alguém assume o posto abaixo, ou o equipamento é devolvido.'}
               </span>
             </div>
           )}
@@ -234,7 +234,7 @@ export default function PostoDetalheModal({
                           type="button"
                           disabled={devolvendo}
                           onClick={() => void devolver(ativo)}
-                          title={`Devolver ${ativo.assetTag} ao estoque`}
+                          title={`Devolver ${ativo.assetTag} deste posto`}
                           className="inline-flex items-center gap-1.5 px-2 py-1 border border-border-sutil text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary hover:bg-bg-base disabled:opacity-30 transition-colors"
                         >
                           <Undo2 size={11} /> Devolver

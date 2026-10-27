@@ -15,7 +15,8 @@ export interface EntregaAberta {
   targetType: Unidade['targetType'];
   targetPersonId: string | null;
   targetWorkstationId: string | null;
-  /** "Laura Souza", "Mesa 1". */
+  targetAssetId: string | null;
+  /** "Laura Souza", "Mesa 1", "ATV-00012 — Dell do financeiro". */
   targetLabel: string;
   checkoutAt: Date;
   notes: string | null;
@@ -25,11 +26,12 @@ export interface EntregaAberta {
 
 /**
  * QUEM ESTÁ COM ESTE ITEM AGORA — a lista do detalhe, com o botão de devolver
- * em cada linha. O que já foi devolvido mora no histórico. É o "Com quem está"
+ * em cada linha (o Retirar, no componente: a linha é o computador). O que já foi devolvido mora no histórico. É o "Com quem está"
  * da licença, com uma diferença que é do estoque: a linha é a ENTREGA ("Mesa 1 ·
  * 5 unidades"), não a unidade.
  *
- * Paginada e com busca pelo nome de quem recebeu — o colaborador ou o posto.
+ * Paginada e com busca pelo nome de quem recebeu — o colaborador, o posto, ou a
+ * etiqueta e o nome do computador.
  *
  * AS ENTREGAS SÃO MONTADAS EM MEMÓRIA, e é barato: são só as unidades ABERTAS
  * deste item, e o total limita quantas existem.
@@ -43,7 +45,14 @@ export async function listStockCheckouts(itemId: string, query: ListQuery): Prom
     where: {
       itemId,
       returnedAt: null,
-      ...(contem ? { OR: [{ targetPerson: { name: contem } }, { targetWorkstation: { name: contem } }] } : {}),
+      ...(contem ? {
+        OR: [
+          { targetPerson: { name: contem } },
+          { targetWorkstation: { name: contem } },
+          { targetAsset: { assetTag: contem } },
+          { targetAsset: { name: contem } },
+        ],
+      } : {}),
     },
     select: STOCK_MOVEMENT_SELECT,
     // A mais recente primeiro, como a licença. `createdAt` separa as entregas do
@@ -57,6 +66,7 @@ export async function listStockCheckouts(itemId: string, query: ListQuery): Prom
     targetType: primeira.targetType,
     targetPersonId: primeira.targetPersonId,
     targetWorkstationId: primeira.targetWorkstationId,
+    targetAssetId: primeira.targetAssetId,
     targetLabel: rotuloDoAlvo(primeira),
     checkoutAt: primeira.checkoutAt,
     notes: primeira.notes,

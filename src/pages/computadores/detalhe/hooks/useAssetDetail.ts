@@ -10,6 +10,7 @@ import {
 } from '../../../../domain/assignment/assignment.queries';
 import { useCatalogOptionsQuery } from '../../../../domain/catalog/catalog.queries';
 import { useAssetLicensesQuery } from '../../../../domain/license/license.queries';
+import { useAssetComponentsQuery } from '../../../../domain/stock/stock.queries';
 import {
   useDesvincularMaquina, useMaquinaDoAtivoQuery,
 } from '../../../../domain/reconciliation/reconciliation.queries';
@@ -63,6 +64,12 @@ export function useAssetDetail() {
   const {
     data: licencas, isPending: licencasPendentes, error: erroDasLicencas,
   } = useAssetLicensesQuery(id ?? null);
+
+  // A aba Componentes (AI): a memória e o SSD instalados nesta máquina. O
+  // Retirar mora no detalhe do item, e a aba aponta para lá.
+  const {
+    data: componentes, isPending: componentesPendentes, error: erroDosComponentes,
+  } = useAssetComponentsQuery(id ?? null);
 
   // A MÁQUINA (F7): especificações coletadas, último contato e as trocas de peça
   // que o agente percebeu — tudo do endpoint vinculado. E desvincular, que é a
@@ -142,7 +149,7 @@ export function useAssetDetail() {
       await excluir.mutateAsync(asset.id);
       navigate('/computadores');
     } catch (falha) {
-      // O 409 do ativo com licença traz cada uma em link.
+      // O 409 do ativo com licença ou componente traz cada um em link.
       notificar.erro((falha as Error).message, linksDoErro(falha));
     }
   };
@@ -169,6 +176,11 @@ export function useAssetDetail() {
     licencas: licencas ?? [],
     licencasPendentes,
     erroDasLicencas: erroDasLicencas ? (erroDasLicencas as Error).message : null,
+
+    // COMPONENTES — o que está instalado neste ativo (AI).
+    componentes: componentes ?? [],
+    componentesPendentes,
+    erroDosComponentes: erroDosComponentes ? (erroDosComponentes as Error).message : null,
 
     // MÁQUINA — a aba que nasceu pronta na F7.
     maquina,

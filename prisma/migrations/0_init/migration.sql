@@ -28,7 +28,7 @@ CREATE TYPE "Cargo" AS ENUM ('ADMIN');
 CREATE TYPE "AuditActorType" AS ENUM ('USER', 'SYSTEM', 'ANONYMOUS');
 
 -- CreateEnum
-CREATE TYPE "CategoryType" AS ENUM ('ASSET', 'LICENSE', 'STOCK');
+CREATE TYPE "CategoryType" AS ENUM ('ASSET', 'LICENSE', 'STOCK', 'COMPONENT');
 
 -- CreateEnum
 CREATE TYPE "StatusLabelType" AS ENUM ('DEPLOYABLE', 'IN_USE', 'PENDING', 'UNDEPLOYABLE');
@@ -54,7 +54,7 @@ CREATE TYPE "SuggestionState" AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED', 'SUPER
 -- CreateEnum
 
 -- CreateEnum
-CREATE TYPE "StockTarget" AS ENUM ('PERSON', 'WORKSTATION');
+CREATE TYPE "StockTarget" AS ENUM ('PERSON', 'WORKSTATION', 'ASSET');
 
 -- CreateTable
 CREATE TABLE "endpoints" (
@@ -425,6 +425,7 @@ CREATE TABLE "stock_movements" (
     "targetPersonId" UUID,
     "targetWorkstationId" UUID,
     "targetWorkstationName" TEXT,
+    "targetAssetId" UUID,
     "checkoutAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "returnedAt" TIMESTAMP(3),
     "returnRecordedAt" TIMESTAMP(3),
@@ -599,6 +600,9 @@ CREATE INDEX "stock_movements_targetPersonId_returnedAt_idx" ON "stock_movements
 -- CreateIndex
 CREATE INDEX "stock_movements_targetWorkstationId_returnedAt_idx" ON "stock_movements"("targetWorkstationId", "returnedAt");
 
+-- CreateIndex
+CREATE INDEX "stock_movements_targetAssetId_returnedAt_idx" ON "stock_movements"("targetAssetId", "returnedAt");
+
 -- AddForeignKey
 ALTER TABLE "endpoints" ADD CONSTRAINT "endpoints_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "assets"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
@@ -685,6 +689,9 @@ ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_targetPersonId_fke
 
 -- AddForeignKey
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_targetWorkstationId_fkey" FOREIGN KEY ("targetWorkstationId") REFERENCES "workstations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_targetAssetId_fkey" FOREIGN KEY ("targetAssetId") REFERENCES "assets"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- O QUE O PRISMA NÃO EXPRESSA, E O PROJETO DEPENDE: índices PARCIAIS e CHECKs.
@@ -837,13 +844,17 @@ ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_qty_positiva"
 
 -- Cada linha é UMA unidade com exatamente UM alvo, o que o discriminante diz.
 -- A entrega JÁ DEVOLVIDA para um posto excluído fica sem FK, com o nome por
--- escrito — como na `Assignment`.
+-- escrito — como na `Assignment`. O computador (o componente, AI) não tem
+-- essa saída: ele não se exclui, vai para a lixeira.
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_forma" CHECK (
-     ("targetType" = 'PERSON' AND "targetPersonId" IS NOT NULL AND "targetWorkstationId" IS NULL)
-  OR ("targetType" = 'WORKSTATION' AND "targetPersonId" IS NULL AND (
+     ("targetType" = 'PERSON' AND "targetPersonId" IS NOT NULL AND "targetWorkstationId" IS NULL
+      AND "targetAssetId" IS NULL)
+  OR ("targetType" = 'WORKSTATION' AND "targetPersonId" IS NULL AND "targetAssetId" IS NULL AND (
           "targetWorkstationId" IS NOT NULL
        OR ("returnedAt" IS NOT NULL AND "targetWorkstationName" IS NOT NULL)
      ))
+  OR ("targetType" = 'ASSET' AND "targetAssetId" IS NOT NULL AND "targetPersonId" IS NULL
+      AND "targetWorkstationId" IS NULL)
 );
 
 -- O ITEM EXCLUÍDO (AG): só a entrega JÁ DEVOLVIDA fica sem ele, com o nome por

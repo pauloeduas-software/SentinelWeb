@@ -142,7 +142,7 @@ export default function AssetFormModal({
           {clonar && (
             <p className="p-3 border border-border-sutil bg-bg-base/50 text-text-tertiary text-[10px] leading-relaxed">
               Cópia de {asset?.assetTag}: etiqueta e número de série nascem em branco porque são
-              únicos. O clone entra no estoque, sem posse — entregar continua sendo operação.
+              únicos. O clone nasce sem posse — entregar continua sendo operação.
             </p>
           )}
 

@@ -13,7 +13,9 @@ import { CAMPOS_AUDITADOS_DO_ITEM, STOCK_ITEM_SELECT } from '../helpers/stock-se
 import type { CreateStockItemInput } from '../schemas/stock.schema';
 
 /**
- * A categoria do item tem que ser do tipo ESTOQUE.
+ * A categoria do item tem que ser do tipo ESTOQUE ou COMPONENTE — e é ela que
+ * decide para onde o item vai (AI): o de Estoque a colaborador ou posto, o de
+ * Componente só a computador.
  *
  * O banco não impede — a FK aceita qualquer categoria —, e é o `type` que
  * separa: um item de estoque numa categoria de ATIVO é o mesmo erro que "Em
@@ -22,22 +24,24 @@ import type { CreateStockItemInput } from '../schemas/stock.schema';
  *
  * Lida `FOR SHARE`: a troca de tipo da categoria trava a linha antes de contar
  * os itens, e esta leitura espera por ela em vez de aprovar o tipo velho.
+ * Devolve o tipo, que a edição compara com o de antes.
  */
 export async function assertCategoriaDeEstoque(
   client: ClienteEstoque & ClienteQueTrava,
   categoryId: string,
   /** A categoria de ANTES, na edição: desativada só é recusada quando muda. */
   categoriaAtual?: string,
-): Promise<void> {
+): Promise<string> {
   const categoria = await lerCategoriaTravada(client, categoryId);
   if (!categoria) throw new AppError('Categoria não encontrada.', 404);
-  if (categoria.type !== 'STOCK') {
+  if (categoria.type !== 'STOCK' && categoria.type !== 'COMPONENT') {
     throw new AppError(
-      `A categoria de um item de estoque precisa ser do tipo Estoque, e "${categoria.name}" não é.`,
+      `A categoria de um item de estoque precisa ser do tipo Estoque ou Componente, e "${categoria.name}" não é.`,
       422,
     );
   }
   if (categoryId !== categoriaAtual) assertEscolhaAtiva(categoria, { rotulo: 'A categoria', feminino: true });
+  return categoria.type;
 }
 
 /**

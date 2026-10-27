@@ -153,7 +153,8 @@ O tipo diz a que **módulo** a categoria pertence, e é fechado:
 |---|---|---|
 | `ASSET` — Ativo | o **modelo** de equipamento | o ativo não tem categoria própria: herda a do modelo |
 | `LICENSE` — Licença | a licença | |
-| `STOCK` — Estoque | o item de estoque (monitor, mouse, cabo) | o que não é computador é estoque |
+| `STOCK` — Estoque | o item de estoque (monitor, mouse, cabo) | o que não é computador é estoque; vai a colaborador ou posto |
+| `COMPONENT` — Componente | o item de estoque que vai para dentro do computador (memória, SSD) | vai só a computador, e sai pelo Retirar ([AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar)) |
 
 - **Única por (nome, tipo):** "Notebook" de Ativo e "Notebook" de Licença são duas
   categorias; "notebook" de Ativo, ao lado de "Notebook" de Ativo, é recusada.
@@ -162,9 +163,11 @@ O tipo diz a que **módulo** a categoria pertence, e é fechado:
 - **O tipo não muda com a categoria em uso** — 409. Trocar o tipo por baixo dos
   registros mudaria o significado deles sem tocar em nenhum (invariante 3).
 - **Cada módulo confere o tipo ao gravar:** modelo exige `ASSET`, licença exige
-  `LICENSE`, item de estoque exige `STOCK` — 422 em qualquer outro. A tela só
-  oferece as do tipo certo, mas a regra é do servidor.
+  `LICENSE`, item de estoque exige `STOCK` ou `COMPONENT` — 422 em qualquer outro.
+  A tela só oferece as do tipo certo, mas a regra é do servidor.
 - **Filtro por tipo** na listagem (`?type=`), validado contra a lista fechada. O
+  `/options` aceita vários, separados por vírgula: o formulário e o filtro do
+  estoque pedem `?type=STOCK,COMPONENT`. O
   filtro de categoria das listas de Computadores, Licenças e Estoque mostra também as
   desativadas.
 

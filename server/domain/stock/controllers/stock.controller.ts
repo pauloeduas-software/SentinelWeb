@@ -13,6 +13,7 @@ import { deleteStockItem } from '../use-cases/delete-stock-item.usecase';
 import { getStockItem } from '../use-cases/get-stock-item.usecase';
 import { listStock } from '../use-cases/list-stock.usecase';
 import { listStockCheckouts } from '../use-cases/list-stock-checkouts.usecase';
+import { listAssetComponents } from '../use-cases/list-workstation-stock.usecase';
 import { listStockHistory } from '../use-cases/stock-history.usecase';
 import { updateStockItem } from '../use-cases/update-stock-item.usecase';
 
@@ -82,6 +83,12 @@ export const stockController = {
   },
 
   /** 200: a devolução FECHA unidades que já existiam. O `:id` é o de uma unidade da ENTREGA. */
+  /** Os componentes instalados num computador — a aba Componentes (AI). */
+  async doAtivo(request: FastifyRequest) {
+    const { id } = idParamSchema.parse(request.params);
+    return listAssetComponents(id);
+  },
+
   async checkin(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     return checkinStock(id, checkinStockSchema.parse(request.body ?? {}), atorDaRequisicao(request));

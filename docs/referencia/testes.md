@@ -103,6 +103,14 @@ Em todos os casos a asserção central é sobre o BANCO — a contagem de `Stock
 sobre a resposta HTTP: é o estado final que precisa estar certo, e é exatamente o que uma resposta
 `201` plausível esconderia se a trava não existisse.
 
+**`componente.test.ts` › a categoria decide para onde o item vai.** O componente
+([AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar))
+que fosse para um colaborador ficaria "em uso" com uma pessoa, e o mouse num computador apareceria
+na aba Componentes; nenhum dos dois quebra conta nenhuma, e por isso a recusa é testada nos dois
+sentidos. O mesmo arquivo prova que o componente fica quando o computador muda de mãos, que a baixa
+e a lixeira do computador com componente são recusadas com o item em link, e que o CHECK do alvo
+`ASSET` exige o computador e só ele.
+
 ### `listagens/` — o que a vista devolve, e o que ela esconde
 
 A regra do diretório: toda asserção diz as **duas** metades — o que apareceu e o

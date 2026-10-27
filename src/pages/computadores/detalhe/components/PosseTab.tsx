@@ -78,7 +78,7 @@ export default function PosseTab({
         <div className="border border-border-sutil bg-bg-base/50 p-4 text-text-tertiary">
           {entregue
             ? 'Ninguém responde por ele: a posse aponta para um posto sem ocupante.'
-            : 'Sem posse aberta — o ativo está no estoque.'}
+            : 'Sem posse aberta — o ativo não está entregue a ninguém.'}
         </div>
       ) : (
         <ul className="border border-border-sutil divide-y divide-border-sutil/50">
@@ -136,7 +136,7 @@ export default function PosseTab({
               <TriangleAlert size={12} className="mt-0.5 shrink-0" />
               <span>
                 POSTO VAGO: o ativo está entregue a um posto sem nenhum ocupante aberto —
-                equipamento parado em mesa vazia. Devolva ao estoque, ou coloque alguém
+                equipamento parado em mesa vazia. Devolva o computador, ou coloque alguém
                 no posto pela ficha dele, no nome logo acima.
               </span>
             </div>

@@ -5,7 +5,7 @@
 > muda, mesmo que o arquivo onde ela vive mude. Depois do D164 veio uma segunda rodada, com 15
 > decisões próprias, nomeadas por letra (`A`…`P`, sem `N`) em vez de número — ver
 > [*A segunda rodada*](#a-segunda-rodada-ap) abaixo. A varredura do código morto, que veio
-> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y`, `Z` e, acabado o alfabeto, `AA`, `AB`, `AC`, `AD`, `AE`, `AF`, `AG` e `AH`.
+> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y`, `Z` e, acabado o alfabeto, `AA`, `AB`, `AC`, `AD`, `AE`, `AF`, `AG`, `AH` e `AI`.
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve.** Se a realidade mudou, ela é
 > **superada** por outra, com link entre as duas. O log é o que diz por quanto tempo cada regra
@@ -28,7 +28,7 @@
 | [`licencas.md`](./licencas.md) | Licenças | 16 |
 | [`campos-customizados.md`](./campos-customizados.md) | Campos customizados | 8 |
 | [`plataforma.md`](./plataforma.md) | Plataforma | 7 |
-| [`estoque.md`](./estoque.md) | Estoque | 9 |
+| [`estoque.md`](./estoque.md) | Estoque | 10 |
 
 ## Correções e supersessões
 
@@ -100,6 +100,7 @@ registram o "Supera:" do mesmo jeito, e o log só fica completo com elas na tabe
 | **AA** (em parte: a aba Encerradas e o Encerrar sem volta na linha) | **AF** | a licença entra no cadastro das Configurações: a encerrada fica na lista, e Encerrar/Reabrir é o Desativar/Ativar dela, com a data; o Editar manda o formulário inteiro em todas as telas |
 | **AE** (em parte: só o item nunca entregue se exclui), **AA** (em parte: a licença já entregue não se exclui) | **AG** | o item e a licença excluem pela regra do posto: só o que está em uso recusa, e o passado fica com o nome por escrito; as chaves vão junto com a licença |
 | **U** (em parte: o colaborador como aba de Configurações) | **AH** | o menu se agrupa por assunto; o colaborador ganha página própria, na seção Pessoas, e a página Ativos vira Computadores; o cadastro e a API são os mesmos |
+| **J** (em parte: o alvo em pessoa ou posto) | **AI** | a categoria ganha o tipo Componente: o item dela vai só para computador, fica nele até o Retirar, e o computador com componente não recebe baixa nem vai para a lixeira |
 
 Quatro decisões nasceram para resolver **conflito entre dois planos**, e não de uma fase só:
 **D79** (cada job tem a própria linha), **D80** (um `ApiToken` com dono polimórfico), **D81** (uma
@@ -158,6 +159,7 @@ que o código ainda cita. Letra deixa claro, só pelo nome, que a decisão é de
 | **AF** | A licença entra no cadastro das Configurações, e o Editar manda o formulário inteiro | [Licenças](./licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro) |
 | **AG** | A regra do posto vale para o estoque e a licença: só o que está em uso impede a exclusão | [Estoque](./estoque.md#ag--a-regra-do-posto-vale-para-o-estoque-e-a-licença-só-o-que-está-em-uso-impede-a-exclusão) |
 | **AH** | O menu por assunto: o colaborador ganha página própria, e Ativos vira Computadores | [Acesso](./acesso.md#ah--o-menu-por-assunto-o-colaborador-ganha-página-própria-e-ativos-vira-computadores) |
+| **AI** | O componente é uma categoria: vai só para computador, e sai pelo Retirar | [Estoque](./estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar) |
 
 **`N` não existe, de propósito.** As correções de segurança e consistência desta rodada (custo
 de compra vazando por uma quarta porta, comando que respondia sucesso sem confirmação do socket,
@@ -172,7 +174,7 @@ já prometiam e o código não cumpria. Continua a letra pelo mesmo motivo de a 
 adotado: a numeração `D` corresponde ao que o código cita, e recomeçá-la colidiria. A `R` veio
 logo depois dela, pelo mesmo caminho: a varredura achou a rota de senha sem chamador, e a
 resposta foi levar a senha para o cadastro. A `S` é o renomeio do papel para cargo, a palavra
-que a equipe usa. A `T` tira o seed da conta de administrador. A `AA` veio da revisão da página de Licenças — acabado o alfabeto, a letra continua com duas. A `AB` traz de volta a auditoria de quem fez, só no banco. A `AC` veio da conversa sobre o que faltava na licença: a chave virou lista. A `AD` respondeu os casos de uso que a `AC` deixou sugeridos. A `AE` pôs o estoque na lógica da licença. A `AF` pôs a licença no cadastro das Configurações, e o Editar com o formulário inteiro em todas as telas. A `AG` veio da pergunta sobre excluir o que já foi devolvido: o item e a licença passaram à regra do posto. A `AH` agrupou o menu por assunto: o colaborador ganhou página própria e a página Ativos virou Computadores; a próxima é a `AI`.
+que a equipe usa. A `T` tira o seed da conta de administrador. A `AA` veio da revisão da página de Licenças — acabado o alfabeto, a letra continua com duas. A `AB` traz de volta a auditoria de quem fez, só no banco. A `AC` veio da conversa sobre o que faltava na licença: a chave virou lista. A `AD` respondeu os casos de uso que a `AC` deixou sugeridos. A `AE` pôs o estoque na lógica da licença. A `AF` pôs a licença no cadastro das Configurações, e o Editar com o formulário inteiro em todas as telas. A `AG` veio da pergunta sobre excluir o que já foi devolvido: o item e a licença passaram à regra do posto. A `AH` agrupou o menu por assunto: o colaborador ganhou página própria e a página Ativos virou Computadores. A `AI` veio da memória e do SSD: a categoria ganhou o tipo Componente, que vai só para computador; a próxima é a `AJ`.
 
 ## O índice
 

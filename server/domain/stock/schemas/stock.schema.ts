@@ -64,15 +64,19 @@ export const updateStockItemSchema = z.strictObject({
  * teto por requisição existe porque são N `INSERT`s numa transação, e ninguém
  * entrega mil mouses de uma vez pela tela.
  *
- * As duas FKs são opcionais aqui e a obrigatoriedade de UMA fica no use-case
+ * O alvo `ASSET` é só do componente (AI) — quem confere é o use-case, que lê a
+ * categoria do item.
+ *
+ * As três FKs são opcionais aqui e a obrigatoriedade de UMA fica no use-case
  * (`assertAlvoCoerente`), pelo mesmo motivo do checkout de ativo: a regra é
  * "exatamente uma, e a que casa com o `targetType`", e no use-case ela vira
  * `AppError(…, 422)` com o texto que ensina o modelo.
  */
 export const checkoutStockSchema = z.strictObject({
-  targetType: z.enum(['PERSON', 'WORKSTATION'], 'tipo de alvo inválido: use PERSON ou WORKSTATION'),
+  targetType: z.enum(['PERSON', 'WORKSTATION', 'ASSET'], 'tipo de alvo inválido: use PERSON, WORKSTATION ou ASSET'),
   targetPersonId: uuidOpcional('colaborador'),
   targetWorkstationId: uuidOpcional('posto'),
+  targetAssetId: uuidOpcional('computador'),
   qty: quantidade('quantidade', 100).default(1),
   notes: textoOpcional('observações', 2_000),
   /** Ausente é hoje. Passado é o caso real: registrar a entrega que já aconteceu. */

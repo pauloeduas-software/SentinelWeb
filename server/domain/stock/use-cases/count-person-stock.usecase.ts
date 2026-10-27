@@ -1,4 +1,4 @@
-import type { ReferenciaDoErro } from '../../../core/errors/app-error';
+import { AppError, type ReferenciaDoErro } from '../../../core/errors/app-error';
 import type { ClienteEstoque } from '../helpers/stock-balance.helper';
 
 /** Um item de estoque que está com alguém, como a frase da recusa o cita. */
@@ -19,7 +19,7 @@ export interface ItemComAlguem {
  */
 export async function itensAbertosNo(
   client: ClienteEstoque,
-  alvo: { targetPersonId: string } | { targetWorkstationId: string },
+  alvo: { targetPersonId: string } | { targetWorkstationId: string } | { targetAssetId: string },
 ): Promise<ItemComAlguem[]> {
   const grupos = await client.stockMovement.groupBy({
     by: ['itemId'],
@@ -63,4 +63,28 @@ export function nomesDosItens(itens: readonly ItemComAlguem[]): string {
 /** Os itens como `refs` do erro: a tela põe um link para o detalhe de cada um. */
 export function itensComoReferencias(itens: readonly ItemComAlguem[]): ReferenciaDoErro[] {
   return itens.map((item) => ({ tipo: 'estoque' as const, id: item.id, nome: item.nome }));
+}
+
+/**
+ * O computador com COMPONENTE instalado não recebe baixa nem vai para a lixeira
+ * (AI): 409, com cada item em link para o detalhe dele, onde mora o Retirar.
+ * Quem chama trava o computador antes: a entrega de componente trava a mesma
+ * linha, e não nasce no meio da conta.
+ */
+export async function componentesDoAtivo(
+  client: ClienteEstoque,
+  assetId: string,
+  /** Quem a frase cita: a etiqueta, ou "Este ativo". */
+  sujeito: string,
+  /** "dar baixa", "excluir". */
+  operacao: string,
+): Promise<void> {
+  const itens = await itensAbertosNo(client, { targetAssetId: assetId });
+  if (itens.length === 0) return;
+  throw new AppError(
+    `${sujeito} ainda tem ${totalDeUnidades(itens) === 1 ? 'o componente' : 'os componentes'} ${nomesDosItens(itens)}. `
+    + `Retire pela tela de Estoque antes de ${operacao}.`,
+    409,
+    itensComoReferencias(itens),
+  );
 }

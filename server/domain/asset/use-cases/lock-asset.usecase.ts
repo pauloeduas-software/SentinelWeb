@@ -37,6 +37,9 @@ import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase
 //                     (`license/use-cases/lock-license.usecase.ts`). A devolução
 //                     de licença trava só a linha da entrega.
 //   pessoa → item     a entrega de estoque a pessoa (`stock/use-cases/checkout-stock.usecase.ts`)
+//   ativo → item      a entrega de componente a computador (AI, o mesmo arquivo).
+//                     A baixa e a lixeira do ativo contam os componentes com o
+//                     ativo travado, e não travam item nenhum.
 //   item → posto      implícita: o INSERT da entrega a posto toma `FOR KEY SHARE`
 //                     na linha do posto, com o item já travado. Nenhum caminho
 //                     trava posto e depois item, e nenhum trava item e depois

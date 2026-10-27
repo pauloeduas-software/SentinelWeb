@@ -1,6 +1,6 @@
-import { History, Info, KeyRound, MonitorSmartphone, Users } from 'lucide-react';
+import { Cpu, History, Info, KeyRound, MonitorSmartphone, Users } from 'lucide-react';
 
-// AS CINCO ABAS DA TELA DE DETALHE — dado, não componente.
+// AS SEIS ABAS DA TELA DE DETALHE — dado, não componente.
 //
 // Fica em `helpers/` porque é a lista que a tela percorre, e porque um arquivo
 // que exporta componente E constante quebra o fast refresh do Vite (o lint
@@ -11,7 +11,7 @@ import { History, Info, KeyRound, MonitorSmartphone, Users } from 'lucide-react'
 
 export type AbaId =
   | 'detalhes' | 'posse' | 'historico'
-  | 'licencas' | 'maquina';
+  | 'licencas' | 'componentes' | 'maquina';
 
 export interface Aba {
   id: AbaId;
@@ -24,5 +24,6 @@ export const ABAS: readonly Aba[] = [
   { id: 'posse', rotulo: 'Posse', icone: Users },
   { id: 'historico', rotulo: 'Histórico', icone: History },
   { id: 'licencas', rotulo: 'Licenças', icone: KeyRound },
+  { id: 'componentes', rotulo: 'Componentes', icone: Cpu },
   { id: 'maquina', rotulo: 'Máquina', icone: MonitorSmartphone },
 ];

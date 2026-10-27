@@ -8,14 +8,16 @@ import {
 } from '../../../domain/stock/stock.queries';
 import type { ItemDeEstoque } from '../../../domain/shared/stock.types';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
-import { classeDaConta, motivoParaNaoEntregar, resumoDaContagem } from '../helpers/estoque.helper';
+import { classeDaConta, ehComponente, motivoParaNaoEntregar, resumoDaContagem } from '../helpers/estoque.helper';
 
 // O DETALHE DO ITEM: a conta, as ações da lista, todos os campos do cadastro,
 // quem está com ele agora e o histórico — as duas listas de 15 em 15. É o
 // detalhe da licença (`LicencaDetalheModal.tsx`), com quantidade (AE).
 //
 // "COM QUEM ESTÁ" É ONDE A DEVOLUÇÃO ACONTECE — o único lugar: as fichas do
-// posto e do colaborador mostram o que está com eles e apontam para cá.
+// posto e do colaborador mostram o que está com eles e apontam para cá. No
+// COMPONENTE (AI) a lista é "Em quais computadores", e a devolução é o Retirar;
+// a aba Componentes do computador aponta para cá do mesmo jeito.
 
 interface ItemDetalheModalProps {
   item: ItemDeEstoque;
@@ -96,6 +98,7 @@ export default function ItemDetalheModal({
 
   const atual = detalhe ?? item;
   const motivoSemEntrega = motivoParaNaoEntregar(atual);
+  const componente = ehComponente(atual);
 
   const mudarBusca = (valor: string) => {
     setBusca(valor);
@@ -173,11 +176,11 @@ export default function ItemDetalheModal({
           </div>
 
           <div className="space-y-3">
-            <span className={ROTULO}>Com quem está</span>
+            <span className={ROTULO}>{componente ? 'Em quais computadores' : 'Com quem está'}</span>
             <ListToolbar
               search={busca}
               onSearchChange={mudarBusca}
-              placeholder="Buscar por colaborador ou posto..."
+              placeholder={componente ? 'Buscar por etiqueta ou nome do computador...' : 'Buscar por colaborador ou posto...'}
               page={paginaDasEntregas}
               perPage={POR_PAGINA}
               total={entregas.data?.total ?? 0}
@@ -186,7 +189,13 @@ export default function ItemDetalheModal({
             <Estado carregando={entregas.isPending} erro={entregas.error}>
               <EntregasAbertas
                 entregas={entregas.data?.rows ?? []}
-                vazio={buscaAdiada ? `Ninguém com "${buscaAdiada}" está com este item.` : undefined}
+                vazio={
+                  componente
+                    ? buscaAdiada
+                      ? `Nenhum computador com "${buscaAdiada}" tem este componente.`
+                      : 'Nenhum computador tem este componente agora.'
+                    : buscaAdiada ? `Ninguém com "${buscaAdiada}" está com este item.` : undefined
+                }
                 ocupado={ocupado}
                 onDevolver={onDevolver}
               />

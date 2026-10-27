@@ -1,4 +1,5 @@
 import type { EventoDoItem, ItemDeEstoque } from '../../../domain/shared/stock.types';
+import { textoDeUnidades } from '../../helpers/estoque.helper';
 
 // Funções puras da tela de estoque (docs/referencia/arquitetura.md). O que as
 // outras telas também mostram — o link do item — mora em
@@ -23,11 +24,22 @@ export function classeDaConta(item: Pick<ItemDeEstoque, 'disponivel'>): string {
   return item.disponivel < 0 ? 'text-status-danger' : 'text-text-secondary';
 }
 
-/** O vocabulário do histórico: entrega e devolução. */
-export const ACOES_DO_ITEM: Record<EventoDoItem['action'], string> = {
-  CHECKOUT: 'Entregue',
-  CHECKIN: 'Devolvida',
-};
+/**
+ * O item é COMPONENTE (AI)? É a categoria que diz: o componente vai só para
+ * computador, e sai dele pelo Retirar.
+ */
+export function ehComponente(item: Pick<ItemDeEstoque, 'category'>): boolean {
+  return item.category.type === 'COMPONENT';
+}
+
+/** "Entregue a Mesa 1 · 5 unidades", "Instalado em ATV-00012 · 1 unidade". */
+export function tituloDoEvento(evento: EventoDoItem): string {
+  const unidades = textoDeUnidades(evento.unidades);
+  if (evento.targetType === 'ASSET') {
+    return `${evento.action === 'CHECKOUT' ? 'Instalado em' : 'Retirado de'} ${evento.targetLabel} · ${unidades}`;
+  }
+  return `${evento.action === 'CHECKOUT' ? 'Entregue a' : 'Devolvida por'} ${evento.targetLabel} · ${unidades}`;
+}
 
 /**
  * Por que este item não pode ser entregue agora — `null` quando pode.

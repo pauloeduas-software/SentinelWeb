@@ -11,6 +11,7 @@ import { travarAtivoOuFalhar } from './lock-asset.usecase';
 import {
   comoReferencias, licencasDoAtivo, nomesDasLicencas,
 } from '../../license/use-cases/count-license-checkouts.usecase';
+import { componentesDoAtivo } from '../../stock/use-cases/count-person-stock.usecase';
 
 // DAR BAIXA — o ativo saiu do PATRIMÔNIO: foi vendido, descartado, doado,
 // extraviado, roubado ou trocado em garantia.
@@ -76,6 +77,11 @@ export async function retireAsset(id: string, data: RetireAssetData, ator: Ator)
         comoReferencias(licencas),
       );
     }
+
+    // E o COMPONENTE (AI): a memória continuaria "em uso" numa máquina vendida.
+    // Se ela foi junto, retirar e depois diminuir o total do item é o registro
+    // honesto — a peça saiu do estoque, e não ficou instalada em nada.
+    await componentesDoAtivo(tx, id, antes.assetTag, 'dar baixa');
 
     const retiredAt = data.retiredAt ?? new Date();
 

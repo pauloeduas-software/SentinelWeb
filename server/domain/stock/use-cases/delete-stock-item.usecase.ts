@@ -32,12 +32,14 @@ export async function deleteStockItem(id: string, ator: Ator): Promise<void> {
         targetPerson: { select: { name: true } },
         targetWorkstation: { select: { name: true } },
         targetWorkstationName: true,
+        targetAsset: { select: { assetTag: true, name: true } },
       },
     });
     if (emUso.length > 0) {
       throw new AppError(
         `"${item.name}" ainda tem ${emUso.length === 1 ? '1 unidade em uso' : `${emUso.length} unidades em uso`} `
-        + `(${comQuem(emUso.map(rotuloDoAlvo))}). Devolva antes de excluir.`,
+        + `(${comQuem(emUso.map(rotuloDoAlvo))}). `
+        + `${item.category.type === 'COMPONENT' ? 'Retire' : 'Devolva'} antes de excluir.`,
         409,
       );
     }
