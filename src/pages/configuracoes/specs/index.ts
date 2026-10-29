@@ -1,5 +1,5 @@
 import {
-  TIPOS_CATEGORIA, TIPOS_STATUS, desativar,
+  TIPOS_CATEGORIA, TIPOS_STATUS,
   type CatalogUiSpec,
 } from '../../components/catalogo/catalog-ui.types';
 
@@ -24,7 +24,6 @@ const categoria: CatalogUiSpec = {
     { key: 'type', label: 'Tipo', tipo: 'select', obrigatorio: true, opcoes: TIPOS_CATEGORIA },
   ],
   filtroPorTipo: { campo: 'type', opcoes: TIPOS_CATEGORIA },
-  acoes: [desativar(true)],
 };
 
 const status: CatalogUiSpec = {
@@ -43,7 +42,6 @@ const status: CatalogUiSpec = {
     { key: 'type', label: 'Tipo', tipo: 'select', obrigatorio: true, opcoes: TIPOS_STATUS },
     { key: 'notes', label: 'Notas', tipo: 'textarea', largura: 'inteira' },
   ],
-  acoes: [desativar(false)],
 };
 
 const fabricante: CatalogUiSpec = {
@@ -70,7 +68,6 @@ const fabricante: CatalogUiSpec = {
     { key: 'supportPhone', label: 'Telefone de suporte', tipo: 'text' },
     { key: 'supportEmail', label: 'E-mail de suporte', tipo: 'text' },
   ],
-  acoes: [desativar(false)],
 };
 
 const modelo: CatalogUiSpec = {
@@ -95,7 +92,6 @@ const modelo: CatalogUiSpec = {
     { key: 'categoryId', label: 'Categoria', tipo: 'reference', rota: 'categories', filtroTipo: 'ASSET', obrigatorio: true },
     { key: 'notes', label: 'Notas', tipo: 'textarea', largura: 'inteira' },
   ],
-  acoes: [desativar(false)],
 };
 const localizacao: CatalogUiSpec = {
   slug: 'locations',
@@ -105,8 +101,6 @@ const localizacao: CatalogUiSpec = {
   descricao: 'Onde as coisas ficam guardadas: a matriz, a filial, o depósito, o home office. Os postos de trabalho ficam dentro delas e se cadastram na tela Postos. Só não se exclui a localização que tem algo guardado ou um posto nela agora.',
   placeholderBusca: 'Buscar localização, cidade ou endereço...',
   colunas: [
-    // Sem coluna de "ativa": a localização desativada aparece esmaecida e
-    // marcada (a ação `ativacao` abaixo).
     { key: 'name', label: 'Nome' },
     { key: 'city', label: 'Cidade' },
     { key: 'state', label: 'Estado' },
@@ -123,7 +117,6 @@ const localizacao: CatalogUiSpec = {
     { key: 'state', label: 'Estado', tipo: 'text' },
     { key: 'notes', label: 'Notas', tipo: 'textarea', largura: 'inteira' },
   ],
-  acoes: [desativar(true)],
 };
 
 export const CATALOG_UI_SPECS: readonly CatalogUiSpec[] = [

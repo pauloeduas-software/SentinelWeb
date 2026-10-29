@@ -6,7 +6,7 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D1–D3, D5, D8–D13, D18–D21, D85, e C/I da segunda rodada (ver
+> Decisões neste arquivo: D1–D3, D5, D8–D13, D18–D21, D85, C/I da segunda rodada e AO (ver
 > [`README.md`](./README.md#a-segunda-rodada-ap)).
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
@@ -433,3 +433,50 @@ ativo guardado ali continua sendo parque.
 > um recorte a menos:** o posto virou cadastro próprio e só ele recebe entrega, então "só onde
 > `isWorkstation` é true" ficou sem objeto — toda posse aberta para posto tira o ativo de
 > `/ativos`, e o ativo guardado no depósito continua parque.
+
+---
+
+## AO — Categoria, status, fabricante, modelo e localização não se desativam
+
+**Decidido** (2026-10-29, na comparação das Configurações com o Snipe-IT e o GLPI, com o usuário
+escolhendo o modelo do Snipe-IT):
+
+- **As cinco abas das Configurações perdem o Desativar.** `isActive` sai das cinco tabelas e das
+  rotas: mandar o campo é 422. A linha não tem mais marca "desativado", o `/options` devolve todas,
+  e o `?inativos=incluir` do filtro de categoria sai junto, sem nada para incluir.
+- **A exclusão continua bloqueada pelo que usa o registro agora** (D8, V, Y), e o 409 diz o que
+  tirar em vez de mandar desativar: `Não é possível excluir: fabricante em uso por 3 registros.
+  Troque o fabricante desses registros e exclua de novo.` Na localização, `Mova o que está guardado
+  nela e os postos que ficam nela, e exclua de novo.`
+- **A invariante 21 sai.** A localização que existe recebe ativo, item e posto; a que não existe é
+  404 (`assertLocalExiste`), no lugar do erro cru da FK.
+- **O último status de Disponível e de Em uso continua protegido**, agora contra a troca de tipo e
+  a exclusão: 409 `"Disponível" é o único status do tipo Disponível, e é ele que a devolução aplica
+  sozinha. Crie outro do mesmo tipo antes.` A entrega e a devolução automáticas escolhem entre
+  todos os status do tipo.
+
+**Supera em parte:** o Desativar do catálogo do commit `ff34364` (configurações revisadas), com
+a invariante 21 e o `assertEscolhaAtiva`;
+[AF](./licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)
+(o Desativar em todas as telas e o 409 que manda desativar);
+[AN](./licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura) (o que ficava de fora:
+o catálogo com Desativar); [Y](./posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)
+(a localização desativada que não recebia nada novo).
+**Mantém:** o D8 — sem lixeira no catálogo, exclusão definitiva —; o Desativar do colaborador, da
+conta e do item de estoque, e o Encerrar da licença; a invariante 3 e a regra do último status do
+tipo.
+
+**Por quê:** o Desativar era a saída de quem não podia ser excluído por ter uso, e cada escolha do
+sistema precisava conferir se o registro estava ativo — status, categoria, fabricante, modelo e
+localização, cada um com a sua trava contra a desativação no meio. O Snipe-IT não tem nada disso
+nessas cinco tabelas: a exclusão com uso é 409, e o que sai de linha fica até ninguém usar.
+
+**Como o Snipe-IT e o GLPI fazem** (conferido no código-fonte): o Snipe-IT recusa excluir
+categoria, fabricante, modelo, status e localização em uso, e sem uso apaga com `SoftDeletes`,
+com Restaurar e limpeza da lixeira. O GLPI pergunta por qual registro trocar ou deixa o campo vazio
+nos que apontavam. Aqui fica a parte do Snipe-IT que protege — o 409 por uso —, sem a lixeira,
+pelos motivos do D8.
+
+**O que fica de fora, declarado:** o colaborador e a conta mantêm o Desativar, porque são pessoas:
+saem da empresa e continuam no histórico. O item de estoque o mantém como o acessório do Snipe-IT,
+que se arquiva.

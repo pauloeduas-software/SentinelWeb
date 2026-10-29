@@ -47,7 +47,7 @@ describe('o Editar com a versão velha é recusado', () => {
       .toEqual({ name: 'Fabricante da versão', supportPhone: '1133334444' });
 
     expect((await api.put(`/api/manufacturers/${id}`, { name: 'Fabricante da versão nova', updatedAt: outra.body.updatedAt })).status).toBe(200);
-    expect((await api.put(`/api/manufacturers/${id}`, { isActive: false })).status).toBe(200);
+    expect((await api.put(`/api/manufacturers/${id}`, { supportPhone: '1144445555' })).status).toBe(200);
   });
 
   it('na licença: o formulário aberto antes do Encerrar não a reabre', async () => {

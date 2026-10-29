@@ -1,6 +1,6 @@
 import { INCLUINDO_LIXEIRA } from '../../../core/database/soft-delete.extension';
 import { AppError } from '../../../core/errors/app-error';
-import { assertEscolhaAtiva, lerCategoriaTravada, lerFabricanteTravado } from '../helpers/catalog-lock.helper';
+import { lerCategoriaTravada, lerFabricanteTravado } from '../helpers/catalog-lock.helper';
 import { createAssetModelSchema, updateAssetModelSchema } from '../schemas/catalog-entities.schema';
 import type { CatalogDelegate, CatalogSpec } from './catalog-spec.types';
 import { escaparCuringas } from '../../shared/busca.helper';
@@ -18,19 +18,18 @@ export const assetModelSpec: CatalogSpec = {
   // O fabricante e a categoria vêm embutidos porque a tabela mostra o nome, não
   // o uuid — e uma segunda consulta por linha seria N+1 na tela.
   select: {
-    id: true, name: true, modelNumber: true, notes: true, isActive: true,
+    id: true, name: true, modelNumber: true, notes: true,
     manufacturerId: true, categoryId: true, createdAt: true, updatedAt: true,
     manufacturer: { select: { id: true, name: true } },
     category: { select: { id: true, name: true, type: true } },
   },
   searchable: ['name', 'modelNumber'],
   audited: [
-    'name', 'modelNumber', 'notes', 'manufacturerId', 'categoryId', 'isActive',
+    'name', 'modelNumber', 'notes', 'manufacturerId', 'categoryId',
   ],
 
-  // Desativado some das escolhas e continua no histórico (configuracoes.md).
-  optionsWhere: { isActive: true },
-  dicaEmUso: 'Desative-o em vez de excluir: ele some das escolhas e continua no histórico.',
+  // Sem Desativar (AO): o modelo em uso fica, e sai quando nenhum ativo o usa.
+  dicaEmUso: 'Troque o modelo desses ativos e exclua de novo.',
 
   // Conta a lixeira também: a FK é `Restrict` e o banco recusaria de todo jeito,
   // mas sem isto a contagem dá 0 e o usuário recebe o P2003 genérico no lugar da
@@ -51,32 +50,23 @@ export const assetModelSpec: CatalogSpec = {
     const atual = id
       ? await client.assetModel.findUnique({
         where: { id },
-        select: { manufacturerId: true, categoryId: true, modelNumber: true },
+        select: { manufacturerId: true, modelNumber: true },
       })
       : null;
 
-    // Leituras `FOR SHARE`: a troca de tipo da categoria e a desativação do
-    // fabricante ou da categoria travam a linha, e estas leituras esperam por
-    // elas em vez de aprovar o valor velho (`catalog-lock.helper.ts`).
     if (typeof data.manufacturerId === 'string') {
       const fabricante = await lerFabricanteTravado(client, data.manufacturerId);
       if (!fabricante) throw new AppError('Fabricante não encontrado.', 404);
-      // Desativado não é escolhido de novo — só quando o fabricante MUDA: o
-      // formulário reenvia todo campo, e o modelo que já era dele continua
-      // editável.
-      if (data.manufacturerId !== atual?.manufacturerId) {
-        assertEscolhaAtiva(fabricante, { rotulo: 'O fabricante' });
-      }
     }
 
+    // Leitura `FOR SHARE`: a troca de tipo da categoria trava a linha, e esta
+    // leitura espera por ela em vez de aprovar o tipo velho
+    // (`catalog-lock.helper.ts`).
     if (typeof data.categoryId === 'string') {
       const categoria = await lerCategoriaTravada(client, data.categoryId);
       if (!categoria) throw new AppError('Categoria não encontrada.', 404);
       if (categoria.type !== 'ASSET') {
         throw new AppError(`"${categoria.name}" não é uma categoria de ativo.`, 422);
-      }
-      if (data.categoryId !== atual?.categoryId) {
-        assertEscolhaAtiva(categoria, { rotulo: 'A categoria', feminino: true });
       }
     }
 

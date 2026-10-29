@@ -44,7 +44,7 @@ export default function PostoFormModal({ posto, onClose, onSubmit }: PostoFormMo
       await onSubmit({ ...montarPosto({ name, locationId, notes }, posto !== null), ...(versao ? { updatedAt: versao } : {}) });
     } catch (falha) {
       // O apiClient já traduziu a resposta do servidor em Error.message — é
-      // aqui que aparece o 409 de nome repetido e o de localização desativada.
+      // aqui que aparece o 409 de nome repetido e o 404 da localização.
       setErro((falha as Error).message);
     } finally {
       setSalvando(false);

@@ -126,7 +126,7 @@ async function assertAlvoApto(
   alvoId: string,
 ): Promise<{ nome: string; compra: Date | null }> {
   if (tipo === 'WORKSTATION') {
-    // Desativado não recebe entrega nova. `FOR SHARE` depois do item — a aresta
+    // O posto não se desativa (AN): basta existir. `FOR SHARE` depois do item — a aresta
     // `item → posto` que o grafo já tinha (`lock-asset.usecase.ts`).
     return { nome: await lerPostoTravado(client, alvoId), compra: null };
   }

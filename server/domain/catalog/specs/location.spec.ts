@@ -1,5 +1,4 @@
 import { INCLUINDO_LIXEIRA } from '../../../core/database/soft-delete.extension';
-import { travarLocalParaEscrita } from '../helpers/catalog-lock.helper';
 import { createLocationSchema, updateLocationSchema } from '../schemas/catalog-entities.schema';
 import type { CatalogDelegate, CatalogSpec } from './catalog-spec.types';
 
@@ -14,21 +13,16 @@ export const locationSpec: CatalogSpec = {
   updateSchema: updateLocationSchema,
 
   select: {
-    id: true, name: true, isActive: true,
+    id: true, name: true,
     address: true, city: true, state: true, zip: true, phone: true, notes: true, createdAt: true, updatedAt: true,
   },
   searchable: ['name', 'city', 'address'],
-  audited: ['name', 'isActive', 'address', 'city', 'state', 'zip', 'phone', 'notes'],
+  audited: ['name', 'address', 'city', 'state', 'zip', 'phone', 'notes'],
 
   nomeUnicoPor: [],
 
-  // O formulário só ESCOLHE localização ativa: desativada não guarda nada novo,
-  // e o vínculo que já aponta para ela aparece como "fora desta lista" no
-  // `ReferenceSelect`, sem sumir.
-  optionsWhere: { isActive: true },
-
-  dicaEmUso: 'Mova o que está guardado nela e os postos que ficam nela, ou desative-a: '
-    + 'ela some das escolhas e continua no histórico.',
+  // Sem Desativar (AO): a localização com algo nela fica, e a vazia se exclui.
+  dicaEmUso: 'Mova o que está guardado nela e os postos que ficam nela, e exclua de novo.',
 
   // A mesma lógica do status: localização é cadastro de REFERÊNCIA e só o que
   // aponta para ela AGORA a segura — os ativos e itens de estoque guardados
@@ -42,11 +36,5 @@ export const locationSpec: CatalogSpec = {
       client.workstation.count({ where: { locationId: id } }),
     ]);
     return ativos + itens + postos;
-  },
-
-  // A trava da linha na edição: é o que faz a desativação esperar quem está
-  // lendo o `isActive` dela para guardar algo aqui (`catalog-lock.helper.ts`).
-  async beforeWrite(client, id) {
-    if (id) await travarLocalParaEscrita(client, id);
   },
 };

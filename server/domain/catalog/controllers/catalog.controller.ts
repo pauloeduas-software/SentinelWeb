@@ -22,11 +22,6 @@ function buildOptionsQuerySchema(spec: CatalogSpec) {
   return z.strictObject({
     q: z.string().trim().max(200, 'busca: máximo de 200 caracteres').optional()
       .transform((valor) => valor || undefined),
-    // `?inativos=incluir`: o FILTRO de uma listagem precisa achar o desativado
-    // (os notebooks antigos continuam na categoria que saiu de linha); o
-    // `<select>` de um formulário, não. Um valor só, e não um booleano, para a
-    // URL dizer o que faz.
-    inativos: z.enum(['incluir'], 'inativos: use "incluir"').optional(),
     ...(spec.optionFilter
       ? {
           [spec.optionFilter.campo]: z
@@ -76,9 +71,9 @@ export function createCatalogController(spec: CatalogSpec) {
     },
 
     async options(request: FastifyRequest) {
-      const query = optionsQuerySchema.parse(request.query ?? {}) as { q?: string; inativos?: string } & Record<string, unknown>;
+      const query = optionsQuerySchema.parse(request.query ?? {}) as { q?: string } & Record<string, unknown>;
       const filtro = spec.optionFilter ? query[spec.optionFilter.campo] as string[] | undefined : undefined;
-      return listCatalogOptions(spec, query.q, filtro, query.inativos === 'incluir');
+      return listCatalogOptions(spec, query.q, filtro);
     },
 
     async create(request: FastifyRequest, reply: FastifyReply) {

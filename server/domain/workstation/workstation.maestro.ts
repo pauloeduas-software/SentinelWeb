@@ -11,7 +11,7 @@ const logger = createLogger('workstation.maestro');
 //
 // DUAS metades, e cada uma com o seu dono:
 //
-//   o CADASTRO   criar, renomear, mudar de localização, desativar e excluir.
+//   o CADASTRO   criar, renomear, mudar de localização e excluir.
 //                É o MESMO controller das tabelas de catálogo, amarrado à
 //                `workstationSpec`: nome único, 409 pelo que está nele agora e
 //                `AuditLog` vêm do CRUD genérico, e não de uma cópia que

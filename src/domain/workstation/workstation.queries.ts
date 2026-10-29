@@ -61,7 +61,7 @@ export interface PostoInput {
  * Invalidam DOIS caches: a lista de postos e as OPÇÕES de posto
  * (`catalogKeys.tabela('workstations')`), que os seletores da entrega de ativo, da
  * de estoque e do vínculo de máquina leem. Sem a segunda, o posto criado não
- * aparecia no seletor — e o desativado continuava sendo oferecido — até o
+ * aparecia no seletor — e o excluído continuava sendo oferecido — até o
  * `staleTime` vencer.
  */
 function useMutacaoDePosto<T>(mutationFn: (dados: T) => Promise<unknown>) {

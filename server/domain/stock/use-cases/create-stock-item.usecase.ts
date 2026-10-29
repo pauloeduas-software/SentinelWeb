@@ -4,9 +4,7 @@ import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
 import { escaparCuringas } from '../../shared/busca.helper';
 import { buildSnapshot } from '../../shared/diff.helper';
-import {
-  assertEscolhaAtiva, assertLocalRecebe, lerCategoriaTravada,
-} from '../../catalog/helpers/catalog-lock.helper';
+import { assertLocalExiste, lerCategoriaTravada } from '../../catalog/helpers/catalog-lock.helper';
 import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
 import { comContagem, SEM_USO, type ClienteEstoque } from '../helpers/stock-balance.helper';
 import { CAMPOS_AUDITADOS_DO_ITEM, STOCK_ITEM_SELECT } from '../helpers/stock-select.helper';
@@ -30,8 +28,6 @@ import type { CreateStockItemInput } from '../schemas/stock.schema';
 export async function assertCategoriaDeEstoque(
   client: ClienteEstoque & ClienteQueTrava,
   categoryId: string,
-  /** A categoria de ANTES, na edição: desativada só é recusada quando muda. */
-  categoriaAtual?: string,
 ): Promise<string> {
   const categoria = await lerCategoriaTravada(client, categoryId);
   if (!categoria) throw new AppError('Categoria não encontrada.', 404);
@@ -42,7 +38,6 @@ export async function assertCategoriaDeEstoque(
       422,
     );
   }
-  if (categoryId !== categoriaAtual) assertEscolhaAtiva(categoria, { rotulo: 'A categoria', feminino: true });
   return categoria.type;
 }
 
@@ -75,9 +70,8 @@ export async function createStockItem(data: CreateStockItemInput, ator: Ator) {
   return prisma.$transaction(async (tx) => {
     await assertCategoriaDeEstoque(tx, data.categoryId);
     await assertNomeLivre(tx, data.name);
-    // O local de guarda: existe (404) e não foi desativado (409) — a mesma
-    // porta de quem entrega ou guarda ativo (`assertLocalRecebe`).
-    if (data.locationId) await assertLocalRecebe(tx, data.locationId, 'estoque novo');
+    // O local de guarda existe (404) — a mesma porta de quem guarda ativo.
+    if (data.locationId) await assertLocalExiste(tx, data.locationId);
 
     const item = await tx.stockItem.create({
       data: {

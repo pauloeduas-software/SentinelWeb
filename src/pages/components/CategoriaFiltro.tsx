@@ -14,11 +14,7 @@ interface CategoriaFiltroProps {
 }
 
 export default function CategoriaFiltro({ tipo, valor, onChange }: CategoriaFiltroProps) {
-  // `inativos=incluir`: é FILTRO, não escolha — a categoria desativada continua
-  // tendo registros, e quem procura os notebooks antigos precisa achá-la.
-  const { data: categorias = [], isPending } = useCatalogOptionsQuery(
-    'categories', tipo, undefined, { inativos: 'incluir' },
-  );
+  const { data: categorias = [], isPending } = useCatalogOptionsQuery('categories', tipo);
 
   // O FILTRO APLICADO PODE NÃO ESTAR NA LISTA: a categoria foi excluída, mudou
   // de tipo, ou passou do teto do `/options`. Um `<select>` cujo `value` não

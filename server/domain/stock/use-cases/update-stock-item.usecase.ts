@@ -4,7 +4,7 @@ import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
 import { buildChanges } from '../../shared/diff.helper';
 import { assertVersaoLida } from '../../shared/versao.helper';
-import { assertLocalRecebe } from '../../catalog/helpers/catalog-lock.helper';
+import { assertLocalExiste } from '../../catalog/helpers/catalog-lock.helper';
 import { comContagem, contarUsoDe, fraseDoPiso, travarItemOuFalhar } from '../helpers/stock-balance.helper';
 import { CAMPOS_AUDITADOS_DO_ITEM, STOCK_ITEM_SELECT } from '../helpers/stock-select.helper';
 import type { UpdateStockItemInput } from '../schemas/stock.schema';
@@ -48,7 +48,7 @@ export async function updateStockItem(id: string, data: UpdateStockItemInput, at
     assertVersaoLida(antes.updatedAt, data.updatedAt, antes.name);
 
     if (data.categoryId !== undefined) {
-      const tipo = await assertCategoriaDeEstoque(tx, data.categoryId, antes.categoryId);
+      const tipo = await assertCategoriaDeEstoque(tx, data.categoryId);
       if (tipo !== antes.category.type) {
         const { emUso } = await contarUsoDe(tx, id);
         if (emUso > 0) {
@@ -63,9 +63,9 @@ export async function updateStockItem(id: string, data: UpdateStockItemInput, at
       }
     }
     if (data.name !== undefined) await assertNomeLivre(tx, data.name, id);
-    // Local desativado não recebe estoque NOVO — só quando o local muda.
+    // O local novo existe? Só quando muda: o formulário reenvia todo campo.
     if (data.locationId && data.locationId !== antes.locationId) {
-      await assertLocalRecebe(tx, data.locationId, 'estoque novo');
+      await assertLocalExiste(tx, data.locationId);
     }
 
     if (data.qty !== undefined && data.qty < antes.qty) {

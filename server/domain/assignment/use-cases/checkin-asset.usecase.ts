@@ -2,7 +2,7 @@ import { prisma } from '../../../core/database/prismaClient';
 import type { Ator } from '../../audit/audit.types';
 import { AppError } from '../../../core/errors/app-error';
 import { rotuloDoAlvo } from '../helpers/target-label.helper';
-import { assertStatusEscolhivel, escolherStatusPorTipo } from './checkout-asset.usecase';
+import { escolherStatusPorTipo } from './checkout-asset.usecase';
 import { fecharPosse } from './close-assignment.usecase';
 import { lerStatusTravado } from '../../catalog/helpers/catalog-lock.helper';
 import { travarAtivoOuFalhar } from '../../asset/use-cases/lock-asset.usecase';
@@ -86,11 +86,8 @@ export async function checkinAsset(assetId: string, data: CheckinData, ator: Ato
       );
     }
 
-    // O status escolhido à mão: existe e está ativo — exceto se é o que o ativo
-    // JÁ tem. Devolver mantendo o status atual não escolhe nada novo, e é a
-    // mesma regra "só quando o vínculo muda" das outras portas.
-    if (data.statusId && data.statusId !== ativo.statusId) await assertStatusEscolhivel(tx, data.statusId);
-    else if (data.statusId) await lerStatusTravado(tx, data.statusId);
+    // O status escolhido à mão existe? Lido travado: a troca de tipo dele espera.
+    if (data.statusId) await lerStatusTravado(tx, data.statusId);
     // Sem escolha explícita, o equipamento volta para o estoque. O caminho
     // anormal — voltou quebrado, foi direto para a assistência — é que merece o
     // `statusId` no corpo, e a tela de devolução oferece a lista.

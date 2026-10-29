@@ -5,7 +5,7 @@
 > muda, mesmo que o arquivo onde ela vive mude. Depois do D164 veio uma segunda rodada, com 15
 > decisões próprias, nomeadas por letra (`A`…`P`, sem `N`) em vez de número — ver
 > [*A segunda rodada*](#a-segunda-rodada-ap) abaixo. A varredura do código morto, que veio
-> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y`, `Z` e, acabado o alfabeto, `AA`, `AB`, `AC`, `AD`, `AE`, `AF`, `AG`, `AH`, `AI`, `AJ`, `AK`, `AL`, `AM` e `AN`.
+> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y`, `Z` e, acabado o alfabeto, `AA`, `AB`, `AC`, `AD`, `AE`, `AF`, `AG`, `AH`, `AI`, `AJ`, `AK`, `AL`, `AM`, `AN` e `AO`.
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve.** Se a realidade mudou, ela é
 > **superada** por outra, com link entre as duas. O log é o que diz por quanto tempo cada regra
@@ -21,7 +21,7 @@
 | [`reconciliacao.md`](./reconciliacao.md) | Reconciliação | 35 |
 | [`acesso.md`](./acesso.md) | Acesso | 31 |
 | [`escopo.md`](./escopo.md) | **Escopo** — o que o sistema deixou de fazer | 22 |
-| [`catalogo-e-ativo.md`](./catalogo-e-ativo.md) | Catálogo e ativo | 15 |
+| [`catalogo-e-ativo.md`](./catalogo-e-ativo.md) | Catálogo e ativo | 16 |
 | [`posse.md`](./posse.md) | Posse | 19 |
 | [`relatorios-import-etiquetas.md`](./relatorios-import-etiquetas.md) | Relatórios, import e etiquetas | 13 |
 | [`ciclo-de-vida.md`](./ciclo-de-vida.md) | Ciclo de vida | 12 |
@@ -106,6 +106,7 @@ registram o "Supera:" do mesmo jeito, e o log só fica completo com elas na tabe
 | **B**, **Y** (em parte: a porta da restauração) | **AL** | o computador entregue não vai para a lixeira, como não recebe baixa: faça a devolução antes |
 | a nota da Leva 1B da F4 (a data da entrega nunca vem do cliente) | **AM** | a entrega e a devolução do computador têm o dia, como a licença e o estoque; "hoje" é o dia de Brasília em toda data |
 | **AA**, **AF** (em parte: encerrar em uso e o alerta dele), **AE** (em parte: desativar com unidade fora), **Y** (em parte: o posto com desativar), **AM** (em parte: o que ficava de fora) | **AN** | o que está em uso bloqueia o Encerrar e o Desativar; o posto perde o Desativar; compra e encerramento não são futuros; o fim da ocupação e a devolução pelo posto ganham o dia |
+| o Desativar do catálogo (commit `ff34364`, com a invariante 21), **AF** (em parte: o Desativar em todas as telas), **AN** (em parte: o catálogo que ficava de fora), **Y** (em parte: a localização desativada) | **AO** | categoria, status, fabricante, modelo e localização perdem o Desativar, como no Snipe-IT; a exclusão continua bloqueada pelo uso, e o 409 diz o que tirar |
 
 Quatro decisões nasceram para resolver **conflito entre dois planos**, e não de uma fase só:
 **D79** (cada job tem a própria linha), **D80** (um `ApiToken` com dono polimórfico), **D81** (uma
@@ -170,6 +171,7 @@ que o código ainda cita. Letra deixa claro, só pelo nome, que a decisão é de
 | **AL** | O computador entregue não vai para a lixeira | [Posse](./posse.md#al--o-computador-entregue-não-vai-para-a-lixeira) |
 | **AM** | A entrega e a devolução do computador ganham o dia | [Posse](./posse.md#am--a-entrega-e-a-devolução-do-computador-ganham-o-dia) |
 | **AN** | O que está em uso bloqueia, e nenhuma data é futura | [Licenças](./licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura) |
+| **AO** | Categoria, status, fabricante, modelo e localização não se desativam | [Catálogo e ativo](./catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam) |
 
 **`N` não existe, de propósito.** As correções de segurança e consistência desta rodada (custo
 de compra vazando por uma quarta porta, comando que respondia sucesso sem confirmação do socket,
@@ -184,7 +186,7 @@ já prometiam e o código não cumpria. Continua a letra pelo mesmo motivo de a 
 adotado: a numeração `D` corresponde ao que o código cita, e recomeçá-la colidiria. A `R` veio
 logo depois dela, pelo mesmo caminho: a varredura achou a rota de senha sem chamador, e a
 resposta foi levar a senha para o cadastro. A `S` é o renomeio do papel para cargo, a palavra
-que a equipe usa. A `T` tira o seed da conta de administrador. A `AA` veio da revisão da página de Licenças — acabado o alfabeto, a letra continua com duas. A `AB` traz de volta a auditoria de quem fez, só no banco. A `AC` veio da conversa sobre o que faltava na licença: a chave virou lista. A `AD` respondeu os casos de uso que a `AC` deixou sugeridos. A `AE` pôs o estoque na lógica da licença. A `AF` pôs a licença no cadastro das Configurações, e o Editar com o formulário inteiro em todas as telas. A `AG` veio da pergunta sobre excluir o que já foi devolvido: o item e a licença passaram à regra do posto. A `AH` agrupou o menu por assunto: o colaborador ganhou página própria e a página Ativos virou Computadores. A `AI` veio da memória e do SSD: a categoria ganhou o tipo Componente, que vai só para computador. A `AJ` veio da validação de ITAM do estoque: a categoria ganhou o tipo Consumível. A `AK`, a `AL` e a `AM` vieram da revisão de lógica de licença e estoque: a chave que voltou sai da lista, o computador entregue não vai para a lixeira, e a posse do computador ganhou o dia. A `AN` fechou a revisão com os dois padrões do usuário: o que está em uso bloqueia, e nenhuma data é futura; a próxima é a `AO`.
+que a equipe usa. A `T` tira o seed da conta de administrador. A `AA` veio da revisão da página de Licenças — acabado o alfabeto, a letra continua com duas. A `AB` traz de volta a auditoria de quem fez, só no banco. A `AC` veio da conversa sobre o que faltava na licença: a chave virou lista. A `AD` respondeu os casos de uso que a `AC` deixou sugeridos. A `AE` pôs o estoque na lógica da licença. A `AF` pôs a licença no cadastro das Configurações, e o Editar com o formulário inteiro em todas as telas. A `AG` veio da pergunta sobre excluir o que já foi devolvido: o item e a licença passaram à regra do posto. A `AH` agrupou o menu por assunto: o colaborador ganhou página própria e a página Ativos virou Computadores. A `AI` veio da memória e do SSD: a categoria ganhou o tipo Componente, que vai só para computador. A `AJ` veio da validação de ITAM do estoque: a categoria ganhou o tipo Consumível. A `AK`, a `AL` e a `AM` vieram da revisão de lógica de licença e estoque: a chave que voltou sai da lista, o computador entregue não vai para a lixeira, e a posse do computador ganhou o dia. A `AN` fechou a revisão com os dois padrões do usuário: o que está em uso bloqueia, e nenhuma data é futura. A `AO` veio da comparação das Configurações com o Snipe-IT e o GLPI: o catálogo perdeu o Desativar; a próxima é a `AP`.
 
 ## O índice
 

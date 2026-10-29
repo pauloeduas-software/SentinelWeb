@@ -5,13 +5,13 @@ import {
   criarAtivo, criarFabricante, criarItemDeEstoque, criarLocal, criarModelo, criarPosto, idsDoSeed,
 } from '../helpers/fixtures';
 
-// A LOCALIZAÇÃO: o que segura o delete, e o que a desativação fecha.
+// A LOCALIZAÇÃO: o que segura o delete.
 //
 // Localização é cadastro de REFERÊNCIA, com a regra do status (decisão Y): diz
 // onde a coisa está GUARDADA e não recebe nada — quem recebe entrega, estoque e
 // ocupante é o posto. Só o que aponta para ela AGORA segura o delete: ativo ou
-// estoque guardado, posto que fica nela. Desativada, ela some das escolhas e
-// não guarda nada novo — mas o que já aponta para ela continua editável.
+// estoque guardado, posto que fica nela. Ela não se desativa (AO): a vazia se
+// exclui.
 
 let api: ApiDeTeste;
 let seed: Awaited<ReturnType<typeof idsDoSeed>>;
@@ -31,11 +31,6 @@ afterAll(async () => {
 const ativoDisponivel = (name: string, locationId?: string) =>
   criarAtivo(api, { statusId: seed.statusDeployableId, modelId, name, locationId });
 
-async function desativar(id: string) {
-  const resposta = await api.put(`/api/locations/${id}`, { isActive: false });
-  expect(resposta.status, JSON.stringify(resposta.body)).toBe(200);
-}
-
 describe('excluir localização — a regra do status', () => {
   it('recusa a que guarda um ativo, e a dica diz o que fazer', async () => {
     const deposito = await criarLocal(api, { name: 'Depósito com projetor' });
@@ -45,7 +40,7 @@ describe('excluir localização — a regra do status', () => {
     expect(status).toBe(409);
     expect(body.error).toMatch(/1 registro/);
     // A recusa ensina a saída — sem a dica, o operador fica sem caminho.
-    expect(body.error).toContain('Mova o que está guardado nela');
+    expect(body.error).toContain('Mova o que está guardado nela e os postos que ficam nela, e exclua de novo.');
   });
 
   it('recusa a que tem um POSTO nela', async () => {
@@ -87,59 +82,25 @@ describe('localização não recebe — quem recebe é o posto', () => {
   });
 });
 
-describe('localização desativada não guarda nada NOVO', () => {
-  it('some do /options — o formulário não a oferece', async () => {
-    const ativa = await criarLocal(api, { name: 'Opção Ativa' });
-    const inativa = await criarLocal(api, { name: 'Opção Desativada' });
-    await desativar(inativa);
+describe('sem Desativar (AO)', () => {
+  it('mandar isActive é 422, e o /options oferece todas', async () => {
+    const sala = await criarLocal(api, { name: 'Opção sem desativar' });
+    expect((await api.put(`/api/locations/${sala}`, { isActive: false })).status).toBe(422);
 
-    const { status, body } = await api.get<{ id: string }[]>('/api/locations/options?q=Op%C3%A7%C3%A3o');
-    expect(status).toBe(200);
-    const ids = body.map((o) => o.id);
-    expect(ids).toContain(ativa);
-    expect(ids).not.toContain(inativa);
+    const { body } = await api.get<{ id: string }[]>('/api/locations/options?q=Op%C3%A7%C3%A3o');
+    expect(body.map((o) => o.id)).toContain(sala);
   });
 
-  it('recusa ativo NOVO cadastrado nela', async () => {
-    const deposito = await criarLocal(api, { name: 'Depósito fechado' });
-    await desativar(deposito);
-
-    const { status, body } = await api.post<{ error: string }>('/api/assets', {
-      statusId: seed.statusDeployableId, modelId, locationId: deposito,
+  it('a que não existe é 404 no ativo, no item e no posto', async () => {
+    const inexistente = '00000000-0000-4000-8000-000000000000';
+    const ativo = await api.post('/api/assets', { statusId: seed.statusDeployableId, modelId, locationId: inexistente });
+    expect(ativo.status).toBe(404);
+    const item = await api.post('/api/stock/items', {
+      name: 'Item sem lugar', categoryId: seed.categoriaEstoqueId, qty: 1, locationId: inexistente,
     });
-    expect(status).toBe(409);
-    expect(body.error).toMatch(/desativada/);
-  });
-
-  it('recusa posto NOVO nela', async () => {
-    const filial = await criarLocal(api, { name: 'Filial fechada' });
-    await desativar(filial);
-
-    const { status, body } = await api.post<{ error: string }>('/api/workstations', {
-      name: 'Mesa da filial fechada', locationId: filial,
-    });
-    expect(status).toBe(409);
-    expect(body.error).toMatch(/"Filial fechada" está desativada e não recebe posto novo/);
-  });
-
-  it('deixa editar o ativo que JÁ está nela, sem mudar o local', async () => {
-    // O formulário reenvia todo campo: recusar o `locationId` que não mudou
-    // travaria a edição do nome de tudo que estava no depósito desativado.
-    const deposito = await criarLocal(api, { name: 'Depósito antigo' });
-    const ativo = await ativoDisponivel('Servidor do depósito', deposito);
-    await desativar(deposito);
-
-    const { status } = await api.put(`/api/assets/${ativo.id}`, { name: 'Servidor renomeado', locationId: deposito });
-    expect(status).toBe(200);
-  });
-
-  it('deixa editar o posto que JÁ está nela, sem mudar o local', async () => {
-    const filial = await criarLocal(api, { name: 'Filial antiga' });
-    const mesa = await criarPosto(api, { name: 'Mesa da filial antiga', locationId: filial });
-    await desativar(filial);
-
-    const { status } = await api.put(`/api/workstations/${mesa}`, { name: 'Mesa renomeada', locationId: filial });
-    expect(status).toBe(200);
+    expect(item.status).toBe(404);
+    const posto = await api.post('/api/workstations', { name: 'Mesa sem lugar', locationId: inexistente });
+    expect(posto.status).toBe(404);
   });
 });
 
@@ -172,21 +133,5 @@ describe('o estoque guardado numa localização', () => {
     const exclusao = await api.delete<{ error: string }>(`/api/locations/${deposito}`);
     expect(exclusao.status).toBe(409);
     expect(exclusao.body.error).toMatch(/Mova o que está guardado nela/);
-  });
-
-  it('localização desativada não recebe estoque novo — mas o item que já estava lá continua editável', async () => {
-    const deposito = await criarLocal(api, { name: 'Depósito antigo de estoque' });
-    const item = await api.post<{ id: string }>(
-      '/api/stock/items', { name: 'Teclado guardado', categoryId: seed.categoriaEstoqueId, qty: 1, locationId: deposito },
-    );
-    await desativar(deposito);
-
-    const novo = await api.post('/api/stock/items', { name: 'Cabo novo', categoryId: seed.categoriaEstoqueId, qty: 1, locationId: deposito });
-    expect(novo.status).toBe(409);
-
-    const edicao = await api.put(`/api/stock/items/${item.body.id}`, {
-      name: 'Teclado guardado renomeado', categoryId: seed.categoriaEstoqueId, locationId: deposito,
-    });
-    expect(edicao.status).toBe(200);
   });
 });

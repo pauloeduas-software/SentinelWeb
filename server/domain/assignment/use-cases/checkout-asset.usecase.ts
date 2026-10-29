@@ -9,7 +9,7 @@ import { travarAtivoOuFalhar } from '../../asset/use-cases/lock-asset.usecase';
 import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
 import { hojeNoBrasil, instanteDoDia } from '../../shared/hoje.helper';
 import {
-  assertEscolhaAtiva, lerPostoTravado, lerStatusTravado,
+  lerPostoTravado, lerStatusTravado,
 } from '../../catalog/helpers/catalog-lock.helper';
 import { ASSIGNMENT_SELECT } from '../helpers/assignment-select.helper';
 import { travarPessoaOuFalhar, type ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
@@ -140,8 +140,7 @@ function assertAlvoCoerente(data: CheckoutData): string {
  * consulta e devolve 404 com o nome do que faltou.
  *
  * Pessoa sai por `findFirst`, que o escopo da lixeira alcança: NÃO se entrega
- * equipamento a um cadastro na lixeira. Posto sai travado, pela marca de
- * desativado.
+ * equipamento a um cadastro na lixeira. Posto sai travado, pela invariante 19.
  */
 async function assertAlvoExiste(
   client: ClientePosse & ClienteQueTrava,
@@ -167,9 +166,8 @@ async function assertAlvoExiste(
     return pessoa.name;
   }
 
-  // DESATIVADO é a mesma recusa do colaborador desativado, um degrau acima: o
-  // posto continua no histórico e não recebe entrega nova. `UPDATE` e não
-  // `SHARE`: a invariante 19 trava este mesmo posto `FOR UPDATE` logo adiante,
+  // O posto não se desativa (AN): basta existir. `UPDATE` e não `SHARE`: a
+  // invariante 19 trava este mesmo posto `FOR UPDATE` logo adiante,
   // e subir de uma para a outra é deadlock entre duas entregas ao mesmo posto.
   return lerPostoTravado(client, alvoId, 'UPDATE');
 }
@@ -196,30 +194,20 @@ export async function escolherStatusPorTipo(
   tipo: 'DEPLOYABLE' | 'IN_USE',
   rotulo: string,
 ): Promise<string> {
-  // Só entre os ATIVOS: o status desativado saiu de linha e não é mais
-  // aplicado a ninguém, nem pela escolha automática.
   const escolhido = await client.statusLabel.findFirst({
-    where: { type: tipo, isActive: true },
+    where: { type: tipo },
     select: { id: true },
     orderBy: { name: 'asc' },
   });
   if (!escolhido) {
-    throw new AppError(`Nenhum status ativo do tipo "${rotulo}". Reative um em Configurações › Status ou escolha o status à mão.`, 409);
+    throw new AppError(`Nenhum status do tipo "${rotulo}". Cadastre um em Configurações › Status ou escolha o status à mão.`, 409);
   }
 
   const status = await lerStatusTravado(client, escolhido.id);
-  if (status.type !== tipo || !status.isActive) {
+  if (status.type !== tipo) {
     throw new AppError(`O status "${status.name}" acabou de mudar. Tente de novo.`, 409);
   }
   return status.id;
-}
-
-/**
- * O status escolhido à mão existe (404) e está ATIVO (409). Lê travado, pelo
- * mesmo motivo do `escolherStatusPorTipo`.
- */
-export async function assertStatusEscolhivel(client: ClienteQueTrava, statusId: string): Promise<void> {
-  assertEscolhaAtiva(await lerStatusTravado(client, statusId), { rotulo: 'O status' });
 }
 
 export async function checkoutAsset(assetId: string, data: CheckoutData, ator: Ator) {
@@ -313,7 +301,6 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, ator: A
     // entregando. Aqui o erro é do formulário, e a frase diz isso.
     if (data.statusId) {
       const escolhido = await lerStatusTravado(tx, data.statusId);
-      assertEscolhaAtiva(escolhido, { rotulo: 'O status' });
       if (escolhido.type === 'DEPLOYABLE') {
         throw new AppError(
           `"${escolhido.name}" é um status de estoque e não serve para um ativo entregue. Escolha outro.`,

@@ -617,6 +617,10 @@ registrada no passado não vai antes dela.
 > **Superada em parte por [AN](#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura):**
 > o Encerrar com entrega aberta é 409, e saem com isso a contagem na pergunta, o alerta
 > "encerradas em uso" e o filtro "Ainda em uso". O posto perde o Desativar: o vazio se exclui.
+>
+> **Superada em parte por [AO](./catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam):**
+> as cinco abas das Configurações perdem o Desativar, e o 409 do Excluir diz o que tirar em vez
+> de mandar desativar. O Desativar fica no colaborador, na conta e no item de estoque.
 
 **Decidido** (2026-10-26, no levantamento do Editar, do Desativar e do Excluir no sistema inteiro):
 
@@ -704,6 +708,10 @@ livres, e o assento que já foi usado e voltou é livre; o passado fica no log. 
 ---
 
 ## AN — O que está em uso bloqueia, e nenhuma data é futura
+
+> **Superada em parte por [AO](./catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam):**
+> o catálogo (categoria, status, fabricante, modelo, localização) perde o Desativar, que esta
+> deixava de fora; o colaborador e a conta o mantêm.
 
 **Decidido** (2026-10-29, na mesma revisão, com dois padrões que o usuário declarou para o sistema
 inteiro: "bloquear qualquer coisa que depende de outra em uso" e "data passada e presente, nunca

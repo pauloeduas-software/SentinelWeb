@@ -38,22 +38,20 @@ export const categorySpec: CatalogSpec = {
   updateSchema: updateCategorySchema,
 
   select: {
-    id: true, name: true, type: true, isActive: true, createdAt: true, updatedAt: true,
+    id: true, name: true, type: true, createdAt: true, updatedAt: true,
   },
   searchable: ['name'],
-  audited: ['name', 'type', 'isActive'],
+  audited: ['name', 'type'],
 
   // O `<select>` de cada formulário pede só as do SEU tipo; sem isto ele
   // ofereceria duas linhas de mesmo nome e tipos diferentes.
   optionFilter: { campo: 'type', valores: Object.values($Enums.CategoryType) as [$Enums.CategoryType, ...$Enums.CategoryType[]] },
 
   countUsages: contarUsos,
-  dicaEmUso: 'Desative-a em vez de excluir: ela some das escolhas e continua no histórico.',
+  // Sem Desativar (AO): a categoria em uso fica, e sai quando nada a usa.
+  dicaEmUso: 'Troque a categoria desses registros e exclua de novo.',
 
   nomeUnicoPor: ['type'],
-  // Desativado some das escolhas e continua no histórico (configuracoes.md).
-  optionsWhere: { isActive: true },
-
 
   // Trocar o tipo de uma categoria em uso levaria junto tudo que aponta para
   // ela: uma categoria de ATIVO virando LICENÇA muda a semântica dos registros

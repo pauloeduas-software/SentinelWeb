@@ -42,10 +42,7 @@ export async function updateLicense(id: string, data: UpdateLicenseData, ator: A
     // O formulário aberto antes de um Encerrar ou da edição de outra pessoa (AF).
     assertVersaoLida(antes.updatedAt, lida, antes.name);
 
-    await assertReferenciasDaLicenca(tx, data, {
-      categoryId: antes.categoryId as string,
-      manufacturerId: antes.manufacturerId as string | null,
-    });
+    await assertReferenciasDaLicenca(tx, data);
 
     // As datas como ficarão: a que não veio no corpo é a que já está gravada.
     assertDatasNaoAntecedemACompra({

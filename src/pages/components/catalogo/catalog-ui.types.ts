@@ -58,9 +58,8 @@ export interface ColunaSpec {
  * Por que isto existe: as seis tabelas são o MESMO CRUD — as cinco abas de
  * Configurações e a página Colaboradores —, e foi essa igualdade que permitiu
  * um componente só (`CadastroDoCatalogo`). Duas ações quebram a igualdade sem
- * quebrar o componente: Desativar/Ativar, que as seis declaram (com a marca no
- * gênero de cada uma); e Ficha, que só Colaboradores tem, e que leva à tela do
- * que está com a pessoa.
+ * quebrar o componente, e só Colaboradores as tem: Desativar/Ativar (as cinco
+ * abas não se desativam, AO); e Ficha, que leva à tela do que está com a pessoa.
  *
  * As duas saídas ruins eram: uma tela separada por aba diferente (volta a
  * duplicação que a spec eliminou) ou um `if (slug === 'people')` no meio do
@@ -106,7 +105,7 @@ export interface CatalogUiSpec {
   placeholderBusca: string;
   colunas: readonly ColunaSpec[];
   campos: readonly CampoSpec[];
-  /** As ações além de editar e excluir — Desativar nas seis tabelas. Ver `AcaoLinhaSpec`. */
+  /** As ações além de editar e excluir — Desativar e Ficha, só em Colaboradores (AO). Ver `AcaoLinhaSpec`. */
   acoes?: readonly AcaoLinhaSpec[];
   /**
    * A aba tem LIXEIRA: excluir manda para lá, e a barra ganha a aba Lixeira com
@@ -121,10 +120,9 @@ export interface CatalogUiSpec {
   filtroPorTipo?: { campo: string; opcoes: readonly OpcaoFixa[] };
 }
 
-// O BOTÃO DESATIVAR/ATIVAR, igual nas seis tabelas (e em Usuários): grava só
-// `isActive`. Desativado some das listas de escolha e não é escolhido de novo —
-// o servidor recusa —, e continua no histórico e em tudo que já o usa. É a
-// saída de quem não pode ser excluído por ter uso.
+// O BOTÃO DESATIVAR/ATIVAR do colaborador (e o mesmo desenho em Usuários): grava
+// só `isActive`. Desativado some das listas de escolha e não recebe nada novo,
+// e continua no histórico. As cinco abas das Configurações não o têm (AO).
 export function desativar(feminino: boolean): AcaoLinhaSpec {
   return {
     id: 'ativacao',

@@ -27,7 +27,7 @@ interface CatalogTableProps {
   colunas: readonly ColunaSpec[];
   registros: readonly CatalogRow[];
   vazio: React.ReactNode;
-  /** Ações por linha da aba, além de editar e excluir (Desativar em todas; Ficha em Colaboradores). */
+  /** Ações por linha da aba, além de editar e excluir (Desativar e Ficha, em Colaboradores). */
   acoes?: readonly AcaoLinhaSpec[];
   onEdit: (registro: CatalogRow) => void;
   onDelete: (registro: CatalogRow) => void;
