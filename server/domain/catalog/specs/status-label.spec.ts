@@ -18,20 +18,20 @@ const contarUsos = (client: ClienteCatalogo, id: string) =>
   client.asset.count({ where: { statusId: id, ...INCLUINDO_LIXEIRA } });
 
 // Os tipos que a entrega e a devolução aplicam SOZINHAS (`escolherStatusPorTipo`),
-// com o nome que a tela dá a cada um. Sempre tem que sobrar um ativo de cada.
+// com o nome que a tela dá a cada um. Sempre tem que sobrar um de cada.
 const TIPOS_AUTOMATICOS: Partial<Record<$Enums.StatusLabelType, string>> = {
   DEPLOYABLE: 'Disponível',
   IN_USE: 'Em uso',
 };
 
 /**
- * Sobra OUTRO status ativo do mesmo tipo automático? Senão, 409.
+ * Sobra OUTRO status do mesmo tipo automático? Senão, 409.
  *
  * Chamada com o tipo inteiro já travado (`travarStatusDoTipo`): é o que impede
- * duas saídas simultâneas — desativar, trocar de tipo ou excluir — de contarem
- * "sobra o outro" cada uma e deixarem zero.
+ * duas saídas simultâneas — trocar de tipo ou excluir — de contarem "sobra o
+ * outro" cada uma e deixarem zero.
  */
-async function assertSobraOutroAtivo(
+async function assertSobraOutro(
   client: ClienteCatalogo,
   id: string,
   atual: { name: string; type: $Enums.StatusLabelType },
@@ -40,14 +40,14 @@ async function assertSobraOutroAtivo(
   if (!rotuloDoTipo) return;
 
   const outros = await client.statusLabel.count({
-    where: { type: atual.type, isActive: true, id: { not: id } },
+    where: { type: atual.type, id: { not: id } },
   });
   if (outros > 0) return;
 
   throw new AppError(
-    `"${atual.name}" é o único status ativo do tipo ${rotuloDoTipo}, e é ele que ${
+    `"${atual.name}" é o único status do tipo ${rotuloDoTipo}, e é ele que ${
       atual.type === 'IN_USE' ? 'a entrega' : 'a devolução'
-    } aplica sozinha. Crie ou reative outro do mesmo tipo antes.`,
+    } aplica sozinha. Crie outro do mesmo tipo antes.`,
     409,
   );
 }
@@ -64,10 +64,10 @@ export const statusLabelSpec: CatalogSpec = {
 
   select: {
     id: true, name: true, type: true,
-    notes: true, isActive: true, createdAt: true, updatedAt: true,
+    notes: true, createdAt: true, updatedAt: true,
   },
   searchable: ['name'],
-  audited: ['name', 'type', 'notes', 'isActive'],
+  audited: ['name', 'type', 'notes'],
 
   // Aqui o `optionFilter` NÃO restringe a lista: os quatro valores do enum estão
   // presentes, e é de propósito. Ele existe para que `?type=` seja um parâmetro
@@ -89,11 +89,10 @@ export const statusLabelSpec: CatalogSpec = {
 
   // Apagar um status em uso deixaria ativos apontando para o nada.
   countUsages: contarUsos,
-  dicaEmUso: 'Desative-o em vez de excluir: ele some das escolhas e continua no histórico.',
+  // Sem Desativar (AO): o status em uso fica, e sai quando nenhum ativo o usa.
+  dicaEmUso: 'Troque o status desses ativos e exclua de novo.',
 
   nomeUnicoPor: [],
-  // Desativado some das escolhas e continua no histórico (configuracoes.md).
-  optionsWhere: { isActive: true },
 
   // Trocar o TIPO de um status em uso muda, de uma vez, o significado de todo
   // ativo que aponta para ele — sem tocar em nenhum. Mesma guarda do delete.
@@ -110,12 +109,12 @@ export const statusLabelSpec: CatalogSpec = {
   // A saída correta é a mesma do delete: criar o status novo e mover os ativos
   // um a um, que é uma operação visível e auditada.
   //
-  // E O ÚLTIMO ATIVO DE UM TIPO AUTOMÁTICO NÃO SAI. A entrega aplica sozinha o
-  // primeiro `IN_USE` ativo, e a devolução o primeiro `DEPLOYABLE` ativo
-  // (`escolherStatusPorTipo`). Desativar — ou mudar de tipo — o único que
-  // sobra derrubava TODA entrega e devolução sem status escolhido à mão.
+  // E O ÚLTIMO DE UM TIPO AUTOMÁTICO NÃO SAI. A entrega aplica sozinha o
+  // primeiro `IN_USE`, e a devolução o primeiro `DEPLOYABLE`
+  // (`escolherStatusPorTipo`). Mudar de tipo o único que sobra derrubava TODA
+  // entrega e devolução sem status escolhido à mão.
   async beforeWrite(client, id, data) {
-    if (!id || (data.type === undefined && data.isActive === undefined)) return;
+    if (!id || data.type === undefined) return;
 
     const lido = await client.statusLabel.findUnique({ where: { id }, select: { type: true } });
     if (!lido) return;
@@ -129,35 +128,32 @@ export const statusLabelSpec: CatalogSpec = {
     else await travarStatusParaEscrita(client, id);
 
     const atual = await client.statusLabel.findUnique({
-      where: { id }, select: { name: true, type: true, isActive: true },
+      where: { id }, select: { name: true, type: true },
     });
-    if (!atual) return;
-    const mudaTipo = data.type !== undefined && data.type !== atual.type;
+    if (!atual || data.type === atual.type) return;
 
-    if (mudaTipo) {
-      const usos = await contarUsos(client, id);
-      if (usos > 0) {
-        throw new AppError(
-          `Não é possível mudar o tipo: status em uso por ${usos} ${usos === 1 ? 'registro' : 'registros'}.`,
-          409,
-        );
-      }
+    const usos = await contarUsos(client, id);
+    if (usos > 0) {
+      throw new AppError(
+        `Não é possível mudar o tipo: status em uso por ${usos} ${usos === 1 ? 'registro' : 'registros'}.`,
+        409,
+      );
     }
 
-    if (atual.isActive && (data.isActive === false || mudaTipo)) await assertSobraOutroAtivo(client, id, atual);
+    await assertSobraOutro(client, id, atual);
   },
 
-  // A mesma guarda na EXCLUSÃO: apagar o último ativo do tipo derrubava a
-  // entrega ou a devolução automática igual a desativá-lo — e o DELETE não
-  // passa pelo `beforeWrite`.
+  // A mesma guarda na EXCLUSÃO: apagar o último do tipo derrubava a entrega ou
+  // a devolução automática igual a trocar o tipo dele — e o DELETE não passa
+  // pelo `beforeWrite`.
   async beforeDelete(client, id) {
     const lido = await client.statusLabel.findUnique({ where: { id }, select: { type: true } });
     if (!lido || !TIPOS_AUTOMATICOS[lido.type]) return;
 
     await travarStatusDoTipo(client, lido.type);
     const atual = await client.statusLabel.findUnique({
-      where: { id }, select: { name: true, type: true, isActive: true },
+      where: { id }, select: { name: true, type: true },
     });
-    if (atual?.isActive) await assertSobraOutroAtivo(client, id, atual);
+    if (atual) await assertSobraOutro(client, id, atual);
   },
 };

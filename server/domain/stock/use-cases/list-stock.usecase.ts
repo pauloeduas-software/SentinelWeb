@@ -12,8 +12,8 @@ export type ItemComContagem = ComContagem<StockItemRow>;
 /**
  * A LISTAGEM, com a conta de cada linha calculada em LOTE.
  *
- * UMA LISTA SÓ, ativos e desativados juntos, pelo nome — o padrão das
- * Configurações: o desativado continua na lista, e a tela o esmaece e marca.
+ * UMA LISTA SÓ, ativos e desativados juntos, pelo nome — o padrão do
+ * cadastro (AF): o desativado continua na lista, e a tela o esmaece e marca.
  */
 export async function listStock(
   query: ListQuery,

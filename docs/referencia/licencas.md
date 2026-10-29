@@ -17,7 +17,7 @@
 ## O que é
 
 **Um contrato com uma quantidade comprada**, entregue um a um a quem usa. **Campos:** nome,
-categoria (do tipo Licença, ativa) e quantidade comprada, obrigatórios; vencimento,
+categoria (do tipo Licença) e quantidade comprada, obrigatórios; vencimento,
 encerramento, licenciado para (nome e e-mail), fabricante, pedido, data e valor da compra,
 notas e as chaves do produto, opcionais. O cadastro não entra no histórico da tela, que é só
 entregas e devoluções; ele fica na auditoria, no banco, com quem fez ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)) — e as chaves só

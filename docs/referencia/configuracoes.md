@@ -7,9 +7,14 @@
 > ([`colaboradores.md`](colaboradores.md)).
 >
 > As regras que viram fato permanente no banco estão também em
-> [`invariantes.md`](invariantes.md) (a 3 e a 21); aqui está o funcionamento da
+> [`invariantes.md`](invariantes.md) (a 3); aqui está o funcionamento da
 > tela inteira. A baixa do ativo, que **não** é um status, está em
 > [`baixa.md`](baixa.md).
+>
+> **Fechadas em 2026-10-29**, depois da
+> [AO](../decisoes/catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam):
+> a lógica foi conferida contra o Snipe-IT e o GLPI e não muda mais; daqui em diante se corrige
+> defeito.
 
 ---
 
@@ -59,12 +64,12 @@ servidor, sem o colaborador, que é o último; a tela acha cada spec pelo `slug`
 | **Quem lê e quem escreve** | `ADMIN`, o único cargo ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)) — `GET`, `POST`, `PUT`, `DELETE` e o `restore` do colaborador. A exclusão é guardada pelo uso (o 409 abaixo), não pelo cargo | `access/helpers/route-permissions.ts` |
 | **Campo desconhecido é recusado** | `strictObject` em todo schema: 422, nunca ignorado em silêncio | `schemas/catalog-entities.schema.ts` |
 | **Nome único, sem diferença de maiúscula** | "dell" é recusado quando há "Dell": 409 `Já existe fabricante com o nome "Dell".` `%` e `_` contam como letras, não como curingas. Categoria é única **por tipo**; modelo não tem nome único (ver abaixo) | `helpers/nome-unico.helper.ts`, campo `nomeUnicoPor` da spec |
-| **Exclusão só sem uso** | `DELETE` de linha que alguém usa **agora** é 409 com a contagem e a saída: `Não é possível excluir: fabricante em uso por 3 registros. Desative-o em vez de excluir: …` A tela mostra isso numa **notificação do sistema**. O colaborador diz *o quê* em vez de quantos (`motivoParaNaoExcluir`) | `countUsages` e `dicaEmUso` de cada spec, `delete-catalog.usecase.ts` |
-| **Desativar em vez de excluir** | o desativado some das listas de escolha e é **recusado** (409) quando escolhido de novo; continua no histórico e em tudo que já o usa. Detalhes abaixo | `isActive` nas seis, `optionsWhere`, `assertEscolhaAtiva` |
+| **Exclusão só sem uso** | `DELETE` de linha que alguém usa **agora** é 409 com a contagem e a saída: `Não é possível excluir: fabricante em uso por 3 registros. Troque o fabricante desses registros e exclua de novo.` A tela mostra isso numa **notificação do sistema**. O colaborador diz *o quê* em vez de quantos (`motivoParaNaoExcluir`) | `countUsages` e `dicaEmUso` de cada spec, `delete-catalog.usecase.ts` |
+| **Desativar só no colaborador** | as cinco abas não se desativam ([AO](../decisoes/catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam)): mandar `isActive` é 422, e o que tem uso fica até sair do uso. Detalhes abaixo | `isActive` só em `people`, `optionsWhere` da spec do colaborador |
 | **A contagem inclui a lixeira** | o ativo na lixeira continua apontando — e pode voltar. O item de estoque e a licença não têm lixeira: o desativado e a encerrada contam, o excluído não existe mais | `INCLUINDO_LIXEIRA` nos `countUsages` do ativo |
 | **Lixeira só em Colaboradores** | nas outras cinco, exclusão é definitiva (D8) e o que protege é o 409 por uso. O colaborador vai para a lixeira, com Restaurar ([V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira), [`colaboradores.md`](colaboradores.md)) | `lixeira` da spec, `restore-catalog.usecase.ts` |
 | **Tudo vai para a auditoria** | criar, editar e excluir gravam `audit_logs` na **mesma transação**, com quem fez ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)); a edição grava só o que mudou | `recordAudit` nos use-cases |
-| **Listas de escolha** | `GET /api/<tabela>/options` devolve `{ id, name }` dos **ativos**, até 200, com busca `?q=` — e o colaborador vem também com `detalhe`, o e-mail (`optionDetail` da spec), que o seletor da entrega de licença mostra ao lado do nome. É ele que alimenta todo `<select>`. Um **filtro** de listagem pede `?inativos=incluir`, porque o desativado ainda tem registros | `list-catalog-options.usecase.ts` |
+| **Listas de escolha** | `GET /api/<tabela>/options` devolve `{ id, name }` de todos — do colaborador, só os ativos —, até 200, com busca `?q=` — e o colaborador vem também com `detalhe`, o e-mail (`optionDetail` da spec), que o seletor da entrega de licença mostra ao lado do nome. É ele que alimenta todo `<select>` | `list-catalog-options.usecase.ts` |
 
 > **A contagem de uso é a regra inteira.** Se uma tabela nova passar a apontar
 > para uma destas e o `countUsages` não a conhecer, a exclusão cai no erro cru do
@@ -78,7 +83,7 @@ Nesta ordem — o destrutivo na ponta:
 | Botão | Onde | O que faz |
 |---|---|---|
 | ✏️ Editar | todas | abre o formulário preenchido |
-| ⏻ Desativar / Ativar | todas | grava só `isActive`; pede confirmação ao desativar, não ao ativar |
+| ⏻ Desativar / Ativar | Colaboradores | grava só `isActive`; pede confirmação ao desativar, não ao ativar |
 | 📄 Ficha do colaborador | Colaboradores | abre a ficha da pessoa — ver [`colaboradores.md`](colaboradores.md) |
 | 🗑️ Excluir | todas | confirma e apaga; com uso, a notificação diz por quê |
 
@@ -104,6 +109,8 @@ entrada. As diferenças são de propósito:
 - **O que está em uso não se desativa** ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)): a licença com
   entrega aberta não se encerra, e o item de estoque com unidade em uso não se
   desativa — 409 que manda devolver antes, como no Excluir.
+- As cinco abas das Configurações não se desativam ([AO](../decisoes/catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam)): o que tem uso
+  recebe o 409 do Excluir, que diz o que tirar.
 - O Posto não se desativa: o vazio se exclui, como a localização, e o que tem
   algo nele recebe o 409 da exclusão.
 - O Ativo não se desativa: os status dele são outros, e o fim é a baixa
@@ -117,33 +124,15 @@ Erros de ação (exclusão recusada, desativação recusada) aparecem numa
 colaborador que ainda tem licença diz quais, e a notificação traz um link para cada uma — o
 Devolver mora no detalhe da licença; com link, ela fica até alguém fechar.
 
-### Desativar e ativar
+### Sem Desativar nas cinco
 
-| | |
-|---|---|
-| **continua** | na lista (esmaecido), no histórico, nos relatórios e em todo registro que já aponta para ele |
-| **some** | das listas de escolha dos formulários; o vínculo que já aponta para ele aparece como "fora desta lista" e não se perde |
-| **recusa** (409) | ser **escolhido** de novo: `O fabricante "Dell" está desativado e não pode ser escolhido. Reative em Configurações ou escolha outro.` |
-| **deixa passar** | editar o registro que **já** o usa sem trocar o vínculo — o formulário reenvia todo campo |
+Categoria, status, fabricante, modelo e localização não se desativam ([AO](../decisoes/catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam)),
+como no Snipe-IT: mandar `isActive` é 422. O que sai de linha — o modelo que não
+se compra mais, o fabricante que fechou — continua na lista e nas escolhas até
+nada o usar, e então se exclui. Com uso, o 409 do Excluir diz o que tirar.
 
-Onde a escolha é recusada:
-
-| Desativado | Recusado em |
-|---|---|
-| categoria | modelo novo ou trocado, licença, item de estoque |
-| status | ativo novo, troca de status do ativo, status escolhido na entrega ou na devolução. A escolha **automática** só considera status ativos, e o último ativo de Disponível e de Em uso não pode sair (ver Status) |
-| fabricante | modelo novo ou trocado, licença |
-| modelo | ativo novo, troca de modelo do ativo |
-| localização | ativo, item de estoque ou posto novo guardado nela — ver Localizações |
-| colaborador | entrega de ativo, de licença e de estoque, ocupante novo — ver [`colaboradores.md`](colaboradores.md) |
-
-**O que a desativação não alcança, de propósito:**
-- **o que já existe por baixo.** Desativar a categoria "Servidor" ou o fabricante
-  "Dell" tira os dois das escolhas de **modelo**, mas os modelos ativos deles
-  continuam escolhíveis para ativo novo. Quem quer parar de cadastrar aquele
-  equipamento desativa o **modelo**.
-- **a lixeira.** Restaurar um ativo devolve o modelo, o status e o local que ele
-  tinha, desativados ou não — o vínculo não muda, ele só volta.
+O colaborador é o único do catálogo com Desativar: desativado, some das escolhas
+e é recusado em entrega e ocupação novas — ver [`colaboradores.md`](colaboradores.md).
 
 ---
 
@@ -173,9 +162,7 @@ O tipo diz a que **módulo** a categoria pertence, e é fechado:
   A tela só oferece as do tipo certo, mas a regra é do servidor.
 - **Filtro por tipo** na listagem (`?type=`), validado contra a lista fechada. O
   `/options` aceita vários, separados por vírgula: o formulário e o filtro do
-  estoque pedem `?type=STOCK,COMPONENT,CONSUMABLE`. O
-  filtro de categoria das listas de Computadores, Licenças e Estoque mostra também as
-  desativadas.
+  estoque pedem `?type=STOCK,COMPONENT,CONSUMABLE`.
 
 ## Status
 
@@ -197,14 +184,13 @@ O nome é seu; o tipo é uma de quatro caixas que o sistema entende:
 - **O tipo não muda com o status em uso** — 409 (invariante 3). A saída é criar
   o status novo e mover os ativos.
 - **Ativo entregue não fica `Disponível`** — invariante 4.
-- **A entrega** aplica o primeiro status `IN_USE` **ativo**, por nome, ou o
-  escolhido à mão (que não pode ser `Disponível`: 422). **A devolução** aplica o
-  primeiro `DEPLOYABLE` ativo, ou o escolhido — e pode manter o status atual do
-  ativo mesmo que ele tenha sido desativado.
-- **O último ativo de `Disponível` ou de `Em uso` não sai** — nem desativado,
-  nem trocado de tipo, nem excluído: 409 `"Disponível" é o único status ativo do tipo
-  Disponível, e é ele que a devolução aplica sozinha. Crie ou reative outro do
-  mesmo tipo antes.` Sem isso, toda entrega ou devolução automática quebraria.
+- **A entrega** aplica o primeiro status `IN_USE`, por nome, ou o escolhido à
+  mão (que não pode ser `Disponível`: 422). **A devolução** aplica o primeiro
+  `DEPLOYABLE`, ou o escolhido.
+- **O último de `Disponível` ou de `Em uso` não sai** — nem trocado de tipo,
+  nem excluído: 409 `"Disponível" é o único status do tipo Disponível, e é ele
+  que a devolução aplica sozinha. Crie outro do mesmo tipo antes.` Sem isso, toda
+  entrega ou devolução automática quebraria.
 - **Não existe tipo "baixado" ou "arquivado".** O ativo que deixa de ser da
   empresa recebe **baixa**, que é outra coisa — [`baixa.md`](baixa.md).
 
@@ -265,12 +251,12 @@ Intel, AMD ou Nvidia como fabricante para montar um modelo.
   quem recebe é o posto
   ([Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)).
 
-### Uso e desativação
+### Uso
 
 Localização tem a regra do **status**: só o que aponta para ela **agora**
 impede a exclusão
 ([Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)). É 409 com a dica
-`Mova o que está guardado nela e os postos que ficam nela, ou desative-a: …`
+`Mova o que está guardado nela e os postos que ficam nela, e exclua de novo.`
 
 **Uso**, aqui, é: **ativo** guardado nela (lixeira inclusive), **item de
 estoque** guardado nela (desativado inclusive) e **posto** que fica nela. O ativo
@@ -278,16 +264,8 @@ da lixeira e o item desativado entram porque continuam apontando e podem voltar.
 recebe nada, não há passado preso a ela: sem nada disso, ela sai de verdade, sem
 nome por escrito para guardar.
 
-**Desativada** (`isActive = false`), ela:
-
-| | |
-|---|---|
-| continua | na lista de Configurações (esmaecida), no histórico, nos relatórios, com tudo o que já estava nela |
-| **some** | das listas de escolha (`/options` só devolve as ativas); o vínculo que já aponta para ela aparece como "fora desta lista" e não se perde |
-| **recusa** (409) | ativo, item de estoque ou posto novo guardado nela — `"Filial SP" está desativada e não recebe ativo novo.` |
-| **deixa passar** | editar o ativo, o item ou o posto que **já** está nela sem trocar o local — desativar não esvazia nada |
-
-**Ativar** desfaz tudo. É a invariante 21.
+Ela não se desativa ([AO](../decisoes/catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam)): a que existe recebe ativo, item e posto, e a que
+não existe é 404 (`Localização não encontrada.`).
 
 ---
 
@@ -302,9 +280,8 @@ segue o grafo de `asset/use-cases/lock-asset.usecase.ts`.
 | trocar o tipo da categoria × cadastrar licença, item ou modelo nela | item de estoque numa categoria de Ativo | `FOR UPDATE` na troca, `FOR SHARE` na leitura do tipo |
 | trocar o tipo do status × editar/entregar/devolver ativo com ele | ativo entregue com status de estoque | idem, na linha do status |
 | devolver o mesmo ativo duas vezes, ou devolver atrasado depois de uma entrega nova | posse errada fechada, ativo entregue marcado "Disponível" | a devolução trava o ativo e só fecha a posse ABERTA |
-| desativar, trocar o tipo ou excluir dois status do mesmo tipo automático | nenhum "Disponível" ou "Em uso" ativo sobrando | `FOR UPDATE` em todos os status do tipo, na mesma ordem |
-| desativar a localização × guardar algo nela | ativo, item ou posto num local que acabou de fechar | `FOR NO KEY UPDATE` na escrita do local × `FOR SHARE` de quem confere o `isActive` |
-| desativar categoria, status, fabricante ou modelo × escolhê-lo | escolha aprovada com o valor velho | o `UPDATE` da desativação × `FOR SHARE` da leitura (`lerCategoriaTravada`, `lerStatusTravado`, `lerFabricanteTravado`, `lerModeloTravado`) |
+| trocar o tipo ou excluir dois status do mesmo tipo automático | nenhum "Disponível" ou "Em uso" sobrando | `FOR UPDATE` em todos os status do tipo, na mesma ordem |
+| excluir a localização, o fabricante ou o modelo × cadastrar algo nele | o cadastro aprovado caía no `Registro está em uso por outro cadastro` da FK | `FOR SHARE` na leitura (`assertLocalExiste`, `lerFabricanteTravado`, `lerModeloTravado`): quem lê depois recebe o 404, e a exclusão que vem depois é recusada pela FK |
 | desativar o colaborador × entregar a ele ou pô-lo num posto | desativado com posse aberta | `FOR UPDATE` na linha da pessoa nos dois lados (`lock-person.usecase.ts`) |
 
 A exceção aceita: dois cadastros **simultâneos** de "Dell" e "dell" passam os dois
@@ -348,8 +325,8 @@ aviso, o modelo cujo fabricante ou categoria foi renomeado ou excluído.
 
 | Assunto | Arquivo |
 |---|---|
-| contagem de uso, troca de tipo, modelo, nome único, URL, desativar | `tests/invariantes/catalogo.test.ts` |
-| localização: exclusão pelo presente, não recebe entrega, desativação, lista plana, estoque guardado nela | `tests/invariantes/localizacao.test.ts` |
+| contagem de uso, troca de tipo, modelo, nome único, URL, sem desativar, o último status do tipo | `tests/invariantes/catalogo.test.ts` |
+| localização: exclusão pelo presente, não recebe entrega, sem desativar, lista plana, estoque guardado nela | `tests/invariantes/localizacao.test.ts` |
 | colaborador | ver [`colaboradores.md`](colaboradores.md) |
 | filtro por tipo e `/options` | `tests/listagens/filtro-por-categoria.test.ts`, `opcoes-com-busca.test.ts` |
 | as corridas | `tests/corridas/posse.test.ts`, `tests/corridas/ativo-por-posto.test.ts`, `tests/estoque/corridas.test.ts` |

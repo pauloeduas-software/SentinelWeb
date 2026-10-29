@@ -6,9 +6,7 @@ import { assertVersaoLida } from '../../shared/versao.helper';
 import { diaEmPortugues } from '../helpers/asset-dates.helper';
 import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
-import {
-  assertEscolhaAtiva, assertLocalRecebe, lerModeloTravado, lerStatusTravado,
-} from '../../catalog/helpers/catalog-lock.helper';
+import { assertLocalExiste, lerModeloTravado, lerStatusTravado } from '../../catalog/helpers/catalog-lock.helper';
 import { ASSET_SELECT, CAMPOS_AUDITADOS_DO_ATIVO, semCusto } from '../helpers/asset-select.helper';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
 import { assertEtiquetaESerieLivres } from './assert-unique-asset.usecase';
@@ -53,9 +51,8 @@ export async function updateAsset(id: string, data: UpdateAssetData, ator: Ator)
     // que já está entregue (o formulário reenvia todo campo a cada salvamento).
     const statusIdFinal = valorFinal(data.statusId, antes.statusId);
     if (statusIdFinal !== antes.statusId) {
-      // Status desativado não é escolhido de novo — só aqui, quando MUDA: o
-      // ativo que já estava nele continua editável.
-      assertEscolhaAtiva(await lerStatusTravado(tx, statusIdFinal), { rotulo: 'O status' });
+      // O 404 com nome do status novo, que a guarda abaixo não dá.
+      await lerStatusTravado(tx, statusIdFinal);
       await assertStatusCoerenteComPosse(tx, id, statusIdFinal);
     }
 
@@ -64,13 +61,12 @@ export async function updateAsset(id: string, data: UpdateAssetData, ator: Ator)
     if (data.modelId && data.modelId !== antes.modelId) {
       const modelo = await lerModeloTravado(tx, data.modelId);
       if (!modelo) throw new AppError('Modelo não encontrado.', 404);
-      assertEscolhaAtiva(modelo, { rotulo: 'O modelo' });
     }
 
-    // Local desativado não recebe ativo NOVO — só quando o local muda, pelo
-    // mesmo motivo do status: o formulário reenvia todo campo.
+    // O local novo existe? Só quando muda, pelo mesmo motivo do status: o
+    // formulário reenvia todo campo.
     if (data.locationId && data.locationId !== antes.locationId) {
-      await assertLocalRecebe(tx, data.locationId, 'ativo novo');
+      await assertLocalExiste(tx, data.locationId);
     }
 
     // A COMPRA não fica depois da primeira entrega deste computador (AM), da

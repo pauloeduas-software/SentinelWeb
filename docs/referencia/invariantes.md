@@ -23,7 +23,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 
 ---
 
-## As dezessete
+## As dezesseis
 
 > **A numeração é a original, e por isso salta.** O corte do ITAM levou as
 > invariantes 7, 8, 15, 16 e 18 junto com as tabelas que elas defendiam
@@ -33,7 +33,8 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 > ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional));
 > e a [AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas) levou a 10 e a 11 junto com a vaga numerada da licença, e trouxe a 22 e a 23;
 > a [AC](../decisoes/licencas.md#ac--a-chave-vira-lista-cada-uma-cobre-uma-quantidade-e-a-entrega-escolhe-uma) trouxe a 24, e a
-> [AE](../decisoes/estoque.md#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira), a 25.
+> [AE](../decisoes/estoque.md#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira), a 25;
+> e a [AO](../decisoes/catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam) levou a 21 junto com o Desativar da localização.
 > Renumerar as que ficaram quebraria as citações no código —
 > `assert-sem-posse.usecase.ts` diz "Invariante 4", `license-count.helper.ts`
 > diz "invariante 22" —, e um número que muda de significado é pior que um
@@ -53,7 +54,6 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 17 | Sempre existe alguém ativo que é `ADMIN` | **aplicação** — `assertSobraAdministrador()`, DEPOIS da escrita e dentro da transação, na edição e na exclusão de usuário | 409 `Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. Dê o cargo de Administrador a outra pessoa com login antes de seguir.` |
 | 19 | No máximo um ativo por posto de trabalho | **aplicação** — a porta da entrega (`ativoDoPosto()`, com `FOR UPDATE` na linha do posto); a lixeira não a contorna, porque o ativo entregue não vai para ela ([AL](../decisoes/posse.md#al--o-computador-entregue-não-vai-para-a-lixeira)) | 409 `Este posto de trabalho já tem um ativo: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.` |
 | 20 | Ativo baixado ou na lixeira não tem posse aberta, licença nem componente | **aplicação** — três portas: a baixa e a lixeira (`assertSemPosse` e as contagens de licenças e de componentes) e a entrega (`checkout-asset`, `checkout-license`, `checkout-stock`), as duas com o ativo travado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Desfaça a baixa antes.` |
-| 21 | Localização desativada não recebe nada novo | **aplicação** — `assertLocalRecebe()` em cada porta que guarda (ativo, item, posto), com a linha travada | 409 `"Filial Centro" está desativada e não recebe ativo novo.` |
 | 22 | O que está em uso nunca passa da quantidade comprada | **aplicação** — a entrega e a edição contam com a linha da licença travada (`lock-license.usecase.ts`) | 409 `Sem licença livre em "Office 2024": 5 compradas, 5 em uso. Devolva uma entrega ou aumente a quantidade comprada.` |
 | 23 | Uma entrega aberta por alvo e licença | **banco** — dois índices únicos parciais, um por alvo. No passado, a entrega que se sobrepõe à última devolução do mesmo alvo é só da **aplicação** (422) | 409 `Laura Souza já está com "Office 2024".` (a API confere antes) |
 | 24 | A chave da entrega é uma das chaves da licença; nenhuma chave vai para mais entregas abertas do que cobre; e as chaves cobrem no máximo o que foi comprado | **banco** — a FK composta (chave, licença) e os `CHECK`s da chave. A conta de cada chave e a soma contra o comprado são da **aplicação**, com a licença travada | 409 `Esta chave já está em outra entrega aberta de "Office 2024". Escolha outra.` / 422 `As chaves cobrem 12, mais do que 10 compradas em "Office 2024". …` |
@@ -576,42 +576,6 @@ tela está em [`baixa.md`](baixa.md).
 > **Testado:** `tests/invariantes/posse.test.ts` (o baixado não é entregue;
 > desfeita a baixa, volta a poder) e `tests/corridas/posse.test.ts` (baixa ×
 > entrega do mesmo ativo, várias rodadas, nunca os dois).
-
----
-
-### 21 — Localização desativada não recebe nada novo
-
-```ts
-// catalog/helpers/catalog-lock.helper.ts
-await assertLocalRecebe(tx, locationId, 'ativo novo');            // 404 ou 409
-```
-
-A localização com algo nela **agora** não se exclui
-([V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira)).
-Desativar (`isActive = false`) é outra coisa: continua na lista, e desativada não
-**recebe** nada novo. O que já está lá fica, igual ao colaborador desativado.
-
-**As portas** — o que passa a ficar GUARDADO nela: `create-asset` e
-`update-asset` (o local do ativo), `create-stock-item` e `update-stock-item` (o
-local de guarda do item de estoque) e o cadastro do posto
-(`workstationSpec.beforeWrite`, o posto novo ou que se muda para ela) — nas
-edições, só quando o local **muda**: o formulário reenvia todo campo.
-
-**Por que na aplicação:** depende do estado do local no momento da escrita, e
-cruza tabelas. **E por isso trava:** a desativação trava a linha
-(`FOR NO KEY UPDATE`), e cada porta a lê `FOR SHARE`.
-
-**O posto não se desativa** ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)): o vazio se exclui, e o que tem
-algo nele recebe o 409 da exclusão. As portas dele (`checkout-asset`,
-`checkout-stock`, `add-workstation-occupant`) só o leem travado
-(`lerPostoTravado`), para o 404 e o nome da auditoria.
-
-O mesmo princípio vale para categoria, status, fabricante e modelo desativados —
-não são **escolhidos** de novo (`assertEscolhaAtiva`) —, mas ali é regra de
-formulário, não fato sobre o lugar: está em
-[`configuracoes.md`](configuracoes.md).
-
-> **Testado:** `tests/invariantes/localizacao.test.ts`.
 
 ---
 

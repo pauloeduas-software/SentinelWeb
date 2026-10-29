@@ -30,7 +30,7 @@ export const stockController = {
     // `license.controller.ts`: `categoryId` é nosso, o resto é do
     // `parseListQuery`, que é estrito e responderia 422 a uma chave que não
     // conhece. Sem `trashable` — o item não tem lixeira (AE) —, e sem abas: o
-    // desativado fica na mesma lista, como nas Configurações.
+    // desativado fica na mesma lista, como em Colaboradores.
     const { categoryId, ...paginacao } = (request.query ?? {}) as Record<string, unknown>;
     const filtros = stockFiltersSchema.parse(categoryId === undefined ? {} : { categoryId });
 

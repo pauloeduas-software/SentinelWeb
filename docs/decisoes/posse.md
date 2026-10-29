@@ -594,6 +594,9 @@ localização, o segundo — sem lixeira, porque ninguém precisa dela de volta.
 > **Superada em parte por [AN](./licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura):**
 > o posto perde o `isActive` e o Desativar. O vazio se exclui, como a localização; o que tem algo
 > nele recebe o 409 que diz o que tirar. A invariante 21 fica só com a localização.
+>
+> **Superada em parte por [AO](./catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam):**
+> a localização também perde o Desativar, e a invariante 21 sai.
 
 **Decidido:** o posto de trabalho vira cadastro próprio — `Workstation`, com nome, a localização
 onde ele fica (`locationId`, obrigatória), notas e `isActive` — e a `Location` volta a ser só lugar.

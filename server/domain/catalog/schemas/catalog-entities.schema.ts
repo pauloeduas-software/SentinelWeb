@@ -23,7 +23,6 @@ export const createCategorySchema = z.strictObject({
 export const updateCategorySchema = z.strictObject({
   name: nomeObrigatorio().optional(),
   type: z.enum($Enums.CategoryType, 'tipo de categoria inválido').optional(),
-  isActive: booleano('ativa').optional(),
   updatedAt: versaoLida,
 });
 
@@ -38,7 +37,6 @@ export const updateStatusLabelSchema = z.strictObject({
   name: nomeObrigatorio().optional(),
   type: z.enum($Enums.StatusLabelType, 'tipo de status inválido').optional(),
   notes: textoOpcional('notas', 2_000),
-  isActive: booleano('ativo').optional(),
   updatedAt: versaoLida,
 });
 
@@ -50,10 +48,10 @@ const camposFabricante = {
 };
 
 export const createManufacturerSchema = z.strictObject({ name: nomeObrigatorio(), ...camposFabricante });
-// `isActive` só na EDIÇÃO em categoria, status, fabricante e modelo: é o botão
-// Desativar/Ativar da linha. Quem nasce, nasce ativo — o create o recusa.
+// Sem `isActive` em categoria, status, fabricante, modelo e localização: elas não
+// se desativam (AO), e mandar o campo é 422.
 export const updateManufacturerSchema = z.strictObject({
-  name: nomeObrigatorio().optional(), ...camposFabricante, isActive: booleano('ativo').optional(),
+  name: nomeObrigatorio().optional(), ...camposFabricante,
   updatedAt: versaoLida,
 });
 
@@ -75,7 +73,6 @@ export const updateAssetModelSchema = z.strictObject({
   manufacturerId: uuidObrigatorio('fabricante').optional(),
   categoryId: uuidObrigatorio('categoria').optional(),
   ...camposModelo,
-  isActive: booleano('ativo').optional(),
   updatedAt: versaoLida,
 });
 
@@ -91,9 +88,8 @@ const camposLocalizacao = {
 };
 
 export const createLocationSchema = z.strictObject({ name: nomeObrigatorio(), ...camposLocalizacao });
-// `isActive` só na EDIÇÃO, como nas outras quatro: é o botão Desativar/Ativar.
 export const updateLocationSchema = z.strictObject({
-  name: nomeObrigatorio().optional(), ...camposLocalizacao, isActive: booleano('ativa').optional(),
+  name: nomeObrigatorio().optional(), ...camposLocalizacao,
   updatedAt: versaoLida,
 });
 
@@ -111,7 +107,8 @@ const emailDoColaborador = z
   .pipe(z.email('e-mail inválido').max(320, 'e-mail: máximo de 320 caracteres').nullish());
 
 export const createPersonSchema = z.strictObject({ name: nomeObrigatorio(), email: emailDoColaborador });
-// `isActive` só na EDIÇÃO, como nas outras cinco: é o botão Desativar/Ativar.
+// `isActive` só na EDIÇÃO: é o botão Desativar/Ativar, que no catálogo só o
+// colaborador tem (AO).
 export const updatePersonSchema = z.strictObject({
   name: nomeObrigatorio().optional(), email: emailDoColaborador, isActive: booleano('ativo').optional(),
   updatedAt: versaoLida,

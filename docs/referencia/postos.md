@@ -70,8 +70,8 @@ dentro da mesma transação. As FKs continuam `Restrict`: o que ninguém desligo
 — uma entrega que nasceu no meio — segura o `DELETE` e desfaz tudo.
 
 **Sem Desativar** ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)): o posto vazio se exclui, como a
-localização, e o que tem algo nele recebe o 409 acima. A **localização**
-desativada não recebe posto novo, nem posto que se muda para ela.
+localização, e o que tem algo nele recebe o 409 acima. A localização também
+não se desativa ([AO](../decisoes/catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam)): a que existe recebe o posto.
 
 ## Onde é testado
 

@@ -1,4 +1,4 @@
-import { assertLocalRecebe, travarPostoParaEscrita } from '../../catalog/helpers/catalog-lock.helper';
+import { assertLocalExiste, travarPostoParaEscrita } from '../../catalog/helpers/catalog-lock.helper';
 import type { CatalogDelegate, CatalogSpec } from '../../catalog/specs/catalog-spec.types';
 import { createWorkstationSchema, updateWorkstationSchema } from '../schemas/workstation.schema';
 import {
@@ -112,10 +112,8 @@ export const workstationSpec: CatalogSpec = {
   // A trava da linha na edição faz a troca de nome esperar quem está lendo o
   // posto para entregar ou ocupar (`lerPostoTravado`).
   //
-  // E a localização desativada não recebe posto novo — nem posto que se muda
-  // para ela. Só quando o vínculo MUDA: o formulário reenvia todo campo, e o
-  // posto que já estava na Filial não fica impedido de mudar de nome porque a
-  // Filial foi desativada.
+  // E a localização nova existe (404). Só quando o vínculo MUDA: o formulário
+  // reenvia todo campo.
   async beforeWrite(client, id, data) {
     if (id) await travarPostoParaEscrita(client, id);
 
@@ -126,6 +124,6 @@ export const workstationSpec: CatalogSpec = {
       const atual = await client.workstation.findUnique({ where: { id }, select: { locationId: true } });
       if (atual?.locationId === locationId) return;
     }
-    await assertLocalRecebe(client, locationId, 'posto novo');
+    await assertLocalExiste(client, locationId);
   },
 };

@@ -83,9 +83,9 @@ export default function ReferenceSelect({
   // digitado, o vínculo atual costuma estar FORA da lista filtrada.
   const foraDaLista = !isPending && valor !== '' && !opcoes.some((opcao) => opcao.id === valor);
   // O nome, quando se sabe SEM requisição: pelo id, nunca por posição — um
-  // nome trocado aqui faria a pessoa salvar achando que é outro vínculo. O caso
-  // mais comum hoje não é o teto, é o registro DESATIVADO, que o `/options` não
-  // devolve e o registro continua apontando.
+  // nome trocado aqui faria a pessoa salvar achando que é outro vínculo. Além do
+  // teto, é o caso do colaborador DESATIVADO, que o `/options` não devolve e o
+  // registro continua apontando.
   const nomeForaDaLista = [escolhida, atual].find((ref) => ref?.id === valor)?.name;
 
   // ═══════════════════════════════════════════════════════════════════════════

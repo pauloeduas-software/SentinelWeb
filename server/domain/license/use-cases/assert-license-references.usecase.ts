@@ -1,7 +1,5 @@
 import { AppError } from '../../../core/errors/app-error';
-import {
-  assertEscolhaAtiva, lerCategoriaTravada, lerFabricanteTravado,
-} from '../../catalog/helpers/catalog-lock.helper';
+import { lerCategoriaTravada, lerFabricanteTravado } from '../../catalog/helpers/catalog-lock.helper';
 import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
 import type { ClienteLicenca } from './count-license-checkouts.usecase';
 
@@ -34,8 +32,6 @@ interface ReferenciasDaLicenca {
 export async function assertReferenciasDaLicenca(
   client: ClienteLicenca & ClienteQueTrava,
   dados: ReferenciasDaLicenca,
-  /** Os vínculos de ANTES, na edição: desativado só é recusado quando muda. */
-  atuais?: ReferenciasDaLicenca,
 ): Promise<void> {
   if (dados.categoryId) {
     // `FOR SHARE`: a troca de tipo da categoria trava a linha antes de contar
@@ -50,13 +46,6 @@ export async function assertReferenciasDaLicenca(
         422,
       );
     }
-
-    // Desativada não é escolhida de novo — só quando a categoria MUDA: o
-    // formulário reenvia todo campo, e a licença que já estava nela continua
-    // editável.
-    if (dados.categoryId !== atuais?.categoryId) {
-      assertEscolhaAtiva(categoria, { rotulo: 'A categoria', feminino: true });
-    }
   }
 
   // As duas opcionais. Só conferidas quando vêm PREENCHIDAS: `null` explícito é
@@ -64,8 +53,5 @@ export async function assertReferenciasDaLicenca(
   if (dados.manufacturerId) {
     const fabricante = await lerFabricanteTravado(client, dados.manufacturerId);
     if (!fabricante) throw new AppError('Fabricante não encontrado.', 404);
-    if (dados.manufacturerId !== atuais?.manufacturerId) {
-      assertEscolhaAtiva(fabricante, { rotulo: 'O fabricante' });
-    }
   }
 }

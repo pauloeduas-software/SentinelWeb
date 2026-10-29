@@ -13,15 +13,14 @@ export const manufacturerSpec: CatalogSpec = {
 
   select: {
     id: true, name: true, url: true,
-    supportPhone: true, supportEmail: true, isActive: true, createdAt: true, updatedAt: true,
+    supportPhone: true, supportEmail: true, createdAt: true, updatedAt: true,
   },
   searchable: ['name'],
-  audited: ['name', 'url', 'supportPhone', 'supportEmail', 'isActive'],
+  audited: ['name', 'url', 'supportPhone', 'supportEmail'],
 
   nomeUnicoPor: [],
-  // Desativado some das escolhas e continua no histórico (configuracoes.md).
-  optionsWhere: { isActive: true },
-  dicaEmUso: 'Desative-o em vez de excluir: ele some das escolhas e continua no histórico.',
+  // Sem Desativar (AO): o fabricante em uso fica, e sai quando nada o usa.
+  dicaEmUso: 'Troque o fabricante desses registros e exclua de novo.',
 
   // Os modelos de ativo e as licenças, que apontam direto para cá — inclusive
   // as encerradas: a FK é `Restrict` e elas seguram o fabricante do mesmo

@@ -323,114 +323,77 @@ describe('URL do fabricante', () => {
   });
 });
 
-describe('desativar — nas quatro tabelas além de Localização', () => {
-  async function desativar(rota: string, id: string) {
-    const { status } = await api.put(`/api/${rota}/${id}`, { isActive: false });
-    expect(status).toBe(200);
-  }
+describe('sem Desativar nas cinco tabelas (AO)', () => {
+  it('mandar isActive é 422 em categoria, status, fabricante, modelo e localização', async () => {
+    const fabricante = await criarFabricante(api, 'Fabricante sem desativar');
+    const modelo = await criarModelo(api, { categoriaId, fabricanteId: fabricante, name: 'Modelo sem desativar' });
+    const status = await api.post<{ id: string }>('/api/status-labels', { name: 'Status sem desativar', type: 'UNDEPLOYABLE' });
+    const local = await api.post<{ id: string }>('/api/locations', { name: 'Local sem desativar' });
 
-  it('o desativado some das escolhas, mas o FILTRO ainda o acha', async () => {
-    const id = await criarFabricante(api, 'Fabricante que saiu de linha');
-    await desativar('manufacturers', id);
-
-    const escolha = await api.get<{ id: string }[]>('/api/manufacturers/options');
-    expect(escolha.body.map((o) => o.id)).not.toContain(id);
-
-    const filtro = await api.get<{ id: string }[]>('/api/manufacturers/options?inativos=incluir');
-    expect(filtro.body.map((o) => o.id)).toContain(id);
+    const registros: [string, string][] = [
+      ['categories', categoriaId], ['status-labels', status.body.id], ['manufacturers', fabricante],
+      ['asset-models', modelo], ['locations', local.body.id],
+    ];
+    for (const [rota, id] of registros) {
+      expect((await api.put(`/api/${rota}/${id}`, { isActive: false })).status, rota).toBe(422);
+    }
   });
 
-  it('fabricante desativado não é escolhido para modelo NOVO — 409', async () => {
-    const id = await criarFabricante(api, 'Fabricante desativado');
-    await desativar('manufacturers', id);
-
-    const { status, body } = await api.post<{ error: string }>('/api/asset-models', {
-      name: 'Modelo novo', manufacturerId: id, categoryId: categoriaId,
-    });
-    expect(status).toBe(409);
-    expect(body.error).toMatch(/desativado/);
+  it('o seletor não tem mais o "incluir desativados"', async () => {
+    expect((await api.get('/api/manufacturers/options?inativos=incluir')).status).toBe(422);
   });
 
-  it('o modelo que JÁ era dele continua editável, reenviando o mesmo fabricante', async () => {
-    // O formulário reenvia todo campo: a guarda só vale quando o vínculo muda.
-    const fabricante = await criarFabricante(api, 'Fabricante antigo');
-    const modelo = await criarModelo(api, { categoriaId, fabricanteId: fabricante, name: 'Modelo antigo' });
-    await desativar('manufacturers', fabricante);
-
-    const { status } = await api.put(`/api/asset-models/${modelo}`, {
-      name: 'Modelo antigo renomeado', manufacturerId: fabricante, categoryId: categoriaId,
-    });
-    expect(status).toBe(200);
-  });
-
-  it('modelo e status desativados não entram em ativo novo — 409', async () => {
-    const seed = await idsDoSeed();
-    const fabricante = await criarFabricante(api, 'Fabricante do modelo desativado');
-    const modelo = await criarModelo(api, { categoriaId, fabricanteId: fabricante, name: 'Modelo desativado' });
-    await desativar('asset-models', modelo);
-
-    const comModelo = await api.post<{ error: string }>('/api/assets', { statusId: seed.statusDeployableId, modelId: modelo });
-    expect(comModelo.status).toBe(409);
-
-    const status = await api.post<{ id: string }>('/api/status-labels', { name: 'Status aposentado', type: 'DEPLOYABLE' });
-    await desativar('status-labels', status.body.id);
-    const comStatus = await api.post<{ error: string }>('/api/assets', { statusId: status.body.id, modelId });
-    expect(comStatus.status).toBe(409);
-    expect(comStatus.body.error).toMatch(/desativado/);
-  });
-
-  it('categoria desativada não é escolhida para licença nova — 409', async () => {
-    const { body } = await api.post<{ id: string }>('/api/categories', { name: 'Família descontinuada', type: 'LICENSE' });
-    await desativar('categories', body.id);
-
-    const licenca = await api.post<{ error: string }>('/api/licenses', { name: 'Licença nova', seatsTotal: 1, categoryId: body.id });
-    expect(licenca.status).toBe(409);
-  });
-
-  it('a exclusão recusada sugere desativar', async () => {
+  it('a exclusão recusada diz o que tirar, sem sugerir desativar', async () => {
     const fabricante = await criarFabricante(api, 'Fabricante com modelo');
     await criarModelo(api, { categoriaId, fabricanteId: fabricante, name: 'Modelo que segura' });
 
     const { status, body } = await api.delete<{ error: string }>(`/api/manufacturers/${fabricante}`);
     expect(status).toBe(409);
-    expect(body.error).toMatch(/Desative-o em vez de excluir/);
+    expect(body.error).toMatch(/Troque o fabricante desses registros e exclua de novo\./);
+    expect(body.error).not.toMatch(/esativ/);
   });
 });
 
-describe('o último status ativo de um tipo automático', () => {
-  it('não se desativa — a entrega e a devolução o aplicam sozinhas', async () => {
-    // Deixa o "Disponível" do seed como o ÚNICO ativo do tipo: outros testes
-    // deste arquivo criam status disponíveis, e eles saem primeiro — cada um
-    // pode, porque o do seed continua.
-    const { statusDeployableId } = await idsDoSeed();
-    const ativos = await api.get<{ id: string }[]>('/api/status-labels/options?type=DEPLOYABLE');
-    for (const { id } of ativos.body.filter((opcao) => opcao.id !== statusDeployableId)) {
-      expect((await api.put(`/api/status-labels/${id}`, { isActive: false })).status).toBe(200);
+describe('o último status de um tipo automático', () => {
+  // Deixa um status novo como o ÚNICO do tipo. Os outros saem do tipo por fora
+  // da API — pela API não sairiam, e é isso que se prova — e voltam no fim.
+  async function sozinhoNoTipo(
+    tipo: 'DEPLOYABLE' | 'IN_USE',
+    nome: string,
+    prova: (id: string) => Promise<void>,
+  ): Promise<void> {
+    const novo = await api.post<{ id: string }>('/api/status-labels', { name: nome, type: tipo });
+    const outros = (await prisma.statusLabel.findMany({
+      where: { type: tipo, id: { not: novo.body.id } }, select: { id: true },
+    })).map((linha) => linha.id);
+    await prisma.statusLabel.updateMany({ where: { id: { in: outros } }, data: { type: 'UNDEPLOYABLE' } });
+    try {
+      await prova(novo.body.id);
+    } finally {
+      await prisma.statusLabel.updateMany({ where: { id: { in: outros } }, data: { type: tipo } });
     }
+  }
 
-    const { status, body } = await api.put<{ error: string }>(`/api/status-labels/${statusDeployableId}`, { isActive: false });
-    expect(status).toBe(409);
-    expect(body.error).toMatch(/único status ativo/);
-
-    // Com um segundo do mesmo tipo, o primeiro pode sair.
-    const outro = await api.post('/api/status-labels', { name: 'Prateleira', type: 'DEPLOYABLE' });
-    expect(outro.status).toBe(201);
-    expect((await api.put(`/api/status-labels/${statusDeployableId}`, { isActive: false })).status).toBe(200);
+  it('não muda de tipo — a devolução o aplica sozinha', async () => {
+    await sozinhoNoTipo('DEPLOYABLE', 'Prateleira sozinha', async (id) => {
+      const { status, body } = await api.put<{ error: string }>(`/api/status-labels/${id}`, { type: 'UNDEPLOYABLE' });
+      expect(status).toBe(409);
+      expect(body.error).toMatch(/único status do tipo Disponível/);
+    });
   });
-});
 
-describe('o último status ativo — também na exclusão', () => {
-  it('não se exclui o único "Em uso" ativo, mesmo sem nenhum ativo usando', async () => {
-    // Deixa um IN_USE novo como o único ativo do tipo: os outros saem primeiro.
-    const novo = await api.post<{ id: string }>('/api/status-labels', { name: 'Em uso — sozinho', type: 'IN_USE' });
-    const ativos = await api.get<{ id: string }[]>('/api/status-labels/options?type=IN_USE');
-    for (const { id } of ativos.body.filter((opcao) => opcao.id !== novo.body.id)) {
-      expect((await api.put(`/api/status-labels/${id}`, { isActive: false })).status).toBe(200);
-    }
+  it('não se exclui, mesmo sem nenhum ativo usando', async () => {
+    await sozinhoNoTipo('IN_USE', 'Em uso sozinho', async (id) => {
+      const { status, body } = await api.delete<{ error: string }>(`/api/status-labels/${id}`);
+      expect(status).toBe(409);
+      expect(body.error).toMatch(/único status do tipo Em uso/);
+    });
+  });
 
-    const { status, body } = await api.delete<{ error: string }>(`/api/status-labels/${novo.body.id}`);
-    expect(status).toBe(409);
-    expect(body.error).toMatch(/único status ativo/);
+  it('com outro do mesmo tipo, sai', async () => {
+    const segundo = await api.post<{ id: string }>('/api/status-labels', { name: 'Prateleira dois', type: 'DEPLOYABLE' });
+    expect((await api.put(`/api/status-labels/${segundo.body.id}`, { type: 'PENDING' })).status).toBe(200);
+    expect((await api.delete(`/api/status-labels/${segundo.body.id}`)).status).toBe(200);
   });
 });
 

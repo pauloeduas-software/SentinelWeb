@@ -29,8 +29,8 @@ function valoresIniciais(
 
 /**
  * O vínculo com que um campo `reference` abriu, com nome — para o
- * `ReferenceSelect` nomear a opção que ficou fora da lista (um fabricante
- * desativado não volta no `/options`).
+ * `ReferenceSelect` nomear a opção que ficou fora da lista (o colaborador
+ * desativado não volta no `/options`, e a lista tem teto).
  *
  * Pela convenção das specs: o campo `manufacturerId` tem a relação ao lado, em
  * `manufacturer`, que é a mesma que a coluna `relacao` da tabela lê. Sem a

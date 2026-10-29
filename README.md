@@ -55,7 +55,7 @@ Na ordem do menu, que se agrupa por assunto ([AH](./docs/decisoes/acesso.md#ah--
 | --- | --- | --- | --- |
 | **Ativos** | `/computadores` | Listagem de ativos (computadores) — filtros, busca por etiqueta/série, ações de ciclo de vida | ADMIN |
 |  | `/computadores/:id` | Ficha do ativo — abas **Detalhes**, **Posse**, **Histórico**, **Licenças**, **Máquina** (telemetria e comando, quando há agente) | ADMIN |
-|  | `/postos` | Postos de trabalho (mesas), cada um numa localização — quem está, quantos ativos, se está vago; criar, editar, desativar e excluir posto | ADMIN |
+|  | `/postos` | Postos de trabalho (mesas), cada um numa localização — quem está, quantos ativos, se está vago; criar, editar e excluir posto | ADMIN |
 |  | `/postos/:id` | Ficha do posto — ocupantes (adicionar, corrigir o turno, encerrar), o computador da mesa (com telemetria), ativos entregues e estoque da mesa | ADMIN |
 | **Recursos** | `/estoque` | O que tem quantidade em vez de patrimônio — o total, quantos em uso e com quem; entrega e devolução a colaborador ou posto, com o dia | ADMIN |
 |  | `/licencas` | Contratos de software: quantidade comprada, chaves, entregas a colaborador ou computador; a encerrada fica na lista, com Reabrir | ADMIN |

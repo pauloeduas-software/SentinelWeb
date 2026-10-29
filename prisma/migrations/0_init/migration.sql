@@ -152,7 +152,6 @@ CREATE TABLE "categories" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
     "type" "CategoryType" NOT NULL,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -165,7 +164,6 @@ CREATE TABLE "status_labels" (
     "name" TEXT NOT NULL,
     "type" "StatusLabelType" NOT NULL,
     "notes" TEXT,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -179,7 +177,6 @@ CREATE TABLE "manufacturers" (
     "url" TEXT,
     "supportPhone" TEXT,
     "supportEmail" TEXT,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -192,7 +189,6 @@ CREATE TABLE "asset_models" (
     "name" TEXT NOT NULL,
     "modelNumber" TEXT,
     "notes" TEXT,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "manufacturerId" UUID NOT NULL,
     "categoryId" UUID NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -211,7 +207,6 @@ CREATE TABLE "locations" (
     "zip" TEXT,
     "phone" TEXT,
     "notes" TEXT,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 

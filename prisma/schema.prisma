@@ -372,11 +372,6 @@ model Category {
   name String
   type CategoryType
 
-  // Desativado some das listas de escolha e não é escolhido de novo; o que já
-  // aponta para ele continua (docs/referencia/configuracoes.md). É a saída de
-  // quem não pode ser excluído por ter uso.
-  isActive Boolean @default(true)
-
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   assetModels AssetModel[]
@@ -397,11 +392,6 @@ model StatusLabel {
 
   notes String?
 
-  // Desativado some das listas de escolha e não é escolhido de novo; o que já
-  // aponta para ele continua (docs/referencia/configuracoes.md). É a saída de
-  // quem não pode ser excluído por ter uso.
-  isActive Boolean @default(true)
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   assets    Asset[]
@@ -416,11 +406,6 @@ model Manufacturer {
   url          String?
   supportPhone String?
   supportEmail String?
-
-  // Desativado some das listas de escolha e não é escolhido de novo; o que já
-  // aponta para ele continua (docs/referencia/configuracoes.md). É a saída de
-  // quem não pode ser excluído por ter uso.
-  isActive Boolean @default(true)
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -437,11 +422,6 @@ model AssetModel {
 
   modelNumber String?
   notes       String?
-
-  // Desativado some das listas de escolha e não é escolhido de novo; o que já
-  // aponta para ele continua (docs/referencia/configuracoes.md). É a saída de
-  // quem não pode ser excluído por ter uso.
-  isActive Boolean @default(true)
 
   manufacturerId String @db.Uuid
   categoryId     String @db.Uuid
@@ -482,11 +462,8 @@ model Location {
   // guardada e não recebe nada — quem recebe entrega, estoque e ocupante é o
   // POSTO (`Workstation`, decisão Y).
   //
-  // DESATIVAR tira o local das escolhas sem excluí-lo. Excluir só é recusado
-  // (409) pelo que está nele AGORA: ativo ou item de estoque guardado, posto
-  // que fica nele. Desativada, ela não recebe ativo, item ou posto novo; o que
-  // já está lá fica.
-  isActive Boolean @default(true)
+  // Sem Desativar (AO): excluir só é recusado (409) pelo que está nela AGORA —
+  // ativo ou item de estoque guardado, posto que fica nela.
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
