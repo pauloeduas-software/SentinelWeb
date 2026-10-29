@@ -17,7 +17,7 @@
     "db:seed": "prisma db seed",
     "db:seed:demo": "tsx prisma/seeds/demo/index.ts",
     "db:studio": "prisma studio",
-    "acesso:administrador": "tsx server/domain/access/cli/conceder-administrador.cli.ts",
+    "acesso:administrador": "tsx server/domain/access/cli/criar-administrador.cli.ts",
     "agente:falso": "tsx scripts/agente-falso.ts",
     "postinstall": "prisma generate"
   },

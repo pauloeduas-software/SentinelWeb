@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '../../server/core/database/prismaClient';
-import { concederAdministrador } from '../../server/domain/access/cli/conceder-administrador.cli';
+import { criarAdministrador } from '../../server/domain/access/cli/criar-administrador.cli';
 import { rodarReconciliacao } from '../../server/domain/reconciliation/jobs/reconcile.job';
 import { criarApi, type ApiDeTeste, type Resposta } from '../helpers/app';
 import { conectarAgente, esperarPor } from '../helpers/agente';
@@ -406,18 +406,14 @@ describe('o que roda sozinho', () => {
     expect(depois.vinculos.filter((e) => e.assetId)).toEqual(antes.vinculos.filter((e) => e.assetId));
   });
 
-  it('o comando de terminal não grava o que não mudou', async () => {
-    // Com um cargo só (Z), toda conta já nasce ADMIN: conceder não muda nada, e
-    // uma linha "de ADMIN para ADMIN" afirmaria uma troca que não houve. Quem
-    // assina como sistema quando algo muda é o vínculo automático (cascata.test.ts).
-    const email = `promovida.${proximo()}@teste.local`;
-    const criada = await api.post('/api/users', { name: 'Promovida', email, password: 'senha-promovida-1' });
-    expect(criada.status).toBe(201);
-    const linhas = await prisma.auditLog.count();
+  it('o comando de terminal assina como sistema, com o usuário do sistema operacional', async () => {
+    const email = `do.terminal.${proximo()}@teste.local`;
 
-    await concederAdministrador(email);
+    const conta = await criarAdministrador({ nome: 'Do Terminal', email, senha: 'senha-do-terminal-1' });
 
-    expect(await prisma.auditLog.count()).toBe(linhas);
+    const linha = await prisma.auditLog.findFirstOrThrow({ where: { entityId: conta.id, action: 'CREATE' } });
+    expect(linha).toMatchObject({ actorType: 'SYSTEM', actorId: null, actorEmail: null, requestId: null });
+    expect(linha.source).toMatch(/^cli:criar-administrador:./);
   });
 });
 

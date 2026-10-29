@@ -7,7 +7,7 @@
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D22–D26, D72–D78, D80, D89, D135–D142, P da segunda rodada (ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)) e R, S, T, U, W, X, Z e AB, que vieram depois da varredura
+> [`README.md`](./README.md#a-segunda-rodada-ap)) e R, S, T, U, W, X, Z, AB, AH e AP, que vieram depois da varredura
 > Q e continuaram a letra.
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
@@ -488,6 +488,10 @@ colide com nada: o campo de RH `jobTitle`, que a tela traduzia como "cargo", sai
 
 ## T — Não há conta semeada
 
+> **Completada por [AP](#ap--o-administrador-nasce-por-comando-como-no-snipe-it):** o "criado à mão,
+> no terminal" ganhou o comando que faltava, `npm run acesso:administrador`. O seed continua sem
+> conta.
+
 **Decidido:** o `npm run db:seed` cria só o que o sistema precisa para funcionar —
 configuração, categorias e status. O seed do administrador (e o que repunha o cargo dele) saiu;
 o primeiro administrador de um ambiente novo é criado à mão por quem instala, no terminal. Saem
@@ -728,6 +732,10 @@ direto no `exigirPermissao`, e o que o `ADMIN` vê continua provado pela API.
 > a chave de licença deixa de ir como `chave: 'informada' | 'alterada' | 'removida'`. A auditoria
 > conta as chaves da lista (`chaves: { incluidas, alteradas, removidas }`) e, na entrega e na
 > troca, guarda qual chave pelo `licenseKeyId`. O texto continua fora.
+>
+> **E em parte por [AP](#ap--o-administrador-nasce-por-comando-como-no-snipe-it):** o
+> `conceder-administrador` saiu. O comando que assina como sistema agora é o que cria
+> administrador, com a origem `cli:criar-administrador:<usuário do sistema operacional>`.
 
 **Decidido** (2026-10-25): `activity_logs` vira `audit_logs` (`AuditLog`), e toda escrita grava
 QUEM fez, na mesma transação da operação. A tabela é do administrador, consultada no banco: tela
@@ -886,3 +894,48 @@ lista de cinco telas sob "Operação" não dizia o que cada uma era, e por assun
 sozinho.
 
 **O que a migração faz:** nada — a mudança é só de tela, rota e menu.
+
+---
+
+## AP — O administrador nasce por comando, como no Snipe-IT
+
+**Decidido** (em 2026-10-29, na revisão de Usuários — perguntado como os outros sistemas criam a
+primeira conta, o usuário escolheu "no mesmo estilo do Snipe-IT, um comando para criar o
+primeiro admin". Depois, a senha no próprio comando — "faz logo a pessoa já escrever a senha
+direto no comando, facilita o nosso código" — e sem o aviso de trocar a senha: "a pessoa já
+escolhe a própria senha, é até melhor que ter esse sistema de notificação"):
+
+- **`npm run acesso:administrador -- --nome "Nome Completo" --email "e-mail" --senha "senha"`
+  cria um Administrador**, pelo mesmo cadastro da tela: as regras de nome, e-mail e senha do
+  `createUserSchema`, o 409 de e-mail em uso e a linha na auditoria, assinada pelo sistema
+  (`cli:criar-administrador:<usuário do sistema operacional>`, [AB](#ab--a-auditoria-volta-quem-fez-só-no-banco)).
+  É o `snipeit:create-admin`, com um nome só no lugar de nome e sobrenome e sem nome de usuário,
+  porque o login é o e-mail ([R](#r--a-senha-nasce-no-cadastro-e-o-login-é-o-e-mail)).
+- **A senha vai no próprio comando**, como o `--password` do Snipe-IT: quem instala escolhe a
+  senha ali mesmo, e não há senha padrão a trocar nem aviso na tela. O preço, aceito: ela fica no
+  histórico do terminal de quem rodou. O `--` depois do nome do script é do npm — sem ele, o npm
+  toma `--nome`, `--email` e `--senha` como opções dele e só repassa os valores, sem os nomes.
+- **Cria mesmo com administrador no sistema.** São dois casos com uma saída só: a instalação
+  nova, que não tem conta nenhuma ([T](#t--não-há-conta-semeada)), e o único administrador que
+  perdeu a senha — o novo entra e define a **Nova senha** da conta antiga em Usuários. Quem roda
+  o comando já tem o servidor nas mãos.
+- **O cargo vai explícito**, `ADMIN`, e não pelo `@default` da coluna: se a separação de cargos
+  vier ([Z](#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)),
+  o padrão pode mudar e o comando não.
+- **Sai o `conceder-administrador`**, que dava o cargo `ADMIN` a uma conta que já existia. Com
+  um cargo só, toda conta já nasce `ADMIN`, e ele não fazia nada. O nome do script fica o mesmo.
+
+**Completa:** a [T](#t--não-há-conta-semeada), que dizia "criado à mão por quem instala, no
+terminal" sem ter o comando: a saída era um `INSERT` com um hash argon2 calculado por fora.
+**Mantém:** a T no resto (o seed principal não cria conta) e a invariante 17 (a rede do último
+administrador), cuja linha de escape continua sendo de linha de comando, e não uma rota.
+
+**Por quê:** comparando com os outros sistemas. O Snipe-IT tem o assistente na primeira abertura
+e o `snipeit:create-admin` para recuperar o acesso. O GLPI instala contas com senha conhecida
+(`glpi/glpi`) e mostra um aviso até trocarem; quem perde a senha do administrador mexe no hash
+direto no banco. O Keycloak usa uma variável de ambiente na primeira subida, mais um comando que
+também serve para recuperar. O assistente na web foi descartado porque, até alguém criar a
+conta, quem abrir o endereço primeiro vira administrador; a senha padrão do GLPI e a variável
+de ambiente são a porta que a T fechou.
+
+**O que a migração faz:** nada — a mudança é só do comando.

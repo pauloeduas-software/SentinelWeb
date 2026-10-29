@@ -20,9 +20,10 @@ import { categoriasSeeder } from './categorias.seed';
 import { statusSeeder } from './status.seed';
 
 // NÃO HÁ SEED DE CONTA. O seed só cria o que o sistema precisa para funcionar
-// (configuração, categorias, status); o primeiro administrador é criado à mão,
-// por quem instala — uma conta semeada com senha de `.env` era uma porta que
-// reabria sozinha toda vez que alguém rodava o seed de novo.
+// (configuração, categorias, status); o primeiro administrador nasce pelo
+// `npm run acesso:administrador`, por quem instala (AP) — uma conta semeada com
+// senha de `.env` era uma porta que reabria sozinha toda vez que alguém rodava
+// o seed de novo.
 const seeders: Seeder[] = [
   configuracaoSeeder,
   categoriasSeeder,

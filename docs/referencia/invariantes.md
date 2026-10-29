@@ -51,7 +51,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 9 | A forma da entrega de licença: o alvo é UM (pessoa **ou** ativo), a devolução vem depois da entrega, e toda entrega em uso aponta para a licença | **banco** — três `CHECK` em `license_checkouts`, com a FK `Restrict` | 422 com o campo que falta (a API recusa antes, com frase própria) |
 | 12 | Uma máquina é no máximo um ativo, e um ativo no máximo uma máquina | **banco** — `@unique` em `Endpoint.assetId` | 409 `Este ativo já está vinculado a outra máquina. Desfaça aquele vínculo antes, pela aba Máquina do ativo.` |
 | 13 | A mesma sugestão não empilha na fila | **banco** — índice único parcial `sugestao_pendente_por_alvo` | nada: o job trata o `P2002` como "outro já criou" |
-| 17 | Sempre existe alguém ativo que é `ADMIN` | **aplicação** — `assertSobraAdministrador()`, DEPOIS da escrita e dentro da transação, na edição e na exclusão de usuário | 409 `Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. Dê o cargo de Administrador a outra pessoa com login antes de seguir.` |
+| 17 | Sempre existe alguém ativo que é `ADMIN` | **aplicação** — `assertSobraAdministrador()`, DEPOIS da escrita e dentro da transação, na edição e na exclusão de usuário | 409 `Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. Mantenha outra conta de Administrador ativa antes de seguir.` |
 | 19 | No máximo um ativo por posto de trabalho | **aplicação** — a porta da entrega (`ativoDoPosto()`, com `FOR UPDATE` na linha do posto); a lixeira não a contorna, porque o ativo entregue não vai para ela ([AL](../decisoes/posse.md#al--o-computador-entregue-não-vai-para-a-lixeira)) | 409 `Este posto de trabalho já tem um ativo: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.` |
 | 20 | Ativo baixado ou na lixeira não tem posse aberta, licença nem componente | **aplicação** — três portas: a baixa e a lixeira (`assertSemPosse` e as contagens de licenças e de componentes) e a entrega (`checkout-asset`, `checkout-license`, `checkout-stock`), as duas com o ativo travado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Desfaça a baixa antes.` |
 | 22 | O que está em uso nunca passa da quantidade comprada | **aplicação** — a entrega e a edição contam com a linha da licença travada (`lock-license.usecase.ts`) | 409 `Sem licença livre em "Office 2024": 5 compradas, 5 em uso. Devolva uma entrega ou aumente a quantidade comprada.` |
@@ -449,10 +449,11 @@ tem uma — `passwordHash` é obrigatório desde
 
 > **O que esta invariante NÃO cobre, e por isso existe a linha de escape:** o
 > caminho da tela. Um restore parcial deixa o sistema de pé e **trancado**, e a
-> saída é `npm run acesso:administrador -- <e-mail>`, que exige acesso ao
-> servidor — e **não** uma rota de emergência, que seria uma rota concedendo
-> `ADMIN` sem ser `ADMIN`. O comando só dá o cargo a um usuário que já existe:
-> se a única conta `ADMIN` perdeu a senha, a troca é direto no banco.
+> saída é `npm run acesso:administrador`, que exige acesso ao servidor e cria
+> outro administrador ([AP](../decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it)) —
+> e **não** uma rota de emergência, que seria uma rota criando `ADMIN` sem ser
+> `ADMIN`. Se a única conta `ADMIN` perdeu a senha, o administrador novo entra e
+> define a Nova senha dela em Usuários.
 
 ---
 

@@ -114,8 +114,9 @@ carregam senha —, e o CORS com allowlist.
 Parece caro e é a defesa principal contra o token que sobrevive ao usuário:
 excluir alguém não apaga o JWT que já está no navegador dele.
 
-A extension de soft delete joga a favor sem código extra — `findFirst` já não
-enxerga o apagado. `isActive: false` cai junto.
+Excluir apaga a linha ([W](../decisoes/acesso.md#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo)),
+então a releitura não encontra quem foi excluído. E ela procura com `isActive: true`, então o
+desativado cai junto.
 
 ### 4. `tokenVersion` — o que a releitura sozinha não cobre
 
@@ -162,6 +163,13 @@ gastar os mesmos ~50 ms do caminho real. Sem isso, um volta em 1 ms e o outro em
 O 403 do desativado tem frase própria de propósito: quem chegou ali já provou que sabe a
 senha, não há nada a enumerar, e "e-mail ou senha inválidos" mandaria essa pessoa procurar
 um erro de digitação que não existe.
+
+O 423 é a brecha que ficou, e foi aceita: o e-mail sem conta nunca trava, então quem errar a
+senha cinco vezes de propósito descobre que aquele e-mail tem conta. Fechar exigiria contar
+tentativa também de e-mail que não existe, que não tem linha onde guardar a contagem. E
+responder "e-mail ou senha inválidos" à conta travada deixaria a pessoa de verdade sem saber
+por que a senha certa não entra. Com o teto de 20 tentativas por minuto por IP, são quatro
+e-mails por minuto, para descobrir o que o formato `nome.sobrenome@empresa` já entrega.
 
 ### 6. Argon2id, e o rehash transparente
 
@@ -277,9 +285,9 @@ do administrador, no banco, para responder se um erro foi de uma conta ou do sis
 
 - **`USER`** — a conta da sessão (`atorDaRequisicao`), com nome e e-mail por escrito e o número
   da requisição, que o servidor gera sempre (o `X-Request-Id` do cliente é ignorado);
-- **`SYSTEM`** — o vínculo automático da reconciliação em `ON` (`job:reconciliacao`) e o
-  `conceder-administrador` (`cli:conceder-administrador:<usuário do sistema operacional>`), quando
-  o cargo muda — com um cargo só (Z), hoje nunca;
+- **`SYSTEM`** — o vínculo automático da reconciliação em `ON` (`job:reconciliacao`) e a conta
+  criada pelo `acesso:administrador` (`cli:criar-administrador:<usuário do sistema operacional>`,
+  [AP](../decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it));
 - **`ANONYMOUS`** — a tela de login sem sessão: a senha errada, a conta bloqueada e a desativada
   gravam na conta, mas sem autor, porque quem digitou não provou ser ela. Na conta bloqueada, uma
   linha por bloqueio, e não uma por tentativa. A entrada certa é `USER` (`LOGIN`), e a saída
@@ -328,7 +336,7 @@ terceiro — encontra ali o que já foi tentado e por que saiu.
 | **Política de senha no `.env`** | O mínimo de 12 caracteres é constante em `auth.schema.ts`. Não há demanda para torná-lo configurável |
 | **Segundo fator, SSO, diretório, token pessoal de API** | Existiram e saíram — [D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)/[D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token). Voltar é decisão nova, não bug |
 | **Trilha de tentativas de login** (`AuthEvent`) | Saiu com o D148, por não ter leitor que sobrevivesse ao corte. `failedLoginCount`/`lockedUntil` continuam protegendo a conta; o que falta é um registro consultável de *quando* |
-| **Reset de senha por e-mail** | Não há mais e-mail no sistema (segundo de-escopo, O). O caminho é alguém com cargo `ADMIN` definir uma **Nova senha** na edição do usuário (`PUT /api/users/:id`) |
+| **Reset de senha por e-mail** | Não há mais e-mail no sistema (segundo de-escopo, O). O caminho é alguém com cargo `ADMIN` definir uma **Nova senha** na edição do usuário (`PUT /api/users/:id`). Se nenhum administrador lembra a senha, o `npm run acesso:administrador` cria outro no servidor ([AP](../decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it)) |
 
 > **Nota sobre o mínimo de 12 caracteres:** ele vale para **definir** senha
 > (`senhaNova`, que o cadastro e a edição de usuário importam), não para o login. No login só existe o teto de 128
@@ -367,13 +375,13 @@ server/domain/access/                    a OUTRA metade da sessão: o que ela al
 ├── helpers/route-permissions.ts         método + rota → cargo mínimo (o mapa que o boot confere)
 ├── helpers/require-permission.ts        temCargo() e exigirPermissao() (403 que nomeia o cargo)
 ├── helpers/ultimo-administrador.ts      a invariante 17 — nunca sem administrador
-└── cli/conceder-administrador.cli.ts    a linha de escape do acesso
+└── cli/criar-administrador.cli.ts      a primeira conta e a linha de escape do acesso (AP)
 
 server/core/http/require-auth.ts         a porta fechada por padrão (sessão)
 server/core/http/permission-guard.ts     a porta fechada por padrão (autorização) + a conferência do boot
 server/app.ts                            ROTAS_PUBLICAS — a allowlist inteira
 tests/invariantes/sessao.test.ts         a sessão por HTTP
-tests/invariantes/permissao.test.ts      a cobertura do mapa, o "nunca sem administrador" e a senha no cadastro
+tests/invariantes/permissao.test.ts      a cobertura do mapa, o "nunca sem administrador", a senha no cadastro e o comando (AP)
 ```
 
 ---

@@ -22,14 +22,14 @@ import type { ClientePosse } from '../../assignment/use-cases/resolve-responsibl
 // obrigatório).
 //
 // O ESCAPE, e ele é de linha de comando de propósito:
-// `npm run acesso:administrador -- <login>`. Uma rota de emergência seria uma
-// rota que concede ADMIN sem ser ADMIN — a porta exata que isto existe para
-// fechar.
+// `npm run acesso:administrador`, que cria outro administrador (AP). Uma rota
+// de emergência seria uma rota que cria ADMIN sem ser ADMIN — a porta exata que
+// isto existe para fechar.
 // ═══════════════════════════════════════════════════════════════════════════
 
 const SEM_SAIDA =
   'Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. ' +
-  'Dê o cargo de Administrador a outra pessoa com login antes de seguir.';
+  'Mantenha outra conta de Administrador ativa antes de seguir.';
 
 /**
  * A TRAVA DA ADMINISTRAÇÃO — a primeira instrução de toda transação que pode
