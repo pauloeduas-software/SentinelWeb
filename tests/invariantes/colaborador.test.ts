@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '../../server/core/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { cenarioDePosse, criarAtivo, criarColaborador } from '../helpers/fixtures';
+import { cenarioDePosse, criarAtivo, criarColaborador, criarPosto } from '../helpers/fixtures';
 
 // O COLABORADOR — a sexta tabela do catálogo, com página própria, e a única com LIXEIRA.
 //
@@ -39,6 +39,25 @@ describe('excluir colaborador', () => {
     expect(recusa.status).toBe(409);
     expect(recusa.body.error).toContain('responde por 1 ativo');
     expect(recusa.body.error).toContain('antes de excluir');
+  });
+
+  it('a recusa cita o computador e o posto pelo nome, com o link de cada um', async () => {
+    const pessoa = await criarColaborador(api, { name: 'Com Notebook e Mesa', email: 'notebook.mesa@teste.local' });
+    const notebook = await entregarNotebook(pessoa);
+    const mesa = await criarPosto(api, { name: 'Mesa da Recusa' });
+    expect((await api.post(`/api/workstations/${mesa}/occupants`, { personId: pessoa })).status).toBe(201);
+
+    type Recusa = { error: string; refs: { tipo: string; id: string; nome: string }[] };
+    const recusa = await api.put<Recusa>(`/api/people/${pessoa}`, { isActive: false });
+    expect(recusa.status).toBe(409);
+    expect(recusa.body.error).toBe(
+      `Este colaborador ainda responde por 1 ativo (${notebook.assetTag}) e ocupa 1 posto (Mesa da Recusa). `
+      + 'Devolva o que está com ele e encerre as ocupações antes de desativar.',
+    );
+    expect(recusa.body.refs).toEqual([
+      { tipo: 'ativo', id: notebook.id, nome: notebook.assetTag },
+      { tipo: 'posto', id: mesa, nome: 'Mesa da Recusa' },
+    ]);
   });
 
   it('o notebook dela não vai para a lixeira antes da devolução — e ela não se desativa por baixo (AL)', async () => {
@@ -91,6 +110,39 @@ describe('excluir colaborador', () => {
     expect((await api.post(`/api/assets/${notebook.id}/checkout`, {
       targetType: 'PERSON', targetPersonId: pessoa,
     })).status).toBe(404);
+  });
+});
+
+describe('a ficha do colaborador', () => {
+  it('lista o computador entregue a ELA — não o do posto que ela ocupa', async () => {
+    const pessoa = await criarColaborador(api, { name: 'Bia da Ficha do Notebook', email: 'bia.notebook@teste.local' });
+    const notebook = await entregarNotebook(pessoa);
+
+    // O desktop da mesa que ela ocupa é do posto: fica na ficha do posto.
+    const mesa = await criarPosto(api, { name: 'Mesa da Bia' });
+    expect((await api.post(`/api/workstations/${mesa}/occupants`, { personId: pessoa })).status).toBe(201);
+    const desktop = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
+    expect((await api.post(`/api/assets/${desktop.id}/checkout`, {
+      targetType: 'WORKSTATION', targetWorkstationId: mesa,
+    })).status).toBe(201);
+
+    type Ficha = { ativos: { asset: { id: string; assetTag: string } }[] };
+    const ficha = await api.get<Ficha>(`/api/people/${pessoa}`);
+    expect(ficha.body.ativos.map((posse) => posse.asset.id)).toEqual([notebook.id]);
+
+    // Devolvido, sai da lista de cima e fica só no histórico.
+    expect((await api.post(`/api/assets/${notebook.id}/checkin`, {})).status).toBe(200);
+    expect((await api.get<Ficha>(`/api/people/${pessoa}`)).body.ativos).toEqual([]);
+  });
+
+  it('mostra as notas do cadastro', async () => {
+    const criado = await api.post<{ id: string }>('/api/people', {
+      name: 'Com Notas', email: 'com.notas@teste.local', notes: 'Afastada até março.',
+    });
+    expect(criado.status).toBe(201);
+
+    const ficha = await api.get<{ notes: string | null }>(`/api/people/${criado.body.id}`);
+    expect(ficha.body.notes).toBe('Afastada até março.');
   });
 });
 

@@ -195,6 +195,10 @@ model Person {
   // `NULL` não colidem; gravado em minúsculas.
   email String?
 
+  // Texto livre, como as notas dos outros cadastros: "afastada até março",
+  // "terceirizado da empresa X". Aparece na ficha.
+  notes String?
+
   // DESATIVAR é o caminho de quem não pode excluir: quem saiu da empresa
   // continua no histórico de posse, só não recebe entrega nova. Só desativa
   // quem não responde por nada (invariante 6, `personSpec.beforeWrite`).

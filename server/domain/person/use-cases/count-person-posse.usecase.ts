@@ -24,11 +24,20 @@ import {
 // entraram junto com os outros em vez de virarem uma contagem que alguém
 // precisasse lembrar de somar.
 
+/** Um computador ou um posto que a recusa cita: o id para o link, o nome para a frase. */
+interface CitadoNaRecusa {
+  id: string;
+  nome: string;
+}
+
 interface PosseAbertaDaPessoa {
-  /** `Assignment` abertas com alvo `PERSON` — o que devolver. */
-  ativosEmPosse: number;
-  /** `WorkstationOccupant` abertas — o que encerrar. */
-  postosOcupados: number;
+  /**
+   * `Assignment` abertas com alvo `PERSON` — o que devolver —, pela ETIQUETA:
+   * a recusa diz QUAIS, como faz com as licenças e os itens.
+   */
+  ativos: CitadoNaRecusa[];
+  /** `WorkstationOccupant` abertas — o que encerrar —, pelo nome do posto. */
+  postos: CitadoNaRecusa[];
   /**
    * `LicenseCheckout` abertas com `assignedPersonId` — a terceira ponta —, com
    * o NOME de cada licença: a recusa diz quais voltam.
@@ -58,17 +67,36 @@ export async function contarPosseAberta(
   client: ClientePosse,
   personId: string,
 ): Promise<PosseAbertaDaPessoa> {
-  const [ativosEmPosse, postosOcupados, licencas, itens] = await Promise.all([
+  const [posses, ocupacoes, licencas, itens] = await Promise.all([
     // Sem filtro de lixeira: o ativo entregue não vai para ela (AL).
-    client.assignment.count({
+    client.assignment.findMany({
       where: { targetType: 'PERSON', targetPersonId: personId, checkinAt: null },
+      select: { asset: { select: { id: true, assetTag: true } } },
+      orderBy: { asset: { assetTag: 'asc' } },
     }),
-    client.workstationOccupant.count({ where: { personId, endedAt: null } }),
+    client.workstationOccupant.findMany({
+      where: { personId, endedAt: null },
+      select: { workstation: { select: { id: true, name: true } } },
+      orderBy: { workstation: { name: 'asc' } },
+    }),
     licencasDaPessoa(client, personId),
     itensDaPessoa(client, personId),
   ]);
 
-  return { ativosEmPosse, postosOcupados, licencas, itens };
+  return {
+    ativos: posses.map(({ asset }) => ({ id: asset.id, nome: asset.assetTag })),
+    // A ocupação aberta sempre tem posto (CHECK `workstation_occupants_posto_presente`);
+    // o filtro é para o tipo, que é o da coluna.
+    postos: ocupacoes.flatMap(({ workstation }) => (workstation ? [{ id: workstation.id, nome: workstation.name }] : [])),
+    licencas,
+    itens,
+  };
+}
+
+/** "ATV-00012, ATV-00013 e ATV-00020" — os nomes que a recusa escreve. */
+function emLista(citados: readonly CitadoNaRecusa[]): string {
+  const nomes = citados.map((citado) => citado.nome);
+  return nomes.length <= 1 ? nomes.join('') : `${nomes.slice(0, -1).join(', ')} e ${nomes[nomes.length - 1]}`;
 }
 
 /** "2 ativos", "1 ativo" — plural à mão porque é uma frase, não um dado. */
@@ -90,10 +118,12 @@ export interface RecusaDaPessoa {
  * qual das duas camadas manda o operador procurar no lugar errado — e a camada
  * do posto é justamente a que ninguém lembra.
  *
- * AS LICENÇAS E OS ITENS VÊM PELO NOME — "tem 3 licenças (AutoCAD, Office e
- * VPN)", "está com 3 unidades de estoque (Mouse USB ×2 e Teclado)" — e como
- * `refs`: o Devolver só existe no detalhe da licença e no do item, e quem
- * desliga um funcionário que sai vai direto a cada um pelo link.
+ * AS QUATRO PONTAS VÊM PELO NOME — "responde por 1 ativo (ATV-00012)", "tem 3
+ * licenças (AutoCAD, Office e VPN)", "está com 3 unidades de estoque (Mouse USB
+ * ×2 e Teclado)", "ocupa 1 posto (Mesa 1)" — e como `refs`: o Devolver mora na
+ * ficha do computador, no detalhe da licença e no do item, e o Encerrar na
+ * ficha do posto; quem desliga um funcionário que sai vai direto a cada um
+ * pelo link.
  *
  * Devolve `null` quando não há nada aberto: é o sinal de que a operação pode
  * seguir, sem o chamador reinterpretar os números.
@@ -103,7 +133,9 @@ export function motivoParaRecusar(
   operacao: 'excluir' | 'desativar',
 ): RecusaDaPessoa | null {
   const partes: string[] = [];
-  if (posse.ativosEmPosse > 0) partes.push(`responde por ${quantos(posse.ativosEmPosse, 'ativo', 'ativos')}`);
+  if (posse.ativos.length > 0) {
+    partes.push(`responde por ${quantos(posse.ativos.length, 'ativo', 'ativos')} (${emLista(posse.ativos)})`);
+  }
   if (posse.licencas.length > 0) {
     partes.push(`tem ${quantos(posse.licencas.length, 'licença', 'licenças')} (${nomesDasLicencas(posse.licencas)})`);
   }
@@ -111,7 +143,9 @@ export function motivoParaRecusar(
     const unidades = totalDeUnidades(posse.itens);
     partes.push(`está com ${quantos(unidades, 'unidade de estoque', 'unidades de estoque')} (${nomesDosItens(posse.itens)})`);
   }
-  if (posse.postosOcupados > 0) partes.push(`ocupa ${quantos(posse.postosOcupados, 'posto', 'postos')}`);
+  if (posse.postos.length > 0) {
+    partes.push(`ocupa ${quantos(posse.postos.length, 'posto', 'postos')} (${emLista(posse.postos)})`);
+  }
 
   if (partes.length === 0) return null;
 
@@ -119,8 +153,14 @@ export function motivoParaRecusar(
     ? partes[0]
     : `${partes.slice(0, -1).join(', ')} e ${partes[partes.length - 1]}`;
 
+  // Os links na ordem da frase.
   return {
     mensagem: `Este colaborador ainda ${frase}. Devolva o que está com ele e encerre as ocupações antes de ${operacao}.`,
-    refs: [...comoReferencias(posse.licencas), ...itensComoReferencias(posse.itens)],
+    refs: [
+      ...posse.ativos.map((ativo) => ({ tipo: 'ativo' as const, ...ativo })),
+      ...comoReferencias(posse.licencas),
+      ...itensComoReferencias(posse.itens),
+      ...posse.postos.map((posto) => ({ tipo: 'posto' as const, ...posto })),
+    ],
   };
 }

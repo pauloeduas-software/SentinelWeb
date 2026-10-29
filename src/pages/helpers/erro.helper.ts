@@ -8,8 +8,10 @@ import { caminhoDaLicenca } from './licenca.helper';
 // erro da API guarda o corpo como veio (`corpo`); a leitura dele mora aqui.
 
 const CAMINHO: Record<ReferenciaDoErro['tipo'], (id: string) => string> = {
+  ativo: (id) => `/computadores/${id}`,
   licenca: caminhoDaLicenca,
   estoque: caminhoDoItem,
+  posto: (id) => `/postos/${id}`,
 };
 
 /** Só as referências bem formadas: o corpo do erro vem de fora. */

@@ -61,7 +61,7 @@ Na ordem do menu, que se agrupa por assunto ([AH](./docs/decisoes/acesso.md#ah--
 |  | `/licencas` | Contratos de software: quantidade comprada, chaves, entregas a colaborador ou computador; a encerrada fica na lista, com Reabrir | ADMIN |
 | **Convergência** | `/descobertas` | O que o agente vê e o cadastro não sabe — máquinas sem vínculo, vínculo manual, fila de sugestões e "Reconciliar agora" | ADMIN |
 | **Pessoas** | `/colaboradores` | Quem recebe equipamento — criar, editar, desativar, excluir para a lixeira e restaurar. Não entra no sistema: quem opera é usuário | ADMIN |
-|  | `/colaboradores/:id` | Ficha do colaborador — postos ocupados, estoque e licenças no nome dele e histórico | ADMIN |
+|  | `/colaboradores/:id` | Ficha do colaborador — as notas, os computadores entregues a ele, os postos ocupados, o estoque e as licenças no nome dele, e o histórico | ADMIN |
 | **Sistema** | `/configuracoes` | As cinco abas de referência — categorias, status, fabricantes, modelos e localizações. A configuração da descoberta fica em `/descobertas` | ADMIN |
 | **Gestão** | `/usuarios` | Quem opera o sistema — hoje só Administrador, o único cargo (Z). O cadastro pede nome, e-mail e a senha com que a pessoa entra (o login é o e-mail) | ADMIN |
 

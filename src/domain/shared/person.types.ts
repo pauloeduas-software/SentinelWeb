@@ -17,12 +17,25 @@ export interface PessoaDaFicha {
   name: string;
   /** Opcional: o colaborador não faz login. */
   email: string | null;
+  notes: string | null;
   createdAt: string;
   isActive: boolean;
+  /** Os computadores entregues A ELA e ainda com ela — não o do posto que ela ocupa. */
+  ativos: ComputadorDaPessoa[];
   /** O estoque no NOME dela, uma linha por entrega — como a ficha do posto mostra `itens`. */
   itens: EntregaNaFicha[];
   /** As licenças entregues A ELA e ainda abertas — não as do computador que ela usa. */
   licencas: EntregaDoAlvo[];
+}
+
+/** Um computador com a pessoa: a posse aberta de alvo PERSON, uma linha por entrega. */
+export interface ComputadorDaPessoa {
+  /** O id da posse. */
+  id: string;
+  checkoutAt: string;
+  expectedCheckinAt: string | null;
+  checkoutNotes: string | null;
+  asset: { id: string; assetTag: string; name: string | null; model: { name: string } };
 }
 
 /**

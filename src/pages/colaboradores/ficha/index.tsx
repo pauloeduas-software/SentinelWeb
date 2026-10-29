@@ -1,14 +1,16 @@
-import { ArrowLeft, Boxes, History, KeyRound, MapPin, UserX } from 'lucide-react';
+import { ArrowLeft, Boxes, History, KeyRound, Laptop, MapPin, UserX } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import HistoryPanel from './components/HistoryPanel';
 import { useColaborador } from './hooks/useColaborador';
-import { formatarDiaDoInstante } from '../../helpers/format.helper';
+import { formatarData, formatarDiaDoInstante } from '../../helpers/format.helper';
 import { caminhoDoItem, textoDeUnidades } from '../../helpers/estoque.helper';
 import { caminhoDaLicenca, textoDaSituacao } from '../../helpers/licenca.helper';
 
-// FICHA DO COLABORADOR — quem é a pessoa, os POSTOS que ela ocupa, o estoque e
-// as licenças no nome dela, e o HISTÓRICO (docs/referencia/modelo-de-posse.md). Abre da
-// página Colaboradores.
+// FICHA DO COLABORADOR — quem é a pessoa, os COMPUTADORES entregues a ela, os
+// POSTOS que ela ocupa, o estoque e as licenças no nome dela, e o HISTÓRICO
+// (docs/referencia/modelo-de-posse.md). Abre da página Colaboradores. São as
+// quatro coisas que a desativação e a exclusão cobram, cada uma com o link
+// para onde ela se devolve ou se encerra.
 //
 // Os postos aparecem inclusive quando não têm ativo nenhum entregue: é uma
 // ocupação aberta, e é ela que a desativação cobra.
@@ -68,8 +70,65 @@ export default function ColaboradorPage() {
               </span>
             )}
           </div>
+          {/* Com o rótulo, como a aba Detalhes do computador. */}
+          <div className="font-mono text-xs space-y-1 max-w-3xl">
+            <span className="text-text-tertiary uppercase tracking-widest text-[10px]">Notas</span>
+            <p className="text-text-secondary whitespace-pre-wrap break-words leading-relaxed">
+              {pessoa.notes || <span className="text-text-tertiary">Sem notas.</span>}
+            </p>
+          </div>
         </div>
 
+      </div>
+
+      <div>
+        <div className="flex items-center gap-3 mb-3">
+          <Laptop size={14} className="text-text-tertiary" />
+          <h3 className="font-mono text-xs uppercase tracking-widest text-text-secondary">
+            Computadores com esta pessoa <span className="text-text-tertiary">({pessoa.ativos.length})</span>
+          </h3>
+        </div>
+        <p className="font-mono text-[10px] text-text-tertiary mb-3 leading-relaxed">
+          Computadores entregues a ELA — nunca o do posto que ocupa, que fica na ficha do posto.
+          É o que precisa voltar antes de desativá-la — pela ficha do computador, onde está o Devolver.
+        </p>
+
+        <div className="bg-surface-card border border-border-sutil overflow-x-auto">
+          <table className="w-full text-left font-mono text-xs whitespace-nowrap">
+            <thead className="bg-bg-base/50 text-text-secondary border-b border-border-sutil uppercase tracking-widest">
+              <tr>
+                <th className={CABECALHO}>Computador</th>
+                <th className={CABECALHO}>Modelo</th>
+                <th className={CABECALHO}>Devolução prevista</th>
+                <th className={CABECALHO}>Desde</th>
+              </tr>
+            </thead>
+            <tbody className="text-text-primary divide-y divide-border-sutil/50">
+              {pessoa.ativos.map((posse) => (
+                <tr key={posse.id} className="hover:bg-bg-base transition-colors">
+                  <td className={CELULA}>
+                    <Link to={`/computadores/${posse.asset.id}`} className="hover:underline underline-offset-2">
+                      {posse.asset.name ? `${posse.asset.assetTag} — ${posse.asset.name}` : posse.asset.assetTag}
+                    </Link>
+                    {posse.checkoutNotes && (
+                      <div className="text-[10px] text-text-tertiary mt-0.5">{posse.checkoutNotes}</div>
+                    )}
+                  </td>
+                  <td className={`${CELULA} text-text-tertiary`}>{posse.asset.model.name}</td>
+                  <td className={`${CELULA} text-text-tertiary`}>{formatarData(posse.expectedCheckinAt)}</td>
+                  <td className={`${CELULA} text-text-tertiary`}>{formatarDiaDoInstante(posse.checkoutAt)}</td>
+                </tr>
+              ))}
+              {pessoa.ativos.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-10 text-center text-text-tertiary">
+                    Não está com nenhum computador.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div>
@@ -81,7 +140,8 @@ export default function ColaboradorPage() {
         </div>
         <p className="font-mono text-[10px] text-text-tertiary mb-3 leading-relaxed">
           Aparecem aqui inclusive os postos sem ativo nenhum: ocupar um posto também é
-          responder por ele, e precisa ser encerrado antes de desativar a pessoa.
+          responder por ele, e precisa ser encerrado antes de desativar a pessoa — pela ficha
+          do posto, onde está o Encerrar.
         </p>
 
         <div className="bg-surface-card border border-border-sutil overflow-x-auto">
@@ -96,7 +156,15 @@ export default function ColaboradorPage() {
             <tbody className="text-text-primary divide-y divide-border-sutil/50">
               {ocupacoes.map((ocupacao) => (
                 <tr key={ocupacao.id} className="hover:bg-bg-base transition-colors">
-                  <td className={CELULA}>{ocupacao.workstation?.name ?? '—'}</td>
+                  <td className={CELULA}>
+                    {/* A ficha do posto é onde mora o Encerrar, como o Devolver mora
+                        no detalhe do item e no da licença. */}
+                    {ocupacao.workstation ? (
+                      <Link to={`/postos/${ocupacao.workstation.id}`} className="hover:underline underline-offset-2">
+                        {ocupacao.workstation.name}
+                      </Link>
+                    ) : '—'}
+                  </td>
                   <td className={CELULA}>{ocupacao.shift || '—'}</td>
                   <td className={`${CELULA} text-text-tertiary`}>{formatarDiaDoInstante(ocupacao.startedAt)}</td>
                 </tr>
@@ -225,8 +293,8 @@ export default function ColaboradorPage() {
           </h3>
         </div>
         <p className="font-mono text-[10px] text-text-tertiary mb-3 leading-relaxed">
-          O que aconteceu com esta pessoa: cadastro e edições, entregas e devoluções, entradas e
-          saídas de posto.
+          O que aconteceu com esta pessoa: entregas e devoluções de computador, licença e estoque,
+          entradas e saídas de posto.
         </p>
 
         <HistoryPanel eventos={historico} total={totalDoHistorico} carregando={carregandoHistorico} />

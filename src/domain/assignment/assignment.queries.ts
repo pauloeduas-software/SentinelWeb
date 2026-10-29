@@ -4,6 +4,7 @@ import { assetKeys } from '../asset/asset.queries';
 // Quem PERGUNTA importa; o dono do dado é quem responde (docs/referencia/arquitetura.md).
 // A posse precisa dizer ao posto que algo mudou nele, e a chave é do posto.
 import { workstationKeys } from '../workstation/workstation.queries';
+import { personKeys } from '../person/person.queries';
 import type { AlvoDaPosse, Assignment } from '../shared/posse.types';
 
 // A POSSE — Camada 1 de docs/referencia/modelo-de-posse.md.
@@ -66,14 +67,17 @@ export function useAssetAssignmentsQuery(assetId: string | null) {
 /**
  * O QUE UMA ENTREGA OU UMA DEVOLUÇÃO MUDA NA TELA, num lugar só.
  *
- * Três domínios, e nenhum deles é opcional:
+ * Quatro domínios, e nenhum deles é opcional:
  *
  *   posses  — a linha que acabou de abrir ou fechar;
  *   ativos  — a coluna Responsável e o status são consequência da operação, e
  *             um ativo entregue a um posto SAI da listagem `/computadores`
  *             (`asset-filters.helper.ts`), então a tabela muda de tamanho;
  *   postos  — a ficha do posto lista os ativos entregues a ele, conta quantos
- *             são e deriva o selo de POSTO VAGO desses dois números.
+ *             são e deriva o selo de POSTO VAGO desses dois números;
+ *   pessoas — a ficha do colaborador lista os computadores entregues a ele e
+ *             conta a entrega e a devolução no histórico, como a licença e o
+ *             estoque já faziam (`invalidarLicencaEPosse`, `invalidarEstoqueEPosse`).
  *
  * O terceiro não estava aqui, e não dava para notar: até esta etapa nenhuma
  * entrega ou devolução acontecia com uma tela de posto montada. A devolução
@@ -87,12 +91,13 @@ export function useAssetAssignmentsQuery(assetId: string | null) {
  * faz a ficha reler ao montar.
  *
  * É o mesmo desenho do `invalidarPosseDerivada` da ocupação, pelo mesmo motivo:
- * posse é um fato que três telas leem de ângulos diferentes.
+ * posse é um fato que quatro telas leem de ângulos diferentes.
  */
 function invalidarAlvosDaPosse(queryClient: ReturnType<typeof useQueryClient>) {
   void queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
   void queryClient.invalidateQueries({ queryKey: assetKeys.all });
   void queryClient.invalidateQueries({ queryKey: workstationKeys.all });
+  void queryClient.invalidateQueries({ queryKey: personKeys.all });
 }
 
 /** Entregar. */
