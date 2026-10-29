@@ -20,7 +20,7 @@ import { travarAtivoOuFalhar } from './lock-asset.usecase';
  * observação vai junto: ela explicava a baixa que acabou de ser desfeita.
  *
  * Não tem guarda de posse: um ativo que volta ao patrimônio não contradiz nada.
- * A guarda existe na ida (`assert-retire-posse.usecase.ts`), que é onde o
+ * A guarda existe na ida (`assert-sem-posse.usecase.ts`), que é onde o
  * inventário perderia o rastro de quem está com o equipamento.
  */
 export async function unretireAsset(id: string, ator: Ator) {

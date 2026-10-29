@@ -75,34 +75,19 @@ export const dataOpcional = (rotulo: string) =>
         .nullish(),
     );
 
-/** Meia-noite UTC de HOJE — o primeiro instante que ainda é hoje. */
-function meiaNoiteUTC(): Date {
-  const limite = new Date();
-  limite.setUTCHours(0, 0, 0, 0);
-  return limite;
-}
-
-/** Meia-noite UTC de AMANHÃ — o primeiro instante que já é futuro. */
-function amanhaUTC(): Date {
-  const limite = meiaNoiteUTC();
-  limite.setUTCDate(limite.getUTCDate() + 1);
-  return limite;
-}
-
 /**
- * As duas bordas do calendário, e elas são a MESMA regra vista dos dois lados.
+ * As duas bordas do calendário, e elas são a MESMA regra vista dos dois lados —
+ * as duas contra o dia de HOJE em Brasília (`hojeNoBrasil`), e não contra a
+ * meia-noite UTC, que vira às 21h de Brasília: "hoje" passava a ser recusado
+ * como passado, e "amanhã", aceito como presente.
  *
- * Moram juntas aqui, e não no schema de cada domínio, porque é isso que as
- * mantém simétricas: as duas comparam contra meia-noite UTC — a mesma
- * referência que o `dataOpcional` acima usa para construir o valor —, e duas
- * cópias em arquivos diferentes divergiriam no primeiro ajuste de fuso.
- *
- * `dataNaoFutura` — o começo de um vínculo. Uma ocupação de posto com
- * `endedAt IS NULL` já conta como ocupante ATUAL em toda consulta e no índice
- * único parcial, então "começa semana que vem" gravaria como presente quem
- * ninguém vê no posto, e ainda bloquearia o cadastro de quem está lá hoje.
- * PASSADO aqui é o caso real e aceito: a carga inicial é "a Laura ocupa a Mesa
- * 1 desde março".
+ * `diaNaoFuturo` — o DIA de uma entrega, de uma devolução, do começo ou do fim
+ * de uma ocupação, de uma baixa, de uma compra ou de um encerramento (AN).
+ * PASSADO é o caso real e aceito: a carga inicial é "a Laura está com o
+ * notebook desde março". FUTURO é recusado: a ocupação ou a entrega aberta já
+ * conta como presente em toda consulta, então "começa semana que vem" gravaria
+ * como atual o que ninguém vê; e a compra ou o encerramento futuros descrevem o
+ * que ainda não aconteceu.
  *
  * `dataNaoPassada` — o prazo de um vínculo. Uma entrega com devolução prevista
  * para ontem NASCE VENCIDA: o prazo expira no mesmo segundo em que o
@@ -112,18 +97,6 @@ function amanhaUTC(): Date {
  * Nenhuma das duas cobre o valor ausente: campo opcional continua opcional, e
  * `null` passa. Quem exige a presença é o schema que usa o construtor.
  */
-export const dataNaoFutura = (rotulo: string) =>
-  dataOpcional(rotulo).refine(
-    (valor) => !valor || valor < amanhaUTC(),
-    `${rotulo} não pode ser uma data futura`,
-  );
-
-/**
- * O DIA de uma entrega ou de uma devolução — de licença e de estoque: hoje ou
- * antes, contra o dia de BRASÍLIA. Não é o `dataNaoFutura` acima, que compara
- * com a meia-noite UTC e recusaria "hoje" depois das 21h — o defeito que ainda
- * está pendente lá (`hoje.helper.ts`).
- */
 export const diaNaoFuturo = (rotulo: string) =>
   dataOpcional(rotulo).refine(
     (valor) => !valor || valor <= hojeNoBrasil(),
@@ -132,7 +105,7 @@ export const diaNaoFuturo = (rotulo: string) =>
 
 export const dataNaoPassada = (rotulo: string) =>
   dataOpcional(rotulo).refine(
-    (valor) => !valor || valor >= meiaNoiteUTC(),
+    (valor) => !valor || valor >= hojeNoBrasil(),
     `${rotulo} não pode ser uma data passada`,
   );
 

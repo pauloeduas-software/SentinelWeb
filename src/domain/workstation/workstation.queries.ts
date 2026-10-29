@@ -49,7 +49,6 @@ export interface PostoInput {
   /** A localização onde o posto fica — obrigatória ao criar. */
   locationId?: string;
   notes?: string | null;
-  isActive?: boolean;
   /** A versão que o formulário leu ao abrir (AF) — só no Editar; o servidor recusa se a linha mudou. */
   updatedAt?: string;
 }

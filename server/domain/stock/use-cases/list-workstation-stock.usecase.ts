@@ -24,7 +24,7 @@ const UNIDADE_DA_FICHA = {
   targetAssetId: true,
   item: {
     select: {
-      id: true, name: true, isActive: true,
+      id: true, name: true,
       category: { select: { id: true, name: true } },
     },
   },

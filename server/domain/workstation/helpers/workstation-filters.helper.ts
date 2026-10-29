@@ -22,18 +22,12 @@ export type WorkstationView = 'todos' | 'vagos' | 'ocupados';
 
 /**
  * Uma posse ABERTA apontando para o posto — o que faz um ativo "estar entregue"
- * à mesa (docs/referencia/modelo-de-posse.md, Camada 1).
- *
- * `asset: { deletedAt: null }` escrito à mão porque a `softDeleteExtension` só
- * age no model do topo da consulta: num filtro de relação aninhado ela não
- * entra, e o ativo mandado para a lixeira continuaria contando como equipamento
- * na mesa — inflando o número da tela e criando "posto vago" onde não há
- * equipamento nenhum.
+ * à mesa (docs/referencia/modelo-de-posse.md, Camada 1). Sem filtro de
+ * lixeira: o ativo entregue não vai para ela (AL).
  */
 export const POSSE_ABERTA: Prisma.AssignmentWhereInput = {
   targetType: 'WORKSTATION',
   checkinAt: null,
-  asset: { deletedAt: null },
 };
 
 /** Ocupação ABERTA — `endedAt` nulo. É quem responde pelo posto agora. */

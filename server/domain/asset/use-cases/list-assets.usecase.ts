@@ -96,6 +96,7 @@ function semPosse(): PosseResolvida {
     targetType: null,
     targetLabel: null,
     responsaveis: [],
+    checkoutAt: null,
     postoVago: false,
   };
 }

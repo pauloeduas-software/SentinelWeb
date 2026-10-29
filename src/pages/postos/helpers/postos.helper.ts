@@ -9,11 +9,6 @@ import type {
 
 export const TRACO = '—';
 
-/** O posto foi DESATIVADO? Aceita o posto ainda não carregado (`null`). */
-export function estaDesativado(posto: Pick<Posto, 'isActive'> | null | undefined): boolean {
-  return posto?.isActive === false;
-}
-
 /** Os três recortes da tela, na ordem em que aparecem. */
 export const VISOES: readonly { valor: PostoView; rotulo: string }[] = [
   { valor: 'todos', rotulo: 'Todos' },

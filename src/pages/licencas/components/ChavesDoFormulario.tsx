@@ -9,9 +9,9 @@ import { cobertasPelas, linhaNova, type LinhaDeChave } from '../helpers/licenca.
 // quantidade comprada — o "Adicionar" para quando chegam lá, e o servidor
 // responde 422 se a conta passar por outro caminho.
 //
-// A CHAVE JÁ ENTREGUE NÃO SAI DA LISTA (o histórico de quem a usou depende
-// dela), e não cobre menos do que as entregas abertas com ela: o ✕ fica
-// desabilitado, e o "cobre" não desce além disso. O texto dela pode mudar — é
+// A CHAVE COM ENTREGA ABERTA NÃO SAI DA LISTA, nem cobre menos do que as
+// entregas abertas com ela: o ✕ fica desabilitado, e o "cobre" não desce além
+// disso. A que só tem entregas devolvidas sai (AK). O texto dela pode mudar — é
 // a correção de digitação, e vale para as entregas dela.
 //
 // COLAR UMA LISTA com várias linhas num campo cria uma chave para cada linha:
@@ -95,9 +95,9 @@ export default function ChavesDoFormulario({ linhas, compradas, onChange, classe
           <button
             type="button"
             onClick={() => onChange(linhas.filter((outra) => outra.uid !== linha.uid))}
-            disabled={linha.jaEntregue}
+            disabled={linha.emUso > 0}
             aria-label={`Tirar a chave ${posicao + 1}`}
-            title={linha.jaEntregue ? 'Já foi entregue: não sai da lista' : 'Tirar esta chave'}
+            title={linha.emUso > 0 ? `Com ${linha.emUso} ${linha.emUso === 1 ? 'entrega aberta' : 'entregas abertas'}: devolva para tirar` : 'Tirar esta chave'}
             className="p-1.5 text-text-tertiary hover:text-status-danger transition-colors disabled:opacity-30 disabled:hover:text-text-tertiary"
           >
             <X size={14} />

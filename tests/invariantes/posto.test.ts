@@ -5,14 +5,13 @@ import {
   criarAtivo, criarColaborador, criarFabricante, criarItemDeEstoque, criarLocal, criarModelo, criarPosto, idsDoSeed,
 } from '../helpers/fixtures';
 
-// O POSTO: o cadastro, o que segura o delete e o que a desativação fecha.
+// O POSTO: o cadastro e o que segura o delete.
 //
-// O posto segue a regra do status (decisão Y): nome único, desativar em vez de
-// excluir, e só o que está nele AGORA segura o delete — entrega de ativo ou de
-// estoque aberta, ocupante atual. O passado não segura: a entrega devolvida e a
-// ocupação encerrada perdem a ligação e guardam o nome por escrito, e o
-// histórico continua dizendo onde o ativo esteve. Desativado, ele some das
-// escolhas e não recebe nada novo.
+// Nome único, e só o que está nele AGORA segura o delete (AG) — entrega de
+// ativo ou de estoque aberta, ocupante atual. O passado não segura: a entrega
+// devolvida e a ocupação encerrada perdem a ligação e guardam o nome por
+// escrito, e o histórico continua dizendo onde o ativo esteve. Sem Desativar
+// (AN): o posto vazio se exclui, como a localização.
 
 let api: ApiDeTeste;
 let seed: Awaited<ReturnType<typeof idsDoSeed>>;
@@ -36,11 +35,6 @@ afterAll(async () => {
 const ativoDisponivel = (name: string) => criarAtivo(api, { statusId: seed.statusDeployableId, modelId, name });
 
 const posto = (name: string) => criarPosto(api, { name, locationId: filial });
-
-async function desativar(id: string) {
-  const resposta = await api.put(`/api/workstations/${id}`, { isActive: false });
-  expect(resposta.status, JSON.stringify(resposta.body)).toBe(200);
-}
 
 describe('o cadastro do posto', () => {
   it('nasce numa localização, e a listagem diz qual', async () => {
@@ -149,52 +143,9 @@ describe('excluir posto — só o presente segura', () => {
   });
 });
 
-describe('posto desativado não recebe nada NOVO', () => {
-  it('some do /options — o seletor da entrega não o oferece', async () => {
-    const ativo = await posto('Opção de Posto Ativo');
-    const inativo = await posto('Opção de Posto Desativado');
-    await desativar(inativo);
-
-    const { status, body } = await api.get<{ id: string }[]>('/api/workstations/options?q=Op%C3%A7%C3%A3o%20de%20Posto');
-    expect(status).toBe(200);
-    const ids = body.map((o) => o.id);
-    expect(ids).toContain(ativo);
-    expect(ids).not.toContain(inativo);
-  });
-
-  it('recusa a entrega de ativo a ele', async () => {
-    const mesa = await posto('Mesa fechada para entrega');
-    await desativar(mesa);
-    const ativo = await ativoDisponivel('Notebook barrado');
-
-    const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/checkout`, {
-      targetType: 'WORKSTATION', targetWorkstationId: mesa,
-    });
-    expect(status).toBe(409);
-    expect(body.error).toMatch(/"Mesa fechada para entrega" está desativado e não recebe/);
-    expect(await prisma.assignment.count({ where: { assetId: ativo.id } })).toBe(0);
-  });
-
-  it('recusa a entrega de estoque para ele', async () => {
-    const mesa = await posto('Mesa fechada para estoque');
-    await desativar(mesa);
-    const mouse = await criarItemDeEstoque(api, { name: 'Mouse barrado', categoryId: seed.categoriaEstoqueId, qty: 1 });
-
-    const { status, body } = await api.post<{ error: string }>(`/api/stock/items/${mouse.id}/checkout`, {
-      targetType: 'WORKSTATION', targetWorkstationId: mesa,
-    });
-    expect(status).toBe(409);
-    expect(body.error).toMatch(/desativado/);
-  });
-
-  it('recusa ocupante novo', async () => {
-    const mesa = await posto('Mesa fechada');
-    await desativar(mesa);
-
-    const { status, body } = await api.post<{ error: string }>(`/api/workstations/${mesa}/occupants`, {
-      personId: laura, shift: 'Manhã',
-    });
-    expect(status).toBe(409);
-    expect(body.error).toMatch(/desativado/);
+describe('sem Desativar (AN)', () => {
+  it('o cadastro não tem o campo: mandar isActive é 422', async () => {
+    const mesa = await posto('Mesa sem desativar');
+    expect((await api.put(`/api/workstations/${mesa}`, { isActive: false })).status).toBe(422);
   });
 });

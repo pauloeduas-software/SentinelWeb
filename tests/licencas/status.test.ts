@@ -95,12 +95,11 @@ describe('o status pela API, nas bordas', () => {
     expect(await lerStatus(licenca.id)).toMatchObject({ status: 'ENCERRADA' });
   });
 
-  it('encerramento FUTURO não encerra nada hoje', async () => {
-    const licenca = await criarLicenca(api, {
-      name: 'Encerra no mês que vem', categoryId: cenario.categoriaLicencaId, seatsTotal: 1,
-      expirationDate: diaNoBrasil(10), terminationDate: diaNoBrasil(30),
+  it('encerramento FUTURO não existe: o cadastro o recusa', async () => {
+    const { status } = await api.post('/api/licenses', {
+      name: 'Encerra no mês que vem', categoryId: cenario.categoriaLicencaId, seatsTotal: 1, terminationDate: diaNoBrasil(30),
     });
-    expect(await lerStatus(licenca.id)).toMatchObject({ status: 'VENCENDO' });
+    expect(status).toBe(422);
   });
 
   it('e NÃO existe coluna de status nem de livres: não podem divergir porque não guardam nada', async () => {

@@ -42,17 +42,35 @@ export function assertDatasNaoAntecedemACompra(datas: DatasDaLicenca): void {
 }
 
 /**
+ * ENCERRAR SÓ COM TUDO DEVOLVIDO — o padrão do sistema para o que depende de
+ * outra coisa em uso: bloqueia, e diz o que fazer antes. Vale para o botão e
+ * para a data do formulário. O arquivar do Snipe-IT recusa o acessório com
+ * unidade entregue da mesma forma.
+ */
+export async function assertEncerraSemEntregaAberta(client: ClienteLicenca, licenseId: string, nome: string): Promise<void> {
+  const abertas = await client.licenseCheckout.count({ where: { licenseId, checkinAt: null } });
+  if (abertas === 0) return;
+  throw new AppError(
+    `"${nome}" tem ${abertas} ${abertas === 1 ? 'entrega aberta' : 'entregas abertas'} e não pode ser encerrada. `
+    + 'Faça a devolução antes.',
+    409,
+  );
+}
+
+/**
  * AS DATAS DA LICENÇA CONTRA AS ENTREGAS QUE ELA JÁ TEM — a edição que muda a
  * compra ou o encerramento não deixa uma entrega fora do contrato:
  *
  * - a compra não fica DEPOIS da primeira entrega — a entrega já recusa o dia
  *   antes da compra, e a edição não pode desfazer isso por trás;
- * - o encerramento não fica ANTES da última — o histórico diria "entregue em
- *   10/10" num contrato que acabou em 01/10.
+ * - o encerramento não fica ANTES da última devolução — o histórico diria
+ *   "devolvido em 10/10" num contrato que acabou em 01/10. Com tudo devolvido
+ *   (`assertEncerraSemEntregaAberta`), a última devolução vem depois de toda
+ *   entrega.
  *
  * Só a data que MUDA é conferida: o formulário reenvia todas, e a licença
  * antiga com a ordem trocada continua editável nos outros campos. O Encerrar do
- * botão grava hoje, que nunca vem antes de entrega nenhuma.
+ * botão grava hoje, que nunca vem antes de devolução nenhuma.
  */
 export async function assertDatasCobremAsEntregas(
   client: ClienteLicenca,
@@ -74,12 +92,12 @@ export async function assertDatasCobremAsEntregas(
   }
   if (encerramento) {
     const ultima = await client.licenseCheckout.findFirst({
-      where: { licenseId }, orderBy: { checkoutAt: 'desc' }, select: { checkoutAt: true },
+      where: { licenseId, checkinAt: { not: null } }, orderBy: { checkinAt: 'desc' }, select: { checkinAt: true },
     });
-    const dia = ultima && hojeNoBrasil(ultima.checkoutAt);
+    const dia = ultima?.checkinAt && hojeNoBrasil(ultima.checkinAt);
     if (dia && encerramento < dia) {
       throw new AppError(
-        `O encerramento (${diaEmPortugues(encerramento)}) não pode ser antes da última entrega (${diaEmPortugues(dia)}).`,
+        `O encerramento (${diaEmPortugues(encerramento)}) não pode ser antes da última devolução (${diaEmPortugues(dia)}).`,
         422,
       );
     }

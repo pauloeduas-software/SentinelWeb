@@ -73,13 +73,23 @@ export async function updateAsset(id: string, data: UpdateAssetData, ator: Ator)
       await assertLocalRecebe(tx, data.locationId, 'ativo novo');
     }
 
-    // A COMPRA não fica depois da primeira licença entregue a este computador,
-    // nem do primeiro componente instalado nele (AI) — as duas entregas já
-    // recusam o dia antes dela. Só quando a data MUDA, pelo mesmo motivo do
-    // status.
+    // A COMPRA não fica depois da primeira entrega deste computador (AM), da
+    // primeira licença entregue a ele, do primeiro componente instalado nele
+    // (AI) nem da baixa — as quatro já recusam o dia antes dela. Só quando a
+    // data MUDA, pelo mesmo motivo do status.
     const compra = data.purchaseDate;
     if (compra && compra.getTime() !== antes.purchaseDate?.getTime()) {
-      const [licenca, componente] = await Promise.all([
+      if (antes.retiredAt && compra > antes.retiredAt) {
+        throw new AppError(
+          `A data de compra (${diaEmPortugues(compra)}) não pode ser depois da baixa de ${antes.assetTag} `
+          + `(${diaEmPortugues(antes.retiredAt)}).`,
+          422,
+        );
+      }
+      const [entrega, licenca, componente] = await Promise.all([
+        tx.assignment.findFirst({
+          where: { assetId: id }, orderBy: { checkoutAt: 'asc' }, select: { checkoutAt: true },
+        }),
         tx.licenseCheckout.findFirst({
           where: { assignedAssetId: id }, orderBy: { checkoutAt: 'asc' }, select: { checkoutAt: true },
         }),
@@ -88,6 +98,7 @@ export async function updateAsset(id: string, data: UpdateAssetData, ator: Ator)
         }),
       ]);
       const primeiras = [
+        { oque: 'da primeira entrega de', dia: entrega && hojeNoBrasil(entrega.checkoutAt) },
         { oque: 'da primeira licença entregue a', dia: licenca && hojeNoBrasil(licenca.checkoutAt) },
         { oque: 'do primeiro componente instalado em', dia: componente && hojeNoBrasil(componente.checkoutAt) },
       ];

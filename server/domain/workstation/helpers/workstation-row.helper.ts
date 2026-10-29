@@ -27,7 +27,6 @@ interface PostoLido {
   id: string;
   name: string;
   notes: string | null;
-  isActive: boolean;
   createdAt: Date;
   locationId: string;
   location: { id: string; name: string };
@@ -38,7 +37,6 @@ export interface WorkstationRow {
   id: string;
   name: string;
   notes: string | null;
-  isActive: boolean;
   createdAt: Date;
   locationId: string;
   location: { id: string; name: string };
@@ -109,7 +107,6 @@ export function montarLinhaDePosto(
     id: posto.id,
     name: posto.name,
     notes: posto.notes,
-    isActive: posto.isActive,
     createdAt: posto.createdAt,
     locationId: posto.locationId,
     location: posto.location,

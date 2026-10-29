@@ -28,8 +28,8 @@ import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase
 // não mapeia e devolve como 500.
 //
 //   pessoa → ativo    o checkout de ativo a pessoa
-//   ativo → posto     o checkout a posto e a restauração da lixeira, pela
-//                     invariante 19 (`workstation/helpers/ativo-do-posto.helper.ts`)
+//   ativo → posto     o checkout a posto, pela invariante 19
+//                     (`workstation/helpers/ativo-do-posto.helper.ts`)
 //   ativo             o soft delete do ativo, a edição (`update-asset`) e a
 //                     baixa (`retire-asset`)
 //   pessoa → licença  a entrega de licença a pessoa

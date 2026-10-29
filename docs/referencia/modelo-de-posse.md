@@ -88,12 +88,41 @@ a conta de quem opera o sistema, que é `User` e não recebe equipamento
   Esse índice é também **a alavanca da decisão**: o dia que N detentores
   simultâneos for necessário, derrubar o índice é a mudança — não reescrever a
   camada.
+- **A entrega e a devolução têm o DIA**
+  ([AM](../decisoes/posse.md#am--a-entrega-e-a-devolução-do-computador-ganham-o-dia)),
+  como na licença e no estoque. O formulário vem com hoje e pode voltar para
+  registrar a que já aconteceu — a carga inicial é "a Laura está com o notebook
+  desde março". Futuro é 422. Hoje grava a hora real; um dia passado, o meio-dia
+  de Brasília, e por isso as telas mostram a entrega e a devolução **só pelo
+  dia**. As recusas:
+
+  | Tentativa | Resposta |
+  |---|---|
+  | entrega antes da compra do computador | 422 `A entrega (09/03/2026) não pode ser antes da compra de ATV-00012 (10/03/2026).` |
+  | entrega antes do dia da última devolução dele | 422 `A entrega (09/03/2026) não pode ser antes da última devolução de ATV-00012 (10/03/2026).` — no próprio dia passa, um milissegundo depois da devolução |
+  | devolução antes do dia da entrega | 422 `A devolução (09/03/2026) não pode ser antes da entrega (10/03/2026).` — no mesmo dia, nunca antes da hora real da entrega |
+  | compra do computador editada para depois da primeira entrega, ou da baixa | 422 `A data de compra (…) não pode ser depois da primeira entrega de ATV-00012 (…).` |
+
+  As recusas de estado olham **hoje**: o colaborador desativado recusa a
+  entrega no passado mesmo que, naquele dia, estivesse em ordem. A ficha do
+  posto também devolve com o dia ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)). A compra do
+  computador não é futura (422).
+- **O computador entregue não vai para a lixeira**
+  ([AL](../decisoes/posse.md#al--o-computador-entregue-não-vai-para-a-lixeira)):
+  409 `Este ativo está entregue e não pode ir para a lixeira. Faça a devolução
+  antes.`, como a baixa. O que está na lixeira nunca aponta para ninguém.
 
 ### Camada 2 — `WorkstationOccupant`: quem ocupa o posto
 
 Uma linha por pessoa que ocupa um posto, com o turno.
 
 - **Aberta** = `endedAt IS NULL`. É ocupante atual.
+- **O "desde" é um dia**, como a entrega (AM): hoje por padrão, passado pode,
+  futuro é 422; o dia passado fica ao meio-dia de Brasília, e a tela mostra só o dia.
+- **O fim também** ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)): Encerrar abre o campo "Saiu em" na
+  linha, com hoje; passado pode, futuro é 422, e nunca antes do início — 422 `O fim
+  da ocupação (09/03/2026) não pode ser antes do início (10/03/2026).` O DELETE leva
+  `{ endedAt: 'AAAA-MM-DD' }` no corpo; sem ele, é agora.
 - `shift` é **texto livre** (`"Manhã"`, `"Tarde"`, `"12x36 A"`). Enum engessaria
   escalas reais; faixa de horário seria agenda, não inventário.
 - **O turno se corrige no lugar, na ocupação aberta.** O lápis **Corrigir turno** do

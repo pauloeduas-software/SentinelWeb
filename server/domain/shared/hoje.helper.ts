@@ -16,9 +16,8 @@
 // `formatToParts` e não `toLocaleDateString('en-CA')`: o formato da string
 // depende do ICU que o Node carrega, e as partes não.
 //
-// O mesmo defeito ainda existe em `fields.schema.ts` (`dataNaoFutura`,
-// `dataNaoPassada`), que validam datas de ativo, posse e ocupação contra a
-// meia-noite UTC. Fica para quando aquelas telas forem revistas.
+// As bordas dos formulários (`diaNaoFuturo`, `dataNaoPassada`, em
+// `fields.schema.ts`) usam este mesmo dia.
 // ═════════════════════════════════════════════════════════════════════════════
 
 export const FUSO_DO_NEGOCIO = 'America/Sao_Paulo';
@@ -50,7 +49,7 @@ const MEIO_DIA_DE_BRASILIA_EM_UTC = 15 * 60 * 60 * 1000;
 
 /**
  * O INSTANTE a gravar para um DIA que a tela escolheu — a data de uma entrega ou
- * de uma devolução de licença.
+ * de uma devolução (licença, estoque, computador) e o começo de uma ocupação.
  *
  * Hoje é AGORA: a hora real ordena as operações do mesmo dia. Um dia passado
  * vira o MEIO-DIA de Brasília (15h UTC) — e não a meia-noite UTC, que em

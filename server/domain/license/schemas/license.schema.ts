@@ -25,7 +25,7 @@ const quantidadeObrigatoria = z.number('quantidade comprada deve ser um número'
 
 const camposComuns = {
   expirationDate: dataOpcional('data de vencimento'),
-  terminationDate: dataOpcional('data de encerramento'),
+  terminationDate: diaNaoFuturo('data de encerramento'),
 
   licensedToName: textoOpcional('licenciado para', 200),
   licensedToEmail: emailOpcional,
@@ -33,7 +33,7 @@ const camposComuns = {
   manufacturerId: uuidOpcional('fabricante'),
 
   orderNumber: textoOpcional('número do pedido', 100),
-  purchaseDate: dataOpcional('data de compra'),
+  purchaseDate: diaNaoFuturo('data de compra'),
   purchaseCost: valorMonetarioOpcional('valor de compra'),
 
   notes: textoOpcional('notas', 2_000),
@@ -145,8 +145,6 @@ export const licenseFiltersSchema = z.strictObject({
     ['ATIVA', 'VENCENDO', 'EXPIRADA', 'ENCERRADA'],
     'status inválido: use ATIVA, VENCENDO, EXPIRADA ou ENCERRADA',
   ).optional(),
-  /** `sim`: só as que alguém ainda usa — a encerrada em uso, do alerta. */
-  emUso: z.enum(['sim'], 'emUso inválido: use sim').optional(),
 });
 
 export type CreateLicenseData = z.infer<typeof createLicenseSchema>;

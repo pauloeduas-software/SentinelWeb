@@ -1,11 +1,11 @@
 import { z } from 'zod';
-import { booleano, nomeObrigatorio, textoOpcional, uuidObrigatorio, versaoLida } from '../../shared/fields.schema';
+import { nomeObrigatorio, textoOpcional, uuidObrigatorio, versaoLida } from '../../shared/fields.schema';
 
 // Contrato de entrada das rotas de posto.
 //
 // `strictObject` como no catálogo: campo desconhecido é 422, nunca ignorado.
 // O posto FICA numa localização — obrigatória na criação; na edição, só se
-// mudar. `isActive` só na EDIÇÃO: é o botão Desativar/Ativar.
+// mudar. Sem `isActive`: o posto não se desativa (AN).
 export const createWorkstationSchema = z.strictObject({
   name: nomeObrigatorio(),
   locationId: uuidObrigatorio('localização'),
@@ -16,7 +16,6 @@ export const updateWorkstationSchema = z.strictObject({
   name: nomeObrigatorio().optional(),
   locationId: uuidObrigatorio('localização').optional(),
   notes: textoOpcional('notas', 2_000),
-  isActive: booleano('ativo').optional(),
   updatedAt: versaoLida,
 });
 

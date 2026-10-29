@@ -1,11 +1,10 @@
 # Postos
 
 > A tela `/postos`: o posto de trabalho — a MesaEscritório, a bancada, o guichê.
-> O que ele é, onde se cadastra, o que segura a exclusão e o que a desativação
-> fecha. Quem responde pelo que está nele é a Camada 3 de
+> O que ele é, onde se cadastra e o que segura a exclusão. Quem responde pelo que está nele é a Camada 3 de
 > [`modelo-de-posse.md`](modelo-de-posse.md); as regras que viram fato
-> permanente no banco estão em [`invariantes.md`](invariantes.md) (a 2, a 5, a 19
-> e a 21).
+> permanente no banco estão em [`invariantes.md`](invariantes.md) (a 2, a 5 e a
+> 19).
 
 ---
 
@@ -31,11 +30,11 @@ de alvo `WORKSTATION`) e é ele que as pessoas ocupam, por turno
 | | |
 |---|---|
 | **a lista** | Posto, Localização, Quem está (por turno), Ativos e Situação — *Posto vago* (tem ativo e ninguém responde), *Ocupado* ou *Sem uso*. Recortes Todos, Vagos e Ocupados; busca por nome e nota |
-| **a ficha** (`/postos/:id`) | os ocupantes — colocar alguém, corrigir o turno, encerrar —, os ativos entregues com **Devolver**, o computador da mesa ao vivo e o estoque da mesa, por entrega, com o link para o detalhe do item, onde está o Devolver ([`estoque.md`](estoque.md)) |
-| **o cadastro** | **Novo posto** e, em cada linha, ✏️ Editar, ⏻ Desativar / Ativar e 🗑️ Excluir — `ADMIN`, como tudo hoje ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)) |
+| **a ficha** (`/postos/:id`) | os ocupantes — colocar alguém, corrigir o turno, encerrar com o dia em que saiu —, os ativos entregues com **Devolver** (com o dia em que voltou: hoje, ou um dia passado desde a entrega), o computador da mesa ao vivo e o estoque da mesa, por entrega, com o link para o detalhe do item, onde está o Devolver ([`estoque.md`](estoque.md)) |
+| **o cadastro** | **Novo posto** e, em cada linha, ✏️ Editar e 🗑️ Excluir, sem Desativar ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)) — `ADMIN`, como tudo hoje ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)) |
 
-Desativar e excluir pedem confirmação, com as mesmas frases de Configurações, e a
-recusa aparece numa notificação do sistema.
+Excluir pede confirmação, com a frase de Configurações, e a recusa aparece numa
+notificação do sistema.
 
 ## Como o código é montado
 
@@ -49,15 +48,15 @@ O cadastro passa pelo **mesmo CRUD das tabelas de catálogo**, com a
 |---|---|---|
 | `GET /api/workstations` | `ADMIN` | a lista, com ocupantes e ativos por linha (`?view=todos\|vagos\|ocupados`) |
 | `GET /api/workstations/:id` | `ADMIN` | a ficha |
-| `GET /api/workstations/options` | `ADMIN` | o seletor: só postos ativos |
+| `GET /api/workstations/options` | `ADMIN` | o seletor |
 | `POST`, `PUT /:id`, `DELETE /:id` | `ADMIN` | o cadastro |
 | `/api/workstations/:id/occupants` | `ADMIN` | os ocupantes — domínio `occupancy` |
 
-## Uso e desativação
+## Uso e exclusão
 
 A regra do **status**: só o que está nele **agora** impede a exclusão. É 409
-com a dica `Tire o que está nele agora — devolva o que foi entregue e encerre as
-ocupações — ou desative-o: …`
+com a dica `Tire o que está nele agora: devolva o que foi entregue e encerre as
+ocupações.`
 
 **Uso**, aqui, é: **entrega** de ativo aberta para ele, **entrega de estoque**
 aberta para ele e **ocupante** atual.
@@ -70,23 +69,15 @@ histórico do ativo continua dizendo "Entregue: Mesa 7", o do item "para a Mesa
 dentro da mesma transação. As FKs continuam `Restrict`: o que ninguém desligou
 — uma entrega que nasceu no meio — segura o `DELETE` e desfaz tudo.
 
-**Desativado** (`isActive = false`), ele:
-
-| | |
-|---|---|
-| continua | na lista (esmaecido, com a marca "desativado" das Configurações), no histórico, com tudo o que já estava nele |
-| **some** | dos seletores da entrega de ativo, da de estoque e do vínculo de máquina |
-| **recusa** (409) | entrega de ativo, entrega de estoque e ocupante novo — `"Mesa 1" está desativado e não recebe entrega nova.` |
-| **deixa passar** | devolver e encerrar ocupação — desativar não esvazia a mesa |
-
-**Ativar** desfaz tudo. É a invariante 21. E a **localização** desativada não
-recebe posto novo, nem posto que se muda para ela.
+**Sem Desativar** ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)): o posto vazio se exclui, como a
+localização, e o que tem algo nele recebe o 409 acima. A **localização**
+desativada não recebe posto novo, nem posto que se muda para ela.
 
 ## Onde é testado
 
 | Assunto | Arquivo |
 |---|---|
-| cadastro, exclusão pelo presente com o nome no histórico, desativação | `tests/invariantes/posto.test.ts` |
-| um ativo por posto, nas duas portas | `tests/invariantes/ativo-por-posto.test.ts`, `tests/corridas/ativo-por-posto.test.ts` |
+| cadastro, exclusão pelo presente com o nome no histórico, sem desativar | `tests/invariantes/posto.test.ts` |
+| um ativo por posto, na entrega, e a lixeira que recusa o entregue | `tests/invariantes/ativo-por-posto.test.ts`, `tests/corridas/ativo-por-posto.test.ts` |
 | ocupantes e turno | `tests/invariantes/posse.test.ts`, `tests/invariantes/turno-da-ocupacao.test.ts` |
 | a ficha e a lista de ativos | `tests/listagens/ficha-do-posto.test.ts`, `tests/listagens/ativo-em-posto.test.ts` |

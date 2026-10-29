@@ -30,16 +30,3 @@ const ROTULO_DA_ACAO: Record<string, string> = {
 export function rotuloDaAcao(action: string, extras: Record<string, string> = {}): string {
   return extras[action] ?? ROTULO_DA_ACAO[action] ?? action;
 }
-
-/** Data e hora do evento, no formato que o Brasil lê. */
-export function momentoDoEvento(iso: string): string {
-  const data = new Date(iso);
-  if (Number.isNaN(data.getTime())) return iso;
-
-  // Aqui é hora LOCAL de propósito, ao contrário da data de compra: o evento é
-  // um INSTANTE ("às 14h32"), não um dia de calendário, e quem lê quer saber
-  // que horas eram no relógio dele.
-  return data.toLocaleString('pt-BR', {
-    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-  });
-}

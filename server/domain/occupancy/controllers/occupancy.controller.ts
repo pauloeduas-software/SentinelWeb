@@ -3,7 +3,7 @@ import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { SEM_PARAMETROS } from '../../../core/http/sem-parametros';
 import {
-  addOccupantSchema, occupancyViewQuerySchema, occupantParamsSchema,
+  addOccupantSchema, endOccupancySchema, occupancyViewQuerySchema, occupantParamsSchema,
   updateOccupantShiftSchema,
 } from '../schemas/occupancy.schema';
 import { listWorkstationOccupants } from '../use-cases/list-workstation-occupants.usecase';
@@ -34,7 +34,8 @@ export const occupancyController = {
   // use-case — histórico de posto é append-only.
   async end(request: FastifyRequest) {
     const { id, occupantId } = occupantParamsSchema.parse(request.params);
-    return endWorkstationOccupancy(id, occupantId, atorDaRequisicao(request));
+    const { endedAt } = endOccupancySchema.parse(request.body ?? {});
+    return endWorkstationOccupancy(id, occupantId, endedAt ?? undefined, atorDaRequisicao(request));
   },
 
   // PATCH e não PUT: corrige UM atributo do vínculo aberto, e o resto da

@@ -524,10 +524,7 @@ model Workstation {
   locationId String  @db.Uuid
   notes      String?
 
-  // Desativado some das escolhas e não RECEBE nada novo: entrega de ativo ou
-  // de estoque, ocupante. O que já está nele fica — desativar não devolve nem
-  // encerra nada, igual ao colaborador desativado.
-  isActive Boolean @default(true)
+  // Sem Desativar (AN): o posto vazio se exclui, e o histórico guarda o nome.
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

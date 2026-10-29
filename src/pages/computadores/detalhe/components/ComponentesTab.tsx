@@ -58,7 +58,6 @@ export default function ComponentesTab({ componentes, assetTag, carregando, erro
                 <Link to={caminhoDoItem(entrega.item.id, assetTag)} className="text-text-primary hover:underline underline-offset-2">
                   {entrega.item.name}
                 </Link>
-                {!entrega.item.isActive && <span className="text-text-tertiary"> · desativado</span>}
                 {entrega.notes && (
                   <div className="text-[10px] text-text-secondary mt-0.5">{entrega.notes}</div>
                 )}

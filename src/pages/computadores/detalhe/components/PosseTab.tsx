@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import type {
   Assignment, PosseResolvida, Responsavel,
 } from '../../../../domain/shared/posse.types';
-import { formatarData } from '../../../helpers/format.helper';
+import { formatarData, formatarDiaDoInstante } from '../../../helpers/format.helper';
 import {
   comoChegouAoAlvo, estaAberta, postoDaPosseAberta, rotuloDoAlvo,
 } from '../helpers/rotulo-do-alvo.helper';
@@ -175,9 +175,9 @@ export default function PosseTab({
                 {detalhe && <div className="text-text-tertiary text-[10px]">{detalhe}</div>}
 
                 <div className="text-text-tertiary text-[10px] tabular-nums">
-                  Entrega {formatarData(linha.checkoutAt)}
+                  Entrega {formatarDiaDoInstante(linha.checkoutAt)}
                   {linha.expectedCheckinAt && ` · prevista para ${formatarData(linha.expectedCheckinAt)}`}
-                  {linha.checkinAt && ` · devolução ${formatarData(linha.checkinAt)}`}
+                  {linha.checkinAt && ` · devolução ${formatarDiaDoInstante(linha.checkinAt)}`}
                 </div>
 
                 {linha.checkoutNotes && (

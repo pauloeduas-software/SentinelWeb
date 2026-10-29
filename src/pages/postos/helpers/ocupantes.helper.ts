@@ -1,4 +1,4 @@
-import { formatarData } from '../../helpers/format.helper';
+import { formatarDiaDoInstante } from '../../helpers/format.helper';
 import type { OccupantInput } from '../../../domain/occupancy/occupancy.queries';
 import type { WorkstationOccupant } from '../../../domain/shared/posse.types';
 
@@ -24,8 +24,8 @@ export function turnoDoOcupante(ocupante: WorkstationOccupant): string {
  * dado faltando.
  */
 export function periodoDaOcupacao(ocupante: WorkstationOccupant): string {
-  const inicio = formatarData(ocupante.startedAt);
-  return ocupante.endedAt ? `${inicio} › ${formatarData(ocupante.endedAt)}` : `desde ${inicio}`;
+  const inicio = formatarDiaDoInstante(ocupante.startedAt);
+  return ocupante.endedAt ? `${inicio} › ${formatarDiaDoInstante(ocupante.endedAt)}` : `desde ${inicio}`;
 }
 
 /** Ocupação ABERTA — `endedAt` nulo. É quem responde pelo posto agora. */

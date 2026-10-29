@@ -190,6 +190,10 @@ que mostrá-la. A cor do saldo na tela usa `<= 0`, não `=== 0`, por este motivo
 
 ## AE — O estoque segue a lógica da licença: total na edição, entrega com dia, desativar em vez de lixeira
 
+> **Superada em parte por [AN](./licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura):**
+> o item com unidade em uso não se desativa — 409 que manda devolver, ou retirar no componente.
+> O Desativar continua, para o item que já voltou todo.
+>
 > **Superada em parte por [AJ](#aj--o-consumível-é-uma-categoria-e-o-total-é-o-que-existe):**
 > o total é o que existe e chega a 0 quando acaba — pela entrega do consumível ou pela edição; só
 > o cadastro continua pedindo ao menos 1.

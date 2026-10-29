@@ -26,10 +26,7 @@ export interface AtivoDoPosto {
 /**
  * O ativo que já está neste posto, ou `null` quando não há nenhum.
  *
- * `assetId` é o ativo da operação em curso, e ele é EXCLUÍDO da busca: na
- * restauração da lixeira o ativo já tem a posse aberta apontando para o posto, e
- * sem a exclusão ele seria encontrado como "o ativo que já está lá" — a operação
- * responderia 409 contra si mesma.
+ * `assetId` é o ativo da entrega em curso: ele é travado antes do posto.
  *
  * ═══════════════════════════════════════════════════════════════════════════
  * TRAVA DUAS LINHAS, NESTA ORDEM: o ativo e depois o posto.
@@ -60,21 +57,8 @@ export async function ativoDoPosto(
   await client.$queryRaw`SELECT id FROM workstations WHERE id = ${workstationId}::uuid FOR UPDATE`;
 
   const posse = await client.assignment.findFirst({
-    where: {
-      targetWorkstationId: workstationId,
-      checkinAt: null,
-      asset: {
-        // `deletedAt: null` À MÃO: a `softDeleteExtension` só age no model do
-        // TOPO da consulta, e aqui o topo é `assignment`. Sem isto, um ativo
-        // mandado para a lixeira com a posse ainda aberta — que é o que o
-        // `delete-asset` faz, porque ele só carimba `deletedAt` — trancaria o
-        // posto para sempre, recusando todo ativo novo com a frase abaixo
-        // apontando um ativo que nenhuma tela mostra e que ninguém consegue
-        // devolver. É a restauração que reconfere (`restore-asset.usecase.ts`).
-        deletedAt: null,
-        id: { not: assetId },
-      },
-    },
+    // Sem filtro de lixeira: o ativo entregue não vai para ela (AL).
+    where: { targetWorkstationId: workstationId, checkinAt: null },
     select: { asset: { select: { id: true, assetTag: true, name: true } } },
   });
 

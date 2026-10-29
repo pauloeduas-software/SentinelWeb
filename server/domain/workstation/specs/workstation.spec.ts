@@ -5,15 +5,14 @@ import {
   itensAbertosNo, itensComoReferencias, nomesDosItens, totalDeUnidades,
 } from '../../stock/use-cases/count-person-stock.usecase';
 
-const DICA_DO_POSTO_EM_USO = 'Tire o que está nele agora — devolva o que foi entregue e encerre as ocupações — '
-  + 'ou desative-o: ele some das escolhas e continua no histórico.';
+const DICA_DO_POSTO_EM_USO = 'Tire o que está nele agora: devolva o que foi entregue e encerre as ocupações.';
 
 function quantos(total: number, singular: string, plural: string): string {
   return `${total} ${total === 1 ? singular : plural}`;
 }
 
-// O POSTO com a regra de cadastro do STATUS (decisão Y): nome único, desativar
-// em vez de excluir, exclusão de verdade recusada só pelo que está nele agora.
+// O POSTO com a regra de cadastro do STATUS (decisão Y): nome único e exclusão
+// de verdade recusada só pelo que está nele agora. Sem desativar (AN).
 //
 // É uma `CatalogSpec` para passar pelo MESMO CRUD das tabelas de catálogo
 // (`catalog/use-cases/`) — o 409 por uso, a unicidade do nome e o `AuditLog`
@@ -31,17 +30,13 @@ export const workstationSpec: CatalogSpec = {
   updateSchema: updateWorkstationSchema,
 
   select: {
-    id: true, name: true, notes: true, isActive: true, createdAt: true, updatedAt: true,
+    id: true, name: true, notes: true, createdAt: true, updatedAt: true,
     locationId: true, location: { select: { id: true, name: true } },
   },
   searchable: ['name'],
-  audited: ['name', 'locationId', 'notes', 'isActive'],
+  audited: ['name', 'locationId', 'notes'],
 
   nomeUnicoPor: [],
-
-  // O seletor da entrega de ativo, da de estoque e do vínculo de máquina só
-  // oferece posto ativo: desativado não recebe nada novo.
-  optionsWhere: { isActive: true },
 
   dicaEmUso: DICA_DO_POSTO_EM_USO,
 
@@ -114,8 +109,8 @@ export const workstationSpec: CatalogSpec = {
     });
   },
 
-  // A trava da linha na edição faz a desativação esperar quem está lendo o
-  // `isActive` do posto para entregar ou ocupar (`assertPostoRecebe`).
+  // A trava da linha na edição faz a troca de nome esperar quem está lendo o
+  // posto para entregar ou ocupar (`lerPostoTravado`).
   //
   // E a localização desativada não recebe posto novo — nem posto que se muda
   // para ela. Só quando o vínculo MUDA: o formulário reenvia todo campo, e o

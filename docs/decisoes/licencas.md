@@ -7,7 +7,7 @@
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D39–D44, D90–D94, G da segunda rodada (ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)), AA, AC, AD e AF.
+> [`README.md`](./README.md#a-segunda-rodada-ap)), AA, AC, AD, AF, AK e AN.
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
@@ -365,6 +365,10 @@ handshake, com a nota de que o servidor não guarda — mesma escolha do A para 
 
 ## AA — A licença vira quantidade e entregas: sem vaga numerada, sem lixeira, com Encerradas
 
+> **Superada em parte por [AN](#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura):**
+> o Encerrar só passa com tudo devolvido — com entrega aberta é 409 —, e o alerta perde o motivo
+> "encerrada, ainda em uso". A compra e o encerramento não aceitam data futura.
+
 > **Superada em parte por [AG](./estoque.md#ag--a-regra-do-posto-vale-para-o-estoque-e-a-licença-só-o-que-está-em-uso-impede-a-exclusão):**
 > a licença que já foi entregue também se exclui, se nenhuma entrega está aberta — as devolvidas
 > perdem a ligação e a chave, e guardam o nome por escrito, que até ali a entrega não guardava. Só
@@ -495,6 +499,9 @@ encerramento que não antecedem a compra.
 
 ## AC — A chave vira lista: cada uma cobre uma quantidade, e a entrega escolhe uma
 
+> **Superada em parte por [AK](#ak--a-chave-só-prende-enquanto-está-em-uso):** a chave que ficou
+> fora da lista sai também depois de entregue, desde que todas as entregas dela tenham voltado.
+
 **Decidido** (2026-10-26, na conversa sobre o que falta para a licença ficar completa):
 
 - **A chave de produto vira uma lista**, `license_keys`: uma linha por chave, cada uma com
@@ -600,9 +607,16 @@ mesma licença).
 tela o valor e o pedido de antes. Se a data da compra passar a ser a da renovação, a entrega
 registrada no passado não vai antes dela.
 
+> **Depois (`0227772`, 2026-10-28):** a data da compra não passa da primeira entrega. Na licença
+> já entregue, a renovação muda o vencimento, o pedido e o valor, e a compra fica a da primeira.
+
 ---
 
 ## AF — A licença entra no cadastro das Configurações, e o Editar manda o formulário inteiro
+
+> **Superada em parte por [AN](#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura):**
+> o Encerrar com entrega aberta é 409, e saem com isso a contagem na pergunta, o alerta
+> "encerradas em uso" e o filtro "Ainda em uso". O posto perde o Desativar: o vazio se exclui.
 
 **Decidido** (2026-10-26, no levantamento do Editar, do Desativar e do Excluir no sistema inteiro):
 
@@ -659,3 +673,79 @@ no corpo — o Desativar, o Encerrar, o Reabrir, quem chama a API por fora —, 
 daria 409 sem ninguém ter editado. A entrega e a devolução de licença e de estoque gravam em outra
 tabela, e não esbarram no Editar aberto; a do computador troca o status dele, e esbarra — é o
 caso que a conferência existe para pegar.
+
+---
+
+## AK — A chave só prende enquanto está em uso
+
+**Decidido** (2026-10-29, na revisão de lógica de licença e estoque):
+
+- **A chave que ficou fora da lista sai, a menos que tenha entrega aberta** — a regra do posto
+  ([AG](./estoque.md#ag--a-regra-do-posto-vale-para-o-estoque-e-a-licença-só-o-que-está-em-uso-impede-a-exclusão)),
+  agora na chave. A com entrega aberta recusa com 409 `Uma chave com entrega aberta não sai da
+  lista: 2 estão com ela. Devolva para liberar.`, e na tela o ✕ dela fica apagado.
+- **As entregas devolvidas com ela perdem a ligação** (`licenseKeyId` nulo), como já acontecia ao
+  excluir a licença. Nenhuma tela mostra a chave de uma entrega devolvida, e a auditoria conta as
+  removidas, sem o texto.
+- O "cobre" continua não descendo abaixo das entregas abertas com a chave.
+
+**Supera em parte:** [AC](#ac--a-chave-vira-lista-cada-uma-cobre-uma-quantidade-e-a-entrega-escolhe-uma)
+(a chave já entregue não sai da lista).
+**Mantém:** AC (a soma das chaves até o comprado, a chave obrigatória na entrega quando a licença
+tem chaves) e a invariante 24.
+
+**Por quê:** a trava prendia a quantidade para sempre. Dez chaves individuais, todas entregues
+alguma vez: a renovação com cinco licenças não conseguia tirar as cinco que voltaram, e a
+quantidade não descia. A [AD](#ad--renovar-é-editar-o-vencimento-o-suporte-a-oem-e-o-comprovante-não-viram-campo)
+prometia que a renovação com chave nova era trocar a lista, e a trava a impedia. Ela protegia um
+dado que nenhuma tela mostra. O Snipe-IT faz assim: reduzir a quantidade apaga só os assentos
+livres, e o assento que já foi usado e voltou é livre; o passado fica no log. O GLPI não trava.
+
+---
+
+## AN — O que está em uso bloqueia, e nenhuma data é futura
+
+**Decidido** (2026-10-29, na mesma revisão, com dois padrões que o usuário declarou para o sistema
+inteiro: "bloquear qualquer coisa que depende de outra em uso" e "data passada e presente, nunca
+futura; nada antes da compra"):
+
+- **Encerrar a licença com entrega aberta é 409** `"X" tem N entrega(s) aberta(s) e não pode ser
+  encerrada. Faça a devolução antes.`, pelo botão e pelo formulário. Com isso saem o alerta
+  "encerrada, ainda em uso" (`ENCERRADA_EM_USO`), o filtro "Ainda em uso" e a contagem dele: o
+  alerta fica com vencida e vencendo.
+- **A compra e o encerramento da licença não são futuros** (422), e o encerramento não vem antes da
+  **última devolução** (antes era a última entrega).
+- **Desativar o item de estoque com unidade em uso é 409** `"X" tem N unidade(s) em uso e não pode
+  ser desativado. Devolva antes.` (no componente, "Retire"). Desativado, continua não recebendo
+  entrega. As fichas perdem a marca "desativado" do item: a entrega aberta nunca aponta para um.
+- **O posto perde o Desativar** (`isActive` sai da tabela e da rota, 422). O posto vazio se
+  exclui, como a localização (V); o que tem algo nele recebe o 409 que diz o que tirar (AG).
+- **A compra do computador não é futura** (422).
+- **Encerrar a ocupação e devolver pela ficha do posto ganham o dia**, como a AM fez com a entrega:
+  hoje por padrão, passado ao meio-dia de Brasília, nunca futuro, e o fim da ocupação não vem
+  antes do início.
+
+**Supera em parte:** [AA](#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)
+e [AF](#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)
+(encerrar com alguém usando, o alerta "encerrada, ainda em uso" e o filtro dele);
+[AE](./estoque.md#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira)
+(desativar o item mesmo com unidade fora);
+[Y](./posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe) (o posto com
+desativar); [AM](./posse.md#am--a-entrega-e-a-devolução-do-computador-ganham-o-dia) (o que ficava
+de fora: a devolução pela ficha do posto e o fim da ocupação sempre hoje).
+**Mantém:** o Desativar do item de estoque, do catálogo, do colaborador e da conta; a lixeira do
+computador e do colaborador; a devolução prevista, que é futura por natureza.
+
+**Por quê:** a mesma regra já valia para excluir (AG), dar baixa e mandar para a lixeira (AL); o
+Encerrar e o Desativar eram as exceções. E uma data futura de compra ou de encerramento descreve o
+que ainda não aconteceu.
+
+**Como o Snipe-IT e o GLPI fazem** (conferido no código-fonte): o Snipe-IT recusa arquivar o
+acessório e o consumível com unidade entregue, e por isso o item mantém o Desativar com a trava. A
+localização e o modelo não têm desativar lá, só exclusão bloqueada pelo que está neles: é o que o
+posto passa a ter. O Snipe-IT não limita as datas de compra e de encerramento ao passado; aqui
+limita, pelo padrão do sistema.
+
+**O que fica de fora, declarado:** o catálogo (categoria, status, fabricante, modelo, localização),
+o colaborador e a conta mantêm o Desativar, que o Snipe-IT não tem; e o item de estoque não ganha
+data de compra, porque um item junta unidades compradas em dias diferentes.

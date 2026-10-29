@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import CampoDeDinheiro from '../../components/CampoDeDinheiro';
 import ReferenceSelect from '../../components/ReferenceSelect';
 import ChavesDoFormulario from './ChavesDoFormulario';
-import { paraCampoDeData } from '../../helpers/format.helper';
+import { hojeNoCampoDeData, paraCampoDeData } from '../../helpers/format.helper';
 import { useLicenseQuery } from '../../../domain/license/license.queries';
 import type {
   ChaveDaLicenca, ChaveNoFormulario, Licenca, LicencaDetalhe, LicencaInput,
@@ -56,7 +56,7 @@ function chaveParaEnvio(chave: { id?: string; productKey: string; seats: number 
 function comoLinha(chave: ChaveDaLicenca): LinhaDeChave {
   return {
     uid: chave.id, id: chave.id, productKey: chave.productKey, seats: String(chave.seats),
-    emUso: chave.emUso, jaEntregue: chave.jaEntregue,
+    emUso: chave.emUso,
   };
 }
 
@@ -243,11 +243,10 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
 
             <label className="space-y-1.5">
               <span className={ROTULO}>Encerramento</span>
-              <input type="date" value={terminationDate} onChange={(e) => setTerminationDate(e.target.value)} className={CLASSE_CAMPO} />
+              <input type="date" max={hojeNoCampoDeData()} value={terminationDate} onChange={(e) => setTerminationDate(e.target.value)} className={CLASSE_CAMPO} />
               <span className="block text-[10px] text-text-tertiary">
-                O fim do contrato. No dia marcado a licença fica encerrada, mesmo que o
-                vencimento seja depois. Com alguém usando, ela fica no alerta até tudo ser devolvido.
-                Apagar a data reabre a licença.
+                O dia em que o contrato acabou, mesmo que o vencimento fosse depois. Só com
+                tudo devolvido. Apagar a data reabre a licença.
               </span>
             </label>
 
@@ -272,7 +271,7 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
 
             <label className="space-y-1.5">
               <span className={ROTULO}>Data da compra</span>
-              <input type="date" value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} className={CLASSE_CAMPO} />
+              <input type="date" max={hojeNoCampoDeData()} value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} className={CLASSE_CAMPO} />
             </label>
 
             <label className="space-y-1.5">

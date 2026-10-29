@@ -38,6 +38,8 @@ interface DadosDaDevolucao {
   /** Status DEPOIS da devolução. Já resolvido por quem chama — nunca nulo aqui. */
   statusId: string;
   checkinNotes?: string | null;
+  /** O instante da devolução, já conferido contra a entrega por quem chama (AM). */
+  checkinAt: Date;
 }
 
 export async function fecharPosse(
@@ -58,7 +60,7 @@ export async function fecharPosse(
   const { count } = await client.assignment.updateMany({
     where: { id: posse.id, checkinAt: null },
     data: {
-      checkinAt: new Date(),
+      checkinAt: dados.checkinAt,
       checkinNotes: dados.checkinNotes ?? null,
     },
   });

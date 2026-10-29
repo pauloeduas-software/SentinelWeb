@@ -1,8 +1,7 @@
-import { Armchair, Edit2, Power, PowerOff, Trash2, TriangleAlert } from 'lucide-react';
+import { Armchair, Edit2, Trash2, TriangleAlert } from 'lucide-react';
 import {
-  TRACO, estaDesativado, explicacaoDoVago, resumoDeAtivos, turnosDoPosto,
+  TRACO, explicacaoDoVago, resumoDeAtivos, turnosDoPosto,
 } from '../helpers/postos.helper';
-import SeloDesativado from './SeloDesativado';
 import type { Posto } from '../../../domain/shared/workstation.types';
 
 // A lista de postos. Apresentacional: recebe as linhas prontas e devolve o
@@ -12,8 +11,9 @@ import type { Posto } from '../../../domain/shared/workstation.types';
 // QUEM está na mesa, EM QUE TURNO, QUANTO equipamento ela segura, e se está
 // VAGA — equipamento parado sem ninguém respondendo (docs/referencia/modelo-de-posse.md).
 //
-// E, para o ADMIN, o CADASTRO na própria linha — Editar, Desativar/Ativar e
-// Excluir, na ordem de Configurações: o destrutivo fica na ponta.
+// E, para o ADMIN, o CADASTRO na própria linha — Editar e Excluir, na ordem de
+// Configurações: o destrutivo fica na ponta. Sem Desativar (AN): o posto vazio
+// se exclui.
 
 interface PostosTableProps {
   postos: readonly Posto[];
@@ -22,12 +22,11 @@ interface PostosTableProps {
   /** Mexer no cadastro é `ADMIN`. */
   podeEditar: boolean;
   onEditar: (posto: Posto) => void;
-  onAlternar: (posto: Posto) => void;
   onExcluir: (posto: Posto) => void;
 }
 
 export default function PostosTable({
-  postos, vazio, onAbrir, podeEditar, onEditar, onAlternar, onExcluir,
+  postos, vazio, onAbrir, podeEditar, onEditar, onExcluir,
 }: PostosTableProps) {
   // O clique na linha abre a ficha; o do botão não pode abrir junto.
   const acao = (fazer: (posto: Posto) => void, posto: Posto) => (event: React.MouseEvent) => {
@@ -65,19 +64,11 @@ export default function PostosTable({
                   // no canto: é o sinal que a tela existe para dar, e ele
                   // precisa ser visível de relance numa lista de vinte mesas.
                   posto.vago ? 'bg-status-warning/5 hover:bg-status-warning/10' : 'hover:bg-bg-base'
-                } ${
-                  // Desativado ESMAECE, como no `CatalogTable` e em Usuários: o
-                  // selo diz o quê, e o esmaecido faz a linha recuar na lista
-                  // sem sumir — ela está ali pelo passado, não pelo uso.
-                  estaDesativado(posto) ? 'opacity-60' : ''
                 }`}
               >
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <span className="font-medium">{posto.name}</span>
-                    {/* A marca das Configurações, ao lado do nome: é onde o olho
-                        está ao procurar a linha. */}
-                    {estaDesativado(posto) && <SeloDesativado />}
                   </div>
                 </td>
 
@@ -136,14 +127,6 @@ export default function PostosTable({
                         className="text-text-tertiary hover:text-text-primary transition-colors"
                       >
                         <Edit2 size={14} />
-                      </button>
-                      <button
-                        onClick={acao(onAlternar, posto)}
-                        title={posto.isActive ? 'Desativar' : 'Ativar'}
-                        aria-label={`${posto.isActive ? 'Desativar' : 'Ativar'} ${posto.name}`}
-                        className="text-text-tertiary hover:text-status-info transition-colors"
-                      >
-                        {posto.isActive ? <PowerOff size={14} /> : <Power size={14} />}
                       </button>
                       <button
                         onClick={acao(onExcluir, posto)}

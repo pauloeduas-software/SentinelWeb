@@ -4,7 +4,7 @@ import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
 import { buildChanges } from '../../shared/diff.helper';
 import { hojeNoBrasil } from '../../shared/hoje.helper';
-import { assertDatasNaoAntecedemACompra } from '../helpers/license-dates.helper';
+import { assertDatasNaoAntecedemACompra, assertEncerraSemEntregaAberta } from '../helpers/license-dates.helper';
 import {
   LICENSE_SELECT, paraResposta,
   type LicencaNaResposta, type LinhaDeLicenca,
@@ -20,11 +20,9 @@ import { travarLicencaOuFalhar } from './lock-license.usecase';
  * Grava o dia de hoje em `terminationDate`; é a data que manda (o status
  * ENCERRADA é derivado dela, D44).
  *
- * ENCERRA MESMO COM ALGUÉM USANDO — a tela pergunta antes, com a contagem. É o
- * padrão do sistema para o que tem data e para o que se desativa: não se
- * recusa, avisa. A licença não recebe entrega nova, e quem está com ela
- * aparece no alerta "encerrada, ainda em uso" até tudo ser devolvido. Recusar
- * aqui não impediria nada: a data futura do formulário chega sozinha.
+ * SÓ COM TUDO DEVOLVIDO — 409 com a entrega aberta, o padrão do sistema para o
+ * que depende de outra coisa em uso. A data do formulário segue a mesma regra,
+ * e não aceita futuro: a licença nunca encerra por baixo de quem a usa.
  *
  * Reabrir é limpar a data na edição — não precisa de rota própria.
  */
@@ -39,8 +37,10 @@ export async function terminateLicense(id: string, ator: Ator): Promise<LicencaN
       throw new AppError(`"${antes.name}" já está encerrada.`, 409);
     }
 
-    // A compra lançada com data futura: encerrar hoje poria o encerramento antes
-    // dela, e o 422 do formulário vem antes do CHECK.
+    await assertEncerraSemEntregaAberta(tx, id, antes.name);
+
+    // A compra não aceita futuro, mas a gravada antes dessa regra pode estar
+    // depois de hoje: o 422 vem antes do CHECK.
     const hoje = hojeNoBrasil();
     assertDatasNaoAntecedemACompra({ ...antes, terminationDate: hoje });
 

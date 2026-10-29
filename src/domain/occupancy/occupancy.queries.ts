@@ -108,8 +108,9 @@ export function useCorrigirTurno() {
 export function useEndWorkstationOccupancy() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ workstationId, occupantId }: { workstationId: string; occupantId: string }) =>
-      apiClient.delete(`/workstations/${workstationId}/occupants/${occupantId}`),
+    // `endedAt`: o dia em que a pessoa saiu, 'AAAA-MM-DD' (AM). Ausente é agora.
+    mutationFn: ({ workstationId, occupantId, endedAt }: { workstationId: string; occupantId: string; endedAt?: string }) =>
+      apiClient.delete(`/workstations/${workstationId}/occupants/${occupantId}`, { data: endedAt ? { endedAt } : {} }),
     onSuccess: () => invalidarPosseDerivada(queryClient),
   });
 }

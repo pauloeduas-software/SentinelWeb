@@ -19,8 +19,7 @@ import { contarUso } from './count-license-checkouts.usecase';
  *
  * UMA LISTA SÓ (AF), como nas Configurações: a encerrada fica junto, e a tela
  * a esmaece. `status` recorta um dos quatro — `ENCERRADA` é o que a aba
- * Encerradas mostrava —, e `emUso` deixa só as que alguém ainda usa: com
- * `ENCERRADA`, é para onde o alerta "encerradas em uso" leva.
+ * Encerradas mostrava.
  */
 export async function listLicenses(
   query: ListQuery,
@@ -33,7 +32,6 @@ export async function listLicenses(
     AND: [
       buildLicenseWhere(query.q),
       filtros.status ? buildStatusWhere(filtros.status, hoje) : {},
-      filtros.emUso ? { checkouts: { some: { checkinAt: null } } } : {},
       filtros.categoryId ? { categoryId: filtros.categoryId } : {},
     ],
   };

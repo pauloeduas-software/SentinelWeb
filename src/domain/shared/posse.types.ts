@@ -53,6 +53,8 @@ export interface PosseResolvida {
   /** Nome de quem detém: a pessoa ou o nome do posto. */
   targetLabel: string | null;
   responsaveis: Responsavel[];
+  /** Quando a posse aberta começou — o `min` do dia da devolução (AM). */
+  checkoutAt: string | null;
   /**
    * Posse apontando para um posto SEM ocupante aberto: equipamento
    * parado em posto vazio. É sinal operacional, não erro de dado — por isso

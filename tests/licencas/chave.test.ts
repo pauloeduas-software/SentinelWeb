@@ -23,7 +23,7 @@ afterAll(async () => {
   await api.fechar();
 });
 
-interface Chave { id: string; productKey: string; seats: number; emUso: number; jaEntregue: boolean }
+interface Chave { id: string; productKey: string; seats: number; emUso: number }
 interface Detalhe { id: string; keys: Chave[] }
 interface Entrega { id: string; licenseKeyId?: string | null; licenseKey?: { productKey: string } | null }
 
@@ -51,9 +51,9 @@ describe('a lista de chaves da licença', () => {
     ]);
 
     const chaves = await chavesDe(id);
-    expect(chaves.map(({ productKey, seats, emUso, jaEntregue }) => ({ productKey, seats, emUso, jaEntregue }))).toEqual([
-      { productKey: 'ZZZZZ-11111', seats: 1, emUso: 0, jaEntregue: false },
-      { productKey: 'AAAAA-22222', seats: 3, emUso: 0, jaEntregue: false },
+    expect(chaves.map(({ productKey, seats, emUso }) => ({ productKey, seats, emUso }))).toEqual([
+      { productKey: 'ZZZZZ-11111', seats: 1, emUso: 0 },
+      { productKey: 'AAAAA-22222', seats: 3, emUso: 0 },
     ]);
 
     const lista = await api.get<{ rows: Record<string, unknown>[] }>('/api/licenses?q=Office com chaves');
@@ -102,7 +102,7 @@ describe('a lista de chaves da licença', () => {
     }
   });
 
-  it('a edição inclui, corrige e tira; a chave já entregue não sai e não cobre menos do que está com ela', async () => {
+  it('a edição inclui, corrige e tira; a chave em uso não sai e não cobre menos do que está com ela', async () => {
     const id = await cadastrar('Edição das chaves', 4, [
       { productKey: 'ED-1', seats: 1 },
       { productKey: 'ED-2', seats: 2 },
@@ -111,13 +111,13 @@ describe('a lista de chaves da licença', () => {
     expect((await entregar(id, { assignedPersonId: cenario.laura }, segunda.id)).status).toBe(201);
     expect((await entregar(id, { assignedPersonId: cenario.ana }, segunda.id)).status).toBe(201);
 
-    // A que já foi entregue não sai da lista.
-    const tirarEntregue = await api.put<{ error: string }>(`/api/licenses/${id}`, {
+    // A que tem entrega aberta não sai da lista.
+    const tirarEmUso = await api.put<{ error: string }>(`/api/licenses/${id}`, {
       keys: [{ id: primeira.id, productKey: 'ED-1', seats: 1 }],
     });
-    expect(tirarEntregue.status).toBe(409);
-    expect(tirarEntregue.body.error).toBe(
-      'Uma chave que já foi entregue não sai da lista: o histórico de quem a usou depende dela.',
+    expect(tirarEmUso.status).toBe(409);
+    expect(tirarEmUso.body.error).toBe(
+      'Uma chave com entrega aberta não sai da lista: 2 estão com ela. Devolva para liberar.',
     );
 
     // Não cobre menos do que as duas entregas abertas com ela.
@@ -129,7 +129,7 @@ describe('a lista de chaves da licença', () => {
       'Uma chave não cobre menos do que as entregas abertas com ela: 2 estão com ela. Devolva para liberar.',
     );
 
-    // Corrige o texto da entregue, tira a nunca entregue e inclui uma nova, que vai para o fim.
+    // Corrige o texto da em uso, tira a nunca entregue e inclui uma nova, que vai para o fim.
     const editada = await api.put(`/api/licenses/${id}`, {
       keys: [{ id: segunda.id, productKey: 'ED-2-CORRIGIDA', seats: 2 }, { productKey: 'ED-3', seats: 1 }],
     });
@@ -194,6 +194,34 @@ describe('a lista de chaves da licença', () => {
     });
     expect(junto.status).toBe(200);
   });
+
+  it('a chave só com entregas devolvidas sai, e a quantidade desce — a renovação com menos licenças (AK)', async () => {
+    // Dez chaves individuais, cada uma entregue e devolvida: a renovação fica
+    // com cinco.
+    const keys = Array.from({ length: 10 }, (_, i) => ({ productKey: `REN-${i + 1}`, seats: 1 }));
+    const id = await cadastrar('Renovação com menos', 10, keys);
+    const chaves = await chavesDe(id);
+    for (const chave of chaves) {
+      const entrega = await entregar(id, { assignedPersonId: cenario.laura }, chave.id);
+      expect(entrega.status, entrega.body.error).toBe(201);
+      expect((await api.post(`/api/licenses/checkouts/${entrega.body.id}/checkin`)).status).toBe(200);
+    }
+
+    const ficam = chaves.slice(0, 5).map((chave) => ({ id: chave.id, productKey: chave.productKey, seats: 1 }));
+    const renovada = await api.put<{ error: string }>(`/api/licenses/${id}`, { seatsTotal: 5, keys: ficam });
+    expect(renovada.status, renovada.body.error).toBe(200);
+    expect((await chavesDe(id)).map((chave) => chave.productKey)).toEqual(['REN-1', 'REN-2', 'REN-3', 'REN-4', 'REN-5']);
+
+    // As entregas devolvidas continuam, e as das chaves que saíram perderam a ligação.
+    const entregas = await prisma.licenseCheckout.findMany({ where: { licenseId: id }, select: { licenseKeyId: true } });
+    expect(entregas).toHaveLength(10);
+    expect(entregas.filter((entrega) => entrega.licenseKeyId === null)).toHaveLength(5);
+
+    const auditoria = await prisma.auditLog.findFirst({
+      where: { entityType: 'License', entityId: id, action: 'UPDATE' }, orderBy: { createdAt: 'desc' },
+    });
+    expect(auditoria?.changes).toMatchObject({ chaves: { removidas: 5 } });
+  });
 });
 
 describe('a chave da entrega', () => {
@@ -235,7 +263,7 @@ describe('a chave da entrega', () => {
     expect((await entregar(id, { assignedPersonId: pessoa }, individual.id)).status).toBe(201);
 
     const uso = await chavesDe(id);
-    expect(uso.map((chave) => [chave.emUso, chave.jaEntregue])).toEqual([[1, true], [2, true]]);
+    expect(uso.map((chave) => chave.emUso)).toEqual([1, 2]);
 
     // A chave de outra licença, ou uma que não existe, é 404.
     const outra = await cadastrar('Dona da chave', 1, [{ productKey: 'ALHEIA-1', seats: 1 }]);

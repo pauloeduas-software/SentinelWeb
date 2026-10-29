@@ -2,7 +2,7 @@
 --
 -- Diferença para `posse-invariantes.sql`: lá as regras vivem no BANCO (índices
 -- parciais), e o SQL prova que elas recusam o que deve recusar. Aqui as regras
--- vivem na APLICAÇÃO — `assert-retire-posse.usecase.ts` —, porque cruzam
+-- vivem na APLICAÇÃO — `assert-sem-posse.usecase.ts` —, porque cruzam
 -- tabelas e porque o valor delas está na MENSAGEM que ensina o que fazer
 -- (docs/referencia/invariantes.md, "a regra de onde cada uma mora").
 --
@@ -17,13 +17,13 @@
 BEGIN;
 
 \echo ''
-\echo '### 1. Ativo fora do patrimonio COM posse aberta  -> esperado: 0 linhas'
--- O equipamento foi vendido/descartado e continua na mao de alguem: sumiu do
--- inventario sem que a devolucao tenha acontecido.
-SELECT a."assetTag", a."retiredAt", a."retiredReason", g.id AS assignment
+\echo '### 1. Ativo baixado ou na lixeira COM posse aberta  -> esperado: 0 linhas'
+-- O equipamento foi vendido/descartado, ou foi para a lixeira, e continua na
+-- mao de alguem: sumiu do inventario sem que a devolucao tenha acontecido (AL).
+SELECT a."assetTag", a."retiredAt", a."retiredReason", a."deletedAt", g.id AS assignment
 FROM assets a
 JOIN assignments g ON g."assetId" = a.id AND g."checkinAt" IS NULL
-WHERE a."retiredAt" IS NOT NULL AND a."deletedAt" IS NULL;
+WHERE a."retiredAt" IS NOT NULL OR a."deletedAt" IS NOT NULL;
 
 \echo ''
 \echo '### 2. Motivo sem data, ou data sem motivo  -> esperado: 0 linhas'

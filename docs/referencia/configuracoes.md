@@ -101,6 +101,11 @@ entrada. As diferenças são de propósito:
   não deixa ninguém agir sobre si mesmo.
 - Na Licença, o Desativar é o **Encerrar**, e o Ativar é o **Reabrir**: o fim é
   uma data, que entra no status e no alerta. A encerrada fica na lista, marcada.
+- **O que está em uso não se desativa** ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)): a licença com
+  entrega aberta não se encerra, e o item de estoque com unidade em uso não se
+  desativa — 409 que manda devolver antes, como no Excluir.
+- O Posto não se desativa: o vazio se exclui, como a localização, e o que tem
+  algo nele recebe o 409 da exclusão.
 - O Ativo não se desativa: os status dele são outros, e o fim é a baixa
   ([`baixa.md`](baixa.md)). O Excluir dele manda para a lixeira, como o do
   Colaborador, com a mesma frase: `Excluir "X"? Vai para a lixeira e pode ser

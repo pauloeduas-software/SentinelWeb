@@ -78,16 +78,15 @@ describe('a listagem', () => {
 
   it('o desativado continua na mesma lista, com a conta — sem abas, como nas Configurações', async () => {
     const parado = await item('Projetor desativado sem uso', 1);
-    const naRua = await item('Leitor desativado em uso', 2);
+    const naRua = await item('Leitor em uso não desativa', 2);
     expect((await entregar(naRua.id, { targetType: 'PERSON', targetPersonId: cenario.ana })).status).toBe(201);
-    for (const { id } of [parado, naRua]) {
-      expect((await api.put(`/api/stock/items/${id}`, { isActive: false })).status).toBe(200);
-    }
+    expect((await api.put(`/api/stock/items/${parado.id}`, { isActive: false })).status).toBe(200);
+    expect((await api.put(`/api/stock/items/${naRua.id}`, { isActive: false })).status).toBe(409);
 
     const { body } = await api.get<{ rows: { id: string; isActive: boolean; emUso: number }[] }>('/api/stock/items?perPage=100');
     const porId = new Map(body.rows.map((linha) => [linha.id, linha]));
     expect(porId.get(parado.id)).toMatchObject({ isActive: false, emUso: 0 });
-    expect(porId.get(naRua.id)).toMatchObject({ isActive: false, emUso: 1 });
+    expect(porId.get(naRua.id)).toMatchObject({ isActive: true, emUso: 1 });
 
     // As abas e o filtro saíram, e a lixeira não existe: a chave é 422, e não
     // uma lista em silêncio diferente da pedida.
@@ -288,10 +287,10 @@ describe('as fichas', () => {
     const mouse = await item('Mouse da ficha do posto', 5);
     const entrega = await entregar(mouse.id, { targetType: 'WORKSTATION', targetWorkstationId: mesa, qty: 3 });
 
-    type Ficha = { itens: { id: string; unidades: number; item: { id: string; name: string; isActive: boolean } }[]; totalAtivos: number };
+    type Ficha = { itens: { id: string; unidades: number; item: { id: string; name: string } }[]; totalAtivos: number };
     const antes = await api.get<Ficha>(`/api/workstations/${mesa}`);
     expect(antes.body.itens.map((s) => [s.item.name, s.unidades])).toEqual([['Mouse da ficha do posto', 3]]);
-    expect(antes.body.itens[0].item).toMatchObject({ id: mouse.id, isActive: true });
+    expect(antes.body.itens[0].item).toMatchObject({ id: mouse.id });
     // Estoque NÃO conta como ativo: `totalAtivos` é o número que a invariante
     // 19 limita a um, e um mouse não entra nele.
     expect(antes.body.totalAtivos).toBe(0);
@@ -300,15 +299,14 @@ describe('as fichas', () => {
     expect((await api.get<Ficha>(`/api/workstations/${mesa}`)).body.itens.map((s) => s.unidades)).toEqual([1]);
   });
 
-  it('a da pessoa lista o estoque no nome dela, e o item desativado continua lá', async () => {
+  it('a da pessoa lista o estoque no nome dela', async () => {
     const pessoa = await criarColaborador(api, { name: 'Bia da Ficha', email: 'bia.ficha@teste.local' });
     const fone = await item('Fone da ficha da pessoa', 2);
     expect((await entregar(fone.id, { targetType: 'PERSON', targetPersonId: pessoa, qty: 2 })).status).toBe(201);
-    expect((await api.put(`/api/stock/items/${fone.id}`, { isActive: false })).status).toBe(200);
 
-    type Ficha = { itens: { unidades: number; item: { name: string; isActive: boolean } }[] };
+    type Ficha = { itens: { unidades: number; item: { name: string } }[] };
     const ficha = await api.get<Ficha>(`/api/people/${pessoa}`);
-    expect(ficha.body.itens).toEqual([expect.objectContaining({ unidades: 2, item: expect.objectContaining({ isActive: false }) })]);
+    expect(ficha.body.itens).toEqual([expect.objectContaining({ unidades: 2, item: expect.objectContaining({ name: 'Fone da ficha da pessoa' }) })]);
   });
 
   it('o histórico da pessoa traz o estoque no nome dela, por entrega', async () => {

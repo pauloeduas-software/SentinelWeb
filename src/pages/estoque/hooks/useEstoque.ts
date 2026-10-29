@@ -151,9 +151,8 @@ export function useEstoque() {
   };
 
   // DESATIVAR/ATIVAR, com a frase de Configurações (`useCatalog`): grava só
-  // `isActive`, e confirma só na ida — ativar não tem o que perder. Desativa
-  // mesmo com unidade fora: o que está com alguém continua até voltar, e a
-  // linha fica na lista, esmaecida, com a conta à mostra.
+  // `isActive`, e confirma só na ida — ativar não tem o que perder. O botão
+  // sempre clica: com unidade em uso, o 409 do servidor manda devolver antes.
   const handleAlternarAtivo = async (item: ItemDeEstoque) => {
     if (item.isActive && !window.confirm(
       `Desativar "${item.name}"? Continua no histórico, mas some das escolhas e não recebe nada novo.`,

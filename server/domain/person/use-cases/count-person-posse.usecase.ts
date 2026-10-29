@@ -59,15 +59,9 @@ export async function contarPosseAberta(
   personId: string,
 ): Promise<PosseAbertaDaPessoa> {
   const [ativosEmPosse, postosOcupados, licencas, itens] = await Promise.all([
+    // Sem filtro de lixeira: o ativo entregue não vai para ela (AL).
     client.assignment.count({
-      // `asset: { deletedAt: null }` EXPLÍCITO. `assignments` não tem
-      // `deletedAt`, então a extension não escopa esta contagem — e ela não
-      // alcança relação aninhada de jeito nenhum.
-      //
-      // Sem esta linha, um ativo mandado para a lixeira com a posse ainda
-      // aberta contaria aqui: o 409 diria "responde por 1 ativo" sobre
-      // equipamento que saiu do inventário, e não se cobra isso de ninguém.
-      where: { targetType: 'PERSON', targetPersonId: personId, checkinAt: null, asset: { deletedAt: null } },
+      where: { targetType: 'PERSON', targetPersonId: personId, checkinAt: null },
     }),
     client.workstationOccupant.count({ where: { personId, endedAt: null } }),
     licencasDaPessoa(client, personId),

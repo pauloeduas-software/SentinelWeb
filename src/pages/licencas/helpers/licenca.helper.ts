@@ -84,7 +84,6 @@ export interface LinhaDeChave {
   productKey: string;
   seats: string;
   emUso: number;
-  jaEntregue: boolean;
 }
 
 let proximaLinha = 0;
@@ -92,7 +91,7 @@ let proximaLinha = 0;
 /** Uma linha nova, vazia ou com o texto colado. */
 export function linhaNova(productKey = ''): LinhaDeChave {
   proximaLinha += 1;
-  return { uid: `nova-${proximaLinha}`, productKey, seats: '1', emUso: 0, jaEntregue: false };
+  return { uid: `nova-${proximaLinha}`, productKey, seats: '1', emUso: 0 };
 }
 
 /** Quanto as linhas cobrem juntas — o "cobre" que ainda não é número conta zero. */

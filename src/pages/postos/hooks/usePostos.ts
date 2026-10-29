@@ -90,21 +90,9 @@ export function usePostos() {
     fecharFormulario();
   };
 
-  // DESATIVAR/ATIVAR e EXCLUIR são os botões da linha, com as mesmas frases de
-  // Configurações (`components/catalogo/useCatalog.ts`): o posto segue a regra
-  // do status. Confirma só na ida — reativar não tem o que perder.
-  const handleAlternar = async (posto: Posto) => {
-    if (posto.isActive && !confirm(
-      `Desativar "${posto.name}"? Continua no histórico, mas some das escolhas e não recebe nada novo.`,
-    )) return;
-
-    try {
-      await editar.mutateAsync({ id: posto.id, data: { isActive: !posto.isActive } });
-    } catch (erro) {
-      notificar.erro((erro as Error).message);
-    }
-  };
-
+  // EXCLUIR é o botão da linha, com a frase de Configurações
+  // (`components/catalogo/useCatalog.ts`). Sem Desativar (AN): o posto com algo
+  // nele recebe o 409 do servidor, que diz o que tirar.
   const handleExcluir = async (posto: Posto) => {
     if (!confirm(`Excluir "${posto.name}"? Esta ação não tem lixeira.`)) return;
 
@@ -130,7 +118,7 @@ export function usePostos() {
    * por busca ou por URL. Esta é a ponta que faltava do caminho que a etapa
    * passada abriu.
    *
-   * SÓ O ESCOPO no corpo, e mais nada: o servidor resolve o status de volta para
+   * SÓ O ESCOPO E O DIA no corpo (AM): o servidor resolve o status de volta para
    * o primeiro `DEPLOYABLE` (`checkin-asset.usecase.ts`). O formulário completo
    * da devolução — status de volta e observação — continua na tela Computadores,
    * onde cabe; aqui o que se quer é tirar o equipamento DESTA mesa.
@@ -140,15 +128,12 @@ export function usePostos() {
    * e um corpo vazio fecharia a posse dela. Com o posto no corpo, o servidor
    * recusa com 409 e diz com quem o ativo está — a mensagem sobe para a ficha.
    *
-   * `confirm` com o NÚMERO e o NOME, não "tem certeza?": o que faz alguém parar é
-   * ler a etiqueta do que vai sair da mesa.
+   * A confirmação é a da linha, com o dia em que o ativo voltou, como a
+   * devolução da licença.
    */
-  const handleDevolver = async (ativo: AtivoDoPosto) => {
+  const handleDevolver = async (ativo: AtivoDoPosto, dia: string) => {
     if (!postoId) return;
-    const qual = ativo.name ? `${ativo.assetTag} (${ativo.name})` : ativo.assetTag;
-    if (!confirm(`Devolver ${qual}? Ele sai deste posto e volta para a lista de Computadores.`)) return;
-
-    await devolver.mutateAsync({ id: ativo.id, data: { targetWorkstationId: postoId } });
+    await devolver.mutateAsync({ id: ativo.id, data: { targetWorkstationId: postoId, checkinAt: dia } });
   };
 
   return {
@@ -174,7 +159,6 @@ export function usePostos() {
     },
     closeModal: fecharFormulario,
     handleSalvar,
-    handleAlternar,
     handleExcluir,
 
     postoId: postoId ?? null,

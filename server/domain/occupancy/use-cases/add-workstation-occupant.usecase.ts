@@ -6,7 +6,8 @@ import type { Ator } from '../../audit/audit.types';
 import { buildSnapshot } from '../../shared/diff.helper';
 import { OCCUPANT_SELECT, rotuloDaOcupacao } from '../helpers/occupant-select.helper';
 import { travarPessoa } from '../../person/use-cases/lock-person.usecase';
-import { assertPostoRecebe } from '../../catalog/helpers/catalog-lock.helper';
+import { lerPostoTravado } from '../../catalog/helpers/catalog-lock.helper';
+import { instanteDoDia } from '../../shared/hoje.helper';
 
 interface AddOccupantData {
   personId: string;
@@ -66,7 +67,7 @@ export async function addWorkstationOccupant(
       // pessoa —, esta ocupação, uma entrega à mesma pessoa e uma entrega do
       // mesmo ativo ao posto fechavam um ciclo de três e o Postgres matava uma
       // com `40P01`.
-      await assertPostoRecebe(tx, workstationId, 'ocupante novo');
+      await lerPostoTravado(tx, workstationId);
 
       // `findFirst`: só ele recebe o escopo da lixeira da extension — com
       // `findUnique`, um colaborador excluído voltaria a ocupar um posto. A
@@ -102,11 +103,10 @@ export async function addWorkstationOccupant(
           personId: data.personId,
           shift: data.shift ?? null,
           notes: data.notes ?? null,
-          // `undefined` faz o Prisma NÃO mandar a coluna, e aí quem preenche é
-          // o `@default(now())` do banco. Trocar por `new Date()` colocaria o
-          // relógio da aplicação no lugar do relógio do banco — que é o mesmo
-          // que carimba o `endedAt`, e comparar os dois precisa da mesma fonte.
-          startedAt: data.startedAt ?? undefined,
+          // O dia passado vira o meio-dia de Brasília, e hoje a hora real
+          // (`instanteDoDia`), como na entrega (AM). Ausente, `undefined` faz o
+          // Prisma NÃO mandar a coluna, e quem preenche é o `@default(now())`.
+          startedAt: data.startedAt ? instanteDoDia(data.startedAt) : undefined,
         },
         select: OCCUPANT_SELECT,
       });
