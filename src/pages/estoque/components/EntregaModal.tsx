@@ -4,7 +4,7 @@ import ReferenceSelect from '../../components/ReferenceSelect';
 import { useStockItemQuery } from '../../../domain/stock/stock.queries';
 import type { AlvoDaEntregaDeEstoque, ItemDeEstoque } from '../../../domain/shared/stock.types';
 import { hojeNoCampoDeData } from '../../helpers/format.helper';
-import { ehComponente } from '../helpers/estoque.helper';
+import { ehComponente, ehConsumivel } from '../helpers/estoque.helper';
 
 // A ENTREGA: `qty` unidades para UM colaborador ou UM posto — ou, o componente,
 // UM computador —, num dia: a entrega da licença com quantidade (AE).
@@ -95,7 +95,7 @@ export default function EntregaModal({ item, onClose, onSubmit }: EntregaModalPr
           <div>
             <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">Entregar</h2>
             <p className="font-mono text-[10px] text-text-tertiary mt-1">
-              {atual.name} · {atual.disponivel} de {atual.qty} {atual.disponivel === 1 ? 'disponível' : 'disponíveis'}
+              {atual.name} · {atual.disponivel}{ehConsumivel(atual) ? '' : ` de ${atual.qty}`} {atual.disponivel === 1 ? 'disponível' : 'disponíveis'}
             </p>
           </div>
           <button onClick={onClose} aria-label="Fechar" title="Fechar" className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
@@ -174,8 +174,11 @@ export default function EntregaModal({ item, onClose, onSubmit }: EntregaModalPr
               ? 'Componente vai só para um computador e fica nele, mesmo quando o computador muda de mãos. '
                 + 'Para tirar, use o Retirar no detalhe do item: na troca de peça, antes da baixa do computador '
                 + 'ou para corrigir uma entrega errada.'
-              : 'Entregar a um posto vale pela mesa, não pela pessoa: qualquer ocupante aberto dela '
-                + 'responde pelas unidades. A devolução é feita no detalhe do item, quantas voltarem.'}
+              : ehConsumivel(item)
+                ? 'Consumível não volta: a entrega tira as unidades do total e não fica com ninguém. '
+                  + 'Lançou errado? Some de volta no total, pelo Editar.'
+                : 'Entregar a um posto vale pela mesa, não pela pessoa: qualquer ocupante aberto dela '
+                  + 'responde pelas unidades. A devolução é feita no detalhe do item, quantas voltarem.'}
           </p>
 
           <div className="flex justify-end gap-2 pt-1">

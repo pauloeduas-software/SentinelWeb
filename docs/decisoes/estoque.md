@@ -10,7 +10,7 @@
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D33–D38, J da segunda rodada (ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)), AE, AG e AI.
+> [`README.md`](./README.md#a-segunda-rodada-ap)), AE, AG, AI e AJ.
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
@@ -142,6 +142,10 @@ trabalho de apresentação, não de schema.
 > **Superada em parte por [AI](#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar):**
 > o alvo deixa de ser só pessoa ou posto — o item de categoria Componente vai só para
 > computador.
+>
+> **Superada em parte por [AJ](#aj--o-consumível-é-uma-categoria-e-o-total-é-o-que-existe):**
+> volta a existir o que não se devolve — o item de categoria Consumível, cuja entrega já nasce
+> fechada.
 
 **Decidido:** `Accessory`, `Consumable`, `Component` e os três `Checkout` — removidos inteiros
 pelo segundo de-escopo (ver [`escopo.md`](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai))
@@ -186,6 +190,10 @@ que mostrá-la. A cor do saldo na tela usa `<= 0`, não `=== 0`, por este motivo
 
 ## AE — O estoque segue a lógica da licença: total na edição, entrega com dia, desativar em vez de lixeira
 
+> **Superada em parte por [AJ](#aj--o-consumível-é-uma-categoria-e-o-total-é-o-que-existe):**
+> o total é o que existe e chega a 0 quando acaba — pela entrega do consumível ou pela edição; só
+> o cadastro continua pedindo ao menos 1.
+>
 > **Superada em parte por [AG](#ag--a-regra-do-posto-vale-para-o-estoque-e-a-licença-só-o-que-está-em-uso-impede-a-exclusão):**
 > o item que já foi entregue também se exclui, se nada está em uso agora — as entregas devolvidas
 > perdem a ligação e guardam o nome por escrito. Só o item com unidade em uso recusa, e o 409 diz
@@ -376,3 +384,53 @@ operação só, que já existia.
 reescrito. No banco de desenvolvimento, a categoria "Peça de reposição" mudou de tipo, sem
 entrega nenhuma nos itens dela.
 
+---
+
+## AJ — O consumível é uma categoria, e o total é o que existe
+
+**Decidido** (na validação de ITAM das telas de Licenças e Estoque, em 2026-10-28 — o usuário,
+que está aprendendo ITAM, pediu para conferir se a lógica estava certa. A resposta apontou que o
+cabo ou o toner dado de vez virava "em uso" para sempre. Ele respondeu "sobre os consumíveis é
+interessante fazermos do mesmo formato que foi feito com componentes", e, entre o total como "o
+que entrou" e como "o que existe", escolheu o segundo):
+
+- **A categoria ganha o tipo Consumível**, ao lado de Estoque e Componente: o que se gasta e não
+  volta, como toner e pilha. Vai a colaborador ou posto, como o estoque. A entrega tira do total na
+  hora, não fica "em uso" com ninguém, não tem Devolver (409) e não prende o colaborador nem o
+  posto. O detalhe do item não tem "Com quem está", e a linha mostra só "3 disponíveis". O
+  histórico do item e o do colaborador mostram a entrega, e só ela.
+- **O total é o que existe** e chega a 0 quando acaba: pelo consumo ou pela edição. O cadastro
+  continua pedindo ao menos 1. O item com 0 continua ativo — "sem unidade disponível" — até alguém
+  somar a compra nova. Reduzir à mão continua não passando do que está em uso.
+- **Trocar a categoria** entre Estoque, Componente e Consumível só sem unidade em uso, como na AI.
+  O consumível nunca tem unidade em uso, e passa a estoque sempre.
+- **O seed** ganha a categoria "Material de consumo" (Consumível), e o seed demo, a "Pilha AA" e o
+  "Toner para impressora".
+
+**Supera:** em parte [AE](#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira)
+(o total ao menos 1 sempre, e o item que acabou se desativa) e [J](#j--o-estoque-volta-como-stockitem--stockmovement)
+(toda entrega pode ser devolvida).
+**Mantém:** o saldo calculado ([D34](#d34--saldo-é-sempre-calculado-nunca-coluna)) — o
+disponível continua `qty − em uso` —, a regra do posto ([AG](#ag--a-regra-do-posto-vale-para-o-estoque-e-a-licença-só-o-que-está-em-uso-impede-a-exclusão)),
+a categoria que decide o alvo (AI) e o estoque sem baixa (AE): a unidade que quebrou ou se perdeu
+volta pelo Devolver e sai do total pelo Editar.
+
+**Por quê:** o cabo dado de vez ficava "em uso" com a pessoa até alguém registrar uma devolução
+falsa — e impedia desativá-la quando saísse. O Snipe-IT separa o consumível (não volta) do
+acessório (volta) e do componente (vai para dentro do ativo), com o tipo na categoria; aqui o
+consumível segue o mesmo formato do componente. O total como "o que entrou" deixaria o mínimo 1 de
+pé, mas a linha do item cresceria para sempre com o que já saiu.
+
+**O que fica de fora, declarado:** a entrega de consumível lançada errado não se desfaz (some de
+volta no total, pelo Editar). E o motivo da redução: chegou a ser feito — primeiro uma lista fixa
+no Devolver, depois um "Dar baixa" com motivos num cadastro das Configurações — e saiu na mesma
+conversa, porque só cobria a unidade entregue (a parada, que nunca saiu, continuava saindo pelo
+Editar, sem motivo) e porque nem o GLPI nem o Snipe-IT têm baixa no estoque: lá também se devolve e
+se edita a quantidade.
+
+**O que a migração faz:** `CategoryType` ganha `CONSUMABLE`; o enum `StockReturnKind`
+(`RETURNED`, `CONSUMED`) e a coluna `stock_movements.returnKind`, nula junto com `returnedAt`
+(CHECK `stock_movements_fechamento_com_devolucao`); o CHECK `stock_items_qty_positiva` (`>= 1`)
+vira `stock_items_qty_nao_negativa` (`>= 0`). A entrega do consumível grava as linhas já fechadas
+— `returnedAt` igual ao `checkoutAt`, `CONSUMED` —, e por isso nenhuma conta de "em uso" e de
+posse muda.

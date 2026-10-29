@@ -16,7 +16,8 @@ import type { CatalogSpec } from '../specs/catalog-spec.types';
 // ignorado em silêncio, como no resto do sistema.
 //
 // Um valor ou vários, separados por vírgula: o item de estoque escolhe entre as
-// categorias de Estoque e as de Componente (`?type=STOCK,COMPONENT`, AI).
+// categorias de Estoque, Componente e Consumível (`?type=STOCK,COMPONENT,CONSUMABLE`,
+// AI e AJ).
 function buildOptionsQuerySchema(spec: CatalogSpec) {
   return z.strictObject({
     q: z.string().trim().max(200, 'busca: máximo de 200 caracteres').optional()

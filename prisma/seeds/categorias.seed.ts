@@ -12,6 +12,7 @@ import type { Seeder } from './seeder';
 // categoria dele é "Periférico".
 // COMPONENTE também é item de estoque, o que vai para dentro do computador
 // (AI): a memória e o SSD, que só um computador recebe.
+// CONSUMÍVEL é o item de estoque que se gasta e não volta (AJ): toner, pilha.
 // LICENÇA agrupa por família de software.
 const CATEGORIES = [
   { name: 'Notebook', type: 'ASSET' },
@@ -23,6 +24,8 @@ const CATEGORIES = [
   { name: 'Cabo e adaptador', type: 'STOCK' },
 
   { name: 'Peça de reposição', type: 'COMPONENT' },
+
+  { name: 'Material de consumo', type: 'CONSUMABLE' },
 
   { name: 'Sistema operacional', type: 'LICENSE' },
   { name: 'Produtividade', type: 'LICENSE' },

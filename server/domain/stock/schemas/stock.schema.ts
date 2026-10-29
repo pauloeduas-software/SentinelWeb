@@ -24,16 +24,18 @@ const quantidade = (rotulo: string, max: number, min = 1) =>
     .max(max, `${rotulo}: máximo de ${max}`);
 
 /**
- * O TOTAL, ao menos UM — no cadastro e na edição —, como a quantidade comprada
- * da licença: o item que acabou se desativa, e o total nunca é zero (CHECK
- * `stock_items_qty_positiva`).
+ * O TOTAL é o que existe (AJ). O cadastro pede ao menos UM, como a quantidade
+ * comprada da licença; depois ele chega a 0 quando acaba — pela entrega do
+ * consumível ou pela edição. Negativo nunca (CHECK
+ * `stock_items_qty_nao_negativa`).
  */
-const total = quantidade('quantidade', MAX_UNIDADES);
+const totalDoCadastro = quantidade('quantidade', MAX_UNIDADES);
+const totalDaEdicao = quantidade('quantidade', MAX_UNIDADES, 0);
 
 export const createStockItemSchema = z.strictObject({
   name: nomeObrigatorio('nome'),
   categoryId: uuidObrigatorio('categoria'),
-  qty: total,
+  qty: totalDoCadastro,
   // Onde o que sobra fica guardado — o Depósito de TI. Opcional.
   locationId: uuidOpcional('localização'),
   notes: textoOpcional('notas', 2_000),
@@ -52,7 +54,7 @@ export const createStockItemSchema = z.strictObject({
 export const updateStockItemSchema = z.strictObject({
   name: nomeObrigatorio('nome').optional(),
   categoryId: uuidObrigatorio('categoria').optional(),
-  qty: total.optional(),
+  qty: totalDaEdicao.optional(),
   locationId: uuidOpcional('localização'),
   notes: textoOpcional('notas', 2_000),
   isActive: z.boolean('ativo: use true ou false').optional(),

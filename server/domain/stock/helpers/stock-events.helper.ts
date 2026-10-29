@@ -42,6 +42,7 @@ export function buscarUnidadesDoAlvo(alvo: { targetPersonId: string } | { target
       checkoutAt: true,
       returnedAt: true,
       returnRecordedAt: true,
+      returnKind: true,
       notes: true,
       targetType: true,
       targetPersonId: true,
@@ -58,7 +59,8 @@ export function buscarUnidadesDoAlvo(alvo: { targetPersonId: string } | { target
  * As unidades viram eventos POR ENTREGA, como no histórico do item: a entrega é
  * um evento com todas as unidades; cada devolução, as unidades dela registradas juntas (o mesmo
  * `returnRecordedAt` — duas devoluções no mesmo dia são duas). No mesmo
- * instante, a devolução vem antes da entrega.
+ * instante, a devolução vem antes da entrega. O CONSUMÍVEL (AJ) não tem
+ * devolução: a linha nasce fechada, e só a entrega aparece.
  */
 export function eventosDasUnidades(
   unidades: Awaited<ReturnType<typeof buscarUnidadesDoAlvo>>,
@@ -73,6 +75,7 @@ export function eventosDasUnidades(
     const devolucoes = new Map<number, { at: Date; devolvidas: number }>();
     for (const unidade of doLote) {
       if (!unidade.returnedAt || !unidade.returnRecordedAt) continue;
+      if (unidade.returnKind === 'CONSUMED') continue;
       const registro = unidade.returnRecordedAt.getTime();
       const devolucao = devolucoes.get(registro);
       if (devolucao) devolucao.devolvidas += 1;

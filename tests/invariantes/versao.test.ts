@@ -82,6 +82,19 @@ describe('o Editar com a versão velha é recusado', () => {
     expect((await api.get<{ qty: number }>(`/api/stock/items/${item.id}`)).body.qty).toBe(10);
   });
 
+  it('no consumível: a entrega tira do total, e o formulário velho não o devolve', async () => {
+    const item = await criarItemDeEstoque(api, { name: 'Toner da versão', categoryId: cenario.categoriaConsumivelId, qty: 5 });
+    const lida = (await api.get<ComVersao>(`/api/stock/items/${item.id}`)).body.updatedAt;
+
+    const entrega = await api.post(`/api/stock/items/${item.id}/checkout`, { targetType: 'PERSON', targetPersonId: cenario.laura, qty: 2 });
+    expect(entrega.status).toBe(201);
+
+    const velha = await api.put<{ error: string }>(`/api/stock/items/${item.id}`, { qty: 5, updatedAt: lida });
+    expect(velha.status).toBe(409);
+    expect(velha.body.error).toBe(frase('Toner da versão'));
+    expect((await api.get<{ qty: number }>(`/api/stock/items/${item.id}`)).body.qty).toBe(3);
+  });
+
   it('no computador: a entrega troca o status, e o formulário velho não o desfaz', async () => {
     const ativo = await api.get<ComVersao & { assetTag: string; statusId: string }>(`/api/assets/${cenario.ativo.id}`);
     const entrega = await api.post(`/api/assets/${cenario.ativo.id}/checkout`, { targetType: 'PERSON', targetPersonId: cenario.ana });

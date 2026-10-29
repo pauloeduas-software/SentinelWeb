@@ -48,6 +48,10 @@ export default function ItemFormModal({ item, onClose, onSubmit }: ItemFormModal
   const { data: componentes } = useCatalogOptionsQuery('categories', 'COMPONENT');
   const categoriaDeComponente = (item?.categoryId === categoryId && item.category.type === 'COMPONENT')
     || (componentes ?? []).some((categoria) => categoria.id === categoryId);
+  // E as de consumível (AJ), pelo mesmo caminho.
+  const { data: consumiveis } = useCatalogOptionsQuery('categories', 'CONSUMABLE');
+  const categoriaDeConsumivel = (item?.categoryId === categoryId && item.category.type === 'CONSUMABLE')
+    || (consumiveis ?? []).some((categoria) => categoria.id === categoryId);
   const [locationId, setLocationId] = useState(item?.locationId ?? '');
   const [qty, setQty] = useState(item ? String(item.qty) : '1');
   const [notes, setNotes] = useState(item?.notes ?? '');
@@ -61,12 +65,13 @@ export default function ItemFormModal({ item, onClose, onSubmit }: ItemFormModal
   const enviar = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    // A quantidade em branco não vira 0, e zero não existe — a mesma regra da
-    // quantidade comprada no `LicencaFormModal`.
+    // A quantidade em branco não vira 0. O cadastro começa com ao menos 1; na
+    // edição o total é o que existe, e o item que acabou fica com 0 (AJ).
     const quantidade = Number(qty);
-    if (qty.trim() === '' || !Number.isInteger(quantidade) || quantidade < 1) {
+    const minimo = editando ? 0 : 1;
+    if (qty.trim() === '' || !Number.isInteger(quantidade) || quantidade < minimo) {
       setErro(editando
-        ? 'Informe a quantidade: um número inteiro, 1 ou mais.'
+        ? 'Informe a quantidade: um número inteiro, 0 ou mais.'
         : 'Informe a quantidade inicial: um número inteiro, 1 ou mais.');
       return;
     }
@@ -124,10 +129,15 @@ export default function ItemFormModal({ item, onClose, onSubmit }: ItemFormModal
             <span className={ROTULO}>Categoria *</span>
             {/* Filtrada por TIPO: o `<select>` não oferece categoria de
                 ativo ou de licença, porque o servidor a recusaria com 422. */}
-            <ReferenceSelect rota="categories" filtroTipo="STOCK,COMPONENT" valor={categoryId} obrigatorio atual={item?.category} onChange={setCategoryId} />
+            <ReferenceSelect rota="categories" filtroTipo="STOCK,COMPONENT,CONSUMABLE" valor={categoryId} obrigatorio atual={item?.category} onChange={setCategoryId} />
             {categoriaDeComponente && (
               <span className="block text-[10px] text-text-tertiary leading-relaxed">
                 Categoria de componente: o item vai só para computador, e sai dele pelo Retirar.
+              </span>
+            )}
+            {categoriaDeConsumivel && (
+              <span className="block text-[10px] text-text-tertiary leading-relaxed">
+                Categoria de consumível: a entrega tira do total e não volta.
               </span>
             )}
           </label>
@@ -142,7 +152,7 @@ export default function ItemFormModal({ item, onClose, onSubmit }: ItemFormModal
           <label className="space-y-1.5 block">
             <span className={ROTULO}>{editando ? 'Quantidade *' : 'Quantidade inicial *'}</span>
             <input
-              required type="number" min={1} step={1} value={qty}
+              required type="number" min={editando ? 0 : 1} step={1} value={qty}
               onChange={(e) => setQty(e.target.value)} className={CLASSE_CAMPO}
             />
             <span className="block text-[10px] text-text-tertiary leading-relaxed">
@@ -150,7 +160,7 @@ export default function ItemFormModal({ item, onClose, onSubmit }: ItemFormModal
                 ? 'Ao menos 1: o que há hoje.'
                 : item.emUso > 0
                   ? `O total, com o que está em uso. O mínimo é ${item.emUso}: é o que está com alguém.`
-                  : 'O total que há agora.'}
+                  : 'O total que há agora — 0 quando acabou.'}
             </span>
           </label>
 

@@ -103,7 +103,7 @@ describe('Configurações — a aba Categorias separada por tipo', () => {
   });
 
   it('recusa tipo fora da lista, e a tabela sem filtro declarado continua recusando a chave', async () => {
-    expect((await api.get('/api/categories?type=CONSUMABLE')).status).toBe(422);
+    expect((await api.get('/api/categories?type=GADGET')).status).toBe(422);
     // Fabricante não declara `optionFilter`: a chave chega ao `parseListQuery`,
     // que é estrito.
     expect((await api.get('/api/manufacturers?type=ASSET')).status).toBe(422);

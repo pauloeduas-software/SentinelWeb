@@ -155,6 +155,7 @@ O tipo diz a que **módulo** a categoria pertence, e é fechado:
 | `LICENSE` — Licença | a licença | |
 | `STOCK` — Estoque | o item de estoque (monitor, mouse, cabo) | o que não é computador é estoque; vai a colaborador ou posto |
 | `COMPONENT` — Componente | o item de estoque que vai para dentro do computador (memória, SSD) | vai só a computador, e sai pelo Retirar ([AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar)) |
+| `CONSUMABLE` — Consumível | o item de estoque que se gasta e não volta (toner, pilha) | vai a colaborador ou posto, e a entrega tira do total ([AJ](../decisoes/estoque.md#aj--o-consumível-é-uma-categoria-e-o-total-é-o-que-existe)) |
 
 - **Única por (nome, tipo):** "Notebook" de Ativo e "Notebook" de Licença são duas
   categorias; "notebook" de Ativo, ao lado de "Notebook" de Ativo, é recusada.
@@ -163,11 +164,11 @@ O tipo diz a que **módulo** a categoria pertence, e é fechado:
 - **O tipo não muda com a categoria em uso** — 409. Trocar o tipo por baixo dos
   registros mudaria o significado deles sem tocar em nenhum (invariante 3).
 - **Cada módulo confere o tipo ao gravar:** modelo exige `ASSET`, licença exige
-  `LICENSE`, item de estoque exige `STOCK` ou `COMPONENT` — 422 em qualquer outro.
+  `LICENSE`, item de estoque exige `STOCK`, `COMPONENT` ou `CONSUMABLE` — 422 em qualquer outro.
   A tela só oferece as do tipo certo, mas a regra é do servidor.
 - **Filtro por tipo** na listagem (`?type=`), validado contra a lista fechada. O
   `/options` aceita vários, separados por vírgula: o formulário e o filtro do
-  estoque pedem `?type=STOCK,COMPONENT`. O
+  estoque pedem `?type=STOCK,COMPONENT,CONSUMABLE`. O
   filtro de categoria das listas de Computadores, Licenças e Estoque mostra também as
   desativadas.
 
@@ -313,7 +314,7 @@ Dois seeds, com regras diferentes:
 | | `npm run db:seed` — o principal | `npm run db:seed:demo` — demonstração |
 |---|---|---|
 | onde roda | todo banco, produção incluída, e antes de cada arquivo de teste | só quando alguém pede: ambiente de desenvolvimento e demonstração |
-| o que cria | o que é do SOFTWARE: as 11 categorias, os 4 status (Disponível, Em uso, Pendente, Inutilizável) e a configuração — nenhuma conta ([T](../decisoes/acesso.md#t--não-há-conta-semeada)) | o que é da EMPRESA, como exemplo: fabricantes, modelos, localizações, colaboradores, licenças e itens de estoque (abaixo), e a conta de entrar. Roda o principal antes |
+| o que cria | o que é do SOFTWARE: as 12 categorias, os 4 status (Disponível, Em uso, Pendente, Inutilizável) e a configuração — nenhuma conta ([T](../decisoes/acesso.md#t--não-há-conta-semeada)) | o que é da EMPRESA, como exemplo: fabricantes, modelos, localizações, colaboradores, licenças e itens de estoque (abaixo), e a conta de entrar. Roda o principal antes |
 | arquivos | `prisma/seeds/*.seed.ts`, ordem em `prisma/seeds/index.ts` | `prisma/seeds/demo/*.seed.ts`, ordem em `prisma/seeds/demo/index.ts` |
 
 Fabricante, modelo e localização ficam **fora** do principal de propósito:
@@ -328,7 +329,7 @@ cadastram os próprios.
 | **Localizações** | Matriz, Filial (exemplo), Depósito de TI (onde fica o estoque) e Home office (uma só para todo mundo de casa, sem endereço) |
 | **Colaboradores** | PESSOA1 a PESSOA5, com e-mail `pessoa1@gmail.com` a `pessoa5@gmail.com` |
 | **Licenças** | duas por categoria: Windows 11 Pro e Windows 10 Pro, Microsoft 365 e WinRAR (uma licença só, para a empresa inteira), Norton 360 e McAfee Total Protection, Adobe Photoshop e Canva Pro (só as da Microsoft com fabricante). Como recém-cadastradas: sem data, por isso sempre ativas, sem chave e sem entrega |
-| **Estoque** | Mouse USB, Teclado USB, Headset, Webcam, Monitor 24", Cabo HDMI, Adaptador USB-C para HDMI, Memória RAM 8 GB e SSD 480 GB, no Depósito de TI. Todos ativos e sem entrega |
+| **Estoque** | Mouse USB, Teclado USB, Headset, Webcam, Monitor 24", Cabo HDMI, Adaptador USB-C para HDMI, Memória RAM 8 GB, SSD 480 GB, Pilha AA e Toner para impressora (consumíveis), no Depósito de TI. Todos ativos e sem entrega |
 | **Conta** | Administrador, `admin@sentinel.com`, senha `admin` — só aqui, nunca no principal ([T](../decisoes/acesso.md#t--não-há-conta-semeada)) |
 
 Os dois são **idempotentes**: rodar de novo não duplica nem desfaz o que foi

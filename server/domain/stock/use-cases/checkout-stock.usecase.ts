@@ -48,6 +48,12 @@ import type { CheckoutStockInput } from '../schemas/stock.schema';
 // O COMPONENTE tem a recusa "antes da compra" — a do COMPUTADOR, como a
 // licença instalada nele: a peça não entra numa máquina que ainda não tinha
 // sido comprada.
+//
+// O CONSUMÍVEL (AJ) vai a colaborador ou posto, como o estoque, mas não volta:
+// as linhas nascem FECHADAS — devolvidas no próprio instante da entrega, marcadas
+// `CONSUMED` — e o total diminui na mesma transação. Fechadas, elas ficam
+// fora de toda conta de "em uso" e de posse sem que nenhuma delas mude: o
+// colaborador que recebeu toner se desativa, e o posto se exclui.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const FK_DO_ALVO = {
@@ -184,8 +190,9 @@ export async function checkoutStock(itemId: string, data: CheckoutStockInput, at
 
     // A conta, DEPOIS da trava. Antes dela seria a mesma leitura suja que o
     // `if` sozinho faz.
+    const consumivel = item.category.type === 'CONSUMABLE';
     const { emUso } = await contarUsoDe(tx, itemId);
-    assertDisponivel(item, data.qty, emUso);
+    assertDisponivel(item, data.qty, emUso, consumivel);
 
     const dia = data.checkoutAt ?? hojeNoBrasil();
     if (compraDoAlvo && dia < compraDoAlvo) {
@@ -195,8 +202,14 @@ export async function checkoutStock(itemId: string, data: CheckoutStockInput, at
       );
     }
 
-    // Ausente, quem preenche é o `@default(now())`.
-    const checkoutAt = data.checkoutAt ? instanteDoDia(data.checkoutAt) : undefined;
+    // Ausente, quem preenche é o `@default(now())` — menos no consumível, que
+    // fecha a linha no mesmo instante e precisa dele escrito nas duas colunas.
+    const checkoutAt = data.checkoutAt
+      ? instanteDoDia(data.checkoutAt)
+      : consumivel ? new Date() : undefined;
+    const consumida = consumivel
+      ? { returnedAt: checkoutAt, returnRecordedAt: new Date(), returnKind: 'CONSUMED' as const }
+      : {};
 
     // UMA ida ao banco para as N linhas, com as duas travas seguradas o menor
     // tempo possível — e as N com o MESMO `createdAt` (o `now()` da transação),
@@ -210,9 +223,16 @@ export async function checkoutStock(itemId: string, data: CheckoutStockInput, at
         targetAssetId: data.targetType === 'ASSET' ? alvoId : null,
         notes: data.notes ?? null,
         checkoutAt,
+        ...consumida,
       })),
       select: STOCK_MOVEMENT_SELECT,
     });
+
+    // O consumível sai do TOTAL, que é o que existe (AJ). Pelo client, para o
+    // `updatedAt` subir e a edição aberta em outra tela receber o 409.
+    if (consumivel) {
+      await tx.stockItem.update({ where: { id: itemId }, data: { qty: { decrement: data.qty } } });
+    }
 
     const disponivel = item.qty - emUso - data.qty;
 
@@ -234,6 +254,7 @@ export async function checkoutStock(itemId: string, data: CheckoutStockInput, at
         checkoutAt: unidades[0].checkoutAt.toISOString(),
         disponivel,
         movementIds: unidades.map((unidade) => unidade.id),
+        ...(consumivel ? { consumivel: true, totalDoItem: { de: item.qty, para: item.qty - data.qty } } : {}),
       },
     }, ator);
 

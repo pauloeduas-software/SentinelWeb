@@ -4,9 +4,9 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { cenarioDePosse, criarColaborador, criarItemDeEstoque, criarPosto } from '../helpers/fixtures';
 
 // AS INVARIANTES DO ESTOQUE — o saldo calculado, a forma da entrega, o total que
-// nunca desce do que está em uso nem de 1, a categoria do tipo certo, o
-// desativar e o excluir, e a ponta da invariante 6. A mesma lógica da licença
-// (AE).
+// nunca desce do que está em uso nem fica negativo (o cadastro começa com 1, AJ),
+// a categoria do tipo certo, o desativar e o excluir, e a ponta da invariante 6.
+// A mesma lógica da licença (AE).
 //
 // Uma linha de `stock_items` é o item, cada unidade entregue é uma linha de
 // `stock_movements`, e o disponível é `qty − COUNT(abertas)` — nunca coluna. Se
@@ -140,17 +140,24 @@ describe('o alvo da entrega é UM — e quem garante é o banco', () => {
     // mão, um script. Testar por HTTP seria impossível por construção.
     const dock = await item('Dock do CHECK', 1);
     const inserir = (colunas: Record<string, unknown>) => prisma.$executeRawUnsafe(
-      `INSERT INTO stock_movements (id, "itemId", "targetType", "targetPersonId", "targetWorkstationId", "checkoutAt", "returnedAt", "returnRecordedAt", "createdAt")
-       VALUES (gen_random_uuid(), $1::uuid, $2::"StockTarget", $3::uuid, $4::uuid, now(), $5::timestamp, $6::timestamp, now())`,
+      `INSERT INTO stock_movements (id, "itemId", "targetType", "targetPersonId", "targetWorkstationId", "checkoutAt", "returnedAt", "returnRecordedAt", "returnKind", "createdAt")
+       VALUES (gen_random_uuid(), $1::uuid, $2::"StockTarget", $3::uuid, $4::uuid, now(), $5::timestamp, $6::timestamp, $7::"StockReturnKind", now())`,
       colunas.semItem ? null : dock.id, colunas.targetType, colunas.targetPersonId ?? null, colunas.targetWorkstationId ?? null, colunas.returnedAt ?? null,
-      colunas.returnRecordedAt ?? null,
+      colunas.returnRecordedAt ?? null, colunas.returnKind ?? null,
     ).then(() => null, (erro: Error) => erro.message);
 
     expect(await inserir({ targetType: 'PERSON', targetPersonId: cenario.laura, targetWorkstationId: cenario.mesa1 }))
       .toMatch(/stock_movements_forma/);
     expect(await inserir({ targetType: 'WORKSTATION', targetPersonId: cenario.laura })).toMatch(/stock_movements_forma/);
-    expect(await inserir({ targetType: 'PERSON', targetPersonId: cenario.laura, returnedAt: '2000-01-01', returnRecordedAt: '2000-01-01' }))
-      .toMatch(/stock_movements_devolucao_nao_antecede_entrega/);
+    expect(await inserir({
+      targetType: 'PERSON', targetPersonId: cenario.laura, returnedAt: '2000-01-01', returnRecordedAt: '2000-01-01', returnKind: 'RETURNED',
+    })).toMatch(/stock_movements_devolucao_nao_antecede_entrega/);
+    // Como saiu anda com a devolução (AJ): a devolvida sem dizer como, e o "como"
+    // na unidade em uso, não entram.
+    const devolvida = { targetType: 'PERSON', targetPersonId: cenario.laura, returnedAt: '2999-01-01', returnRecordedAt: '2999-01-01' };
+    expect(await inserir(devolvida)).toMatch(/stock_movements_fechamento_com_devolucao/);
+    expect(await inserir({ targetType: 'PERSON', targetPersonId: cenario.laura, returnKind: 'RETURNED' }))
+      .toMatch(/stock_movements_fechamento_com_devolucao/);
     // O dia da devolução sem o instante do registro — ou o contrário — não entra.
     expect(await inserir({ targetType: 'PERSON', targetPersonId: cenario.laura, returnedAt: '2999-01-01' }))
       .toMatch(/stock_movements_devolucao_registrada/);
@@ -162,9 +169,10 @@ describe('o alvo da entrega é UM — e quem garante é o banco', () => {
     // E a linha bem formada entra.
     expect(await inserir({ targetType: 'WORKSTATION', targetWorkstationId: cenario.mesa1 })).toBeNull();
 
-    // O total de zero também não entra, nem por fora.
-    expect(await prisma.$executeRawUnsafe(`UPDATE stock_items SET qty = 0 WHERE id = $1::uuid`, dock.id)
-      .then(() => null, (erro: Error) => erro.message)).toMatch(/stock_items_qty_positiva/);
+    // O total negativo também não entra, nem por fora. O zero entra: é o item
+    // que acabou (AJ).
+    expect(await prisma.$executeRawUnsafe(`UPDATE stock_items SET qty = -1 WHERE id = $1::uuid`, dock.id)
+      .then(() => null, (erro: Error) => erro.message)).toMatch(/stock_items_qty_nao_negativa/);
   });
 
   it('as constraints existem no banco', async () => {
@@ -175,9 +183,10 @@ describe('o alvo da entrega é UM — e quem garante é o banco', () => {
        WHERE contype = 'c' AND conrelid IN ('stock_movements'::regclass, 'stock_items'::regclass)
     `;
     expect(constraints.map((c) => c.conname).sort()).toEqual([
-      'stock_items_qty_positiva',
+      'stock_items_qty_nao_negativa',
       'stock_movements_devolucao_nao_antecede_entrega',
       'stock_movements_devolucao_registrada',
+      'stock_movements_fechamento_com_devolucao',
       'stock_movements_forma',
       'stock_movements_item_presente',
     ]);
@@ -202,7 +211,7 @@ describe('o total é campo da edição, como a quantidade comprada da licença',
     expect((await lerItem(fone.id)).body).toMatchObject({ qty: 2, disponivel: 0 });
   });
 
-  it('o total nunca é zero: nem no cadastro, nem na edição', async () => {
+  it('o cadastro começa com ao menos 1; a edição leva o total a 0, o item que acabou (AJ)', async () => {
     const corpo = { name: 'Item que nasceria vazio', categoryId: cenario.categoriaEstoqueId };
     const zero = await api.post<{ error: string }>('/api/stock/items', { ...corpo, qty: 0 });
     expect(zero.status).toBe(422);
@@ -212,8 +221,16 @@ describe('o total é campo da edição, como a quantidade comprada da licença',
     expect(await prisma.stockItem.count({ where: { name: corpo.name } })).toBe(0);
 
     const pilha = await item('Pilha que acabou', 2);
-    expect((await api.put(`/api/stock/items/${pilha.id}`, { qty: 0 })).status).toBe(422);
-    expect((await lerItem(pilha.id)).body.qty).toBe(2);
+    expect((await api.put(`/api/stock/items/${pilha.id}`, { qty: -1 })).status).toBe(422);
+    expect((await api.put(`/api/stock/items/${pilha.id}`, { qty: 0 })).status).toBe(200);
+    expect((await lerItem(pilha.id)).body).toMatchObject({ qty: 0, disponivel: 0, isActive: true });
+
+    // Com 0, não há o que entregar — e a frase diz o total.
+    const semNada = await paraLaura(pilha.id);
+    expect(semNada.status).toBe(409);
+    expect(semNada.body.error).toBe(
+      'Sem unidade disponível de "Pilha que acabou": 0 no total, 0 em uso. Devolva uma unidade ou aumente o total.',
+    );
   });
 
   it('a quantidade é número de verdade: null, texto, booleano e lista são 422 — nunca viram 0 ou 1', async () => {

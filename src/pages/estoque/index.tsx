@@ -36,7 +36,7 @@ export default function EstoquePage() {
           <p className="text-xs text-text-tertiary mt-2 font-mono max-w-2xl leading-relaxed">
             O que não é computador: monitor, teclado, mouse, cabo. Cada item tem um total, e cada
             uso é uma entrega — a um colaborador ou a um posto. O componente, como memória e SSD,
-            vai só para um computador.
+            vai só para um computador. O consumível, como toner e pilha, sai do total na entrega.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -60,7 +60,7 @@ export default function EstoquePage() {
         search={search}
         onSearchChange={changeSearch}
         placeholder="Buscar por nome, categoria ou localização..."
-        filtros={<CategoriaFiltro tipo="STOCK,COMPONENT" valor={categoryId} onChange={changeCategoria} />}
+        filtros={<CategoriaFiltro tipo="STOCK,COMPONENT,CONSUMABLE" valor={categoryId} onChange={changeCategoria} />}
         page={page}
         perPage={perPage}
         total={total}

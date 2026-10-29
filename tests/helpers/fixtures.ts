@@ -28,7 +28,7 @@ function exigir201<T>(o_que: string, resposta: { status: number; body: unknown }
 /** Os ids que o seed deixa prontos. Lidos, nunca criados. */
 export async function idsDoSeed() {
   const [
-    deployable, emUso, categoria, licenca, estoque, componente,
+    deployable, emUso, categoria, licenca, estoque, componente, consumivel,
   ] = await Promise.all([
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'DEPLOYABLE' }, select: { id: true } }),
     prisma.statusLabel.findFirstOrThrow({ where: { type: 'IN_USE' }, select: { id: true } }),
@@ -43,6 +43,9 @@ export async function idsDoSeed() {
     // A do componente (AI): "Peça de reposição" nasce `COMPONENT` no seed — o
     // item dela vai só para computador.
     prisma.category.findFirstOrThrow({ where: { type: 'COMPONENT' }, select: { id: true } }),
+    // A do consumível (AJ): "Material de consumo" nasce `CONSUMABLE` no seed — a
+    // entrega do item dela tira do total e não volta.
+    prisma.category.findFirstOrThrow({ where: { type: 'CONSUMABLE' }, select: { id: true } }),
   ]);
 
   return {
@@ -52,6 +55,7 @@ export async function idsDoSeed() {
     categoriaLicencaId: licenca.id,
     categoriaEstoqueId: estoque.id,
     categoriaComponenteId: componente.id,
+    categoriaConsumivelId: consumivel.id,
   };
 }
 

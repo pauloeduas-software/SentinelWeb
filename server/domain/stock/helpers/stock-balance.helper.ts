@@ -137,16 +137,25 @@ function quantas(total: number, singular: string, plural: string): string {
 /**
  * A recusa da entrega sem unidade — com os NÚMEROS na frase, para a tela não ter
  * que recontar, e o que fazer, como a `fraseSemVaga` da licença.
+ *
+ * O CONSUMÍVEL (AJ) nunca tem unidade em uso, e não se devolve: a frase dele
+ * diz só o total, e manda somar a compra nova.
  */
-export function assertDisponivel(item: { name: string; qty: number }, pedidas: number, emUso: number): void {
+export function assertDisponivel(
+  item: { name: string; qty: number },
+  pedidas: number,
+  emUso: number,
+  consumivel = false,
+): void {
   const disponivel = item.qty - emUso;
   if (pedidas <= disponivel) return;
 
   // Duas frases, porque são dois estados: nada disponível, ou menos do que a
   // entrega pede. "Sem unidade disponível" com duas na gaveta seria falsa.
-  const conta = `${item.qty} no total, ${emUso} em uso`;
+  const conta = consumivel ? `${item.qty} no total` : `${item.qty} no total, ${emUso} em uso`;
+  const remedio = consumivel ? 'Aumente o total quando comprar mais.' : 'Devolva uma unidade ou aumente o total.';
   const frase = disponivel <= 0
-    ? `Sem unidade disponível de "${item.name}": ${conta}. Devolva uma unidade ou aumente o total.`
+    ? `Sem unidade disponível de "${item.name}": ${conta}. ${remedio}`
     : `Sem unidade suficiente de "${item.name}": a entrega pede ${pedidas} e há `
       + `${quantas(disponivel, 'disponível', 'disponíveis')} (${conta}).`;
 

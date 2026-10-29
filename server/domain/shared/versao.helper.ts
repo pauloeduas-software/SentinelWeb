@@ -9,7 +9,9 @@ import { AppError } from '../../core/errors/app-error';
 // compara com o da linha TRAVADA: diferente, ninguém grava por cima de ninguém.
 //
 // O `updatedAt` muda em toda gravação da linha, e só nela: a entrega de licença
-// e a de estoque gravam em outra tabela e não esbarram no Editar aberto.
+// e a de estoque gravam em outra tabela e não esbarram no Editar aberto. A que
+// muda o TOTAL do item — a entrega do consumível (AJ) — grava nele de
+// propósito, e o Editar aberto antes recebe o 409.
 // Usuários ficam de fora: o login grava na linha da conta a cada entrada, e o
 // formulário daria 409 sem ninguém ter editado nada.
 

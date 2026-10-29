@@ -8,7 +8,7 @@ import {
 } from '../../../domain/stock/stock.queries';
 import type { ItemDeEstoque } from '../../../domain/shared/stock.types';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
-import { classeDaConta, ehComponente, motivoParaNaoEntregar, resumoDaContagem } from '../helpers/estoque.helper';
+import { classeDaConta, ehComponente, ehConsumivel, motivoParaNaoEntregar, resumoDaContagem } from '../helpers/estoque.helper';
 
 // O DETALHE DO ITEM: a conta, as ações da lista, todos os campos do cadastro,
 // quem está com ele agora e o histórico — as duas listas de 15 em 15. É o
@@ -89,7 +89,8 @@ export default function ItemDetalheModal({
   const [paginaDasEntregas, setPaginaDasEntregas] = useState(1);
   const [busca, setBusca] = useState(buscaInicial);
   const buscaAdiada = useDebouncedValue(busca);
-  const entregas = useStockCheckoutsQuery(item.id, {
+  // O consumível (AJ) não fica com ninguém: nem busca "Com quem está".
+  const entregas = useStockCheckoutsQuery(ehConsumivel(item) ? null : item.id, {
     page: paginaDasEntregas, perPage: POR_PAGINA, q: buscaAdiada || undefined,
   });
 
@@ -99,6 +100,9 @@ export default function ItemDetalheModal({
   const atual = detalhe ?? item;
   const motivoSemEntrega = motivoParaNaoEntregar(atual);
   const componente = ehComponente(atual);
+  // O consumível (AJ) não fica com ninguém: a entrega tira do total, e o
+  // histórico é o único lugar onde ela aparece.
+  const consumivel = ehConsumivel(atual);
 
   const mudarBusca = (valor: string) => {
     setBusca(valor);
@@ -175,7 +179,7 @@ export default function ItemDetalheModal({
             <Campo rotulo="Notas" largo>{atual.notes ?? '—'}</Campo>
           </div>
 
-          <div className="space-y-3">
+          {!consumivel && <div className="space-y-3">
             <span className={ROTULO}>{componente ? 'Em quais computadores' : 'Com quem está'}</span>
             <ListToolbar
               search={busca}
@@ -200,7 +204,7 @@ export default function ItemDetalheModal({
                 onDevolver={onDevolver}
               />
             </Estado>
-          </div>
+          </div>}
 
           <div className="space-y-3">
             <span className={ROTULO}>Histórico</span>
