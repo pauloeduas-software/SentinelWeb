@@ -1,7 +1,7 @@
 # Colaboradores
 
-> A tela `/colaboradores`: quem recebe equipamento — o ativo, o posto que ocupa,
-> a licença e o estoque no nome dele. O que ele é, a ficha, e o que a exclusão,
+> A tela `/colaboradores`: quem recebe equipamento — o computador, o posto que
+> ocupa, a licença e o estoque no nome dele. O que ele é, a ficha, e o que a exclusão,
 > a lixeira e a desativação recusam. O cadastro é o do catálogo, com as regras
 > de [`configuracoes.md`](configuracoes.md) (*O que vale para as seis*); quem
 > responde pelo quê é a Camada 2 de [`modelo-de-posse.md`](modelo-de-posse.md),
@@ -35,25 +35,34 @@ Usuários, e é outra tabela
 ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)).
 Um não vira o outro: quem opera o sistema e também tem um notebook é cadastrado
 aqui à parte, à mão — nada cria colaborador a partir de usuário.
-**Campos:** nome completo e e-mail.
+**Campos:** nome completo, e-mail e notas.
 
 - **O e-mail é opcional** — o colaborador não faz login — e único quando
   preenchido entre os que não estão na lixeira, gravado em minúsculas:
   `E-mail já está em uso por outro colaborador.`
   O nome **não** é único: dois "João Silva" existem, e é o e-mail que os separa.
+- **As notas** são texto livre, como as dos outros cadastros — "afastada até
+  março", "terceirizado da empresa X" — e aparecem na ficha, abaixo do nome. Não
+  entram na lista nem na busca, que é por nome e e-mail.
 - **A lista de escolha** (`/api/people/options`) é o seletor de pessoa da
   entrega de ativo, do posto, da licença e da entrega de estoque.
 
 ## A ficha
 
-O botão 📄 abre `/colaboradores/:id`: os **postos** que a pessoa
-ocupa (com o turno), os **itens de estoque** e as **licenças** no nome dela — cada
-um com o link para o detalhe do item ou da licença, já filtrado pelo nome dela, onde está o
-Devolver — e o
-**histórico**, que é só movimentação: entregas e devoluções de ativo, entradas e
-saídas de posto, licenças e estoque recebidos e devolvidos. Só o que foi entregue a
-ELA: as licenças do computador que ela usa ficam na aba Licenças do ativo, e o
-estoque da mesa que ela ocupa, na ficha do posto. Só leitura.
+O botão 📄 abre `/colaboradores/:id`: o nome, o e-mail e as notas; os
+**computadores** entregues a ela (com o modelo, a devolução prevista e desde
+quando), os **postos** que ela ocupa (com o turno), os **itens de estoque** e as
+**licenças** no nome dela — e o **histórico**, que é só movimentação: entregas e
+devoluções de computador, licença e estoque, entradas e saídas de posto.
+
+São as quatro coisas que a desativação e a exclusão cobram, e cada linha leva
+para onde ela se resolve: o computador, à ficha dele, onde está o Devolver; o
+posto, à ficha do posto, onde está o Encerrar; o item e a licença, ao detalhe
+deles, já filtrado pelo nome dela, onde está o Devolver.
+
+Só o que foi entregue a ELA: o computador do posto que ela ocupa e o estoque da
+mesa ficam na ficha do posto, e as licenças do computador que ela usa, na aba
+Licenças do computador. Só leitura.
 
 ## Exclusão, lixeira e desativação
 
@@ -65,8 +74,10 @@ licenças continua com o nome dele, e ele some das listas, dos seletores e da
 ficha (404).
 
 Só não se exclui quem responde por algo **agora** (invariante 6) — 409 com a
-conta, a mesma da desativação:
-`Este colaborador ainda responde por 1 ativo e ocupa 1 posto. Devolva o que está com ele e encerre as ocupações antes de excluir.`
+conta, a mesma da desativação, e cada coisa pelo nome:
+`Este colaborador ainda responde por 1 ativo (ATV-00012) e ocupa 1 posto (Mesa 1). Devolva o que está com ele e encerre as ocupações antes de excluir.`
+O computador, a licença, o item e o posto citados vão também como `refs`, e o
+aviso põe um link em cada um, na ordem da frase.
 
 **A aba Lixeira** fica na própria página, ao lado da lista. **Restaurar** devolve a mesma
 pessoa, com o histórico inteiro; se o e-mail dela foi reaproveitado por outro
@@ -91,6 +102,7 @@ desfaz.
 
 | Assunto | Arquivo |
 |---|---|
-| lixeira, restaurar, a recusa que diz o quê, desativação, `/options` | `tests/invariantes/colaborador.test.ts`, `tests/invariantes/posse.test.ts` |
-| o corpo literal do formulário (e-mail em branco vira nulo, único e em minúsculas) | `tests/formularios/corpo-literal.test.ts` |
+| lixeira, restaurar, a recusa que diz o quê (com os links), desativação, `/options` | `tests/invariantes/colaborador.test.ts`, `tests/invariantes/posse.test.ts` |
+| a ficha: o computador dela e não o do posto, as notas | `tests/invariantes/colaborador.test.ts` |
+| o corpo literal do formulário (e-mail e notas em branco viram nulo; e-mail único e em minúsculas) | `tests/formularios/corpo-literal.test.ts` |
 | o histórico da ficha, com as quatro fontes | `tests/listagens/historico-da-pessoa.test.ts`, `tests/licencas/historico.test.ts`, `tests/estoque/operacoes.test.ts` |

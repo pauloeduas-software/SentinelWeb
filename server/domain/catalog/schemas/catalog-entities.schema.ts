@@ -106,10 +106,13 @@ const emailDoColaborador = z
   .transform((valor) => (valor === undefined ? undefined : valor || null))
   .pipe(z.email('e-mail inválido').max(320, 'e-mail: máximo de 320 caracteres').nullish());
 
-export const createPersonSchema = z.strictObject({ name: nomeObrigatorio(), email: emailDoColaborador });
+export const createPersonSchema = z.strictObject({
+  name: nomeObrigatorio(), email: emailDoColaborador, notes: textoOpcional('notas', 2_000),
+});
 // `isActive` só na EDIÇÃO: é o botão Desativar/Ativar, que no catálogo só o
 // colaborador tem (AO).
 export const updatePersonSchema = z.strictObject({
-  name: nomeObrigatorio().optional(), email: emailDoColaborador, isActive: booleano('ativo').optional(),
+  name: nomeObrigatorio().optional(), email: emailDoColaborador, notes: textoOpcional('notas', 2_000),
+  isActive: booleano('ativo').optional(),
   updatedAt: versaoLida,
 });

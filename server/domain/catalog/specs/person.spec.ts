@@ -23,9 +23,9 @@ export const personSpec: CatalogSpec = {
   createSchema: createPersonSchema,
   updateSchema: updatePersonSchema,
 
-  select: { id: true, name: true, email: true, isActive: true, createdAt: true, updatedAt: true },
+  select: { id: true, name: true, email: true, notes: true, isActive: true, createdAt: true, updatedAt: true },
   searchable: ['name', 'email'],
-  audited: ['name', 'email', 'isActive'],
+  audited: ['name', 'email', 'notes', 'isActive'],
 
   // SEM `nomeUnicoPor`: dois "João Silva" existem, e quem os separa é o
   // e-mail (`beforeWrite`).
@@ -46,10 +46,10 @@ export const personSpec: CatalogSpec = {
   // segura: ele fica com a linha na lixeira.
   countUsages: async (client, id) => {
     const posse = await contarPosseAberta(client, id);
-    return posse.ativosEmPosse + posse.postosOcupados + posse.licencas.length + posse.itens.length;
+    return posse.ativos.length + posse.postos.length + posse.licencas.length + posse.itens.length;
   },
 
-  // A recusa diz O QUÊ — "responde por 1 ativo e ocupa 1 posto" —, e não "em
+  // A recusa diz O QUÊ — "responde por 1 ativo (ATV-00012) e ocupa 1 posto (Mesa 1)" —, e não "em
   // uso por 2 registros": cada ponta se resolve numa tela diferente. A trava
   // vem antes da contagem, pelo mesmo motivo da desativação: sem ela, uma
   // entrega simultânea nasceria depois da contagem e a pessoa iria para a

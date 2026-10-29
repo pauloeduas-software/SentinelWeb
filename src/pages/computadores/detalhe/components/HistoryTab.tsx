@@ -53,7 +53,7 @@ function Evento({ evento }: { evento: EventoDoAtivo }) {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           {dePosse
-            ? <ArrowRightLeft size={13} className="text-status-info shrink-0" />
+            ? <ArrowRightLeft size={13} className="text-text-tertiary shrink-0" />
             : <Icone size={13} className="text-text-tertiary shrink-0" />}
           <span className="text-text-primary">{tituloDoEvento(evento)}</span>
         </div>

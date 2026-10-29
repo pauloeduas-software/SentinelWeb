@@ -22,6 +22,7 @@ export const colaborador: CatalogUiSpec = {
     { key: 'name', label: 'Nome completo', tipo: 'text', obrigatorio: true, largura: 'inteira' },
     { key: 'email', label: 'E-mail', tipo: 'text', largura: 'inteira',
       ajuda: 'Opcional. O colaborador não entra no sistema; o e-mail só ajuda a separar dois nomes iguais.' },
+    { key: 'notes', label: 'Notas', tipo: 'textarea', largura: 'inteira' },
   ],
   acoes: [
     desativar(false),

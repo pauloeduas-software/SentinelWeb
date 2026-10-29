@@ -210,17 +210,18 @@ describe('POST /api/users com o corpo literal do UserFormModal', () => {
 describe('POST /api/people com o corpo literal da página Colaboradores', () => {
   /** Os `campos` da spec `colaborador` (src/pages/colaboradores/specs/index.ts), em branco. */
   function corpoDoFormularioDeColaborador(sobrescrever: Record<string, unknown> = {}) {
-    return { name: '', email: '', ...sobrescrever };
+    return { name: '', email: '', notes: '', ...sobrescrever };
   }
 
-  it('aceita o e-mail em branco, e grava nulo — colaborador não faz login', async () => {
-    const { status, body } = await api.post<{ email: string | null }>(
+  it('aceita o e-mail e as notas em branco, e grava nulo — colaborador não faz login', async () => {
+    const { status, body } = await api.post<{ email: string | null; notes: string | null }>(
       '/api/people',
       corpoDoFormularioDeColaborador({ name: 'Sem E-mail' }),
     );
 
     expect(status).toBe(201);
     expect(body.email).toBeNull();
+    expect(body.notes).toBeNull();
   });
 
   it('e-mail é único e gravado em minúsculas', async () => {

@@ -146,8 +146,9 @@ resposta de erro.
 `error.message` de banco ou de biblioteca **nunca** vai para o cliente. E o corpo de
 toda resposta de erro é `{ error }` — a frase —, com uma exceção só: quando a frase cita
 registros que a tela pode abrir, `refs` vai ao lado (`AppError(mensagem, status, refs)`) — a
-recusa do colaborador e do ativo com licença aberta manda as licenças, e a tela põe um link em
-cada uma ([AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)).
+recusa do colaborador manda os computadores, as licenças, os itens e os postos que ela cita, a
+do ativo, as licenças e os componentes, e a tela põe um link em cada um
+([AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)).
 O 422 de validação não manda o mapa por campo
 ([Q](../decisoes/escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai)). A frase
 é o contrato e continua completa sem `refs`: no front, `ErroDaApi` guarda o corpo (`corpo`), e
