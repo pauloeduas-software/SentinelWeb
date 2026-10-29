@@ -234,7 +234,7 @@ banco sem a linha diz só o que a conta mandou; o vínculo repetido não
 grava nada, e o aceite fecha a sugestão junto com o vínculo; `UPDATE` e `DELETE` na tabela são
 recusados pelo banco, e o texto em branco também; o agente
 e o job em `SUGGEST` não mexem em cadastro, posse nem estoque e não gravam; o
-`conceder-administrador` não grava o que não mudou; e senha, hash e chave de licença nunca chegam à
+`acesso:administrador` assina como sistema; e senha, hash e chave de licença nunca chegam à
 tabela. `id-da-requisicao.test.ts` prova que o `X-Request-Id` do cliente é ignorado.
 
 ### `invariantes/versao.test.ts` — o Editar velho não grava por cima

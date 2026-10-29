@@ -7,6 +7,8 @@ import { registerPermissionGuard } from '../../server/core/http/permission-guard
 import { ROTAS_POR_PERMISSAO } from '../../server/domain/access/helpers/route-permissions';
 import { exigirPermissao } from '../../server/domain/access/helpers/require-permission';
 import type { FastifyRequest } from 'fastify';
+import { criarAdministrador } from '../../server/domain/access/cli/criar-administrador.cli';
+import { ADMIN_DE_TESTE } from '../setup/database';
 
 // AS INVARIANTES DO ACESSO (D148) — e a que importa é a segunda.
 //
@@ -195,6 +197,32 @@ describe('a senha no cadastro — todo usuário entra', () => {
     expect(resposta.status).toBe(422);
     expect(resposta.body.error).toMatch(/cargo/i);
     expect((await api.put(`/api/users/${api.adminId}`, { role: 'INEXISTENTE' })).status).toBe(422);
+  });
+});
+
+describe('o comando que cria administrador (AP)', () => {
+  it('cria a conta como Administrador, e ela entra com a senha', async () => {
+    const email = 'pelo.terminal@teste.local';
+    const conta = await criarAdministrador({ nome: 'Pelo Terminal', email, senha: 'Senha-Do-Terminal-12' });
+
+    const linha = await prisma.user.findUniqueOrThrow({ where: { id: conta.id }, select: { role: true, isActive: true } });
+    expect(linha).toEqual({ role: 'ADMIN', isActive: true });
+    expect((await api.anonimo.post('/api/auth/login', { email, password: 'Senha-Do-Terminal-12' })).status)
+      .toBe(200);
+  });
+
+  it('cria mesmo com administrador no sistema: é a saída de quem perdeu a senha', async () => {
+    expect(await prisma.user.count({ where: { role: 'ADMIN', isActive: true } })).toBeGreaterThan(0);
+    await expect(criarAdministrador({ nome: 'Socorro', email: 'socorro@teste.local', senha: 'Senha-Do-Socorro-12' }))
+      .resolves.toMatchObject({ email: 'socorro@teste.local' });
+  });
+
+  it('as regras são as do cadastro: e-mail em uso e senha curta são recusados', async () => {
+    await expect(criarAdministrador({ nome: 'Repetido', email: ADMIN_DE_TESTE.email, senha: 'Senha-Repetida-12' }))
+      .rejects.toThrow('E-mail já está em uso.');
+    await expect(criarAdministrador({ nome: 'Curta', email: 'curta@teste.local', senha: 'curta' }))
+      .rejects.toThrow(/12/);
+    expect(await prisma.user.findUnique({ where: { email: 'curta@teste.local' } })).toBeNull();
   });
 });
 

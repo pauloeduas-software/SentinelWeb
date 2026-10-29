@@ -3,7 +3,7 @@
 // A diferença entre as formas é o que a auditoria existe para provar: uma CONTA
 // do painel fez, ou o SISTEMA fez sozinho. A conta vem da sessão
 // (`auth/helpers/actor.helper.ts`), nunca do corpo da requisição; o sistema se
-// identifica pela origem ('job:reconciliacao', 'cli:conceder-administrador').
+// identifica pela origem ('job:reconciliacao', 'cli:criar-administrador').
 //
 // A terceira, SEM SESSÃO, é a tela de login: a senha errada e a conta
 // bloqueada acontecem NUMA conta, mas quem digitou não provou ser ela. Gravar
