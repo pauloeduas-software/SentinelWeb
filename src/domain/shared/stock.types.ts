@@ -9,12 +9,13 @@ import type { Referencia } from './asset.types';
 // `server/domain/stock/helpers/stock-select.helper.ts`.
 //
 // O item de categoria COMPONENTE (memória, SSD) vai só para computador — o
-// alvo `ASSET` — e o resto nunca vai (AI).
+// alvo `ASSET` — e o resto nunca vai (AI). O de categoria CONSUMÍVEL (toner,
+// pilha) vai a colaborador ou posto e não volta: a entrega tira do total (AJ).
 
 type AlvoDaEntrega = 'PERSON' | 'WORKSTATION' | 'ASSET';
 
 interface CategoriaDoItem extends Referencia {
-  /** `STOCK` ou `COMPONENT` — é ele que diz para onde o item vai (AI). */
+  /** `STOCK`, `COMPONENT` ou `CONSUMABLE` — é ele que diz para onde o item vai, e se volta (AI, AJ). */
   type: string;
 }
 
@@ -27,7 +28,7 @@ interface CategoriaDoItem extends Referencia {
 export interface ItemDeEstoque {
   id: string;
   name: string;
-  /** O TOTAL — muda pela edição, nunca abaixo do que está em uso. */
+  /** O TOTAL, o que existe — muda pela edição e pela entrega do consumível; nunca abaixo do que está em uso. */
   qty: number;
   categoryId: string;
   /** Onde o que sobra fica guardado (o Depósito de TI). */
@@ -107,7 +108,7 @@ export interface EntregaNaFicha {
 export interface ItemDeEstoqueInput {
   name: string;
   categoryId: string;
-  /** O total: ao menos 1, no cadastro e na edição, e nunca abaixo do que está em uso. */
+  /** O total: ao menos 1 no cadastro; na edição pode ser 0, e nunca abaixo do que está em uso. */
   qty: number;
   locationId: string | null;
   notes: string | null;

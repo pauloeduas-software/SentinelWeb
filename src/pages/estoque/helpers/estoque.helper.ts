@@ -5,13 +5,14 @@ import { textoDeUnidades } from '../../helpers/estoque.helper';
 // outras telas também mostram — o link do item — mora em
 // `src/pages/helpers/estoque.helper.ts`.
 
-/** "10 no total · 7 em uso · 3 disponíveis". */
-export function resumoDaContagem(item: Pick<ItemDeEstoque, 'qty' | 'emUso' | 'disponivel'>): string {
-  return [
-    `${item.qty} no total`,
-    `${item.emUso} em uso`,
-    `${item.disponivel} ${item.disponivel === 1 ? 'disponível' : 'disponíveis'}`,
-  ].join(' · ');
+/**
+ * "10 no total · 7 em uso · 3 disponíveis". O consumível (AJ) nunca tem unidade
+ * em uso, e o total dele é o disponível: só "3 disponíveis".
+ */
+export function resumoDaContagem(item: Pick<ItemDeEstoque, 'qty' | 'emUso' | 'disponivel' | 'category'>): string {
+  const disponiveis = `${item.disponivel} ${item.disponivel === 1 ? 'disponível' : 'disponíveis'}`;
+  if (ehConsumivel(item)) return disponiveis;
+  return [`${item.qty} no total`, `${item.emUso} em uso`, disponiveis].join(' · ');
 }
 
 /**
@@ -30,6 +31,14 @@ export function classeDaConta(item: Pick<ItemDeEstoque, 'disponivel'>): string {
  */
 export function ehComponente(item: Pick<ItemDeEstoque, 'category'>): boolean {
   return item.category.type === 'COMPONENT';
+}
+
+/**
+ * O item é CONSUMÍVEL (AJ)? A categoria diz: a entrega tira do total e não
+ * volta — não tem "Com quem está" nem Devolver.
+ */
+export function ehConsumivel(item: Pick<ItemDeEstoque, 'category'>): boolean {
+  return item.category.type === 'CONSUMABLE';
 }
 
 /** "Entregue a Mesa 1 · 5 unidades", "Instalado em ATV-00012 · 1 unidade". */

@@ -57,7 +57,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 22 | O que está em uso nunca passa da quantidade comprada | **aplicação** — a entrega e a edição contam com a linha da licença travada (`lock-license.usecase.ts`) | 409 `Sem licença livre em "Office 2024": 5 compradas, 5 em uso. Devolva uma entrega ou aumente a quantidade comprada.` |
 | 23 | Uma entrega aberta por alvo e licença | **banco** — dois índices únicos parciais, um por alvo. No passado, a entrega que se sobrepõe à última devolução do mesmo alvo é só da **aplicação** (422) | 409 `Laura Souza já está com "Office 2024".` (a API confere antes) |
 | 24 | A chave da entrega é uma das chaves da licença; nenhuma chave vai para mais entregas abertas do que cobre; e as chaves cobrem no máximo o que foi comprado | **banco** — a FK composta (chave, licença) e os `CHECK`s da chave. A conta de cada chave e a soma contra o comprado são da **aplicação**, com a licença travada | 409 `Esta chave já está em outra entrega aberta de "Office 2024". Escolha outra.` / 422 `As chaves cobrem 12, mais do que 10 compradas em "Office 2024". …` |
-| 25 | A forma da entrega de estoque, e o que está em uso nunca passa do total | **banco** — o CHECK do total (`stock_items_qty_positiva`), os quatro `CHECK` da linha e a FK `Restrict` para o item. A conta contra o total é da **aplicação**, com a linha do item travada | 409 `Sem unidade disponível de "Mouse USB": 10 no total, 10 em uso. Devolva uma unidade ou aumente o total.` / `Não dá para reduzir "Mouse USB" para 1: 2 estão em uso. Devolva para liberar.` |
+| 25 | A forma da entrega de estoque, e o que está em uso nunca passa do total | **banco** — o CHECK do total (`stock_items_qty_nao_negativa`), os cinco `CHECK` da linha e a FK `Restrict` para o item. A conta contra o total é da **aplicação**, com a linha do item travada | 409 `Sem unidade disponível de "Mouse USB": 10 no total, 10 em uso. Devolva uma unidade ou aumente o total.` / `Não dá para reduzir "Mouse USB" para 1: 2 estão em uso. Devolva para liberar.` |
 
 ---
 
@@ -709,7 +709,7 @@ uma chave ou diminua o que ela cobre antes.`
 ### 25 — A entrega de estoque, e o total que não fica abaixo do que está em uso
 
 ```sql
-ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_qty_positiva" CHECK ("qty" >= 1);
+ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_qty_nao_negativa" CHECK ("qty" >= 0);
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_forma" CHECK (
      ("targetType" = 'PERSON' AND "targetPersonId" IS NOT NULL AND "targetWorkstationId" IS NULL
       AND "targetAssetId" IS NULL)
@@ -724,6 +724,8 @@ ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_devolucao_nao_ante
   CHECK ("returnedAt" IS NULL OR "returnedAt" >= "checkoutAt");
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_devolucao_registrada"
   CHECK (("returnedAt" IS NULL) = ("returnRecordedAt" IS NULL));
+ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_fechamento_com_devolucao"
+  CHECK (("returnedAt" IS NULL) = ("returnKind" IS NULL));
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_item_presente" CHECK (
   "itemId" IS NOT NULL OR ("returnedAt" IS NOT NULL AND "itemName" IS NOT NULL)
 );
@@ -734,7 +736,10 @@ O estoque segue a conta da licença
 `disponível = qty − unidades abertas`, e cada linha de `stock_movements` é **uma unidade
 entregue**. A invariante tem, como a 24, uma metade no banco e outra na aplicação.
 
-**No banco, a forma.** O total é ao menos 1 — o item que acabou se desativa. A linha tem UM alvo,
+**No banco, a forma.** O total é o que existe, e nunca negativo: chega a 0 quando acaba, pela
+entrega do consumível ou pela edição ([AJ](../decisoes/estoque.md#aj--o-consumível-é-uma-categoria-e-o-total-é-o-que-existe));
+o cadastro com ao menos 1 é da aplicação. A unidade que saiu diz sempre como — devolvida ou
+consumida —, e a em uso, nada. A linha tem UM alvo,
 o que o `targetType` diz — o computador (`ASSET`) é só do componente, e quem confere a categoria
 é a aplicação ([AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar)) —, e a devolução não fica antes da entrega e tem o dia e o instante do
 registro juntos — o instante é o que separa duas devoluções no mesmo dia; a entrega devolvida de um posto
@@ -747,14 +752,15 @@ também (AG): toda entrega em uso aponta para o item (CHECK `stock_movements_ite
 tabela. Mora em quem conta e grava: a **entrega** (`checkout-stock.usecase.ts`) e a **edição**
 que reduz o total (`update-stock-item.usecase.ts`), as duas com a linha do item travada
 (`travarItemOuFalhar`). Sem a trava, duas entregas liam "1 disponível" e as duas gravavam. A
-ordem é colaborador ou computador → item → posto; a devolução trava só as linhas da entrega, porque só diminui o
-que está em uso.
+ordem é colaborador ou computador → item → posto; a devolução trava só as linhas da
+entrega, porque só diminui o que está em uso. A entrega do consumível tira do total
+também — uma unidade de cada lado, e a conta não muda.
 
 **O disponível negativo se mostra.** Só nasce de uma linha criada por fora da trava, e a tela o
 mostra em vermelho em vez de zerá-lo: esconder seria apagar o sintoma.
 
 > **Provado em** `tests/estoque/invariantes.test.ts` (o `INSERT` cru da linha incoerente é
-> recusado, as constraints existem, o total nunca é zero, a FK não deixa apagar item com entrega) e
+> recusado, as constraints existem, o total nunca é negativo e o "como saiu" anda com a devolução, a FK não deixa apagar item com entrega) e
 > `tests/estoque/corridas.test.ts` (cinco entregas simultâneas num estoque de três: passam três; a
 > redução do total contra a entrega nunca deixa a conta passar dele).
 

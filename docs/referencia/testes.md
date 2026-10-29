@@ -79,9 +79,9 @@ configurar nada (só precisa do Postgres de pé: `docker compose up -d`).
 ### `estoque/` — a que falharia em silêncio
 
 **`invariantes.test.ts` › os CHECKs do Postgres recusam a linha incoerente mesmo por fora da API.**
-`stock_movements_forma` (uma unidade com exatamente um alvo), `stock_items_qty_positiva`, a
-devolução que não antecede a entrega, a que tem o dia sem o instante do registro e a entrega em uso
-sem item existem para quem não passa pelo use-case — o `psql` à mão, um
+`stock_movements_forma` (uma unidade com exatamente um alvo), `stock_items_qty_nao_negativa`, a
+devolução que não antecede a entrega, a que tem o dia sem o instante do registro, a devolvida sem
+dizer como (ou o "como" na unidade em uso) e a entrega em uso sem item existem para quem não passa pelo use-case — o `psql` à mão, um
 script. Testar isso por HTTP seria impossível por construção; o teste insere direto no banco e lê a
 mensagem do Postgres.
 
@@ -238,7 +238,7 @@ tabela. `id-da-requisicao.test.ts` prova que o `X-Request-Id` do cliente é igno
 ### `invariantes/versao.test.ts` — o Editar velho não grava por cima
 
 O Editar manda o `updatedAt` que leu ao abrir ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)). Cada caso salva no meio — outra edição, o
-Encerrar da licença, o total do item, a entrega do computador — e prova que a versão velha é 409,
+Encerrar da licença, o total do item, a entrega do consumível, a entrega do computador — e prova que a versão velha é 409,
 com a frase, e que nada foi gravado; a versão atual e a ausente passam, e a que não é data e hora
 é 422. Cadastro novo com Editar entra nesta lista.
 

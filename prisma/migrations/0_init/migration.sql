@@ -28,7 +28,7 @@ CREATE TYPE "Cargo" AS ENUM ('ADMIN');
 CREATE TYPE "AuditActorType" AS ENUM ('USER', 'SYSTEM', 'ANONYMOUS');
 
 -- CreateEnum
-CREATE TYPE "CategoryType" AS ENUM ('ASSET', 'LICENSE', 'STOCK', 'COMPONENT');
+CREATE TYPE "CategoryType" AS ENUM ('ASSET', 'LICENSE', 'STOCK', 'COMPONENT', 'CONSUMABLE');
 
 -- CreateEnum
 CREATE TYPE "StatusLabelType" AS ENUM ('DEPLOYABLE', 'IN_USE', 'PENDING', 'UNDEPLOYABLE');
@@ -55,6 +55,9 @@ CREATE TYPE "SuggestionState" AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED', 'SUPER
 
 -- CreateEnum
 CREATE TYPE "StockTarget" AS ENUM ('PERSON', 'WORKSTATION', 'ASSET');
+
+-- CreateEnum
+CREATE TYPE "StockReturnKind" AS ENUM ('RETURNED', 'CONSUMED');
 
 -- CreateTable
 CREATE TABLE "endpoints" (
@@ -429,6 +432,7 @@ CREATE TABLE "stock_movements" (
     "checkoutAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "returnedAt" TIMESTAMP(3),
     "returnRecordedAt" TIMESTAMP(3),
+    "returnKind" "StockReturnKind",
     "notes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -834,13 +838,13 @@ ALTER TABLE "licenses" ADD CONSTRAINT "licenses_encerramento_nao_antecede_compra
   "purchaseDate" IS NULL OR "terminationDate" IS NULL OR "terminationDate" >= "purchaseDate"
 );
 
--- ── O ESTOQUE: A FORMA DA ENTREGA (docs/decisoes/estoque.md, J e AE) ───────
+-- ── O ESTOQUE: A FORMA DA ENTREGA (docs/decisoes/estoque.md, J, AE e AJ) ──
 --
--- O total é ao menos 1, no cadastro e na edição, como a quantidade comprada da
--- licença: o item que acabou se desativa, e o disponível chega a zero pela
--- entrega, o total nunca.
-ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_qty_positiva"
-  CHECK ("qty" >= 1);
+-- O total é o que existe, e nunca negativo. O cadastro pede ao menos 1 (a
+-- aplicação); depois ele chega a 0 quando acaba — a unidade que recebeu baixa
+-- ou foi consumida sai dele (AJ).
+ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_qty_nao_negativa"
+  CHECK ("qty" >= 0);
 
 -- Cada linha é UMA unidade com exatamente UM alvo, o que o discriminante diz.
 -- A entrega JÁ DEVOLVIDA para um posto excluído fica sem FK, com o nome por
@@ -873,6 +877,11 @@ ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_devolucao_nao_ante
 -- dia passado é sempre o meio-dia, e duas devoluções no mesmo dia viravam uma.
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_devolucao_registrada"
   CHECK (("returnedAt" IS NULL) = ("returnRecordedAt" IS NULL));
+
+-- COMO SAIU ANDA COM A DEVOLUÇÃO (AJ): a unidade em uso não tem, e a que saiu
+-- tem sempre — devolvida ou consumida.
+ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_fechamento_com_devolucao"
+  CHECK (("returnedAt" IS NULL) = ("returnKind" IS NULL));
 
 -- ── A AUDITORIA: O AUTOR COERENTE E A LINHA QUE NÃO SE REESCREVE (AB) ─────
 --

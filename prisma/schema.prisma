@@ -310,11 +310,15 @@ model AuditLog {
 // `COMPONENT` também é item de estoque, mas o que vai PARA DENTRO do computador
 // — memória, SSD (AI). É a categoria que decide para onde o item vai: o de
 // `STOCK` só a colaborador ou posto, o de `COMPONENT` só a computador.
+//
+// `CONSUMABLE` é o item que se gasta e não volta — toner, pilha (AJ). Vai a
+// colaborador ou posto, como o `STOCK`, e a entrega tira do total na hora.
 enum CategoryType {
   ASSET
   LICENSE
   STOCK
   COMPONENT
+  CONSUMABLE
 }
 
 // O tipo do status responde: *o que dá para fazer com este ativo agora?*
@@ -914,7 +918,7 @@ model LicenseCheckout {
   // Nulo só na entrega DEVOLVIDA de uma licença que foi excluída — o nome dela
   // fica em `licenseName`, a regra do posto (AG). Em uso, aponta sempre para a
   // licença (CHECK `license_checkouts_licenca_presente`).
-  licenseId String? @db.Uuid
+  licenseId   String? @db.Uuid
   /// O nome da licença, por escrito, quando ela foi excluída.
   licenseName String?
 
@@ -1120,15 +1124,24 @@ enum StockTarget {
   ASSET
 }
 
+// COMO a unidade deixou de estar com quem a recebeu (AJ). `RETURNED` é a
+// devolução, e volta ao disponível. `CONSUMED` é do consumível, e nasce com a
+// entrega: a linha já sai fechada.
+enum StockReturnKind {
+  RETURNED
+  CONSUMED
+}
+
 model StockItem {
   id   String @id @default(uuid()) @db.Uuid
   // Único entre TODOS, desativados inclusive: o item que volta a ser comprado
   // se reativa, e o histórico dele continua junto.
   name String @unique
 
-  // QUANTO HÁ NO TOTAL — não quanto sobra. Ao menos 1, no cadastro e na edição
-  // (CHECK `stock_items_qty_positiva`): o item que acabou se desativa. Reduzir
-  // não passa do que está em uso (`update-stock-item`).
+  // QUANTO EXISTE — não quanto sobra. Ao menos 1 no cadastro; depois chega a 0
+  // quando acaba (AJ): a unidade que recebeu baixa ou foi consumida sai daqui
+  // (CHECK `stock_items_qty_nao_negativa`). Reduzir não passa do que está
+  // em uso (`update-stock-item`).
   qty Int
 
   categoryId String  @db.Uuid
@@ -1171,11 +1184,11 @@ model StockItem {
 // A forma da linha é CHECK do banco, escrito à mão na migration
 // (`stock_movements_forma`): exatamente um alvo, o que o discriminante diz.
 model StockMovement {
-  id     String  @id @default(uuid()) @db.Uuid
+  id       String  @id @default(uuid()) @db.Uuid
   // Nulo só na entrega DEVOLVIDA de um item que foi excluído — o nome dele fica
   // em `itemName`, como o do posto em `targetWorkstationName`. Em uso, aponta
   // sempre para o item (CHECK `stock_movements_item_presente`).
-  itemId String? @db.Uuid
+  itemId   String? @db.Uuid
   /// O nome do item, por escrito, quando ele foi excluído.
   itemName String?
 
@@ -1191,15 +1204,19 @@ model StockMovement {
 
   /// O DIA da entrega, como o `checkoutAt` da licença: hoje é a hora real, um dia
   /// passado é o meio-dia de Brasília (`instanteDoDia`).
-  checkoutAt DateTime  @default(now())
+  checkoutAt       DateTime         @default(now())
   /// Nulo = unidade EM USO. É o que o saldo conta. Nunca antes da entrega (CHECK).
   /// É o DIA da devolução, como o `checkoutAt`: duas devoluções no mesmo dia
   /// passado têm o mesmo — por isso a chave da devolução é a coluna de baixo.
-  returnedAt DateTime?
+  returnedAt       DateTime?
   /// O instante em que a devolução foi REGISTRADA — o mesmo nas N linhas que
   /// voltaram juntas: é a chave da devolução, como o `createdAt` é a da entrega.
   /// Nula junto com `returnedAt`, e só (CHECK `stock_movements_devolucao_registrada`).
   returnRecordedAt DateTime?
+  /// Como a unidade saiu de quem estava com ela — nulo junto com `returnedAt`
+  /// (CHECK `stock_movements_fechamento_com_devolucao`). No consumível,
+  /// `CONSUMED` desde a entrega (AJ).
+  returnKind       StockReturnKind?
 
   /// A observação da entrega. A devolução não tem a sua.
   notes String?

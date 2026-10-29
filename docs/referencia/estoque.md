@@ -1,11 +1,12 @@
 # Estoque
 
-> A tela `/estoque`: o que não é computador — monitor, teclado, mouse, cabo, e os componentes que
-> vão para dentro dele, como memória e SSD —, com um total e a quem as unidades foram entregues. O
-> que o item é, as contas, o que a entrega e a devolução recusam, e onde o estoque aparece fora da
-> própria tela. É a lógica da licença ([`licencas.md`](licencas.md)), com quantidade. As decisões
-> estão em [`../decisoes/estoque.md`](../decisoes/estoque.md) (a última é a
-> [AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar));
+> A tela `/estoque`: o que não é computador — monitor, teclado, mouse, cabo, os componentes que
+> vão para dentro dele, como memória e SSD, e os consumíveis, como toner e pilha —, com um total e
+> a quem as unidades foram entregues. O que o item é, as contas, o que a entrega e a devolução
+> recusam, e onde o estoque aparece fora da própria tela. É a lógica da licença
+> ([`licencas.md`](licencas.md)), com quantidade. As decisões estão em
+> [`../decisoes/estoque.md`](../decisoes/estoque.md) (a última é a
+> [AJ](../decisoes/estoque.md#aj--o-consumível-é-uma-categoria-e-o-total-é-o-que-existe));
 > as regras que viram fato permanente no banco estão em [`invariantes.md`](invariantes.md)
 > (a 6, a 21 e a 25).
 
@@ -15,18 +16,22 @@
 
 **N unidades intercambiáveis de uma mesma coisa**, sem patrimônio individual, entregues a quem
 usa. Ativo é computador; o resto entra aqui, por quantidade. **Campos:** nome, categoria (do
-tipo Estoque ou Componente, ativa) e quantidade, obrigatórios; localização (onde o que sobra fica guardado — o
+tipo Estoque, Componente ou Consumível, ativa) e quantidade, obrigatórios; localização (onde o que sobra fica guardado — o
 Depósito de TI) e notas, opcionais. O cadastro não entra no histórico da tela, que é só entregas
 e devoluções; ele fica na auditoria, no banco, com quem fez
 ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)).
 
-- **A quantidade é o total, de 1 a 100.000**, no cadastro e depois dele: zero não é item, e o que
-  acabou se desativa. O piso tem o CHECK `stock_items_qty_positiva`; o teto é só da aplicação.
-- **A categoria decide para onde o item vai**
-  ([AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar)):
-  o de categoria Estoque vai a colaborador ou posto, e o de categoria **Componente** vai só a
-  computador — ver [O componente](#o-componente). O formulário oferece as categorias dos dois
-  tipos, e diz abaixo do campo quando a escolhida é de componente.
+- **A quantidade é o total, o que existe** ([AJ](../decisoes/estoque.md#aj--o-consumível-é-uma-categoria-e-o-total-é-o-que-existe)):
+  o cadastro pede de 1 a 100.000; depois ele chega a 0 quando acaba — pela entrega do consumível
+  ou pela edição, que também aceita 0. O item com 0 continua ativo, sem
+  unidade disponível, até alguém somar a compra nova. Negativo nunca: o CHECK
+  `stock_items_qty_nao_negativa`; o teto é só da aplicação.
+- **A categoria decide para onde o item vai, e se ele volta**
+  ([AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar), AJ):
+  o de categoria Estoque vai a colaborador ou posto; o de categoria **Componente** vai só a
+  computador — ver [O componente](#o-componente); o de categoria **Consumível** vai a colaborador
+  ou posto e não volta — ver [O consumível](#o-consumível). O formulário oferece as categorias dos
+  três tipos, e diz abaixo do campo quando a escolhida é de componente ou de consumível.
 - **A entrega vai para um colaborador OU para um posto**, nunca os dois
   ([D33](../decisoes/estoque.md#d33--o-acessório-entregue-a-um-posto-é-do-posto-os-ocupantes-respondem-solidariamente)).
   Entregar 5 mouses à Mesa 1 vale **5**, qualquer que seja o número de ocupantes: quem responde
@@ -48,12 +53,13 @@ leitura ([D34](../decisoes/estoque.md#d34--saldo-é-sempre-calculado-nunca-colun
 
 | | |
 |---|---|
-| **em uso** | unidades entregues e não devolvidas |
+| **em uso** | unidades entregues e não devolvidas — o consumível nunca tem |
 | **disponível** | total − em uso |
 | **já entregue** | alguma unidade, aberta ou devolvida — o item tem passado |
 
 **Aumentar o total sempre pode. Reduzir não passa do que está em uso** (invariante 25), com a
-mesma trava do item que a entrega usa:
+mesma trava do item que a entrega usa. Quem reduz sozinho é a entrega do consumível, que sai e não
+volta — uma unidade de cada lado, e a conta não muda:
 `Não dá para reduzir "Mouse USB" para 1: 2 estão em uso. Devolva para liberar.`
 
 **O disponível negativo aparece, em vermelho**, em vez de ser zerado: só acontece com uma linha
@@ -64,7 +70,7 @@ criada por fora da trava (o `psql` à mão), e esconder a inconsistência seria 
 | | |
 |---|---|
 | **a lista** | **uma só**, pelo nome, com os desativados — sem abas, como nas Configurações. Busca por nome, categoria e localização — o texto ao pé da letra, `%` e `_` não são curinga; filtro de categoria |
-| **a linha** | nome (e as notas), categoria, localização e "10 no total · 7 em uso · 3 disponíveis". Sem cor pelo valor. A do desativado fica esmaecida, com a marca "desativado" ao lado do nome |
+| **a linha** | nome (e as notas), categoria, localização e "10 no total · 7 em uso · 3 disponíveis" — no consumível, só "3 disponíveis". Sem cor pelo valor. A do desativado fica esmaecida, com a marca "desativado" ao lado do nome |
 | **as ações** | as das Configurações, que aparecem ao passar o mouse: Entregar (desabilitado sem disponível, com o motivo no `title`; some no desativado), Editar, Desativar/Ativar e Excluir — com confirmação no Desativar e no Excluir |
 | **o detalhe** | no cabeçalho, a conta ("Desativado · 10 no total · 7 em uso · 3 disponíveis") e as ações da lista, com as mesmas regras (Entregar e Editar voltam ao detalhe ao fechar; excluído, a janela fecha). Depois, todos os campos do cadastro. **Com quem está**: as entregas abertas, da mais recente para a mais antiga, 15 por página, com busca pelo nome do colaborador ou do posto — "Mesa 1 · 5 unidades · desde 12/10/2026", com a observação —, e Devolver em cada linha. **Histórico**: só entregas e devoluções, por entrega, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
 
@@ -162,8 +168,8 @@ mesmos do resto do estoque.
   máquina.
 - **Sai pelo Retirar**, que é a devolução: quantas e o dia, na linha de **Em quais computadores**
   (o "Com quem está" do componente, com busca pela etiqueta ou pelo nome do computador). Serve à
-  troca de peça, à máquina que vai ser descartada e à entrega lançada errado. Se a peça saiu junto
-  com a máquina, retire e depois diminua o total do item.
+  troca de peça, à máquina que vai ser descartada e à entrega lançada errado. Se a peça queimou ou
+  saiu junto com a máquina, retire e depois diminua o total do item.
 - **O computador com componente instalado não recebe baixa nem vai para a lixeira** — a regra da
   licença por máquina. O 409 diz quais, com cada item em link para o detalhe dele.
 - **A compra do computador** editada não vai para depois do primeiro componente instalado.
@@ -180,6 +186,35 @@ mesmos do resto do estoque.
 | baixa ou lixeira do computador com componente | 409 `ATV-00012 ainda tem os componentes Memória RAM 8 GB ×2. Retire pela tela de Estoque antes de dar baixa.` (na lixeira, `Este ativo ainda tem … antes de excluir.`) |
 | compra do computador depois do primeiro componente | 422 `A data de compra (…) não pode ser depois do primeiro componente instalado em ATV-00012 (…).` |
 | trocar a categoria com unidade em uso | 409 `"Memória RAM 8 GB" tem 2 unidades em uso e não pode passar de componente para estoque. Retire antes de trocar a categoria.` |
+
+## O consumível
+
+**O item cuja categoria é do tipo Consumível** — toner, pilha — se gasta e não volta
+([AJ](../decisoes/estoque.md#aj--o-consumível-é-uma-categoria-e-o-total-é-o-que-existe)).
+A "Material de consumo" do seed é Consumível. O cadastro, o desativar e o excluir são os mesmos do
+resto do estoque.
+
+- **O Entregar** é o do estoque: colaborador ou posto, quantas, o dia e a observação. A entrega
+  **tira do total** na hora e não fica "em uso" com ninguém. A janela diz isso embaixo.
+- **Não volta**: não tem Devolver, e o detalhe do item não tem "Com quem está". O histórico do item
+  e o do colaborador mostram a entrega, e só ela.
+- **Não prende ninguém**: o colaborador que recebeu toner se desativa, e o posto se exclui. A ficha
+  do colaborador e a do posto não mostram o consumível.
+- **Acaba no 0**: sem unidade, a entrega é 409 e manda somar a compra nova pelo Editar.
+- **A entrega lançada errado não se desfaz**: some de volta no total, pelo Editar.
+- **Trocar a categoria** entre Estoque, Componente e Consumível só sem unidade em uso. O consumível
+  nunca tem, e passa a estoque sempre.
+
+| Tentativa | Resposta |
+|---|---|
+| consumível para computador | 422 `"Pilha AA" não é componente: vai para um colaborador ou um posto, não para um computador.` |
+| sem unidade | 409 `Sem unidade disponível de "Toner": 0 no total. Aumente o total quando comprar mais.` — ou, com menos do que a entrega pede, `Sem unidade suficiente de "Toner": a entrega pede 3 e há 2 disponíveis (2 no total).` |
+| devolver a entrega do consumível | 409 `"Toner" é consumível: a entrega não volta.` |
+| trocar de estoque para consumível com unidade em uso | 409 `"Mouse USB" tem 1 unidade em uso e não pode passar de estoque para consumível. Devolva antes de trocar a categoria.` |
+
+**No banco**, a entrega do consumível grava as N linhas **já fechadas**: devolvidas no mesmo
+instante da entrega, marcadas `CONSUMED`. Fechadas, elas ficam fora de toda conta de "em uso"
+e de posse sem que nenhuma dessas contas mude.
 
 ## Fora da tela de Estoque
 
@@ -222,8 +257,8 @@ Todas `ADMIN` ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a
 
 **As travas:** a entrega trava o **colaborador** (no alvo pessoa) ou o **computador** (no
 componente) e depois o **item**; o posto é lido `FOR SHARE` depois do item. A baixa e a lixeira do
-computador o travam antes de contar os componentes. A edição e a exclusão travam o item. A devolução trava só as
-linhas da entrega: ela só diminui o que está em uso. A entrega agrupada mora em
+computador o travam antes de contar os componentes. A edição e a exclusão travam o item. A devolução
+trava só as linhas da entrega: ela só diminui o que está em uso. A entrega agrupada mora em
 `helpers/stock-lote.helper.ts`; a conta, em `helpers/stock-balance.helper.ts`.
 
 **A busca** é a `contemTexto` (`server/domain/shared/busca.helper.ts`), a mesma de todas as
@@ -231,7 +266,9 @@ listagens. As ordens terminam em `id`, para a mesma linha não aparecer em duas 
 
 ## O que não existe
 
-- entrada e baixa — o total é um número que se digita na edição;
+- entrada e baixa — o total é um número que se digita na edição, e a unidade que quebrou ou se
+  perdeu volta pelo Devolver e sai pelo Editar, como no Snipe-IT e no GLPI;
+- desfazer a entrega do consumível — o total se corrige pelo Editar;
 - lixeira e restaurar;
 - vencimento, status, chave e dados de compra — são do contrato da licença;
 - alerta de mínimo, e alerta, aba ou filtro de "desativado ainda em uso" — a linha esmaecida mostra a conta;
@@ -247,4 +284,5 @@ listagens. As ordens terminam em `id`, para a mesma linha não aparecer em duas 
 | a lista (conta, busca, o desativado na mesma lista), "Com quem está" por entrega, a devolução parcial, o histórico por entrega (duas devoluções no mesmo dia são duas), os dias, as fichas e o histórico do colaborador | `tests/estoque/operacoes.test.ts` |
 | o saldo calculado, as frases sem unidade, o posto que não multiplica, os CHECKs, o total na edição e na auditoria, a quantidade que é número de verdade, o nome único sem diferença de maiúscula, a categoria, desativar e excluir (a regra do posto, com o nome por escrito), a invariante 6 e o 409 do posto com os itens, as rotas | `tests/estoque/invariantes.test.ts` |
 | o componente: a categoria que decide o alvo, o computador baixado e na lixeira, as datas contra a compra, o componente que fica quando o computador muda de mãos, o Retirar, os dois históricos, a busca pela etiqueta, a baixa e a lixeira recusadas, a troca de categoria, o seletor com os dois tipos e o CHECK | `tests/estoque/componente.test.ts` |
+| o consumível: a entrega que tira do total, o posto e o dia passado, o computador recusado, o 0 e as frases, sem devolução, não prende ninguém, a exclusão, o histórico só com a entrega e a troca de categoria | `tests/estoque/consumivel.test.ts` |
 | as corridas: entregas simultâneas, total × entrega, devoluções da mesma entrega, a troca do tipo da categoria × cadastro, exclusão × entrega e o item e o posto excluídos ao mesmo tempo | `tests/estoque/corridas.test.ts` |

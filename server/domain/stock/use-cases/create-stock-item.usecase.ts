@@ -13,9 +13,10 @@ import { CAMPOS_AUDITADOS_DO_ITEM, STOCK_ITEM_SELECT } from '../helpers/stock-se
 import type { CreateStockItemInput } from '../schemas/stock.schema';
 
 /**
- * A categoria do item tem que ser do tipo ESTOQUE ou COMPONENTE — e é ela que
- * decide para onde o item vai (AI): o de Estoque a colaborador ou posto, o de
- * Componente só a computador.
+ * A categoria do item tem que ser do tipo ESTOQUE, COMPONENTE ou CONSUMÍVEL — e
+ * é ela que decide para onde o item vai (AI): o de Estoque e o de Consumível a
+ * colaborador ou posto, o de Componente só a computador. O de Consumível não
+ * volta (AJ).
  *
  * O banco não impede — a FK aceita qualquer categoria —, e é o `type` que
  * separa: um item de estoque numa categoria de ATIVO é o mesmo erro que "Em
@@ -34,9 +35,10 @@ export async function assertCategoriaDeEstoque(
 ): Promise<string> {
   const categoria = await lerCategoriaTravada(client, categoryId);
   if (!categoria) throw new AppError('Categoria não encontrada.', 404);
-  if (categoria.type !== 'STOCK' && categoria.type !== 'COMPONENT') {
+  if (categoria.type !== 'STOCK' && categoria.type !== 'COMPONENT' && categoria.type !== 'CONSUMABLE') {
     throw new AppError(
-      `A categoria de um item de estoque precisa ser do tipo Estoque ou Componente, e "${categoria.name}" não é.`,
+      'A categoria de um item de estoque precisa ser do tipo Estoque, Componente ou Consumível, '
+      + `e "${categoria.name}" não é.`,
       422,
     );
   }

@@ -16,6 +16,9 @@ import { rotuloDoComputador } from '../helpers/stock-select.helper';
 // alvo são UM evento ("Entregue a Mesa 1 · 5 unidades"), e as que voltaram na
 // mesma devolução (o mesmo `returnRecordedAt`) são UMA devolução — duas no mesmo
 // dia são duas.
+//
+// O CONSUMÍVEL (AJ) não tem devolução: a linha dele nasce fechada, `CONSUMED`, e
+// o histórico mostra só a entrega.
 
 export interface EventoDoItem {
   /** Estável para a tela: a entrega e qual dos dois eventos dela. */
@@ -76,7 +79,7 @@ export async function listStockHistory(
            GROUP BY "createdAt", "targetType", "targetPersonId", "targetWorkstationId", "targetWorkstationName", "targetAssetId"
         ) AS entregas)
         + (SELECT count(*) FROM (
-          SELECT 1 FROM stock_movements WHERE "itemId" = ${itemId}::uuid AND "returnedAt" IS NOT NULL
+          SELECT 1 FROM stock_movements WHERE "itemId" = ${itemId}::uuid AND "returnedAt" IS NOT NULL AND "returnKind" <> 'CONSUMED'
            GROUP BY "createdAt", "targetType", "targetPersonId", "targetWorkstationId", "targetWorkstationName", "targetAssetId", "returnRecordedAt"
         ) AS devolucoes)
       )::int AS total
@@ -94,7 +97,7 @@ export async function listStockHistory(
                "targetType", "targetPersonId", "targetWorkstationId", "targetWorkstationName", "targetAssetId",
                NULL, count(*)::int
           FROM stock_movements
-         WHERE "itemId" = ${itemId}::uuid AND "returnedAt" IS NOT NULL
+         WHERE "itemId" = ${itemId}::uuid AND "returnedAt" IS NOT NULL AND "returnKind" <> 'CONSUMED'
          GROUP BY "createdAt", "targetType", "targetPersonId", "targetWorkstationId", "targetWorkstationName", "targetAssetId", "returnRecordedAt"
       ) AS eventos
       ORDER BY at DESC, action ASC, registro DESC, lote DESC, "targetPersonId", "targetWorkstationId", "targetWorkstationName",

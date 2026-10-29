@@ -43,6 +43,8 @@ export const STOCK_MOVEMENT_SELECT = {
 
   checkoutAt: true,
   returnedAt: true,
+  // Como saiu (AJ): devolvida ou consumida.
+  returnKind: true,
   notes: true,
 
   createdAt: true,

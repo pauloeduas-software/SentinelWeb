@@ -147,6 +147,9 @@ export const TIPOS_CATEGORIA: readonly OpcaoFixa[] = [
   { value: 'COMPONENT', label: 'Componente',
     ajuda: 'Item por quantidade que vai para dentro do computador: memória, SSD. '
       + 'Só um computador recebe, e sai dele pelo Retirar.' },
+  { value: 'CONSUMABLE', label: 'Consumível',
+    ajuda: 'O que se gasta e não volta: toner, pilha. Vai para um colaborador ou um posto, '
+      + 'e a entrega tira do total.' },
   { value: 'LICENSE', label: 'Licença',
     ajuda: 'Software, com a quantidade comprada entregue a pessoas ou a máquinas.' },
 ];

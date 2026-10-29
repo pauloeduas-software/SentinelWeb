@@ -39,6 +39,14 @@ export async function checkinStock(movementId: string, data: Partial<CheckinStoc
       select: { ...STOCK_MOVEMENT_SELECT, itemName: true, item: { select: { name: true } } },
     });
     if (!unidade) throw new AppError('Nenhuma entrega de estoque com este identificador.', 404);
+    // O CONSUMÍVEL (AJ) não volta: a entrega dele já nasce fechada.
+    if (unidade.returnKind === 'CONSUMED') {
+      throw new AppError(
+        `"${unidade.item?.name ?? unidade.itemName ?? 'item excluído'}" é consumível: a entrega não volta.`,
+        409,
+      );
+    }
+
     // O ITEM EXCLUÍDO (AG) só deixa entrega já devolvida — a em uso segura a
     // exclusão. A tela velha que ainda mostra a linha recebe o mesmo 409.
     const componente = unidade.targetType === 'ASSET';
@@ -117,7 +125,10 @@ export async function checkinStock(movementId: string, data: Partial<CheckinStoc
     const ids = abertas.slice(abertas.length - pedidas).map((linha) => linha.id);
     // O DIA e o INSTANTE do registro: o instante é o que separa esta devolução
     // de outra da mesma entrega no mesmo dia — o dia passado é sempre o meio-dia.
-    await tx.stockMovement.updateMany({ where: { id: { in: ids } }, data: { returnedAt, returnRecordedAt: new Date() } });
+    await tx.stockMovement.updateMany({
+      where: { id: { in: ids } },
+      data: { returnedAt, returnRecordedAt: new Date(), returnKind: 'RETURNED' },
+    });
 
     await recordAudit(tx, {
       entityType: 'StockItem',

@@ -10,19 +10,26 @@ import { CAMPOS_AUDITADOS_DO_ITEM, STOCK_ITEM_SELECT } from '../helpers/stock-se
 import type { UpdateStockItemInput } from '../schemas/stock.schema';
 import { assertCategoriaDeEstoque, assertNomeLivre } from './create-stock-item.usecase';
 
+/** O tipo da categoria como a frase o diz. */
+const ROTULO_DO_TIPO: Record<string, string> = {
+  STOCK: 'estoque', COMPONENT: 'componente', CONSUMABLE: 'consumível',
+};
+
 /**
  * A EDIÇÃO — e ela pode mudar o total, como a da licença muda a quantidade
  * comprada (AE).
  *
- * `qty` é o TOTAL: chegaram mais, a recontagem deu outro número — digitar isso
- * É a correção, e nunca abaixo de 1 (o item que acabou se desativa). Aumentar
+ * `qty` é o TOTAL, o que existe: chegaram mais, a recontagem deu outro número —
+ * digitar isso É a correção, e pode chegar a 0, o item que acabou (AJ). Aumentar
  * sempre pode. Reduzir não passa do que está em uso: as unidades existem, estão
  * com alguém, e o total que diz menos do que isso é uma afirmação falsa sobre o
  * almoxarifado.
  *
- * TROCAR ENTRE ESTOQUE E COMPONENTE (a categoria de outro tipo, AI) só sem
- * unidade em uso: a que está com a Laura viraria componente fora de um
- * computador, e a instalada num computador viraria mouse dentro da máquina.
+ * TROCAR ENTRE ESTOQUE, COMPONENTE E CONSUMÍVEL (a categoria de outro tipo, AI e
+ * AJ) só sem unidade em uso: a que está com a Laura viraria componente fora de
+ * um computador, a instalada num computador viraria mouse dentro da máquina, e
+ * a que está em uso viraria consumível sem nunca ter sido consumida. O
+ * consumível nunca tem unidade em uso, e passa a estoque sempre.
  *
  * `isActive: false` é o DESATIVAR, e passa MESMO COM UNIDADE FORA — a tela
  * pergunta antes, com a frase das Configurações. É o Encerrar da licença:
@@ -45,8 +52,8 @@ export async function updateStockItem(id: string, data: UpdateStockItemInput, at
       if (tipo !== antes.category.type) {
         const { emUso } = await contarUsoDe(tx, id);
         if (emUso > 0) {
-          const de = antes.category.type === 'COMPONENT' ? 'componente' : 'estoque';
-          const para = tipo === 'COMPONENT' ? 'componente' : 'estoque';
+          const de = ROTULO_DO_TIPO[antes.category.type];
+          const para = ROTULO_DO_TIPO[tipo];
           throw new AppError(
             `"${antes.name}" tem ${emUso === 1 ? '1 unidade em uso' : `${emUso} unidades em uso`} e não pode `
             + `passar de ${de} para ${para}. ${de === 'componente' ? 'Retire' : 'Devolva'} antes de trocar a categoria.`,
