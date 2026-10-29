@@ -224,7 +224,6 @@ CREATE TABLE "workstations" (
     "name" TEXT NOT NULL,
     "locationId" UUID NOT NULL,
     "notes" TEXT,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 

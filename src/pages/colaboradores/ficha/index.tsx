@@ -2,7 +2,7 @@ import { ArrowLeft, Boxes, History, KeyRound, MapPin, UserX } from 'lucide-react
 import { Link } from 'react-router-dom';
 import HistoryPanel from './components/HistoryPanel';
 import { useColaborador } from './hooks/useColaborador';
-import { formatarData, formatarDiaDoInstante } from '../../helpers/format.helper';
+import { formatarDiaDoInstante } from '../../helpers/format.helper';
 import { caminhoDoItem, textoDeUnidades } from '../../helpers/estoque.helper';
 import { caminhoDaLicenca, textoDaSituacao } from '../../helpers/licenca.helper';
 
@@ -98,7 +98,7 @@ export default function ColaboradorPage() {
                 <tr key={ocupacao.id} className="hover:bg-bg-base transition-colors">
                   <td className={CELULA}>{ocupacao.workstation?.name ?? '—'}</td>
                   <td className={CELULA}>{ocupacao.shift || '—'}</td>
-                  <td className={`${CELULA} text-text-tertiary`}>{formatarData(ocupacao.startedAt)}</td>
+                  <td className={`${CELULA} text-text-tertiary`}>{formatarDiaDoInstante(ocupacao.startedAt)}</td>
                 </tr>
               ))}
               {ocupacoes.length === 0 && (
@@ -145,9 +145,6 @@ export default function ColaboradorPage() {
                     <Link to={caminhoDoItem(entrega.item.id, pessoa.name)} className="hover:underline underline-offset-2">
                       {entrega.item.name}
                     </Link>
-                    {!entrega.item.isActive && (
-                      <span className="ml-2 text-[10px] uppercase tracking-widest text-status-warning">desativado</span>
-                    )}
                     {entrega.notes && (
                       <div className="text-[10px] text-text-tertiary mt-0.5">{entrega.notes}</div>
                     )}

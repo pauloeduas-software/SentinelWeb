@@ -41,6 +41,25 @@ describe('excluir colaborador', () => {
     expect(recusa.body.error).toContain('antes de excluir');
   });
 
+  it('o notebook dela não vai para a lixeira antes da devolução — e ela não se desativa por baixo (AL)', async () => {
+    const pessoa = await criarColaborador(api, { name: 'Notebook na Lixeira', email: 'notebook.lixeira@teste.local' });
+    const notebook = await entregarNotebook(pessoa);
+
+    const recusa = await api.delete<{ error: string }>(`/api/assets/${notebook.id}`);
+    expect(recusa.status).toBe(409);
+    expect(recusa.body.error).toBe('Este ativo está entregue e não pode ir para a lixeira. Faça a devolução antes.');
+
+    // O notebook continua no nome dela, e a desativação continua vendo.
+    expect((await api.put(`/api/people/${pessoa}`, { isActive: false })).status).toBe(409);
+
+    // Devolvido, vai para a lixeira e volta sem apontar para ninguém.
+    expect((await api.post(`/api/assets/${notebook.id}/checkin`, {})).status).toBe(200);
+    expect((await api.delete(`/api/assets/${notebook.id}`)).status).toBe(200);
+    expect((await api.put(`/api/people/${pessoa}`, { isActive: false })).status).toBe(200);
+    expect((await api.post(`/api/assets/${notebook.id}/restore`)).status).toBe(200);
+    expect(await prisma.assignment.count({ where: { assetId: notebook.id, checkinAt: null } })).toBe(0);
+  });
+
   it('quem já devolveu vai para a lixeira, e o histórico do ativo continua com o nome', async () => {
     const pessoa = await criarColaborador(api, { name: 'Já Teve Notebook', email: 'ja.teve@teste.local' });
     const notebook = await entregarNotebook(pessoa);

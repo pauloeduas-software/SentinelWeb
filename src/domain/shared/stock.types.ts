@@ -85,10 +85,8 @@ export interface EventoDoItem {
 
 /**
  * Uma entrega aberta como a FICHA DO POSTO, a da PESSOA e a aba Componentes do
- * computador a recebem: o item, a
- * categoria, quantas e desde quando. `item.isActive` vem porque a unidade de um
- * item desativado continua na mesa, e a ficha precisa mostrá-la para alguém
- * devolvê-la — no detalhe do item, para onde a linha aponta.
+ * computador a recebem: o item, a categoria, quantas e desde quando. Sem o
+ * `isActive` do item: o item com unidade em uso não se desativa (AN).
  */
 export interface EntregaNaFicha {
   id: string;
@@ -99,7 +97,6 @@ export interface EntregaNaFicha {
   item: {
     id: string;
     name: string;
-    isActive: boolean;
     category: { id: string; name: string };
   };
 }

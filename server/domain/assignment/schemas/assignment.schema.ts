@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { dataNaoPassada, textoOpcional, uuidOpcional } from '../../shared/fields.schema';
+import { dataNaoPassada, diaNaoFuturo, textoOpcional, uuidOpcional } from '../../shared/fields.schema';
 
 // Contrato de entrada da ENTREGA e da DEVOLUÇÃO — as duas únicas operações que
 // escrevem posse (docs/referencia/modelo-de-posse.md).
@@ -31,10 +31,14 @@ export const checkoutSchema = z.strictObject({
   // PRAZO, e por isso não aceita o passado: uma entrega com devolução prevista
   // para ontem nasce VENCIDA — o prazo expira no mesmo segundo em que o
   // equipamento sai, que é um cadastro que ninguém quis fazer.
-  // O espelho é o `startedAt` da ocupação, que recusa o FUTURO pelo motivo
+  // O espelho é o dia da entrega, logo abaixo, que recusa o FUTURO pelo motivo
   // oposto (shared/fields.schema.ts).
   expectedCheckinAt: dataNaoPassada('devolução prevista'),
   checkoutNotes: textoOpcional('observações da entrega', 2_000),
+
+  // O DIA da entrega (AM), como na licença e no estoque: hoje por padrão, o
+  // passado para registrar a que já aconteceu — a carga inicial da D17.
+  checkoutAt: diaNaoFuturo('data da entrega'),
 });
 
 export const checkinSchema = z.strictObject({
@@ -44,6 +48,8 @@ export const checkinSchema = z.strictObject({
   // explícita.
   statusId: uuidOpcional('status'),
   checkinNotes: textoOpcional('observações da devolução', 2_000),
+  // O DIA da devolução (AM): hoje por padrão; nem futuro, nem antes da entrega.
+  checkinAt: diaNaoFuturo('data da devolução'),
   // O ESCOPO: fecha a posse só se ela aponta para este posto, senão 409.
   // É o que a ficha do posto manda, para não fechar a posse de outra pessoa
   // por cima de uma tela velha (`checkin-asset.usecase.ts`).

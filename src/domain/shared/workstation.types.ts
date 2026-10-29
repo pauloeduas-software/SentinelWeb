@@ -35,11 +35,6 @@ export interface Posto {
   id: string;
   name: string;
   notes: string | null;
-  /**
-   * `false` = o posto foi DESATIVADO: continua no histórico, mas não recebe
-   * entrega nem ocupante novo.
-   */
-  isActive: boolean;
   createdAt: string;
   updatedAt: string;
   /** A localização onde o posto fica — a Matriz, a Filial. */

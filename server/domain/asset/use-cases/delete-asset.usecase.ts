@@ -8,6 +8,7 @@ import {
   comoReferencias, licencasDoAtivo, nomesDasLicencas,
 } from '../../license/use-cases/count-license-checkouts.usecase';
 import { componentesDoAtivo } from '../../stock/use-cases/count-person-stock.usecase';
+import { assertSemPosse } from './assert-sem-posse.usecase';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
 
 /**
@@ -33,6 +34,12 @@ import { travarAtivoOuFalhar } from './lock-asset.usecase';
 export async function deleteAsset(id: string, ator: Ator): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await travarAtivoOuFalhar(tx, id);
+
+    // O 409 PELA POSSE (AL), antes da licença: a devolução é na própria tela do
+    // computador. Sem ele, o ativo ia para a lixeira ainda no nome da pessoa —
+    // que se desativava, porque a contagem dela não vê a lixeira — e voltava
+    // restaurado para quem não pode ter posse.
+    await assertSemPosse(tx, id, 'Este ativo', 'ir para a lixeira');
 
     // O 409 pela licença: ela continuaria descontada do contrato, e a empresa
     // pagaria por uma licença presa a uma máquina que saiu do inventário.

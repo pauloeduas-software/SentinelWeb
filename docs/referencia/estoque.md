@@ -6,9 +6,13 @@
 > recusam, e onde o estoque aparece fora da própria tela. É a lógica da licença
 > ([`licencas.md`](licencas.md)), com quantidade. As decisões estão em
 > [`../decisoes/estoque.md`](../decisoes/estoque.md) (a última é a
-> [AJ](../decisoes/estoque.md#aj--o-consumível-é-uma-categoria-e-o-total-é-o-que-existe));
+> [AJ](../decisoes/estoque.md#aj--o-consumível-é-uma-categoria-e-o-total-é-o-que-existe);
+> a [AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura), em `licencas.md`, travou o Desativar com unidade em uso);
 > as regras que viram fato permanente no banco estão em [`invariantes.md`](invariantes.md)
 > (a 6, a 21 e a 25).
+>
+> **Fechado em 2026-10-29**, junto com a licença: a lógica foi conferida contra o Snipe-IT e não
+> muda mais; daqui em diante se corrige defeito.
 
 ---
 
@@ -91,11 +95,12 @@ contas. O cabeçalho do Entregar também lê o detalhe, e acompanha.
 O cadastro é o das Configurações — os mesmos botões, a mesma ordem e as mesmas frases
 ([`configuracoes.md`](configuracoes.md)).
 
-- **Desativar** deixa o item na lista, esmaecido e marcado — **mesmo com unidade fora**. A tela
-  pergunta antes: `Desativar "Mouse USB"? Continua no histórico, mas some das escolhas e não recebe
-  nada novo.` Desativado, ele não recebe entrega nova (409 `O item "Mouse USB" está desativado e
-  não recebe entrega. Se ele voltou a ser usado, reative-o antes.`); o que está com alguém continua
-  até voltar, e a conta da linha diz quantas. Avisa, não recusa — como o Encerrar da licença.
+- **Desativar** deixa o item na lista, esmaecido e marcado — **só com tudo devolvido** ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)):
+  com unidade em uso é 409 `"Mouse USB" tem 3 unidades em uso e não pode ser desativado. Devolva
+  antes.` (no componente, "Retire antes"), como o Encerrar da licença e o arquivar do Snipe-IT. A
+  tela pergunta antes: `Desativar "Mouse USB"? Continua no histórico, mas some das escolhas e não
+  recebe nada novo.` Desativado, ele não recebe entrega nova (409 `O item "Mouse USB" está
+  desativado e não recebe entrega. Se ele voltou a ser usado, reative-o antes.`).
 - **Ativar** é o mesmo botão, sem pergunta.
 - **Excluir** é definitivo, com a **regra do posto** ([AG](../decisoes/estoque.md#ag--a-regra-do-posto-vale-para-o-estoque-e-a-licença-só-o-que-está-em-uso-impede-a-exclusão)): só o que
   está **em uso agora** impede. O botão sempre clica, e pergunta `Excluir "Mouse USB"? Esta ação
@@ -116,7 +121,7 @@ O cadastro é o das Configurações — os mesmos botões, a mesma ordem e as me
 registrar a entrega que já aconteceu; futuro é 422. Ao contrário da licença, o dia passado não
 tem outra recusa: o item não tem data de compra, e o mesmo alvo pode estar com várias unidades ao
 mesmo tempo. A quantidade no passado não é conferida — a conta é sempre a de agora —, e as
-recusas de estado olham **hoje**: o item, o colaborador e o posto desativados recusam a entrega
+recusas de estado olham **hoje**: o item e o colaborador desativados recusam a entrega
 no passado mesmo que, naquele dia, estivessem em ordem.
 
 **Cada unidade é uma linha**, e as N de uma entrega nascem no mesmo `INSERT`, com o mesmo
@@ -144,7 +149,7 @@ A entrega confere **na ordem da tabela** e responde a primeira recusa — o cola
 | quantidade zero, ou mais de 100 numa entrega | 422 |
 | dois alvos, ou nenhum | 422 `Uma entrega tem UM alvo: preencha só a chave que corresponde ao targetType (PERSON).` / `Entrega do tipo "WORKSTATION" exige um posto (targetWorkstationId).` |
 | item, colaborador ou posto que não existe, ou colaborador na lixeira | 404 |
-| colaborador ou posto desativado | 409 `Laura Souza está desativado(a) e não pode receber equipamento.` / `"Mesa 1" está desativado e não recebe entrega de estoque.` |
+| colaborador desativado | 409 `Laura Souza está desativado(a) e não pode receber equipamento.` |
 | item desativado | 409 `O item "Mouse USB" está desativado e não recebe entrega. …` |
 | sem unidade | 409 `Sem unidade disponível de "Mouse USB": 10 no total, 10 em uso. Devolva uma unidade ou aumente o total.` — ou, com menos do que a entrega pede, `Sem unidade suficiente de "Mouse USB": a entrega pede 3 e há 2 disponíveis (10 no total, 8 em uso).` |
 | devolução antes do dia da entrega | 422 `A devolução (09/03/2026) não pode ser antes da entrega (10/03/2026).` |
@@ -153,7 +158,7 @@ A entrega confere **na ordem da tabela** e responde a primeira recusa — o cola
 
 **A devolução é pela entrega**, não pelo item nem pelo alvo: o `:id` é o de qualquer unidade dela,
 e o clique de uma tela velha encontra a entrega antiga já fechada, sem devolver a de quem recebeu
-depois. Devolver sempre pode, mesmo com o item desativado, e não pede confirmação.
+depois. Devolver sempre pode, e não pede confirmação.
 
 ## O componente
 
@@ -267,11 +272,14 @@ listagens. As ordens terminam em `id`, para a mesma linha não aparecer em duas 
 ## O que não existe
 
 - entrada e baixa — o total é um número que se digita na edição, e a unidade que quebrou ou se
-  perdeu volta pelo Devolver e sai pelo Editar, como no Snipe-IT e no GLPI;
+  perdeu volta pelo Devolver (no componente, pelo Retirar) e sai pelo Editar, como no Snipe-IT e
+  no GLPI; o consumível já sai do total na entrega;
+- reatribuível — o Snipe-IT também só o tem na licença: a unidade devolvida sempre volta a ficar
+  disponível;
 - desfazer a entrega do consumível — o total se corrige pelo Editar;
 - lixeira e restaurar;
 - vencimento, status, chave e dados de compra — são do contrato da licença;
-- alerta de mínimo, e alerta, aba ou filtro de "desativado ainda em uso" — a linha esmaecida mostra a conta;
+- alerta de mínimo, e "desativado ainda em uso" — o item em uso não se desativa;
 - entrega para vários alvos de uma vez;
 - entregar ou devolver fora da tela de Estoque;
 - observação na devolução (só existe na entrega);
@@ -282,7 +290,7 @@ listagens. As ordens terminam em `id`, para a mesma linha não aparecer em duas 
 | Assunto | Arquivo |
 |---|---|
 | a lista (conta, busca, o desativado na mesma lista), "Com quem está" por entrega, a devolução parcial, o histórico por entrega (duas devoluções no mesmo dia são duas), os dias, as fichas e o histórico do colaborador | `tests/estoque/operacoes.test.ts` |
-| o saldo calculado, as frases sem unidade, o posto que não multiplica, os CHECKs, o total na edição e na auditoria, a quantidade que é número de verdade, o nome único sem diferença de maiúscula, a categoria, desativar e excluir (a regra do posto, com o nome por escrito), a invariante 6 e o 409 do posto com os itens, as rotas | `tests/estoque/invariantes.test.ts` |
+| o saldo calculado, as frases sem unidade, o posto que não multiplica, os CHECKs, o total na edição e na auditoria, a quantidade que é número de verdade, o nome único sem diferença de maiúscula, a categoria, desativar só sem unidade em uso e excluir (a regra do posto, com o nome por escrito), a invariante 6 e o 409 do posto com os itens, as rotas | `tests/estoque/invariantes.test.ts` |
 | o componente: a categoria que decide o alvo, o computador baixado e na lixeira, as datas contra a compra, o componente que fica quando o computador muda de mãos, o Retirar, os dois históricos, a busca pela etiqueta, a baixa e a lixeira recusadas, a troca de categoria, o seletor com os dois tipos e o CHECK | `tests/estoque/componente.test.ts` |
 | o consumível: a entrega que tira do total, o posto e o dia passado, o computador recusado, o 0 e as frases, sem devolução, não prende ninguém, a exclusão, o histórico só com a entrega e a troca de categoria | `tests/estoque/consumivel.test.ts` |
 | as corridas: entregas simultâneas, total × entrega, devoluções da mesma entrega, a troca do tipo da categoria × cadastro, exclusão × entrega e o item e o posto excluídos ao mesmo tempo | `tests/estoque/corridas.test.ts` |

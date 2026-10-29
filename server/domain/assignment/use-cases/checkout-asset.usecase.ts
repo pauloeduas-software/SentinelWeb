@@ -7,8 +7,9 @@ import { ASSET_WRITE_SELECT } from '../../asset/helpers/asset-select.helper';
 import { assertStatusCoerenteComPosse } from '../../asset/use-cases/assert-status-posse.usecase';
 import { travarAtivoOuFalhar } from '../../asset/use-cases/lock-asset.usecase';
 import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
+import { hojeNoBrasil, instanteDoDia } from '../../shared/hoje.helper';
 import {
-  assertEscolhaAtiva, assertPostoRecebe, lerStatusTravado,
+  assertEscolhaAtiva, lerPostoTravado, lerStatusTravado,
 } from '../../catalog/helpers/catalog-lock.helper';
 import { ASSIGNMENT_SELECT } from '../helpers/assignment-select.helper';
 import { travarPessoaOuFalhar, type ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
@@ -29,6 +30,8 @@ interface CheckoutData {
   statusId?: string | null;
   expectedCheckinAt?: Date | null;
   checkoutNotes?: string | null;
+  /** O dia (AM). Ausente é hoje. */
+  checkoutAt?: Date | null;
 }
 
 /**
@@ -37,6 +40,52 @@ interface CheckoutData {
  * mesma recusa dita de dois jeitos, dependendo de quem chegou primeiro.
  */
 const JA_ENTREGUE = 'Este ativo já está entregue. Faça a devolução antes.';
+
+/**
+ * O DIA DA ENTREGA contra o passado do computador — e o instante a gravar (AM),
+ * no molde da licença (`checkout-license.usecase.ts`).
+ *
+ * O dia não antecede a compra do computador, nem o dia da última devolução
+ * dele: a entrega que volta no tempo para antes da devolução poria o computador
+ * com duas pessoas no mesmo período. Os dois dias no calendário de Brasília.
+ *
+ * No mesmo dia da devolução, o meio-dia do dia passado pode cair antes da hora
+ * real dela; a entrega fica um milissegundo depois, para os históricos não
+ * porem a devolução antiga acima da entrega nova.
+ */
+async function instanteDaEntrega(
+  client: ClientePosse,
+  ativo: { id: string; assetTag: string; purchaseDate: Date | null },
+  checkoutAt: Date | null | undefined,
+): Promise<Date | undefined> {
+  const dia = checkoutAt ?? hojeNoBrasil();
+  if (ativo.purchaseDate && dia < ativo.purchaseDate) {
+    throw new AppError(
+      `A entrega (${diaEmPortugues(dia)}) não pode ser antes da compra de ${ativo.assetTag} `
+      + `(${diaEmPortugues(ativo.purchaseDate)}).`,
+      422,
+    );
+  }
+
+  const anterior = await client.assignment.findFirst({
+    where: { assetId: ativo.id, checkinAt: { not: null } },
+    orderBy: { checkinAt: 'desc' },
+    select: { checkinAt: true },
+  });
+  const devolvidoEm = anterior?.checkinAt;
+  if (devolvidoEm && dia < hojeNoBrasil(devolvidoEm)) {
+    throw new AppError(
+      `A entrega (${diaEmPortugues(dia)}) não pode ser antes da última devolução de ${ativo.assetTag} `
+      + `(${diaEmPortugues(hojeNoBrasil(devolvidoEm))}).`,
+      422,
+    );
+  }
+
+  // Ausente, quem preenche é o `@default(now())` — depois de qualquer devolução.
+  if (!checkoutAt) return undefined;
+  const instante = instanteDoDia(checkoutAt);
+  return devolvidoEm && instante <= devolvidoEm ? new Date(devolvidoEm.getTime() + 1) : instante;
+}
 
 const TIPOS_DE_ALVO = ['PERSON', 'WORKSTATION'] as const;
 
@@ -122,7 +171,7 @@ async function assertAlvoExiste(
   // posto continua no histórico e não recebe entrega nova. `UPDATE` e não
   // `SHARE`: a invariante 19 trava este mesmo posto `FOR UPDATE` logo adiante,
   // e subir de uma para a outra é deadlock entre duas entregas ao mesmo posto.
-  return assertPostoRecebe(client, alvoId, 'entrega nova', 'UPDATE');
+  return lerPostoTravado(client, alvoId, 'UPDATE');
 }
 
 /**
@@ -210,7 +259,7 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, ator: A
     const ativo = await tx.asset.findFirst({
       where: { id: assetId },
       select: {
-        id: true, assetTag: true, statusId: true, retiredAt: true,
+        id: true, assetTag: true, statusId: true, retiredAt: true, purchaseDate: true,
         status: { select: { name: true, type: true } },
       },
     });
@@ -249,8 +298,8 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, ator: A
       );
     }
 
-    // NO MÁXIMO UM ATIVO POR POSTO — a primeira das DUAS portas; a outra é a
-    // restauração da lixeira (`asset/use-cases/restore-asset.usecase.ts`).
+    // NO MÁXIMO UM ATIVO POR POSTO — a porta da invariante 19. A lixeira não a
+    // contorna: o ativo entregue não vai para ela (AL).
     // Depois de todas as recusas baratas, e DENTRO da transação: não há índice
     // único embaixo, porque a regra cruza duas tabelas.
     if (data.targetType === 'WORKSTATION') {
@@ -274,6 +323,8 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, ator: A
     }
     const statusId = data.statusId ?? (await escolherStatusPorTipo(tx, 'IN_USE', 'Em uso'));
 
+    const checkoutAt = await instanteDaEntrega(tx, ativo, data.checkoutAt);
+
     let posse;
     try {
       posse = await tx.assignment.create({
@@ -287,6 +338,7 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, ator: A
           targetWorkstationId: data.targetType === 'WORKSTATION' ? alvoId : null,
           expectedCheckinAt: data.expectedCheckinAt ?? null,
           checkoutNotes: data.checkoutNotes ?? null,
+          checkoutAt,
         },
         select: ASSIGNMENT_SELECT,
       });

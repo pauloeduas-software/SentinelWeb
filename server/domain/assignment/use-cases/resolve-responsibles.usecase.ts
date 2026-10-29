@@ -47,6 +47,8 @@ export interface PosseResolvida {
   /** "Laura Souza", "Mesa 1". */
   targetLabel: string | null;
   responsaveis: Responsavel[];
+  /** Quando a posse aberta começou — o `min` do dia da devolução (AM). */
+  checkoutAt: Date | null;
   /**
    * Alvo WORKSTATION sem NENHUM ocupante aberto — equipamento parado em posto
    * vazio. Não é erro: é o sinal operacional que o docs/referencia/modelo-de-posse.md pede e que
@@ -61,7 +63,7 @@ export interface PosseResolvida {
  * posse, e um `push` de quem recebe contaminaria todos de uma vez.
  */
 function semPosse(): PosseResolvida {
-  return { assignmentId: null, targetType: null, targetLabel: null, responsaveis: [], postoVago: false };
+  return { assignmentId: null, targetType: null, targetLabel: null, responsaveis: [], checkoutAt: null, postoVago: false };
 }
 
 // O mínimo que a resolução precisa de uma posse aberta.
@@ -71,6 +73,7 @@ const SELECT_POSSE = {
   targetType: true,
   targetPersonId: true,
   targetWorkstationId: true,
+  checkoutAt: true,
 } as const;
 
 interface PosseAberta {
@@ -79,6 +82,7 @@ interface PosseAberta {
   targetType: AlvoPosse;
   targetPersonId: string | null;
   targetWorkstationId: string | null;
+  checkoutAt: Date;
 }
 
 interface Pessoa {
@@ -120,6 +124,7 @@ function montar(posse: PosseAberta, dicionarios: Dicionarios): PosseResolvida {
       targetType: 'PERSON',
       targetLabel: pessoa?.name ?? null,
       responsaveis: pessoa ? [pessoaComoResponsavel(pessoa)] : [],
+      checkoutAt: posse.checkoutAt,
       postoVago: false,
     };
   }
@@ -131,6 +136,7 @@ function montar(posse: PosseAberta, dicionarios: Dicionarios): PosseResolvida {
     targetType: 'WORKSTATION',
     targetLabel: nomeDoPosto,
     responsaveis: ocupantes.map((ocupante) => ocupanteComoResponsavel(ocupante, nomeDoPosto)),
+    checkoutAt: posse.checkoutAt,
     postoVago: ocupantes.length === 0,
   };
 }

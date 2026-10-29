@@ -4,9 +4,13 @@
 > entregue. O que a licença é, as contas, o que a entrega e a devolução recusam, as chaves de
 > produto, e onde a licença aparece fora da própria tela. As decisões estão em
 > [`../decisoes/licencas.md`](../decisoes/licencas.md) (a última é a
-> [AD](../decisoes/licencas.md#ad--renovar-é-editar-o-vencimento-o-suporte-a-oem-e-o-comprovante-não-viram-campo));
+> [AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura));
 > as regras que viram fato permanente no banco estão em [`invariantes.md`](invariantes.md)
 > (a 6, a 9, a 20, a 22, a 23 e a 24).
+>
+> **Fechada em 2026-10-29.** A lógica foi conferida contra o Snipe-IT
+> ([*Comparada com o Snipe-IT*](#comparada-com-o-snipe-it)) e não muda mais; daqui em diante se
+> corrige defeito.
 
 ---
 
@@ -21,6 +25,9 @@ como quantas entraram, mudaram e saíram, nunca o texto.
 
 - **A quantidade vai de 1 a 100.000**: zero não é contrato, e a licença que acabou se encerra. O
   piso tem o CHECK `licenses_seats_positivo`; o teto é só da aplicação.
+- **A compra e o encerramento não são futuros** ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)): 422 `data de compra não pode ser uma
+  data futura` / `data de encerramento não pode ser uma data futura`. O vencimento pode, e é o
+  caso normal.
 - **O vencimento e o encerramento não antecedem a data da compra.** Cada um só é comparado
   quando os dois lados estão preenchidos, e o encerramento não é comparado com o vencimento — dá
   para encerrar antes do fim do período pago. A recusa é 422 com as duas datas
@@ -29,10 +36,11 @@ como quantas entraram, mudaram e saíram, nunca o texto.
   são a rede.
 - **As datas da licença cobrem as entregas que ela já tem.** Na edição, a compra não fica depois
   da primeira entrega (`A data da compra (06/03/2026) não pode ser depois da primeira entrega
-  (05/03/2026).`) e o encerramento não fica antes da última (`O encerramento (01/10/2026) não pode
-  ser antes da última entrega (10/10/2026).`) — no mesmo dia passa. Só a data que **muda** é
-  conferida: o formulário reenvia todas, e a licença antiga com a ordem trocada continua editável
-  nos outros campos. O Encerrar do botão grava hoje, que nunca vem antes de entrega nenhuma.
+  (05/03/2026).`) e o encerramento não fica antes da última devolução (`O encerramento (01/10/2026)
+  não pode ser antes da última devolução (10/10/2026).`) — no mesmo dia passa. Só a data que
+  **muda** é conferida: o formulário reenvia todas, e a licença antiga com a ordem trocada continua
+  editável nos outros campos. O Encerrar do botão grava hoje, que nunca vem antes de devolução
+  nenhuma.
 - **A entrega vai para um colaborador OU para um computador**, nunca os dois e nunca para um
   posto ([D39](../decisoes/licencas.md#d39--assento-de-licença-não-vai-para-um-posto)). Licença
   por máquina (Windows de volume, Office avulso) vai para o ativo; por assinatura de pessoa
@@ -75,8 +83,8 @@ Calculado das datas e do dia de hoje **em Brasília** (`hojeNoBrasil`), nunca gr
 | **Ativa** | o resto, inclusive sem vencimento |
 
 O **vencimento** é até quando a licença pode ser usada, e se renova editando a data: quem está
-com ela continua, e o pedido, a data e o valor da compra podem passar a ser os da renovação — o
-de antes fica na auditoria. A perpétua fica sem vencimento. O formulário diz isso embaixo do
+com ela continua, e o pedido e o valor podem passar a ser os da renovação — o de antes fica na
+auditoria. A data da compra fica a da primeira, porque não passa da primeira entrega. A perpétua fica sem vencimento. O formulário diz isso embaixo do
 campo, e diz embaixo do pedido que ali vai o pedido ou a nota fiscal, o comprovante. O
 **encerramento** é o fim do contrato. Numa listagem, o filtro e o status de cada linha usam o
 mesmo hoje: a requisição que cruza a meia-noite não devolve, no filtro Vencendo, uma linha já
@@ -86,11 +94,11 @@ vencida.
 
 | | |
 |---|---|
-| **a lista** | **uma só**, por nome, como nas Configurações ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)): a encerrada fica junto, esmaecida e com a marca "encerrada". Busca por nome, licenciado, e-mail, pedido, categoria e fabricante — o texto ao pé da letra, `%` e `_` não são curinga; filtro de categoria; filtro de status (Todos, Ativas, Vencendo, Vencidas, Encerradas — esta pela mais recente); com Encerradas, "Ainda em uso". Sair de Encerradas desliga o "Ainda em uso" |
+| **a lista** | **uma só**, por nome, como nas Configurações ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)): a encerrada fica junto, esmaecida e com a marca "encerrada". Busca por nome, licenciado, e-mail, pedido, categoria e fabricante — o texto ao pé da letra, `%` e `_` não são curinga; filtro de categoria; filtro de status (Todos, Ativas, Vencendo, Vencidas, Encerradas — esta pela mais recente) |
 | **a linha** | nome, categoria, status, "10 compradas · 7 em uso · 3 livres" e prazo (ou "encerrada em" e a data). Fabricante e custo ficam só no detalhe. Sem cor por status |
 | **as ações** | aparecem ao passar o mouse, como nas Configurações: Entregar (some na encerrada; desabilitado sem livre ou vencida, com o motivo no `title`), Editar, Encerrar/Reabrir (os ícones do Desativar/Ativar) e Excluir. O Excluir é o das Configurações: sempre clica, e a que está em uso recebe o 409, que diz com quem está |
 | **o detalhe** | no cabeçalho, o status com a conta ("Vencida · 10 compradas · 7 em uso · 3 livres") e as ações da lista, com as mesmas regras (Entregar e Editar voltam ao detalhe ao fechar; excluída, a janela fecha). Depois, as **chaves do produto**, numeradas, cada uma com quanto está tomado ("livre", "em uso", "cobre 10 · 3 livres"), e todos os campos do cadastro — o valor da compra é o total, com o preço de cada licença ao lado: "R$ 5.000,00 (R$ 500,00 por licença)". **Com quem está**: as entregas abertas, da mais recente para a mais antiga, 15 por página, com busca pelo nome do colaborador ou do computador, a chave de cada uma (com o número dela na lista, ou "sem chave" na entrega feita antes de a licença ter chaves), e Chave — quando a licença tem chaves — e Devolver em cada linha. **Histórico**: só entregas e devoluções, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
-| **o alerta** | só nesta tela, numa caixa só, do mais urgente para o menos: encerrada ainda em uso, vencida (a mais recente primeiro; fica até alguém renovar ou encerrar, mesmo sem ninguém usando — é decisão pendente), vencendo em 30 dias (a mais próxima primeiro). Cada linha diz quantas estão em uso, na mesma frase nos três motivos — "venceu há 3 dias, ainda em uso (7)"; sem ninguém usando, só o prazo. Embaixo, a contagem de cada motivo com link — "2 encerradas em uso · 5 vencidas · 3 vencendo" —, que leva ao filtro que mostra todas aquelas (encerradas em uso: o status Encerradas com "Ainda em uso"). Não existe alerta de mínimo |
+| **o alerta** | só nesta tela, numa caixa só, do mais urgente para o menos: vencida (a mais recente primeiro; fica até alguém renovar ou encerrar, mesmo sem ninguém usando — é decisão pendente) e vencendo em 30 dias (a mais próxima primeiro). A encerrada não entra: com entrega aberta ela não se encerra ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)). Cada linha diz quantas estão em uso, na mesma frase nos dois motivos — "venceu há 3 dias, ainda em uso (7)"; sem ninguém usando, só o prazo. Embaixo, a contagem de cada motivo com link — "5 vencidas · 3 vencendo" —, que leva ao filtro que mostra todas aquelas. Não existe alerta de mínimo |
 
 A edição manda **o formulário inteiro**, a lista de chaves junto, como em todas as telas
 ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)), com o `updatedAt` que leu ao abrir: se outra pessoa salvou, encerrou ou
@@ -117,14 +125,12 @@ detalhe, e acompanha.
 ## Encerrar, reabrir e excluir
 
 - **Encerrar** é o Desativar da licença ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)): grava hoje na data de encerramento, e a
-  licença fica na lista, esmaecida — **mesmo com alguém usando**. A tela pergunta antes, com a
-  frase do padrão: `Encerrar "AutoCAD" hoje? Continua no histórico, mas some das escolhas e não
-  recebe nada novo. Ainda está com 3: fica no alerta até tudo voltar.` (a última frase só com
-  alguém usando). Encerrada, ela não recebe entrega nova, e fica no alerta *encerrada, ainda em uso* até tudo
-  ser devolvido. O formulário segue a mesma regra. É o padrão do sistema para o que tem data e
-  para o que se desativa: avisa, não recusa — recusar não impediria nada, porque a data futura
-  chega sozinha. A licença com a data da compra no futuro não se encerra hoje: é o mesmo 422 do
-  formulário, `O encerramento (…) não pode ser antes da data da compra (…).`
+  licença fica na lista, esmaecida. **Só com tudo devolvido** ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)): com entrega aberta é 409
+  `"AutoCAD" tem 3 entregas abertas e não pode ser encerrada. Faça a devolução antes.` — o padrão
+  do sistema para o que está em uso, como no Excluir. A tela pergunta antes, com a frase do
+  padrão: `Encerrar "AutoCAD" hoje? Continua no histórico, mas some das escolhas e não recebe nada
+  novo.` Encerrada, ela não recebe entrega nova. O formulário segue a mesma regra, e a data dele
+  não é futura.
 - **Reabrir** é o Ativar: o mesmo botão, na encerrada, apaga a data de encerramento sem perguntar
   — a mesma edição que o formulário faz ao apagar a data.
 - **Excluir** é definitivo, com a **regra do posto** ([AG](../decisoes/estoque.md#ag--a-regra-do-posto-vale-para-o-estoque-e-a-licença-só-o-que-está-em-uso-impede-a-exclusão)): só o que está
@@ -197,7 +203,7 @@ cada chave numa linha, com quantas licenças ela **cobre** — 1 na individual, 
 |---|---|
 | **no formulário** | uma embaixo da outra, com "Adicionar chave", o "cobre" de cada uma e o ✕. Colar uma lista com várias linhas cria uma chave para cada linha. Acima da lista, a conta: "8 de 10 licenças com chave". A linha nova deixada em branco não vai; a chave que já existia não se tira apagando o texto — é o ✕ |
 | **as regras** | uma linha, não vazia, sem repetir na licença (422 `A mesma chave aparece duas vezes na lista.`) — sem diferença de maiúscula: `abcd-1234` e `ABCD-1234` são a mesma chave, e a gravada fica como foi digitada. Juntas, cobrem no máximo o comprado: o "Adicionar" para quando chegam lá, e o servidor responde 422 `As chaves cobrem 12, mais do que 10 compradas em "Office 2021". …`; reduzir a quantidade abaixo do que elas cobrem é o mesmo 422 pelo formulário, que manda a lista junto, e 409 `Não dá para reduzir "Office 2021" para 3: as chaves cobrem 4. Tire uma chave ou diminua o que ela cobre antes.` num `PUT` sem a lista |
-| **a já entregue** | não sai da lista (409 `Uma chave que já foi entregue não sai da lista: o histórico de quem a usou depende dela.`), e não cobre menos do que as entregas abertas com ela (409 `Uma chave não cobre menos do que as entregas abertas com ela: 2 estão com ela. Devolva para liberar.`). O texto dela pode mudar: é a correção de digitação, e vale para as entregas dela. É também a renovação que trouxe chave nova (AD): a chave só aparece nas entregas abertas, e o histórico não a mostra |
+| **a em uso** | a chave com entrega **aberta** não sai da lista (409 `Uma chave com entrega aberta não sai da lista: 2 estão com ela. Devolva para liberar.`, e o ✕ dela fica apagado), e não cobre menos do que as entregas abertas com ela (409 `Uma chave não cobre menos do que as entregas abertas com ela: 2 estão com ela. Devolva para liberar.`). O texto dela pode mudar: é a correção de digitação, e vale para as entregas dela. É também a renovação que trouxe chave nova (AD): a chave só aparece nas entregas abertas, e o histórico não a mostra. A chave cujas entregas já voltaram todas sai como a nunca entregue — é o que deixa a renovação com menos licenças tirar as chaves que sobraram e reduzir a quantidade no mesmo Salvar ([AK](../decisoes/licencas.md#ak--a-chave-só-prende-enquanto-está-em-uso)) |
 | **na entrega** | com chaves cadastradas, a entrega **escolhe uma** — é o que diz qual chave está com cada um. O seletor mostra só as que têm lugar, pelo número e pelo começo ("3. ABCDE-FGHIJ-•••••-•••••-••••• — cobre 10 · 3 livres"), e com uma só ela já vem escolhida. A licença sem chave nenhuma — a assinatura por conta, como o Microsoft 365 — entrega sem chave. As chaves podem cobrir menos do que o comprado (as outras chegam depois), mas a licença que tem chaves não entrega sem chave: a entrega além do que elas cobrem espera a próxima, cadastrada em Editar |
 | **trocar** | a chave de uma entrega **aberta**, por outra com lugar, na linha de "Com quem está" (`PATCH` com `licenseKeyId`). Não existe "limpar". É também como a entrega feita antes de a licença ter chaves ganha a sua. Devolvida é 409; sem lugar, 409 |
 | **onde aparece** | **só no detalhe da licença**: a lista, no topo, e a de cada entrega, em "Com quem está", com o mesmo número; e no seletor da entrega. Sempre escondida — `ABCDE-FGHIJ-•••••-•••••-•••••` —, com **Mostrar** e **Copiar** em cada uma |
@@ -209,7 +215,7 @@ cada chave numa linha, com quantas licenças ela **cobre** — 1 na individual, 
 `licenseId`) → `license_keys(id, licenseId)`, e cada chave cobre ao menos uma e não é vazia
 (invariante 24). Quantas entregas abertas cada chave tem, e quanto as chaves somam, são contas da
 aplicação, com a licença travada. Excluir a licença leva as chaves junto, e a entrega devolvida
-perde a dela (AG).
+perde a dela (AG); tirar uma chave da lista faz o mesmo com as devolvidas dela (AK).
 
 As chaves ficam **em texto** no banco: a cifra saiu inteira na
 [G](../decisoes/licencas.md#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples),
@@ -243,13 +249,13 @@ da lista é derivada.
 
 | Rota | O que é |
 |---|---|
-| `GET /api/licenses` | a lista, uma só (`?status=ATIVA\|VENCENDO\|EXPIRADA\|ENCERRADA`, `?emUso=sim`, `?categoryId=`, `?q=`; `?view=` é 422) — sem a chave |
+| `GET /api/licenses` | a lista, uma só (`?status=ATIVA\|VENCENDO\|EXPIRADA\|ENCERRADA`, `?categoryId=`, `?q=`; `?view=` e `?emUso=` são 422) — sem a chave |
 | `GET /api/licenses/alerts` | o alerta: `{ total, contagem, rows }` — a contagem por motivo, e em `rows` só as seis primeiras na ordem de urgência, as que a caixa lista, cada uma com o seu `motivo` |
-| `GET /api/licenses/:id` | o detalhe — a única leitura da licença com as chaves (`keys`, cada uma com `seats`, `emUso` e `jaEntregue`) |
+| `GET /api/licenses/:id` | o detalhe — a única leitura da licença com as chaves (`keys`, cada uma com `seats` e `emUso`) |
 | `GET /api/licenses/:id/checkouts` | quem está com ela, com a chave de cada entrega (`?page=`, `?q=` pelo nome; 15 por página) |
 | `GET /api/licenses/:id/history` | o histórico (`?page=`; 15 por página, sem busca — `?q=` é 422) |
 | `POST`, `PUT /:id`, `DELETE /:id` | o cadastro, com `keys` — a lista das chaves como ficará; na edição, ausente mantém as que estão —; excluir a que não está em uso, soltando as entregas devolvidas com o nome por escrito |
-| `POST /api/licenses/:id/terminate` | Encerrar |
+| `POST /api/licenses/:id/terminate` | Encerrar: grava hoje; 409 com entrega aberta |
 | `POST /api/licenses/:id/checkout` | entregar (`assignedPersonId` XOR `assignedAssetId`, `notes`, `checkoutAt` — o dia —, `licenseKeyId`) |
 | `POST /api/licenses/checkouts/:id/checkin` | devolver (`checkinAt` — o dia; ausente é hoje) — o `:id` é o da **entrega** |
 | `PATCH /api/licenses/checkouts/:id` | trocar só a chave (`licenseKeyId`) de uma entrega aberta |
@@ -266,9 +272,35 @@ alvo → licença → entrega é o que mantém o grafo sem ciclo.
 todas as listagens do sistema: sem diferença de maiúscula e com `%` e `_` escapados. As ordens
 terminam em `id`, para a mesma linha não aparecer em duas páginas.
 
+## Comparada com o Snipe-IT
+
+Conferida no código-fonte do Snipe-IT em 2026-10-29.
+
+- **Igual:** a entrega a um colaborador ou a um computador e a devolução; compradas, em uso e
+  livres; reduzir a quantidade só tira as livres; a vencida ou encerrada não recebe entrega;
+  excluir com entrega aberta é recusado; o aviso do que venceu e do que vai vencer.
+- **Mais rígida, de propósito** ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)): encerrar com entrega
+  aberta é 409 — o Snipe-IT grava a data mesmo assim —, e a compra e o encerramento não aceitam
+  data futura, que o Snipe-IT não confere.
+- **A mais:** a lista de chaves, cada uma com quanto cobre, e a chave de cada entrega — o
+  Snipe-IT tem uma chave por licença —; e as datas da licença conferidas contra as entregas.
+- **Fora, cada uma com o motivo:**
+  - reatribuível: a licença que não pode passar adiante se devolve e tem a quantidade diminuída
+    no Editar ([AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas));
+  - "mantido": no Snipe-IT é uma marca sem data e sem efeito; o suporte vai nas notas (AA,
+    [AD](../decisoes/licencas.md#ad--renovar-é-editar-o-vencimento-o-suporte-a-oem-e-o-comprovante-não-viram-campo));
+  - o anexo do comprovante: a referência é o número do pedido (AD);
+  - alerta de mínimo, e-mail de aviso, exportar, entrega em lote e clonar: tudo fica dentro do
+    sistema, e o alerta é só nesta tela;
+  - o histórico das edições na tela: fica no banco ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco));
+  - fornecedor e depreciação, que saíram do sistema inteiro; o pedido de licença pelo
+    colaborador e as várias empresas, que o sistema não tem.
+
 ## O que não existe
 
-- reatribuível e queima — devolvida, toda licença volta a ficar livre;
+- reatribuível e queima — devolvida, toda licença volta a ficar livre; a que não pode passar
+  adiante se devolve e tem a quantidade diminuída no Editar;
+- encerrar com entrega aberta, e o alerta e o filtro de "encerrada, ainda em uso";
 - "com manutenção" e fim do suporte à parte — o suporte vai nas notas, e a perpétua fica sem
   vencimento;
 - licença OEM — é do computador;
@@ -277,7 +309,8 @@ terminam em `id`, para a mesma linha não aparecer em duas páginas.
 - lixeira e restaurar;
 - tipo de licença (por dispositivo ou por pessoa);
 - a mesma licença duas vezes no mesmo alvo;
-- entrega para várias pessoas ou computadores de uma vez;
+- entrega para várias pessoas ou computadores de uma vez, e clonar uma licença;
+- e-mail de aviso de vencimento — o alerta é só nesta tela;
 - entregar ou devolver fora da tela de Licenças;
 - a chave digitada na entrega — ela é escolhida da lista da licença —, e a entrega sem chave numa
   licença que tem chaves;
@@ -293,7 +326,7 @@ terminam em `id`, para a mesma linha não aparecer em duas páginas.
 | a conta, a quantidade e o teto, as datas e o valor do contrato (e a máscara do campo), a entrega, a devolução, os dias de cada uma e a ordem das recusas | `tests/licencas/operacoes.test.ts` |
 | o status, o dia de Brasília, o filtro de status (e a encerrada na lista sem filtro), o `view` que é 422, a busca da lista e a ordem das encerradas | `tests/licencas/status.test.ts` |
 | as duas listas do detalhe, de 15 em 15, a busca e a página além do fim | `tests/licencas/detalhe.test.ts` |
-| Encerrar com alguém usando, o filtro "ainda em uso", excluir pela regra do posto e o alerta | `tests/licencas/ciclo.test.ts` |
+| Encerrar só com tudo devolvido, a compra e o encerramento não futuros, excluir pela regra do posto e o alerta | `tests/licencas/ciclo.test.ts` |
 | a lista de chaves (ordem, cobre, soma, edição), a chave na entrega e a troca, onde ela não aparece e como a tela a esconde | `tests/licencas/chave.test.ts` |
 | o histórico por alvo, a paginação e o desempate no mesmo instante | `tests/licencas/historico.test.ts` |
 | o 409 da pessoa e do ativo com as licenças e as `refs`, a ficha e a aba | `tests/licencas/posse.test.ts` |

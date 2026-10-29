@@ -32,7 +32,6 @@ export const WORKSTATION_SELECT = {
   id: true,
   name: true,
   notes: true,
-  isActive: true,
   createdAt: true,
   // A localização onde o posto fica — a coluna da tela e o campo do formulário.
   locationId: true,
@@ -56,7 +55,6 @@ export const WORKSTATION_DETAIL_SELECT = {
   id: true,
   name: true,
   notes: true,
-  isActive: true,
   createdAt: true,
   updatedAt: true,
   locationId: true,

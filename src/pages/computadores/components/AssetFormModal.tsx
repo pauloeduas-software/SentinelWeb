@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import ReferenceSelect from '../../components/ReferenceSelect';
-import { paraCampoDeData } from '../../helpers/format.helper';
+import { hojeNoCampoDeData, paraCampoDeData } from '../../helpers/format.helper';
 import { useNextAssetTagQuery, type AssetInput } from '../../../domain/asset/asset.queries';
 import { usePode } from '../../../domain/auth/auth.store';
 import type { Asset } from '../../../domain/shared/asset.types';
@@ -208,7 +208,7 @@ export default function AssetFormModal({
             </div>
             <div className="space-y-1">
               <label className={ROTULO}>Data da compra</label>
-              <input type="date" value={valores.purchaseDate} onChange={(e) => definir('purchaseDate', e.target.value)} className={CLASSE_CAMPO} />
+              <input type="date" max={hojeNoCampoDeData()} value={valores.purchaseDate} onChange={(e) => definir('purchaseDate', e.target.value)} className={CLASSE_CAMPO} />
             </div>
             {veCusto && (
               <div className="space-y-1">

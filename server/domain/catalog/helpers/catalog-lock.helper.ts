@@ -16,9 +16,8 @@ import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase
 //
 // Resultado: um item de estoque numa categoria de ATIVO, que nenhuma guarda
 // recusou. O mesmo vale para o tipo do status (um ativo entregue com status de
-// estoque), para o posto desativado (uma entrega a um posto que não recebe mais
-// nada) e para a localização desativada (um ativo guardado onde não cabe mais
-// nada).
+// estoque) e para a localização desativada (um ativo guardado onde não cabe
+// mais nada).
 //
 // A FK NÃO cobre: o `FOR KEY SHARE` que ela toma não conflita com o `UPDATE`
 // de uma coluna que não é chave. Por isso os DOIS lados travam de verdade:
@@ -77,8 +76,8 @@ export async function travarLocalParaEscrita(client: ClienteQueTrava, id: string
 }
 
 /**
- * Trava o posto para escrita — a mesma trava da localização, pelo mesmo motivo:
- * a desativação espera quem está lendo o `isActive` dele (`assertPostoRecebe`).
+ * Trava o posto para escrita: a edição espera quem está lendo o nome dele para
+ * entregar ou ocupar (`lerPostoTravado`), e a auditoria grava o nome certo.
  * `NO KEY UPDATE` deixa passar o `FOR KEY SHARE` das FKs que apontam para cá
  * (a entrega de ativo, a de estoque, o ocupante).
  */
@@ -141,8 +140,8 @@ export async function assertLocalRecebe(client: ClienteQueTrava, id: string, fin
 }
 
 /**
- * O posto existe e ainda RECEBE coisa nova — entrega de ativo, entrega de
- * estoque, ocupante? 404 / 409.
+ * O posto do alvo — entrega de ativo, entrega de estoque, ocupante — existe?
+ * 404. Ele não se desativa (AN): o que existe recebe.
  *
  * `modo`: `SHARE` para a entrega de estoque e o ocupante; `UPDATE` para a entrega
  * de ativo, que logo depois trava o posto `FOR UPDATE` na invariante 19 —
@@ -152,22 +151,16 @@ export async function assertLocalRecebe(client: ClienteQueTrava, id: string, fin
  * Devolve o NOME do posto, já lido aqui: é como a entrega de ativo e a de estoque o gravam
  * na auditoria.
  */
-export async function assertPostoRecebe(
+export async function lerPostoTravado(
   client: ClienteQueTrava,
   id: string,
-  finalidade: string,
   modo: 'SHARE' | 'UPDATE' = 'SHARE',
 ): Promise<string> {
   const linhas = modo === 'UPDATE'
-    ? await client.$queryRaw<{ name: string; isActive: boolean }[]>`
-        SELECT name, "isActive" FROM workstations WHERE id = ${id}::uuid FOR UPDATE`
-    : await client.$queryRaw<{ name: string; isActive: boolean }[]>`
-        SELECT name, "isActive" FROM workstations WHERE id = ${id}::uuid FOR SHARE`;
+    ? await client.$queryRaw<{ name: string }[]>`SELECT name FROM workstations WHERE id = ${id}::uuid FOR UPDATE`
+    : await client.$queryRaw<{ name: string }[]>`SELECT name FROM workstations WHERE id = ${id}::uuid FOR SHARE`;
 
   if (linhas.length === 0) throw new AppError('Posto não encontrado.', 404);
-  if (!linhas[0].isActive) {
-    throw new AppError(`"${linhas[0].name}" está desativado e não recebe ${finalidade}.`, 409);
-  }
   return linhas[0].name;
 }
 

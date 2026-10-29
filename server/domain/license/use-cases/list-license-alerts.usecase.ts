@@ -5,10 +5,11 @@ import { hojeNoBrasil, somarDias } from '../../shared/hoje.helper';
 import { DIAS_DE_AVISO, diasParaVencer, statusDaLicenca, type LicenseStatus } from '../helpers/license-status.helper';
 import { contarUso } from './count-license-checkouts.usecase';
 
-// O ALERTA DA LICENÇA — um só: o que venceu, o que vai vencer, e o que encerrou
-// com alguém ainda usando. Não existe alerta de "abaixo do mínimo" (AA).
+// O ALERTA DA LICENÇA — um só: o que venceu e o que vai vencer. A encerrada
+// não entra: ela só encerra com tudo devolvido. Não existe alerta de "abaixo do
+// mínimo" (AA).
 
-export type MotivoDoAlerta = 'ENCERRADA_EM_USO' | 'VENCIDA' | 'VENCENDO';
+export type MotivoDoAlerta = 'VENCIDA' | 'VENCENDO';
 
 export interface LicencaEmAlerta {
   id: string;
@@ -45,14 +46,11 @@ type LinhaDoAlerta = {
 };
 
 /**
- * Os três motivos, do mais urgente para o menos:
+ * Os dois motivos, do mais urgente para o menos:
  *
- * 1. ENCERRADA E AINDA EM USO — o contrato acabou e tem gente usando: uso sem
- *    direito, agora. O Encerrar e a data marcada deixam passar com alguém
- *    usando, e é aqui que isso aparece.
- * 2. VENCIDA — da mais recente para a mais antiga. Fica no alerta até alguém
+ * 1. VENCIDA — da mais recente para a mais antiga. Fica no alerta até alguém
  *    renovar a data ou encerrar a licença: é uma decisão pendente.
- * 3. VENCENDO nos próximos 30 dias — da mais próxima para a mais distante.
+ * 2. VENCENDO nos próximos 30 dias — da mais próxima para a mais distante.
  *
  * TODO FILTRO NO BANCO, e o teto DEPOIS dele: cortar antes de filtrar deixava
  * de fora justamente as que importavam. `total` diz à tela quantas são de
@@ -65,11 +63,6 @@ export async function listLicenseAlerts(): Promise<AlertasDaLicenca> {
   };
 
   const recortes: { motivo: MotivoDoAlerta; where: Prisma.LicenseWhereInput; orderBy: Prisma.LicenseOrderByWithRelationInput[] }[] = [
-    {
-      motivo: 'ENCERRADA_EM_USO',
-      where: { terminationDate: { lte: hoje }, checkouts: { some: { checkinAt: null } } },
-      orderBy: [{ terminationDate: 'desc' }, { name: 'asc' }, { id: 'asc' }],
-    },
     {
       motivo: 'VENCIDA',
       where: { AND: [naoEncerrada, { expirationDate: { lt: hoje } }] },

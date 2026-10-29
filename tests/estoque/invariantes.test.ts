@@ -320,17 +320,20 @@ describe('a categoria precisa ser de estoque', () => {
 });
 
 describe('desativar e excluir', () => {
-  it('desativa mesmo com unidade fora: não recebe entrega nova, e a que está fora volta', async () => {
+  it('com unidade em uso não se desativa (409); devolvida, desativa e não recebe entrega nova', async () => {
     const webcam = await item('Webcam desativada', 3);
     const entrega = await paraLaura(webcam.id);
+    const emUso = await api.put<{ error: string }>(`/api/stock/items/${webcam.id}`, { isActive: false });
+    expect(emUso.status).toBe(409);
+    expect(emUso.body.error).toBe('"Webcam desativada" tem 1 unidade em uso e não pode ser desativado. Devolva antes.');
+
+    expect((await api.post(`/api/stock/checkouts/${entrega.body.unidades[0].id}/checkin`, {})).status).toBe(200);
     expect((await api.put(`/api/stock/items/${webcam.id}`, { isActive: false })).status).toBe(200);
-    expect((await lerItem(webcam.id)).body).toMatchObject({ isActive: false, emUso: 1 });
+    expect((await lerItem(webcam.id)).body).toMatchObject({ isActive: false, emUso: 0 });
 
     const recusa = await paraLaura(webcam.id);
     expect(recusa.status).toBe(409);
     expect(recusa.body.error).toMatch(/está desativado e não recebe entrega\. .*reative-o antes/);
-
-    expect((await api.post(`/api/stock/checkouts/${entrega.body.unidades[0].id}/checkin`, {})).status).toBe(200);
 
     // Reativado, volta a entregar.
     expect((await api.put(`/api/stock/items/${webcam.id}`, { isActive: true })).status).toBe(200);

@@ -1,7 +1,6 @@
 import { ArrowRightLeft, Boxes, Clock, KeyRound, MapPin } from 'lucide-react';
 import type { EventoDaPessoa } from '../../../../domain/shared/person.types';
 import { formatarDiaDoInstante } from '../../../helpers/format.helper';
-import { momentoDoEvento } from '../../../helpers/historico.helper';
 import { tituloDoEvento } from '../helpers/historico.helper';
 
 // A LINHA DO TEMPO da pessoa: por onde ela passou. QUATRO fontes, uma lista:
@@ -75,11 +74,9 @@ function Evento({ evento }: { evento: EventoDaPessoa }) {
         </div>
 
         <span className="flex items-center gap-1.5 text-text-tertiary text-[10px] tabular-nums shrink-0">
-          {/* A licença e o estoque são registrados por dia: a hora de um dia
-              passado seria inventada. */}
-          <Clock size={11} />{' '}
-          {evento.fonte === 'LICENCA' || evento.fonte === 'ESTOQUE'
-            ? formatarDiaDoInstante(evento.at) : momentoDoEvento(evento.at)}
+          {/* Tudo é registrado por dia — posse, ocupação, licença e estoque (AM):
+              a hora de um dia passado seria inventada. */}
+          <Clock size={11} /> {formatarDiaDoInstante(evento.at)}
         </span>
       </div>
 

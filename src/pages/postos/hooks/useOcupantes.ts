@@ -4,7 +4,6 @@ import {
   type OccupantInput,
 } from '../../../domain/occupancy/occupancy.queries';
 import type { WorkstationOccupant, OccupantView } from '../../../domain/shared/posse.types';
-import { nomeDoOcupante } from '../helpers/ocupantes.helper';
 
 // Os OCUPANTES de um posto — Camada 2 de docs/referencia/modelo-de-posse.md.
 //
@@ -26,12 +25,11 @@ export function useOcupantes(workstationId: string | null) {
   };
 
   // Encerrar não apaga a linha, mas também não se desfaz: recolocar a pessoa
-  // abre uma ocupação NOVA, e a continuidade do turno se perde. Por isso o
-  // confirm, no mesmo lugar em que o `handleDelete` do catálogo tem o dele.
-  const handleEncerrar = async (ocupante: WorkstationOccupant) => {
+  // abre uma ocupação NOVA. A confirmação é a da linha, com o dia em que a
+  // pessoa saiu (AM), como a devolução da licença.
+  const handleEncerrar = async (ocupante: WorkstationOccupant, dia: string) => {
     if (!workstationId) return;
-    if (!confirm(`Encerrar a ocupação de ${nomeDoOcupante(ocupante)} neste posto?`)) return;
-    await encerrar.mutateAsync({ workstationId, occupantId: ocupante.id });
+    await encerrar.mutateAsync({ workstationId, occupantId: ocupante.id, endedAt: dia });
   };
 
   // Corrigir o turno não pede confirmação: não encerra nada e fica no histórico

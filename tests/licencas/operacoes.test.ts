@@ -226,17 +226,19 @@ describe('as datas contra as entregas que já existem', () => {
   /** '2026-03-10' → '10/03/2026', como a frase do servidor. */
   const naFrase = (dia: string) => dia.split('-').reverse().join('/');
 
-  it('o encerramento não fica antes da última entrega; no mesmo dia passa', async () => {
-    const licenca = await criarLicenca(api, { name: 'Encerra antes da entrega', categoryId: cenario.categoriaLicencaId, seatsTotal: 2 });
-    await api.post(`/api/licenses/${licenca.id}/checkout`, { assignedPersonId: cenario.laura, checkoutAt: diaNoBrasil(-8) });
-    await api.post(`/api/licenses/${licenca.id}/checkout`, { assignedPersonId: cenario.ana, checkoutAt: diaNoBrasil(-5) });
+  it('o encerramento não fica antes da última devolução; no mesmo dia passa', async () => {
+    const licenca = await criarLicenca(api, { name: 'Encerra antes da devolução', categoryId: cenario.categoriaLicencaId, seatsTotal: 2 });
+    const laura = await api.post<{ id: string }>(`/api/licenses/${licenca.id}/checkout`, { assignedPersonId: cenario.laura, checkoutAt: diaNoBrasil(-8) });
+    const ana = await api.post<{ id: string }>(`/api/licenses/${licenca.id}/checkout`, { assignedPersonId: cenario.ana, checkoutAt: diaNoBrasil(-5) });
+    await api.post(`/api/licenses/checkouts/${laura.body.id}/checkin`, { checkinAt: diaNoBrasil(-6) });
+    await api.post(`/api/licenses/checkouts/${ana.body.id}/checkin`, { checkinAt: diaNoBrasil(-3) });
 
-    const antes = await api.put<{ error: string }>(`/api/licenses/${licenca.id}`, { terminationDate: diaNoBrasil(-6) });
+    const antes = await api.put<{ error: string }>(`/api/licenses/${licenca.id}`, { terminationDate: diaNoBrasil(-4) });
     expect(antes.status).toBe(422);
     expect(antes.body.error).toBe(
-      `O encerramento (${naFrase(diaNoBrasil(-6))}) não pode ser antes da última entrega (${naFrase(diaNoBrasil(-5))}).`,
+      `O encerramento (${naFrase(diaNoBrasil(-4))}) não pode ser antes da última devolução (${naFrase(diaNoBrasil(-3))}).`,
     );
-    expect((await api.put(`/api/licenses/${licenca.id}`, { terminationDate: diaNoBrasil(-5) })).status).toBe(200);
+    expect((await api.put(`/api/licenses/${licenca.id}`, { terminationDate: diaNoBrasil(-3) })).status).toBe(200);
   });
 
   it('a compra não fica depois da primeira entrega; no mesmo dia passa', async () => {

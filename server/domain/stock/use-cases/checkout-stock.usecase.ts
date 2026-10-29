@@ -4,7 +4,7 @@ import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
 import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
 import { travarAtivo } from '../../asset/use-cases/lock-asset.usecase';
-import { assertPostoRecebe } from '../../catalog/helpers/catalog-lock.helper';
+import { lerPostoTravado } from '../../catalog/helpers/catalog-lock.helper';
 import { travarPessoaOuFalhar, type ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
 import { hojeNoBrasil, instanteDoDia } from '../../shared/hoje.helper';
 import {
@@ -128,7 +128,7 @@ async function assertAlvoApto(
   if (tipo === 'WORKSTATION') {
     // Desativado não recebe entrega nova. `FOR SHARE` depois do item — a aresta
     // `item → posto` que o grafo já tinha (`lock-asset.usecase.ts`).
-    return { nome: await assertPostoRecebe(client, alvoId, 'entrega de estoque'), compra: null };
+    return { nome: await lerPostoTravado(client, alvoId), compra: null };
   }
 
   if (tipo === 'ASSET') {

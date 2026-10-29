@@ -4,9 +4,10 @@ import { AppError } from '../../../core/errors/app-error';
 import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
 import { buildChanges } from '../../shared/diff.helper';
+import { hojeNoBrasil } from '../../shared/hoje.helper';
 import { diaEmPortugues } from '../helpers/asset-dates.helper';
 import { ASSET_WRITE_SELECT } from '../helpers/asset-select.helper';
-import { assertSemPosseParaBaixa } from './assert-retire-posse.usecase';
+import { assertSemPosse } from './assert-sem-posse.usecase';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
 import {
   comoReferencias, licencasDoAtivo, nomesDasLicencas,
@@ -47,7 +48,7 @@ export async function retireAsset(id: string, data: RetireAssetData, ator: Ator)
 
     const antes = await tx.asset.findFirst({
       where: { id },
-      select: { id: true, assetTag: true, retiredAt: true, retiredReason: true, retiredNotes: true },
+      select: { id: true, assetTag: true, purchaseDate: true, retiredAt: true, retiredReason: true, retiredNotes: true },
     });
     if (!antes) throw new AppError('Registro não encontrado', 404);
 
@@ -62,7 +63,7 @@ export async function retireAsset(id: string, data: RetireAssetData, ator: Ator)
 
     // A amarra da etapa: ativo entregue não sai do patrimônio. Com o ativo já
     // travado, a entrega simultânea espera esta transação terminar.
-    await assertSemPosseParaBaixa(tx, id, antes.assetTag);
+    await assertSemPosse(tx, id, antes.assetTag, 'receber baixa');
 
     // E a LICENÇA, pelo mesmo motivo da exclusão (`delete-asset`): ela
     // continuaria descontada do contrato, presa a uma máquina vendida.
@@ -83,7 +84,43 @@ export async function retireAsset(id: string, data: RetireAssetData, ator: Ator)
     // honesto — a peça saiu do estoque, e não ficou instalada em nada.
     await componentesDoAtivo(tx, id, antes.assetTag, 'dar baixa');
 
-    const retiredAt = data.retiredAt ?? new Date();
+    // O DIA da baixa, no calendário de Brasília, como a data da compra: é fato
+    // contábil, e "agora" às 22h já seria amanhã em UTC. Não antecede a compra,
+    // nem a última devolução do computador, da licença entregue a ele ou do
+    // componente retirado dele (AM): o histórico diria "devolvido em 10/03" de
+    // um computador que saiu do patrimônio em 01/03.
+    const retiredAt = data.retiredAt ?? hojeNoBrasil();
+    if (antes.purchaseDate && retiredAt < antes.purchaseDate) {
+      throw new AppError(
+        `A baixa (${diaEmPortugues(retiredAt)}) não pode ser antes da compra de ${antes.assetTag} `
+        + `(${diaEmPortugues(antes.purchaseDate)}).`,
+        422,
+      );
+    }
+    const [entrega, licenca, componente] = await Promise.all([
+      tx.assignment.findFirst({
+        where: { assetId: id, checkinAt: { not: null } }, orderBy: { checkinAt: 'desc' }, select: { checkinAt: true },
+      }),
+      tx.licenseCheckout.findFirst({
+        where: { assignedAssetId: id, checkinAt: { not: null } }, orderBy: { checkinAt: 'desc' }, select: { checkinAt: true },
+      }),
+      tx.stockMovement.findFirst({
+        where: { targetAssetId: id, returnedAt: { not: null } }, orderBy: { returnedAt: 'desc' }, select: { returnedAt: true },
+      }),
+    ]);
+    const ultimas = [
+      { oque: 'da última devolução de', dia: entrega?.checkinAt && hojeNoBrasil(entrega.checkinAt) },
+      { oque: 'da última licença devolvida de', dia: licenca?.checkinAt && hojeNoBrasil(licenca.checkinAt) },
+      { oque: 'do último componente retirado de', dia: componente?.returnedAt && hojeNoBrasil(componente.returnedAt) },
+    ];
+    for (const { oque, dia } of ultimas) {
+      if (dia && retiredAt < dia) {
+        throw new AppError(
+          `A baixa (${diaEmPortugues(retiredAt)}) não pode ser antes ${oque} ${antes.assetTag} (${diaEmPortugues(dia)}).`,
+          422,
+        );
+      }
+    }
 
     const depois = await tx.asset.update({
       where: { id },

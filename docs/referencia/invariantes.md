@@ -35,7 +35,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 > a [AC](../decisoes/licencas.md#ac--a-chave-vira-lista-cada-uma-cobre-uma-quantidade-e-a-entrega-escolhe-uma) trouxe a 24, e a
 > [AE](../decisoes/estoque.md#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira), a 25.
 > Renumerar as que ficaram quebraria as citações no código —
-> `assert-retire-posse.usecase.ts` diz "Invariante 4", `license-count.helper.ts`
+> `assert-sem-posse.usecase.ts` diz "Invariante 4", `license-count.helper.ts`
 > diz "invariante 22" —, e um número que muda de significado é pior que um
 > número que falta.
 
@@ -51,9 +51,9 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 12 | Uma máquina é no máximo um ativo, e um ativo no máximo uma máquina | **banco** — `@unique` em `Endpoint.assetId` | 409 `Este ativo já está vinculado a outra máquina. Desfaça aquele vínculo antes, pela aba Máquina do ativo.` |
 | 13 | A mesma sugestão não empilha na fila | **banco** — índice único parcial `sugestao_pendente_por_alvo` | nada: o job trata o `P2002` como "outro já criou" |
 | 17 | Sempre existe alguém ativo que é `ADMIN` | **aplicação** — `assertSobraAdministrador()`, DEPOIS da escrita e dentro da transação, na edição e na exclusão de usuário | 409 `Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. Dê o cargo de Administrador a outra pessoa com login antes de seguir.` |
-| 19 | No máximo um ativo por posto de trabalho | **aplicação** — duas portas: a entrega e a restauração da lixeira (`ativoDoPosto()`, com `FOR UPDATE` na linha do posto) | 409 `Este posto de trabalho já tem um ativo: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.` |
-| 20 | Ativo baixado não tem posse aberta, licença nem componente | **aplicação** — duas portas: a baixa (`assertSemPosseParaBaixa` e as contagens de licenças e de componentes) e a entrega (`checkout-asset`, `checkout-license`, `checkout-stock`), as duas com o ativo travado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Desfaça a baixa antes.` |
-| 21 | Localização ou posto desativado não recebe nada novo | **aplicação** — `assertLocalRecebe()` em cada porta que guarda (ativo, item, posto) e `assertPostoRecebe()` em cada porta que entrega ou ocupa, com a linha travada | 409 `"Mesa 1" está desativado e não recebe entrega nova.` |
+| 19 | No máximo um ativo por posto de trabalho | **aplicação** — a porta da entrega (`ativoDoPosto()`, com `FOR UPDATE` na linha do posto); a lixeira não a contorna, porque o ativo entregue não vai para ela ([AL](../decisoes/posse.md#al--o-computador-entregue-não-vai-para-a-lixeira)) | 409 `Este posto de trabalho já tem um ativo: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.` |
+| 20 | Ativo baixado ou na lixeira não tem posse aberta, licença nem componente | **aplicação** — três portas: a baixa e a lixeira (`assertSemPosse` e as contagens de licenças e de componentes) e a entrega (`checkout-asset`, `checkout-license`, `checkout-stock`), as duas com o ativo travado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Desfaça a baixa antes.` |
+| 21 | Localização desativada não recebe nada novo | **aplicação** — `assertLocalRecebe()` em cada porta que guarda (ativo, item, posto), com a linha travada | 409 `"Filial Centro" está desativada e não recebe ativo novo.` |
 | 22 | O que está em uso nunca passa da quantidade comprada | **aplicação** — a entrega e a edição contam com a linha da licença travada (`lock-license.usecase.ts`) | 409 `Sem licença livre em "Office 2024": 5 compradas, 5 em uso. Devolva uma entrega ou aumente a quantidade comprada.` |
 | 23 | Uma entrega aberta por alvo e licença | **banco** — dois índices únicos parciais, um por alvo. No passado, a entrega que se sobrepõe à última devolução do mesmo alvo é só da **aplicação** (422) | 409 `Laura Souza já está com "Office 2024".` (a API confere antes) |
 | 24 | A chave da entrega é uma das chaves da licença; nenhuma chave vai para mais entregas abertas do que cobre; e as chaves cobrem no máximo o que foi comprado | **banco** — a FK composta (chave, licença) e os `CHECK`s da chave. A conta de cada chave e a soma contra o comprado são da **aplicação**, com a licença travada | 409 `Esta chave já está em outra entrega aberta de "Office 2024". Escolha outra.` / 422 `As chaves cobrem 12, mais do que 10 compradas em "Office 2024". …` |
@@ -459,8 +459,8 @@ tem uma — `passwordHash` é obrigatório desde
 ### 19 — No máximo um ativo por posto de trabalho
 
 ```ts
-// workstation/helpers/ativo-do-posto.helper.ts, nas duas portas (entrega e
-// restauração da lixeira), dentro da transação
+// workstation/helpers/ativo-do-posto.helper.ts, na porta da entrega, dentro da
+// transação
 const ocupante = await ativoDoPosto(tx, workstationId, assetId);
 if (ocupante) throw new AppError(jaTemAtivo(ocupante), 409);
 ```
@@ -491,25 +491,21 @@ nenhum `if` o pega. Sem rede no banco, a serialização é explícita:
 que as duas transações disputam — depois de travar o ativo, que é a ordem do
 grafo de travas (`lock-asset.usecase.ts`).
 
-**São DUAS portas, e nenhuma é redundante:**
+**É uma porta só, a da entrega** (`checkout-asset.usecase.ts`): ela recusa
+entregar ao posto um segundo ativo.
 
-| porta | o que ela impede |
-| --- | --- |
-| `checkout-asset.usecase.ts` | entregar ao posto um segundo ativo |
-| `restore-asset.usecase.ts` | **restaurar da lixeira** um ativo cuja posse aberta aponta para um posto que, enquanto ele estava fora, recebeu outro |
-
-Houve uma terceira, a da **marca**: enquanto o posto era uma localização com
+Houve outras duas. A da **marca**: enquanto o posto era uma localização com
 `isWorkstation`, marcar como posto uma sala que já tinha dois ativos contornava
 a entrega. Ela saiu com a marca
 ([Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)):
 o posto nasce posto, e só ele recebe entrega.
 
-Sem a segunda, seria contornável pela lixeira: o `delete-asset` só carimba
-`deletedAt` e **não fecha a posse**, e a entrega ignora o ativo na lixeira de
-propósito — um ativo que nenhuma tela mostra não pode trancar a mesa.
-Juntas, as duas decisões abrem o caminho: a vaga é ocupada enquanto o ativo
-está na lixeira, e restaurá-lo o devolve a uma mesa que já não tem lugar para
-ele. A porta reconfere na volta, com o mesmo helper e a mesma frase.
+E a da **restauração da lixeira**: o `delete-asset` mandava para a lixeira o
+ativo ainda entregue, a vaga ficava para outro, e restaurá-lo o devolvia a uma
+mesa que já não tinha lugar — a porta reconferia na volta. Ela saiu com a
+[AL](../decisoes/posse.md#al--o-computador-entregue-não-vai-para-a-lixeira): o
+ativo entregue não vai para a lixeira, então o que volta dela não aponta para
+mesa nenhuma.
 
 **O vínculo de máquina NÃO é porta**, e já foi: enquanto "computador" era
 "ativo com máquina vinculada", entregar o desktop sem agente e vincular depois
@@ -524,20 +520,23 @@ estoque na mesa, que não é ativo. **Posto sem ativo continua válido**: a regr
 relação com esta invariante: ele é posto **sem ocupante** — gente, não máquina.)
 
 > **A regra é testada, não argumentada.** `tests/invariantes/ativo-por-posto.test.ts`
-> cobre a porta da entrega sem agente, o que libera a vaga e a porta da
-> restauração; `tests/descoberta/vincular-e-entregar.test.ts` cobre a entrega com
+> cobre a porta da entrega sem agente, o que libera a vaga e a lixeira que
+> recusa o ativo entregue; `tests/descoberta/vincular-e-entregar.test.ts` cobre a entrega com
 > agente e prova que desvincular a máquina NÃO libera a vaga. **A corrida
 > também:** `tests/corridas/ativo-por-posto.test.ts` dispara duas entregas
 > simultâneas ao mesmo posto e exige que exatamente uma entre.
 
 ---
 
-### 20 — Ativo baixado não tem posse aberta
+### 20 — Ativo baixado ou na lixeira não tem posse aberta
 
 ```ts
 // asset/use-cases/retire-asset.usecase.ts — a porta da BAIXA
 await travarAtivoOuFalhar(tx, id);
-await assertSemPosseParaBaixa(tx, id, antes.assetTag);
+await assertSemPosse(tx, id, antes.assetTag, 'receber baixa');
+
+// asset/use-cases/delete-asset.usecase.ts — a porta da LIXEIRA (AL)
+await assertSemPosse(tx, id, 'Este ativo', 'ir para a lixeira');
 
 // assignment/use-cases/checkout-asset.usecase.ts — a porta da ENTREGA
 if (ativo.retiredAt) throw new AppError(`${ativo.assetTag} teve baixa em …`, 409);
@@ -547,10 +546,15 @@ if (ativo.retiredAt) throw new AppError(`${ativo.assetTag} teve baixa em …`, 4
 equipamento sumiria do inventário continuando com ela, e a devolução — que
 registra em que estado ele voltou e quem recebeu — não aconteceria.
 
-**São duas portas, uma em cada sentido:**
+Na lixeira é o mesmo: a pessoa se desativava com o computador ainda no nome
+dela, porque a contagem dela não via a lixeira, e restaurá-lo o devolvia a quem
+não pode ter posse (invariante 6).
+
+**São três portas:**
 
 | porta | o que ela impede |
 | --- | --- |
+| `delete-asset.usecase.ts` | mandar para a lixeira o ativo **entregue** — `Este ativo está entregue e não pode ir para a lixeira. Faça a devolução antes.` —, com **licença** ou com **componente** ([AL](../decisoes/posse.md#al--o-computador-entregue-não-vai-para-a-lixeira)) |
 | `retire-asset.usecase.ts` | dar baixa em ativo **entregue** — `Faça a devolução antes.` —, que **tem licença** — `Devolva pela tela de Licenças antes de dar baixa.` — ou que **tem componente** instalado — `Retire pela tela de Estoque antes de dar baixa.` ([AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar)) |
 | `checkout-asset.usecase.ts` | **entregar** ativo baixado — e isso vale com **qualquer** status, porque a baixa não mexe no status: um vendido pode estar "Disponível" |
 
@@ -575,41 +579,39 @@ tela está em [`baixa.md`](baixa.md).
 
 ---
 
-### 21 — Localização ou posto desativado não recebe nada novo
+### 21 — Localização desativada não recebe nada novo
 
 ```ts
 // catalog/helpers/catalog-lock.helper.ts
 await assertLocalRecebe(tx, locationId, 'ativo novo');            // 404 ou 409
-await assertPostoRecebe(tx, workstationId, 'entrega nova', 'UPDATE');
 ```
 
-A localização e o posto com algo neles **agora** não se excluem
-([V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira),
-[Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)). Desativar
-(`isActive = false`) é outra coisa: continuam na lista, e desativados não
-**recebem** nada novo. O que já está lá fica — desativar não devolve nem encerra
-nada, igual ao colaborador desativado.
+A localização com algo nela **agora** não se exclui
+([V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira)).
+Desativar (`isActive = false`) é outra coisa: continua na lista, e desativada não
+**recebe** nada novo. O que já está lá fica, igual ao colaborador desativado.
 
-**As portas da localização** — o que passa a ficar GUARDADO nela: `create-asset`
-e `update-asset` (o local do ativo), `create-stock-item` e `update-stock-item`
-(o local de guarda do item de estoque) e o cadastro do posto
+**As portas** — o que passa a ficar GUARDADO nela: `create-asset` e
+`update-asset` (o local do ativo), `create-stock-item` e `update-stock-item` (o
+local de guarda do item de estoque) e o cadastro do posto
 (`workstationSpec.beforeWrite`, o posto novo ou que se muda para ela) — nas
 edições, só quando o local **muda**: o formulário reenvia todo campo.
 
-**As portas do posto** — o que ele RECEBE: `checkout-asset` (entrega),
-`checkout-stock` (entrega de estoque) e `add-workstation-occupant` (ocupante).
+**Por que na aplicação:** depende do estado do local no momento da escrita, e
+cruza tabelas. **E por isso trava:** a desativação trava a linha
+(`FOR NO KEY UPDATE`), e cada porta a lê `FOR SHARE`.
 
-**Por que na aplicação:** depende do estado do local ou do posto no momento da
-escrita, e cruza tabelas. **E por isso trava:** a desativação trava a linha
-(`FOR NO KEY UPDATE`), e cada porta a lê `FOR SHARE` — a entrega de ativo,
-`FOR UPDATE`, porque logo depois trava o mesmo posto pela invariante 19.
+**O posto não se desativa** ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)): o vazio se exclui, e o que tem
+algo nele recebe o 409 da exclusão. As portas dele (`checkout-asset`,
+`checkout-stock`, `add-workstation-occupant`) só o leem travado
+(`lerPostoTravado`), para o 404 e o nome da auditoria.
 
 O mesmo princípio vale para categoria, status, fabricante e modelo desativados —
 não são **escolhidos** de novo (`assertEscolhaAtiva`) —, mas ali é regra de
 formulário, não fato sobre o lugar: está em
 [`configuracoes.md`](configuracoes.md).
 
-> **Testado:** `tests/invariantes/localizacao.test.ts` e `tests/invariantes/posto.test.ts`.
+> **Testado:** `tests/invariantes/localizacao.test.ts`.
 
 ---
 

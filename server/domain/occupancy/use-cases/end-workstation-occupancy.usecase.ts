@@ -3,6 +3,8 @@ import { AppError } from '../../../core/errors/app-error';
 import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
 import { buildSnapshot } from '../../shared/diff.helper';
+import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
+import { hojeNoBrasil, instanteDoDia } from '../../shared/hoje.helper';
 import { OCCUPANT_SELECT, rotuloDaOcupacao } from '../helpers/occupant-select.helper';
 
 const CAMPOS_AUDITADOS = ['workstationId', 'personId', 'shift', 'startedAt', 'endedAt', 'notes'] as const;
@@ -27,13 +29,37 @@ const CAMPOS_AUDITADOS = ['workstationId', 'personId', 'shift', 'startedAt', 'en
  * escolher a resposta certa: 404 se a ocupação não existe NESTE posto, 409 se
  * existe e já estava encerrada. Sem ela, encerrar duas vezes responderia "não
  * encontrado" para uma linha que está lá.
+ *
+ * O DIA do fim (AM), como a devolução: ausente é agora; um dia passado vira o
+ * meio-dia de Brasília (`instanteDoDia`), e não vem antes do dia do início —
+ * no mesmo dia, nunca antes da hora real dele.
  */
 export async function endWorkstationOccupancy(
   workstationId: string,
   occupantId: string,
+  dia: Date | undefined,
   ator: Ator,
 ) {
   return prisma.$transaction(async (tx) => {
+    let endedAt = new Date();
+    if (dia) {
+      const aberta = await tx.workstationOccupant.findFirst({
+        where: { id: occupantId, workstationId, endedAt: null },
+        select: { startedAt: true },
+      });
+      if (aberta) {
+        const inicio = hojeNoBrasil(aberta.startedAt);
+        if (dia < inicio) {
+          throw new AppError(
+            `O fim da ocupação (${diaEmPortugues(dia)}) não pode ser antes do início (${diaEmPortugues(inicio)}).`,
+            422,
+          );
+        }
+        const instante = instanteDoDia(dia);
+        endedAt = instante < aberta.startedAt ? aberta.startedAt : instante;
+      }
+    }
+
     // `workstationId` entra no `where` junto com o id: a ocupação é encerrada
     // DENTRO do posto a que pertence. Sem ele, um id de ocupação de outro posto
     // seria encerrado por esta URL e a rota deixaria de descrever o que fez.
@@ -43,7 +69,7 @@ export async function endWorkstationOccupancy(
         workstationId,
         endedAt: null,
       },
-      data: { endedAt: new Date() },
+      data: { endedAt },
     });
 
     if (count === 0) {

@@ -16,13 +16,12 @@ import type { ClienteLicenca } from './count-license-checkouts.usecase';
 // sem repeti-la, e a auditoria conta quantas entraram, mudaram e saíram.
 // ═════════════════════════════════════════════════════════════════════════════
 
-/** O uso de uma chave: entregas abertas agora, e se já teve alguma. */
+/** O uso de uma chave: as entregas abertas com ela agora. */
 interface UsoDaChave {
   emUso: number;
-  jaEntregue: boolean;
 }
 
-const CHAVE_SEM_USO: UsoDaChave = { emUso: 0, jaEntregue: false };
+const CHAVE_SEM_USO: UsoDaChave = { emUso: 0 };
 
 /** Uma chave como o detalhe a devolve: o texto, quanto cobre e o uso. */
 export interface ChaveNaResposta extends UsoDaChave {
@@ -42,9 +41,8 @@ export type MudancaDasChaves = {
 };
 
 /**
- * O uso de cada chave da licença, em duas consultas — as abertas e as que já
- * tiveram entrega —, como o `contarUso` da licença. `excetoEntregaId` deixa uma
- * entrega fora da conta: a troca de chave não disputa lugar consigo mesma.
+ * Quantas entregas abertas cada chave da licença tem. `excetoEntregaId` deixa
+ * uma entrega fora da conta: a troca de chave não disputa lugar consigo mesma.
  */
 async function usoDasChaves(
   client: ClienteLicenca,
@@ -52,22 +50,15 @@ async function usoDasChaves(
   excetoEntregaId?: string,
 ): Promise<Map<string, UsoDaChave>> {
   const fora = excetoEntregaId ? { id: { not: excetoEntregaId } } : {};
-  const [abertas, entregues] = await Promise.all([
-    client.licenseCheckout.groupBy({
-      by: ['licenseKeyId'],
-      where: { licenseId, licenseKeyId: { not: null }, checkinAt: null, ...fora },
-      _count: { _all: true },
-    }),
-    client.licenseCheckout.groupBy({
-      by: ['licenseKeyId'],
-      where: { licenseId, licenseKeyId: { not: null } },
-    }),
-  ]);
+  const abertas = await client.licenseCheckout.groupBy({
+    by: ['licenseKeyId'],
+    where: { licenseId, licenseKeyId: { not: null }, checkinAt: null, ...fora },
+    _count: { _all: true },
+  });
 
-  const emUso = new Map(abertas.map((grupo) => [grupo.licenseKeyId, grupo._count._all]));
   const uso = new Map<string, UsoDaChave>();
-  for (const { licenseKeyId } of entregues) {
-    if (licenseKeyId) uso.set(licenseKeyId, { emUso: emUso.get(licenseKeyId) ?? 0, jaEntregue: true });
+  for (const { licenseKeyId, _count } of abertas) {
+    if (licenseKeyId) uso.set(licenseKeyId, { emUso: _count._all });
   }
   return uso;
 }
@@ -121,8 +112,10 @@ export async function somaDasChaves(client: ClienteLicenca, licenseId: string): 
  * - a chave com `id` já existe: o texto (a correção de digitação) e o "cobre"
  *   podem mudar, mas ela não cobre menos do que as entregas abertas com ela;
  * - a sem `id` é nova;
- * - a que ficou fora da lista sai — e só a que nunca foi entregue: a já
- *   entregue tem o histórico de quem a usou, como a licença.
+ * - a que ficou fora da lista sai, menos a que tem entrega aberta — a regra do
+ *   posto (AG), e a do Snipe-IT, que só apaga o assento livre. As entregas
+ *   devolvidas com ela perdem a ligação, como na exclusão da licença: nenhuma
+ *   tela mostra a chave de uma entrega devolvida (AK).
  *
  * A ORDEM é a da lista: o `createMany` grava o mesmo instante em todas, e um
  * milissegundo a mais em cada uma guarda a ordem em que foram digitadas.
@@ -160,16 +153,24 @@ export async function gravarChaves(
   }
 
   const removidas = [...existentes.values()].filter((chave) => !mantidas.has(chave.id));
-  if (removidas.some((chave) => chave.jaEntregue)) {
+  const emUso = removidas.find((chave) => chave.emUso > 0);
+  if (emUso) {
     throw new AppError(
-      'Uma chave que já foi entregue não sai da lista: o histórico de quem a usou depende dela.',
+      `Uma chave com entrega aberta não sai da lista: ${quantas(emUso.emUso, 'está', 'estão')} com ela. `
+      + 'Devolva para liberar.',
       409,
     );
   }
 
   // Sai antes de mudar e de entrar: a chave removida libera o texto para a nova.
+  // As devolvidas soltam a chave antes: a FK composta é `Restrict`.
   if (removidas.length > 0) {
-    await tx.licenseKey.deleteMany({ where: { id: { in: removidas.map((chave) => chave.id) } } });
+    const ids = removidas.map((chave) => chave.id);
+    await tx.licenseCheckout.updateMany({
+      where: { licenseKeyId: { in: ids }, checkinAt: { not: null } },
+      data: { licenseKeyId: null },
+    });
+    await tx.licenseKey.deleteMany({ where: { id: { in: ids } } });
     mudanca.removidas = removidas.length;
   }
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowRightLeft, MapPin, TriangleAlert, Undo2, User, X } from 'lucide-react';
 import ReferenceSelect from '../../components/ReferenceSelect';
+import { diaDoInstante, hojeNoCampoDeData } from '../../helpers/format.helper';
 import { useCatalogOptionsQuery } from '../../../domain/catalog/catalog.queries';
 import { montarDevolucao, montarEntrega, resumoDaPosse, type ResumoPosse } from '../helpers/posse.helper';
 import type { CheckinInput, CheckoutInput } from '../../../domain/assignment/assignment.queries';
@@ -78,6 +79,10 @@ export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }
   const [statusId, setStatusId] = useState('');
   const [expectedCheckinAt, setExpectedCheckinAt] = useState('');
   const [observacoes, setObservacoes] = useState('');
+  // O DIA da entrega ou da devolução (AM), como na licença e no estoque: vem
+  // com hoje, e pode voltar para registrar a que já aconteceu.
+  const hoje = hojeNoCampoDeData();
+  const [dia, setDia] = useState(hoje);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -107,10 +112,10 @@ export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }
 
     try {
       if (posse.entregue) {
-        await onDevolver(montarDevolucao({ statusId, checkinNotes: observacoes }));
+        await onDevolver(montarDevolucao({ statusId, checkinNotes: observacoes, checkinAt: dia }));
       } else {
         await onEntregar(montarEntrega({
-          targetType: aba, alvoId, statusId, expectedCheckinAt, checkoutNotes: observacoes,
+          targetType: aba, alvoId, statusId, expectedCheckinAt, checkoutNotes: observacoes, checkoutAt: dia,
         }));
       }
     } catch (falha) {
@@ -222,6 +227,15 @@ export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }
           )}
 
           <div className="space-y-1">
+            <label className={ROTULO}>{posse.entregue ? 'Data da devolução' : 'Data da entrega'}*</label>
+            <input
+              type="date" required max={hoje} value={dia}
+              min={posse.entregue && asset.posse?.checkoutAt ? diaDoInstante(asset.posse.checkoutAt) : undefined}
+              onChange={(event) => setDia(event.target.value)} className={CLASSE_CAMPO}
+            />
+          </div>
+
+          <div className="space-y-1">
             <label className={ROTULO}>Observações {posse.entregue ? 'da devolução' : 'da entrega'}</label>
             <textarea
               value={observacoes}
@@ -240,7 +254,7 @@ export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }
             </button>
             <button
               type="submit"
-              disabled={salvando || (!posse.entregue && !alvoId)}
+              disabled={salvando || !dia || (!posse.entregue && !alvoId)}
               className="px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary transition-colors disabled:opacity-50"
             >
               {salvando

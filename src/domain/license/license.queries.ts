@@ -18,8 +18,6 @@ import type {
 export type ParamsDaLicenca = Omit<ListParams, 'view'> & {
   categoryId?: string;
   status?: StatusDoFiltro;
-  /** Só as que alguém ainda usa — com `ENCERRADA`, para onde o alerta "encerradas em uso" leva. */
-  emUso?: 'sim';
 };
 
 /** As duas listas do detalhe: a página e, na de entregas, a busca pelo nome. */

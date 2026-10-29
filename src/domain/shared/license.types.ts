@@ -68,10 +68,8 @@ export interface ChaveDaLicenca {
   productKey: string;
   /** Quantas licenças ela cobre: 1 na individual, mais na de volume. */
   seats: number;
-  /** Entregas abertas com ela agora. */
+  /** Entregas abertas com ela agora: a com alguma não sai da lista (AK). */
   emUso: number;
-  /** Já teve entrega, mesmo devolvida: não sai da lista. */
-  jaEntregue: boolean;
 }
 
 /**
@@ -175,7 +173,7 @@ export interface EventoDeLicencaDoAlvo {
 }
 
 /** Por que a licença está no alerta, do mais urgente para o menos. */
-export type MotivoDoAlerta = 'ENCERRADA_EM_USO' | 'VENCIDA' | 'VENCENDO';
+export type MotivoDoAlerta = 'VENCIDA' | 'VENCENDO';
 
 export interface LicencaEmAlerta {
   id: string;

@@ -140,15 +140,17 @@ licença e os seus alvos quando vai mudá-los: rodado sozinho com `-t`, ele pass
   pedido, categoria e fabricante, com `_` como texto, e a ordem das encerradas.
 - **`detalhe.test.ts`** — com quem está e o histórico de 15 em 15, e a busca pelo nome do
   colaborador ou do computador; o histórico recusa `?q=`, e a página além do fim vem vazia.
-- **`ciclo.test.ts`** — Encerrar (com alguém usando, encerra e entra no alerta; passa a ser
-  encerrada na lista; reabre ao apagar a data), o filtro "ainda em uso" das encerradas, excluir de vez pela
+- **`ciclo.test.ts`** — Encerrar (com entrega aberta é 409, pelo botão e pelo formulário;
+  devolvida, passa a ser encerrada na lista; reabre ao apagar a data), a compra e o encerramento
+  não futuros, o filtro "ainda em uso" que não existe mais (422), excluir de vez pela
   regra do posto (a em uso recusa com quem; a devolvida some com as chaves, e as entregas ficam com
   o nome; a FK recusa por fora) e o alerta, na ordem de urgência e com a contagem
   de cada motivo. O bloco do alerta começa devolvendo tudo e apagando os vencimentos que os
   testes de cima deixaram: a caixa corta em seis.
 - **`chave.test.ts`** — a lista de chaves da licença (a ordem digitada, o "cobre", a soma contra o
-  comprado, a repetida; a edição que inclui, corrige e tira, a já entregue que não sai nem
-  encolhe, e a correção que troca o texto entre duas chaves), a chave escolhida na entrega (obrigatória com chaves, cada uma até o que cobre, a de
+  comprado, a repetida; a edição que inclui, corrige e tira, a em uso que não sai nem
+  encolhe, a só devolvida que sai e solta as entregas — a renovação com menos licenças, de 10
+  chaves para 5 ([AK](../decisoes/licencas.md#ak--a-chave-só-prende-enquanto-está-em-uso)) —, e a correção que troca o texto entre duas chaves), a chave escolhida na entrega (obrigatória com chaves, cada uma até o que cobre, a de
   outra licença é 404), a troca, as rotas que nunca a devolvem — o alerta incluído, com uma
   licença que está nele —, a exclusão que leva as chaves junto, e como a tela a esconde.
 - **`historico.test.ts`** — o histórico separado por alvo, e o da licença só com entregas e
@@ -241,6 +243,17 @@ O Editar manda o `updatedAt` que leu ao abrir ([AF](../decisoes/licencas.md#af--
 Encerrar da licença, o total do item, a entrega do consumível, a entrega do computador — e prova que a versão velha é 409,
 com a frase, e que nada foi gravado; a versão atual e a ausente passam, e a que não é data e hora
 é 422. Cadastro novo com Editar entra nesta lista.
+
+### `invariantes/dia-da-posse.test.ts` — o dia da entrega do computador
+
+O molde dos testes de dia da licença ([AM](../decisoes/posse.md#am--a-entrega-e-a-devolução-do-computador-ganham-o-dia)):
+a entrega e a devolução aceitam o dia passado, gravado ao meio-dia de Brasília, e recusam o
+futuro; a entrega não vem antes da compra nem da última devolução, e no dia dela fica um
+milissegundo depois; a devolução não vem antes da entrega, nem antes da hora real no mesmo dia;
+sem dia é agora. E as datas que dependem dela: a compra editada depois da primeira entrega, a
+compra futura, a baixa antes da última devolução, o começo e o fim da ocupação (nunca antes do
+início) e a devolução pela ficha do posto com o dia. O "hoje" dos testes é o
+`diaNoBrasil` — com a meia-noite UTC, a suíte falhava das 21h à meia-noite.
 
 ### `corridas/` — o placar, nunca "deu certo"
 

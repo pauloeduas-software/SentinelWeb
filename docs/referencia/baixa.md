@@ -29,7 +29,7 @@ E **não é excluir**:
 | | Excluir (lixeira) | Dar baixa |
 |---|---|---|
 | quando | o ativo foi cadastrado **por engano** | o ativo **saiu do patrimônio** |
-| pede | só a confirmação | **motivo**, data e observação |
+| pede | a confirmação, e a devolução antes, se ele está entregue ([AL](../decisoes/posse.md#al--o-computador-entregue-não-vai-para-a-lixeira)) | **motivo**, data e observação, e a devolução antes |
 | depois | some do inventário; restaura-se da lixeira | continua no histórico e na vista **Baixados**; desfaz-se com **Reverter** |
 | é | erro de digitação | fato contábil, datado |
 
@@ -43,7 +43,7 @@ formulário próprio — é uma operação, não um campo do cadastro:
 | Campo | Regra |
 |---|---|
 | **Motivo** (obrigatório) | um de seis, lista fechada: Vendido, Descartado, Doado, Devolvido em garantia, Extraviado, Roubado |
-| **Data da saída** (obrigatório) | vem preenchida com **hoje**, no fuso do navegador. Pode ser uma data passada — a venda foi na semana passada e o registro, hoje —, nunca futura (422) |
+| **Data da saída** (obrigatório) | vem preenchida com **hoje**, no calendário de Brasília, que é também o padrão quando a API não a recebe. Pode ser uma data passada — a venda foi na semana passada e o registro, hoje —, nunca futura, antes da compra nem antes da última devolução do computador, de uma licença entregue a ele ou de um componente retirado dele (422, [AM](../decisoes/posse.md#am--a-entrega-e-a-devolução-do-computador-ganham-o-dia)) |
 | **Observações** | a justificativa ("lote 2026/03, nota 1187"). Fica no ativo (`retiredNotes`) e aparece na aba Detalhes enquanto a baixa valer; a de cada baixa fica também na auditoria, no banco ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)) |
 
 A API é `POST /api/assets/:id/retire` (`{ retiredReason, retiredAt?, notes? }`),
@@ -72,6 +72,8 @@ permitida a `ADMIN`, o único cargo ([Z](../decisoes/acesso.md#z--sobra-um-cargo
 | dar baixa em ativo que **tem componente** | 409 `ATV-00042 ainda tem os componentes Memória RAM 8 GB ×2. Retire pela tela de Estoque antes de dar baixa.` | a peça continuaria "em uso" numa máquina vendida. A recusa traz um link para o detalhe de cada item, onde está o Retirar; se a peça foi junto, retire e diminua o total do item ([AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar)) |
 | dar baixa **duas vezes** | 409 `ATV-00042 já teve baixa em 15/10/2026.` | reescreveria a data em que ele deixou de ser patrimônio |
 | data da saída **futura** | 422 | a baixa tiraria o ativo do inventário hoje por um fato que não aconteceu |
+| data da saída **antes da compra** | 422 `A baixa (01/03/2026) não pode ser antes da compra de ATV-00042 (10/03/2026).` | nada acontece com o computador antes de ele ser comprado; e a compra editada também não vai para depois da baixa |
+| data da saída **antes da última devolução** — do computador, de uma licença entregue a ele ou de um componente retirado dele | 422 `A baixa (01/03/2026) não pode ser antes da última devolução de ATV-00042 (10/03/2026).` (`… da última licença devolvida de …`, `… do último componente retirado de …`) | o histórico diria "devolvido em 10/03" de um computador que saiu do patrimônio em 01/03 |
 | **entregar** ativo baixado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Desfaça a baixa antes.` | ele não é mais da empresa — vale com **qualquer** status, inclusive "Disponível" |
 | entregar **licença** a ativo baixado | 409 `O ativo ATV-00042 teve baixa e não pode receber licença.` | a licença ficaria presa a uma máquina que não existe mais |
 | entregar **componente** a ativo baixado | 409 `O ativo ATV-00042 teve baixa e não pode receber componente.` | pelo mesmo motivo |
@@ -130,9 +132,9 @@ pedir:
 | | |
 |---|---|
 | dar baixa | `server/domain/asset/use-cases/retire-asset.usecase.ts` |
-| a guarda da posse | `assert-retire-posse.usecase.ts` |
+| a guarda da posse (a baixa e a lixeira) | `assert-sem-posse.usecase.ts` |
 | reverter | `unretire-asset.usecase.ts` |
 | a recusa na entrega | `assignment/use-cases/checkout-asset.usecase.ts`; na licença, `license/use-cases/checkout-license.usecase.ts` |
 | as vistas Ativos / Baixados | `asset/helpers/asset-filters.helper.ts` |
 | a tela | `src/pages/computadores/detalhe/components/{RetireModal,DetalhesTab}.tsx`, `src/pages/computadores/helpers/baixa.helper.ts` |
-| testes | `tests/invariantes/posse.test.ts` (a baixa recusa entregue, licença, data futura e repetição; baixado não é entregue; reverter libera), `tests/corridas/posse.test.ts` (baixa × entrega), `tests/listagens/vistas-do-ativo.test.ts` (as vistas) |
+| testes | `tests/invariantes/posse.test.ts` (a baixa recusa entregue, licença, data futura e repetição; baixado não é entregue; reverter libera), `tests/invariantes/dia-da-posse.test.ts` (o dia da baixa contra a última devolução), `tests/corridas/posse.test.ts` (baixa × entrega), `tests/listagens/vistas-do-ativo.test.ts` (as vistas) |

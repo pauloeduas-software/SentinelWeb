@@ -6,6 +6,8 @@ import { assertStatusEscolhivel, escolherStatusPorTipo } from './checkout-asset.
 import { fecharPosse } from './close-assignment.usecase';
 import { lerStatusTravado } from '../../catalog/helpers/catalog-lock.helper';
 import { travarAtivoOuFalhar } from '../../asset/use-cases/lock-asset.usecase';
+import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
+import { hojeNoBrasil, instanteDoDia } from '../../shared/hoje.helper';
 
 // A DEVOLUÇÃO — o fechamento da posse aberta.
 //
@@ -17,6 +19,8 @@ import { travarAtivoOuFalhar } from '../../asset/use-cases/lock-asset.usecase';
 interface CheckinData {
   statusId?: string | null;
   checkinNotes?: string | null;
+  /** O dia (AM). Ausente é hoje. */
+  checkinAt?: Date | null;
   /**
    * O ESCOPO da devolução: só fecha a posse se ela aponta para ESTE
    * posto. Sem ele, fecha a posse aberta que o ativo tiver, seja com quem
@@ -59,6 +63,7 @@ export async function checkinAsset(assetId: string, data: CheckinData, ator: Ato
         id: true,
         targetType: true,
         targetWorkstationId: true,
+        checkoutAt: true,
         // Os dois alvos, para a recusa do escopo dizer COM QUEM o ativo está.
         targetPerson: { select: { name: true } },
         targetWorkstation: { select: { name: true } },
@@ -91,13 +96,28 @@ export async function checkinAsset(assetId: string, data: CheckinData, ator: Ato
     // `statusId` no corpo, e a tela de devolução oferece a lista.
     const statusId = data.statusId ?? (await escolherStatusPorTipo(tx, 'DEPLOYABLE', 'Disponível'));
 
+    // O DIA da devolução não antecede o DIA da entrega (AM) — os dois no
+    // calendário de Brasília, como na licença. No mesmo dia, o meio-dia do dia
+    // passado pode cair antes da hora real da entrega, e a devolução nunca fica
+    // antes dela: é o CHECK `assignments_devolucao_nao_antecede_entrega`.
+    const dia = data.checkinAt ?? hojeNoBrasil();
+    const diaDaEntrega = hojeNoBrasil(aberta.checkoutAt);
+    if (dia < diaDaEntrega) {
+      throw new AppError(
+        `A devolução (${diaEmPortugues(dia)}) não pode ser antes da entrega (${diaEmPortugues(diaDaEntrega)}).`,
+        422,
+      );
+    }
+    const instante = instanteDoDia(dia);
+    const checkinAt = instante < aberta.checkoutAt ? aberta.checkoutAt : instante;
+
     // As três escritas da devolução (fechar a posse, mexer no ativo, gravar o
     // log) moram em `fecharPosse`: é onde a próxima porta de devolução entra
     // sem copiar nada.
     return fecharPosse(
       tx,
       { id: aberta.id, assetId, targetType: aberta.targetType, statusAnteriorId: ativo.statusId },
-      { statusId, checkinNotes: data.checkinNotes },
+      { statusId, checkinNotes: data.checkinNotes, checkinAt },
       ator,
     );
   });

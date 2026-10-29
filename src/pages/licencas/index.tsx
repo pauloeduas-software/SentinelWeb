@@ -7,7 +7,6 @@ import EntregaLicencaModal from './components/EntregaLicencaModal';
 import LicencaDetalheModal from './components/LicencaDetalheModal';
 import LicencaFormModal from './components/LicencaFormModal';
 import LicencaTable from './components/LicencaTable';
-import EmUsoFiltro from './components/EmUsoFiltro';
 import StatusFiltro from './components/StatusFiltro';
 import { useLicencas } from './hooks/useLicencas';
 import { usePode } from '../../domain/auth/auth.store';
@@ -25,7 +24,7 @@ import { usePode } from '../../domain/auth/auth.store';
 export default function LicencasPage() {
   const {
     licencas, total, carregando, erro, page, perPage, setPage, search, changeSearch,
-    categoryId, changeCategoria, status, changeStatus, soEmUso, changeSoEmUso, irParaAlerta,
+    categoryId, changeCategoria, status, changeStatus, irParaAlerta,
     alertas,
     modal, licencaAberta, buscaDoLink, erroDoLink, abrir, fechar, ocupado,
     handleCriar, handleEditar, handleEntregar, handleDevolver, handleTrocarChave, handleAlternarEncerrada, handleExcluir,
@@ -71,7 +70,6 @@ export default function LicencasPage() {
         filtros={
           <>
             <StatusFiltro valor={status} onChange={changeStatus} />
-            {status === 'ENCERRADA' && <EmUsoFiltro ligado={soEmUso} onChange={changeSoEmUso} />}
             <CategoriaFiltro tipo="LICENSE" valor={categoryId} onChange={changeCategoria} />
           </>
         }
@@ -95,7 +93,7 @@ export default function LicencasPage() {
           <EstadoDaLista carregando={carregando} erro={erro}>
             {search ? (
               <span>Nenhuma licença encontrada para "{search}".</span>
-            ) : status || soEmUso || categoryId ? (
+            ) : status || categoryId ? (
               <span>Nenhuma licença com este filtro.</span>
             ) : (
               <>

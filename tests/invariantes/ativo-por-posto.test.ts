@@ -13,8 +13,8 @@ import { criarAtivo, criarFabricante, criarModelo, idsDoSeed } from '../helpers/
 // O primeiro `describe` é a porta da ENTREGA, que recusa. O segundo cobre o
 // outro lado: a regra é "no máximo um", não "exatamente um", e os caminhos que
 // LIBERAM a vaga precisam funcionar, ou a regra tranca o posto em vez de
-// protegê-lo. O terceiro é a porta da RESTAURAÇÃO — a entrada no posto outra
-// vez, pela porta de trás.
+// protegê-lo. A lixeira não é porta de trás: o ativo entregue não vai para ela
+// (AL).
 
 let api: ApiDeTeste;
 let seed: Awaited<ReturnType<typeof idsDoSeed>>;
@@ -117,60 +117,23 @@ describe('invariante 19 — o que libera a vaga do posto', () => {
     expect((await entregarAoPosto(novo.id, posto)).status).toBe(201);
   });
 
-  it('ativo na LIXEIRA com posse aberta não tranca o posto', async () => {
-    // O `delete-asset` só carimba `deletedAt` — ele NÃO fecha a posse. Sem o
-    // `deletedAt: null` no filtro aninhado (que a softDeleteExtension não
-    // alcança, porque o topo da consulta é `assignment`), o posto recusaria
-    // todo ativo novo apontando um ativo que nenhuma tela mostra.
+  it('o ativo entregue ao posto não vai para a lixeira; devolvido, vai e volta (AL)', async () => {
+    // A lixeira não contorna a regra: sem esta recusa, o ativo ia para ela
+    // ainda no posto, a vaga ficava para outro, e a restauração o devolvia a
+    // uma mesa que já não tinha lugar.
     const posto = await criarPosto('Mesa da Lixeira');
 
-    const sumido = await ativo('Desktop que foi para a lixeira');
-    expect((await entregarAoPosto(sumido.id, posto)).status).toBe(201);
-    expect((await api.delete(`/api/assets/${sumido.id}`)).status).toBe(200);
-
-    const novo = await ativo('Desktop que chega depois');
-    expect((await entregarAoPosto(novo.id, posto)).status).toBe(201);
-  });
-});
-
-describe('invariante 19 — a porta da RESTAURAÇÃO', () => {
-  // O `delete-asset` só carimba `deletedAt` e NÃO fecha a posse, e as outras
-  // portas ignoram o ativo na lixeira de propósito (o caso acima). Juntas, as
-  // duas decisões abrem o caminho: a vaga é ocupada enquanto o ativo está na
-  // lixeira, e restaurá-lo o devolve a uma mesa que já não tem lugar para ele.
-  it('recusa restaurar o ativo de um posto que recebeu outro enquanto ele estava na lixeira', async () => {
-    const posto = await criarPosto('Mesa da Restauração');
-
-    const antigo = await ativo('Desktop que foi para a lixeira com posse');
-    expect((await entregarAoPosto(antigo.id, posto)).status).toBe(201);
-    expect((await api.delete(`/api/assets/${antigo.id}`)).status).toBe(200);
-
-    const novo = await ativo('Desktop que entrou no lugar');
-    expect((await entregarAoPosto(novo.id, posto)).status).toBe(201);
-
-    const { status, body } = await api.post<{ error: string; assetId?: string }>(
-      `/api/assets/${antigo.id}/restore`,
-    );
-
-    expect(status).toBe(409);
-    // A MESMA frase da entrega, nomeando quem já está lá.
-    expect(body.error).toContain(novo.assetTag);
-    expect(body.error).toMatch(/j[áa] tem um ativo/i);
-
-    // E nada foi gravado: o ativo continua na lixeira. `findUnique` porque o
-    // escopo da lixeira não o alcança — é justamente o que se quer ler aqui.
-    const depois = await prisma.asset.findUnique({ where: { id: antigo.id }, select: { deletedAt: true } });
-    expect(depois?.deletedAt).not.toBeNull();
-  });
-
-  it('restaura quando a vaga continua livre', async () => {
-    const posto = await criarPosto('Mesa da Restauração Livre');
-
-    const unico = await ativo('Desktop que volta da lixeira');
+    const unico = await ativo('Desktop que não vai para a lixeira');
     expect((await entregarAoPosto(unico.id, posto)).status).toBe(201);
-    expect((await api.delete(`/api/assets/${unico.id}`)).status).toBe(200);
 
-    // Ninguém entrou enquanto ele estava fora: a vaga continua dele.
+    const recusa = await api.delete<{ error: string }>(`/api/assets/${unico.id}`);
+    expect(recusa.status).toBe(409);
+    expect(recusa.body.error).toBe('Este ativo está entregue e não pode ir para a lixeira. Faça a devolução antes.');
+    const linha = await prisma.asset.findUnique({ where: { id: unico.id }, select: { deletedAt: true } });
+    expect(linha?.deletedAt).toBeNull();
+
+    expect((await api.post(`/api/assets/${unico.id}/checkin`, {})).status).toBe(200);
+    expect((await api.delete(`/api/assets/${unico.id}`)).status).toBe(200);
     expect((await api.post(`/api/assets/${unico.id}/restore`)).status).toBe(200);
   });
 });

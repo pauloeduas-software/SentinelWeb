@@ -5,12 +5,11 @@ import {
 import { Link } from 'react-router-dom';
 import OccupantsPanel from './OccupantsPanel';
 import TelemetriaDaMaquina from '../../components/TelemetriaDaMaquina';
-import SeloDesativado from './SeloDesativado';
 import {
-  ativosComMaquina, estaDesativado, explicacaoDoVago, resumoDeAtivos,
+  ativosComMaquina, explicacaoDoVago, resumoDeAtivos,
 } from '../helpers/postos.helper';
 import { caminhoDoItem, textoDeUnidades } from '../../helpers/estoque.helper';
-import { formatarDiaDoInstante } from '../../helpers/format.helper';
+import { diaDoInstante, formatarDiaDoInstante, hojeNoCampoDeData } from '../../helpers/format.helper';
 import type { OccupantInput } from '../../../domain/occupancy/occupancy.queries';
 import type { WorkstationOccupant, OccupantView } from '../../../domain/shared/posse.types';
 import type { AtivoDoPosto, Posto, PostoDetalhe } from '../../../domain/shared/workstation.types';
@@ -62,10 +61,10 @@ interface PostoDetalheModalProps {
   view: OccupantView;
   onViewChange: (view: OccupantView) => void;
   onAdicionar: (data: OccupantInput) => Promise<void>;
-  onEncerrar: (ocupante: WorkstationOccupant) => Promise<void>;
+  onEncerrar: (ocupante: WorkstationOccupant, dia: string) => Promise<void>;
   onCorrigirTurno: (ocupante: WorkstationOccupant, turno: string) => Promise<void>;
-  /** Tira o ativo desta mesa: a devolução. O `confirm` é do hook. */
-  onDevolver: (ativo: AtivoDoPosto) => Promise<void>;
+  /** Tira o ativo desta mesa: a devolução, com o dia em que ele voltou (AM). */
+  onDevolver: (ativo: AtivoDoPosto, dia: string) => Promise<void>;
   devolvendo: boolean;
   onClose: () => void;
 }
@@ -82,11 +81,14 @@ export default function PostoDetalheModal({
   // de "este ativo não está entregue" numa rejeição não tratada — o clique não
   // faria nada e não diria nada.
   const [erroDaDevolucao, setErroDaDevolucao] = useState('');
+  // A devolução aberta numa linha: qual ativo e o dia escolhido.
+  const [devolvendoAtivo, setDevolvendoAtivo] = useState<{ id: string; dia: string } | null>(null);
 
-  const devolver = async (ativo: AtivoDoPosto) => {
+  const devolver = async (ativo: AtivoDoPosto, dia: string) => {
     setErroDaDevolucao('');
     try {
-      await onDevolver(ativo);
+      await onDevolver(ativo, dia);
+      setDevolvendoAtivo(null);
     } catch (falha) {
       setErroDaDevolucao((falha as Error).message);
     }
@@ -101,12 +103,6 @@ export default function PostoDetalheModal({
   const comMaquina = ativosComMaquina(ativos);
   const vago = detalhe?.vago ?? posto?.vago ?? false;
   const totalAtivos = detalhe?.totalAtivos ?? posto?.totalAtivos ?? 0;
-  // DESATIVADO: a ficha continua mostrando tudo — é o histórico do lugar —, mas
-  // deixa de oferecer o que cria coisa nova nele (ocupante, entrega). Devolver
-  // e encerrar continuam: desativar não esvazia a mesa, e quem ficou nela precisa
-  // de uma saída.
-  const desativado = estaDesativado(detalhe ?? posto);
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
       <div className="relative w-full max-w-4xl bg-surface-card border border-border-sutil shadow-2xl flex flex-col">
@@ -115,7 +111,6 @@ export default function PostoDetalheModal({
           <div>
             <h2 className="flex items-center gap-3 text-sm font-mono text-text-primary tracking-widest uppercase">
               <Armchair size={16} /> {detalhe?.name ?? posto?.name ?? '…'}
-              {desativado && <SeloDesativado />}
             </h2>
             {/* ONDE a mesa fica: o nome do posto não precisa carregar a filial. */}
             <p className="mt-1 font-mono text-[10px] text-text-tertiary uppercase tracking-widest">
@@ -133,11 +128,7 @@ export default function PostoDetalheModal({
               <TriangleAlert size={12} className="shrink-0 mt-0.5" />
               <span>
                 POSTO VAGO — {explicacaoDoVago({ totalAtivos })}{' '}
-                {/* Posto desativado não recebe ocupante: "alguém assume" seria
-                    oferecer a saída que o formulário logo abaixo não tem. */}
-                {desativado
-                  ? 'O posto está desativado e não recebe ocupante: devolva o equipamento.'
-                  : 'Ou alguém assume o posto abaixo, ou o equipamento é devolvido.'}
+                Ou alguém assume o posto abaixo, ou o equipamento é devolvido.
               </span>
             </div>
           )}
@@ -151,7 +142,6 @@ export default function PostoDetalheModal({
             onAdicionar={onAdicionar}
             onEncerrar={onEncerrar}
             onCorrigirTurno={onCorrigirTurno}
-            desativado={desativado}
           />
 
           <section className="font-mono text-xs space-y-3 border-t border-border-sutil pt-5">
@@ -170,9 +160,7 @@ export default function PostoDetalheModal({
                   saiu da listagem de Computadores, e a operação ficou na tela que já não
                   mostra o ativo. A entrega não tem esse problema — o ativo está na
                   listagem justamente até ser entregue. */}
-              {desativado
-                ? ' Posto desativado: não recebe entrega nova. A devolução continua, aqui ou em Computadores.'
-                : ' A entrega é feita em Computadores; a devolução, aqui ou lá.'}
+              {' A entrega é feita em Computadores; a devolução, aqui ou lá.'}
             </p>
 
             {erroDaDevolucao && (
@@ -230,15 +218,46 @@ export default function PostoDetalheModal({
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button
-                          type="button"
-                          disabled={devolvendo}
-                          onClick={() => void devolver(ativo)}
-                          title={`Devolver ${ativo.assetTag} deste posto`}
-                          className="inline-flex items-center gap-1.5 px-2 py-1 border border-border-sutil text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary hover:bg-bg-base disabled:opacity-30 transition-colors"
-                        >
-                          <Undo2 size={11} /> Devolver
-                        </button>
+                        {devolvendoAtivo?.id === ativo.id ? (
+                          <div className="inline-flex flex-wrap items-center justify-end gap-2">
+                            <label className="flex items-center gap-2 text-[10px] text-text-tertiary uppercase tracking-widest">
+                              Devolvido em
+                              <input
+                                type="date"
+                                value={devolvendoAtivo.dia}
+                                min={ativo.posse?.checkoutAt ? diaDoInstante(ativo.posse.checkoutAt) : undefined}
+                                max={hojeNoCampoDeData()}
+                                onChange={(event) => setDevolvendoAtivo({ id: ativo.id, dia: event.target.value })}
+                                className="p-1 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary"
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              disabled={devolvendo || devolvendoAtivo.dia === ''}
+                              onClick={() => void devolver(ativo, devolvendoAtivo.dia)}
+                              className="px-2 py-1 border border-border-sutil text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary hover:bg-bg-base disabled:opacity-30 transition-colors"
+                            >
+                              Confirmar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDevolvendoAtivo(null)}
+                              className="px-2 py-1 border border-border-sutil text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary hover:bg-bg-base transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={devolvendo}
+                            onClick={() => setDevolvendoAtivo({ id: ativo.id, dia: hojeNoCampoDeData() })}
+                            title={`Devolver ${ativo.assetTag} deste posto`}
+                            className="inline-flex items-center gap-1.5 px-2 py-1 border border-border-sutil text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary hover:bg-bg-base disabled:opacity-30 transition-colors"
+                          >
+                            <Undo2 size={11} /> Devolver
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -248,10 +267,6 @@ export default function PostoDetalheModal({
                       <td colSpan={5} className="px-4 py-10 text-center text-text-tertiary">
                         {carregando ? (
                           'Carregando...'
-                        ) : desativado ? (
-                          // Sem o convite à entrega: o servidor a recusa num
-                          // posto desativado, e o link levaria a um 409.
-                          'Nenhum ativo entregue a este posto. Desativado, ele não recebe entrega.'
                         ) : (
                           <>
                             Nenhum ativo entregue a este posto.
@@ -364,9 +379,6 @@ export default function PostoDetalheModal({
                         <Link to={caminhoDoItem(entrega.item.id, detalhe?.name ?? posto?.name)} className="hover:underline underline-offset-2">
                           {entrega.item.name}
                         </Link>
-                        {!entrega.item.isActive && (
-                          <span className="ml-2 text-[10px] uppercase tracking-widest text-status-warning">desativado</span>
-                        )}
                         {entrega.notes && (
                           <div className="text-[10px] text-text-tertiary mt-0.5">{entrega.notes}</div>
                         )}

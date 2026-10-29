@@ -7,7 +7,7 @@
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D14–D17, D27–D32, D82, D87–D88, B/K da segunda rodada (ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)), V e Y.
+> [`README.md`](./README.md#a-segunda-rodada-ap)), V, Y, AL e AM.
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
@@ -523,6 +523,9 @@ saiu porque, na forma final, vincular máquina não decide a vaga; a vaga é dec
 > `PATCH /api/workstations/:id/occupants/:occupantId`, e o painel de ocupantes só existe na ficha
 > do posto.
 
+> **Superada em parte por [AL](#al--o-computador-entregue-não-vai-para-a-lixeira):** o computador entregue não vai
+> mais para a lixeira, e a porta da restauração saiu com ele — sobra a entrega.
+
 ---
 
 ## V — Excluir não apaga o passado: localização por referência, colaborador pela lixeira
@@ -588,6 +591,10 @@ localização, o segundo — sem lixeira, porque ninguém precisa dela de volta.
 
 ## Y — O posto sai de `Location`: localização guarda, posto recebe
 
+> **Superada em parte por [AN](./licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura):**
+> o posto perde o `isActive` e o Desativar. O vazio se exclui, como a localização; o que tem algo
+> nele recebe o 409 que diz o que tirar. A invariante 21 fica só com a localização.
+
 **Decidido:** o posto de trabalho vira cadastro próprio — `Workstation`, com nome, a localização
 onde ele fica (`locationId`, obrigatória), notas e `isActive` — e a `Location` volta a ser só lugar.
 
@@ -604,7 +611,7 @@ onde ele fica (`locationId`, obrigatória), notas e `isActive` — e a `Location
   agora — entregas de ativo e de estoque abertas, ocupante atual — e exclusão de verdade, com o passado desligado e
   o nome por escrito (`targetWorkstationName`, `workstationName`), exatamente como V fazia com o
   local. Ele se cria, edita, desativa e exclui na tela **Postos**; Configurações não tem aba de posto.
-- **A invariante 19 vale para todo posto**, com duas portas — a entrega e a restauração da lixeira.
+- **A invariante 19 vale para todo posto**, com duas portas — a entrega e a restauração da lixeira (a segunda saiu com a [AL](#al--o-computador-entregue-não-vai-para-a-lixeira)).
   A porta da marca sai com a marca: não há mais como fazer "virar posto" um lugar que já tem dois
   ativos.
 - **A entrega a um lugar que não é posto deixa de existir.** A sala de reunião com dois
@@ -645,6 +652,81 @@ as colunas e FKs de alvo de `assignments` e `stock_movements` passando para o po
 `location_occupants` virando `workstation_occupants`; e `locations.isWorkstation` saindo. Os CHECKs
 da forma da posse (invariante 5) e o índice parcial da ocupação (invariante 2) são reescritos antes
 de as colunas mudarem: `DROP COLUMN` derruba em silêncio o CHECK inteiro que a cita.
+
+---
+
+## AL — O computador entregue não vai para a lixeira
+
+**Decidido** (2026-10-29, na revisão de lógica de licença e estoque):
+
+- **Excluir o computador entregue**, a colaborador ou a posto, recusa com 409 `Este ativo está
+  entregue e não pode ir para a lixeira. Faça a devolução antes.` — a mesma guarda da baixa
+  (`assertSemPosse`), com o verbo de cada uma. O Excluir continua clicável
+  ([AF](./licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)),
+  e a notificação diz por quê. Devolvido, vai para a lixeira e restaura como antes.
+- **A invariante 20 passa a valer para a lixeira:** o ativo baixado ou na lixeira não tem posse
+  aberta, licença nem componente. A licença e o componente já eram recusados na exclusão.
+- **Sai o que ficou sem caso:** a porta da restauração da invariante 19
+  ([B](#b--invariante-19-na-forma-final-um-ativo-por-posto-de-trabalho)) e o filtro de lixeira à
+  mão nas contagens de posse da pessoa, do posto e do ativo do posto.
+
+**Supera em parte:** B e [Y](#y--o-posto-sai-de-location-localização-guarda-posto-recebe) (a
+porta da restauração).
+**Mantém:** a lixeira do computador e a do colaborador
+([V](#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira)), e a
+baixa ([D19](./catalogo-e-ativo.md#d19--arquivar-descomissionar-e-apagar-são-três-coisas-com-três-colunas)) com a frase dela.
+
+**Por quê:** a lixeira guardava a posse aberta e as contagens não a viam. A pessoa se desativava
+com o computador ainda no nome dela, e restaurá-lo o devolvia a quem não pode ter posse
+(invariante 6). O posto, ao contrário, não se excluía por um computador que nenhuma tela mostrava.
+
+**Por que bloquear, e não devolver sozinho:** o Snipe-IT devolve sozinho ao excluir ("Checkin on
+delete"), e o GLPI guarda o vínculo na lixeira sem conferir. Aqui vale o que a baixa já fazia:
+bloqueia, nunca fecha a posse sozinha. A devolução da tela registra o dia e o status da volta, e a
+automática apagaria em que estado o computador voltou.
+
+---
+
+## AM — A entrega e a devolução do computador ganham o dia
+
+> **Superada em parte por [AN](./licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura):**
+> o que ficava de fora entrou: a devolução pela ficha do posto e o fim da ocupação também têm o
+> dia. A compra do computador não aceita data futura, e o posto desativado sai das recusas de
+> estado, porque o posto não se desativa mais.
+
+**Decidido** (2026-10-29, na mesma revisão, para deixar as datas no mesmo padrão):
+
+- **A entrega e a devolução do computador têm o dia**, como as da licença
+  ([AA](./licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas))
+  e as do estoque ([AE](./estoque.md#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira)):
+  o formulário vem com hoje, pode voltar para o passado e nunca vai para o futuro (422). Hoje
+  grava a hora real; o dia passado, o meio-dia de Brasília.
+- **O dia não antecede o que já aconteceu:** a entrega não vem antes da compra do computador nem
+  do dia da última devolução dele; a devolução não vem antes da entrega e, no mesmo dia, não fica
+  antes da hora real dela. A compra editada não vai para depois da primeira entrega nem da baixa,
+  e a baixa não vai para antes da compra nem da última devolução — do computador, de uma licença
+  entregue a ele ou de um componente retirado dele (422 em todos).
+- **"Hoje" é o dia de Brasília em toda data que recusa o futuro ou o passado** — a entrega, a
+  devolução, a baixa, o começo da ocupação e a devolução prevista. A meia-noite UTC virava o dia
+  às 21h.
+- **O começo da ocupação passado** também fica ao meio-dia de Brasília, e a baixa sem data é o dia
+  de Brasília.
+- **As telas mostram a posse e a ocupação só pelo dia**, como a licença e o estoque: a hora de um
+  dia passado seria inventada.
+- **As recusas de estado olham hoje:** o colaborador ou o posto desativados recusam a entrega no
+  passado mesmo que, naquele dia, estivessem em ordem.
+
+**Supera:** a nota da Leva 1B da F4 ("a data da entrega nunca vem do cliente",
+[`../historico/fase-04-posse.md`](../historico/fase-04-posse.md)).
+**Realiza:** [D17](#d17--assetassignedtoid-deixa-de-ser-editável-pelo-formulário), que mandava a
+carga inicial pelo checkout "com data retroativa em `checkoutAt`" — o campo nunca existiu.
+**Mantém:** a devolução prevista que não nasce no passado.
+
+**Por quê:** a carga inicial é "a Laura está com o notebook desde março", e o histórico gravava
+o dia do cadastro. Licença e estoque já registravam o dia; o computador era o único que não.
+
+**O que fica de fora, declarado:** a devolução pela ficha do posto continua com hoje, sem campo
+(o dia passado é na tela Computadores), e encerrar a ocupação também é sempre hoje.
 
 ---
 

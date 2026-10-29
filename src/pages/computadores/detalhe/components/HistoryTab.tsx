@@ -1,7 +1,6 @@
 import { ArrowRightLeft, Clock, Cpu, KeyRound } from 'lucide-react';
 import type { EventoDoAtivo } from '../../../../domain/shared/asset.types';
 import { formatarDiaDoInstante } from '../../../helpers/format.helper';
-import { momentoDoEvento } from '../../../helpers/historico.helper';
 import { tituloDoEvento } from '../helpers/historico.helper';
 
 // A LINHA DO TEMPO do ativo: por onde ele passou. Três fontes, uma lista: o
@@ -60,9 +59,9 @@ function Evento({ evento }: { evento: EventoDoAtivo }) {
         </div>
 
         <span className="flex items-center gap-1.5 text-text-tertiary text-[10px] tabular-nums shrink-0">
-          {/* A licença e o componente são registrados por dia: a hora de um dia
-              passado seria inventada. */}
-          <Clock size={11} /> {dePosse ? momentoDoEvento(evento.at) : formatarDiaDoInstante(evento.at)}
+          {/* A posse, a licença e o componente são registrados por dia (AM): a
+              hora de um dia passado seria inventada. */}
+          <Clock size={11} /> {formatarDiaDoInstante(evento.at)}
         </span>
       </div>
 

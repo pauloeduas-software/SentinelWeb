@@ -5,7 +5,7 @@
 > muda, mesmo que o arquivo onde ela vive mude. Depois do D164 veio uma segunda rodada, com 15
 > decisões próprias, nomeadas por letra (`A`…`P`, sem `N`) em vez de número — ver
 > [*A segunda rodada*](#a-segunda-rodada-ap) abaixo. A varredura do código morto, que veio
-> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y`, `Z` e, acabado o alfabeto, `AA`, `AB`, `AC`, `AD`, `AE`, `AF`, `AG`, `AH`, `AI` e `AJ`.
+> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y`, `Z` e, acabado o alfabeto, `AA`, `AB`, `AC`, `AD`, `AE`, `AF`, `AG`, `AH`, `AI`, `AJ`, `AK`, `AL`, `AM` e `AN`.
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve.** Se a realidade mudou, ela é
 > **superada** por outra, com link entre as duas. O log é o que diz por quanto tempo cada regra
@@ -22,10 +22,10 @@
 | [`acesso.md`](./acesso.md) | Acesso | 31 |
 | [`escopo.md`](./escopo.md) | **Escopo** — o que o sistema deixou de fazer | 22 |
 | [`catalogo-e-ativo.md`](./catalogo-e-ativo.md) | Catálogo e ativo | 15 |
-| [`posse.md`](./posse.md) | Posse | 17 |
+| [`posse.md`](./posse.md) | Posse | 19 |
 | [`relatorios-import-etiquetas.md`](./relatorios-import-etiquetas.md) | Relatórios, import e etiquetas | 13 |
 | [`ciclo-de-vida.md`](./ciclo-de-vida.md) | Ciclo de vida | 12 |
-| [`licencas.md`](./licencas.md) | Licenças | 16 |
+| [`licencas.md`](./licencas.md) | Licenças | 18 |
 | [`campos-customizados.md`](./campos-customizados.md) | Campos customizados | 8 |
 | [`plataforma.md`](./plataforma.md) | Plataforma | 7 |
 | [`estoque.md`](./estoque.md) | Estoque | 11 |
@@ -102,6 +102,10 @@ registram o "Supera:" do mesmo jeito, e o log só fica completo com elas na tabe
 | **U** (em parte: o colaborador como aba de Configurações) | **AH** | o menu se agrupa por assunto; o colaborador ganha página própria, na seção Pessoas, e a página Ativos vira Computadores; o cadastro e a API são os mesmos |
 | **J** (em parte: o alvo em pessoa ou posto) | **AI** | a categoria ganha o tipo Componente: o item dela vai só para computador, fica nele até o Retirar, e o computador com componente não recebe baixa nem vai para a lixeira |
 | **AE** (em parte: o total ao menos 1 sempre), **J** (em parte: toda entrega se devolve) | **AJ** | o consumível é uma categoria cuja entrega não volta; o total é o que existe e chega a 0 |
+| **AC** (em parte: a chave já entregue não sai da lista) | **AK** | a chave só prende enquanto tem entrega aberta; as devolvidas com ela perdem a ligação |
+| **B**, **Y** (em parte: a porta da restauração) | **AL** | o computador entregue não vai para a lixeira, como não recebe baixa: faça a devolução antes |
+| a nota da Leva 1B da F4 (a data da entrega nunca vem do cliente) | **AM** | a entrega e a devolução do computador têm o dia, como a licença e o estoque; "hoje" é o dia de Brasília em toda data |
+| **AA**, **AF** (em parte: encerrar em uso e o alerta dele), **AE** (em parte: desativar com unidade fora), **Y** (em parte: o posto com desativar), **AM** (em parte: o que ficava de fora) | **AN** | o que está em uso bloqueia o Encerrar e o Desativar; o posto perde o Desativar; compra e encerramento não são futuros; o fim da ocupação e a devolução pelo posto ganham o dia |
 
 Quatro decisões nasceram para resolver **conflito entre dois planos**, e não de uma fase só:
 **D79** (cada job tem a própria linha), **D80** (um `ApiToken` com dono polimórfico), **D81** (uma
@@ -162,6 +166,10 @@ que o código ainda cita. Letra deixa claro, só pelo nome, que a decisão é de
 | **AH** | O menu por assunto: o colaborador ganha página própria, e Ativos vira Computadores | [Acesso](./acesso.md#ah--o-menu-por-assunto-o-colaborador-ganha-página-própria-e-ativos-vira-computadores) |
 | **AI** | O componente é uma categoria: vai só para computador, e sai pelo Retirar | [Estoque](./estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar) |
 | **AJ** | O consumível é uma categoria, e o total é o que existe | [Estoque](./estoque.md#aj--o-consumível-é-uma-categoria-e-o-total-é-o-que-existe) |
+| **AK** | A chave só prende enquanto está em uso | [Licenças](./licencas.md#ak--a-chave-só-prende-enquanto-está-em-uso) |
+| **AL** | O computador entregue não vai para a lixeira | [Posse](./posse.md#al--o-computador-entregue-não-vai-para-a-lixeira) |
+| **AM** | A entrega e a devolução do computador ganham o dia | [Posse](./posse.md#am--a-entrega-e-a-devolução-do-computador-ganham-o-dia) |
+| **AN** | O que está em uso bloqueia, e nenhuma data é futura | [Licenças](./licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura) |
 
 **`N` não existe, de propósito.** As correções de segurança e consistência desta rodada (custo
 de compra vazando por uma quarta porta, comando que respondia sucesso sem confirmação do socket,
@@ -176,7 +184,7 @@ já prometiam e o código não cumpria. Continua a letra pelo mesmo motivo de a 
 adotado: a numeração `D` corresponde ao que o código cita, e recomeçá-la colidiria. A `R` veio
 logo depois dela, pelo mesmo caminho: a varredura achou a rota de senha sem chamador, e a
 resposta foi levar a senha para o cadastro. A `S` é o renomeio do papel para cargo, a palavra
-que a equipe usa. A `T` tira o seed da conta de administrador. A `AA` veio da revisão da página de Licenças — acabado o alfabeto, a letra continua com duas. A `AB` traz de volta a auditoria de quem fez, só no banco. A `AC` veio da conversa sobre o que faltava na licença: a chave virou lista. A `AD` respondeu os casos de uso que a `AC` deixou sugeridos. A `AE` pôs o estoque na lógica da licença. A `AF` pôs a licença no cadastro das Configurações, e o Editar com o formulário inteiro em todas as telas. A `AG` veio da pergunta sobre excluir o que já foi devolvido: o item e a licença passaram à regra do posto. A `AH` agrupou o menu por assunto: o colaborador ganhou página própria e a página Ativos virou Computadores. A `AI` veio da memória e do SSD: a categoria ganhou o tipo Componente, que vai só para computador. A `AJ` veio da validação de ITAM do estoque: a categoria ganhou o tipo Consumível; a próxima é a `AK`.
+que a equipe usa. A `T` tira o seed da conta de administrador. A `AA` veio da revisão da página de Licenças — acabado o alfabeto, a letra continua com duas. A `AB` traz de volta a auditoria de quem fez, só no banco. A `AC` veio da conversa sobre o que faltava na licença: a chave virou lista. A `AD` respondeu os casos de uso que a `AC` deixou sugeridos. A `AE` pôs o estoque na lógica da licença. A `AF` pôs a licença no cadastro das Configurações, e o Editar com o formulário inteiro em todas as telas. A `AG` veio da pergunta sobre excluir o que já foi devolvido: o item e a licença passaram à regra do posto. A `AH` agrupou o menu por assunto: o colaborador ganhou página própria e a página Ativos virou Computadores. A `AI` veio da memória e do SSD: a categoria ganhou o tipo Componente, que vai só para computador. A `AJ` veio da validação de ITAM do estoque: a categoria ganhou o tipo Consumível. A `AK`, a `AL` e a `AM` vieram da revisão de lógica de licença e estoque: a chave que voltou sai da lista, o computador entregue não vai para a lixeira, e a posse do computador ganhou o dia. A `AN` fechou a revisão com os dois padrões do usuário: o que está em uso bloqueia, e nenhuma data é futura; a próxima é a `AO`.
 
 ## O índice
 

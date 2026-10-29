@@ -31,10 +31,10 @@ const ROTULO_DO_TIPO: Record<string, string> = {
  * a que está em uso viraria consumível sem nunca ter sido consumida. O
  * consumível nunca tem unidade em uso, e passa a estoque sempre.
  *
- * `isActive: false` é o DESATIVAR, e passa MESMO COM UNIDADE FORA — a tela
- * pergunta antes, com a frase das Configurações. É o Encerrar da licença:
- * avisa, não recusa.
- * O item não recebe entrega nova, e o que está com alguém continua até voltar.
+ * `isActive: false` é o DESATIVAR, e só SEM UNIDADE EM USO — o padrão do
+ * sistema para o que depende de outra coisa em uso, e o do Encerrar da
+ * licença. O arquivar do Snipe-IT recusa o acessório com unidade entregue da
+ * mesma forma. Desativado, o item não recebe entrega nova.
  *
  * A TRAVA DO ITEM vem primeiro e serializa a edição com a entrega: sem ela, a
  * edição contava "2 em uso", uma entrega gravava a terceira, e o total descia
@@ -71,6 +71,18 @@ export async function updateStockItem(id: string, data: UpdateStockItemInput, at
     if (data.qty !== undefined && data.qty < antes.qty) {
       const { emUso } = await contarUsoDe(tx, id);
       if (data.qty < emUso) throw new AppError(fraseDoPiso(antes.name, data.qty, emUso), 409);
+    }
+
+    if (data.isActive === false && antes.isActive) {
+      const { emUso } = await contarUsoDe(tx, id);
+      if (emUso > 0) {
+        const retirar = antes.category.type === 'COMPONENT';
+        throw new AppError(
+          `"${antes.name}" tem ${emUso === 1 ? '1 unidade em uso' : `${emUso} unidades em uso`} e não pode ser `
+          + `desativado. ${retirar ? 'Retire' : 'Devolva'} antes.`,
+          409,
+        );
+      }
     }
 
     const depois = await tx.stockItem.update({

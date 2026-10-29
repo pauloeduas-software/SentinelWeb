@@ -5,7 +5,9 @@ import { buildChanges } from '../../shared/diff.helper';
 import { assertVersaoLida } from '../../shared/versao.helper';
 import { AppError } from '../../../core/errors/app-error';
 import { fraseDoPiso } from '../helpers/license-count.helper';
-import { assertDatasCobremAsEntregas, assertDatasNaoAntecedemACompra } from '../helpers/license-dates.helper';
+import {
+  assertDatasCobremAsEntregas, assertDatasNaoAntecedemACompra, assertEncerraSemEntregaAberta,
+} from '../helpers/license-dates.helper';
 import {
   CAMPOS_AUDITADOS_DA_LICENCA, LICENSE_SELECT, paraResposta,
   type LicencaNaResposta, type LinhaDeLicenca,
@@ -52,6 +54,11 @@ export async function updateLicense(id: string, data: UpdateLicenseData, ator: A
       terminationDate: data.terminationDate !== undefined ? data.terminationDate : antes.terminationDate,
     });
     const mesmoDia = (a: Date | null | undefined, b: Date | null) => (a?.getTime() ?? null) === (b?.getTime() ?? null);
+    // O ENCERRAMENTO PELO FORMULÁRIO segue a regra do botão: só com tudo
+    // devolvido (`terminate-license.usecase.ts`).
+    if (data.terminationDate && !mesmoDia(data.terminationDate, antes.terminationDate)) {
+      await assertEncerraSemEntregaAberta(tx, id, antes.name);
+    }
     await assertDatasCobremAsEntregas(tx, id, {
       purchaseDate: mesmoDia(data.purchaseDate, antes.purchaseDate) ? undefined : data.purchaseDate,
       terminationDate: mesmoDia(data.terminationDate, antes.terminationDate) ? undefined : data.terminationDate,
@@ -66,10 +73,6 @@ export async function updateLicense(id: string, data: UpdateLicenseData, ator: A
       // número novo. Com a lista, quem confere é o `gravarChaves`, abaixo.
       if (!keys) assertChavesCabem(antes.name, data.seatsTotal, await somaDasChaves(tx, id), 409);
     }
-
-    // O ENCERRAMENTO PELO FORMULÁRIO segue a regra do botão: passa mesmo com
-    // alguém usando (`terminate-license.usecase.ts`), e a licença cai no
-    // alerta "encerrada, ainda em uso".
 
     const depois = await tx.license.update({
       where: { id },

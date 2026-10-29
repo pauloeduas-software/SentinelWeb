@@ -35,6 +35,8 @@ export interface CheckoutInput {
   statusId?: string;
   expectedCheckinAt?: string;
   checkoutNotes?: string;
+  /** O dia da entrega, 'AAAA-MM-DD'. Ausente é hoje (AM). */
+  checkoutAt?: string;
 }
 
 /** Corpo de `POST /api/assets/:id/checkin`. */
@@ -42,6 +44,8 @@ export interface CheckinInput {
   /** Para que estado o ativo volta: estoque, conserto, inutilizável... */
   statusId?: string;
   checkinNotes?: string;
+  /** O dia da devolução, 'AAAA-MM-DD'. Ausente é hoje (AM). */
+  checkinAt?: string;
   /**
    * Só fecha a posse se ela aponta para este posto (409 se não). A ficha
    * do posto manda o id dela; a tela Computadores, que olha a posse, não manda.

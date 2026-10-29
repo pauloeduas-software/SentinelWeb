@@ -129,6 +129,7 @@ export function montarEntrega(valores: {
   statusId: string;
   expectedCheckinAt: string;
   checkoutNotes: string;
+  checkoutAt: string;
 }): CheckoutInput {
   const corpo: CheckoutInput = { targetType: valores.targetType };
 
@@ -138,16 +139,18 @@ export function montarEntrega(valores: {
   if (valores.statusId) corpo.statusId = valores.statusId;
   if (valores.expectedCheckinAt) corpo.expectedCheckinAt = valores.expectedCheckinAt;
   if (valores.checkoutNotes.trim()) corpo.checkoutNotes = valores.checkoutNotes.trim();
+  if (valores.checkoutAt) corpo.checkoutAt = valores.checkoutAt;
 
   return corpo;
 }
 
 /** Formulário de devolução → corpo de `POST /assets/:id/checkin`. */
-export function montarDevolucao(valores: { statusId: string; checkinNotes: string }): CheckinInput {
+export function montarDevolucao(valores: { statusId: string; checkinNotes: string; checkinAt: string }): CheckinInput {
   const corpo: CheckinInput = {};
 
   if (valores.statusId) corpo.statusId = valores.statusId;
   if (valores.checkinNotes.trim()) corpo.checkinNotes = valores.checkinNotes.trim();
+  if (valores.checkinAt) corpo.checkinAt = valores.checkinAt;
 
   return corpo;
 }

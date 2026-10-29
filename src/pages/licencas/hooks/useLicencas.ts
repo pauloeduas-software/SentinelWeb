@@ -26,9 +26,6 @@ export function useLicencas() {
   const [search, setSearch] = useState('');
   const [categoryId, setCategoryId] = useState<string | undefined>();
   const [status, setStatus] = useState<StatusDoFiltro | undefined>();
-  // Só as que alguém ainda usa — o filtro do status Encerradas, para onde o
-  // alerta "encerradas em uso" leva.
-  const [soEmUso, setSoEmUso] = useState(false);
   const debouncedSearch = useDebouncedValue(search);
 
   // Zerar a página no mesmo handler que muda o recorte, e não num `useEffect`
@@ -39,10 +36,6 @@ export function useLicencas() {
     setPage(1);
   };
 
-  const changeSoEmUso = (ligado: boolean) => {
-    setSoEmUso(ligado);
-    setPage(1);
-  };
 
   /**
    * Os links do alerta: cada contagem leva ao filtro que mostra exatamente
@@ -53,20 +46,11 @@ export function useLicencas() {
     setSearch('');
     setCategoryId(undefined);
     setPage(1);
-    if (motivo === 'ENCERRADA_EM_USO') {
-      setStatus('ENCERRADA');
-      setSoEmUso(true);
-      return;
-    }
-    setSoEmUso(false);
     setStatus(motivo === 'VENCIDA' ? 'EXPIRADA' : 'VENCENDO');
   };
 
-  // O "em uso" é filtro das encerradas: sair delas o desliga, senão a lista
-  // ficaria num recorte que o seletor nem mostra mais.
   const changeStatus = (proximo: StatusDoFiltro | undefined) => {
     setStatus(proximo);
-    if (proximo !== 'ENCERRADA') setSoEmUso(false);
     setPage(1);
   };
 
@@ -78,9 +62,8 @@ export function useLicencas() {
   const params = useMemo(
     () => ({
       page, perPage: PER_PAGE, q: debouncedSearch || undefined, categoryId, status,
-      emUso: soEmUso ? 'sim' as const : undefined,
     }),
-    [page, debouncedSearch, categoryId, status, soEmUso],
+    [page, debouncedSearch, categoryId, status],
   );
 
   const { data, isPending, error } = useLicensesQuery(params);
@@ -212,21 +195,19 @@ export function useLicencas() {
 
   // ENCERRAR/REABRIR é o Desativar/Ativar das Configurações (AF), com data: o
   // encerramento grava hoje em `terminationDate`, e reabrir apaga a data — a
-  // mesma edição do formulário. Confirma só na ida, com a frase do padrão.
-  // Encerra MESMO COM ALGUÉM USANDO, e por isso a pergunta diz quantos: a
-  // licença fica no alerta até tudo voltar.
+  // mesma edição do formulário. Confirma só na ida, com a frase do padrão. O
+  // botão sempre clica: com entrega aberta, o 409 do servidor manda devolver.
   const handleAlternarEncerrada = async (licenca: Licenca) => {
     const encerrada = licenca.status === 'ENCERRADA';
     if (!encerrada && !window.confirm(
-      `Encerrar "${licenca.name}" hoje? Continua no histórico, mas some das escolhas e não recebe nada novo.`
-        + (licenca.emUso > 0 ? ` Ainda está com ${licenca.emUso}: fica no alerta até tudo voltar.` : ''),
+      `Encerrar "${licenca.name}" hoje? Continua no histórico, mas some das escolhas e não recebe nada novo.`,
     )) return;
     try {
       if (encerrada) await editar.mutateAsync({ id: licenca.id, data: { terminationDate: null } });
       else await encerrar.mutateAsync(licenca.id);
     } catch (erro) {
-      // O 409 da licença que já estava encerrada (duas abas), e o 422 do
-      // encerramento antes da data da compra.
+      // O 409 da entrega aberta e o da licença que já estava encerrada (duas
+      // abas), e o 422 do encerramento antes da data da compra.
       notificar.erro((erro as Error).message);
     }
   };
@@ -260,11 +241,9 @@ export function useLicencas() {
     changeCategoria,
     status,
     changeStatus,
-    soEmUso,
-    changeSoEmUso,
     irParaAlerta,
 
-    alertas: alertas ?? { total: 0, contagem: { ENCERRADA_EM_USO: 0, VENCIDA: 0, VENCENDO: 0 }, rows: [] },
+    alertas: alertas ?? { total: 0, contagem: { VENCIDA: 0, VENCENDO: 0 }, rows: [] },
 
     modal: modalAtual,
     licencaAberta: licencaAtual,

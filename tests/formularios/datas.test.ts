@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { cenarioDePosse, criarAtivo, criarColaborador, criarPosto } from '../helpers/fixtures';
+import { cenarioDePosse, criarAtivo, criarColaborador, criarPosto, diaNoBrasil } from '../helpers/fixtures';
 
-// AS DUAS BORDAS DO CALENDÁRIO — `dataNaoFutura` e `dataNaoPassada`.
+// AS DUAS BORDAS DO CALENDÁRIO — `diaNaoFuturo` e `dataNaoPassada`.
 //
 // São a MESMA regra vista dos dois lados, e por isso moram no mesmo arquivo
 // (`server/domain/shared/fields.schema.ts`) e são provadas no mesmo lugar:
@@ -17,9 +17,8 @@ import { cenarioDePosse, criarAtivo, criarColaborador, criarPosto } from '../hel
 //               equipamento sai, que é um cadastro que ninguém quis fazer.
 //
 // HOJE é aceito nos dois: "ocupa desde hoje" e "devolve hoje" são pedidos
-// legítimos, e a comparação é contra meia-noite UTC — a mesma referência que o
-// `dataOpcional` usa para construir o valor, senão a borda mudaria de lugar
-// conforme o fuso de quem roda o teste.
+// legítimos, e a comparação é contra o dia de Brasília (`hojeNoBrasil`) — não
+// contra a meia-noite UTC, que vira às 21h e mudava a borda de lugar.
 
 let api: ApiDeTeste;
 let cenario: Awaited<ReturnType<typeof cenarioDePosse>>;
@@ -50,13 +49,8 @@ afterAll(async () => {
   await api.fechar();
 });
 
-/** 'AAAA-MM-DD' de N dias a partir de hoje, em UTC. */
-function dia(delta: number): string {
-  const data = new Date();
-  data.setUTCHours(0, 0, 0, 0);
-  data.setUTCDate(data.getUTCDate() + delta);
-  return data.toISOString().slice(0, 10);
-}
+/** 'AAAA-MM-DD' de N dias a partir de hoje, no calendário de Brasília. */
+const dia = diaNoBrasil;
 
 describe('devolução prevista', () => {
   it('recusa ONTEM com 422, e a mensagem diz o que está errado', async () => {

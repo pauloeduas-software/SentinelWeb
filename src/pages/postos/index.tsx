@@ -17,7 +17,7 @@ import { usePode } from '../../domain/auth/auth.store';
 export default function PostosPage() {
   const {
     postos, total, carregando, erro, page, perPage, setPage, search, changeSearch, view, changeView,
-    modalAberto, emEdicao, openCreate, openEdit, closeModal, handleSalvar, handleAlternar, handleExcluir,
+    modalAberto, emEdicao, openCreate, openEdit, closeModal, handleSalvar, handleExcluir,
     postoId, postoAberto, openDetalhe, closeDetalhe, detalhe, detalhePendente, detalheErro, ocupantes,
     devolvendo, handleDevolver,
   } = usePostos();
@@ -87,7 +87,6 @@ export default function PostosPage() {
         onAbrir={openDetalhe}
         podeEditar={podeCriar}
         onEditar={openEdit}
-        onAlternar={(posto) => void handleAlternar(posto)}
         onExcluir={(posto) => void handleExcluir(posto)}
         vazio={
           <EstadoDaLista carregando={carregando} erro={erro}>
