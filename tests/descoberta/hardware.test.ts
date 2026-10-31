@@ -2,8 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { conectarAgente, esperarPor } from '../helpers/agente';
 import { criarAtivo, criarFabricante, criarModelo, idsDoSeed } from '../helpers/fixtures';
-import { mudancasDeHardware } from '../../server/domain/reconciliation/helpers/hardware-diff.helper';
-import { prisma } from '../../server/core/database/prismaClient';
+import { mudancasDeHardware } from '../../server/modules/reconciliation/helpers/hardware-diff.helper';
+import { prisma } from '../../server/infra/database/prismaClient';
 
 // A `AssetChange` GANHA ESCRITOR — "esta máquina trocou de peça".
 //

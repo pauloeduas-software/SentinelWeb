@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import ReferenceSelect from '../../components/ReferenceSelect';
+import ReferenceSelect from '../../../components/ReferenceSelect';
 import { montarPosto } from '../helpers/postos.helper';
-import type { PostoInput } from '../../../domain/workstation/workstation.queries';
-import type { Posto } from '../../../domain/shared/workstation.types';
+import type { PostoInput } from '../../../queries/workstation.queries';
+import type { Posto } from '../../../types/workstation.types';
 
 // Criar ou editar a Mesa 1 SEM sair da tela de postos.
 //

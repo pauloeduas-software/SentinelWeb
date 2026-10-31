@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAuthStore } from '../../../domain/auth/auth.store';
+import { useAuthStore } from '../../../stores/auth.store';
 
 // Estado da tela de login: o que está digitado, o que está em voo e o que deu
 // errado. A página é só markup, como toda página do painel.

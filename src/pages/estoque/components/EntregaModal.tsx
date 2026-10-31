@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Armchair, User, X } from 'lucide-react';
-import ReferenceSelect from '../../components/ReferenceSelect';
-import { useStockItemQuery } from '../../../domain/stock/stock.queries';
-import type { AlvoDaEntregaDeEstoque, ItemDeEstoque } from '../../../domain/shared/stock.types';
-import { hojeNoCampoDeData } from '../../helpers/format.helper';
+import ReferenceSelect from '../../../components/ReferenceSelect';
+import { useStockItemQuery } from '../../../queries/stock.queries';
+import type { AlvoDaEntregaDeEstoque, ItemDeEstoque } from '../../../types/stock.types';
+import { hojeNoCampoDeData } from '../../../helpers/format.helper';
 import { ehComponente, ehConsumivel } from '../helpers/estoque.helper';
 
 // A ENTREGA: `qty` unidades para UM colaborador ou UM posto — ou, o componente,

@@ -1,13 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { prisma } from '../../server/core/database/prismaClient';
-import { CARGOS, cargoAlcanca, ehCargo } from '../../server/domain/access/helpers/cargo';
+import { prisma } from '../../server/infra/database/prismaClient';
+import { CARGOS, cargoAlcanca, ehCargo } from '../../server/modules/access/helpers/cargo';
 import Fastify, { type HTTPMethods } from 'fastify';
-import { registerPermissionGuard } from '../../server/core/http/permission-guard';
-import { ROTAS_POR_PERMISSAO } from '../../server/domain/access/helpers/route-permissions';
-import { exigirPermissao } from '../../server/domain/access/helpers/require-permission';
+import { registerPermissionGuard } from '../../server/infra/http/permission-guard';
+import { ROTAS_POR_PERMISSAO } from '../../server/modules/access/helpers/route-permissions';
+import { exigirPermissao } from '../../server/modules/access/helpers/require-permission';
 import type { FastifyRequest } from 'fastify';
-import { criarAdministrador } from '../../server/domain/access/cli/criar-administrador.cli';
+import { criarAdministrador } from '../../server/modules/access/cli/criar-administrador.cli';
 import { ADMIN_DE_TESTE } from '../setup/database';
 
 // AS INVARIANTES DO ACESSO (D148) — e a que importa é a segunda.
@@ -79,6 +79,7 @@ describe('o mapa de rotas × a tabela do Fastify (D137)', () => {
       autorizar: () => {},
       rotasPublicas: [],
       foraDaConferencia: [],
+      estaticoPublico: false,
     };
 
     const coberta = Fastify();
@@ -96,6 +97,47 @@ describe('o mapa de rotas × a tabela do Fastify (D137)', () => {
     // A mensagem tem que NOMEAR a rota: é o que faz o erro do boot ser
     // acionável em vez de "alguma coisa não está declarada".
     expect(() => guardaFurada.verificarCobertura()).toThrow(/POST \/esquecida/);
+    await furada.close();
+  });
+
+  it('em produção, os arquivos do painel ficam fora da conferência; a API esquecida, não', async () => {
+    // O que o E2E achou em 2026-10-30: em produção o `@fastify/static` registra
+    // uma rota por arquivo do `dist` (`GET /`, `GET /assets/<hash>.js`), mais o
+    // catch-all `GET /*` — nenhuma no mapa, e o boot caía. O flag
+    // `estaticoPublico` as dispensa pela regra do guard de sessão (GET fora de
+    // `/api`), e SÓ elas: a rota de API esquecida continua derrubando.
+    const declaradas = new Set(['GET /api/declarada']);
+    const opcoes = {
+      exigenciaDaRota: (metodo: string, url: string) =>
+        (declaradas.has(`${metodo.toUpperCase()} ${url}`) ? 'ADMIN' : undefined),
+      autorizar: () => {},
+      rotasPublicas: [],
+      foraDaConferencia: [],
+      estaticoPublico: true,
+    };
+
+    const painel = Fastify();
+    const guardaDoPainel = registerPermissionGuard(painel, opcoes);
+    painel.get('/api/declarada', async () => 'ok');
+    painel.get('/', async () => 'index');
+    painel.get('/assets/index-abc123.js', async () => 'js');
+    painel.get('/*', async () => 'index');
+    await painel.ready();
+    expect(() => guardaDoPainel.verificarCobertura()).not.toThrow();
+    // E em tempo de requisição: o asset responde, sem cair no "não declarada" —
+    // também no `HEAD`, que o Fastify cria junto com todo `GET`.
+    const asset = await painel.inject({ method: 'GET', url: '/assets/index-abc123.js' });
+    expect(asset.statusCode).toBe(200);
+    const cabecalho = await painel.inject({ method: 'HEAD', url: '/assets/index-abc123.js' });
+    expect(cabecalho.statusCode).toBe(200);
+    await painel.close();
+
+    const furada = Fastify();
+    const guardaFurada = registerPermissionGuard(furada, opcoes);
+    furada.get('/*', async () => 'index');
+    furada.get('/api/esquecida', async () => 'ok');
+    await furada.ready();
+    expect(() => guardaFurada.verificarCobertura()).toThrow(/GET \/api\/esquecida/);
     await furada.close();
   });
 });
@@ -168,31 +210,23 @@ describe('nunca sem administrador (D148)', () => {
   });
 });
 
-describe('a senha no cadastro — todo usuário entra', () => {
-  it('todo usuário nasce com senha: sem ela é 422', async () => {
-    const resposta = await api.post<{ error: string }>('/api/users', {
-      name: 'Sem Senha', email: 'sem.senha@teste.local',
-    });
-    expect(resposta.status).toBe(422);
-    expect(resposta.body.error).toMatch(/senha/i);
-  });
-
-  it('sem cargo, nasce Administrador — o único (Z) — e entra com a senha', async () => {
+describe('o cargo no cadastro', () => {
+  it('sem cargo, nasce Administrador — o único (Z) — e entra com a temporária', async () => {
     const email = 'nasce.admin@teste.local';
-    const resposta = await api.post<{ id: string }>('/api/users', {
-      name: 'Nasce Administrador', email, password: 'Senha-Do-Admin-12',
+    const resposta = await api.post<{ id: string; temporaryPassword: string }>('/api/users', {
+      name: 'Nasce Administrador', email,
     });
     expect(resposta.status).toBe(201);
 
     const linha = await prisma.user.findUniqueOrThrow({ where: { id: resposta.body.id }, select: { role: true } });
     expect(linha.role).toBe('ADMIN');
-    expect((await api.anonimo.post('/api/auth/login', { email, password: 'Senha-Do-Admin-12' })).status)
+    expect((await api.anonimo.post('/api/auth/login', { email, password: resposta.body.temporaryPassword })).status)
       .toBe(200);
   });
 
   it('cargo que não existe é 422, no cadastro e na edição', async () => {
     const resposta = await api.post<{ error: string }>('/api/users', {
-      name: 'Cargo Inexistente', email: 'cargo.inexistente@teste.local', role: 'INEXISTENTE', password: 'Senha-Qualquer-123',
+      name: 'Cargo Inexistente', email: 'cargo.inexistente@teste.local', role: 'INEXISTENTE',
     });
     expect(resposta.status).toBe(422);
     expect(resposta.body.error).toMatch(/cargo/i);

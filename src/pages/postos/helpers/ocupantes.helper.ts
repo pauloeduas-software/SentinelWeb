@@ -1,6 +1,6 @@
-import { formatarDiaDoInstante } from '../../helpers/format.helper';
-import type { OccupantInput } from '../../../domain/occupancy/occupancy.queries';
-import type { WorkstationOccupant } from '../../../domain/shared/posse.types';
+import { formatarDiaDoInstante } from '../../../helpers/format.helper';
+import type { OccupantInput } from '../../../queries/occupancy.queries';
+import type { WorkstationOccupant } from '../../../types/posse.types';
 
 // Leitura das ocupações de um posto para a tela — funções puras, fora do JSX
 // (docs/referencia/arquitetura.md). Camada 2 de docs/referencia/modelo-de-posse.md.

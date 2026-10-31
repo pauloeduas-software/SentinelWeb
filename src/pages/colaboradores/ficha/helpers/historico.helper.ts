@@ -1,9 +1,9 @@
-import type { EventoDaPessoa } from '../../../../domain/shared/person.types';
-import { textoDeUnidades } from '../../../helpers/estoque.helper';
-import { rotuloDaAcao } from '../../../helpers/historico.helper';
+import type { EventoDaPessoa } from '../../../../types/person.types';
+import { textoDeUnidades } from '../../../../helpers/estoque.helper';
+import { rotuloDaAcao } from '../../../../helpers/historico.helper';
 
 // O que o Histórico da PESSOA acrescenta ao leitor genérico
-// (`src/pages/helpers/historico.helper.ts`): o segundo mapa de ação (o do POSTO)
+// (`src/helpers/historico.helper.ts`): o segundo mapa de ação (o do POSTO)
 // e a frase do título — que aqui depende da FONTE, e não só da ação.
 
 /**

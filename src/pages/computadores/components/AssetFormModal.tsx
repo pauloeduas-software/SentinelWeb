@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import ReferenceSelect from '../../components/ReferenceSelect';
-import { hojeNoCampoDeData, paraCampoDeData } from '../../helpers/format.helper';
-import { useNextAssetTagQuery, type AssetInput } from '../../../domain/asset/asset.queries';
-import { usePode } from '../../../domain/auth/auth.store';
-import type { Asset } from '../../../domain/shared/asset.types';
+import ReferenceSelect from '../../../components/ReferenceSelect';
+import { hojeNoCampoDeData, paraCampoDeData } from '../../../helpers/format.helper';
+import { useNextAssetTagQuery, type AssetInput } from '../../../queries/asset.queries';
+import { usePode } from '../../../stores/auth.store';
+import type { Asset } from '../../../types/asset.types';
 
 // POSSE NÃO É CAMPO DESTE FORMULÁRIO — e a ausência é a decisão (D14,
 // docs/referencia/modelo-de-posse.md).

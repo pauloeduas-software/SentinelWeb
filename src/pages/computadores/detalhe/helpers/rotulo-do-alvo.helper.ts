@@ -1,4 +1,4 @@
-import type { Assignment } from '../../../../domain/shared/posse.types';
+import type { Assignment } from '../../../../types/posse.types';
 
 // Para QUEM uma posse aponta, em texto — função pura, fora do JSX.
 //

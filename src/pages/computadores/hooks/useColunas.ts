@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useAssetColumnsStore } from '../../../domain/asset/asset.store';
+import { useAssetColumnsStore } from '../../../stores/asset.store';
 import {
   COLUNAS_DE_ATIVO, COLUNAS_FIXAS, COLUNAS_PADRAO, colunasVisiveis,
 } from '../helpers/asset-columns';

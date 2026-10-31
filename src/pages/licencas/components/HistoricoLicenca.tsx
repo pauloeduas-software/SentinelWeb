@@ -1,6 +1,6 @@
 import { ArrowRightLeft } from 'lucide-react';
-import type { EventoDaLicenca } from '../../../domain/shared/license.types';
-import { formatarDiaDoInstante } from '../../helpers/format.helper';
+import type { EventoDaLicenca } from '../../../types/license.types';
+import { formatarDiaDoInstante } from '../../../helpers/format.helper';
 import { ACOES_DA_LICENCA } from '../helpers/licenca.helper';
 
 // POR ONDE A LICENÇA PASSOU — entregas e devoluções, e mais nada: o sistema não

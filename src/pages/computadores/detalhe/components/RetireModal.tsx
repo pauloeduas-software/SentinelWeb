@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { PackageX, X } from 'lucide-react';
-import type { Asset, RetireInput } from '../../../../domain/shared/asset.types';
-import { hojeNoCampoDeData } from '../../../helpers/format.helper';
+import type { Asset, RetireInput } from '../../../../types/asset.types';
+import { hojeNoCampoDeData } from '../../../../helpers/format.helper';
 import { MOTIVOS_DA_SAIDA } from '../../helpers/baixa.helper';
 import { Link } from 'react-router-dom';
-import type { LinkDaNotificacao } from '../../../hooks/useNotificacao';
-import { linksDoErro } from '../../../helpers/erro.helper';
+import type { LinkDaNotificacao } from '../../../../hooks/useNotificacao';
+import { linksDoErro } from '../../../../helpers/erro.helper';
 
 // DAR BAIXA — registrar que o ativo saiu do PATRIMÔNIO.
 //

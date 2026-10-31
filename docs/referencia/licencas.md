@@ -244,7 +244,7 @@ da licença. Nada fecha sozinho. A licença do computador não prende a pessoa.
 
 ## Como o código é montado
 
-Fatia vertical inteira (`server/domain/license/`), e não spec do catálogo: a coluna principal
+Fatia vertical inteira (`server/modules/license/`), e não spec do catálogo: a coluna principal
 da lista é derivada.
 
 | Rota | O que é |
@@ -268,7 +268,7 @@ Todas `ADMIN` ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a
 licença (a troca, depois a linha da entrega); a devolução trava só a linha da entrega. A ordem
 alvo → licença → entrega é o que mantém o grafo sem ciclo.
 
-**A busca** das listas é a `contemTexto` (`server/domain/shared/busca.helper.ts`), a mesma de
+**A busca** das listas é a `contemTexto` (`server/modules/shared/busca.helper.ts`), a mesma de
 todas as listagens do sistema: sem diferença de maiúscula e com `%` e `_` escapados. As ordens
 terminam em `id`, para a mesma linha não aparecer em duas páginas.
 

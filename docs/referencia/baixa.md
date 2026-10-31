@@ -131,7 +131,7 @@ pedir:
 
 | | |
 |---|---|
-| dar baixa | `server/domain/asset/use-cases/retire-asset.usecase.ts` |
+| dar baixa | `server/modules/asset/use-cases/retire-asset.usecase.ts` |
 | a guarda da posse (a baixa e a lixeira) | `assert-sem-posse.usecase.ts` |
 | reverter | `unretire-asset.usecase.ts` |
 | a recusa na entrega | `assignment/use-cases/checkout-asset.usecase.ts`; na licença, `license/use-cases/checkout-license.usecase.ts` |

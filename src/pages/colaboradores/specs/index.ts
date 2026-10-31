@@ -1,4 +1,4 @@
-import { desativar, type CatalogUiSpec } from '../../components/catalogo/catalog-ui.types';
+import { desativar, type CatalogUiSpec } from '../../../components/catalogo/catalog-ui.types';
 
 // QUEM RECEBE EQUIPAMENTO — ativo, posto, licença, estoque. Não
 // entra no sistema: quem opera é usuário, na tela Usuários, e um não vira o

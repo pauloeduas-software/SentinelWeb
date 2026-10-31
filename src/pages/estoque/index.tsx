@@ -1,13 +1,13 @@
 import { Plus } from 'lucide-react';
-import CategoriaFiltro from '../components/CategoriaFiltro';
-import EstadoDaLista from '../components/EstadoDaLista';
-import ListToolbar from '../components/ListToolbar';
+import CategoriaFiltro from '../../components/CategoriaFiltro';
+import EstadoDaLista from '../../components/EstadoDaLista';
+import ListToolbar from '../../components/ListToolbar';
 import EntregaModal from './components/EntregaModal';
 import EstoqueTable from './components/EstoqueTable';
 import ItemDetalheModal from './components/ItemDetalheModal';
 import ItemFormModal from './components/ItemFormModal';
 import { useEstoque } from './hooks/useEstoque';
-import { usePode } from '../../domain/auth/auth.store';
+import { usePode } from '../../stores/auth.store';
 
 // O ESTOQUE — monitor, teclado, mouse, cabo: o que tem QUANTIDADE e não
 // patrimônio (docs/decisoes/estoque.md). Ativo é computador; o resto entra

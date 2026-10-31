@@ -1,4 +1,4 @@
-import { prisma } from '../../../server/core/database/prismaClient';
+import { prisma } from '../../../server/infra/database/prismaClient';
 import { logger, type Seeder } from '../seeder';
 
 // COLABORADORES DE EXEMPLO, para a entrega e o posto terem a quem apontar.

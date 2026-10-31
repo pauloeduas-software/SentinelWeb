@@ -1,5 +1,5 @@
 import { SlidersHorizontal } from 'lucide-react';
-import CadastroDoCatalogo from '../components/catalogo/CadastroDoCatalogo';
+import CadastroDoCatalogo from '../../components/catalogo/CadastroDoCatalogo';
 import { CATALOG_UI_SPECS } from './specs';
 
 // As tabelas de referência do ITAM — o menu *Settings* do Snipe-IT: categorias,

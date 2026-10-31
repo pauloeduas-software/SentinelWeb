@@ -1,12 +1,12 @@
 import { Plus } from 'lucide-react';
-import EstadoDaLista from '../components/EstadoDaLista';
-import ListToolbar from '../components/ListToolbar';
+import EstadoDaLista from '../../components/EstadoDaLista';
+import ListToolbar from '../../components/ListToolbar';
 import PostoDetalheModal from './components/PostoDetalheModal';
 import PostoFormModal from './components/PostoFormModal';
 import PostosTable from './components/PostosTable';
 import { VISOES, rotuloDaContagem } from './helpers/postos.helper';
 import { usePostos } from './hooks/usePostos';
-import { usePode } from '../../domain/auth/auth.store';
+import { usePode } from '../../stores/auth.store';
 
 // O POSTO DE TRABALHO — a MesaEscritório, a bancada, o guichê.
 //

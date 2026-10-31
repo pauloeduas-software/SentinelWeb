@@ -1,5 +1,5 @@
 import { Edit2, Power, PowerOff, Trash2, UserPlus } from 'lucide-react';
-import type { ItemDeEstoque } from '../../../domain/shared/stock.types';
+import type { ItemDeEstoque } from '../../../types/stock.types';
 import { classeDaConta, motivoParaNaoEntregar, resumoDaContagem } from '../helpers/estoque.helper';
 
 // A tabela de estoque. Apresentacional puro: recebe valor e callback, não

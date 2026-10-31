@@ -1,7 +1,7 @@
-import type { PostoInput } from '../../../domain/workstation/workstation.queries';
+import type { PostoInput } from '../../../queries/workstation.queries';
 import type {
   AtivoDoPosto, Posto, PostoOcupante, PostoView,
-} from '../../../domain/shared/workstation.types';
+} from '../../../types/workstation.types';
 
 // Leitura de um posto para a tela — funções puras, fora do JSX
 // (docs/referencia/arquitetura.md). Camadas 1 e 2 de docs/referencia/modelo-de-posse.md, vistas do lado

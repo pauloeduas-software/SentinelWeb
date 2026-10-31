@@ -110,7 +110,7 @@ Camada 2 existe para permitir (Laura + Ana na Mesa 1).
 
 ### 3 — O tipo de um status em uso não muda
 
-`server/domain/catalog/specs/status-label.spec.ts` → `beforeWrite`
+`server/modules/catalog/specs/status-label.spec.ts` → `beforeWrite`
 
 Trocar o `type` de um `StatusLabel` que 200 ativos usam muda o significado dos
 200 de uma vez, **sem escrever uma linha em `assets`** — e portanto sem
@@ -148,7 +148,7 @@ operação visível, uma por ativo, auditada.
 
 ### 4 — Estado × posse
 
-`server/domain/asset/use-cases/assert-status-posse.usecase.ts`, chamada pelo
+`server/modules/asset/use-cases/assert-status-posse.usecase.ts`, chamada pelo
 `updateAsset` dentro da transação que já existe.
 
 Ativo com `Assignment` aberta não pode receber status de tipo `DEPLOYABLE`
@@ -237,7 +237,7 @@ a rede de baixo.
 
 ### 6 — Desativado não fica com posse aberta
 
-`server/domain/person/use-cases/lock-person.usecase.ts`, chamada como **primeira**
+`server/modules/person/use-cases/lock-person.usecase.ts`, chamada como **primeira**
 trava da transação na edição do colaborador (`personSpec.beforeWrite`),
 `checkoutAsset` (alvo `PERSON`), `checkoutLicense` (alvo `PERSON`), `checkoutStock`
 (alvo `PERSON`) e `addWorkstationOccupant`.
@@ -453,7 +453,7 @@ tem uma — `passwordHash` é obrigatório desde
 > outro administrador ([AP](../decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it)) —
 > e **não** uma rota de emergência, que seria uma rota criando `ADMIN` sem ser
 > `ADMIN`. Se a única conta `ADMIN` perdeu a senha, o administrador novo entra e
-> define a Nova senha dela em Usuários.
+> gera a senha temporária dela em Usuários.
 
 ---
 
@@ -749,7 +749,7 @@ mostra em vermelho em vez de zerá-lo: esconder seria apagar o sintoma.
   fato sobre linhas já gravadas.
 - **Validação de formato** (uuid, tamanho, enum) — é do `zod`, na borda.
 - **Toda rota declara a permissão que exige.** É garantia de **BOOT**, não
-  invariante de dado: `core/http/permission-guard.ts` confere o mapa contra a
+  invariante de dado: `infra/http/permission-guard.ts` confere o mapa contra a
   tabela de rotas do Fastify e **derruba o processo** com a lista das que faltam
   (D137). Não cabe nesta lista porque não há linha gravada que possa violá-la — o
   que ela protege é uma rota existir alcançável sem ninguém ter decidido isso. E o

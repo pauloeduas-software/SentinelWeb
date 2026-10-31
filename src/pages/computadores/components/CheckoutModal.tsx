@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { ArrowRightLeft, MapPin, TriangleAlert, Undo2, User, X } from 'lucide-react';
-import ReferenceSelect from '../../components/ReferenceSelect';
-import { diaDoInstante, hojeNoCampoDeData } from '../../helpers/format.helper';
-import { useCatalogOptionsQuery } from '../../../domain/catalog/catalog.queries';
+import ReferenceSelect from '../../../components/ReferenceSelect';
+import { diaDoInstante, hojeNoCampoDeData } from '../../../helpers/format.helper';
+import { useCatalogOptionsQuery } from '../../../queries/catalog.queries';
 import { montarDevolucao, montarEntrega, resumoDaPosse, type ResumoPosse } from '../helpers/posse.helper';
-import type { CheckinInput, CheckoutInput } from '../../../domain/assignment/assignment.queries';
-import type { Asset } from '../../../domain/shared/asset.types';
-import type { AlvoDaPosse } from '../../../domain/shared/posse.types';
+import type { CheckinInput, CheckoutInput } from '../../../queries/assignment.queries';
+import type { Asset } from '../../../types/asset.types';
+import type { AlvoDaPosse } from '../../../types/posse.types';
 
 // ENTREGAR e DEVOLVER — a única porta pela qual a posse de um ativo muda
 // (docs/referencia/modelo-de-posse.md).

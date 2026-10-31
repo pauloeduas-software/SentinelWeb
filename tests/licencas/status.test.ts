@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { cenarioDePosse, criarFabricante, criarLicenca, diaNoBrasil } from '../helpers/fixtures';
-import { prisma } from '../../server/core/database/prismaClient';
-import { hojeNoBrasil } from '../../server/domain/shared/hoje.helper';
-import { diasParaVencer, statusDaLicenca } from '../../server/domain/license/helpers/license-status.helper';
+import { prisma } from '../../server/infra/database/prismaClient';
+import { hojeNoBrasil } from '../../server/modules/shared/hoje.helper';
+import { diasParaVencer, statusDaLicenca } from '../../server/modules/license/helpers/license-status.helper';
 
 // O STATUS DERIVADO — e todo erro dele é de um dia.
 //

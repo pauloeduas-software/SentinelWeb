@@ -8,35 +8,37 @@ import fastifyStatic from '@fastify/static';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 
-import { getJwtSecret, isProduction, tetoDeRequisicaoLigado } from './core/config/env';
-import { getCorsOrigins } from './core/config/cors';
-import { createLogger, rootLogger } from './core/logger/logger';
-import { generateRequestId, registerRequestLogger } from './core/logger/request-logger';
-import { registerErrorHandler } from './core/errors/error-handler';
-import { registerAuthGuard, type RotaPublica } from './core/http/require-auth';
-import { registerPermissionGuard } from './core/http/permission-guard';
+import { getJwtSecret, isProduction, tetoDeRequisicaoLigado } from './infra/config/env';
+import { getCorsOrigins } from './infra/config/cors';
+import { createLogger, rootLogger } from './infra/logger/logger';
+import { generateRequestId, registerRequestLogger } from './infra/logger/request-logger';
+import { registerErrorHandler } from './infra/errors/error-handler';
+import { registerAuthGuard, type RotaPublica } from './infra/http/require-auth';
+import { registerPermissionGuard } from './infra/http/permission-guard';
+import { registerSemCacheNaApi } from './infra/http/sem-cache';
 
-import { AuthMaestro } from './domain/auth/auth.maestro';
+import { ApiDocsMaestro, CAMINHO_DO_SWAGGER } from './modules/api-docs/api-docs.maestro';
+import { AuthMaestro } from './modules/auth/auth.maestro';
 
-import { exigenciaDaRota } from './domain/access/helpers/route-permissions';
-import { exigirPermissao } from './domain/access/helpers/require-permission';
-import { autenticarRequisicao } from './domain/auth/helpers/authenticate-request.helper';
-import { COOKIE_SESSAO, SESSAO_SEGUNDOS } from './domain/auth/helpers/session-cookie.helper';
-import { AgentMaestro } from './domain/agent/agent.maestro';
-import { EndpointMaestro } from './domain/endpoint/endpoint.maestro';
-import { ReconciliationMaestro } from './domain/reconciliation/reconciliation.maestro';
-import { CatalogMaestro } from './domain/catalog/catalog.maestro';
-import { AssetMaestro } from './domain/asset/asset.maestro';
-import { SettingsMaestro } from './domain/settings/settings.maestro';
-import { UserMaestro } from './domain/user/user.maestro';
-import { PersonMaestro } from './domain/person/person.maestro';
-import { AssignmentMaestro } from './domain/assignment/assignment.maestro';
-import { OccupancyMaestro } from './domain/occupancy/occupancy.maestro';
-import { WorkstationMaestro } from './domain/workstation/workstation.maestro';
-import { StockMaestro } from './domain/stock/stock.maestro';
-import { LicenseMaestro } from './domain/license/license.maestro';
-import { buildReadinessReport, checkDependencies } from './core/lifecycle/health';
-import { countAgentsOnline } from './domain/agent/agent.registry';
+import { exigenciaDaRota } from './modules/access/helpers/route-permissions';
+import { exigirPermissao } from './modules/access/helpers/require-permission';
+import { autenticarRequisicao } from './modules/auth/helpers/authenticate-request.helper';
+import { COOKIE_SESSAO, SESSAO_SEGUNDOS } from './modules/auth/helpers/session-cookie.helper';
+import { AgentMaestro } from './modules/agent/agent.maestro';
+import { EndpointMaestro } from './modules/endpoint/endpoint.maestro';
+import { ReconciliationMaestro } from './modules/reconciliation/reconciliation.maestro';
+import { CatalogMaestro } from './modules/catalog/catalog.maestro';
+import { AssetMaestro } from './modules/asset/asset.maestro';
+import { SettingsMaestro } from './modules/settings/settings.maestro';
+import { UserMaestro } from './modules/user/user.maestro';
+import { PersonMaestro } from './modules/person/person.maestro';
+import { AssignmentMaestro } from './modules/assignment/assignment.maestro';
+import { OccupancyMaestro } from './modules/occupancy/occupancy.maestro';
+import { WorkstationMaestro } from './modules/workstation/workstation.maestro';
+import { StockMaestro } from './modules/stock/stock.maestro';
+import { LicenseMaestro } from './modules/license/license.maestro';
+import { buildReadinessReport, checkDependencies } from './infra/lifecycle/health';
+import { countAgentsOnline } from './modules/agent/agent.registry';
 
 const logger = createLogger('app');
 
@@ -67,7 +69,7 @@ const logger = createLogger('app');
 // A API é FECHADA por padrão: o `preHandler` global exige sessão em tudo, e
 // esta lista é a exceção inteira (docs/historico/fase-03-autenticacao-e-ator.md, Etapa C).
 //
-// Ela mora aqui, e não dentro de `core/http/require-auth.ts`, porque saber que
+// Ela mora aqui, e não dentro de `infra/http/require-auth.ts`, porque saber que
 // o `/agent-hub` tem autenticação própria é conhecimento de NEGÓCIO — e `core`
 // não importa `domain`. Rota nova nasce protegida: quem quiser abrir uma
 // escreve a linha e o motivo aqui, onde a decisão fica visível na revisão.
@@ -76,6 +78,13 @@ const ROTAS_PUBLICAS: readonly RotaPublica[] = [
   { method: 'GET', path: '/health/ready', motivo: 'readiness do monitoramento, que também não tem' },
   { method: 'POST', path: '/api/auth/login', motivo: 'é por onde a sessão nasce' },
   { method: 'GET', path: '/agent-hub', motivo: 'autenticação própria (AGENT_TOKEN)' },
+  // O Swagger só existe fora de produção (`ApiDocsMaestro`): é a planta da API, e a
+  // rota dele não tem sessão nem cargo. Em produção a lista não o inclui — e a rota
+  // nem é registrada.
+  ...(isProduction ? [] : [
+    { method: 'GET', path: CAMINHO_DO_SWAGGER, motivo: 'o Swagger, só fora de produção' },
+    { method: 'GET', path: `${CAMINHO_DO_SWAGGER}/*`, motivo: 'o Swagger (interface e contrato), só fora de produção' },
+  ]),
 ];
 
 export interface OpcoesDaAplicacao {
@@ -130,7 +139,7 @@ export async function buildApp(
   if (isProduction && !comTetoDeRequisicao) {
     throw new Error(
       'buildApp: teto de requisições desligado em produção. Ele só é dispensado no '
-        + 'harness de teste (server/core/config/env.ts, tetoDeRequisicaoLigado).',
+        + 'harness de teste (server/infra/config/env.ts, tetoDeRequisicaoLigado).',
     );
   }
   const server = Fastify({
@@ -151,6 +160,7 @@ export async function buildApp(
   // Traduz qualquer erro dos handlers em resposta HTTP, num lugar só
   registerErrorHandler(server);
   registerRequestLogger(server);
+  registerSemCacheNaApi(server);
 
   await server.register(cors, { origin: getCorsOrigins(), credentials: true });
 
@@ -170,7 +180,7 @@ export async function buildApp(
       // resposta aqui faria o orquestrador reiniciar um servidor saudável.
       allowList: (request) => request.url.startsWith('/health'),
       // A resposta do 429 NÃO é montada aqui: o plugin lança o erro e quem traduz
-      // é o core/errors/error-handler, único lugar do sistema que monta resposta
+      // é o infra/errors/error-handler, único lugar do sistema que monta resposta
       // de erro. Com `errorResponseBuilder`, o objeto devolvido chegava ao handler
       // sem status reconhecível e virava 500.
     });
@@ -222,14 +232,17 @@ export async function buildApp(
     foraDaConferencia: [
       { method: 'GET', path: '/health', motivo: 'liveness do container, que não tem sessão' },
       { method: 'GET', path: '/health/ready', motivo: 'readiness do monitoramento' },
-      // O catch-all do painel. Não é rota de API: ele entrega o `index.html`
-      // para qualquer caminho que não seja `/api` nem `/agent-hub`, e o próprio
-      // guard de sessão já o libera por `estaticoPublico`.
-      { method: 'GET', path: '/*', motivo: 'fallback do painel estático (entrega index.html)' },
     ],
+    // O painel: o catch-all `GET /*` (entrega o `index.html`) e a rota que o
+    // `@fastify/static` registra para CADA arquivo do `dist`, com hash no nome.
+    // Nenhuma é API nem tem sessão — o mesmo flag e a mesma regra do guard de
+    // sessão acima: GET fora de `/api` é arquivo do painel.
+    estaticoPublico: isProduction,
   });
 
-  logger.info('[App] Inicializando Maestros de Domínio...');
+  logger.debug('[App] Inicializando Maestros de Domínio...');
+  // O Swagger ANTES de todos: o plugin só descobre as rotas que nascem depois dele.
+  if (!isProduction) await ApiDocsMaestro.setupRoutes(server);
   // `auth` primeiro: é o domínio que todos os outros passaram a depender (o
   // `preHandler` acima já usa o `autenticarRequisicao` dele).
   await AuthMaestro.setupRoutes(server);

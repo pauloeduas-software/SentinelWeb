@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Save, Settings2 } from 'lucide-react';
 import type {
   ConfiguracaoDaDescoberta as Configuracao, DiscoveryMode,
-} from '../../../domain/shared/reconciliation.types';
+} from '../../../types/reconciliation.types';
 
 // ═════════════════════════════════════════════════════════════════════════════
 // OS BOTÕES DA DESCOBERTA — e até aqui eles não existiam em tela nenhuma.

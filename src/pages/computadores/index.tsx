@@ -4,11 +4,11 @@ import AssetFilterBar from './components/AssetFilterBar';
 import AssetFormModal from './components/AssetFormModal';
 import CheckoutModal from './components/CheckoutModal';
 import ColunasMenu from './components/ColunasMenu';
-import CategoriaFiltro from '../components/CategoriaFiltro';
-import EstadoDaLista from '../components/EstadoDaLista';
-import ListToolbar from '../components/ListToolbar';
-import { usePode } from '../../domain/auth/auth.store';
-import { formatarData, formatarMoeda } from '../helpers/format.helper';
+import CategoriaFiltro from '../../components/CategoriaFiltro';
+import EstadoDaLista from '../../components/EstadoDaLista';
+import ListToolbar from '../../components/ListToolbar';
+import { usePode } from '../../stores/auth.store';
+import { formatarData, formatarMoeda } from '../../helpers/format.helper';
 import { seloDaSaida } from './helpers/baixa.helper';
 import {
   TRACO, bloqueioDaEntrega, resumoDaPosse, rotuloDaOperacao,

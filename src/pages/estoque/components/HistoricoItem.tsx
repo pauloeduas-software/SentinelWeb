@@ -1,6 +1,6 @@
 import { ArrowRightLeft } from 'lucide-react';
-import type { EventoDoItem } from '../../../domain/shared/stock.types';
-import { formatarDiaDoInstante } from '../../helpers/format.helper';
+import type { EventoDoItem } from '../../../types/stock.types';
+import { formatarDiaDoInstante } from '../../../helpers/format.helper';
 import { tituloDoEvento } from '../helpers/estoque.helper';
 
 // POR ONDE O ITEM PASSOU — entregas e devoluções (no componente, instalação e

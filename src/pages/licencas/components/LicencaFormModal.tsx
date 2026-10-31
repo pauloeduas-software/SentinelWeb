@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import CampoDeDinheiro from '../../components/CampoDeDinheiro';
-import ReferenceSelect from '../../components/ReferenceSelect';
+import CampoDeDinheiro from '../../../components/CampoDeDinheiro';
+import ReferenceSelect from '../../../components/ReferenceSelect';
 import ChavesDoFormulario from './ChavesDoFormulario';
-import { hojeNoCampoDeData, paraCampoDeData } from '../../helpers/format.helper';
-import { useLicenseQuery } from '../../../domain/license/license.queries';
+import { hojeNoCampoDeData, paraCampoDeData } from '../../../helpers/format.helper';
+import { useLicenseQuery } from '../../../queries/license.queries';
 import type {
   ChaveDaLicenca, ChaveNoFormulario, Licenca, LicencaDetalhe, LicencaInput,
-} from '../../../domain/shared/license.types';
+} from '../../../types/license.types';
 import type { LinhaDeChave } from '../helpers/licenca.helper';
 
 // Cadastro e edição de uma licença.

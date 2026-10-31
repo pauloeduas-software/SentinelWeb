@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Copy, Eye, EyeOff } from 'lucide-react';
-import { useNotificacao } from '../../hooks/useNotificacao';
+import { useNotificacao } from '../../../hooks/useNotificacao';
 import { esconderChave } from '../helpers/licenca.helper';
 
 // A CHAVE DE PRODUTO NA TELA — escondida até alguém pedir (AA). "Copiar" leva a

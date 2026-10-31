@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { prisma } from '../../server/core/database/prismaClient';
+import { prisma } from '../../server/infra/database/prismaClient';
 import { criarFabricante, criarModelo, idsDoSeed } from '../helpers/fixtures';
 
 // O CORPO LITERAL DO FORMULÁRIO — o teste que teria pego o defeito 1.
@@ -173,9 +173,8 @@ describe('PUT /api/assets/:id com o corpo literal do formulário de edição', (
 
 describe('POST /api/users com o corpo literal do UserFormModal', () => {
   /**
-   * Cópia fiel de `src/pages/usuarios/components/UserFormModal.tsx`. A senha
-   * só vai quando preenchida — no cadastro, o `required` do campo garante que
-   * vá.
+   * Cópia fiel de `src/pages/usuarios/components/UserFormModal.tsx`: nome e
+   * e-mail, sem senha (AU) — a conta nasce com a temporária.
    */
   function corpoDoFormularioDeUsuario(sobrescrever: Record<string, unknown> = {}) {
     return { name: '', email: '', ...sobrescrever };
@@ -185,7 +184,7 @@ describe('POST /api/users com o corpo literal do UserFormModal', () => {
     const { status, body } = await api.post<Record<string, unknown>>(
       '/api/users',
       corpoDoFormularioDeUsuario({
-        name: 'Laura Souza', email: 'laura.formulario@teste.local', password: 'Senha-Do-Formulario-1',
+        name: 'Laura Souza', email: 'laura.formulario@teste.local',
       }),
     );
 

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from './helpers/app';
 import { nomeDoBanco } from './setup/database';
-import { prisma } from '../server/core/database/prismaClient';
+import { prisma } from '../server/infra/database/prismaClient';
 import { semearBanco } from '../prisma/seeds/index';
 import { ADMIN_DE_TESTE } from './setup/database';
 

@@ -1,0 +1,164 @@
+import { useState } from 'react';
+import { Search } from 'lucide-react';
+import { useCatalogOptionsQuery } from '../queries/catalog.queries';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
+
+// `<select>` alimentado por outra tabela (/options).
+//
+// É o ÚNICO componente desta pasta que busca dado, e por um motivo concreto: a
+// quantidade de campos-referência muda de aba para aba (Modelos tem dois,
+// Fabricantes nenhum). Buscar no hook da página exigiria chamar um hook por
+// campo dentro de um laço de tamanho variável — o que as regras dos hooks
+// proíbem. Um componente por campo resolve: cada instância faz a sua chamada, e
+// montar/desmontar ao trocar de aba é o caminho normal do React.
+//
+// Continua sem falar HTTP: usa a query do domínio, como manda o docs/referencia/arquitetura.md.
+
+/**
+ * O TETO DO `/options` NO SERVIDOR, repetido aqui de propósito.
+ *
+ * O número mora em `server/modules/catalog/use-cases/list-catalog-options.usecase.ts`
+ * (e nos dois irmãos, de ativos e de usuários). O lint impede `src/` importar de
+ * `server/`, e a regra existe para o Prisma não acabar no bundle — não vale
+ * furá-la por um número (é o D71 outra vez).
+ *
+ * A divergência é inofensiva aqui: se o servidor baixar o teto, a lista chega
+ * menor que isto e o campo de busca deixa de aparecer sozinho; se subir, ele
+ * aparece um pouco antes do necessário. Nenhum dos dois esconde opção nenhuma.
+ */
+const TETO_DE_OPCOES = 200;
+
+interface ReferenceSelectProps {
+  rota: string;
+  filtroTipo?: string;
+  /** Recorte próprio da rota, além do tipo: `{ maquina: 'sem' }` nos ativos. */
+  parametros?: Record<string, string>;
+  valor: string;
+  obrigatorio?: boolean;
+  /**
+   * Somem da lista — quando a regra recusa alguns de uma vez: os status
+   * `DEPLOYABLE` como destino de uma entrega. O `/options` só
+   * filtra por UM tipo, e não por "todos menos um"; quem sabe os ids a tirar
+   * é quem usa o campo.
+   */
+  excluirIds?: readonly string[];
+  /**
+   * O vínculo com que o formulário ABRIU, com o nome — o que o registro já traz
+   * embutido (`asset.location`, `model.manufacturer`). Serve só para dar nome à
+   * opção "fora desta lista"; sem ele, ela aparece sem nome, como antes.
+   */
+  atual?: { id: string; name: string } | null;
+  /**
+   * Mostra o `detalhe` da opção ao lado do nome — "Laura Souza — laura@empresa.com".
+   * Onde a tela pediu; nas outras o seletor continua só com o nome.
+   */
+  comDetalhe?: boolean;
+  onChange: (valor: string) => void;
+}
+
+export default function ReferenceSelect({
+  rota, filtroTipo, parametros, valor, obrigatorio, excluirIds, atual, comDetalhe = false, onChange,
+}: ReferenceSelectProps) {
+  const [busca, setBusca] = useState('');
+  // A última opção ESCOLHIDA aqui, com o nome. É o outro caminho para o valor
+  // ficar fora da lista: escolher "Dell" e depois buscar "HP". Sem guardar o
+  // nome na hora da escolha, a opção órfã levaria o nome do `atual` — que é o
+  // vínculo de ANTES, não o escolhido.
+  const [escolhida, setEscolhida] = useState<{ id: string; name: string } | null>(null);
+  // O MESMO `useDebouncedValue` das cinco listagens: sem ele é uma requisição
+  // por tecla, e o `/options` não tem paginação para amortecer.
+  const buscaDebounced = useDebouncedValue(busca);
+
+  const { data, isPending } = useCatalogOptionsQuery(rota, filtroTipo, buscaDebounced || undefined, parametros);
+  const opcoes = (data ?? []).filter((opcao) => !excluirIds?.includes(opcao.id));
+
+  // O `/options` tem teto de 200 (list-catalog-options.usecase.ts). Passando
+  // disso, o vínculo atual pode não estar na lista — e um `<select>` cujo
+  // `value` não casa com nenhuma `<option>` renderiza VAZIO. Salvar daí mandaria
+  // `''`, que em `locationId`/`manufacturerId` vira `null`: o vínculo
+  // sumiria sem o usuário ter tocado no campo.
+  //
+  // A opção abaixo segura o valor para que isso não aconteça. Com a busca ela
+  // deixou de ser a única defesa, mas continua necessária: enquanto há termo
+  // digitado, o vínculo atual costuma estar FORA da lista filtrada.
+  const foraDaLista = !isPending && valor !== '' && !opcoes.some((opcao) => opcao.id === valor);
+  // O nome, quando se sabe SEM requisição: pelo id, nunca por posição — um
+  // nome trocado aqui faria a pessoa salvar achando que é outro vínculo. Além do
+  // teto, é o caso do colaborador DESATIVADO, que o `/options` não devolve e o
+  // registro continua apontando.
+  const nomeForaDaLista = [escolhida, atual].find((ref) => ref?.id === valor)?.name;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // A BUSCA APARECE QUANDO A LISTA ESTÁ CHEIA — não sempre (F10, Etapa B).
+  //
+  // Um campo de busca fixo em cada campo-referência poria quatro caixas extras
+  // no formulário de ativo, três das quais com oito opções embaixo. Ele nasce
+  // exatamente no caso que motivou a etapa: a lista voltou no teto, então há
+  // (provavelmente) mais coisa do que a tela mostra, e navegar até a 201ª
+  // localização é impossível sem digitar.
+  //
+  // Uma vez digitado algo, o campo FICA — senão a lista encolheria abaixo do
+  // teto, a caixa desapareceria e o termo ficaria aplicado sem nada na tela
+  // explicando por que faltam opções.
+  // ═══════════════════════════════════════════════════════════════════════════
+  const listaCheia = opcoes.length >= TETO_DE_OPCOES;
+  const mostrarBusca = listaCheia || busca !== '';
+
+  return (
+    <div className="space-y-1">
+      {mostrarBusca && (
+        <div className="relative">
+          <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-text-tertiary" />
+          <input
+            type="text"
+            value={busca}
+            onChange={(evento) => setBusca(evento.target.value)}
+            placeholder="Buscar…"
+            // `search` e não `text` só no tipo não bastaria: o que importa é que
+            // ENTER aqui não submeta o formulário em volta — o campo está dentro
+            // de um `<form>`, e submeter ao buscar gravaria o registro no meio
+            // da escolha.
+            onKeyDown={(evento) => {
+              if (evento.key === 'Enter') evento.preventDefault();
+            }}
+            className="w-full pl-7 pr-2 py-1.5 bg-bg-base border border-border-sutil text-[11px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors"
+          />
+        </div>
+      )}
+
+      <select
+        required={obrigatorio}
+        value={valor}
+        onChange={(event) => {
+          const id = event.target.value;
+          const opcao = opcoes.find((item) => item.id === id);
+          setEscolhida(opcao ? { id: opcao.id, name: opcao.name } : null);
+          onChange(id);
+        }}
+        className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors disabled:opacity-50"
+        // `isPending` é só a PRIMEIRA carga: com `placeholderData` na query, as
+        // buscas seguintes mantêm a lista anterior e o campo não trava a cada
+        // tecla.
+        disabled={isPending}
+      >
+        <option value="">{isPending ? 'Carregando...' : obrigatorio ? 'Selecione...' : '— nenhum —'}</option>
+        {foraDaLista && (
+          <option value={valor}>
+            {nomeForaDaLista ? `${nomeForaDaLista} (fora desta lista)` : '— vínculo atual (fora desta lista) —'}
+          </option>
+        )}
+        {opcoes.map((opcao) => (
+          <option key={opcao.id} value={opcao.id}>
+            {comDetalhe && opcao.detalhe ? `${opcao.name} — ${opcao.detalhe}` : opcao.name}
+          </option>
+        ))}
+      </select>
+
+      {listaCheia && (
+        <span className="block text-[10px] text-text-tertiary leading-relaxed">
+          Mostrando as {TETO_DE_OPCOES} primeiras. Use a busca para achar o resto.
+        </span>
+      )}
+    </div>
+  );
+}

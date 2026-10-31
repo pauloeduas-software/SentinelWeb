@@ -6,3 +6,23 @@ dist/
 # Rascunhos de trabalho (levantamentos, anotações). Não é código nem documentação
 # do projeto — o que vira decisão vai para docs/, o resto morre aqui.
 temp/
+
+# Configuração do Obsidian, gravada ao abrir docs/ como cofre. A documentação é
+# o conteúdo de docs/; o cofre é só o leitor.
+docs/.obsidian/
+
+# Playwright: a sessão que o auth.setup.ts guarda, os traces e o relatório
+tests/e2e/.auth/
+test-results/
+playwright-report/
+
+# Claude Code: a configuração pessoal e as cópias de trabalho. O resto de
+# .claude/ (as skills) é do projeto e vai para o repositório.
+.claude/settings.local.json
+.claude/worktrees/
+.mcp.json
+
+# O lockfile é o bun.lock (decisão M); o de outro gerenciador não entra
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

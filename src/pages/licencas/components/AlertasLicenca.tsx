@@ -1,6 +1,6 @@
 import { CalendarClock } from 'lucide-react';
-import type { LicencaEmAlerta, MotivoDoAlerta } from '../../../domain/shared/license.types';
-import { textoDoPrazo } from '../../helpers/licenca.helper';
+import type { LicencaEmAlerta, MotivoDoAlerta } from '../../../types/license.types';
+import { textoDoPrazo } from '../../../helpers/licenca.helper';
 
 // O ALERTA DA LICENÇA — um só: o que venceu e o que vence nos próximos 30 dias,
 // nessa ordem de urgência. A encerrada não entra: ela só encerra com tudo

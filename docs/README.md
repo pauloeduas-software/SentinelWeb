@@ -18,8 +18,12 @@ fazer, e por quê, está em [`decisoes/escopo.md`](./decisoes/escopo.md).
 
 ## Por onde entrar
 
+**Sou um agente de código.** O [`CLAUDE.md`](../CLAUDE.md) na raiz é o mapa curto: comandos, o
+que não se negocia, o vocabulário e o que já foi decidido que não volta. Dali, o mesmo caminho de
+quem vai mexer no código.
+
 **Vou mexer no código.** Comece em [`referencia/arquitetura.md`](./referencia/arquitetura.md) —
-as três camadas, os 17 domínios e o que o lint recusa. Se o que você vai mexer tem a ver com
+as camadas, os 17 módulos e o que o lint recusa. Se o que você vai mexer tem a ver com
 quem responde por um equipamento, [`referencia/modelo-de-posse.md`](./referencia/modelo-de-posse.md)
 é pré-requisito, não leitura opcional.
 
@@ -79,7 +83,7 @@ Se você está escrevendo a mesma frase na segunda zona, uma das duas está no l
 2. **Auditoria e revisão não ganham arquivo.** Elas atualizam o documento que revisaram: a
    revisão de um plano entra no plano, a correção de uma referência substitui o parágrafo errado.
    Documento de referência não carrega a lista das suas próprias correções — isso é o `git log`.
-3. **Decisão nova continua a letra** (a próxima é a `AG`; a numeração `D` parou no `D164`, pelo
+3. **Decisão nova continua a letra** (a próxima é a `AU`; a numeração `D` parou no `D164`, pelo
    motivo escrito em [*A segunda rodada*](./decisoes/README.md#a-segunda-rodada-ap)), entra no
    arquivo do assunto que ela governa e ganha linha no índice. Se ela corrige uma anterior, as
    duas apontam uma para a outra e a tabela de supersessões cresce.

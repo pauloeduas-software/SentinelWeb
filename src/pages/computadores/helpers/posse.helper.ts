@@ -1,6 +1,6 @@
-import type { CheckinInput, CheckoutInput } from '../../../domain/assignment/assignment.queries';
-import type { Asset } from '../../../domain/shared/asset.types';
-import type { AlvoDaPosse, PosseResolvida, Responsavel } from '../../../domain/shared/posse.types';
+import type { CheckinInput, CheckoutInput } from '../../../queries/assignment.queries';
+import type { Asset } from '../../../types/asset.types';
+import type { AlvoDaPosse, PosseResolvida, Responsavel } from '../../../types/posse.types';
 
 // Leitura da posse para a tela — funções puras, fora do JSX
 // (docs/referencia/arquitetura.md: "cálculo sai do JSX").

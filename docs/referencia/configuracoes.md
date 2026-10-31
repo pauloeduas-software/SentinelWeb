@@ -46,11 +46,11 @@ de Configurações e a página Colaboradores
 
 | | Servidor | Tela |
 |---|---|---|
-| a spec de cada tabela | `server/domain/catalog/specs/*.spec.ts` | `src/pages/configuracoes/specs/index.ts` (as cinco) e `src/pages/colaboradores/specs/index.ts` |
-| o contrato da spec | `catalog-spec.types.ts` | `src/pages/components/catalogo/catalog-ui.types.ts` |
-| o CRUD | `use-cases/{list,create,update,delete}-catalog.usecase.ts` | `src/pages/components/catalogo/` — `useCatalog.ts`, `Catalog*.tsx` e `CadastroDoCatalogo.tsx`, a tela com as abas |
+| a spec de cada tabela | `server/modules/catalog/specs/*.spec.ts` | `src/pages/configuracoes/specs/index.ts` (as cinco) e `src/pages/colaboradores/specs/index.ts` |
+| o contrato da spec | `catalog-spec.types.ts` | `src/components/catalogo/catalog-ui.types.ts` |
+| o CRUD | `use-cases/{list,create,update,delete}-catalog.usecase.ts` | `src/components/catalogo/` — `useCatalog.ts`, `Catalog*.tsx` e `CadastroDoCatalogo.tsx`, a tela com as abas |
 | as rotas | `catalog.maestro.ts`, cinco por tabela, em laço | — |
-| a ficha do colaborador | `server/domain/person/` (só leitura) | `src/pages/colaboradores/ficha/` — `/colaboradores/:id` |
+| a ficha do colaborador | `server/modules/person/` (só leitura) | `src/pages/colaboradores/ficha/` — `/colaboradores/:id` |
 
 A lista das abas (`CATALOG_UI_SPECS`) segue a ordem do `CATALOG_SPECS` do
 servidor, sem o colaborador, que é o último; a tela acha cada spec pelo `slug`.
@@ -120,7 +120,7 @@ entrada. As diferenças são de propósito:
 
 Erros de ação (exclusão recusada, desativação recusada) aparecem numa
 **notificação do sistema**, no canto inferior direito, e somem sozinhos
-(`src/pages/components/Notificacoes.tsx`, `src/pages/hooks/useNotificacao.ts`). A recusa do
+(`src/components/Notificacoes.tsx`, `src/hooks/useNotificacao.ts`). A recusa do
 colaborador que ainda tem licença diz quais, e a notificação traz um link para cada uma — o
 Devolver mora no detalhe da licença; com link, ela fica até alguém fechar.
 

@@ -939,3 +939,74 @@ conta, quem abrir o endereço primeiro vira administrador; a senha padrão do GL
 de ambiente são a porta que a T fechou.
 
 **O que a migração faz:** nada — a mudança é só do comando.
+
+---
+
+## AR — A senha temporária e "Minha conta" voltam
+
+**Decidido** (em 2026-10-30, ao comparar com o ModuloDefault, o template da organização: "a troca
+de senha de um usuário para o outro, fazendo uma senha temporária e obrigando o outro a mudar a
+senha, é muito bom gosto desse sistema, e também a página de usuário individual para o usuário
+trocar a própria senha, nome e etc. Se trocar a própria senha não precisa derrubar, mas se for
+uma lógica difícil, aplique a mais fácil"):
+
+- **O administrador gera uma senha temporária** para outra conta (`POST /api/users/:id/temporary-password`,
+  botão **Gerar senha temporária** no formulário de Usuários). A senha é aleatória (16 símbolos do
+  `crypto`, sem os que se confundem), sai **uma vez** na resposta e não vai para a auditoria nem
+  para o log. A conta fica marcada (`User.mustChangePassword`), destrava e perde as sessões abertas.
+- **Com a temporária a sessão só alcança três rotas** — `GET /api/auth/me`, `POST /api/auth/logout`
+  e `PUT /api/auth/password` —, e o painel mostra só a tela "Escolha a sua senha". O resto responde
+  403 até a troca. A temporária passou por mãos alheias; ela serve para entrar e escolher a própria.
+- **Minha conta** (`/conta`): a pessoa troca o **nome** (`PATCH /api/auth/me`) e a **senha**
+  (`PUT /api/auth/password`, que pede a atual). O e-mail e o cargo seguem em Usuários.
+- **Trocar a própria senha não derruba quem trocou.** Era a opção fácil: o `tokenVersion` já sobe e
+  derruba as outras sessões, e o controller só grava o cookie da geração nova na resposta
+  (`reemitirSessao`). Não foi preciso mexer na conferência da sessão. O mesmo vale para quem edita a
+  própria conta em Usuários com a Nova senha.
+- **A "Nova senha" do administrador continua** e é uma senha de verdade: se a conta tinha uma temporária
+  pendente, a marca cai.
+
+**Reabre, em parte:** o [D162](./escopo.md#d162--minha-conta-sai-e-o-cargo-vira-campo-do-formulário-de-usuário)
+tirou a tela porque ela tinha dois painéis (segundo fator e tokens) e os dois saíram — sobrava uma
+página com um cabeçalho. Agora ela tem dois painéis que existem. E a [AP](#ap--o-administrador-nasce-por-comando-como-no-snipe-it)
+dispensou o **aviso** de trocar a senha *no comando que cria o administrador*, onde a pessoa escolhe a
+própria senha na hora; não há senha de outra pessoa ali, então a decisão continua de pé.
+
+**Não reabre:** e-mail (O). A senha temporária é entregue pelo administrador, em mãos, e não por
+mensagem do sistema.
+
+**Por quê:** quem esquece a senha precisa de alguém que a escolha, e uma senha escolhida por outra
+pessoa não é mais segredo de quem a usa. Com a temporária, o administrador nunca sabe a senha que fica.
+O custo é uma coluna e três rotas liberadas na conta pendente.
+
+---
+
+## AU — Ninguém escolhe a senha de outra pessoa
+
+**Decidido** (em 2026-10-31, ao ver o formulário de Usuários: "não era para eu definir a senha que o
+usuário vai colocar, apenas gerar uma nova senha temporária, e aí a pessoa ao entrar coloca a senha e
+já pede automaticamente para trocar"; e, na tela de troca: "pedir a temporária uma segunda vez é
+desnecessário, ela já foi validada no login"):
+
+- **O cadastro não recebe senha.** A conta nasce com uma temporária, gerada como a da [AR](#ar--a-senha-temporária-e-minha-conta-voltam),
+  que sai uma vez na resposta do `POST /api/users` e o formulário mostra para copiar. A conta nasce
+  marcada (`mustChangePassword`) e a pessoa escolhe a dela no primeiro acesso.
+- **A "Nova senha" da edição de usuário sai.** A senha de quem esqueceu é o botão Gerar senha
+  temporária; a própria é em Minha conta. Senha no corpo do cadastro ou da edição é 422.
+- **A troca obrigatória não pede a temporária de novo.** A pessoa acabou de digitá-la no login, e
+  a sessão com ela só alcança essa troca. O `currentPassword` virou opcional no contrato; fora da troca
+  obrigatória, o use-case continua a exigi-lo. A nova só não pode ser a própria temporária.
+- **O comando de terminal que cria administrador ([AP](#ap--o-administrador-nasce-por-comando-como-no-snipe-it))
+  continua com `--senha`:** ali quem roda é a própria pessoa, e a senha é dela.
+- **A sessão vale 12 horas, e não 8:** com 8, quem entrava às 8h caía às 16h, no meio do expediente.
+  Continua fixa, contada da entrada: renovar a cada requisição manteria viva para sempre a aba da
+  telemetria, que consulta o servidor a cada 5 s. Quando ela cai, o login devolve a pessoa à tela
+  onde estava (pelo `state` da navegação, e não por `?redirectTo=`, que abriria redirecionamento para
+  fora).
+
+**Reabre, em parte:** a [AR](#ar--a-senha-temporária-e-minha-conta-voltam), que manteve a "Nova senha" do administrador, e a
+[R](#r--a-senha-nasce-no-cadastro-e-o-login-é-o-e-mail), que pôs a senha no cadastro. O login continua sendo o e-mail.
+
+**Por quê:** é o argumento da própria AR — uma senha escolhida por outra pessoa não é mais segredo de
+quem a usa — aplicado também ao cadastro e à edição, que o deixavam aberto.
+

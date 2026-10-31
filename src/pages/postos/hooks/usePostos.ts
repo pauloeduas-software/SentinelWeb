@@ -3,12 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   useCreateWorkstation, useDeleteWorkstation, useUpdateWorkstation, useWorkstationQuery,
   useWorkstationsQuery, type PostoInput,
-} from '../../../domain/workstation/workstation.queries';
-import { useCheckinAsset } from '../../../domain/assignment/assignment.queries';
-import type { AtivoDoPosto, Posto, PostoView } from '../../../domain/shared/workstation.types';
-import { linksDoErro } from '../../helpers/erro.helper';
-import { useDebouncedValue } from '../../hooks/useDebouncedValue';
-import { useNotificacao } from '../../hooks/useNotificacao';
+} from '../../../queries/workstation.queries';
+import { useCheckinAsset } from '../../../queries/assignment.queries';
+import type { AtivoDoPosto, Posto, PostoView } from '../../../types/workstation.types';
+import { linksDoErro } from '../../../helpers/erro.helper';
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
+import { useNotificacao } from '../../../hooks/useNotificacao';
 import { useOcupantes } from './useOcupantes';
 
 const PER_PAGE = 10;

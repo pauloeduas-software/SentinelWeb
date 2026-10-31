@@ -1,4 +1,4 @@
-import type { FabricanteRef } from '../../../../domain/shared/asset.types';
+import type { FabricanteRef } from '../../../../types/asset.types';
 
 // OS CANAIS DE SUPORTE DO FABRICANTE, prontos para a ficha do ativo.
 //

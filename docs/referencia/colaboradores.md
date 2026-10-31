@@ -18,7 +18,7 @@ operação de toda semana — contratação, entrega, desligamento —, tem lixe
 ficha, e as outras cinco abas são referência que se monta uma vez.
 
 O cadastro **é o mesmo componente** das abas de Configurações
-(`src/pages/components/catalogo/CadastroDoCatalogo.tsx`), com a spec do
+(`src/components/catalogo/CadastroDoCatalogo.tsx`), com a spec do
 colaborador (`src/pages/colaboradores/specs/index.ts`): a busca por nome ou
 e-mail, a paginação, Editar, Desativar/Ativar, a Ficha e Excluir na ordem e
 com as frases do sistema inteiro, e a aba Lixeira. A API não mudou: é o CRUD do

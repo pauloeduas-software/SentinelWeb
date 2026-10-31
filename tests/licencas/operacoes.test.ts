@@ -3,9 +3,9 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 import {
   cenarioDePosse, criarAtivo, criarColaborador, criarLicenca, diaNoBrasil, entregarLicenca,
 } from '../helpers/fixtures';
-import { prisma } from '../../server/core/database/prismaClient';
+import { prisma } from '../../server/infra/database/prismaClient';
 // A máscara do campo de dinheiro: o teste prova o que a tela manda ao servidor.
-import { centavosDigitados, dinheiroNoCampo } from '../../src/pages/helpers/format.helper';
+import { centavosDigitados, dinheiroNoCampo } from '../../src/helpers/format.helper';
 
 // AS OPERAÇÕES SOBRE A LICENÇA — a conta, as datas, a entrega e a devolução.
 //

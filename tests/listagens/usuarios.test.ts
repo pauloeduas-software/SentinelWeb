@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { prisma } from '../../server/core/database/prismaClient';
+import { prisma } from '../../server/infra/database/prismaClient';
 
 // A LISTAGEM DE USUÁRIOS — `GET /api/users`, quem opera o sistema.
 //
@@ -21,7 +21,6 @@ beforeAll(async () => {
     const criado = await api.post('/api/users', {
       name: `${nome} ${MARCA}`,
       email: `${nome.toLowerCase()}.${MARCA}@teste.local`,
-      password: 'Senha-De-Teste-123',
     });
     expect(criado.status).toBe(201);
   }
@@ -69,7 +68,7 @@ describe('GET /api/users', () => {
     expect(await prisma.user.findUnique({ where: { id: bruno.id } })).toBeNull();
 
     const denovo = await api.post('/api/users', {
-      name: `Bruno ${MARCA}`, email, password: 'Senha-De-Teste-123',
+      name: `Bruno ${MARCA}`, email,
     });
     expect(denovo.status).toBe(201);
   });

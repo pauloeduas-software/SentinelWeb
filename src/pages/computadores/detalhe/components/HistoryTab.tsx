@@ -1,6 +1,6 @@
 import { ArrowRightLeft, Clock, Cpu, KeyRound } from 'lucide-react';
-import type { EventoDoAtivo } from '../../../../domain/shared/asset.types';
-import { formatarDiaDoInstante } from '../../../helpers/format.helper';
+import type { EventoDoAtivo } from '../../../../types/asset.types';
+import { formatarDiaDoInstante } from '../../../../helpers/format.helper';
 import { tituloDoEvento } from '../helpers/historico.helper';
 
 // A LINHA DO TEMPO do ativo: por onde ele passou. Três fontes, uma lista: o

@@ -29,18 +29,19 @@
         ├─ e-mail sem conta ──────────► argon2 descartável ──► 401
         ├─ lockedUntil no futuro ───────────────────────────────► 423
         ├─ senha errada ──► failedLoginCount++ (5 = trava 15min) ─► 401
+        │                    (trava vencida: a contagem recomeça do zero)
         ├─ isActive: false ─────────────────────────────────────► 403
         └─ acerto
              ├─ rehash transparente se o hash for de parâmetros antigos
              ├─ zera contador/trava
-             ├─ relê pelo USER_PUBLIC_SELECT, com o cargo e o tokenVersion
+             ├─ relê pelo USER_PUBLIC_SELECT, com o cargo, o tokenVersion e o mustChangePassword
              └─ 200
         │
         ▼
   controller assina JWT { sub, tv }   ← `tv` = tokenVersion, a geração da sessão
         │
         ▼
-  Set-Cookie: sentinel_sessao  (httpOnly, SameSite=Lax, Secure em produção, 8h)
+  Set-Cookie: sentinel_sessao  (httpOnly, SameSite=Lax, Secure em produção, 12h)
 ```
 
 E em **toda** requisição seguinte:
@@ -80,10 +81,17 @@ em `ROTAS_PUBLICAS` (`server/app.ts`): os dois health checks, o login e o
 `/agent-hub` (que tem autenticação própria) — quatro linhas, cada uma com o motivo ao lado.
 
 **E há uma segunda porta fechada por padrão, do lado da AUTORIZAÇÃO:**
-`core/http/permission-guard.ts` exige que toda rota declare o **cargo mínimo** que pede — e
+`infra/http/permission-guard.ts` exige que toda rota declare o **cargo mínimo** que pede — e
 rota registrada sem declaração **derruba o boot**, com o nome dela no erro (D137).
 Os dois guards são o mesmo desenho pelo mesmo motivo, e o segundo tem um degrau a
 mais: o esquecimento não vira API aberta em silêncio, vira servidor que não sobe.
+Ficam fora da conferência as quatro rotas de `ROTAS_PUBLICAS`, os dois health checks
+nomeados um a um em `foraDaConferencia` e — em produção, pelo mesmo flag
+`estaticoPublico` do guard de sessão — os arquivos do painel: o
+`@fastify/static` registra uma rota por arquivo do `dist`, com hash no nome, e o
+catch-all `GET /*` entrega o `index.html`. A regra é a mesma do guard de sessão,
+GET fora de `/api`; é pelo padrão da rota, para `/api/nao-existe` continuar sendo o
+404 da API e não um 500 por "rota não declarada".
 
 A alternativa — proteger rota a rota — tem um defeito que não aparece em
 revisão: **a rota nova nasce aberta**, e esquecer de protegê-la não gera erro
@@ -132,16 +140,16 @@ O buraco concreto que isso deixava:
 | Admin redefine a senha de alguém | sessões antigas seguem valendo | todas caem |
 
 O mecanismo é um inteiro na linha do usuário, assinado dentro do token como
-`tv` e conferido contra a coluna a cada requisição. Trocar a senha — a **Nova senha**
-da edição do usuário (`updateUser`) — faz `increment: 1`, e todo token emitido antes
+`tv` e conferido contra a coluna a cada requisição. Trocar a senha — a própria, em Minha
+conta, ou gerar a temporária de alguém — faz `increment: 1`, e todo token emitido antes
 morre de uma vez, sem tabela de sessão e sem lista de revogação.
 
 > `increment`, não `set`: duas redefinições simultâneas leriam o mesmo valor e
 > gravariam o mesmo número, e uma das duas não invalidaria nada.
 
-> **Tolerância deliberada:** `tv` **ausente** no token é aceito, pelo mesmo motivo de sempre —
-> tokens assinados antes do campo existir não precisam ser recusados em massa sem ganho. `tv`
-> presente e diferente é 401.
+> `tv` é **obrigatório**: token sem o campo é anterior a este mecanismo e já venceu (a sessão dura
+> 8 horas), então não há sessão legítima sem ele. Ausente ou diferente, é 401. A tolerância que
+> existiu para o dia do deploy saiu.
 
 ### 5. As recusas do login, e as frases que elas usam
 
@@ -163,6 +171,11 @@ gastar os mesmos ~50 ms do caminho real. Sem isso, um volta em 1 ms e o outro em
 O 403 do desativado tem frase própria de propósito: quem chegou ali já provou que sabe a
 senha, não há nada a enumerar, e "e-mail ou senha inválidos" mandaria essa pessoa procurar
 um erro de digitação que não existe.
+
+A trava dura 15 minutos e **a contagem recomeça do zero quando ela vence**: o primeiro erro depois
+do desbloqueio é o primeiro de novo, e não o sexto — sem isso, a conta travava outra vez a cada erro
+até alguém acertar a senha. O zero é um `UPDATE` condicional (`lockedUntil <= agora`) na mesma
+transação do erro, para uma rajada somar certo.
 
 O 423 é a brecha que ficou, e foi aceita: o e-mail sem conta nunca trava, então quem errar a
 senha cinco vezes de propósito descobre que aquele e-mail tem conta. Fechar exigiria contar
@@ -261,21 +274,62 @@ edição do custo fica na auditoria, que tela nenhuma lê ([AB](../decisoes/aces
 
 A busca do leitor (`/api/search`) devolve só o que identifica o ativo, para todo cargo.
 
-**A senha nasce no cadastro, e o login é o e-mail** ([R](../decisoes/acesso.md#r--a-senha-nasce-no-cadastro-e-o-login-é-o-e-mail)).
+**O login é o e-mail, e ninguém escolhe a senha de outra pessoa** ([R](../decisoes/acesso.md#r--a-senha-nasce-no-cadastro-e-o-login-é-o-e-mail), [AU](../decisoes/acesso.md#au--ninguém-escolhe-a-senha-de-outra-pessoa)).
 Não há nome de usuário à parte nem ação separada para dar acesso: o formulário de Usuários
-pede nome, e-mail e senha — **Senha\*** obrigatória no cadastro, **Nova senha** opcional na
-edição. O campo Cargo, que o [D162](../decisoes/escopo.md#d162--minha-conta-sai-e-o-cargo-vira-campo-do-formulário-de-usuário)
+pede nome e e-mail, e **nenhuma senha**. O campo Cargo, que o [D162](../decisoes/escopo.md#d162--minha-conta-sai-e-o-cargo-vira-campo-do-formulário-de-usuário)
 pôs no formulário, saiu com o [Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir): não há o que escolher.
 
 A regra é do servidor, nas duas rotas do formulário — ambas `ADMIN`:
 
-- `POST /api/users` responde **422** sem senha (`createUserSchema`);
-- na edição, `password` ausente mantém a atual; presente troca a senha, destrava a conta
-  (`failedLoginCount` e `lockedUntil` zerados) e incrementa o `tokenVersion`;
-- as duas gravam na auditoria, com quem fez ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)): o retrato da conta no cadastro, o
-  `{ de, para }` na edição, e a senha só como `senha: 'alterada'` — nem o hash entra;
+- `POST /api/users` cria a conta com uma **senha temporária**, que volta uma vez na resposta
+  (`temporaryPassword`) e a tela mostra para entregar; a conta nasce com `mustChangePassword` e a
+  pessoa escolhe a dela ao entrar. Senha no corpo é **422** (`createUserSchema`);
+- a edição muda nome, e-mail e cargo, e desativa ou ativa; senha no corpo também é **422**. A de quem
+  esqueceu é a temporária, abaixo; a própria é em Minha conta;
+- as duas gravam na auditoria, com quem fez ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)): o retrato da conta no cadastro e o
+  `{ de, para }` na edição — senha nenhuma entra;
 - as duas rotas têm o `verificarOrigem` das rotas de credencial (`user.maestro.ts`).
+- A exceção é o comando de terminal que cria administrador ([AP](../decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it)):
+  ali quem roda é a própria pessoa, e a senha do comando é a dela.
 
+### A senha temporária e Minha conta ([AR](../decisoes/acesso.md#ar--a-senha-temporária-e-minha-conta-voltam))
+
+Quem esqueceu a senha não precisa de um administrador que a escolha: ele **gera uma temporária**
+(`POST /api/users/:id/temporary-password`, `ADMIN`) e a entrega.
+
+```
+  admin: "Gerar senha temporária" ──► senha aleatória de 16 símbolos, em grupos de 4
+        │                              (sai UMA vez na resposta, `no-store`; nada dela na auditoria)
+        ▼
+  a conta fica com mustChangePassword = true, o login destrava e as sessões abertas caem
+        │
+        ▼
+  a pessoa entra com a temporária ──► a sessão só alcança três rotas:
+        │                              GET /api/auth/me · POST /api/auth/logout · PUT /api/auth/password
+        │                              (qualquer outra: 403 "Troque a senha temporária antes de continuar.")
+        ▼
+  o painel mostra só a tela "Escolha a sua senha" ──► PUT /api/auth/password
+        │
+        ▼
+  marca zerada; a sessão que trocou recebe o cookie novo e segue dentro
+```
+
+- **Para a própria conta é 409:** a sua você troca em Minha conta. Gerar uma temporária para si
+  mesmo só o jogaria para fora.
+- **Minha conta** (`/conta`, aberta pelo nome no rodapé da barra) tem o **nome** (`PATCH /api/auth/me`)
+  e a **senha** (`PUT /api/auth/password`). O e-mail é o login e o cargo é dado de administrador:
+  os dois ficam em Usuários. As duas rotas são `null` no mapa — a sessão basta, e o id vem dela,
+  nunca do caminho.
+- **Trocar a própria senha não derruba quem trocou.** O `tokenVersion` sobe e derruba as *outras*
+  sessões da conta; a resposta traz o cookie da geração nova (`reemitirSessao`), e só a sessão que
+  trocou sobrevive.
+- **A troca obrigatória não pede a temporária de novo** (AU): a pessoa acabou de digitá-la no login, e
+  a sessão com ela não alcança mais nada. Só recusa a nova igual à temporária.
+- **Em Minha conta, a troca pede a senha atual** e recusa a igual e a curta. A
+  atual errada é 422, e não 401: a sessão é válida, o dado é que está errado — um 401 faria o
+  painel dizer "sessão expirada". O teto contra quem adivinha a atual com uma sessão roubada é o de
+  20/min por IP, o mesmo do login; o erro não conta contra a trava da conta, porque isso deixaria
+  quem roubou a sessão travar o dono fora.
 ---
 
 ## A auditoria — quem fez, só no banco
@@ -330,16 +384,15 @@ terceiro — encontra ali o que já foi tentado e por que saiu.
 | Falta | Por quê |
 |---|---|
 | **Revogar uma sessão específica** | Exige tabela de sessão: saber QUAIS sessões existem para derrubar uma. O `tokenVersion` derruba **todas** de uma pessoa de uma vez, e é com ele que trocar a senha corta o acesso. "Desconectar este aparelho" continua sem existir |
-| **Logout derrubar as outras sessões** | Hoje `logout` só apaga o cookie local. Quem precisa derrubar tudo troca a senha pela edição do usuário (**Nova senha**), que incrementa o `tokenVersion` |
+| **Logout derrubar as outras sessões** | Hoje `logout` só apaga o cookie local. Quem precisa derrubar tudo troca a própria senha em Minha conta, ou o administrador gera uma temporária; os dois incrementam o `tokenVersion` |
 | **A separação de cargos** — **decisão a tomar** | Hoje há um cargo só, `ADMIN` ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)). Falta decidir quais cargos existem, o que cada um alcança, qual nasce por padrão e como a tela de Usuários escolhe o cargo. A validação de `ADMIN` está de pé (`CARGOS` em `access/helpers/cargo.ts`, o mapa de `route-permissions.ts`, o `usePode` da tela); a separação se constrói do zero |
-| **Trocar a própria senha sem passar por Usuários** | A senha se troca na edição do usuário, e a tela que daria isso a cada um — "Minha conta" — saiu ([D162](../decisoes/escopo.md#d162--minha-conta-sai-e-o-cargo-vira-campo-do-formulário-de-usuário)). Com todo mundo `ADMIN`, cada um troca a sua editando a si mesmo em Usuários |
 | **Política de senha no `.env`** | O mínimo de 12 caracteres é constante em `auth.schema.ts`. Não há demanda para torná-lo configurável |
 | **Segundo fator, SSO, diretório, token pessoal de API** | Existiram e saíram — [D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)/[D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token). Voltar é decisão nova, não bug |
 | **Trilha de tentativas de login** (`AuthEvent`) | Saiu com o D148, por não ter leitor que sobrevivesse ao corte. `failedLoginCount`/`lockedUntil` continuam protegendo a conta; o que falta é um registro consultável de *quando* |
-| **Reset de senha por e-mail** | Não há mais e-mail no sistema (segundo de-escopo, O). O caminho é alguém com cargo `ADMIN` definir uma **Nova senha** na edição do usuário (`PUT /api/users/:id`). Se nenhum administrador lembra a senha, o `npm run acesso:administrador` cria outro no servidor ([AP](../decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it)) |
+| **Reset de senha por e-mail** | Não há mais e-mail no sistema (segundo de-escopo, O). O caminho é alguém com cargo `ADMIN` gerar uma **senha temporária** (AR). Se nenhum administrador lembra a senha, o `npm run acesso:administrador` cria outro no servidor ([AP](../decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it)) |
 
 > **Nota sobre o mínimo de 12 caracteres:** ele vale para **definir** senha
-> (`senhaNova`, que o cadastro e a edição de usuário importam), não para o login. No login só existe o teto de 128
+> (`senhaNova`, da troca da própria senha e do comando que cria administrador), não para o login. No login só existe o teto de 128
 > caracteres — quem já tem uma senha curta precisa continuar entrando, e recusar
 > por tamanho ali entregaria a regra de comprimento a quem está adivinhando.
 
@@ -348,28 +401,31 @@ terceiro — encontra ali o que já foi tentado e por que saiu.
 ## Onde cada coisa mora
 
 ```
-server/domain/auth/
-├── auth.maestro.ts                      rotas + ROTA_DE_CREDENCIAL (bodyLimit, no-store, Origin, só cookie)
+server/modules/auth/
+├── auth.maestro.ts                      rotas + ROTA_DE_CREDENCIAL (bodyLimit, Origin, só cookie)
 ├── auth.types.ts                        SessionUser, SessaoEmitida, o payload do JWT
 ├── controllers/auth.controller.ts        só HTTP: assina o JWT, grava o cookie, responde o GET /api/auth/me
 ├── helpers/
-│   ├── auth-hardening.helper.ts         semCache + verificarOrigem
-│   ├── authenticate-request.helper.ts   o que o preHandler global chama
+│   ├── auth-hardening.helper.ts         verificarOrigem
+│   ├── authenticate-request.helper.ts   o que o preHandler global chama; a troca de senha pendente (AR)
+│   ├── emitir-sessao.helper.ts          reemite o cookie de quem trocou a PRÓPRIA senha (AR)
 │   ├── password.helper.ts               argon2id, hash descartável, precisaRehash
 │   └── session-cookie.helper.ts         atributos do cookie, iguais na gravação e na limpeza
 ├── schemas/auth.schema.ts               loginSchema ({ email, password }) e senhaNova, a regra que o cadastro importa
 └── use-cases/
-    ├── current-user.usecase.ts          releitura por requisição (inclui o cargo)
+    ├── change-own-password.usecase.ts   a troca da própria senha (AR)
+    ├── current-user.usecase.ts          releitura por requisição (inclui o cargo e a troca pendente)
     └── login.usecase.ts                 as quatro recusas
 
-server/domain/user/                      quem opera o sistema — onde a senha nasce e se troca (R, U)
+server/modules/user/                      quem opera o sistema — onde a senha nasce e se troca (R, U)
 ├── user.maestro.ts                      POST/PUT com o verificarOrigem das rotas de credencial
-├── helpers/credencial.helper.ts         o hash da Nova senha, fora da transação
+├── helpers/temporary-password.helper.ts a senha temporária: 16 símbolos do crypto, sem 0/O/1/l/I (AR)
 └── use-cases/
     ├── create-user.usecase.ts           a senha do cadastro
-    └── update-user.usecase.ts           a Nova senha: troca, destrava, increment do tokenVersion
+    ├── reset-user-password.usecase.ts   a senha temporária de outra conta (AR)
+    └── update-user.usecase.ts           nome, e-mail, cargo e ativo; senha não passa por aqui (AU)
 
-server/domain/access/                    a OUTRA metade da sessão: o que ela alcança
+server/modules/access/                    a OUTRA metade da sessão: o que ela alcança
 ├── access.types.ts
 ├── helpers/cargo.ts                     os cargos, com ordem (D148) — hoje só ADMIN (Z)
 ├── helpers/route-permissions.ts         método + rota → cargo mínimo (o mapa que o boot confere)
@@ -377,10 +433,12 @@ server/domain/access/                    a OUTRA metade da sessão: o que ela al
 ├── helpers/ultimo-administrador.ts      a invariante 17 — nunca sem administrador
 └── cli/criar-administrador.cli.ts      a primeira conta e a linha de escape do acesso (AP)
 
-server/core/http/require-auth.ts         a porta fechada por padrão (sessão)
-server/core/http/permission-guard.ts     a porta fechada por padrão (autorização) + a conferência do boot
+server/infra/http/require-auth.ts         a porta fechada por padrão (sessão)
+server/infra/http/permission-guard.ts     a porta fechada por padrão (autorização) + a conferência do boot
 server/app.ts                            ROTAS_PUBLICAS — a allowlist inteira
 tests/invariantes/sessao.test.ts         a sessão por HTTP
+tests/invariantes/credencial.test.ts     o cookie, as recusas do login, a trava que vence, o token sem `tv` e o 500 sem vazar
+tests/invariantes/senha-temporaria.test.ts  a senha temporária e Minha conta (AR)
 tests/invariantes/permissao.test.ts      a cobertura do mapa, o "nunca sem administrador", a senha no cadastro e o comando (AP)
 ```
 

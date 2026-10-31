@@ -1,5 +1,5 @@
 import { afterAll, beforeAll } from 'vitest';
-import { closeDatabase } from '../../server/core/database/prismaClient';
+import { closeDatabase } from '../../server/infra/database/prismaClient';
 import { exigirBancoDeTeste, resetarBanco } from './database';
 
 // Roda uma vez POR ARQUIVO de teste (é o `setupFiles` do vitest.config.ts).

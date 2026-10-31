@@ -1,0 +1,47 @@
+name: CI
+
+# Mesmos passos do `bun run check` (CLAUDE.md), na mesma ordem. O Postgres sobe
+# na 3002 porque é a porta que o `.env.test` (versionado, sem segredo) já usa.
+on:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: sentinel
+          POSTGRES_PASSWORD: sentinelpassword
+          POSTGRES_DB: sentineldb
+        ports:
+          - 3002:5432
+        options: >-
+          --health-cmd "pg_isready -U sentinel"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun run test
+
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run test:e2e

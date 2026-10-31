@@ -3,16 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import {
   useAssetStatsQuery, useAssetsQuery, useCreateAsset, useDeleteAsset,
   useRestoreAsset, useUpdateAsset, type AssetInput,
-} from '../../../domain/asset/asset.queries';
+} from '../../../queries/asset.queries';
 import {
   useCheckinAsset, useCheckoutAsset,
   type CheckinInput, type CheckoutInput,
-} from '../../../domain/assignment/assignment.queries';
-import { useCatalogOptionsQuery } from '../../../domain/catalog/catalog.queries';
-import type { Asset, AssetView } from '../../../domain/shared/asset.types';
-import { useDebouncedValue } from '../../hooks/useDebouncedValue';
-import { useNotificacao } from '../../hooks/useNotificacao';
-import { linksDoErro } from '../../helpers/erro.helper';
+} from '../../../queries/assignment.queries';
+import { useCatalogOptionsQuery } from '../../../queries/catalog.queries';
+import type { Asset, AssetView } from '../../../types/asset.types';
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
+import { useNotificacao } from '../../../hooks/useNotificacao';
+import { linksDoErro } from '../../../helpers/erro.helper';
 
 const PER_PAGE = 10;
 

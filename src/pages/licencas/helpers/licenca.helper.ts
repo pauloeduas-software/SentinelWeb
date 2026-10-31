@@ -1,8 +1,8 @@
-import type { ChaveDaLicenca, EventoDaLicenca, Licenca } from '../../../domain/shared/license.types';
+import type { ChaveDaLicenca, EventoDaLicenca, Licenca } from '../../../types/license.types';
 
 // Funções puras da tela de licenças (docs/referencia/arquitetura.md). O que as
 // outras telas também mostram — prazo, resumo da conta, devolução — mora em
-// `src/pages/helpers/licenca.helper.ts`.
+// `src/helpers/licenca.helper.ts`.
 
 /** O vocabulário do histórico DESTA tela: só entrega e devolução. */
 export const ACOES_DA_LICENCA: Record<EventoDaLicenca['action'], string> = {

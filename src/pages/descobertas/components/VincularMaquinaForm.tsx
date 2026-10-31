@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link2 } from 'lucide-react';
-import ReferenceSelect from '../../components/ReferenceSelect';
-import type { Endpoint } from '../../../domain/shared/endpoint.types';
+import ReferenceSelect from '../../../components/ReferenceSelect';
+import type { Endpoint } from '../../../types/endpoint.types';
 
 // VINCULAR UMA MÁQUINA A UM ATIVO, À MÃO — e, se quiser, entregar o ativo ao
 // posto na mesma ida.

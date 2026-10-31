@@ -4,12 +4,12 @@ import {
   useCheckinLicense, useCheckoutLicense, useCreateLicense, useDeleteLicense,
   useLicenseAlertsQuery, useLicenseQuery, useLicensesQuery, useTerminateLicense, useUpdateCheckoutKey,
   useUpdateLicense,
-} from '../../../domain/license/license.queries';
+} from '../../../queries/license.queries';
 import type {
   AlvoDaEntrega, Licenca, LicencaInput, MotivoDoAlerta, StatusDoFiltro,
-} from '../../../domain/shared/license.types';
-import { useDebouncedValue } from '../../hooks/useDebouncedValue';
-import { useNotificacao } from '../../hooks/useNotificacao';
+} from '../../../types/license.types';
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
+import { useNotificacao } from '../../../hooks/useNotificacao';
 
 const PER_PAGE = 15;
 

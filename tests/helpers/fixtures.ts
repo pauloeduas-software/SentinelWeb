@@ -1,6 +1,6 @@
-import { prisma } from '../../server/core/database/prismaClient';
+import { prisma } from '../../server/infra/database/prismaClient';
 import type { ApiDeTeste } from './app';
-import { hojeNoBrasil, somarDias } from '../../server/domain/shared/hoje.helper';
+import { hojeNoBrasil, somarDias } from '../../server/modules/shared/hoje.helper';
 
 // O CENÁRIO de cada teste, montado PELA API.
 //

@@ -4,15 +4,15 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import OccupantsPanel from './OccupantsPanel';
-import TelemetriaDaMaquina from '../../components/TelemetriaDaMaquina';
+import TelemetriaDaMaquina from '../../../components/TelemetriaDaMaquina';
 import {
   ativosComMaquina, explicacaoDoVago, resumoDeAtivos,
 } from '../helpers/postos.helper';
-import { caminhoDoItem, textoDeUnidades } from '../../helpers/estoque.helper';
-import { diaDoInstante, formatarDiaDoInstante, hojeNoCampoDeData } from '../../helpers/format.helper';
-import type { OccupantInput } from '../../../domain/occupancy/occupancy.queries';
-import type { WorkstationOccupant, OccupantView } from '../../../domain/shared/posse.types';
-import type { AtivoDoPosto, Posto, PostoDetalhe } from '../../../domain/shared/workstation.types';
+import { caminhoDoItem, textoDeUnidades } from '../../../helpers/estoque.helper';
+import { diaDoInstante, formatarDiaDoInstante, hojeNoCampoDeData } from '../../../helpers/format.helper';
+import type { OccupantInput } from '../../../queries/occupancy.queries';
+import type { WorkstationOccupant, OccupantView } from '../../../types/posse.types';
+import type { AtivoDoPosto, Posto, PostoDetalhe } from '../../../types/workstation.types';
 
 // UM POSTO ABERTO: quem está nele, o que foi entregue a ele e como está a
 // máquina que vive nele.

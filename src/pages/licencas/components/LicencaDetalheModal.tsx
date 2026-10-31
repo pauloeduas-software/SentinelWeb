@@ -3,16 +3,16 @@ import { useState } from 'react';
 import ChaveEscondida from './ChaveEscondida';
 import EntregasAbertas from './EntregasAbertas';
 import HistoricoLicenca from './HistoricoLicenca';
-import ListToolbar from '../../components/ListToolbar';
+import ListToolbar from '../../../components/ListToolbar';
 import {
   useLicenseCheckoutsQuery, useLicenseHistoryQuery, useLicenseQuery,
-} from '../../../domain/license/license.queries';
-import type { Licenca } from '../../../domain/shared/license.types';
-import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+} from '../../../queries/license.queries';
+import type { Licenca } from '../../../types/license.types';
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import {
   ROTULO_DO_STATUS, resumoDaContagem, textoDoPrazo, textoDoValorDaCompra,
-} from '../../helpers/licenca.helper';
-import { formatarData } from '../../helpers/format.helper';
+} from '../../../helpers/licenca.helper';
+import { formatarData } from '../../../helpers/format.helper';
 import { lugarDaChave, motivoParaNaoEntregar } from '../helpers/licenca.helper';
 
 // O DETALHE DA LICENÇA: o status e a conta, as ações da lista, todos os campos

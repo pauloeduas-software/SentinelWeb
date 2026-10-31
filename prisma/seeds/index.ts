@@ -8,12 +8,12 @@
 // garante que a linha exista sem desfazer o que alguém editou pela interface.
 //
 // Reaproveita o cliente do servidor de propósito, em vez de um `new PrismaClient()`
-// próprio: é `getDatabaseUrl()` (server/core/config/env.ts) que remove as aspas em
+// próprio: é `getDatabaseUrl()` (server/infra/config/env.ts) que remove as aspas em
 // volta do valor no .env — sem ele, as aspas entrariam na connection string.
 //
 // Um arquivo por assunto nesta pasta; aqui só a ORDEM em que rodam.
 import { pathToFileURL } from 'node:url';
-import { closeDatabase } from '../../server/core/database/prismaClient';
+import { closeDatabase } from '../../server/infra/database/prismaClient';
 import { logger, type Seeder } from './seeder';
 import { configuracaoSeeder } from './configuracao.seed';
 import { categoriasSeeder } from './categorias.seed';

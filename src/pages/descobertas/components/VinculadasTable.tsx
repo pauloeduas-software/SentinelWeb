@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { MonitorCheck } from 'lucide-react';
-import type { Endpoint } from '../../../domain/shared/endpoint.types';
+import type { Endpoint } from '../../../types/endpoint.types';
 
 // AS MÁQUINAS QUE JÁ SÃO PATRIMÔNIO — o outro lado da lista "Sem vínculo".
 //

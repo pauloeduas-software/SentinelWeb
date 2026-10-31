@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Armchair, Monitor, User } from 'lucide-react';
-import type { EntregaAberta } from '../../../domain/shared/stock.types';
-import { diaDoInstante, formatarDiaDoInstante, hojeNoCampoDeData } from '../../helpers/format.helper';
-import { textoDeUnidades } from '../../helpers/estoque.helper';
+import type { EntregaAberta } from '../../../types/stock.types';
+import { diaDoInstante, formatarDiaDoInstante, hojeNoCampoDeData } from '../../../helpers/format.helper';
+import { textoDeUnidades } from '../../../helpers/estoque.helper';
 
 // QUEM ESTÁ COM O ITEM AGORA — uma linha por ENTREGA ("Mesa 1 · 5 unidades ·
 // desde…"), com o botão de devolver. É o "Com quem está" da licença

@@ -14,6 +14,8 @@ npm test               # roda tudo, uma vez
 npm run test:watch
 npx vitest run tests/corridas           # só uma pasta
 npx vitest run -t "etiqueta automática"  # só o que casa com o nome
+npm run test:e2e       # o segundo harness: o navegador contra o build (ver o fim)
+npm run check          # lint + typecheck + test + test:e2e: o que passa antes de dar por pronto
 ```
 
 ### Uma configuração só, porque todo teste fala com o banco
@@ -315,3 +317,61 @@ teste que não precisar do banco.
 
 O molde de arquivo, o fixture e a armadilha do sufixo estão em
 [`../guias/escrever-um-teste.md`](../guias/escrever-um-teste.md).
+
+---
+
+## O segundo harness: o navegador contra o build
+
+Tudo acima fala com o Fastify por `inject()` e nunca abre o navegador. O que isso
+não prova: que o `dist` carrega, que o login pela tela funciona, que cada página
+do menu abre sem erro no console, e que o cadastro do catálogo fecha o ciclo
+criar, editar e excluir clicando. É o que `tests/e2e/` prova, com o Playwright
+(`playwright.config.ts`), em quatro specs:
+
+| Arquivo | O que prova |
+|---|---|
+| `login.spec.ts` | sem sessão vai para `/login`; senha errada fica lá com a frase única; a certa abre Computadores |
+| `menu.spec.ts` | as oito páginas do menu, pelo link, na ordem do menu, com o título e sem erro no console. **Página nova entra na lista** |
+| `configuracoes.spec.ts` | criar, editar e excluir uma categoria pelo `CatalogTable` + `useCatalog`, o padrão de CRUD de todo cadastro (AF, AO), inclusive a frase do `confirm()` |
+| `conta.spec.ts` | Minha conta abre pelo nome no rodapé da barra, troca o nome e o devolve (AR). A troca de senha não entra: derrubaria a sessão guardada dos outros specs — está em `invariantes/senha-temporaria.test.ts` |
+
+Como roda, e por que assim:
+
+- **O servidor é o de produção** (`NODE_ENV=production`), porque é o único modo em
+  que o Fastify serve o `dist` (`estaticoPublico` em `server/app.ts`). O
+  `e2e:servidor` do `package.json` prepara o banco, faz o `vite build` e sobe o
+  Fastify na porta `4173`; o Playwright o inicia e o derruba com a suíte.
+- **O mesmo `.env.test`**, lido pelo `playwright.config.ts` com o leitor do vitest
+  (`tests/setup/env-de-teste.ts`), e três trocas que são a natureza deste harness,
+  não configuração: `DATABASE_URL` vira a `E2E_DATABASE_URL` do arquivo,
+  `NODE_ENV` vira `production` e `CORS_ORIGIN` vira a origem do próprio servidor.
+- **Banco próprio, `sentineldb_e2e_test`**, separado do `sentineldb_test` para o
+  vitest e o Playwright poderem rodar ao mesmo tempo sem um truncar o do outro.
+  Passa pela **mesma trava do sufixo `_test`** e pelos mesmos passos
+  (`tests/e2e/preparar.ts` importa o `global-setup.ts` e o `database.ts`): criar
+  se faltar, `migrate deploy`, esvaziar, semear e criar o administrador. Mudou a
+  `0_init`, apague este banco também.
+- **Um login por execução.** O projeto `sessao` (`auth.setup.ts`) entra pela tela
+  e guarda o cookie em `tests/e2e/.auth/` (ignorado pelo git); os specs
+  autenticados o reaproveitam. Cinco erros bloqueiam a conta por quinze minutos e
+  produção limita o login a vinte por minuto por IP, então o login de verdade
+  acontece uma vez, mais as duas tentativas do próprio `login.spec.ts`.
+- **Um arquivo por vez** (`workers: 1`), pela mesma razão do vitest: o banco é um.
+- **Erro no console derruba o spec** (`vigiarConsole`, em `helpers.ts`): um `500`
+  em segundo plano ou um erro de render não passam só porque a tela parecia
+  certa.
+- O trace (tela, rede, console, passo a passo) fica em `test-results/` só quando
+  o teste falha: `npx playwright show-trace <arquivo>`.
+
+O Chromium vem do `npx playwright install chromium`, uma vez por máquina.
+
+## A CI
+
+`.github/workflows/ci.yml` roda, a cada push na `main`, os mesmos passos do `bun run check`: `lint`,
+`typecheck`, `test` e `test:e2e`, nessa ordem. O Postgres sobe como serviço na porta `3002`, a que o
+`.env.test` (versionado, sem segredo) já usa, e o Chromium vem de `playwright install --with-deps`.
+A versão do bun vem do `packageManager` do `package.json`. No CI, o `forbidOnly` do Playwright
+transforma um `test.only` esquecido em falha, em vez de pular o resto da suíte e sair verde.
+
+Só `push` na `main`, e não `pull_request`: o fluxo é commit direto, e a CI existe para avisar quando um
+`check` foi pulado — não para barrar nada.

@@ -1,7 +1,8 @@
-import { prisma } from '../../server/core/database/prismaClient';
-import { getDatabaseUrl } from '../../server/core/config/env';
+import { prisma } from '../../server/infra/database/prismaClient';
+import { getDatabaseUrl } from '../../server/infra/config/env';
 import { semearBanco } from '../../prisma/seeds/index';
-import { hashSenha } from '../../server/domain/auth/helpers/password.helper';
+import { hashSenha } from '../../server/modules/auth/helpers/password.helper';
+import { ADMIN_DE_TESTE } from './admin-de-teste';
 
 // O BANCO DE TESTE — e a trava que impede o harness de apagar o seu.
 //
@@ -112,11 +113,11 @@ export async function resetarBanco(): Promise<void> {
  * verdade é criado à mão por quem instala —, então o harness cria o seu. Direto
  * no banco, e não pela API, porque é ele que abre a primeira sessão: sem um
  * administrador, nenhuma rota de cadastro aceita a requisição.
+ *
+ * O e-mail e a senha moram em `admin-de-teste.ts`, que o Playwright também lê
+ * sem precisar importar o servidor. Reexportado daqui para quem já importava.
  */
-export const ADMIN_DE_TESTE = {
-  email: 'admin@sentinel.local',
-  password: process.env.ADMIN_PASSWORD ?? 'senha-do-admin-de-teste',
-};
+export { ADMIN_DE_TESTE };
 
 async function criarAdministradorDeTeste(): Promise<void> {
   await prisma.user.create({

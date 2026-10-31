@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { cenarioDePosse, criarColaborador, criarLicenca, diaNoBrasil } from '../helpers/fixtures';
-import { prisma } from '../../server/core/database/prismaClient';
+import { prisma } from '../../server/infra/database/prismaClient';
 // A função PURA que a tela usa para esconder a chave: o teste prova o que o
 // operador VÊ antes de "Mostrar".
 import { esconderChave } from '../../src/pages/licencas/helpers/licenca.helper';

@@ -2,9 +2,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { conectarAgente, esperarPor } from '../helpers/agente';
 import { cenarioDePosse, criarAtivo } from '../helpers/fixtures';
-import { agregarUsoDosAtivos } from '../../server/domain/reconciliation/use-cases/aggregate-usage.usecase';
-import { expurgarTelemetriaAntiga } from '../../server/domain/endpoint/use-cases/purge-telemetry.usecase';
-import { prisma } from '../../server/core/database/prismaClient';
+import { agregarUsoDosAtivos } from '../../server/modules/reconciliation/use-cases/aggregate-usage.usecase';
+import { expurgarTelemetriaAntiga } from '../../server/modules/endpoint/use-cases/purge-telemetry.usecase';
+import { prisma } from '../../server/infra/database/prismaClient';
 
 // ═════════════════════════════════════════════════════════════════════════════
 // O USO AGREGADO NÃO PODE ENCOLHER — o D111.

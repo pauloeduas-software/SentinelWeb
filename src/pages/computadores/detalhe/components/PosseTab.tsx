@@ -2,8 +2,8 @@ import { ArrowRightLeft, ExternalLink, MapPin, TriangleAlert, Undo2, User } from
 import { Link } from 'react-router-dom';
 import type {
   Assignment, PosseResolvida, Responsavel,
-} from '../../../../domain/shared/posse.types';
-import { formatarData, formatarDiaDoInstante } from '../../../helpers/format.helper';
+} from '../../../../types/posse.types';
+import { formatarData, formatarDiaDoInstante } from '../../../../helpers/format.helper';
 import {
   comoChegouAoAlvo, estaAberta, postoDaPosseAberta, rotuloDoAlvo,
 } from '../helpers/rotulo-do-alvo.helper';

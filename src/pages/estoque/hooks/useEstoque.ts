@@ -3,11 +3,11 @@ import { useSearchParams } from 'react-router-dom';
 import {
   useCheckinStock, useCheckoutStock, useCreateStockItem, useDeleteStockItem, useStockItemQuery,
   useStockQuery, useUpdateStockItem,
-} from '../../../domain/stock/stock.queries';
-import type { AlvoDaEntregaDeEstoque, ItemDeEstoque, ItemDeEstoqueInput } from '../../../domain/shared/stock.types';
-import { useDebouncedValue } from '../../hooks/useDebouncedValue';
-import { useNotificacao } from '../../hooks/useNotificacao';
-import { linksDoErro } from '../../helpers/erro.helper';
+} from '../../../queries/stock.queries';
+import type { AlvoDaEntregaDeEstoque, ItemDeEstoque, ItemDeEstoqueInput } from '../../../types/stock.types';
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
+import { useNotificacao } from '../../../hooks/useNotificacao';
+import { linksDoErro } from '../../../helpers/erro.helper';
 
 const PER_PAGE = 15;
 

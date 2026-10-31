@@ -1,43 +1,14 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { defineConfig } from 'vitest/config';
+import { lerEnvDeTeste } from './tests/setup/env-de-teste';
 
 // Configuração PRÓPRIA, separada do `vite.config.ts`: o do frontend carrega o
 // plugin do React e resolve `src/`, e nada disso tem uso aqui — a suíte exercita
 // o servidor, em Node, contra o Postgres. Arquivo separado é também o que faz
 // `npm test` não depender de o build do painel estar saudável.
 
-/**
- * Lê o `.env.test` para um objeto.
- *
- * À mão, e não com `process.loadEnvFile()`, por um motivo: `loadEnvFile` NÃO
- * sobrescreve variável já definida no ambiente — que é exatamente o
- * comportamento desejado depois, quando o `server/core/config/load-env.ts`
- * carregar o `.env` e tiver que perder para estes valores. Mas para MONTAR a
- * lista precisamos do conteúdo do arquivo, tenha o ambiente o que tiver.
- */
-function lerEnvDeTeste(): Record<string, string> {
-  const arquivo = path.resolve(import.meta.dirname, '.env.test');
-  if (!fs.existsSync(arquivo)) {
-    throw new Error('.env.test não encontrado na raiz do projeto. Ele é versionado — confira o checkout.');
-  }
-
-  const valores: Record<string, string> = {};
-  for (const linha of fs.readFileSync(arquivo, 'utf8').split('\n')) {
-    const limpa = linha.trim();
-    if (limpa === '' || limpa.startsWith('#')) continue;
-
-    const igual = limpa.indexOf('=');
-    if (igual === -1) continue;
-
-    const chave = limpa.slice(0, igual).trim();
-    // Aspas em volta do valor entrariam na connection string — é o mesmo
-    // cuidado que o `getDatabaseUrl()` toma ao ler o `.env`.
-    valores[chave] = limpa.slice(igual + 1).trim().replace(/^"|"$/g, '');
-  }
-  return valores;
-}
-
+// O leitor do `.env.test` mora em `tests/setup/env-de-teste.ts` (com o porquê
+// de não ser o `process.loadEnvFile()`): o playwright.config.ts lê o mesmo
+// arquivo, do mesmo jeito.
 const envDeTeste = lerEnvDeTeste();
 
 // Aplicado TAMBÉM no processo principal do vitest, e não só nos workers: o
@@ -69,7 +40,10 @@ export default defineConfig({
 
     environment: 'node',
     include: ['tests/**/*.test.ts'],
-    exclude: ['**/node_modules/**'],
+    // `tests/e2e/` é do Playwright (`.spec.ts`, playwright.config.ts): outro
+    // harness, outro banco. O `include` já o deixa de fora pelo sufixo; a
+    // linha aqui é para a exclusão não depender de ninguém lembrar disso.
+    exclude: ['**/node_modules/**', 'tests/e2e/**'],
 
     // UM BANCO SÓ, então UM ARQUIVO POR VEZ.
     //

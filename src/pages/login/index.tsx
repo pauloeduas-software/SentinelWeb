@@ -1,5 +1,6 @@
 import { LayoutDashboard, Lock } from 'lucide-react';
 import { useLogin } from './hooks/useLogin';
+import CampoDeSenha from '../../components/CampoDeSenha';
 
 // A porta de entrada do painel.
 //
@@ -55,10 +56,9 @@ export default function LoginPage() {
               <label htmlFor="password" className="text-text-secondary uppercase tracking-widest text-[10px]">
                 Senha
               </label>
-              <input
+              <CampoDeSenha
                 id="password"
                 required
-                type="password"
                 autoComplete="current-password"
                 value={password}
                 onChange={(evento) => setPassword(evento.target.value)}
@@ -80,7 +80,7 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-6 text-[10px] font-mono text-text-tertiary uppercase tracking-widest text-center">
-          Sessão de 8 horas · Cinco erros bloqueiam a conta por 15 minutos
+          Sessão de 12 horas · Cinco erros bloqueiam a conta por 15 minutos
         </p>
       </div>
     </div>

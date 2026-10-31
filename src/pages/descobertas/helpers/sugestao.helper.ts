@@ -1,4 +1,4 @@
-import type { Sugestao, SuggestionKind } from '../../../domain/shared/reconciliation.types';
+import type { Sugestao, SuggestionKind } from '../../../types/reconciliation.types';
 
 // O VOCABULÁRIO DA FILA — dado, não componente.
 //

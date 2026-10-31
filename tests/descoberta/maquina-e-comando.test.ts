@@ -1,7 +1,7 @@
 import type { WebSocket } from 'ws';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { prisma } from '../../server/core/database/prismaClient';
-import { registerAgent } from '../../server/domain/agent/agent.registry';
+import { prisma } from '../../server/infra/database/prismaClient';
+import { registerAgent } from '../../server/modules/agent/agent.registry';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { conectarAgente, esperarPor, type AgenteDeTeste } from '../helpers/agente';
 

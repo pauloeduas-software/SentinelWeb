@@ -1,4 +1,4 @@
-import { prisma } from '../../server/core/database/prismaClient';
+import { prisma } from '../../server/infra/database/prismaClient';
 import type { Seeder } from './seeder';
 
 // Um status de cada tipo, com o nome do próprio tipo — o bastante para o

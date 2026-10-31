@@ -2,12 +2,12 @@ import { Edit2, Power, PowerOff, Trash2, UserPlus, X, type LucideIcon } from 'lu
 import { useState } from 'react';
 import HistoricoItem from './HistoricoItem';
 import EntregasAbertas from './EntregasAbertas';
-import ListToolbar from '../../components/ListToolbar';
+import ListToolbar from '../../../components/ListToolbar';
 import {
   useStockCheckoutsQuery, useStockHistoryQuery, useStockItemQuery,
-} from '../../../domain/stock/stock.queries';
-import type { ItemDeEstoque } from '../../../domain/shared/stock.types';
-import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+} from '../../../queries/stock.queries';
+import type { ItemDeEstoque } from '../../../types/stock.types';
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import { classeDaConta, ehComponente, ehConsumivel, motivoParaNaoEntregar, resumoDaContagem } from '../helpers/estoque.helper';
 
 // O DETALHE DO ITEM: a conta, as ações da lista, todos os campos do cadastro,

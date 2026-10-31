@@ -2,8 +2,8 @@ import { useState } from 'react';
 import {
   useAddWorkstationOccupant, useCorrigirTurno, useEndWorkstationOccupancy, useWorkstationOccupantsQuery,
   type OccupantInput,
-} from '../../../domain/occupancy/occupancy.queries';
-import type { WorkstationOccupant, OccupantView } from '../../../domain/shared/posse.types';
+} from '../../../queries/occupancy.queries';
+import type { WorkstationOccupant, OccupantView } from '../../../types/posse.types';
 
 // Os OCUPANTES de um posto — Camada 2 de docs/referencia/modelo-de-posse.md.
 //
