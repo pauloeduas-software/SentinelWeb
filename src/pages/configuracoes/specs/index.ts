@@ -1,7 +1,7 @@
 import {
   TIPOS_CATEGORIA, TIPOS_STATUS,
   type CatalogUiSpec,
-} from '../../components/catalogo/catalog-ui.types';
+} from '../../../components/catalogo/catalog-ui.types';
 
 // As CINCO abas da tela de Configurações, na ordem em que aparecem: do que se
 // mexe mais para o que se mexe menos. A ordem espelha CATALOG_SPECS do servidor.

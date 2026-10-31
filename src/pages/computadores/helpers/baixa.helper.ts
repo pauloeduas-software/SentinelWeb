@@ -1,5 +1,5 @@
-import type { Asset, MotivoDaSaida } from '../../../domain/shared/asset.types';
-import { formatarData } from '../../helpers/format.helper';
+import type { Asset, MotivoDaSaida } from '../../../types/asset.types';
+import { formatarData } from '../../../helpers/format.helper';
 
 // BAIXA na tela — funções puras, fora do JSX
 // (docs/referencia/arquitetura.md: "cálculo sai do JSX").

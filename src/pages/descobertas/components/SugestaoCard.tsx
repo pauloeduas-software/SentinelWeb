@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Check, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import type { Sugestao } from '../../../domain/shared/reconciliation.types';
+import type { Sugestao } from '../../../types/reconciliation.types';
 import { linhasDaEvidencia, ROTULOS, resumoDaSugestao } from '../helpers/sugestao.helper';
 
 // UMA SUGESTÃO, COM A EVIDÊNCIA À VISTA.

@@ -1,8 +1,8 @@
 import { KeyRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import type { EntregaDoAlvo } from '../../../../domain/shared/license.types';
-import { formatarDiaDoInstante } from '../../../helpers/format.helper';
-import { caminhoDaLicenca, textoDaSituacao } from '../../../helpers/licenca.helper';
+import type { EntregaDoAlvo } from '../../../../types/license.types';
+import { formatarDiaDoInstante } from '../../../../helpers/format.helper';
+import { caminhoDaLicenca, textoDaSituacao } from '../../../../helpers/licenca.helper';
 
 // A ABA LICENÇAS — "o que está licenciado NESTA máquina agora".
 //

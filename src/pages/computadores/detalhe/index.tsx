@@ -13,7 +13,7 @@ import RetireModal from './components/RetireModal';
 import { seloDaSaida } from '../helpers/baixa.helper';
 import { bloqueioDaEntrega, rotuloDaOperacao } from '../helpers/posse.helper';
 import { useAssetDetail } from './hooks/useAssetDetail';
-import { usePode } from '../../../domain/auth/auth.store';
+import { usePode } from '../../../stores/auth.store';
 
 // A TELA DO ATIVO — `/computadores/:id`.
 //

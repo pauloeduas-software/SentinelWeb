@@ -3,7 +3,7 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 import {
   cenarioDePosse, criarAtivo, criarColaborador, criarLicenca, criarPosto, diasAFrente, idsDoSeed,
 } from '../helpers/fixtures';
-import { prisma } from '../../server/core/database/prismaClient';
+import { prisma } from '../../server/infra/database/prismaClient';
 
 // AS INVARIANTES DO MODELO DE POSSE — `docs/referencia/invariantes.md`, 1, 2 e 4.
 //

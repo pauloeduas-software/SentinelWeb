@@ -1,5 +1,5 @@
-import { prisma } from '../../../server/core/database/prismaClient';
-import { hashSenha } from '../../../server/domain/auth/helpers/password.helper';
+import { prisma } from '../../../server/infra/database/prismaClient';
+import { hashSenha } from '../../../server/modules/auth/helpers/password.helper';
 import { logger, type Seeder } from '../seeder';
 
 // A CONTA DE DESENVOLVIMENTO — admin@sentinel.com, senha "admin".

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { prisma } from '../../server/core/database/prismaClient';
+import { prisma } from '../../server/infra/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 
 // A 201ª LOCALIZAÇÃO (F10, Etapa B) — o furo que a auditoria da F1 anotou como

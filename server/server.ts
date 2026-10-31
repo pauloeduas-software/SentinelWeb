@@ -1,12 +1,15 @@
-import { getPort, validateEnv } from './core/config/env';
-import { createLogger } from './core/logger/logger';
-import { checkDependencies, isHealthy } from './core/lifecycle/health';
-import { installProcessHandlers, onShutdown } from './core/lifecycle/shutdown';
-import { closeDatabase } from './core/database/prismaClient';
-import { disconnectAllAgents } from './domain/agent/agent.registry';
-import { startZombieCleanerJob, stopZombieCleanerJob } from './domain/endpoint/jobs/zombie-cleaner.job';
-import { startReconcileJob, stopReconcileJob } from './domain/reconciliation/jobs/reconcile.job';
+import { getPort, validateEnv } from './infra/config/env';
+import { createLogger } from './infra/logger/logger';
+import { checkDependencies, isHealthy } from './infra/lifecycle/health';
+import { installProcessHandlers, onShutdown } from './infra/lifecycle/shutdown';
+import { closeDatabase } from './infra/database/prismaClient';
+import { disconnectAllAgents } from './modules/agent/agent.registry';
+import { startZombieCleanerJob, stopZombieCleanerJob } from './modules/endpoint/jobs/zombie-cleaner.job';
+import { startReconcileJob, stopReconcileJob } from './modules/reconciliation/jobs/reconcile.job';
 import { buildApp } from './app';
+import { imprimirBanner } from './infra/logger/banner';
+import { isProduction } from './infra/config/env';
+import { CAMINHO_DO_SWAGGER } from './modules/api-docs/api-docs.maestro';
 
 const logger = createLogger('server');
 
@@ -19,11 +22,11 @@ const logger = createLogger('server');
 async function bootstrap() {
   // Variável obrigatória ausente derruba o boot aqui (catch → log limpo +
   // exit 1), em vez de virar erro em runtime na primeira requisição.
-  validateEnv();
+  const avisos = validateEnv();
 
   // Sem banco o servidor não atende ninguém: não sobe "meio vivo" — falha no
   // boot e o orquestrador tenta de novo.
-  logger.info('[Server] Verificando dependências...');
+  logger.debug('[Server] Verificando dependências...');
   const health = await checkDependencies();
   if (!isHealthy(health)) {
     throw new Error(`Dependências indisponíveis no boot: ${JSON.stringify(health)}`);
@@ -52,8 +55,24 @@ async function bootstrap() {
   // concorrente em banco compartilhado.
   startReconcileJob();
   const port = getPort();
+  // O Fastify anuncia cada endereço da máquina ("Server listening at ...") em
+  // `info`, sem opção para desligar. Em desenvolvimento quem diz o endereço é o
+  // bloco abaixo, então o anúncio fica de fora; em produção ele continua no log.
+  const nivel = server.log.level;
+  if (!isProduction) server.log.level = 'warn';
   await server.listen({ port, host: '0.0.0.0' });
-  logger.info(`🚀 [Server] Sentinel API operando em http://localhost:${port}`);
+  server.log.level = nivel;
+  // Em desenvolvimento, o bloco no formato do Vite (`banner.ts`); em produção, a
+  // linha no log JSON. O Swagger é do back e só existe fora de produção (AS).
+  if (isProduction) {
+    logger.info(`[Server] Sentinel API operando em http://localhost:${port}`);
+  } else {
+    imprimirBanner([
+      { rotulo: 'API', url: `http://localhost:${port}/api` },
+      { rotulo: 'Swagger', url: `http://localhost:${port}${CAMINHO_DO_SWAGGER}` },
+    ]);
+  }
+  for (const aviso of avisos) logger.warn(aviso);
 }
 
 installProcessHandlers();

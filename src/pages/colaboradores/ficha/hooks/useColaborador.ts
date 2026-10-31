@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom';
-import { usePersonHistoryQuery, usePersonQuery } from '../../../../domain/person/person.queries';
-import { usePersonOccupanciesQuery } from '../../../../domain/occupancy/occupancy.queries';
+import { usePersonHistoryQuery, usePersonQuery } from '../../../../queries/person.queries';
+import { usePersonOccupanciesQuery } from '../../../../queries/occupancy.queries';
 
 // Estado de TELA da ficha do colaborador. O dado vem das queries de domínio.
 //

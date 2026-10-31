@@ -11,7 +11,7 @@
 // (`administrador.seed.ts`). Roda o seed principal ANTES — os modelos
 // precisam das categorias — e é idempotente: rodar de novo não duplica nem
 // desfaz o que foi editado pela tela.
-import { closeDatabase } from '../../../server/core/database/prismaClient';
+import { closeDatabase } from '../../../server/infra/database/prismaClient';
 import { semearBanco } from '../index';
 import { logger, type Seeder } from '../seeder';
 import { administradorDemo } from './administrador.seed';

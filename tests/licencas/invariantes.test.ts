@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { cenarioDePosse, criarLicenca } from '../helpers/fixtures';
-import { prisma } from '../../server/core/database/prismaClient';
+import { prisma } from '../../server/infra/database/prismaClient';
 
 // AS REDES DO BANCO na licença e na tabela de entregas — por SQL cru, como o
 // `invariantes/check-assignment.test.ts` faz para a posse.

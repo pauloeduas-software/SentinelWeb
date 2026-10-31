@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { cenarioDePosse, criarAtivo, criarColaborador, criarLicenca, diaNoBrasil, entregarLicenca } from '../helpers/fixtures';
-import { prisma } from '../../server/core/database/prismaClient';
+import { prisma } from '../../server/infra/database/prismaClient';
 // O vocabulário que a tela usa, importado para o teste provar que toda ação do
 // histórico tem rótulo — não só o que o banco guarda.
 import { ACOES_DA_LICENCA } from '../../src/pages/licencas/helpers/licenca.helper';
-import type { EventoDaLicenca } from '../../src/domain/shared/license.types';
+import type { EventoDaLicenca } from '../../src/types/license.types';
 
 // O HISTÓRICO, SEPARADO POR ALVO (AA), e legível pela tela.
 //

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import ReferenceSelect from '../../components/ReferenceSelect';
-import { useCatalogOptionsQuery } from '../../../domain/catalog/catalog.queries';
-import type { ItemDeEstoque, ItemDeEstoqueInput } from '../../../domain/shared/stock.types';
+import ReferenceSelect from '../../../components/ReferenceSelect';
+import { useCatalogOptionsQuery } from '../../../queries/catalog.queries';
+import type { ItemDeEstoque, ItemDeEstoqueInput } from '../../../types/stock.types';
 
 // Cadastro e edição de um item de estoque.
 //

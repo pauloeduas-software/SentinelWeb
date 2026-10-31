@@ -2,7 +2,7 @@ import { Armchair, Edit2, Trash2, TriangleAlert } from 'lucide-react';
 import {
   TRACO, explicacaoDoVago, resumoDeAtivos, turnosDoPosto,
 } from '../helpers/postos.helper';
-import type { Posto } from '../../../domain/shared/workstation.types';
+import type { Posto } from '../../../types/workstation.types';
 
 // A lista de postos. Apresentacional: recebe as linhas prontas e devolve o
 // clique — não conhece query nem HTTP (docs/referencia/arquitetura.md).

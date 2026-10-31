@@ -1,7 +1,7 @@
 import { Plus } from 'lucide-react';
-import CategoriaFiltro from '../components/CategoriaFiltro';
-import EstadoDaLista from '../components/EstadoDaLista';
-import ListToolbar from '../components/ListToolbar';
+import CategoriaFiltro from '../../components/CategoriaFiltro';
+import EstadoDaLista from '../../components/EstadoDaLista';
+import ListToolbar from '../../components/ListToolbar';
 import AlertasLicenca from './components/AlertasLicenca';
 import EntregaLicencaModal from './components/EntregaLicencaModal';
 import LicencaDetalheModal from './components/LicencaDetalheModal';
@@ -9,7 +9,7 @@ import LicencaFormModal from './components/LicencaFormModal';
 import LicencaTable from './components/LicencaTable';
 import StatusFiltro from './components/StatusFiltro';
 import { useLicencas } from './hooks/useLicencas';
-import { usePode } from '../../domain/auth/auth.store';
+import { usePode } from '../../stores/auth.store';
 
 // AS LICENÇAS DE SOFTWARE (docs/referencia/licencas.md).
 //

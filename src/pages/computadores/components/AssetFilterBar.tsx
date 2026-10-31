@@ -1,6 +1,6 @@
 import { MonitorSmartphone, PackageX, Trash2, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import type { AssetView } from '../../../domain/shared/asset.types';
+import type { AssetView } from '../../../types/asset.types';
 
 // AS VISTAS E OS FILTROS DA LISTAGEM DE ATIVOS.
 //

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { conectarAgente, esperarPor } from '../helpers/agente';
-import { prisma } from '../../server/core/database/prismaClient';
+import { prisma } from '../../server/infra/database/prismaClient';
 
 // A BORDA DO AGENTE — o que o rollout vai exercitar por semanas.
 //

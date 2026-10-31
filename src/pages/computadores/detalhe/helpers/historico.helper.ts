@@ -1,9 +1,9 @@
-import type { EventoDoAtivo } from '../../../../domain/shared/asset.types';
-import { textoDeUnidades } from '../../../helpers/estoque.helper';
-import { rotuloDaAcao } from '../../../helpers/historico.helper';
+import type { EventoDoAtivo } from '../../../../types/asset.types';
+import { textoDeUnidades } from '../../../../helpers/estoque.helper';
+import { rotuloDaAcao } from '../../../../helpers/historico.helper';
 
 // O que a aba Histórico do ATIVO acrescenta ao leitor genérico
-// (`src/pages/helpers/historico.helper.ts`): a frase do título. O resto — o
+// (`src/helpers/historico.helper.ts`): a frase do título. O resto — o
 // rótulo da ação, ler a hora — vale para qualquer trilha e mora lá.
 
 /** As entregas de licença ao ativo — a fonte `LICENCA`. */

@@ -243,7 +243,7 @@ fecha sozinho.
 
 ## Como o código é montado
 
-Fatia vertical inteira (`server/domain/stock/`), e não spec do catálogo: a coluna principal da
+Fatia vertical inteira (`server/modules/stock/`), e não spec do catálogo: a coluna principal da
 lista é derivada
 ([D35](../decisoes/estoque.md#d35--um-domínio-stock-não-três-fatias-verticais)).
 
@@ -266,7 +266,7 @@ computador o travam antes de contar os componentes. A edição e a exclusão tra
 trava só as linhas da entrega: ela só diminui o que está em uso. A entrega agrupada mora em
 `helpers/stock-lote.helper.ts`; a conta, em `helpers/stock-balance.helper.ts`.
 
-**A busca** é a `contemTexto` (`server/domain/shared/busca.helper.ts`), a mesma de todas as
+**A busca** é a `contemTexto` (`server/modules/shared/busca.helper.ts`), a mesma de todas as
 listagens. As ordens terminam em `id`, para a mesma linha não aparecer em duas páginas.
 
 ## O que não existe

@@ -1,0 +1,38 @@
+import { prisma } from '../../../infra/database/prismaClient';
+import type { ListEnvelope, ListQuery } from '../../../infra/http/list-query';
+import { buildCatalogWhere } from '../helpers/catalog-where.helper';
+import type { CatalogSpec } from '../specs/catalog-spec.types';
+
+export async function listCatalog(
+  spec: CatalogSpec,
+  query: ListQuery,
+  filtro?: string,
+): Promise<ListEnvelope<Record<string, unknown>>> {
+  const where = {
+    ...buildCatalogWhere(spec.searchable, query.q),
+    ...(filtro && spec.optionFilter ? { [spec.optionFilter.campo]: filtro } : {}),
+    // A lixeira, na tabela que a tem: `deletedAt` explícito faz a extension de
+    // soft delete sair do caminho. Sem `?view=trashed`, a extension esconde.
+    ...(spec.lixeira && query.view === 'trashed' ? { deletedAt: { not: null } } : {}),
+  };
+
+  // Transação para a contagem e a página saírem do MESMO instante: em duas
+  // consultas soltas, um cadastro entre uma e outra faz o total não bater com o
+  // que a página mostra. É a forma interativa (e não `$transaction([...])`)
+  // porque o delegate genérico devolve Promise, não PrismaPromise.
+  return prisma.$transaction(async (tx) => {
+    const delegate = spec.delegate(tx);
+
+    const total = await delegate.count({ where });
+    const rows = await delegate.findMany({
+      where,
+      select: spec.select,
+      // Catálogo é lista para consultar, não fila de novidades: por nome.
+      orderBy: { name: 'asc' },
+      skip: query.skip,
+      take: query.take,
+    });
+
+    return { total, rows };
+  });
+}

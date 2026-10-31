@@ -1,5 +1,5 @@
 import { AlertTriangle, EyeOff, Ghost, MonitorCheck, MonitorX, ShieldQuestion } from 'lucide-react';
-import type { Cobertura } from '../../../domain/shared/reconciliation.types';
+import type { Cobertura } from '../../../types/reconciliation.types';
 
 // O PAINEL DE COBERTURA — *quanto do parque o sistema realmente enxerga?*
 //

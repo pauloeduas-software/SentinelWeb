@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Laptop, User, X } from 'lucide-react';
-import ReferenceSelect from '../../components/ReferenceSelect';
-import { useLicenseQuery } from '../../../domain/license/license.queries';
-import type { AlvoDaEntrega, Licenca } from '../../../domain/shared/license.types';
-import { hojeNoCampoDeData } from '../../helpers/format.helper';
+import ReferenceSelect from '../../../components/ReferenceSelect';
+import { useLicenseQuery } from '../../../queries/license.queries';
+import type { AlvoDaEntrega, Licenca } from '../../../types/license.types';
+import { hojeNoCampoDeData } from '../../../helpers/format.helper';
 import { chavesComLugar, lugarDaChave, rotuloDaChave } from '../helpers/licenca.helper';
 
 // A ENTREGA DE UMA LICENÇA.

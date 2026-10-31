@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { prisma } from '../../server/core/database/prismaClient';
-import { COOKIE_SESSAO } from '../../server/domain/auth/helpers/session-cookie.helper';
+import { prisma } from '../../server/infra/database/prismaClient';
+import { COOKIE_SESSAO } from '../../server/modules/auth/helpers/session-cookie.helper';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 
 // A SESSÃO — o que a derruba, o que a mantém, e o que fica registrado.
@@ -9,7 +9,7 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 // trocar a senha NÃO expulsava ninguém. A releitura por requisição
 // (`current-user.usecase.ts`) só barra quem foi apagado ou desativado — quem
 // roubasse o cookie continuava sendo um usuário válido e ativo, e seguia dentro
-// pelas 8 horas do TTL mesmo depois de a vítima fazer exatamente o que se faz
+// até o fim do TTL mesmo depois de a vítima fazer exatamente o que se faz
 // ao desconfiar.
 //
 // Tudo por HTTP, pelo mesmo caminho do navegador: é o `preHandler` global e o
@@ -42,18 +42,21 @@ async function logar(email: string, password: string): Promise<string> {
 
 /** Um colaborador com credencial própria, para não mexer na sessão do harness. */
 async function criarUsuarioComAcesso(sufixo: string) {
-  // Este arquivo é sobre SESSÃO — ele precisa de alguém que entre. A senha vem
-  // no mesmo cadastro, e o cargo nasce `ADMIN` pelo `@default` (Z).
+  // Este arquivo é sobre SESSÃO — ele precisa de alguém que entre. A conta troca
+  // a temporária do cadastro pela senha dela (AU), e o cargo nasce `ADMIN` pelo
+  // `@default` (Z).
   const email = `fulano.${sufixo}@empresa.com`;
   const password = 'senha-comprida-do-teste';
-  const criado = await api.post<{ id: string }>('/api/users', {
-    name: `Fulano ${sufixo}`,
-    email,
-    password,
-  });
-  expect(criado.status).toBe(201);
+  const { id } = await api.criarConta({ name: `Fulano ${sufixo}`, email }, password);
 
-  return { id: criado.body.id, email, password };
+  return { id, email, password };
+}
+
+/** O administrador redefine a senha da conta: gera a temporária (AR) e a devolve. */
+async function redefinir(id: string): Promise<string> {
+  const resposta = await api.post<{ temporaryPassword: string }>(`/api/users/${id}/temporary-password`);
+  expect(resposta.status).toBe(200);
+  return resposta.body.temporaryPassword;
 }
 
 describe('tokenVersion — trocar a senha derruba quem já está dentro', () => {
@@ -79,10 +82,7 @@ describe('tokenVersion — trocar a senha derruba quem já está dentro', () => 
     const antes = await api.app.inject({ method: 'GET', url: '/api/auth/me', headers: { cookie } });
     expect(antes.statusCode).toBe(200);
 
-    const troca = await api.put(`/api/users/${usuario.id}`, {
-      password: 'outra-senha-comprida',
-    });
-    expect(troca.status).toBe(200);
+    await redefinir(usuario.id);
 
     // O MESMO cookie, que continua com assinatura válida e dentro do prazo,
     // agora é recusado: é o `tv` do token que não bate mais com a coluna.
@@ -92,10 +92,10 @@ describe('tokenVersion — trocar a senha derruba quem já está dentro', () => 
 
   it('a senha NOVA entra normalmente logo depois', async () => {
     const usuario = await criarUsuarioComAcesso('renovado');
-    await api.put(`/api/users/${usuario.id}`, { password: 'a-senha-que-passa-a-valer' });
+    const temporaria = await redefinir(usuario.id);
 
     // Derrubar as sessões não pode derrubar a CONTA: quem sabe a senha nova entra.
-    const cookie = await logar(usuario.email, 'a-senha-que-passa-a-valer');
+    const cookie = await logar(usuario.email, temporaria);
     const me = await api.app.inject({ method: 'GET', url: '/api/auth/me', headers: { cookie } });
     expect(me.statusCode).toBe(200);
   });
@@ -107,7 +107,7 @@ describe('tokenVersion — trocar a senha derruba quem já está dentro', () => 
     const cookieAlvo = await logar(alvo.email, alvo.password);
     const cookieVizinho = await logar(vizinho.email, vizinho.password);
 
-    await api.put(`/api/users/${alvo.id}`, { password: 'senha-nova-do-alvo' });
+    await redefinir(alvo.id);
 
     const doAlvo = await api.app.inject({ method: 'GET', url: '/api/auth/me', headers: { cookie: cookieAlvo } });
     expect(doAlvo.statusCode).toBe(401);
@@ -129,8 +129,8 @@ describe('tokenVersion — trocar a senha derruba quem já está dentro', () => 
       select: { tokenVersion: true },
     });
 
-    await api.put(`/api/users/${usuario.id}`, { password: 'primeira-troca-longa' });
-    await api.put(`/api/users/${usuario.id}`, { password: 'segunda-troca-longa1' });
+    await redefinir(usuario.id);
+    await redefinir(usuario.id);
 
     const depois = await prisma.user.findUniqueOrThrow({
       where: { id: usuario.id },

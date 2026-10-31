@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { prisma } from '../../server/core/database/prismaClient';
+import { prisma } from '../../server/infra/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 
 // A RAJADA DE SENHAS ERRADAS.
@@ -26,8 +26,7 @@ afterAll(async () => {
 describe('dez senhas erradas ao mesmo tempo na mesma conta', () => {
   it('contam dez, cada linha da auditoria com o seu número, e a conta trava', async () => {
     const email = 'rajada@teste.local';
-    const criada = await api.post<{ id: string }>('/api/users', { name: 'Alvo da Rajada', email, password: 'senha-da-rajada-1' });
-    expect(criada.status).toBe(201);
+    const criada = { body: await api.criarConta({ name: 'Alvo da Rajada', email }, 'senha-da-rajada-1') };
 
     const respostas = await Promise.all(
       Array.from({ length: 10 }, () => api.anonimo.post('/api/auth/login', { email, password: 'senha-errada-000' })),
@@ -47,8 +46,7 @@ describe('dez senhas erradas ao mesmo tempo na mesma conta', () => {
 describe('dez tentativas ao mesmo tempo na conta bloqueada', () => {
   it('gravam UMA linha "bloqueada"', async () => {
     const email = 'rajada-bloqueada@teste.local';
-    const criada = await api.post<{ id: string }>('/api/users', { name: 'Alvo Bloqueado', email, password: 'senha-da-rajada-2' });
-    expect(criada.status).toBe(201);
+    const criada = { body: await api.criarConta({ name: 'Alvo Bloqueado', email }, 'senha-da-rajada-2') };
     await prisma.user.update({
       where: { id: criada.body.id },
       data: { failedLoginCount: 5, lockedUntil: new Date(Date.now() + 15 * 60_000) },

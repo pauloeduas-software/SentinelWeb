@@ -3,12 +3,12 @@ import {
   useAceitarSugestao, useCoberturaQuery, useConfiguracaoDaDescobertaQuery,
   useOciososQuery, useReconciliarAgora, useRecusarSugestao, useSalvarConfiguracaoDaDescoberta,
   useSugestoesQuery, useTriarMaquina, useVincularEEntregar, useVincularMaquina,
-} from '../../../domain/reconciliation/reconciliation.queries';
-import { useEndpointsQuery } from '../../../domain/endpoint/endpoint.queries';
-import { usePode } from '../../../domain/auth/auth.store';
+} from '../../../queries/reconciliation.queries';
+import { useEndpointsQuery } from '../../../queries/endpoint.queries';
+import { usePode } from '../../../stores/auth.store';
 import type {
   ConfiguracaoDaDescoberta, ResultadoDaVarredura, ReviewState,
-} from '../../../domain/shared/reconciliation.types';
+} from '../../../types/reconciliation.types';
 
 // O ESTADO DA TELA DE DESCOBERTAS. A página é markup e mais nada
 // (docs/referencia/arquitetura.md).

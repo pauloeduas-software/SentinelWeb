@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { buildApp, type OpcoesDaAplicacao } from '../../server/app';
-import { COOKIE_SESSAO } from '../../server/domain/auth/helpers/session-cookie.helper';
+import { COOKIE_SESSAO } from '../../server/modules/auth/helpers/session-cookie.helper';
 import { ADMIN_DE_TESTE } from '../setup/database';
 
 // O CLIENTE DE TESTE — requisições em memória contra a aplicação de verdade.
@@ -51,6 +51,15 @@ export interface ApiDeTeste extends Cliente {
    * separação de cargos é decisão a tomar.
    */
   comoUsuario(cargo?: 'ADMIN'): Promise<Cliente & { userId: string }>;
+  /**
+   * Cadastra uma conta PELA API e a deixa pronta para entrar com `senha` (AU).
+   *
+   * O cadastro não recebe senha: a conta nasce com uma temporária. Com `senha`,
+   * o ajudante faz o que a pessoa faria — entra com a temporária e troca pela
+   * dela —, e a conta sai sem troca pendente. Sem `senha`, a conta fica com a
+   * temporária, que volta em `temporaria`.
+   */
+  criarConta(dados: { name: string; email: string; role?: 'ADMIN' }, senha?: string): Promise<{ id: string; temporaria: string }>;
   /** A instância montada, para o que o cliente não cobre (WebSocket, `app.hasRoute`). */
   app: FastifyInstance;
   /** O id do administrador logado. */
@@ -157,7 +166,7 @@ export async function criarApi(opcoes: OpcoesDaAplicacao = {}): Promise<ApiDeTes
   /**
    * A sessão com um CARGO, montada PELA API — nunca por escrita direta no banco.
    *
-   * Pela rota (`POST /api/users`, com cargo e senha no mesmo corpo) porque é o
+   * Pela rota (`POST /api/users` com o cargo, e a troca da temporária) porque é o
    * mesmo motivo que este arquivo
    * inteiro existe: um teste que gravasse `role` com `prisma.user.update` pularia
    * o zod da borda e passaria a verde com um valor que a aplicação recusaria.
@@ -165,6 +174,33 @@ export async function criarApi(opcoes: OpcoesDaAplicacao = {}): Promise<ApiDeTes
    * ERA `comoUsuario(permissoes: string[])`, com grupo (D76). O D148 trocou a
    * matriz pelo cargo, e o grupo intermediário desapareceu junto.
    */
+  async function criarConta(dados: { name: string; email: string; role?: 'ADMIN' }, senha?: string) {
+    const criada = await padrao.post<{ id: string; temporaryPassword: string }>('/api/users', dados);
+    if (criada.status !== 201) {
+      throw new Error(`criarConta: cadastro falhou (${criada.status}): ${JSON.stringify(criada.body)}`);
+    }
+    const { id, temporaryPassword: temporaria } = criada.body;
+    if (senha === undefined) return { id, temporaria };
+
+    const entrada = await app.inject({
+      method: 'POST', url: '/api/auth/login', payload: { email: dados.email, password: temporaria },
+    });
+    const cookie = entrada.cookies.find((c) => c.name === COOKIE_SESSAO)?.value;
+    if (entrada.statusCode !== 200 || !cookie) {
+      throw new Error(`criarConta: entrar com a temporária falhou (${entrada.statusCode}): ${entrada.body}`);
+    }
+    const troca = await app.inject({
+      method: 'PUT',
+      url: '/api/auth/password',
+      headers: { cookie: `${COOKIE_SESSAO}=${cookie}` },
+      payload: { newPassword: senha },
+    });
+    if (troca.statusCode !== 200) {
+      throw new Error(`criarConta: trocar a temporária falhou (${troca.statusCode}): ${troca.body}`);
+    }
+    return { id, temporaria };
+  }
+
   async function comoUsuario(cargo: 'ADMIN' = 'ADMIN') {
     // `Date.now()` no sufixo porque o `email` é único, e um arquivo de teste
     // chama isto mais de uma vez.
@@ -172,15 +208,7 @@ export async function criarApi(opcoes: OpcoesDaAplicacao = {}): Promise<ApiDeTes
     const email = `${marca}@teste.local`;
     const senha = 'Senha-De-Teste-123';
 
-    const pessoa = await padrao.post<{ id: string }>('/api/users', {
-      name: `Sessão ${marca}`,
-      email,
-      role: cargo,
-      password: senha,
-    });
-    if (pessoa.status !== 201) {
-      throw new Error(`comoUsuario: criar pessoa falhou (${pessoa.status}): ${JSON.stringify(pessoa.body)}`);
-    }
+    const pessoa = await criarConta({ name: `Sessão ${marca}`, email, role: cargo }, senha);
 
     const entrada = await app.inject({
       method: 'POST',
@@ -194,7 +222,7 @@ export async function criarApi(opcoes: OpcoesDaAplicacao = {}): Promise<ApiDeTes
     const sessao = entrada.cookies.find((c) => c.name === COOKIE_SESSAO)?.value;
     if (!sessao) throw new Error('comoUsuario: login sem cookie de sessão.');
 
-    return { ...clienteCom(app, `${COOKIE_SESSAO}=${sessao}`), userId: pessoa.body.id };
+    return { ...clienteCom(app, `${COOKIE_SESSAO}=${sessao}`), userId: pessoa.id };
   }
 
   return {
@@ -202,6 +230,7 @@ export async function criarApi(opcoes: OpcoesDaAplicacao = {}): Promise<ApiDeTes
     adminId,
     ...padrao,
     comoUsuario,
+    criarConta,
     anonimo: clienteCom(app, null),
     fechar: () => app.close(),
   };

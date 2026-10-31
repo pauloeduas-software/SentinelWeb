@@ -1,9 +1,9 @@
-import type { EventoDoItem, ItemDeEstoque } from '../../../domain/shared/stock.types';
-import { textoDeUnidades } from '../../helpers/estoque.helper';
+import type { EventoDoItem, ItemDeEstoque } from '../../../types/stock.types';
+import { textoDeUnidades } from '../../../helpers/estoque.helper';
 
 // Funções puras da tela de estoque (docs/referencia/arquitetura.md). O que as
 // outras telas também mostram — o link do item — mora em
-// `src/pages/helpers/estoque.helper.ts`.
+// `src/helpers/estoque.helper.ts`.
 
 /**
  * "10 no total · 7 em uso · 3 disponíveis". O consumível (AJ) nunca tem unidade

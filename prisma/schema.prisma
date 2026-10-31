@@ -163,6 +163,13 @@ model User {
   // — sem tabela de sessão e sem lista de revogação.
   tokenVersion Int @default(0)
 
+  // SENHA TEMPORÁRIA (AR): o administrador gera uma senha para quem esqueceu a
+  // sua, e a conta fica marcada até a própria pessoa trocá-la. Enquanto estiver
+  // marcada, a sessão só alcança "quem sou eu", "sair" e a troca de senha
+  // (`authenticate-request.helper.ts`). Quem zera é a troca da própria senha, ou o
+  // administrador definindo uma "Nova senha" de verdade na edição.
+  mustChangePassword Boolean @default(false)
+
   // Desativar é diferente de excluir: a conta continua na lista e volta com
   // Ativar, só não entra mais no sistema. Editável em `PUT /api/users/:id`.
   isActive Boolean @default(true)

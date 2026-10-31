@@ -2,9 +2,9 @@ import { ArrowLeft, Boxes, History, KeyRound, Laptop, MapPin, UserX } from 'luci
 import { Link } from 'react-router-dom';
 import HistoryPanel from './components/HistoryPanel';
 import { useColaborador } from './hooks/useColaborador';
-import { formatarData, formatarDiaDoInstante } from '../../helpers/format.helper';
-import { caminhoDoItem, textoDeUnidades } from '../../helpers/estoque.helper';
-import { caminhoDaLicenca, textoDaSituacao } from '../../helpers/licenca.helper';
+import { formatarData, formatarDiaDoInstante } from '../../../helpers/format.helper';
+import { caminhoDoItem, textoDeUnidades } from '../../../helpers/estoque.helper';
+import { caminhoDaLicenca, textoDaSituacao } from '../../../helpers/licenca.helper';
 
 // FICHA DO COLABORADOR — quem é a pessoa, os COMPUTADORES entregues a ela, os
 // POSTOS que ela ocupa, o estoque e as licenças no nome dela, e o HISTÓRICO

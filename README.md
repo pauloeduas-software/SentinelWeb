@@ -9,25 +9,28 @@ O **Sentinel Web** fornece a interface visual para o gerenciamento de ativos. É
 ## 📁 Arquitetura
 
 Fatia vertical por domínio sobre uma base de infraestrutura compartilhada, com
-dependência em mão única: `pages → domain → core`.
+dependência em mão única: `modules → infra` no servidor, `pages → queries → api` no front.
 
 ```
 server/
 ├── server.ts              # bootstrap: valida env, checa banco, registra, sobe
-├── core/                  # infra: config, database, errors, logger, lifecycle
-└── domain/<nome>/         # maestro (rotas) → controllers → use-cases → prisma
-    └── agent · endpoint · asset · catalog · settings · activity · user
-    └── assignment · occupancy · stock · license · reconciliation
-    └── access · auth · workstation · shared
+├── infra/                 # config, database, errors, http, jobs, lifecycle, logger
+└── modules/<nome>/        # maestro (rotas) → controllers → use-cases → prisma
+    └── access · agent · api-docs · asset · assignment · audit · auth · catalog · endpoint
+    └── license · occupancy · person · reconciliation · settings · stock · user
+    └── workstation · shared
 
 src/
 ├── App.tsx                # moldura e rotas
-├── core/api/              # apiClient (axios) + queryClient (TanStack Query)
-├── domain/<nome>/         # queries (TanStack Query) + shared/*.types.ts
+├── api/                   # apiClient (axios) + queryClient (TanStack Query)
+├── queries/               # <nome>.queries.ts (TanStack Query), um por recurso
+├── stores/                # <nome>.store.ts (zustand): o estado que só existe no navegador
+├── types/                 # o contrato da API
+├── components/ hooks/ helpers/   # o que as páginas compartilham
 └── pages/<contexto>/      # index.tsx · hooks/ · components/ · helpers/
 ```
 
-A regra `pages → domain → core` é **verificada pelo lint** (`no-restricted-imports`
+A regra das camadas é **verificada pelo lint** (`no-restricted-imports`
 por camada): import que sobe a seta reprova o `npm run lint`, com a mensagem do que
 fazer no lugar.
 
@@ -77,7 +80,7 @@ tela própria. O critério de cada tela e o que já existiu e saiu estão em
 
 ## 🔌 Portas
 
-Todas configuráveis pelo `.env` (único arquivo de ambiente do projeto):
+Todas configuráveis pelo `.env` (o único que o servidor lê fora dos testes):
 
 | Serviço  | Porta | Variável        |
 | -------- | ----- | --------------- |
@@ -89,11 +92,12 @@ Ao trocar `POSTGRES_PORT`, ajuste também a porta dentro de `DATABASE_URL` — o
 não expande `${VAR}` no `.env`.
 
 O frontend nunca aponta para uma porta fixa: as chamadas saem em `/api` relativo
-(`src/core/api/apiClient.ts`) e o Vite faz o proxy para o backend em dev. Só quando painel e
+(`src/api/apiClient.ts`) e o Vite faz o proxy para o backend em dev. Só quando painel e
 API ficam em hosts diferentes o build lê `VITE_API_URL`.
 
 As variáveis ficam num `.env` só, na raiz — modelo em [`.env.example`](./.env.example).
-O servidor valida o que é obrigatório no boot e não sobe sem isso.
+O servidor valida o que é obrigatório no boot e não sobe sem isso. Os testes têm o seu,
+`.env.test`, versionado e sem segredo, lido pelos dois harnesses (Vitest e Playwright).
 
 ## 🛠️ Desenvolvimento
 
@@ -120,12 +124,16 @@ bun run dev
 | `dev:server` | Só a API |
 | `build` | Typecheck dos 2 projetos TS (front e Node) + build do front |
 | `start` | Produção: a API serve o `dist` |
-| `lint` | ESLint em `src/`, `server/` e `tests/` |
+| `lint` | ESLint em todo `.ts`/`.tsx` do repositório (menos `dist/`), com as regras de camada e a de cor fixa |
+| `typecheck` | `tsc -b` dos 2 projetos TS, sem build |
 | `test` / `test:watch` | Vitest contra o banco `sentineldb_test` (descartável). Ver [`docs/referencia/testes.md`](./docs/referencia/testes.md) |
+| `test:e2e` | Playwright: o build de produção na porta 4173, o banco `sentineldb_e2e_test` (descartável) e o Chromium clicando na tela. `npx playwright install chromium` uma vez por máquina |
+| `e2e:servidor` | O servidor que o `test:e2e` sobe e derruba, com o ambiente que o `playwright.config.ts` monta do `.env.test`: prepara o banco, faz o build e serve o `dist` na porta 4173 |
+| `check` | `lint`, `typecheck`, `test` e `test:e2e`, nessa ordem. É o que passa antes de dar uma mudança por pronta, e o que a CI (`.github/workflows/ci.yml`) roda a cada push na `main` |
 | `db:migrate` / `db:generate` / `db:studio` | Prisma |
 | `db:seed` | O seed principal: categorias, status e configuração. Não cria conta ([T](./docs/decisoes/acesso.md#t--não-há-conta-semeada)): o primeiro administrador nasce pelo `acesso:administrador` ([AP](./docs/decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it)). Roda em todo banco |
 | `db:seed:demo` | O principal mais dados de exemplo — a conta `admin@sentinel.com` (senha `admin`), fabricantes, modelos, localizações, cinco colaboradores, licenças e itens de estoque. Só para desenvolvimento e demonstração. Ver [`docs/referencia/configuracoes.md`](./docs/referencia/configuracoes.md#o-que-vem-semeado) |
-| `acesso:administrador` | Cria um administrador: `-- --nome "Nome Completo" --email "e-mail" --senha "senha"` (o `--` é do npm: sem ele, o npm engole os nomes dos parâmetros). É a primeira conta da instalação nova e a saída de quem perdeu a senha — o novo entra e define a Nova senha da conta antiga em Usuários. Roda no servidor, fora da API — ver [AP](./docs/decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it) e a invariante 17 em [`docs/referencia/invariantes.md`](./docs/referencia/invariantes.md) |
+| `acesso:administrador` | Cria um administrador: `-- --nome "Nome Completo" --email "e-mail" --senha "senha"` (o `--` é do npm: sem ele, o npm engole os nomes dos parâmetros). É a primeira conta da instalação nova e a saída de quem perdeu a senha — o novo entra e gera a senha temporária da conta antiga em Usuários. Roda no servidor, fora da API — ver [AP](./docs/decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it) e a invariante 17 em [`docs/referencia/invariantes.md`](./docs/referencia/invariantes.md) |
 | `agente:falso` | Um agente de mentira no `/agent-hub` (`scripts/agente-falso.ts`): handshake e telemetria a cada 3 s, para ver a aba Máquina e a ficha do posto sem o agente real. Lê `PORT` e `AGENT_TOKEN` do `.env`; `-- <hwid> <hostname>` para uma segunda máquina |
 
 ### Migrations

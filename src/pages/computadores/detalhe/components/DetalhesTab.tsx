@@ -1,6 +1,6 @@
 import { PackageX, Undo2 } from 'lucide-react';
-import type { Asset } from '../../../../domain/shared/asset.types';
-import { formatarData, formatarMoeda } from '../../../helpers/format.helper';
+import type { Asset } from '../../../../types/asset.types';
+import { formatarData, formatarMoeda } from '../../../../helpers/format.helper';
 import { seloDaSaida } from '../../helpers/baixa.helper';
 import { canaisDeSuporte, type CanalDeSuporte } from '../helpers/suporte.helper';
 

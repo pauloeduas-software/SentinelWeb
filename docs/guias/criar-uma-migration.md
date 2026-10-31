@@ -56,7 +56,10 @@ npm run db:generate
 
 O banco de teste não se alinha: ele é descartável. Apague o `sentineldb_test` e o
 `globalSetup` do próximo `npm test` o recria com a `0_init` nova
-([`../referencia/testes.md`](../referencia/testes.md)).
+([`../referencia/testes.md`](../referencia/testes.md)). O `sentineldb_e2e_test` do
+Playwright é igual: apague, e o próximo `npm run test:e2e` o recria. Sem apagar, o
+`migrate deploy` não reaplica a `0_init`, que já está registrada em `_prisma_migrations`:
+o banco fica no schema antigo, em silêncio.
 
 **3. Conferir que nada divergiu.**
 

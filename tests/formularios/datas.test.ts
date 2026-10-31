@@ -5,7 +5,7 @@ import { cenarioDePosse, criarAtivo, criarColaborador, criarPosto, diaNoBrasil }
 // AS DUAS BORDAS DO CALENDÁRIO — `diaNaoFuturo` e `dataNaoPassada`.
 //
 // São a MESMA regra vista dos dois lados, e por isso moram no mesmo arquivo
-// (`server/domain/shared/fields.schema.ts`) e são provadas no mesmo lugar:
+// (`server/modules/shared/fields.schema.ts`) e são provadas no mesmo lugar:
 //
 //   ocupação    recusa o FUTURO  — uma linha com `endedAt IS NULL` já conta
 //               como ocupante ATUAL em toda consulta e no índice único

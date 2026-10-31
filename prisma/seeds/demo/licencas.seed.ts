@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { prisma } from '../../../server/core/database/prismaClient';
+import { prisma } from '../../../server/infra/database/prismaClient';
 import { logger, type Seeder } from '../seeder';
 import { mesmoNome } from './garantir-por-nome';
 

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { cenarioDePosse } from '../helpers/fixtures';
-import { prisma } from '../../server/core/database/prismaClient';
+import { prisma } from '../../server/infra/database/prismaClient';
 
 // INVARIANTE 5 — os dois CHECKs da `assignments`.
 //

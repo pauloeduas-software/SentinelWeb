@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react';
 import {
   useCreateUser,
   useDeleteUser,
+  useResetUserPassword,
   useUpdateUser,
   useUsersQuery,
   type UserInput,
-} from '../../../domain/user/user.queries';
-import type { User } from '../../../domain/shared/user.types';
-import { useDebouncedValue } from '../../hooks/useDebouncedValue';
-import { useNotificacao } from '../../hooks/useNotificacao';
+} from '../../../queries/user.queries';
+import type { User } from '../../../types/user.types';
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
+import { useNotificacao } from '../../../hooks/useNotificacao';
 
 const PER_PAGE = 10;
 
@@ -35,11 +36,12 @@ export function useUsers() {
   );
 
   // A busca e a invalidação depois de gravar são da query
-  // (domain/user/user.queries.ts). Aqui fica só estado de tela.
+  // (queries/user.queries.ts). Aqui fica só estado de tela.
   const { data, isPending, error } = useUsersQuery(params);
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
+  const resetPassword = useResetUserPassword();
 
   const users = data?.rows ?? [];
   const total = data?.total ?? 0;
@@ -62,11 +64,14 @@ export function useUsers() {
     setEditing(null);
   };
 
-  // O erro sobe para o formulário mostrar a mensagem do servidor
-  const handleSubmit = async (data: UserInput) => {
-    if (editing) await updateUser.mutateAsync({ id: editing.id, data });
-    else await createUser.mutateAsync(data);
+  // O erro sobe para o formulário mostrar a mensagem do servidor. O CADASTRO
+  // não fecha a janela: devolve a senha temporária da conta nova (AU), que o
+  // formulário mostra uma vez; quem fecha é o administrador, depois de copiá-la.
+  const handleSubmit = async (data: UserInput): Promise<string | null> => {
+    if (!editing) return (await createUser.mutateAsync(data)).temporaryPassword;
+    await updateUser.mutateAsync({ id: editing.id, data });
     closeModal();
+    return null;
   };
 
   // EXCLUIR, e o confirm diz o que isso quer dizer AQUI: não tem volta — errou,
@@ -99,6 +104,17 @@ export function useUsers() {
     }
   };
 
+  // A SENHA TEMPORÁRIA (AR): de quem esqueceu a sua. Gerar invalida a senha de hoje
+  // e derruba as sessões abertas da conta NA HORA, então o confirm diz isso. A
+  // senha volta uma vez só, para o formulário mostrar; o erro sobe para ele.
+  const handleGerarSenhaTemporaria = async (user: User): Promise<string | null> => {
+    if (!confirm(
+      `Gerar uma senha temporária para "${user.name}"? A senha atual deixa de valer agora e as sessões abertas dela caem. A pessoa escolhe a nova senha no primeiro acesso.`,
+    )) return null;
+    const { temporaryPassword } = await resetPassword.mutateAsync(user.id);
+    return temporaryPassword;
+  };
+
   return {
     users,
     total,
@@ -119,5 +135,6 @@ export function useUsers() {
     handleSubmit,
     handleDelete,
     handleAlternarAtivo,
+    handleGerarSenhaTemporaria,
   };
 }

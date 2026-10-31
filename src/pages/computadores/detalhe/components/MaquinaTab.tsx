@@ -1,8 +1,8 @@
 import { MonitorSmartphone, Unlink } from 'lucide-react';
-import TelemetriaDaMaquina from '../../../components/TelemetriaDaMaquina';
+import TelemetriaDaMaquina from '../../../../components/TelemetriaDaMaquina';
 import type {
   EspecificacoesDaMaquina, MaquinaDoAtivo, MudancaDeHardware,
-} from '../../../../domain/shared/reconciliation.types';
+} from '../../../../types/reconciliation.types';
 
 // A ABA MÁQUINA — o que o AGENTE vê deste ativo (F7).
 //
@@ -32,7 +32,7 @@ import type {
 // abaixo: o que a empresa COMPROU (as specs), o que MUDOU desde então, e como a
 // máquina está AGORA.
 //
-// O painel é `pages/components/TelemetriaDaMaquina` porque a ficha do POSTO
+// O painel é `components/TelemetriaDaMaquina` porque a ficha do POSTO
 // mostra o mesmo — o computador da mesa é um ativo, visto do outro lado.
 // ─────────────────────────────────────────────────────────────────────────────
 

@@ -1,6 +1,6 @@
 import { ArrowRightLeft, Boxes, Clock, KeyRound, MapPin } from 'lucide-react';
-import type { EventoDaPessoa } from '../../../../domain/shared/person.types';
-import { formatarDiaDoInstante } from '../../../helpers/format.helper';
+import type { EventoDaPessoa } from '../../../../types/person.types';
+import { formatarDiaDoInstante } from '../../../../helpers/format.helper';
 import { tituloDoEvento } from '../helpers/historico.helper';
 
 // A LINHA DO TEMPO da pessoa: por onde ela passou. QUATRO fontes, uma lista:

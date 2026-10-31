@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Check, LogOut, Pencil, UserPlus, X } from 'lucide-react';
-import ReferenceSelect from '../../components/ReferenceSelect';
-import { diaDoInstante, hojeNoCampoDeData } from '../../helpers/format.helper';
+import ReferenceSelect from '../../../components/ReferenceSelect';
+import { diaDoInstante, hojeNoCampoDeData } from '../../../helpers/format.helper';
 import {
   estaAberta, montarOcupante, nomeDoOcupante, periodoDaOcupacao, turnoDoOcupante,
 } from '../helpers/ocupantes.helper';
-import type { OccupantInput } from '../../../domain/occupancy/occupancy.queries';
-import type { WorkstationOccupant, OccupantView } from '../../../domain/shared/posse.types';
+import type { OccupantInput } from '../../../queries/occupancy.queries';
+import type { WorkstationOccupant, OccupantView } from '../../../types/posse.types';
 
 // QUEM OCUPA O POSTO — Camada 2 de docs/referencia/modelo-de-posse.md, a que o Snipe-IT não
 // tem.

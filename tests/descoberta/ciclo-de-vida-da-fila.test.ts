@@ -2,8 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { conectarAgente, esperarPor } from '../helpers/agente';
 import { cenarioDePosse, criarAtivo } from '../helpers/fixtures';
-import { rodarReconciliacao } from '../../server/domain/reconciliation/jobs/reconcile.job';
-import { prisma } from '../../server/core/database/prismaClient';
+import { rodarReconciliacao } from '../../server/modules/reconciliation/jobs/reconcile.job';
+import { prisma } from '../../server/infra/database/prismaClient';
 
 // ═════════════════════════════════════════════════════════════════════════════
 // A FILA TEM TRÊS PORTAS DE SAÍDA, E A TERCEIRA É A QUE NÃO SE VÊ

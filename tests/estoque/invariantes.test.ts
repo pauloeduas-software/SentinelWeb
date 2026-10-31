@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { prisma } from '../../server/core/database/prismaClient';
+import { prisma } from '../../server/infra/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { cenarioDePosse, criarColaborador, criarItemDeEstoque, criarPosto } from '../helpers/fixtures';
 

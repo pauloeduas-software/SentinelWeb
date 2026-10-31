@@ -1,8 +1,8 @@
 import { Cpu } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import type { EntregaNaFicha } from '../../../../domain/shared/stock.types';
-import { formatarDiaDoInstante } from '../../../helpers/format.helper';
-import { caminhoDoItem, textoDeUnidades } from '../../../helpers/estoque.helper';
+import type { EntregaNaFicha } from '../../../../types/stock.types';
+import { formatarDiaDoInstante } from '../../../../helpers/format.helper';
+import { caminhoDoItem, textoDeUnidades } from '../../../../helpers/estoque.helper';
 
 // A ABA COMPONENTES — "o que está instalado NESTA máquina agora" (AI): a
 // memória, o SSD. Uma linha por entrega, como a ficha do posto.

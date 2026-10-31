@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { prisma } from '../../server/core/database/prismaClient';
-import { criarAdministrador } from '../../server/domain/access/cli/criar-administrador.cli';
-import { rodarReconciliacao } from '../../server/domain/reconciliation/jobs/reconcile.job';
+import { prisma } from '../../server/infra/database/prismaClient';
+import { criarAdministrador } from '../../server/modules/access/cli/criar-administrador.cli';
+import { rodarReconciliacao } from '../../server/modules/reconciliation/jobs/reconcile.job';
 import { criarApi, type ApiDeTeste, type Resposta } from '../helpers/app';
 import { conectarAgente, esperarPor } from '../helpers/agente';
 import {
@@ -180,9 +180,10 @@ describe('toda escrita do painel deixa rastro com a conta da sessão', () => {
 
   it('usuários e configurações', async () => {
     const usuario = await auditada(api.post<{ id: string }>('/api/users', {
-      name: 'Conta Auditada', email: `conta.${proximo()}@teste.local`, password: 'senha-inicial-123',
+      name: 'Conta Auditada', email: `conta.${proximo()}@teste.local`,
     }));
-    await auditada(api.put(`/api/users/${usuario.body.id}`, { name: 'Conta Renomeada', password: 'senha-trocada-456' }));
+    await auditada(api.put(`/api/users/${usuario.body.id}`, { name: 'Conta Renomeada' }));
+    await auditada(api.post(`/api/users/${usuario.body.id}/temporary-password`));
     await auditada(api.delete(`/api/users/${usuario.body.id}`));
 
     const { body } = await api.get<{ ghostDays: number }>('/api/settings/discovery');
@@ -276,9 +277,7 @@ describe('o login', () => {
 
   beforeAll(async () => {
     email = `login.${proximo()}@teste.local`;
-    const criado = await api.post<{ id: string }>('/api/users', { name: 'Quem Entra', email, password: senha });
-    expect(criado.status).toBe(201);
-    id = criado.body.id;
+    ({ id } = await api.criarConta({ name: 'Quem Entra', email }, senha));
   });
 
   const entrar = (password: string, conta = email) => api.anonimo.post('/api/auth/login', { email: conta, password });
@@ -309,8 +308,7 @@ describe('o login', () => {
   it('o bloqueio fica registrado, e a insistência durante ele, uma vez só', async () => {
     // Conta própria: o teste não depende das falhas dos outros.
     const conta = `bloqueio.${proximo()}@teste.local`;
-    const criada = await api.post<{ id: string }>('/api/users', { name: 'Quem Insiste', email: conta, password: senha });
-    expect(criada.status).toBe(201);
+    const criada = { body: await api.criarConta({ name: 'Quem Insiste', email: conta }, senha) };
 
     for (let i = 0; i < 5; i++) expect((await entrar('senha-errada-000', conta)).status).toBe(401);
 
@@ -422,11 +420,8 @@ describe('dado sensível não entra na auditoria', () => {
     const senha = 'senha-que-nao-pode-vazar-1';
     const chave = 'CHAVE-QUE-NAO-PODE-VAZAR';
 
-    const usuario = await api.post<{ id: string }>('/api/users', {
-      name: 'Conta Sensível', email: `sensivel.${proximo()}@teste.local`, password: senha,
-    });
-    expect(usuario.status).toBe(201);
-    expect((await api.put(`/api/users/${usuario.body.id}`, { password: `${senha}-2` })).status).toBe(200);
+    // A conta troca a temporária pela `senha` (AU), pela rota da própria senha.
+    const usuario = { body: await api.criarConta({ name: 'Conta Sensível', email: `sensivel.${proximo()}@teste.local` }, senha) };
 
     const pessoa = await criarColaborador(api, { name: 'Usa a Chave', email: `chave.${proximo()}@teste.local` });
     const licenca = await api.post<{ id: string }>('/api/licenses', {

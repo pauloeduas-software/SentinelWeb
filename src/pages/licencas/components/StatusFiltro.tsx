@@ -1,4 +1,4 @@
-import type { StatusDoFiltro } from '../../../domain/shared/license.types';
+import type { StatusDoFiltro } from '../../../types/license.types';
 
 // O FILTRO POR STATUS. Sem abas (AF): a encerrada fica na lista, e é por aqui
 // que se vê só elas. Vazio é "todos", e fica no topo pelo mesmo motivo do

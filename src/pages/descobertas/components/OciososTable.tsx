@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { BatteryWarning } from 'lucide-react';
-import type { AtivoOcioso } from '../../../domain/shared/reconciliation.types';
+import type { AtivoOcioso } from '../../../types/reconciliation.types';
 
 // "NINGUÉM USA" × "NINGUÉM RESPONDE" — duas conversas diferentes, com duas
 // pessoas diferentes.

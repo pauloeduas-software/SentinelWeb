@@ -3,21 +3,21 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   useAssetHistoryQuery, useAssetQuery, useCreateAsset, useDeleteAsset,
   useRetireAsset, useUnretireAsset, useUpdateAsset, type AssetInput,
-} from '../../../../domain/asset/asset.queries';
+} from '../../../../queries/asset.queries';
 import {
   useAssetAssignmentsQuery, useCheckinAsset, useCheckoutAsset,
   type CheckinInput, type CheckoutInput,
-} from '../../../../domain/assignment/assignment.queries';
-import { useCatalogOptionsQuery } from '../../../../domain/catalog/catalog.queries';
-import { useAssetLicensesQuery } from '../../../../domain/license/license.queries';
-import { useAssetComponentsQuery } from '../../../../domain/stock/stock.queries';
+} from '../../../../queries/assignment.queries';
+import { useCatalogOptionsQuery } from '../../../../queries/catalog.queries';
+import { useAssetLicensesQuery } from '../../../../queries/license.queries';
+import { useAssetComponentsQuery } from '../../../../queries/stock.queries';
 import {
   useDesvincularMaquina, useMaquinaDoAtivoQuery,
-} from '../../../../domain/reconciliation/reconciliation.queries';
-import type { RetireInput } from '../../../../domain/shared/asset.types';
+} from '../../../../queries/reconciliation.queries';
+import type { RetireInput } from '../../../../types/asset.types';
 import type { AbaId } from '../helpers/abas.helper';
-import { useNotificacao } from '../../../hooks/useNotificacao';
-import { linksDoErro } from '../../../helpers/erro.helper';
+import { useNotificacao } from '../../../../hooks/useNotificacao';
+import { linksDoErro } from '../../../../helpers/erro.helper';
 
 // Estado da TELA DE DETALHE. Aba, modais e o ativo em edição são de uma tela
 // só: ficam aqui, em `useState`, e não em store (docs/referencia/arquitetura.md).

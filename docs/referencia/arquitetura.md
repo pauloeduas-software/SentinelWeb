@@ -8,15 +8,22 @@
 
 ## A regra que sustenta tudo
 
-Três camadas, dependência em **mão única**:
+Camadas com dependência em **mão única**, e cada pasta com o nome do que guarda (AQ):
 
 ```
-pages  ──▶  domain  ──▶  core
+server:   modules  ──▶  infra
+src:      pages  ──▶  queries  ──▶  api
 ```
 
-- `core` **não** conhece negócio. Não importa nada de `domain` nem de `pages`.
-- `domain` **não** conhece tela. Não importa nada de `pages`.
-- `pages` **não** conhece HTTP. Não chama `apiClient` nem `fetch` direto.
+- `server/infra` é infraestrutura: config, banco, erros, HTTP, jobs, ciclo de vida, logger.
+  **Não** conhece negócio: não importa nada de `server/modules`.
+- `server/modules/<nome>` é uma fatia vertical por assunto (rotas, controllers, use-cases).
+  **Não** conhece tela: não importa nada de `src/`.
+- `src/api` é o cliente HTTP (`apiClient`) e o cache (`queryClient`). **Não** conhece negócio.
+- `src/queries` (TanStack Query), `src/stores` (zustand) e `src/types` (o contrato da API)
+  **não** conhecem tela: não importam `pages`, `components`, `hooks` nem `helpers`.
+- A tela — `src/pages` e o que ela compartilha em `src/components`, `src/hooks` e `src/helpers` —
+  **não** fala HTTP: não chama `apiClient`, `axios` nem `@tanstack/react-query` direto.
 
 Um `import` que sobe essa seta é o sinal de que algo está na pasta errada.
 
@@ -26,14 +33,24 @@ lint` com a mensagem do que fazer no lugar.
 
 | Camada | Não pode importar |
 |---|---|
-| `server/core` | `server/domain`, qualquer coisa de `src/` |
-| `server/domain` | `src/` (tipo compartilhado vai em `server/domain/shared`) |
-| `src/core` | `src/domain`, `src/pages`, `server/`, `@prisma/client`, `fastify`, `pino` |
-| `src/domain` | `src/pages`, `server/`, `@prisma/client`, `fastify`, `pino` |
-| `src/pages` | `src/core/api`, `axios`, `@tanstack/react-query`, `server/`, `@prisma/client`, `fastify`, `pino` |
+| `server/infra` | `server/modules`, qualquer coisa de `src/` |
+| `server/modules` | `src/` (tipo compartilhado vai em `server/modules/shared`) |
+| `src/api` | `src/queries`, `src/stores`, `src/types`, a tela, `server/`, `@prisma/client`, `fastify`, `pino` |
+| `src/queries`, `src/stores`, `src/types` | `src/pages`, `src/components`, `src/hooks`, `src/helpers`, `server/`, `@prisma/client`, `fastify`, `pino` |
+| `src/pages`, `src/components`, `src/hooks`, `src/helpers` | `src/api`, `axios`, `@tanstack/react-query`, `server/`, `@prisma/client`, `fastify`, `pino` |
+
+Até 2026-10-30 as pastas se chamavam `server/core`, `server/domain`, `src/core/api`,
+`src/domain/<nome>/` (as queries e os stores), `src/domain/shared/` (os tipos) e
+`src/pages/{components,helpers,hooks}` (o compartilhado). A decisão AQ as renomeou; os textos de
+`docs/decisoes/` e `docs/historico/` não se reescrevem e citam os nomes antigos.
+
+O mesmo `eslint.config.js` recusa **cor fixa** em `src/`: a paleta numerada do Tailwind
+(`bg-red-500`), hex e `rgb()`/`hsl()` em string ou template. Toda cor vem dos tokens de
+`src/index.css` (`bg-bg-base`, `text-status-danger`), e nenhum registro ganha cor pelo
+valor — é a regra "sem cor por dado", garantida pelo lint em vez de por code review.
 
 As três últimas linhas são o que protege a decisão de manter `server/` separado de
-`src/`: sem elas, um `import` relativo de `server/core/database/prismaClient`
+`src/`: sem elas, um `import` relativo de `server/infra/database/prismaClient`
 dentro de um componente colocaria o Prisma — e as credenciais do banco — no
 bundle que vai para o navegador.
 
@@ -45,7 +62,7 @@ bundle que vai para o navegador.
 server/
 ├── server.ts                    # O PROCESSO: valida env, checa banco, liga jobs, abre porta, morre limpo
 ├── app.ts                       # A APLICAÇÃO: buildApp() monta tudo e NÃO abre porta (é o que o teste usa)
-├── core/                        # INFRAESTRUTURA. zero regra de negócio.
+├── infra/                       # INFRAESTRUTURA. zero regra de negócio.
 │   ├── config/                  # load-env, env (validateEnv), cors
 │   ├── database/                # prismaClient, soft-delete.extension (acha a lixeira pelo DMMF)
 │   ├── errors/                  # app-error (AppError), error-handler, error-shape, zod-error
@@ -54,13 +71,14 @@ server/
 │   ├── jobs/                    # claim-window — o CAS por linha de JobRun (D79) e `inicioDoDia`
 │   ├── lifecycle/               # health (readiness), shutdown (onShutdown)
 │   └── logger/                  # logger (createLogger), sanitize, request-logger
-└── domain/<nome>/               # FATIA VERTICAL — sempre o mesmo esqueleto
-    ├── <nome>.maestro.ts        # registra as rotas do domínio. Só rota.
-    ├── controllers/             # só HTTP: lê a requisição, chama use-case, responde
-    ├── use-cases/               # 1 arquivo = 1 operação de negócio
-    ├── helpers/                 # funções puras, sem I/O
-    ├── jobs/                    # tarefas periódicas, com start/stop explícitos
-    └── shared/                  # tipos compartilhados entre domínios
+└── modules/
+    ├── shared/                  # tipos, schemas e helpers compartilhados entre os módulos
+    └── <nome>/                  # FATIA VERTICAL — sempre o mesmo esqueleto
+        ├── <nome>.maestro.ts    # registra as rotas do domínio. Só rota.
+        ├── controllers/         # só HTTP: lê a requisição, chama use-case, responde
+        ├── use-cases/           # 1 arquivo = 1 operação de negócio
+        ├── helpers/             # funções puras, sem I/O
+        └── jobs/                # tarefas periódicas, com start/stop explícitos
 ```
 
 ### Domínios hoje
@@ -71,7 +89,7 @@ server/
 | `endpoint` | Máquina descoberta pelo agente (lado RMM) + telemetria (a crua fica 3 dias, com expurgo uma vez por dia depois da agregação; o uso diário agregado, para sempre) + comandos | `Endpoint`, `Telemetry` |
 | `asset` | Ativo do ITAM — o `Asset` do vocabulário do Snipe-IT | `Asset` |
 | `catalog` | As SEIS tabelas de catálogo, com UM CRUD genérico dirigido por spec — o colaborador inclusive | `Category`, `StatusLabel`, `Manufacturer`, `AssetModel`, `Location`, `Person` |
-| `settings` | Configuração global: a etiqueta automática (prefixo, zeros, próximo número) e os botões da descoberta (`discoveryMode`, `ghostDays`, `shadowHours`). Idioma, moeda e formato de data são fixos no código (`src/pages/helpers/format.helper.ts`) | `AppSetting` |
+| `settings` | Configuração global: a etiqueta automática (prefixo, zeros, próximo número) e os botões da descoberta (`discoveryMode`, `ghostDays`, `shadowHours`). Idioma, moeda e formato de data são fixos no código (`src/helpers/format.helper.ts`) | `AppSetting` |
 | `audit` | A auditoria — quem fez o quê, em qual registro e quando ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)) —, gravada na transação de quem a origina. Só no banco: tela nenhuma a lê | `AuditLog` |
 | `user` | **Quem opera o sistema** — hoje só Administrador ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)), com senha ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)) | `User` |
 | `person` | **O colaborador** — quem recebe equipamento. O cadastro é do `catalog` (a única aba com lixeira); aqui ficam a ficha, o histórico, a contagem da posse aberta e a trava da linha | `Person` |
@@ -130,7 +148,7 @@ maestro  →  controller  →  use-case  →  prisma
 
 Nenhum controller tem `try/catch`: no Fastify, handler async que rejeita cai
 sozinho no `errorHandler`. Os use-cases lançam `AppError(mensagem, status)` e o
-`core/errors/error-handler.ts` traduz — é o **único** lugar do sistema que monta
+`infra/errors/error-handler.ts` traduz — é o **único** lugar do sistema que monta
 resposta de erro.
 
 | Situação | Vira | Quem faz |
@@ -152,7 +170,7 @@ do ativo, as licenças e os componentes, e a tela põe um link em cada um
 O 422 de validação não manda o mapa por campo
 ([Q](../decisoes/escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai)). A frase
 é o contrato e continua completa sem `refs`: no front, `ErroDaApi` guarda o corpo (`corpo`), e
-quem lê as referências é `pages/helpers/erro.helper.ts` — o `core` não conhece domínio.
+quem lê as referências é `helpers/erro.helper.ts` — o `src/api` não conhece domínio.
 
 ---
 
@@ -161,25 +179,26 @@ quem lê as referências é `pages/helpers/erro.helper.ts` — o `core` não con
 ```
 src/
 ├── App.tsx                      # moldura e rotas. Mais nada.
-├── core/api/
+├── api/
 │   ├── apiClient.ts             # axios + tradução do erro do servidor
 │   └── queryClient.ts           # cache do TanStack Query
-├── domain/
-│   ├── shared/*.types.ts        # tipos do contrato com a API
-│   └── <nome>/<nome>.queries.ts # TanStack Query: busca e mutação do domínio
-└── pages/
-    ├── components/              # UI compartilhada entre páginas (AppHeader; catalogo/, o cadastro de Configurações e Colaboradores)
-    └── <contexto>/
-        ├── index.tsx            # markup. Nenhum fetch, nenhum cálculo.
-        ├── hooks/use<Nome>.ts   # estado de tela: modal, seleção, confirmações
-        ├── components/          # apresentacionais, recebem callback por prop
-        └── helpers/*.helper.ts  # funções puras (parse, formatação, cor)
+├── queries/<nome>.queries.ts    # TanStack Query: busca e mutação de cada recurso
+├── stores/<nome>.store.ts       # zustand: o estado que só existe no navegador (auth, asset)
+├── types/*.types.ts             # tipos do contrato com a API
+├── components/                  # UI compartilhada entre páginas (AppHeader, AppSidebar; catalogo/, o cadastro de Configurações e Colaboradores)
+├── hooks/                       # hooks compartilhados entre páginas (useBarraLateral, useMaquinaAoVivo, useNotificacao)
+├── helpers/*.helper.ts          # funções puras compartilhadas entre páginas (formatação, erro, histórico)
+└── pages/<contexto>/
+    ├── index.tsx                # markup. Nenhum fetch, nenhum cálculo.
+    ├── hooks/use<Nome>.ts       # estado de tela: modal, seleção, confirmações
+    ├── components/              # apresentacionais, recebem callback por prop
+    └── helpers/*.helper.ts      # funções puras (parse, formatação, cor)
 ```
 
 ### O caminho de um clique
 
 ```
-index.tsx  →  hooks/useX  →  domain/x.queries  →  core/api/apiClient
+index.tsx  →  hooks/useX  →  queries/x.queries  →  api/apiClient
 (markup)      (estado de     (dado do            (HTTP)
                tela)          servidor)
 ```
@@ -188,8 +207,8 @@ index.tsx  →  hooks/useX  →  domain/x.queries  →  core/api/apiClient
 
 | | Guarda | Onde |
 |---|---|---|
-| **TanStack Query** | *server state*: o que vem da API, envelhece, é compartilhado entre telas | `domain/<nome>/<nome>.queries.ts` |
-| **zustand** | *client state*: o que só existe no navegador e ninguém busca | `domain/<nome>/<nome>.store.ts` |
+| **TanStack Query** | *server state*: o que vem da API, envelhece, é compartilhado entre telas | `queries/<nome>.queries.ts` |
+| **zustand** | *client state*: o que só existe no navegador e ninguém busca | `stores/<nome>.store.ts` |
 
 São ferramentas para problemas diferentes e o projeto usa as duas. A regra única é
 **nunca as duas para o mesmo dado** — isso cria duas fontes de verdade para a
@@ -211,8 +230,8 @@ Regras práticas:
 - **Componente não faz `fetch`.** Recebe `onSubmit`, `onCommand`, `onDelete`. Duas
   exceções, e as duas são widgets AUTOCONTIDOS usados por telas sem relação entre
   si, onde passar tudo por prop duplicaria a mesma ligação em cada chamador:
-  `pages/components/ReferenceSelect` (busca a lista de opções da rota que recebe) e
-  `pages/components/TelemetriaDaMaquina` (consulta e revalida uma máquina, e manda
+  `components/ReferenceSelect` (busca a lista de opções da rota que recebe) e
+  `components/TelemetriaDaMaquina` (consulta e revalida uma máquina, e manda
   comando nela). Exceção se declara no cabeçalho do componente; a terceira que
   aparecer sem motivo escrito é a regra virando sugestão.
 - **Página não importa `@tanstack/react-query` nem `axios`.** O lint recusa. Ela
@@ -254,7 +273,7 @@ Estão em `server/server.ts` e existem para o sistema falhar cedo e limpo.
   requisição e na auditoria (`audit_logs.requestId`). O servidor sempre gera o
   número (`generateRequestId`) e ignora o do cliente: aceito, uma conta poderia
   repetir o número de outra requisição. Credenciais são removidas em
-  `core/logger/sanitize.ts`.
+  `infra/logger/sanitize.ts`.
 
 ---
 

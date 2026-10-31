@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { tetoDeRequisicaoLigado } from '../../server/core/config/env';
+import { tetoDeRequisicaoLigado } from '../../server/infra/config/env';
 import { criarApi, type ApiDeTeste, type Resposta } from '../helpers/app';
 
 // O TETO DE REQUISIÇÕES POR IP — o único lugar da suíte onde ele é o assunto.
@@ -32,7 +32,7 @@ import { criarApi, type ApiDeTeste, type Resposta } from '../helpers/app';
  */
 const ROTA = '/api/manufacturers';
 
-/** O `max` de `WRITE_RATE_LIMIT` (server/core/http/write-rate-limit.ts). */
+/** O `max` de `WRITE_RATE_LIMIT` (server/infra/http/write-rate-limit.ts). */
 const TETO_DE_ESCRITA = 40;
 
 let semTeto: ApiDeTeste;
@@ -80,7 +80,7 @@ describe('o teto de requisições por IP', () => {
     expect(barrada.status).toBe(429);
     // A MENSAGEM É NOSSA, e isso é a outra metade do que se prova aqui: o plugin
     // LANÇA o 429 em vez de responder, e quem o traduz é o
-    // `core/errors/error-handler.ts` — o único lugar do sistema que monta
+    // `infra/errors/error-handler.ts` — o único lugar do sistema que monta
     // resposta de erro. Sem o caso de 429 lá, isto virava "Requisição inválida",
     // que não diz o que fazer, ou um 500.
     expect(barrada.body.error).toBe('Muitas requisições. Tente novamente em instantes.');

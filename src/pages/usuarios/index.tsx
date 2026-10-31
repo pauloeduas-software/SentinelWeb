@@ -1,10 +1,10 @@
 import { Users, Plus, Edit2, Trash2, Power, PowerOff } from 'lucide-react';
 import UserFormModal from './components/UserFormModal';
-import EstadoDaLista from '../components/EstadoDaLista';
-import ListToolbar from '../components/ListToolbar';
+import EstadoDaLista from '../../components/EstadoDaLista';
+import ListToolbar from '../../components/ListToolbar';
 import { useUsers } from './hooks/useUsers';
-import type { User } from '../../domain/shared/user.types';
-import { useAuthStore } from '../../domain/auth/auth.store';
+import type { User } from '../../types/user.types';
+import { useAuthStore } from '../../stores/auth.store';
 
 const NOME_DO_CARGO: Record<User['role'], string> = {
   ADMIN: 'Administrador',
@@ -14,7 +14,7 @@ export default function UsersPage() {
   const {
     users, total, loading, erro, page, perPage, setPage, search, changeSearch,
     modalOpen, editing, openCreate, openEdit, closeModal, handleSubmit, handleDelete,
-    handleAlternarAtivo,
+    handleAlternarAtivo, handleGerarSenhaTemporaria,
   } = useUsers();
   // A própria conta não se desativa nem se exclui (W): o servidor recusa com
   // 409, e aqui os dois botões da linha dela ficam desligados, dizendo por quê.
@@ -140,6 +140,7 @@ export default function UsersPage() {
           user={editing}
           onClose={closeModal}
           onSubmit={handleSubmit}
+          onGerarSenhaTemporaria={editing && editing.id !== meuId ? () => handleGerarSenhaTemporaria(editing) : undefined}
         />
       )}
     </div>

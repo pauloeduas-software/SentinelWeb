@@ -5,7 +5,7 @@ import WebSocket from 'ws';
 // O Agente Sentinel é um binário que vive fora deste repositório. Sem ele não
 // existe linha em `endpoints`, e sem linha em `endpoints` a aba Máquina do ativo
 // e a ficha do posto não têm o que mostrar. Este script fala o mesmo protocolo
-// (`server/domain/shared/agent-protocol.types.ts`): um Handshake, e depois uma
+// (`server/modules/shared/agent-protocol.types.ts`): um Handshake, e depois uma
 // amostra de telemetria a cada 3 segundos, com valores que andam para dar para
 // ver a tela atualizando sozinha.
 //

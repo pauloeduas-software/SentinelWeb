@@ -1,8 +1,8 @@
 import { Edit2, Power, PowerOff, Trash2, UserPlus } from 'lucide-react';
-import type { Licenca } from '../../../domain/shared/license.types';
-import { ROTULO_DO_STATUS, resumoDaContagem, textoDoPrazo } from '../../helpers/licenca.helper';
+import type { Licenca } from '../../../types/license.types';
+import { ROTULO_DO_STATUS, resumoDaContagem, textoDoPrazo } from '../../../helpers/licenca.helper';
 import { motivoParaNaoEntregar } from '../helpers/licenca.helper';
-import { formatarData } from '../../helpers/format.helper';
+import { formatarData } from '../../../helpers/format.helper';
 
 // A tabela de licenças. Apresentacional puro: recebe valor e callback, não
 // conhece query nem HTTP.

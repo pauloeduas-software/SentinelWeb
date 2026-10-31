@@ -1,4 +1,4 @@
-import { prisma } from '../../server/core/database/prismaClient';
+import { prisma } from '../../server/infra/database/prismaClient';
 import type { Seeder } from './seeder';
 
 // Conjunto mínimo para os formulários não abrirem com `<select>` vazio.

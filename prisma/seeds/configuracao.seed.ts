@@ -1,5 +1,5 @@
-import { prisma } from '../../server/core/database/prismaClient';
-import { APP_SETTING_ID } from '../../server/domain/settings/helpers/app-setting.helper';
+import { prisma } from '../../server/infra/database/prismaClient';
+import { APP_SETTING_ID } from '../../server/modules/settings/helpers/app-setting.helper';
 import type { Seeder } from './seeder';
 
 // A linha de configuração global. Precisa existir antes do primeiro ativo:

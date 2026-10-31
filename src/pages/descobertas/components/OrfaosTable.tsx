@@ -1,8 +1,8 @@
 import { Fragment, useState } from 'react';
 import { Check, Ban, HelpCircle, Link2 } from 'lucide-react';
 import VincularMaquinaForm from './VincularMaquinaForm';
-import type { Endpoint } from '../../../domain/shared/endpoint.types';
-import type { ReviewState } from '../../../domain/shared/reconciliation.types';
+import type { Endpoint } from '../../../types/endpoint.types';
+import type { ReviewState } from '../../../types/reconciliation.types';
 
 // AS MÁQUINAS QUE O AGENTE VÊ E O CADASTRO NÃO CONHECE — o Shadow IT, e o
 // computador novo que ainda não virou patrimônio.

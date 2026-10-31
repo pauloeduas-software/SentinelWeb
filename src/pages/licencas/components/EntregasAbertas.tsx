@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { KeyRound, Laptop, User } from 'lucide-react';
 import ChaveEscondida from './ChaveEscondida';
-import type { ChaveDaLicenca, EntregaComChave } from '../../../domain/shared/license.types';
-import { diaDoInstante, formatarDiaDoInstante, hojeNoCampoDeData } from '../../helpers/format.helper';
+import type { ChaveDaLicenca, EntregaComChave } from '../../../types/license.types';
+import { diaDoInstante, formatarDiaDoInstante, hojeNoCampoDeData } from '../../../helpers/format.helper';
 import { chavesComLugar, lugarDaChave, rotuloDaChave } from '../helpers/licenca.helper';
 
 // QUEM ESTÁ COM A LICENÇA AGORA — uma linha por entrega aberta, com a chave

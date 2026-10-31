@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { PrismaClient } from '@prisma/client';
-import { getDatabaseUrl } from '../../server/core/config/env';
+import { getDatabaseUrl } from '../../server/infra/config/env';
 import { exigirBancoDeTeste, nomeDoBanco } from './database';
 
 const exec = promisify(execFile);

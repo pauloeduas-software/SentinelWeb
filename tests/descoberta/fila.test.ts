@@ -2,8 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { conectarAgente, esperarPor } from '../helpers/agente';
 import { criarAtivo, criarFabricante, criarModelo, idsDoSeed } from '../helpers/fixtures';
-import { rodarReconciliacao } from '../../server/domain/reconciliation/jobs/reconcile.job';
-import { prisma } from '../../server/core/database/prismaClient';
+import { rodarReconciliacao } from '../../server/modules/reconciliation/jobs/reconcile.job';
+import { prisma } from '../../server/infra/database/prismaClient';
 
 // A FILA NÃO PODE VIRAR RUÍDO — o D97.
 //

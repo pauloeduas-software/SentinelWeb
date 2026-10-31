@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { prisma } from '../../server/core/database/prismaClient';
-import { executarUmaVezPorJanela, inicioDoDia, tomarJanela } from '../../server/core/jobs/claim-window';
+import { prisma } from '../../server/infra/database/prismaClient';
+import { executarUmaVezPorJanela, inicioDoDia, tomarJanela } from '../../server/infra/jobs/claim-window';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 
 // A JANELA DE EXECUÇÃO — o D79 sob teste.

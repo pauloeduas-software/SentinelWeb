@@ -3,7 +3,7 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 import {
   criarAtivo, criarFabricante, criarLicenca, criarModelo, idsDoSeed,
 } from '../helpers/fixtures';
-import { prisma } from '../../server/core/database/prismaClient';
+import { prisma } from '../../server/infra/database/prismaClient';
 
 // INVARIANTE 3 — o tipo de um status em uso não muda (`docs/referencia/invariantes.md`).
 //

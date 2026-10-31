@@ -254,3 +254,117 @@ quem olhar primeiro.
 `bun.lock` novo, para provar que ele basta sozinho — idempotente, sem o `nodemailer` que a
 limpeza do segundo de-escopo tinha tirado do `package.json` voltar por reinstalação. `tsc` nos
 três projetos, `eslint`, build e a suíte inteira verdes na árvore resultante.
+
+## AQ — As pastas levam o nome do que guardam
+
+**Decidido:** `server/core` vira `server/infra`; `server/domain` vira `server/modules`. No front,
+`src/core/api` vira `src/api`; `src/domain/<nome>/<nome>.queries.ts` vira
+`src/queries/<nome>.queries.ts`; os dois `*.store.ts` vão para `src/stores/`;
+`src/domain/shared/*.types.ts` vira `src/types/`; e o que as páginas compartilhavam dentro de
+`src/pages/` — `components/`, `helpers/`, `hooks/` — sobe para `src/components/`, `src/helpers/` e
+`src/hooks/`. A arquitetura não muda: continua `modules → infra` no servidor e
+`pages → queries → api` no front, e o lint continua a recusar o import que sobe a seta.
+
+**Por quê:** `core` não dizia o que havia dentro (infraestrutura), e `domain` dizia a coisa errada
+no front, onde a pasta guardava o acesso à API e não regra de negócio. `src/core/api` eram três
+níveis para dois arquivos; `src/domain/<nome>/`, uma pasta por arquivo; e o que as páginas
+compartilhavam morava dentro de `pages/`, indistinguível de uma página na listagem. A comparação
+foi com o ModuloDefault, o template da organização, com a pergunta do que ficaria "realmente
+melhor": o desenho aproveita de lá os nomes convencionais e descritivos num nível só (`api`,
+`types`, `components`, `hooks`) e **não** a separação por camada do servidor (`routes/` +
+`services/`), porque a fatia vertical por assunto é o que mantém cada módulo inteiro numa pasta.
+
+**O que não se reescreve:** `docs/decisoes/` e `docs/historico/` citam os nomes antigos, como manda
+a regra das pastas; a tradução está em
+[`../referencia/arquitetura.md`](../referencia/arquitetura.md). Nos 292 arquivos movidos os
+imports foram reescritos por resolução (cada import apontado ao arquivo de destino e recalculado
+da posição nova), com `git mv` para o histórico seguir o arquivo.
+
+---
+
+## AS — O Swagger: a API inteira navegável, só fora de produção
+
+**Decidido** (em 2026-10-30, "uma coisa boa é adicionar o Swagger, ele é muito bom"):
+
+- **`/api/docs`** abre a interface do Swagger com todas as rotas, o corpo de cada uma e o cookie de
+  sessão como esquema de segurança. Existe **só fora de produção**: o contrato é a planta da API e
+  em produção não tem leitor. Debaixo de `/api` para o proxy do Vite alcançá-lo
+  (`http://localhost:3000/api/docs` no `bun run dev`).
+- **O corpo é o schema Zod que o controller já valida**, convertido (`z.toJSONSchema`), e não uma
+  segunda descrição. O Fastify não lê o contrato para validar nada: o `transform` do `@fastify/swagger`
+  só reescreve o que o Swagger *mostra*, e quem recusa o corpo inválido continua sendo o `parse` do
+  controller, com o 422 de sempre. Nenhum maestro de rota mudou.
+- **O contrato é uma tabela por rota** (`server/modules/api-docs/helpers/contrato-das-rotas.ts`), na
+  mesma chave do mapa de permissões. `tests/invariantes/contrato-da-api.test.ts` reprova rota nova
+  sem linha (e linha de rota que saiu), então a documentação não envelhece em silêncio.
+- **As rotas do Swagger são públicas fora de produção** (`ROTAS_PUBLICAS` em `server/app.ts`,
+  acrescentadas só quando `!isProduction`); em produção o plugin nem é registrado.
+
+**O que o Swagger não faz, de propósito:** descrever o *corpo da resposta*. O que a API devolve é a
+forma que o Prisma e os `select` produzem, sem schema Zod por trás; descrevê-la exigiria um schema de
+resposta por rota, em mais de cem lugares, para a documentação divergir do código no primeiro `select` novo.
+Lista, status de sucesso e os erros de cada rota (todos `{ error }`) estão lá.
+
+**Por quê:** o ModuloDefault expõe o contrato OpenAPI com a interface do Swagger, e foi a peça que o
+usuário quis trazer. Para quem escreve código (humano ou agente), é a API inteira num lugar só, em
+vez de 14 maestros mais os controllers.
+
+---
+
+## AT — O que veio do ModuloDefault, e o que ficou de fora
+
+**Decidido** (em 2026-10-30, depois de ler o ModuloDefault inteiro — servidor, front, ferramentas e
+repositório — contra este, com o critério do usuário: *coisas simples que fazem diferença, boas
+tecnologias e boas práticas, não mais funcionalidades*):
+
+**Veio:**
+- o `CLAUDE.md`, as skills `migration` e `dominio-novo`, a regra de lint contra cor fixa, o `bun run
+  check` e o E2E com Playwright (a rodada anterior);
+- a **trava do login que recomeça do zero ao vencer** — o contador seguia em 5 e o primeiro erro depois
+  do desbloqueio travava de novo, a cada erro, até alguém acertar (bug);
+- o **`tv` obrigatório** na sessão: a tolerância ao token sem o campo era do dia do deploy e já tinha
+  vencido (8 horas), então virou ramo morto;
+- o **`NODE_ENV` validado** contra `development | production | test` (ausente vale): um erro de
+  digitação desligava em silêncio o cookie `Secure` e a recusa do segredo fraco;
+- testes que faltavam: os atributos do cookie, o 401 idêntico para senha errada e e-mail inexistente,
+  cookie adulterado e token vencido, e o 500 que não vaza a mensagem;
+- a **CI** (`.github/workflows/ci.yml`, a cada push na `main`, com o Postgres na 3002), o
+  `packageManager` do bun, o `forbidOnly` do Playwright, o `.editorconfig` e as linhas do `.gitignore`
+  para a configuração pessoal do Claude Code;
+- o `retry` do TanStack Query que **não repete 4xx** (a recusa chega na hora);
+- a [senha temporária e Minha conta](./acesso.md#ar--a-senha-temporária-e-minha-conta-voltam) (AR) e o
+  [Swagger](#as--o-swagger-a-api-inteira-navegável-só-fora-de-produção) (AS);
+- numa segunda leitura (2026-10-31), o que nenhuma das duas listas tinha: o **erro de tela capturado**
+  (`src/components/ErroDaTela.tsx`; sem ele, um erro de renderização deixava a tela branca, sem menu),
+  o **endereço que não existe voltando para a raiz** (a moldura abria vazia) e o **`no-store` em toda a
+  `/api`** (`server/infra/http/sem-cache.ts`), não só nas rotas de credencial;
+- a pedido, da lista de funcionalidades: o **olho no campo de senha** (`src/components/CampoDeSenha.tsx`),
+  o **título da aba por tela** (`useTituloDaAba`; o nome saiu do cabeçalho, onde repetia o da página) e,
+  do log, os **endereços da API e do Swagger no bloco do back**, no formato do Vite, com os avisos do
+  ambiente logo depois. Ficaram de fora: login só com o nome (não precisa), último acesso, aviso único
+  de servidor fora do ar e o estado da lista na URL (agora não).
+
+**Não veio, e não volta sem decisão nova:**
+- **Problem Details (RFC 9457), caminhos em camelCase sem verbo, `/api/v1` e `{ data, meta }`:** trocariam
+  o `{ error, refs }` em 27 arquivos de teste e 74 rotas sem nenhuma tela ler os campos novos. O
+  vocabulário `checkout`/`checkin`/`retire` é o do Snipe-IT, a referência do sistema. O `/v1` serve a
+  cliente externo que não atualiza junto: o painel vem no mesmo build e o agente fala pelo `/agent-hub`.
+- **O erro por campo (`errors[]`)** contradiz a [Q](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai):
+  o `fields` saiu por não ter leitor. Só volta se os formulários passarem a marcar o campo errado.
+- **O Prettier:** reformataria 291 arquivos e quebraria o `git blame`, num código que já é consistente
+  (aspas simples em 414 de 414 arquivos com import).
+- **release-please, templates de issue e de PR:** o commit é direto na `main`, com `feat:` e `chore:`, e a
+  versão é `0.0.0` e privada.
+- **O shadcn/ui inteiro:** seria reescrever 15 modais, as tabelas e as notificações (que já fazem mais:
+  cartão com link para a recusa).
+- **Spectral:** com o Swagger só de leitura, não há contrato de resposta para ele checar.
+- **Estado da lista na URL, barra de progresso e tema claro:** funcionalidade, e o pedido foi por prática
+  e não por função. (A troca obrigatória no primeiro login, a volta à página depois do login e o título
+  da aba vieram depois, a pedido: [AU](./acesso.md#au--ninguém-escolhe-a-senha-de-outra-pessoa) e a lista abaixo.) O mesmo vale para o diálogo próprio no lugar do `confirm()`.
+- **O bcrypt e o teto de 72 bytes, o cache longo de `/assets` e o banner do servidor:** aqui é argon2id; o
+  `@fastify/static` já manda `max-age=0` com ETag e não há carregamento sob demanda; o banner é aparência.
+- **O Dockerfile**, até haver destino de produção: não há onde rodar, e o do ModuloDefault faz o bundle de
+  outro servidor.
+- **Pendente de decisão, não recusado:** a acessibilidade dos modais (Esc, foco, `role="dialog"`: 15 modais
+  montam o próprio fundo e só 2 têm o papel) e o `htmlFor` dos rótulos. Ficam para a refeita do visual.
+

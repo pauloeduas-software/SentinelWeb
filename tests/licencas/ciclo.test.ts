@@ -3,7 +3,7 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 import {
   cenarioDePosse, criarColaborador, criarLicenca, diaNoBrasil, entregarLicenca,
 } from '../helpers/fixtures';
-import { prisma } from '../../server/core/database/prismaClient';
+import { prisma } from '../../server/infra/database/prismaClient';
 
 // O CICLO DO CONTRATO (AA): encerrar, reabrir, excluir de vez, e o alerta.
 //

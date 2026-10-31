@@ -1,4 +1,4 @@
-import { createLogger } from '../../server/core/logger/logger';
+import { createLogger } from '../../server/infra/logger/logger';
 
 export const logger = createLogger('seed');
 
