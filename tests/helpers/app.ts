@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { buildApp, type OpcoesDaAplicacao } from '../../server/app';
+import type { Cargo } from '../../server/modules/access/helpers/cargo';
 import { COOKIE_SESSAO } from '../../server/modules/auth/helpers/session-cookie.helper';
 import { ADMIN_DE_TESTE } from '../setup/database';
 
@@ -45,12 +46,10 @@ export interface ApiDeTeste extends Cliente {
    * `ADMIN` e alcança tudo, então nenhuma asserção sobre "sem acesso" é possível
    * por ele.
    *
-   * Cria um usuário com senha e o cargo pedido, e entra. Hoje o único cargo é
-   * `ADMIN` (Z), então "sem acesso" não tem como ser provado por aqui: serve
-   * para ter uma SEGUNDA sessão, outra conta além do administrador padrão. A
-   * separação de cargos é decisão a tomar.
+   * Cria um usuário com senha e o cargo pedido, e entra. Sem cargo, é outro
+   * Administrador: uma SEGUNDA sessão além da padrão.
    */
-  comoUsuario(cargo?: 'ADMIN'): Promise<Cliente & { userId: string }>;
+  comoUsuario(cargo?: Cargo): Promise<Cliente & { userId: string }>;
   /**
    * Cadastra uma conta PELA API e a deixa pronta para entrar com `senha` (AU).
    *
@@ -59,7 +58,7 @@ export interface ApiDeTeste extends Cliente {
    * dela —, e a conta sai sem troca pendente. Sem `senha`, a conta fica com a
    * temporária, que volta em `temporaria`.
    */
-  criarConta(dados: { name: string; email: string; role?: 'ADMIN' }, senha?: string): Promise<{ id: string; temporaria: string }>;
+  criarConta(dados: { name: string; email: string; role?: Cargo }, senha?: string): Promise<{ id: string; temporaria: string }>;
   /** A instância montada, para o que o cliente não cobre (WebSocket, `app.hasRoute`). */
   app: FastifyInstance;
   /** O id do administrador logado. */
@@ -174,7 +173,7 @@ export async function criarApi(opcoes: OpcoesDaAplicacao = {}): Promise<ApiDeTes
    * ERA `comoUsuario(permissoes: string[])`, com grupo (D76). O D148 trocou a
    * matriz pelo cargo, e o grupo intermediário desapareceu junto.
    */
-  async function criarConta(dados: { name: string; email: string; role?: 'ADMIN' }, senha?: string) {
+  async function criarConta(dados: { name: string; email: string; role?: Cargo }, senha?: string) {
     const criada = await padrao.post<{ id: string; temporaryPassword: string }>('/api/users', dados);
     if (criada.status !== 201) {
       throw new Error(`criarConta: cadastro falhou (${criada.status}): ${JSON.stringify(criada.body)}`);
@@ -201,7 +200,7 @@ export async function criarApi(opcoes: OpcoesDaAplicacao = {}): Promise<ApiDeTes
     return { id, temporaria };
   }
 
-  async function comoUsuario(cargo: 'ADMIN' = 'ADMIN') {
+  async function comoUsuario(cargo: Cargo = 'ADMIN') {
     // `Date.now()` no sufixo porque o `email` é único, e um arquivo de teste
     // chama isto mais de uma vez.
     const marca = `p${Date.now()}${Math.floor(Math.random() * 1000)}`;

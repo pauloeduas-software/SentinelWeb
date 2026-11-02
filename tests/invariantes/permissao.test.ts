@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
+import { criarAtivo, criarFabricante, criarLicenca, criarModelo, idsDoSeed } from '../helpers/fixtures';
 import { prisma } from '../../server/infra/database/prismaClient';
 import { CARGOS, cargoAlcanca, ehCargo } from '../../server/modules/access/helpers/cargo';
 import Fastify, { type HTTPMethods } from 'fastify';
@@ -28,8 +29,9 @@ import { ADMIN_DE_TESTE } from '../setup/database';
 // nada falha. É o que o boot derruba (D137) — e é o que se prova aqui, sem
 // precisar subir em produção para descobrir.
 //
-// COM UM CARGO SÓ (Z), não há sessão abaixo de ADMIN para levar 403 pela API:
-// a mensagem do 403 é provada direto no `exigirPermissao`.
+// E COM TRÊS CARGOS (AV), a outra metade: o cargo logo abaixo do mínimo de cada
+// rota leva 403 pela API, numa varredura gerada do próprio mapa — rota nova entra
+// sozinha.
 // ═════════════════════════════════════════════════════════════════════════════
 
 let api: ApiDeTeste;
@@ -142,14 +144,84 @@ describe('o mapa de rotas × a tabela do Fastify (D137)', () => {
   });
 });
 
-describe('a hierarquia — um cargo só (Z)', () => {
-  it('ADMIN alcança tudo', () => {
-    for (const cargo of CARGOS) expect(cargoAlcanca('ADMIN', cargo)).toBe(true);
+describe('a hierarquia — Técnico < Supervisor < Administrador (AV)', () => {
+  it('a ordem é a do enum', () => {
+    expect([...CARGOS]).toEqual(['TECNICO', 'SUPERVISOR', 'ADMIN']);
+    expect(ehCargo('INEXISTENTE')).toBe(false);
   });
 
-  it('o único cargo é ADMIN', () => {
-    expect([...CARGOS]).toEqual(['ADMIN']);
-    expect(ehCargo('INEXISTENTE')).toBe(false);
+  it('o maior alcança o menor, e nunca o contrário', () => {
+    for (const cargo of CARGOS) expect(cargoAlcanca('ADMIN', cargo)).toBe(true);
+    expect(cargoAlcanca('SUPERVISOR', 'TECNICO')).toBe(true);
+    expect(cargoAlcanca('SUPERVISOR', 'ADMIN')).toBe(false);
+    expect(cargoAlcanca('TECNICO', 'SUPERVISOR')).toBe(false);
+  });
+});
+
+describe('o cargo abaixo do mínimo leva 403, rota por rota (AV)', () => {
+  // UMA SESSÃO POR CARGO, e cada rota do mapa pedida pelo cargo logo abaixo do
+  // mínimo dela. O guard roda antes do handler, então o id inventado e o corpo
+  // vazio não chegam a ser lidos: o que volta é a recusa do cargo, e nada além.
+  const ID = '00000000-0000-4000-8000-000000000000';
+  const sessoes = new Map<string, Awaited<ReturnType<ApiDeTeste['comoUsuario']>>>();
+
+  beforeAll(async () => {
+    sessoes.set('TECNICO', await api.comoUsuario('TECNICO'));
+    sessoes.set('SUPERVISOR', await api.comoUsuario('SUPERVISOR'));
+  });
+  afterAll(async () => {
+    await prisma.user.deleteMany({ where: { id: { in: [...sessoes.values()].map((s) => s.userId) } } });
+  });
+
+  it('nenhuma rota abre para quem está abaixo do cargo dela', async () => {
+    const abertas: string[] = [];
+    for (const [chave, exigencia] of Object.entries(ROTAS_POR_PERMISSAO)) {
+      if (exigencia === null || exigencia === 'TECNICO') continue;
+      const abaixo = CARGOS[CARGOS.indexOf(exigencia) - 1];
+      const [metodo, ...resto] = chave.split(' ');
+      const url = resto.join(' ').replace(/:[A-Za-z]+/g, ID);
+      const cliente = sessoes.get(abaixo)!;
+      const resposta = metodo === 'GET' ? await cliente.get(url)
+        : metodo === 'POST' ? await cliente.post(url, {})
+        : metodo === 'PUT' ? await cliente.put(url, {})
+        : metodo === 'PATCH' ? await cliente.patch(url, {})
+        : await cliente.delete(url);
+      // A FRASE, e não só o 403: outra recusa (a origem das rotas de credencial,
+      // a troca de senha pendente) também é 403, e esconderia um cargo baixado
+      // por engano.
+      const recusa = (resposta.body as { error?: string } | undefined)?.error ?? '';
+      if (resposta.status !== 403 || !/exige o cargo de/.test(recusa)) {
+        abertas.push(`${chave} (${abaixo}: ${resposta.status} ${recusa})`);
+      }
+    }
+    expect(abertas).toEqual([]);
+  });
+
+  it('o Técnico alcança o que é dele', async () => {
+    const tecnico = sessoes.get('TECNICO')!;
+    for (const url of ['/api/assets', '/api/stock/items', '/api/licenses', '/api/people', '/api/workstations', '/api/endpoints', '/api/categories/options']) {
+      expect((await tecnico.get(url)).status, url).toBe(200);
+    }
+  });
+
+  it('a lixeira, pela listagem, é do Supervisor', async () => {
+    for (const url of ['/api/assets?view=trashed', '/api/people?view=trashed']) {
+      expect((await sessoes.get('TECNICO')!.get(url)).status, url).toBe(403);
+      expect((await sessoes.get('SUPERVISOR')!.get(url)).status, url).toBe(200);
+    }
+  });
+
+  it('desativar vai pela edição, e só o Supervisor desativa', async () => {
+    const tecnico = sessoes.get('TECNICO')!;
+    const supervisor = sessoes.get('SUPERVISOR')!;
+    const pessoa = await api.post<{ id: string }>('/api/people', { name: 'Quem Sai' });
+    expect(pessoa.status).toBe(201);
+
+    const recusada = await tecnico.put<{ error: string }>(`/api/people/${pessoa.body.id}`, { isActive: false });
+    expect(recusada.status).toBe(403);
+    expect(recusada.body.error).toMatch(/Supervisor ou acima/);
+    expect((await tecnico.put(`/api/people/${pessoa.body.id}`, { name: 'Quem Fica', email: null, notes: null })).status).toBe(200);
+    expect((await supervisor.put(`/api/people/${pessoa.body.id}`, { isActive: false })).status).toBe(200);
   });
 });
 
@@ -211,15 +283,15 @@ describe('nunca sem administrador (D148)', () => {
 });
 
 describe('o cargo no cadastro', () => {
-  it('sem cargo, nasce Administrador — o único (Z) — e entra com a temporária', async () => {
-    const email = 'nasce.admin@teste.local';
+  it('sem cargo, nasce Técnico — o de menor acesso (AV) — e entra com a temporária', async () => {
+    const email = 'nasce.tecnico@teste.local';
     const resposta = await api.post<{ id: string; temporaryPassword: string }>('/api/users', {
-      name: 'Nasce Administrador', email,
+      name: 'Nasce Técnico', email,
     });
     expect(resposta.status).toBe(201);
 
     const linha = await prisma.user.findUniqueOrThrow({ where: { id: resposta.body.id }, select: { role: true } });
-    expect(linha.role).toBe('ADMIN');
+    expect(linha.role).toBe('TECNICO');
     expect((await api.anonimo.post('/api/auth/login', { email, password: resposta.body.temporaryPassword })).status)
       .toBe(200);
   });
@@ -261,12 +333,49 @@ describe('o comando que cria administrador (AP)', () => {
 });
 
 describe('a porta fechada por padrão', () => {
-  it('o 403 NOMEIA o cargo que falta', () => {
-    // Sem sessão abaixo de ADMIN para pedir pela API (Z), a recusa é provada
-    // na função que o guard chama: uma requisição sem cargo numa exigência de
-    // ADMIN.
+  it('o 403 NOMEIA o cargo que falta', async () => {
     const semCargo = {} as FastifyRequest;
-    expect(() => exigirPermissao(semCargo, 'ADMIN')).toThrow(/cargo de Administrador/);
+    expect(() => exigirPermissao(semCargo, 'ADMIN')).toThrow(/cargo de Administrador\./);
+
+    const supervisor = await api.comoUsuario('SUPERVISOR');
+    const resposta = await supervisor.get<{ error: string }>('/api/users');
+    expect(resposta.status).toBe(403);
+    expect(resposta.body.error).toMatch(/cargo de Administrador\./);
+    await prisma.user.delete({ where: { id: supervisor.userId } });
+  });
+
+  it('o custo, do computador e da licença, só sai para o Supervisor (D77)', async () => {
+    const seed = await idsDoSeed();
+    const modelId = await criarModelo(api, {
+      categoriaId: seed.categoriaId, fabricanteId: await criarFabricante(api, 'Fabricante do Custo'),
+    });
+    const tecnico = await api.comoUsuario('TECNICO');
+    const supervisor = await api.comoUsuario('SUPERVISOR');
+
+    // O Técnico cadastra, e o valor que ele manda é descartado: quem não vê o
+    // custo não o escreve.
+    const doTecnico = await tecnico.post<{ id: string }>('/api/assets', {
+      statusId: seed.statusDeployableId, modelId, purchaseCost: '1.00',
+    });
+    expect(doTecnico.status).toBe(201);
+    const gravado = await prisma.asset.findUniqueOrThrow({ where: { id: doTecnico.body.id }, select: { purchaseCost: true } });
+    expect(gravado.purchaseCost).toBeNull();
+
+    const ativo = await criarAtivo(api, { statusId: seed.statusDeployableId, modelId });
+    await prisma.asset.update({ where: { id: ativo.id }, data: { purchaseCost: 4200 } });
+    expect((await tecnico.get<Record<string, unknown>>(`/api/assets/${ativo.id}`)).body).not.toHaveProperty('purchaseCost');
+    expect(Number((await supervisor.get<{ purchaseCost: unknown }>(`/api/assets/${ativo.id}`)).body.purchaseCost)).toBe(4200);
+
+    // A licença também é dinheiro: a listagem e o detalhe não leem o custo para o Técnico.
+    const licenca = await criarLicenca(api, { name: 'Licença do Custo', categoryId: seed.categoriaLicencaId, seatsTotal: 2 });
+    await prisma.license.update({ where: { id: licenca.id }, data: { purchaseCost: 900 } });
+    expect((await tecnico.get<Record<string, unknown>>(`/api/licenses/${licenca.id}`)).body).not.toHaveProperty('purchaseCost');
+    const listaDoTecnico = await tecnico.get<{ rows: Record<string, unknown>[] }>('/api/licenses');
+    expect(listaDoTecnico.body.rows.length).toBeGreaterThan(0);
+    for (const linha of listaDoTecnico.body.rows) expect(linha).not.toHaveProperty('purchaseCost');
+    expect(Number((await supervisor.get<{ purchaseCost: unknown }>(`/api/licenses/${licenca.id}`)).body.purchaseCost)).toBe(900);
+
+    await prisma.user.deleteMany({ where: { id: { in: [tecnico.userId, supervisor.userId] } } });
   });
 
   it('o cargo é relido a cada requisição: desativado por fora, a sessão cai', async () => {

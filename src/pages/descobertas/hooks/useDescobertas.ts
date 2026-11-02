@@ -38,12 +38,12 @@ export function useDescobertas() {
   const vincularEEntregar = useVincularEEntregar();
   const salvarConfiguracao = useSalvarConfiguracaoDaDescoberta();
 
-  // RECONCILIAR AGORA: só `ADMIN` vê o botão (a rota recusa os outros com 403;
+  // RECONCILIAR AGORA: só `SUPERVISOR` vê o botão (a rota recusa os outros com 403;
   // aqui é interface, não segurança). O placar da última rodada fica na tela
   // ao lado do botão — "3 sugestões, 1 vínculo" é a resposta à pergunta de
   // quem clicou, e um `alert` a faria sumir no fechar.
   const reconciliar = useReconciliarAgora();
-  const podeReconciliar = usePode('ADMIN');
+  const podeReconciliar = usePode('SUPERVISOR');
   const [ultimaVarredura, setUltimaVarredura] = useState<ResultadoDaVarredura | null>(null);
 
   /**
@@ -82,7 +82,7 @@ export function useDescobertas() {
       || vincular.isPending || vincularEEntregar.isPending || reconciliar.isPending,
 
     podeReconciliar,
-    // Mudar o modo e os prazos (`PUT /api/settings/discovery`) também é `ADMIN`.
+    // Mudar o modo e os prazos (`PUT /api/settings/discovery`) também é `SUPERVISOR`.
     // Mesmo cargo do reconciliar, nome próprio para quem lê a página não ter
     // que saber disso.
     podeConfigurar: podeReconciliar,

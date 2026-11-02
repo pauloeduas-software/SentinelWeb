@@ -1,6 +1,7 @@
 import {
   Armchair, Boxes, Contact, Database, Radar, ScrollText, SlidersHorizontal, Users, type LucideIcon,
 } from 'lucide-react';
+import type { Cargo } from '../types/user.types';
 
 // O MENU, declarado em um lugar só — a barra lateral desenha, o cabeçalho lê
 // para descobrir o nome da tela atual.
@@ -44,7 +45,7 @@ interface ItemDeMenu {
    * O campo continua opcional porque a próxima tela desse tipo não deve
    * precisar de mudança de tipo para existir.
    */
-  cargo?: 'ADMIN';
+  cargo?: Cargo;
 }
 
 interface GrupoDeMenu {
@@ -72,10 +73,10 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
       // A raiz passou a redirecionar para cá (src/App.tsx), então nenhum item
       // aponta mais para `/`. Chamava-se Ativos, e virou o nome da seção: o que
       // a tela lista são computadores — ativo é computador (decisão I).
-      { to: '/computadores', label: 'Computadores', icon: Database, cargo: 'ADMIN' },
+      { to: '/computadores', label: 'Computadores', icon: Database, cargo: 'TECNICO' },
       // Logo depois: é a mesma operação vista do outro lado — o computador
       // está na mesa, e a mesa é de quem a ocupa (docs/referencia/modelo-de-posse.md).
-      { to: '/postos', label: 'Postos', icon: Armchair, cargo: 'ADMIN' },
+      { to: '/postos', label: 'Postos', icon: Armchair, cargo: 'TECNICO' },
     ],
   },
   {
@@ -84,10 +85,10 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
     titulo: 'Recursos',
     itens: [
       // O que sai do almoxarifado costuma ir para a mesa (docs/decisoes/estoque.md).
-      { to: '/estoque', label: 'Estoque', icon: Boxes, cargo: 'ADMIN' },
+      { to: '/estoque', label: 'Estoque', icon: Boxes, cargo: 'TECNICO' },
       // Licença também é posse: cada entrega é uma linha, a um colaborador ou a
       // um computador (AA).
-      { to: '/licencas', label: 'Licenças', icon: ScrollText, cargo: 'ADMIN' },
+      { to: '/licencas', label: 'Licenças', icon: ScrollText, cargo: 'TECNICO' },
     ],
   },
   {
@@ -95,7 +96,7 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
     itens: [
       // O que o agente VÊ e o cadastro não sabe (F7). Perto do inventário
       // porque é dele que a tela fala, não do RMM.
-      { to: '/descobertas', label: 'Descobertas', icon: Radar, cargo: 'ADMIN' },
+      { to: '/descobertas', label: 'Descobertas', icon: Radar, cargo: 'TECNICO' },
     ],
   },
   {
@@ -104,13 +105,13 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
     // de login e colaborador são coisas diferentes (U).
     titulo: 'Pessoas',
     itens: [
-      { to: '/colaboradores', label: 'Colaboradores', icon: Contact, cargo: 'ADMIN' },
+      { to: '/colaboradores', label: 'Colaboradores', icon: Contact, cargo: 'TECNICO' },
     ],
   },
   {
     titulo: 'Sistema',
     itens: [
-      { to: '/configuracoes', label: 'Configurações', icon: SlidersHorizontal, cargo: 'ADMIN' },
+      { to: '/configuracoes', label: 'Configurações', icon: SlidersHorizontal, cargo: 'SUPERVISOR' },
     ],
   },
   {

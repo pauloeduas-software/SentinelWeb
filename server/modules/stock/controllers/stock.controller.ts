@@ -1,5 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { parseListQuery } from '../../../infra/http/list-query';
+import { exigirPermissao } from '../../access/helpers/require-permission';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import {
@@ -64,6 +65,9 @@ export const stockController = {
   async update(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     const data = updateStockItemSchema.parse(request.body ?? {});
+    // Desativar e Ativar vão por esta rota, que é do Técnico: o mapa não os
+    // separa da edição, então a conferência é aqui (AV).
+    if (data.isActive !== undefined) exigirPermissao(request, 'SUPERVISOR');
     return updateStockItem(id, data, atorDaRequisicao(request));
   },
 

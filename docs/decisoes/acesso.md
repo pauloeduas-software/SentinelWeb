@@ -724,6 +724,8 @@ direto no `exigirPermissao`, e o que o `ADMIN` vê continua provado pela API.
   ([D164](./escopo.md#d164--o-default-da-coluna-tranca-o-sistema-e-a-migração-precisa-do-backfill));
 - **o que a tela de Usuários precisa** para escolher o cargo, e quem pode mudar o de quem.
 
+**Resolvido** pela [AV](#av--três-cargos-técnico-supervisor-e-administrador).
+
 ---
 
 ## AB — A auditoria volta: quem fez, só no banco
@@ -1009,4 +1011,61 @@ desnecessário, ela já foi validada no login"):
 
 **Por quê:** é o argumento da própria AR — uma senha escolhida por outra pessoa não é mais segredo de
 quem a usa — aplicado também ao cadastro e à edição, que o deixavam aberto.
+
+---
+
+## AV — Três cargos: Técnico, Supervisor e Administrador
+
+**Decidido** (em 2026-11-02, depois de comparar GLPI, Snipe-IT e Lansweeper: "admin pode fazer tudo,
+supervisor vai ter acesso a quase tudo menos a coisas como página de gestão de usuário, e usuário vai
+usar o sistema mas sem acesso a página de configuração"; as perguntas abertas o usuário deixou para a
+recomendação):
+
+O enum `Cargo` passa a ser `TECNICO < SUPERVISOR < ADMIN`, nessa ordem, e o `@default` da coluna é
+`TECNICO`. O mapa de rotas declara o mínimo de cada rota, e o resto é o `cargoAlcanca` do D148.
+
+| | Técnico | Supervisor | Administrador |
+|---|:-:|:-:|:-:|
+| Ver Computadores, Postos, Estoque, Licenças, Colaboradores e Descobertas | ✅ | ✅ | ✅ |
+| Entregar e devolver (computador, estoque, licença), ocupar posto, trocar a chave da entrega | ✅ | ✅ | ✅ |
+| Cadastrar e editar computador, item de estoque e colaborador | ✅ | ✅ | ✅ |
+| Vincular a máquina descoberta, aceitar ou recusar sugestão, marcar revisão | ✅ | ✅ | ✅ |
+| Excluir, desativar, lixeira, baixa, encerrar e reabrir licença | — | ✅ | ✅ |
+| Cadastrar e editar posto e licença | — | ✅ | ✅ |
+| Ver o custo ([D77](#d77--dado-sensível-é-filtrado-no-select-não-mascarado-na-resposta)) | — | ✅ | ✅ |
+| Comando remoto, Reconciliar agora, configuração da descoberta | — | ✅ | ✅ |
+| Configurações (o catálogo) | — | ✅ | ✅ |
+| Usuários | — | — | ✅ |
+
+- **Ler o catálogo é do Técnico**, escrever é do Supervisor: o formulário do Técnico escolhe
+  categoria, modelo e localização (`GET /api/<catálogo>/options`). O colaborador é a exceção — o
+  Técnico o cadastra e edita, porque é operação de toda semana ([AH](#ah--o-menu-por-assunto-o-colaborador-ganha-página-própria-e-ativos-vira-computadores)).
+- **Desativar vai pelo `PUT` da edição**, que no colaborador e no item de estoque é do Técnico. O
+  mapa não separa os dois, então o controller confere à parte: `isActive` no corpo exige Supervisor.
+- **O custo que o Técnico manda é descartado** (`custoSoDoSupervisor`): ele cadastra o computador
+  sem o valor, e a edição dele não apaga o que não vê.
+- **Ver a lixeira também é do Supervisor.** A listagem é do Técnico, e o `?view=trashed` dela o
+  controller recusa à parte, como o `isActive`.
+- **O custo da licença segue o do computador:** a listagem e o detalhe não leem a coluna para quem não
+  é Supervisor (`licenseSelect`).
+- **A tela esconde o que o cargo não alcança**: o item do menu, a URL digitada (volta para a raiz),
+  os botões e a aba Lixeira. O 403 diz o cargo que falta, com "ou acima" quando não é o do topo.
+- **O formulário de Usuários ganha o campo Cargo** ([D162](./escopo.md#d162--minha-conta-sai-e-o-cargo-vira-campo-do-formulário-de-usuário)),
+  com a frase do que cada um alcança. O comando de terminal ([AP](#ap--o-administrador-nasce-por-comando-como-no-snipe-it))
+  continua criando Administrador.
+- **Rebaixar a si mesmo não volta como regra:** a rede do último administrador já impede o sistema de
+  ficar sem quem administre, e um administrador entre outros pode deixar o cargo.
+
+**Supera:** a [Z](#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir), e responde a lista "A decidir" dela.
+**Mantém:** o mapa conferido no boot (D137), a releitura do cargo a cada requisição — rebaixado
+perde o acesso na requisição seguinte —, a rede do último administrador e o resto do [W](#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo).
+
+**Por quê:** os três sistemas chegam às mesmas três camadas — quem opera, quem decide e quem
+administra o acesso. O GLPI separa Técnico, Supervisor e Admin; o Snipe-IT dá entregar e devolver
+como permissão separada de excluir; o Lansweeper separa "Manage assets" de "Administrator". Contas
+ficam só com o topo porque é o ponto mais sensível: o Snipe-IT teve CVEs de quem editava usuários
+promovendo a si mesmo. O cargo padrão é o de menor acesso porque quem precisa de mais ganha de quem
+pode dar, e o contrário — nascer com acesso demais — não se nota. O Técnico cadastra porque, numa
+equipe pequena, quem recebe a máquina é quem a cadastra; posto e licença ficam acima dele por serem
+estrutura e contrato.
 

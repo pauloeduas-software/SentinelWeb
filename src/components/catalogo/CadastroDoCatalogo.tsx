@@ -7,6 +7,7 @@ import type { CatalogUiSpec } from './catalog-ui.types';
 import { useCatalog } from './useCatalog';
 import EstadoDaLista from '../EstadoDaLista';
 import ListToolbar from '../ListToolbar';
+import { usePode } from '../../stores/auth.store';
 
 interface CadastroDoCatalogoProps {
   /** O nome da tela, no cabeçalho. */
@@ -30,6 +31,14 @@ export default function CadastroDoCatalogo({ titulo, icone: Icone, specs, caminh
     openCreate, openEdit, closeModal, handleSubmit, handleDelete, handleRestore,
     openAcao,
   } = useCatalog(specs);
+
+  // DESATIVAR, EXCLUIR E A LIXEIRA são `SUPERVISOR` no servidor (AV). Configurações
+  // inteira já é dele; o que muda é Colaboradores, que o Técnico cadastra e edita.
+  // Sem o cargo, a lixeira nem aparece: ver o que foi excluído sem poder restaurar
+  // seria uma vista de botões que faltam.
+  const podeDecidir = usePode('SUPERVISOR');
+  const comLixeira = spec.lixeira === true && podeDecidir;
+  const acoes = podeDecidir ? spec.acoes : spec.acoes?.filter((acao) => !acao.alterna);
 
   // A FICHA não abre modal: é uma tela (`/colaboradores/:id`), para poder ser
   // aberta direto, colada de um chamado ou recarregada.
@@ -77,7 +86,7 @@ export default function CadastroDoCatalogo({ titulo, icone: Icone, specs, caminh
       )}
 
       <ListToolbar
-        {...(spec.lixeira ? { view, onViewChange: changeView } : {})}
+        {...(comLixeira ? { view, onViewChange: changeView } : {})}
         search={search}
         onSearchChange={changeSearch}
         placeholder={spec.placeholderBusca}
@@ -93,11 +102,11 @@ export default function CadastroDoCatalogo({ titulo, icone: Icone, specs, caminh
       <CatalogTable
         colunas={spec.colunas}
         registros={registros}
-        acoes={spec.acoes}
+        acoes={acoes}
         onEdit={openEdit}
-        onDelete={handleDelete}
+        onDelete={podeDecidir ? handleDelete : undefined}
         onAcao={abrirAcao}
-        onRestore={spec.lixeira && view === 'trashed' ? handleRestore : undefined}
+        onRestore={comLixeira && view === 'trashed' ? handleRestore : undefined}
         vazio={
           <div className="flex flex-col items-center justify-center">
             <Icone size={24} className="mb-4 opacity-50" />

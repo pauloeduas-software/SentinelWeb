@@ -25,9 +25,9 @@ interface ItemDetalheModalProps {
   onClose: () => void;
   onEntregar: (item: ItemDeEstoque) => void;
   onEditar: (item: ItemDeEstoque) => void;
-  /** Desativar e ativar — o mesmo botão, pelo estado do item. */
-  onAlternarAtivo: (item: ItemDeEstoque) => void;
-  /** Excluir é `ADMIN` no servidor. Ausente, o botão some — quem decide é a página. */
+  /** Desativar e ativar — o mesmo botão, pelo estado do item. `SUPERVISOR` no servidor (AV); ausente, o botão some. */
+  onAlternarAtivo?: (item: ItemDeEstoque) => void;
+  /** Excluir é `SUPERVISOR` no servidor. Ausente, o botão some — quem decide é a página. */
   onExcluir?: (item: ItemDeEstoque) => void;
   /** `checkinAt` é o dia, 'AAAA-MM-DD'. Resolve `true` quando a devolução deu certo. */
   onDevolver: (entregaId: string, qty: number, checkinAt: string) => Promise<boolean>;
@@ -146,12 +146,14 @@ export default function ItemDetalheModal({
                 />
               )}
               <Acao icone={Edit2} rotulo="Editar" onClick={() => onEditar(atual)} />
-              <Acao
-                icone={atual.isActive ? PowerOff : Power}
-                rotulo={atual.isActive ? 'Desativar' : 'Ativar'}
-                onClick={() => onAlternarAtivo(atual)}
-                disabled={ocupado}
-              />
+              {onAlternarAtivo && (
+                <Acao
+                  icone={atual.isActive ? PowerOff : Power}
+                  rotulo={atual.isActive ? 'Desativar' : 'Ativar'}
+                  onClick={() => onAlternarAtivo(atual)}
+                  disabled={ocupado}
+                />
+              )}
               {onExcluir && (
                 <Acao
                   icone={Trash2}

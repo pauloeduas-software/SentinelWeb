@@ -226,12 +226,28 @@ com uma função pura afirmada por teste garantindo que produção nunca sobe se
 
 ## A autorização: cargo, não permissão
 
-**Um cargo só, hoje: `ADMIN`** ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)), e todo usuário é Administrador. **A separação de
-cargos é decisão a tomar** — ver *O que ainda não existe*, abaixo. A validação de `ADMIN` é a
-do D148: os cargos têm ordem, cada rota declara o cargo MÍNIMO que exige em
-`route-permissions.ts`, e a pergunta de toda requisição é só "a sessão alcança esse mínimo?" —
-aritmética sobre a posição no array, não uma lista de cargos aceitos por rota. Hoje toda rota
-autenticada exige `ADMIN`.
+**Três cargos, em ordem: `TECNICO < SUPERVISOR < ADMIN`** ([AV](../decisoes/acesso.md#av--três-cargos-técnico-supervisor-e-administrador)). Os cargos têm ordem (D148),
+cada rota declara o cargo MÍNIMO que exige em `route-permissions.ts`, e a pergunta de toda
+requisição é só "a sessão alcança esse mínimo?" — aritmética sobre a posição no array, não uma
+lista de cargos aceitos por rota. A conta nova nasce `TECNICO`.
+
+| | Técnico | Supervisor | Administrador |
+|---|:-:|:-:|:-:|
+| Ler tudo da operação, e o catálogo (os formulários escolhem categoria, modelo, localização) | ✅ | ✅ | ✅ |
+| Entregar, devolver, ocupar posto, trocar a chave da entrega | ✅ | ✅ | ✅ |
+| Cadastrar e editar computador, item de estoque e colaborador | ✅ | ✅ | ✅ |
+| Vincular máquina, aceitar ou recusar sugestão, marcar revisão | ✅ | ✅ | ✅ |
+| Excluir, desativar, lixeira, baixa, encerrar e reabrir licença | — | ✅ | ✅ |
+| Cadastrar e editar posto, licença e o catálogo (Configurações) | — | ✅ | ✅ |
+| Ver o custo, comando remoto, Reconciliar agora, configurar a descoberta | — | ✅ | ✅ |
+| Usuários | — | — | ✅ |
+
+**Desativar vai pelo `PUT` da edição** (colaborador e item de estoque), que é do Técnico: o mapa
+não separa os dois, e o controller exige Supervisor quando o corpo traz `isActive`. A lixeira
+(`?view=trashed` em computadores e colaboradores) é recusada do mesmo jeito. O 403 nomeia o
+cargo que falta: "Esta ação exige o cargo de Supervisor ou acima." A tela esconde o que o cargo
+não alcança — item do menu, URL digitada (volta para a raiz, `SoCargo` em `App.tsx`), botões e a
+aba Lixeira —, e isso é interface: quem autoriza é o servidor.
 
 **Usuário é quem opera o sistema; colaborador é quem recebe equipamento**
 ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)).
@@ -259,15 +275,17 @@ na requisição seguinte, porque a releitura não encontra mais a conta. Nada ap
 a auditoria guarda quem fez POR ESCRITO, nome e e-mail, sem FK ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)) — a
 exclusão grava o retrato da conta, e as linhas antigas dela continuam dizendo quem foi.
 
-**O custo de compra do ativo é do `ADMIN`** ([D77](../decisoes/acesso.md#d77--dado-sensível-é-filtrado-no-select-não-mascarado-na-resposta)),
-e são três portas, todas em `asset/helpers/asset-select.helper.ts` ou ao lado dele. Com um
-cargo só, todo mundo vê o custo:
+**O custo de compra do ativo é do `SUPERVISOR`** ([D77](../decisoes/acesso.md#d77--dado-sensível-é-filtrado-no-select-não-mascarado-na-resposta)),
+e são três portas, todas em `asset/helpers/asset-select.helper.ts` ou ao lado dele:
 
-- **a leitura** (listagem, detalhe, ficha do posto) não lê a coluna para quem não é `ADMIN`;
+- **a leitura** (listagem, detalhe, ficha do posto) não lê a coluna para quem não é `SUPERVISOR`;
 - **a resposta das escritas** (criar, editar, entregar, devolver, dar baixa, restaurar) não leva
   o custo para cargo nenhum (`ASSET_WRITE_SELECT`);
-- **a escrita de quem não é `ADMIN`** descarta o custo que chegar (`custoSoDoAdmin`): o
+- **a escrita de quem não é `SUPERVISOR`** descarta o custo que chegar (`custoSoDoSupervisor`): o
   formulário não tem o campo, e um `purchaseCost: ''` apagaria o valor que não se vê;
+
+O custo da licença segue a mesma regra na leitura: `licenseSelect(podeVerCusto)` tira a coluna da
+listagem e do detalhe para quem não é `SUPERVISOR`, e as escritas da licença já são dele.
 
 A quarta porta era o diff do histórico do ativo, e ela fechou: o histórico é só movimentação, e a
 edição do custo fica na auditoria, que tela nenhuma lê ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)).
@@ -276,8 +294,7 @@ A busca do leitor (`/api/search`) devolve só o que identifica o ativo, para tod
 
 **O login é o e-mail, e ninguém escolhe a senha de outra pessoa** ([R](../decisoes/acesso.md#r--a-senha-nasce-no-cadastro-e-o-login-é-o-e-mail), [AU](../decisoes/acesso.md#au--ninguém-escolhe-a-senha-de-outra-pessoa)).
 Não há nome de usuário à parte nem ação separada para dar acesso: o formulário de Usuários
-pede nome e e-mail, e **nenhuma senha**. O campo Cargo, que o [D162](../decisoes/escopo.md#d162--minha-conta-sai-e-o-cargo-vira-campo-do-formulário-de-usuário)
-pôs no formulário, saiu com o [Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir): não há o que escolher.
+pede nome, e-mail e cargo ([D162](../decisoes/escopo.md#d162--minha-conta-sai-e-o-cargo-vira-campo-do-formulário-de-usuário), [AV](../decisoes/acesso.md#av--três-cargos-técnico-supervisor-e-administrador)), e **nenhuma senha**.
 
 A regra é do servidor, nas duas rotas do formulário — ambas `ADMIN`:
 
@@ -385,7 +402,6 @@ terceiro — encontra ali o que já foi tentado e por que saiu.
 |---|---|
 | **Revogar uma sessão específica** | Exige tabela de sessão: saber QUAIS sessões existem para derrubar uma. O `tokenVersion` derruba **todas** de uma pessoa de uma vez, e é com ele que trocar a senha corta o acesso. "Desconectar este aparelho" continua sem existir |
 | **Logout derrubar as outras sessões** | Hoje `logout` só apaga o cookie local. Quem precisa derrubar tudo troca a própria senha em Minha conta, ou o administrador gera uma temporária; os dois incrementam o `tokenVersion` |
-| **A separação de cargos** — **decisão a tomar** | Hoje há um cargo só, `ADMIN` ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)). Falta decidir quais cargos existem, o que cada um alcança, qual nasce por padrão e como a tela de Usuários escolhe o cargo. A validação de `ADMIN` está de pé (`CARGOS` em `access/helpers/cargo.ts`, o mapa de `route-permissions.ts`, o `usePode` da tela); a separação se constrói do zero |
 | **Política de senha no `.env`** | O mínimo de 12 caracteres é constante em `auth.schema.ts`. Não há demanda para torná-lo configurável |
 | **Segundo fator, SSO, diretório, token pessoal de API** | Existiram e saíram — [D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)/[D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token). Voltar é decisão nova, não bug |
 | **Trilha de tentativas de login** (`AuthEvent`) | Saiu com o D148, por não ter leitor que sobrevivesse ao corte. `failedLoginCount`/`lockedUntil` continuam protegendo a conta; o que falta é um registro consultável de *quando* |
@@ -427,7 +443,7 @@ server/modules/user/                      quem opera o sistema — onde a senha 
 
 server/modules/access/                    a OUTRA metade da sessão: o que ela alcança
 ├── access.types.ts
-├── helpers/cargo.ts                     os cargos, com ordem (D148) — hoje só ADMIN (Z)
+├── helpers/cargo.ts                     os cargos, com ordem (D148): TECNICO < SUPERVISOR < ADMIN (AV)
 ├── helpers/route-permissions.ts         método + rota → cargo mínimo (o mapa que o boot confere)
 ├── helpers/require-permission.ts        temCargo() e exigirPermissao() (403 que nomeia o cargo)
 ├── helpers/ultimo-administrador.ts      a invariante 17 — nunca sem administrador

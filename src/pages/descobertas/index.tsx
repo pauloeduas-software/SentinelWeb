@@ -53,7 +53,7 @@ export default function DescobertasPage() {
           </p>
         </div>
 
-        {/* RECONCILIAR AGORA (ADMIN). A varredura roda de hora em hora e toma
+        {/* RECONCILIAR AGORA (SUPERVISOR). A varredura roda de hora em hora e toma
             a janela da hora; quem cadastrou o ativo e quer ver a proposta nascer
             não deveria esperar a hora virar. O placar fica ao lado do botão. */}
         {podeReconciliar && (

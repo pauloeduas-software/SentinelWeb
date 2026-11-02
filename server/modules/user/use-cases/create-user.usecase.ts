@@ -13,7 +13,7 @@ import type { Cargo } from '../../access/helpers/cargo';
 interface CreateUserData {
   name: string;
   email: string;
-  /** O cargo (D148). Ausente nasce `ADMIN`, pelo `@default` do schema. */
+  /** O cargo (D148). Ausente nasce `TECNICO`, pelo `@default` do schema. */
   role?: Cargo;
   /**
    * Só o comando de terminal (AP) manda: ali quem roda é a própria pessoa, que
@@ -43,8 +43,8 @@ export async function createUser(data: CreateUserData, ator: Ator) {
       data: {
         name: data.name,
         email: data.email,
-        // Ausente cai no `@default(ADMIN)` do schema — e é por isso que aqui
-        // não há `?? 'ADMIN'`: o padrão mora num lugar só.
+        // Ausente cai no `@default(TECNICO)` do schema — e é por isso que aqui
+        // não há `?? 'TECNICO'`: o padrão mora num lugar só.
         role: data.role,
         passwordHash,
         mustChangePassword: temporaryPassword !== undefined,

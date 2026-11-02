@@ -71,18 +71,18 @@ export const ASSET_SELECT = {
 // POR QUE UMA FUNÇÃO E NÃO DOIS `const`: os dois selects têm que ser o MESMO
 // menos uma coluna. Dois literais lado a lado divergem na primeira coluna
 // acrescentada — e a que divergiria é a versão restrita, que ninguém olha no
-// dia a dia porque o administrador vê tudo.
+// dia a dia porque o supervisor vê tudo.
 //
 // AS ESCRITAS devolvem o ativo SEM custo, para qualquer cargo
 // (`ASSET_WRITE_SELECT`). Criar, editar, entregar, devolver, dar baixa e
-// restaurar respondem com o ativo atualizado, e quem não é `ADMIN` chamaria
+// restaurar respondem com o ativo atualizado, e quem não é `SUPERVISOR` chamaria
 // quase todas: com o select cheio, o custo que a leitura esconde sairia pela
 // resposta da escrita. Enfiar a sessão em cada use-case de escrita espalharia autorização
 // por toda a camada de posse — e a tela não usa o custo da resposta de escrita
 // nenhuma. O custo sai por LEITURA, e é a leitura que filtra.
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** As colunas que só o `ADMIN` vê (D77). Uma lista, num lugar só. */
+/** As colunas que só o `SUPERVISOR` (ou acima) vê (D77). Uma lista, num lugar só. */
 const COLUNAS_DE_CUSTO = ['purchaseCost'] as const;
 
 /**
@@ -113,13 +113,13 @@ export const CAMPOS_AUDITADOS_DO_ATIVO = [
 export const ASSET_WRITE_SELECT = semCusto(ASSET_SELECT);
 
 /**
- * O custo que chega numa ESCRITA de quem não é `ADMIN` é descartado.
+ * O custo que chega numa ESCRITA de quem não é `SUPERVISOR` é descartado.
  *
- * O formulário de quem não é `ADMIN` não tem o campo, porque não vê o valor.
+ * O formulário de quem não é `SUPERVISOR` não tem o campo, porque não vê o valor.
  * Aceitar o que chegasse deixaria um `purchaseCost: ''` (o campo vazio vira
- * `null`) apagar o custo que só o administrador enxerga.
+ * `null`) apagar o custo que só o supervisor enxerga.
  */
-export function custoSoDoAdmin<T extends { purchaseCost?: string | null }>(
+export function custoSoDoSupervisor<T extends { purchaseCost?: string | null }>(
   data: T,
   podeVerCusto: boolean,
 ): T {
@@ -135,7 +135,7 @@ export function assetSelect(podeVerCusto: boolean) {
  * O select do DETALHE, conforme a sessão enxergue custo ou não.
  *
  * É o select compartilhado (`ASSET_SELECT`) — menos a coluna de custo, quando a
- * sessão não é `ADMIN` (D77).
+ * sessão não é `SUPERVISOR` (D77).
  */
 export function assetDetailSelect(podeVerCusto: boolean) {
   if (podeVerCusto) return ASSET_SELECT;

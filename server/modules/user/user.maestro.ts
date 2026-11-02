@@ -16,7 +16,7 @@ const ESCRITA_COM_SENHA: RouteShorthandOptions = { ...WRITE_RATE_LIMIT, preValid
 
 export class UserMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
-    // QUEM OPERA O SISTEMA — hoje, só Administrador (Z). Quem recebe
+    // QUEM OPERA O SISTEMA — Técnico, Supervisor ou Administrador (AV). Quem recebe
     // equipamento é colaborador, catálogo (`/api/people`).
     server.get('/api/users', userController.list);
     server.post('/api/users', ESCRITA_COM_SENHA, userController.create);

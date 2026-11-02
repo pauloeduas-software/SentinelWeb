@@ -21,7 +21,7 @@ export default function PostosPage() {
     postoId, postoAberto, openDetalhe, closeDetalhe, detalhe, detalhePendente, detalheErro, ocupantes,
     devolvendo, handleDevolver,
   } = usePostos();
-  const podeCriar = usePode('ADMIN');
+  const podeCriar = usePode('SUPERVISOR');
 
   return (
     <div className="motion-safe:animate-fade-in h-[calc(100vh-4rem)] flex flex-col pb-6">
@@ -40,7 +40,7 @@ export default function PostosPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {/* O cadastro do posto é `ADMIN`. */}
+          {/* O cadastro do posto é `SUPERVISOR`. */}
           {podeCriar && (
             <button
               onClick={openCreate}
@@ -99,7 +99,7 @@ export default function PostosPage() {
             ) : (
               <>
                 <span>Nenhum posto de trabalho cadastrado.</span>
-                {/* "O botão acima" só existe para o ADMIN (`podeCriar`): para
+                {/* "O botão acima" só existe para o SUPERVISOR (`podeCriar`): para
                     quem não é, apontar para um botão que não aparece seria
                     mandar procurar o que não está lá. */}
                 <span className="mt-4 text-[10px] max-w-md leading-relaxed">

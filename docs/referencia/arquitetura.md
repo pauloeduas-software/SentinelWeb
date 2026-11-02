@@ -91,7 +91,7 @@ server/
 | `catalog` | As SEIS tabelas de catálogo, com UM CRUD genérico dirigido por spec — o colaborador inclusive | `Category`, `StatusLabel`, `Manufacturer`, `AssetModel`, `Location`, `Person` |
 | `settings` | Configuração global: a etiqueta automática (prefixo, zeros, próximo número) e os botões da descoberta (`discoveryMode`, `ghostDays`, `shadowHours`). Idioma, moeda e formato de data são fixos no código (`src/helpers/format.helper.ts`) | `AppSetting` |
 | `audit` | A auditoria — quem fez o quê, em qual registro e quando ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)) —, gravada na transação de quem a origina. Só no banco: tela nenhuma a lê | `AuditLog` |
-| `user` | **Quem opera o sistema** — hoje só Administrador ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)), com senha ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)) | `User` |
+| `user` | **Quem opera o sistema** — Técnico, Supervisor ou Administrador ([AV](../decisoes/acesso.md#av--três-cargos-técnico-supervisor-e-administrador)), com senha ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)) | `User` |
 | `person` | **O colaborador** — quem recebe equipamento. O cadastro é do `catalog` (a única aba com lixeira); aqui ficam a ficha, o histórico, a contagem da posse aberta e a trava da linha | `Person` |
 | `assignment` | **Posse**: entrega e devolução de ativo, com alvo polimórfico (pessoa ou posto) e o histórico de quem teve o quê | `Assignment` |
 | `occupancy` | **Ocupação do posto**: quem trabalha em qual posto, e em que turno | `WorkstationOccupant` |

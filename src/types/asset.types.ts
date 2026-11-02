@@ -79,7 +79,7 @@ export interface Asset {
 
   orderNumber: string | null;
   purchaseDate: string | null;
-  /** Ausente para quem não é `ADMIN`: o servidor nem lê a coluna (D77). */
+  /** Ausente para quem não é `SUPERVISOR`: o servidor nem lê a coluna (D77). */
   purchaseCost?: string | null;
 
   /**

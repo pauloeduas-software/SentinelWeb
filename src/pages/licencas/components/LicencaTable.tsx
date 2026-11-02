@@ -21,11 +21,12 @@ interface LicencaTableProps {
   /** Uma ação está correndo: os botões esperam, para o duplo clique não virar erro. */
   ocupado: boolean;
   onAbrir: (licenca: Licenca) => void;
-  onEditar: (licenca: Licenca) => void;
+  /** Editar, encerrar e reabrir são `SUPERVISOR` no servidor (AV). Ausentes, os botões somem. */
+  onEditar?: (licenca: Licenca) => void;
   onEntregar: (licenca: Licenca) => void;
   /** Encerrar e reabrir — o mesmo botão, pelo status da licença. */
-  onAlternarEncerrada: (licenca: Licenca) => void;
-  /** Excluir é `ADMIN` no servidor. Ausente, o botão some — quem decide é a página. */
+  onAlternarEncerrada?: (licenca: Licenca) => void;
+  /** Excluir é `SUPERVISOR` no servidor. Ausente, o botão some — quem decide é a página. */
   onExcluir?: (licenca: Licenca) => void;
   vazio: React.ReactNode;
 }
@@ -106,25 +107,29 @@ export default function LicencaTable({
                         <UserPlus size={14} />
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => onEditar(licenca)}
-                      title="Editar"
-                      aria-label={`Editar ${licenca.name}`}
-                      className={`${BOTAO} hover:text-text-primary`}
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onAlternarEncerrada(licenca)}
-                      disabled={ocupado}
-                      title={encerrada ? 'Reabrir' : 'Encerrar'}
-                      aria-label={`${encerrada ? 'Reabrir' : 'Encerrar'} ${licenca.name}`}
-                      className={`${BOTAO} hover:text-status-info`}
-                    >
-                      {encerrada ? <Power size={14} /> : <PowerOff size={14} />}
-                    </button>
+                    {onEditar && (
+                      <button
+                        type="button"
+                        onClick={() => onEditar(licenca)}
+                        title="Editar"
+                        aria-label={`Editar ${licenca.name}`}
+                        className={`${BOTAO} hover:text-text-primary`}
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                    )}
+                    {onAlternarEncerrada && (
+                      <button
+                        type="button"
+                        onClick={() => onAlternarEncerrada(licenca)}
+                        disabled={ocupado}
+                        title={encerrada ? 'Reabrir' : 'Encerrar'}
+                        aria-label={`${encerrada ? 'Reabrir' : 'Encerrar'} ${licenca.name}`}
+                        className={`${BOTAO} hover:text-status-info`}
+                      >
+                        {encerrada ? <Power size={14} /> : <PowerOff size={14} />}
+                      </button>
+                    )}
                     {onExcluir && (
                       <button
                         type="button"

@@ -40,8 +40,8 @@ export interface Licenca {
 
   orderNumber: string | null;
   purchaseDate: string | null;
-  /** STRING — ver o aviso no topo do arquivo. */
-  purchaseCost: string | null;
+  /** STRING — ver o aviso no topo do arquivo. Ausente para quem não é `SUPERVISOR` (D77, AV). */
+  purchaseCost?: string | null;
 
   notes: string | null;
 

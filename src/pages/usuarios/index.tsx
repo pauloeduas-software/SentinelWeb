@@ -3,12 +3,8 @@ import UserFormModal from './components/UserFormModal';
 import EstadoDaLista from '../../components/EstadoDaLista';
 import ListToolbar from '../../components/ListToolbar';
 import { useUsers } from './hooks/useUsers';
-import type { User } from '../../types/user.types';
+import { nomeDoCargo } from '../../helpers/cargo.helper';
 import { useAuthStore } from '../../stores/auth.store';
-
-const NOME_DO_CARGO: Record<User['role'], string> = {
-  ADMIN: 'Administrador',
-};
 
 export default function UsersPage() {
   const {
@@ -19,7 +15,7 @@ export default function UsersPage() {
   // A própria conta não se desativa nem se exclui (W): o servidor recusa com
   // 409, e aqui os dois botões da linha dela ficam desligados, dizendo por quê.
   const meuId = useAuthStore((estado) => estado.usuario?.id);
-  // A tela inteira é do Administrador — a rota passa pelo `SoAdmin` (App.tsx)
+  // A tela inteira é do Administrador — a rota passa pelo `SoCargo` (App.tsx)
   // e o servidor exige `ADMIN` em toda rota dela —, então não há botão a
   // esconder aqui dentro.
 
@@ -79,7 +75,7 @@ export default function UsersPage() {
                   </div>
                 </td>
                 <td className="px-6 py-4 text-text-tertiary">{user.email}</td>
-                <td className="px-6 py-4 text-text-secondary">{NOME_DO_CARGO[user.role]}</td>
+                <td className="px-6 py-4 text-text-secondary">{nomeDoCargo(user.role)}</td>
                 <td className="px-6 py-4 text-right">
                   {/* Visível ao passar o mouse, ao navegar por Tab e sempre no toque. */}
                   <div className="flex items-center justify-end gap-3 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">

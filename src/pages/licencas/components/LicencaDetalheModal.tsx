@@ -27,10 +27,11 @@ interface LicencaDetalheModalProps {
   ocupado: boolean;
   onClose: () => void;
   onEntregar: (licenca: Licenca) => void;
-  onEditar: (licenca: Licenca) => void;
+  /** Editar, encerrar e reabrir são `SUPERVISOR` no servidor (AV). Ausentes, os botões somem. */
+  onEditar?: (licenca: Licenca) => void;
   /** Encerrar e reabrir — o mesmo botão, pelo status da licença. */
-  onAlternarEncerrada: (licenca: Licenca) => void;
-  /** Excluir é `ADMIN` no servidor. Ausente, o botão some — quem decide é a página. */
+  onAlternarEncerrada?: (licenca: Licenca) => void;
+  /** Excluir é `SUPERVISOR` no servidor. Ausente, o botão some — quem decide é a página. */
   onExcluir?: (licenca: Licenca) => void;
   /** `checkinAt` é o dia, 'AAAA-MM-DD'. Resolve `true` quando a devolução deu certo. */
   onDevolver: (checkoutId: string, checkinAt: string) => Promise<boolean>;
@@ -145,13 +146,15 @@ export default function LicencaDetalheModal({
                   title={motivoSemEntrega ?? 'Entregar'}
                 />
               )}
-              <Acao icone={Edit2} rotulo="Editar" onClick={() => onEditar(atual)} />
-              <Acao
-                icone={encerrada ? Power : PowerOff}
-                rotulo={encerrada ? 'Reabrir' : 'Encerrar'}
-                onClick={() => onAlternarEncerrada(atual)}
-                disabled={ocupado}
-              />
+              {onEditar && <Acao icone={Edit2} rotulo="Editar" onClick={() => onEditar(atual)} />}
+              {onAlternarEncerrada && (
+                <Acao
+                  icone={encerrada ? Power : PowerOff}
+                  rotulo={encerrada ? 'Reabrir' : 'Encerrar'}
+                  onClick={() => onAlternarEncerrada(atual)}
+                  disabled={ocupado}
+                />
+              )}
               {onExcluir && (
                 <Acao
                   icone={Trash2}
@@ -205,7 +208,8 @@ export default function LicencaDetalheModal({
             <Campo rotulo="E-mail do licenciado">{atual.licensedToEmail ?? '—'}</Campo>
             <Campo rotulo="Nº do pedido">{atual.orderNumber ?? '—'}</Campo>
             <Campo rotulo="Data da compra">{formatarData(atual.purchaseDate)}</Campo>
-            <Campo rotulo="Valor da compra" largo>{textoDoValorDaCompra(atual)}</Campo>
+            {/* Ausente para quem não vê o custo (D77, AV): sem a linha, e não um "—" que diria "sem valor". */}
+            {atual.purchaseCost !== undefined && <Campo rotulo="Valor da compra" largo>{textoDoValorDaCompra(atual)}</Campo>}
             <Campo rotulo="Notas" largo>{atual.notes ?? '—'}</Campo>
           </div>
 

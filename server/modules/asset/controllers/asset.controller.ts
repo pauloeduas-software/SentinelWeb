@@ -5,7 +5,7 @@ import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { historyQuerySchema } from '../../shared/history.schema';
 import { separarFiltrosDeAtivo } from '../helpers/asset-filters.helper';
-import { custoSoDoAdmin } from '../helpers/asset-select.helper';
+import { custoSoDoSupervisor } from '../helpers/asset-select.helper';
 import { createAssetSchema, retireAssetSchema, updateAssetSchema } from '../schemas/asset.schema';
 import { listAssets } from '../use-cases/list-assets.usecase';
 import { listAssetOptions } from '../use-cases/list-asset-options.usecase';
@@ -18,7 +18,7 @@ import { restoreAsset } from '../use-cases/restore-asset.usecase';
 import { findAssetById } from '../use-cases/find-asset-by-id.usecase';
 // A BORDA é quem sabe quem está pedindo: o use-case recebe um booleano e não
 // conhece `request`.
-import { temCargo } from '../../access/helpers/require-permission';
+import { exigirPermissao, temCargo } from '../../access/helpers/require-permission';
 import { getAssetHistory } from '../use-cases/asset-history.usecase';
 import { retireAsset } from '../use-cases/retire-asset.usecase';
 import { unretireAsset } from '../use-cases/unretire-asset.usecase';
@@ -56,6 +56,9 @@ export const assetController = {
     // `strictObject` e responderia 422 a `?statusId=` ou
     // `?view=retired` — que ele, por decisão de camada, não conhece (D20).
     const { filtros, paraOCore } = separarFiltrosDeAtivo(request.query);
+    // A LIXEIRA é `SUPERVISOR` (AV): a rota da listagem é do Técnico, e a vista
+    // dela não se separa no mapa de rotas.
+    if (filtros.view === 'trashed') exigirPermissao(request, 'SUPERVISOR');
 
     const query = parseListQuery(paraOCore, {
       // `trashable` fica FALSO mesmo havendo lixeira: quem cuida de `?view=`
@@ -65,12 +68,12 @@ export const assetController = {
       trashable: false,
     });
 
-    return listAssets(query, filtros, temCargo(request, 'ADMIN'));
+    return listAssets(query, filtros, temCargo(request, 'SUPERVISOR'));
   },
 
   async byId(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return findAssetById(id, temCargo(request, 'ADMIN'));
+    return findAssetById(id, temCargo(request, 'SUPERVISOR'));
   },
 
   async history(request: FastifyRequest) {
@@ -101,7 +104,7 @@ export const assetController = {
   },
 
   async create(request: FastifyRequest, reply: FastifyReply) {
-    const data = custoSoDoAdmin(createAssetSchema.parse(request.body ?? {}), temCargo(request, 'ADMIN'));
+    const data = custoSoDoSupervisor(createAssetSchema.parse(request.body ?? {}), temCargo(request, 'SUPERVISOR'));
     // O autor vem da SESSÃO, nunca do corpo (auth/helpers/actor.helper.ts).
     const ativo = await createAsset(data, atorDaRequisicao(request));
     return reply.status(201).send(ativo);
@@ -109,7 +112,7 @@ export const assetController = {
 
   async update(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    const data = custoSoDoAdmin(updateAssetSchema.parse(request.body ?? {}), temCargo(request, 'ADMIN'));
+    const data = custoSoDoSupervisor(updateAssetSchema.parse(request.body ?? {}), temCargo(request, 'SUPERVISOR'));
     return updateAsset(id, data, atorDaRequisicao(request));
   },
 

@@ -1,7 +1,7 @@
 import { prisma } from '../../../infra/database/prismaClient';
 import { AppError } from '../../../infra/errors/app-error';
 import {
-  LICENSE_SELECT, paraResposta,
+  licenseSelect, paraResposta,
   type LicencaNaResposta, type LinhaDeLicenca,
 } from '../helpers/license-select.helper';
 import { contarUsoDe } from './count-license-checkouts.usecase';
@@ -13,10 +13,11 @@ import { listarChaves, type ChaveNaResposta } from './license-keys.usecase';
  * é a do detalhe, onde a tela as mostra escondidas, e a da entrega, que escolhe
  * uma delas.
  */
-export async function getLicense(id: string): Promise<LicencaNaResposta & { keys: ChaveNaResposta[] }> {
+export async function getLicense(id: string, podeVerCusto: boolean): Promise<LicencaNaResposta & { keys: ChaveNaResposta[] }> {
   const licenca = await prisma.license.findUnique({
     where: { id },
-    select: LICENSE_SELECT,
+    // O select DEPENDE DA SESSÃO (D77): sem o cargo, a coluna do custo nem é lida.
+    select: licenseSelect(podeVerCusto),
   }) as LinhaDeLicenca | null;
 
   if (!licenca) throw new AppError('Nenhuma licença com este identificador.', 404);

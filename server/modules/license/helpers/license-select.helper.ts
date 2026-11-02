@@ -47,6 +47,18 @@ export const LICENSE_SELECT = {
 } as const;
 
 /**
+ * O select das LEITURAS (listagem e detalhe), que dependem da sessão: o custo é
+ * do `SUPERVISOR` (D77, AV), e para quem não é a coluna nem é lida. As escritas
+ * usam o `LICENSE_SELECT` inteiro porque já são `SUPERVISOR` no mapa de rotas.
+ */
+export function licenseSelect(podeVerCusto: boolean) {
+  if (podeVerCusto) return LICENSE_SELECT;
+  const semCusto: Record<string, unknown> = { ...LICENSE_SELECT };
+  delete semCusto.purchaseCost;
+  return semCusto as Omit<typeof LICENSE_SELECT, 'purchaseCost'>;
+}
+
+/**
  * Os campos da licença que a auditoria guarda (AB): o retrato no cadastro e na
  * exclusão, o `{ de, para }` na edição. As CHAVES ficam fora: a auditoria conta
  * quantas entraram, mudaram e saíram (`gravarChaves`), nunca o texto.

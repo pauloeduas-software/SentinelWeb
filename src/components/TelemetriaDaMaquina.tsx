@@ -4,6 +4,7 @@ import {
   formatarTaxa, formatarVolume, readSnapshot, usagePercent, volumeDeRede,
 } from '../helpers/metrics.helper';
 import { useMaquinaAoVivo, type ComandoDaMaquina } from '../hooks/useMaquinaAoVivo';
+import { usePode } from '../stores/auth.store';
 
 // COMO A MÁQUINA ESTÁ AGORA, e o que se pode mandar nela.
 //
@@ -122,6 +123,9 @@ function Numero({ rotulo, valor, unidade }: { rotulo: string; valor: string; uni
 
 export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaProps) {
   const { maquina, carregando, erro, enviando, retorno, handleComando } = useMaquinaAoVivo(endpointId);
+  // O comando age na máquina de verdade, e é `SUPERVISOR` no servidor (AV). Para
+  // quem não é, a seção some — o botão só levaria 403.
+  const podeComandar = usePode('SUPERVISOR');
   // GUARDA QUAL hwid foi copiado, não um booleano: o roteador reaproveita a
   // tela de `/computadores/:id` de um ativo para outro (a busca do leitor navega
   // assim), e um `true` sobreviveria à troca — a máquina seguinte apareceria
@@ -273,54 +277,56 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
         )}
       </div>
 
-      <div className="space-y-3 border-t border-border-sutil pt-4">
-        <h4 className={`${ROTULO} flex items-center gap-2`}>
-          <Cpu size={11} /> Comandos
-        </h4>
+      {podeComandar && (
+        <div className="space-y-3 border-t border-border-sutil pt-4">
+          <h4 className={`${ROTULO} flex items-center gap-2`}>
+            <Cpu size={11} /> Comandos
+          </h4>
 
-        <div className="flex flex-wrap gap-2">
-          {COMANDOS.map((comando) => (
-            <button
-              key={comando.action}
-              type="button"
-              // O BOTÃO NÃO É DESABILITADO QUANDO A MÁQUINA ESTÁ OFFLINE, e isso
-              // é decisão: o `status` da tela atrasa até cerca de CINCO minutos —
-              // quatro de tolerância (`mark-stale-endpoints-offline`) mais a
-              // rodada de um minuto do job de zumbis —, então um botão cinza
-              // mentiria nos dois sentidos. Quem decide é o servidor, na hora, e
-              // a resposta dele aparece logo abaixo dizendo qual máquina não
-              // respondeu.
-              disabled={enviando}
-              onClick={() => void handleComando(comando)}
-              className={`flex items-center gap-2 px-3 py-1.5 border text-[10px] font-mono uppercase tracking-widest transition-colors disabled:opacity-30 ${comando.cor}`}
+          <div className="flex flex-wrap gap-2">
+            {COMANDOS.map((comando) => (
+              <button
+                key={comando.action}
+                type="button"
+                // O BOTÃO NÃO É DESABILITADO QUANDO A MÁQUINA ESTÁ OFFLINE, e isso
+                // é decisão: o `status` da tela atrasa até cerca de CINCO minutos —
+                // quatro de tolerância (`mark-stale-endpoints-offline`) mais a
+                // rodada de um minuto do job de zumbis —, então um botão cinza
+                // mentiria nos dois sentidos. Quem decide é o servidor, na hora, e
+                // a resposta dele aparece logo abaixo dizendo qual máquina não
+                // respondeu.
+                disabled={enviando}
+                onClick={() => void handleComando(comando)}
+                className={`flex items-center gap-2 px-3 py-1.5 border text-[10px] font-mono uppercase tracking-widest transition-colors disabled:opacity-30 ${comando.cor}`}
+              >
+                <comando.icone size={12} /> {comando.rotulo}
+              </button>
+            ))}
+          </div>
+
+          {retorno && (
+            <p
+              // ANUNCIADO, e não só pintado. O fluxo antigo terminava num `alert`,
+              // que o leitor de tela lê e que bloqueia até ser fechado. Trocá-lo por
+              // um parágrafo no DOM deixava quem usa leitor de tela sem retorno
+              // nenhum: o sucesso e o 409 ficavam igualmente silenciosos.
+              aria-live={retorno.tipo === 'falhou' ? 'assertive' : 'polite'}
+              role={retorno.tipo === 'falhou' ? 'alert' : undefined}
+              className={`flex items-start gap-2 text-[10px] leading-relaxed ${
+                retorno.tipo === 'enviado' ? 'text-status-success' : 'text-status-danger'
+              }`}
             >
-              <comando.icone size={12} /> {comando.rotulo}
-            </button>
-          ))}
-        </div>
+              {retorno.tipo === 'falhou' && <TriangleAlert size={12} className="shrink-0 mt-0.5" />}
+              <span>{retorno.texto}</span>
+            </p>
+          )}
 
-        {retorno && (
-          <p
-            // ANUNCIADO, e não só pintado. O fluxo antigo terminava num `alert`,
-            // que o leitor de tela lê e que bloqueia até ser fechado. Trocá-lo por
-            // um parágrafo no DOM deixava quem usa leitor de tela sem retorno
-            // nenhum: o sucesso e o 409 ficavam igualmente silenciosos.
-            aria-live={retorno.tipo === 'falhou' ? 'assertive' : 'polite'}
-            role={retorno.tipo === 'falhou' ? 'alert' : undefined}
-            className={`flex items-start gap-2 text-[10px] leading-relaxed ${
-              retorno.tipo === 'enviado' ? 'text-status-success' : 'text-status-danger'
-            }`}
-          >
-            {retorno.tipo === 'falhou' && <TriangleAlert size={12} className="shrink-0 mt-0.5" />}
-            <span>{retorno.texto}</span>
+          <p className="text-[10px] text-text-tertiary leading-relaxed">
+            O comando vai pelo WebSocket aberto do agente e não fica em fila: se a máquina estiver
+            fora do ar, ele é recusado na hora — em vez de desligá-la quando ela voltar.
           </p>
-        )}
-
-        <p className="text-[10px] text-text-tertiary leading-relaxed">
-          O comando vai pelo WebSocket aberto do agente e não fica em fila: se a máquina estiver
-          fora do ar, ele é recusado na hora — em vez de desligá-la quando ela voltar.
-        </p>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

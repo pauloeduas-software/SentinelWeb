@@ -26,9 +26,16 @@ import type { Cargo } from './cargo';
 //
 // O CRITÉRIO, escrito uma vez aqui em vez de repetido em cada linha:
 //
-//   `null`     — a sessão basta. Quatro rotas, e todas são sobre si mesmo.
-//   `ADMIN`    — todo o resto. É o único cargo (Z); a separação de cargos é
-//                decisão a tomar.
+//   `null`       — a sessão basta. Quatro rotas, e todas são sobre si mesmo.
+//   `TECNICO`    — o dia a dia: ler, cadastrar e editar computador, item de
+//                  estoque e colaborador, entregar, devolver, ocupar posto e
+//                  vincular a máquina descoberta (AV).
+//   `SUPERVISOR` — o que apaga ou fecha registro (excluir, lixeira, baixa,
+//                  encerrar), o dinheiro (licença; o custo é o D77), a estrutura
+//                  (posto, catálogo) e o que age sobre o sistema ou a máquina
+//                  (comando, reconciliar, configurar a descoberta). Desativar vai
+//                  pelo `PUT` de edição, então o controller confere à parte.
+//   `ADMIN`      — as contas: Usuários.
 //
 // Quem RECEBE equipamento é colaborador (`/api/people`), catálogo, e não tem
 // conta: não entra no mapa como cargo.
@@ -41,6 +48,9 @@ import type { Cargo } from './cargo';
  * decisão, e cada uma tem o motivo escrito ao lado.
  */
 type ExigenciaDaRota = Cargo | null;
+
+/** O catálogo que o Técnico cadastra e edita: o colaborador. O resto é Configurações. */
+const CADASTRO_DO_TECNICO: ReadonlySet<string> = new Set(['people']);
 
 const DISPENSADAS: Record<string, ExigenciaDaRota> = {
   // Quem está logado sempre pode saber quem é e sair. Exigir cargo para ler a
@@ -57,85 +67,85 @@ const DISPENSADAS: Record<string, ExigenciaDaRota> = {
 const ROTAS: Record<string, ExigenciaDaRota> = {
   ...DISPENSADAS,
 
-  'GET /api/assets': 'ADMIN',
-  'GET /api/assets/:id': 'ADMIN',
-  'GET /api/assets/:id/history': 'ADMIN',
-  'GET /api/assets/options': 'ADMIN',
-  'GET /api/assets/stats': 'ADMIN',
-  'GET /api/search': 'ADMIN',
-  'POST /api/assets': 'ADMIN',
-  'PUT /api/assets/:id': 'ADMIN',
-  'DELETE /api/assets/:id': 'ADMIN',
-  'POST /api/assets/:id/restore': 'ADMIN',
-  'POST /api/assets/:id/retire': 'ADMIN',
-  'POST /api/assets/:id/unretire': 'ADMIN',
-  'GET /api/assets/:id/assignments': 'ADMIN',
-  'POST /api/assets/:id/checkout': 'ADMIN',
-  'POST /api/assets/:id/checkin': 'ADMIN',
-  'GET /api/workstations/:id/occupants': 'ADMIN',
-  'POST /api/workstations/:id/occupants': 'ADMIN',
-  'DELETE /api/workstations/:id/occupants/:occupantId': 'ADMIN',
-  'PATCH /api/workstations/:id/occupants/:occupantId': 'ADMIN',
-  'GET /api/people/:id/occupancies': 'ADMIN',
+  'GET /api/assets': 'TECNICO',
+  'GET /api/assets/:id': 'TECNICO',
+  'GET /api/assets/:id/history': 'TECNICO',
+  'GET /api/assets/options': 'TECNICO',
+  'GET /api/assets/stats': 'TECNICO',
+  'GET /api/search': 'TECNICO',
+  'POST /api/assets': 'TECNICO',
+  'PUT /api/assets/:id': 'TECNICO',
+  'DELETE /api/assets/:id': 'SUPERVISOR',
+  'POST /api/assets/:id/restore': 'SUPERVISOR',
+  'POST /api/assets/:id/retire': 'SUPERVISOR',
+  'POST /api/assets/:id/unretire': 'SUPERVISOR',
+  'GET /api/assets/:id/assignments': 'TECNICO',
+  'POST /api/assets/:id/checkout': 'TECNICO',
+  'POST /api/assets/:id/checkin': 'TECNICO',
+  'GET /api/workstations/:id/occupants': 'TECNICO',
+  'POST /api/workstations/:id/occupants': 'TECNICO',
+  'DELETE /api/workstations/:id/occupants/:occupantId': 'TECNICO',
+  'PATCH /api/workstations/:id/occupants/:occupantId': 'TECNICO',
+  'GET /api/people/:id/occupancies': 'TECNICO',
   // O POSTO: é a mesma `CatalogSpec` do catálogo, fora da lista gerada abaixo
   // porque a tela dele é Postos, não Configurações.
-  'GET /api/workstations': 'ADMIN',
-  'GET /api/workstations/options': 'ADMIN',
-  'GET /api/workstations/:id': 'ADMIN',
-  'POST /api/workstations': 'ADMIN',
-  'PUT /api/workstations/:id': 'ADMIN',
-  'DELETE /api/workstations/:id': 'ADMIN',
+  'GET /api/workstations': 'TECNICO',
+  'GET /api/workstations/options': 'TECNICO',
+  'GET /api/workstations/:id': 'TECNICO',
+  'POST /api/workstations': 'SUPERVISOR',
+  'PUT /api/workstations/:id': 'SUPERVISOR',
+  'DELETE /api/workstations/:id': 'SUPERVISOR',
   // O ESTOQUE.
-  'GET /api/stock/items': 'ADMIN',
-  'GET /api/stock/items/:id': 'ADMIN',
-  'GET /api/stock/items/:id/checkouts': 'ADMIN',
-  'GET /api/stock/items/:id/history': 'ADMIN',
-  'POST /api/stock/items': 'ADMIN',
-  'PUT /api/stock/items/:id': 'ADMIN',
-  'DELETE /api/stock/items/:id': 'ADMIN',
-  'POST /api/stock/items/:id/checkout': 'ADMIN',
-  'POST /api/stock/checkouts/:id/checkin': 'ADMIN',
-  'GET /api/assets/:id/components': 'ADMIN',
-  'GET /api/licenses': 'ADMIN',
-  'GET /api/licenses/:id': 'ADMIN',
-  'GET /api/licenses/:id/history': 'ADMIN',
-  'GET /api/licenses/:id/checkouts': 'ADMIN',
-  'GET /api/licenses/alerts': 'ADMIN',
-  'GET /api/assets/:id/licenses': 'ADMIN',
-  'POST /api/licenses': 'ADMIN',
-  'PUT /api/licenses/:id': 'ADMIN',
-  'DELETE /api/licenses/:id': 'ADMIN',
-  'POST /api/licenses/:id/terminate': 'ADMIN',
-  'POST /api/licenses/:id/checkout': 'ADMIN',
-  'POST /api/licenses/checkouts/:id/checkin': 'ADMIN',
-  'PATCH /api/licenses/checkouts/:id': 'ADMIN',
+  'GET /api/stock/items': 'TECNICO',
+  'GET /api/stock/items/:id': 'TECNICO',
+  'GET /api/stock/items/:id/checkouts': 'TECNICO',
+  'GET /api/stock/items/:id/history': 'TECNICO',
+  'POST /api/stock/items': 'TECNICO',
+  'PUT /api/stock/items/:id': 'TECNICO',
+  'DELETE /api/stock/items/:id': 'SUPERVISOR',
+  'POST /api/stock/items/:id/checkout': 'TECNICO',
+  'POST /api/stock/checkouts/:id/checkin': 'TECNICO',
+  'GET /api/assets/:id/components': 'TECNICO',
+  'GET /api/licenses': 'TECNICO',
+  'GET /api/licenses/:id': 'TECNICO',
+  'GET /api/licenses/:id/history': 'TECNICO',
+  'GET /api/licenses/:id/checkouts': 'TECNICO',
+  'GET /api/licenses/alerts': 'TECNICO',
+  'GET /api/assets/:id/licenses': 'TECNICO',
+  'POST /api/licenses': 'SUPERVISOR',
+  'PUT /api/licenses/:id': 'SUPERVISOR',
+  'DELETE /api/licenses/:id': 'SUPERVISOR',
+  'POST /api/licenses/:id/terminate': 'SUPERVISOR',
+  'POST /api/licenses/:id/checkout': 'TECNICO',
+  'POST /api/licenses/checkouts/:id/checkin': 'TECNICO',
+  'PATCH /api/licenses/checkouts/:id': 'TECNICO',
   // A FICHA DO COLABORADOR — leitura: o cadastro (`/api/people`) vem gerado lá
   // embaixo, com as outras cinco abas.
-  'GET /api/people/:id': 'ADMIN',
-  'GET /api/people/:id/history': 'ADMIN',
+  'GET /api/people/:id': 'TECNICO',
+  'GET /api/people/:id/history': 'TECNICO',
   // Quem opera o sistema.
   'GET /api/users': 'ADMIN',
   'POST /api/users': 'ADMIN',
   'PUT /api/users/:id': 'ADMIN',
   'DELETE /api/users/:id': 'ADMIN',
   'POST /api/users/:id/temporary-password': 'ADMIN',
-  'GET /api/endpoints': 'ADMIN',
-  'GET /api/endpoints/:id': 'ADMIN',
-  'GET /api/assets/:id/machine': 'ADMIN',
-  'GET /api/reconciliation/coverage': 'ADMIN',
-  'GET /api/reconciliation/idle': 'ADMIN',
-  'GET /api/reconciliation/suggestions': 'ADMIN',
-  'POST /api/reconciliation/run': 'ADMIN',
-  'POST /api/reconciliation/suggestions/:id/accept': 'ADMIN',
-  'POST /api/reconciliation/suggestions/:id/reject': 'ADMIN',
-  'POST /api/endpoints/:id/link': 'ADMIN',
-  'POST /api/endpoints/:id/link-and-checkout': 'ADMIN',
-  'DELETE /api/endpoints/:id/link': 'ADMIN',
-  'PATCH /api/endpoints/:id/review': 'ADMIN',
-  'POST /api/endpoints/:id/command': 'ADMIN',
-  'GET /api/settings/next-asset-tag': 'ADMIN',
-  'GET /api/settings/discovery': 'ADMIN',
-  'PUT /api/settings/discovery': 'ADMIN',
+  'GET /api/endpoints': 'TECNICO',
+  'GET /api/endpoints/:id': 'TECNICO',
+  'GET /api/assets/:id/machine': 'TECNICO',
+  'GET /api/reconciliation/coverage': 'TECNICO',
+  'GET /api/reconciliation/idle': 'TECNICO',
+  'GET /api/reconciliation/suggestions': 'TECNICO',
+  'POST /api/reconciliation/run': 'SUPERVISOR',
+  'POST /api/reconciliation/suggestions/:id/accept': 'TECNICO',
+  'POST /api/reconciliation/suggestions/:id/reject': 'TECNICO',
+  'POST /api/endpoints/:id/link': 'TECNICO',
+  'POST /api/endpoints/:id/link-and-checkout': 'TECNICO',
+  'DELETE /api/endpoints/:id/link': 'TECNICO',
+  'PATCH /api/endpoints/:id/review': 'TECNICO',
+  'POST /api/endpoints/:id/command': 'SUPERVISOR',
+  'GET /api/settings/next-asset-tag': 'TECNICO',
+  'GET /api/settings/discovery': 'TECNICO',
+  'PUT /api/settings/discovery': 'SUPERVISOR',
 
   // ── O CATÁLOGO, gerado ────────────────────────────────────────────────────
   //
@@ -146,16 +156,23 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   //
   // A exclusão é guardada pelo 409 de uso (D8), e o colaborador vai para a
   // lixeira (V).
+  //
+  // LER é do Técnico em todas: os formulários dele escolhem categoria, modelo e
+  // localização. ESCREVER é do Supervisor (a página Configurações), menos o
+  // colaborador, que o Técnico cadastra e edita no dia a dia (AV).
   ...Object.fromEntries(
-    CATALOG_SPECS.flatMap((spec) => [
-      [`GET /api/${spec.slug}`, 'ADMIN' as const],
-      [`GET /api/${spec.slug}/options`, 'ADMIN' as const],
-      [`POST /api/${spec.slug}`, 'ADMIN' as const],
-      [`PUT /api/${spec.slug}/:id`, 'ADMIN' as const],
-      [`DELETE /api/${spec.slug}/:id`, 'ADMIN' as const],
-      // Restaurar, só na tabela com lixeira — o colaborador.
-      ...(spec.lixeira ? [[`POST /api/${spec.slug}/:id/restore`, 'ADMIN' as const] as const] : []),
-    ]),
+    CATALOG_SPECS.flatMap((spec) => {
+      const escrita: Cargo = CADASTRO_DO_TECNICO.has(spec.slug) ? 'TECNICO' : 'SUPERVISOR';
+      return [
+        [`GET /api/${spec.slug}`, 'TECNICO' as const],
+        [`GET /api/${spec.slug}/options`, 'TECNICO' as const],
+        [`POST /api/${spec.slug}`, escrita],
+        [`PUT /api/${spec.slug}/:id`, escrita],
+        [`DELETE /api/${spec.slug}/:id`, 'SUPERVISOR' as const],
+        // Restaurar, só na tabela com lixeira — o colaborador.
+        ...(spec.lixeira ? [[`POST /api/${spec.slug}/:id/restore`, 'SUPERVISOR' as const] as const] : []),
+      ];
+    }),
   ),
 };
 

@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { registrarPerdaDeSessao } from '../api/apiClient';
 import { queryClient } from '../api/queryClient';
 import type { Credenciais, SessionUser } from '../types/auth.types';
+import type { Cargo } from '../types/user.types';
 import {
   atualizarNomeRequest, fetchSessao, loginRequest, logoutRequest, trocarSenhaRequest,
 } from '../queries/auth.queries';
@@ -112,11 +113,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 // esta só decide o que desenhar. Fazer a tela consultar uma rota para saber a
 // ordem dos cargos seria uma requisição para uma constante.
 //
-// Hoje um cargo só (Z): todo `usePode('ADMIN')` do painel responde `true` para
-// quem está logado, e os ramos "de quem não é ADMIN" estão dormentes até a
-// separação de cargos, que é decisão a tomar.
-export type Cargo = 'ADMIN';
-const ORDEM_DOS_CARGOS: readonly Cargo[] = ['ADMIN'];
+// Do menor para o maior (AV): Técnico opera, Supervisor decide o ciclo de vida
+// e o dinheiro, Administrador cuida das contas.
+export type { Cargo };
+const ORDEM_DOS_CARGOS: readonly Cargo[] = ['TECNICO', 'SUPERVISOR', 'ADMIN'];
 
 function alcanca(cargo: Cargo, minimo: Cargo): boolean {
   return ORDEM_DOS_CARGOS.indexOf(cargo) >= ORDEM_DOS_CARGOS.indexOf(minimo);

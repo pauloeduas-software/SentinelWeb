@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { SEM_PARAMETROS } from '../../../infra/http/sem-parametros';
 import { parseListQuery } from '../../../infra/http/list-query';
 import { idParamSchema } from '../../shared/params.schema';
+import { temCargo } from '../../access/helpers/require-permission';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import {
   checkinLicenseSchema, checkoutKeySchema, checkoutLicenseSchema,
@@ -44,12 +45,12 @@ export const licenseController = {
       ...(emUso === undefined ? {} : { emUso }),
     });
 
-    return listLicenses(parseListQuery(paginacao), filtros);
+    return listLicenses(parseListQuery(paginacao), filtros, temCargo(request, 'SUPERVISOR'));
   },
 
   async byId(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return getLicense(id);
+    return getLicense(id, temCargo(request, 'SUPERVISOR'));
   },
 
   async create(request: FastifyRequest, reply: FastifyReply) {

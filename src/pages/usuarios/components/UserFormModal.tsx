@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import type { User } from '../../../types/user.types';
+import type { Cargo, User } from '../../../types/user.types';
 import type { UserInput } from '../../../queries/user.queries';
+import { CARGOS_NA_TELA } from '../../../helpers/cargo.helper';
 
-// O FORMULÁRIO DE USUÁRIO — quem opera o sistema: nome e e-mail.
+// O FORMULÁRIO DE USUÁRIO — quem opera o sistema: nome, e-mail e cargo.
 //
-// SEM CAMPO DE CARGO: hoje há um cargo só, Administrador (Z), e não há o que
-// escolher. A conta nova nasce `ADMIN` pelo `@default` da coluna, e a edição não
-// manda `role`, então não mexe nele. O campo volta com a separação de cargos,
-// que é decisão a tomar.
+// O CARGO (AV) é campo do formulário (D162), e a conta nova começa em Técnico, o
+// de menor acesso. Tirar o último Administrador o servidor recusa
+// (`ultimo-administrador.ts`), e a frase dele aparece aqui.
 //
 // SEM CAMPO DE SENHA (AU): quem cadastra não escolhe a senha de outra pessoa. A
 // conta nasce com uma temporária, que aparece aqui uma vez, e a pessoa escolhe
@@ -34,7 +34,9 @@ export default function UserFormModal({ user, onClose, onSubmit, onGerarSenhaTem
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
+    role: (user?.role ?? 'TECNICO') as Cargo,
   });
+  const alcance = CARGOS_NA_TELA.find((cargo) => cargo.valor === formData.role)?.alcance;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -73,6 +75,7 @@ export default function UserFormModal({ user, onClose, onSubmit, onGerarSenhaTem
       const senha = await onSubmit({
         name: formData.name,
         email: formData.email,
+        role: formData.role,
         // `isActive` NÃO viaja daqui: desativar e ativar são o botão da linha,
         // em Ações (`useUsers.handleAlternarAtivo`), o mesmo padrão das outras
         // listas. Quem nasce, nasce ativo — o `strictObject` do create recusa o
@@ -109,6 +112,14 @@ export default function UserFormModal({ user, onClose, onSubmit, onGerarSenhaTem
           <div className="space-y-1">
             <label className="text-text-secondary uppercase tracking-widest text-[10px]">E-mail*</label>
             <input required disabled={criada} type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors" />
+          </div>
+
+          <div className="space-y-1">
+            <label htmlFor="cargo-do-usuario" className="text-text-secondary uppercase tracking-widest text-[10px]">Cargo*</label>
+            <select id="cargo-do-usuario" required disabled={criada} value={formData.role} onChange={e => setFormData({...formData, role: e.target.value as Cargo})} className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors">
+              {CARGOS_NA_TELA.map((cargo) => <option key={cargo.valor} value={cargo.valor}>{cargo.nome}</option>)}
+            </select>
+            {alcance && <p className="text-text-tertiary text-[10px] leading-relaxed">{alcance}</p>}
           </div>
 
           {(onGerarSenhaTemporaria || temporaria) && (

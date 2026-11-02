@@ -24,16 +24,18 @@ interface AssetFilterBarProps {
   /** O nome do status filtrado, quando um contador do cabeçalho foi clicado. */
   statusFiltrado: string | null;
   onLimparStatus: () => void;
+  /** A lixeira é `SUPERVISOR` no servidor (AV): sem ele, a aba não aparece. */
+  comLixeira: boolean;
 }
 
 export default function AssetFilterBar({
   view, onViewChange, baixados,
-  statusFiltrado, onLimparStatus,
+  statusFiltrado, onLimparStatus, comLixeira,
 }: AssetFilterBarProps) {
   const abas: { valor: AssetView; rotulo: string; icone?: typeof PackageX; contador?: number }[] = [
     { valor: 'active', rotulo: 'Ativos' },
     { valor: 'retired', rotulo: 'Baixados', icone: PackageX, contador: baixados },
-    { valor: 'trashed', rotulo: 'Lixeira', icone: Trash2 },
+    ...(comLixeira ? [{ valor: 'trashed' as const, rotulo: 'Lixeira', icone: Trash2 }] : []),
   ];
 
   return (

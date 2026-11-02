@@ -24,7 +24,7 @@ export class ReconciliationMaestro {
 
     // RECONCILIAR AGORA. O job roda de hora em hora e toma a janela da hora;
     // quem acabou de cadastrar o ativo e quer ver a sugestão nascer não deveria
-    // esperar a hora virar nem reiniciar o servidor. É `ADMIN`, e é uma por
+    // esperar a hora virar nem reiniciar o servidor. É `SUPERVISOR`, e é uma por
     // vez (409 com outra em andamento). Teto de escrita: varredura é cara.
     server.post('/api/reconciliation/run', WRITE_RATE_LIMIT, reconciliationController.runNow);
 

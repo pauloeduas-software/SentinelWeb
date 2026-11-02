@@ -30,7 +30,8 @@ interface CatalogTableProps {
   /** Ações por linha da aba, além de editar e excluir (Desativar e Ficha, em Colaboradores). */
   acoes?: readonly AcaoLinhaSpec[];
   onEdit: (registro: CatalogRow) => void;
-  onDelete: (registro: CatalogRow) => void;
+  /** Excluir é `SUPERVISOR` no servidor. Ausente, o botão some — quem decide é a tela. */
+  onDelete?: (registro: CatalogRow) => void;
   onAcao?: (id: AcaoLinhaId, registro: CatalogRow) => void;
   /**
    * A LIXEIRA está na tela: a linha oferece só Restaurar. Editar, desativar e
@@ -113,14 +114,16 @@ export default function CatalogTable({
                             </button>
                           );
                         })}
-                        <button
-                          onClick={() => onDelete(registro)}
-                          title="Excluir"
-                          aria-label={`Excluir ${String(registro.name ?? '')}`}
-                          className="text-text-tertiary hover:text-status-danger transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {onDelete && (
+                          <button
+                            onClick={() => onDelete(registro)}
+                            title="Excluir"
+                            aria-label={`Excluir ${String(registro.name ?? '')}`}
+                            className="text-text-tertiary hover:text-status-danger transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </>
                     )}
                   </div>

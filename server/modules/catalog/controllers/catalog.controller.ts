@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { parseListQuery } from '../../../infra/http/list-query';
+import { exigirPermissao } from '../../access/helpers/require-permission';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { listCatalog } from '../use-cases/list-catalog.usecase';
@@ -67,6 +68,9 @@ export function createCatalogController(spec: CatalogSpec) {
       // Sem `trashable` — aqui não há lixeira (D8).
       // `?view=trashed` só existe na tabela com lixeira: nas outras, a chave é 422.
       const query = parseListQuery(paginacao, { trashable: spec.lixeira === true });
+      // A LIXEIRA é `SUPERVISOR` (AV): a listagem do colaborador é do Técnico, e
+      // a vista dela não se separa no mapa de rotas.
+      if (query.view === 'trashed') exigirPermissao(request, 'SUPERVISOR');
       return listCatalog(spec, query, filtro);
     },
 
@@ -86,6 +90,9 @@ export function createCatalogController(spec: CatalogSpec) {
     async update(request: FastifyRequest) {
       const { id } = idParamSchema.parse(request.params);
       const data = spec.updateSchema.parse(request.body ?? {}) as Record<string, unknown>;
+      // Desativar e Ativar vão pela edição, que no colaborador é do Técnico: o
+      // mapa não os separa, então a conferência é aqui (AV).
+      if (data.isActive !== undefined) exigirPermissao(request, 'SUPERVISOR');
       return updateCatalog(spec, id, data, atorDaRequisicao(request));
     },
 

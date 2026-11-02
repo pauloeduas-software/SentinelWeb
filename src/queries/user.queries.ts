@@ -1,9 +1,9 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api/apiClient';
-import type { User } from '../types/user.types';
+import type { Cargo, User } from '../types/user.types';
 import type { ListEnvelope, ListParams } from '../types/list.types';
 
-// QUEM OPERA O SISTEMA — hoje, só Administrador (Z). Quem recebe equipamento é
+// QUEM OPERA O SISTEMA — Técnico, Supervisor ou Administrador (AV). Quem recebe equipamento é
 // colaborador (`person.queries.ts`, e o cadastro na página Colaboradores).
 export const userKeys = {
   all: ['users'] as const,
@@ -13,8 +13,8 @@ export const userKeys = {
 export interface UserInput {
   name: string;
   email: string;
-  /** O cargo (D148). Ausente, numa criação, nasce `ADMIN` pelo `@default`. */
-  role?: 'ADMIN';
+  /** O cargo (D148). Ausente, numa criação, nasce `TECNICO` pelo `@default`. */
+  role?: Cargo;
   /**
    * SÓ na edição, e só pelo botão Desativar/Ativar da lista: desativar recusa
    * o login e derruba a sessão da pessoa.
