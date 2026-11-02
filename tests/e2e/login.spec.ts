@@ -21,6 +21,18 @@ test('senha errada fica no login, com a mesma frase para e-mail e senha', async 
   await expect(page).toHaveURL(/\/login(\?|$)/);
 });
 
+test('a validação do campo fala português, e não o idioma do navegador', async ({ page }) => {
+  await page.goto('/login');
+  const email = page.getByLabel('E-mail');
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await expect.poll(() => email.evaluate((campo) => (campo as { validationMessage: string }).validationMessage)).toBe('Preencha este campo.');
+
+  await email.fill('abc');
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await expect.poll(() => email.evaluate((campo) => (campo as { validationMessage: string }).validationMessage))
+    .toBe('Digite um e-mail válido, como nome@empresa.com.');
+});
+
 test('e-mail e senha certos abrem o painel em Computadores', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('E-mail').fill(ADMIN_DE_TESTE.email);

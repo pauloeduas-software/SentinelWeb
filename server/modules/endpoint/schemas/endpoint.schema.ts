@@ -6,10 +6,16 @@ import { z } from 'zod';
 // URL. Quem fala de uma máquina por HTTP usa o uuid, como `:id/link` e
 // `:id/review` já usavam, e o `idParamSchema` compartilhado cobre todos.
 
-// `toUpperCase` no schema, não no controller: a normalização faz parte do
+// Só os três comandos que a tela oferece. Texto livre ia direto ao agente, que
+// roda como root: o servidor não repassa ação que ninguém previu.
+const ACOES = ['reboot', 'shutdown', 'suspend'] as const;
+
+// Maiúscula no schema, não no controller: a normalização faz parte do
 // contrato — o agente recebe sempre o comando em maiúscula.
 export const sendCommandSchema = z.strictObject({
-  action: z.string('a ação é obrigatória').trim().min(1, 'a ação não pode ser vazia').max(64, 'ação: máximo de 64 caracteres').toUpperCase(),
+  action: z.string('a ação é obrigatória').trim().toLowerCase()
+    .pipe(z.enum(ACOES, 'ação inválida: use reboot, shutdown ou suspend'))
+    .transform((acao) => acao.toUpperCase()),
 });
 
 /**

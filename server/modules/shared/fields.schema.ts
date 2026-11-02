@@ -16,13 +16,13 @@ export const nomeObrigatorio = (rotulo = 'nome') =>
     .max(200, `${rotulo}: máximo de 200 caracteres`);
 
 export const textoOpcional = (rotulo: string, max = 500) =>
-  z.string().trim().max(max, `${rotulo}: máximo de ${max} caracteres`).nullish()
+  z.string(`${rotulo}: envie um texto`).trim().max(max, `${rotulo}: máximo de ${max} caracteres`).nullish()
     .transform((valor) => (valor === undefined ? undefined : valor || null));
 
 // `z.email()` da zod 4 valida ANTES do `.trim()`; por isso o `pipe` (a mesma
 // armadilha documentada na Fase 0, em user.schema.ts).
 export const emailOpcional = z
-  .string()
+  .string('e-mail inválido')
   .trim()
   .nullish()
   .transform((valor) => (valor === undefined ? undefined : valor || null))
@@ -36,7 +36,7 @@ export const emailOpcional = z
 // completar o esquema: `dell.com` é recusado, quem digita escreve o endereço
 // inteiro.
 export const urlOpcional = (rotulo: string) => z
-  .string()
+  .string(`${rotulo} inválido: use o endereço completo, com https://`)
   .trim()
   .nullish()
   .transform((valor) => (valor === undefined ? undefined : valor || null))
@@ -48,10 +48,16 @@ export const urlOpcional = (rotulo: string) => z
 
 export const booleano = (rotulo: string) => z.boolean(`${rotulo} deve ser verdadeiro ou falso`);
 
-export const uuidObrigatorio = (rotulo: string) => z.uuid(`${rotulo}: identificador inválido`);
+// Ausente ou vazio é o select que ficou sem escolha, e a frase diz isso; o
+// "identificador inválido" fica para o valor que veio e não é um uuid.
+export const uuidObrigatorio = (rotulo: string) => z.uuid({
+  error: (issue) => (issue.input === undefined || issue.input === ''
+    ? `${rotulo}: campo obrigatório`
+    : `${rotulo}: identificador inválido`),
+});
 
 export const uuidOpcional = (rotulo: string) =>
-  z.string().trim().nullish()
+  z.string(`${rotulo}: identificador inválido`).trim().nullish()
     .transform((valor) => (valor === undefined ? undefined : valor || null))
     .pipe(z.uuid(`${rotulo}: identificador inválido`).nullish());
 
@@ -64,7 +70,7 @@ export const uuidOpcional = (rotulo: string) =>
  * não instante.
  */
 export const dataOpcional = (rotulo: string) =>
-  z.string().trim().nullish()
+  z.string(`${rotulo}: use uma data no formato AAAA-MM-DD`).trim().nullish()
     .transform((valor) => (valor === undefined ? undefined : valor || null))
     // `.nullish()` no fim, e não `z.union([z.null(), z.undefined(), …])`: a união
     // que falha em todos os ramos responde só "Invalid input", e a frase do
@@ -118,7 +124,9 @@ export const dataNaoPassada = (rotulo: string) =>
  * string do formulário vai direto ao banco sem passar por float em lugar nenhum.
  */
 export const valorMonetarioOpcional = (rotulo: string) =>
-  z.string().trim().nullish()
+  // A frase também no tipo errado: o número 3500, e não o texto "3500.00",
+  // caía na mensagem padrão da zod, sem o nome do campo.
+  z.string(`${rotulo}: use um valor como 1234.50`).trim().nullish()
     .transform((valor) => (valor === undefined ? undefined : valor || null))
     // `.nullish()` no fim pelo mesmo motivo do `dataOpcional`: a frase do campo.
     .pipe(

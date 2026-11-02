@@ -1,4 +1,9 @@
-import { ZodError } from 'zod';
+import { z, ZodError } from 'zod';
+
+// O sistema é só pt-BR. A mensagem padrão da zod sai em português para o campo
+// que o schema não deu frase própria; carregado aqui porque o error-handler e o
+// comando do administrador passam por este arquivo antes de qualquer `parse`.
+z.config(z.locales.ptBR());
 
 // Traduz um ZodError na frase de erro do projeto.
 //
@@ -9,9 +14,9 @@ import { ZodError } from 'zod';
 // Quantos campos entram na mensagem curta antes de virar "e mais N".
 const MAX_NA_MENSAGEM = 3;
 
-// `unrecognized_keys` (o que `strictObject` recusa) chega com `path` vazio e
-// mensagem em inglês, porque o campo não está no schema — não há onde pendurar
-// uma mensagem customizada. É o único caso que precisa de tradução aqui.
+// `unrecognized_keys` (o que `strictObject` recusa) chega com `path` vazio,
+// porque o campo não está no schema — não há onde pendurar uma mensagem
+// customizada. É o único caso que precisa de frase montada aqui.
 function descreverIssue(issue: ZodError['issues'][number]): { campo: string; mensagem: string } {
   if (issue.code === 'unrecognized_keys') {
     const chaves = issue.keys.join('", "');

@@ -145,6 +145,17 @@ describe('POST /api/endpoints/:id/command', () => {
     expect(status).toBe(422);
   });
 
+  it('ação fora dos três comandos é 422, e nada é enviado', async () => {
+    const { status, body } = await api.post<{ error: string }>(
+      `/api/endpoints/${endpointId}/command`,
+      { action: 'FORMATAR_DISCO' },
+    );
+
+    expect(status).toBe(422);
+    expect(body.error).toBe('ação inválida: use reboot, shutdown ou suspend');
+    expect(await prisma.auditLog.count({ where: { action: 'COMMAND', entityId: endpointId, changes: { path: ['comando'], equals: 'FORMATAR_DISCO' } } })).toBe(0);
+  });
+
   it('uuid que não é de máquina nenhuma é 404', async () => {
     const { status, body } = await api.post<{ error: string }>(
       `/api/endpoints/${UUID_QUE_NAO_EXISTE}/command`,

@@ -82,6 +82,9 @@ não há mock de Prisma ([`testes.md`](./docs/referencia/testes.md)). Página no
 - **Sem cor por dado** (status, nome, categoria, tipo de evento). Só os tokens do tema
   (`status-success`, `status-warning`, `status-danger`, `status-info`) em botão, aviso e na marca
   "desativado". O lint recusa cor fixa em `src/`.
+- **Só pt-BR, e a moeda é o real (BRL).** Nenhuma frase em inglês chega a quem usa: a recusa da API
+  passa pelo locale pt-BR da zod (`server/infra/errors/zod-error.ts`) e o balão do navegador, por
+  `src/helpers/validacao.helper.ts`. Campo novo de schema leva a frase com o rótulo.
 - **O seed demo é como recém-cadastrado pela tela:** nada entregue, sem chave, só produto que todo
   mundo conhece.
 
