@@ -24,9 +24,9 @@ const email = z.string('e-mail é obrigatório').trim().toLowerCase()
 
 /**
  * O CARGO (D148), no mesmo corpo do cadastro — e não em rota própria.
- * Hoje um só, Administrador (Z): a separação de cargos é decisão a tomar, e a
- * tela deixou de mandar o campo. Quem só recebe equipamento não é usuário — é
- * colaborador (`catalog/specs/person.spec.ts`).
+ * Técnico, Supervisor ou Administrador (AV), escolhido no formulário de
+ * Usuários. Quem só recebe equipamento não é usuário — é colaborador
+ * (`catalog/specs/person.spec.ts`).
  *
  * A matriz antiga tinha rota separada (`PUT /api/users/:id/groups`) porque o dono
  * do dado era o grupo: quem decidia o que uma permissão concedia era o domínio de
@@ -41,7 +41,7 @@ const cargo = z.enum(CARGOS, 'cargo inválido');
 export const createUserSchema = z.strictObject({
   name: nome,
   email,
-  // Ausente nasce `ADMIN`, pelo `@default` do schema.
+  // Ausente nasce `TECNICO`, pelo `@default` do schema.
   role: cargo.optional(),
   // SEM senha: o servidor gera uma temporária e a pessoa escolhe a dela no
   // primeiro acesso (AU). O administrador nunca sabe a senha que fica.

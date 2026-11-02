@@ -29,15 +29,15 @@ export const workstationController = {
 
   async detail(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    // O CUSTO DOS ATIVOS DA MESA É DE `ADMIN` (D77), e esta rota vazava.
+    // O CUSTO DOS ATIVOS DA MESA É DE `SUPERVISOR` (D77), e esta rota vazava.
     //
     // A ficha do posto devolve os ativos entregues com o `ASSET_SELECT`
-    // completo, e `purchaseCost` está nele: quem não fosse `ADMIN` e abrisse
+    // completo, e `purchaseCost` está nele: quem não fosse `SUPERVISOR` e abrisse
     // `/postos/:id` recebia o custo de compra de cada equipamento da mesa —
     // exatamente o que `tests/invariantes/dado-sensivel.test.ts` prova que
     // `/api/assets` e `/api/assets/:id` não fazem. O vazamento era por falta de
     // uma terceira porta, não por decisão: quem lê filtra, e esta é a leitura
     // que faltava. Quem sabe quem está pedindo é a borda.
-    return getWorkstation(id, temCargo(request, 'ADMIN'));
+    return getWorkstation(id, temCargo(request, 'SUPERVISOR'));
   },
 };

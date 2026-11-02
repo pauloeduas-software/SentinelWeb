@@ -44,6 +44,10 @@ não há mock de Prisma ([`testes.md`](./docs/referencia/testes.md)). Página no
   linha da conta.
 - Toda escrita grava quem fez só no banco, nunca em tela (AB). Rota nova de escrita entra em
   `tests/invariantes/auditoria.test.ts`.
+- **Três cargos, `TECNICO < SUPERVISOR < ADMIN` (AV).** O Técnico opera (ver, cadastrar, editar,
+  entregar, devolver); o Supervisor exclui, desativa, dá baixa, vê o custo, mexe em licença, posto,
+  Configurações e comando; só o Administrador mexe em Usuários. A conta nasce Técnico. Botão que o
+  cargo não alcança some (`usePode`), e desativar pelo `PUT` confere `isActive` no controller.
 - **Rota nova tem duas linhas:** o cargo em `route-permissions.ts` (sem ela o boot cai) e o contrato em
   `server/modules/api-docs/helpers/contrato-das-rotas.ts` (sem ela `contrato-da-api.test.ts` reprova).
   O Swagger abre em `/api/docs`, só fora de produção (AS).
@@ -113,9 +117,9 @@ Decidido; não proponha de novo:
 - o que a AT deixou de fora do ModuloDefault: Problem Details, caminhos em camelCase e `/v1`, Prettier,
   release-please e o shadcn/ui inteiro.
 
-**Fechados:** licença, estoque, Configurações, Colaboradores e Usuários foram validados contra GLPI e
-Snipe-IT. Só se corrige bug e texto falso; regra nova, só a pedido. A separação de cargos está
-pendente (Z) e nasce do zero: não reintroduza o técnico.
+**Fechados:** licença, estoque, Configurações, Colaboradores, Usuários e os cargos (AV, também contra
+o Lansweeper) foram validados contra GLPI e Snipe-IT. Só se corrige bug e texto falso; regra nova, só
+a pedido.
 
 ## Docs e commits
 

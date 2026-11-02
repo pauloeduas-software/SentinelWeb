@@ -6,7 +6,7 @@ import { hojeNoBrasil, somarDias } from '../../shared/hoje.helper';
 import { SEM_USO } from '../helpers/license-count.helper';
 import { DIAS_DE_AVISO } from '../helpers/license-status.helper';
 import {
-  LICENSE_SELECT, paraResposta,
+  licenseSelect, paraResposta,
   type LicencaNaResposta, type LinhaDeLicenca,
 } from '../helpers/license-select.helper';
 import type { LicenseFilters, StatusDoFiltro } from '../schemas/license.schema';
@@ -24,6 +24,7 @@ import { contarUso } from './count-license-checkouts.usecase';
 export async function listLicenses(
   query: ListQuery,
   filtros: LicenseFilters,
+  podeVerCusto: boolean,
 ): Promise<ListEnvelope<LicencaNaResposta>> {
   // `AND`, e não espalhamento: a busca escreve `OR` e o status também —
   // espalhados, um apagaria o outro em silêncio.
@@ -47,7 +48,8 @@ export async function listLicenses(
     prisma.license.count({ where }),
     prisma.license.findMany({
       where,
-      select: LICENSE_SELECT,
+      // O select DEPENDE DA SESSÃO (D77): sem o cargo, a coluna do custo nem é lida.
+      select: licenseSelect(podeVerCusto),
       orderBy,
       skip: query.skip,
       take: query.take,

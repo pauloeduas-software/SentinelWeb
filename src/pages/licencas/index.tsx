@@ -29,8 +29,9 @@ export default function LicencasPage() {
     modal, licencaAberta, buscaDoLink, erroDoLink, abrir, fechar, ocupado,
     handleCriar, handleEditar, handleEntregar, handleDevolver, handleTrocarChave, handleAlternarEncerrada, handleExcluir,
   } = useLicencas();
-  // Excluir é `ADMIN` no servidor.
-  const podeApagar = usePode('ADMIN');
+  // Cadastrar, editar, encerrar e excluir são `SUPERVISOR` no servidor: licença é
+  // contrato e dinheiro (AV). O Técnico entrega, devolve e troca a chave.
+  const podeGerir = usePode('SUPERVISOR');
 
   return (
     <div className="motion-safe:animate-fade-in flex flex-col pb-6">
@@ -45,12 +46,14 @@ export default function LicencasPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => abrir('criar')}
-            className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary font-mono text-xs uppercase tracking-widest transition-colors"
-          >
-            <Plus size={14} /> Nova licença
-          </button>
+          {podeGerir && (
+            <button
+              onClick={() => abrir('criar')}
+              className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary font-mono text-xs uppercase tracking-widest transition-colors"
+            >
+              <Plus size={14} /> Nova licença
+            </button>
+          )}
         </div>
       </div>
 
@@ -83,10 +86,10 @@ export default function LicencasPage() {
         licencas={licencas}
         ocupado={ocupado}
         onAbrir={(licenca) => abrir('detalhe', licenca)}
-        onEditar={(licenca) => abrir('editar', licenca)}
+        onEditar={podeGerir ? (licenca) => abrir('editar', licenca) : undefined}
         onEntregar={(licenca) => abrir('entregar', licenca)}
-        onAlternarEncerrada={(licenca) => void handleAlternarEncerrada(licenca)}
-        onExcluir={podeApagar ? (licenca) => void handleExcluir(licenca) : undefined}
+        onAlternarEncerrada={podeGerir ? (licenca) => void handleAlternarEncerrada(licenca) : undefined}
+        onExcluir={podeGerir ? (licenca) => void handleExcluir(licenca) : undefined}
         vazio={
           // Carregando e erro antes do vazio: sem isto, a primeira carga e um
           // servidor fora do ar diziam "nenhuma cadastrada" (`EstadoDaLista`).
@@ -129,9 +132,9 @@ export default function LicencasPage() {
           ocupado={ocupado}
           onClose={fechar}
           onEntregar={(licenca) => abrir('entregar', licenca)}
-          onEditar={(licenca) => abrir('editar', licenca)}
-          onAlternarEncerrada={(licenca) => void handleAlternarEncerrada(licenca)}
-          onExcluir={podeApagar ? (licenca) => void handleExcluir(licenca) : undefined}
+          onEditar={podeGerir ? (licenca) => abrir('editar', licenca) : undefined}
+          onAlternarEncerrada={podeGerir ? (licenca) => void handleAlternarEncerrada(licenca) : undefined}
+          onExcluir={podeGerir ? (licenca) => void handleExcluir(licenca) : undefined}
           onDevolver={handleDevolver}
           onTrocarChave={handleTrocarChave}
         />

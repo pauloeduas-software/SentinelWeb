@@ -229,7 +229,9 @@ describe('Minha conta: o nome', () => {
     const trocou = await chamar(cookie, 'PATCH', '/api/auth/me', { name: 'Nome Novo' });
     expect(trocou.statusCode).toBe(200);
     expect(trocou.json().name).toBe('Nome Novo');
-    expect(trocou.json().role).toBe('ADMIN');
+    // A conta nasce Técnico (AV), e é por isso que o `role: 'ADMIN'` abaixo
+    // importa: é o Técnico tentando se promover pela própria conta.
+    expect(trocou.json().role).toBe('TECNICO');
     expect((await prisma.user.findUniqueOrThrow({ where: { id } })).name).toBe('Nome Novo');
 
     // Cargo, e-mail e qualquer outro campo são recusados: o corpo é estrito.

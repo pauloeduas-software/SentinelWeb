@@ -24,8 +24,9 @@ export default function EstoquePage() {
     modal, itemAberto, buscaDoLink, erroDoLink, abrir, fechar, ocupado,
     handleCriar, handleEditar, handleEntregar, handleDevolver, handleAlternarAtivo, handleExcluir,
   } = useEstoque();
-  // Excluir é `ADMIN` no servidor.
-  const podeApagar = usePode('ADMIN');
+  // Desativar e excluir são `SUPERVISOR` no servidor (AV). O Técnico cadastra,
+  // edita, entrega e devolve.
+  const podeDecidir = usePode('SUPERVISOR');
 
   return (
     <div className="motion-safe:animate-fade-in flex flex-col pb-6">
@@ -73,8 +74,8 @@ export default function EstoquePage() {
         onAbrir={(item) => abrir('detalhe', item)}
         onEntregar={(item) => abrir('entregar', item)}
         onEditar={(item) => abrir('editar', item)}
-        onAlternarAtivo={(item) => void handleAlternarAtivo(item)}
-        onExcluir={podeApagar ? (item) => void handleExcluir(item) : undefined}
+        onAlternarAtivo={podeDecidir ? (item) => void handleAlternarAtivo(item) : undefined}
+        onExcluir={podeDecidir ? (item) => void handleExcluir(item) : undefined}
         vazio={
           // Carregando e erro antes do vazio: sem isto, a primeira carga e um
           // servidor fora do ar diziam "nenhum cadastrado" (`EstadoDaLista`).
@@ -118,8 +119,8 @@ export default function EstoquePage() {
           onClose={fechar}
           onEntregar={(item) => abrir('entregar', item)}
           onEditar={(item) => abrir('editar', item)}
-          onAlternarAtivo={(item) => void handleAlternarAtivo(item)}
-          onExcluir={podeApagar ? (item) => void handleExcluir(item) : undefined}
+          onAlternarAtivo={podeDecidir ? (item) => void handleAlternarAtivo(item) : undefined}
+          onExcluir={podeDecidir ? (item) => void handleExcluir(item) : undefined}
           onDevolver={handleDevolver}
         />
       )}

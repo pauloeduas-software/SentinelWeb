@@ -91,11 +91,11 @@ export default function AssetFormModal({
   // A versão DESTA abertura (AF): o registro pode chegar mais novo enquanto o
   // formulário está aberto (o clone é cadastro novo, sem versão), e o que ele mostra continua sendo o desta leitura.
   const [versao] = useState(asset && !clonar ? asset.updatedAt : undefined);
-  // O CUSTO É DO ADMIN (D77). Quem não é nem recebe o valor do servidor, então
+  // O CUSTO É DO SUPERVISOR (D77). Quem não é nem recebe o valor do servidor, então
   // o campo abriria vazio — e salvar mandaria esse vazio por cima do custo que
   // só o administrador enxerga. Sem o campo e sem a chave no corpo, edita-se o
   // resto sem tocar no dinheiro.
-  const veCusto = usePode('ADMIN');
+  const veCusto = usePode('SUPERVISOR');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 

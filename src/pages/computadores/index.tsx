@@ -27,9 +27,10 @@ export default function ComputadoresPage() {
     handleSubmit, handleDelete, handleRestore,
     emPosse, openPosse, closePosse, handleEntregar, handleDevolver,
   } = useAssets();
-  // Mandar para a lixeira e tirar de lá é `ADMIN` no servidor. Sem isto, quem
-  // não é veria a lixeira e o restaurar, e os dois só levariam 403.
-  const ehAdmin = usePode('ADMIN');
+  // Mandar para a lixeira, tirar de lá e Configurações são `SUPERVISOR` no
+  // servidor (AV). Sem isto, quem não é veria a lixeira, o restaurar e o link de
+  // Configurações, e os três só levariam 403 ou voltariam para a raiz.
+  const podeDecidir = usePode('SUPERVISOR');
 
   // AS COLUNAS VISÍVEIS (F10, Etapa B). Preferência do navegador, não do
   // servidor: ninguém a consulta e ela não é fato sobre o inventário
@@ -87,6 +88,7 @@ export default function ComputadoresPage() {
         baixados={baixados}
         statusFiltrado={statusFiltrado}
         onLimparStatus={limparStatus}
+        comLixeira={podeDecidir}
       />
 
       {/* Sem as abas do `ListToolbar`: as vistas do ativo são três e moram no
@@ -199,8 +201,9 @@ export default function ComputadoresPage() {
                   )}
                   {colunas.mostrar('purchase') && (
                   <td className="px-6 py-4 text-text-secondary">
-                    <div className="tabular-nums">{formatarMoeda(asset.purchaseCost)}</div>
-                    <div className="text-[10px] text-text-tertiary mt-1 tabular-nums">{formatarData(asset.purchaseDate)}</div>
+                    {/* O valor só para quem vê o custo (D77, AV); a data, para todos. */}
+                    {asset.purchaseCost !== undefined && <div className="tabular-nums">{formatarMoeda(asset.purchaseCost)}</div>}
+                    <div className={`tabular-nums ${asset.purchaseCost !== undefined ? 'text-[10px] text-text-tertiary mt-1' : ''}`}>{formatarData(asset.purchaseDate)}</div>
                   </td>
                   )}
 
@@ -224,7 +227,7 @@ export default function ComputadoresPage() {
                         a coluna inteira não existia. */}
                     <div className="flex items-center justify-end gap-3 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
                       {view === 'trashed' ? (
-                        ehAdmin && (
+                        podeDecidir && (
                           <button onClick={() => void handleRestore(asset)} title="Restaurar" aria-label={`Restaurar ${asset.assetTag}`} className="text-text-tertiary hover:text-status-success transition-colors">
                             <RotateCcw size={14} />
                           </button>
@@ -252,7 +255,7 @@ export default function ComputadoresPage() {
                           <button onClick={() => openEdit(asset)} title="Editar" aria-label={`Editar ${asset.assetTag}`} className="text-text-tertiary hover:text-text-primary transition-colors">
                             <Edit2 size={14} />
                           </button>
-                          {ehAdmin && (
+                          {podeDecidir && (
                             <button onClick={() => void handleDelete(asset)} title="Excluir" aria-label={`Excluir ${asset.assetTag}`} className="text-text-tertiary hover:text-status-danger transition-colors">
                               <Trash2 size={14} />
                             </button>
@@ -296,9 +299,15 @@ export default function ComputadoresPage() {
                               categoria — é a ordem do Snipe-IT. Sem esta dica, o
                               primeiro cadastro esbarra num seletor vazio. */}
                           <span className="mt-4 text-[10px] max-w-md leading-relaxed">
-                            Todo ativo pertence a um modelo. Cadastre o fabricante e o modelo em{' '}
-                            <Link to="/configuracoes" className="text-status-success hover:underline">Configurações</Link>
-                            {' '}antes do primeiro ativo.
+                            {podeDecidir ? (
+                              <>
+                                Todo ativo pertence a um modelo. Cadastre o fabricante e o modelo em{' '}
+                                <Link to="/configuracoes" className="text-status-success hover:underline">Configurações</Link>
+                                {' '}antes do primeiro ativo.
+                              </>
+                            ) : (
+                              'Todo ativo pertence a um modelo. Peça a um supervisor que cadastre o fabricante e o modelo em Configurações antes do primeiro ativo.'
+                            )}
                           </span>
                         </>
                       )}

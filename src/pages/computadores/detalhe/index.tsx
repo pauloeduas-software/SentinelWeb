@@ -37,10 +37,10 @@ export default function AssetDetailPage() {
     handleSubmit, handleEntregar, handleDevolver, handleDarBaixa, handleReverterSaida,
     handleDelete,
   } = useAssetDetail();
-  // A lixeira é `ADMIN` no servidor (`DELETE /api/assets/:id`); para quem não
-  // é, o botão só levaria 403. Antes dos `return` abaixo: hook depois de retorno
+  // A lixeira e a baixa são `SUPERVISOR` no servidor (`DELETE /api/assets/:id`,
+  // `retire`, `unretire`); para quem não é, o botão só levaria 403. Antes dos `return` abaixo: hook depois de retorno
   // condicional é o que as regras do React proíbem.
-  const podeExcluir = usePode('ADMIN');
+  const podeExcluir = usePode('SUPERVISOR');
 
   if (carregando) {
     return <div className="font-mono text-xs text-text-tertiary">Carregando ativo…</div>;
@@ -113,8 +113,8 @@ export default function AssetDetailPage() {
         {aba === 'detalhes' && (
           <DetalhesTab
             asset={asset}
-            onDarBaixa={abrirBaixa}
-            onReverterSaida={() => void handleReverterSaida()}
+            onDarBaixa={podeExcluir ? abrirBaixa : undefined}
+            onReverterSaida={podeExcluir ? () => void handleReverterSaida() : undefined}
           />
         )}
 

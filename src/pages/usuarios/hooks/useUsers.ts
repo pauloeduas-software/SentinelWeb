@@ -10,11 +10,14 @@ import {
 import type { User } from '../../../types/user.types';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import { useNotificacao } from '../../../hooks/useNotificacao';
+import { useAuthStore } from '../../../stores/auth.store';
 
 const PER_PAGE = 10;
 
 export function useUsers() {
   const notificar = useNotificacao();
+  const meuId = useAuthStore((estado) => estado.usuario?.id);
+  const conferirSessao = useAuthStore((estado) => estado.conferirSessao);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search);
@@ -70,6 +73,11 @@ export function useUsers() {
   const handleSubmit = async (data: UserInput): Promise<string | null> => {
     if (!editing) return (await createUser.mutateAsync(data)).temporaryPassword;
     await updateUser.mutateAsync({ id: editing.id, data });
+    // A PRÓPRIA conta com outro cargo (AV): o servidor já relê o cargo a cada
+    // requisição, mas o menu e o `usePode` leem a sessão guardada. Sem reler,
+    // quem deixou de ser Administrador continuaria vendo Usuários, e a lista
+    // voltaria 403.
+    if (editing.id === meuId && data.role !== editing.role) await conferirSessao();
     closeModal();
     return null;
   };

@@ -16,7 +16,7 @@ import { caminhoDoColaborador } from './helpers/colaborador.helper';
 import LoginPage from './pages/login';
 import ContaPage from './pages/conta';
 import TrocaObrigatoria from './pages/conta/components/TrocaObrigatoria';
-import { useAuthStore, usePode } from './stores/auth.store';
+import { useAuthStore, usePode, type Cargo } from './stores/auth.store';
 import Notificacoes from './components/Notificacoes';
 import ErroDaTela from './components/ErroDaTela';
 import { useTituloDaAba } from './hooks/useTituloDaAba';
@@ -49,12 +49,13 @@ function RedirecionarColaborador() {
 }
 
 /**
- * A ROTA QUE SÓ O ADMIN ABRE — Usuários, hoje.
+ * A ROTA QUE SÓ UM CARGO ABRE — Usuários (Administrador) e Configurações
+ * (Supervisor).
  *
  * O menu já escondia o item, mas esconder o item não fecha a URL: quem colava
  * `/usuarios` (ou seguia um link antigo) via a tela inteira, com o botão de
- * cadastrar e as ações de linha, e tudo voltava 403 — a tela é `ADMIN` até para
- * ler (`server/modules/access/helpers/route-permissions.ts`).
+ * cadastrar e as ações de linha, e tudo voltava 403 — Usuários é `ADMIN` até
+ * para ler (`server/modules/access/helpers/route-permissions.ts`).
  * Uma tela em que tudo falha é pior do que não chegar nela.
  *
  * Redireciona para a raiz, e não para uma tela de "sem acesso": a raiz já leva
@@ -63,8 +64,8 @@ function RedirecionarColaborador() {
  *
  * Como o `usePode`, isto é INTERFACE, não segurança: quem autoriza é o servidor.
  */
-function SoAdmin({ children }: { children: React.ReactNode }) {
-  const pode = usePode('ADMIN');
+function SoCargo({ cargo, children }: { cargo: Cargo; children: React.ReactNode }) {
+  const pode = usePode(cargo);
   return pode ? <>{children}</> : <Navigate to="/" replace />;
 }
 
@@ -135,9 +136,8 @@ function Layout() {
               <Route path="/descobertas" element={<DescobertasPage />} />
               {/* QUEM OPERA O SISTEMA é assunto do Administrador: quem não é nem
                   vê o item no menu (navegacao.ts), e a URL digitada volta para a
-                  raiz. Com um cargo só (Z), todo mundo passa. `/users` era o
-                  nome antigo. */}
-              <Route path="/usuarios" element={<SoAdmin><UsuariosPage /></SoAdmin>} />
+                  raiz (AV). `/users` era o nome antigo. */}
+              <Route path="/usuarios" element={<SoCargo cargo="ADMIN"><UsuariosPage /></SoCargo>} />
               <Route path="/users" element={<Navigate to="/usuarios" replace />} />
               <Route path="/users/:id" element={<RedirecionarColaborador />} />
               <Route path="/colaboradores" element={<ColaboradoresPage />} />
@@ -146,7 +146,7 @@ function Layout() {
                   Colaboradores porque é de lá que ela abre, e é isso que acende o
                   item certo no menu. */}
               <Route path="/colaboradores/:id" element={<ColaboradorPage />} />
-              <Route path="/configuracoes" element={<ConfiguracoesPage />} />
+              <Route path="/configuracoes" element={<SoCargo cargo="SUPERVISOR"><ConfiguracoesPage /></SoCargo>} />
               {/* MINHA CONTA (AR): cada um edita o próprio nome e troca a própria
                   senha. Não está no menu — abre pelo nome, no rodapé da barra. */}
               <Route path="/conta" element={<ContaPage />} />

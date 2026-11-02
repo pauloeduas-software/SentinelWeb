@@ -1,4 +1,4 @@
-import type { User } from './user.types';
+import type { Cargo, User } from './user.types';
 
 /**
  * Quem está logado.
@@ -17,7 +17,7 @@ import type { User } from './user.types';
  */
 export type SessionUser = Omit<User, 'role' | 'isActive'> & {
   /**
-   * O CARGO desta pessoa (D148) — hoje sempre `ADMIN` (Z).
+   * O CARGO desta pessoa (D148): Técnico, Supervisor ou Administrador (AV).
    *
    * Na sessão VEM SÓ DE DUAS ROTAS, `POST /api/auth/login` e `GET /api/auth/me`:
    * no servidor ele não está no `USER_PUBLIC_SELECT` de propósito, e sai na
@@ -31,7 +31,7 @@ export type SessionUser = Omit<User, 'role' | 'isActive'> & {
    * ERA UM ARRAY de chaves `<módulo>.<ação>`, a união dos grupos (D76). Virou uma
    * string com ordem, e quem compara é o `usePode()` do store.
    */
-  role: 'ADMIN';
+  role: Cargo;
   /**
    * A conta entrou com uma senha temporária e ainda não a trocou (AR): o painel
    * mostra só a tela de troca, e o servidor recusa o resto com 403.

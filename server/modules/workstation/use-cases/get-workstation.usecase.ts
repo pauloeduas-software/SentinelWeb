@@ -36,7 +36,7 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
       // Acrescentá-la ao `ASSET_SELECT` compartilhado a faria sair em toda
       // listagem, em toda criação e em toda edição, sem ninguém ter decidido.
       //
-      // MENOS o custo de compra quando a sessão não é `ADMIN` (D77) — é o que o
+      // MENOS o custo de compra quando a sessão não é `SUPERVISOR` (D77) — é o que o
       // `assetSelect` faz, e é a mesma função que a listagem e o detalhe de
       // ativo usam. O `as` fixa o tipo no select completo porque é ele que o
       // Prisma precisa ver; o mesmo recurso que `list-assets.usecase.ts` usa.

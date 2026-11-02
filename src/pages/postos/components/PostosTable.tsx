@@ -11,7 +11,7 @@ import type { Posto } from '../../../types/workstation.types';
 // QUEM está na mesa, EM QUE TURNO, QUANTO equipamento ela segura, e se está
 // VAGA — equipamento parado sem ninguém respondendo (docs/referencia/modelo-de-posse.md).
 //
-// E, para o ADMIN, o CADASTRO na própria linha — Editar e Excluir, na ordem de
+// E, para o SUPERVISOR, o CADASTRO na própria linha — Editar e Excluir, na ordem de
 // Configurações: o destrutivo fica na ponta. Sem Desativar (AN): o posto vazio
 // se exclui.
 
@@ -19,7 +19,7 @@ interface PostosTableProps {
   postos: readonly Posto[];
   vazio: React.ReactNode;
   onAbrir: (posto: Posto) => void;
-  /** Mexer no cadastro é `ADMIN`. */
+  /** Mexer no cadastro é `SUPERVISOR`. */
   podeEditar: boolean;
   onEditar: (posto: Posto) => void;
   onExcluir: (posto: Posto) => void;

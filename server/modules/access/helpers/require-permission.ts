@@ -1,7 +1,7 @@
 import type { FastifyRequest } from 'fastify';
 import { AppError } from '../../../infra/errors/app-error';
 import { createLogger } from '../../../infra/logger/logger';
-import { ehCargo, NOME_DO_CARGO, cargoAlcanca, type Cargo } from './cargo';
+import { CARGOS, ehCargo, NOME_DO_CARGO, cargoAlcanca, type Cargo } from './cargo';
 
 // A AUTORIZAÇÃO, do ponto de vista de uma requisição (D148).
 //
@@ -20,7 +20,7 @@ const logger = createLogger('require-permission');
  * A sessão alcança este cargo? Sem lançar — para quem precisa DECIDIR, não barrar.
  *
  * É o que os `select` por cargo usam (D77): o use-case da listagem de ativos
- * pergunta `temCargo(request, 'ADMIN')` para escolher o select com ou sem custo,
+ * pergunta `temCargo(request, 'SUPERVISOR')` para escolher o select com ou sem custo,
  * e não para recusar a requisição.
  */
 export function temCargo(request: FastifyRequest, minimo: Cargo): boolean {
@@ -51,8 +51,10 @@ export function exigirPermissao(request: FastifyRequest, exigencia: string): voi
 
   if (request.cargo && cargoAlcanca(request.cargo, exigencia)) return;
 
+  // O cargo do topo é um só; abaixo dele, o maior também serve (`cargoAlcanca`).
+  const acima = exigencia === CARGOS[CARGOS.length - 1] ? '' : ' ou acima';
   throw new AppError(
-    `Esta ação exige o cargo de ${NOME_DO_CARGO[exigencia]}. Fale com quem administra o sistema.`,
+    `Esta ação exige o cargo de ${NOME_DO_CARGO[exigencia]}${acima}. Fale com quem administra o sistema.`,
     403,
   );
 }

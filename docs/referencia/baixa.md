@@ -47,7 +47,7 @@ formulário próprio — é uma operação, não um campo do cadastro:
 | **Observações** | a justificativa ("lote 2026/03, nota 1187"). Fica no ativo (`retiredNotes`) e aparece na aba Detalhes enquanto a baixa valer; a de cada baixa fica também na auditoria, no banco ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)) |
 
 A API é `POST /api/assets/:id/retire` (`{ retiredReason, retiredAt?, notes? }`),
-permitida a `ADMIN`, o único cargo ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)).
+permitida a partir de `SUPERVISOR` ([AV](../decisoes/acesso.md#av--três-cargos-técnico-supervisor-e-administrador)), como o `unretire`.
 
 ### Depois da baixa
 

@@ -9,8 +9,9 @@ import { canaisDeSuporte, type CanalDeSuporte } from '../helpers/suporte.helper'
 
 interface DetalhesTabProps {
   asset: Asset;
-  onDarBaixa: () => void;
-  onReverterSaida: () => void;
+  /** Dar baixa e reverter são `SUPERVISOR` no servidor. Ausentes, os botões somem — quem decide é a página. */
+  onDarBaixa?: () => void;
+  onReverterSaida?: () => void;
 }
 
 export default function DetalhesTab({
@@ -38,13 +39,15 @@ export default function DetalhesTab({
               em que saiu.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onReverterSaida}
-            className="flex items-center gap-2 px-3 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base transition-colors shrink-0"
-          >
-            <Undo2 size={13} /> Reverter
-          </button>
+          {onReverterSaida && (
+            <button
+              type="button"
+              onClick={onReverterSaida}
+              className="flex items-center gap-2 px-3 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base transition-colors shrink-0"
+            >
+              <Undo2 size={13} /> Reverter
+            </button>
+          )}
         </div>
       )}
 
@@ -77,7 +80,8 @@ export default function DetalhesTab({
         <Secao titulo="Compra">
           <Campo rotulo="Número do pedido" valor={asset.orderNumber} />
           <Campo rotulo="Data da compra" valor={formatarData(asset.purchaseDate)} />
-          <Campo rotulo="Valor" valor={formatarMoeda(asset.purchaseCost)} />
+          {/* Ausente para quem não vê o custo (D77): sem a linha, e não um "—" que diria "sem valor". */}
+          {asset.purchaseCost !== undefined && <Campo rotulo="Valor" valor={formatarMoeda(asset.purchaseCost)} />}
         </Secao>
 
         <Secao titulo="Notas">
@@ -87,7 +91,7 @@ export default function DetalhesTab({
         </Secao>
       </div>
 
-      {!selo && (
+      {!selo && onDarBaixa && (
         <div className="border-t border-border-sutil pt-4 flex items-center justify-between gap-4">
           <p className="text-text-tertiary text-[10px] leading-relaxed max-w-xl">
             <span className="text-text-secondary uppercase tracking-widest">Dar baixa</span>{' '}

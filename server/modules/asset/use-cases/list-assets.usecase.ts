@@ -15,7 +15,7 @@ type AssetRowComPosse = AssetRow & { posse: PosseResolvida };
 function buscarPagina(where: object, query: ListQuery, podeVerCusto: boolean) {
   return prisma.asset.findMany({
     where,
-    // O select DEPENDE DA SESSÃO (D77): quem não é `ADMIN` não tem o
+    // O select DEPENDE DA SESSÃO (D77): quem não é `SUPERVISOR` não tem o
     // `purchaseCost` lido do banco. Mascarar depois deixaria o valor passar por log, por
     // erro e por qualquer serialização no caminho.
     select: assetSelect(podeVerCusto) as typeof ASSET_SELECT,

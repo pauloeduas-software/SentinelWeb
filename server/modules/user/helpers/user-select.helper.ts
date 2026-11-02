@@ -57,7 +57,7 @@ export function soPublico<T extends ContaPublica>(linha: T): Pick<T, keyof typeo
 export const USER_LIST_SELECT = {
   ...USER_PUBLIC_SELECT,
 
-  // O CARGO, para a coluna Cargo da lista. Hoje é sempre Administrador (Z).
+  // O CARGO, para a coluna Cargo da lista e o formulário (AV).
   role: true,
 
   // `isActive` porque é ele que decide o botão da linha — Desativar ou Ativar —

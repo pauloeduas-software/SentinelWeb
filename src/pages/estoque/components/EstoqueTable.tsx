@@ -21,9 +21,9 @@ interface EstoqueTableProps {
   onAbrir: (item: ItemDeEstoque) => void;
   onEntregar: (item: ItemDeEstoque) => void;
   onEditar: (item: ItemDeEstoque) => void;
-  /** Desativar e ativar — o mesmo botão, pelo estado do item. */
-  onAlternarAtivo: (item: ItemDeEstoque) => void;
-  /** Excluir é `ADMIN` no servidor. Ausente, o botão some — quem decide é a página. */
+  /** Desativar e ativar — o mesmo botão, pelo estado do item. `SUPERVISOR` no servidor (AV); ausente, o botão some. */
+  onAlternarAtivo?: (item: ItemDeEstoque) => void;
+  /** Excluir é `SUPERVISOR` no servidor. Ausente, o botão some — quem decide é a página. */
   onExcluir?: (item: ItemDeEstoque) => void;
   vazio: React.ReactNode;
 }
@@ -110,16 +110,18 @@ export default function EstoqueTable({
                     >
                       <Edit2 size={14} />
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => onAlternarAtivo(item)}
-                      disabled={ocupado}
-                      title={item.isActive ? 'Desativar' : 'Ativar'}
-                      aria-label={`${item.isActive ? 'Desativar' : 'Ativar'} ${item.name}`}
-                      className={`${BOTAO} hover:text-status-info`}
-                    >
-                      {item.isActive ? <PowerOff size={14} /> : <Power size={14} />}
-                    </button>
+                    {onAlternarAtivo && (
+                      <button
+                        type="button"
+                        onClick={() => onAlternarAtivo(item)}
+                        disabled={ocupado}
+                        title={item.isActive ? 'Desativar' : 'Ativar'}
+                        aria-label={`${item.isActive ? 'Desativar' : 'Ativar'} ${item.name}`}
+                        className={`${BOTAO} hover:text-status-info`}
+                      >
+                        {item.isActive ? <PowerOff size={14} /> : <Power size={14} />}
+                      </button>
+                    )}
                     {onExcluir && (
                       <button
                         type="button"

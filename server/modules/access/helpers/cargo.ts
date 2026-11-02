@@ -1,9 +1,13 @@
-// O CARGO DA SESSÃO — com ordem (D148), e hoje com um valor só (Z).
+// O CARGO DA SESSÃO — com ordem (D148), em três degraus (AV).
 //
 // ═══════════════════════════════════════════════════════════════════════════
-// UM CARGO SÓ: todo usuário é `ADMIN` (Z), e a separação de cargos é decisão
-// a tomar. A validação de `ADMIN` fica inteira — o mapa de rotas, o `temCargo`
-// dos `select` por cargo, o `usePode` da tela.
+// TRÊS CARGOS, como GLPI, Snipe-IT e Lansweeper (AV): quem opera, quem decide
+// e quem administra.
+//
+//   `TECNICO`    — o dia a dia: vê, cadastra, edita, entrega e devolve.
+//   `SUPERVISOR` — o que apaga ou fecha registro, o dinheiro (custo, licença),
+//                  a estrutura (posto, catálogo) e o que age na máquina.
+//   `ADMIN`      — as contas: só ele mexe em Usuários.
 //
 // POR QUE COM ORDEM: a pergunta de toda rota é "tem ao MENOS este cargo?".
 // Sem ordem, cada linha do mapa teria que listar os cargos aceitos, e a lista
@@ -18,12 +22,14 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 /** Os cargos, do menor para o maior. A ordem do array **é** a hierarquia. */
-export const CARGOS = ['ADMIN'] as const;
+export const CARGOS = ['TECNICO', 'SUPERVISOR', 'ADMIN'] as const;
 
 export type Cargo = (typeof CARGOS)[number];
 
 /** O nome que aparece na tela e na mensagem de 403. */
 export const NOME_DO_CARGO: Readonly<Record<Cargo, string>> = {
+  TECNICO: 'Técnico',
+  SUPERVISOR: 'Supervisor',
   ADMIN: 'Administrador',
 };
 
