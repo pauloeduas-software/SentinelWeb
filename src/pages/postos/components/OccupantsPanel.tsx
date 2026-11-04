@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, LogOut, Pencil, UserPlus, X } from 'lucide-react';
 import ReferenceSelect from '../../../components/ReferenceSelect';
 import { diaDoInstante, hojeNoCampoDeData } from '../../../helpers/format.helper';
@@ -63,6 +63,12 @@ export default function OccupantsPanel({
   const [notes, setNotes] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
+  // O aviso fica no topo, e a ficha rola: quem clicou em "Adicionar ao posto",
+  // lá embaixo, não via a recusa e achava que o clique não tinha feito nada.
+  const avisoRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (erro) avisoRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [erro]);
   // O encerramento aberto numa linha: qual ocupação e o dia escolhido.
   const [encerrando, setEncerrando] = useState<{ id: string; dia: string } | null>(null);
 
@@ -136,7 +142,9 @@ export default function OccupantsPanel({
   return (
     <div className="font-mono text-xs space-y-5">
       {erro && (
-        <div className="p-3 bg-status-danger/10 text-status-danger border border-status-danger/20">{erro}</div>
+        <div ref={avisoRef} role="alert" className="p-3 bg-status-danger/10 text-status-danger border border-status-danger/20">
+          {erro}
+        </div>
       )}
 
       <p className="text-text-tertiary text-[10px] leading-relaxed">
@@ -180,6 +188,11 @@ export default function OccupantsPanel({
                   <div>{nomeDoOcupante(ocupante)}</div>
                   {ocupante.person?.email && (
                     <div className="text-[10px] text-text-tertiary mt-1">{ocupante.person.email}</div>
+                  )}
+                  {/* A nota de quem colocou a pessoa aqui, lida onde foi escrita
+                      — como a da entrega de estoque, na mesma ficha. */}
+                  {ocupante.notes && (
+                    <div className="text-[10px] text-text-tertiary mt-1 whitespace-normal">{ocupante.notes}</div>
                   )}
                 </td>
                 <td className="px-4 py-3 text-text-secondary">

@@ -521,7 +521,8 @@ model Workstation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Restrict: a localização com posto é "em uso" e se desativa, não se exclui.
+  // Restrict: a localização com posto é "em uso" e não se exclui (nem se
+  // desativa: a localização não tem Desativar, AO).
   location Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
 
   // Ativos entregues A ESTE POSTO e as pessoas que o ocupam. É a junção das
@@ -708,6 +709,12 @@ model Assignment {
   // dizendo "Entregue: Mesa 7" (`workstationSpec.beforeDelete`).
   targetWorkstationName String?
 
+  // E O ID que o posto tinha, também por escrito e sem FK (AW): é por ele, e
+  // não pelo nome, que o histórico do ativo encontra quem ocupou o posto
+  // excluído — um posto novo com o mesmo nome não se mistura. Só existe com a
+  // ligação vazia (CHECK `assignments_posto_excluido`).
+  targetWorkstationFormerId String? @db.Uuid
+
   checkoutAt        DateTime  @default(now())
   expectedCheckinAt DateTime?
   checkinAt         DateTime?
@@ -742,6 +749,8 @@ model WorkstationOccupant {
 
   /// O nome do posto, por escrito, quando ele foi excluído.
   workstationName String?
+  /// E o id que ele tinha, sem FK (AW), como o `targetWorkstationFormerId` da posse.
+  workstationFormerId String? @db.Uuid
 
   // Texto livre de propósito: "Manhã", "Tarde", "12x36 A". Enum engessaria
   // escalas reais e faixa de horário seria agenda, não inventário (D15).
@@ -765,6 +774,9 @@ model WorkstationOccupant {
   // único PARCIAL (`WHERE "endedAt" IS NULL`) criado na migration.
   @@index([workstationId, endedAt])
   @@index([personId, endedAt])
+  // O histórico de posse do ativo procura as ocupações do posto pelo id vivo OU
+  // pelo guardado na exclusão (AW); sem este, o `OR` varreria a tabela.
+  @@index([workstationFormerId])
   @@map("workstation_occupants")
 }
 

@@ -1,4 +1,5 @@
-import type { Assignment } from '../../../../types/posse.types';
+import type { AlvoDaPosse, Assignment, OcupanteDoPeriodo } from '../../../../types/posse.types';
+import { formatarDiaDoInstante } from '../../../../helpers/format.helper';
 
 // Para QUEM uma posse aponta, em texto — função pura, fora do JSX.
 //
@@ -17,6 +18,16 @@ export function rotuloDoAlvo(assignment: Assignment): string {
   // O posto excluído deixou o nome por escrito: a posse já devolvida perdeu a
   // ligação com o cadastro, e é este campo que diz por onde o ativo passou.
   return assignment.targetWorkstation?.name ?? assignment.targetWorkstationName ?? curto(assignment.targetWorkstationId);
+}
+
+/**
+ * O tipo do alvo em português, com o rótulo da entrega (`CheckoutModal`):
+ * o enum cru ("WORKSTATION") chegava à tela.
+ */
+export function tipoDoAlvo(tipo: AlvoDaPosse | null | undefined): string {
+  if (tipo === 'PERSON') return 'Colaborador';
+  if (tipo === 'WORKSTATION') return 'Posto';
+  return '';
 }
 
 /** "no posto Mesa 1" — vazio quando o alvo é a pessoa. */
@@ -47,6 +58,34 @@ export function postoDaPosseAberta(assignments: readonly Assignment[]): { id: st
 
   const posto = aberta.targetWorkstation;
   return posto ? { id: posto.id, name: posto.name } : null;
+}
+
+/** O posto desta posse foi excluído — o nome e o id ficaram por escrito (AW). */
+export function postoExcluido(assignment: Assignment): boolean {
+  return assignment.targetType === 'WORKSTATION' && assignment.targetWorkstationId === null;
+}
+
+/**
+ * O histórico sabe quem ocupou o posto desta entrega? Sabe pelo id: o do posto
+ * vivo ou o que a exclusão guardou (AW). O posto excluído antes de o id ser
+ * guardado só deixou o nome, e dizer "ninguém ocupou" seria afirmar o que não
+ * se sabe — a linha fica sem ocupantes, e eles continuam na ficha de cada
+ * colaborador.
+ */
+export function sabeOsOcupantes(assignment: Assignment): boolean {
+  return assignment.targetType === 'WORKSTATION'
+    && (assignment.targetWorkstationId ?? assignment.targetWorkstationFormerId ?? null) !== null;
+}
+
+/**
+ * "Laura (Manhã) 10/03/2026 › 20/06/2026" — um ocupante do período da entrega
+ * (AW), com o período DELE, que pode ser menor que o da entrega.
+ */
+export function rotuloDoOcupanteDoPeriodo(ocupante: OcupanteDoPeriodo): string {
+  const turno = ocupante.shift?.trim() ? ` (${ocupante.shift})` : '';
+  const inicio = formatarDiaDoInstante(ocupante.startedAt);
+  const periodo = ocupante.endedAt ? `${inicio} › ${formatarDiaDoInstante(ocupante.endedAt)}` : `desde ${inicio}`;
+  return `${ocupante.person.name}${turno} ${periodo}`;
 }
 
 /** A posse está aberta? É `checkinAt` nulo, e é o que decide o rótulo da linha. */

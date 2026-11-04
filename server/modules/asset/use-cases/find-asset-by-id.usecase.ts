@@ -8,7 +8,7 @@ import { assetDetailSelect, ASSET_SELECT } from '../helpers/asset-select.helper'
 // deve abrir tela de detalhe — ele volta pela restauração, não pela URL.
 function buscarAtivo(id: string, podeVerCusto: boolean) {
   return prisma.asset.findFirst({
-    // O select DEPENDE DA SESSÃO (D77). Quem não é `ADMIN` não recebe a coluna
+    // O select DEPENDE DA SESSÃO (D77). Quem não é `SUPERVISOR` não recebe a coluna
     // de custo — ver `assetDetailSelect`.
     where: { id },
     select: assetDetailSelect(podeVerCusto) as typeof ASSET_SELECT,
@@ -23,7 +23,32 @@ function buscarAtivo(id: string, podeVerCusto: boolean) {
  */
 type AssetDetail = NonNullable<Awaited<ReturnType<typeof buscarAtivo>>> & {
   posse: PosseResolvida;
+  postoAtual: PostoAtual | null;
 };
+
+/** O posto da entrega em aberto, com a localização onde ele fica. */
+interface PostoAtual {
+  id: string;
+  name: string;
+  location: { id: string; name: string };
+}
+
+/**
+ * ONDE O COMPUTADOR ESTÁ, quando está numa mesa (AW).
+ *
+ * `Asset.locationId` é onde ele fica GUARDADO, e entregar não mexe nele: o
+ * computador que saiu do Depósito para a Mesa 1, na Filial, está na Filial. É
+ * a localização atual e a padrão do Snipe-IT, só que a atual não é copiada:
+ * sai da posse aberta na hora, e o posto que muda de lugar leva o computador
+ * junto sem nenhuma atualização em cadeia. Devolvido, volta a valer o guardado.
+ */
+async function lerPostoAtual(assetId: string): Promise<PostoAtual | null> {
+  const posse = await prisma.assignment.findFirst({
+    where: { assetId, checkinAt: null, targetType: 'WORKSTATION' },
+    select: { targetWorkstation: { select: { id: true, name: true, location: { select: { id: true, name: true } } } } },
+  });
+  return posse?.targetWorkstation ?? null;
+}
 
 /**
  * UM ativo por id — a leitura que a tela de detalhe (`/computadores/:id`) começa
@@ -42,7 +67,7 @@ export async function findAssetById(id: string, podeVerCusto: boolean): Promise<
   const ativo = await buscarAtivo(id, podeVerCusto);
   if (!ativo) throw new AppError('Registro não encontrado', 404);
 
-  const posse = await resolverResponsaveis(prisma, id);
+  const [posse, postoAtual] = await Promise.all([resolverResponsaveis(prisma, id), lerPostoAtual(id)]);
 
-  return { ...ativo, posse };
+  return { ...ativo, posse, postoAtual };
 }

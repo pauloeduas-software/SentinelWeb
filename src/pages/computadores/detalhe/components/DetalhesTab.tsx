@@ -1,6 +1,7 @@
 import { PackageX, Undo2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import type { Asset } from '../../../../types/asset.types';
-import { formatarData, formatarMoeda } from '../../../../helpers/format.helper';
+import { formatarData, formatarDiaDoInstante, formatarMoeda } from '../../../../helpers/format.helper';
 import { seloDaSaida } from '../../helpers/baixa.helper';
 import { canaisDeSuporte, type CanalDeSuporte } from '../helpers/suporte.helper';
 
@@ -56,7 +57,8 @@ export default function DetalhesTab({
           <Campo rotulo="Etiqueta" valor={asset.assetTag} />
           <Campo rotulo="Número de série" valor={asset.serial} />
           <Campo rotulo="Nome / apelido" valor={asset.name} />
-          <Campo rotulo="Cadastrado em" valor={formatarData(asset.createdAt)} />
+          {/* `createdAt` é instante: o dia sai no fuso de Brasília, não em UTC. */}
+          <Campo rotulo="Cadastrado em" valor={formatarDiaDoInstante(asset.createdAt)} />
         </Secao>
 
         <Secao titulo="Catálogo">
@@ -65,7 +67,25 @@ export default function DetalhesTab({
           {/* A categoria vem do MODELO, não de coluna própria — é o que impede
               ativo e modelo divergirem (asset-select.helper.ts). */}
           <Campo rotulo="Categoria" valor={categoria} />
-          <Campo rotulo="Localização" valor={asset.location?.name} />
+          {/* NUM POSTO, o computador está onde o posto fica (AW), e a
+              localização dele é para onde volta na devolução — a atual e a
+              padrão do Snipe-IT. Fora de posto, é onde ele está guardado. */}
+          {asset.postoAtual ? (
+            <>
+              <div className="space-y-1">
+                <div className="text-text-tertiary uppercase tracking-widest text-[10px]">Localização</div>
+                <div className="text-text-primary break-words">
+                  {asset.postoAtual.location.name} ·{' '}
+                  <Link to={`/postos/${asset.postoAtual.id}`} className="text-status-info hover:underline">
+                    {asset.postoAtual.name}
+                  </Link>
+                </div>
+              </div>
+              <Campo rotulo="Volta para" valor={asset.location?.name} />
+            </>
+          ) : (
+            <Campo rotulo="Localização" valor={asset.location?.name} />
+          )}
         </Secao>
 
         {/* O SUPORTE DO FABRICANTE, logo ao lado do catálogo de onde ele vem.

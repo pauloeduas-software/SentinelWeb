@@ -6,14 +6,14 @@ import { criarAtivo, criarFabricante, criarModelo, criarPosto, idsDoSeed } from 
 // A CORRIDA DA INVARIANTE 19 — dois ativos entregues ao mesmo posto, ao mesmo
 // tempo.
 //
-// Esta é a invariante que NÃO tem rede no banco: a regra cruza `assignments` e
-// `assets`, e o índice único da posse aberta é por ativo, não por posto. Então o `if` do
-// use-case é tudo que existe — e `if` de aplicação é exatamente o que as duas
-// requisições atravessam juntas em READ COMMITTED.
+// O `if` do use-case é o que as duas requisições atravessam juntas em READ
+// COMMITTED. O índice `assignments_um_aberto_por_posto` seguraria a segunda,
+// mas a perdedora receberia a frase genérica, sem saber qual computador
+// devolver.
 //
 // É por isso que o helper trava a linha do posto com `FOR UPDATE`. Este arquivo
-// é a prova de que ela trava: sem o `FOR UPDATE`, as duas entregas passam e o
-// posto fica com dois ativos.
+// é a prova de que ela trava: a perdedora recebe o 409 da porta, com o
+// computador que está na mesa.
 
 let api: ApiDeTeste;
 let seed: Awaited<ReturnType<typeof idsDoSeed>>;
@@ -82,4 +82,30 @@ describe('dois ativos entregues ao MESMO posto, ao mesmo tempo', () => {
     expect(total).toBe(1);
   });
 
+});
+
+// EXCLUIR O POSTO E ENTREGAR A ELE AO MESMO TEMPO. A exclusão trava o posto
+// antes de contar o uso, e a entrega lê o posto travado: uma das duas espera a
+// outra. Ou o posto sai e a entrega recebe 404, ou a entrega passa e a exclusão
+// recebe o 409 que diz o que tirar — nunca a frase genérica da FK.
+describe('excluir o posto e entregar a ele, ao mesmo tempo', () => {
+  it('uma das duas espera a outra, e a recusa diz o que fazer', async () => {
+    for (let rodada = 1; rodada <= 5; rodada += 1) {
+      const posto = await criarPosto(api, { name: `Mesa que sai ${rodada}` });
+      const item = await ativo(`Desktop da mesa que sai ${rodada}`);
+
+      const [exclusao, entrega] = await Promise.all([
+        api.delete<{ error?: string }>(`/api/workstations/${posto}`),
+        entregar(item.id, posto),
+      ]);
+
+      if (exclusao.status === 200) {
+        expect(entrega.status).toBe(404);
+      } else {
+        expect(entrega.status).toBe(201);
+        expect(exclusao.status).toBe(409);
+        expect(exclusao.body.error).toContain('Tire o que está nele agora');
+      }
+    }
+  });
 });

@@ -108,6 +108,23 @@ export interface Assignment {
   targetWorkstation?: PostoRef | null;
   /** O nome do posto, por escrito, quando ele foi excluído — `targetWorkstation` vem nulo. */
   targetWorkstationName?: string | null;
+  /** E o id que ele tinha (AW): preenchido, o posto foi excluído. */
+  targetWorkstationFormerId?: string | null;
+
+  /**
+   * Quem ocupou o posto durante esta entrega (AW) — só no histórico do ativo
+   * (`GET /api/assets/:id/assignments`); vazio na entrega a uma pessoa.
+   */
+  ocupantesDoPeriodo?: OcupanteDoPeriodo[];
+}
+
+/** Uma ocupação do posto que se sobrepõe ao período de uma entrega. */
+export interface OcupanteDoPeriodo {
+  id: string;
+  shift: string | null;
+  startedAt: string;
+  endedAt: string | null;
+  person: PessoaRef;
 }
 
 /**

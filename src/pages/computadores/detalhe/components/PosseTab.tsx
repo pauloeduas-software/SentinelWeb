@@ -5,7 +5,8 @@ import type {
 } from '../../../../types/posse.types';
 import { formatarData, formatarDiaDoInstante } from '../../../../helpers/format.helper';
 import {
-  comoChegouAoAlvo, estaAberta, postoDaPosseAberta, rotuloDoAlvo,
+  comoChegouAoAlvo, estaAberta, postoDaPosseAberta, postoExcluido, rotuloDoAlvo, rotuloDoOcupanteDoPeriodo,
+  sabeOsOcupantes, tipoDoAlvo,
 } from '../helpers/rotulo-do-alvo.helper';
 
 // A ABA POSSE — as três camadas do docs/referencia/modelo-de-posse.md numa tela só:
@@ -127,7 +128,7 @@ export default function PosseTab({
               posse?.targetLabel ?? '—'
             )}
             <span className="text-text-tertiary text-[10px] uppercase tracking-widest">
-              {posse?.targetType}
+              {tipoDoAlvo(posse?.targetType)}
             </span>
           </div>
 
@@ -166,7 +167,10 @@ export default function PosseTab({
                 className={`border p-3 space-y-1 ${aberta ? 'border-status-info/40 bg-status-info/5' : 'border-border-sutil'}`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-text-primary">{rotuloDoAlvo(linha)}</span>
+                  <span className="text-text-primary">
+                    {rotuloDoAlvo(linha)}
+                    {postoExcluido(linha) && <span className="text-text-tertiary text-[10px]"> · posto excluído</span>}
+                  </span>
                   <span className={`text-[10px] uppercase tracking-widest ${aberta ? 'text-status-info' : 'text-text-tertiary'}`}>
                     {aberta ? 'aberta' : 'devolvida'}
                   </span>
@@ -179,6 +183,17 @@ export default function PosseTab({
                   {linha.expectedCheckinAt && ` · prevista para ${formatarData(linha.expectedCheckinAt)}`}
                   {linha.checkinAt && ` · devolução ${formatarDiaDoInstante(linha.checkinAt)}`}
                 </div>
+
+                {/* QUEM OCUPOU O POSTO NESTE PERÍODO (AW): é o que responde
+                    "quem estava com este equipamento em março?" quando ele
+                    foi entregue a uma mesa, e não a uma pessoa. */}
+                {sabeOsOcupantes(linha) && linha.ocupantesDoPeriodo && (
+                  <div className="text-text-secondary text-[10px] tabular-nums">
+                    {linha.ocupantesDoPeriodo.length > 0
+                      ? <>{linha.ocupantesDoPeriodo.length === 1 ? 'Ocupante' : 'Ocupantes'}: {linha.ocupantesDoPeriodo.map(rotuloDoOcupanteDoPeriodo).join(' · ')}</>
+                      : <span className="text-text-tertiary">Ninguém ocupou o posto neste período.</span>}
+                  </div>
+                )}
 
                 {linha.checkoutNotes && (
                   <div className="text-text-secondary text-[10px]">Entrega: {linha.checkoutNotes}</div>

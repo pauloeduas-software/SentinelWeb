@@ -75,7 +75,8 @@ a conta de quem opera o sistema, que é `User` e não recebe equipamento
 - **Fechada** = `checkinAt` preenchido. É histórico, e histórico não se apaga.
   Nem quando o alvo sai: o colaborador excluído vai para a lixeira (a linha
   fica), e o posto excluído deixa o nome por escrito em `targetWorkstationName`
-  ([V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira),
+  e o id em `targetWorkstationFormerId` ([AW](../decisoes/posse.md#aw--o-computador-está-onde-o-posto-fica-e-o-histórico-diz-quem-ocupou-o-posto),
+  [V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira),
   [Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)).
 - **Uma aberta por ativo**, garantida por índice único parcial no banco —
   não por regra de aplicação que alguém pode esquecer:
@@ -159,6 +160,14 @@ resolverResponsaveis(ativo):
 
 **Nunca é coluna.** Coluna seria uma quarta fonte de verdade para o que as
 Camadas 1 e 2 já dizem, e a divergência entre elas seria silenciosa.
+
+**E no passado** ([AW](../decisoes/posse.md#aw--o-computador-está-onde-o-posto-fica-e-o-histórico-diz-quem-ocupou-o-posto)):
+"quem respondia por este computador em março?" é a mesma junção, sobre as
+linhas fechadas. O histórico de posse do ativo (`GET /api/assets/:id/assignments`)
+traz, em cada entrega a um posto, as ocupações que dividem ao menos um dia com
+ela — inclusive na entrega aberta. Também calculado na hora, nunca guardado. O
+posto excluído cruza pelo id que a exclusão guardou (`targetWorkstationFormerId`,
+`workstationFormerId`), nunca pelo nome.
 
 ---
 
@@ -260,6 +269,8 @@ limites escolhidos, não esquecimentos.
   à Mesa 1, ele aparece como responsabilidade da Laura e da Ana — que não
   sabem que ele existe. A saída é **não** entregar item de reserva:
   `locationId` (*onde está guardado*) continua separado da entrega (*quem responde*).
+  O computador entregue a um posto aparece onde o posto fica, e o `locationId`
+  dele vira *para onde volta* na devolução ([AW](../decisoes/posse.md#aw--o-computador-está-onde-o-posto-fica-e-o-histórico-diz-quem-ocupou-o-posto)).
   Um ativo pode estar **em** um lugar sem ser **do** lugar. O modelo não impede o
   erro; ele dá o lugar certo para registrar a diferença.
 
@@ -289,12 +300,19 @@ CREATE UNIQUE INDEX "assignments_um_aberto_por_ativo"
 CREATE UNIQUE INDEX "workstation_occupants_um_aberto_por_pessoa_posto"
   ON "workstation_occupants"("workstationId", "personId") WHERE "endedAt" IS NULL;
 
+-- a rede da invariante 19: um computador por posto (AX)
+CREATE UNIQUE INDEX "assignments_um_aberto_por_posto"
+  ON "assignments"("targetWorkstationId") WHERE "checkinAt" IS NULL;
+
 -- as consultas quentes da Camada 3
 CREATE INDEX ON "assignments"("assetId", "checkinAt");
 CREATE INDEX ON "workstation_occupants"("workstationId", "endedAt");
 CREATE INDEX ON "workstation_occupants"("personId", "endedAt");
+
+-- o histórico de posse do ativo, pelo id do posto excluído (AW)
+CREATE INDEX ON "workstation_occupants"("workstationFormerId");
 ```
 
-Os dois primeiros são **parciais**, o mesmo padrão já usado em `assets.assetTag`,
-`assets.serial` e `users.email`: a regra vive no banco, não na memória de quem
-escreve a próxima query.
+Os três primeiros são **parciais**, o mesmo padrão já usado em `assets.assetTag`
+e `assets.serial`: a regra vive no banco, não na memória de quem escreve a
+próxima query.

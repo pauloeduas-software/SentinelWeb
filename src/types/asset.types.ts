@@ -111,6 +111,19 @@ export interface Asset {
    */
   posse: PosseResolvida | null;
 
+  /**
+   * O posto da entrega em aberto e a localização dele — só na FICHA
+   * (`GET /api/assets/:id`), nulo fora de posto (AW). Com ele, a localização do
+   * computador é a do posto, e `location` é para onde ele volta na devolução.
+   */
+  postoAtual?: PostoAtual | null;
+}
+
+/** O posto onde o computador está agora, com a localização onde o posto fica. */
+export interface PostoAtual {
+  id: string;
+  name: string;
+  location: Referencia;
 }
 
 /**

@@ -12,13 +12,14 @@ import { usePode } from '../../stores/auth.store';
 //
 // É o coração do modelo de posse (docs/referencia/modelo-de-posse.md): quem
 // está em cada mesa, o que foi entregue a ela, e se ela está vaga. E é aqui que
-// o posto se CADASTRA — criar, editar, desativar e excluir —, cada um dentro
-// de uma localização de Configurações (decisão Y).
+// o posto se CADASTRA — criar, editar e excluir, sem Desativar (AN) —, cada um
+// dentro de uma localização de Configurações (decisão Y).
 export default function PostosPage() {
   const {
     postos, total, carregando, erro, page, perPage, setPage, search, changeSearch, view, changeView,
     modalAberto, emEdicao, openCreate, openEdit, closeModal, handleSalvar, handleExcluir,
-    postoId, postoAberto, openDetalhe, closeDetalhe, detalhe, detalhePendente, detalheErro, ocupantes,
+    postoId, postoAberto, openDetalhe, closeDetalhe, detalhe, detalhePendente, detalheErro, detalheInexistente,
+    ocupantes,
     devolvendo, handleDevolver,
   } = usePostos();
   const podeCriar = usePode('SUPERVISOR');
@@ -105,7 +106,7 @@ export default function PostosPage() {
                 <span className="mt-4 text-[10px] max-w-md leading-relaxed">
                   {podeCriar
                     ? 'Crie a primeira mesa no botão acima. '
-                    : 'Postos são criados por um administrador — peça a um. '}
+                    : 'Postos são criados por um supervisor — peça a um. '}
                   Cada posto fica numa localização de Configurações — a Matriz, a Filial.
                 </span>
               </>
@@ -125,7 +126,9 @@ export default function PostosPage() {
       {postoId && detalheErro && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
           <div className="w-full max-w-md bg-surface-card border border-border-sutil shadow-2xl p-6 font-mono text-xs space-y-4">
-            <p className="text-text-primary uppercase tracking-widest">Posto não encontrado</p>
+            <p className="text-text-primary uppercase tracking-widest">
+              {detalheInexistente ? 'Posto não encontrado' : 'Não foi possível abrir o posto'}
+            </p>
             <p className="text-text-tertiary leading-relaxed">{detalheErro}</p>
             <button
               type="button"

@@ -23,7 +23,8 @@ export class OccupancyMaestro {
     server.get('/api/workstations/:id/occupants', occupancyController.listByWorkstation);
     server.post('/api/workstations/:id/occupants', WRITE_RATE_LIMIT, occupancyController.add);
 
-    // DELETE ENCERRA a ocupação (`endedAt = now()`); a linha NUNCA é apagada.
+    // DELETE ENCERRA a ocupação (`endedAt`: o dia do corpo, ou agora sem ele,
+    // AN); a linha NUNCA é apagada.
     // Escrita como as outras, então teto de escrita como as outras.
     server.delete(
       '/api/workstations/:id/occupants/:occupantId',

@@ -117,6 +117,55 @@ describe('excluir posto — só o presente segura', () => {
     }
   });
 
+  // O ID TAMBÉM FICA POR ESCRITO (AW): é por ele, e não pelo nome, que o
+  // histórico do ativo cruza a entrega com quem ocupou o posto excluído.
+  it('a exclusão guarda o id do posto na entrega e na ocupação, e o banco recusa as duas ligações juntas', async () => {
+    const mesa = await posto('Mesa que guarda o id');
+    const ativo = await ativoDisponivel('Desktop do id guardado');
+    expect((await api.post(`/api/assets/${ativo.id}/checkout`, {
+      targetType: 'WORKSTATION', targetWorkstationId: mesa,
+    })).status).toBe(201);
+    expect((await api.post(`/api/assets/${ativo.id}/checkin`, {})).status).toBe(200);
+    const ocupacao = await api.post<{ id: string }>(`/api/workstations/${mesa}/occupants`, { personId: laura });
+    expect((await api.delete(`/api/workstations/${mesa}/occupants/${ocupacao.body.id}`)).status).toBe(200);
+
+    expect((await api.delete(`/api/workstations/${mesa}`)).status).toBe(200);
+
+    const posse = await prisma.assignment.findFirstOrThrow({ where: { assetId: ativo.id } });
+    expect(posse).toMatchObject({ targetWorkstationId: null, targetWorkstationFormerId: mesa });
+    const encerrada = await prisma.workstationOccupant.findUniqueOrThrow({ where: { id: ocupacao.body.id } });
+    expect(encerrada).toMatchObject({ workstationId: null, workstationFormerId: mesa });
+
+    // Um posto vivo e um excluído na mesma linha não significam nada.
+    const outra = await posto('Mesa viva do id');
+    await expect(prisma.$executeRaw`
+      UPDATE assignments SET "targetWorkstationId" = ${outra}::uuid WHERE id = ${posse.id}::uuid
+    `).rejects.toThrow(/assignments_posto_excluido/);
+    await expect(prisma.$executeRaw`
+      UPDATE workstation_occupants SET "workstationId" = ${outra}::uuid WHERE id = ${encerrada.id}::uuid
+    `).rejects.toThrow(/workstation_occupants_posto_excluido/);
+
+    // O id guardado só existe na linha que o `beforeDelete` desligou: reaberta,
+    // ela é presente, e o id de um posto que saiu não tem o que dizer nela.
+    await expect(prisma.$executeRaw`
+      UPDATE assignments SET "checkinAt" = NULL WHERE id = ${posse.id}::uuid
+    `).rejects.toThrow(/assignments_posto_excluido|assignments_alvo_coerente/);
+    await expect(prisma.$executeRaw`
+      UPDATE workstation_occupants SET "endedAt" = NULL WHERE id = ${encerrada.id}::uuid
+    `).rejects.toThrow(/workstation_occupants_posto_excluido|workstation_occupants_posto_presente/);
+  });
+
+  it('o banco recusa a ocupação que termina antes de começar', async () => {
+    const mesa = await posto('Mesa do fim antes do início');
+    const ocupacao = await api.post<{ id: string }>(`/api/workstations/${mesa}/occupants`, { personId: laura });
+    expect(ocupacao.status).toBe(201);
+
+    await expect(prisma.$executeRaw`
+      UPDATE workstation_occupants SET "endedAt" = "startedAt" - interval '1 day' WHERE id = ${ocupacao.body.id}::uuid
+    `).rejects.toThrow(/workstation_occupants_fim_nao_antecede_inicio/);
+    expect((await api.delete(`/api/workstations/${mesa}/occupants/${ocupacao.body.id}`)).status).toBe(200);
+  });
+
   it('exclui o que só recebeu estoque JÁ DEVOLVIDO, e o histórico do item continua com o nome', async () => {
     const mesa = await posto('Mesa com mouse antigo');
     const mouse = await criarItemDeEstoque(api, { name: 'Mouse que passou pela mesa', categoryId: seed.categoriaEstoqueId, qty: 1 });

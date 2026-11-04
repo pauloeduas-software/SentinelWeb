@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '../../server/infra/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { conectarAgente, esperarPor } from '../helpers/agente';
-import { criarAtivo, criarFabricante, criarModelo, idsDoSeed } from '../helpers/fixtures';
+import { criarAtivo, criarFabricante, criarModelo, criarPosto, idsDoSeed } from '../helpers/fixtures';
 
 // O QUE A FICHA DO POSTO PRECISA SABER, e que a listagem de ativos não manda.
 //
@@ -123,5 +123,18 @@ describe('o que a ficha do posto lê', () => {
       `/api/assets/${naMesa.id}/assignments`,
     );
     expect(daMesa.body[0].targetWorkstation).toEqual({ id: posto, name: 'Mesa da Ficha' });
+  });
+
+  // O "Devolvido em" da ficha não vem antes da entrega (AM): o mínimo do campo
+  // sai deste `entregueEm`. Sem ele a tela deixava escolher qualquer dia, e só
+  // o servidor recusava.
+  it('cada ativo da mesa traz o instante em que foi entregue a ela', async () => {
+    const mesa = await criarPosto(api, { name: 'Mesa do Dia da Entrega' });
+    const item = await ativo('Desktop do dia da entrega', 'SN-FICHA-40');
+    await entregarA(item.id, mesa);
+
+    const posse = await prisma.assignment.findFirstOrThrow({ where: { assetId: item.id, checkinAt: null } });
+    const ficha = await api.get<{ ativos: { id: string; entregueEm: string | null }[] }>(`/api/workstations/${mesa}`);
+    expect(ficha.body.ativos).toEqual([expect.objectContaining({ id: item.id, entregueEm: posse.checkoutAt.toISOString() })]);
   });
 });

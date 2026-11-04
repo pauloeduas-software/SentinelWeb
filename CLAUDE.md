@@ -81,7 +81,9 @@ não há mock de Prisma ([`testes.md`](./docs/referencia/testes.md)). Página no
 - **Estoque conta quantos.** A categoria decide o tipo: Estoque vai a colaborador ou posto,
   Componente só a computador, Consumível sai do total e não tem Devolver (AI, AJ). Quebrou ou
   perdeu: Devolver e Editar o total. Cadastro com quantidade nasce com 1 ou mais.
-- **Um computador por posto** (invariante 19, B). Laboratório é um posto por computador.
+- **Um computador por posto** (invariante 19, B), também no passado: a entrega não começa antes
+  da última devolução no posto, nem a ocupação antes do fim da anterior da mesma pessoa ali (AX).
+  Laboratório é um posto por computador.
 - **Alerta só de prazo, e só na tela do assunto:** o da licença fica em `/licencas`.
 - **Sem cor por dado** (status, nome, categoria, tipo de evento). Só os tokens do tema
   (`status-success`, `status-warning`, `status-danger`, `status-info`) em botão, aviso e na marca
@@ -117,9 +119,9 @@ Decidido; não proponha de novo:
 - o que a AT deixou de fora do ModuloDefault: Problem Details, caminhos em camelCase e `/v1`, Prettier,
   release-please e o shadcn/ui inteiro.
 
-**Fechados:** licença, estoque, Configurações, Colaboradores, Usuários e os cargos (AV, também contra
-o Lansweeper) foram validados contra GLPI e Snipe-IT. Só se corrige bug e texto falso; regra nova, só
-a pedido.
+**Fechados:** licença, estoque, Configurações, Colaboradores, Usuários, os cargos (AV, também contra
+o Lansweeper) e Postos (AW e AX, também contra Shelf.nu, ServiceNow e iTop) foram validados contra
+GLPI e Snipe-IT. Só se corrige bug e texto falso; regra nova, só a pedido.
 
 ## Docs e commits
 

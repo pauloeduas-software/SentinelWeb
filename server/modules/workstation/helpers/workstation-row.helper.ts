@@ -28,6 +28,7 @@ interface PostoLido {
   name: string;
   notes: string | null;
   createdAt: Date;
+  updatedAt: Date;
   locationId: string;
   location: { id: string; name: string };
   _count: { assignments: number };
@@ -38,6 +39,8 @@ export interface WorkstationRow {
   name: string;
   notes: string | null;
   createdAt: Date;
+  /** A versão que o Editar devolve (AF). */
+  updatedAt: Date;
   locationId: string;
   location: { id: string; name: string };
   ocupantes: OcupanteDoPosto[];
@@ -108,6 +111,7 @@ export function montarLinhaDePosto(
     name: posto.name,
     notes: posto.notes,
     createdAt: posto.createdAt,
+    updatedAt: posto.updatedAt,
     locationId: posto.locationId,
     location: posto.location,
     ocupantes,

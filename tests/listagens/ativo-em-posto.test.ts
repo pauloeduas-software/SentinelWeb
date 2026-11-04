@@ -240,3 +240,63 @@ describe('o ativo entregue a um posto sai da listagem', () => {
   });
 
 });
+
+// A FICHA MOSTRA O LUGAR DO POSTO (AW).
+//
+// Entregar não mexe em `Asset.locationId`, que é onde o computador fica
+// guardado. Na mesa, ele está onde o posto fica: a ficha traz o `postoAtual`,
+// lido da posse aberta, e o posto que muda de lugar leva o computador junto.
+interface Ficha {
+  location: { id: string; name: string } | null;
+  postoAtual: { id: string; name: string; location: { id: string; name: string } } | null;
+}
+
+async function ficha(assetId: string) {
+  const { status, body } = await api.get<Ficha>(`/api/assets/${assetId}`);
+  expect(status).toBe(200);
+  return body;
+}
+
+describe('a ficha do computador num posto mostra o lugar do posto', () => {
+  it('entregue, traz o posto e a localização dele; o guardado continua o mesmo', async () => {
+    const item = await ativo('Desktop da ficha', 'SN-LISTA-F1', deposito);
+    const posto = await mesa('Mesa da Ficha 1');
+    await entregarA(item.id, posto.id);
+
+    const lida = await ficha(item.id);
+    expect(lida.postoAtual).toEqual({
+      id: posto.id, name: 'Mesa da Ficha 1', location: { id: expect.any(String), name: 'Local de Mesa da Ficha 1' },
+    });
+    expect(lida.location?.id).toBe(deposito);
+  });
+
+  it('o posto que muda de localização leva o computador junto', async () => {
+    const item = await ativo('Desktop que muda', 'SN-LISTA-F2', deposito);
+    const posto = await mesa('Mesa da Ficha 2');
+    await entregarA(item.id, posto.id);
+
+    const filial = await prisma.location.create({ data: { name: 'Filial da Ficha' }, select: { id: true } });
+    expect((await api.put(`/api/workstations/${posto.id}`, { locationId: filial.id })).status).toBe(200);
+
+    expect((await ficha(item.id)).postoAtual?.location).toEqual({ id: filial.id, name: 'Filial da Ficha' });
+  });
+
+  it('devolvido, o posto some e vale de novo onde ele fica guardado', async () => {
+    const item = await ativo('Desktop devolvido', 'SN-LISTA-F3', deposito);
+    await entregarA(item.id, (await mesa('Mesa da Ficha 3')).id);
+    expect((await api.post(`/api/assets/${item.id}/checkin`, {})).status).toBe(200);
+
+    const lida = await ficha(item.id);
+    expect(lida.postoAtual).toBeNull();
+    expect(lida.location?.id).toBe(deposito);
+  });
+
+  it('entregue a uma pessoa, não há posto', async () => {
+    const item = await ativo('Notebook da ficha', 'SN-LISTA-F4', deposito);
+    const pessoa = await api.post<{ id: string }>('/api/people', { name: 'Bia da Ficha', email: 'bia.ficha@teste.local' });
+    expect(pessoa.status).toBe(201);
+    expect((await api.post(`/api/assets/${item.id}/checkout`, { targetType: 'PERSON', targetPersonId: pessoa.body.id })).status).toBe(201);
+
+    expect((await ficha(item.id)).postoAtual).toBeNull();
+  });
+});

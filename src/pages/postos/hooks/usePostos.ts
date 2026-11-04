@@ -171,6 +171,9 @@ export function usePostos() {
     // zero ativos e zero ocupantes, que é indistinguível de um posto novo e
     // vazio — a tela mentiria em vez de dizer que o link está morto.
     detalheErro: detalheErro ? detalheErro.message : null,
+    // Só o 404 é "não encontrado": um 500 ou a rede caída não dizem que o
+    // posto não existe. O `status` vem do erro da API (`ErroDaApi`).
+    detalheInexistente: (detalheErro as { status?: number } | null)?.status === 404,
     devolvendo: devolver.isPending,
     handleDevolver,
 

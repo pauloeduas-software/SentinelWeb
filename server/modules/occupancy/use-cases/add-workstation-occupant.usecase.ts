@@ -7,7 +7,9 @@ import { buildSnapshot } from '../../shared/diff.helper';
 import { OCCUPANT_SELECT, rotuloDaOcupacao } from '../helpers/occupant-select.helper';
 import { travarPessoa } from '../../person/use-cases/lock-person.usecase';
 import { lerPostoTravado } from '../../catalog/helpers/catalog-lock.helper';
-import { instanteDoDia } from '../../shared/hoje.helper';
+import { diaEmPortugues } from '../../asset/helpers/asset-dates.helper';
+import { hojeNoBrasil, instanteDoDia } from '../../shared/hoje.helper';
+import type { ClientePosse } from '../../assignment/use-cases/resolve-responsibles.usecase';
 
 interface AddOccupantData {
   personId: string;
@@ -22,6 +24,45 @@ const CAMPOS_AUDITADOS = ['workstationId', 'personId', 'shift', 'startedAt', 'no
 const JA_OCUPA = 'Esta pessoa já ocupa este posto.';
 
 /**
+ * O DIA EM QUE A OCUPAÇÃO COMEÇA contra a última da mesma pessoa no mesmo posto
+ * (AX) — e o instante a gravar. É a regra da entrega do computador
+ * (`checkout-asset.usecase.ts`): a Laura que saiu da Mesa 1 em março não volta
+ * a ela com data de fevereiro, senão o histórico do posto a teria duas vezes no
+ * mesmo período. Só a mesma pessoa no mesmo posto; outra pessoa no turno ao
+ * lado é escala, não sobreposição. A trava da pessoa, antes, segura a corrida.
+ *
+ * No mesmo dia do fim, o meio-dia do dia passado pode cair antes da hora real
+ * dele; o início fica um milissegundo depois, para a ficha da pessoa não pôr a
+ * saída antiga acima da entrada nova.
+ */
+async function inicioDaOcupacao(
+  client: ClientePosse,
+  workstationId: string,
+  nome: string,
+  data: AddOccupantData,
+): Promise<Date | undefined> {
+  const dia = data.startedAt ?? hojeNoBrasil();
+  const anterior = await client.workstationOccupant.findFirst({
+    where: { workstationId, personId: data.personId, endedAt: { not: null } },
+    orderBy: { endedAt: 'desc' },
+    select: { endedAt: true },
+  });
+  const terminouEm = anterior?.endedAt;
+  if (terminouEm && dia < hojeNoBrasil(terminouEm)) {
+    throw new AppError(
+      `A ocupação (${diaEmPortugues(dia)}) não pode começar antes do fim da anterior de ${nome} neste posto `
+      + `(${diaEmPortugues(hojeNoBrasil(terminouEm))}).`,
+      422,
+    );
+  }
+
+  // Ausente, quem preenche é o `@default(now())` — depois de qualquer fim.
+  if (!data.startedAt) return undefined;
+  const instante = instanteDoDia(data.startedAt);
+  return terminouEm && instante <= terminouEm ? new Date(terminouEm.getTime() + 1) : instante;
+}
+
+/**
  * Coloca uma pessoa num posto de trabalho.
  *
  * As três guardas, na ordem em que importam:
@@ -31,7 +72,8 @@ const JA_OCUPA = 'Esta pessoa já ocupa este posto.';
  *    adivinhar qual dos dois uuids estava errado.
  * 2. **Duplicata.** A mesma pessoa não ocupa o mesmo posto duas vezes ao mesmo
  *    tempo — dois vínculos abertos idênticos não significam nada e quebrariam
- *    a contagem de ocupantes da Camada 3.
+ *    a contagem de ocupantes da Camada 3. Nem no passado (AX): a ocupação nova
+ *    não começa antes do dia em que a última dela no posto terminou.
  * 3. **Transação com o `AuditLog`.** Gravado fora, a auditoria registraria
  *    uma ocupação que depois falhou.
  *
@@ -60,8 +102,8 @@ export async function addWorkstationOccupant(
       // 1 (`lock-person.usecase.ts`).
       await travarPessoa(tx, data.personId);
 
-      // O posto existe e ainda recebe ocupante? Desativado, não — continua no
-      // histórico, mas ninguém novo passa a responder por ele. Lido `FOR SHARE`
+      // O posto existe? O posto não se desativa (AN): existindo, recebe
+      // ocupante, e o 404 é o único caso de recusa. Lido `FOR SHARE`
       // DEPOIS da trava da pessoa: é a ordem do grafo (`pessoa → ativo →
       // posto`, `lock-asset.usecase.ts`). Ao contrário — posto antes da
       // pessoa —, esta ocupação, uma entrega à mesma pessoa e uma entrega do
@@ -97,6 +139,8 @@ export async function addWorkstationOccupant(
       });
       if (aberta) throw new AppError(JA_OCUPA, 409);
 
+      const startedAt = await inicioDaOcupacao(tx, workstationId, pessoa.name, data);
+
       const ocupacao = await tx.workstationOccupant.create({
         data: {
           workstationId,
@@ -106,7 +150,7 @@ export async function addWorkstationOccupant(
           // O dia passado vira o meio-dia de Brasília, e hoje a hora real
           // (`instanteDoDia`), como na entrega (AM). Ausente, `undefined` faz o
           // Prisma NÃO mandar a coluna, e quem preenche é o `@default(now())`.
-          startedAt: data.startedAt ? instanteDoDia(data.startedAt) : undefined,
+          startedAt,
         },
         select: OCCUPANT_SELECT,
       });
