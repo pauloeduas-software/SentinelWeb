@@ -225,7 +225,7 @@ export default function PostoDetalheModal({
                               <input
                                 type="date"
                                 value={devolvendoAtivo.dia}
-                                min={ativo.posse?.checkoutAt ? diaDoInstante(ativo.posse.checkoutAt) : undefined}
+                                min={ativo.entregueEm ? diaDoInstante(ativo.entregueEm) : undefined}
                                 max={hojeNoCampoDeData()}
                                 onChange={(event) => setDevolvendoAtivo({ id: ativo.id, dia: event.target.value })}
                                 className="p-1 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary"
@@ -357,7 +357,7 @@ export default function PostoDetalheModal({
             </div>
 
             <p className="text-text-tertiary text-[10px] leading-relaxed">
-              Unidades de estoque entregues a este posto — qualquer ocupante aberto dela responde
+              Unidades de estoque entregues a este posto — qualquer ocupante atual dele responde
               por elas, independente de quem fez a entrega. A devolução é feita no detalhe do item.
             </p>
 

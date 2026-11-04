@@ -1,6 +1,6 @@
 import { prisma } from '../../../infra/database/prismaClient';
 import { AppError } from '../../../infra/errors/app-error';
-import { errorCode } from '../../../infra/errors/error-shape';
+import { errorCode, errorProp } from '../../../infra/errors/error-shape';
 import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
 import { ASSET_WRITE_SELECT } from '../../asset/helpers/asset-select.helper';
@@ -49,6 +49,13 @@ const JA_ENTREGUE = 'Este ativo já está entregue. Faça a devolução antes.';
  * dele: a entrega que volta no tempo para antes da devolução poria o computador
  * com duas pessoas no mesmo período. Os dois dias no calendário de Brasília.
  *
+ * E, na entrega a um POSTO, não antecede o dia da última devolução de um
+ * computador nele (AX): o posto tem um computador por vez também no passado. A
+ * invariante 19 só olhava o presente, e uma entrega com data de março à Mesa 1
+ * punha dois computadores nela, se o de antes só saiu em junho. É a regra do
+ * computador, lida pelo lado do posto — e o posto já está travado
+ * (`ativoDoPosto`), então ninguém devolve nem entrega nele no meio.
+ *
  * No mesmo dia da devolução, o meio-dia do dia passado pode cair antes da hora
  * real dela; a entrega fica um milissegundo depois, para os históricos não
  * porem a devolução antiga acima da entrega nova.
@@ -57,6 +64,7 @@ async function instanteDaEntrega(
   client: ClientePosse,
   ativo: { id: string; assetTag: string; purchaseDate: Date | null },
   checkoutAt: Date | null | undefined,
+  posto: { id: string; nome: string } | null,
 ): Promise<Date | undefined> {
   const dia = checkoutAt ?? hojeNoBrasil();
   if (ativo.purchaseDate && dia < ativo.purchaseDate) {
@@ -81,10 +89,28 @@ async function instanteDaEntrega(
     );
   }
 
+  const doPosto = posto ? await client.assignment.findFirst({
+    where: { targetWorkstationId: posto.id, checkinAt: { not: null } },
+    orderBy: { checkinAt: 'desc' },
+    select: { checkinAt: true, asset: { select: { assetTag: true } } },
+  }) : null;
+  const postoLiberadoEm = doPosto?.checkinAt;
+  if (postoLiberadoEm && dia < hojeNoBrasil(postoLiberadoEm)) {
+    throw new AppError(
+      `A entrega (${diaEmPortugues(dia)}) não pode ser antes da última devolução no posto ${posto?.nome}: `
+      + `${doPosto.asset.assetTag} saiu dele em ${diaEmPortugues(hojeNoBrasil(postoLiberadoEm))}, `
+      + 'e o posto tem um computador por vez.',
+      422,
+    );
+  }
+
   // Ausente, quem preenche é o `@default(now())` — depois de qualquer devolução.
   if (!checkoutAt) return undefined;
   const instante = instanteDoDia(checkoutAt);
-  return devolvidoEm && instante <= devolvidoEm ? new Date(devolvidoEm.getTime() + 1) : instante;
+  const ultima = [devolvidoEm, postoLiberadoEm]
+    .filter((data): data is Date => data instanceof Date)
+    .reduce<Date | null>((maior, data) => (maior && maior >= data ? maior : data), null);
+  return ultima && instante <= ultima ? new Date(ultima.getTime() + 1) : instante;
 }
 
 const TIPOS_DE_ALVO = ['PERSON', 'WORKSTATION'] as const;
@@ -288,8 +314,9 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, ator: A
 
     // NO MÁXIMO UM ATIVO POR POSTO — a porta da invariante 19. A lixeira não a
     // contorna: o ativo entregue não vai para ela (AL).
-    // Depois de todas as recusas baratas, e DENTRO da transação: não há índice
-    // único embaixo, porque a regra cruza duas tabelas.
+    // Depois de todas as recusas baratas, e DENTRO da transação. O índice
+    // `assignments_um_aberto_por_posto` está embaixo, mas é esta porta que diz
+    // qual computador devolver.
     if (data.targetType === 'WORKSTATION') {
       const ocupante = await ativoDoPosto(tx, alvoId, assetId);
       if (ocupante) throw new AppError(jaTemAtivo(ocupante), 409);
@@ -310,7 +337,9 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, ator: A
     }
     const statusId = data.statusId ?? (await escolherStatusPorTipo(tx, 'IN_USE', 'Em uso'));
 
-    const checkoutAt = await instanteDaEntrega(tx, ativo, data.checkoutAt);
+    const checkoutAt = await instanteDaEntrega(
+      tx, ativo, data.checkoutAt, data.targetType === 'WORKSTATION' ? { id: alvoId, nome: nomeDoAlvo } : null,
+    );
 
     let posse;
     try {
@@ -336,7 +365,17 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, ator: A
       // decide é o índice único parcial `assignments_um_aberto_por_ativo`, e o
       // perdedor precisa receber a MESMA frase do vencedor — não o 409
       // genérico "Registro já existe" do error-handler, que não diz o que fazer.
-      if (errorCode(erro) === 'P2002') throw new AppError(JA_ENTREGUE, 409);
+      //
+      // O outro índice é o do posto (`assignments_um_aberto_por_posto`, a rede
+      // da invariante 19), e a trava do posto em `ativoDoPosto` já não deixa
+      // chegar a ele; se chegar, a frase é a do posto, não a do ativo.
+      if (errorCode(erro) === 'P2002') {
+        const campos = errorProp(errorProp(erro, 'meta'), 'target');
+        if (Array.isArray(campos) && campos.includes('targetWorkstationId')) {
+          throw new AppError('Este posto de trabalho já tem um ativo. Faça a devolução dele antes.', 409);
+        }
+        throw new AppError(JA_ENTREGUE, 409);
+      }
       throw erro;
     }
 

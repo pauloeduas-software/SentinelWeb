@@ -127,7 +127,7 @@ describe('CHECK 2 — a devolução não antecede a entrega', () => {
   });
 });
 
-describe('as duas constraints existem no banco', () => {
+describe('as constraints existem no banco', () => {
   it('estão registradas como CHECK na tabela assignments', async () => {
     // A asserção que pega o caso em que alguém aplica o schema com `db push`:
     // as tabelas nascem certas e as constraints escritas à mão somem, porque
@@ -137,9 +137,11 @@ describe('as duas constraints existem no banco', () => {
       WHERE contype = 'c' AND conrelid = 'assignments'::regclass
     `;
 
+    // O terceiro é o do id do posto excluído (AW), provado em `posto.test.ts`.
     expect(constraints.map((c) => c.conname).sort()).toEqual([
       'assignments_alvo_coerente',
       'assignments_devolucao_nao_antecede_entrega',
+      'assignments_posto_excluido',
     ]);
   });
 });

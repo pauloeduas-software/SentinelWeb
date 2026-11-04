@@ -19,8 +19,8 @@ import type { Asset } from '../../../types/asset.types';
 // ativo.
 //
 // `locationId` continua aqui, e não é a mesma coisa: é ONDE o ativo está, não
-// QUEM responde por ele. O mouse reserva na gaveta de uma mesa ocupada está NA
-// mesa sem ser DA mesa.
+// QUEM responde por ele. Entregue a um posto, ele está onde o posto fica, e o
+// campo é para onde volta na devolução (AW).
 
 const CLASSE_CAMPO =
   'w-full p-2 bg-bg-base border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors';
@@ -189,8 +189,13 @@ export default function AssetFormModal({
             <div className="space-y-1">
               <label className={ROTULO}>Localização</label>
               <ReferenceSelect rota="locations" valor={valores.locationId} atual={asset?.location} onChange={(v) => definir('locationId', v)} />
+              {/* Num posto, o computador está onde o posto fica, e este campo
+                  é para onde ele volta na devolução (AW). O clone nasce fora
+                  de posto. */}
               <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">
-                Onde o ativo ESTÁ. Não é quem responde por ele.
+                {asset?.postoAtual && !clonar
+                  ? `Entregue ao posto ${asset.postoAtual.name} (${asset.postoAtual.location.name}). Este campo é para onde ele volta na devolução.`
+                  : 'Onde o ativo ESTÁ. Não é quem responde por ele.'}
               </p>
             </div>
             <p className="col-span-2 text-text-tertiary text-[10px] leading-relaxed border-t border-border-sutil pt-3">

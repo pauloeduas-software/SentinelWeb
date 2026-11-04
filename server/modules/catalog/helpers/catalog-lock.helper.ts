@@ -27,12 +27,12 @@ import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // NO GRAFO DE TRAVAS (`asset/use-cases/lock-asset.usecase.ts`) as linhas de
-// catálogo vêm por último: usuário → ativo → posto → status, item → posto,
+// catálogo vêm por último: pessoa → ativo → posto → status, item → posto,
 // item → categoria, licença → categoria. A troca de tipo trava `FOR UPDATE` e
-// só CONTA depois — não espera mais nada. A exceção é a ocupação de posto, que
-// lê o posto ANTES de travar o usuário; a escrita do posto trava só a própria
-// linha (e lê a localização dele) e não pede usuário nenhum, então as duas não
-// se cruzam.
+// só CONTA depois — não espera mais nada. A ocupação de posto segue a mesma
+// ordem (trava a pessoa e depois lê o posto); a escrita e a exclusão do posto
+// travam só a própria linha (e leem a localização dele) e não pedem pessoa
+// nenhuma, então não fecham ciclo com ela.
 
 /** Trava a linha para quem vai MUDAR o tipo — antes de contar os usos. */
 export async function travarCategoriaParaEscrita(client: ClienteQueTrava, id: string): Promise<void> {

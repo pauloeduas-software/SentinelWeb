@@ -43,6 +43,13 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
       select: {
         ...(assetSelect(podeVerCusto) as typeof ASSET_SELECT),
         endpoint: { select: { id: true } },
+        // O DIA DA ENTREGA a esta mesa: é o mínimo do "Devolvido em" da ficha.
+        // A posse aberta é uma só por ativo (índice parcial).
+        assignments: {
+          where: { targetWorkstationId: id, checkinAt: null },
+          select: { checkoutAt: true },
+          take: 1,
+        },
       },
       orderBy: { assetTag: 'asc' },
     }),
@@ -56,9 +63,10 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
 
   // A relação vira um CAMPO: a tela quer saber se este ativo tem máquina
   // vinculada e qual consultar, não receber um objeto aninhado de uma chave só.
-  const ativos = entregues.map(({ endpoint, ...ativo }) => ({
+  const ativos = entregues.map(({ endpoint, assignments, ...ativo }) => ({
     ...ativo,
     endpointId: endpoint?.id ?? null,
+    entregueEm: assignments[0]?.checkoutAt ?? null,
   }));
 
   const { _count, ...posto } = lido;

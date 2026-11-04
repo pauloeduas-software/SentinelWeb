@@ -1,4 +1,4 @@
-import { assertLocalExiste, travarPostoParaEscrita } from '../../catalog/helpers/catalog-lock.helper';
+import { assertLocalExiste, lerPostoTravado, travarPostoParaEscrita } from '../../catalog/helpers/catalog-lock.helper';
 import type { CatalogDelegate, CatalogSpec } from '../../catalog/specs/catalog-spec.types';
 import { createWorkstationSchema, updateWorkstationSchema } from '../schemas/workstation.schema';
 import {
@@ -55,7 +55,16 @@ export const workstationSpec: CatalogSpec = {
   // A RECUSA DIZ O QUÊ, como a do colaborador: "tem 1 ativo, 3 unidades de
   // estoque (Mouse USB ×2 e Teclado) e 1 ocupante", e os itens como `refs` — o
   // Devolver do estoque mora no detalhe do item, e a notificação leva até lá.
+  //
+  // TRAVA O POSTO ANTES DE CONTAR, `FOR UPDATE`. A entrega ao posto e a
+  // ocupação leem o posto travado (`ativoDoPosto`, `lerPostoTravado`), então
+  // a que chega no meio da exclusão espera e depois recebe 404 — em vez de a
+  // FK segurar o `DELETE` com a frase genérica, sem dizer o que tirar. E a
+  // troca de nome espera também: o nome que o `beforeDelete` escreve é mesmo o
+  // último.
   async motivoParaNaoExcluir(client, id) {
+    await lerPostoTravado(client, id, 'UPDATE');
+
     const [ativos, itens, ocupantes] = await Promise.all([
       client.assignment.count({ where: { targetWorkstationId: id, checkinAt: null } }),
       itensAbertosNo(client, { targetWorkstationId: id }),
@@ -79,6 +88,11 @@ export const workstationSpec: CatalogSpec = {
   // o nome que o posto tem AGORA, o último antes de ele sair. É o nome que o
   // histórico mostra enquanto o posto existe, então nada muda na tela.
   //
+  // A posse e a ocupação guardam também o ID (AW): é por ele que o histórico
+  // do ativo cruza a entrega com quem ocupou o posto. Pelo nome, um posto novo
+  // chamado Mesa 7 misturaria as pessoas dos dois. O estoque não cruza com
+  // ninguém e fica só com o nome.
+  //
   // As FKs continuam `Restrict`: a linha que ninguém desligou aqui — uma
   // entrega que nasceu depois da contagem — segura o `DELETE` e desfaz a
   // transação inteira, em vez de sumir.
@@ -88,7 +102,7 @@ export const workstationSpec: CatalogSpec = {
 
     await client.assignment.updateMany({
       where: { targetWorkstationId: id, checkinAt: { not: null } },
-      data: { targetWorkstationId: null, targetWorkstationName: posto.name },
+      data: { targetWorkstationId: null, targetWorkstationName: posto.name, targetWorkstationFormerId: id },
     });
     // Na ordem do id, como a exclusão do item (`delete-stock-item.usecase.ts`),
     // que desliga as mesmas linhas: os dois ao mesmo tempo se esperam, sem
@@ -105,7 +119,7 @@ export const workstationSpec: CatalogSpec = {
     });
     await client.workstationOccupant.updateMany({
       where: { workstationId: id, endedAt: { not: null } },
-      data: { workstationId: null, workstationName: posto.name },
+      data: { workstationId: null, workstationName: posto.name, workstationFormerId: id },
     });
   },
 

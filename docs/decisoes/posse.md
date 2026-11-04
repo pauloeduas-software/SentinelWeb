@@ -733,6 +733,82 @@ o dia do cadastro. Licença e estoque já registravam o dia; o computador era o 
 
 ---
 
+## AW — O computador está onde o posto fica, e o histórico diz quem ocupou o posto
+
+**Decidido** (2026-11-04, na revisão de Postos, comparando com Snipe-IT, Shelf.nu, GLPI,
+ServiceNow, ManageEngine e iTop):
+
+- **O computador entregue a um posto está onde o posto fica.** A ficha mostra a localização do
+  posto, com o nome dele ("Filial · Mesa 1"), e a localização do computador passa a ser
+  **para onde ele volta** na devolução. São os dois lugares do Snipe-IT, a atual e a padrão, mas
+  a atual não é copiada: sai da entrega em aberto na hora, e o posto que muda de localização leva
+  o computador junto sem atualização em cadeia. Fora de posto, nada muda.
+- **Cada entrega a um posto, no histórico de posse do computador, diz quem ocupou o posto
+  naquele período**, com turno e datas — inclusive a entrega em aberto, porque uma mesa de dois
+  anos troca de gente no meio. Uma ocupação entra se divide ao menos um dia com a entrega.
+  Calculado na hora, sem tela nova e sem guardar nada.
+- **O posto excluído guarda o id, além do nome**, na entrega e na ocupação já fechadas
+  (`targetWorkstationFormerId`, `workstationFormerId`, sem FK). É por ele que o histórico
+  cruza as duas depois da exclusão. O estoque não cruza com ninguém e fica só com o nome.
+
+**Estende:** [Y](#y--o-posto-sai-de-location-localização-guarda-posto-recebe) (a localização
+guarda, o posto recebe: agora a tela diz onde o computador recebido está) e a regra de excluir
+o posto da [AG](./estoque.md#ag--a-regra-do-posto-vale-para-o-estoque-e-a-licença-só-o-que-está-em-uso-impede-a-exclusão)
+(o passado guarda o nome por escrito: a entrega e a ocupação guardam também o id).
+
+**Por quê:** o computador que saiu do Depósito para a Mesa 1, na Filial, aparecia no Depósito.
+O Snipe-IT e o Shelf.nu mostram o lugar de quem está com o equipamento, e no Snipe-IT o
+equipamento acompanha a pessoa que muda de lugar. E "quem respondia por este computador em
+março?" — a pergunta de quando um equipamento some — só se respondia lendo dois históricos à
+mão. Snipe-IT e GLPI a respondem pelo histórico do ativo, porque lá a entrega é a uma pessoa;
+aqui ela é ao posto, e as pessoas estão na ocupação.
+
+**Por que o id, e não o nome:** nenhum dos sistemas comparados liga o histórico pelo nome. O
+Snipe-IT não apaga de verdade, e o ServiceNow deixa o id no campo depois que o registro some.
+Pelo nome, um posto novo chamado Mesa 7 misturaria as pessoas dos dois — e numa auditoria
+apontar a pessoa errada é pior que não apontar ninguém. A lixeira de posto, como a do
+Snipe-IT, contrariaria a [V](#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira)
+e a AG.
+
+**O que fica de fora, declarado:** o computador entregue a uma pessoa continua mostrando onde
+fica guardado — o colaborador não tem localização. Não há consulta "por data" nem tela nova.
+
+---
+
+## AX — O posto tem um computador por vez, também no passado
+
+**Decidido** (2026-11-04, na revisão de Postos, logo depois da AW):
+
+- **A entrega a um posto não começa antes do dia da última devolução de outro computador
+  nele.** A invariante 19 olhava só o presente: com a Mesa 1 vazia hoje, a entrega do ATV-2 com
+  data de março passava, mesmo que o ATV-1 tivesse ficado nela até junho. No mesmo dia da
+  devolução passa, e a entrega fica depois dela no histórico.
+- **A ocupação nova da mesma pessoa no mesmo posto não começa antes do fim da anterior.**
+  Ocupação 1 começa, termina, e só então a 2 começa; a 2 no meio da 1 não existe. Outra pessoa
+  no mesmo período é escala (Camada 2), e a mesma pessoa em outro posto também passa.
+- **E a invariante 19 ganha rede no banco:** o índice único parcial
+  `assignments_um_aberto_por_posto`, na posse aberta. A porta continua sendo a entrega, que diz
+  qual computador devolver.
+
+**Estende:** [AM](#am--a-entrega-e-a-devolução-do-computador-ganham-o-dia) (a entrega não antecede a
+última devolução do computador: agora também a do posto) e a [AW](#aw--o-computador-está-onde-o-posto-fica-e-o-histórico-diz-quem-ocupou-o-posto),
+que é onde o furo aparecia: a Laura respondendo por dois computadores em março, ou duas vezes
+pelo mesmo.
+
+**Por quê, e por que assim:** é a regra que o sistema já tinha para o computador, lida pelo
+lado do posto e da ocupação, com o mesmo dia de Brasília e a mesma frase. O Snipe-IT e o GLPI
+não deixam a entrega voltar no tempo por cima de outra do mesmo equipamento, e a reserva de sala
+de qualquer sistema recusa dois períodos sobrepostos no mesmo recurso. A comparação é pelo
+último fim, e não pelo intervalo inteiro: o posto já tem um computador por vez no presente, então
+o passado dele é uma fila, e nada pode entrar antes do fim dela.
+
+**No banco, só o presente.** O passado caberia num `EXCLUDE` por intervalo (`btree_gist`), mas
+a regra é por dia de Brasília e o banco grava o instante: o meio-dia do dia passado e a hora real
+de hoje dariam sobreposição onde a tela vê dois dias diferentes, e a recusa sem frase. Fica na
+porta, com a trava que já serializa a entrega no posto e a ocupação na pessoa.
+
+---
+
 ## Onde o modelo vive no código — D14 a D17
 
 Para quem for verificar, e para quem for mexer. A tabela cobre as quatro decisões do **modelo**;

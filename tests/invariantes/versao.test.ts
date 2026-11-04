@@ -120,6 +120,23 @@ describe('o Editar com a versão velha é recusado', () => {
     expect((await api.put(`/api/workstations/${id}`, { name: 'Mesa renomeada', updatedAt: segunda.body.updatedAt })).status).toBe(200);
   });
 
+  // O Editar do posto abre da LINHA da lista, e a lista é montada à mão: sem o
+  // `updatedAt` nela, o formulário não mandava versão e a conferência não rodava.
+  it('no posto, a versão sai da linha da lista, que é de onde o Editar abre', async () => {
+    const id = await criarPosto(api, { name: 'Mesa da lista' });
+    const lista = await api.get<{ rows: (ComVersao & { id: string })[] }>(`/api/workstations?q=${encodeURIComponent('Mesa da lista')}`);
+    const linha = lista.body.rows.find((posto) => posto.id === id);
+    expect(linha?.updatedAt).toEqual(expect.any(String));
+
+    expect((await api.put(`/api/workstations/${id}`, { notes: 'outra pessoa' })).status).toBe(200);
+
+    const velha = await api.put<{ error: string }>(`/api/workstations/${id}`, {
+      name: 'Mesa da lista', notes: null, updatedAt: linha?.updatedAt,
+    });
+    expect(velha.status).toBe(409);
+    expect(velha.body.error).toBe(frase('Mesa da lista'));
+  });
+
   it('a versão que não é data e hora é 422', async () => {
     const id = await criarPosto(api, { name: 'Mesa da versão torta' });
     const torta = await api.put<{ error: string }>(`/api/workstations/${id}`, { name: 'x', updatedAt: 'ontem' });

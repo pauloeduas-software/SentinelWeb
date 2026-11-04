@@ -35,12 +35,13 @@ export interface AtivoDoPosto {
  * duas entregas simultâneas de dois ativos ao mesmo posto leem as duas um
  * estado de antes, nenhuma enxerga a posse que a outra não confirmou, e as duas
  * passam pela guarda — o mesmo furo que a `travarPessoa` fecha na exclusão de
- * pessoa, e pelo mesmo motivo nenhum `if` pega. Aqui não há rede no banco: a
- * regra cruza `assignments` e `assets`, e o índice único da posse aberta é por
- * ATIVO, não por posto.
+ * pessoa, e pelo mesmo motivo nenhum `if` pega. O índice
+ * `assignments_um_aberto_por_posto` também recusaria a segunda, mas com a frase
+ * genérica e sem dizer qual computador devolver: a trava é a porta, e o índice
+ * é a rede de baixo.
  *
  * POR QUE O ATIVO PRIMEIRO, e não só o posto: é a ordem do sistema inteiro —
- * usuário → ativo → posto (`lock-asset.usecase.ts`). Quem trava os dois em
+ * pessoa → ativo → posto (`lock-asset.usecase.ts`). Quem trava os dois em
  * ordem oposta fecha um ciclo, e o `40P01` que sai dele o error-handler não
  * mapeia: vira 500. A contenção é só entre operações que miram o MESMO posto.
  * ═══════════════════════════════════════════════════════════════════════════

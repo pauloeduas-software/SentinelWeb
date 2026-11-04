@@ -33,6 +33,9 @@ export const WORKSTATION_SELECT = {
   name: true,
   notes: true,
   createdAt: true,
+  // A versão que o Editar da linha devolve (AF): sem ela o formulário não
+  // tinha o que mandar, e a edição de outra pessoa se perdia sem 409.
+  updatedAt: true,
   // A localização onde o posto fica — a coluna da tela e o campo do formulário.
   locationId: true,
   location: { select: { id: true, name: true } },

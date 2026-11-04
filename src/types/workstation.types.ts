@@ -67,9 +67,11 @@ export interface Posto {
  * Máquina também conhece um `endpointId`, mas por fora do ativo, em
  * `GET /api/assets/:id/machine`.
  */
-export interface AtivoDoPosto extends Asset {
+export interface AtivoDoPosto extends Omit<Asset, 'posse'> {
   /** `null` quando o agente ainda não foi vinculado ao ativo. */
   endpointId: string | null;
+  /** O instante da entrega a esta mesa — o mínimo da devolução pela ficha (AM). */
+  entregueEm: string | null;
 }
 
 /**
