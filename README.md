@@ -1,5 +1,5 @@
 # Sentinel Web Dashboard 📊
-> **Cyber-Industrial Control Panel for Fleet Management**
+> **Painel de inventário de TI com convergência RMM**
 
 ![React](https://img.shields.io/badge/React-19.x-61DAFB?logo=react)
 ![Tailwind](https://img.shields.io/badge/Tailwind-4.x-38B2AC?logo=tailwind-css)
@@ -38,8 +38,8 @@ fazer no lugar.
 quando quebrar em use-cases — está em [`docs/referencia/arquitetura.md`](./docs/referencia/arquitetura.md).**
 Leia antes de criar arquivo novo.
 
-O tema **Cyber-Industrial** (modo escuro, cores de status, fonte monoespaçada)
-fica em `src/index.css`, com variáveis CSS do Tailwind.
+O visual vem da IntraNet (decisão AY): tema claro e escuro, azulado, em `src/index.css`, com variáveis
+CSS do Tailwind. Os primitivos ficam em `src/components/ui/`.
 
 ## ❤️ Saúde do serviço
 

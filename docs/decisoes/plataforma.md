@@ -368,3 +368,41 @@ tecnologias e boas práticas, não mais funcionalidades*):
 - **Pendente de decisão, não recusado:** a acessibilidade dos modais (Esc, foco, `role="dialog"`: 15 modais
   montam o próprio fundo e só 2 têm o papel) e o `htmlFor` dos rótulos. Ficam para a refeita do visual.
 
+## AY — O visual vem da IntraNet, em tema claro e escuro, e a linha inteira abre o registro
+
+**Decisão.** O visual do painel foi refeito a partir da IntraNet (`/home/penta/IntraNet`): paleta azulada,
+Inter sem caixa alta, cantos arredondados, densidade compacta no desktop, menu lateral com seções que
+recolhem, menu do usuário no cabeçalho, e tema claro ou escuro: na primeira entrada vale o do sistema, e
+depois o que ficou gravado. As regras de negócio não mudaram.
+
+- **Clique na linha.** A linha inteira abre o registro: o detalhe, a ficha ou, no cadastro sem detalhe, o
+  Editar. As ações moram no `⋯` (`AcoesDaLinha`), na ordem de sempre: Editar, Desativar/Ativar e Excluir. Isto
+  corrige o "ao passar o mouse" de AF, AN e AO. Excluir continua sempre clicando, e quem recusa é o 409.
+- **Um lugar para cada coisa.** Formulário é painel lateral (`FormularioLateral`), detalhe é janela com abas
+  (`JanelaDeDetalhe`), e o que não tem volta pergunta pelo `confirmar()` (`hooks/useConfirmacao`) no lugar do
+  `confirm()` do navegador. Os três ganham foco preso, Esc e `role` de graça do Radix, e o `Campo` liga o
+  rótulo ao controle: é a pendência de acessibilidade que a AT deixou para esta refeita.
+- **shadcn só no que se usa.** Em `src/components/ui/` estão os primitivos que as telas pedem, não os 54 da
+  IntraNet. A AT recusou o shadcn **inteiro** por custar a reescrita dos modais; com ela feita, sobrou o
+  ganho. O `<select>` do navegador saiu pelo `Seletor`, que busca na lista.
+- **Cor em situação.** Corrige "sem cor por dado": ativo, desativado, vencida, online e offline podem ter
+  cor, sempre pelos tokens `status-*`, com `Badge`, `PontoDeStatus` ou `Aviso`. Nome, categoria e tipo de
+  evento continuam sem cor.
+- **Texto na tela.** Subtítulo de uma linha. A regra mora na ajuda do campo em que a dúvida aparece.
+- **Sem busca no cabeçalho.** Não há leitor de código de barras em uso: o campo "Bipe" saiu, e com ele
+  `GET /api/search`. Consequência: o computador num posto não está na lista de Computadores, e agora se acha
+  pelo posto.
+- **A marca é a torre sem fundo, com uma arte para cada tema** (`torre-sem-fundo-light` e `-dark`). Sai o escudo.
+  A arte original some na barra escura, e clarear ou contornar por CSS estoura a paleta: a versão de cada tema é
+  um arquivo próprio, não um efeito. O favicon é o alto da torre (`torre-topo-light` e `-dark`): inteira ela é fina e
+  detalhada demais para 16px, e fundo claro não entra. Ele acompanha o tema do painel, como a marca.
+- **Campo vazio some do detalhe** (`Dado`): uma coluna de "—" parecia ficha quebrada, e o Editar mostra o
+  que falta.
+
+**O que ficou de fora.** Cards de números no topo das listas (função nova, e a contagem já está na barra),
+seleção em lote e exportar (O), foto de perfil, a marca da IntraNet e o esconder de todas as barras de
+rolagem, que deixaria a tabela larga sem sinal de que rola.
+
+**Tokens.** Os nomes continuam os de antes (`bg-bg-base`, `text-text-primary`), agora com um valor por tema
+em `src/index.css`, mais `primary`, `accent`, `surface-muted` e `sidebar`. O lint segue recusando cor fixa.
+

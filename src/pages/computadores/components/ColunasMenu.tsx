@@ -1,5 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { Columns3, RotateCcw } from 'lucide-react';
+import { Check, Columns3, RotateCcw } from 'lucide-react';
+import { Button } from '../../../components/ui/button';
+import {
+  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuItemIndicator,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from '../../../components/ui/dropdown-menu';
 import type { ColunaDeAtivo } from '../helpers/asset-columns';
 
 // O MENU DE COLUNAS (F10, Etapa B).
@@ -22,81 +26,48 @@ interface Props {
 export default function ColunasMenu({
   catalogo, visiveis, personalizado, onAlternar, onRestaurar,
 }: Props) {
-  const [aberto, setAberto] = useState(false);
-  const caixa = useRef<HTMLDivElement>(null);
-
-  // Fecha no clique de fora. `mousedown` e não `click`: com `click`, o próprio
-  // clique que abriu o menu chegaria ao documento depois e o fecharia na hora.
-  useEffect(() => {
-    if (!aberto) return;
-
-    const aoClicar = (evento: MouseEvent) => {
-      if (!caixa.current?.contains(evento.target as Node)) setAberto(false);
-    };
-    document.addEventListener('mousedown', aoClicar);
-    return () => document.removeEventListener('mousedown', aoClicar);
-  }, [aberto]);
-
   return (
-    <div className="relative" ref={caixa}>
-      <button
-        type="button"
-        onClick={() => setAberto((estava) => !estava)}
-        title="Escolher colunas"
-        className={`flex items-center gap-2 px-3 py-2 border font-mono text-[10px] uppercase tracking-widest transition-colors ${
-          aberto
-            ? 'border-text-secondary text-text-primary'
-            : 'border-border-sutil text-text-tertiary hover:text-text-primary hover:border-text-secondary'
-        }`}
-      >
-        <Columns3 size={12} /> Colunas
-        <span className="text-text-tertiary">{visiveis.length}</span>
-      </button>
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" title="Escolher colunas">
+          <Columns3 /> Colunas
+          <span className="tabular-nums text-text-tertiary">{visiveis.length}</span>
+        </Button>
+      </DropdownMenuTrigger>
 
-      {aberto && (
-        <div className="absolute right-0 mt-1 z-30 w-64 bg-surface-card border border-border-sutil shadow-xl font-mono">
-          <ul className="max-h-80 overflow-auto py-1">
-            {catalogo.map((coluna) => {
-              const marcada = visiveis.includes(coluna.token);
-              return (
-                <li key={coluna.token}>
-                  <label
-                    className={`flex items-center gap-3 px-3 py-2 text-xs transition-colors ${
-                      coluna.fixa ? 'opacity-50 cursor-not-allowed' : 'hover:bg-bg-base cursor-pointer'
-                    }`}
-                    title={coluna.fixa ? 'A etiqueta identifica a linha e não pode ser escondida.' : undefined}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={marcada}
-                      disabled={coluna.fixa}
-                      onChange={() => onAlternar(coluna.token)}
-                      className="accent-status-info w-3.5 h-3.5"
-                    />
-                    <span className={marcada ? 'text-text-primary' : 'text-text-tertiary'}>
-                      {coluna.rotulo}
-                    </span>
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
+      <DropdownMenuContent align="end" className="w-64">
+        {catalogo.map((coluna) => (
+          <DropdownMenuCheckboxItem
+            key={coluna.token}
+            checked={visiveis.includes(coluna.token)}
+            disabled={coluna.fixa}
+            onCheckedChange={() => onAlternar(coluna.token)}
+            // O menu fica aberto: quem ajusta a tabela costuma marcar mais de uma.
+            onSelect={(evento) => evento.preventDefault()}
+            title={coluna.fixa ? 'A etiqueta identifica a linha e não pode ser escondida.' : undefined}
+            // A travada recebe o ponteiro, senão o `title` acima nunca aparece.
+            className={coluna.fixa ? 'cursor-not-allowed data-[disabled]:pointer-events-auto' : undefined}
+          >
+            <span className="flex size-4 items-center justify-center">
+              <DropdownMenuItemIndicator><Check /></DropdownMenuItemIndicator>
+            </span>
+            {coluna.rotulo}
+          </DropdownMenuCheckboxItem>
+        ))}
 
-          <div className="border-t border-border-sutil px-3 py-2 space-y-2">
-            <button
-              type="button"
-              disabled={!personalizado}
-              onClick={onRestaurar}
-              className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary transition-colors disabled:opacity-40 disabled:hover:text-text-tertiary"
-            >
-              <RotateCcw size={11} /> Restaurar padrão
-            </button>
-            <p className="text-[10px] text-text-tertiary leading-relaxed">
-              A escolha vale só neste navegador.
-            </p>
-          </div>
-        </div>
-      )}
-    </div>
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem
+          disabled={!personalizado}
+          onSelect={(evento) => {
+            evento.preventDefault();
+            onRestaurar();
+          }}
+        >
+          <RotateCcw /> Restaurar padrão
+        </DropdownMenuItem>
+        <p className="px-2 py-1.5 text-xs text-text-tertiary">A escolha vale só neste navegador.</p>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

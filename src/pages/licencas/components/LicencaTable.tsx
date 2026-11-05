@@ -1,7 +1,11 @@
-import { Edit2, Power, PowerOff, Trash2, UserPlus } from 'lucide-react';
+import { KeyRound, Pencil, Power, PowerOff, Trash2, UserPlus } from 'lucide-react';
+import AcoesDaLinha from '../../../components/AcoesDaLinha';
+import { PontoDeStatus } from '../../../components/ui/badge';
+import { Card } from '../../../components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import type { Licenca } from '../../../types/license.types';
 import { ROTULO_DO_STATUS, resumoDaContagem, textoDoPrazo } from '../../../helpers/licenca.helper';
-import { motivoParaNaoEntregar } from '../helpers/licenca.helper';
+import { TOM_DO_STATUS, motivoParaNaoEntregar } from '../helpers/licenca.helper';
 import { formatarData } from '../../../helpers/format.helper';
 
 // A tabela de licenças. Apresentacional puro: recebe valor e callback, não
@@ -10,11 +14,12 @@ import { formatarData } from '../../../helpers/format.helper';
 // A COLUNA PRINCIPAL É A CONTA — compradas, em uso, livres —, e os
 // números aparecem todos: "2 livres" sozinho não diz se sobrou muito ou pouco.
 //
-// O CADASTRO É O DAS CONFIGURAÇÕES (`CatalogTable`, AF): Editar,
-// Encerrar/Reabrir no lugar do Desativar/Ativar, e Excluir; a encerrada fica na
-// lista, esmaecida e marcada; e Excluir sempre clica — a licença em uso recebe
-// o 409 do servidor, que diz com quem está e manda devolver (AG). Encerrar grava
-// a data do fim do contrato, que entra no status e no alerta.
+// A LINHA INTEIRA ABRE O DETALHE, e o `⋯` guarda as ações (AY). O CADASTRO É O DAS
+// CONFIGURAÇÕES (`CatalogTable`, AF): Editar, Encerrar/Reabrir no lugar do
+// Desativar/Ativar, e Excluir; a encerrada fica na lista, esmaecida e marcada na
+// coluna Status; e Excluir sempre clica — a licença em uso recebe o 409 do
+// servidor, que diz com quem está e manda devolver (AG). Encerrar grava a data do
+// fim do contrato, que entra no status e no alerta.
 
 interface LicencaTableProps {
   licencas: Licenca[];
@@ -31,124 +36,94 @@ interface LicencaTableProps {
   vazio: React.ReactNode;
 }
 
-const CABECALHO = 'px-4 py-3 text-left text-[10px] uppercase tracking-widest text-text-tertiary font-normal';
-const BOTAO = 'text-text-tertiary transition-colors disabled:opacity-30 disabled:hover:text-text-tertiary';
-
 export default function LicencaTable({
   licencas, ocupado, onAbrir, onEditar, onEntregar, onAlternarEncerrada, onExcluir, vazio,
 }: LicencaTableProps) {
   if (licencas.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-text-tertiary font-mono text-xs gap-3 border border-border-sutil bg-surface-card">
+      <Card className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-text-tertiary">
+        <KeyRound className="size-6 opacity-50" />
         {vazio}
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="border border-border-sutil bg-surface-card overflow-x-auto">
-      <table className="w-full font-mono text-xs">
-        <thead className="border-b border-border-sutil bg-bg-base/40">
-          <tr>
-            <th className={CABECALHO}>Licença</th>
-            <th className={CABECALHO}>Categoria</th>
-            <th className={CABECALHO}>Status</th>
-            <th className={CABECALHO}>Quantidade</th>
-            <th className={CABECALHO}>Vencimento</th>
-            <th className={`${CABECALHO} text-right`}>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
+    <Card className="overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Licença</TableHead>
+            <TableHead className="hidden md:table-cell">Categoria</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Quantidade</TableHead>
+            <TableHead>Vencimento</TableHead>
+            <TableHead className="w-12 text-right">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {licencas.map((licenca) => {
             const motivoSemEntrega = motivoParaNaoEntregar(licenca);
             const encerrada = licenca.status === 'ENCERRADA';
 
             return (
-              <tr
+              <TableRow
                 key={licenca.id}
-                className={`border-b border-border-sutil/50 last:border-0 hover:bg-bg-base/40 transition-colors group ${encerrada ? 'opacity-60' : ''}`}
+                onClick={() => onAbrir(licenca)}
+                className={encerrada ? 'cursor-pointer opacity-60' : 'cursor-pointer'}
               >
-                <td className="px-4 py-3">
-                  <button
-                    type="button"
-                    onClick={() => onAbrir(licenca)}
-                    className="text-text-primary hover:text-text-secondary underline-offset-2 hover:underline text-left"
-                  >
+                <TableCell>
+                  {/* O botão é o caminho do teclado: o clique sobe para a linha. */}
+                  <button type="button" className="text-left font-medium text-text-primary focus-visible:underline focus-visible:outline-none">
                     {licenca.name}
                   </button>
-                  {encerrada && (
-                    <span className="ml-3 text-[10px] text-status-warning uppercase tracking-widest">encerrada</span>
-                  )}
-                </td>
+                </TableCell>
 
-                <td className="px-4 py-3 text-text-secondary">{licenca.category?.name ?? '—'}</td>
+                <TableCell className="hidden md:table-cell">{licenca.category?.name ?? '—'}</TableCell>
 
-                <td className="px-4 py-3 text-text-secondary">{ROTULO_DO_STATUS[licenca.status]}</td>
+                <TableCell>
+                  <PontoDeStatus tom={TOM_DO_STATUS[licenca.status]}>{ROTULO_DO_STATUS[licenca.status]}</PontoDeStatus>
+                </TableCell>
 
-                <td className="px-4 py-3 text-text-secondary">{resumoDaContagem(licenca)}</td>
+                <TableCell>{resumoDaContagem(licenca)}</TableCell>
 
-                <td className="px-4 py-3 text-text-secondary">
+                <TableCell>
                   {encerrada ? `encerrada em ${formatarData(licenca.terminationDate)}` : textoDoPrazo(licenca.diasParaVencer)}
-                </td>
+                </TableCell>
 
-                <td className="px-4 py-3">
-                  {/* Visível ao passar o mouse, ao navegar por Tab
-                      (`focus-within`) e sempre no toque, como na `CatalogTable`. */}
-                  <div className="flex items-center justify-end gap-3 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
-                    {!encerrada && (
-                      <button
-                        type="button"
-                        onClick={() => onEntregar(licenca)}
-                        disabled={motivoSemEntrega !== null}
-                        title={motivoSemEntrega ?? 'Entregar'}
-                        aria-label={`Entregar ${licenca.name}`}
-                        className={`${BOTAO} hover:text-text-primary`}
-                      >
-                        <UserPlus size={14} />
-                      </button>
-                    )}
-                    {onEditar && (
-                      <button
-                        type="button"
-                        onClick={() => onEditar(licenca)}
-                        title="Editar"
-                        aria-label={`Editar ${licenca.name}`}
-                        className={`${BOTAO} hover:text-text-primary`}
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                    )}
-                    {onAlternarEncerrada && (
-                      <button
-                        type="button"
-                        onClick={() => onAlternarEncerrada(licenca)}
-                        disabled={ocupado}
-                        title={encerrada ? 'Reabrir' : 'Encerrar'}
-                        aria-label={`${encerrada ? 'Reabrir' : 'Encerrar'} ${licenca.name}`}
-                        className={`${BOTAO} hover:text-status-info`}
-                      >
-                        {encerrada ? <Power size={14} /> : <PowerOff size={14} />}
-                      </button>
-                    )}
-                    {onExcluir && (
-                      <button
-                        type="button"
-                        onClick={() => onExcluir(licenca)}
-                        disabled={ocupado}
-                        title="Excluir"
-                        aria-label={`Excluir ${licenca.name}`}
-                        className={`${BOTAO} hover:text-status-danger`}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
+                <TableCell>
+                  <AcoesDaLinha
+                    nome={licenca.name}
+                    acoes={[
+                      !encerrada && {
+                        rotulo: 'Entregar',
+                        icone: UserPlus,
+                        onClick: () => onEntregar(licenca),
+                        disabled: motivoSemEntrega !== null,
+                        titulo: motivoSemEntrega ?? undefined,
+                      },
+                      onEditar && { rotulo: 'Editar', icone: Pencil, onClick: () => onEditar(licenca) },
+                      onAlternarEncerrada && {
+                        rotulo: encerrada ? 'Reabrir' : 'Encerrar',
+                        icone: encerrada ? Power : PowerOff,
+                        onClick: () => onAlternarEncerrada(licenca),
+                        disabled: ocupado,
+                      },
+                      onExcluir && {
+                        rotulo: 'Excluir',
+                        icone: Trash2,
+                        onClick: () => onExcluir(licenca),
+                        disabled: ocupado,
+                        perigo: true,
+                      },
+                    ]}
+                  />
+                </TableCell>
+              </TableRow>
             );
           })}
-        </tbody>
-      </table>
-    </div>
+        </TableBody>
+      </Table>
+    </Card>
   );
 }

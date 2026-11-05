@@ -5,6 +5,7 @@ import {
 import type { ListView } from '../../types/list.types';
 import type { CatalogRow } from '../../types/catalog.types';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { confirmar } from '../../hooks/useConfirmacao';
 import { useNotificacao } from '../../hooks/useNotificacao';
 import type { AcaoLinhaId, CatalogUiSpec } from './catalog-ui.types';
 import { linksDoErro } from '../../helpers/erro.helper';
@@ -125,14 +126,16 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
     closeModal();
   };
 
-  // DESATIVAR É UM BOTÃO DA LINHA, não uma caixa no formulário — o mesmo
+  // DESATIVAR É UMA AÇÃO DA LINHA, não uma caixa no formulário — o mesmo
   // padrão de Usuários. Grava só o campo alternado. Confirma só na ida:
   // desativar tira o registro das escolhas; reativar não tem o que perder.
   const handleAlternar = async (registro: CatalogRow, campo: string) => {
     const ligado = registro[campo] !== false;
-    if (ligado && !confirm(
-      `Desativar "${registro.name}"? Continua no histórico, mas some das escolhas e não recebe nada novo.`,
-    )) return;
+    if (ligado && !(await confirmar({
+      titulo: `Desativar "${registro.name}"?`,
+      descricao: 'Continua no histórico, mas some das escolhas e não recebe nada novo.',
+      acao: 'Desativar',
+    }))) return;
 
     try {
       await editar.mutateAsync({ id: registro.id, data: { [campo]: !ligado } });
@@ -143,10 +146,12 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
   };
 
   const handleDelete = async (registro: CatalogRow) => {
-    const aviso = spec.lixeira
-      ? `Excluir "${registro.name}"? Vai para a lixeira e pode ser restaurado.`
-      : `Excluir "${registro.name}"? Esta ação não tem lixeira.`;
-    if (!confirm(aviso)) return;
+    if (!(await confirmar({
+      titulo: `Excluir "${registro.name}"?`,
+      descricao: spec.lixeira ? 'Vai para a lixeira e pode ser restaurado.' : 'Esta ação não tem lixeira.',
+      acao: 'Excluir',
+      perigo: true,
+    }))) return;
 
     try {
       await excluir.mutateAsync(registro.id);

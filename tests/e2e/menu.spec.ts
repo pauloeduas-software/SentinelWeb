@@ -38,3 +38,35 @@ test('endereço que não existe volta para a raiz', async ({ page }) => {
   await expect(page).toHaveURL(/\/computadores$/);
   await expect(tituloDaPagina(page, 'Computadores')).toBeVisible();
 });
+
+// O tema escolhido no menu do usuário vale agora e depois do F5, sem depender do
+// sistema operacional: o `index.html` o aplica antes do primeiro quadro.
+test('o tema escolhido fica depois de recarregar', async ({ page }) => {
+  await page.goto('/computadores');
+  await page.getByRole('button', { name: 'Menu do usuário' }).click();
+  await page.getByRole('button', { name: 'Claro' }).click();
+
+  await page.getByRole('button', { name: 'Escuro' }).click();
+  await expect(page.locator('html')).toHaveClass(/dark/);
+
+  await page.reload();
+  await expect(page.locator('html')).toHaveClass(/dark/);
+
+  await page.getByRole('button', { name: 'Menu do usuário' }).click();
+  await page.getByRole('button', { name: 'Claro' }).click();
+  await expect(page.locator('html')).not.toHaveClass(/dark/);
+});
+
+// Na primeira entrada vale o do sistema, e ele fica: mudar o sistema depois não
+// muda o painel.
+test('a primeira entrada segue o sistema, e depois o tema fica', async ({ page }) => {
+  await page.goto('/computadores');
+  await page.evaluate(() => localStorage.removeItem('sentinel.tema'));
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.reload();
+  await expect(page.locator('html')).toHaveClass(/dark/);
+
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.reload();
+  await expect(page.locator('html')).toHaveClass(/dark/);
+});

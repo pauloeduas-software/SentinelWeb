@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { Activity, Copy, Cpu, HardDrive, Lock, Power, RefreshCw, TriangleAlert } from 'lucide-react';
+import {
+  Activity, Copy, Cpu, HardDrive, Lock, MemoryStick, Power, RefreshCw, TriangleAlert, Wifi, WifiOff,
+  type LucideIcon,
+} from 'lucide-react';
+import { Aviso } from './ui/aviso';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { Card } from './ui/card';
+import { Table, TableBody, TableCell, TableRow } from './ui/table';
+import { cn } from '../helpers/cn.helper';
 import {
   formatarTaxa, formatarVolume, readSnapshot, usagePercent, volumeDeRede,
 } from '../helpers/metrics.helper';
@@ -49,7 +58,7 @@ interface TelemetriaDaMaquinaProps {
   endpointId: string;
 }
 
-const ROTULO = 'text-[10px] uppercase tracking-widest text-text-tertiary';
+const ROTULO = 'text-xs text-text-tertiary';
 
 /**
  * Os três comandos, com o verbo e a CONSEQUÊNCIA de cada um.
@@ -64,47 +73,97 @@ const COMANDOS: readonly (ComandoDaMaquina & { icone: typeof Power; cor: string 
     action: 'shutdown',
     rotulo: 'Desligar',
     consequencia: 'Quem estiver usando perde o que não salvou.',
+    perigo: true,
     icone: Power,
-    cor: 'text-status-danger border-status-danger/30 hover:bg-status-danger/10',
+    cor: 'text-status-danger border-status-danger/30 hover:bg-status-danger/10 hover:text-status-danger',
   },
   {
     action: 'reboot',
     rotulo: 'Reiniciar',
     consequencia: 'Quem estiver usando perde o que não salvou.',
+    perigo: true,
     icone: RefreshCw,
-    cor: 'text-status-warning border-status-warning/30 hover:bg-status-warning/10',
+    cor: 'text-status-warning border-status-warning/30 hover:bg-status-warning/10 hover:text-status-warning',
   },
   {
     action: 'suspend',
     rotulo: 'Suspender',
     consequencia: 'A máquina dorme; a sessão e as janelas continuam abertas.',
     icone: Lock,
-    cor: 'text-status-info border-status-info/30 hover:bg-status-info/10',
+    cor: 'text-status-info border-status-info/30 hover:bg-status-info/10 hover:text-status-info',
   },
 ];
+
+/** A vírgula do pt-BR, como o resto do painel: "12,9 GB", e não "12.9 GB". */
+function comVirgula(numero: string): string {
+  return numero.replace('.', ',');
+}
 
 /** A hora da amostra. Só a hora: o dia é hoje em toda máquina que responde. */
 function hora(valor: string): string {
   return new Date(valor).toLocaleTimeString('pt-BR', { timeStyle: 'medium' });
 }
 
-function Barra({ rotulo, valor, detalhe }: { rotulo: string; valor: number; detalhe?: string }) {
-  // A cor é do VALOR, não do rótulo: é o que faz "85% de disco" saltar sem
-  // ninguém precisar ler o número.
-  const cor = valor < 60 ? 'bg-status-success' : valor < 85 ? 'bg-status-warning' : 'bg-status-danger';
+/**
+ * A cor da medida, pelo LIMITE: os mesmos 70% e 90% da IntraNet, nos tokens de
+ * status (AY). A cor é do VALOR, não do rótulo: é o que faz "95% de disco" saltar
+ * sem ninguém precisar ler o número.
+ *
+ * Fora do ar a cor sai: a medida é a última que chegou, e vermelho num número de
+ * ontem diria que o problema é de agora.
+ */
+function corDoUso(valor: number, online: boolean): { texto: string; barra: string } {
+  if (!online) return { texto: 'text-text-tertiary', barra: 'bg-text-tertiary' };
+  if (valor >= 90) return { texto: 'text-status-danger', barra: 'bg-status-danger' };
+  if (valor >= 70) return { texto: 'text-status-warning', barra: 'bg-status-warning' };
+  return { texto: 'text-status-success', barra: 'bg-status-success' };
+}
+
+function Trilho({ valor, cor }: { valor: number; cor: string }) {
+  return (
+    <div className="h-2 w-full overflow-hidden rounded-full bg-surface-muted">
+      <div
+        className={cn('h-full rounded-full transition-all duration-500 ease-out', cor)}
+        style={{ width: `${Math.min(valor, 100)}%` }}
+      />
+    </div>
+  );
+}
+
+/** O número grande com a barra embaixo: o `TelemetriaTab` da IntraNet. */
+function Medidor({ icone: Icone, rotulo, valor, detalhe, online }: {
+  icone: LucideIcon;
+  rotulo: string;
+  valor: number;
+  detalhe?: string;
+  online: boolean;
+}) {
+  const cor = corDoUso(valor, online);
 
   return (
+    <Card className="min-w-0 space-y-2 p-4">
+      <div className="flex items-center gap-2">
+        <Icone className={cn('size-4 shrink-0', cor.texto)} />
+        <span className="text-sm font-medium text-text-primary">{rotulo}</span>
+      </div>
+      <div className={cn('text-3xl font-bold tabular-nums', cor.texto)}>{comVirgula(valor.toFixed(1))}%</div>
+      <Trilho valor={valor} cor={cor.barra} />
+      {detalhe && <p className="truncate text-xs text-text-tertiary" title={detalhe}>{detalhe}</p>}
+    </Card>
+  );
+}
+
+/** A linha de um disco, quando há mais de um para mostrar. */
+function Barra({ rotulo, valor, detalhe, online }: { rotulo: string; valor: number; detalhe: string; online: boolean }) {
+  return (
     <div className="space-y-1.5">
-      <div className="flex justify-between items-baseline gap-2">
-        <span className={ROTULO}>{rotulo}</span>
-        <span className="text-text-primary tabular-nums">
-          {Math.round(valor)}%
-          {detalhe && <span className="text-text-tertiary"> · {detalhe}</span>}
+      <div className="flex items-baseline justify-between gap-2 text-sm">
+        <span className="text-text-secondary">{rotulo}</span>
+        <span className="tabular-nums text-text-primary">
+          {Math.round(valor)}%<span className="text-xs text-text-tertiary"> · {detalhe}</span>
         </span>
       </div>
-      <div className="h-1.5 w-full bg-border-sutil overflow-hidden">
-        <div className={`h-full transition-all duration-500 ease-out ${cor}`} style={{ width: `${Math.min(valor, 100)}%` }} />
-      </div>
+      <Trilho valor={valor} cor={corDoUso(valor, online).barra} />
     </div>
   );
 }
@@ -113,9 +172,9 @@ function Numero({ rotulo, valor, unidade }: { rotulo: string; valor: string; uni
   return (
     <div className="space-y-1">
       <span className={ROTULO}>{rotulo}</span>
-      <p className="text-text-primary tabular-nums">
-        {valor}
-        <span className="text-text-tertiary text-[10px]"> {unidade}</span>
+      <p className="text-sm tabular-nums text-text-primary">
+        {comVirgula(valor)}
+        <span className="text-xs text-text-tertiary"> {unidade}</span>
       </p>
     </div>
   );
@@ -133,7 +192,7 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
   // comando tem no `useMaquinaAoVivo`.
   const [hwidCopiado, setHwidCopiado] = useState<string | null>(null);
 
-  if (carregando) return <p className="text-text-tertiary">Lendo a máquina…</p>;
+  if (carregando) return <p className="text-sm text-text-tertiary">Lendo a máquina…</p>;
 
   // BUSCA ENGOLE ERRO (docs/referencia/arquitetura.md): esta consulta revalida a
   // cada poucos segundos, e um 500 passageiro, um reinício do servidor ou um
@@ -142,7 +201,7 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
   // momento em que a pessoa provavelmente está tentando desligar a máquina
   // justamente porque algo está errado. Com dado em mão, o erro é um aviso ao
   // lado; sem dado nenhum, aí sim ele é a tela toda.
-  if (erro && !maquina) return <p className="text-status-danger">{erro}</p>;
+  if (erro && !maquina) return <Aviso>{erro}</Aviso>;
   if (!maquina) return null;
 
   const amostra = maquina.telemetries[0];
@@ -155,15 +214,22 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
   const taxaDeEnvio = formatarTaxa(network.txSpeedKbps);
   const totalRecebido = formatarVolume(volumeDeRede(network.bytesReceived, network.totalRxGb));
   const totalEnviado = formatarVolume(volumeDeRede(network.bytesSent, network.totalTxGb));
+  // O disco do medidor é o MAIS CHEIO, que é o que pede atenção. Com mais de um,
+  // a lista embaixo mostra todos.
+  const discos = disks.map((disco) => ({ ...disco, uso: usagePercent(disco.usedGb, disco.totalGb) }));
+  const maisCheio = discos.reduce<(typeof discos)[number] | null>(
+    (maior, disco) => (maior && maior.uso >= disco.uso ? maior : disco),
+    null,
+  );
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-2">
-        <div className={`h-2 w-2 rounded-full ${online ? 'bg-status-success animate-pulse' : 'bg-text-tertiary'}`} />
-        <span className={`text-[10px] font-mono font-bold uppercase tracking-widest ${online ? 'text-status-success' : 'text-text-secondary'}`}>
-          {maquina.status}
-        </span>
-        <span className="text-[10px] text-text-tertiary">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge tom={online ? 'sucesso' : 'perigo'}>
+          {online ? <Wifi className="size-3" /> : <WifiOff className="size-3" />}
+          {online ? 'Online' : 'Offline'}
+        </Badge>
+        <span className="text-xs text-text-tertiary">
           {/* A FRASE MUDA COM O ESTADO, e isso importa mais que o número: uma
               máquina OFFLINE tem telemetria na tela, e ela é a última que chegou.
               Sem dizer isso, 12% de CPU de ontem se lê como 12% agora.
@@ -171,53 +237,65 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
               são coisas diferentes: um agente vivo com a coleta travada mantém o
               selo verde sobre um número de dez minutos atrás, e só a hora denuncia. */}
           {amostra
-            ? `· leitura de ${hora(amostra.timestamp)}${online ? ', atualiza sozinho' : ', de antes de ela cair'}`
-            : '· nenhuma amostra ainda: o agente conectou e não mandou leitura'}
+            ? `Leitura de ${hora(amostra.timestamp)}${online ? ', atualiza sozinho' : ', de antes de ela cair'}`
+            : 'Nenhuma amostra ainda: o agente conectou e não mandou leitura'}
         </span>
       </div>
 
       {/* A FALHA DO CICLO, quando há dado em mão: a tela continua, com o aviso. */}
       {erro && (
-        <p className="flex items-start gap-2 text-status-warning text-[10px] leading-relaxed" aria-live="polite">
-          <TriangleAlert size={12} className="shrink-0 mt-0.5" />
+        <p className="flex items-start gap-2 text-xs leading-relaxed text-status-warning" aria-live="polite">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
           <span>Não foi possível reler a máquina agora ({erro}). Os números abaixo são do último ciclo.</span>
         </p>
       )}
 
       {!amostra ? (
-        <p className="text-text-tertiary border border-border-sutil px-4 py-6 text-center">
+        <Card className="px-4 py-6 text-center text-sm text-text-tertiary">
           Sem leitura de telemetria. A máquina aparece aqui porque fez handshake; as medidas
           chegam na primeira amostra.
-        </p>
+        </Card>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 border border-border-sutil p-4">
-            <Barra rotulo="Processador" valor={cpuUsage} />
-            <Barra
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Medidor icone={Cpu} rotulo="CPU" valor={cpuUsage} online={online} />
+            <Medidor
+              icone={MemoryStick}
               rotulo="Memória"
               valor={ramPercent}
-              detalhe={`${ramUsedGb.toFixed(1)} de ${ramTotalGb.toFixed(1)} GB`}
+              detalhe={`${comVirgula(ramUsedGb.toFixed(1))} de ${comVirgula(ramTotalGb.toFixed(1))} GB`}
+              online={online}
             />
+            {maisCheio && (
+              <Medidor
+                icone={HardDrive}
+                rotulo="Disco"
+                valor={maisCheio.uso}
+                detalhe={`${maisCheio.name} · ${maisCheio.usedGb.toFixed(0)} de ${maisCheio.totalGb.toFixed(0)} GB`}
+                online={online}
+              />
+            )}
           </div>
 
-          {disks.length > 0 && (
-            <div className="space-y-3 border border-border-sutil p-4">
-              <h4 className={`${ROTULO} flex items-center gap-2`}>
-                <HardDrive size={11} /> Armazenamento
+          {discos.length > 1 && (
+            <Card className="space-y-3 p-4">
+              <h4 className="flex items-center gap-2 text-sm font-medium text-text-primary">
+                <HardDrive className="size-4 text-text-tertiary" /> Armazenamento
               </h4>
-              {disks.map((disco, indice) => (
+              {discos.map((disco, indice) => (
                 <Barra
                   key={`${disco.name}-${indice}`}
                   rotulo={disco.name}
-                  valor={usagePercent(disco.usedGb, disco.totalGb)}
+                  valor={disco.uso}
                   detalhe={`${disco.usedGb.toFixed(0)} de ${disco.totalGb.toFixed(0)} GB`}
+                  online={online}
                 />
               ))}
-            </div>
+            </Card>
           )}
 
-          <div className="border border-border-sutil p-4 space-y-3">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <Card className="space-y-3 p-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <Numero rotulo="Recebendo" valor={recebendo.valor} unidade={recebendo.unidade} />
               <Numero rotulo="Enviando" valor={taxaDeEnvio.valor} unidade={taxaDeEnvio.unidade} />
               <Numero rotulo="Total recebido" valor={totalRecebido.valor} unidade={totalRecebido.unidade} />
@@ -227,29 +305,29 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
                 e esta linha diz que as quatro são a mesma coisa. Sem ela, quem
                 conhece o agente procura o "Kbps" que ele manda e desconfia do
                 número menor. */}
-            <p className="text-[10px] text-text-tertiary leading-relaxed">
+            <p className="text-xs leading-relaxed text-text-tertiary">
               Rede em bytes: velocidade em kB/s ou MB/s, totais em MB ou GB desde que o agente ligou.
             </p>
-          </div>
+          </Card>
 
           {processes.length > 0 && (
-            <div className="border border-border-sutil">
-              <h4 className={`${ROTULO} flex items-center gap-2 px-4 py-3 border-b border-border-sutil`}>
-                <Activity size={11} /> O que está consumindo memória
+            <Card className="overflow-hidden">
+              <h4 className="flex items-center gap-2 border-b border-border-sutil px-4 py-3 text-sm font-medium text-text-primary">
+                <Activity className="size-4 text-text-tertiary" /> O que está consumindo memória
               </h4>
-              <table className="w-full text-left">
-                <tbody className="divide-y divide-border-sutil/50">
+              <Table>
+                <TableBody>
                   {processes.map((processo, indice) => (
-                    <tr key={`${processo.name}-${indice}`}>
-                      <td className="px-4 py-2 text-text-secondary truncate max-w-[260px]">{processo.name}</td>
-                      <td className="px-4 py-2 text-right text-text-primary tabular-nums whitespace-nowrap">
-                        {processo.ramMb.toFixed(0)} <span className="text-text-tertiary text-[10px]">MB</span>
-                      </td>
-                    </tr>
+                    <TableRow key={`${processo.name}-${indice}`}>
+                      <TableCell className="max-w-[260px] truncate py-2">{processo.name}</TableCell>
+                      <TableCell className="whitespace-nowrap py-2 text-right tabular-nums text-text-primary">
+                        {processo.ramMb.toFixed(0)} <span className="text-xs text-text-tertiary">MB</span>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </Table>
+            </Card>
           )}
         </>
       )}
@@ -268,26 +346,27 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
             setHwidCopiado(maquina.hwid);
           }}
           title="Copiar o HWID completo"
-          className="inline-flex items-center gap-1.5 text-text-secondary hover:text-text-primary transition-colors break-all text-left"
+          className="inline-flex items-center gap-1.5 break-all text-left font-mono text-sm text-text-secondary transition-colors hover:text-text-primary"
         >
-          {maquina.hwid} <Copy size={11} className="shrink-0" />
+          {maquina.hwid} <Copy className="size-3 shrink-0" />
         </button>
         {hwidCopiado === maquina.hwid && (
-          <span className="text-status-success text-[10px]">copiado</span>
+          <span className="text-xs text-status-success">copiado</span>
         )}
       </div>
 
       {podeComandar && (
         <div className="space-y-3 border-t border-border-sutil pt-4">
-          <h4 className={`${ROTULO} flex items-center gap-2`}>
-            <Cpu size={11} /> Comandos
+          <h4 className="flex items-center gap-2 text-sm font-medium text-text-primary">
+            <Cpu className="size-4 text-text-tertiary" /> Comandos
           </h4>
 
           <div className="flex flex-wrap gap-2">
             {COMANDOS.map((comando) => (
-              <button
+              <Button
                 key={comando.action}
-                type="button"
+                variant="outline"
+                size="sm"
                 // O BOTÃO NÃO É DESABILITADO QUANDO A MÁQUINA ESTÁ OFFLINE, e isso
                 // é decisão: o `status` da tela atrasa até cerca de CINCO minutos —
                 // quatro de tolerância (`mark-stale-endpoints-offline`) mais a
@@ -297,10 +376,10 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
                 // respondeu.
                 disabled={enviando}
                 onClick={() => void handleComando(comando)}
-                className={`flex items-center gap-2 px-3 py-1.5 border text-[10px] font-mono uppercase tracking-widest transition-colors disabled:opacity-30 ${comando.cor}`}
+                className={comando.cor}
               >
-                <comando.icone size={12} /> {comando.rotulo}
-              </button>
+                <comando.icone /> {comando.rotulo}
+              </Button>
             ))}
           </div>
 
@@ -312,18 +391,18 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
               // nenhum: o sucesso e o 409 ficavam igualmente silenciosos.
               aria-live={retorno.tipo === 'falhou' ? 'assertive' : 'polite'}
               role={retorno.tipo === 'falhou' ? 'alert' : undefined}
-              className={`flex items-start gap-2 text-[10px] leading-relaxed ${
-                retorno.tipo === 'enviado' ? 'text-status-success' : 'text-status-danger'
-              }`}
+              className={cn(
+                'flex items-start gap-2 text-xs leading-relaxed',
+                retorno.tipo === 'enviado' ? 'text-status-success' : 'text-status-danger',
+              )}
             >
-              {retorno.tipo === 'falhou' && <TriangleAlert size={12} className="shrink-0 mt-0.5" />}
+              {retorno.tipo === 'falhou' && <TriangleAlert className="mt-0.5 size-4 shrink-0" />}
               <span>{retorno.texto}</span>
             </p>
           )}
 
-          <p className="text-[10px] text-text-tertiary leading-relaxed">
-            O comando vai pelo WebSocket aberto do agente e não fica em fila: se a máquina estiver
-            fora do ar, ele é recusado na hora — em vez de desligá-la quando ela voltar.
+          <p className="text-xs leading-relaxed text-text-tertiary">
+            O comando não fica em fila: com a máquina fora do ar, ele é recusado na hora.
           </p>
         </div>
       )}

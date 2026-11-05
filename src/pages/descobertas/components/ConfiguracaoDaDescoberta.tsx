@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { Save, Settings2 } from 'lucide-react';
+import { ChevronDown, Save, Settings2 } from 'lucide-react';
+import { Aviso } from '../../../components/ui/aviso';
+import { Badge } from '../../../components/ui/badge';
+import { Button } from '../../../components/ui/button';
+import { Campo } from '../../../components/ui/campo';
+import { Card } from '../../../components/ui/card';
+import { Input } from '../../../components/ui/input';
+import { Segmentado } from '../../../components/ui/segmentado';
+import { cn } from '../../../helpers/cn.helper';
 import type {
   ConfiguracaoDaDescoberta as Configuracao, DiscoveryMode,
 } from '../../../types/reconciliation.types';
@@ -26,28 +34,25 @@ interface Props {
   onSalvar: (dados: Partial<Configuracao>) => void;
 }
 
-const ROTULO = 'text-[10px] uppercase tracking-widest text-text-tertiary';
-const CAMPO = 'bg-bg-base border border-border-sutil px-2 py-1.5 text-xs font-mono text-text-primary w-full';
-
 /** Os três modos, com o que cada um faz escrito onde a pessoa decide (D51/D112). */
-const MODOS: { valor: DiscoveryMode; rotulo: string; explicacao: string; cor: string }[] = [
+const MODOS: { valor: DiscoveryMode; rotulo: string; explicacao: string; tom: 'neutro' | 'sucesso' | 'aviso' }[] = [
   {
     valor: 'OFF',
     rotulo: 'Desligado',
     explicacao: 'Nenhuma proposta sobre máquina sem cadastro. A fila para de encher, e o painel de cobertura continua contando.',
-    cor: 'text-text-tertiary',
+    tom: 'neutro',
   },
   {
     valor: 'SUGGEST',
     rotulo: 'Sugerir',
     explicacao: 'O padrão. O sistema propõe e uma pessoa decide. Nada entra no cadastro sozinho.',
-    cor: 'text-status-success',
+    tom: 'sucesso',
   },
   {
     valor: 'ON',
     rotulo: 'Vincular sozinho',
     explicacao: 'Série ou UUID batendo com UM único ativo vira vínculo sem perguntar. Continua não criando ativo nem mexendo em posse sozinho.',
-    cor: 'text-status-warning',
+    tom: 'aviso',
   },
 ];
 
@@ -93,40 +98,19 @@ function Formulario({ configuracao, salvando, onSalvar }: FormularioProps) {
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <label className="space-y-1 block">
-          <span className={ROTULO}>Dias para virar fantasma</span>
-          <input
-            type="number" min={1} max={365} value={ghostDays}
-            onChange={(evento) => setGhostDays(evento.target.value)}
-            className={CAMPO}
-          />
-          <span className="text-[10px] text-text-tertiary block leading-relaxed">
-            Ativo cujo agente não dá sinal há mais que isso entra na conta de fantasmas.
-          </span>
-        </label>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Campo rotulo="Dias para virar fantasma" ajuda="Ativo cujo agente não dá sinal há mais que isso entra na conta de fantasmas.">
+          <Input type="number" min={1} max={365} value={ghostDays} onChange={(evento) => setGhostDays(evento.target.value)} />
+        </Campo>
 
-        <label className="space-y-1 block">
-          <span className={ROTULO}>Horas para virar Shadow IT</span>
-          <input
-            type="number" min={1} max={720} value={shadowHours}
-            onChange={(evento) => setShadowHours(evento.target.value)}
-            className={CAMPO}
-          />
-          <span className="text-[10px] text-text-tertiary block leading-relaxed">
-            Máquina sem cadastro vista há mais que isso e ainda sem triagem.
-          </span>
-        </label>
+        <Campo rotulo="Horas para virar Shadow IT" ajuda="Máquina sem cadastro vista há mais que isso e ainda sem triagem.">
+          <Input type="number" min={1} max={720} value={shadowHours} onChange={(evento) => setShadowHours(evento.target.value)} />
+        </Campo>
       </div>
 
-      <button
-        type="button"
-        disabled={salvando}
-        onClick={handleSalvar}
-        className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary text-[10px] uppercase tracking-widest transition-colors disabled:opacity-40"
-      >
-        <Save size={12} /> {salvando ? 'Salvando…' : 'Salvar'}
-      </button>
+      <Button disabled={salvando} onClick={handleSalvar}>
+        <Save /> {salvando ? 'Salvando…' : 'Salvar'}
+      </Button>
     </>
   );
 }
@@ -139,63 +123,56 @@ export default function ConfiguracaoDaDescoberta({ configuracao, podeEditar, sal
   const modoAtual = MODOS.find((modo) => modo.valor === configuracao.discoveryMode) ?? MODOS[1];
 
   return (
-    <div className="border border-border-sutil mb-4">
+    <Card className="mb-6 overflow-hidden">
       <button
         type="button"
+        aria-expanded={aberta}
         onClick={() => setAberta((estava) => !estava)}
-        className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-bg-base/50 transition-colors"
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-muted/50"
       >
-        <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-text-tertiary">
-          <Settings2 size={12} /> Descoberta
+        <span className="flex items-center gap-2 text-sm font-medium text-text-primary">
+          <Settings2 className="size-4 text-text-tertiary" /> Descoberta
         </span>
-        <span className="font-mono text-[10px] flex flex-wrap items-center gap-x-3 gap-y-1 justify-end">
-          <span className={modoAtual.cor}>{modoAtual.rotulo}</span>
-          <span className="text-text-tertiary">fantasma em {configuracao.ghostDays}d</span>
-          <span className="text-text-tertiary">shadow em {configuracao.shadowHours}h</span>
+        <span className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs text-text-tertiary">
+          <Badge tom={modoAtual.tom}>{modoAtual.rotulo}</Badge>
+          <span>fantasma em {configuracao.ghostDays}d</span>
+          <span>shadow em {configuracao.shadowHours}h</span>
+          <ChevronDown className={cn('size-4 transition-transform', aberta && 'rotate-180')} />
         </span>
       </button>
 
       {aberta && (
-        <div className="px-4 pb-4 pt-2 border-t border-border-sutil space-y-5 font-mono text-xs">
+        <div className="space-y-5 border-t border-border-sutil p-4">
 
           {/* O MODO — clique que salva na hora, sem passar por rascunho: é um
               interruptor, e interruptor que precisa de "salvar" depois não
               parece ligado nem desligado. */}
           <div className="space-y-2">
-            <span className={ROTULO}>O que fazer com máquina que aparece sem cadastro</span>
+            <p className="text-sm font-medium text-text-primary">O que fazer com máquina que aparece sem cadastro</p>
             {podeEditar ? (
-              <div className="flex flex-wrap gap-1">
-                {MODOS.map((modo) => (
-                  <button
-                    key={modo.valor}
-                    type="button"
-                    disabled={salvando}
-                    onClick={() => onSalvar({ discoveryMode: modo.valor })}
-                    className={`px-3 py-1.5 text-[10px] uppercase tracking-widest border transition-colors disabled:opacity-40 ${
-                      configuracao.discoveryMode === modo.valor
-                        ? 'border-text-primary text-text-primary'
-                        : 'border-border-sutil text-text-tertiary hover:text-text-primary'
-                    }`}
-                  >
-                    {modo.rotulo}
-                  </button>
-                ))}
-              </div>
+              // O `fieldset` desliga os botões do `Segmentado` enquanto salva.
+              <fieldset disabled={salvando} className="min-w-0 disabled:opacity-50">
+                <Segmentado
+                  opcoes={MODOS}
+                  valor={configuracao.discoveryMode}
+                  onChange={(modo) => onSalvar({ discoveryMode: modo })}
+                />
+              </fieldset>
             ) : (
-              <p className={`text-[10px] uppercase tracking-widest ${modoAtual.cor}`}>{modoAtual.rotulo}</p>
+              <div><Badge tom={modoAtual.tom}>{modoAtual.rotulo}</Badge></div>
             )}
-            <p className="text-[10px] text-text-tertiary leading-relaxed max-w-2xl">
+            <p className="max-w-2xl text-xs leading-relaxed text-text-tertiary">
               {modoAtual.explicacao}
             </p>
             {configuracao.discoveryMode === 'ON' && (
               // O AVISO É DA DECISÃO, não do formulário (D51): em `ON`, a
               // primeira VM de teste que casar por série vira vínculo sem
               // ninguém olhar. É a única opção desta tela cujo erro é silencioso.
-              <p className="text-[10px] text-status-warning leading-relaxed max-w-2xl">
-                Em “vincular sozinho”, um vínculo errado entra no cadastro sem ninguém revisar —
+              <Aviso tom="aviso" className="max-w-2xl">
+                Em “vincular sozinho”, um vínculo errado entra no cadastro sem ninguém revisar,
                 e quem abrir a tela do ativo vai ler o vínculo como fato. Desfazer é o botão
                 “Desvincular” na aba Máquina.
-              </p>
+              </Aviso>
             )}
           </div>
 
@@ -209,13 +186,13 @@ export default function ConfiguracaoDaDescoberta({ configuracao, podeEditar, sal
           ) : (
             // Os dois prazos já estão no cabeçalho do painel; aqui só o porquê
             // de não haver campo para mudá-los.
-            <p className="text-[10px] text-text-tertiary leading-relaxed max-w-2xl">
+            <p className="max-w-2xl text-xs leading-relaxed text-text-tertiary">
               Fantasma em {configuracao.ghostDays} dias, Shadow IT em {configuracao.shadowHours} horas.
-              Só um administrador muda o modo e os prazos.
+              Só o Supervisor e o Administrador mudam o modo e os prazos.
             </p>
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

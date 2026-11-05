@@ -9,7 +9,6 @@ interface Rotulo {
   titulo: string;
   /** A frase que explica o que ACONTECE ao aceitar. Não é descrição: é aviso. */
   acao: string;
-  cor: string;
 }
 
 /** O que cada tipo de sugestão propõe, em português de quem opera. */
@@ -17,7 +16,6 @@ export const ROTULOS: Record<SuggestionKind, Rotulo> = {
   LINK: {
     titulo: 'Vincular máquina ao ativo',
     acao: 'O ativo passa a ter esta máquina. Nada muda na posse.',
-    cor: 'text-status-info',
   },
 };
 

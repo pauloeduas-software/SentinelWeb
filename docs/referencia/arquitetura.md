@@ -385,3 +385,12 @@ linha 460 de um documento chamado "Arquitetura". Elas viraram guias:
   `migrate diff`, por que **nunca** `migrate dev`, e o teste de reconstruir o banco do zero;
 - [`../guias/adicionar-um-dominio.md`](../guias/adicionar-um-dominio.md) — os seis passos, mais
   a regra de corte de quando quebrar em `use-cases/`.
+
+## O visual
+
+`src/components/ui/` são os primitivos (Radix por baixo): botão, campo, seletor, tabela, abas, janela. Em cima
+deles, as peças que as telas repetem: `PaginaCabecalho`, `ListToolbar`, `AcoesDaLinha`, `FormularioLateral`,
+`JanelaDeDetalhe` e `DialogoDeConfirmacao`. A cor mora em `src/index.css`, com um valor por tema; a classe `dark`
+no `<html>` decide qual vale, e o `index.html` a aplica antes do primeiro quadro para o F5 não piscar
+(`hooks/useTema`). O porquê está na [AY](../decisoes/plataforma.md#ay--o-visual-vem-da-intranet-em-tema-claro-e-escuro-e-a-linha-inteira-abre-o-registro).
+

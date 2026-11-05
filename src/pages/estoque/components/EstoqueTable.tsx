@@ -1,4 +1,8 @@
-import { Edit2, Power, PowerOff, Trash2, UserPlus } from 'lucide-react';
+import { Package, Pencil, Power, PowerOff, Trash2, UserPlus } from 'lucide-react';
+import AcoesDaLinha from '../../../components/AcoesDaLinha';
+import { Badge } from '../../../components/ui/badge';
+import { Card } from '../../../components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import type { ItemDeEstoque } from '../../../types/stock.types';
 import { classeDaConta, motivoParaNaoEntregar, resumoDaContagem } from '../helpers/estoque.helper';
 
@@ -9,10 +13,10 @@ import { classeDaConta, motivoParaNaoEntregar, resumoDaContagem } from '../helpe
 // aparecem todos, como na `LicencaTable`: "3 disponíveis" sozinho não diz se
 // sobrou muito ou pouco.
 //
-// O CADASTRO É O DAS CONFIGURAÇÕES (`CatalogTable`): Editar, Desativar/Ativar
-// e Excluir, nessa ordem; o desativado fica na lista, esmaecido e marcado; e
-// Excluir sempre clica — o item em uso recebe o 409 do servidor, que diz com
-// quem está e manda devolver (AG).
+// A LINHA INTEIRA ABRE O DETALHE, e o `⋯` guarda as ações (AY). O CADASTRO É O DAS
+// CONFIGURAÇÕES (`CatalogTable`): Editar, Desativar/Ativar e Excluir, nessa ordem;
+// o desativado fica na lista, esmaecido e marcado; e Excluir sempre clica — o item
+// em uso recebe o 409 do servidor, que diz com quem está e manda devolver (AG).
 
 interface EstoqueTableProps {
   itens: ItemDeEstoque[];
@@ -28,119 +32,88 @@ interface EstoqueTableProps {
   vazio: React.ReactNode;
 }
 
-const CABECALHO = 'px-4 py-3 text-left text-[10px] uppercase tracking-widest text-text-tertiary font-normal';
-const BOTAO = 'text-text-tertiary transition-colors disabled:opacity-30 disabled:hover:text-text-tertiary';
-
 export default function EstoqueTable({
   itens, ocupado, onAbrir, onEntregar, onEditar, onAlternarAtivo, onExcluir, vazio,
 }: EstoqueTableProps) {
   if (itens.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-text-tertiary font-mono text-xs gap-3 border border-border-sutil bg-surface-card">
+      <Card className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-text-tertiary">
+        <Package className="size-6 opacity-50" />
         {vazio}
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="border border-border-sutil bg-surface-card overflow-x-auto">
-      <table className="w-full font-mono text-xs">
-        <thead className="border-b border-border-sutil bg-bg-base/40">
-          <tr>
-            <th className={CABECALHO}>Item</th>
-            <th className={CABECALHO}>Categoria</th>
-            <th className={CABECALHO}>Localização</th>
-            <th className={CABECALHO}>Quantidade</th>
-            <th className={`${CABECALHO} text-right`}>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
+    <Card className="overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Item</TableHead>
+            <TableHead>Categoria</TableHead>
+            <TableHead className="hidden md:table-cell">Localização</TableHead>
+            <TableHead>Quantidade</TableHead>
+            <TableHead className="w-12 text-right">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {itens.map((item) => {
             const motivoSemEntrega = motivoParaNaoEntregar(item);
 
             return (
-              <tr
+              <TableRow
                 key={item.id}
-                className={`border-b border-border-sutil/50 last:border-0 hover:bg-bg-base/40 transition-colors group ${item.isActive ? '' : 'opacity-60'}`}
+                onClick={() => onAbrir(item)}
+                className={item.isActive ? 'cursor-pointer' : 'cursor-pointer opacity-60'}
               >
-                <td className="px-4 py-3">
-                  <button
-                    type="button"
-                    onClick={() => onAbrir(item)}
-                    className="text-text-primary hover:text-text-secondary underline-offset-2 hover:underline text-left"
-                  >
+                <TableCell>
+                  {/* O botão é o caminho do teclado: o clique sobe para a linha. */}
+                  <button type="button" className="text-left font-medium text-text-primary focus-visible:underline focus-visible:outline-none">
                     {item.name}
                   </button>
-                  {!item.isActive && (
-                    <span className="ml-3 text-[10px] text-status-warning uppercase tracking-widest">desativado</span>
-                  )}
-                  {item.notes && (
-                    <div className="text-[10px] text-text-tertiary mt-1 line-clamp-1">{item.notes}</div>
-                  )}
-                </td>
+                  {!item.isActive && <Badge tom="aviso" className="ml-2">Desativado</Badge>}
+                  {item.notes && <div className="mt-0.5 line-clamp-1 text-xs text-text-tertiary">{item.notes}</div>}
+                </TableCell>
 
-                <td className="px-4 py-3 text-text-secondary">{item.category.name}</td>
+                <TableCell>{item.category.name}</TableCell>
 
-                <td className="px-4 py-3 text-text-secondary">{item.location?.name ?? '—'}</td>
+                <TableCell className="hidden md:table-cell">{item.location?.name ?? '—'}</TableCell>
 
-                <td className={`px-4 py-3 ${classeDaConta(item)}`}>{resumoDaContagem(item)}</td>
+                <TableCell className={classeDaConta(item)}>{resumoDaContagem(item)}</TableCell>
 
-                <td className="px-4 py-3">
-                  {/* Visível ao passar o mouse, ao navegar por Tab
-                      (`focus-within`) e sempre no toque, como na `CatalogTable`. */}
-                  <div className="flex items-center justify-end gap-3 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
-                    {item.isActive && (
-                      <button
-                        type="button"
-                        onClick={() => onEntregar(item)}
-                        disabled={motivoSemEntrega !== null}
-                        title={motivoSemEntrega ?? 'Entregar'}
-                        aria-label={`Entregar ${item.name}`}
-                        className={`${BOTAO} hover:text-text-primary`}
-                      >
-                        <UserPlus size={14} />
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => onEditar(item)}
-                      title="Editar"
-                      aria-label={`Editar ${item.name}`}
-                      className={`${BOTAO} hover:text-text-primary`}
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    {onAlternarAtivo && (
-                      <button
-                        type="button"
-                        onClick={() => onAlternarAtivo(item)}
-                        disabled={ocupado}
-                        title={item.isActive ? 'Desativar' : 'Ativar'}
-                        aria-label={`${item.isActive ? 'Desativar' : 'Ativar'} ${item.name}`}
-                        className={`${BOTAO} hover:text-status-info`}
-                      >
-                        {item.isActive ? <PowerOff size={14} /> : <Power size={14} />}
-                      </button>
-                    )}
-                    {onExcluir && (
-                      <button
-                        type="button"
-                        onClick={() => onExcluir(item)}
-                        disabled={ocupado}
-                        title="Excluir"
-                        aria-label={`Excluir ${item.name}`}
-                        className={`${BOTAO} hover:text-status-danger`}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
+                <TableCell>
+                  <AcoesDaLinha
+                    nome={item.name}
+                    acoes={[
+                      item.isActive && {
+                        rotulo: 'Entregar',
+                        icone: UserPlus,
+                        onClick: () => onEntregar(item),
+                        disabled: motivoSemEntrega !== null,
+                        titulo: motivoSemEntrega ?? undefined,
+                      },
+                      { rotulo: 'Editar', icone: Pencil, onClick: () => onEditar(item) },
+                      onAlternarAtivo && {
+                        rotulo: item.isActive ? 'Desativar' : 'Ativar',
+                        icone: item.isActive ? PowerOff : Power,
+                        onClick: () => onAlternarAtivo(item),
+                        disabled: ocupado,
+                      },
+                      onExcluir && {
+                        rotulo: 'Excluir',
+                        icone: Trash2,
+                        onClick: () => onExcluir(item),
+                        disabled: ocupado,
+                        perigo: true,
+                      },
+                    ]}
+                  />
+                </TableCell>
+              </TableRow>
             );
           })}
-        </tbody>
-      </table>
-    </div>
+        </TableBody>
+      </Table>
+    </Card>
   );
 }

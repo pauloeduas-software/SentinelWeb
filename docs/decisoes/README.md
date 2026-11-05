@@ -5,7 +5,7 @@
 > muda, mesmo que o arquivo onde ela vive mude. Depois do D164 veio uma segunda rodada, com 15
 > decisões próprias, nomeadas por letra (`A`…`P`, sem `N`) em vez de número — ver
 > [*A segunda rodada*](#a-segunda-rodada-ap) abaixo. A varredura do código morto, que veio
-> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y`, `Z` e, acabado o alfabeto, `AA`, `AB`, `AC`, `AD`, `AE`, `AF`, `AG`, `AH`, `AI`, `AJ`, `AK`, `AL`, `AM`, `AN`, `AO`, `AP`, `AQ`, `AR`, `AS`, `AT`, `AU`, `AV`, `AW` e `AX`.
+> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y`, `Z` e, acabado o alfabeto, `AA`, `AB`, `AC`, `AD`, `AE`, `AF`, `AG`, `AH`, `AI`, `AJ`, `AK`, `AL`, `AM`, `AN`, `AO`, `AP`, `AQ`, `AR`, `AS`, `AT`, `AU`, `AV`, `AW`, `AX` e `AY`.
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve.** Se a realidade mudou, ela é
 > **superada** por outra, com link entre as duas. O log é o que diz por quanto tempo cada regra
@@ -27,7 +27,7 @@
 | [`ciclo-de-vida.md`](./ciclo-de-vida.md) | Ciclo de vida | 12 |
 | [`licencas.md`](./licencas.md) | Licenças | 18 |
 | [`campos-customizados.md`](./campos-customizados.md) | Campos customizados | 8 |
-| [`plataforma.md`](./plataforma.md) | Plataforma | 7 |
+| [`plataforma.md`](./plataforma.md) | Plataforma | 8 |
 | [`estoque.md`](./estoque.md) | Estoque | 11 |
 
 ## Correções e supersessões
@@ -47,6 +47,7 @@ que corrigem algo anterior:
 | **D19** (três colunas de saída), **D127** | commit `505c520` (status enxuto) | sem `ARCHIVED`, sobram duas: `retiredAt` (a baixa) e `deletedAt` |
 | **D20** (`?arquivados=`), **D85** (`?view=archived`) | commit `505c520` (status enxuto) | a vista, a aba e o contador de arquivados saem; `active` exclui só o baixado |
 | **D4** e **D15** (a árvore de `Location`), **O** (`Location.managerId` fica) | commit `ff34364` (localização plana) | `parentId` e `managerId` saem: a lista é plana, e o nome único diz onde o lugar fica |
+| **AF**, **AN**, **AO** (ações ao passar o mouse), **AT** (shadcn e tema claro) e **F** (a busca por etiqueta) | **AY** | a linha inteira abre o registro e as ações vão para o `⋯`; a situação pode ter cor; primitivos do shadcn só no que se usa, e tema claro e escuro; `GET /api/search` sai |
 | **P** (`USUARIO` não entra), **R** (em parte) | **U** | quem recebe equipamento sai de `User` e vira colaborador (catálogo); sobram dois cargos, e todo usuário tem senha |
 | **D8** (catálogo sem lixeira, em parte), **U** (em parte) | **V** | só o presente segura a exclusão: a localização sai de verdade e o histórico guarda o nome por escrito; o colaborador vai para a lixeira, com Restaurar |
 | a lixeira do usuário da F0 (`deletedAt`, `users_email_unique_undeleted`) | **W** | excluir usuário apaga a linha; ninguém rebaixa, desativa ou exclui a si mesmo |
@@ -183,6 +184,7 @@ que o código ainda cita. Letra deixa claro, só pelo nome, que a decisão é de
 | **AV** | Três cargos: Técnico, Supervisor e Administrador | [Acesso](./acesso.md#av--três-cargos-técnico-supervisor-e-administrador) |
 | **AW** | O computador está onde o posto fica, e o histórico diz quem ocupou o posto | [Posse](./posse.md#aw--o-computador-está-onde-o-posto-fica-e-o-histórico-diz-quem-ocupou-o-posto) |
 | **AX** | O posto tem um computador por vez, também no passado | [Posse](./posse.md#ax--o-posto-tem-um-computador-por-vez-também-no-passado) |
+| **AY** | O visual vem da IntraNet, em tema claro e escuro, e a linha inteira abre o registro | [Plataforma](./plataforma.md#ay--o-visual-vem-da-intranet-em-tema-claro-e-escuro-e-a-linha-inteira-abre-o-registro) |
 
 **`N` não existe, de propósito.** As correções de segurança e consistência desta rodada (custo
 de compra vazando por uma quarta porta, comando que respondia sucesso sem confirmação do socket,

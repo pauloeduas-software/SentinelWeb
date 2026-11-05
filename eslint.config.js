@@ -126,6 +126,12 @@ export default defineConfig([
     },
   },
 
+  // --- Frontend: os primitivos são apelidos do Radix (`Dialog = Primitive.Root`) ---
+  {
+    files: ['src/components/ui/**/*.tsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
+
   // --- Frontend: sem cor fixa (o tema é o único lugar com cor) ---
   {
     files: ['src/**/*.{ts,tsx}'],

@@ -89,7 +89,7 @@ Nesta ordem — o destrutivo na ponta:
 
 Desativar é **botão da linha**, nunca caixa no formulário. A linha desativada
 aparece esmaecida, com a marca "desativado"/"desativada" ao lado do nome, e
-continua na mesma lista — sem aba à parte. Os botões aparecem ao passar o mouse,
+continua na mesma lista — sem aba à parte. As ações ficam no `⋯` da linha (AY),
 ao navegar por Tab e sempre no toque.
 
 **É o padrão do cadastro no sistema inteiro** ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)): Postos, Usuários,

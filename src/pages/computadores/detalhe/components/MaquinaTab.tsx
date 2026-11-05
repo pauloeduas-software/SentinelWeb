@@ -1,5 +1,9 @@
-import { MonitorSmartphone, Unlink } from 'lucide-react';
+import { Monitor, Unlink } from 'lucide-react';
 import TelemetriaDaMaquina from '../../../../components/TelemetriaDaMaquina';
+import { Button } from '../../../../components/ui/button';
+import { Card } from '../../../../components/ui/card';
+import { Dado, GradeDeDados } from '../../../../components/ui/dado';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/ui/table';
 import type {
   EspecificacoesDaMaquina, MaquinaDoAtivo, MudancaDeHardware,
 } from '../../../../types/reconciliation.types';
@@ -28,9 +32,9 @@ import type {
 //
 // Eram `/`: a frota inteira em cards, com três barras cada. Aquela tela sabia a
 // medida e não sabia de quem é a máquina; esta ficha sabe o patrimônio, a pessoa
-// e o posto, e passou a saber a medida também. É a ordem certa das três seções
-// abaixo: o que a empresa COMPROU (as specs), o que MUDOU desde então, e como a
-// máquina está AGORA.
+// e o posto, e passou a saber a medida também. As seções abaixo vão na ordem da
+// IntraNet: como a máquina está AGORA, que é por que se abre esta aba, e depois o
+// que há nela (as specs) e o que MUDOU.
 //
 // O painel é `components/TelemetriaDaMaquina` porque a ficha do POSTO
 // mostra o mesmo — o computador da mesa é um ativo, visto do outro lado.
@@ -42,9 +46,6 @@ interface MaquinaTabProps {
   desvinculando: boolean;
   onDesvincular: () => void;
 }
-
-const CABECALHO = 'px-3 py-2 text-left text-[10px] uppercase tracking-widest text-text-tertiary font-normal';
-const ROTULO = 'text-[10px] uppercase tracking-widest text-text-tertiary';
 
 /**
  * Bytes em unidade legível.
@@ -88,94 +89,87 @@ const NOME_DO_CAMPO: Record<string, string> = {
   diskTotalBytes: 'Disco',
 };
 
-function Campo({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1 min-w-0">
-      <span className={ROTULO}>{rotulo}</span>
-      <p className="text-text-secondary truncate" title={typeof children === 'string' ? children : undefined}>
-        {children}
-      </p>
-    </div>
-  );
+function Titulo({ children }: { children: React.ReactNode }) {
+  return <h3 className="text-sm font-medium text-text-primary">{children}</h3>;
 }
 
 function Especificacoes({ specs }: { specs: EspecificacoesDaMaquina }) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border border-border-sutil p-4">
-      <Campo rotulo="Fabricante">{specs.manufacturer ?? '—'}</Campo>
-      <Campo rotulo="Modelo">{specs.hardwareModel ?? '—'}</Campo>
-      <Campo rotulo="Chassi">{specs.chassisType ?? '—'}</Campo>
-      <Campo rotulo="Processador">{specs.cpuModel ?? '—'}</Campo>
-      <Campo rotulo="Memória">{bytes(specs.ramTotalBytes)}</Campo>
-      <Campo rotulo="Disco">{bytes(specs.diskTotalBytes)}</Campo>
-      <Campo rotulo="Sistema">{specs.osVersion ?? '—'}</Campo>
-      <Campo rotulo="Série da BIOS">{specs.biosSerial ?? '—'}</Campo>
-      <Campo rotulo="UUID">{specs.systemUuid ?? '—'}</Campo>
-      <Campo rotulo="MAC">{specs.macAddress ?? '—'}</Campo>
-      <Campo rotulo="IP local">{specs.localIp ?? '—'}</Campo>
-    </div>
+    <GradeDeDados className="md:grid-cols-4">
+      <Dado rotulo="Fabricante">{specs.manufacturer}</Dado>
+      <Dado rotulo="Modelo">{specs.hardwareModel}</Dado>
+      <Dado rotulo="Chassi">{specs.chassisType}</Dado>
+      <Dado rotulo="Processador">{specs.cpuModel}</Dado>
+      <Dado rotulo="Memória">{bytes(specs.ramTotalBytes)}</Dado>
+      <Dado rotulo="Disco">{bytes(specs.diskTotalBytes)}</Dado>
+      <Dado rotulo="Sistema">{specs.osVersion}</Dado>
+      <Dado rotulo="Série da BIOS">{specs.biosSerial && <span className="font-mono">{specs.biosSerial}</span>}</Dado>
+      <Dado rotulo="UUID">{specs.systemUuid && <span className="font-mono">{specs.systemUuid}</span>}</Dado>
+      <Dado rotulo="MAC">{specs.macAddress && <span className="font-mono">{specs.macAddress}</span>}</Dado>
+      <Dado rotulo="IP local">{specs.localIp && <span className="font-mono">{specs.localIp}</span>}</Dado>
+    </GradeDeDados>
   );
 }
 
 function Mudancas({ mudancas }: { mudancas: MudancaDeHardware[] }) {
   return (
-    <div>
-      <h3 className={`${ROTULO} mb-2 block`}>Mudanças detectadas — {mudancas.length}</h3>
-      <table className="w-full border border-border-sutil text-xs font-mono">
-        <thead className="bg-bg-base/50 border-b border-border-sutil">
-          <tr>
-            <th className={CABECALHO}>Campo</th>
-            <th className={CABECALHO}>Era</th>
-            <th className={CABECALHO}>Passou a ser</th>
-            <th className={CABECALHO}>Quando</th>
-          </tr>
-        </thead>
-        <tbody>
+    <Card className="overflow-hidden">
+      <h3 className="px-6 pt-6 pb-2 text-sm font-medium text-text-primary">Mudanças detectadas ({mudancas.length})</h3>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Campo</TableHead>
+            <TableHead>Era</TableHead>
+            <TableHead>Passou a ser</TableHead>
+            <TableHead>Quando</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {mudancas.map((mudanca) => (
-            <tr key={mudanca.id} className="border-b border-border-sutil last:border-0">
-              <td className="px-3 py-2 text-text-primary">
+            <TableRow key={mudanca.id}>
+              <TableCell className="font-medium text-text-primary">
                 {NOME_DO_CAMPO[mudanca.field] ?? mudanca.field}
-              </td>
-              <td className="px-3 py-2 text-text-tertiary line-through">
+              </TableCell>
+              <TableCell className="text-text-tertiary line-through">
                 {mudanca.field.endsWith('Bytes') ? bytes(mudanca.oldValue) : mudanca.oldValue ?? '—'}
-              </td>
-              <td className="px-3 py-2 text-status-warning">
+              </TableCell>
+              <TableCell>
                 {mudanca.field.endsWith('Bytes') ? bytes(mudanca.newValue) : mudanca.newValue}
-              </td>
-              <td className="px-3 py-2 text-text-tertiary">{dataHora(mudanca.detectedAt)}</td>
-            </tr>
+              </TableCell>
+              <TableCell className="whitespace-nowrap">{dataHora(mudanca.detectedAt)}</TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </TableBody>
+      </Table>
+    </Card>
   );
 }
 
 export default function MaquinaTab({ maquina, carregando, desvinculando, onDesvincular }: MaquinaTabProps) {
-  if (carregando) return <p className="text-text-tertiary">Carregando a máquina…</p>;
+  if (carregando) return <p className="text-sm text-text-tertiary">Carregando a máquina…</p>;
 
   if (!maquina?.endpointId) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-text-tertiary gap-3">
-        <MonitorSmartphone size={24} className="opacity-50" />
+      <Card className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-text-tertiary">
+        <Monitor className="size-6 opacity-50" />
         <span>Nenhuma máquina vinculada a este ativo.</span>
-        <span className="text-[10px] max-w-md text-center leading-relaxed">
-          Nem todo ativo tem agente — monitor, cadeira e cabo nunca terão. Se este deveria ter,
-          a máquina aparece em Descobertas assim que o agente mandar o primeiro sinal.
+        <span className="max-w-md text-center text-xs leading-relaxed">
+          Se este ativo deveria ter agente, a máquina aparece em Descobertas assim que ele mandar o
+          primeiro sinal.
         </span>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between border border-border-sutil px-4 py-3 gap-4">
-        <div className="min-w-0">
-          <span className={ROTULO}>Máquina vinculada</span>
-          <p className="font-mono text-sm text-text-primary mt-1 truncate">{maquina.hostname}</p>
+    <div className="space-y-4">
+      <Card className="flex flex-wrap items-center justify-between gap-4 p-6">
+        <div className="min-w-0 space-y-0.5">
+          <p className="text-xs font-medium text-text-tertiary">Máquina vinculada</p>
+          <p className="truncate text-sm font-medium text-text-primary">{maquina.hostname}</p>
           {/* O SELO ONLINE/OFFLINE SAIU DAQUI, e isso conserta um defeito.
               Ele vinha de `GET /api/assets/:id/machine`, que NÃO tem polling, e
-              a seção "Como está agora" lá embaixo mostra o mesmo campo vindo de
+              a seção "Como está agora" logo abaixo mostra o mesmo campo vindo de
               uma consulta que revalida a cada poucos segundos. Eram duas
               respostas para a mesma pergunta a quarenta pixels de distância:
               tirar o cabo da máquina pintava o painel de OFFLINE enquanto esta
@@ -185,55 +179,43 @@ export default function MaquinaTab({ maquina, carregando, desvinculando, onDesvi
               está certa. Quem responde "agora" é o painel, um dono só.
               A DATA fica: ela é histórico ("foi visto às 10:02"), não estado, e
               é metade da lição das duas datas logo abaixo. */}
-          <p className="font-mono text-[10px] mt-1 text-text-tertiary">
-            último contato {dataHora(maquina.ultimoContato)}
-          </p>
+          <p className="text-xs text-text-tertiary">último contato {dataHora(maquina.ultimoContato)}</p>
           {/* AS DUAS DATAS, LADO A LADO — e o texto explica a diferença, que é de
               até uma hora. O carimbo do ativo é escrito pelo JOB e não pelo
               handshake (D95): sem a frase, quem vê a segunda data atrasada
               acharia que o batimento falhou. */}
-          <p className="font-mono text-[10px] text-text-tertiary mt-0.5">
-            carimbado no ativo em {dataHora(maquina.ultimoContatoNoAtivo)}
-            <span className="opacity-60"> · a varredura atualiza de hora em hora</span>
+          <p className="text-xs text-text-tertiary">
+            carimbado no ativo em {dataHora(maquina.ultimoContatoNoAtivo)} · a varredura atualiza de hora em hora
           </p>
         </div>
-        <button
-          type="button"
-          disabled={desvinculando}
-          onClick={onDesvincular}
-          className="flex items-center gap-2 px-3 py-1.5 border border-border-sutil text-[10px] font-mono uppercase tracking-widest text-text-tertiary hover:text-status-danger hover:border-status-danger/40 disabled:opacity-30 transition-colors shrink-0"
-          title="Este ativo não é esta máquina"
-        >
-          <Unlink size={12} /> Desvincular
-        </button>
-      </div>
+        <Button variant="outline" size="sm" disabled={desvinculando} onClick={onDesvincular} title="Este ativo não é esta máquina">
+          <Unlink /> Desvincular
+        </Button>
+      </Card>
 
-      <div className="font-mono text-xs">
-        <h3 className={`${ROTULO} mb-2 block`}>Especificações coletadas pelo agente</h3>
-        {maquina.especificacoes && <Especificacoes specs={maquina.especificacoes} />}
-        <p className="text-[10px] text-text-tertiary mt-2 leading-relaxed">
-          É o que está na máquina agora, não o que a empresa comprou. Os dois podem divergir com
-          razão — e quando divergem, a lista abaixo diz quando mudou.
-        </p>
-      </div>
-
-      <div className="font-mono text-xs">
-        {maquina.mudancas.length === 0 ? (
-          <>
-            <h3 className={`${ROTULO} mb-2 block`}>Mudanças detectadas</h3>
-            <p className="text-text-tertiary border border-border-sutil px-4 py-6 text-center">
-              Nenhuma troca de peça desde que o agente começou a coletar.
-            </p>
-          </>
-        ) : (
-          <Mudancas mudancas={maquina.mudancas} />
-        )}
-      </div>
-
-      <div className="font-mono text-xs">
-        <h3 className={`${ROTULO} mb-3 block`}>Como está agora</h3>
+      <section className="space-y-3">
+        <Titulo>Como está agora</Titulo>
         <TelemetriaDaMaquina endpointId={maquina.endpointId} />
-      </div>
+      </section>
+
+      <Card className="space-y-4 p-6">
+        <div className="space-y-0.5">
+          <Titulo>Especificações coletadas pelo agente</Titulo>
+          <p className="text-xs text-text-tertiary">
+            O que está na máquina agora, não o que a empresa comprou. Quando divergem, as mudanças abaixo dizem quando.
+          </p>
+        </div>
+        {maquina.especificacoes && <Especificacoes specs={maquina.especificacoes} />}
+      </Card>
+
+      {maquina.mudancas.length === 0 ? (
+        <Card className="space-y-2 p-6">
+          <Titulo>Mudanças detectadas</Titulo>
+          <p className="text-sm text-text-tertiary">Nenhuma troca de peça desde que o agente começou a coletar.</p>
+        </Card>
+      ) : (
+        <Mudancas mudancas={maquina.mudancas} />
+      )}
     </div>
   );
 }

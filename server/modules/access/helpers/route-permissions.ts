@@ -72,7 +72,6 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   'GET /api/assets/:id/history': 'TECNICO',
   'GET /api/assets/options': 'TECNICO',
   'GET /api/assets/stats': 'TECNICO',
-  'GET /api/search': 'TECNICO',
   'POST /api/assets': 'TECNICO',
   'PUT /api/assets/:id': 'TECNICO',
   'DELETE /api/assets/:id': 'SUPERVISOR',

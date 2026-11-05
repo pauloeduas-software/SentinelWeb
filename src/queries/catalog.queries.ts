@@ -9,7 +9,7 @@ import type { ListEnvelope, ListParams } from '../types/list.types';
 // A chave inclui o slug e os parâmetros: sem isso a aba de Fabricantes seria
 // servida do cache da de Categorias. `['catalog', slug]` continua sendo o
 // prefixo, então invalidar depois de gravar alcança a listagem E as opções da
-// mesma tabela, sem a mutação saber em que página ou em que `<select>` o dado
+// mesma tabela, sem a mutação saber em que página ou em que seletor o dado
 // está sendo mostrado.
 export const catalogKeys = {
   tabela: (slug: string) => ['catalog', slug] as const,
@@ -47,7 +47,7 @@ export function useCatalogQuery(slug: string, params: CatalogListParams) {
 }
 
 /**
- * Opções para `<select>`. `rota` é o slug do catálogo — colaboradores
+ * Opções para o seletor. `rota` é o slug do catálogo — colaboradores
  * (`people`) inclusive — ou `assets`: as duas respondem no mesmo formato, então
  * um hook só atende as duas.
  *
@@ -79,7 +79,7 @@ export function useCatalogOptionsQuery(
     // Catálogo muda pouco: não vale refazer a consulta a cada abertura de modal.
     staleTime: 60_000,
     // Sem isto, cada tecla da busca esvazia a lista enquanto a próxima resposta
-    // não chega — e um `<select>` que fica vazio por 300 ms perde o foco do que
+    // não chega — e um seletor que fica vazio por 300 ms perde o foco do que
     // a pessoa estava lendo.
     placeholderData: keepPreviousData,
   });

@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Segmentado } from './ui/segmentado';
 import type { ListView } from '../types/list.types';
 
 // Busca e paginação das listagens. Compartilhado por todas elas para as telas
@@ -49,39 +52,22 @@ export default function ListToolbar({
   const ultimo = Math.min(page * perPage, total);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 mb-4 font-mono text-xs">
-      {view && onViewChange && (
-        <div className="flex border border-border-sutil">
-          {ABAS_DA_LIXEIRA.map(aba => (
-            <button
-              key={aba.valor}
-              type="button"
-              onClick={() => onViewChange(aba.valor)}
-              className={`px-4 py-2 uppercase tracking-widest transition-colors ${
-                view === aba.valor
-                  ? 'bg-text-primary text-bg-base'
-                  : 'text-text-tertiary hover:text-text-primary hover:bg-bg-base'
-              }`}
-            >
-              {aba.rotulo}
-            </button>
-          ))}
-        </div>
-      )}
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      {view && onViewChange && <Segmentado opcoes={ABAS_DA_LIXEIRA} valor={view} onChange={onViewChange} />}
 
       {/* Busca e filtros num grupo só: soltos, o `justify-between` da barra
           espalharia o filtro no meio do caminho entre a busca e a paginação. */}
       {(onSearchChange || filtros) && (
-        <div className="flex flex-1 flex-wrap items-center gap-2">
+        <div className="flex min-w-0 grow basis-full flex-wrap items-center gap-2 sm:basis-0">
           {onSearchChange && (
-            <div className="relative flex-1 min-w-[220px] max-w-sm">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
-              <input
+            <div className="relative min-w-[220px] max-w-md flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-tertiary" />
+              <Input
                 type="search"
                 value={search ?? ''}
                 onChange={event => onSearchChange(event.target.value)}
                 placeholder={placeholder}
-                className="w-full pl-9 pr-3 py-2 bg-surface-card border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors"
+                className="bg-surface-card pl-9"
               />
             </div>
           )}
@@ -89,35 +75,35 @@ export default function ListToolbar({
         </div>
       )}
 
-      <div className="flex items-center gap-4">
-        <span className="text-text-tertiary tabular-nums">
+      <div className="ml-auto flex items-center gap-3 text-sm">
+        <span className="tabular-nums text-text-tertiary">
           {primeiro}–{ultimo} de {total}
         </span>
 
         <div className="flex items-center gap-1">
-          <button
-            type="button"
+          <Button
+            variant="outline"
+            size="icon-sm"
             onClick={() => onPageChange(page - 1)}
             disabled={page <= 1}
             aria-label="Página anterior"
-            className="p-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
           >
-            <ChevronLeft size={14} />
-          </button>
+            <ChevronLeft />
+          </Button>
 
-          <span className="px-3 text-text-secondary tabular-nums">
+          <span className="px-2 tabular-nums text-text-secondary">
             {page} / {totalPages}
           </span>
 
-          <button
-            type="button"
+          <Button
+            variant="outline"
+            size="icon-sm"
             onClick={() => onPageChange(page + 1)}
             disabled={page >= totalPages}
             aria-label="Próxima página"
-            className="p-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
           >
-            <ChevronRight size={14} />
-          </button>
+            <ChevronRight />
+          </Button>
         </div>
       </div>
     </div>

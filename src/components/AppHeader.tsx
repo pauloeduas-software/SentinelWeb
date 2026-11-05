@@ -1,6 +1,9 @@
 import { Menu } from 'lucide-react';
-import BuscaDoLeitor from './BuscaDoLeitor';
+import MenuDoUsuario from './MenuDoUsuario';
+import { Button } from './ui/button';
+import { TopProgress } from './ui/top-progress';
 import { useBarraLateral } from '../hooks/useBarraLateral';
+import { useConsultasEmVoo } from '../queries/atividade.queries';
 
 // O CABEÇALHO, depois de a navegação sair dele.
 //
@@ -11,45 +14,38 @@ import { useBarraLateral } from '../hooks/useBarraLateral';
 // cabeçalho ficava mais largo que a janela e, sendo `sticky`, dava rolagem
 // horizontal à página inteira — em toda tela, inclusive sem tabela larga.
 //
-// SAIU a marca, que agora encabeça a barra lateral, e SAIU o nome de quem está
-// logado, que agora é o rodapé dela: sessão não é informação de tela, e aqui
-// disputava largura com a busca do leitor.
-//
 // SAIU o nome da tela: ele repetia o título que a própria página já tem logo
 // abaixo. Foi para a aba do navegador (`useTituloDaAba`).
 //
-// FICOU o que precisa estar visível em todas as telas:
-//   a busca do leitor   conferir prateleira é bipar vinte equipamentos em
-//                       sequência (F10, Etapa G); navegar até uma tela de busca
-//                       entre cada um viraria vinte navegações;
-//   o sino              a única coisa da moldura que muda sozinha.
+// FICOU o que precisa estar à mão em todas as telas: o menu do usuário, com o
+// tema, a conta e o Sair, e a faixa de carregamento na borda de baixo, que
+// qualquer consulta acende.
 //
 // E ENTROU o botão da gaveta, que abaixo de `md` é a ÚNICA forma de alcançar o
-// menu. Antes desta mudança não havia nenhuma: a `<nav>` era `hidden` nessa
-// faixa, e o painel ficava sem navegação no celular.
+// menu.
 // ═══════════════════════════════════════════════════════════════════════════
 
 export default function AppHeader() {
   const abrirNoCelular = useBarraLateral((estado) => estado.abrirNoCelular);
+  const carregando = useConsultasEmVoo();
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border-sutil bg-bg-base px-4 md:px-6">
-      <div className="flex min-w-0 items-center gap-3">
-        <button
-          type="button"
-          onClick={abrirNoCelular}
-          aria-label="Abrir menu"
-          className="p-2 text-text-tertiary transition-colors hover:text-text-primary md:hidden"
-        >
-          <Menu size={16} />
-        </button>
-      </div>
+    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border-sutil bg-bg-base px-3 md:px-6">
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={abrirNoCelular}
+        aria-label="Abrir menu"
+        className="md:hidden"
+      >
+        <Menu />
+      </Button>
 
-      <div className="flex shrink-0 items-center gap-4 font-mono text-xs">
-        <div className="hidden md:block">
-          <BuscaDoLeitor />
-        </div>
-      </div>
+      <div className="flex-1" />
+
+      <MenuDoUsuario />
+
+      <TopProgress ativa={carregando} />
     </header>
   );
 }

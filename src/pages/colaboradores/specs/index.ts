@@ -12,7 +12,7 @@ export const colaborador: CatalogUiSpec = {
   aba: 'Colaboradores',
   singular: 'Colaborador',
   genero: 'm',
-  descricao: 'Quem recebe equipamento: ativo, posto, licença e estoque. Não entra no sistema — quem opera o painel fica em Usuários. Excluir manda para a lixeira; só não se exclui quem está com algo agora.',
+  descricao: 'Quem recebe equipamento. Não entra no sistema: quem opera o painel fica em Usuários.',
   placeholderBusca: 'Buscar por nome ou e-mail...',
   colunas: [
     { key: 'name', label: 'Nome' },

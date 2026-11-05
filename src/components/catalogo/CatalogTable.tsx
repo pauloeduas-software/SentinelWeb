@@ -1,22 +1,15 @@
-import { Edit2, FileText, RotateCcw, Trash2, Power, PowerOff, type LucideIcon } from 'lucide-react';
+import { Pencil, Power, PowerOff, RotateCcw, Trash2 } from 'lucide-react';
+import AcoesDaLinha from '../AcoesDaLinha';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Card } from '../ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { nomeDaRelacao, rotuloDoEnum } from '../../helpers/format.helper';
 import type { AcaoLinhaId, AcaoLinhaSpec, ColunaSpec } from './catalog-ui.types';
 import type { CatalogRow } from '../../types/catalog.types';
 
-// O ícone de cada ação mora AQUI, e não na spec, porque a spec é dado puro: um
-// componente React dentro dela obrigaria `specs/` a importar React só para
-// descrever uma tabela. O `Record` fechado garante que toda ação declarada tem
-// ícone — esquecer um vira erro de tipo.
-//
-// A ação que ALTERNA tem dois ícones: o do que o clique FAZ (desligar quando
-// está ligado, ligar quando está desligado).
-const ICONE_DA_ACAO: Record<AcaoLinhaId, LucideIcon> = {
-  ativacao: PowerOff,
-  ficha: FileText,
-};
-const ICONE_SE_DESLIGADO: Partial<Record<AcaoLinhaId, LucideIcon>> = {
-  ativacao: Power,
-};
+// A LINHA INTEIRA CLICA (AY): abre a ficha, onde a spec declara uma, e o Editar
+// nas outras. O `⋯` guarda Editar, Desativar/Ativar e Excluir, nessa ordem.
 
 /** A linha está com o campo da ação de alternar desligado? (`false`, não ausente.) */
 function desligada(registro: CatalogRow, acoes?: readonly AcaoLinhaSpec[]): AcaoLinhaSpec | undefined {
@@ -45,103 +38,91 @@ export default function CatalogTable({
   colunas, registros, vazio, acoes, onEdit, onDelete, onAcao, onRestore,
 }: CatalogTableProps) {
   return (
-    <div className="bg-surface-card border border-border-sutil flex-1 overflow-auto">
-      <table className="w-full text-left font-mono text-xs whitespace-nowrap">
-        <thead className="bg-bg-base/50 text-text-secondary border-b border-border-sutil uppercase tracking-widest sticky top-0 z-10">
-          <tr>
-            {colunas.map((coluna) => (
-              <th key={coluna.key} className="px-6 py-4 font-normal">{coluna.label}</th>
-            ))}
-            <th className="px-6 py-4 font-normal text-right">Ações</th>
-          </tr>
-        </thead>
+    <Card className="overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            {colunas.map((coluna) => <TableHead key={coluna.key}>{coluna.label}</TableHead>)}
+            <TableHead className="w-12 text-right">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
 
-        <tbody className="text-text-primary divide-y divide-border-sutil/50">
+        <TableBody>
           {registros.map((registro) => {
             const apagada = desligada(registro, acoes);
+            const comFicha = acoes?.some((acao) => acao.id === 'ficha');
+            const nome = String(registro.name ?? '');
+            // Na lixeira não há o que abrir: o servidor responde 404, e a linha só restaura.
+            const abrir = onRestore
+              ? undefined
+              : () => (comFicha ? onAcao?.('ficha', registro) : onEdit(registro));
+
             return (
-              <tr key={registro.id} className={`hover:bg-bg-base transition-colors group ${apagada ? 'opacity-60' : ''}`}>
+              <TableRow
+                key={registro.id}
+                onClick={abrir}
+                className={[abrir ? 'cursor-pointer' : '', apagada ? 'opacity-60' : ''].join(' ')}
+              >
                 {colunas.map((coluna, indice) => (
-                  <td key={coluna.key} className="px-6 py-4 text-text-secondary">
-                    <Celula coluna={coluna} registro={registro} />
+                  <TableCell key={coluna.key}>
+                    {indice === 0 ? (
+                      // O botão é o caminho do teclado: o clique sobe para a linha.
+                      <button type="button" className="text-left font-medium text-text-primary focus-visible:underline focus-visible:outline-none">
+                        <Celula coluna={coluna} registro={registro} />
+                      </button>
+                    ) : (
+                      <Celula coluna={coluna} registro={registro} />
+                    )}
                     {/* A marca vai na PRIMEIRA coluna, ao lado do nome: é onde o
                         olho está ao procurar a linha. */}
                     {indice === 0 && apagada?.alterna && (
-                      <span className="ml-3 text-[10px] text-status-warning uppercase tracking-widest">
-                        {apagada.alterna.marcaSeDesligado}
-                      </span>
+                      <Badge tom="aviso" className="ml-2">{apagada.alterna.marcaSeDesligado}</Badge>
                     )}
-                  </td>
+                  </TableCell>
                 ))}
-                <td className="px-6 py-4 text-right">
-                  {/* Visível ao passar o mouse, ao navegar por Tab (`focus-within`)
-                      e sempre no toque, onde não há hover. */}
-                  <div className="flex items-center justify-end gap-3 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
-                    {onRestore ? (
-                      <button
-                        onClick={() => onRestore(registro)}
-                        title="Restaurar"
-                        aria-label={`Restaurar ${String(registro.name ?? '')}`}
-                        className="text-text-tertiary hover:text-status-success transition-colors"
-                      >
-                        <RotateCcw size={14} />
-                      </button>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => onEdit(registro)}
-                          title="Editar"
-                          aria-label={`Editar ${String(registro.name ?? '')}`}
-                          className="text-text-tertiary hover:text-text-primary transition-colors"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        {/* A ordem é Editar, as ações da spec (Desativar, Ficha) e
-                            Excluir por último — o destrutivo fica na ponta. */}
-                        {acoes?.map((acao) => {
+                <TableCell className="text-right">
+                  {onRestore ? (
+                    <Button variant="ghost" size="sm" onClick={() => onRestore(registro)} aria-label={`Restaurar ${nome}`}>
+                      <RotateCcw /> Restaurar
+                    </Button>
+                  ) : (
+                    <AcoesDaLinha
+                      nome={nome}
+                      acoes={[
+                        { rotulo: 'Editar', icone: Pencil, onClick: () => onEdit(registro) },
+                        // A ficha é o clique na linha: não repete no menu.
+                        ...(acoes ?? []).filter((acao) => acao.id !== 'ficha').map((acao) => {
                           const desligado = acao.alterna && registro[acao.alterna.campo] === false;
-                          const Icone = (desligado && ICONE_SE_DESLIGADO[acao.id]) || ICONE_DA_ACAO[acao.id];
-                          const titulo = desligado ? acao.alterna?.tituloSeDesligado : acao.titulo;
-                          return (
-                            <button
-                              key={acao.id}
-                              onClick={() => onAcao?.(acao.id, registro)}
-                              title={titulo}
-                              aria-label={`${titulo ?? ''} ${String(registro.name ?? '')}`}
-                              className="text-text-tertiary hover:text-status-info transition-colors"
-                            >
-                              <Icone size={14} />
-                            </button>
-                          );
-                        })}
-                        {onDelete && (
-                          <button
-                            onClick={() => onDelete(registro)}
-                            title="Excluir"
-                            aria-label={`Excluir ${String(registro.name ?? '')}`}
-                            className="text-text-tertiary hover:text-status-danger transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </td>
-              </tr>
+                          return {
+                            rotulo: (desligado ? acao.alterna?.tituloSeDesligado : acao.titulo) ?? '',
+                            icone: desligado ? Power : PowerOff,
+                            onClick: () => onAcao?.(acao.id, registro),
+                          };
+                        }),
+                        onDelete && {
+                          rotulo: 'Excluir',
+                          icone: Trash2,
+                          onClick: () => onDelete(registro),
+                          perigo: true,
+                        },
+                      ]}
+                    />
+                  )}
+                </TableCell>
+              </TableRow>
             );
           })}
 
           {registros.length === 0 && (
-            <tr>
-              <td colSpan={colunas.length + 1} className="px-6 py-16 text-center text-text-tertiary">
+            <TableRow className="hover:bg-transparent">
+              <TableCell colSpan={colunas.length + 1} className="py-16 text-center text-text-tertiary">
                 {vazio}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           )}
-        </tbody>
-      </table>
-    </div>
+        </TableBody>
+      </Table>
+    </Card>
   );
 }
 

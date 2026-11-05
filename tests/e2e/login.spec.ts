@@ -64,7 +64,8 @@ test('depois do Sair, o próximo login começa pela raiz, e não pela tela de qu
   await entrar();
   await expect(page).toHaveURL(/\/licencas$/);
 
-  await page.getByRole('button', { name: 'Sair' }).click();
+  await page.getByRole('button', { name: 'Menu do usuário' }).click();
+  await page.getByRole('menuitem', { name: 'Sair' }).click();
   await expect(page).toHaveURL(/\/login(\?|$)/);
   await entrar();
   await expect(page).toHaveURL(/\/computadores$/);

@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import FormularioLateral from '../FormularioLateral';
 import ReferenceSelect from '../ReferenceSelect';
+import { Campo as CampoDoFormulario } from '../ui/campo';
+import { Input, Textarea } from '../ui/input';
+import { Seletor } from '../ui/seletor';
 import type { CampoSpec, CatalogUiSpec } from './catalog-ui.types';
 import type { CatalogRow } from '../../types/catalog.types';
 
@@ -79,67 +82,44 @@ export default function CatalogFormModal({ spec, registro, padroes, onClose, onS
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
-      <div className="relative w-full max-w-2xl bg-surface-card border border-border-sutil shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-sutil bg-bg-base/50">
-          <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">
-            {registro ? `Editar ${spec.singular}` : `${spec.genero === 'f' ? 'Nova' : 'Novo'} ${spec.singular}`}
-          </h2>
-          <button onClick={onClose} className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
-            <X size={16} />
-          </button>
-        </div>
-
-        <form onSubmit={enviar} className="p-6 font-mono text-xs overflow-y-auto max-h-[75vh]">
-          {erro && (
-            <div className="mb-4 p-3 bg-status-danger/10 text-status-danger border border-status-danger/20">
-              {erro}
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            {spec.campos.map((campo) => (
-              <div key={campo.key} className={`space-y-1 ${campo.largura === 'inteira' ? 'col-span-2' : ''}`}>
-                <label className="text-text-secondary uppercase tracking-widest text-[10px]">
-                  {campo.label}{campo.obrigatorio && '*'}
-                </label>
-                <Campo
-                  campo={campo}
-                  atual={referenciaAtual(registro, campo)}
-                  valor={valores[campo.key]}
-                  onChange={(valor) => definir(campo.key, valor)}
-                />
-                {campo.ajuda && (
-                  <p className="text-text-tertiary text-[10px] leading-relaxed">{campo.ajuda}</p>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 pt-4 flex justify-end gap-3 border-t border-border-sutil">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={salvando}
-              className="px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary transition-colors disabled:opacity-50"
-            >
-              {salvando ? 'Salvando...' : 'Salvar'}
-            </button>
-          </div>
-        </form>
+    <FormularioLateral
+      titulo={registro ? `Editar ${spec.singular}` : `${spec.genero === 'f' ? 'Nova' : 'Novo'} ${spec.singular}`}
+      largura="lg"
+      onClose={onClose}
+      onSubmit={enviar}
+      erro={erro}
+      salvando={salvando}
+    >
+      <div className="grid grid-cols-2 gap-4">
+        {spec.campos.map((campo) => (
+          <CampoDoFormulario
+            key={campo.key}
+            rotulo={campo.label}
+            obrigatorio={campo.obrigatorio}
+            ajuda={ajudaDoCampo(campo, valores[campo.key])}
+            className={campo.largura === 'inteira' ? 'col-span-2' : ''}
+          >
+            <Campo
+              campo={campo}
+              atual={referenciaAtual(registro, campo)}
+              valor={valores[campo.key]}
+              onChange={(valor) => definir(campo.key, valor)}
+            />
+          </CampoDoFormulario>
+        ))}
       </div>
-    </div>
+    </FormularioLateral>
   );
 }
 
-const CLASSE_CAMPO =
-  'w-full p-2 bg-bg-base border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors';
+// A explicação da opção escolhida fica logo abaixo do campo. É o que responde, no
+// momento da escolha, "qual a diferença entre estas duas?".
+function ajudaDoCampo(campo: CampoSpec, valor: unknown): string | undefined {
+  const selecionada = campo.tipo === 'select'
+    ? campo.opcoes?.find((opcao) => opcao.value === String(valor ?? ''))
+    : undefined;
+  return selecionada?.ajuda ?? campo.ajuda;
+}
 
 function Campo({
   campo, atual, valor, onChange,
@@ -163,47 +143,27 @@ function Campo({
   }
 
   if (campo.tipo === 'select') {
-    // A explicação da opção escolhida fica logo abaixo do campo. É o que
-    // responde, no momento da escolha, "qual a diferença entre estas duas?" —
-    // pergunta que o rótulo de um `<option>` não tem espaço para responder.
-    const selecionada = campo.opcoes?.find((opcao) => opcao.value === String(valor ?? ''));
-
     return (
-      <>
-        <select
-          required={campo.obrigatorio}
-          value={String(valor ?? '')}
-          onChange={(event) => onChange(event.target.value)}
-          className={CLASSE_CAMPO}
-        >
-          {campo.opcoes?.map((opcao) => (
-            <option key={opcao.value} value={opcao.value}>{opcao.label}</option>
-          ))}
-        </select>
-        {selecionada?.ajuda && (
-          <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">{selecionada.ajuda}</p>
-        )}
-      </>
-    );
-  }
-
-  if (campo.tipo === 'textarea') {
-    return (
-      <textarea
+      <Seletor
+        obrigatorio={campo.obrigatorio}
         value={String(valor ?? '')}
-        onChange={(event) => onChange(event.target.value)}
-        className={`${CLASSE_CAMPO} h-20 resize-none`}
+        onChange={onChange}
+        vazio="Selecione..."
+        opcoes={campo.opcoes ?? []}
       />
     );
   }
 
+  if (campo.tipo === 'textarea') {
+    return <Textarea rows={4} value={String(valor ?? '')} onChange={(event) => onChange(event.target.value)} />;
+  }
+
   return (
-    <input
+    <Input
       type="text"
       required={campo.obrigatorio}
       value={String(valor ?? '')}
       onChange={(event) => onChange(event.target.value)}
-      className={CLASSE_CAMPO}
     />
   );
 }

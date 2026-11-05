@@ -1,4 +1,4 @@
-import type { ChaveDaLicenca, EventoDaLicenca, Licenca } from '../../../types/license.types';
+import type { ChaveDaLicenca, EventoDaLicenca, Licenca, StatusDaLicenca } from '../../../types/license.types';
 
 // Funções puras da tela de licenças (docs/referencia/arquitetura.md). O que as
 // outras telas também mostram — prazo, resumo da conta, devolução — mora em
@@ -8,6 +8,14 @@ import type { ChaveDaLicenca, EventoDaLicenca, Licenca } from '../../../types/li
 export const ACOES_DA_LICENCA: Record<EventoDaLicenca['action'], string> = {
   CHECKOUT: 'Entregue',
   CHECKIN: 'Devolvida',
+};
+
+/** O tom da situação, a única cor que o dado pode ter (AY): a encerrada já acabou, não pede nada. */
+export const TOM_DO_STATUS: Record<StatusDaLicenca, 'sucesso' | 'aviso' | 'perigo' | 'neutro'> = {
+  ATIVA: 'sucesso',
+  VENCENDO: 'aviso',
+  EXPIRADA: 'perigo',
+  ENCERRADA: 'neutro',
 };
 
 /**

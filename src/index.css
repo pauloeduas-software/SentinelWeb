@@ -1,40 +1,149 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+/* O `dark:` do Tailwind segue a classe no <html> (hooks/useTema), e não o
+   sistema operacional direto: quem escolheu Claro num sistema escuro fica no claro. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* AS CORES DOS DOIS TEMAS — o único lugar com cor no front (o lint recusa cor
+   fixa em `src/`). A paleta é a da IntraNet: azul na marca e fundos azulados. */
+:root {
+  color-scheme: light;
+
+  --bg-base: hsl(210 20% 98%);
+  --surface-card: hsl(0 0% 100%);
+  --surface-muted: hsl(210 16% 93%);
+  --border-sutil: hsl(214 32% 91%);
+  --border-hover: hsl(214 25% 82%);
+  --text-primary: hsl(215 25% 15%);
+  --text-secondary: hsl(215 20% 32%);
+  --text-tertiary: hsl(215 16% 47%);
+
+  --primary: hsl(213 94% 38%);
+  --primary-foreground: hsl(0 0% 100%);
+  --accent: hsl(213 94% 95%);
+  --accent-foreground: hsl(213 94% 38%);
+  --ring: hsl(213 94% 38%);
+
+  --status-success: hsl(142 76% 30%);
+  --status-warning: hsl(32 95% 40%);
+  --status-danger: hsl(0 72% 50%);
+  --status-info: hsl(213 94% 42%);
+
+  --sidebar: hsl(210 16% 96%);
+  --sidebar-foreground: hsl(215 25% 15%);
+  --sidebar-accent: hsl(210 16% 90%);
+  --sidebar-border: hsl(214 32% 91%);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --bg-base: hsl(215 25% 10%);
+  --surface-card: hsl(215 25% 13%);
+  --surface-muted: hsl(215 25% 20%);
+  --border-sutil: hsl(215 25% 22%);
+  --border-hover: hsl(215 22% 30%);
+  --text-primary: hsl(210 20% 98%);
+  --text-secondary: hsl(215 20% 78%);
+  --text-tertiary: hsl(215 16% 60%);
+
+  --primary: hsl(213 94% 50%);
+  --primary-foreground: hsl(0 0% 100%);
+  --accent: hsl(215 25% 20%);
+  --accent-foreground: hsl(213 94% 65%);
+  --ring: hsl(213 94% 50%);
+
+  --status-success: hsl(142 70% 45%);
+  --status-warning: hsl(38 92% 50%);
+  --status-danger: hsl(0 84% 60%);
+  --status-info: hsl(213 94% 62%);
+
+  --sidebar: hsl(215 25% 8%);
+  --sidebar-foreground: hsl(210 20% 98%);
+  --sidebar-accent: hsl(215 25% 15%);
+  --sidebar-border: hsl(215 25% 18%);
+}
+
+/* `inline` porque o valor muda com a classe do tema: com ele a utilitária aponta
+   para a variável acima, e `bg-primary/10` continua misturando pela opacidade. */
+@theme inline {
+  --color-bg-base: var(--bg-base);
+  --color-surface-card: var(--surface-card);
+  --color-surface-muted: var(--surface-muted);
+  --color-border-sutil: var(--border-sutil);
+  --color-border-hover: var(--border-hover);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-ring: var(--ring);
+  --color-status-success: var(--status-success);
+  --color-status-warning: var(--status-warning);
+  --color-status-danger: var(--status-danger);
+  --color-status-info: var(--status-info);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-border: var(--sidebar-border);
+}
 
 @theme {
-  --color-bg-base: #0a0a0a;
-  --color-surface-card: #111111;
-  --color-border-sutil: #1f1f1f;
-  --color-border-hover: #2a2a2a;
-  --color-text-primary: #ededed;
-  --color-text-secondary: #888888;
-  --color-text-tertiary: #444444;
-  --color-status-success: #22c55e;
-  --color-status-warning: #f59e0b;
-  --color-status-danger: #ef4444;
-  --color-status-info: #3b82f6;
-
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
 
   /* A ENTRADA DAS PÁGINAS: `motion-safe:animate-fade-in` no contêiner de cada
      tela. `motion-safe` respeita quem pediu menos movimento no sistema. */
   --animate-fade-in: fade-in 300ms ease-out;
+  /* A faixa do topo: indeterminada, porque uma consulta não informa progresso. */
+  --animate-carregando: carregando 1.4s ease-in-out infinite;
 
   @keyframes fade-in {
     from { opacity: 0; }
     to { opacity: 1; }
   }
+
+  @keyframes carregando {
+    0% { width: 0%; margin-left: 0%; }
+    50% { width: 100%; margin-left: 0%; }
+    100% { width: 0%; margin-left: 100%; }
+  }
 }
 
 @layer base {
-  body {
-    @apply bg-bg-base text-text-primary;
+  /* A borda sem cor explícita sai do tema, não do cinza padrão do Tailwind 4. */
+  *, ::before, ::after, ::backdrop {
+    border-color: var(--border-sutil);
   }
 
-  /* Custom scrollbar matching enterprise look */
+  /* A DENSIDADE COMPACTA DA INTRANET, só no desktop: tudo que é em `rem` encolhe
+     junto, e o celular mantém o tamanho que o dedo precisa. */
+  @media (min-width: 1024px) {
+    html {
+      font-size: 80%;
+    }
+  }
+
+  body {
+    @apply bg-bg-base text-text-primary font-sans antialiased;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
   ::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {

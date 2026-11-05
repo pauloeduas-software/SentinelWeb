@@ -1,6 +1,12 @@
 import { useState } from 'react';
-import { Laptop, User, X } from 'lucide-react';
+import { Monitor, User } from 'lucide-react';
+import FormularioLateral from '../../../components/FormularioLateral';
 import ReferenceSelect from '../../../components/ReferenceSelect';
+import { Aviso } from '../../../components/ui/aviso';
+import { Campo } from '../../../components/ui/campo';
+import { Input, Textarea } from '../../../components/ui/input';
+import { Segmentado } from '../../../components/ui/segmentado';
+import { Seletor } from '../../../components/ui/seletor';
 import { useLicenseQuery } from '../../../queries/license.queries';
 import type { AlvoDaEntrega, Licenca } from '../../../types/license.types';
 import { hojeNoCampoDeData } from '../../../helpers/format.helper';
@@ -21,11 +27,6 @@ import { chavesComLugar, lugarDaChave, rotuloDaChave } from '../helpers/licenca.
 // qual chave está com cada um. A lista vem do detalhe, que é a leitura com as
 // chaves. Com chaves cadastradas, escolher é obrigatório; só aparecem as que têm
 // lugar, e com uma só ela já vem escolhida. A licença sem chave entrega sem.
-
-const CLASSE_CAMPO =
-  'w-full p-2 bg-bg-base border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors';
-
-const ROTULO = 'text-text-secondary uppercase tracking-widest text-[10px]';
 
 interface EntregaLicencaModalProps {
   licenca: Licenca;
@@ -83,113 +84,80 @@ export default function EntregaLicencaModal({ licenca, onClose, onSubmit }: Entr
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
-      <div className="relative w-full max-w-lg bg-surface-card border border-border-sutil shadow-2xl flex flex-col">
+    <FormularioLateral
+      titulo="Entregar licença"
+      descricao={`${atual.name} · ${atual.livres} de ${atual.seatsTotal} ${atual.livres === 1 ? 'livre' : 'livres'}`}
+      // Mais largo que a entrega de estoque: a lista de chaves leva a chave e o quanto ela cobre.
+      largura="lg"
+      onClose={onClose}
+      onSubmit={enviar}
+      erro={erro}
+      salvando={salvando}
+      bloqueado={!pronto}
+      rotuloDoEnvio="Entregar"
+      rotuloEnviando="Entregando..."
+    >
+      <Segmentado
+        opcoes={[
+          { valor: 'PERSON', rotulo: <><User /> Colaborador</> },
+          { valor: 'ASSET', rotulo: <><Monitor /> Ativo</> },
+        ]}
+        valor={alvo}
+        onChange={setAlvo}
+      />
 
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-sutil bg-bg-base/50">
-          <div>
-            <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">Entregar licença</h2>
-            <p className="font-mono text-[10px] text-text-tertiary mt-1">
-              {atual.name} · {atual.livres} de {atual.seatsTotal} {atual.livres === 1 ? 'livre' : 'livres'}
-            </p>
-          </div>
-          <button onClick={onClose} aria-label="Fechar" title="Fechar" className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
-            <X size={16} />
-          </button>
-        </div>
+      {alvo === 'PERSON' ? (
+        <Campo rotulo="Colaborador" obrigatorio>
+          <ReferenceSelect rota="people" valor={personId} obrigatorio comDetalhe onChange={setPersonId} />
+        </Campo>
+      ) : (
+        <Campo rotulo="Ativo" obrigatorio>
+          <ReferenceSelect rota="assets" valor={assetId} obrigatorio onChange={setAssetId} />
+        </Campo>
+      )}
 
-        <form onSubmit={enviar} className="p-6 font-mono text-xs space-y-4">
-          {erro && (
-            <div className="p-3 bg-status-danger/10 text-status-danger border border-status-danger/20">{erro}</div>
-          )}
+      <Campo rotulo="Data da entrega" obrigatorio>
+        <Input type="date" required max={hoje} value={checkoutAt} onChange={(e) => setCheckoutAt(e.target.value)} />
+      </Campo>
 
-          <div className="flex border border-border-sutil w-fit">
-            {([['PERSON', 'Colaborador', User], ['ASSET', 'Ativo', Laptop]] as const).map(([valor, rotulo, Icone]) => (
-              <button
-                key={valor}
-                type="button"
-                onClick={() => setAlvo(valor)}
-                className={`flex items-center gap-2 px-4 py-2 uppercase tracking-widest transition-colors ${
-                  alvo === valor
-                    ? 'bg-text-primary text-bg-base'
-                    : 'text-text-tertiary hover:text-text-primary hover:bg-bg-base'
-                }`}
-              >
-                <Icone size={12} /> {rotulo}
-              </button>
-            ))}
-          </div>
-
-          {alvo === 'PERSON' ? (
-            <label className="space-y-1.5 block">
-              <span className={ROTULO}>Colaborador *</span>
-              <ReferenceSelect rota="people" valor={personId} obrigatorio comDetalhe onChange={setPersonId} />
-            </label>
-          ) : (
-            <label className="space-y-1.5 block">
-              <span className={ROTULO}>Ativo *</span>
-              <ReferenceSelect rota="assets" valor={assetId} obrigatorio onChange={setAssetId} />
-            </label>
-          )}
-
-          <label className="space-y-1.5 block">
-            <span className={ROTULO}>Data da entrega *</span>
-            <input
-              type="date" required max={hoje} value={checkoutAt}
-              onChange={(e) => setCheckoutAt(e.target.value)} className={CLASSE_CAMPO}
+      {erroDoDetalhe ? (
+        <Aviso>Não foi possível carregar as chaves: {erroDoDetalhe.message}</Aviso>
+      ) : !detalhe ? (
+        <p className="text-sm text-text-tertiary">Carregando as chaves…</p>
+      ) : chaves.length > 0 && (
+        comLugar.length === 0 ? (
+          <Aviso tom="aviso">
+            Todas as chaves desta licença estão em uso. Cadastre a chave da próxima licença, em
+            Editar, antes de entregar.
+          </Aviso>
+        ) : (
+          <Campo rotulo="Chave" obrigatorio>
+            <Seletor
+              value={licenseKeyId}
+              onChange={setChaveEscolhida}
+              obrigatorio
+              vazio="Escolha a chave…"
+              placeholderDaBusca="Buscar chave..."
+              opcoesMono
+              className={licenseKeyId ? 'font-mono' : undefined}
+              // A posição vem da lista inteira: é o mesmo número do detalhe.
+              opcoes={chaves.flatMap((chave, indice) => (comLugar.includes(chave)
+                ? [{ value: chave.id, label: rotuloDaChave(chave, indice + 1), detalhe: lugarDaChave(chave) }]
+                : []))}
             />
-          </label>
+          </Campo>
+        )
+      )}
 
-          {erroDoDetalhe ? (
-            <p role="alert" className="text-status-danger">Não foi possível carregar as chaves: {erroDoDetalhe.message}</p>
-          ) : !detalhe ? (
-            <p className="text-text-tertiary">Carregando as chaves…</p>
-          ) : chaves.length > 0 && (
-            comLugar.length === 0 ? (
-              <p className="text-text-secondary leading-relaxed">
-                Todas as chaves desta licença estão em uso. Cadastre a chave da próxima licença, em
-                Editar, antes de entregar.
-              </p>
-            ) : (
-              <label className="space-y-1.5 block">
-                <span className={ROTULO}>Chave *</span>
-                <select
-                  required value={licenseKeyId} onChange={(e) => setChaveEscolhida(e.target.value)}
-                  className={`${CLASSE_CAMPO} font-mono`}
-                >
-                  <option value="">Escolha a chave…</option>
-                  {chaves.map((chave, indice) => comLugar.includes(chave) && (
-                    <option key={chave.id} value={chave.id}>
-                      {rotuloDaChave(chave, indice + 1)} — {lugarDaChave(chave)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )
-          )}
+      <Campo rotulo="Observações">
+        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </Campo>
 
-          <label className="space-y-1.5 block">
-            <span className={ROTULO}>Observações</span>
-            <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={CLASSE_CAMPO} />
-          </label>
-
-          <p className="text-[10px] text-text-tertiary leading-relaxed border-t border-border-sutil pt-3">
-            Licença por computador (Windows, Office avulso) vai para o{' '}
-            <span className="text-text-secondary">ativo</span>; por assinatura de pessoa (Microsoft
-            365, Adobe), para o <span className="text-text-secondary">colaborador</span>. Posto de
-            trabalho não recebe licença: o computador da mesa recebe.
-          </p>
-
-          <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="px-4 py-2 border border-border-sutil text-text-tertiary hover:text-text-primary uppercase tracking-widest transition-colors">
-              Cancelar
-            </button>
-            <button type="submit" disabled={salvando || !pronto} className="px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary uppercase tracking-widest transition-colors disabled:opacity-50">
-              {salvando ? 'Entregando…' : 'Entregar'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      <p className="text-xs leading-relaxed text-text-tertiary">
+        Licença por computador (Windows, Office avulso) vai para o ativo; por assinatura de pessoa
+        (Microsoft 365, Adobe), para o colaborador. Posto de trabalho não recebe licença: o
+        computador da mesa recebe.
+      </p>
+    </FormularioLateral>
   );
 }

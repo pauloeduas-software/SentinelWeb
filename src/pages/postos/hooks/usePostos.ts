@@ -7,6 +7,7 @@ import {
 import { useCheckinAsset } from '../../../queries/assignment.queries';
 import type { AtivoDoPosto, Posto, PostoView } from '../../../types/workstation.types';
 import { linksDoErro } from '../../../helpers/erro.helper';
+import { confirmar } from '../../../hooks/useConfirmacao';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import { useNotificacao } from '../../../hooks/useNotificacao';
 import { useOcupantes } from './useOcupantes';
@@ -73,6 +74,10 @@ export function usePostos() {
     data: detalhe, isPending: detalhePendente, error: detalheErro,
   } = useWorkstationQuery(postoId ?? null);
 
+  // Só o 404 é "não encontrado": um 500 ou a rede caída não dizem que o posto
+  // não existe. O `status` vem do erro da API (`ErroDaApi`).
+  const detalheInexistente = (detalheErro as { status?: number } | null)?.status === 404;
+
   // Os ocupantes vêm de hook próprio, que também serve o histórico — que o
   // detalhe do posto (`GET /api/workstations/:id`) não traz.
   const ocupantes = useOcupantes(postoId ?? null);
@@ -90,11 +95,16 @@ export function usePostos() {
     fecharFormulario();
   };
 
-  // EXCLUIR é o botão da linha, com a frase de Configurações
+  // EXCLUIR é o item do `⋯` da linha, com a frase de Configurações
   // (`components/catalogo/useCatalog.ts`). Sem Desativar (AN): o posto com algo
   // nele recebe o 409 do servidor, que diz o que tirar.
   const handleExcluir = async (posto: Posto) => {
-    if (!confirm(`Excluir "${posto.name}"? Esta ação não tem lixeira.`)) return;
+    if (!(await confirmar({
+      titulo: `Excluir "${posto.name}"?`,
+      descricao: 'Esta ação não tem lixeira.',
+      acao: 'Excluir',
+      perigo: true,
+    }))) return;
 
     try {
       await excluir.mutateAsync(posto.id);
@@ -170,10 +180,9 @@ export function usePostos() {
     // O 404 de `/postos/<id-que-não-existe>`. Sem isto a janela abriria com
     // zero ativos e zero ocupantes, que é indistinguível de um posto novo e
     // vazio — a tela mentiria em vez de dizer que o link está morto.
-    detalheErro: detalheErro ? detalheErro.message : null,
-    // Só o 404 é "não encontrado": um 500 ou a rede caída não dizem que o
-    // posto não existe. O `status` vem do erro da API (`ErroDaApi`).
-    detalheInexistente: (detalheErro as { status?: number } | null)?.status === 404,
+    // Atualização que falha com a ficha já na tela não a fecha; o 404 fecha.
+    detalheErro: detalheErro && (!detalhe || detalheInexistente) ? detalheErro.message : null,
+    detalheInexistente,
     devolvendo: devolver.isPending,
     handleDevolver,
 

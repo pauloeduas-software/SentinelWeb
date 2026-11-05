@@ -13,7 +13,7 @@ const categoria: CatalogUiSpec = {
   aba: 'Categorias',
   singular: 'Categoria',
   genero: 'f',
-  descricao: 'O NOME é seu. O TIPO diz a que módulo a categoria pertence — uma categoria de Ativo não agrupa licenças.',
+  descricao: 'O tipo diz a que módulo a categoria pertence.',
   placeholderBusca: 'Buscar categoria...',
   colunas: [
     { key: 'name', label: 'Nome' },
@@ -31,7 +31,7 @@ const status: CatalogUiSpec = {
   aba: 'Status',
   singular: 'Status',
   genero: 'm',
-  descricao: 'O NOME é seu — crie quantos quiser. O TIPO é uma de quatro caixas que o sistema entende: é ele que decide se o ativo pode ser entregue a alguém.',
+  descricao: 'O tipo decide se o computador pode ser entregue a alguém.',
   placeholderBusca: 'Buscar status...',
   colunas: [
     { key: 'name', label: 'Nome' },
@@ -49,7 +49,7 @@ const fabricante: CatalogUiSpec = {
   aba: 'Fabricantes',
   singular: 'Fabricante',
   genero: 'm',
-  descricao: 'Quem fabrica o equipamento, com os canais de suporte para abrir chamado de garantia.',
+  descricao: 'Quem fabrica o equipamento, com os canais de suporte.',
   placeholderBusca: 'Buscar fabricante...',
   colunas: [
     { key: 'name', label: 'Nome' },
@@ -75,7 +75,7 @@ const modelo: CatalogUiSpec = {
   aba: 'Modelos',
   singular: 'Modelo',
   genero: 'm',
-  descricao: 'O catálogo de equipamentos. O ativo herda daqui a categoria.',
+  descricao: 'O catálogo de equipamentos. O computador herda daqui a categoria.',
   placeholderBusca: 'Buscar modelo ou número...',
   colunas: [
     { key: 'name', label: 'Modelo' },
@@ -98,7 +98,7 @@ const localizacao: CatalogUiSpec = {
   aba: 'Localizações',
   singular: 'Localização',
   genero: 'f',
-  descricao: 'Onde as coisas ficam guardadas: a matriz, a filial, o depósito, o home office. Os postos de trabalho ficam dentro delas e se cadastram na tela Postos. Só não se exclui a localização que tem algo guardado ou um posto nela agora.',
+  descricao: 'Onde as coisas ficam guardadas: matriz, filial, depósito, home office.',
   placeholderBusca: 'Buscar localização, cidade ou endereço...',
   colunas: [
     { key: 'name', label: 'Nome' },

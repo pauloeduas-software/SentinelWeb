@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { KeyRound } from 'lucide-react';
+import FormularioLateral from '../../../components/FormularioLateral';
+import { Button } from '../../../components/ui/button';
+import { Campo } from '../../../components/ui/campo';
+import { Input } from '../../../components/ui/input';
+import { Seletor } from '../../../components/ui/seletor';
 import type { Cargo, User } from '../../../types/user.types';
 import type { UserInput } from '../../../queries/user.queries';
 import { CARGOS_NA_TELA } from '../../../helpers/cargo.helper';
@@ -19,18 +24,20 @@ import { CARGOS_NA_TELA } from '../../../helpers/cargo.helper';
 
 interface UserFormModalProps {
   user?: User | null;
+  /** A senha que o `⋯` da linha gerou: o formulário abre mostrando. */
+  senhaGerada?: string | null;
   onClose: () => void;
   /** Devolve a senha temporária no cadastro (AU); `null` na edição, que fecha a janela. */
   onSubmit: (data: UserInput) => Promise<string | null>;
   /**
    * Gera a senha temporária desta conta (AR) e a devolve; `null` se a pessoa
-   * desistiu no confirm. Ausente no cadastro e na PRÓPRIA conta: a sua senha se
+   * desistiu na confirmação. Ausente no cadastro e na PRÓPRIA conta: a sua senha se
    * troca em Minha conta.
    */
   onGerarSenhaTemporaria?: () => Promise<string | null>;
 }
 
-export default function UserFormModal({ user, onClose, onSubmit, onGerarSenhaTemporaria }: UserFormModalProps) {
+export default function UserFormModal({ user, senhaGerada = null, onClose, onSubmit, onGerarSenhaTemporaria }: UserFormModalProps) {
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -41,7 +48,7 @@ export default function UserFormModal({ user, onClose, onSubmit, onGerarSenhaTem
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   // A senha temporária gerada, mostrada UMA vez: o servidor só guarda o hash.
-  const [temporaria, setTemporaria] = useState<string | null>(null);
+  const [temporaria, setTemporaria] = useState<string | null>(senhaGerada);
   const [copiada, setCopiada] = useState(false);
   // O cadastro deu certo: a senha da conta nova está na tela, e os campos travam.
   const criada = !user && temporaria !== null;
@@ -90,85 +97,63 @@ export default function UserFormModal({ user, onClose, onSubmit, onGerarSenhaTem
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
-      <div className="relative w-full max-w-md bg-surface-card border border-border-sutil shadow-2xl overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-sutil bg-bg-base/50">
-          <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">
-            {user ? 'Editar Usuário' : 'Novo Usuário'}
-          </h2>
-          <button onClick={onClose} className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
-            <X size={16} />
-          </button>
-        </div>
+    <FormularioLateral
+      titulo={user ? 'Editar usuário' : 'Novo usuário'}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      erro={error}
+      salvando={loading}
+      // Cadastrada a conta, o que resta é fechar: salvar de novo criaria outra, e um
+      // Cancelar diria que dá para desfazer a conta que já existe.
+      rodape={criada ? <Button onClick={onClose}>Fechar</Button> : undefined}
+    >
+      <Campo rotulo="Nome completo" obrigatorio>
+        <Input required disabled={criada} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+      </Campo>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 font-mono text-xs">
-          {error && <div className="p-3 bg-status-danger/10 text-status-danger border border-status-danger/20 rounded">{error}</div>}
+      <Campo rotulo="E-mail" obrigatorio>
+        <Input required disabled={criada} type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+      </Campo>
 
-          <div className="space-y-1">
-            <label className="text-text-secondary uppercase tracking-widest text-[10px]">Nome Completo*</label>
-            <input required disabled={criada} type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors" />
-          </div>
+      <Campo rotulo="Cargo" obrigatorio ajuda={alcance}>
+        <Seletor
+          obrigatorio
+          disabled={criada}
+          value={formData.role}
+          onChange={(valor) => setFormData({ ...formData, role: valor as Cargo })}
+          vazio="Selecione..."
+          placeholderDaBusca="Buscar cargo..."
+          opcoes={CARGOS_NA_TELA.map((cargo) => ({ value: cargo.valor, label: cargo.nome }))}
+        />
+      </Campo>
 
-          <div className="space-y-1">
-            <label className="text-text-secondary uppercase tracking-widest text-[10px]">E-mail*</label>
-            <input required disabled={criada} type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors" />
-          </div>
-
-          <div className="space-y-1">
-            <label htmlFor="cargo-do-usuario" className="text-text-secondary uppercase tracking-widest text-[10px]">Cargo*</label>
-            <select id="cargo-do-usuario" required disabled={criada} value={formData.role} onChange={e => setFormData({...formData, role: e.target.value as Cargo})} className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors">
-              {CARGOS_NA_TELA.map((cargo) => <option key={cargo.valor} value={cargo.valor}>{cargo.nome}</option>)}
-            </select>
-            {alcance && <p className="text-text-tertiary text-[10px] leading-relaxed">{alcance}</p>}
-          </div>
-
-          {(onGerarSenhaTemporaria || temporaria) && (
-            <div className="space-y-2 pt-2 border-t border-border-sutil">
-              {temporaria ? (
-                <div className="space-y-2">
-                  <p className="text-text-secondary uppercase tracking-widest text-[10px]">Senha temporária</p>
-                  <div className="flex items-center gap-3">
-                    <code className="flex-1 p-2 bg-bg-base border border-border-sutil text-text-primary select-all tracking-widest">{temporaria}</code>
-                    <button type="button" onClick={() => void copiar()} className="px-3 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base transition-colors">
-                      {copiada ? 'Copiada' : 'Copiar'}
-                    </button>
-                  </div>
-                  <p className="text-text-tertiary text-[10px] leading-relaxed">
-                    Aparece só agora: feche e ela não volta. Entregue à pessoa; ela escolhe a própria senha no primeiro acesso.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <button type="button" onClick={() => void gerarTemporaria()} className="px-4 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base transition-colors">
-                    Gerar senha temporária
-                  </button>
-                  <p className="text-text-tertiary text-[10px] leading-relaxed">
-                    Para quem esqueceu a senha: a de hoje deixa de valer e a pessoa escolhe outra ao entrar.
-                  </p>
-                </>
-              )}
+      {(onGerarSenhaTemporaria || temporaria) && (
+        <div className="border-t border-border-sutil pt-4">
+          {temporaria ? (
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium text-text-primary">Senha temporária</p>
+              <div className="flex items-center gap-2">
+                <code className="flex h-10 min-w-0 flex-1 select-all items-center overflow-x-auto rounded-md border border-border-sutil bg-bg-base px-3 font-mono text-sm text-text-primary">{temporaria}</code>
+                <Button variant="outline" onClick={() => void copiar()}>
+                  {copiada ? 'Copiada' : 'Copiar'}
+                </Button>
+              </div>
+              <p className="text-xs leading-relaxed text-text-tertiary">
+                Aparece só agora: feche e ela não volta. Entregue à pessoa; ela escolhe a própria senha no primeiro acesso.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Button variant="outline" onClick={() => void gerarTemporaria()}>
+                <KeyRound /> Gerar senha temporária
+              </Button>
+              <p className="text-xs leading-relaxed text-text-tertiary">
+                Para quem esqueceu a senha: a de hoje deixa de valer e a pessoa escolhe outra ao entrar.
+              </p>
             </div>
           )}
-
-          <div className="pt-4 flex justify-end gap-3 border-t border-border-sutil">
-            {/* Cadastrada a conta, o que resta é fechar: salvar de novo criaria outra. */}
-            {criada ? (
-              <button type="button" onClick={onClose} className="px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary transition-colors">
-                Fechar
-              </button>
-            ) : (
-              <>
-                <button type="button" onClick={onClose} className="px-4 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base transition-colors">
-                  Cancelar
-                </button>
-                <button type="submit" disabled={loading} className="px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary transition-colors disabled:opacity-50">
-                  {loading ? 'Salvando...' : 'Salvar Usuário'}
-                </button>
-              </>
-            )}
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+      )}
+    </FormularioLateral>
   );
 }

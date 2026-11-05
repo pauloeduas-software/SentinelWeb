@@ -1,6 +1,10 @@
 import { useState } from 'react';
-import { Armchair, User, X } from 'lucide-react';
+import { MapPin, User } from 'lucide-react';
+import FormularioLateral from '../../../components/FormularioLateral';
 import ReferenceSelect from '../../../components/ReferenceSelect';
+import { Campo } from '../../../components/ui/campo';
+import { Input, Textarea } from '../../../components/ui/input';
+import { Segmentado } from '../../../components/ui/segmentado';
 import { useStockItemQuery } from '../../../queries/stock.queries';
 import type { AlvoDaEntregaDeEstoque, ItemDeEstoque } from '../../../types/stock.types';
 import { hojeNoCampoDeData } from '../../../helpers/format.helper';
@@ -19,11 +23,6 @@ import { ehComponente, ehConsumivel } from '../helpers/estoque.helper';
 //
 // O COMPONENTE (AI) vai só para um computador: a janela dele não tem a escolha
 // entre colaborador e posto, só o campo do computador.
-
-const CLASSE_CAMPO =
-  'w-full p-2 bg-bg-base border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors';
-
-const ROTULO = 'text-text-secondary uppercase tracking-widest text-[10px]';
 
 interface EntregaModalProps {
   item: ItemDeEstoque;
@@ -88,109 +87,65 @@ export default function EntregaModal({ item, onClose, onSubmit }: EntregaModalPr
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
-      <div className="relative w-full max-w-lg bg-surface-card border border-border-sutil shadow-2xl flex flex-col">
+    <FormularioLateral
+      titulo="Entregar"
+      descricao={`${atual.name} · ${atual.disponivel}${ehConsumivel(atual) ? '' : ` de ${atual.qty}`} ${atual.disponivel === 1 ? 'disponível' : 'disponíveis'}`}
+      onClose={onClose}
+      onSubmit={enviar}
+      erro={erro}
+      salvando={salvando}
+      bloqueado={!pronto}
+      rotuloDoEnvio="Entregar"
+      rotuloEnviando="Entregando..."
+    >
+      {componente ? (
+        <Campo rotulo="Computador" obrigatorio>
+          <ReferenceSelect rota="assets" valor={assetId} obrigatorio onChange={setAssetId} />
+        </Campo>
+      ) : (
+        <>
+          <Segmentado
+            opcoes={[
+              { valor: 'PERSON', rotulo: <><User /> Colaborador</> },
+              { valor: 'WORKSTATION', rotulo: <><MapPin /> Posto</> },
+            ]}
+            valor={tipo}
+            onChange={setTipo}
+          />
 
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-sutil bg-bg-base/50">
-          <div>
-            <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">Entregar</h2>
-            <p className="font-mono text-[10px] text-text-tertiary mt-1">
-              {atual.name} · {atual.disponivel}{ehConsumivel(atual) ? '' : ` de ${atual.qty}`} {atual.disponivel === 1 ? 'disponível' : 'disponíveis'}
-            </p>
-          </div>
-          <button onClick={onClose} aria-label="Fechar" title="Fechar" className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
-            <X size={16} />
-          </button>
-        </div>
-
-        <form onSubmit={enviar} className="p-6 font-mono text-xs space-y-4">
-          {erro && (
-            <div className="p-3 bg-status-danger/10 text-status-danger border border-status-danger/20">{erro}</div>
-          )}
-
-          {componente ? (
-            <label className="space-y-1.5 block">
-              <span className={ROTULO}>Computador *</span>
-              <ReferenceSelect rota="assets" valor={assetId} obrigatorio onChange={setAssetId} />
-            </label>
+          {tipo === 'PERSON' ? (
+            <Campo rotulo="Colaborador" obrigatorio>
+              <ReferenceSelect rota="people" valor={personId} obrigatorio comDetalhe onChange={setPersonId} />
+            </Campo>
           ) : (
-            <>
-            <div className="flex border border-border-sutil w-fit">
-              {([['PERSON', 'Colaborador', User], ['WORKSTATION', 'Posto', Armchair]] as const).map(([valor, rotulo, Icone]) => (
-                <button
-                  key={valor}
-                  type="button"
-                  onClick={() => setTipo(valor)}
-                  className={`flex items-center gap-2 px-4 py-2 uppercase tracking-widest transition-colors ${
-                    tipo === valor
-                      ? 'bg-text-primary text-bg-base'
-                      : 'text-text-tertiary hover:text-text-primary hover:bg-bg-base'
-                  }`}
-                >
-                  <Icone size={12} /> {rotulo}
-                </button>
-              ))}
-            </div>
-
-            {tipo === 'PERSON' ? (
-              <label className="space-y-1.5 block">
-                <span className={ROTULO}>Colaborador *</span>
-                <ReferenceSelect rota="people" valor={personId} obrigatorio comDetalhe onChange={setPersonId} />
-              </label>
-            ) : (
-              <label className="space-y-1.5 block">
-                <span className={ROTULO}>Posto *</span>
-                <ReferenceSelect rota="workstations" valor={workstationId} obrigatorio onChange={setWorkstationId} />
-              </label>
-            )}
-            </>
+            <Campo rotulo="Posto" obrigatorio>
+              <ReferenceSelect rota="workstations" valor={workstationId} obrigatorio onChange={setWorkstationId} />
+            </Campo>
           )}
+        </>
+      )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <label className="space-y-1.5 block">
-              <span className={ROTULO}>Quantidade *</span>
-              <input
-                required type="number" min={1} max={100} value={qty}
-                onChange={(e) => setQty(e.target.value)} className={CLASSE_CAMPO}
-              />
-            </label>
+      <div className="grid grid-cols-2 gap-4">
+        <Campo rotulo="Quantidade" obrigatorio>
+          <Input required type="number" min={1} max={100} value={qty} onChange={(e) => setQty(e.target.value)} />
+        </Campo>
 
-            <label className="space-y-1.5 block">
-              <span className={ROTULO}>Data da entrega *</span>
-              <input
-                type="date" required max={hoje} value={checkoutAt}
-                onChange={(e) => setCheckoutAt(e.target.value)} className={CLASSE_CAMPO}
-              />
-            </label>
-          </div>
-
-          <label className="space-y-1.5 block">
-            <span className={ROTULO}>Observações</span>
-            <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={CLASSE_CAMPO} />
-          </label>
-
-          <p className="text-[10px] text-text-tertiary leading-relaxed border-t border-border-sutil pt-3">
-            {componente
-              ? 'Componente vai só para um computador e fica nele, mesmo quando o computador muda de mãos. '
-                + 'Para tirar, use o Retirar no detalhe do item: na troca de peça, antes da baixa do computador '
-                + 'ou para corrigir uma entrega errada.'
-              : ehConsumivel(item)
-                ? 'Consumível não volta: a entrega tira as unidades do total e não fica com ninguém. '
-                  + 'Lançou errado? Some de volta no total, pelo Editar.'
-                : 'Entregar a um posto vale pela mesa, não pela pessoa: qualquer ocupante aberto dela '
-                  + 'responde pelas unidades. A devolução é feita no detalhe do item, quantas voltarem.'}
-          </p>
-
-          <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="px-4 py-2 border border-border-sutil text-text-tertiary hover:text-text-primary uppercase tracking-widest transition-colors">
-              Cancelar
-            </button>
-            <button type="submit" disabled={salvando || !pronto} className="px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary uppercase tracking-widest transition-colors disabled:opacity-50">
-              {salvando ? 'Entregando…' : 'Entregar'}
-            </button>
-          </div>
-        </form>
+        <Campo rotulo="Data da entrega" obrigatorio>
+          <Input type="date" required max={hoje} value={checkoutAt} onChange={(e) => setCheckoutAt(e.target.value)} />
+        </Campo>
       </div>
-    </div>
+
+      <Campo rotulo="Observações">
+        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </Campo>
+
+      <p className="text-xs leading-relaxed text-text-tertiary">
+        {componente
+          ? 'Fica no computador, mesmo quando ele muda de mãos. Para tirar, use o Retirar no detalhe do item.'
+          : ehConsumivel(item)
+            ? 'Consumível não volta: a entrega tira do total. Lançou errado? Some de volta pelo Editar.'
+            : 'No posto, vale pela mesa: qualquer ocupante responde. A devolução é feita no detalhe do item.'}
+      </p>
+    </FormularioLateral>
   );
 }

@@ -18,7 +18,7 @@ export interface OpcaoFixa {
    * Uma linha explicando a opção, mostrada no formulário quando ela está
    * selecionada.
    *
-   * Existe porque rótulo de `<select>` não carrega a diferença entre duas
+   * Existe porque o rótulo de uma opção não carrega a diferença entre duas
    * opções parecidas — e as quatro de `StatusLabel.type` são exatamente isso.
    * A dúvida aparece na hora de escolher, então a resposta vai ali.
    */
@@ -77,13 +77,13 @@ export type AcaoLinhaId = 'ativacao' | 'ficha';
 
 export interface AcaoLinhaSpec {
   id: AcaoLinhaId;
-  /** Vira o `title` do botão — é o que o usuário lê ao passar o mouse. */
+  /** O nome da ação no `⋯` da linha. */
   titulo: string;
   /**
    * Ação que ALTERNA um booleano da linha — Desativar/Ativar. O `titulo` vale
    * com o campo ligado; `tituloSeDesligado`, com ele desligado. A linha com o
    * campo desligado aparece esmaecida e marcada, para o estado não depender de
-   * passar o mouse no botão.
+   * abrir o menu.
    */
   alterna?: { campo: string; tituloSeDesligado: string; marcaSeDesligado: string };
 }

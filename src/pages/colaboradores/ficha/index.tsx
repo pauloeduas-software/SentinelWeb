@@ -1,7 +1,14 @@
-import { ArrowLeft, Boxes, History, KeyRound, Laptop, MapPin, UserX } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { ArrowLeft, History, KeyRound, Mail, MapPin, Monitor, Package } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import HistoryPanel from './components/HistoryPanel';
 import { useColaborador } from './hooks/useColaborador';
+import { Avatar } from '../../../components/ui/avatar';
+import { Aviso } from '../../../components/ui/aviso';
+import { Badge } from '../../../components/ui/badge';
+import { Card } from '../../../components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 import { formatarData, formatarDiaDoInstante } from '../../../helpers/format.helper';
 import { caminhoDoItem, textoDeUnidades } from '../../../helpers/estoque.helper';
 import { caminhoDaLicenca, textoDaSituacao } from '../../../helpers/licenca.helper';
@@ -15,15 +22,65 @@ import { caminhoDaLicenca, textoDaSituacao } from '../../../helpers/licenca.help
 // Os postos aparecem inclusive quando não têm ativo nenhum entregue: é uma
 // ocupação aberta, e é ela que a desativação cobra.
 //
-// O histórico vem embaixo, e a ordem é o argumento: a lista de cima diz o que
-// ESTÁ, o histórico diz o que FOI. Um ativo devolvido mês passado não aparece
-// na de cima, e é ele que responde "já teve um notebook antes?".
-
-const CELULA = 'px-6 py-3';
-const CABECALHO = 'px-6 py-3 font-normal';
+// Quem é a pessoa fica no card à esquerda; à direita, uma aba para cada coisa
+// que está com ela e, por último, o histórico: as abas dizem o que ESTÁ, o
+// histórico diz o que FOI. Um ativo devolvido mês passado não aparece nas de
+// cima, e é ele que responde "já teve um notebook antes?". Cada linha abre o
+// registro, onde mora o Devolver ou o Encerrar.
 
 /** Volta para a lista de Colaboradores. */
 const VOLTAR = '/colaboradores';
+
+interface LinhaDaFicha {
+  id: string;
+  para?: string;
+  /** O nome na primeira coluna, e a nota embaixo dele. */
+  nome: string;
+  nota?: string | null;
+  celulas: readonly ReactNode[];
+}
+
+/** A tabela de uma aba: a linha inteira abre o registro. */
+function TabelaDaFicha({ colunas, linhas, vazio }: { colunas: readonly string[]; linhas: readonly LinhaDaFicha[]; vazio: string }) {
+  const navigate = useNavigate();
+
+  if (linhas.length === 0) {
+    return <Card className="py-16 text-center text-sm text-text-tertiary">{vazio}</Card>;
+  }
+
+  return (
+    <Card className="overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>{colunas.map((coluna) => <TableHead key={coluna}>{coluna}</TableHead>)}</TableRow>
+        </TableHeader>
+        <TableBody>
+          {linhas.map(({ id, para, nome, nota, celulas }) => (
+            <TableRow
+              key={id}
+              onClick={para ? () => navigate(para) : undefined}
+              className={para ? 'cursor-pointer' : undefined}
+            >
+              <TableCell>
+                {para ? (
+                  <Link
+                    to={para}
+                    onClick={(evento) => evento.stopPropagation()}
+                    className="font-medium text-text-primary focus-visible:underline focus-visible:outline-none"
+                  >
+                    {nome}
+                  </Link>
+                ) : <span className="font-medium text-text-primary">{nome}</span>}
+                {nota && <div className="mt-0.5 text-xs text-text-tertiary">{nota}</div>}
+              </TableCell>
+              {celulas.map((celula, indice) => <TableCell key={indice}>{celula}</TableCell>)}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Card>
+  );
+}
 
 export default function ColaboradorPage() {
   const {
@@ -32,274 +89,126 @@ export default function ColaboradorPage() {
   } = useColaborador();
 
   if (carregando) {
-    return <p className="font-mono text-xs text-text-tertiary">Carregando colaborador...</p>;
+    return <p className="text-sm text-text-tertiary">Carregando colaborador...</p>;
   }
 
   if (erro || !pessoa) {
     return (
-      <div className="font-mono text-xs space-y-4">
-        <p className="text-status-danger">{erro ?? 'Colaborador não encontrado.'}</p>
-        <Link to={VOLTAR} className="text-text-tertiary hover:text-text-primary flex items-center gap-2">
-          <ArrowLeft size={14} /> Voltar para a lista
+      <div className="space-y-4 text-sm">
+        <Aviso>{erro ?? 'Colaborador não encontrado.'}</Aviso>
+        <Link to={VOLTAR} className="flex items-center gap-2 text-text-tertiary hover:text-text-primary">
+          <ArrowLeft className="size-4" /> Voltar para a lista
         </Link>
       </div>
     );
   }
 
+  const unidades = pessoa.itens.reduce((soma, entrega) => soma + entrega.unidades, 0);
+
   return (
-    <div className="motion-safe:animate-fade-in space-y-8">
+    <div className="space-y-4 pb-6 motion-safe:animate-fade-in">
+      <Link to={VOLTAR} className="inline-flex items-center gap-1.5 text-sm text-text-tertiary transition-colors hover:text-text-primary">
+        <ArrowLeft className="size-4" /> Colaboradores
+      </Link>
 
-      <div className="flex justify-between items-end gap-6 flex-wrap">
-        <div className="space-y-2">
-          <Link to={VOLTAR} className="font-mono text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary flex items-center gap-2">
-            <ArrowLeft size={12} /> Colaboradores
-          </Link>
-          <h2 className="text-xl font-mono text-text-primary uppercase tracking-widest">
-            {pessoa.name}
-          </h2>
-          <div className="flex items-center gap-4 font-mono text-xs text-text-tertiary flex-wrap">
-            {pessoa.email && <span>{pessoa.email}</span>}
-            {pessoa.isActive ? (
-              <span className="text-status-success">ativo</span>
-            ) : (
-              // Estar desativado é a primeira coisa que a tela precisa dizer: todo
-              // número abaixo tem que ser lido como histórico. Quando e por
-              // quem foi desativado fica na auditoria, no banco (AB).
-              <span className="flex items-center gap-2 text-status-warning">
-                <UserX size={12} /> desativado
-              </span>
-            )}
+      <div className="grid items-start gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]">
+        <Card className="overflow-hidden border-t-4 border-t-primary">
+          <div className="flex flex-col items-center gap-3 p-6 text-center">
+            <Avatar nome={pessoa.name} className="size-20 text-2xl" />
+            <div className="min-w-0 space-y-1">
+              <h2 className="break-words text-xl font-bold text-text-primary">{pessoa.name}</h2>
+              {pessoa.email && (
+                <p className="flex items-center justify-center gap-1.5 break-all text-sm text-text-tertiary">
+                  <Mail className="size-3.5 shrink-0" /> {pessoa.email}
+                </p>
+              )}
+            </div>
+            {/* Estar desativado é a primeira coisa que a tela precisa dizer: todo
+                número ao lado tem que ser lido como histórico. Quando e por quem
+                foi desativado fica na auditoria, no banco (AB). */}
+            <Badge tom={pessoa.isActive ? 'sucesso' : 'aviso'}>{pessoa.isActive ? 'Ativo' : 'Desativado'}</Badge>
           </div>
-          {/* Com o rótulo, como a aba Detalhes do computador. */}
-          <div className="font-mono text-xs space-y-1 max-w-3xl">
-            <span className="text-text-tertiary uppercase tracking-widest text-[10px]">Notas</span>
-            <p className="text-text-secondary whitespace-pre-wrap break-words leading-relaxed">
-              {pessoa.notes || <span className="text-text-tertiary">Sem notas.</span>}
-            </p>
-          </div>
-        </div>
+          {pessoa.notes && (
+            <div className="space-y-1 border-t border-border-sutil p-6">
+              <p className="text-xs font-medium text-text-tertiary">Notas</p>
+              <p className="whitespace-pre-wrap break-words text-sm text-text-secondary">{pessoa.notes}</p>
+            </div>
+          )}
+        </Card>
 
+        <Tabs defaultValue="computadores" className="min-w-0 space-y-4">
+          <TabsList>
+            <TabsTrigger value="computadores"><Monitor /> Computadores ({pessoa.ativos.length})</TabsTrigger>
+            <TabsTrigger value="postos"><MapPin /> Postos ({ocupacoes.length})</TabsTrigger>
+            <TabsTrigger value="estoque"><Package /> Estoque ({unidades})</TabsTrigger>
+            <TabsTrigger value="licencas"><KeyRound /> Licenças ({pessoa.licencas.length})</TabsTrigger>
+            <TabsTrigger value="historico"><History /> Histórico ({totalDoHistorico})</TabsTrigger>
+          </TabsList>
+
+          {/* Só os entregues a ELA: o computador do posto que ocupa fica na ficha do posto. */}
+          <TabsContent value="computadores">
+            <TabelaDaFicha
+              colunas={['Computador', 'Modelo', 'Devolução prevista', 'Desde']}
+              vazio="Não está com nenhum computador."
+              linhas={pessoa.ativos.map((posse) => ({
+                id: posse.id,
+                para: `/computadores/${posse.asset.id}`,
+                nome: posse.asset.name ? `${posse.asset.assetTag} · ${posse.asset.name}` : posse.asset.assetTag,
+                nota: posse.checkoutNotes,
+                celulas: [posse.asset.model.name, formatarData(posse.expectedCheckinAt), formatarDiaDoInstante(posse.checkoutAt)],
+              }))}
+            />
+          </TabsContent>
+
+          {/* Inclusive os postos sem ativo nenhum: ocupar também é responder por ele. */}
+          <TabsContent value="postos">
+            <TabelaDaFicha
+              colunas={['Posto', 'Turno', 'Desde']}
+              vazio="Não ocupa nenhum posto."
+              linhas={ocupacoes.map((ocupacao) => ({
+                id: ocupacao.id,
+                para: ocupacao.workstation ? `/postos/${ocupacao.workstation.id}` : undefined,
+                nome: ocupacao.workstation?.name ?? '—',
+                celulas: [ocupacao.shift || '—', formatarDiaDoInstante(ocupacao.startedAt)],
+              }))}
+            />
+          </TabsContent>
+
+          {/* As unidades no NOME dela, nunca as do posto que ocupa. */}
+          <TabsContent value="estoque">
+            <TabelaDaFicha
+              colunas={['Item', 'Categoria', 'Quantidade', 'Desde']}
+              vazio="Não está com nenhum item de estoque."
+              linhas={pessoa.itens.map((entrega) => ({
+                id: entrega.id,
+                para: caminhoDoItem(entrega.item.id, pessoa.name),
+                nome: entrega.item.name,
+                nota: entrega.notes,
+                celulas: [entrega.item.category.name, textoDeUnidades(entrega.unidades), formatarDiaDoInstante(entrega.checkoutAt)],
+              }))}
+            />
+          </TabsContent>
+
+          {/* As entregues a ELA, nunca as do computador que ela usa. */}
+          <TabsContent value="licencas">
+            <TabelaDaFicha
+              colunas={['Licença', 'Categoria', 'Situação', 'Desde']}
+              vazio="Não está com nenhuma licença."
+              linhas={pessoa.licencas.map((entrega) => ({
+                id: entrega.id,
+                para: caminhoDaLicenca(entrega.license.id, pessoa.name),
+                nome: entrega.license.name,
+                nota: entrega.checkoutNotes,
+                celulas: [entrega.license.category?.name ?? '—', textoDaSituacao(entrega), formatarDiaDoInstante(entrega.checkoutAt)],
+              }))}
+            />
+          </TabsContent>
+
+          <TabsContent value="historico">
+            <HistoryPanel eventos={historico} total={totalDoHistorico} carregando={carregandoHistorico} />
+          </TabsContent>
+        </Tabs>
       </div>
-
-      <div>
-        <div className="flex items-center gap-3 mb-3">
-          <Laptop size={14} className="text-text-tertiary" />
-          <h3 className="font-mono text-xs uppercase tracking-widest text-text-secondary">
-            Computadores com esta pessoa <span className="text-text-tertiary">({pessoa.ativos.length})</span>
-          </h3>
-        </div>
-        <p className="font-mono text-[10px] text-text-tertiary mb-3 leading-relaxed">
-          Computadores entregues a ELA — nunca o do posto que ocupa, que fica na ficha do posto.
-          É o que precisa voltar antes de desativá-la — pela ficha do computador, onde está o Devolver.
-        </p>
-
-        <div className="bg-surface-card border border-border-sutil overflow-x-auto">
-          <table className="w-full text-left font-mono text-xs whitespace-nowrap">
-            <thead className="bg-bg-base/50 text-text-secondary border-b border-border-sutil uppercase tracking-widest">
-              <tr>
-                <th className={CABECALHO}>Computador</th>
-                <th className={CABECALHO}>Modelo</th>
-                <th className={CABECALHO}>Devolução prevista</th>
-                <th className={CABECALHO}>Desde</th>
-              </tr>
-            </thead>
-            <tbody className="text-text-primary divide-y divide-border-sutil/50">
-              {pessoa.ativos.map((posse) => (
-                <tr key={posse.id} className="hover:bg-bg-base transition-colors">
-                  <td className={CELULA}>
-                    <Link to={`/computadores/${posse.asset.id}`} className="hover:underline underline-offset-2">
-                      {posse.asset.name ? `${posse.asset.assetTag} — ${posse.asset.name}` : posse.asset.assetTag}
-                    </Link>
-                    {posse.checkoutNotes && (
-                      <div className="text-[10px] text-text-tertiary mt-0.5">{posse.checkoutNotes}</div>
-                    )}
-                  </td>
-                  <td className={`${CELULA} text-text-tertiary`}>{posse.asset.model.name}</td>
-                  <td className={`${CELULA} text-text-tertiary`}>{formatarData(posse.expectedCheckinAt)}</td>
-                  <td className={`${CELULA} text-text-tertiary`}>{formatarDiaDoInstante(posse.checkoutAt)}</td>
-                </tr>
-              ))}
-              {pessoa.ativos.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-6 py-10 text-center text-text-tertiary">
-                    Não está com nenhum computador.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div>
-        <div className="flex items-center gap-3 mb-3">
-          <MapPin size={14} className="text-text-tertiary" />
-          <h3 className="font-mono text-xs uppercase tracking-widest text-text-secondary">
-            Postos ocupados <span className="text-text-tertiary">({ocupacoes.length})</span>
-          </h3>
-        </div>
-        <p className="font-mono text-[10px] text-text-tertiary mb-3 leading-relaxed">
-          Aparecem aqui inclusive os postos sem ativo nenhum: ocupar um posto também é
-          responder por ele, e precisa ser encerrado antes de desativar a pessoa — pela ficha
-          do posto, onde está o Encerrar.
-        </p>
-
-        <div className="bg-surface-card border border-border-sutil overflow-x-auto">
-          <table className="w-full text-left font-mono text-xs whitespace-nowrap">
-            <thead className="bg-bg-base/50 text-text-secondary border-b border-border-sutil uppercase tracking-widest">
-              <tr>
-                <th className={CABECALHO}>Posto</th>
-                <th className={CABECALHO}>Turno</th>
-                <th className={CABECALHO}>Desde</th>
-              </tr>
-            </thead>
-            <tbody className="text-text-primary divide-y divide-border-sutil/50">
-              {ocupacoes.map((ocupacao) => (
-                <tr key={ocupacao.id} className="hover:bg-bg-base transition-colors">
-                  <td className={CELULA}>
-                    {/* A ficha do posto é onde mora o Encerrar, como o Devolver mora
-                        no detalhe do item e no da licença. */}
-                    {ocupacao.workstation ? (
-                      <Link to={`/postos/${ocupacao.workstation.id}`} className="hover:underline underline-offset-2">
-                        {ocupacao.workstation.name}
-                      </Link>
-                    ) : '—'}
-                  </td>
-                  <td className={CELULA}>{ocupacao.shift || '—'}</td>
-                  <td className={`${CELULA} text-text-tertiary`}>{formatarDiaDoInstante(ocupacao.startedAt)}</td>
-                </tr>
-              ))}
-              {ocupacoes.length === 0 && (
-                <tr>
-                  <td colSpan={3} className="px-6 py-10 text-center text-text-tertiary">
-                    Não ocupa nenhum posto.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div>
-        <div className="flex items-center gap-3 mb-3">
-          <Boxes size={14} className="text-text-tertiary" />
-          <h3 className="font-mono text-xs uppercase tracking-widest text-text-secondary">
-            Itens de estoque com esta pessoa{' '}
-            <span className="text-text-tertiary">
-              ({textoDeUnidades(pessoa.itens.reduce((soma, entrega) => soma + entrega.unidades, 0))})
-            </span>
-          </h3>
-        </div>
-        <p className="font-mono text-[10px] text-text-tertiary mb-3 leading-relaxed">
-          Unidades de estoque no NOME dela — nunca as do posto que ocupa. É o que precisa
-          voltar antes de desativá-la — pelo detalhe do item, aberto no nome dela.
-        </p>
-
-        <div className="bg-surface-card border border-border-sutil overflow-x-auto">
-          <table className="w-full text-left font-mono text-xs whitespace-nowrap">
-            <thead className="bg-bg-base/50 text-text-secondary border-b border-border-sutil uppercase tracking-widest">
-              <tr>
-                <th className={CABECALHO}>Item</th>
-                <th className={CABECALHO}>Categoria</th>
-                <th className={CABECALHO}>Quantidade</th>
-                <th className={CABECALHO}>Desde</th>
-              </tr>
-            </thead>
-            <tbody className="text-text-primary divide-y divide-border-sutil/50">
-              {pessoa.itens.map((entrega) => (
-                <tr key={entrega.id} className="hover:bg-bg-base transition-colors">
-                  <td className={CELULA}>
-                    <Link to={caminhoDoItem(entrega.item.id, pessoa.name)} className="hover:underline underline-offset-2">
-                      {entrega.item.name}
-                    </Link>
-                    {entrega.notes && (
-                      <div className="text-[10px] text-text-tertiary mt-0.5">{entrega.notes}</div>
-                    )}
-                  </td>
-                  <td className={`${CELULA} text-text-tertiary`}>{entrega.item.category.name}</td>
-                  <td className={`${CELULA} text-text-tertiary`}>{textoDeUnidades(entrega.unidades)}</td>
-                  <td className={`${CELULA} text-text-tertiary`}>{formatarDiaDoInstante(entrega.checkoutAt)}</td>
-                </tr>
-              ))}
-              {pessoa.itens.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-6 py-10 text-center text-text-tertiary">
-                    Não está com nenhum item de estoque.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div>
-        <div className="flex items-center gap-3 mb-3">
-          <KeyRound size={14} className="text-text-tertiary" />
-          <h3 className="font-mono text-xs uppercase tracking-widest text-text-secondary">
-            Licenças com esta pessoa <span className="text-text-tertiary">({pessoa.licencas.length})</span>
-          </h3>
-        </div>
-        <p className="font-mono text-[10px] text-text-tertiary mb-3 leading-relaxed">
-          Licenças entregues a ELA, como uma assinatura do Microsoft 365 — nunca as do
-          computador que ela usa, que ficam na aba Licenças do ativo. É o que precisa voltar
-          antes de desativá-la — pelo detalhe da licença, aberto no nome dela.
-        </p>
-
-        <div className="bg-surface-card border border-border-sutil overflow-x-auto">
-          <table className="w-full text-left font-mono text-xs whitespace-nowrap">
-            <thead className="bg-bg-base/50 text-text-secondary border-b border-border-sutil uppercase tracking-widest">
-              <tr>
-                <th className={CABECALHO}>Licença</th>
-                <th className={CABECALHO}>Categoria</th>
-                <th className={CABECALHO}>Situação</th>
-                <th className={CABECALHO}>Desde</th>
-              </tr>
-            </thead>
-            <tbody className="text-text-primary divide-y divide-border-sutil/50">
-              {pessoa.licencas.map((entrega) => (
-                <tr key={entrega.id} className="hover:bg-bg-base transition-colors">
-                  <td className={CELULA}>
-                    <Link to={caminhoDaLicenca(entrega.license.id, pessoa.name)} className="hover:underline underline-offset-2">
-                      {entrega.license.name}
-                    </Link>
-                    {entrega.checkoutNotes && (
-                      <div className="text-[10px] text-text-tertiary mt-0.5">{entrega.checkoutNotes}</div>
-                    )}
-                  </td>
-                  <td className={`${CELULA} text-text-tertiary`}>{entrega.license.category?.name ?? '—'}</td>
-                  <td className={`${CELULA} text-text-tertiary`}>{textoDaSituacao(entrega)}</td>
-                  <td className={`${CELULA} text-text-tertiary`}>{formatarDiaDoInstante(entrega.checkoutAt)}</td>
-                </tr>
-              ))}
-              {pessoa.licencas.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-6 py-10 text-center text-text-tertiary">
-                    Não está com nenhuma licença.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div>
-        <div className="flex items-center gap-3 mb-3">
-          <History size={14} className="text-text-tertiary" />
-          <h3 className="font-mono text-xs uppercase tracking-widest text-text-secondary">
-            Histórico <span className="text-text-tertiary">({totalDoHistorico})</span>
-          </h3>
-        </div>
-        <p className="font-mono text-[10px] text-text-tertiary mb-3 leading-relaxed">
-          O que aconteceu com esta pessoa: entregas e devoluções de computador, licença e estoque,
-          entradas e saídas de posto.
-        </p>
-
-        <HistoryPanel eventos={historico} total={totalDoHistorico} carregando={carregandoHistorico} />
-      </div>
-
     </div>
   );
 }

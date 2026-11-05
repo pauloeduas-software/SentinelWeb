@@ -1,6 +1,6 @@
 import type { Cargo } from '../types/user.types';
 
-// OS CARGOS NA TELA (AV), do menor para o maior: a ordem é a do `<select>` do
+// OS CARGOS NA TELA (AV), do menor para o maior: a ordem é a do seletor do
 // formulário de Usuários. A frase diz o que cada um pode, para quem escolhe não
 // precisar adivinhar pelo nome.
 export const CARGOS_NA_TELA: readonly { valor: Cargo; nome: string; alcance: string }[] = [

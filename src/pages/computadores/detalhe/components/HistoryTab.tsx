@@ -1,4 +1,5 @@
-import { ArrowRightLeft, Clock, Cpu, KeyRound } from 'lucide-react';
+import { ArrowRightLeft, Cpu, KeyRound } from 'lucide-react';
+import { Card } from '../../../../components/ui/card';
 import type { EventoDoAtivo } from '../../../../types/asset.types';
 import { formatarDiaDoInstante } from '../../../../helpers/format.helper';
 import { tituloDoEvento } from '../helpers/historico.helper';
@@ -19,26 +20,27 @@ export default function HistoryTab({ eventos, total, carregando }: HistoryTabPro
   // Cálculo fora do JSX: o aviso de corte depende da comparação, não da lista.
   const cortado = total > eventos.length;
 
-  if (carregando) return <div className="text-text-tertiary">Carregando…</div>;
+  if (carregando) return <p className="text-sm text-text-tertiary">Carregando…</p>;
 
   if (eventos.length === 0) {
-    return <div className="text-text-tertiary">Nenhuma entrega, licença nem componente ainda.</div>;
+    return <Card className="p-6 text-sm text-text-tertiary">Nenhuma entrega, licença nem componente ainda.</Card>;
   }
 
   return (
-    <div className="space-y-4">
-      <ul className="space-y-2">
-        {eventos.map((evento) => (
-          <Evento key={evento.id} evento={evento} />
-        ))}
-      </ul>
+    <div className="space-y-3">
+      <Card className="overflow-hidden">
+        <ul className="divide-y divide-border-sutil text-sm">
+          {eventos.map((evento) => (
+            <Evento key={evento.id} evento={evento} />
+          ))}
+        </ul>
+      </Card>
 
       {cortado && (
-        <p className="text-text-tertiary text-[10px] leading-relaxed">
+        <p className="text-xs text-text-tertiary">
           Mostrando os {eventos.length} eventos mais recentes de {total}.
         </p>
       )}
-
     </div>
   );
 }
@@ -49,26 +51,21 @@ function Evento({ evento }: { evento: EventoDoAtivo }) {
   const Icone = evento.fonte === 'COMPONENTE' ? Cpu : KeyRound;
 
   return (
-    <li className="border border-border-sutil p-3 space-y-2">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
+    <li className="space-y-1 px-4 py-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <span className="flex items-center gap-2 text-text-secondary">
           {dePosse
-            ? <ArrowRightLeft size={13} className="text-text-tertiary shrink-0" />
-            : <Icone size={13} className="text-text-tertiary shrink-0" />}
-          <span className="text-text-primary">{tituloDoEvento(evento)}</span>
-        </div>
-
-        <span className="flex items-center gap-1.5 text-text-tertiary text-[10px] tabular-nums shrink-0">
-          {/* A posse, a licença e o componente são registrados por dia (AM): a
-              hora de um dia passado seria inventada. */}
-          <Clock size={11} /> {formatarDiaDoInstante(evento.at)}
+            ? <ArrowRightLeft className="size-4 shrink-0 text-text-tertiary" />
+            : <Icone className="size-4 shrink-0 text-text-tertiary" />}
+          {tituloDoEvento(evento)}
         </span>
+
+        {/* A posse, a licença e o componente são registrados por dia (AM): a
+            hora de um dia passado seria inventada. */}
+        <span className="shrink-0 text-xs tabular-nums text-text-tertiary">{formatarDiaDoInstante(evento.at)}</span>
       </div>
 
-      {notas && (
-        <div className="text-text-secondary text-[10px]">{notas}</div>
-      )}
-
+      {notas && <div className="text-xs text-text-tertiary">{notas}</div>}
     </li>
   );
 }

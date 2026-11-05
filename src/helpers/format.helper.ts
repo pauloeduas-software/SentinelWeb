@@ -116,3 +116,11 @@ export function diaDoInstante(iso: string): string {
 export function formatarDiaDoInstante(iso: string): string {
   return formatarData(diaDoInstante(iso));
 }
+
+/** As iniciais do avatar: primeira e última palavra do nome ("Ana Paula Souza" → "AS"). */
+export function iniciais(nome: string): string {
+  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return '?';
+  const ultima = partes.length > 1 ? partes[partes.length - 1] : '';
+  return `${partes[0].charAt(0)}${ultima.charAt(0)}`.toUpperCase();
+}

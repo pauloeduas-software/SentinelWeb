@@ -1,6 +1,11 @@
 import { useState } from 'react';
-import { ArrowRightLeft, MapPin, TriangleAlert, Undo2, User, X } from 'lucide-react';
+import { MapPin, TriangleAlert, User } from 'lucide-react';
+import FormularioLateral from '../../../components/FormularioLateral';
 import ReferenceSelect from '../../../components/ReferenceSelect';
+import { Aviso } from '../../../components/ui/aviso';
+import { Campo } from '../../../components/ui/campo';
+import { Input, Textarea } from '../../../components/ui/input';
+import { Segmentado } from '../../../components/ui/segmentado';
 import { diaDoInstante, hojeNoCampoDeData } from '../../../helpers/format.helper';
 import { useCatalogOptionsQuery } from '../../../queries/catalog.queries';
 import { montarDevolucao, montarEntrega, resumoDaPosse, type ResumoPosse } from '../helpers/posse.helper';
@@ -22,15 +27,10 @@ import type { AlvoDaPosse } from '../../../types/posse.types';
 // por `apiClient`: o `ReferenceSelect` e a lista de status disponíveis que o
 // destino da entrega precisa ESCONDER (ver `idsDisponiveis`).
 
-const CLASSE_CAMPO =
-  'w-full p-2 bg-bg-base border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors';
-
-const ROTULO = 'text-text-secondary uppercase tracking-widest text-[10px]';
-
 /**
  * As DUAS abas do seletor de alvo. Cada uma é um `targetType` do contrato, e a
  * `ajuda` explica a diferença no momento da escolha — que é quando a dúvida
- * aparece, e é o mesmo padrão dos `<select>` de Configurações.
+ * aparece, e é o mesmo padrão dos seletores de Configurações.
  *
  * Não há aba "Ativo": ativo é computador, e um computador não é entregue a
  * outro. O que acompanha a máquina (dock, monitor, cabo) é estoque.
@@ -48,11 +48,11 @@ const ABAS: readonly {
 }[] = [
   {
     tipo: 'PERSON',
-    rotulo: 'Pessoa',
+    rotulo: 'Colaborador',
     icone: User,
     rota: 'people',
     rotuloAlvo: 'Colaborador',
-    ajuda: 'A posse fica no nome dela: um responsável, direto. É o caso simples.',
+    ajuda: 'A posse fica no nome dele: um responsável, direto.',
   },
   {
     tipo: 'WORKSTATION',
@@ -60,7 +60,7 @@ const ABAS: readonly {
     icone: MapPin,
     rota: 'workstations',
     rotuloAlvo: 'Posto',
-    ajuda: 'A posse fica no POSTO. Quem responde são os ocupantes dele — podem ser vários, em turnos diferentes. Os ocupantes de cada posto se gerenciam na ficha do posto, em Postos.',
+    ajuda: 'A posse fica no posto: quem responde são os ocupantes dele, um ou vários, por turno. Eles se gerenciam na ficha do posto.',
   },
 ];
 
@@ -128,143 +128,84 @@ export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
-      <div className="relative w-full max-w-2xl bg-surface-card border border-border-sutil shadow-2xl flex flex-col">
+    <FormularioLateral
+      titulo={`${posse.entregue ? 'Devolver' : 'Entregar'} ${asset.assetTag}`}
+      descricao={
+        <>
+          {asset.model.manufacturer.name} {asset.model.name}
+          {asset.serial && <> · SN <span className="font-mono">{asset.serial}</span></>}
+        </>
+      }
+      largura="lg"
+      onClose={onClose}
+      onSubmit={enviar}
+      erro={erro}
+      salvando={salvando}
+      bloqueado={!dia || (!posse.entregue && !alvoId)}
+      rotuloDoEnvio={posse.entregue ? 'Confirmar devolução' : 'Confirmar entrega'}
+      rotuloEnviando={posse.entregue ? 'Devolvendo...' : 'Entregando...'}
+    >
+      {posse.entregue ? (
+        <>
+          <PosseAtual posse={posse} />
 
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-sutil bg-bg-base/50">
-          <h2 className="flex items-center gap-3 text-sm font-mono text-text-primary tracking-widest uppercase">
-            {posse.entregue ? <Undo2 size={16} /> : <ArrowRightLeft size={16} />}
-            {posse.entregue ? 'Devolver' : 'Entregar'} {asset.assetTag}
-          </h2>
-          <button onClick={onClose} className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
-            <X size={16} />
-          </button>
-        </div>
+          <Campo rotulo="Status de volta" ajuda="Como o ativo volta: disponível, em conserto, inutilizável. Em branco, o servidor decide.">
+            <ReferenceSelect rota="status-labels" valor={statusId} onChange={setStatusId} />
+          </Campo>
+        </>
+      ) : (
+        <>
+          <Segmentado
+            opcoes={ABAS.map((item) => ({ valor: item.tipo, rotulo: <><item.icone /> {item.rotulo}</> }))}
+            valor={aba}
+            onChange={trocarAba}
+          />
 
-        <form onSubmit={enviar} className="p-6 font-mono text-xs overflow-y-auto max-h-[78vh] space-y-5">
-          {erro && (
-            <div className="p-3 bg-status-danger/10 text-status-danger border border-status-danger/20">{erro}</div>
-          )}
-
-          <p className="text-text-tertiary text-[10px] leading-relaxed">
-            {asset.model.manufacturer.name} {asset.model.name}
-            {asset.serial && <> · SN {asset.serial}</>}
-          </p>
-
-          {posse.entregue ? (
-            <PosseAtual posse={posse} />
-          ) : (
-            <>
-              <div className="flex flex-wrap border border-border-sutil">
-                {ABAS.map((item) => (
-                  <button
-                    key={item.tipo}
-                    type="button"
-                    onClick={() => trocarAba(item.tipo)}
-                    className={`flex items-center gap-2 px-4 py-2 uppercase tracking-widest transition-colors ${
-                      item.tipo === aba
-                        ? 'bg-text-primary text-bg-base'
-                        : 'text-text-tertiary hover:text-text-primary hover:bg-bg-base'
-                    }`}
-                  >
-                    <item.icone size={14} /> {item.rotulo}
-                  </button>
-                ))}
-              </div>
-
-              <div className="space-y-1">
-                <label className={ROTULO}>{abaAtual.rotuloAlvo}*</label>
-                <ReferenceSelect
-                  // Remontar a cada aba é de propósito: cada alvo é uma lista
-                  // diferente, e a `key` evita que o `<select>` da aba anterior
-                  // apareça por um quadro com as opções velhas.
-                  key={abaAtual.tipo}
-                  rota={abaAtual.rota}
-                  valor={alvoId}
-                  obrigatorio
-                  onChange={setAlvoId}
-                />
-                <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">{abaAtual.ajuda}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className={ROTULO}>Status após a entrega</label>
-                  <ReferenceSelect
-                    rota="status-labels"
-                    valor={statusId}
-                    excluirIds={idsDisponiveis}
-                    onChange={setStatusId}
-                  />
-                  <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">
-                    Em branco, o servidor aplica o status de uso.
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <label className={ROTULO}>Devolução prevista</label>
-                  <input
-                    type="date"
-                    value={expectedCheckinAt}
-                    onChange={(event) => setExpectedCheckinAt(event.target.value)}
-                    className={CLASSE_CAMPO}
-                  />
-                  <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">
-                    Só para empréstimo com prazo. Em branco, é entrega sem data de volta.
-                  </p>
-                </div>
-              </div>
-            </>
-          )}
-
-          {posse.entregue && (
-            <div className="space-y-1">
-              <label className={ROTULO}>Status de volta</label>
-              <ReferenceSelect rota="status-labels" valor={statusId} onChange={setStatusId} />
-              <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">
-                Como o ativo volta: disponível, em conserto, inutilizável. Em branco, o servidor decide.
-              </p>
-            </div>
-          )}
-
-          <div className="space-y-1">
-            <label className={ROTULO}>{posse.entregue ? 'Data da devolução' : 'Data da entrega'}*</label>
-            <input
-              type="date" required max={hoje} value={dia}
-              min={posse.entregue && asset.posse?.checkoutAt ? diaDoInstante(asset.posse.checkoutAt) : undefined}
-              onChange={(event) => setDia(event.target.value)} className={CLASSE_CAMPO}
+          <Campo rotulo={abaAtual.rotuloAlvo} obrigatorio ajuda={abaAtual.ajuda}>
+            <ReferenceSelect
+              // Remontar a cada aba é de propósito: cada alvo é uma lista
+              // diferente, e a `key` evita que a lista da aba anterior
+              // apareça por um quadro com as opções velhas.
+              key={abaAtual.tipo}
+              rota={abaAtual.rota}
+              valor={alvoId}
+              obrigatorio
+              onChange={setAlvoId}
             />
-          </div>
+          </Campo>
 
-          <div className="space-y-1">
-            <label className={ROTULO}>Observações {posse.entregue ? 'da devolução' : 'da entrega'}</label>
-            <textarea
-              value={observacoes}
-              onChange={(event) => setObservacoes(event.target.value)}
-              className={`${CLASSE_CAMPO} h-20 resize-none`}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <Campo rotulo="Status após a entrega" ajuda="Em branco, o servidor aplica o status de uso.">
+              <ReferenceSelect
+                rota="status-labels"
+                valor={statusId}
+                excluirIds={idsDisponiveis}
+                onChange={setStatusId}
+              />
+            </Campo>
+            <Campo rotulo="Devolução prevista" ajuda="Só para empréstimo com prazo.">
+              <Input
+                type="date"
+                value={expectedCheckinAt}
+                onChange={(event) => setExpectedCheckinAt(event.target.value)}
+              />
+            </Campo>
           </div>
+        </>
+      )}
 
-          <div className="pt-4 flex justify-end gap-3 border-t border-border-sutil">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={salvando || !dia || (!posse.entregue && !alvoId)}
-              className="px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary transition-colors disabled:opacity-50"
-            >
-              {salvando
-                ? (posse.entregue ? 'Devolvendo...' : 'Entregando...')
-                : (posse.entregue ? 'Confirmar devolução' : 'Confirmar entrega')}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      <Campo rotulo={posse.entregue ? 'Data da devolução' : 'Data da entrega'} obrigatorio>
+        <Input
+          type="date" required max={hoje} value={dia}
+          min={posse.entregue && asset.posse?.checkoutAt ? diaDoInstante(asset.posse.checkoutAt) : undefined}
+          onChange={(event) => setDia(event.target.value)}
+        />
+      </Campo>
+
+      <Campo rotulo={`Observações ${posse.entregue ? 'da devolução' : 'da entrega'}`}>
+        <Textarea value={observacoes} onChange={(event) => setObservacoes(event.target.value)} />
+      </Campo>
+    </FormularioLateral>
   );
 }
 
@@ -278,25 +219,25 @@ function PosseAtual({ posse }: { posse: ResumoPosse }) {
   const comQuem = posse.responsaveis || posse.alvo;
 
   return (
-    <div className="border border-border-sutil bg-bg-base/50 p-4 space-y-2">
-      <div className={ROTULO}>Hoje está com</div>
+    <div className="space-y-2 rounded-lg border border-border-sutil p-4">
+      <div className="text-xs font-medium text-text-tertiary">Hoje está com</div>
 
-      <div className="text-text-primary">
+      <div className="text-sm text-text-primary">
         {comQuem || <span className="text-text-tertiary">ninguém responde por ele</span>}
       </div>
 
       {posse.detalheAlvo && (
-        <div className="text-text-tertiary text-[10px]">{posse.detalheAlvo}</div>
+        <div className="text-xs text-text-tertiary">{posse.detalheAlvo}</div>
       )}
 
       {posse.postoVago && (
-        <div className="flex items-start gap-2 text-status-warning text-[10px] leading-relaxed">
-          <TriangleAlert size={12} className="mt-0.5 shrink-0" />
+        <Aviso tom="aviso" className="flex items-start gap-2 text-xs leading-relaxed">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
           <span>
-            Posto sem ocupante aberto: o ativo está parado numa mesa vazia. Devolver o computador
-            ou colocar alguém no posto, na ficha do posto em Postos.
+            Posto sem ocupante aberto: o ativo está parado numa mesa vazia. Devolva o computador
+            ou coloque alguém no posto, na ficha do posto em Postos.
           </span>
-        </div>
+        </Aviso>
       )}
     </div>
   );

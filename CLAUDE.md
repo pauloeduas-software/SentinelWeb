@@ -39,6 +39,10 @@ não há mock de Prisma ([`testes.md`](./docs/referencia/testes.md)). Página no
   Rota sem linha em `server/modules/access/helpers/route-permissions.ts` **derruba o boot** (D137).
 - Front: página não fala HTTP. Ela usa `src/queries/<nome>.queries.ts`.
 - Cadastro novo copia `src/components/catalogo/` (`CatalogTable` + `useCatalog`), não a licença.
+- **O visual vem da IntraNet (AY):** tela nova usa os primitivos de `src/components/ui/` e estas peças:
+  `PaginaCabecalho` (título e uma linha), `FormularioLateral` (todo formulário), `JanelaDeDetalhe` (detalhe em
+  abas), `AcoesDaLinha` (o `⋯`) e `confirmar()` (`hooks/useConfirmacao`), nunca `confirm()`. Tema claro e escuro:
+  cor só pelos tokens de `src/index.css`. Fonte normal; `font-mono` só em etiqueta, série, chave, IP e MAC.
 - Editar manda o formulário inteiro com o `updatedAt` lido ao abrir; se a linha mudou, o servidor
   responde 409 (`server/modules/shared/versao.helper.ts`, AF). Menos Usuários: o login grava na
   linha da conta.
@@ -73,9 +77,9 @@ não há mock de Prisma ([`testes.md`](./docs/referencia/testes.md)). Página no
 - **Em uso bloqueia.** Encerrar, desativar, excluir, baixa ou lixeira de algo em uso é 409, dizendo o
   que devolver antes. **Nenhuma data é futura**, exceto prazo e vencimento, e nada acontece antes da
   compra (AN).
-- **O CRUD é um só.** Editar, Desativar/Ativar e Excluir, nessa ordem, ao passar o mouse. Excluir
-  sempre clica, e quem recusa é o 409. Desativar existe só em colaborador, conta e item de estoque; a
-  licença tem Encerrar; catálogo e posto só excluem (AF, AN, AO).
+- **O CRUD é um só.** A linha inteira abre o registro (detalhe, ficha ou Editar). Editar, Desativar/Ativar
+  e Excluir, nessa ordem, no `⋯` (AY). Excluir sempre clica, e quem recusa é o 409. Desativar existe só em
+  colaborador, conta e item de estoque; a licença tem Encerrar; catálogo e posto só excluem (AF, AN, AO).
 - **Lixeira só onde o histórico é do próprio registro:** colaborador e computador. O resto exclui de
   verdade, e o histórico guarda o nome por escrito (V, AG).
 - **Estoque conta quantos.** A categoria decide o tipo: Estoque vai a colaborador ou posto,
@@ -85,9 +89,10 @@ não há mock de Prisma ([`testes.md`](./docs/referencia/testes.md)). Página no
   da última devolução no posto, nem a ocupação antes do fim da anterior da mesma pessoa ali (AX).
   Laboratório é um posto por computador.
 - **Alerta só de prazo, e só na tela do assunto:** o da licença fica em `/licencas`.
-- **Sem cor por dado** (status, nome, categoria, tipo de evento). Só os tokens do tema
-  (`status-success`, `status-warning`, `status-danger`, `status-info`) em botão, aviso e na marca
-  "desativado". O lint recusa cor fixa em `src/`.
+- **Sem cor por dado** (nome, categoria, tipo de evento). Cor só por token do tema, em botão, aviso e na
+  situação: ativo, desativado, vencida, online (`Badge`, `PontoDeStatus`; AY). O lint recusa cor fixa em
+  `src/`.
+- **Pouco texto na tela.** Subtítulo de uma linha; a regra mora na ajuda do campo (AY).
 - **Só pt-BR, e a moeda é o real (BRL).** Nenhuma frase em inglês chega a quem usa: a recusa da API
   passa pelo locale pt-BR da zod (`server/infra/errors/zod-error.ts`) e o balão do navegador, por
   `src/helpers/validacao.helper.ts`. Campo novo de schema leva a frase com o rótulo.
@@ -110,6 +115,8 @@ Decidido; não proponha de novo:
 
 - e-mail, exportar e ação em lote (O);
 - alerta de mínimo, piso ou estoque mínimo, em qualquer módulo (AA);
+- busca no cabeçalho, com bipe ou `Ctrl+K` (AY);
+- fundo claro na marca, e contorno ou filtro de brilho por CSS: cada tema tem a sua arte (AY);
 - conformidade de software (instalado × licença), "instalado" marcado à mão, OEM e licença por
   núcleo (G, AA, AD);
 - baixa, motivo de redução ou lixeira no estoque (AE, AJ);

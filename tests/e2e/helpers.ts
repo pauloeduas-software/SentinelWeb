@@ -3,8 +3,7 @@ import { expect, type Locator, type Page } from '@playwright/test';
 export { ADMIN_DE_TESTE } from '../setup/admin-de-teste';
 
 /**
- * O título da página: o `<h2>` do conteúdo. O cabeçalho repete o nome da página
- * noutro `<h2>` (AppHeader), e um localizador sem o `main` acharia os dois.
+ * O título da página: o `<h2>` do conteúdo, dentro do `main`.
  */
 export function tituloDaPagina(page: Page, nome: string): Locator {
   return page.getByRole('main').getByRole('heading', { level: 2, name: nome, exact: true });

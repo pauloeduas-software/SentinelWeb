@@ -71,7 +71,7 @@ interface PermissionGuardOptions {
    * regra: `GET` fora de `/api` é arquivo do painel, não rota de API.
    *
    * Não cabe em `foraDaConferencia` porque o `@fastify/static` registra uma
-   * rota por arquivo (`GET /`, `GET /assets/<hash>.js`, `GET /favicon.svg`...)
+   * rota por arquivo (`GET /`, `GET /assets/<hash>.js`...)
    * e o hash muda a cada build; e não cabe no mapa de permissões porque essas
    * rotas não têm sessão — sem o flag, cada asset cairia no "não declarada" e
    * responderia 500 (e o boot nem chegaria lá, derrubado pela conferência).

@@ -1,5 +1,8 @@
 import { KeyRound } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { Aviso } from '../../../../components/ui/aviso';
+import { Card } from '../../../../components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/ui/table';
 import type { EntregaDoAlvo } from '../../../../types/license.types';
 import { formatarDiaDoInstante } from '../../../../helpers/format.helper';
 import { caminhoDaLicenca, textoDaSituacao } from '../../../../helpers/licenca.helper';
@@ -10,7 +13,7 @@ import { caminhoDaLicenca, textoDaSituacao } from '../../../../helpers/licenca.h
 // Histórico; as da pessoa que responde pela máquina são dela, e ficam na ficha
 // dela (AA).
 //
-// SEM DEVOLVER: a devolução mora só na tela de Licenças, e o nome de cada
+// SEM DEVOLVER: a devolução mora só na tela de Licenças, e a linha de cada
 // licença leva até o detalhe dela, onde está o botão.
 
 interface LicensesTabProps {
@@ -21,58 +24,60 @@ interface LicensesTabProps {
   erro: string | null;
 }
 
-const CABECALHO = 'px-3 py-2 text-left text-[10px] uppercase tracking-widest text-text-tertiary font-normal';
-
 export default function LicensesTab({ licencas, assetTag, carregando, erro }: LicensesTabProps) {
-  if (carregando) return <p className="text-text-tertiary">Carregando licenças…</p>;
-  if (erro) return <p role="alert" className="text-status-danger">Não foi possível carregar as licenças: {erro}</p>;
+  const navegar = useNavigate();
+
+  if (carregando) return <p className="text-sm text-text-tertiary">Carregando licenças…</p>;
+  if (erro) return <Aviso>Não foi possível carregar as licenças: {erro}</Aviso>;
 
   if (licencas.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-text-tertiary gap-3">
-        <KeyRound size={24} className="opacity-50" />
+      <Card className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-text-tertiary">
+        <KeyRound className="size-6 opacity-50" />
         <span>Nenhuma licença entregue a este ativo.</span>
-        <span className="text-[10px] max-w-md text-center leading-relaxed">
+        <span className="max-w-md text-center text-xs leading-relaxed">
           Licença por computador vai para o ativo, pela tela de{' '}
-          <Link to="/licencas" className="text-text-secondary underline-offset-2 hover:underline">Licenças</Link>.
+          <Link to="/licencas" className="text-primary hover:underline">Licenças</Link>.
           A de assinatura de uma pessoa vai para o colaborador, e aparece na ficha dele.
         </span>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="border border-border-sutil bg-surface-card overflow-x-auto">
-      <table className="w-full font-mono text-xs">
-        <thead className="border-b border-border-sutil bg-bg-base/40">
-          <tr>
-            <th className={CABECALHO}>Licença</th>
-            <th className={CABECALHO}>Categoria</th>
-            <th className={CABECALHO}>Situação</th>
-            <th className={CABECALHO}>Desde</th>
-          </tr>
-        </thead>
-        <tbody>
+    <Card className="overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Licença</TableHead>
+            <TableHead>Categoria</TableHead>
+            <TableHead>Situação</TableHead>
+            <TableHead>Desde</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {licencas.map((entrega) => {
             const licenca = entrega.license;
+            const caminho = caminhoDaLicenca(licenca.id, assetTag);
             return (
-              <tr key={entrega.id} className="border-b border-border-sutil/50 last:border-0">
-                <td className="px-3 py-2">
-                  <Link to={caminhoDaLicenca(licenca.id, assetTag)} className="text-text-primary hover:underline underline-offset-2">
+              <TableRow key={entrega.id} onClick={() => navegar(caminho)} className="cursor-pointer">
+                <TableCell>
+                  {/* O link é o caminho do teclado; o clique nele não sobe, senão navegaria duas vezes. */}
+                  <Link to={caminho} onClick={(evento) => evento.stopPropagation()} className="font-medium text-text-primary focus-visible:underline focus-visible:outline-none">
                     {licenca.name}
                   </Link>
                   {entrega.checkoutNotes && (
-                    <div className="text-[10px] text-text-secondary mt-0.5">{entrega.checkoutNotes}</div>
+                    <div className="mt-0.5 text-xs text-text-tertiary">{entrega.checkoutNotes}</div>
                   )}
-                </td>
-                <td className="px-3 py-2 text-text-secondary">{licenca.category?.name ?? '—'}</td>
-                <td className="px-3 py-2 text-text-secondary">{textoDaSituacao(entrega)}</td>
-                <td className="px-3 py-2 text-text-tertiary">{formatarDiaDoInstante(entrega.checkoutAt)}</td>
-              </tr>
+                </TableCell>
+                <TableCell>{licenca.category?.name ?? '—'}</TableCell>
+                <TableCell>{textoDaSituacao(entrega)}</TableCell>
+                <TableCell className="whitespace-nowrap">{formatarDiaDoInstante(entrega.checkoutAt)}</TableCell>
+              </TableRow>
             );
           })}
-        </tbody>
-      </table>
-    </div>
+        </TableBody>
+      </Table>
+    </Card>
   );
 }

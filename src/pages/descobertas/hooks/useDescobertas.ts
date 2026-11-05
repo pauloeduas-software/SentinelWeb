@@ -69,14 +69,17 @@ export function useDescobertas() {
 
     sugestoes: sugestoes.data?.rows ?? [],
     carregandoSugestoes: sugestoes.isLoading,
+    erroDasSugestoes: sugestoes.error?.message ?? null,
     cobertura: cobertura.data,
     carregandoCobertura: cobertura.isLoading,
     ociosos: ociosos.data?.rows ?? [],
+    erroDosOciosos: ociosos.error?.message ?? null,
     configuracao: configuracao.data,
 
     semVinculo: semVinculo.data ?? [],
     vinculadas: vinculadas.data ?? [],
     carregandoMaquinas: semVinculo.isLoading || vinculadas.isLoading,
+    erroDasMaquinas: semVinculo.error?.message ?? vinculadas.error?.message ?? null,
 
     ocupado: aceitar.isPending || recusar.isPending || triar.isPending
       || vincular.isPending || vincularEEntregar.isPending || reconciliar.isPending,
@@ -100,10 +103,10 @@ export function useDescobertas() {
     /**
      * VINCULAR À MÃO, e opcionalmente ENTREGAR ao posto na mesma ida.
      *
-     * PROPAGA em vez de passar pelo `comErro`: o formulário é inline, na linha
-     * da máquina, e é lá que a recusa precisa aparecer — "este posto já tem um
-     * computador", ou "a máquina foi vinculada, mas a entrega não aconteceu".
-     * A faixa de erro no topo da tela ficaria longe de quem clicou.
+     * PROPAGA em vez de passar pelo `comErro`: é no painel do formulário que a
+     * recusa precisa aparecer — "este posto já tem um computador", ou "a máquina
+     * foi vinculada, mas a entrega não aconteceu". A faixa de erro no topo da
+     * tela ficaria atrás do painel.
      */
     handleVincular: async (endpointId: string, assetId: string, targetWorkstationId: string | null) => {
       if (targetWorkstationId) {
