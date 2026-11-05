@@ -8,6 +8,7 @@ import {
   type UserInput,
 } from '../../../queries/user.queries';
 import type { User } from '../../../types/user.types';
+import { confirmar } from '../../../hooks/useConfirmacao';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import { useNotificacao } from '../../../hooks/useNotificacao';
 import { useAuthStore } from '../../../stores/auth.store';
@@ -51,6 +52,9 @@ export function useUsers() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
+  // A senha gerada pelo `⋯` da linha, que o formulário abre mostrando. Fechar a
+  // janela a apaga: ela aparece uma vez só, como a gerada por dentro dele.
+  const [senhaGerada, setSenhaGerada] = useState<string | null>(null);
 
   const openCreate = () => {
     setEditing(null);
@@ -65,6 +69,7 @@ export function useUsers() {
   const closeModal = () => {
     setModalOpen(false);
     setEditing(null);
+    setSenhaGerada(null);
   };
 
   // O erro sobe para o formulário mostrar a mensagem do servidor. O CADASTRO
@@ -82,12 +87,17 @@ export function useUsers() {
     return null;
   };
 
-  // EXCLUIR, e o confirm diz o que isso quer dizer AQUI: não tem volta — errou,
+  // EXCLUIR, e a pergunta diz o que isso quer dizer AQUI: não tem volta — errou,
   // cadastra de novo. É o terceiro do trio Editar/Desativar/Excluir — e o texto
   // precisa separá-lo do Desativar, que é o que se usa para quem saiu da
   // empresa. "Tem certeza que deseja remover?" não dizia nem quem nem o quê.
   const handleDelete = async (user: User) => {
-    if (!confirm(`Excluir "${user.name}"? Não tem como desfazer.`)) return;
+    if (!(await confirmar({
+      titulo: `Excluir "${user.name}"?`,
+      descricao: 'Não tem como desfazer.',
+      acao: 'Excluir',
+      perigo: true,
+    }))) return;
     try {
       await deleteUser.mutateAsync(user.id);
       if (users.length === 1 && page > 1) setPage(page - 1);
@@ -101,9 +111,11 @@ export function useUsers() {
   // apaga: a conta fica na lista, só não entra mais. A confirmação é só na ida;
   // reativar não tem o que perder.
   const handleAlternarAtivo = async (user: User) => {
-    if (user.isActive && !confirm(
-      `Desativar "${user.name}"? A conta continua na lista, mas não entra mais no sistema.`,
-    )) return;
+    if (user.isActive && !(await confirmar({
+      titulo: `Desativar "${user.name}"?`,
+      descricao: 'A conta continua na lista, mas não entra mais no sistema.',
+      acao: 'Desativar',
+    }))) return;
 
     try {
       await updateUser.mutateAsync({ id: user.id, data: { isActive: !user.isActive } });
@@ -113,14 +125,31 @@ export function useUsers() {
   };
 
   // A SENHA TEMPORÁRIA (AR): de quem esqueceu a sua. Gerar invalida a senha de hoje
-  // e derruba as sessões abertas da conta NA HORA, então o confirm diz isso. A
+  // e derruba as sessões abertas da conta NA HORA, então a pergunta diz isso. A
   // senha volta uma vez só, para o formulário mostrar; o erro sobe para ele.
   const handleGerarSenhaTemporaria = async (user: User): Promise<string | null> => {
-    if (!confirm(
-      `Gerar uma senha temporária para "${user.name}"? A senha atual deixa de valer agora e as sessões abertas dela caem. A pessoa escolhe a nova senha no primeiro acesso.`,
-    )) return null;
+    if (!(await confirmar({
+      titulo: `Gerar uma senha temporária para "${user.name}"?`,
+      descricao: 'A senha atual deixa de valer agora e as sessões abertas dela caem. A pessoa escolhe a nova senha no primeiro acesso.',
+      acao: 'Gerar senha',
+    }))) return null;
     const { temporaryPassword } = await resetPassword.mutateAsync(user.id);
     return temporaryPassword;
+  };
+
+  // A MESMA GERAÇÃO, pelo `⋯` da linha: a senha só existe nesta resposta, então
+  // ela precisa de onde aparecer, e o lugar é o mesmo formulário de quem gera por
+  // dentro dele. Sem formulário aberto, o erro vai para o aviso, como nas outras
+  // ações da linha.
+  const handleGerarSenhaDaLinha = async (user: User) => {
+    try {
+      const senha = await handleGerarSenhaTemporaria(user);
+      if (!senha) return;
+      setSenhaGerada(senha);
+      openEdit(user);
+    } catch (error) {
+      notificar.erro((error as Error).message);
+    }
   };
 
   return {
@@ -137,6 +166,7 @@ export function useUsers() {
     erro: error ? error.message : null,
     modalOpen,
     editing,
+    senhaGerada,
     openCreate,
     openEdit,
     closeModal,
@@ -144,5 +174,6 @@ export function useUsers() {
     handleDelete,
     handleAlternarAtivo,
     handleGerarSenhaTemporaria,
+    handleGerarSenhaDaLinha,
   };
 }

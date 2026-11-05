@@ -13,7 +13,7 @@ import { formatarData } from '../../../helpers/format.helper';
 // telas que a mostram (listagem, detalhe e modal) dizerem a mesma coisa.
 
 /**
- * Os motivos, em português, na ordem em que fazem sentido no `<select>`: o que
+ * Os motivos, em português, na ordem em que fazem sentido no seletor: o que
  * mais acontece primeiro.
  *
  * Os VALORES espelham o enum `RetiredReason` do banco e não podem ser

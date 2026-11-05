@@ -1,5 +1,7 @@
 import { useState, type InputHTMLAttributes } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
+import { Input } from './ui/input';
+import { cn } from '../helpers/cn.helper';
 
 // O CAMPO DE SENHA COM O OLHO: mostrar e ocultar o que foi digitado.
 //
@@ -16,7 +18,7 @@ export default function CampoDeSenha({ className, ...props }: CampoDeSenhaProps)
   const [visivel, setVisivel] = useState(false);
   return (
     <div className="relative">
-      <input {...props} type={visivel ? 'text' : 'password'} className={`${className ?? ''} pr-9`} />
+      <Input {...props} type={visivel ? 'text' : 'password'} className={cn('pr-9', className)} />
       <button
         type="button"
         tabIndex={-1}

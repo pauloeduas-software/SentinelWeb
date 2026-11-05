@@ -1,5 +1,7 @@
-import { MonitorSmartphone, PackageX, Trash2, X } from 'lucide-react';
+import { MapPin, PackageX, Trash2, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Button } from '../../../components/ui/button';
+import { Segmentado } from '../../../components/ui/segmentado';
 import type { AssetView } from '../../../types/asset.types';
 
 // AS VISTAS E OS FILTROS DA LISTAGEM DE ATIVOS.
@@ -13,8 +15,6 @@ import type { AssetView } from '../../../types/asset.types';
 // ausência é a parte confusa: quem acabou de entregar um computador a uma mesa
 // volta para esta tela e não o encontra. Dizer para onde ele foi, com o link,
 // custa uma linha e evita a conclusão de que o sistema perdeu o ativo.
-
-const CLASSE_ABA = 'flex items-center gap-2 px-4 py-2 uppercase tracking-widest transition-colors';
 
 interface AssetFilterBarProps {
   view: AssetView;
@@ -32,53 +32,31 @@ export default function AssetFilterBar({
   view, onViewChange, baixados,
   statusFiltrado, onLimparStatus, comLixeira,
 }: AssetFilterBarProps) {
-  const abas: { valor: AssetView; rotulo: string; icone?: typeof PackageX; contador?: number }[] = [
+  const abas: { valor: AssetView; rotulo: React.ReactNode }[] = [
     { valor: 'active', rotulo: 'Ativos' },
-    { valor: 'retired', rotulo: 'Baixados', icone: PackageX, contador: baixados },
-    ...(comLixeira ? [{ valor: 'trashed' as const, rotulo: 'Lixeira', icone: Trash2 }] : []),
+    {
+      valor: 'retired',
+      rotulo: <><PackageX /> Baixados {baixados > 0 && <span className="tabular-nums">{baixados}</span>}</>,
+    },
+    ...(comLixeira ? [{ valor: 'trashed' as const, rotulo: <><Trash2 /> Lixeira</> }] : []),
   ];
 
   return (
-    <div className="flex flex-wrap items-center gap-3 mb-4 font-mono text-xs">
-      <div className="flex border border-border-sutil">
-        {abas.map((aba) => (
-          <button
-            key={aba.valor}
-            type="button"
-            onClick={() => onViewChange(aba.valor)}
-            className={`${CLASSE_ABA} ${
-              view === aba.valor
-                ? 'bg-text-primary text-bg-base'
-                : 'text-text-tertiary hover:text-text-primary hover:bg-bg-base'
-            }`}
-          >
-            {aba.icone && <aba.icone size={13} />}
-            {aba.rotulo}
-            {aba.contador !== undefined && aba.contador > 0 && (
-              <span className="tabular-nums">{aba.contador}</span>
-            )}
-          </button>
-        ))}
-      </div>
+    <div className="mb-4 flex flex-wrap items-center gap-3">
+      <Segmentado opcoes={abas} valor={view} onChange={onViewChange} />
 
       {view === 'active' && (
-        <span className="flex items-center gap-1.5 text-text-tertiary normal-case tracking-normal">
-          <MonitorSmartphone size={12} className="shrink-0" />
+        <span className="flex items-center gap-1.5 text-xs text-text-tertiary">
+          <MapPin className="size-4 shrink-0" />
           Computador entregue a um posto aparece em
-          <Link to="/postos" className="text-text-secondary hover:text-text-primary underline underline-offset-2">
-            Postos
-          </Link>
+          <Link to="/postos" className="text-primary hover:underline">Postos</Link>
         </span>
       )}
 
       {statusFiltrado && (
-        <button
-          type="button"
-          onClick={onLimparStatus}
-          className={`${CLASSE_ABA} border border-status-info/40 bg-status-info/10 text-status-info`}
-        >
-          Status: {statusFiltrado} <X size={12} />
-        </button>
+        <Button variant="outline" size="sm" onClick={onLimparStatus}>
+          Status: {statusFiltrado} <X />
+        </Button>
       )}
     </div>
   );

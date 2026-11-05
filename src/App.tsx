@@ -18,6 +18,7 @@ import ContaPage from './pages/conta';
 import TrocaObrigatoria from './pages/conta/components/TrocaObrigatoria';
 import { useAuthStore, usePode, type Cargo } from './stores/auth.store';
 import Notificacoes from './components/Notificacoes';
+import DialogoDeConfirmacao from './components/DialogoDeConfirmacao';
 import ErroDaTela from './components/ErroDaTela';
 import { useTituloDaAba } from './hooks/useTituloDaAba';
 
@@ -87,13 +88,13 @@ function Layout() {
     // `overflow-x-clip` no `<main>` é o cinto de segurança para o que ainda não
     // tem esse contêiner: uma tela nova com conteúdo largo passa a ser cortada
     // ali, em vez de desalinhar a moldura toda.
-    <div className="min-h-screen bg-bg-base text-text-primary selection:bg-status-info/20 font-sans flex">
+    <div className="min-h-screen bg-bg-base text-text-primary selection:bg-primary/20 flex">
       <AppSidebar />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <AppHeader />
 
-        <main className="min-w-0 flex-1 overflow-x-clip p-4 md:p-8">
+        <main className="min-w-0 flex-1 overflow-x-clip p-3 sm:p-4 md:p-6">
           <ErroDaTela chave={pathname}>
             <Routes>
               {/* A RAIZ LEVA AOS ATIVOS, e isso é o fim de uma tela.
@@ -202,9 +203,7 @@ function TituloDaAba() {
 function Verificando() {
   return (
     <div className="min-h-screen bg-bg-base flex items-center justify-center">
-      <span className="font-mono text-xs uppercase tracking-widest text-text-tertiary">
-        Verificando sessão...
-      </span>
+      <span className="text-sm text-text-tertiary">Verificando sessão...</span>
     </div>
   );
 }
@@ -254,6 +253,7 @@ export default function App() {
           aponta para cada licença a devolver. A fila é um store
           (hooks/useNotificacao), não um contexto. */}
       <Notificacoes />
+      <DialogoDeConfirmacao />
     </BrowserRouter>
   );
 }

@@ -16,6 +16,7 @@ import {
 } from '../../../../queries/reconciliation.queries';
 import type { RetireInput } from '../../../../types/asset.types';
 import type { AbaId } from '../helpers/abas.helper';
+import { confirmar } from '../../../../hooks/useConfirmacao';
 import { useNotificacao } from '../../../../hooks/useNotificacao';
 import { linksDoErro } from '../../../../helpers/erro.helper';
 
@@ -122,14 +123,16 @@ export function useAssetDetail() {
   };
 
   // Reverter apaga a data, o motivo e a observação da saída num clique só, e o
-  // botão fica ao lado do selo, onde se clica por engano — por isso o `confirm`,
+  // botão fica ao lado do selo, onde se clica por engano — por isso a confirmação,
   // como na lixeira. O que se perde é o registro no ativo; a auditoria, no
   // banco, guarda a baixa e a reversão (AB).
   const handleReverterSaida = async () => {
     if (!asset) return;
-    if (!confirm(
-      `Reverter a baixa de ${asset.assetTag}? A data, o motivo e a observação da saída são apagados.`,
-    )) return;
+    if (!(await confirmar({
+      titulo: `Reverter a baixa de ${asset.assetTag}?`,
+      descricao: 'A data, o motivo e a observação da saída são apagados.',
+      acao: 'Reverter',
+    }))) return;
     try {
       await reverterSaida.mutateAsync(asset.id);
     } catch (falha) {
@@ -143,7 +146,12 @@ export function useAssetDetail() {
    */
   const handleDelete = async () => {
     if (!asset) return;
-    if (!confirm(`Excluir "${asset.assetTag}"? Vai para a lixeira e pode ser restaurado.`)) return;
+    if (!(await confirmar({
+      titulo: `Excluir "${asset.assetTag}"?`,
+      descricao: 'Vai para a lixeira e pode ser restaurado.',
+      acao: 'Excluir',
+      perigo: true,
+    }))) return;
 
     try {
       await excluir.mutateAsync(asset.id);

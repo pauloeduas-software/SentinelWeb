@@ -10,14 +10,15 @@ import {
 } from '../../../queries/assignment.queries';
 import { useCatalogOptionsQuery } from '../../../queries/catalog.queries';
 import type { Asset, AssetView } from '../../../types/asset.types';
+import { confirmar } from '../../../hooks/useConfirmacao';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import { useNotificacao } from '../../../hooks/useNotificacao';
 import { linksDoErro } from '../../../helpers/erro.helper';
 
 const PER_PAGE = 10;
 
-// Estado da tela de ativos. Página, busca, vista, filtros, seleção e modal são
-// de UMA tela: ficam aqui, em useState, e não em store (docs/referencia/arquitetura.md).
+// Estado da tela de ativos. Página, busca, vista, filtros e modal são de UMA
+// tela: ficam aqui, em useState, e não em store (docs/referencia/arquitetura.md).
 
 export function useAssets() {
   const notificar = useNotificacao();
@@ -142,7 +143,12 @@ export function useAssets() {
   };
 
   const handleDelete = async (asset: Asset) => {
-    if (!confirm(`Excluir "${asset.assetTag}"? Vai para a lixeira e pode ser restaurado.`)) return;
+    if (!(await confirmar({
+      titulo: `Excluir "${asset.assetTag}"?`,
+      descricao: 'Vai para a lixeira e pode ser restaurado.',
+      acao: 'Excluir',
+      perigo: true,
+    }))) return;
     try {
       await excluir.mutateAsync(asset.id);
       if (assets.length === 1 && page > 1) setPage(page - 1);

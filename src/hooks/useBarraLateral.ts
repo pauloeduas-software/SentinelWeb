@@ -13,6 +13,8 @@ import { persist } from 'zustand/middleware';
 // iriam para o `localStorage` juntas — e a segunda voltaria `true` para quem
 // fechou a aba com o menu aberto.
 //
+// `gruposFechados` é preferência também: as seções que a pessoa recolheu.
+//
 // É CLIENT STATE pela definição do docs/referencia/arquitetura.md: só existe no navegador,
 // ninguém busca, não envelhece e não responde pergunta de negócio nenhuma. Mora
 // em `src/hooks` porque é cromo da moldura — a barra é de `src/components`,
@@ -22,6 +24,8 @@ import { persist } from 'zustand/middleware';
 interface EstadoDaBarra {
   recolhida: boolean;
   abertaNoCelular: boolean;
+  gruposFechados: readonly string[];
+  alternarGrupo: (grupo: string) => void;
   alternarRecolhida: () => void;
   abrirNoCelular: () => void;
   fecharNoCelular: () => void;
@@ -32,6 +36,12 @@ export const useBarraLateral = create<EstadoDaBarra>()(
     (set) => ({
       recolhida: false,
       abertaNoCelular: false,
+      gruposFechados: [],
+      alternarGrupo: (grupo) => set((estado) => ({
+        gruposFechados: estado.gruposFechados.includes(grupo)
+          ? estado.gruposFechados.filter((item) => item !== grupo)
+          : [...estado.gruposFechados, grupo],
+      })),
       alternarRecolhida: () => set((estado) => ({ recolhida: !estado.recolhida })),
       abrirNoCelular: () => set({ abertaNoCelular: true }),
       fecharNoCelular: () => set({ abertaNoCelular: false }),
@@ -39,7 +49,7 @@ export const useBarraLateral = create<EstadoDaBarra>()(
     {
       name: 'sentinel.barra-lateral',
       version: 1,
-      partialize: (estado) => ({ recolhida: estado.recolhida }),
+      partialize: (estado) => ({ recolhida: estado.recolhida, gruposFechados: estado.gruposFechados }),
     },
   ),
 );

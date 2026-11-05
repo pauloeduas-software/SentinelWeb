@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { Link2 } from 'lucide-react';
+import FormularioLateral from '../../../components/FormularioLateral';
 import ReferenceSelect from '../../../components/ReferenceSelect';
+import { Campo } from '../../../components/ui/campo';
+import { Dado, GradeDeDados } from '../../../components/ui/dado';
 import type { Endpoint } from '../../../types/endpoint.types';
 
 // VINCULAR UMA MÁQUINA A UM ATIVO, À MÃO — e, se quiser, entregar o ativo ao
 // posto na mesma ida.
 //
-// Inline, na linha da máquina, e não um modal: a pessoa está olhando o
-// hostname, o serial e o sistema da máquina que vai vincular, e um modal
-// cobriria exatamente isso. Dois campos: o ativo (obrigatório) e o posto
-// (opcional). Com posto, a operação é a de vincular-e-entregar, que o servidor
-// encadeia; sem, é só o vínculo.
+// O painel repete o sistema e a série, porque a pessoa decide olhando a máquina
+// que vai vincular, e ele cobre a linha dela. Dois campos: o ativo (obrigatório)
+// e o posto (opcional). Com posto, a operação é a de vincular-e-entregar, que o
+// servidor encadeia; sem, é só o vínculo.
 //
 // O seletor de ativos pede `?maquina=sem`: ativo que já tem máquina é opção
 // que o `endpoints.assetId @unique` recusaria no clique, então a lista nem
@@ -20,8 +21,6 @@ import type { Endpoint } from '../../../types/endpoint.types';
 // Não fala HTTP: recebe `onVincular` e mostra o que ele rejeitar. O erro mora
 // AQUI porque é aqui que a pessoa decide — "este posto já tem um ativo"
 // precisa aparecer ao lado do campo onde ela escolheu o posto.
-
-const ROTULO = 'text-[10px] uppercase tracking-widest text-text-tertiary';
 
 interface Props {
   maquina: Endpoint;
@@ -42,8 +41,9 @@ export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCa
     setErro('');
     try {
       await onVincular(maquina.id, assetId, workstationId || null);
-      // Sem `onCancelar` no sucesso: a linha some da lista "Sem vínculo" na
-      // revalidação, e o formulário desmonta com ela.
+      // Fecha só no sucesso. Na entrega recusada o vínculo fica e a linha some da
+      // lista "Sem vínculo", e o painel continua aberto com a frase que diz isso.
+      onCancelar();
     } catch (falha) {
       setErro((falha as Error).message);
     } finally {
@@ -52,58 +52,42 @@ export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCa
   };
 
   return (
-    <form onSubmit={enviar} className="p-4 bg-bg-base border-t border-border-sutil space-y-4 font-mono text-xs">
-      <p className="text-text-secondary">
-        <Link2 size={12} className="inline mr-2" />
-        {maquina.hostname} passa a ser o patrimônio escolhido abaixo. Nada muda na máquina.
-      </p>
+    <FormularioLateral
+      titulo="Vincular máquina"
+      descricao={`${maquina.hostname} passa a ser o patrimônio escolhido abaixo. Nada muda na máquina.`}
+      onClose={onCancelar}
+      onSubmit={enviar}
+      erro={erro}
+      salvando={salvando}
+      bloqueado={ocupado || !assetId}
+      rotuloDoEnvio={workstationId ? 'Vincular e entregar' : 'Vincular'}
+      rotuloEnviando="Vinculando…"
+    >
+      <GradeDeDados className="md:grid-cols-2">
+        <Dado rotulo="Sistema">{maquina.osVersion}</Dado>
+        <Dado rotulo="Série">{maquina.biosSerial && <span className="font-mono">{maquina.biosSerial}</span>}</Dado>
+      </GradeDeDados>
 
-      {erro && (
-        <div className="p-3 bg-status-danger/10 text-status-danger border border-status-danger/20" role="alert">
-          {erro}
-        </div>
-      )}
+      <Campo
+        rotulo="Ativo"
+        obrigatorio
+        ajuda="Só ativos ainda sem máquina. Cadastre o ativo em Computadores se ele não existe."
+      >
+        <ReferenceSelect
+          rota="assets"
+          parametros={{ maquina: 'sem' }}
+          valor={assetId}
+          obrigatorio
+          onChange={setAssetId}
+        />
+      </Campo>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <label className={ROTULO}>Ativo*</label>
-          <ReferenceSelect
-            rota="assets"
-            parametros={{ maquina: 'sem' }}
-            valor={assetId}
-            obrigatorio
-            onChange={setAssetId}
-          />
-          <p className="text-[10px] text-text-tertiary leading-relaxed">
-            Só ativos ainda sem máquina. Cadastre o ativo em Computadores se ele não existe.
-          </p>
-        </div>
-        <div className="space-y-1">
-          <label className={ROTULO}>E entregar ao posto</label>
-          <ReferenceSelect rota="workstations" valor={workstationId} onChange={setWorkstationId} />
-          <p className="text-[10px] text-text-tertiary leading-relaxed">
-            Opcional. Com posto, o ativo é entregue à mesa na mesma operação — e um posto que já
-            tem ativo recusa.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={onCancelar}
-          className="px-3 py-1.5 border border-border-sutil text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary hover:bg-bg-base transition-colors"
-        >
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          disabled={salvando || ocupado || !assetId}
-          className="px-3 py-1.5 bg-text-primary text-bg-base text-[10px] uppercase tracking-widest hover:bg-text-secondary transition-colors disabled:opacity-40"
-        >
-          {salvando ? 'Vinculando…' : workstationId ? 'Vincular e entregar' : 'Vincular'}
-        </button>
-      </div>
-    </form>
+      <Campo
+        rotulo="E entregar ao posto"
+        ajuda="Opcional. Com posto, o ativo é entregue à mesa na mesma operação, e um posto que já tem ativo recusa."
+      >
+        <ReferenceSelect rota="workstations" valor={workstationId} onChange={setWorkstationId} />
+      </Campo>
+    </FormularioLateral>
   );
 }

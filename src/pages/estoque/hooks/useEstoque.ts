@@ -6,6 +6,7 @@ import {
 } from '../../../queries/stock.queries';
 import type { AlvoDaEntregaDeEstoque, ItemDeEstoque, ItemDeEstoqueInput } from '../../../types/stock.types';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
+import { confirmar } from '../../../hooks/useConfirmacao';
 import { useNotificacao } from '../../../hooks/useNotificacao';
 import { linksDoErro } from '../../../helpers/erro.helper';
 
@@ -154,9 +155,11 @@ export function useEstoque() {
   // `isActive`, e confirma só na ida — ativar não tem o que perder. O botão
   // sempre clica: com unidade em uso, o 409 do servidor manda devolver antes.
   const handleAlternarAtivo = async (item: ItemDeEstoque) => {
-    if (item.isActive && !window.confirm(
-      `Desativar "${item.name}"? Continua no histórico, mas some das escolhas e não recebe nada novo.`,
-    )) return;
+    if (item.isActive && !(await confirmar({
+      titulo: `Desativar "${item.name}"?`,
+      descricao: 'Continua no histórico, mas some das escolhas e não recebe nada novo.',
+      acao: 'Desativar',
+    }))) return;
     try {
       await editar.mutateAsync({ id: item.id, data: { isActive: !item.isActive } });
     } catch (erro) {
@@ -167,7 +170,12 @@ export function useEstoque() {
   // EXCLUIR, com a frase de Configurações. O botão sempre clica: o item com
   // unidade em uso recebe o 409 do servidor, que diz com quem e manda devolver.
   const handleExcluir = async (item: ItemDeEstoque) => {
-    if (!window.confirm(`Excluir "${item.name}"? Esta ação não tem lixeira.`)) return;
+    if (!(await confirmar({
+      titulo: `Excluir "${item.name}"?`,
+      descricao: 'Esta ação não tem lixeira.',
+      acao: 'Excluir',
+      perigo: true,
+    }))) return;
     try {
       await excluir.mutateAsync(item.id);
       // Excluído do detalhe: a janela não tem mais o que mostrar.
@@ -195,6 +203,9 @@ export function useEstoque() {
     itemAberto: itemAtual,
     // Só para o item do link: o outro, aberto pela lista, abre sem busca.
     buscaDoLink: itemAtual && itemAtual.id === idDoLink ? buscaDoLink : '',
+    // Todo link leva à devolução: a ficha e a recusa 409, que vem sem busca. Por
+    // isso a janela abre em "Com quem está", com busca ou sem.
+    veioDoLink: itemAtual?.id === idDoLink,
     // O link apontava para um item que não existe mais (excluído).
     erroDoLink: idDoLink && modal === null && doLink.error ? doLink.error.message : null,
     abrir,

@@ -114,6 +114,15 @@ export function bloqueioDaEntrega(asset: Pick<Asset, 'posse' | 'status' | 'retir
 }
 
 /**
+ * O tom da marca de status, pelo TIPO e não pelo nome: o nome é texto livre do
+ * cadastro, e o tipo é o que diz a situação (AY).
+ */
+export function tomDoStatus(tipo: Asset['status']['type']): 'sucesso' | 'info' | 'aviso' | 'perigo' {
+  const tons = { DEPLOYABLE: 'sucesso', IN_USE: 'info', PENDING: 'aviso', UNDEPLOYABLE: 'perigo' } as const;
+  return tons[tipo];
+}
+
+/**
  * Formulário de entrega → corpo de `POST /assets/:id/checkout`.
  *
  * Mora aqui, e não no `onSubmit` do modal, por dois motivos concretos:

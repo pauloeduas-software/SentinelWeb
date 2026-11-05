@@ -14,7 +14,7 @@ export interface CatalogRow {
   [campo: string]: unknown;
 }
 
-/** Item de `<select>`: o que `GET /api/<slug>/options` devolve. */
+/** Item de seletor: o que `GET /api/<slug>/options` devolve. */
 export interface CatalogOption {
   id: string;
   name: string;

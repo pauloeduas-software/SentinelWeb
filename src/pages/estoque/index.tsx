@@ -2,6 +2,9 @@ import { Plus } from 'lucide-react';
 import CategoriaFiltro from '../../components/CategoriaFiltro';
 import EstadoDaLista from '../../components/EstadoDaLista';
 import ListToolbar from '../../components/ListToolbar';
+import PaginaCabecalho from '../../components/PaginaCabecalho';
+import { Aviso } from '../../components/ui/aviso';
+import { Button } from '../../components/ui/button';
 import EntregaModal from './components/EntregaModal';
 import EstoqueTable from './components/EstoqueTable';
 import ItemDetalheModal from './components/ItemDetalheModal';
@@ -21,7 +24,7 @@ export default function EstoquePage() {
   const {
     itens, total, carregando, erro, page, perPage, setPage, search, changeSearch,
     categoryId, changeCategoria,
-    modal, itemAberto, buscaDoLink, erroDoLink, abrir, fechar, ocupado,
+    modal, itemAberto, buscaDoLink, veioDoLink, erroDoLink, abrir, fechar, ocupado,
     handleCriar, handleEditar, handleEntregar, handleDevolver, handleAlternarAtivo, handleExcluir,
   } = useEstoque();
   // Desativar e excluir são `SUPERVISOR` no servidor (AV). O Técnico cadastra,
@@ -31,30 +34,17 @@ export default function EstoquePage() {
   return (
     <div className="motion-safe:animate-fade-in flex flex-col pb-6">
 
-      <div className="flex justify-between items-end mb-6 shrink-0">
-        <div>
-          <h2 className="text-xl font-mono text-text-primary uppercase tracking-widest">Estoque</h2>
-          <p className="text-xs text-text-tertiary mt-2 font-mono max-w-2xl leading-relaxed">
-            O que não é computador: monitor, teclado, mouse, cabo. Cada item tem um total, e cada
-            uso é uma entrega — a um colaborador ou a um posto. O componente, como memória e SSD,
-            vai só para um computador. O consumível, como toner e pilha, sai do total na entrega.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => abrir('criar')}
-            className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary font-mono text-xs uppercase tracking-widest transition-colors"
-          >
-            <Plus size={14} /> Novo item
-          </button>
-        </div>
-      </div>
+      <PaginaCabecalho
+        titulo="Estoque"
+        subtitulo="O que não é computador: monitor, teclado, cabo, peça e consumível."
+        acao={<Button onClick={() => abrir('criar')}><Plus /> Novo item</Button>}
+      />
 
       {erroDoLink && (
-        <p role="alert" className="mb-4 p-3 bg-status-danger/10 text-status-danger border border-status-danger/20 font-mono text-xs flex justify-between gap-4">
+        <Aviso className="mb-4 flex items-center justify-between gap-4">
           <span>Não foi possível abrir o item do link: {erroDoLink}</span>
-          <button type="button" onClick={fechar} className="uppercase tracking-widest text-[10px] hover:underline">Dispensar</button>
-        </p>
+          <button type="button" onClick={fechar} className="text-xs hover:underline">Dispensar</button>
+        </Aviso>
       )}
 
       <ListToolbar
@@ -87,10 +77,6 @@ export default function EstoquePage() {
             ) : (
               <>
                 <span>Nenhum item de estoque cadastrado.</span>
-                <span className="mt-4 text-[10px] max-w-md text-center leading-relaxed">
-                  Um item é N unidades de uma mesma coisa — monitores, mouses, cabos. Cadastre-o com
-                  o total que há hoje e entregue a colaboradores ou postos até ele acabar.
-                </span>
               </>
             )}
           </EstadoDaLista>
@@ -115,6 +101,7 @@ export default function EstoquePage() {
           key={itemAberto.id}
           item={itemAberto}
           buscaInicial={buscaDoLink}
+          veioDoLink={veioDoLink}
           ocupado={ocupado}
           onClose={fechar}
           onEntregar={(item) => abrir('entregar', item)}

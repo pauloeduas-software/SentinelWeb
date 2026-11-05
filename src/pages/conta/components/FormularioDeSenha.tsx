@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import CampoDeSenha from '../../../components/CampoDeSenha';
+import { Aviso } from '../../../components/ui/aviso';
+import { Button } from '../../../components/ui/button';
+import { Campo } from '../../../components/ui/campo';
 
 // O FORMULÁRIO DE TROCA DA PRÓPRIA SENHA (AR) — o mesmo em Minha conta e na tela
 // de troca obrigatória. A troca obrigatória não pede a senha de hoje (AU): a
@@ -15,9 +18,6 @@ interface FormularioDeSenhaProps {
   rotuloDoBotao: string;
   onSubmit: (senhaAtual: string | null, senhaNova: string) => Promise<void>;
 }
-
-const CAMPO = 'w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors';
-const ROTULO = 'text-text-secondary uppercase tracking-widest text-[10px]';
 
 export default function FormularioDeSenha({ pedirAtual, rotuloDoBotao, onSubmit }: FormularioDeSenhaProps) {
   const [atual, setAtual] = useState('');
@@ -49,38 +49,27 @@ export default function FormularioDeSenha({ pedirAtual, rotuloDoBotao, onSubmit 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
-      {erro && (
-        <div role="alert" className="p-3 bg-status-danger/10 text-status-danger border border-status-danger/20 rounded">
-          {erro}
-        </div>
-      )}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {erro && <Aviso>{erro}</Aviso>}
 
       {pedirAtual && (
-        <div className="space-y-1">
-          <label htmlFor="senha-atual" className={ROTULO}>Senha atual</label>
-          <CampoDeSenha id="senha-atual" required autoComplete="current-password" value={atual} onChange={(e) => setAtual(e.target.value)} className={CAMPO} />
-        </div>
+        <Campo rotulo="Senha atual">
+          <CampoDeSenha required autoComplete="current-password" value={atual} onChange={(e) => setAtual(e.target.value)} />
+        </Campo>
       )}
 
-      <div className="space-y-1">
-        <label htmlFor="senha-nova" className={ROTULO}>Nova senha</label>
-        <CampoDeSenha id="senha-nova" required autoComplete="new-password" value={nova} onChange={(e) => setNova(e.target.value)} className={CAMPO} />
-        <p className="text-text-tertiary text-[10px] leading-relaxed">
-          Mínimo de 12 caracteres. Trocar encerra as suas outras sessões abertas.
-        </p>
-      </div>
+      <Campo rotulo="Nova senha" ajuda="Mínimo de 12 caracteres. Trocar encerra as suas outras sessões abertas.">
+        <CampoDeSenha required autoComplete="new-password" value={nova} onChange={(e) => setNova(e.target.value)} />
+      </Campo>
 
-      <div className="space-y-1">
-        <label htmlFor="senha-confirmacao" className={ROTULO}>Repita a nova senha</label>
-        <CampoDeSenha id="senha-confirmacao" required autoComplete="new-password" value={confirmacao} onChange={(e) => setConfirmacao(e.target.value)} className={CAMPO} />
-      </div>
+      <Campo rotulo="Repita a nova senha">
+        <CampoDeSenha required autoComplete="new-password" value={confirmacao} onChange={(e) => setConfirmacao(e.target.value)} />
+      </Campo>
 
-      <div className="pt-4 border-t border-border-sutil">
-        <button type="submit" disabled={enviando} className="px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary transition-colors disabled:opacity-50 uppercase tracking-widest">
-          {enviando ? 'Salvando...' : rotuloDoBotao}
-        </button>
-      </div>
+      {/* Na tela cheia da troca obrigatória o botão ocupa a largura, como no login. */}
+      <Button type="submit" disabled={enviando} className={pedirAtual ? undefined : 'w-full'}>
+        {enviando ? 'Salvando...' : rotuloDoBotao}
+      </Button>
     </form>
   );
 }

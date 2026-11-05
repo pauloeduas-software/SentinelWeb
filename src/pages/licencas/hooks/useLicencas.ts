@@ -9,6 +9,7 @@ import type {
   AlvoDaEntrega, Licenca, LicencaInput, MotivoDoAlerta, StatusDoFiltro,
 } from '../../../types/license.types';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
+import { confirmar } from '../../../hooks/useConfirmacao';
 import { useNotificacao } from '../../../hooks/useNotificacao';
 
 const PER_PAGE = 15;
@@ -199,9 +200,12 @@ export function useLicencas() {
   // botão sempre clica: com entrega aberta, o 409 do servidor manda devolver.
   const handleAlternarEncerrada = async (licenca: Licenca) => {
     const encerrada = licenca.status === 'ENCERRADA';
-    if (!encerrada && !window.confirm(
-      `Encerrar "${licenca.name}" hoje? Continua no histórico, mas some das escolhas e não recebe nada novo.`,
-    )) return;
+    if (!encerrada && !(await confirmar({
+      titulo: `Encerrar "${licenca.name}" hoje?`,
+      descricao: 'Continua no histórico, mas some das escolhas e não recebe nada novo.',
+      acao: 'Encerrar',
+      perigo: true,
+    }))) return;
     try {
       if (encerrada) await editar.mutateAsync({ id: licenca.id, data: { terminationDate: null } });
       else await encerrar.mutateAsync(licenca.id);
@@ -216,7 +220,12 @@ export function useLicencas() {
   // a licença em uso recebe o 409 do servidor, que diz com quem e manda
   // devolver (AG).
   const handleExcluir = async (licenca: Licenca) => {
-    if (!window.confirm(`Excluir "${licenca.name}"? Esta ação não tem lixeira.`)) return;
+    if (!(await confirmar({
+      titulo: `Excluir "${licenca.name}"?`,
+      descricao: 'Esta ação não tem lixeira.',
+      acao: 'Excluir',
+      perigo: true,
+    }))) return;
     try {
       await excluir.mutateAsync(licenca.id);
       // Excluída do detalhe: a janela não tem mais o que mostrar.
@@ -249,6 +258,9 @@ export function useLicencas() {
     licencaAberta: licencaAtual,
     // Só para a licença do link: a outra, aberta pela lista, abre sem busca.
     buscaDoLink: licencaAtual && licencaAtual.id === idDoLink ? buscaDoLink : '',
+    // Todo link leva à devolução: a ficha, o computador e a recusa 409, que vem
+    // sem busca. Por isso a janela abre em "Com quem está", com busca ou sem.
+    veioDoLink: licencaAtual?.id === idDoLink,
     // O link apontava para uma licença que não existe mais (excluída).
     erroDoLink: idDoLink && modal === null && doLink.error ? doLink.error.message : null,
     abrir,

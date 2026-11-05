@@ -16,17 +16,16 @@ function formulario(page: Page): Locator {
   return page.locator('form').filter({ has: page.getByRole('button', { name: /^Salvar/ }) });
 }
 
-/**
- * Um campo do formulário pelo rótulo. O `<label>` do CatalogFormModal não tem
- * `htmlFor`, então `getByLabel` não o acha: o campo é o controle dentro do
- * mesmo bloco do rótulo.
- */
-function campo(form: Locator, rotulo: string): Locator {
-  return form
-    .locator('label', { hasText: rotulo })
-    .locator('xpath=..')
-    .locator('input, select, textarea')
-    .first();
+/** Escolhe uma opção no seletor do campo: abre pelo rótulo e clica no nome. */
+async function escolher(page: Page, rotulo: string, opcao: string): Promise<void> {
+  await formulario(page).getByLabel(rotulo).click();
+  await page.getByRole('option', { name: opcao, exact: true }).click();
+}
+
+/** Abre o `⋯` da linha e clica na ação. */
+async function acaoDaLinha(page: Page, nome: string, acao: string): Promise<void> {
+  await page.getByRole('button', { name: `Ações de ${nome}` }).click();
+  await page.getByRole('menuitem', { name: acao }).click();
 }
 
 test('cria, edita e exclui uma categoria', async ({ page }) => {
@@ -37,32 +36,34 @@ test('cria, edita e exclui uma categoria', async ({ page }) => {
   // Criar: o botão "+ Categoria" abre "Nova Categoria".
   await page.getByRole('button', { name: 'Categoria', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Nova Categoria' })).toBeVisible();
-  await campo(formulario(page), 'Nome').fill(NOME);
-  await campo(formulario(page), 'Tipo').selectOption('STOCK');
+  await formulario(page).getByLabel('Nome').fill(NOME);
+  await escolher(page, 'Tipo', 'Estoque');
   await formulario(page).getByRole('button', { name: /^Salvar/ }).click();
   await expect(formulario(page)).toBeHidden();
   await expect(page.getByText(NOME, { exact: true })).toBeVisible();
 
-  // Editar: o formulário vem preenchido com o que está gravado.
-  await page.getByRole('button', { name: `Editar ${NOME}` }).click();
+  // Editar pelo clique na linha (AY): o formulário vem preenchido com o que está gravado.
+  await page.getByRole('row', { name: new RegExp(NOME) }).click();
   await expect(page.getByRole('heading', { name: 'Editar Categoria' })).toBeVisible();
-  await expect(campo(formulario(page), 'Nome')).toHaveValue(NOME);
-  await campo(formulario(page), 'Nome').fill(NOME_EDITADO);
+  await expect(formulario(page).getByLabel('Nome')).toHaveValue(NOME);
+  await formulario(page).getByLabel('Nome').fill(NOME_EDITADO);
   await formulario(page).getByRole('button', { name: /^Salvar/ }).click();
   await expect(formulario(page)).toBeHidden();
   await expect(page.getByText(NOME_EDITADO, { exact: true })).toBeVisible();
   await expect(page.getByText(NOME, { exact: true })).toHaveCount(0);
 
-  // Excluir: o `confirm()` do navegador, com a frase do padrão (sem lixeira).
-  // O ouvinte entra ANTES do clique; sem ele o Playwright descarta o diálogo.
-  let aviso = '';
-  page.once('dialog', (dialogo) => {
-    aviso = dialogo.message();
-    void dialogo.accept();
-  });
-  await page.getByRole('button', { name: `Excluir ${NOME_EDITADO}` }).click();
+  // O `⋯` abre o mesmo formulário.
+  await acaoDaLinha(page, NOME_EDITADO, 'Editar');
+  await expect(page.getByRole('heading', { name: 'Editar Categoria' })).toBeVisible();
+  await page.getByRole('button', { name: 'Cancelar' }).click();
+
+  // Excluir pergunta antes, com a frase do padrão (sem lixeira).
+  await acaoDaLinha(page, NOME_EDITADO, 'Excluir');
+  const pergunta = page.getByRole('alertdialog');
+  await expect(pergunta.getByRole('heading', { name: `Excluir "${NOME_EDITADO}"?` })).toBeVisible();
+  await expect(pergunta).toContainText('Esta ação não tem lixeira.');
+  await pergunta.getByRole('button', { name: 'Excluir' }).click();
   await expect(page.getByText(NOME_EDITADO, { exact: true })).toHaveCount(0);
-  expect(aviso).toBe(`Excluir "${NOME_EDITADO}"? Esta ação não tem lixeira.`);
 
   conferirConsole();
 });

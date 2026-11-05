@@ -290,8 +290,6 @@ listagem e do detalhe para quem não é `SUPERVISOR`, e as escritas da licença 
 A quarta porta era o diff do histórico do ativo, e ela fechou: o histórico é só movimentação, e a
 edição do custo fica na auditoria, que tela nenhuma lê ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)).
 
-A busca do leitor (`/api/search`) devolve só o que identifica o ativo, para todo cargo.
-
 **O login é o e-mail, e ninguém escolhe a senha de outra pessoa** ([R](../decisoes/acesso.md#r--a-senha-nasce-no-cadastro-e-o-login-é-o-e-mail), [AU](../decisoes/acesso.md#au--ninguém-escolhe-a-senha-de-outra-pessoa)).
 Não há nome de usuário à parte nem ação separada para dar acesso: o formulário de Usuários
 pede nome, e-mail e cargo ([D162](../decisoes/escopo.md#d162--minha-conta-sai-e-o-cargo-vira-campo-do-formulário-de-usuário), [AV](../decisoes/acesso.md#av--três-cargos-técnico-supervisor-e-administrador)), e **nenhuma senha**.

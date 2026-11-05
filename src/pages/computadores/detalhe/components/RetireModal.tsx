@@ -1,9 +1,13 @@
 import { useState } from 'react';
-import { PackageX, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import FormularioLateral from '../../../../components/FormularioLateral';
+import { Aviso } from '../../../../components/ui/aviso';
+import { Campo } from '../../../../components/ui/campo';
+import { Input, Textarea } from '../../../../components/ui/input';
+import { Seletor } from '../../../../components/ui/seletor';
 import type { Asset, RetireInput } from '../../../../types/asset.types';
 import { hojeNoCampoDeData } from '../../../../helpers/format.helper';
 import { MOTIVOS_DA_SAIDA } from '../../helpers/baixa.helper';
-import { Link } from 'react-router-dom';
 import type { LinkDaNotificacao } from '../../../../hooks/useNotificacao';
 import { linksDoErro } from '../../../../helpers/erro.helper';
 
@@ -11,17 +15,12 @@ import { linksDoErro } from '../../../../helpers/erro.helper';
 //
 // Modal próprio, e não um campo do formulário de ativo, pelo mesmo motivo da
 // entrega: é uma OPERAÇÃO, com data, motivo e recusa própria (ativo entregue
-// não sai do patrimônio). Como campo, viraria um `<select>` que alguém muda sem
+// não sai do patrimônio). Como campo, viraria um seletor que alguém muda sem
 // perceber ao editar o número de série.
 //
 // As duas saídas são diferentes (D19) e o texto abaixo diz isso na hora da
 // decisão, que é quando a dúvida existe: a lixeira é para cadastro errado, e
 // isto aqui é o fato contábil de que o bem saiu.
-
-const CLASSE_CAMPO =
-  'w-full p-2 bg-bg-base border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors';
-
-const ROTULO = 'text-text-secondary uppercase tracking-widest text-[10px]';
 
 interface RetireModalProps {
   asset: Asset;
@@ -69,98 +68,48 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
-      <div className="relative w-full max-w-lg bg-surface-card border border-border-sutil shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-sutil bg-bg-base/50">
-          <h2 className="flex items-center gap-3 text-sm font-mono text-text-primary tracking-widest uppercase">
-            <PackageX size={16} /> Dar baixa em {asset.assetTag}
-          </h2>
-          <button onClick={onClose} className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
-            <X size={16} />
-          </button>
-        </div>
-
-        <form onSubmit={enviar} className="p-6 font-mono text-xs space-y-5">
-          {erro && (
-            <div role="alert" className="p-3 bg-status-danger/10 text-status-danger border border-status-danger/20 space-y-1.5">
-              <p>{erro}</p>
-              {links.length > 0 && (
-                <div className="flex flex-wrap gap-x-3 gap-y-1">
-                  {links.map((link) => (
-                    <Link key={link.para} to={link.para} className="underline underline-offset-2">{link.rotulo}</Link>
-                  ))}
-                </div>
-              )}
+    <FormularioLateral
+      titulo={`Dar baixa em ${asset.assetTag}`}
+      descricao="Sai do patrimônio e das listagens, e fica na vista Baixados com a data e o motivo. Cadastro errado vai para a lixeira."
+      onClose={onClose}
+      onSubmit={enviar}
+      salvando={salvando}
+      rotuloDoEnvio="Confirmar saída"
+      rotuloEnviando="Registrando..."
+    >
+      {erro && (
+        <Aviso className="space-y-1.5">
+          <p>{erro}</p>
+          {links.length > 0 && (
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              {links.map((link) => (
+                <Link key={link.para} to={link.para} className="underline underline-offset-2">{link.rotulo}</Link>
+              ))}
             </div>
           )}
+        </Aviso>
+      )}
 
-          <p className="text-text-tertiary text-[10px] leading-relaxed">
-            O ativo sai do PATRIMÔNIO e das listagens do dia a dia, mas continua existindo: segue
-            no histórico e na vista "Baixados" da tela Computadores, com a data e o motivo da saída.
-            Para desfazer um cadastro errado, use a lixeira.
-          </p>
+      <Campo rotulo="Motivo" obrigatorio>
+        <Seletor
+          value={motivo}
+          onChange={(valor) => setMotivo(valor as typeof motivo)}
+          opcoes={MOTIVOS_DA_SAIDA}
+          vazio="Selecione..."
+          placeholderDaBusca="Buscar motivo..."
+          obrigatorio
+        />
+      </Campo>
 
-          <div className="space-y-1">
-            <label className={ROTULO}>Motivo*</label>
-            <select
-              value={motivo}
-              onChange={(event) => setMotivo(event.target.value as typeof motivo)}
-              className={CLASSE_CAMPO}
-            >
-              {MOTIVOS_DA_SAIDA.map((opcao) => (
-                <option key={opcao.value} value={opcao.value}>{opcao.label}</option>
-              ))}
-            </select>
-          </div>
+      {/* `max` = hoje porque o servidor recusa data futura (422): uma saída
+          que ainda não aconteceu não é fato a registrar. */}
+      <Campo rotulo="Data da saída" obrigatorio ajuda="Vem com hoje: troque pela data em que o ativo saiu.">
+        <Input type="date" required max={hoje} value={data} onChange={(event) => setData(event.target.value)} />
+      </Campo>
 
-          <div className="space-y-1">
-            <label className={ROTULO}>Data da saída*</label>
-            {/* `max` = hoje porque o servidor recusa data futura (422): uma saída
-                que ainda não aconteceu não é fato a registrar. */}
-            <input
-              type="date"
-              required
-              max={hoje}
-              value={data}
-              onChange={(event) => setData(event.target.value)}
-              className={CLASSE_CAMPO}
-            />
-            <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">
-              Vem com a data de hoje. A venda pode ter sido semana passada e o registro, hoje: troque
-              pela data em que o ativo saiu.
-            </p>
-          </div>
-
-          <div className="space-y-1">
-            <label className={ROTULO}>Observações</label>
-            <textarea
-              value={observacoes}
-              onChange={(event) => setObservacoes(event.target.value)}
-              className={`${CLASSE_CAMPO} h-20 resize-none`}
-            />
-            <p className="text-text-tertiary text-[10px] leading-relaxed pt-1">
-              Aparece na aba Detalhes enquanto a baixa valer, e sai se a baixa for desfeita.
-            </p>
-          </div>
-
-          <div className="pt-4 flex justify-end gap-3 border-t border-border-sutil">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={salvando}
-              className="px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary transition-colors disabled:opacity-50"
-            >
-              {salvando ? 'Registrando...' : 'Confirmar saída'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      <Campo rotulo="Observações" ajuda="Aparece na aba Detalhes enquanto a baixa valer.">
+        <Textarea value={observacoes} onChange={(event) => setObservacoes(event.target.value)} />
+      </Campo>
+    </FormularioLateral>
   );
 }

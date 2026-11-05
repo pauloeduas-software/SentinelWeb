@@ -25,10 +25,10 @@ interface EstadoDaListaProps {
 }
 
 export default function EstadoDaLista({ carregando, erro, children }: EstadoDaListaProps) {
-  if (carregando) return <span>Carregando…</span>;
+  if (carregando) return <span className="text-sm text-text-tertiary">Carregando…</span>;
   if (erro) {
     return (
-      <span role="alert" className="text-status-danger max-w-md text-center leading-relaxed">
+      <span role="alert" className="max-w-md text-center text-sm leading-relaxed text-status-danger">
         Não foi possível carregar a lista: {erro}
       </span>
     );

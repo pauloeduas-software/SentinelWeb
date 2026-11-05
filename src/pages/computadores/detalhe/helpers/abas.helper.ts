@@ -1,4 +1,4 @@
-import { Cpu, History, Info, KeyRound, MonitorSmartphone, Users } from 'lucide-react';
+import { Cpu, History, Info, KeyRound, Monitor, Users } from 'lucide-react';
 
 // AS SEIS ABAS DA TELA DE DETALHE — dado, não componente.
 //
@@ -25,5 +25,5 @@ export const ABAS: readonly Aba[] = [
   { id: 'historico', rotulo: 'Histórico', icone: History },
   { id: 'licencas', rotulo: 'Licenças', icone: KeyRound },
   { id: 'componentes', rotulo: 'Componentes', icone: Cpu },
-  { id: 'maquina', rotulo: 'Máquina', icone: MonitorSmartphone },
+  { id: 'maquina', rotulo: 'Máquina', icone: Monitor },
 ];

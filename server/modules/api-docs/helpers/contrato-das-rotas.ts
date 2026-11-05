@@ -65,7 +65,6 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
   'GET /api/assets': { tag: 'Computadores', resumo: 'Lista os computadores, com filtros e a lixeira (?view=trashed)', query: 'lista' },
   'GET /api/assets/stats': { tag: 'Computadores', resumo: 'Contagens do inventário' },
   'GET /api/assets/options': { tag: 'Computadores', resumo: 'Opções para um seletor de computador' },
-  'GET /api/search': { tag: 'Computadores', resumo: 'Busca global (etiqueta, nome, número de série)' },
   'GET /api/assets/:id': { tag: 'Computadores', resumo: 'A ficha do computador' },
   'GET /api/assets/:id/history': { tag: 'Computadores', resumo: 'O histórico do computador' },
   'GET /api/assets/:id/assignments': { tag: 'Computadores', resumo: 'As posses (entregas e devoluções) do computador' },

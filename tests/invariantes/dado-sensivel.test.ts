@@ -76,26 +76,6 @@ describe('custo de compra — `ADMIN` (D148), hoje o único cargo (Z)', () => {
     expect(linha!.purchaseCost).toBe('4250.9');
   });
 
-  it('a BUSCA GLOBAL não traz a propriedade — no acerto exato nem no aproximado', async () => {
-    // A QUARTA PORTA. `GET /api/search` devolvia o ativo inteiro com o select
-    // da listagem. Hoje a busca devolve só o que identifica o ativo, para todo
-    // cargo. Os dois caminhos são consultas diferentes, então os dois
-    // são conferidos — um `select` esquecido no aproximado passaria pelo caso
-    // do exato.
-    type Busca = { tipo: string; ativos: Record<string, unknown>[] };
-
-    const exato = await api.get<Busca>('/api/search?q=ATV-CUSTO-1');
-    expect(exato.status).toBe(200);
-    expect(exato.body.tipo).toBe('EXATO');
-    expect(Object.hasOwn(exato.body.ativos[0], 'purchaseCost')).toBe(false);
-
-    const aproximado = await api.get<Busca>('/api/search?q=CUSTO');
-    expect(aproximado.body.tipo).toBe('PARCIAL');
-    const linha = aproximado.body.ativos.find((a) => a.assetTag === 'ATV-CUSTO-1');
-    expect(linha).toBeDefined();
-    expect(Object.hasOwn(linha!, 'purchaseCost')).toBe(false);
-  });
-
   it('as respostas de ESCRITA não trazem o custo, para cargo nenhum', async () => {
     // A QUINTA PORTA: criar, editar, entregar, devolver, dar baixa e restaurar
     // respondem com o ativo atualizado (`ASSET_WRITE_SELECT`).

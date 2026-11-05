@@ -1,8 +1,9 @@
-import { ArrowLeft, ArrowRightLeft, Copy, Edit2, PackageX, Trash2, Undo2 } from 'lucide-react';
+import { ArrowLeft, Copy, Pencil, Trash2, Undo2, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AssetFormModal from '../components/AssetFormModal';
 import CheckoutModal from '../components/CheckoutModal';
 import AssetTabs from './components/AssetTabs';
+import IdentificacaoCard from './components/IdentificacaoCard';
 import LicensesTab from './components/LicensesTab';
 import ComponentesTab from './components/ComponentesTab';
 import MaquinaTab from './components/MaquinaTab';
@@ -10,7 +11,11 @@ import DetalhesTab from './components/DetalhesTab';
 import HistoryTab from './components/HistoryTab';
 import PosseTab from './components/PosseTab';
 import RetireModal from './components/RetireModal';
-import { seloDaSaida } from '../helpers/baixa.helper';
+import AcoesDaLinha from '../../../components/AcoesDaLinha';
+import PaginaCabecalho from '../../../components/PaginaCabecalho';
+import { Aviso } from '../../../components/ui/aviso';
+import { Button } from '../../../components/ui/button';
+import { TabsContent } from '../../../components/ui/tabs';
 import { bloqueioDaEntrega, rotuloDaOperacao } from '../helpers/posse.helper';
 import { useAssetDetail } from './hooks/useAssetDetail';
 import { usePode } from '../../../stores/auth.store';
@@ -43,121 +48,102 @@ export default function AssetDetailPage() {
   const podeExcluir = usePode('SUPERVISOR');
 
   if (carregando) {
-    return <div className="font-mono text-xs text-text-tertiary">Carregando ativo…</div>;
+    return <div className="text-sm text-text-tertiary">Carregando ativo…</div>;
   }
 
   if (erro || !asset) {
     return (
-      <div className="font-mono text-xs space-y-4">
-        <div className="text-status-danger">{erro ?? 'Ativo não encontrado.'}</div>
-        <Link to="/computadores" className="flex items-center gap-2 text-text-tertiary hover:text-text-primary transition-colors">
-          <ArrowLeft size={14} /> Voltar para os computadores
+      <div className="space-y-4">
+        <Aviso>{erro ?? 'Ativo não encontrado.'}</Aviso>
+        <Link to="/computadores" className="inline-flex items-center gap-1.5 text-sm text-text-tertiary transition-colors hover:text-text-primary">
+          <ArrowLeft className="size-4" /> Voltar para os computadores
         </Link>
       </div>
     );
   }
 
-  // Cálculo fora do JSX (docs/referencia/arquitetura.md).
-  const selo = seloDaSaida(asset);
   // A MESMA trava da listagem, nas duas portas desta tela (cabeçalho e aba
   // Posse): só `DEPLOYABLE` se entrega, e o motivo vai no `title`.
   const bloqueio = bloqueioDaEntrega(asset);
 
   return (
-    <div className="motion-safe:animate-fade-in space-y-6 pb-6">
-      <Link
-        to="/computadores"
-        className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary transition-colors"
-      >
-        <ArrowLeft size={13} /> Computadores
-      </Link>
+    <div className="motion-safe:animate-fade-in pb-6">
+      <PaginaCabecalho
+        voltar={{ para: '/computadores', rotulo: 'Computadores' }}
+        titulo={<span className="font-mono">{asset.assetTag}</span>}
+        subtitulo={`${asset.model.manufacturer.name} ${asset.model.name}`}
+        acao={
+          <>
+            <Button size="sm" onClick={abrirPosse} disabled={bloqueio !== null} title={bloqueio ?? undefined}>
+              {asset.posse?.assignmentId ? <Undo2 /> : <UserPlus />} {rotuloDaOperacao(asset.posse)}
+            </Button>
+            <Button variant="outline" size="sm" onClick={abrirEdicao}><Pencil /> Editar</Button>
+            <AcoesDaLinha
+              nome={asset.assetTag}
+              acoes={[
+                // Clonar é operação DE TELA: abre o formulário em modo criação com
+                // os valores deste ativo, sem etiqueta e sem série. Não há rota nova.
+                { rotulo: 'Clonar', icone: Copy, onClick: abrirClone },
+                podeExcluir && { rotulo: 'Excluir', icone: Trash2, onClick: () => void handleDelete(), perigo: true },
+              ]}
+            />
+          </>
+        }
+      />
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-xl font-mono text-text-primary uppercase tracking-widest">{asset.assetTag}</h2>
+      <div className="space-y-6">
+        <IdentificacaoCard asset={asset} />
 
-            <span className="px-2 py-1 border border-border-sutil rounded-[2px] text-text-secondary font-mono text-[10px] uppercase tracking-widest">
-              {asset.status.name}
-            </span>
+        <AssetTabs ativa={aba} onChange={setAba}>
+          <TabsContent value="detalhes" className="mt-4">
+            <DetalhesTab
+              asset={asset}
+              onDarBaixa={podeExcluir ? abrirBaixa : undefined}
+              onReverterSaida={podeExcluir ? () => void handleReverterSaida() : undefined}
+            />
+          </TabsContent>
 
-            {selo && (
-              <span className="flex items-center gap-1.5 px-2 py-1 border border-status-warning/30 bg-status-warning/10 text-status-warning font-mono text-[10px] uppercase tracking-widest">
-                <PackageX size={11} /> {selo}
-              </span>
-            )}
-          </div>
+          <TabsContent value="posse" className="mt-4">
+            <PosseTab
+              posse={asset.posse}
+              assignments={assignments}
+              carregando={possePendente}
+              onAbrirOperacao={abrirPosse}
+              bloqueio={bloqueio}
+            />
+          </TabsContent>
 
-          <div className="font-mono text-xs text-text-tertiary">
-            {asset.model.manufacturer.name} {asset.model.name}
-            {asset.name && <> · {asset.name}</>}
-            {asset.serial && <> · SN {asset.serial}</>}
-          </div>
-        </div>
+          <TabsContent value="historico" className="mt-4">
+            <HistoryTab eventos={eventos} total={totalDeEventos} carregando={historicoPendente} />
+          </TabsContent>
 
-        <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
-          <Acao onClick={abrirPosse} icone={asset.posse?.assignmentId ? Undo2 : ArrowRightLeft} bloqueio={bloqueio}>
-            {rotuloDaOperacao(asset.posse)}
-          </Acao>
-          <Acao onClick={abrirEdicao} icone={Edit2}>Editar</Acao>
-          {/* Clonar é operação DE TELA: abre o formulário em modo criação com os
-              valores deste ativo, sem etiqueta e sem série. Não há rota nova. */}
-          <Acao onClick={abrirClone} icone={Copy}>Clonar</Acao>
-          {podeExcluir && <Acao onClick={() => void handleDelete()} icone={Trash2} perigo>Excluir</Acao>}
-        </div>
-      </div>
+          <TabsContent value="licencas" className="mt-4">
+            <LicensesTab
+              licencas={licencas}
+              assetTag={asset.assetTag}
+              carregando={licencasPendentes}
+              erro={erroDasLicencas}
+            />
+          </TabsContent>
 
-      <AssetTabs ativa={aba} onChange={setAba} />
+          <TabsContent value="componentes" className="mt-4">
+            <ComponentesTab
+              componentes={componentes}
+              assetTag={asset.assetTag}
+              carregando={componentesPendentes}
+              erro={erroDosComponentes}
+            />
+          </TabsContent>
 
-      <div className="bg-surface-card border border-border-sutil p-6 font-mono text-xs">
-        {aba === 'detalhes' && (
-          <DetalhesTab
-            asset={asset}
-            onDarBaixa={podeExcluir ? abrirBaixa : undefined}
-            onReverterSaida={podeExcluir ? () => void handleReverterSaida() : undefined}
-          />
-        )}
-
-        {aba === 'posse' && (
-          <PosseTab
-            posse={asset.posse}
-            assignments={assignments}
-            carregando={possePendente}
-            onAbrirOperacao={abrirPosse}
-            bloqueio={bloqueio}
-          />
-        )}
-
-        {aba === 'historico' && (
-          <HistoryTab eventos={eventos} total={totalDeEventos} carregando={historicoPendente} />
-        )}
-
-        {aba === 'licencas' && (
-          <LicensesTab
-            licencas={licencas}
-            assetTag={asset.assetTag}
-            carregando={licencasPendentes}
-            erro={erroDasLicencas}
-          />
-        )}
-
-        {aba === 'componentes' && (
-          <ComponentesTab
-            componentes={componentes}
-            assetTag={asset.assetTag}
-            carregando={componentesPendentes}
-            erro={erroDosComponentes}
-          />
-        )}
-
-        {aba === 'maquina' && (
-          <MaquinaTab
-            maquina={maquina}
-            carregando={maquinaPendente}
-            desvinculando={desvinculando}
-            onDesvincular={handleDesvincular}
-          />
-        )}
+          <TabsContent value="maquina" className="mt-4">
+            <MaquinaTab
+              maquina={maquina}
+              carregando={maquinaPendente}
+              desvinculando={desvinculando}
+              onDesvincular={handleDesvincular}
+            />
+          </TabsContent>
+        </AssetTabs>
       </div>
 
       {(modal === 'editar' || modal === 'clonar') && (
@@ -183,32 +169,5 @@ export default function AssetDetailPage() {
         <RetireModal asset={asset} onClose={fecharModal} onConfirmar={handleDarBaixa} />
       )}
     </div>
-  );
-}
-
-interface AcaoProps {
-  onClick: () => void;
-  icone: typeof Edit2;
-  perigo?: boolean;
-  /** Preenchido, a ação fica travada e o texto vira o `title` — o porquê. */
-  bloqueio?: string | null;
-  children: React.ReactNode;
-}
-
-function Acao({ onClick, icone: Icone, perigo, bloqueio, children }: AcaoProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={bloqueio != null}
-      title={bloqueio ?? undefined}
-      className={`flex items-center gap-2 px-3 py-2 border border-border-sutil transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
-        perigo
-          ? 'text-text-tertiary hover:text-status-danger hover:bg-bg-base'
-          : 'text-text-secondary hover:text-text-primary hover:bg-bg-base'
-      }`}
-    >
-      <Icone size={13} /> {children}
-    </button>
   );
 }

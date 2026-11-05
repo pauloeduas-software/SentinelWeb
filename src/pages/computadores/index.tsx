@@ -1,17 +1,26 @@
-import { ArrowRightLeft, Copy, Database, Edit2, PackageX, Plus, RotateCcw, Trash2, TriangleAlert, Undo2 } from 'lucide-react';
+import {
+  Copy, Monitor, PackageX, Pencil, Plus, RotateCcw, Trash2, TriangleAlert, Undo2, UserPlus,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AssetFilterBar from './components/AssetFilterBar';
 import AssetFormModal from './components/AssetFormModal';
 import CheckoutModal from './components/CheckoutModal';
 import ColunasMenu from './components/ColunasMenu';
+import AcoesDaLinha from '../../components/AcoesDaLinha';
 import CategoriaFiltro from '../../components/CategoriaFiltro';
 import EstadoDaLista from '../../components/EstadoDaLista';
 import ListToolbar from '../../components/ListToolbar';
+import PaginaCabecalho from '../../components/PaginaCabecalho';
+import { Badge } from '../../components/ui/badge';
+import { Button } from '../../components/ui/button';
+import { Card } from '../../components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { usePode } from '../../stores/auth.store';
+import { cn } from '../../helpers/cn.helper';
 import { formatarData, formatarMoeda } from '../../helpers/format.helper';
 import { seloDaSaida } from './helpers/baixa.helper';
 import {
-  TRACO, bloqueioDaEntrega, resumoDaPosse, rotuloDaOperacao,
+  TRACO, bloqueioDaEntrega, resumoDaPosse, rotuloDaOperacao, tomDoStatus,
 } from './helpers/posse.helper';
 import { useAssets } from './hooks/useAssets';
 import { useColunas } from './hooks/useColunas';
@@ -38,13 +47,13 @@ export default function ComputadoresPage() {
   const colunas = useColunas();
 
   return (
-    <div className="motion-safe:animate-fade-in h-[calc(100vh-4rem)] flex flex-col pb-6">
+    <div className="motion-safe:animate-fade-in flex flex-col pb-6">
 
-      <div className="flex justify-between items-end mb-6 shrink-0">
-        <div>
-          <h2 className="text-xl font-mono text-text-primary uppercase tracking-widest">Computadores</h2>
-          <div className="flex flex-wrap items-center gap-4 mt-2 font-mono text-xs text-text-tertiary">
-            <span>{totalCadastrado} {totalCadastrado === 1 ? 'ativo' : 'ativos'}</span>
+      <PaginaCabecalho
+        titulo="Computadores"
+        subtitulo={
+          <span className="flex flex-wrap items-center gap-1">
+            <span className="mr-1">{totalCadastrado} {totalCadastrado === 1 ? 'ativo' : 'ativos'}</span>
             {porStatus.map((status) => (
               // O contador agora FILTRA: clicar liga `?statusId=`, clicar de
               // novo desliga. Antes o número existia e não levava a lugar
@@ -54,33 +63,30 @@ export default function ComputadoresPage() {
                 type="button"
                 onClick={() => toggleStatus(status.id)}
                 title={`Filtrar por ${status.name}`}
-                className={`flex items-center gap-2 px-2 py-1 border transition-colors ${
-                  statusId === status.id
-                    ? 'border-status-info/40 bg-status-info/10 text-text-primary'
-                    : 'border-transparent hover:border-border-sutil hover:text-text-secondary'
-                }`}
+                aria-pressed={statusId === status.id}
+                className={cn(
+                  'rounded-md px-2 py-0.5 transition-colors hover:bg-accent hover:text-accent-foreground',
+                  statusId === status.id && 'bg-accent text-accent-foreground',
+                )}
               >
-                {status.name} <span className="text-text-secondary tabular-nums">{status.total}</span>
+                {status.name} <span className="tabular-nums">{status.total}</span>
               </button>
             ))}
-          </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <ColunasMenu
-            catalogo={colunas.catalogo}
-            visiveis={colunas.visiveis}
-            personalizado={colunas.personalizado}
-            onAlternar={colunas.alternar}
-            onRestaurar={colunas.restaurar}
-          />
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-2 px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary font-mono text-xs uppercase tracking-widest transition-colors"
-          >
-            <Plus size={14} /> Novo Ativo
-          </button>
-        </div>
-      </div>
+          </span>
+        }
+        acao={
+          <>
+            <ColunasMenu
+              catalogo={colunas.catalogo}
+              visiveis={colunas.visiveis}
+              personalizado={colunas.personalizado}
+              onAlternar={colunas.alternar}
+              onRestaurar={colunas.restaurar}
+            />
+            <Button onClick={openCreate}><Plus /> Novo ativo</Button>
+          </>
+        }
+      />
 
       <AssetFilterBar
         view={view}
@@ -105,220 +111,185 @@ export default function ComputadoresPage() {
         onPageChange={setPage}
       />
 
-      <div className="bg-surface-card border border-border-sutil flex-1 overflow-auto">
-        <table className="w-full text-left font-mono text-xs whitespace-nowrap">
-          <thead className="bg-bg-base/50 text-text-secondary border-b border-border-sutil uppercase tracking-widest sticky top-0 z-10">
-            <tr>
-              {/* O CABEÇALHO E A CÉLULA consultam o MESMO `mostrar()`, e é só
-                  isso que os mantém alinhados. Iterar a lista de tokens e
-                  desenhar a célula por token seria mais curto e exigiria uma
-                  função de render por coluna — o que levaria o JSX de status,
-                  de posse e de compra (que não são texto: são selo, lista com
-                  turno e duas linhas) para dentro de um helper. */}
-              {colunas.mostrar('assetTag') && <th className="px-6 py-4 font-normal">Etiqueta</th>}
-              {colunas.mostrar('model') && <th className="px-6 py-4 font-normal">Modelo</th>}
-              {colunas.mostrar('category') && <th className="px-6 py-4 font-normal">Categoria</th>}
-              {colunas.mostrar('status') && <th className="px-6 py-4 font-normal">Status</th>}
-              {colunas.mostrar('location') && <th className="px-6 py-4 font-normal">Localização</th>}
-              {colunas.mostrar('responsible') && <th className="px-6 py-4 font-normal">Responsável</th>}
-              {colunas.mostrar('purchase') && <th className="px-6 py-4 font-normal">Compra</th>}
-              {colunas.mostrar('name') && <th className="px-6 py-4 font-normal">Nome</th>}
-              {colunas.mostrar('orderNumber') && <th className="px-6 py-4 font-normal">Nº do pedido</th>}
-              <th className="px-6 py-4 font-normal text-right">Ações</th>
-            </tr>
-          </thead>
-
-          <tbody className="text-text-primary divide-y divide-border-sutil/50">
-            {assets.map((asset) => {
-              // O cálculo da posse fica no helper, nunca no JSX
-              // (docs/referencia/arquitetura.md). Aqui só se escolhe o que mostrar.
-              const posse = resumoDaPosse(asset.posse);
-              const selo = seloDaSaida(asset);
-              const bloqueio = bloqueioDaEntrega(asset);
-
-              return (
-                <tr
-                  key={asset.id}
-                  // A LINHA ABRE O DETALHE. Os controles de dentro dela param a
-                  // propagação: marcar um checkbox ou clicar em "editar" não
-                  // pode navegar para outra tela.
-                  onClick={() => abrirDetalhe(asset)}
-                  title={`Abrir ${asset.assetTag}`}
-                  className="hover:bg-bg-base transition-colors group cursor-pointer"
-                >
-                  {colunas.mostrar('assetTag') && (
-                  <td className="px-6 py-4">
-                    <div className="font-medium">{asset.assetTag}</div>
-                    {asset.serial && <div className="text-[10px] text-text-tertiary mt-1">SN {asset.serial}</div>}
-                    {selo && (
-                      <div className="flex items-center gap-1.5 text-[10px] text-status-warning mt-1 uppercase tracking-widest">
-                        <PackageX size={11} className="shrink-0" /> {selo}
-                      </div>
-                    )}
-                  </td>
+      {assets.length === 0 ? (
+        <Card className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-text-tertiary">
+          <Monitor className="size-6 opacity-50" />
+          <EstadoDaLista carregando={loading} erro={erro}>
+            {view === 'trashed' ? (
+              <span>A lixeira está vazia.</span>
+            ) : view === 'retired' ? (
+              <span>Nenhum ativo baixado.</span>
+            ) : search ? (
+              <span>Nenhum ativo encontrado para "{search}".</span>
+            ) : statusId ? (
+              <span>Nenhum ativo com este status.</span>
+            ) : categoryId ? (
+              <span>Nenhum ativo nesta categoria.</span>
+            ) : (
+              <>
+                <span>Nenhum ativo cadastrado.</span>
+                {/* Um ativo exige um modelo, e o modelo exige fabricante e
+                    categoria — é a ordem do Snipe-IT. Sem esta dica, o
+                    primeiro cadastro esbarra num seletor vazio. */}
+                <span className="max-w-md text-center text-xs leading-relaxed">
+                  {podeDecidir ? (
+                    <>
+                      Todo ativo pertence a um modelo. Cadastre o fabricante e o modelo em{' '}
+                      <Link to="/configuracoes" className="text-primary hover:underline">Configurações</Link>
+                      {' '}antes do primeiro ativo.
+                    </>
+                  ) : (
+                    'Todo ativo pertence a um modelo. Peça a um supervisor que cadastre o fabricante e o modelo em Configurações antes do primeiro ativo.'
                   )}
-                  {colunas.mostrar('model') && (
-                  <td className="px-6 py-4 text-text-secondary">
-                    <div>{asset.model.name}</div>
-                    <div className="text-[10px] text-text-tertiary mt-1">{asset.model.manufacturer.name}</div>
-                  </td>
-                  )}
-                  {colunas.mostrar('category') && (
-                  <td className="px-6 py-4 text-text-tertiary">{asset.model.category.name}</td>
-                  )}
-                  {colunas.mostrar('status') && (
-                  <td className="px-6 py-4">
-                    <span className="px-2 py-1 border border-border-sutil rounded-[2px] text-text-secondary text-[10px] uppercase tracking-widest">
-                      {asset.status.name}
-                    </span>
-                  </td>
-                  )}
-                  {colunas.mostrar('location') && (
-                  <td className="px-6 py-4 text-text-tertiary">{asset.location?.name ?? '—'}</td>
-                  )}
-                  {/* RESPONSÁVEL — derivado, e pode ser mais de um: os ocupantes
-                      do posto para o qual o ativo foi entregue aparecem juntos,
-                      cada um com o turno (docs/referencia/modelo-de-posse.md, Camada 3). */}
-                  {colunas.mostrar('responsible') && (
-                  <td className="px-6 py-4">
-                    {posse.quantos > 0
-                      ? <div className="text-text-secondary whitespace-normal max-w-[20rem]">{posse.responsaveis}</div>
-                      : <span className="text-text-tertiary">{TRACO}</span>}
-
-                    {posse.detalheAlvo && (
-                      <div className="text-[10px] text-text-tertiary mt-1">{posse.detalheAlvo}</div>
-                    )}
-
-                    {/* Posto vago: equipamento parado em mesa sem ninguém. É sinal
-                        operacional, por isso tem cor — some assim que alguém
-                        ocupar o posto. */}
-                    {posse.postoVago && (
-                      <div className="flex items-center gap-1.5 text-[10px] text-status-warning mt-1 uppercase tracking-widest">
-                        <TriangleAlert size={11} className="shrink-0" /> Posto vago
-                      </div>
-                    )}
-                  </td>
-                  )}
-                  {colunas.mostrar('purchase') && (
-                  <td className="px-6 py-4 text-text-secondary">
-                    {/* O valor só para quem vê o custo (D77, AV); a data, para todos. */}
-                    {asset.purchaseCost !== undefined && <div className="tabular-nums">{formatarMoeda(asset.purchaseCost)}</div>}
-                    <div className={`tabular-nums ${asset.purchaseCost !== undefined ? 'text-[10px] text-text-tertiary mt-1' : ''}`}>{formatarData(asset.purchaseDate)}</div>
-                  </td>
-                  )}
-
-                  {/* AS CINCO QUE O SELETOR TROUXE. Todas vinham no payload da
-                      listagem desde a F1 — nenhuma custa consulta a mais. */}
-                  {colunas.mostrar('name') && (
-                    <td className="px-6 py-4 text-text-secondary">
-                      {asset.name || <span className="text-text-tertiary">{TRACO}</span>}
-                    </td>
-                  )}
-                  {colunas.mostrar('orderNumber') && (
-                    <td className="px-6 py-4 text-text-tertiary">
-                      {asset.orderNumber || <span className="text-text-tertiary">{TRACO}</span>}
-                    </td>
-                  )}
-                  <td className="px-6 py-4 text-right" onClick={(event) => event.stopPropagation()}>
-                    {/* Visível ao passar o mouse, ao navegar por Tab
-                        (`focus-within`) e sempre no toque, onde não há hover —
-                        o mesmo desenho do `CatalogTable`. Com `opacity-0` puro,
-                        o botão focado por Tab ficava invisível e, no celular,
-                        a coluna inteira não existia. */}
-                    <div className="flex items-center justify-end gap-3 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
-                      {view === 'trashed' ? (
-                        podeDecidir && (
-                          <button onClick={() => void handleRestore(asset)} title="Restaurar" aria-label={`Restaurar ${asset.assetTag}`} className="text-text-tertiary hover:text-status-success transition-colors">
-                            <RotateCcw size={14} />
-                          </button>
-                        )
-                      ) : (
-                        <>
-                          {/* Entregar/devolver é OPERAÇÃO, não campo: mora aqui,
-                              ao lado do ativo, e não dentro do formulário.
-                              Travado, o `title` diz POR QUÊ — um botão apagado
-                              sem explicação parece defeito. */}
-                          <button
-                            onClick={() => openPosse(asset)}
-                            disabled={bloqueio !== null}
-                            title={bloqueio ?? `${rotuloDaOperacao(asset.posse)} ${asset.assetTag}`}
-                            aria-label={`${rotuloDaOperacao(asset.posse)} ${asset.assetTag}`}
-                            className="text-text-tertiary hover:text-status-info transition-colors disabled:opacity-30 disabled:hover:text-text-tertiary disabled:cursor-not-allowed"
-                          >
-                            {posse.entregue ? <Undo2 size={14} /> : <ArrowRightLeft size={14} />}
-                          </button>
-                          {/* Clonar: o formulário abre em modo criação com os
-                              valores deste ativo, sem etiqueta e sem série. */}
-                          <button onClick={() => openClone(asset)} title={`Clonar ${asset.assetTag}`} aria-label={`Clonar ${asset.assetTag}`} className="text-text-tertiary hover:text-text-primary transition-colors">
-                            <Copy size={14} />
-                          </button>
-                          <button onClick={() => openEdit(asset)} title="Editar" aria-label={`Editar ${asset.assetTag}`} className="text-text-tertiary hover:text-text-primary transition-colors">
-                            <Edit2 size={14} />
-                          </button>
-                          {podeDecidir && (
-                            <button onClick={() => void handleDelete(asset)} title="Excluir" aria-label={`Excluir ${asset.assetTag}`} className="text-text-tertiary hover:text-status-danger transition-colors">
-                              <Trash2 size={14} />
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-
-            {assets.length === 0 && (
-              <tr>
-                {/* A SOMA, e não um número cravado: as visíveis (que o seletor
-                    muda, F10) mais a coluna de ações. Esta célula é a única que
-                    não percorre lista nenhuma, então é a única que precisa contar
-                    — e com o número fixo o "nenhum ativo encontrado" deixava de
-                    cobrir a tabela a cada coluna marcada ou desmarcada. */}
-                <td
-                  colSpan={1 + colunas.visiveis.length}
-                  className="px-6 py-16 text-center text-text-tertiary"
-                >
-                  <div className="flex flex-col items-center justify-center">
-                    <Database size={24} className="mb-4 opacity-50" />
-                    <EstadoDaLista carregando={loading} erro={erro}>
-                      {view === 'trashed' ? (
-                        <span>A lixeira está vazia.</span>
-                      ) : view === 'retired' ? (
-                        <span>Nenhum ativo baixado.</span>
-                      ) : search ? (
-                        <span>Nenhum ativo encontrado para "{search}".</span>
-                      ) : statusId ? (
-                        <span>Nenhum ativo com este status.</span>
-                      ) : categoryId ? (
-                        <span>Nenhum ativo nesta categoria.</span>
-                      ) : (
-                        <>
-                          <span>Nenhum ativo cadastrado.</span>
-                          {/* Um ativo exige um modelo, e o modelo exige fabricante e
-                              categoria — é a ordem do Snipe-IT. Sem esta dica, o
-                              primeiro cadastro esbarra num seletor vazio. */}
-                          <span className="mt-4 text-[10px] max-w-md leading-relaxed">
-                            {podeDecidir ? (
-                              <>
-                                Todo ativo pertence a um modelo. Cadastre o fabricante e o modelo em{' '}
-                                <Link to="/configuracoes" className="text-status-success hover:underline">Configurações</Link>
-                                {' '}antes do primeiro ativo.
-                              </>
-                            ) : (
-                              'Todo ativo pertence a um modelo. Peça a um supervisor que cadastre o fabricante e o modelo em Configurações antes do primeiro ativo.'
-                            )}
-                          </span>
-                        </>
-                      )}
-                    </EstadoDaLista>
-                  </div>
-                </td>
-              </tr>
+                </span>
+              </>
             )}
-          </tbody>
-        </table>
-      </div>
+          </EstadoDaLista>
+        </Card>
+      ) : (
+        <Card className="overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {/* O CABEÇALHO E A CÉLULA consultam o MESMO `mostrar()`, e é só
+                    isso que os mantém alinhados. Iterar a lista de tokens e
+                    desenhar a célula por token seria mais curto e exigiria uma
+                    função de render por coluna — o que levaria o JSX de status,
+                    de posse e de compra (que não são texto: são selo, lista com
+                    turno e duas linhas) para dentro de um helper. */}
+                {colunas.mostrar('assetTag') && <TableHead>Etiqueta</TableHead>}
+                {colunas.mostrar('model') && <TableHead>Modelo</TableHead>}
+                {colunas.mostrar('category') && <TableHead>Categoria</TableHead>}
+                {colunas.mostrar('status') && <TableHead>Status</TableHead>}
+                {colunas.mostrar('location') && <TableHead>Localização</TableHead>}
+                {colunas.mostrar('responsible') && <TableHead>Responsável</TableHead>}
+                {colunas.mostrar('purchase') && <TableHead>Compra</TableHead>}
+                {colunas.mostrar('name') && <TableHead>Nome</TableHead>}
+                {colunas.mostrar('orderNumber') && <TableHead>Nº do pedido</TableHead>}
+                <TableHead className="w-12 text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+
+            <TableBody>
+              {assets.map((asset) => {
+                // O cálculo da posse fica no helper, nunca no JSX
+                // (docs/referencia/arquitetura.md). Aqui só se escolhe o que mostrar.
+                const posse = resumoDaPosse(asset.posse);
+                const selo = seloDaSaida(asset);
+                const bloqueio = bloqueioDaEntrega(asset);
+
+                return (
+                  <TableRow
+                    key={asset.id}
+                    // A LINHA ABRE O DETALHE, e o `⋯` guarda as ações (AY). Na lixeira
+                    // não há o que abrir: o servidor responde 404, e a linha só restaura.
+                    onClick={view === 'trashed' ? undefined : () => abrirDetalhe(asset)}
+                    className={view === 'trashed' ? undefined : 'cursor-pointer'}
+                  >
+                    {colunas.mostrar('assetTag') && (
+                      <TableCell className="whitespace-nowrap">
+                        {/* O botão é o caminho do teclado: o clique sobe para a linha. */}
+                        <button type="button" className="text-left font-mono font-medium text-text-primary focus-visible:underline focus-visible:outline-none">
+                          {asset.assetTag}
+                        </button>
+                        {asset.serial && <div className="mt-0.5 font-mono text-xs text-text-tertiary">SN {asset.serial}</div>}
+                        {selo && (
+                          <div className="mt-1">
+                            <Badge tom="aviso"><PackageX className="size-3 shrink-0" /> {selo}</Badge>
+                          </div>
+                        )}
+                      </TableCell>
+                    )}
+                    {colunas.mostrar('model') && (
+                      <TableCell>
+                        <div>{asset.model.name}</div>
+                        <div className="mt-0.5 text-xs text-text-tertiary">{asset.model.manufacturer.name}</div>
+                      </TableCell>
+                    )}
+                    {colunas.mostrar('category') && (
+                      <TableCell>{asset.model.category.name}</TableCell>
+                    )}
+                    {colunas.mostrar('status') && (
+                      <TableCell>
+                        <Badge tom={tomDoStatus(asset.status.type)}>{asset.status.name}</Badge>
+                      </TableCell>
+                    )}
+                    {colunas.mostrar('location') && (
+                      <TableCell>{asset.location?.name ?? TRACO}</TableCell>
+                    )}
+                    {/* RESPONSÁVEL — derivado, e pode ser mais de um: os ocupantes
+                        do posto para o qual o ativo foi entregue aparecem juntos,
+                        cada um com o turno (docs/referencia/modelo-de-posse.md, Camada 3). */}
+                    {colunas.mostrar('responsible') && (
+                      <TableCell>
+                        {posse.quantos > 0 ? <div>{posse.responsaveis}</div> : TRACO}
+
+                        {posse.detalheAlvo && (
+                          <div className="mt-0.5 text-xs text-text-tertiary">{posse.detalheAlvo}</div>
+                        )}
+
+                        {/* Posto vago: equipamento parado em mesa sem ninguém. É sinal
+                            operacional, por isso tem cor — some assim que alguém
+                            ocupar o posto. */}
+                        {posse.postoVago && (
+                          <div className="mt-1">
+                            <Badge tom="aviso"><TriangleAlert className="size-3 shrink-0" /> Posto vago</Badge>
+                          </div>
+                        )}
+                      </TableCell>
+                    )}
+                    {colunas.mostrar('purchase') && (
+                      <TableCell className="whitespace-nowrap">
+                        {/* O valor só para quem vê o custo (D77, AV); a data, para todos. */}
+                        {asset.purchaseCost != null && <div className="tabular-nums">{formatarMoeda(asset.purchaseCost)}</div>}
+                        <div className={cn('tabular-nums', asset.purchaseCost != null && 'mt-0.5 text-xs text-text-tertiary')}>
+                          {formatarData(asset.purchaseDate)}
+                        </div>
+                      </TableCell>
+                    )}
+
+                    {/* AS QUE O SELETOR TROUXE. Vinham no payload da listagem desde
+                        a F1 — nenhuma custa consulta a mais. */}
+                    {colunas.mostrar('name') && <TableCell>{asset.name || TRACO}</TableCell>}
+                    {colunas.mostrar('orderNumber') && <TableCell>{asset.orderNumber || TRACO}</TableCell>}
+
+                    <TableCell>
+                      <AcoesDaLinha
+                        nome={asset.assetTag}
+                        acoes={view === 'trashed'
+                          ? [podeDecidir && { rotulo: 'Restaurar', icone: RotateCcw, onClick: () => void handleRestore(asset) }]
+                          : [
+                            // Entregar/devolver é OPERAÇÃO, não campo: mora aqui,
+                            // ao lado do ativo, e não dentro do formulário.
+                            // Travado, o `titulo` diz POR QUÊ — um botão apagado
+                            // sem explicação parece defeito.
+                            {
+                              rotulo: rotuloDaOperacao(asset.posse),
+                              icone: posse.entregue ? Undo2 : UserPlus,
+                              onClick: () => openPosse(asset),
+                              disabled: bloqueio !== null,
+                              titulo: bloqueio ?? undefined,
+                            },
+                            // Clonar: o formulário abre em modo criação com os
+                            // valores deste ativo, sem etiqueta e sem série.
+                            { rotulo: 'Clonar', icone: Copy, onClick: () => openClone(asset) },
+                            { rotulo: 'Editar', icone: Pencil, onClick: () => openEdit(asset) },
+                            podeDecidir && {
+                              rotulo: 'Excluir',
+                              icone: Trash2,
+                              onClick: () => void handleDelete(asset),
+                              perigo: true,
+                            },
+                          ]}
+                      />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
 
       {modalAberto && (
         <AssetFormModal

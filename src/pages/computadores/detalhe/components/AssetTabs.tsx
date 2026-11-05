@@ -1,29 +1,27 @@
+import type { ReactNode } from 'react';
+import { Tabs, TabsList, TabsTrigger } from '../../../../components/ui/tabs';
 import { ABAS, type AbaId } from '../helpers/abas.helper';
 
 // A barra de abas. A LISTA está em `helpers/abas.helper.ts` — aqui só se desenha.
+// Quem chama passa um `TabsContent` por aba em `children`.
 
 interface AssetTabsProps {
   ativa: AbaId;
   onChange: (aba: AbaId) => void;
+  children: ReactNode;
 }
 
-export default function AssetTabs({ ativa, onChange }: AssetTabsProps) {
+export default function AssetTabs({ ativa, onChange, children }: AssetTabsProps) {
   return (
-    <div className="flex flex-wrap border border-border-sutil font-mono text-xs shrink-0">
-      {ABAS.map((aba) => (
-        <button
-          key={aba.id}
-          type="button"
-          onClick={() => onChange(aba.id)}
-          className={`flex items-center gap-2 px-4 py-2 uppercase tracking-widest transition-colors ${
-            aba.id === ativa
-              ? 'bg-text-primary text-bg-base'
-              : 'text-text-tertiary hover:text-text-primary hover:bg-bg-base'
-          }`}
-        >
-          <aba.icone size={14} /> {aba.rotulo}
-        </button>
-      ))}
-    </div>
+    <Tabs value={ativa} onValueChange={(valor) => onChange(valor as AbaId)}>
+      <TabsList>
+        {ABAS.map((aba) => (
+          <TabsTrigger key={aba.id} value={aba.id}>
+            <aba.icone /> {aba.rotulo}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+      {children}
+    </Tabs>
   );
 }

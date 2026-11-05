@@ -1,87 +1,75 @@
-import { LayoutDashboard, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { useLogin } from './hooks/useLogin';
 import CampoDeSenha from '../../components/CampoDeSenha';
+import MenuDoTema from '../../components/MenuDoTema';
+import SentinelLogo from '../../components/SentinelLogo';
+import { Aviso } from '../../components/ui/aviso';
+import { Button } from '../../components/ui/button';
+import { Campo } from '../../components/ui/campo';
+import { Input } from '../../components/ui/input';
 
-// A porta de entrada do painel.
-//
-// Mesma linguagem visual do resto (mono, caixa alta, traço fino): é a primeira
-// tela que alguém vê, e uma tela de login genérica no meio de um painel com
-// identidade própria parece a de outro sistema.
+// A porta de entrada do painel: a marca à esquerda, o formulário à direita. No
+// celular fica só o formulário, com a marca em cima.
 export default function LoginPage() {
   const {
     email, setEmail, password, setPassword, erro, enviando, handleSubmit,
   } = useLogin();
 
   return (
-    <div className="min-h-screen bg-bg-base text-text-primary font-sans flex items-center justify-center p-6">
-      <div className="w-full max-w-sm motion-safe:animate-fade-in">
+    <div className="relative flex min-h-screen bg-bg-base text-text-primary">
+      <MenuDoTema className="absolute right-4 top-4 z-10" />
 
-        <div className="flex items-center gap-3 mb-8">
-          <div className="bg-text-primary p-1 rounded-sm">
-            <LayoutDashboard size={14} className="text-bg-base" />
+      <div className="relative hidden items-center justify-center border-r border-border-sutil bg-accent bg-gradient-to-br from-primary/40 via-primary/15 to-accent p-12 dark:bg-surface-muted dark:from-primary/20 dark:via-primary/5 dark:to-bg-base lg:flex lg:w-1/2">
+        <div className="flex max-w-2xl flex-col items-center space-y-7 text-center">
+          <SentinelLogo className="size-44 drop-shadow-2xl" />
+          <div className="space-y-2">
+            <h1 className="text-5xl font-bold tracking-tight text-primary">Sentinel</h1>
+            <p className="text-lg text-text-secondary dark:text-text-tertiary xl:text-xl">Inventário de TI: computadores, postos, estoque e licenças.</p>
           </div>
-          <h1 className="text-sm font-bold tracking-tight uppercase">Sentinel</h1>
         </div>
+      </div>
 
-        <div className="bg-surface-card border border-border-sutil">
-          <div className="flex items-center gap-2 px-6 py-4 border-b border-border-sutil bg-bg-base/50">
-            <Lock size={14} className="text-text-tertiary" />
-            <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">Acesso restrito</h2>
+      <div className="flex flex-1 flex-col items-center justify-center p-4 lg:p-8">
+        <div className="w-full max-w-md space-y-7 motion-safe:animate-fade-in">
+          <div className="space-y-2 text-center">
+            <div className="mb-4 flex justify-center lg:hidden">
+              <SentinelLogo className="size-16" />
+            </div>
+            <h2 className="text-3xl font-bold tracking-tight">Entrar</h2>
+            <p className="text-base text-text-tertiary">Use o e-mail e a senha da sua conta.</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-4 font-mono text-xs">
-            {erro && (
-              <div className="p-3 bg-status-danger/10 text-status-danger border border-status-danger/20 rounded">
-                {erro}
-              </div>
-            )}
+          <form onSubmit={handleSubmit} className="space-y-5 [&_label]:text-base">
+            {erro && <Aviso>{erro}</Aviso>}
 
-            <div className="space-y-1">
-              <label htmlFor="email" className="text-text-secondary uppercase tracking-widest text-[10px]">
-                E-mail
-              </label>
-              <input
-                id="email"
+            <Campo rotulo="E-mail">
+              <Input
                 required
                 autoFocus
                 type="email"
                 autoComplete="username"
                 value={email}
                 onChange={(evento) => setEmail(evento.target.value)}
-                className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors"
+                className="h-12 text-base"
               />
-            </div>
+            </Campo>
 
-            <div className="space-y-1">
-              <label htmlFor="password" className="text-text-secondary uppercase tracking-widest text-[10px]">
-                Senha
-              </label>
+            <Campo rotulo="Senha">
               <CampoDeSenha
-                id="password"
                 required
                 autoComplete="current-password"
                 value={password}
                 onChange={(evento) => setPassword(evento.target.value)}
-                className="w-full p-2 bg-bg-base border border-border-sutil text-text-primary focus:outline-none focus:border-text-secondary transition-colors"
+                className="h-12 text-base"
                 placeholder="••••••••"
               />
-            </div>
+            </Campo>
 
-            <div className="pt-4 border-t border-border-sutil">
-              <button
-                type="submit"
-                disabled={enviando}
-                className="w-full px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary transition-colors disabled:opacity-50 uppercase tracking-widest"
-              >
-                {enviando ? 'Entrando...' : 'Entrar'}
-              </button>
-            </div>
+            <Button type="submit" disabled={enviando} className="h-12 w-full text-lg">
+              <Lock /> {enviando ? 'Entrando...' : 'Entrar'}
+            </Button>
           </form>
         </div>
-
-        <p className="mt-6 text-[10px] font-mono text-text-tertiary uppercase tracking-widest text-center">
-          Sessão de 12 horas · Cinco erros bloqueiam a conta por 15 minutos
-        </p>
       </div>
     </div>
   );

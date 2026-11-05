@@ -1,12 +1,17 @@
 import { PackageX, Undo2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Aviso } from '../../../../components/ui/aviso';
+import { Button } from '../../../../components/ui/button';
+import { Card } from '../../../../components/ui/card';
+import { Dado, GradeDeDados } from '../../../../components/ui/dado';
 import type { Asset } from '../../../../types/asset.types';
-import { formatarData, formatarDiaDoInstante, formatarMoeda } from '../../../../helpers/format.helper';
+import { formatarData, formatarMoeda } from '../../../../helpers/format.helper';
 import { seloDaSaida } from '../../helpers/baixa.helper';
 import { canaisDeSuporte, type CanalDeSuporte } from '../helpers/suporte.helper';
 
-// A FICHA do ativo. Só leitura: editar é o modal que já existe, e duplicar os
+// A FICHA do ativo. Só leitura: editar é o formulário que já existe, e duplicar os
 // campos aqui em modo de edição criaria dois formulários para a mesma tabela.
+// Etiqueta, série, nome e onde ele está moram no card acima das abas
+// (`IdentificacaoCard`), à vista em todas elas.
 
 interface DetalhesTabProps {
   asset: Asset;
@@ -18,75 +23,49 @@ interface DetalhesTabProps {
 export default function DetalhesTab({
   asset, onDarBaixa, onReverterSaida,
 }: DetalhesTabProps) {
-  // Cálculo fora do JSX (docs/referencia/arquitetura.md). Os dois textos abaixo dependem
-  // do mesmo dado e são lidos em dois lugares da tela.
+  // Cálculo fora do JSX (docs/referencia/arquitetura.md).
   const selo = seloDaSaida(asset);
-  const categoria = asset.model.category.name;
   const canais = canaisDeSuporte(asset.model.manufacturer);
+  // Sem nada da compra, a seção não aparece: um título sozinho parece ficha quebrada.
+  const temCompra = Boolean(asset.orderNumber || asset.purchaseDate || asset.purchaseCost);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {selo && (
-        <div className="border border-status-warning/30 bg-status-warning/10 p-4 flex items-start justify-between gap-4">
+        <Aviso tom="aviso" className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-status-warning uppercase tracking-widest text-[10px]">
-              <PackageX size={13} /> Fora do patrimônio
+            <div className="flex items-center gap-2 font-medium">
+              <PackageX className="size-4" /> Fora do patrimônio
             </div>
             <div className="text-text-primary">{selo}</div>
             {asset.retiredNotes && <div className="text-text-secondary">{asset.retiredNotes}</div>}
-            <p className="text-text-tertiary text-[10px] leading-relaxed max-w-xl">
-              Saiu do patrimônio — não é o mesmo que estar na lixeira (cadastro errado). O
-              ativo continua no histórico e na vista "Baixados" da tela Computadores, com a data
-              em que saiu.
+            <p className="text-xs text-text-tertiary">
+              Continua no histórico e na vista Baixados. Não é o mesmo que estar na lixeira, que é cadastro errado.
             </p>
           </div>
           {onReverterSaida && (
-            <button
-              type="button"
-              onClick={onReverterSaida}
-              className="flex items-center gap-2 px-3 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base transition-colors shrink-0"
-            >
-              <Undo2 size={13} /> Reverter
-            </button>
+            <Button variant="outline" size="sm" onClick={onReverterSaida}><Undo2 /> Reverter</Button>
           )}
-        </div>
+        </Aviso>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-        <Secao titulo="Identificação">
-          <Campo rotulo="Etiqueta" valor={asset.assetTag} />
-          <Campo rotulo="Número de série" valor={asset.serial} />
-          <Campo rotulo="Nome / apelido" valor={asset.name} />
-          {/* `createdAt` é instante: o dia sai no fuso de Brasília, não em UTC. */}
-          <Campo rotulo="Cadastrado em" valor={formatarDiaDoInstante(asset.createdAt)} />
-        </Secao>
-
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Secao titulo="Catálogo">
-          <Campo rotulo="Modelo" valor={asset.model.name} />
-          <Campo rotulo="Fabricante" valor={asset.model.manufacturer.name} />
+          <Dado rotulo="Modelo">{asset.model.name}</Dado>
+          <Dado rotulo="Fabricante">{asset.model.manufacturer.name}</Dado>
           {/* A categoria vem do MODELO, não de coluna própria — é o que impede
               ativo e modelo divergirem (asset-select.helper.ts). */}
-          <Campo rotulo="Categoria" valor={categoria} />
-          {/* NUM POSTO, o computador está onde o posto fica (AW), e a
-              localização dele é para onde volta na devolução — a atual e a
-              padrão do Snipe-IT. Fora de posto, é onde ele está guardado. */}
-          {asset.postoAtual ? (
-            <>
-              <div className="space-y-1">
-                <div className="text-text-tertiary uppercase tracking-widest text-[10px]">Localização</div>
-                <div className="text-text-primary break-words">
-                  {asset.postoAtual.location.name} ·{' '}
-                  <Link to={`/postos/${asset.postoAtual.id}`} className="text-status-info hover:underline">
-                    {asset.postoAtual.name}
-                  </Link>
-                </div>
-              </div>
-              <Campo rotulo="Volta para" valor={asset.location?.name} />
-            </>
-          ) : (
-            <Campo rotulo="Localização" valor={asset.location?.name} />
-          )}
+          <Dado rotulo="Categoria">{asset.model.category.name}</Dado>
         </Secao>
+
+        {temCompra && (
+          <Secao titulo="Compra">
+            <Dado rotulo="Número do pedido">{asset.orderNumber}</Dado>
+            <Dado rotulo="Data da compra">{formatarData(asset.purchaseDate)}</Dado>
+            {/* Ausente para quem não vê o custo (D77): sem a linha, e não um "—" que diria "sem valor". */}
+            {asset.purchaseCost !== undefined && <Dado rotulo="Valor">{formatarMoeda(asset.purchaseCost)}</Dado>}
+          </Secao>
+        )}
 
         {/* O SUPORTE DO FABRICANTE, logo ao lado do catálogo de onde ele vem.
             Só os canais preenchidos; sem nenhum, a seção não aparece — três
@@ -97,35 +76,22 @@ export default function DetalhesTab({
           </Secao>
         )}
 
-        <Secao titulo="Compra">
-          <Campo rotulo="Número do pedido" valor={asset.orderNumber} />
-          <Campo rotulo="Data da compra" valor={formatarData(asset.purchaseDate)} />
-          {/* Ausente para quem não vê o custo (D77): sem a linha, e não um "—" que diria "sem valor". */}
-          {asset.purchaseCost !== undefined && <Campo rotulo="Valor" valor={formatarMoeda(asset.purchaseCost)} />}
-        </Secao>
-
-        <Secao titulo="Notas">
-          <p className="col-span-2 text-text-secondary whitespace-pre-wrap leading-relaxed">
-            {asset.notes || <span className="text-text-tertiary">Sem notas.</span>}
-          </p>
-        </Secao>
+        {asset.notes && (
+          <Card className="space-y-2 p-6">
+            <h3 className="text-sm font-medium text-text-primary">Notas</h3>
+            <p className="whitespace-pre-wrap text-sm text-text-secondary">{asset.notes}</p>
+          </Card>
+        )}
       </div>
 
       {!selo && onDarBaixa && (
-        <div className="border-t border-border-sutil pt-4 flex items-center justify-between gap-4">
-          <p className="text-text-tertiary text-[10px] leading-relaxed max-w-xl">
-            <span className="text-text-secondary uppercase tracking-widest">Dar baixa</span>{' '}
-            registra que o ativo saiu do patrimônio, com a data e o motivo. Ativo entregue é
+        <Card className="flex flex-wrap items-center justify-between gap-4 p-4">
+          <p className="text-xs leading-relaxed text-text-tertiary">
+            Dar baixa registra que o ativo saiu do patrimônio, com a data e o motivo. Ativo entregue é
             recusado: faça a devolução antes.
           </p>
-          <button
-            type="button"
-            onClick={onDarBaixa}
-            className="flex items-center gap-2 px-3 py-2 border border-border-sutil text-text-secondary hover:text-status-warning hover:bg-bg-base transition-colors shrink-0"
-          >
-            <PackageX size={13} /> Dar baixa
-          </button>
-        </div>
+          <Button variant="outline" size="sm" onClick={onDarBaixa}><PackageX /> Dar baixa</Button>
+        </Card>
       )}
     </div>
   );
@@ -133,17 +99,15 @@ export default function DetalhesTab({
 
 function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-3">
-      <h3 className="text-text-tertiary uppercase tracking-widest text-[10px] border-b border-border-sutil pb-2">
-        {titulo}
-      </h3>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-3">{children}</div>
-    </section>
+    <Card className="space-y-4 p-6">
+      <h3 className="text-sm font-medium text-text-primary">{titulo}</h3>
+      <GradeDeDados>{children}</GradeDeDados>
+    </Card>
   );
 }
 
 /**
- * Um canal de suporte: o mesmo desenho do `Campo`, com o valor clicável.
+ * Um canal de suporte: o mesmo `Dado`, com o valor clicável.
  *
  * Endereço web abre em outra aba com `noopener noreferrer` — a página do
  * fabricante não ganha acesso a esta janela pelo `window.opener`, nem recebe a
@@ -152,30 +116,16 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
  */
 function CampoDeCanal({ canal }: { canal: CanalDeSuporte }) {
   return (
-    <div className="space-y-1">
-      <div className="text-text-tertiary uppercase tracking-widest text-[10px]">{canal.rotulo}</div>
-      <div className="break-words">
-        {canal.href ? (
-          <a
-            href={canal.href}
-            {...(canal.externo ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-            className="text-status-info hover:underline"
-          >
-            {canal.texto}
-          </a>
-        ) : (
-          <span className="text-text-primary">{canal.texto}</span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Campo({ rotulo, valor }: { rotulo: string; valor?: string | null }) {
-  return (
-    <div className="space-y-1">
-      <div className="text-text-tertiary uppercase tracking-widest text-[10px]">{rotulo}</div>
-      <div className="text-text-primary break-words">{valor || '—'}</div>
-    </div>
+    <Dado rotulo={canal.rotulo}>
+      {canal.href ? (
+        <a
+          href={canal.href}
+          {...(canal.externo ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+          className="text-primary hover:underline"
+        >
+          {canal.texto}
+        </a>
+      ) : canal.texto}
+    </Dado>
   );
 }

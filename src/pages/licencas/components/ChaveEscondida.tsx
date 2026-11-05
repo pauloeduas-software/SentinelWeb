@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Copy, Eye, EyeOff } from 'lucide-react';
+import { Button } from '../../../components/ui/button';
 import { useNotificacao } from '../../../hooks/useNotificacao';
 import { esconderChave } from '../helpers/licenca.helper';
 
@@ -11,7 +12,8 @@ interface ChaveEscondidaProps {
   chave: string;
 }
 
-const BOTAO = 'flex items-center gap-1 px-1.5 py-0.5 border border-border-sutil text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary transition-colors';
+/** Menor que `size="sm"`: os dois botões acompanham a linha do texto, em cada chave da lista. */
+const BOTAO = 'h-7 px-2 text-xs';
 
 export default function ChaveEscondida({ chave }: ChaveEscondidaProps) {
   const notificar = useNotificacao();
@@ -31,17 +33,17 @@ export default function ChaveEscondida({ chave }: ChaveEscondidaProps) {
   };
 
   return (
-    <div className="flex flex-wrap items-start gap-2">
-      <code className="whitespace-pre-wrap break-all text-text-secondary">
+    <div className="flex flex-wrap items-center gap-2">
+      <code className="whitespace-pre-wrap break-all font-mono text-text-primary">
         {visivel ? chave : esconderChave(chave)}
       </code>
-      <div className="flex gap-1 shrink-0">
-        <button type="button" onClick={() => setVisivel(!visivel)} className={BOTAO}>
-          {visivel ? <EyeOff size={11} /> : <Eye size={11} />} {visivel ? 'Esconder' : 'Mostrar'}
-        </button>
-        <button type="button" onClick={() => void copiar()} className={BOTAO}>
-          <Copy size={11} /> {copiada ? 'Copiada' : 'Copiar'}
-        </button>
+      <div className="flex shrink-0 gap-1">
+        <Button variant="ghost" size="sm" className={BOTAO} onClick={() => setVisivel(!visivel)}>
+          {visivel ? <EyeOff /> : <Eye />} {visivel ? 'Esconder' : 'Mostrar'}
+        </Button>
+        <Button variant="ghost" size="sm" className={BOTAO} onClick={() => void copiar()}>
+          <Copy /> {copiada ? 'Copiada' : 'Copiar'}
+        </Button>
       </div>
     </div>
   );

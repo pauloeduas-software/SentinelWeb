@@ -1,13 +1,13 @@
-// A PILHA DE NOTIFICAÇÕES — canto inferior direito, por cima de tudo.
+// A PILHA DE NOTIFICAÇÕES — no alto, ao centro, por cima de tudo.
 //
 // Só desenha: a fila, os prazos e o teto moram em `hooks/useNotificacao`.
-// Montada UMA vez, em `main.tsx`, fora das rotas — assim vale para toda tela,
+// Montada UMA vez, no `App.tsx`, fora das rotas — assim vale para toda tela,
 // login incluído, e trocar de página não apaga um erro que ainda está sendo
 // lido.
 //
-// CANTO INFERIOR DIREITO porque é o canto que nada usa: o topo é do cabeçalho e
-// da busca, a esquerda é da barra lateral, e os modais abrem no centro.
-// `z-[60]` fica acima do
+// NO ALTO, AO CENTRO, porque é onde nada se clica: embaixo à direita fica o Salvar
+// do formulário lateral, que o cartão cobriria justo quando a recusa pede para
+// corrigir e salvar de novo. `z-[60]` fica acima do
 // `z-50` dos modais: o erro de um "Salvar" dentro do modal tem que aparecer na
 // frente dele, não atrás do véu.
 //
@@ -38,9 +38,11 @@ function Cartao({ notificacao, onFechar }: { notificacao: Notificacao; onFechar:
       // mensagem ser lida inteira, não só o trecho que mudou.
       role={notificacao.tipo === 'erro' ? 'alert' : 'status'}
       aria-atomic="true"
-      className={`pointer-events-auto flex items-start gap-3 w-full bg-surface-card border border-border-sutil border-l-2 ${borda} shadow-2xl px-4 py-3 font-mono text-xs text-text-primary`}
+      // `data-notificacao`: o clique aqui não conta como clique fora da janela aberta.
+      data-notificacao
+      className={`pointer-events-auto flex items-start gap-3 w-full rounded-xl bg-surface-card/95 backdrop-blur-xl border border-border-sutil border-l-4 ${borda} shadow-2xl px-4 py-3 text-sm text-text-primary`}
     >
-      <Icone size={14} className={`${cor} mt-0.5 shrink-0`} aria-hidden="true" />
+      <Icone size={16} className={`${cor} mt-0.5 shrink-0`} aria-hidden="true" />
       {/* `break-words` porque a mensagem vem do servidor e às vezes carrega um
           identificador comprido sem espaço — sem isso, o cartão estoura. */}
       <div className="flex-1 min-w-0 space-y-1.5">
@@ -78,7 +80,7 @@ export default function Notificacoes() {
   return (
     // No celular ocupa a largura toda (menos a margem); no desktop, uma coluna
     // de largura fixa — mensagem de erro é frase, não parágrafo.
-    <div className="fixed bottom-4 right-4 left-4 sm:left-auto sm:w-96 z-[60] flex flex-col gap-2 pointer-events-none">
+    <div className="fixed left-4 right-4 top-4 z-[60] flex flex-col gap-2 pointer-events-none sm:left-1/2 sm:right-auto sm:w-96 sm:-translate-x-1/2">
       {fila.map((notificacao) => (
         <Cartao key={notificacao.id} notificacao={notificacao} onFechar={() => fechar(notificacao.id)} />
       ))}

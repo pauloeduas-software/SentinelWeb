@@ -1,4 +1,5 @@
 import { CalendarClock } from 'lucide-react';
+import { Aviso } from '../../../components/ui/aviso';
 import type { LicencaEmAlerta, MotivoDoAlerta } from '../../../types/license.types';
 import { textoDoPrazo } from '../../../helpers/licenca.helper';
 
@@ -38,32 +39,33 @@ export default function AlertasLicenca({ alertas, total, contagem, onIrPara }: A
   const comAlgum = MOTIVOS.filter(({ motivo }) => contagem[motivo] > 0);
 
   return (
-    <div className="border border-status-warning/30 bg-surface-card p-3 font-mono text-xs mb-4">
-      <div className="flex items-center gap-2 text-status-warning uppercase tracking-widest text-[10px] mb-2">
-        <CalendarClock size={12} /> Vencendo e vencidas ({total})
+    <Aviso tom="aviso" className="mb-4">
+      <div className="mb-2 flex items-center gap-2 font-medium">
+        <CalendarClock className="size-4 shrink-0" /> Vencendo e vencidas ({total})
       </div>
+      {/* O nome fica fora da cor do aviso: a cor é do alerta, não do dado. */}
       <ul className="space-y-1">
         {alertas.map((alerta) => (
           <li key={alerta.id} className="flex justify-between gap-3">
-            <span className="text-text-secondary truncate">{alerta.name}</span>
-            <span className="text-text-tertiary shrink-0">{motivoEmTexto(alerta)}</span>
+            <span className="truncate text-text-primary">{alerta.name}</span>
+            <span className="shrink-0 text-text-secondary">{motivoEmTexto(alerta)}</span>
           </li>
         ))}
       </ul>
-      <p className="flex flex-wrap gap-x-2 text-[10px] text-text-tertiary mt-2">
+      <p className="mt-2 flex flex-wrap gap-x-2 text-xs">
         {comAlgum.map(({ motivo, texto }, indice) => (
           <span key={motivo} className="flex gap-2">
             {indice > 0 && <span aria-hidden>·</span>}
             <button
               type="button"
               onClick={() => onIrPara(motivo)}
-              className="text-text-secondary hover:text-text-primary underline underline-offset-2"
+              className="underline underline-offset-2 hover:text-text-primary"
             >
               {texto(contagem[motivo])}
             </button>
           </span>
         ))}
       </p>
-    </div>
+    </Aviso>
   );
 }

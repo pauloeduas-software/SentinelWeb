@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useEndpointQuery, useSendCommand } from '../queries/endpoint.queries';
 import type { AgentAction } from '../types/endpoint.types';
+import { confirmar } from './useConfirmacao';
 
 // A MÁQUINA AGORA: a amostra que chega sozinha e os comandos que se manda nela.
 //
@@ -11,14 +12,14 @@ import type { AgentAction } from '../types/endpoint.types';
 // desta mesa" — e a resposta é a mesma consulta.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// O CONFIRM FICA, E O ALERT NÃO.
+// A CONFIRMAÇÃO FICA, E O ALERT NÃO.
 //
-// `confirm` porque desligar uma máquina é irreversível pela tela: não há botão
+// `confirmar` porque desligar uma máquina é irreversível pela tela: não há botão
 // de desfazer, e quem está do outro lado perde o que não salvou. É o mesmo lugar
 // em que o `handleDelete` do catálogo tem o dele — no hook, nunca no componente.
 //
-// Ele NOMEIA a máquina e diz a consequência DAQUELE comando, e as duas coisas
-// têm o mesmo motivo: o `confirm` é uma caixa que cobre a página, então o que
+// Ela NOMEIA a máquina e diz a consequência DAQUELE comando, e as duas coisas
+// têm o mesmo motivo: a pergunta é uma caixa que cobre a página, então o que
 // estava na tela identificando o equipamento não está mais visível quando a
 // pessoa lê a pergunta. E a consequência não é uma só — suspender não perde
 // trabalho nenhum, a máquina dorme com as janelas abertas. Uma frase genérica
@@ -36,11 +37,13 @@ interface RetornoDoComando {
   texto: string;
 }
 
-/** Um comando e o que ele causa — o texto que o `confirm` mostra. */
+/** Um comando e o que ele causa — o texto que a confirmação mostra. */
 export interface ComandoDaMaquina {
   action: AgentAction;
   rotulo: string;
   consequencia: string;
+  /** Quem usa a máquina perde o que não salvou: o botão da pergunta sai no vermelho. */
+  perigo?: boolean;
 }
 
 export function useMaquinaAoVivo(endpointId: string | null) {
@@ -52,11 +55,11 @@ export function useMaquinaAoVivo(endpointId: string | null) {
   // entregue" da máquina anterior ficaria embaixo dos botões da seguinte.
   const [retorno, setRetorno] = useState<(RetornoDoComando & { endpointId: string }) | null>(null);
 
-  const handleComando = async ({ action, rotulo, consequencia }: ComandoDaMaquina) => {
+  const handleComando = async ({ action, rotulo, consequencia, perigo }: ComandoDaMaquina) => {
     if (!endpointId) return;
 
     const qual = maquina?.hostname ?? 'esta máquina';
-    if (!confirm(`${rotulo} ${qual}? ${consequencia}`)) return;
+    if (!(await confirmar({ titulo: `${rotulo} ${qual}?`, descricao: consequencia, acao: rotulo, perigo }))) return;
 
     // O retorno anterior sai da tela ANTES do envio: deixá-lo ali durante a
     // requisição faria o resultado do comando passado parecer o do atual.

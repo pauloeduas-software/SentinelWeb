@@ -1,5 +1,8 @@
 import { Cpu } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { Aviso } from '../../../../components/ui/aviso';
+import { Card } from '../../../../components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/ui/table';
 import type { EntregaNaFicha } from '../../../../types/stock.types';
 import { formatarDiaDoInstante } from '../../../../helpers/format.helper';
 import { caminhoDoItem, textoDeUnidades } from '../../../../helpers/estoque.helper';
@@ -11,7 +14,7 @@ import { caminhoDoItem, textoDeUnidades } from '../../../../helpers/estoque.help
 // fica no computador mesmo quando ele muda de mãos — a peça está dentro dele.
 //
 // SEM RETIRAR: ele mora no detalhe do item, como a devolução de licença mora na
-// tela de Licenças. O nome do item leva até lá, já filtrado por este computador.
+// tela de Licenças. A linha do item leva até lá, já filtrada por este computador.
 
 interface ComponentesTabProps {
   componentes: EntregaNaFicha[];
@@ -21,54 +24,58 @@ interface ComponentesTabProps {
   erro: string | null;
 }
 
-const CABECALHO = 'px-3 py-2 text-left text-[10px] uppercase tracking-widest text-text-tertiary font-normal';
-
 export default function ComponentesTab({ componentes, assetTag, carregando, erro }: ComponentesTabProps) {
-  if (carregando) return <p className="text-text-tertiary">Carregando componentes…</p>;
-  if (erro) return <p role="alert" className="text-status-danger">Não foi possível carregar os componentes: {erro}</p>;
+  const navegar = useNavigate();
+
+  if (carregando) return <p className="text-sm text-text-tertiary">Carregando componentes…</p>;
+  if (erro) return <Aviso>Não foi possível carregar os componentes: {erro}</Aviso>;
 
   if (componentes.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-text-tertiary gap-3">
-        <Cpu size={24} className="opacity-50" />
+      <Card className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-text-tertiary">
+        <Cpu className="size-6 opacity-50" />
         <span>Nenhum componente instalado neste ativo.</span>
-        <span className="text-[10px] max-w-md text-center leading-relaxed">
+        <span className="max-w-md text-center text-xs leading-relaxed">
           Memória e SSD são itens de categoria Componente, entregues a um computador pela tela de{' '}
-          <Link to="/estoque" className="text-text-secondary underline-offset-2 hover:underline">Estoque</Link>.
+          <Link to="/estoque" className="text-primary hover:underline">Estoque</Link>.
         </span>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="border border-border-sutil bg-surface-card overflow-x-auto">
-      <table className="w-full font-mono text-xs">
-        <thead className="border-b border-border-sutil bg-bg-base/40">
-          <tr>
-            <th className={CABECALHO}>Componente</th>
-            <th className={CABECALHO}>Categoria</th>
-            <th className={CABECALHO}>Quantidade</th>
-            <th className={CABECALHO}>Desde</th>
-          </tr>
-        </thead>
-        <tbody>
-          {componentes.map((entrega) => (
-            <tr key={entrega.id} className="border-b border-border-sutil/50 last:border-0">
-              <td className="px-3 py-2">
-                <Link to={caminhoDoItem(entrega.item.id, assetTag)} className="text-text-primary hover:underline underline-offset-2">
-                  {entrega.item.name}
-                </Link>
-                {entrega.notes && (
-                  <div className="text-[10px] text-text-secondary mt-0.5">{entrega.notes}</div>
-                )}
-              </td>
-              <td className="px-3 py-2 text-text-secondary">{entrega.item.category.name}</td>
-              <td className="px-3 py-2 text-text-secondary">{textoDeUnidades(entrega.unidades)}</td>
-              <td className="px-3 py-2 text-text-tertiary">{formatarDiaDoInstante(entrega.checkoutAt)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Card className="overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Componente</TableHead>
+            <TableHead>Categoria</TableHead>
+            <TableHead>Quantidade</TableHead>
+            <TableHead>Desde</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {componentes.map((entrega) => {
+            const caminho = caminhoDoItem(entrega.item.id, assetTag);
+            return (
+              <TableRow key={entrega.id} onClick={() => navegar(caminho)} className="cursor-pointer">
+                <TableCell>
+                  {/* O link é o caminho do teclado; o clique nele não sobe, senão navegaria duas vezes. */}
+                  <Link to={caminho} onClick={(evento) => evento.stopPropagation()} className="font-medium text-text-primary focus-visible:underline focus-visible:outline-none">
+                    {entrega.item.name}
+                  </Link>
+                  {entrega.notes && (
+                    <div className="mt-0.5 text-xs text-text-tertiary">{entrega.notes}</div>
+                  )}
+                </TableCell>
+                <TableCell>{entrega.item.category.name}</TableCell>
+                <TableCell>{textoDeUnidades(entrega.unidades)}</TableCell>
+                <TableCell className="whitespace-nowrap">{formatarDiaDoInstante(entrega.checkoutAt)}</TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </Card>
   );
 }

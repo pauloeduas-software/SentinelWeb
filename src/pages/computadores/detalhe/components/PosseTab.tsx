@@ -1,5 +1,10 @@
-import { ArrowRightLeft, ExternalLink, MapPin, TriangleAlert, Undo2, User } from 'lucide-react';
+import { ExternalLink, MapPin, TriangleAlert, Undo2, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Avatar } from '../../../../components/ui/avatar';
+import { Aviso } from '../../../../components/ui/aviso';
+import { Badge } from '../../../../components/ui/badge';
+import { Button } from '../../../../components/ui/button';
+import { Card } from '../../../../components/ui/card';
 import type {
   Assignment, PosseResolvida, Responsavel,
 } from '../../../../types/posse.types';
@@ -47,172 +52,137 @@ export default function PosseTab({
   // Cálculo fora do JSX: as perguntas da tela, respondidas uma vez.
   const entregue = posse?.assignmentId != null;
   const responsaveis = posse?.responsaveis ?? [];
-  const fechadas = assignments.filter((linha) => !estaAberta(linha));
   // O posto vem da POSSE ABERTA, e não do `posse.targetLabel`: o `PosseResolvida`
   // carrega o rótulo do alvo e não o id dele, e sem id não há link.
   const posto = postoDaPosseAberta(assignments);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h3 className="text-text-tertiary uppercase tracking-widest text-[10px]">Quem responde hoje</h3>
-          <p className="text-text-tertiary text-[10px] leading-relaxed max-w-xl">
-            Calculado na hora a partir da posse aberta e — quando ela aponta para um posto — de quem
-            ocupa esse posto. Nunca é uma coluna do ativo, e é por isso que pode ser mais de uma
-            pessoa.
+    <div className="space-y-4">
+      <Card className="space-y-4 p-6">
+        <div className="flex items-center justify-between gap-4">
+          <h3 className="text-sm font-medium text-text-primary">Quem responde hoje</h3>
+          <Button variant="outline" size="sm" onClick={onAbrirOperacao} disabled={bloqueio !== null} title={bloqueio ?? undefined}>
+            {entregue ? <Undo2 /> : <UserPlus />}
+            {entregue ? 'Devolver' : 'Entregar'}
+          </Button>
+        </div>
+
+        {responsaveis.length === 0 ? (
+          <p className="text-sm text-text-tertiary">
+            {entregue
+              ? 'Ninguém responde por ele: a posse aponta para um posto sem ocupante.'
+              : 'Sem posse aberta: o ativo não está entregue a ninguém.'}
           </p>
-        </div>
-        <button
-          type="button"
-          onClick={onAbrirOperacao}
-          disabled={bloqueio !== null}
-          title={bloqueio ?? undefined}
-          className="flex items-center gap-2 px-3 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-text-secondary"
-        >
-          {entregue ? <Undo2 size={13} /> : <ArrowRightLeft size={13} />}
-          {entregue ? 'Devolver' : 'Entregar'}
-        </button>
-      </div>
+        ) : (
+          <ul className="divide-y divide-border-sutil rounded-lg border border-border-sutil text-sm">
+            {responsaveis.map((responsavel) => (
+              <li key={`${responsavel.id}-${responsavel.via}-${responsavel.shift ?? ''}`} className="flex items-center gap-3 px-4 py-3">
+                <Avatar nome={responsavel.name} />
+                <div className="min-w-0 space-y-0.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium text-text-primary">{responsavel.name}</span>
+                    {responsavel.shift && <Badge>{responsavel.shift}</Badge>}
+                    <Badge title={VIA[responsavel.via].explicacao}>{VIA[responsavel.via].rotulo}</Badge>
+                  </div>
+                  <div className="text-xs text-text-tertiary">
+                    {responsavel.email}
+                    {responsavel.workstationName && ` · Posto: ${responsavel.workstationName}`}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
 
-      {responsaveis.length === 0 ? (
-        <div className="border border-border-sutil bg-bg-base/50 p-4 text-text-tertiary">
-          {entregue
-            ? 'Ninguém responde por ele: a posse aponta para um posto sem ocupante.'
-            : 'Sem posse aberta — o ativo não está entregue a ninguém.'}
-        </div>
-      ) : (
-        <ul className="border border-border-sutil divide-y divide-border-sutil/50">
-          {responsaveis.map((responsavel) => (
-            <li key={`${responsavel.id}-${responsavel.via}-${responsavel.shift ?? ''}`} className="p-4 space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <User size={13} className="text-text-tertiary" />
-                <span className="text-text-primary">{responsavel.name}</span>
-                {responsavel.shift && (
-                  <span className="px-2 py-0.5 border border-border-sutil text-[10px] uppercase tracking-widest text-text-secondary">
-                    {responsavel.shift}
-                  </span>
-                )}
-                <span className="text-[10px] uppercase tracking-widest text-status-info">
-                  {VIA[responsavel.via].rotulo}
-                </span>
-              </div>
-              <div className="text-text-tertiary text-[10px]">{responsavel.email}</div>
-              <div className="text-text-tertiary text-[10px] leading-relaxed">
-                {VIA[responsavel.via].explicacao}
-                {responsavel.workstationName && ` Posto: ${responsavel.workstationName}.`}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {entregue && (
-        <div className="border border-border-sutil bg-bg-base/50 p-4 space-y-2">
-          <div className="text-text-tertiary uppercase tracking-widest text-[10px]">Entregue para</div>
-          <div className="flex flex-wrap items-center gap-2 text-text-primary">
-            <MapPin size={13} className="text-text-tertiary" />
-            {/* O NOME DO POSTO LEVA ATÉ ELE. A ficha dizia "Mesa 1" e parava
-                aí; quem precisava ver o resto da mesa — os outros ativos, quem a
-                ocupa, em que turno, e agora a telemetria do computador — tinha de
-                ir a /postos e procurar pelo nome. Só POSTO vira link: pessoa não
-                tem ficha de posto para onde ir. */}
-            {posto ? (
-              <Link
-                to={`/postos/${posto.id}`}
-                className="inline-flex items-center gap-1.5 text-status-info hover:underline"
-              >
-                {posto.name} <ExternalLink size={11} />
-              </Link>
-            ) : (
-              posse?.targetLabel ?? '—'
-            )}
-            <span className="text-text-tertiary text-[10px] uppercase tracking-widest">
-              {tipoDoAlvo(posse?.targetType)}
-            </span>
-          </div>
-
-          {posse?.postoVago && (
-            <div className="flex items-start gap-2 text-status-warning text-[10px] leading-relaxed">
-              <TriangleAlert size={12} className="mt-0.5 shrink-0" />
-              <span>
-                POSTO VAGO: o ativo está entregue a um posto sem nenhum ocupante aberto —
-                equipamento parado em mesa vazia. Devolva o computador, ou coloque alguém
-                no posto pela ficha dele, no nome logo acima.
-              </span>
+        {entregue && (
+          <div className="space-y-2 rounded-lg border border-border-sutil p-4">
+            <div className="text-xs font-medium text-text-tertiary">Entregue para</div>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-text-primary">
+              <MapPin className="size-4 text-text-tertiary" />
+              {/* O NOME DO POSTO LEVA ATÉ ELE. A ficha dizia "Mesa 1" e parava
+                  aí; quem precisava ver o resto da mesa — os outros ativos, quem a
+                  ocupa, em que turno, e agora a telemetria do computador — tinha de
+                  ir a /postos e procurar pelo nome. Só POSTO vira link: pessoa não
+                  tem ficha de posto para onde ir. */}
+              {posto ? (
+                <Link to={`/postos/${posto.id}`} className="inline-flex items-center gap-1.5 text-primary hover:underline">
+                  {posto.name} <ExternalLink className="size-3" />
+                </Link>
+              ) : (
+                posse?.targetLabel ?? '—'
+              )}
+              <span className="text-xs text-text-tertiary">{tipoDoAlvo(posse?.targetType)}</span>
             </div>
-          )}
-        </div>
-      )}
 
-      <section className="space-y-3">
-        <h3 className="text-text-tertiary uppercase tracking-widest text-[10px] border-b border-border-sutil pb-2">
-          Histórico de posse
-        </h3>
+            {posse?.postoVago && (
+              <Aviso tom="aviso" className="flex items-start gap-2 text-xs leading-relaxed">
+                <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+                <span>
+                  Posto vago: o ativo está entregue a um posto sem nenhum ocupante aberto. Devolva o
+                  computador, ou coloque alguém no posto pela ficha dele, no nome logo acima.
+                </span>
+              </Aviso>
+            )}
+          </div>
+        )}
+      </Card>
 
-        {carregando && <div className="text-text-tertiary">Carregando…</div>}
+      <Card className="space-y-4 p-6">
+        <h3 className="text-sm font-medium text-text-primary">Histórico de posse</h3>
+
+        {carregando && <p className="text-sm text-text-tertiary">Carregando…</p>}
 
         {!carregando && assignments.length === 0 && (
-          <div className="text-text-tertiary">Este ativo nunca foi entregue.</div>
+          <p className="text-sm text-text-tertiary">Este ativo nunca foi entregue.</p>
         )}
 
-        <ul className="space-y-2">
-          {assignments.map((linha) => {
-            const aberta = estaAberta(linha);
-            const detalhe = comoChegouAoAlvo(linha);
+        {assignments.length > 0 && (
+          <ul className="divide-y divide-border-sutil rounded-lg border border-border-sutil text-sm">
+            {assignments.map((linha) => {
+              const aberta = estaAberta(linha);
+              const detalhe = comoChegouAoAlvo(linha);
 
-            return (
-              <li
-                key={linha.id}
-                className={`border p-3 space-y-1 ${aberta ? 'border-status-info/40 bg-status-info/5' : 'border-border-sutil'}`}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-text-primary">
-                    {rotuloDoAlvo(linha)}
-                    {postoExcluido(linha) && <span className="text-text-tertiary text-[10px]"> · posto excluído</span>}
-                  </span>
-                  <span className={`text-[10px] uppercase tracking-widest ${aberta ? 'text-status-info' : 'text-text-tertiary'}`}>
-                    {aberta ? 'aberta' : 'devolvida'}
-                  </span>
-                </div>
-
-                {detalhe && <div className="text-text-tertiary text-[10px]">{detalhe}</div>}
-
-                <div className="text-text-tertiary text-[10px] tabular-nums">
-                  Entrega {formatarDiaDoInstante(linha.checkoutAt)}
-                  {linha.expectedCheckinAt && ` · prevista para ${formatarData(linha.expectedCheckinAt)}`}
-                  {linha.checkinAt && ` · devolução ${formatarDiaDoInstante(linha.checkinAt)}`}
-                </div>
-
-                {/* QUEM OCUPOU O POSTO NESTE PERÍODO (AW): é o que responde
-                    "quem estava com este equipamento em março?" quando ele
-                    foi entregue a uma mesa, e não a uma pessoa. */}
-                {sabeOsOcupantes(linha) && linha.ocupantesDoPeriodo && (
-                  <div className="text-text-secondary text-[10px] tabular-nums">
-                    {linha.ocupantesDoPeriodo.length > 0
-                      ? <>{linha.ocupantesDoPeriodo.length === 1 ? 'Ocupante' : 'Ocupantes'}: {linha.ocupantesDoPeriodo.map(rotuloDoOcupanteDoPeriodo).join(' · ')}</>
-                      : <span className="text-text-tertiary">Ninguém ocupou o posto neste período.</span>}
+              return (
+                <li key={linha.id} className="space-y-1 px-4 py-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-medium text-text-primary">
+                      {rotuloDoAlvo(linha)}
+                      {postoExcluido(linha) && <span className="text-xs font-normal text-text-tertiary"> · posto excluído</span>}
+                    </span>
+                    <Badge tom={aberta ? 'info' : 'neutro'}>{aberta ? 'Aberta' : 'Devolvida'}</Badge>
                   </div>
-                )}
 
-                {linha.checkoutNotes && (
-                  <div className="text-text-secondary text-[10px]">Entrega: {linha.checkoutNotes}</div>
-                )}
-                {linha.checkinNotes && (
-                  <div className="text-text-secondary text-[10px]">Devolução: {linha.checkinNotes}</div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                  {detalhe && <div className="text-xs text-text-tertiary">{detalhe}</div>}
 
-        {fechadas.length > 0 && (
-          <p className="text-text-tertiary text-[10px] leading-relaxed">
-            Posse devolvida NÃO é apagada: a linha fica com a data de devolução. É o que mantém
-            respondível "quem estava com este equipamento em março?".
-          </p>
+                  <div className="text-xs tabular-nums text-text-tertiary">
+                    Entrega {formatarDiaDoInstante(linha.checkoutAt)}
+                    {linha.expectedCheckinAt && ` · prevista para ${formatarData(linha.expectedCheckinAt)}`}
+                    {linha.checkinAt && ` · devolução ${formatarDiaDoInstante(linha.checkinAt)}`}
+                  </div>
+
+                  {/* QUEM OCUPOU O POSTO NESTE PERÍODO (AW): é o que responde
+                      "quem estava com este equipamento em março?" quando ele
+                      foi entregue a uma mesa, e não a uma pessoa. */}
+                  {sabeOsOcupantes(linha) && linha.ocupantesDoPeriodo && (
+                    <div className="text-xs tabular-nums text-text-secondary">
+                      {linha.ocupantesDoPeriodo.length > 0
+                        ? <>{linha.ocupantesDoPeriodo.length === 1 ? 'Ocupante' : 'Ocupantes'}: {linha.ocupantesDoPeriodo.map(rotuloDoOcupanteDoPeriodo).join(' · ')}</>
+                        : <span className="text-text-tertiary">Ninguém ocupou o posto neste período.</span>}
+                    </div>
+                  )}
+
+                  {linha.checkoutNotes && (
+                    <div className="text-xs text-text-secondary">Entrega: {linha.checkoutNotes}</div>
+                  )}
+                  {linha.checkinNotes && (
+                    <div className="text-xs text-text-secondary">Devolução: {linha.checkinNotes}</div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         )}
-      </section>
+      </Card>
     </div>
   );
 }

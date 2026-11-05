@@ -15,25 +15,12 @@ export class AssetMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
     server.get('/api/assets', assetController.list);
     server.get('/api/assets/stats', assetController.stats);
-    // Lista enxuta para os `<select>` que escolhem um ativo: a licença entregue
+    // Lista enxuta para os seletores que escolhem um ativo: a licença entregue
     // a uma máquina e o vínculo de `/descobertas` (`?maquina=sem`).
     server.get('/api/assets/options', assetController.options);
 
-    // A BUSCA DO LEITOR DE CÓDIGO DE BARRAS (F10, Etapa G).
-    //
-    // A ROTA É GLOBAL (`/api/search`) e o handler é do ativo: é ativo que ela
-    // procura. A ordem das tentativas — etiqueta exata, série exata e só então
-    // `ILIKE` — está no use-case, e ela sai dos índices: os dois primeiros usam
-    // índice único parcial, o terceiro varre a tabela.
-    //
-    // SEM teto próprio: quem bipa cinquenta equipamentos em sequência faz
-    // cinquenta buscas em dois minutos, e o teto global de 300/min cobre isso
-    // com folga. Um teto apertado aqui atrapalharia exatamente o uso para o
-    // qual a rota existe.
-    server.get('/api/search', assetController.search);
-
     // A leitura unitária vem DEPOIS das rotas de caminho fixo (`/stats`,
-    // `/options`, `/search`): o find-my-way casa o segmento estático antes do
+    // `/options`): o find-my-way casa o segmento estático antes do
     // parâmetro, mas manter a ordem aqui é o que deixa isso óbvio para quem
     // acrescentar a próxima.
     //

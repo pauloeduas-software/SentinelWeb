@@ -5,7 +5,6 @@ import type {
   Asset, AssetListParams, AssetStats, EventoDoAtivo, RetireInput,
 } from '../types/asset.types';
 import type { ListEnvelope } from '../types/list.types';
-import type { ResultadoDaBusca } from '../types/search.types';
 
 // A chave inclui os parâmetros: sem isso a página 2 seria servida do cache da
 // página 1. `all` é o prefixo — invalidar ['assets'] alcança listagem e
@@ -23,25 +22,6 @@ export const assetKeys = {
 };
 
 export type AssetInput = Record<string, unknown>;
-
-/**
- * A BUSCA DO LEITOR DE CÓDIGO DE BARRAS (F10, Etapa G).
- *
- * `useMutation` e não `useQuery`, apesar de ser `GET`: o gesto é um BIPE seguido
- * de Enter, e o resultado é uma NAVEGAÇÃO — não um dado que a tela mostra e
- * revalida. Como query, cada tecla digitada entraria na chave do cache, e o
- * `refetchOnWindowFocus` reabriria a busca de ontem ao voltar para a aba.
- *
- * SEM DEBOUNCE, de propósito: o leitor digita a etiqueta inteira em
- * milissegundos e manda `Enter`. Um debounce engoliria a submissão, que é
- * justamente o evento que importa aqui.
- */
-export function useBuscaDoLeitor() {
-  return useMutation({
-    mutationFn: async (q: string) =>
-      (await apiClient.get<ResultadoDaBusca>('/search', { params: { q } })).data,
-  });
-}
 
 export function useAssetsQuery(params: AssetListParams) {
   return useQuery({

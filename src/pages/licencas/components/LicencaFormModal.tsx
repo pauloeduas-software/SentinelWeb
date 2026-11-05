@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
 import CampoDeDinheiro from '../../../components/CampoDeDinheiro';
+import FormularioLateral from '../../../components/FormularioLateral';
 import ReferenceSelect from '../../../components/ReferenceSelect';
+import { Campo } from '../../../components/ui/campo';
+import { Input, Textarea } from '../../../components/ui/input';
 import ChavesDoFormulario from './ChavesDoFormulario';
 import { hojeNoCampoDeData, paraCampoDeData } from '../../../helpers/format.helper';
 import { useLicenseQuery } from '../../../queries/license.queries';
@@ -28,11 +30,6 @@ import type { LinhaDeChave } from '../helpers/licenca.helper';
 // O preço, declarado: o formulário aberto há tempo desfaz a edição que outra
 // pessoa salvou no meio. O servidor continua barrando o que quebra regra.
 // ─────────────────────────────────────────────────────────────────────────────
-
-const CLASSE_CAMPO =
-  'w-full p-2 bg-bg-base border border-border-sutil text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-text-secondary transition-colors';
-
-const ROTULO = 'text-text-secondary uppercase tracking-widest text-[10px]';
 
 function limpar(valor: string): string | null {
   const texto = valor.trim();
@@ -73,16 +70,16 @@ function EdicaoDaLicenca({ id, onClose, onSubmit }: Omit<LicencaFormModalProps, 
   if (data && isFetchedAfterMount && !error) return <Formulario licenca={data} onClose={onClose} onSubmit={onSubmit} />;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-surface-card border border-border-sutil p-6 font-mono text-xs space-y-4">
-        {error
-          ? <p role="alert" className="text-status-danger">Não foi possível carregar a licença: {error.message}</p>
-          : <p className="text-text-tertiary">Carregando…</p>}
-        <button type="button" onClick={onClose} className="px-4 py-2 border border-border-sutil text-text-tertiary hover:text-text-primary uppercase tracking-widest transition-colors">
-          Fechar
-        </button>
-      </div>
-    </div>
+    <FormularioLateral
+      titulo="Editar licença"
+      largura="lg"
+      onClose={onClose}
+      onSubmit={(evento) => evento.preventDefault()}
+      erro={error ? `Não foi possível carregar a licença: ${error.message}` : undefined}
+      bloqueado
+    >
+      {!error && <p className="text-sm text-text-tertiary">Carregando…</p>}
+    </FormularioLateral>
   );
 }
 
@@ -175,136 +172,98 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm">
-      <div className="relative w-full max-w-2xl bg-surface-card border border-border-sutil shadow-2xl flex flex-col">
+    <FormularioLateral
+      titulo={editando ? 'Editar licença' : 'Nova licença'}
+      largura="lg"
+      onClose={onClose}
+      onSubmit={enviar}
+      erro={erro}
+      salvando={salvando}
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Campo
+          rotulo="Nome"
+          obrigatorio
+          className="sm:col-span-2"
+          ajuda={editando ? undefined : 'O Windows ou o Office que veio de fábrica no computador (OEM) não entra aqui: é do computador, e não passa para outro.'}
+        >
+          <Input required value={name} onChange={(e) => setName(e.target.value)} />
+        </Campo>
 
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-sutil bg-bg-base/50">
-          <h2 className="text-sm font-mono text-text-primary tracking-widest uppercase">
-            {editando ? 'Editar licença' : 'Nova licença'}
-          </h2>
-          <button onClick={onClose} aria-label="Fechar" title="Fechar" className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
-            <X size={16} />
-          </button>
+        {/* Filtrada por TIPO: o seletor não oferece categoria de ativo, porque o
+            servidor a recusaria com 422. */}
+        <Campo rotulo="Categoria" obrigatorio>
+          <ReferenceSelect rota="categories" filtroTipo="LICENSE" valor={categoryId} obrigatorio atual={licenca?.category} onChange={setCategoryId} />
+        </Campo>
+
+        <Campo rotulo="Fabricante">
+          <ReferenceSelect rota="manufacturers" valor={manufacturerId} atual={licenca?.manufacturer} onChange={setManufacturerId} />
+        </Campo>
+
+        <Campo
+          rotulo="Quantidade comprada"
+          obrigatorio
+          className="sm:col-span-2"
+          ajuda={licenca && licenca.emUso > 0 ? `O mínimo é ${licenca.emUso}: é o que está em uso.` : undefined}
+        >
+          <Input
+            required type="number" min={1} step={1} value={seatsTotal}
+            onChange={(e) => setSeatsTotal(e.target.value)}
+          />
+        </Campo>
+
+        <Campo
+          rotulo="Vencimento"
+          ajuda="Vencida não recebe entrega. Renovou? Mude esta data, e quem está com ela continua. A perpétua fica sem vencimento, e o fim do suporte vai nas notas."
+        >
+          <Input type="date" value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} />
+        </Campo>
+
+        <Campo
+          rotulo="Encerramento"
+          ajuda="O dia em que o contrato acabou, mesmo que o vencimento fosse depois. Só com tudo devolvido. Apagar a data reabre a licença."
+        >
+          <Input type="date" max={hojeNoCampoDeData()} value={terminationDate} onChange={(e) => setTerminationDate(e.target.value)} />
+        </Campo>
+
+        <Campo rotulo="Licenciado para">
+          <Input value={licensedToName} onChange={(e) => setLicensedToName(e.target.value)} />
+        </Campo>
+
+        <Campo rotulo="E-mail do licenciado">
+          <Input type="email" value={licensedToEmail} onChange={(e) => setLicensedToEmail(e.target.value)} />
+        </Campo>
+
+        <Campo
+          rotulo="Número do pedido"
+          className="sm:col-span-2"
+          ajuda="O pedido ou a nota fiscal: a busca encontra a licença por este número."
+        >
+          <Input value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} />
+        </Campo>
+
+        <Campo rotulo="Data da compra">
+          <Input type="date" max={hojeNoCampoDeData()} value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} />
+        </Campo>
+
+        <Campo rotulo="Valor da compra">
+          <CampoDeDinheiro valor={purchaseCost} onChange={setPurchaseCost} />
+        </Campo>
+
+        <Campo rotulo="Notas" className="sm:col-span-2">
+          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </Campo>
+
+        {/* Sem `Campo`: ele daria o mesmo id a todas as linhas. Cada uma tem o seu `aria-label`. */}
+        <div className="space-y-1.5 sm:col-span-2">
+          <span className="block text-sm font-medium text-text-primary">Chaves do produto</span>
+          <ChavesDoFormulario
+            linhas={chaves}
+            compradas={Number.isInteger(Number(seatsTotal)) && seatsTotal.trim() !== '' ? Number(seatsTotal) : null}
+            onChange={setChaves}
+          />
         </div>
-
-        <form onSubmit={enviar} className="p-6 font-mono text-xs space-y-4 overflow-y-auto max-h-[75vh]">
-          {erro && (
-            <div className="p-3 bg-status-danger/10 text-status-danger border border-status-danger/20">{erro}</div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <label className="space-y-1.5 col-span-2">
-              <span className={ROTULO}>Nome *</span>
-              <input
-                required value={name} onChange={(e) => setName(e.target.value)}
-                className={CLASSE_CAMPO}
-              />
-              {!editando && (
-                <span className="block text-[10px] text-text-tertiary leading-relaxed">
-                  O Windows ou o Office que veio de fábrica no computador (OEM) não entra aqui: é do
-                  computador, e não passa para outro.
-                </span>
-              )}
-            </label>
-
-            <label className="space-y-1.5">
-              <span className={ROTULO}>Categoria *</span>
-              {/* Filtrada por TIPO: o `<select>` não oferece categoria de ativo,
-                  porque o servidor a recusaria com 422. */}
-              <ReferenceSelect rota="categories" filtroTipo="LICENSE" valor={categoryId} obrigatorio atual={licenca?.category} onChange={setCategoryId} />
-            </label>
-
-            <label className="space-y-1.5">
-              <span className={ROTULO}>Fabricante</span>
-              <ReferenceSelect rota="manufacturers" valor={manufacturerId} atual={licenca?.manufacturer} onChange={setManufacturerId} />
-            </label>
-
-            <label className="space-y-1.5 col-span-2">
-              <span className={ROTULO}>Quantidade comprada *</span>
-              <input
-                required type="number" min={1} step={1} value={seatsTotal}
-                onChange={(e) => setSeatsTotal(e.target.value)} className={CLASSE_CAMPO}
-              />
-              {licenca && licenca.emUso > 0 && (
-                <span className="block text-[10px] text-text-tertiary leading-relaxed">
-                  O mínimo é {licenca.emUso}: é o que está em uso.
-                </span>
-              )}
-            </label>
-
-            <label className="space-y-1.5">
-              <span className={ROTULO}>Vencimento</span>
-              <input type="date" value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} className={CLASSE_CAMPO} />
-              <span className="block text-[10px] text-text-tertiary">
-                Até quando pode usar: vencida, não recebe entrega. Renovou? Mude esta data — quem está
-                com ela continua. A perpétua fica sem vencimento, e o fim do suporte vai nas notas.
-              </span>
-            </label>
-
-            <label className="space-y-1.5">
-              <span className={ROTULO}>Encerramento</span>
-              <input type="date" max={hojeNoCampoDeData()} value={terminationDate} onChange={(e) => setTerminationDate(e.target.value)} className={CLASSE_CAMPO} />
-              <span className="block text-[10px] text-text-tertiary">
-                O dia em que o contrato acabou, mesmo que o vencimento fosse depois. Só com
-                tudo devolvido. Apagar a data reabre a licença.
-              </span>
-            </label>
-
-            <label className="space-y-1.5">
-              <span className={ROTULO}>Licenciado para</span>
-              <input value={licensedToName} onChange={(e) => setLicensedToName(e.target.value)} className={CLASSE_CAMPO} />
-            </label>
-
-            <label className="space-y-1.5">
-              <span className={ROTULO}>E-mail do licenciado</span>
-              <input type="email" value={licensedToEmail} onChange={(e) => setLicensedToEmail(e.target.value)} className={CLASSE_CAMPO} />
-            </label>
-
-            <label className="space-y-1.5">
-              <span className={ROTULO}>Número do pedido</span>
-              <input value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} className={CLASSE_CAMPO} />
-              <span className="block text-[10px] text-text-tertiary">
-                O pedido ou a nota fiscal: é por ele que se acha o comprovante, e a busca encontra a
-                licença por este número.
-              </span>
-            </label>
-
-            <label className="space-y-1.5">
-              <span className={ROTULO}>Data da compra</span>
-              <input type="date" max={hojeNoCampoDeData()} value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} className={CLASSE_CAMPO} />
-            </label>
-
-            <label className="space-y-1.5">
-              <span className={ROTULO}>Valor da compra</span>
-              <CampoDeDinheiro valor={purchaseCost} onChange={setPurchaseCost} className={CLASSE_CAMPO} />
-            </label>
-
-            <label className="space-y-1.5 col-span-2">
-              <span className={ROTULO}>Notas</span>
-              <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={CLASSE_CAMPO} />
-            </label>
-
-            <div className="space-y-1.5 col-span-2">
-              <span className={ROTULO}>Chaves do produto</span>
-              <ChavesDoFormulario
-                linhas={chaves}
-                compradas={Number.isInteger(Number(seatsTotal)) && seatsTotal.trim() !== '' ? Number(seatsTotal) : null}
-                onChange={setChaves}
-                classeCampo={CLASSE_CAMPO}
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 border border-border-sutil text-text-tertiary hover:text-text-primary uppercase tracking-widest transition-colors">
-              Cancelar
-            </button>
-            <button type="submit" disabled={salvando} className="px-4 py-2 bg-text-primary text-bg-base hover:bg-text-secondary uppercase tracking-widest transition-colors disabled:opacity-50">
-              {salvando ? 'Salvando…' : 'Salvar'}
-            </button>
-          </div>
-        </form>
       </div>
-    </div>
+    </FormularioLateral>
   );
 }

@@ -1,4 +1,10 @@
-import { AlertCircle, Inbox, RefreshCw } from 'lucide-react';
+import { Inbox, RefreshCw } from 'lucide-react';
+import EstadoDaLista from '../../components/EstadoDaLista';
+import PaginaCabecalho from '../../components/PaginaCabecalho';
+import { Aviso } from '../../components/ui/aviso';
+import { Button } from '../../components/ui/button';
+import { Card } from '../../components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import ConfiguracaoDaDescoberta from './components/ConfiguracaoDaDescoberta';
 import OciososTable from './components/OciososTable';
 import OrfaosTable from './components/OrfaosTable';
@@ -34,41 +40,37 @@ const ABAS: { id: AbaDaTela; rotulo: string }[] = [
 export default function DescobertasPage() {
   const {
     aba, setAba, erro, limparErro,
-    sugestoes, carregandoSugestoes, cobertura, carregandoCobertura,
-    ociosos, semVinculo, vinculadas, carregandoMaquinas, ocupado,
+    sugestoes, carregandoSugestoes, erroDasSugestoes, cobertura, carregandoCobertura,
+    ociosos, erroDosOciosos, semVinculo, vinculadas, carregandoMaquinas, erroDasMaquinas, ocupado,
     configuracao, salvandoConfiguracao, podeConfigurar,
     podeReconciliar, reconciliando, ultimaVarredura, handleReconciliar,
     handleAceitar, handleRecusar, handleTriar, handleVincular, handleSalvarConfiguracao,
   } = useDescobertas();
 
+  // O número ao lado do nome da aba.
+  const contagem: Partial<Record<AbaDaTela, number>> = {
+    fila: sugestoes.length,
+    sem: semVinculo.length,
+    com: vinculadas.length,
+  };
+
   return (
     <div className="motion-safe:animate-fade-in flex flex-col pb-6">
 
-      <div className="mb-6 shrink-0 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-mono text-text-primary uppercase tracking-widest">Descobertas</h2>
-          <p className="text-xs text-text-tertiary mt-2 font-mono max-w-3xl leading-relaxed">
-            O que o agente vê e o cadastro ainda não sabe. Cada linha é uma proposta com a
-            evidência à vista — o sistema propõe, e quem decide é você.
-          </p>
-        </div>
-
-        {/* RECONCILIAR AGORA (SUPERVISOR). A varredura roda de hora em hora e toma
-            a janela da hora; quem cadastrou o ativo e quer ver a proposta nascer
-            não deveria esperar a hora virar. O placar fica ao lado do botão. */}
-        {podeReconciliar && (
-          <div className="flex flex-col items-end gap-1 font-mono text-[10px]">
-            <button
-              type="button"
-              disabled={reconciliando}
-              onClick={handleReconciliar}
-              className="flex items-center gap-2 px-4 py-2 border border-border-sutil text-text-secondary hover:text-text-primary hover:bg-bg-base uppercase tracking-widest transition-colors disabled:opacity-40"
-            >
-              <RefreshCw size={12} className={reconciliando ? 'animate-spin' : ''} />
+      <PaginaCabecalho
+        titulo="Descobertas"
+        subtitulo="O que o agente vê e o cadastro ainda não sabe: o sistema propõe, e quem decide é você."
+        // RECONCILIAR AGORA (SUPERVISOR). A varredura roda de hora em hora e toma
+        // a janela da hora; quem cadastrou o ativo e quer ver a proposta nascer
+        // não deveria esperar a hora virar. O placar fica ao lado do botão.
+        acao={podeReconciliar && (
+          <div className="flex flex-col items-end gap-1">
+            <Button variant="outline" disabled={reconciliando} onClick={handleReconciliar}>
+              <RefreshCw className={reconciliando ? 'animate-spin' : undefined} />
               {reconciliando ? 'Varrendo…' : 'Reconciliar agora'}
-            </button>
+            </Button>
             {ultimaVarredura && (
-              <span className="text-text-tertiary" aria-live="polite">
+              <span className="text-xs text-text-tertiary" aria-live="polite">
                 {ultimaVarredura.endpoints} máquina{ultimaVarredura.endpoints === 1 ? '' : 's'} sem vínculo
                 {' · '}{ultimaVarredura.sugeridas} sugest{ultimaVarredura.sugeridas === 1 ? 'ão' : 'ões'}
                 {' · '}{ultimaVarredura.vinculadas} vínculo{ultimaVarredura.vinculadas === 1 ? '' : 's'}
@@ -77,9 +79,9 @@ export default function DescobertasPage() {
             )}
           </div>
         )}
-      </div>
+      />
 
-      <PainelDeCobertura cobertura={cobertura} carregando={carregandoCobertura} />
+      <PainelDeCobertura cobertura={cobertura} carregando={carregandoCobertura} horasDeShadow={configuracao?.shadowHours} />
 
       {/* A CONFIGURAÇÃO logo abaixo do painel, e não numa tela de ajustes: os
           botões explicam os números que acabaram de ser lidos. "Por que tenho
@@ -93,53 +95,31 @@ export default function DescobertasPage() {
       />
 
       {erro && (
-        <div className="mb-4 border border-status-danger/40 bg-status-danger/5 px-4 py-3 flex items-start gap-3">
-          <AlertCircle size={14} className="text-status-danger mt-0.5 shrink-0" />
-          <p className="text-xs text-status-danger leading-relaxed flex-1">{erro}</p>
-          <button type="button" onClick={limparErro} className="text-[10px] uppercase tracking-widest text-text-tertiary hover:text-text-primary">
-            fechar
-          </button>
-        </div>
+        <Aviso className="mb-4 flex items-start justify-between gap-4">
+          <span>{erro}</span>
+          <button type="button" onClick={limparErro} className="shrink-0 text-xs hover:underline">Dispensar</button>
+        </Aviso>
       )}
 
-      <div className="flex items-center gap-1 border-b border-border-sutil mb-4 font-mono text-xs uppercase tracking-widest">
-        {ABAS.map(({ id, rotulo }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setAba(id)}
-            className={`px-4 py-2 border-b-2 -mb-px transition-colors ${
-              aba === id ? 'border-status-success text-status-success' : 'border-transparent text-text-tertiary hover:text-text-primary'
-            }`}
-          >
-            {rotulo}
-            {id === 'fila' && sugestoes.length > 0 && (
-              <span className="ml-2 text-[10px] text-text-tertiary">{sugestoes.length}</span>
-            )}
-            {id === 'sem' && semVinculo.length > 0 && (
-              <span className="ml-2 text-[10px] text-text-tertiary">{semVinculo.length}</span>
-            )}
-            {id === 'com' && vinculadas.length > 0 && (
-              <span className="ml-2 text-[10px] text-text-tertiary">{vinculadas.length}</span>
-            )}
-          </button>
-        ))}
-      </div>
+      <Tabs value={aba} onValueChange={(valor) => setAba(valor as AbaDaTela)}>
+        <TabsList className="mb-4">
+          {ABAS.map(({ id, rotulo }) => (
+            <TabsTrigger key={id} value={id}>
+              {rotulo}
+              {Boolean(contagem[id]) && <span className="text-xs text-text-tertiary">{contagem[id]}</span>}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      {aba === 'fila' && (
-        <>
-          {carregandoSugestoes ? (
-            <p className="text-text-tertiary text-xs font-mono">Carregando sugestões…</p>
-          ) : sugestoes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-text-tertiary gap-3 border border-border-sutil">
-              <Inbox size={24} className="opacity-50" />
-              <span>Nada esperando decisão.</span>
-              <span className="text-[10px] max-w-md text-center leading-relaxed">
-                A varredura roda de hora em hora. Quando o agente encontrar uma máquina
-                cuja identidade de hardware casa com um ativo do cadastro, a proposta
-                aparece aqui.
-              </span>
-            </div>
+        <TabsContent value="fila">
+          {sugestoes.length === 0 ? (
+            <Card className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-text-tertiary">
+              <Inbox className="size-6 opacity-50" />
+              <EstadoDaLista carregando={carregandoSugestoes} erro={erroDasSugestoes}>
+                <span>Nada esperando decisão.</span>
+                <span className="text-xs">A varredura roda de hora em hora.</span>
+              </EstadoDaLista>
+            </Card>
           ) : (
             <div className="flex flex-col gap-3">
               {sugestoes.map((sugestao) => (
@@ -153,20 +133,27 @@ export default function DescobertasPage() {
               ))}
             </div>
           )}
-        </>
-      )}
+        </TabsContent>
 
-      {aba === 'sem' && (
-        <OrfaosTable
-          orfaos={semVinculo}
-          carregando={carregandoMaquinas}
-          ocupado={ocupado}
-          onTriar={handleTriar}
-          onVincular={handleVincular}
-        />
-      )}
-      {aba === 'com' && <VinculadasTable maquinas={vinculadas} carregando={carregandoMaquinas} />}
-      {aba === 'ociosos' && <OciososTable ociosos={ociosos} />}
+        <TabsContent value="sem">
+          <OrfaosTable
+            orfaos={semVinculo}
+            carregando={carregandoMaquinas}
+            erro={erroDasMaquinas}
+            ocupado={ocupado}
+            onTriar={handleTriar}
+            onVincular={handleVincular}
+          />
+        </TabsContent>
+
+        <TabsContent value="com">
+          <VinculadasTable maquinas={vinculadas} carregando={carregandoMaquinas} erro={erroDasMaquinas} />
+        </TabsContent>
+
+        <TabsContent value="ociosos">
+          <OciososTable ociosos={ociosos} erro={erroDosOciosos} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

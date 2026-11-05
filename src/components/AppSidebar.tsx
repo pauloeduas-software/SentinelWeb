@@ -1,9 +1,14 @@
 import { useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronsLeft, ChevronsRight, LayoutDashboard, LogOut, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, Menu, X } from 'lucide-react';
 import { GRUPOS_DE_MENU, itemEstaAtivo } from './navegacao';
+import SentinelLogo from './SentinelLogo';
+import { Button } from './ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { cn } from '../helpers/cn.helper';
 import { useBarraLateral } from '../hooks/useBarraLateral';
-import { useAuthStore, usePermissoes } from '../stores/auth.store';
+import { usePermissoes } from '../stores/auth.store';
 
 // A NAVEGAÇÃO DO PAINEL, na vertical.
 //
@@ -16,8 +21,8 @@ import { useAuthStore, usePermissoes } from '../stores/auth.store';
 // ═══════════════════════════════════════════════════════════════════════════
 // TRÊS LARGURAS, E A DO MEIO É A QUE RESOLVE O DEFEITO.
 //
-//   `md` para cima, aberta     220px, com rótulo e título de seção;
-//   `md` para cima, recolhida   64px, só ícone, com `title` no hover;
+//   `md` para cima, aberta     256px, com rótulo e seção que recolhe;
+//   `md` para cima, recolhida   64px, só ícone, com a dica à direita;
 //   abaixo de `md`              gaveta por cima do conteúdo, fechada por padrão.
 //
 // A gaveta é `fixed` e sai do fluxo: ela NÃO empurra o conteúdo, senão abrir o
@@ -27,9 +32,9 @@ import { useAuthStore, usePermissoes } from '../stores/auth.store';
 
 export default function AppSidebar() {
   const location = useLocation();
-  const { recolhida, abertaNoCelular, alternarRecolhida, fecharNoCelular } = useBarraLateral();
-  const usuario = useAuthStore((estado) => estado.usuario);
-  const sair = useAuthStore((estado) => estado.sair);
+  const {
+    recolhida, abertaNoCelular, gruposFechados, alternarRecolhida, alternarGrupo, fecharNoCelular,
+  } = useBarraLateral();
   // `usePermissoes` e não `usePode` por item: o número de itens é variável, e um
   // hook por item quebraria a regra dos hooks. Aqui é uma assinatura só.
   const pode = usePermissoes();
@@ -69,7 +74,40 @@ export default function AppSidebar() {
     [pode],
   );
 
-  const largura = recolhida ? 'md:w-16' : 'md:w-56';
+  const largura = recolhida ? 'md:w-16' : 'md:w-64';
+  // Na gaveta do celular a barra está sempre aberta: a preferência é do desktop.
+  const soIcones = recolhida && !abertaNoCelular;
+
+  const desenharItem = ({ to, label, icon: Icon }: (typeof visiveis)[number]['itens'][number]) => {
+    const ativo = itemEstaAtivo(to, location.pathname);
+    const link = (
+      <Link
+        key={to}
+        to={to}
+        aria-label={label}
+        aria-current={ativo ? 'page' : undefined}
+        className={cn(
+          'relative flex items-center gap-3 overflow-hidden rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+          ativo
+            ? 'bg-primary text-primary-foreground'
+            : 'text-sidebar-foreground hover:bg-sidebar-accent',
+          soIcones && 'justify-center',
+        )}
+      >
+        {ativo && <span className="absolute inset-y-1.5 left-0 w-1 rounded-r-full bg-primary-foreground/70" />}
+        <Icon className="size-5 shrink-0" />
+        {!soIcones && <span className="truncate">{label}</span>}
+      </Link>
+    );
+
+    if (!soIcones) return link;
+    return (
+      <Tooltip key={to}>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="right">{label}</TooltipContent>
+      </Tooltip>
+    );
+  };
 
   return (
     <>
@@ -81,137 +119,88 @@ export default function AppSidebar() {
           type="button"
           aria-label="Fechar menu"
           onClick={fecharNoCelular}
-          className="fixed inset-0 z-40 bg-black/70 md:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
         />
       )}
 
       <aside
-        className={[
+        className={cn(
           // `fixed` abaixo de `md` (gaveta, fora do fluxo) e `sticky` a partir
           // dele (coluna no fluxo, acompanhando a rolagem da página).
-          'fixed inset-y-0 left-0 z-50 w-56 shrink-0',
+          'fixed inset-y-0 left-0 z-50 w-64 shrink-0',
           'md:sticky md:top-0 md:z-30 md:h-screen md:translate-x-0',
           largura,
           abertaNoCelular ? 'translate-x-0' : '-translate-x-full',
-          'flex flex-col border-r border-border-sutil bg-bg-base transition-[width,transform] duration-200',
-        ].join(' ')}
+          'flex flex-col bg-sidebar text-sidebar-foreground transition-[width,transform] duration-300',
+        )}
       >
         {/* ── MARCA ─────────────────────────────────────────────────────────
-            Mesma altura do cabeçalho (`h-14`) de propósito: a borda de baixo
-            daqui e a do cabeçalho formam UMA linha reta atravessando a tela. */}
-        <div className="h-14 shrink-0 flex items-center gap-3 border-b border-border-sutil px-4">
-          {/* `/computadores` e não `/`: a raiz REDIRECIONA para cá (src/App.tsx), e
-              clicar na marca empilhava uma entrada de histórico que o
-              redirecionamento substituía — o primeiro "voltar" depois disso não
-              mudava nada na tela. */}
-          <Link to="/computadores" className="flex items-center gap-3 min-w-0" title="Sentinel">
-            <div className="bg-text-primary p-1 rounded-sm shrink-0">
-              <LayoutDashboard size={14} className="text-bg-base" />
-            </div>
-            {!recolhida && (
-              <h1 className="truncate text-sm font-bold uppercase tracking-tight">Sentinel</h1>
-            )}
-          </Link>
+            Mesma altura do cabeçalho (`h-14`) de propósito. O botão de recolher
+            mora aqui, ao lado dela; na gaveta ele é o X. */}
+        <div className={cn('flex h-14 shrink-0 items-center gap-2 px-4', soIcones ? 'justify-center px-0' : 'justify-between')}>
+          {!soIcones && (
+            // `/computadores` e não `/`: a raiz REDIRECIONA para cá (src/App.tsx), e
+            // clicar na marca empilhava uma entrada de histórico que o
+            // redirecionamento substituía.
+            <Link to="/computadores" className="flex min-w-0 items-center gap-2" title="Sentinel">
+              <SentinelLogo className="-mx-2 size-10" />
+              <h1 className="truncate text-lg font-bold tracking-tight text-primary">Sentinel</h1>
+            </Link>
+          )}
 
-          {/* O X da gaveta — só no celular, onde não há botão de recolher. */}
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={alternarRecolhida}
+            aria-label={recolhida ? 'Expandir menu' : 'Recolher menu'}
+            title={recolhida ? 'Expandir menu' : 'Recolher menu'}
+            className="hidden text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground md:inline-flex"
+          >
+            {recolhida ? <Menu /> : <ChevronLeft />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={fecharNoCelular}
             aria-label="Fechar menu"
-            className="ml-auto p-1 text-text-tertiary hover:text-text-primary md:hidden"
+            className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground md:hidden"
           >
-            <X size={16} />
-          </button>
+            <X />
+          </Button>
         </div>
 
         {/* ── ITENS ─────────────────────────────────────────────────────────
-            `overflow-y-auto` com `min-h-0`: numa janela baixa a lista rola
-            DENTRO da barra, sem empurrar o rodapé (nome e sair) para fora da
-            tela. Sem o `min-h-0`, o flex item não encolhe e o rodapé some. */}
-        <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-4 font-mono text-xs uppercase tracking-widest">
-          {visiveis.map((grupo, indice) => (
-            <div key={grupo.titulo ?? indice} className={indice > 0 ? 'mt-5' : ''}>
-              {/* O título da seção desaparece quando a barra está recolhida —
-                  em 64px não cabe texto. No lugar dele, uma linha: sem nenhuma
-                  marca, os ícones viram uma coluna sem hierarquia. */}
-              {grupo.titulo && (
-                recolhida ? (
-                  <div className="mx-4 mb-2 border-t border-border-sutil" />
-                ) : (
-                  <div className="px-4 pb-2 text-[10px] text-text-tertiary">{grupo.titulo}</div>
-                )
-              )}
+            `overflow-y-auto` com `min-h-0`: numa janela baixa a lista rola DENTRO
+            da barra. Sem o `min-h-0`, o flex item não encolhe. */}
+        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden p-2">
+          {visiveis.map((grupo, indice) => {
+            const titulo = grupo.titulo ?? '';
+            const fechado = gruposFechados.includes(titulo);
 
-              {grupo.itens.map(({ to, label, icon: Icon }) => {
-                const ativo = itemEstaAtivo(to, location.pathname);
-                return (
-                  <Link
-                    key={to}
-                    to={to}
-                    // `title` sempre, não só quando recolhida: no modo estreito
-                    // é a única forma de saber o que o ícone é, e no aberto não
-                    // incomoda.
-                    title={label}
-                    aria-current={ativo ? 'page' : undefined}
-                    className={[
-                      'flex items-center gap-3 px-4 py-2 transition-colors',
-                      // A BARRA DE 2px À ESQUERDA é o que marca o ativo, e ela
-                      // existe nos dois modos — recolhida, a cor do ícone
-                      // sozinha é fraca demais para achar a tela atual.
-                      ativo
-                        ? 'border-l-2 border-status-success bg-surface-card text-status-success'
-                        : 'border-l-2 border-transparent text-text-tertiary hover:bg-surface-card hover:text-text-primary',
-                      recolhida ? 'justify-center' : '',
-                    ].join(' ')}
-                  >
-                    <Icon size={14} className="shrink-0" />
-                    {!recolhida && <span className="truncate">{label}</span>}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
+            // Recolhida: um traço entre as seções, e a seção fechada some.
+            if (soIcones) {
+              if (fechado) return null;
+              return (
+                <div key={titulo} className="space-y-1">
+                  {indice > 0 && <div className="mx-2 my-2 border-t border-sidebar-border" />}
+                  {grupo.itens.map(desenharItem)}
+                </div>
+              );
+            }
+
+            return (
+              <Collapsible key={titulo} open={!fechado} onOpenChange={() => alternarGrupo(titulo)} className="space-y-1">
+                <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md px-3 pb-1 pt-3 text-xs font-semibold text-sidebar-foreground/60 transition-colors hover:text-sidebar-foreground">
+                  <span>{grupo.titulo}</span>
+                  <ChevronDown className={cn('size-3.5 opacity-60 transition-transform duration-200', fechado && '-rotate-90')} />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-1 pt-1">
+                  {grupo.itens.map(desenharItem)}
+                </CollapsibleContent>
+              </Collapsible>
+            );
+          })}
         </nav>
-
-        {/* ── QUEM ESTÁ OPERANDO ────────────────────────────────────────────
-            Saiu do cabeçalho e veio para cá: é informação de sessão, não de
-            tela, e no cabeçalho ela disputava largura com a busca do leitor.
-            Num computador compartilhado, é o que diz em nome de quem se está
-            clicando. */}
-        {usuario && (
-          <div className="shrink-0 border-t border-border-sutil p-3 font-mono text-xs">
-            <div className={`flex items-center gap-2 ${recolhida ? 'justify-center' : ''}`}>
-              {!recolhida && (
-                <Link to="/conta" title="Minha conta" className="flex min-w-0 flex-col leading-tight hover:text-text-secondary">
-                  <span className="truncate text-text-primary">{usuario.name}</span>
-                  <span className="truncate text-[10px] uppercase tracking-widest text-text-tertiary">
-                    Minha conta
-                  </span>
-                </Link>
-              )}
-              <button
-                type="button"
-                onClick={() => void sair()}
-                title="Sair"
-                className={`p-2 text-text-tertiary transition-colors hover:text-status-danger ${recolhida ? '' : 'ml-auto'}`}
-              >
-                <LogOut size={14} />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── RECOLHER ──────────────────────────────────────────────────────
-            Só a partir de `md`: abaixo disso a barra é gaveta, e "recolher uma
-            gaveta" não quer dizer nada. */}
-        <button
-          type="button"
-          onClick={alternarRecolhida}
-          title={recolhida ? 'Expandir menu' : 'Recolher menu'}
-          className="hidden shrink-0 items-center justify-center gap-2 border-t border-border-sutil py-2 font-mono text-[10px] uppercase tracking-widest text-text-tertiary transition-colors hover:bg-surface-card hover:text-text-primary md:flex"
-        >
-          {recolhida ? <ChevronsRight size={14} /> : <><ChevronsLeft size={14} /> Recolher</>}
-        </button>
       </aside>
     </>
   );

@@ -75,7 +75,7 @@ criada por fora da trava (o `psql` à mão), e esconder a inconsistência seria 
 |---|---|
 | **a lista** | **uma só**, pelo nome, com os desativados — sem abas, como em Colaboradores. Busca por nome, categoria e localização — o texto ao pé da letra, `%` e `_` não são curinga; filtro de categoria |
 | **a linha** | nome (e as notas), categoria, localização e "10 no total · 7 em uso · 3 disponíveis" — no consumível, só "3 disponíveis". Sem cor pelo valor. A do desativado fica esmaecida, com a marca "desativado" ao lado do nome |
-| **as ações** | as do cadastro (AF), que aparecem ao passar o mouse: Entregar (desabilitado sem disponível, com o motivo no `title`; some no desativado), Editar, Desativar/Ativar e Excluir — com confirmação no Desativar e no Excluir |
+| **as ações** | as do cadastro (AF), no `⋯` da linha (AY): Entregar (desabilitado sem disponível, com o motivo no `title`; some no desativado), Editar, Desativar/Ativar e Excluir — com confirmação no Desativar e no Excluir |
 | **o detalhe** | no cabeçalho, a conta ("Desativado · 10 no total · 7 em uso · 3 disponíveis") e as ações da lista, com as mesmas regras (Entregar e Editar voltam ao detalhe ao fechar; excluído, a janela fecha). Depois, todos os campos do cadastro. **Com quem está**: as entregas abertas, da mais recente para a mais antiga, 15 por página, com busca pelo nome do colaborador ou do posto — "Mesa 1 · 5 unidades · desde 12/10/2026", com a observação —, e Devolver em cada linha. **Histórico**: só entregas e devoluções, por entrega, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
 
 A edição mostra o **total** e manda **o formulário inteiro**, como em todas as telas
