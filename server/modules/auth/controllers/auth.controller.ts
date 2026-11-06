@@ -53,9 +53,9 @@ export const authController = {
     // `logout.usecase.ts` porque não há regra de negócio nenhuma aqui — o que
     // faltaria para haver (revogar UMA sessão específica, sessão por
     // dispositivo) exige uma tabela de sessão, que o sistema não tem. Quem
-    // precisa derrubar TODAS as sessões de alguém troca a senha dela na edição
-    // do usuário, que incrementa o `tokenVersion`. Fora isso, quem limita o
-    // estrago é o TTL de 12 horas.
+    // precisa derrubar TODAS as sessões de alguém gera uma senha temporária para
+    // ela, que incrementa o `tokenVersion`. Fora isso, quem limita o estrago é o
+    // TTL de 48 horas.
 
     return reply.clearCookie(COOKIE_SESSAO, opcoesLimparSessao()).send({ success: true });
   },

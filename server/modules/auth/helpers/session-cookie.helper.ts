@@ -11,19 +11,20 @@ import { isProduction } from '../../../infra/config/env';
 export const COOKIE_SESSAO = 'sentinel_sessao';
 
 /**
- * Validade do JWT e do cookie, juntas: 12 horas a contar da entrada (AU).
+ * Validade do JWT e do cookie, juntas: 48 horas a contar da entrada (BD).
  *
- * Um dia de trabalho, e não 8 horas: com 8, quem entrava às 8h caía às 16h, no
- * meio do expediente. Com 12, entra-se uma vez por dia, e no dia seguinte de novo.
+ * Entra-se a cada dois dias, e não todo dia. O vencimento cai na hora em que se
+ * entrou, às vezes no meio do expediente, e o login devolve a pessoa à tela onde
+ * estava (AU).
  *
  * FIXA, sem renovar a cada requisição: a telemetria consulta o servidor a cada
  * 5 s, e uma aba esquecida aberta renovaria a sessão para sempre.
  *
- * Horas, não dias: mandar alguém para a lixeira NÃO invalida o token que ele já
- * tem no navegador. O `preHandler` relê o usuário a cada requisição (e é essa a
- * defesa real), mas o TTL curto é o que limita o estrago se um token vazar.
+ * Com teto: mandar alguém para a lixeira NÃO invalida o token que ele já tem no
+ * navegador. O `preHandler` relê o usuário a cada requisição (e é essa a defesa
+ * real), mas o TTL é o que limita o estrago se um token vazar.
  */
-export const SESSAO_SEGUNDOS = 12 * 60 * 60;
+export const SESSAO_SEGUNDOS = 48 * 60 * 60;
 
 /**
  * Os atributos que precisam ser IDÊNTICOS na gravação e na limpeza.

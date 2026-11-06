@@ -41,7 +41,7 @@
   controller assina JWT { sub, tv }   ← `tv` = tokenVersion, a geração da sessão
         │
         ▼
-  Set-Cookie: sentinel_sessao  (httpOnly, SameSite=Lax, Secure em produção, 12h)
+  Set-Cookie: sentinel_sessao  (httpOnly, SameSite=Lax, Secure em produção, 48h)
 ```
 
 E em **toda** requisição seguinte:
