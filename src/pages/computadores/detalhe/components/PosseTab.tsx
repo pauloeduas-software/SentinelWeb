@@ -97,7 +97,7 @@ export default function PosseTab({
                   ir a /postos e procurar pelo nome. Só POSTO vira link: pessoa não
                   tem ficha de posto para onde ir. */}
               {posto ? (
-                <Link to={`/postos/${posto.id}`} className="inline-flex items-center gap-1.5 text-primary hover:underline">
+                <Link to={`/postos/${posto.id}`} className="inline-flex items-center gap-1.5 text-link hover:underline">
                   {posto.name} <ExternalLink className="size-3" />
                 </Link>
               ) : (

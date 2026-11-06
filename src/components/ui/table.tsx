@@ -63,11 +63,11 @@ export function TableHead({ className, ...props }: ComponentProps<'th'>) {
 
 /** A coluna do `⋯`, igual em toda lista. */
 export function TableHeadAcoes() {
-  return <TableHead className="w-20 text-right">Ações</TableHead>;
+  return <TableHead className="w-24 text-right">Ações</TableHead>;
 }
 
 export function TableCell({ className, ...props }: ComponentProps<'td'>) {
-  return <td title={tituloDe(props.children)} className={cn('truncate px-4 py-2 align-middle text-text-secondary', className)} {...props} />;
+  return <td title={tituloDe(props.children)} className={cn('truncate px-4 py-1.5 align-middle text-text-secondary', className)} {...props} />;
 }
 
 /** O nome na primeira coluna. O botão é o caminho do teclado: o clique sobe para a linha. */

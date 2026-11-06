@@ -28,10 +28,13 @@ const BACKEND_ONLY = [
 // string e template; o que passa é token (`text-status-danger`, `bg-bg-base`).
 const COR_FIXA = 'sem cor fixa no frontend: use um token do tema (src/index.css), como bg-bg-base, text-status-danger ou border-border-sutil.'
 const PALETA_TAILWIND = '/\\b(bg|text|border|ring|outline|fill|stroke|divide|from|via|to|shadow|accent|caret|decoration)-(red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|slate|gray|zinc|neutral|stone)-[0-9]{2,3}\\b/'
+const PRETO_E_BRANCO = '/\\b(bg|text|border|ring|outline|fill|stroke|divide|from|via|to|shadow|accent|caret|decoration)-(black|white)\\b/'
 const COR_CSS = '/#[0-9a-fA-F]{6}\\b|#[0-9a-fA-F]{3}\\b|\\b(rgb|hsl)a?\\(/'
 const SEM_COR_FIXA = [
   { selector: `Literal[value=${PALETA_TAILWIND}]`, message: COR_FIXA },
   { selector: `TemplateElement[value.raw=${PALETA_TAILWIND}]`, message: COR_FIXA },
+  { selector: `Literal[value=${PRETO_E_BRANCO}]`, message: COR_FIXA },
+  { selector: `TemplateElement[value.raw=${PRETO_E_BRANCO}]`, message: COR_FIXA },
   { selector: `Literal[value=${COR_CSS}]`, message: COR_FIXA },
   { selector: `TemplateElement[value.raw=${COR_CSS}]`, message: COR_FIXA },
 ]

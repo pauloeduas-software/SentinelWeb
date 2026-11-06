@@ -137,7 +137,7 @@ function Celula({ coluna, registro }: { coluna: ColunaSpec; registro: CatalogRow
           rel="noreferrer"
           title={String(valor)}
           onClick={(evento) => evento.stopPropagation()}
-          className="block truncate text-primary hover:underline focus-visible:underline focus-visible:outline-none"
+          className="block truncate text-link hover:underline focus-visible:underline focus-visible:outline-none"
         >
           {String(valor).replace(/^https?:\/\//, '').replace(/\/$/, '')}
         </a>

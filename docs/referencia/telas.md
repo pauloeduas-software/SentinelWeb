@@ -30,6 +30,10 @@ Cadastro novo copia `src/components/catalogo/` (`CatalogTable` + `useCatalog`), 
 - **Sem cor por dado** (nome, categoria, tipo de evento). Cor só por token do tema, em botão, aviso e
   na situação: ativo, desativado, vencida, online (`Badge`, `PontoDeStatus`; AY). O lint recusa cor
   fixa em `src/`.
+- **Texto de 12px para cima (BH).** A escala de `src/index.css` vale para `text-xs` a `text-xl`; tamanho
+  fixo em `px` não entra.
+- **Cor de texto não é cor de fundo (BH).** Link é `text-link`, e o botão de perigo é `bg-destructive`:
+  `text-primary` sobre o card e `bg-status-danger` com texto branco não passam de 4,5:1 no escuro.
 - **Fonte normal.** `font-mono` só em código: etiqueta, série, chave, IP, MAC, UUID, HWID e senha
   temporária.
 - **Pouco texto na tela.** Página sem subtítulo; a regra mora na ajuda do campo (AZ).

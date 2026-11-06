@@ -52,7 +52,7 @@ export default function VinculadasTable({ maquinas, carregando, erro, acao }: Pr
             <TableHead>Máquina</TableHead>
             <TableHead className="w-44">Ativo</TableHead>
             <TableHead>Sistema operacional</TableHead>
-            <TableHead className="w-44">Último contato</TableHead>
+            <TableHead className="w-48">Último contato</TableHead>
             <TableHead className="w-36">Situação</TableHead>
           </TableRow>
         </TableHeader>

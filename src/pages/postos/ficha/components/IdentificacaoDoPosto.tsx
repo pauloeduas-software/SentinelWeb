@@ -20,7 +20,7 @@ export default function IdentificacaoDoPosto({ posto, acoes }: { posto: PostoDet
         <Dado rotulo="Localização">{posto.location.name}</Dado>
         <Dado rotulo="Computador">
           {computador && (
-            <Link to={`/computadores/${computador.id}`} className="font-mono text-primary hover:underline">
+            <Link to={`/computadores/${computador.id}`} className="font-mono text-link hover:underline">
               {computador.assetTag}
             </Link>
           )}

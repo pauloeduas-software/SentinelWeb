@@ -42,7 +42,7 @@ export default function IdentificacaoCard({ asset, acoes }: { asset: Asset; acoe
           <>
             <Dado rotulo="Localização">
               {asset.postoAtual.location.name} ·{' '}
-              <Link to={`/postos/${asset.postoAtual.id}`} className="text-primary hover:underline">
+              <Link to={`/postos/${asset.postoAtual.id}`} className="text-link hover:underline">
                 {asset.postoAtual.name}
               </Link>
             </Dado>

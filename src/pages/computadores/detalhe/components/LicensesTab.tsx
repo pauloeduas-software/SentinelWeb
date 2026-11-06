@@ -41,7 +41,7 @@ export default function LicensesTab({ licencas, assetTag, carregando, erro }: Li
     >
       <span className="max-w-md text-center text-xs leading-relaxed">
         Licença por computador vai para o ativo, pela tela de{' '}
-        <Link to="/licencas" className="text-primary hover:underline">Licenças</Link>.
+        <Link to="/licencas" className="text-link hover:underline">Licenças</Link>.
         A de assinatura de uma pessoa vai para o colaborador, e aparece na ficha dele.
       </span>
     </TabelaDaFicha>

@@ -72,7 +72,7 @@ export default function OrfaosTable({ orfaos, carregando, erro, ocupado, acao, o
               <TableHead>Máquina</TableHead>
               <TableHead>Sistema operacional</TableHead>
               <TableHead className="w-44">Série da BIOS</TableHead>
-              <TableHead className="w-44">Último contato</TableHead>
+              <TableHead className="w-48">Último contato</TableHead>
               <TableHead className="w-36">Situação</TableHead>
               <TableHeadAcoes />
             </TableRow>

@@ -40,7 +40,7 @@ export default function ComponentesTab({ componentes, assetTag, carregando, erro
     >
       <span className="max-w-md text-center text-xs leading-relaxed">
         Memória e SSD são itens de categoria Componente, entregues a um computador pela tela de{' '}
-        <Link to="/estoque" className="text-primary hover:underline">Estoque</Link>.
+        <Link to="/estoque" className="text-link hover:underline">Estoque</Link>.
       </span>
     </TabelaDaFicha>
   );

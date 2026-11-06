@@ -172,7 +172,7 @@ export default function ComputadorTab({ ativos, onDevolver, devolvendo }: Comput
           <ListaVazia icone={Monitor} carregando={false} erro={null} frase="Nenhum ativo entregue a este posto.">
             <span className="max-w-md text-xs leading-relaxed">
               A entrega é feita em{' '}
-              <Link to="/computadores" className="text-primary hover:underline">Computadores</Link>
+              <Link to="/computadores" className="text-link hover:underline">Computadores</Link>
               , escolhendo este posto como destino.
             </span>
           </ListaVazia>
@@ -200,7 +200,7 @@ export default function ComputadorTab({ ativos, onDevolver, devolvendo }: Comput
                 ? `O computador deste posto é o ${ativos[0].assetTag}${ativos[0].name ? ` (${ativos[0].name})` : ''}, e ele ainda não tem máquina vinculada.`
                 : `Nenhum dos ${ativos.length} ativos deste posto tem máquina vinculada.`}
               {' '}A telemetria aparece quando a máquina é vinculada ao ativo, em{' '}
-              <Link to="/descobertas" className="text-primary hover:underline">Descobertas</Link>.
+              <Link to="/descobertas" className="text-link hover:underline">Descobertas</Link>.
             </p>
           ) : (
             <>
