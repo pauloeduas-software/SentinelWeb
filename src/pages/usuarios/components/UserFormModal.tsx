@@ -8,6 +8,7 @@ import { Seletor } from '../../../components/ui/seletor';
 import type { Cargo, User } from '../../../types/user.types';
 import type { UserInput } from '../../../queries/user.queries';
 import { CARGOS_NA_TELA } from '../../../helpers/cargo.helper';
+import type { PedidoDeConfirmacao } from '../../../hooks/useConfirmacao';
 import { useCopiar } from '../../../hooks/useCopiar';
 
 // O FORMULÁRIO DE USUÁRIO — quem opera o sistema: nome, e-mail e cargo.
@@ -22,6 +23,14 @@ import { useCopiar } from '../../../hooks/useCopiar';
 //
 // Quem só RECEBE equipamento não é usuário: é colaborador, cadastrado na página
 // Colaboradores.
+
+const PERGUNTA_COM_A_SENHA_NA_TELA: PedidoDeConfirmacao = {
+  titulo: 'Fechar sem guardar a senha?',
+  descricao: 'Ela aparece só agora: feche e ela não volta.',
+  acao: 'Fechar',
+  voltar: 'Continuar aqui',
+  perigo: true,
+};
 
 interface UserFormModalProps {
   user?: User | null;
@@ -96,6 +105,7 @@ export default function UserFormModal({ user, senhaGerada = null, onClose, onSub
       onSubmit={handleSubmit}
       erro={error}
       salvando={loading}
+      perguntaAoSair={temporaria ? PERGUNTA_COM_A_SENHA_NA_TELA : undefined}
       // Cadastrada a conta, o que resta é fechar: salvar de novo criaria outra, e um
       // Cancelar diria que dá para desfazer a conta que já existe.
       rodape={criada ? <Button onClick={onClose}>Fechar</Button> : undefined}

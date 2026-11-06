@@ -6,8 +6,8 @@ import { create } from 'zustand';
 // continua com a mesma linha de antes: `if (!(await confirmar(...))) return;`.
 // Quem desenha é `components/DialogoDeConfirmacao.tsx`, montado uma vez no App.
 //
-// Promessa num store, e não um componente em cada tela: são 14 lugares
-// perguntando, quase todos dentro de hooks, que não têm onde desenhar.
+// Promessa num store, e não um componente em cada tela: quase todo lugar que
+// pergunta está dentro de um hook, que não tem onde desenhar.
 
 export interface PedidoDeConfirmacao {
   titulo: string;
@@ -15,6 +15,8 @@ export interface PedidoDeConfirmacao {
   descricao?: string;
   /** O verbo do botão. Sem ele, "Confirmar". */
   acao?: string;
+  /** O botão de desistir. Sem ele, "Cancelar". */
+  voltar?: string;
   /** O que não tem volta (Excluir, Reverter baixa): o botão sai no vermelho. */
   perigo?: boolean;
 }

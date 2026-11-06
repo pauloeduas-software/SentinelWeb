@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useContext, type ReactNode } from 'react';
+import { MarcarAlteracaoContext } from './formulario.context';
 import { cn } from '../../helpers/cn.helper';
 
 // A ESCOLHA ENTRE POUCAS OPÇÕES VISÍVEIS: Ativos e Lixeira, Colaborador e Posto.
@@ -19,6 +20,8 @@ interface SegmentadoProps<T> {
 }
 
 export function Segmentado<T extends string | undefined>({ opcoes, valor, onChange, sublinhado, className }: SegmentadoProps<T>) {
+  const marcarAlteracao = useContext(MarcarAlteracaoContext);
+
   return (
     <div
       className={cn(
@@ -34,7 +37,10 @@ export function Segmentado<T extends string | undefined>({ opcoes, valor, onChan
             key={opcao.valor ?? 'todos'}
             type="button"
             aria-pressed={escolhida}
-            onClick={() => onChange(opcao.valor)}
+            onClick={() => {
+              if (!escolhida) marcarAlteracao();
+              onChange(opcao.valor);
+            }}
             className={cn(
               'inline-flex items-center gap-2 whitespace-nowrap text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&_svg]:size-4',
               sublinhado ? 'border-b-2 py-2.5 focus-visible:ring-inset' : 'rounded-sm px-3 py-1.5',

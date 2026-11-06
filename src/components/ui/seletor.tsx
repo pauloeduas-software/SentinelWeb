@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { Command } from 'cmdk';
 import { Check, ChevronsUpDown, Search } from 'lucide-react';
 import { cn } from '../../helpers/cn.helper';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
 import { CLASSE_DO_CONTROLE } from './input';
 import { useIdDoCampo } from './campo';
+import { MarcarAlteracaoContext } from './formulario.context';
 
 // O SELETOR COM BUSCA — filtros e campos de escolha, no lugar do `<select>` do
 // navegador. É o `SearchableSelect` da IntraNet.
@@ -52,10 +53,12 @@ export function Seletor({
   obrigatorio, disabled, ariaLabel, className, opcoesMono = false, onBusca, busca, rodape,
 }: SeletorProps) {
   const [aberto, setAberto] = useState(false);
+  const marcarAlteracao = useContext(MarcarAlteracaoContext);
   const idDoCampo = useIdDoCampo(id);
   const selecionada = opcoes.find((opcao) => opcao.value === value);
 
   const escolher = (valor: string) => {
+    if (valor !== value) marcarAlteracao();
     onChange(valor);
     setAberto(false);
   };

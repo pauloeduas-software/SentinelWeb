@@ -3,6 +3,7 @@ import * as SheetPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { cn } from '../../helpers/cn.helper';
 import { CLASSE_DO_VEU } from './dialog';
+import { naoFecharPelaNotificacao } from './fora-da-janela.helper';
 
 // O PAINEL LATERAL: a casa dos formulários, como na IntraNet. É o mesmo Dialog
 // do Radix, encostado à direita. Quem o usa é o `FormularioLateral`.
@@ -17,6 +18,7 @@ export function SheetContent({ className, children, ...props }: ComponentProps<t
         aria-describedby={undefined}
         // `data-painel-lateral`: é por ele que a pilha de notificações sai da frente.
         data-painel-lateral
+        onInteractOutside={naoFecharPelaNotificacao}
         className={cn(
           'fixed inset-y-0 right-0 z-50 flex h-full w-full flex-col border-l border-border-sutil bg-surface-card shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-300 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-xl',
           className,

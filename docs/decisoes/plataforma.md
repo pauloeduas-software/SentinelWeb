@@ -572,3 +572,23 @@ um gesto, e cabe em quem foi clicado.
 
 **Descartado: a recusa de formulário no cartão.** O Salvar do `FormularioLateral` mora no mesmo canto, e o cartão o cobriria
 justo quando a recusa pede para corrigir e salvar de novo. Dentro do painel ela fica à vista.
+
+## BG — Clicar fora fecha o formulário, e pergunta antes se a pessoa mexeu em algo
+
+**Decisão.** O `FormularioLateral` não fechava com o clique fora, para não perder o que foi digitado. Quem só abriu para olhar
+ficava preso a Cancelar ou Salvar, e a proteção tinha um furo: Esc e o X descartavam tudo sem perguntar. Agora clicar fora, Esc
+e o X seguem o mesmo caminho.
+
+- **Sem alteração, fecha na hora.** Com alteração, pergunta `Descartar as alterações?`, com Continuar editando e Descartar. O
+  botão sai no vermelho porque não tem volta, como pede a regra da pergunta em [`telas.md`](../referencia/telas.md).
+- **Cancelar fecha direto.** Ele já é a decisão de descartar, e perguntar pediria a mesma resposta duas vezes.
+- **Conta a pessoa ter mexido, não o valor diferente do inicial.** Comparar pediria a cada formulário que entregasse os seus
+  valores ao painel. O custo é pequeno: quem digita e apaga de volta vê a pergunta.
+- **A senha temporária pergunta sempre** (`perguntaAoSair`), mesmo sem alteração, porque aparece uma vez só.
+- **Não contam como clique fora:** o que fecha o seletor aberto, o cartão de notificação (BF) e o clique enquanto salva.
+
+**Por quê perguntar só com alteração:** é o padrão de diálogo do hyperscript, que passa Esc, X e clique fora pela mesma checagem.
+A Cloudscape, da AWS, também confirma sempre que há alteração não salva, e usuários do Enonic XP reclamaram de perder
+configurações ao clicar no fundo escuro. GLPI e Snipe-IT não foram conferidos.
+
+**Descartado: perguntar também no Cancelar,** como faz a Cloudscape.
