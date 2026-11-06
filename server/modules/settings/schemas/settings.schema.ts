@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// Contrato da configuração da descoberta (F7).
+// Contrato da configuração da descoberta.
 //
 // Os tetos e os pisos não são decoração: são o que impede uma configuração de
 // transformar o painel inteiro em alarme. `ghostDays: 0` faria toda a frota

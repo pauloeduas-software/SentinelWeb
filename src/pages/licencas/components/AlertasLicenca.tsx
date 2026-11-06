@@ -1,29 +1,19 @@
 import { CalendarClock } from 'lucide-react';
 import { Aviso } from '../../../components/ui/aviso';
-import type { LicencaEmAlerta, MotivoDoAlerta } from '../../../types/license.types';
+import type { LicencaEmAlerta } from '../../../types/license.types';
 import { textoDoPrazo } from '../../../helpers/licenca.helper';
 
 // O ALERTA DA LICENÇA — um só: o que venceu e o que vence nos próximos 30 dias,
 // nessa ordem de urgência. A encerrada não entra: ela só encerra com tudo
 // devolvido. Não existe alerta de "abaixo do mínimo" (AA). Só nesta tela.
 //
-// EMBAIXO, A CONTAGEM DE CADA MOTIVO, com link — "5 vencidas · 3 vencendo":
-// cada uma leva ao filtro que mostra todas aquelas, e a lista de cima pode
-// ficar curta.
+// O NÚMERO DE CADA MOTIVO está nos cartões logo acima, que filtram a lista.
 
 interface AlertasLicencaProps {
   alertas: LicencaEmAlerta[];
   /** Quantas são de verdade — a lista pode vir cortada. */
   total: number;
-  contagem: Record<MotivoDoAlerta, number>;
-  onIrPara: (motivo: MotivoDoAlerta) => void;
 }
-
-/** A ordem do alerta, e o texto de cada contagem. */
-const MOTIVOS: readonly { motivo: MotivoDoAlerta; texto: (n: number) => string }[] = [
-  { motivo: 'VENCIDA', texto: (n) => `${n} ${n === 1 ? 'vencida' : 'vencidas'}` },
-  { motivo: 'VENCENDO', texto: (n) => `${n} vencendo` },
-];
 
 // QUANTAS ESTÃO EM USO diz a urgência, nos dois motivos e na mesma frase: a
 // vencida com sete pessoas usando é software sem direito de uso; a vencida que
@@ -33,10 +23,8 @@ function motivoEmTexto(alerta: LicencaEmAlerta): string {
   return alerta.emUso > 0 ? `${prazo}, ainda em uso (${alerta.emUso})` : prazo;
 }
 
-export default function AlertasLicenca({ alertas, total, contagem, onIrPara }: AlertasLicencaProps) {
+export default function AlertasLicenca({ alertas, total }: AlertasLicencaProps) {
   if (alertas.length === 0) return null;
-
-  const comAlgum = MOTIVOS.filter(({ motivo }) => contagem[motivo] > 0);
 
   return (
     <Aviso tom="aviso" className="mb-4">
@@ -52,20 +40,6 @@ export default function AlertasLicenca({ alertas, total, contagem, onIrPara }: A
           </li>
         ))}
       </ul>
-      <p className="mt-2 flex flex-wrap gap-x-2 text-xs">
-        {comAlgum.map(({ motivo, texto }, indice) => (
-          <span key={motivo} className="flex gap-2">
-            {indice > 0 && <span aria-hidden>·</span>}
-            <button
-              type="button"
-              onClick={() => onIrPara(motivo)}
-              className="underline underline-offset-2 hover:text-text-primary"
-            >
-              {texto(contagem[motivo])}
-            </button>
-          </span>
-        ))}
-      </p>
     </Aviso>
   );
 }

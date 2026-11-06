@@ -1,5 +1,8 @@
-import { useState } from 'react';
-import { MapPin, Monitor, User } from 'lucide-react';
+import { useState, type KeyboardEvent } from 'react';
+import {
+  MapPin, Monitor, Undo2, User, Users,
+} from 'lucide-react';
+import { CartaoVazio } from '../../../components/ListaVazia';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import type { EntregaAberta } from '../../../types/stock.types';
@@ -20,6 +23,8 @@ import { textoDeUnidades } from '../../../helpers/estoque.helper';
 
 interface EntregasAbertasProps {
   entregas: EntregaAberta[];
+  carregando: boolean;
+  erro: string | null;
   /** A frase da lista vazia quando ela é vazia por causa da busca. */
   vazio?: string;
   ocupado: boolean;
@@ -35,12 +40,17 @@ type Pedido = { id: string; qty: string; dia: string } | null;
 
 const ICONE_DO_ALVO = { PERSON: User, WORKSTATION: MapPin, ASSET: Monitor } as const;
 
-export default function EntregasAbertas({ entregas, vazio, ocupado, onDevolver }: EntregasAbertasProps) {
+export default function EntregasAbertas({ entregas, carregando, erro, vazio, ocupado, onDevolver }: EntregasAbertasProps) {
   // Um pedido aberto de cada vez, na linha que o abriu.
   const [pedido, setPedido] = useState<Pedido>(null);
 
+  // Esc na linha aberta desfaz o pedido, e só ele: a janela continua aberta.
+  const desfazerNoEsc = (evento: KeyboardEvent) => {
+    if (evento.key === 'Escape') setPedido(null);
+  };
+
   if (entregas.length === 0) {
-    return <p className="text-sm text-text-tertiary">{vazio ?? 'Ninguém está com este item agora.'}</p>;
+    return <CartaoVazio icone={Users} carregando={carregando} erro={erro} frase={vazio ?? 'Ninguém está com este item agora.'} />;
   }
 
   const hoje = hojeNoCampoDeData();
@@ -74,7 +84,7 @@ export default function EntregasAbertas({ entregas, vazio, ocupado, onDevolver }
             </div>
 
             {meu ? (
-              <div className="flex flex-wrap items-center gap-2">
+              <div data-esc-proprio onKeyDown={desfazerNoEsc} className="flex flex-wrap items-center gap-2">
                 {/* Com uma unidade só, não há o que perguntar. */}
                 {entrega.unidades > 1 && (
                   <label className="flex items-center gap-2 text-xs text-text-tertiary">
@@ -97,9 +107,10 @@ export default function EntregasAbertas({ entregas, vazio, ocupado, onDevolver }
                     min={diaDoInstante(entrega.checkoutAt)}
                     max={hoje}
                     onChange={(evento) => setPedido({ ...meu, dia: evento.target.value })}
-                    className="h-9"
+                    className="h-9 w-36"
                   />
                 </label>
+                <Button variant="outline" size="sm" onClick={() => setPedido(null)}>Cancelar</Button>
                 <Button
                   size="sm"
                   onClick={() => void confirmar(entrega, meu)}
@@ -108,7 +119,6 @@ export default function EntregasAbertas({ entregas, vazio, ocupado, onDevolver }
                 >
                   Confirmar
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setPedido(null)}>Cancelar</Button>
               </div>
             ) : (
               <Button
@@ -117,7 +127,7 @@ export default function EntregasAbertas({ entregas, vazio, ocupado, onDevolver }
                 onClick={() => setPedido({ id: entrega.id, qty: String(entrega.unidades), dia: hoje })}
                 disabled={ocupado}
               >
-                {componente ? 'Retirar' : 'Devolver'}
+                <Undo2 /> {componente ? 'Retirar' : 'Devolver'}
               </Button>
             )}
           </li>

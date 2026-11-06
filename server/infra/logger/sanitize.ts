@@ -4,7 +4,7 @@
 // Nome de campo que indica credencial: o valor vira "[oculto]", em qualquer
 // profundidade (não depende de listar o caminho exato de cada campo).
 //
-// `chave|productkey|product_key` entrou na F6, quando a licença guardava chave
+// `chave|productkey|product_key` entrou quando a licença guardava chave
 // de produto: `productKey` NÃO casava com `apikey` nem com nenhum outro termo
 // da lista, e um `logger.error({ dados })` num caminho de erro publicaria a
 // chave EM CLARO no log estruturado. A chave voltou com AA e virou lista com AC

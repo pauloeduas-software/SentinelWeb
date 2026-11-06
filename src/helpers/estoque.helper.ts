@@ -8,7 +8,7 @@
  * está" já abre filtrado.
  */
 export function caminhoDoItem(itemId: string, busca?: string): string {
-  const parametros = new URLSearchParams({ item: itemId, ...(busca ? { busca } : {}) });
+  const parametros = new URLSearchParams({ item: itemId, ...(busca ? { quem: busca } : {}) });
   return `/estoque?${parametros.toString()}`;
 }
 

@@ -25,6 +25,7 @@ export const manufacturerSpec: CatalogSpec = {
   // Os modelos de ativo e as licenças, que apontam direto para cá — inclusive
   // as encerradas: a FK é `Restrict` e elas seguram o fabricante do mesmo
   // jeito. Nenhum dos dois tem lixeira.
+  mostraUso: true,
   countUsages: async (client, id) => {
     const [modelos, licencas] = await Promise.all([
       client.assetModel.count({ where: { manufacturerId: id } }),

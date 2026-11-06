@@ -8,8 +8,8 @@ import { prisma } from '../../server/infra/database/prismaClient';
 // ⚠️ OS FILTROS DA LISTAGEM DE MÁQUINAS, PELO CAMINHO DO HTTP.
 //
 // Este arquivo nasceu de um 422 em requisição válida: `GET /api/endpoints?vinculo=sem`
-// respondia *campo não reconhecido: "vinculo"*. Os dois filtros que a F7
-// escreveu — vínculo e triagem — existiam no `buildEndpointWhere`, estavam
+// respondia *campo não reconhecido: "vinculo"*. Os dois filtros — vínculo e
+// triagem — existiam no `buildEndpointWhere`, estavam
 // tipados no use-case e eram INALCANÇÁVEIS pela borda.
 //
 // A causa: a query tem dois donos. `parseListQuery` (do `core`) é `strictObject`
@@ -17,7 +17,7 @@ import { prisma } from '../../server/infra/database/prismaClient';
 // dois recebiam a query inteira, e o primeiro barrava o que era do segundo.
 //
 // O `workstation.controller.ts` já tinha exatamente este trecho, com um
-// comentário explicando o motivo — a F7 refez o erro em vez de copiar a solução.
+// comentário explicando o motivo — refez-se o erro em vez de copiar a solução.
 // É por isso que o teste entra pela ROTA: chamar `listEndpoints()` direto
 // passaria com o defeito de pé, porque o defeito é da borda.
 // ═════════════════════════════════════════════════════════════════════════════

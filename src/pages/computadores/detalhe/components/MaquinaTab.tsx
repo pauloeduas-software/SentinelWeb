@@ -1,14 +1,16 @@
 import { Monitor, Unlink } from 'lucide-react';
+import { CartaoVazio } from '../../../../components/ListaVazia';
 import TelemetriaDaMaquina from '../../../../components/TelemetriaDaMaquina';
 import { Button } from '../../../../components/ui/button';
 import { Card } from '../../../../components/ui/card';
 import { Dado, GradeDeDados } from '../../../../components/ui/dado';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/ui/table';
+import { formatarDataHora } from '../../../../helpers/format.helper';
 import type {
   EspecificacoesDaMaquina, MaquinaDoAtivo, MudancaDeHardware,
 } from '../../../../types/reconciliation.types';
 
-// A ABA MÁQUINA — o que o AGENTE vê deste ativo (F7).
+// A ABA MÁQUINA — o que o AGENTE vê deste ativo.
 //
 // Nasceu com a convergência: até aqui, o ativo sabia o que a empresa comprou e a
 // máquina sabia o que ela é, e os dois nunca se falavam.
@@ -43,6 +45,7 @@ import type {
 interface MaquinaTabProps {
   maquina: MaquinaDoAtivo | undefined;
   carregando: boolean;
+  erro: string | null;
   desvinculando: boolean;
   onDesvincular: () => void;
 }
@@ -72,8 +75,7 @@ function bytes(valor: string | null): string {
 }
 
 function dataHora(valor: string | null): string {
-  if (!valor) return '—';
-  return new Date(valor).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+  return valor ? formatarDataHora(valor) : '—';
 }
 
 /** O nome do campo como uma pessoa o lê, e não como a coluna se chama. */
@@ -102,9 +104,9 @@ function Especificacoes({ specs }: { specs: EspecificacoesDaMaquina }) {
       <Dado rotulo="Processador">{specs.cpuModel}</Dado>
       <Dado rotulo="Memória">{bytes(specs.ramTotalBytes)}</Dado>
       <Dado rotulo="Disco">{bytes(specs.diskTotalBytes)}</Dado>
-      <Dado rotulo="Sistema">{specs.osVersion}</Dado>
+      <Dado rotulo="Sistema operacional">{specs.osVersion}</Dado>
       <Dado rotulo="Série da BIOS">{specs.biosSerial && <span className="font-mono">{specs.biosSerial}</span>}</Dado>
-      <Dado rotulo="UUID">{specs.systemUuid && <span className="font-mono">{specs.systemUuid}</span>}</Dado>
+      <Dado rotulo="UUID do sistema">{specs.systemUuid && <span className="font-mono">{specs.systemUuid}</span>}</Dado>
       <Dado rotulo="MAC">{specs.macAddress && <span className="font-mono">{specs.macAddress}</span>}</Dado>
       <Dado rotulo="IP local">{specs.localIp && <span className="font-mono">{specs.localIp}</span>}</Dado>
     </GradeDeDados>
@@ -118,15 +120,15 @@ function Mudancas({ mudancas }: { mudancas: MudancaDeHardware[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Campo</TableHead>
+            <TableHead className="w-44">Campo</TableHead>
             <TableHead>Era</TableHead>
             <TableHead>Passou a ser</TableHead>
-            <TableHead>Quando</TableHead>
+            <TableHead className="w-44">Quando</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {mudancas.map((mudanca) => (
-            <TableRow key={mudanca.id}>
+            <TableRow key={mudanca.id} className="h-auto">
               <TableCell className="font-medium text-text-primary">
                 {NOME_DO_CAMPO[mudanca.field] ?? mudanca.field}
               </TableCell>
@@ -145,19 +147,15 @@ function Mudancas({ mudancas }: { mudancas: MudancaDeHardware[] }) {
   );
 }
 
-export default function MaquinaTab({ maquina, carregando, desvinculando, onDesvincular }: MaquinaTabProps) {
-  if (carregando) return <p className="text-sm text-text-tertiary">Carregando a máquina…</p>;
-
+export default function MaquinaTab({ maquina, carregando, erro, desvinculando, onDesvincular }: MaquinaTabProps) {
   if (!maquina?.endpointId) {
     return (
-      <Card className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-text-tertiary">
-        <Monitor className="size-6 opacity-50" />
-        <span>Nenhuma máquina vinculada a este ativo.</span>
-        <span className="max-w-md text-center text-xs leading-relaxed">
+      <CartaoVazio icone={Monitor} carregando={carregando} erro={erro} frase="Nenhuma máquina vinculada a este ativo.">
+        <span className="max-w-md text-xs leading-relaxed">
           Se este ativo deveria ter agente, a máquina aparece em Descobertas assim que ele mandar o
           primeiro sinal.
         </span>
-      </Card>
+      </CartaoVazio>
     );
   }
 
@@ -185,7 +183,7 @@ export default function MaquinaTab({ maquina, carregando, desvinculando, onDesvi
               handshake (D95): sem a frase, quem vê a segunda data atrasada
               acharia que o batimento falhou. */}
           <p className="text-xs text-text-tertiary">
-            carimbado no ativo em {dataHora(maquina.ultimoContatoNoAtivo)} · a varredura atualiza de hora em hora
+            gravado no ativo em {dataHora(maquina.ultimoContatoNoAtivo)} · a varredura atualiza de hora em hora
           </p>
         </div>
         <Button variant="outline" size="sm" disabled={desvinculando} onClick={onDesvincular} title="Este ativo não é esta máquina">

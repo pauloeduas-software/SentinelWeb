@@ -9,34 +9,19 @@ import {
 } from '../../../queries/user.queries';
 import type { User } from '../../../types/user.types';
 import { confirmar } from '../../../hooks/useConfirmacao';
-import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
+import { useListaNaUrl, usePaginaQueExiste } from '../../../hooks/useListaNaUrl';
 import { useNotificacao } from '../../../hooks/useNotificacao';
 import { useAuthStore } from '../../../stores/auth.store';
-
-const PER_PAGE = 10;
 
 export function useUsers() {
   const notificar = useNotificacao();
   const meuId = useAuthStore((estado) => estado.usuario?.id);
   const conferirSessao = useAuthStore((estado) => estado.conferirSessao);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const debouncedSearch = useDebouncedValue(search);
-
-  // Buscar com o usuário na página 5 deixaria a tela vazia sem explicação:
-  // resultado novo começa sempre da primeira página.
-  //
-  // Zerar a página acontece AQUI, no mesmo handler que muda a busca, e não num
-  // `useEffect` reagindo a ela: `setState` dentro de efeito encadeia renders e
-  // o lint do react-hooks recusa (react.dev/learn/you-might-not-need-an-effect).
-  const changeSearch = (value: string) => {
-    setSearch(value);
-    setPage(1);
-  };
+  const { page, perPage, setPage, search, debouncedSearch, changeSearch } = useListaNaUrl();
 
   const params = useMemo(
-    () => ({ page, perPage: PER_PAGE, q: debouncedSearch || undefined }),
-    [page, debouncedSearch],
+    () => ({ page, perPage, q: debouncedSearch || undefined }),
+    [page, perPage, debouncedSearch],
   );
 
   // A busca e a invalidação depois de gravar são da query
@@ -49,6 +34,7 @@ export function useUsers() {
 
   const users = data?.rows ?? [];
   const total = data?.total ?? 0;
+  usePaginaQueExiste(page, data?.total, setPage);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
@@ -94,13 +80,12 @@ export function useUsers() {
   const handleDelete = async (user: User) => {
     if (!(await confirmar({
       titulo: `Excluir "${user.name}"?`,
-      descricao: 'Não tem como desfazer.',
+      descricao: 'Esta ação não tem lixeira.',
       acao: 'Excluir',
       perigo: true,
     }))) return;
     try {
       await deleteUser.mutateAsync(user.id);
-      if (users.length === 1 && page > 1) setPage(page - 1);
     } catch (error) {
       notificar.erro((error as Error).message);
     }
@@ -156,9 +141,10 @@ export function useUsers() {
     users,
     total,
     page,
-    perPage: PER_PAGE,
+    perPage,
     setPage,
     search,
+    buscaFeita: debouncedSearch,
     changeSearch,
     loading: isPending,
     // Para a tabela não dizer "nenhum usuário cadastrado" quando a consulta

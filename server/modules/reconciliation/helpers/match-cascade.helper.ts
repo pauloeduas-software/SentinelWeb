@@ -5,11 +5,11 @@ import { normalizeHostname, normalizeSerial, normalizeUuid } from './normalize-i
 // a dos candidatos, devolvem o que casou e quanto vale.
 //
 // Nenhuma consulta aqui dentro, de propósito: a regra que decide o que é um
-// vínculo confiável é a coisa desta fase que mais vai mudar com dado real, e ela
+// vínculo confiável é a coisa que mais vai mudar com dado real, e ela
 // é testável linha a linha sem banco nenhum.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// O PLANO DA FASE LISTAVA QUATRO SINAIS, E UM DELES NÃO CABIA AQUI
+// ERAM QUATRO SINAIS, E UM DELES NÃO CABIA AQUI
 //
 // `serial → uuid → MAC → hostname`, contra o ativo. Escrevendo contra a árvore,
 // o MAC nunca cabia: **`Asset` não tem coluna de endereço MAC** — ele tem

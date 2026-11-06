@@ -11,6 +11,8 @@ export interface CatalogRow {
   name: string;
   /** A versão da linha: o Editar a devolve, e o servidor recusa se ela mudou (AF). */
   updatedAt: string;
+  /** Quantos apontam para a linha: o número que recusaria o Excluir. Não vem do colaborador. */
+  usos?: number;
   [campo: string]: unknown;
 }
 

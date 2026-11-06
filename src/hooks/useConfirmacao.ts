@@ -15,7 +15,7 @@ export interface PedidoDeConfirmacao {
   descricao?: string;
   /** O verbo do botão. Sem ele, "Confirmar". */
   acao?: string;
-  /** Excluir e encerrar: o botão sai no vermelho. */
+  /** O que não tem volta (Excluir, Reverter baixa): o botão sai no vermelho. */
   perigo?: boolean;
 }
 

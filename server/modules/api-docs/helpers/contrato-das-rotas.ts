@@ -81,8 +81,9 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
   'POST /api/assets/:id/checkin': { tag: 'Computadores', resumo: 'Devolve o computador', body: checkinSchema },
 
   // ── Postos ────────────────────────────────────────────────────────────
-  'GET /api/workstations': { tag: 'Postos', resumo: 'Lista os postos (?view=todos|vagos|ocupados)', query: 'lista' },
+  'GET /api/workstations': { tag: 'Postos', resumo: 'Lista os postos (?view=todos|vagos|ocupados|sem-uso)', query: 'lista' },
   'GET /api/workstations/options': { tag: 'Postos', resumo: 'Opções para um seletor de posto' },
+  'GET /api/workstations/stats': { tag: 'Postos', resumo: 'Quantos postos em cada situação' },
   'GET /api/workstations/:id': { tag: 'Postos', resumo: 'A ficha do posto' },
   'POST /api/workstations': { tag: 'Postos', resumo: 'Cadastra um posto', body: createWorkstationSchema, status: 201 },
   'PUT /api/workstations/:id': { tag: 'Postos', resumo: 'Edita o posto', body: updateWorkstationSchema },
@@ -106,6 +107,7 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
   // ── Licenças ──────────────────────────────────────────────────────────
   'GET /api/licenses': { tag: 'Licenças', resumo: 'Lista as licenças', query: 'lista' },
   'GET /api/licenses/alerts': { tag: 'Licenças', resumo: 'Os alertas de prazo' },
+  'GET /api/licenses/stats': { tag: 'Licenças', resumo: 'Quantas licenças em cada situação' },
   'GET /api/licenses/:id': { tag: 'Licenças', resumo: 'A licença' },
   'GET /api/licenses/:id/checkouts': { tag: 'Licenças', resumo: 'As entregas da licença', query: 'lista' },
   'GET /api/licenses/:id/history': { tag: 'Licenças', resumo: 'O histórico da licença', query: 'lista' },

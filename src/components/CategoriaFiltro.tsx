@@ -1,4 +1,4 @@
-import { Seletor } from './ui/seletor';
+import FiltroDaLista from './FiltroDaLista';
 import { useCatalogOptionsQuery } from '../queries/catalog.queries';
 
 // O FILTRO POR CATEGORIA das listagens de Computadores, Licenças e Estoque.
@@ -23,14 +23,12 @@ export default function CategoriaFiltro({ tipo, valor, onChange }: CategoriaFilt
   const foraDaLista = !isPending && Boolean(valor) && !categorias.some((categoria) => categoria.id === valor);
 
   return (
-    <Seletor
-      ariaLabel="Filtrar por categoria"
-      value={valor ?? ''}
-      onChange={(id) => onChange(id || undefined)}
-      vazio="Todas as categorias"
-      comOpcaoVazia
-      placeholderDaBusca="Buscar categoria..."
-      className="w-full sm:w-56"
+    <FiltroDaLista
+      rotulo="Filtrar por categoria"
+      todos="Todas as categorias"
+      valor={valor}
+      onChange={onChange}
+      placeholderDaBusca="Buscar categoria…"
       opcoes={[
         ...(foraDaLista && valor ? [{ value: valor, label: 'Filtro atual (fora desta lista)' }] : []),
         ...categorias.map((categoria) => ({ value: categoria.id, label: categoria.name })),

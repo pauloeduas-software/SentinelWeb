@@ -5,7 +5,7 @@ import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Card } from '../../../components/ui/card';
 import type { Sugestao } from '../../../types/reconciliation.types';
-import { linhasDaEvidencia, ROTULOS, resumoDaSugestao } from '../helpers/sugestao.helper';
+import { linhasDaEvidencia, ROTULOS, ROTULO_DO_SINAL, resumoDaSugestao } from '../helpers/sugestao.helper';
 
 // UMA SUGESTÃO, COM A EVIDÊNCIA À VISTA.
 //
@@ -14,12 +14,14 @@ import { linhasDaEvidencia, ROTULOS, resumoDaSugestao } from '../helpers/sugesta
 
 interface Props {
   sugestao: Sugestao;
+  /** O `state` do link: a seta da ficha volta para esta lista. */
+  volta: object;
   ocupado: boolean;
   onAceitar: (id: string) => void;
   onRecusar: (id: string) => void;
 }
 
-export default function SugestaoCard({ sugestao, ocupado, onAceitar, onRecusar }: Props) {
+export default function SugestaoCard({ sugestao, volta, ocupado, onAceitar, onRecusar }: Props) {
   const rotulo = ROTULOS[sugestao.kind];
   const [aberta, setAberta] = useState(false);
 
@@ -31,14 +33,14 @@ export default function SugestaoCard({ sugestao, ocupado, onAceitar, onRecusar }
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-medium text-text-primary">{rotulo.titulo}</span>
-            <Badge>{sugestao.score} pts{sugestao.signal ? ` · ${sugestao.signal}` : ''}</Badge>
+            <Badge>{sugestao.score} pts{sugestao.signal ? ` · ${ROTULO_DO_SINAL[sugestao.signal]}` : ''}</Badge>
           </div>
 
           <p className="truncate text-sm text-text-primary">{resumoDaSugestao(sugestao)}</p>
           <p className="text-xs leading-relaxed text-text-tertiary">{rotulo.acao}</p>
 
           {sugestao.asset && (
-            <Link to={`/computadores/${sugestao.asset.id}`} className="inline-block text-sm text-primary hover:underline">
+            <Link to={`/computadores/${sugestao.asset.id}`} state={volta} className="inline-block text-sm text-primary hover:underline">
               abrir <span className="font-mono">{sugestao.asset.assetTag}</span>
             </Link>
           )}

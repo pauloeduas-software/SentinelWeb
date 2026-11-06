@@ -9,6 +9,12 @@ import type { ListEnvelope } from '../types/list.types';
 // A chave inclui os parâmetros: sem isso a página 2 seria servida do cache da
 // página 1. `all` é o prefixo — invalidar ['assets'] alcança listagem e
 // contadores, e as mutações não precisam saber em que página o usuário está.
+/** A página do histórico: `limit` é o tamanho dela. */
+export interface ParamsDoHistorico {
+  page: number;
+  limit: number;
+}
+
 export const assetKeys = {
   all: ['assets'] as const,
   list: (params: AssetListParams) => ['assets', 'list', params] as const,
@@ -16,7 +22,7 @@ export const assetKeys = {
   // toda mutação invalida `['assets']` e as duas recarregam junto com a
   // listagem, sem cada mutação precisar saber que telas estão abertas.
   detail: (id: string) => ['assets', 'detail', id] as const,
-  history: (id: string) => ['assets', 'history', id] as const,
+  history: (id: string, params: ParamsDoHistorico) => ['assets', 'history', id, params] as const,
   stats: () => ['assets', 'stats'] as const,
   nextTag: () => ['assets', 'next-tag'] as const,
 };
@@ -47,12 +53,13 @@ export function useAssetQuery(id: string | undefined) {
 }
 
 /** A aba Histórico: as entregas e as licenças do ativo, do mais recente para o mais antigo. */
-export function useAssetHistoryQuery(id: string | undefined) {
+export function useAssetHistoryQuery(id: string | undefined, params: ParamsDoHistorico) {
   return useQuery({
-    queryKey: assetKeys.history(id ?? ''),
+    queryKey: assetKeys.history(id ?? '', params),
     queryFn: async () =>
-      (await apiClient.get<ListEnvelope<EventoDoAtivo>>(`/assets/${id}/history`)).data,
+      (await apiClient.get<ListEnvelope<EventoDoAtivo>>(`/assets/${id}/history`, { params })).data,
     enabled: id != null && id !== '',
+    placeholderData: keepPreviousData,
   });
 }
 

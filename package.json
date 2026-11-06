@@ -14,7 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "e2e:servidor": "tsx tests/e2e/preparar.ts && vite build && tsx server/server.ts",
+    "e2e:servidor": "tsx tests/e2e/preparar.ts && vite build && tsx tests/e2e/servidor.ts",
     "check": "bun run lint && bun run typecheck && bun run test && bun run test:e2e",
     "preview": "vite preview",
     "db:generate": "prisma generate",

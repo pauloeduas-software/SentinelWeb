@@ -1,5 +1,5 @@
 // A CONVERGÊNCIA RMM × ITAM, do lado do navegador
-// (docs/historico/fase-07-convergencia-rmm-itam.md).
+// (docs/decisoes/reconciliacao.md).
 
 export type SuggestionKind = 'LINK';
 type SuggestionState = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SUPERSEDED';
@@ -88,7 +88,7 @@ export interface EspecificacoesDaMaquina {
   localIp: string | null;
 }
 
-/** Uma troca de peça que o agente percebeu — a `AssetChange` (Etapa B). */
+/** Uma troca de peça que o agente percebeu — a `AssetChange`. */
 export interface MudancaDeHardware {
   id: string;
   field: string;

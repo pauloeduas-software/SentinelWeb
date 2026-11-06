@@ -20,8 +20,8 @@ export async function listEndpoints(
     prisma.endpoint.findMany({
       where,
       // `include` aqui é intencional: o model `Endpoint` não recebe campo
-      // sensível (o `select` obrigatório vale para `User`, que ganha
-      // `passwordHash` na Fase 3).
+      // sensível (o `select` obrigatório vale para `User`, que tem
+      // `passwordHash`).
       include: {
         // O patrimônio de quem tem: é o que separa a lista de máquinas
         // VINCULADAS de uma lista de hostnames, em `/descobertas`.

@@ -4,7 +4,7 @@ import type { ClienteStatusPosse } from './assert-status-posse.usecase';
 /**
  * Guarda irmã da `assertStatusCoerenteComPosse` — a Invariante 4 aplicada à
  * BAIXA e à LIXEIRA (docs/referencia/invariantes.md, a 20;
- * docs/historico/fase-02-ativos.md D19; a AL).
+ * docs/decisoes/catalogo-e-ativo.md D19; a AL).
  *
  * Ativo com `Assignment` aberta não sai do patrimônio nem vai para a lixeira.
  * "Vendido" e "está na mão da Laura" não podem ser verdade ao mesmo tempo: o

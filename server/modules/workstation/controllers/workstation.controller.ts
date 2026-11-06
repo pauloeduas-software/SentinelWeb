@@ -5,6 +5,7 @@ import { temCargo } from '../../access/helpers/require-permission';
 import { workstationViewQuerySchema } from '../schemas/workstation.schema';
 import { listWorkstations } from '../use-cases/list-workstations.usecase';
 import { getWorkstation } from '../use-cases/get-workstation.usecase';
+import { getWorkstationStats } from '../use-cases/workstation-stats.usecase';
 
 // Só HTTP. Sem try/catch: o `parse` do schema rejeita e a rejeição cai no
 // errorHandler, que devolve 422 com o campo que falhou — e o `AppError` do
@@ -12,7 +13,7 @@ import { getWorkstation } from '../use-cases/get-workstation.usecase';
 export const workstationController = {
   async list(request: FastifyRequest) {
     // A query tem DOIS donos e por isso é separada antes de qualquer `parse`:
-    // `view` é nosso (todos|vagos|ocupados) e o resto é do `parseListQuery`,
+    // `view` é nosso (todos|vagos|ocupados|sem-uso) e o resto é do `parseListQuery`,
     // que é `strictObject` e recusaria uma chave que não conhece. Entregar a
     // query inteira a qualquer um dos dois daria 422 numa requisição válida.
     const { view: visaoCrua, ...paginacao } = (request.query ?? {}) as Record<string, unknown>;
@@ -25,6 +26,10 @@ export const workstationController = {
     const query = parseListQuery(paginacao);
 
     return listWorkstations(query, view);
+  },
+
+  async stats() {
+    return getWorkstationStats();
   },
 
   async detail(request: FastifyRequest) {

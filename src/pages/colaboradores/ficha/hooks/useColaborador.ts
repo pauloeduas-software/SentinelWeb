@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { POR_PAGINA } from '../../../../hooks/useListaNaUrl';
 import { usePersonHistoryQuery, usePersonQuery } from '../../../../queries/person.queries';
 import { usePersonOccupanciesQuery } from '../../../../queries/occupancy.queries';
 
@@ -22,21 +24,29 @@ export function useColaborador() {
   const { id = null } = useParams<{ id: string }>();
 
   const { data: pessoa, isPending: carregandoPessoa, error } = usePersonQuery(id);
-  const { data: ocupacoes } = usePersonOccupanciesQuery(id);
-  const { data: historico, isPending: carregandoHistorico } = usePersonHistoryQuery(id);
+  const {
+    data: ocupacoes, isPending: carregandoOcupacoes, error: erroDasOcupacoes,
+  } = usePersonOccupanciesQuery(id);
+  const [paginaDoHistorico, setPaginaDoHistorico] = useState(1);
+  const {
+    data: historico, isPending: carregandoHistorico, error: erroDoHistorico,
+  } = usePersonHistoryQuery(id, { page: paginaDoHistorico, limit: POR_PAGINA });
 
   return {
     pessoa,
     // Só as ABERTAS: é o que a rota da pessoa devolve.
     ocupacoes: ocupacoes ?? [],
-    // `total` vem separado das linhas de propósito: ele conta o universo, e as
-    // linhas vêm cortadas no teto — é o que deixa a tela dizer "100 de 340" em
-    // vez de mentir que são 100.
+    totalDeOcupacoes: ocupacoes?.length,
+    carregandoOcupacoes,
+    erroDasOcupacoes: erroDasOcupacoes?.message ?? null,
+    // `total` conta tudo, e as linhas são só a página.
     historico: historico?.rows ?? [],
-    totalDoHistorico: historico?.total ?? 0,
+    paginaDoHistorico,
+    setPaginaDoHistorico,
+    totalDoHistorico: historico?.total,
     carregandoHistorico,
+    erroDoHistorico: erroDoHistorico?.message ?? null,
     carregando: carregandoPessoa,
     erro: error ? (error as Error).message : null,
-
   };
 }

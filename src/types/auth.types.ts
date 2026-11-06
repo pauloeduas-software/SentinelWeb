@@ -13,7 +13,7 @@ import type { Cargo, User } from './user.types';
  * esse o motivo de os dois tipos existirem separados.
  *
  * O que NÃO existe aqui, e nunca vai existir: token. Ele viaja em cookie
- * httpOnly e o JavaScript do painel nunca o vê (docs/historico/fase-03-autenticacao-e-ator.md, D22).
+ * httpOnly e o JavaScript do painel nunca o vê (docs/decisoes/acesso.md, D22).
  */
 export type SessionUser = Omit<User, 'role' | 'isActive'> & {
   /**

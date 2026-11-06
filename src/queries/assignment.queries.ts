@@ -79,7 +79,7 @@ export function useAssetAssignmentsQuery(assetId: string | null) {
  *             conta a entrega e a devolução no histórico, como a licença e o
  *             estoque já faziam (`invalidarLicencaEPosse`, `invalidarEstoqueEPosse`).
  *
- * O terceiro não estava aqui, e não dava para notar: até esta etapa nenhuma
+ * O terceiro não estava aqui, e não dava para notar: até então nenhuma
  * entrega ou devolução acontecia com uma tela de posto montada. A devolução
  * passou a morar DENTRO da ficha do posto, e aí a tabela de ativos, o contador e
  * o selo de vago estão todos na tela no instante em que a mutação volta — sem

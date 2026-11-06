@@ -1,35 +1,39 @@
 import type { ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useVagaDoTitulo } from '../hooks/useVagaDoTitulo';
 
-// O TOPO DE TODA PÁGINA: título, uma linha de subtítulo e a ação na mesma linha.
-// A regra que mora em parágrafo não mora aqui: ela vai para a ajuda do campo
-// onde a dúvida aparece.
+// O TOPO DE TODA PÁGINA: o título sobe para o cabeçalho (`useVagaDoTitulo`), com o
+// voltar ao lado, e NADA MAIS vai lá (BB): o botão da lista fica na barra dela
+// (`ListToolbar`) e o da ficha, no card (`CartaoDaFicha`). Não há subtítulo: a explicação
+// vai para a ajuda do campo onde a dúvida aparece, e o dado, para a própria tela.
 
 interface PaginaCabecalhoProps {
   titulo: ReactNode;
-  subtitulo?: ReactNode;
-  /** O botão à direita: "Novo item". */
-  acao?: ReactNode;
   /** O link de volta, na ficha: `{ para: '/colaboradores', rotulo: 'Colaboradores' }`. */
   voltar?: { para: string; rotulo: string };
 }
 
-export default function PaginaCabecalho({ titulo, subtitulo, acao, voltar }: PaginaCabecalhoProps) {
-  return (
-    <div className="mb-6 space-y-2">
+export default function PaginaCabecalho({ titulo, voltar }: PaginaCabecalhoProps) {
+  const vaga = useVagaDoTitulo((estado) => estado.vaga);
+
+  if (!vaga) return null;
+
+  return createPortal(
+    <>
       {voltar && (
-        <Link to={voltar.para} className="inline-flex items-center gap-1.5 text-sm text-text-tertiary transition-colors hover:text-text-primary">
-          <ArrowLeft className="size-4" /> {voltar.rotulo}
+        <Link
+          to={voltar.para}
+          aria-label={`Voltar para ${voltar.rotulo}`}
+          title={`Voltar para ${voltar.rotulo}`}
+          className="shrink-0 text-text-tertiary transition-colors hover:text-text-primary"
+        >
+          <ArrowLeft className="size-5" />
         </Link>
       )}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h2 className="break-words text-2xl font-bold text-text-primary">{titulo}</h2>
-          {subtitulo && <p className="mt-1 text-sm text-text-tertiary">{subtitulo}</p>}
-        </div>
-        {acao && <div className="flex shrink-0 items-center gap-2">{acao}</div>}
-      </div>
-    </div>
+      <h2 className="truncate text-lg font-bold text-text-primary">{titulo}</h2>
+    </>,
+    vaga,
   );
 }

@@ -8,7 +8,7 @@ import { criarAtivo, criarFabricante, criarModelo, criarPosto, idsDoSeed } from 
 //
 // A ficha de `/postos/:id` mostra a telemetria do computador da mesa e leva de
 // volta à ficha de cada ativo. Para isso ela pergunta duas coisas que são de
-// rotas diferentes, e as duas nasceram nesta etapa:
+// rotas diferentes:
 //
 //   `GET /api/workstations/:id`        — se o ativo da mesa tem MÁQUINA
 //                                        vinculada, e qual máquina consultar;
@@ -136,5 +136,22 @@ describe('o que a ficha do posto lê', () => {
     const posse = await prisma.assignment.findFirstOrThrow({ where: { assetId: item.id, checkinAt: null } });
     const ficha = await api.get<{ ativos: { id: string; entregueEm: string | null }[] }>(`/api/workstations/${mesa}`);
     expect(ficha.body.ativos).toEqual([expect.objectContaining({ id: item.id, entregueEm: posse.checkoutAt.toISOString() })]);
+  });
+
+  // A situação no card da ficha sai deste número. Se saísse da lista de ocupantes,
+  // uma consulta que falhasse viraria "Sem uso".
+  it('conta quem ocupa o posto agora, sem quem já saiu', async () => {
+    const mesa = await criarPosto(api, { name: 'Mesa da Contagem' });
+    const pessoa = await prisma.person.create({ data: { name: 'Quem Saiu' }, select: { id: true } });
+    const ocupacao = await api.post<{ id: string }>(`/api/workstations/${mesa}/occupants`, { personId: pessoa.id });
+    expect(ocupacao.status).toBe(201);
+
+    const comGente = await api.get<{ totalOcupantes: number }>(`/api/workstations/${mesa}`);
+    expect(comGente.body.totalOcupantes).toBe(1);
+
+    await api.delete(`/api/workstations/${mesa}/occupants/${ocupacao.body.id}`);
+
+    const semGente = await api.get<{ totalOcupantes: number }>(`/api/workstations/${mesa}`);
+    expect(semGente.body.totalOcupantes).toBe(0);
   });
 });

@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import {
-  Activity, Copy, Cpu, HardDrive, Lock, MemoryStick, Power, RefreshCw, TriangleAlert, Wifi, WifiOff,
+  Activity, Copy, Cpu, HardDrive, Lock, MemoryStick, Power, RefreshCw, TriangleAlert,
   type LucideIcon,
 } from 'lucide-react';
 import { Aviso } from './ui/aviso';
-import { Badge } from './ui/badge';
+import { PontoDeStatus } from './ui/badge';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Table, TableBody, TableCell, TableRow } from './ui/table';
@@ -99,9 +99,9 @@ function comVirgula(numero: string): string {
   return numero.replace('.', ',');
 }
 
-/** A hora da amostra. Só a hora: o dia é hoje em toda máquina que responde. */
+/** A hora da amostra, em Brasília. Só a hora: o dia é hoje em toda máquina que responde. */
 function hora(valor: string): string {
-  return new Date(valor).toLocaleTimeString('pt-BR', { timeStyle: 'medium' });
+  return new Date(valor).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', timeStyle: 'medium' });
 }
 
 /**
@@ -192,7 +192,7 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
   // comando tem no `useMaquinaAoVivo`.
   const [hwidCopiado, setHwidCopiado] = useState<string | null>(null);
 
-  if (carregando) return <p className="text-sm text-text-tertiary">Lendo a máquina…</p>;
+  if (carregando) return <p className="text-sm text-text-tertiary">Carregando…</p>;
 
   // BUSCA ENGOLE ERRO (docs/referencia/arquitetura.md): esta consulta revalida a
   // cada poucos segundos, e um 500 passageiro, um reinício do servidor ou um
@@ -225,10 +225,7 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge tom={online ? 'sucesso' : 'perigo'}>
-          {online ? <Wifi className="size-3" /> : <WifiOff className="size-3" />}
-          {online ? 'Online' : 'Offline'}
-        </Badge>
+        <PontoDeStatus tom={online ? 'sucesso' : 'neutro'}>{online ? 'Online' : 'Offline'}</PontoDeStatus>
         <span className="text-xs text-text-tertiary">
           {/* A FRASE MUDA COM O ESTADO, e isso importa mais que o número: uma
               máquina OFFLINE tem telemetria na tela, e ela é a última que chegou.
@@ -252,8 +249,8 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
 
       {!amostra ? (
         <Card className="px-4 py-6 text-center text-sm text-text-tertiary">
-          Sem leitura de telemetria. A máquina aparece aqui porque fez handshake; as medidas
-          chegam na primeira amostra.
+          Sem leitura de telemetria. A máquina já se apresentou ao sistema; as medidas chegam
+          na primeira leitura.
         </Card>
       ) : (
         <>
@@ -315,12 +312,12 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
               <h4 className="flex items-center gap-2 border-b border-border-sutil px-4 py-3 text-sm font-medium text-text-primary">
                 <Activity className="size-4 text-text-tertiary" /> O que está consumindo memória
               </h4>
-              <Table>
+              <Table className="min-w-0">
                 <TableBody>
                   {processes.map((processo, indice) => (
-                    <TableRow key={`${processo.name}-${indice}`}>
-                      <TableCell className="max-w-[260px] truncate py-2">{processo.name}</TableCell>
-                      <TableCell className="whitespace-nowrap py-2 text-right tabular-nums text-text-primary">
+                    <TableRow key={`${processo.name}-${indice}`} className="h-auto">
+                      <TableCell className="truncate py-2">{processo.name}</TableCell>
+                      <TableCell className="w-28 whitespace-nowrap py-2 text-right tabular-nums text-text-primary">
                         {processo.ramMb.toFixed(0)} <span className="text-xs text-text-tertiary">MB</span>
                       </TableCell>
                     </TableRow>
@@ -336,14 +333,14 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
           É a identidade de hardware que o agente derivou, e o único lugar do
           painel onde a máquina se identifica — de propósito: ela não é nome, é o
           que se cola num chamado e o que se procura no log do agente. Ela saiu da
-          URL do comando nesta mesma etapa, e não tem outra tela. */}
+          URL do comando, e não tem outra tela. */}
       <div className="flex flex-wrap items-baseline gap-2 border-t border-border-sutil pt-4">
         <span className={ROTULO}>HWID</span>
         <button
           type="button"
+          // Sem permissão de área de transferência, nada de "copiado": o HWID está na tela.
           onClick={() => {
-            void navigator.clipboard.writeText(maquina.hwid);
-            setHwidCopiado(maquina.hwid);
+            navigator.clipboard.writeText(maquina.hwid).then(() => setHwidCopiado(maquina.hwid), () => undefined);
           }}
           title="Copiar o HWID completo"
           className="inline-flex items-center gap-1.5 break-all text-left font-mono text-sm text-text-secondary transition-colors hover:text-text-primary"

@@ -3,6 +3,7 @@ import { SEM_PARAMETROS } from '../../infra/http/sem-parametros';
 import { createLogger } from '../../infra/logger/logger';
 import { WRITE_RATE_LIMIT } from '../../infra/http/write-rate-limit';
 import { licenseController } from './controllers/license.controller';
+import { getLicenseStats } from './use-cases/license-stats.usecase';
 import { listLicenseAlerts } from './use-cases/list-license-alerts.usecase';
 
 const logger = createLogger('license.maestro');
@@ -24,6 +25,12 @@ export class LicenseMaestro {
     server.get('/api/licenses/alerts', async (request: FastifyRequest) => {
       SEM_PARAMETROS.parse(request.query ?? {});
       return listLicenseAlerts();
+    });
+
+    // OS CARTÕES DA TELA. ANTES de `/:id`, como o alerta.
+    server.get('/api/licenses/stats', async (request: FastifyRequest) => {
+      SEM_PARAMETROS.parse(request.query ?? {});
+      return getLicenseStats();
     });
 
     // ── A DEVOLUÇÃO E A CHAVE DA ENTREGA ───────────────────────────────────

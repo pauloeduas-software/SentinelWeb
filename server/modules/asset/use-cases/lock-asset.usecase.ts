@@ -2,7 +2,7 @@ import { AppError } from '../../../infra/errors/app-error';
 import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
 
 // A TRAVA DA LINHA DO ATIVO — irmã da `lock-person.usecase.ts`, e nasceu pelo
-// mesmo tipo de bug, uma fase depois.
+// mesmo tipo de bug.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // O QUE ELA FECHA

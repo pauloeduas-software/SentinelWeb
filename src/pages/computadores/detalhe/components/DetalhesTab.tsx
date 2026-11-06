@@ -1,6 +1,5 @@
-import { PackageX, Undo2 } from 'lucide-react';
+import { PackageX } from 'lucide-react';
 import { Aviso } from '../../../../components/ui/aviso';
-import { Button } from '../../../../components/ui/button';
 import { Card } from '../../../../components/ui/card';
 import { Dado, GradeDeDados } from '../../../../components/ui/dado';
 import type { Asset } from '../../../../types/asset.types';
@@ -15,14 +14,9 @@ import { canaisDeSuporte, type CanalDeSuporte } from '../helpers/suporte.helper'
 
 interface DetalhesTabProps {
   asset: Asset;
-  /** Dar baixa e reverter são `SUPERVISOR` no servidor. Ausentes, os botões somem — quem decide é a página. */
-  onDarBaixa?: () => void;
-  onReverterSaida?: () => void;
 }
 
-export default function DetalhesTab({
-  asset, onDarBaixa, onReverterSaida,
-}: DetalhesTabProps) {
+export default function DetalhesTab({ asset }: DetalhesTabProps) {
   // Cálculo fora do JSX (docs/referencia/arquitetura.md).
   const selo = seloDaSaida(asset);
   const canais = canaisDeSuporte(asset.model.manufacturer);
@@ -32,7 +26,7 @@ export default function DetalhesTab({
   return (
     <div className="space-y-4">
       {selo && (
-        <Aviso tom="aviso" className="flex flex-wrap items-start justify-between gap-4">
+        <Aviso tom="aviso">
           <div className="space-y-1">
             <div className="flex items-center gap-2 font-medium">
               <PackageX className="size-4" /> Fora do patrimônio
@@ -43,9 +37,6 @@ export default function DetalhesTab({
               Continua no histórico e na vista Baixados. Não é o mesmo que estar na lixeira, que é cadastro errado.
             </p>
           </div>
-          {onReverterSaida && (
-            <Button variant="outline" size="sm" onClick={onReverterSaida}><Undo2 /> Reverter</Button>
-          )}
         </Aviso>
       )}
 
@@ -63,7 +54,7 @@ export default function DetalhesTab({
             <Dado rotulo="Número do pedido">{asset.orderNumber}</Dado>
             <Dado rotulo="Data da compra">{formatarData(asset.purchaseDate)}</Dado>
             {/* Ausente para quem não vê o custo (D77): sem a linha, e não um "—" que diria "sem valor". */}
-            {asset.purchaseCost !== undefined && <Dado rotulo="Valor">{formatarMoeda(asset.purchaseCost)}</Dado>}
+            {asset.purchaseCost !== undefined && <Dado rotulo="Valor da compra">{formatarMoeda(asset.purchaseCost)}</Dado>}
           </Secao>
         )}
 
@@ -84,15 +75,6 @@ export default function DetalhesTab({
         )}
       </div>
 
-      {!selo && onDarBaixa && (
-        <Card className="flex flex-wrap items-center justify-between gap-4 p-4">
-          <p className="text-xs leading-relaxed text-text-tertiary">
-            Dar baixa registra que o ativo saiu do patrimônio, com a data e o motivo. Ativo entregue é
-            recusado: faça a devolução antes.
-          </p>
-          <Button variant="outline" size="sm" onClick={onDarBaixa}><PackageX /> Dar baixa</Button>
-        </Card>
-      )}
     </div>
   );
 }
@@ -116,7 +98,7 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
  */
 function CampoDeCanal({ canal }: { canal: CanalDeSuporte }) {
   return (
-    <Dado rotulo={canal.rotulo}>
+    <Dado rotulo={canal.rotulo} largo={canal.externo}>
       {canal.href ? (
         <a
           href={canal.href}

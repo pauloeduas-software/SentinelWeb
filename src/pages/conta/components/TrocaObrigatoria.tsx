@@ -29,7 +29,7 @@ export default function TrocaObrigatoria() {
         </div>
 
         <Card className="p-6">
-          <FormularioDeSenha pedirAtual={false} rotuloDoBotao="Definir senha" onSubmit={trocarSenha} />
+          <FormularioDeSenha pedirAtual={false} rotuloDoBotao="Definir senha" rotuloEnviando="Definindo…" onSubmit={trocarSenha} />
         </Card>
 
         <Button variant="ghost" className="w-full" onClick={() => void sair()}>Sair</Button>

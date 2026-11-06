@@ -1,9 +1,14 @@
+import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MonitorCheck } from 'lucide-react';
-import EstadoDaLista from '../../../components/EstadoDaLista';
+import ListaVazia from '../../../components/ListaVazia';
+import ListToolbar from '../../../components/ListToolbar';
 import { PontoDeStatus } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableNome, TableRow, TableSublinha } from '../../../components/ui/table';
+import { formatarDataHora } from '../../../helpers/format.helper';
+import { useListaLocalNaUrl } from '../../../hooks/usePaginaLocal';
+import { comFiltros } from '../../../hooks/useVoltaComFiltros';
 import type { Endpoint } from '../../../types/endpoint.types';
 
 // AS MÁQUINAS QUE JÁ SÃO PATRIMÔNIO — o outro lado da lista "Sem vínculo".
@@ -17,80 +22,80 @@ interface Props {
   maquinas: Endpoint[];
   carregando: boolean;
   erro: string | null;
+  acao: ReactNode;
 }
 
-export default function VinculadasTable({ maquinas, carregando, erro }: Props) {
+export default function VinculadasTable({ maquinas, carregando, erro, acao }: Props) {
   const navigate = useNavigate();
-
-  if (maquinas.length === 0) {
-    return (
-      <Card className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-text-tertiary">
-        <MonitorCheck className="size-6 opacity-50" />
-        <EstadoDaLista carregando={carregando} erro={erro}>
-          <span>Nenhuma máquina vinculada a um ativo ainda.</span>
-          <span className="text-xs">O vínculo nasce aceitando uma sugestão, ou à mão, em "Sem vínculo".</span>
-        </EstadoDaLista>
-      </Card>
-    );
-  }
+  const lista = useListaLocalNaUrl(
+    maquinas,
+    (maquina) => `${maquina.hostname} ${maquina.osVersion} ${maquina.asset?.assetTag ?? ''} ${maquina.asset?.name ?? ''}`,
+  );
 
   return (
+    <>
+      <ListToolbar
+        search={lista.search}
+        onSearchChange={lista.changeSearch}
+        placeholder="Buscar por máquina, ativo ou sistema…"
+        acao={acao}
+        page={lista.page}
+        perPage={lista.perPage}
+        total={lista.total}
+        onPageChange={lista.setPage}
+      />
+
     <Card className="overflow-hidden">
-      <Table>
+      <Table className="min-w-[52rem]">
         <TableHeader>
           <TableRow>
             <TableHead>Máquina</TableHead>
-            <TableHead>Ativo</TableHead>
-            <TableHead>Sistema</TableHead>
-            <TableHead>Agente</TableHead>
-            <TableHead>Último contato</TableHead>
+            <TableHead className="w-44">Ativo</TableHead>
+            <TableHead>Sistema operacional</TableHead>
+            <TableHead className="w-44">Último contato</TableHead>
+            <TableHead className="w-36">Situação</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {maquinas.map((maquina) => {
+          {lista.visiveis.map((maquina) => {
             // `asset` pode faltar só na linha que o `SetNull` desfez entre duas
             // revalidações: sem ficha para abrir, a linha não clica.
             const { asset } = maquina;
             const online = maquina.status === 'ONLINE';
 
             return (
-              <TableRow
-                key={maquina.id}
-                onClick={asset ? () => navigate(`/computadores/${asset.id}`) : undefined}
-                className={asset ? 'cursor-pointer' : undefined}
-              >
-                <TableCell>
-                  {/* O botão é o caminho do teclado: o clique sobe para a linha. */}
-                  {asset ? (
-                    <button type="button" className="text-left font-medium text-text-primary focus-visible:underline focus-visible:outline-none">
-                      {maquina.hostname}
-                    </button>
-                  ) : (
-                    <span className="font-medium text-text-primary">{maquina.hostname}</span>
-                  )}
-                </TableCell>
+              <TableRow key={maquina.id} onClick={asset ? () => navigate(`/computadores/${asset.id}`, comFiltros(lista.parametros, '/descobertas')) : undefined}>
+                <TableCell><TableNome>{maquina.hostname}</TableNome></TableCell>
                 <TableCell>
                   {asset ? (
                     <>
                       <span className="font-mono text-text-primary">{asset.assetTag}</span>
-                      {asset.name && <div className="mt-0.5 text-xs text-text-tertiary">{asset.name}</div>}
+                      {asset.name && <TableSublinha>{asset.name}</TableSublinha>}
                     </>
-                  ) : (
-                    <span className="text-text-tertiary">vínculo desfeito</span>
-                  )}
+                  ) : '—'}
                 </TableCell>
                 <TableCell>{maquina.osVersion}</TableCell>
+                <TableCell>{formatarDataHora(maquina.lastSeen)}</TableCell>
                 <TableCell>
                   <PontoDeStatus tom={online ? 'sucesso' : 'neutro'}>{online ? 'Online' : 'Offline'}</PontoDeStatus>
-                </TableCell>
-                <TableCell className="text-text-tertiary">
-                  {new Date(maquina.lastSeen).toLocaleString('pt-BR')}
                 </TableCell>
               </TableRow>
             );
           })}
         </TableBody>
       </Table>
+      {lista.total === 0 && (
+        <ListaVazia
+          icone={MonitorCheck}
+          carregando={carregando}
+          erro={erro}
+          nome="máquina"
+          genero="f"
+          busca={lista.search}
+          frase="Nenhuma máquina vinculada a um ativo ainda."
+        />
+      )}
     </Card>
+    </>
   );
 }

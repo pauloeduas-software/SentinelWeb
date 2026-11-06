@@ -6,7 +6,6 @@ import { DESTRUCTIVE_RATE_LIMIT } from '../../infra/http/write-rate-limit';
 const logger = createLogger('endpoint.maestro');
 
 // Máquinas descobertas pelo agente (model `Endpoint`) — o lado RMM do produto.
-// Quando a Fase 3 trouxer autenticação, o middleware entra aqui, por rota.
 export class EndpointMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
     server.get('/api/endpoints', endpointController.list);

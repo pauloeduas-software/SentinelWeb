@@ -3,8 +3,8 @@ import FormularioLateral from '../FormularioLateral';
 import ReferenceSelect from '../ReferenceSelect';
 import { Campo as CampoDoFormulario } from '../ui/campo';
 import { Input, Textarea } from '../ui/input';
-import { Seletor } from '../ui/seletor';
-import type { CampoSpec, CatalogUiSpec } from './catalog-ui.types';
+import { OpcoesDescritas } from '../ui/opcoes-descritas';
+import { tituloDoNovo, type CampoSpec, type CatalogUiSpec } from './catalog-ui.types';
 import type { CatalogRow } from '../../types/catalog.types';
 
 // Valor inicial de cada campo. Tudo vira string: é o que o `<input>`
@@ -66,6 +66,11 @@ export default function CatalogFormModal({ spec, registro, padroes, onClose, onS
 
   const definir = (key: string, valor: unknown) => setValores((atual) => ({ ...atual, [key]: valor }));
 
+  // Evita o 409 depois do Salvar; a guarda do servidor continua, porque a contagem
+  // é a da lista, e pode ter mudado.
+  const usos = registro?.usos ?? 0;
+  const travado = (campo: CampoSpec) => campo.travaEmUso === true && usos > 0;
+
   const enviar = async (event: React.FormEvent) => {
     event.preventDefault();
     setSalvando(true);
@@ -83,26 +88,27 @@ export default function CatalogFormModal({ spec, registro, padroes, onClose, onS
 
   return (
     <FormularioLateral
-      titulo={registro ? `Editar ${spec.singular}` : `${spec.genero === 'f' ? 'Nova' : 'Novo'} ${spec.singular}`}
-      largura="lg"
+      titulo={registro ? `Editar ${spec.singular.toLowerCase()}` : tituloDoNovo(spec)}
+      descricao={registro ? String(registro.name ?? '') : undefined}
       onClose={onClose}
       onSubmit={enviar}
       erro={erro}
       salvando={salvando}
     >
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid sm:grid-cols-2 gap-4">
         {spec.campos.map((campo) => (
           <CampoDoFormulario
             key={campo.key}
             rotulo={campo.label}
             obrigatorio={campo.obrigatorio}
-            ajuda={ajudaDoCampo(campo, valores[campo.key])}
+            ajuda={travado(campo) ? `Em uso por ${usos} ${usos === 1 ? 'registro' : 'registros'}: o tipo não muda.` : campo.ajuda}
             className={campo.largura === 'inteira' ? 'col-span-2' : ''}
           >
             <Campo
               campo={campo}
               atual={referenciaAtual(registro, campo)}
               valor={valores[campo.key]}
+              travado={travado(campo)}
               onChange={(valor) => definir(campo.key, valor)}
             />
           </CampoDoFormulario>
@@ -112,21 +118,13 @@ export default function CatalogFormModal({ spec, registro, padroes, onClose, onS
   );
 }
 
-// A explicação da opção escolhida fica logo abaixo do campo. É o que responde, no
-// momento da escolha, "qual a diferença entre estas duas?".
-function ajudaDoCampo(campo: CampoSpec, valor: unknown): string | undefined {
-  const selecionada = campo.tipo === 'select'
-    ? campo.opcoes?.find((opcao) => opcao.value === String(valor ?? ''))
-    : undefined;
-  return selecionada?.ajuda ?? campo.ajuda;
-}
-
 function Campo({
-  campo, atual, valor, onChange,
+  campo, atual, valor, travado, onChange,
 }: {
   campo: CampoSpec;
   atual: { id: string; name: string } | null;
   valor: unknown;
+  travado: boolean;
   onChange: (valor: unknown) => void;
 }) {
   if (campo.tipo === 'reference') {
@@ -144,24 +142,25 @@ function Campo({
 
   if (campo.tipo === 'select') {
     return (
-      <Seletor
-        obrigatorio={campo.obrigatorio}
+      <OpcoesDescritas
+        rotulo={campo.label}
         value={String(valor ?? '')}
         onChange={onChange}
-        vazio="Selecione..."
         opcoes={campo.opcoes ?? []}
+        disabled={travado}
       />
     );
   }
 
   if (campo.tipo === 'textarea') {
-    return <Textarea rows={4} value={String(valor ?? '')} onChange={(event) => onChange(event.target.value)} />;
+    return <Textarea value={String(valor ?? '')} onChange={(event) => onChange(event.target.value)} />;
   }
 
   return (
     <Input
-      type="text"
+      type={campo.tipo}
       required={campo.obrigatorio}
+      placeholder={campo.placeholder}
       value={String(valor ?? '')}
       onChange={(event) => onChange(event.target.value)}
     />

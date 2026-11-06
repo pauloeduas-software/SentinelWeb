@@ -1,4 +1,4 @@
-import { Pencil, Power, PowerOff, Trash2, UserPlus } from 'lucide-react';
+import { History, Info, Pencil, Power, PowerOff, Trash2, UserPlus, Users } from 'lucide-react';
 import { useState } from 'react';
 import ChaveEscondida from './ChaveEscondida';
 import EntregasAbertas from './EntregasAbertas';
@@ -7,7 +7,9 @@ import AcoesDaLinha from '../../../components/AcoesDaLinha';
 import JanelaDeDetalhe from '../../../components/JanelaDeDetalhe';
 import ListToolbar from '../../../components/ListToolbar';
 import { Aviso } from '../../../components/ui/aviso';
-import { Badge } from '../../../components/ui/badge';
+import { PontoDeStatus } from '../../../components/ui/badge';
+import { ContagemDaAba } from '../../../components/ui/tabs';
+import { POR_PAGINA } from '../../../hooks/useListaNaUrl';
 import { Button } from '../../../components/ui/button';
 import { Dado, GradeDeDados } from '../../../components/ui/dado';
 import {
@@ -16,10 +18,10 @@ import {
 import type { Licenca } from '../../../types/license.types';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import {
-  ROTULO_DO_STATUS, resumoDaContagem, textoDoPrazo, textoDoValorDaCompra,
+  ROTULO_DO_STATUS, TOM_DO_STATUS, resumoDaContagem, textoDoPrazo, textoDoValorDaCompra,
 } from '../../../helpers/licenca.helper';
 import { formatarData } from '../../../helpers/format.helper';
-import { TOM_DO_STATUS, lugarDaChave, motivoParaNaoEntregar } from '../helpers/licenca.helper';
+import { lugarDaChave, motivoParaNaoEntregar } from '../helpers/licenca.helper';
 
 // O DETALHE DA LICENÇA: o status, a conta e as ações em cima; nas abas, os campos
 // do cadastro, quem está com ela agora e o histórico — as duas listas de 15 em 15.
@@ -47,16 +49,6 @@ interface LicencaDetalheModalProps {
   buscaInicial?: string;
   /** Chegou por um link: abre em "Com quem está", que é onde a devolução acontece. */
   veioDoLink?: boolean;
-}
-
-/** As duas listas do detalhe andam de 15 em 15. */
-const POR_PAGINA = 15;
-
-/** Carregando e erro antes do conteúdo: lista vazia não pode ser o que a tela diz enquanto espera. */
-function Estado({ carregando, erro, children }: { carregando: boolean; erro: Error | null; children: React.ReactNode }) {
-  if (carregando) return <p className="text-sm text-text-tertiary">Carregando…</p>;
-  if (erro) return <Aviso>Não foi possível carregar: {erro.message}</Aviso>;
-  return <>{children}</>;
 }
 
 export default function LicencaDetalheModal({
@@ -130,7 +122,7 @@ export default function LicencaDetalheModal({
         <Dado rotulo="Fabricante">{atual.manufacturer?.name}</Dado>
         <Dado rotulo="Licenciado para">{atual.licensedToName}</Dado>
         <Dado rotulo="E-mail do licenciado">{atual.licensedToEmail}</Dado>
-        <Dado rotulo="Nº do pedido">{atual.orderNumber}</Dado>
+        <Dado rotulo="Número do pedido">{atual.orderNumber}</Dado>
         <Dado rotulo="Data da compra">{formatarData(atual.purchaseDate)}</Dado>
         {/* Ausente para quem não vê o custo (D77, AV): o campo some, e não diz "sem valor". */}
         <Dado rotulo="Valor da compra">{textoDoValorDaCompra(atual)}</Dado>
@@ -144,22 +136,22 @@ export default function LicencaDetalheModal({
       <ListToolbar
         search={busca}
         onSearchChange={mudarBusca}
-        placeholder="Buscar por colaborador ou computador..."
+        placeholder="Buscar por colaborador ou computador…"
         page={paginaDasEntregas}
         perPage={POR_PAGINA}
         total={entregas.data?.total ?? 0}
         onPageChange={setPaginaDasEntregas}
       />
-      <Estado carregando={entregas.isPending} erro={entregas.error}>
-        <EntregasAbertas
-          entregas={entregas.data?.rows ?? []}
-          chaves={detalhe?.keys ?? []}
-          vazio={buscaAdiada ? `Ninguém com "${buscaAdiada}" está com esta licença.` : undefined}
-          ocupado={ocupado}
-          onDevolver={onDevolver}
-          onTrocarChave={onTrocarChave}
-        />
-      </Estado>
+      <EntregasAbertas
+        carregando={entregas.isPending}
+        erro={entregas.error?.message ?? null}
+        entregas={entregas.data?.rows ?? []}
+        chaves={detalhe?.keys ?? []}
+        vazio={buscaAdiada ? `Ninguém com "${buscaAdiada}" está com esta licença.` : undefined}
+        ocupado={ocupado}
+        onDevolver={onDevolver}
+        onTrocarChave={onTrocarChave}
+      />
     </>
   );
 
@@ -175,9 +167,7 @@ export default function LicencaDetalheModal({
           onPageChange={setPaginaDoHistorico}
         />
       )}
-      <Estado carregando={historico.isPending} erro={historico.error}>
-        <HistoricoLicenca eventos={historico.data?.rows ?? []} />
-      </Estado>
+      <HistoricoLicenca eventos={historico.data?.rows ?? []} carregando={historico.isPending} erro={historico.error?.message ?? null} />
     </>
   );
 
@@ -186,7 +176,7 @@ export default function LicencaDetalheModal({
       titulo={atual.name}
       subtitulo={
         <span className="flex flex-wrap items-center gap-2">
-          <Badge tom={TOM_DO_STATUS[atual.status]}>{ROTULO_DO_STATUS[atual.status]}</Badge>
+          <PontoDeStatus tom={TOM_DO_STATUS[atual.status]}>{ROTULO_DO_STATUS[atual.status]}</PontoDeStatus>
           {resumoDaContagem(atual)}
         </span>
       }
@@ -229,11 +219,11 @@ export default function LicencaDetalheModal({
       }
       abaInicial={veioDoLink ? 'posse' : 'dados'}
       abas={[
-        { id: 'dados', rotulo: 'Dados', conteudo: dados },
+        { id: 'dados', rotulo: <><Info /> Detalhes</>, conteudo: dados },
         // `emUso`, e não o total da lista: com a busca do link, ele diria só quantos
         // a busca achou, e não com quantos a licença está.
-        { id: 'posse', rotulo: `Com quem está (${atual.emUso})`, conteudo: comQuemEsta },
-        { id: 'historico', rotulo: 'Histórico', conteudo: historicoDaLicenca },
+        { id: 'posse', rotulo: <><Users /> Com quem está <ContagemDaAba>{atual.emUso}</ContagemDaAba></>, conteudo: comQuemEsta },
+        { id: 'historico', rotulo: <><History /> Histórico</>, conteudo: historicoDaLicenca },
       ]}
       onClose={onClose}
     />

@@ -90,6 +90,7 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   // porque a tela dele é Postos, não Configurações.
   'GET /api/workstations': 'TECNICO',
   'GET /api/workstations/options': 'TECNICO',
+  'GET /api/workstations/stats': 'TECNICO',
   'GET /api/workstations/:id': 'TECNICO',
   'POST /api/workstations': 'SUPERVISOR',
   'PUT /api/workstations/:id': 'SUPERVISOR',
@@ -110,6 +111,7 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   'GET /api/licenses/:id/history': 'TECNICO',
   'GET /api/licenses/:id/checkouts': 'TECNICO',
   'GET /api/licenses/alerts': 'TECNICO',
+  'GET /api/licenses/stats': 'TECNICO',
   'GET /api/assets/:id/licenses': 'TECNICO',
   'POST /api/licenses': 'SUPERVISOR',
   'PUT /api/licenses/:id': 'SUPERVISOR',

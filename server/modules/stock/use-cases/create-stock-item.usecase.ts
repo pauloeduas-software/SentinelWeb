@@ -18,7 +18,7 @@ import type { CreateStockItemInput } from '../schemas/stock.schema';
  *
  * O banco não impede — a FK aceita qualquer categoria —, e é o `type` que
  * separa: um item de estoque numa categoria de ATIVO é o mesmo erro que "Em
- * Uso" tipado DEPLOYABLE foi na F1. 422 e não 404: a categoria existe, o tipo
+ * Uso" tipado DEPLOYABLE foi. 422 e não 404: a categoria existe, o tipo
  * dela é que não serve.
  *
  * Lida `FOR SHARE`: a troca de tipo da categoria trava a linha antes de contar

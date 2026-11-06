@@ -7,7 +7,7 @@ import { argon2id, hash, needsRehash, verify } from 'argon2';
 // A LENTIDÃO É O RECURSO. Um vazamento do banco dá ao atacante o hash e todo o
 // tempo do mundo: contra sha256 ele testa bilhões de senhas por segundo, contra
 // argon2id com 64 MiB de memória por tentativa ele testa dezenas. É por isso que
-// token de máquina NÃO usa argon2 (F3, Etapa G): 32 bytes aleatórios não têm
+// token de máquina NÃO usa argon2: 32 bytes aleatórios não têm
 // dicionário para atacar, e pagar 50 ms por handshake de agente seria transformar
 // a defesa da senha em lentidão da frota.
 //

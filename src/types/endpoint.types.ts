@@ -4,7 +4,7 @@ import type { Telemetry } from './telemetry.types';
  * O eixo do AGENTE — dois valores, e não três.
  *
  * "Nunca visto pelo agente" é pergunta do ATIVO, não desta tabela: uma linha de
- * endpoint nasce de um handshake (docs/historico/fase-07-convergencia-rmm-itam.md, D98).
+ * endpoint nasce de um handshake (docs/decisoes/reconciliacao.md, D98).
  *
  * União, e não `string`: com `string`, `endpoint.status === 'Online'` compila e
  * é sempre falso.
@@ -26,7 +26,7 @@ export interface Endpoint {
   status: AgentStatus;
   lastSeen: string;
 
-  /** A identidade coletada (F7). Tudo nulável: agente velho não manda. */
+  /** A identidade coletada. Tudo nulável: agente velho não manda. */
   biosSerial?: string | null;
   systemUuid?: string | null;
   manufacturer?: string | null;

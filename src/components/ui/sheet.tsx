@@ -9,21 +9,14 @@ import { CLASSE_DO_VEU } from './dialog';
 
 export const Sheet = SheetPrimitive.Root;
 
-const LARGURAS = { md: 'sm:max-w-md', lg: 'sm:max-w-xl', xl: 'sm:max-w-3xl' } as const;
-
-interface SheetContentProps extends ComponentProps<typeof SheetPrimitive.Content> {
-  largura?: keyof typeof LARGURAS;
-}
-
-export function SheetContent({ className, children, largura = 'md', ...props }: SheetContentProps) {
+export function SheetContent({ className, children, ...props }: ComponentProps<typeof SheetPrimitive.Content>) {
   return (
     <SheetPrimitive.Portal>
       <SheetPrimitive.Overlay className={CLASSE_DO_VEU} />
       <SheetPrimitive.Content
         aria-describedby={undefined}
         className={cn(
-          'fixed inset-y-0 right-0 z-50 flex h-full w-full flex-col border-l border-border-sutil bg-surface-card shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-300 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right',
-          LARGURAS[largura],
+          'fixed inset-y-0 right-0 z-50 flex h-full w-full flex-col border-l border-border-sutil bg-surface-card shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-300 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-xl',
           className,
         )}
         {...props}

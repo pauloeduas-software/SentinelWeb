@@ -1,11 +1,9 @@
-import { MapPin, Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
+import SeloDoPosto from './SeloDoPosto';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
-import { Badge } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import {
-  TRACO, explicacaoDoVago, resumoDeAtivos, turnosDoPosto,
-} from '../helpers/postos.helper';
+import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableNome, TableRow } from '../../../components/ui/table';
+import { TRACO, quemEstaNoPosto, resumoDeAtivos } from '../helpers/postos.helper';
 import type { Posto } from '../../../types/workstation.types';
 
 // A lista de postos. Apresentacional: recebe as linhas prontas e devolve o
@@ -32,83 +30,30 @@ interface PostosTableProps {
 export default function PostosTable({
   postos, vazio, onAbrir, podeEditar, onEditar, onExcluir,
 }: PostosTableProps) {
-  if (postos.length === 0) {
-    return (
-      <Card className="flex flex-col items-center justify-center gap-3 py-16 text-center text-sm text-text-tertiary">
-        <MapPin className="size-6 opacity-50" />
-        {vazio}
-      </Card>
-    );
-  }
-
   return (
     <Card className="overflow-hidden">
-      <Table>
+      <Table className="min-w-[29rem] md:min-w-[50rem]">
         <TableHeader>
           <TableRow>
             <TableHead>Posto</TableHead>
-            <TableHead className="hidden md:table-cell">Localização</TableHead>
+            <TableHead className="hidden w-[16%] md:table-cell">Localização</TableHead>
             <TableHead>Quem está</TableHead>
-            <TableHead className="hidden md:table-cell">Ativos</TableHead>
-            <TableHead>Situação</TableHead>
-            {podeEditar && <TableHead className="w-12 text-right">Ações</TableHead>}
+            <TableHead className="hidden w-28 md:table-cell">Ativos</TableHead>
+            <TableHead className="w-36">Situação</TableHead>
+            {podeEditar && <TableHeadAcoes />}
           </TableRow>
         </TableHeader>
 
         <TableBody>
-          {postos.map((posto) => {
-            // O agrupamento por turno sai do JSX para o helper: aqui só se
-            // escolhe o que mostrar (docs/referencia/arquitetura.md).
-            const turnos = turnosDoPosto(posto.ocupantes);
-
-            return (
-              <TableRow key={posto.id} onClick={() => onAbrir(posto)} className="cursor-pointer">
-                <TableCell>
-                  {/* O botão é o caminho do teclado: o clique sobe para a linha. */}
-                  <button type="button" className="text-left font-medium text-text-primary focus-visible:underline focus-visible:outline-none">
-                    {posto.name}
-                  </button>
-                </TableCell>
-
+          {postos.map((posto) => (
+              <TableRow key={posto.id} onClick={() => onAbrir(posto)}>
+                <TableCell><TableNome>{posto.name}</TableNome></TableCell>
                 <TableCell className="hidden md:table-cell">{posto.location.name}</TableCell>
-
-                <TableCell>
-                  {turnos.length > 0 ? (
-                    <div className="max-w-[22rem] space-y-1">
-                      {turnos.map((faixa) => (
-                        <div key={faixa.turno} className="flex flex-wrap items-baseline gap-2">
-                          <span className="shrink-0 text-xs text-text-tertiary">{faixa.turno}</span>
-                          <span>{faixa.pessoas.join(', ')}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="text-text-tertiary">ninguém</span>
-                  )}
-                </TableCell>
-
-                <TableCell className="hidden tabular-nums md:table-cell">
+                <TableCell>{quemEstaNoPosto(posto)}</TableCell>
+                <TableCell className="hidden md:table-cell">
                   {posto.totalAtivos > 0 ? resumoDeAtivos(posto.totalAtivos) : TRACO}
                 </TableCell>
-
-                <TableCell>
-                  {/* O posto vago leva a marca de aviso, com a explicação embaixo:
-                      é o sinal que a tela existe para dar, e ele precisa ser
-                      visível de relance numa lista de vinte mesas. */}
-                  {posto.vago ? (
-                    <div className="max-w-[18rem] space-y-1">
-                      <Badge tom="aviso">Posto vago</Badge>
-                      <p className="text-xs leading-relaxed text-text-tertiary">{explicacaoDoVago(posto)}</p>
-                    </div>
-                  ) : posto.totalOcupantes > 0 ? (
-                    <Badge>Ocupado</Badge>
-                  ) : (
-                    // Sem gente E sem equipamento: não é sinal de nada, é uma
-                    // mesa que acabou de ser criada. Marcá-la de amarelo junto
-                    // com as vagas apagaria a diferença que importa.
-                    <Badge>Sem uso</Badge>
-                  )}
-                </TableCell>
+                <TableCell><SeloDoPosto posto={posto} /></TableCell>
 
                 {podeEditar && (
                   <TableCell>
@@ -122,10 +67,10 @@ export default function PostosTable({
                   </TableCell>
                 )}
               </TableRow>
-            );
-          })}
+          ))}
         </TableBody>
       </Table>
+      {postos.length === 0 && vazio}
     </Card>
   );
 }

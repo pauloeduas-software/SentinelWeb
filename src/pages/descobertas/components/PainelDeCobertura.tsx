@@ -1,10 +1,11 @@
 import { AlertTriangle, EyeOff, Ghost, MonitorCheck, MonitorX, ShieldQuestion } from 'lucide-react';
+import { Aviso } from '../../../components/ui/aviso';
 import { Card } from '../../../components/ui/card';
 import type { Cobertura } from '../../../types/reconciliation.types';
 
 // O PAINEL DE COBERTURA — *quanto do parque o sistema realmente enxerga?*
 //
-// Antes da F7 não havia como responder: o ITAM sabia o que foi cadastrado, o RMM
+// Antes não havia como responder: o ITAM sabia o que foi cadastrado, o RMM
 // sabia o que está ligado, e ninguém sabia o tamanho da diferença.
 //
 // Os números saem todos na mesma cor: quem diz o que olhar é a frase embaixo de
@@ -13,6 +14,7 @@ import type { Cobertura } from '../../../types/reconciliation.types';
 interface Props {
   cobertura: Cobertura | undefined;
   carregando: boolean;
+  erro: string | null;
   /** O `shadowHours` da configuração, que a frase do Shadow IT cita. */
   horasDeShadow?: number;
 }
@@ -66,13 +68,15 @@ function numeros(cobertura: Cobertura, horasDeShadow: number): Numero[] {
   ];
 }
 
-export default function PainelDeCobertura({ cobertura, carregando, horasDeShadow = 24 }: Props) {
-  if (carregando || !cobertura) {
-    return <Card className="mb-6 h-28 animate-pulse" />;
+export default function PainelDeCobertura({ cobertura, carregando, erro, horasDeShadow = 24 }: Props) {
+  if (!cobertura) {
+    // Sem isto, a consulta que falhou ficava pulsando para sempre, como se ainda viesse.
+    if (erro && !carregando) return <Aviso className="mb-4">Não foi possível carregar os números: {erro}</Aviso>;
+    return <Card className="mb-4 h-28 animate-pulse" />;
   }
 
   return (
-    <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+    <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
       {numeros(cobertura, horasDeShadow).map(({ rotulo, valor, icone: Icone, ajuda }) => (
         <Card key={rotulo} className="flex flex-col gap-1 p-4">
           <div className="flex items-center gap-2 text-sm text-text-tertiary">

@@ -25,7 +25,7 @@ const POLL_INTERVAL_MS = 5_000;
  *
  * Quem a consome é `/descobertas`, nas DUAS listas — as máquinas sem vínculo e
  * as vinculadas —, e o recorte é do SERVIDOR (`?vinculo=`), não um `filter` em
- * memória sobre a frota inteira: o filtro existia desde a F7 e a tela nunca o
+ * memória sobre a frota inteira: o filtro já existia e a tela nunca o
  * usou. A tela que mostrava a frota em cards saiu, e com ela o único leitor que
  * precisava da amostra de TODAS — por isso a telemetria de uma máquina tem
  * consulta própria abaixo.

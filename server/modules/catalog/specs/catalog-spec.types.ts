@@ -87,12 +87,18 @@ export interface CatalogSpec {
   /**
    * Quantos registros apontam para esta linha. > 0 recusa o DELETE com 409 —
    * é o que o Snipe-IT faz ao se recusar a apagar categoria com item associado.
-   * Ainda devolve 0 onde a tabela que aponta só nasce numa fase adiante.
    */
   countUsages: (client: ClienteCatalogo, id: string) => Promise<number>;
 
   /** Frase que completa o 409 do delete — o que fazer em vez de excluir. */
   dicaEmUso?: string;
+
+  /**
+   * A listagem devolve `usos` em cada linha, pelo `countUsages`: a coluna "Em uso"
+   * da tela é o mesmo número da recusa do DELETE, com a lixeira incluída. O
+   * colaborador fica de fora: a contagem dele carrega a posse aberta inteira.
+   */
+  mostraUso?: boolean;
 
   /**
    * A recusa da exclusão com frase PRÓPRIA, no lugar de "em uso por N
