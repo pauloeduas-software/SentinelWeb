@@ -1,6 +1,5 @@
-import { useState } from 'react';
 import {
-  Activity, Copy, Cpu, HardDrive, Lock, MemoryStick, Power, RefreshCw, TriangleAlert,
+  Activity, Copy, Cpu, HardDrive, Lock, MemoryStick, Power, RefreshCw,
   type LucideIcon,
 } from 'lucide-react';
 import { Aviso } from './ui/aviso';
@@ -13,6 +12,7 @@ import { FUSO_DO_NEGOCIO } from '../helpers/format.helper';
 import {
   formatarTaxa, formatarVolume, readSnapshot, usagePercent, volumeDeRede,
 } from '../helpers/metrics.helper';
+import { useCopiar } from '../hooks/useCopiar';
 import { useMaquinaAoVivo, type ComandoDaMaquina } from '../hooks/useMaquinaAoVivo';
 import { usePode } from '../stores/auth.store';
 
@@ -182,16 +182,11 @@ function Numero({ rotulo, valor, unidade }: { rotulo: string; valor: string; uni
 }
 
 export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaProps) {
-  const { maquina, carregando, erro, enviando, retorno, handleComando } = useMaquinaAoVivo(endpointId);
+  const { maquina, carregando, erro, enviando, handleComando } = useMaquinaAoVivo(endpointId);
   // O comando age na máquina de verdade, e é `SUPERVISOR` no servidor (AV). Para
   // quem não é, a seção some — o botão só levaria 403.
   const podeComandar = usePode('SUPERVISOR');
-  // GUARDA QUAL hwid foi copiado, não um booleano: o roteador reaproveita a
-  // tela de `/computadores/:id` de um ativo para outro (a busca do leitor navega
-  // assim), e um `true` sobreviveria à troca — a máquina seguinte apareceria
-  // com "copiado" sem ninguém ter copiado. É a mesma guarda que o retorno do
-  // comando tem no `useMaquinaAoVivo`.
-  const [hwidCopiado, setHwidCopiado] = useState<string | null>(null);
+  const { copiado, copiar } = useCopiar(maquina?.hwid ?? '', 'Não foi possível copiar o HWID. Selecione e copie à mão.');
 
   if (carregando) return <p className="text-sm text-text-tertiary">Carregando…</p>;
 
@@ -242,10 +237,9 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
 
       {/* A FALHA DO CICLO, quando há dado em mão: a tela continua, com o aviso. */}
       {erro && (
-        <p className="flex items-start gap-2 text-xs leading-relaxed text-status-warning" aria-live="polite">
-          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-          <span>Não foi possível reler a máquina agora ({erro}). Os números abaixo são do último ciclo.</span>
-        </p>
+        <Aviso tom="aviso" aria-live="polite">
+          Não foi possível reler a máquina agora ({erro}). Os números abaixo são do último ciclo.
+        </Aviso>
       )}
 
       {!amostra ? (
@@ -335,22 +329,12 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
           painel onde a máquina se identifica — de propósito: ela não é nome, é o
           que se cola num chamado e o que se procura no log do agente. Ela saiu da
           URL do comando, e não tem outra tela. */}
-      <div className="flex flex-wrap items-baseline gap-2 border-t border-border-sutil pt-4">
+      <div className="flex flex-wrap items-center gap-2 border-t border-border-sutil pt-4">
         <span className={ROTULO}>HWID</span>
-        <button
-          type="button"
-          // Sem permissão de área de transferência, nada de "copiado": o HWID está na tela.
-          onClick={() => {
-            navigator.clipboard.writeText(maquina.hwid).then(() => setHwidCopiado(maquina.hwid), () => undefined);
-          }}
-          title="Copiar o HWID completo"
-          className="inline-flex items-center gap-1.5 break-all text-left font-mono text-sm text-text-secondary transition-colors hover:text-text-primary"
-        >
-          {maquina.hwid} <Copy className="size-3 shrink-0" />
-        </button>
-        {hwidCopiado === maquina.hwid && (
-          <span className="text-xs text-status-success">copiado</span>
-        )}
+        <code className="break-all font-mono text-sm text-text-secondary">{maquina.hwid}</code>
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => void copiar()}>
+          <Copy /> {copiado ? 'Copiado' : 'Copiar'}
+        </Button>
       </div>
 
       {podeComandar && (
@@ -370,7 +354,7 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
                 // quatro de tolerância (`mark-stale-endpoints-offline`) mais a
                 // rodada de um minuto do job de zumbis —, então um botão cinza
                 // mentiria nos dois sentidos. Quem decide é o servidor, na hora, e
-                // a resposta dele aparece logo abaixo dizendo qual máquina não
+                // a resposta dele vem na notificação, dizendo qual máquina não
                 // respondeu.
                 disabled={enviando}
                 onClick={() => void handleComando(comando)}
@@ -380,24 +364,6 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
               </Button>
             ))}
           </div>
-
-          {retorno && (
-            <p
-              // ANUNCIADO, e não só pintado. O fluxo antigo terminava num `alert`,
-              // que o leitor de tela lê e que bloqueia até ser fechado. Trocá-lo por
-              // um parágrafo no DOM deixava quem usa leitor de tela sem retorno
-              // nenhum: o sucesso e o 409 ficavam igualmente silenciosos.
-              aria-live={retorno.tipo === 'falhou' ? 'assertive' : 'polite'}
-              role={retorno.tipo === 'falhou' ? 'alert' : undefined}
-              className={cn(
-                'flex items-start gap-2 text-xs leading-relaxed',
-                retorno.tipo === 'enviado' ? 'text-status-success' : 'text-status-danger',
-              )}
-            >
-              {retorno.tipo === 'falhou' && <TriangleAlert className="mt-0.5 size-4 shrink-0" />}
-              <span>{retorno.texto}</span>
-            </p>
-          )}
 
           <p className="text-xs leading-relaxed text-text-tertiary">
             O comando não fica em fila: com a máquina fora do ar, ele é recusado na hora.

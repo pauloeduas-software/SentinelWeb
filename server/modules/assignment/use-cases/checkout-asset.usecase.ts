@@ -122,8 +122,8 @@ const FK_DO_ALVO = {
 } as const;
 
 const ROTULO_DO_ALVO = {
-  PERSON: 'um colaborador (targetPersonId)',
-  WORKSTATION: 'um posto (targetWorkstationId)',
+  PERSON: 'um colaborador',
+  WORKSTATION: 'um posto',
 } as const;
 
 /**
@@ -145,13 +145,13 @@ function assertAlvoCoerente(data: CheckoutData): string {
 
   if (intrusas.length > 0) {
     throw new AppError(
-      'Uma entrega tem UM alvo: preencha só a chave que corresponde ao targetType.',
+      'Uma entrega tem um alvo só: informe apenas o do tipo escolhido.',
       422,
     );
   }
 
   if (!alvoId) {
-    throw new AppError(`Entrega do tipo "${data.targetType}" exige ${ROTULO_DO_ALVO[data.targetType]}.`, 422);
+    throw new AppError(`A entrega precisa de ${ROTULO_DO_ALVO[data.targetType]}.`, 422);
   }
 
   return alvoId;
@@ -160,7 +160,7 @@ function assertAlvoCoerente(data: CheckoutData): string {
 /**
  * O alvo existe? Devolve o NOME dele, que a auditoria grava.
  *
- * Deixar a FK falhar responderia 409 "Registro está em uso por outro cadastro"
+ * Deixar a FK falhar responderia 409 "Registro está em uso por outro cadastro."
  * — o texto que o `error-handler` dá a todo `P2003` —, que não é nem o status
  * nem a frase certa para "essa pessoa não existe". Conferir antes custa uma
  * consulta e devolve 404 com o nome do que faltou.
@@ -277,7 +277,7 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, ator: A
         status: { select: { name: true, type: true } },
       },
     });
-    if (!ativo) throw new AppError('Registro não encontrado', 404);
+    if (!ativo) throw new AppError('Ativo não encontrado.', 404);
 
     // ATIVO BAIXADO NÃO SAI PARA NINGUÉM. Ele não é mais da empresa — foi
     // vendido, doado, roubado —, e o status dele pode muito bem ser
@@ -363,7 +363,7 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, ator: A
       // COMMITTED nenhuma enxerga a posse que a outra ainda não confirmou. Quem
       // decide é o índice único parcial `assignments_um_aberto_por_ativo`, e o
       // perdedor precisa receber a MESMA frase do vencedor — não o 409
-      // genérico "Registro já existe" do error-handler, que não diz o que fazer.
+      // genérico "Registro já existe." do error-handler, que não diz o que fazer.
       //
       // O outro índice é o do posto (`assignments_um_aberto_por_posto`, a rede
       // da invariante 19), e a trava do posto em `ativoDoPosto` já não deixa

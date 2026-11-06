@@ -39,6 +39,19 @@ describe('excluir colaborador', () => {
     expect(recusa.status).toBe(409);
     expect(recusa.body.error).toContain('responde por 1 ativo');
     expect(recusa.body.error).toContain('antes de excluir');
+    expect(recusa.body.error).toContain('Devolva o que está com ele antes de excluir.');
+  });
+
+  it('quem só ocupa posto não é mandado devolver nada', async () => {
+    const pessoa = await criarColaborador(api, { name: 'Só Na Mesa', email: 'so.na.mesa@teste.local' });
+    const mesa = await criarPosto(api, { name: 'Mesa Sem Entrega' });
+    expect((await api.post(`/api/workstations/${mesa}/occupants`, { personId: pessoa })).status).toBe(201);
+
+    const recusa = await api.delete<{ error: string }>(`/api/people/${pessoa}`);
+    expect(recusa.status).toBe(409);
+    expect(recusa.body.error).toBe(
+      'Este colaborador ainda ocupa 1 posto (Mesa Sem Entrega). Encerre a ocupação antes de excluir.',
+    );
   });
 
   it('a recusa cita o computador e o posto pelo nome, com o link de cada um', async () => {
@@ -52,7 +65,7 @@ describe('excluir colaborador', () => {
     expect(recusa.status).toBe(409);
     expect(recusa.body.error).toBe(
       `Este colaborador ainda responde por 1 ativo (${notebook.assetTag}) e ocupa 1 posto (Mesa da Recusa). `
-      + 'Devolva o que está com ele e encerre as ocupações antes de desativar.',
+      + 'Devolva o que está com ele e encerre a ocupação antes de desativar.',
     );
     expect(recusa.body.refs).toEqual([
       { tipo: 'ativo', id: notebook.id, nome: notebook.assetTag },

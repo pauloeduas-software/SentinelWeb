@@ -57,6 +57,7 @@ export const statusLabelSpec: CatalogSpec = {
   entityType: 'StatusLabel',
   tabela: 'status_labels',
   rotulo: 'status',
+  naoEncontrado: 'Status não encontrado.',
 
   delegate: (client) => client.statusLabel as unknown as CatalogDelegate,
   createSchema: createStatusLabelSchema,

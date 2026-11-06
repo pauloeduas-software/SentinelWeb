@@ -185,7 +185,7 @@ describe('a lista de chaves da licença', () => {
     const reduzir = await api.put<{ error: string }>(`/api/licenses/${id}`, { seatsTotal: 3 });
     expect(reduzir.status).toBe(409);
     expect(reduzir.body.error).toBe(
-      'Não dá para reduzir "Piso das chaves" para 3: as chaves cobrem 4. Tire uma chave ou diminua o que ela cobre antes.',
+      'Não é possível reduzir "Piso das chaves" para 3: as chaves cobrem 4. Tire uma chave ou diminua o que ela cobre antes.',
     );
 
     // Com a lista nova no mesmo corpo, a conta é contra ela.

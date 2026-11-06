@@ -29,7 +29,7 @@ export default function LicencasPage() {
     licencas, total, carregando, erro, page, perPage, setPage, search, buscaFeita, changeSearch,
     categoryId, changeCategoria, status, changeStatus, contagens,
     alertas, erroDosAlertas,
-    modal, licencaAberta, buscaDoLink, veioDoLink, erroDoLink, abrir, fechar, ocupado,
+    modal, licencaAberta, buscaDoLink, veioDoLink, abrir, fechar, ocupado,
     handleCriar, handleEditar, handleEntregar, handleDevolver, handleTrocarChave, handleAlternarEncerrada, handleExcluir,
   } = useLicencas();
   // Cadastrar, editar, encerrar e excluir são `SUPERVISOR` no servidor: licença é
@@ -40,10 +40,6 @@ export default function LicencasPage() {
     <div className="motion-safe:animate-fade-in flex flex-col pb-6">
 
       <PaginaCabecalho titulo="Licenças" />
-
-      {erroDoLink && (
-        <Aviso className="mb-4" onDispensar={fechar}>Não foi possível abrir a licença do link: {erroDoLink}</Aviso>
-      )}
 
       <CartoesDeContagem contagens={contagens} escolhido={status} onEscolher={changeStatus} />
 

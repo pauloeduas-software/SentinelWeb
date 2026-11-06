@@ -26,7 +26,7 @@ export async function checkinLicense(checkoutId: string, data: Partial<CheckinLi
     const travada = await tx.$queryRaw<{ id: string }[]>`
       SELECT id FROM license_checkouts WHERE id = ${checkoutId}::uuid FOR UPDATE
     `;
-    if (travada.length === 0) throw new AppError('Nenhuma entrega de licença com este identificador.', 404);
+    if (travada.length === 0) throw new AppError('Entrega de licença não encontrada.', 404);
 
     const entrega = await tx.licenseCheckout.findUniqueOrThrow({
       where: { id: checkoutId },

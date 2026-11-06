@@ -16,7 +16,7 @@ import { z } from 'zod';
 //
 // Só a troca da própria senha a usa: o cadastro e a edição de usuário não
 // recebem senha (AU).
-export const senhaNova = z.string('senha é obrigatória')
+export const senhaNova = z.string('senha: campo obrigatório')
   .min(12, 'senha: mínimo de 12 caracteres')
   .max(128, 'senha: máximo de 128 caracteres');
 
@@ -30,7 +30,7 @@ export const senhaNova = z.string('senha é obrigatória')
  * use-case (`change-own-password.usecase.ts`).
  */
 export const trocarSenhaSchema = z.strictObject({
-  currentPassword: z.string('senha atual é obrigatória').max(128, 'senha atual: máximo de 128 caracteres').optional(),
+  currentPassword: z.string('senha atual: campo obrigatório').max(128, 'senha atual: máximo de 128 caracteres').optional(),
   newPassword: senhaNova,
 });
 
@@ -40,11 +40,11 @@ export const loginSchema = z.strictObject({
   // não acharia a conta gravada como "ana@x.com". Sem conferir o FORMATO: um
   // e-mail malformado simplesmente não acha conta, e cai na mesma recusa de
   // "e-mail ou senha inválidos".
-  email: z.string('e-mail é obrigatório').trim().toLowerCase()
-    .min(1, 'e-mail é obrigatório')
+  email: z.string('e-mail: campo obrigatório').trim().toLowerCase()
+    .min(1, 'e-mail: campo obrigatório')
     .max(320, 'e-mail: máximo de 320 caracteres'),
   // No LOGIN a senha não tem mínimo: quem já tem uma senha curta de antes
   // precisa continuar entrando, e recusar aqui por tamanho entregaria a regra
   // de comprimento a quem está adivinhando. Só o teto fica, contra corpo gigante.
-  password: z.string('senha é obrigatória').max(128, 'senha: máximo de 128 caracteres'),
+  password: z.string('senha: campo obrigatório').max(128, 'senha: máximo de 128 caracteres'),
 });

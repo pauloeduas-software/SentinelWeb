@@ -66,13 +66,13 @@ export function parseListQuery(raw: unknown, options: ListQueryOptions = {}): Li
   const schema = z.strictObject({
     page: z.coerce.number('página deve ser um número')
       .int('página deve ser um número inteiro')
-      .min(1, 'a primeira página é 1')
+      .min(1, 'página: mínimo de 1')
       .default(1),
 
-    perPage: z.coerce.number('perPage deve ser um número')
-      .int('perPage deve ser um número inteiro')
-      .min(1, 'perPage mínimo é 1')
-      .max(maxPerPage, `perPage máximo é ${maxPerPage}`)
+    perPage: z.coerce.number('itens por página deve ser um número')
+      .int('itens por página deve ser um número inteiro')
+      .min(1, 'itens por página: mínimo de 1')
+      .max(maxPerPage, `itens por página: máximo de ${maxPerPage}`)
       .default(perPage),
 
     ...(searchable

@@ -19,6 +19,8 @@ O visual vem da IntraNet (AY). Tela nova usa os primitivos de `src/components/ui
 | `CartaoDaFicha` e `TabelaDaFicha` | a ficha em página: computador, colaborador e posto |
 | `AcoesDaLinha` | o `⋯` |
 | `confirmar()` (`hooks/useConfirmacao`) | a pergunta, nunca `confirm()` |
+| `useNotificacao` | o cartão da resposta a um clique, nunca `alert()` |
+| `useCopiar` | o botão de copiar: quem diz que copiou é ele |
 
 Cadastro novo copia `src/components/catalogo/` (`CatalogTable` + `useCatalog`), não a licença.
 
@@ -42,6 +44,22 @@ Cadastro novo copia `src/components/catalogo/` (`CatalogTable` + `useCatalog`), 
   Excluir e Desativar ficam desligados, porque ninguém age sobre si mesmo.
 - **Desativar existe só em colaborador, conta e item de estoque;** a licença tem Encerrar; catálogo e
   posto só excluem (AF, AN, AO).
+
+## As mensagens
+
+Cada mensagem tem um lugar só (BF):
+
+| A mensagem | Onde |
+|---|---|
+| resposta a um clique, deu certo ou foi recusado | cartão no canto inferior direito (`useNotificacao`), um por vez, que some sozinho e espera com o mouse ou o foco em cima; com link, fica até alguém fechar. Com o painel aberto, ele sai da frente dos botões |
+| recusa de formulário | dentro dele (`FormularioLateral`, login e Minha conta): o cartão cobriria o Salvar |
+| falha ao carregar | no lugar do conteúdo (BB) |
+| situação que continua valendo (posto vago, prazo, fora do patrimônio) | `Aviso`, na tela do assunto |
+| campo inválido | o balão do navegador (`validacao.helper.ts`) |
+| copiar | o próprio botão, por dois segundos (`useCopiar`); a falha vai para o cartão |
+
+Toda ação que grava confirma no cartão. As exceções são a conta nova e a senha temporária, que
+mostram a senha no painel aberto, e a troca obrigatória de senha, que já leva ao sistema.
 
 ## A ficha
 

@@ -9,14 +9,17 @@ import { hojeNoBrasil } from './hoje.helper';
 // (o formulário manda string vazia quando o usuário limpa o campo) e ausente
 // continua `undefined`, que o Prisma lê como "não mexe neste campo".
 
+/** O limite como se lê em português: `100.000`, e não `100000`. */
+export const milhar = (numero: number) => numero.toLocaleString('pt-BR');
+
 export const nomeObrigatorio = (rotulo = 'nome') =>
-  z.string(`${rotulo} é obrigatório`)
+  z.string(`${rotulo}: campo obrigatório`)
     .trim()
-    .min(1, `${rotulo} não pode ser vazio`)
+    .min(1, `${rotulo}: campo obrigatório`)
     .max(200, `${rotulo}: máximo de 200 caracteres`);
 
 export const textoOpcional = (rotulo: string, max = 500) =>
-  z.string(`${rotulo}: envie um texto`).trim().max(max, `${rotulo}: máximo de ${max} caracteres`).nullish()
+  z.string(`${rotulo}: envie um texto`).trim().max(max, `${rotulo}: máximo de ${milhar(max)} caracteres`).nullish()
     .transform((valor) => (valor === undefined ? undefined : valor || null));
 
 // `z.email()` da zod 4 valida ANTES do `.trim()`; por isso o `pipe` (a mesma
@@ -36,12 +39,12 @@ export const emailOpcional = z
 // completar o esquema: `dell.com` é recusado, quem digita escreve o endereço
 // inteiro.
 export const urlOpcional = (rotulo: string) => z
-  .string(`${rotulo} inválido: use o endereço completo, com https://`)
+  .string(`${rotulo}: use o endereço completo, com https:// no começo`)
   .trim()
   .nullish()
   .transform((valor) => (valor === undefined ? undefined : valor || null))
   .pipe(
-    z.url({ protocol: /^https?$/, error: `${rotulo} inválido: use o endereço completo, com https://` })
+    z.url({ protocol: /^https?$/, error: `${rotulo}: use o endereço completo, com https:// no começo` })
       .max(300, `${rotulo}: máximo de 300 caracteres`)
       .nullish(),
   );
@@ -126,11 +129,11 @@ export const dataNaoPassada = (rotulo: string) =>
 export const valorMonetarioOpcional = (rotulo: string) =>
   // A frase também no tipo errado: o número 3500, e não o texto "3500.00",
   // caía na mensagem padrão da zod, sem o nome do campo.
-  z.string(`${rotulo}: use um valor como 1234.50`).trim().nullish()
+  z.string(`${rotulo}: use um valor como 1234,50`).trim().nullish()
     .transform((valor) => (valor === undefined ? undefined : valor || null))
     // `.nullish()` no fim pelo mesmo motivo do `dataOpcional`: a frase do campo.
     .pipe(
-      z.string().regex(/^\d{1,10}([.,]\d{1,2})?$/, `${rotulo}: use um valor como 1234.50`)
+      z.string().regex(/^\d{1,10}([.,]\d{1,2})?$/, `${rotulo}: use um valor como 1234,50`)
         .transform((valor) => valor.replace(',', '.'))
         .nullish(),
     );
@@ -140,6 +143,6 @@ export const valorMonetarioOpcional = (rotulo: string) =>
  * abriu, devolvido como veio. Ausente, a edição não confere: é o Desativar, o
  * Reabrir, quem chama a API por fora. A conferência é `assertVersaoLida`.
  */
-export const versaoLida = z.iso.datetime({ offset: true, error: 'updatedAt: use a data e hora que a leitura devolveu' })
+export const versaoLida = z.iso.datetime({ offset: true, error: 'versão: use a data e hora que a leitura devolveu' })
   .transform((valor) => new Date(valor))
   .optional();

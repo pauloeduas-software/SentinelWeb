@@ -3,6 +3,7 @@ import FormularioLateral from '../../../components/FormularioLateral';
 import ReferenceSelect from '../../../components/ReferenceSelect';
 import { Campo } from '../../../components/ui/campo';
 import { Dado, GradeDeDados } from '../../../components/ui/dado';
+import { useNotificacao } from '../../../hooks/useNotificacao';
 import type { Endpoint } from '../../../types/endpoint.types';
 
 // VINCULAR UMA MÁQUINA A UM ATIVO, À MÃO — e, se quiser, entregar o ativo ao
@@ -30,6 +31,7 @@ interface Props {
 }
 
 export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCancelar }: Props) {
+  const notificar = useNotificacao();
   const [assetId, setAssetId] = useState('');
   const [workstationId, setWorkstationId] = useState('');
   const [salvando, setSalvando] = useState(false);
@@ -44,6 +46,7 @@ export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCa
       // Fecha só no sucesso. Na entrega recusada o vínculo fica e a linha some da
       // lista "Sem vínculo", e o painel continua aberto com a frase que diz isso.
       onCancelar();
+      notificar.sucesso(workstationId ? 'Máquina vinculada e ativo entregue.' : 'Máquina vinculada.');
     } catch (falha) {
       setErro((falha as Error).message);
     } finally {

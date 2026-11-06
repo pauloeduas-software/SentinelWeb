@@ -11,9 +11,9 @@ function ehCampo(alvo: EventTarget | null): alvo is Campo {
   return alvo instanceof HTMLInputElement || alvo instanceof HTMLSelectElement || alvo instanceof HTMLTextAreaElement;
 }
 
-// O limite como a pessoa lê: o `min`/`max` de um campo de data é 'AAAA-MM-DD'.
+// O limite como a pessoa lê: o `min`/`max` de um campo de data é 'AAAA-MM-DD', e 100000 é 100.000.
 function limite(campo: HTMLInputElement, valor: string): string {
-  return campo.type === 'date' ? formatarData(valor) : valor;
+  return campo.type === 'date' ? formatarData(valor) : Number(valor).toLocaleString('pt-BR');
 }
 
 export function mensagemDeValidacao(campo: Campo): string {
@@ -28,12 +28,12 @@ export function mensagemDeValidacao(campo: Campo): string {
   if (v.rangeUnderflow) {
     return campo.type === 'date'
       ? `A data não pode ser antes de ${limite(campo, campo.min)}.`
-      : `O mínimo é ${campo.min}.`;
+      : `O mínimo é ${limite(campo, campo.min)}.`;
   }
   if (v.rangeOverflow) {
     return campo.type === 'date'
       ? `A data não pode ser depois de ${limite(campo, campo.max)}.`
-      : `O máximo é ${campo.max}.`;
+      : `O máximo é ${limite(campo, campo.max)}.`;
   }
   if (v.stepMismatch) return 'Use um número inteiro.';
   if (v.tooShort) return `Use pelo menos ${campo.minLength} caracteres.`;

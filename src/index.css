@@ -5,6 +5,9 @@
    sistema operacional direto: quem escolheu Claro num sistema escuro fica no claro. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Com o formulário lateral aberto: a pilha de notificações sai de cima dele (BF). */
+@custom-variant com-painel (body:has([data-painel-lateral][data-state="open"]) &);
+
 /* AS CORES DOS DOIS TEMAS — o único lugar com cor no front (o lint recusa cor
    fixa em `src/`). A paleta é a da IntraNet: azul na marca e fundos azulados. */
 :root {

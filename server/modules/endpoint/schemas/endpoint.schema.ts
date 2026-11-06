@@ -13,7 +13,7 @@ const ACOES = ['reboot', 'shutdown', 'suspend'] as const;
 // Maiúscula no schema, não no controller: a normalização faz parte do
 // contrato — o agente recebe sempre o comando em maiúscula.
 export const sendCommandSchema = z.strictObject({
-  action: z.string('a ação é obrigatória').trim().toLowerCase()
+  action: z.string('ação: campo obrigatório').trim().toLowerCase()
     .pipe(z.enum(ACOES, 'ação inválida: use reboot, shutdown ou suspend'))
     .transform((acao) => acao.toUpperCase()),
 });

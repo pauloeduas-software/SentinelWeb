@@ -535,3 +535,40 @@ o que vale, a receita de um sistema que já mudou. O que importava já estava em
   `grep` acha qualquer decisão pelo título. Ficam os assuntos e as supersessões.
 - **`tests/invariantes/links-da-documentacao.test.ts` reprova** o link quebrado, a âncora sem título e o `docs/*.md`
   inexistente citado em comentário de código.
+
+## BF — A resposta a um clique vai para o cartão do canto inferior direito
+
+**Decisão.** A mesma recusa aparecia em três lugares: no cartão do alto, numa faixa no topo da tela e num texto ao lado do
+botão. Quem clicava no fim de uma lista comprida às vezes nem via a faixa, e nada dizia que a ação tinha dado certo. Agora a
+resposta a um clique tem um lugar só: o cartão de `useNotificacao`, no canto inferior direito, como no IntraChat.
+
+- **Vão para o cartão:** a recusa de Descobertas, de Ocupantes e do Devolver na ficha do posto, o retorno do comando da
+  máquina, o link que não abre e o placar do Reconciliar agora, este em azul (`info`), porque não é sucesso nem falha.
+- **Toda ação que grava confirma no cartão,** com o que aconteceu: `Licença entregue.`, `Fabricante excluído.`. Ficam de fora
+  o cadastro de conta e a senha temporária, que mostram a senha no painel aberto, e a troca obrigatória de senha, que já leva
+  ao sistema.
+- **A resposta nova tira a anterior.** Fica um cartão por vez, para o erro de uma tentativa não ficar ao lado do sucesso da
+  seguinte. Só o cartão com link se acumula, porque espera alguém fechar.
+- **O cartão sai da frente do painel.** Quem já estava na tela quando o formulário abre vai para o lado dele no desktop, e para
+  o alto onde ao lado não cabe (`com-painel`). Ali ele cobre o título e o X do painel, nunca Cancelar e Salvar.
+- **O cartão espera quem está lendo.** O prazo para com o mouse em cima, com o foco dentro dele e com a página fora de vista,
+  e recomeça inteiro ao soltar. O tempo maior do erro longo continua: é o que vale no celular, onde nada pausa.
+- **A região fica sempre na página,** vazia quando não há cartão. O leitor de tela só anuncia o que muda numa região que já
+  existia, e o `aria-live` é o que a mantém ao alcance dele com um painel aberto.
+- **Copiar confirma no próprio botão,** por dois segundos, e a falha vai para o cartão (`useCopiar`).
+- **Ficam onde estavam:** a recusa de formulário, a falha ao carregar (BB), a situação que continua valendo (posto vago,
+  prazo, fora do patrimônio), o balão do campo e a pergunta do `confirmar()`.
+- **A regra:** o que responde a um clique e pode sumir é cartão; o que precisa continuar à vista fica na tela.
+
+**Por quê a direita embaixo:** é o padrão escrito do IntraChat e o padrão do GLPI. O IntraNet tem dois sistemas, um em cima e
+outro embaixo.
+
+**Por quê pausar:** todo sistema comparado com cartão que some pausa: GLPI e NetBox pelo Bootstrap, iTop pelo `stopOnFocus`,
+Shelf.nu pelo Radix e o IntraChat pelo Sonner. O Snipe-IT nem tem o problema: a faixa fica até alguém fechar. A página fora de
+vista vem do Sonner: quem troca de aba não perde a resposta.
+
+**Por quê copiar no botão:** é o que fazem GLPI, Snipe-IT, iTop e Carbon, e copiar não muda nada no sistema: é o retorno de
+um gesto, e cabe em quem foi clicado.
+
+**Descartado: a recusa de formulário no cartão.** O Salvar do `FormularioLateral` mora no mesmo canto, e o cartão o cobriria
+justo quando a recusa pede para corrigir e salvar de novo. Dentro do painel ela fica à vista.

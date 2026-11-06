@@ -76,7 +76,7 @@ O cadastro passa pelo **mesmo CRUD das tabelas de catálogo**, com a
 
 A regra do **status**: só o que está nele **agora** impede a exclusão. É 409
 com a dica `Tire o que está nele agora: devolva o que foi entregue e encerre as
-ocupações.`
+ocupações.`, que cita só o que existe no posto.
 
 **Uso**, aqui, é: **entrega** de ativo aberta para ele, **entrega de estoque**
 aberta para ele e **ocupante** atual.

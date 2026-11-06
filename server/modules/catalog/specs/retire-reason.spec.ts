@@ -10,6 +10,7 @@ export const retireReasonSpec: CatalogSpec = {
   entityType: 'RetireReason',
   tabela: 'retire_reasons',
   rotulo: 'motivo de baixa',
+  naoEncontrado: 'Motivo da baixa não encontrado.',
 
   delegate: (client) => client.retireReason as unknown as CatalogDelegate,
   createSchema: createRetireReasonSchema,

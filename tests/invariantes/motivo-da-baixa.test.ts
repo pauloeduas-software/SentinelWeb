@@ -55,7 +55,7 @@ describe('o cadastro', () => {
     for (const name of ['', '   ']) {
       const { status, body } = await api.post<{ error: string }>('/api/retire-reasons', { name });
       expect(status).toBe(422);
-      expect(body.error).toMatch(/nome não pode ser vazio/);
+      expect(body.error).toMatch(/Nome: campo obrigatório\./);
     }
   });
 
@@ -102,7 +102,7 @@ describe('a baixa', () => {
     const ativo = await novoComputador();
     const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/retire`, {});
     expect(status).toBe(422);
-    expect(body.error).toMatch(/motivo da baixa: campo obrigatório/);
+    expect(body.error).toMatch(/Motivo da baixa: campo obrigatório\./);
   });
 
   it('não recebe mais o valor da lista fechada: `retiredReason` no corpo é 422', async () => {

@@ -92,7 +92,7 @@ describe('a quantidade', () => {
 
     const recusa = await api.put<{ error: string }>(`/api/licenses/${licenca.id}`, { seatsTotal: 1 });
     expect(recusa.status).toBe(409);
-    expect(recusa.body.error).toBe('Não dá para reduzir "Project" para 1: 2 estão em uso. Devolva para liberar.');
+    expect(recusa.body.error).toBe('Não é possível reduzir "Project" para 1: 2 estão em uso. Devolva para liberar.');
 
     expect((await api.put(`/api/licenses/${licenca.id}`, { seatsTotal: 2 })).status).toBe(200);
     expect(await contas(licenca.id)).toMatchObject({ seatsTotal: 2, livres: 0 });
@@ -156,7 +156,7 @@ describe('o valor da compra', () => {
 
     const comMilhar = await editar('1.234,56');
     expect(comMilhar.status).toBe(422);
-    expect(comMilhar.body.error).toBe('valor de compra: use um valor como 1234.50');
+    expect(comMilhar.body.error).toBe('Valor de compra: use um valor como 1234,50.');
 
     expect((await editar('')).body.purchaseCost).toBeNull();
   });

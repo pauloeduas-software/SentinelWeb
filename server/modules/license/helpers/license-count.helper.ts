@@ -48,6 +48,6 @@ export function fraseSemVaga(nome: string, seatsTotal: number, uso: UsoDaLicenca
 
 /** Por que a quantidade não desce até `novoTotal`: o piso é o que está em uso. */
 export function fraseDoPiso(nome: string, novoTotal: number, uso: UsoDaLicenca): string {
-  return `Não dá para reduzir "${nome}" para ${novoTotal}: ${quantas(uso.emUso, 'está', 'estão')} em uso. `
+  return `Não é possível reduzir "${nome}" para ${novoTotal}: ${quantas(uso.emUso, 'está', 'estão')} em uso. `
     + 'Devolva para liberar.';
 }

@@ -2,7 +2,6 @@ import {
   BatteryWarning, HelpCircle, Inbox, MonitorCheck, RefreshCw, type LucideIcon,
 } from 'lucide-react';
 import PaginaCabecalho from '../../components/PaginaCabecalho';
-import { Aviso } from '../../components/ui/aviso';
 import { Button } from '../../components/ui/button';
 import { ContagemDaAba, Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import ConfiguracaoDaDescoberta from './components/ConfiguracaoDaDescoberta';
@@ -39,11 +38,11 @@ const ABAS: { id: AbaDaTela; rotulo: string; icone: LucideIcon }[] = [
 
 export default function DescobertasPage() {
   const {
-    aba, setAba, erro, limparErro,
+    aba, setAba,
     sugestoes, contagem, carregandoSugestoes, erroDasSugestoes, cobertura, carregandoCobertura, erroDaCobertura,
     ociosos, carregandoOciosos, erroDosOciosos, semVinculo, vinculadas, carregandoMaquinas, erroDasMaquinas, ocupado,
     configuracao, salvandoConfiguracao, podeConfigurar,
-    podeReconciliar, reconciliando, ultimaVarredura, dispensarVarredura, handleReconciliar,
+    podeReconciliar, reconciliando, handleReconciliar,
     handleAceitar, handleRecusar, handleTriar, handleVincular, handleSalvarConfiguracao,
   } = useDescobertas();
 
@@ -75,17 +74,6 @@ export default function DescobertasPage() {
         salvando={salvandoConfiguracao}
         onSalvar={handleSalvarConfiguracao}
       />
-
-      {ultimaVarredura && (
-        <Aviso tom="info" className="mb-4" onDispensar={dispensarVarredura}>
-          {ultimaVarredura.endpoints} máquina{ultimaVarredura.endpoints === 1 ? '' : 's'} sem vínculo
-          {' · '}{ultimaVarredura.sugeridas} sugest{ultimaVarredura.sugeridas === 1 ? 'ão' : 'ões'}
-          {' · '}{ultimaVarredura.vinculadas} vínculo{ultimaVarredura.vinculadas === 1 ? '' : 's'}
-          {' · '}{ultimaVarredura.encerradas} encerrada{ultimaVarredura.encerradas === 1 ? '' : 's'}
-        </Aviso>
-      )}
-
-      {erro && <Aviso className="mb-4" onDispensar={limparErro}>{erro}</Aviso>}
 
       <Tabs value={aba} onValueChange={(valor) => setAba(valor as AbaDaTela)}>
         <TabsList className="mb-4">

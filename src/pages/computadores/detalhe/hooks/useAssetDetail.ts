@@ -99,12 +99,14 @@ export function useAssetDetail() {
       const novo = await criar.mutateAsync(valores);
       fecharModal();
       navigate(`/computadores/${novo.id}`);
+      notificar.sucesso('Ativo cadastrado.');
       return;
     }
 
     if (!asset) return;
     await editar.mutateAsync({ id: asset.id, data: valores });
     fecharModal();
+    notificar.sucesso('Ativo salvo.');
   };
 
   // O erro SOBE para o modal mostrar a mensagem do servidor: é aqui que aparece
@@ -113,18 +115,21 @@ export function useAssetDetail() {
     if (!asset) return;
     await entregar.mutateAsync({ id: asset.id, data: dados });
     fecharModal();
+    notificar.sucesso('Ativo entregue.');
   };
 
   const handleDevolver = async (dados: CheckinInput) => {
     if (!asset) return;
     await devolver.mutateAsync({ id: asset.id, data: dados });
     fecharModal();
+    notificar.sucesso('Ativo devolvido.');
   };
 
   const handleDarBaixa = async (dados: RetireInput) => {
     if (!asset) return;
     await darBaixa.mutateAsync({ id: asset.id, data: dados });
     fecharModal();
+    notificar.sucesso('Baixa registrada.');
   };
 
   // Reverter apaga a data, o motivo e a observação da saída num clique só, e o
@@ -141,6 +146,7 @@ export function useAssetDetail() {
     }))) return;
     try {
       await reverterSaida.mutateAsync(asset.id);
+      notificar.sucesso('Baixa revertida.');
     } catch (falha) {
       notificar.erro((falha as Error).message);
     }
@@ -154,7 +160,7 @@ export function useAssetDetail() {
     if (!asset) return;
     if (!(await confirmar({
       titulo: `Excluir "${asset.assetTag}"?`,
-      descricao: 'Vai para a lixeira e pode ser restaurado.',
+      descricao: 'Se não estiver em uso, vai para a lixeira e pode ser restaurado.',
       acao: 'Excluir',
       perigo: true,
     }))) return;
@@ -162,6 +168,7 @@ export function useAssetDetail() {
     try {
       await excluir.mutateAsync(asset.id);
       navigate('/computadores');
+      notificar.sucesso(`"${asset.assetTag}" foi para a lixeira.`);
     } catch (falha) {
       // O 409 do ativo com licença ou componente traz cada um em link.
       notificar.erro((falha as Error).message, linksDoErro(falha));
@@ -223,9 +230,12 @@ export function useAssetDetail() {
       // A recusa do servidor (vínculo já desfeito, máquina sumiu) vai para a
       // notificação, como nas outras ações da ficha — sem ela o clique falhava
       // em silêncio.
-      desvincular.mutate(maquina.endpointId, {
-        onError: (falha) => notificar.erro((falha as Error).message),
-      });
+      try {
+        await desvincular.mutateAsync(maquina.endpointId);
+        notificar.sucesso('Máquina desvinculada.');
+      } catch (falha) {
+        notificar.erro((falha as Error).message);
+      }
     },
 
     modal,

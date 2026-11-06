@@ -40,10 +40,7 @@ export async function assertReferenciasDaLicenca(
 
     // 422 e não 409: o corpo enviado é que está incoerente.
     if (categoria.type !== 'LICENSE') {
-      throw new AppError(
-        `A categoria "${categoria.name}" é do tipo ${categoria.type} e não serve a uma licença.`,
-        422,
-      );
+      throw new AppError(`"${categoria.name}" não é uma categoria de licença.`, 422);
     }
   }
 

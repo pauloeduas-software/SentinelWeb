@@ -9,7 +9,7 @@ import { z } from 'zod';
 const inteiroEntre = (rotulo: string, min: number, max: number) =>
   z
     .number(`${rotulo} deve ser um número`)
-    .int(`${rotulo} deve ser inteiro`)
+    .int(`${rotulo} deve ser um número inteiro`)
     .min(min, `${rotulo}: mínimo de ${min}`)
     .max(max, `${rotulo}: máximo de ${max}`);
 
