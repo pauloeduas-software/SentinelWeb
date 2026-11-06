@@ -985,6 +985,8 @@ O custo é uma coluna e três rotas liberadas na conta pendente.
 
 ## AU — Ninguém escolhe a senha de outra pessoa
 
+> **Superada em parte por [BD](#bd--a-sessão-vale-48-horas):** a sessão passa de 12 para 48 horas; continua fixa, contada da entrada.
+
 **Decidido** (em 2026-10-31, ao ver o formulário de Usuários: "não era para eu definir a senha que o
 usuário vai colocar, apenas gerar uma nova senha temporária, e aí a pessoa ao entrar coloca a senha e
 já pede automaticamente para trocar"; e, na tela de troca: "pedir a temporária uma segunda vez é
@@ -1069,3 +1071,25 @@ pode dar, e o contrário — nascer com acesso demais — não se nota. O Técni
 equipe pequena, quem recebe a máquina é quem a cadastra; posto e licença ficam acima dele por serem
 estrutura e contrato.
 
+---
+
+## BD — A sessão vale 48 horas
+
+**Decidido** (em 2026-11-06, ao ler a lista do que é fixo no sistema: "Sessao pode ser de 48h"):
+
+- **A sessão vale 48 horas, e não 12.** O JWT e o cookie vencem juntos (`SESSAO_SEGUNDOS`).
+- **Continua fixa, contada da entrada.** Renovar a cada requisição manteria viva para sempre a aba da
+  telemetria, o motivo da [AU](#au--ninguém-escolhe-a-senha-de-outra-pessoa).
+- **Continua no código**, sem campo em Configurações.
+
+**Supera:** em parte a [AU](#au--ninguém-escolhe-a-senha-de-outra-pessoa), nas 12 horas.
+**Mantém:** a releitura do usuário a cada requisição: desativado, excluído ou rebaixado perde o acesso
+na requisição seguinte, e a senha nova, a própria ou a temporária, derruba os tokens antigos pelo
+`tokenVersion`.
+
+**Por quê:** com 12 horas, entrava-se todo dia. Como a releitura corta o acesso na hora, o prazo só
+decide por quanto tempo vale um token vazado ou um navegador deixado aberto, e é esse o preço aceito.
+
+**O que muda para quem usa:** o vencimento cai na hora em que se entrou, dois dias depois. Quem entrou
+às 14h cai às 14h, às vezes no meio do expediente, o que as 12 horas evitavam; o login devolve a
+pessoa à tela onde estava.

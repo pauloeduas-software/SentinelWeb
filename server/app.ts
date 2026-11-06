@@ -202,7 +202,7 @@ export async function buildApp(
     // Onde procurar o token. Com isto, `request.jwtVerify()` lê o cookie
     // httpOnly sozinho e nenhum controller precisa mexer em header (D22).
     cookie: { cookieName: COOKIE_SESSAO, signed: false },
-    // TTL curto: o JWT sobrevive ao usuário (mandar alguém para a lixeira não
+    // TTL com teto: o JWT sobrevive ao usuário (mandar alguém para a lixeira não
     // apaga o token que ele já tem no navegador). Quem realmente resolve isso é
     // o `preHandler`, que relê o usuário a cada requisição; o TTL é o teto.
     sign: { expiresIn: SESSAO_SEGUNDOS },
