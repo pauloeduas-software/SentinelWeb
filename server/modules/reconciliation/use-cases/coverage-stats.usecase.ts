@@ -1,4 +1,5 @@
 import { prisma } from '../../../infra/database/prismaClient';
+import { SEM_BAIXA } from '../../asset/helpers/asset-filters.helper';
 import { lerConfiguracaoDaDescoberta } from '../helpers/discovery-settings.helper';
 
 // O PAINEL DE COBERTURA — a pergunta que só existe depois de os dois lados se
@@ -42,10 +43,10 @@ export async function calcularCobertura(): Promise<Cobertura> {
   const limiteFantasma = new Date(Date.now() - configuracao.ghostDays * 24 * 60 * 60 * 1000);
   const limiteShadow = new Date(Date.now() - configuracao.shadowHours * 60 * 60 * 1000);
 
-  // `retiredAt: null` porque ativo VENDIDO não é fantasma: ele saiu do
+  // `SEM_BAIXA` porque ativo VENDIDO não é fantasma: ele saiu do
   // patrimônio de propósito, e contá-lo como falha de cobertura encheria o
   // painel de acertos contábeis (D19).
-  const vivos = { retiredAt: null };
+  const vivos = SEM_BAIXA;
 
   const [cadastrados, comAgente, nuncaVistos, fantasmas, orfaos, shadowIt] = await prisma.$transaction([
     prisma.asset.count({ where: vivos }),

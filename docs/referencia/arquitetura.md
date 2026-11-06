@@ -280,11 +280,11 @@ saiu do sistema, e o critério, está em [`../decisoes/escopo.md`](../decisoes/e
 
 ## "Estar no parque" é UMA definição, e ela mora no domínio dono das colunas
 
-`retiredAt: null` — o recorte que diz se um ativo ainda é do parque. Domínio que **pergunta** importa;
+`SEM_BAIXA` (`retiredAt: null`, em `asset-filters.helper.ts`) — o recorte que diz se um ativo ainda é do parque. Domínio que **pergunta** importa;
 domínio que **responde** é o dono do dado — é o D16 aplicado a uma constante.
 
-O recorte ainda se repete à mão: no `asset` (`asset-filters.helper.ts`, `asset-stats`, `list-asset-options`) e na
-reconciliação (`list-idle-assets`, `coverage-stats`). **Deveria ser constante:** cada consulta reescrevendo o recorte à mão é o que produz versões diferentes.
+A lista, os contadores e as opções do `asset` e a reconciliação importam a mesma constante: cada consulta
+reescrevendo o recorte à mão é o que produz versões diferentes.
 
 ---
 ## Posse: a regra que atravessa três domínios
