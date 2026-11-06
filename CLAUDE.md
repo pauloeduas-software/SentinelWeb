@@ -1,18 +1,14 @@
 # CLAUDE.md
 
-Guia para agentes de código neste repositório. É o mapa, curto de propósito: a fonte é a
-[`docs/`](./docs/README.md), e este arquivo diz onde olhar e o que não se negocia. Mudou uma regra
-daqui? Atualize este arquivo no mesmo commit.
+Mapa para agentes de código, curto de propósito: a fonte é a [`docs/`](./docs/README.md), e aqui fica
+onde olhar e o que não se negocia. Mudou uma regra daqui? Atualize este arquivo no mesmo commit.
 
 ## O que é
 
-Painel de inventário de TI com convergência RMM: o cadastro de computadores, postos, estoque,
-licenças e colaboradores, e a máquina que o SentinelAgente descobre pelo `/agent-hub`. Fastify +
-Prisma (Postgres) em `server/`, React 19 + Vite + TanStack Query em `src/`. As telas e o menu estão
-no [`README.md`](./README.md#-telas).
-
-Skills em `.claude/skills/`: `migration` (mudança de schema) e `dominio-novo` (rota, use-case,
-página). Elas apontam para o guia; o guia é a fonte.
+Painel de inventário de TI com convergência RMM: o cadastro de computadores, postos, estoque, licenças
+e colaboradores, e a máquina que o SentinelAgente descobre pelo `/agent-hub`. Fastify + Prisma (Postgres)
+em `server/`, React 19 + Vite + TanStack Query em `src/`. As telas e o menu estão no
+[`README.md`](./README.md#-telas). Skills em `.claude/skills/`: `migration` e `dominio-novo`.
 
 ## Comandos
 
@@ -25,74 +21,47 @@ bun run db:generate    # depois de mudar o schema.prisma
 bun run agente:falso   # agente de mentira, para ver a aba Máquina sem o real
 ```
 
-**Antes de dizer que terminou: `bun run check` passando.** Teste que fala com o banco é a regra:
-não há mock de Prisma ([`testes.md`](./docs/referencia/testes.md)). Página nova entra na lista de
+**Antes de dizer que terminou: `bun run check` passando.** Teste que fala com o banco é a regra: não
+há mock de Prisma ([`testes.md`](./docs/referencia/testes.md)). Página nova entra na lista de
 `tests/e2e/menu.spec.ts`.
+
+## Antes de mexer, leia
+
+- **Tela, lista, ficha ou formulário:** [`telas.md`](./docs/referencia/telas.md). O molde é um só.
+- **Rota, cargo, senha ou sessão:** [`acesso.md`](./docs/referencia/acesso.md).
+- **Quem responde por um equipamento:** [`modelo-de-posse.md`](./docs/referencia/modelo-de-posse.md).
+- **O que o banco recusa:** [`invariantes.md`](./docs/referencia/invariantes.md).
+- **Licença, estoque, posto, colaborador, baixa ou Configurações:** a página do assunto em
+  [`referencia/`](./docs/referencia/).
 
 ## Arquitetura
 
-- `modules → infra` no servidor e `pages → queries → api` no front, verificado pelo lint. A mensagem do erro diz para onde
-  mover; não contorne com `eslint-disable`. O porquê está em
-  [`arquitetura.md`](./docs/referencia/arquitetura.md); a receita, em
+- `modules → infra` no servidor e `pages → queries → api` no front, verificado pelo lint. A mensagem do
+  erro diz para onde mover; não contorne com `eslint-disable`
+  ([`arquitetura.md`](./docs/referencia/arquitetura.md)).
+- **Rota nova tem duas linhas:** o cargo em `route-permissions.ts` (sem ela o boot cai, D137) e o
+  contrato em `contrato-das-rotas.ts` (sem ela `contrato-da-api.test.ts` reprova). A receita está em
   [`adicionar-um-dominio.md`](./docs/guias/adicionar-um-dominio.md).
-- Servidor: `server/modules/<nome>/` com `<nome>.maestro.ts` (rotas), `controllers/` e `use-cases/`.
-  Rota sem linha em `server/modules/access/helpers/route-permissions.ts` **derruba o boot** (D137).
-- Front: página não fala HTTP. Ela usa `src/queries/<nome>.queries.ts`.
-- Cadastro novo copia `src/components/catalogo/` (`CatalogTable` + `useCatalog`), não a licença.
-- **O visual vem da IntraNet (AY):** tela nova usa os primitivos de `src/components/ui/` e estas peças:
-  `PaginaCabecalho` (título e uma linha), `FormularioLateral` (todo formulário), `JanelaDeDetalhe` (detalhe em
-  abas), `AcoesDaLinha` (o `⋯`) e `confirmar()` (`hooks/useConfirmacao`), nunca `confirm()`. Tema claro e escuro:
-  cor só pelos tokens de `src/index.css`. Fonte normal; `font-mono` só em etiqueta, série, chave, IP e MAC.
-- Editar manda o formulário inteiro com o `updatedAt` lido ao abrir; se a linha mudou, o servidor
-  responde 409 (`server/modules/shared/versao.helper.ts`, AF). Menos Usuários: o login grava na
-  linha da conta.
 - Toda escrita grava quem fez só no banco, nunca em tela (AB). Rota nova de escrita entra em
   `tests/invariantes/auditoria.test.ts`.
 - **Três cargos, `TECNICO < SUPERVISOR < ADMIN` (AV).** O Técnico opera (ver, cadastrar, editar,
   entregar, devolver); o Supervisor exclui, desativa, dá baixa, vê o custo, mexe em licença, posto,
-  Configurações e comando; só o Administrador mexe em Usuários. A conta nasce Técnico. Botão que o
-  cargo não alcança some (`usePode`), e desativar pelo `PUT` confere `isActive` no controller.
-- **Rota nova tem duas linhas:** o cargo em `route-permissions.ts` (sem ela o boot cai) e o contrato em
-  `server/modules/api-docs/helpers/contrato-das-rotas.ts` (sem ela `contrato-da-api.test.ts` reprova).
-  O Swagger abre em `/api/docs`, só fora de produção (AS).
-- **Senha:** ninguém escolhe a de outra pessoa. O cadastro nasce com uma temporária e o administrador
-  gera outra para quem esqueceu; a pessoa a troca ao entrar (`mustChangePassword`), sem digitá-la de
-  novo. A sessão com ela só alcança `/auth/me`, sair e `PUT /auth/password`. Quem troca a própria senha
-  não é derrubado (`reemitirSessao`). A sessão vale 12 h, fixa (AR, AU).
+  Configurações e comando; só o Administrador mexe em Usuários.
 
 ## Banco
 
-- **Nunca `prisma migrate dev`.** O schema inteiro vive na `0_init`, editada no lugar. Siga
-  [`criar-uma-migration.md`](./docs/guias/criar-uma-migration.md) do começo ao fim.
-- `DROP COLUMN` apaga em silêncio o `CHECK` que cita a coluna. Procure cada coluna removida no bloco
-  escrito à mão da `0_init` antes de alinhar o dev.
-- Nunca passe o banco de desenvolvimento como `--shadow-database-url`: ele é zerado.
-- O que o banco recusa, e onde cada regra é defendida:
-  [`invariantes.md`](./docs/referencia/invariantes.md).
-- Mudou a `0_init`: apague o `sentineldb_test` e o `sentineldb_e2e_test`; o próximo `test` e
-  `test:e2e` recriam cada um.
+**Nunca `prisma migrate dev`.** O schema inteiro vive na `0_init`, editada no lugar. Siga
+[`criar-uma-migration.md`](./docs/guias/criar-uma-migration.md) do começo ao fim: o `CHECK` que um
+`DROP COLUMN` apaga em silêncio, o banco de desenvolvimento que nunca é `--shadow-database-url` e os
+bancos de teste a apagar depois estão lá.
 
 ## Regras do sistema inteiro
 
 - **Em uso bloqueia.** Encerrar, desativar, excluir, baixa ou lixeira de algo em uso é 409, dizendo o
   que devolver antes. **Nenhuma data é futura**, exceto prazo e vencimento, e nada acontece antes da
   compra (AN).
-- **O CRUD é um só.** A linha inteira abre o registro (detalhe, ficha ou Editar). Editar, Desativar/Ativar
-  e Excluir, nessa ordem, no `⋯` (AY). Excluir sempre clica, e quem recusa é o 409. Desativar existe só em
-  colaborador, conta e item de estoque; a licença tem Encerrar; catálogo e posto só excluem (AF, AN, AO).
 - **Lixeira só onde o histórico é do próprio registro:** colaborador e computador. O resto exclui de
   verdade, e o histórico guarda o nome por escrito (V, AG).
-- **Estoque conta quantos.** A categoria decide o tipo: Estoque vai a colaborador ou posto,
-  Componente só a computador, Consumível sai do total e não tem Devolver (AI, AJ). Quebrou ou
-  perdeu: Devolver e Editar o total. Cadastro com quantidade nasce com 1 ou mais.
-- **Um computador por posto** (invariante 19, B), também no passado: a entrega não começa antes
-  da última devolução no posto, nem a ocupação antes do fim da anterior da mesma pessoa ali (AX).
-  Laboratório é um posto por computador.
-- **Alerta só de prazo, e só na tela do assunto:** o da licença fica em `/licencas`.
-- **Sem cor por dado** (nome, categoria, tipo de evento). Cor só por token do tema, em botão, aviso e na
-  situação: ativo, desativado, vencida, online (`Badge`, `PontoDeStatus`; AY). O lint recusa cor fixa em
-  `src/`.
-- **Pouco texto na tela.** Subtítulo de uma linha; a regra mora na ajuda do campo (AY).
 - **Só pt-BR, e a moeda é o real (BRL).** Nenhuma frase em inglês chega a quem usa: a recusa da API
   passa pelo locale pt-BR da zod (`server/infra/errors/zod-error.ts`) e o balão do navegador, por
   `src/helpers/validacao.helper.ts`. Campo novo de schema leva a frase com o rótulo.
@@ -116,6 +85,7 @@ Decidido; não proponha de novo:
 - e-mail, exportar e ação em lote (O);
 - alerta de mínimo, piso ou estoque mínimo, em qualquer módulo (AA);
 - busca no cabeçalho, com bipe ou `Ctrl+K` (AY);
+- seletor de colunas nas listas (BA);
 - fundo claro na marca, e contorno ou filtro de brilho por CSS: cada tema tem a sua arte (AY);
 - conformidade de software (instalado × licença), "instalado" marcado à mão, OEM e licença por
   núcleo (G, AA, AD);
@@ -133,7 +103,6 @@ GLPI e Snipe-IT. Só se corrige bug e texto falso; regra nova, só a pedido.
 ## Docs e commits
 
 - Antes de escrever em `docs/`, leia o [`docs/README.md`](./docs/README.md): a pasta se decide pelo
-  ciclo de vida, não pelo assunto. Decisão nova continua a letra; a próxima está no fim de
-  [`decisoes/README.md`](./docs/decisoes/README.md).
+  ciclo de vida, não pelo assunto. Decisão nova continua a letra, e a próxima está lá.
 - Commit direto na `main`. Só `feat:` ou `chore:`, sem escopo, corpo em bullets curtos. Um assunto,
   um commit. Sem `Co-Authored-By` nem "Generated with".
