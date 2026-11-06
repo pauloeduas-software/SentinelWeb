@@ -59,6 +59,9 @@ test('o link do menu volta para a primeira aba, sem levar a busca junto', async 
 });
 
 test('a dica de Computadores vazio leva direto a Modelos', async ({ page }) => {
+  // A lista vem vazia pelo `page.route`: os specs dividem o banco, e os que rodam antes
+  // deixam computadores cadastrados.
+  await page.route('**/api/assets?*', (rota) => rota.fulfill({ json: { total: 0, rows: [] } }));
   await page.goto('/computadores');
   await page.getByRole('main').getByRole('link', { name: 'Configurações' }).click();
   await expect(page.getByRole('tab', { name: 'Modelos' })).toHaveAttribute('aria-selected', 'true');
