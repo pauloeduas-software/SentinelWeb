@@ -1,6 +1,9 @@
-import { ExternalLink, MapPin, TriangleAlert } from 'lucide-react';
+import type { ReactNode } from 'react';
+import {
+  ArrowRightLeft, ExternalLink, History, MapPin, TriangleAlert,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
-import EstadoDaLista from '../../../../components/EstadoDaLista';
+import LinhaDoTempo from '../../../../components/LinhaDoTempo';
 import { Avatar } from '../../../../components/ui/avatar';
 import { Aviso } from '../../../../components/ui/aviso';
 import { Badge, PontoDeStatus } from '../../../../components/ui/badge';
@@ -9,6 +12,7 @@ import type {
   Assignment, PosseResolvida, Responsavel,
 } from '../../../../types/posse.types';
 import { formatarData, formatarDiaDoInstante } from '../../../../helpers/format.helper';
+import { usePaginaLocal } from '../../../../hooks/usePaginaLocal';
 import {
   comoChegouAoAlvo, estaAberta, postoDaPosseAberta, postoExcluido, rotuloDoAlvo, rotuloDoOcupanteDoPeriodo,
   sabeOsOcupantes, tipoDoAlvo,
@@ -36,6 +40,42 @@ const VIA: Record<Responsavel['via'], { rotulo: string; explicacao: string }> = 
   },
 };
 
+/** Os dias da posse, um atrás do outro: a linha do tempo mostra só o `dia`. */
+function diasDaPosse(linha: Assignment): string {
+  return [
+    `Entrega ${formatarDiaDoInstante(linha.checkoutAt)}`,
+    linha.expectedCheckinAt && `prevista para ${formatarData(linha.expectedCheckinAt)}`,
+    linha.checkinAt && `devolução ${formatarDiaDoInstante(linha.checkinAt)}`,
+  ].filter(Boolean).join(' · ');
+}
+
+/** O que a posse diz além do alvo e dos dias. Sem nada a dizer, a linha fica com os dois. */
+function detalheDaPosse(linha: Assignment): ReactNode {
+  const detalhe = comoChegouAoAlvo(linha);
+  const ocupantes = sabeOsOcupantes(linha) ? linha.ocupantesDoPeriodo : undefined;
+  if (!detalhe && !ocupantes && !linha.checkoutNotes && !linha.checkinNotes) return null;
+
+  return (
+    <div className="space-y-1">
+      {detalhe && <div>{detalhe}</div>}
+
+      {/* QUEM OCUPOU O POSTO NESTE PERÍODO (AW): é o que responde
+          "quem estava com este equipamento em março?" quando ele
+          foi entregue a uma mesa, e não a uma pessoa. */}
+      {ocupantes && (
+        <div className="tabular-nums text-text-secondary">
+          {ocupantes.length > 0
+            ? <>{ocupantes.length === 1 ? 'Ocupante' : 'Ocupantes'}: {ocupantes.map(rotuloDoOcupanteDoPeriodo).join(' · ')}</>
+            : <span className="text-text-tertiary">Ninguém ocupou o posto neste período.</span>}
+        </div>
+      )}
+
+      {linha.checkoutNotes && <div className="text-text-secondary">Entrega: {linha.checkoutNotes}</div>}
+      {linha.checkinNotes && <div className="text-text-secondary">Devolução: {linha.checkinNotes}</div>}
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 interface PosseTabProps {
   posse: PosseResolvida | null;
@@ -53,6 +93,7 @@ export default function PosseTab({
   // O posto vem da POSSE ABERTA, e não do `posse.targetLabel`: o `PosseResolvida`
   // carrega o rótulo do alvo e não o id dele, e sem id não há link.
   const posto = postoDaPosseAberta(assignments);
+  const { visiveis, page, setPage, total } = usePaginaLocal(assignments);
 
   return (
     <div className="space-y-4">
@@ -119,62 +160,31 @@ export default function PosseTab({
         )}
       </Card>
 
-      <Card className="space-y-4 p-6">
+      <section className="space-y-2">
         <h3 className="text-sm font-medium text-text-primary">Histórico de posse</h3>
-
-        {assignments.length === 0 && (
-          <EstadoDaLista carregando={carregando} erro={erro}>
-            <p className="text-sm text-text-tertiary">Este ativo nunca foi entregue.</p>
-          </EstadoDaLista>
-        )}
-
-        {assignments.length > 0 && (
-          <ul className="divide-y divide-border-sutil rounded-lg border border-border-sutil text-sm">
-            {assignments.map((linha) => {
-              const aberta = estaAberta(linha);
-              const detalhe = comoChegouAoAlvo(linha);
-
-              return (
-                <li key={linha.id} className="space-y-1 px-4 py-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-medium text-text-primary">
-                      {rotuloDoAlvo(linha)}
-                      {postoExcluido(linha) && <span className="text-xs font-normal text-text-tertiary"> · posto excluído</span>}
-                    </span>
-                    <PontoDeStatus tom={aberta ? 'info' : 'neutro'}>{aberta ? 'Aberta' : 'Devolvida'}</PontoDeStatus>
-                  </div>
-
-                  {detalhe && <div className="text-xs text-text-tertiary">{detalhe}</div>}
-
-                  <div className="text-xs tabular-nums text-text-tertiary">
-                    Entrega {formatarDiaDoInstante(linha.checkoutAt)}
-                    {linha.expectedCheckinAt && ` · prevista para ${formatarData(linha.expectedCheckinAt)}`}
-                    {linha.checkinAt && ` · devolução ${formatarDiaDoInstante(linha.checkinAt)}`}
-                  </div>
-
-                  {/* QUEM OCUPOU O POSTO NESTE PERÍODO (AW): é o que responde
-                      "quem estava com este equipamento em março?" quando ele
-                      foi entregue a uma mesa, e não a uma pessoa. */}
-                  {sabeOsOcupantes(linha) && linha.ocupantesDoPeriodo && (
-                    <div className="text-xs tabular-nums text-text-secondary">
-                      {linha.ocupantesDoPeriodo.length > 0
-                        ? <>{linha.ocupantesDoPeriodo.length === 1 ? 'Ocupante' : 'Ocupantes'}: {linha.ocupantesDoPeriodo.map(rotuloDoOcupanteDoPeriodo).join(' · ')}</>
-                        : <span className="text-text-tertiary">Ninguém ocupou o posto neste período.</span>}
-                    </div>
-                  )}
-
-                  {linha.checkoutNotes && (
-                    <div className="text-xs text-text-secondary">Entrega: {linha.checkoutNotes}</div>
-                  )}
-                  {linha.checkinNotes && (
-                    <div className="text-xs text-text-secondary">Devolução: {linha.checkinNotes}</div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Card>
+        <LinhaDoTempo
+          icone={History}
+          vazio="Este ativo nunca foi entregue."
+          carregando={carregando}
+          erro={erro}
+          pagina={{ page, total, onPageChange: setPage }}
+          eventos={visiveis.map((linha) => ({
+            id: linha.id,
+            icone: ArrowRightLeft,
+            titulo: (
+              <>
+                <span className="font-medium">
+                  {rotuloDoAlvo(linha)}
+                  {postoExcluido(linha) && <span className="text-xs font-normal text-text-tertiary"> · posto excluído</span>}
+                </span>
+                <PontoDeStatus tom={estaAberta(linha) ? 'info' : 'neutro'}>{estaAberta(linha) ? 'Aberta' : 'Devolvida'}</PontoDeStatus>
+              </>
+            ),
+            dia: diasDaPosse(linha),
+            nota: detalheDaPosse(linha),
+          }))}
+        />
+      </section>
     </div>
   );
 }

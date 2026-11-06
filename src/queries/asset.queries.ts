@@ -92,10 +92,22 @@ export function useNextAssetTagQuery(habilitado: boolean) {
  * de licença e de componente leem. Sem a segunda, o computador criado não
  * aparecia no seletor — e o baixado continuava sendo oferecido — até o
  * `staleTime` vencer.
+ *
+ * Devolve a promessa e roda também no erro, como `invalidarLicencaEPosse`: o botão só
+ * destrava com a tela relida, e o 409 de quem viu a tela velha traz a tela nova.
+ *
+ * `excluido`: o ativo que acabou de ir para a lixeira. A ficha e o histórico dele ficam
+ * de fora: buscá-los de novo é um 404 garantido, que a ficha aberta mostraria antes de
+ * sair dali.
  */
-function invalidarAtivos(queryClient: ReturnType<typeof useQueryClient>) {
-  void queryClient.invalidateQueries({ queryKey: assetKeys.all });
-  void queryClient.invalidateQueries({ queryKey: catalogKeys.tabela('assets') });
+function invalidarAtivos(queryClient: ReturnType<typeof useQueryClient>, excluido?: string) {
+  return Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: assetKeys.all,
+      predicate: (consulta) => excluido === undefined || consulta.queryKey[2] !== excluido,
+    }),
+    queryClient.invalidateQueries({ queryKey: catalogKeys.tabela('assets') }),
+  ]);
 }
 
 /**
@@ -109,7 +121,7 @@ export function useCreateAsset() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: AssetInput) => (await apiClient.post<Asset>('/assets', data)).data,
-    onSuccess: () => invalidarAtivos(queryClient),
+    onSettled: () => invalidarAtivos(queryClient),
   });
 }
 
@@ -126,7 +138,7 @@ export function useDeleteAsset() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiClient.delete(`/assets/${id}`),
-    onSuccess: () => invalidarAtivos(queryClient),
+    onSettled: (_resposta, erro, id) => invalidarAtivos(queryClient, erro ? undefined : id),
   });
 }
 
@@ -134,7 +146,7 @@ export function useRestoreAsset() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiClient.post(`/assets/${id}/restore`),
-    onSuccess: () => invalidarAtivos(queryClient),
+    onSettled: () => invalidarAtivos(queryClient),
   });
 }
 
@@ -149,7 +161,7 @@ export function useRetireAsset() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: RetireInput }) =>
       apiClient.post(`/assets/${id}/retire`, data),
-    onSuccess: () => invalidarAtivos(queryClient),
+    onSettled: () => invalidarAtivos(queryClient),
   });
 }
 
@@ -158,7 +170,7 @@ export function useUnretireAsset() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiClient.post(`/assets/${id}/unretire`),
-    onSuccess: () => invalidarAtivos(queryClient),
+    onSettled: () => invalidarAtivos(queryClient),
   });
 }
 

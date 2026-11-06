@@ -857,3 +857,16 @@ que sobrou delas está em `assignment/`, `occupancy/` e `user/`, com as provas e
 | D15 (o que ficou de pé, ver Y) | `prisma/schema.prisma` (model `WorkstationOccupant`, campo `shift`) · mesma migration (índice `workstation_occupants_um_aberto_por_pessoa_posto`) |
 | D16 | use-case de resolução no domínio de posse — **nenhuma coluna** em `Asset` · invariante estado × posse em [`../referencia/invariantes.md`](../referencia/invariantes.md) |
 | D17 | superada por [Q](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai): `Asset.assignedToId` não existe mais, e checkout/checkin escrevem só a `Assignment` |
+
+## BI — A busca de Postos acha o computador pela etiqueta e pela série
+
+**Decisão.** A busca de `/postos` varre também a etiqueta e o número de série do computador entregue à mesa. Depois de devolvido,
+ele deixa de ser achado ali e volta a ser achado em Computadores.
+
+**Por quê:** a [C](./catalogo-e-ativo.md#c--o-ativo-entregue-a-um-posto-sai-de-ativos-a-ficha-do-posto-é-rota) tira da lista de
+Computadores o computador entregue a um posto, e a busca por etiqueta que levava até ele saiu com a AY, que deixou escrito "agora
+se acha pelo posto". Só que a busca de Postos procurava em nome e nota, então quem tinha a etiqueta na mão e não sabia a mesa
+não achava o computador em lugar nenhum. O Snipe-IT não tem esse furo porque nunca tira o ativo da lista.
+
+**Descartado: devolver o computador à lista de Computadores.** Desfaria a C, que continua valendo, e a busca dali passaria a mostrar
+uma linha que a lista sem busca não mostra.

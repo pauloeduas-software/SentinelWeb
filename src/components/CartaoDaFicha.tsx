@@ -19,7 +19,7 @@ export default function CartaoDaFicha({ marca, acoes, children }: CartaoDaFichaP
     <Card className="flex flex-wrap gap-4 p-6 lg:flex-nowrap">
       {marca}
       <GradeDeDados className="min-w-0 flex-1 basis-60 md:grid-cols-4 xl:grid-cols-6">{children}</GradeDeDados>
-      {acoes && <div className="flex shrink-0 items-start gap-2">{acoes}</div>}
+      {acoes && <div className="flex shrink-0 items-center gap-2 self-start">{acoes}</div>}
     </Card>
   );
 }

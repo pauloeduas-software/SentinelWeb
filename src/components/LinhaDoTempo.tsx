@@ -14,7 +14,8 @@ export interface EventoDaLinha {
   titulo: ReactNode;
   /** O dia, já formatado: a hora de um dia passado seria inventada (AM). */
   dia: string;
-  nota?: string | null;
+  /** A nota, ou mais de uma linha dela: a posse diz também quem ocupou o posto. */
+  nota?: ReactNode;
 }
 
 interface LinhaDoTempoProps {

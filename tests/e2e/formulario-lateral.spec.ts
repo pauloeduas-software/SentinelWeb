@@ -121,6 +121,52 @@ test('trocar a opção do Segmentado conta como alteração', async ({ page, req
   await expect(pergunta(page)).toContainText('Descartar as alterações?');
 });
 
+// NENHUM DOS TRÊS É CAMPO DO NAVEGADOR: colar a lista cancela o `paste`, e adicionar e tirar
+// são botões. O painel só fica sabendo porque `ChavesDoFormulario` avisa.
+test('colar, adicionar e tirar uma chave contam como alteração', async ({ page, request }) => {
+  const nome = `Licença das chaves ${Date.now()}`;
+  const categoria = await request.post('/api/categories', { data: { name: `Categoria de ${nome}`, type: 'LICENSE' } });
+  const { id: categoryId } = (await categoria.json()) as { id: string };
+  const licenca = await request.post('/api/licenses', {
+    data: { name: nome, categoryId, seatsTotal: 3, keys: [{ productKey: 'AAAA-1111', seats: 1 }] },
+  });
+  expect(licenca.status()).toBe(201);
+
+  const abrirEditar = async () => {
+    await page.goto(`/licencas?busca=${encodeURIComponent(nome)}`);
+    await page.getByRole('button', { name: `Ações de ${nome}` }).click();
+    await page.getByRole('menuitem', { name: 'Editar' }).click();
+    await expect(painel(page)).toBeVisible();
+  };
+  const escPergunta = async () => {
+    await page.keyboard.press('Escape');
+    await expect(pergunta(page)).toContainText('Descartar as alterações?');
+    await pergunta(page).getByRole('button', { name: 'Descartar' }).click();
+    await expect(painel(page)).toBeHidden();
+  };
+
+  await abrirEditar();
+  await painel(page).getByLabel('Chave 1', { exact: true }).focus();
+  // Em texto porque os specs compilam sem os tipos do navegador.
+  await page.evaluate(`(() => {
+    const dados = new DataTransfer();
+    dados.setData('text/plain', 'BBBB-2222\\nCCCC-3333');
+    document.activeElement.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dados, bubbles: true, cancelable: true }));
+  })()`);
+  await expect(painel(page).getByLabel('Chave 3', { exact: true })).toHaveValue('CCCC-3333');
+  await escPergunta();
+
+  await abrirEditar();
+  await painel(page).getByRole('button', { name: 'Tirar a chave 1' }).click();
+  await expect(painel(page).getByLabel('Chave 1', { exact: true })).toBeHidden();
+  await escPergunta();
+
+  await abrirEditar();
+  await painel(page).getByRole('button', { name: 'Adicionar chave' }).click();
+  await expect(painel(page).getByLabel('Chave 2', { exact: true })).toBeVisible();
+  await escPergunta();
+});
+
 test('com a senha temporária na tela, pergunta mesmo sem alteração', async ({ page, request }) => {
   const nome = `Conta do painel ${Date.now()}`;
   const criada = await request.post('/api/users', { data: { name: nome, email: `painel.${Date.now()}@teste.local`, role: 'TECNICO' } });

@@ -92,6 +92,7 @@ export function useDescobertas() {
     carregandoOciosos: ociosos.isLoading,
     erroDosOciosos: ociosos.error?.message ?? null,
     configuracao: configuracao.data,
+    erroDaConfiguracao: configuracao.error?.message ?? null,
 
     semVinculo: semVinculo.data ?? [],
     vinculadas: vinculadas.data ?? [],
