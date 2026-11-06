@@ -6,7 +6,7 @@
 
 | Pasta | A regra | O que mora lá |
 |---|---|---|
-| [`referencia/`](./referencia/) | **É verdade AGORA.** Mudou o código, muda aqui. Não conta história, não dá instrução. | o que o sistema é: camadas, modelo de posse, invariantes, acesso, testes, configurações, baixa do ativo, postos, colaboradores, licenças, estoque |
+| [`referencia/`](./referencia/) | **É verdade AGORA.** Mudou o código, muda aqui. Não conta história, não dá instrução. | o que o sistema é: camadas, modelo de posse, invariantes, acesso, telas, testes, configurações, baixa do ativo, postos, colaboradores, licenças, estoque |
 | [`guias/`](./guias/) | **Começa com um verbo.** Receita para quem já sabe o que quer. | criar uma migration, adicionar um domínio, escrever um teste |
 | [`decisoes/`](./decisoes/) | **Não se reescreve.** Se a realidade mudou, a decisão é *superada* por outra, com link entre as duas. | as decisões numeradas (`D1`…`D164`) e as por letra (de `A` em diante), um arquivo por assunto |
 
@@ -25,6 +25,9 @@ quem vai mexer no código.
 as camadas, os módulos e o que o lint recusa. Se o que você vai mexer tem a ver com
 quem responde por um equipamento, [`referencia/modelo-de-posse.md`](./referencia/modelo-de-posse.md)
 é pré-requisito, não leitura opcional.
+
+**Vou mexer numa tela.** [`referencia/telas.md`](./referencia/telas.md) diz as peças e o molde da lista,
+da ficha e do formulário: toda tela segue o mesmo.
 
 **Vou mexer em rota, cookie ou permissão.** [`referencia/acesso.md`](./referencia/acesso.md).
 Rota nova nasce negada, e rota sem permissão declarada **derruba o boot** — é melhor saber disso

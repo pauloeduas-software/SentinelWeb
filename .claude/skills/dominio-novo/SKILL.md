@@ -32,6 +32,7 @@ A receita está em `docs/guias/adicionar-um-dominio.md` e o porquê em
 - Página em `src/pages/<substantivo-plural>/`, rota em `src/App.tsx`, item do menu em
   `src/components/navegacao.ts`.
 - Cadastro copia `src/components/catalogo/` (`CatalogTable` + `useCatalog`), não a licença.
+- Tela segue `docs/referencia/telas.md`: as peças e o molde da lista, da ficha e do formulário.
 - Sem cor fixa (o lint recusa): só os tokens de `src/index.css`.
 
 ## Antes de concluir

@@ -15,6 +15,8 @@ mesa (`Assignment` de alvo `WORKSTATION`), o estoque que fica nela (`StockMoveme
 de alvo `WORKSTATION`) e é ele que as pessoas ocupam, por turno
 (`WorkstationOccupant`). **Campos:** nome, localização e notas.
 
+- **Um computador por posto** (invariante 19, B), também no passado. Laboratório é um posto por
+  computador.
 - **Fica numa localização** — a Matriz, a Filial —, obrigatória. A localização
   só diz onde as coisas estão guardadas e não recebe nada; o posto não é uma
   localização, é cadastro próprio
