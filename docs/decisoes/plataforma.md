@@ -375,6 +375,8 @@ tecnologias e boas práticas, não mais funcionalidades*):
 
 ## AY — O visual vem da IntraNet, em tema claro e escuro, e a linha inteira abre o registro
 
+> **Superada em parte por [BH](#bh--o-texto-tem-piso-de-12px-e-cor-de-texto-e-cor-de-fundo-são-tokens-separados):** a densidade compacta fica no espaçamento, e o texto tem escala própria.
+>
 > **Superada em parte por [BA](#ba--o-título-volta-ao-cabeçalho-a-lista-não-se-mexe-e-o-posto-tem-ficha-em-página):** o título da página volta ao cabeçalho, e o posto tem ficha em página.
 >
 > **Superada em parte por [AZ](#az--configurações-explica-no-formulário-e-a-página-fica-sem-subtítulo):** a página fica sem subtítulo.
@@ -592,3 +594,23 @@ A Cloudscape, da AWS, também confirma sempre que há alteração não salva, e 
 configurações ao clicar no fundo escuro. GLPI e Snipe-IT não foram conferidos.
 
 **Descartado: perguntar também no Cancelar,** como faz a Cloudscape.
+
+## BH — O texto tem piso de 12px, e cor de texto e cor de fundo são tokens separados
+
+**Decisão.** Os 80% da densidade da IntraNet encolhem tudo que é em `rem`, e o texto ia junto: a tabela saía com 11,2px e a
+segunda linha com 9,6px. No desktop o texto agora tem escala própria em `src/index.css`: `text-xs` 12px, `text-sm` 13px,
+`text-base` 14px, `text-lg` 16px e `text-xl` 18px. O espaçamento continua nos 80%, e a linha da tabela nos 48px (BB).
+
+- **Cor de texto e cor de fundo não dividem token.** O azul e o vermelho que aguentam texto branco por cima somem como
+  texto no card escuro. `link` e `status-danger` são lidos sobre o card; `primary` e `destructive` levam texto branco. Link é
+  `text-link`, e o botão de perigo é `bg-destructive`.
+- **Todo texto passa de 4,5:1 nos dois temas**, o piso AA da WCAG. A marca fica de fora, como a WCAG deixa logotipo de fora.
+- **O véu é token** (`bg-veu`), e o lint passou a recusar `black` e `white`, que a lista da paleta não pegava.
+
+**Por quê 12px:** é o menor tamanho do Carbon (IBM), do Primer (GitHub) e do Horizon (ServiceNow), e o corpo de texto fica em
+14px neles, no Ant Design e no Tabler, que é a base do GLPI. O 80% não é uma escolha de tipografia: é a IntraNet encolhendo a
+tela inteira, e ela tem os mesmos 9,6px. Por isso o piso entra aqui, e o resto da densidade fica como veio de lá.
+
+**Por quê tokens separados:** é como o Primer faz, com `fgColor.danger` para texto e `bgColor.danger.emphasis` para fundo.
+
+**Descartado: voltar a raiz para 100%.** Devolveria o texto, mas levaria junto a densidade que a AY escolheu.

@@ -61,7 +61,7 @@ export default function ComputadoresPage() {
       <ListToolbar
         search={search}
         onSearchChange={changeSearch}
-        placeholder="Buscar por etiqueta, série, nome, modelo ou fabricante…"
+        placeholder="Buscar por etiqueta, série, nome ou modelo…"
         filtros={<CategoriaFiltro tipo="ASSET" valor={categoryId} onChange={changeCategoria} />}
         acao={<Button onClick={openCreate}><Plus /> Novo ativo</Button>}
         page={page}
@@ -79,7 +79,7 @@ export default function ComputadoresPage() {
               <TableHead className="hidden w-[12%] md:table-cell">Categoria</TableHead>
               <TableHead className="hidden w-[12%] md:table-cell">Localização</TableHead>
               <TableHead>Responsável</TableHead>
-              <TableHead className="w-32">Compra</TableHead>
+              <TableHead className="w-36">Compra</TableHead>
               <TableHead className="w-36">Status</TableHead>
               <TableHeadAcoes />
             </TableRow>
@@ -180,7 +180,7 @@ export default function ComputadoresPage() {
               {podeDecidir ? (
                 <>
                   Todo ativo pertence a um modelo. Cadastre o fabricante e o modelo em{' '}
-                  <Link to="/configuracoes?aba=modelos" className="text-primary hover:underline">Configurações</Link>
+                  <Link to="/configuracoes?aba=modelos" className="text-link hover:underline">Configurações</Link>
                   {' '}antes do primeiro ativo.
                 </>
               ) : (

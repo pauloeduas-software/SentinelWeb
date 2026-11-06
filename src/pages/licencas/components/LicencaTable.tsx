@@ -47,7 +47,7 @@ export default function LicencaTable({
             <TableHead>Licença</TableHead>
             <TableHead className="hidden w-[16%] md:table-cell">Categoria</TableHead>
             <TableHead className="w-[18%]">Quantidade</TableHead>
-            <TableHead className="w-[18%]">Vencimento</TableHead>
+            <TableHead className="w-[20%]">Vencimento</TableHead>
             <TableHead className="w-36">Status</TableHead>
             <TableHeadAcoes />
           </TableRow>

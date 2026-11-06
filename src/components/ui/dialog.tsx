@@ -7,7 +7,7 @@ import { naoFecharPelaNotificacao } from './fora-da-janela.helper';
 export const Dialog = DialogPrimitive.Root;
 
 export const CLASSE_DO_VEU =
-  'fixed inset-0 z-50 bg-black/60 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0';
+  'fixed inset-0 z-50 bg-veu data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0';
 
 const LARGURAS = { sm: 'max-w-md', md: 'max-w-lg', lg: 'max-w-3xl' } as const;
 

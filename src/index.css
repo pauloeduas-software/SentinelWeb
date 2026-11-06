@@ -9,7 +9,9 @@
 @custom-variant com-painel (body:has([data-painel-lateral][data-state="open"]) &);
 
 /* AS CORES DOS DOIS TEMAS — o único lugar com cor no front (o lint recusa cor
-   fixa em `src/`). A paleta é a da IntraNet: azul na marca e fundos azulados. */
+   fixa em `src/`). A paleta é a da IntraNet: azul na marca e fundos azulados.
+   Cor de texto e cor de fundo são tokens separados (BH): `link` e `status-danger`
+   leem sobre o card, e `primary` e `destructive` levam texto branco por cima. */
 :root {
   color-scheme: light;
 
@@ -27,11 +29,13 @@
   --accent: hsl(213 94% 95%);
   --accent-foreground: hsl(213 94% 38%);
   --ring: hsl(213 94% 38%);
+  --link: hsl(213 94% 38%);
 
-  --status-success: hsl(142 76% 30%);
-  --status-warning: hsl(32 95% 40%);
-  --status-danger: hsl(0 72% 50%);
+  --status-success: hsl(142 76% 26%);
+  --status-warning: hsl(32 95% 32%);
+  --status-danger: hsl(0 72% 45%);
   --status-info: hsl(213 94% 42%);
+  --destructive: hsl(0 72% 45%);
 
   --sidebar: hsl(210 16% 96%);
   --sidebar-foreground: hsl(215 25% 15%);
@@ -51,16 +55,18 @@
   --text-secondary: hsl(215 20% 78%);
   --text-tertiary: hsl(215 16% 60%);
 
-  --primary: hsl(213 94% 50%);
+  --primary: hsl(213 94% 46%);
   --primary-foreground: hsl(0 0% 100%);
   --accent: hsl(215 25% 20%);
   --accent-foreground: hsl(213 94% 65%);
   --ring: hsl(213 94% 50%);
+  --link: hsl(213 94% 65%);
 
   --status-success: hsl(142 70% 45%);
   --status-warning: hsl(38 92% 50%);
-  --status-danger: hsl(0 84% 60%);
+  --status-danger: hsl(0 84% 72%);
   --status-info: hsl(213 94% 62%);
+  --destructive: hsl(0 72% 50%);
 
   --sidebar: hsl(215 25% 8%);
   --sidebar-foreground: hsl(210 20% 98%);
@@ -84,6 +90,8 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-ring: var(--ring);
+  --color-link: var(--link);
+  --color-destructive: var(--destructive);
   --color-status-success: var(--status-success);
   --color-status-warning: var(--status-warning);
   --color-status-danger: var(--status-danger);
@@ -95,6 +103,9 @@
 }
 
 @theme {
+  /* O fundo escurecido atrás da janela, do painel e do menu do celular: o mesmo nos dois temas. */
+  --color-veu: hsl(0 0% 0% / 0.6);
+
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 
@@ -128,10 +139,19 @@
   }
 
   /* A DENSIDADE COMPACTA DA INTRANET, só no desktop: tudo que é em `rem` encolhe
-     junto, e o celular mantém o tamanho que o dedo precisa. */
+     junto, e o celular mantém o tamanho que o dedo precisa. O texto é a exceção (BH):
+     a escala abaixo devolve o piso de 12px, e o espaçamento continua compacto. */
   @media (min-width: 1024px) {
     html {
       font-size: 80%;
+    }
+
+    :root {
+      --text-xs: 0.9375rem; /* 12px */
+      --text-sm: 1.015625rem; /* 13px */
+      --text-base: 1.09375rem; /* 14px */
+      --text-lg: 1.25rem; /* 16px */
+      --text-xl: 1.40625rem; /* 18px */
     }
   }
 
