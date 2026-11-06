@@ -121,7 +121,7 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   'POST /api/licenses/checkouts/:id/checkin': 'TECNICO',
   'PATCH /api/licenses/checkouts/:id': 'TECNICO',
   // A FICHA DO COLABORADOR — leitura: o cadastro (`/api/people`) vem gerado lá
-  // embaixo, com as outras cinco abas.
+  // embaixo, com as outras seis tabelas.
   'GET /api/people/:id': 'TECNICO',
   'GET /api/people/:id/history': 'TECNICO',
   // Quem opera o sistema.
@@ -152,7 +152,7 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   //
   // As especificações do catálogo (D9) registram rotas idênticas por entidade:
   // listar, opções, criar, editar, apagar. Declará-las à mão seria repetir o
-  // mesmo bloco seis vezes e deixar a sétima de fora quando alguém acrescentar
+  // mesmo bloco sete vezes e deixar a oitava de fora quando alguém acrescentar
   // uma spec — exatamente o esquecimento que o D137 existe para pegar.
   //
   // A exclusão é guardada pelo 409 de uso (D8), e o colaborador vai para a

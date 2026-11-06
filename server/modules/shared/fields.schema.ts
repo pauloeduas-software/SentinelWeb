@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { hojeNoBrasil } from './hoje.helper';
 
 // Construtores de campo reaproveitados pelos schemas de vários domínios — as
-// seis tabelas de catálogo e o ativo. Um lugar só para as regras que se repetem:
+// sete tabelas de catálogo e o ativo. Um lugar só para as regras que se repetem:
 // nome, texto livre, e-mail, site, dinheiro, data.
 //
 // Todos seguem o mesmo padrão: `''` vira `null`

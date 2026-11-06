@@ -63,10 +63,10 @@ export interface ColunaSpec {
 /**
  * Uma ação por LINHA além de editar e excluir.
  *
- * Por que isto existe: as seis tabelas são o MESMO CRUD — as cinco abas de
+ * Por que isto existe: as sete tabelas são o MESMO CRUD — as seis abas de
  * Configurações e a página Colaboradores —, e foi essa igualdade que permitiu
  * um componente só (`CadastroDoCatalogo`). Duas ações quebram a igualdade sem
- * quebrar o componente, e só Colaboradores as tem: Desativar/Ativar (as cinco
+ * quebrar o componente, e só Colaboradores as tem: Desativar/Ativar (as seis
  * abas não se desativam, AO); e Ficha, que leva à tela do que está com a pessoa.
  *
  * As duas saídas ruins eram: uma tela separada por aba diferente (volta a
@@ -110,7 +110,7 @@ export interface CatalogUiSpec {
    *
    * Declarado, e não deduzido da última letra: "Status" e "Fabricante" não
    * terminam em `o` e são masculinos, "Localização" não termina em `a` e é
-   * feminina. A regra da letra erraria três das seis tabelas.
+   * feminina, e "Motivo de baixa" termina em `a` e é masculino.
    */
   genero: 'm' | 'f';
   placeholderBusca: string;
@@ -133,7 +133,7 @@ export interface CatalogUiSpec {
 
 // O BOTÃO DESATIVAR/ATIVAR do colaborador (e o mesmo desenho em Usuários): grava
 // só `isActive`. Desativado some das listas de escolha e não recebe nada novo,
-// e continua no histórico. As cinco abas das Configurações não o têm (AO).
+// e continua no histórico. As seis abas das Configurações não o têm (AO).
 export function desativar(): AcaoLinhaSpec {
   return { id: 'ativacao', titulo: 'Desativar', alterna: { campo: 'isActive', tituloSeDesligado: 'Ativar' } };
 }
