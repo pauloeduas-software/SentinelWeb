@@ -401,8 +401,11 @@ test('a recusa na ficha do posto sai no cartão, e a linha continua aberta', asy
 
   await recusar(page, `**/api/assets/${ativo}/checkin`);
   await page.getByRole('tab', { name: /Computador/ }).click();
-  await page.getByRole('button', { name: 'Devolver' }).click();
-  await page.getByRole('button', { name: /Confirmar/ }).click();
+  await page.getByRole('button', { name: /^Ações de ATV-/ }).click();
+  await page.getByRole('menuitem', { name: 'Devolver' }).click();
+  const confirmarDevolucao = page.getByRole('button', { name: /^Confirmar a devolução/ });
+  await confirmarDevolucao.click();
   await expect(page.getByRole('alert')).toHaveText('Recusa do teste.');
   await conferirCanto(page, page.getByRole('alert'));
+  await expect(confirmarDevolucao).toBeVisible();
 });

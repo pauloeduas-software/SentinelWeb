@@ -1,17 +1,24 @@
 import { useState } from 'react';
-import { Monitor, Undo2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { CartaoVazio } from '../../../../components/ListaVazia';
+import {
+  Check, Monitor, Undo2, X,
+} from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import AcoesDaLinha from '../../../../components/AcoesDaLinha';
+import ListaVazia from '../../../../components/ListaVazia';
 import TelemetriaDaMaquina from '../../../../components/TelemetriaDaMaquina';
 import { Aviso } from '../../../../components/ui/aviso';
-import { Badge, PontoDeStatus } from '../../../../components/ui/badge';
+import { PontoDeStatus } from '../../../../components/ui/badge';
 import { Button } from '../../../../components/ui/button';
+import { Card } from '../../../../components/ui/card';
 import { Input } from '../../../../components/ui/input';
-import { diaDoInstante, hojeNoCampoDeData } from '../../../../helpers/format.helper';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableLinha, TableNome, TableRow, TableSublinha,
+} from '../../../../components/ui/table';
+import { diaDoInstante, formatarDiaDoInstante, hojeNoCampoDeData } from '../../../../helpers/format.helper';
 import { tomDoStatus } from '../../../../helpers/status.helper';
 import { useNotificacao } from '../../../../hooks/useNotificacao';
 import type { AtivoDoPosto } from '../../../../types/workstation.types';
-import { ativosComMaquina } from '../../helpers/postos.helper';
+import { TRACO, ativosComMaquina } from '../../helpers/postos.helper';
 
 // O COMPUTADOR DA MESA: o ativo entregue ao posto, com o Devolver, e a TELEMETRIA,
 // que é o RMM entrando pelo ITAM. Ela morava numa tela de frota, que media as
@@ -32,6 +39,7 @@ export default function ComputadorTab({ ativos, onDevolver, devolvendo }: Comput
   // de "este ativo não está entregue" numa rejeição não tratada — o clique não
   // faria nada e não diria nada.
   const notificar = useNotificacao();
+  const navigate = useNavigate();
   // A devolução aberta numa linha: qual ativo e o dia escolhido.
   const [devolvendoAtivo, setDevolvendoAtivo] = useState<{ id: string; dia: string } | null>(null);
 
@@ -63,85 +71,116 @@ export default function ComputadorTab({ ativos, onDevolver, devolvendo }: Comput
         </Aviso>
       )}
 
-      {ativos.length === 0 ? (
-        <CartaoVazio icone={Monitor} carregando={false} erro={null} frase="Nenhum ativo entregue a este posto.">
-          <span className="max-w-md text-xs leading-relaxed">
-            A entrega é feita em{' '}
-            <Link to="/computadores" className="text-primary hover:underline">Computadores</Link>
-            , escolhendo este posto como destino.
-          </span>
-        </CartaoVazio>
-      ) : (
-        <>
-          <ul className="divide-y divide-border-sutil rounded-lg border border-border-sutil bg-surface-card text-sm">
-            {ativos.map((ativo) => (
-              <li key={ativo.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                <div className="min-w-0 space-y-0.5">
-                  <div className="flex flex-wrap items-center gap-2 text-text-primary">
-                    <Monitor className="size-4 shrink-0 text-text-tertiary" />
-                    {/* A ETIQUETA LEVA À FICHA DO ATIVO. É o caminho de volta
-                        do par: a ficha do ativo leva ao posto pelo nome da
-                        mesa, e a do posto leva ao ativo pela etiqueta. Sem
-                        ele, um ativo que saiu da listagem de /computadores só se
-                        alcançava por busca ou por URL decorada. */}
-                    <Link to={`/computadores/${ativo.id}`} className="font-mono font-medium underline-offset-2 hover:underline">
-                      {ativo.assetTag}
-                    </Link>
+      <Card className="overflow-hidden">
+        <Table className="min-w-[62rem]">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-44">Etiqueta</TableHead>
+              <TableHead>Modelo</TableHead>
+              <TableHead className="w-[12%]">Categoria</TableHead>
+              <TableHead className="w-36">Status</TableHead>
+              <TableHead className="w-72">Desde</TableHead>
+              <TableHeadAcoes />
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {ativos.map((ativo) => {
+              const devolucao = devolvendoAtivo?.id === ativo.id ? devolvendoAtivo : null;
+
+              return (
+                // A LINHA ABRE A FICHA DO ATIVO. É o caminho de volta do par: a ficha
+                // do ativo leva ao posto pelo nome da mesa, e a do posto leva ao
+                // ativo por aqui. Com a devolução aberta ela não abre: o clique é no
+                // campo do dia.
+                <TableRow key={ativo.id} onClick={devolucao ? undefined : () => navigate(`/computadores/${ativo.id}`)}>
+                  <TableCell>
+                    <TableNome className="font-mono">{ativo.assetTag}</TableNome>
+                    {ativo.serial && <TableSublinha className="font-mono">SN {ativo.serial}</TableSublinha>}
+                  </TableCell>
+                  <TableCell>
+                    <TableLinha>{ativo.model.name}</TableLinha>
+                    <TableSublinha>{ativo.model.manufacturer.name}</TableSublinha>
+                  </TableCell>
+                  <TableCell>{ativo.model.category.name}</TableCell>
+                  <TableCell title={ativo.status.name}>
                     <PontoDeStatus tom={tomDoStatus(ativo.status.type)}>{ativo.status.name}</PontoDeStatus>
-                    {/* Todo ativo é computador; o que a linha avisa é o
-                        que falta a ele — a máquina, e com ela a telemetria. */}
-                    {!ativo.endpointId && (
-                      <Badge title="Sem máquina vinculada: a telemetria aparece quando o agente for vinculado ao ativo, em Descobertas">
-                        sem agente
-                      </Badge>
+                  </TableCell>
+
+                  <TableCell>
+                    {devolucao ? (
+                      <label className="flex items-center gap-2 text-xs text-text-tertiary">
+                        Devolvido em
+                        <Input
+                          type="date"
+                          value={devolucao.dia}
+                          min={ativo.entregueEm ? diaDoInstante(ativo.entregueEm) : undefined}
+                          max={hojeNoCampoDeData()}
+                          onChange={(event) => setDevolvendoAtivo({ id: ativo.id, dia: event.target.value })}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Escape') setDevolvendoAtivo(null);
+                          }}
+                          className="h-9 w-36"
+                        />
+                      </label>
+                    ) : (
+                      ativo.entregueEm ? formatarDiaDoInstante(ativo.entregueEm) : TRACO
                     )}
-                  </div>
-                  <div className="text-xs text-text-tertiary">
-                    {ativo.model.manufacturer.name} {ativo.model.name} · {ativo.model.category.name}
-                    {ativo.serial && <> · SN <span className="font-mono">{ativo.serial}</span></>}
-                  </div>
-                </div>
+                  </TableCell>
 
-                {devolvendoAtivo?.id === ativo.id ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <label className="flex items-center gap-2 whitespace-nowrap text-xs text-text-tertiary">
-                      Devolvido em
-                      <Input
-                        type="date"
-                        value={devolvendoAtivo.dia}
-                        min={ativo.entregueEm ? diaDoInstante(ativo.entregueEm) : undefined}
-                        max={hojeNoCampoDeData()}
-                        onChange={(event) => setDevolvendoAtivo({ id: ativo.id, dia: event.target.value })}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Escape') setDevolvendoAtivo(null);
-                        }}
-                        className="h-9 w-36"
+                  <TableCell className="overflow-visible">
+                    {devolucao ? (
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => setDevolvendoAtivo(null)}
+                          title="Cancelar"
+                          aria-label="Cancelar a devolução"
+                        >
+                          <X />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => void devolver(ativo, devolucao.dia)}
+                          disabled={devolvendo || devolucao.dia === ''}
+                          title="Confirmar a devolução"
+                          aria-label={`Confirmar a devolução de ${ativo.assetTag}`}
+                        >
+                          <Check />
+                        </Button>
+                      </div>
+                    ) : (
+                      <AcoesDaLinha
+                        nome={ativo.assetTag}
+                        acoes={[{
+                          rotulo: 'Devolver',
+                          icone: Undo2,
+                          onClick: () => setDevolvendoAtivo({ id: ativo.id, dia: hojeNoCampoDeData() }),
+                          disabled: devolvendo,
+                        }]}
                       />
-                    </label>
-                    <Button variant="outline" size="sm" onClick={() => setDevolvendoAtivo(null)}>Cancelar</Button>
-                    <Button
-                      size="sm"
-                      disabled={devolvendo || devolvendoAtivo.dia === ''}
-                      onClick={() => void devolver(ativo, devolvendoAtivo.dia)}
-                    >
-                      Confirmar
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={devolvendo}
-                    onClick={() => setDevolvendoAtivo({ id: ativo.id, dia: hojeNoCampoDeData() })}
-                    title={`Devolver ${ativo.assetTag} deste posto`}
-                  >
-                    <Undo2 /> Devolver
-                  </Button>
-                )}
-              </li>
-            ))}
-          </ul>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+        {ativos.length === 0 && (
+          <ListaVazia icone={Monitor} carregando={false} erro={null} frase="Nenhum ativo entregue a este posto.">
+            <span className="max-w-md text-xs leading-relaxed">
+              A entrega é feita em{' '}
+              <Link to="/computadores" className="text-primary hover:underline">Computadores</Link>
+              , escolhendo este posto como destino.
+            </span>
+          </ListaVazia>
+        )}
+      </Card>
 
+      {ativos.length > 0 && (
+        <>
           {/* A ENTREGA continua sendo na tela Computadores, e a DEVOLUÇÃO não é
               mais: ela saiu de lá para cá porque o ativo entregue a um posto
               saiu da listagem de Computadores, e a operação ficou na tela que já não
