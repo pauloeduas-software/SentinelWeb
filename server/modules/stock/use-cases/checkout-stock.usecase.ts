@@ -60,9 +60,9 @@ const FK_DO_ALVO = {
   PERSON: 'targetPersonId', WORKSTATION: 'targetWorkstationId', ASSET: 'targetAssetId',
 } as const;
 const ROTULO_DO_ALVO = {
-  PERSON: 'um colaborador (targetPersonId)',
-  WORKSTATION: 'um posto (targetWorkstationId)',
-  ASSET: 'um computador (targetAssetId)',
+  PERSON: 'um colaborador',
+  WORKSTATION: 'um posto',
+  ASSET: 'um computador',
 } as const;
 
 type TipoDoAlvo = CheckoutStockInput['targetType'];
@@ -79,12 +79,12 @@ function assertAlvoCoerente(data: CheckoutStockInput): string {
 
   if (intrusa) {
     throw new AppError(
-      `Uma entrega tem UM alvo: preencha só a chave que corresponde ao targetType (${data.targetType}).`,
+      'Uma entrega tem um alvo só: informe apenas o do tipo escolhido.',
       422,
     );
   }
   if (!alvoId) {
-    throw new AppError(`Entrega do tipo "${data.targetType}" exige ${ROTULO_DO_ALVO[data.targetType]}.`, 422);
+    throw new AppError(`A entrega precisa de ${ROTULO_DO_ALVO[data.targetType]}.`, 422);
   }
   return alvoId;
 }

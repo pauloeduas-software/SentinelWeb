@@ -20,7 +20,7 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
     select: WORKSTATION_DETAIL_SELECT,
   });
 
-  if (!lido) throw new AppError('Posto de trabalho não encontrado.', 404);
+  if (!lido) throw new AppError('Posto não encontrado.', 404);
 
   const [entregues, itens] = await Promise.all([
     // Consulta em `asset`, e não nas `assignments` do posto, de propósito: no

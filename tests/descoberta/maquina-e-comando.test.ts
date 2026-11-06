@@ -152,7 +152,7 @@ describe('POST /api/endpoints/:id/command', () => {
     );
 
     expect(status).toBe(422);
-    expect(body.error).toBe('ação inválida: use reboot, shutdown ou suspend');
+    expect(body.error).toBe('Ação inválida: use reboot, shutdown ou suspend.');
     expect(await prisma.auditLog.count({ where: { action: 'COMMAND', entityId: endpointId, changes: { path: ['comando'], equals: 'FORMATAR_DISCO' } } })).toBe(0);
   });
 

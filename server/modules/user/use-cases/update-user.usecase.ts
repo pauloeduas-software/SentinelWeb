@@ -40,7 +40,7 @@ export async function updateUser(id: string, data: UpdateUserData, sessaoId: str
     // quando a mudança foi de B. É a trava que o UPDATE abaixo tomaria.
     await tx.$queryRaw`SELECT id FROM users WHERE id = ${id}::uuid FOR NO KEY UPDATE`;
     const antes = await tx.user.findFirst({ where: { id }, select: USER_AUDIT_SELECT });
-    if (!antes) throw new AppError('Registro não encontrado', 404);
+    if (!antes) throw new AppError('Usuário não encontrado.', 404);
 
     // NINGUÉM TIRA A SI MESMO DO JOGO (W): desativar a própria conta é com outro
     // administrador (a exclusão está em `delete-user.usecase.ts`).

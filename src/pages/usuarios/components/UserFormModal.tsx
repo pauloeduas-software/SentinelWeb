@@ -8,6 +8,7 @@ import { Seletor } from '../../../components/ui/seletor';
 import type { Cargo, User } from '../../../types/user.types';
 import type { UserInput } from '../../../queries/user.queries';
 import { CARGOS_NA_TELA } from '../../../helpers/cargo.helper';
+import { useCopiar } from '../../../hooks/useCopiar';
 
 // O FORMULÁRIO DE USUÁRIO — quem opera o sistema: nome, e-mail e cargo.
 //
@@ -49,7 +50,7 @@ export default function UserFormModal({ user, senhaGerada = null, onClose, onSub
   const [error, setError] = useState('');
   // A senha temporária gerada, mostrada UMA vez: o servidor só guarda o hash.
   const [temporaria, setTemporaria] = useState<string | null>(senhaGerada);
-  const [copiada, setCopiada] = useState(false);
+  const { copiado, copiar } = useCopiar(temporaria ?? '', 'Não foi possível copiar a senha. Selecione e copie à mão.');
   // O cadastro deu certo: a senha da conta nova está na tela, e os campos travam.
   const criada = !user && temporaria !== null;
 
@@ -61,15 +62,6 @@ export default function UserFormModal({ user, senhaGerada = null, onClose, onSub
       if (senha) setTemporaria(senha);
     } catch (err) {
       setError((err as Error).message);
-    }
-  };
-
-  const copiar = async () => {
-    try {
-      await navigator.clipboard.writeText(temporaria ?? '');
-      setCopiada(true);
-    } catch {
-      // Sem permissão de área de transferência: a senha está na tela para copiar à mão.
     }
   };
 
@@ -136,7 +128,7 @@ export default function UserFormModal({ user, senhaGerada = null, onClose, onSub
               <div className="flex items-center gap-2">
                 <code className="flex h-10 min-w-0 flex-1 select-all items-center overflow-x-auto rounded-md border border-border-sutil bg-bg-base px-3 font-mono text-sm text-text-primary">{temporaria}</code>
                 <Button variant="outline" onClick={() => void copiar()}>
-                  {copiada ? 'Copiada' : 'Copiar'}
+                  {copiado ? 'Copiada' : 'Copiar'}
                 </Button>
               </div>
               <p className="text-sm leading-relaxed text-text-secondary">

@@ -1,3 +1,4 @@
+import { useEffect, useState, useSyncExternalStore, type PointerEvent } from 'react';
 import { create } from 'zustand';
 
 // AS NOTIFICAÇÕES DO SISTEMA — o que entrou no lugar do `alert()`.
@@ -14,13 +15,13 @@ import { create } from 'zustand';
 // ele dispensa duas coisas que um provider exigiria — envolver a árvore e
 // separar o contexto do componente em arquivos diferentes só para o
 // `react-refresh` não reclamar. Aqui a fila é um store de módulo; quem desenha
-// é `components/Notificacoes.tsx`, montado UMA vez em `main.tsx`.
+// é `components/Notificacoes.tsx`, montado UMA vez em `App.tsx`.
 //
 // É CLIENT STATE pela definição do docs/referencia/arquitetura.md: só existe
 // no navegador, não persiste (uma notificação de ontem depois do F5 seria
 // ruído) e não responde pergunta de negócio nenhuma.
 
-export type TipoNotificacao = 'erro' | 'aviso' | 'sucesso';
+export type TipoNotificacao = 'erro' | 'aviso' | 'info' | 'sucesso';
 
 /** Um link no cartão — a licença que a recusa manda devolver. */
 export interface LinkDaNotificacao {
@@ -38,10 +39,12 @@ export interface Notificacao {
 
 // QUANTO TEMPO CADA UMA FICA. O erro fica o dobro do sucesso porque é o que se
 // LÊ: "fabricante em uso por 3 registros" pede para a pessoa entender e ir
-// atrás; "salvo" só confirma o que ela já esperava. O aviso fica no meio.
+// atrás; "salvo" só confirma o que ela já esperava. O aviso e a informação
+// ficam no meio.
 const DURACAO_MS: Record<TipoNotificacao, number> = {
   erro: 6000,
   aviso: 5000,
+  info: 5000,
   sucesso: 3000,
 };
 
@@ -50,9 +53,8 @@ const DURACAO_MS: Record<TipoNotificacao, number> = {
 // A conta é por caractere acima do que se lê de relance, com teto: o cartão
 // tem X, e um erro que ficasse um minuto cobrindo o canto viraria o defeito.
 //
-// Escolhido no lugar de pausar com o mouse em cima porque não depende de
-// mouse nem de foco: quem lê no celular ou sem tirar a mão do teclado ganha
-// o mesmo tempo.
+// Soma com a pausa de `usePrazoDoCartao`, e não a substitui: o tempo maior vale
+// para quem lê no celular ou sem tirar a mão do teclado, onde nada pausa.
 const CARACTERES_DE_RELANCE = 80;
 const MS_POR_CARACTERE = 50;
 const TETO_MS = 15_000;
@@ -64,16 +66,19 @@ function duracao(tipo: TipoNotificacao, mensagem: string): number {
   return Math.min(TETO_MS, base + excesso * MS_POR_CARACTERE);
 }
 
-// Um teto para a pilha. Uma rajada de falhas (servidor caiu, cinco cliques)
-// não pode cobrir a tela de cartões: as mais antigas saem para as novas
-// entrarem — a mais recente é a que diz o estado atual.
+// Um teto para a pilha. Sem link, só a resposta mais recente fica (`limpar`); quem
+// se acumula é o cartão com link, que espera alguém fechar. As mais antigas saem
+// para as novas entrarem.
 const MAXIMO_NA_TELA = 4;
 
 interface AcoesDeNotificacao {
   erro: (mensagem: string, links?: LinkDaNotificacao[]) => void;
   aviso: (mensagem: string) => void;
+  info: (mensagem: string) => void;
   sucesso: (mensagem: string) => void;
   fechar: (id: number) => void;
+  /** Tira a resposta que está na tela, para não valer pela do clique que acabou de sair. */
+  limpar: () => void;
 }
 
 interface EstadoDasNotificacoes {
@@ -85,32 +90,26 @@ interface EstadoDasNotificacoes {
   acoes: AcoesDeNotificacao;
 }
 
-// Os temporizadores ficam fora do estado: não são nada que a tela desenhe, e
-// guardá-los no store faria cada `setTimeout` notificar os assinantes.
-const temporizadores = new Map<number, ReturnType<typeof setTimeout>>();
 let proximoId = 1;
 
 export const useNotificacoes = create<EstadoDasNotificacoes>()((set) => {
   const fechar = (id: number) => {
-    clearTimeout(temporizadores.get(id));
-    temporizadores.delete(id);
     set((estado) => ({ fila: estado.fila.filter((item) => item.id !== id) }));
   };
 
+  // A RESPOSTA NOVA TIRA A ANTERIOR: o erro de uma tentativa não pode ficar ao lado
+  // do sucesso da seguinte, nem cinco cliques em fila empilhar cinco cartões. Só o
+  // cartão com link fica: ele espera alguém fechar.
+  const limpar = () => {
+    set((estado) => ({ fila: estado.fila.filter((item) => item.links) }));
+  };
+
   const mostrar = (tipo: TipoNotificacao, mensagem: string, links?: LinkDaNotificacao[]) => {
+    limpar();
     const id = proximoId++;
-    set((estado) => {
-      const fila = [...estado.fila, { id, tipo, mensagem, ...(links?.length ? { links } : {}) }];
-      // As que saem pelo teto levam o temporizador junto, senão ele dispararia
-      // um `fechar` para um id que já não está na fila.
-      for (const antiga of fila.slice(0, Math.max(0, fila.length - MAXIMO_NA_TELA))) {
-        clearTimeout(temporizadores.get(antiga.id));
-        temporizadores.delete(antiga.id);
-      }
-      return { fila: fila.slice(-MAXIMO_NA_TELA) };
-    });
-    if (links?.length) return;
-    temporizadores.set(id, setTimeout(() => fechar(id), duracao(tipo, mensagem)));
+    set((estado) => ({
+      fila: [...estado.fila, { id, tipo, mensagem, ...(links?.length ? { links } : {}) }].slice(-MAXIMO_NA_TELA),
+    }));
   };
 
   return {
@@ -118,8 +117,10 @@ export const useNotificacoes = create<EstadoDasNotificacoes>()((set) => {
     acoes: {
       erro: (mensagem, links) => mostrar('erro', mensagem, links),
       aviso: (mensagem) => mostrar('aviso', mensagem),
+      info: (mensagem) => mostrar('info', mensagem),
       sucesso: (mensagem) => mostrar('sucesso', mensagem),
       fechar,
+      limpar,
     },
   };
 });
@@ -132,4 +133,38 @@ export const useNotificacoes = create<EstadoDasNotificacoes>()((set) => {
  */
 export function useNotificacao(): AcoesDeNotificacao {
   return useNotificacoes((estado) => estado.acoes);
+}
+
+function ouvirVisibilidade(avisar: () => void): () => void {
+  document.addEventListener('visibilitychange', avisar);
+  return () => document.removeEventListener('visibilitychange', avisar);
+}
+
+/**
+ * O prazo de um cartão: para com o mouse em cima, com o foco dentro dele e com a
+ * página fora de vista, e recomeça inteiro ao soltar. Devolve os eventos do cartão.
+ *
+ * O prazo mora no cartão montado, e não no store: quem sai da tela leva o
+ * temporizador junto.
+ */
+export function usePrazoDoCartao({ id, tipo, mensagem, links }: Notificacao) {
+  const fechar = useNotificacoes((estado) => estado.acoes.fechar);
+  const [comMouse, setComMouse] = useState(false);
+  const [comFoco, setComFoco] = useState(false);
+  const paginaOculta = useSyncExternalStore(ouvirVisibilidade, () => document.hidden);
+  const segurado = comMouse || comFoco || paginaOculta;
+
+  useEffect(() => {
+    if (links || segurado) return undefined;
+    const temporizador = setTimeout(() => fechar(id), duracao(tipo, mensagem));
+    return () => clearTimeout(temporizador);
+  }, [fechar, id, links, mensagem, segurado, tipo]);
+
+  return {
+    // Só o mouse: o toque não tem saída, e o cartão ficaria preso depois de um toque.
+    onPointerEnter: (evento: PointerEvent) => setComMouse(evento.pointerType === 'mouse'),
+    onPointerLeave: () => setComMouse(false),
+    onFocus: () => setComFoco(true),
+    onBlur: () => setComFoco(false),
+  };
 }

@@ -248,7 +248,7 @@ describe('AssetModel — as referências são conferidas antes de gravar', () =>
       name: 'Latitude Cópia', manufacturerId: fabricanteId, categoryId: categoriaId, modelNumber: 'LAT-5440',
     });
     expect(status).toBe(409);
-    // A colisão crua diria só "Registro já existe" — sem dizer QUAL modelo.
+    // A colisão crua diria só "Registro já existe." — sem dizer QUAL modelo.
     expect(body.error).toContain('Latitude Original');
   });
 });
@@ -301,7 +301,7 @@ describe('URL do fabricante', () => {
   it('recusa `javascript:` com 422', async () => {
     const { status, body } = await api.post('/api/manufacturers', { name: 'Fabricante JS', url: 'javascript:alert(1)' });
     expect(status).toBe(422);
-    expect(JSON.stringify(body)).toMatch(/site/);
+    expect(JSON.stringify(body)).toMatch(/site/i);
   });
 
   it('recusa o endereço sem esquema com 422', async () => {
@@ -319,7 +319,7 @@ describe('URL do fabricante', () => {
       name: 'Fabricante do site ruim', url: 'javascript:alert(1)',
     });
     expect(status).toBe(422);
-    expect(JSON.stringify(body)).toContain('site inválido');
+    expect(JSON.stringify(body)).toContain('Site: use o endereço completo');
   });
 });
 

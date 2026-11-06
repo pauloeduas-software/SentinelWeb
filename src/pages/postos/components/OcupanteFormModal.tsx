@@ -4,6 +4,7 @@ import ReferenceSelect from '../../../components/ReferenceSelect';
 import { Campo } from '../../../components/ui/campo';
 import { Input, Textarea } from '../../../components/ui/input';
 import { hojeNoCampoDeData } from '../../../helpers/format.helper';
+import { useNotificacao } from '../../../hooks/useNotificacao';
 import { montarOcupante } from '../helpers/ocupantes.helper';
 import type { OccupantInput } from '../../../queries/occupancy.queries';
 
@@ -24,6 +25,7 @@ export default function OcupanteFormModal({ nomeDoPosto, onClose, onSubmit }: Oc
   const [shift, setShift] = useState('');
   const [startedAt, setStartedAt] = useState('');
   const [notes, setNotes] = useState('');
+  const notificar = useNotificacao();
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -37,6 +39,7 @@ export default function OcupanteFormModal({ nomeDoPosto, onClose, onSubmit }: Oc
       // Fechar só depois do sucesso: com erro, o que foi digitado continua na
       // tela para ser corrigido em vez de redigitado.
       onClose();
+      notificar.sucesso('Ocupante adicionado.');
     } catch (falha) {
       setErro((falha as Error).message);
     } finally {

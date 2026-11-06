@@ -65,7 +65,7 @@ async function lerPostoAtual(assetId: string): Promise<PostoAtual | null> {
  */
 export async function findAssetById(id: string, podeVerCusto: boolean): Promise<AssetDetail> {
   const ativo = await buscarAtivo(id, podeVerCusto);
-  if (!ativo) throw new AppError('Registro não encontrado', 404);
+  if (!ativo) throw new AppError('Ativo não encontrado.', 404);
 
   const [posse, postoAtual] = await Promise.all([resolverResponsaveis(prisma, id), lerPostoAtual(id)]);
 

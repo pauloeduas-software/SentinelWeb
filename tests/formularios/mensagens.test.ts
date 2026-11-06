@@ -23,6 +23,25 @@ afterAll(async () => {
   await api.fechar();
 });
 
+describe('a frase do limite', () => {
+  it('sai com o ponto de milhar', async () => {
+    const quantidade = await api.post<{ error: string }>('/api/stock/items', { name: 'Limite', categoryId: modelId, qty: 100_001 });
+    expect(quantidade.body.error).toBe('Quantidade: máximo de 100.000.');
+
+    const chave = await api.post<{ error: string }>('/api/licenses', {
+      name: 'Limite', categoryId: modelId, seatsTotal: 1, keys: [{ productKey: 'CHAVE', seats: 100_001 }],
+    });
+    expect(chave.body.error).toContain('cobre no máximo 100.000');
+  });
+
+  it('o campo ativo responde em português, sem true nem false', async () => {
+    const { body } = await api.put<{ error: string }>(`/api/stock/items/${modelId}`, {
+      isActive: 'sim', updatedAt: new Date().toISOString(),
+    });
+    expect(body.error).toBe('Ativo deve ser verdadeiro ou falso.');
+  });
+});
+
 describe('tipo errado', () => {
   it('valor de compra em número diz o campo, em português', async () => {
     const { status, body } = await api.post<{ error: string }>('/api/assets', {
@@ -30,7 +49,7 @@ describe('tipo errado', () => {
     });
 
     expect(status).toBe(422);
-    expect(body.error).toBe('valor de compra: use um valor como 1234.50');
+    expect(body.error).toBe('Valor de compra: use um valor como 1234,50.');
   });
 
   it('o que o schema não deu frase própria cai na mensagem da zod em português', async () => {
@@ -38,7 +57,7 @@ describe('tipo errado', () => {
     const { status, body } = await api.post<{ error: string }>('/api/workstations', ['Posto']);
 
     expect(status).toBe(422);
-    expect(body.error).toBe('Entrada inválida: esperava um objeto, recebeu um vetor');
+    expect(body.error).toBe('Entrada inválida: esperava um objeto, recebeu um vetor.');
   });
 });
 
@@ -48,8 +67,8 @@ describe('select obrigatório', () => {
     const vazio = await api.post<{ error: string }>('/api/workstations', { name: 'Posto sem lugar', locationId: '' });
 
     expect(semCampo.status).toBe(422);
-    expect(semCampo.body.error).toBe('localização: campo obrigatório');
-    expect(vazio.body.error).toBe('localização: campo obrigatório');
+    expect(semCampo.body.error).toBe('Localização: campo obrigatório.');
+    expect(vazio.body.error).toBe('Localização: campo obrigatório.');
   });
 
   it('localização que não é uuid continua sendo identificador inválido', async () => {
@@ -58,6 +77,6 @@ describe('select obrigatório', () => {
     });
 
     expect(status).toBe(422);
-    expect(body.error).toBe('localização: identificador inválido');
+    expect(body.error).toBe('Localização: identificador inválido.');
   });
 });

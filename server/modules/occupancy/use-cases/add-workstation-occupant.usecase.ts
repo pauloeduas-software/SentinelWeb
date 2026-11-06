@@ -21,7 +21,7 @@ interface AddOccupantData {
 const CAMPOS_AUDITADOS = ['workstationId', 'personId', 'shift', 'startedAt', 'notes'] as const;
 
 /** A mesma frase nos dois caminhos — ver a nota sobre a dupla guarda abaixo. */
-const JA_OCUPA = 'Esta pessoa já ocupa este posto.';
+const JA_OCUPA = 'Este colaborador já ocupa este posto.';
 
 /**
  * O DIA EM QUE A OCUPAÇÃO COMEÇA contra a última da mesma pessoa no mesmo posto
@@ -82,7 +82,7 @@ async function inicioDaOcupacao(
  * é READ COMMITTED, não serializável —, então a checagem sozinha deixa passar a
  * corrida e o índice único parcial
  * `workstation_occupants_um_aberto_por_pessoa_posto` é quem de fato garante a
- * regra. Mas o `P2002` cru vira "Registro já existe" no error-handler
+ * regra. Mas o `P2002` cru vira "Registro já existe." no error-handler
  * (infra/errors/error-handler.ts), que não diz nada a quem está na tela. Então:
  * a checagem é pela MENSAGEM, o índice é a GARANTIA, e o `catch` traduz o
  * segundo para a primeira.

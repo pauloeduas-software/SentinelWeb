@@ -20,7 +20,7 @@ export async function getLicense(id: string, podeVerCusto: boolean): Promise<Lic
     select: licenseSelect(podeVerCusto),
   }) as LinhaDeLicenca | null;
 
-  if (!licenca) throw new AppError('Nenhuma licença com este identificador.', 404);
+  if (!licenca) throw new AppError('Licença não encontrada.', 404);
 
   const [uso, keys] = await Promise.all([contarUsoDe(prisma, id), listarChaves(prisma, id)]);
   return { ...paraResposta(licenca, uso), keys };

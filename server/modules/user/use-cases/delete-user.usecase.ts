@@ -44,7 +44,7 @@ export async function deleteUser(id: string, sessaoId: string, ator: Ator): Prom
     const antes = await tx.user.findUnique({ where: { id }, select: USER_AUDIT_SELECT });
     const { count } = await tx.user.deleteMany({ where: { id } });
 
-    if (count === 0 || !antes) throw new AppError('Registro não encontrado', 404);
+    if (count === 0 || !antes) throw new AppError('Usuário não encontrado.', 404);
 
     // A conta sai DE VERDADE: o retrato é o que sobra de quem ela era.
     await recordAudit(tx, {

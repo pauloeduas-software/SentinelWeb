@@ -34,7 +34,7 @@ export async function createUser(data: CreateUserData, ator: Ator) {
   const passwordHash = await hashSenha(data.password ?? temporaryPassword ?? '');
 
   return prisma.$transaction(async (tx) => {
-    // O `@unique` do e-mail pegaria a colisão, mas com o "Registro já existe"
+    // O `@unique` do e-mail pegaria a colisão, mas com o "Registro já existe."
     // genérico do P2002; conferir antes devolve a frase que diz o quê.
     const exists = await tx.user.findUnique({ where: { email: data.email } });
     if (exists) throw new AppError('E-mail já está em uso.', 409);

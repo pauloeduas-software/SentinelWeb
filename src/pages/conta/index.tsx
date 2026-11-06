@@ -22,7 +22,7 @@ function Secao({ titulo, children }: { titulo: string; children: ReactNode }) {
 }
 
 export default function ContaPage() {
-  const { nome, changeNome, salvarNome, erro, salvo, salvando, alterado, trocarSenha } = useConta();
+  const { nome, changeNome, salvarNome, erro, salvando, alterado, trocarSenha } = useConta();
 
   return (
     <div className="motion-safe:animate-fade-in flex max-w-xl flex-col pb-6">
@@ -36,12 +36,9 @@ export default function ContaPage() {
             <Campo rotulo="Nome completo" obrigatorio>
               <Input required value={nome} onChange={(e) => changeNome(e.target.value)} />
             </Campo>
-            <div className="flex items-center gap-4">
-              <Button type="submit" disabled={salvando || !alterado}>
-                {salvando ? 'Salvando…' : 'Salvar'}
-              </Button>
-              {salvo && <span role="status" className="text-sm text-status-success">Nome salvo.</span>}
-            </div>
+            <Button type="submit" disabled={salvando || !alterado}>
+              {salvando ? 'Salvando…' : 'Salvar'}
+            </Button>
           </form>
         </Secao>
 

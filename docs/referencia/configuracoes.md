@@ -112,11 +112,11 @@ entrada. As diferenças são de propósito:
   algo nele recebe o 409 da exclusão.
 - O Ativo não se desativa: os status dele são outros, e o fim é a baixa
   ([`baixa.md`](baixa.md)). O Excluir dele manda para a lixeira, como o do
-  Colaborador, com a mesma frase: `Excluir "X"? Vai para a lixeira e pode ser
-  restaurado.`
+  Colaborador, com a mesma frase: `Excluir "X"? Se não estiver em uso, vai para a
+  lixeira e pode ser restaurado.`
 
 Erros de ação (exclusão recusada, desativação recusada) aparecem numa
-**notificação do sistema**, no alto, ao centro, e somem sozinhos
+**notificação do sistema**, no canto inferior direito, e somem sozinhos
 (`src/components/Notificacoes.tsx`, `src/hooks/useNotificacao.ts`). A recusa do
 colaborador que ainda tem licença diz quais, e a notificação traz um link para cada uma — o
 Devolver mora no detalhe da licença; com link, ela fica até alguém fechar.
@@ -295,7 +295,7 @@ segue o grafo de `asset/use-cases/lock-asset.usecase.ts`.
 | trocar o tipo do status × editar/entregar/devolver ativo com ele | ativo entregue com status de estoque | idem, na linha do status |
 | devolver o mesmo ativo duas vezes, ou devolver atrasado depois de uma entrega nova | posse errada fechada, ativo entregue marcado "Disponível" | a devolução trava o ativo e só fecha a posse ABERTA |
 | trocar o tipo ou excluir dois status do mesmo tipo automático | nenhum "Disponível" ou "Em uso" sobrando | `FOR UPDATE` em todos os status do tipo, na mesma ordem |
-| excluir a localização, o fabricante ou o modelo × cadastrar algo nele; excluir o motivo de baixa × dar baixa com ele | o cadastro aprovado caía no `Registro está em uso por outro cadastro` da FK | `FOR SHARE` na leitura (`assertLocalExiste`, `lerFabricanteTravado`, `lerModeloTravado`, `assertMotivoDaBaixaExiste`): quem lê depois recebe o 404, e a exclusão que vem depois é recusada pela FK |
+| excluir a localização, o fabricante ou o modelo × cadastrar algo nele; excluir o motivo de baixa × dar baixa com ele | o cadastro aprovado caía no `Registro está em uso por outro cadastro.` da FK | `FOR SHARE` na leitura (`assertLocalExiste`, `lerFabricanteTravado`, `lerModeloTravado`, `assertMotivoDaBaixaExiste`): quem lê depois recebe o 404, e a exclusão que vem depois é recusada pela FK |
 | desativar o colaborador × entregar a ele ou pô-lo num posto | desativado com posse aberta | `FOR UPDATE` na linha da pessoa nos dois lados (`lock-person.usecase.ts`) |
 
 A exceção aceita: dois cadastros **simultâneos** de "Dell" e "dell" passam os dois

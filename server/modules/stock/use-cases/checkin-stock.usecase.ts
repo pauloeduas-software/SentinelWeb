@@ -38,7 +38,7 @@ export async function checkinStock(movementId: string, data: Partial<CheckinStoc
       where: { id: movementId },
       select: { ...STOCK_MOVEMENT_SELECT, itemName: true, item: { select: { name: true } } },
     });
-    if (!unidade) throw new AppError('Nenhuma entrega de estoque com este identificador.', 404);
+    if (!unidade) throw new AppError('Entrega de estoque não encontrada.', 404);
     // O CONSUMÍVEL (AJ) não volta: a entrega dele já nasce fechada.
     if (unidade.returnKind === 'CONSUMED') {
       throw new AppError(

@@ -20,7 +20,7 @@ export async function listAssetAssignments(assetId: string) {
   // `findFirst` pelo escopo da lixeira: o histórico do ativo apagado só volta
   // com ele, pela restauração.
   const ativo = await prisma.asset.findFirst({ where: { id: assetId }, select: { id: true } });
-  if (!ativo) throw new AppError('Registro não encontrado', 404);
+  if (!ativo) throw new AppError('Ativo não encontrado.', 404);
 
   return prisma.assignment.findMany({
     where: { assetId },

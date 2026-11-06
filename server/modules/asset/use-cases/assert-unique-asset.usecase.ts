@@ -16,7 +16,7 @@ interface Candidato {
  * A unicidade é um índice PARCIAL (`WHERE "deletedAt" IS NULL`) escrito à mão na
  * migration, e o Prisma não o conhece: sem esta checagem, a colisão chegaria
  * como violação crua do banco. Ela vira 409 no error-handler de qualquer forma
- * (P2002), mas com a mensagem genérica "Registro já existe" — que não diz se o
+ * (P2002), mas com a mensagem genérica "Registro já existe." — que não diz se o
  * problema foi a etiqueta ou o número de série.
  *
  * `findFirst`, e não `findUnique`: o índice parcial não é uma chave única do

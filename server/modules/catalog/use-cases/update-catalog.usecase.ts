@@ -21,7 +21,7 @@ export async function updateCatalog(
     const delegate = spec.delegate(tx);
 
     const antes = await delegate.findFirst({ where: { id }, select: spec.select });
-    if (!antes) throw new AppError('Registro não encontrado', 404);
+    if (!antes) throw new AppError(spec.naoEncontrado, 404);
     // Já aqui, sem trava, para o formulário velho receber ESTA frase, e não a
     // de uma regra que ele só quebra por estar velho. A que vale é a de baixo.
     assertVersaoLida(antes.updatedAt as Date, lida, String(antes.name));
@@ -35,7 +35,7 @@ export async function updateCatalog(
     // passo antes — e depois das do `beforeWrite`, para não mudar a ordem delas.
     await tx.$queryRaw`SELECT id FROM ${Prisma.raw(`"${spec.tabela}"`)} WHERE id = ${id}::uuid FOR NO KEY UPDATE`;
     const travado = await delegate.findFirst({ where: { id }, select: spec.select });
-    if (!travado) throw new AppError('Registro não encontrado', 404);
+    if (!travado) throw new AppError(spec.naoEncontrado, 404);
     assertVersaoLida(travado.updatedAt as Date, lida, String(travado.name));
 
     const depois = await delegate.update({ where: { id }, data: campos, select: spec.select });

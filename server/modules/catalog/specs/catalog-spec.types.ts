@@ -54,6 +54,8 @@ export interface CatalogSpec {
   tabela: string;
   /** Nome em português, para a mensagem de erro do 409 */
   rotulo: string;
+  /** A frase do 404: é ela que acerta o gênero, que o `rotulo` não sabe. */
+  naoEncontrado: string;
 
   delegate: (client: ClienteCatalogo) => CatalogDelegate;
 

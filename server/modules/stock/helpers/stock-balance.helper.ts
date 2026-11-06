@@ -164,6 +164,6 @@ export function assertDisponivel(
 
 /** Por que o total não desce até `novoTotal`: o piso é o que está em uso. A frase da licença. */
 export function fraseDoPiso(nome: string, novoTotal: number, emUso: number): string {
-  return `Não dá para reduzir "${nome}" para ${novoTotal}: ${quantas(emUso, 'está', 'estão')} em uso. `
+  return `Não é possível reduzir "${nome}" para ${novoTotal}: ${quantas(emUso, 'está', 'estão')} em uso. `
     + 'Devolva para liberar.';
 }

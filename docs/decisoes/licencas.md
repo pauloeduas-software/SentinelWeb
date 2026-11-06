@@ -443,8 +443,8 @@ handshake, com a nota de que o servidor não guarda — mesma escolha do A para 
   não é conferida**: quantas estavam em uso naquele dia fica de fora, e a conta de livres é
   sempre a de agora.
 - **O valor da compra tem máscara na tela** (`R$ 1.234,56`, enviado como `1234.56`). O servidor
-  continua sem ponto de milhar, e a recusa diz o campo: `valor de compra: use um valor como
-  1234.50`.
+  continua sem ponto de milhar, e a recusa diz o campo: `Valor de compra: use um valor como
+  1234,50.`.
 - **O mesmo alvo não recebe a mesma licença duas vezes** enquanto a primeira está aberta
   (invariante 23, índices únicos parciais). O caso real que pediria duas — servidor licenciado por
   núcleo — não é deste inventário; se vier, é um campo de quantidade na entrega.

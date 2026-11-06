@@ -38,7 +38,7 @@ export async function updateCheckoutKey(checkoutId: string, data: CheckoutKeyDat
     where: { id: checkoutId },
     select: { licenseId: true, licenseName: true, license: { select: { name: true } }, ...ALVO_SELECT },
   });
-  if (!previa) throw new AppError('Nenhuma entrega de licença com este identificador.', 404);
+  if (!previa) throw new AppError('Entrega de licença não encontrada.', 404);
   // A da licença excluída (AG) é sempre devolvida: a em uso segura a exclusão.
   const licenseId = previa.licenseId;
   if (!licenseId) throw jaDevolvida(previa.licenseName, previa);

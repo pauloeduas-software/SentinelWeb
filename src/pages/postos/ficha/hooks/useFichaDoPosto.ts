@@ -44,6 +44,7 @@ export function useFichaDoPosto() {
     if (!id) return;
     await editar.mutateAsync({ id, data: dados });
     setEditando(false);
+    notificar.sucesso('Posto salvo.');
   };
 
   // A mesma frase da linha da lista (`usePostos`). Sem Desativar (AN): o posto com
@@ -61,6 +62,7 @@ export function useFichaDoPosto() {
       await excluir.mutateAsync(posto.id);
       // Sem os filtros: o posto excluído podia ser o último da página guardada neles.
       navigate('/postos');
+      notificar.sucesso('Posto excluído.');
     } catch (falha) {
       notificar.erro((falha as Error).message, linksDoErro(falha));
     }

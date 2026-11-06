@@ -147,9 +147,9 @@ resposta de erro.
 |---|---|---|
 | `AppError('Máquina não encontrada.', 404)` | 404 + a mensagem | use-case |
 | `AppError('O agente de … não está conectado agora.', 409)` | 409 + a mensagem | use-case |
-| Prisma `P2025` (não achou) | 404 "Registro não encontrado" | error-handler |
-| Prisma `P2002` (unique) | 409 "Registro já existe" | error-handler |
-| `ZodError` (corpo, query ou parâmetro inválido) | 422 + a frase dos primeiros campos | error-handler (`zod-error.ts`) |
+| Prisma `P2025` (não achou) | 404 "Registro não encontrado." | error-handler |
+| Prisma `P2002` (unique) | 409 "Registro já existe." | error-handler |
+| `ZodError` (corpo, query ou parâmetro inválido) | 422 + a frase dos primeiros campos, com maiúscula e ponto | error-handler (`zod-error.ts`) |
 | JSON malformado / corpo grande | 400 / 413 | error-handler |
 | Qualquer outro erro | 500 genérico + log completo | error-handler |
 

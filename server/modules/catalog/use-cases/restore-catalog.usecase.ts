@@ -20,7 +20,7 @@ export async function restoreCatalog(
     const delegate = spec.delegate(tx);
 
     const naLixeira = await delegate.findFirst({ where: { id, deletedAt: { not: null } }, select: { id: true } });
-    if (!naLixeira) throw new AppError('Registro não está na lixeira.', 404);
+    if (!naLixeira) throw new AppError(`${spec.rotulo.charAt(0).toUpperCase()}${spec.rotulo.slice(1)} não está na lixeira.`, 404);
 
     await spec.beforeRestore?.(tx, id);
 

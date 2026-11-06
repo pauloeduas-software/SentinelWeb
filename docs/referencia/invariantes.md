@@ -36,7 +36,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 3 | O tipo de um status ou de uma categoria em uso não muda | **aplicação** — `status-label.spec.ts`, `category.spec.ts`, com a linha travada | 409 `Não é possível mudar o tipo: status em uso por 200 registros.` |
 | 4 | Estado × posse: ativo entregue não fica `DEPLOYABLE` | **aplicação** — `assert-status-posse.usecase.ts` | 409 `"Disponível" é um status de estoque, e este ativo está entregue. Faça a devolução antes de mudar o status.` |
 | 5 | A forma da posse: um alvo coerente, devolução depois da entrega — e só a posse **devolvida** de um posto excluído fica sem FK, com o nome e o id por escrito | **banco** — três `CHECK` | 422 com frase própria, porque a API recusa antes; quem escreve direto no banco (seed, `psql`) recebe o erro do `CHECK` |
-| 6 | Colaborador desativado ou na lixeira não tem posse direta, **licença**, **unidade de estoque** nem ocupação aberta | **aplicação** — 409 na desativação (`personSpec.beforeWrite`), na exclusão (`personSpec.motivoParaNaoExcluir`), no `checkout` e no cadastro de ocupante + trava de linha | 409 `Este colaborador ainda responde por 2 ativos (ATV-00012 e ATV-00013), tem 1 licença (Office), está com 3 unidades de estoque (Mouse USB ×2 e Teclado) e ocupa 1 posto (Mesa 1). Devolva o que está com ele e encerre as ocupações antes de excluir.` (ou *antes de desativar*), com os computadores, as licenças, os itens e os postos como `refs` — a tela põe um link em cada um |
+| 6 | Colaborador desativado ou na lixeira não tem posse direta, **licença**, **unidade de estoque** nem ocupação aberta | **aplicação** — 409 na desativação (`personSpec.beforeWrite`), na exclusão (`personSpec.motivoParaNaoExcluir`), no `checkout` e no cadastro de ocupante + trava de linha | 409 `Este colaborador ainda responde por 2 ativos (ATV-00012 e ATV-00013), tem 1 licença (Office), está com 3 unidades de estoque (Mouse USB ×2 e Teclado) e ocupa 1 posto (Mesa 1). Devolva o que está com ele e encerre a ocupação antes de excluir.` (ou *antes de desativar*), com os computadores, as licenças, os itens e os postos como `refs` — a tela põe um link em cada um |
 | 9 | A forma da entrega de licença: o alvo é UM (pessoa **ou** ativo), a devolução vem depois da entrega, e toda entrega em uso aponta para a licença | **banco** — três `CHECK` em `license_checkouts`, com a FK `Restrict` | 422 com o campo que falta (a API recusa antes, com frase própria) |
 | 12 | Uma máquina é no máximo um ativo, e um ativo no máximo uma máquina | **banco** — `@unique` em `Endpoint.assetId` | 409 `Este ativo já está vinculado a outra máquina. Desfaça aquele vínculo antes, pela aba Máquina do ativo.` |
 | 13 | A mesma sugestão não empilha na fila | **banco** — índice único parcial `sugestao_pendente_por_alvo` | nada: o job trata o `P2002` como "outro já criou" |
@@ -46,7 +46,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 22 | O que está em uso nunca passa da quantidade comprada | **aplicação** — a entrega e a edição contam com a linha da licença travada (`lock-license.usecase.ts`) | 409 `Sem licença livre em "Office 2024": 5 compradas, 5 em uso. Devolva uma entrega ou aumente a quantidade comprada.` |
 | 23 | Uma entrega aberta por alvo e licença | **banco** — dois índices únicos parciais, um por alvo. No passado, a entrega que se sobrepõe à última devolução do mesmo alvo é só da **aplicação** (422) | 409 `Laura Souza já está com "Office 2024".` (a API confere antes) |
 | 24 | A chave da entrega é uma das chaves da licença; nenhuma chave vai para mais entregas abertas do que cobre; e as chaves cobrem no máximo o que foi comprado | **banco** — a FK composta (chave, licença) e os `CHECK`s da chave. A conta de cada chave e a soma contra o comprado são da **aplicação**, com a licença travada | 409 `Esta chave já está em outra entrega aberta de "Office 2024". Escolha outra.` / 422 `As chaves cobrem 12, mais do que 10 compradas em "Office 2024". …` |
-| 25 | A forma da entrega de estoque, e o que está em uso nunca passa do total | **banco** — o CHECK do total (`stock_items_qty_nao_negativa`), os cinco `CHECK` da linha e a FK `Restrict` para o item. A conta contra o total é da **aplicação**, com a linha do item travada | 409 `Sem unidade disponível de "Mouse USB": 10 no total, 10 em uso. Devolva uma unidade ou aumente o total.` / `Não dá para reduzir "Mouse USB" para 1: 2 estão em uso. Devolva para liberar.` |
+| 25 | A forma da entrega de estoque, e o que está em uso nunca passa do total | **banco** — o CHECK do total (`stock_items_qty_nao_negativa`), os cinco `CHECK` da linha e a FK `Restrict` para o item. A conta contra o total é da **aplicação**, com a linha do item travada | 409 `Sem unidade disponível de "Mouse USB": 10 no total, 10 em uso. Devolva uma unidade ou aumente o total.` / `Não é possível reduzir "Mouse USB" para 1: 2 estão em uso. Devolva para liberar.` |
 
 ---
 
@@ -491,7 +491,7 @@ trava só a linha da entrega — ela só diminui o que está em uso, e travar a 
 entrega fecharia um ciclo com a troca de chave, que trava a licença e depois a linha da
 entrega.
 
-**A frase diz quantas estão em uso**, e que devolver libera: `Não dá para reduzir "Office
+**A frase diz quantas estão em uso**, e que devolver libera: `Não é possível reduzir "Office
 2021" para 6: 7 estão em uso. Devolva para liberar.`
 
 > **Provado em** `tests/licencas/corridas.test.ts` (oito entregas a oito pessoas diferentes
@@ -553,7 +553,7 @@ uma, não é vazia, e não repete na licença (`license_keys_licenseId_productKe
 
 **A frase diz o que fazer**: `Esta chave de "Office 2024" cobre 2, e as 2 estão em uso. Escolha
 outra.`; `Todas as chaves de "Office 2024" estão em uso. Cadastre a chave da próxima licença, em
-Editar, antes de entregar.`; `Não dá para reduzir "Office 2024" para 3: as chaves cobrem 4. Tire
+Editar, antes de entregar.`; `Não é possível reduzir "Office 2024" para 3: as chaves cobrem 4. Tire
 uma chave ou diminua o que ela cobre antes.`
 
 > **Provado em** `tests/licencas/invariantes.test.ts` (a chave de outra licença é recusada pela

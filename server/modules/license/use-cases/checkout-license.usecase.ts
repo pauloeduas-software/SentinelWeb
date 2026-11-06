@@ -44,7 +44,7 @@ function assertAlvoCoerente(data: CheckoutLicenseData): AlvoDaEntrega {
 
   if (assignedPersonId && assignedAssetId) {
     throw new AppError(
-      'Uma entrega tem UM alvo: informe o colaborador OU o ativo, nunca os dois.',
+      'Uma entrega tem um alvo só: informe o colaborador ou o ativo, nunca os dois.',
       422,
     );
   }
@@ -53,8 +53,8 @@ function assertAlvoCoerente(data: CheckoutLicenseData): AlvoDaEntrega {
   if (assignedAssetId) return { tipo: 'ASSET', id: assignedAssetId };
 
   throw new AppError(
-    'A entrega de uma licença exige um alvo: assignedPersonId (colaborador) ou assignedAssetId (ativo). '
-    + 'Posto de trabalho não é alvo de licença — entregue ao ativo que está na mesa.',
+    'A entrega de uma licença precisa de um colaborador ou de um ativo. '
+    + 'Posto não recebe licença: entregue ao ativo que está na mesa.',
     422,
   );
 }
@@ -217,8 +217,7 @@ export async function checkoutLicense(licenseId: string, data: CheckoutLicenseDa
     // ORDEM DE TRAVAMENTO: **alvo, depois licença** (`lock-license.usecase.ts`).
     // A trava do alvo protege a contagem que a desativação do colaborador e a
     // baixa do ativo leem; a da licença, a conta de livres.
-    // O ativo inexistente diz "Ativo", como o colaborador diz "Colaborador" — e
-    // não o "Registro não encontrado" das telas de ativo.
+    // O ativo inexistente diz "Ativo", como o colaborador diz "Colaborador".
     if (alvo.tipo === 'PERSON') await travarPessoaOuFalhar(tx, alvo.id);
     else if (!(await travarAtivo(tx, alvo.id))) throw new AppError('Ativo não encontrado.', 404);
 

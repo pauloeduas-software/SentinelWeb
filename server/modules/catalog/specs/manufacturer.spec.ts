@@ -6,6 +6,7 @@ export const manufacturerSpec: CatalogSpec = {
   entityType: 'Manufacturer',
   tabela: 'manufacturers',
   rotulo: 'fabricante',
+  naoEncontrado: 'Fabricante não encontrado.',
 
   delegate: (client) => client.manufacturer as unknown as CatalogDelegate,
   createSchema: createManufacturerSchema,

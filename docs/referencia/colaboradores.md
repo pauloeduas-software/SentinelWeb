@@ -75,7 +75,8 @@ ficha (404).
 
 Só não se exclui quem responde por algo **agora** (invariante 6) — 409 com a
 conta, a mesma da desativação, e cada coisa pelo nome:
-`Este colaborador ainda responde por 1 ativo (ATV-00012) e ocupa 1 posto (Mesa 1). Devolva o que está com ele e encerre as ocupações antes de excluir.`
+`Este colaborador ainda responde por 1 ativo (ATV-00012) e ocupa 1 posto (Mesa 1). Devolva o que está com ele e encerre a ocupação antes de excluir.`
+O pedido cita só o que existe: sem posto, ele não fala em ocupação; sem entrega, não fala em devolver.
 O computador, a licença, o item e o posto citados vão também como `refs`, e o
 aviso põe um link em cada um, na ordem da frase.
 

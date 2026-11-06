@@ -100,7 +100,7 @@ test('Excluir na ficha volta para a lista, sem o posto', async ({ page, request 
 test('o link de um posto que não existe avisa e leva de volta à lista', async ({ page }) => {
   await page.goto('/postos/00000000-0000-4000-8000-000000000000');
 
-  await expect(page.getByText('Posto de trabalho não encontrado.')).toBeVisible();
+  await expect(page.getByText('Posto não encontrado.')).toBeVisible();
   await page.getByRole('link', { name: 'Voltar para Postos' }).click();
   await expect(tituloDaPagina(page, 'Postos')).toBeVisible();
 });

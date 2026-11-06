@@ -77,6 +77,7 @@ describe('excluir posto — só o presente segura', () => {
     expect(status).toBe(409);
     expect(body.error).toMatch(/^Este posto ainda tem 1 ativo\. /);
     expect(body.error).toContain('Tire o que está nele agora');
+    expect(body.error).toMatch(/: devolva o que foi entregue\.$/);
   });
 
   it('exclui o que só tem entrega JÁ DEVOLVIDA, e o histórico do ativo continua com o nome', async () => {

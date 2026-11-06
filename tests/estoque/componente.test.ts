@@ -68,7 +68,7 @@ describe('a categoria decide para onde o item vai', () => {
     const pc = await maquina('Dois alvos');
     const duas = await entregar(ram.id, { targetType: 'ASSET', targetAssetId: pc.id, targetPersonId: cenario.laura });
     expect(duas.status).toBe(422);
-    expect(duas.body.error).toMatch(/UM alvo/);
+    expect(duas.body.error).toMatch(/um alvo só/);
     expect((await entregar(ram.id, { targetType: 'ASSET' })).status).toBe(422);
   });
 

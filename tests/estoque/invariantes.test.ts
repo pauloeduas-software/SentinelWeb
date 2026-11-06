@@ -130,7 +130,7 @@ describe('o alvo da entrega é UM — e quem garante é o banco', () => {
       targetType: 'PERSON', targetPersonId: cenario.laura, targetWorkstationId: cenario.mesa1,
     });
     expect(duas.status).toBe(422);
-    expect(duas.body.error).toMatch(/UM alvo/);
+    expect(duas.body.error).toMatch(/um alvo só/);
 
     expect((await entregar(dock.id, { targetType: 'WORKSTATION' })).status).toBe(422);
   });
@@ -203,7 +203,7 @@ describe('o total é campo da edição, como a quantidade comprada da licença',
 
     const abaixo = await api.put<{ error: string }>(`/api/stock/items/${fone.id}`, { qty: 1 });
     expect(abaixo.status).toBe(409);
-    expect(abaixo.body.error).toBe('Não dá para reduzir "Fone do total" para 1: 2 estão em uso. Devolva para liberar.');
+    expect(abaixo.body.error).toBe('Não é possível reduzir "Fone do total" para 1: 2 estão em uso. Devolva para liberar.');
     expect((await lerItem(fone.id)).body.qty).toBe(8);
 
     // Igual ao que está em uso cabe: o disponível fica em zero.

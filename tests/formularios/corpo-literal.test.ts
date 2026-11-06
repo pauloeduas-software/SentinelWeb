@@ -197,7 +197,7 @@ describe('POST /api/users com o corpo literal do UserFormModal', () => {
     );
 
     expect(status).toBe(422);
-    expect(body.error).toMatch(/nome/);
+    expect(body.error).toMatch(/nome/i);
     expect(body.error).toMatch(/e-mail/);
   });
 });

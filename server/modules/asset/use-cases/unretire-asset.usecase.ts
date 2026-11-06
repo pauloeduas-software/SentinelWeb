@@ -34,7 +34,7 @@ export async function unretireAsset(id: string, ator: Ator) {
       where: { id },
       select: { id: true, assetTag: true, retiredAt: true, retiredReason: { select: { name: true } }, retiredNotes: true },
     });
-    if (!antes) throw new AppError('Registro não encontrado', 404);
+    if (!antes) throw new AppError('Ativo não encontrado.', 404);
 
     if (!antes.retiredAt) {
       throw new AppError(`${antes.assetTag} não teve baixa.`, 409);

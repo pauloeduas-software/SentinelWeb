@@ -70,6 +70,7 @@ export function useUsers() {
     // voltaria 403.
     if (editing.id === meuId && data.role !== editing.role) await conferirSessao();
     closeModal();
+    notificar.sucesso('Usuário salvo.');
     return null;
   };
 
@@ -86,6 +87,7 @@ export function useUsers() {
     }))) return;
     try {
       await deleteUser.mutateAsync(user.id);
+      notificar.sucesso('Usuário excluído.');
     } catch (error) {
       notificar.erro((error as Error).message);
     }
@@ -104,6 +106,7 @@ export function useUsers() {
 
     try {
       await updateUser.mutateAsync({ id: user.id, data: { isActive: !user.isActive } });
+      notificar.sucesso(user.isActive ? 'Usuário desativado.' : 'Usuário ativado.');
     } catch (error) {
       notificar.erro((error as Error).message);
     }

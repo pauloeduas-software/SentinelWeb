@@ -32,6 +32,7 @@ export const categorySpec: CatalogSpec = {
   entityType: 'Category',
   tabela: 'categories',
   rotulo: 'categoria',
+  naoEncontrado: 'Categoria não encontrada.',
 
   delegate: (client) => client.category as unknown as CatalogDelegate,
   createSchema: createCategorySchema,

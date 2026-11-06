@@ -75,6 +75,11 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
   const [modalAberto, setModalAberto] = useState(false);
   const [emEdicao, setEmEdicao] = useState<CatalogRow | null>(null);
 
+  // "Categoria cadastrada.", "Status salvo.": o particípio concorda com a aba.
+  const feito = (participio: string) => (
+    `${spec.singular} ${spec.genero === 'f' ? participio.replace(/o$/, 'a') : participio}.`
+  );
+
   const openCreate = () => {
     setEmEdicao(null);
     setModalAberto(true);
@@ -102,6 +107,7 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
     if (emEdicao) await editar.mutateAsync({ id: emEdicao.id, data: valores });
     else await criar.mutateAsync(valores);
     closeModal();
+    notificar.sucesso(feito(emEdicao ? 'salvo' : 'cadastrado'));
   };
 
   // DESATIVAR É UMA AÇÃO DA LINHA, não uma caixa no formulário — o mesmo
@@ -117,6 +123,7 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
 
     try {
       await editar.mutateAsync({ id: registro.id, data: { [campo]: !ligado } });
+      notificar.sucesso(feito(ligado ? 'desativado' : 'ativado'));
     } catch (erro) {
       // A desativação do colaborador recusada traz as licenças dele, com link.
       notificar.erro((erro as Error).message, linksDoErro(erro));
@@ -126,13 +133,14 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
   const handleDelete = async (registro: CatalogRow) => {
     if (!(await confirmar({
       titulo: `Excluir "${registro.name}"?`,
-      descricao: spec.lixeira ? 'Vai para a lixeira e pode ser restaurado.' : 'Esta ação não tem lixeira.',
+      descricao: spec.lixeira ? 'Se não estiver em uso, vai para a lixeira e pode ser restaurado.' : 'Esta ação não tem lixeira.',
       acao: 'Excluir',
       perigo: true,
     }))) return;
 
     try {
       await excluir.mutateAsync(registro.id);
+      notificar.sucesso(spec.lixeira ? `"${registro.name}" foi para a lixeira.` : feito('excluído'));
     } catch (erro) {
       // É aqui que aparece o 409 de "em uso por N registros" — a regra que
       // impede apagar uma categoria que alguém está usando — e o do
@@ -144,6 +152,7 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
   const handleRestore = async (registro: CatalogRow) => {
     try {
       await restaurar.mutateAsync(registro.id);
+      notificar.sucesso(feito('restaurado'));
     } catch (erro) {
       // O 409 do e-mail que foi reaproveitado enquanto ele estava na lixeira.
       notificar.erro((erro as Error).message);

@@ -10,6 +10,7 @@ import type {
 import { useListaNaUrl, usePaginaQueExiste } from '../../../hooks/useListaNaUrl';
 import { confirmar } from '../../../hooks/useConfirmacao';
 import { useNotificacao } from '../../../hooks/useNotificacao';
+import { useRecusaDoLink } from '../../../hooks/useRecusaDoLink';
 import { contagensDasLicencas } from '../helpers/contagens.helper';
 import { statusDaUrl } from '../helpers/licenca.helper';
 
@@ -87,12 +88,20 @@ export function useLicencas() {
     if (idDoLink) lista.trocar({ licenca: undefined, quem: undefined });
   };
 
+  useRecusaDoLink({
+    consulta: doLink,
+    id: modal === null ? idDoLink : null,
+    frase: 'Não foi possível abrir a licença do link',
+    fechar,
+  });
+
   // Os erros sobem para o formulário mostrar a mensagem do servidor — é por
   // aqui que aparecem o 422 de categoria do tipo errado e o 409 de reduzir a
   // quantidade abaixo do que está em uso.
   const handleCriar = async (dados: LicencaInput) => {
     await criar.mutateAsync(dados);
     fechar();
+    notificar.sucesso('Licença cadastrada.');
   };
 
   // O formulário inteiro vai, como nas Configurações (AF).
@@ -100,12 +109,14 @@ export function useLicencas() {
     if (!licencaAberta) return;
     await editar.mutateAsync({ id: licencaAberta.id, data: dados });
     fechar();
+    notificar.sucesso('Licença salva.');
   };
 
   const handleEntregar = async (alvo: AlvoDaEntrega) => {
     if (!licencaAberta) return;
     await entregar.mutateAsync({ licenseId: licencaAberta.id, alvo });
     fechar();
+    notificar.sucesso('Licença entregue.');
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -124,6 +135,7 @@ export function useLicencas() {
   const handleDevolver = async (checkoutId: string, checkinAt: string): Promise<boolean> => {
     try {
       await devolver.mutateAsync({ checkoutId, checkinAt });
+      notificar.sucesso('Licença devolvida.');
       return true;
     } catch (erro) {
       // O 409 de entrega já devolvida (duas abas abertas na mesma licença) e o
@@ -140,6 +152,7 @@ export function useLicencas() {
   const handleTrocarChave = async (checkoutId: string, licenseKeyId: string): Promise<boolean> => {
     try {
       await trocarChave.mutateAsync({ checkoutId, licenseKeyId });
+      notificar.sucesso('Chave trocada.');
       return true;
     } catch (erro) {
       // O 409 da chave que ficou sem lugar (outra aba tomou o último), e o da
@@ -163,6 +176,7 @@ export function useLicencas() {
     try {
       if (encerrada) await editar.mutateAsync({ id: licenca.id, data: { terminationDate: null } });
       else await encerrar.mutateAsync(licenca.id);
+      notificar.sucesso(encerrada ? 'Licença reaberta.' : 'Licença encerrada.');
     } catch (erro) {
       // O 409 da entrega aberta e o da licença que já estava encerrada (duas
       // abas), e o 422 do encerramento antes da data da compra.
@@ -182,6 +196,7 @@ export function useLicencas() {
     }))) return;
     try {
       await excluir.mutateAsync(licenca.id);
+      notificar.sucesso('Licença excluída.');
       // Excluída do detalhe: a janela não tem mais o que mostrar.
       if (licencaAtual?.id === licenca.id) fechar();
     } catch (erro) {
@@ -219,8 +234,6 @@ export function useLicencas() {
     // Todo link leva à devolução: a ficha, o computador e a recusa 409, que vem
     // sem busca. Por isso a janela abre em "Com quem está", com busca ou sem.
     veioDoLink: licencaAtual?.id === idDoLink,
-    // O link apontava para uma licença que não existe mais (excluída).
-    erroDoLink: idDoLink && modal === null && doLink.error ? doLink.error.message : null,
     abrir,
     fechar,
 

@@ -81,9 +81,9 @@ describe('o teto de requisições por IP', () => {
     // A MENSAGEM É NOSSA, e isso é a outra metade do que se prova aqui: o plugin
     // LANÇA o 429 em vez de responder, e quem o traduz é o
     // `infra/errors/error-handler.ts` — o único lugar do sistema que monta
-    // resposta de erro. Sem o caso de 429 lá, isto virava "Requisição inválida",
+    // resposta de erro. Sem o caso de 429 lá, isto virava "Requisição inválida.",
     // que não diz o que fazer, ou um 500.
-    expect(barrada.body.error).toBe('Muitas requisições. Tente novamente em instantes.');
+    expect(barrada.body.error).toBe('Muitas requisições. Tente de novo em instantes.');
 
     // E O TETO É POR ROTA. A leitura da MESMA entidade continua respondendo com
     // a escrita já estourada — senão o limitador de um formulário derrubaria a

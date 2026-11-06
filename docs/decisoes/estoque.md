@@ -226,7 +226,7 @@ Configurações, como o sistema inteiro):
 - **O total é campo da edição**, como a quantidade comprada da licença. `ENTRADA` e `BAIXA`
   saem, e com elas o enum `StockMovementKind` e as colunas `kind` e `qty` da linha: toda linha de
   `stock_movements` é uma unidade entregue. Aumentar sempre pode; reduzir não passa do que está em
-  uso (`Não dá para reduzir "Mouse USB" para 1: 2 estão em uso. Devolva para liberar.`), com a
+  uso (`Não é possível reduzir "Mouse USB" para 1: 2 estão em uso. Devolva para liberar.`), com a
   linha do item travada; e o total é ao menos 1 — no cadastro e depois dele (CHECK
   `stock_items_qty_positiva`). O item que acabou se desativa; o disponível chega a zero pela
   entrega, o total nunca. A mudança do total vai só para a auditoria

@@ -68,7 +68,7 @@ export async function listLicenseHistory(
   query: Pick<ListQuery, 'skip' | 'take'>,
 ): Promise<ListEnvelope<EventoDaLicenca>> {
   const licenca = await prisma.license.findUnique({ where: { id: licenseId }, select: { id: true } });
-  if (!licenca) throw new AppError('Nenhuma licença com este identificador.', 404);
+  if (!licenca) throw new AppError('Licença não encontrada.', 404);
 
   const [contagem, pagina] = await Promise.all([
     // Um evento por entrega, mais um por devolução.

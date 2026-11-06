@@ -54,6 +54,7 @@ export function usePostos() {
     if (emEdicao) await editar.mutateAsync({ id: emEdicao.id, data: dados });
     else await criar.mutateAsync(dados);
     fecharFormulario();
+    notificar.sucesso(emEdicao ? 'Posto salvo.' : 'Posto cadastrado.');
   };
 
   // EXCLUIR é o item do `⋯` da linha, com a frase de Configurações
@@ -69,6 +70,7 @@ export function usePostos() {
 
     try {
       await excluir.mutateAsync(posto.id);
+      notificar.sucesso('Posto excluído.');
     } catch (erro) {
       // É aqui que aparece o 409 do posto com algo nele agora — com um link
       // para cada item de estoque, onde mora o Devolver.

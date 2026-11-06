@@ -72,10 +72,10 @@ describe('encerrar', () => {
     const licenca = await criarLicenca(api, { name: 'Compra adiantada', categoryId: cenario.categoriaLicencaId, seatsTotal: 1 });
     const compra = await api.put<{ error: string }>(`/api/licenses/${licenca.id}`, { purchaseDate: diaNoBrasil(5) });
     expect(compra.status).toBe(422);
-    expect(compra.body.error).toContain('data de compra não pode ser uma data futura');
+    expect(compra.body.error).toContain('Data de compra não pode ser uma data futura');
     const fim = await api.put<{ error: string }>(`/api/licenses/${licenca.id}`, { terminationDate: diaNoBrasil(5) });
     expect(fim.status).toBe(422);
-    expect(fim.body.error).toContain('data de encerramento não pode ser uma data futura');
+    expect(fim.body.error).toContain('Data de encerramento não pode ser uma data futura');
     expect(await idsDaLista('outras', 'Compra adiantada')).toEqual([licenca.id]);
   });
 

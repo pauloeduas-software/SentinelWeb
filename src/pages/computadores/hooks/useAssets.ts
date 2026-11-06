@@ -121,31 +121,36 @@ export function useAssets() {
     if (!emPosse) return;
     await entregar.mutateAsync({ id: emPosse.id, data: dados });
     closePosse();
+    notificar.sucesso('Ativo entregue.');
   };
 
   const handleDevolver = async (dados: CheckinInput) => {
     if (!emPosse) return;
     await devolver.mutateAsync({ id: emPosse.id, data: dados });
     closePosse();
+    notificar.sucesso('Ativo devolvido.');
   };
 
   // O erro sobe para o formulário mostrar a mensagem do servidor.
   const handleSubmit = async (valores: AssetInput) => {
-    if (emEdicao && !clonando) await editar.mutateAsync({ id: emEdicao.id, data: valores });
+    const editando = emEdicao && !clonando;
+    if (editando) await editar.mutateAsync({ id: emEdicao.id, data: valores });
     else await criar.mutateAsync(valores);
     closeModal();
+    notificar.sucesso(editando ? 'Ativo salvo.' : 'Ativo cadastrado.');
   };
 
   const handleDelete = async (asset: Asset) => {
     if (!(await confirmar({
       titulo: `Excluir "${asset.assetTag}"?`,
-      descricao: 'Vai para a lixeira e pode ser restaurado.',
+      descricao: 'Se não estiver em uso, vai para a lixeira e pode ser restaurado.',
       acao: 'Excluir',
       perigo: true,
     }))) return;
     try {
       await excluir.mutateAsync(asset.id);
       if (assets.length === 1 && page > 1) setPage(page - 1);
+      notificar.sucesso(`"${asset.assetTag}" foi para a lixeira.`);
     } catch (erro) {
       // O 409 do ativo com licença ou componente traz cada um em link.
       notificar.erro((erro as Error).message, linksDoErro(erro));
@@ -156,6 +161,7 @@ export function useAssets() {
     try {
       await restaurar.mutateAsync(asset.id);
       if (assets.length === 1 && page > 1) setPage(page - 1);
+      notificar.sucesso('Ativo restaurado.');
     } catch (erro) {
       // É aqui que aparece o 409 de etiqueta reaproveitada enquanto o ativo
       // estava na lixeira — o índice único é parcial, só entre os vivos.

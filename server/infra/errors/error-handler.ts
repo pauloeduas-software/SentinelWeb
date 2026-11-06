@@ -7,7 +7,7 @@ import { createLogger } from '../logger/logger';
 
 const logger = createLogger('error-handler');
 
-const DEFAULT_MESSAGE = 'Erro interno do servidor';
+const DEFAULT_MESSAGE = 'Erro interno do servidor.';
 
 interface HttpError {
   status: number;
@@ -40,12 +40,12 @@ function toHttpError(error: unknown): HttpError {
   const code = errorCode(error);
 
   // Prisma: registro inexistente / violação de UNIQUE / chave estrangeira
-  if (code === 'P2025') return { status: 404, body: { error: 'Registro não encontrado' }, unexpected: false };
-  if (code === 'P2002') return { status: 409, body: { error: 'Registro já existe' }, unexpected: false };
-  if (code === 'P2003') return { status: 409, body: { error: 'Registro está em uso por outro cadastro' }, unexpected: false };
+  if (code === 'P2025') return { status: 404, body: { error: 'Registro não encontrado.' }, unexpected: false };
+  if (code === 'P2002') return { status: 409, body: { error: 'Registro já existe.' }, unexpected: false };
+  if (code === 'P2003') return { status: 409, body: { error: 'Registro está em uso por outro cadastro.' }, unexpected: false };
 
   // Fastify: corpo grande demais, JSON malformado
-  if (code === 'FST_ERR_CTP_BODY_TOO_LARGE') return { status: 413, body: { error: 'Requisição grande demais' }, unexpected: false };
+  if (code === 'FST_ERR_CTP_BODY_TOO_LARGE') return { status: 413, body: { error: 'Requisição grande demais.' }, unexpected: false };
 
   // Content-Type que o servidor não sabe ler. 415 e não o 400 genérico abaixo: o
   // corpo pode estar perfeito, o que está errado é o ENVELOPE — e a mensagem diz
@@ -59,25 +59,25 @@ function toHttpError(error: unknown): HttpError {
   }
 
   if (code?.startsWith('FST_ERR_CTP_')) {
-    return { status: 400, body: { error: 'Requisição inválida' }, unexpected: false };
+    return { status: 400, body: { error: 'Requisição inválida.' }, unexpected: false };
   }
 
   const statusCode = errorProp(error, 'statusCode');
 
   // @fastify/rate-limit lança o 429 em vez de responder direto. Sem este caso
-  // ele cairia no 4xx genérico e o cliente leria "Requisição inválida" — que não
+  // ele cairia no 4xx genérico e o cliente leria "Requisição inválida." — que não
   // diz o que fazer. A mensagem é NOSSA: texto de biblioteca não vai ao cliente.
   if (statusCode === 429) {
     return {
       status: 429,
-      body: { error: 'Muitas requisições. Tente novamente em instantes.' },
+      body: { error: 'Muitas requisições. Tente de novo em instantes.' },
       unexpected: false,
     };
   }
 
   // Erro que já carrega status HTTP próprio (4xx do próprio Fastify)
   if (typeof statusCode === 'number' && statusCode >= 400 && statusCode < 500) {
-    return { status: statusCode, body: { error: 'Requisição inválida' }, unexpected: false };
+    return { status: statusCode, body: { error: 'Requisição inválida.' }, unexpected: false };
   }
 
   return { status: 500, body: { error: DEFAULT_MESSAGE }, unexpected: true };

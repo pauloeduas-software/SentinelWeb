@@ -102,7 +102,7 @@ export const updateLocationSchema = z.strictObject({
 // razão do e-mail de usuário (`user.schema.ts`): "Ana@x.com" e "ana@x.com"
 // seriam dois cadastros, e o `@unique` do banco compara byte a byte.
 const emailDoColaborador = z
-  .string()
+  .string('e-mail inválido')
   .trim()
   .toLowerCase()
   .nullish()

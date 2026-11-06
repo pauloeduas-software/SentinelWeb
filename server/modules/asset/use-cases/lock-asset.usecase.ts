@@ -82,6 +82,6 @@ export async function travarAtivo(client: ClienteQueTrava, assetId: string): Pro
 /** A mesma trava, com o 404 que todo chamador daria. */
 export async function travarAtivoOuFalhar(client: ClienteQueTrava, assetId: string): Promise<void> {
   if (!(await travarAtivo(client, assetId))) {
-    throw new AppError('Registro não encontrado', 404);
+    throw new AppError('Ativo não encontrado.', 404);
   }
 }

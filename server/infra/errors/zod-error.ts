@@ -43,6 +43,8 @@ export function formatZodError(error: ZodError): string {
   const restantes = mensagens.length - visiveis.length;
   const resumo = visiveis.join('; ') + (restantes > 0 ? ` (e mais ${restantes})` : '');
 
-  // O frontend mostra esta string direto no formulário (src/api/apiClient.ts)
-  return resumo || 'Dados inválidos.';
+  // O frontend mostra esta string direto no formulário (src/api/apiClient.ts), e ela
+  // sai como toda recusa do sistema: maiúscula no começo e ponto no fim.
+  if (!resumo) return 'Dados inválidos.';
+  return `${resumo.charAt(0).toUpperCase()}${resumo.slice(1)}`.replace(/\.?$/, '.');
 }

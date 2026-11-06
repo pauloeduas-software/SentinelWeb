@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Copy, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
-import { useNotificacao } from '../../../hooks/useNotificacao';
+import { useCopiar } from '../../../hooks/useCopiar';
 import { esconderChave } from '../helpers/licenca.helper';
 
 // A CHAVE DE PRODUTO NA TELA — escondida até alguém pedir (AA). "Copiar" leva a
@@ -16,21 +16,8 @@ interface ChaveEscondidaProps {
 const BOTAO = 'h-7 px-2 text-xs';
 
 export default function ChaveEscondida({ chave }: ChaveEscondidaProps) {
-  const notificar = useNotificacao();
   const [visivel, setVisivel] = useState(false);
-  const [copiada, setCopiada] = useState(false);
-
-  const copiar = async () => {
-    try {
-      await navigator.clipboard.writeText(chave);
-      setCopiada(true);
-      setTimeout(() => setCopiada(false), 2000);
-    } catch {
-      // Sem permissão de área de transferência (HTTP sem TLS, navegador que
-      // recusa): a chave continua a um "Mostrar" de distância.
-      notificar.erro('Não foi possível copiar a chave. Use "Mostrar" e copie à mão.');
-    }
-  };
+  const { copiado, copiar } = useCopiar(chave, 'Não foi possível copiar a chave. Use "Mostrar" e copie à mão.');
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -42,7 +29,7 @@ export default function ChaveEscondida({ chave }: ChaveEscondidaProps) {
           {visivel ? <EyeOff /> : <Eye />} {visivel ? 'Esconder' : 'Mostrar'}
         </Button>
         <Button variant="ghost" size="sm" className={BOTAO} onClick={() => void copiar()}>
-          <Copy /> {copiada ? 'Copiada' : 'Copiar'}
+          <Copy /> {copiado ? 'Copiada' : 'Copiar'}
         </Button>
       </div>
     </div>

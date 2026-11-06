@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   useAceitarSugestao, useCoberturaQuery, useConfiguracaoDaDescobertaQuery,
   useOciososQuery, useReconciliarAgora, useRecusarSugestao, useSalvarConfiguracaoDaDescoberta,
@@ -6,6 +5,7 @@ import {
 } from '../../../queries/reconciliation.queries';
 import { useEndpointsQuery } from '../../../queries/endpoint.queries';
 import { useAbaNaUrl } from '../../../hooks/useAbaNaUrl';
+import { useNotificacao } from '../../../hooks/useNotificacao';
 import { usePode } from '../../../stores/auth.store';
 import type {
   ConfiguracaoDaDescoberta, ResultadoDaVarredura, ReviewState,
@@ -22,9 +22,19 @@ import type {
 const ABAS = ['fila', 'sem', 'com', 'ociosos'] as const;
 export type AbaDaTela = typeof ABAS[number];
 
+/** O placar da rodada: "3 sugestões · 1 vínculo" é a resposta à pergunta de quem clicou. */
+function placarDaVarredura({ endpoints, sugeridas, vinculadas, encerradas }: ResultadoDaVarredura): string {
+  return [
+    `${endpoints} máquina${endpoints === 1 ? '' : 's'} sem vínculo`,
+    `${sugeridas} sugest${sugeridas === 1 ? 'ão' : 'ões'}`,
+    `${vinculadas} vínculo${vinculadas === 1 ? '' : 's'}`,
+    `${encerradas} encerrada${encerradas === 1 ? '' : 's'}`,
+  ].join(' · ');
+}
+
 export function useDescobertas() {
+  const notificar = useNotificacao();
   const [aba, setAba] = useAbaNaUrl(ABAS);
-  const [erro, setErro] = useState<string | null>(null);
 
   const sugestoes = useSugestoesQuery();
   const cobertura = useCoberturaQuery();
@@ -41,11 +51,9 @@ export function useDescobertas() {
   const salvarConfiguracao = useSalvarConfiguracaoDaDescoberta();
 
   // RECONCILIAR AGORA: só `SUPERVISOR` vê o botão (a rota recusa os outros com 403;
-  // aqui é interface, não segurança). O placar da última rodada fica na tela até
-  // ser dispensado: "3 sugestões, 1 vínculo" é a resposta à pergunta de quem clicou.
+  // aqui é interface, não segurança).
   const reconciliar = useReconciliarAgora();
   const podeReconciliar = usePode('SUPERVISOR');
-  const [ultimaVarredura, setUltimaVarredura] = useState<ResultadoDaVarredura | null>(null);
 
   /**
    * O erro vai para a TELA, e não para o console.
@@ -55,18 +63,17 @@ export function useDescobertas() {
    * Engolir a mensagem deixaria o botão parecendo quebrado.
    */
   const comErro = async (operacao: () => Promise<unknown>) => {
-    setErro(null);
+    notificar.limpar();
     try {
       await operacao();
     } catch (falha) {
       // `ErroDaApi` já traz a frase do servidor no `message` (`apiClient.ts`).
-      setErro((falha as Error).message || 'Não foi possível concluir a operação.');
+      notificar.erro((falha as Error).message || 'Não foi possível concluir a operação.');
     }
   };
 
   return {
     aba, setAba,
-    erro, limparErro: () => setErro(null),
 
     sugestoes: sugestoes.data?.rows ?? [],
     // Sem resposta não há número: `undefined`, e a aba fica sem contagem.
@@ -100,24 +107,30 @@ export function useDescobertas() {
     // que saber disso.
     podeConfigurar: podeReconciliar,
     reconciliando: reconciliar.isPending,
-    ultimaVarredura,
-    dispensarVarredura: () => setUltimaVarredura(null),
     handleReconciliar: () => void comErro(async () => {
-      setUltimaVarredura(await reconciliar.mutateAsync());
+      notificar.info(placarDaVarredura(await reconciliar.mutateAsync()));
     }),
 
-    handleAceitar: (id: string) => void comErro(() => aceitar.mutateAsync(id)),
-    handleRecusar: (id: string) => void comErro(() => recusar.mutateAsync(id)),
-    handleTriar: (id: string, reviewState: ReviewState) =>
-      void comErro(() => triar.mutateAsync({ id, reviewState })),
+    handleAceitar: (id: string) => void comErro(async () => {
+      await aceitar.mutateAsync(id);
+      notificar.sucesso('Sugestão aceita.');
+    }),
+    handleRecusar: (id: string) => void comErro(async () => {
+      await recusar.mutateAsync(id);
+      notificar.sucesso('Sugestão recusada.');
+    }),
+    handleTriar: (id: string, reviewState: ReviewState) => void comErro(async () => {
+      await triar.mutateAsync({ id, reviewState });
+      notificar.sucesso('Triagem salva.');
+    }),
 
     /**
      * VINCULAR À MÃO, e opcionalmente ENTREGAR ao posto na mesma ida.
      *
      * PROPAGA em vez de passar pelo `comErro`: é no painel do formulário que a
      * recusa precisa aparecer — "este posto já tem um computador", ou "a máquina
-     * foi vinculada, mas a entrega não aconteceu". A faixa de erro no topo da
-     * tela ficaria atrás do painel.
+     * foi vinculada, mas a entrega não aconteceu". A notificação cairia em cima
+     * do botão do painel.
      */
     handleVincular: async (endpointId: string, assetId: string, targetWorkstationId: string | null) => {
       if (targetWorkstationId) {
@@ -136,7 +149,9 @@ export function useDescobertas() {
      * abrisse a tela com um cache velho, salvar o modo reverteria os limiares.
      */
     salvandoConfiguracao: salvarConfiguracao.isPending,
-    handleSalvarConfiguracao: (dados: Partial<ConfiguracaoDaDescoberta>) =>
-      void comErro(() => salvarConfiguracao.mutateAsync(dados)),
+    handleSalvarConfiguracao: (dados: Partial<ConfiguracaoDaDescoberta>) => void comErro(async () => {
+      await salvarConfiguracao.mutateAsync(dados);
+      notificar.sucesso('Configuração salva.');
+    }),
   };
 }

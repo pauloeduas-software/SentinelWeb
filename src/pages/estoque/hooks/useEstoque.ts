@@ -7,6 +7,7 @@ import type { AlvoDaEntregaDeEstoque, ItemDeEstoque, ItemDeEstoqueInput } from '
 import { useListaNaUrl, usePaginaQueExiste } from '../../../hooks/useListaNaUrl';
 import { confirmar } from '../../../hooks/useConfirmacao';
 import { useNotificacao } from '../../../hooks/useNotificacao';
+import { useRecusaDoLink } from '../../../hooks/useRecusaDoLink';
 import { linksDoErro } from '../../../helpers/erro.helper';
 
 /** Qual janela está aberta. Uma de cada vez, como nas outras telas. */
@@ -77,12 +78,20 @@ export function useEstoque() {
     if (idDoLink) lista.trocar({ item: undefined, quem: undefined });
   };
 
+  useRecusaDoLink({
+    consulta: doLink,
+    id: modal === null ? idDoLink : null,
+    frase: 'Não foi possível abrir o item do link',
+    fechar,
+  });
+
   // Os erros sobem para o formulário mostrar a mensagem do servidor — é por
   // aqui que aparecem o 422 de categoria do tipo errado, o 409 do nome
   // repetido e o de reduzir o total abaixo do que está em uso.
   const handleCriar = async (dados: ItemDeEstoqueInput) => {
     await criar.mutateAsync(dados);
     fechar();
+    notificar.sucesso('Item cadastrado.');
   };
 
   // O formulário inteiro vai, como nas Configurações (AF).
@@ -90,12 +99,14 @@ export function useEstoque() {
     if (!itemAberto) return;
     await editar.mutateAsync({ id: itemAberto.id, data: dados });
     fechar();
+    notificar.sucesso('Item salvo.');
   };
 
   const handleEntregar = async (alvo: AlvoDaEntregaDeEstoque) => {
     if (!itemAberto) return;
     await entregar.mutateAsync({ itemId: itemAberto.id, alvo });
     fechar();
+    notificar.sucesso('Item entregue.');
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -113,6 +124,7 @@ export function useEstoque() {
   const handleDevolver = async (entregaId: string, qty: number, checkinAt: string): Promise<boolean> => {
     try {
       await devolver.mutateAsync({ entregaId, qty, checkinAt });
+      notificar.sucesso('Devolução registrada.');
       return true;
     } catch (erro) {
       // O 409 da entrega já devolvida (duas abas abertas no mesmo item), o de
@@ -134,6 +146,7 @@ export function useEstoque() {
     }))) return;
     try {
       await editar.mutateAsync({ id: item.id, data: { isActive: !item.isActive } });
+      notificar.sucesso(item.isActive ? 'Item desativado.' : 'Item ativado.');
     } catch (erro) {
       notificar.erro((erro as Error).message);
     }
@@ -150,6 +163,7 @@ export function useEstoque() {
     }))) return;
     try {
       await excluir.mutateAsync(item.id);
+      notificar.sucesso('Item excluído.');
       // Excluído do detalhe: a janela não tem mais o que mostrar.
       if (itemAtual?.id === item.id) fechar();
     } catch (erro) {
@@ -179,8 +193,6 @@ export function useEstoque() {
     // Todo link leva à devolução: a ficha e a recusa 409, que vem sem busca. Por
     // isso a janela abre em "Com quem está", com busca ou sem.
     veioDoLink: itemAtual?.id === idDoLink,
-    // O link apontava para um item que não existe mais (excluído).
-    erroDoLink: idDoLink && modal === null && doLink.error ? doLink.error.message : null,
     abrir,
     fechar,
 
