@@ -305,7 +305,7 @@ export async function buildApp(
 
       logger.info(`[App] Frontend estático servido de ${distPath}`);
     } else {
-      logger.warn(`[App] NODE_ENV=production mas ${distPath} não existe. Rode "npm run build" antes.`);
+      logger.warn(`[App] NODE_ENV=production mas ${distPath} não existe. Rode "bun run build" antes.`);
     }
   }
 

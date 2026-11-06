@@ -40,7 +40,7 @@ export default function SugestaoCard({ sugestao, volta, ocupado, onAceitar, onRe
           <p className="text-xs leading-relaxed text-text-tertiary">{rotulo.acao}</p>
 
           {sugestao.asset && (
-            <Link to={`/computadores/${sugestao.asset.id}`} state={volta} className="inline-block text-sm text-primary hover:underline">
+            <Link to={`/computadores/${sugestao.asset.id}`} state={volta} className="inline-block text-sm text-link hover:underline">
               abrir <span className="font-mono">{sugestao.asset.assetTag}</span>
             </Link>
           )}

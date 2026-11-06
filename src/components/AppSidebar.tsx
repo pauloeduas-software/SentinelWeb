@@ -87,14 +87,13 @@ export default function AppSidebar() {
         aria-label={label}
         aria-current={ativo ? 'page' : undefined}
         className={cn(
-          'relative flex items-center gap-3 overflow-hidden rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+          'flex items-center gap-3 overflow-hidden rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
           ativo
             ? 'bg-primary text-primary-foreground'
             : 'text-sidebar-foreground hover:bg-sidebar-accent',
           soIcones && 'justify-center',
         )}
       >
-        {ativo && <span className="absolute inset-y-1.5 left-0 w-1 rounded-r-full bg-primary-foreground/70" />}
         <Icon className="size-5 shrink-0" />
         {!soIcones && <span className="truncate">{label}</span>}
       </Link>
@@ -119,7 +118,7 @@ export default function AppSidebar() {
           type="button"
           aria-label="Fechar menu"
           onClick={fecharNoCelular}
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-40 bg-veu backdrop-blur-sm md:hidden"
         />
       )}
 

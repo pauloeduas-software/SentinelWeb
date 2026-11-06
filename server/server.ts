@@ -115,8 +115,8 @@ bootstrap().catch((error) => {
     const port = getPort();
     logger.error(
       `[Server] A porta ${port} já está em uso — outro servidor Sentinel está rodando. `
-      + 'Provavelmente um "npm run dev:server" esquecido num terminal, que colide com a metade '
-      + `"back" do "npm run dev". Quem está segurando: lsof -ti:${port} — e para encerrar: `
+      + 'Provavelmente um "bun run dev:server" esquecido num terminal, que colide com a metade '
+      + `"back" do "bun run dev". Quem está segurando: lsof -ti:${port} — e para encerrar: `
       + `kill $(lsof -ti:${port}). Rode UM dos dois, não os dois.`,
     );
     process.exit(1);

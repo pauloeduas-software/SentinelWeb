@@ -103,7 +103,7 @@ function CampoDeCanal({ canal }: { canal: CanalDeSuporte }) {
         <a
           href={canal.href}
           {...(canal.externo ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-          className="text-primary hover:underline"
+          className="text-link hover:underline"
         >
           {canal.texto}
         </a>
