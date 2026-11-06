@@ -15,11 +15,12 @@ interface CategoriaFiltroProps {
 }
 
 export default function CategoriaFiltro({ tipo, valor, onChange }: CategoriaFiltroProps) {
-  const { data: categorias = [], isPending } = useCatalogOptionsQuery('categories', tipo);
+  const { data: categorias = [], isPending, isError } = useCatalogOptionsQuery('categories', tipo);
 
   // O FILTRO APLICADO PODE NÃO ESTAR NA LISTA: a categoria foi excluída, mudou
   // de tipo, ou passou do teto do `/options`. Sem a opção abaixo, a tela diria
   // "Todas as categorias" e mostraria um recorte. Escolher "Todas" desliga o filtro.
+  // Com a consulta falhando não há lista, e "fora desta lista" seria afirmar sem saber.
   const foraDaLista = !isPending && Boolean(valor) && !categorias.some((categoria) => categoria.id === valor);
 
   return (
@@ -30,9 +31,10 @@ export default function CategoriaFiltro({ tipo, valor, onChange }: CategoriaFilt
       onChange={onChange}
       placeholderDaBusca="Buscar categoria…"
       opcoes={[
-        ...(foraDaLista && valor ? [{ value: valor, label: 'Filtro atual (fora desta lista)' }] : []),
+        ...(foraDaLista && valor ? [{ value: valor, label: isError ? 'Filtro atual' : 'Filtro atual (fora desta lista)' }] : []),
         ...categorias.map((categoria) => ({ value: categoria.id, label: categoria.name })),
       ]}
+      rodape={isError ? 'Não foi possível carregar as categorias.' : undefined}
     />
   );
 }

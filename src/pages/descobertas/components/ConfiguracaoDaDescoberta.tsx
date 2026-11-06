@@ -24,6 +24,7 @@ import type {
 
 interface Props {
   configuracao: Configuracao | undefined;
+  erro: string | null;
   /**
    * Gravar é `SUPERVISOR` no servidor. Sem ele o painel continua abrindo — saber POR
    * QUE a fila está como está vale para todos —, mas só para ler: sem os botões
@@ -115,10 +116,13 @@ function Formulario({ configuracao, salvando, onSalvar }: FormularioProps) {
   );
 }
 
-export default function ConfiguracaoDaDescoberta({ configuracao, podeEditar, salvando, onSalvar }: Props) {
+export default function ConfiguracaoDaDescoberta({ configuracao, erro, podeEditar, salvando, onSalvar }: Props) {
   const [aberta, setAberta] = useState(false);
 
-  if (!configuracao) return null;
+  if (!configuracao) {
+    // Sem isto, a consulta que falhou sumia com o cartão e com o botão de configurar.
+    return erro ? <Aviso className="mb-6">Não foi possível carregar a configuração: {erro}</Aviso> : null;
+  }
 
   const modoAtual = MODOS.find((modo) => modo.valor === configuracao.discoveryMode) ?? MODOS[1];
 

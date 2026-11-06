@@ -252,6 +252,22 @@ describe('toda escrita do painel deixa rastro com a conta da sessão', () => {
     const outra = await api.comoUsuario();
     await auditada(outra.post('/api/auth/logout', {}), outra.userId);
   });
+
+  it('Minha conta: o nome e a senha', async () => {
+    const outra = await api.comoUsuario();
+    await auditada(outra.patch('/api/auth/me', { name: `Conta ${proximo()}` }), outra.userId);
+    await auditada(outra.put('/api/auth/password', { currentPassword: 'Senha-De-Teste-123', newPassword: 'Outra-Senha-De-Teste-123' }), outra.userId);
+  });
+
+  it('o comando à máquina', async () => {
+    const hwid = `comando-${proximo()}`;
+    const agente = await conectarAgente(api, hwid);
+    await agente.handshake({ Hostname: `pc-do-comando-${proximo()}` });
+    const maquina = await esperarPor('a máquina do handshake', () => prisma.endpoint.findUnique({ where: { hwid } }));
+
+    await auditada(api.post(`/api/endpoints/${maquina.id}/command`, { action: 'reboot' }));
+    await agente.fechar();
+  });
 });
 
 describe('o autor vem da sessão, nunca do corpo', () => {

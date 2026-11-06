@@ -74,11 +74,11 @@ export function useMaquinaDoAtivoQuery(assetId: string | null) {
 /** Tudo que a resolução de uma sugestão pode ter mudado. */
 function useInvalidarTudo() {
   const queryClient = useQueryClient();
-  return () => {
-    void queryClient.invalidateQueries({ queryKey: reconciliationKeys.all });
-    void queryClient.invalidateQueries({ queryKey: assetKeys.all });
-    void queryClient.invalidateQueries({ queryKey: endpointKeys.all });
-  };
+  return () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: reconciliationKeys.all }),
+    queryClient.invalidateQueries({ queryKey: assetKeys.all }),
+    queryClient.invalidateQueries({ queryKey: endpointKeys.all }),
+  ]);
 }
 
 export function useAceitarSugestao() {
@@ -86,7 +86,7 @@ export function useAceitarSugestao() {
   return useMutation({
     mutationFn: async (id: string) =>
       (await apiClient.post<Sugestao>(`/reconciliation/suggestions/${id}/accept`, {})).data,
-    onSuccess: invalidar,
+    onSettled: invalidar,
   });
 }
 
@@ -95,7 +95,7 @@ export function useRecusarSugestao() {
   return useMutation({
     mutationFn: async (id: string) =>
       (await apiClient.post<Sugestao>(`/reconciliation/suggestions/${id}/reject`)).data,
-    onSuccess: invalidar,
+    onSettled: invalidar,
   });
 }
 
@@ -104,7 +104,7 @@ export function useTriarMaquina() {
   return useMutation({
     mutationFn: async ({ id, reviewState }: { id: string; reviewState: ReviewState }) =>
       (await apiClient.patch(`/endpoints/${id}/review`, { reviewState })).data,
-    onSuccess: invalidar,
+    onSettled: invalidar,
   });
 }
 
@@ -112,7 +112,7 @@ export function useDesvincularMaquina() {
   const invalidar = useInvalidarTudo();
   return useMutation({
     mutationFn: async (endpointId: string) => (await apiClient.delete(`/endpoints/${endpointId}/link`)).data,
-    onSuccess: invalidar,
+    onSettled: invalidar,
   });
 }
 
@@ -129,7 +129,7 @@ export function useVincularMaquina() {
   return useMutation({
     mutationFn: async ({ endpointId, assetId }: { endpointId: string; assetId: string }) =>
       (await apiClient.post(`/endpoints/${endpointId}/link`, { assetId })).data,
-    onSuccess: invalidar,
+    onSettled: invalidar,
   });
 }
 
@@ -144,16 +144,15 @@ export function useVincularMaquina() {
 export function useVincularEEntregar() {
   const queryClient = useQueryClient();
   const invalidar = useInvalidarTudo();
-  const invalidarComPosto = () => {
-    invalidar();
-    void queryClient.invalidateQueries({ queryKey: workstationKeys.all });
-  };
+  const invalidarComPosto = () => Promise.all([
+    invalidar(),
+    queryClient.invalidateQueries({ queryKey: workstationKeys.all }),
+  ]);
   return useMutation({
     mutationFn: async ({ endpointId, assetId, targetWorkstationId }: {
       endpointId: string; assetId: string; targetWorkstationId: string;
     }) => (await apiClient.post(`/endpoints/${endpointId}/link-and-checkout`, { assetId, targetWorkstationId })).data,
-    onSuccess: invalidarComPosto,
-    onError: invalidarComPosto,
+    onSettled: invalidarComPosto,
   });
 }
 
@@ -168,7 +167,7 @@ export function useReconciliarAgora() {
   const invalidar = useInvalidarTudo();
   return useMutation({
     mutationFn: async () => (await apiClient.post<ResultadoDaVarredura>('/reconciliation/run')).data,
-    onSuccess: invalidar,
+    onSettled: invalidar,
   });
 }
 
@@ -177,8 +176,6 @@ export function useSalvarConfiguracaoDaDescoberta() {
   return useMutation({
     mutationFn: async (dados: Partial<ConfiguracaoDaDescoberta>) =>
       (await apiClient.put<ConfiguracaoDaDescoberta>('/settings/discovery', dados)).data,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: reconciliationKeys.all });
-    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: reconciliationKeys.all }),
   });
 }

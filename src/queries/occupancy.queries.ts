@@ -63,12 +63,17 @@ export function usePersonOccupanciesQuery(personId: string | null) {
  * uma mesa que segura equipamento é exatamente o que ACENDE aquele selo — sem
  * esta invalidação, a tela que existe para mostrar o sinal seria a última a
  * saber dele.
+ *
+ * Devolve a promessa e roda também no erro, como `invalidarLicencaEPosse`: o botão só
+ * destrava com a tela relida, e o 409 de quem viu a tela velha traz a tela nova.
  */
 function invalidarPosseDerivada(queryClient: ReturnType<typeof useQueryClient>) {
-  void queryClient.invalidateQueries({ queryKey: occupancyKeys.all });
-  void queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
-  void queryClient.invalidateQueries({ queryKey: assetKeys.all });
-  void queryClient.invalidateQueries({ queryKey: workstationKeys.all });
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: occupancyKeys.all }),
+    queryClient.invalidateQueries({ queryKey: assignmentKeys.all }),
+    queryClient.invalidateQueries({ queryKey: assetKeys.all }),
+    queryClient.invalidateQueries({ queryKey: workstationKeys.all }),
+  ]);
 }
 
 export function useAddWorkstationOccupant() {
@@ -76,7 +81,7 @@ export function useAddWorkstationOccupant() {
   return useMutation({
     mutationFn: ({ workstationId, data }: { workstationId: string; data: OccupantInput }) =>
       apiClient.post(`/workstations/${workstationId}/occupants`, data),
-    onSuccess: () => invalidarPosseDerivada(queryClient),
+    onSettled: () => invalidarPosseDerivada(queryClient),
   });
 }
 
@@ -94,7 +99,7 @@ export function useCorrigirTurno() {
   return useMutation({
     mutationFn: ({ workstationId, occupantId, shift }: { workstationId: string; occupantId: string; shift: string | null }) =>
       apiClient.patch(`/workstations/${workstationId}/occupants/${occupantId}`, { shift }),
-    onSuccess: () => invalidarPosseDerivada(queryClient),
+    onSettled: () => invalidarPosseDerivada(queryClient),
   });
 }
 
@@ -111,6 +116,6 @@ export function useEndWorkstationOccupancy() {
     // `endedAt`: o dia em que a pessoa saiu, 'AAAA-MM-DD' (AM). Ausente é agora.
     mutationFn: ({ workstationId, occupantId, endedAt }: { workstationId: string; occupantId: string; endedAt?: string }) =>
       apiClient.delete(`/workstations/${workstationId}/occupants/${occupantId}`, { data: endedAt ? { endedAt } : {} }),
-    onSuccess: () => invalidarPosseDerivada(queryClient),
+    onSettled: () => invalidarPosseDerivada(queryClient),
   });
 }

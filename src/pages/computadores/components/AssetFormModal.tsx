@@ -142,7 +142,7 @@ export default function AssetFormModal({
         <Campo rotulo="Número de série">
           <Input value={valores.serial} onChange={(e) => definir('serial', e.target.value)} className="font-mono" />
         </Campo>
-        <Campo rotulo="Nome / apelido" className="col-span-2">
+        <Campo rotulo="Nome / apelido" className="sm:col-span-2">
           <Input value={valores.name} onChange={(e) => definir('name', e.target.value)} />
         </Campo>
       </Secao>
@@ -161,7 +161,7 @@ export default function AssetFormModal({
             de posto. */}
         <Campo
           rotulo="Localização"
-          className="col-span-2"
+          className="sm:col-span-2"
           ajuda={asset?.postoAtual && !clonar
             ? `Entregue ao posto ${asset.postoAtual.name} (${asset.postoAtual.location.name}). Este campo é para onde ele volta na devolução.`
             : 'Onde o ativo está. Quem responde por ele muda pelo Entregar, não aqui.'}

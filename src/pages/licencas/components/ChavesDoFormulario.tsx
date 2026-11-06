@@ -1,5 +1,7 @@
+import { useContext } from 'react';
 import { Plus, X } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
+import { MarcarAlteracaoContext } from '../../../components/ui/formulario.context';
 import { Input } from '../../../components/ui/input';
 import { cobertasPelas, linhaNova, type LinhaDeChave } from '../helpers/licenca.helper';
 
@@ -33,6 +35,14 @@ export default function ChavesDoFormulario({ linhas, compradas, onChange }: Chav
   const cobertas = cobertasPelas(linhas);
   const cheia = compradas !== null && cobertas >= compradas;
 
+  // Colar a lista, adicionar e tirar uma chave não são campo do navegador: sem avisar o
+  // painel, Esc e clique fora descartavam as chaves sem perguntar (BG).
+  const marcarAlteracao = useContext(MarcarAlteracaoContext);
+  const alterar = (novas: LinhaDeChave[]) => {
+    marcarAlteracao();
+    onChange(novas);
+  };
+
   const mudar = (uid: string, campo: 'productKey' | 'seats', valor: string) => {
     onChange(linhas.map((linha) => (linha.uid === uid ? { ...linha, [campo]: valor } : linha)));
   };
@@ -49,7 +59,7 @@ export default function ChavesDoFormulario({ linhas, compradas, onChange }: Chav
     // novas no fim da lista.
     const [primeira, ...resto] = atual.productKey.trim() === '' ? coladas : ['', ...coladas];
     const novas = resto.map((chave) => linhaNova(chave));
-    onChange([
+    alterar([
       ...linhas.slice(0, indice),
       primeira ? { ...atual, productKey: primeira } : atual,
       ...linhas.slice(indice + 1),
@@ -94,7 +104,7 @@ export default function ChavesDoFormulario({ linhas, compradas, onChange }: Chav
           <Button
             variant="ghost"
             size="icon-sm"
-            onClick={() => onChange(linhas.filter((outra) => outra.uid !== linha.uid))}
+            onClick={() => alterar(linhas.filter((outra) => outra.uid !== linha.uid))}
             disabled={linha.emUso > 0}
             title={linha.emUso > 0 ? `Com ${linha.emUso} ${linha.emUso === 1 ? 'entrega aberta' : 'entregas abertas'}: devolva para tirar` : 'Tirar esta chave'}
             aria-label={`Tirar a chave ${posicao + 1}`}
@@ -107,7 +117,7 @@ export default function ChavesDoFormulario({ linhas, compradas, onChange }: Chav
       <Button
         variant="outline"
         size="sm"
-        onClick={() => onChange([...linhas, linhaNova()])}
+        onClick={() => alterar([...linhas, linhaNova()])}
         disabled={cheia}
         title={cheia ? 'As chaves já cobrem todas as compradas: aumente a quantidade para adicionar' : undefined}
       >

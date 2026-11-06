@@ -46,13 +46,23 @@ export const OCUPANTES_ABERTOS_ORDER_BY: Prisma.WorkstationOccupantOrderByWithRe
   { startedAt: 'asc' },
 ];
 
-/** A busca `?q=` varre nome e notas. */
+/**
+ * A busca `?q=` varre nome e notas, e a etiqueta e o número de série do computador
+ * entregue ao posto: ele não está na lista de Computadores (C), e quem tem só a
+ * etiqueta na mão precisa chegar à mesa dele (BI).
+ */
 function buildBuscaWhere(q?: string): Prisma.WorkstationWhereInput {
   if (!q) return {};
 
   // Sem diferença de maiúscula: "mesa" acha "Mesa 1".
   const contem = contemTexto(q);
-  return { OR: [{ name: contem }, { notes: contem }] };
+  return {
+    OR: [
+      { name: contem },
+      { notes: contem },
+      { assignments: { some: { ...POSSE_ABERTA, asset: { OR: [{ assetTag: contem }, { serial: contem }] } } } },
+    ],
+  };
 }
 
 /**

@@ -5,6 +5,7 @@ import { CartaoVazio } from '../../../components/ListaVazia';
 import ListToolbar from '../../../components/ListToolbar';
 import { useListaLocalNaUrl } from '../../../hooks/usePaginaLocal';
 import { comFiltros } from '../../../hooks/useVoltaComFiltros';
+import { textoDaSugestao } from '../helpers/sugestao.helper';
 
 // A FILA DE SUGESTÕES: cartões, e não tabela, porque cada um traz a evidência e a
 // decisão; a barra e a página são as de toda lista.
@@ -22,7 +23,7 @@ interface Props {
 }
 
 export default function SugestoesLista({ sugestoes, carregando, erro, ocupado, acao, onAceitar, onRecusar }: Props) {
-  const lista = useListaLocalNaUrl(sugestoes, (sugestao) => JSON.stringify(sugestao));
+  const lista = useListaLocalNaUrl(sugestoes, textoDaSugestao);
 
   return (
     <>

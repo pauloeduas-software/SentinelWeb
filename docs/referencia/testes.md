@@ -290,7 +290,9 @@ o administrador do harness; `api.anonimo` é o mesmo app sem cookie, para testar
 porta fechada. Os fixtures criam cenário **pela API**, nunca por `prisma.create`
 — um registro criado por Prisma pula o zod da borda, o `strictObject`, a etiqueta
 automática e a auditoria, e o teste passaria a provar coisas sobre um dado que
-nenhum usuário consegue criar.
+nenhum usuário consegue criar. A exceção é o que não é o assunto do teste, e um
+comentário diz isso: o que o agente grava (`endpoint`, `telemetry`), o `auditLog`,
+o volume que seriam centenas de `POST` e o cadastro que só monta uma contagem.
 
 **Um arquivo por vez** (`fileParallelism: false`): é um banco só. Com paralelismo,
 dois arquivos truncariam a tabela no meio do teste do outro, e a falha mudaria de

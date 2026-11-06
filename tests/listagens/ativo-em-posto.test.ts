@@ -140,6 +140,22 @@ describe('o ativo entregue a um posto sai da listagem', () => {
     expect(porStatus.rows.map((l) => l.id)).not.toContain(item.id);
   });
 
+  it('a busca de Postos acha a mesa pela etiqueta e pela série do computador, e só enquanto ele está lá (BI)', async () => {
+    const posto = await mesa('Mesa da busca');
+    const computador = await ativo('Na mesa da busca', 'SERIE-DA-BUSCA');
+    await entregarA(computador.id, posto.id);
+
+    const buscar = async (termo: string) => {
+      const { body } = await api.get<Envelope>(`/api/workstations?q=${encodeURIComponent(termo)}`);
+      return body.rows.map((linha) => linha.id);
+    };
+    expect(await buscar(computador.assetTag)).toEqual([posto.id]);
+    expect(await buscar('serie-da-busca')).toEqual([posto.id]);
+
+    expect((await api.post(`/api/assets/${computador.id}/checkin`, {})).status).toBe(200);
+    expect(await buscar(computador.assetTag)).toEqual([]);
+  });
+
   it('e a ficha do posto mostra o computador que a listagem deixou de mostrar', async () => {
     const item = await ativo('Desktop da ficha', 'SN-LISTA-7');
     const posto = await mesa('Mesa da Listagem 7');

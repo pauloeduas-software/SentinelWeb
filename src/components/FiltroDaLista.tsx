@@ -12,9 +12,11 @@ interface FiltroDaListaProps {
   onChange: (valor: string | undefined) => void;
   opcoes: readonly OpcaoDoSeletor[];
   placeholderDaBusca?: string;
+  /** A linha embaixo da lista: a consulta que falhou. */
+  rodape?: string;
 }
 
-export default function FiltroDaLista({ rotulo, todos, valor, onChange, opcoes, placeholderDaBusca }: FiltroDaListaProps) {
+export default function FiltroDaLista({ rotulo, todos, valor, onChange, opcoes, placeholderDaBusca, rodape }: FiltroDaListaProps) {
   return (
     <Seletor
       ariaLabel={rotulo}
@@ -25,6 +27,7 @@ export default function FiltroDaLista({ rotulo, todos, valor, onChange, opcoes, 
       placeholderDaBusca={placeholderDaBusca}
       className="w-full sm:w-56 [&_[role=combobox]]:bg-surface-card"
       opcoes={opcoes}
+      rodape={rodape}
     />
   );
 }

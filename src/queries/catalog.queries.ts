@@ -89,7 +89,7 @@ export function useCreateCatalogRow(slug: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CatalogInput) => apiClient.post(`/${slug}`, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: catalogKeys.tabela(slug) }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: catalogKeys.tabela(slug) }),
   });
 }
 
@@ -107,7 +107,7 @@ export function useDeleteCatalogRow(slug: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiClient.delete(`/${slug}/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: catalogKeys.tabela(slug) }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: catalogKeys.tabela(slug) }),
   });
 }
 
@@ -116,6 +116,6 @@ export function useRestoreCatalogRow(slug: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiClient.post(`/${slug}/${id}/restore`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: catalogKeys.tabela(slug) }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: catalogKeys.tabela(slug) }),
   });
 }
