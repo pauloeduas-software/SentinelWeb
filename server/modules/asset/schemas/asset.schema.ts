@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { $Enums } from '@prisma/client';
 import {
   diaNaoFuturo, nomeObrigatorio, textoOpcional,
   uuidObrigatorio, uuidOpcional, valorMonetarioOpcional, versaoLida
@@ -74,14 +73,9 @@ export const updateAssetSchema = z.strictObject({
 // DAR BAIXA
 // ---------------------------------------------------------------------------
 
-/**
- * O motivo vem do enum do banco, e não de uma lista escrita de novo aqui: um
- * valor a mais em `RetiredReason` passa a ser aceito sem ninguém lembrar deste
- * arquivo, e um valor removido vira erro de compilação em vez de 500 na
- * gravação.
- */
+/** O motivo é um cadastro de Configurações (BE): a borda confere o formato, e `retireAsset`, se ele existe. */
 export const retireAssetSchema = z.strictObject({
-  retiredReason: z.enum($Enums.RetiredReason, 'motivo da saída inválido'),
+  retiredReasonId: uuidObrigatorio('motivo da baixa'),
   // Ausente = hoje, no dia de Brasília. A venda pode ter sido na semana passada
   // e o registro hoje — mas não na semana QUE VEM: uma baixa futura tirava o
   // ativo do inventário hoje, e toda mensagem dizia "teve baixa em" uma data

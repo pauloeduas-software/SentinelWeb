@@ -65,7 +65,7 @@ Na ordem do menu, que se agrupa por assunto ([AH](./docs/decisoes/acesso.md#ah--
 | **Convergência** | `/descobertas` | O que o agente vê e o cadastro não sabe — máquinas sem vínculo, vínculo manual, fila de sugestões e "Reconciliar agora" | TECNICO |
 | **Pessoas** | `/colaboradores` | Quem recebe equipamento — criar, editar, desativar, excluir para a lixeira e restaurar. Não entra no sistema: quem opera é usuário | TECNICO |
 |  | `/colaboradores/:id` | Ficha do colaborador — as notas, os computadores entregues a ele, os postos ocupados, o estoque e as licenças no nome dele, e o histórico | TECNICO |
-| **Sistema** | `/configuracoes` | As cinco abas de referência — categorias, status, fabricantes, modelos e localizações. A configuração da descoberta fica em `/descobertas` | SUPERVISOR |
+| **Sistema** | `/configuracoes` | As seis abas de referência — categorias, fabricantes, modelos, localizações, status e motivos de baixa. A configuração da descoberta fica em `/descobertas` | SUPERVISOR |
 | **Gestão** | `/usuarios` | Quem opera o sistema — Técnico, Supervisor ou Administrador (AV). O cadastro pede nome, e-mail e cargo, e a conta nasce com uma senha temporária (o login é o e-mail) | ADMIN |
 
 A convergência RMM × ITAM — vínculo entre a máquina que o agente descobre e o ativo cadastrado,

@@ -3,7 +3,7 @@
 > A tela `/colaboradores`: quem recebe equipamento — o computador, o posto que
 > ocupa, a licença e o estoque no nome dele. O que ele é, a ficha, e o que a exclusão,
 > a lixeira e a desativação recusam. O cadastro é o do catálogo, com as regras
-> de [`configuracoes.md`](configuracoes.md) (*O que vale para as seis*); quem
+> de [`configuracoes.md`](configuracoes.md) (*O que vale para as sete*); quem
 > responde pelo quê é a Camada 2 de [`modelo-de-posse.md`](modelo-de-posse.md),
 > e a regra que vira fato permanente no banco é a 6 de
 > [`invariantes.md`](invariantes.md).

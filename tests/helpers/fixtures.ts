@@ -59,6 +59,12 @@ export async function idsDoSeed() {
   };
 }
 
+/** O id de um motivo da baixa que o seed deixa pronto (BE). Lido, nunca criado. */
+export async function motivoDaBaixa(name = 'Vendido'): Promise<string> {
+  const motivo = await prisma.retireReason.findUniqueOrThrow({ where: { name }, select: { id: true } });
+  return motivo.id;
+}
+
 /**
  * Um item de estoque, pela API — nunca por `prisma.stockItem.create`.
  *
