@@ -1,13 +1,13 @@
-import { Building2, CircleDot, Factory, Laptop, Tag } from 'lucide-react';
+import { Building2, CircleDot, Factory, Laptop, PackageX, Tag } from 'lucide-react';
 import {
   TIPOS_CATEGORIA, TIPOS_STATUS,
   type CatalogUiSpec, type ColunaSpec,
 } from '../../../components/catalogo/catalog-ui.types';
 
-// As CINCO abas da tela de Configurações, na ordem em que se cadastra: modelo pede
-// categoria e fabricante, e Status vem por último porque já nasce semeado. A ordem
-// espelha CATALOG_SPECS do servidor.
-// A sexta tabela do catálogo, colaboradores, tem página própria
+// As SEIS abas da tela de Configurações, na ordem em que se cadastra: modelo pede
+// categoria e fabricante, e Status e Motivos de baixa vêm por último porque já
+// nascem semeados. A ordem espelha CATALOG_SPECS do servidor.
+// A sétima tabela do catálogo, colaboradores, tem página própria
 // (`src/pages/colaboradores`, decisão AH).
 
 // O mesmo número que recusaria o Excluir (`mostraUso` da spec do servidor, AZ).
@@ -136,6 +136,24 @@ const localizacao: CatalogUiSpec = {
   ],
 };
 
+const motivoDaBaixa: CatalogUiSpec = {
+  slug: 'retire-reasons',
+  chave: 'motivos',
+  aba: 'Motivos de baixa',
+  icone: PackageX,
+  singular: 'Motivo de baixa',
+  genero: 'm',
+  placeholderBusca: 'Buscar motivo…',
+  colunas: [
+    { key: 'name', label: 'Nome' },
+    EM_USO,
+  ],
+  campos: [
+    { key: 'name', label: 'Nome', tipo: 'text', obrigatorio: true, largura: 'inteira',
+      placeholder: 'Ex.: devolvido ao locador', ajuda: 'É o que aparece ao dar baixa em um computador.' },
+  ],
+};
+
 export const CATALOG_UI_SPECS: readonly CatalogUiSpec[] = [
-  categoria, fabricante, modelo, localizacao, status,
+  categoria, fabricante, modelo, localizacao, status, motivoDaBaixa,
 ];

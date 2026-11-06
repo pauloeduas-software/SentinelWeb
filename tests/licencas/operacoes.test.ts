@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import {
-  cenarioDePosse, criarAtivo, criarColaborador, criarLicenca, diaNoBrasil, entregarLicenca,
+  cenarioDePosse, criarAtivo, criarColaborador, criarLicenca, diaNoBrasil, entregarLicenca, motivoDaBaixa,
 } from '../helpers/fixtures';
 import { prisma } from '../../server/infra/database/prismaClient';
 // A máscara do campo de dinheiro: o teste prova o que a tela manda ao servidor.
@@ -341,7 +341,7 @@ describe('a entrega recusa', () => {
     const licenca = await criarLicenca(api, { name: 'Antivírus', categoryId: cenario.categoriaLicencaId, seatsTotal: 5 });
     const baixado = await maquina('Vendido');
     const apagado = await maquina('Apagado');
-    expect((await api.post(`/api/assets/${baixado.id}/retire`, { retiredReason: 'VENDIDO' })).status).toBe(200);
+    expect((await api.post(`/api/assets/${baixado.id}/retire`, { retiredReasonId: await motivoDaBaixa() })).status).toBe(200);
     expect((await api.delete(`/api/assets/${apagado.id}`)).status).toBe(200);
 
     const r1 = await api.post<{ error: string }>(`/api/licenses/${licenca.id}/checkout`, { assignedAssetId: baixado.id });

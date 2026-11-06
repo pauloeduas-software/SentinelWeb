@@ -6,7 +6,7 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. O índice das 164 está em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D1–D3, D5, D8–D13, D18–D21, D85, C/I da segunda rodada e AO (ver
+> Decisões neste arquivo: D1–D3, D5, D8–D13, D18–D21, D85, C/I da segunda rodada, AO e BE (ver
 > [`README.md`](./README.md#a-segunda-rodada-ap)).
 > A execução que as aplicou está em [`../historico/`](../historico/).
 
@@ -301,6 +301,10 @@ checkin, nota) gravarem com `entityType: 'Asset'`.
 
 ## D19 — Arquivar, descomissionar e apagar são três coisas, com três colunas.
 
+> **Superada em parte pelo commit `505c520`:** sem `ARCHIVED`, sobram duas: `retiredAt` (a baixa) e `deletedAt`.
+
+> **Superada em parte por [BE](#be--os-motivos-da-baixa-viram-cadastro-de-configurações):** o motivo deixa de ser lista fechada e vira cadastro; a baixa continua separada do status.
+
 **Decidido:** `status.type = ARCHIVED` (classificação, reversível), `retiredAt` +
 `retiredReason` (fato datado de saída do parque), `deletedAt` (lixeira).
 **Descartado:** um `archived Boolean` no `Asset`.
@@ -480,3 +484,39 @@ pelos motivos do D8.
 **O que fica de fora, declarado:** o colaborador e a conta mantêm o Desativar, porque são pessoas:
 saem da empresa e continuam no histórico. O item de estoque o mantém como o acessório do Snipe-IT,
 que se arquiva.
+
+---
+
+## BE — Os motivos da baixa viram cadastro de Configurações
+
+**Decidido** (em 2026-11-06, na varredura do que estava fixo no código: "Motivos da baixa pode fazer"):
+
+- **O enum `RetiredReason` sai, e entra a tabela `RetireReason`.** É a sexta aba de Configurações,
+  Motivos de baixa, no CRUD do catálogo: só nome, único sem diferença de maiúscula, sem Desativar
+  ([AO](#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam)).
+- **O sistema nasce com os seis de antes**, pelo seed principal: Vendido, Descartado, Doado,
+  Devolvido em garantia, Extraviado e Roubado.
+- **O motivo em uso não se exclui.** `Asset.retiredReasonId` é FK `Restrict`, a contagem inclui a
+  lixeira, e o 409 manda reverter a baixa, porque ela não se edita.
+- **A baixa recebe `retiredReasonId`**, e o motivo que não existe é 404. O campo nasce vazio: antes
+  vinha com Vendido marcado.
+- **A auditoria guarda o nome por escrito**, e não o id ([V](./posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira)).
+  Renomear muda o selo das baixas que já existem; a auditoria continua com o nome da época.
+
+**Supera:** em parte o [D19](#d19--arquivar-descomissionar-e-apagar-são-três-coisas-com-três-colunas),
+na lista fechada do motivo.
+**Mantém:** a baixa separada do status (D19), e o [D5](#d5--nada-de-texto-livre-onde-o-snipe-it-tem-tabela):
+continua sem texto livre, agora com a tabela que ele pede.
+
+**Por quê:** dos 14 enums do banco, este era o único que nenhuma regra lia, e por isso o único que
+podia sair do código. Tipo de categoria, tipo de status e cargo continuam fixos porque o sistema
+decide por eles. A falta era concreta: o computador de locação que volta ao fornecedor não tinha
+motivo certo, e a [`baixa.md`](../referencia/baixa.md) registrava isso. O GLPI e o Snipe-IT não têm
+campo de motivo: lá é um status que o administrador cria. Aqui a coluna própria fica, pelo D19, e
+o que passa à mão da empresa é a lista. O argumento do enum era contra o texto livre, e um cadastro
+com nome único o cumpre.
+
+**O que fica de fora, declarado:** o seletor passa a vir em ordem alfabética, e não com o que mais
+acontece primeiro. O cadastro não impede "Venda" ao lado de "Vendido", mas só o Supervisor o
+altera. Nada disso toca o estoque: sem baixa e sem motivo lá
+([AJ](./estoque.md#aj--o-consumível-é-uma-categoria-e-o-total-é-o-que-existe)) continua decidido.

@@ -3,7 +3,7 @@ import { AppError } from '../../../infra/errors/app-error';
 import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
 import { buildSnapshot } from '../../shared/diff.helper';
-import { ASSET_SELECT, CAMPOS_AUDITADOS_DO_ATIVO } from '../helpers/asset-select.helper';
+import { ASSET_SELECT, CAMPOS_AUDITADOS_DO_ATIVO, comMotivoPorEscrito } from '../helpers/asset-select.helper';
 import {
   comoReferencias, licencasDoAtivo, nomesDasLicencas,
 } from '../../license/use-cases/count-license-checkouts.usecase';
@@ -79,7 +79,7 @@ export async function deleteAsset(id: string, ator: Ator): Promise<void> {
       entityId: id,
       entityLabel: antes.assetTag,
       action: 'DELETE',
-      changes: buildSnapshot(antes, [...CAMPOS_AUDITADOS_DO_ATIVO, 'retiredAt', 'retiredReason', 'retiredNotes']),
+      changes: buildSnapshot(comMotivoPorEscrito(antes), [...CAMPOS_AUDITADOS_DO_ATIVO, 'retiredAt', 'retiredReason', 'retiredNotes']),
     }, ator);
   });
 }

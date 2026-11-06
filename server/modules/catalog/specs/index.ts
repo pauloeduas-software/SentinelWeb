@@ -3,6 +3,7 @@ import { categorySpec } from './category.spec';
 import { locationSpec } from './location.spec';
 import { manufacturerSpec } from './manufacturer.spec';
 import { personSpec } from './person.spec';
+import { retireReasonSpec } from './retire-reason.spec';
 import { statusLabelSpec } from './status-label.spec';
 import type { CatalogSpec } from './catalog-spec.types';
 
@@ -10,12 +11,14 @@ import type { CatalogSpec } from './catalog-spec.types';
 // uma tabela nova é escrever a spec e incluí-la aqui; nenhuma rota é escrita à mão.
 //
 // A ordem é a que a tela de Configurações usa nas abas: a de cadastro, com o status
-// por último porque já nasce semeado. O colaborador, o último, tem página própria (AH).
+// e o motivo da baixa por último porque já nascem semeados. O colaborador, o último,
+// tem página própria (AH).
 export const CATALOG_SPECS: readonly CatalogSpec[] = [
   categorySpec,
   manufacturerSpec,
   assetModelSpec,
   locationSpec,
   statusLabelSpec,
+  retireReasonSpec,
   personSpec,
 ];

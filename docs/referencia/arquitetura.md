@@ -88,7 +88,7 @@ server/
 | `agent` | Conversa WebSocket com o Agente Sentinel (C#). Só transporte. | — |
 | `endpoint` | Máquina descoberta pelo agente (lado RMM) + telemetria (a crua fica 3 dias, com expurgo uma vez por dia depois da agregação; o uso diário agregado, para sempre) + comandos | `Endpoint`, `Telemetry` |
 | `asset` | Ativo do ITAM — o `Asset` do vocabulário do Snipe-IT | `Asset` |
-| `catalog` | As SEIS tabelas de catálogo, com UM CRUD genérico dirigido por spec — o colaborador inclusive | `Category`, `StatusLabel`, `Manufacturer`, `AssetModel`, `Location`, `Person` |
+| `catalog` | As SETE tabelas de catálogo, com UM CRUD genérico dirigido por spec — o colaborador inclusive | `Category`, `StatusLabel`, `RetireReason`, `Manufacturer`, `AssetModel`, `Location`, `Person` |
 | `settings` | Configuração global: a etiqueta automática (prefixo, zeros, próximo número) e os botões da descoberta (`discoveryMode`, `ghostDays`, `shadowHours`). Idioma, moeda e formato de data são fixos no código (`src/helpers/format.helper.ts`) | `AppSetting` |
 | `audit` | A auditoria — quem fez o quê, em qual registro e quando ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)) —, gravada na transação de quem a origina. Só no banco: tela nenhuma a lê | `AuditLog` |
 | `user` | **Quem opera o sistema** — Técnico, Supervisor ou Administrador ([AV](../decisoes/acesso.md#av--três-cargos-técnico-supervisor-e-administrador)), com senha ([U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)) | `User` |
@@ -100,7 +100,7 @@ server/
 | `reconciliation` | **Convergência RMM × ITAM**: o vínculo entre a máquina descoberta e o ativo cadastrado e a fila de sugestões — sem inferência por conta do sistema operacional ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)) nem fusão de máquinas ([H](../decisoes/reconciliacao.md#h--a-fusão-de-máquinas-sai)) | `ReconciliationSuggestion`, `AssetChange`, `AssetUsageDaily` |
 | `access` | **Autorização**: o cargo da sessão, o mapa de rotas × cargo mínimo e a invariante "nunca sem administrador" | — |
 | `auth` | **Sessão e credencial**: login, cookie e a geração da sessão (`tokenVersion`) | — |
-| `workstation` | **O posto de trabalho**: o cadastro (o CRUD do catálogo, com a `workstationSpec` — fora das seis tabelas) e a leitura de posto + ocupantes que a `/postos` mostra, onde `ehPostoVago()` mora ([Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)) | `Workstation` |
+| `workstation` | **O posto de trabalho**: o cadastro (o CRUD do catálogo, com a `workstationSpec` — fora das sete tabelas) e a leitura de posto + ocupantes que a `/postos` mostra, onde `ehPostoVago()` mora ([Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)) | `Workstation` |
 | `shared` | Tipos e helpers usados por mais de um domínio (`diff.helper`, `fields.schema`, `history.schema`) | — |
 
 > **A decisão D1 foi executada na Fase 1.** `asset/` (RMM) virou `endpoint/`, e o
@@ -113,9 +113,9 @@ server/
 
 ### `catalog` é a exceção à fatia vertical
 
-As SEIS tabelas de catálogo — e o posto, pela `workstationSpec` — são o MESMO CRUD: nome, listagem paginada, busca,
-auditoria, 409 quando a linha está em uso. Cinco fatias verticais completas
-seriam ~55 arquivos quase idênticos (onze por fatia, a conta do D9) — o que esta
+As SETE tabelas de catálogo — e o posto, pela `workstationSpec` — são o MESMO CRUD: nome, listagem paginada, busca,
+auditoria, 409 quando a linha está em uso. Sete fatias verticais completas
+seriam ~77 arquivos quase idênticos (onze por fatia, a conta do D9) — o que esta
 mesma página chama de cerimônia, não arquitetura.
 
 > **O número está escrito aqui de propósito, e precisa ser corrigido junto.** É

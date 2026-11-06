@@ -3,7 +3,7 @@ import { tituloDaPagina, vigiarConsole } from './helpers';
 
 // O cadastro do catálogo é o padrão de CRUD do sistema inteiro (CatalogTable +
 // useCatalog; decisões AF e AO): se o ciclo fecha em Categorias, fecha nas
-// outras quatro abas e em Colaboradores, que usam o mesmo componente.
+// outras cinco abas e em Colaboradores, que usam o mesmo componente.
 //
 // O nome carrega "E2E" para não bater com o seed. Não há limpeza no fim: o
 // banco é esvaziado a cada execução (tests/e2e/preparar.ts), então uma
@@ -25,7 +25,7 @@ async function acaoDaLinha(page: Page, nome: string, acao: string): Promise<void
 test('cada aba aponta para um painel que existe', async ({ page }) => {
   await page.goto('/configuracoes');
   const abas = page.getByRole('tab');
-  await expect(abas).toHaveText(['Categorias', 'Fabricantes', 'Modelos', 'Localizações', 'Status']);
+  await expect(abas).toHaveText(['Categorias', 'Fabricantes', 'Modelos', 'Localizações', 'Status', 'Motivos de baixa']);
 
   for (const aba of await abas.all()) {
     const alvo = await aba.getAttribute('aria-controls');

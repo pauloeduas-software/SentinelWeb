@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { cenarioDePosse, criarAtivo } from '../helpers/fixtures';
+import { cenarioDePosse, criarAtivo, motivoDaBaixa } from '../helpers/fixtures';
 import { prisma } from '../../server/infra/database/prismaClient';
 
 // AS CORRIDAS — o que "passa no teste com um usuário".
@@ -148,11 +148,12 @@ describe('baixa × entrega do mesmo ativo, ao mesmo tempo', () => {
   it('nunca termina baixado E entregue', async () => {
     // Sem a trava do ativo na baixa, as duas liam "sem posse" e "sem baixa" e
     // passavam: o notebook ficava vendido e na mão da Laura ao mesmo tempo.
+    const retiredReasonId = await motivoDaBaixa();
     for (let rodada = 0; rodada < 8; rodada += 1) {
       const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
 
       const [baixa, entrega] = await Promise.all([
-        api.post(`/api/assets/${ativo.id}/retire`, { retiredReason: 'VENDIDO' }),
+        api.post(`/api/assets/${ativo.id}/retire`, { retiredReasonId }),
         api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'PERSON', targetPersonId: cenario.laura }),
       ]);
       // Exatamente uma vence: a que chegar depois encontra a outra feita e
@@ -185,6 +186,32 @@ describe('duas devoluções do mesmo ativo, ao mesmo tempo', () => {
 
       const checkins = await prisma.auditLog.count({ where: { entityId: ativo.id, action: 'CHECKIN' } });
       expect(checkins).toBe(1);
+    }
+  });
+});
+
+// O MOTIVO DA BAIXA (BE), como a localização: a baixa lê o motivo travado. Ou ele
+// sai antes e ela recebe 404, ou ela passa e a exclusão é recusada.
+describe('excluir o motivo da baixa e dar baixa com ele, ao mesmo tempo', () => {
+  it('nunca termina com a baixa apontando para um motivo que sumiu', async () => {
+    for (let rodada = 1; rodada <= 8; rodada += 1) {
+      const motivo = await api.post<{ id: string }>('/api/retire-reasons', { name: `Motivo da corrida ${rodada}` });
+      const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
+
+      const [exclusao, baixa] = await Promise.all([
+        api.delete(`/api/retire-reasons/${motivo.body.id}`),
+        api.post(`/api/assets/${ativo.id}/retire`, { retiredReasonId: motivo.body.id }),
+      ]);
+
+      const lido = await prisma.asset.findUniqueOrThrow({ where: { id: ativo.id }, select: { retiredReasonId: true } });
+      if (exclusao.status === 200) {
+        expect(baixa.status).toBe(404);
+        expect(lido.retiredReasonId).toBeNull();
+      } else {
+        expect(exclusao.status).toBe(409);
+        expect(baixa.status).toBe(200);
+        expect(lido.retiredReasonId).toBe(motivo.body.id);
+      }
     }
   });
 });

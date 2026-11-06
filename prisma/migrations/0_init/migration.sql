@@ -34,9 +34,6 @@ CREATE TYPE "CategoryType" AS ENUM ('ASSET', 'LICENSE', 'STOCK', 'COMPONENT', 'C
 CREATE TYPE "StatusLabelType" AS ENUM ('DEPLOYABLE', 'IN_USE', 'PENDING', 'UNDEPLOYABLE');
 
 -- CreateEnum
-CREATE TYPE "RetiredReason" AS ENUM ('VENDIDO', 'DESCARTADO', 'DOADO', 'EXTRAVIADO', 'ROUBADO', 'GARANTIA');
-
--- CreateEnum
 CREATE TYPE "AssignmentTarget" AS ENUM ('PERSON', 'WORKSTATION');
 
 -- CreateEnum
@@ -50,8 +47,6 @@ CREATE TYPE "SuggestionKind" AS ENUM ('LINK');
 
 -- CreateEnum
 CREATE TYPE "SuggestionState" AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED', 'SUPERSEDED');
-
--- CreateEnum
 
 -- CreateEnum
 CREATE TYPE "StockTarget" AS ENUM ('PERSON', 'WORKSTATION', 'ASSET');
@@ -173,6 +168,16 @@ CREATE TABLE "status_labels" (
 );
 
 -- CreateTable
+CREATE TABLE "retire_reasons" (
+    "id" UUID NOT NULL,
+    "name" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "retire_reasons_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "manufacturers" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
@@ -241,7 +246,7 @@ CREATE TABLE "assets" (
     "purchaseDate" TIMESTAMP(3),
     "purchaseCost" DECIMAL(12,2),
     "retiredAt" TIMESTAMP(3),
-    "retiredReason" "RetiredReason",
+    "retiredReasonId" UUID,
     "retiredNotes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -483,6 +488,9 @@ CREATE UNIQUE INDEX "categories_name_type_key" ON "categories"("name", "type");
 CREATE UNIQUE INDEX "status_labels_name_key" ON "status_labels"("name");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "retire_reasons_name_key" ON "retire_reasons"("name");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "manufacturers_name_key" ON "manufacturers"("name");
 
 -- CreateIndex
@@ -511,6 +519,9 @@ CREATE INDEX "assets_modelId_idx" ON "assets"("modelId");
 
 -- CreateIndex
 CREATE INDEX "assets_locationId_idx" ON "assets"("locationId");
+
+-- CreateIndex
+CREATE INDEX "assets_retiredReasonId_idx" ON "assets"("retiredReasonId");
 
 -- CreateIndex
 CREATE INDEX "assets_retiredAt_idx" ON "assets"("retiredAt");
@@ -631,6 +642,9 @@ ALTER TABLE "assets" ADD CONSTRAINT "assets_modelId_fkey" FOREIGN KEY ("modelId"
 
 -- AddForeignKey
 ALTER TABLE "assets" ADD CONSTRAINT "assets_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "assets" ADD CONSTRAINT "assets_retiredReasonId_fkey" FOREIGN KEY ("retiredReasonId") REFERENCES "retire_reasons"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "assignments" ADD CONSTRAINT "assignments_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "assets"("id") ON DELETE CASCADE ON UPDATE CASCADE;

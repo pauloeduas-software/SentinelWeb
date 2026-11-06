@@ -20,7 +20,7 @@ BEGIN;
 \echo '### 1. Ativo baixado ou na lixeira COM posse aberta  -> esperado: 0 linhas'
 -- O equipamento foi vendido/descartado, ou foi para a lixeira, e continua na
 -- mao de alguem: sumiu do inventario sem que a devolucao tenha acontecido (AL).
-SELECT a."assetTag", a."retiredAt", a."retiredReason", a."deletedAt", g.id AS assignment
+SELECT a."assetTag", a."retiredAt", a."retiredReasonId", a."deletedAt", g.id AS assignment
 FROM assets a
 JOIN assignments g ON g."assetId" = a.id AND g."checkinAt" IS NULL
 WHERE a."retiredAt" IS NOT NULL OR a."deletedAt" IS NOT NULL;
@@ -28,11 +28,11 @@ WHERE a."retiredAt" IS NOT NULL OR a."deletedAt" IS NOT NULL;
 \echo ''
 \echo '### 2. Motivo sem data, ou data sem motivo  -> esperado: 0 linhas'
 -- As duas colunas andam juntas: `retiredAt` sozinho e "saiu, nao se sabe por
--- que"; `retiredReason` sozinho e um motivo de saida para um ativo que nao
+-- que"; `retiredReasonId` sozinho e um motivo de saida para um ativo que nao
 -- saiu. Nenhuma tela sabe mostrar esses dois estados.
-SELECT a."assetTag", a."retiredAt", a."retiredReason"
+SELECT a."assetTag", a."retiredAt", a."retiredReasonId"
 FROM assets a
-WHERE (a."retiredAt" IS NULL) <> (a."retiredReason" IS NULL);
+WHERE (a."retiredAt" IS NULL) <> (a."retiredReasonId" IS NULL);
 
 \echo ''
 \echo '### 3. Saida do patrimonio sem linha na auditoria  -> esperado: 0 linhas'

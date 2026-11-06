@@ -323,16 +323,17 @@ describe('URL do fabricante', () => {
   });
 });
 
-describe('sem Desativar nas cinco tabelas (AO)', () => {
-  it('mandar isActive é 422 em categoria, status, fabricante, modelo e localização', async () => {
+describe('sem Desativar nas seis tabelas (AO)', () => {
+  it('mandar isActive é 422 em categoria, status, fabricante, modelo, localização e motivo de baixa', async () => {
     const fabricante = await criarFabricante(api, 'Fabricante sem desativar');
     const modelo = await criarModelo(api, { categoriaId, fabricanteId: fabricante, name: 'Modelo sem desativar' });
     const status = await api.post<{ id: string }>('/api/status-labels', { name: 'Status sem desativar', type: 'UNDEPLOYABLE' });
     const local = await api.post<{ id: string }>('/api/locations', { name: 'Local sem desativar' });
+    const motivo = await api.post<{ id: string }>('/api/retire-reasons', { name: 'Motivo sem desativar' });
 
     const registros: [string, string][] = [
       ['categories', categoriaId], ['status-labels', status.body.id], ['manufacturers', fabricante],
-      ['asset-models', modelo], ['locations', local.body.id],
+      ['asset-models', modelo], ['locations', local.body.id], ['retire-reasons', motivo.body.id],
     ];
     for (const [rota, id] of registros) {
       expect((await api.put(`/api/${rota}/${id}`, { isActive: false })).status, rota).toBe(422);

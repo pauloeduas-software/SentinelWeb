@@ -6,7 +6,7 @@ import { rodarReconciliacao } from '../../server/modules/reconciliation/jobs/rec
 import { criarApi, type ApiDeTeste, type Resposta } from '../helpers/app';
 import { conectarAgente, esperarPor } from '../helpers/agente';
 import {
-  criarAtivo, criarColaborador, criarFabricante, criarModelo, criarPosto, idsDoSeed,
+  criarAtivo, criarColaborador, criarFabricante, criarModelo, criarPosto, idsDoSeed, motivoDaBaixa,
 } from '../helpers/fixtures';
 
 // A AUDITORIA (AB) — quem fez o quê, só no banco.
@@ -76,6 +76,10 @@ describe('toda escrita do painel deixa rastro com a conta da sessão', () => {
     await auditada(api.put(`/api/asset-models/${modelo.body.id}`, { name: `Modelo ${proximo()}` }));
     await auditada(api.delete(`/api/asset-models/${modelo.body.id}`));
     await auditada(api.delete(`/api/categories/${categoria.body.id}`));
+
+    const motivo = await auditada(api.post<{ id: string }>('/api/retire-reasons', { name: `Motivo ${proximo()}` }));
+    await auditada(api.put(`/api/retire-reasons/${motivo.body.id}`, { name: `Motivo ${proximo()}` }));
+    await auditada(api.delete(`/api/retire-reasons/${motivo.body.id}`));
     await auditada(api.delete(`/api/manufacturers/${fabricante.body.id}`));
 
     const status = await auditada(api.post<{ id: string }>('/api/status-labels', {
@@ -121,7 +125,7 @@ describe('toda escrita do painel deixa rastro com a conta da sessão', () => {
     const mesa = await criarPosto(api, { name: `Mesa do ativo ${proximo()}` });
     await auditada(api.post(`/api/assets/${id}/checkout`, { targetType: 'WORKSTATION', targetWorkstationId: mesa }));
     await auditada(api.post(`/api/assets/${id}/checkin`, {}));
-    await auditada(api.post(`/api/assets/${id}/retire`, { retiredReason: 'DOADO', notes: 'Doado à escola' }));
+    await auditada(api.post(`/api/assets/${id}/retire`, { retiredReasonId: await motivoDaBaixa('Doado'), notes: 'Doado à escola' }));
     await auditada(api.post(`/api/assets/${id}/unretire`, {}));
     await auditada(api.delete(`/api/assets/${id}`));
     await auditada(api.post(`/api/assets/${id}/restore`));

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { criarAtivo, criarFabricante, criarModelo, idsDoSeed } from '../helpers/fixtures';
+import { criarAtivo, criarFabricante, criarModelo, idsDoSeed, motivoDaBaixa } from '../helpers/fixtures';
 
 // AS TRÊS VISTAS DA LISTAGEM DE ATIVOS — e as duas colunas que elas separam (D19):
 //
@@ -39,7 +39,7 @@ beforeAll(async () => {
   noEstoque = await criarAtivo(api, { statusId: seed.statusDeployableId, modelId, name: 'No estoque' });
   baixado = await criarAtivo(api, { statusId: seed.statusDeployableId, modelId, name: 'Vendido' });
 
-  const saiu = await api.post(`/api/assets/${baixado.id}/retire`, { retiredReason: 'VENDIDO' });
+  const saiu = await api.post(`/api/assets/${baixado.id}/retire`, { retiredReasonId: await motivoDaBaixa() });
   expect(saiu.status).toBe(200);
 });
 

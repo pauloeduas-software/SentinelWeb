@@ -1,9 +1,9 @@
 # Configurações
 
-> A tela `/configuracoes`: as cinco tabelas de referência — Categorias, Status,
-> Fabricantes, Modelos e Localizações —, o que cada uma é, quem aponta para ela
-> e o que o sistema recusa. E o CRUD do catálogo, que elas dividem com a sexta
-> tabela, Colaboradores, que tem página própria
+> A tela `/configuracoes`: as seis tabelas de referência — Categorias, Fabricantes,
+> Modelos, Localizações, Status e Motivos de baixa —, o que cada uma é, quem aponta
+> para ela e o que o sistema recusa. E o CRUD do catálogo, que elas dividem com a
+> sétima tabela, Colaboradores, que tem página própria
 > ([`colaboradores.md`](colaboradores.md)).
 >
 > As regras que viram fato permanente no banco estão também em
@@ -39,8 +39,8 @@ entregar, na página Colaboradores.
 
 ### Como o código é montado
 
-Um CRUD para as seis, dirigido por **spec** — acrescentar uma tabela é escrever
-a spec, não copiar uma fatia. Na tela, o mesmo componente desenha as cinco abas
+Um CRUD para as sete, dirigido por **spec** — acrescentar uma tabela é escrever
+a spec, não copiar uma fatia. Na tela, o mesmo componente desenha as seis abas
 de Configurações e a página Colaboradores
 ([AH](../decisoes/acesso.md#ah--o-menu-por-assunto-o-colaborador-ganha-página-própria-e-ativos-vira-computadores)).
 
@@ -53,11 +53,14 @@ de Configurações e a página Colaboradores
 | a ficha do colaborador | `server/modules/person/` (só leitura) | `src/pages/colaboradores/ficha/` — `/colaboradores/:id` |
 
 A lista das abas (`CATALOG_UI_SPECS`) segue a ordem do `CATALOG_SPECS` do
-servidor, sem o colaborador, que é o último; a tela acha cada spec pelo `slug`.
+servidor, que é a ordem prática de cadastro, com o status e os motivos de baixa por
+último porque já nascem semeados. O colaborador, o último, fica de fora; a tela acha cada spec pelo
+`slug`. A aba fica no endereço (`?aba=modelos`, pela `chave` da spec): o F5 mantém a
+aba, e a primeira é o endereço limpo. Busca, filtro e página também ficam na URL (`useListaNaUrl`).
 
 ---
 
-## O que vale para as seis
+## O que vale para as sete
 
 | Regra | Como funciona | Onde |
 |---|---|---|
@@ -65,9 +68,10 @@ servidor, sem o colaborador, que é o último; a tela acha cada spec pelo `slug`
 | **Campo desconhecido é recusado** | `strictObject` em todo schema: 422, nunca ignorado em silêncio | `schemas/catalog-entities.schema.ts` |
 | **Nome único, sem diferença de maiúscula** | "dell" é recusado quando há "Dell": 409 `Já existe fabricante com o nome "Dell".` `%` e `_` contam como letras, não como curingas. Categoria é única **por tipo**; modelo não tem nome único (ver abaixo) | `helpers/nome-unico.helper.ts`, campo `nomeUnicoPor` da spec |
 | **Exclusão só sem uso** | `DELETE` de linha que alguém usa **agora** é 409 com a contagem e a saída: `Não é possível excluir: fabricante em uso por 3 registros. Troque o fabricante desses registros e exclua de novo.` A tela mostra isso numa **notificação do sistema**. O colaborador diz *o quê* em vez de quantos (`motivoParaNaoExcluir`) | `countUsages` e `dicaEmUso` de cada spec, `delete-catalog.usecase.ts` |
-| **Desativar só no colaborador** | as cinco abas não se desativam ([AO](../decisoes/catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam)): mandar `isActive` é 422, e o que tem uso fica até sair do uso. Detalhes abaixo | `isActive` só em `people`, `optionsWhere` da spec do colaborador |
+| **Desativar só no colaborador** | as seis abas não se desativam ([AO](../decisoes/catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam)): mandar `isActive` é 422, e o que tem uso fica até sair do uso. Detalhes abaixo | `isActive` só em `people`, `optionsWhere` da spec do colaborador |
 | **A contagem inclui a lixeira** | o ativo na lixeira continua apontando — e pode voltar. O item de estoque e a licença não têm lixeira: o desativado e a encerrada contam, o excluído não existe mais | `INCLUINDO_LIXEIRA` nos `countUsages` do ativo |
-| **Lixeira só em Colaboradores** | nas outras cinco, exclusão é definitiva (D8) e o que protege é o 409 por uso. O colaborador vai para a lixeira, com Restaurar ([V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira), [`colaboradores.md`](colaboradores.md)) | `lixeira` da spec, `restore-catalog.usecase.ts` |
+| **A coluna "Em uso"** | as seis abas mostram, em cada linha, o número que recusaria o `DELETE`, pelo mesmo `countUsages`. Com uso, o formulário trava o Tipo de categoria e de status e diz por quê; a guarda do servidor continua, e o Excluir segue clicando. Colaboradores não tem a coluna: a ficha diz o que está com a pessoa ([AZ](../decisoes/plataforma.md#az--configurações-explica-no-formulário-e-a-página-fica-sem-subtítulo)) | `mostraUso` da spec, `list-catalog.usecase.ts` |
+| **Lixeira só em Colaboradores** | nas outras seis, exclusão é definitiva (D8) e o que protege é o 409 por uso. O colaborador vai para a lixeira, com Restaurar ([V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira), [`colaboradores.md`](colaboradores.md)) | `lixeira` da spec, `restore-catalog.usecase.ts` |
 | **Tudo vai para a auditoria** | criar, editar e excluir gravam `audit_logs` na **mesma transação**, com quem fez ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)); a edição grava só o que mudou | `recordAudit` nos use-cases |
 | **Listas de escolha** | `GET /api/<tabela>/options` devolve `{ id, name }` de todos — do colaborador, só os ativos —, até 200, com busca `?q=` — e o colaborador vem também com `detalhe`, o e-mail (`optionDetail` da spec), que o seletor da entrega de licença mostra ao lado do nome. É ele que alimenta todo `<select>` | `list-catalog-options.usecase.ts` |
 
@@ -109,7 +113,7 @@ entrada. As diferenças são de propósito:
 - **O que está em uso não se desativa** ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)): a licença com
   entrega aberta não se encerra, e o item de estoque com unidade em uso não se
   desativa — 409 que manda devolver antes, como no Excluir.
-- As cinco abas das Configurações não se desativam ([AO](../decisoes/catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam)): o que tem uso
+- As seis abas das Configurações não se desativam ([AO](../decisoes/catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam)): o que tem uso
   recebe o 409 do Excluir, que diz o que tirar.
 - O Posto não se desativa: o vazio se exclui, como a localização, e o que tem
   algo nele recebe o 409 da exclusão.
@@ -124,9 +128,9 @@ Erros de ação (exclusão recusada, desativação recusada) aparecem numa
 colaborador que ainda tem licença diz quais, e a notificação traz um link para cada uma — o
 Devolver mora no detalhe da licença; com link, ela fica até alguém fechar.
 
-### Sem Desativar nas cinco
+### Sem Desativar nas seis
 
-Categoria, status, fabricante, modelo e localização não se desativam ([AO](../decisoes/catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam)),
+Categoria, status, fabricante, modelo, localização e motivo de baixa não se desativam ([AO](../decisoes/catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam)),
 como no Snipe-IT: mandar `isActive` é 422. O que sai de linha — o modelo que não
 se compra mais, o fabricante que fechou — continua na lista e nas escolhas até
 nada o usar, e então se exclui. Com uso, o 409 do Excluir diz o que tirar.
@@ -269,6 +273,23 @@ não existe é 404 (`Localização não encontrada.`).
 
 ---
 
+## Motivos de baixa
+
+Por que o computador saiu do patrimônio: é o que o formulário da
+[baixa](baixa.md) oferece ([BE](../decisoes/catalogo-e-ativo.md#be--os-motivos-da-baixa-viram-cadastro-de-configurações)). Só nome, único sem diferença de maiúscula.
+O sistema nasce com seis, e a empresa acrescenta os dela, como "Devolvido ao locador".
+
+Nenhuma regra decide pelo motivo: ele diz por que o computador saiu, e só. É por isso
+que ele é cadastro, e o tipo de categoria e o de status não são.
+
+**Uso** é o computador baixado com esse motivo, lixeira inclusive. É 409 com a dica
+`Reverta a baixa desses computadores e exclua de novo.`, porque a baixa não se edita.
+
+Renomear muda o selo das baixas que já existem. A auditoria continua com o nome da
+época, por escrito.
+
+---
+
 ## Corridas que o catálogo fecha
 
 Quando um lado muda o que o outro acabou de ler, as duas transações travam a
@@ -281,7 +302,7 @@ segue o grafo de `asset/use-cases/lock-asset.usecase.ts`.
 | trocar o tipo do status × editar/entregar/devolver ativo com ele | ativo entregue com status de estoque | idem, na linha do status |
 | devolver o mesmo ativo duas vezes, ou devolver atrasado depois de uma entrega nova | posse errada fechada, ativo entregue marcado "Disponível" | a devolução trava o ativo e só fecha a posse ABERTA |
 | trocar o tipo ou excluir dois status do mesmo tipo automático | nenhum "Disponível" ou "Em uso" sobrando | `FOR UPDATE` em todos os status do tipo, na mesma ordem |
-| excluir a localização, o fabricante ou o modelo × cadastrar algo nele | o cadastro aprovado caía no `Registro está em uso por outro cadastro` da FK | `FOR SHARE` na leitura (`assertLocalExiste`, `lerFabricanteTravado`, `lerModeloTravado`): quem lê depois recebe o 404, e a exclusão que vem depois é recusada pela FK |
+| excluir a localização, o fabricante ou o modelo × cadastrar algo nele; excluir o motivo de baixa × dar baixa com ele | o cadastro aprovado caía no `Registro está em uso por outro cadastro` da FK | `FOR SHARE` na leitura (`assertLocalExiste`, `lerFabricanteTravado`, `lerModeloTravado`, `assertMotivoDaBaixaExiste`): quem lê depois recebe o 404, e a exclusão que vem depois é recusada pela FK |
 | desativar o colaborador × entregar a ele ou pô-lo num posto | desativado com posse aberta | `FOR UPDATE` na linha da pessoa nos dois lados (`lock-person.usecase.ts`) |
 
 A exceção aceita: dois cadastros **simultâneos** de "Dell" e "dell" passam os dois
@@ -296,7 +317,7 @@ Dois seeds, com regras diferentes:
 | | `npm run db:seed` — o principal | `npm run db:seed:demo` — demonstração |
 |---|---|---|
 | onde roda | todo banco, produção incluída, e antes de cada arquivo de teste | só quando alguém pede: ambiente de desenvolvimento e demonstração |
-| o que cria | o que é do SOFTWARE: as 12 categorias, os 4 status (Disponível, Em uso, Pendente, Inutilizável) e a configuração — nenhuma conta ([T](../decisoes/acesso.md#t--não-há-conta-semeada)) | o que é da EMPRESA, como exemplo: fabricantes, modelos, localizações, colaboradores, licenças e itens de estoque (abaixo), e a conta de entrar. Roda o principal antes |
+| o que cria | o que é do SOFTWARE: as 12 categorias, os 4 status (Disponível, Em uso, Pendente, Inutilizável), os 6 motivos de baixa e a configuração — nenhuma conta ([T](../decisoes/acesso.md#t--não-há-conta-semeada)) | o que é da EMPRESA, como exemplo: fabricantes, modelos, localizações, colaboradores, licenças e itens de estoque (abaixo), e a conta de entrar. Roda o principal antes |
 | arquivos | `prisma/seeds/*.seed.ts`, ordem em `prisma/seeds/index.ts` | `prisma/seeds/demo/*.seed.ts`, ordem em `prisma/seeds/demo/index.ts` |
 
 Fabricante, modelo e localização ficam **fora** do principal de propósito:
@@ -326,6 +347,7 @@ aviso, o modelo cujo fabricante ou categoria foi renomeado ou excluído.
 | Assunto | Arquivo |
 |---|---|
 | contagem de uso, troca de tipo, modelo, nome único, URL, sem desativar, o último status do tipo | `tests/invariantes/catalogo.test.ts` |
+| motivos de baixa: o cadastro, a versão do formulário, o motivo em uso e o nome por escrito | `tests/invariantes/motivo-da-baixa.test.ts`, `tests/e2e/baixa.spec.ts` |
 | localização: exclusão pelo presente, não recebe entrega, sem desativar, lista plana, estoque guardado nela | `tests/invariantes/localizacao.test.ts` |
 | colaborador | ver [`colaboradores.md`](colaboradores.md) |
 | filtro por tipo e `/options` | `tests/listagens/filtro-por-categoria.test.ts`, `opcoes-com-busca.test.ts` |

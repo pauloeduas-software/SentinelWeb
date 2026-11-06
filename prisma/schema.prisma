@@ -348,7 +348,7 @@ enum CategoryType {
 //                  danificado sem conserto, perdido, roubado.
 //
 // Não existe tipo "arquivado": o ativo que sai de vez (vendido, descartado,
-// doado) é BAIXADO — `retiredAt` + `retiredReason` no `Asset`.
+// doado) é BAIXADO — `retiredAt` + `retiredReasonId` no `Asset`.
 //
 // `IN_USE` é tipo PRÓPRIO, e não `PENDING`, porque a diferença entre "está com
 // um colaborador" e "está na assistência" é a distinção mais cara do inventário:
@@ -368,18 +368,6 @@ enum StatusLabelType {
   IN_USE
   PENDING
   UNDEPLOYABLE
-}
-
-// Por que o ativo saiu do patrimônio. Fechado de propósito: é campo de
-// relatório contábil, e texto livre aqui vira "vendido", "Vendido" e "venda"
-// na mesma coluna (D5).
-enum RetiredReason {
-  VENDIDO
-  DESCARTADO
-  DOADO
-  EXTRAVIADO
-  ROUBADO
-  GARANTIA
 }
 
 model Category {
@@ -412,6 +400,21 @@ model StatusLabel {
   assets    Asset[]
 
   @@map("status_labels")
+}
+
+// Por que o ativo saiu do patrimônio. Cadastro, e não enum, porque nenhuma regra
+// decide pelo valor (BE): é o Supervisor quem acrescenta o que a empresa precisa,
+// como a devolução ao locador. Tabela, e não texto livre, porque "vendido",
+// "Vendido" e "venda" na mesma coluna é o que o D5 impede.
+model RetireReason {
+  id   String @id @default(uuid()) @db.Uuid
+  name String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  assets    Asset[]
+
+  @@map("retire_reasons")
 }
 
 model Manufacturer {
@@ -586,12 +589,12 @@ model Asset {
   //   `deletedAt` — foi cadastrado errado e está na lixeira
   // Um ativo vendido é um fato contábil e continua nos relatórios; um ativo na
   // lixeira é um erro de digitação e não deveria ter existido.
-  retiredAt     DateTime?
-  retiredReason RetiredReason?
+  retiredAt       DateTime?
+  retiredReasonId String?   @db.Uuid
   // A observação da baixa, enquanto ela vale: a aba Detalhes a mostra ao lado
   // do motivo, e desfazer a baixa a limpa junto. A de cada baixa passada fica na
   // auditoria (AB), que a tela não lê.
-  retiredNotes  String?
+  retiredNotes    String?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -601,7 +604,8 @@ model Asset {
   model    AssetModel  @relation(fields: [modelId], references: [id], onDelete: Restrict)
   // Restrict, como o status: a localização com ativo guardado — lixeira
   // inclusive — é "em uso" e se desativa, não se exclui (`locationSpec`).
-  location Location?   @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  location      Location?     @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  retiredReason RetireReason? @relation(fields: [retiredReasonId], references: [id], onDelete: Restrict)
 
   // A posse deste ativo, aberta e histórica.
   assignments Assignment[] @relation("AssignmentAsset")
@@ -651,6 +655,7 @@ model Asset {
   // schema, o `migrate diff` o tomava por lixo e emitia `DROP INDEX` dele a
   // cada migração nova. Índice COMUM o Prisma expressa; só os PARCIAIS
   // (`WHERE …`) moram de propósito só no SQL.
+  @@index([retiredReasonId])
   @@index([retiredAt])
   @@index([lastSeenByAgentAt])
   @@map("assets")

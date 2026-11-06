@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import {
-  cenarioDePosse, criarAtivo, criarColaborador, criarItemDeEstoque, criarLicenca, criarPosto, diaNoBrasil,
+  cenarioDePosse, criarAtivo, criarColaborador, criarItemDeEstoque, criarLicenca, criarPosto, diaNoBrasil, motivoDaBaixa,
 } from '../helpers/fixtures';
 
 // O DIA DA ENTREGA E DA DEVOLUÇÃO DO COMPUTADOR (AM) — o molde da licença e do
@@ -139,12 +139,12 @@ describe('as outras datas do computador e do posto', () => {
     expect((await devolver(pc.id, { checkinAt: diaNoBrasil(-4) })).status).toBe(200);
 
     const antes = await api.post<{ error: string }>(`/api/assets/${pc.id}/retire`, {
-      retiredReason: 'VENDIDO', retiredAt: diaNoBrasil(-5),
+      retiredReasonId: await motivoDaBaixa(), retiredAt: diaNoBrasil(-5),
     });
     expect(antes.status).toBe(422);
     expect(antes.body.error).toMatch(/^A baixa \(.+\) não pode ser antes da última devolução de .+ \(.+\)\.$/);
 
-    const hoje = await api.post<{ retiredAt: string; error: string }>(`/api/assets/${pc.id}/retire`, { retiredReason: 'VENDIDO' });
+    const hoje = await api.post<{ retiredAt: string; error: string }>(`/api/assets/${pc.id}/retire`, { retiredReasonId: await motivoDaBaixa() });
     expect(hoje.status, hoje.body.error).toBe(200);
     expect(hoje.body.retiredAt).toBe(`${diaNoBrasil(0)}T00:00:00.000Z`);
   });
@@ -154,7 +154,7 @@ describe('as outras datas do computador e do posto', () => {
     expect((await api.put(`/api/assets/${pc.id}`, { purchaseDate: diaNoBrasil(-10) })).status).toBe(200);
 
     const antes = await api.post<{ error: string }>(`/api/assets/${pc.id}/retire`, {
-      retiredReason: 'VENDIDO', retiredAt: diaNoBrasil(-20),
+      retiredReasonId: await motivoDaBaixa(), retiredAt: diaNoBrasil(-20),
     });
     expect(antes.status).toBe(422);
     expect(antes.body.error).toBe(
@@ -162,7 +162,7 @@ describe('as outras datas do computador e do posto', () => {
       + `(${diaNoBrasil(-10).split('-').reverse().join('/')}).`,
     );
 
-    expect((await api.post(`/api/assets/${pc.id}/retire`, { retiredReason: 'VENDIDO', retiredAt: diaNoBrasil(-5) })).status).toBe(200);
+    expect((await api.post(`/api/assets/${pc.id}/retire`, { retiredReasonId: await motivoDaBaixa(), retiredAt: diaNoBrasil(-5) })).status).toBe(200);
     const compra = await api.put<{ error: string }>(`/api/assets/${pc.id}`, { purchaseDate: diaNoBrasil(-3) });
     expect(compra.status).toBe(422);
     expect(compra.body.error).toContain(`não pode ser depois da baixa de ${pc.assetTag}`);
@@ -178,7 +178,7 @@ describe('as outras datas do computador e do posto', () => {
     expect((await api.post(`/api/licenses/checkouts/${entrega.body.id}/checkin`, { checkinAt: diaNoBrasil(-5) })).status).toBe(200);
 
     const daLicenca = await api.post<{ error: string }>(`/api/assets/${pc.id}/retire`, {
-      retiredReason: 'VENDIDO', retiredAt: diaNoBrasil(-10),
+      retiredReasonId: await motivoDaBaixa(), retiredAt: diaNoBrasil(-10),
     });
     expect(daLicenca.status).toBe(422);
     expect(daLicenca.body.error).toMatch(/^A baixa \(.+\) não pode ser antes da última licença devolvida de .+ \(.+\)\.$/);
@@ -191,11 +191,11 @@ describe('as outras datas do computador e do posto', () => {
     expect((await api.post(`/api/stock/checkouts/${instalada.body.unidades[0].id}/checkin`, { checkinAt: diaNoBrasil(-5) })).status).toBe(200);
 
     const doComponente = await api.post<{ error: string }>(`/api/assets/${outro.id}/retire`, {
-      retiredReason: 'VENDIDO', retiredAt: diaNoBrasil(-10),
+      retiredReasonId: await motivoDaBaixa(), retiredAt: diaNoBrasil(-10),
     });
     expect(doComponente.status).toBe(422);
     expect(doComponente.body.error).toMatch(/^A baixa \(.+\) não pode ser antes do último componente retirado de .+ \(.+\)\.$/);
-    expect((await api.post(`/api/assets/${outro.id}/retire`, { retiredReason: 'VENDIDO', retiredAt: diaNoBrasil(-5) })).status).toBe(200);
+    expect((await api.post(`/api/assets/${outro.id}/retire`, { retiredReasonId: await motivoDaBaixa(), retiredAt: diaNoBrasil(-5) })).status).toBe(200);
   });
 
   it('a ocupação desde um dia passado fica ao meio-dia de Brasília; futura é 422', async () => {

@@ -118,6 +118,15 @@ export async function assertLocalExiste(client: ClienteQueTrava, id: string): Pr
 }
 
 /**
+ * O motivo da baixa existe? 404, pelo mesmo caminho da localização: `FOR SHARE`
+ * contra a exclusão simultânea, em vez do P2003 genérico da FK.
+ */
+export async function assertMotivoDaBaixaExiste(client: ClienteQueTrava, id: string): Promise<void> {
+  const linhas = await client.$queryRaw<{ id: string }[]>`SELECT id FROM retire_reasons WHERE id = ${id}::uuid FOR SHARE`;
+  if (linhas.length === 0) throw new AppError('Motivo da baixa não encontrado.', 404);
+}
+
+/**
  * O posto do alvo — entrega de ativo, entrega de estoque, ocupante — existe?
  * 404. Ele não se desativa (AN): o que existe recebe.
  *

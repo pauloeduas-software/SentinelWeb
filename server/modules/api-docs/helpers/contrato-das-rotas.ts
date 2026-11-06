@@ -144,8 +144,8 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
   'PUT /api/settings/discovery': { tag: 'Configurações', resumo: 'Salva a configuração da descoberta', body: configuracaoDaDescobertaSchema },
   'GET /api/settings/next-asset-tag': { tag: 'Configurações', resumo: 'A próxima etiqueta de computador' },
 
-  // As tabelas de catálogo (categorias, status, fabricantes, modelos, localizações e
-  // colaboradores) são registradas em laço sobre `CATALOG_SPECS`: a tabela delas
+  // As tabelas de catálogo (categorias, status, motivos de baixa, fabricantes, modelos,
+  // localizações e colaboradores) são registradas em laço sobre `CATALOG_SPECS`: a tabela delas
   // também. Os nomes saem da spec, e o corpo é o `createSchema`/`updateSchema` dela.
   ...Object.fromEntries(CATALOG_SPECS.flatMap((spec) => {
     const base = `/api/${spec.slug}`;

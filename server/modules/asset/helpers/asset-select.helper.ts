@@ -33,7 +33,7 @@ export const ASSET_SELECT = {
   // NÃO é `deletedAt`: as duas colunas respondem perguntas diferentes (D19,
   // docs/decisoes/catalogo-e-ativo.md).
   retiredAt: true,
-  retiredReason: true,
+  retiredReason: { select: { id: true, name: true } },
   retiredNotes: true,
 
   createdAt: true,
@@ -108,6 +108,15 @@ export const CAMPOS_AUDITADOS_DO_ATIVO = [
   'statusId', 'modelId', 'locationId',
   'orderNumber', 'purchaseDate', 'purchaseCost',
 ] as const;
+
+/**
+ * O motivo da baixa como a auditoria o guarda: o NOME por escrito, e não o id. O
+ * motivo pode ser renomeado ou, sem uso, excluído, e a linha já gravada continua
+ * dizendo por que o ativo saiu (V).
+ */
+export function comMotivoPorEscrito<T extends { retiredReason: { name: string } | null }>(ativo: T) {
+  return { ...ativo, retiredReason: ativo.retiredReason?.name ?? null };
+}
 
 /** O select das RESPOSTAS DE ESCRITA: sem custo, qualquer que seja o cargo. */
 export const ASSET_WRITE_SELECT = semCusto(ASSET_SELECT);

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import {
-  cenarioDePosse, criarAtivo, criarColaborador, criarLicenca, entregarLicenca,
+  cenarioDePosse, criarAtivo, criarColaborador, criarLicenca, entregarLicenca, motivoDaBaixa,
 } from '../helpers/fixtures';
 
 // A COSTURA COM A POSSE (D93).
@@ -82,7 +82,7 @@ describe('o ativo', () => {
     expect(exclusao.body.error).toContain('tela de Licenças');
     expect(exclusao.body.refs).toEqual([{ tipo: 'licenca', id: licenca.id, nome: 'SolidWorks' }]);
 
-    const baixa = await api.post<Recusa>(`/api/assets/${maquina.id}/retire`, { retiredReason: 'VENDIDO' });
+    const baixa = await api.post<Recusa>(`/api/assets/${maquina.id}/retire`, { retiredReasonId: await motivoDaBaixa() });
     expect(baixa.status).toBe(409);
     expect(baixa.body.error).toContain('tela de Licenças');
     expect(baixa.body.refs.map((ref) => ref.nome)).toEqual(['SolidWorks']);
@@ -100,6 +100,6 @@ describe('o ativo', () => {
 
     expect((await api.post(`/api/licenses/checkouts/${aba.body[0].id}/checkin`)).status).toBe(200);
     expect((await api.get<unknown[]>(`/api/assets/${maquina.id}/licenses`)).body).toEqual([]);
-    expect((await api.post(`/api/assets/${maquina.id}/retire`, { retiredReason: 'VENDIDO' })).status).toBe(200);
+    expect((await api.post(`/api/assets/${maquina.id}/retire`, { retiredReasonId: await motivoDaBaixa() })).status).toBe(200);
   });
 });

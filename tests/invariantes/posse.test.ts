@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import {
-  cenarioDePosse, criarAtivo, criarColaborador, criarLicenca, criarPosto, diasAFrente, idsDoSeed,
+  cenarioDePosse, criarAtivo, criarColaborador, criarLicenca, criarPosto, diasAFrente, idsDoSeed, motivoDaBaixa,
 } from '../helpers/fixtures';
 import { prisma } from '../../server/infra/database/prismaClient';
 
@@ -352,7 +352,7 @@ describe('a baixa recusa', () => {
     const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
     await api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'PERSON', targetPersonId: cenario.laura });
 
-    const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/retire`, { retiredReason: 'VENDIDO' });
+    const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/retire`, { retiredReasonId: await motivoDaBaixa() });
     expect(status).toBe(409);
     expect(body.error).toMatch(/Faça a devolução antes/);
   });
@@ -364,28 +364,28 @@ describe('a baixa recusa', () => {
     const entrega = await api.post(`/api/licenses/${licenca.id}/checkout`, { assignedAssetId: ativo.id });
     expect(entrega.status).toBe(201);
 
-    const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/retire`, { retiredReason: 'VENDIDO' });
+    const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/retire`, { retiredReasonId: await motivoDaBaixa() });
     expect(status).toBe(409);
     expect(body.error).toMatch(/licença/);
   });
 
   it('a data futura — a baixa não acontece na semana que vem', async () => {
     const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
-    const { status } = await api.post(`/api/assets/${ativo.id}/retire`, { retiredReason: 'VENDIDO', retiredAt: diasAFrente(7) });
+    const { status } = await api.post(`/api/assets/${ativo.id}/retire`, { retiredReasonId: await motivoDaBaixa(), retiredAt: diasAFrente(7) });
     expect(status).toBe(422);
   });
 
   it('dar baixa duas vezes', async () => {
     const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
-    expect((await api.post(`/api/assets/${ativo.id}/retire`, { retiredReason: 'DOADO' })).status).toBe(200);
-    expect((await api.post(`/api/assets/${ativo.id}/retire`, { retiredReason: 'DOADO' })).status).toBe(409);
+    expect((await api.post(`/api/assets/${ativo.id}/retire`, { retiredReasonId: await motivoDaBaixa('Doado') })).status).toBe(200);
+    expect((await api.post(`/api/assets/${ativo.id}/retire`, { retiredReasonId: await motivoDaBaixa('Doado') })).status).toBe(409);
   });
 });
 
 describe('ativo baixado', () => {
   it('não é entregue, mesmo com status disponível — a baixa não mexe no status', async () => {
     const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
-    const baixa = await api.post(`/api/assets/${ativo.id}/retire`, { retiredReason: 'VENDIDO' });
+    const baixa = await api.post(`/api/assets/${ativo.id}/retire`, { retiredReasonId: await motivoDaBaixa() });
     expect(baixa.status).toBe(200);
 
     const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/checkout`, {
@@ -405,7 +405,7 @@ describe('ativo baixado', () => {
     // A observação é do ativo (`retiredNotes`), e a aba Detalhes a mostra — a
     // aba Histórico não lê mais a auditoria (AB), onde ela ficava antes.
     const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
-    expect((await api.post(`/api/assets/${ativo.id}/retire`, { retiredReason: 'DOADO', notes: 'Doado à escola' })).status)
+    expect((await api.post(`/api/assets/${ativo.id}/retire`, { retiredReasonId: await motivoDaBaixa('Doado'), notes: 'Doado à escola' })).status)
       .toBe(200);
     const baixado = await api.get<{ retiredNotes: string | null }>(`/api/assets/${ativo.id}`);
     expect(baixado.body.retiredNotes).toBe('Doado à escola');
