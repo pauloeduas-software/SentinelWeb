@@ -81,8 +81,13 @@ export function paraCampoDeData(valor: unknown): string {
 // (`server/modules/shared/hoje.helper.ts`). Nem UTC — às 22h de Brasília já é o
 // dia seguinte em Greenwich — nem o relógio do navegador, que num computador em
 // outro fuso escolheria um dia que o servidor recusa.
+//
+// `America/Sao_Paulo` é o nome do horário de Brasília: a base de fusos (IANA) não
+// tem `America/Brasilia`, e o Distrito Federal está nesse fuso.
+export const FUSO_DO_NEGOCIO = 'America/Sao_Paulo';
+
 const CALENDARIO_DE_BRASILIA = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/Sao_Paulo',
+  timeZone: FUSO_DO_NEGOCIO,
   year: 'numeric',
   month: '2-digit',
   day: '2-digit',
@@ -119,7 +124,7 @@ export function formatarDiaDoInstante(iso: string): string {
 
 /** O instante com a hora, em Brasília: o último contato de uma máquina. */
 export function formatarDataHora(iso: string): string {
-  return new Date(iso).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' });
+  return new Date(iso).toLocaleString('pt-BR', { timeZone: FUSO_DO_NEGOCIO, dateStyle: 'short', timeStyle: 'short' });
 }
 
 /** As iniciais do avatar: primeira e última palavra do nome ("Ana Paula Souza" → "AS"). */
