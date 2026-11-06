@@ -68,6 +68,9 @@ mostram a senha no painel aberto, e a troca obrigatória de senha, que já leva 
 ## A ficha
 
 - **A ação da ficha fica no card (`CartaoDaFicha`), e nenhuma aba repete botão (BB).**
+- **A seta volta para onde a ficha foi aberta, como estava (BB, BJ).** `useVoltaComFiltros` lê o caminho no
+  `state` da navegação; sem ele, como no link colado, vai para a lista. A ficha que abre outra passa
+  `useVoltaParaEstaFicha`.
 - **A pergunta segue o risco.** Sem volta: pergunta e vermelho. Com volta: pergunta sem vermelho.
   Rotina: sem pergunta.
 

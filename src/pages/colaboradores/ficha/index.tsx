@@ -52,7 +52,7 @@ export default function ColaboradorPage() {
 
   return (
     <div className="space-y-4 pb-6 motion-safe:animate-fade-in">
-      <PaginaCabecalho titulo={pessoa.name} voltar={{ para: voltar, rotulo: 'Colaboradores' }} />
+      <PaginaCabecalho titulo={pessoa.name} voltar={{ ...voltar, rotulo: 'Colaboradores' }} />
 
       <div className="space-y-6">
         <CartaoDaFicha marca={<Avatar nome={pessoa.name} className="size-10 text-sm" />}>

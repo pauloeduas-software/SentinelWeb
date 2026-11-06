@@ -2,6 +2,7 @@ import { prisma } from '../../../infra/database/prismaClient';
 import { AppError } from '../../../infra/errors/app-error';
 import { resolverResponsaveis, type PosseResolvida } from '../../assignment/use-cases/resolve-responsibles.usecase';
 import { assetDetailSelect, ASSET_SELECT } from '../helpers/asset-select.helper';
+import { listCurrentWorkstations, type PostoAtual } from './list-current-workstations.usecase';
 
 // `findFirst`, nunca `findUnique`: o escopo da lixeira não alcança o
 // `findUnique` (infra/database/soft-delete.extension.ts), e um ativo apagado não
@@ -26,30 +27,6 @@ type AssetDetail = NonNullable<Awaited<ReturnType<typeof buscarAtivo>>> & {
   postoAtual: PostoAtual | null;
 };
 
-/** O posto da entrega em aberto, com a localização onde ele fica. */
-interface PostoAtual {
-  id: string;
-  name: string;
-  location: { id: string; name: string };
-}
-
-/**
- * ONDE O COMPUTADOR ESTÁ, quando está numa mesa (AW).
- *
- * `Asset.locationId` é onde ele fica GUARDADO, e entregar não mexe nele: o
- * computador que saiu do Depósito para a Mesa 1, na Filial, está na Filial. É
- * a localização atual e a padrão do Snipe-IT, só que a atual não é copiada:
- * sai da posse aberta na hora, e o posto que muda de lugar leva o computador
- * junto sem nenhuma atualização em cadeia. Devolvido, volta a valer o guardado.
- */
-async function lerPostoAtual(assetId: string): Promise<PostoAtual | null> {
-  const posse = await prisma.assignment.findFirst({
-    where: { assetId, checkinAt: null, targetType: 'WORKSTATION' },
-    select: { targetWorkstation: { select: { id: true, name: true, location: { select: { id: true, name: true } } } } },
-  });
-  return posse?.targetWorkstation ?? null;
-}
-
 /**
  * UM ativo por id — a leitura que a tela de detalhe (`/computadores/:id`) começa
  * fazendo e que não existia: até aqui o modal recebia a linha que a listagem já
@@ -67,7 +44,7 @@ export async function findAssetById(id: string, podeVerCusto: boolean): Promise<
   const ativo = await buscarAtivo(id, podeVerCusto);
   if (!ativo) throw new AppError('Ativo não encontrado.', 404);
 
-  const [posse, postoAtual] = await Promise.all([resolverResponsaveis(prisma, id), lerPostoAtual(id)]);
+  const [posse, postos] = await Promise.all([resolverResponsaveis(prisma, id), listCurrentWorkstations([id])]);
 
-  return { ...ativo, posse, postoAtual };
+  return { ...ativo, posse, postoAtual: postos.get(id) ?? null };
 }

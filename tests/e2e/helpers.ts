@@ -27,13 +27,15 @@ export function vigiarConsole(page: Page): () => void {
   return () => expect(erros, 'erros no console da página').toEqual([]);
 }
 
-export async function criarPosto(request: APIRequestContext, nome: string): Promise<void> {
+/** Um posto de verdade, com a localização que ele exige. Devolve o id. */
+export async function criarPosto(request: APIRequestContext, nome: string): Promise<string> {
   const local = await request.post('/api/locations', { data: { name: `Local de ${nome}` } });
   expect(local.status()).toBe(201);
   const { id: locationId } = (await local.json()) as { id: string };
 
   const posto = await request.post('/api/workstations', { data: { name: nome, locationId } });
   expect(posto.status()).toBe(201);
+  return ((await posto.json()) as { id: string }).id;
 }
 
 export async function criarColaborador(request: APIRequestContext, nome: string): Promise<void> {

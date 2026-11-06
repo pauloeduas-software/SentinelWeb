@@ -48,8 +48,7 @@ export const OCUPANTES_ABERTOS_ORDER_BY: Prisma.WorkstationOccupantOrderByWithRe
 
 /**
  * A busca `?q=` varre nome e notas, e a etiqueta e o número de série do computador
- * entregue ao posto: ele não está na lista de Computadores (C), e quem tem só a
- * etiqueta na mão precisa chegar à mesa dele (BI).
+ * entregue ao posto: quem tem só a etiqueta na mão chega à mesa dele daqui também (BI).
  */
 function buildBuscaWhere(q?: string): Prisma.WorkstationWhereInput {
   if (!q) return {};

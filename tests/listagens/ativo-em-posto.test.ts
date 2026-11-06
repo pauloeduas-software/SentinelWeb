@@ -3,13 +3,13 @@ import { prisma } from '../../server/infra/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { criarAtivo, criarFabricante, criarModelo, idsDoSeed } from '../helpers/fixtures';
 
-// O ATIVO ENTREGUE A UM POSTO SAI DA LISTAGEM `/computadores`.
+// O ATIVO ENTREGUE A UM POSTO CONTINUA NA LISTAGEM `/computadores` (BJ).
 //
-// O computador montado numa mesa tem endereço, e o endereço dele é a mesa:
-// quem pergunta "o que há no parque" quer o que está em estoque ou com gente.
+// A lista é o parque inteiro, e a linha diz em que mesa ele está: a localização
+// do posto, os ocupantes e o selo de posto vago.
 //
-// O contador do cabeçalho exclui o mesmo conjunto, senão o badge prometeria uma
-// linha que a tabela não mostra — é a promessa que o `/stats` carrega escrita.
+// O contador do cabeçalho conta o mesmo conjunto, senão o badge prometeria outra
+// coisa que a tabela — é a promessa que o `/stats` carrega escrita.
 
 let api: ApiDeTeste;
 let seed: Awaited<ReturnType<typeof idsDoSeed>>;
@@ -63,8 +63,20 @@ async function entregarA(assetId: string, workstationId: string) {
   expect(r.status, `entrega falhou: ${JSON.stringify(r.body)}`).toBe(201);
 }
 
+interface PostoAtual {
+  id: string;
+  name: string;
+  location: { id: string; name: string };
+}
+
 interface Envelope {
-  rows: { id: string; assetTag: string }[];
+  rows: {
+    id: string;
+    assetTag: string;
+    location: { id: string; name: string } | null;
+    postoAtual: PostoAtual | null;
+    posse: { targetLabel: string | null; postoVago: boolean };
+  }[];
   total: number;
 }
 
@@ -74,8 +86,8 @@ async function listar(query = '') {
   return body;
 }
 
-describe('o ativo entregue a um posto sai da listagem', () => {
-  it('estava na lista antes da entrega, e sai depois dela', async () => {
+describe('o ativo entregue a um posto continua na listagem', () => {
+  it('estava na lista antes da entrega, e continua depois dela', async () => {
     const item = await ativo('Desktop da mesa', 'SN-LISTA-1');
     const posto = await mesa('Mesa da Listagem 1');
 
@@ -85,19 +97,26 @@ describe('o ativo entregue a um posto sai da listagem', () => {
     await entregarA(item.id, posto.id);
 
     const depois = await listar('?perPage=100');
-    expect(depois.rows.map((l) => l.id)).not.toContain(item.id);
+    expect(depois.rows.map((l) => l.id)).toContain(item.id);
     // O total do envelope acompanha: o `count` usa o MESMO `where` da página.
-    expect(depois.total).toBe(antes.total - 1);
+    expect(depois.total).toBe(antes.total);
   });
 
-  it('volta para a lista quando é devolvido', async () => {
+  it('continua na lista depois de devolvido', async () => {
     const item = await ativo('Desktop que volta', 'SN-LISTA-2');
     await entregarA(item.id, (await mesa('Mesa da Listagem 2')).id);
-    expect((await listar('?perPage=100')).rows.map((l) => l.id)).not.toContain(item.id);
-
     expect((await api.post(`/api/assets/${item.id}/checkin`, {})).status).toBe(200);
 
     expect((await listar('?perPage=100')).rows.map((l) => l.id)).toContain(item.id);
+  });
+
+  it('a busca de Computadores acha pela etiqueta e pela série', async () => {
+    const item = await ativo('Desktop buscado', 'SERIE-DA-LISTA');
+    await entregarA(item.id, (await mesa('Mesa da Listagem 3')).id);
+
+    for (const termo of [item.assetTag, 'serie-da-lista']) {
+      expect((await listar(`?q=${encodeURIComponent(termo)}`)).rows.map((l) => l.id)).toEqual([item.id]);
+    }
   });
 
   it('GUARDADO numa localização continua na lista: depósito é parque', async () => {
@@ -123,7 +142,9 @@ describe('o ativo entregue a um posto sai da listagem', () => {
     expect((await listar('?perPage=100')).rows.map((l) => l.id)).toContain(item.id);
   });
 
-  it('o contador do cabeçalho exclui o mesmo conjunto que a tabela', async () => {
+  it('o contador do cabeçalho conta o mesmo conjunto que a tabela', async () => {
+    await entregarA((await ativo('Desktop contado', 'SN-LISTA-6')).id, (await mesa('Mesa da Listagem 6')).id);
+
     const { status, body } = await api.get<{ total: number }>('/api/assets/stats');
     expect(status).toBe(200);
 
@@ -132,12 +153,12 @@ describe('o ativo entregue a um posto sai da listagem', () => {
     expect(body.total).toBe(padrao.total);
   });
 
-  it('o filtro por status também exclui: clicar no contador não traz o do posto', async () => {
+  it('o filtro por status também traz: clicar no contador acha o do posto', async () => {
     const item = await ativo('Desktop do status', 'SN-LISTA-5');
     await entregarA(item.id, (await mesa('Mesa da Listagem 5')).id);
 
     const porStatus = await listar(`?perPage=100&statusId=${seed.statusEmUsoId}`);
-    expect(porStatus.rows.map((l) => l.id)).not.toContain(item.id);
+    expect(porStatus.rows.map((l) => l.id)).toContain(item.id);
   });
 
   it('a busca de Postos acha a mesa pela etiqueta e pela série do computador, e só enquanto ele está lá (BI)', async () => {
@@ -156,7 +177,7 @@ describe('o ativo entregue a um posto sai da listagem', () => {
     expect(await buscar(computador.assetTag)).toEqual([]);
   });
 
-  it('e a ficha do posto mostra o computador que a listagem deixou de mostrar', async () => {
+  it('e a ficha do posto mostra o mesmo computador', async () => {
     const item = await ativo('Desktop da ficha', 'SN-LISTA-7');
     const posto = await mesa('Mesa da Listagem 7');
     await entregarA(item.id, posto.id);
@@ -167,7 +188,65 @@ describe('o ativo entregue a um posto sai da listagem', () => {
     expect(status).toBe(200);
     expect(body.ativos.map((a) => a.id)).toContain(item.id);
   });
+});
 
+// A LINHA DIZ EM QUE MESA ELE ESTÁ (BJ).
+//
+// Entregar não muda `Asset.locationId`. Sem o `postoAtual`, um computador do
+// Depósito entregue a um posto na Filial apareceria na lista como Depósito.
+describe('a linha do computador num posto', () => {
+  async function linha(assetId: string) {
+    const achada = (await listar('?perPage=100')).rows.find((l) => l.id === assetId);
+    expect(achada, 'o computador devia estar na lista').toBeDefined();
+    return achada!;
+  }
+
+  it('traz o posto e a localização dele, igual à ficha; o guardado continua o mesmo', async () => {
+    const item = await ativo('Desktop da linha', 'SN-LISTA-L1', deposito);
+    const posto = await mesa('Mesa da Linha 1');
+    await entregarA(item.id, posto.id);
+
+    const lida = await linha(item.id);
+    expect(lida.postoAtual).toEqual({
+      id: posto.id, name: 'Mesa da Linha 1', location: { id: expect.any(String), name: 'Local de Mesa da Linha 1' },
+    });
+    expect(lida.location?.id).toBe(deposito);
+    expect(lida.postoAtual).toEqual((await ficha(item.id)).postoAtual);
+  });
+
+  it('a localização acompanha quando o posto muda de lugar', async () => {
+    const item = await ativo('Desktop que muda na lista', 'SN-LISTA-L2', deposito);
+    const posto = await mesa('Mesa da Linha 2');
+    await entregarA(item.id, posto.id);
+
+    const filial = await prisma.location.create({ data: { name: 'Filial da Linha' }, select: { id: true } });
+    expect((await api.put(`/api/workstations/${posto.id}`, { locationId: filial.id })).status).toBe(200);
+
+    expect((await linha(item.id)).postoAtual?.location).toEqual({ id: filial.id, name: 'Filial da Linha' });
+  });
+
+  it('depois de devolvido, volta a valer o lugar guardado', async () => {
+    const item = await ativo('Desktop devolvido na lista', 'SN-LISTA-L3', deposito);
+    await entregarA(item.id, (await mesa('Mesa da Linha 3')).id);
+    expect((await api.post(`/api/assets/${item.id}/checkin`, {})).status).toBe(200);
+
+    const lida = await linha(item.id);
+    expect(lida.postoAtual).toBeNull();
+    expect(lida.location?.id).toBe(deposito);
+  });
+
+  it('o posto vago aparece na resposta da lista', async () => {
+    const item = await ativo('Desktop sem ninguém', 'SN-LISTA-L4');
+    await entregarA(item.id, (await mesa('Mesa da Linha 4')).id);
+
+    expect((await linha(item.id)).posse).toMatchObject({ targetLabel: 'Mesa da Linha 4', postoVago: true });
+  });
+
+  it('fora de posto, não há posto na linha', async () => {
+    const item = await ativo('Desktop guardado na lista', 'SN-LISTA-L5', deposito);
+
+    expect((await linha(item.id)).postoAtual).toBeNull();
+  });
 });
 
 // A FICHA MOSTRA O LUGAR DO POSTO (AW).

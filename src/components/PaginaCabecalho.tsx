@@ -12,7 +12,7 @@ import { useVagaDoTitulo } from '../hooks/useVagaDoTitulo';
 interface PaginaCabecalhoProps {
   titulo: ReactNode;
   /** O link de volta, na ficha: `{ para: '/colaboradores', rotulo: 'Colaboradores' }`. */
-  voltar?: { para: string; rotulo: string };
+  voltar?: { para: string; rotulo: string; state?: unknown };
 }
 
 export default function PaginaCabecalho({ titulo, voltar }: PaginaCabecalhoProps) {
@@ -25,6 +25,7 @@ export default function PaginaCabecalho({ titulo, voltar }: PaginaCabecalhoProps
       {voltar && (
         <Link
           to={voltar.para}
+          state={voltar.state}
           aria-label={`Voltar para ${voltar.rotulo}`}
           title={`Voltar para ${voltar.rotulo}`}
           className="shrink-0 text-text-tertiary transition-colors hover:text-text-primary"

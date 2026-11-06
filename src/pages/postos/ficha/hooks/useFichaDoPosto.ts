@@ -6,7 +6,7 @@ import {
 import { useCheckinAsset } from '../../../../queries/assignment.queries';
 import { confirmar } from '../../../../hooks/useConfirmacao';
 import { useNotificacao } from '../../../../hooks/useNotificacao';
-import { useVoltaComFiltros } from '../../../../hooks/useVoltaComFiltros';
+import { useVoltaComFiltros, useVoltaParaEstaFicha } from '../../../../hooks/useVoltaComFiltros';
 import { linksDoErro } from '../../../../helpers/erro.helper';
 import type { AtivoDoPosto } from '../../../../types/workstation.types';
 import { useOcupantes } from '../../hooks/useOcupantes';
@@ -27,6 +27,7 @@ export function useFichaDoPosto() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const voltar = useVoltaComFiltros('/postos');
+  const voltaDoComputador = useVoltaParaEstaFicha();
 
   const [editando, setEditando] = useState(false);
 
@@ -71,12 +72,6 @@ export function useFichaDoPosto() {
   /**
    * DEVOLVER O ATIVO DA MESA, daqui mesmo.
    *
-   * Antes a devolução só existia na tela Computadores — e o ativo entregue a um
-   * posto SAIU dela (`asset-filters.helper.ts`). O computador da Mesa 1 ficava
-   * visível só nesta ficha, e a única operação possível sobre ele estava na tela
-   * que não o mostrava mais: para devolvê-lo era preciso chegar à ficha do ativo
-   * por busca ou por URL. Esta é a ponta que faltava.
-   *
    * SÓ O ESCOPO E O DIA no corpo (AM): o servidor resolve o status de volta para
    * o primeiro `DEPLOYABLE` (`checkin-asset.usecase.ts`). O formulário completo
    * da devolução — status de volta e observação — continua na tela Computadores,
@@ -103,6 +98,7 @@ export function useFichaDoPosto() {
     // tela mentiria em vez de dizer que o link está morto.
     erro: mensagemDoErro(error, posto != null),
     voltar,
+    voltaDoComputador,
     ocupantes,
 
     editando,

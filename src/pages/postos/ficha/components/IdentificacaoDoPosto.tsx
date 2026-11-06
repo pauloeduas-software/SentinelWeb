@@ -10,7 +10,14 @@ import type { PostoDetalhe } from '../../../../types/workstation.types';
 // O CARD DE IDENTIFICAÇÃO: o que responde "que mesa é esta e como ela está" antes
 // de qualquer aba, como o da ficha do computador.
 
-export default function IdentificacaoDoPosto({ posto, acoes }: { posto: PostoDetalhe; acoes?: ReactNode }) {
+interface Props {
+  posto: PostoDetalhe;
+  /** O `state` do link: a seta da ficha do computador volta para este posto. */
+  voltaDoComputador: object;
+  acoes?: ReactNode;
+}
+
+export default function IdentificacaoDoPosto({ posto, voltaDoComputador, acoes }: Props) {
   // A lista tem no máximo um ativo: é a invariante 19.
   const computador = posto.ativos[0];
 
@@ -20,7 +27,7 @@ export default function IdentificacaoDoPosto({ posto, acoes }: { posto: PostoDet
         <Dado rotulo="Localização">{posto.location.name}</Dado>
         <Dado rotulo="Computador">
           {computador && (
-            <Link to={`/computadores/${computador.id}`} className="font-mono text-link hover:underline">
+            <Link to={`/computadores/${computador.id}`} state={voltaDoComputador} className="font-mono text-link hover:underline">
               {computador.assetTag}
             </Link>
           )}

@@ -39,7 +39,7 @@ const ABAS = ['ocupantes', 'computador', 'estoque'] as const;
 
 export default function PostoFichaPage() {
   const {
-    posto, carregando, erro, voltar, ocupantes,
+    posto, carregando, erro, voltar, voltaDoComputador, ocupantes,
     editando, abrirEdicao, fecharEdicao, handleSalvar, handleExcluir,
     devolvendo, handleDevolver,
   } = useFichaDoPosto();
@@ -57,11 +57,12 @@ export default function PostoFichaPage() {
 
   return (
     <div className="motion-safe:animate-fade-in pb-6">
-      <PaginaCabecalho voltar={{ para: voltar, rotulo: 'Postos' }} titulo={posto.name} />
+      <PaginaCabecalho voltar={{ ...voltar, rotulo: 'Postos' }} titulo={posto.name} />
 
       <div className="space-y-6">
         <IdentificacaoDoPosto
           posto={posto}
+          voltaDoComputador={voltaDoComputador}
           acoes={podeEditar && (
             <>
               <Button variant="outline" size="sm" onClick={abrirEdicao}><Pencil /> Editar</Button>
@@ -101,7 +102,7 @@ export default function PostoFichaPage() {
           </TabsContent>
 
           <TabsContent value="computador" className="mt-4 space-y-4">
-            <ComputadorTab ativos={posto.ativos} onDevolver={handleDevolver} devolvendo={devolvendo} />
+            <ComputadorTab ativos={posto.ativos} voltaDoComputador={voltaDoComputador} onDevolver={handleDevolver} devolvendo={devolvendo} />
           </TabsContent>
 
           <TabsContent value="estoque" className="mt-4 space-y-4">
