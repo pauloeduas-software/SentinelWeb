@@ -33,7 +33,7 @@ export function readBigInt(payload: Record<string, unknown>, ...names: string[])
 }
 
 /**
- * Bytes que podem simplesmente NÃO TER VINDO — as specs coletadas da F7.
+ * Bytes que podem simplesmente NÃO TER VINDO — as specs coletadas.
  *
  * Separado do `readBigInt` acima porque o zero dele é uma resposta legítima para
  * uso de RAM ("a máquina está usando 0 bytes agora" é improvável, mas é uma

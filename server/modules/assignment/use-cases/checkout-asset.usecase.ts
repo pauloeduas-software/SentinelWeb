@@ -303,8 +303,7 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, ator: A
 
     // A regra que dá sentido ao `StatusLabelType`: só `DEPLOYABLE` é "está no
     // estoque, pode ser entregue". Sem ela o tipo vira enfeite — foi essa a
-    // contradição que a auditoria da F1 encontrou no rótulo "Em Uso" tipado
-    // `DEPLOYABLE`, e que criou o `IN_USE`.
+    // contradição do rótulo "Em Uso" tipado `DEPLOYABLE`, que criou o `IN_USE`.
     if (ativo.status.type !== 'DEPLOYABLE') {
       throw new AppError(
         `Só ativo disponível pode ser entregue, e este está como "${ativo.status.name}".`,

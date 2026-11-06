@@ -12,9 +12,9 @@ import { ADMIN_DE_TESTE } from '../setup/database';
 // que fecha a API, o error-handler que monta todo 4xx.
 //
 // O QUE ESTE ARQUIVO EXISTE PARA IMPEDIR: que um teste chame o use-case direto.
-// Foi assim que o defeito 1 da auditoria passou — verificado pelo caminho da
-// API, nunca pelo do formulário. Um use-case chamado direto pula o zod da
-// borda, o `strictObject` que recusa campo desconhecido, a sessão e o
+// Foi assim que a etiqueta automática inalcançável passou — verificada pelo
+// caminho da API, nunca pelo do formulário. Um use-case chamado direto pula o
+// zod da borda, o `strictObject` que recusa campo desconhecido, a sessão e o
 // error-handler; ou seja, pula quase tudo que erra na prática. Aqui só se fala
 // HTTP.
 

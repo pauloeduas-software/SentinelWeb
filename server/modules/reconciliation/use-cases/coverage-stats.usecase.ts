@@ -4,7 +4,7 @@ import { lerConfiguracaoDaDescoberta } from '../helpers/discovery-settings.helpe
 // O PAINEL DE COBERTURA — a pergunta que só existe depois de os dois lados se
 // falarem: *quanto do parque o sistema realmente enxerga?*
 //
-// Antes da F7 não havia como responder. O ITAM sabia o que foi cadastrado, o RMM
+// Antes não havia como responder. O ITAM sabia o que foi cadastrado, o RMM
 // sabia o que está ligado, e ninguém sabia o tamanho da diferença.
 
 export interface Cobertura {

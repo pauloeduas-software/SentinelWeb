@@ -99,6 +99,7 @@ export default function ItemFormModal({ item, onClose, onSubmit }: ItemFormModal
   return (
     <FormularioLateral
       titulo={editando ? 'Editar item' : 'Novo item'}
+      descricao={item?.name}
       onClose={onClose}
       onSubmit={enviar}
       erro={erro}

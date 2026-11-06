@@ -1,7 +1,7 @@
 // O CONTRATO DAS LICENÇAS com a API (docs/referencia/licencas.md).
 //
 // ⚠️ `purchaseCost` é STRING, e não `number` — a coluna é `Decimal` no Postgres
-// e o JSON a serializa assim. É a armadilha nº 7 da F1, pela quarta vez.
+// e o JSON a serializa assim.
 //
 interface ReferenciaNomeada {
   id: string;
@@ -17,6 +17,15 @@ export type StatusDaLicenca = 'ATIVA' | 'VENCENDO' | 'EXPIRADA' | 'ENCERRADA';
 
 /** O filtro de status: os quatro. Sem abas (AF) — `ENCERRADA` separa as encerradas. */
 export type StatusDoFiltro = StatusDaLicenca;
+
+/** Os cartões da tela: `GET /api/licenses/stats`. */
+export interface LicencaStats {
+  total: number;
+  ativas: number;
+  vencendo: number;
+  vencidas: number;
+  encerradas: number;
+}
 
 /**
  * Uma licença, com as contas que o servidor fez.

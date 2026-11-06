@@ -3,7 +3,7 @@ import { prisma } from '../../server/infra/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { criarFabricante, criarModelo, idsDoSeed } from '../helpers/fixtures';
 
-// DADO SENSÍVEL É OMITIDO DO `select`, NÃO MASCARADO DEPOIS (F11, D77).
+// DADO SENSÍVEL É OMITIDO DO `select`, NÃO MASCARADO DEPOIS (D77).
 //
 // ═════════════════════════════════════════════════════════════════════════════
 // POR QUE AS ASSERÇÕES USAM `in` / `hasOwnProperty` E NÃO `=== null`.

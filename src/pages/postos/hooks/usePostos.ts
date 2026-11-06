@@ -1,86 +1,47 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
-  useCreateWorkstation, useDeleteWorkstation, useUpdateWorkstation, useWorkstationQuery,
-  useWorkstationsQuery, type PostoInput,
+  useCreateWorkstation, useDeleteWorkstation, useUpdateWorkstation,
+  useWorkstationStatsQuery, useWorkstationsQuery, type PostoInput,
 } from '../../../queries/workstation.queries';
-import { useCheckinAsset } from '../../../queries/assignment.queries';
-import type { AtivoDoPosto, Posto, PostoView } from '../../../types/workstation.types';
+import type { Posto, PostoView } from '../../../types/workstation.types';
 import { linksDoErro } from '../../../helpers/erro.helper';
 import { confirmar } from '../../../hooks/useConfirmacao';
-import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
+import { useListaNaUrl, usePaginaQueExiste } from '../../../hooks/useListaNaUrl';
+import { comFiltros } from '../../../hooks/useVoltaComFiltros';
 import { useNotificacao } from '../../../hooks/useNotificacao';
-import { useOcupantes } from './useOcupantes';
+import { contagensDosPostos, recorteDaUrl } from '../helpers/postos.helper';
 
-const PER_PAGE = 10;
-
-// Estado da tela de Postos: que recorte, que página, o que está na busca e qual
-// posto está aberto. Tudo de UMA tela — fica aqui, em useState, e não em store
-// (docs/referencia/arquitetura.md).
-//
-// O POSTO ABERTO MORA NA URL (`/postos/:id`), e não em `useState`: a ficha do
-// posto virou destino de link — é onde a busca por etiqueta larga quem bipou o
-// computador de uma mesa. Com estado, esse link não existiria, e recarregar a
-// página fecharia a ficha.
-//
-// A LINHA da listagem continua sendo usada quando ela está carregada: ela dá
-// nome e caminho ao cabeçalho sem esperar o detalhe, que é a razão de ela existir
-// aqui. Quem entra pela URL não a tem — nem quem abre um posto que está em outra
-// página da listagem —, e aí o cabeçalho espera o detalhe chegar: uma ida e
-// volta de rede, não um quadro. Durante ela o nome é `…` e o caminho não aparece.
+// Estado da lista de Postos: que recorte, que página e o que está na busca, na URL
+// (`useListaNaUrl`). A ficha do posto é outra página, e a seta dela volta com eles.
 export function usePostos() {
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [view, setView] = useState<PostoView>('todos');
-  const debouncedSearch = useDebouncedValue(search);
+  const lista = useListaNaUrl();
+  const { page, perPage, setPage, search, debouncedSearch, changeSearch, parametros, filtrar } = lista;
+  const view = recorteDaUrl(parametros.get('situacao'));
 
-  // Zerar a página acontece no mesmo handler que muda o recorte ou a busca, e
-  // não num `useEffect` reagindo a eles: `setState` dentro de efeito encadeia
-  // renders e o lint do react-hooks recusa.
-  const changeSearch = (valor: string) => {
-    setSearch(valor);
-    setPage(1);
-  };
-
-  const changeView = (proxima: PostoView) => {
-    setView(proxima);
-    setPage(1);
+  // Clicar no cartão escolhido volta para `todos`, como em Computadores.
+  const escolherView = (proxima: PostoView) => {
+    filtrar('situacao', proxima === view || proxima === 'todos' ? undefined : proxima);
   };
 
   const params = useMemo(
-    () => ({ page, perPage: PER_PAGE, view, q: debouncedSearch || undefined }),
-    [page, view, debouncedSearch],
+    () => ({ page, perPage, view, q: debouncedSearch || undefined }),
+    [page, perPage, view, debouncedSearch],
   );
 
   const { data, isPending, error } = useWorkstationsQuery(params);
+  const { data: stats } = useWorkstationStatsQuery();
   const criar = useCreateWorkstation();
   const editar = useUpdateWorkstation();
   const excluir = useDeleteWorkstation();
-  const devolver = useCheckinAsset();
   const notificar = useNotificacao();
+  usePaginaQueExiste(page, data?.total, setPage);
 
   // O formulário serve às duas operações: `emEdicao` nulo é criar.
   const [modalAberto, setModalAberto] = useState(false);
   const [emEdicao, setEmEdicao] = useState<Posto | null>(null);
 
-  const { id: postoId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const postoAberto = data?.rows.find((linha) => linha.id === postoId) ?? null;
-
-  // As duas consultas do detalhe ficam DESLIGADAS enquanto não houver posto
-  // aberto (`enabled`), e não atrás de um `if` — hook condicional é o que as
-  // regras do React proíbem.
-  const {
-    data: detalhe, isPending: detalhePendente, error: detalheErro,
-  } = useWorkstationQuery(postoId ?? null);
-
-  // Só o 404 é "não encontrado": um 500 ou a rede caída não dizem que o posto
-  // não existe. O `status` vem do erro da API (`ErroDaApi`).
-  const detalheInexistente = (detalheErro as { status?: number } | null)?.status === 404;
-
-  // Os ocupantes vêm de hook próprio, que também serve o histórico — que o
-  // detalhe do posto (`GET /api/workstations/:id`) não traz.
-  const ocupantes = useOcupantes(postoId ?? null);
 
   const fecharFormulario = () => {
     setModalAberto(false);
@@ -108,42 +69,11 @@ export function usePostos() {
 
     try {
       await excluir.mutateAsync(posto.id);
-      // Apagar o último posto da última página deixaria a tela vazia numa
-      // página que não existe mais.
-      if (data?.rows.length === 1 && page > 1) setPage(page - 1);
     } catch (erro) {
       // É aqui que aparece o 409 do posto com algo nele agora — com um link
       // para cada item de estoque, onde mora o Devolver.
       notificar.erro((erro as Error).message, linksDoErro(erro));
     }
-  };
-
-  /**
-   * DEVOLVER O ATIVO DA MESA, daqui mesmo.
-   *
-   * Antes a devolução só existia na tela Computadores — e o ativo entregue a um
-   * posto SAIU dela (`asset-filters.helper.ts`). O computador da Mesa 1 ficava
-   * visível só nesta ficha, e a única operação possível sobre ele estava na tela
-   * que não o mostrava mais: para devolvê-lo era preciso chegar à ficha do ativo
-   * por busca ou por URL. Esta é a ponta que faltava do caminho que a etapa
-   * passada abriu.
-   *
-   * SÓ O ESCOPO E O DIA no corpo (AM): o servidor resolve o status de volta para
-   * o primeiro `DEPLOYABLE` (`checkin-asset.usecase.ts`). O formulário completo
-   * da devolução — status de volta e observação — continua na tela Computadores,
-   * onde cabe; aqui o que se quer é tirar o equipamento DESTA mesa.
-   *
-   * E é por isso que o `targetWorkstationId` vai: a ficha pode estar velha. Entre
-   * ela carregar e o clique, o ativo pode ter sido devolvido e entregue à Laura,
-   * e um corpo vazio fecharia a posse dela. Com o posto no corpo, o servidor
-   * recusa com 409 e diz com quem o ativo está — a mensagem sobe para a ficha.
-   *
-   * A confirmação é a da linha, com o dia em que o ativo voltou, como a
-   * devolução da licença.
-   */
-  const handleDevolver = async (ativo: AtivoDoPosto, dia: string) => {
-    if (!postoId) return;
-    await devolver.mutateAsync({ id: ativo.id, data: { targetWorkstationId: postoId, checkinAt: dia } });
   };
 
   return {
@@ -153,12 +83,14 @@ export function usePostos() {
     // Para a lista não dizer "nenhum posto cadastrado" quando a consulta falhou.
     erro: error ? error.message : null,
     page,
-    perPage: PER_PAGE,
+    perPage,
     setPage,
     search,
+    buscaFeita: debouncedSearch,
     changeSearch,
     view,
-    changeView,
+    escolherView,
+    contagens: contagensDosPostos(stats),
 
     modalAberto,
     emEdicao,
@@ -171,21 +103,6 @@ export function usePostos() {
     handleSalvar,
     handleExcluir,
 
-    postoId: postoId ?? null,
-    postoAberto,
-    openDetalhe: (posto: Posto) => navigate(`/postos/${posto.id}`),
-    closeDetalhe: () => navigate('/postos'),
-    detalhe: detalhe ?? null,
-    detalhePendente: postoId != null && detalhePendente,
-    // O 404 de `/postos/<id-que-não-existe>`. Sem isto a janela abriria com
-    // zero ativos e zero ocupantes, que é indistinguível de um posto novo e
-    // vazio — a tela mentiria em vez de dizer que o link está morto.
-    // Atualização que falha com a ficha já na tela não a fecha; o 404 fecha.
-    detalheErro: detalheErro && (!detalhe || detalheInexistente) ? detalheErro.message : null,
-    detalheInexistente,
-    devolvendo: devolver.isPending,
-    handleDevolver,
-
-    ocupantes,
+    openDetalhe: (posto: Posto) => navigate(`/postos/${posto.id}`, comFiltros(parametros)),
   };
 }

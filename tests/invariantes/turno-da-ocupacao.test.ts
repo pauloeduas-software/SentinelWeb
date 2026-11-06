@@ -5,7 +5,7 @@ import { cenarioDePosse, criarPosto } from '../helpers/fixtures';
 
 // CORRIGIR O TURNO DE UMA OCUPAÇÃO ABERTA — `PATCH /api/workstations/:id/occupants/:occupantId`.
 //
-// O use-case existia desde a F10 e não tinha rota. O que ele resolve é o typo:
+// O use-case já existia e não tinha rota. O que ele resolve é o typo:
 // "manha" cadastrado, "manhã" correto. As duas alternativas erradas estão
 // argumentadas no cabeçalho dele — encerrar e reabrir fabrica histórico falso, e
 // recusar deixa o cadastro errado para sempre.

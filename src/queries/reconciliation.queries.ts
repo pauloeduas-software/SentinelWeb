@@ -11,7 +11,7 @@ import type {
   ResultadoDaVarredura, ReviewState, Sugestao,
 } from '../types/reconciliation.types';
 
-// A CONVERGÊNCIA RMM × ITAM (docs/historico/fase-07-convergencia-rmm-itam.md).
+// A CONVERGÊNCIA RMM × ITAM (docs/decisoes/reconciliacao.md).
 //
 // `['reconciliation']` é o prefixo, então invalidar depois de resolver uma
 // sugestão alcança a fila E o painel de cobertura — que muda a cada aceite sem
@@ -119,7 +119,7 @@ export function useDesvincularMaquina() {
 /**
  * VINCULAR À MÃO — `POST /api/endpoints/:id/link`.
  *
- * A rota existia desde a F7 e nenhuma tela a chamava: o vínculo só nascia pela
+ * A rota já existia e nenhuma tela a chamava: o vínculo só nascia pela
  * fila, e a máquina que a cascata não casava com nada (serial em branco, nome
  * que não bate) ficava em "sem cadastro" sem botão. É a afirmação "esta máquina
  * é aquele patrimônio", dita por gente.

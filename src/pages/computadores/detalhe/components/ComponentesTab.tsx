@@ -1,8 +1,6 @@
 import { Cpu } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Aviso } from '../../../../components/ui/aviso';
-import { Card } from '../../../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/ui/table';
+import { Link } from 'react-router-dom';
+import TabelaDaFicha from '../../../../components/TabelaDaFicha';
 import type { EntregaNaFicha } from '../../../../types/stock.types';
 import { formatarDiaDoInstante } from '../../../../helpers/format.helper';
 import { caminhoDoItem, textoDeUnidades } from '../../../../helpers/estoque.helper';
@@ -25,57 +23,25 @@ interface ComponentesTabProps {
 }
 
 export default function ComponentesTab({ componentes, assetTag, carregando, erro }: ComponentesTabProps) {
-  const navegar = useNavigate();
-
-  if (carregando) return <p className="text-sm text-text-tertiary">Carregando componentes…</p>;
-  if (erro) return <Aviso>Não foi possível carregar os componentes: {erro}</Aviso>;
-
-  if (componentes.length === 0) {
-    return (
-      <Card className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-text-tertiary">
-        <Cpu className="size-6 opacity-50" />
-        <span>Nenhum componente instalado neste ativo.</span>
-        <span className="max-w-md text-center text-xs leading-relaxed">
-          Memória e SSD são itens de categoria Componente, entregues a um computador pela tela de{' '}
-          <Link to="/estoque" className="text-primary hover:underline">Estoque</Link>.
-        </span>
-      </Card>
-    );
-  }
-
   return (
-    <Card className="overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Componente</TableHead>
-            <TableHead>Categoria</TableHead>
-            <TableHead>Quantidade</TableHead>
-            <TableHead>Desde</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {componentes.map((entrega) => {
-            const caminho = caminhoDoItem(entrega.item.id, assetTag);
-            return (
-              <TableRow key={entrega.id} onClick={() => navegar(caminho)} className="cursor-pointer">
-                <TableCell>
-                  {/* O link é o caminho do teclado; o clique nele não sobe, senão navegaria duas vezes. */}
-                  <Link to={caminho} onClick={(evento) => evento.stopPropagation()} className="font-medium text-text-primary focus-visible:underline focus-visible:outline-none">
-                    {entrega.item.name}
-                  </Link>
-                  {entrega.notes && (
-                    <div className="mt-0.5 text-xs text-text-tertiary">{entrega.notes}</div>
-                  )}
-                </TableCell>
-                <TableCell>{entrega.item.category.name}</TableCell>
-                <TableCell>{textoDeUnidades(entrega.unidades)}</TableCell>
-                <TableCell className="whitespace-nowrap">{formatarDiaDoInstante(entrega.checkoutAt)}</TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </Card>
+    <TabelaDaFicha
+      colunas={[{ rotulo: 'Componente' }, { rotulo: 'Categoria', className: 'w-[24%]' }, { rotulo: 'Quantidade', className: 'w-40' }, { rotulo: 'Desde', className: 'w-32' }]}
+      icone={Cpu}
+      carregando={carregando}
+      erro={erro}
+      vazio="Nenhum componente instalado neste ativo."
+      linhas={componentes.map((entrega) => ({
+        id: entrega.id,
+        para: caminhoDoItem(entrega.item.id, assetTag),
+        nome: entrega.item.name,
+        nota: entrega.notes,
+        celulas: [entrega.item.category.name, textoDeUnidades(entrega.unidades), formatarDiaDoInstante(entrega.checkoutAt)],
+      }))}
+    >
+      <span className="max-w-md text-center text-xs leading-relaxed">
+        Memória e SSD são itens de categoria Componente, entregues a um computador pela tela de{' '}
+        <Link to="/estoque" className="text-primary hover:underline">Estoque</Link>.
+      </span>
+    </TabelaDaFicha>
   );
 }

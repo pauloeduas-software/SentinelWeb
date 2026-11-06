@@ -3,8 +3,8 @@ import {
 } from 'lucide-react';
 import type { Cargo } from '../types/user.types';
 
-// O MENU, declarado em um lugar só — a barra lateral desenha, o cabeçalho lê
-// para descobrir o nome da tela atual.
+// O MENU, declarado em um lugar só — a barra lateral desenha, a aba do navegador
+// lê para descobrir o nome da tela atual.
 //
 // ═══════════════════════════════════════════════════════════════════════════
 // POR QUE SAIU DO CABEÇALHO (e por que isto é correção de defeito, não enfeite).
@@ -94,7 +94,7 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
   {
     titulo: 'Convergência',
     itens: [
-      // O que o agente VÊ e o cadastro não sabe (F7). Perto do inventário
+      // O que o agente VÊ e o cadastro não sabe. Perto do inventário
       // porque é dele que a tela fala, não do RMM.
       { to: '/descobertas', label: 'Descobertas', icon: Radar, cargo: 'TECNICO' },
     ],
@@ -144,7 +144,7 @@ export function itemEstaAtivo(to: string, caminho: string): boolean {
 }
 
 /**
- * O nome da tela atual, para o cabeçalho.
+ * O nome da tela atual, para a aba do navegador.
  *
  * O item MAIS específico ganha: `/computadores/:id` casa `/computadores`, e se um dia houver
  * `/computadores/algo` as duas casariam — a mais longa é a certa.

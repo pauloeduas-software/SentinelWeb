@@ -16,10 +16,11 @@ interface FormularioDeSenhaProps {
   /** Pede a senha de hoje — Minha conta. Falso na troca obrigatória, que manda `null`. */
   pedirAtual: boolean;
   rotuloDoBotao: string;
+  rotuloEnviando: string;
   onSubmit: (senhaAtual: string | null, senhaNova: string) => Promise<void>;
 }
 
-export default function FormularioDeSenha({ pedirAtual, rotuloDoBotao, onSubmit }: FormularioDeSenhaProps) {
+export default function FormularioDeSenha({ pedirAtual, rotuloDoBotao, rotuloEnviando, onSubmit }: FormularioDeSenhaProps) {
   const [atual, setAtual] = useState('');
   const [nova, setNova] = useState('');
   const [confirmacao, setConfirmacao] = useState('');
@@ -53,22 +54,22 @@ export default function FormularioDeSenha({ pedirAtual, rotuloDoBotao, onSubmit 
       {erro && <Aviso>{erro}</Aviso>}
 
       {pedirAtual && (
-        <Campo rotulo="Senha atual">
+        <Campo rotulo="Senha atual" obrigatorio>
           <CampoDeSenha required autoComplete="current-password" value={atual} onChange={(e) => setAtual(e.target.value)} />
         </Campo>
       )}
 
-      <Campo rotulo="Nova senha" ajuda="Mínimo de 12 caracteres. Trocar encerra as suas outras sessões abertas.">
+      <Campo rotulo="Nova senha" obrigatorio ajuda="Mínimo de 12 caracteres. Trocar encerra as suas outras sessões abertas.">
         <CampoDeSenha required autoComplete="new-password" value={nova} onChange={(e) => setNova(e.target.value)} />
       </Campo>
 
-      <Campo rotulo="Repita a nova senha">
+      <Campo rotulo="Repita a nova senha" obrigatorio>
         <CampoDeSenha required autoComplete="new-password" value={confirmacao} onChange={(e) => setConfirmacao(e.target.value)} />
       </Campo>
 
       {/* Na tela cheia da troca obrigatória o botão ocupa a largura, como no login. */}
       <Button type="submit" disabled={enviando} className={pedirAtual ? undefined : 'w-full'}>
-        {enviando ? 'Salvando...' : rotuloDoBotao}
+        {enviando ? rotuloEnviando : rotuloDoBotao}
       </Button>
     </form>
   );

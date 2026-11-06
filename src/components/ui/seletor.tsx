@@ -48,7 +48,7 @@ interface SeletorProps {
 }
 
 export function Seletor({
-  id, value, onChange, opcoes, vazio, comOpcaoVazia = false, placeholderDaBusca = 'Buscar...',
+  id, value, onChange, opcoes, vazio, comOpcaoVazia = false, placeholderDaBusca = 'Buscar…',
   obrigatorio, disabled, ariaLabel, className, opcoesMono = false, onBusca, busca, rodape,
 }: SeletorProps) {
   const [aberto, setAberto] = useState(false);

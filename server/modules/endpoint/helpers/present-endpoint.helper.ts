@@ -16,7 +16,7 @@ type PresentedTelemetry = Omit<Telemetry, 'ramTotal' | 'ramUsed'> & {
  * O `Endpoint` na saída do domínio: os dois `BigInt` coletados viram string.
  *
  * ISTO NÃO É DETALHE. O `presentEndpoint` devolvia `{ ...endpoint }` inteiro, e
- * a F7 pôs `ramTotalBytes` e `diskTotalBytes` na tabela: sem a conversão, os
+ * `ramTotalBytes` e `diskTotalBytes` entraram na tabela: sem a conversão, os
  * dois iam crus para o `JSON.stringify` e a rota morria com *"Do not know how to
  * serialize a BigInt"* — na tela que o painel consulta a cada 5 segundos. O tipo
  * acima é o que faz o compilador cobrar a conversão de qualquer BigInt novo.

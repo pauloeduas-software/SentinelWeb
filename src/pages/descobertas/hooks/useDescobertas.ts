@@ -5,6 +5,7 @@ import {
   useSugestoesQuery, useTriarMaquina, useVincularEEntregar, useVincularMaquina,
 } from '../../../queries/reconciliation.queries';
 import { useEndpointsQuery } from '../../../queries/endpoint.queries';
+import { useAbaNaUrl } from '../../../hooks/useAbaNaUrl';
 import { usePode } from '../../../stores/auth.store';
 import type {
   ConfiguracaoDaDescoberta, ResultadoDaVarredura, ReviewState,
@@ -18,10 +19,11 @@ import type {
  * vê e o cadastro não sabe, e o que já é patrimônio —, e são o recorte do
  * servidor (`?vinculo=`), não um `filter` sobre a frota inteira.
  */
-export type AbaDaTela = 'fila' | 'sem' | 'com' | 'ociosos';
+const ABAS = ['fila', 'sem', 'com', 'ociosos'] as const;
+export type AbaDaTela = typeof ABAS[number];
 
 export function useDescobertas() {
-  const [aba, setAba] = useState<AbaDaTela>('fila');
+  const [aba, setAba] = useAbaNaUrl(ABAS);
   const [erro, setErro] = useState<string | null>(null);
 
   const sugestoes = useSugestoesQuery();
@@ -39,9 +41,8 @@ export function useDescobertas() {
   const salvarConfiguracao = useSalvarConfiguracaoDaDescoberta();
 
   // RECONCILIAR AGORA: só `SUPERVISOR` vê o botão (a rota recusa os outros com 403;
-  // aqui é interface, não segurança). O placar da última rodada fica na tela
-  // ao lado do botão — "3 sugestões, 1 vínculo" é a resposta à pergunta de
-  // quem clicou, e um `alert` a faria sumir no fechar.
+  // aqui é interface, não segurança). O placar da última rodada fica na tela até
+  // ser dispensado: "3 sugestões, 1 vínculo" é a resposta à pergunta de quem clicou.
   const reconciliar = useReconciliarAgora();
   const podeReconciliar = usePode('SUPERVISOR');
   const [ultimaVarredura, setUltimaVarredura] = useState<ResultadoDaVarredura | null>(null);
@@ -68,11 +69,20 @@ export function useDescobertas() {
     erro, limparErro: () => setErro(null),
 
     sugestoes: sugestoes.data?.rows ?? [],
+    // Sem resposta não há número: `undefined`, e a aba fica sem contagem.
+    contagem: {
+      fila: sugestoes.data?.rows.length,
+      sem: semVinculo.data?.length,
+      com: vinculadas.data?.length,
+      ociosos: ociosos.data?.rows.length,
+    } as Record<AbaDaTela, number | undefined>,
     carregandoSugestoes: sugestoes.isLoading,
     erroDasSugestoes: sugestoes.error?.message ?? null,
     cobertura: cobertura.data,
     carregandoCobertura: cobertura.isLoading,
+    erroDaCobertura: cobertura.error?.message ?? null,
     ociosos: ociosos.data?.rows ?? [],
+    carregandoOciosos: ociosos.isLoading,
     erroDosOciosos: ociosos.error?.message ?? null,
     configuracao: configuracao.data,
 
@@ -91,6 +101,7 @@ export function useDescobertas() {
     podeConfigurar: podeReconciliar,
     reconciliando: reconciliar.isPending,
     ultimaVarredura,
+    dispensarVarredura: () => setUltimaVarredura(null),
     handleReconciliar: () => void comErro(async () => {
       setUltimaVarredura(await reconciliar.mutateAsync());
     }),

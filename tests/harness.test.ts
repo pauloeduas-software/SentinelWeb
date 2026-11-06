@@ -49,7 +49,7 @@ describe('o harness', () => {
   });
 });
 
-describe('a porta fechada (D22 / F3 Etapa C)', () => {
+describe('a porta fechada (D22)', () => {
   it('recusa a API sem sessão', async () => {
     const { status } = await api.anonimo.get('/api/assets');
     expect(status).toBe(401);

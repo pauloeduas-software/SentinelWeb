@@ -1,7 +1,7 @@
 // MUDANÇA DE HARDWARE **DETECTADA**, e não digitada — função pura.
 //
 // ═════════════════════════════════════════════════════════════════════════════
-// A `AssetChange` nasceu na Etapa B desta fase e ficou SEM ESCRITOR: a tabela
+// A `AssetChange` nasceu e ficou SEM ESCRITOR: a tabela
 // existia, o índice existia, e nenhuma linha entrava nela. Tabela sem escritor
 // não é meio caminho andado — é uma promessa no schema que a tela não cumpre.
 //

@@ -9,38 +9,33 @@ import {
   type CheckinInput, type CheckoutInput,
 } from '../../../queries/assignment.queries';
 import { useCatalogOptionsQuery } from '../../../queries/catalog.queries';
+import type { Contagem } from '../../../components/CartoesDeContagem';
 import type { Asset, AssetView } from '../../../types/asset.types';
 import { confirmar } from '../../../hooks/useConfirmacao';
-import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
+import { useListaNaUrl, usePaginaQueExiste } from '../../../hooks/useListaNaUrl';
+import { comFiltros } from '../../../hooks/useVoltaComFiltros';
 import { useNotificacao } from '../../../hooks/useNotificacao';
 import { linksDoErro } from '../../../helpers/erro.helper';
+import { tomDoStatus } from '../../../helpers/status.helper';
 
-const PER_PAGE = 10;
+const VISTAS: readonly AssetView[] = ['active', 'retired', 'trashed'];
 
-// Estado da tela de ativos. Página, busca, vista, filtros e modal são de UMA
-// tela: ficam aqui, em useState, e não em store (docs/referencia/arquitetura.md).
+// Estado da tela de ativos: página, busca, vista e filtros, na URL (`useListaNaUrl`),
+// e o modal, aqui.
 
 export function useAssets() {
   const notificar = useNotificacao();
   const navigate = useNavigate();
 
-  const [page, setPage] = useState(1);
-  const [view, setView] = useState<AssetView>('active');
-  const [search, setSearch] = useState('');
-  const [statusId, setStatusId] = useState<string | undefined>();
-  const [categoryId, setCategoryId] = useState<string | undefined>();
-  const debouncedSearch = useDebouncedValue(search);
-
-  // Zerar a página no mesmo handler que muda o filtro, e não num `useEffect`
-  // reagindo a ele: filtrar com o usuário na página 5 deixaria a tela vazia.
-  const changeSearch = (valor: string) => {
-    setSearch(valor);
-    setPage(1);
-  };
+  const lista = useListaNaUrl();
+  const { page, perPage, setPage, search, debouncedSearch, changeSearch, parametros, filtrar, trocar } = lista;
+  const view = VISTAS.find((vista) => vista === parametros.get('vista')) ?? 'active';
+  const statusId = parametros.get('situacao') ?? undefined;
+  const categoryId = parametros.get('categoria') ?? undefined;
 
   const params = useMemo(
-    () => ({ page, perPage: PER_PAGE, q: debouncedSearch || undefined, view, statusId, categoryId }),
-    [page, debouncedSearch, view, statusId, categoryId],
+    () => ({ page, perPage, q: debouncedSearch || undefined, view, statusId, categoryId }),
+    [page, perPage, debouncedSearch, view, statusId, categoryId],
   );
 
   const { data, isPending, error } = useAssetsQuery(params);
@@ -54,6 +49,7 @@ export function useAssets() {
 
   const assets = useMemo(() => data?.rows ?? [], [data]);
   const total = data?.total ?? 0;
+  usePaginaQueExiste(page, data?.total, setPage);
 
   // O STATUS COM QUE UM ATIVO NOVO NASCE: o primeiro do TIPO `DEPLOYABLE` — o
   // tipo que a tela de Configurações rotula "Disponível" —, e não o primeiro da
@@ -65,21 +61,19 @@ export function useAssets() {
   const { data: disponiveis } = useCatalogOptionsQuery('status-labels', 'DEPLOYABLE');
   const statusPadraoId = disponiveis?.[0]?.id ?? '';
 
-  const trocarFiltro = (aplicar: () => void) => {
-    aplicar();
-    setPage(1);
-  };
-
-  const changeView = (proxima: AssetView) => trocarFiltro(() => setView(proxima));
-  const changeCategoria = (id: string | undefined) => trocarFiltro(() => setCategoryId(id));
+  // O status conta a vista Ativos: fora dela, o filtro não teria o que mostrar.
+  const changeView = (proxima: AssetView) => trocar({
+    vista: proxima === 'active' ? undefined : proxima, situacao: undefined, pagina: undefined,
+  });
+  const changeCategoria = (id: string | undefined) => filtrar('categoria', id);
 
   /**
-   * Clicar no contador do cabeçalho filtra por aquele status; clicar de novo
-   * limpa. É o atalho que faltava — o número existia e não levava a lugar
-   * nenhum, porque a API não aceitava filtro por status.
+   * Clicar no contador filtra por aquele status; clicar de novo limpa, e o Total
+   * (`undefined`) também. Volta para a vista Ativos, que é a que ele conta.
    */
-  const toggleStatus = (id: string) =>
-    trocarFiltro(() => setStatusId((atual) => (atual === id ? undefined : id)));
+  const escolherStatus = (id: string | undefined) => trocar({
+    vista: undefined, situacao: id === statusId ? undefined : id, pagina: undefined,
+  });
 
   const [modalAberto, setModalAberto] = useState(false);
   const [emEdicao, setEmEdicao] = useState<Asset | null>(null);
@@ -119,7 +113,7 @@ export function useAssets() {
   const closePosse = () => setEmPosse(null);
 
   /** A linha inteira abre a tela do ativo — a URL que se cola no chamado. */
-  const abrirDetalhe = (asset: Asset) => navigate(`/computadores/${asset.id}`);
+  const abrirDetalhe = (asset: Asset) => navigate(`/computadores/${asset.id}`, comFiltros(parametros));
 
   // Como no handleSubmit: o erro SOBE para o modal mostrar a mensagem do
   // servidor — é aqui que aparecem o duplo checkout e o ativo indisponível.
@@ -169,29 +163,30 @@ export function useAssets() {
     }
   };
 
-  // Cálculo fora do JSX: o nome do status filtrado sai da lista de contadores.
-  const porStatus = stats?.byStatus ?? [];
-  const statusFiltrado = porStatus.find((status) => status.id === statusId)?.name ?? null;
+  // O contador vem do /stats: com paginação, o tamanho da página não é o tamanho
+  // do inventário.
+  const contagens: Contagem<string | undefined>[] = [
+    { valor: undefined, rotulo: 'Total', total: stats?.total },
+    ...(stats?.byStatus ?? []).map((status) => ({
+      valor: status.id, rotulo: status.name, total: status.total, tom: tomDoStatus(status.type),
+    })),
+  ];
 
   return {
     assets,
     total,
-    // O contador do cabeçalho vem do /stats: com paginação, o tamanho da página
-    // não é o tamanho do inventário.
-    totalCadastrado: stats?.total ?? total,
-    porStatus,
-    baixados: stats?.retired ?? 0,
+    contagens,
+    baixados: stats?.retired,
     page,
-    perPage: PER_PAGE,
+    perPage,
     setPage,
     search,
+    buscaFeita: debouncedSearch,
     changeSearch,
     view,
     changeView,
     statusId,
-    statusFiltrado,
-    toggleStatus,
-    limparStatus: () => trocarFiltro(() => setStatusId(undefined)),
+    escolherStatus,
     categoryId,
     changeCategoria,
     loading: isPending,

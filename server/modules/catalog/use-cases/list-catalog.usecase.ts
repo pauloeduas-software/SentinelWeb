@@ -33,6 +33,13 @@ export async function listCatalog(
       take: query.take,
     });
 
-    return { total, rows };
+    if (!spec.mostraUso) return { total, rows };
+
+    // O MESMO `countUsages` da exclusão: o número da tela é sempre o motivo da
+    // recusa. São poucas contagens por linha, e a página de catálogo é curta.
+    const comUso = await Promise.all(
+      rows.map(async (row) => ({ ...row, usos: await spec.countUsages(tx, String(row.id)) })),
+    );
+    return { total, rows: comUso };
   });
 }

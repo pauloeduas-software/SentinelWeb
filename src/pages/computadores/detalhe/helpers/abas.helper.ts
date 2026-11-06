@@ -22,8 +22,10 @@ export interface Aba {
 export const ABAS: readonly Aba[] = [
   { id: 'detalhes', rotulo: 'Detalhes', icone: Info },
   { id: 'posse', rotulo: 'Posse', icone: Users },
-  { id: 'historico', rotulo: 'Histórico', icone: History },
   { id: 'licencas', rotulo: 'Licenças', icone: KeyRound },
   { id: 'componentes', rotulo: 'Componentes', icone: Cpu },
   { id: 'maquina', rotulo: 'Máquina', icone: Monitor },
+  { id: 'historico', rotulo: 'Histórico', icone: History },
 ];
+
+export const IDS_DAS_ABAS: readonly AbaId[] = ABAS.map((aba) => aba.id);

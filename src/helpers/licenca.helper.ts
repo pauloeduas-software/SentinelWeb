@@ -13,7 +13,7 @@ import { formatarMoeda } from './format.helper';
  * etiqueta do computador —, e "Com quem está" já abre filtrado.
  */
 export function caminhoDaLicenca(licenseId: string, busca?: string): string {
-  const parametros = new URLSearchParams({ licenca: licenseId, ...(busca ? { busca } : {}) });
+  const parametros = new URLSearchParams({ licenca: licenseId, ...(busca ? { quem: busca } : {}) });
   return `/licencas?${parametros.toString()}`;
 }
 
@@ -23,6 +23,14 @@ export const ROTULO_DO_STATUS: Record<StatusDaLicenca, string> = {
   VENCENDO: 'Vencendo',
   EXPIRADA: 'Vencida',
   ENCERRADA: 'Encerrada',
+};
+
+/** O tom da situação, a única cor que o dado pode ter (AY): a encerrada já acabou, não pede nada. */
+export const TOM_DO_STATUS: Record<StatusDaLicenca, 'sucesso' | 'aviso' | 'perigo' | 'neutro'> = {
+  ATIVA: 'sucesso',
+  VENCENDO: 'aviso',
+  EXPIRADA: 'perigo',
+  ENCERRADA: 'neutro',
 };
 
 /**
@@ -51,15 +59,12 @@ export function textoDoPrazo(dias: number | null): string {
 }
 
 /**
- * A situação de uma licença entregue, vista de quem a recebeu — a aba Licenças
- * do computador e a ficha do colaborador dizem a mesma frase: "Ativa · vence em
- * 20 dias", "Vencida · venceu há 3 dias", "Encerrada".
+ * O vencimento de uma licença entregue, vista de quem a recebeu: a aba Licenças do
+ * computador e a ficha do colaborador dizem a mesma frase. A encerrada já não tem prazo.
  */
-export function textoDaSituacao(entrega: Pick<EntregaDoAlvo, 'status' | 'diasParaVencer' | 'license'>): string {
-  if (!entrega.status) return '—';
-  const rotulo = ROTULO_DO_STATUS[entrega.status];
-  if (entrega.status === 'ENCERRADA' || !entrega.license.expirationDate) return rotulo;
-  return `${rotulo} · ${textoDoPrazo(entrega.diasParaVencer)}`;
+export function prazoDaEntrega(entrega: Pick<EntregaDoAlvo, 'status' | 'diasParaVencer' | 'license'>): string {
+  if (entrega.status === 'ENCERRADA') return '—';
+  return textoDoPrazo(entrega.license.expirationDate ? entrega.diasParaVencer : null);
 }
 
 /** "10 compradas · 7 em uso · 3 livres". */

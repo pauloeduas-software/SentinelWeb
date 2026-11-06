@@ -2,9 +2,8 @@
 // abas Histórico do ativo e da pessoa.
 //
 // Nasceu dentro de `ativos/detalhe/helpers/`, quando o ativo era o único
-// com linha do tempo, e mudou para cá quando a pessoa ganhou a dela (Leva 1C do
-// fechamento da F4, em docs/historico/fase-04-posse.md). O que ficou lá é o que É do ativo — a
-// frase do título; o que veio para cá é o que vale para qualquer trilha.
+// com linha do tempo, e mudou para cá quando a pessoa ganhou a dela. O que
+// ficou lá é o que É do ativo — a frase do título; o que veio para cá é o que vale para qualquer trilha.
 //
 // As trilhas são só movimentação (entregas, devoluções, postos, licenças). O
 // diff de cadastro e edição fica na auditoria, no banco (AB), e não chega à tela.

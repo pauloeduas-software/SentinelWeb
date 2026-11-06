@@ -2,7 +2,7 @@
 //
 // É uma allowlist: campo novo na tabela `User` não aparece em resposta nenhuma
 // até alguém escrever o nome dele aqui. É isso que impede o `passwordHash`,
-// o `failedLoginCount` e o `lockedUntil` da Fase 3 de vazarem sozinhos por
+// o `failedLoginCount` e o `lockedUntil` de vazarem sozinhos por
 // qualquer uma das rotas que devolvem um usuário — listagem, criação, edição,
 // ou a sessão.
 //

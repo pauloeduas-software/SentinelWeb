@@ -1,8 +1,8 @@
-import { ArrowLeft, Copy, Pencil, Trash2, Undo2, UserPlus } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Copy, PackageX, Pencil, Trash2, Undo2, UserPlus } from 'lucide-react';
 import AssetFormModal from '../components/AssetFormModal';
 import CheckoutModal from '../components/CheckoutModal';
 import AssetTabs from './components/AssetTabs';
+import { seloDaSaida } from '../helpers/baixa.helper';
 import IdentificacaoCard from './components/IdentificacaoCard';
 import LicensesTab from './components/LicensesTab';
 import ComponentesTab from './components/ComponentesTab';
@@ -12,8 +12,8 @@ import HistoryTab from './components/HistoryTab';
 import PosseTab from './components/PosseTab';
 import RetireModal from './components/RetireModal';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
+import { FichaIndisponivel } from '../../../components/CartaoDaFicha';
 import PaginaCabecalho from '../../../components/PaginaCabecalho';
-import { Aviso } from '../../../components/ui/aviso';
 import { Button } from '../../../components/ui/button';
 import { TabsContent } from '../../../components/ui/tabs';
 import { bloqueioDaEntrega, rotuloDaOperacao } from '../helpers/posse.helper';
@@ -23,7 +23,7 @@ import { usePode } from '../../../stores/auth.store';
 // A TELA DO ATIVO — `/computadores/:id`.
 //
 // Existe porque uma URL colada no navegador não tem a linha que a listagem
-// tinha em memória: até a F2 o modal recebia o ativo já carregado pela tabela, e
+// tinha em memória: antes o modal recebia o ativo já carregado pela tabela, e
 // não havia como abrir um ativo direto. Ela começa por `GET /api/assets/:id`.
 //
 // Markup e mais nada: estado e chamadas ficam no `useAssetDetail`
@@ -31,13 +31,13 @@ import { usePode } from '../../../stores/auth.store';
 
 export default function AssetDetailPage() {
   const {
-    asset, carregando, erro,
-    aba, setAba,
-    eventos, totalDeEventos, historicoPendente,
-    assignments, possePendente,
+    asset, carregando, erro, voltar,
+    aba, setAba, contagens,
+    eventos, totalDeEventos, paginaDoHistorico, setPaginaDoHistorico, historicoPendente, erroDoHistorico,
+    assignments, possePendente, erroDaPosse,
     licencas, licencasPendentes, erroDasLicencas,
     componentes, componentesPendentes, erroDosComponentes,
-    maquina, maquinaPendente, desvinculando, handleDesvincular,
+    maquina, maquinaPendente, erroDaMaquina, desvinculando, handleDesvincular,
     modal, abrirEdicao, abrirClone, abrirPosse, abrirBaixa, fecharModal, statusPadraoId,
     handleSubmit, handleEntregar, handleDevolver, handleDarBaixa, handleReverterSaida,
     handleDelete,
@@ -47,60 +47,49 @@ export default function AssetDetailPage() {
   // condicional é o que as regras do React proíbem.
   const podeExcluir = usePode('SUPERVISOR');
 
-  if (carregando) {
-    return <div className="text-sm text-text-tertiary">Carregando ativo…</div>;
+  if (carregando || erro || !asset) {
+    return <FichaIndisponivel lista="Computadores" voltar={voltar} carregando={carregando} erro={erro ?? 'Ativo não encontrado.'} />;
   }
 
-  if (erro || !asset) {
-    return (
-      <div className="space-y-4">
-        <Aviso>{erro ?? 'Ativo não encontrado.'}</Aviso>
-        <Link to="/computadores" className="inline-flex items-center gap-1.5 text-sm text-text-tertiary transition-colors hover:text-text-primary">
-          <ArrowLeft className="size-4" /> Voltar para os computadores
-        </Link>
-      </div>
-    );
-  }
-
-  // A MESMA trava da listagem, nas duas portas desta tela (cabeçalho e aba
-  // Posse): só `DEPLOYABLE` se entrega, e o motivo vai no `title`.
+  // A MESMA trava da listagem: só `DEPLOYABLE` se entrega, e o motivo vai no `title`.
   const bloqueio = bloqueioDaEntrega(asset);
+  const baixado = seloDaSaida(asset) !== null;
+  const rotuloDaVolta = voltar.startsWith('/descobertas') ? 'Descobertas' : 'Computadores';
 
   return (
     <div className="motion-safe:animate-fade-in pb-6">
       <PaginaCabecalho
-        voltar={{ para: '/computadores', rotulo: 'Computadores' }}
+        voltar={{ para: voltar, rotulo: rotuloDaVolta }}
         titulo={<span className="font-mono">{asset.assetTag}</span>}
-        subtitulo={`${asset.model.manufacturer.name} ${asset.model.name}`}
-        acao={
-          <>
-            <Button size="sm" onClick={abrirPosse} disabled={bloqueio !== null} title={bloqueio ?? undefined}>
-              {asset.posse?.assignmentId ? <Undo2 /> : <UserPlus />} {rotuloDaOperacao(asset.posse)}
-            </Button>
-            <Button variant="outline" size="sm" onClick={abrirEdicao}><Pencil /> Editar</Button>
-            <AcoesDaLinha
-              nome={asset.assetTag}
-              acoes={[
-                // Clonar é operação DE TELA: abre o formulário em modo criação com
-                // os valores deste ativo, sem etiqueta e sem série. Não há rota nova.
-                { rotulo: 'Clonar', icone: Copy, onClick: abrirClone },
-                podeExcluir && { rotulo: 'Excluir', icone: Trash2, onClick: () => void handleDelete(), perigo: true },
-              ]}
-            />
-          </>
-        }
       />
 
       <div className="space-y-6">
-        <IdentificacaoCard asset={asset} />
+        <IdentificacaoCard
+          asset={asset}
+          acoes={
+            <>
+              <Button size="sm" onClick={abrirPosse} disabled={bloqueio !== null} title={bloqueio ?? undefined}>
+                {asset.posse?.assignmentId ? <Undo2 /> : <UserPlus />} {rotuloDaOperacao(asset.posse)}
+              </Button>
+              <Button variant="outline" size="sm" onClick={abrirEdicao}><Pencil /> Editar</Button>
+              <AcoesDaLinha
+                nome={asset.assetTag}
+                acoes={[
+                  // Clonar é operação DE TELA: abre o formulário em modo criação com
+                  // os valores deste ativo, sem etiqueta e sem série. Não há rota nova.
+                  { rotulo: 'Clonar', icone: Copy, onClick: abrirClone },
+                  podeExcluir && !baixado && { rotulo: 'Dar baixa', icone: PackageX, onClick: abrirBaixa },
+                  podeExcluir && baixado && { rotulo: 'Reverter baixa', icone: Undo2, onClick: () => void handleReverterSaida() },
+                  podeExcluir && { rotulo: 'Excluir', icone: Trash2, onClick: () => void handleDelete(), perigo: true },
+                ]}
+              />
+            </>
+          }
+        />
 
-        <AssetTabs ativa={aba} onChange={setAba}>
+        <AssetTabs ativa={aba} onChange={setAba} contagens={contagens}>
           <TabsContent value="detalhes" className="mt-4">
-            <DetalhesTab
-              asset={asset}
-              onDarBaixa={podeExcluir ? abrirBaixa : undefined}
-              onReverterSaida={podeExcluir ? () => void handleReverterSaida() : undefined}
-            />
+            <DetalhesTab asset={asset} />
           </TabsContent>
 
           <TabsContent value="posse" className="mt-4">
@@ -108,13 +97,17 @@ export default function AssetDetailPage() {
               posse={asset.posse}
               assignments={assignments}
               carregando={possePendente}
-              onAbrirOperacao={abrirPosse}
-              bloqueio={bloqueio}
+              erro={erroDaPosse}
             />
           </TabsContent>
 
           <TabsContent value="historico" className="mt-4">
-            <HistoryTab eventos={eventos} total={totalDeEventos} carregando={historicoPendente} />
+            <HistoryTab
+              eventos={eventos}
+              pagina={{ page: paginaDoHistorico, total: totalDeEventos, onPageChange: setPaginaDoHistorico }}
+              carregando={historicoPendente}
+              erro={erroDoHistorico}
+            />
           </TabsContent>
 
           <TabsContent value="licencas" className="mt-4">
@@ -139,8 +132,9 @@ export default function AssetDetailPage() {
             <MaquinaTab
               maquina={maquina}
               carregando={maquinaPendente}
+              erro={erroDaMaquina}
               desvinculando={desvinculando}
-              onDesvincular={handleDesvincular}
+              onDesvincular={() => void handleDesvincular()}
             />
           </TabsContent>
         </AssetTabs>

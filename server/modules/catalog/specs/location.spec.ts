@@ -29,6 +29,7 @@ export const locationSpec: CatalogSpec = {
   // aqui e os postos que ficam aqui. Os ativos da lixeira e os itens
   // desativados contam porque continuam apontando e podem voltar. Ela não recebe entrega nem ocupante — quem
   // recebe é o posto (decisão Y) —, então não há passado preso a ela.
+  mostraUso: true,
   countUsages: async (client, id) => {
     const [ativos, itens, postos] = await Promise.all([
       client.asset.count({ where: { locationId: id, ...INCLUINDO_LIXEIRA } }),

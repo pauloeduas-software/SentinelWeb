@@ -32,6 +32,6 @@ export const updateWorkstationSchema = z.strictObject({
  */
 export const workstationViewQuerySchema = z.strictObject({
   view: z
-    .enum(['todos', 'vagos', 'ocupados'], 'view inválida: use todos, vagos ou ocupados')
+    .enum(['todos', 'vagos', 'ocupados', 'sem-uso'], 'view inválida: use todos, vagos, ocupados ou sem-uso')
     .default('todos'),
 });

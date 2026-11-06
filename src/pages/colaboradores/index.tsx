@@ -1,4 +1,3 @@
-import { Users } from 'lucide-react';
 import CadastroDoCatalogo from '../../components/catalogo/CadastroDoCatalogo';
 import { caminhoDoColaborador } from '../../helpers/colaborador.helper';
 import { colaborador } from './specs';
@@ -10,5 +9,5 @@ import { colaborador } from './specs';
 const SPECS = [colaborador];
 
 export default function ColaboradoresPage() {
-  return <CadastroDoCatalogo titulo="Colaboradores" icone={Users} specs={SPECS} caminhoDaFicha={caminhoDoColaborador} />;
+  return <CadastroDoCatalogo titulo="Colaboradores" specs={SPECS} caminhoDaFicha={caminhoDoColaborador} />;
 }

@@ -5,6 +5,7 @@ import AppSidebar from './components/AppSidebar';
 import ComputadoresPage from './pages/computadores';
 import AssetDetailPage from './pages/computadores/detalhe';
 import PostosPage from './pages/postos';
+import PostoFichaPage from './pages/postos/ficha';
 import EstoquePage from './pages/estoque';
 import LicencasPage from './pages/licencas';
 import DescobertasPage from './pages/descobertas';
@@ -24,7 +25,7 @@ import { useTituloDaAba } from './hooks/useTituloDaAba';
 
 /**
  * Os endereços antigos da tela do ativo → `/computadores/:id`, preservando o id:
- * `/itam/assets/:id`, até a F6, e `/ativos/:id`, até a tela virar Computadores
+ * `/itam/assets/:id`, e depois `/ativos/:id`, até a tela virar Computadores
  * (AH).
  *
  * Um `Navigate` com caminho literal não serve aqui: o id está na URL, e é ele
@@ -109,8 +110,8 @@ function Layout() {
               {/* A tela do ativo. Rota própria, e não modal: é uma URL que se cola
                   no chamado, se abre em outra aba e se guarda nos favoritos. */}
               <Route path="/computadores/:id" element={<AssetDetailPage />} />
-              {/* AS ROTAS ANTIGAS, redirecionando. `/itam` era o nome da tela até a
-                  F6; ele saiu porque "ITAM" é o nome do ASSUNTO do sistema inteiro,
+              {/* AS ROTAS ANTIGAS, redirecionando. `/itam` era o nome da tela; ele
+                  saiu porque "ITAM" é o nome do ASSUNTO do sistema inteiro,
                   não desta tela. `/ativos` veio depois, e saiu quando "Ativos" virou
                   o nome da seção do menu e a tela passou a ter o nome do que lista:
                   computadores (AH). O redirecionamento fica porque quem colar uma
@@ -120,20 +121,20 @@ function Layout() {
               <Route path="/itam" element={<Navigate to="/computadores" replace />} />
               <Route path="/itam/assets/:id" element={<RedirecionarAtivo />} />
               <Route path="/postos" element={<PostosPage />} />
-              {/* A FICHA DO POSTO É ROTA, e é a mesma tela: a listagem fica atrás
-                  da janela. É destino de link porque a busca por etiqueta larga
-                  aqui quem bipou o computador de uma mesa — ele saiu de /computadores. */}
-              <Route path="/postos/:id" element={<PostosPage />} />
+              {/* A FICHA DO POSTO é página, como a do computador, e destino de link:
+                  a ficha do computador, a do colaborador e as recusas do servidor
+                  trazem para cá. */}
+              <Route path="/postos/:id" element={<PostoFichaPage />} />
               {/* O ESTOQUE: monitor, teclado, mouse, cabo — o que tem
                   quantidade e não patrimônio (docs/decisoes/estoque.md). Perto
                   de Postos porque a entrega pode ir para uma mesa, e perto de
                   Licenças porque as duas são posse consumida em unidade. */}
               <Route path="/estoque" element={<EstoquePage />} />
               <Route path="/licencas" element={<LicencasPage />} />
-              {/* O QUE O AGENTE VÊ E O CADASTRO NÃO SABE (F7). A rota leva o nome
+              {/* O QUE O AGENTE VÊ E O CADASTRO NÃO SABE. A rota leva o nome
                   do que a tela LISTA — descobertas —, e não o do processo que roda
-                  por trás: `/reconciliacao` seria o mesmo erro que `/itam` foi até
-                  a F6, nomear a tela pelo assunto em vez de pelo conteúdo. */}
+                  por trás: `/reconciliacao` seria o mesmo erro que `/itam` foi,
+                  nomear a tela pelo assunto em vez de pelo conteúdo. */}
               <Route path="/descobertas" element={<DescobertasPage />} />
               {/* QUEM OPERA O SISTEMA é assunto do Administrador: quem não é nem
                   vê o item no menu (navegacao.ts), e a URL digitada volta para a
@@ -203,7 +204,7 @@ function TituloDaAba() {
 function Verificando() {
   return (
     <div className="min-h-screen bg-bg-base flex items-center justify-center">
-      <span className="text-sm text-text-tertiary">Verificando sessão...</span>
+      <span className="text-sm text-text-tertiary">Verificando sessão…</span>
     </div>
   );
 }

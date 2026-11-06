@@ -25,7 +25,7 @@ export function Campo({ rotulo, obrigatorio, ajuda, className, children }: Campo
           {rotulo}{obrigatorio && <span aria-hidden="true" className="text-status-danger"> *</span>}
         </label>
         {children}
-        {ajuda && <p className="text-xs leading-relaxed text-text-tertiary">{ajuda}</p>}
+        {ajuda && <p className="text-sm leading-relaxed text-text-secondary">{ajuda}</p>}
       </div>
     </CampoContext.Provider>
   );

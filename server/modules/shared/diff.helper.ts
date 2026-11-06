@@ -38,8 +38,8 @@ export function buildChanges(
     // histórico.
     //
     // Normalizar primeiro resolve os dois de uma vez, e resolve de antemão
-    // qualquer coluna-objeto que apareça depois — `Decimal` entrou na F1 sem
-    // que o caso especial de `Date`, escrito na F0, desse qualquer sinal.
+    // qualquer coluna-objeto que apareça depois — `Decimal` entrou sem
+    // que o caso especial de `Date`, escrito antes, desse qualquer sinal.
     const de = normalizar(antes[campo]);
     const para = normalizar(depois[campo]);
 

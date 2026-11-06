@@ -50,7 +50,7 @@ export const WORKSTATION_SELECT = {
  * mais: aqui os ativos vêm por inteiro, então o `_count` deles seria um segundo
  * número para o mesmo fato — e dois números para o mesmo fato divergem.
  *
- * Os ocupantes vêm só CONTADOS: é do número que `vago` sai. A lista com nomes
+ * Os ocupantes vêm só CONTADOS: desse número saem o `vago` e a situação do posto. A lista com nomes
  * a tela lê da rota de ocupação (`/api/workstations/:id/occupants`), onde mora o
  * histórico e que o adicionar/encerrar invalida.
  */

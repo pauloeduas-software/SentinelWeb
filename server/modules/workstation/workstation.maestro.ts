@@ -30,6 +30,7 @@ export class WorkstationMaestro {
 
     server.get('/api/workstations', workstationController.list);
     server.get('/api/workstations/options', cadastro.options);
+    server.get('/api/workstations/stats', workstationController.stats);
     server.get('/api/workstations/:id', workstationController.detail);
     server.post('/api/workstations', WRITE_RATE_LIMIT, cadastro.create);
     server.put('/api/workstations/:id', WRITE_RATE_LIMIT, cadastro.update);

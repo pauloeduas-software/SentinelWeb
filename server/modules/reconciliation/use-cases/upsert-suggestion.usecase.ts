@@ -3,7 +3,7 @@ import { prisma } from '../../../infra/database/prismaClient';
 import { errorCode } from '../../../infra/errors/error-shape';
 import { hashDaAfirmacao, type Afirmacao, type Evidencia } from '../helpers/evidence.helper';
 
-// PROPOR UMA SUGESTÃO SEM ENCHER A FILA — o coração da idempotência da fase.
+// PROPOR UMA SUGESTÃO SEM ENCHER A FILA — o coração da idempotência.
 //
 // O job roda de hora em hora sobre a frota inteira e reencontra as MESMAS
 // evidências. Sem as guardas daqui, uma semana de operação transforma a fila em

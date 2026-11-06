@@ -23,12 +23,6 @@ export function DropdownMenuItem({ className, ...props }: ComponentProps<typeof 
   return <Menu.Item className={cn(CLASSE_DO_ITEM, className)} {...props} />;
 }
 
-export function DropdownMenuCheckboxItem({ className, children, ...props }: ComponentProps<typeof Menu.CheckboxItem>) {
-  return <Menu.CheckboxItem className={cn(CLASSE_DO_ITEM, className)} {...props}>{children}</Menu.CheckboxItem>;
-}
-
-export const DropdownMenuItemIndicator = Menu.ItemIndicator;
-
 export function DropdownMenuSeparator({ className, ...props }: ComponentProps<typeof Menu.Separator>) {
   return <Menu.Separator className={cn('-mx-1 my-1 h-px bg-border-sutil', className)} {...props} />;
 }

@@ -23,7 +23,7 @@ export const endpointController = {
     //
     // É o mesmo trecho que `workstation.controller.ts` já tinha, com a mesma
     // nota explicando o motivo. Ele foi escrito porque o problema tinha
-    // acontecido lá; aqui a F7 refez o erro em vez de copiar a solução.
+    // acontecido lá; aqui o erro foi refeito em vez de copiar a solução.
     const { vinculo, ...paginacao } = (request.query ?? {}) as Record<string, unknown>;
 
     // `perPage` generoso: `/descobertas` lê a frota inteira para separar as
@@ -35,7 +35,7 @@ export const endpointController = {
       maxPerPage: 1_000,
     });
 
-    // Os filtros da F7 saem do `parseListQuery` de propósito: ele é do `core` e
+    // Os filtros saem do `parseListQuery` de propósito: ele é do `core` e
     // não conhece vínculo nem triagem. Quem valida o que é do domínio é o schema
     // do domínio — e agora ele recebe SÓ o que é dele, então pode voltar a ser
     // estrito e pegar `?vinculo=nenhum` em vez de ignorar em silêncio.

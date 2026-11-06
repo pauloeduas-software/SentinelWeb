@@ -13,9 +13,9 @@ import {
 
 // PARA CADA MÁQUINA SEM VÍNCULO, QUAL ATIVO ELA É — e o que fazer com a resposta.
 //
-// É o único lugar da fase que enxerga o banco E decide: a cascata (pura) diz o
-// que casou, este arquivo diz o que isso vira. A separação existe porque a
-// pontuação vai mudar com dado real e a regra do que é confiável não deveria
+// É o único lugar deste módulo que enxerga o banco E decide: a cascata (pura)
+// diz o que casou, este arquivo diz o que isso vira. A separação existe porque
+// a pontuação vai mudar com dado real e a regra do que é confiável não deveria
 // mudar junto.
 
 const SELECT_IDENTIDADE = {

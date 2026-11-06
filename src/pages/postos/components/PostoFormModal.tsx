@@ -7,7 +7,7 @@ import { montarPosto } from '../helpers/postos.helper';
 import type { PostoInput } from '../../../queries/workstation.queries';
 import type { Posto } from '../../../types/workstation.types';
 
-// Criar ou editar a Mesa 1 SEM sair da tela de postos.
+// Criar ou editar a Mesa 1 SEM sair da lista nem da ficha.
 //
 // Três campos: nome, a LOCALIZAÇÃO onde a mesa fica e uma nota. Endereço, CEP e
 // telefone são da localização, não da mesa — quem precisa deles edita a
@@ -16,8 +16,8 @@ import type { Posto } from '../../../types/workstation.types';
 // Grava em `/workstations`, o cadastro do posto (decisão Y).
 
 interface PostoFormModalProps {
-  /** O posto em edição; `null` cria um novo. */
-  posto: Posto | null;
+  /** O posto em edição, da linha ou da ficha; `null` cria um novo. */
+  posto: Pick<Posto, 'name' | 'locationId' | 'location' | 'notes' | 'updatedAt'> | null;
   onClose: () => void;
   onSubmit: (data: PostoInput) => Promise<void>;
 }
@@ -51,20 +51,19 @@ export default function PostoFormModal({ posto, onClose, onSubmit }: PostoFormMo
   return (
     <FormularioLateral
       titulo={posto ? 'Editar posto' : 'Novo posto'}
-      descricao="Quem ocupa o posto se define na ficha dele, com o turno de cada um."
+      descricao={posto?.name ?? 'Quem ocupa o posto se define na ficha dele, com o turno de cada um.'}
       onClose={onClose}
       onSubmit={enviar}
       erro={erro}
       salvando={salvando}
       bloqueado={!name.trim() || !locationId}
-      rotuloDoEnvio={posto ? 'Salvar' : 'Criar posto'}
     >
       <Campo rotulo="Nome" obrigatorio>
         <Input
           required
           value={name}
           onChange={(event) => setName(event.target.value)}
-          placeholder="MesaEscritório, MesaRecepção..."
+          placeholder="MesaEscritório, MesaRecepção…"
         />
       </Campo>
 

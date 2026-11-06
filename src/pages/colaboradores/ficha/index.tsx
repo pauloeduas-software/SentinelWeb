@@ -1,17 +1,23 @@
-import type { ReactNode } from 'react';
-import { ArrowLeft, History, KeyRound, Mail, MapPin, Monitor, Package } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import {
+  History, KeyRound, MapPin, Monitor, Package,
+} from 'lucide-react';
 import HistoryPanel from './components/HistoryPanel';
 import { useColaborador } from './hooks/useColaborador';
+import CartaoDaFicha, { FichaIndisponivel } from '../../../components/CartaoDaFicha';
+import PaginaCabecalho from '../../../components/PaginaCabecalho';
+import SituacaoDaEntrega from '../../../components/SituacaoDaEntrega';
+import TabelaDaFicha from '../../../components/TabelaDaFicha';
 import { Avatar } from '../../../components/ui/avatar';
-import { Aviso } from '../../../components/ui/aviso';
-import { Badge } from '../../../components/ui/badge';
-import { Card } from '../../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
+import { PontoDeStatus } from '../../../components/ui/badge';
+import { Dado } from '../../../components/ui/dado';
+import {
+  ContagemDaAba, Tabs, TabsContent, TabsList, TabsTrigger,
+} from '../../../components/ui/tabs';
 import { formatarData, formatarDiaDoInstante } from '../../../helpers/format.helper';
 import { caminhoDoItem, textoDeUnidades } from '../../../helpers/estoque.helper';
-import { caminhoDaLicenca, textoDaSituacao } from '../../../helpers/licenca.helper';
+import { caminhoDaLicenca, prazoDaEntrega } from '../../../helpers/licenca.helper';
+import { useAbaNaUrl } from '../../../hooks/useAbaNaUrl';
+import { useVoltaComFiltros } from '../../../hooks/useVoltaComFiltros';
 
 // FICHA DO COLABORADOR — quem é a pessoa, os COMPUTADORES entregues a ela, os
 // POSTOS que ela ocupa, o estoque e as licenças no nome dela, e o HISTÓRICO
@@ -22,138 +28,68 @@ import { caminhoDaLicenca, textoDaSituacao } from '../../../helpers/licenca.help
 // Os postos aparecem inclusive quando não têm ativo nenhum entregue: é uma
 // ocupação aberta, e é ela que a desativação cobra.
 //
-// Quem é a pessoa fica no card à esquerda; à direita, uma aba para cada coisa
-// que está com ela e, por último, o histórico: as abas dizem o que ESTÁ, o
-// histórico diz o que FOI. Um ativo devolvido mês passado não aparece nas de
-// cima, e é ele que responde "já teve um notebook antes?". Cada linha abre o
-// registro, onde mora o Devolver ou o Encerrar.
+// Quem é a pessoa fica no card de cima; embaixo, uma aba para cada coisa que está com
+// ela e, por último, o histórico: as abas dizem o que ESTÁ, o histórico diz o que FOI.
+// Um ativo devolvido mês passado não aparece nas de cima, e é ele que responde "já teve
+// um notebook antes?". Cada linha abre o registro, onde mora o Devolver ou o Encerrar.
 
-/** Volta para a lista de Colaboradores. */
-const VOLTAR = '/colaboradores';
-
-interface LinhaDaFicha {
-  id: string;
-  para?: string;
-  /** O nome na primeira coluna, e a nota embaixo dele. */
-  nome: string;
-  nota?: string | null;
-  celulas: readonly ReactNode[];
-}
-
-/** A tabela de uma aba: a linha inteira abre o registro. */
-function TabelaDaFicha({ colunas, linhas, vazio }: { colunas: readonly string[]; linhas: readonly LinhaDaFicha[]; vazio: string }) {
-  const navigate = useNavigate();
-
-  if (linhas.length === 0) {
-    return <Card className="py-16 text-center text-sm text-text-tertiary">{vazio}</Card>;
-  }
-
-  return (
-    <Card className="overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow>{colunas.map((coluna) => <TableHead key={coluna}>{coluna}</TableHead>)}</TableRow>
-        </TableHeader>
-        <TableBody>
-          {linhas.map(({ id, para, nome, nota, celulas }) => (
-            <TableRow
-              key={id}
-              onClick={para ? () => navigate(para) : undefined}
-              className={para ? 'cursor-pointer' : undefined}
-            >
-              <TableCell>
-                {para ? (
-                  <Link
-                    to={para}
-                    onClick={(evento) => evento.stopPropagation()}
-                    className="font-medium text-text-primary focus-visible:underline focus-visible:outline-none"
-                  >
-                    {nome}
-                  </Link>
-                ) : <span className="font-medium text-text-primary">{nome}</span>}
-                {nota && <div className="mt-0.5 text-xs text-text-tertiary">{nota}</div>}
-              </TableCell>
-              {celulas.map((celula, indice) => <TableCell key={indice}>{celula}</TableCell>)}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
-  );
-}
+const ABAS = ['computadores', 'postos', 'estoque', 'licencas', 'historico'] as const;
+const DESDE = { rotulo: 'Desde', className: 'w-32' };
 
 export default function ColaboradorPage() {
   const {
-    pessoa, ocupacoes, carregando, erro,
-    historico, totalDoHistorico, carregandoHistorico,
+    pessoa, ocupacoes, totalDeOcupacoes, carregandoOcupacoes, erroDasOcupacoes, carregando, erro,
+    historico, totalDoHistorico, paginaDoHistorico, setPaginaDoHistorico, carregandoHistorico, erroDoHistorico,
   } = useColaborador();
+  const voltar = useVoltaComFiltros('/colaboradores');
+  const [aba, setAba] = useAbaNaUrl(ABAS);
 
-  if (carregando) {
-    return <p className="text-sm text-text-tertiary">Carregando colaborador...</p>;
-  }
-
-  if (erro || !pessoa) {
-    return (
-      <div className="space-y-4 text-sm">
-        <Aviso>{erro ?? 'Colaborador não encontrado.'}</Aviso>
-        <Link to={VOLTAR} className="flex items-center gap-2 text-text-tertiary hover:text-text-primary">
-          <ArrowLeft className="size-4" /> Voltar para a lista
-        </Link>
-      </div>
-    );
+  if (carregando || erro || !pessoa) {
+    return <FichaIndisponivel lista="Colaboradores" voltar={voltar} carregando={carregando} erro={erro ?? 'Colaborador não encontrado.'} />;
   }
 
   const unidades = pessoa.itens.reduce((soma, entrega) => soma + entrega.unidades, 0);
 
   return (
     <div className="space-y-4 pb-6 motion-safe:animate-fade-in">
-      <Link to={VOLTAR} className="inline-flex items-center gap-1.5 text-sm text-text-tertiary transition-colors hover:text-text-primary">
-        <ArrowLeft className="size-4" /> Colaboradores
-      </Link>
+      <PaginaCabecalho titulo={pessoa.name} voltar={{ para: voltar, rotulo: 'Colaboradores' }} />
 
-      <div className="grid items-start gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]">
-        <Card className="overflow-hidden border-t-4 border-t-primary">
-          <div className="flex flex-col items-center gap-3 p-6 text-center">
-            <Avatar nome={pessoa.name} className="size-20 text-2xl" />
-            <div className="min-w-0 space-y-1">
-              <h2 className="break-words text-xl font-bold text-text-primary">{pessoa.name}</h2>
-              {pessoa.email && (
-                <p className="flex items-center justify-center gap-1.5 break-all text-sm text-text-tertiary">
-                  <Mail className="size-3.5 shrink-0" /> {pessoa.email}
-                </p>
-              )}
-            </div>
-            {/* Estar desativado é a primeira coisa que a tela precisa dizer: todo
-                número ao lado tem que ser lido como histórico. Quando e por quem
-                foi desativado fica na auditoria, no banco (AB). */}
-            <Badge tom={pessoa.isActive ? 'sucesso' : 'aviso'}>{pessoa.isActive ? 'Ativo' : 'Desativado'}</Badge>
-          </div>
-          {pessoa.notes && (
-            <div className="space-y-1 border-t border-border-sutil p-6">
-              <p className="text-xs font-medium text-text-tertiary">Notas</p>
-              <p className="whitespace-pre-wrap break-words text-sm text-text-secondary">{pessoa.notes}</p>
-            </div>
-          )}
-        </Card>
+      <div className="space-y-6">
+        <CartaoDaFicha marca={<Avatar nome={pessoa.name} className="size-10 text-sm" />}>
+          {/* Estar desativado é a primeira coisa que a tela precisa dizer: todo número
+              embaixo tem que ser lido como histórico. Quando e por quem foi desativado
+              fica na auditoria, no banco (AB). */}
+          <Dado rotulo="Situação">
+            <PontoDeStatus tom={pessoa.isActive ? 'sucesso' : 'aviso'}>{pessoa.isActive ? 'Ativo' : 'Desativado'}</PontoDeStatus>
+          </Dado>
+          <Dado rotulo="E-mail">{pessoa.email}</Dado>
+          <Dado rotulo="Notas" largo>{pessoa.notes}</Dado>
+        </CartaoDaFicha>
 
-        <Tabs defaultValue="computadores" className="min-w-0 space-y-4">
+        <Tabs value={aba} onValueChange={(valor) => setAba(valor as typeof aba)} className="space-y-4">
           <TabsList>
-            <TabsTrigger value="computadores"><Monitor /> Computadores ({pessoa.ativos.length})</TabsTrigger>
-            <TabsTrigger value="postos"><MapPin /> Postos ({ocupacoes.length})</TabsTrigger>
-            <TabsTrigger value="estoque"><Package /> Estoque ({unidades})</TabsTrigger>
-            <TabsTrigger value="licencas"><KeyRound /> Licenças ({pessoa.licencas.length})</TabsTrigger>
-            <TabsTrigger value="historico"><History /> Histórico ({totalDoHistorico})</TabsTrigger>
+            <TabsTrigger value="computadores"><Monitor /> Computadores <ContagemDaAba>{pessoa.ativos.length}</ContagemDaAba></TabsTrigger>
+            <TabsTrigger value="postos"><MapPin /> Postos <ContagemDaAba>{totalDeOcupacoes}</ContagemDaAba></TabsTrigger>
+            <TabsTrigger value="estoque"><Package /> Estoque <ContagemDaAba>{unidades}</ContagemDaAba></TabsTrigger>
+            <TabsTrigger value="licencas"><KeyRound /> Licenças <ContagemDaAba>{pessoa.licencas.length}</ContagemDaAba></TabsTrigger>
+            <TabsTrigger value="historico"><History /> Histórico <ContagemDaAba>{totalDoHistorico}</ContagemDaAba></TabsTrigger>
           </TabsList>
 
           {/* Só os entregues a ELA: o computador do posto que ocupa fica na ficha do posto. */}
           <TabsContent value="computadores">
             <TabelaDaFicha
-              colunas={['Computador', 'Modelo', 'Devolução prevista', 'Desde']}
+              colunas={[{ rotulo: 'Computador' }, { rotulo: 'Modelo', className: 'w-[24%]' }, { rotulo: 'Devolução prevista', className: 'w-48' }, DESDE]}
+              icone={Monitor}
               vazio="Não está com nenhum computador."
               linhas={pessoa.ativos.map((posse) => ({
                 id: posse.id,
                 para: `/computadores/${posse.asset.id}`,
-                nome: posse.asset.name ? `${posse.asset.assetTag} · ${posse.asset.name}` : posse.asset.assetTag,
+                nome: (
+                  <>
+                    <span className="font-mono">{posse.asset.assetTag}</span>
+                    {posse.asset.name && ` · ${posse.asset.name}`}
+                  </>
+                ),
                 nota: posse.checkoutNotes,
                 celulas: [posse.asset.model.name, formatarData(posse.expectedCheckinAt), formatarDiaDoInstante(posse.checkoutAt)],
               }))}
@@ -163,7 +99,10 @@ export default function ColaboradorPage() {
           {/* Inclusive os postos sem ativo nenhum: ocupar também é responder por ele. */}
           <TabsContent value="postos">
             <TabelaDaFicha
-              colunas={['Posto', 'Turno', 'Desde']}
+              colunas={[{ rotulo: 'Posto' }, { rotulo: 'Turno', className: 'w-64' }, DESDE]}
+              icone={MapPin}
+              carregando={carregandoOcupacoes}
+              erro={erroDasOcupacoes}
               vazio="Não ocupa nenhum posto."
               linhas={ocupacoes.map((ocupacao) => ({
                 id: ocupacao.id,
@@ -177,7 +116,8 @@ export default function ColaboradorPage() {
           {/* As unidades no NOME dela, nunca as do posto que ocupa. */}
           <TabsContent value="estoque">
             <TabelaDaFicha
-              colunas={['Item', 'Categoria', 'Quantidade', 'Desde']}
+              colunas={[{ rotulo: 'Item' }, { rotulo: 'Categoria', className: 'w-[24%]' }, { rotulo: 'Quantidade', className: 'w-40' }, DESDE]}
+              icone={Package}
               vazio="Não está com nenhum item de estoque."
               linhas={pessoa.itens.map((entrega) => ({
                 id: entrega.id,
@@ -192,20 +132,26 @@ export default function ColaboradorPage() {
           {/* As entregues a ELA, nunca as do computador que ela usa. */}
           <TabsContent value="licencas">
             <TabelaDaFicha
-              colunas={['Licença', 'Categoria', 'Situação', 'Desde']}
+              colunas={[{ rotulo: 'Licença' }, { rotulo: 'Categoria', className: 'w-[24%]' }, { rotulo: 'Vencimento', className: 'w-44' }, { rotulo: 'Situação', className: 'w-36' }, DESDE]}
+              icone={KeyRound}
               vazio="Não está com nenhuma licença."
               linhas={pessoa.licencas.map((entrega) => ({
                 id: entrega.id,
                 para: caminhoDaLicenca(entrega.license.id, pessoa.name),
                 nome: entrega.license.name,
                 nota: entrega.checkoutNotes,
-                celulas: [entrega.license.category?.name ?? '—', textoDaSituacao(entrega), formatarDiaDoInstante(entrega.checkoutAt)],
+                celulas: [entrega.license.category?.name ?? '—', prazoDaEntrega(entrega), <SituacaoDaEntrega status={entrega.status} />, formatarDiaDoInstante(entrega.checkoutAt)],
               }))}
             />
           </TabsContent>
 
           <TabsContent value="historico">
-            <HistoryPanel eventos={historico} total={totalDoHistorico} carregando={carregandoHistorico} />
+            <HistoryPanel
+              eventos={historico}
+              pagina={{ page: paginaDoHistorico, total: totalDoHistorico ?? 0, onPageChange: setPaginaDoHistorico }}
+              carregando={carregandoHistorico}
+              erro={erroDoHistorico}
+            />
           </TabsContent>
         </Tabs>
       </div>

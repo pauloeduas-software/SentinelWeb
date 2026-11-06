@@ -19,7 +19,7 @@ test('abre Minha conta pelo menu do usuário, troca o nome e devolve o que era',
   const original = await campo.inputValue();
 
   await campo.fill(`${original} (E2E)`);
-  await page.getByRole('button', { name: 'Salvar nome' }).click();
+  await page.getByRole('button', { name: 'Salvar' }).click();
   await expect(page.getByRole('status')).toHaveText('Nome salvo.');
   await menu.click();
   await expect(page.getByRole('menu')).toContainText(`${original} (E2E)`);
@@ -28,7 +28,7 @@ test('abre Minha conta pelo menu do usuário, troca o nome e devolve o que era',
   // Devolve o nome: o banco do E2E é esvaziado a cada execução, mas o resto do
   // spec e os próximos testes da mesma execução não devem ver o nome trocado.
   await campo.fill(original);
-  await page.getByRole('button', { name: 'Salvar nome' }).click();
+  await page.getByRole('button', { name: 'Salvar' }).click();
   await expect(page.getByRole('status')).toHaveText('Nome salvo.');
 
   conferirConsole();

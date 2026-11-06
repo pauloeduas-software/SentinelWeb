@@ -27,7 +27,7 @@ const logger = createLogger('auditoria');
 // são as duas únicas operações que escrevem posse, e quem audita quer lê-las
 // como evento, não como diff (docs/referencia/modelo-de-posse.md).
 // `LINK` e `UNLINK` são o vínculo endpoint↔ativo da convergência com o RMM
-// (F7, D45). Gravadas com `entityType: 'Asset'` — quem consulta a auditoria do
+// (D45). Gravadas com `entityType: 'Asset'` — quem consulta a auditoria do
 // ativo quer ler "passou a ser a máquina PC-ANA" no mesmo registro, e não
 // numa entidade à parte.
 //

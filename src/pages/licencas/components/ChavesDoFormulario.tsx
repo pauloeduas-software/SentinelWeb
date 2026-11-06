@@ -60,7 +60,7 @@ export default function ChavesDoFormulario({ linhas, compradas, onChange }: Chav
   return (
     <div className="space-y-2">
       {compradas !== null && (
-        <p className={cobertas > compradas ? 'text-xs text-status-danger' : 'text-xs text-text-tertiary'}>
+        <p className={cobertas > compradas ? 'text-sm text-status-danger' : 'text-sm text-text-secondary'}>
           {cobertas > compradas
             ? `As chaves cobrem ${cobertas}, mais do que as ${compradas} compradas.`
             : `${cobertas} de ${compradas} ${compradas === 1 ? 'licença' : 'licenças'} com chave.`}
@@ -114,7 +114,7 @@ export default function ChavesDoFormulario({ linhas, compradas, onChange }: Chav
         <Plus /> Adicionar chave
       </Button>
 
-      <p className="text-xs leading-relaxed text-text-tertiary">
+      <p className="text-sm leading-relaxed text-text-secondary">
         A chave individual cobre 1 licença; a de volume, várias. Colar uma lista com várias linhas
         cria uma chave para cada. Com chaves cadastradas, toda entrega escolhe uma delas.
       </p>

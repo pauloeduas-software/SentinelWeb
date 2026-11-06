@@ -88,6 +88,7 @@ export const statusLabelSpec: CatalogSpec = {
   },
 
   // Apagar um status em uso deixaria ativos apontando para o nada.
+  mostraUso: true,
   countUsages: contarUsos,
   // Sem Desativar (AO): o status em uso fica, e sai quando nenhum ativo o usa.
   dicaEmUso: 'Troque o status desses ativos e exclua de novo.',

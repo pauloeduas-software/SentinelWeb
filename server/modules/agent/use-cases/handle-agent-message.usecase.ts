@@ -22,7 +22,7 @@ export async function handleAgentMessage(message: ParsedAgentMessage): Promise<v
       const dados = toHandshakeData(message);
       const endpoint = await registerHandshake(dados);
 
-      // TROCOU DE PEÇA? (F7, Etapa B — a `AssetChange`.) Fica aqui, no
+      // TROCOU DE PEÇA? (A `AssetChange`.) Fica aqui, no
       // roteador, e não dentro do `registerHandshake`: inventário é assunto do
       // domínio `endpoint`, e comparar o que o agente trouxe com o que estava
       // gravado é inferência sobre o patrimônio. E é o `registerHandshake` que

@@ -72,7 +72,6 @@ function EdicaoDaLicenca({ id, onClose, onSubmit }: Omit<LicencaFormModalProps, 
   return (
     <FormularioLateral
       titulo="Editar licença"
-      largura="lg"
       onClose={onClose}
       onSubmit={(evento) => evento.preventDefault()}
       erro={error ? `Não foi possível carregar a licença: ${error.message}` : undefined}
@@ -174,7 +173,7 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
   return (
     <FormularioLateral
       titulo={editando ? 'Editar licença' : 'Nova licença'}
-      largura="lg"
+      descricao={licenca?.name}
       onClose={onClose}
       onSubmit={enviar}
       erro={erro}

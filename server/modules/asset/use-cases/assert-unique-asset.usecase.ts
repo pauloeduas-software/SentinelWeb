@@ -21,7 +21,7 @@ interface Candidato {
  *
  * `findFirst`, e não `findUnique`: o índice parcial não é uma chave única do
  * schema, então o Prisma não aceitaria `findUnique` por estes campos. É o mesmo
- * caminho que `createUser` usa para o e-mail desde a Fase 0.
+ * caminho que `createUser` usa para o e-mail.
  */
 export async function assertEtiquetaESerieLivres(
   client: ClienteComAsset,

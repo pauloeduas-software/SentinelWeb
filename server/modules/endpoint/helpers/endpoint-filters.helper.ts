@@ -5,7 +5,7 @@ import { contemTexto } from '../../shared/busca.helper';
 // envelope existe para a API ter UMA forma de resposta, não porque a tela pagina.
 // Por isso o padrão é generoso (ver endpoint.controller.ts).
 
-/** O que a listagem aceita filtrar além da busca por texto (F7). */
+/** O que a listagem aceita filtrar além da busca por texto. */
 export interface FiltrosDeEndpoint {
   q?: string;
   /** `com` = já é um ativo; `sem` = órfão, o candidato a Shadow IT. */

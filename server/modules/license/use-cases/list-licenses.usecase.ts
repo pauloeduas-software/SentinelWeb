@@ -91,7 +91,7 @@ function buildLicenseWhere(q?: string): Prisma.LicenseWhereInput {
  * vencimento antes de hoje (o dia do vencimento ainda vale), vencendo vai de
  * hoje a hoje + 30, e ativa é o resto, inclusive sem vencimento.
  */
-function buildStatusWhere(status: StatusDoFiltro, hoje: Date): Prisma.LicenseWhereInput {
+export function buildStatusWhere(status: StatusDoFiltro, hoje: Date): Prisma.LicenseWhereInput {
   if (status === 'ENCERRADA') return { terminationDate: { lte: hoje } };
 
   const naoEncerrada: Prisma.LicenseWhereInput = { OR: [{ terminationDate: null }, { terminationDate: { gt: hoje } }] };

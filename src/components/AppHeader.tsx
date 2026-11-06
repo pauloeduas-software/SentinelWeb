@@ -3,6 +3,7 @@ import MenuDoUsuario from './MenuDoUsuario';
 import { Button } from './ui/button';
 import { TopProgress } from './ui/top-progress';
 import { useBarraLateral } from '../hooks/useBarraLateral';
+import { useVagaDoTitulo } from '../hooks/useVagaDoTitulo';
 import { useConsultasEmVoo } from '../queries/atividade.queries';
 
 // O CABEÇALHO, depois de a navegação sair dele.
@@ -14,12 +15,10 @@ import { useConsultasEmVoo } from '../queries/atividade.queries';
 // cabeçalho ficava mais largo que a janela e, sendo `sticky`, dava rolagem
 // horizontal à página inteira — em toda tela, inclusive sem tabela larga.
 //
-// SAIU o nome da tela: ele repetia o título que a própria página já tem logo
-// abaixo. Foi para a aba do navegador (`useTituloDaAba`).
-//
-// FICOU o que precisa estar à mão em todas as telas: o menu do usuário, com o
-// tema, a conta e o Sair, e a faixa de carregamento na borda de baixo, que
-// qualquer consulta acende.
+// FICOU o que precisa estar à mão em todas as telas: o título da página, que ela
+// mesma desenha na vaga (`useVagaDoTitulo`), o menu do usuário, com o tema, a conta
+// e o Sair, e a faixa de carregamento na borda de baixo, que qualquer consulta
+// acende. Botão de página não vem para cá (BB).
 //
 // E ENTROU o botão da gaveta, que abaixo de `md` é a ÚNICA forma de alcançar o
 // menu.
@@ -27,6 +26,7 @@ import { useConsultasEmVoo } from '../queries/atividade.queries';
 
 export default function AppHeader() {
   const abrirNoCelular = useBarraLateral((estado) => estado.abrirNoCelular);
+  const registrarVaga = useVagaDoTitulo((estado) => estado.registrar);
   const carregando = useConsultasEmVoo();
 
   return (
@@ -41,7 +41,7 @@ export default function AppHeader() {
         <Menu />
       </Button>
 
-      <div className="flex-1" />
+      <div ref={registrarVaga} className="flex min-w-0 flex-1 items-center gap-2" />
 
       <MenuDoUsuario />
 

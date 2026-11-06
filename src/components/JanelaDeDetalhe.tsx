@@ -3,8 +3,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
 // O DETALHE DE UM REGISTRO, em janela: nome, situação, ações e as abas. As
-// três janelas (item, licença e posto) saem
-// dele para terem a mesma cara.
+// duas janelas (item e licença) saem dele para
+// terem a mesma cara. Computador, colaborador e posto têm ficha em página.
 
 export interface AbaDoDetalhe {
   id: string;

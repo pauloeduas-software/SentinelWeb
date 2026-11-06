@@ -152,7 +152,7 @@ function eventosDoPosto(ocupacao: OcupacaoDaPessoa): EventoDaPessoa[] {
  * notebook"), e uma consulta por linha só para escrever a etiqueta seria N+1.
  *
  * ATIVO NA LIXEIRA CONTINUA APARECENDO, de propósito. A extension de soft
- * delete não alcança leitura aninhada (documentado nos riscos da F2), e aqui
+ * delete não alcança leitura aninhada, e aqui
  * isso joga a favor: a entrega aconteceu, e esconder a linha porque o ativo foi
  * excluído depois faria o histórico mentir por omissão. O que seria erro na
  * listagem é o comportamento certo numa trilha append-only.
@@ -190,6 +190,7 @@ type OcupacaoDaPessoa = Awaited<ReturnType<typeof listPersonOccupancies>>[number
 export async function getPersonHistory(
   personId: string,
   limite = LIMITE_PADRAO,
+  pagina = 1,
 ): Promise<ListEnvelope<EventoDaPessoa>> {
   // `listPersonOccupancies` é quem confere se a pessoa existe (404) — o mesmo
   // 404 da ficha, escrito uma vez só. Importado do domínio de ocupação, nunca
@@ -216,6 +217,6 @@ export async function getPersonHistory(
   // pessoa com exatamente 100 eventos.
   return {
     total: eventos.length,
-    rows: eventos.slice(0, limite),
+    rows: eventos.slice((pagina - 1) * limite, pagina * limite),
   };
 }

@@ -34,6 +34,7 @@ export const assetModelSpec: CatalogSpec = {
   // Conta a lixeira também: a FK é `Restrict` e o banco recusaria de todo jeito,
   // mas sem isto a contagem dá 0 e o usuário recebe o P2003 genérico no lugar da
   // mensagem que diz quantos ativos usam o modelo.
+  mostraUso: true,
   countUsages: (client, id) =>
     client.asset.count({ where: { modelId: id, ...INCLUINDO_LIXEIRA } }),
 

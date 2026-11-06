@@ -15,30 +15,30 @@ import { Input } from '../../components/ui/input';
 function Secao({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <Card>
-      <h3 className="px-6 pt-6 text-lg font-semibold leading-tight text-text-primary">{titulo}</h3>
+      <h3 className="px-6 pt-6 text-sm font-medium text-text-primary">{titulo}</h3>
       <div className="p-6">{children}</div>
     </Card>
   );
 }
 
 export default function ContaPage() {
-  const { usuario, nome, changeNome, salvarNome, erro, salvo, salvando, alterado, trocarSenha } = useConta();
+  const { nome, changeNome, salvarNome, erro, salvo, salvando, alterado, trocarSenha } = useConta();
 
   return (
     <div className="motion-safe:animate-fade-in flex max-w-xl flex-col pb-6">
 
-      <PaginaCabecalho titulo="Minha conta" subtitulo={usuario?.email} />
+      <PaginaCabecalho titulo="Minha conta" />
 
       <div className="space-y-6">
         <Secao titulo="Nome">
           <form onSubmit={salvarNome} className="space-y-4">
             {erro && <Aviso>{erro}</Aviso>}
-            <Campo rotulo="Nome completo">
+            <Campo rotulo="Nome completo" obrigatorio>
               <Input required value={nome} onChange={(e) => changeNome(e.target.value)} />
             </Campo>
             <div className="flex items-center gap-4">
               <Button type="submit" disabled={salvando || !alterado}>
-                {salvando ? 'Salvando...' : 'Salvar nome'}
+                {salvando ? 'Salvando…' : 'Salvar'}
               </Button>
               {salvo && <span role="status" className="text-sm text-status-success">Nome salvo.</span>}
             </div>
@@ -46,7 +46,7 @@ export default function ContaPage() {
         </Secao>
 
         <Secao titulo="Senha">
-          <FormularioDeSenha pedirAtual rotuloDoBotao="Trocar senha" onSubmit={trocarSenha} />
+          <FormularioDeSenha pedirAtual rotuloDoBotao="Trocar senha" rotuloEnviando="Trocando…" onSubmit={trocarSenha} />
         </Secao>
       </div>
     </div>

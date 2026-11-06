@@ -100,6 +100,7 @@ function eventosDaPosse(assignment: Awaited<ReturnType<typeof listAssetAssignmen
 export async function getAssetHistory(
   assetId: string,
   limite = LIMITE_PADRAO,
+  pagina = 1,
 ): Promise<ListEnvelope<EventoDoAtivo>> {
   // `listAssetAssignments` é quem confere se o ativo existe (404) — o mesmo
   // 404 da tela de detalhe, escrito uma vez só. Importado do domínio de posse,
@@ -118,5 +119,5 @@ export async function getAssetHistory(
 
   const eventos = [...daPosse, ...daLicenca, ...doComponente].sort((a, b) => b.at.getTime() - a.at.getTime());
 
-  return { total: eventos.length, rows: eventos.slice(0, limite) };
+  return { total: eventos.length, rows: eventos.slice((pagina - 1) * limite, pagina * limite) };
 }

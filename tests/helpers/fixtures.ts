@@ -186,7 +186,7 @@ export async function criarAtivo(
   if (opcoes.assetTag !== undefined) corpo.assetTag = opcoes.assetTag;
   if (opcoes.name !== undefined) corpo.name = opcoes.name;
   // `serial` e `locationId` entram na CRIAÇÃO e não por um PUT depois: é o
-  // caminho que o formulário usa, e é pelo serial que a reconciliação da F7
+  // caminho que o formulário usa, e é pelo serial que a reconciliação
   // encontra o ativo.
   if (opcoes.serial !== undefined) corpo.serial = opcoes.serial;
   if (opcoes.locationId !== undefined) corpo.locationId = opcoes.locationId;
@@ -245,7 +245,7 @@ export async function cenarioDePosse(api: ApiDeTeste, sufixo = '') {
   return { ...seed, modelId, fabricanteId, mesa1, laura, ana, ativo };
 }
 
-// ── O CICLO DE VIDA (F8) ────────────────────────────────────────────────────
+// ── O CICLO DE VIDA ─────────────────────────────────────────────────────────
 
 /** `AAAA-MM-DD` de N dias atrás — o que os testes de prazo precisam. */
 function diasAtras(dias: number): string {

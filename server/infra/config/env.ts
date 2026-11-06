@@ -31,7 +31,7 @@ export function tetoDeRequisicaoLigado(nodeEnv: string | undefined): boolean {
 // Variáveis sem as quais o servidor não funciona: faltou alguma, o boot para
 // aqui com a lista completa (em vez de falhar aos poucos em runtime).
 //
-// `JWT_SECRET` entrou na F3: é ele que assina o cookie de sessão. Segredo
+// `JWT_SECRET` é o que assina o cookie de sessão. Segredo
 // ausente não pode virar "assina com string vazia" nem 500 na primeira tentativa
 // de login — sem ele NINGUÉM entra, então o boot para aqui.
 const REQUIRED_VARS = ['DATABASE_URL', 'JWT_SECRET'];
@@ -117,7 +117,7 @@ function validateJwtSecret(): string | null {
   return `[Env] JWT_SECRET fraco: ${fraco}. Aceito só em desenvolvimento. ${comoGerar}`;
 }
 
-// Chave que assina o JWT da sessão (cookie httpOnly — docs/historico/fase-03-autenticacao-e-ator.md, D22).
+// Chave que assina o JWT da sessão (cookie httpOnly — docs/decisoes/acesso.md, D22).
 export function getJwtSecret(): string {
   return (process.env.JWT_SECRET ?? '').replace(/^"|"$/g, '').trim();
 }

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import {
-  criarAtivo, criarFabricante, criarLicenca, criarModelo, idsDoSeed,
+  criarAtivo, criarColaborador, criarFabricante, criarLicenca, criarModelo, idsDoSeed,
 } from '../helpers/fixtures';
 import { prisma } from '../../server/infra/database/prismaClient';
 
@@ -402,5 +402,59 @@ describe('nome com % ou _ não é curinga', () => {
     await criarFabricante(api, 'Zeta Corp');
     expect((await api.post('/api/manufacturers', { name: 'Z%' })).status).toBe(201);
     expect((await api.post('/api/manufacturers', { name: 'Z_ta Corp' })).status).toBe(201);
+  });
+});
+
+// ── A COLUNA "EM USO" ───────────────────────────────────────────────────────
+//
+// O número da lista é o motivo da recusa do DELETE (AZ). Se os dois fossem contas
+// diferentes, a tela diria 0 para o que o 409 recusa.
+describe('a listagem diz quantos usam cada linha', () => {
+  async function linhaDaLista(slug: string, id: string, busca: string) {
+    const { body } = await api.get<{ rows: { id: string; usos?: number }[] }>(
+      `/api/${slug}?q=${encodeURIComponent(busca)}`,
+    );
+    return body.rows.find((linha) => linha.id === id);
+  }
+
+  it('é o mesmo número da recusa, e o ativo na lixeira conta', async () => {
+    const seed = await idsDoSeed();
+    const fabricanteId = await criarFabricante(api, 'Fabricante da coluna');
+    const modelo = await criarModelo(api, { categoriaId, fabricanteId, name: 'Modelo da coluna' });
+    const ativo = { statusId: seed.statusDeployableId, modelId: modelo };
+    await criarAtivo(api, { ...ativo, name: 'Ativo no cadastro' });
+    const naLixeira = await criarAtivo(api, { ...ativo, name: 'Ativo na lixeira' });
+    expect((await api.delete(`/api/assets/${naLixeira.id}`)).status).toBe(200);
+
+    expect((await linhaDaLista('asset-models', modelo, 'Modelo da coluna'))?.usos).toBe(2);
+
+    const { status, body } = await api.delete<{ error: string }>(`/api/asset-models/${modelo}`);
+    expect(status).toBe(409);
+    expect(body.error).toMatch(/2 registros/);
+  });
+
+  it('soma as tabelas que apontam para a linha, como o delete', async () => {
+    const seed = await idsDoSeed();
+    const fabricante = await criarFabricante(api, 'Fabricante de modelo e licença');
+    await criarModelo(api, { categoriaId, fabricanteId: fabricante, name: 'Modelo da soma' });
+    const licenca = await api.post('/api/licenses', {
+      name: 'Licença da soma', categoryId: seed.categoriaLicencaId, seatsTotal: 1, manufacturerId: fabricante,
+    });
+    expect(licenca.status).toBe(201);
+
+    expect((await linhaDaLista('manufacturers', fabricante, 'Fabricante de modelo'))?.usos).toBe(2);
+  });
+
+  it('zero onde ninguém usa, e a exclusão passa', async () => {
+    const id = await criarFabricante(api, 'Fabricante sem uso');
+    expect((await linhaDaLista('manufacturers', id, 'Fabricante sem uso'))?.usos).toBe(0);
+    expect((await api.delete(`/api/manufacturers/${id}`)).status).toBe(200);
+  });
+
+  it('o colaborador não traz o número: a ficha diz o que está com ele', async () => {
+    const id = await criarColaborador(api, { name: 'Pessoa sem coluna', email: 'sem.coluna@empresa.com' });
+    const linha = await linhaDaLista('people', id, 'Pessoa sem coluna');
+    expect(linha).toBeDefined();
+    expect(linha).not.toHaveProperty('usos');
   });
 });

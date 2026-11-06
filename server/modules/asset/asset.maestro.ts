@@ -9,8 +9,7 @@ const logger = createLogger('asset.maestro');
 //
 // A máquina descoberta pelo agente é o `Endpoint`, em /api/endpoints: são duas
 // coisas diferentes de propósito, porque há ativo sem agente (monitor, cadeira,
-// cabo) e máquina vista pelo agente que ninguém cadastrou. O vínculo entre as
-// duas é a Fase 7.
+// cabo) e máquina vista pelo agente que ninguém cadastrou.
 export class AssetMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
     server.get('/api/assets', assetController.list);

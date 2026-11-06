@@ -10,13 +10,16 @@ import {
 } from '../../../../queries/assignment.queries';
 import { useCatalogOptionsQuery } from '../../../../queries/catalog.queries';
 import { useAssetLicensesQuery } from '../../../../queries/license.queries';
+import { POR_PAGINA } from '../../../../hooks/useListaNaUrl';
 import { useAssetComponentsQuery } from '../../../../queries/stock.queries';
 import {
   useDesvincularMaquina, useMaquinaDoAtivoQuery,
 } from '../../../../queries/reconciliation.queries';
 import type { RetireInput } from '../../../../types/asset.types';
-import type { AbaId } from '../helpers/abas.helper';
+import { IDS_DAS_ABAS, type AbaId } from '../helpers/abas.helper';
+import { useAbaNaUrl } from '../../../../hooks/useAbaNaUrl';
 import { confirmar } from '../../../../hooks/useConfirmacao';
+import { useVoltaComFiltros } from '../../../../hooks/useVoltaComFiltros';
 import { useNotificacao } from '../../../../hooks/useNotificacao';
 import { linksDoErro } from '../../../../helpers/erro.helper';
 
@@ -34,17 +37,19 @@ export function useAssetDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [aba, setAba] = useState<AbaId>('detalhes');
+  const [aba, setAba] = useAbaNaUrl<AbaId>(IDS_DAS_ABAS);
+  const voltar = useVoltaComFiltros('/computadores');
   const [modal, setModal] = useState<ModalAberto>('nenhum');
 
   const { data: asset, isPending, error } = useAssetQuery(id);
 
-  // A aba Posse lê o histórico de posse pela query do domínio de posse — a
-  // mesma rota que a F4 escreve. Esta tela LÊ, não recalcula nada.
-  const { data: historico, isPending: historicoPendente } = useAssetHistoryQuery(id);
-  // A aba Posse lê o histórico de posse pela query do domínio de posse — a
-  // mesma rota que a F4 escreve. Esta tela LÊ, não recalcula nada.
-  const { data: assignments, isPending: possePendente } = useAssetAssignmentsQuery(id ?? null);
+  const [paginaDoHistorico, setPaginaDoHistorico] = useState(1);
+  const {
+    data: historico, isPending: historicoPendente, error: erroDoHistorico,
+  } = useAssetHistoryQuery(id, { page: paginaDoHistorico, limit: POR_PAGINA });
+  // A aba Posse lê o histórico de posse pela query do domínio de posse.
+  // Esta tela LÊ, não recalcula nada.
+  const { data: assignments, isPending: possePendente, error: erroDaPosse } = useAssetAssignmentsQuery(id ?? null);
 
   // O STATUS DO CLONE: o mesmo "primeiro `DEPLOYABLE`" que a listagem usa para
   // o cadastro novo (`useAssets.ts`). Clonar daqui é criar — e sem isto o clone
@@ -72,11 +77,11 @@ export function useAssetDetail() {
     data: componentes, isPending: componentesPendentes, error: erroDosComponentes,
   } = useAssetComponentsQuery(id ?? null);
 
-  // A MÁQUINA (F7): especificações coletadas, último contato e as trocas de peça
+  // A MÁQUINA: especificações coletadas, último contato e as trocas de peça
   // que o agente percebeu — tudo do endpoint vinculado. E desvincular, que é a
-  // correção de um vínculo errado — o pior resultado possível daquela fase, e
+  // correção de um vínculo errado — o pior resultado possível, e
   // não pode depender de mexer no banco à mão.
-  const { data: maquina, isPending: maquinaPendente } = useMaquinaDoAtivoQuery(id ?? null);
+  const { data: maquina, isPending: maquinaPendente, error: erroDaMaquina } = useMaquinaDoAtivoQuery(id ?? null);
   const desvincular = useDesvincularMaquina();
 
   const fecharModal = () => setModal('nenhum');
@@ -129,9 +134,10 @@ export function useAssetDetail() {
   const handleReverterSaida = async () => {
     if (!asset) return;
     if (!(await confirmar({
-      titulo: `Reverter a baixa de ${asset.assetTag}?`,
-      descricao: 'A data, o motivo e a observação da saída são apagados.',
+      titulo: `Reverter a baixa de "${asset.assetTag}"?`,
+      descricao: 'A data, o motivo e as notas da saída são apagados.',
       acao: 'Reverter',
+      perigo: true,
     }))) return;
     try {
       await reverterSaida.mutateAsync(asset.id);
@@ -163,6 +169,7 @@ export function useAssetDetail() {
   };
 
   return {
+    voltar,
     asset,
     carregando: isPending,
     // A busca engole o erro na listagem, mas aqui ele é a tela inteira: um
@@ -172,13 +179,24 @@ export function useAssetDetail() {
 
     aba,
     setAba,
+    // Sem resposta, sem número: `undefined`, e a aba fica sem contagem.
+    contagens: {
+      posse: assignments?.length,
+      licencas: licencas?.length,
+      componentes: componentes?.length,
+      historico: historico?.total,
+    },
 
     eventos: historico?.rows ?? [],
     totalDeEventos: historico?.total ?? 0,
+    paginaDoHistorico,
+    setPaginaDoHistorico,
     historicoPendente,
+    erroDoHistorico: erroDoHistorico?.message ?? null,
 
     assignments: assignments ?? [],
     possePendente,
+    erroDaPosse: erroDaPosse?.message ?? null,
 
     // LICENÇAS — o que está licenciado neste ativo.
     licencas: licencas ?? [],
@@ -190,12 +208,18 @@ export function useAssetDetail() {
     componentesPendentes,
     erroDosComponentes: erroDosComponentes ? (erroDosComponentes as Error).message : null,
 
-    // MÁQUINA — a aba que nasceu pronta na F7.
+    // MÁQUINA — a aba que nasceu pronta.
     maquina,
     maquinaPendente,
+    erroDaMaquina: erroDaMaquina?.message ?? null,
     desvinculando: desvincular.isPending,
-    handleDesvincular: () => {
+    handleDesvincular: async () => {
       if (!maquina?.endpointId) return;
+      if (!(await confirmar({
+        titulo: `Desvincular esta máquina de "${asset?.assetTag}"?`,
+        descricao: 'O ativo deixa de mostrar esta máquina, que volta para Descobertas e pode ser vinculada de novo.',
+        acao: 'Desvincular',
+      }))) return;
       // A recusa do servidor (vínculo já desfeito, máquina sumiu) vai para a
       // notificação, como nas outras ações da ficha — sem ela o clique falhava
       // em silêncio.

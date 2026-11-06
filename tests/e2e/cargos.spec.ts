@@ -24,7 +24,7 @@ async function entrarComo(browser: Browser, request: APIRequestContext, role: 'T
   await page.getByLabel('Senha', { exact: true }).fill(temporaryPassword);
   await page.getByRole('button', { name: 'Entrar' }).click();
 
-  await page.getByLabel('Nova senha', { exact: true }).fill('senha-do-cargo-e2e');
+  await page.getByLabel(/^Nova senha/).fill('senha-do-cargo-e2e');
   await page.getByLabel('Repita a nova senha').fill('senha-do-cargo-e2e');
   await page.getByRole('button', { name: 'Definir senha' }).click();
   await expect(page).toHaveURL(/\/computadores$/);

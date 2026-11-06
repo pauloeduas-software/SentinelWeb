@@ -1,5 +1,8 @@
-import { ArrowRightLeft, Cpu, KeyRound } from 'lucide-react';
-import { Card } from '../../../../components/ui/card';
+import {
+  ArrowRightLeft, Cpu, History, KeyRound,
+} from 'lucide-react';
+import type { BarraDaFichaProps } from '../../../../components/BarraDaFicha';
+import LinhaDoTempo from '../../../../components/LinhaDoTempo';
 import type { EventoDoAtivo } from '../../../../types/asset.types';
 import { formatarDiaDoInstante } from '../../../../helpers/format.helper';
 import { tituloDoEvento } from '../helpers/historico.helper';
@@ -12,60 +15,29 @@ import { tituloDoEvento } from '../helpers/historico.helper';
 
 interface HistoryTabProps {
   eventos: EventoDoAtivo[];
-  total: number;
+  pagina: BarraDaFichaProps;
   carregando: boolean;
+  erro: string | null;
 }
 
-export default function HistoryTab({ eventos, total, carregando }: HistoryTabProps) {
-  // Cálculo fora do JSX: o aviso de corte depende da comparação, não da lista.
-  const cortado = total > eventos.length;
+const ICONE = { POSSE: ArrowRightLeft, LICENCA: KeyRound, COMPONENTE: Cpu } as const;
 
-  if (carregando) return <p className="text-sm text-text-tertiary">Carregando…</p>;
-
-  if (eventos.length === 0) {
-    return <Card className="p-6 text-sm text-text-tertiary">Nenhuma entrega, licença nem componente ainda.</Card>;
-  }
-
+export default function HistoryTab({ eventos, pagina, carregando, erro }: HistoryTabProps) {
   return (
-    <div className="space-y-3">
-      <Card className="overflow-hidden">
-        <ul className="divide-y divide-border-sutil text-sm">
-          {eventos.map((evento) => (
-            <Evento key={evento.id} evento={evento} />
-          ))}
-        </ul>
-      </Card>
-
-      {cortado && (
-        <p className="text-xs text-text-tertiary">
-          Mostrando os {eventos.length} eventos mais recentes de {total}.
-        </p>
-      )}
-    </div>
-  );
-}
-
-function Evento({ evento }: { evento: EventoDoAtivo }) {
-  const dePosse = evento.fonte === 'POSSE';
-  const notas = evento.posse?.notes ?? evento.licenca?.notes ?? evento.componente?.notes;
-  const Icone = evento.fonte === 'COMPONENTE' ? Cpu : KeyRound;
-
-  return (
-    <li className="space-y-1 px-4 py-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="flex items-center gap-2 text-text-secondary">
-          {dePosse
-            ? <ArrowRightLeft className="size-4 shrink-0 text-text-tertiary" />
-            : <Icone className="size-4 shrink-0 text-text-tertiary" />}
-          {tituloDoEvento(evento)}
-        </span>
-
-        {/* A posse, a licença e o componente são registrados por dia (AM): a
-            hora de um dia passado seria inventada. */}
-        <span className="shrink-0 text-xs tabular-nums text-text-tertiary">{formatarDiaDoInstante(evento.at)}</span>
-      </div>
-
-      {notas && <div className="text-xs text-text-tertiary">{notas}</div>}
-    </li>
+    <LinhaDoTempo
+      icone={History}
+      vazio="Nenhuma entrega, licença nem componente ainda."
+      carregando={carregando}
+      erro={erro}
+      pagina={pagina}
+      // A posse, a licença e o componente são registrados por dia (AM).
+      eventos={eventos.map((evento) => ({
+        id: evento.id,
+        icone: ICONE[evento.fonte],
+        titulo: tituloDoEvento(evento),
+        dia: formatarDiaDoInstante(evento.at),
+        nota: evento.posse?.notes ?? evento.licenca?.notes ?? evento.componente?.notes,
+      }))}
+    />
   );
 }

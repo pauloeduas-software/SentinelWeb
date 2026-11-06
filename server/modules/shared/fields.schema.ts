@@ -20,7 +20,7 @@ export const textoOpcional = (rotulo: string, max = 500) =>
     .transform((valor) => (valor === undefined ? undefined : valor || null));
 
 // `z.email()` da zod 4 valida ANTES do `.trim()`; por isso o `pipe` (a mesma
-// armadilha documentada na Fase 0, em user.schema.ts).
+// armadilha, documentada em user.schema.ts).
 export const emailOpcional = z
   .string('e-mail inválido')
   .trim()

@@ -1,6 +1,6 @@
-import { Plus } from 'lucide-react';
+import { Package, Plus } from 'lucide-react';
 import CategoriaFiltro from '../../components/CategoriaFiltro';
-import EstadoDaLista from '../../components/EstadoDaLista';
+import ListaVazia from '../../components/ListaVazia';
 import ListToolbar from '../../components/ListToolbar';
 import PaginaCabecalho from '../../components/PaginaCabecalho';
 import { Aviso } from '../../components/ui/aviso';
@@ -22,7 +22,7 @@ import { usePode } from '../../stores/auth.store';
 
 export default function EstoquePage() {
   const {
-    itens, total, carregando, erro, page, perPage, setPage, search, changeSearch,
+    itens, total, carregando, erro, page, perPage, setPage, search, buscaFeita, changeSearch,
     categoryId, changeCategoria,
     modal, itemAberto, buscaDoLink, veioDoLink, erroDoLink, abrir, fechar, ocupado,
     handleCriar, handleEditar, handleEntregar, handleDevolver, handleAlternarAtivo, handleExcluir,
@@ -34,24 +34,18 @@ export default function EstoquePage() {
   return (
     <div className="motion-safe:animate-fade-in flex flex-col pb-6">
 
-      <PaginaCabecalho
-        titulo="Estoque"
-        subtitulo="O que não é computador: monitor, teclado, cabo, peça e consumível."
-        acao={<Button onClick={() => abrir('criar')}><Plus /> Novo item</Button>}
-      />
+      <PaginaCabecalho titulo="Estoque" />
 
       {erroDoLink && (
-        <Aviso className="mb-4 flex items-center justify-between gap-4">
-          <span>Não foi possível abrir o item do link: {erroDoLink}</span>
-          <button type="button" onClick={fechar} className="text-xs hover:underline">Dispensar</button>
-        </Aviso>
+        <Aviso className="mb-4" onDispensar={fechar}>Não foi possível abrir o item do link: {erroDoLink}</Aviso>
       )}
 
       <ListToolbar
         search={search}
         onSearchChange={changeSearch}
-        placeholder="Buscar por nome, categoria ou localização..."
+        placeholder="Buscar por nome, categoria ou localização…"
         filtros={<CategoriaFiltro tipo="STOCK,COMPONENT,CONSUMABLE" valor={categoryId} onChange={changeCategoria} />}
+        acao={<Button onClick={() => abrir('criar')}><Plus /> Novo item</Button>}
         page={page}
         perPage={perPage}
         total={total}
@@ -67,19 +61,15 @@ export default function EstoquePage() {
         onAlternarAtivo={podeDecidir ? (item) => void handleAlternarAtivo(item) : undefined}
         onExcluir={podeDecidir ? (item) => void handleExcluir(item) : undefined}
         vazio={
-          // Carregando e erro antes do vazio: sem isto, a primeira carga e um
-          // servidor fora do ar diziam "nenhum cadastrado" (`EstadoDaLista`).
-          <EstadoDaLista carregando={carregando} erro={erro}>
-            {search ? (
-              <span>Nenhum item encontrado para "{search}".</span>
-            ) : categoryId ? (
-              <span>Nenhum item com este filtro.</span>
-            ) : (
-              <>
-                <span>Nenhum item de estoque cadastrado.</span>
-              </>
-            )}
-          </EstadoDaLista>
+          <ListaVazia
+            icone={Package}
+            carregando={carregando}
+            erro={erro}
+            nome="item"
+            busca={buscaFeita}
+            filtrada={Boolean(categoryId)}
+            onCadastrar={() => abrir('criar')}
+          />
         }
       />
 

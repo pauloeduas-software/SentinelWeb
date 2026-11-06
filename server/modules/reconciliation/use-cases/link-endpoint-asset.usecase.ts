@@ -136,7 +136,7 @@ export async function vincularEndpointAoAtivo(
 /**
  * Desfaz o vínculo.
  *
- * Existe porque o vínculo errado é o pior resultado possível desta fase, e
+ * Existe porque o vínculo errado é o pior resultado possível, e
  * corrigi-lo não pode depender de mexer no banco à mão. O `AuditLog` grava o
  * que havia — a mesma linha que, quando o `onDelete: SetNull` desfizer um
  * vínculo sozinho ao apagar um ativo, vai ser a única testemunha do que existia.

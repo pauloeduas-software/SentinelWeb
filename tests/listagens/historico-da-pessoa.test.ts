@@ -135,6 +135,14 @@ describe('a lista', () => {
     expect(inteiro.total).toBe(inteiro.rows.length);
   });
 
+  it('`page` traz a página seguinte, sem repetir nem pular evento', async () => {
+    const inteiro = await historico();
+    const segunda = await historico('?limit=2&page=2');
+    expect(segunda.total).toBe(inteiro.total);
+    expect(segunda.rows.map((evento: { id: string }) => evento.id))
+      .toEqual(inteiro.rows.slice(2, 4).map((evento: { id: string }) => evento.id));
+  });
+
   it('recusa `limit` acima do teto com 422', async () => {
     const { status } = await api.get(`/api/people/${cenario.laura}/history?limit=500`);
     expect(status).toBe(422);

@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Check, Ban, HelpCircle, Link2 } from 'lucide-react';
 import VincularMaquinaForm from './VincularMaquinaForm';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
-import EstadoDaLista from '../../../components/EstadoDaLista';
+import ListaVazia from '../../../components/ListaVazia';
+import ListToolbar from '../../../components/ListToolbar';
 import { PontoDeStatus } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableRow } from '../../../components/ui/table';
+import { formatarDataHora } from '../../../helpers/format.helper';
+import { useListaLocalNaUrl } from '../../../hooks/usePaginaLocal';
 import type { Endpoint } from '../../../types/endpoint.types';
 import type { ReviewState } from '../../../types/reconciliation.types';
 
@@ -31,6 +34,7 @@ interface Props {
   carregando: boolean;
   erro: string | null;
   ocupado: boolean;
+  acao: ReactNode;
   onTriar: (id: string, reviewState: ReviewState) => void;
   onVincular: (endpointId: string, assetId: string, targetWorkstationId: string | null) => Promise<void>;
 }
@@ -41,80 +45,92 @@ const SITUACAO: Record<ReviewState, { rotulo: string; tom: 'aviso' | 'sucesso' |
   BLOCKED: { rotulo: 'Não autorizada', tom: 'perigo' },
 };
 
-export default function OrfaosTable({ orfaos, carregando, erro, ocupado, onTriar, onVincular }: Props) {
+export default function OrfaosTable({ orfaos, carregando, erro, ocupado, acao, onTriar, onVincular }: Props) {
   // A MÁQUINA NO PAINEL DE VÍNCULO: a linha, e não o id. Quando a entrega é recusada
   // o vínculo fica, e a máquina sai desta lista na revalidação; o painel precisa
   // sobreviver a isso para dizer que só metade aconteceu.
   const [vinculando, setVinculando] = useState<Endpoint | null>(null);
+  const lista = useListaLocalNaUrl(orfaos, (orfao) => `${orfao.hostname} ${orfao.osVersion} ${orfao.biosSerial ?? ''}`);
 
   return (
     <>
-      {orfaos.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-text-tertiary">
-          <HelpCircle className="size-6 opacity-50" />
-          <EstadoDaLista carregando={carregando} erro={erro}>
-            <span>Nenhuma máquina sem vínculo.</span>
-          </EstadoDaLista>
-        </Card>
-      ) : (
-        <Card className="overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Máquina</TableHead>
-                <TableHead>Sistema</TableHead>
-                <TableHead>Série</TableHead>
-                <TableHead>Último contato</TableHead>
-                <TableHead>Situação</TableHead>
-                <TableHead className="w-12 text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orfaos.map((orfao) => {
-                const situacao = SITUACAO[orfao.reviewState ?? 'UNREVIEWED'];
-                return (
-                  <TableRow key={orfao.id}>
-                    <TableCell className="font-medium text-text-primary">{orfao.hostname}</TableCell>
-                    <TableCell>{orfao.osVersion}</TableCell>
-                    <TableCell className="font-mono text-text-tertiary">{orfao.biosSerial ?? '—'}</TableCell>
-                    <TableCell className="text-text-tertiary">
-                      {new Date(orfao.lastSeen).toLocaleString('pt-BR')}
-                    </TableCell>
-                    <TableCell><PontoDeStatus tom={situacao.tom}>{situacao.rotulo}</PontoDeStatus></TableCell>
-                    <TableCell>
-                      <AcoesDaLinha
-                        nome={orfao.hostname}
-                        acoes={[
-                          {
-                            rotulo: 'Vincular a um ativo',
-                            icone: Link2,
-                            onClick: () => setVinculando(orfao),
-                            disabled: ocupado,
-                          },
-                          {
-                            rotulo: 'Conheço esta máquina',
-                            icone: Check,
-                            onClick: () => onTriar(orfao.id, 'ALLOWED'),
-                            disabled: ocupado,
-                          },
-                          {
-                            rotulo: 'Não deveria estar na rede',
-                            icone: Ban,
-                            onClick: () => onTriar(orfao.id, 'BLOCKED'),
-                            disabled: ocupado,
-                          },
-                        ]}
-                      />
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
+      <ListToolbar
+        search={lista.search}
+        onSearchChange={lista.changeSearch}
+        placeholder="Buscar por máquina, sistema ou série…"
+        acao={acao}
+        page={lista.page}
+        perPage={lista.perPage}
+        total={lista.total}
+        onPageChange={lista.setPage}
+      />
 
-      {/* Fora dos dois lados do `?`: a última máquina sair da lista não pode
+      <Card className="overflow-hidden">
+        <Table className="min-w-[56rem]">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Máquina</TableHead>
+              <TableHead>Sistema operacional</TableHead>
+              <TableHead className="w-44">Série da BIOS</TableHead>
+              <TableHead className="w-44">Último contato</TableHead>
+              <TableHead className="w-36">Situação</TableHead>
+              <TableHeadAcoes />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {lista.visiveis.map((orfao) => {
+              const situacao = SITUACAO[orfao.reviewState ?? 'UNREVIEWED'];
+              return (
+                <TableRow key={orfao.id}>
+                  <TableCell className="font-medium text-text-primary">{orfao.hostname}</TableCell>
+                  <TableCell>{orfao.osVersion}</TableCell>
+                  <TableCell className="font-mono text-text-tertiary">{orfao.biosSerial ?? '—'}</TableCell>
+                  <TableCell>{formatarDataHora(orfao.lastSeen)}</TableCell>
+                  <TableCell><PontoDeStatus tom={situacao.tom}>{situacao.rotulo}</PontoDeStatus></TableCell>
+                  <TableCell>
+                    <AcoesDaLinha
+                      nome={orfao.hostname}
+                      acoes={[
+                        {
+                          rotulo: 'Vincular a um ativo',
+                          icone: Link2,
+                          onClick: () => setVinculando(orfao),
+                          disabled: ocupado,
+                        },
+                        {
+                          rotulo: 'Conheço esta máquina',
+                          icone: Check,
+                          onClick: () => onTriar(orfao.id, 'ALLOWED'),
+                          disabled: ocupado,
+                        },
+                        {
+                          rotulo: 'Não deveria estar na rede',
+                          icone: Ban,
+                          onClick: () => onTriar(orfao.id, 'BLOCKED'),
+                          disabled: ocupado,
+                        },
+                      ]}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+        {lista.total === 0 && (
+          <ListaVazia
+            icone={HelpCircle}
+            carregando={carregando}
+            erro={erro}
+            nome="máquina"
+            genero="f"
+            busca={lista.search}
+            frase="Nenhuma máquina sem vínculo."
+          />
+        )}
+      </Card>
+
+      {/* Fora da tabela: a última máquina sair da lista não pode
           remontar o painel, que perderia a frase da recusa e o que foi escolhido. */}
       {vinculando && (
         <VincularMaquinaForm

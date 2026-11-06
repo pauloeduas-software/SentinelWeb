@@ -107,7 +107,7 @@ export interface Asset {
    *
    * Vem no contrato de `GET /api/assets`. Continua sendo lida por
    * `resumoDaPosse()` (pages/computadores/helpers), que trata a ausência: entre
-   * a subida do frontend e a do backend da F4, o campo simplesmente não chega.
+   * a subida do frontend e a do backend, o campo simplesmente não chega.
    */
   posse: PosseResolvida | null;
 
@@ -156,7 +156,7 @@ export interface AssetStats {
  *
  * `retired` é do ITAM e por isso não mora no tipo compartilhado: nenhuma outra
  * tabela do sistema tem "saiu do patrimônio" (D20,
- * docs/historico/fase-02-ativos.md). `active` o exclui.
+ * docs/decisoes/catalogo-e-ativo.md). `active` o exclui.
  */
 export type AssetView = 'active' | 'trashed' | 'retired';
 

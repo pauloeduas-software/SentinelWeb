@@ -8,11 +8,10 @@ import {
 // Contrato de entrada das seis tabelas de catálogo, num lugar só.
 //
 // `strictObject` em tudo: campo desconhecido é recusado em vez de ignorado em
-// silêncio — é o que fecha o mass assignment (docs/historico/fase-00-base-tecnica.md).
+// silêncio — é o que fecha o mass assignment.
 //
 // Os enums vêm de `$Enums`, gerado pelo Prisma a partir do schema: a lista de
-// valores válidos tem UMA fonte, o banco. É o fim do texto livre que a Fase 1
-// existe para promover (D5/D10).
+// valores válidos tem UMA fonte, o banco. É o fim do texto livre (D5/D10).
 
 // ---------------------------------------------------------------- Category
 export const createCategorySchema = z.strictObject({

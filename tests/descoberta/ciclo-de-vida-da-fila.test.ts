@@ -7,7 +7,7 @@ import { prisma } from '../../server/infra/database/prismaClient';
 
 // ═════════════════════════════════════════════════════════════════════════════
 // A FILA TEM TRÊS PORTAS DE SAÍDA, E A TERCEIRA É A QUE NÃO SE VÊ
-// (docs/historico/fase-07-convergencia-rmm-itam.md, D110 e D112).
+// (docs/decisoes/reconciliacao.md, D110 e D112).
 //
 // Uma sugestão sai da fila quando alguém a aceita, quando alguém a recusa — e
 // quando o MUNDO MUDA e ela deixa de descrever qualquer coisa. A terceira é a

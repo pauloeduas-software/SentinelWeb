@@ -88,14 +88,13 @@ export default function EntregaLicencaModal({ licenca, onClose, onSubmit }: Entr
       titulo="Entregar licença"
       descricao={`${atual.name} · ${atual.livres} de ${atual.seatsTotal} ${atual.livres === 1 ? 'livre' : 'livres'}`}
       // Mais largo que a entrega de estoque: a lista de chaves leva a chave e o quanto ela cobre.
-      largura="lg"
       onClose={onClose}
       onSubmit={enviar}
       erro={erro}
       salvando={salvando}
       bloqueado={!pronto}
       rotuloDoEnvio="Entregar"
-      rotuloEnviando="Entregando..."
+      rotuloEnviando="Entregando…"
     >
       <Segmentado
         opcoes={[
@@ -137,7 +136,7 @@ export default function EntregaLicencaModal({ licenca, onClose, onSubmit }: Entr
               onChange={setChaveEscolhida}
               obrigatorio
               vazio="Escolha a chave…"
-              placeholderDaBusca="Buscar chave..."
+              placeholderDaBusca="Buscar chave…"
               opcoesMono
               className={licenseKeyId ? 'font-mono' : undefined}
               // A posição vem da lista inteira: é o mesmo número do detalhe.
@@ -149,11 +148,11 @@ export default function EntregaLicencaModal({ licenca, onClose, onSubmit }: Entr
         )
       )}
 
-      <Campo rotulo="Observações">
+      <Campo rotulo="Notas">
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
       </Campo>
 
-      <p className="text-xs leading-relaxed text-text-tertiary">
+      <p className="text-sm leading-relaxed text-text-secondary">
         Licença por computador (Windows, Office avulso) vai para o ativo; por assinatura de pessoa
         (Microsoft 365, Adobe), para o colaborador. Posto de trabalho não recebe licença: o
         computador da mesa recebe.

@@ -5,7 +5,7 @@ import { personKeys } from './person.queries';
 import type { ListEnvelope, ListParams } from '../types/list.types';
 import type {
   AlertasDaLicenca, AlvoDaEntrega, EntregaComChave, EntregaDeLicenca, EntregaDoAlvo, EventoDaLicenca,
-  Licenca, LicencaDetalhe, LicencaInput, StatusDoFiltro,
+  Licenca, LicencaDetalhe, LicencaInput, LicencaStats, StatusDoFiltro,
 } from '../types/license.types';
 
 // AS LICENÇAS DE SOFTWARE (docs/referencia/licencas.md).
@@ -30,6 +30,7 @@ export interface ParamsDoDetalhe {
 const licenseKeys = {
   all: ['licenses'] as const,
   list: (params: ParamsDaLicenca) => ['licenses', 'list', params] as const,
+  stats: () => ['licenses', 'stats'] as const,
   item: (id: string) => ['licenses', 'item', id] as const,
   entregas: (id: string, params: ParamsDoDetalhe) => ['licenses', 'entregas', id, params] as const,
   historico: (id: string, params: ParamsDoDetalhe) => ['licenses', 'historico', id, params] as const,
@@ -44,6 +45,13 @@ export function useLicensesQuery(params: ParamsDaLicenca) {
     queryFn: async () => (await apiClient.get<ListEnvelope<Licenca>>('/licenses', { params })).data,
     // Sem isto a tabela pisca em branco a cada troca de página ou tecla da busca.
     placeholderData: keepPreviousData,
+  });
+}
+
+export function useLicenseStatsQuery() {
+  return useQuery({
+    queryKey: licenseKeys.stats(),
+    queryFn: async () => (await apiClient.get<LicencaStats>('/licenses/stats')).data,
   });
 }
 

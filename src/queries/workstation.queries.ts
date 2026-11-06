@@ -2,7 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { apiClient } from '../api/apiClient';
 import { catalogKeys } from './catalog.queries';
 import type { ListEnvelope } from '../types/list.types';
-import type { Posto, PostoDetalhe, PostoView } from '../types/workstation.types';
+import type { Posto, PostoDetalhe, PostoStats, PostoView } from '../types/workstation.types';
 
 // O POSTO DE TRABALHO — a Mesa 1, a bancada, o guichê.
 //
@@ -15,6 +15,7 @@ export const workstationKeys = {
   all: ['workstations'] as const,
   list: (params: PostoListParams) => ['workstations', 'list', params] as const,
   detalhe: (id: string) => ['workstations', 'detalhe', id] as const,
+  stats: () => ['workstations', 'stats'] as const,
 };
 
 interface PostoListParams {
@@ -32,6 +33,13 @@ export function useWorkstationsQuery(params: PostoListParams) {
     // Sem isto a tabela pisca em branco a cada troca de página, de recorte ou
     // tecla da busca.
     placeholderData: keepPreviousData,
+  });
+}
+
+export function useWorkstationStatsQuery() {
+  return useQuery({
+    queryKey: workstationKeys.stats(),
+    queryFn: async () => (await apiClient.get<PostoStats>('/workstations/stats')).data,
   });
 }
 

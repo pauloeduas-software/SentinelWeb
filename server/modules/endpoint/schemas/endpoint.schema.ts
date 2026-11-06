@@ -19,7 +19,7 @@ export const sendCommandSchema = z.strictObject({
 });
 
 /**
- * Os filtros da listagem de máquinas (F7).
+ * Os filtros da listagem de máquinas.
  *
  * `strictObject`, e isso mudou: a versão anterior era aberta com a justificativa
  * de "ler a MESMA query string que o `parseListQuery` já consumiu". A

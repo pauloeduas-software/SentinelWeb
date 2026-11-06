@@ -1,9 +1,9 @@
-import { ExternalLink, MapPin, TriangleAlert, Undo2, UserPlus } from 'lucide-react';
+import { ExternalLink, MapPin, TriangleAlert } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import EstadoDaLista from '../../../../components/EstadoDaLista';
 import { Avatar } from '../../../../components/ui/avatar';
 import { Aviso } from '../../../../components/ui/aviso';
-import { Badge } from '../../../../components/ui/badge';
-import { Button } from '../../../../components/ui/button';
+import { Badge, PontoDeStatus } from '../../../../components/ui/badge';
 import { Card } from '../../../../components/ui/card';
 import type {
   Assignment, PosseResolvida, Responsavel,
@@ -41,13 +41,11 @@ interface PosseTabProps {
   posse: PosseResolvida | null;
   assignments: Assignment[];
   carregando: boolean;
-  onAbrirOperacao: () => void;
-  /** Por que a ENTREGA está travada (status não disponível), ou `null`. */
-  bloqueio: string | null;
+  erro: string | null;
 }
 
 export default function PosseTab({
-  posse, assignments, carregando, onAbrirOperacao, bloqueio,
+  posse, assignments, carregando, erro,
 }: PosseTabProps) {
   // Cálculo fora do JSX: as perguntas da tela, respondidas uma vez.
   const entregue = posse?.assignmentId != null;
@@ -59,13 +57,7 @@ export default function PosseTab({
   return (
     <div className="space-y-4">
       <Card className="space-y-4 p-6">
-        <div className="flex items-center justify-between gap-4">
-          <h3 className="text-sm font-medium text-text-primary">Quem responde hoje</h3>
-          <Button variant="outline" size="sm" onClick={onAbrirOperacao} disabled={bloqueio !== null} title={bloqueio ?? undefined}>
-            {entregue ? <Undo2 /> : <UserPlus />}
-            {entregue ? 'Devolver' : 'Entregar'}
-          </Button>
-        </div>
+        <h3 className="text-sm font-medium text-text-primary">Quem responde hoje</h3>
 
         {responsaveis.length === 0 ? (
           <p className="text-sm text-text-tertiary">
@@ -130,10 +122,10 @@ export default function PosseTab({
       <Card className="space-y-4 p-6">
         <h3 className="text-sm font-medium text-text-primary">Histórico de posse</h3>
 
-        {carregando && <p className="text-sm text-text-tertiary">Carregando…</p>}
-
-        {!carregando && assignments.length === 0 && (
-          <p className="text-sm text-text-tertiary">Este ativo nunca foi entregue.</p>
+        {assignments.length === 0 && (
+          <EstadoDaLista carregando={carregando} erro={erro}>
+            <p className="text-sm text-text-tertiary">Este ativo nunca foi entregue.</p>
+          </EstadoDaLista>
         )}
 
         {assignments.length > 0 && (
@@ -149,7 +141,7 @@ export default function PosseTab({
                       {rotuloDoAlvo(linha)}
                       {postoExcluido(linha) && <span className="text-xs font-normal text-text-tertiary"> · posto excluído</span>}
                     </span>
-                    <Badge tom={aberta ? 'info' : 'neutro'}>{aberta ? 'Aberta' : 'Devolvida'}</Badge>
+                    <PontoDeStatus tom={aberta ? 'info' : 'neutro'}>{aberta ? 'Aberta' : 'Devolvida'}</PontoDeStatus>
                   </div>
 
                   {detalhe && <div className="text-xs text-text-tertiary">{detalhe}</div>}

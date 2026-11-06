@@ -47,6 +47,7 @@ export const categorySpec: CatalogSpec = {
   // ofereceria duas linhas de mesmo nome e tipos diferentes.
   optionFilter: { campo: 'type', valores: Object.values($Enums.CategoryType) as [$Enums.CategoryType, ...$Enums.CategoryType[]] },
 
+  mostraUso: true,
   countUsages: contarUsos,
   // Sem Desativar (AO): a categoria em uso fica, e sai quando nada a usa.
   dicaEmUso: 'Troque a categoria desses registros e exclua de novo.',

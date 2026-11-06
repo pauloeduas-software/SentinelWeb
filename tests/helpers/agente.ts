@@ -9,9 +9,9 @@ import type { ApiDeTeste } from './app';
 //
 // Porque `inject` não faz upgrade de WebSocket: ele monta uma requisição HTTP e
 // entrega ao Fastify sem socket, e o `/agent-hub` precisa exatamente do socket.
-// Até a F7 isso nunca incomodou: nenhum teste precisava de um agente conectado.
+// Antes isso não incomodava: nenhum teste precisava de um agente conectado.
 //
-// A F7 mudou o que está em jogo: a borda do agente (parse → normalização →
+// Agora o que está em jogo é outro: a borda do agente (parse → normalização →
 // upsert) é justamente onde o agente VELHO e o NOVO se distinguem, e é o risco
 // número um do rollout. Chamar `handleAgentMessage()` direto pularia o parser,
 // a tabela de sinônimos PascalCase/camelCase e o `readOptionalBigInt` — ou seja,

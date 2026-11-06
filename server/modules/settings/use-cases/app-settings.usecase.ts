@@ -68,8 +68,7 @@ export async function nextAssetTag(client: ClienteComEtiqueta): Promise<string> 
   }
 
   throw new AppError(
-    `As próximas ${MAX_PULOS} etiquetas automáticas já estão em uso. ` +
-      'Ajuste o prefixo ou o contador nas configurações, ou informe a etiqueta manualmente.',
+    `As próximas ${MAX_PULOS} etiquetas automáticas já estão em uso. Informe a etiqueta manualmente.`,
     409,
   );
 }
@@ -97,7 +96,7 @@ export async function peekNextAssetTag(): Promise<{ assetTag: string }> {
   return { assetTag: '' };
 }
 
-// ── A CONFIGURAÇÃO DA DESCOBERTA (F7) ───────────────────────────────────────
+// ── A CONFIGURAÇÃO DA DESCOBERTA ────────────────────────────────────────────
 
 /**
  * Salva os botões da convergência RMM × ITAM.

@@ -13,13 +13,21 @@ import type { EntregaNaFicha } from './stock.types';
 // fixos e a tela depende de cada um deles.
 
 /**
- * Os três recortes da tela.
+ * Os recortes da tela.
  *
  * `vagos` é o que justifica a tela: posto com equipamento e sem ninguém
  * respondendo por ele. `ocupados` NÃO é o inverso — um posto recém-criado, sem
- * ativo e sem gente, não é nem um nem outro e só aparece em `todos`.
+ * ativo e sem gente, não é nem um nem outro: é o `sem-uso`.
  */
-export type PostoView = 'todos' | 'vagos' | 'ocupados';
+export type PostoView = 'todos' | 'vagos' | 'ocupados' | 'sem-uso';
+
+/** Os números dos cartões da tela: `ocupados`, `vagos` e `semUso` somam `total`. */
+export interface PostoStats {
+  total: number;
+  ocupados: number;
+  vagos: number;
+  semUso: number;
+}
 
 /** Quem ocupa o posto AGORA, como a listagem mostra: nome e turno. */
 export interface PostoOcupante {
@@ -77,12 +85,12 @@ export interface AtivoDoPosto extends Omit<Asset, 'posse'> {
 /**
  * O posto aberto — `GET /api/workstations/:id`.
  *
- * SEM os ocupantes: a ficha os lê da rota de ocupação
+ * SEM a lista de ocupantes: a ficha a lê da rota de ocupação
  * (`/api/workstations/:id/occupants`), com período e notas, que é também a que o
- * adicionar/encerrar invalida. Daqui só sai o `vago`, que o servidor deriva
- * da contagem deles.
+ * adicionar/encerrar invalida. Daqui saem só a contagem e o `vago`, que o servidor
+ * deriva dela.
  */
-export interface PostoDetalhe extends Omit<Posto, 'ocupantes' | 'totalOcupantes'> {
+export interface PostoDetalhe extends Omit<Posto, 'ocupantes'> {
   /** Os ativos entregues ao posto — posse ABERTA com alvo WORKSTATION. */
   ativos: AtivoDoPosto[];
   /** O estoque na mesa — as entregas ABERTAS com alvo WORKSTATION, uma linha por entrega. */

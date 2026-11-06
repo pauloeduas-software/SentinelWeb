@@ -1,13 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, LogOut, Pencil, UserPlus, X } from 'lucide-react';
+import {
+  Check, LogOut, Pencil, UserPlus, Users, X,
+} from 'lucide-react';
 import OcupanteFormModal from './OcupanteFormModal';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
+import ListaVazia from '../../../components/ListaVazia';
 import { Aviso } from '../../../components/ui/aviso';
 import { Button } from '../../../components/ui/button';
 import { Card } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
 import { Segmentado } from '../../../components/ui/segmentado';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableLinha, TableRow, TableSublinha,
+} from '../../../components/ui/table';
 import { diaDoInstante, hojeNoCampoDeData } from '../../../helpers/format.helper';
 import {
   estaAberta, nomeDoOcupante, periodoDaOcupacao, turnoDoOcupante,
@@ -23,8 +28,8 @@ import type { WorkstationOccupant, OccupantView } from '../../../types/posse.typ
 // tenha sido tocado. Entrar num posto é passar a responder por tudo que foi
 // entregue a ele; sair é deixar de responder.
 //
-// Não traz a moldura da janela: é uma aba do detalhe do posto, que tem nas outras
-// a lista de ativos que o posto segura.
+// Não traz moldura: é uma aba da ficha do posto, que tem nas outras a lista de
+// ativos que o posto segura.
 //
 // Não fala HTTP: recebe a lista pronta e devolve callbacks.
 
@@ -34,6 +39,7 @@ const RECORTES: readonly { valor: OccupantView; rotulo: string }[] = [
 ];
 
 interface OccupantsPanelProps {
+  nomeDoPosto: string;
   ocupantes: readonly WorkstationOccupant[];
   carregando: boolean;
   /** A consulta da lista falhou. Vence o vazio: não é "posto vago", é não saber. */
@@ -53,7 +59,7 @@ interface OccupantsPanelProps {
 }
 
 export default function OccupantsPanel({
-  ocupantes, carregando, erro: erroAoCarregar = null, view, onViewChange, onAdicionar, onEncerrar,
+  nomeDoPosto, ocupantes, carregando, erro: erroAoCarregar = null, view, onViewChange, onAdicionar, onEncerrar,
   onCorrigirTurno,
 }: OccupantsPanelProps) {
   const [adicionando, setAdicionando] = useState(false);
@@ -123,43 +129,27 @@ export default function OccupantsPanel({
         <Button size="sm" onClick={() => setAdicionando(true)}><UserPlus /> Adicionar ao posto</Button>
       </div>
 
-      {ocupantes.length === 0 ? (
-        erroAoCarregar && !carregando ? (
-          <Aviso>Não foi possível carregar os ocupantes: {erroAoCarregar}</Aviso>
-        ) : (
-          <p className="text-sm text-text-tertiary">
-            {carregando
-              ? 'Carregando…'
-              : view === 'all'
-                ? 'Este posto nunca teve ocupante.'
-                : 'Ninguém ocupa este posto agora.'}
-          </p>
-        )
-      ) : (
         <Card className="overflow-hidden">
-          <Table>
+          <Table className="min-w-[52rem]">
             <TableHeader>
               <TableRow>
-                <TableHead>Pessoa</TableHead>
-                <TableHead>Turno</TableHead>
-                <TableHead>Período</TableHead>
-                <TableHead className="w-12 text-right">Ações</TableHead>
+                <TableHead>Colaborador</TableHead>
+                <TableHead className="w-64">Turno</TableHead>
+                <TableHead className="w-64">Período</TableHead>
+                <TableHeadAcoes />
               </TableRow>
             </TableHeader>
 
             <TableBody>
-              {ocupantes.map((ocupante) => (
+              {ocupantes.map((ocupante) => {
+                const sublinha = [ocupante.person?.email, ocupante.notes].filter(Boolean).join(' · ');
+                return (
                 <TableRow key={ocupante.id}>
                   <TableCell>
-                    <div className="font-medium text-text-primary">{nomeDoOcupante(ocupante)}</div>
-                    {ocupante.person?.email && (
-                      <div className="mt-0.5 text-xs text-text-tertiary">{ocupante.person.email}</div>
-                    )}
+                    <TableLinha className="font-medium text-text-primary">{nomeDoOcupante(ocupante)}</TableLinha>
                     {/* A nota de quem colocou a pessoa aqui, lida onde foi escrita
                         — como a da entrega de estoque, na mesma ficha. */}
-                    {ocupante.notes && (
-                      <div className="mt-0.5 text-xs text-text-tertiary">{ocupante.notes}</div>
-                    )}
+                    {sublinha && <TableSublinha>{sublinha}</TableSublinha>}
                   </TableCell>
 
                   <TableCell>
@@ -167,18 +157,26 @@ export default function OccupantsPanel({
                       <div className="flex items-center gap-1">
                         <Input
                           autoFocus
-                          data-esc-proprio
                           aria-label={`Turno de ${nomeDoOcupante(ocupante)}`}
                           value={turnoEditado}
                           maxLength={60}
                           onChange={(event) => setTurnoEditado(event.target.value)}
                           onKeyDown={(event) => {
                             if (event.key === 'Enter') void salvarTurno(ocupante);
-                            // Esc aqui desfaz a correção, e só ela: a ficha continua aberta.
+                            // Esc aqui desfaz a correção, e só ela.
                             if (event.key === 'Escape') cancelarTurno();
                           }}
                           className="h-9 w-32"
                         />
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={cancelarTurno}
+                          title="Cancelar"
+                          aria-label="Cancelar a edição do turno"
+                        >
+                          <X />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon-sm"
@@ -189,22 +187,13 @@ export default function OccupantsPanel({
                         >
                           <Check />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={cancelarTurno}
-                          title="Cancelar"
-                          aria-label="Cancelar a edição do turno"
-                        >
-                          <X />
-                        </Button>
                       </div>
                     ) : (
                       turnoDoOcupante(ocupante)
                     )}
                   </TableCell>
 
-                  <TableCell className="whitespace-nowrap tabular-nums">
+                  <TableCell>
                     {encerrando?.id === ocupante.id ? (
                       <label className="flex items-center gap-2 text-xs text-text-tertiary">
                         Saiu em
@@ -214,6 +203,9 @@ export default function OccupantsPanel({
                           min={diaDoInstante(ocupante.startedAt)}
                           max={hojeNoCampoDeData()}
                           onChange={(event) => setEncerrando({ id: ocupante.id, dia: event.target.value })}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Escape') setEncerrando(null);
+                          }}
                           className="h-9 w-36"
                         />
                       </label>
@@ -222,11 +214,20 @@ export default function OccupantsPanel({
                     )}
                   </TableCell>
 
-                  <TableCell>
+                  <TableCell className="overflow-visible">
                     {/* Ocupação já encerrada não tem o que encerrar: a linha fica,
                         sem ação, porque histórico é para ser lido. */}
                     {encerrando?.id === ocupante.id ? (
                       <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => setEncerrando(null)}
+                          title="Cancelar"
+                          aria-label="Cancelar o encerramento"
+                        >
+                          <X />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon-sm"
@@ -236,15 +237,6 @@ export default function OccupantsPanel({
                           aria-label={`Confirmar o encerramento da ocupação de ${nomeDoOcupante(ocupante)}`}
                         >
                           <Check />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => setEncerrando(null)}
-                          title="Cancelar"
-                          aria-label="Cancelar o encerramento"
-                        >
-                          <X />
                         </Button>
                       </div>
                     ) : estaAberta(ocupante) && editandoTurno !== ocupante.id && (
@@ -264,13 +256,21 @@ export default function OccupantsPanel({
                     )}
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
+          {ocupantes.length === 0 && (
+            <ListaVazia
+              icone={Users}
+              carregando={carregando}
+              erro={erroAoCarregar}
+              frase={view === 'all' ? 'Este posto nunca teve ocupante.' : 'Ninguém ocupa este posto agora.'}
+            />
+          )}
         </Card>
-      )}
 
-      {adicionando && <OcupanteFormModal onClose={() => setAdicionando(false)} onSubmit={onAdicionar} />}
+      {adicionando && <OcupanteFormModal nomeDoPosto={nomeDoPosto} onClose={() => setAdicionando(false)} onSubmit={onAdicionar} />}
     </>
   );
 }

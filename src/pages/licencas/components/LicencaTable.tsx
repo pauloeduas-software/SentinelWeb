@@ -1,11 +1,11 @@
-import { KeyRound, Pencil, Power, PowerOff, Trash2, UserPlus } from 'lucide-react';
+import { Pencil, Power, PowerOff, Trash2, UserPlus } from 'lucide-react';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
 import { PontoDeStatus } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableLinha, TableNome, TableRow, TableSublinha } from '../../../components/ui/table';
 import type { Licenca } from '../../../types/license.types';
-import { ROTULO_DO_STATUS, resumoDaContagem, textoDoPrazo } from '../../../helpers/licenca.helper';
-import { TOM_DO_STATUS, motivoParaNaoEntregar } from '../helpers/licenca.helper';
+import { ROTULO_DO_STATUS, TOM_DO_STATUS, textoDoPrazo } from '../../../helpers/licenca.helper';
+import { motivoParaNaoEntregar } from '../helpers/licenca.helper';
 import { formatarData } from '../../../helpers/format.helper';
 
 // A tabela de licenças. Apresentacional puro: recebe valor e callback, não
@@ -39,26 +39,17 @@ interface LicencaTableProps {
 export default function LicencaTable({
   licencas, ocupado, onAbrir, onEditar, onEntregar, onAlternarEncerrada, onExcluir, vazio,
 }: LicencaTableProps) {
-  if (licencas.length === 0) {
-    return (
-      <Card className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-text-tertiary">
-        <KeyRound className="size-6 opacity-50" />
-        {vazio}
-      </Card>
-    );
-  }
-
   return (
     <Card className="overflow-hidden">
-      <Table>
+      <Table className="min-w-[46rem] md:min-w-[56rem]">
         <TableHeader>
           <TableRow>
             <TableHead>Licença</TableHead>
-            <TableHead className="hidden md:table-cell">Categoria</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Quantidade</TableHead>
-            <TableHead>Vencimento</TableHead>
-            <TableHead className="w-12 text-right">Ações</TableHead>
+            <TableHead className="hidden w-[16%] md:table-cell">Categoria</TableHead>
+            <TableHead className="w-[18%]">Quantidade</TableHead>
+            <TableHead className="w-[18%]">Vencimento</TableHead>
+            <TableHead className="w-36">Status</TableHead>
+            <TableHeadAcoes />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -67,28 +58,22 @@ export default function LicencaTable({
             const encerrada = licenca.status === 'ENCERRADA';
 
             return (
-              <TableRow
-                key={licenca.id}
-                onClick={() => onAbrir(licenca)}
-                className={encerrada ? 'cursor-pointer opacity-60' : 'cursor-pointer'}
-              >
-                <TableCell>
-                  {/* O botão é o caminho do teclado: o clique sobe para a linha. */}
-                  <button type="button" className="text-left font-medium text-text-primary focus-visible:underline focus-visible:outline-none">
-                    {licenca.name}
-                  </button>
-                </TableCell>
+              <TableRow key={licenca.id} onClick={() => onAbrir(licenca)} apagada={encerrada}>
+                <TableCell><TableNome>{licenca.name}</TableNome></TableCell>
 
                 <TableCell className="hidden md:table-cell">{licenca.category?.name ?? '—'}</TableCell>
 
                 <TableCell>
-                  <PontoDeStatus tom={TOM_DO_STATUS[licenca.status]}>{ROTULO_DO_STATUS[licenca.status]}</PontoDeStatus>
+                  <TableLinha>{licenca.livres} {licenca.livres === 1 ? 'livre' : 'livres'}</TableLinha>
+                  <TableSublinha>{licenca.seatsTotal} {licenca.seatsTotal === 1 ? 'comprada' : 'compradas'} · {licenca.emUso} em uso</TableSublinha>
                 </TableCell>
-
-                <TableCell>{resumoDaContagem(licenca)}</TableCell>
 
                 <TableCell>
                   {encerrada ? `encerrada em ${formatarData(licenca.terminationDate)}` : textoDoPrazo(licenca.diasParaVencer)}
+                </TableCell>
+
+                <TableCell>
+                  <PontoDeStatus tom={TOM_DO_STATUS[licenca.status]}>{ROTULO_DO_STATUS[licenca.status]}</PontoDeStatus>
                 </TableCell>
 
                 <TableCell>
@@ -124,6 +109,7 @@ export default function LicencaTable({
           })}
         </TableBody>
       </Table>
+      {licencas.length === 0 && vazio}
     </Card>
   );
 }

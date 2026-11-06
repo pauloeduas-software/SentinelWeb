@@ -46,8 +46,8 @@ const logger = createLogger('app');
 //
 // POR QUE OS DOIS ARQUIVOS: enquanto `server.ts` fazia as duas coisas, importá-lo
 // abria porta, ligava job e instalava handler de sinal — então testar uma rota
-// só era possível por fora, com o servidor de pé e `curl`. Foi assim que as duas
-// suítes da auditoria (120 e depois 34 asserções) nasceram descartáveis: elas
+// só era possível por fora, com o servidor de pé e `curl`. Foi assim que duas
+// suítes de `curl` (120 e depois 34 asserções) nasceram descartáveis: elas
 // testavam um PROCESSO, não a aplicação.
 //
 // Com a montagem isolada, o teste faz `buildApp()` e `app.inject()` — requisição
@@ -67,7 +67,7 @@ const logger = createLogger('app');
 //   - `listen`, `onShutdown`, `installProcessHandlers()` — tudo do processo.
 
 // A API é FECHADA por padrão: o `preHandler` global exige sessão em tudo, e
-// esta lista é a exceção inteira (docs/historico/fase-03-autenticacao-e-ator.md, Etapa C).
+// esta lista é a exceção inteira (docs/referencia/acesso.md).
 //
 // Ela mora aqui, e não dentro de `infra/http/require-auth.ts`, porque saber que
 // o `/agent-hub` tem autenticação própria é conhecimento de NEGÓCIO — e `core`
@@ -111,12 +111,15 @@ export interface OpcoesDaAplicacao {
    * instância COM ele e prova o 429 — é o único lugar da suíte onde o teto é o
    * assunto, que é exatamente onde ele deve ser exercitado.
    *
-   * Este é o ÚNICO atalho que o ambiente de teste tem. Nenhuma outra guarda —
+   * Este é o ÚNICO atalho que o ambiente de teste tem (o `tetoPorMinuto` abaixo
+   * muda um número, e quem o passa é o harness, por escrito). Nenhuma outra guarda —
    * de sessão, de permissão ou de invariante — pergunta o ambiente: teste que
    * roda contra regra diferente da de produção não prova nada sobre produção.
    * ═════════════════════════════════════════════════════════════════════════
    */
   comTetoDeRequisicao?: boolean;
+  /** O teto global por IP. Só o harness do E2E o troca; `server.ts` fica no padrão. */
+  tetoPorMinuto?: number;
 }
 
 /**
@@ -126,7 +129,7 @@ export interface OpcoesDaAplicacao {
  * `listen`; o teste chama `inject`.
  */
 export async function buildApp(
-  { comTetoDeRequisicao = tetoDeRequisicaoLigado(process.env.NODE_ENV) }: OpcoesDaAplicacao = {},
+  { comTetoDeRequisicao = tetoDeRequisicaoLigado(process.env.NODE_ENV), tetoPorMinuto = 300 }: OpcoesDaAplicacao = {},
 ): Promise<FastifyInstance> {
   // PRODUÇÃO NÃO SOBE SEM TETO, aconteça o que acontecer com o padrão acima.
   //
@@ -174,7 +177,7 @@ export async function buildApp(
   // registrado esse `config` fica sendo um objeto que ninguém lê.
   if (comTetoDeRequisicao) {
     await server.register(rateLimit, {
-      max: 300,
+      max: tetoPorMinuto,
       timeWindow: '1 minute',
       // Health check de container bate sem parar e não pode ser barrado: ficar sem
       // resposta aqui faria o orquestrador reiniciar um servidor saudável.
@@ -265,12 +268,11 @@ export async function buildApp(
   await StockMaestro.setupRoutes(server);
   // LICENÇA depois de posse: as rotas dela pendem de `/api/assets/:id` (a aba
   // Licenças), e registrar na ordem em que o conceito nasce é o que mantém o
-  // arquivo legível (docs/historico/fase-06-licencas.md).
+  // arquivo legível.
   await LicenseMaestro.setupRoutes(server);
   // CONVERGÊNCIA por último: as rotas de vínculo pendem de `/api/endpoints/:id`
   // e `/api/assets/:id`, e a aba Máquina pendura no ativo. Registrar na ordem em
-  // que o conceito nasce é o que mantém o arquivo legível
-  // (docs/historico/fase-07-convergencia-rmm-itam.md).
+  // que o conceito nasce é o que mantém o arquivo legível.
   await ReconciliationMaestro.setupRoutes(server);
   await AgentMaestro.setupRoutes(server);
 
