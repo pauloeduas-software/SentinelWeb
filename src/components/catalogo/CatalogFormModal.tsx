@@ -102,7 +102,7 @@ export default function CatalogFormModal({ spec, registro, padroes, onClose, onS
             rotulo={campo.label}
             obrigatorio={campo.obrigatorio}
             ajuda={travado(campo) ? `Em uso por ${usos} ${usos === 1 ? 'registro' : 'registros'}: o tipo não muda.` : campo.ajuda}
-            className={campo.largura === 'inteira' ? 'col-span-2' : ''}
+            className={campo.largura === 'inteira' ? 'sm:col-span-2' : ''}
           >
             <Campo
               campo={campo}

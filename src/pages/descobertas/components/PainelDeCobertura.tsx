@@ -27,7 +27,7 @@ interface Numero {
   ajuda: string;
 }
 
-function numeros(cobertura: Cobertura, horasDeShadow: number): Numero[] {
+function numeros(cobertura: Cobertura, horasDeShadow: number | undefined): Numero[] {
   return [
     {
       rotulo: 'Com agente',
@@ -63,12 +63,15 @@ function numeros(cobertura: Cobertura, horasDeShadow: number): Numero[] {
       rotulo: 'Shadow IT',
       valor: cobertura.shadowIt,
       icone: AlertTriangle,
-      ajuda: `órfãos vistos há mais de ${horasDeShadow}h e ainda sem triagem`,
+      // Sem a configuração não há prazo a citar: o número seria inventado.
+      ajuda: horasDeShadow === undefined
+        ? 'órfãos antigos e ainda sem triagem'
+        : `órfãos vistos há mais de ${horasDeShadow}h e ainda sem triagem`,
     },
   ];
 }
 
-export default function PainelDeCobertura({ cobertura, carregando, erro, horasDeShadow = 24 }: Props) {
+export default function PainelDeCobertura({ cobertura, carregando, erro, horasDeShadow }: Props) {
   if (!cobertura) {
     // Sem isto, a consulta que falhou ficava pulsando para sempre, como se ainda viesse.
     if (erro && !carregando) return <Aviso className="mb-4">Não foi possível carregar os números: {erro}</Aviso>;

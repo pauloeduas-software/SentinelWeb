@@ -41,6 +41,11 @@ export function resumoDaSugestao(sugestao: Sugestao): string {
   }
 }
 
+/** Onde a busca da aba procura: a máquina e o ativo, e nunca id, pontuação ou nome de campo. */
+export function textoDaSugestao({ endpoint, asset }: Sugestao): string {
+  return [endpoint.hostname, endpoint.biosSerial, asset?.assetTag, asset?.name, asset?.serial].filter(Boolean).join(' ');
+}
+
 /**
  * A evidência como pares legíveis.
  *

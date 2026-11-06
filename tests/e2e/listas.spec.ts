@@ -67,6 +67,41 @@ test('na ficha do colaborador, a consulta que falha avisa e não diz que não h�
   await expect(historico).toHaveText('Histórico');
 });
 
+// O 409 quase sempre quer dizer que a tela está velha: outra pessoa fez antes. Relida a
+// tela, ela para de oferecer o que o servidor acabou de recusar.
+test('a devolução recusada porque outra pessoa já devolveu traz a ficha nova', async ({ page, request }) => {
+  const ativo = await criarAtivo(request);
+  const pessoa = await request.post('/api/people', { data: { name: `Pessoa da tela velha ${Date.now()}` } });
+  const { id: targetPersonId } = (await pessoa.json()) as { id: string };
+  const entrega = await request.post(`/api/assets/${ativo}/checkout`, { data: { targetType: 'PERSON', targetPersonId } });
+  expect(entrega.status()).toBe(201);
+
+  await page.goto(`/computadores/${ativo}`);
+  await page.getByRole('button', { name: 'Devolver', exact: true }).click();
+  const painel = page.locator('[data-painel-lateral]');
+  await expect(painel).toBeVisible();
+
+  const devolucao = await request.post(`/api/assets/${ativo}/checkin`, { data: {} });
+  expect(devolucao.status()).toBe(200);
+
+  await painel.getByRole('button', { name: 'Devolver', exact: true }).click();
+  await expect(painel.getByRole('alert')).toBeVisible();
+  await painel.getByRole('button', { name: 'Cancelar' }).click();
+
+  await expect(page.getByRole('button', { name: 'Entregar', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Devolver', exact: true })).toHaveCount(0);
+});
+
+test('o filtro de categoria que não carrega avisa, e não diz que o filtro ficou fora da lista', async ({ page }) => {
+  await falhar(page, '**/api/categories/options*');
+  await page.goto('/computadores?categoria=00000000-0000-4000-8000-000000000000');
+
+  const filtro = page.getByRole('combobox', { name: 'Filtrar por categoria' });
+  await expect(filtro).toHaveText('Filtro atual');
+  await filtro.click();
+  await expect(page.getByText('Não foi possível carregar as categorias.')).toBeVisible();
+});
+
 test('na ficha do computador, a consulta que falha avisa e não diz que não há nada', async ({ page, request }) => {
   const id = await criarAtivo(request);
   await falhar(page, '**/api/assets/*/history*');

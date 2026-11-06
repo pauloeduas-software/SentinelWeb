@@ -92,12 +92,17 @@ export function useAssetAssignmentsQuery(assetId: string | null) {
  *
  * É o mesmo desenho do `invalidarPosseDerivada` da ocupação, pelo mesmo motivo:
  * posse é um fato que quatro telas leem de ângulos diferentes.
+ *
+ * Devolve a promessa e roda também no erro, como `invalidarLicencaEPosse`: o botão só
+ * destrava com a tela relida, e o 409 de quem viu a tela velha traz a tela nova.
  */
 function invalidarAlvosDaPosse(queryClient: ReturnType<typeof useQueryClient>) {
-  void queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
-  void queryClient.invalidateQueries({ queryKey: assetKeys.all });
-  void queryClient.invalidateQueries({ queryKey: workstationKeys.all });
-  void queryClient.invalidateQueries({ queryKey: personKeys.all });
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: assignmentKeys.all }),
+    queryClient.invalidateQueries({ queryKey: assetKeys.all }),
+    queryClient.invalidateQueries({ queryKey: workstationKeys.all }),
+    queryClient.invalidateQueries({ queryKey: personKeys.all }),
+  ]);
 }
 
 /** Entregar. */
@@ -106,7 +111,7 @@ export function useCheckoutAsset() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: CheckoutInput }) =>
       apiClient.post(`/assets/${id}/checkout`, data),
-    onSuccess: () => invalidarAlvosDaPosse(queryClient),
+    onSettled: () => invalidarAlvosDaPosse(queryClient),
   });
 }
 
@@ -116,7 +121,7 @@ export function useCheckinAsset() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: CheckinInput }) =>
       apiClient.post(`/assets/${id}/checkin`, data),
-    onSuccess: () => invalidarAlvosDaPosse(queryClient),
+    onSettled: () => invalidarAlvosDaPosse(queryClient),
   });
 }
 
