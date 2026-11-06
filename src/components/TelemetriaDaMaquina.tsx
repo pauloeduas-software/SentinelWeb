@@ -9,6 +9,7 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Table, TableBody, TableCell, TableRow } from './ui/table';
 import { cn } from '../helpers/cn.helper';
+import { FUSO_DO_NEGOCIO } from '../helpers/format.helper';
 import {
   formatarTaxa, formatarVolume, readSnapshot, usagePercent, volumeDeRede,
 } from '../helpers/metrics.helper';
@@ -101,7 +102,7 @@ function comVirgula(numero: string): string {
 
 /** A hora da amostra, em Brasília. Só a hora: o dia é hoje em toda máquina que responde. */
 function hora(valor: string): string {
-  return new Date(valor).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', timeStyle: 'medium' });
+  return new Date(valor).toLocaleTimeString('pt-BR', { timeZone: FUSO_DO_NEGOCIO, timeStyle: 'medium' });
 }
 
 /**
