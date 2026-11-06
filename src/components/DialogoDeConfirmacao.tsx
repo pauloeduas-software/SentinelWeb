@@ -29,7 +29,7 @@ export default function DialogoDeConfirmacao() {
           </div>
           <div className="flex justify-end gap-2">
             <AlertDialog.Cancel asChild>
-              <Button variant="outline">Cancelar</Button>
+              <Button variant="outline">{pedido?.voltar ?? 'Cancelar'}</Button>
             </AlertDialog.Cancel>
             <AlertDialog.Action asChild>
               <Button variant={pedido?.perigo ? 'destructive' : 'default'} onClick={() => responder(true)}>
