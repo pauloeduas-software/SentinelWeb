@@ -2,8 +2,8 @@ import type { ZodType } from 'zod';
 import type { prisma } from '../../../infra/database/prismaClient';
 import type { ReferenciaDoErro } from '../../../infra/errors/app-error';
 
-// O contrato de UMA tabela de catálogo. Cinco arquivos preenchem isto e o CRUD
-// genérico (use-cases/) atende às cinco — em vez de cinco fatias verticais quase
+// O contrato de UMA tabela de catálogo. Sete arquivos preenchem isto e o CRUD
+// genérico (use-cases/) atende às sete — em vez de sete fatias verticais quase
 // idênticas, que é o que o docs/referencia/arquitetura.md chama de cerimônia.
 
 /**

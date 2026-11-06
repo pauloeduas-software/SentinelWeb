@@ -10,8 +10,9 @@ const logger = createLogger('catalog.maestro');
 // tabela, registradas em laço sobre `CATALOG_SPECS`: acrescentar uma tabela é
 // escrever a spec, não copiar um maestro.
 //
-// Não há `POST /:id/restore` em lugar nenhum daqui: o catálogo não tem lixeira
-// (docs/decisoes/catalogo-e-ativo.md, D8). A proteção é o 409 por uso, no delete.
+// Só a tabela com `lixeira` na spec, o colaborador, tem `POST /:id/restore` (V).
+// Nas outras a exclusão é definitiva (docs/decisoes/catalogo-e-ativo.md, D8), e a
+// proteção é o 409 por uso, no delete.
 export class CatalogMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
     for (const spec of CATALOG_SPECS) {

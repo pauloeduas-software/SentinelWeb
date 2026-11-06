@@ -24,7 +24,7 @@ interface CadastroDoCatalogoProps {
 }
 
 // UMA TELA DE CATÁLOGO, dirigida pelas specs que recebe: acrescentar uma tabela
-// é escrever a spec, não copiar uma página. Configurações a usa com as cinco
+// é escrever a spec, não copiar uma página. Configurações a usa com as seis
 // abas de referência; Colaboradores, com uma só (decisão AH) — o mesmo
 // cadastro, os mesmos botões e as mesmas frases, porque é o mesmo componente.
 export default function CadastroDoCatalogo({ titulo, specs, caminhoDaFicha }: CadastroDoCatalogoProps) {

@@ -10,7 +10,7 @@ import { useNotificacao } from '../../hooks/useNotificacao';
 import type { AcaoLinhaId, CatalogUiSpec } from './catalog-ui.types';
 import { linksDoErro } from '../../helpers/erro.helper';
 
-// Estado de uma tela de catálogo — Configurações, com as cinco abas, ou
+// Estado de uma tela de catálogo — Configurações, com as seis abas, ou
 // Colaboradores, com uma só: qual aba, que página, o que está no campo de busca, na
 // URL (`useListaNaUrl`), e qual registro está no modal. `?aba=modelos`: o F5 não volta
 // para a primeira, e um link leva direto a ela (AZ).
