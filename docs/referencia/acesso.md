@@ -323,7 +323,8 @@ Quem esqueceu a senha não precisa de um administrador que a escolha: ele **gera
 - **Minha conta** (`/conta`, aberta pelo menu do usuário, no cabeçalho) tem o **nome** (`PATCH /api/auth/me`)
   e a **senha** (`PUT /api/auth/password`). O e-mail é o login e o cargo é dado de administrador:
   os dois ficam em Usuários. As duas rotas são `null` no mapa — a sessão basta, e o id vem dela,
-  nunca do caminho.
+  nunca do caminho. A tela segue o Meu Perfil da IntraNet (AY): quem é à esquerda, e as abas Dados
+  pessoais e Senha à direita.
 - **Trocar a própria senha não derruba quem trocou.** O `tokenVersion` sobe e derruba as *outras*
   sessões da conta; a resposta traz o cookie da geração nova (`reemitirSessao`), e só a sessão que
   trocou sobrevive.
