@@ -5,12 +5,13 @@ import { assetSelect, ASSET_SELECT } from '../helpers/asset-select.helper';
 import {
   buildAssetFilterWhere, buildAssetWhere, type AssetFilters,
 } from '../helpers/asset-filters.helper';
+import { listCurrentWorkstations, type PostoAtual } from './list-current-workstations.usecase';
 
 type LinhaCrua = Awaited<ReturnType<typeof buscarPagina>>[number];
 type AssetRow = LinhaCrua;
 
-/** A linha da listagem com a responsabilidade já resolvida (Camada 3). */
-type AssetRowComPosse = AssetRow & { posse: PosseResolvida };
+/** A linha da listagem com a responsabilidade já resolvida (Camada 3) e o posto onde está. */
+type AssetRowComPosse = AssetRow & { posse: PosseResolvida; postoAtual: PostoAtual | null };
 
 function buscarPagina(where: object, query: ListQuery, podeVerCusto: boolean) {
   return prisma.asset.findMany({
@@ -69,7 +70,8 @@ export async function listAssets(
   // FORA da `$transaction` acima de propósito: aquela existe para o total e a
   // página serem do mesmo instante, e alongá-la com as consultas da posse
   // seguraria a transação durante leitura que não precisa dessa garantia.
-  const posses = await resolverResponsaveisEmLote(prisma, rows.map((linha) => linha.id));
+  const ids = rows.map((linha) => linha.id);
+  const [posses, postos] = await Promise.all([resolverResponsaveisEmLote(prisma, ids), listCurrentWorkstations(ids)]);
 
   return {
     total,
@@ -78,6 +80,7 @@ export async function listAssets(
     rows: rows.map((linha) => ({
       ...linha,
       posse: posses.get(linha.id) ?? semPosse(),
+      postoAtual: postos.get(linha.id) ?? null,
     })),
   };
 }

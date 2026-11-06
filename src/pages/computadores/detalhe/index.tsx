@@ -29,6 +29,12 @@ import { usePode } from '../../../stores/auth.store';
 // Markup e mais nada: estado e chamadas ficam no `useAssetDetail`
 // (docs/referencia/arquitetura.md).
 
+/** Quem abriu a ficha: a seta diz para onde volta. */
+function rotuloDaVoltaDaFicha(voltar: string): string {
+  if (voltar.startsWith('/descobertas')) return 'Descobertas';
+  return voltar.startsWith('/postos') ? 'Posto' : 'Computadores';
+}
+
 export default function AssetDetailPage() {
   const {
     asset, carregando, erro, voltar,
@@ -47,19 +53,20 @@ export default function AssetDetailPage() {
   // condicional é o que as regras do React proíbem.
   const podeExcluir = usePode('SUPERVISOR');
 
+  const rotuloDaVolta = rotuloDaVoltaDaFicha(voltar.para);
+
   if (carregando || erro || !asset) {
-    return <FichaIndisponivel lista="Computadores" voltar={voltar} carregando={carregando} erro={erro ?? 'Ativo não encontrado.'} />;
+    return <FichaIndisponivel lista="Computadores" rotuloDaVolta={rotuloDaVolta} voltar={voltar} carregando={carregando} erro={erro ?? 'Ativo não encontrado.'} />;
   }
 
   // A MESMA trava da listagem: só `DEPLOYABLE` se entrega, e o motivo vai no `title`.
   const bloqueio = bloqueioDaEntrega(asset);
   const baixado = seloDaSaida(asset) !== null;
-  const rotuloDaVolta = voltar.startsWith('/descobertas') ? 'Descobertas' : 'Computadores';
 
   return (
     <div className="motion-safe:animate-fade-in pb-6">
       <PaginaCabecalho
-        voltar={{ para: voltar, rotulo: rotuloDaVolta }}
+        voltar={{ ...voltar, rotulo: rotuloDaVolta }}
         titulo={<span className="font-mono">{asset.assetTag}</span>}
       />
 

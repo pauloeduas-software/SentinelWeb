@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { Volta } from '../hooks/useVoltaComFiltros';
 import PaginaCabecalho from './PaginaCabecalho';
 import { Aviso } from './ui/aviso';
 import { Card } from './ui/card';
@@ -35,16 +36,18 @@ export function IconeDaFicha({ children }: { children: ReactNode }) {
 interface FichaIndisponivelProps {
   /** O nome da lista, no título e no link: "Computadores". */
   lista: string;
-  voltar: string;
+  /** O nome no link, quando a ficha foi aberta de outra tela. */
+  rotuloDaVolta?: string;
+  voltar: Volta;
   carregando: boolean;
   erro: string | null;
 }
 
 /** A ficha que ainda não chegou ou não existe: o cabeçalho não fica sem título. */
-export function FichaIndisponivel({ lista, voltar, carregando, erro }: FichaIndisponivelProps) {
+export function FichaIndisponivel({ lista, rotuloDaVolta = lista, voltar, carregando, erro }: FichaIndisponivelProps) {
   return (
     <div className="space-y-4">
-      <PaginaCabecalho titulo={lista} voltar={{ para: voltar, rotulo: lista }} />
+      <PaginaCabecalho titulo={lista} voltar={{ ...voltar, rotulo: rotuloDaVolta }} />
       {carregando ? <p className="text-sm text-text-tertiary">Carregando…</p> : <Aviso>{erro}</Aviso>}
     </div>
   );
