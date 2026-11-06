@@ -85,6 +85,9 @@ mostram a senha no painel aberto, e a troca obrigatória de senha, que já leva 
 
 ## O formulário
 
+- **Clicar fora fecha (BG),** com Esc e o X. Se a pessoa mexeu em algo, `FormularioLateral` pergunta
+  antes; Cancelar fecha direto. O que a tela não mostra de novo pede a sua pergunta (`perguntaAoSair`),
+  e controle novo que não seja campo do navegador avisa pelo `MarcarAlteracaoContext`.
 - **Todo formulário é igual (BB).** Uma largura só. O título é ação e tipo, e a descrição diz qual
   registro. Salvar no cadastro e o verbo na operação; o campo livre é Notas. Na linha, Cancelar vem
   antes de Confirmar.
