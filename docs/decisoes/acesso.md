@@ -4,12 +4,11 @@
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve**. Se a realidade mudou, a
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
-> cada regra governou. O índice das 164 está em [`README.md`](./README.md).
+> cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D22–D26, D72–D78, D80, D89, D135–D142, P da segunda rodada (ver
 > [`README.md`](./README.md#a-segunda-rodada-ap)) e R, S, T, U, W, X, Z, AB, AH e AP, que vieram depois da varredura
 > Q e continuaram a letra.
-> A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
 
@@ -21,7 +20,7 @@
 **Por quê:** um XSS em qualquer página do app lê o `localStorage` inteiro e leva a
 sessão embora; o cookie `httpOnly` não é legível por JavaScript, então o mesmo XSS
 consegue *usar* a sessão enquanto a aba está aberta, mas não *exportá-la*. O preço
-é CSRF, e ele se paga com `SameSite` mais o CORS já fechado da F0 — que recusa
+é CSRF, e ele se paga com `SameSite` mais o CORS já fechado — que recusa
 `*` e trabalha com allowlist de origem desde o primeiro dia.
 
 ---
@@ -60,8 +59,8 @@ um usuário `system` e carimbar tudo nele.
 **Por quê:** auditoria falsificada é pior que auditoria ausente, porque parece
 confiável. "Fulano arquivou 40 ativos em janeiro" seria mentira com aparência de
 prova, e alguém a usaria numa conversa real. É a mesma razão pela qual
-`ActivityLog.actorId` nasceu nulável em vez de segurar o `ActivityLog` até a F3:
-registro sem ator é registro; registro com ator errado é dano.
+`ActivityLog.actorId` nasceu nulável em vez de segurar o `ActivityLog` até haver
+autenticação: registro sem ator é registro; registro com ator errado é dano.
 
 ---
 
@@ -85,8 +84,10 @@ dado duplicado com uma fonte a mais para divergir.
 
 ## D26 — `createdById`/`updatedById` só onde a tela mostra.
 
+> **Superada por [Q](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai):** a varredura do código morto: coluna, rota e parâmetro sem leitor saem.
+
 **Decidido:** as duas colunas no `Asset`, não nas 14 tabelas.
-**Descartado:** o item do TODO como está escrito ("em todas as tabelas").
+**Descartado:** a coluna "em todas as tabelas".
 **Por quê:** o `ActivityLog` já responde *quem criou isto* — a linha `CREATE` está
 lá, com o ator. A coluna existe para não fazer essa consulta **por linha** na tela
 de detalhe do ativo, que é a única que mostra o dado. Nas outras treze, seria
@@ -106,7 +107,7 @@ migração aditiva de duas colunas.
 
 ## D72 — Posto responde pelo ativo; departamento agrupa pessoas; gestor escalona.
 
-**Decidido:** a tabela da Etapa F. **Descartado:** `Department` como detentor de ativo; e gestor
+**Decidido:** o que o título diz. **Descartado:** `Department` como detentor de ativo; e gestor
 entrando na resolução de responsabilidade. Entregar "para o Comercial" é entregar para uma sala ou
 para uma pessoa — departamento não tem mesa, não tem chave e não assina nada. Aceitá-lo como alvo
 de `Assignment` acrescentaria um quarto valor ao `AssignmentTarget` cujo "responsável" seria a
@@ -119,22 +120,26 @@ explícita** — não efeito colateral de as duas colunas existirem.
 
 ## D73 — `resolverEscalonamento()` é função separada de `resolverResponsaveis()`.
 
+> **Superada por [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
+
 **Decidido:** duas funções. **Descartado:** um `else` dentro de `resolverResponsaveis()` devolvendo
 o gestor da localidade quando o posto está vago. O `else` é tentador e destrói o sinal mais útil do
-modelo: com ele **todo ativo passa a ter responsável**, e *"ativo em posto vago"* — o relatório da
-F2, o alerta da auditoria da F8 — deixa de ser expressável. São perguntas diferentes: *quem está
+modelo: com ele **todo ativo passa a ter responsável**, e *"ativo em posto vago"* — o relatório,
+o alerta da auditoria — deixa de ser expressável. São perguntas diferentes: *quem está
 com isto* e *para quem eu ligo*; uma admite vazio, a outra existe para preencher o vazio da
 primeira.
 
 `resolverEscalonamento()` sobe a árvore de `Location` até achar um `managerId`, com teto de
 profundidade — a mesma guarda que o `location-cycle.helper.ts` já usa, pelo mesmo motivo: o banco
-aceita ciclo (provado na F1).
+aceita ciclo.
 
 ---
 
 ## D74 — Desligar não é apagar. E encerrar ocupações é passo do fluxo.
 
-**Decidido:** `terminatedAt` + `isActive`, com o passo 3 da Etapa G. **Descartado:** soft delete no
+> **Superada por [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
+
+**Decidido:** `terminatedAt` + `isActive`. **Descartado:** soft delete no
 desligamento; e "a pessoa inativa some da resolução sozinha". `deletedAt` significa *este cadastro
 não devia existir*; `terminatedAt` significa *esta pessoa trabalhou aqui*, e quem saiu continua
 aparecendo no histórico de posse — é a pergunta "quem estava com o notebook antes?" que o
@@ -146,18 +151,23 @@ lista de ocupantes de um posto.
 
 ## D75 — `Department` é a décima spec do catálogo, e a troca de coluna é em duas migrações.
 
+> **Superada por [D135](#d135--o-contrato-do-departamento-muda-com-a-entidade-não-no-drop-column):** o contrato muda com a entidade, não no `DROP COLUMN`.
+>
+> **Superada por [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
+
 **Decidido:** `department.spec.ts` em `specs/index.ts`; `add + backfill` numa migração, `drop` na
 seguinte. **Descartado:** um domínio `department/` completo; e migração única. É CRUD plano — nome,
 busca, 409 por uso —, e o `../referencia/arquitetura.md` diz que acrescentar tabela de catálogo *é escrever a
 spec*. Os dois tempos são o preço de a janela do D6 ter fechado: com dado dentro,
 `add`+`backfill`+`drop` num commit só transforma um rollback em perda de dado.
 
-*(O plano dizia "oitava spec"; quando a fase foi executada o catálogo já tinha nove, e o
-`Department` entrou como a décima.)*
+*(O catálogo já tinha nove specs, e o `Department` entrou como a décima.)*
 
 ---
 
 ## D76 — Permissão é união permissiva. Não existe `deny`.
+
+> **Superada por [D148](./escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem):** matriz vira `User.role`; o D137 (cobertura no boot) fica.
 
 **Decidido:** efetiva = união das chaves dos grupos. **Descartado:** flag de negação por grupo.
 Negação em união cria dependência de ordem e transforma *"por que ela não consegue ver?"* numa
@@ -171,16 +181,18 @@ de chaves é declarado em código, e a verificação confere que toda chave usad
 
 ## D77 — Dado sensível é filtrado no `select`, não mascarado na resposta.
 
-**Decidido:** o dado que não deve sair **não é lido**. O `select` explícito por domínio é, desde a
-F0, o único lugar onde se decide o que sai. **Descartado:** ler tudo e apagar campo antes de
+> **Superada em parte por [D140](#d140--o-d77-é-regra-de-coluna-em-jsonb-mascarar-depois-é-o-limite-não-a-exceção):** em `JsonB` isso é impossível: mascarar depois é o limite da regra, não exceção.
+
+**Decidido:** o dado que não deve sair **não é lido**. O `select` explícito por domínio é
+o único lugar onde se decide o que sai. **Descartado:** ler tudo e apagar campo antes de
 responder.
 
-**Obrigação cruzada:** a allowlist de colunas da F10 — export CSV, report builder, seletor de
+**Obrigação cruzada:** a allowlist de colunas — export CSV, report builder, seletor de
 colunas — passa a ser **filtrada pelas mesmas permissões**. Sem isso, exportar é a porta dos fundos
 do custo de compra, e o report builder é a da chave de licença.
 
-**O alcance real, pela revisão:** não é `assetSelect(perms)`/`licenseSelect(perms)` como o plano
-escrevia. São três mecanismos, porque os três dados sensíveis são diferentes — ver o defeito 4, o
+**O alcance real:** não é `assetSelect(perms)`/`licenseSelect(perms)`.
+São três mecanismos, porque os três dados sensíveis são diferentes — ver o
 D138 e o D140.
 
 > **Revisão (varredura Q):** sobrou um dado sensível, o custo de compra do ativo, e ele vazava
@@ -199,22 +211,26 @@ D138 e o D140.
 
 ## D78 — LDAP sincroniza; OIDC autentica; ninguém entra sem cadastro.
 
+> **Superada por [D148](./escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem):** matriz vira `User.role`; o D137 (cobertura no boot) fica.
+
 **Decidido:** `ldapts` só importa e atualiza cadastro; o login corporativo é OIDC (Entra ID), com
 vínculo pelo `oid`. **Descartado:** bind de senha contra o AD; SAML; e provisionamento JIT.
 Autenticar contra o AD faz a aplicação virar funil de credencial corporativa, com TLS a pinar e
 senha a trafegar, e o OIDC resolve login sem que a senha passe por aqui. O vínculo é pelo `oid`,
 **não pelo e-mail**: no Entra, `preferred_username` diverge de `mail` com frequência e e-mail muda
-quando a pessoa casa ou a empresa troca de domínio; `oid` é imutável. Sem JIT porque o TODO pede
-recusar quem não está cadastrado, e porque criar colaborador no login faz o cadastro de pessoas
+quando a pessoa casa ou a empresa troca de domínio; `oid` é imutável. Sem JIT porque quem não está
+cadastrado é recusado, e porque criar colaborador no login faz o cadastro de pessoas
 depender de quem clicou primeiro.
 
 ---
 
 ## D80 — Um `ApiToken` só, com dono polimórfico.
 
-**O conflito.** A F3 (Etapa G) cria `ApiToken` com `endpointId` — o token **por
-agente**. A F11 (Etapa F) cria `ApiToken` com `userId` — o token **pessoal**. Os
-dois planos acham que criam *"o"* `ApiToken`.
+> **Superada por [D149](./escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token):** o prazo do D89 expira sem ser cumprido, e por escrito.
+
+**O conflito.** Um `ApiToken` com `endpointId` é o token **por
+agente**. Um `ApiToken` com `userId` é o token **pessoal**. Os
+dois lados acham que criam *"o"* `ApiToken`.
 
 **Decidido:** **uma** tabela, com uma coluna dizendo quem é o dono.
 
@@ -260,13 +276,14 @@ ALTER TABLE "api_tokens" ADD CONSTRAINT "api_tokens_dono_coerente" CHECK (
 Note que `AGENT` **não** exige `endpointId`: é justamente o estado de antes do
 primeiro handshake.
 
-**Afeta:** [`../historico/fase-03-autenticacao-e-ator.md`](../historico/fase-03-autenticacao-e-ator.md) (Etapa G) e
-[`../historico/fase-11-acesso-avancado.md`](../historico/fase-11-acesso-avancado.md) (Etapa F). A F3 cria a tabela inteira,
-com o enum e o CHECK; a F11 só acrescenta a tela e o caminho `USER`.
+O token por agente cria a tabela inteira,
+com o enum e o CHECK; o pessoal só acrescenta a tela e o caminho `USER`.
 
 ---
 
 ## D89 — A troca do `AGENT_TOKEN` pelo `ApiToken` é por convivência, com prazo.
+
+> **Superada por [D149](./escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token):** o prazo do D89 expira sem ser cumprido, e por escrito.
 
 **Decidido:** durante a transição, `authenticate-agent.helper.ts` aceita **os dois**: o
 `ApiToken` por prefixo e, se não casar, o `AGENT_TOKEN` compartilhado — este último logando
@@ -279,12 +296,14 @@ inteira e, pior, derruba o canal por onde se descobriria que ela caiu: quem não
 reporta.
 
 **O log de depreciação é a parte que não pode faltar.** Sem ele, a convivência vira permanente
-por esquecimento — o token compartilhado fica no `.env` por mais um ano e a fase é dada como
+por esquecimento — o token compartilhado fica no `.env` por mais um ano e a troca é dada como
 concluída. Com ele, a pergunta *"já dá para cortar?"* tem resposta observável.
 
 ---
 
-## D135 — O contrato do departamento muda na Etapa D, não no `DROP COLUMN`.
+## D135 — O contrato do departamento muda com a entidade, não no `DROP COLUMN`.
+
+> **Superada por [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
 
 **Decidido:** `USER_PUBLIC_SELECT` continua **sem** departamento; nasce `USER_LIST_SELECT` com
 `department: { select: { id, name } }` para a listagem de pessoas. **Descartado:** `department:
@@ -296,6 +315,8 @@ N+1 transforma um `DROP COLUMN` numa refatoração de contrato com o banco já m
 ---
 
 ## D136 — Permissão efetiva é lida na consulta de sessão que já existe, e não entra no `request.user`.
+
+> **Superada por [D148](./escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem):** matriz vira `User.role`; o D137 (cobertura no boot) fica.
 
 **Decidido:** `include` dos grupos em `carregarSessaoParaValidacao()`, reduzido a `Set<string>` em
 `request.permissions`. **Descartado:** permissão no `USER_PUBLIC_SELECT`; e um
@@ -321,6 +342,8 @@ caminho: as 5 rotas servem 10 cadastros.
 
 ## D138 — Relatório que é sobre dinheiro exige a permissão na rota, não na coluna.
 
+> **Superada por [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
+
 **Decidido:** `/api/reports/depreciacao` inteiro atrás de `assets.viewCost`; nos outros caminhos
 (builder, export, relatório de responsabilidade) a chave filtra a coluna e o `SUM`. **Descartado:**
 filtrar `purchaseCost` dentro do relatório de depreciação. Ele devolve custo total, custo
@@ -343,8 +366,8 @@ que vai ao gestor — não a responsabilidade.
 
 ## D140 — O D77 é regra de coluna. Em JsonB, mascarar depois é o limite, não a exceção.
 
-**Decidido:** `mascararCampos()` da F9 fica como está, com o motivo escrito ao lado. **Descartado:**
-"consertar" a F9 para filtrar no `select`. `Asset.customFields` é **uma** coluna com valor cifrado e
+**Decidido:** `mascararCampos()` fica como está, com o motivo escrito ao lado. **Descartado:**
+"consertá-lo" para filtrar no `select`. `Asset.customFields` é **uma** coluna com valor cifrado e
 comum lado a lado — não existe `select` parcial de JsonB, e foi por isso que o prefixo `enc:` passou
 a viajar dentro do valor (D81, item 1). Sem esta decisão escrita, a primeira pessoa a aplicar o D77
 ao pé da letra vai tentar, não vai conseguir, e provavelmente vai deixar o campo cifrado de fora da
@@ -353,6 +376,8 @@ resposta inteira — quebrando o selo "tem segredo" da listagem.
 ---
 
 ## D141 — O portal se chama pelo que lista.
+
+> **Superada por [D156](./escopo.md#d156--o-portal-do-colaborador-e-o-backup-saem):** o nome estava certo; a tela cai.
 
 **Decidido:** `src/pages/meus-equipamentos/`. **Descartado:** `src/pages/portal/`. A convenção do
 projeto é a tela levar o nome do que ela lista — `ativos`, `estoque`, `licencas`, `postos`,
@@ -363,7 +388,9 @@ muda é a pessoa saber, pela URL, o que vai encontrar.
 
 ## D142 — `api_tokens.userId` ganha FK antes de existir token pessoal.
 
-**Decidido:** `FOREIGN KEY … ON DELETE SET NULL` mais a relação no schema, na etapa do
+> **Superada por [D149](./escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token):** o prazo do D89 expira sem ser cumprido, e por escrito.
+
+**Decidido:** `FOREIGN KEY … ON DELETE SET NULL` mais a relação no schema, junto do
 desligamento. **Descartado:** confiar no CHECK. O CHECK garante que `userId` **existe quando
 `ownerType = 'USER'`**, não que ele aponte para alguém — um token pessoal pode referenciar um
 cadastro que nunca existiu, e o passo que revoga tokens no desligamento passaria por cima disso sem
@@ -410,8 +437,7 @@ mantém a atual; presente troca a senha, destrava a conta e incrementa o `tokenV
 `POST /api/users/:id/set-password`, o `set-user-password.usecase.ts` e a ação **Definir acesso**
 da ficha do colaborador.
 **Supera:** nada do D1–D164 — o nome de acesso e a rota de senha nasceram de uma decisão da
-EXECUÇÃO da F3, não desta pasta: o item 2 de
-[*Três decisões que a implementação teve de tomar*](../historico/fase-03-autenticacao-e-ator.md#três-decisões-que-a-implementação-teve-de-tomar)
+execução, não desta pasta
 ("credencial não entrou no formulário de colaborador; entrou no `set-password`").
 **Mantém:** [P](#p--usuario-não-entra-no-painel) — é ele que torna a senha do `USUARIO`
 dispensável — e [D162](./escopo.md#d162--minha-conta-sai-e-o-cargo-vira-campo-do-formulário-de-usuário):
@@ -428,8 +454,8 @@ Duas chaves de entrada eram duas coisas para a pessoa esquecer, dois índices pa
 manter e duas metades de uma credencial para manter coerentes — senha sem nome de acesso não
 entrava, e nome de acesso sem senha também não.
 
-**O argumento da F3 era certo no sistema que ela tinha, e o cargo o desfez.** Ela separava *dar
-acesso* de *cadastrar alguém para receber equipamento* porque, na F3, todo cadastro com senha
+**O argumento era certo no sistema que havia, e o cargo o desfez.** Ele separava *dar
+acesso* de *cadastrar alguém para receber equipamento* porque, então, todo cadastro com senha
 entrava: a senha ERA a decisão de acesso, e merecia rota própria. Desde o
 [D148](./escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem) e o
 [P](#p--usuario-não-entra-no-painel), quem decide se a pessoa entra é o CARGO — `USUARIO` é
@@ -476,8 +502,7 @@ enquanto não existe banco em produção.
 **Mantém:** [D148](./escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)
 inteiro — muda o nome, não a regra. Por ser troca de nome e não de regra, o texto das decisões e
 da referência passou a usar o nome novo no lugar, inclusive nos títulos do D148, do D162 e do
-D163 (e nas âncoras deles); [`../historico/`](../historico/) continua dizendo "papel", porque
-registra a época.
+D163 (e nas âncoras deles).
 
 **Por quê:** pedido do usuário — "cargo" é a palavra que a equipe usa para isso. A troca não
 colide com nada: o campo de RH `jobTitle`, que a tela traduzia como "cargo", saiu na varredura
@@ -516,6 +541,8 @@ demo de novo ganha uma segunda conta `ADMIN` —, e é aceita por ser banco de d
 ---
 
 ## U — Quem recebe equipamento sai de `User`: colaborador vira catálogo, e sobram dois cargos
+
+> **Superada em parte por [AH](#ah--o-menu-por-assunto-o-colaborador-ganha-página-própria-e-ativos-vira-computadores):** o menu se agrupa por assunto; o colaborador ganha página própria, na seção Pessoas, e a página Ativos vira Computadores; o cadastro e a API são os mesmos.
 
 > **Superada em parte por [V](./posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira):**
 > excluir colaborador passou a mandar para a lixeira, recusando só quem está com algo agora — e
@@ -609,7 +636,7 @@ telas. `GET /api/users/options`, `/:id` e `/:id/history` saíram; o seletor de p
 - **A lista mostra o cargo**, numa coluna entre E-mail e Ações. Antes ele só aparecia dentro do
   formulário.
 
-**Supera:** a lixeira do usuário que vinha da F0 — o `deletedAt` e o `unique_undeleted` do
+**Supera:** a lixeira do usuário — o `deletedAt` e o `unique_undeleted` do
 e-mail —, que o [U](#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos)
 já tinha tirado da tela (sem aba Lixeira, sem Restaurar) mas deixado no banco.
 **Mantém:** o U inteiro, e a rede do último administrador do
@@ -656,7 +683,7 @@ quando, na mesma transação da operação. Junto:
   `ActivityLog`;
 - **as telas perdem o autor:** Movimentações de Estoque e Histórico da Licença deixam de mostrar
   `por 3f2a1b4c…` / "sem autor registrado", e a aba Histórico do ativo perde o aviso de que o
-  autor só existe a partir da F3;
+  autor pode faltar;
 - **a regra da própria conta fica:** `updateUser` e `deleteUser` continuam recebendo quem pede
   (`sessaoId`, de `request.user.id`) — é o que o [W](#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo)
   compara;
@@ -690,6 +717,8 @@ faz com a localização —, e não o id: o id de um usuário excluído não lev
 ---
 
 ## Z — Sobra um cargo só: Administrador, e a separação de cargos fica para decidir
+
+> **Superada por [AV](#av--três-cargos-técnico-supervisor-e-administrador):** três cargos, `TECNICO < SUPERVISOR < ADMIN`: o Técnico opera, o Supervisor decide e o Administrador cuida das contas.
 
 **Decidido:** o cargo `TECNICO` sai. O enum `Cargo` fica só com `ADMIN`, que passa a ser o
 `@default` da coluna `users.role`; a `0_init` foi editada no lugar, e o banco de

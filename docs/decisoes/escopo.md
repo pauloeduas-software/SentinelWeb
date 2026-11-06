@@ -5,12 +5,11 @@
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve**. Se a realidade mudou, a
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
-> cada regra governou. O índice está em [`README.md`](./README.md).
+> cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D143–D164, O (segunda rodada, numerada por letra — ver
 > [`README.md`](./README.md#a-segunda-rodada-ap)) e Q (a varredura do código morto, que veio
 > depois e continuou a letra).
-> A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
 
@@ -19,7 +18,7 @@
 **Decidido:** sobrevive o que serve ao núcleo ITAM ou à ponte ITAM×RMM. Todo o resto sai.
 **Descartado:** cortar a convergência.
 
-O projeto cresceu até onze fases e 72.355 linhas de aplicação — porte de produto comercial, não
+O projeto cresceu até 72.355 linhas de aplicação — porte de produto comercial, não
 de TCC. A redução óbvia era cortar a metade RMM: `reconciliation` é o maior domínio do sistema
 (4.242 linhas) e o assunto com mais decisões (35), e sem ele sobrava um ITAM limpo e defensável.
 
@@ -38,6 +37,8 @@ que leve o projeto a 25 mil mantendo a convergência, e perseguir isso seria des
 ---
 
 ## D144 — A conferência **manual** sai. A conferência pelo agente fica
+
+> **Superada por [D157](#d157--a-conferência-sai-inteira-inclusive-a-do-agente):** sem tela ninguém lê o registro; o job perde uma linha e nada mais.
 
 **Decidido:** saem `record-audit`, `audit-location` e a tela `/auditorias`. Ficam o modelo
 `Audit`, `audit-by-agent` e `lastAuditAt`.
@@ -217,6 +218,10 @@ certo no que decidia (calcular no servidor, nunca persistir); o que muda é não
 
 ## D153 — Estoque vira **item** e **movimento**
 
+> **Superada por [D160](#d160--o-estoque-não-foi-achatado):** o único item que REESCREVIA; não foi executado, e o log diz isso.
+>
+> **Superada por [J](./estoque.md#j--o-estoque-volta-como-stockitem--stockmovement):** `StockItem` + `StockMovement`, entrega por unidade, alvo em pessoa ou posto.
+
 **Decidido:** `Accessory`, `Consumable`, `Component` e seus três `Checkout` dão lugar a
 `StockItem` + `StockMovement`. Sete modelos viram dois.
 **Supera:** [D36](./estoque.md#d36--os-três-têm-lixeira-aqui-o-d8-não-se-aplica),
@@ -239,6 +244,10 @@ baixo não mexe em nenhuma resposta.
 
 ## D154 — Relatório vira três consultas fixas
 
+> **Superada por [D161](#d161--os-relatórios-que-sobraram-são-dois-e-não-três):** são dois: licença e estoque já exportavam pelos domínios deles.
+>
+> **Superada por [O](#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
+
 **Decidido:** o builder sai. Ficam três relatórios declarados em código — ativos por responsável,
 licenças e estoque — cada um com export.
 **Supera:** [D67](./relatorios-import-etiquetas.md#d67--o-builder-recebe-token-nunca-campo-nunca-sql),
@@ -255,6 +264,8 @@ desaparece em vez de ser defendida, o que é o jeito mais forte de resolver o pr
 
 ## D155 — Manutenção vira registro no histórico do ativo
 
+> **Superada por [D158](#d158--manutenção-sai-inteira):** sem tela ninguém cria a linha, e o `ActivityLog` (D18) já é o lugar.
+
 **Decidido:** o modelo `Maintenance` fica, com tipo, data e custo. Saem a tela `/manutencoes`, a
 aba própria e o fluxo de abrir/fechar. A manutenção aparece no histórico do ativo, junto do resto.
 **Supera:** nada — o assunto não tinha decisão escrita.
@@ -266,6 +277,8 @@ pelo mesmo raciocínio do D143 que manteve o RMM e cortou o resto.
 ---
 
 ## D156 — O portal do colaborador e o backup saem
+
+> **Superada por [O](#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
 
 **Decidido:** saem a tela `/meus-equipamentos` e o domínio `backup`.
 **Supera:** [D141](./acesso.md#d141--o-portal-se-chama-pelo-que-lista).
@@ -283,7 +296,7 @@ portal, mas está entranhado em `user` (criação, atualização, filtro, substi
 legítima de ITAM — centro de custo de quem responde pelo ativo. Cortá-lo custaria edição em código
 que fica, por nenhum ganho de escopo. O
 [D75](./acesso.md#d75--department-é-a-décima-spec-do-catálogo-e-a-troca-de-coluna-é-em-duas-migrações)
-e o [D135](./acesso.md#d135--o-contrato-do-departamento-muda-na-etapa-d-não-no-drop-column)
+e o [D135](./acesso.md#d135--o-contrato-do-departamento-muda-com-a-entidade-não-no-drop-column)
 continuam valendo.
 
 ---
@@ -346,7 +359,7 @@ já mostra, ou sobre processo que não é inventário. `/descobertas` é a únic
 `reconciliation` — a fila de sugestões, os órfãos sem cadastro e os ociosos. Cortá-la deixaria
 4.242 linhas de motor inalcançáveis.
 
-**E esse erro já foi cometido aqui.** A segunda auditoria da fase 7 procurou o que a fase tinha de
+**E esse erro já foi cometido aqui.** Uma revisão procurou o que havia de
 motor pronto e **inalcançável pela tela**, achou "três entregas inteiras nesse estado", e as
 [D113](./reconciliacao.md#d113--o-turno-é-a-moda-dos-turnos-não-a-média-das-horas)–[D122](./reconciliacao.md#d122--assetsuggestions-e-não-o-nome-que-o-prisma-format-escreveu)
 nasceram para consertar isso. Cortar a tela agora seria reintroduzir, de propósito, o problema que
@@ -359,6 +372,8 @@ saem não a atravessam; esta é a ponte.
 ---
 
 ## D160 — O estoque **não** foi achatado
+
+> **Superada por [J](./estoque.md#j--o-estoque-volta-como-stockitem--stockmovement):** `StockItem` + `StockMovement`, entrega por unidade, alvo em pessoa ou posto.
 
 **Decidido:** `Accessory`, `Consumable`, `Component` e seus três `Checkout` ficam como
 estão — sete modelos, 3.149 linhas.
@@ -383,6 +398,8 @@ está aqui.
 ---
 
 ## D161 — Os relatórios que sobraram são **dois**, e não três
+
+> **Superada por [O](#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
 
 **Decidido:** ficam `GET /api/reports/prazos` (garantia e fim de vida vencendo) e
 `GET /api/reports/responsabilidade` (direto × por posto × por ativo).
@@ -430,6 +447,8 @@ a rede do `ultimo-administrador.ts` pegaria o caso do ÚLTIMO administrador, e o
 
 ## D163 — O mapa de coluna protegida é tipado `Cargo`, porque `indexOf` de string estranha é **-1**
 
+> **Superada por [O](#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
+
 **Decidido:** `COLUNAS_COM_PERMISSAO` (export de ativos) e `TOKENS_COM_PERMISSAO` (relatório) têm
 `Cargo` no tipo do valor, não `string`.
 
@@ -459,7 +478,7 @@ de falhar deixa de existir em vez de ser lembrado.
 
 **O DEFEITO QUE ISTO CONSERTA, E ELE ACONTECEU.** A coluna nasceu
 `role Cargo NOT NULL DEFAULT 'USUARIO'`, e esse `DEFAULT` é a decisão certa para conta NOVA — é a
-porta fechada por padrão da F3 levada à autorização (D148). Aplicado a um banco que **já tem
+porta fechada por padrão levada à autorização (D148). Aplicado a um banco que **já tem
 gente**, ele rebaixou todos de uma vez, e os grupos foram derrubados na mesma migração: a
 informação de quem era administrador deixou de existir no mesmo passo que a tornou necessária.
 
@@ -491,6 +510,8 @@ quando a coluna governa acesso, é uma escrita em massa que se tranca para fora.
 
 ## O — O segundo de-escopo: o que a primeira rodada manteve, ou não enxergou, sai
 
+> **Superada em parte pelo commit `ff34364`:** `parentId` e `managerId` saem: a lista é plana, e o nome único diz onde o lugar fica.
+
 **Decidido:** mais uma leva de corte, pelo MESMO critério do D143, aplicado sem a folga que a
 primeira rodada deu a alguns itens. Saem, numa leva de 49 arquivos (331 testes passando depois
 dela):
@@ -515,8 +536,8 @@ dela):
   `checkinEmail`, `csvDelimiter`).
 
 **Supera:** D21 (ação em massa "tudo ou nada" — deixa de existir), D31 (entrega em massa por
-linha), D32 e [D82](./posse.md#d82--terminate-não-existe-a-f11-estende-o-offboard) (desligamento
-como operação com nome próprio — a F11 não tem mais o que estender), D57 e
+linha), D32 e [D82](./posse.md#d82--terminate-não-existe-o-offboard-é-estendido) (desligamento
+como operação com nome próprio — não há mais o que estender), D57 e
 [D86](./plataforma.md#d86--e-mail-é-best-effort-com-log-o-que-não-pode-se-perder-tem-linha-em-tabela)
 (o e-mail, inteiro — nada do que restava dele sobrevive), D66/D129/D130 (a view do responsável
 resolvido), D73 (`resolverEscalonamento`, sem chamador), D74 (a frase "desligar não é apagar"
@@ -546,8 +567,7 @@ Esta rodada paga esse custo.
 **O que fica, e por quê:** tudo que atravessa a ponte ITAM×RMM continua de pé —
 `reconciliation` ([D159](#d159--a-tela-da-convergência-fica-e-é-a-única-das-cinco-que-fica)), a
 telemetria consolidada na ficha do ativo e do posto, a licença como cadastro simples e o estoque
-como item e movimento — ver o índice da segunda rodada em
-[`README.md`](./README.md#a-segunda-rodada-ap). `Location.managerId` fica: é gestor de espaço,
+como item e movimento. `Location.managerId` fica: é gestor de espaço,
 lido pela spec de localização, e não carrega nenhum dos usos que levaram o `User.managerId`
 embora.
 

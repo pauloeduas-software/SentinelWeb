@@ -38,7 +38,7 @@ const comandoSchema = createUserSchema.extend({ password: senhaNova });
 // preço, aceito: ela fica no histórico do terminal de quem rodou.
 //
 // USO:
-//   npm run acesso:administrador -- --nome "Maria Silva" --email "maria.silva@empresa.com" --senha "uma senha qualquer"
+//   bun run acesso:administrador --nome "Maria Silva" --email "maria.silva@empresa.com" --senha "uma senha qualquer"
 //
 // O `--` depois do nome do script é do npm: sem ele, o npm toma `--nome`,
 // `--email` e `--senha` como opções dele e só repassa os valores, sem os nomes.
@@ -46,7 +46,7 @@ const comandoSchema = createUserSchema.extend({ password: senhaNova });
 
 const logger = createLogger('cli:acesso');
 
-const USO = 'Uso: npm run acesso:administrador -- --nome "Nome Completo" --email "e-mail" --senha "senha"';
+const USO = 'Uso: bun run acesso:administrador --nome "Nome Completo" --email "e-mail" --senha "senha"';
 
 /**
  * Quem roda o comando, pelo usuário do sistema operacional. Sem lançar:

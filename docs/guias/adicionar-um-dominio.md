@@ -18,16 +18,16 @@ server/modules/licenca/
 4. Registre em **`app.ts`** (não em `server.ts`): `await LicencaMaestro.setupRoutes(server);`
 5. Declare o cargo mínimo de cada rota em `server/modules/access/helpers/route-permissions.ts`.
    Rota sem linha ali **derruba o boot** (D137) — ver [`acesso.md`](../referencia/acesso.md).
-6. No front: `src/queries/licenca.queries.ts` (TanStack Query — o padrão, como
+6. No front: `src/queries/<nome>.queries.ts` (TanStack Query — o padrão, como
    `src/queries/license.queries.ts`) + `src/pages/<contexto>/`. Um `src/stores/<nome>.store.ts`
-   (zustand) só nasce para estado que existe só no navegador — hoje são dois, `auth.store.ts`
-   e `asset.store.ts` ([`arquitetura.md`](../referencia/arquitetura.md)).
+   (zustand) só nasce para estado que existe só no navegador — hoje é um, `auth.store.ts`
+   ([`arquitetura.md`](../referencia/arquitetura.md)).
 
 ---
 
 ## Quando quebrar em `use-cases/`
 
-Os 17 domínios de hoje (`server/modules/`) já têm o esqueleto que lhes cabe. Para um domínio **novo**,
+Os domínios de hoje (`server/modules/`) já têm o esqueleto que lhes cabe. Para um domínio **novo**,
 comece simples e quebre quando um dos dois acontecer:
 
 1. o arquivo do domínio passar de ~250 linhas; **ou**

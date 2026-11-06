@@ -4,11 +4,10 @@
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve**. Se a realidade mudou, a
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
-> cada regra governou. O índice das 164 está em [`README.md`](./README.md).
+> cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D45–D51, D95–D122, e A/D/E/H da segunda rodada (ver
 > [`README.md`](./README.md#a-segunda-rodada-ap)).
-> A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
 
@@ -47,18 +46,20 @@ MAC repetido vale 0. **Hostname** é renomeável e volta atrás.
 Pegar o primeiro candidato numa colisão é pior do que não vincular: cria vínculo errado
 que ninguém revisa, porque o sistema disse que estava certo.
 
-> **O que a árvore acrescentou:** a mesma regra vale para o casamento de pessoa da Etapa E,
-> que hoje tem **dois** sinais e não um, porque a F3 entregou `User.username`.
+> **O que a árvore acrescentou:** a mesma regra vale para o casamento de pessoa,
+> que hoje tem **dois** sinais e não um, porque existe `User.username`.
 
 ---
 
 ## D47 — O usuário logado sugere **ocupação** quando a posse é do posto
 
-**Decidido:** a árvore da Etapa E. Quando a `Assignment` aberta do ativo tem alvo
+> **Superada por [A](#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional):** a fila deixa de inferir pessoa; sai a invariante 14, e o D50 fica.
+
+**Decidido:** quando a `Assignment` aberta do ativo tem alvo
 `LOCATION`, a sugestão gerada é `LocationOccupant`, não checkout.
 
-**Descartado:** sugerir sempre checkout do ativo para o usuário logado — que é o que o
-item do TODO dizia antes do modelo de posse existir, e o que qualquer ITAM faria.
+**Descartado:** sugerir sempre checkout do ativo para o usuário logado, que é o que
+qualquer ITAM faria.
 
 **Por quê:** porque a sugestão errada aqui **desfaz cadastro certo**. Se o desktop da Mesa 1
 está corretamente entregue ao posto e o sistema sugere "atribuir para a Ana", aceitar essa
@@ -74,6 +75,8 @@ falta para a Camada 2 sair do papel.
 ---
 
 ## D48 — Dois usuários na mesma máquina é **evidência de posto compartilhado**
+
+> **Superada por [A](#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional):** a fila deixa de inferir pessoa; sai a invariante 14, e o D50 fica.
 
 **Decidido:** duas ou mais pessoas com presença recorrente no mesmo endpoint geram uma
 sugestão de **posto compartilhado** — criar/escolher a `Location`, mover a posse para ela
@@ -92,18 +95,20 @@ Com as três camadas, a mesma observação é **consistente**: o ativo é do pos
 assignment), as pessoas são ocupantes (duas linhas), e o turno é um rótulo no vínculo
 pessoa↔posto. Não há contradição para resolver, então não há nada para descartar. **O
 modelo de posse não é enfeite de modelagem: é o que transforma uma observação descartada
-em cadastro.** É a capacidade mais difícil de copiar desta fase, porque copiá-la exige
+em cadastro.** É a capacidade mais difícil de copiar, porque copiá-la exige
 copiar o modelo inteiro.
 
 **O limite, declarado:** é sugestão. Duas pessoas numa máquina também podem ser um técnico
 de TI logando para dar suporte, ou uma conta de serviço — e é por isso que o D101 traz a
-allowlist para dentro da fase. A sugestão entra na fila com a evidência visível (quais dias,
+allowlist. A sugestão entra na fila com a evidência visível (quais dias,
 quais horas, quantas amostras) e alguém confirma. O auto-provisionamento **nunca** cria
 ocupação sozinho, em nenhum modo.
 
 ---
 
 ## D49 — Observação de usuário é agregada por dia, com retenção
+
+> **Superada por [A](#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional):** a fila deixa de inferir pessoa; sai a invariante 14, e o D50 fica.
 
 **Decidido:** `EndpointUserDaily` — uma linha por (endpoint, usuário, dia), com primeira e
 última hora vistas e contagem de amostras. Expurgo aos 90 dias.
@@ -127,7 +132,7 @@ RMM e não é copiado a cada mensagem.
 **Por quê o nome:** é a regra permanente do D13 e a rede de segurança é o compilador. Se o
 `Asset` tivesse uma coluna `lastSeen`, o `markStaleEndpointsOffline` apontando para o model
 errado **compilaria** — e marcaria a frota inteira como OFFLINE em silêncio. Com o nome
-diferente, o mesmo erro é 11 erros de compilação (provado na F1).
+diferente, o mesmo erro é 11 erros de compilação.
 
 **Por quê uma coluna, e não só derivar pelo `Endpoint`:** porque reimagem cria endpoint
 novo (`hwid` muda) e o histórico de "um agente já viu este ativo" não pode zerar junto.
@@ -144,7 +149,7 @@ novo (`hwid` muda) e o histórico de "um agente já viu este ativo" não pode ze
 **Decidido:** `discoveryMode` com `OFF | SUGGEST | ON`, default **SUGGEST**.
 
 **Por quê:** em `ON`, a primeira VM de teste que alguém subir vira patrimônio — e **consome
-uma etiqueta do contador**, que o `nextAssetTag()` nunca devolve (F1, e o `MAX_PULOS` do
+uma etiqueta do contador**, que o `nextAssetTag()` nunca devolve (e o `MAX_PULOS` do
 `app-settings.usecase.ts` prova que a sequência já é assunto delicado). O estrago não é a
 linha a mais: é a sequência de etiquetas furada para sempre.
 
@@ -159,7 +164,7 @@ linha a mais: é a sequência de etiquetas furada para sempre.
 ## D95 — Quem carimba o ativo é o **job**, não o handshake
 
 **Decidido:** `Asset.lastSeenByAgentAt` é propagado pelo `reconcile.job.ts`, num único
-`UPDATE … FROM` que cobre a frota inteira (Etapa D). O `touchEndpoint` continua tocando
+`UPDATE … FROM` que cobre a frota inteira. O `touchEndpoint` continua tocando
 **só** `endpoints`.
 **Descartado:** escrever em `assets` dentro do `touchEndpoint`, com teto diário (o
 mecanismo que o D50 previa).
@@ -223,7 +228,7 @@ este par, faça o que fizer".
 **Decidido:** `enum AgentStatus { ONLINE OFFLINE }`. A pergunta *"cadastrado e nunca visto
 pelo agente"* é respondida pelo `Asset` (sem endpoint vinculado, ou `lastSeenByAgentAt IS
 NULL`), no painel de cobertura.
-**Descartado:** `NEVER_SEEN` no enum, como o item do TODO pedia.
+**Descartado:** `NEVER_SEEN` no enum.
 
 **Por quê:** uma linha de `endpoints` **só existe porque um handshake chegou**. Um valor que
 nenhuma linha jamais pode ter não é um estado: é uma coluna mentindo sobre o que a tabela
@@ -231,14 +236,13 @@ significa — e alguém, um dia, escreveria a consulta `WHERE status = 'NEVER_SE
 procurar fantasmas na tabela onde eles, por construção, não estão. A resposta viria vazia e
 pareceria boa notícia.
 
-O enum descreve o **agente**; fantasma é fato do **patrimônio**. São eixos diferentes, e
-misturá-los é a mesma confusão que o próprio item do TODO existe para desfazer.
+O enum descreve o **agente**; fantasma é fato do **patrimônio**. São eixos diferentes.
 
 ---
 
 ## D99 — O teste do agente entra por **WebSocket de verdade**
 
-**Decidido:** os testes desta fase abrem `app.listen({ port: 0 })` e falam com `/agent-hub`
+**Decidido:** os testes do agente abrem `app.listen({ port: 0 })` e falam com `/agent-hub`
 por um cliente `ws` real, num helper `tests/helpers/agente.ts`. `ws` entra como
 `devDependency` explícita.
 **Descartado:** chamar `handleAgentMessage()` direto; e simular o handshake com
@@ -246,7 +250,7 @@ por um cliente `ws` real, num helper `tests/helpers/agente.ts`. `ws` entra como
 
 **Por quê:** hoje **nenhum teste atravessa o hub** — `invariantes/api-token.test.ts` usa
 `inject` e para no 401 do `preHandler`, porque `inject` não faz upgrade de WebSocket. E é
-justamente a borda do agente que esta fase inteira mexe: `parse-agent-message` →
+justamente a borda do agente que está em jogo: `parse-agent-message` →
 `normalize-payload` → `registerHandshake`. Chamar o use-case direto pularia o parser, os
 sinônimos PascalCase/camelCase e o `readOptionalBigInt` — ou seja, pularia exatamente onde
 o agente velho e o novo se distinguem, que é o risco número um do rollout. É o mesmo
@@ -280,17 +284,17 @@ descrever **o que chegou**.
 
 ---
 
-## D101 — A allowlist de usuários ignorados nasce **nesta** fase
+## D101 — A allowlist de usuários ignorados não fica para depois
 
 **Decidido:** `AppSetting.ignoredUserKeys String[]`, aplicada antes da detecção de posto
 compartilhado e da sugestão de posse.
-**Descartado:** deixar para depois, como o plano anterior previa.
+**Descartado:** deixar para depois.
 
 **Por quê:** o técnico de TI loga em todas as máquinas que atende, e a conta de serviço
-aparece em todas as que rodam o serviço. Sem o filtro, a Etapa F entrega **no primeiro dia**
+aparece em todas as que rodam o serviço. Sem o filtro, o sistema entrega **no primeiro dia**
 uma fila com dezenas de "posto compartilhado" falsos misturados aos verdadeiros — e uma
 fila cujo primeiro contato é ruído não é revisada uma segunda vez. O custo é uma coluna e
-um `NOT IN`; o custo de adiar é a única entrega desta fase que o concorrente não copia
+um `NOT IN`; o custo de adiar é a única entrega que o concorrente não copia
 nascer desacreditada.
 
 Ela nasce **vazia**: preencher com palpites (`admin`, `administrator`) esconderia um
@@ -299,6 +303,8 @@ administrador que é uma pessoa de verdade usando a máquina dela.
 ---
 
 ## D102 — Licença ↔ pacote é vínculo **explícito**, nunca casamento por nome
+
+> **Superada por [G](./licencas.md#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples):** licença vira cadastro simples, sem conformidade de software nem chave cifrada.
 
 **Decidido:** tabela `LicenseSoftware (licenseId, packageId)`, preenchida por uma pessoa
 escolhendo entre os pacotes que a descoberta já normalizou.
@@ -310,7 +316,7 @@ Pro" convive com "Adobe Acrobat (64-bit)" e com o Reader, que é grátis. Casame
 aproximado erra nos dois sentidos, e os dois erros são caros: um falso **"instalado sem
 licença"** manda comprar assento que já existe; um falso **"coberto"** entrega auditoria de
 fornecedor com resposta errada — que é exatamente a pergunta que o módulo de licença existe
-para responder valendo dinheiro (F6).
+para responder valendo dinheiro.
 
 Um vínculo explícito é trabalho humano uma vez por licença, e é o único que alguém pode
 **conferir**. É a mesma régua do D46, um andar acima: evidência que não distingue não é
@@ -319,6 +325,8 @@ evidência.
 ---
 
 ## D103 — Merge não apaga: o endpoint perdedor ganha `mergedIntoId`
+
+> **Superada por [H](#h--a-fusão-de-máquinas-sai):** o `hwid` é estável entre reinstalações; não há o que fundir.
 
 **Decidido:** a fusão move telemetria, presença e instalações, e **mantém a linha** do
 endpoint antigo com `mergedIntoId` preenchido, fora das listagens.
@@ -335,9 +343,11 @@ que a fusão aconteceu, ao lado do `ActivityLog`.
 
 ## D104 — MAC é sinal de **MERGE**, não de vínculo
 
+> **Superada por [H](#h--a-fusão-de-máquinas-sai):** o `hwid` é estável entre reinstalações; não há o que fundir.
+
 **Decidido:** duas cascatas. `endpoint × ativo` pontua `SERIAL` (100), `UUID` (100) e
 `HOSTNAME` (60); `endpoint × endpoint` pontua `SERIAL`, `UUID` e **`MAC` (85)**.
-**Descartado:** a cascata única de quatro sinais que este plano desenhou.
+**Descartado:** a cascata única de quatro sinais.
 
 **Por quê:** escrevendo o helper, o sinal de MAC não tinha contra o que comparar — **o
 `Asset` não tem coluna de endereço MAC**. Ele tem `assetTag`, `serial` e `name`, todos
@@ -381,13 +391,13 @@ agente.
 **Descartado:** `?? null`, que é o que "campo opcional" sugere em quase toda outra situação.
 
 **Por quê:** em Prisma, `undefined` significa **não escreva esta coluna** e `null` significa
-**apague o que está nela**. A diferença é a fase inteira durante o rollout do agente C#:
+**apague o que está nela**. A diferença pesa durante o rollout do agente C#:
 uma máquina que já mandou o serial e reconecta com a versão antiga do agente — rollback,
 reinstalação, imagem desatualizada — **apagaria o próprio serial**, e com ele o vínculo que
 a reconciliação já tinha resolvido. O operador veria a máquina voltar para a fila de
 descobertas sem nada ter acontecido no mundo real.
 
-"Opcional no parser" (que o plano dizia) protege contra o agente velho **quebrar**; isto
+"Opcional no parser" protege contra o agente velho **quebrar**; isto
 protege contra ele **destruir**. São coisas diferentes e as duas eram necessárias.
 
 ---
@@ -398,7 +408,7 @@ protege contra ele **destruir**. São coisas diferentes e as duas eram necessár
 marca a sugestão como `ACCEPTED`, em duas operações separadas.
 **Descartado:** as duas na mesma transação.
 
-**Por quê o descarte é forçado:** as ações chamam use-cases da F4 e da F6 que **já abrem
+**Por quê o descarte é forçado:** as ações chamam use-cases que **já abrem
 transação** — o checkout tem seis passos e uma trava de linha —, e transação aninhada não é
 suportada. Reimplementar o checkout aqui dentro para caber numa transação só seria a
 segunda cópia da posse, que é o que o `accept-suggestion` inteiro existe para evitar.
@@ -416,13 +426,13 @@ aconteceu**: o sistema afirma ter feito algo que não fez, e ninguém tem como d
 **Decidido:** o vencedor fica com o **maior** `lastSeen` dos dois, e as colisões de
 `endpoint_user_daily` e `software_installations` são **consolidadas** (somando amostras,
 esticando as datas), não movidas.
-**Descartado:** "preservar o `createdAt` mais antigo", que era a promessa deste plano.
+**Descartado:** "preservar o `createdAt` mais antigo".
 
-**Por quê:** **`Endpoint` não tem `createdAt`.** A tabela nasceu na F0 como registro de
-presença, e o que ela guarda é `lastSeen`. A promessa do plano descrevia um campo que não
+**Por quê:** **`Endpoint` não tem `createdAt`.** A tabela nasceu como registro de
+presença, e o que ela guarda é `lastSeen`. A promessa descrevia um campo que não
 existe — e escrever a fusão foi o que revelou isso.
 
-**A consolidação, que o plano não previa:** `endpoint_user_daily` é única por (máquina,
+**A consolidação:** `endpoint_user_daily` é única por (máquina,
 conta, dia) e `software_installations` por (máquina, pacote). As duas linhas podem ter
 registros do MESMO dia e do MESMO pacote — é o caso **normal**, aliás, porque a reimagem
 acontece no meio de um dia de trabalho. Mover cegamente violaria o índice e derrubaria a
@@ -438,7 +448,7 @@ fusão inteira na metade. E consolidar não é só evitar o erro: `firstSeenAt` 
 **afirmação** — o subconjunto que identifica o que a sugestão diz —, e não da
 evidência inteira. `proporSugestao` recebe os dois campos separados, e a
 `afirmacao` é obrigatória.
-**Descartado:** hashear o objeto de evidência, que era o que esta fase fazia.
+**Descartado:** hashear o objeto de evidência.
 
 **Por quê:** a evidência de posse carrega o que **sustenta** a afirmação — em
 quantos dias a pessoa apareceu, quantas amostras, em que horas, qual foi o último
@@ -539,7 +549,7 @@ eu não cadastrei", e é exatamente isso que a chave passa a fazer.
 
 **O limite é o que o enum diz que ele governa:** *o que o sistema faz quando
 descobre máquina sem cadastro*. Estender `OFF` para calar também a sugestão de
-ocupação seria desligar a entrega mais valiosa da fase (D48) por uma chave cujo
+ocupação seria desligar a entrega mais valiosa (D48) por uma chave cujo
 nome não anuncia isso — e ela responde outra pergunta, sobre máquina que o
 cadastro já conhece.
 
@@ -565,8 +575,8 @@ depois é o que faz a meia-noite deixar de ser um precipício no meio da conta.
 **Empate devolve `null`, e isso é o D46 aplicado ao turno:** a escala 12x36 produz horas em
 dois turnos com a mesma frequência (`[7, 19]`), e a média dizia "Tarde" — errado para os
 dois lados. Sem rótulo, a ocupação nasce sem turno e quem cadastra escreve o que é, que é
-exatamente por que a coluna é texto livre (D15). O plano já declarava 12x36 fora de escopo;
-o que ele não podia aceitar é uma resposta errada em vez de nenhuma.
+exatamente por que a coluna é texto livre (D15). 12x36 já estava fora de escopo;
+o que não se podia aceitar é uma resposta errada em vez de nenhuma.
 
 ---
 
@@ -585,7 +595,7 @@ o contrário, que é a forma de defeito mais caro de achar: quem lê acredita.
 então escolher "Matriz — São Paulo" criava uma posse de **posto** apontando para uma
 localização que não é posto. A `Assignment` fica válida, `/postos` nunca mostra aquele ativo,
 e o `postoVago` — o sinal de "ninguém responde por este equipamento" — não tem como falar
-dele. A entrega mais valiosa da fase produzindo cadastro que a fase seguinte não enxerga.
+dele. A entrega mais valiosa produzindo cadastro que `/postos` não enxerga.
 
 A própria spec aponta o caminho certo, e a correção é usá-lo em vez de abrir `optionFilter`
 para booleano (que o `z.enum` de valores de texto não expressa, e que a spec já tinha
@@ -595,10 +605,11 @@ recusado com motivo).
 
 ## D115 — A rota da aba chama `/machine`, e devolve o que a aba mostra
 
+> **Superada por [D](#d--a-telemetria-e-o-comando-vão-para-a-ficha-do-ativo-e-a-do-posto):** a telemetria e o comando vão para a ficha do ativo e a do posto.
+
 **Decidido:** `GET /api/assets/:id/machine` devolve especificações, os **dois** carimbos de
 último contato, as mudanças de hardware detectadas e a lista de software.
-**Descartado:** `GET /api/assets/:id/software` devolvendo só a lista de programas, que era o
-que o plano escreveu.
+**Descartado:** `GET /api/assets/:id/software` devolvendo só a lista de programas.
 
 **Por quê:** a aba Máquina prometia "specs, último contato, software e desvincular" e
 entregava dois dos quatro. Pior: o cabeçalho do componente gastava oito linhas explicando
@@ -626,10 +637,10 @@ sobrescrever, e o roteador do agente compara e grava — ao lado de onde já gra
 de usuário.
 **Descartado:** deixar a tabela esperando "quando a comparação de specs entrar".
 
-**Por quê:** a tabela nasceu na Etapa B com FK, índice e nenhuma linha. **Tabela sem escritor
+**Por quê:** a tabela nasceu com FK, índice e nenhuma linha. **Tabela sem escritor
 não é meio caminho andado** — é uma promessa no schema que a tela não cumpre, e é o mesmo
-defeito que o `installedSoftware` tinha antes da Etapa G (três ocorrências no código, todas
-de escrita). O item estava marcado `[x]` no TODO por causa da tabela existir.
+defeito que o `installedSoftware` tinha (três ocorrências no código, todas
+de escrita).
 
 **Tem que ser no handshake**, porque é o único instante em que o ANTES e o DEPOIS existem ao
 mesmo tempo: depois do `upsert`, o valor velho não está em lugar nenhum. A alternativa seria
@@ -657,17 +668,17 @@ patrimônio para contestar.
 **Decidido:** nasce `GET /api/software-packages` (com busca, ordenado por número de
 instalações) e `GET /api/licenses/:id/software`, e a tela da licença ganha o formulário da
 ponte mais o relatório.
-**Descartado:** considerar a Etapa G entregue porque as rotas de escrita e de relatório
+**Descartado:** considerar a ponte entregue porque as rotas de escrita e de relatório
 existiam.
 
-**Por quê:** a Etapa G entregou `PUT /api/licenses/:id/software` e
+**Por quê:** havia `PUT /api/licenses/:id/software` e
 `GET /api/licenses/:id/compliance`, e faltava a pergunta do meio — *quais pacotes existem
 para eu ligar?* Sem ela, nenhuma tela tinha de onde tirar um `packageId`: `LicenseSoftware`
 não recebia linha por caminho de produto nenhum, e `calcularConformidade` respondia
 `semVinculoDeSoftware: true` **para sempre**. Motor completo, resposta vazia.
 
-É o **defeito 1** do [`../referencia/testes.md`](../referencia/testes.md) na forma mais pura: funcionalidade verificada
-pelo caminho da API e inalcançável pelo caminho do formulário. O teste da fase provava a
+É o defeito da etiqueta automática, do [`../referencia/testes.md`](../referencia/testes.md), na forma mais pura: funcionalidade verificada
+pelo caminho da API e inalcançável pelo caminho do formulário. O teste provava a
 ponte pegando o `packageId` direto do Prisma — coisa que nenhuma tela pode fazer —, e foi
 justamente esse atalho que escondeu a lacuna. Os testes novos entram pela rota.
 
@@ -691,7 +702,7 @@ não funciona, e é pior que uma que falta: a que falta é pedida; esta é procu
 encontrada, e continua sem jeito de mexer. É o mesmo raciocínio do D112, uma camada acima —
 lá era o enum que ninguém lia, aqui é o formulário que ninguém desenhou.
 
-**A allowlist é a que dói.** O TODO chama as três guardas da fila de "não opcionais", e ela é
+**A allowlist é a que dói.** As três guardas da fila não são opcionais, e ela é
 a terceira: sem ela, o técnico de TI que loga em 40 máquinas gera 40 sugestões de posto
 compartilhado no primeiro dia — e fila cujo primeiro contato é ruído não é revisada uma
 segunda vez. A guarda estava implementada no servidor e inalcançável.
@@ -880,7 +891,7 @@ recebeu o ativo entre o carregar da tela e o clique.
 ## E — `/descobertas` ganha vínculo manual e "Reconciliar agora"
 
 **Decidido:** `/descobertas` passa a mostrar as máquinas **sem vínculo** e as **vinculadas**
-(`?vinculo=`, que já filtrava desde a F7 sem a tela usar), com vínculo manual inline — escolher
+(`?vinculo=`, que já filtrava sem a tela usar), com vínculo manual inline — escolher
 um ativo sem máquina e, opcional, um posto — e `POST /api/endpoints/:id/link-and-checkout`, que
 encadeia vínculo e entrega em sequência. `POST /api/reconciliation/run` (ADMIN) roda a mesma
 varredura do job sob demanda, sem esperar a janela da hora, com um botão na tela e o placar da

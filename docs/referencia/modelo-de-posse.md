@@ -1,6 +1,6 @@
 # Modelo de Posse e Responsabilidade
 
-> **Este documento é o contrato.** Schema, use-cases, telas e os planos de fase
+> **Este documento é o contrato.** Schema, use-cases e telas
 > derivam dele. Quando algo aqui mudar, muda aqui primeiro.
 >
 > Nasceu da pergunta: *"um computador, mouse etc. está na Mesa 1, e essa mesa é
@@ -230,8 +230,8 @@ do schema ([Q](../decisoes/escopo.md#q--a-varredura-do-código-morto-o-que-não-
 Quem responde pelo ativo é a `Assignment` aberta, e só ela; a Camada 3 deriva o resto.
 
 **Por quê:** uma coluna com a mesma resposta *ao lado* de uma tabela de posse são duas
-fontes de verdade para o mesmo fato, e nada impede divergirem. É exatamente o erro que a
-auditoria da F1 encontrou no tipo do status ("Em Uso" tipado `DEPLOYABLE`), um nível
+fontes de verdade para o mesmo fato, e nada impede divergirem. É exatamente o erro do
+tipo do status ("Em Uso" tipado `DEPLOYABLE`), um nível
 acima. A defesa não é uma checagem de que as duas batem: é não haver a
 segunda. A carga inicial de equipamento que já está com
 alguém se faz pelo **checkout**, que é a operação que existe para isso.

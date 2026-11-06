@@ -4,11 +4,10 @@
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve**. Se a realidade mudou, a
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
-> cada regra governou. O índice das 164 está em [`README.md`](./README.md).
+> cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D14–D17, D27–D32, D82, D87–D88, B/K da segunda rodada (ver
 > [`README.md`](./README.md#a-segunda-rodada-ap)), V, Y, AL e AM.
-> A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
 
@@ -30,6 +29,8 @@ Então estas quatro decisões não são de paridade. São o ponto onde copiar sa
 
 ## D14 — O detentor é singular; o ALVO é que é polimórfico
 
+> **Superada em parte por [K](#k--o-alvo-asset-sai-da-posse):** a posse tem dois alvos: pessoa e posto.
+
 **Decidido.** Um ativo tem **no máximo uma** posse aberta. Não há caminho, nem
 por API nem por SQL do Prisma, para dois detentores simultâneos do mesmo ativo.
 O que varia é **o que** pode ser o detentor: pessoa (`USER`), localização
@@ -45,7 +46,7 @@ CREATE UNIQUE INDEX "assignments_um_aberto_por_ativo"
 Índice único **parcial**, o mesmo padrão já usado em `assets.assetTag`,
 `assets.serial` e `users.email`: a regra vive onde o esquecimento não alcança.
 Duplo checkout não é "validação que o use-case faz" — é **P2002**, e o
-`error-handler` da F0 já o traduz em 409.
+`error-handler` já o traduz em 409.
 
 **Por quê.** A pluralidade existe, mas ela não é do ativo: é **do posto**. A
 Mesa 1 tem duas responsáveis; o mouse tem uma detentora só, que é a Mesa 1. Ao
@@ -92,7 +93,11 @@ linha fechar.
 
 ## D15 — O posto de trabalho é uma `Location`, não uma entidade nova
 
-**Decidido.** "Mesa 1" é uma `Location`, folha da árvore que a F1 já entregou
+> **Superada em parte pelo commit `ff34364`:** `parentId` e `managerId` saem: a lista é plana, e o nome único diz onde o lugar fica.
+>
+> **Superada em parte por [Y](#y--o-posto-sai-de-location-localização-guarda-posto-recebe):** o posto sai de `Location` e vira `Workstation`: a localização só guarda, com a regra do status; o posto recebe entrega, estoque e ocupante.
+
+**Decidido.** "Mesa 1" é uma `Location`, folha da árvore que já existe
 (`Sede → Andar 2 → Sala 3 → Mesa 1`). Quem ocupa o posto vive em
 `LocationOccupant` — uma linha por pessoa, com `shift` e `endedAt`.
 
@@ -131,7 +136,7 @@ computado.
 **O que quebra se for revertido.** Trocar `LocationOccupant` por uma entidade
 `Workstation` paralela quebra o `locationId` do ativo como fonte de "onde"
 (passa a haver duas), quebra a conferência de localização da auditoria física
-(F8, que confere um campo só) e obriga a migrar `Assignment.targetLocationId`.
+(que confere um campo só) e obriga a migrar `Assignment.targetLocationId`.
 Trocar `shift` por enum quebra a primeira escala real que não couber nele — e aí
 o valor vira `OUTRO`, que é texto livre com passos extras.
 
@@ -149,6 +154,10 @@ o valor vira `OUTRO`, que é texto livre com passos extras.
 ---
 
 ## D16 — Responsabilidade é DERIVADA, nunca coluna
+
+> **Superada em parte por [D130](./relatorios-import-etiquetas.md#d130--posto-vago-continua-saindo-do-posto_vago):** a derivação tem UMA implementação por pergunta — nem a view nem o aceite criam a segunda.
+>
+> **Superada em parte por [D139](./acesso.md#d139--o-escalonamento-tem-uma-implementação-e-o-aceite-passa-a-usá-la):** a derivação tem UMA implementação por pergunta — nem a view nem o aceite criam a segunda.
 
 **Decidido.** Não existe, e não vai existir, uma coluna `responsaveis` em
 `Asset`. A pergunta *"quem responde por este ativo?"* é respondida por uma
@@ -192,20 +201,22 @@ explícita — os dois mantêm a origem como verdade. A coluna, não.
 
 **Descartado: coluna preenchida por trigger do Postgres.** Resolve a divergência
 e esconde a regra num lugar que nem o `schema.prisma` nem o `tsc` enxergam. O
-projeto já decidiu o contrário na guarda de ciclo da `Location` (D8/F1): regra de
+projeto já decidiu o contrário na guarda de ciclo da `Location` (D8): regra de
 negócio fica em use-case, onde ela é lida; o banco garante **invariante**
 (unicidade, FK), não cálculo.
 
 **O que quebra se for revertido.** Acrescentar a coluna quebra a única coisa que
-hoje não pode divergir. E quebra em cascata: o relatório de *posto vago* (F2)
+hoje não pode divergir. E quebra em cascata: o relatório de *posto vago*
 passa a ler a coluna e some com o caso que ele existe para achar; o check-in em
-massa do desligamento (F4) precisa saber reescrever a coluna de todo ativo do
-posto que a pessoa ocupava; e a aba Posse (F2) passa a ter duas respostas
+massa do desligamento precisa saber reescrever a coluna de todo ativo do
+posto que a pessoa ocupava; e a aba Posse passa a ter duas respostas
 possíveis para a mesma tela.
 
 ---
 
 ## D17 — `Asset.assignedToId` deixa de ser editável pelo formulário
+
+> **Superada por [Q](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai):** a varredura do código morto: coluna, rota e parâmetro sem leitor saem.
 
 **Decidido.** A coluna continua. O significado muda: ela passa a ser **cache do
 caso `USER`**, e só dele.
@@ -227,24 +238,23 @@ fontes de verdade para o mesmo fato, e nada impede divergirem: eu edito o
 pessoa, e as duas telas do sistema passam a dar respostas diferentes sem nenhum
 erro em lugar nenhum.
 
-**É o mesmo erro que a auditoria da F1 encontrou um nível acima.** Lá, "Em Uso"
+**É o mesmo erro, um nível acima.** Lá, "Em Uso"
 estava tipado `DEPLOYABLE` — um rótulo declarado à mão competindo com um fato
 que o sistema deveria derivar, e a contradição estava em três arquivos ao mesmo
 tempo sem quebrar teste nenhum. A conclusão daquela correção foi textual:
 
 > *"É o que impede o status e a posse divergirem, já que agora as duas coisas são
-> graváveis em separado."* — `../historico/fase-01-catalogo-e-ativo.md`, *Auditoria das F0 e F1*, o que restou,
-> item 3
+> graváveis em separado."*
 
 Este é o mesmo movimento, uma camada abaixo: **se a operação existe, ela é a dona
 do campo.** O que estava certo enquanto não havia checkout (marcar à mão quem
 está com o quê) fica errado no instante em que o checkout existe.
 
 **Descartado: manter o campo editável "para carga inicial".** Era o argumento que
-sustentava o campo, e ele cai pelo mesmo motivo que caiu na auditoria: a carga
+sustentava o campo, e ele cai: a carga
 inicial de equipamento que já está com alguém se faz **pelo checkout**, que é a
 operação que existe para isso — com data retroativa em `checkoutAt` e nota, o que
-o campo do formulário nunca daria. Carga em massa é problema do importador (F10),
+o campo do formulário nunca daria. Carga em massa é problema do importador,
 que chama o mesmo use-case.
 
 **Descartado: apagar a coluna.** Ela paga por si em leitura: a listagem de ativos
@@ -270,8 +280,10 @@ inteiros sem avisar.
 
 ## D27 — Num posto com duas pessoas, quem assina o termo é o gestor da localidade.
 
+> **Superada por [D150](./escopo.md#d150--o-termo-de-aceite-sai):** o termo sai; o `resolverEscalonamento()` (D73) fica.
+
 **Decidido.** Com `targetType = LOCATION` e categoria que exige aceite, sai **um**
-termo, para o `Location.managerId` — coluna que existe desde a F1 e nunca foi lida
+termo, para o `Location.managerId` — coluna que já existe e nunca foi lida
 por nada. Os ocupantes recebem **ciência por e-mail**, não assinatura.
 
 **Descartado: cada ocupante assina o seu.** São N documentos para **um** fato: o
@@ -309,12 +321,12 @@ Categoria **sem** `requireAcceptance` entrega normalmente: não há documento.
 
 **Decidido.** Encerrar a última `LocationOccupant` aberta de um posto **não** fecha
 as `Assignment` daquele posto. Os ativos passam a aparecer no relatório de **posto
-vago** (F2, Etapa E) e `resolverResponsaveis()` devolve lista vazia com
+vago** e `resolverResponsaveis()` devolve lista vazia com
 `postoVago: true` — que é exatamente o que `posse.types.ts` já declara.
 
 **Descartado: fechar as assignments automaticamente.** Seria o sistema fazendo um
 check-in que ninguém fez. O equipamento continua fisicamente na mesa, e a devolução
-tem data, estado, nota e — com a F3 — quem recebeu. É o raciocínio que
+tem data, estado, nota e quem recebeu. É o raciocínio que
 `assert-status-posse.usecase.ts` já aplica ao recusar mandar ativo entregue para
 `DEPLOYABLE`: **bloqueia, nunca limpa sozinho** — limpar sozinho é perda de dado
 silenciosa.
@@ -328,13 +340,15 @@ a Laura "ocupando" há seis meses um posto onde não trabalha.
 Ele assina o termo (D27); não herda a guarda.
 
 **O que a saída do último ocupante faz:** grava `ActivityLog` no local e, com o
-alerta da F8, avisa o gestor de que há N ativos em posto vago. É **sinal**, não
+alerta, avisa o gestor de que há N ativos em posto vago. É **sinal**, não
 erro, e nenhuma invariante é violada: a posse continua aberta, e o que esvaziou
 foi a Camada 2.
 
 ---
 
 ## D29 — O EULA é copiado para o `Acceptance`, não referenciado.
+
+> **Superada por [D150](./escopo.md#d150--o-termo-de-aceite-sai):** o termo sai; o `resolverEscalonamento()` (D73) fica.
 
 **Decidido:** `eulaSnapshot` guarda o texto no instante da emissão.
 **Descartado:** FK para `Category` e ler `eulaText` na hora de exibir.
@@ -346,6 +360,8 @@ depois de assinado não é termo.
 
 ## D30 — O PDF é gerado no aceite e guardado. Nunca regenerado.
 
+> **Superada por [D150](./escopo.md#d150--o-termo-de-aceite-sai):** o termo sai; o `resolverEscalonamento()` (D73) fica.
+
 **Decidido:** o arquivo nasce no `accept-term.usecase.ts`; o caminho vai em `pdfPath`.
 **Descartado:** gerar sob demanda em `GET /api/acceptances/:id/pdf`.
 **Por quê:** regenerar monta o documento com os dados de **hoje** — o ativo pode ter
@@ -354,11 +370,13 @@ prova que se recalcula não prova nada. É o D29 no arquivo.
 
 ---
 
-## D31 — Entrega em massa é por linha, com relatório. (O oposto da F2.)
+## D31 — Entrega em massa é por linha, com relatório. (O oposto do D21.)
+
+> **Superada por [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
 
 **Decidido:** `bulk-checkout` processa cada ativo na sua transação e devolve o que
 entrou e o que foi recusado, com o motivo. **Descartado:** tudo ou nada, como a
-ação em massa da F2 (D21).
+ação em massa (D21).
 **Por quê:** não é inconsistência, é a natureza da operação. Edição em massa é
 **uma** intenção aplicada a N linhas — metade aplicada é estado que ninguém pediu.
 Checkout em massa são **N entregas independentes**: um kit de 8 itens em que 1
@@ -369,9 +387,11 @@ relatório de uma linha.
 
 ## D32 — Desligamento é uma operação com nome próprio, e fecha as duas camadas.
 
+> **Superada por [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
+
 **Decidido:** `POST /api/users/:id/offboard` fecha posses `USER` abertas **e**
 ocupações abertas, na mesma transação, com uma nota comum. **Descartado:**
-`checkin-all` só sobre `Assignment`, como o TODO descrevia.
+`checkin-all` só sobre `Assignment`.
 **Por quê:** devolver os ativos diretos e deixar a pessoa ocupando a Mesa 1 mantém
 um desligado como responsável resolvido por todo equipamento daquele posto — o
 `resolverResponsaveis()` continua devolvendo o nome dele, e o 409 de exclusão
@@ -380,9 +400,11 @@ duas** coisas, não só as posses.
 
 ---
 
-## D82 — `terminate` não existe. A F11 **estende** o `offboard`.
+## D82 — `terminate` não existe. O `offboard` é **estendido**.
 
-**O conflito.** O `offboard` da F4 (D32) e o `terminate` da F11 (Etapa D) são a
+> **Superada por [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
+
+**O conflito.** O `offboard` (D32) e o `terminate` são a
 mesma operação, escrita duas vezes: as duas fecham posses e ocupações.
 
 **O que aconteceria.** Duas rotas fazendo a mesma coisa divergem, e a que divergir
@@ -394,27 +416,30 @@ consulta acusa. É o bug mais perigoso do modelo, e duas rotas é a forma mais f
 de criá-lo.
 
 **Decidido:** **uma** rota e **um** use-case — `POST /api/users/:id/offboard`,
-`server/domain/user/use-cases/offboard-user.usecase.ts` — que **cresce** a cada
-fase em vez de ganhar um irmão.
+`server/domain/user/use-cases/offboard-user.usecase.ts` — que **cresce**
+em vez de ganhar um irmão.
 
-| Fase | O que o `offboard` passa a fazer |
+| Quando | O que o `offboard` passa a fazer |
 |---|---|
-| **F4** *(feito)* | devolve as posses diretas, encerra as ocupações de posto, marca `terminatedAt` + `isActive = false`, registra tudo no `ActivityLog` |
-| **F11** | acrescenta a **guarda do substituto** para quem é gestor, e a **revogação de sessões e `ApiToken`s** (D80) |
+| **Primeiro** *(feito)* | devolve as posses diretas, encerra as ocupações de posto, marca `terminatedAt` + `isActive = false`, registra tudo no `ActivityLog` |
+| **Depois** | acrescenta a **guarda do substituto** para quem é gestor, e a **revogação de sessões e `ApiToken`s** (D80) |
 
-A Etapa D da F11 deixa de ser *"criar o desligamento"* e passa a ser
+O trabalho deixa de ser *"criar o desligamento"* e passa a ser
 **"estender o desligamento"**.
 
-> **Nota de estado.** O `offboard` da F4 **já grava** `terminatedAt` e
-> `isActive` — a F11 não precisa acrescentá-los, só o que está na linha dela
-> acima. O plano da F11 descreve o passo 4 como se a coluna ainda não existisse.
+> **Nota de estado.** O `offboard` **já grava** `terminatedAt` e
+> `isActive`: não é preciso acrescentá-los, só o que está na segunda linha
+> acima.
 
-**Afeta:** [`../historico/fase-11-acesso-avancado.md`](../historico/fase-11-acesso-avancado.md) (Etapa D e o passo 4 do
-D74). A F4 não muda.
+**Afeta:** o D74.
 
 ---
 
 ## D87 — Entrega com alvo `ASSET` não emite termo.
+
+> **Superada por [D150](./escopo.md#d150--o-termo-de-aceite-sai):** o termo sai; o `resolverEscalonamento()` (D73) fica.
+>
+> **Superada por [K](#k--o-alvo-asset-sai-da-posse):** a posse tem dois alvos: pessoa e posto.
 
 **Decidido:** `targetType = ASSET` nunca gera `Acceptance`, mesmo que a categoria exija aceite.
 **Descartado:** emitir o termo para o responsável resolvido do ativo detentor.
@@ -430,6 +455,8 @@ mesmo objeto físico é pedir duas assinaturas para um fato.
 ---
 
 ## D88 — Aceite pendente não bloqueia a entrega.
+
+> **Superada por [D150](./escopo.md#d150--o-termo-de-aceite-sai):** o termo sai; o `resolverEscalonamento()` (D73) fica.
 
 **Decidido:** o checkout conclui, a `Assignment` abre, o status vai para `IN_USE` e o
 `Acceptance` nasce pendente ao lado. Pendência é **linha de relatório**, não estado da posse.
@@ -480,6 +507,10 @@ desaparecer da definição.
 
 ## B — Invariante 19, na forma final: **um ativo por posto de trabalho**
 
+> **Superada em parte por [Y](#y--o-posto-sai-de-location-localização-guarda-posto-recebe):** o posto sai de `Location` e vira `Workstation`: a localização só guarda, com a regra do status; o posto recebe entrega, estoque e ocupante.
+>
+> **Superada em parte por [AL](#al--o-computador-entregue-não-vai-para-a-lixeira):** o computador entregue não vai para a lixeira, como não recebe baixa: faça a devolução antes.
+
 **Decidido:** um posto de trabalho (`Location.isWorkstation`) tem no máximo **um** `Asset` com
 posse aberta apontando para ele. A regra é sobre o ativo, não sobre "ativo com máquina vinculada".
 Descrição completa, com as três portas e o que cada uma impede, em
@@ -529,6 +560,8 @@ saiu porque, na forma final, vincular máquina não decide a vaga; a vaga é dec
 ---
 
 ## V — Excluir não apaga o passado: localização por referência, colaborador pela lixeira
+
+> **Superada em parte por [Y](#y--o-posto-sai-de-location-localização-guarda-posto-recebe):** o posto sai de `Location` e vira `Workstation`: a localização só guarda, com a regra do status; o posto recebe entrega, estoque e ocupante.
 
 > **Superada em parte por [AE](./estoque.md#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira):**
 > o item de estoque não tem mais lixeira. Na contagem da localização, o item desativado conta
@@ -590,6 +623,8 @@ localização, o segundo — sem lixeira, porque ninguém precisa dela de volta.
 ---
 
 ## Y — O posto sai de `Location`: localização guarda, posto recebe
+
+> **Superada em parte por [AL](#al--o-computador-entregue-não-vai-para-a-lixeira):** o computador entregue não vai para a lixeira, como não recebe baixa: faça a devolução antes.
 
 > **Superada em parte por [AN](./licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura):**
 > o posto perde o `isActive` e o Desativar. O vazio se exclui, como a localização; o que tem algo
@@ -719,8 +754,7 @@ automática apagaria em que estado o computador voltou.
 - **As recusas de estado olham hoje:** o colaborador ou o posto desativados recusam a entrega no
   passado mesmo que, naquele dia, estivessem em ordem.
 
-**Supera:** a nota da Leva 1B da F4 ("a data da entrega nunca vem do cliente",
-[`../historico/fase-04-posse.md`](../historico/fase-04-posse.md)).
+**Supera:** a nota "a data da entrega nunca vem do cliente".
 **Realiza:** [D17](#d17--assetassignedtoid-deixa-de-ser-editável-pelo-formulário), que mandava a
 carga inicial pelo checkout "com data retroativa em `checkoutAt`" — o campo nunca existiu.
 **Mantém:** a devolução prevista que não nasce no passado.

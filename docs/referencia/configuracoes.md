@@ -10,11 +10,6 @@
 > [`invariantes.md`](invariantes.md) (a 3); aqui está o funcionamento da
 > tela inteira. A baixa do ativo, que **não** é um status, está em
 > [`baixa.md`](baixa.md).
->
-> **Fechadas em 2026-10-29**, depois da
-> [AO](../decisoes/catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam):
-> a lógica foi conferida contra o Snipe-IT e o GLPI e não muda mais; daqui em diante se corrige
-> defeito.
 
 ---
 
@@ -46,7 +41,7 @@ de Configurações e a página Colaboradores
 
 | | Servidor | Tela |
 |---|---|---|
-| a spec de cada tabela | `server/modules/catalog/specs/*.spec.ts` | `src/pages/configuracoes/specs/index.ts` (as cinco) e `src/pages/colaboradores/specs/index.ts` |
+| a spec de cada tabela | `server/modules/catalog/specs/*.spec.ts` | `src/pages/configuracoes/specs/index.ts` (as seis) e `src/pages/colaboradores/specs/index.ts` |
 | o contrato da spec | `catalog-spec.types.ts` | `src/components/catalogo/catalog-ui.types.ts` |
 | o CRUD | `use-cases/{list,create,update,delete}-catalog.usecase.ts` | `src/components/catalogo/` — `useCatalog.ts`, `Catalog*.tsx` e `CadastroDoCatalogo.tsx`, a tela com as abas |
 | as rotas | `catalog.maestro.ts`, cinco por tabela, em laço | — |
@@ -88,13 +83,11 @@ Nesta ordem — o destrutivo na ponta:
 |---|---|---|
 | ✏️ Editar | todas | abre o formulário preenchido |
 | ⏻ Desativar / Ativar | Colaboradores | grava só `isActive`; pede confirmação ao desativar, não ao ativar |
-| 📄 Ficha do colaborador | Colaboradores | abre a ficha da pessoa — ver [`colaboradores.md`](colaboradores.md) |
 | 🗑️ Excluir | todas | confirma e apaga; com uso, a notificação diz por quê |
 
 Desativar é **botão da linha**, nunca caixa no formulário. A linha desativada
-aparece esmaecida, com a marca "desativado"/"desativada" ao lado do nome, e
-continua na mesma lista — sem aba à parte. As ações ficam no `⋯` da linha (AY),
-ao navegar por Tab e sempre no toque.
+aparece esmaecida, com **Desativado** na coluna Situação, e
+continua na mesma lista — sem aba à parte. As ações ficam no `⋯` da linha (AY).
 
 **É o padrão do cadastro no sistema inteiro** ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)): Postos, Usuários,
 Estoque e Licenças têm os mesmos botões, a mesma marca e as mesmas frases —
@@ -123,7 +116,7 @@ entrada. As diferenças são de propósito:
   restaurado.`
 
 Erros de ação (exclusão recusada, desativação recusada) aparecem numa
-**notificação do sistema**, no canto inferior direito, e somem sozinhos
+**notificação do sistema**, no alto, ao centro, e somem sozinhos
 (`src/components/Notificacoes.tsx`, `src/hooks/useNotificacao.ts`). A recusa do
 colaborador que ainda tem licença diz quais, e a notificação traz um link para cada uma — o
 Devolver mora no detalhe da licença; com link, ela fica até alguém fechar.
@@ -314,7 +307,7 @@ A exceção aceita: dois cadastros **simultâneos** de "Dell" e "dell" passam os
 
 Dois seeds, com regras diferentes:
 
-| | `npm run db:seed` — o principal | `npm run db:seed:demo` — demonstração |
+| | `bun run db:seed` — o principal | `bun run db:seed:demo` — demonstração |
 |---|---|---|
 | onde roda | todo banco, produção incluída, e antes de cada arquivo de teste | só quando alguém pede: ambiente de desenvolvimento e demonstração |
 | o que cria | o que é do SOFTWARE: as 12 categorias, os 4 status (Disponível, Em uso, Pendente, Inutilizável), os 6 motivos de baixa e a configuração — nenhuma conta ([T](../decisoes/acesso.md#t--não-há-conta-semeada)) | o que é da EMPRESA, como exemplo: fabricantes, modelos, localizações, colaboradores, licenças e itens de estoque (abaixo), e a conta de entrar. Roda o principal antes |

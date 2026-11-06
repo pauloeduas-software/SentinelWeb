@@ -9,11 +9,11 @@ datasource db {
 
 // A máquina descoberta pelo Agente Sentinel — o lado RMM.
 //
-// Chamava-se `Asset` até a Fase 1. O nome foi liberado para o ativo do ITAM, que
+// Chamava-se `Asset`. O nome foi liberado para o ativo do ITAM, que
 // é o `Asset` do vocabulário do Snipe-IT. Aqui nenhuma coluna pode voltar a se
 // chamar `status`, `lastSeen` ou `hwid` do outro lado: é essa ausência que faz o
 // compilador barrar uma query do RMM que aponte para a tabela errada
-// (docs/historico/fase-01-catalogo-e-ativo.md, D13).
+// (docs/decisoes/catalogo-e-ativo.md, D13).
 model Endpoint {
   id       String @id @default(uuid()) @db.Uuid
   hwid     String @unique
@@ -21,10 +21,10 @@ model Endpoint {
 
   osVersion String
 
-  // O EIXO DO AGENTE, e só ele. Enum desde a F7: era `String` livre, e o que
+  // O EIXO DO AGENTE, e só ele. Enum: era `String` livre, e o que
   // impedia `status = "Em uso"` de entrar aqui era a boa vontade de quem
   // escrevesse a query. O ciclo de vida do ativo é `StatusLabel`, outra tabela,
-  // outro eixo (docs/historico/fase-07-convergencia-rmm-itam.md, D98).
+  // outro eixo (docs/decisoes/reconciliacao.md, D98).
   //
   // DOIS VALORES, e não os três que chegaram a ser propostos: `NEVER_SEEN` seria um valor
   // que NENHUMA linha desta tabela pode ter, porque a linha nasce de um
@@ -37,7 +37,7 @@ model Endpoint {
   localIp    String?
   macAddress String?
 
-  // ── IDENTIDADE COLETADA (F7, Etapa A) ────────────────────────────────────
+  // ── IDENTIDADE COLETADA ──────────────────────────────────────────────────
   // Tudo nulável: o agente vive fora deste repositório e o rollout leva
   // semanas. Máquina que não manda serial não pontua por serial — não vira erro.
   biosSerial    String?
@@ -145,7 +145,7 @@ model User {
   // (W) —, então não há linha apagada segurando o e-mail de ninguém.
   email String @unique
 
-  // AUTENTICAÇÃO (F3). Obrigatória: todo usuário entra no painel.
+  // AUTENTICAÇÃO. Obrigatória: todo usuário entra no painel.
   passwordHash String
 
   // Bloqueio por tentativa. `lockedUntil` no futuro recusa o login mesmo com a
@@ -307,7 +307,7 @@ model AuditLog {
 }
 
 // ============================================================================
-// CATÁLOGO — as tabelas que o Snipe-IT chama de *Settings* (docs/historico/fase-01-catalogo-e-ativo.md)
+// CATÁLOGO — as tabelas que o Snipe-IT chama de *Settings* (docs/decisoes/catalogo-e-ativo.md)
 //
 // Nenhuma tem `deletedAt`, e isso é decisão, não esquecimento (D8): a extension
 // de soft delete descobre a lixeira pela PRESENÇA da coluna, então a ausência é
@@ -339,7 +339,7 @@ enum CategoryType {
 // O tipo do status responde: *o que dá para fazer com este ativo agora?*
 //
 //   DEPLOYABLE   — está no estoque e pode ser entregue. O único que libera o
-//                  checkout da F4.
+//                  checkout.
 //   IN_USE       — está com alguém ou instalado em algum lugar. Fora do estoque
 //                  porque está CUMPRINDO a função dele.
 //   PENDING      — fora do estoque por algum impedimento, e volta: em reparo,
@@ -541,7 +541,7 @@ model Workstation {
 }
 
 // ============================================================================
-// O ATIVO — o coração do ITAM (docs/historico/fase-01-catalogo-e-ativo.md, Etapa G)
+// O ATIVO — o coração do ITAM (docs/decisoes/catalogo-e-ativo.md)
 // ============================================================================
 
 // Um ativo = UM equipamento físico, com etiqueta e série próprias.
@@ -556,14 +556,14 @@ model Workstation {
 // NENHUMA coluna aqui pode se chamar `status`, `lastSeen` ou `hwid`: são os
 // nomes do `Endpoint` (lado RMM), e é a ausência deles que faz o compilador
 // barrar uma query do RMM que aponte para esta tabela (D13). O último contato
-// do agente, que a F7 passou a registrar, se chama `lastSeenByAgentAt`.
+// do agente se chama `lastSeenByAgentAt`.
 model Asset {
   id String @id @default(uuid()) @db.Uuid
 
   // Unicidade de `assetTag` e `serial` é índice PARCIAL (`WHERE "deletedAt" IS
   // NULL`), criado à mão na migration — NÃO `@unique`. Com unique comum, um
   // ativo na lixeira travaria para sempre o recadastro da mesma etiqueta. É o
-  // `unique_undeleted` do Snipe-IT, o mesmo caso de `User.email` na Fase 0.
+  // `unique_undeleted` do Snipe-IT.
   assetTag String
   serial   String?
 
@@ -600,8 +600,8 @@ model Asset {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  status   StatusLabel @relation(fields: [statusId], references: [id], onDelete: Restrict)
-  model    AssetModel  @relation(fields: [modelId], references: [id], onDelete: Restrict)
+  status        StatusLabel   @relation(fields: [statusId], references: [id], onDelete: Restrict)
+  model         AssetModel    @relation(fields: [modelId], references: [id], onDelete: Restrict)
   // Restrict, como o status: a localização com ativo guardado — lixeira
   // inclusive — é "em uso" e se desativa, não se exclui (`locationSpec`).
   location      Location?     @relation(fields: [locationId], references: [id], onDelete: Restrict)
@@ -616,7 +616,7 @@ model Asset {
   // Os componentes instalados nela — a memória, o SSD (AI).
   stockMovements StockMovement[]
 
-  // ── A CONVERGÊNCIA COM O RMM (F7) ────────────────────────────────────────
+  // ── A CONVERGÊNCIA COM O RMM ─────────────────────────────────────────────
   //
   // `lastSeenByAgentAt`, e NUNCA `lastSeen` (D13). Se esta coluna se chamasse
   // `lastSeen`, o `markStaleEndpointsOffline` apontando para o model errado
@@ -753,7 +753,7 @@ model WorkstationOccupant {
   personId      String  @db.Uuid
 
   /// O nome do posto, por escrito, quando ele foi excluído.
-  workstationName String?
+  workstationName     String?
   /// E o id que ele tinha, sem FK (AW), como o `targetWorkstationFormerId` da posse.
   workstationFormerId String? @db.Uuid
 
@@ -804,7 +804,7 @@ model AppSetting {
   assetTagZerofill Int    @default(5)
   assetTagNext     Int    @default(1)
 
-  // ── OS BOTÕES DA DESCOBERTA (F7) ─────────────────────────────────────────
+  // ── OS BOTÕES DA DESCOBERTA ──────────────────────────────────────────────
   //
   // Moram no singleton que já existe, e não numa tabela de configuração nova:
   // são três valores, não um domínio.
@@ -967,14 +967,14 @@ model LicenseCheckout {
 }
 
 // ============================================================================
-// CONVERGÊNCIA RMM × ITAM — docs/historico/fase-07-convergencia-rmm-itam.md (D45–D51, D95–D103)
+// CONVERGÊNCIA RMM × ITAM — docs/decisoes/reconciliacao.md (D45–D51, D95–D103)
 //
 // O `Endpoint` sabe o que a máquina É; o `Asset` sabe o que a empresa COMPROU e
 // de quem cobra. Tudo aqui existe para ligar os dois SEM FUNDI-LOS (D45) e para
 // transformar o que o agente OBSERVA em cadastro que uma pessoa CONFIRMA.
 //
-// A regra que atravessa a fase inteira: nada aqui escreve posse sozinho. A fila
-// propõe, um humano aceita, e quem grava é o use-case da F4 — com o zod da
+// A regra que atravessa tudo isto: nada aqui escreve posse sozinho. A fila
+// propõe, um humano aceita, e quem grava é o use-case de posse — com o zod da
 // borda, o AuditLog e as invariantes 1, 2 e 4 que já existem.
 // ============================================================================
 

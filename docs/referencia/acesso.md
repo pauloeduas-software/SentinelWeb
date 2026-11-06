@@ -1,16 +1,9 @@
 # Autenticação — como a sessão nasce, vive e morre
 
-> **Este documento é o contrato da sessão.** O `docs/historico/fase-03-autenticacao-e-ator.md` descreve
-> como a autenticação foi construída; este descreve **o que ela é hoje**, por
+> **Este documento é o contrato da sessão.** Ele descreve **o que ela é hoje**, por
 > que cada peça está onde está, e o que deliberadamente ainda não existe.
 >
-> A sessão teve três portas (senha, SSO, token pessoal de API) e um segundo fator por TOTP — a F11
-> construiu os três. O [D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)
-> e o [D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token) cortaram
-> duas das três portas e o segundo fator inteiro: hoje só existe senha + cookie. O que este
-> documento descreve é o que sobrou, não o que a F11 tinha construído — para isso, leia
-> `docs/historico/fase-11-acesso-avancado.md` sabendo que metade do que ele descreve não existe
-> mais.
+> Só existe senha + cookie.
 
 ---
 
@@ -65,9 +58,7 @@ E em **toda** requisição seguinte:
         │   └─ daqui sai a decisão do permission-guard
 ```
 
-**Não há segundo fator, SSO nem token de API.** As três coisas existiram na F11
-e saíram no [D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)/[D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token) —
-ver a seção *O que saiu, e por quê* abaixo. O agente conversa por `AGENT_TOKEN` fixo no `.env`,
+**Não há segundo fator, SSO nem token de API** ([D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem), [D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token)). O agente conversa por `AGENT_TOKEN` fixo no `.env`,
 fora deste fluxo inteiramente (`/agent-hub`, autenticação própria).
 
 ---
@@ -78,14 +69,14 @@ fora deste fluxo inteiramente (`/agent-hub`, autenticação própria).
 
 O `preHandler` global exige sessão em **toda** rota, e a exceção é escrita à mão
 em `ROTAS_PUBLICAS` (`server/app.ts`): os dois health checks, o login e o
-`/agent-hub` (que tem autenticação própria) — quatro linhas, cada uma com o motivo ao lado.
+`/agent-hub` (que tem autenticação própria) — quatro linhas, cada uma com o motivo ao lado, mais as duas do Swagger fora de produção.
 
 **E há uma segunda porta fechada por padrão, do lado da AUTORIZAÇÃO:**
 `infra/http/permission-guard.ts` exige que toda rota declare o **cargo mínimo** que pede — e
 rota registrada sem declaração **derruba o boot**, com o nome dela no erro (D137).
 Os dois guards são o mesmo desenho pelo mesmo motivo, e o segundo tem um degrau a
 mais: o esquecimento não vira API aberta em silêncio, vira servidor que não sobe.
-Ficam fora da conferência as quatro rotas de `ROTAS_PUBLICAS`, os dois health checks
+Ficam fora da conferência as rotas de `ROTAS_PUBLICAS`, os dois health checks
 nomeados um a um em `foraDaConferencia` e — em produção, pelo mesmo flag
 `estaticoPublico` do guard de sessão — os arquivos do painel: o
 `@fastify/static` registra uma rota por arquivo do `dist`, com hash no nome, e o
@@ -109,8 +100,8 @@ corpo criaria o caminho para o front guardá-lo no `localStorage`, e aí o mesmo
 XSS levaria a sessão embora para sempre.
 
 O preço é CSRF, pago em três camadas: `SameSite=Lax` no cookie, a conferência de
-`Origin` nas rotas de credencial — login, logout, e o cadastro e a edição de usuário, que
-carregam senha —, e o CORS com allowlist.
+`Origin` nas rotas de credencial — login, logout, cadastro, edição e senha temporária de
+usuário, e o nome e a senha de Minha conta —, e o CORS com allowlist.
 
 > **Por que `Lax` e não `Strict`:** em desenvolvimento o painel roda na 3000 e a
 > API na 3001 (o Vite faz proxy com `changeOrigin`). Com `Strict` o navegador
@@ -147,9 +138,7 @@ morre de uma vez, sem tabela de sessão e sem lista de revogação.
 > `increment`, não `set`: duas redefinições simultâneas leriam o mesmo valor e
 > gravariam o mesmo número, e uma das duas não invalidaria nada.
 
-> `tv` é **obrigatório**: token sem o campo é anterior a este mecanismo e já venceu (a sessão dura
-> 8 horas), então não há sessão legítima sem ele. Ausente ou diferente, é 401. A tolerância que
-> existiu para o dia do deploy saiu.
+> `tv` é **obrigatório**: ausente ou diferente, é 401.
 
 ### 5. As recusas do login, e as frases que elas usam
 
@@ -215,8 +204,8 @@ Elas resolvem problemas **diferentes** e só funcionam juntas:
 A trava é, reconhecidamente, uma negação de serviço contra um usuário conhecido:
 quem sabe o e-mail de alguém trava a conta em cinco tentativas. Por isso a janela
 é de **minutos** e o desbloqueio é **automático** — bloqueio permanente com
-desbloqueio manual troca um ataque barato por um chamado garantido. Trocar a
-senha pela edição do usuário também destrava, que é o caminho de suporte para quem
+desbloqueio manual troca um ataque barato por um chamado garantido. Gerar uma
+senha temporária também destrava, que é o caminho de suporte para quem
 se trancou fora.
 
 O teto por IP é desligado em `NODE_ENV=test` ([L](../decisoes/plataforma.md#l--o-teto-de-requisições-é-desligado-em-node_envtest-com-guarda-contra-produção)),
@@ -331,7 +320,7 @@ Quem esqueceu a senha não precisa de um administrador que a escolha: ele **gera
 
 - **Para a própria conta é 409:** a sua você troca em Minha conta. Gerar uma temporária para si
   mesmo só o jogaria para fora.
-- **Minha conta** (`/conta`, aberta pelo nome no rodapé da barra) tem o **nome** (`PATCH /api/auth/me`)
+- **Minha conta** (`/conta`, aberta pelo menu do usuário, no cabeçalho) tem o **nome** (`PATCH /api/auth/me`)
   e a **senha** (`PUT /api/auth/password`). O e-mail é o login e o cargo é dado de administrador:
   os dois ficam em Usuários. As duas rotas são `null` no mapa — a sessão basta, e o id vem dela,
   nunca do caminho.
@@ -368,32 +357,6 @@ A linha não se altera nem se apaga (trigger `audit_logs_imutavel`), e a coerên
 
 ---
 
-## O que saiu, e por quê
-
-Até o [D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)
-e o [D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token) o sistema
-tinha: grupos com uma matriz de permissões nomeadas (`access.manage`, `settings.manage`, …),
-diretório LDAP (sincronização que marcava quem saiu, sem desligar ninguém), SSO por OIDC/PKCE,
-segundo fator por TOTP com códigos de recuperação, uma trilha `AuthEvent` própria para tentativas
-de login, e um `ApiToken` com dono polimórfico (agente **ou** pessoa) para integração.
-
-**Por quê:** nenhuma dessas sete peças exercita regra de ITAM — são 2.300 linhas de servidor
-para um sistema que terá três contas, protegendo rotas que um enum de cargo protege igual. O
-D137 (boot derruba sem exigência declarada) continua de pé; o que mudou é o que a exigência
-diz.
-
-**O que ficou sem a troca que as apoiava:**
-- a autorização por cargo (D148) substitui a união de permissões de grupo (D76) — a mesma
-  régua, com menos granularidade e sem tabela `Group`;
-- o agente volta a autenticar por `AGENT_TOKEN` fixo no `.env` (D149) — não há mais token
-  pessoal de API, nem rota para emitir um.
-
-Nada disso é regressão silenciosa: cada peça está documentada na decisão que a cortou, com o
-motivo. Quem precisar reconstruir alguma — segundo fator obrigatório, uma integração de
-terceiro — encontra ali o que já foi tentado e por que saiu.
-
----
-
 ## O que ainda não existe (e é decisão, não esquecimento)
 
 | Falta | Por quê |
@@ -403,7 +366,7 @@ terceiro — encontra ali o que já foi tentado e por que saiu.
 | **Política de senha no `.env`** | O mínimo de 12 caracteres é constante em `auth.schema.ts`. Não há demanda para torná-lo configurável |
 | **Segundo fator, SSO, diretório, token pessoal de API** | Existiram e saíram — [D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)/[D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token). Voltar é decisão nova, não bug |
 | **Trilha de tentativas de login** (`AuthEvent`) | Saiu com o D148, por não ter leitor que sobrevivesse ao corte. `failedLoginCount`/`lockedUntil` continuam protegendo a conta; o que falta é um registro consultável de *quando* |
-| **Reset de senha por e-mail** | Não há mais e-mail no sistema (segundo de-escopo, O). O caminho é alguém com cargo `ADMIN` gerar uma **senha temporária** (AR). Se nenhum administrador lembra a senha, o `npm run acesso:administrador` cria outro no servidor ([AP](../decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it)) |
+| **Reset de senha por e-mail** | Não há mais e-mail no sistema (segundo de-escopo, O). O caminho é alguém com cargo `ADMIN` gerar uma **senha temporária** (AR). Se nenhum administrador lembra a senha, o `bun run acesso:administrador` cria outro no servidor ([AP](../decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it)) |
 
 > **Nota sobre o mínimo de 12 caracteres:** ele vale para **definir** senha
 > (`senhaNova`, da troca da própria senha e do comando que cria administrador), não para o login. No login só existe o teto de 128
@@ -414,55 +377,18 @@ terceiro — encontra ali o que já foi tentado e por que saiu.
 
 ## Onde cada coisa mora
 
-```
-server/modules/auth/
-├── auth.maestro.ts                      rotas + ROTA_DE_CREDENCIAL (bodyLimit, Origin, só cookie)
-├── auth.types.ts                        SessionUser, SessaoEmitida, o payload do JWT
-├── controllers/auth.controller.ts        só HTTP: assina o JWT, grava o cookie, responde o GET /api/auth/me
-├── helpers/
-│   ├── auth-hardening.helper.ts         verificarOrigem
-│   ├── authenticate-request.helper.ts   o que o preHandler global chama; a troca de senha pendente (AR)
-│   ├── emitir-sessao.helper.ts          reemite o cookie de quem trocou a PRÓPRIA senha (AR)
-│   ├── password.helper.ts               argon2id, hash descartável, precisaRehash
-│   └── session-cookie.helper.ts         atributos do cookie, iguais na gravação e na limpeza
-├── schemas/auth.schema.ts               loginSchema ({ email, password }) e senhaNova, a regra que o cadastro importa
-└── use-cases/
-    ├── change-own-password.usecase.ts   a troca da própria senha (AR)
-    ├── current-user.usecase.ts          releitura por requisição (inclui o cargo e a troca pendente)
-    └── login.usecase.ts                 as quatro recusas
-
-server/modules/user/                      quem opera o sistema — onde a senha nasce e se troca (R, U)
-├── user.maestro.ts                      POST/PUT com o verificarOrigem das rotas de credencial
-├── helpers/temporary-password.helper.ts a senha temporária: 16 símbolos do crypto, sem 0/O/1/l/I (AR)
-└── use-cases/
-    ├── create-user.usecase.ts           a senha do cadastro
-    ├── reset-user-password.usecase.ts   a senha temporária de outra conta (AR)
-    └── update-user.usecase.ts           nome, e-mail, cargo e ativo; senha não passa por aqui (AU)
-
-server/modules/access/                    a OUTRA metade da sessão: o que ela alcança
-├── access.types.ts
-├── helpers/cargo.ts                     os cargos, com ordem (D148): TECNICO < SUPERVISOR < ADMIN (AV)
-├── helpers/route-permissions.ts         método + rota → cargo mínimo (o mapa que o boot confere)
-├── helpers/require-permission.ts        temCargo() e exigirPermissao() (403 que nomeia o cargo)
-├── helpers/ultimo-administrador.ts      a invariante 17 — nunca sem administrador
-└── cli/criar-administrador.cli.ts      a primeira conta e a linha de escape do acesso (AP)
-
-server/infra/http/require-auth.ts         a porta fechada por padrão (sessão)
-server/infra/http/permission-guard.ts     a porta fechada por padrão (autorização) + a conferência do boot
-server/app.ts                            ROTAS_PUBLICAS — a allowlist inteira
-tests/invariantes/sessao.test.ts         a sessão por HTTP
-tests/invariantes/credencial.test.ts     o cookie, as recusas do login, a trava que vence, o token sem `tv` e o 500 sem vazar
-tests/invariantes/senha-temporaria.test.ts  a senha temporária e Minha conta (AR)
-tests/invariantes/permissao.test.ts      a cobertura do mapa, o "nunca sem administrador", a senha no cadastro e o comando (AP)
-```
+- `server/modules/auth/`: o login, o cookie e a troca da própria senha.
+- `server/modules/user/`: a conta, onde a senha nasce e se troca (R, U).
+- `server/modules/access/`: o que a sessão alcança. `helpers/route-permissions.ts` é o mapa que o boot
+  confere, e `cli/criar-administrador.cli.ts` é a primeira conta e a linha de escape (AP).
+- `server/infra/http/`: `require-auth.ts` e `permission-guard.ts`, as duas portas fechadas por padrão.
+- `server/app.ts`: `ROTAS_PUBLICAS`, a allowlist inteira.
+- `tests/invariantes/`: `sessao`, `credencial`, `senha-temporaria` e `permissao`.
 
 ---
 
 ## Ver também
 
-- `docs/historico/fase-03-autenticacao-e-ator.md` — como a autenticação foi construída (D22, D23, Etapas A–G)
-- `docs/historico/fase-11-acesso-avancado.md` — a autorização por grupo, o segundo fator, o token
-  pessoal e o SSO como foram construídos (D72–D78, D135–D142) — **metade não existe mais**; ver
-  [D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem)/[D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token)/[P](../decisoes/acesso.md#p--usuario-não-entra-no-painel)
+- `docs/decisoes/acesso.md` — por que a sessão, a permissão e a identidade são assim
 - `docs/referencia/invariantes.md` — as regras que o banco garante
 - `docs/referencia/testes.md` — por que a suíte só fala HTTP

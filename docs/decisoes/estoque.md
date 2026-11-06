@@ -7,11 +7,10 @@
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve**. Se a realidade mudou, a
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
-> cada regra governou. O índice das 164 está em [`README.md`](./README.md).
+> cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D33–D38, J da segunda rodada (ver
 > [`README.md`](./README.md#a-segunda-rodada-ap)), AE, AG, AI e AJ.
-> A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
 
@@ -43,13 +42,13 @@ estoque, candidato a voltar, listado em `/api/stock/alerts`.
 de entrega, num helper só. **Descartado:** uma coluna `qtyAvailable` mantida por decremento.
 
 **Por quê — qual corrida a coluna cria.** A óbvia é a do *ler-e-depois-escrever*, a mesma
-que o `nextAssetTag()` da F1 documenta: duas requisições leem `qtyAvailable = 1`, as duas
+que o `nextAssetTag()` documenta: duas requisições leem `qtyAvailable = 1`, as duas
 calculam `0`, as duas gravam — duas unidades entregues de um estoque de uma. Em
 `READ COMMITTED` nada impede, e um `UPDATE … SET x = x − 1` resolve só **esse** caso.
 
 A segunda é pior porque é silenciosa e permanente: **a coluna pode divergir das linhas.**
 Basta um `INSERT` de checkout que não passe pelo decremento — falha no meio de uma
-operação sem transação, correção à mão no `psql`, importador de CSV da F10. A partir daí a
+operação sem transação, correção à mão no `psql`, importador de CSV. A partir daí a
 coluna mente **para sempre** e nada detecta, porque a coluna *é* a resposta: não existe
 ninguém para discordar dela. Com `COUNT` a resposta não pode divergir das linhas — ela
 **são** as linhas. É o D16 uma camada abaixo.
@@ -93,6 +92,10 @@ clientes — abstração que passa a custar mais do que economiza.
 
 ## D36 — Os três têm lixeira; aqui o D8 não se aplica
 
+> **Superada por [D153](./escopo.md#d153--estoque-vira-item-e-movimento):** sete modelos viram `StockItem` + `StockMovement`; o D34 torna isso barato.
+>
+> **Superada por [J](#j--o-estoque-volta-como-stockitem--stockmovement):** `StockItem` + `StockMovement`, entrega por unidade, alvo em pessoa ou posto.
+
 **Decidido:** `deletedAt` nos três, `name` único por índice parcial, `DELETE` respondendo
 **409 enquanto houver entrega aberta**.
 
@@ -100,11 +103,15 @@ clientes — abstração que passa a custar mais do que economiza.
 apagado aparecendo como valor **atual** de outra linha (a categoria na lixeira ainda sendo
 a categoria do ativo). Aqui a leitura aninhada é de **histórico** — o nome do acessório na
 linha de consumo de março — e mostrar o item apagado ali é **certo**. E o delete real
-levaria junto o histórico de consumo, a única coisa da fase que não se reconstrói.
+levaria junto o histórico de consumo, a única coisa que não se reconstrói.
 
 ---
 
 ## D37 — `Consumable` não tem devolução; não é validação, é ausência
+
+> **Superada por [D153](./escopo.md#d153--estoque-vira-item-e-movimento):** sete modelos viram `StockItem` + `StockMovement`; o D34 torna isso barato.
+>
+> **Superada por [J](#j--o-estoque-volta-como-stockitem--stockmovement):** `StockItem` + `StockMovement`, entrega por unidade, alvo em pessoa ou posto.
 
 **Decidido:** `ConsumableCheckout` sem coluna de fechamento e sem rota de checkin. Um
 `POST .../checkin` responde **404 do roteador**.
@@ -119,6 +126,10 @@ copiado no ato — o consumo precisa continuar legível depois que a pessoa sai.
 
 ## D38 — Devolução parcial de componente **divide a linha**
 
+> **Superada por [D153](./escopo.md#d153--estoque-vira-item-e-movimento):** sete modelos viram `StockItem` + `StockMovement`; o D34 torna isso barato.
+>
+> **Superada por [J](#j--o-estoque-volta-como-stockitem--stockmovement):** `StockItem` + `StockMovement`, entrega por unidade, alvo em pessoa ou posto.
+
 **Decidido:** devolver 2 de 4 pentes fecha a linha de 4 (`detachedAt = now()`) e abre uma
 com `assignedQty = 2`. **Descartado:** decrementar `assignedQty` na linha aberta.
 
@@ -132,6 +143,8 @@ trabalho de apresentação, não de schema.
 ---
 
 ## J — O estoque volta como `StockItem` + `StockMovement`
+
+> **Superada em parte por [AJ](#aj--o-consumível-é-uma-categoria-e-o-total-é-o-que-existe):** o consumível é uma categoria cuja entrega não volta; o total é o que existe e chega a 0.
 
 > **Superada em parte por [AE](#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira):**
 > `ENTRADA` e `BAIXA` saem — o total vira campo da edição, como a quantidade comprada da licença —,
@@ -189,6 +202,8 @@ que mostrá-la. A cor do saldo na tela usa `<= 0`, não `=== 0`, por este motivo
 ---
 
 ## AE — O estoque segue a lógica da licença: total na edição, entrega com dia, desativar em vez de lixeira
+
+> **Superada em parte por [AG](#ag--a-regra-do-posto-vale-para-o-estoque-e-a-licença-só-o-que-está-em-uso-impede-a-exclusão):** o item e a licença excluem pela regra do posto: só o que está em uso recusa, e o passado fica com o nome por escrito; as chaves vão junto com a licença.
 
 > **Superada em parte por [AN](./licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura):**
 > o item com unidade em uso não se desativa — 409 que manda devolver, ou retirar no componente.
