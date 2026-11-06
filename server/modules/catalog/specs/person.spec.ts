@@ -9,10 +9,11 @@ import type { CatalogDelegate, CatalogSpec } from './catalog-spec.types';
 // não vira o outro: quem opera o sistema e também tem um notebook é cadastrado
 // aqui à parte.
 //
-// É catálogo, e não domínio próprio, porque o cadastro é o mesmo das outras
-// cinco abas: nome, desativar, excluir. O que ele tem a mais é a LIXEIRA — o
-// único do catálogo com histórico de posse próprio, que recadastrar partiria em
-// dois — e a ficha com o que está com a pessoa, que mora no domínio `person`.
+// É catálogo, e não domínio próprio, porque o cadastro é o mesmo das seis abas
+// de Configurações: nome, busca, excluir. O que ele tem a mais é o Desativar, a
+// LIXEIRA — o único do catálogo com histórico de posse próprio, que recadastrar
+// partiria em dois — e a ficha com o que está com a pessoa, que mora no domínio
+// `person`.
 export const personSpec: CatalogSpec = {
   slug: 'people',
   entityType: 'Person',

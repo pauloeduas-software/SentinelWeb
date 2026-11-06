@@ -3,7 +3,7 @@ import { apiClient } from '../api/apiClient';
 import type { CatalogOption, CatalogRow } from '../types/catalog.types';
 import type { ListEnvelope, ListParams } from '../types/list.types';
 
-// Um conjunto de hooks para as CINCO tabelas de catálogo — o espelho, no
+// Um conjunto de hooks para as SETE tabelas de catálogo — o espelho, no
 // frontend, do CRUD genérico do servidor. O `slug` é o que muda.
 //
 // A chave inclui o slug e os parâmetros: sem isso a aba de Fabricantes seria
@@ -35,7 +35,7 @@ export function useCatalogQuery(slug: string, params: CatalogListParams) {
       (await apiClient.get<ListEnvelope<CatalogRow>>(`/${slug}`, { params })).data,
     // Sem isto a tabela pisca em branco a cada troca de página ou tecla da busca.
     //
-    // MAS SÓ DENTRO DA MESMA TABELA. As seis tabelas do catálogo dividem este hook, e o
+    // MAS SÓ DENTRO DA MESMA TABELA. As sete tabelas do catálogo dividem este hook, e o
     // `keepPreviousData` puro reaproveitava a resposta de QUALQUER chave
     // anterior: trocar de Categorias para Status mostrava as categorias sob o
     // cabeçalho de Status até a resposta chegar — e elas respondiam a clique,

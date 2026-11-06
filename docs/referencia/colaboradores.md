@@ -13,9 +13,9 @@
 ## A tela
 
 Página própria no menu, sozinha na seção **Pessoas**, abaixo de Convergência
-([AH](../decisoes/acesso.md#ah--o-menu-por-assunto-o-colaborador-ganha-página-própria-e-ativos-vira-computadores)). Até ali era a sexta aba de Configurações; saiu de lá porque é
+([AH](../decisoes/acesso.md#ah--o-menu-por-assunto-o-colaborador-ganha-página-própria-e-ativos-vira-computadores)). Até ali era uma aba de Configurações; saiu de lá porque é
 operação de toda semana — contratação, entrega, desligamento —, tem lixeira e
-ficha, e as outras cinco abas são referência que se monta uma vez.
+ficha, e as outras abas são referência que se monta uma vez.
 
 O cadastro **é o mesmo componente** das abas de Configurações
 (`src/components/catalogo/CadastroDoCatalogo.tsx`), com a spec do
