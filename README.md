@@ -31,7 +31,7 @@ src/
 ```
 
 A regra das camadas é **verificada pelo lint** (`no-restricted-imports`
-por camada): import que sobe a seta reprova o `npm run lint`, com a mensagem do que
+por camada): import que sobe a seta reprova o `bun run lint`, com a mensagem do que
 fazer no lugar.
 
 **A convenção completa — onde cada coisa vai, como adicionar um domínio novo e
@@ -57,7 +57,7 @@ Na ordem do menu, que se agrupa por assunto ([AH](./docs/decisoes/acesso.md#ah--
 | Seção do menu | Rota | O que é | Cargo mínimo |
 | --- | --- | --- | --- |
 | **Ativos** | `/computadores` | Listagem de ativos (computadores) — filtros, busca por etiqueta/série, ações de ciclo de vida | TECNICO |
-|  | `/computadores/:id` | Ficha do ativo — abas **Detalhes**, **Posse**, **Histórico**, **Licenças**, **Máquina** (telemetria e comando, quando há agente) | TECNICO |
+|  | `/computadores/:id` | Ficha do ativo — abas **Detalhes**, **Posse**, **Licenças**, **Componentes**, **Máquina** (telemetria e comando, quando há agente) e **Histórico** | TECNICO |
 |  | `/postos` | Postos de trabalho (mesas), cada um numa localização — quem está, quantos ativos, se está vago; criar, editar e excluir posto | TECNICO |
 |  | `/postos/:id` | Ficha do posto — ocupantes (adicionar, corrigir o turno, encerrar), o computador da mesa (com telemetria), ativos entregues e estoque da mesa | TECNICO |
 | **Recursos** | `/estoque` | O que tem quantidade em vez de patrimônio — o total, quantos em uso e com quem; entrega e devolução a colaborador ou posto, com o dia | TECNICO |
@@ -127,13 +127,13 @@ bun run dev
 | `lint` | ESLint em todo `.ts`/`.tsx` do repositório (menos `dist/`), com as regras de camada e a de cor fixa |
 | `typecheck` | `tsc -b` dos 2 projetos TS, sem build |
 | `test` / `test:watch` | Vitest contra o banco `sentineldb_test` (descartável). Ver [`docs/referencia/testes.md`](./docs/referencia/testes.md) |
-| `test:e2e` | Playwright: o build de produção na porta 4173, o banco `sentineldb_e2e_test` (descartável) e o Chromium clicando na tela. `npx playwright install chromium` uma vez por máquina |
+| `test:e2e` | Playwright: o build de produção na porta 4173, o banco `sentineldb_e2e_test` (descartável) e o Chromium clicando na tela. `bunx playwright install chromium` uma vez por máquina |
 | `e2e:servidor` | O servidor que o `test:e2e` sobe e derruba, com o ambiente que o `playwright.config.ts` monta do `.env.test`: prepara o banco, faz o build e serve o `dist` na porta 4173 |
 | `check` | `lint`, `typecheck`, `test` e `test:e2e`, nessa ordem. É o que passa antes de dar uma mudança por pronta, e o que a CI (`.github/workflows/ci.yml`) roda a cada push na `main` |
 | `db:migrate` / `db:generate` / `db:studio` | Prisma |
 | `db:seed` | O seed principal: categorias, status e configuração. Não cria conta ([T](./docs/decisoes/acesso.md#t--não-há-conta-semeada)): o primeiro administrador nasce pelo `acesso:administrador` ([AP](./docs/decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it)). Roda em todo banco |
 | `db:seed:demo` | O principal mais dados de exemplo — a conta `admin@sentinel.com` (senha `admin`), fabricantes, modelos, localizações, cinco colaboradores, licenças e itens de estoque. Só para desenvolvimento e demonstração. Ver [`docs/referencia/configuracoes.md`](./docs/referencia/configuracoes.md#o-que-vem-semeado) |
-| `acesso:administrador` | Cria um administrador: `-- --nome "Nome Completo" --email "e-mail" --senha "senha"` (o `--` é do npm: sem ele, o npm engole os nomes dos parâmetros). É a primeira conta da instalação nova e a saída de quem perdeu a senha — o novo entra e gera a senha temporária da conta antiga em Usuários. Roda no servidor, fora da API — ver [AP](./docs/decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it) e a invariante 17 em [`docs/referencia/invariantes.md`](./docs/referencia/invariantes.md) |
+| `acesso:administrador` | Cria um administrador: `--nome "Nome Completo" --email "e-mail" --senha "senha"`. É a primeira conta da instalação nova e a saída de quem perdeu a senha — o novo entra e gera a senha temporária da conta antiga em Usuários. Roda no servidor, fora da API — ver [AP](./docs/decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it) e a invariante 17 em [`docs/referencia/invariantes.md`](./docs/referencia/invariantes.md) |
 | `agente:falso` | Um agente de mentira no `/agent-hub` (`scripts/agente-falso.ts`): handshake e telemetria a cada 3 s, para ver a aba Máquina e a ficha do posto sem o agente real. Lê `PORT` e `AGENT_TOKEN` do `.env`; `-- <hwid> <hostname>` para uma segunda máquina |
 
 ### Migrations

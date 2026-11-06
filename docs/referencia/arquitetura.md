@@ -28,7 +28,7 @@ src:      pages  ──▶  queries  ──▶  api
 Um `import` que sobe essa seta é o sinal de que algo está na pasta errada.
 
 **Isto é verificado pelo lint, não por code review.** O `eslint.config.js` tem um
-bloco de `no-restricted-imports` por camada: o import errado reprova o `npm run
+bloco de `no-restricted-imports` por camada: o import errado reprova o `bun run
 lint` com a mensagem do que fazer no lugar.
 
 | Camada | Não pode importar |
@@ -42,7 +42,7 @@ lint` com a mensagem do que fazer no lugar.
 Até 2026-10-30 as pastas se chamavam `server/core`, `server/domain`, `src/core/api`,
 `src/domain/<nome>/` (as queries e os stores), `src/domain/shared/` (os tipos) e
 `src/pages/{components,helpers,hooks}` (o compartilhado). A decisão AQ as renomeou; os textos de
-`docs/decisoes/` e `docs/historico/` não se reescrevem e citam os nomes antigos.
+`docs/decisoes/` não se reescrevem e citam os nomes antigos.
 
 O mesmo `eslint.config.js` recusa **cor fixa** em `src/`: a paleta numerada do Tailwind
 (`bg-red-500`), hex e `rgb()`/`hsl()` em string ou template. Toda cor vem dos tokens de
@@ -77,7 +77,7 @@ server/
         ├── <nome>.maestro.ts    # registra as rotas do domínio. Só rota.
         ├── controllers/         # só HTTP: lê a requisição, chama use-case, responde
         ├── use-cases/           # 1 arquivo = 1 operação de negócio
-        ├── helpers/             # funções puras, sem I/O
+        ├── helpers/             # funções de apoio do módulo
         └── jobs/                # tarefas periódicas, com start/stop explícitos
 ```
 
@@ -102,11 +102,8 @@ server/
 | `auth` | **Sessão e credencial**: login, cookie e a geração da sessão (`tokenVersion`) | — |
 | `workstation` | **O posto de trabalho**: o cadastro (o CRUD do catálogo, com a `workstationSpec` — fora das sete tabelas) e a leitura de posto + ocupantes que a `/postos` mostra, onde `ehPostoVago()` mora ([Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)) | `Workstation` |
 | `shared` | Tipos e helpers usados por mais de um domínio (`diff.helper`, `fields.schema`, `history.schema`) | — |
+| `api-docs` | O Swagger em `/api/docs`, só fora de produção, e o contrato de cada rota ([AS](../decisoes/plataforma.md#as--o-swagger-a-api-inteira-navegável-só-fora-de-produção)) | — |
 
-> **A decisão D1 foi executada na Fase 1.** `asset/` (RMM) virou `endpoint/`, e o
-> nome `asset/` passou ao ativo do ITAM. O `inventory/` deixou de existir junto
-> com a tabela `inventory_items`.
->
 > ⚠️ **`Asset` nunca pode ter coluna `status`, `lastSeen` ou `hwid`** — são as do
 > `Endpoint`. É essa ausência que faz o compilador barrar uma query do RMM
 > apontando para a tabela errada ([D13](../decisoes/catalogo-e-ativo.md#d13--a-segurança-do-rename-depende-de-o-asset-novo-não-ter-status-lastseen-nem-hwid)).
@@ -118,18 +115,13 @@ auditoria, 409 quando a linha está em uso. Sete fatias verticais completas
 seriam ~77 arquivos quase idênticos (onze por fatia, a conta do D9) — o que esta
 mesma página chama de cerimônia, não arquitetura.
 
-> **O número está escrito aqui de propósito, e precisa ser corrigido junto.** É
-> o mesmo tipo de referência envelhecida que o `invariantes.md` pede para
-> corrigir ao acrescentar uma invariante: quem lê um número aqui e conta outro no
-> `specs/index.ts` passa a desconfiar do resto da página.
-
 Então elas compartilham um CRUD genérico, e o que varia mora em `specs/`: um
 arquivo por tabela declarando o slug da rota, o schema de entrada, a allowlist de
 resposta, as colunas de busca e a regra de "em uso". **Acrescentar uma tabela
 de catálogo é escrever a spec e incluí-la em `specs/index.ts`** — nenhuma rota é
 escrita à mão.
 
-O preço, declarado: tipar a união dos cinco delegates do Prisma não existe em TS,
+O preço, declarado: tipar a união dos delegates do Prisma não existe em TS,
 então cada spec faz UM cast, ao lado do nome do model. O cast não atravessa a
 regra: a entrada continua validada pelo `strictObject`, a saída continua limitada
 pelo `select`, e o `countUsages` de cada spec continua totalmente tipado.
@@ -183,7 +175,7 @@ src/
 │   ├── apiClient.ts             # axios + tradução do erro do servidor
 │   └── queryClient.ts           # cache do TanStack Query
 ├── queries/<nome>.queries.ts    # TanStack Query: busca e mutação de cada recurso
-├── stores/<nome>.store.ts       # zustand: o estado que só existe no navegador (auth, asset)
+├── stores/<nome>.store.ts       # zustand: o estado que só existe no navegador (hoje, só auth)
 ├── types/*.types.ts             # tipos do contrato com a API
 ├── components/                  # UI compartilhada entre páginas (AppHeader, AppSidebar; catalogo/, o cadastro de Configurações e Colaboradores)
 ├── hooks/                       # hooks compartilhados entre páginas (useBarraLateral, useMaquinaAoVivo, useNotificacao)
@@ -216,8 +208,8 @@ mesma lista.
 
 Quase tudo está no primeiro balde: ativos, licenças, postos e usuários são todos
 dado de servidor. O zustand guarda o client state de verdade — a sessão em
-memória (`auth.store.ts`) e a preferência de colunas da listagem de ativos
-(`asset.store.ts`). Estado de uma tela só (modal aberto, item em edição, seleção)
+memória (`auth.store.ts`) e o estado da moldura (`hooks/useBarraLateral`, `hooks/useVagaDoTitulo`).
+Estado de uma tela só (modal aberto, item em edição, seleção)
 continua em `useState` dentro do hook da página: não é global, não precisa de store.
 
 O que a query assumiu e não se escreve mais à mão: intervalo de polling e limpeza
@@ -227,24 +219,26 @@ de um `fetch` manual no fim de cada mutação).
 
 Regras práticas:
 
-- **Componente não faz `fetch`.** Recebe `onSubmit`, `onCommand`, `onDelete`. Duas
-  exceções, e as duas são widgets AUTOCONTIDOS usados por telas sem relação entre
-  si, onde passar tudo por prop duplicaria a mesma ligação em cada chamador:
-  `components/ReferenceSelect` (busca a lista de opções da rota que recebe) e
-  `components/TelemetriaDaMaquina` (consulta e revalida uma máquina, e manda
-  comando nela). Exceção se declara no cabeçalho do componente; a terceira que
-  aparecer sem motivo escrito é a regra virando sugestão.
+- **Componente não faz `fetch`.** A escrita sobe por prop (`onSubmit`, `onComando`,
+  `onDelete`) até o hook da página. Ler pode, pelas queries de `src/queries/`: os
+  seletores (`ReferenceSelect`, `CategoriaFiltro`), os formulários e as janelas de
+  detalhe buscam as próprias opções e o registro que abrem. Uma exceção escreve:
+  `components/TelemetriaDaMaquina` (consulta e revalida uma máquina, e manda comando
+  nela), um widget AUTOCONTIDO usado por telas sem relação entre si, onde passar
+  tudo por prop duplicaria a mesma ligação em cada chamador. Exceção se declara no
+  cabeçalho do componente; a que aparecer sem motivo escrito é a regra virando
+  sugestão.
 - **Página não importa `@tanstack/react-query` nem `axios`.** O lint recusa. Ela
   usa o hook da própria pasta, que usa a query do domínio.
-- **Busca engole erro, mutação propaga.** A lista recarrega a cada 5s e uma
-  falha passageira não pode limpar a tela; já um clique do usuário precisa
-  mostrar o que deu errado. O formulário exibe `error.message`, que o
-  `apiClient` já traduziu da resposta do servidor.
+- **O erro aparece, nunca vira vazio.** A consulta que falha mostra o aviso ou
+  `—` (`EstadoDaLista`, BB), e a mutação mostra a recusa: o formulário exibe
+  `error.message`, que o `apiClient` já traduziu da resposta do servidor. Só as
+  consultas de endpoint recarregam sozinhas, a cada 5s.
 - **Cálculo sai do JSX.** Parse de coluna Json, conversão de bytes e cor de
   status moram em `helpers/`.
 - **O `apiClient` traduz o erro num lugar só.** Toda tela mostra
-  `error.message`, que vem do `error` do corpo — o único campo que uma resposta
-  de erro tem.
+  `error.message`, que vem do `error` do corpo. A resposta de erro só tem esse campo
+  e, quando a recusa cita o que a tela pode abrir, `refs`.
 
 ---
 
@@ -279,37 +273,18 @@ Estão em `server/server.ts` e existem para o sistema falhar cedo e limpo.
 
 ## O que ainda não existe
 
-**Nada em aberto.** O que o ITAM tinha e deixou de ter saiu por decisão de
-escopo, não por falta de tempo: o corte está registrado em
-[`../decisoes/escopo.md`](../decisoes/escopo.md), com o critério — *fica o que a
-ponte ITAM × RMM usa* — e a lista do que foi embora.
-
-O que **não** vai existir por decisão — multi-empresa (**D4**), fila de
-requisição, revogar uma sessão específica — está em
-[`../decisoes/`](../decisoes/), cada um com o motivo escrito.
-
-> **Esta seção já listou onze coisas como pendentes, e as onze existem.** Ela carregava **oito**
-> blocos de autocorreção — *"JÁ EXISTE, esta seção estava desatualizada"* — que é exatamente o que
-> acontece quando um documento de referência tenta também ser o registro do que mudou. O que cada
-> fase construiu está em [`../historico/`](../historico/); aqui fica só o que é verdade agora.
+Multi-empresa (**D4**), fila de requisição e revogar uma sessão específica não existem por decisão. O que
+saiu do sistema, e o critério, está em [`../decisoes/escopo.md`](../decisoes/escopo.md).
 
 ---
 
 ## "Estar no parque" é UMA definição, e ela mora no domínio dono das colunas
 
-`retiredAt: null` — o recorte que diz se um ativo ainda é do parque. (Até a
-remoção do tipo de status `ARCHIVED`, era também `status.type != ARCHIVED`.)
+`retiredAt: null` — o recorte que diz se um ativo ainda é do parque. Domínio que **pergunta** importa;
+domínio que **responde** é o dono do dado — é o D16 aplicado a uma constante.
 
-A revisão da F8 encontrou **três** versões dela, e a mais frouxa tinha
-consequência: um ativo fora do parque era conferido todo dia pelo job e não
-aparecia onde o escopo completo era lido. Domínio que **pergunta** importa; domínio que
-**responde** é o dono do dado — é o D16 aplicado a uma constante.
-
-> O corte do ITAM levou os três leitores que importavam o helper, e com eles o
-> helper. A definição continua valendo e hoje está onde se consulta o parque: no
-> recorte de `list-assets` e no da reconciliação. **Se um terceiro leitor voltar,
-> a constante volta com ele** — três cópias foi o defeito, e ele nasce de cada
-> consulta reescrever o recorte à mão.
+O recorte ainda se repete à mão: no `asset` (`asset-filters.helper.ts`, `asset-stats`, `list-asset-options`) e na
+reconciliação (`list-idle-assets`, `coverage-stats`). **Deveria ser constante:** cada consulta reescrevendo o recorte à mão é o que produz versões diferentes.
 
 ---
 ## Posse: a regra que atravessa três domínios
@@ -349,7 +324,7 @@ O que isso proíbe, e o lint não pega: **guardar quem responde numa coluna**. O
 quem responde é a `Assignment` aberta, e um segundo lugar com a mesma resposta
 recria a divergência que o modelo existe para impedir. As invariantes estão em
 [`invariantes.md`](invariantes.md) e são provadas por `tests/invariantes/`
-(`npm test`) e por `prisma/verificacoes/posse-invariantes.sql`.
+(`bun run test`) e por `prisma/verificacoes/posse-invariantes.sql`.
 
 ---
 
@@ -359,7 +334,7 @@ Leia [`acesso.md`](acesso.md) antes de mexer em rota, cookie ou
 qualquer coisa com "auth" no nome. Em três linhas:
 
 1. **Toda rota exige sessão.** A exceção é a allowlist `ROTAS_PUBLICAS` em
-   `server/app.ts` — quatro linhas, cada uma com o motivo escrito ao lado.
+   `server/app.ts`, cada linha com o motivo escrito ao lado.
    Rota nova nasce protegida, e uma rota registrada sem exigência declarada
    **derruba o boot** (D137).
 2. **O JWT nunca é visto pelo JavaScript.** Sai só no cookie `httpOnly`; o corpo
@@ -389,7 +364,8 @@ linha 460 de um documento chamado "Arquitetura". Elas viraram guias:
 ## O visual
 
 `src/components/ui/` são os primitivos (Radix por baixo): botão, campo, seletor, tabela, abas, janela. Em cima
-deles, as peças que as telas repetem: `PaginaCabecalho`, `ListToolbar`, `AcoesDaLinha`, `FormularioLateral`,
+deles, as peças que as telas repetem: `PaginaCabecalho`, `ListToolbar`, `FiltroDaLista`, `VistasDaLista`,
+`ListaVazia`, `AcoesDaLinha`, `FormularioLateral`, `CartaoDaFicha`, `TabelaDaFicha`, `LinhaDoTempo`,
 `JanelaDeDetalhe` e `DialogoDeConfirmacao`. A cor mora em `src/index.css`, com um valor por tema; a classe `dark`
 no `<html>` decide qual vale, e o `index.html` a aplica antes do primeiro quadro para o F5 não piscar
 (`hooks/useTema`). O porquê está na [AY](../decisoes/plataforma.md#ay--o-visual-vem-da-intranet-em-tema-claro-e-escuro-e-a-linha-inteira-abre-o-registro).

@@ -6,7 +6,7 @@ aplicação, que **detecta** a linha que a viola. Roda numa transação que term
 
 Existe porque estas regras vivem no BANCO: um teste de aplicação passaria por
 cima delas sem tocá-las. (A frase original dizia "porque o projeto ainda não tem
-suíte de testes" — tem, desde a F5: `npm test`, contra Postgres real, ver
+suíte de testes" — tem: `bun run test`, contra Postgres real, ver
 `docs/referencia/testes.md`. O que a suíte **não** alcança são os índices parciais e os
 CHECKs, porque ela entra pela API, que nunca tenta violá-los.)
 

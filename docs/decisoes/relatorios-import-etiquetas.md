@@ -4,23 +4,26 @@
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve**. Se a realidade mudou, a
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
-> cada regra governou. O índice das 164 está em [`README.md`](./README.md).
+> cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D65–D71, D129–D134, e F da segunda rodada (ver
 > [`README.md`](./README.md#a-segunda-rodada-ap)).
-> A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
 
 ## D65 — Não nasce tabela `Setting`. O `AppSetting` cresce.
 
-O TODO pede um *"`Setting` singleton"*; ele já existe desde a F1, com id fixo `singleton` e o
+O `Setting` singleton já existe, com id fixo `singleton` e o
 `assetTagNext` dentro. Uma segunda tabela de configuração global seria duas linhas para a mesma
 pergunta, e a primeira dúvida de quem chegar depois seria *em qual delas eu escrevo?*
 
 ---
 
 ## D66 — Responsável resolvido é uma **view**, não coluna nem cache.
+
+> **Superada por [D129](#d129--a-view-devolve-responsável-real-e-fala-a-língua-da-tela):** a view filtra a lixeira, não emite responsável nulo e fala `DIRETO`/`POSTO`/`ATIVO`.
+>
+> **Superada por [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
 
 **Decidido:** `vw_asset_responsibles`, não materializada, lida por `$queryRaw` com `Prisma.sql`.
 **Descartado:** coluna (é o D16); resolução em memória com teto; e materializar agora. Resolver
@@ -31,7 +34,7 @@ posse (`assignments(assetId, checkinAt)`, `location_occupants(locationId, endedA
 
 **O trade-off, assumido:** cada relatório paga os joins. A saída está pré-escrita — se o `EXPLAIN`
 com 10 mil ativos doer, `CREATE MATERIALIZED VIEW` sobre **o mesmo SQL** + `REFRESH CONCURRENTLY`
-no job diário da F8: uma linha de DDL, porque a derivação está num lugar só. Materializar não é a
+no job diário: uma linha de DDL, porque a derivação está num lugar só. Materializar não é a
 quarta fonte de verdade que o D16 recusou — é cache reconstruível por comando, cujo modo de falha
 é *desatualização visível*, não *divergência silenciosa*. E nada de `WITH RECURSIVE`: o salto de
 `ASSET` é de **um nível** por decisão (D16), e uma CTE recursiva seguiria um ciclo alegremente.
@@ -40,21 +43,25 @@ quarta fonte de verdade que o D16 recusou — é cache reconstruível por comand
 
 ## D67 — O builder recebe token. Nunca campo, nunca SQL.
 
+> **Superada por [D154](./escopo.md#d154--relatório-vira-três-consultas-fixas):** três consultas em código; a superfície desaparece em vez de ser defendida.
+
 **Decidido:** `Record<token, Prisma.Sql>` declarado em `report-columns.ts`; token desconhecido é
 422. **Descartado:** montar `select` do Prisma com string do cliente, ou SQL por concatenação.
 O perigo não é raw SQL; é SQL **controlado pelo cliente**. Um mapa de token para fragmento
 declarado é tão seguro quanto um mapa de token para campo do Prisma, e é o único que expressa o
 join da view — mesma forma do `sortable` de `core/http/list-query.ts`, que já resolveu isto para a
-ordenação. Quando a **F11** chegar, este mapa passa a ser **filtrado por permissão**, senão o
+ordenação. Este mapa tem de ser **filtrado por permissão**, senão o
 export vira a porta dos fundos do custo de compra.
 
 ---
 
 ## D68 — Importação é de dois passos, e o dry-run é obrigatório.
 
+> **Superada por [D146](./escopo.md#d146--a-importação-de-csv-sai-a-carga-é-a-descoberta):** a carga é a descoberta; o **export** (D69) fica.
+
 **Decidido:** upload+mapeamento roda o dry-run e grava `ImportRow`; um segundo POST aplica.
 **Descartado:** importar direto com "relatório no final". Import é a operação com maior razão
-dano/esforço do sistema: um clique, milhares de linhas — e na Etapa E ela muda responsabilidade em
+dano/esforço do sistema: um clique, milhares de linhas — e ela muda responsabilidade em
 massa **sem tocar em posse nenhuma**. Ver antes o que vai acontecer é a única chance de perceber
 que a coluna *Local* veio trocada.
 
@@ -62,15 +69,19 @@ que a coluna *Local* veio trocada.
 
 ## D69 — O export manda número cru e data ISO — e trata fórmula.
 
+> **Superada por [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
+
 **Decidido:** ponto decimal, `YYYY-MM-DD`, e prefixo em valor que começa com `=`, `+`, `-` ou `@`.
 **Descartado:** exportar já formatado em pt-BR. O export é a entrada do importador: um `1.234,50`
 volta como lixo no round-trip. O custo — o Excel em pt-BR mostra número como texto até a pessoa
 converter a coluna — está aceito, porque perder dado na volta é pior que um clique de formatação.
-O BOM continua ali: ele resolve **acento**, que é o problema que o TODO nomeia.
+O BOM continua ali: ele resolve **acento**.
 
 ---
 
 ## D70 — QR leva URL. Código de barras leva a etiqueta.
+
+> **Superada por [D147](./escopo.md#d147--as-etiquetas-saem):** o `assetTag` fica; desenhar o papel sai.
 
 **Decidido:** o QR contém `${APP_URL}/ativos/:id`; o Code128 contém o `assetTag`.
 (A rota era `/itam/assets/:id` quando esta decisão foi escrita; a tela passou a ser
@@ -85,6 +96,8 @@ descarta o prefixo conhecido, para quem bipar o QR dentro do campo.
 
 ## D71 — O catálogo de colunas é declarado duas vezes, de propósito.
 
+> **Superada por [D154](./escopo.md#d154--relatório-vira-três-consultas-fixas):** três consultas em código; a superfície desaparece em vez de ser defendida.
+
 **Decidido:** allowlist no servidor (`asset-filters.helper.ts`, onde `ASSET_SORTABLE` já mora) e
 catálogo de interface em `src/pages/ativos/helpers/`. **Descartado:** arquivo compartilhado.
 O lint impede `src/` importar de `server/`, e a regra existe para não colocar o Prisma no bundle
@@ -95,6 +108,8 @@ do navegador — não vale furá-la por uma lista de strings. A divergência ent
 
 ## D129 — A view devolve responsável REAL, e fala a língua da tela
 
+> **Superada por [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
+
 `deletedAt IS NULL` dentro da view; `userId` nulo não vira linha; `via` é
 `DIRETO`/`POSTO`/`ATIVO`. **Descartado:** corrigir no consumidor — seriam três
 relatórios lembrando do mesmo filtro, e o quarto esqueceria. A equivalência com
@@ -103,6 +118,8 @@ relatórios lembrando do mesmo filtro, e o quarto esqueceria. A equivalência co
 ---
 
 ## D130 — Posto vago continua saindo do `POSTO_VAGO`
+
+> **Superada por [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
 
 A view não responde essa pergunta (o `JOIN` a elimina) e já há duas
 implementações revisadas. **Descartado:** uma quarta perna com `LEFT JOIN` só para
@@ -113,6 +130,8 @@ caber tudo numa view — ela mudaria a cardinalidade das outras três e faria
 
 ## D131 — Posse importada é checkout retroativo e **silencioso**
 
+> **Superada por [D146](./escopo.md#d146--a-importação-de-csv-sai-a-carga-é-a-descoberta):** a carga é a descoberta; o **export** (D69) fica.
+
 `checkoutAt` passado + `semAviso` que pula termo e e-mail, usados **só** pelo
 importador. **Descartado:** `UPDATE` direto em `assignedToId` (é o D17); e
 importar com aviso ligado — 500 convites de assinatura para equipamento entregue
@@ -122,20 +141,26 @@ há anos é estrago que nenhum "desfazer" alcança, porque o e-mail já saiu.
 
 ## D132 — Pessoa casa por e-mail com `findFirst`, e e-mail ambíguo é linha ignorada
 
-A unicidade de `User.email` é **parcial**. **Descartado:** casar por nome (o plano
-já recusa) e `findUnique` (não compila).
+> **Superada por [D146](./escopo.md#d146--a-importação-de-csv-sai-a-carga-é-a-descoberta):** a carga é a descoberta; o **export** (D69) fica.
+
+A unicidade de `User.email` é **parcial**. **Descartado:** casar por nome e
+`findUnique` (não compila).
 
 ---
 
 ## D133 — O export não monta `select`: ele reusa o do domínio
 
-`license-select.helper.ts` devolve `productKeyMask` porque alguém pensou nisso na
-F6. **Descartado:** uma allowlist de export paralela — ela nasceria certa e
+> **Superada por [D154](./escopo.md#d154--relatório-vira-três-consultas-fixas):** três consultas em código; a superfície desaparece em vez de ser defendida.
+
+`license-select.helper.ts` devolve `productKeyMask` porque alguém pensou nisso.
+**Descartado:** uma allowlist de export paralela — ela nasceria certa e
 envelheceria sozinha, e o dia em que divergir é o dia em que a chave viaja.
 
 ---
 
 ## D134 — A rota de import declara os próprios limites de multipart
+
+> **Superada por [D146](./escopo.md#d146--a-importação-de-csv-sai-a-carga-é-a-descoberta):** a carga é a descoberta; o **export** (D69) fica.
 
 O teto global (10 MB, `files: 1`, `fields: 10`) é o do anexo. O mapeamento viaja
 como **um** campo JSON. **Descartado:** subir o teto global — ele protege as
@@ -144,6 +169,8 @@ rotas de anexo, que recebem arquivo de gente.
 ---
 
 ## F — A busca por QR sai, com `APP_URL`, `resolve-tags` e `by-serial`
+
+> **Superada em parte por [AY](./plataforma.md#ay--o-visual-vem-da-intranet-em-tema-claro-e-escuro-e-a-linha-inteira-abre-o-registro):** a linha inteira abre o registro e as ações vão para o `⋯`; a situação pode ter cor; primitivos do shadcn só no que se usa, e tema claro e escuro; `GET /api/search` sai.
 
 **Decidido:** saem o passo 0 da busca global (reconhecer e descartar o prefixo de URL do
 painel), `idDaUrlDoPainel`, `core/config/app-url.ts` inteiro e as duas rotas sem tela

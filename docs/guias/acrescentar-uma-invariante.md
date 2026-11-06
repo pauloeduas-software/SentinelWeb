@@ -11,5 +11,4 @@
 3. Escreva a mensagem antes do código. Se a mensagem não ensina o que fazer em
    seguida, a regra ainda não está entendida.
 4. Acrescente a linha na tabela do começo do arquivo — e corrija o número no
-   título dela. Referir-se a ela por "As onze" era o que fazia esta instrução
-   apontar para um título que não existia mais a cada fase.
+   título dela.

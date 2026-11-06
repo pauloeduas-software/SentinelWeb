@@ -4,14 +4,15 @@
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve**. Se a realidade mudou, a
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
-> cada regra governou. O índice das 164 está em [`README.md`](./README.md).
+> cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D52–D57, D123–D128.
-> A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
 
 ## D52 — A auditoria corrige *onde está*. Nunca *quem responde*.
+
+> **Superada por [D144](./escopo.md#d144--a-conferência-manual-sai-a-conferência-pelo-agente-fica):** a manual sai; a do agente (D124) fica, e era a que já respondia.
 
 **Decidido:** grava `Asset.locationId` e `Audit.locationIdBefore`. **Descartado:** mover a
 `Assignment` aberta para o local onde o ativo foi achado.
@@ -26,8 +27,10 @@ Corrigir posse é **checkout**: operação com autor, data e nota.
 
 ## D53 — `lastAuditAt` é coluna. `nextAuditAt` não nasce.
 
+> **Superada por [D157](./escopo.md#d157--a-conferência-sai-inteira-inclusive-a-do-agente):** sem tela ninguém lê o registro; o job perde uma linha e nada mais.
+
 **Decidido:** `Asset.lastAuditAt`, escrita só pelo use-case de auditoria, com índice.
-**Descartado:** `Asset.nextAuditAt`, que o item do TODO pede.
+**Descartado:** `Asset.nextAuditAt`.
 
 `lastAuditAt` é **cache de evento**, no molde de `Asset.assignedToId`: escritor único, fato que
 aconteceu, e existe porque *"nunca auditados"* é pergunta sobre a frota inteira. `nextAuditAt` é
@@ -39,15 +42,19 @@ em massa que ninguém vai lembrar de rodar.
 
 ## D54 — A auditoria é registrada por ATIVO. O posto é a unidade de trabalho.
 
+> **Superada por [D144](./escopo.md#d144--a-conferência-manual-sai-a-conferência-pelo-agente-fica):** a manual sai; a do agente (D124) fica, e era a que já respondia.
+
 **Decidido:** uma linha de `Audit` por ativo; auditar um posto cria N linhas numa transação.
 **Descartado:** uma linha de auditoria por posto. *"Quais ativos nunca foram auditados"* é a pergunta
-que paga esta fase, e ela não é respondível por linhas de posto; no caminho inverso, *"quando a Mesa
+que importa, e ela não é respondível por linhas de posto; no caminho inverso, *"quando a Mesa
 1 foi conferida?"* é `MAX(auditedAt)` sobre os ativos daquele posto — derivável, e derivável é o lado
 certo de ficar.
 
 ---
 
 ## D55 — Valor contábil é calculado no servidor. Sempre.
+
+> **Superada por [D152](./escopo.md#d152--o-valor-contábil-sai):** `purchaseCost` fica; a amortização sai.
 
 **Decidido:** função pura em `server/domain/asset/helpers/`. **Descartado:** coluna `bookValue` — e
 descartado também calcular na tela.
@@ -83,6 +90,8 @@ vez por dia — `tsx watch`, dois deploys num dia — **nunca chega aos 24 h e o
 
 ## D57 — A central no app é o canal primário; SMTP mora no `.env`.
 
+> **Superada por [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
+
 > **Superada por [D151](./escopo.md#d151--a-central-de-alertas-e-o-webhook-saem) e pelo
 > [segundo de-escopo](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):**
 > a central saiu, e o correio inteiro com ela. O sistema não envia e-mail.
@@ -93,8 +102,8 @@ continua lendo `SMTP_URL`/`MAIL_FROM` do ambiente, em modo no-op quando falta.
 
 Persistir primeiro dá três coisas: *"o alerta disparou?"* vira um `SELECT`; o sistema funciona sem
 SMTP; e o `dedupeKey` vira a defesa contra o mesmo alerta chegando todo dia até alguém resolver o
-problema. Senha no banco pediria cifra em repouso — que hoje existe (F6), mas numa coluna que o
-export CSV da F10 alcança.
+problema. Senha no banco pediria cifra em repouso — que hoje existe, mas numa coluna que o
+export CSV alcança.
 
 > **Revisão:** a versão original prometia `SMTP_*` "validadas em `validateEnv()`". **Não são, e não
 > passam a ser.** O contrato do correio é o D86 — *best-effort* com log, e no-op sem configuração —,
@@ -112,7 +121,7 @@ configuração** em vez do `FUSO_PADRAO` embutido. **Descartado:** `new Date()` 
 conceito de fuso só para os alertas.
 
 O processo roda em UTC em produção e no fuso de quem desenvolve na máquina local. `inicioDoDia()`
-hoje faz `setHours(0,0,0,0)` — fuso do **processo** — e o lembrete de atraso da F4 já depende disso:
+hoje faz `setHours(0,0,0,0)` — fuso do **processo** — e o lembrete de atraso já depende disso:
 uma rodada às 21h em São Paulo já é o dia seguinte em UTC, e a janela fecharia duas vezes no mesmo
 dia local.
 
@@ -135,7 +144,7 @@ para os endpoints vinculados cujo `biosSerial` normalizado **é igual** ao `Asse
 uma por ativo por dia. **Descartado:** escrever no handshake; e contar hostname ou MAC como
 confirmação.
 
-A F7 fechou, então isto deixou de ser pergunta em aberto. Três razões, e as três são dela:
+Isto deixou de ser pergunta em aberto. Três razões:
 
 1. **`touchEndpoint` roda a cada Handshake, Telemetry e Ping de CADA máquina** — é o D95 na letra.
    Uma linha de `Audit` ali cresceria em (máquinas × mensagens por dia), e a tabela que responde
@@ -143,16 +152,18 @@ A F7 fechou, então isto deixou de ser pergunta em aberto. Três razões, e as t
 2. **Hostname é renomeável e MAC muda com dock.** Nenhum dos dois prova que alguém olhou o
    equipamento; o serial de BIOS é o número que está na etiqueta do fabricante.
 3. **Serial que não bate não é auditoria nenhuma** — e em particular **não** é `NAO_LOCALIZADO`.
-   Máquina que não manda serial é caso normal e aceito na F7 (`biosSerial` é nulável de propósito).
+   Máquina que não manda serial é caso normal e aceito (`biosSerial` é nulável de propósito).
 
 E o que o `AGENTE` **não** faz: escrever `locationId`. O agente não sabe onde a máquina está. Os três
-campos conferidos da Etapa B são do caminho `MANUAL`; o automático grava `result: OK`, avança
+campos conferidos são do caminho `MANUAL`; o automático grava `result: OK`, avança
 `lastAuditAt` e mais nada. Sem esta linha escrita, a auditoria automática cairia na mesma transação
 que corrige localização — e o D52 seria violado por um job, que é o pior lugar para descobrir isso.
 
 ---
 
 ## D125 — `dedupeKey` tem uma regra por tipo, e ela carrega o id da ORIGEM.
+
+> **Superada por [D151](./escopo.md#d151--a-central-de-alertas-e-o-webhook-saem):** os sinais continuam consultáveis; empurrá-los sai. O D79 **não** sai.
 
 **Decidido:**
 
@@ -173,7 +184,7 @@ Ela falha em dois dos quatro casos, e falha para o lado ruim — o de repetir:
   finalmente auditar, a chave muda porque o fato mudou, que é o comportamento certo.
 - **Manutenção aberta não tem data-alvo.** `completionDate` é nulo *por ela estar aberta*. O prazo
   vem de `startDate + maintenanceOpenDays` (configurável), e a chave é **por manutenção**: um ativo
-  com duas manutenções abertas — caso que a Etapa A permite de propósito — colapsaria em um alerta
+  com duas manutenções abertas — caso permitido de propósito — colapsaria em um alerta
   só se a chave fosse do ativo, e a segunda nunca apareceria.
 
 `assetId` nulo é possível no schema (alerta da frota, não de um ativo); a chave então traz a
@@ -208,6 +219,10 @@ coluna, o log responde *qual* canal falhou — e é no log que se investiga entr
 
 ## D127 — Alerta não nasce para ativo fora do parque.
 
+> **Superada pelo commit `505c520`:** sem `ARCHIVED`, sobram duas: `retiredAt` (a baixa) e `deletedAt`.
+>
+> **Superada por [D151](./escopo.md#d151--a-central-de-alertas-e-o-webhook-saem):** os sinais continuam consultáveis; empurrá-los sai. O D79 **não** sai.
+
 **Decidido:** as quatro consultas do job e os relatórios de prazo filtram `retiredAt: null` (e o
 `deletedAt` da extension; a manutenção filtra `asset: { deletedAt: null }` à mão, porque a tabela
 dela não tem lixeira). **Descartado:** alertar sobre tudo e deixar a tela filtrar.
@@ -232,14 +247,14 @@ e nenhum dos três merece cobrança de prazo.
 > licença vencendo que ela previa não nasce — o sistema não envia e-mail.
 
 **Decidido:** os quatro valores de `AlertType` são todos do ativo. Os alertas de **licença**
-(`/api/licenses/alerts` — vencendo, assentos baixos, F6) e de **estoque** (`/api/stock/alerts`, F5)
+(`/api/licenses/alerts` — vencendo, assentos baixos) e de **estoque** (`/api/stock/alerts`)
 continuam onde estão: painel na própria tela, derivado sob demanda.
-**Descartado:** puxá-los para `alerts` nesta fase.
+**Descartado:** puxá-los para `alerts`.
 
 Escrito como decisão porque a ausência dele constrói um segundo sino. Os dois sinais já são
 **derivados** — `status` de licença é função das datas (D44) e saldo de estoque é conta sobre as
 linhas de entrega (D34) —, e materializá-los em `alerts` pediria o inverso do que essas duas decisões
 protegem. O que falta para eles entrarem é um **alvo polimórfico** em `Alert` (`licenseId`,
-`stockItemId`, ou `targetType` + `targetId`), que é aditivo e cabe numa fase que precise de
+`stockItemId`, ou `targetType` + `targetId`), que é aditivo e cabe quando alguém precisar de
 notificação por e-mail de licença vencendo. Enquanto isso, o sino conta ativo, e a frase dele diz
 isso.

@@ -25,20 +25,9 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 
 ## As dezesseis
 
-> **A numeração é a original, e por isso salta.** O corte do ITAM levou as
-> invariantes 7, 8, 15, 16 e 18 junto com as tabelas que elas defendiam
-> (acessório, estoque, campo customizado, token de API); a segunda rodada levou a
-> 14 junto com `EndpointUserDaily`, quando a reconciliação deixou de inferir
-> pessoa pela conta do sistema operacional
-> ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional));
-> e a [AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas) levou a 10 e a 11 junto com a vaga numerada da licença, e trouxe a 22 e a 23;
-> a [AC](../decisoes/licencas.md#ac--a-chave-vira-lista-cada-uma-cobre-uma-quantidade-e-a-entrega-escolhe-uma) trouxe a 24, e a
-> [AE](../decisoes/estoque.md#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira), a 25;
-> e a [AO](../decisoes/catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam) levou a 21 junto com o Desativar da localização.
-> Renumerar as que ficaram quebraria as citações no código —
-> `assert-sem-posse.usecase.ts` diz "Invariante 4", `license-count.helper.ts`
-> diz "invariante 22" —, e um número que muda de significado é pior que um
-> número que falta.
+> **A numeração salta de propósito.** Invariante que saiu não volta, e as que ficaram não se
+> renumeram: o código cita os números, e um número que muda de significado é pior que um número
+> que falta.
 
 | # | Invariante | Onde | O que o usuário vê |
 |---|---|---|---|
@@ -80,14 +69,6 @@ qualquer um gravar. Só o índice único pega isso.
 **Onde está:** no bloco escrito à mão de `prisma/migrations/0_init/migration.sql`.
 Parcial (`WHERE "checkinAt" IS NULL`) porque o histórico fechado é ilimitado: o
 mesmo ativo pode ter sido entregue cem vezes.
-
-> **A mensagem é a do use-case, nos dois caminhos.** O checkout confere a posse
-> aberta antes e responde *"Este ativo já está entregue. Faça a devolução
-> antes."*; quando a corrida passa pela conferência e é o índice que recusa, o
-> `P2002` é capturado ali mesmo e vira a mesma frase. O `Registro já existe`
-> genérico do `error-handler` não chega a quem clicou em "Entregar". O cadastro
-> de ocupante faz o mesmo com a invariante 2 (*"Esta pessoa já ocupa este
-> posto."*).
 
 ### 2 — `workstation_occupants_um_aberto_por_pessoa_posto`
 
@@ -140,15 +121,8 @@ modelo, de ativo, entrega, devolução) a lê `FOR SHARE`
 lido o tipo velho gravava depois da contagem e a guarda era contornada por uma
 corrida.
 
-> **A guarda vale o que a contagem enxerga.** Uma contagem que esquece uma
-> tabela deixa a guarda aberta sem avisar: ela responde "zero em uso" e a troca
-> de tipo passa.
->
-> Contar é a regra inteira aqui — `countUsages` de categoria e de localização
-> precisa conhecer **toda** tabela que aponta para elas, e as duas do estoque
-> apontam (`StockItem` para categoria e localização, `StockMovement` para
-> localização). Uma tabela
-> nova reabre isto em silêncio; é o preço de uma regra que é uma soma.
+> **A guarda vale o que a contagem enxerga:** toda tabela que aponta para categoria ou localização
+> precisa estar no `countUsages` ([`configuracoes.md`](configuracoes.md)).
 
 **A saída correta** é a mesma do delete: criar o status novo e mover os ativos —
 operação visível, uma por ativo, auditada.
@@ -197,21 +171,8 @@ posse errada nem gravam "Disponível" num ativo entregue.
 
 ### 5 — A forma da `Assignment`
 
-```sql
-ALTER TABLE "assignments" ADD CONSTRAINT "assignments_alvo_coerente" CHECK (
-     ("targetType" = 'PERSON' AND "targetPersonId" IS NOT NULL AND "targetWorkstationId" IS NULL)
-  OR ("targetType" = 'WORKSTATION' AND "targetPersonId" IS NULL AND (
-          "targetWorkstationId" IS NOT NULL
-       OR ("checkinAt" IS NOT NULL AND "targetWorkstationName" IS NOT NULL)
-     ))
-);
-ALTER TABLE "assignments" ADD CONSTRAINT "assignments_devolucao_nao_antecede_entrega" CHECK (
-  "checkinAt" IS NULL OR "checkinAt" >= "checkoutAt"
-);
-ALTER TABLE "assignments" ADD CONSTRAINT "assignments_posto_excluido" CHECK (
-  "targetWorkstationFormerId" IS NULL OR "targetWorkstationId" IS NULL
-);
-```
+`assignments_alvo_coerente`, `assignments_devolucao_nao_antecede_entrega` e `assignments_posto_excluido`, no
+bloco escrito à mão de `prisma/migrations/0_init/migration.sql`.
 
 Três afirmações sobre a mesma linha: o alvo polimórfico é **coerente** (uma FK
 preenchida, e é a que casa com o `targetType`), a posse **não fecha antes de
@@ -245,19 +206,11 @@ seed, um `psql` à mão, uma migração futura. Uma linha com `targetType: 'PERS
 `targetWorkstationId` preenchido é aceita pelo Postgres sem CHECK, e a Camada 3 a resolve como *"sem responsável"* — em
 silêncio, que é o pior jeito de um equipamento sumir de vista.
 
-A `Assignment` era a **única** tabela do modelo de posse sem CHECK: a ocupação é
-defendida pelo índice único parcial (#2) e a entrega de licença tem os CHECKs
-da #9. A tabela que carrega a Camada 1 ficaria a mais
-frouxa das três.
-
 **`>=` e não `>`** na data: entrega e devolução no mesmo instante é real — é a
 devolução no mesmo dia da entrega, com dois relógios que podem coincidir no
 milissegundo.
 
-**Onde está:** no bloco escrito à mão da migration `0_init` — o da coerência já
-na forma de dois alvos ([K](../decisoes/posse.md#k--o-alvo-asset-sai-da-posse)).
-A aplicação continua recusando antes, com a frase que ensina o modelo; o CHECK é
-a rede de baixo.
+A aplicação recusa antes, com a frase que ensina o modelo; o CHECK é a rede de baixo.
 
 ### 6 — Desativado não fica com posse aberta
 
@@ -295,22 +248,8 @@ T2                 grava isActive = false                 → COMMIT
 T1                 cria a Assignment                      → COMMIT
 ```
 
-Resultado: **desativado com posse aberta**. Os dois caminhos fizeram exatamente o
-que está escrito neles. Em `READ COMMITTED` — o padrão do Postgres e o nosso —
-nenhum `if` pega isso: as duas transações leem um estado consistente de antes, e
-nenhuma enxerga o que a outra ainda não confirmou.
-
-E o estado é **invisível**: nada falha, nada é logado como erro, e a pessoa some
-dos seletores levando um equipamento no nome.
-
-> **A assimetria que existia até o corte do ITAM:** `checkoutAsset` recusava
-> entregar ativo a quem está desativado e o cadastro de ocupante só conferia
-> existência. Como responsável de posto é DERIVADO da ocupação, a brecha reabria
-> por fora do checkout exatamente a responsabilidade que a desativação fecha — e
-> a fila de reconciliação chegava a oferecer o botão que fazia isso, porque o
-> aceite de uma sugestão de ocupação passava por ali. Hoje as duas recusam com
-> 409, e a fila nem propõe mais ocupação: o tipo `OCCUPANCY` saiu com
-> [A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional).
+Resultado: **desativado com posse aberta**, sem erro nenhum. Em `READ COMMITTED`, o padrão do Postgres e o
+nosso, nenhum `if` pega isso: nenhuma das transações enxerga o que a outra ainda não confirmou.
 
 **A saída** é serializar as duas na linha que as duas disputam: `SELECT … FOR
 UPDATE` na linha da pessoa (`people`). A segunda transação espera a primeira
@@ -335,17 +274,8 @@ a verificação.
 
 ### 9 — A forma da entrega de licença
 
-```sql
-ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_alvo_xor"
-  CHECK (num_nonnulls("assignedPersonId", "assignedAssetId") = 1);
-ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_devolucao_nao_antecede"
-  CHECK ("checkinAt" IS NULL OR "checkinAt" >= "checkoutAt");
-ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_licenca_presente" CHECK (
-  "licenseId" IS NOT NULL
-  OR ("checkinAt" IS NOT NULL AND "licenseName" IS NOT NULL AND "licenseKeyId" IS NULL)
-);
--- e a FK de "licenseId" ON DELETE RESTRICT
-```
+`license_checkouts_alvo_xor`, `license_checkouts_devolucao_nao_antecede`, `license_checkouts_licenca_presente` e
+a FK `Restrict` de `licenseId`, na `0_init`.
 
 Duas colunas de alvo nuláveis admitem quatro estados, e **dois são mentira**: as duas
 preenchidas ("esta licença está com a Laura E com o notebook") e nenhuma preenchida
@@ -386,10 +316,7 @@ O caso que ele pega de verdade é a **reimagem**: a máquina volta com `hwid` no
 o serial casando com um ativo que já tem endpoint. Sem o índice, o segundo vínculo
 entraria e a tela do ativo passaria a mostrar a máquina errada, escolhida por
 ordem de consulta. Com ele, a tentativa é recusada com 409, apontando para
-"Desvincular" na aba Máquina — não há mais fusão (saiu com
-[H](../decisoes/reconciliacao.md#h--a-fusão-de-máquinas-sai): o `hwid` é derivado
-do hardware e estável entre reinstalações, então a duplicação que a fusão
-resolvia não acontece mais).
+"Desvincular" na aba Máquina.
 
 > `onDelete: SetNull` é o outro lado: apagar um ativo de verdade **não** leva
 > junto a telemetria da máquina. O preço é que o vínculo se desfaz em silêncio, e
@@ -408,12 +335,7 @@ CREATE UNIQUE INDEX "sugestao_pendente_por_alvo"
 recusada em março, substituída em abril e aceita em maio, e as três linhas contam
 essa história. O que não pode repetir é o que está **esperando decisão**.
 
-**Hoje um alvo só — `assetId`.** O índice chegou a cobrir quatro alvos
-(`targetUserId`, `targetLocationId` e `mergeIntoEndpointId` além de `assetId`),
-de quando a fila também propunha ocupação de posto e fusão de máquinas; os dois
-saíram ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional),
-[H](../decisoes/reconciliacao.md#h--a-fusão-de-máquinas-sai)), e com eles as três
-colunas. `SuggestionKind` hoje só tem `LINK`.
+**Um alvo só, `assetId`:** `SuggestionKind` só tem `LINK`.
 
 **`COALESCE` continua, mesmo com um alvo só** — e não é cerimônia: a coluna
 segue nulável, e em Postgres dois `NULL` nunca colidem num índice único. Uma
@@ -428,20 +350,11 @@ pessoa vira uma lista que ninguém abre duas vezes.
 > **Provado em** `tests/descoberta/fila.test.ts`: três rodadas seguidas do job e a
 > contagem de `PENDING` não cresce.
 
-> **A invariante 14 saiu com `EndpointUserDaily`** quando a reconciliação deixou de inferir
-> pessoa pela conta do sistema operacional
-> ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)).
-> Ela garantia que a agregação por dia fosse uma linha por (máquina, conta, dia); a tabela que
-> ela defendia não existe mais.
-
 ---
 
 ### 17 — Nunca sem administrador
 
-```ts
-// access/helpers/ultimo-administrador.ts, no FIM da transação
-await assertSobraAdministrador(tx);
-```
+`assertSobraAdministrador()` (`access/helpers/ultimo-administrador.ts`), no fim da transação.
 
 **A checagem roda DEPOIS da escrita, dentro da transação** — e é isso que a torna
 completa. Prever se uma operação vai deixar o sistema sem administrador exigiria
@@ -449,31 +362,19 @@ simular cada caminho (mudar o cargo, desativar a pessoa, apagar a pessoa), e o
 terceiro seria o esquecido. Aplicando e **contando depois**, há uma pergunta só:
 *ainda existe alguém?* Se não, o `throw` desfaz tudo e nada aconteceu.
 
-Um caminho novo que mexa em cargo herda a proteção só por chamar isto no fim — e
-foi o que aconteceu com o `isActive` editável: a checagem roda em TODO `update`
-de usuário, não só quando `role` vem no corpo, então desativar o último
-administrador responde 409 sem ninguém ter escrito uma linha para isso.
+Um caminho novo que mexa em cargo herda a proteção só por chamar isto no fim: a checagem roda em TODO
+`update` de usuário, não só quando `role` vem no corpo.
 
-**E o terceiro caminho foi, de fato, o esquecido.** Até a varredura
-[Q](../decisoes/escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai),
-só a edição chamava a checagem: excluir o único administrador — inclusive a si
-mesmo — passava, e o sistema ficava trancado por fora. Hoje `deleteUser` a chama
-no fim da transação, como a edição.
-
-**O último administrador não alcança mais a rede sozinho** desde o
-[W](../decisoes/acesso.md#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo): desativar
-e excluir a si mesmo são recusados antes. Ela continua cobrindo a corrida — dois
+**Desativar e excluir a si mesmo são recusados antes** ([W](../decisoes/acesso.md#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo)). A checagem cobre a corrida — dois
 administradores tirando um ao outro no mesmo instante, cada um contando "sobra eu" —, que
 `travarAdministracao` põe em fila. Provado em `tests/invariantes/permissao.test.ts`.
 
 **Quem conta como administrador precisa poder ENTRAR**: `isActive`,
-`role = ADMIN` e a linha existir — excluir apaga (W). A senha não entra na conta porque todo usuário
-tem uma — `passwordHash` é obrigatório desde
-[U](../decisoes/acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos).
+`role = ADMIN` e a linha existir — excluir apaga (W). A senha não entra na conta: todo usuário tem uma.
 
 > **O que esta invariante NÃO cobre, e por isso existe a linha de escape:** o
 > caminho da tela. Um restore parcial deixa o sistema de pé e **trancado**, e a
-> saída é `npm run acesso:administrador`, que exige acesso ao servidor e cria
+> saída é `bun run acesso:administrador`, que exige acesso ao servidor e cria
 > outro administrador ([AP](../decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it)) —
 > e **não** uma rota de emergência, que seria uma rota criando `ADMIN` sem ser
 > `ADMIN`. Se a única conta `ADMIN` perdeu a senha, o administrador novo entra e
@@ -482,13 +383,6 @@ tem uma — `passwordHash` é obrigatório desde
 ---
 
 ### 19 — No máximo um ativo por posto de trabalho
-
-```ts
-// workstation/helpers/ativo-do-posto.helper.ts, na porta da entrega, dentro da
-// transação
-const ocupante = await ativoDoPosto(tx, workstationId, assetId);
-if (ocupante) throw new AppError(jaTemAtivo(ocupante), 409);
-```
 
 Um posto de trabalho é uma mesa, uma bancada, um guichê: uma pessoa por turno,
 um computador. Duas máquinas entregues à mesma mesa não são um cenário de
@@ -505,10 +399,7 @@ ainda não chegou já é o computador da mesa, e o segundo é recusado na entreg
 **Na aplicação, com rede no banco.** A porta é a entrega, porque é ela que
 diz qual computador devolver. Embaixo, o índice único parcial
 `assignments_um_aberto_por_posto`, em `("targetWorkstationId") WHERE "checkinAt"
-IS NULL`, para quem escreve por fora. Ele só coube depois que o ativo entregue
-deixou de ir para a lixeira ([AL](../decisoes/posse.md#al--o-computador-entregue-não-vai-para-a-lixeira)):
-antes, a regra cruzava o `deletedAt` do ativo, e nenhum índice de uma tabela só
-a expressava.
+IS NULL`, para quem escreve por fora.
 
 **E no passado** ([AX](../decisoes/posse.md#ax--o-posto-tem-um-computador-por-vez-também-no-passado)):
 a entrega a um posto não começa antes do dia da última devolução de outro
@@ -528,23 +419,7 @@ grafo de travas (`lock-asset.usecase.ts`).
 **É uma porta só, a da entrega** (`checkout-asset.usecase.ts`): ela recusa
 entregar ao posto um segundo ativo, agora ou num período passado.
 
-Houve outras duas. A da **marca**: enquanto o posto era uma localização com
-`isWorkstation`, marcar como posto uma sala que já tinha dois ativos contornava
-a entrega. Ela saiu com a marca
-([Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)):
-o posto nasce posto, e só ele recebe entrega.
-
-E a da **restauração da lixeira**: o `delete-asset` mandava para a lixeira o
-ativo ainda entregue, a vaga ficava para outro, e restaurá-lo o devolvia a uma
-mesa que já não tinha lugar — a porta reconferia na volta. Ela saiu com a
-[AL](../decisoes/posse.md#al--o-computador-entregue-não-vai-para-a-lixeira): o
-ativo entregue não vai para a lixeira, então o que volta dela não aponta para
-mesa nenhuma.
-
-**O vínculo de máquina NÃO é porta**, e já foi: enquanto "computador" era
-"ativo com máquina vinculada", entregar o desktop sem agente e vincular depois
-contornava a entrega, e o vínculo tinha de reconferir. Com a regra sobre o
-ativo, a vaga é decidida na entrega e o vínculo só muda o que a ficha mostra.
+**O vínculo de máquina NÃO é porta:** a vaga é decidida na entrega, e o vínculo só muda o que a ficha mostra.
 
 **Note o que ela NÃO proíbe:** vários ocupantes no posto, que são o desenho da
 Camada 2; dois ativos **guardados** numa localização — a sala de reunião e o
@@ -564,25 +439,11 @@ relação com esta invariante: ele é posto **sem ocupante** — gente, não má
 
 ### 20 — Ativo baixado ou na lixeira não tem posse aberta
 
-```ts
-// asset/use-cases/retire-asset.usecase.ts — a porta da BAIXA
-await travarAtivoOuFalhar(tx, id);
-await assertSemPosse(tx, id, antes.assetTag, 'receber baixa');
-
-// asset/use-cases/delete-asset.usecase.ts — a porta da LIXEIRA (AL)
-await assertSemPosse(tx, id, 'Este ativo', 'ir para a lixeira');
-
-// assignment/use-cases/checkout-asset.usecase.ts — a porta da ENTREGA
-if (ativo.retiredAt) throw new AppError(`${ativo.assetTag} teve baixa em …`, 409);
-```
-
 "Vendido" e "na mão da Laura" não podem ser verdade ao mesmo tempo. Se fossem, o
 equipamento sumiria do inventário continuando com ela, e a devolução — que
 registra em que estado ele voltou e quem recebeu — não aconteceria.
 
-Na lixeira é o mesmo: a pessoa se desativava com o computador ainda no nome
-dela, porque a contagem dela não via a lixeira, e restaurá-lo o devolvia a quem
-não pode ter posse (invariante 6).
+Na lixeira é o mesmo: restaurá-lo o devolveria a quem talvez não possa mais ter posse (invariante 6).
 
 **São três portas:**
 
@@ -668,13 +529,8 @@ travado. No próprio dia da devolução a entrega passa, gravada um milissegundo
 
 ### 24 — A chave da entrega é da licença, e não passa do que cobre
 
-```sql
-ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_licenseKeyId_licenseId_fkey"
-  FOREIGN KEY ("licenseKeyId", "licenseId") REFERENCES "license_keys"("id", "licenseId")
-  ON DELETE RESTRICT ON UPDATE RESTRICT;
-ALTER TABLE "license_keys" ADD CONSTRAINT "license_keys_seats_positivo" CHECK ("seats" >= 1);
-ALTER TABLE "license_keys" ADD CONSTRAINT "license_keys_chave_preenchida" CHECK (btrim("productKey") <> '');
-```
+A FK composta `license_checkouts_licenseKeyId_licenseId_fkey`, `license_keys_seats_positivo` e
+`license_keys_chave_preenchida`, na `0_init`.
 
 Cada chave da licença cobre `seats` licenças: 1 na individual, mais na de volume
 ([AC](../decisoes/licencas.md#ac--a-chave-vira-lista-cada-uma-cobre-uma-quantidade-e-a-entrega-escolhe-uma)).
@@ -708,28 +564,9 @@ uma chave ou diminua o que ela cobre antes.`
 
 ### 25 — A entrega de estoque, e o total que não fica abaixo do que está em uso
 
-```sql
-ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_qty_nao_negativa" CHECK ("qty" >= 0);
-ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_forma" CHECK (
-     ("targetType" = 'PERSON' AND "targetPersonId" IS NOT NULL AND "targetWorkstationId" IS NULL
-      AND "targetAssetId" IS NULL)
-  OR ("targetType" = 'WORKSTATION' AND "targetPersonId" IS NULL AND "targetAssetId" IS NULL AND (
-          "targetWorkstationId" IS NOT NULL
-       OR ("returnedAt" IS NOT NULL AND "targetWorkstationName" IS NOT NULL)
-     ))
-  OR ("targetType" = 'ASSET' AND "targetAssetId" IS NOT NULL AND "targetPersonId" IS NULL
-      AND "targetWorkstationId" IS NULL)
-);
-ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_devolucao_nao_antecede_entrega"
-  CHECK ("returnedAt" IS NULL OR "returnedAt" >= "checkoutAt");
-ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_devolucao_registrada"
-  CHECK (("returnedAt" IS NULL) = ("returnRecordedAt" IS NULL));
-ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_fechamento_com_devolucao"
-  CHECK (("returnedAt" IS NULL) = ("returnKind" IS NULL));
-ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_item_presente" CHECK (
-  "itemId" IS NOT NULL OR ("returnedAt" IS NOT NULL AND "itemName" IS NOT NULL)
-);
-```
+`stock_items_qty_nao_negativa` e os cinco `CHECK` de `stock_movements` (`_forma`,
+`_devolucao_nao_antecede_entrega`, `_devolucao_registrada`, `_fechamento_com_devolucao` e `_item_presente`), na
+`0_init`.
 
 O estoque segue a conta da licença
 ([AE](../decisoes/estoque.md#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira)):
@@ -769,16 +606,13 @@ mostra em vermelho em vez de zerá-lo: esconder seria apagar o sintoma.
 ## O que **não** é invariante, e por isso não está aqui
 
 - **"Quem responde" numa coluna do ativo bate com a `Assignment` aberta.** Não
-  há coluna: o `Asset.assignedToId`, que era cache do caso pessoa, saiu do schema
-  ([Q](../decisoes/escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai)),
-  e com ele a pergunta de se ele batia. A defesa é **não ter a coluna**, não ter
-  uma checagem (`modelo-de-posse.md`).
+  há coluna: a defesa é **não ter a coluna**, não ter uma checagem (`modelo-de-posse.md`).
 - **O status da licença.** `ATIVA/VENCENDO/EXPIRADA/ENCERRADA` sai de um helper
   puro sobre duas datas e o dia de hoje (D44). Não há linha gravada com que
   divergir — que é justamente por que ele não é coluna: uma coluna exigiria um
   job diário para continuar verdadeira, e no dia em que o job falhasse o
   inventário mentiria sem sintoma.
-- **Só `DEPLOYABLE` libera checkout.** É regra de fluxo do checkout (F4), não
+- **Só `DEPLOYABLE` libera checkout.** É regra de fluxo do checkout, não
   fato sobre linhas já gravadas.
 - **Validação de formato** (uuid, tamanho, enum) — é do `zod`, na borda.
 - **Toda rota declara a permissão que exige.** É garantia de **BOOT**, não
@@ -786,16 +620,14 @@ mostra em vermelho em vez de zerá-lo: esconder seria apagar o sintoma.
   tabela de rotas do Fastify e **derruba o processo** com a lista das que faltam
   (D137). Não cabe nesta lista porque não há linha gravada que possa violá-la — o
   que ela protege é uma rota existir alcançável sem ninguém ter decidido isso. E o
-  lugar certo para ela é o boot, não uma checagem por requisição: `npm test` fica
+  lugar certo para ela é o boot, não uma checagem por requisição: `bun run test` fica
   vermelho antes de qualquer deploy.
 - **O cargo efetivo de uma sessão bate com a coluna.** Ele é LIDO a cada
   requisição, na mesma consulta que relê o usuário (D136/D148) — não há cópia com
   que divergir. É o D16 aplicado ao acesso: guardar o cargo no token exigiria
   reemitir a sessão a cada troca, e no dia em que a reemissão falhasse alguém
   continuaria alcançando o que já lhe foi tirado.
-- **A fila de sugestões não fala de gente.** Desde
-  [A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)
-  ela só propõe vínculo entre máquina e ativo (`SuggestionKind` tem só `LINK`):
+- **A fila de sugestões não fala de gente.** Ela só propõe vínculo entre máquina e ativo (`SuggestionKind` tem só `LINK`):
   não há sugestão sobre pessoa desativada para recusar nem para invalidar. O que
   `invalidate-suggestions.usecase.ts` encerra como `SUPERSEDED` é a pendente cuja
   máquina, ou cujo ativo, ganhou vínculo por outro caminho — e isso é regra de
@@ -807,6 +639,4 @@ mostra em vermelho em vez de zerá-lo: esconder seria apagar o sintoma.
 ## Para acrescentar uma
 
 O passo a passo está em
-[`../guias/acrescentar-uma-invariante.md`](../guias/acrescentar-uma-invariante.md) — incluindo a
-regra de corrigir o número no título desta página, que é o que mantinha a instrução apontando
-para um título que não existia mais a cada fase.
+[`../guias/acrescentar-uma-invariante.md`](../guias/acrescentar-uma-invariante.md).

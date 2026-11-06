@@ -4,17 +4,16 @@
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve**. Se a realidade mudou, a
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
-> cada regra governou. O índice das 164 está em [`README.md`](./README.md).
+> cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D1–D3, D5, D8–D13, D18–D21, D85, C/I da segunda rodada, AO e BE (ver
 > [`README.md`](./README.md#a-segunda-rodada-ap)).
-> A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
 
 ## D1 — `InventoryItem` vira `Asset`; o `Asset` atual (descoberto pelo agente) vira `Endpoint`
 
-**✅ FEITO na F1.**
+**✅ FEITO.**
 Executado como `drop`+`create` do lado ITAM (D12) e rename de verdade do lado RMM.
 No Snipe-IT, `Asset` é o ativo gerenciado — é esse vocabulário que queremos. A tabela que o
 agente C# popula passa a se chamar `Endpoint` (`@@map("endpoints")`).
@@ -22,7 +21,7 @@ Impactou: `server/domain/agent/`, `server/domain/asset/` (virou `endpoint/`),
 `server/domain/inventory/` (virou `asset/`), `src/domain/asset/`, `src/pages/telemetria/*`.
 ⚠️ O ponto de risco era `touchAsset`, chamada a cada mensagem do agente: um `prisma.asset`
 apontando para o model errado ali congelaria o `lastSeen` e o zombie cleaner marcaria a frota
-inteira como OFFLINE. **Verificado na auditoria:** o arquivo hoje é
+inteira como OFFLINE. **Verificado:** o arquivo hoje é
 `server/domain/endpoint/use-cases/touch-endpoint.usecase.ts` e aponta para o model certo —
 e os 6 pontos do RMM falharam na compilação durante o rename, nenhum silencioso (ver D13).
 As rotas RMM passaram para `/api/endpoints` — não por colisão de rota (testado: `POST
@@ -38,24 +37,26 @@ Snipe-IT não tem "pastas/filiais". Ele tem `Location` (hierárquica, com endere
 pai/filho) e `Company` (multi-tenancy). O `Folder` era uma invenção nossa que fazia papel de
 location pobre. Removido por completo na migration `20260922180151_remove_folders`:
 model, coluna `folderId`, rotas `/api/folders`, sidebar de pastas e o select do formulário.
-A `Location` de verdade nasceu na F1, do zero — não havia nada para migrar.
+A `Location` de verdade nasceu do zero — não havia nada para migrar.
 
 ---
 
 ## D3 — `quantity` sai do `Asset`
 
-**✅ APLICADO na F1.**
+**✅ APLICADO.**
 No Snipe-IT 1 linha = 1 equipamento físico, com etiqueta e série próprias. Quantidade só
-existe em `Accessory`, `Consumable` e `Component` (F5). Resolveu-se sozinho pelo D12: a
+existe em `Accessory`, `Consumable` e `Component`. Resolveu-se sozinho pelo D12: a
 tabela nova nasceu sem a coluna.
 
 ---
 
 ## D5 — Nada de texto livre onde o Snipe-IT tem tabela
 
-**✅ APLICADO na F1.** `category` e
+> **Superada em parte pelo commit `505c520`:** o `ARCHIVED` sai: **quatro** tipos; cor e `showInNav` saem do `StatusLabel`; o seed cria um status por tipo.
+
+**✅ APLICADO.** `category` e
 `status` viraram `Category` (com `type`) e `StatusLabel` (com `type`).
-**Correção vinda da auditoria da F1:** o seed classificava "Em Uso" como `DEPLOYABLE`, e
+**Correção:** o seed classificava "Em Uso" como `DEPLOYABLE`, e
 `DEPLOYABLE` significa *pode ser entregue* — um ativo que está com alguém não pode. As duas
 saídas óbvias foram descartadas (derivar de `assignedToId` deixa sem resposta o monitor
 parafusado na sala, que está em uso **sem** responsável; tipar `PENDING` empacota "está com
@@ -94,7 +95,7 @@ status é ordenável por `type` — a migration precisou de `ADD VALUE 'IN_USE' 
 
 **O que o Snipe-IT faz, de verdade:** ele tem as duas coisas, e a que protege é a
 primeira. `CategoriesController::destroy` **recusa** apagar categoria com item
-associado; o `SoftDeletes` é rede secundária. **Esta fase reproduz a proteção
+associado; o `SoftDeletes` é rede secundária. **Aqui se reproduz a proteção
 principal** — o 409 por uso — e dispensa a secundária. O comportamento que o
 usuário vê é o mesmo do Snipe-IT.
 
@@ -114,15 +115,14 @@ apagada continuaria aparecendo em todo ativo que a referencia, em silêncio.
 **As três contas de manter soft delete no catálogo:**
 
 1. sete índices únicos **parciais** escritos à mão (o `unique_undeleted`), como
-   `User.email` na F0;
+   `User.email`;
 2. o `upsert` do seed deixa de funcionar — o Prisma não conhece índice parcial,
-   e a F0 prometeu "só `upsert`, nunca `create`";
+   e a promessa era "só `upsert`, nunca `create`";
 3. relação **to-one** não é filtrável no Prisma: taparia o vazamento só com uma
    camada de apresentação anulando o registro apagado em cada `select`.
 
 **No lugar:** `countUsages` por entidade; `DELETE` responde **409** com a contagem.
-Na F1 toda contagem é `0` (nada referencia o catálogo ainda) — a F2 e a Etapa F
-preenchem. O `ActivityLog` grava a linha inteira em `changes` no DELETE, então um
+O `ActivityLog` grava a linha inteira em `changes` no DELETE, então um
 apagão acidental é recuperável à mão.
 
 **A decisão é barata de desfazer.** A extension descobre a lixeira pelo DMMF: se
@@ -131,10 +131,10 @@ a ser escopado sozinho — pagando, aí sim, as três contas acima.
 
 > **Efeito colateral já presente hoje:** usuário na lixeira ainda aparece como
 > `assignedTo` do inventário, pelo mesmo motivo. Severidade baixa (zero linhas) e
-> a regra da F4 — `DELETE /api/users/:id` responde 409 com item em posse — fecha o
+> a regra — `DELETE /api/users/:id` responde 409 com item em posse — fecha o
 > caminho. Fica registrado para não ser redescoberto.
 
-**O outro lado disto, achado pela auditoria das F0/F1.** Se a extension não alcança leitura
+**O outro lado disto.** Se a extension não alcança leitura
 aninhada, ela **alcança** o `count` de topo — e era esse o problema: `countUsages` rodava **com**
 escopo de lixeira e não enxergava ativo apagado, então apagar um fornecedor zerava o vínculo de
 ativos que estavam na lixeira, em silêncio. Corrigido com `INCLUINDO_LIXEIRA`
@@ -192,12 +192,12 @@ regra de negócio:** o `countUsages` continua totalmente tipado (prova nº 2), o
 de saída. O que se perde é o estreitamento de tipo do `sort` — que já era
 garantido **em runtime** pelo `z.enum` do `parseListQuery`, e continua sendo.
 
-> **O número cresceu, a decisão não mudou.** Eram sete specs; a F9 acrescentou duas (D64) e a
-> F11 a décima (D75). "Um domínio `catalog`" segue valendo — e cada tabela nova continua sendo
+> **O número cresceu, a decisão não mudou.** Eram sete specs; o D64 acrescentou duas e o
+> D75 a décima. "Um domínio `catalog`" segue valendo — e cada tabela nova continua sendo
 > **uma spec, nenhuma rota escrita à mão**. Quem contar os arquivos em `specs/index.ts` vai
 > achar dez.
 
-> **E depois encolheu, e a decisão continua a mesma.** As duas da F9 saíram com os campos
+> **E depois encolheu, e a decisão continua a mesma.** As duas do D64 saíram com os campos
 > customizados ([D145](./escopo.md#d145--campos-customizados-saem-inteiros)), a depreciação com o
 > valor contábil ([D152](./escopo.md#d152--o-valor-contábil-sai)), e fornecedor e departamento
 > com o [segundo de-escopo](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai).
@@ -217,7 +217,7 @@ nº 3), entra no tipo gerado e o `z.enum` passa a espelhar o banco (prova nº 8)
 Preço: acrescentar valor depois é `ALTER TYPE … ADD VALUE` à mão na migração. Os
 três conjuntos vêm do Snipe-IT e são estáveis.
 
-> **O preço foi cobrado na auditoria das F0/F1, e é o que o D5 conta:** o `IN_USE` entrou como
+> **O preço foi cobrado, e é o que o D5 conta:** o `IN_USE` entrou como
 > quinto valor do `StatusLabelType` e exigiu `ADD VALUE 'IN_USE' AFTER 'DEPLOYABLE'` escrito à
 > mão — o `migrate diff` acrescenta no fim, e a posição importa porque o Postgres ordena pela
 > ordem de declaração e a listagem de status é ordenável por `type`.
@@ -231,31 +231,30 @@ por nome, teto de 200.
 
 A listagem pagina com `perPage` máximo de 100 (`core/http/list-query.ts`) — certo
 para tabela, errado para `<select>`: o seletor de modelo do formulário de ativo
-(F2) e o de pai da `Location` precisam da lista inteira. Sem esta rota, o
+e o de pai da `Location` precisam da lista inteira. Sem esta rota, o
 formulário pediria `perPage=100` e mentiria em silêncio a partir do 101º item.
 
 ---
 
-## D12 — O `Asset` nasce inteiro na F1. `inventory_items` é apagada, não migrada.
+## D12 — O `Asset` nasce inteiro. `inventory_items` é apagada, não migrada.
 
-O TODO trata o D1 como *rename* porque assumia preservar o inventário existente.
-Não é o caso: a base de ITAM atual (**16 arquivos, 841 linhas**) é descartável, e
+O D1 não precisa preservar o inventário existente: a base de ITAM atual (**16 arquivos, 841 linhas**) é descartável, e
 as cinco tabelas estão em zero linha. Então a operação não é renomear — é
 **apagar `inventory_items` e criar `assets`** já na forma do Snipe-IT.
 
-Isso é mais simples e mais seguro que o rename que o TODO descreve: não há
+Isso é mais simples e mais seguro que um rename: não há
 `ALTER TABLE ... RENAME`, não há coluna sobrevivente fora de lugar, não há
 `quantity` para descartar depois (D3 se resolve sozinho por não existir).
 
-E é o que evita construir a mesma tabela duas vezes: uma versão magra na F1 só
-para o catálogo ter a quem apontar, e a versão real na F2. Coluna que nasce com a
+E é o que evita construir a mesma tabela duas vezes: uma versão magra só
+para o catálogo ter a quem apontar, e a versão real depois. Coluna que nasce com a
 tabela custa zero; acrescentada depois custa migração e backfill.
 
 ---
 
 ## D13 — A segurança do rename depende de o `Asset` novo **não** ter `status`, `lastSeen` nem `hwid`.
 
-O TODO marca o D1 com ⚠️: se o rename deixar um `prisma.asset` apontando para o
+O risco do D1: se o rename deixar um `prisma.asset` apontando para o
 model errado no `touchAsset`, o `lastSeen` congela e o zombie cleaner marca a
 frota inteira como OFFLINE.
 
@@ -275,9 +274,9 @@ mantido um `status String`, o `markStaleAssetsOffline` teria compilado e
 atualizado a tabela errada em silêncio. Daí a regra, que vale para sempre:
 
 > Nenhuma coluna do `Asset` (ITAM) pode se chamar `status`, `lastSeen` ou `hwid`.
-> O status do ciclo de vida é `statusId` (D5). Quando a **F7** quiser registrar
+> O status do ciclo de vida é `statusId` (D5). Para registrar
 > quando o agente viu o ativo pela última vez, o campo chama `lastSeenByAgentAt`
-> ou `lastAuditAt` — nunca `lastSeen`. É o mesmo par de eixos que a F7 já separa
+> ou `lastAuditAt` — nunca `lastSeen`. É o mesmo par de eixos já separado
 > (`AgentStatus` × `LifecycleStatus`), aplicado ao nome da coluna.
 
 ---
@@ -322,6 +321,8 @@ colapsá-las obriga a inventar a resposta que falta na hora do relatório.
 
 ## D20 — "Arquivados" e "posto vago" são filtros do domínio, não `view` do `core`.
 
+> **Superada pelo commit `505c520`:** a vista, a aba e o contador de arquivados saem; `active` exclui só o baixado.
+
 **Decidido:** `?arquivados=` e `?relatorio=` vivem em `asset-filters.helper.ts`.
 **Descartado:** acrescentar `'archived'` ao `ListView` de `core/http/list-query.ts`.
 **Por quê:** `trashed` é genérico — toda tabela com `deletedAt` o entende.
@@ -336,31 +337,34 @@ proíbe e o lint reprova.
 
 ---
 
-## D21 — Ação em massa é tudo ou nada; entrega em massa não será (F4).
+## D21 — Ação em massa é tudo ou nada; entrega em massa não será.
+
+> **Superada por [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
 
 **Decidido:** `POST /api/assets/bulk` roda numa `$transaction` e falha inteira se
 um id barrar, devolvendo 409 com a lista.
 **Descartado:** aplicar o que der e devolver relatório por linha.
 **Por quê:** edição em massa é **uma** intenção aplicada a N linhas — metade
 aplicada é um estado que ninguém pediu e ninguém desfaz sem conferir os 200 um a
-um. É o oposto do checkout em massa da F4, que são N entregas independentes: 7
+um. É o oposto do checkout em massa, que são N entregas independentes: 7
 entregues e 1 recusado é um resultado legível. A diferença não é inconsistência,
-é a natureza da operação — e por isso está declarada nos dois planos.
+é a natureza da operação — e por isso está declarada aqui e no D31.
 
 ---
 
 ## D85 — `?view=archived` é a quarta vista, e a listagem padrão passa a excluir `ARCHIVED`.
 
+> **Superada pelo commit `505c520`:** a vista, a aba e o contador de arquivados saem; `active` exclui só o baixado.
+
 **Decidido:** `ASSET_VIEWS` vira `['active','trashed','retired','archived']`, e `active` passa
 a excluir também `status.type = ARCHIVED`.
 **Descartado:** uma coluna `archivedAt`, espelhando `retiredAt`.
-**Por quê:** arquivar **já é** um tipo de `StatusLabel` desde a F1, e a invariante que impede
+**Por quê:** arquivar **já é** um tipo de `StatusLabel`, e a invariante que impede
 arquivar ativo entregue já lê `status.type`. Uma coluna nova seria uma segunda verdade sobre o
 mesmo fato — o erro do D17 uma camada acima.
 
 **É uma mudança de comportamento, e está declarada:** ativo arquivado aparecia na listagem
-padrão e a partir daqui não aparece mais. É o que o roadmap do projeto sempre
-pediu (*"sai das listagens por padrão"*) e o que não tinha sido implementado.
+padrão e a partir daqui não aparece mais.
 
 **A armadilha, e a regra que a fecha:** a exclusão de `ARCHIVED` vale **só quando não há
 `?statusId=` explícito**. Sem isso, clicar no contador de um status arquivado abriria uma lista
@@ -387,7 +391,7 @@ quantidade, sem série nem etiqueta própria.
 **Consequência de:** [D3](#d3--quantity-sai-do-asset) (quem tem quantidade não é `Asset`) e do
 retorno do estoque — ver [J](./estoque.md).
 
-**Por quê precisou ser dito outra vez:** o D3 já tinha decidido isso na F1, pela régua "tem
+**Por quê precisou ser dito outra vez:** o D3 já tinha decidido isso, pela régua "tem
 etiqueta própria → é `Asset`". O que faltava não era a regra — era um lugar onde ela decidisse
 algo que custasse caro errar. É o que a [invariante 19](../referencia/invariantes.md#19--no-máximo-um-ativo-por-posto-de-trabalho)
 passou a ser: "no máximo um **ativo** por posto" só funciona como regra simples se "ativo" for
@@ -441,6 +445,8 @@ ativo guardado ali continua sendo parque.
 ---
 
 ## AO — Categoria, status, fabricante, modelo e localização não se desativam
+
+> **Superada em parte por [AY](./plataforma.md#ay--o-visual-vem-da-intranet-em-tema-claro-e-escuro-e-a-linha-inteira-abre-o-registro):** a linha inteira abre o registro e as ações vão para o `⋯`; a situação pode ter cor; primitivos do shadcn só no que se usa, e tema claro e escuro; `GET /api/search` sai.
 
 **Decidido** (2026-10-29, na comparação das Configurações com o Snipe-IT e o GLPI, com o usuário
 escolhendo o modelo do Snipe-IT):

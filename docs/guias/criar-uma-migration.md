@@ -23,7 +23,7 @@ escreve e, no fim, o bloco escrito à mão — índices parciais e `CHECK`s, que
 expressa e que carregam metade das invariantes. Regere a primeira e preserve a segunda:
 
 ```bash
-npx prisma migrate diff --from-empty \
+bunx prisma migrate diff --from-empty \
   --to-schema-datamodel prisma/schema.prisma --script
 # a saída substitui a metade gerada da 0_init; o bloco do fim continua à mão
 ```
@@ -51,20 +51,20 @@ BEGIN;
 UPDATE "_prisma_migrations" SET checksum = '<o sha256 acima>' WHERE migration_name = '0_init';
 COMMIT;
 SQL
-npm run db:generate
+bun run db:generate
 ```
 
 O banco de teste não se alinha: ele é descartável. Apague o `sentineldb_test` e o
-`globalSetup` do próximo `npm test` o recria com a `0_init` nova
+`globalSetup` do próximo `bun run test` o recria com a `0_init` nova
 ([`../referencia/testes.md`](../referencia/testes.md)). O `sentineldb_e2e_test` do
-Playwright é igual: apague, e o próximo `npm run test:e2e` o recria. Sem apagar, o
+Playwright é igual: apague, e o próximo `bun run test:e2e` o recria. Sem apagar, o
 `migrate deploy` não reaplica a `0_init`, que já está registrada em `_prisma_migrations`:
 o banco fica no schema antigo, em silêncio.
 
 **3. Conferir que nada divergiu.**
 
 ```bash
-npx prisma migrate diff --from-url "$DATABASE_URL" \
+bunx prisma migrate diff --from-url "$DATABASE_URL" \
   --to-schema-datamodel prisma/schema.prisma --script
 ```
 
@@ -94,8 +94,8 @@ algo que destrói dado ou não executa:
 docker exec sentinel-postgres psql -U sentinel -d postgres \
   -c "DROP DATABASE IF EXISTS sentinel_audit;" -c "CREATE DATABASE sentinel_audit;"
 AUDIT="postgresql://sentinel:sentinelpassword@localhost:3002/sentinel_audit?schema=public"
-DATABASE_URL="$AUDIT" npx prisma migrate deploy
-DATABASE_URL="$AUDIT" npm run db:seed
+DATABASE_URL="$AUDIT" bunx prisma migrate deploy
+DATABASE_URL="$AUDIT" bun run db:seed
 ```
 
 Foi assim que se descobriu que a cadeia de migrations **não aplicava do zero**: o
@@ -114,18 +114,17 @@ uma migration nova, aplicada por `migrate deploy`:
 ```bash
 PASTA="prisma/migrations/$(date +%Y%m%d%H%M%S)_nome"
 mkdir -p "$PASTA"
-npx prisma migrate diff --from-url "$DATABASE_URL" \
+bunx prisma migrate diff --from-url "$DATABASE_URL" \
   --to-schema-datamodel prisma/schema.prisma --script > "$PASTA/migration.sql"
 # REVISAR o SQL antes de aplicar
-npm run db:migrate && npm run db:generate
+bun run db:migrate && bun run db:generate
 ```
 
 **Se a migração NÃO for aditiva**, ela vai em dois tempos: criar a coluna nova e **preencher
 na mesma transação** numa migração; apagar a antiga na seguinte, depois de o resultado ser
 conferido. Entre as duas, um rollback ainda encontra o dado original. O projeto fez isso uma
-vez, com `users.department` na F11 (o D75, que o D135 corrigiu no que dizia sobre o contrato
-da API — e o departamento saiu depois, no segundo de-escopo): ver
-[`../historico/fase-11-acesso-avancado.md`](../historico/fase-11-acesso-avancado.md).
+vez, com `users.department` (o D75, que o D135 corrigiu no que dizia sobre o contrato
+da API — e o departamento saiu depois, no segundo de-escopo).
 
 E a armadilha que vale para toda coluna nova num banco que **já tem linhas**: o `DEFAULT` é o
 valor para a linha que ainda não existe; para as que existem, ele é uma escrita em massa — o

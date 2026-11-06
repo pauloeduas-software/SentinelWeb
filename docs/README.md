@@ -1,15 +1,14 @@
 # Documentação do SentinelWeb
 
 > **O critério das pastas é o ciclo de vida, não o assunto.** Cada zona tem uma regra, e é a
-> regra que impede a pasta de apodrecer. Antes de escrever em `docs/`, pergunte qual das quatro
+> regra que impede a pasta de apodrecer. Antes de escrever em `docs/`, pergunte qual das três
 > frases descreve o que você está escrevendo.
 
 | Pasta | A regra | O que mora lá |
 |---|---|---|
 | [`referencia/`](./referencia/) | **É verdade AGORA.** Mudou o código, muda aqui. Não conta história, não dá instrução. | o que o sistema é: camadas, modelo de posse, invariantes, acesso, testes, configurações, baixa do ativo, postos, colaboradores, licenças, estoque |
 | [`guias/`](./guias/) | **Começa com um verbo.** Receita para quem já sabe o que quer. | criar uma migration, adicionar um domínio, escrever um teste |
-| [`decisoes/`](./decisoes/) | **Não se reescreve.** Se a realidade mudou, a decisão é *superada* por outra, com link entre as duas. | as decisões numeradas (`D1`…`D164`) e as por letra (`A`…`Z`), um arquivo por assunto |
-| [`historico/`](./historico/) | **Congelado na data.** Não se reescreve: o que ali se apresenta como vigente e deixou de ser ganha uma nota curta de status, com o link do que mudou. | os planos, as revisões e os fechamentos das onze fases |
+| [`decisoes/`](./decisoes/) | **Não se reescreve.** Se a realidade mudou, a decisão é *superada* por outra, com link entre as duas. | as decisões numeradas (`D1`…`D164`) e as por letra (de `A` em diante), um arquivo por assunto |
 
 E um arquivo na raiz: este mapa. Não há lista do que falta fazer — o que o sistema deixou de
 fazer, e por quê, está em [`decisoes/escopo.md`](./decisoes/escopo.md).
@@ -23,7 +22,7 @@ que não se negocia, o vocabulário e o que já foi decidido que não volta. Dal
 quem vai mexer no código.
 
 **Vou mexer no código.** Comece em [`referencia/arquitetura.md`](./referencia/arquitetura.md) —
-as camadas, os 17 módulos e o que o lint recusa. Se o que você vai mexer tem a ver com
+as camadas, os módulos e o que o lint recusa. Se o que você vai mexer tem a ver com
 quem responde por um equipamento, [`referencia/modelo-de-posse.md`](./referencia/modelo-de-posse.md)
 é pré-requisito, não leitura opcional.
 
@@ -51,12 +50,11 @@ nunca pode ser falso e onde cada regra é defendida, e
 [`guias/criar-uma-migration.md`](./guias/criar-uma-migration.md) tem a receita (**nunca**
 `prisma migrate dev`).
 
-**Quero saber por que isso é assim.** [`decisoes/README.md`](./decisoes/README.md) — o índice das
-164 numeradas e das por letra, com as supersessões. Toda decisão tem um nome estável: `D137` é
+**Quero saber por que isso é assim.** [`decisoes/README.md`](./decisoes/README.md) — os assuntos e as
+supersessões. Toda decisão tem um nome estável: `D137` é
 `D137` e `O` é `O` para sempre, mesmo que o arquivo onde ela vive mude.
 
-**Quero saber o que foi feito e quando.** [`historico/`](./historico/), uma fase por arquivo, com
-o plano, o que a revisão achou e o que a execução decidiu por conta própria.
+**Quero saber o que foi feito e quando.** O `git log`.
 
 ---
 
@@ -81,11 +79,11 @@ Se você está escrevendo a mesma frase na segunda zona, uma das duas está no l
    mesmo que X seja sobre arquitetura — foi assim que a receita de migration foi morar na linha
    460 de um documento chamado *Arquitetura*, onde ninguém a procurava.
 2. **Auditoria e revisão não ganham arquivo.** Elas atualizam o documento que revisaram: a
-   revisão de um plano entra no plano, a correção de uma referência substitui o parágrafo errado.
+   correção de uma referência substitui o parágrafo errado.
    Documento de referência não carrega a lista das suas próprias correções — isso é o `git log`.
-3. **Decisão nova continua a letra** (a próxima é a `AU`; a numeração `D` parou no `D164`, pelo
+3. **Decisão nova continua a letra** (a próxima é a `BF`; a numeração `D` parou no `D164`, pelo
    motivo escrito em [*A segunda rodada*](./decisoes/README.md#a-segunda-rodada-ap)), entra no
-   arquivo do assunto que ela governa e ganha linha no índice. Se ela corrige uma anterior, as
-   duas apontam uma para a outra e a tabela de supersessões cresce.
+   arquivo do assunto que ela governa. Se ela corrige uma anterior, a antiga ganha `> **Superada por…**`
+   logo abaixo do título, e a tabela de supersessões cresce.
 4. **Um fato, um lugar.** Se precisar repetir, cite — o link é mais barato que a segunda cópia, e
    a segunda cópia é a que vai envelhecer sozinha.
