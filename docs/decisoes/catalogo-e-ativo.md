@@ -413,6 +413,10 @@ precisa que "ativo" signifique.
 
 ## C — O ativo entregue a um posto sai de `/ativos`; a ficha do posto é rota
 
+> **Superada em parte por [BJ](#bj--o-computador-entregue-a-um-posto-continua-na-lista-de-computadores):** o computador
+> entregue a um posto volta à lista de Computadores, e a linha diz em que mesa ele está. Continua valendo
+> a outra metade: a ficha do posto é rota.
+
 **Decidido:** a vista padrão de `/ativos` exclui quem tem posse aberta num local marcado como
 posto (`isWorkstation`). `/postos/:id` passa a ser rota — a mesma tela de `/postos`, com a
 listagem atrás —, e a busca por etiqueta ou série leva até ela quando o ativo está montado numa
@@ -526,3 +530,45 @@ com nome único o cumpre.
 acontece primeiro. O cadastro não impede "Venda" ao lado de "Vendido", mas só o Supervisor o
 altera. Nada disso toca o estoque: sem baixa e sem motivo lá
 ([AJ](./estoque.md#aj--o-consumível-é-uma-categoria-e-o-total-é-o-que-existe)) continua decidido.
+
+---
+
+## BJ — O computador entregue a um posto continua na lista de Computadores
+
+**Decidido** (2026-11-06, na revisão de Computadores):
+
+- **A vista Ativos mostra todo computador sem baixa**, entregue a um posto ou não. A busca, o filtro por
+  status e os cartões contam o mesmo conjunto, e `EM_POSTO_DE_TRABALHO` sai.
+- **A linha diz onde ele está.** A Localização é a do posto, lida da entrega em aberto como na ficha
+  ([AW](./posse.md#aw--o-computador-está-onde-o-posto-fica-e-o-histórico-diz-quem-ocupou-o-posto)), e não
+  a guardada, que é para onde ele volta. Responsável mostra os ocupantes, ou o selo Posto vago, com
+  "no posto Mesa 1" embaixo.
+- **O `⋯` da linha oferece Devolver**, a mesma operação da ficha. Excluir continua recusado com 409, como
+  no computador entregue a uma pessoa ([AL](./posse.md#al--o-computador-entregue-não-vai-para-a-lixeira)).
+- **A seta da ficha do computador volta ao posto** quando foi de lá que ela foi aberta, na aba em que se
+  estava, e a seta do posto continua voltando à lista como ela estava.
+
+**Supera:** em parte a [C](#c--o-ativo-entregue-a-um-posto-sai-de-ativos-a-ficha-do-posto-é-rota), no
+computador fora da lista; a ficha do posto continua rota. Em parte a
+[Y](./posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe), que mantinha a C, e a
+[BI](./posse.md#bi--a-busca-de-postos-acha-o-computador-pela-etiqueta-e-pela-série), no que ela descartou.
+**Mantém:** a busca de Postos por etiqueta e série (BI), a aba Computador do posto e todas as regras de Postos.
+
+**Por quê:** a C partia de que a mesa era o endereço do computador, e de que "o que há no parque" e "o
+que está nesta mesa" pediam duas telas. Na prática, Computadores contava menos máquinas do que
+Descobertas, e a etiqueta na mão não achava o computador na tela que leva o nome dele: a BI foi o remendo
+desse furo. Sair da lista não é o que os outros fazem. No Snipe-IT o ativo nunca sai; no NetBox, no GLPI e
+no Shelf o item que está dentro de outro (rack, kit) continua na lista dele, e quem o guarda o mostra numa
+aba, como a licença daqui. No iTop não se viu nada que tire, e no ServiceNow não se confirmou. A mesa
+continua dita, agora na própria linha.
+
+**Como a seta lembra o caminho:** no `state` da navegação, a mesma peça da
+[BB](./plataforma.md#bb--toda-lista-ficha-e-formulário-seguem-o-mesmo-molde), com um nível a mais
+(`useVoltaParaEstaFicha`). O critério é o do GOV.UK: voltar à página anterior no estado em que ela foi
+vista por último.
+
+**Descartado:** `navigate(-1)`, porque o histórico é cronológico: quem passa por outra tela no meio voltaria
+para ela, e o link colado não teria para onde voltar. O parâmetro na URL, como o `return_url` do NetBox e o
+`_changelist_filters` do Django, porque sujaria o endereço que se cola no chamado e pediria validar o
+destino, que é onde o `back_url` do Redmine teve o redirecionamento aberto. Guardar os filtros de cada lista
+na sessão, porque o menu recomeça a lista limpa (BB).

@@ -624,6 +624,9 @@ localização, o segundo — sem lixeira, porque ninguém precisa dela de volta.
 
 ## Y — O posto sai de `Location`: localização guarda, posto recebe
 
+> **Superada em parte por [BJ](./catalogo-e-ativo.md#bj--o-computador-entregue-a-um-posto-continua-na-lista-de-computadores):**
+> a C, que esta decisão mantinha, deixa de tirar o computador da lista.
+
 > **Superada em parte por [AL](#al--o-computador-entregue-não-vai-para-a-lixeira):** o computador entregue não vai para a lixeira, como não recebe baixa: faça a devolução antes.
 
 > **Superada em parte por [AN](./licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura):**
@@ -859,6 +862,10 @@ que sobrou delas está em `assignment/`, `occupancy/` e `user/`, com as provas e
 | D17 | superada por [Q](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai): `Asset.assignedToId` não existe mais, e checkout/checkin escrevem só a `Assignment` |
 
 ## BI — A busca de Postos acha o computador pela etiqueta e pela série
+
+> **Superada em parte por [BJ](./catalogo-e-ativo.md#bj--o-computador-entregue-a-um-posto-continua-na-lista-de-computadores):**
+> o computador volta à lista de Computadores, que era o descartado aqui. A busca de Postos continua, e o
+> devolvido deixa de ser achado ali.
 
 **Decisão.** A busca de `/postos` varre também a etiqueta e o número de série do computador entregue à mesa. Depois de devolvido,
 ele deixa de ser achado ali e volta a ser achado em Computadores.

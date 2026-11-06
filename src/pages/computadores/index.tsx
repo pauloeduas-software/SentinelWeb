@@ -106,12 +106,15 @@ export default function ComputadoresPage() {
                     <TableSublinha>{asset.model.manufacturer.name}</TableSublinha>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{asset.model.category.name}</TableCell>
-                  <TableCell className="hidden md:table-cell">{asset.location?.name ?? TRACO}</TableCell>
+                  {/* No posto, ele está onde o posto fica (AW); `location` é para onde ele volta. */}
+                  <TableCell className="hidden md:table-cell">{asset.postoAtual?.location.name ?? asset.location?.name ?? TRACO}</TableCell>
                   {/* RESPONSÁVEL — derivado, e pode ser mais de um: os ocupantes
                       do posto para o qual o ativo foi entregue aparecem juntos,
                       cada um com o turno (docs/referencia/modelo-de-posse.md, Camada 3). */}
                   <TableCell>
-                    <TableLinha>{posse.quantos > 0 ? posse.responsaveis : TRACO}</TableLinha>
+                    {posse.postoVago
+                      ? <PontoDeStatus tom="aviso">Posto vago</PontoDeStatus>
+                      : <TableLinha>{posse.quantos > 0 ? posse.responsaveis : TRACO}</TableLinha>}
                     {posse.detalheAlvo && <TableSublinha>{posse.detalheAlvo}</TableSublinha>}
                   </TableCell>
                   <TableCell>

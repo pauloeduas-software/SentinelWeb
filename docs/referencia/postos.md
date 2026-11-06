@@ -51,6 +51,11 @@ notificação do sistema.
   ("Filial · Mesa 1", com link), e a do computador vira **Volta para** — onde ele
   fica guardado e para onde volta na devolução. Lida da entrega em aberto, na
   hora: mudar o posto de localização leva o computador junto;
+- **a lista de Computadores** mostra o computador do posto como qualquer outro
+  ([BJ](../decisoes/catalogo-e-ativo.md#bj--o-computador-entregue-a-um-posto-continua-na-lista-de-computadores)):
+  a Localização é a do posto, e Responsável traz os ocupantes, ou o selo *Posto
+  vago*, com "no posto Mesa 1" embaixo. Quem abre o computador pelo posto volta
+  ao posto pela seta, na aba em que estava;
 - **o histórico de posse** traz, em cada entrega ao posto, quem o ocupou naquele
   período, com turno e datas — inclusive na entrega em aberto. Entra quem divide
   ao menos um dia com a entrega.
@@ -107,7 +112,7 @@ não se desativa ([AO](../decisoes/catalogo-e-ativo.md#ao--categoria-status-fabr
 | um ativo por posto, na entrega, e a lixeira que recusa o entregue | `tests/invariantes/ativo-por-posto.test.ts`, `tests/corridas/ativo-por-posto.test.ts` |
 | ocupantes e turno | `tests/invariantes/posse.test.ts`, `tests/invariantes/turno-da-ocupacao.test.ts` |
 | a ficha e a lista de ativos | `tests/listagens/ficha-do-posto.test.ts`, `tests/listagens/ativo-em-posto.test.ts` |
-| o lugar do posto na ficha do computador | `tests/listagens/ativo-em-posto.test.ts` |
+| o lugar do posto na ficha e na lista de Computadores, com a linha em posto vago | `tests/listagens/ativo-em-posto.test.ts`, `tests/e2e/ficha-do-posto.spec.ts` |
 | quem ocupou o posto em cada entrega, e o posto excluído pelo id | `tests/listagens/ocupantes-do-periodo.test.ts`, `tests/invariantes/posto.test.ts` |
 | o Editar com a versão da linha | `tests/invariantes/versao.test.ts` |
 | um computador por vez e a mesma pessoa sem sobreposição, no passado; o índice do posto | `tests/invariantes/passado-do-posto.test.ts` |

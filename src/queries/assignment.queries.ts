@@ -70,9 +70,8 @@ export function useAssetAssignmentsQuery(assetId: string | null) {
  * Quatro domínios, e nenhum deles é opcional:
  *
  *   posses  — a linha que acabou de abrir ou fechar;
- *   ativos  — a coluna Responsável e o status são consequência da operação, e
- *             um ativo entregue a um posto SAI da listagem `/computadores`
- *             (`asset-filters.helper.ts`), então a tabela muda de tamanho;
+ *   ativos  — as colunas Responsável e Localização e o status são consequência
+ *             da operação;
  *   postos  — a ficha do posto lista os ativos entregues a ele, conta quantos
  *             são e deriva o selo de POSTO VAGO desses dois números;
  *   pessoas — a ficha do colaborador lista os computadores entregues a ele e

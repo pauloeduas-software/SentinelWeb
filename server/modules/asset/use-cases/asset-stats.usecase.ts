@@ -1,11 +1,11 @@
 import { $Enums } from '@prisma/client';
 import { prisma } from '../../../infra/database/prismaClient';
-import { EM_POSTO_DE_TRABALHO, SEM_BAIXA } from '../helpers/asset-filters.helper';
+import { SEM_BAIXA } from '../helpers/asset-filters.helper';
 
 // Contadores do cabeçalho da tela de ativos. Rota própria porque, com paginação,
 // `rows.length` conta só a página atual — a agregação roda FORA do skip/take.
 export interface AssetStats {
-  /** O que a listagem PADRÃO mostra: nem baixado, nem em posto. */
+  /** O que a listagem PADRÃO mostra: sem o baixado e sem a lixeira. */
   total: number;
   byStatus: {
     id: string;
@@ -29,16 +29,11 @@ export interface AssetStats {
  * é informação — "não há nada inutilizável" vale tanto quanto o número.
  */
 export async function getAssetStats(): Promise<AssetStats> {
-  // `SEM_BAIXA` E o `NOT` do posto de trabalho, porque a listagem padrão
-  // exclui os dois: o contador do cabeçalho é o cabeçalho DAQUELA lista, e
-  // contar aqui o notebook vendido — ou o computador montado numa mesa, que
-  // agora se pergunta em `/postos` — faria o badge prometer uma linha que a
-  // tabela não mostra. É a mesma exclusão de `whereDaVista`, importada de lá
-  // para as duas não divergirem quando uma mudar.
-  const semPosto = { ...SEM_BAIXA, NOT: EM_POSTO_DE_TRABALHO };
-
+  // `SEM_BAIXA`, porque a listagem padrão o exclui: o contador do cabeçalho é o
+  // cabeçalho DAQUELA lista, e contar aqui o notebook vendido faria o badge
+  // prometer uma linha que a tabela não mostra.
   const [grupos, rotulos, retired] = await Promise.all([
-    prisma.asset.groupBy({ by: ['statusId'], where: semPosto, _count: { _all: true } }),
+    prisma.asset.groupBy({ by: ['statusId'], where: SEM_BAIXA, _count: { _all: true } }),
     prisma.statusLabel.findMany({ select: { id: true, name: true, type: true } }),
     prisma.asset.count({ where: { retiredAt: { not: null } } }),
   ]);
@@ -50,10 +45,9 @@ export async function getAssetStats(): Promise<AssetStats> {
     .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, 'pt-BR'));
 
   return {
-    // `total` conta o que a listagem PADRÃO mostra, e ela exclui o
-    // baixado e o que está entregue a um posto: o cabeçalho é o
-    // cabeçalho DAQUELA lista, e prometer uma linha que a tabela não mostra é o
-    // defeito que este contador existe para não ter.
+    // `total` conta o que a listagem PADRÃO mostra, e ela exclui o baixado: o
+    // cabeçalho é o cabeçalho DAQUELA lista, e prometer uma linha que a tabela
+    // não mostra é o defeito que este contador existe para não ter.
     total: byStatus.reduce((soma, rotulo) => soma + rotulo.total, 0),
     byStatus,
     retired,

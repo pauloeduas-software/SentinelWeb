@@ -27,12 +27,14 @@ import { TRACO, ativosComMaquina } from '../../helpers/postos.helper';
 
 interface ComputadorTabProps {
   ativos: readonly AtivoDoPosto[];
+  /** O `state` da linha: a seta da ficha do computador volta para este posto. */
+  voltaDoComputador: object;
   /** Tira o ativo desta mesa: a devolução, com o dia em que ele voltou (AM). */
   onDevolver: (ativo: AtivoDoPosto, dia: string) => Promise<void>;
   devolvendo: boolean;
 }
 
-export default function ComputadorTab({ ativos, onDevolver, devolvendo }: ComputadorTabProps) {
+export default function ComputadorTab({ ativos, voltaDoComputador, onDevolver, devolvendo }: ComputadorTabProps) {
   // O ERRO DA DEVOLUÇÃO SOBE ATÉ AQUI, e é o mesmo desenho do `OccupantsPanel`: o
   // hook propaga a rejeição (mutação propaga, docs/referencia/arquitetura.md) e
   // quem a notifica é o componente. Sem este `catch`, o `onClick` engoliria o 409
@@ -93,7 +95,7 @@ export default function ComputadorTab({ ativos, onDevolver, devolvendo }: Comput
                 // do ativo leva ao posto pelo nome da mesa, e a do posto leva ao
                 // ativo por aqui. Com a devolução aberta ela não abre: o clique é no
                 // campo do dia.
-                <TableRow key={ativo.id} onClick={devolucao ? undefined : () => navigate(`/computadores/${ativo.id}`)}>
+                <TableRow key={ativo.id} onClick={devolucao ? undefined : () => navigate(`/computadores/${ativo.id}`, { state: voltaDoComputador })}>
                   <TableCell>
                     <TableNome className="font-mono">{ativo.assetTag}</TableNome>
                     {ativo.serial && <TableSublinha className="font-mono">SN {ativo.serial}</TableSublinha>}
@@ -181,11 +183,8 @@ export default function ComputadorTab({ ativos, onDevolver, devolvendo }: Comput
 
       {ativos.length > 0 && (
         <>
-          {/* A ENTREGA continua sendo na tela Computadores, e a DEVOLUÇÃO não é
-              mais: ela saiu de lá para cá porque o ativo entregue a um posto
-              saiu da listagem de Computadores, e a operação ficou na tela que já não
-              mostra o ativo. A entrega não tem esse problema — o ativo está na
-              listagem justamente até ser entregue. */}
+          {/* A ENTREGA é só na tela Computadores, e a DEVOLUÇÃO também mora aqui:
+              com o dia, para tirar o computador desta mesa sem sair dela. */}
           <p className="text-sm text-text-secondary">A entrega é feita em Computadores; a devolução, aqui ou lá.</p>
 
           {/* ── O COMPUTADOR DA MESA, AO VIVO ────────────────────────────────

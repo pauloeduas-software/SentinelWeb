@@ -46,30 +46,6 @@ export interface AssetFilters {
 }
 
 /**
- * ENTREGUE A UM POSTO DE TRABALHO — posse aberta cujo alvo é um posto.
- *
- * É o recorte que a listagem padrão EXCLUI: o equipamento que está numa mesa
- * tem endereço, e o endereço dele é a mesa. Quem pergunta "o que há no parque"
- * quer o que está em estoque ou com gente; o que está montado num posto se
- * pergunta em `/postos`, onde ele aparece junto dos ocupantes que respondem por
- * ele. Sem isto, o mesmo computador aparece nas duas telas e nenhuma das duas
- * responde uma pergunta inteira. O ativo GUARDADO no depósito ou na sala de
- * reunião (`locationId`) não é entregue a ninguém e continua sendo parque.
- *
- * FILTRO DO PRISMA, nunca `.filter()` depois da consulta: filtrando no cliente,
- * a página 1 mostraria 3 de 25 linhas e o `total` do envelope mentiria — a
- * paginação inteira passa a descrever um conjunto que a tela não está vendo.
- */
-export const EM_POSTO_DE_TRABALHO: Prisma.AssetWhereInput = {
-  assignments: {
-    some: {
-      checkinAt: null,
-      targetType: 'WORKSTATION',
-    },
-  },
-};
-
-/**
  * O ativo que não teve baixa, a definição de "ainda é do parque". Quem pergunta
  * isso importa daqui, de qualquer domínio: cada consulta reescrevendo o recorte
  * à mão é o que produz versões diferentes.
@@ -124,14 +100,13 @@ export function separarFiltrosDeAtivo(raw: unknown): {
  * `deletedAt` explícito faz a extension de soft delete sair do caminho — é
  * assim que a lixeira alcança as linhas apagadas sem um segundo cliente Prisma.
  *
- * O `NOT` do posto mantém o contador do cabeçalho batendo com a tabela, porque
- * o `/stats` exclui o mesmo conjunto: o computador do posto é pergunta de
- * `/postos`.
+ * O computador entregue a um posto continua em `active` (BJ): a lista é o
+ * parque inteiro, e a linha diz em que mesa ele está.
  */
 function whereDaVista(view: AssetView): Prisma.AssetWhereInput {
   if (view === 'trashed') return { deletedAt: { not: null } };
   if (view === 'retired') return { retiredAt: { not: null } };
-  return { ...SEM_BAIXA, NOT: EM_POSTO_DE_TRABALHO };
+  return SEM_BAIXA;
 }
 
 /**
