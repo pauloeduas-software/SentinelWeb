@@ -69,6 +69,13 @@ export const EM_POSTO_DE_TRABALHO: Prisma.AssetWhereInput = {
   },
 };
 
+/**
+ * O ativo que não teve baixa, a definição de "ainda é do parque". Quem pergunta
+ * isso importa daqui, de qualquer domínio: cada consulta reescrevendo o recorte
+ * à mão é o que produz versões diferentes.
+ */
+export const SEM_BAIXA: Prisma.AssetWhereInput = { retiredAt: null };
+
 // `z.object`, e NÃO `strictObject`: aqui só se lê o que é do domínio e o resto
 // (page, perPage, q) segue intacto para o parser do `core`, que é
 // estrito e continua recusando typo em chave dele.
@@ -124,7 +131,7 @@ export function separarFiltrosDeAtivo(raw: unknown): {
 function whereDaVista(view: AssetView): Prisma.AssetWhereInput {
   if (view === 'trashed') return { deletedAt: { not: null } };
   if (view === 'retired') return { retiredAt: { not: null } };
-  return { retiredAt: null, NOT: EM_POSTO_DE_TRABALHO };
+  return { ...SEM_BAIXA, NOT: EM_POSTO_DE_TRABALHO };
 }
 
 /**

@@ -1,6 +1,6 @@
 import { $Enums } from '@prisma/client';
 import { prisma } from '../../../infra/database/prismaClient';
-import { EM_POSTO_DE_TRABALHO } from '../helpers/asset-filters.helper';
+import { EM_POSTO_DE_TRABALHO, SEM_BAIXA } from '../helpers/asset-filters.helper';
 
 // Contadores do cabeçalho da tela de ativos. Rota própria porque, com paginação,
 // `rows.length` conta só a página atual — a agregação roda FORA do skip/take.
@@ -29,13 +29,13 @@ export interface AssetStats {
  * é informação — "não há nada inutilizável" vale tanto quanto o número.
  */
 export async function getAssetStats(): Promise<AssetStats> {
-  // `retiredAt: null` E o `NOT` do posto de trabalho, porque a listagem padrão
+  // `SEM_BAIXA` E o `NOT` do posto de trabalho, porque a listagem padrão
   // exclui os dois: o contador do cabeçalho é o cabeçalho DAQUELA lista, e
   // contar aqui o notebook vendido — ou o computador montado numa mesa, que
   // agora se pergunta em `/postos` — faria o badge prometer uma linha que a
   // tabela não mostra. É a mesma exclusão de `whereDaVista`, importada de lá
   // para as duas não divergirem quando uma mudar.
-  const semPosto = { retiredAt: null, NOT: EM_POSTO_DE_TRABALHO };
+  const semPosto = { ...SEM_BAIXA, NOT: EM_POSTO_DE_TRABALHO };
 
   const [grupos, rotulos, retired] = await Promise.all([
     prisma.asset.groupBy({ by: ['statusId'], where: semPosto, _count: { _all: true } }),

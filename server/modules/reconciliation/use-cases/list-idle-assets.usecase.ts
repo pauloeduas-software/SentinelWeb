@@ -1,4 +1,5 @@
 import { prisma } from '../../../infra/database/prismaClient';
+import { SEM_BAIXA } from '../../asset/helpers/asset-filters.helper';
 import { resolverResponsaveisEmLote } from '../../assignment/use-cases/resolve-responsibles.usecase';
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -37,7 +38,7 @@ export async function listarAtivosOciosos(dias = 30): Promise<AtivoOcioso[]> {
   const limite = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
 
   const comAgente = await prisma.asset.findMany({
-    where: { retiredAt: null, endpoint: { isNot: null } },
+    where: { ...SEM_BAIXA, endpoint: { isNot: null } },
     select: {
       id: true,
       assetTag: true,

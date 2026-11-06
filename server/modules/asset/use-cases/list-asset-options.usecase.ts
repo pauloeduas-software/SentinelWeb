@@ -1,5 +1,5 @@
 import { prisma } from '../../../infra/database/prismaClient';
-import { buildAssetWhere } from '../helpers/asset-filters.helper';
+import { buildAssetWhere, SEM_BAIXA } from '../helpers/asset-filters.helper';
 
 // Mesmo teto e mesma forma dos outros `/options`: id e nome, sem envelope.
 const MAX_OPCOES = 200;
@@ -41,7 +41,7 @@ export async function listAssetOptions(
       // Sem os BAIXADOS: os três seletores que usam esta lista — a entrega de
       // licença, a de componente e o vínculo de máquina — recusam o ativo que
       // saiu do patrimônio, então oferecê-lo seria oferecer um 409.
-      retiredAt: null,
+      ...SEM_BAIXA,
       ...(filtro.semMaquina ? { endpoint: null } : {}),
     },
     select: {
