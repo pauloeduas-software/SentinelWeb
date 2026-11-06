@@ -32,7 +32,7 @@ Rota nova nasce negada, e rota sem permissão declarada **derruba o boot** — �
 antes.
 
 **Vou mexer nas Configurações ou na saída de um ativo.** [`referencia/configuracoes.md`](./referencia/configuracoes.md)
-diz o que cada uma das cinco tabelas de referência é, o que a exclusão recusa e quem as usa;
+diz o que cada uma das seis tabelas de referência é, o que a exclusão recusa e quem as usa;
 [`referencia/baixa.md`](./referencia/baixa.md), o que é dar baixa — e por que não é status nem lixeira.
 
 **Vou mexer nos postos.** [`referencia/postos.md`](./referencia/postos.md) diz o que o posto é, onde

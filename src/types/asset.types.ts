@@ -5,15 +5,6 @@ import type { ListParams } from './list.types';
 // Contrato do ativo com a API. Espelha `ASSET_SELECT`
 // (server/modules/asset/helpers/asset-select.helper.ts).
 
-/**
- * Por que um ativo saiu do patrimônio. Espelha o enum `RetiredReason`.
- *
- * Os rótulos em português ficam na tela (pages/computadores/helpers), não aqui:
- * este arquivo é o CONTRATO com a API, e o contrato são os valores que viajam.
- */
-export type MotivoDaSaida =
-  | 'VENDIDO' | 'DESCARTADO' | 'DOADO' | 'EXTRAVIADO' | 'ROUBADO' | 'GARANTIA';
-
 /** Relação embutida enxuta: o que a tabela mostra sem uma consulta por linha. */
 export interface Referencia {
   id: string;
@@ -90,7 +81,7 @@ export interface Asset {
    * um da lixeira nunca deveria ter existido.
    */
   retiredAt: string | null;
-  retiredReason: MotivoDaSaida | null;
+  retiredReason: Referencia | null;
   /** A observação da baixa, enquanto ela vale. Desfazer a baixa a limpa. */
   retiredNotes: string | null;
 
@@ -210,7 +201,7 @@ export interface EventoDoAtivo {
 
 /** Corpo de `POST /api/assets/:id/retire`. */
 export interface RetireInput {
-  retiredReason: MotivoDaSaida;
+  retiredReasonId: string;
   /**
    * 'AAAA-MM-DD', nunca no futuro (o servidor responde 422). A tela manda
    * sempre — o modal nasce com hoje no fuso local (ver `RetireModal`).

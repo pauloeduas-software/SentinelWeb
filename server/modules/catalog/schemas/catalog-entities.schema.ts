@@ -5,7 +5,7 @@ import {
   nomeObrigatorio, textoOpcional, urlOpcional, uuidObrigatorio, versaoLida
 } from '../../shared/fields.schema';
 
-// Contrato de entrada das seis tabelas de catálogo, num lugar só.
+// Contrato de entrada das sete tabelas de catálogo, num lugar só.
 //
 // `strictObject` em tudo: campo desconhecido é recusado em vez de ignorado em
 // silêncio — é o que fecha o mass assignment.
@@ -53,6 +53,10 @@ export const updateManufacturerSchema = z.strictObject({
   name: nomeObrigatorio().optional(), ...camposFabricante,
   updatedAt: versaoLida,
 });
+
+// ------------------------------------------------------------ RetireReason
+export const createRetireReasonSchema = z.strictObject({ name: nomeObrigatorio() });
+export const updateRetireReasonSchema = z.strictObject({ name: nomeObrigatorio().optional(), updatedAt: versaoLida });
 
 // -------------------------------------------------------------- AssetModel
 const camposModelo = {

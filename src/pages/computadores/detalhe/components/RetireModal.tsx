@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import FormularioLateral from '../../../../components/FormularioLateral';
+import ReferenceSelect from '../../../../components/ReferenceSelect';
 import { Campo } from '../../../../components/ui/campo';
 import { Input, Textarea } from '../../../../components/ui/input';
-import { Seletor } from '../../../../components/ui/seletor';
 import type { Asset, RetireInput } from '../../../../types/asset.types';
 import { hojeNoCampoDeData } from '../../../../helpers/format.helper';
-import { MOTIVOS_DA_SAIDA } from '../../helpers/baixa.helper';
 import type { LinkDaNotificacao } from '../../../../hooks/useNotificacao';
 import { linksDoErro } from '../../../../helpers/erro.helper';
 
@@ -28,7 +27,7 @@ interface RetireModalProps {
 }
 
 export default function RetireModal({ asset, onClose, onConfirmar }: RetireModalProps) {
-  const [motivo, setMotivo] = useState(MOTIVOS_DA_SAIDA[0].value);
+  const [motivo, setMotivo] = useState('');
   // A data NASCE com o dia de hoje e vai sempre preenchida. "Em branco = agora"
   // mandava o servidor gravar o INSTANTE, e ele guarda a saída como dia em UTC:
   // uma baixa às 22h de Brasília aparecia com o dia seguinte. Com o dia já
@@ -52,7 +51,7 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
       // A data vai sempre: o campo é obrigatório e nasce com hoje (ver o
       // `useState` acima). Observação vazia vira AUSENTE, nunca `''`.
       await onConfirmar({
-        retiredReason: motivo,
+        retiredReasonId: motivo,
         retiredAt: data,
         ...(observacoes.trim() ? { notes: observacoes.trim() } : {}),
       });
@@ -88,15 +87,8 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
         </span>
       )}
     >
-      <Campo rotulo="Motivo" obrigatorio>
-        <Seletor
-          value={motivo}
-          onChange={(valor) => setMotivo(valor as typeof motivo)}
-          opcoes={MOTIVOS_DA_SAIDA}
-          vazio="Selecione…"
-          placeholderDaBusca="Buscar motivo…"
-          obrigatorio
-        />
+      <Campo rotulo="Motivo" obrigatorio ajuda="A lista vem de Configurações › Motivos de baixa.">
+        <ReferenceSelect rota="retire-reasons" valor={motivo} onChange={setMotivo} obrigatorio />
       </Campo>
 
       {/* `max` = hoje porque o servidor recusa data futura (422): uma saída

@@ -16,7 +16,7 @@ O mesmo ativo responde três coisas diferentes, e cada uma mora num campo:
 | Pergunta | Onde | Exemplo |
 |---|---|---|
 | **Em que estado ele está?** | o **status** (`statusId`) | Disponível, Em uso, Pendente, Inutilizável |
-| **Ainda é da empresa?** | a **baixa** (`retiredAt` + `retiredReason`) | Vendido em 15/10/2026 |
+| **Ainda é da empresa?** | a **baixa** (`retiredAt` + `retiredReasonId`) | Vendido em 15/10/2026 |
 | **Foi cadastrado de verdade?** | a **lixeira** (`deletedAt`) | cadastro feito por engano |
 
 Por isso a baixa **não é um quinto tipo de status**: ela não substitui o estado
@@ -42,11 +42,11 @@ formulário próprio — é uma operação, não um campo do cadastro:
 
 | Campo | Regra |
 |---|---|
-| **Motivo** (obrigatório) | um de seis, lista fechada: Vendido, Descartado, Doado, Devolvido em garantia, Extraviado, Roubado |
+| **Motivo** (obrigatório) | um dos cadastrados em [Configurações › Motivos de baixa](configuracoes.md#motivos-de-baixa) ([BE](../decisoes/catalogo-e-ativo.md#be--os-motivos-da-baixa-viram-cadastro-de-configurações)). O campo nasce vazio, e o sistema nasce com seis: Vendido, Descartado, Doado, Devolvido em garantia, Extraviado e Roubado |
 | **Data da saída** (obrigatório) | vem preenchida com **hoje**, no calendário de Brasília, que é também o padrão quando a API não a recebe. Pode ser uma data passada — a venda foi na semana passada e o registro, hoje —, nunca futura, antes da compra nem antes da última devolução do computador, de uma licença entregue a ele ou de um componente retirado dele (422, [AM](../decisoes/posse.md#am--a-entrega-e-a-devolução-do-computador-ganham-o-dia)) |
 | **Observações** | a justificativa ("lote 2026/03, nota 1187"). Fica no ativo (`retiredNotes`) e aparece na aba Detalhes enquanto a baixa valer; a de cada baixa fica também na auditoria, no banco ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)) |
 
-A API é `POST /api/assets/:id/retire` (`{ retiredReason, retiredAt?, notes? }`),
+A API é `POST /api/assets/:id/retire` (`{ retiredReasonId, retiredAt?, notes? }`),
 permitida a partir de `SUPERVISOR` ([AV](../decisoes/acesso.md#av--três-cargos-técnico-supervisor-e-administrador)), como o `unretire`.
 
 ### Depois da baixa
@@ -70,6 +70,7 @@ permitida a partir de `SUPERVISOR` ([AV](../decisoes/acesso.md#av--três-cargos-
 | dar baixa em ativo **entregue** (a pessoa ou a posto) | 409 `ATV-00042 está entregue e não pode receber baixa. Faça a devolução antes.` | "vendido" e "na mão da Laura" não podem ser verdade juntos. O sistema **não devolve sozinho**: apagaria quem estava com o equipamento e em que estado voltou |
 | dar baixa em ativo que **tem licença** | 409 `ATV-00042 ainda tem a licença SolidWorks. Devolva pela tela de Licenças antes de dar baixa.` | a licença ficaria descontada do contrato, presa a uma máquina vendida. A recusa traz um link para o detalhe de cada licença, onde está o Devolver |
 | dar baixa em ativo que **tem componente** | 409 `ATV-00042 ainda tem os componentes Memória RAM 8 GB ×2. Retire pela tela de Estoque antes de dar baixa.` | a peça continuaria "em uso" numa máquina vendida. A recusa traz um link para o detalhe de cada item, onde está o Retirar; se a peça foi junto, retire e diminua o total do item ([AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar)) |
+| motivo que **não existe** | 404 `Motivo da baixa não encontrado.` | o motivo pode ter sido excluído depois de o formulário abrir |
 | dar baixa **duas vezes** | 409 `ATV-00042 já teve baixa em 15/10/2026.` | reescreveria a data em que ele deixou de ser patrimônio |
 | data da saída **futura** | 422 | a baixa tiraria o ativo do inventário hoje por um fato que não aconteceu |
 | data da saída **antes da compra** | 422 `A baixa (01/03/2026) não pode ser antes da compra de ATV-00042 (10/03/2026).` | nada acontece com o computador antes de ele ser comprado; e a compra editada também não vai para depois da baixa |
@@ -97,7 +98,7 @@ Para a venda que não saiu, o roubado que apareceu, o clique errado.
 `POST /api/assets/:id/unretire`, `ADMIN`, botão **Reverter** na ficha, que pede
 confirmação.
 
-- Limpa **as três** colunas juntas — `retiredAt`, `retiredReason` e `retiredNotes`:
+- Limpa **as três** colunas juntas — `retiredAt`, `retiredReasonId` e `retiredNotes`:
   `retiredAt` sem motivo seria "saiu, não se sabe por quê", e a observação explicaria
   uma saída que não existe mais.
 - **Não confere posse**: um ativo que volta ao patrimônio não contradiz nada.

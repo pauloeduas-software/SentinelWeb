@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '../../server/infra/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
-import { cenarioDePosse, criarAtivo, criarItemDeEstoque, diaNoBrasil } from '../helpers/fixtures';
+import { cenarioDePosse, criarAtivo, criarItemDeEstoque, diaNoBrasil, motivoDaBaixa } from '../helpers/fixtures';
 
 // O COMPONENTE (AI) — o item de estoque cuja CATEGORIA é do tipo Componente:
 // a memória, o SSD. Vai só para computador, fica nele mesmo quando o
@@ -75,7 +75,7 @@ describe('a categoria decide para onde o item vai', () => {
   it('o computador baixado é 409; o da lixeira e o inexistente, 404', async () => {
     const ssd = await componente('SSD do computador que saiu', 3);
     const baixado = await maquina('Baixado');
-    expect((await api.post(`/api/assets/${baixado.id}/retire`, { retiredReason: 'VENDIDO' })).status).toBe(200);
+    expect((await api.post(`/api/assets/${baixado.id}/retire`, { retiredReasonId: await motivoDaBaixa() })).status).toBe(200);
     const recusa = await noComputador(ssd.id, baixado.id);
     expect(recusa.status).toBe(409);
     expect(recusa.body.error).toBe(`O ativo ${baixado.assetTag} teve baixa e não pode receber componente.`);
@@ -177,7 +177,7 @@ describe('o computador com componente não sai do inventário', () => {
     const pc = await maquina('Vai ser vendido');
     const instalada = await noComputador(ram.id, pc.id, 2);
 
-    const baixa = await api.post<Recusa>(`/api/assets/${pc.id}/retire`, { retiredReason: 'VENDIDO' });
+    const baixa = await api.post<Recusa>(`/api/assets/${pc.id}/retire`, { retiredReasonId: await motivoDaBaixa() });
     expect(baixa.status).toBe(409);
     expect(baixa.body.error).toBe(
       `${pc.assetTag} ainda tem os componentes RAM que segura a baixa ×2. Retire pela tela de Estoque antes de dar baixa.`,
@@ -191,7 +191,7 @@ describe('o computador com componente não sai do inventário', () => {
     );
 
     expect((await retirar(instalada.body.unidades[0].id)).status).toBe(200);
-    expect((await api.post(`/api/assets/${pc.id}/retire`, { retiredReason: 'VENDIDO' })).status).toBe(200);
+    expect((await api.post(`/api/assets/${pc.id}/retire`, { retiredReasonId: await motivoDaBaixa() })).status).toBe(200);
   });
 
   it('o item com componente instalado não se exclui: manda retirar', async () => {

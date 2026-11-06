@@ -1,12 +1,12 @@
-import type { $Enums } from '@prisma/client';
 import { prisma } from '../../../infra/database/prismaClient';
 import { AppError } from '../../../infra/errors/app-error';
 import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
 import { buildChanges } from '../../shared/diff.helper';
 import { hojeNoBrasil } from '../../shared/hoje.helper';
+import { assertMotivoDaBaixaExiste } from '../../catalog/helpers/catalog-lock.helper';
 import { diaEmPortugues } from '../helpers/asset-dates.helper';
-import { ASSET_WRITE_SELECT } from '../helpers/asset-select.helper';
+import { ASSET_WRITE_SELECT, comMotivoPorEscrito } from '../helpers/asset-select.helper';
 import { assertSemPosse } from './assert-sem-posse.usecase';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
 import {
@@ -28,7 +28,8 @@ import { componentesDoAtivo } from '../../stock/use-cases/count-person-stock.use
 // histórico.
 
 interface RetireAssetData {
-  retiredReason: $Enums.RetiredReason;
+  /** Um motivo do cadastro de Configurações (BE). */
+  retiredReasonId: string;
   /** Ausente = agora. A saída pode ter acontecido antes de alguém registrar. */
   retiredAt?: Date | null;
   /** A justificativa. Vai para `retiredNotes`, que a aba Detalhes mostra (AB). */
@@ -48,7 +49,10 @@ export async function retireAsset(id: string, data: RetireAssetData, ator: Ator)
 
     const antes = await tx.asset.findFirst({
       where: { id },
-      select: { id: true, assetTag: true, purchaseDate: true, retiredAt: true, retiredReason: true, retiredNotes: true },
+      select: {
+        id: true, assetTag: true, purchaseDate: true, retiredAt: true,
+        retiredReason: { select: { name: true } }, retiredNotes: true,
+      },
     });
     if (!antes) throw new AppError('Registro não encontrado', 404);
 
@@ -122,9 +126,11 @@ export async function retireAsset(id: string, data: RetireAssetData, ator: Ator)
       }
     }
 
+    await assertMotivoDaBaixaExiste(tx, data.retiredReasonId);
+
     const depois = await tx.asset.update({
       where: { id },
-      data: { retiredAt, retiredReason: data.retiredReason, retiredNotes: data.notes ?? null },
+      data: { retiredAt, retiredReasonId: data.retiredReasonId, retiredNotes: data.notes ?? null },
       select: ASSET_WRITE_SELECT,
     });
 
@@ -134,7 +140,7 @@ export async function retireAsset(id: string, data: RetireAssetData, ator: Ator)
       entityLabel: antes.assetTag,
       action: 'RETIRE',
       changes: {
-        ...buildChanges(antes, depois, ['retiredAt', 'retiredReason', 'retiredNotes']),
+        ...buildChanges(comMotivoPorEscrito(antes), comMotivoPorEscrito(depois), ['retiredAt', 'retiredReason', 'retiredNotes']),
       },
     }, ator);
 

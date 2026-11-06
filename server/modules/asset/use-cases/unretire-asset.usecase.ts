@@ -3,7 +3,7 @@ import { AppError } from '../../../infra/errors/app-error';
 import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
 import { buildChanges } from '../../shared/diff.helper';
-import { ASSET_WRITE_SELECT } from '../helpers/asset-select.helper';
+import { ASSET_WRITE_SELECT, comMotivoPorEscrito } from '../helpers/asset-select.helper';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
 
 /**
@@ -32,7 +32,7 @@ export async function unretireAsset(id: string, ator: Ator) {
 
     const antes = await tx.asset.findFirst({
       where: { id },
-      select: { id: true, assetTag: true, retiredAt: true, retiredReason: true, retiredNotes: true },
+      select: { id: true, assetTag: true, retiredAt: true, retiredReason: { select: { name: true } }, retiredNotes: true },
     });
     if (!antes) throw new AppError('Registro não encontrado', 404);
 
@@ -42,7 +42,7 @@ export async function unretireAsset(id: string, ator: Ator) {
 
     const depois = await tx.asset.update({
       where: { id },
-      data: { retiredAt: null, retiredReason: null, retiredNotes: null },
+      data: { retiredAt: null, retiredReasonId: null, retiredNotes: null },
       select: ASSET_WRITE_SELECT,
     });
 
@@ -54,7 +54,7 @@ export async function unretireAsset(id: string, ator: Ator) {
       // O diff guarda DE ONDE ele voltou: sem isso, a auditoria diria "voltou
       // ao patrimônio" sem dizer como vendido ou como roubado ele estava — e é
       // justamente essa a pergunta de quem audita a reversão.
-      changes: buildChanges(antes, depois, ['retiredAt', 'retiredReason', 'retiredNotes']),
+      changes: buildChanges(comMotivoPorEscrito(antes), comMotivoPorEscrito(depois), ['retiredAt', 'retiredReason', 'retiredNotes']),
     }, ator);
 
     return depois;
