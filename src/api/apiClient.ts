@@ -65,6 +65,15 @@ export class ErroDaApi extends Error {
   }
 }
 
+/**
+ * O servidor respondeu e recusou: tentar de novo dá na mesma. Sem status, ele nem
+ * respondeu; 408 e 429 são 4xx, mas passam com o tempo.
+ */
+export function foiRecusa(erro: unknown): boolean {
+  const status = erro instanceof ErroDaApi ? erro.status : undefined;
+  return status !== undefined && status >= 400 && status < 500 && status !== 408 && status !== 429;
+}
+
 // O backend responde erro SEMPRE no mesmo formato (`{ error: "mensagem" }`, ver
 // server/infra/errors). Traduzir isso em Error acontece aqui, num lugar só: as
 // telas mostram `error.message` sem cada uma precisar conhecer o formato da

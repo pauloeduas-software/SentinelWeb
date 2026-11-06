@@ -7,6 +7,7 @@ export const locationSpec: CatalogSpec = {
   entityType: 'Location',
   tabela: 'locations',
   rotulo: 'localização',
+  naoEncontrado: 'Localização não encontrada.',
 
   delegate: (client) => client.location as unknown as CatalogDelegate,
   createSchema: createLocationSchema,

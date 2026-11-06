@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import {
-  diaNaoFuturo, nomeObrigatorio, textoOpcional, uuidObrigatorio, uuidOpcional, versaoLida
+  diaNaoFuturo, nomeObrigatorio, textoOpcional, uuidObrigatorio, uuidOpcional, versaoLida, milhar,
 } from '../../shared/fields.schema';
 
 // Contrato de entrada do ESTOQUE — a mesma forma do da licença
@@ -21,7 +21,7 @@ const quantidade = (rotulo: string, max: number, min = 1) =>
   z.number(`${rotulo} deve ser um número`)
     .int(`${rotulo} deve ser um número inteiro`)
     .min(min, `${rotulo}: mínimo de ${min}`)
-    .max(max, `${rotulo}: máximo de ${max}`);
+    .max(max, `${rotulo}: máximo de ${milhar(max)}`);
 
 /**
  * O TOTAL é o que existe (AJ). O cadastro pede ao menos UM, como a quantidade
@@ -57,7 +57,7 @@ export const updateStockItemSchema = z.strictObject({
   qty: totalDaEdicao.optional(),
   locationId: uuidOpcional('localização'),
   notes: textoOpcional('notas', 2_000),
-  isActive: z.boolean('ativo: use true ou false').optional(),
+  isActive: z.boolean('ativo deve ser verdadeiro ou falso').optional(),
   updatedAt: versaoLida,
 });
 

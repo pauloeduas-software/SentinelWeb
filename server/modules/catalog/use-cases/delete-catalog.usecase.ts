@@ -25,7 +25,7 @@ export async function deleteCatalog(spec: CatalogSpec, id: string, ator: Ator): 
     const delegate = spec.delegate(tx);
 
     const antes = await delegate.findFirst({ where: { id }, select: spec.select });
-    if (!antes) throw new AppError('Registro não encontrado', 404);
+    if (!antes) throw new AppError(spec.naoEncontrado, 404);
 
     if (spec.motivoParaNaoExcluir) {
       const motivo = await spec.motivoParaNaoExcluir(tx, id);

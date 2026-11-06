@@ -89,7 +89,7 @@ export function assertChavesCabem(nome: string, seatsTotal: number, cobertas: nu
   if (cobertas <= seatsTotal) return;
   throw new AppError(
     status === 409
-      ? `Não dá para reduzir "${nome}" para ${seatsTotal}: as chaves cobrem ${cobertas}. `
+      ? `Não é possível reduzir "${nome}" para ${seatsTotal}: as chaves cobrem ${cobertas}. `
         + 'Tire uma chave ou diminua o que ela cobre antes.'
       : `As chaves cobrem ${cobertas}, mais do que ${quantas(seatsTotal, 'comprada', 'compradas')} em "${nome}". `
         + 'Aumente a quantidade comprada ou diminua o que as chaves cobrem.',

@@ -26,5 +26,5 @@ export async function travarLicenca(client: ClienteQueTrava, licenseId: string):
 
 /** Trava a licença até o fim da transação. 404 quando ela não existe. */
 export async function travarLicencaOuFalhar(client: ClienteQueTrava, licenseId: string): Promise<void> {
-  if (!(await travarLicenca(client, licenseId))) throw new AppError('Nenhuma licença com este identificador.', 404);
+  if (!(await travarLicenca(client, licenseId))) throw new AppError('Licença não encontrada.', 404);
 }

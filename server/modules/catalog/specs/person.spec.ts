@@ -18,6 +18,7 @@ export const personSpec: CatalogSpec = {
   entityType: 'Person',
   tabela: 'people',
   rotulo: 'colaborador',
+  naoEncontrado: 'Colaborador não encontrado.',
 
   delegate: (client) => client.person as unknown as CatalogDelegate,
   createSchema: createPersonSchema,

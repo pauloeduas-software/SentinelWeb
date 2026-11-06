@@ -65,6 +65,9 @@ bancos de teste a apagar depois estão lá.
 - **Só pt-BR, e a moeda é o real (BRL).** Nenhuma frase em inglês chega a quem usa: a recusa da API
   passa pelo locale pt-BR da zod (`server/infra/errors/zod-error.ts`) e o balão do navegador, por
   `src/helpers/validacao.helper.ts`. Campo novo de schema leva a frase com o rótulo.
+- **A resposta a um clique vai para o cartão do canto inferior direito** (`useNotificacao`), com sucesso
+  e com recusa. Recusa de formulário fica no formulário; falha ao carregar e situação que continua
+  valendo ficam na tela; copiar confirma no próprio botão (BF).
 - **O seed demo é como recém-cadastrado pela tela:** nada entregue, sem chave, só produto que todo
   mundo conhece.
 

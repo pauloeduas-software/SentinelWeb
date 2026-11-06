@@ -141,6 +141,6 @@ describe('o Editar com a versão velha é recusado', () => {
     const id = await criarPosto(api, { name: 'Mesa da versão torta' });
     const torta = await api.put<{ error: string }>(`/api/workstations/${id}`, { name: 'x', updatedAt: 'ontem' });
     expect(torta.status).toBe(422);
-    expect(torta.body.error).toContain('updatedAt: use a data e hora que a leitura devolveu');
+    expect(torta.body.error).toContain('Versão: use a data e hora que a leitura devolveu.');
   });
 });

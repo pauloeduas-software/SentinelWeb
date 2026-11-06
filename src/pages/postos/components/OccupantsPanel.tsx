@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   Check, LogOut, Pencil, UserPlus, Users, X,
 } from 'lucide-react';
 import OcupanteFormModal from './OcupanteFormModal';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
 import ListaVazia from '../../../components/ListaVazia';
-import { Aviso } from '../../../components/ui/aviso';
 import { Button } from '../../../components/ui/button';
 import { Card } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
@@ -14,6 +13,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableLinha, TableRow, TableSublinha,
 } from '../../../components/ui/table';
 import { diaDoInstante, hojeNoCampoDeData } from '../../../helpers/format.helper';
+import { useNotificacao } from '../../../hooks/useNotificacao';
 import {
   estaAberta, nomeDoOcupante, periodoDaOcupacao, turnoDoOcupante,
 } from '../helpers/ocupantes.helper';
@@ -59,17 +59,11 @@ interface OccupantsPanelProps {
 }
 
 export default function OccupantsPanel({
-  nomeDoPosto, ocupantes, carregando, erro: erroAoCarregar = null, view, onViewChange, onAdicionar, onEncerrar,
+  nomeDoPosto, ocupantes, carregando, erro = null, view, onViewChange, onAdicionar, onEncerrar,
   onCorrigirTurno,
 }: OccupantsPanelProps) {
+  const notificar = useNotificacao();
   const [adicionando, setAdicionando] = useState(false);
-  const [erro, setErro] = useState('');
-  // O aviso fica no topo, e a aba rola: quem encerrou uma ocupação no fim do
-  // histórico não via a recusa e achava que o clique não tinha feito nada.
-  const avisoRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (erro) avisoRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }, [erro]);
   // O encerramento aberto numa linha: qual ocupação e o dia escolhido.
   const [encerrando, setEncerrando] = useState<{ id: string; dia: string } | null>(null);
 
@@ -80,15 +74,11 @@ export default function OccupantsPanel({
   const [salvandoTurno, setSalvandoTurno] = useState(false);
 
   const abrirEdicaoDoTurno = (ocupante: WorkstationOccupant) => {
-    setErro('');
     setEditandoTurno(ocupante.id);
     setTurnoEditado(ocupante.shift ?? '');
   };
 
-  const cancelarTurno = () => {
-    setEditandoTurno(null);
-    setErro('');
-  };
+  const cancelarTurno = () => setEditandoTurno(null);
 
   const salvarTurno = async (ocupante: WorkstationOccupant) => {
     if (salvandoTurno) return;
@@ -97,33 +87,31 @@ export default function OccupantsPanel({
       cancelarTurno();
       return;
     }
-    setErro('');
     setSalvandoTurno(true);
     try {
       await onCorrigirTurno(ocupante, turnoEditado);
       setEditandoTurno(null);
+      notificar.sucesso('Turno corrigido.');
     } catch (falha) {
       // O campo continua aberto com o que foi digitado, para corrigir.
-      setErro((falha as Error).message);
+      notificar.erro((falha as Error).message);
     } finally {
       setSalvandoTurno(false);
     }
   };
 
   const encerrar = async (ocupante: WorkstationOccupant, dia: string) => {
-    setErro('');
     try {
       await onEncerrar(ocupante, dia);
       setEncerrando(null);
+      notificar.sucesso('Ocupação encerrada.');
     } catch (falha) {
-      setErro((falha as Error).message);
+      notificar.erro((falha as Error).message);
     }
   };
 
   return (
     <>
-      {erro && <Aviso ref={avisoRef}>{erro}</Aviso>}
-
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Segmentado opcoes={RECORTES} valor={view} onChange={onViewChange} />
         <Button size="sm" onClick={() => setAdicionando(true)}><UserPlus /> Adicionar ao posto</Button>
@@ -264,7 +252,7 @@ export default function OccupantsPanel({
             <ListaVazia
               icone={Users}
               carregando={carregando}
-              erro={erroAoCarregar}
+              erro={erro}
               frase={view === 'all' ? 'Este posto nunca teve ocupante.' : 'Ninguém ocupa este posto agora.'}
             />
           )}

@@ -212,7 +212,7 @@ export async function criarAtivo(
  *
  * `Manufacturer.name` e `Workstation.name` são `@unique`, e `Person.email` tem índice
  * único parcial. Chamar esta função DUAS vezes no mesmo arquivo colide nos três —
- * 409 "Registro já existe" vindo de dentro do fixture, que se lê como defeito da
+ * 409 "Registro já existe." vindo de dentro do fixture, que se lê como defeito da
  * aplicação e não do teste.
  *
  * O padrão fica VAZIO de propósito: há testes que dependem dos nomes LITERAIS

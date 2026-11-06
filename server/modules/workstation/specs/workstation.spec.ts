@@ -24,6 +24,7 @@ export const workstationSpec: CatalogSpec = {
   entityType: 'Workstation',
   tabela: 'workstations',
   rotulo: 'posto',
+  naoEncontrado: 'Posto não encontrado.',
 
   delegate: (client) => client.workstation as unknown as CatalogDelegate,
   createSchema: createWorkstationSchema,
@@ -80,7 +81,15 @@ export const workstationSpec: CatalogSpec = {
     if (partes.length === 0) return null;
 
     const frase = partes.length === 1 ? partes[0] : `${partes.slice(0, -1).join(', ')} e ${partes[partes.length - 1]}`;
-    return { mensagem: `Este posto ainda tem ${frase}. ${DICA_DO_POSTO_EM_USO}`, refs: itensComoReferencias(itens) };
+
+    // O pedido cita só o que existe: posto só com ocupante não tem entrega a devolver.
+    const pedidos: string[] = [];
+    if (ativos > 0 || itens.length > 0) pedidos.push('devolva o que foi entregue');
+    if (ocupantes > 0) pedidos.push(`encerre ${ocupantes === 1 ? 'a ocupação' : 'as ocupações'}`);
+    return {
+      mensagem: `Este posto ainda tem ${frase}. Tire o que está nele agora: ${pedidos.join(' e ')}.`,
+      refs: itensComoReferencias(itens),
+    };
   },
 
   // O PASSADO SOLTA O POSTO. Roda depois da contagem — nada aberto aponta para

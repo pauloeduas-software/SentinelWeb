@@ -9,6 +9,7 @@ import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { diaDoInstante, hojeNoCampoDeData } from '../../../../helpers/format.helper';
 import { tomDoStatus } from '../../../../helpers/status.helper';
+import { useNotificacao } from '../../../../hooks/useNotificacao';
 import type { AtivoDoPosto } from '../../../../types/workstation.types';
 import { ativosComMaquina } from '../../helpers/postos.helper';
 
@@ -25,22 +26,22 @@ interface ComputadorTabProps {
 }
 
 export default function ComputadorTab({ ativos, onDevolver, devolvendo }: ComputadorTabProps) {
-  // O ERRO DA DEVOLUÇÃO MORA AQUI, e é o mesmo desenho do `OccupantsPanel`: o
+  // O ERRO DA DEVOLUÇÃO SOBE ATÉ AQUI, e é o mesmo desenho do `OccupantsPanel`: o
   // hook propaga a rejeição (mutação propaga, docs/referencia/arquitetura.md) e
-  // quem a mostra é o componente. Sem este `catch`, o `onClick` engoliria o 409
+  // quem a notifica é o componente. Sem este `catch`, o `onClick` engoliria o 409
   // de "este ativo não está entregue" numa rejeição não tratada — o clique não
   // faria nada e não diria nada.
-  const [erroDaDevolucao, setErroDaDevolucao] = useState('');
+  const notificar = useNotificacao();
   // A devolução aberta numa linha: qual ativo e o dia escolhido.
   const [devolvendoAtivo, setDevolvendoAtivo] = useState<{ id: string; dia: string } | null>(null);
 
   const devolver = async (ativo: AtivoDoPosto, dia: string) => {
-    setErroDaDevolucao('');
     try {
       await onDevolver(ativo, dia);
       setDevolvendoAtivo(null);
+      notificar.sucesso('Ativo devolvido.');
     } catch (falha) {
-      setErroDaDevolucao((falha as Error).message);
+      notificar.erro((falha as Error).message);
     }
   };
 
@@ -51,8 +52,6 @@ export default function ComputadorTab({ ativos, onDevolver, devolvendo }: Comput
 
   return (
     <>
-      {erroDaDevolucao && <Aviso>{erroDaDevolucao}</Aviso>}
-
       {/* Estado que a invariante 19 recusa nas duas portas, e que só um dado de
           antes da regra traria. Se aparecer, precisa ser visto — não escondido
           atrás do primeiro ativo. */}

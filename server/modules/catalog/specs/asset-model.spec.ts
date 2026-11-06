@@ -10,6 +10,7 @@ export const assetModelSpec: CatalogSpec = {
   entityType: 'AssetModel',
   tabela: 'asset_models',
   rotulo: 'modelo',
+  naoEncontrado: 'Modelo não encontrado.',
 
   delegate: (client) => client.assetModel as unknown as CatalogDelegate,
   createSchema: createAssetModelSchema,
@@ -72,7 +73,7 @@ export const assetModelSpec: CatalogSpec = {
     }
 
     // O número do modelo é único POR FABRICANTE (`@@unique([manufacturerId,
-    // modelNumber])`), e a colisão crua vira "Registro já existe" sem dizer
+    // modelNumber])`), e a colisão crua vira "Registro já existe." sem dizer
     // qual. Conferido quando o número ou o fabricante mudam.
     if (data.modelNumber === undefined && data.manufacturerId === undefined) return;
 

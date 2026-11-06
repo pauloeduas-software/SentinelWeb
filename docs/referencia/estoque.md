@@ -58,7 +58,7 @@ leitura ([D34](../decisoes/estoque.md#d34--saldo-é-sempre-calculado-nunca-colun
 **Aumentar o total sempre pode. Reduzir não passa do que está em uso** (invariante 25), com a
 mesma trava do item que a entrega usa. Quem reduz sozinho é a entrega do consumível, que sai e não
 volta — uma unidade de cada lado, e a conta não muda:
-`Não dá para reduzir "Mouse USB" para 1: 2 estão em uso. Devolva para liberar.`
+`Não é possível reduzir "Mouse USB" para 1: 2 estão em uso. Devolva para liberar.`
 
 **O disponível negativo aparece, em vermelho**, em vez de ser zerado: só acontece com uma linha
 criada por fora da trava (o `psql` à mão), e esconder a inconsistência seria pior que mostrá-la.

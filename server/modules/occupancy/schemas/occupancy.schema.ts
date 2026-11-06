@@ -73,7 +73,7 @@ export const occupancyViewQuerySchema = z.strictObject({
  * turno. O teto de 60 é o mesmo de `addOccupantSchema`, e pelo mesmo motivo.
  */
 export const updateOccupantShiftSchema = z.strictObject({
-  shift: z.string('informe o turno').trim().max(60, 'turno: máximo de 60 caracteres')
+  shift: z.string('turno: campo obrigatório').trim().max(60, 'turno: máximo de 60 caracteres')
     .nullable()
     .transform((valor) => valor || null),
 });

@@ -3,7 +3,6 @@ import CategoriaFiltro from '../../components/CategoriaFiltro';
 import ListaVazia from '../../components/ListaVazia';
 import ListToolbar from '../../components/ListToolbar';
 import PaginaCabecalho from '../../components/PaginaCabecalho';
-import { Aviso } from '../../components/ui/aviso';
 import { Button } from '../../components/ui/button';
 import EntregaModal from './components/EntregaModal';
 import EstoqueTable from './components/EstoqueTable';
@@ -24,7 +23,7 @@ export default function EstoquePage() {
   const {
     itens, total, carregando, erro, page, perPage, setPage, search, buscaFeita, changeSearch,
     categoryId, changeCategoria,
-    modal, itemAberto, buscaDoLink, veioDoLink, erroDoLink, abrir, fechar, ocupado,
+    modal, itemAberto, buscaDoLink, veioDoLink, abrir, fechar, ocupado,
     handleCriar, handleEditar, handleEntregar, handleDevolver, handleAlternarAtivo, handleExcluir,
   } = useEstoque();
   // Desativar e excluir são `SUPERVISOR` no servidor (AV). O Técnico cadastra,
@@ -35,10 +34,6 @@ export default function EstoquePage() {
     <div className="motion-safe:animate-fade-in flex flex-col pb-6">
 
       <PaginaCabecalho titulo="Estoque" />
-
-      {erroDoLink && (
-        <Aviso className="mb-4" onDispensar={fechar}>Não foi possível abrir o item do link: {erroDoLink}</Aviso>
-      )}
 
       <ListToolbar
         search={search}

@@ -890,6 +890,8 @@ recebeu o ativo entre o carregar da tela e o clique.
 
 ## E — `/descobertas` ganha vínculo manual e "Reconciliar agora"
 
+> **Superada em parte por [BF](./plataforma.md#bf--a-resposta-a-um-clique-vai-para-o-cartão-do-canto-inferior-direito):** o placar da rodada vai para o cartão, como toda resposta a um clique.
+
 **Decidido:** `/descobertas` passa a mostrar as máquinas **sem vínculo** e as **vinculadas**
 (`?vinculo=`, que já filtrava sem a tela usar), com vínculo manual inline — escolher
 um ativo sem máquina e, opcional, um posto — e `POST /api/endpoints/:id/link-and-checkout`, que

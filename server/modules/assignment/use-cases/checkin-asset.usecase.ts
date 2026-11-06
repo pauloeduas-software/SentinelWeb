@@ -55,7 +55,7 @@ export async function checkinAsset(assetId: string, data: CheckinData, ator: Ato
       where: { id: assetId },
       select: { id: true, statusId: true },
     });
-    if (!ativo) throw new AppError('Registro não encontrado', 404);
+    if (!ativo) throw new AppError('Ativo não encontrado.', 404);
 
     const aberta = await tx.assignment.findFirst({
       where: { assetId, checkinAt: null },

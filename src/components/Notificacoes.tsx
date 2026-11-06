@@ -1,37 +1,41 @@
-// A PILHA DE NOTIFICAÇÕES — no alto, ao centro, por cima de tudo.
+// A PILHA DE NOTIFICAÇÕES — no canto inferior direito, por cima de tudo (BF).
 //
 // Só desenha: a fila, os prazos e o teto moram em `hooks/useNotificacao`.
 // Montada UMA vez, no `App.tsx`, fora das rotas — assim vale para toda tela,
 // login incluído, e trocar de página não apaga um erro que ainda está sendo
 // lido.
 //
-// NO ALTO, AO CENTRO, porque é onde nada se clica: embaixo à direita fica o Salvar
-// do formulário lateral, que o cartão cobriria justo quando a recusa pede para
-// corrigir e salvar de novo. `z-[60]` fica acima do
-// `z-50` dos modais: o erro de um "Salvar" dentro do modal tem que aparecer na
-// frente dele, não atrás do véu.
+// O Salvar do formulário lateral mora no mesmo canto. Por isso a recusa do formulário
+// fica dentro dele (`FormularioLateral`), e o cartão que já estava na tela sai da
+// frente quando o painel abre (`com-painel`): para o lado dele no desktop, para o
+// alto onde ao lado não cabe, e ali ele cobre o título, e não os botões. `z-[60]` fica acima do `z-50`
+// dos modais: o erro de um clique dentro da janela tem que aparecer na frente
+// dela, não atrás do véu.
 //
 // `pointer-events-none` no contêiner e `auto` em cada cartão: o espaço vazio
 // entre eles não pode engolir o clique no que está embaixo.
 
-import { CircleAlert, CircleCheck, TriangleAlert, X } from 'lucide-react';
-import { useNotificacoes, type Notificacao, type TipoNotificacao } from '../hooks/useNotificacao';
+import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from 'lucide-react';
+import { useNotificacoes, usePrazoDoCartao, type Notificacao, type TipoNotificacao } from '../hooks/useNotificacao';
 import { Link } from 'react-router-dom';
 
 // A cor está na borda e no ícone, e NUNCA sozinha: o ícone muda de forma junto
-// (círculo com !, triângulo, check), e quem não distingue vermelho de verde
+// (círculo com !, triângulo, i, check), e quem não distingue vermelho de verde
 // continua sabendo o que leu.
 const ESTILO: Record<TipoNotificacao, { borda: string; cor: string; Icone: typeof CircleAlert }> = {
   erro: { borda: 'border-l-status-danger', cor: 'text-status-danger', Icone: CircleAlert },
   aviso: { borda: 'border-l-status-warning', cor: 'text-status-warning', Icone: TriangleAlert },
+  info: { borda: 'border-l-status-info', cor: 'text-status-info', Icone: Info },
   sucesso: { borda: 'border-l-status-success', cor: 'text-status-success', Icone: CircleCheck },
 };
 
 function Cartao({ notificacao, onFechar }: { notificacao: Notificacao; onFechar: () => void }) {
   const { borda, cor, Icone } = ESTILO[notificacao.tipo];
+  const prazo = usePrazoDoCartao(notificacao);
 
   return (
     <div
+      {...prazo}
       // ERRO É `alert`, o resto é `status`. `alert` é anunciado na hora pelo
       // leitor de tela, interrompendo o que ele estiver lendo — certo para
       // "não deu para excluir", errado para "salvo". `aria-atomic` faz a
@@ -75,15 +79,18 @@ export default function Notificacoes() {
   const fila = useNotificacoes((estado) => estado.fila);
   const fechar = useNotificacoes((estado) => estado.acoes.fechar);
 
-  if (fila.length === 0) return null;
-
   return (
+    // A REGIÃO FICA SEMPRE NA PÁGINA, vazia quando não há cartão. O leitor de tela só
+    // anuncia o que muda numa região que já existia, e o `aria-live` é o que a deixa
+    // de fora do que o modal do Radix esconde dele (`aria-hidden` pula quem o tem).
+    //
     // No celular ocupa a largura toda (menos a margem); no desktop, uma coluna
-    // de largura fixa — mensagem de erro é frase, não parágrafo.
-    <div className="fixed left-4 right-4 top-4 z-[60] flex flex-col gap-2 pointer-events-none sm:left-1/2 sm:right-auto sm:w-96 sm:-translate-x-1/2">
+    // de largura fixa — mensagem de erro é frase, não parágrafo. Os `37rem` são a
+    // largura do painel (`sm:max-w-xl`) mais a margem.
+    <section aria-label="Notificações" aria-live="polite" className="fixed bottom-4 left-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none sm:left-auto sm:w-96 com-painel:bottom-auto com-painel:top-4 lg:com-painel:bottom-4 lg:com-painel:right-[37rem] lg:com-painel:top-auto">
       {fila.map((notificacao) => (
         <Cartao key={notificacao.id} notificacao={notificacao} onFechar={() => fechar(notificacao.id)} />
       ))}
-    </div>
+    </section>
   );
 }

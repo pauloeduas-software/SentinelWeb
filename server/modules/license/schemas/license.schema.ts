@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import {
   dataOpcional, diaNaoFuturo, emailOpcional, nomeObrigatorio, textoOpcional,
-  uuidObrigatorio, uuidOpcional, valorMonetarioOpcional, versaoLida
+  uuidObrigatorio, uuidOpcional, valorMonetarioOpcional, versaoLida, milhar,
 } from '../../shared/fields.schema';
 
 // Contrato de entrada das rotas de licença.
@@ -21,7 +21,7 @@ const MAX_LICENCAS = 100_000;
 const quantidadeObrigatoria = z.number('quantidade comprada deve ser um número')
   .int('quantidade comprada deve ser um número inteiro')
   .min(1, 'quantidade comprada: mínimo de 1')
-  .max(MAX_LICENCAS, `quantidade comprada: máximo de ${MAX_LICENCAS}`);
+  .max(MAX_LICENCAS, `quantidade comprada: máximo de ${milhar(MAX_LICENCAS)}`);
 
 const camposComuns = {
   expirationDate: dataOpcional('data de vencimento'),
@@ -50,7 +50,7 @@ const textoDaChave = z.string('chave: informe a chave')
 const coberturaDaChave = z.number('chave: informe quantas licenças ela cobre')
   .int('chave: cobre um número inteiro de licenças')
   .min(1, 'chave: cobre ao menos 1 licença')
-  .max(MAX_LICENCAS, `chave: cobre no máximo ${MAX_LICENCAS}`);
+  .max(MAX_LICENCAS, `chave: cobre no máximo ${milhar(MAX_LICENCAS)}`);
 
 /**
  * AS CHAVES DA LICENÇA (AC) — a lista inteira, como ficará. No cadastro, só
@@ -61,12 +61,12 @@ const coberturaDaChave = z.number('chave: informe quantas licenças ela cobre')
 const chavesNovas = z.array(
   z.strictObject({ productKey: textoDaChave, seats: coberturaDaChave }),
   'chaves: envie uma lista',
-).max(MAX_LICENCAS, `chaves: no máximo ${MAX_LICENCAS}`);
+).max(MAX_LICENCAS, `chaves: no máximo ${milhar(MAX_LICENCAS)}`);
 
 const chavesDaEdicao = z.array(
   z.strictObject({ id: uuidObrigatorio('chave').optional(), productKey: textoDaChave, seats: coberturaDaChave }),
   'chaves: envie uma lista',
-).max(MAX_LICENCAS, `chaves: no máximo ${MAX_LICENCAS}`);
+).max(MAX_LICENCAS, `chaves: no máximo ${milhar(MAX_LICENCAS)}`);
 
 export const createLicenseSchema = z.strictObject({
   name: nomeObrigatorio('nome'),

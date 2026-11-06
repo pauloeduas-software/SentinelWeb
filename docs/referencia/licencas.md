@@ -62,7 +62,7 @@ Nenhuma é coluna — saem das linhas de entrega (`license_checkouts`) a cada le
 
 **Aumentar a quantidade sempre pode. Reduzir não passa do que está em uso** (invariante 22),
 com a mesma trava da licença que a entrega usa:
-`Não dá para reduzir "Office 2021" para 6: 7 estão em uso. Devolva para liberar.`
+`Não é possível reduzir "Office 2021" para 6: 7 estão em uso. Devolva para liberar.`
 
 ## O status
 
@@ -107,7 +107,7 @@ Encerrar, e salvar só as notas reabria a licença.
 Os dígitos entram pelos centavos — apagar o último de `R$ 1.234,50` deixa `R$ 123,45` —, e
 param nos 10 dígitos e 2 casas que o servidor aceita. O servidor aceita ponto ou vírgula nos
 centavos e nenhum ponto de milhar: `1.234,56` é 422 com o nome do campo,
-`valor de compra: use um valor como 1234.50`. As datas vêm do seletor.
+`Valor de compra: use um valor como 1234,50.`. As datas vêm do seletor.
 
 **Quando a última linha de uma página sai** — excluída, encerrada, devolvida, aqui ou por outra
 pessoa —, a lista e o "Com quem está" voltam para a última página que existe. **A devolução que o
@@ -168,7 +168,7 @@ lixeira é 404 mesmo com a licença vencida. As duas últimas linhas são da dev
 | Tentativa | Resposta |
 |---|---|
 | entrega ou devolução num dia futuro | 422 `data da entrega não pode ser uma data futura` / `data da devolução não pode ser uma data futura` |
-| dois alvos, nenhum, ou posto | 422 — com dois: `Uma entrega tem UM alvo: informe o colaborador OU o ativo, nunca os dois.`; o posto nem é campo |
+| dois alvos, nenhum, ou posto | 422 — com dois: `Uma entrega tem um alvo só: informe o colaborador ou o ativo, nunca os dois.`; o posto nem é campo |
 | ativo ou colaborador que não existe, ou na lixeira | 404 `Ativo não encontrado.` / `Colaborador não encontrado.` |
 | ativo baixado / colaborador desativado | 409 `O ativo ATV-00042 teve baixa e não pode receber licença.` / `Laura Souza está desativado(a) e não pode receber licença.` |
 | licença encerrada ou vencida | 409 `A licença "Office 2021" está encerrada e não recebe entrega. Se o contrato voltou, reabra-a antes.` / `A licença "Office 2021" venceu há 3 dias e não recebe entrega: renove o contrato e atualize a data de vencimento antes.` — a vencendo entrega normalmente |
@@ -196,7 +196,7 @@ cada chave numa linha, com quantas licenças ela **cobre** — 1 na individual, 
 | | |
 |---|---|
 | **no formulário** | uma embaixo da outra, com "Adicionar chave", o "cobre" de cada uma e o ✕. Colar uma lista com várias linhas cria uma chave para cada linha. Acima da lista, a conta: "8 de 10 licenças com chave". A linha nova deixada em branco não vai; a chave que já existia não se tira apagando o texto — é o ✕ |
-| **as regras** | uma linha, não vazia, sem repetir na licença (422 `A mesma chave aparece duas vezes na lista.`) — sem diferença de maiúscula: `abcd-1234` e `ABCD-1234` são a mesma chave, e a gravada fica como foi digitada. Juntas, cobrem no máximo o comprado: o "Adicionar" para quando chegam lá, e o servidor responde 422 `As chaves cobrem 12, mais do que 10 compradas em "Office 2021". …`; reduzir a quantidade abaixo do que elas cobrem é o mesmo 422 pelo formulário, que manda a lista junto, e 409 `Não dá para reduzir "Office 2021" para 3: as chaves cobrem 4. Tire uma chave ou diminua o que ela cobre antes.` num `PUT` sem a lista |
+| **as regras** | uma linha, não vazia, sem repetir na licença (422 `A mesma chave aparece duas vezes na lista.`) — sem diferença de maiúscula: `abcd-1234` e `ABCD-1234` são a mesma chave, e a gravada fica como foi digitada. Juntas, cobrem no máximo o comprado: o "Adicionar" para quando chegam lá, e o servidor responde 422 `As chaves cobrem 12, mais do que 10 compradas em "Office 2021". …`; reduzir a quantidade abaixo do que elas cobrem é o mesmo 422 pelo formulário, que manda a lista junto, e 409 `Não é possível reduzir "Office 2021" para 3: as chaves cobrem 4. Tire uma chave ou diminua o que ela cobre antes.` num `PUT` sem a lista |
 | **a em uso** | a chave com entrega **aberta** não sai da lista (409 `Uma chave com entrega aberta não sai da lista: 2 estão com ela. Devolva para liberar.`, e o ✕ dela fica apagado), e não cobre menos do que as entregas abertas com ela (409 `Uma chave não cobre menos do que as entregas abertas com ela: 2 estão com ela. Devolva para liberar.`). O texto dela pode mudar: é a correção de digitação, e vale para as entregas dela. É também a renovação que trouxe chave nova (AD): a chave só aparece nas entregas abertas, e o histórico não a mostra. A chave cujas entregas já voltaram todas sai como a nunca entregue — é o que deixa a renovação com menos licenças tirar as chaves que sobraram e reduzir a quantidade no mesmo Salvar ([AK](../decisoes/licencas.md#ak--a-chave-só-prende-enquanto-está-em-uso)) |
 | **na entrega** | com chaves cadastradas, a entrega **escolhe uma** — é o que diz qual chave está com cada um. O seletor mostra só as que têm lugar, pelo número e pelo começo ("3. ABCDE-FGHIJ-•••••-•••••-••••• — cobre 10 · 3 livres"), e com uma só ela já vem escolhida. A licença sem chave nenhuma — a assinatura por conta, como o Microsoft 365 — entrega sem chave. As chaves podem cobrir menos do que o comprado (as outras chegam depois), mas a licença que tem chaves não entrega sem chave: a entrega além do que elas cobrem espera a próxima, cadastrada em Editar |
 | **trocar** | a chave de uma entrega **aberta**, por outra com lugar, na linha de "Com quem está" (`PATCH` com `licenseKeyId`). Não existe "limpar". É também como a entrega feita antes de a licença ter chaves ganha a sua. Devolvida é 409; sem lugar, 409 |

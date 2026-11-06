@@ -59,6 +59,7 @@ que corrigem algo anterior:
 | **Z** | **AV** | três cargos, `TECNICO < SUPERVISOR < ADMIN`: o Técnico opera, o Supervisor decide e o Administrador cuida das contas |
 | **AU** (as 12 horas da sessão) | **BD** | a sessão vale 48 horas, ainda fixa e contada da entrada |
 | **D19** (a lista fechada de motivos da baixa) | **BE** | o enum `RetiredReason` sai: os motivos são um cadastro de Configurações, e a baixa continua separada do status |
+| **E** (o placar da varredura ao lado do botão) | **BF** | o placar vai para o cartão do canto inferior direito, como toda resposta a um clique |
 
 **O de-escopo (D143–D156) supera por subtração**, e é o maior grupo de supersessões do projeto:
 a decisão antiga não estava errada, o que ela governava deixou de existir. Está inteiro em

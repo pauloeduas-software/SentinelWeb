@@ -31,7 +31,7 @@ export async function resetUserPassword(id: string, sessaoId: string, ator: Ator
   await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM users WHERE id = ${id}::uuid FOR NO KEY UPDATE`;
     const conta = await tx.user.findFirst({ where: { id }, select: { email: true } });
-    if (!conta) throw new AppError('Registro não encontrado', 404);
+    if (!conta) throw new AppError('Usuário não encontrado.', 404);
 
     await tx.user.update({
       where: { id },

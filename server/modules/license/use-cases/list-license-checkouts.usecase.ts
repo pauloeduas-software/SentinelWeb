@@ -20,7 +20,7 @@ type Entrega = Prisma.LicenseCheckoutGetPayload<{ select: typeof CHECKOUT_COM_CH
  */
 export async function listLicenseCheckouts(licenseId: string, query: ListQuery): Promise<ListEnvelope<Entrega>> {
   const licenca = await prisma.license.findUnique({ where: { id: licenseId }, select: { id: true } });
-  if (!licenca) throw new AppError('Nenhuma licença com este identificador.', 404);
+  if (!licenca) throw new AppError('Licença não encontrada.', 404);
 
   const contem = query.q ? contemTexto(query.q) : undefined;
   const where: Prisma.LicenseCheckoutWhereInput = {

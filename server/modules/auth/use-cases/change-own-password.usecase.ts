@@ -44,7 +44,7 @@ export async function changeOwnPassword(userId: string, data: TrocaDaPropriaSenh
       throw new AppError('Escolha uma senha sua, diferente da temporária.', 422);
     }
   } else {
-    if (data.currentPassword === undefined) throw new AppError('senha atual é obrigatória', 422);
+    if (data.currentPassword === undefined) throw new AppError('A senha atual é obrigatória.', 422);
     if (!(await conferirSenha(conta.passwordHash, data.currentPassword))) {
       throw new AppError('A senha atual não confere.', 422);
     }

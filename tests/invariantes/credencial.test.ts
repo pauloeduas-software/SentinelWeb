@@ -138,6 +138,6 @@ describe('o erro inesperado', () => {
     expect(resposta.statusCode).toBe(500);
     expect(resposta.body).not.toContain('postgres');
     expect(resposta.body).not.toContain('segredo');
-    expect(resposta.json()).toEqual({ error: 'Erro interno do servidor' });
+    expect(resposta.json()).toEqual({ error: 'Erro interno do servidor.' });
   });
 });

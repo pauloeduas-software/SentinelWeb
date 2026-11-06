@@ -1,7 +1,7 @@
-import { useState } from 'react';
 import { useEndpointQuery, useSendCommand } from '../queries/endpoint.queries';
 import type { AgentAction } from '../types/endpoint.types';
 import { confirmar } from './useConfirmacao';
+import { useNotificacao } from './useNotificacao';
 
 // A MÁQUINA AGORA: a amostra que chega sozinha e os comandos que se manda nela.
 //
@@ -27,15 +27,9 @@ import { confirmar } from './useConfirmacao';
 //
 // A RESPOSTA, por outro lado, não é mais um `alert`. Ela tem o que dizer: o 409
 // nomeia a máquina que não respondeu e explica que o comando não fica em fila. Um
-// `alert` com esse texto obriga a pessoa a fechá-lo para continuar e não deixa
-// rastro na tela; aqui a frase fica ao lado do botão que a produziu.
+// `alert` com esse texto obriga a pessoa a fechá-lo para continuar; a notificação
+// diz o mesmo sem travar a tela.
 // ─────────────────────────────────────────────────────────────────────────────
-
-/** O que aconteceu com o último comando, para a tela dizer algo. */
-interface RetornoDoComando {
-  tipo: 'enviado' | 'falhou';
-  texto: string;
-}
 
 /** Um comando e o que ele causa — o texto que a confirmação mostra. */
 export interface ComandoDaMaquina {
@@ -47,13 +41,9 @@ export interface ComandoDaMaquina {
 }
 
 export function useMaquinaAoVivo(endpointId: string | null) {
+  const notificar = useNotificacao();
   const { data: maquina, isPending, isError, error } = useEndpointQuery(endpointId);
   const enviarComando = useSendCommand();
-
-  // O retorno guarda A QUAL MÁQUINA pertence. A tela do ativo é reaproveitada
-  // pelo roteador de um `/computadores/:id` para outro, então sem isto o "comando
-  // entregue" da máquina anterior ficaria embaixo dos botões da seguinte.
-  const [retorno, setRetorno] = useState<(RetornoDoComando & { endpointId: string }) | null>(null);
 
   const handleComando = async ({ action, rotulo, consequencia, perigo }: ComandoDaMaquina) => {
     if (!endpointId) return;
@@ -61,19 +51,15 @@ export function useMaquinaAoVivo(endpointId: string | null) {
     const qual = maquina?.hostname ?? 'esta máquina';
     if (!(await confirmar({ titulo: `${rotulo} "${qual}"?`, descricao: consequencia, acao: rotulo, perigo }))) return;
 
-    // O retorno anterior sai da tela ANTES do envio: deixá-lo ali durante a
+    // A resposta anterior sai da tela ANTES do envio: deixá-la ali durante a
     // requisição faria o resultado do comando passado parecer o do atual.
-    setRetorno(null);
+    notificar.limpar();
 
     try {
       await enviarComando.mutateAsync({ endpointId, action });
-      setRetorno({
-        endpointId,
-        tipo: 'enviado',
-        texto: `Comando de ${rotulo.toLowerCase()} entregue ao agente de ${qual}.`,
-      });
+      notificar.sucesso(`Comando de ${rotulo.toLowerCase()} entregue ao agente de ${qual}.`);
     } catch (erro) {
-      setRetorno({ endpointId, tipo: 'falhou', texto: (erro as Error).message });
+      notificar.erro((erro as Error).message);
     }
   };
 
@@ -85,7 +71,6 @@ export function useMaquinaAoVivo(endpointId: string | null) {
     carregando: endpointId != null && isPending,
     erro: isError ? (error as Error).message : null,
     enviando: enviarComando.isPending,
-    retorno: retorno?.endpointId === endpointId ? retorno : null,
     handleComando,
   };
 }

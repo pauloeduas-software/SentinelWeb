@@ -22,11 +22,11 @@ const HISTORY_MAX_LIMIT = 200;
 export const historyQuerySchema = z.strictObject({
   limit: z.coerce.number('limite deve ser um número')
     .int('limite deve ser um número inteiro')
-    .min(1, 'limite mínimo é 1')
-    .max(HISTORY_MAX_LIMIT, `limite máximo é ${HISTORY_MAX_LIMIT}`)
+    .min(1, 'limite: mínimo de 1')
+    .max(HISTORY_MAX_LIMIT, `limite: máximo de ${HISTORY_MAX_LIMIT}`)
     .optional(),
   page: z.coerce.number('página deve ser um número')
     .int('página deve ser um número inteiro')
-    .min(1, 'página mínima é 1')
+    .min(1, 'página: mínimo de 1')
     .optional(),
 });

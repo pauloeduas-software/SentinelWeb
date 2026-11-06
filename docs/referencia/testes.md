@@ -323,6 +323,7 @@ criar, editar e excluir clicando. É o que `tests/e2e/` prova, com o Playwright
 | `menu.spec.ts` | as oito páginas do menu, pelo link, na ordem do menu, com o título, sem erro no console e sem botão no cabeçalho (BB). **Página nova entra na lista** |
 | `listas.spec.ts` | o estado da lista na URL (BB): o menu recomeça a lista, a aba da ficha fica no endereço e a seta volta com a busca. E a consulta que falha (`page.route`): a aba avisa, em vez de dizer que não há nada, e o cartão mostra traço |
 | `configuracoes.spec.ts` | criar, editar e excluir uma categoria pelo `CatalogTable` + `useCatalog`, o padrão de CRUD de todo cadastro (AF, AO), inclusive a frase do `confirmar()` |
+| `notificacoes.spec.ts` | a resposta a um clique sai no cartão do canto inferior direito, com sucesso e com recusa, e a recusa de formulário fica no painel (BF) |
 | `conta.spec.ts` | Minha conta abre pelo menu do usuário, troca o nome e o devolve (AR). A troca de senha não entra: derrubaria a sessão guardada dos outros specs — está em `invariantes/senha-temporaria.test.ts` |
 
 Como roda, e por que assim:

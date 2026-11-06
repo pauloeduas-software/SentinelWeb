@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-import { ErroDaApi } from './apiClient';
+import { foiRecusa } from './apiClient';
 
 /**
  * Cache de dado de servidor do painel.
@@ -18,13 +18,9 @@ export const queryClient = new QueryClient({
       staleTime: 0,
       // Ferramenta interna: uma repetição basta. Mais que isso esconde
       // servidor fora do ar atrás de espera silenciosa. E só para o que pode
-      // mudar na segunda tentativa: 4xx (403, 404, 409, 422) é resposta do
-      // servidor, repetir o pedido devolve a mesma recusa e só atrasa a tela.
-      retry: (tentativas, error) => {
-        const status = error instanceof ErroDaApi ? error.status : undefined;
-        if (status !== undefined && status >= 400 && status < 500) return false;
-        return tentativas < 1;
-      },
+      // mudar na segunda tentativa: a recusa (403, 404, 409, 422) é resposta do
+      // servidor, repetir o pedido devolve a mesma frase e só atrasa a tela.
+      retry: (tentativas, error) => !foiRecusa(error) && tentativas < 1,
       // Voltar para a aba mostra dado de agora, não de dez minutos atrás
       refetchOnWindowFocus: true,
     },

@@ -153,9 +153,16 @@ export function motivoParaRecusar(
     ? partes[0]
     : `${partes.slice(0, -1).join(', ')} e ${partes[partes.length - 1]}`;
 
+  // O pedido cita só o que existe: quem não ocupa posto não tem ocupação a encerrar.
+  const temEntrega = posse.ativos.length + posse.licencas.length + posse.itens.length > 0;
+  const ocupacoes = posse.postos.length === 1 ? 'a ocupação' : 'as ocupações';
+  let pedido = 'Devolva o que está com ele';
+  if (!temEntrega) pedido = `Encerre ${ocupacoes}`;
+  else if (posse.postos.length > 0) pedido = `Devolva o que está com ele e encerre ${ocupacoes}`;
+
   // Os links na ordem da frase.
   return {
-    mensagem: `Este colaborador ainda ${frase}. Devolva o que está com ele e encerre as ocupações antes de ${operacao}.`,
+    mensagem: `Este colaborador ainda ${frase}. ${pedido} antes de ${operacao}.`,
     refs: [
       ...posse.ativos.map((ativo) => ({ tipo: 'ativo' as const, ...ativo })),
       ...comoReferencias(posse.licencas),
