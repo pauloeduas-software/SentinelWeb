@@ -4,14 +4,15 @@
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve**. Se a realidade mudou, a
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
-> cada regra governou. O índice das 164 está em [`README.md`](./README.md).
+> cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D7, D58–D64.
-> A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
 
 ## D7 — Campos customizados em `JsonB`, não em DDL dinâmico
+
+> **Superada por [D145](./escopo.md#d145--campos-customizados-saem-inteiros):** o assunto inteiro sai; a cifra fica com um uso só, e o D77 volta a ser regra inteira.
 
 O Snipe-IT cria uma coluna por campo customizado. Isso é inviável com `prisma migrate`.
 
@@ -19,11 +20,12 @@ O Snipe-IT cria uma coluna por campo customizado. Isso é inviável com `prisma 
 
 ## D58 — O conjunto ancora na **categoria** e no **modelo**, com precedência do modelo.
 
+> **Superada por [D145](./escopo.md#d145--campos-customizados-saem-inteiros):** o assunto inteiro sai; a cifra fica com um uso só, e o D77 volta a ser regra inteira.
+
 **Decidido:** `Category.fieldsetId` é o padrão; `AssetModel.fieldsetId` sobrepõe quando preenchido.
 **Descartado:** só por modelo; só por categoria; e herança em três níveis.
 
-O roadmap do projeto (versão de 23/09) diz *por modelo*; o briefing desta fase dizia *por categoria*.
-Os dois têm razão em metades diferentes. **Por categoria** carrega a empresa inteira em seis
+*Por modelo* e *por categoria* têm razão em metades diferentes. **Por categoria** carrega a empresa inteira em seis
 atribuições, e os campos que o cliente realmente quer — IP, hostname, patrimônio — são da categoria
 *Notebook*, não do *Latitude 5420*. **Por modelo** é o que o Snipe-IT faz e o único jeito de
 expressar o campo que só existe num modelo (IMEI do tablet 4G). Duas colunas nullable e uma linha
@@ -34,6 +36,8 @@ mais longa é sintoma de modelagem errada e custa um salto de consulta a cada le
 ---
 
 ## D59 — Valores em `JsonB` na linha do ativo. Não DDL dinâmico, não EAV.
+
+> **Superada por [D145](./escopo.md#d145--campos-customizados-saem-inteiros):** o assunto inteiro sai; a cifra fica com um uso só, e o D77 volta a ser regra inteira.
 
 **Decidido:** `Asset.customFields Json? @db.JsonB`. **Descartado:** uma coluna por campo (o que o
 Snipe-IT faz); e uma tabela `CustomFieldValue` no estilo EAV.
@@ -53,6 +57,8 @@ chaves do JSON e `custom_fields` — é o que o D60 fecha.
 
 ## D60 — O `slug` é imutável. O valor órfão não é apagado.
 
+> **Superada por [D145](./escopo.md#d145--campos-customizados-saem-inteiros):** o assunto inteiro sai; a cifra fica com um uso só, e o D77 volta a ser regra inteira.
+
 **Decidido:** `beforeWrite` recusa mudar `slug` de campo já criado; `name` muda à vontade.
 **Descartado:** renomear slug com `UPDATE` em massa no JSON de todos os ativos.
 
@@ -66,30 +72,36 @@ conjunto antigo pode voltar, e mantê-las custa zero.
 
 ## D61 — Obrigatoriedade é do **vínculo**, não do campo.
 
+> **Superada por [D145](./escopo.md#d145--campos-customizados-saem-inteiros):** o assunto inteiro sai; a cifra fica com um uso só, e o D77 volta a ser regra inteira.
+
 **Decidido:** `required` e `defaultValue` moram em `CustomFieldsetField`. **Descartado:**
 `CustomField.required` global.
 
 O mesmo campo *Centro de custo* é obrigatório no conjunto de Notebooks e opcional no de Periféricos
 — é assim no Snipe-IT e é o que a operação real pede. A obrigatoriedade vale **em todo save**,
 criação e edição: valer só na criação faria "obrigatório" não significar nada. O caminho para não
-travar a edição de ativos antigos é o da tela: nasce opcional, a edição em massa da F2 faz o
+travar a edição de ativos antigos é o da tela: nasce opcional, a edição em massa faz o
 backfill, e só então promove-se para obrigatório — com o contador de quantos quebrariam à vista.
 
 ---
 
 ## D62 — Cifra é `enc:v1:` dentro do JsonB, com rota própria para revelar.
 
+> **Superada por [D145](./escopo.md#d145--campos-customizados-saem-inteiros):** o assunto inteiro sai; a cifra fica com um uso só, e o D77 volta a ser regra inteira.
+
 **Decidido:** AES-256-GCM em `server/core/crypto/`, valor escalar prefixado, mascarado no `select`.
 **Descartado:** cifrar a coluna inteira; e devolver o valor em claro na listagem.
 
 Cifrar a coluna inteira tiraria **todos** os campos do índice GIN por causa de um. Mascarar no
-`select` — não depois, na resposta — é o princípio da F0: o dado que não deve sair não é lido. E a
+`select` — não depois, na resposta — é o princípio: o dado que não deve sair não é lido. E a
 rota de revelar existe para que *quem viu* vire `ActivityLog`, que é a pergunta que a auditoria faz
-sobre dado sensível (mesmo desenho que a F6 usará na product key).
+sobre dado sensível (mesmo desenho da product key).
 
 ---
 
-## D63 — Filtrar por campo customizado: sim. Ordenar: não, nesta fase.
+## D63 — Filtrar por campo customizado: sim. Ordenar: não.
+
+> **Superada por [D145](./escopo.md#d145--campos-customizados-saem-inteiros):** o assunto inteiro sai; a cifra fica com um uso só, e o D77 volta a ser regra inteira.
 
 **Decidido:** `?cf[slug]=valor` por igualdade, apoiado no GIN. **Descartado:** `?sort=cf.slug`.
 
@@ -100,8 +112,8 @@ que é DDL por campo: exatamente o que o D7 recusou, entrando pela porta dos fun
 
 Há ainda uma armadilha de tipo: `->>` devolve **texto**, então campo numérico ordena `"10"` antes
 de `"9"`. E o Prisma não tem `orderBy` sobre caminho JSON, o que empurra a ordenação para
-`$queryRaw` ou para memória. **A F10 é quem paga isso** — o report builder vai querer ordenar e
-agrupar por campo customizado, e esta fase entrega a ela o número medido, não uma promessa.
+`$queryRaw` ou para memória. **O report builder é quem paga isso** — ele vai querer ordenar e
+agrupar por campo customizado, e fica com o número medido, não uma promessa.
 
 **Regex custom fica**, com três guardas: teto no tamanho do padrão, teto no tamanho da entrada, e
 recusa sintática de quantificador aninhado (`(a+)+`). O risco residual é declarado no bloco de
@@ -111,10 +123,12 @@ armadilhas, e a saída nomeada é `node:worker_threads` com timeout.
 
 ## D64 — A parte plana é spec de catálogo; a composição é domínio próprio.
 
+> **Superada por [D145](./escopo.md#d145--campos-customizados-saem-inteiros):** o assunto inteiro sai; a cifra fica com um uso só, e o D77 volta a ser regra inteira.
+
 **Decidido:** `custom-field.spec.ts` e `custom-fieldset.spec.ts` entram em `specs/index.ts`; a
 composição, a resolução e a validação ficam em `server/domain/custom-field/`.
 
-Listar, buscar, ordenar, `ActivityLog` e 409-por-uso é o que o CRUD genérico da F1 já faz — e o
+Listar, buscar, ordenar, `ActivityLog` e 409-por-uso é o que o CRUD genérico já faz — e o
 `../referencia/arquitetura.md` diz que acrescentar tabela de catálogo *é escrever a spec*. O que **não** cabe na
 spec é ordem, obrigatoriedade por vínculo e validação de valor: isso tem regra, e regra mora em
 use-case. O `countUsages` do campo conta vínculos **mais** ativos com a chave presente

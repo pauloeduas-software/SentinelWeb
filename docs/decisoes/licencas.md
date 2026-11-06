@@ -4,11 +4,10 @@
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve**. Se a realidade mudou, a
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
-> cada regra governou. O índice das 164 está em [`README.md`](./README.md).
+> cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D39–D44, D90–D94, G da segunda rodada (ver
 > [`README.md`](./README.md#a-segunda-rodada-ap)), AA, AC, AD, AF, AK e AN.
-> A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
 
@@ -28,7 +27,7 @@
 1. **Licença é consumida por uma instalação.** O fornecedor licencia *por dispositivo* ou
    *por usuário nomeado*; não existe EULA que licencie um móvel. Quando o auditor da
    Microsoft pergunta onde o assento está, "na Mesa 1" não é uma resposta que conte.
-2. **A F7 quebraria.** A conformidade alimentada pelo software instalado é o join
+2. **A conformidade quebraria.** Alimentada pelo software instalado, ela é o join
    `LicenseSeat → Asset → Endpoint → SoftwareInstallation`. Um assento apontando para uma
    `Location` não tem caminho até uma instalação: seria um buraco exatamente no relatório
    que justifica o módulo.
@@ -97,7 +96,7 @@ novo é melhor do que enfileirar requisições HTTP.
 > chave de produto e a cifra saíram.
 
 > ⚠️ **Reconciliado — ver [`README.md`](README.md), D81.** O formato é `enc:v1:<kid>:<iv>:<tag>:<ct>`, com o identificador da chave e AAD amarrando o
-> valor ao lugar onde ele mora — o mesmo da F9, num arquivo só (`core/crypto/cipher.ts`).
+> valor ao lugar onde ele mora — o mesmo do D62, num arquivo só (`core/crypto/cipher.ts`).
 
 **Decidido:** AES-256-GCM, chave de 32 bytes em `APP_ENCRYPTION_KEY`, valor guardado como
 `enc:v1:<kid>:<iv>:<tag>:<ct>` numa coluna só. **Descartado:** três colunas (`iv`, `tag`, `ct`) e
@@ -107,7 +106,7 @@ novo é melhor do que enfileirar requisições HTTP.
 de algoritmo — o prefixo já é essa quarta, e ele viaja junto com o dado.
 
 **Por que sem plano B:** gravar em claro quando falta configuração é como o `/agent-hub`
-aberto que a F0 fechou — o sistema funciona, ninguém percebe, e o segredo está no banco. Se
+aberto que já foi fechado — o sistema funciona, ninguém percebe, e o segredo está no banco. Se
 `APP_ENCRYPTION_KEY` não existir, **o campo de chave é recusado com 422** e a licença é
 criada sem chave. Em produção o boot para, exatamente como já para sem `AGENT_TOKEN`.
 
@@ -123,6 +122,8 @@ funcionaria** — o regex de lá não casa com `productKey`.
 ---
 
 ## D43 — `burnedAt` e `retiredAt` são fatos diferentes
+
+> **Superada por [D92](#d92--livres-sai-das-linhas-aposentados-não-entra-na-subtração):** a fórmula dos assentos livres: `aposentados` é exibido e **nunca** subtraído.
 
 > **Superada por [AA](#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas):** a licença não tem mais reatribuível nem queima —
 > devolvida, ela volta a ficar livre —, e o aposentado saiu com a vaga numerada: reduzir a
@@ -170,7 +171,7 @@ inventário mentiria sem sintoma. É o D16 aplicado ao tempo em vez de à posse.
 **Decidido:** `reconcile-seats` trava a linha da licença **e todos os assentos dela**
 (`FOR UPDATE`, sem `SKIP LOCKED`, `ORDER BY "seatNumber"`) antes de contar.
 `checkout-seat` continua travando **um** assento, com `SKIP LOCKED`.
-**Descartado:** reconciliar "dentro de uma transação", como a Etapa E dizia, sem
+**Descartado:** reconciliar "dentro de uma transação", sem
 dizer o que se trava.
 
 **Por quê:** transação não é trava. Encolher de 5 para 3 lê "2 livres", marca os dois
@@ -273,16 +274,16 @@ disjuntos na prática sem precisar de um CHECK para isso.
 > licença com um link para o detalhe dela — o único lugar que devolve.
 
 **Decidido:** assento de licença entra em `count-user-posse`, no `offboard` e no 409 do
-`DELETE` de ativo, na Etapa G — antes das telas.
-**Descartado:** tratar licença como módulo isolado, que é o que a Etapa C fazia
-ao não mencionar nenhum dos três.
+`DELETE` de ativo, antes das telas.
+**Descartado:** tratar licença como módulo isolado, sem
+mencionar nenhum dos três.
 
 **Por quê:** a pergunta que decide se algo é posse não é "tem tabela própria?", é
 *"alguém responde por isto quando a pessoa sai?"*. Assento responde sim — ele custa
-dinheiro por mês e é nominal. A F5 já respondeu essa pergunta para o acessório e a
-resposta mudou quatro arquivos fora do domínio dela; a F6 responde igual.
+dinheiro por mês e é nominal. Essa pergunta já foi respondida para o acessório e a
+resposta mudou quatro arquivos fora do domínio dele; a licença responde igual.
 
-**O que aconteceria sem isto**, e é o motivo de a etapa vir antes das telas: o
+**O que aconteceria sem isto**, e é o motivo de isto vir antes das telas: o
 desligamento fecharia tudo **menos** a licença, e o sintoma não é um erro — é um número
 de assentos ocupados que nunca desce. A empresa compra assento novo porque "não tem
 livre", e os livres estão com gente que saiu. É o D82 outra vez: o passo que não dá erro
@@ -293,25 +294,24 @@ Ele não é da pessoa.
 
 ---
 
-## D94 — Anexo de licença sai da fase
+## D94 — Anexo de licença fica de fora
 
-**Decidido:** a F6 não entrega anexo de licença. O item continua no roadmap do projeto, com
-o pré-requisito escrito.
-**Descartado:** "depende do upload que nasce na F2", como os pré-requisitos anotavam.
+**Decidido:** não há anexo de licença.
+**Descartado:** "depende do upload".
 
-**Por quê:** o upload da F2 nasceu, e nasceu **de ativo**. `Attachment.assetId` é
+**Por quê:** o upload nasceu **de ativo**. `Attachment.assetId` é
 `NOT NULL` com FK para `assets` e `onDelete: Cascade` — não há onde pendurar uma licença
 sem tornar o dono polimórfico, o que significa migração, discriminante, CHECK e uma
 decisão sobre o que acontece com o arquivo quando o dono some. Isso é do tamanho de uma
 etapa inteira, e não é sobre licença: é sobre anexo.
 
 **O que se perde, declarado:** a nota fiscal e o contrato da licença continuam fora do
-sistema por mais uma fase. Contra isso, `orderNumber`, `purchaseDate` e `purchaseCost`
-já entram na F6 — a *referência* ao documento existe, o arquivo é que não.
+sistema. Contra isso, `orderNumber`, `purchaseDate` e `purchaseCost`
+já entram — a *referência* ao documento existe, o arquivo é que não.
 
 > **Sem objeto desde o [segundo de-escopo](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** os anexos saíram
 > inteiros (domínio `attachment`, `core/storage`), e com eles o upload de ativo que este item
-> estenderia. O roadmap que guardava o pendente também foi apagado; não há item em aberto.
+> estenderia. Não há item em aberto.
 
 ---
 
@@ -364,6 +364,14 @@ handshake, com a nota de que o servidor não guarda — mesma escolha do A para 
 ---
 
 ## AA — A licença vira quantidade e entregas: sem vaga numerada, sem lixeira, com Encerradas
+
+> **Superada em parte por [AB](./acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco).**
+>
+> **Superada em parte por [AC](#ac--a-chave-vira-lista-cada-uma-cobre-uma-quantidade-e-a-entrega-escolhe-uma):** a chave vira lista: cada uma cobre uma quantidade, e a entrega escolhe uma, obrigatória quando a licença tem chaves.
+>
+> **Superada em parte por [AD](#ad--renovar-é-editar-o-vencimento-o-suporte-a-oem-e-o-comprovante-não-viram-campo):** renovar é editar o vencimento; o fim do suporte vai nas notas, a OEM fica com o computador e o comprovante é o número do pedido.
+>
+> **Superada em parte por [AF](#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro).**
 
 > **Superada em parte por [AN](#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura):**
 > o Encerrar só passa com tudo devolvido — com entrega aberta é 409 —, e o alerta perde o motivo
@@ -468,7 +476,7 @@ handshake, com a nota de que o servidor não guarda — mesma escolha do A para 
 [D44](#d44--status-da-licença-é-derivado-nunca-coluna) (o "hoje"), em parte
 [G](#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples) (a chave de
 produto volta, sem a cifra), em parte [Q](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai)
-(o erro ganha `refs`, que a tela lê), e a lixeira da licença da F6 (`deletedAt`,
+(o erro ganha `refs`, que a tela lê), e a lixeira da licença (`deletedAt`,
 `licenses_name_unico_ativo`, a rota de restaurar).
 **Mantém:** [D39](#d39--assento-de-licença-não-vai-para-um-posto) (o alvo),
 D44 (o status derivado), [D93](#d93--assento-é-posse-e-a-posse-do-projeto-já-tem-três-lugares)
@@ -614,6 +622,8 @@ registrada no passado não vai antes dela.
 
 ## AF — A licença entra no cadastro das Configurações, e o Editar manda o formulário inteiro
 
+> **Superada em parte por [AY](./plataforma.md#ay--o-visual-vem-da-intranet-em-tema-claro-e-escuro-e-a-linha-inteira-abre-o-registro):** a linha inteira abre o registro e as ações vão para o `⋯`; a situação pode ter cor; primitivos do shadcn só no que se usa, e tema claro e escuro; `GET /api/search` sai.
+
 > **Superada em parte por [AN](#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura):**
 > o Encerrar com entrega aberta é 409, e saem com isso a contagem na pergunta, o alerta
 > "encerradas em uso" e o filtro "Ainda em uso". O posto perde o Desativar: o vazio se exclui.
@@ -708,6 +718,8 @@ livres, e o assento que já foi usado e voltou é livre; o passado fica no log. 
 ---
 
 ## AN — O que está em uso bloqueia, e nenhuma data é futura
+
+> **Superada em parte por [AY](./plataforma.md#ay--o-visual-vem-da-intranet-em-tema-claro-e-escuro-e-a-linha-inteira-abre-o-registro):** a linha inteira abre o registro e as ações vão para o `⋯`; a situação pode ter cor; primitivos do shadcn só no que se usa, e tema claro e escuro; `GET /api/search` sai.
 
 > **Superada em parte por [AO](./catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam):**
 > o catálogo (categoria, status, fabricante, modelo, localização) perde o Desativar, que esta

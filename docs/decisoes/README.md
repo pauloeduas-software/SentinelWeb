@@ -1,34 +1,33 @@
 # As decisões do SentinelWeb
 
-> Toda decisão de arquitetura do projeto, arquivada **pelo assunto que ela governa** — não pela
-> fase que a tomou. A numeração `D1`…`D164` é contínua e global: ela é o nome da decisão e não
-> muda, mesmo que o arquivo onde ela vive mude. Depois do D164 veio uma segunda rodada, com 15
-> decisões próprias, nomeadas por letra (`A`…`P`, sem `N`) em vez de número — ver
-> [*A segunda rodada*](#a-segunda-rodada-ap) abaixo. A varredura do código morto, que veio
-> depois dela, continuou a letra — `Q` —, e o que veio depois da varredura também: `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y`, `Z` e, acabado o alfabeto, `AA`, `AB`, `AC`, `AD`, `AE`, `AF`, `AG`, `AH`, `AI`, `AJ`, `AK`, `AL`, `AM`, `AN`, `AO`, `AP`, `AQ`, `AR`, `AS`, `AT`, `AU`, `AV`, `AW`, `AX` e `AY`.
+> Toda decisão de arquitetura do projeto, arquivada **pelo assunto que ela governa**.
+> A numeração `D1`…`D164` é contínua e global: ela é o nome da decisão e não
+> muda, mesmo que o arquivo onde ela vive mude. Depois do D164 o nome passou a ser letra (`A`, `B`…
+> `AA`, `AB`…), pelo motivo em [*A segunda rodada*](#a-segunda-rodada-ap). Para achar uma decisão,
+> procure o título: `grep -rn '^## D137 ' docs/decisoes`.
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve.** Se a realidade mudou, ela é
 > **superada** por outra, com link entre as duas. O log é o que diz por quanto tempo cada regra
 > governou — reescrever apaga essa informação.
 >
 > Quem quer saber **o que vale hoje**, leia [`../referencia/`](../referencia/).
-> Quem quer saber **o que foi feito e quando**, leia [`../historico/`](../historico/).
+> Quem quer saber **o que foi feito e quando**, veja o `git log`.
 
 ## Os onze assuntos
 
-| Arquivo | Assunto | Decisões |
-|---|---|---|
-| [`reconciliacao.md`](./reconciliacao.md) | Reconciliação | 35 |
-| [`acesso.md`](./acesso.md) | Acesso | 32 |
-| [`escopo.md`](./escopo.md) | **Escopo** — o que o sistema deixou de fazer | 22 |
-| [`catalogo-e-ativo.md`](./catalogo-e-ativo.md) | Catálogo e ativo | 16 |
-| [`posse.md`](./posse.md) | Posse | 19 |
-| [`relatorios-import-etiquetas.md`](./relatorios-import-etiquetas.md) | Relatórios, import e etiquetas | 13 |
-| [`ciclo-de-vida.md`](./ciclo-de-vida.md) | Ciclo de vida | 12 |
-| [`licencas.md`](./licencas.md) | Licenças | 18 |
-| [`campos-customizados.md`](./campos-customizados.md) | Campos customizados | 8 |
-| [`plataforma.md`](./plataforma.md) | Plataforma | 8 |
-| [`estoque.md`](./estoque.md) | Estoque | 11 |
+| Arquivo | Assunto |
+|---|---|
+| [`reconciliacao.md`](./reconciliacao.md) | Reconciliação |
+| [`acesso.md`](./acesso.md) | Acesso |
+| [`escopo.md`](./escopo.md) | **Escopo** — o que o sistema deixou de fazer |
+| [`catalogo-e-ativo.md`](./catalogo-e-ativo.md) | Catálogo e ativo |
+| [`posse.md`](./posse.md) | Posse |
+| [`relatorios-import-etiquetas.md`](./relatorios-import-etiquetas.md) | Relatórios, import e etiquetas |
+| [`ciclo-de-vida.md`](./ciclo-de-vida.md) | Ciclo de vida |
+| [`licencas.md`](./licencas.md) | Licenças |
+| [`campos-customizados.md`](./campos-customizados.md) | Campos customizados |
+| [`plataforma.md`](./plataforma.md) | Plataforma |
+| [`estoque.md`](./estoque.md) | Estoque |
 
 ## Correções e supersessões
 
@@ -48,13 +47,18 @@ que corrigem algo anterior:
 | **D20** (`?arquivados=`), **D85** (`?view=archived`) | commit `505c520` (status enxuto) | a vista, a aba e o contador de arquivados saem; `active` exclui só o baixado |
 | **D4** e **D15** (a árvore de `Location`), **O** (`Location.managerId` fica) | commit `ff34364` (localização plana) | `parentId` e `managerId` saem: a lista é plana, e o nome único diz onde o lugar fica |
 | **AF**, **AN**, **AO** (ações ao passar o mouse), **AT** (shadcn e tema claro) e **F** (a busca por etiqueta) | **AY** | a linha inteira abre o registro e as ações vão para o `⋯`; a situação pode ter cor; primitivos do shadcn só no que se usa, e tema claro e escuro; `GET /api/search` sai |
+| **AY** (subtítulo de uma linha), **AT** (o estado da lista na URL, só a aba) | **AZ** | a página fica sem subtítulo, e a aba de Configurações mora no endereço |
+| **AT** (o título fora do cabeçalho; o estado da lista na URL, só em Postos), **AY** (o título; detalhe em janela, no posto) | **BA** | o título da página volta ao cabeçalho, e o posto tem ficha em página, com o estado da lista na URL |
+| **BA** (a ação na página; os filtros fora da URL), **AZ** (busca, filtro e página fora da URL) | **BB** | o cabeçalho só tem o título e o voltar, e toda lista guarda os filtros na URL |
 | **P** (`USUARIO` não entra), **R** (em parte) | **U** | quem recebe equipamento sai de `User` e vira colaborador (catálogo); sobram dois cargos, e todo usuário tem senha |
 | **D8** (catálogo sem lixeira, em parte), **U** (em parte) | **V** | só o presente segura a exclusão: a localização sai de verdade e o histórico guarda o nome por escrito; o colaborador vai para a lixeira, com Restaurar |
-| a lixeira do usuário da F0 (`deletedAt`, `users_email_unique_undeleted`) | **W** | excluir usuário apaga a linha; ninguém rebaixa, desativa ou exclui a si mesmo |
+| a lixeira do usuário (`deletedAt`, `users_email_unique_undeleted`) | **W** | excluir usuário apaga a linha; ninguém rebaixa, desativa ou exclui a si mesmo |
 | **D23**, **D24**, **D25**, **W** (em parte) | **X** | o histórico não guarda quem fez: as cinco colunas de autor e o parâmetro `actorId` saem, e usuário não grava histórico |
 | **D15**, **B** (a porta da marca), **V** (a metade da localização) | **Y** | o posto sai de `Location` e vira `Workstation`: a localização só guarda, com a regra do status; o posto recebe entrega, estoque e ocupante |
 | **U** (os dois cargos), **W** (o rebaixar) | **Z** | sobra um cargo só, `ADMIN`, com toda a validação dele; a separação de cargos é decisão a tomar |
 | **Z** | **AV** | três cargos, `TECNICO < SUPERVISOR < ADMIN`: o Técnico opera, o Supervisor decide e o Administrador cuida das contas |
+| **AU** (as 12 horas da sessão) | **BD** | a sessão vale 48 horas, ainda fixa e contada da entrada |
+| **D19** (a lista fechada de motivos da baixa) | **BE** | o enum `RetiredReason` sai: os motivos são um cadastro de Configurações, e a baixa continua separada do status |
 
 **O de-escopo (D143–D156) supera por subtração**, e é o maior grupo de supersessões do projeto:
 a decisão antiga não estava errada, o que ela governava deixou de existir. Está inteiro em
@@ -93,8 +97,8 @@ registram o "Supera:" do mesmo jeito, e o log só fica completo com elas na tabe
 | **D14** (o `ASSET` como alvo), **D87** | **K** | a posse tem dois alvos: pessoa e posto |
 | **D21**, **D31**, **D32**, **D82** (massa e desligamento), **D93** (em parte: o `offboard`), **D57**, **D86** (e-mail), **D66**, **D129**, **D130** (a view do responsável), **D73**, **D74**, **D75**, **D135**, **D156** (`Department`), **D154**, **D161** (relatórios), **D69**, **D138**, **D163** (export e relatório) | **O** | o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada |
 | **D17** (`assignedToId`), **D26** (`createdById`/`updatedById`) | **Q** | a varredura do código morto: coluna, rota e parâmetro sem leitor saem |
-| a credencial à parte da F3 (`username` + `set-password` — decisão da execução, sem número) | **R** | a senha nasce no cadastro do usuário e o login é o e-mail |
-| **D40**, **D41**, **D43**, **D90**, **D92**, **D44** (em parte), a lixeira da licença da F6 | **AA** | a licença vira quantidade e entregas: sem vaga numerada, sem lixeira, sem reatribuível nem queima, com Encerradas e o "hoje" de Brasília |
+| a credencial à parte (`username` + `set-password` — decisão da execução, sem número) | **R** | a senha nasce no cadastro do usuário e o login é o e-mail |
+| **D40**, **D41**, **D43**, **D90**, **D92**, **D44** (em parte), a lixeira da licença | **AA** | a licença vira quantidade e entregas: sem vaga numerada, sem lixeira, sem reatribuível nem queima, com Encerradas e o "hoje" de Brasília |
 | **X**, **D18** (em parte), **AA** (a licença sem trilha) | **AB** | a auditoria de quem fez volta, só no banco: conta, sistema ou login sem sessão, por escrito, numa linha que não se reescreve; os históricos das telas ficam só movimentação |
 | **AA** (em parte: a chave em texto), **AB** (em parte: a marca da chave na auditoria) | **AC** | a chave vira lista: cada uma cobre uma quantidade, e a entrega escolhe uma, obrigatória quando a licença tem chaves |
 | **AA** (em parte: a renovação de mesmo nome) | **AD** | renovar é editar o vencimento; o fim do suporte vai nas notas, a OEM fica com o computador e o comprovante é o número do pedido |
@@ -106,20 +110,15 @@ registram o "Supera:" do mesmo jeito, e o log só fica completo com elas na tabe
 | **AE** (em parte: o total ao menos 1 sempre), **J** (em parte: toda entrega se devolve) | **AJ** | o consumível é uma categoria cuja entrega não volta; o total é o que existe e chega a 0 |
 | **AC** (em parte: a chave já entregue não sai da lista) | **AK** | a chave só prende enquanto tem entrega aberta; as devolvidas com ela perdem a ligação |
 | **B**, **Y** (em parte: a porta da restauração) | **AL** | o computador entregue não vai para a lixeira, como não recebe baixa: faça a devolução antes |
-| a nota da Leva 1B da F4 (a data da entrega nunca vem do cliente) | **AM** | a entrega e a devolução do computador têm o dia, como a licença e o estoque; "hoje" é o dia de Brasília em toda data |
+| a nota de que a data da entrega nunca vem do cliente | **AM** | a entrega e a devolução do computador têm o dia, como a licença e o estoque; "hoje" é o dia de Brasília em toda data |
 | **AA**, **AF** (em parte: encerrar em uso e o alerta dele), **AE** (em parte: desativar com unidade fora), **Y** (em parte: o posto com desativar), **AM** (em parte: o que ficava de fora) | **AN** | o que está em uso bloqueia o Encerrar e o Desativar; o posto perde o Desativar; compra e encerramento não são futuros; o fim da ocupação e a devolução pelo posto ganham o dia |
 | o Desativar do catálogo (commit `ff34364`, com a invariante 21), **AF** (em parte: o Desativar em todas as telas), **AN** (em parte: o catálogo que ficava de fora), **Y** (em parte: a localização desativada) | **AO** | categoria, status, fabricante, modelo e localização perdem o Desativar, como no Snipe-IT; a exclusão continua bloqueada pelo uso, e o 409 diz o que tirar |
-| o `conceder-administrador` da F11 (Etapa B, sem número), **T** (em parte: o "criado à mão") | **AP** | o administrador nasce por comando, como no Snipe-IT: nome, e-mail e senha como parâmetro; serve à instalação nova e a quem perdeu a senha |
+| o `conceder-administrador` (sem número), **T** (em parte: o "criado à mão") | **AP** | o administrador nasce por comando, como no Snipe-IT: nome, e-mail e senha como parâmetro; serve à instalação nova e a quem perdeu a senha |
 
-Quatro decisões nasceram para resolver **conflito entre dois planos**, e não de uma fase só:
+Quatro decisões nasceram para resolver **um conflito**:
 **D79** (cada job tem a própria linha), **D80** (um `ApiToken` com dono polimórfico), **D81** (uma
 cifra para os dois usos) e **D82** (`terminate` não existe; o `offboard` é estendido). Elas estão
 arquivadas no assunto que governam, com o conflito original descrito dentro de cada uma.
-
-> ⚠️ **A fase 0 usa uma numeração LOCAL.** O
-> [`../historico/fase-00-base-tecnica.md`](../historico/fase-00-base-tecnica.md) chama suas
-> sub-etapas de `D1. Migração`, `D2. O escopo automático`… — isso **antecede** este esquema e
-> **não** corresponde às D1–D4 desta tabela. É registro histórico e ficou como está.
 
 ---
 
@@ -128,244 +127,16 @@ arquivadas no assunto que governam, com o conflito original descrito dentro de c
 O corte do ITAM (D143–D164) foi a **primeira** rodada de de-escopo, com numeração contínua D1–D164.
 Depois dela o projeto passou por uma **segunda** rodada — mais de-escopo (O), a forma final da
 invariante 19 (B), o retorno do estoque numa forma diferente da que o D153 previu (J) e meia dúzia
-de outras decisões que não vieram de uma das onze fases do roadmap, e sim da revisão do que ficou
+de outras decisões que vieram da revisão do que ficou
 depois do corte. Elas usam **letra**, não número: a numeração D é contínua porque corresponde à ordem em
 que o código citava "invariante N" e "D N" — recomeçá-la nesta rodada criaria colisão com os D's
 que o código ainda cita. Letra deixa claro, só pelo nome, que a decisão é desta rodada.
 
-| Letra | Decisão | Onde |
-|---|---|---|
-| **A** | A reconciliação deixa de inferir pessoa pela conta do sistema operacional | [Reconciliação](./reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional) |
-| **B** | Invariante 19, na forma final: um ativo por posto de trabalho | [Posse](./posse.md#b--invariante-19-na-forma-final-um-ativo-por-posto-de-trabalho) |
-| **C** | O ativo entregue a um posto sai de `/ativos`; a ficha do posto é rota | [Catálogo e ativo](./catalogo-e-ativo.md#c--o-ativo-entregue-a-um-posto-sai-de-ativos-a-ficha-do-posto-é-rota) |
-| **D** | A telemetria e o comando vão para a ficha do ativo e a do posto | [Reconciliação](./reconciliacao.md#d--a-telemetria-e-o-comando-vão-para-a-ficha-do-ativo-e-a-do-posto) |
-| **E** | `/descobertas` ganha vínculo manual e "Reconciliar agora" | [Reconciliação](./reconciliacao.md#e--descobertas-ganha-vínculo-manual-e-reconciliar-agora) |
-| **F** | A busca por QR sai, com `APP_URL`, `resolve-tags` e `by-serial` | [Relatórios, import e etiquetas](./relatorios-import-etiquetas.md#f--a-busca-por-qr-sai-com-app_url-resolve-tags-e-by-serial) |
-| **G** | Software instalado e conformidade de licença saem; licença vira cadastro simples | [Licenças](./licencas.md#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples) |
-| **H** | A fusão de máquinas sai | [Reconciliação](./reconciliacao.md#h--a-fusão-de-máquinas-sai) |
-| **I** | Ativo é computador | [Catálogo e ativo](./catalogo-e-ativo.md#i--ativo-é-computador) |
-| **J** | O estoque volta como `StockItem` + `StockMovement` | [Estoque](./estoque.md#j--o-estoque-volta-como-stockitem--stockmovement) |
-| **K** | O alvo `ASSET` sai da posse | [Posse](./posse.md#k--o-alvo-asset-sai-da-posse) |
-| **L** | O teto de requisições é desligado em `NODE_ENV=test`, com guarda contra produção | [Plataforma](./plataforma.md#l--o-teto-de-requisições-é-desligado-em-node_envtest-com-guarda-contra-produção) |
-| **M** | Um lockfile só, o do `bun` | [Plataforma](./plataforma.md#m--um-lockfile-só-o-do-bun) |
-| **O** | O segundo de-escopo: o que a primeira rodada manteve, ou não enxergou, sai | [Escopo](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai) |
-| **P** | `USUARIO` não entra no painel | [Acesso](./acesso.md#p--usuario-não-entra-no-painel) |
-| **Q** | A varredura do código morto: o que não tem leitor sai | [Escopo](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai) |
-| **R** | A senha nasce no cadastro, e o login é o e-mail | [Acesso](./acesso.md#r--a-senha-nasce-no-cadastro-e-o-login-é-o-e-mail) |
-| **S** | O papel passa a se chamar cargo | [Acesso](./acesso.md#s--o-papel-passa-a-se-chamar-cargo) |
-| **T** | Não há conta semeada | [Acesso](./acesso.md#t--não-há-conta-semeada) |
-| **U** | Quem recebe equipamento sai de `User`: colaborador vira catálogo, e sobram dois cargos | [Acesso](./acesso.md#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos) |
-| **V** | Excluir não apaga o passado: localização por referência, colaborador pela lixeira | [Posse](./posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira) |
-| **W** | Excluir usuário apaga a linha, e ninguém rebaixa, desativa ou exclui a si mesmo | [Acesso](./acesso.md#w--excluir-usuário-apaga-a-linha-e-ninguém-rebaixa-desativa-ou-exclui-a-si-mesmo) |
-| **X** | O histórico não guarda quem fez | [Acesso](./acesso.md#x--o-histórico-não-guarda-quem-fez) |
-| **Y** | O posto sai de `Location`: localização guarda, posto recebe | [Posse](./posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe) |
-| **Z** | Sobra um cargo só: Administrador, e a separação de cargos fica para decidir | [Acesso](./acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir) |
-| **AA** | A licença vira quantidade e entregas: sem vaga numerada, sem lixeira, com Encerradas | [Licenças](./licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas) |
-| **AB** | A auditoria volta: quem fez, só no banco | [Acesso](./acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco) |
-| **AC** | A chave vira lista: cada uma cobre uma quantidade, e a entrega escolhe uma | [Licenças](./licencas.md#ac--a-chave-vira-lista-cada-uma-cobre-uma-quantidade-e-a-entrega-escolhe-uma) |
-| **AD** | Renovar é editar o vencimento; o suporte, a OEM e o comprovante não viram campo | [Licenças](./licencas.md#ad--renovar-é-editar-o-vencimento-o-suporte-a-oem-e-o-comprovante-não-viram-campo) |
-| **AE** | O estoque segue a lógica da licença: total na edição, entrega com dia, desativar em vez de lixeira | [Estoque](./estoque.md#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira) |
-| **AF** | A licença entra no cadastro das Configurações, e o Editar manda o formulário inteiro | [Licenças](./licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro) |
-| **AG** | A regra do posto vale para o estoque e a licença: só o que está em uso impede a exclusão | [Estoque](./estoque.md#ag--a-regra-do-posto-vale-para-o-estoque-e-a-licença-só-o-que-está-em-uso-impede-a-exclusão) |
-| **AH** | O menu por assunto: o colaborador ganha página própria, e Ativos vira Computadores | [Acesso](./acesso.md#ah--o-menu-por-assunto-o-colaborador-ganha-página-própria-e-ativos-vira-computadores) |
-| **AI** | O componente é uma categoria: vai só para computador, e sai pelo Retirar | [Estoque](./estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar) |
-| **AJ** | O consumível é uma categoria, e o total é o que existe | [Estoque](./estoque.md#aj--o-consumível-é-uma-categoria-e-o-total-é-o-que-existe) |
-| **AK** | A chave só prende enquanto está em uso | [Licenças](./licencas.md#ak--a-chave-só-prende-enquanto-está-em-uso) |
-| **AL** | O computador entregue não vai para a lixeira | [Posse](./posse.md#al--o-computador-entregue-não-vai-para-a-lixeira) |
-| **AM** | A entrega e a devolução do computador ganham o dia | [Posse](./posse.md#am--a-entrega-e-a-devolução-do-computador-ganham-o-dia) |
-| **AN** | O que está em uso bloqueia, e nenhuma data é futura | [Licenças](./licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura) |
-| **AO** | Categoria, status, fabricante, modelo e localização não se desativam | [Catálogo e ativo](./catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam) |
-| **AP** | O administrador nasce por comando, como no Snipe-IT | [Acesso](./acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it) |
-| **AQ** | As pastas levam o nome do que guardam | [Plataforma](./plataforma.md#aq--as-pastas-levam-o-nome-do-que-guardam) |
-| **AR** | A senha temporária e "Minha conta" voltam | [Acesso](./acesso.md#ar--a-senha-temporária-e-minha-conta-voltam) |
-| **AS** | O Swagger: a API inteira navegável, só fora de produção | [Plataforma](./plataforma.md#as--o-swagger-a-api-inteira-navegável-só-fora-de-produção) |
-| **AT** | O que veio do ModuloDefault, e o que ficou de fora | [Plataforma](./plataforma.md#at--o-que-veio-do-modulodefault-e-o-que-ficou-de-fora) |
-| **AU** | Ninguém escolhe a senha de outra pessoa | [Acesso](./acesso.md#au--ninguém-escolhe-a-senha-de-outra-pessoa) |
-| **AV** | Três cargos: Técnico, Supervisor e Administrador | [Acesso](./acesso.md#av--três-cargos-técnico-supervisor-e-administrador) |
-| **AW** | O computador está onde o posto fica, e o histórico diz quem ocupou o posto | [Posse](./posse.md#aw--o-computador-está-onde-o-posto-fica-e-o-histórico-diz-quem-ocupou-o-posto) |
-| **AX** | O posto tem um computador por vez, também no passado | [Posse](./posse.md#ax--o-posto-tem-um-computador-por-vez-também-no-passado) |
-| **AY** | O visual vem da IntraNet, em tema claro e escuro, e a linha inteira abre o registro | [Plataforma](./plataforma.md#ay--o-visual-vem-da-intranet-em-tema-claro-e-escuro-e-a-linha-inteira-abre-o-registro) |
+A letra continuou depois dela, pelo mesmo motivo: `Q`, `R`… e, acabado o alfabeto, `AA`, `AB`…
 
 **`N` não existe, de propósito.** As correções de segurança e consistência desta rodada (custo
 de compra vazando por uma quarta porta, comando que respondia sucesso sem confirmação do socket,
 status padrão do ativo novo, unidade de rede em bit misturada com byte) não são decisão de
 arquitetura — são a aplicação de regras já decididas (D77, acima de tudo) em um lugar que tinha
-escapado. Ficam só no histórico da fase, não aqui: decisão registrada sem ser decisão nova é
-ruído para quem lê o índice procurando o que mudou de ideia.
-
-**`Q` não é da segunda rodada: veio depois dela**, numa varredura do que as duas rodadas
-deixaram de pé — coluna, rota e parâmetro sem leitor, e duas recusas que as invariantes 6 e 17
-já prometiam e o código não cumpria. Continua a letra pelo mesmo motivo de a rodada tê-la
-adotado: a numeração `D` corresponde ao que o código cita, e recomeçá-la colidiria. A `R` veio
-logo depois dela, pelo mesmo caminho: a varredura achou a rota de senha sem chamador, e a
-resposta foi levar a senha para o cadastro. A `S` é o renomeio do papel para cargo, a palavra
-que a equipe usa. A `T` tira o seed da conta de administrador. A `AA` veio da revisão da página de Licenças — acabado o alfabeto, a letra continua com duas. A `AB` traz de volta a auditoria de quem fez, só no banco. A `AC` veio da conversa sobre o que faltava na licença: a chave virou lista. A `AD` respondeu os casos de uso que a `AC` deixou sugeridos. A `AE` pôs o estoque na lógica da licença. A `AF` pôs a licença no cadastro das Configurações, e o Editar com o formulário inteiro em todas as telas. A `AG` veio da pergunta sobre excluir o que já foi devolvido: o item e a licença passaram à regra do posto. A `AH` agrupou o menu por assunto: o colaborador ganhou página própria e a página Ativos virou Computadores. A `AI` veio da memória e do SSD: a categoria ganhou o tipo Componente, que vai só para computador. A `AJ` veio da validação de ITAM do estoque: a categoria ganhou o tipo Consumível. A `AK`, a `AL` e a `AM` vieram da revisão de lógica de licença e estoque: a chave que voltou sai da lista, o computador entregue não vai para a lixeira, e a posse do computador ganhou o dia. A `AN` fechou a revisão com os dois padrões do usuário: o que está em uso bloqueia, e nenhuma data é futura. A `AO` veio da comparação das Configurações com o Snipe-IT e o GLPI: o catálogo perdeu o Desativar. A `AP` veio da revisão de Usuários, comparando com o Snipe-IT: o administrador nasce por comando, com nome, e-mail e senha. A `AQ` veio da comparação com o ModuloDefault, o template da organização: as pastas passaram a levar o nome do que guardam; a `AR` trouxe de volta a senha temporária e Minha conta, a `AS` o Swagger, e a `AT` registra o que veio do ModuloDefault e o que ficou de fora. A `AU` veio do formulário de Usuários: ninguém escolhe a senha de outra pessoa. A `AV` veio da comparação com GLPI, Snipe-IT e Lansweeper: três cargos, Técnico, Supervisor e Administrador. A `AW` veio da revisão de Postos: o computador entregue está onde o posto fica, e o histórico de posse diz quem ocupou o posto. A `AX` fechou o furo que ela mostrou: o posto tem um computador por vez, e a mesma pessoa não ocupa o mesmo posto duas vezes, também no passado; a próxima é a `AY`.
-
-## O índice
-
-| # | Decisão | Onde |
-|---|---|---|
-| **D1** | `InventoryItem` vira `Asset`; o `Asset` atual (descoberto pelo agente) vira `Endpoint` | [Catálogo e ativo](./catalogo-e-ativo.md#d1--inventoryitem-vira-asset-o-asset-atual-descoberto-pelo-agente-vira-endpoint) |
-| **D2** | `Folder` morre | [Catálogo e ativo](./catalogo-e-ativo.md#d2--folder-morre) |
-| **D3** | `quantity` sai do `Asset` | [Catálogo e ativo](./catalogo-e-ativo.md#d3--quantity-sai-do-asset) |
-| **D4** | `Company` / Full Multiple Companies Support: descartado | [Plataforma](./plataforma.md#d4--company--full-multiple-companies-support-descartado) |
-| **D5** | Nada de texto livre onde o Snipe-IT tem tabela | [Catálogo e ativo](./catalogo-e-ativo.md#d5--nada-de-texto-livre-onde-o-snipe-it-tem-tabela) |
-| **D6** | Baselinar as migrations antes de tocar em qualquer coluna — e NÃO com `migrate dev` | [Plataforma](./plataforma.md#d6--baselinar-as-migrations-antes-de-tocar-em-qualquer-coluna--e-não-com-migrate-dev) |
-| **D7** | Campos customizados em `JsonB`, não em DDL dinâmico | [Campos customizados](./campos-customizados.md#d7--campos-customizados-em-jsonb-não-em-ddl-dinâmico) |
-| **D8** | Catálogo sem soft delete. O delete é real, bloqueado por uso | [Catálogo e ativo](./catalogo-e-ativo.md#d8--catálogo-sem-soft-delete-o-delete-é-real-bloqueado-por-uso) |
-| **D9** | Um domínio `catalog` com sete especificações. Não sete domínios | [Catálogo e ativo](./catalogo-e-ativo.md#d9--um-domínio-catalog-com-sete-especificações-não-sete-domínios) |
-| **D10** | `type` vira `enum` do Prisma, não `String` | [Catálogo e ativo](./catalogo-e-ativo.md#d10--type-vira-enum-do-prisma-não-string) |
-| **D11** | Rota de opções separada da listagem | [Catálogo e ativo](./catalogo-e-ativo.md#d11--rota-de-opções-separada-da-listagem) |
-| **D12** | O `Asset` nasce inteiro na F1. `inventory_items` é apagada, não migrada | [Catálogo e ativo](./catalogo-e-ativo.md#d12--o-asset-nasce-inteiro-na-f1-inventory_items-é-apagada-não-migrada) |
-| **D13** | A segurança do rename depende de o `Asset` novo **não** ter `status`, `lastSeen` nem `hwid` | [Catálogo e ativo](./catalogo-e-ativo.md#d13--a-segurança-do-rename-depende-de-o-asset-novo-não-ter-status-lastseen-nem-hwid) |
-| **D14** | O detentor é singular; o ALVO é que é polimórfico | [Posse](./posse.md#d14--o-detentor-é-singular-o-alvo-é-que-é-polimórfico) |
-| **D15** | O posto de trabalho é uma `Location`, não uma entidade nova | [Posse](./posse.md#d15--o-posto-de-trabalho-é-uma-location-não-uma-entidade-nova) |
-| **D16** | Responsabilidade é DERIVADA, nunca coluna | [Posse](./posse.md#d16--responsabilidade-é-derivada-nunca-coluna) |
-| **D17** | `Asset.assignedToId` deixa de ser editável pelo formulário | [Posse](./posse.md#d17--assetassignedtoid-deixa-de-ser-editável-pelo-formulário) |
-| **D18** | `AssetLog` não nasce. A aba Histórico lê o `ActivityLog` | [Catálogo e ativo](./catalogo-e-ativo.md#d18--assetlog-não-nasce-a-aba-histórico-lê-o-activitylog) |
-| **D19** | Arquivar, descomissionar e apagar são três coisas, com três colunas | [Catálogo e ativo](./catalogo-e-ativo.md#d19--arquivar-descomissionar-e-apagar-são-três-coisas-com-três-colunas) |
-| **D20** | "Arquivados" e "posto vago" são filtros do domínio, não `view` do `core` | [Catálogo e ativo](./catalogo-e-ativo.md#d20--arquivados-e-posto-vago-são-filtros-do-domínio-não-view-do-core) |
-| **D21** | Ação em massa é tudo ou nada; entrega em massa não será (F4) | [Catálogo e ativo](./catalogo-e-ativo.md#d21--ação-em-massa-é-tudo-ou-nada-entrega-em-massa-não-será-f4) |
-| **D22** | Sessão em cookie `httpOnly`, não em `localStorage` | [Acesso](./acesso.md#d22--sessão-em-cookie-httponly-não-em-localstorage) |
-| **D23** | `actorId` é parâmetro obrigatório, não `AsyncLocalStorage` | [Acesso](./acesso.md#d23--actorid-é-parâmetro-obrigatório-não-asynclocalstorage) |
-| **D24** | O histórico anterior fica sem ator. Não há backfill | [Acesso](./acesso.md#d24--o-histórico-anterior-fica-sem-ator-não-há-backfill) |
-| **D25** | Ocupação de posto não ganha coluna de ator | [Acesso](./acesso.md#d25--ocupação-de-posto-não-ganha-coluna-de-ator) |
-| **D26** | `createdById`/`updatedById` só onde a tela mostra | [Acesso](./acesso.md#d26--createdbyidupdatedbyid-só-onde-a-tela-mostra) |
-| **D27** | Num posto com duas pessoas, quem assina o termo é o gestor da localidade | [Posse](./posse.md#d27--num-posto-com-duas-pessoas-quem-assina-o-termo-é-o-gestor-da-localidade) |
-| **D28** | Quando o último ocupante sai, a posse continua aberta | [Posse](./posse.md#d28--quando-o-último-ocupante-sai-a-posse-continua-aberta) |
-| **D29** | O EULA é copiado para o `Acceptance`, não referenciado | [Posse](./posse.md#d29--o-eula-é-copiado-para-o-acceptance-não-referenciado) |
-| **D30** | O PDF é gerado no aceite e guardado. Nunca regenerado | [Posse](./posse.md#d30--o-pdf-é-gerado-no-aceite-e-guardado-nunca-regenerado) |
-| **D31** | Entrega em massa é por linha, com relatório. (O oposto da F2.) | [Posse](./posse.md#d31--entrega-em-massa-é-por-linha-com-relatório-o-oposto-da-f2) |
-| **D32** | Desligamento é uma operação com nome próprio, e fecha as duas camadas | [Posse](./posse.md#d32--desligamento-é-uma-operação-com-nome-próprio-e-fecha-as-duas-camadas) |
-| **D33** | O acessório entregue a um posto é **do posto**; os ocupantes respondem solidariamente | [Estoque](./estoque.md#d33--o-acessório-entregue-a-um-posto-é-do-posto-os-ocupantes-respondem-solidariamente) |
-| **D34** | Saldo é sempre **calculado**, nunca coluna | [Estoque](./estoque.md#d34--saldo-é-sempre-calculado-nunca-coluna) |
-| **D35** | Um domínio `stock`, não três fatias verticais | [Estoque](./estoque.md#d35--um-domínio-stock-não-três-fatias-verticais) |
-| **D36** | Os três têm lixeira; aqui o D8 não se aplica | [Estoque](./estoque.md#d36--os-três-têm-lixeira-aqui-o-d8-não-se-aplica) |
-| **D37** | `Consumable` não tem devolução; não é validação, é ausência | [Estoque](./estoque.md#d37--consumable-não-tem-devolução-não-é-validação-é-ausência) |
-| **D38** | Devolução parcial de componente **divide a linha** | [Estoque](./estoque.md#d38--devolução-parcial-de-componente-divide-a-linha) |
-| **D39** | Assento de licença **não** vai para um posto | [Licenças](./licencas.md#d39--assento-de-licença-não-vai-para-um-posto) |
-| **D40** | Assento materializado, ocupação em tabela própria | [Licenças](./licencas.md#d40--assento-materializado-ocupação-em-tabela-própria) |
-| **D41** | `FOR UPDATE SKIP LOCKED`, e o preço dele | [Licenças](./licencas.md#d41--for-update-skip-locked-e-o-preço-dele) |
-| **D42** | Chave cifrada numa coluna versionada, sem plano B em claro | [Licenças](./licencas.md#d42--chave-cifrada-numa-coluna-versionada-sem-plano-b-em-claro) |
-| **D43** | `burnedAt` e `retiredAt` são fatos diferentes | [Licenças](./licencas.md#d43--burnedat-e-retiredat-são-fatos-diferentes) |
-| **D44** | Status da licença é derivado, nunca coluna | [Licenças](./licencas.md#d44--status-da-licença-é-derivado-nunca-coluna) |
-| **D45** | A FK mora no `Endpoint`, e as tabelas não se fundem | [Reconciliação](./reconciliacao.md#d45--a-fk-mora-no-endpoint-e-as-tabelas-não-se-fundem) |
-| **D46** | Evidência ambígua é evidência **zero** | [Reconciliação](./reconciliacao.md#d46--evidência-ambígua-é-evidência-zero) |
-| **D47** | O usuário logado sugere **ocupação** quando a posse é do posto | [Reconciliação](./reconciliacao.md#d47--o-usuário-logado-sugere-ocupação-quando-a-posse-é-do-posto) |
-| **D48** | Dois usuários na mesma máquina é **evidência de posto compartilhado** | [Reconciliação](./reconciliacao.md#d48--dois-usuários-na-mesma-máquina-é-evidência-de-posto-compartilhado) |
-| **D49** | Observação de usuário é agregada por dia, com retenção | [Reconciliação](./reconciliacao.md#d49--observação-de-usuário-é-agregada-por-dia-com-retenção) |
-| **D50** | `lastSeenByAgentAt` existe e **nunca** se chama `lastSeen` | [Reconciliação](./reconciliacao.md#d50--lastseenbyagentat-existe-e-nunca-se-chama-lastseen) |
-| **D51** | Auto-provisionamento nasce em `SUGGEST` | [Reconciliação](./reconciliacao.md#d51--auto-provisionamento-nasce-em-suggest) |
-| **D52** | A auditoria corrige *onde está*. Nunca *quem responde* | [Ciclo de vida](./ciclo-de-vida.md#d52--a-auditoria-corrige-onde-está-nunca-quem-responde) |
-| **D53** | `lastAuditAt` é coluna. `nextAuditAt` não nasce | [Ciclo de vida](./ciclo-de-vida.md#d53--lastauditat-é-coluna-nextauditat-não-nasce) |
-| **D54** | A auditoria é registrada por ATIVO. O posto é a unidade de trabalho | [Ciclo de vida](./ciclo-de-vida.md#d54--a-auditoria-é-registrada-por-ativo-o-posto-é-a-unidade-de-trabalho) |
-| **D55** | Valor contábil é calculado no servidor. Sempre | [Ciclo de vida](./ciclo-de-vida.md#d55--valor-contábil-é-calculado-no-servidor-sempre) |
-| **D56** | O job diário não é `setInterval` de 24 h. É tick curto com compare-and-set | [Ciclo de vida](./ciclo-de-vida.md#d56--o-job-diário-não-é-setinterval-de-24-h-é-tick-curto-com-compare-and-set) |
-| **D57** | A central no app é o canal primário; SMTP mora no `.env` | [Ciclo de vida](./ciclo-de-vida.md#d57--a-central-no-app-é-o-canal-primário-smtp-mora-no-env) |
-| **D58** | O conjunto ancora na **categoria** e no **modelo**, com precedência do modelo | [Campos customizados](./campos-customizados.md#d58--o-conjunto-ancora-na-categoria-e-no-modelo-com-precedência-do-modelo) |
-| **D59** | Valores em `JsonB` na linha do ativo. Não DDL dinâmico, não EAV | [Campos customizados](./campos-customizados.md#d59--valores-em-jsonb-na-linha-do-ativo-não-ddl-dinâmico-não-eav) |
-| **D60** | O `slug` é imutável. O valor órfão não é apagado | [Campos customizados](./campos-customizados.md#d60--o-slug-é-imutável-o-valor-órfão-não-é-apagado) |
-| **D61** | Obrigatoriedade é do **vínculo**, não do campo | [Campos customizados](./campos-customizados.md#d61--obrigatoriedade-é-do-vínculo-não-do-campo) |
-| **D62** | Cifra é `enc:v1:` dentro do JsonB, com rota própria para revelar | [Campos customizados](./campos-customizados.md#d62--cifra-é-encv1-dentro-do-jsonb-com-rota-própria-para-revelar) |
-| **D63** | Filtrar por campo customizado: sim. Ordenar: não, nesta fase | [Campos customizados](./campos-customizados.md#d63--filtrar-por-campo-customizado-sim-ordenar-não-nesta-fase) |
-| **D64** | A parte plana é spec de catálogo; a composição é domínio próprio | [Campos customizados](./campos-customizados.md#d64--a-parte-plana-é-spec-de-catálogo-a-composição-é-domínio-próprio) |
-| **D65** | Não nasce tabela `Setting`. O `AppSetting` cresce | [Relatórios, import e etiquetas](./relatorios-import-etiquetas.md#d65--não-nasce-tabela-setting-o-appsetting-cresce) |
-| **D66** | Responsável resolvido é uma **view**, não coluna nem cache | [Relatórios, import e etiquetas](./relatorios-import-etiquetas.md#d66--responsável-resolvido-é-uma-view-não-coluna-nem-cache) |
-| **D67** | O builder recebe token. Nunca campo, nunca SQL | [Relatórios, import e etiquetas](./relatorios-import-etiquetas.md#d67--o-builder-recebe-token-nunca-campo-nunca-sql) |
-| **D68** | Importação é de dois passos, e o dry-run é obrigatório | [Relatórios, import e etiquetas](./relatorios-import-etiquetas.md#d68--importação-é-de-dois-passos-e-o-dry-run-é-obrigatório) |
-| **D69** | O export manda número cru e data ISO — e trata fórmula | [Relatórios, import e etiquetas](./relatorios-import-etiquetas.md#d69--o-export-manda-número-cru-e-data-iso--e-trata-fórmula) |
-| **D70** | QR leva URL. Código de barras leva a etiqueta | [Relatórios, import e etiquetas](./relatorios-import-etiquetas.md#d70--qr-leva-url-código-de-barras-leva-a-etiqueta) |
-| **D71** | O catálogo de colunas é declarado duas vezes, de propósito | [Relatórios, import e etiquetas](./relatorios-import-etiquetas.md#d71--o-catálogo-de-colunas-é-declarado-duas-vezes-de-propósito) |
-| **D72** | Posto responde pelo ativo; departamento agrupa pessoas; gestor escalona | [Acesso](./acesso.md#d72--posto-responde-pelo-ativo-departamento-agrupa-pessoas-gestor-escalona) |
-| **D73** | `resolverEscalonamento()` é função separada de `resolverResponsaveis()` | [Acesso](./acesso.md#d73--resolverescalonamento-é-função-separada-de-resolverresponsaveis) |
-| **D74** | Desligar não é apagar. E encerrar ocupações é passo do fluxo | [Acesso](./acesso.md#d74--desligar-não-é-apagar-e-encerrar-ocupações-é-passo-do-fluxo) |
-| **D75** | `Department` é a décima spec do catálogo, e a troca de coluna é em duas migrações | [Acesso](./acesso.md#d75--department-é-a-décima-spec-do-catálogo-e-a-troca-de-coluna-é-em-duas-migrações) |
-| **D76** | Permissão é união permissiva. Não existe `deny` | [Acesso](./acesso.md#d76--permissão-é-união-permissiva-não-existe-deny) |
-| **D77** | Dado sensível é filtrado no `select`, não mascarado na resposta | [Acesso](./acesso.md#d77--dado-sensível-é-filtrado-no-select-não-mascarado-na-resposta) |
-| **D78** | LDAP sincroniza; OIDC autentica; ninguém entra sem cadastro | [Acesso](./acesso.md#d78--ldap-sincroniza-oidc-autentica-ninguém-entra-sem-cadastro) |
-| **D79** | Cada job tem a própria linha de execução. `lastAlertRunAt` não é coluna de `AppSetting` | [Plataforma](./plataforma.md#d79--cada-job-tem-a-própria-linha-de-execução-lastalertrunat-não-é-coluna-de-appsetting) |
-| **D80** | Um `ApiToken` só, com dono polimórfico | [Acesso](./acesso.md#d80--um-apitoken-só-com-dono-polimórfico) |
-| **D81** | Um arquivo e um formato de cifra, para os dois usos | [Plataforma](./plataforma.md#d81--um-arquivo-e-um-formato-de-cifra-para-os-dois-usos) |
-| **D82** | `terminate` não existe. A F11 **estende** o `offboard` | [Posse](./posse.md#d82--terminate-não-existe-a-f11-estende-o-offboard) |
-| **D83** | O armazenamento é `core/storage/`; a linha é do domínio | [Plataforma](./plataforma.md#d83--o-armazenamento-é-corestorage-a-linha-é-do-domínio) |
-| **D84** | Anexo não é rota estática. Ele sai por `/api/`, com sessão | [Plataforma](./plataforma.md#d84--anexo-não-é-rota-estática-ele-sai-por-api-com-sessão) |
-| **D85** | `?view=archived` é a quarta vista, e a listagem padrão passa a excluir `ARCHIVED` | [Catálogo e ativo](./catalogo-e-ativo.md#d85--viewarchived-é-a-quarta-vista-e-a-listagem-padrão-passa-a-excluir-archived) |
-| **D86** | E-mail é *best-effort* com log. O que não pode se perder tem linha em tabela | [Plataforma](./plataforma.md#d86--e-mail-é-best-effort-com-log-o-que-não-pode-se-perder-tem-linha-em-tabela) |
-| **D87** | Entrega com alvo `ASSET` não emite termo | [Posse](./posse.md#d87--entrega-com-alvo-asset-não-emite-termo) |
-| **D88** | Aceite pendente não bloqueia a entrega | [Posse](./posse.md#d88--aceite-pendente-não-bloqueia-a-entrega) |
-| **D89** | A troca do `AGENT_TOKEN` pelo `ApiToken` é por convivência, com prazo | [Acesso](./acesso.md#d89--a-troca-do-agent_token-pelo-apitoken-é-por-convivência-com-prazo) |
-| **D90** | Quem reconcilia trava tudo; quem entrega trava um assento | [Licenças](./licencas.md#d90--quem-reconcilia-trava-tudo-quem-entrega-trava-um-assento) |
-| **D91** | Chaveiro, não chave: o `kid` vem da própria chave | [Licenças](./licencas.md#d91--chaveiro-não-chave-o-kid-vem-da-própria-chave) |
-| **D92** | `livres` sai das linhas; `aposentados` não entra na subtração | [Licenças](./licencas.md#d92--livres-sai-das-linhas-aposentados-não-entra-na-subtração) |
-| **D93** | Assento é posse, e a posse do projeto já tem três lugares | [Licenças](./licencas.md#d93--assento-é-posse-e-a-posse-do-projeto-já-tem-três-lugares) |
-| **D94** | Anexo de licença sai da fase | [Licenças](./licencas.md#d94--anexo-de-licença-sai-da-fase) |
-| **D95** | Quem carimba o ativo é o **job**, não o handshake | [Reconciliação](./reconciliacao.md#d95--quem-carimba-o-ativo-é-o-job-não-o-handshake) |
-| **D96** | **Uma** tabela de sugestão, com discriminante | [Reconciliação](./reconciliacao.md#d96--uma-tabela-de-sugestão-com-discriminante) |
-| **D97** | A recusa tem memória, e a memória tem chave | [Reconciliação](./reconciliacao.md#d97--a-recusa-tem-memória-e-a-memória-tem-chave) |
-| **D98** | `AgentStatus` tem **dois** valores; "nunca visto" é pergunta do ativo | [Reconciliação](./reconciliacao.md#d98--agentstatus-tem-dois-valores-nunca-visto-é-pergunta-do-ativo) |
-| **D99** | O teste do agente entra por **WebSocket de verdade** | [Reconciliação](./reconciliacao.md#d99--o-teste-do-agente-entra-por-websocket-de-verdade) |
-| **D100** | A chave do pacote é derivada, e o hash do software é do **servidor** | [Reconciliação](./reconciliacao.md#d100--a-chave-do-pacote-é-derivada-e-o-hash-do-software-é-do-servidor) |
-| **D101** | A allowlist de usuários ignorados nasce **nesta** fase | [Reconciliação](./reconciliacao.md#d101--a-allowlist-de-usuários-ignorados-nasce-nesta-fase) |
-| **D102** | Licença ↔ pacote é vínculo **explícito**, nunca casamento por nome | [Reconciliação](./reconciliacao.md#d102--licença--pacote-é-vínculo-explícito-nunca-casamento-por-nome) |
-| **D103** | Merge não apaga: o endpoint perdedor ganha `mergedIntoId` | [Reconciliação](./reconciliacao.md#d103--merge-não-apaga-o-endpoint-perdedor-ganha-mergedintoid) |
-| **D104** | MAC é sinal de **MERGE**, não de vínculo | [Reconciliação](./reconciliacao.md#d104--mac-é-sinal-de-merge-não-de-vínculo) |
-| **D105** | Dois hashes de software: o que **chegou** e o que foi **normalizado** | [Reconciliação](./reconciliacao.md#d105--dois-hashes-de-software-o-que-chegou-e-o-que-foi-normalizado) |
-| **D106** | O que o agente velho não sabe, ele **não desfaz** | [Reconciliação](./reconciliacao.md#d106--o-que-o-agente-velho-não-sabe-ele-não-desfaz) |
-| **D107** | O aceite **age e depois fecha**, e a ordem erra para o lado certo | [Reconciliação](./reconciliacao.md#d107--o-aceite-age-e-depois-fecha-e-a-ordem-erra-para-o-lado-certo) |
-| **D108** | A fusão preserva o `lastSeen` mais recente, não o `createdAt` mais antigo | [Reconciliação](./reconciliacao.md#d108--a-fusão-preserva-o-lastseen-mais-recente-não-o-createdat-mais-antigo) |
-| **D109** | O hash é da **afirmação**, não da evidência | [Reconciliação](./reconciliacao.md#d109--o-hash-é-da-afirmação-não-da-evidência) |
-| **D110** | A fila tem **três** portas de saída, e a terceira é o mundo | [Reconciliação](./reconciliacao.md#d110--a-fila-tem-três-portas-de-saída-e-a-terceira-é-o-mundo) |
-| **D111** | A janela da agregação corta na **meia-noite**, não em "há N×24 horas" | [Reconciliação](./reconciliacao.md#d111--a-janela-da-agregação-corta-na-meia-noite-não-em-há-n24-horas) |
-| **D112** | `discoveryMode = OFF` desliga a descoberta | [Reconciliação](./reconciliacao.md#d112--discoverymode--off-desliga-a-descoberta) |
-| **D113** | O turno é a **moda** dos turnos, não a média das horas | [Reconciliação](./reconciliacao.md#d113--o-turno-é-a-moda-dos-turnos-não-a-média-das-horas) |
-| **D114** | O seletor de posto oferece **posto**, e a spec de localizações já dizia onde | [Reconciliação](./reconciliacao.md#d114--o-seletor-de-posto-oferece-posto-e-a-spec-de-localizações-já-dizia-onde) |
-| **D115** | A rota da aba chama `/machine`, e devolve o que a aba mostra | [Reconciliação](./reconciliacao.md#d115--a-rota-da-aba-chama-machine-e-devolve-o-que-a-aba-mostra) |
-| **D116** | A `AssetChange` ganha escritor, e ele mora no handshake | [Reconciliação](./reconciliacao.md#d116--a-assetchange-ganha-escritor-e-ele-mora-no-handshake) |
-| **D117** | A conformidade ganha **porta de entrada**: o catálogo de pacotes | [Reconciliação](./reconciliacao.md#d117--a-conformidade-ganha-porta-de-entrada-o-catálogo-de-pacotes) |
-| **D118** | A configuração da descoberta ganha tela, e a allowlist com ela | [Reconciliação](./reconciliacao.md#d118--a-configuração-da-descoberta-ganha-tela-e-a-allowlist-com-ela) |
-| **D119** | Assinatura na `key`, nunca `setState` em efeito | [Reconciliação](./reconciliacao.md#d119--assinatura-na-key-nunca-setstate-em-efeito) |
-| **D120** | `proporSugestao` não recebe cliente, porque abre transação | [Reconciliação](./reconciliacao.md#d120--proporsugestao-não-recebe-cliente-porque-abre-transação) |
-| **D121** | Casar a conta busca os **candidatos**, não o cadastro inteiro | [Reconciliação](./reconciliacao.md#d121--casar-a-conta-busca-os-candidatos-não-o-cadastro-inteiro) |
-| **D122** | `Asset.suggestions`, e não o nome que o `prisma format` escreveu | [Reconciliação](./reconciliacao.md#d122--assetsuggestions-e-não-o-nome-que-o-prisma-format-escreveu) |
-| **D123** | A janela do job é do FUSO e da HORA configurados. `inicioDoDia` ganha parâmetro | [Ciclo de vida](./ciclo-de-vida.md#d123--a-janela-do-job-é-do-fuso-e-da-hora-configurados-iniciododia-ganha-parâmetro) |
-| **D124** | A auditoria pelo agente nasce no JOB, uma por ativo por dia, e só quando o SERIAL confere | [Ciclo de vida](./ciclo-de-vida.md#d124--a-auditoria-pelo-agente-nasce-no-job-uma-por-ativo-por-dia-e-só-quando-o-serial-confere) |
-| **D125** | `dedupeKey` tem uma regra por tipo, e ela carrega o id da ORIGEM | [Ciclo de vida](./ciclo-de-vida.md#d125--dedupekey-tem-uma-regra-por-tipo-e-ela-carrega-o-id-da-origem) |
-| **D126** | O webhook tem allowlist de destino; `notifiedAt` é do ALERTA, e a rodada seguinte reenvia o nulo | [Ciclo de vida](./ciclo-de-vida.md#d126--o-webhook-tem-allowlist-de-destino-notifiedat-é-do-alerta-e-a-rodada-seguinte-reenvia-o-nulo) |
-| **D127** | Alerta não nasce para ativo fora do parque | [Ciclo de vida](./ciclo-de-vida.md#d127--alerta-não-nasce-para-ativo-fora-do-parque) |
-| **D128** | A central nasce só com os sinais do ATIVO | [Ciclo de vida](./ciclo-de-vida.md#d128--a-central-nasce-só-com-os-sinais-do-ativo) |
-| **D129** | A view devolve responsável REAL, e fala a língua da tela | [Relatórios, import e etiquetas](./relatorios-import-etiquetas.md#d129--a-view-devolve-responsável-real-e-fala-a-língua-da-tela) |
-| **D130** | Posto vago continua saindo do `POSTO_VAGO` | [Relatórios, import e etiquetas](./relatorios-import-etiquetas.md#d130--posto-vago-continua-saindo-do-posto_vago) |
-| **D131** | Posse importada é checkout retroativo e **silencioso** | [Relatórios, import e etiquetas](./relatorios-import-etiquetas.md#d131--posse-importada-é-checkout-retroativo-e-silencioso) |
-| **D132** | Pessoa casa por e-mail com `findFirst`, e e-mail ambíguo é linha ignorada | [Relatórios, import e etiquetas](./relatorios-import-etiquetas.md#d132--pessoa-casa-por-e-mail-com-findfirst-e-e-mail-ambíguo-é-linha-ignorada) |
-| **D133** | O export não monta `select`: ele reusa o do domínio | [Relatórios, import e etiquetas](./relatorios-import-etiquetas.md#d133--o-export-não-monta-select-ele-reusa-o-do-domínio) |
-| **D134** | A rota de import declara os próprios limites de multipart | [Relatórios, import e etiquetas](./relatorios-import-etiquetas.md#d134--a-rota-de-import-declara-os-próprios-limites-de-multipart) |
-| **D135** | O contrato do departamento muda na Etapa D, não no `DROP COLUMN` | [Acesso](./acesso.md#d135--o-contrato-do-departamento-muda-na-etapa-d-não-no-drop-column) |
-| **D136** | Permissão efetiva é lida na consulta de sessão que já existe, e não entra no `request.user` | [Acesso](./acesso.md#d136--permissão-efetiva-é-lida-na-consulta-de-sessão-que-já-existe-e-não-entra-no-requestuser) |
-| **D137** | Rota sem permissão declarada derruba o boot | [Acesso](./acesso.md#d137--rota-sem-permissão-declarada-derruba-o-boot) |
-| **D138** | Relatório que é sobre dinheiro exige a permissão na rota, não na coluna | [Acesso](./acesso.md#d138--relatório-que-é-sobre-dinheiro-exige-a-permissão-na-rota-não-na-coluna) |
-| **D139** | O escalonamento tem uma implementação, e o aceite passa a usá-la | [Acesso](./acesso.md#d139--o-escalonamento-tem-uma-implementação-e-o-aceite-passa-a-usá-la) |
-| **D140** | O D77 é regra de coluna. Em JsonB, mascarar depois é o limite, não a exceção | [Acesso](./acesso.md#d140--o-d77-é-regra-de-coluna-em-jsonb-mascarar-depois-é-o-limite-não-a-exceção) |
-| **D141** | O portal se chama pelo que lista | [Acesso](./acesso.md#d141--o-portal-se-chama-pelo-que-lista) |
-| **D142** | `api_tokens.userId` ganha FK antes de existir token pessoal | [Acesso](./acesso.md#d142--api_tokensuserid-ganha-fk-antes-de-existir-token-pessoal) |
-| **D143** | O escopo é ITAM **+** RMM, e o critério de corte é a ponte | [Escopo](./escopo.md#d143--o-escopo-é-itam--rmm-e-o-critério-de-corte-é-a-ponte) |
-| **D144** | A conferência **manual** sai. A conferência pelo agente fica | [Escopo](./escopo.md#d144--a-conferência-manual-sai-a-conferência-pelo-agente-fica) |
-| **D145** | Campos customizados saem inteiros | [Escopo](./escopo.md#d145--campos-customizados-saem-inteiros) |
-| **D146** | A importação de CSV sai. A carga é a descoberta | [Escopo](./escopo.md#d146--a-importação-de-csv-sai-a-carga-é-a-descoberta) |
-| **D147** | As etiquetas saem | [Escopo](./escopo.md#d147--as-etiquetas-saem) |
-| **D148** | Permissão vira **cargo**. Grupo, diretório, SSO e segundo fator saem | [Escopo](./escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem) |
-| **D149** | O `ApiToken` sai, e o agente volta ao `AGENT_TOKEN` | [Escopo](./escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token) |
-| **D150** | O termo de aceite sai | [Escopo](./escopo.md#d150--o-termo-de-aceite-sai) |
-| **D151** | A central de alertas e o webhook saem | [Escopo](./escopo.md#d151--a-central-de-alertas-e-o-webhook-saem) |
-| **D152** | O valor contábil sai | [Escopo](./escopo.md#d152--o-valor-contábil-sai) |
-| **D153** | Estoque vira **item** e **movimento** | [Escopo](./escopo.md#d153--estoque-vira-item-e-movimento) |
-| **D154** | Relatório vira três consultas fixas | [Escopo](./escopo.md#d154--relatório-vira-três-consultas-fixas) |
-| **D155** | Manutenção vira registro no histórico do ativo | [Escopo](./escopo.md#d155--manutenção-vira-registro-no-histórico-do-ativo) |
-| **D156** | O portal do colaborador e o backup saem | [Escopo](./escopo.md#d156--o-portal-do-colaborador-e-o-backup-saem) |
-| **D157** | A conferência sai **inteira**, inclusive a do agente | [Escopo](./escopo.md#d157--a-conferência-sai-inteira-inclusive-a-do-agente) |
-| **D158** | Manutenção sai **inteira** | [Escopo](./escopo.md#d158--manutenção-sai-inteira) |
-| **D159** | A tela da convergência fica, e é a única das cinco que fica | [Escopo](./escopo.md#d159--a-tela-da-convergência-fica-e-é-a-única-das-cinco-que-fica) |
-| **D160** | O estoque **não** foi achatado | [Escopo](./escopo.md#d160--o-estoque-não-foi-achatado) |
-| **D161** | Os relatórios que sobraram são **dois**, e não três | [Escopo](./escopo.md#d161--os-relatórios-que-sobraram-são-dois-e-não-três) |
-| **D162** | "Minha conta" sai, e o cargo vira campo do formulário de usuário | [Escopo](./escopo.md#d162--minha-conta-sai-e-o-cargo-vira-campo-do-formulário-de-usuário) |
-| **D163** | O mapa de coluna protegida é tipado `Cargo`, porque `indexOf` de string estranha é **-1** | [Escopo](./escopo.md#d163--o-mapa-de-coluna-protegida-é-tipado-cargo-porque-indexof-de-string-estranha-é--1) |
-| **D164** | O `DEFAULT` da coluna **tranca o sistema**, e a migração precisa do backfill | [Escopo](./escopo.md#d164--o-default-da-coluna-tranca-o-sistema-e-a-migração-precisa-do-backfill) |
+escapado. Ficam só no `git log`, não aqui: decisão registrada sem ser decisão nova é
+ruído para quem procura o que mudou de ideia.

@@ -1,14 +1,13 @@
 # Decisões de plataforma
 
-> Infraestrutura que não é de nenhum domínio: migração, arquivo, correio, job e cifra. É o `core/` em forma de decisão.
+> Infraestrutura que não é de nenhum domínio: migração, arquivo, correio, job e cifra. É o `server/infra/` em forma de decisão.
 >
 > **A regra desta pasta:** decisão escrita aqui **não se reescreve**. Se a realidade mudou, a
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
-> cada regra governou. O índice das 164 está em [`README.md`](./README.md).
+> cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D4, D6, D79, D81, D83–D84, D86, e L/M da segunda rodada (ver
 > [`README.md`](./README.md#a-segunda-rodada-ap)).
-> A execução que as aplicou está em [`../historico/`](../historico/).
 
 ---
 
@@ -25,7 +24,7 @@ furar. A hierarquia de `Location` resolve o que precisamos hoje.
 
 ## D6 — Baselinar as migrations antes de tocar em qualquer coluna — e NÃO com `migrate dev`
 
-**✅ FEITO na F0.**
+**✅ FEITO.**
 O schema tinha sido aplicado com `db push` e a tabela `_prisma_migrations` não existia, então
 `prisma migrate dev` detectaria drift e **ofereceria resetar o banco**. O estado atual foi
 adotado como migração inicial:
@@ -51,7 +50,7 @@ A receita ficou fixada para sempre: `migrate diff --from-url` + `migrate deploy`
 
 ## D79 — Cada job tem a própria linha de execução. `lastAlertRunAt` não é coluna de `AppSetting`.
 
-**O conflito.** A F4 (Etapa D, lembrete de atraso) e a F8 (D56, alertas diários)
+**O conflito.** O lembrete de atraso e os alertas diários (D56)
 fazem *compare-and-set* na **mesma** coluna `AppSetting.lastAlertRunAt`.
 
 **O que aconteceria.** O job que acordasse primeiro no dia venceria o CAS e
@@ -83,14 +82,13 @@ return count === 1;   // ganhou a janela
 ```
 
 **Descartado:** uma coluna por job em `AppSetting`. Resolve o conflito de hoje e
-reabre o mesmo no terceiro job, porque nada no nome da coluna impede a próxima
-fase de reusar uma existente — que foi exatamente como este conflito nasceu.
+reabre o mesmo no terceiro job, porque nada no nome da coluna impede o próximo
+job de reusar uma existente — que foi exatamente como este conflito nasceu.
 
 **Onde mora:** o helper em `server/core/jobs/`, recebendo o nome do job por
 parâmetro. É infraestrutura: não sabe o que é um alerta nem um atraso.
 
-**Afeta:** [`../historico/fase-04-posse.md`](../historico/fase-04-posse.md) (Etapa D) e
-[`../historico/fase-08-ciclo-de-vida.md`](../historico/fase-08-ciclo-de-vida.md) (D56). Quem nascer primeiro cria a tabela
+**Afeta:** o D56. Quem nascer primeiro cria a tabela
 e o helper; o segundo só acrescenta a linha com o próprio nome.
 
 ---
@@ -100,8 +98,8 @@ e o helper; o segundo só acrescenta a linha com o próprio nome.
 > **Superada por [G](./licencas.md#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples):** os dois usos saíram — os campos customizados com o D145, a chave
 > de produto com G. Não há mais cifra no projeto.
 
-**O conflito.** A F6 usa `server/core/crypto/aes-gcm.ts` com `v1:iv:tag:ct`. A F9
-usa `server/core/crypto/cipher.ts` com `enc:v1:iv:tag:ct`. Os dois planos dizem
+**O conflito.** O D42 usa `server/core/crypto/aes-gcm.ts` com `v1:iv:tag:ct`. O D62
+usa `server/core/crypto/cipher.ts` com `enc:v1:iv:tag:ct`. Os dois dizem
 "quem chegar primeiro cria" — e o que chegasse segundo encontraria um arquivo com
 o nome errado e um formato incompatível, e provavelmente criaria o seu.
 
@@ -113,9 +111,9 @@ enc:v1:<kid>:<iv>:<tag>:<ct>
 
 Três escolhas, cada uma com um motivo:
 
-**1. O prefixo `enc:` está SEMPRE presente**, inclusive onde não seria preciso. Na
-F9 ele é obrigatório: dentro do mesmo `JsonB` convivem valores cifrados e valores
-comuns, e sem marca não há como saber qual é qual. Na F6, numa coluna dedicada,
+**1. O prefixo `enc:` está SEMPRE presente**, inclusive onde não seria preciso. No
+D62 ele é obrigatório: dentro do mesmo `JsonB` convivem valores cifrados e valores
+comuns, e sem marca não há como saber qual é qual. No D42, numa coluna dedicada,
 ele é redundante — e entra assim mesmo, porque **um formato só** significa uma
 função de leitura só. Duas formas de ler o mesmo tipo de dado é a origem do
 conflito que esta decisão fecha.
@@ -140,9 +138,9 @@ legítima** — a cifra continua válida, porque nada nela diz de onde veio.
 errada no ambiente derruba o boot — em vez de o sistema subir e só descobrir na
 primeira leitura, com um erro de decifragem no meio de uma tela.
 
-**Afeta:** [`../historico/fase-06-licencas.md`](../historico/fase-06-licencas.md) (D42 — o formato ali descrito,
+**Afeta:** o D42 (o formato ali descrito,
 `v1:iv:tag:ct`, é **substituído** por este) e
-[`../historico/fase-09-campos-customizados.md`](../historico/fase-09-campos-customizados.md) (D62).
+o D62.
 
 ---
 
@@ -151,8 +149,8 @@ primeira leitura, com um erro de decifragem no meio de uma tela.
 **Decidido:** gravar bytes, derivar nome seguro e apagar arquivo moram em
 `server/core/storage/`. O model `Attachment` e as regras sobre ele moram em
 `server/domain/attachment/`.
-**Descartado:** `domain/attachment/helpers/storage.helper.ts`, como a Etapa G previa.
-**Por quê:** quando a Etapa G foi escrita, anexo de ativo era o único cliente. O aceite da F4
+**Descartado:** `domain/attachment/helpers/storage.helper.ts`.
+**Por quê:** anexo de ativo era o único cliente, e o aceite
 acrescenta dois que **não são anexos de ativo** — a imagem da assinatura e o PDF do termo, que
 pertencem a `Acceptance`. Com o helper dentro de `attachment/`, o domínio `acceptance`
 importaria de outro domínio para gravar um arquivo; e `domain → domain` não é uma seta que o
@@ -165,9 +163,8 @@ um anexo, um termo nem um ativo.
 
 **Decidido:** `GET /api/attachments/:id/download` lê a linha, confere a sessão e transmite o
 arquivo. `UPLOAD_DIR` fica **fora** de qualquer raiz do `@fastify/static`.
-**Descartado:** `@fastify/static` numa segunda raiz servindo `/uploads/*`, que é o que a Etapa
-G mandava fazer.
-**Por quê:** esta fase foi planejada **antes** da porta fechada da F3, e a regra dela é
+**Descartado:** `@fastify/static` numa segunda raiz servindo `/uploads/*`.
+**Por quê:** a regra da porta fechada é
 
 ```ts
 if (estaticoPublico && request.method === 'GET' && !path.startsWith('/api')) return;
@@ -192,6 +189,8 @@ e é o único desenho em que a resposta a *"quem pode ler este arquivo?"* não d
 ---
 
 ## D86 — E-mail é *best-effort* com log. O que não pode se perder tem linha em tabela.
+
+> **Superada por [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
 
 **Decidido:** o envio acontece depois do commit; a falha é registrada em `warn` com
 destinatário e motivo, e **não** é retentada na hora.
@@ -274,7 +273,7 @@ melhor": o desenho aproveita de lá os nomes convencionais e descritivos num ní
 `types`, `components`, `hooks`) e **não** a separação por camada do servidor (`routes/` +
 `services/`), porque a fatia vertical por assunto é o que mantém cada módulo inteiro numa pasta.
 
-**O que não se reescreve:** `docs/decisoes/` e `docs/historico/` citam os nomes antigos, como manda
+**O que não se reescreve:** `docs/decisoes/` cita os nomes antigos, como manda
 a regra das pastas; a tradução está em
 [`../referencia/arquitetura.md`](../referencia/arquitetura.md). Nos 292 arquivos movidos os
 imports foram reescritos por resolução (cada import apontado ao arquivo de destino e recalculado
@@ -312,6 +311,12 @@ vez de 14 maestros mais os controllers.
 ---
 
 ## AT — O que veio do ModuloDefault, e o que ficou de fora
+
+> **Superada em parte por [AY](#ay--o-visual-vem-da-intranet-em-tema-claro-e-escuro-e-a-linha-inteira-abre-o-registro):** a linha inteira abre o registro e as ações vão para o `⋯`; a situação pode ter cor; primitivos do shadcn só no que se usa, e tema claro e escuro; `GET /api/search` sai.
+
+> **Superada em parte por [BA](#ba--o-título-volta-ao-cabeçalho-a-lista-não-se-mexe-e-o-posto-tem-ficha-em-página):** o título da página volta ao cabeçalho, e a lista de Postos guarda o estado na URL.
+>
+> **Superada em parte por [AZ](#az--configurações-explica-no-formulário-e-a-página-fica-sem-subtítulo):** a aba de Configurações mora no endereço; busca, filtro e página continuam fora da URL.
 
 **Decidido** (em 2026-10-30, depois de ler o ModuloDefault inteiro — servidor, front, ferramentas e
 repositório — contra este, com o critério do usuário: *coisas simples que fazem diferença, boas
@@ -370,6 +375,10 @@ tecnologias e boas práticas, não mais funcionalidades*):
 
 ## AY — O visual vem da IntraNet, em tema claro e escuro, e a linha inteira abre o registro
 
+> **Superada em parte por [BA](#ba--o-título-volta-ao-cabeçalho-a-lista-não-se-mexe-e-o-posto-tem-ficha-em-página):** o título da página volta ao cabeçalho, e o posto tem ficha em página.
+>
+> **Superada em parte por [AZ](#az--configurações-explica-no-formulário-e-a-página-fica-sem-subtítulo):** a página fica sem subtítulo.
+
 **Decisão.** O visual do painel foi refeito a partir da IntraNet (`/home/penta/IntraNet`): paleta azulada,
 Inter sem caixa alta, cantos arredondados, densidade compacta no desktop, menu lateral com seções que
 recolhem, menu do usuário no cabeçalho, e tema claro ou escuro: na primeira entrada vale o do sistema, e
@@ -406,3 +415,123 @@ rolagem, que deixaria a tabela larga sem sinal de que rola.
 **Tokens.** Os nomes continuam os de antes (`bg-bg-base`, `text-text-primary`), agora com um valor por tema
 em `src/index.css`, mais `primary`, `accent`, `surface-muted` e `sidebar`. O lint segue recusando cor fixa.
 
+## AZ — Configurações explica no formulário, e a página fica sem subtítulo
+
+> **Superada em parte por [BB](#bb--toda-lista-ficha-e-formulário-seguem-o-mesmo-molde):** busca, filtro e página moram na URL em toda lista.
+
+**Decisão.** A revisão visual de Configurações tirou o texto do topo das páginas e levou a explicação para onde a
+dúvida aparece. As regras de negócio não mudaram.
+
+- **Página sem subtítulo.** Supera o "subtítulo de uma linha" da AY: ele repetia o que o formulário já dizia, e
+  Computadores e Postos sempre viveram sem. Saiu de todas as páginas, e o `PaginaCabecalho` nem tem mais o campo. O
+  dado que estava ali mora na própria tela: o modelo na aba Detalhes, o e-mail no menu do usuário. A linha da
+  `JanelaDeDetalhe` fica, porque diz a situação do registro.
+- **Os tipos à vista.** Categoria e Status escolhem o tipo numa lista com a explicação de cada opção
+  (`OpcoesDescritas`). Comparar pedia selecionar um por um, e a regra de quem pode ser entregue ficava escondida.
+- **Coluna "Em uso".** As cinco abas mostram o número da recusa do `DELETE`, pelo mesmo `countUsages`, com a lixeira
+  incluída. Com uso, o formulário trava o Tipo e diz por quê; a guarda do servidor continua, e o Excluir segue
+  clicando. O Snipe-IT mostra a contagem nas cinco listas; no GLPI isso não foi conferido. Colaboradores fica de
+  fora: a contagem dele carrega a posse inteira, e a ficha já diz o que está com a pessoa.
+- **A aba no endereço** (`?aba=modelos`). Revê, só nesse ponto, o "estado da lista na URL (agora não)" da AT: sem
+  ela, o F5 voltava para Categorias e o link de Computadores não tinha como cair em Modelos. Busca, filtro e página
+  ficam fora da URL: Postos os põe lá porque a ficha é outra página, e aqui nada sai da tela.
+- **A barra da lista não anda.** Com uma página só, as setas e o `1 / 1` somem, mas guardam o lugar: o `ListToolbar`
+  usa `invisible`, porque tirar da árvore faria a busca e o botão andarem ao filtrar. Por isso a contagem não encosta
+  na direita: trocá-la de lugar com as setas faria elas andarem a cada página.
+- **A ordem das abas** é a de cadastro: Categorias, Fabricantes, Modelos, Localizações e Status, que já nasce semeado.
+- **Tela estreita.** Abaixo de `lg` as abas viram `Seletor`, e abaixo de `xl` o filtro de tipo também: cortadas, as
+  opções sumiam sem aviso, e o filtro em duas linhas deixava a tabela mais baixa que nas outras abas. `soNoDesktop`
+  esconde as colunas que não cabem, e o resto continua a um toque na linha.
+
+**O que ficou de fora.** A recusa dizendo o quê em vez de quantos (`motivoParaNaoExcluir` já existe, e a coluna
+resolve boa parte), trocar coluna ou campo de lugar e mover o botão de Estoque, Licenças e Usuários (pedido do
+usuário: não mover nada).
+
+## BA — O título volta ao cabeçalho, a lista não se mexe e o posto tem ficha em página
+
+> **Superada em parte por [BB](#bb--toda-lista-ficha-e-formulário-seguem-o-mesmo-molde):** na página não sobra ação nenhuma no topo, e os filtros de toda lista moram na URL.
+
+**Decisão.** Os ajustes feitos olhando as telas depois da AY. As regras de negócio não mudaram.
+
+- **O título da página fica no cabeçalho.** Corrige a AT, que o tirou de lá, e a AY, que deixou só o menu do usuário.
+  A `PaginaCabecalho` o desenha por portal (`useVagaDoTitulo`), com a seta de voltar na ficha. Na página sobra a ação.
+- **Cartões de contagem.** Computadores e Postos abrem com um cartão por situação, e o número filtra
+  (`CartoesDeContagem`). Cada um usa o mesmo `where` da lista que ele abre.
+- **Sem seletor de colunas.** A lista de Computadores tem colunas fixas: o menu Colunas saiu, com a preferência
+  guardada no navegador.
+- **As colunas não se mexem.** A tabela é `table-fixed` no primitivo (`ui/table`): filtrar, paginar ou esvaziar a lista
+  não desloca nada. A largura vem do cabeçalho, em `%` para acompanhar a tela, e em `rem` só no que tem tamanho certo
+  (valor, data, o `⋯`). O aviso de lista vazia fica debaixo do cabeçalho (`TableVazia`), e Restaurar mora no `⋯`,
+  porque a coluna é a mesma na lixeira.
+- **O posto tem ficha em página.** Corrige o "detalhe é janela com abas" da AY: item e licença continuam em janela, e
+  computador, colaborador e posto têm ficha em página. A janela existia para não perder a lista, então o recorte, a
+  página e a busca de Postos moram na URL, e a seta da ficha volta com eles. Revê, só nesse ponto, o "estado da lista
+  na URL (agora não)" da AT.
+
+**O que ficou de fora.** Guardar na URL os filtros de Computadores, que ainda se perdem ao voltar da ficha, e levar
+Estoque e Licenças para ficha em página.
+
+## BB — Toda lista, ficha e formulário seguem o mesmo molde
+
+**Decisão.** A revisão página por página achou a mesma coisa feita de jeitos diferentes: linha entre 45 e 57px, 10, 15
+ou 25 itens por página, quatro formas de filtrar, dois desenhos de aba e três larguras de formulário. Agora é um molde
+só. As regras de negócio não mudaram, e a única rota nova é a contagem de licenças.
+
+- **O cabeçalho só tem o título e o voltar.** Corrige o "na página sobra a ação" da BA, que deixava o botão sozinho numa
+  linha, com a tabela mais baixa em cada tela. O botão da lista fica no fim do `ListToolbar`, depois da paginação; o da
+  ficha, dentro do card de cima (`CartaoDaFicha`).
+- **A ordem da lista:** cartões, vistas (`VistasDaLista`), barra (`ListToolbar`) e tabela. Cartão só onde há situação
+  para contar: Computadores, Postos e Licenças.
+- **A linha tem 48px no desktop** (`TableRow`), com no máximo duas linhas de texto (`TableLinha`, `TableSublinha`). O que
+  não cabe termina em `…`, com o texto inteiro no `title`.
+- **A coluna da situação** existe em toda lista que tem situação, com a mesma largura e o `PontoDeStatus`. Desativado e
+  encerrado ficam esmaecidos (`apagada`). Estoque e Colaboradores ganharam a coluna, Situação como em Postos e Usuários.
+  Computadores e Licenças continuam dizendo Status, como o formulário e a aba de Configurações, que está fechada.
+- **Filtro:** situação é cartão, categoria e tipo são `FiltroDaLista`, vista é `VistasDaLista`. Em Licenças, os cartões
+  substituem o filtro de status e os links do alerta, com a contagem em `GET /api/licenses/stats`.
+- **Tudo na URL** (`useListaNaUrl`): página, busca, situação, categoria, vista, tipo e aba. Supera o "busca, filtro e
+  página ficam fora da URL" da AZ e o que a BA deixou de fora: a seta da ficha (`useVoltaComFiltros`) e o F5 trazem a
+  lista como estava. O menu lateral recomeça a lista limpa.
+- **15 por página** (`POR_PAGINA`) em toda lista e janela. Descobertas ganhou busca e paginação nas quatro abas, no
+  navegador (`usePaginaLocal`), porque as rotas dela devolvem tudo.
+- **Um desenho de aba:** sublinhada, com ícone e a contagem em `ContagemDaAba`. Nas fichas e em Descobertas, a aba mora
+  em `?aba=` (`useAbaNaUrl`).
+- **A ficha:** `CartaoDaFicha` em cima, com as ações, e as abas embaixo, com `TabelaDaFicha`. `FichaIndisponivel` cobre
+  carregando e erro sem tirar o título. O colaborador deixou o card lateral e leva o nome no título.
+- **O formulário** tem uma largura só. O título é ação e tipo ("Entregar ativo"), e a descrição diz qual registro. O envio
+  é Salvar no cadastro e o verbo na operação (Entregar, Devolver, Dar baixa, Adicionar, Vincular). O campo livre é sempre
+  Notas, e quem recebe é sempre Colaborador ou Ativo.
+- **A edição na linha** põe Cancelar antes de Confirmar, e Esc desfaz só ela: a janela continua aberta.
+- **Um histórico só** (`LinhaDoTempo`) em ficha e janela, e um vazio só fora de tabela (`CartaoVazio`).
+- **Ficha e janela falam como a lista.** A licença entregue tem Vencimento e Situação, as abas do computador têm contagem
+  e terminam no Histórico, e a primeira aba é sempre Detalhes.
+- **15 por página também na ficha.** A aba que chega inteira mostra 15 de cada vez (`BarraDaFicha`), e o histórico do
+  computador e do colaborador vem por página do servidor, sem o corte nos 100 mais recentes.
+- **Toda ação da ficha do computador fica no card:** Entregar ou Devolver, Editar e, no `⋯`, Clonar, Dar baixa ou Reverter
+  baixa, e Excluir. Nenhuma aba repete botão.
+- **A confirmação tem três níveis.** Sem volta: pergunta e botão vermelho (Excluir, Reverter baixa). Com volta: pergunta sem
+  vermelho (Desativar, Encerrar, Desvincular). Rotina: sem pergunta (Editar, Entregar).
+- **Descobertas guarda a busca e a página na URL**, e a seta da ficha aberta de lá volta para lá.
+- **A consulta que falha não diz "nenhum".** Aba e histórico mostram o erro, e cartão e contagem de aba mostram `—` ou
+  nada, nunca 0: "este ativo nunca foi entregue" é uma afirmação, e só a resposta do servidor a sustenta. É a regra que o
+  `EstadoDaLista` já dava às listas, levada ao que tinha ficado de fora.
+
+**O que ficou de fora.** Cartões em Estoque, Usuários e Colaboradores, que não têm situação para contar além de ativo e
+desativado, e Editar, Desativar e Excluir na ficha do colaborador, que continuam na lista: a tela está fechada, e a ação
+na ficha é função nova.
+
+## BC — O que foi feito e quando fica no `git log`, não em `docs/`
+
+`docs/` também guardava o plano e o fechamento de cada rodada de trabalho: 7.681 das 18.315 linhas, e boa parte falava do
+que o corte tirou (campo customizado, importação, LDAP, OIDC e segundo fator). Quem procurava um termo recebia, junto com
+o que vale, a receita de um sistema que já mudou. O que importava já estava em `decisoes/`.
+
+- **Sobram três zonas:** `referencia/`, `guias/` e `decisoes/`. O texto removido continua no git, no commit `7ad4590`.
+- **Texto e comentário citam a decisão ou a referência,** nunca um plano ou uma etapa dele. Quando o destino da citação
+  deixou de existir, ela saiu junto, inclusive em `decisoes/`: é a exceção à regra de não reescrever.
+- **A decisão superada diz isso logo abaixo do título,** para quem cair nela pela busca. A tabela de supersessões do
+  `decisoes/README.md` continua sendo a lista inteira.
+- **Sai a lista de títulos do `decisoes/README.md`:** ela repetia os arquivos, e cada decisão nova pedia mais uma linha. Um
+  `grep` acha qualquer decisão pelo título. Ficam os assuntos e as supersessões.
+- **`tests/invariantes/links-da-documentacao.test.ts` reprova** o link quebrado, a âncora sem título e o `docs/*.md`
+  inexistente citado em comentário de código.

@@ -34,9 +34,10 @@ de alvo `WORKSTATION`) e é ele que as pessoas ocupam, por turno
 
 | | |
 |---|---|
-| **a lista** | Posto, Localização, Quem está (por turno), Ativos e Situação — *Posto vago* (tem ativo e ninguém responde), *Ocupado* ou *Sem uso*. Recortes Todos, Vagos e Ocupados; busca por nome e nota |
-| **a ficha** (`/postos/:id`) | os ocupantes — colocar alguém, corrigir o turno, encerrar com o dia em que saiu —, os ativos entregues com **Devolver** (com o dia em que voltou: hoje, ou um dia passado desde a entrega), o computador da mesa ao vivo e o estoque da mesa, por entrega, com o link para o detalhe do item, onde está o Devolver ([`estoque.md`](estoque.md)) |
-| **o cadastro** | **Novo posto** e, em cada linha, ✏️ Editar e 🗑️ Excluir, sem Desativar ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)) — `SUPERVISOR`; ver o posto e colocar ou tirar ocupante é `TECNICO` ([AV](../decisoes/acesso.md#av--três-cargos-técnico-supervisor-e-administrador)). O Editar abre da linha, com a versão dela: se outra pessoa salvou no meio, é 409 (AF) |
+| **a lista** | Posto, Localização, Quem está (uma linha por posto, "Manhã: Ana · Tarde: Bruno"), Ativos e Situação — *Posto vago* (tem ativo e ninguém responde), *Ocupado* ou *Sem uso*. Em cima, os cartões Total, Ocupados, Vagos e Sem uso: as três situações somam o total, e clicar filtra; busca por nome e nota |
+| **a ficha** (`/postos/:id`) | página própria, no molde da do computador: o card com situação, localização, computador e notas, e as abas com os ocupantes — colocar alguém, corrigir o turno, encerrar com o dia em que saiu —, os ativos entregues com **Devolver** (com o dia em que voltou: hoje, ou um dia passado desde a entrega), o computador da mesa ao vivo e o estoque da mesa, por entrega, com o link para o detalhe do item, onde está o Devolver ([`estoque.md`](estoque.md)) |
+| **o cadastro** | **Novo posto** e, em cada linha e na ficha, ✏️ Editar e 🗑️ Excluir, sem Desativar ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)) — `SUPERVISOR`; ver o posto e colocar ou tirar ocupante é `TECNICO` ([AV](../decisoes/acesso.md#av--três-cargos-técnico-supervisor-e-administrador)). O Editar leva a versão lida: se outra pessoa salvou no meio, é 409 (AF) |
+| **a volta** | situação, página e busca moram na URL da lista (`?situacao=vagos&pagina=2&busca=mesa`): o voltar do navegador e a seta da ficha trazem a lista como estava |
 
 Excluir pede confirmação, com a frase de Configurações, e a recusa aparece numa
 notificação do sistema.
@@ -62,7 +63,8 @@ O cadastro passa pelo **mesmo CRUD das tabelas de catálogo**, com a
 
 | Rota | Quem | O que é |
 |---|---|---|
-| `GET /api/workstations` | `TECNICO` | a lista, com os ocupantes e o número de ativos por linha (`?view=todos\|vagos\|ocupados`) |
+| `GET /api/workstations` | `TECNICO` | a lista, com os ocupantes e o número de ativos por linha (`?view=todos\|vagos\|ocupados\|sem-uso`) |
+| `GET /api/workstations/stats` | `TECNICO` | os números dos cartões |
 | `GET /api/workstations/:id` | `TECNICO` | a ficha (o custo dos ativos só para `SUPERVISOR`) |
 | `GET /api/workstations/options` | `TECNICO` | o seletor |
 | `POST`, `PUT /:id`, `DELETE /:id` | `SUPERVISOR` | o cadastro |

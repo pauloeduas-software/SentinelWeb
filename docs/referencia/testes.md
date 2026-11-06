@@ -1,31 +1,21 @@
 # Testes
 
 > Como rodar, o que a suíte prova e como acrescentar um arquivo.
->
-> A suíte nasceu contra um risco nomeado: **não havia teste nenhum**, e a
-> auditoria da F0/F1 mostrou o custo disso. O defeito 1 — a etiqueta automática
-> inalcançável pela tela — passou por ter sido verificado pelo caminho da API e
-> não pelo do formulário. As duas suítes de `curl` daquela auditoria (120 e
-> depois 34 asserções) foram descartadas porque testavam um **processo**, não a
-> aplicação.
 
 ```bash
-npm test               # roda tudo, uma vez
-npm run test:watch
-npx vitest run tests/corridas           # só uma pasta
-npx vitest run -t "etiqueta automática"  # só o que casa com o nome
-npm run test:e2e       # o segundo harness: o navegador contra o build (ver o fim)
-npm run check          # lint + typecheck + test + test:e2e: o que passa antes de dar por pronto
+bun run test               # roda tudo, uma vez
+bun run test:watch
+bunx vitest run tests/corridas           # só uma pasta
+bunx vitest run -t "etiqueta automática"  # só o que casa com o nome
+bun run test:e2e       # o segundo harness: o navegador contra o build (ver o fim)
+bun run check          # lint + typecheck + test + test:e2e: o que passa antes de dar por pronto
 ```
 
 ### Uma configuração só, porque todo teste fala com o banco
 
-Houve dois projetos: arquivo terminado em **`.puro.test.ts`** exercitava função
-pura e rodava sem `globalSetup`, o que permitia um `npm run test:puro` numa
-máquina sem contêiner. O corte de escopo levou o último arquivo puro, e um
-projeto com zero arquivos não é separação — é um script que sai com erro sem
-nenhum teste ter falhado. O par (projeto + sufixo no nome do arquivo) volta junto
-com o próximo teste puro.
+O `globalSetup` cria o banco e aplica as migrations em toda execução. No dia em que
+nascer um teste que não precise do banco, o que entra é um projeto próprio e um
+sufixo no nome do arquivo, não uma pasta.
 
 ---
 
@@ -59,7 +49,7 @@ sobre outra coisa.
 
 O `.env.test` é **versionado**: não há segredo nele, o banco é descartável e a
 senha é a do administrador que o próprio harness cria (`ADMIN_DE_TESTE`, em
-`tests/setup/database.ts` — o seed não cria conta). Quem clonar o repositório roda `npm test` sem
+`tests/setup/database.ts` — o seed não cria conta). Quem clonar o repositório roda `bun run test` sem
 configurar nada (só precisa do Postgres de pé: `docker compose up -d`).
 
 ---
@@ -69,7 +59,7 @@ configurar nada (só precisa do Postgres de pé: `docker compose up -d`).
 | Pasta | O que está lá | Por que existe |
 |---|---|---|
 | `tests/harness.test.ts` | banco descartável, seed aplicado, app sem porta, porta fechada | se este arquivo falha, **nenhum outro resultado significa nada** |
-| `tests/formularios/` | o corpo **literal** que cada modal monta | é o teste que teria pego o defeito 1 |
+| `tests/formularios/` | o corpo **literal** que cada modal monta | é o teste que teria pego a etiqueta automática inalcançável |
 | `tests/invariantes/` | as do [`invariantes.md`](invariantes.md) | vermelho aqui = o dado já pode estar errado no banco |
 | `tests/corridas/` | duas requisições simultâneas, e o placar | o que "passa no teste com um usuário" |
 | `tests/listagens/` | o que cada vista e cada leitura DEVOLVE, e o que ela esconde | filtro que esconde demais não dá erro: some linha e ninguém percebe |
@@ -122,7 +112,7 @@ equipamento que o sistema jurava não ter.
 
 ### `licencas/` — a conta, as entregas e a trava da licença
 
-Nove arquivos, e cada um prova uma coisa que passaria despercebida. Cada `it` cria a sua
+Dez arquivos, e cada um prova uma coisa que passaria despercebida. Cada `it` cria a sua
 licença e os seus alvos quando vai mudá-los: rodado sozinho com `-t`, ele passa.
 
 - **`operacoes.test.ts`** — a conta (compradas − em uso), a devolução que libera, o piso da
@@ -140,6 +130,8 @@ licença e os seus alvos quando vai mudá-los: rodado sozinho com `-t`, ele pass
   status, com as mesmas fronteiras: a encerrada só no `ENCERRADA`, e junto das outras na lista
   sem filtro; o `view` das abas que saíram é 422. A busca da lista por licenciado, e-mail,
   pedido, categoria e fabricante, com `_` como texto, e a ordem das encerradas.
+- **`contagem.test.ts`** — os cartões de `GET /api/licenses/stats`: cada licença conta em uma
+  situação só, e o número do cartão é o total da lista que ele abre.
 - **`detalhe.test.ts`** — com quem está e o histórico de 15 em 15, e a busca pelo nome do
   colaborador ou do computador; o histórico recusa `?q=`, e a página além do fim vem vazia.
 - **`ciclo.test.ts`** — Encerrar (com entrega aberta é 409, pelo botão e pelo formulário;
@@ -196,9 +188,9 @@ o que resta é o vínculo entre máquina e ativo, por evidência de hardware:
   distintos**, e o comando só responde sucesso com o envio confirmado pelo socket — não por
   achar a conexão no mapa ([D](../decisoes/reconciliacao.md#d--a-telemetria-e-o-comando-vão-para-a-ficha-do-ativo-e-a-do-posto)).
 - **`fila.test.ts` e `ciclo-de-vida-da-fila.test.ts`** provam que a mesma sugestão não empilha
-  (invariante 13) e que aceitar uma sugestão já realizada não inventa devolução no histórico —
-  o aceite de reatribuição é checkin + checkout, e aceitar "entregar à Ana" um ativo já entregue
-  à Ana gravaria uma devolução que nunca aconteceu.
+  (invariante 13), que a recusa fica lembrada até surgir evidência nova e que a fila acompanha o
+  mundo: vincular a máquina à mão a outro ativo encerra a sugestão como `SUPERSEDED`, e
+  `discoveryMode = OFF` desliga a descoberta. E que o painel de cobertura fecha a conta.
 - **`uso-agregado.test.ts`** roda a mesma agregação com duas janelas, porque a pergunta é se
   "idempotente" quer dizer que a segunda passada escreve o **mesmo** valor (D111).
 
@@ -223,7 +215,7 @@ mandá-lo inteiro. Nunca escrever um corpo "para a ocasião".
 Um formulário React inicializa todo campo de texto com `''` e **manda a chave**,
 vazia. `.optional()` do zod aceita a chave **ausente**, não a chave vazia. Os dois
 corpos são diferentes e só um existe na vida real — foi essa distinção que custou
-o defeito 1, e ela volta a cada campo novo.
+a etiqueta automática inalcançável, e ela volta a cada campo novo.
 
 ### `invariantes/auditoria.test.ts` — toda escrita tem dono
 
@@ -257,6 +249,10 @@ compra futura, a baixa antes da última devolução, o começo e o fim da ocupa�
 início) e a devolução pela ficha do posto com o dia. O "hoje" dos testes é o
 `diaNoBrasil` — com a meia-noite UTC, a suíte falhava das 21h à meia-noite.
 
+### `invariantes/links-da-documentacao.test.ts` — a documentação não aponta para o vazio
+
+Confere cada link de Markdown até a âncora, e cada `docs/*.md` citado em comentário de código até o arquivo.
+
 ### `corridas/` — o placar, nunca "deu certo"
 
 A asserção de um teste de corrida nunca é *"a requisição funcionou"*: é
@@ -265,10 +261,6 @@ A asserção de um teste de corrida nunca é *"a requisição funcionou"*: é
 `Promise.all` sobre `app.inject()` dispara de verdade em paralelo — cada `inject`
 entra no event loop como requisição independente e o Prisma tira uma conexão do
 pool para cada. Quem serializa é o Postgres, que é o que se quer provar.
-
-> Foi aqui que a invariante 6 nasceu: o teste de "desligar e entregar ao mesmo
-> tempo" ficou vermelho com `{ posses: 1 }` na primeira execução, contra código
-> que parecia certo e cujos comentários afirmavam ser seguro.
 
 `vinculo.test.ts` é a corrida da máquina: dois vínculos da mesma máquina para ativos diferentes,
 duas desvinculações e dois aceites da mesma sugestão — passa um de cada, e a auditoria tem um
@@ -304,10 +296,7 @@ nenhum usuário consegue criar.
 dois arquivos truncariam a tabela no meio do teste do outro, e a falha mudaria de
 lugar a cada execução — suíte que falha sem repetir ensina a ignorar o vermelho.
 
-Hoje **não há projeto nenhum** — uma configuração só, a do `vitest.config.ts`. O par de
-projetos (`banco` + `puro`) saiu quando o corte de escopo levou o último arquivo
-`.puro.test.ts`, e um projeto com zero arquivos não é separação. Volta junto com o próximo
-teste que não precisar do banco.
+Não há projetos: uma configuração só, a do `vitest.config.ts`.
 
 ---
 
@@ -326,21 +315,25 @@ Tudo acima fala com o Fastify por `inject()` e nunca abre o navegador. O que iss
 não prova: que o `dist` carrega, que o login pela tela funciona, que cada página
 do menu abre sem erro no console, e que o cadastro do catálogo fecha o ciclo
 criar, editar e excluir clicando. É o que `tests/e2e/` prova, com o Playwright
-(`playwright.config.ts`), em quatro specs:
+(`playwright.config.ts`). Os principais:
 
 | Arquivo | O que prova |
 |---|---|
 | `login.spec.ts` | sem sessão vai para `/login`; senha errada fica lá com a frase única; a certa abre Computadores |
-| `menu.spec.ts` | as oito páginas do menu, pelo link, na ordem do menu, com o título e sem erro no console. **Página nova entra na lista** |
-| `configuracoes.spec.ts` | criar, editar e excluir uma categoria pelo `CatalogTable` + `useCatalog`, o padrão de CRUD de todo cadastro (AF, AO), inclusive a frase do `confirm()` |
-| `conta.spec.ts` | Minha conta abre pelo nome no rodapé da barra, troca o nome e o devolve (AR). A troca de senha não entra: derrubaria a sessão guardada dos outros specs — está em `invariantes/senha-temporaria.test.ts` |
+| `menu.spec.ts` | as oito páginas do menu, pelo link, na ordem do menu, com o título, sem erro no console e sem botão no cabeçalho (BB). **Página nova entra na lista** |
+| `listas.spec.ts` | o estado da lista na URL (BB): o menu recomeça a lista, a aba da ficha fica no endereço e a seta volta com a busca. E a consulta que falha (`page.route`): a aba avisa, em vez de dizer que não há nada, e o cartão mostra traço |
+| `configuracoes.spec.ts` | criar, editar e excluir uma categoria pelo `CatalogTable` + `useCatalog`, o padrão de CRUD de todo cadastro (AF, AO), inclusive a frase do `confirmar()` |
+| `conta.spec.ts` | Minha conta abre pelo menu do usuário, troca o nome e o devolve (AR). A troca de senha não entra: derrubaria a sessão guardada dos outros specs — está em `invariantes/senha-temporaria.test.ts` |
 
 Como roda, e por que assim:
 
 - **O servidor é o de produção** (`NODE_ENV=production`), porque é o único modo em
   que o Fastify serve o `dist` (`estaticoPublico` em `server/app.ts`). O
   `e2e:servidor` do `package.json` prepara o banco, faz o `vite build` e sobe o
-  Fastify na porta `4173`; o Playwright o inicia e o derruba com a suíte.
+  Fastify na porta `4173`, por `tests/e2e/servidor.ts`: o mesmo `buildApp`, com o
+  teto global por IP mais alto, porque cada teste é um navegador sem cache e a suíte
+  passava de 300 por minuto. Os tetos por rota são os de produção. O Playwright o
+  inicia e o derruba com a suíte.
 - **O mesmo `.env.test`**, lido pelo `playwright.config.ts` com o leitor do vitest
   (`tests/setup/env-de-teste.ts`), e três trocas que são a natureza deste harness,
   não configuração: `DATABASE_URL` vira a `E2E_DATABASE_URL` do arquivo,
@@ -351,19 +344,19 @@ Como roda, e por que assim:
   (`tests/e2e/preparar.ts` importa o `global-setup.ts` e o `database.ts`): criar
   se faltar, `migrate deploy`, esvaziar, semear e criar o administrador. Mudou a
   `0_init`, apague este banco também.
-- **Um login por execução.** O projeto `sessao` (`auth.setup.ts`) entra pela tela
-  e guarda o cookie em `tests/e2e/.auth/` (ignorado pelo git); os specs
+- **A sessão é guardada, não repetida.** O projeto `sessao` (`auth.setup.ts`) entra
+  pela tela e guarda o cookie em `tests/e2e/.auth/` (ignorado pelo git); os specs
   autenticados o reaproveitam. Cinco erros bloqueiam a conta por quinze minutos e
-  produção limita o login a vinte por minuto por IP, então o login de verdade
-  acontece uma vez, mais as duas tentativas do próprio `login.spec.ts`.
+  produção limita o login a vinte por minuto por IP, então só entra pela tela de
+  novo quem prova o próprio login: `login.spec.ts` e `cargos.spec.ts`.
 - **Um arquivo por vez** (`workers: 1`), pela mesma razão do vitest: o banco é um.
 - **Erro no console derruba o spec** (`vigiarConsole`, em `helpers.ts`): um `500`
   em segundo plano ou um erro de render não passam só porque a tela parecia
   certa.
 - O trace (tela, rede, console, passo a passo) fica em `test-results/` só quando
-  o teste falha: `npx playwright show-trace <arquivo>`.
+  o teste falha: `bunx playwright show-trace <arquivo>`.
 
-O Chromium vem do `npx playwright install chromium`, uma vez por máquina.
+O Chromium vem do `bunx playwright install chromium`, uma vez por máquina.
 
 ## A CI
 

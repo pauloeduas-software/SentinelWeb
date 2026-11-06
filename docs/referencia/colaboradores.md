@@ -20,7 +20,7 @@ ficha, e as outras cinco abas são referência que se monta uma vez.
 O cadastro **é o mesmo componente** das abas de Configurações
 (`src/components/catalogo/CadastroDoCatalogo.tsx`), com a spec do
 colaborador (`src/pages/colaboradores/specs/index.ts`): a busca por nome ou
-e-mail, a paginação, Editar, Desativar/Ativar, a Ficha e Excluir na ordem e
+e-mail, a paginação, Editar, Desativar/Ativar e Excluir na ordem e
 com as frases do sistema inteiro, e a aba Lixeira. A API não mudou: é o CRUD do
 catálogo em `/api/people`.
 
@@ -49,7 +49,7 @@ aqui à parte, à mão — nada cria colaborador a partir de usuário.
 
 ## A ficha
 
-O botão 📄 abre `/colaboradores/:id`: o nome, o e-mail e as notas; os
+A linha abre `/colaboradores/:id`: o nome, o e-mail e as notas; os
 **computadores** entregues a ela (com o modelo, a devolução prevista e desde
 quando), os **postos** que ela ocupa (com o turno), os **itens de estoque** e as
 **licenças** no nome dela — e o **histórico**, que é só movimentação: entregas e

@@ -36,10 +36,8 @@ const cenario = await cenarioDePosse(api, ' (posto-vago)');
 
 `cenarioDePosse` cria fabricante, posto e dois colaboradores com nomes **fixos**, e os três têm
 unicidade no banco (`@unique` em `Manufacturer.name` e `Workstation.name`, índice parcial no e-mail). A
-segunda chamada no mesmo arquivo devolve **409 "Registro já existe" vindo de dentro do fixture** — que
-se lê como defeito da aplicação, não do teste. Foi exatamente o que escondeu sete dos oito `it` do
-arquivo da conferência física (`ciclo-de-vida/auditoria.test.ts`, que saiu com ela no corte de escopo — D144, D157) até a
-suíte rodar pela primeira vez.
+segunda chamada no mesmo arquivo devolve **409 `Já existe fabricante com o nome "…"` vindo de dentro do fixture** — que
+se lê como defeito da aplicação, não do teste.
 
 O sufixo entra no nome do fabricante, do posto e das pessoas; a versão do **e-mail** é sanitizada
 dentro do fixture (`' (posto-vago)'` → `laura.posto-vago@teste.local`), porque a parte local de um
@@ -52,12 +50,12 @@ O padrão é **vazio**, e continua assim de propósito: `invariantes/posse.test.
 > **Use o nome do caso, não um contador.** `' (posto-vago)'` diz qual `it` produziu o 409; `' (3)'`
 > manda você contar `describe`s.
 
-Três regras:
+Quatro regras:
 
 1. **Tudo por HTTP.** O Prisma entra só para **ler** o resultado ou para provar
    uma regra de banco que a API recusa antes (é o caso de
-   `invariantes/check-assignment.test.ts` e de `estoque/invariantes.test.ts`, os dois únicos
-   que escrevem SQL cru — os `CHECK` da posse e do estoque).
+   `invariantes/check-assignment.test.ts` e de `estoque/invariantes.test.ts`, que escrevem
+   SQL cru para provar os `CHECK` da posse e do estoque).
 2. **Um `criarApi()` por arquivo**, em `beforeAll` — cada arquivo abre e fecha a sua.
    Isto **já não é** limite de quantas requisições o arquivo pode fazer: o teto do rate
    limit era contado em memória por instância e dividia arquivo por aritmética, e o

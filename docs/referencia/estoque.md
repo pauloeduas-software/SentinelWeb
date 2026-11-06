@@ -5,14 +5,8 @@
 > a quem as unidades foram entregues. O que o item é, as contas, o que a entrega e a devolução
 > recusam, e onde o estoque aparece fora da própria tela. É a lógica da licença
 > ([`licencas.md`](licencas.md)), com quantidade. As decisões estão em
-> [`../decisoes/estoque.md`](../decisoes/estoque.md) (a última é a
-> [AJ](../decisoes/estoque.md#aj--o-consumível-é-uma-categoria-e-o-total-é-o-que-existe);
-> a [AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura), em `licencas.md`, travou o Desativar com unidade em uso);
-> as regras que viram fato permanente no banco estão em [`invariantes.md`](invariantes.md)
-> (a 6 e a 25).
->
-> **Fechado em 2026-10-29**, junto com a licença: a lógica foi conferida contra o Snipe-IT e não
-> muda mais; daqui em diante se corrige defeito.
+> [`../decisoes/estoque.md`](../decisoes/estoque.md); as regras que viram fato permanente no banco, em
+> [`invariantes.md`](invariantes.md) (a 6 e a 25).
 
 ---
 
@@ -74,7 +68,7 @@ criada por fora da trava (o `psql` à mão), e esconder a inconsistência seria 
 | | |
 |---|---|
 | **a lista** | **uma só**, pelo nome, com os desativados — sem abas, como em Colaboradores. Busca por nome, categoria e localização — o texto ao pé da letra, `%` e `_` não são curinga; filtro de categoria |
-| **a linha** | nome (e as notas), categoria, localização e "10 no total · 7 em uso · 3 disponíveis" — no consumível, só "3 disponíveis". Sem cor pelo valor. A do desativado fica esmaecida, com a marca "desativado" ao lado do nome |
+| **a linha** | nome (e as notas), categoria, localização, "3 disponíveis" com "10 no total · 7 em uso" embaixo (no consumível, só "3 disponíveis") e situação. Sem cor pelo valor. A do desativado fica esmaecida |
 | **as ações** | as do cadastro (AF), no `⋯` da linha (AY): Entregar (desabilitado sem disponível, com o motivo no `title`; some no desativado), Editar, Desativar/Ativar e Excluir — com confirmação no Desativar e no Excluir |
 | **o detalhe** | no cabeçalho, a conta ("Desativado · 10 no total · 7 em uso · 3 disponíveis") e as ações da lista, com as mesmas regras (Entregar e Editar voltam ao detalhe ao fechar; excluído, a janela fecha). Depois, todos os campos do cadastro. **Com quem está**: as entregas abertas, da mais recente para a mais antiga, 15 por página, com busca pelo nome do colaborador ou do posto — "Mesa 1 · 5 unidades · desde 12/10/2026", com a observação —, e Devolver em cada linha. **Histórico**: só entregas e devoluções, por entrega, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
 
@@ -225,7 +219,7 @@ e de posse sem que nenhuma dessas contas mude.
 
 | Onde | O quê |
 |---|---|
-| **ficha do posto** | o estoque **da mesa**, por entrega, com quantas e desde quando; o nome leva ao detalhe do item com "Com quem está" já filtrado pelo posto (`/estoque?item=<id>&busca=Mesa 1`), onde está o Devolver. O item desativado aparece marcado. Não conta como ativo do posto |
+| **ficha do posto** | o estoque **da mesa**, por entrega, com quantas e desde quando; o nome leva ao detalhe do item com "Com quem está" já filtrado pelo posto (`/estoque?item=<id>&quem=Mesa 1`), onde está o Devolver. O item desativado aparece marcado. Não conta como ativo do posto |
 | **ficha do colaborador** | o estoque **no nome dela**, com o mesmo link, filtrado pelo nome dela; o título conta as unidades, como a ficha do posto e o 409 da desativação |
 | **histórico do colaborador** | entregas e devoluções de estoque **a ela**, por entrega ("Recebeu: Mouse USB · 2 unidades") |
 | **aba Componentes do computador** | os componentes instalados **nele**, por entrega, com categoria, quantas e desde quando; o nome leva ao detalhe do item já filtrado pela etiqueta, onde está o Retirar |
@@ -258,7 +252,7 @@ lista é derivada
 | `POST /api/stock/checkouts/:id/checkin` | devolver, ou retirar o componente (`qty` — ausente é todas —, `checkinAt` — o dia; ausente é hoje) — o `:id` é o de uma unidade da **entrega** |
 | `GET /api/assets/:id/components` | os componentes instalados num computador — a aba Componentes |
 
-Todas `ADMIN` ([Z](../decisoes/acesso.md#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir)).
+Ler, cadastrar, editar, entregar e devolver: `TECNICO`. Excluir e desativar: `SUPERVISOR`, e desativar pelo `PUT` é conferido no controller ([AV](../decisoes/acesso.md#av--três-cargos-técnico-supervisor-e-administrador)).
 
 **As travas:** a entrega trava o **colaborador** (no alvo pessoa) ou o **computador** (no
 componente) e depois o **item**; o posto é lido `FOR SHARE` depois do item. A baixa e a lixeira do
