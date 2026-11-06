@@ -18,8 +18,8 @@ import type { Ator } from '../../audit/audit.types';
  * repete é o alerta que ninguém lê.
  *
  * `entityType: 'Endpoint'` e não `'Asset'`: aqui a máquina AINDA NÃO é um ativo —
- * é justamente esse o assunto. É a única ação da fase que registra na entidade
- * do RMM, e por isso ela não aparece no histórico de ativo nenhum.
+ * é justamente esse o assunto. É a única ação deste módulo que registra na
+ * entidade do RMM, e por isso ela não aparece no histórico de ativo nenhum.
  */
 export async function triarEndpoint(endpointId: string, reviewState: ReviewState, ator: Ator) {
   return prisma.$transaction(async (tx) => {

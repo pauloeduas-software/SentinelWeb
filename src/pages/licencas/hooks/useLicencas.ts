@@ -1,82 +1,44 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import {
   useCheckinLicense, useCheckoutLicense, useCreateLicense, useDeleteLicense,
-  useLicenseAlertsQuery, useLicenseQuery, useLicensesQuery, useTerminateLicense, useUpdateCheckoutKey,
+  useLicenseAlertsQuery, useLicenseQuery, useLicenseStatsQuery, useLicensesQuery, useTerminateLicense, useUpdateCheckoutKey,
   useUpdateLicense,
 } from '../../../queries/license.queries';
 import type {
-  AlvoDaEntrega, Licenca, LicencaInput, MotivoDoAlerta, StatusDoFiltro,
+  AlvoDaEntrega, Licenca, LicencaInput, StatusDoFiltro,
 } from '../../../types/license.types';
-import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
+import { useListaNaUrl, usePaginaQueExiste } from '../../../hooks/useListaNaUrl';
 import { confirmar } from '../../../hooks/useConfirmacao';
 import { useNotificacao } from '../../../hooks/useNotificacao';
-
-const PER_PAGE = 15;
+import { contagensDasLicencas } from '../helpers/contagens.helper';
+import { statusDaUrl } from '../helpers/licenca.helper';
 
 /** Qual janela está aberta. Uma de cada vez, como nas outras telas. */
 type ModalDeLicenca = 'criar' | 'editar' | 'detalhe' | 'entregar' | null;
 
-// Estado da tela de Licenças: página, busca, filtros e qual licença está aberta.
-// É o cadastro das Configurações (`useCatalog`, AF): uma lista só, com a
-// encerrada junto, e Encerrar/Reabrir no lugar do Desativar/Ativar. Tudo de
-// UMA tela — `useState`, não store (docs/referencia/arquitetura.md).
+// Estado da tela de Licenças: página, busca e filtros, na URL (`useListaNaUrl`), e
+// qual licença está aberta. É o cadastro das Configurações (`useCatalog`, AF): uma
+// lista só, com a encerrada junto, e Encerrar/Reabrir no lugar do Desativar/Ativar.
 export function useLicencas() {
   const notificar = useNotificacao();
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [categoryId, setCategoryId] = useState<string | undefined>();
-  const [status, setStatus] = useState<StatusDoFiltro | undefined>();
-  const debouncedSearch = useDebouncedValue(search);
-
-  // Zerar a página no mesmo handler que muda o recorte, e não num `useEffect`
-  // reagindo a ele: `setState` dentro de efeito encadeia renders e o lint do
-  // react-hooks recusa.
-  const changeSearch = (valor: string) => {
-    setSearch(valor);
-    setPage(1);
-  };
-
-
-  /**
-   * Os links do alerta: cada contagem leva ao filtro que mostra exatamente
-   * aquelas. A busca e a categoria saem, para a lista bater com o
-   * número que foi clicado.
-   */
-  const irParaAlerta = (motivo: MotivoDoAlerta) => {
-    setSearch('');
-    setCategoryId(undefined);
-    setPage(1);
-    setStatus(motivo === 'VENCIDA' ? 'EXPIRADA' : 'VENCENDO');
-  };
-
-  const changeStatus = (proximo: StatusDoFiltro | undefined) => {
-    setStatus(proximo);
-    setPage(1);
-  };
-
-  const changeCategoria = (id: string | undefined) => {
-    setCategoryId(id);
-    setPage(1);
-  };
+  const lista = useListaNaUrl();
+  const { page, perPage, setPage, search, debouncedSearch, changeSearch, parametros, filtrar } = lista;
+  const categoryId = parametros.get('categoria') ?? undefined;
+  const status = statusDaUrl(parametros.get('situacao'));
 
   const params = useMemo(
     () => ({
-      page, perPage: PER_PAGE, q: debouncedSearch || undefined, categoryId, status,
+      page, perPage, q: debouncedSearch || undefined, categoryId, status,
     }),
-    [page, debouncedSearch, categoryId, status],
+    [page, perPage, debouncedSearch, categoryId, status],
   );
 
   const { data, isPending, error } = useLicensesQuery(params);
   const licencas = data?.rows ?? [];
 
-  // A página que deixou de existir volta para a última — a linha saiu do
-  // filtro por edição, devolução, encerramento, exclusão, ou por outra pessoa. Ajuste DURANTE o render, guardado pela condição (o padrão do React
-  // para estado derivado do anterior), e não num `useEffect`: `setState` em
-  // efeito encadeia renders e o lint do react-hooks recusa.
-  const ultimaPagina = data ? Math.max(1, Math.ceil(data.total / PER_PAGE)) : page;
-  if (page > ultimaPagina) setPage(ultimaPagina);
-  const { data: alertas } = useLicenseAlertsQuery();
+  usePaginaQueExiste(page, data?.total, setPage);
+  const { data: stats } = useLicenseStatsQuery();
+  const { data: alertas, error: erroDosAlertas } = useLicenseAlertsQuery();
 
   const criar = useCreateLicense();
   const editar = useUpdateLicense();
@@ -99,11 +61,10 @@ export function useLicencas() {
   // ficha do colaborador usam (`caminhoDaLicenca`) para levar à devolução. Abre
   // o detalhe daquela licença assim que ela chega, sem efeito: enquanto nenhuma
   // janela foi aberta aqui, a janela aberta é a do link. Fechar tira o link.
-  const [parametros, setParametros] = useSearchParams();
   const idDoLink = parametros.get('licenca');
-  // `?busca=<nome>`: quem veio da ficha do colaborador ou da aba do computador
+  // `?quem=<nome>`: quem veio da ficha do colaborador ou da aba do computador
   // já abre "Com quem está" filtrado por ele.
-  const buscaDoLink = parametros.get('busca') ?? '';
+  const buscaDoLink = parametros.get('quem') ?? '';
   const doLink = useLicenseQuery(idDoLink);
   const pelaUrl = modal === null && doLink.data ? doLink.data : null;
   const modalAtual: ModalDeLicenca = pelaUrl ? 'detalhe' : modal;
@@ -123,13 +84,7 @@ export function useLicencas() {
     }
     setModal(null);
     setLicencaAberta(null);
-    if (idDoLink) {
-      setParametros((atuais) => {
-        atuais.delete('licenca');
-        atuais.delete('busca');
-        return atuais;
-      }, { replace: true });
-    }
+    if (idDoLink) lista.trocar({ licenca: undefined, quem: undefined });
   };
 
   // Os erros sobem para o formulário mostrar a mensagem do servidor — é por
@@ -204,7 +159,6 @@ export function useLicencas() {
       titulo: `Encerrar "${licenca.name}" hoje?`,
       descricao: 'Continua no histórico, mas some das escolhas e não recebe nada novo.',
       acao: 'Encerrar',
-      perigo: true,
     }))) return;
     try {
       if (encerrada) await editar.mutateAsync({ id: licenca.id, data: { terminationDate: null } });
@@ -242,17 +196,21 @@ export function useLicencas() {
     // Para a tabela não dizer "nenhuma cadastrada" quando a consulta falhou.
     erro: error ? error.message : null,
     page,
-    perPage: PER_PAGE,
+    perPage,
     setPage,
     search,
+    buscaFeita: debouncedSearch,
     changeSearch,
     categoryId,
-    changeCategoria,
+    changeCategoria: (id: string | undefined) => filtrar('categoria', id),
     status,
-    changeStatus,
-    irParaAlerta,
+    // Clicar no cartão escolhido, ou no Total, volta para todas.
+    changeStatus: (proximo: StatusDoFiltro | undefined) => filtrar('situacao', proximo === status ? undefined : proximo),
+    contagens: contagensDasLicencas(stats),
 
     alertas: alertas ?? { total: 0, contagem: { VENCIDA: 0, VENCENDO: 0 }, rows: [] },
+    // Sem resposta, nenhum alerta na tela não quer dizer nada vencendo.
+    erroDosAlertas: alertas ? null : erroDosAlertas?.message ?? null,
 
     modal: modalAtual,
     licencaAberta: licencaAtual,

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, Save, Settings2 } from 'lucide-react';
 import { Aviso } from '../../../components/ui/aviso';
-import { Badge } from '../../../components/ui/badge';
+import { PontoDeStatus } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Campo } from '../../../components/ui/campo';
 import { Card } from '../../../components/ui/card';
@@ -15,7 +15,7 @@ import type {
 // ═════════════════════════════════════════════════════════════════════════════
 // OS BOTÕES DA DESCOBERTA — e até aqui eles não existiam em tela nenhuma.
 //
-// As colunas estavam no `AppSetting` desde a Etapa B, a rota
+// As colunas já estavam no `AppSetting`, a rota
 // `PUT /api/settings/discovery` estava pronta com zod e tetos, o hook estava
 // escrito — e a página nunca desenhou nada disso. Configuração sem tela é a
 // mesma coisa que configuração que não funciona: quem quer parar de receber
@@ -134,9 +134,9 @@ export default function ConfiguracaoDaDescoberta({ configuracao, podeEditar, sal
           <Settings2 className="size-4 text-text-tertiary" /> Descoberta
         </span>
         <span className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs text-text-tertiary">
-          <Badge tom={modoAtual.tom}>{modoAtual.rotulo}</Badge>
+          <PontoDeStatus tom={modoAtual.tom}>{modoAtual.rotulo}</PontoDeStatus>
           <span>fantasma em {configuracao.ghostDays}d</span>
-          <span>shadow em {configuracao.shadowHours}h</span>
+          <span>Shadow IT em {configuracao.shadowHours}h</span>
           <ChevronDown className={cn('size-4 transition-transform', aberta && 'rotate-180')} />
         </span>
       </button>
@@ -159,9 +159,9 @@ export default function ConfiguracaoDaDescoberta({ configuracao, podeEditar, sal
                 />
               </fieldset>
             ) : (
-              <div><Badge tom={modoAtual.tom}>{modoAtual.rotulo}</Badge></div>
+              <div><PontoDeStatus tom={modoAtual.tom}>{modoAtual.rotulo}</PontoDeStatus></div>
             )}
-            <p className="max-w-2xl text-xs leading-relaxed text-text-tertiary">
+            <p className="max-w-2xl text-sm leading-relaxed text-text-secondary">
               {modoAtual.explicacao}
             </p>
             {configuracao.discoveryMode === 'ON' && (
@@ -186,7 +186,7 @@ export default function ConfiguracaoDaDescoberta({ configuracao, podeEditar, sal
           ) : (
             // Os dois prazos já estão no cabeçalho do painel; aqui só o porquê
             // de não haver campo para mudá-los.
-            <p className="max-w-2xl text-xs leading-relaxed text-text-tertiary">
+            <p className="max-w-2xl text-sm leading-relaxed text-text-secondary">
               Fantasma em {configuracao.ghostDays} dias, Shadow IT em {configuracao.shadowHours} horas.
               Só o Supervisor e o Administrador mudam o modo e os prazos.
             </p>

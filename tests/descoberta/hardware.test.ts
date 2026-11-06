@@ -7,7 +7,7 @@ import { prisma } from '../../server/infra/database/prismaClient';
 
 // A `AssetChange` GANHA ESCRITOR — "esta máquina trocou de peça".
 //
-// A tabela nasceu na Etapa B e ficou sem ninguém escrevendo nela: o índice
+// A tabela nasceu e ficou sem ninguém escrevendo nela: o índice
 // existia, a FK existia, e nenhuma linha entrava. Tabela sem escritor é uma
 // promessa no schema que a tela não cumpre.
 //

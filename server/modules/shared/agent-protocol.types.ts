@@ -24,7 +24,7 @@ export interface AgentCommandPacket {
 /**
  * Identificação e inventário da máquina, enviados no Handshake.
  *
- * OS OITO CAMPOS DE IDENTIDADE (F7, Etapa A) SÃO TODOS NULÁVEIS, e isso não é
+ * OS OITO CAMPOS DE IDENTIDADE SÃO TODOS NULÁVEIS, e isso não é
  * frouxidão de tipo: o agente é um binário que vive FORA deste repositório, e o
  * rollout dele leva semanas. Durante todo esse tempo chega handshake sem nenhum
  * deles — e o que a máquina consegue coletar depende de permissão e de firmware,
@@ -33,7 +33,7 @@ export interface AgentCommandPacket {
  * painel justamente por isso.
  *
  * Quem não manda serial simplesmente não pontua por serial na cascata de
- * reconciliação (docs/historico/fase-07-convergencia-rmm-itam.md, D46).
+ * reconciliação (docs/decisoes/reconciliacao.md, D46).
  */
 export interface HandshakeData {
   hwid: string;

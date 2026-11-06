@@ -155,7 +155,7 @@ describe('a rota do painel não estoura com os BigInt novos', () => {
       return achado?.ramTotalBytes ? achado : null;
     });
 
-    // ESTE É O TESTE QUE PEGA A REGRESSÃO MAIS SILENCIOSA DA FASE. O
+    // ESTE É O TESTE QUE PEGA A REGRESSÃO MAIS SILENCIOSA. O
     // `present-endpoint.helper.ts` devolvia `{ ...endpoint }` inteiro; com
     // colunas BigInt no model, o `JSON.stringify` do Fastify morre com "Do not
     // know how to serialize a BigInt" — e morre na rota que o painel consulta a

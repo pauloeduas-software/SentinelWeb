@@ -8,7 +8,7 @@ import type { CatalogSpec } from '../specs/catalog-spec.types';
 /**
  * Exclui — de verdade, ou para a lixeira na tabela que a tem (`spec.lixeira`).
  *
- * O catálogo não tem lixeira (docs/historico/fase-01-catalogo-e-ativo.md, D8),
+ * O catálogo não tem lixeira (docs/decisoes/catalogo-e-ativo.md, D8),
  * com UMA exceção: o colaborador, que tem histórico de posse próprio
  * (docs/decisoes/posse.md, V).
  *

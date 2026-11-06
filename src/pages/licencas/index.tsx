@@ -1,6 +1,7 @@
-import { Plus } from 'lucide-react';
+import { KeyRound, Plus } from 'lucide-react';
+import CartoesDeContagem from '../../components/CartoesDeContagem';
 import CategoriaFiltro from '../../components/CategoriaFiltro';
-import EstadoDaLista from '../../components/EstadoDaLista';
+import ListaVazia from '../../components/ListaVazia';
 import ListToolbar from '../../components/ListToolbar';
 import PaginaCabecalho from '../../components/PaginaCabecalho';
 import { Aviso } from '../../components/ui/aviso';
@@ -10,7 +11,6 @@ import EntregaLicencaModal from './components/EntregaLicencaModal';
 import LicencaDetalheModal from './components/LicencaDetalheModal';
 import LicencaFormModal from './components/LicencaFormModal';
 import LicencaTable from './components/LicencaTable';
-import StatusFiltro from './components/StatusFiltro';
 import { useLicencas } from './hooks/useLicencas';
 import { usePode } from '../../stores/auth.store';
 
@@ -26,9 +26,9 @@ import { usePode } from '../../stores/auth.store';
 
 export default function LicencasPage() {
   const {
-    licencas, total, carregando, erro, page, perPage, setPage, search, changeSearch,
-    categoryId, changeCategoria, status, changeStatus, irParaAlerta,
-    alertas,
+    licencas, total, carregando, erro, page, perPage, setPage, search, buscaFeita, changeSearch,
+    categoryId, changeCategoria, status, changeStatus, contagens,
+    alertas, erroDosAlertas,
     modal, licencaAberta, buscaDoLink, veioDoLink, erroDoLink, abrir, fechar, ocupado,
     handleCriar, handleEditar, handleEntregar, handleDevolver, handleTrocarChave, handleAlternarEncerrada, handleExcluir,
   } = useLicencas();
@@ -39,31 +39,24 @@ export default function LicencasPage() {
   return (
     <div className="motion-safe:animate-fade-in flex flex-col pb-6">
 
-      <PaginaCabecalho
-        titulo="Licenças"
-        subtitulo="O contrato e a quantidade comprada. Cada uso é uma entrega, a um colaborador ou a um computador."
-        acao={podeGerir && <Button onClick={() => abrir('criar')}><Plus /> Nova licença</Button>}
-      />
+      <PaginaCabecalho titulo="Licenças" />
 
       {erroDoLink && (
-        <Aviso className="mb-4 flex items-center justify-between gap-4">
-          <span>Não foi possível abrir a licença do link: {erroDoLink}</span>
-          <button type="button" onClick={fechar} className="text-xs hover:underline">Dispensar</button>
-        </Aviso>
+        <Aviso className="mb-4" onDispensar={fechar}>Não foi possível abrir a licença do link: {erroDoLink}</Aviso>
       )}
 
-      <AlertasLicenca alertas={alertas.rows} total={alertas.total} contagem={alertas.contagem} onIrPara={irParaAlerta} />
+      <CartoesDeContagem contagens={contagens} escolhido={status} onEscolher={changeStatus} />
+
+      {erroDosAlertas && <Aviso className="mb-4">Não foi possível conferir os prazos: {erroDosAlertas}</Aviso>}
+      <AlertasLicenca alertas={alertas.rows} total={alertas.total} />
 
       <ListToolbar
         search={search}
         onSearchChange={changeSearch}
-        placeholder="Buscar por nome, licenciado ou pedido..."
-        filtros={
-          <>
-            <StatusFiltro valor={status} onChange={changeStatus} />
-            <CategoriaFiltro tipo="LICENSE" valor={categoryId} onChange={changeCategoria} />
-          </>
-        }
+        placeholder="Buscar por nome, licenciado ou pedido…"
+        filtros={<CategoriaFiltro tipo="LICENSE" valor={categoryId} onChange={changeCategoria} />}
+        // Cadastrar é `SUPERVISOR`.
+        acao={podeGerir && <Button onClick={() => abrir('criar')}><Plus /> Nova licença</Button>}
         page={page}
         perPage={perPage}
         total={total}
@@ -79,17 +72,16 @@ export default function LicencasPage() {
         onAlternarEncerrada={podeGerir ? (licenca) => void handleAlternarEncerrada(licenca) : undefined}
         onExcluir={podeGerir ? (licenca) => void handleExcluir(licenca) : undefined}
         vazio={
-          // Carregando e erro antes do vazio: sem isto, a primeira carga e um
-          // servidor fora do ar diziam "nenhuma cadastrada" (`EstadoDaLista`).
-          <EstadoDaLista carregando={carregando} erro={erro}>
-            {search ? (
-              <span>Nenhuma licença encontrada para "{search}".</span>
-            ) : status || categoryId ? (
-              <span>Nenhuma licença com este filtro.</span>
-            ) : (
-              <span>Nenhuma licença cadastrada.</span>
-            )}
-          </EstadoDaLista>
+          <ListaVazia
+            icone={KeyRound}
+            carregando={carregando}
+            erro={erro}
+            nome="licença"
+            genero="f"
+            busca={buscaFeita}
+            filtrada={Boolean(status || categoryId)}
+            onCadastrar={podeGerir ? () => abrir('criar') : undefined}
+          />
         }
       />
 

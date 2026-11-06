@@ -35,7 +35,7 @@ export const assignmentController = {
   },
 
   // Sem query string nenhuma, e é de propósito: o recorte é a definição de
-  // vencido (`docs/historico/fase-04-posse.md`, Etapa D), não uma preferência de quem
+  // vencido, não uma preferência de quem
   // consulta. Filtro por pessoa ou por local entraria quando existir a tela que
   // o peça — e aí como parâmetro validado, nunca como `where` vindo do cliente.
 };

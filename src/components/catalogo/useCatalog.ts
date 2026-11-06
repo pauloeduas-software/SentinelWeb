@@ -4,75 +4,52 @@ import {
 } from '../../queries/catalog.queries';
 import type { ListView } from '../../types/list.types';
 import type { CatalogRow } from '../../types/catalog.types';
-import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { useListaNaUrl, usePaginaQueExiste } from '../../hooks/useListaNaUrl';
 import { confirmar } from '../../hooks/useConfirmacao';
 import { useNotificacao } from '../../hooks/useNotificacao';
 import type { AcaoLinhaId, CatalogUiSpec } from './catalog-ui.types';
 import { linksDoErro } from '../../helpers/erro.helper';
 
-// Catálogo é lista curta: com 10, onze categorias já viravam duas páginas. A
-// tabela rola por dentro, então 25 não estoura a tela.
-const PER_PAGE = 25;
-
 // Estado de uma tela de catálogo — Configurações, com as cinco abas, ou
-// Colaboradores, com uma só: qual aba, que página, o que está no campo de busca
-// e qual registro está no modal. Tudo de UMA tela — fica aqui, em useState, e
-// não em store (docs/referencia/arquitetura.md).
+// Colaboradores, com uma só: qual aba, que página, o que está no campo de busca, na
+// URL (`useListaNaUrl`), e qual registro está no modal. `?aba=modelos`: o F5 não volta
+// para a primeira, e um link leva direto a ela (AZ).
 export function useCatalog(specs: readonly CatalogUiSpec[]) {
   const notificar = useNotificacao();
-  const [slug, setSlug] = useState(specs[0].slug);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const debouncedSearch = useDebouncedValue(search);
+  const lista = useListaNaUrl();
+  const { page, perPage, setPage, search, debouncedSearch, changeSearch, parametros, filtrar } = lista;
+  const chave = parametros.get('aba');
   // O valor do `filtroPorTipo` da aba. `undefined` é "todos".
-  const [tipo, setTipo] = useState<string | undefined>();
+  const tipo = parametros.get('tipo') ?? undefined;
   // A lixeira, só na aba que a tem (`spec.lixeira`).
-  const [view, setView] = useState<ListView>('active');
+  const view: ListView = parametros.get('vista') === 'trashed' ? 'trashed' : 'active';
 
   const spec = useMemo(
-    () => specs.find((item) => item.slug === slug) ?? specs[0],
-    [specs, slug],
+    () => specs.find((item) => item.chave === chave) ?? specs[0],
+    [specs, chave],
   );
 
-  // Zerar a página acontece no mesmo handler que muda a aba ou a busca, e não
-  // num `useEffect` reagindo a eles: `setState` dentro de efeito encadeia
-  // renders e o lint do react-hooks recusa.
+  // A primeira aba é o endereço limpo. O que era da aba anterior fica para trás: "Ativo"
+  // nas categorias não quer dizer nada nos status.
   const changeTab = (proximo: string) => {
-    setSlug(proximo);
-    setPage(1);
-    setSearch('');
-    // O tipo é da aba: "Ativo" nas categorias não quer dizer nada nos status.
-    setTipo(undefined);
-    // E a lixeira também: a próxima aba começa no cadastro, não na lixeira.
-    setView('active');
+    const proxima = specs.find((item) => item.slug === proximo) ?? specs[0];
+    lista.recomecar(proxima === specs[0] ? {} : { aba: proxima.chave });
   };
 
-  const changeSearch = (valor: string) => {
-    setSearch(valor);
-    setPage(1);
-  };
-
-  const changeTipo = (valor: string | undefined) => {
-    setTipo(valor);
-    setPage(1);
-  };
-
-  const changeView = (proxima: ListView) => {
-    setView(proxima);
-    setPage(1);
-  };
+  const changeTipo = (valor: string | undefined) => filtrar('tipo', valor);
+  const changeView = (proxima: ListView) => filtrar('vista', proxima === 'active' ? undefined : proxima);
 
   const campoDoFiltro = spec.filtroPorTipo?.campo;
   const params = useMemo(
     () => ({
       page,
-      perPage: PER_PAGE,
+      perPage,
       q: debouncedSearch || undefined,
       ...(campoDoFiltro && tipo ? { [campoDoFiltro]: tipo } : {}),
       // Só a aba com lixeira manda `view`: nas outras o servidor recusa a chave.
       ...(spec.lixeira ? { view } : {}),
     }),
-    [page, debouncedSearch, campoDoFiltro, tipo, spec.lixeira, view],
+    [page, perPage, debouncedSearch, campoDoFiltro, tipo, spec.lixeira, view],
   );
 
   const { data, isPending, error } = useCatalogQuery(spec.slug, params);
@@ -83,9 +60,10 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
 
   const registros = data?.rows ?? [];
   const total = data?.total ?? 0;
+  usePaginaQueExiste(page, data?.total, setPage);
 
   // O REGISTRO NOVO NASCE NO RECORTE QUE ESTÁ NA TELA. Quem filtrou as
-  // categorias por "Licença" e clicou em "Categoria" quer uma categoria de
+  // categorias por "Licença" e clicou em "Nova categoria" quer uma categoria de
   // licença: abrir o formulário em "Ativo" (a primeira opção) fazia a pessoa
   // trocar o campo à mão — ou, não reparando, gravar no tipo errado e ver a
   // linha sumir do filtro que ela mesma tinha ligado.
@@ -155,9 +133,6 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
 
     try {
       await excluir.mutateAsync(registro.id);
-      // Apagar o último item da última página deixaria a tela vazia com o
-      // usuário numa página que não existe mais.
-      if (registros.length === 1 && page > 1) setPage(page - 1);
     } catch (erro) {
       // É aqui que aparece o 409 de "em uso por N registros" — a regra que
       // impede apagar uma categoria que alguém está usando — e o do
@@ -169,8 +144,6 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
   const handleRestore = async (registro: CatalogRow) => {
     try {
       await restaurar.mutateAsync(registro.id);
-      // Restaurar o último da página da lixeira deixaria a tela vazia.
-      if (registros.length === 1 && page > 1) setPage(page - 1);
     } catch (erro) {
       // O 409 do e-mail que foi reaproveitado enquanto ele estava na lixeira.
       notificar.erro((erro as Error).message);
@@ -184,9 +157,11 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
     registros,
     total,
     page,
-    perPage: PER_PAGE,
+    perPage,
     setPage,
     search,
+    buscaFeita: debouncedSearch,
+    parametros,
     changeSearch,
     tipo,
     changeTipo,

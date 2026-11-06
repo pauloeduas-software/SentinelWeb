@@ -66,7 +66,7 @@ export default function LoginPage() {
             </Campo>
 
             <Button type="submit" disabled={enviando} className="h-12 w-full text-lg">
-              <Lock /> {enviando ? 'Entrando...' : 'Entrar'}
+              <Lock /> {enviando ? 'Entrando…' : 'Entrar'}
             </Button>
           </form>
         </div>

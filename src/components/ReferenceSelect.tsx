@@ -68,7 +68,7 @@ export default function ReferenceSelect({
   // por tecla, e o `/options` não tem paginação para amortecer.
   const buscaDebounced = useDebouncedValue(busca);
 
-  const { data, isPending } = useCatalogOptionsQuery(rota, filtroTipo, buscaDebounced || undefined, parametros);
+  const { data, isPending, isError } = useCatalogOptionsQuery(rota, filtroTipo, buscaDebounced || undefined, parametros);
   const opcoes = (data ?? []).filter((opcao) => !excluirIds?.includes(opcao.id));
 
   // O `/options` tem teto de 200 (list-catalog-options.usecase.ts). Passando
@@ -98,7 +98,7 @@ export default function ReferenceSelect({
       // `isPending` é só a PRIMEIRA carga: com `placeholderData` na query, as
       // buscas seguintes mantêm a lista anterior e o campo não trava a cada tecla.
       disabled={isPending}
-      vazio={isPending ? 'Carregando...' : obrigatorio ? 'Selecione...' : 'Nenhum'}
+      vazio={isPending ? 'Carregando…' : isError ? 'Não foi possível carregar' : obrigatorio ? 'Selecione…' : 'Nenhum'}
       comOpcaoVazia={!obrigatorio}
       onBusca={setBusca}
       busca={busca}

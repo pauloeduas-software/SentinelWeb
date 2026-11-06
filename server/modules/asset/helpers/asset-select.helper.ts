@@ -31,7 +31,7 @@ export const ASSET_SELECT = {
   // listagem `?view=retired` devolveria linhas indistinguíveis das outras.
   //
   // NÃO é `deletedAt`: as duas colunas respondem perguntas diferentes (D19,
-  // docs/historico/fase-02-ativos.md).
+  // docs/decisoes/catalogo-e-ativo.md).
   retiredAt: true,
   retiredReason: true,
   retiredNotes: true,
@@ -55,7 +55,7 @@ export const ASSET_SELECT = {
 } as const;
 
 // ═══════════════════════════════════════════════════════════════════════════
-// O CUSTO POR PERMISSÃO (F11, D77) — e ele é OMITIDO DO SELECT, não mascarado
+// O CUSTO POR PERMISSÃO (D77) — e ele é OMITIDO DO SELECT, não mascarado
 // depois.
 //
 // Ler a coluna e apagá-la do objeto antes de responder ainda

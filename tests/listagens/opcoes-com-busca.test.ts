@@ -2,8 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '../../server/infra/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 
-// A 201ª LOCALIZAÇÃO (F10, Etapa B) — o furo que a auditoria da F1 anotou como
-// observação 7 e que ficou aberto desde então.
+// A 201ª LOCALIZAÇÃO — o furo que ficou aberto.
 //
 // `/options` devolve no máximo 200 linhas, em ordem alfabética. Com 201
 // localizações cadastradas, a última é INALCANÇÁVEL pelo formulário: ela não
@@ -12,7 +11,7 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 // entre as 200, mandando `null` no salvamento — foi fechada na época com a opção
 // de "vínculo atual".
 //
-// O `?q=` do servidor já existia desde a F1, nas três rotas de `/options`. O que
+// O `?q=` do servidor já existia, nas três rotas de `/options`. O que
 // este arquivo prova é o contrato de que a tela nova depende: o teto continua
 // valendo, e com termo a linha fora das 200 primeiras aparece.
 

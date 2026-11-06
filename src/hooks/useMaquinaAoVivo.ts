@@ -59,7 +59,7 @@ export function useMaquinaAoVivo(endpointId: string | null) {
     if (!endpointId) return;
 
     const qual = maquina?.hostname ?? 'esta máquina';
-    if (!(await confirmar({ titulo: `${rotulo} ${qual}?`, descricao: consequencia, acao: rotulo, perigo }))) return;
+    if (!(await confirmar({ titulo: `${rotulo} "${qual}"?`, descricao: consequencia, acao: rotulo, perigo }))) return;
 
     // O retorno anterior sai da tela ANTES do envio: deixá-lo ali durante a
     // requisição faria o resultado do comando passado parecer o do atual.

@@ -1,9 +1,14 @@
+import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BatteryWarning } from 'lucide-react';
-import EstadoDaLista from '../../../components/EstadoDaLista';
-import { Badge } from '../../../components/ui/badge';
+import ListaVazia from '../../../components/ListaVazia';
+import ListToolbar from '../../../components/ListToolbar';
+import { PontoDeStatus } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableNome, TableRow, TableSublinha } from '../../../components/ui/table';
+import { formatarData } from '../../../helpers/format.helper';
+import { useListaLocalNaUrl } from '../../../hooks/usePaginaLocal';
+import { comFiltros } from '../../../hooks/useVoltaComFiltros';
 import type { AtivoOcioso } from '../../../types/reconciliation.types';
 
 // "NINGUÉM USA" × "NINGUÉM RESPONDE" — duas conversas diferentes, com duas
@@ -19,66 +24,78 @@ import type { AtivoOcioso } from '../../../types/reconciliation.types';
 
 interface Props {
   ociosos: AtivoOcioso[];
+  carregando: boolean;
   erro: string | null;
+  acao: ReactNode;
 }
 
-export default function OciososTable({ ociosos, erro }: Props) {
+export default function OciososTable({ ociosos, carregando, erro, acao }: Props) {
   const navigate = useNavigate();
-
-  if (ociosos.length === 0) {
-    return (
-      <Card className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-text-tertiary">
-        <BatteryWarning className="size-6 opacity-50" />
-        <EstadoDaLista carregando={false} erro={erro}>
-          <span>Nenhum ativo ocioso nos últimos 30 dias.</span>
-          <span className="text-xs">Só entram aqui ativos com agente.</span>
-        </EstadoDaLista>
-      </Card>
-    );
-  }
+  const lista = useListaLocalNaUrl(ociosos, (ativo) => `${ativo.assetTag} ${ativo.name ?? ''} ${ativo.hostname ?? ''}`);
 
   return (
-    <Card className="overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Ativo</TableHead>
-            <TableHead>Máquina</TableHead>
-            <TableHead>Último uso</TableHead>
-            <TableHead>Quem responde</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {ociosos.map((ativo) => (
-            <TableRow
-              key={ativo.assetId}
-              onClick={() => navigate(`/computadores/${ativo.assetId}`)}
-              className="cursor-pointer"
-            >
-              <TableCell>
-                {/* O botão é o caminho do teclado: o clique sobe para a linha. */}
-                <button type="button" className="text-left font-mono font-medium text-text-primary focus-visible:underline focus-visible:outline-none">
-                  {ativo.assetTag}
-                </button>
-                {ativo.name && <div className="mt-0.5 text-xs text-text-tertiary">{ativo.name}</div>}
-              </TableCell>
-              <TableCell>{ativo.hostname ?? '—'}</TableCell>
-              <TableCell className="text-text-tertiary">
-                {ativo.ultimoUso ? `${ativo.ultimoUso} (${ativo.diasSemUso} dias)` : 'nunca registrado'}
-              </TableCell>
-              <TableCell>
-                {ativo.postoVago ? (
-                  <Badge tom="aviso">Posto vago: ninguém responde</Badge>
-                ) : ativo.responsaveis.length > 0 ? (
-                  ativo.responsaveis.map((pessoa) => pessoa.name).join(', ')
-                ) : (
-                  <span className="text-text-tertiary">não entregue</span>
-                )}
-              </TableCell>
+    <>
+      <ListToolbar
+        search={lista.search}
+        onSearchChange={lista.changeSearch}
+        placeholder="Buscar por ativo ou máquina…"
+        acao={acao}
+        page={lista.page}
+        perPage={lista.perPage}
+        total={lista.total}
+        onPageChange={lista.setPage}
+      />
+
+      <Card className="overflow-hidden">
+        <Table className="min-w-[52rem]">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-44">Ativo</TableHead>
+              <TableHead>Máquina</TableHead>
+              <TableHead>Quem responde</TableHead>
+              <TableHead className="w-36">Último uso</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
+          </TableHeader>
+          <TableBody>
+            {lista.visiveis.map((ativo) => (
+              <TableRow key={ativo.assetId} onClick={() => navigate(`/computadores/${ativo.assetId}`, comFiltros(lista.parametros, '/descobertas'))}>
+                <TableCell>
+                  <TableNome className="font-mono">{ativo.assetTag}</TableNome>
+                  {ativo.name && <TableSublinha>{ativo.name}</TableSublinha>}
+                </TableCell>
+                <TableCell>{ativo.hostname ?? '—'}</TableCell>
+                <TableCell>
+                  {ativo.postoVago ? (
+                    <PontoDeStatus tom="aviso">Posto vago</PontoDeStatus>
+                  ) : ativo.responsaveis.length > 0 ? (
+                    ativo.responsaveis.map((pessoa) => pessoa.name).join(', ')
+                  ) : '—'}
+                </TableCell>
+                <TableCell>
+                  {ativo.ultimoUso ? (
+                    <>
+                      {formatarData(ativo.ultimoUso)}
+                      <TableSublinha>{ativo.diasSemUso} dias sem uso</TableSublinha>
+                    </>
+                  ) : '—'}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        {lista.total === 0 && (
+          <ListaVazia
+            icone={BatteryWarning}
+            carregando={carregando}
+            erro={erro}
+            nome="ativo"
+            busca={lista.search}
+            frase="Nenhum ativo ocioso nos últimos 30 dias."
+          >
+            <span className="text-xs">Só entram aqui ativos com agente.</span>
+          </ListaVazia>
+        )}
+      </Card>
+    </>
   );
 }

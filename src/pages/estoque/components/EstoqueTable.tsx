@@ -1,21 +1,20 @@
-import { Package, Pencil, Power, PowerOff, Trash2, UserPlus } from 'lucide-react';
+import { Pencil, Power, PowerOff, Trash2, UserPlus } from 'lucide-react';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
-import { Badge } from '../../../components/ui/badge';
+import { PontoDeStatus } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableLinha, TableNome, TableRow, TableSublinha } from '../../../components/ui/table';
 import type { ItemDeEstoque } from '../../../types/stock.types';
-import { classeDaConta, motivoParaNaoEntregar, resumoDaContagem } from '../helpers/estoque.helper';
+import { classeDaConta, ehConsumivel, motivoParaNaoEntregar } from '../helpers/estoque.helper';
 
 // A tabela de estoque. Apresentacional puro: recebe valor e callback, não
 // conhece query nem HTTP.
 //
-// A COLUNA PRINCIPAL É A CONTA — total, em uso, disponíveis —, e os números
-// aparecem todos, como na `LicencaTable`: "3 disponíveis" sozinho não diz se
-// sobrou muito ou pouco.
+// A COLUNA PRINCIPAL É A CONTA: os disponíveis e, embaixo, o total e o que está em
+// uso, como na `LicencaTable`: "3 disponíveis" sozinho não diz se sobrou muito ou pouco.
 //
 // A LINHA INTEIRA ABRE O DETALHE, e o `⋯` guarda as ações (AY). O CADASTRO É O DAS
 // CONFIGURAÇÕES (`CatalogTable`): Editar, Desativar/Ativar e Excluir, nessa ordem;
-// o desativado fica na lista, esmaecido e marcado; e Excluir sempre clica — o item
+// o desativado fica na lista, esmaecido, com a Situação dizendo; e Excluir sempre clica — o item
 // em uso recebe o 409 do servidor, que diz com quem está e manda devolver (AG).
 
 interface EstoqueTableProps {
@@ -35,25 +34,17 @@ interface EstoqueTableProps {
 export default function EstoqueTable({
   itens, ocupado, onAbrir, onEntregar, onEditar, onAlternarAtivo, onExcluir, vazio,
 }: EstoqueTableProps) {
-  if (itens.length === 0) {
-    return (
-      <Card className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-text-tertiary">
-        <Package className="size-6 opacity-50" />
-        {vazio}
-      </Card>
-    );
-  }
-
   return (
     <Card className="overflow-hidden">
-      <Table>
+      <Table className="min-w-[44rem] md:min-w-[52rem]">
         <TableHeader>
           <TableRow>
             <TableHead>Item</TableHead>
-            <TableHead>Categoria</TableHead>
-            <TableHead className="hidden md:table-cell">Localização</TableHead>
-            <TableHead>Quantidade</TableHead>
-            <TableHead className="w-12 text-right">Ações</TableHead>
+            <TableHead className="w-[16%]">Categoria</TableHead>
+            <TableHead className="hidden w-[16%] md:table-cell">Localização</TableHead>
+            <TableHead className="w-[18%]">Quantidade</TableHead>
+            <TableHead className="w-36">Situação</TableHead>
+            <TableHeadAcoes />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -61,25 +52,26 @@ export default function EstoqueTable({
             const motivoSemEntrega = motivoParaNaoEntregar(item);
 
             return (
-              <TableRow
-                key={item.id}
-                onClick={() => onAbrir(item)}
-                className={item.isActive ? 'cursor-pointer' : 'cursor-pointer opacity-60'}
-              >
+              <TableRow key={item.id} onClick={() => onAbrir(item)} apagada={!item.isActive}>
                 <TableCell>
-                  {/* O botão é o caminho do teclado: o clique sobe para a linha. */}
-                  <button type="button" className="text-left font-medium text-text-primary focus-visible:underline focus-visible:outline-none">
-                    {item.name}
-                  </button>
-                  {!item.isActive && <Badge tom="aviso" className="ml-2">Desativado</Badge>}
-                  {item.notes && <div className="mt-0.5 line-clamp-1 text-xs text-text-tertiary">{item.notes}</div>}
+                  <TableNome>{item.name}</TableNome>
+                  {item.notes && <TableSublinha>{item.notes}</TableSublinha>}
                 </TableCell>
 
                 <TableCell>{item.category.name}</TableCell>
 
                 <TableCell className="hidden md:table-cell">{item.location?.name ?? '—'}</TableCell>
 
-                <TableCell className={classeDaConta(item)}>{resumoDaContagem(item)}</TableCell>
+                <TableCell>
+                  <TableLinha className={classeDaConta(item)}>
+                    {item.disponivel} {item.disponivel === 1 ? 'disponível' : 'disponíveis'}
+                  </TableLinha>
+                  {!ehConsumivel(item) && <TableSublinha>{item.qty} no total · {item.emUso} em uso</TableSublinha>}
+                </TableCell>
+
+                <TableCell>
+                  <PontoDeStatus tom={item.isActive ? 'sucesso' : 'aviso'}>{item.isActive ? 'Ativo' : 'Desativado'}</PontoDeStatus>
+                </TableCell>
 
                 <TableCell>
                   <AcoesDaLinha
@@ -114,6 +106,7 @@ export default function EstoqueTable({
           })}
         </TableBody>
       </Table>
+      {itens.length === 0 && vazio}
     </Card>
   );
 }

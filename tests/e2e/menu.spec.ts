@@ -27,6 +27,8 @@ test('cada página do menu abre pelo link, com o título e sem erro no console',
   for (const nome of PAGINAS) {
     await menu.getByRole('link', { name: nome, exact: true }).click();
     await expect(tituloDaPagina(page, nome)).toBeVisible();
+    // Só o título e o menu do usuário: botão de página fica na página (BB).
+    await expect(page.getByRole('banner').getByRole('button')).toHaveCount(1);
   }
 
   conferirConsole();

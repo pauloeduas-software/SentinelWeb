@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { createLogger } from '../logger/logger';
 
 // A porta fechada por padrão: TODA rota exige sessão, e a exceção é escrita à
-// mão (docs/historico/fase-03-autenticacao-e-ator.md, Etapa C).
+// mão (docs/referencia/acesso.md).
 //
 // POR QUE UM HOOK GLOBAL, E NÃO UM `preHandler` POR ROTA: com a proteção por
 // rota, a rota nova nasce ABERTA — e esquecer de protegê-la não gera erro

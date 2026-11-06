@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import CampoDeDinheiro from '../../../components/CampoDeDinheiro';
 import FormularioLateral from '../../../components/FormularioLateral';
 import ReferenceSelect from '../../../components/ReferenceSelect';
 import { Campo } from '../../../components/ui/campo';
@@ -121,14 +122,12 @@ export default function AssetFormModal({
 
   return (
     <FormularioLateral
-      titulo={clonar && asset ? `Clonar ${asset.assetTag}` : asset ? `Editar ${asset.assetTag}` : 'Novo ativo'}
-      descricao={clonar ? 'Etiqueta e número de série nascem em branco porque são únicos. A cópia nasce sem posse.' : undefined}
-      largura="lg"
+      titulo={clonar ? 'Clonar ativo' : asset ? 'Editar ativo' : 'Novo ativo'}
+      descricao={clonar ? `Cópia de ${asset?.assetTag}. Etiqueta e número de série nascem em branco porque são únicos. A cópia nasce sem posse.` : asset?.assetTag}
       onClose={onClose}
       onSubmit={enviar}
       erro={erro}
       salvando={salvando}
-      rotuloDoEnvio={clonar ? 'Criar cópia' : 'Salvar'}
     >
       <Secao titulo="Identificação">
         <Campo rotulo="Etiqueta">
@@ -179,10 +178,8 @@ export default function AssetFormModal({
           <Input type="date" max={hojeNoCampoDeData()} value={valores.purchaseDate} onChange={(e) => definir('purchaseDate', e.target.value)} />
         </Campo>
         {veCusto && (
-          <Campo rotulo="Valor (R$)">
-            {/* `text`, não `number`: o valor viaja como string do formulário ao
-                Postgres, sem passar por ponto flutuante em lugar nenhum. */}
-            <Input inputMode="decimal" value={valores.purchaseCost} onChange={(e) => definir('purchaseCost', e.target.value)} />
+          <Campo rotulo="Valor da compra">
+            <CampoDeDinheiro valor={String(valores.purchaseCost)} onChange={(valor) => definir('purchaseCost', valor)} />
           </Campo>
         )}
       </Secao>
@@ -200,7 +197,7 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
       <legend className="w-full border-b border-border-sutil pb-2 text-sm font-medium text-text-primary">
         {titulo}
       </legend>
-      <div className="mt-4 grid grid-cols-2 gap-4">{children}</div>
+      <div className="mt-4 grid sm:grid-cols-2 gap-4">{children}</div>
     </fieldset>
   );
 }

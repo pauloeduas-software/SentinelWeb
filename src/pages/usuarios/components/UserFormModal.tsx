@@ -99,6 +99,7 @@ export default function UserFormModal({ user, senhaGerada = null, onClose, onSub
   return (
     <FormularioLateral
       titulo={user ? 'Editar usuário' : 'Novo usuário'}
+      descricao={user?.name}
       onClose={onClose}
       onSubmit={handleSubmit}
       erro={error}
@@ -121,8 +122,8 @@ export default function UserFormModal({ user, senhaGerada = null, onClose, onSub
           disabled={criada}
           value={formData.role}
           onChange={(valor) => setFormData({ ...formData, role: valor as Cargo })}
-          vazio="Selecione..."
-          placeholderDaBusca="Buscar cargo..."
+          vazio="Selecione…"
+          placeholderDaBusca="Buscar cargo…"
           opcoes={CARGOS_NA_TELA.map((cargo) => ({ value: cargo.valor, label: cargo.nome }))}
         />
       </Campo>
@@ -138,7 +139,7 @@ export default function UserFormModal({ user, senhaGerada = null, onClose, onSub
                   {copiada ? 'Copiada' : 'Copiar'}
                 </Button>
               </div>
-              <p className="text-xs leading-relaxed text-text-tertiary">
+              <p className="text-sm leading-relaxed text-text-secondary">
                 Aparece só agora: feche e ela não volta. Entregue à pessoa; ela escolhe a própria senha no primeiro acesso.
               </p>
             </div>
@@ -147,7 +148,7 @@ export default function UserFormModal({ user, senhaGerada = null, onClose, onSub
               <Button variant="outline" onClick={() => void gerarTemporaria()}>
                 <KeyRound /> Gerar senha temporária
               </Button>
-              <p className="text-xs leading-relaxed text-text-tertiary">
+              <p className="text-sm leading-relaxed text-text-secondary">
                 Para quem esqueceu a senha: a de hoje deixa de valer e a pessoa escolhe outra ao entrar.
               </p>
             </div>

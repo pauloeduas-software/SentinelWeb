@@ -23,8 +23,7 @@ interface ReferenciasDaLicenca {
  * NADA NO BANCO IMPEDE o contrário — a FK só garante que a linha existe, não o
  * `type` dela. Sem esta guarda, uma licença de categoria "Notebook (ASSET)"
  * entra sem erro nenhum e reaparece na tela agrupada com equipamento. É o mesmo
- * tipo de contradição que a auditoria da F1 encontrou em "Em Uso" tipado
- * `DEPLOYABLE`.
+ * tipo de contradição de "Em Uso" tipado `DEPLOYABLE`.
  *
  * A tela tem a sua própria proteção — o `optionFilter` da spec de categoria
  * (D11) —, mas tela não é regra: quem chama a API direto passaria por cima.

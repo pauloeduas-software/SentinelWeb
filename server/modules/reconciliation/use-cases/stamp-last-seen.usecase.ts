@@ -6,7 +6,7 @@ import { prisma } from '../../../infra/database/prismaClient';
  * ─────────────────────────────────────────────────────────────────────────────
  * POR QUE AQUI, E NÃO NO `touchEndpoint` — o D95
  *
- * O plano da fase dizia "escrita no handshake, no máximo uma vez por dia". A
+ * A ideia era "escrita no handshake, no máximo uma vez por dia". A
  * árvore mostrou o custo: `touchEndpoint` roda a cada Handshake, Telemetry e
  * Ping de CADA máquina. O teto diário não evita esse custo, só evita a escrita —
  * a instrução condicional seria EXECUTADA em toda mensagem de qualquer jeito, e

@@ -1,6 +1,9 @@
-import { useState } from 'react';
-import { KeyRound, Monitor, User } from 'lucide-react';
+import { useState, type KeyboardEvent } from 'react';
+import {
+  KeyRound, Monitor, Undo2, User, Users,
+} from 'lucide-react';
 import ChaveEscondida from './ChaveEscondida';
+import { CartaoVazio } from '../../../components/ListaVazia';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Seletor } from '../../../components/ui/seletor';
@@ -22,6 +25,8 @@ import { chavesComLugar, lugarDaChave, rotuloDaChave } from '../helpers/licenca.
 
 interface EntregasAbertasProps {
   entregas: EntregaComChave[];
+  carregando: boolean;
+  erro: string | null;
   /** As chaves da licença, do detalhe. Vazia, a entrega não tem chave para trocar. */
   chaves: ChaveDaLicenca[];
   /** A frase da lista vazia quando ela é vazia por causa da busca. */
@@ -39,19 +44,29 @@ interface EntregasAbertasProps {
 /** O que uma linha está pedindo agora: nada, o dia da devolução, ou a chave nova (o id). */
 type Pedido = { id: string; tipo: 'devolver' | 'chave'; valor: string } | null;
 
-function alvoEmTexto(entrega: EntregaComChave): string {
-  if (entrega.assignedPerson) return entrega.assignedPerson.name;
+function Alvo({ entrega }: { entrega: EntregaComChave }) {
+  if (entrega.assignedPerson) return <>{entrega.assignedPerson.name}</>;
   const ativo = entrega.assignedAsset;
-  if (!ativo) return '—';
-  return ativo.name ? `${ativo.assetTag} — ${ativo.name}` : ativo.assetTag;
+  if (!ativo) return <>—</>;
+  return (
+    <>
+      <span className="font-mono">{ativo.assetTag}</span>
+      {ativo.name && ` — ${ativo.name}`}
+    </>
+  );
 }
 
-export default function EntregasAbertas({ entregas, chaves, vazio, ocupado, onDevolver, onTrocarChave }: EntregasAbertasProps) {
+export default function EntregasAbertas({ entregas, carregando, erro, chaves, vazio, ocupado, onDevolver, onTrocarChave }: EntregasAbertasProps) {
   // Um pedido aberto de cada vez, na linha que o abriu.
   const [pedido, setPedido] = useState<Pedido>(null);
 
+  // Esc na linha aberta desfaz o pedido, e só ele: a janela continua aberta.
+  const desfazerNoEsc = (evento: KeyboardEvent) => {
+    if (evento.key === 'Escape') setPedido(null);
+  };
+
   if (entregas.length === 0) {
-    return <p className="text-sm text-text-tertiary">{vazio ?? 'Ninguém está com esta licença agora.'}</p>;
+    return <CartaoVazio icone={Users} carregando={carregando} erro={erro} frase={vazio ?? 'Ninguém está com esta licença agora.'} />;
   }
 
   const hoje = hojeNoCampoDeData();
@@ -78,7 +93,7 @@ export default function EntregasAbertas({ entregas, chaves, vazio, ocupado, onDe
               <div className="min-w-0 space-y-0.5">
                 <div className="flex items-center gap-2 text-text-primary">
                   <Icone className="size-4 shrink-0 text-text-tertiary" />
-                  <span className="truncate font-medium">{alvoEmTexto(entrega)}</span>
+                  <span className="truncate font-medium"><Alvo entrega={entrega} /></span>
                 </div>
                 <div className="text-xs text-text-tertiary">
                   desde {formatarDiaDoInstante(entrega.checkoutAt)}
@@ -87,7 +102,7 @@ export default function EntregasAbertas({ entregas, chaves, vazio, ocupado, onDe
               </div>
 
               {meu?.tipo === 'devolver' ? (
-                <div className="flex flex-wrap items-center gap-2">
+                <div data-esc-proprio onKeyDown={desfazerNoEsc} className="flex flex-wrap items-center gap-2">
                   <label className="flex items-center gap-2 text-xs text-text-tertiary">
                     Devolvida em
                     <Input
@@ -96,9 +111,10 @@ export default function EntregasAbertas({ entregas, chaves, vazio, ocupado, onDe
                       min={diaDoInstante(entrega.checkoutAt)}
                       max={hoje}
                       onChange={(evento) => setPedido({ ...meu, valor: evento.target.value })}
-                      className="h-9 w-auto"
+                      className="h-9 w-36"
                     />
                   </label>
+                  <Button variant="outline" size="sm" onClick={() => setPedido(null)}>Cancelar</Button>
                   <Button
                     size="sm"
                     onClick={() => void confirmarDevolucao(entrega.id, meu.valor)}
@@ -106,7 +122,6 @@ export default function EntregasAbertas({ entregas, chaves, vazio, ocupado, onDe
                   >
                     Confirmar
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => setPedido(null)}>Cancelar</Button>
                 </div>
               ) : (
                 <div className="flex gap-2">
@@ -117,7 +132,7 @@ export default function EntregasAbertas({ entregas, chaves, vazio, ocupado, onDe
                       onClick={() => setPedido({ id: entrega.id, tipo: 'chave', valor: entrega.licenseKeyId ?? '' })}
                       disabled={ocupado}
                     >
-                      Chave
+                      <KeyRound /> Chave
                     </Button>
                   )}
                   <Button
@@ -126,21 +141,21 @@ export default function EntregasAbertas({ entregas, chaves, vazio, ocupado, onDe
                     onClick={() => setPedido({ id: entrega.id, tipo: 'devolver', valor: hoje })}
                     disabled={ocupado}
                   >
-                    Devolver
+                    <Undo2 /> Devolver
                   </Button>
                 </div>
               )}
             </div>
 
             {meu?.tipo === 'chave' ? (
-              <div className="flex flex-wrap items-center gap-2">
+              <div data-esc-proprio onKeyDown={desfazerNoEsc} className="flex flex-wrap items-center gap-2">
                 {/* A chave atual e as que têm lugar. */}
                 <Seletor
                   ariaLabel="Chave desta entrega"
                   value={meu.valor}
                   onChange={(valor) => setPedido({ ...meu, valor })}
                   vazio="Escolha a chave…"
-                  placeholderDaBusca="Buscar chave..."
+                  placeholderDaBusca="Buscar chave…"
                   opcoesMono
                   className={meu.valor ? 'min-w-[220px] flex-1 font-mono' : 'min-w-[220px] flex-1'}
                   opcoes={chaves.flatMap((chave, indice) => (chave.id === entrega.licenseKeyId || comLugar.includes(chave)
@@ -151,6 +166,7 @@ export default function EntregasAbertas({ entregas, chaves, vazio, ocupado, onDe
                     }]
                     : []))}
                 />
+                <Button variant="outline" size="sm" onClick={() => setPedido(null)}>Cancelar</Button>
                 <Button
                   size="sm"
                   onClick={() => void salvarChave(entrega.id, meu.valor)}
@@ -158,7 +174,6 @@ export default function EntregasAbertas({ entregas, chaves, vazio, ocupado, onDe
                 >
                   Salvar
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setPedido(null)}>Cancelar</Button>
               </div>
             ) : entrega.licenseKey ? (
               <div className="flex items-center gap-2 text-xs">

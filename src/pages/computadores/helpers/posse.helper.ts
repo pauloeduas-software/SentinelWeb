@@ -54,7 +54,7 @@ export interface ResumoPosse {
 /**
  * A célula "Responsável" de uma linha da listagem.
  *
- * Aceita `undefined` porque o campo `posse` é da F4: enquanto o backend não
+ * Aceita `undefined` porque, enquanto o backend não
  * sobe, a listagem simplesmente não traz o campo, e a coluna deve mostrar um
  * traço em vez de quebrar a tela inteira.
  */
@@ -111,15 +111,6 @@ export function bloqueioDaEntrega(asset: Pick<Asset, 'posse' | 'status' | 'retir
   if (asset.retiredAt) return 'Ativo baixado não pode ser entregue — desfaça a baixa antes.';
   if (asset.status.type === 'DEPLOYABLE') return null;
   return `Só ativo disponível pode ser entregue — este está como ${asset.status.name}.`;
-}
-
-/**
- * O tom da marca de status, pelo TIPO e não pelo nome: o nome é texto livre do
- * cadastro, e o tipo é o que diz a situação (AY).
- */
-export function tomDoStatus(tipo: Asset['status']['type']): 'sucesso' | 'info' | 'aviso' | 'perigo' {
-  const tons = { DEPLOYABLE: 'sucesso', IN_USE: 'info', PENDING: 'aviso', UNDEPLOYABLE: 'perigo' } as const;
-  return tons[tipo];
 }
 
 /**

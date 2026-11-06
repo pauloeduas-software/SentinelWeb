@@ -1,19 +1,24 @@
 import { Pencil, Power, PowerOff, RotateCcw, Trash2 } from 'lucide-react';
 import AcoesDaLinha from '../AcoesDaLinha';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
+import { PontoDeStatus } from '../ui/badge';
 import { Card } from '../ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableNome, TableRow } from '../ui/table';
+import { cn } from '../../helpers/cn.helper';
 import { nomeDaRelacao, rotuloDoEnum } from '../../helpers/format.helper';
+import { tomDoStatus, type TipoDeStatus } from '../../helpers/status.helper';
 import type { AcaoLinhaId, AcaoLinhaSpec, ColunaSpec } from './catalog-ui.types';
 import type { CatalogRow } from '../../types/catalog.types';
 
 // A LINHA INTEIRA CLICA (AY): abre a ficha, onde a spec declara uma, e o Editar
 // nas outras. O `⋯` guarda Editar, Desativar/Ativar e Excluir, nessa ordem.
 
-/** A linha está com o campo da ação de alternar desligado? (`false`, não ausente.) */
-function desligada(registro: CatalogRow, acoes?: readonly AcaoLinhaSpec[]): AcaoLinhaSpec | undefined {
-  return acoes?.find((acao) => acao.alterna && registro[acao.alterna.campo] === false);
+/** A largura e o alinhamento da coluna, iguais no cabeçalho e nas células. */
+function classeDaColuna(coluna: ColunaSpec): string {
+  return cn(
+    coluna.render === 'contagem' && 'w-24 text-right',
+    coluna.render === 'situacao' && 'w-36',
+    coluna.soNoDesktop && 'hidden md:table-cell',
+  );
 }
 
 interface CatalogTableProps {
@@ -39,17 +44,17 @@ export default function CatalogTable({
 }: CatalogTableProps) {
   return (
     <Card className="overflow-hidden">
-      <Table>
+      {/* Com `soNoDesktop`, o que sobra na tela estreita cabe sem rolar. Sem ela, vale a largura mínima do `Table`. */}
+      <Table className={cn(colunas.some((coluna) => coluna.soNoDesktop) && 'min-w-0 lg:min-w-[36rem]')}>
         <TableHeader>
           <TableRow>
-            {colunas.map((coluna) => <TableHead key={coluna.key}>{coluna.label}</TableHead>)}
-            <TableHead className="w-12 text-right">Ações</TableHead>
+            {colunas.map((coluna) => <TableHead key={coluna.key} className={classeDaColuna(coluna)}>{coluna.label}</TableHead>)}
+            <TableHeadAcoes />
           </TableRow>
         </TableHeader>
 
         <TableBody>
           {registros.map((registro) => {
-            const apagada = desligada(registro, acoes);
             const comFicha = acoes?.some((acao) => acao.id === 'ficha');
             const nome = String(registro.name ?? '');
             // Na lixeira não há o que abrir: o servidor responde 404, e a linha só restaura.
@@ -58,37 +63,22 @@ export default function CatalogTable({
               : () => (comFicha ? onAcao?.('ficha', registro) : onEdit(registro));
 
             return (
-              <TableRow
-                key={registro.id}
-                onClick={abrir}
-                className={[abrir ? 'cursor-pointer' : '', apagada ? 'opacity-60' : ''].join(' ')}
-              >
+              <TableRow key={registro.id} onClick={abrir} apagada={registro.isActive === false}>
                 {colunas.map((coluna, indice) => (
-                  <TableCell key={coluna.key}>
+                  <TableCell key={coluna.key} className={classeDaColuna(coluna)}>
                     {indice === 0 ? (
-                      // O botão é o caminho do teclado: o clique sobe para a linha.
-                      <button type="button" className="text-left font-medium text-text-primary focus-visible:underline focus-visible:outline-none">
-                        <Celula coluna={coluna} registro={registro} />
-                      </button>
+                      <TableNome><Celula coluna={coluna} registro={registro} /></TableNome>
                     ) : (
                       <Celula coluna={coluna} registro={registro} />
                     )}
-                    {/* A marca vai na PRIMEIRA coluna, ao lado do nome: é onde o
-                        olho está ao procurar a linha. */}
-                    {indice === 0 && apagada?.alterna && (
-                      <Badge tom="aviso" className="ml-2">{apagada.alterna.marcaSeDesligado}</Badge>
-                    )}
                   </TableCell>
                 ))}
-                <TableCell className="text-right">
-                  {onRestore ? (
-                    <Button variant="ghost" size="sm" onClick={() => onRestore(registro)} aria-label={`Restaurar ${nome}`}>
-                      <RotateCcw /> Restaurar
-                    </Button>
-                  ) : (
-                    <AcoesDaLinha
-                      nome={nome}
-                      acoes={[
+                <TableCell>
+                  <AcoesDaLinha
+                    nome={nome}
+                    acoes={onRestore
+                      ? [{ rotulo: 'Restaurar', icone: RotateCcw, onClick: () => onRestore(registro) }]
+                      : [
                         { rotulo: 'Editar', icone: Pencil, onClick: () => onEdit(registro) },
                         // A ficha é o clique na linha: não repete no menu.
                         ...(acoes ?? []).filter((acao) => acao.id !== 'ficha').map((acao) => {
@@ -106,22 +96,14 @@ export default function CatalogTable({
                           perigo: true,
                         },
                       ]}
-                    />
-                  )}
+                  />
                 </TableCell>
               </TableRow>
             );
           })}
-
-          {registros.length === 0 && (
-            <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={colunas.length + 1} className="py-16 text-center text-text-tertiary">
-                {vazio}
-              </TableCell>
-            </TableRow>
-          )}
         </TableBody>
       </Table>
+      {registros.length === 0 && vazio}
     </Card>
   );
 }
@@ -133,8 +115,33 @@ function Celula({ coluna, registro }: { coluna: ColunaSpec; registro: CatalogRow
     case 'enum':
       return <span>{rotuloDoEnum(valor, coluna.opcoes)}</span>;
 
+    case 'status':
+      return <PontoDeStatus tom={tomDoStatus(valor as TipoDeStatus)}>{rotuloDoEnum(valor, coluna.opcoes)}</PontoDeStatus>;
+
+    case 'situacao':
+      return <PontoDeStatus tom={valor === false ? 'aviso' : 'sucesso'}>{valor === false ? 'Desativado' : 'Ativo'}</PontoDeStatus>;
+
     case 'relacao':
       return <span>{nomeDaRelacao(valor)}</span>;
+
+    case 'contagem':
+      return <span>{Number(valor ?? 0)}</span>;
+
+    case 'link':
+      if (!valor) return <span>—</span>;
+      return (
+        // O clique fica no link: subir para a linha abriria o formulário junto.
+        <a
+          href={String(valor)}
+          target="_blank"
+          rel="noreferrer"
+          title={String(valor)}
+          onClick={(evento) => evento.stopPropagation()}
+          className="block truncate text-primary hover:underline focus-visible:underline focus-visible:outline-none"
+        >
+          {String(valor).replace(/^https?:\/\//, '').replace(/\/$/, '')}
+        </a>
+      );
 
     default:
       return <span>{valor == null || valor === '' ? '—' : String(valor)}</span>;

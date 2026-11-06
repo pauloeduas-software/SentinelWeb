@@ -117,6 +117,11 @@ export function formatarDiaDoInstante(iso: string): string {
   return formatarData(diaDoInstante(iso));
 }
 
+/** O instante com a hora, em Brasília: o último contato de uma máquina. */
+export function formatarDataHora(iso: string): string {
+  return new Date(iso).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' });
+}
+
 /** As iniciais do avatar: primeira e última palavra do nome ("Ana Paula Souza" → "AS"). */
 export function iniciais(nome: string): string {
   const partes = nome.trim().split(/\s+/).filter(Boolean);

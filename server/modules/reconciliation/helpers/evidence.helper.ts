@@ -11,12 +11,12 @@ import { createHash } from 'crypto';
 // A segunda é o que uma recusa sem chave significa, e ela custa caro: recusar
 // "este endpoint é o ATV-00012" porque o serial estava em branco é CORRETO, e
 // quando a máquina passar a mandar o serial de verdade é OUTRA afirmação.
-// Enterrá-la junto seria perder exatamente os casos que a fase existe para achar.
+// Enterrá-la junto seria perder exatamente os casos que importa achar.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // POR QUE SÃO DOIS CONCEITOS, E NÃO UM (a correção do D109)
 //
-// A primeira versão desta fase hasheava a EVIDÊNCIA INTEIRA, e isso desfazia a
+// A primeira versão hasheava a EVIDÊNCIA INTEIRA, e isso desfazia a
 // memória da recusa sempre que a evidência carregava algo que muda sozinho.
 // Então a EVIDÊNCIA é o que vai para a TELA, e a AFIRMAÇÃO é o que vai para o
 // HASH — e só muda quando a frase muda.

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import FormularioLateral from '../../../../components/FormularioLateral';
-import { Aviso } from '../../../../components/ui/aviso';
 import { Campo } from '../../../../components/ui/campo';
 import { Input, Textarea } from '../../../../components/ui/input';
 import { Seletor } from '../../../../components/ui/seletor';
@@ -69,34 +68,33 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
 
   return (
     <FormularioLateral
-      titulo={`Dar baixa em ${asset.assetTag}`}
-      descricao="Sai do patrimônio e das listagens, e fica na vista Baixados com a data e o motivo. Cadastro errado vai para a lixeira."
+      titulo="Dar baixa no ativo"
+      descricao={`${asset.assetTag} sai do patrimônio e das listagens, e fica na vista Baixados com a data e o motivo. Cadastro errado vai para a lixeira.`}
       onClose={onClose}
       onSubmit={enviar}
       salvando={salvando}
-      rotuloDoEnvio="Confirmar saída"
-      rotuloEnviando="Registrando..."
-    >
-      {erro && (
-        <Aviso className="space-y-1.5">
-          <p>{erro}</p>
+      rotuloDoEnvio="Dar baixa"
+      rotuloEnviando="Dando baixa…"
+      erro={erro && (
+        <span className="block space-y-1.5">
+          <span className="block">{erro}</span>
           {links.length > 0 && (
-            <div className="flex flex-wrap gap-x-3 gap-y-1">
+            <span className="flex flex-wrap gap-x-3 gap-y-1">
               {links.map((link) => (
                 <Link key={link.para} to={link.para} className="underline underline-offset-2">{link.rotulo}</Link>
               ))}
-            </div>
+            </span>
           )}
-        </Aviso>
+        </span>
       )}
-
+    >
       <Campo rotulo="Motivo" obrigatorio>
         <Seletor
           value={motivo}
           onChange={(valor) => setMotivo(valor as typeof motivo)}
           opcoes={MOTIVOS_DA_SAIDA}
-          vazio="Selecione..."
-          placeholderDaBusca="Buscar motivo..."
+          vazio="Selecione…"
+          placeholderDaBusca="Buscar motivo…"
           obrigatorio
         />
       </Campo>
@@ -107,7 +105,7 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
         <Input type="date" required max={hoje} value={data} onChange={(event) => setData(event.target.value)} />
       </Campo>
 
-      <Campo rotulo="Observações" ajuda="Aparece na aba Detalhes enquanto a baixa valer.">
+      <Campo rotulo="Notas" ajuda="Aparece na aba Detalhes enquanto a baixa valer.">
         <Textarea value={observacoes} onChange={(event) => setObservacoes(event.target.value)} />
       </Campo>
     </FormularioLateral>

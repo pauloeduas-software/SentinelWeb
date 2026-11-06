@@ -1,4 +1,4 @@
-import type { Sugestao, SuggestionKind } from '../../../types/reconciliation.types';
+import type { MatchSignal, Sugestao, SuggestionKind } from '../../../types/reconciliation.types';
 
 // O VOCABULÁRIO DA FILA — dado, não componente.
 //
@@ -17,6 +17,20 @@ export const ROTULOS: Record<SuggestionKind, Rotulo> = {
     titulo: 'Vincular máquina ao ativo',
     acao: 'O ativo passa a ter esta máquina. Nada muda na posse.',
   },
+};
+
+/** O sinal que casou, com o nome que ele tem na aba Máquina. */
+export const ROTULO_DO_SINAL: Record<MatchSignal, string> = {
+  SERIAL: 'Série da BIOS',
+  UUID: 'UUID do sistema',
+  HOSTNAME: 'Nome da máquina',
+};
+
+const ROTULO_DA_EVIDENCIA: Record<string, string> = {
+  sinal: 'Sinal',
+  valor: 'Valor',
+  hostname: 'Nome da máquina',
+  hwid: 'HWID',
 };
 
 /** "SN-ABC-123 casou com o serial do ativo" — a frase de uma linha da evidência. */
@@ -39,8 +53,8 @@ export function linhasDaEvidencia(evidencia: Record<string, unknown>): { chave: 
   return Object.entries(evidencia)
     .filter(([, valor]) => valor !== null && valor !== undefined && valor !== '')
     .map(([chave, valor]) => ({
-      chave,
-      valor: Array.isArray(valor)
+      chave: ROTULO_DA_EVIDENCIA[chave] ?? chave,
+      valor: chave === 'sinal' ? ROTULO_DO_SINAL[valor as MatchSignal] ?? String(valor) : Array.isArray(valor)
         ? valor.map((item) => (typeof item === 'object' ? JSON.stringify(item) : String(item))).join(', ')
         : typeof valor === 'object'
           ? JSON.stringify(valor)

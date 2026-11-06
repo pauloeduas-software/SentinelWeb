@@ -13,7 +13,7 @@ import { lerConfiguracaoDaDescoberta } from '../helpers/discovery-settings.helpe
 
 // A VARREDURA — de hora em hora, sobre as máquinas SEM vínculo.
 //
-// Este é o único lugar da fase que roda sozinho, e ele existe porque a
+// Este é o único lugar deste módulo que roda sozinho, e ele existe porque a
 // alternativa é pior: reconciliar dentro do handshake colocaria uma varredura do
 // catálogo de ativos no caminho de ingestão, que roda a cada mensagem de cada
 // máquina.
@@ -123,7 +123,7 @@ async function executarVarredura(): Promise<ResultadoDaVarredura> {
     }
   }
 
-  // O USO AGREGADO dos últimos dias (Etapa I): uma instrução para a frota
+  // O USO AGREGADO dos últimos dias: uma instrução para a frota
   // inteira, e é ela que faz a pergunta do ativo ocioso caber numa consulta.
   await agregarUsoDosAtivos();
 

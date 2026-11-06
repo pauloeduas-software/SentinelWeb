@@ -3,11 +3,14 @@
 //
 // É irmã da spec do servidor (server/modules/catalog/specs/), não a mesma: lá se
 // decide o que é válido e o que pode sair na resposta; aqui, como isso aparece
-// na tela. Mora em `pages/` porque é decisão de tela — e por isso não importa
+// na tela. Mora em `components/catalogo` porque é decisão de tela — e por isso não importa
 // nada de `src/api` (o lint recusa).
+
+import type { LucideIcon } from 'lucide-react';
 
 type TipoCampo =
   | 'text' | 'textarea'
+  | 'email' | 'tel' | 'url' // o `type` do input: valida e abre o teclado certo no celular
   | 'select'    // valores fixos, vindos de um enum do banco
   | 'reference'; // valores vindos de outra tabela, por /options
 
@@ -15,8 +18,7 @@ export interface OpcaoFixa {
   value: string;
   label: string;
   /**
-   * Uma linha explicando a opção, mostrada no formulário quando ela está
-   * selecionada.
+   * Uma linha explicando a opção, à vista no formulário ao lado de cada uma.
    *
    * Existe porque o rótulo de uma opção não carrega a diferença entre duas
    * opções parecidas — e as quatro de `StatusLabel.type` são exatamente isso.
@@ -40,16 +42,22 @@ export interface CampoSpec {
   largura?: 'inteira';
   /** Uma linha sob o campo, explicando o que o rótulo não cabe. */
   ajuda?: string;
+  /** O exemplo dentro do campo vazio. */
+  placeholder?: string;
+  /** Com a linha em uso, o valor não muda: o servidor recusaria depois do Salvar. */
+  travaEmUso?: boolean;
 }
 
-type RenderColuna = 'texto' | 'enum' | 'relacao';
+type RenderColuna = 'texto' | 'enum' | 'status' | 'situacao' | 'relacao' | 'contagem' | 'link';
 
 export interface ColunaSpec {
   key: string;
   label: string;
   render?: RenderColuna;
-  /** `enum`: para traduzir o valor do banco no rótulo em português */
+  /** `enum` e `status`: para traduzir o valor do banco no rótulo em português */
   opcoes?: readonly OpcaoFixa[];
+  /** Some abaixo de `lg`: na tela estreita ficam o nome, a coluna principal e o `⋯`. */
+  soNoDesktop?: boolean;
 }
 
 /**
@@ -82,26 +90,29 @@ export interface AcaoLinhaSpec {
   /**
    * Ação que ALTERNA um booleano da linha — Desativar/Ativar. O `titulo` vale
    * com o campo ligado; `tituloSeDesligado`, com ele desligado. A linha com o
-   * campo desligado aparece esmaecida e marcada, para o estado não depender de
+   * campo desligado aparece esmaecida, com a coluna Situação, para o estado não depender de
    * abrir o menu.
    */
-  alterna?: { campo: string; tituloSeDesligado: string; marcaSeDesligado: string };
+  alterna?: { campo: string; tituloSeDesligado: string };
 }
 
 export interface CatalogUiSpec {
   /** Bate com o slug da rota: 'categories' → /api/categories */
   slug: string;
+  /** A aba no endereço: `?aba=modelos`. Em português, como as rotas da tela. */
+  chave: string;
   aba: string;
+  /** O ícone da aba e da lista vazia. Não repete os do menu. */
+  icone: LucideIcon;
   singular: string;
   /**
-   * O gênero do `singular`, para o título "Novo …"/"Nova …" do formulário.
+   * O gênero do `singular`, para o "Novo …"/"Nova …" e o "Nenhum …"/"Nenhuma …".
    *
    * Declarado, e não deduzido da última letra: "Status" e "Fabricante" não
    * terminam em `o` e são masculinos, "Localização" não termina em `a` e é
    * feminina. A regra da letra erraria três das seis tabelas.
    */
   genero: 'm' | 'f';
-  descricao: string;
   placeholderBusca: string;
   colunas: readonly ColunaSpec[];
   campos: readonly CampoSpec[];
@@ -123,12 +134,14 @@ export interface CatalogUiSpec {
 // O BOTÃO DESATIVAR/ATIVAR do colaborador (e o mesmo desenho em Usuários): grava
 // só `isActive`. Desativado some das listas de escolha e não recebe nada novo,
 // e continua no histórico. As cinco abas das Configurações não o têm (AO).
-export function desativar(feminino: boolean): AcaoLinhaSpec {
-  return {
-    id: 'ativacao',
-    titulo: 'Desativar',
-    alterna: { campo: 'isActive', tituloSeDesligado: 'Ativar', marcaSeDesligado: feminino ? 'desativada' : 'desativado' },
-  };
+export function desativar(): AcaoLinhaSpec {
+  return { id: 'ativacao', titulo: 'Desativar', alterna: { campo: 'isActive', tituloSeDesligado: 'Ativar' } };
+}
+
+// "Nova categoria", "Novo status": o mesmo nome no botão e no título do formulário,
+// em minúscula como o "Novo item" e a "Nova licença" das outras telas.
+export function tituloDoNovo({ singular, genero }: CatalogUiSpec): string {
+  return `${genero === 'f' ? 'Nova' : 'Novo'} ${singular.toLowerCase()}`;
 }
 
 // Traduções dos enums do banco. Ficam aqui, num lugar só, porque a tabela e o
@@ -164,7 +177,7 @@ export const TIPOS_CATEGORIA: readonly OpcaoFixa[] = [
 // baixa do ativo (`retiredAt`).
 export const TIPOS_STATUS: readonly OpcaoFixa[] = [
   { value: 'DEPLOYABLE', label: 'Disponível',
-    ajuda: 'Em estoque, pronto para entregar. É o único tipo que libera a entrega.' },
+    ajuda: 'Guardado, pronto para entregar. É o único tipo que libera a entrega.' },
   // Tipo próprio, e não uma variação de "indisponível": a diferença entre estar
   // com um colaborador e estar na assistência é a distinção mais cara do
   // inventário — um gera valor, o outro custa (prisma/schema.prisma).

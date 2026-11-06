@@ -54,7 +54,7 @@ export default function AppSidebar() {
     return () => window.removeEventListener('keydown', aoTeclar);
   }, [abertaNoCelular, fecharNoCelular]);
 
-  // SÓ O QUE A PESSOA ALCANÇA (F11) — e o GRUPO VAZIO SOME JUNTO.
+  // SÓ O QUE A PESSOA ALCANÇA — e o GRUPO VAZIO SOME JUNTO.
   //
   // Filtrar só os itens deixaria "Gestão" como um título com nada embaixo para
   // quem não alcança o cargo dela: um cabeçalho de seção vazio é pior do que a

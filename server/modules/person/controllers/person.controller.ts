@@ -15,7 +15,7 @@ export const personController = {
   // padrão no use-case — quem não pede nada recebe os 100 mais recentes.
   async history(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    const { limit } = historyQuerySchema.parse(request.query ?? {});
-    return getPersonHistory(id, limit);
+    const { limit, page } = historyQuerySchema.parse(request.query ?? {});
+    return getPersonHistory(id, limit, page);
   },
 };

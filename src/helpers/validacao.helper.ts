@@ -20,7 +20,10 @@ export function mensagemDeValidacao(campo: Campo): string {
   const v = campo.validity;
   if (v.valueMissing) return campo instanceof HTMLSelectElement ? 'Escolha uma opção.' : 'Preencha este campo.';
   if (v.badInput) return campo.type === 'number' ? 'Digite um número.' : 'Valor inválido.';
-  if (v.typeMismatch) return campo.type === 'email' ? 'Digite um e-mail válido, como nome@empresa.com.' : 'Valor em formato inválido.';
+  if (v.typeMismatch) {
+    if (campo.type === 'email') return 'Digite um e-mail válido, como nome@empresa.com.';
+    return campo.type === 'url' ? 'Digite o endereço completo, como https://empresa.com.' : 'Valor em formato inválido.';
+  }
   if (!(campo instanceof HTMLInputElement)) return 'Valor inválido.';
   if (v.rangeUnderflow) {
     return campo.type === 'date'

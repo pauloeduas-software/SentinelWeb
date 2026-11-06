@@ -1,11 +1,14 @@
-import { Pencil, Power, PowerOff, Trash2, UserPlus } from 'lucide-react';
+import { History, Info, Monitor, Pencil, Power, PowerOff, Trash2, UserPlus, Users } from 'lucide-react';
 import { useState } from 'react';
 import HistoricoItem from './HistoricoItem';
 import EntregasAbertas from './EntregasAbertas';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
 import JanelaDeDetalhe from '../../../components/JanelaDeDetalhe';
+import { POR_PAGINA } from '../../../hooks/useListaNaUrl';
 import ListToolbar from '../../../components/ListToolbar';
+import { ContagemDaAba } from '../../../components/ui/tabs';
 import { Aviso } from '../../../components/ui/aviso';
+import { PontoDeStatus } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Dado, GradeDeDados } from '../../../components/ui/dado';
 import {
@@ -40,16 +43,6 @@ interface ItemDetalheModalProps {
   buscaInicial?: string;
   /** Chegou por um link, que leva à devolução: abre em "Com quem está". */
   veioDoLink?: boolean;
-}
-
-/** As duas listas do detalhe andam de 15 em 15. */
-const POR_PAGINA = 15;
-
-/** Carregando e erro antes do conteúdo: lista vazia não pode ser o que a tela diz enquanto espera. */
-function Estado({ carregando, erro, children }: { carregando: boolean; erro: Error | null; children: React.ReactNode }) {
-  if (carregando) return <p className="text-sm text-text-tertiary">Carregando…</p>;
-  if (erro) return <Aviso>Não foi possível carregar: {erro.message}</Aviso>;
-  return <>{children}</>;
 }
 
 export default function ItemDetalheModal({
@@ -109,26 +102,26 @@ export default function ItemDetalheModal({
       <ListToolbar
         search={busca}
         onSearchChange={mudarBusca}
-        placeholder={componente ? 'Buscar por etiqueta ou nome do computador...' : 'Buscar por colaborador ou posto...'}
+        placeholder={componente ? 'Buscar por etiqueta ou nome do computador…' : 'Buscar por colaborador ou posto…'}
         page={paginaDasEntregas}
         perPage={POR_PAGINA}
         total={entregas.data?.total ?? 0}
         onPageChange={setPaginaDasEntregas}
       />
-      <Estado carregando={entregas.isPending} erro={entregas.error}>
-        <EntregasAbertas
-          entregas={entregas.data?.rows ?? []}
-          vazio={
-            componente
-              ? buscaAdiada
-                ? `Nenhum computador com "${buscaAdiada}" tem este componente.`
-                : 'Nenhum computador tem este componente agora.'
-              : buscaAdiada ? `Ninguém com "${buscaAdiada}" está com este item.` : undefined
-          }
-          ocupado={ocupado}
-          onDevolver={onDevolver}
-        />
-      </Estado>
+      <EntregasAbertas
+        carregando={entregas.isPending}
+        erro={entregas.error?.message ?? null}
+        entregas={entregas.data?.rows ?? []}
+        vazio={
+          componente
+            ? buscaAdiada
+              ? `Nenhum computador com "${buscaAdiada}" tem este componente.`
+              : 'Nenhum computador tem este componente agora.'
+            : buscaAdiada ? `Ninguém com "${buscaAdiada}" está com este item.` : undefined
+        }
+        ocupado={ocupado}
+        onDevolver={onDevolver}
+      />
     </>
   );
 
@@ -144,9 +137,7 @@ export default function ItemDetalheModal({
           onPageChange={setPaginaDoHistorico}
         />
       )}
-      <Estado carregando={historico.isPending} erro={historico.error}>
-        <HistoricoItem eventos={historico.data?.rows ?? []} />
-      </Estado>
+      <HistoricoItem eventos={historico.data?.rows ?? []} carregando={historico.isPending} erro={historico.error?.message ?? null} />
     </>
   );
 
@@ -154,10 +145,10 @@ export default function ItemDetalheModal({
     <JanelaDeDetalhe
       titulo={atual.name}
       subtitulo={
-        <>
-          {!atual.isActive && 'Desativado · '}
+        <span className="flex flex-wrap items-center gap-2">
+          <PontoDeStatus tom={atual.isActive ? 'sucesso' : 'aviso'}>{atual.isActive ? 'Ativo' : 'Desativado'}</PontoDeStatus>
           <span className={atual.disponivel < 0 ? classeDaConta(atual) : ''}>{resumoDaContagem(atual)}</span>
-        </>
+        </span>
       }
       // As ações da lista, com as mesmas regras: o desativado não entrega, e se
       // ativa pelo mesmo botão.
@@ -197,14 +188,19 @@ export default function ItemDetalheModal({
       // Quem chega por um link vem atrás de quem está com ele.
       abaInicial={veioDoLink && !consumivel ? 'posse' : 'dados'}
       abas={[
-        { id: 'dados', rotulo: 'Dados', conteudo: dados },
+        { id: 'dados', rotulo: <><Info /> Detalhes</>, conteudo: dados },
         ...(consumivel ? [] : [{
           id: 'posse',
           // Sem o número durante a busca: ele conta a lista filtrada, não as entregas do item.
-          rotulo: `${componente ? 'Em quais computadores' : 'Com quem está'}${buscaAdiada ? '' : ` (${entregas.data?.total ?? 0})`}`,
+          rotulo: (
+            <>
+              {componente ? <Monitor /> : <Users />} {componente ? 'Em quais computadores' : 'Com quem está'}
+              {!buscaAdiada && <ContagemDaAba>{entregas.data?.total}</ContagemDaAba>}
+            </>
+          ),
           conteudo: comQuemEsta,
         }]),
-        { id: 'historico', rotulo: 'Histórico', conteudo: historicoDoItem },
+        { id: 'historico', rotulo: <><History /> Histórico</>, conteudo: historicoDoItem },
       ]}
       onClose={onClose}
     />

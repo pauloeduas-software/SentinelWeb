@@ -88,7 +88,7 @@ export default function EntregaModal({ item, onClose, onSubmit }: EntregaModalPr
 
   return (
     <FormularioLateral
-      titulo="Entregar"
+      titulo="Entregar item"
       descricao={`${atual.name} · ${atual.disponivel}${ehConsumivel(atual) ? '' : ` de ${atual.qty}`} ${atual.disponivel === 1 ? 'disponível' : 'disponíveis'}`}
       onClose={onClose}
       onSubmit={enviar}
@@ -96,10 +96,10 @@ export default function EntregaModal({ item, onClose, onSubmit }: EntregaModalPr
       salvando={salvando}
       bloqueado={!pronto}
       rotuloDoEnvio="Entregar"
-      rotuloEnviando="Entregando..."
+      rotuloEnviando="Entregando…"
     >
       {componente ? (
-        <Campo rotulo="Computador" obrigatorio>
+        <Campo rotulo="Ativo" obrigatorio>
           <ReferenceSelect rota="assets" valor={assetId} obrigatorio onChange={setAssetId} />
         </Campo>
       ) : (
@@ -125,7 +125,7 @@ export default function EntregaModal({ item, onClose, onSubmit }: EntregaModalPr
         </>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid sm:grid-cols-2 gap-4">
         <Campo rotulo="Quantidade" obrigatorio>
           <Input required type="number" min={1} max={100} value={qty} onChange={(e) => setQty(e.target.value)} />
         </Campo>
@@ -135,11 +135,11 @@ export default function EntregaModal({ item, onClose, onSubmit }: EntregaModalPr
         </Campo>
       </div>
 
-      <Campo rotulo="Observações">
+      <Campo rotulo="Notas">
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
       </Campo>
 
-      <p className="text-xs leading-relaxed text-text-tertiary">
+      <p className="text-sm leading-relaxed text-text-secondary">
         {componente
           ? 'Fica no computador, mesmo quando ele muda de mãos. Para tirar, use o Retirar no detalhe do item.'
           : ehConsumivel(item)

@@ -1,57 +1,36 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import {
   useCheckinStock, useCheckoutStock, useCreateStockItem, useDeleteStockItem, useStockItemQuery,
   useStockQuery, useUpdateStockItem,
 } from '../../../queries/stock.queries';
 import type { AlvoDaEntregaDeEstoque, ItemDeEstoque, ItemDeEstoqueInput } from '../../../types/stock.types';
-import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
+import { useListaNaUrl, usePaginaQueExiste } from '../../../hooks/useListaNaUrl';
 import { confirmar } from '../../../hooks/useConfirmacao';
 import { useNotificacao } from '../../../hooks/useNotificacao';
 import { linksDoErro } from '../../../helpers/erro.helper';
 
-const PER_PAGE = 15;
-
 /** Qual janela está aberta. Uma de cada vez, como nas outras telas. */
 type ModalDeEstoque = 'criar' | 'editar' | 'entregar' | 'detalhe' | null;
 
-// Estado da tela de Estoque: página, busca, categoria e qual item está aberto.
+// Estado da tela de Estoque: página, busca e categoria, na URL (`useListaNaUrl`), e
+// qual item está aberto.
 // É o `useLicencas` com quantidade (AE), e o cadastro das Configurações
-// (`useCatalog`): uma lista só, Desativar/Ativar e Excluir com as mesmas frases. Tudo de UMA tela — `useState`, não store
-// (docs/referencia/arquitetura.md).
+// (`useCatalog`): uma lista só, Desativar/Ativar e Excluir com as mesmas frases.
 export function useEstoque() {
   const notificar = useNotificacao();
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [categoryId, setCategoryId] = useState<string | undefined>();
-  const debouncedSearch = useDebouncedValue(search);
-
-  // Zerar a página no mesmo handler que muda o recorte, e não num `useEffect`
-  // reagindo a ele: `setState` dentro de efeito encadeia renders e o lint do
-  // react-hooks recusa.
-  const changeSearch = (valor: string) => {
-    setSearch(valor);
-    setPage(1);
-  };
-
-  const changeCategoria = (id: string | undefined) => {
-    setCategoryId(id);
-    setPage(1);
-  };
+  const lista = useListaNaUrl();
+  const { page, perPage, setPage, search, debouncedSearch, changeSearch, parametros, filtrar } = lista;
+  const categoryId = parametros.get('categoria') ?? undefined;
 
   const params = useMemo(
-    () => ({ page, perPage: PER_PAGE, q: debouncedSearch || undefined, categoryId }),
-    [page, debouncedSearch, categoryId],
+    () => ({ page, perPage, q: debouncedSearch || undefined, categoryId }),
+    [page, perPage, debouncedSearch, categoryId],
   );
 
   const { data, isPending, error } = useStockQuery(params);
   const itens = data?.rows ?? [];
 
-  // A página que deixou de existir volta para a última — a linha saiu da lista
-  // ou do filtro por exclusão, aqui ou por outra pessoa. Ajuste
-  // DURANTE o render, guardado pela condição, como no `useLicencas`.
-  const ultimaPagina = data ? Math.max(1, Math.ceil(data.total / PER_PAGE)) : page;
-  if (page > ultimaPagina) setPage(ultimaPagina);
+  usePaginaQueExiste(page, data?.total, setPage);
 
   const criar = useCreateStockItem();
   const editar = useUpdateStockItem();
@@ -72,11 +51,10 @@ export function useEstoque() {
   // devolução. Abre o detalhe daquele item assim que ele chega, sem efeito:
   // enquanto nenhuma janela foi aberta aqui, a janela aberta é a do link.
   // Fechar tira o link.
-  const [parametros, setParametros] = useSearchParams();
   const idDoLink = parametros.get('item');
-  // `?busca=<nome>`: quem veio da ficha do colaborador ou da do posto já abre
+  // `?quem=<nome>`: quem veio da ficha do colaborador ou da do posto já abre
   // "Com quem está" filtrado por ele.
-  const buscaDoLink = parametros.get('busca') ?? '';
+  const buscaDoLink = parametros.get('quem') ?? '';
   const doLink = useStockItemQuery(idDoLink);
   const pelaUrl = modal === null && doLink.data ? doLink.data : null;
   const modalAtual: ModalDeEstoque = pelaUrl ? 'detalhe' : modal;
@@ -96,13 +74,7 @@ export function useEstoque() {
     }
     setModal(null);
     setItemAberto(null);
-    if (idDoLink) {
-      setParametros((atuais) => {
-        atuais.delete('item');
-        atuais.delete('busca');
-        return atuais;
-      }, { replace: true });
-    }
+    if (idDoLink) lista.trocar({ item: undefined, quem: undefined });
   };
 
   // Os erros sobem para o formulário mostrar a mensagem do servidor — é por
@@ -192,12 +164,13 @@ export function useEstoque() {
     // Para a tabela não dizer "nenhum cadastrado" quando a consulta falhou.
     erro: error ? error.message : null,
     page,
-    perPage: PER_PAGE,
+    perPage,
     setPage,
     search,
+    buscaFeita: debouncedSearch,
     changeSearch,
     categoryId,
-    changeCategoria,
+    changeCategoria: (id: string | undefined) => filtrar('categoria', id),
 
     modal: modalAtual,
     itemAberto: itemAtual,

@@ -75,6 +75,7 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
     ...posto,
     ativos,
     totalAtivos: ativos.length,
+    totalOcupantes: _count.occupants,
     itens,
 
     // `vago` olha só os ATIVOS, e isso é decisão: o sinal existe para o

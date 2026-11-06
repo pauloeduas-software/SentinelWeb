@@ -1,13 +1,13 @@
 import type { CookieSerializeOptions } from '@fastify/cookie';
 import { isProduction } from '../../../infra/config/env';
 
-// O cookie de sessão — D22 do docs/historico/fase-03-autenticacao-e-ator.md.
+// O cookie de sessão — D22 do docs/decisoes/acesso.md.
 //
 // `httpOnly` é a decisão inteira em uma palavra: um XSS em qualquer tela do
 // painel lê o `localStorage` inteiro e leva a sessão embora para sempre; o
 // mesmo XSS contra um cookie httpOnly consegue USAR a sessão enquanto a aba
 // está aberta, mas não EXPORTÁ-LA. O preço é CSRF, e ele se paga com
-// `SameSite` mais o CORS com allowlist que a F0 já deixou pronto.
+// `SameSite` mais o CORS com allowlist, que já estava pronto.
 export const COOKIE_SESSAO = 'sentinel_sessao';
 
 /**
@@ -39,7 +39,7 @@ function atributosDoCookie(): CookieSerializeOptions {
     // `Lax`, não `Strict`: em desenvolvimento o painel roda na 3000 e a API na
     // 3001, e `Strict` faria o navegador simplesmente não enviar o cookie — o
     // sintoma é 401 em tudo depois de um login que respondeu 200, sem erro
-    // nenhum no console (docs/historico/fase-03-autenticacao-e-ator.md, "Riscos e armadilhas").
+    // nenhum no console.
     sameSite: 'lax',
     // Só em produção: `Secure` em http://localhost faz o navegador descartar o
     // cookie em silêncio.

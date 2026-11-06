@@ -4,7 +4,7 @@ import { contemTexto } from '../../shared/busca.helper';
 // Recortes e ordem da listagem de postos — funções puras, sem I/O.
 
 /**
- * As três perguntas que a tela de postos faz.
+ * As perguntas que a tela de postos faz, uma para cada cartão.
  *
  * `vagos` é a que justifica a tela existir: posto com equipamento e SEM
  * ninguém respondendo por ele é sinal operacional, não erro de cadastro
@@ -12,13 +12,13 @@ import { contemTexto } from '../../shared/busca.helper';
  *
  * `ocupados` é o complemento útil — quem está de fato em serviço —, e NÃO é o
  * inverso exato de `vagos`: um posto recém-criado, sem ativo e sem gente, não
- * é nem um nem outro. Ele aparece só em `todos`, que é o padrão.
+ * é nem um nem outro. Esse é o `sem-uso`, e com ele os três somam `todos`.
  *
  * Nomes diferentes do `active|trashed` do `infra/http/list-query.ts` de
  * propósito: lá o par fala de lixeira, aqui fala de ocupação. Reaproveitar a
  * palavra faria parecer que um posto vago foi excluído.
  */
-export type WorkstationView = 'todos' | 'vagos' | 'ocupados';
+export type WorkstationView = 'todos' | 'vagos' | 'ocupados' | 'sem-uso';
 
 /**
  * Uma posse ABERTA apontando para o posto — o que faz um ativo "estar entregue"
@@ -69,6 +69,10 @@ function buildVisaoWhere(view: WorkstationView): Prisma.WorkstationWhereInput {
   // que é sobre equipamento parado — viraria ruído de cadastro.
   if (view === 'vagos') {
     return { occupants: { none: OCUPACAO_ABERTA }, assignments: { some: POSSE_ABERTA } };
+  }
+
+  if (view === 'sem-uso') {
+    return { occupants: { none: OCUPACAO_ABERTA }, assignments: { none: POSSE_ABERTA } };
   }
 
   return {};

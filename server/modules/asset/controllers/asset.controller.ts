@@ -65,8 +65,8 @@ export const assetController = {
 
   async history(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    const { limit } = historyQuerySchema.parse(request.query ?? {});
-    return getAssetHistory(id, limit);
+    const { limit, page } = historyQuerySchema.parse(request.query ?? {});
+    return getAssetHistory(id, limit, page);
   },
 
   async stats() {

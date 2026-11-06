@@ -129,27 +129,26 @@ export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }
 
   return (
     <FormularioLateral
-      titulo={`${posse.entregue ? 'Devolver' : 'Entregar'} ${asset.assetTag}`}
+      titulo={posse.entregue ? 'Devolver ativo' : 'Entregar ativo'}
       descricao={
         <>
-          {asset.model.manufacturer.name} {asset.model.name}
+          <span className="font-mono">{asset.assetTag}</span> · {asset.model.manufacturer.name} {asset.model.name}
           {asset.serial && <> · SN <span className="font-mono">{asset.serial}</span></>}
         </>
       }
-      largura="lg"
       onClose={onClose}
       onSubmit={enviar}
       erro={erro}
       salvando={salvando}
       bloqueado={!dia || (!posse.entregue && !alvoId)}
-      rotuloDoEnvio={posse.entregue ? 'Confirmar devolução' : 'Confirmar entrega'}
-      rotuloEnviando={posse.entregue ? 'Devolvendo...' : 'Entregando...'}
+      rotuloDoEnvio={posse.entregue ? 'Devolver' : 'Entregar'}
+      rotuloEnviando={posse.entregue ? 'Devolvendo…' : 'Entregando…'}
     >
       {posse.entregue ? (
         <>
           <PosseAtual posse={posse} />
 
-          <Campo rotulo="Status de volta" ajuda="Como o ativo volta: disponível, em conserto, inutilizável. Em branco, o servidor decide.">
+          <Campo rotulo="Status de volta" ajuda="Como o ativo volta: disponível, em conserto, inutilizável. Em branco, volta disponível.">
             <ReferenceSelect rota="status-labels" valor={statusId} onChange={setStatusId} />
           </Campo>
         </>
@@ -170,12 +169,13 @@ export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }
               rota={abaAtual.rota}
               valor={alvoId}
               obrigatorio
+              comDetalhe
               onChange={setAlvoId}
             />
           </Campo>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Campo rotulo="Status após a entrega" ajuda="Em branco, o servidor aplica o status de uso.">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Campo rotulo="Status após a entrega" ajuda="Em branco, fica em uso.">
               <ReferenceSelect
                 rota="status-labels"
                 valor={statusId}
@@ -202,7 +202,7 @@ export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }
         />
       </Campo>
 
-      <Campo rotulo={`Observações ${posse.entregue ? 'da devolução' : 'da entrega'}`}>
+      <Campo rotulo="Notas">
         <Textarea value={observacoes} onChange={(event) => setObservacoes(event.target.value)} />
       </Campo>
     </FormularioLateral>

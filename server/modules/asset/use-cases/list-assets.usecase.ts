@@ -36,7 +36,7 @@ export async function listAssets(
   query: ListQuery,
   filtros: AssetFilters,
   /**
-   * A sessão enxerga custo de compra? (F11, D77)
+   * A sessão enxerga custo de compra? (D77)
    *
    * Vem por PARÂMETRO, do controller, e não de um `request` importado aqui: o
    * use-case não conhece HTTP (docs/referencia/arquitetura.md) — quem sabe quem

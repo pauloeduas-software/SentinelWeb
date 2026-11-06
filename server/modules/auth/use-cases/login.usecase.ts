@@ -23,7 +23,7 @@ const CREDENCIAL_INVALIDA = 'E-mail ou senha inválidos.';
  * quem sabe o login de alguém trava a conta em cinco tentativas. Por isso a
  * janela é de MINUTOS e o desbloqueio é automático — bloqueio permanente com
  * desbloqueio manual troca um ataque barato por um chamado garantido. Quem
- * segura a varredura em massa é o rate limit por IP da F0, que é a outra metade
+ * segura a varredura em massa é o rate limit por IP, que é a outra metade
  * da defesa.
  */
 const MAX_TENTATIVAS = 5;

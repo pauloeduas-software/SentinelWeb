@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import type { ParamsDoHistorico } from './asset.queries';
 import { apiClient } from '../api/apiClient';
 import type { EventoDaPessoa, PessoaDaFicha } from '../types/person.types';
 import type { ListEnvelope } from '../types/list.types';
@@ -12,7 +13,7 @@ export const personKeys = {
   // Pendurada no mesmo prefixo da ficha, como no ativo: invalidar `['people']`
   // recarrega as duas juntas, sem a mutação precisar saber que telas estão
   // abertas.
-  history: (id: string) => ['people', 'history', id] as const,
+  history: (id: string, params: ParamsDoHistorico) => ['people', 'history', id, params] as const,
 };
 
 /**
@@ -34,11 +35,12 @@ export function usePersonQuery(id: string | null) {
  * O Histórico da pessoa: posses diretas + ocupações de posto + licenças
  * entregues a ela, do mais recente para o mais antigo.
  */
-export function usePersonHistoryQuery(id: string | null) {
+export function usePersonHistoryQuery(id: string | null, params: ParamsDoHistorico) {
   return useQuery({
-    queryKey: personKeys.history(id ?? ''),
+    queryKey: personKeys.history(id ?? '', params),
     queryFn: async () =>
-      (await apiClient.get<ListEnvelope<EventoDaPessoa>>(`/people/${id}/history`)).data,
+      (await apiClient.get<ListEnvelope<EventoDaPessoa>>(`/people/${id}/history`, { params })).data,
     enabled: id != null,
+    placeholderData: keepPreviousData,
   });
 }

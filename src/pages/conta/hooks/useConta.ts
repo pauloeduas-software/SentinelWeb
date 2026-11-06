@@ -38,7 +38,7 @@ export function useConta() {
   };
 
   return {
-    usuario, nome, changeNome, salvarNome, erro, salvo, salvando,
+    nome, changeNome, salvarNome, erro, salvo, salvando,
     alterado: rascunho !== null && rascunho !== usuario?.name,
     trocarSenha,
   };

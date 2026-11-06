@@ -17,7 +17,7 @@ import { listarMudancasDoAtivo } from './record-hardware-changes.usecase';
  * **A CONVERSÃO NÃO É OPCIONAL.** `ramTotalBytes` e `diskTotalBytes` são
  * `BigInt` no Prisma e `JSON.stringify` não sabe serializá-los: sem isto a rota
  * morre com *"Do not know how to serialize a BigInt"* — o mesmo defeito que o
- * `presentEndpoint` já teve que consertar quando a Etapa A pôs os dois campos na
+ * `presentEndpoint` já teve que consertar quando os dois campos entraram na
  * tabela. O tipo abaixo é o que faz o compilador cobrar a conversão.
  */
 export interface EspecificacoesDaMaquina {

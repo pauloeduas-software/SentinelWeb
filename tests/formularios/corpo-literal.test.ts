@@ -3,9 +3,9 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { prisma } from '../../server/infra/database/prismaClient';
 import { criarFabricante, criarModelo, idsDoSeed } from '../helpers/fixtures';
 
-// O CORPO LITERAL DO FORMULÁRIO — o teste que teria pego o defeito 1.
+// O CORPO LITERAL DO FORMULÁRIO — o teste que teria pego a etiqueta inalcançável.
 //
-// A auditoria da F0/F1 encontrou a etiqueta automática INALCANÇÁVEL pela tela:
+// A etiqueta automática já foi INALCANÇÁVEL pela tela:
 // ela funcionava por `curl` e respondia 422 pelo formulário. Passou porque foi
 // verificada pelo caminho que funciona, e não pelo que o usuário usa.
 //
@@ -17,10 +17,6 @@ import { criarFabricante, criarModelo, idsDoSeed } from '../helpers/fixtures';
 // Por isso este arquivo não escreve corpo "de teste". Ele copia o objeto que a
 // tela monta, campo por campo, e o manda inteiro. Quando alguém acrescentar um
 // campo ao formulário sem tratar o `''` no schema, é aqui que aparece.
-//
-// A auditoria: "O teste que teria pego os defeitos 1, 3, 4 e 5 é o mesmo:
-// enviar o corpo literal que o formulário monta."
-// (docs/historico/fase-01-catalogo-e-ativo.md, "Auditoria das F0 e F1")
 
 let api: ApiDeTeste;
 let statusId = '';
@@ -48,7 +44,7 @@ afterAll(async () => {
  * mesmo usado aqui. TODO O RESTO vai como a tela monta: string vazia em cada
  * campo de texto.
  *
- * `assignedToId` NÃO está aqui de propósito — o campo saiu do formulário na F4,
+ * `assignedToId` NÃO está aqui de propósito — o campo saiu do formulário,
  * e o `strictObject` do servidor recusa a chave. A ausência é a regra
  * (docs/referencia/modelo-de-posse.md, D14).
  */
@@ -69,7 +65,7 @@ function corpoDoFormularioDeAtivo(sobrescrever: Record<string, unknown> = {}) {
 }
 
 describe('POST /api/assets com o corpo literal do AssetFormModal', () => {
-  it('aceita e gera a etiqueta automática (regressão do defeito 1)', async () => {
+  it('aceita e gera a etiqueta automática', async () => {
     const { status, body } = await api.post<{ id: string; assetTag: string }>(
       '/api/assets',
       corpoDoFormularioDeAtivo(),
@@ -77,7 +73,7 @@ describe('POST /api/assets com o corpo literal do AssetFormModal', () => {
 
     // Antes da correção isto era 422 {"error":"etiqueta não pode ser vazio"}.
     expect(status).toBe(201);
-    // O contador de `AppSetting`, que é a funcionalidade-título da Etapa G.
+    // O contador de `AppSetting`.
     expect(body.assetTag).toMatch(/^ATV-\d{5}$/);
   });
 
@@ -131,7 +127,7 @@ describe('POST /api/assets com o corpo literal do AssetFormModal', () => {
 
   it('recusa campo desconhecido no corpo (mass assignment)', async () => {
     // `strictObject`. A chave escolhida é a que mais importa: `assignedToId`
-    // saiu do contrato na F4 e voltar a aceitá-la criaria a SEGUNDA fonte de
+    // saiu do contrato e voltar a aceitá-la criaria a SEGUNDA fonte de
     // verdade sobre quem responde pelo ativo.
     const { status } = await api.post(
       '/api/assets',

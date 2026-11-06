@@ -18,7 +18,7 @@ import { componentesDoAtivo } from '../../stock/use-cases/count-person-stock.use
 // extraviado, roubado ou trocado em garantia.
 //
 // NÃO é apagar. São duas colunas, duas perguntas, e uma não substitui a outra
-// (D19, docs/historico/fase-02-ativos.md):
+// (D19, docs/decisoes/catalogo-e-ativo.md):
 //
 //   `retiredAt`  saiu do PATRIMÔNIO — fato datado, contábil
 //   `deletedAt`  foi cadastrado ERRADO — lixeira
@@ -61,7 +61,7 @@ export async function retireAsset(id: string, data: RetireAssetData, ator: Ator)
       );
     }
 
-    // A amarra da etapa: ativo entregue não sai do patrimônio. Com o ativo já
+    // A amarra: ativo entregue não sai do patrimônio. Com o ativo já
     // travado, a entrega simultânea espera esta transação terminar.
     await assertSemPosse(tx, id, antes.assetTag, 'receber baixa');
 

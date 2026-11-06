@@ -1,6 +1,7 @@
+import type { Contagem } from '../../../components/CartoesDeContagem';
 import type { PostoInput } from '../../../queries/workstation.queries';
 import type {
-  AtivoDoPosto, Posto, PostoOcupante, PostoView,
+  AtivoDoPosto, Posto, PostoOcupante, PostoStats, PostoView,
 } from '../../../types/workstation.types';
 
 // Leitura de um posto para a tela — funções puras, fora do JSX
@@ -9,23 +10,21 @@ import type {
 
 export const TRACO = '—';
 
-/** Os três recortes da tela, na ordem em que aparecem. */
-export const VISOES: readonly { valor: PostoView; rotulo: string }[] = [
-  { valor: 'todos', rotulo: 'Todos' },
-  { valor: 'vagos', rotulo: 'Vagos' },
-  { valor: 'ocupados', rotulo: 'Ocupados' },
-];
+/** Os cartões da tela: o Total e uma situação por cartão, na cor do selo da tabela. */
+export function contagensDosPostos(stats: PostoStats | undefined): Contagem<PostoView>[] {
+  return [
+    { valor: 'todos', rotulo: 'Total', total: stats?.total },
+    { valor: 'ocupados', rotulo: 'Ocupados', total: stats?.ocupados, tom: 'sucesso' },
+    { valor: 'vagos', rotulo: 'Vagos', total: stats?.vagos, tom: 'aviso' },
+    { valor: 'sem-uso', rotulo: 'Sem uso', total: stats?.semUso, tom: 'neutro' },
+  ];
+}
 
-/**
- * O que o contador do cabeçalho diz, e ele muda com o recorte: em "Vagos", o
- * número na tela é de postos vagos, não de postos. Repetir "postos" nos três
- * casos faria o mesmo número parecer o total da empresa.
- */
-export function rotuloDaContagem(total: number, view: PostoView): string {
-  const plural = total === 1 ? 'posto' : 'postos';
-  if (view === 'vagos') return `${total} ${plural} ${total === 1 ? 'vago' : 'vagos'}`;
-  if (view === 'ocupados') return `${total} ${plural} ${total === 1 ? 'ocupado' : 'ocupados'}`;
-  return `${total} ${plural}`;
+const RECORTES: readonly PostoView[] = ['todos', 'ocupados', 'vagos', 'sem-uso'];
+
+/** `?situacao=` da lista. O que não é recorte vale `todos`: o servidor recusaria com 422. */
+export function recorteDaUrl(valor: string | null): PostoView {
+  return RECORTES.find((recorte) => recorte === valor) ?? 'todos';
 }
 
 /** Uma faixa da escala: o turno e quem o cobre. */
@@ -33,6 +32,8 @@ interface TurnoDoPosto {
   turno: string;
   pessoas: string[];
 }
+
+const SEM_TURNO = 'sem turno';
 
 /**
  * Os ocupantes agrupados POR TURNO — é assim que a linha se lê ("Manhã: Laura /
@@ -47,7 +48,7 @@ export function turnosDoPosto(ocupantes: readonly PostoOcupante[]): TurnoDoPosto
   const faixas: TurnoDoPosto[] = [];
 
   for (const ocupante of ocupantes) {
-    const turno = ocupante.shift?.trim() || 'sem turno';
+    const turno = ocupante.shift?.trim() || SEM_TURNO;
     const nome = ocupante.person?.name ?? ocupante.personId;
 
     const faixa = faixas.find((item) => item.turno === turno);
@@ -56,6 +57,19 @@ export function turnosDoPosto(ocupantes: readonly PostoOcupante[]): TurnoDoPosto
   }
 
   return faixas;
+}
+
+/**
+ * A coluna Quem está, numa linha: "Manhã: Laura · Tarde: Ana". No posto vago, a frase
+ * do selo: é o sinal que a tela existe para dar.
+ */
+export function quemEstaNoPosto(posto: Pick<Posto, 'ocupantes' | 'vago' | 'totalAtivos'>): string {
+  if (posto.vago) return explicacaoDoVago(posto);
+  const faixas = turnosDoPosto(posto.ocupantes);
+  if (faixas.length === 0) return TRACO;
+  return faixas
+    .map(({ turno, pessoas }) => (turno === SEM_TURNO ? pessoas.join(', ') : `${turno}: ${pessoas.join(', ')}`))
+    .join(' · ');
 }
 
 /** "3 ativos" / "1 ativo" / "nenhum". */
