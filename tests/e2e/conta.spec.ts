@@ -31,5 +31,9 @@ test('abre Minha conta pelo menu do usuário, troca o nome e devolve o que era',
   await page.getByRole('button', { name: 'Salvar' }).click();
   await expect(page.getByRole('status')).toHaveText('Nome salvo.');
 
+  await page.getByRole('tab', { name: 'Senha' }).click();
+  await expect(page.getByLabel('Senha atual')).toBeVisible();
+  await expect(page.getByLabel('Nome completo')).toBeHidden();
+
   conferirConsole();
 });

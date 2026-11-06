@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { KeyRound } from 'lucide-react';
+import SecaoDaConta from './SecaoDaConta';
 import CampoDeSenha from '../../../components/CampoDeSenha';
 import { Aviso } from '../../../components/ui/aviso';
 import { Button } from '../../../components/ui/button';
@@ -49,9 +51,9 @@ export default function FormularioDeSenha({ pedirAtual, rotuloDoBotao, rotuloEnv
     }
   };
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {erro && <Aviso>{erro}</Aviso>}
+  const campos = (
+    <>
+      {erro && <Aviso className="md:col-span-2">{erro}</Aviso>}
 
       {pedirAtual && (
         <Campo rotulo="Senha atual" obrigatorio>
@@ -59,18 +61,26 @@ export default function FormularioDeSenha({ pedirAtual, rotuloDoBotao, rotuloEnv
         </Campo>
       )}
 
-      <Campo rotulo="Nova senha" obrigatorio ajuda="Mínimo de 12 caracteres. Trocar encerra as suas outras sessões abertas.">
+      <Campo className="md:col-start-1" rotulo="Nova senha" obrigatorio ajuda="Mínimo de 12 caracteres. Trocar encerra as suas outras sessões abertas.">
         <CampoDeSenha required autoComplete="new-password" value={nova} onChange={(e) => setNova(e.target.value)} />
       </Campo>
 
       <Campo rotulo="Repita a nova senha" obrigatorio>
         <CampoDeSenha required autoComplete="new-password" value={confirmacao} onChange={(e) => setConfirmacao(e.target.value)} />
       </Campo>
+    </>
+  );
 
-      {/* Na tela cheia da troca obrigatória o botão ocupa a largura, como no login. */}
-      <Button type="submit" disabled={enviando} className={pedirAtual ? undefined : 'w-full'}>
-        {enviando ? rotuloEnviando : rotuloDoBotao}
-      </Button>
+  // Na tela cheia da troca obrigatória o botão ocupa a largura, como no login.
+  const botao = (
+    <Button type="submit" disabled={enviando} className={pedirAtual ? undefined : 'w-full'}>
+      {pedirAtual && <KeyRound />} {enviando ? rotuloEnviando : rotuloDoBotao}
+    </Button>
+  );
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {pedirAtual ? <SecaoDaConta titulo="Trocar senha" botao={botao}>{campos}</SecaoDaConta> : <>{campos}{botao}</>}
     </form>
   );
 }
