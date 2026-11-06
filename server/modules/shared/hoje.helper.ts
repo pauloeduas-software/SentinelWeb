@@ -20,6 +20,7 @@
 // `fields.schema.ts`) usam este mesmo dia.
 // ═════════════════════════════════════════════════════════════════════════════
 
+/** O horário de Brasília: a base de fusos (IANA) não tem `America/Brasilia`, e o DF está neste. */
 export const FUSO_DO_NEGOCIO = 'America/Sao_Paulo';
 
 const CALENDARIO = new Intl.DateTimeFormat('en-US', {
