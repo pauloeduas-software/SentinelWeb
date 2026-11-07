@@ -154,9 +154,11 @@ test('na lista, Responsáveis mostra o posto sem quem o ocupa, que fica pendurad
   await expect(noPosto.getByText(`Posto ${nome}`)).toBeVisible();
   await expect(noPosto.getByText(pessoa)).toHaveCount(0);
 
+  // No card, o Responsável é só o posto. A aba Responsáveis, a primeira (BR), mostra a pessoa embaixo dele.
   await noPosto.click();
-  await expect(page.getByRole('main').getByText(`Posto ${nome}`)).toBeVisible();
-  await expect(page.getByRole('main').getByText(pessoa)).toHaveCount(0);
+  const responsavelNoCard = page.getByRole('main').getByRole('definition').filter({ hasText: `Posto ${nome}` });
+  await expect(responsavelNoCard).toBeVisible();
+  await expect(responsavelNoCard).not.toContainText(pessoa);
 
   await page.getByRole('tab', { name: 'Responsáveis 1' }).click();
   await page.getByRole('button', { name: 'Devolver' }).click();
