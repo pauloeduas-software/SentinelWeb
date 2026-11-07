@@ -192,6 +192,46 @@ test('com a senha temporária na tela, pergunta mesmo sem alteração', async ({
   await expect(painel(page)).toBeHidden();
 });
 
+test('gerada no painel, a senha tranca os campos e deixa só o Fechar', async ({ page, request }) => {
+  const nome = `Conta do rodapé ${Date.now()}`;
+  const criada = await request.post('/api/users', { data: { name: nome, email: `rodape.${Date.now()}@teste.local`, role: 'TECNICO' } });
+  expect(criada.status()).toBe(201);
+  await page.goto('/usuarios');
+  await page.getByRole('searchbox').fill(nome);
+  await page.getByRole('row', { name: new RegExp(nome) }).click();
+  await expect(painel(page).getByRole('button', { name: 'Salvar' })).toBeVisible();
+
+  // O Salvar fechava o painel sem perguntar, e a senha ia junto.
+  await painel(page).getByRole('button', { name: 'Gerar senha temporária' }).click();
+  await pergunta(page).getByRole('button', { name: 'Gerar' }).click();
+  await expect(painel(page).getByRole('button', { name: 'Copiar', exact: true })).toBeVisible();
+  await expect(painel(page).getByRole('button', { name: 'Salvar' })).toHaveCount(0);
+  await expect(painel(page).getByLabel('Nome completo')).toBeDisabled();
+
+  // O do rodapé, com texto: o X do canto também se chama Fechar.
+  await painel(page).getByRole('button', { name: 'Fechar', exact: true }).filter({ hasText: 'Fechar' }).click();
+  await expect(painel(page)).toBeHidden();
+});
+
+test('a conta desativada não oferece a senha temporária', async ({ page, request }) => {
+  const nome = `Conta desativada ${Date.now()}`;
+  const criada = await request.post('/api/users', { data: { name: nome, email: `desativada.${Date.now()}@teste.local`, role: 'TECNICO' } });
+  expect(criada.status()).toBe(201);
+  const { id } = (await criada.json()) as { id: string };
+  expect((await request.put(`/api/users/${id}`, { data: { isActive: false } })).status()).toBe(200);
+
+  await page.goto('/usuarios');
+  await page.getByRole('searchbox').fill(nome);
+  await page.getByRole('button', { name: `Ações de ${nome}` }).click();
+  await expect(page.getByRole('menuitem', { name: 'Ativar' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Gerar senha temporária' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('row', { name: new RegExp(nome) }).click();
+  await expect(painel(page).getByRole('button', { name: 'Salvar' })).toBeVisible();
+  await expect(painel(page).getByRole('button', { name: 'Gerar senha temporária' })).toHaveCount(0);
+});
+
 test('enquanto salva, clicar fora não faz nada', async ({ page }) => {
   await abrirNovaCategoria(page);
   let liberar = () => undefined as void;

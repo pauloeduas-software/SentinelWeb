@@ -1,13 +1,14 @@
 import type { Prisma } from '@prisma/client';
 import { contemTexto } from '../../shared/busca.helper';
 
-export function buildUserWhere(q?: string): Prisma.UserWhereInput {
-  if (!q) return {};
-
+/** A busca e o recorte dos cartões Ativos e Desativados (BT). */
+export function buildUserWhere(q?: string, isActive?: boolean): Prisma.UserWhereInput {
   return {
-    OR: [
-      { name: contemTexto(q) },
-      { email: contemTexto(q) },
+    // `AND`, e não espalhamento: a busca escreve `OR`, e espalhada ela apagaria
+    // outro `OR` em silêncio.
+    AND: [
+      q ? { OR: [{ name: contemTexto(q) }, { email: contemTexto(q) }] } : {},
+      isActive === undefined ? {} : { isActive },
     ],
   };
 }

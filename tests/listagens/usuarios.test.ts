@@ -5,7 +5,8 @@ import { prisma } from '../../server/infra/database/prismaClient';
 // A LISTAGEM DE USUÁRIOS — `GET /api/users`, quem opera o sistema.
 //
 // Em ordem de NOME, e sem lixeira: excluir apaga a linha (W), então a rota não
-// aceita `?view=trashed` nem tem `restore`.
+// aceita `?view=trashed` nem tem `restore`. Cada linha diz se a conta ainda está
+// com a senha temporária (CB).
 
 let api: ApiDeTeste;
 
@@ -32,7 +33,7 @@ afterAll(async () => {
 
 interface Envelope {
   total: number;
-  rows: { id: string; name: string }[];
+  rows: { id: string; name: string; mustChangePassword: boolean }[];
 }
 
 async function buscar(termo: string) {
@@ -71,5 +72,29 @@ describe('GET /api/users', () => {
       name: `Bruno ${MARCA}`, email,
     });
     expect(denovo.status).toBe(201);
+  });
+});
+
+describe('a senha temporária na lista (CB)', () => {
+  async function marcaDe(nome: string) {
+    const { body } = await buscar(nome);
+    expect(body.rows).toHaveLength(1);
+    return body.rows[0].mustChangePassword;
+  }
+
+  it('a conta nova vem marcada, e a marca cai quando a pessoa escolhe a sua', async () => {
+    await api.criarConta({ name: `Nova ${MARCA}`, email: `nova.${MARCA}@teste.local` });
+    expect(await marcaDe(`Nova ${MARCA}`)).toBe(true);
+
+    await api.criarConta({ name: `Trocou ${MARCA}`, email: `trocou.${MARCA}@teste.local` }, 'Senha-De-Teste-123');
+    expect(await marcaDe(`Trocou ${MARCA}`)).toBe(false);
+  });
+
+  it('gerar a temporária marca de novo', async () => {
+    const { id } = await api.criarConta({ name: `Esqueceu ${MARCA}`, email: `esqueceu.${MARCA}@teste.local` }, 'Senha-De-Teste-123');
+    expect(await marcaDe(`Esqueceu ${MARCA}`)).toBe(false);
+
+    expect((await api.post(`/api/users/${id}/temporary-password`)).status).toBe(200);
+    expect(await marcaDe(`Esqueceu ${MARCA}`)).toBe(true);
   });
 });

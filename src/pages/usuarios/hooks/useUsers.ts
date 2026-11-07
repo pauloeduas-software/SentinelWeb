@@ -4,10 +4,12 @@ import {
   useDeleteUser,
   useResetUserPassword,
   useUpdateUser,
+  useUserStatsQuery,
   useUsersQuery,
   type UserInput,
 } from '../../../queries/user.queries';
 import type { User } from '../../../types/user.types';
+import { ativoDoStatus, contagensDoStatusAtivo, statusAtivoDaUrl, type StatusAtivo } from '../../../helpers/status.helper';
 import { confirmar } from '../../../hooks/useConfirmacao';
 import { useListaNaUrl, usePaginaQueExiste } from '../../../hooks/useListaNaUrl';
 import { useNotificacao } from '../../../hooks/useNotificacao';
@@ -17,16 +19,18 @@ export function useUsers() {
   const notificar = useNotificacao();
   const meuId = useAuthStore((estado) => estado.usuario?.id);
   const conferirSessao = useAuthStore((estado) => estado.conferirSessao);
-  const { page, perPage, setPage, search, debouncedSearch, changeSearch } = useListaNaUrl();
+  const { page, perPage, setPage, search, debouncedSearch, changeSearch, parametros, filtrar } = useListaNaUrl();
+  const status = statusAtivoDaUrl(parametros.get('status'));
 
   const params = useMemo(
-    () => ({ page, perPage, q: debouncedSearch || undefined }),
-    [page, perPage, debouncedSearch],
+    () => ({ page, perPage, q: debouncedSearch || undefined, isActive: ativoDoStatus(status) }),
+    [page, perPage, debouncedSearch, status],
   );
 
   // A busca e a invalidação depois de gravar são da query
   // (queries/user.queries.ts). Aqui fica só estado de tela.
   const { data, isPending, error } = useUsersQuery(params);
+  const { data: stats } = useUserStatsQuery();
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
@@ -149,6 +153,10 @@ export function useUsers() {
     search,
     buscaFeita: debouncedSearch,
     changeSearch,
+    status,
+    // Clicar liga o recorte, clicar de novo desliga, e o Total limpa.
+    escolherStatus: (proximo: StatusAtivo | undefined) => filtrar('status', proximo === status ? undefined : proximo),
+    contagens: contagensDoStatusAtivo(stats),
     loading: isPending,
     // Para a tabela não dizer "nenhum usuário cadastrado" quando a consulta
     // falhou — e oferecer cadastrar o primeiro (`EstadoDaLista`).

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { KeyRound } from 'lucide-react';
+import { Copy, KeyRound } from 'lucide-react';
 import FormularioLateral from '../../../components/FormularioLateral';
 import { Button } from '../../../components/ui/button';
 import { Campo } from '../../../components/ui/campo';
@@ -41,8 +41,8 @@ interface UserFormModalProps {
   onSubmit: (data: UserInput) => Promise<string | null>;
   /**
    * Gera a senha temporária desta conta (AR) e a devolve; `null` se a pessoa
-   * desistiu na confirmação. Ausente no cadastro e na PRÓPRIA conta: a sua senha se
-   * troca em Minha conta.
+   * desistiu na confirmação. Ausente no cadastro, na PRÓPRIA conta, onde a sua senha se
+   * troca em Minha conta, e na conta desativada, que não entra.
    */
   onGerarSenhaTemporaria?: () => Promise<string | null>;
 }
@@ -60,15 +60,21 @@ export default function UserFormModal({ user, senhaGerada = null, onClose, onSub
   // A senha temporária gerada, mostrada UMA vez: o servidor só guarda o hash.
   const [temporaria, setTemporaria] = useState<string | null>(senhaGerada);
   const { copiado, copiar } = useCopiar(temporaria ?? '', 'Não foi possível copiar a senha. Selecione e copie à mão.');
-  // O cadastro deu certo: a senha da conta nova está na tela, e os campos travam.
-  const criada = !user && temporaria !== null;
+  // A senha está na tela: a da conta nova ou a temporária que acabou de valer. Os campos
+  // travam e o que resta é Fechar: salvar de novo criaria outra conta, e na edição o
+  // Salvar fechava o painel sem perguntar, levando a senha junto.
+  const senhaNaTela = temporaria !== null;
 
   const gerarTemporaria = async () => {
     if (!onGerarSenhaTemporaria) return;
     setError('');
     try {
       const senha = await onGerarSenhaTemporaria();
-      if (senha) setTemporaria(senha);
+      if (!senha) return;
+      // O que estava digitado e não foi salvo volta ao que está gravado: com os campos
+      // travados, ele pareceria salvo.
+      if (user) setFormData({ name: user.name, email: user.email, role: user.role });
+      setTemporaria(senha);
     } catch (err) {
       setError((err as Error).message);
     }
@@ -106,22 +112,21 @@ export default function UserFormModal({ user, senhaGerada = null, onClose, onSub
       erro={error}
       salvando={loading}
       perguntaAoSair={temporaria ? PERGUNTA_COM_A_SENHA_NA_TELA : undefined}
-      // Cadastrada a conta, o que resta é fechar: salvar de novo criaria outra, e um
-      // Cancelar diria que dá para desfazer a conta que já existe.
-      rodape={criada ? <Button onClick={onClose}>Fechar</Button> : undefined}
+      // Um Cancelar diria que dá para desfazer a conta criada ou a senha gerada.
+      rodape={senhaNaTela ? <Button onClick={onClose}>Fechar</Button> : undefined}
     >
       <Campo rotulo="Nome completo" obrigatorio>
-        <Input required disabled={criada} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+        <Input required disabled={senhaNaTela} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
       </Campo>
 
       <Campo rotulo="E-mail" obrigatorio>
-        <Input required disabled={criada} type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+        <Input required disabled={senhaNaTela} type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
       </Campo>
 
       <Campo rotulo="Cargo" obrigatorio ajuda={alcance}>
         <Seletor
           obrigatorio
-          disabled={criada}
+          disabled={senhaNaTela}
           value={formData.role}
           onChange={(valor) => setFormData({ ...formData, role: valor as Cargo })}
           vazio="Selecione…"
@@ -138,7 +143,7 @@ export default function UserFormModal({ user, senhaGerada = null, onClose, onSub
               <div className="flex items-center gap-2">
                 <code className="flex h-10 min-w-0 flex-1 select-all items-center overflow-x-auto rounded-md border border-border-sutil bg-bg-base px-3 font-mono text-sm text-text-primary">{temporaria}</code>
                 <Button variant="outline" onClick={() => void copiar()}>
-                  {copiado ? 'Copiada' : 'Copiar'}
+                  <Copy /> {copiado ? 'Copiada' : 'Copiar'}
                 </Button>
               </div>
               <p className="text-sm leading-relaxed text-text-secondary">

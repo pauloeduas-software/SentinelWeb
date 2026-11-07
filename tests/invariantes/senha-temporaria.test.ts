@@ -76,6 +76,20 @@ describe('gerar a senha temporária', () => {
     expect((await api.post('/api/users/00000000-0000-4000-8000-000000000000/temporary-password')).status).toBe(404);
   });
 
+  it('é 409 para a conta desativada, e a senha dela continua valendo', async () => {
+    const { id, email } = await criarConta();
+    expect((await api.put(`/api/users/${id}`, { isActive: false })).status).toBe(200);
+
+    const resposta = await api.post<{ error: string }>(`/api/users/${id}/temporary-password`);
+    expect(resposta.status).toBe(409);
+    expect(resposta.body.error).toBe('Conta desativada. Ative a conta antes de gerar a senha temporária.');
+    expect((await prisma.user.findUniqueOrThrow({ where: { id } })).mustChangePassword).toBe(false);
+
+    // Reativada, a pessoa entra com a senha que já era dela.
+    expect((await api.put(`/api/users/${id}`, { isActive: true })).status).toBe(200);
+    await entrar(email, SENHA);
+  });
+
   it('não vai para a auditoria: só o fato de ter sido gerada', async () => {
     const { id } = await criarConta();
     const temporaria = await gerarTemporaria(id);

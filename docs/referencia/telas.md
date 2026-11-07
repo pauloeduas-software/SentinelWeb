@@ -92,8 +92,9 @@ mostram a senha no painel aberto, e a troca obrigatória de senha, que já leva 
   texto, coluna Status com `PontoDeStatus` e o valor no masculino (BU), 15 por página
   (`POR_PAGINA`, também em aba de ficha e histórico) e tudo na URL (`useListaNaUrl`): status é
   cartão, categoria e tipo são `FiltroDaLista`.
-- **O cartão conta linhas da lista, e cada linha cai em um só (BT).** Tipo de status em Computadores, status em Postos e
-  Licenças, Ativos e Desativados em Estoque e Colaboradores. O número é o total da lista que ele abre, sem a busca.
+- **O cartão conta linhas da lista, e cada linha cai em um só (BT, CA).** Tipo de status em Computadores, status em Postos
+  e Licenças, Ativos e Desativados em Estoque, Colaboradores e Usuários. O número é o total da lista que ele abre, sem a
+  busca.
 - **As colunas não se mexem.** `Table` é `table-fixed`: filtrar, paginar ou esvaziar a lista não
   desloca nada. A largura vem do `TableHead`, o `⋯` é `TableHeadAcoes` e o aviso de lista vazia é
   `TableVazia`, debaixo do cabeçalho (BA).

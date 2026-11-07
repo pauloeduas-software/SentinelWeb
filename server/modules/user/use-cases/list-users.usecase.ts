@@ -21,8 +21,8 @@ function buscarPagina(where: object, query: ListQuery) {
   });
 }
 
-export async function listUsers(query: ListQuery): Promise<ListEnvelope<UserRow>> {
-  const where = buildUserWhere(query.q);
+export async function listUsers(query: ListQuery, isActive?: boolean): Promise<ListEnvelope<UserRow>> {
+  const where = buildUserWhere(query.q, isActive);
 
   const [total, rows] = await prisma.$transaction([
     prisma.user.count({ where }),

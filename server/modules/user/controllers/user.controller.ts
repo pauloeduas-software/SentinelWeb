@@ -1,9 +1,11 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { parseListQuery } from '../../../infra/http/list-query';
+import { filtroDeAtivo } from '../../shared/fields.schema';
 import { idParamSchema } from '../../shared/params.schema';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { createUserSchema, updateUserSchema } from '../schemas/user.schema';
 import { listUsers } from '../use-cases/list-users.usecase';
+import { getUserStats } from '../use-cases/user-stats.usecase';
 import { createUser } from '../use-cases/create-user.usecase';
 import { updateUser } from '../use-cases/update-user.usecase';
 import { deleteUser } from '../use-cases/delete-user.usecase';
@@ -11,7 +13,14 @@ import { resetUserPassword } from '../use-cases/reset-user-password.usecase';
 
 export const userController = {
   async list(request: FastifyRequest) {
-    return listUsers(parseListQuery(request.query));
+    // `isActive` sai antes do `parseListQuery`, que é estrito e responderia 422 a
+    // uma chave que não conhece.
+    const { isActive, ...paginacao } = (request.query ?? {}) as Record<string, unknown>;
+    return listUsers(parseListQuery(paginacao), filtroDeAtivo.parse(isActive));
+  },
+
+  async stats() {
+    return getUserStats();
   },
 
   /** A conta nasce com a senha temporária (AU), que sai uma vez, na resposta. */

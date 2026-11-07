@@ -56,6 +56,7 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
 
   // ── Usuários ──────────────────────────────────────────────────────────
   'GET /api/users': { tag: 'Usuários', resumo: 'Lista quem opera o sistema', query: 'lista' },
+  'GET /api/users/stats': { tag: 'Usuários', resumo: 'Quantas contas ativas e desativadas' },
   'POST /api/users': { tag: 'Usuários', resumo: 'Cadastra um usuário; a resposta traz a senha temporária, que aparece uma vez e a pessoa troca ao entrar', body: createUserSchema, status: 201 },
   'PUT /api/users/:id': { tag: 'Usuários', resumo: 'Edita nome, e-mail e cargo, e desativa ou ativa; senha não passa por aqui', body: updateUserSchema },
   'DELETE /api/users/:id': { tag: 'Usuários', resumo: 'Exclui o usuário (não há lixeira)' },
