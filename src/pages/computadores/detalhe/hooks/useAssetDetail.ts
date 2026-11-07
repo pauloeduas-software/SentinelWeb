@@ -5,8 +5,7 @@ import {
   useRetireAsset, useUnretireAsset, useUpdateAsset, type AssetInput,
 } from '../../../../queries/asset.queries';
 import {
-  useAssetAssignmentsQuery, useCheckinAsset, useCheckoutAsset,
-  type CheckinInput, type CheckoutInput,
+  useCheckinAsset, useCheckoutAsset, type CheckinInput, type CheckoutInput,
 } from '../../../../queries/assignment.queries';
 import { useCatalogOptionsQuery } from '../../../../queries/catalog.queries';
 import { useAssetLicensesQuery } from '../../../../queries/license.queries';
@@ -18,10 +17,13 @@ import {
 import type { RetireInput } from '../../../../types/asset.types';
 import { IDS_DAS_ABAS, type AbaId } from '../helpers/abas.helper';
 import { useAbaNaUrl } from '../../../../hooks/useAbaNaUrl';
+import { BUSCA_DA_FICHA } from '../../../../hooks/useBuscaDaFicha';
 import { confirmar } from '../../../../hooks/useConfirmacao';
+import { useBuscaLocalDaFicha } from '../../../../hooks/usePaginaLocal';
 import { useVoltaComFiltros } from '../../../../hooks/useVoltaComFiltros';
 import { useNotificacao } from '../../../../hooks/useNotificacao';
 import { erroDaFicha, linksDoErro } from '../../../../helpers/erro.helper';
+import { textoDaPosse } from '../../helpers/posse.helper';
 
 // Estado da TELA DE DETALHE. Aba, modais e o ativo em edição são de uma tela
 // só: ficam aqui, em `useState`, e não em store (docs/referencia/arquitetura.md).
@@ -29,27 +31,28 @@ import { erroDaFicha, linksDoErro } from '../../../../helpers/erro.helper';
 // Quem busca dado é a query do domínio; este hook só decide o que a tela faz
 // com ela. Nenhum componente da pasta fala HTTP.
 
-/** Qual modal está aberto. UM de cada vez, por construção: são quatro portas para o mesmo ativo. */
-type ModalAberto = 'nenhum' | 'editar' | 'clonar' | 'posse' | 'baixa';
+/** Qual modal está aberto. UM de cada vez, por construção: são cinco portas para o mesmo ativo. */
+type ModalAberto = 'nenhum' | 'editar' | 'clonar' | 'entregar' | 'devolver' | 'baixa';
 
 export function useAssetDetail() {
   const notificar = useNotificacao();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [aba, setAba] = useAbaNaUrl<AbaId>(IDS_DAS_ABAS);
+  const [aba, setAba] = useAbaNaUrl<AbaId>(IDS_DAS_ABAS, BUSCA_DA_FICHA);
   const voltar = useVoltaComFiltros('/computadores');
   const [modal, setModal] = useState<ModalAberto>('nenhum');
 
   const { data: asset, isPending, error } = useAssetQuery(id);
 
+  // A aba Responsáveis, com a busca da de Estoque e Licenças. A posse chega com o
+  // ativo: a lista tem uma linha só, ou nenhuma, e se filtra aqui.
+  const responsaveis = useBuscaLocalDaFicha(asset?.posse?.assignmentId ? [asset.posse] : [], textoDaPosse);
+
   const [paginaDoHistorico, setPaginaDoHistorico] = useState(1);
   const {
     data: historico, isPending: historicoPendente, error: erroDoHistorico,
   } = useAssetHistoryQuery(id, { page: paginaDoHistorico, limit: POR_PAGINA });
-  // A aba Posse lê o histórico de posse pela query do domínio de posse.
-  // Esta tela LÊ, não recalcula nada.
-  const { data: assignments, isPending: possePendente, error: erroDaPosse } = useAssetAssignmentsQuery(id ?? null);
 
   // O STATUS DO CLONE: o mesmo "primeiro `DEPLOYABLE`" que a listagem usa para
   // o cadastro novo (`useAssets.ts`). Clonar daqui é criar — e sem isto o clone
@@ -186,9 +189,11 @@ export function useAssetDetail() {
 
     aba,
     setAba,
+    responsaveis,
     // Sem resposta, sem número: `undefined`, e a aba fica sem contagem.
     contagens: {
-      posse: assignments?.length,
+      // Quem responde hoje, como em Estoque e Licenças: o posto conta um, tenha quantos ocupantes tiver.
+      responsaveis: asset && (asset.posse?.assignmentId != null ? 1 : 0),
       licencas: licencas?.length,
       componentes: componentes?.length,
       historico: historico?.total,
@@ -200,10 +205,6 @@ export function useAssetDetail() {
     setPaginaDoHistorico,
     historicoPendente,
     erroDoHistorico: erroDoHistorico?.message ?? null,
-
-    assignments: assignments ?? [],
-    possePendente,
-    erroDaPosse: erroDaPosse?.message ?? null,
 
     // LICENÇAS — o que está licenciado neste ativo.
     licencas: licencas ?? [],
@@ -242,7 +243,8 @@ export function useAssetDetail() {
     statusPadraoId,
     abrirEdicao: () => setModal('editar'),
     abrirClone: () => setModal('clonar'),
-    abrirPosse: () => setModal('posse'),
+    abrirEntrega: () => setModal('entregar'),
+    abrirDevolucao: () => setModal('devolver'),
     abrirBaixa: () => setModal('baixa'),
     fecharModal,
 

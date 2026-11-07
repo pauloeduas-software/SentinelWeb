@@ -22,8 +22,7 @@ export type OccupancyView = 'current' | 'all';
  * Recorte de vigência da consulta.
  *
  * Em `all` o filtro é VAZIO, não `endedAt: { not: null }`: "histórico" aqui
- * significa tudo, aberto inclusive — a tela que mostra o histórico de um posto
- * precisa mostrar quem ainda está nele no meio da lista.
+ * significa tudo, aberto inclusive — quem ainda está no posto também entrou nele.
  */
 export function buildViewWhere(view: OccupancyView): Prisma.WorkstationOccupantWhereInput {
   return view === 'current' ? { endedAt: null } : {};
@@ -37,9 +36,8 @@ export function buildViewWhere(view: OccupancyView): Prisma.WorkstationOccupantW
  * pelas ocupações já encerradas e o ocupante atual — a informação que se
  * procura — apareceria no rodapé.
  *
- * Em `view=current` a primeira chave não faz nada (todo `endedAt` é nulo); ela
- * existe para a `all`, e manter UMA ordem para as duas é o que permite a mesma
- * tabela renderizar as duas visões.
+ * Em `current` a primeira chave não faz nada (todo `endedAt` é nulo); ela existe
+ * para a `all`.
  */
 export const OCCUPANT_ORDER_BY: Prisma.WorkstationOccupantOrderByWithRelationInput[] = [
   { endedAt: { sort: 'asc', nulls: 'first' } },

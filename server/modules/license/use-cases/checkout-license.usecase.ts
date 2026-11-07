@@ -120,7 +120,7 @@ async function assertAlvoSemEntregaAberta(
   });
   if (aberta) {
     throw new AppError(
-      `${nomeDoAlvo} já está com "${nomeDaLicenca}". Uma licença vai uma vez para cada `
+      `"${nomeDaLicenca}" já está entregue a ${nomeDoAlvo}. Uma licença vai uma vez para cada `
       + 'computador ou colaborador.',
       409,
     );
@@ -173,7 +173,7 @@ async function instanteDaEntrega(
   if (devolvidaEm && dia < hojeNoBrasil(devolvidaEm)) {
     throw new AppError(
       `A entrega (${diaEmPortugues(dia)}) não pode ser antes de ${diaEmPortugues(hojeNoBrasil(devolvidaEm))}: `
-      + `até esse dia ${nomeDoAlvo} estava com "${licenca.name}".`,
+      + `até esse dia "${licenca.name}" estava entregue a ${nomeDoAlvo}.`,
       422,
     );
   }

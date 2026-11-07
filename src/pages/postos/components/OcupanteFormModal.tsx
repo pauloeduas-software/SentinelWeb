@@ -39,7 +39,7 @@ export default function OcupanteFormModal({ nomeDoPosto, onClose, onSubmit }: Oc
       // Fechar só depois do sucesso: com erro, o que foi digitado continua na
       // tela para ser corrigido em vez de redigitado.
       onClose();
-      notificar.sucesso('Ocupante adicionado.');
+      notificar.sucesso('Responsável adicionado.');
     } catch (falha) {
       setErro((falha as Error).message);
     } finally {
@@ -50,7 +50,7 @@ export default function OcupanteFormModal({ nomeDoPosto, onClose, onSubmit }: Oc
   return (
     <FormularioLateral
       titulo="Adicionar ao posto"
-      descricao={`${nomeDoPosto}: quem ocupa o posto responde por tudo que foi entregue a ele.`}
+      descricao={`${nomeDoPosto}: passa a responder por tudo que foi entregue ao posto.`}
       onClose={onClose}
       onSubmit={enviar}
       erro={erro}

@@ -302,7 +302,7 @@ describe('a entrega recusa', () => {
       `/api/licenses/${licenca.id}/checkout`, { assignedAssetId: cenario.ativo.id },
     );
     expect(status).toBe(409);
-    expect(body.error).toContain('já está com "Notion"');
+    expect(body.error).toContain('"Notion" já está entregue a');
   });
 
   it('dois alvos ou nenhum é 422; posto não é campo', async () => {
@@ -426,7 +426,7 @@ describe('a data da entrega e da devolução', () => {
       assignedPersonId: cenario.laura, checkoutAt: diaNoBrasil(-7),
     });
     expect(sobreposta.status).toBe(422);
-    expect(sobreposta.body.error).toMatch(/^A entrega \(.+\) não pode ser antes de .+: até esse dia Laura Souza estava com "Volta no tempo"\.$/);
+    expect(sobreposta.body.error).toMatch(/^A entrega \(.+\) não pode ser antes de .+: até esse dia "Volta no tempo" estava entregue a Laura Souza\.$/);
 
     // Outro alvo no mesmo período não é sobreposição — a quantidade no passado não é conferida.
     expect((await api.post(`/api/licenses/${licenca.id}/checkout`, {

@@ -772,6 +772,9 @@ o dia do cadastro. Licença e estoque já registravam o dia; o computador era o 
 
 ## AW — O computador está onde o posto fica, e o histórico diz quem ocupou o posto
 
+> **Superada em parte por [BP](#bp--o-que-já-foi-mora-na-aba-histórico):** o histórico do computador deixa de dizer quem ocupou o posto, e o id do posto
+> excluído sai. O computador continua onde o posto fica.
+
 **Decidido** (2026-11-04, na revisão de Postos, comparando com Snipe-IT, Shelf.nu, GLPI,
 ServiceNow, ManageEngine e iTop):
 
@@ -877,3 +880,150 @@ não achava o computador em lugar nenhum. O Snipe-IT não tem esse furo porque n
 
 **Descartado: devolver o computador à lista de Computadores.** Desfaria a C, que continua valendo, e a busca dali passaria a mostrar
 uma linha que a lista sem busca não mostra.
+
+---
+
+## BM — O nome é Responsável, em toda tela
+
+**Decidido** (2026-11-06, na revisão de Computadores):
+
+- **Responsável** é o nome de quem responde por computador, item, licença ou posto em toda tela: coluna, aba,
+  título e frase, e o título vai no plural, Responsáveis, mesmo com uma pessoa só. "Quem responde", "Quem está",
+  "Com quem está" e "Hoje está com" saem, e a aba Posse da ficha do computador passa a Responsáveis.
+- **"Ocupante" sai da tela, inclusive de Postos:** a coluna da lista e a aba da ficha do posto passam a Responsáveis,
+  "ocupação" vira "responsabilidade" ("Encerrar responsabilidade"), e "por ocupar o posto" vira "responsável pelo
+  posto".
+- **"Posse" sai da tela:** "Histórico de posse" vira "Histórico de responsáveis", "posse direta" vira "responsável
+  direto", e as recusas do servidor dizem "responde por" e "entregue a", em vez de "está com" e "posse aberta".
+- **Continuam,** porque não nomeiam quem responde: Ocupado e Vago, que são a situação do posto; "Entregue para",
+  que é o alvo da entrega; Colaborador no seletor e no campo das janelas de entrega, que é o cadastro de onde se
+  escolhe; e "Licenciado para", que é dado do contrato.
+- **A exceção é o componente:** na ficha do item, a aba se chama Computadores, porque a peça está instalada na máquina,
+  e ninguém responde por ela à parte. A licença entregue a um computador continua em Responsáveis.
+
+**Por quê:** a mesma pessoa tinha um nome por tela, e a tela nova escolhia entre eles. O modelo continua separando
+as duas coisas ([modelo de posse](../referencia/modelo-de-posse.md)): `WorkstationOccupant` é o cadastro do posto,
+e a responsabilidade se deriva dele. Esses nomes ficam no código e no banco, e quem usa vê um só. As decisões
+antigas citam os nomes da época e não se reescrevem.
+
+---
+
+## BN — O Devolver mora só na ficha do que foi entregue
+
+**Decidido** (2026-11-07, olhando a aba Computador do posto):
+
+- **A devolução só existe na origem:** o computador em Computadores, o item em Estoque e a licença em Licenças. A
+  ficha do posto e a do colaborador não devolvem nada: mostram o que está com eles, e a linha abre o registro, onde
+  está o Devolver. O Encerrar responsabilidade continua na aba Responsáveis do posto, porque ali o registro é o próprio
+  posto, e nada volta.
+- **A aba Computador do posto só mostra:** sem o `⋯` nem o campo do dia, ela passa para a `TabelaDaFicha`, como as
+  outras abas. Saem as duas frases dela: "A entrega é feita em Computadores; a devolução, aqui ou lá." e a que dizia
+  que o computador ainda não tem máquina vinculada. Sem máquina, a aba fica só com a linha do computador.
+- **O escopo da devolução sai da API:** o `targetWorkstationId` do `POST /api/assets/:id/checkin` só servia à ficha do
+  posto, e agora é 422, como todo campo que a rota não conhece.
+- **A recusa de excluir o posto traz o link do computador,** como já trazia o de cada item: é por ele que se chega ao
+  Devolver.
+
+**Supera em parte:** [AN](./licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura) (devolver pela ficha do
+posto com o dia), [BF](./plataforma.md#bf--a-resposta-a-um-clique-vai-para-o-cartão-do-canto-inferior-direito) (a recusa
+do Devolver na ficha do posto) e [D](./reconciliacao.md#d--a-telemetria-e-o-comando-vão-para-a-ficha-do-ativo-e-a-do-posto)
+(a devolução presa ao posto).
+
+**Por quê:** a mesma devolução tinha duas portas, e a do posto era a pior: sem status de volta nem observação. Com a
+porta só na ficha do computador, o caminho é um clique mais longo e a devolução fica inteira. A proteção contra a ficha
+velha sai junto, porque ela existia para aquele botão: quem devolve em Computadores está olhando quem responde.
+
+---
+
+## BO — Em Responsáveis vai só o nome
+
+**Decidido** (2026-11-07, olhando as listas de Computadores e Postos):
+
+- **Onde se lê Responsáveis, vai só quem responde:** o nome do posto, nunca o de quem o ocupa; o do colaborador; ou o
+  do computador, como a licença já fazia ("ATV-00009 — DT-ALM-01"). Vale na coluna das listas, no cartão da ficha, na
+  janela de devolução e nos Ociosos de Descobertas.
+- **Posto vago é a Situação do posto, e só ela diz isso:** o selo fica na lista de Postos e no card da ficha do posto.
+  Sai da lista de Computadores, do cartão e da aba Responsáveis do computador, da janela de devolução, dos Ociosos e da
+  aba Responsáveis do posto, com os avisos que explicavam o que fazer.
+- **Na lista de Postos, a coluna traz os nomes, sem turno:** os dois primeiros e quantos faltam, "Ana Souza, Bruno Lima
+  +2", com todos ao passar o mouse; sem ninguém, o traço, inclusive no posto vago. Sai a frase "1 ativo entregue aqui,
+  sem responsável.". O turno continua na aba Responsáveis do posto, onde se corrige, e na aba Postos do colaborador.
+- **Continuam:** a pessoa pendurada no posto na aba Responsáveis do computador
+  ([BL](./catalogo-e-ativo.md#bl--o-computador-no-posto-mostra-o-posto-antes-de-quem-o-ocupa)), e o `postoVago` na API,
+  que é o sinal do modelo e não uma frase de tela.
+
+**Supera em parte:** [BL](./catalogo-e-ativo.md#bl--o-computador-no-posto-mostra-o-posto-antes-de-quem-o-ocupa) (o selo
+embaixo do nome do posto) e [BF](./plataforma.md#bf--a-resposta-a-um-clique-vai-para-o-cartão-do-canto-inferior-direito)
+(o posto vago como situação em `Aviso`).
+
+**Por quê:** cada tela somava uma coisa diferente à mesma coluna: o selo em Computadores, o turno e uma frase em Postos.
+Quem lê Responsáveis pergunta só quem responde, e o resto já tem lugar: o posto vago na Situação, o turno na ficha.
+
+---
+
+## BP — O que já foi mora na aba Histórico
+
+**Decidido** (2026-11-07, olhando as abas Responsáveis do posto e do computador):
+
+- **Toda ficha tem a aba Histórico, por último, e as outras dizem só o que está agora.** O posto era a única sem
+  ela: o passado dele ficava num Atuais/Histórico dentro da aba Responsáveis, e só com pessoas. O seletor sai, e a
+  aba mostra quem está no posto agora.
+- **O Histórico do posto tem três fontes:** quem entrou e saiu, com o turno; o computador entregue e devolvido; e o
+  estoque entregue à mesa, por entrega. A licença não entra, porque não vai para posto
+  ([D39](./licencas.md#d39--assento-de-licença-não-vai-para-um-posto)). É a rota
+  `GET /api/workstations/:id/history`, no molde da do colaborador.
+- **Sai o "Histórico de responsáveis" da aba Responsáveis do computador,** que repetia a aba Histórico. A aba passa ao
+  box de Estoque e Licenças, com um item só: a pessoa, ou o posto com quem está nele, um nome embaixo do outro, e
+  desde quando, com a devolução prevista e a observação da entrega. O item não tem link, como os de Estoque e Licenças. Saem o "Entregue para",
+  o título repetido, o avatar e o selo "responsável pelo posto".
+- **Sai "quem ocupou o posto em cada entrega".** Quem passou pela mesa se lê no Histórico do posto. Saem junto a rota
+  `GET /api/assets/:id/assignments` e o `?view=` de `/occupants`, que ficaram sem leitor, e o id do posto excluído:
+  `targetWorkstationFormerId`, `workstationFormerId`, o índice e os dois CHECKs.
+
+**Supera em parte:** [AW](#aw--o-computador-está-onde-o-posto-fica-e-o-histórico-diz-quem-ocupou-o-posto) (o histórico que dizia quem ocupou o posto, e o id guardado na exclusão: o computador
+continua onde o posto fica) e
+[BL](./catalogo-e-ativo.md#bl--o-computador-no-posto-mostra-o-posto-antes-de-quem-o-ocupa) (a forma da aba Responsáveis
+e o histórico dela: a pessoa continua aparecendo só embaixo do posto).
+
+**Por quê:** a ficha do colaborador já dizia a regra: as abas dizem o que está, e o histórico diz o que foi. Estoque e
+Licenças seguiam isso; o posto e o computador tinham o passado em dois lugares, ou pela metade. A página de local do
+Snipe-IT também tem a sua aba History, junto das outras. O id do posto excluído só existia para cruzar a entrega com
+quem ocupou a mesa: sem esse cruzamento, sobraria uma coluna que ninguém lê
+([Q](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai)).
+
+**O que fica de fora, declarado:** o Histórico do computador não diz quem estava na mesa em cada entrega: isso se lê no
+do posto. O posto excluído não tem ficha, então a lista de quem passou por ele deixa de existir; cada pessoa continua
+com "Entrou no posto: Mesa 7" na própria ficha.
+
+---
+
+## BQ — Entregar e Devolver são dois botões, e a aba Responsáveis é uma só
+
+**Decidido** (2026-11-07, comparando as abas Responsáveis do computador e do posto com as de Estoque e Licenças):
+
+- **O botão do computador só entrega.** Era um botão só, no card e no `⋯` da lista, que virava Devolver com o computador
+  entregue. Agora é sempre Entregar: já entregue, ele trava com o motivo ao passar o mouse, como o do item sem unidade
+  disponível.
+- **O Devolver é um botão à parte, na linha do responsável,** como em Estoque e Licenças. Sai do `⋯` da lista de
+  Computadores, e a recusa que cita o computador leva à aba Responsáveis dele.
+- **A devolução do computador continua no painel lateral.** O botão é o mesmo, e o que ele abre, não: além do dia, o
+  computador volta com um status e pode levar notas, e foi para não perder os dois que a
+  [BN](#bn--o-devolver-mora-só-na-ficha-do-que-foi-entregue) deixou a devolução na ficha dele.
+- **A aba Responsáveis é uma só em toda ficha:** a barra com a busca e a contagem, a busca em `?quem=` e o box com uma
+  linha por responsável e a ação à direita. O computador e o posto chegam inteiros e filtram na tela
+  (`useBuscaLocalDaFicha`). A busca do posto olha o nome e o turno.
+- **No posto, a tabela vira essa linha:** o nome, o turno ao lado e, embaixo, desde quando, com o e-mail e as notas. O `⋯`
+  vira os botões Corrigir turno e Encerrar, que pedem o que falta na própria linha, como o Devolver da licença, e
+  Adicionar ao posto sobe para o card, como o Entregar. O Técnico continua vendo e usando os três.
+
+**Supera em parte:** [BB](./plataforma.md#bb--toda-lista-ficha-e-formulário-seguem-o-mesmo-molde) (Entregar ou Devolver no card: o card fica só com o Entregar).
+
+**Completa:** [BP](#bp--o-que-já-foi-mora-na-aba-histórico), que trouxe o box da aba sem a busca e sem a ação, e
+[BN](#bn--o-devolver-mora-só-na-ficha-do-que-foi-entregue), que já dizia que o Devolver mora só na ficha.
+
+**Por quê:** o mesmo gesto tinha dois desenhos. Em Estoque e Licenças, entregar fica no card e devolver, na linha de
+quem está com o registro; no computador, o mesmo botão fazia as duas coisas conforme o dado, e no posto a aba era outra
+tela. Um botão que muda de sentido sozinho é também o que deixa alguém devolver achando que ia entregar.
+
+**O que fica de fora, declarado:** a aba Responsáveis do computador tem uma linha só, e a busca nela existe pela
+padronização, não por necessidade. Devolver é um clique a mais a partir da lista de Computadores: abrir a ficha e ir à aba.

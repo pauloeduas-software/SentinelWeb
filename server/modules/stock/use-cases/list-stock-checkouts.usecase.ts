@@ -8,7 +8,7 @@ import { rotuloDoAlvo, STOCK_MOVEMENT_SELECT } from '../helpers/stock-select.hel
 
 type Unidade = Prisma.StockMovementGetPayload<{ select: typeof STOCK_MOVEMENT_SELECT }>;
 
-/** Uma linha de "Com quem está": uma entrega, com quantas unidades dela ainda estão fora. */
+/** Uma linha da aba Responsáveis: uma entrega, com quantas unidades dela ainda estão fora. */
 export interface EntregaAberta {
   /** Uma unidade da entrega — o `:id` da devolução. */
   id: string;
@@ -26,7 +26,7 @@ export interface EntregaAberta {
 
 /**
  * QUEM ESTÁ COM ESTE ITEM AGORA — a lista do detalhe, com o botão de devolver
- * em cada linha (o Retirar, no componente: a linha é o computador). O que já foi devolvido mora no histórico. É o "Com quem está"
+ * em cada linha (o Retirar, no componente: a linha é o computador). O que já foi devolvido mora no histórico. É a aba Responsáveis
  * da licença, com uma diferença que é do estoque: a linha é a ENTREGA ("Mesa 1 ·
  * 5 unidades"), não a unidade.
  *

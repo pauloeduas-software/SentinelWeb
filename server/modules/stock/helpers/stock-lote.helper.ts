@@ -3,7 +3,7 @@
 // Cada unidade é uma linha (`StockMovement`), e as N de uma mesma entrega nascem
 // no mesmo INSERT: o `createdAt` igual, com o mesmo alvo, é o que as faz UMA
 // entrega — "Mesa 1 · 5 unidades", e não cinco linhas de um. É a entrega da
-// licença, com quantidade: "Com quem está", as fichas e os históricos mostram a
+// licença, com quantidade: a aba Responsáveis, as fichas e os históricos mostram a
 // entrega, e a devolução fecha N unidades dela.
 
 /** O que uma linha precisa ter para entrar num lote. */

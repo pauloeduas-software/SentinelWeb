@@ -35,7 +35,7 @@ describe('o colaborador', () => {
     type Recusa = { error: string; refs: { tipo: string; id: string; nome: string }[] };
     const recusa = await api.put<Recusa>(`/api/people/${pessoa}`, { isActive: false });
     expect(recusa.status).toBe(409);
-    expect(recusa.body.error).toContain('tem 2 licenças (Office e VPN)');
+    expect(recusa.body.error).toContain('responde por 2 licenças (Office e VPN)');
     expect(recusa.body.error).toContain('antes de desativar');
     expect(recusa.body.refs).toEqual([
       { tipo: 'licenca', id: office.id, nome: 'Office' },
@@ -44,7 +44,7 @@ describe('o colaborador', () => {
 
     const exclusao = await api.delete<Recusa>(`/api/people/${pessoa}`);
     expect(exclusao.status).toBe(409);
-    expect(exclusao.body.error).toContain('tem 2 licenças (Office e VPN)');
+    expect(exclusao.body.error).toContain('responde por 2 licenças (Office e VPN)');
     expect(exclusao.body.refs.map((ref) => ref.nome)).toEqual(['Office', 'VPN']);
   });
 

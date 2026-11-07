@@ -35,7 +35,7 @@ export function ehComponente(item: Pick<ItemDeEstoque, 'category'>): boolean {
 
 /**
  * O item é CONSUMÍVEL (AJ)? A categoria diz: a entrega tira do total e não
- * volta — não tem "Com quem está" nem Devolver.
+ * volta — não tem a aba Responsáveis nem Devolver.
  */
 export function ehConsumivel(item: Pick<ItemDeEstoque, 'category'>): boolean {
   return item.category.type === 'CONSUMABLE';

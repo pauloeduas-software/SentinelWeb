@@ -479,6 +479,9 @@ Estoque e Licenças para ficha em página.
 
 ## BB — Toda lista, ficha e formulário seguem o mesmo molde
 
+> **Superada em parte por [BQ](./posse.md#bq--entregar-e-devolver-são-dois-botões-e-a-aba-responsáveis-é-uma-só):** o card do computador fica só com o Entregar, e o Devolver vai para a
+> linha da aba Responsáveis.
+
 **Decisão.** A revisão página por página achou a mesma coisa feita de jeitos diferentes: linha entre 45 e 57px, 10, 15
 ou 25 itens por página, quatro formas de filtrar, dois desenhos de aba e três larguras de formulário. Agora é um molde
 só. As regras de negócio não mudaram, e a única rota nova é a contagem de licenças.
@@ -543,6 +546,10 @@ o que vale, a receita de um sistema que já mudou. O que importava já estava em
   inexistente citado em comentário de código.
 
 ## BF — A resposta a um clique vai para o cartão do canto inferior direito
+
+> **Superada em parte por [BN](./posse.md#bn--o-devolver-mora-só-na-ficha-do-que-foi-entregue):** o Devolver sai da ficha do posto, e com ele a recusa dele no cartão.
+
+> **Superada em parte por [BO](./posse.md#bo--em-responsáveis-vai-só-o-nome):** o posto vago deixa de ser `Aviso` e fica só na Situação do posto.
 
 > **Superada em parte por [BK](#bk--estoque-e-licenças-têm-ficha-em-página):** o link que não abre deixa de ir para o cartão: sem janela, é falha ao carregar, no lugar da ficha.
 

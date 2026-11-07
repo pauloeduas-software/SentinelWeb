@@ -17,9 +17,7 @@ import { PERSON_PUBLIC_SELECT } from '../../person/helpers/person-select.helper'
 // a uma consulta por linha (N+1) para escrever "Mesa 1".
 //
 // `endedAt` sai SEMPRE, inclusive na visão `current` onde é nulo por definição:
-// é o campo que distingue ocupação aberta de encerrada, e o cliente que só
-// recebesse as abertas não teria como renderizar o histórico com o mesmo
-// componente.
+// é o campo que distingue ocupação aberta de encerrada.
 export const OCCUPANT_SELECT = {
   id: true,
   workstationId: true,

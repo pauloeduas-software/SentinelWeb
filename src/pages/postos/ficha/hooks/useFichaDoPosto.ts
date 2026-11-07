@@ -1,17 +1,18 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  useDeleteWorkstation, useUpdateWorkstation, useWorkstationQuery, type PostoInput,
+  useDeleteWorkstation, useUpdateWorkstation, useWorkstationHistoryQuery, useWorkstationQuery, type PostoInput,
 } from '../../../../queries/workstation.queries';
-import { useCheckinAsset } from '../../../../queries/assignment.queries';
 import { confirmar } from '../../../../hooks/useConfirmacao';
+import { POR_PAGINA } from '../../../../hooks/useListaNaUrl';
 import { useNotificacao } from '../../../../hooks/useNotificacao';
+import { useBuscaLocalDaFicha } from '../../../../hooks/usePaginaLocal';
 import { useVoltaComFiltros, useVoltaParaEstaFicha } from '../../../../hooks/useVoltaComFiltros';
 import { erroDaFicha, linksDoErro } from '../../../../helpers/erro.helper';
-import type { AtivoDoPosto } from '../../../../types/workstation.types';
+import { textoDoOcupante } from '../../helpers/ocupantes.helper';
 import { useOcupantes } from '../../hooks/useOcupantes';
 
-// Estado da FICHA DO POSTO: o formulário aberto, a devolução e o caminho de volta.
+// Estado da FICHA DO POSTO: o formulário aberto e o caminho de volta.
 // Quem busca dado é a query do domínio; nenhum componente da pasta fala HTTP.
 
 export function useFichaDoPosto() {
@@ -22,14 +23,19 @@ export function useFichaDoPosto() {
   const voltaDoComputador = useVoltaParaEstaFicha();
 
   const [editando, setEditando] = useState(false);
+  const [adicionando, setAdicionando] = useState(false);
 
   const { data: posto, isPending, error } = useWorkstationQuery(id ?? null);
-  // Os ocupantes vêm de hook próprio, que também serve o histórico — que o
-  // detalhe do posto (`GET /api/workstations/:id`) não traz.
+  // Os ocupantes vêm de hook próprio, com as ações da aba Responsáveis.
   const ocupantes = useOcupantes(id ?? null);
+  // A busca da aba, como em Estoque e Licenças. Os ocupantes chegam inteiros: filtra aqui.
+  const responsaveis = useBuscaLocalDaFicha(ocupantes.ocupantes, textoDoOcupante);
+  const [paginaDoHistorico, setPaginaDoHistorico] = useState(1);
+  const {
+    data: historico, isPending: carregandoHistorico, error: erroDoHistorico,
+  } = useWorkstationHistoryQuery(id ?? null, { page: paginaDoHistorico, limit: POR_PAGINA });
   const editar = useUpdateWorkstation();
   const excluir = useDeleteWorkstation();
-  const devolver = useCheckinAsset();
 
   // O erro sobe para o formulário mostrar a mensagem do servidor — é por aqui
   // que aparece o 409 de nome repetido e o da edição de outra pessoa (AF).
@@ -61,27 +67,6 @@ export function useFichaDoPosto() {
     }
   };
 
-  /**
-   * DEVOLVER O ATIVO DA MESA, daqui mesmo.
-   *
-   * SÓ O ESCOPO E O DIA no corpo (AM): o servidor resolve o status de volta para
-   * o primeiro `DEPLOYABLE` (`checkin-asset.usecase.ts`). O formulário completo
-   * da devolução — status de volta e observação — continua na tela Computadores,
-   * onde cabe; aqui o que se quer é tirar o equipamento DESTA mesa.
-   *
-   * E é por isso que o `targetWorkstationId` vai: a ficha pode estar velha. Entre
-   * ela carregar e o clique, o ativo pode ter sido devolvido e entregue à Laura,
-   * e um corpo vazio fecharia a posse dela. Com o posto no corpo, o servidor
-   * recusa com 409 e diz com quem o ativo está — a mensagem sobe para a ficha.
-   *
-   * A confirmação é a da linha, com o dia em que o ativo voltou, como a
-   * devolução da licença.
-   */
-  const handleDevolver = async (ativo: AtivoDoPosto, dia: string) => {
-    if (!id) return;
-    await devolver.mutateAsync({ id: ativo.id, data: { targetWorkstationId: id, checkinAt: dia } });
-  };
-
   return {
     posto: posto ?? null,
     carregando: isPending,
@@ -92,14 +77,22 @@ export function useFichaDoPosto() {
     voltar,
     voltaDoComputador,
     ocupantes,
+    responsaveis,
+    // `total` conta tudo, e as linhas são só a página.
+    historico: historico?.rows ?? [],
+    totalDoHistorico: historico?.total,
+    paginaDoHistorico,
+    setPaginaDoHistorico,
+    carregandoHistorico,
+    erroDoHistorico: erroDoHistorico?.message ?? null,
 
     editando,
     abrirEdicao: () => setEditando(true),
     fecharEdicao: () => setEditando(false),
+    adicionando,
+    abrirAdicao: () => setAdicionando(true),
+    fecharAdicao: () => setAdicionando(false),
     handleSalvar,
     handleExcluir,
-
-    devolvendo: devolver.isPending,
-    handleDevolver,
   };
 }

@@ -63,6 +63,11 @@ que corrigem algo anterior:
 | **AY** (o texto encolhe com a densidade) | **BH** | a densidade fica no espaçamento, e o texto tem piso de 12px |
 | **C** (em parte: o computador fora da lista), **Y** (em parte: a C mantida), **BI** (em parte: o descartado) | **BJ** | o computador entregue a um posto continua na lista de Computadores, e a linha diz em que mesa ele está |
 | **AE** (o link do detalhe), **AY** (detalhe é janela), **BA** (item e licença em janela), **BF** (o link que não abre no cartão) | **BK** | item e licença têm ficha em página, e o registro que não abre diz no lugar dela |
+| **BJ** (em parte: os ocupantes na coluna Responsável) | **BL** | em toda tela, o responsável que aparece é o posto ou a pessoa direta; a pessoa fica pendurada no posto, na aba Responsáveis |
+| **AN** (em parte: devolver pela ficha do posto), **BF** (em parte: a recusa do Devolver no posto), **D** (em parte: a devolução presa ao posto) | **BN** | o Devolver mora só na ficha do que foi entregue: posto e colaborador mostram, e a linha abre o registro |
+| **BL** (em parte: o selo embaixo do posto), **BF** (em parte: o posto vago em `Aviso`) | **BO** | em Responsáveis vai só o nome, sem turno; posto vago é só a Situação do posto |
+| **BB** (em parte: Entregar ou Devolver no card do computador) | **BQ** | Entregar e Devolver são dois botões, como em Estoque e Licenças, e a aba Responsáveis é uma só em toda ficha |
+| **AW** (em parte: quem ocupou em cada entrega e o id do posto excluído), **BL** (em parte: a forma da aba Responsáveis) | **BP** | o que já foi mora na aba Histórico: o posto ganha a dele, e a aba Responsáveis mostra só o que está agora |
 
 **O de-escopo (D143–D156) supera por subtração**, e é o maior grupo de supersessões do projeto:
 a decisão antiga não estava errada, o que ela governava deixou de existir. Está inteiro em

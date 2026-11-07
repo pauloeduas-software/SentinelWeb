@@ -21,6 +21,44 @@ import type { EntregaNaFicha } from './stock.types';
  */
 export type PostoView = 'todos' | 'vagos' | 'ocupados' | 'sem-uso';
 
+/**
+ * Um evento da aba Histórico do posto — `GET /api/workstations/:id/history`.
+ *
+ * TRÊS fontes numa lista só: quem entrou e saiu, o computador e o estoque entregues
+ * à mesa. Só movimentação: cadastro e edição ficam na auditoria, no banco (AB).
+ */
+export interface EventoDoPosto {
+  id: string;
+  fonte: 'OCUPACAO' | 'POSSE' | 'ESTOQUE';
+  action: string;
+  /** ISO — `JSON.parse` não reconstrói `Date`. */
+  at: string;
+  /** Preenchido só quando `fonte === 'OCUPACAO'`. */
+  ocupacao: {
+    occupantId: string;
+    personId: string;
+    personLabel: string;
+    shift: string | null;
+    notes: string | null;
+  } | null;
+  /** Preenchido só quando `fonte === 'POSSE'`. */
+  posse: {
+    assignmentId: string;
+    assetId: string;
+    /** "ATV-00012 — Dell Latitude". */
+    assetLabel: string;
+    notes: string | null;
+  } | null;
+  /** Preenchido só quando `fonte === 'ESTOQUE'` — a entrega, não a unidade. */
+  estoque: {
+    /** Nulo quando o item foi excluído: o nome continua em `itemLabel`. */
+    itemId: string | null;
+    itemLabel: string;
+    unidades: number;
+    notes: string | null;
+  } | null;
+}
+
 /** Os números dos cartões da tela: `ocupados`, `vagos` e `semUso` somam `total`. */
 export interface PostoStats {
   total: number;

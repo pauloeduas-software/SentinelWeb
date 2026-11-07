@@ -52,7 +52,7 @@ export interface ItemDeEstoque {
 }
 
 /**
- * Uma linha de "Com quem está" — `GET /api/stock/items/:id/checkouts`. É a
+ * Uma linha da aba Responsáveis — `GET /api/stock/items/:id/checkouts`. É a
  * ENTREGA ("Mesa 1 · 5 unidades"), não a unidade; `id` é o de uma unidade dela,
  * e é por ele que a devolução vai.
  */

@@ -57,7 +57,7 @@ Cada mensagem tem um lugar só (BF):
 | resposta a um clique, deu certo ou foi recusado | cartão no canto inferior direito (`useNotificacao`), um por vez, que some sozinho e espera com o mouse ou o foco em cima; com link, fica até alguém fechar. Com o painel aberto, ele sai da frente dos botões |
 | recusa de formulário | dentro dele (`FormularioLateral`, login e Minha conta): o cartão cobriria o Salvar |
 | falha ao carregar | no lugar do conteúdo (BB) |
-| situação que continua valendo (posto vago, prazo, fora do patrimônio) | `Aviso`, na tela do assunto |
+| situação que continua valendo (prazo, fora do patrimônio) | `Aviso`, na tela do assunto |
 | campo inválido | o balão do navegador (`validacao.helper.ts`) |
 | copiar | o próprio botão, por dois segundos (`useCopiar`); a falha vai para o cartão |
 
@@ -68,7 +68,14 @@ mostram a senha no painel aberto, e a troca obrigatória de senha, que já leva 
 
 - **O detalhe de um registro é página, nunca janela (BK).** Os campos moram no card, e cada aba é o que
   está com o registro. Formulário é painel lateral, por cima da ficha.
+- **O que já foi mora na aba Histórico, a última (BP).** As outras abas dizem o que está agora, e nenhuma repete o
+  passado. Toda ficha tem a sua, em `LinhaDoTempo`.
 - **A ação da ficha fica no card (`CartaoDaFicha`), e nenhuma aba repete botão (BB).**
+- **A aba Responsáveis é uma só (BQ):** a `ListToolbar` com a busca (`?quem=`) e o box com uma linha por responsável e a
+  ação à direita. O botão do card só entrega, e sem poder entregar ele trava com o motivo; o Devolver fica na linha. No
+  computador, ele abre o painel, porque a devolução pede o status de volta e as notas.
+- **O Devolver mora só na ficha do que foi entregue (BN):** o computador, o item e a licença. A ficha do posto e a do
+  colaborador mostram o que está com eles em `TabelaDaFicha`, e a linha abre o registro.
 - **A seta volta para onde a ficha foi aberta, como estava (BB, BJ).** `useVoltaComFiltros` lê o caminho no
   `state` da navegação; sem ele, como no link colado, vai para a lista. A ficha que abre outra passa
   `useVoltaParaEstaFicha`, e a `TabelaDaFicha` faz isso em toda linha. O nome na seta vem de `rotuloDaVolta`.

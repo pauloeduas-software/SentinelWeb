@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { useDebouncedValue } from './useDebouncedValue';
 
-/** A busca de "Com quem está" no endereço: `?quem=Mesa 1`. As outras fichas trazem por link. */
+/** A busca da aba Responsáveis no endereço: `?quem=Mesa 1`. As outras fichas trazem por link. */
 export const BUSCA_DA_FICHA = 'quem';
 
 /**
- * A BUSCA E A PÁGINA DE "COM QUEM ESTÁ", na ficha do item e na da licença. Moram na ficha,
+ * A BUSCA E A PÁGINA DA ABA RESPONSÁVEIS, em toda ficha que a tem. Moram na ficha,
  * e não na aba, que desmonta ao trocar. O campo é lido da URL ao abrir, como na lista
  * (`useListaNaUrl`): controlado por ela, perderia letra de quem digita rápido.
  */

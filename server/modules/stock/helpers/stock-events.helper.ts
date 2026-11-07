@@ -1,11 +1,13 @@
 import { prisma } from '../../../infra/database/prismaClient';
 import { agruparPorLote, chaveDoLote } from './stock-lote.helper';
 
-// A ENTREGA DE ESTOQUE COMO EVENTO DE HISTÓRICO — do colaborador e do computador.
+// A ENTREGA DE ESTOQUE COMO EVENTO DE HISTÓRICO — do colaborador, do computador e
+// do posto.
 //
 // O histórico do colaborador lê o estoque no NOME dele; o do computador, os
-// componentes instalados nele (AI). A forma do evento mora aqui para os dois
-// não divergirem, como a da licença (`license-events.helper.ts`).
+// componentes instalados nele (AI); o do posto, o que foi entregue à mesa. A forma
+// do evento mora aqui para os três não divergirem, como a da licença
+// (`license-events.helper.ts`).
 
 /**
  * O que um evento de estoque acrescenta: QUAL item e quantas unidades. É a
@@ -31,7 +33,7 @@ export interface EventoBaseDeEstoque {
  * As unidades que já estiveram com o alvo — abertas e devolvidas. O item
  * desativado continua aparecendo: a entrega aconteceu.
  */
-export function buscarUnidadesDoAlvo(alvo: { targetPersonId: string } | { targetAssetId: string }) {
+export function buscarUnidadesDoAlvo(alvo: { targetPersonId: string } | { targetAssetId: string } | { targetWorkstationId: string }) {
   return prisma.stockMovement.findMany({
     where: alvo,
     select: {

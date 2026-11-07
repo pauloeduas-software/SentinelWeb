@@ -34,7 +34,7 @@ const lerItem = (itemId: string) =>
   api.get<{ qty: number; emUso: number; disponivel: number; jaEntregue: boolean }>(`/api/stock/items/${itemId}`);
 
 describe('a entrega tira do total e não fica com ninguém', () => {
-  it('o total cai, nada fica em uso, e "Com quem está" fica vazio', async () => {
+  it('o total cai, nada fica em uso, e a aba Responsáveis fica vazia', async () => {
     const toner = await consumivel('Toner da entrega', 10);
     const entrega = await entregar(toner.id, { targetType: 'PERSON', targetPersonId: cenario.laura, qty: 3 });
 

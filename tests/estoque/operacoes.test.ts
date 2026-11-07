@@ -153,7 +153,7 @@ describe('com quem está', () => {
     // Mais do que ficou é 409 com a conta; o resto, sem `qty`, volta inteiro.
     const demais = await devolver(qualquer, { qty: 2 });
     expect(demais.status).toBe(409);
-    expect(demais.body.error).toMatch(/Só 1 unidade desta entrega .* ainda está com Mesa 1/);
+    expect(demais.body.error).toMatch(/Só 1 unidade desta entrega .* ainda está entregue a Mesa 1/);
     expect((await devolver(qualquer)).body).toMatchObject({ devolvidas: 1, ficaram: 0 });
     expect((await api.get<{ rows: Entrega[] }>(`/api/stock/items/${fone.id}/checkouts`)).body.rows).toEqual([]);
 

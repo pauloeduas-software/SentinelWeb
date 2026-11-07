@@ -21,7 +21,7 @@ interface AddOccupantData {
 const CAMPOS_AUDITADOS = ['workstationId', 'personId', 'shift', 'startedAt', 'notes'] as const;
 
 /** A mesma frase nos dois caminhos — ver a nota sobre a dupla guarda abaixo. */
-const JA_OCUPA = 'Este colaborador já ocupa este posto.';
+const JA_OCUPA = 'Este colaborador já é responsável por este posto.';
 
 /**
  * O DIA EM QUE A OCUPAÇÃO COMEÇA contra a última da mesma pessoa no mesmo posto
@@ -50,7 +50,7 @@ async function inicioDaOcupacao(
   const terminouEm = anterior?.endedAt;
   if (terminouEm && dia < hojeNoBrasil(terminouEm)) {
     throw new AppError(
-      `A ocupação (${diaEmPortugues(dia)}) não pode começar antes do fim da anterior de ${nome} neste posto `
+      `A responsabilidade (${diaEmPortugues(dia)}) não pode começar antes do fim da anterior de ${nome} neste posto `
       + `(${diaEmPortugues(hojeNoBrasil(terminouEm))}).`,
       422,
     );
@@ -130,7 +130,7 @@ export async function addWorkstationOccupant(
       //
       // 409 e não 404: a pessoa existe, o estado dela é que recusa.
       if (!pessoa.isActive) {
-        throw new AppError(`${pessoa.name} está desativado(a) e não pode ocupar um posto de trabalho.`, 409);
+        throw new AppError(`${pessoa.name} está desativado(a) e não pode ser responsável por um posto de trabalho.`, 409);
       }
 
       const aberta = await tx.workstationOccupant.findFirst({

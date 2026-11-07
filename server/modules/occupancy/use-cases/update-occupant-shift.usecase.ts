@@ -41,11 +41,11 @@ export async function updateOccupantShift(
       select: { id: true, shift: true, endedAt: true },
     });
 
-    if (!antes) throw new AppError('Ocupação não encontrada.', 404);
+    if (!antes) throw new AppError('Responsabilidade não encontrada.', 404);
 
     // Ocupação ENCERRADA não muda de turno: ela é histórico, e histórico que se
     // edita não serve para responder nada.
-    const ENCERRADA = 'Esta ocupação já foi encerrada e não pode ser alterada.';
+    const ENCERRADA = 'Esta responsabilidade já foi encerrada e não pode ser alterada.';
     if (antes.endedAt !== null) throw new AppError(ENCERRADA, 409);
 
     // O MESMO turno não é correção: sem escrita e sem linha no histórico — um

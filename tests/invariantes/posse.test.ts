@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import {
-  cenarioDePosse, criarAtivo, criarColaborador, criarLicenca, criarPosto, diasAFrente, idsDoSeed, motivoDaBaixa,
+  cenarioDePosse, criarAtivo, criarColaborador, criarLicenca, diasAFrente, idsDoSeed, motivoDaBaixa,
 } from '../helpers/fixtures';
 import { prisma } from '../../server/infra/database/prismaClient';
 
@@ -170,50 +170,6 @@ describe('invariante 4 — estado × posse', () => {
 
     const { status } = await api.put(`/api/assets/${ativo.id}`, { statusId: manutencao.id });
     expect(status).toBe(200);
-  });
-});
-
-describe('a devolução escopada ao posto', () => {
-  // A ficha do posto manda `targetWorkstationId` no checkin: a posse só fecha se
-  // for DAQUELE posto. Sem isso, uma ficha velha — o ativo foi devolvido e
-  // entregue a outra pessoa entre o carregar e o clique — fecharia a posse da
-  // pessoa achando que tirava um mouse da mesa.
-  it('recusa fechar a posse que não é deste posto, e diz com quem o ativo está', async () => {
-    const mesa2 = await criarPosto(api, { name: 'Mesa 2 do escopo' });
-    const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
-
-    // Entregue à Laura, não à Mesa 1: é a ficha velha da Mesa 1 clicando.
-    expect((await api.post(`/api/assets/${ativo.id}/checkout`, {
-      targetType: 'PERSON', targetPersonId: cenario.laura,
-    })).status).toBe(201);
-
-    const { status, body } = await api.post<{ error: string }>(`/api/assets/${ativo.id}/checkin`, {
-      targetWorkstationId: cenario.mesa1,
-    });
-    expect(status).toBe(409);
-    expect(body.error).toMatch(/n[ãa]o est[áa] entregue a este posto/i);
-    expect(body.error).toContain('Laura Souza');
-
-    // E a posse da Laura continua aberta: é o que o escopo existe para proteger.
-    const aberta = await prisma.assignment.findFirst({ where: { assetId: ativo.id, checkinAt: null } });
-    expect(aberta?.targetPersonId).toBe(cenario.laura);
-
-    // Posse em OUTRO posto é a mesma recusa: Mesa 2 não devolve o que é da Mesa 1.
-    expect((await api.post(`/api/assets/${ativo.id}/checkin`, {})).status).toBe(200);
-    expect((await api.post(`/api/assets/${ativo.id}/checkout`, {
-      targetType: 'WORKSTATION', targetWorkstationId: cenario.mesa1,
-    })).status).toBe(201);
-    const deOutraMesa = await api.post<{ error: string }>(`/api/assets/${ativo.id}/checkin`, {
-      targetWorkstationId: mesa2,
-    });
-    expect(deOutraMesa.status).toBe(409);
-    expect(deOutraMesa.body.error).toContain('Mesa 1');
-
-    // Do posto certo, fecha.
-    expect((await api.post(`/api/assets/${ativo.id}/checkin`, {
-      targetWorkstationId: cenario.mesa1,
-    })).status).toBe(200);
-    expect(await prisma.assignment.count({ where: { assetId: ativo.id, checkinAt: null } })).toBe(0);
   });
 });
 

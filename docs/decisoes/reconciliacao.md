@@ -860,6 +860,8 @@ sai da lista **depois** de pontuar, como o ativo já ocupado — tirá-lo antes 
 
 ## D — A telemetria e o comando vão para a ficha do ativo e a do posto
 
+> **Superada em parte por [BN](./posse.md#bn--o-devolver-mora-só-na-ficha-do-que-foi-entregue):** a ficha do posto não devolve mais, e a devolução presa ao posto sai da API.
+
 **Decidido:** a tela de frota (`/`) sai — `/` redireciona para `/ativos` e o item Telemetria
 deixa o menu. `GET /api/endpoints/:id` nasce: a telemetria passa a ser consultada por máquina,
 não pela frota inteira a cada ciclo. `POST /api/endpoints/:hwid/command` vira

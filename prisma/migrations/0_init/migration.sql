@@ -264,7 +264,6 @@ CREATE TABLE "assignments" (
     "targetPersonId" UUID,
     "targetWorkstationId" UUID,
     "targetWorkstationName" TEXT,
-    "targetWorkstationFormerId" UUID,
     "checkoutAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "expectedCheckinAt" TIMESTAMP(3),
     "checkinAt" TIMESTAMP(3),
@@ -282,7 +281,6 @@ CREATE TABLE "workstation_occupants" (
     "workstationId" UUID,
     "personId" UUID NOT NULL,
     "workstationName" TEXT,
-    "workstationFormerId" UUID,
     "shift" TEXT,
     "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "endedAt" TIMESTAMP(3),
@@ -545,9 +543,6 @@ CREATE INDEX "workstation_occupants_workstationId_endedAt_idx" ON "workstation_o
 CREATE INDEX "workstation_occupants_personId_endedAt_idx" ON "workstation_occupants"("personId", "endedAt");
 
 -- CreateIndex
-CREATE INDEX "workstation_occupants_workstationFormerId_idx" ON "workstation_occupants"("workstationFormerId");
-
--- CreateIndex
 CREATE INDEX "licenses_categoryId_idx" ON "licenses"("categoryId");
 
 -- CreateIndex
@@ -767,14 +762,6 @@ ALTER TABLE "workstation_occupants" ADD CONSTRAINT "workstation_occupants_posto_
   "workstationId" IS NOT NULL OR ("endedAt" IS NOT NULL AND "workstationName" IS NOT NULL)
 );
 
--- O ID DO POSTO EXCLUÍDO (AW), por escrito e sem FK: só na ocupação que o
--- `beforeDelete` desligou — encerrada, sem a ligação e com o nome. É por ele que
--- o histórico do ativo acha quem ocupou o posto que saiu.
-ALTER TABLE "workstation_occupants" ADD CONSTRAINT "workstation_occupants_posto_excluido" CHECK (
-  "workstationFormerId" IS NULL
-  OR ("workstationId" IS NULL AND "endedAt" IS NOT NULL AND "workstationName" IS NOT NULL)
-);
-
 -- A SAÍDA NÃO ANTECEDE A ENTRADA, como a devolução da posse. `>=`: entrar e
 -- sair no mesmo instante é o mesmo dia, e o encerramento iguala os dois.
 ALTER TABLE "workstation_occupants" ADD CONSTRAINT "workstation_occupants_fim_nao_antecede_inicio" CHECK (
@@ -795,7 +782,7 @@ CREATE UNIQUE INDEX "sugestao_pendente_por_alvo"
   )
   WHERE "state" = 'PENDING';
 
--- ── INVARIANTE 5: A FORMA DA POSSE — três CHECKs ──────────────────────────
+-- ── INVARIANTE 5: A FORMA DA POSSE — dois CHECKs ──────────────────────────
 --
 -- O alvo é UM, pessoa OU posto — não há mais alvo `ASSET` (K): um computador
 -- não é entregue a outro. Cada ramo diz qual FK está preenchida e que a outra
@@ -812,14 +799,6 @@ ALTER TABLE "assignments" ADD CONSTRAINT "assignments_alvo_coerente" CHECK (
           "targetWorkstationId" IS NOT NULL
        OR ("checkinAt" IS NOT NULL AND "targetWorkstationName" IS NOT NULL)
      ))
-);
-
--- O ID DO POSTO EXCLUÍDO (AW), como na ocupação: só na posse a um posto que o
--- `beforeDelete` desligou — devolvida, sem a ligação e com o nome.
-ALTER TABLE "assignments" ADD CONSTRAINT "assignments_posto_excluido" CHECK (
-  "targetWorkstationFormerId" IS NULL
-  OR ("targetType" = 'WORKSTATION' AND "targetWorkstationId" IS NULL
-      AND "checkinAt" IS NOT NULL AND "targetWorkstationName" IS NOT NULL)
 );
 
 -- A DEVOLUÇÃO NÃO ANTECEDE A ENTREGA. `>=` e não `>`: entrega e devolução no

@@ -75,8 +75,7 @@ a conta de quem opera o sistema, que é `User` e não recebe equipamento
 - **Fechada** = `checkinAt` preenchido. É histórico, e histórico não se apaga.
   Nem quando o alvo sai: o colaborador excluído vai para a lixeira (a linha
   fica), e o posto excluído deixa o nome por escrito em `targetWorkstationName`
-  e o id em `targetWorkstationFormerId` ([AW](../decisoes/posse.md#aw--o-computador-está-onde-o-posto-fica-e-o-histórico-diz-quem-ocupou-o-posto),
-  [V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira),
+  ([V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira),
   [Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)).
 - **Uma aberta por ativo**, garantida por índice único parcial no banco —
   não por regra de aplicação que alguém pode esquecer:
@@ -105,8 +104,7 @@ a conta de quem opera o sistema, que é `User` e não recebe equipamento
   | compra do computador editada para depois da primeira entrega, ou da baixa | 422 `A data de compra (…) não pode ser depois da primeira entrega de ATV-00012 (…).` |
 
   As recusas de estado olham **hoje**: o colaborador desativado recusa a
-  entrega no passado mesmo que, naquele dia, estivesse em ordem. A ficha do
-  posto também devolve com o dia ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)). A compra do
+  entrega no passado mesmo que, naquele dia, estivesse em ordem. A compra do
   computador não é futura (422).
 - **O computador entregue não vai para a lixeira**
   ([AL](../decisoes/posse.md#al--o-computador-entregue-não-vai-para-a-lixeira)):
@@ -126,7 +124,7 @@ Uma linha por pessoa que ocupa um posto, com o turno.
   `{ endedAt: 'AAAA-MM-DD' }` no corpo; sem ele, é agora.
 - `shift` é **texto livre** (`"Manhã"`, `"Tarde"`, `"12x36 A"`). Enum engessaria
   escalas reais; faixa de horário seria agenda, não inventário.
-- **O turno se corrige no lugar, na ocupação aberta.** O lápis **Corrigir turno** do
+- **O turno se corrige no lugar, na ocupação aberta.** O botão **Corrigir turno** do
   painel de ocupantes da ficha do posto abre o campo na própria linha — Enter salva,
   Esc cancela, vazio apaga o turno — e grava só o `shift`
   (`PATCH /api/workstations/:id/occupants/:occupantId`, com trilha na auditoria). A linha
@@ -161,13 +159,19 @@ resolverResponsaveis(ativo):
 **Nunca é coluna.** Coluna seria uma quarta fonte de verdade para o que as
 Camadas 1 e 2 já dizem, e a divergência entre elas seria silenciosa.
 
-**E no passado** ([AW](../decisoes/posse.md#aw--o-computador-está-onde-o-posto-fica-e-o-histórico-diz-quem-ocupou-o-posto)):
-"quem respondia por este computador em março?" é a mesma junção, sobre as
-linhas fechadas. O histórico de posse do ativo (`GET /api/assets/:id/assignments`)
-traz, em cada entrega a um posto, as ocupações que dividem ao menos um dia com
-ela — inclusive na entrega aberta. Também calculado na hora, nunca guardado. O
-posto excluído cruza pelo id que a exclusão guardou (`targetWorkstationFormerId`,
-`workstationFormerId`), nunca pelo nome.
+**A tela mostra o alvo, não a derivação**
+([BL](../decisoes/catalogo-e-ativo.md#bl--o-computador-no-posto-mostra-o-posto-antes-de-quem-o-ocupa)):
+entregue a um posto, o responsável que aparece é o posto, em toda tela. A pessoa
+só aparece pendurada nele, na aba Responsáveis da ficha do computador. "Ocupante" e
+"posse" são nomes do modelo: na tela, tudo é Responsável
+([BM](../decisoes/posse.md#bm--o-nome-é-responsável-em-toda-tela)). Em Responsáveis vai só
+o nome: nem turno, nem posto vago, que é a Situação do posto
+([BO](../decisoes/posse.md#bo--em-responsáveis-vai-só-o-nome)).
+
+**E no passado** ([BP](../decisoes/posse.md#bp--o-que-já-foi-mora-na-aba-histórico)): quem entrou e saiu de um posto, e o
+que passou por ele, está na aba Histórico da ficha do posto
+(`GET /api/workstations/:id/history`). A do computador diz para quem ele foi
+entregue, e a do colaborador, por onde a pessoa passou.
 
 ---
 
@@ -208,7 +212,7 @@ dependem de o vazio **continuar vazio**:
 
 | Leitor | O que ele perde com o `else` |
 |---|---|
-| `PosseResolvida.postoVago` | a marca na ficha do ativo nunca mais acende |
+| `PosseResolvida.postoVago` | o sinal nunca mais acende na resposta do ativo |
 | `GET /api/workstations?view=vagos` | a lista de posto sem ocupante fica vazia |
 | `GET /api/reconciliation/idle` | o ativo parado em posto vago deixa de ser achável — e é ele que a reconciliação cruza com a telemetria |
 
@@ -308,9 +312,6 @@ CREATE UNIQUE INDEX "assignments_um_aberto_por_posto"
 CREATE INDEX ON "assignments"("assetId", "checkinAt");
 CREATE INDEX ON "workstation_occupants"("workstationId", "endedAt");
 CREATE INDEX ON "workstation_occupants"("personId", "endedAt");
-
--- o histórico de posse do ativo, pelo id do posto excluído (AW)
-CREATE INDEX ON "workstation_occupants"("workstationFormerId");
 ```
 
 Os três primeiros são **parciais**, o mesmo padrão já usado em `assets.assetTag`

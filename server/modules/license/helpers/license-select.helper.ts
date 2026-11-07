@@ -110,7 +110,7 @@ export const CHECKOUT_SELECT = {
 } as const;
 
 /**
- * Uma entrega com a chave dela — só para o "Com quem está" do detalhe. Uma das
+ * Uma entrega com a chave dela — só para a aba Responsáveis do detalhe. Uma das
  * chaves da licença, ou nula na entrega sem chave (AC).
  */
 export const CHECKOUT_COM_CHAVE_SELECT = {

@@ -3,15 +3,15 @@ import SeloDoPosto from './SeloDoPosto';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
 import { Card } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableNome, TableRow } from '../../../components/ui/table';
-import { TRACO, quemEstaNoPosto, resumoDeAtivos } from '../helpers/postos.helper';
+import { TRACO, nomesDoPosto, quemEstaNoPosto, resumoDeAtivos } from '../helpers/postos.helper';
 import type { Posto } from '../../../types/workstation.types';
 
 // A lista de postos. Apresentacional: recebe as linhas prontas e devolve o
 // clique — não conhece query nem HTTP (docs/referencia/arquitetura.md).
 //
 // O que cada linha responde, e que nenhuma tela de ITAM de prateleira responde:
-// QUEM está na mesa, EM QUE TURNO, QUANTO equipamento ela segura, e se está
-// VAGA — equipamento parado sem ninguém respondendo (docs/referencia/modelo-de-posse.md).
+// QUEM está na mesa, QUANTO equipamento ela segura, e se está VAGA — equipamento
+// parado sem ninguém respondendo (docs/referencia/modelo-de-posse.md).
 //
 // A LINHA INTEIRA ABRE A FICHA, e, para o SUPERVISOR, o CADASTRO fica no `⋯` —
 // Editar e Excluir, na ordem de Configurações: o destrutivo fica na ponta. Sem
@@ -37,7 +37,7 @@ export default function PostosTable({
           <TableRow>
             <TableHead>Posto</TableHead>
             <TableHead className="hidden w-[16%] md:table-cell">Localização</TableHead>
-            <TableHead>Quem está</TableHead>
+            <TableHead>Responsáveis</TableHead>
             <TableHead className="hidden w-28 md:table-cell">Ativos</TableHead>
             <TableHead className="w-36">Situação</TableHead>
             {podeEditar && <TableHeadAcoes />}
@@ -49,7 +49,7 @@ export default function PostosTable({
               <TableRow key={posto.id} onClick={() => onAbrir(posto)}>
                 <TableCell><TableNome>{posto.name}</TableNome></TableCell>
                 <TableCell className="hidden md:table-cell">{posto.location.name}</TableCell>
-                <TableCell>{quemEstaNoPosto(posto)}</TableCell>
+                <TableCell title={nomesDoPosto(posto).join(', ')}>{quemEstaNoPosto(posto)}</TableCell>
                 <TableCell className="hidden md:table-cell">
                   {posto.totalAtivos > 0 ? resumoDeAtivos(posto.totalAtivos) : TRACO}
                 </TableCell>

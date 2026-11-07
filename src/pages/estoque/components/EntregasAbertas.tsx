@@ -10,7 +10,7 @@ import { diaDoInstante, formatarDiaDoInstante, hojeNoCampoDeData } from '../../.
 import { textoDeUnidades } from '../../../helpers/estoque.helper';
 
 // QUEM ESTÁ COM O ITEM AGORA — uma linha por ENTREGA ("Mesa 1 · 5 unidades ·
-// desde…"), com o botão de devolver. É o "Com quem está" da licença
+// desde…"), com o botão de devolver. É a aba Responsáveis da licença
 // (`EntregasAbertas.tsx`), com quantidade.
 //
 // DEVOLVER PERGUNTA QUANTAS E O DIA, na própria linha: vem com todas e com
@@ -50,7 +50,7 @@ export default function EntregasAbertas({ entregas, carregando, erro, vazio, ocu
   };
 
   if (entregas.length === 0) {
-    return <CartaoVazio icone={Users} carregando={carregando} erro={erro} frase={vazio ?? 'Ninguém está com este item agora.'} />;
+    return <CartaoVazio icone={Users} carregando={carregando} erro={erro} frase={vazio ?? 'Nenhum responsável por este item agora.'} />;
   }
 
   const hoje = hojeNoCampoDeData();

@@ -4,7 +4,6 @@ import { idParamSchema } from '../../shared/params.schema';
 import { checkinSchema, checkoutSchema } from '../schemas/assignment.schema';
 import { checkoutAsset } from '../use-cases/checkout-asset.usecase';
 import { checkinAsset } from '../use-cases/checkin-asset.usecase';
-import { listAssetAssignmentsWithOccupants } from '../use-cases/list-asset-assignments.usecase';
 
 // Só HTTP. Sem try/catch: o `parse` do schema rejeita e a rejeição cai no
 // errorHandler, que devolve 422 com o campo que falhou — e os `AppError` dos
@@ -27,11 +26,6 @@ export const assignmentController = {
     const data = checkinSchema.parse(request.body ?? {});
     // 200, e não 201: a devolução FECHA a posse que já existia.
     return checkinAsset(id, data, atorDaRequisicao(request));
-  },
-
-  async history(request: FastifyRequest) {
-    const { id } = idParamSchema.parse(request.params);
-    return listAssetAssignmentsWithOccupants(id);
   },
 
   // Sem query string nenhuma, e é de propósito: o recorte é a definição de

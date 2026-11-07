@@ -96,9 +96,7 @@ export interface Asset {
    * A responsabilidade RESOLVIDA desta linha (Camada 3 do docs/referencia/modelo-de-posse.md),
    * calculada pelo servidor para a tela não fazer uma consulta por ativo.
    *
-   * Vem no contrato de `GET /api/assets`. Continua sendo lida por
-   * `resumoDaPosse()` (pages/computadores/helpers), que trata a ausência: entre
-   * a subida do frontend e a do backend, o campo simplesmente não chega.
+   * Vem no contrato de `GET /api/assets`.
    */
   posse: PosseResolvida | null;
 

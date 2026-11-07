@@ -156,7 +156,7 @@ describe('o componente fica no computador até o Retirar', () => {
     ]);
   });
 
-  it('"Em quais computadores" acha pela etiqueta, e não mostra o de outro computador', async () => {
+  it('a aba Computadores acha pela etiqueta, e não mostra o de outro computador', async () => {
     const ram = await componente('RAM da busca', 2);
     const [um, outro] = await Promise.all([maquina('Primeiro'), maquina('Segundo')]);
     await noComputador(ram.id, um.id);

@@ -81,7 +81,7 @@ export default function ColaboradorPage() {
             <TabelaDaFicha
               colunas={[{ rotulo: 'Computador' }, { rotulo: 'Modelo', className: 'w-[24%]' }, { rotulo: 'Devolução prevista', className: 'w-48' }, DESDE]}
               icone={Monitor}
-              vazio="Não está com nenhum computador."
+              vazio="Não é responsável por nenhum computador."
               linhas={pessoa.ativos.map((posse) => ({
                 id: posse.id,
                 para: `/computadores/${posse.asset.id}`,
@@ -104,7 +104,7 @@ export default function ColaboradorPage() {
               icone={MapPin}
               carregando={carregandoOcupacoes}
               erro={erroDasOcupacoes}
-              vazio="Não ocupa nenhum posto."
+              vazio="Não é responsável por nenhum posto."
               linhas={ocupacoes.map((ocupacao) => ({
                 id: ocupacao.id,
                 para: ocupacao.workstation ? `/postos/${ocupacao.workstation.id}` : undefined,
@@ -119,7 +119,7 @@ export default function ColaboradorPage() {
             <TabelaDaFicha
               colunas={[{ rotulo: 'Item' }, { rotulo: 'Categoria', className: 'w-[24%]' }, { rotulo: 'Quantidade', className: 'w-40' }, DESDE]}
               icone={Package}
-              vazio="Não está com nenhum item de estoque."
+              vazio="Não é responsável por nenhum item de estoque."
               linhas={pessoa.itens.map((entrega) => ({
                 id: entrega.id,
                 para: caminhoDoItem(entrega.item.id, pessoa.name),
@@ -135,7 +135,7 @@ export default function ColaboradorPage() {
             <TabelaDaFicha
               colunas={[{ rotulo: 'Licença' }, { rotulo: 'Categoria', className: 'w-[24%]' }, { rotulo: 'Vencimento', className: 'w-44' }, { rotulo: 'Situação', className: 'w-36' }, DESDE]}
               icone={KeyRound}
-              vazio="Não está com nenhuma licença."
+              vazio="Não é responsável por nenhuma licença."
               linhas={pessoa.licencas.map((entrega) => ({
                 id: entrega.id,
                 para: caminhoDaLicenca(entrega.license.id, pessoa.name),

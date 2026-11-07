@@ -4,7 +4,7 @@
 
 /**
  * O endereço da ficha de um item. `busca` é quem está com ele — o nome do
- * colaborador ou do posto —, e "Com quem está" já abre filtrado.
+ * colaborador ou do posto —, e a aba Responsáveis já abre filtrada.
  */
 export function caminhoDoItem(itemId: string, busca?: string): string {
   const parametros = busca ? `?${new URLSearchParams({ quem: busca }).toString()}` : '';

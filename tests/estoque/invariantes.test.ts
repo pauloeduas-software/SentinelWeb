@@ -410,7 +410,7 @@ describe('invariante 6 — a ponta do estoque', () => {
     type Recusa = { error: string; refs: { tipo: string; id: string; nome: string }[] };
     const { status, body } = await api.put<Recusa>(`/api/people/${pessoa}`, { isActive: false });
     expect(status).toBe(409);
-    expect(body.error).toContain('está com 3 unidades de estoque (Mouse do Pedro ×2 e Teclado do Pedro)');
+    expect(body.error).toContain('responde por 3 unidades de estoque (Mouse do Pedro ×2 e Teclado do Pedro)');
     expect(body.refs).toEqual([
       { tipo: 'estoque', id: mouse.id, nome: 'Mouse do Pedro' },
       { tipo: 'estoque', id: teclado.id, nome: 'Teclado do Pedro' },

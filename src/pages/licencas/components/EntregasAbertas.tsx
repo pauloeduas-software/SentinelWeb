@@ -66,7 +66,7 @@ export default function EntregasAbertas({ entregas, carregando, erro, chaves, va
   };
 
   if (entregas.length === 0) {
-    return <CartaoVazio icone={Users} carregando={carregando} erro={erro} frase={vazio ?? 'Ninguém está com esta licença agora.'} />;
+    return <CartaoVazio icone={Users} carregando={carregando} erro={erro} frase={vazio ?? 'Nenhum responsável por esta licença agora.'} />;
   }
 
   const hoje = hojeNoCampoDeData();

@@ -24,9 +24,9 @@ export type AlvoPosse = 'PERSON' | 'WORKSTATION';
 /**
  * COMO a responsabilidade chegou até a pessoa.
  *
- * Vai para a tela porque "Laura, direto" e "Laura, pelo posto Mesa 1 no turno
- * da manhã" são fatos diferentes sobre o mesmo ativo: o primeiro se desfaz com
- * uma devolução, o segundo com uma troca de escala.
+ * "Laura, direto" e "Laura, pelo posto Mesa 1 no turno da manhã" são fatos
+ * diferentes sobre o mesmo ativo: o primeiro se desfaz com uma devolução, o
+ * segundo com uma troca de escala.
  */
 type ViaPosse = 'DIRETO' | 'POSTO';
 
@@ -49,6 +49,10 @@ export interface PosseResolvida {
   responsaveis: Responsavel[];
   /** Quando a posse aberta começou — o `min` do dia da devolução (AM). */
   checkoutAt: Date | null;
+  /** Quando a entrega deve voltar: é a aba Responsáveis que mostra. */
+  expectedCheckinAt: Date | null;
+  /** A observação da entrega: a aba Responsáveis mostra, como em Estoque e Licenças. */
+  checkoutNotes: string | null;
   /**
    * Alvo WORKSTATION sem NENHUM ocupante aberto — equipamento parado em posto
    * vazio. Não é erro: é o sinal operacional que o docs/referencia/modelo-de-posse.md pede e que
@@ -63,7 +67,10 @@ export interface PosseResolvida {
  * posse, e um `push` de quem recebe contaminaria todos de uma vez.
  */
 function semPosse(): PosseResolvida {
-  return { assignmentId: null, targetType: null, targetLabel: null, responsaveis: [], checkoutAt: null, postoVago: false };
+  return {
+    assignmentId: null, targetType: null, targetLabel: null, responsaveis: [],
+    checkoutAt: null, expectedCheckinAt: null, checkoutNotes: null, postoVago: false,
+  };
 }
 
 // O mínimo que a resolução precisa de uma posse aberta.
@@ -74,6 +81,8 @@ const SELECT_POSSE = {
   targetPersonId: true,
   targetWorkstationId: true,
   checkoutAt: true,
+  expectedCheckinAt: true,
+  checkoutNotes: true,
 } as const;
 
 interface PosseAberta {
@@ -83,6 +92,8 @@ interface PosseAberta {
   targetPersonId: string | null;
   targetWorkstationId: string | null;
   checkoutAt: Date;
+  expectedCheckinAt: Date | null;
+  checkoutNotes: string | null;
 }
 
 interface Pessoa {
@@ -125,6 +136,8 @@ function montar(posse: PosseAberta, dicionarios: Dicionarios): PosseResolvida {
       targetLabel: pessoa?.name ?? null,
       responsaveis: pessoa ? [pessoaComoResponsavel(pessoa)] : [],
       checkoutAt: posse.checkoutAt,
+      expectedCheckinAt: posse.expectedCheckinAt,
+      checkoutNotes: posse.checkoutNotes,
       postoVago: false,
     };
   }
@@ -137,6 +150,8 @@ function montar(posse: PosseAberta, dicionarios: Dicionarios): PosseResolvida {
     targetLabel: nomeDoPosto,
     responsaveis: ocupantes.map((ocupante) => ocupanteComoResponsavel(ocupante, nomeDoPosto)),
     checkoutAt: posse.checkoutAt,
+    expectedCheckinAt: posse.expectedCheckinAt,
+    checkoutNotes: posse.checkoutNotes,
     postoVago: ocupantes.length === 0,
   };
 }

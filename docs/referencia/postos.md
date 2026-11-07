@@ -36,8 +36,8 @@ de alvo `WORKSTATION`) e é ele que as pessoas ocupam, por turno
 
 | | |
 |---|---|
-| **a lista** | Posto, Localização, Quem está (uma linha por posto, "Manhã: Ana · Tarde: Bruno"), Ativos e Situação — *Posto vago* (tem ativo e ninguém responde), *Ocupado* ou *Sem uso*. Em cima, os cartões Total, Ocupados, Vagos e Sem uso: as três situações somam o total, e clicar filtra; busca por nome, nota e pela etiqueta ou série do computador entregue ao posto ([BI](../decisoes/posse.md#bi--a-busca-de-postos-acha-o-computador-pela-etiqueta-e-pela-série)) |
-| **a ficha** (`/postos/:id`) | página própria, no molde da do computador: o card com situação, localização, computador e notas, e as abas com os ocupantes — colocar alguém, corrigir o turno, encerrar com o dia em que saiu —, os ativos entregues com **Devolver** (com o dia em que voltou: hoje, ou um dia passado desde a entrega), o computador da mesa ao vivo e o estoque da mesa, por entrega, com o link para a ficha do item, onde está o Devolver ([`estoque.md`](estoque.md)) |
+| **a lista** | Posto, Localização, Responsáveis (só os nomes, sem turno: os dois primeiros e quantos faltam, "Ana Souza, Bruno Lima +2", com todos ao passar o mouse; sem ninguém, o traço), Ativos e Situação — *Posto vago* (tem ativo e ninguém responde), *Ocupado* ou *Sem uso*. Em cima, os cartões Total, Ocupados, Vagos e Sem uso: as três situações somam o total, e clicar filtra; busca por nome, nota e pela etiqueta ou série do computador entregue ao posto ([BI](../decisoes/posse.md#bi--a-busca-de-postos-acha-o-computador-pela-etiqueta-e-pela-série)) |
+| **a ficha** (`/postos/:id`) | página própria, no molde da do computador: o card com situação, localização, computador e notas, com o **Adicionar ao posto**, e as abas com quem está nele agora — a busca por nome ou turno, e na linha de cada um corrigir o turno e encerrar com o dia em que saiu ([BQ](../decisoes/posse.md#bq--entregar-e-devolver-são-dois-botões-e-a-aba-responsáveis-é-uma-só)) —, o computador da mesa, com a telemetria ao vivo quando tem máquina vinculada, o estoque da mesa, por entrega, e o **Histórico** ([BP](../decisoes/posse.md#bp--o-que-já-foi-mora-na-aba-histórico)): quem entrou e saiu, com o turno, o computador entregue e devolvido e o estoque entregue à mesa, 15 por página, do mais recente para o mais antigo. **A ficha não devolve nada** ([BN](../decisoes/posse.md#bn--o-devolver-mora-só-na-ficha-do-que-foi-entregue)): a linha abre a ficha do computador ou a do item, onde está o Devolver ([`estoque.md`](estoque.md)) |
 | **o cadastro** | **Novo posto** e, em cada linha e na ficha, ✏️ Editar e 🗑️ Excluir, sem Desativar ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)) — `SUPERVISOR`; ver o posto e colocar ou tirar ocupante é `TECNICO` ([AV](../decisoes/acesso.md#av--três-cargos-técnico-supervisor-e-administrador)). O Editar leva a versão lida: se outra pessoa salvou no meio, é 409 (AF) |
 | **a volta** | situação, página e busca moram na URL da lista (`?situacao=vagos&pagina=2&busca=mesa`): o voltar do navegador e a seta da ficha trazem a lista como estava |
 
@@ -53,12 +53,16 @@ notificação do sistema.
   hora: mudar o posto de localização leva o computador junto;
 - **a lista de Computadores** mostra o computador do posto como qualquer outro
   ([BJ](../decisoes/catalogo-e-ativo.md#bj--o-computador-entregue-a-um-posto-continua-na-lista-de-computadores)):
-  a Localização é a do posto, e Responsável traz os ocupantes, ou o selo *Posto
-  vago*, com "no posto Mesa 1" embaixo. Quem abre o computador pelo posto volta
-  ao posto pela seta, na aba em que estava;
-- **o histórico de posse** traz, em cada entrega ao posto, quem o ocupou naquele
-  período, com turno e datas — inclusive na entrega em aberto. Entra quem divide
-  ao menos um dia com a entrega.
+  a Localização é a do posto, e Responsáveis traz só "Posto Mesa 1", sem quem o ocupa
+  ([BO](../decisoes/posse.md#bo--em-responsáveis-vai-só-o-nome)): que o posto está vago é a
+  Situação dele, aqui em Postos. O cartão da ficha, a janela de devolução e os Ociosos de
+  Descobertas dizem o mesmo
+  ([BL](../decisoes/catalogo-e-ativo.md#bl--o-computador-no-posto-mostra-o-posto-antes-de-quem-o-ocupa)).
+  Quem abre o computador pelo posto volta ao posto pela seta, na aba em que estava;
+- **a aba Responsáveis do computador** é um item só: o posto, com quem está nele, um
+  nome embaixo do outro, desde quando, a devolução prevista e a observação da entrega, sem link. O Devolver
+  mora nessa linha, e o Entregar do card trava enquanto o computador está entregue
+  ([BP](../decisoes/posse.md#bp--o-que-já-foi-mora-na-aba-histórico)).
 
 ## Como o código é montado
 
@@ -73,15 +77,16 @@ O cadastro passa pelo **mesmo CRUD das tabelas de catálogo**, com a
 | `GET /api/workstations` | `TECNICO` | a lista, com os ocupantes e o número de ativos por linha (`?view=todos\|vagos\|ocupados\|sem-uso`) |
 | `GET /api/workstations/stats` | `TECNICO` | os números dos cartões |
 | `GET /api/workstations/:id` | `TECNICO` | a ficha (o custo dos ativos só para `SUPERVISOR`) |
+| `GET /api/workstations/:id/history` | `TECNICO` | o histórico (`?page=`, `?limit=`) |
 | `GET /api/workstations/options` | `TECNICO` | o seletor |
 | `POST`, `PUT /:id`, `DELETE /:id` | `SUPERVISOR` | o cadastro |
-| `/api/workstations/:id/occupants` | `TECNICO` | os ocupantes — domínio `occupancy` |
+| `/api/workstations/:id/occupants` | `TECNICO` | quem está no posto agora — domínio `occupancy` |
 
 ## Uso e exclusão
 
 A regra do **status**: só o que está nele **agora** impede a exclusão. É 409
-com a dica `Tire o que está nele agora: devolva o que foi entregue e encerre as
-ocupações.`, que cita só o que existe no posto.
+com a dica `Tire o que está nele agora: devolva o que foi entregue e encerre as responsabilidades.`, que cita só o que existe no posto,
+e um link para o computador e para cada item, onde está o Devolver.
 
 **Uso**, aqui, é: **entrega** de ativo aberta para ele, **entrega de estoque**
 aberta para ele e **ocupante** atual.
@@ -90,11 +95,7 @@ aberta para ele e **ocupante** atual.
 devolvida e ocupação encerrada perdem a ligação com o posto na exclusão e
 guardam o nome dele por escrito (`targetWorkstationName`, `workstationName`): o
 histórico do ativo continua dizendo "Entregue: Mesa 7", o do item "para a Mesa
-7", e a ficha da pessoa "Entrou no posto: Mesa 7". A entrega e a ocupação
-guardam também o **id** (`targetWorkstationFormerId`, `workstationFormerId`, sem
-FK — [AW](../decisoes/posse.md#aw--o-computador-está-onde-o-posto-fica-e-o-histórico-diz-quem-ocupou-o-posto)):
-é por ele que o histórico do ativo continua dizendo quem ocupou a Mesa 7, e um
-posto novo com o mesmo nome não se mistura. É o `beforeDelete` da spec, dentro
+7", e a ficha da pessoa "Entrou no posto: Mesa 7". É o `beforeDelete` da spec, dentro
 da mesma transação, que trava o posto antes de contar o uso: a entrega ou a
 ocupação que chega no meio espera e depois recebe 404, e a troca de nome também
 espera, então o nome escrito é mesmo o último. As FKs continuam `Restrict`,
@@ -113,7 +114,8 @@ não se desativa ([AO](../decisoes/catalogo-e-ativo.md#ao--categoria-status-fabr
 | ocupantes e turno | `tests/invariantes/posse.test.ts`, `tests/invariantes/turno-da-ocupacao.test.ts` |
 | a ficha e a lista de ativos | `tests/listagens/ficha-do-posto.test.ts`, `tests/listagens/ativo-em-posto.test.ts` |
 | o lugar do posto na ficha e na lista de Computadores, com a linha em posto vago | `tests/listagens/ativo-em-posto.test.ts`, `tests/e2e/ficha-do-posto.spec.ts` |
-| quem ocupou o posto em cada entrega, e o posto excluído pelo id | `tests/listagens/ocupantes-do-periodo.test.ts`, `tests/invariantes/posto.test.ts` |
+| o Histórico, com as três fontes, a página e a aba Responsáveis só com quem está agora | `tests/listagens/historico-do-posto.test.ts`, `tests/e2e/ficha-do-posto.spec.ts` |
+| a aba Responsáveis: a busca, o turno e o Encerrar na linha, o Entregar que trava e o Devolver | `tests/e2e/ficha-do-posto.spec.ts` |
 | o Editar com a versão da linha | `tests/invariantes/versao.test.ts` |
 | um computador por vez e a mesma pessoa sem sobreposição, no passado; o índice do posto | `tests/invariantes/passado-do-posto.test.ts` |
 | excluir o posto e entregar a ele ao mesmo tempo | `tests/corridas/ativo-por-posto.test.ts` |

@@ -291,7 +291,7 @@ describe('a chave da entrega', () => {
     expect(comChave.status).toBe(404);
   });
 
-  it('o "Com quem está" traz a chave; aba do ativo, ficha, alerta e históricos, não', async () => {
+  it('a aba Responsáveis traz a chave; aba do ativo, ficha, alerta e históricos, não', async () => {
     const pessoa = await criarColaborador(api, { name: 'Rita Chaves', email: 'rita@chave.local' });
     // Vence hoje, para estar no alerta.
     const criada = await api.post<{ id: string }>('/api/licenses', {

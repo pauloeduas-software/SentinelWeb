@@ -375,30 +375,15 @@ test('a recusa na ficha do posto sai no cartão, e a linha continua aberta', asy
   const workstationId = new URL(page.url()).pathname.split('/').pop();
   const ocupacao = await request.post(`/api/workstations/${workstationId}/occupants`, { data: { personId } });
   expect(ocupacao.ok()).toBe(true);
-  const ativo = await criarAtivo(request);
-  const entrega = await request.post(`/api/assets/${ativo}/checkout`, { data: { targetType: 'WORKSTATION', targetWorkstationId: workstationId } });
-  expect(entrega.ok()).toBe(true);
   await page.reload();
 
   await recusar(page, `**/api/workstations/${workstationId}/occupants/*`);
-  await page.getByRole('button', { name: `Ações de ${pessoa}` }).click();
-  await page.getByRole('menuitem', { name: 'Encerrar ocupação' }).click();
-  const confirmar = page.getByRole('button', { name: `Confirmar o encerramento da ocupação de ${pessoa}` });
+  await page.getByRole('main').getByRole('listitem').getByRole('button', { name: 'Encerrar' }).click();
+  const confirmar = page.getByRole('button', { name: `Confirmar o encerramento da responsabilidade de ${pessoa}` });
   await confirmar.click();
 
   const cartao = page.getByRole('alert');
   await expect(cartao).toHaveText('Recusa do teste.');
   await conferirCanto(page, cartao);
   await expect(confirmar).toBeVisible();
-  await page.getByRole('button', { name: 'Fechar notificação' }).click();
-
-  await recusar(page, `**/api/assets/${ativo}/checkin`);
-  await page.getByRole('tab', { name: /Computador/ }).click();
-  await page.getByRole('button', { name: /^Ações de ATV-/ }).click();
-  await page.getByRole('menuitem', { name: 'Devolver' }).click();
-  const confirmarDevolucao = page.getByRole('button', { name: /^Confirmar a devolução/ });
-  await confirmarDevolucao.click();
-  await expect(page.getByRole('alert')).toHaveText('Recusa do teste.');
-  await conferirCanto(page, page.getByRole('alert'));
-  await expect(confirmarDevolucao).toBeVisible();
 });

@@ -1,29 +1,24 @@
 import { useState } from 'react';
-import { MapPin, TriangleAlert, User } from 'lucide-react';
+import { MapPin, User } from 'lucide-react';
 import FormularioLateral from '../../../components/FormularioLateral';
 import ReferenceSelect from '../../../components/ReferenceSelect';
-import { Aviso } from '../../../components/ui/aviso';
 import { Campo } from '../../../components/ui/campo';
 import { Input, Textarea } from '../../../components/ui/input';
 import { Segmentado } from '../../../components/ui/segmentado';
-import { diaDoInstante, hojeNoCampoDeData } from '../../../helpers/format.helper';
+import { hojeNoCampoDeData } from '../../../helpers/format.helper';
 import { useCatalogOptionsQuery } from '../../../queries/catalog.queries';
-import { montarDevolucao, montarEntrega, resumoDaPosse, type ResumoPosse } from '../helpers/posse.helper';
-import type { CheckinInput, CheckoutInput } from '../../../queries/assignment.queries';
+import { montarEntrega } from '../helpers/posse.helper';
+import type { CheckoutInput } from '../../../queries/assignment.queries';
 import type { Asset } from '../../../types/asset.types';
 import type { AlvoDaPosse } from '../../../types/posse.types';
 
-// ENTREGAR e DEVOLVER — a única porta pela qual a posse de um ativo muda
-// (docs/referencia/modelo-de-posse.md).
+// ENTREGAR — a porta pela qual o ativo ganha um responsável
+// (docs/referencia/modelo-de-posse.md). A devolução é o `DevolucaoModal`, na ficha
+// (BQ). O ativo já entregue não chega aqui: o `bloqueioDaEntrega` trava o botão,
+// e o duplo checkout seria um erro sem explicação do índice único parcial do banco.
 //
-// O modal tem DOIS estados, decididos pelo dado e não por quem clicou: ativo com
-// posse aberta só aceita devolução; sem posse aberta, entrega. É o mesmo botão
-// na listagem porque é a mesma decisão vista dos dois lados — e porque oferecer
-// "entregar" para um ativo já entregue convidaria ao duplo checkout, que o
-// índice único parcial do banco recusaria com um erro sem explicação.
-//
-// Como todo componente desta pasta, não fala HTTP: recebe `onEntregar` e
-// `onDevolver` por prop. As exceções buscam opções pela query do domínio, nunca
+// Como todo componente desta pasta, não fala HTTP: recebe `onEntregar` por prop.
+// As exceções buscam opções pela query do domínio, nunca
 // por `apiClient`: o `ReferenceSelect` e a lista de status disponíveis que o
 // destino da entrega precisa ESCONDER (ver `idsDisponiveis`).
 
@@ -52,7 +47,7 @@ const ABAS: readonly {
     icone: User,
     rota: 'people',
     rotuloAlvo: 'Colaborador',
-    ajuda: 'A posse fica no nome dele: um responsável, direto.',
+    ajuda: 'O colaborador passa a ser o responsável direto.',
   },
   {
     tipo: 'WORKSTATION',
@@ -60,7 +55,7 @@ const ABAS: readonly {
     icone: MapPin,
     rota: 'workstations',
     rotuloAlvo: 'Posto',
-    ajuda: 'A posse fica no posto: quem responde são os ocupantes dele, um ou vários, por turno. Eles se gerenciam na ficha do posto.',
+    ajuda: 'O ativo fica no posto, e o posto é o responsável. Os responsáveis pelo posto, um ou vários, por turno, se definem na ficha dele.',
   },
 ];
 
@@ -68,19 +63,16 @@ interface CheckoutModalProps {
   asset: Asset;
   onClose: () => void;
   onEntregar: (data: CheckoutInput) => Promise<void>;
-  onDevolver: (data: CheckinInput) => Promise<void>;
 }
 
-export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }: CheckoutModalProps) {
-  const posse = resumoDaPosse(asset.posse);
-
+export default function CheckoutModal({ asset, onClose, onEntregar }: CheckoutModalProps) {
   const [aba, setAba] = useState<AlvoDaPosse>('PERSON');
   const [alvoId, setAlvoId] = useState('');
   const [statusId, setStatusId] = useState('');
   const [expectedCheckinAt, setExpectedCheckinAt] = useState('');
   const [observacoes, setObservacoes] = useState('');
-  // O DIA da entrega ou da devolução (AM), como na licença e no estoque: vem
-  // com hoje, e pode voltar para registrar a que já aconteceu.
+  // O DIA da entrega (AM), como na licença e no estoque: vem com hoje, e pode
+  // voltar para registrar a que já aconteceu.
   const hoje = hojeNoCampoDeData();
   const [dia, setDia] = useState(hoje);
   const [salvando, setSalvando] = useState(false);
@@ -111,13 +103,9 @@ export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }
     setErro('');
 
     try {
-      if (posse.entregue) {
-        await onDevolver(montarDevolucao({ statusId, checkinNotes: observacoes, checkinAt: dia }));
-      } else {
-        await onEntregar(montarEntrega({
-          targetType: aba, alvoId, statusId, expectedCheckinAt, checkoutNotes: observacoes, checkoutAt: dia,
-        }));
-      }
+      await onEntregar(montarEntrega({
+        targetType: aba, alvoId, statusId, expectedCheckinAt, checkoutNotes: observacoes, checkoutAt: dia,
+      }));
     } catch (falha) {
       // Mutação propaga: o erro do servidor aparece aqui, já traduzido pelo
       // apiClient (duplo checkout, ativo indisponível, alvo inexistente).
@@ -129,7 +117,7 @@ export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }
 
   return (
     <FormularioLateral
-      titulo={posse.entregue ? 'Devolver ativo' : 'Entregar ativo'}
+      titulo="Entregar ativo"
       descricao={
         <>
           <span className="font-mono">{asset.assetTag}</span> · {asset.model.manufacturer.name} {asset.model.name}
@@ -140,64 +128,51 @@ export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }
       onSubmit={enviar}
       erro={erro}
       salvando={salvando}
-      bloqueado={!dia || (!posse.entregue && !alvoId)}
-      rotuloDoEnvio={posse.entregue ? 'Devolver' : 'Entregar'}
-      rotuloEnviando={posse.entregue ? 'Devolvendo…' : 'Entregando…'}
+      bloqueado={!dia || !alvoId}
+      rotuloDoEnvio="Entregar"
+      rotuloEnviando="Entregando…"
     >
-      {posse.entregue ? (
-        <>
-          <PosseAtual posse={posse} />
+      <Segmentado
+        opcoes={ABAS.map((item) => ({ valor: item.tipo, rotulo: <><item.icone /> {item.rotulo}</> }))}
+        valor={aba}
+        onChange={trocarAba}
+      />
 
-          <Campo rotulo="Status de volta" ajuda="Como o ativo volta: disponível, em conserto, inutilizável. Em branco, volta disponível.">
-            <ReferenceSelect rota="status-labels" valor={statusId} onChange={setStatusId} />
-          </Campo>
-        </>
-      ) : (
-        <>
-          <Segmentado
-            opcoes={ABAS.map((item) => ({ valor: item.tipo, rotulo: <><item.icone /> {item.rotulo}</> }))}
-            valor={aba}
-            onChange={trocarAba}
+      <Campo rotulo={abaAtual.rotuloAlvo} obrigatorio ajuda={abaAtual.ajuda}>
+        <ReferenceSelect
+          // Remontar a cada aba é de propósito: cada alvo é uma lista
+          // diferente, e a `key` evita que a lista da aba anterior
+          // apareça por um quadro com as opções velhas.
+          key={abaAtual.tipo}
+          rota={abaAtual.rota}
+          valor={alvoId}
+          obrigatorio
+          comDetalhe
+          onChange={setAlvoId}
+        />
+      </Campo>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <Campo rotulo="Status após a entrega" ajuda="Em branco, fica em uso.">
+          <ReferenceSelect
+            rota="status-labels"
+            valor={statusId}
+            excluirIds={idsDisponiveis}
+            onChange={setStatusId}
           />
+        </Campo>
+        <Campo rotulo="Devolução prevista" ajuda="Só para empréstimo com prazo.">
+          <Input
+            type="date"
+            value={expectedCheckinAt}
+            onChange={(event) => setExpectedCheckinAt(event.target.value)}
+          />
+        </Campo>
+      </div>
 
-          <Campo rotulo={abaAtual.rotuloAlvo} obrigatorio ajuda={abaAtual.ajuda}>
-            <ReferenceSelect
-              // Remontar a cada aba é de propósito: cada alvo é uma lista
-              // diferente, e a `key` evita que a lista da aba anterior
-              // apareça por um quadro com as opções velhas.
-              key={abaAtual.tipo}
-              rota={abaAtual.rota}
-              valor={alvoId}
-              obrigatorio
-              comDetalhe
-              onChange={setAlvoId}
-            />
-          </Campo>
-
-          <div className="grid sm:grid-cols-2 gap-4">
-            <Campo rotulo="Status após a entrega" ajuda="Em branco, fica em uso.">
-              <ReferenceSelect
-                rota="status-labels"
-                valor={statusId}
-                excluirIds={idsDisponiveis}
-                onChange={setStatusId}
-              />
-            </Campo>
-            <Campo rotulo="Devolução prevista" ajuda="Só para empréstimo com prazo.">
-              <Input
-                type="date"
-                value={expectedCheckinAt}
-                onChange={(event) => setExpectedCheckinAt(event.target.value)}
-              />
-            </Campo>
-          </div>
-        </>
-      )}
-
-      <Campo rotulo={posse.entregue ? 'Data da devolução' : 'Data da entrega'} obrigatorio>
+      <Campo rotulo="Data da entrega" obrigatorio>
         <Input
           type="date" required max={hoje} value={dia}
-          min={posse.entregue && asset.posse?.checkoutAt ? diaDoInstante(asset.posse.checkoutAt) : undefined}
           onChange={(event) => setDia(event.target.value)}
         />
       </Campo>
@@ -206,39 +181,5 @@ export default function CheckoutModal({ asset, onClose, onEntregar, onDevolver }
         <Textarea value={observacoes} onChange={(event) => setObservacoes(event.target.value)} />
       </Campo>
     </FormularioLateral>
-  );
-}
-
-/**
- * Com quem o ativo está hoje — o que a devolução precisa mostrar ANTES de
- * pedir qualquer campo. Sem isto, "devolver" seria um botão sem contexto.
- */
-function PosseAtual({ posse }: { posse: ResumoPosse }) {
-  // Sem responsável resolvido, mostrar para QUEM foi entregue ainda é melhor que
-  // não mostrar nada: é o posto vazio, e é o que explica a devolução.
-  const comQuem = posse.responsaveis || posse.alvo;
-
-  return (
-    <div className="space-y-2 rounded-lg border border-border-sutil p-4">
-      <div className="text-xs font-medium text-text-tertiary">Hoje está com</div>
-
-      <div className="text-sm text-text-primary">
-        {comQuem || <span className="text-text-tertiary">ninguém responde por ele</span>}
-      </div>
-
-      {posse.detalheAlvo && (
-        <div className="text-xs text-text-tertiary">{posse.detalheAlvo}</div>
-      )}
-
-      {posse.postoVago && (
-        <Aviso tom="aviso" className="flex items-start gap-2 text-xs leading-relaxed">
-          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-          <span>
-            Posto sem ocupante aberto: o ativo está parado numa mesa vazia. Devolva o computador
-            ou coloque alguém no posto, na ficha do posto em Postos.
-          </span>
-        </Aviso>
-      )}
-    </div>
   );
 }

@@ -1,52 +1,35 @@
-import { useState } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 import {
-  Check, LogOut, Pencil, UserPlus, Users, X,
+  LogOut, Pencil, User, Users,
 } from 'lucide-react';
-import OcupanteFormModal from './OcupanteFormModal';
-import AcoesDaLinha from '../../../components/AcoesDaLinha';
-import ListaVazia from '../../../components/ListaVazia';
+import { CartaoVazio } from '../../../components/ListaVazia';
 import { Button } from '../../../components/ui/button';
-import { Card } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
-import { Segmentado } from '../../../components/ui/segmentado';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableLinha, TableRow, TableSublinha,
-} from '../../../components/ui/table';
 import { diaDoInstante, hojeNoCampoDeData } from '../../../helpers/format.helper';
 import { useNotificacao } from '../../../hooks/useNotificacao';
-import {
-  estaAberta, nomeDoOcupante, periodoDaOcupacao, turnoDoOcupante,
-} from '../helpers/ocupantes.helper';
-import type { OccupantInput } from '../../../queries/occupancy.queries';
-import type { WorkstationOccupant, OccupantView } from '../../../types/posse.types';
+import { nomeDoOcupante, periodoDaOcupacao } from '../helpers/ocupantes.helper';
+import type { WorkstationOccupant } from '../../../types/posse.types';
 
 // QUEM OCUPA O POSTO — Camada 2 de docs/referencia/modelo-de-posse.md, a que o Snipe-IT não
 // tem.
 //
 // É o painel onde a Mesa 1 vira "Laura de manhã, Ana à tarde": os dois nomes
-// que a coluna Responsável da listagem de ativos mostra, sem que nenhum ativo
+// que a aba Responsáveis do ativo mostra, sem que nenhum ativo
 // tenha sido tocado. Entrar num posto é passar a responder por tudo que foi
 // entregue a ele; sair é deixar de responder.
 //
-// Não traz moldura: é uma aba da ficha do posto, que tem nas outras a lista de
-// ativos que o posto segura.
+// A LINHA É A DE ESTOQUE E LICENÇAS (BQ), e o que ela pede abre nela mesma, um pedido
+// de cada vez: o dia em que a pessoa saiu, como o Devolver da licença, e o turno.
 //
 // Não fala HTTP: recebe a lista pronta e devolve callbacks.
 
-const RECORTES: readonly { valor: OccupantView; rotulo: string }[] = [
-  { valor: 'current', rotulo: 'Atuais' },
-  { valor: 'all', rotulo: 'Histórico' },
-];
-
 interface OccupantsPanelProps {
-  nomeDoPosto: string;
   ocupantes: readonly WorkstationOccupant[];
   carregando: boolean;
   /** A consulta da lista falhou. Vence o vazio: não é "posto vago", é não saber. */
   erro?: string | null;
-  view: OccupantView;
-  onViewChange: (view: OccupantView) => void;
-  onAdicionar: (data: OccupantInput) => Promise<void>;
+  /** A frase da lista vazia quando ela é vazia por causa da busca. */
+  vazio?: string;
   /** Encerra com o dia em que a pessoa saiu, 'AAAA-MM-DD'. */
   onEncerrar: (ocupante: WorkstationOccupant, dia: string) => Promise<void>;
   /**
@@ -58,207 +41,154 @@ interface OccupantsPanelProps {
   onCorrigirTurno: (ocupante: WorkstationOccupant, turno: string) => Promise<void>;
 }
 
+/** O que uma linha está pedindo agora: nada, o turno novo, ou o dia em que a pessoa saiu. */
+type Pedido = { id: string; tipo: 'turno' | 'encerrar'; valor: string } | null;
+
 export default function OccupantsPanel({
-  nomeDoPosto, ocupantes, carregando, erro = null, view, onViewChange, onAdicionar, onEncerrar,
-  onCorrigirTurno,
+  ocupantes, carregando, erro = null, vazio, onEncerrar, onCorrigirTurno,
 }: OccupantsPanelProps) {
   const notificar = useNotificacao();
-  const [adicionando, setAdicionando] = useState(false);
-  // O encerramento aberto numa linha: qual ocupação e o dia escolhido.
-  const [encerrando, setEncerrando] = useState<{ id: string; dia: string } | null>(null);
+  const [pedido, setPedido] = useState<Pedido>(null);
+  // Uma operação por vez: Enter repetido ou clique duplo não manda duas.
+  const [ocupado, setOcupado] = useState(false);
 
-  // A linha em edição de turno — uma por vez — e o texto que está no campo.
-  const [editandoTurno, setEditandoTurno] = useState<string | null>(null);
-  const [turnoEditado, setTurnoEditado] = useState('');
-  // Uma correção por vez: Enter repetido ou clique duplo no ✓ não manda dois PATCH.
-  const [salvandoTurno, setSalvandoTurno] = useState(false);
-
-  const abrirEdicaoDoTurno = (ocupante: WorkstationOccupant) => {
-    setEditandoTurno(ocupante.id);
-    setTurnoEditado(ocupante.shift ?? '');
+  // Esc na linha aberta desfaz o pedido, e só ele.
+  const desfazerNoEsc = (evento: KeyboardEvent) => {
+    if (evento.key === 'Escape') setPedido(null);
   };
 
-  const cancelarTurno = () => setEditandoTurno(null);
+  if (ocupantes.length === 0) {
+    return <CartaoVazio icone={Users} carregando={carregando} erro={erro} frase={vazio ?? 'Nenhum responsável por este posto agora.'} />;
+  }
 
-  const salvarTurno = async (ocupante: WorkstationOccupant) => {
-    if (salvandoTurno) return;
+  const hoje = hojeNoCampoDeData();
+
+  const salvarTurno = async (ocupante: WorkstationOccupant, turno: string) => {
+    if (ocupado) return;
     // Nada mudou: fecha o campo sem ir ao servidor.
-    if (turnoEditado.trim() === (ocupante.shift ?? '')) {
-      cancelarTurno();
+    if (turno.trim() === (ocupante.shift ?? '')) {
+      setPedido(null);
       return;
     }
-    setSalvandoTurno(true);
+    setOcupado(true);
     try {
-      await onCorrigirTurno(ocupante, turnoEditado);
-      setEditandoTurno(null);
+      await onCorrigirTurno(ocupante, turno);
+      setPedido(null);
       notificar.sucesso('Turno corrigido.');
     } catch (falha) {
       // O campo continua aberto com o que foi digitado, para corrigir.
       notificar.erro((falha as Error).message);
     } finally {
-      setSalvandoTurno(false);
+      setOcupado(false);
     }
   };
 
   const encerrar = async (ocupante: WorkstationOccupant, dia: string) => {
+    setOcupado(true);
     try {
       await onEncerrar(ocupante, dia);
-      setEncerrando(null);
-      notificar.sucesso('Ocupação encerrada.');
+      setPedido(null);
+      notificar.sucesso('Responsabilidade encerrada.');
     } catch (falha) {
       notificar.erro((falha as Error).message);
+    } finally {
+      setOcupado(false);
     }
   };
 
   return (
-    <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Segmentado opcoes={RECORTES} valor={view} onChange={onViewChange} />
-        <Button size="sm" onClick={() => setAdicionando(true)}><UserPlus /> Adicionar ao posto</Button>
-      </div>
+    <ul className="divide-y divide-border-sutil rounded-lg border border-border-sutil text-sm">
+      {ocupantes.map((ocupante) => {
+        const nome = nomeDoOcupante(ocupante);
+        const meu = pedido?.id === ocupante.id ? pedido : null;
+        // A nota de quem colocou a pessoa aqui, lida onde foi escrita — como a da
+        // entrega de estoque, na mesma ficha.
+        const detalhe = [ocupante.person?.email, ocupante.notes].filter(Boolean).join(' · ');
 
-        <Card className="overflow-hidden">
-          <Table className="min-w-[52rem]">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Colaborador</TableHead>
-                <TableHead className="w-64">Turno</TableHead>
-                <TableHead className="w-64">Período</TableHead>
-                <TableHeadAcoes />
-              </TableRow>
-            </TableHeader>
+        return (
+          <li key={ocupante.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+            <div className="min-w-0 space-y-0.5">
+              <div className="flex items-center gap-2 text-text-primary">
+                <User className="size-4 shrink-0 text-text-tertiary" />
+                <span className="truncate font-medium">{nome}</span>
+                {ocupante.shift?.trim() && <span className="shrink-0 text-text-secondary">· {ocupante.shift}</span>}
+              </div>
+              <div className="text-xs text-text-tertiary">
+                {periodoDaOcupacao(ocupante)}
+                {detalhe && <span className="text-text-secondary"> · {detalhe}</span>}
+              </div>
+            </div>
 
-            <TableBody>
-              {ocupantes.map((ocupante) => {
-                const sublinha = [ocupante.person?.email, ocupante.notes].filter(Boolean).join(' · ');
-                return (
-                <TableRow key={ocupante.id}>
-                  <TableCell>
-                    <TableLinha className="font-medium text-text-primary">{nomeDoOcupante(ocupante)}</TableLinha>
-                    {/* A nota de quem colocou a pessoa aqui, lida onde foi escrita
-                        — como a da entrega de estoque, na mesma ficha. */}
-                    {sublinha && <TableSublinha>{sublinha}</TableSublinha>}
-                  </TableCell>
+            {meu?.tipo === 'turno' && (
+              <div onKeyDown={desfazerNoEsc} className="flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-2 text-xs text-text-tertiary">
+                  Turno
+                  <Input
+                    autoFocus
+                    aria-label={`Turno de ${nome}`}
+                    value={meu.valor}
+                    maxLength={60}
+                    onChange={(evento) => setPedido({ ...meu, valor: evento.target.value })}
+                    onKeyDown={(evento) => {
+                      if (evento.key === 'Enter') void salvarTurno(ocupante, meu.valor);
+                    }}
+                    className="h-9 w-32"
+                  />
+                </label>
+                <Button variant="outline" size="sm" onClick={() => setPedido(null)}>Cancelar</Button>
+                <Button size="sm" onClick={() => void salvarTurno(ocupante, meu.valor)} disabled={ocupado}>Salvar</Button>
+              </div>
+            )}
 
-                  <TableCell>
-                    {editandoTurno === ocupante.id ? (
-                      <div className="flex items-center gap-1">
-                        <Input
-                          autoFocus
-                          aria-label={`Turno de ${nomeDoOcupante(ocupante)}`}
-                          value={turnoEditado}
-                          maxLength={60}
-                          onChange={(event) => setTurnoEditado(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter') void salvarTurno(ocupante);
-                            // Esc aqui desfaz a correção, e só ela.
-                            if (event.key === 'Escape') cancelarTurno();
-                          }}
-                          className="h-9 w-32"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={cancelarTurno}
-                          title="Cancelar"
-                          aria-label="Cancelar a edição do turno"
-                        >
-                          <X />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => void salvarTurno(ocupante)}
-                          disabled={salvandoTurno}
-                          title="Salvar turno"
-                          aria-label="Salvar turno"
-                        >
-                          <Check />
-                        </Button>
-                      </div>
-                    ) : (
-                      turnoDoOcupante(ocupante)
-                    )}
-                  </TableCell>
+            {meu?.tipo === 'encerrar' && (
+              <div onKeyDown={desfazerNoEsc} className="flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-2 text-xs text-text-tertiary">
+                  Saiu em
+                  <Input
+                    type="date"
+                    value={meu.valor}
+                    min={diaDoInstante(ocupante.startedAt)}
+                    max={hoje}
+                    onChange={(evento) => setPedido({ ...meu, valor: evento.target.value })}
+                    className="h-9 w-36"
+                  />
+                </label>
+                <Button variant="outline" size="sm" onClick={() => setPedido(null)}>Cancelar</Button>
+                <Button
+                  size="sm"
+                  onClick={() => void encerrar(ocupante, meu.valor)}
+                  disabled={ocupado || meu.valor === ''}
+                  aria-label={`Confirmar o encerramento da responsabilidade de ${nome}`}
+                >
+                  Confirmar
+                </Button>
+              </div>
+            )}
 
-                  <TableCell>
-                    {encerrando?.id === ocupante.id ? (
-                      <label className="flex items-center gap-2 text-xs text-text-tertiary">
-                        Saiu em
-                        <Input
-                          type="date"
-                          value={encerrando.dia}
-                          min={diaDoInstante(ocupante.startedAt)}
-                          max={hojeNoCampoDeData()}
-                          onChange={(event) => setEncerrando({ id: ocupante.id, dia: event.target.value })}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Escape') setEncerrando(null);
-                          }}
-                          className="h-9 w-36"
-                        />
-                      </label>
-                    ) : (
-                      periodoDaOcupacao(ocupante)
-                    )}
-                  </TableCell>
-
-                  <TableCell className="overflow-visible">
-                    {/* Ocupação já encerrada não tem o que encerrar: a linha fica,
-                        sem ação, porque histórico é para ser lido. */}
-                    {encerrando?.id === ocupante.id ? (
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => setEncerrando(null)}
-                          title="Cancelar"
-                          aria-label="Cancelar o encerramento"
-                        >
-                          <X />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => void encerrar(ocupante, encerrando.dia)}
-                          disabled={encerrando.dia === ''}
-                          title="Confirmar o encerramento"
-                          aria-label={`Confirmar o encerramento da ocupação de ${nomeDoOcupante(ocupante)}`}
-                        >
-                          <Check />
-                        </Button>
-                      </div>
-                    ) : estaAberta(ocupante) && editandoTurno !== ocupante.id && (
-                      <AcoesDaLinha
-                        nome={nomeDoOcupante(ocupante)}
-                        acoes={[
-                          { rotulo: 'Corrigir turno', icone: Pencil, onClick: () => abrirEdicaoDoTurno(ocupante) },
-                          {
-                            rotulo: 'Encerrar ocupação',
-                            icone: LogOut,
-                            onClick: () => setEncerrando({ id: ocupante.id, dia: hojeNoCampoDeData() }),
-                            titulo: 'Sair do posto não apaga nada: a ocupação é encerrada e fica no histórico.',
-                            perigo: true,
-                          },
-                        ]}
-                      />
-                    )}
-                  </TableCell>
-                </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-          {ocupantes.length === 0 && (
-            <ListaVazia
-              icone={Users}
-              carregando={carregando}
-              erro={erro}
-              frase={view === 'all' ? 'Este posto nunca teve ocupante.' : 'Ninguém ocupa este posto agora.'}
-            />
-          )}
-        </Card>
-
-      {adicionando && <OcupanteFormModal nomeDoPosto={nomeDoPosto} onClose={() => setAdicionando(false)} onSubmit={onAdicionar} />}
-    </>
+            {!meu && (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPedido({ id: ocupante.id, tipo: 'turno', valor: ocupante.shift ?? '' })}
+                  disabled={ocupado}
+                >
+                  <Pencil /> Corrigir turno
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPedido({ id: ocupante.id, tipo: 'encerrar', valor: hoje })}
+                  disabled={ocupado}
+                  title="Sair do posto não apaga nada: a responsabilidade é encerrada e fica no histórico."
+                >
+                  <LogOut /> Encerrar
+                </Button>
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }

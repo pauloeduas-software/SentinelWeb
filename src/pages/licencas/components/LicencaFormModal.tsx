@@ -213,7 +213,7 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
 
         <Campo
           rotulo="Vencimento"
-          ajuda="Vencida não recebe entrega. Renovou? Mude esta data, e quem está com ela continua. A perpétua fica sem vencimento, e o fim do suporte vai nas notas."
+          ajuda="Vencida não recebe entrega. Renovou? Mude esta data, e os responsáveis continuam. A perpétua fica sem vencimento, e o fim do suporte vai nas notas."
         >
           <Input type="date" value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} />
         </Campo>

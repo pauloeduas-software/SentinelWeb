@@ -1,8 +1,11 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api/apiClient';
+import type { ParamsDoHistorico } from './asset.queries';
 import { catalogKeys } from './catalog.queries';
 import type { ListEnvelope } from '../types/list.types';
-import type { Posto, PostoDetalhe, PostoStats, PostoView } from '../types/workstation.types';
+import type {
+  EventoDoPosto, Posto, PostoDetalhe, PostoStats, PostoView,
+} from '../types/workstation.types';
 
 // O POSTO DE TRABALHO — a Mesa 1, a bancada, o guichê.
 //
@@ -15,6 +18,7 @@ export const workstationKeys = {
   all: ['workstations'] as const,
   list: (params: PostoListParams) => ['workstations', 'list', params] as const,
   detalhe: (id: string) => ['workstations', 'detalhe', id] as const,
+  history: (id: string, params: ParamsDoHistorico) => ['workstations', 'history', id, params] as const,
   stats: () => ['workstations', 'stats'] as const,
 };
 
@@ -48,6 +52,20 @@ export function useWorkstationQuery(id: string | null) {
     queryKey: workstationKeys.detalhe(id ?? ''),
     queryFn: async () => (await apiClient.get<PostoDetalhe>(`/workstations/${id}`)).data,
     enabled: id != null,
+  });
+}
+
+/**
+ * A aba Histórico do posto: quem entrou e saiu, e o computador e o estoque entregues
+ * à mesa, do mais recente para o mais antigo.
+ */
+export function useWorkstationHistoryQuery(id: string | null, params: ParamsDoHistorico) {
+  return useQuery({
+    queryKey: workstationKeys.history(id ?? '', params),
+    queryFn: async () =>
+      (await apiClient.get<ListEnvelope<EventoDoPosto>>(`/workstations/${id}/history`, { params })).data,
+    enabled: id != null,
+    placeholderData: keepPreviousData,
   });
 }
 

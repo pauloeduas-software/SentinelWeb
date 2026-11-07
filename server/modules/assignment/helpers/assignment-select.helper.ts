@@ -22,9 +22,6 @@ export const ASSIGNMENT_SELECT = {
   // O nome por escrito do posto que foi excluído: sem ele, o histórico do ativo
   // diria "Entregue:" e nada.
   targetWorkstationName: true,
-  // E o id que ele tinha (AW): é por ele que a linha acha os ocupantes do
-  // período, e a tela marca "posto excluído".
-  targetWorkstationFormerId: true,
 
   checkoutAt: true,
   expectedCheckinAt: true,

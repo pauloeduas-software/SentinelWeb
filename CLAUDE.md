@@ -60,6 +60,9 @@ bancos de teste a apagar depois estão lá.
 - **Em uso bloqueia.** Encerrar, desativar, excluir, baixa ou lixeira de algo em uso é 409, dizendo o
   que devolver antes. **Nenhuma data é futura**, exceto prazo e vencimento, e nada acontece antes da
   compra (AN).
+- **Devolver só na origem:** o computador em Computadores, o item em Estoque, a licença em Licenças, sempre na linha
+  do responsável, e o botão do card só entrega (BQ). Posto e
+  colaborador não devolvem: a linha abre o registro (BN).
 - **Lixeira só onde o histórico é do próprio registro:** colaborador e computador. O resto exclui de
   verdade, e o histórico guarda o nome por escrito (V, AG).
 - **Só pt-BR, e a moeda é o real (BRL).** Nenhuma frase em inglês chega a quem usa: a recusa da API
@@ -75,6 +78,12 @@ bancos de teste a apagar depois estão lá.
 
 - **Entrega**, nunca "saída", no estoque e na licença. "Saída" só na baixa do computador, ao sair de
   um posto e no logout.
+- **Responsável** é o nome de quem responde por computador, item, licença ou posto em toda tela, e o
+  título vai no plural: Responsáveis. "Ocupante" e "posse" são nomes do código e do banco e não aparecem
+  para quem usa (BM). Entregue a um posto, o responsável que aparece é o posto; a pessoa fica pendurada
+  nele, na aba Responsáveis (BL). Em Responsáveis vai só o nome: turno não entra, e Posto vago é só a
+  Situação do posto (BO). A exceção é o item do tipo componente: a aba dele é Computadores, porque a
+  peça está instalada na máquina (BM).
 - **Colaborador** recebe equipamento e não entra no sistema; **usuário** opera (U, P). O termo da
   tela é **cargo**, não papel (S).
 - A página leva o nome do que lista, no plural (`computadores`, `postos`, `licencas`), nunca a

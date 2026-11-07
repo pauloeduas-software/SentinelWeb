@@ -9,8 +9,8 @@ import { formatarMoeda } from './format.helper';
 /**
  * O endereço da ficha de uma licença. É por ele que o ativo e a ficha do
  * colaborador apontam para a licença — a devolução mora lá. `busca` é quem está
- * com ela — o nome do colaborador ou a etiqueta do computador —, e "Com quem está"
- * já abre filtrado.
+ * com ela — o nome do colaborador ou a etiqueta do computador —, e a aba Responsáveis
+ * já abre filtrada.
  */
 export function caminhoDaLicenca(licenseId: string, busca?: string): string {
   const parametros = busca ? `?${new URLSearchParams({ quem: busca }).toString()}` : '';

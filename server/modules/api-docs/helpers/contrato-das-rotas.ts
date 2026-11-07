@@ -67,7 +67,6 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
   'GET /api/assets/options': { tag: 'Computadores', resumo: 'Opções para um seletor de computador' },
   'GET /api/assets/:id': { tag: 'Computadores', resumo: 'A ficha do computador' },
   'GET /api/assets/:id/history': { tag: 'Computadores', resumo: 'O histórico do computador' },
-  'GET /api/assets/:id/assignments': { tag: 'Computadores', resumo: 'As posses (entregas e devoluções) do computador' },
   'GET /api/assets/:id/components': { tag: 'Computadores', resumo: 'Os componentes de estoque entregues a ele' },
   'GET /api/assets/:id/licenses': { tag: 'Computadores', resumo: 'As licenças entregues a ele' },
   'GET /api/assets/:id/machine': { tag: 'Computadores', resumo: 'A máquina que o agente descobriu e está vinculada a ele' },
@@ -85,13 +84,14 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
   'GET /api/workstations/options': { tag: 'Postos', resumo: 'Opções para um seletor de posto' },
   'GET /api/workstations/stats': { tag: 'Postos', resumo: 'Quantos postos em cada situação' },
   'GET /api/workstations/:id': { tag: 'Postos', resumo: 'A ficha do posto' },
+  'GET /api/workstations/:id/history': { tag: 'Postos', resumo: 'O histórico do posto' },
   'POST /api/workstations': { tag: 'Postos', resumo: 'Cadastra um posto', body: createWorkstationSchema, status: 201 },
   'PUT /api/workstations/:id': { tag: 'Postos', resumo: 'Edita o posto', body: updateWorkstationSchema },
   'DELETE /api/workstations/:id': { tag: 'Postos', resumo: 'Exclui o posto (em uso, 409)' },
-  'GET /api/workstations/:id/occupants': { tag: 'Postos', resumo: 'Quem ocupa o posto (?view=)' },
+  'GET /api/workstations/:id/occupants': { tag: 'Postos', resumo: 'Os responsáveis pelo posto agora' },
   'POST /api/workstations/:id/occupants': { tag: 'Postos', resumo: 'Põe um colaborador no posto', body: addOccupantSchema, status: 201 },
-  'DELETE /api/workstations/:id/occupants/:occupantId': { tag: 'Postos', resumo: 'Encerra a ocupação', body: endOccupancySchema },
-  'PATCH /api/workstations/:id/occupants/:occupantId': { tag: 'Postos', resumo: 'Troca o turno do ocupante', body: updateOccupantShiftSchema },
+  'DELETE /api/workstations/:id/occupants/:occupantId': { tag: 'Postos', resumo: 'Encerra a responsabilidade', body: endOccupancySchema },
+  'PATCH /api/workstations/:id/occupants/:occupantId': { tag: 'Postos', resumo: 'Troca o turno do responsável', body: updateOccupantShiftSchema },
 
   // ── Estoque ───────────────────────────────────────────────────────────
   'GET /api/stock/items': { tag: 'Estoque', resumo: 'Lista os itens de estoque', query: 'lista' },
@@ -137,7 +137,7 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
   // ── Colaboradores ─────────────────────────────────────────────────────
   'GET /api/people/:id': { tag: 'Colaboradores', resumo: 'A ficha do colaborador' },
   'GET /api/people/:id/history': { tag: 'Colaboradores', resumo: 'O histórico do colaborador' },
-  'GET /api/people/:id/occupancies': { tag: 'Colaboradores', resumo: 'Os postos que o colaborador ocupa' },
+  'GET /api/people/:id/occupancies': { tag: 'Colaboradores', resumo: 'Os postos pelos quais o colaborador responde' },
 
   // ── Configurações ─────────────────────────────────────────────────────
   'GET /api/settings/discovery': { tag: 'Configurações', resumo: 'A configuração da descoberta' },
