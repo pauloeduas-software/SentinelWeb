@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, UserPlus } from 'lucide-react';
 import SeloDoPosto from './SeloDoPosto';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
 import { Card } from '../../../components/ui/card';
@@ -13,14 +13,17 @@ import type { Posto } from '../../../types/workstation.types';
 // QUEM está na mesa, QUANTO equipamento ela segura, e se está VAGA — equipamento
 // parado sem ninguém respondendo (docs/referencia/modelo-de-posse.md).
 //
-// A LINHA INTEIRA ABRE A FICHA, e, para o SUPERVISOR, o CADASTRO fica no `⋯` —
-// Editar e Excluir, na ordem de Configurações: o destrutivo fica na ponta. Sem
-// Desativar (AN): o posto vazio se exclui.
+// A LINHA INTEIRA ABRE A FICHA, e o `⋯` começa pela operação, como o Entregar de
+// Computadores, Estoque e Licenças: Adicionar ao posto, que o Técnico também faz.
+// Para o SUPERVISOR, vem depois o CADASTRO — Editar e Excluir, na ordem de
+// Configurações: o destrutivo fica na ponta. Sem Desativar (AN): o posto vazio se
+// exclui.
 
 interface PostosTableProps {
   postos: readonly Posto[];
   vazio: React.ReactNode;
   onAbrir: (posto: Posto) => void;
+  onAdicionar: (posto: Posto) => void;
   /** Mexer no cadastro é `SUPERVISOR`. */
   podeEditar: boolean;
   onEditar: (posto: Posto) => void;
@@ -28,7 +31,7 @@ interface PostosTableProps {
 }
 
 export default function PostosTable({
-  postos, vazio, onAbrir, podeEditar, onEditar, onExcluir,
+  postos, vazio, onAbrir, onAdicionar, podeEditar, onEditar, onExcluir,
 }: PostosTableProps) {
   return (
     <Card className="overflow-hidden">
@@ -40,7 +43,7 @@ export default function PostosTable({
             <TableHead>Responsáveis</TableHead>
             <TableHead className="hidden w-28 md:table-cell">Ativos</TableHead>
             <TableHead className="w-36">Status</TableHead>
-            {podeEditar && <TableHeadAcoes />}
+            <TableHeadAcoes />
           </TableRow>
         </TableHeader>
 
@@ -55,17 +58,16 @@ export default function PostosTable({
                 </TableCell>
                 <TableCell><SeloDoPosto posto={posto} /></TableCell>
 
-                {podeEditar && (
-                  <TableCell>
-                    <AcoesDaLinha
-                      nome={posto.name}
-                      acoes={[
-                        { rotulo: 'Editar', icone: Pencil, onClick: () => onEditar(posto) },
-                        { rotulo: 'Excluir', icone: Trash2, onClick: () => onExcluir(posto), perigo: true },
-                      ]}
-                    />
-                  </TableCell>
-                )}
+                <TableCell>
+                  <AcoesDaLinha
+                    nome={posto.name}
+                    acoes={[
+                      { rotulo: 'Adicionar ao posto', icone: UserPlus, onClick: () => onAdicionar(posto) },
+                      podeEditar && { rotulo: 'Editar', icone: Pencil, onClick: () => onEditar(posto) },
+                      podeEditar && { rotulo: 'Excluir', icone: Trash2, onClick: () => onExcluir(posto), perigo: true },
+                    ]}
+                  />
+                </TableCell>
               </TableRow>
           ))}
         </TableBody>

@@ -8,8 +8,8 @@ import { useNotificacao } from '../../../hooks/useNotificacao';
 import { montarOcupante } from '../helpers/ocupantes.helper';
 import type { OccupantInput } from '../../../queries/occupancy.queries';
 
-// COLOCAR ALGUÉM NO POSTO, por cima da ficha: fechar o painel volta para a lista
-// de ocupantes, já com a pessoa nela.
+// COLOCAR ALGUÉM NO POSTO, por cima da ficha ou da lista de Postos: fechar o painel
+// volta para onde se estava, já com a pessoa na linha.
 //
 // Não fala HTTP: devolve o corpo por callback (o `ReferenceSelect` é a exceção
 // documentada, que busca as opções pela query do domínio).

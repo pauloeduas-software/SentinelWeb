@@ -11,6 +11,7 @@ import { useListaNaUrl, usePaginaQueExiste } from '../../../hooks/useListaNaUrl'
 import { comFiltros } from '../../../hooks/useVoltaComFiltros';
 import { useNotificacao } from '../../../hooks/useNotificacao';
 import { contagensDosPostos, recorteDaUrl } from '../helpers/postos.helper';
+import { useOcupantes } from './useOcupantes';
 
 // Estado da lista de Postos: que recorte, que página e o que está na busca, na URL
 // (`useListaNaUrl`). A ficha do posto é outra página, e a seta dela volta com eles.
@@ -40,6 +41,9 @@ export function usePostos() {
   // O formulário serve às duas operações: `emEdicao` nulo é criar.
   const [modalAberto, setModalAberto] = useState(false);
   const [emEdicao, setEmEdicao] = useState<Posto | null>(null);
+  // O posto do Adicionar do `⋯`. A linha já traz o nome, e o painel é o da ficha.
+  const [emAdicao, setEmAdicao] = useState<Posto | null>(null);
+  const { handleAdicionar } = useOcupantes(emAdicao?.id ?? null);
 
   const navigate = useNavigate();
 
@@ -102,7 +106,11 @@ export function usePostos() {
       setModalAberto(true);
     },
     closeModal: fecharFormulario,
+    emAdicao,
+    openAdicao: setEmAdicao,
+    closeAdicao: () => setEmAdicao(null),
     handleSalvar,
+    handleAdicionar,
     handleExcluir,
 
     openDetalhe: (posto: Posto) => navigate(`/postos/${posto.id}`, comFiltros(parametros)),

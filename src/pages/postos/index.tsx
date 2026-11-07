@@ -4,6 +4,7 @@ import ListaVazia from '../../components/ListaVazia';
 import ListToolbar from '../../components/ListToolbar';
 import PaginaCabecalho from '../../components/PaginaCabecalho';
 import { Button } from '../../components/ui/button';
+import OcupanteFormModal from './components/OcupanteFormModal';
 import PostoFormModal from './components/PostoFormModal';
 import PostosTable from './components/PostosTable';
 import { usePostos } from './hooks/usePostos';
@@ -19,6 +20,7 @@ export default function PostosPage() {
   const {
     postos, total, contagens, carregando, erro, page, perPage, setPage, search, buscaFeita, changeSearch, view, escolherView,
     modalAberto, emEdicao, openCreate, openEdit, closeModal, handleSalvar, handleExcluir,
+    emAdicao, openAdicao, closeAdicao, handleAdicionar,
     openDetalhe,
   } = usePostos();
   const podeCriar = usePode('SUPERVISOR');
@@ -45,6 +47,7 @@ export default function PostosPage() {
       <PostosTable
         postos={postos}
         onAbrir={openDetalhe}
+        onAdicionar={openAdicao}
         podeEditar={podeCriar}
         onEditar={openEdit}
         onExcluir={(posto) => void handleExcluir(posto)}
@@ -62,6 +65,8 @@ export default function PostosPage() {
       />
 
       {modalAberto && <PostoFormModal posto={emEdicao} onClose={closeModal} onSubmit={handleSalvar} />}
+
+      {emAdicao && <OcupanteFormModal nomeDoPosto={emAdicao.name} onClose={closeAdicao} onSubmit={handleAdicionar} />}
     </div>
   );
 }
