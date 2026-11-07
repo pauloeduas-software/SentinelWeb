@@ -622,6 +622,8 @@ o motivo. A baixa continua separada do status (D19), e nenhuma regra de negócio
 
 ## BW — A linha da Lixeira abre a ficha, só para consulta
 
+> **Superada em parte por [BZ](./reconciliacao.md#bz--vincular-e-desvincular-moram-em-descobertas):** a aba Máquina não tem mais Desvincular, em nenhuma ficha.
+
 **Decisão.** Em Computadores, a linha da Lixeira abre a ficha, com as mesmas abas, e a única ação é Restaurar. Antes, ver o
 histórico de um ativo excluído exigia restaurá-lo: uma escrita, que devolvia o ativo às listas e ia para a auditoria só para
 alguém olhar. É o que o Snipe-IT faz: a rota do ativo inclui os excluídos.

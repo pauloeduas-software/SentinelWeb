@@ -1029,3 +1029,29 @@ tela. Um botão que muda de sentido sozinho é também o que deixa alguém devol
 
 **O que fica de fora, declarado:** a aba Responsáveis do computador tem uma linha só, e a busca nela existe pela
 padronização, não por necessidade. Devolver é um clique a mais a partir da lista de Computadores: abrir a ficha e ir à aba.
+
+---
+
+## BX — A Máquina do posto tem aba própria
+
+**Decidido** (2026-11-07, olhando a aba Computador do posto):
+
+- **Computador e Máquina são duas abas,** nessa ordem: Responsáveis, Computador, Máquina, Estoque e Histórico. A aba
+  Computador fica só com a linha do computador, como a aba Estoque, e a Máquina traz só a telemetria e os comandos. A
+  etiqueta não entra: o card da ficha já diz qual é o computador.
+- **A Máquina do posto é a mesma do computador:** o `TelemetriaDaMaquina`, com a linha da máquina, o título Como está
+  agora, a telemetria e os comandos
+  ([BZ](./reconciliacao.md#bz--vincular-e-desvincular-moram-em-descobertas)).
+- **Sem máquina, a aba continua lá,** com a frase de que não há máquina vinculada: as abas não mudam de um posto para
+  o outro.
+
+**Completa:** [D](./reconciliacao.md#d--a-telemetria-e-o-comando-vão-para-a-ficha-do-ativo-e-a-do-posto), que trouxe a
+telemetria para a ficha do posto, e [BN](#bn--o-devolver-mora-só-na-ficha-do-que-foi-entregue), que deixou a aba
+Computador só mostrando.
+
+**Por quê:** a aba respondia duas perguntas: o que foi entregue ao posto e como a máquina está agora. A ficha do
+computador já separa a segunda na aba Máquina, com o mesmo painel. E ele consulta o servidor a cada 5 segundos: junto
+da linha, a consulta começava só de abrir a aba para ver a etiqueta.
+
+**O que fica de fora, declarado:** a aba Computador tem no máximo uma linha, porque o posto tem um computador por vez
+(invariante 19). São duas abas para um computador só, e a clareza paga o clique a mais.

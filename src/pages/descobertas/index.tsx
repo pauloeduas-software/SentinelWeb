@@ -25,7 +25,8 @@ import { useDescobertas, type AbaDaTela } from './hooks/useDescobertas';
 // A primeira tem as duas ações que faltavam — vincular a um ativo à mão, e
 // vincular e entregar ao posto numa ida só —, porque a fila de sugestões só
 // alcança a máquina que a cascata casou com alguma coisa; a que chegou com o
-// serial em branco e um nome que não bate ficava aqui sem botão.
+// serial em branco e um nome que não bate ficava aqui sem botão. A segunda
+// desvincula: o vínculo mora nesta tela, e em nenhuma outra (BZ).
 //
 // Markup e mais nada: estado e chamadas ficam no `useDescobertas`.
 
@@ -43,7 +44,7 @@ export default function DescobertasPage() {
     ociosos, carregandoOciosos, erroDosOciosos, semVinculo, vinculadas, carregandoMaquinas, erroDasMaquinas, ocupado,
     configuracao, erroDaConfiguracao, salvandoConfiguracao, podeConfigurar,
     podeReconciliar, reconciliando, handleReconciliar,
-    handleAceitar, handleRecusar, handleTriar, handleVincular, handleSalvarConfiguracao,
+    handleAceitar, handleRecusar, handleTriar, handleVincular, handleDesvincular, handleSalvarConfiguracao,
   } = useDescobertas();
 
   // O número ao lado do nome da aba.
@@ -110,7 +111,14 @@ export default function DescobertasPage() {
         </TabsContent>
 
         <TabsContent value="com">
-          <VinculadasTable maquinas={vinculadas} carregando={carregandoMaquinas} erro={erroDasMaquinas} acao={reconciliar} />
+          <VinculadasTable
+            maquinas={vinculadas}
+            carregando={carregandoMaquinas}
+            erro={erroDasMaquinas}
+            acao={reconciliar}
+            ocupado={ocupado}
+            onDesvincular={(maquina) => void handleDesvincular(maquina)}
+          />
         </TabsContent>
 
         <TabsContent value="ociosos">

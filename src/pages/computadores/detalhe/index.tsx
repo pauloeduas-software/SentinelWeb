@@ -49,7 +49,7 @@ function FichaDoComputador() {
     eventos, totalDeEventos, paginaDoHistorico, setPaginaDoHistorico, historicoPendente, erroDoHistorico,
     licencas, licencasPendentes, erroDasLicencas,
     componentes, componentesPendentes, erroDosComponentes,
-    maquina, maquinaPendente, erroDaMaquina, desvinculando, handleDesvincular,
+    maquina, maquinaPendente, erroDaMaquina,
     modal, abrirEdicao, abrirClone, abrirEntrega, abrirDevolucao, abrirBaixa, fecharModal, statusPadraoId,
     handleSubmit, handleEntregar, handleDevolver, handleDarBaixa, handleReverterSaida,
     handleDelete, handleRestaurar,
@@ -157,8 +157,6 @@ function FichaDoComputador() {
               maquina={maquina}
               carregando={maquinaPendente}
               erro={erroDaMaquina}
-              desvinculando={desvinculando}
-              onDesvincular={naLixeira ? undefined : () => void handleDesvincular()}
             />
           </TabsContent>
         </AssetTabs>

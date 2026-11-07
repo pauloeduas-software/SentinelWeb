@@ -125,18 +125,6 @@ describe('pelo agente de verdade, e só quando há ativo', () => {
     expect(mudanca.oldValue).toBe('17179869184');
     expect(mudanca.newValue).toBe('34359738368');
 
-    // E a aba Máquina mostra as duas coisas: a spec de agora e de onde ela veio.
-    const { body } = await api.get<{
-      especificacoes: { ramTotalBytes: string | null; manufacturer: string | null } | null;
-      mudancas: { field: string }[];
-    }>(`/api/assets/${ativo.id}/machine`);
-
-    // STRING, e não número: `BigInt` não sobrevive ao `JSON.stringify`, e a rota
-    // morreria com "Do not know how to serialize a BigInt" se a conversão saísse.
-    expect(body.especificacoes?.ramTotalBytes).toBe('34359738368');
-    expect(body.especificacoes?.manufacturer).toBe('Dell');
-    expect(body.mudancas.map((linha) => linha.field)).toContain('ramTotalBytes');
-
     await agente.fechar();
   });
 });

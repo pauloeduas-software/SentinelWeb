@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MonitorCheck } from 'lucide-react';
+import { MonitorCheck, Unlink } from 'lucide-react';
+import AcoesDaLinha from '../../../components/AcoesDaLinha';
 import ListaVazia from '../../../components/ListaVazia';
 import ListToolbar from '../../../components/ListToolbar';
 import { PontoDeStatus } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableNome, TableRow, TableSublinha } from '../../../components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableNome, TableRow, TableSublinha } from '../../../components/ui/table';
 import { formatarDataHora } from '../../../helpers/format.helper';
 import { useListaLocalNaUrl } from '../../../hooks/usePaginaLocal';
 import { comFiltros } from '../../../hooks/useVoltaComFiltros';
@@ -15,17 +16,19 @@ import type { Endpoint } from '../../../types/endpoint.types';
 //
 // Existe para a pergunta "esta máquina é qual ativo?" ter resposta sem abrir
 // ativo por ativo: a etiqueta está na linha, e a linha leva à ficha, onde moram a
-// telemetria, o comando e o Desvincular. Só leitura — mexer no vínculo é na
-// aba Máquina do ativo, que tem o contexto para isso.
+// telemetria e o comando. O vínculo mora nesta tela (BZ): vincular é em Sem vínculo
+// e em Sugestões, e desvincular é o `⋯` desta lista.
 
 interface Props {
   maquinas: Endpoint[];
   carregando: boolean;
   erro: string | null;
   acao: ReactNode;
+  ocupado: boolean;
+  onDesvincular: (maquina: Endpoint) => void;
 }
 
-export default function VinculadasTable({ maquinas, carregando, erro, acao }: Props) {
+export default function VinculadasTable({ maquinas, carregando, erro, acao, ocupado, onDesvincular }: Props) {
   const navigate = useNavigate();
   const lista = useListaLocalNaUrl(
     maquinas,
@@ -54,6 +57,7 @@ export default function VinculadasTable({ maquinas, carregando, erro, acao }: Pr
             <TableHead>Sistema operacional</TableHead>
             <TableHead className="w-48">Último contato</TableHead>
             <TableHead className="w-36">Status</TableHead>
+            <TableHeadAcoes />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -78,6 +82,12 @@ export default function VinculadasTable({ maquinas, carregando, erro, acao }: Pr
                 <TableCell>{formatarDataHora(maquina.lastSeen)}</TableCell>
                 <TableCell>
                   <PontoDeStatus tom={online ? 'sucesso' : 'neutro'}>{online ? 'Online' : 'Offline'}</PontoDeStatus>
+                </TableCell>
+                <TableCell>
+                  <AcoesDaLinha
+                    nome={maquina.hostname}
+                    acoes={[asset && { rotulo: 'Desvincular', icone: Unlink, onClick: () => onDesvincular(maquina), disabled: ocupado }]}
+                  />
                 </TableCell>
               </TableRow>
             );
