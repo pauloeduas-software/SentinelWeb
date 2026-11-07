@@ -64,6 +64,8 @@ export default function ColaboradorPage() {
             <PontoDeStatus tom={pessoa.isActive ? 'sucesso' : 'aviso'}>{pessoa.isActive ? 'Ativo' : 'Desativado'}</PontoDeStatus>
           </Dado>
           <Dado rotulo="E-mail">{pessoa.email}</Dado>
+          {/* `createdAt` é instante: o dia sai no fuso de Brasília, não em UTC. */}
+          <Dado rotulo="Cadastrado em">{formatarDiaDoInstante(pessoa.createdAt)}</Dado>
           <Dado rotulo="Notas" largo>{pessoa.notes}</Dado>
         </CartaoDaFicha>
 

@@ -358,7 +358,7 @@ describe('ativo baixado', () => {
   });
 
   it('guarda a observação enquanto a baixa vale, e a perde quando ela é desfeita', async () => {
-    // A observação é do ativo (`retiredNotes`), e a aba Detalhes a mostra — a
+    // A observação é do ativo (`retiredNotes`), e a ficha a mostra — a
     // aba Histórico não lê mais a auditoria (AB), onde ela ficava antes.
     const ativo = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId });
     expect((await api.post(`/api/assets/${ativo.id}/retire`, { retiredReasonId: await motivoDaBaixa('Doado'), notes: 'Doado à escola' })).status)

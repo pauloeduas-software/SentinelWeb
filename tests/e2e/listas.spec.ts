@@ -76,7 +76,7 @@ test('a devolução recusada porque outra pessoa já devolveu traz a ficha nova'
   const entrega = await request.post(`/api/assets/${ativo}/checkout`, { data: { targetType: 'PERSON', targetPersonId } });
   expect(entrega.status()).toBe(201);
 
-  await page.goto(`/computadores/${ativo}?aba=responsaveis`);
+  await page.goto(`/computadores/${ativo}`);
   await page.getByRole('button', { name: 'Devolver', exact: true }).click();
   const painel = page.locator('[data-painel-lateral]');
   await expect(painel).toBeVisible();

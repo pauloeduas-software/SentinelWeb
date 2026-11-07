@@ -57,7 +57,7 @@ Na ordem do menu, que se agrupa por assunto ([AH](./docs/decisoes/acesso.md#ah--
 | Seção do menu | Rota | O que é | Cargo mínimo |
 | --- | --- | --- | --- |
 | **Ativos** | `/computadores` | Listagem de ativos (computadores) — filtros, busca por etiqueta/série, ações de ciclo de vida | TECNICO |
-|  | `/computadores/:id` | Ficha do ativo — abas **Detalhes**, **Responsáveis** (com a devolução), **Licenças**, **Componentes**, **Máquina** (telemetria e comando, quando há agente) e **Histórico** | TECNICO |
+|  | `/computadores/:id` | Ficha do ativo — abas **Responsáveis** (com a devolução), **Licenças**, **Componentes**, **Máquina** (telemetria e comando, quando há agente) e **Histórico** | TECNICO |
 |  | `/postos` | Postos de trabalho (mesas), cada um numa localização — quem está, quantos ativos, se está vago; criar, editar e excluir posto | TECNICO |
 |  | `/postos/:id` | Ficha do posto — abas **Responsáveis** (corrigir o turno, encerrar), **Computador** (com telemetria), **Estoque** e **Histórico** | TECNICO |
 | **Recursos** | `/estoque` | O que tem quantidade em vez de patrimônio — o total, quantos em uso e com quem; entrega e devolução a colaborador ou posto, com o dia | TECNICO |

@@ -16,6 +16,11 @@ export function Dado({ rotulo, children, largo = false }: { rotulo: string; chil
   );
 }
 
+/** Um grupo de campos: começa sempre na primeira coluna, e o campo vazio não deixa buraco. */
+export function GrupoDeDados({ children }: { children: ReactNode }) {
+  return <div className="contents [&>:first-child]:col-start-1">{children}</div>;
+}
+
 export function GradeDeDados({ children, className }: { children: ReactNode; className?: string }) {
   return <dl className={cn('grid grid-cols-2 gap-4 md:grid-cols-3', className)}>{children}</dl>;
 }

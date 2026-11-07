@@ -3,13 +3,13 @@ import { useParams } from 'react-router-dom';
 import AssetFormModal from '../components/AssetFormModal';
 import CheckoutModal from '../components/CheckoutModal';
 import AssetTabs from './components/AssetTabs';
+import AvisoDaBaixa from './components/AvisoDaBaixa';
 import { seloDaSaida } from '../helpers/baixa.helper';
 import IdentificacaoCard from './components/IdentificacaoCard';
 import LicensesTab from './components/LicensesTab';
 import ComponentesTab from './components/ComponentesTab';
 import DevolucaoModal from './components/DevolucaoModal';
 import MaquinaTab from './components/MaquinaTab';
-import DetalhesTab from './components/DetalhesTab';
 import HistoryTab from './components/HistoryTab';
 import PosseTab from './components/PosseTab';
 import RetireModal from './components/RetireModal';
@@ -44,7 +44,7 @@ export default function AssetDetailPage() {
 function FichaDoComputador() {
   const {
     asset, carregando, erro, voltar,
-    aba, setAba, contagens, responsaveis,
+    aba, setAba, contagens, responsaveis, abrirPosto,
     eventos, totalDeEventos, paginaDoHistorico, setPaginaDoHistorico, historicoPendente, erroDoHistorico,
     licencas, licencasPendentes, erroDasLicencas,
     componentes, componentesPendentes, erroDosComponentes,
@@ -99,11 +99,9 @@ function FichaDoComputador() {
           }
         />
 
-        <AssetTabs ativa={aba} onChange={setAba} contagens={contagens}>
-          <TabsContent value="detalhes" className="mt-4">
-            <DetalhesTab asset={asset} />
-          </TabsContent>
+        <AvisoDaBaixa asset={asset} />
 
+        <AssetTabs ativa={aba} onChange={setAba} contagens={contagens}>
           <TabsContent value="responsaveis" className="mt-4 space-y-4">
             <ListToolbar
               search={responsaveis.busca}
@@ -117,6 +115,7 @@ function FichaDoComputador() {
             <PosseTab
               posse={responsaveis.visiveis[0]}
               vazio={responsaveis.buscaAdiada ? `Nenhum responsável com "${responsaveis.buscaAdiada}" neste computador.` : undefined}
+              onAbrirPosto={abrirPosto}
               onDevolver={abrirDevolucao}
             />
           </TabsContent>

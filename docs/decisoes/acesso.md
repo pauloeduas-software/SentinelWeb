@@ -759,6 +759,9 @@ direto no `exigirPermissao`, e o que o `ADMIN` vê continua provado pela API.
 
 ## AB — A auditoria volta: quem fez, só no banco
 
+> **Superada em parte por [BR](./plataforma.md#br--a-ficha-do-computador-não-tem-aba-detalhes):** a observação da baixa aparece no aviso
+> entre o card e as abas, à vista em todas.
+
 > **Superada em parte por [AC](./licencas.md#ac--a-chave-vira-lista-cada-uma-cobre-uma-quantidade-e-a-entrega-escolhe-uma):**
 > a chave de licença deixa de ir como `chave: 'informada' | 'alterada' | 'removida'`. A auditoria
 > conta as chaves da lista (`chaves: { incluidas, alteradas, removidas }`) e, na entrega e na

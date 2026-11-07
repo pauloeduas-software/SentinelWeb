@@ -3,6 +3,7 @@ import { Package } from 'lucide-react';
 import CartaoDaFicha, { IconeDaFicha } from '../../../../components/CartaoDaFicha';
 import { PontoDeStatus } from '../../../../components/ui/badge';
 import { Dado } from '../../../../components/ui/dado';
+import { formatarDiaDoInstante } from '../../../../helpers/format.helper';
 import type { ItemDeEstoque } from '../../../../types/stock.types';
 import { classeDaConta, resumoDaContagem } from '../../helpers/estoque.helper';
 
@@ -25,6 +26,8 @@ export default function IdentificacaoDoItem({ item, acoes }: Props) {
       </Dado>
       <Dado rotulo="Categoria">{item.category.name}</Dado>
       <Dado rotulo="Localização">{item.location?.name}</Dado>
+      {/* `createdAt` é instante: o dia sai no fuso de Brasília, não em UTC. */}
+      <Dado rotulo="Cadastrado em">{formatarDiaDoInstante(item.createdAt)}</Dado>
       <Dado rotulo="Notas" largo>{item.notes}</Dado>
     </CartaoDaFicha>
   );

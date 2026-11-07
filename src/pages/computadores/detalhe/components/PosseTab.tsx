@@ -3,6 +3,7 @@ import {
 } from 'lucide-react';
 import { CartaoVazio } from '../../../../components/ListaVazia';
 import { Button } from '../../../../components/ui/button';
+import { cn } from '../../../../helpers/cn.helper';
 import { formatarData, formatarDiaDoInstante } from '../../../../helpers/format.helper';
 import type { PosseResolvida } from '../../../../types/posse.types';
 
@@ -11,7 +12,8 @@ import type { PosseResolvida } from '../../../../types/posse.types';
 // O que já foi mora na aba Histórico (BP).
 //
 // O DEVOLVER MORA NESTA LINHA (BQ), e abre o painel: a devolução do computador pede
-// o status de volta e as notas, que não cabem nela (BN).
+// o status de volta e as notas, que não cabem nela (BN). Entregue a um posto, a linha
+// abre a ficha dele (BS): é o caminho do computador até a mesa.
 
 const ICONE_DO_ALVO = { PERSON: User, WORKSTATION: MapPin } as const;
 
@@ -19,10 +21,11 @@ interface PosseTabProps {
   posse: PosseResolvida | undefined;
   /** A frase da lista vazia quando ela é vazia por causa da busca. */
   vazio?: string;
+  onAbrirPosto?: () => void;
   onDevolver: () => void;
 }
 
-export default function PosseTab({ posse, vazio, onDevolver }: PosseTabProps) {
+export default function PosseTab({ posse, vazio, onAbrirPosto, onDevolver }: PosseTabProps) {
   if (!posse?.targetType) {
     return <CartaoVazio icone={Users} carregando={false} erro={null} frase={vazio ?? 'Nenhum responsável por este computador agora.'} />;
   }
@@ -36,8 +39,14 @@ export default function PosseTab({ posse, vazio, onDevolver }: PosseTabProps) {
   ].filter(Boolean).join(' · ');
 
   return (
-    <ul className="divide-y divide-border-sutil rounded-lg border border-border-sutil text-sm">
-      <li className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+    <ul className="divide-y divide-border-sutil overflow-hidden rounded-lg border border-border-sutil text-sm">
+      <li
+        className={cn(
+          'flex flex-wrap items-center justify-between gap-3 px-4 py-3',
+          onAbrirPosto && 'cursor-pointer transition-colors hover:bg-surface-muted/50',
+        )}
+        onClick={onAbrirPosto}
+      >
         <div className="min-w-0 space-y-0.5">
           <div className="flex items-center gap-2 text-text-primary">
             <Icone className="size-4 shrink-0 text-text-tertiary" />
@@ -52,7 +61,16 @@ export default function PosseTab({ posse, vazio, onDevolver }: PosseTabProps) {
           </div>
         </div>
 
-        <Button variant="outline" size="sm" onClick={onDevolver}><Undo2 /> Devolver</Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={(evento) => {
+            evento.stopPropagation();
+            onDevolver();
+          }}
+        >
+          <Undo2 /> Devolver
+        </Button>
       </li>
     </ul>
   );

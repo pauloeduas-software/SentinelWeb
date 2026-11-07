@@ -421,6 +421,8 @@ em `src/index.css`, mais `primary`, `accent`, `surface-muted` e `sidebar`. O lin
 
 ## AZ — Configurações explica no formulário, e a página fica sem subtítulo
 
+> **Superada em parte por [BR](#br--a-ficha-do-computador-não-tem-aba-detalhes):** o modelo do computador mora no card, e não numa aba.
+
 > **Superada em parte por [BB](#bb--toda-lista-ficha-e-formulário-seguem-o-mesmo-molde):** busca, filtro e página moram na URL em toda lista.
 
 **Decisão.** A revisão visual de Configurações tirou o texto do topo das páginas e levou a explicação para onde a
@@ -478,6 +480,9 @@ usuário: não mover nada).
 Estoque e Licenças para ficha em página.
 
 ## BB — Toda lista, ficha e formulário seguem o mesmo molde
+
+> **Superada em parte por [BR](#br--a-ficha-do-computador-não-tem-aba-detalhes):** a primeira aba não é mais Detalhes, que sai da
+> ficha do computador como saiu das outras.
 
 > **Superada em parte por [BQ](./posse.md#bq--entregar-e-devolver-são-dois-botões-e-a-aba-responsáveis-é-uma-só):** o card do computador fica só com o Entregar, e o Devolver vai para a
 > linha da aba Responsáveis.
@@ -657,3 +662,51 @@ própria, e o modal fica para a ação pequena. No GLPI, licença e consumível 
 recomenda evitar modal quando a pessoa precisa consultar outra informação: ele interrompe e cobre o que está atrás.
 
 **O que ficou de fora.** "Com quem está" continua lista com a devolução na linha, e não `Card > Table`.
+
+## BR — A ficha do computador não tem aba Detalhes
+
+**Decisão.** O computador perde a aba Detalhes, como o item e a licença na BK, e os campos dela sobem para o card. Era a
+única ficha que ainda tinha essa aba. As regras de negócio não mudaram, e nenhuma rota é nova.
+
+- **Os campos sobem para o card:** modelo, fabricante, categoria, compra, canais de suporte e notas. O `Dado` esconde o
+  vazio, e o valor da compra continua ausente para quem não vê o custo (D77, AV).
+- **O suporte diz que é suporte.** Sem o título da seção, "Telefone" pareceria ser do computador: os rótulos viram Site de
+  suporte, Telefone de suporte e E-mail de suporte, e o site entra na grade como os outros, em vez de ocupar a linha.
+- **O aviso da baixa fica entre o card e as abas,** com a observação. É situação que continua valendo (BF), e dentro de uma
+  aba só aparecia nela.
+- **Responsáveis é a primeira aba,** como em Licenças, Estoque e Postos, e fica no endereço limpo. O `?aba=detalhes` de um
+  link antigo abre nela (`useAbaNaUrl`).
+
+**Por quê:** a BK fez o molde "os campos moram no card, e cada aba é o que está com o registro", e posto e colaborador
+nasceram assim. No computador, o que dizia que máquina era aquela ficava escondido nas outras abas. Com a aba fora, modelo
+e compra ficam à vista em todas elas.
+
+**O custo:** o card cresce e empurra as abas para baixo. A licença já mostra doze campos no card, e o `Dado` esconde o que
+não foi preenchido. O tamanho final está na [BS](#bs--o-card-da-ficha-tem-um-molde-só).
+
+## BS — O card da ficha tem um molde só
+
+**Decisão.** Os cinco cards passam a ter a mesma grade e a mesma ordem. A diferença não estava no `CartaoDaFicha`, que já era
+um só, e sim no que cada ficha punha nele e na largura que os botões deixavam. As regras de negócio não mudaram, e nenhuma
+rota é nova.
+
+- **A grade é a mesma em toda ficha.** Até cinco colunas, e a coluna das ações tem largura fixa, com botão ou sem. Antes o
+  mesmo campo caía em lugar diferente de uma ficha para outra, e andava quando um botão sumia.
+- **Cinco colunas, e não seis.** Com seis, a conta do item e o valor da licença quebravam em duas linhas em tela de 1920px.
+- **O card se lê em grupos (`GrupoDeDados`), cada um começando na primeira coluna.** Primeiro a situação e o que identifica o
+  registro; depois o catálogo; depois a compra; e as Notas, sempre por último, na largura toda. Campo vazio não deixa buraco,
+  e nenhum grupo herda o resto do anterior: era daí que vinha o "Valor da compra" sozinho numa linha.
+- **Cadastrado em aparece nas cinco.** Só o computador e o posto mostravam.
+- **O nome da situação é o da lista:** Status em Computadores e Licenças, Situação nas outras.
+- **Sem link no card.** O card é só leitura, e o que abre outro registro é a linha da aba, como em toda ficha. O computador do
+  posto já abria pela aba Computador. O posto do computador passa a abrir pela linha dele na aba Responsáveis, sem cor de link,
+  e a seta volta ao computador.
+- **A exceção é o site de suporte,** porque sai do sistema. Telefone e e-mail de suporte são texto, como todo e-mail do
+  sistema: o Sentinel não manda e-mail (O), e `tel:` no computador do técnico não liga para ninguém.
+- **O ponto da situação alinha com o resto da linha.** O texto do `PontoDeStatus` ficava abaixo dos outros valores.
+
+**O custo:** o computador completo chega a quatro linhas, mais a das notas, quando o fabricante tem os três canais. Em tela
+menor que 1536px a grade cai para quatro colunas, e valor longo quebra dentro da coluna.
+
+**O que ficou de fora.** A ficha do colaborador continua sem ações (BB). A coluna reservada fica vazia, para a grade ser a
+mesma.

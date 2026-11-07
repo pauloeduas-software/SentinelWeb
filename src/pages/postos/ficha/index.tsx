@@ -50,7 +50,7 @@ export default function PostoFichaPage() {
 
 function FichaDoPosto() {
   const {
-    posto, carregando, erro, voltar, voltaDoComputador, ocupantes, responsaveis,
+    posto, carregando, erro, voltar, ocupantes, responsaveis,
     historico, totalDoHistorico, paginaDoHistorico, setPaginaDoHistorico, carregandoHistorico, erroDoHistorico,
     editando, abrirEdicao, fecharEdicao, adicionando, abrirAdicao, fecharAdicao, handleSalvar, handleExcluir,
   } = useFichaDoPosto();
@@ -74,7 +74,6 @@ function FichaDoPosto() {
       <div className="space-y-6">
         <IdentificacaoDoPosto
           posto={posto}
-          voltaDoComputador={voltaDoComputador}
           acoes={(
             <>
               <Button size="sm" onClick={abrirAdicao}><UserPlus /> Adicionar ao posto</Button>

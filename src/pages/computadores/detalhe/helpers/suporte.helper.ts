@@ -6,14 +6,12 @@ import type { FabricanteRef } from '../../../../types/asset.types';
 // DESTE notebook?". O cadastro dos canais mora em Configurações › Fabricantes;
 // a resposta precisa estar onde a pergunta é feita — na ficha do equipamento.
 
-/** Um canal pronto para virar link: o rótulo, o texto visível e o destino. */
+/** Um canal pronto para a ficha: o rótulo, o texto visível e o destino. */
 export interface CanalDeSuporte {
   rotulo: string;
   texto: string;
-  /** `null` quando o valor não pode virar link com segurança: sai como texto. */
+  /** Só o site tem destino, e só o que pode virar link com segurança. */
   href: string | null;
-  /** Abre em outra aba? Só os endereços web — `mailto:` e `tel:` abrem o app. */
-  externo: boolean;
 }
 
 /**
@@ -29,21 +27,13 @@ function enderecoWeb(valor: string): string | null {
 }
 
 /**
- * O telefone como o `tel:` quer: dígitos e o `+` do DDI. O texto visível
- * continua o que foi cadastrado — "0800 970 3355" se lê melhor que "08009703355".
- */
-function destinoDoTelefone(valor: string): string | null {
-  const discavel = valor.replace(/[^\d+]/g, '');
-  return discavel ? `tel:${discavel}` : null;
-}
-
-/**
  * Os canais PREENCHIDOS, na ordem em que se usam para abrir chamado: o site
  * primeiro (o cadastro pede a página de suporte nele), depois telefone e
  * e-mail.
  *
- * Campo nulo NÃO entra: uma linha "Telefone: —" para cada canal que o fabricante
- * não tem enche a ficha de vazio. Lista vazia é a ficha não mostrar a seção.
+ * Campo nulo NÃO entra: uma linha "Telefone de suporte: —" para cada canal que o
+ * fabricante não tem enche a ficha de vazio. O rótulo leva "de suporte" porque, no
+ * card, sem título de seção, "Telefone" pareceria ser do computador.
  */
 export function canaisDeSuporte(fabricante: FabricanteRef): CanalDeSuporte[] {
   const canais: CanalDeSuporte[] = [];
@@ -54,9 +44,9 @@ export function canaisDeSuporte(fabricante: FabricanteRef): CanalDeSuporte[] {
   const telefone = fabricante.supportPhone?.trim();
   const email = fabricante.supportEmail?.trim();
 
-  if (site) canais.push({ rotulo: 'Site', texto: site, href: enderecoWeb(site), externo: true });
-  if (telefone) canais.push({ rotulo: 'Telefone', texto: telefone, href: destinoDoTelefone(telefone), externo: false });
-  if (email) canais.push({ rotulo: 'E-mail', texto: email, href: `mailto:${email}`, externo: false });
+  if (site) canais.push({ rotulo: 'Site de suporte', texto: site, href: enderecoWeb(site) });
+  if (telefone) canais.push({ rotulo: 'Telefone de suporte', texto: telefone, href: null });
+  if (email) canais.push({ rotulo: 'E-mail de suporte', texto: email, href: null });
 
   return canais;
 }

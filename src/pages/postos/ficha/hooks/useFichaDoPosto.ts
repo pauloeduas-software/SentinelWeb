@@ -7,7 +7,7 @@ import { confirmar } from '../../../../hooks/useConfirmacao';
 import { POR_PAGINA } from '../../../../hooks/useListaNaUrl';
 import { useNotificacao } from '../../../../hooks/useNotificacao';
 import { useBuscaLocalDaFicha } from '../../../../hooks/usePaginaLocal';
-import { useVoltaComFiltros, useVoltaParaEstaFicha } from '../../../../hooks/useVoltaComFiltros';
+import { useVoltaComFiltros } from '../../../../hooks/useVoltaComFiltros';
 import { erroDaFicha, linksDoErro } from '../../../../helpers/erro.helper';
 import { textoDoOcupante } from '../../helpers/ocupantes.helper';
 import { useOcupantes } from '../../hooks/useOcupantes';
@@ -20,7 +20,6 @@ export function useFichaDoPosto() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const voltar = useVoltaComFiltros('/postos');
-  const voltaDoComputador = useVoltaParaEstaFicha();
 
   const [editando, setEditando] = useState(false);
   const [adicionando, setAdicionando] = useState(false);
@@ -75,7 +74,6 @@ export function useFichaDoPosto() {
     // tela mentiria em vez de dizer que o link está morto.
     erro: erroDaFicha(error, posto != null, 'o posto'),
     voltar,
-    voltaDoComputador,
     ocupantes,
     responsaveis,
     // `total` conta tudo, e as linhas são só a página.

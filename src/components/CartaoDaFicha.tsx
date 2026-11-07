@@ -7,6 +7,9 @@ import { GradeDeDados } from './ui/dado';
 
 // O TOPO DE TODA FICHA (BB): a marca, o que identifica o registro e, à direita, as
 // ações dele. O cabeçalho da página só tem o título e o voltar.
+//
+// A COLUNA DAS AÇÕES TEM LARGURA FIXA, com botão ou sem (BS): a grade é a mesma em toda
+// ficha, e um campo não muda de lugar porque um botão sumiu.
 
 interface CartaoDaFichaProps {
   /** O ícone do assunto (`IconeDaFicha`) ou o avatar da pessoa. */
@@ -19,8 +22,8 @@ export default function CartaoDaFicha({ marca, acoes, children }: CartaoDaFichaP
   return (
     <Card className="flex flex-wrap gap-4 p-6 lg:flex-nowrap">
       {marca}
-      <GradeDeDados className="min-w-0 flex-1 basis-60 md:grid-cols-4 xl:grid-cols-6">{children}</GradeDeDados>
-      {acoes && <div className="flex shrink-0 items-center gap-2 self-start">{acoes}</div>}
+      <GradeDeDados className="min-w-0 flex-1 basis-60 xl:grid-cols-4 2xl:grid-cols-5">{children}</GradeDeDados>
+      <div className="flex shrink-0 items-center justify-end gap-2 self-start empty:max-xl:hidden xl:w-[22rem]">{acoes}</div>
     </Card>
   );
 }

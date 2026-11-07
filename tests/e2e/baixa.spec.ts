@@ -66,3 +66,18 @@ test('o motivo em uso mostra o número, recusa o Excluir e sai depois de reverte
   await excluir();
   await expect(page.getByRole('row', { name: new RegExp(motivo) })).toHaveCount(0);
 });
+
+test('o aviso da baixa e a observação ficam à vista em todas as abas', async ({ page, request }) => {
+  const motivo = `Motivo do aviso ${Date.now()}`;
+  const criado = await request.post('/api/retire-reasons', { data: { name: motivo } });
+  const { id: retiredReasonId } = await criado.json() as { id: string };
+  const id = await criarAtivo(request);
+  expect((await request.post(`/api/assets/${id}/retire`, { data: { retiredReasonId, notes: 'Lote 2026/03' } })).ok()).toBe(true);
+
+  await page.goto(`/computadores/${id}`);
+  for (const aba of ['Responsáveis', 'Licenças', 'Componentes', 'Máquina', 'Histórico']) {
+    await page.getByRole('tab', { name: aba }).click();
+    await expect(page.getByText('Fora do patrimônio')).toBeVisible();
+    await expect(page.getByText('Lote 2026/03')).toBeVisible();
+  }
+});

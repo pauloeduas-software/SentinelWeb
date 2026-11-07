@@ -44,18 +44,18 @@ formulário próprio — é uma operação, não um campo do cadastro:
 |---|---|
 | **Motivo** (obrigatório) | um dos cadastrados em [Configurações › Motivos de baixa](configuracoes.md#motivos-de-baixa) ([BE](../decisoes/catalogo-e-ativo.md#be--os-motivos-da-baixa-viram-cadastro-de-configurações)). O campo nasce vazio, e o sistema nasce com seis: Vendido, Descartado, Doado, Devolvido em garantia, Extraviado e Roubado |
 | **Data da saída** (obrigatório) | vem preenchida com **hoje**, no calendário de Brasília, que é também o padrão quando a API não a recebe. Pode ser uma data passada — a venda foi na semana passada e o registro, hoje —, nunca futura, antes da compra nem antes da última devolução do computador, de uma licença entregue a ele ou de um componente retirado dele (422, [AM](../decisoes/posse.md#am--a-entrega-e-a-devolução-do-computador-ganham-o-dia)) |
-| **Notas** | a justificativa ("lote 2026/03, nota 1187"). Fica no ativo (`retiredNotes`) e aparece na aba Detalhes enquanto a baixa valer; a de cada baixa fica também na auditoria, no banco ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)) |
+| **Notas** | a justificativa ("lote 2026/03, nota 1187"). Fica no ativo (`retiredNotes`) e aparece na ficha enquanto a baixa valer; a de cada baixa fica também na auditoria, no banco ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)) |
 
 A API é `POST /api/assets/:id/retire` (`{ retiredReasonId, retiredAt?, notes? }`),
 permitida a partir de `SUPERVISOR` ([AV](../decisoes/acesso.md#av--três-cargos-técnico-supervisor-e-administrador)), como o `unretire`.
 
 ### Depois da baixa
 
-- **Na ficha:** o selo "Vendido em 15/10/2026" no card e uma faixa no topo da
-  aba Detalhes. **Reverter baixa** fica no `⋯` do card.
+- **Na ficha:** o selo "Vendido em 15/10/2026" no card e, entre o card e as abas,
+  o aviso com a observação, à vista em todas ([BR](../decisoes/plataforma.md#br--a-ficha-do-computador-não-tem-aba-detalhes)).
+  **Reverter baixa** fica no `⋯` do card.
 - **Na lista de Computadores:** o ativo sai da vista **Ativos** e passa a aparecer só na
   vista **Baixados**, que tem contador próprio. A **Lixeira** não olha a baixa.
-- **Na aba Detalhes:** a observação, abaixo do selo.
 - **Na auditoria, no banco:** a linha `RETIRE`, com quem fez, quando, o nome do motivo
   por escrito e a observação. A aba Histórico é só movimentação e não a mostra ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)).
 - **O status não muda.** Trocar o status é uma segunda decisão, com linha
@@ -134,5 +134,5 @@ pedir:
 | reverter | `unretire-asset.usecase.ts` |
 | a recusa na entrega | `assignment/use-cases/checkout-asset.usecase.ts`; na licença, `license/use-cases/checkout-license.usecase.ts` |
 | as vistas Ativos / Baixados | `asset/helpers/asset-filters.helper.ts` |
-| a tela | `src/pages/computadores/detalhe/components/{RetireModal,DetalhesTab}.tsx`, `src/pages/computadores/helpers/baixa.helper.ts` |
+| a tela | `src/pages/computadores/detalhe/components/{RetireModal,AvisoDaBaixa}.tsx`, `src/pages/computadores/helpers/baixa.helper.ts` |
 | testes | `tests/invariantes/motivo-da-baixa.test.ts` (o cadastro, o motivo em uso e o nome por escrito), `tests/e2e/baixa.spec.ts` (o motivo novo, pela tela), `tests/invariantes/posse.test.ts` (a baixa recusa entregue, licença, data futura e repetição; baixado não é entregue; reverter libera), `tests/invariantes/dia-da-posse.test.ts` (o dia da baixa contra a última devolução), `tests/corridas/posse.test.ts` (baixa × entrega, baixa × excluir o motivo), `tests/listagens/vistas-do-ativo.test.ts` (as vistas) |
