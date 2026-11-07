@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import BarraDaFicha from './BarraDaFicha';
 import ListaVazia from './ListaVazia';
 import { usePaginaLocal } from '../hooks/usePaginaLocal';
+import { useVoltaParaEstaFicha } from '../hooks/useVoltaComFiltros';
 import { Card } from './ui/card';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableLinha, TableNome, TableRow, TableSublinha,
@@ -42,6 +43,7 @@ export default function TabelaDaFicha({
   colunas, linhas, icone, vazio, carregando = false, erro = null, children,
 }: TabelaDaFichaProps) {
   const navigate = useNavigate();
+  const volta = useVoltaParaEstaFicha();
   const pagina = usePaginaLocal(linhas);
 
   return (
@@ -56,7 +58,7 @@ export default function TabelaDaFicha({
           </TableHeader>
           <TableBody>
             {pagina.visiveis.map(({ id, para, nome, nota, celulas }) => (
-              <TableRow key={id} onClick={para ? () => navigate(para) : undefined}>
+              <TableRow key={id} onClick={para ? () => navigate(para, { state: volta }) : undefined}>
                 <TableCell>
                   {para ? <TableNome>{nome}</TableNome> : <TableLinha className="font-medium text-text-primary">{nome}</TableLinha>}
                   {nota && <TableSublinha>{nota}</TableSublinha>}

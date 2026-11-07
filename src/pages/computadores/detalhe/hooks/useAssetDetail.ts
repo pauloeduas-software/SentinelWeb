@@ -21,7 +21,7 @@ import { useAbaNaUrl } from '../../../../hooks/useAbaNaUrl';
 import { confirmar } from '../../../../hooks/useConfirmacao';
 import { useVoltaComFiltros } from '../../../../hooks/useVoltaComFiltros';
 import { useNotificacao } from '../../../../hooks/useNotificacao';
-import { linksDoErro } from '../../../../helpers/erro.helper';
+import { erroDaFicha, linksDoErro } from '../../../../helpers/erro.helper';
 
 // Estado da TELA DE DETALHE. Aba, modais e o ativo em edição são de uma tela
 // só: ficam aqui, em `useState`, e não em store (docs/referencia/arquitetura.md).
@@ -72,7 +72,7 @@ export function useAssetDetail() {
   } = useAssetLicensesQuery(id ?? null);
 
   // A aba Componentes (AI): a memória e o SSD instalados nesta máquina. O
-  // Retirar mora no detalhe do item, e a aba aponta para lá.
+  // Retirar mora na ficha do item, e a aba aponta para lá.
   const {
     data: componentes, isPending: componentesPendentes, error: erroDosComponentes,
   } = useAssetComponentsQuery(id ?? null);
@@ -182,7 +182,7 @@ export function useAssetDetail() {
     // A busca engole o erro na listagem, mas aqui ele é a tela inteira: um
     // 404 de URL colada precisa dizer que o ativo não existe, não ficar
     // carregando para sempre.
-    erro: error ? (error as Error).message : null,
+    erro: erroDaFicha(error, asset != null, 'o ativo'),
 
     aba,
     setAba,

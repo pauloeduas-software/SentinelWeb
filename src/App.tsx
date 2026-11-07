@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
+import { useEffect, type ReactNode } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import AppHeader from './components/AppHeader';
 import AppSidebar from './components/AppSidebar';
 import ComputadoresPage from './pages/computadores';
@@ -7,13 +7,17 @@ import AssetDetailPage from './pages/computadores/detalhe';
 import PostosPage from './pages/postos';
 import PostoFichaPage from './pages/postos/ficha';
 import EstoquePage from './pages/estoque';
+import ItemFichaPage from './pages/estoque/ficha';
 import LicencasPage from './pages/licencas';
+import LicencaFichaPage from './pages/licencas/ficha';
 import DescobertasPage from './pages/descobertas';
 import UsuariosPage from './pages/usuarios';
 import ConfiguracoesPage from './pages/configuracoes';
 import ColaboradoresPage from './pages/colaboradores';
 import ColaboradorPage from './pages/colaboradores/ficha';
 import { caminhoDoColaborador } from './helpers/colaborador.helper';
+import { caminhoDoItem } from './helpers/estoque.helper';
+import { caminhoDaLicenca } from './helpers/licenca.helper';
 import LoginPage from './pages/login';
 import ContaPage from './pages/conta';
 import TrocaObrigatoria from './pages/conta/components/TrocaObrigatoria';
@@ -48,6 +52,22 @@ function RedirecionarAtivo() {
 function RedirecionarColaborador() {
   const { id } = useParams<{ id: string }>();
   return <Navigate to={caminhoDoColaborador(id ?? '')} replace />;
+}
+
+/**
+ * Os links antigos do detalhe em janela → a ficha: `/estoque?item=<id>&quem=Mesa 1`
+ * e `/licencas?licenca=<id>` (BK). O link guardado num chamado continua levando ao
+ * registro, com a busca que ele trazia.
+ */
+function LinkAntigoDoDetalhe({ parametro, caminho, children }: {
+  parametro: string;
+  caminho: (id: string, busca?: string) => string;
+  children: ReactNode;
+}) {
+  const [parametros] = useSearchParams();
+  const id = parametros.get(parametro);
+  if (id) return <Navigate to={caminho(id, parametros.get('quem') ?? undefined)} replace />;
+  return children;
 }
 
 /**
@@ -129,8 +149,13 @@ function Layout() {
                   quantidade e não patrimônio (docs/decisoes/estoque.md). Perto
                   de Postos porque a entrega pode ir para uma mesa, e perto de
                   Licenças porque as duas são posse consumida em unidade. */}
-              <Route path="/estoque" element={<EstoquePage />} />
-              <Route path="/licencas" element={<LicencasPage />} />
+              <Route path="/estoque" element={<LinkAntigoDoDetalhe parametro="item" caminho={caminhoDoItem}><EstoquePage /></LinkAntigoDoDetalhe>} />
+              {/* A FICHA DO ITEM e a DA LICENÇA são página, como a do posto, e destino
+                  de link: é nelas que mora a devolução, e as outras fichas e as
+                  recusas do servidor trazem para cá. */}
+              <Route path="/estoque/:id" element={<ItemFichaPage />} />
+              <Route path="/licencas" element={<LinkAntigoDoDetalhe parametro="licenca" caminho={caminhoDaLicenca}><LicencasPage /></LinkAntigoDoDetalhe>} />
+              <Route path="/licencas/:id" element={<LicencaFichaPage />} />
               {/* O QUE O AGENTE VÊ E O CADASTRO NÃO SABE. A rota leva o nome
                   do que a tela LISTA — descobertas —, e não o do processo que roda
                   por trás: `/reconciliacao` seria o mesmo erro que `/itam` foi,

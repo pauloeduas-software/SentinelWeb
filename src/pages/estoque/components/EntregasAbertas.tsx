@@ -44,7 +44,7 @@ export default function EntregasAbertas({ entregas, carregando, erro, vazio, ocu
   // Um pedido aberto de cada vez, na linha que o abriu.
   const [pedido, setPedido] = useState<Pedido>(null);
 
-  // Esc na linha aberta desfaz o pedido, e só ele: a janela continua aberta.
+  // Esc na linha aberta desfaz o pedido.
   const desfazerNoEsc = (evento: KeyboardEvent) => {
     if (evento.key === 'Escape') setPedido(null);
   };
@@ -84,7 +84,7 @@ export default function EntregasAbertas({ entregas, carregando, erro, vazio, ocu
             </div>
 
             {meu ? (
-              <div data-esc-proprio onKeyDown={desfazerNoEsc} className="flex flex-wrap items-center gap-2">
+              <div onKeyDown={desfazerNoEsc} className="flex flex-wrap items-center gap-2">
                 {/* Com uma unidade só, não há o que perguntar. */}
                 {entrega.unidades > 1 && (
                   <label className="flex items-center gap-2 text-xs text-text-tertiary">

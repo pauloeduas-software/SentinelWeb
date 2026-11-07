@@ -55,7 +55,7 @@ export const workstationSpec: CatalogSpec = {
 
   // A RECUSA DIZ O QUÊ, como a do colaborador: "tem 1 ativo, 3 unidades de
   // estoque (Mouse USB ×2 e Teclado) e 1 ocupante", e os itens como `refs` — o
-  // Devolver do estoque mora no detalhe do item, e a notificação leva até lá.
+  // Devolver do estoque mora na ficha do item, e a notificação leva até lá.
   //
   // TRAVA O POSTO ANTES DE CONTAR, `FOR UPDATE`. A entrega ao posto e a
   // ocupação leem o posto travado (`ativoDoPosto`, `lerPostoTravado`), então

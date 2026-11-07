@@ -1,5 +1,5 @@
-import { test, expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
-import { criarAtivo, criarPosto } from './helpers';
+import { test, expect, type Locator, type Page } from '@playwright/test';
+import { criarAtivo, criarColaborador, criarItem, criarLicenca, criarPosto } from './helpers';
 
 // A RESPOSTA A UM CLIQUE (BF): com sucesso e com recusa, no cartão do canto inferior
 // direito; a recusa de formulário fica no painel, porque o cartão cobriria o Salvar.
@@ -43,14 +43,6 @@ async function excluirDaLista(page: Page, nome: string): Promise<void> {
   await page.getByRole('button', { name: `Ações de ${nome}` }).click();
   await page.getByRole('menuitem', { name: 'Excluir' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Excluir' }).click();
-}
-
-async function criarItem(request: APIRequestContext, nome: string): Promise<string> {
-  const categoria = await request.post('/api/categories', { data: { name: `Categoria de ${nome}`, type: 'STOCK' } });
-  const { id: categoryId } = await categoria.json() as { id: string };
-  const item = await request.post('/api/stock/items', { data: { name: nome, categoryId, qty: 1 } });
-  expect(item.ok()).toBe(true);
-  return (await item.json() as { id: string }).id;
 }
 
 test('a recusa do Excluir sai no canto inferior direito', async ({ page, request }) => {
@@ -98,19 +90,25 @@ test('a recusa do formulário fica no painel, com o Salvar à vista', async ({ p
   await salvar.click({ trial: true });
 });
 
-for (const { endereco, parametro, frase } of [
-  { endereco: '/estoque', parametro: 'item', frase: 'Não foi possível abrir o item do link' },
-  { endereco: '/licencas', parametro: 'licenca', frase: 'Não foi possível abrir a licença do link' },
+// A FALHA AO CARREGAR FICA NO LUGAR DA FICHA (BF), e o id continua no endereço: o F5 tenta
+// de novo, e o cartão é só para a resposta a um clique.
+for (const { lista, frase, criar } of [
+  { lista: 'Estoque', frase: 'Item de estoque não encontrado.', criar: criarItem },
+  { lista: 'Licenças', frase: 'Licença não encontrada.', criar: criarLicenca },
 ]) {
-  test(`o link que não abre em ${endereco} avisa uma vez e sai do endereço`, async ({ page }) => {
-    await page.goto(`${endereco}?${parametro}=nao-existe`);
-    await expect(page.getByRole('alert')).toHaveCount(1);
-    await expect(page.getByRole('alert')).toContainText(frase);
-    await expect(page).toHaveURL(new RegExp(`${endereco}$`));
+  test(`o registro que não existe diz no lugar da ficha, em ${lista}`, async ({ page, request }) => {
+    const id = await criar(request, `Registro apagado de ${lista} ${Date.now()}`);
+    const endereco = lista === 'Estoque' ? `/api/stock/items/${id}` : `/api/licenses/${id}`;
+    expect((await request.delete(endereco)).ok()).toBe(true);
+
+    await page.goto(lista === 'Estoque' ? `/estoque/${id}` : `/licencas/${id}`);
+    await expect(page.getByRole('main').getByText(frase)).toBeVisible();
+    await expect(page.getByRole('link', { name: `Voltar para ${lista}` })).toBeVisible();
+    await expect(page.locator('[data-notificacao]')).toHaveCount(0);
   });
 }
 
-test('o link sem resposta do servidor fica no endereço, para tentar de novo', async ({ page, request }) => {
+test('a ficha sem resposta do servidor diz no lugar dela, e o F5 tenta de novo', async ({ page, request }) => {
   const nome = `Item do link ${Date.now()}`;
   const id = await criarItem(request, nome);
   const rota = `**/api/stock/items/${id}`;
@@ -118,48 +116,21 @@ test('o link sem resposta do servidor fica no endereço, para tentar de novo', a
     status: 500, contentType: 'application/json', body: '{"error":"Falha do teste."}',
   }));
 
-  await page.goto(`/estoque?item=${id}`);
-  await expect(page.getByRole('alert')).toContainText('Não foi possível abrir o item do link');
-  await expect(page).toHaveURL(new RegExp(`item=${id}`));
+  await page.goto(`/estoque/${id}`);
+  await expect(page.getByRole('main').getByText('Não foi possível abrir o item: Falha do teste.')).toBeVisible();
+  await expect(page.locator('[data-notificacao]')).toHaveCount(0);
 
   await page.unroute(rota);
   await page.reload();
-  await expect(page.getByRole('dialog')).toContainText(nome);
+  await expect(page.getByRole('banner').getByRole('heading', { name: nome })).toBeVisible();
 });
 
-test('a falha passageira do link avisa uma vez, mesmo voltando para a aba', async ({ page, request }) => {
-  const id = await criarItem(request, `Item do aviso ${Date.now()}`);
-  let tentativas = 0;
-  await page.route(`**/api/stock/items/${id}`, (requisicao) => {
-    tentativas += 1;
-    return requisicao.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"Falha do teste."}' });
-  });
-  await page.goto(`/estoque?item=${id}`);
-  await expect(page.getByRole('alert')).toContainText('Não foi possível abrir o item do link');
-  await page.getByRole('button', { name: 'Fechar notificação' }).click();
-
-  const jaTentou = tentativas;
-  await page.evaluate('document.dispatchEvent(new Event("visibilitychange", { bubbles: true }))');
-  await expect.poll(() => tentativas, { timeout: 8_000 }).toBe(jaTentou + 2);
-  await page.waitForTimeout(300);
-  await expect(page.locator('[data-notificacao]')).toHaveCount(0);
-});
-
-test('o limite de requisições não tira o link do endereço', async ({ page, request }) => {
-  const id = await criarItem(request, `Item do limite ${Date.now()}`);
-  await page.route(`**/api/stock/items/${id}`, (requisicao) => requisicao.fulfill({
-    status: 429, contentType: 'application/json', body: '{"error":"Muitas requisições. Tente de novo em instantes."}',
-  }));
-  await page.goto(`/estoque?item=${id}`);
-  await expect(page.getByRole('alert')).toContainText('Muitas requisições');
-  await expect(page).toHaveURL(new RegExp(`item=${id}`));
-});
-
-test('a janela aberta pelo link não fecha quando a atualização falha', async ({ page, request }) => {
-  const nome = `Item da janela ${Date.now()}`;
+test('a ficha aberta não fecha quando a atualização falha', async ({ page, request }) => {
+  const nome = `Item da ficha ${Date.now()}`;
   const id = await criarItem(request, nome);
-  await page.goto(`/estoque?item=${id}`);
-  await expect(page.getByRole('dialog')).toContainText(nome);
+  await page.goto(`/estoque/${id}`);
+  const titulo = page.getByRole('banner').getByRole('heading', { name: nome });
+  await expect(titulo).toBeVisible();
 
   let falhas = 0;
   await page.route(`**/api/stock/items/${id}`, (requisicao) => {
@@ -169,12 +140,34 @@ test('a janela aberta pelo link não fecha quando a atualização falha', async 
   // O que a volta para a aba faz: a consulta atualiza sozinha, e aqui ela falha duas vezes.
   await page.evaluate('document.dispatchEvent(new Event("visibilitychange", { bubbles: true }))');
   await expect.poll(() => falhas, { timeout: 8_000 }).toBe(2);
-  await page.waitForTimeout(300);
 
-  await expect(page.getByRole('dialog')).toContainText(nome);
-  await expect(page).toHaveURL(new RegExp(`item=${id}`));
+  await expect(page.getByRole('main').getByText('Não foi possível atualizar o item: Falha do teste.')).toBeVisible();
+  await expect(titulo).toBeVisible();
   await expect(page.locator('[data-notificacao]')).toHaveCount(0);
 });
+
+for (const { ficha, criar, api, endereco } of [
+  { ficha: 'do computador', criar: criarAtivo, api: 'assets', endereco: 'computadores' },
+  { ficha: 'do colaborador', criar: (request: Parameters<typeof criarAtivo>[0]) => criarColaborador(request, `Pessoa da ficha ${Date.now()}`), api: 'people', endereco: 'colaboradores' },
+]) {
+  test(`a ficha ${ficha} não some quando a atualização falha`, async ({ page, request }) => {
+    const id = await criar(request);
+    await page.goto(`/${endereco}/${id}`);
+    await expect(page.getByRole('main').getByRole('tablist')).toBeVisible();
+
+    let falhas = 0;
+    await page.route(`**/api/${api}/${id}`, (requisicao) => {
+      falhas += 1;
+      return requisicao.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"Falha do teste."}' });
+    });
+    await page.evaluate('document.dispatchEvent(new Event("visibilitychange", { bubbles: true }))');
+    await expect.poll(() => falhas, { timeout: 8_000 }).toBe(2);
+    await page.waitForTimeout(300);
+
+    await expect(page.getByRole('main').getByRole('tablist')).toBeVisible();
+    await expect(page.getByRole('main').getByText('Falha do teste.')).toHaveCount(0);
+  });
+}
 
 test('a resposta nova tira a anterior', async ({ page, request }) => {
   const nome = `Fabricante da resposta ${Date.now()}`;

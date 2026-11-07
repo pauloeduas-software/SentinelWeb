@@ -32,6 +32,15 @@ export function useVoltaParaEstaFicha(): EstadoDaVolta {
   return { filtros: search.slice(1), lista: pathname, anterior: state };
 }
 
+/** Quem abriu a ficha: a seta diz para onde volta. `lista` é a da própria ficha. */
+export function rotuloDaVolta(para: string, lista: string): string {
+  if (para.startsWith('/descobertas')) return 'Descobertas';
+  if (para.startsWith('/postos/')) return 'Posto';
+  if (para.startsWith('/colaboradores/')) return 'Colaborador';
+  if (para.startsWith('/computadores/')) return 'Computador';
+  return lista;
+}
+
 /** Para onde a seta da ficha leva: a lista, como ela estava (BB). */
 export function useVoltaComFiltros(lista: string): Volta {
   const { state } = useLocation();

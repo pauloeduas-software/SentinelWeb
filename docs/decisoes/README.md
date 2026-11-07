@@ -62,6 +62,7 @@ que corrigem algo anterior:
 | **E** (o placar da varredura ao lado do botão) | **BF** | o placar vai para o cartão do canto inferior direito, como toda resposta a um clique |
 | **AY** (o texto encolhe com a densidade) | **BH** | a densidade fica no espaçamento, e o texto tem piso de 12px |
 | **C** (em parte: o computador fora da lista), **Y** (em parte: a C mantida), **BI** (em parte: o descartado) | **BJ** | o computador entregue a um posto continua na lista de Computadores, e a linha diz em que mesa ele está |
+| **AE** (o link do detalhe), **AY** (detalhe é janela), **BA** (item e licença em janela), **BF** (o link que não abre no cartão) | **BK** | item e licença têm ficha em página, e o registro que não abre diz no lugar dela |
 
 **O de-escopo (D143–D156) supera por subtração**, e é o maior grupo de supersessões do projeto:
 a decisão antiga não estava errada, o que ela governava deixou de existir. Está inteiro em

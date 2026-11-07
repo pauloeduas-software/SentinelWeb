@@ -53,7 +53,7 @@ export function tituloDoEvento(evento: EventoDoItem): string {
 /**
  * Por que este item não pode ser entregue agora — `null` quando pode.
  *
- * A mesma regra na tabela e no detalhe: o servidor recusa o desativado e o sem
+ * A mesma regra na tabela e na ficha: o servidor recusa o desativado e o sem
  * unidade, e o botão não convida ao 409. O texto vai no `title` do botão.
  */
 export function motivoParaNaoEntregar(item: Pick<ItemDeEstoque, 'isActive' | 'disponivel'>): string | null {

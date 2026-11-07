@@ -4,7 +4,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 
-// O MENU `⋯` — as ações de um registro, na linha da tabela e no topo do detalhe.
+// O MENU `⋯` — as ações de um registro, na linha da tabela e no card da ficha.
 //
 // A ordem é a do sistema: Editar, Desativar/Ativar, Excluir, e o que destrói fica
 // por último, depois de um traço. A linha é clicável, por isso o `stopPropagation`:

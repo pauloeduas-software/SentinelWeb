@@ -60,7 +60,7 @@ export function nomesDosItens(itens: readonly ItemComAlguem[]): string {
   return nomes.length === 1 ? nomes[0] : `${nomes.slice(0, -1).join(', ')} e ${nomes[nomes.length - 1]}`;
 }
 
-/** Os itens como `refs` do erro: a tela põe um link para o detalhe de cada um. */
+/** Os itens como `refs` do erro: a tela põe um link para a ficha de cada um. */
 export function itensComoReferencias(itens: readonly ItemComAlguem[]): ReferenciaDoErro[] {
   return itens.map((item) => ({ tipo: 'estoque' as const, id: item.id, nome: item.nome }));
 }

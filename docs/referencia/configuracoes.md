@@ -119,7 +119,7 @@ Erros de ação (exclusão recusada, desativação recusada) aparecem numa
 **notificação do sistema**, no canto inferior direito, e somem sozinhos
 (`src/components/Notificacoes.tsx`, `src/hooks/useNotificacao.ts`). A recusa do
 colaborador que ainda tem licença diz quais, e a notificação traz um link para cada uma — o
-Devolver mora no detalhe da licença; com link, ela fica até alguém fechar.
+Devolver mora na ficha da licença; com link, ela fica até alguém fechar.
 
 ### Sem Desativar nas seis
 

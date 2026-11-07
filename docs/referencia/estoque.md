@@ -70,7 +70,7 @@ criada por fora da trava (o `psql` à mão), e esconder a inconsistência seria 
 | **a lista** | **uma só**, pelo nome, com os desativados — sem abas, como em Colaboradores. Busca por nome, categoria e localização — o texto ao pé da letra, `%` e `_` não são curinga; filtro de categoria |
 | **a linha** | nome (e as notas), categoria, localização, "3 disponíveis" com "10 no total · 7 em uso" embaixo (no consumível, só "3 disponíveis") e situação. Sem cor pelo valor. A do desativado fica esmaecida |
 | **as ações** | as do cadastro (AF), no `⋯` da linha (AY): Entregar (desabilitado sem disponível, com o motivo no `title`; some no desativado), Editar, Desativar/Ativar e Excluir — com confirmação no Desativar e no Excluir |
-| **o detalhe** | no cabeçalho, a conta ("Desativado · 10 no total · 7 em uso · 3 disponíveis") e as ações da lista, com as mesmas regras (Entregar e Editar voltam ao detalhe ao fechar; excluído, a janela fecha). Depois, todos os campos do cadastro. **Com quem está**: as entregas abertas, da mais recente para a mais antiga, 15 por página, com busca pelo nome do colaborador ou do posto — "Mesa 1 · 5 unidades · desde 12/10/2026", com a observação —, e Devolver em cada linha. **Histórico**: só entregas e devoluções, por entrega, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
+| **a ficha** (`/estoque/:id`) | no card, a situação, a conta ("10 no total · 7 em uso · 3 disponíveis"), todos os campos do cadastro e as ações da lista, com as mesmas regras (Entregar e Editar abrem o painel por cima da ficha; excluído, volta para a lista). **Com quem está** (a primeira aba): as entregas abertas, da mais recente para a mais antiga, 15 por página, com busca pelo nome do colaborador ou do posto — "Mesa 1 · 5 unidades · desde 12/10/2026", com a observação —, e Devolver em cada linha. **Histórico**: só entregas e devoluções, por entrega, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
 
 A edição mostra o **total** e manda **o formulário inteiro**, como em todas as telas
 ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)), com o `updatedAt` que leu ao abrir: se outra pessoa salvou no meio, é 409
@@ -81,7 +81,7 @@ unidades em uso, o campo diz o mínimo.
 **Quando a última linha de uma página sai** — excluída, devolvida, aqui ou por outra pessoa —, a
 lista e o "Com quem está" voltam para a última página que existe. **A devolução que o servidor
 recusa** deixa a linha aberta, com o que foi escolhido, para tentar de novo — e a tela busca de
-novo o que mudou, como na licença: toda ação, recusada ou não, atualiza a lista, o detalhe e as
+novo o que mudou, como na licença: toda ação, recusada ou não, atualiza a lista, a ficha e as
 contas. O cabeçalho do Entregar também lê o detalhe, e acompanha.
 
 ## Desativar, ativar e excluir
@@ -127,7 +127,7 @@ passado — as duas ao meio-dia — continuam sendo duas no histórico do item e
 ainda aberta, e assim ela continua com o mesmo `:id` depois de devolver parte.
 
 **A devolução** pergunta **quantas** — por padrão, todas as que ainda estão fora nesta entrega — e
-o **dia**, na própria linha de "Com quem está", no detalhe do item — o único lugar do sistema que
+o **dia**, na própria linha de "Com quem está", na ficha do item — o único lugar do sistema que
 devolve estoque. Com uma unidade só, não pergunta quantas. O dia vem com hoje; pode ser passado,
 mas nunca futuro nem antes do dia da entrega (422, com as duas datas). Hoje grava a hora real; um
 dia passado grava o meio-dia de Brasília, e por isso as telas mostram a entrega e a devolução
@@ -170,7 +170,7 @@ mesmos do resto do estoque.
   troca de peça, à máquina que vai ser descartada e à entrega lançada errado. Se a peça queimou ou
   saiu junto com a máquina, retire e depois diminua o total do item.
 - **O computador com componente instalado não recebe baixa nem vai para a lixeira** — a regra da
-  licença por máquina. O 409 diz quais, com cada item em link para o detalhe dele.
+  licença por máquina. O 409 diz quais, com cada item em link para a ficha dele.
 - **A compra do computador** editada não vai para depois do primeiro componente instalado.
 - **Trocar a categoria** do item entre Estoque e Componente só sem unidade em uso.
 
@@ -194,8 +194,8 @@ A "Material de consumo" do seed é Consumível. O cadastro, o desativar e o excl
 resto do estoque.
 
 - **O Entregar** é o do estoque: colaborador ou posto, quantas, o dia e a observação. A entrega
-  **tira do total** na hora e não fica "em uso" com ninguém. A janela diz isso embaixo.
-- **Não volta**: não tem Devolver, e o detalhe do item não tem "Com quem está". O histórico do item
+  **tira do total** na hora e não fica "em uso" com ninguém. O formulário diz isso embaixo.
+- **Não volta**: não tem Devolver, e a ficha do item não tem "Com quem está", só Histórico. O histórico do item
   e o do colaborador mostram a entrega, e só ela.
 - **Não prende ninguém**: o colaborador que recebeu toner se desativa, e o posto se exclui. A ficha
   do colaborador e a do posto não mostram o consumível.
@@ -219,10 +219,10 @@ e de posse sem que nenhuma dessas contas mude.
 
 | Onde | O quê |
 |---|---|
-| **ficha do posto** | o estoque **da mesa**, por entrega, com quantas e desde quando; o nome leva ao detalhe do item com "Com quem está" já filtrado pelo posto (`/estoque?item=<id>&quem=Mesa 1`), onde está o Devolver. O item desativado aparece marcado. Não conta como ativo do posto |
+| **ficha do posto** | o estoque **da mesa**, por entrega, com quantas e desde quando; o nome leva à ficha do item com "Com quem está" já filtrado pelo posto (`/estoque/<id>?quem=Mesa 1`), onde está o Devolver. O item desativado aparece marcado. Não conta como ativo do posto |
 | **ficha do colaborador** | o estoque **no nome dela**, com o mesmo link, filtrado pelo nome dela; o título conta as unidades, como a ficha do posto e o 409 da desativação |
 | **histórico do colaborador** | entregas e devoluções de estoque **a ela**, por entrega ("Recebeu: Mouse USB · 2 unidades") |
-| **aba Componentes do computador** | os componentes instalados **nele**, por entrega, com categoria, quantas e desde quando; o nome leva ao detalhe do item já filtrado pela etiqueta, onde está o Retirar |
+| **aba Componentes do computador** | os componentes instalados **nele**, por entrega, com categoria, quantas e desde quando; o nome leva à ficha do item já filtrada pela etiqueta, onde está o Retirar |
 | **histórico do computador** | a instalação e a retirada de cada componente, por entrega ("Componente instalado: Memória RAM 8 GB · 2 unidades") |
 
 **Separado por alvo:** o que foi entregue ao posto é da mesa, e não aparece na pessoa que o ocupa
@@ -232,7 +232,7 @@ e de posse sem que nenhuma dessas contas mude.
 posto com unidade não se exclui. **A recusa diz quais itens precisam voltar**, pelo nome e com
 quantas — `… está com 3 unidades de estoque (Mouse USB ×2 e Teclado) …`, `Este posto ainda tem 1
 ativo, 3 unidades de estoque (Cabo HDMI ×3) e 1 ocupante. Tire o que está nele agora …` — e manda
-cada item como `refs` ao lado da frase: a notificação põe um link para o detalhe de cada um. Nada
+cada item como `refs` ao lado da frase: a notificação põe um link para a ficha de cada um. Nada
 fecha sozinho.
 
 ## Como o código é montado

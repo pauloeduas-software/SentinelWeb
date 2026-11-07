@@ -4,7 +4,7 @@ import BarraDaFicha, { type BarraDaFichaProps } from './BarraDaFicha';
 import { CartaoVazio } from './ListaVazia';
 import { Card } from './ui/card';
 
-// O HISTÓRICO DE UM REGISTRO, igual em toda ficha e janela (BB): o que aconteceu, o dia
+// O HISTÓRICO DE UM REGISTRO, igual em toda ficha (BB): o que aconteceu, o dia
 // e a nota. Sem linhas, diz se ainda carrega, se a consulta falhou ou se não há nada,
 // porque "nunca foi entregue" é uma afirmação, e só a resposta do servidor a sustenta.
 
@@ -24,8 +24,8 @@ interface LinhaDoTempoProps {
   vazio: string;
   carregando: boolean;
   erro: string | null;
-  /** A página do servidor, nas fichas. A janela desenha a barra dela. */
-  pagina?: BarraDaFichaProps;
+  /** A página do servidor. */
+  pagina: BarraDaFichaProps;
 }
 
 export default function LinhaDoTempo({ eventos, icone, vazio, carregando, erro, pagina }: LinhaDoTempoProps) {
@@ -35,7 +35,7 @@ export default function LinhaDoTempo({ eventos, icone, vazio, carregando, erro, 
 
   return (
     <>
-      {pagina && <BarraDaFicha {...pagina} />}
+      <BarraDaFicha {...pagina} />
       <Card className="overflow-hidden">
         <ul className="divide-y divide-border-sutil text-sm">
           {eventos.map(({ id, icone: Icone, titulo, dia, nota }) => (

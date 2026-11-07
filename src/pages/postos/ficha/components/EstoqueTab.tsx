@@ -18,7 +18,7 @@ export default function EstoqueTab({ itens, nomeDoPosto }: EstoqueTabProps) {
     <>
       {itens.length > 0 && (
         <p className="text-sm text-text-secondary">
-          Qualquer ocupante atual responde por estas unidades. A devolução é feita no detalhe do item.
+          Qualquer ocupante atual responde por estas unidades. A devolução é feita na ficha do item.
         </p>
       )}
 

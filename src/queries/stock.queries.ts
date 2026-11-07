@@ -23,7 +23,7 @@ export type ParamsDoEstoque = Omit<ListParams, 'view'> & {
   categoryId?: string;
 };
 
-/** As duas listas do detalhe: a página e, na de quem está com o item, a busca pelo nome. */
+/** As duas listas da ficha: a página e, na de quem está com o item, a busca pelo nome. */
 export interface ParamsDoDetalhe {
   page: number;
   perPage: number;

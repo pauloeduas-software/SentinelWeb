@@ -17,7 +17,7 @@ import { formatarData, formatarDiaDoInstante } from '../../../helpers/format.hel
 import { caminhoDoItem, textoDeUnidades } from '../../../helpers/estoque.helper';
 import { caminhoDaLicenca, prazoDaEntrega } from '../../../helpers/licenca.helper';
 import { useAbaNaUrl } from '../../../hooks/useAbaNaUrl';
-import { useVoltaComFiltros } from '../../../hooks/useVoltaComFiltros';
+import { rotuloDaVolta, useVoltaComFiltros } from '../../../hooks/useVoltaComFiltros';
 
 // FICHA DO COLABORADOR — quem é a pessoa, os COMPUTADORES entregues a ela, os
 // POSTOS que ela ocupa, o estoque e as licenças no nome dela, e o HISTÓRICO
@@ -43,16 +43,17 @@ export default function ColaboradorPage() {
   } = useColaborador();
   const voltar = useVoltaComFiltros('/colaboradores');
   const [aba, setAba] = useAbaNaUrl(ABAS);
+  const rotulo = rotuloDaVolta(voltar.para, 'Colaboradores');
 
   if (carregando || erro || !pessoa) {
-    return <FichaIndisponivel lista="Colaboradores" voltar={voltar} carregando={carregando} erro={erro ?? 'Colaborador não encontrado.'} />;
+    return <FichaIndisponivel lista="Colaboradores" rotuloDaVolta={rotulo} voltar={voltar} carregando={carregando} erro={erro ?? 'Colaborador não encontrado.'} />;
   }
 
   const unidades = pessoa.itens.reduce((soma, entrega) => soma + entrega.unidades, 0);
 
   return (
     <div className="space-y-4 pb-6 motion-safe:animate-fade-in">
-      <PaginaCabecalho titulo={pessoa.name} voltar={{ ...voltar, rotulo: 'Colaboradores' }} />
+      <PaginaCabecalho titulo={pessoa.name} voltar={{ ...voltar, rotulo }} />
 
       <div className="space-y-6">
         <CartaoDaFicha marca={<Avatar nome={pessoa.name} className="size-10 text-sm" />}>

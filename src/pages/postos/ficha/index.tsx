@@ -17,6 +17,7 @@ import {
   ContagemDaAba, Tabs, TabsContent, TabsList, TabsTrigger,
 } from '../../../components/ui/tabs';
 import { useAbaNaUrl } from '../../../hooks/useAbaNaUrl';
+import { rotuloDaVolta } from '../../../hooks/useVoltaComFiltros';
 import { usePode } from '../../../stores/auth.store';
 
 // A FICHA DO POSTO — `/postos/:id`: quem está nele, o que foi entregue a ele e como
@@ -48,16 +49,17 @@ export default function PostoFichaPage() {
   // proíbem.
   const podeEditar = usePode('SUPERVISOR');
   const [aba, setAba] = useAbaNaUrl(ABAS);
+  const rotulo = rotuloDaVolta(voltar.para, 'Postos');
 
   if (carregando || erro || !posto) {
-    return <FichaIndisponivel lista="Postos" voltar={voltar} carregando={carregando} erro={erro ?? 'Posto não encontrado.'} />;
+    return <FichaIndisponivel lista="Postos" rotuloDaVolta={rotulo} voltar={voltar} carregando={carregando} erro={erro ?? 'Posto não encontrado.'} />;
   }
 
   const totalDeUnidades = posto.itens.reduce((soma, entrega) => soma + entrega.unidades, 0);
 
   return (
     <div className="motion-safe:animate-fade-in pb-6">
-      <PaginaCabecalho voltar={{ ...voltar, rotulo: 'Postos' }} titulo={posto.name} />
+      <PaginaCabecalho voltar={{ ...voltar, rotulo }} titulo={posto.name} />
 
       <div className="space-y-6">
         <IdentificacaoDoPosto
