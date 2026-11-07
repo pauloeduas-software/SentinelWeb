@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import BarraDaFicha, { type BarraDaFichaProps } from './BarraDaFicha';
 import { CartaoVazio } from './ListaVazia';
@@ -11,11 +10,10 @@ import { Card } from './ui/card';
 export interface EventoDaLinha {
   id: string;
   icone: LucideIcon;
-  titulo: ReactNode;
+  titulo: string;
   /** O dia, já formatado: a hora de um dia passado seria inventada (AM). */
   dia: string;
-  /** A nota, ou mais de uma linha dela: a posse diz também quem ocupou o posto. */
-  nota?: ReactNode;
+  nota?: string | null;
 }
 
 interface LinhaDoTempoProps {

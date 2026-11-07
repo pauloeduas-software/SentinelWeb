@@ -100,6 +100,8 @@ function semPosse(): PosseResolvida {
     targetLabel: null,
     responsaveis: [],
     checkoutAt: null,
+    expectedCheckinAt: null,
+    checkoutNotes: null,
     postoVago: false,
   };
 }

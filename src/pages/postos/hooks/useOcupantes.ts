@@ -1,18 +1,15 @@
-import { useState } from 'react';
 import {
   useAddWorkstationOccupant, useCorrigirTurno, useEndWorkstationOccupancy, useWorkstationOccupantsQuery,
   type OccupantInput,
 } from '../../../queries/occupancy.queries';
-import type { WorkstationOccupant, OccupantView } from '../../../types/posse.types';
+import type { WorkstationOccupant } from '../../../types/posse.types';
 
 // Os OCUPANTES de um posto — Camada 2 de docs/referencia/modelo-de-posse.md.
 //
 // Recebe o ID do posto, não o registro, e `null` DESLIGA a query — `enabled`
 // resolve isso sem hook condicional, que as regras do React proíbem.
 export function useOcupantes(workstationId: string | null) {
-  const [view, setView] = useState<OccupantView>('current');
-
-  const { data, isPending, error } = useWorkstationOccupantsQuery(workstationId, view);
+  const { data, isPending, error } = useWorkstationOccupantsQuery(workstationId);
   const adicionar = useAddWorkstationOccupant();
   const encerrar = useEndWorkstationOccupancy();
   const corrigirTurno = useCorrigirTurno();
@@ -49,8 +46,6 @@ export function useOcupantes(workstationId: string | null) {
     // ninguém responde pelos ativos de uma mesa porque a rede caiu é exatamente
     // o alarme falso que esta tela não pode dar.
     erro: workstationId != null && error ? error.message : null,
-    view,
-    changeView: setView,
     handleAdicionar,
     handleEncerrar,
     handleCorrigirTurno,

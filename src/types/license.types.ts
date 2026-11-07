@@ -133,7 +133,7 @@ export interface EntregaDeLicenca {
   license: LicencaDaEntrega;
 }
 
-/** Uma entrega com a chave dela — só o "Com quem está" do detalhe a traz. */
+/** Uma entrega com a chave dela — só a aba Responsáveis do detalhe a traz. */
 export interface EntregaComChave extends EntregaDeLicenca {
   licenseKeyId: string | null;
   /** Uma das chaves da licença; nula na entrega sem chave. */

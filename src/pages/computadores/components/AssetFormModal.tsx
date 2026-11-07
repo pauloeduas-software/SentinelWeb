@@ -18,8 +18,8 @@ import type { Asset } from '../../../types/asset.types';
 // à Mesa 1 responde por DUAS pessoas (Laura de manhã, Ana à tarde), e um
 // campo de uma pessoa só não tem onde guardar isso.
 //
-// Entregar e devolver são OPERAÇÃO, pelo `CheckoutModal`, no menu da linha do
-// ativo e na ficha dele.
+// Entregar e devolver são OPERAÇÃO: o `CheckoutModal`, no menu da linha do ativo
+// e na ficha dele, e o `DevolucaoModal`, na aba Responsáveis.
 //
 // `locationId` continua aqui, e não é a mesma coisa: é ONDE o ativo está, não
 // QUEM responde por ele. Entregue a um posto, ele está onde o posto fica, e o
@@ -123,7 +123,7 @@ export default function AssetFormModal({
   return (
     <FormularioLateral
       titulo={clonar ? 'Clonar ativo' : asset ? 'Editar ativo' : 'Novo ativo'}
-      descricao={clonar ? `Cópia de ${asset?.assetTag}. Etiqueta e número de série nascem em branco porque são únicos. A cópia nasce sem posse.` : asset?.assetTag}
+      descricao={clonar ? `Cópia de ${asset?.assetTag}. Etiqueta e número de série nascem em branco porque são únicos. A cópia nasce sem responsáveis.` : asset?.assetTag}
       onClose={onClose}
       onSubmit={enviar}
       erro={erro}
@@ -164,7 +164,7 @@ export default function AssetFormModal({
           className="sm:col-span-2"
           ajuda={asset?.postoAtual && !clonar
             ? `Entregue ao posto ${asset.postoAtual.name} (${asset.postoAtual.location.name}). Este campo é para onde ele volta na devolução.`
-            : 'Onde o ativo está. Quem responde por ele muda pelo Entregar, não aqui.'}
+            : 'Onde o ativo está. O responsável muda pelo Entregar, não aqui.'}
         >
           <ReferenceSelect rota="locations" valor={valores.locationId} atual={asset?.location} onChange={(v) => definir('locationId', v)} />
         </Campo>

@@ -37,7 +37,7 @@ test('a aba Chaves só existe com chave, e sem ela o endereço cai na primeira',
   await expect(page.getByRole('tabpanel')).toContainText('AAAA-••••');
 
   await page.goto(`/licencas/${semChave}?aba=chaves`);
-  await expect(page.getByRole('tab', { name: /Com quem está/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: /Responsáveis/ })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('tab', { name: /Chaves/ })).toHaveCount(0);
 });
 

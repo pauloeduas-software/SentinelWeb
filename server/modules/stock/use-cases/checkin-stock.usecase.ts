@@ -94,9 +94,10 @@ export async function checkinStock(movementId: string, data: Partial<CheckinStoc
     }
     const pedidas = data.qty ?? abertas.length;
     if (pedidas > abertas.length) {
+      const umaSo = abertas.length === 1;
       throw new AppError(
         `Só ${quantas(abertas.length, 'unidade', 'unidades')} desta entrega de "${item.name}" `
-        + `${abertas.length === 1 ? 'ainda está' : 'ainda estão'} ${componente ? 'em' : 'com'} ${alvo}.`,
+        + `${umaSo ? 'ainda está' : 'ainda estão'} ${componente ? 'em' : `entregue${umaSo ? '' : 's'} a`} ${alvo}.`,
         409,
       );
     }

@@ -36,7 +36,7 @@ test('a aba da ficha fica no endereço, e a seta volta para a lista como estava'
   conferirConsole();
 });
 
-// A FALHA NÃO VIRA VAZIO (BB): "este ativo nunca foi entregue" e "0 no total" são
+// A FALHA NÃO VIRA VAZIO (BB): "nenhuma entrega ainda" e "0 no total" são
 // afirmações, e quem as lê acredita nelas. O erro vem do `page.route` porque é a tela que
 // se prova aqui: a resposta do servidor já tem os testes dela.
 const falhar = (page: Page, rota: string) => page.route(
@@ -57,7 +57,7 @@ test('na ficha do colaborador, a consulta que falha avisa e não diz que não h�
   const postos = page.getByRole('tab', { name: /Postos/ });
   await postos.click();
   await expect(page.getByRole('alert')).toContainText('Não foi possível carregar');
-  await expect(page.getByText('Não ocupa nenhum posto.')).toHaveCount(0);
+  await expect(page.getByText('Não é responsável por nenhum posto.')).toHaveCount(0);
   await expect(postos).toHaveText('Postos');
 
   const historico = page.getByRole('tab', { name: /Histórico/ });
@@ -76,7 +76,7 @@ test('a devolução recusada porque outra pessoa já devolveu traz a ficha nova'
   const entrega = await request.post(`/api/assets/${ativo}/checkout`, { data: { targetType: 'PERSON', targetPersonId } });
   expect(entrega.status()).toBe(201);
 
-  await page.goto(`/computadores/${ativo}`);
+  await page.goto(`/computadores/${ativo}?aba=responsaveis`);
   await page.getByRole('button', { name: 'Devolver', exact: true }).click();
   const painel = page.locator('[data-painel-lateral]');
   await expect(painel).toBeVisible();
@@ -105,16 +105,11 @@ test('o filtro de categoria que não carrega avisa, e não diz que o filtro fico
 test('na ficha do computador, a consulta que falha avisa e não diz que não há nada', async ({ page, request }) => {
   const id = await criarAtivo(request);
   await falhar(page, '**/api/assets/*/history*');
-  await falhar(page, '**/api/assets/*/assignments');
   await falhar(page, '**/api/assets/*/machine');
 
   await page.goto(`/computadores/${id}?aba=historico`);
   await expect(page.getByRole('alert')).toContainText('Não foi possível carregar');
   await expect(page.getByText('Nenhuma entrega, licença nem componente ainda.')).toHaveCount(0);
-
-  await page.getByRole('tab', { name: 'Posse' }).click();
-  await expect(page.getByRole('alert')).toContainText('Não foi possível carregar');
-  await expect(page.getByText('Este ativo nunca foi entregue.')).toHaveCount(0);
 
   await page.getByRole('tab', { name: 'Máquina' }).click();
   await expect(page.getByRole('alert')).toContainText('Não foi possível carregar');

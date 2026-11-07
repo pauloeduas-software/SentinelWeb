@@ -5,7 +5,7 @@ import {
   itensAbertosNo, itensComoReferencias, nomesDosItens, totalDeUnidades,
 } from '../../stock/use-cases/count-person-stock.usecase';
 
-const DICA_DO_POSTO_EM_USO = 'Tire o que está nele agora: devolva o que foi entregue e encerre as ocupações.';
+const DICA_DO_POSTO_EM_USO = 'Tire o que está nele agora: devolva o que foi entregue e encerre as responsabilidades.';
 
 function quantos(total: number, singular: string, plural: string): string {
   return `${total} ${total === 1 ? singular : plural}`;
@@ -54,8 +54,8 @@ export const workstationSpec: CatalogSpec = {
   },
 
   // A RECUSA DIZ O QUÊ, como a do colaborador: "tem 1 ativo, 3 unidades de
-  // estoque (Mouse USB ×2 e Teclado) e 1 ocupante", e os itens como `refs` — o
-  // Devolver do estoque mora na ficha do item, e a notificação leva até lá.
+  // estoque (Mouse USB ×2 e Teclado) e 1 ocupante", e o computador e os itens como
+  // `refs` — o Devolver mora na ficha deles (BN), e a notificação leva até lá.
   //
   // TRAVA O POSTO ANTES DE CONTAR, `FOR UPDATE`. A entrega ao posto e a
   // ocupação leem o posto travado (`ativoDoPosto`, `lerPostoTravado`), então
@@ -67,28 +67,34 @@ export const workstationSpec: CatalogSpec = {
     await lerPostoTravado(client, id, 'UPDATE');
 
     const [ativos, itens, ocupantes] = await Promise.all([
-      client.assignment.count({ where: { targetWorkstationId: id, checkinAt: null } }),
+      client.assignment.findMany({
+        where: { targetWorkstationId: id, checkinAt: null },
+        select: { asset: { select: { id: true, assetTag: true } } },
+      }),
       itensAbertosNo(client, { targetWorkstationId: id }),
       client.workstationOccupant.count({ where: { workstationId: id, endedAt: null } }),
     ]);
 
     const partes: string[] = [];
-    if (ativos > 0) partes.push(quantos(ativos, 'ativo', 'ativos'));
+    if (ativos.length > 0) partes.push(quantos(ativos.length, 'ativo', 'ativos'));
     if (itens.length > 0) {
       partes.push(`${quantos(totalDeUnidades(itens), 'unidade de estoque', 'unidades de estoque')} (${nomesDosItens(itens)})`);
     }
-    if (ocupantes > 0) partes.push(quantos(ocupantes, 'ocupante', 'ocupantes'));
+    if (ocupantes > 0) partes.push(quantos(ocupantes, 'responsável', 'responsáveis'));
     if (partes.length === 0) return null;
 
     const frase = partes.length === 1 ? partes[0] : `${partes.slice(0, -1).join(', ')} e ${partes[partes.length - 1]}`;
 
     // O pedido cita só o que existe: posto só com ocupante não tem entrega a devolver.
     const pedidos: string[] = [];
-    if (ativos > 0 || itens.length > 0) pedidos.push('devolva o que foi entregue');
-    if (ocupantes > 0) pedidos.push(`encerre ${ocupantes === 1 ? 'a ocupação' : 'as ocupações'}`);
+    if (ativos.length > 0 || itens.length > 0) pedidos.push('devolva o que foi entregue');
+    if (ocupantes > 0) pedidos.push(`encerre ${ocupantes === 1 ? 'a responsabilidade' : 'as responsabilidades'}`);
     return {
       mensagem: `Este posto ainda tem ${frase}. Tire o que está nele agora: ${pedidos.join(' e ')}.`,
-      refs: itensComoReferencias(itens),
+      refs: [
+        ...ativos.map(({ asset }) => ({ tipo: 'ativo' as const, id: asset.id, nome: asset.assetTag })),
+        ...itensComoReferencias(itens),
+      ],
     };
   },
 
@@ -96,11 +102,6 @@ export const workstationSpec: CatalogSpec = {
   // cá — e antes do `DELETE`: as linhas já fechadas perdem a ligação e guardam
   // o nome que o posto tem AGORA, o último antes de ele sair. É o nome que o
   // histórico mostra enquanto o posto existe, então nada muda na tela.
-  //
-  // A posse e a ocupação guardam também o ID (AW): é por ele que o histórico
-  // do ativo cruza a entrega com quem ocupou o posto. Pelo nome, um posto novo
-  // chamado Mesa 7 misturaria as pessoas dos dois. O estoque não cruza com
-  // ninguém e fica só com o nome.
   //
   // As FKs continuam `Restrict`: a linha que ninguém desligou aqui — uma
   // entrega que nasceu depois da contagem — segura o `DELETE` e desfaz a
@@ -111,7 +112,7 @@ export const workstationSpec: CatalogSpec = {
 
     await client.assignment.updateMany({
       where: { targetWorkstationId: id, checkinAt: { not: null } },
-      data: { targetWorkstationId: null, targetWorkstationName: posto.name, targetWorkstationFormerId: id },
+      data: { targetWorkstationId: null, targetWorkstationName: posto.name },
     });
     // Na ordem do id, como a exclusão do item (`delete-stock-item.usecase.ts`),
     // que desliga as mesmas linhas: os dois ao mesmo tempo se esperam, sem
@@ -128,7 +129,7 @@ export const workstationSpec: CatalogSpec = {
     });
     await client.workstationOccupant.updateMany({
       where: { workstationId: id, endedAt: { not: null } },
-      data: { workstationId: null, workstationName: posto.name, workstationFormerId: id },
+      data: { workstationId: null, workstationName: posto.name },
     });
   },
 

@@ -50,8 +50,4 @@ export const checkinSchema = z.strictObject({
   checkinNotes: textoOpcional('observações da devolução', 2_000),
   // O DIA da devolução (AM): hoje por padrão; nem futuro, nem antes da entrega.
   checkinAt: diaNaoFuturo('data da devolução'),
-  // O ESCOPO: fecha a posse só se ela aponta para este posto, senão 409.
-  // É o que a ficha do posto manda, para não fechar a posse de outra pessoa
-  // por cima de uma tela velha (`checkin-asset.usecase.ts`).
-  targetWorkstationId: uuidOpcional('posto'),
 });

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { conectarAgente, esperarPor } from '../helpers/agente';
-import { cenarioDePosse, criarAtivo } from '../helpers/fixtures';
+import { cenarioDePosse, criarAtivo, criarColaborador, criarPosto } from '../helpers/fixtures';
 import { agregarUsoDosAtivos } from '../../server/modules/reconciliation/use-cases/aggregate-usage.usecase';
 import { expurgarTelemetriaAntiga } from '../../server/modules/endpoint/use-cases/purge-telemetry.usecase';
 import { prisma } from '../../server/infra/database/prismaClient';
@@ -95,6 +95,27 @@ describe('o recálculo é idempotente de verdade', () => {
   it('o ativo com uso recente não aparece na lista de ociosos', async () => {
     const { body } = await api.get<{ rows: { hostname: string | null }[] }>('/api/reconciliation/idle?dias=30');
     expect(body.rows.map((row) => row.hostname)).not.toContain('pc-uso');
+  });
+
+  it('o ocioso entregue a um posto diz o posto, e não quem o ocupa', async () => {
+    const ativo = await criarAtivo(api, {
+      statusId: cenario.statusDeployableId, modelId: cenario.modelId, name: 'pc-ocioso',
+    });
+    const agente = await conectarAgente(api, 'ocioso-1');
+    await agente.handshake({ Hostname: 'pc-ocioso' });
+    const endpoint = await esperarPor('a máquina ociosa', () => prisma.endpoint.findUnique({ where: { hwid: 'ocioso-1' } }));
+    await agente.fechar();
+    await api.post(`/api/endpoints/${endpoint.id}/link`, { assetId: ativo.id });
+
+    const posto = await criarPosto(api, { name: 'Mesa Ociosa' });
+    const pessoa = await criarColaborador(api, { name: 'Pessoa da Mesa Ociosa', email: 'mesa.ociosa@empresa.test' });
+    await api.post(`/api/workstations/${posto}/occupants`, { personId: pessoa });
+    await api.post(`/api/assets/${ativo.id}/checkout`, { targetType: 'WORKSTATION', targetWorkstationId: posto });
+
+    const { body } = await api.get<{ rows: Record<string, unknown>[] }>('/api/reconciliation/idle?dias=30');
+    const linha = body.rows.find((row) => row.hostname === 'pc-ocioso');
+    expect(linha).toMatchObject({ targetType: 'WORKSTATION', targetLabel: 'Mesa Ociosa', postoVago: false });
+    expect(JSON.stringify(linha)).not.toContain('Pessoa da Mesa Ociosa');
   });
 });
 

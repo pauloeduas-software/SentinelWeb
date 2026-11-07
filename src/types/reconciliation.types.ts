@@ -1,6 +1,8 @@
 // A CONVERGÊNCIA RMM × ITAM, do lado do navegador
 // (docs/decisoes/reconciliacao.md).
 
+import type { AlvoDaPosse } from './posse.types';
+
 export type SuggestionKind = 'LINK';
 type SuggestionState = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SUPERSEDED';
 export type MatchSignal = 'SERIAL' | 'UUID' | 'HOSTNAME';
@@ -63,7 +65,8 @@ export interface AtivoOcioso {
   ultimoUso: string | null;
   diasSemUso: number | null;
   postoVago: boolean;
-  responsaveis: { id: string; name: string; via: string }[];
+  targetType: AlvoDaPosse | null;
+  targetLabel: string | null;
 }
 
 /**

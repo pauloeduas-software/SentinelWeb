@@ -137,11 +137,9 @@ describe('as constraints existem no banco', () => {
       WHERE contype = 'c' AND conrelid = 'assignments'::regclass
     `;
 
-    // O terceiro é o do id do posto excluído (AW), provado em `posto.test.ts`.
     expect(constraints.map((c) => c.conname).sort()).toEqual([
       'assignments_alvo_coerente',
       'assignments_devolucao_nao_antecede_entrega',
-      'assignments_posto_excluido',
     ]);
   });
 });

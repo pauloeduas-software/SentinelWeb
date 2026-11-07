@@ -10,7 +10,7 @@ import { Cpu, History, Info, KeyRound, Monitor, Users } from 'lucide-react';
 // aqui: aba vazia é indistinguível de defeito para quem usa o sistema.
 
 export type AbaId =
-  | 'detalhes' | 'posse' | 'historico'
+  | 'detalhes' | 'responsaveis' | 'historico'
   | 'licencas' | 'componentes' | 'maquina';
 
 export interface Aba {
@@ -21,7 +21,7 @@ export interface Aba {
 
 export const ABAS: readonly Aba[] = [
   { id: 'detalhes', rotulo: 'Detalhes', icone: Info },
-  { id: 'posse', rotulo: 'Posse', icone: Users },
+  { id: 'responsaveis', rotulo: 'Responsáveis', icone: Users },
   { id: 'licencas', rotulo: 'Licenças', icone: KeyRound },
   { id: 'componentes', rotulo: 'Componentes', icone: Cpu },
   { id: 'maquina', rotulo: 'Máquina', icone: Monitor },

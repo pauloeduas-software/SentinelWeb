@@ -227,7 +227,7 @@ describe('as outras datas do computador e do posto', () => {
     const antes = await encerrar({ endedAt: diaNoBrasil(-11) });
     expect(antes.status).toBe(422);
     expect(antes.body.error).toBe(
-      `O fim da ocupação (${naFrase(diaNoBrasil(-11))}) não pode ser antes do início (${naFrase(diaNoBrasil(-10))}).`,
+      `O fim da responsabilidade (${naFrase(diaNoBrasil(-11))}) não pode ser antes do início (${naFrase(diaNoBrasil(-10))}).`,
     );
 
     const fim = await encerrar({ endedAt: diaNoBrasil(-3) });
@@ -241,12 +241,12 @@ describe('as outras datas do computador e do posto', () => {
     expect((await api.put(`/api/assets/${pc.id}`, { purchaseDate: diaNoBrasil(0) })).status).toBe(200);
   });
 
-  it('a devolução pela ficha do posto leva o dia', async () => {
+  it('a devolução do computador entregue a um posto leva o dia', async () => {
     const mesa = await criarPosto(api, { name: 'Mesa da devolução do dia' });
     const pc = await computador();
     await api.post(`/api/assets/${pc.id}/checkout`, { targetType: 'WORKSTATION', targetWorkstationId: mesa, checkoutAt: diaNoBrasil(-6) });
 
-    const devolvido = await devolver(pc.id, { targetWorkstationId: mesa, checkinAt: diaNoBrasil(-2) });
+    const devolvido = await devolver(pc.id, { checkinAt: diaNoBrasil(-2) });
     expect(devolvido.status).toBe(200);
     expect(devolvido.body.assignment.checkinAt).toBe(`${diaNoBrasil(-2)}T15:00:00.000Z`);
   });

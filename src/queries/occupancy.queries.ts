@@ -1,20 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api/apiClient';
 import { assetKeys } from './asset.queries';
-import { assignmentKeys } from './assignment.queries';
 import { workstationKeys } from './workstation.queries';
-import type { WorkstationOccupant, OccupantView } from '../types/posse.types';
+import type { WorkstationOccupant } from '../types/posse.types';
 
 // QUEM OCUPA O POSTO — Camada 2 de docs/referencia/modelo-de-posse.md, a que o Snipe-IT não
 // tem. É aqui que a Mesa 1 vira "Laura de manhã, Ana à tarde".
 //
-// A chave inclui o recorte (`current`/`all`): sem isso o histórico seria servido
-// do cache dos atuais. `['occupancies']` continua sendo o prefixo, então
-// invalidar depois de gravar alcança os dois e também a tela do colaborador.
+// `['occupancies']` é o prefixo, então invalidar depois de gravar alcança a ficha do
+// posto e também a tela do colaborador.
 const occupancyKeys = {
   all: ['occupancies'] as const,
-  doPosto: (workstationId: string, view: OccupantView) =>
-    ['occupancies', 'workstation', workstationId, view] as const,
+  doPosto: (workstationId: string) => ['occupancies', 'workstation', workstationId] as const,
   daPessoa: (personId: string) => ['occupancies', 'person', personId] as const,
 };
 
@@ -28,13 +25,11 @@ export interface OccupantInput {
   startedAt?: string;
 }
 
-export function useWorkstationOccupantsQuery(workstationId: string | null, view: OccupantView) {
+export function useWorkstationOccupantsQuery(workstationId: string | null) {
   return useQuery({
-    queryKey: occupancyKeys.doPosto(workstationId ?? '', view),
+    queryKey: occupancyKeys.doPosto(workstationId ?? ''),
     queryFn: async () =>
-      (await apiClient.get<WorkstationOccupant[]>(`/workstations/${workstationId}/occupants`, {
-        params: { view },
-      })).data,
+      (await apiClient.get<WorkstationOccupant[]>(`/workstations/${workstationId}/occupants`)).data,
     enabled: workstationId != null,
   });
 }
@@ -50,16 +45,15 @@ export function usePersonOccupanciesQuery(personId: string | null) {
 }
 
 /**
- * Por que as duas mutações abaixo invalidam ATIVOS e POSSES, e não só ocupações:
+ * Por que as mutações abaixo invalidam ATIVOS, e não só ocupações:
  *
  * a responsabilidade é derivada (Camada 3). Colocar alguém na Mesa 1 muda quem
- * responde por TODO ativo entregue à Mesa 1 — e tira o `postoVago` da coluna
- * Responsável sem que nenhum ativo tenha sido tocado. Encerrar a última ocupação
- * faz o caminho inverso. Invalidar só `occupancies` deixaria a listagem mentindo
- * até o próximo refetch.
+ * responde por TODO ativo entregue à Mesa 1 sem que nenhum ativo tenha sido
+ * tocado. Encerrar a última ocupação faz o caminho inverso. Invalidar só
+ * `occupancies` deixaria a ficha do computador mentindo até o próximo refetch.
  *
  * E POSTOS pelo mesmo motivo, do outro lado: a linha da Mesa 1 em /postos mostra
- * quem está em cada turno e o selo "posto vago". Encerrar a última ocupação de
+ * quem responde e o selo "posto vago". Encerrar a última ocupação de
  * uma mesa que segura equipamento é exatamente o que ACENDE aquele selo — sem
  * esta invalidação, a tela que existe para mostrar o sinal seria a última a
  * saber dele.
@@ -70,7 +64,6 @@ export function usePersonOccupanciesQuery(personId: string | null) {
 function invalidarPosseDerivada(queryClient: ReturnType<typeof useQueryClient>) {
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: occupancyKeys.all }),
-    queryClient.invalidateQueries({ queryKey: assignmentKeys.all }),
     queryClient.invalidateQueries({ queryKey: assetKeys.all }),
     queryClient.invalidateQueries({ queryKey: workstationKeys.all }),
   ]);
@@ -91,8 +84,8 @@ export function useAddWorkstationOccupant() {
  * fabricaria no histórico uma saída que não aconteceu.
  *
  * Invalida o mesmo que adicionar e encerrar: o turno não muda QUEM responde,
- * mas aparece junto do nome na coluna Responsável dos ativos ("Laura (Manhã)"),
- * na posse do ativo e na lista de postos.
+ * mas aparece junto do nome na ficha do ativo ("Laura (Manhã)"), na posse dele
+ * e na lista de postos.
  */
 export function useCorrigirTurno() {
   const queryClient = useQueryClient();

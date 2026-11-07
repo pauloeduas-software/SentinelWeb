@@ -91,7 +91,7 @@ vencida.
 | **a lista** | **uma só**, por nome, como nas Configurações ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)): a encerrada fica junto, esmaecida e com a marca "encerrada". Busca por nome, licenciado, e-mail, pedido, categoria e fabricante — o texto ao pé da letra, `%` e `_` não são curinga; filtro de categoria. Em cima, os cartões Total, Ativas, Vencendo, Vencidas e Encerradas (esta pela mais recente): clicar filtra |
 | **a linha** | nome, categoria, "3 livres" com "10 compradas · 7 em uso" embaixo, prazo (ou "encerrada em" e a data) e situação. Fabricante e custo ficam só na ficha |
 | **as ações** | ficam no `⋯` da linha, como nas Configurações (AY): Entregar (some na encerrada; desabilitado sem livre ou vencida, com o motivo no `title`), Editar, Encerrar/Reabrir (os ícones do Desativar/Ativar) e Excluir. O Excluir é o das Configurações: sempre clica, e a que está em uso recebe o 409, que diz com quem está |
-| **a ficha** (`/licencas/:id`) | no card, o status, a conta ("10 compradas · 7 em uso · 3 livres"), todos os campos do cadastro — o valor da compra é o total, com o preço de cada licença ao lado: "R$ 5.000,00 (R$ 500,00 por licença)" — e as ações da lista, com as mesmas regras (Entregar e Editar abrem o painel por cima da ficha; excluída, volta para a lista). **Com quem está** (a primeira aba): as entregas abertas, da mais recente para a mais antiga, 15 por página, com busca pelo nome do colaborador ou do computador, a chave de cada uma (com o número dela na lista, ou "sem chave" na entrega feita antes de a licença ter chaves), e Chave — quando a licença tem chaves — e Devolver em cada linha. **Chaves**, só quando a licença tem chave: as **chaves do produto**, numeradas, cada uma com quanto está tomado ("livre", "em uso", "cobre 10 · 3 livres"). **Histórico**: só entregas e devoluções, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
+| **a ficha** (`/licencas/:id`) | no card, o status, a conta ("10 compradas · 7 em uso · 3 livres"), todos os campos do cadastro — o valor da compra é o total, com o preço de cada licença ao lado: "R$ 5.000,00 (R$ 500,00 por licença)" — e as ações da lista, com as mesmas regras (Entregar e Editar abrem o painel por cima da ficha; excluída, volta para a lista). **Responsáveis** (a primeira aba): as entregas abertas, da mais recente para a mais antiga, 15 por página, com busca pelo nome do colaborador ou do computador, a chave de cada uma (com o número dela na lista, ou "sem chave" na entrega feita antes de a licença ter chaves), e Chave — quando a licença tem chaves — e Devolver em cada linha. **Chaves**, só quando a licença tem chave: as **chaves do produto**, numeradas, cada uma com quanto está tomado ("livre", "em uso", "cobre 10 · 3 livres"). **Histórico**: só entregas e devoluções, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
 | **o alerta** | só nesta tela, numa caixa só, do mais urgente para o menos: vencida (a mais recente primeiro; fica até alguém renovar ou encerrar, mesmo sem ninguém usando — é decisão pendente) e vencendo em 30 dias (a mais próxima primeiro). A encerrada não entra: com entrega aberta ela não se encerra ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)). Cada linha diz quantas estão em uso, na mesma frase nos dois motivos — "venceu há 3 dias, ainda em uso (7)"; sem ninguém usando, só o prazo. Quantas são de cada motivo está nos cartões logo acima, que filtram a lista. Não existe alerta de mínimo |
 
 A edição manda **o formulário inteiro**, a lista de chaves junto, como em todas as telas
@@ -110,7 +110,7 @@ centavos e nenhum ponto de milhar: `1.234,56` é 422 com o nome do campo,
 `Valor de compra: use um valor como 1234,50.`. As datas vêm do seletor.
 
 **Quando a última linha de uma página sai** — excluída, encerrada, devolvida, aqui ou por outra
-pessoa —, a lista e o "Com quem está" voltam para a última página que existe. **A devolução que o
+pessoa —, a lista e a aba Responsáveis voltam para a última página que existe. **A devolução que o
 servidor recusa** deixa a linha aberta, com o dia escolhido, para tentar de novo — e a tela busca
 de novo o que mudou: toda ação, recusada ou não, atualiza a lista, a ficha e as contas, porque o
 409 quase sempre quer dizer que outra pessoa mexeu no meio. O cabeçalho do Entregar também lê o
@@ -154,7 +154,7 @@ naquele dia) não é conferida: a conta de livres é sempre a de agora. As recus
 olham **hoje**, e não o dia informado: a licença vencida ou encerrada, o colaborador desativado e
 o computador baixado recusam a entrega no passado mesmo que, naquele dia, estivessem em ordem.
 
-**A devolução** pede só o **dia**, na própria linha de "Com quem está", na ficha da licença —
+**A devolução** pede só o **dia**, na própria linha da aba Responsáveis, na ficha da licença —
 o único lugar do sistema que devolve licença. Vem com hoje; pode ser passado, mas nunca futuro
 nem antes do dia da entrega (422, com as duas datas). Os dois dias são o calendário de
 Brasília: hoje grava a hora real; um dia passado grava o meio-dia de Brasília, e por isso as
@@ -172,9 +172,9 @@ lixeira é 404 mesmo com a licença vencida. As duas últimas linhas são da dev
 | ativo ou colaborador que não existe, ou na lixeira | 404 `Ativo não encontrado.` / `Colaborador não encontrado.` |
 | ativo baixado / colaborador desativado | 409 `O ativo ATV-00042 teve baixa e não pode receber licença.` / `Laura Souza está desativado(a) e não pode receber licença.` |
 | licença encerrada ou vencida | 409 `A licença "Office 2021" está encerrada e não recebe entrega. Se o contrato voltou, reabra-a antes.` / `A licença "Office 2021" venceu há 3 dias e não recebe entrega: renove o contrato e atualize a data de vencimento antes.` — a vencendo entrega normalmente |
-| o mesmo alvo de novo | 409 `Laura Souza já está com "Office 2021". Uma licença vai uma vez para cada computador ou colaborador.` |
+| o mesmo alvo de novo | 409 `"Office 2021" já está entregue a Laura Souza. Uma licença vai uma vez para cada computador ou colaborador.` |
 | entrega antes da data da compra | 422 `A entrega (05/03/2026) não pode ser antes da data da compra (10/03/2026).` — e, para um computador, antes da compra dele: `A entrega (05/03/2026) não pode ser antes da compra de ATV-00042 (10/03/2026).` O outro lado também: a data de compra do computador não muda para depois da primeira licença entregue a ele (422) |
-| entrega antes do dia em que o mesmo alvo devolveu | 422 `A entrega (05/03/2026) não pode ser antes de 10/03/2026: até esse dia Laura Souza estava com "Office 2021".` |
+| entrega antes do dia em que o mesmo alvo devolveu | 422 `A entrega (05/03/2026) não pode ser antes de 10/03/2026: até esse dia "Office 2021" estava entregue a Laura Souza.` |
 | sem licença livre | 409 `Sem licença livre em "Office 2021": 10 compradas, 10 em uso. Devolva uma entrega ou aumente a quantidade comprada.` |
 | licença com chaves, e nenhuma escolhida | 422 `Escolha a chave desta entrega: "Office 2021" tem chaves cadastradas.` — ou, com todas as chaves tomadas, 409 `Todas as chaves de "Office 2021" estão em uso. Cadastre a chave da próxima licença, em Editar, antes de entregar.` |
 | a chave não é desta licença (ou a licença não tem chave) | 404 `Chave não encontrada nesta licença.` |
@@ -199,8 +199,8 @@ cada chave numa linha, com quantas licenças ela **cobre** — 1 na individual, 
 | **as regras** | uma linha, não vazia, sem repetir na licença (422 `A mesma chave aparece duas vezes na lista.`) — sem diferença de maiúscula: `abcd-1234` e `ABCD-1234` são a mesma chave, e a gravada fica como foi digitada. Juntas, cobrem no máximo o comprado: o "Adicionar" para quando chegam lá, e o servidor responde 422 `As chaves cobrem 12, mais do que 10 compradas em "Office 2021". …`; reduzir a quantidade abaixo do que elas cobrem é o mesmo 422 pelo formulário, que manda a lista junto, e 409 `Não é possível reduzir "Office 2021" para 3: as chaves cobrem 4. Tire uma chave ou diminua o que ela cobre antes.` num `PUT` sem a lista |
 | **a em uso** | a chave com entrega **aberta** não sai da lista (409 `Uma chave com entrega aberta não sai da lista: 2 estão com ela. Devolva para liberar.`, e o ✕ dela fica apagado), e não cobre menos do que as entregas abertas com ela (409 `Uma chave não cobre menos do que as entregas abertas com ela: 2 estão com ela. Devolva para liberar.`). O texto dela pode mudar: é a correção de digitação, e vale para as entregas dela. É também a renovação que trouxe chave nova (AD): a chave só aparece nas entregas abertas, e o histórico não a mostra. A chave cujas entregas já voltaram todas sai como a nunca entregue — é o que deixa a renovação com menos licenças tirar as chaves que sobraram e reduzir a quantidade no mesmo Salvar ([AK](../decisoes/licencas.md#ak--a-chave-só-prende-enquanto-está-em-uso)) |
 | **na entrega** | com chaves cadastradas, a entrega **escolhe uma** — é o que diz qual chave está com cada um. O seletor mostra só as que têm lugar, pelo número e pelo começo ("3. ABCDE-FGHIJ-•••••-•••••-••••• — cobre 10 · 3 livres"), e com uma só ela já vem escolhida. A licença sem chave nenhuma — a assinatura por conta, como o Microsoft 365 — entrega sem chave. As chaves podem cobrir menos do que o comprado (as outras chegam depois), mas a licença que tem chaves não entrega sem chave: a entrega além do que elas cobrem espera a próxima, cadastrada em Editar |
-| **trocar** | a chave de uma entrega **aberta**, por outra com lugar, na linha de "Com quem está" (`PATCH` com `licenseKeyId`). Não existe "limpar". É também como a entrega feita antes de a licença ter chaves ganha a sua. Devolvida é 409; sem lugar, 409 |
-| **onde aparece** | **só na ficha da licença**: a lista, na aba Chaves, e a de cada entrega, em "Com quem está", com o mesmo número; e no seletor da entrega. Sempre escondida — `ABCDE-FGHIJ-•••••-•••••-•••••` —, com **Mostrar** e **Copiar** em cada uma |
+| **trocar** | a chave de uma entrega **aberta**, por outra com lugar, na linha da aba Responsáveis (`PATCH` com `licenseKeyId`). Não existe "limpar". É também como a entrega feita antes de a licença ter chaves ganha a sua. Devolvida é 409; sem lugar, 409 |
+| **onde aparece** | **só na ficha da licença**: a lista, na aba Chaves, e a de cada entrega, na aba Responsáveis, com o mesmo número; e no seletor da entrega. Sempre escondida — `ABCDE-FGHIJ-•••••-•••••-•••••` —, com **Mostrar** e **Copiar** em cada uma |
 | **como se esconde** | com três grupos ou mais, ficam os dois primeiros; com dois, o primeiro. Sem hífen, com um grupo vazio, ou quando o que ficaria à mostra é quase a chave inteira (`…XY-Z`), ficam só os primeiros caracteres — um terço, até quatro |
 | **onde não** | a lista, a busca (que também não procura por ela), o alerta, o histórico, a aba Licenças do ativo e a ficha do colaborador. As rotas delas não devolvem a chave |
 | **na auditoria** | só quantas chaves entraram, mudaram e saíram (`chaves: { incluidas, alteradas, removidas }`), e, na entrega e na troca, qual chave pelo `licenseKeyId` — nunca o texto |
@@ -219,7 +219,7 @@ e o que as protege é a tela escondê-las e só o detalhe devolvê-las.
 
 | Onde | O quê |
 |---|---|
-| **aba Licenças do ativo** | as entregas abertas **àquele computador**: licença, categoria, vencimento, situação e desde quando, com a nota embaixo do nome; o nome leva à ficha da licença com "Com quem está" já filtrado pela etiqueta (`/licencas/<id>?quem=ATV-00012`), onde está o Devolver |
+| **aba Licenças do ativo** | as entregas abertas **àquele computador**: licença, categoria, vencimento, situação e desde quando, com a nota embaixo do nome; o nome leva à ficha da licença com a aba Responsáveis já filtrada pela etiqueta (`/licencas/<id>?quem=ATV-00012`), onde está o Devolver |
 | **ficha do colaborador** | as entregas abertas **a ela**, com as mesmas colunas e o mesmo link, filtrado pelo nome dela |
 | **histórico do ativo** | entregas e devoluções de licença **ao ativo** |
 | **histórico do colaborador** | entregas e devoluções de licença **a ela** |
@@ -230,7 +230,7 @@ responde por ele; a entregue à pessoa é dela, e não aparece no computador que
 **É posse** ([D93](../decisoes/licencas.md#d93--assento-é-posse-e-a-posse-do-projeto-já-tem-três-lugares)):
 o colaborador com licença aberta não se desativa nem se exclui, e o ativo com licença aberta não
 dá baixa nem vai para a lixeira. **A recusa diz quais licenças precisam voltar**, pelo nome —
-`Este colaborador ainda tem 3 licenças (AutoCAD, Office e VPN). Devolva o que está com ele …`,
+`Este colaborador ainda responde por 3 licenças (AutoCAD, Office e VPN). Devolva o que foi entregue a ele …`,
 `ATV-00042 ainda tem a licença SolidWorks. Devolva pela tela de Licenças …` — e manda cada uma
 como `refs` ao lado da frase: a notificação (e o modal de baixa) põe um link para a ficha de
 cada licença. É o caminho rápido do funcionário que sai, já que o Devolver só existe na ficha

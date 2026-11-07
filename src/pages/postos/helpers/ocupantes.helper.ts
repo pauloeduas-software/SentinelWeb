@@ -10,27 +10,14 @@ export function nomeDoOcupante(ocupante: WorkstationOccupant): string {
   return ocupante.person?.name ?? ocupante.personId;
 }
 
-/** Turno como foi digitado ("Manhã", "12x36 A"), ou um traço. */
-export function turnoDoOcupante(ocupante: WorkstationOccupant): string {
-  return ocupante.shift?.trim() ? ocupante.shift : '—';
+/** Onde a busca da aba Responsáveis procura: no nome e no turno, os dois que a linha mostra primeiro. */
+export function textoDoOcupante(ocupante: WorkstationOccupant): string {
+  return `${nomeDoOcupante(ocupante)} ${ocupante.shift ?? ''}`;
 }
 
-/**
- * "desde 03/03/2026" enquanto aberta; "03/03/2026 › 15/04/2026" quando
- * encerrada.
- *
- * As duas formas são diferentes de propósito: uma ocupação aberta tem só um
- * lado, e escrever "03/03/2026 – " deixaria um traço pendurado que se lê como
- * dado faltando.
- */
+/** "desde 03/03/2026": a lista é de quem está no posto agora. */
 export function periodoDaOcupacao(ocupante: WorkstationOccupant): string {
-  const inicio = formatarDiaDoInstante(ocupante.startedAt);
-  return ocupante.endedAt ? `${inicio} › ${formatarDiaDoInstante(ocupante.endedAt)}` : `desde ${inicio}`;
-}
-
-/** Ocupação ABERTA — `endedAt` nulo. É quem responde pelo posto agora. */
-export function estaAberta(ocupante: WorkstationOccupant): boolean {
-  return ocupante.endedAt == null;
+  return `desde ${formatarDiaDoInstante(ocupante.startedAt)}`;
 }
 
 /**

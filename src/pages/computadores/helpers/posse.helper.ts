@@ -1,91 +1,21 @@
 import type { CheckinInput, CheckoutInput } from '../../../queries/assignment.queries';
 import type { Asset } from '../../../types/asset.types';
-import type { AlvoDaPosse, PosseResolvida, Responsavel } from '../../../types/posse.types';
+import type { AlvoDaPosse, PosseResolvida } from '../../../types/posse.types';
 
 // Leitura da posse para a tela — funções puras, fora do JSX
 // (docs/referencia/arquitetura.md: "cálculo sai do JSX").
 //
 // O contrato está em docs/referencia/modelo-de-posse.md: a responsabilidade é DERIVADA, pode
 // ser de VÁRIAS pessoas (os ocupantes de um posto) e pode ser de NINGUÉM mesmo
-// com o ativo entregue (posto sem ocupante aberto). As três coisas aparecem numa
-// célula de tabela, e é isto que este arquivo resolve.
+// com o ativo entregue (posto sem ocupante aberto). Fora da aba Responsáveis, a tela
+// mostra só o alvo da entrega (BL), e é isto que este arquivo resolve.
 
 /** O que a listagem mostra quando não há nada a mostrar. */
 export const TRACO = '—';
 
-/**
- * "Laura (Manhã)" — o turno entre parênteses, quando existe.
- *
- * O turno sai do banco como texto livre ("Manhã", "12x36 A") e é mostrado
- * EXATAMENTE como foi digitado: normalizar a caixa aqui estragaria "12x36 A" e
- * reescreveria texto que é do usuário, não nosso.
- */
-function nomeComTurno(responsavel: Responsavel): string {
-  return responsavel.shift ? `${responsavel.name} (${responsavel.shift})` : responsavel.name;
-}
-
-/** "Laura (Manhã), Ana (Tarde)" — a Mesa 1 inteira numa linha. */
-function formatarResponsaveis(responsaveis: readonly Responsavel[]): string {
-  return responsaveis.map(nomeComTurno).join(', ');
-}
-
-export interface ResumoPosse {
-  /** Há posse ABERTA: o botão da linha é devolver, não entregar. */
-  entregue: boolean;
-  /** "Laura (Manhã), Ana (Tarde)". Vazio quando ninguém responde. */
-  responsaveis: string;
-  quantos: number;
-  /** Para quem a posse aponta: a pessoa, o posto ou a etiqueta do outro ativo. */
-  alvo: string | null;
-  /**
-   * De onde a responsabilidade veio, quando NÃO veio direto da pessoa.
-   *
-   * No caso `PERSON` fica nulo de propósito: o alvo e o responsável são a mesma
-   * pessoa, e repetir o nome embaixo dele não informa nada.
-   */
-  detalheAlvo: string | null;
-  /**
-   * Entregue a um posto que não tem ninguém: equipamento parado em mesa vazia.
-   * É sinal operacional — candidato a voltar ao estoque —, não erro de dado.
-   */
-  postoVago: boolean;
-}
-
-/**
- * A célula "Responsável" de uma linha da listagem.
- *
- * Aceita `undefined` porque, enquanto o backend não
- * sobe, a listagem simplesmente não traz o campo, e a coluna deve mostrar um
- * traço em vez de quebrar a tela inteira.
- */
-export function resumoDaPosse(posse: PosseResolvida | null | undefined): ResumoPosse {
-  const responsaveis = posse?.responsaveis ?? [];
-
-  return {
-    entregue: posse?.assignmentId != null,
-    responsaveis: formatarResponsaveis(responsaveis),
-    quantos: responsaveis.length,
-    alvo: posse?.targetLabel ?? null,
-    detalheAlvo: detalheDoAlvo(posse),
-    postoVago: posse?.postoVago === true,
-  };
-}
-
-/** "no posto Mesa 1" — vazio quando o alvo é a pessoa. */
-function detalheDoAlvo(posse: PosseResolvida | null | undefined): string | null {
-  if (!posse?.targetLabel) return null;
-  return posse.targetType === 'WORKSTATION' ? `no posto ${posse.targetLabel}` : null;
-}
-
-/**
- * O texto do botão e do título da operação da linha.
- *
- * Entregar e devolver são a MESMA porta (o `CheckoutModal`), porque são a mesma
- * decisão vista dos dois lados — e porque um ativo entregue não pode ser
- * entregue de novo sem passar pela devolução.
- */
-export function rotuloDaOperacao(posse: PosseResolvida | null | undefined): string {
-  return posse?.assignmentId != null ? 'Devolver' : 'Entregar';
+/** Onde a busca da aba Responsáveis procura: no alvo e em quem está no posto. */
+export function textoDaPosse(posse: PosseResolvida): string {
+  return [posse.targetLabel, ...posse.responsaveis.map((pessoa) => pessoa.name)].join(' ');
 }
 
 /**
@@ -96,8 +26,9 @@ export function rotuloDaOperacao(posse: PosseResolvida | null | undefined): stri
  * para sair?". Um ativo "Em conserto" com o botão aceso abria o modal inteiro,
  * deixava escolher pessoa, data e observação, e só no fim levava a recusa.
  *
- * A DEVOLUÇÃO nunca trava aqui: ativo entregue precisa poder voltar, qualquer
- * que seja o status — é por ela que um status errado se conserta.
+ * O ATIVO ENTREGUE trava primeiro, como o item sem unidade disponível: volta pelo
+ * Devolver da aba Responsáveis (BQ), que nunca trava, qualquer que seja o status —
+ * é por ele que um status errado se conserta.
  *
  * O texto diz o status ATUAL pelo nome que o cliente deu a ele, porque é esse
  * nome que a pessoa vê na linha e procura em Configurações para entender.
@@ -107,7 +38,7 @@ export function rotuloDaOperacao(posse: PosseResolvida | null | undefined): stri
  * "Disponível". O servidor recusa com 409; o botão não oferece.
  */
 export function bloqueioDaEntrega(asset: Pick<Asset, 'posse' | 'status' | 'retiredAt'>): string | null {
-  if (asset.posse?.assignmentId != null) return null;
+  if (asset.posse?.assignmentId != null) return 'Já entregue: devolva antes de entregar de novo';
   if (asset.retiredAt) return 'Ativo baixado não pode ser entregue — desfaça a baixa antes.';
   if (asset.status.type === 'DEPLOYABLE') return null;
   return `Só ativo disponível pode ser entregue — este está como ${asset.status.name}.`;

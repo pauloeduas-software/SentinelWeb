@@ -5,8 +5,7 @@
 //   Camada 3  PosseResolvida       a responsabilidade DERIVADA — nunca coluna
 //
 // Mora em arquivo próprio, e não dentro de `asset.types.ts`, porque posse não é
-// um detalhe do ativo: a mesma `Assignment` é lida pela tela do ativo, pela do
-// colaborador (`/people/:id/history`) e pela do posto (`/workstations/:id`).
+// um detalhe do ativo: a tela do colaborador e a do posto também a leem.
 //
 // A dependência é de mão única — `asset.types.ts` importa daqui, e este arquivo
 // não importa de lá. É o que evita ciclo entre dois arquivos de tipo.
@@ -20,8 +19,8 @@ export type AlvoDaPosse = 'PERSON' | 'WORKSTATION';
  * - `DIRETO`  a posse aponta para ela (`targetType: 'PERSON'`)
  * - `POSTO`   ela ocupa o posto para o qual o ativo foi entregue
  *
- * Importa na tela: "Laura" por posse direta e "Laura" por ocupar a Mesa 1 são
- * fatos diferentes, e a devolução de cada um é uma operação diferente.
+ * "Laura" por posse direta e "Laura" por ocupar a Mesa 1 são fatos diferentes,
+ * e a devolução de cada um é uma operação diferente.
  */
 type ViaDaResponsabilidade = 'DIRETO' | 'POSTO';
 
@@ -47,7 +46,7 @@ export interface Responsavel {
  * Sem posse aberta: tudo nulo e `responsaveis` vazio — o ativo está no estoque.
  */
 export interface PosseResolvida {
-  /** `null` = não há posse aberta. É o que decide entre entregar e devolver. */
+  /** `null` = não há posse aberta. Com ela, o Entregar trava e a linha traz o Devolver. */
   assignmentId: string | null;
   targetType: AlvoDaPosse | null;
   /** Nome de quem detém: a pessoa ou o nome do posto. */
@@ -55,16 +54,19 @@ export interface PosseResolvida {
   responsaveis: Responsavel[];
   /** Quando a posse aberta começou — o `min` do dia da devolução (AM). */
   checkoutAt: string | null;
+  /** Quando a entrega deve voltar: é a aba Responsáveis que mostra. */
+  expectedCheckinAt: string | null;
+  /** A observação da entrega: a aba Responsáveis mostra, como em Estoque e Licenças. */
+  checkoutNotes: string | null;
   /**
    * Posse apontando para um posto SEM ocupante aberto: equipamento
    * parado em posto vazio. É sinal operacional, não erro de dado — por isso
-   * vem no contrato e aparece na listagem (docs/referencia/modelo-de-posse.md, "Como amarra no
-   * status", item 3).
+   * vem no contrato (docs/referencia/modelo-de-posse.md, "Como amarra no status", item 3).
    */
   postoVago: boolean;
 }
 
-/** Pessoa embutida numa linha de posse ou de ocupação. */
+/** Pessoa embutida numa ocupação. */
 export interface PessoaRef {
   id: string;
   name: string;
@@ -72,59 +74,10 @@ export interface PessoaRef {
   email: string | null;
 }
 
-/** Posto embutido como alvo de uma posse ou numa ocupação. */
+/** Posto embutido numa ocupação. */
 interface PostoRef {
   id: string;
   name: string;
-}
-
-/**
- * Uma linha de posse — `GET /api/assets/:id/assignments`.
- *
- * Aberta = `checkinAt` nulo. Fechada é histórico, e histórico não se apaga: a
- * devolução preenche a data, não deleta a linha.
- *
- * As datas são strings ISO (`JSON.parse` não reconstrói `Date`), como no resto
- * do contrato. As relações embutidas são opcionais porque o histórico pode ser
- * servido enxuto: quem mostra o alvo passa por `rotuloDoAlvo()`, que cai nas
- * FKs quando a relação não veio.
- */
-export interface Assignment {
-  id: string;
-  assetId: string;
-
-  targetType: AlvoDaPosse;
-  targetPersonId: string | null;
-  targetWorkstationId: string | null;
-
-  checkoutAt: string;
-  expectedCheckinAt: string | null;
-  checkinAt: string | null;
-
-  checkoutNotes: string | null;
-  checkinNotes: string | null;
-
-  targetPerson?: PessoaRef | null;
-  targetWorkstation?: PostoRef | null;
-  /** O nome do posto, por escrito, quando ele foi excluído — `targetWorkstation` vem nulo. */
-  targetWorkstationName?: string | null;
-  /** E o id que ele tinha (AW): preenchido, o posto foi excluído. */
-  targetWorkstationFormerId?: string | null;
-
-  /**
-   * Quem ocupou o posto durante esta entrega (AW) — só no histórico do ativo
-   * (`GET /api/assets/:id/assignments`); vazio na entrega a uma pessoa.
-   */
-  ocupantesDoPeriodo?: OcupanteDoPeriodo[];
-}
-
-/** Uma ocupação do posto que se sobrepõe ao período de uma entrega. */
-export interface OcupanteDoPeriodo {
-  id: string;
-  shift: string | null;
-  startedAt: string;
-  endedAt: string | null;
-  person: PessoaRef;
 }
 
 /**
@@ -156,11 +109,3 @@ export interface WorkstationOccupant {
    */
   workstation?: PostoRef | null;
 }
-
-/**
- * O recorte que `GET /api/workstations/:id/occupants` devolve:
- *
- * - `current` só as ocupações abertas — quem responde pelo posto AGORA
- * - `all` também as encerradas — o histórico, que nunca é apagado
- */
-export type OccupantView = 'current' | 'all';

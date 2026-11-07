@@ -1,5 +1,5 @@
 // A LEITURA DE UM EVENTO DE HISTÓRICO — funções puras, compartilhadas pelas
-// abas Histórico do ativo e da pessoa.
+// abas Histórico do ativo, da pessoa e do posto.
 //
 // Nasceu dentro de `ativos/detalhe/helpers/`, quando o ativo era o único
 // com linha do tempo, e mudou para cá quando a pessoa ganhou a dela. O que

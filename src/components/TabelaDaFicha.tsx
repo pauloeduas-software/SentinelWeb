@@ -24,7 +24,7 @@ export interface LinhaDaFicha {
   para?: string;
   /** O nome na primeira coluna, e a nota embaixo dele. */
   nome: ReactNode;
-  nota?: string | null;
+  nota?: ReactNode;
   celulas: readonly ReactNode[];
 }
 

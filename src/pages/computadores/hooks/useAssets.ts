@@ -4,10 +4,7 @@ import {
   useAssetStatsQuery, useAssetsQuery, useCreateAsset, useDeleteAsset,
   useRestoreAsset, useUpdateAsset, type AssetInput,
 } from '../../../queries/asset.queries';
-import {
-  useCheckinAsset, useCheckoutAsset,
-  type CheckinInput, type CheckoutInput,
-} from '../../../queries/assignment.queries';
+import { useCheckoutAsset, type CheckoutInput } from '../../../queries/assignment.queries';
 import { useCatalogOptionsQuery } from '../../../queries/catalog.queries';
 import type { Contagem } from '../../../components/CartoesDeContagem';
 import type { Asset, AssetView } from '../../../types/asset.types';
@@ -45,7 +42,6 @@ export function useAssets() {
   const excluir = useDeleteAsset();
   const restaurar = useRestoreAsset();
   const entregar = useCheckoutAsset();
-  const devolver = useCheckinAsset();
 
   const assets = useMemo(() => data?.rows ?? [], [data]);
   const total = data?.total ?? 0;
@@ -122,13 +118,6 @@ export function useAssets() {
     await entregar.mutateAsync({ id: emPosse.id, data: dados });
     closePosse();
     notificar.sucesso('Ativo entregue.');
-  };
-
-  const handleDevolver = async (dados: CheckinInput) => {
-    if (!emPosse) return;
-    await devolver.mutateAsync({ id: emPosse.id, data: dados });
-    closePosse();
-    notificar.sucesso('Ativo devolvido.');
   };
 
   // O erro sobe para o formulário mostrar a mensagem do servidor.
@@ -215,6 +204,5 @@ export function useAssets() {
     openPosse,
     closePosse,
     handleEntregar,
-    handleDevolver,
   };
 }

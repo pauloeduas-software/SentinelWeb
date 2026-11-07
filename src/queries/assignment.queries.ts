@@ -1,25 +1,17 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api/apiClient';
 import { assetKeys } from './asset.queries';
 // Quem PERGUNTA importa; o dono do dado é quem responde (docs/referencia/arquitetura.md).
 // A posse precisa dizer ao posto que algo mudou nele, e a chave é do posto.
 import { workstationKeys } from './workstation.queries';
 import { personKeys } from './person.queries';
-import type { AlvoDaPosse, Assignment } from '../types/posse.types';
+import type { AlvoDaPosse } from '../types/posse.types';
 
 // A POSSE — Camada 1 de docs/referencia/modelo-de-posse.md.
 //
 // Entregar e devolver são OPERAÇÕES, não edição de campo: não existe `useUpdate`
 // aqui de propósito. Uma posse nasce no checkout e morre no checkin, e o
 // histórico nunca é apagado.
-//
-// `all` é o prefixo: invalidar ['assignments'] alcança o histórico de um ativo E
-// o que uma pessoa tem em posse, sem a mutação saber que tela está aberta.
-export const assignmentKeys = {
-  all: ['assignments'] as const,
-  doAtivo: (assetId: string) => ['assignments', 'asset', assetId] as const,
-  minhas: ['assignments', 'me'] as const,
-};
 
 /**
  * Corpo de `POST /api/assets/:id/checkout`.
@@ -47,30 +39,14 @@ export interface CheckinInput {
   checkinNotes?: string;
   /** O dia da devolução, 'AAAA-MM-DD'. Ausente é hoje (AM). */
   checkinAt?: string;
-  /**
-   * Só fecha a posse se ela aponta para este posto (409 se não). A ficha
-   * do posto manda o id dela; a tela Computadores, que olha a posse, não manda.
-   */
-  targetWorkstationId?: string;
-}
-
-/** O histórico de posse de um ativo: a aberta primeiro, depois as fechadas. */
-export function useAssetAssignmentsQuery(assetId: string | null) {
-  return useQuery({
-    queryKey: assignmentKeys.doAtivo(assetId ?? ''),
-    queryFn: async () =>
-      (await apiClient.get<Assignment[]>(`/assets/${assetId}/assignments`)).data,
-    enabled: assetId != null,
-  });
 }
 
 /**
  * O QUE UMA ENTREGA OU UMA DEVOLUÇÃO MUDA NA TELA, num lugar só.
  *
- * Quatro domínios, e nenhum deles é opcional:
+ * Três domínios, e nenhum deles é opcional:
  *
- *   posses  — a linha que acabou de abrir ou fechar;
- *   ativos  — as colunas Responsável e Localização e o status são consequência
+ *   ativos  — as colunas Responsáveis e Localização e o status são consequência
  *             da operação;
  *   postos  — a ficha do posto lista os ativos entregues a ele, conta quantos
  *             são e deriva o selo de POSTO VAGO desses dois números;
@@ -78,7 +54,7 @@ export function useAssetAssignmentsQuery(assetId: string | null) {
  *             conta a entrega e a devolução no histórico, como a licença e o
  *             estoque já faziam (`invalidarLicencaEPosse`, `invalidarEstoqueEPosse`).
  *
- * O terceiro não estava aqui, e não dava para notar: até então nenhuma
+ * O segundo não estava aqui, e não dava para notar: até então nenhuma
  * entrega ou devolução acontecia com uma tela de posto montada. A devolução
  * passou a morar DENTRO da ficha do posto, e aí a tabela de ativos, o contador e
  * o selo de vago estão todos na tela no instante em que a mutação volta — sem
@@ -90,14 +66,13 @@ export function useAssetAssignmentsQuery(assetId: string | null) {
  * faz a ficha reler ao montar.
  *
  * É o mesmo desenho do `invalidarPosseDerivada` da ocupação, pelo mesmo motivo:
- * posse é um fato que quatro telas leem de ângulos diferentes.
+ * posse é um fato que três telas leem de ângulos diferentes.
  *
  * Devolve a promessa e roda também no erro, como `invalidarLicencaEPosse`: o botão só
  * destrava com a tela relida, e o 409 de quem viu a tela velha traz a tela nova.
  */
 function invalidarAlvosDaPosse(queryClient: ReturnType<typeof useQueryClient>) {
   return Promise.all([
-    queryClient.invalidateQueries({ queryKey: assignmentKeys.all }),
     queryClient.invalidateQueries({ queryKey: assetKeys.all }),
     queryClient.invalidateQueries({ queryKey: workstationKeys.all }),
     queryClient.invalidateQueries({ queryKey: personKeys.all }),

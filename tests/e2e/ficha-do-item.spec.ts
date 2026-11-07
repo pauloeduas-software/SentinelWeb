@@ -27,7 +27,7 @@ test('a linha abre a página do item, e a seta volta com a busca', async ({ page
   await page.getByRole('row', { name: new RegExp(nome) }).click();
   await expect(page).toHaveURL(/\/estoque\/[^/?]+$/);
   await expect(tituloDaPagina(page, nome)).toBeVisible();
-  await expect(page.getByRole('tab', { name: /Com quem está/ })).toBeVisible();
+  await expect(page.getByRole('tab', { name: /Responsáveis/ })).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
 
   await page.getByRole('link', { name: 'Voltar para Estoque' }).click();
@@ -80,7 +80,7 @@ test('a busca fica no endereço: trocar de aba não a perde, limpar a tira, e a 
   await expect(page).toHaveURL(/quem=Laura/);
 
   await page.reload();
-  await page.getByRole('tab', { name: /Com quem está/ }).click();
+  await page.getByRole('tab', { name: /Responsáveis/ }).click();
   await expect(busca).toHaveValue('Laura');
 
   await busca.fill('');
@@ -113,7 +113,7 @@ test('devolver acontece na ficha, e ela acompanha a conta', async ({ page, reque
   await principal.getByRole('button', { name: 'Devolver' }).click();
   await principal.getByRole('button', { name: 'Confirmar' }).click();
 
-  await expect(principal.getByText('Ninguém está com este item agora.')).toBeVisible();
+  await expect(principal.getByText('Nenhum responsável por este item agora.')).toBeVisible();
   await expect(principal.getByText('5 no total · 0 em uso · 5 disponíveis')).toBeVisible();
 });
 
@@ -162,6 +162,6 @@ test('o componente diz em quais computadores está', async ({ page, request }) =
   const id = await criarItem(request, `Memória ${Date.now()}`, 'COMPONENT');
 
   await page.goto(`/estoque/${id}`);
-  await expect(page.getByRole('tab', { name: /Em quais computadores/ })).toBeVisible();
-  await expect(page.getByRole('tab', { name: /Com quem está/ })).toHaveCount(0);
+  await expect(page.getByRole('tab', { name: /Computadores/ })).toBeVisible();
+  await expect(page.getByRole('tab', { name: /Responsáveis/ })).toHaveCount(0);
 });

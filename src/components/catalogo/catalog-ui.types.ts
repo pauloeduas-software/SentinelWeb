@@ -182,7 +182,7 @@ export const TIPOS_STATUS: readonly OpcaoFixa[] = [
   // com um colaborador e estar na assistência é a distinção mais cara do
   // inventário — um gera valor, o outro custa (prisma/schema.prisma).
   { value: 'IN_USE', label: 'Em uso',
-    ajuda: 'Com um colaborador ou instalado em algum lugar. Fora do estoque porque está cumprindo a função dele.' },
+    ajuda: 'Com um responsável ou instalado em algum lugar. Fora do estoque porque está cumprindo a função dele.' },
   { value: 'PENDING', label: 'Pendente',
     ajuda: 'Fora do estoque por algum impedimento, e volta: conserto, diagnóstico, trânsito, preparo.' },
   { value: 'UNDEPLOYABLE', label: 'Inutilizável',

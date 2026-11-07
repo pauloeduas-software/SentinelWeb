@@ -32,11 +32,11 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | # | Invariante | Onde | O que o usuário vê |
 |---|---|---|---|
 | 1 | Uma posse aberta por ativo | **banco** — índice único parcial | 409 `Este ativo já está entregue. Faça a devolução antes.` (a API confere antes; o `P2002` da corrida vira a mesma frase) |
-| 2 | Uma ocupação aberta por (posto, pessoa), e as passadas da mesma pessoa no mesmo posto não se sobrepõem | **banco** — índice único parcial; o passado, **aplicação** — o início não antecede o último fim (`add-workstation-occupant`, com a pessoa travada) | 409 `Esta pessoa já ocupa este posto.` (idem); 422 `A ocupação (10/02/2026) não pode começar antes do fim da anterior de Laura neste posto (10/03/2026).` |
+| 2 | Uma ocupação aberta por (posto, pessoa), e as passadas da mesma pessoa no mesmo posto não se sobrepõem | **banco** — índice único parcial; o passado, **aplicação** — o início não antecede o último fim (`add-workstation-occupant`, com a pessoa travada) | 409 `Este colaborador já é responsável por este posto.` (idem); 422 `A responsabilidade (10/02/2026) não pode começar antes do fim da anterior de Laura neste posto (10/03/2026).` |
 | 3 | O tipo de um status ou de uma categoria em uso não muda | **aplicação** — `status-label.spec.ts`, `category.spec.ts`, com a linha travada | 409 `Não é possível mudar o tipo: status em uso por 200 registros.` |
 | 4 | Estado × posse: ativo entregue não fica `DEPLOYABLE` | **aplicação** — `assert-status-posse.usecase.ts` | 409 `"Disponível" é um status de estoque, e este ativo está entregue. Faça a devolução antes de mudar o status.` |
-| 5 | A forma da posse: um alvo coerente, devolução depois da entrega — e só a posse **devolvida** de um posto excluído fica sem FK, com o nome e o id por escrito | **banco** — três `CHECK` | 422 com frase própria, porque a API recusa antes; quem escreve direto no banco (seed, `psql`) recebe o erro do `CHECK` |
-| 6 | Colaborador desativado ou na lixeira não tem posse direta, **licença**, **unidade de estoque** nem ocupação aberta | **aplicação** — 409 na desativação (`personSpec.beforeWrite`), na exclusão (`personSpec.motivoParaNaoExcluir`), no `checkout` e no cadastro de ocupante + trava de linha | 409 `Este colaborador ainda responde por 2 ativos (ATV-00012 e ATV-00013), tem 1 licença (Office), está com 3 unidades de estoque (Mouse USB ×2 e Teclado) e ocupa 1 posto (Mesa 1). Devolva o que está com ele e encerre a ocupação antes de excluir.` (ou *antes de desativar*), com os computadores, as licenças, os itens e os postos como `refs` — a tela põe um link em cada um |
+| 5 | A forma da posse: um alvo coerente, devolução depois da entrega — e só a posse **devolvida** de um posto excluído fica sem FK, com o nome por escrito | **banco** — dois `CHECK` | 422 com frase própria, porque a API recusa antes; quem escreve direto no banco (seed, `psql`) recebe o erro do `CHECK` |
+| 6 | Colaborador desativado ou na lixeira não tem posse direta, **licença**, **unidade de estoque** nem ocupação aberta | **aplicação** — 409 na desativação (`personSpec.beforeWrite`), na exclusão (`personSpec.motivoParaNaoExcluir`), no `checkout` e no cadastro de ocupante + trava de linha | 409 `Este colaborador ainda responde por 2 ativos (ATV-00012 e ATV-00013), 1 licença (Office), 3 unidades de estoque (Mouse USB ×2 e Teclado) e 1 posto (Mesa 1). Devolva o que foi entregue a ele e encerre a responsabilidade pelo posto antes de excluir.` (ou *antes de desativar*), com os computadores, as licenças, os itens e os postos como `refs` — a tela põe um link em cada um |
 | 9 | A forma da entrega de licença: o alvo é UM (pessoa **ou** ativo), a devolução vem depois da entrega, e toda entrega em uso aponta para a licença | **banco** — três `CHECK` em `license_checkouts`, com a FK `Restrict` | 422 com o campo que falta (a API recusa antes, com frase própria) |
 | 12 | Uma máquina é no máximo um ativo, e um ativo no máximo uma máquina | **banco** — `@unique` em `Endpoint.assetId` | 409 `Este ativo já está vinculado a outra máquina. Desfaça aquele vínculo antes, pela aba Máquina do ativo.` |
 | 13 | A mesma sugestão não empilha na fila | **banco** — índice único parcial `sugestao_pendente_por_alvo` | nada: o job trata o `P2002` como "outro já criou" |
@@ -44,7 +44,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 19 | No máximo um ativo por posto de trabalho, também no passado | **aplicação** — a porta da entrega (`ativoDoPosto()`, com `FOR UPDATE` na linha do posto), que também não começa antes da última devolução no posto; **banco** — índice único parcial `assignments_um_aberto_por_posto` | 409 `Este posto de trabalho já tem um ativo: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.`; 422 `A entrega (01/03/2026) não pode ser antes da última devolução no posto Mesa 1: ATV-00042 saiu dele em 10/06/2026, e o posto tem um computador por vez.` |
 | 20 | Ativo baixado ou na lixeira não tem posse aberta, licença nem componente | **aplicação** — três portas: a baixa e a lixeira (`assertSemPosse` e as contagens de licenças e de componentes) e a entrega (`checkout-asset`, `checkout-license`, `checkout-stock`), as duas com o ativo travado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Desfaça a baixa antes.` |
 | 22 | O que está em uso nunca passa da quantidade comprada | **aplicação** — a entrega e a edição contam com a linha da licença travada (`lock-license.usecase.ts`) | 409 `Sem licença livre em "Office 2024": 5 compradas, 5 em uso. Devolva uma entrega ou aumente a quantidade comprada.` |
-| 23 | Uma entrega aberta por alvo e licença | **banco** — dois índices únicos parciais, um por alvo. No passado, a entrega que se sobrepõe à última devolução do mesmo alvo é só da **aplicação** (422) | 409 `Laura Souza já está com "Office 2024".` (a API confere antes) |
+| 23 | Uma entrega aberta por alvo e licença | **banco** — dois índices únicos parciais, um por alvo. No passado, a entrega que se sobrepõe à última devolução do mesmo alvo é só da **aplicação** (422) | 409 `"Office 2024" já está entregue a Laura Souza.` (a API confere antes) |
 | 24 | A chave da entrega é uma das chaves da licença; nenhuma chave vai para mais entregas abertas do que cobre; e as chaves cobrem no máximo o que foi comprado | **banco** — a FK composta (chave, licença) e os `CHECK`s da chave. A conta de cada chave e a soma contra o comprado são da **aplicação**, com a licença travada | 409 `Esta chave já está em outra entrega aberta de "Office 2024". Escolha outra.` / 422 `As chaves cobrem 12, mais do que 10 compradas em "Office 2024". …` |
 | 25 | A forma da entrega de estoque, e o que está em uso nunca passa do total | **banco** — o CHECK do total (`stock_items_qty_nao_negativa`), os cinco `CHECK` da linha e a FK `Restrict` para o item. A conta contra o total é da **aplicação**, com a linha do item travada | 409 `Sem unidade disponível de "Mouse USB": 10 no total, 10 em uso. Devolva uma unidade ou aumente o total.` / `Não é possível reduzir "Mouse USB" para 1: 2 estão em uso. Devolva para liberar.` |
 
@@ -171,12 +171,12 @@ posse errada nem gravam "Disponível" num ativo entregue.
 
 ### 5 — A forma da `Assignment`
 
-`assignments_alvo_coerente`, `assignments_devolucao_nao_antecede_entrega` e `assignments_posto_excluido`, no
+`assignments_alvo_coerente` e `assignments_devolucao_nao_antecede_entrega`, no
 bloco escrito à mão de `prisma/migrations/0_init/migration.sql`.
 
-Três afirmações sobre a mesma linha: o alvo polimórfico é **coerente** (uma FK
-preenchida, e é a que casa com o `targetType`), a posse **não fecha antes de
-abrir**, e o id de um posto excluído só aparece na posse que a exclusão desligou.
+Duas afirmações sobre a mesma linha: o alvo polimórfico é **coerente** (uma FK
+preenchida, e é a que casa com o `targetType`), e a posse **não fecha antes de
+abrir**.
 
 **A exceção é o posto excluído** ([V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira),
 [Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)): o posto segue a regra do status e
@@ -185,15 +185,6 @@ guarda o nome por escrito em `targetWorkstationName` — e só a devolvida: a ab
 aponta sempre para o posto. A entrega de estoque (`stock_movements_forma`) e a
 ocupação (`workstation_occupants_posto_presente`) têm a mesma exceção, com a mesma
 condição.
-
-**E o id do posto excluído** ([AW](../decisoes/posse.md#aw--o-computador-está-onde-o-posto-fica-e-o-histórico-diz-quem-ocupou-o-posto)):
-a posse e a ocupação guardam também o id que o posto tinha
-(`targetWorkstationFormerId`, `workstationFormerId`, sem FK), para o histórico do
-ativo cruzar as duas pelo id e não pelo nome. Os CHECKs `assignments_posto_excluido`
-e `workstation_occupants_posto_excluido` dizem que ele só existe na linha que a
-exclusão desligou — de posto, fechada, sem a ligação e com o nome: uma linha
-nunca aponta para um posto vivo e para um excluído ao mesmo tempo, e uma posse
-de pessoa nunca ganha ocupantes de posto.
 
 **E a ocupação não termina antes de começar**
 (`workstation_occupants_fim_nao_antecede_inicio`), como a posse e a entrega de

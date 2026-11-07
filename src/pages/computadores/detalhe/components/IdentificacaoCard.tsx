@@ -8,7 +8,7 @@ import { formatarDiaDoInstante } from '../../../../helpers/format.helper';
 import type { Asset } from '../../../../types/asset.types';
 import { seloDaSaida } from '../../helpers/baixa.helper';
 import { tomDoStatus } from '../../../../helpers/status.helper';
-import { resumoDaPosse } from '../../helpers/posse.helper';
+import { nomeDoResponsavel } from '../../../../helpers/responsavel.helper';
 
 // O CARD DE IDENTIFICAÇÃO: o que responde "que máquina é esta, de quem é e onde
 // está" antes de qualquer aba. O que é do catálogo e da compra fica em Detalhes.
@@ -16,7 +16,6 @@ import { resumoDaPosse } from '../../helpers/posse.helper';
 export default function IdentificacaoCard({ asset, acoes }: { asset: Asset; acoes: ReactNode }) {
   // Cálculo fora do JSX (docs/referencia/arquitetura.md).
   const selo = seloDaSaida(asset);
-  const posse = resumoDaPosse(asset.posse);
 
   return (
     <CartaoDaFicha marca={<IconeDaFicha><Monitor /></IconeDaFicha>} acoes={acoes}>
@@ -30,11 +29,7 @@ export default function IdentificacaoCard({ asset, acoes }: { asset: Asset; acoe
           {asset.serial && <span className="font-mono">{asset.serial}</span>}
         </Dado>
         <Dado rotulo="Nome / apelido">{asset.name}</Dado>
-        <Dado rotulo="Responsável">
-          {posse.postoVago
-            ? <PontoDeStatus tom="aviso">Posto vago</PontoDeStatus>
-            : posse.responsaveis}
-        </Dado>
+        <Dado rotulo="Responsáveis">{nomeDoResponsavel(asset.posse)}</Dado>
         {/* NUM POSTO, o computador está onde o posto fica (AW), e a
             localização dele é para onde volta na devolução — a atual e a
             padrão do Snipe-IT. Fora de posto, é onde ele está guardado. */}

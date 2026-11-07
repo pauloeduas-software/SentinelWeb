@@ -135,7 +135,7 @@ export default function ItemFormModal({ item, onClose, onSubmit }: ItemFormModal
         ajuda={!item
           ? 'Ao menos 1: o que há hoje.'
           : item.emUso > 0
-            ? `O total, com o que está em uso. O mínimo é ${item.emUso}: é o que está com alguém.`
+            ? `O total, com o que está em uso. O mínimo é ${item.emUso}: é o que está entregue.`
             : 'O total que há agora: 0 quando acabou.'}
       >
         <Input

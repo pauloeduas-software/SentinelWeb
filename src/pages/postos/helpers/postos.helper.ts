@@ -1,7 +1,7 @@
 import type { Contagem } from '../../../components/CartoesDeContagem';
 import type { PostoInput } from '../../../queries/workstation.queries';
 import type {
-  AtivoDoPosto, Posto, PostoOcupante, PostoStats, PostoView,
+  AtivoDoPosto, Posto, PostoStats, PostoView,
 } from '../../../types/workstation.types';
 
 // Leitura de um posto para a tela — funções puras, fora do JSX
@@ -27,66 +27,29 @@ export function recorteDaUrl(valor: string | null): PostoView {
   return RECORTES.find((recorte) => recorte === valor) ?? 'todos';
 }
 
-/** Uma faixa da escala: o turno e quem o cobre. */
-interface TurnoDoPosto {
-  turno: string;
-  pessoas: string[];
-}
+/** Quantos nomes cabem na coluna Responsáveis: o resto vira "+N". */
+const NOMES_NA_COLUNA = 2;
 
-const SEM_TURNO = 'sem turno';
-
-/**
- * Os ocupantes agrupados POR TURNO — é assim que a linha se lê ("Manhã: Laura /
- * Tarde: Ana"), e é a forma que o modelo tem e o Snipe-IT não.
- *
- * O turno é texto livre e pode vir vazio: aí a faixa é "sem turno", que é
- * diferente de não haver ninguém. A ordem vem do servidor (turno, depois
- * antiguidade) e é preservada — reordenar aqui faria a mesma lista sair
- * diferente da que a listagem de ativos mostra.
- */
-export function turnosDoPosto(ocupantes: readonly PostoOcupante[]): TurnoDoPosto[] {
-  const faixas: TurnoDoPosto[] = [];
-
-  for (const ocupante of ocupantes) {
-    const turno = ocupante.shift?.trim() || SEM_TURNO;
-    const nome = ocupante.person?.name ?? ocupante.personId;
-
-    const faixa = faixas.find((item) => item.turno === turno);
-    if (faixa) faixa.pessoas.push(nome);
-    else faixas.push({ turno, pessoas: [nome] });
-  }
-
-  return faixas;
+/** Todos os nomes, na ordem do servidor. É o `title` da coluna. */
+export function nomesDoPosto(posto: Pick<Posto, 'ocupantes'>): string[] {
+  return posto.ocupantes.map((ocupante) => ocupante.person?.name ?? ocupante.personId);
 }
 
 /**
- * A coluna Quem está, numa linha: "Manhã: Laura · Tarde: Ana". No posto vago, a frase
- * do selo: é o sinal que a tela existe para dar.
+ * A coluna Responsáveis: só os nomes (BO), os dois primeiros e quantos faltam, "Ana, Bruno
+ * +3". O turno fica na ficha do posto, e o posto vago, na Situação.
  */
-export function quemEstaNoPosto(posto: Pick<Posto, 'ocupantes' | 'vago' | 'totalAtivos'>): string {
-  if (posto.vago) return explicacaoDoVago(posto);
-  const faixas = turnosDoPosto(posto.ocupantes);
-  if (faixas.length === 0) return TRACO;
-  return faixas
-    .map(({ turno, pessoas }) => (turno === SEM_TURNO ? pessoas.join(', ') : `${turno}: ${pessoas.join(', ')}`))
-    .join(' · ');
+export function quemEstaNoPosto(posto: Pick<Posto, 'ocupantes'>): string {
+  const nomes = nomesDoPosto(posto);
+  const primeiros = nomes.slice(0, NOMES_NA_COLUNA).join(', ');
+  const resto = nomes.length - NOMES_NA_COLUNA;
+  return resto > 0 ? `${primeiros} +${resto}` : primeiros || TRACO;
 }
 
 /** "3 ativos" / "1 ativo" / "nenhum". */
 export function resumoDeAtivos(total: number): string {
   if (total === 0) return 'nenhum';
   return `${total} ${total === 1 ? 'ativo' : 'ativos'}`;
-}
-
-/**
- * A frase do selo de posto vago — a explicação, não só o rótulo.
- *
- * Posto vago não é erro de cadastro: é equipamento parado em mesa sem ninguém,
- * candidato a voltar ao estoque. Quem vê o selo pela primeira vez precisa ler
- * o que ele quer dizer, senão trata como bug.
- */
-export function explicacaoDoVago(posto: Pick<Posto, 'totalAtivos'>): string {
-  return `${resumoDeAtivos(posto.totalAtivos)} entregue${posto.totalAtivos === 1 ? '' : 's'} aqui e ninguém responde por ${posto.totalAtivos === 1 ? 'ele' : 'eles'}.`;
 }
 
 /**

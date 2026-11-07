@@ -19,8 +19,8 @@ const logger = createLogger('workstation.maestro');
 //                o posto não tem lixeira, como o status.
 //
 //   a TELA       a listagem com quem está em cada mesa e quantos ativos ela
-//                tem, e a ficha de um posto — leituras próprias, porque juntam
-//                posse, ocupação e estoque, e nenhuma spec expressa isso.
+//                tem, a ficha de um posto e o histórico dele — leituras próprias,
+//                porque juntam posse, ocupação e estoque, e nenhuma spec expressa isso.
 //
 // Os OCUPANTES não estão aqui: são do domínio `occupancy`, que pendura
 // `/api/workstations/:id/occupants`.
@@ -32,6 +32,7 @@ export class WorkstationMaestro {
     server.get('/api/workstations/options', cadastro.options);
     server.get('/api/workstations/stats', workstationController.stats);
     server.get('/api/workstations/:id', workstationController.detail);
+    server.get('/api/workstations/:id/history', workstationController.history);
     server.post('/api/workstations', WRITE_RATE_LIMIT, cadastro.create);
     server.put('/api/workstations/:id', WRITE_RATE_LIMIT, cadastro.update);
     server.delete('/api/workstations/:id', WRITE_RATE_LIMIT, cadastro.remove);

@@ -27,7 +27,7 @@ import { usePode } from '../../../stores/auth.store';
 // ações em cima; nas abas, quem está com ela agora, as chaves e o histórico.
 //
 // É A ÚNICA TELA COM AS CHAVES DE PRODUTO: as da licença, na aba Chaves, e a de cada
-// entrega, em "Com quem está" — todas escondidas até "Mostrar" (AC).
+// entrega, na aba Responsáveis — todas escondidas até "Mostrar" (AC).
 //
 // Markup e mais nada: estado e chamadas ficam no `useFichaDaLicenca`
 // (docs/referencia/arquitetura.md).
@@ -111,18 +111,18 @@ function FichaDaLicenca({ id }: { id: string }) {
           <TabsList>
             {/* `emUso`, e não o total da lista: com a busca do link, ele diria só quantos
                 a busca achou, e não com quantos a licença está. */}
-            <TabsTrigger value="posse"><Users /> Com quem está <ContagemDaAba>{licenca.emUso}</ContagemDaAba></TabsTrigger>
+            <TabsTrigger value="responsaveis"><Users /> Responsáveis <ContagemDaAba>{licenca.emUso}</ContagemDaAba></TabsTrigger>
             {licenca.keys.length > 0 && (
               <TabsTrigger value="chaves"><KeyRound /> Chaves <ContagemDaAba>{licenca.keys.length}</ContagemDaAba></TabsTrigger>
             )}
             <TabsTrigger value="historico"><History /> Histórico</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="posse" className="mt-4 space-y-4">
+          <TabsContent value="responsaveis" className="mt-4 space-y-4">
             <ListToolbar
               search={busca}
               onSearchChange={mudarBusca}
-              placeholder="Buscar por colaborador ou computador…"
+              placeholder="Buscar por responsável ou computador…"
               page={paginaDasEntregas}
               perPage={POR_PAGINA}
               total={entregas.data?.total ?? 0}
@@ -133,7 +133,7 @@ function FichaDaLicenca({ id }: { id: string }) {
               erro={entregas.error?.message ?? null}
               entregas={entregas.data?.rows ?? []}
               chaves={licenca.keys}
-              vazio={buscaAdiada ? `Ninguém com "${buscaAdiada}" está com esta licença.` : undefined}
+              vazio={buscaAdiada ? `Nenhum responsável com "${buscaAdiada}" nesta licença.` : undefined}
               ocupado={ocupado}
               onDevolver={handleDevolver}
               onTrocarChave={handleTrocarChave}

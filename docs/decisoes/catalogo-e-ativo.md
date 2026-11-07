@@ -535,6 +535,8 @@ altera. Nada disso toca o estoque: sem baixa e sem motivo lá
 
 ## BJ — O computador entregue a um posto continua na lista de Computadores
 
+> **Superada em parte por [BL](#bl--o-computador-no-posto-mostra-o-posto-antes-de-quem-o-ocupa):** entregue a um posto, a coluna Responsável mostra o posto, sem quem o ocupa; o resto continua valendo.
+
 **Decidido** (2026-11-06, na revisão de Computadores):
 
 - **A vista Ativos mostra todo computador sem baixa**, entregue a um posto ou não. A busca, o filtro por
@@ -572,3 +574,30 @@ para ela, e o link colado não teria para onde voltar. O parâmetro na URL, como
 `_changelist_filters` do Django, porque sujaria o endereço que se cola no chamado e pediria validar o
 destino, que é onde o `back_url` do Redmine teve o redirecionamento aberto. Guardar os filtros de cada lista
 na sessão, porque o menu recomeça a lista limpa (BB).
+
+---
+
+## BL — O computador no posto mostra o posto antes de quem o ocupa
+
+> **Superada em parte por [BO](./posse.md#bo--em-responsáveis-vai-só-o-nome):** o selo Posto vago sai de embaixo do nome do posto.
+>
+> **E por [BP](./posse.md#bp--o-que-já-foi-mora-na-aba-histórico):** a aba Responsáveis passa ao box de Estoque e Licenças, e sai o histórico dela.
+
+**Decidido** (2026-11-06, na revisão de Computadores):
+
+- **Entregue a um posto, o responsável que aparece é o posto, em toda tela:** "Posto Mesa 1", ou o nome da pessoa
+  quando foi entregue direto a ela. Vale na lista de Computadores, no cartão da ficha, na janela de devolução e nos
+  Ociosos de Descobertas, como já valia em Estoque. Quem ocupa o posto não aparece, mesmo que seja um só; sem
+  ninguém nele, o selo Posto vago fica embaixo do nome do posto.
+- **O número da aba Responsáveis conta o posto como um,** tenha quantos ocupantes tiver, e vago também.
+- **A pessoa só aparece pendurada no posto, na aba Responsáveis:** "Entregue para", o nome do posto e, embaixo dele,
+  cada pessoa com "responsável pelo posto"; e no histórico da mesma aba, embaixo de cada entrega ao posto. Entregue a
+  uma pessoa, a aba fica como estava.
+
+**Supera:** em parte a [BJ](#bj--o-computador-entregue-a-um-posto-continua-na-lista-de-computadores), que punha
+os ocupantes em cima e "no posto Mesa 1" embaixo.
+
+**Por quê:** o nome do ocupante na primeira linha, igual ao de quem recebeu o computador direto, dava a entender
+que a posse era da pessoa. A posse é do posto, e quem o ocupa responde por estar nele
+([modelo de posse](../referencia/modelo-de-posse.md)). A tela diz o alvo da entrega, e a aba Responsáveis
+mostra a ordem real: primeiro para quem foi entregue, depois quem responde por isso.

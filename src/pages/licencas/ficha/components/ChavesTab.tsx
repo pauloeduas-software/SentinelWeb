@@ -3,7 +3,7 @@ import { lugarDaChave } from '../../helpers/licenca.helper';
 import type { ChaveDaLicenca } from '../../../../types/license.types';
 
 // AS CHAVES DO PRODUTO, numeradas e com quanto cada uma cobre, todas escondidas até
-// "Mostrar" (AC). É a mesma ordem e o mesmo número de "Com quem está" e da entrega.
+// "Mostrar" (AC). É a mesma ordem e o mesmo número da aba Responsáveis e da entrega.
 
 export default function ChavesTab({ chaves }: { chaves: ChaveDaLicenca[] }) {
   return (

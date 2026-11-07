@@ -3,8 +3,7 @@ import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { SEM_PARAMETROS } from '../../../infra/http/sem-parametros';
 import {
-  addOccupantSchema, endOccupancySchema, occupancyViewQuerySchema, occupantParamsSchema,
-  updateOccupantShiftSchema,
+  addOccupantSchema, endOccupancySchema, occupantParamsSchema, updateOccupantShiftSchema,
 } from '../schemas/occupancy.schema';
 import { listWorkstationOccupants } from '../use-cases/list-workstation-occupants.usecase';
 import { addWorkstationOccupant } from '../use-cases/add-workstation-occupant.usecase';
@@ -16,10 +15,12 @@ import { listPersonOccupancies } from '../use-cases/list-person-occupancies.usec
 // errorHandler, que devolve 422 com o campo que falhou — e o `AppError` dos
 // use-cases (404 / 409) sai por lá também, com a mensagem que eles escreveram.
 export const occupancyController = {
+  // Só as ocupações ABERTAS: é o que a aba Responsáveis mostra. As encerradas vêm
+  // pelo `/api/workstations/:id/history`.
   async listByWorkstation(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    const { view } = occupancyViewQuerySchema.parse(request.query ?? {});
-    return listWorkstationOccupants(id, view);
+    SEM_PARAMETROS.parse(request.query ?? {});
+    return listWorkstationOccupants(id, 'current');
   },
 
   async add(request: FastifyRequest, reply: FastifyReply) {

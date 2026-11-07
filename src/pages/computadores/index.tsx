@@ -1,5 +1,5 @@
 import {
-  Copy, Monitor, PackageX, Pencil, Plus, RotateCcw, Trash2, Undo2, UserPlus,
+  Copy, Monitor, PackageX, Pencil, Plus, RotateCcw, Trash2, UserPlus,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AssetFormModal from './components/AssetFormModal';
@@ -19,9 +19,8 @@ import { usePode } from '../../stores/auth.store';
 import { formatarData, formatarMoeda } from '../../helpers/format.helper';
 import { seloDaSaida } from './helpers/baixa.helper';
 import { tomDoStatus } from '../../helpers/status.helper';
-import {
-  TRACO, bloqueioDaEntrega, resumoDaPosse, rotuloDaOperacao,
-} from './helpers/posse.helper';
+import { nomeDoResponsavel } from '../../helpers/responsavel.helper';
+import { TRACO, bloqueioDaEntrega } from './helpers/posse.helper';
 import { useAssets } from './hooks/useAssets';
 
 export default function ComputadoresPage() {
@@ -33,7 +32,7 @@ export default function ComputadoresPage() {
     categoryId, changeCategoria, loading, erro,
     modalAberto, emEdicao, clonando, statusPadraoId, openCreate, openEdit, openClone, closeModal, abrirDetalhe,
     handleSubmit, handleDelete, handleRestore,
-    emPosse, openPosse, closePosse, handleEntregar, handleDevolver,
+    emPosse, openPosse, closePosse, handleEntregar,
   } = useAssets();
   // Mandar para a lixeira, tirar de lá e Configurações são `SUPERVISOR` no
   // servidor (AV). Sem isto, quem não é veria a lixeira, o restaurar e o link de
@@ -78,7 +77,7 @@ export default function ComputadoresPage() {
               <TableHead>Modelo</TableHead>
               <TableHead className="hidden w-[12%] md:table-cell">Categoria</TableHead>
               <TableHead className="hidden w-[12%] md:table-cell">Localização</TableHead>
-              <TableHead>Responsável</TableHead>
+              <TableHead>Responsáveis</TableHead>
               <TableHead className="w-36">Compra</TableHead>
               <TableHead className="w-36">Status</TableHead>
               <TableHeadAcoes />
@@ -89,7 +88,6 @@ export default function ComputadoresPage() {
             {assets.map((asset) => {
               // O cálculo da posse fica no helper, nunca no JSX
               // (docs/referencia/arquitetura.md). Aqui só se escolhe o que mostrar.
-              const posse = resumoDaPosse(asset.posse);
               const selo = seloDaSaida(asset);
               const bloqueio = bloqueioDaEntrega(asset);
 
@@ -108,15 +106,9 @@ export default function ComputadoresPage() {
                   <TableCell className="hidden md:table-cell">{asset.model.category.name}</TableCell>
                   {/* No posto, ele está onde o posto fica (AW); `location` é para onde ele volta. */}
                   <TableCell className="hidden md:table-cell">{asset.postoAtual?.location.name ?? asset.location?.name ?? TRACO}</TableCell>
-                  {/* RESPONSÁVEL — derivado, e pode ser mais de um: os ocupantes
-                      do posto para o qual o ativo foi entregue aparecem juntos,
-                      cada um com o turno (docs/referencia/modelo-de-posse.md, Camada 3). */}
-                  <TableCell>
-                    {posse.postoVago
-                      ? <PontoDeStatus tom="aviso">Posto vago</PontoDeStatus>
-                      : <TableLinha>{posse.quantos > 0 ? posse.responsaveis : TRACO}</TableLinha>}
-                    {posse.detalheAlvo && <TableSublinha>{posse.detalheAlvo}</TableSublinha>}
-                  </TableCell>
+                  {/* RESPONSÁVEL — derivado (docs/referencia/modelo-de-posse.md, Camada 3).
+                      Ou o posto ou a pessoa direta: quem ocupa o posto fica na aba Responsáveis (BL). */}
+                  <TableCell>{nomeDoResponsavel(asset.posse) || TRACO}</TableCell>
                   <TableCell>
                     {/* O valor só para quem vê o custo (D77, AV); a data, para todos. */}
                     {asset.purchaseCost != null && <TableLinha>{formatarMoeda(asset.purchaseCost)}</TableLinha>}
@@ -137,13 +129,13 @@ export default function ComputadoresPage() {
                       acoes={view === 'trashed'
                         ? [podeDecidir && { rotulo: 'Restaurar', icone: RotateCcw, onClick: () => void handleRestore(asset) }]
                         : [
-                          // Entregar/devolver é OPERAÇÃO, não campo: mora aqui,
-                          // ao lado do ativo, e não dentro do formulário.
-                          // Travado, o `titulo` diz POR QUÊ — um botão apagado
-                          // sem explicação parece defeito.
+                          // Entregar é OPERAÇÃO, não campo: mora aqui, ao lado do
+                          // ativo, e não dentro do formulário. Travado, o `titulo`
+                          // diz POR QUÊ — um botão apagado sem explicação parece
+                          // defeito. O Devolver mora na ficha, como em Estoque (BN, BQ).
                           {
-                            rotulo: rotuloDaOperacao(asset.posse),
-                            icone: posse.entregue ? Undo2 : UserPlus,
+                            rotulo: 'Entregar',
+                            icone: UserPlus,
                             onClick: () => openPosse(asset),
                             disabled: bloqueio !== null,
                             titulo: bloqueio ?? undefined,
@@ -209,7 +201,6 @@ export default function ComputadoresPage() {
           asset={emPosse}
           onClose={closePosse}
           onEntregar={handleEntregar}
-          onDevolver={handleDevolver}
         />
       )}
     </div>

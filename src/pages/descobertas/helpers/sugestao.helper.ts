@@ -15,7 +15,7 @@ interface Rotulo {
 export const ROTULOS: Record<SuggestionKind, Rotulo> = {
   LINK: {
     titulo: 'Vincular máquina ao ativo',
-    acao: 'O ativo passa a ter esta máquina. Nada muda na posse.',
+    acao: 'O ativo passa a ter esta máquina. Nada muda nos responsáveis.',
   },
 };
 

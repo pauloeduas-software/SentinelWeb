@@ -191,7 +191,7 @@ export function useCheckinLicense() {
   });
 }
 
-/** Troca só a chave de uma entrega aberta, por outra da lista — o "Com quem está" da ficha. */
+/** Troca só a chave de uma entrega aberta, por outra da lista — a aba Responsáveis da ficha. */
 export function useUpdateCheckoutKey() {
   const queryClient = useQueryClient();
   return useMutation({

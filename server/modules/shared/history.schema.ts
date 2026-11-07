@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// O contrato de entrada de TODA aba Histórico — do ativo e da pessoa.
+// O contrato de entrada de TODA aba Histórico — do ativo, da pessoa e do posto.
 //
 // Nasceu em `asset/schemas/asset.schema.ts`, com o histórico do ativo, e mudou
 // para cá quando a pessoa ganhou o dela:

@@ -63,7 +63,7 @@ export function esconderChave(chave: string): string {
 /**
  * Uma chave como as listas a nomeiam: a posição na licença e o começo, escondido
  * — "3. ABCDE-FGHIJ-•••••-•••••-•••••". A posição separa duas chaves que começam
- * igual, e é o mesmo número na aba Chaves, no "Com quem está" e na entrega.
+ * igual, e é o mesmo número na aba Chaves, na aba Responsáveis e na entrega.
  */
 export function rotuloDaChave(chave: Pick<ChaveDaLicenca, 'productKey'>, posicao: number): string {
   return `${posicao}. ${esconderChave(chave.productKey)}`;

@@ -15,7 +15,7 @@ import { useAcoesDoItem } from '../../hooks/useAcoesDoItem';
 // Estado da FICHA DO ITEM: as duas listas de 15 em 15, a aba e a devolução. A busca é
 // a do `useBuscaDaFicha`, e o rótulo da aba conta as entregas.
 
-const ABAS = ['posse', 'historico'] as const;
+const ABAS = ['responsaveis', 'historico'] as const;
 // O consumível (AJ) não fica com ninguém: a entrega tira do total, e o histórico é o
 // único lugar onde ela aparece.
 const ABAS_DO_CONSUMIVEL = ['historico'] as const;

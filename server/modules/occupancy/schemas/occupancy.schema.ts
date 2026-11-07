@@ -25,7 +25,7 @@ import { diaNaoFuturo, textoOpcional, uuidObrigatorio } from '../../shared/field
  * limite do modelo: escala com data futura é agenda, e agenda está declarada
  * fora dele (docs/referencia/modelo-de-posse.md, "O que este modelo NÃO resolve").
  */
-const inicioOpcional = diaNaoFuturo('início da ocupação');
+const inicioOpcional = diaNaoFuturo('início da responsabilidade');
 
 export const addOccupantSchema = z.strictObject({
   personId: uuidObrigatorio('colaborador'),
@@ -48,20 +48,7 @@ export const addOccupantSchema = z.strictObject({
  * a devolução (AM). Ausente é agora; passado pode, futuro não.
  */
 export const endOccupancySchema = z.strictObject({
-  endedAt: diaNaoFuturo('fim da ocupação'),
-});
-
-/**
- * `?view=` da listagem de ocupantes do posto (a da pessoa traz só as abertas).
- *
- * `current` é o padrão porque é a pergunta da operação — quem ocupa o posto
- * AGORA. `all` traz o histórico inteiro, aberto e encerrado.
- *
- * `strictObject` também aqui: `?vew=all` (typo) usaria o padrão em silêncio e o
- * cliente leria uma lista de ocupantes atuais achando que era o histórico.
- */
-export const occupancyViewQuerySchema = z.strictObject({
-  view: z.enum(['current', 'all'], 'view inválida: use current ou all').default('current'),
+  endedAt: diaNaoFuturo('fim da responsabilidade'),
 });
 
 /**
@@ -89,5 +76,5 @@ export const updateOccupantShiftSchema = z.strictObject({
  */
 export const occupantParamsSchema = z.strictObject({
   id: z.uuid('identificador inválido'),
-  occupantId: uuidObrigatorio('ocupação'),
+  occupantId: uuidObrigatorio('responsabilidade'),
 });

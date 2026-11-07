@@ -73,11 +73,13 @@ describe('excluir posto — só o presente segura', () => {
       targetType: 'WORKSTATION', targetWorkstationId: mesa,
     })).status).toBe(201);
 
-    const { status, body } = await api.delete<{ error: string }>(`/api/workstations/${mesa}`);
+    const { status, body } = await api.delete<{ error: string; refs: unknown[] }>(`/api/workstations/${mesa}`);
     expect(status).toBe(409);
     expect(body.error).toMatch(/^Este posto ainda tem 1 ativo\. /);
     expect(body.error).toContain('Tire o que está nele agora');
     expect(body.error).toMatch(/: devolva o que foi entregue\.$/);
+    // O Devolver mora na ficha do computador (BN): a recusa leva até ela.
+    expect(body.refs).toEqual([{ tipo: 'ativo', id: ativo.id, nome: ativo.assetTag }]);
   });
 
   it('exclui o que só tem entrega JÁ DEVOLVIDA, e o histórico do ativo continua com o nome', async () => {
@@ -116,44 +118,6 @@ describe('excluir posto — só o presente segura', () => {
       expect(evento.posto?.workstationId).toBeNull();
       expect(evento.posto?.workstationLabel).toBe('Mesa com ocupação antiga');
     }
-  });
-
-  // O ID TAMBÉM FICA POR ESCRITO (AW): é por ele, e não pelo nome, que o
-  // histórico do ativo cruza a entrega com quem ocupou o posto excluído.
-  it('a exclusão guarda o id do posto na entrega e na ocupação, e o banco recusa as duas ligações juntas', async () => {
-    const mesa = await posto('Mesa que guarda o id');
-    const ativo = await ativoDisponivel('Desktop do id guardado');
-    expect((await api.post(`/api/assets/${ativo.id}/checkout`, {
-      targetType: 'WORKSTATION', targetWorkstationId: mesa,
-    })).status).toBe(201);
-    expect((await api.post(`/api/assets/${ativo.id}/checkin`, {})).status).toBe(200);
-    const ocupacao = await api.post<{ id: string }>(`/api/workstations/${mesa}/occupants`, { personId: laura });
-    expect((await api.delete(`/api/workstations/${mesa}/occupants/${ocupacao.body.id}`)).status).toBe(200);
-
-    expect((await api.delete(`/api/workstations/${mesa}`)).status).toBe(200);
-
-    const posse = await prisma.assignment.findFirstOrThrow({ where: { assetId: ativo.id } });
-    expect(posse).toMatchObject({ targetWorkstationId: null, targetWorkstationFormerId: mesa });
-    const encerrada = await prisma.workstationOccupant.findUniqueOrThrow({ where: { id: ocupacao.body.id } });
-    expect(encerrada).toMatchObject({ workstationId: null, workstationFormerId: mesa });
-
-    // Um posto vivo e um excluído na mesma linha não significam nada.
-    const outra = await posto('Mesa viva do id');
-    await expect(prisma.$executeRaw`
-      UPDATE assignments SET "targetWorkstationId" = ${outra}::uuid WHERE id = ${posse.id}::uuid
-    `).rejects.toThrow(/assignments_posto_excluido/);
-    await expect(prisma.$executeRaw`
-      UPDATE workstation_occupants SET "workstationId" = ${outra}::uuid WHERE id = ${encerrada.id}::uuid
-    `).rejects.toThrow(/workstation_occupants_posto_excluido/);
-
-    // O id guardado só existe na linha que o `beforeDelete` desligou: reaberta,
-    // ela é presente, e o id de um posto que saiu não tem o que dizer nela.
-    await expect(prisma.$executeRaw`
-      UPDATE assignments SET "checkinAt" = NULL WHERE id = ${posse.id}::uuid
-    `).rejects.toThrow(/assignments_posto_excluido|assignments_alvo_coerente/);
-    await expect(prisma.$executeRaw`
-      UPDATE workstation_occupants SET "endedAt" = NULL WHERE id = ${encerrada.id}::uuid
-    `).rejects.toThrow(/workstation_occupants_posto_excluido|workstation_occupants_posto_presente/);
   });
 
   it('o banco recusa a ocupação que termina antes de começar', async () => {

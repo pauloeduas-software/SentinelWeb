@@ -1,7 +1,6 @@
 import { prisma } from '../../../infra/database/prismaClient';
 import type { Ator } from '../../audit/audit.types';
 import { AppError } from '../../../infra/errors/app-error';
-import { rotuloDoAlvo } from '../helpers/target-label.helper';
 import { escolherStatusPorTipo } from './checkout-asset.usecase';
 import { fecharPosse } from './close-assignment.usecase';
 import { lerStatusTravado } from '../../catalog/helpers/catalog-lock.helper';
@@ -21,18 +20,6 @@ interface CheckinData {
   checkinNotes?: string | null;
   /** O dia (AM). Ausente é hoje. */
   checkinAt?: Date | null;
-  /**
-   * O ESCOPO da devolução: só fecha a posse se ela aponta para ESTE
-   * posto. Sem ele, fecha a posse aberta que o ativo tiver, seja com quem
-   * for — é o caminho da tela Computadores, onde a pessoa está olhando a posse.
-   *
-   * Existe para a ficha do posto. Ela lista os ativos entregues à mesa e tem o
-   * botão Devolver em cada linha; entre a ficha carregar e o clique, o ativo
-   * pode ter sido devolvido e entregue a outra pessoa, e o clique fecharia a
-   * posse da Laura achando que tirava um mouse da Mesa 1. Com o escopo, o
-   * servidor recusa: a ficha estava velha, e é isso que a resposta diz.
-   */
-  targetWorkstationId?: string | null;
 }
 
 export async function checkinAsset(assetId: string, data: CheckinData, ator: Ator) {
@@ -59,32 +46,11 @@ export async function checkinAsset(assetId: string, data: CheckinData, ator: Ato
 
     const aberta = await tx.assignment.findFirst({
       where: { assetId, checkinAt: null },
-      select: {
-        id: true,
-        targetType: true,
-        targetWorkstationId: true,
-        checkoutAt: true,
-        // Os dois alvos, para a recusa do escopo dizer COM QUEM o ativo está.
-        targetPerson: { select: { name: true } },
-        targetWorkstation: { select: { name: true } },
-      },
+      select: { id: true, targetType: true, checkoutAt: true },
     });
     // 409 e não 404: o ativo existe, quem não existe é a posse — é conflito de
     // estado, e a mesma família do "já está entregue" da outra ponta.
     if (!aberta) throw new AppError('Este ativo não está entregue.', 409);
-
-    // O ESCOPO (ver `CheckinData`). Também 409: a posse existe, só não é a que
-    // quem clicou tinha na tela. A mensagem nomeia o alvo de verdade porque a
-    // pessoa precisa decidir se devolve mesmo assim — e isso ela faz na ficha
-    // do ativo, olhando a posse certa.
-    if (data.targetWorkstationId && aberta.targetWorkstationId !== data.targetWorkstationId) {
-      const alvo = rotuloDoAlvo(aberta);
-      throw new AppError(
-        `Este ativo não está entregue a este posto${alvo ? `: a posse aberta dele é com ${alvo}` : ''}. `
-          + 'Releia a ficha; para devolver mesmo assim, use a ficha do ativo.',
-        409,
-      );
-    }
 
     // O status escolhido à mão existe? Lido travado: a troca de tipo dele espera.
     if (data.statusId) await lerStatusTravado(tx, data.statusId);

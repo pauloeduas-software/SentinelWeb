@@ -14,8 +14,8 @@ import { useAcoesDaLicenca } from '../../hooks/useAcoesDaLicenca';
 // Estado da FICHA DA LICENÇA: as duas listas de 15 em 15, a aba, a devolução e a troca
 // de chave. A busca é a do `useBuscaDaFicha`.
 
-const ABAS = ['posse', 'chaves', 'historico'] as const;
-const ABAS_SEM_CHAVE = ['posse', 'historico'] as const;
+const ABAS = ['responsaveis', 'chaves', 'historico'] as const;
+const ABAS_SEM_CHAVE = ['responsaveis', 'historico'] as const;
 
 export function useFichaDaLicenca(id: string) {
   const notificar = useNotificacao();

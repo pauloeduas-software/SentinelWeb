@@ -27,7 +27,7 @@ import { usePode } from '../../../stores/auth.store';
 //
 // "COM QUEM ESTÁ" É ONDE A DEVOLUÇÃO ACONTECE — o único lugar: as fichas do posto e do
 // colaborador mostram o que está com eles e apontam para cá. No COMPONENTE (AI) a lista
-// é "Em quais computadores", e a devolução é o Retirar; a aba Componentes do computador
+// é "Computadores", e a devolução é o Retirar; a aba Componentes do computador
 // aponta para cá do mesmo jeito.
 //
 // Markup e mais nada: estado e chamadas ficam no `useFichaDoItem`
@@ -109,8 +109,8 @@ function FichaDoItem({ id }: { id: string }) {
         <Tabs value={aba} onValueChange={(valor) => setAba(valor as typeof aba)}>
           <TabsList>
             {!ehConsumivel(item) && (
-              <TabsTrigger value="posse">
-                {componente ? <Monitor /> : <Users />} {componente ? 'Em quais computadores' : 'Com quem está'}
+              <TabsTrigger value="responsaveis">
+                {componente ? <Monitor /> : <Users />} {componente ? 'Computadores' : 'Responsáveis'}
                 {/* Sem o número durante a busca: ele conta a lista filtrada, não as entregas do item. */}
                 {!buscaAdiada && <ContagemDaAba>{entregas.data?.total}</ContagemDaAba>}
               </TabsTrigger>
@@ -119,11 +119,11 @@ function FichaDoItem({ id }: { id: string }) {
           </TabsList>
 
           {!ehConsumivel(item) && (
-            <TabsContent value="posse" className="mt-4 space-y-4">
+            <TabsContent value="responsaveis" className="mt-4 space-y-4">
               <ListToolbar
                 search={busca}
                 onSearchChange={mudarBusca}
-                placeholder={componente ? 'Buscar por etiqueta ou nome do computador…' : 'Buscar por colaborador ou posto…'}
+                placeholder={componente ? 'Buscar por etiqueta ou nome do computador…' : 'Buscar por responsável ou posto…'}
                 page={paginaDasEntregas}
                 perPage={POR_PAGINA}
                 total={entregas.data?.total ?? 0}
@@ -138,7 +138,7 @@ function FichaDoItem({ id }: { id: string }) {
                     ? buscaAdiada
                       ? `Nenhum computador com "${buscaAdiada}" tem este componente.`
                       : 'Nenhum computador tem este componente agora.'
-                    : buscaAdiada ? `Ninguém com "${buscaAdiada}" está com este item.` : undefined
+                    : buscaAdiada ? `Nenhum responsável com "${buscaAdiada}" neste item.` : undefined
                 }
                 ocupado={ocupado}
                 onDevolver={handleDevolver}

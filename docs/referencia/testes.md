@@ -246,7 +246,7 @@ futuro; a entrega não vem antes da compra nem da última devolução, e no dia 
 milissegundo depois; a devolução não vem antes da entrega, nem antes da hora real no mesmo dia;
 sem dia é agora. E as datas que dependem dela: a compra editada depois da primeira entrega, a
 compra futura, a baixa antes da última devolução, o começo e o fim da ocupação (nunca antes do
-início) e a devolução pela ficha do posto com o dia. O "hoje" dos testes é o
+início) e a devolução do computador entregue a um posto com o dia. O "hoje" dos testes é o
 `diaNoBrasil` — com a meia-noite UTC, a suíte falhava das 21h à meia-noite.
 
 ### `invariantes/links-da-documentacao.test.ts` — a documentação não aponta para o vazio

@@ -719,6 +719,8 @@ livres, e o assento que já foi usado e voltou é livre; o passado fica no log. 
 
 ## AN — O que está em uso bloqueia, e nenhuma data é futura
 
+> **Superada em parte por [BN](./posse.md#bn--o-devolver-mora-só-na-ficha-do-que-foi-entregue):** a ficha do posto não devolve mais: a devolução, com o dia, é na ficha do computador.
+
 > **Superada em parte por [AY](./plataforma.md#ay--o-visual-vem-da-intranet-em-tema-claro-e-escuro-e-a-linha-inteira-abre-o-registro):** a linha inteira abre o registro e as ações vão para o `⋯`; a situação pode ter cor; primitivos do shadcn só no que se usa, e tema claro e escuro; `GET /api/search` sai.
 
 > **Superada em parte por [AO](./catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam):**

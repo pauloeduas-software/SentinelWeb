@@ -70,7 +70,7 @@ criada por fora da trava (o `psql` à mão), e esconder a inconsistência seria 
 | **a lista** | **uma só**, pelo nome, com os desativados — sem abas, como em Colaboradores. Busca por nome, categoria e localização — o texto ao pé da letra, `%` e `_` não são curinga; filtro de categoria |
 | **a linha** | nome (e as notas), categoria, localização, "3 disponíveis" com "10 no total · 7 em uso" embaixo (no consumível, só "3 disponíveis") e situação. Sem cor pelo valor. A do desativado fica esmaecida |
 | **as ações** | as do cadastro (AF), no `⋯` da linha (AY): Entregar (desabilitado sem disponível, com o motivo no `title`; some no desativado), Editar, Desativar/Ativar e Excluir — com confirmação no Desativar e no Excluir |
-| **a ficha** (`/estoque/:id`) | no card, a situação, a conta ("10 no total · 7 em uso · 3 disponíveis"), todos os campos do cadastro e as ações da lista, com as mesmas regras (Entregar e Editar abrem o painel por cima da ficha; excluído, volta para a lista). **Com quem está** (a primeira aba): as entregas abertas, da mais recente para a mais antiga, 15 por página, com busca pelo nome do colaborador ou do posto — "Mesa 1 · 5 unidades · desde 12/10/2026", com a observação —, e Devolver em cada linha. **Histórico**: só entregas e devoluções, por entrega, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
+| **a ficha** (`/estoque/:id`) | no card, a situação, a conta ("10 no total · 7 em uso · 3 disponíveis"), todos os campos do cadastro e as ações da lista, com as mesmas regras (Entregar e Editar abrem o painel por cima da ficha; excluído, volta para a lista). **Responsáveis** (a primeira aba): as entregas abertas, da mais recente para a mais antiga, 15 por página, com busca pelo nome do colaborador ou do posto — "Mesa 1 · 5 unidades · desde 12/10/2026", com a observação —, e Devolver em cada linha. **Histórico**: só entregas e devoluções, por entrega, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
 
 A edição mostra o **total** e manda **o formulário inteiro**, como em todas as telas
 ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)), com o `updatedAt` que leu ao abrir: se outra pessoa salvou no meio, é 409
@@ -79,7 +79,7 @@ mudou.`, e o total dela não volta. O servidor barra também o total abaixo do q
 unidades em uso, o campo diz o mínimo.
 
 **Quando a última linha de uma página sai** — excluída, devolvida, aqui ou por outra pessoa —, a
-lista e o "Com quem está" voltam para a última página que existe. **A devolução que o servidor
+lista e a aba Responsáveis voltam para a última página que existe. **A devolução que o servidor
 recusa** deixa a linha aberta, com o que foi escolhido, para tentar de novo — e a tela busca de
 novo o que mudou, como na licença: toda ação, recusada ou não, atualiza a lista, a ficha e as
 contas. O cabeçalho do Entregar também lê o detalhe, e acompanha.
@@ -127,7 +127,7 @@ passado — as duas ao meio-dia — continuam sendo duas no histórico do item e
 ainda aberta, e assim ela continua com o mesmo `:id` depois de devolver parte.
 
 **A devolução** pergunta **quantas** — por padrão, todas as que ainda estão fora nesta entrega — e
-o **dia**, na própria linha de "Com quem está", na ficha do item — o único lugar do sistema que
+o **dia**, na própria linha da aba Responsáveis, na ficha do item — o único lugar do sistema que
 devolve estoque. Com uma unidade só, não pergunta quantas. O dia vem com hoje; pode ser passado,
 mas nunca futuro nem antes do dia da entrega (422, com as duas datas). Hoje grava a hora real; um
 dia passado grava o meio-dia de Brasília, e por isso as telas mostram a entrega e a devolução
@@ -147,7 +147,7 @@ A entrega confere **na ordem da tabela** e responde a primeira recusa — o cola
 | item desativado | 409 `O item "Mouse USB" está desativado e não recebe entrega. …` |
 | sem unidade | 409 `Sem unidade disponível de "Mouse USB": 10 no total, 10 em uso. Devolva uma unidade ou aumente o total.` — ou, com menos do que a entrega pede, `Sem unidade suficiente de "Mouse USB": a entrega pede 3 e há 2 disponíveis (10 no total, 8 em uso).` |
 | devolução antes do dia da entrega | 422 `A devolução (09/03/2026) não pode ser antes da entrega (10/03/2026).` |
-| devolver mais do que ainda está fora na entrega | 409 `Só 2 unidades desta entrega de "Mouse USB" ainda estão com Mesa 1.` |
+| devolver mais do que ainda está fora na entrega | 409 `Só 2 unidades desta entrega de "Mouse USB" ainda estão entregues a Mesa 1.` |
 | devolver uma entrega já devolvida | 409 `Esta entrega de "Mouse USB" para Mesa 1 já foi devolvida.` |
 
 **A devolução é pela entrega**, não pelo item nem pelo alvo: o `:id` é o de qualquer unidade dela,
@@ -165,8 +165,8 @@ mesmos do resto do estoque.
   seletor dos computadores sem baixa). A entrega não vem antes da compra do computador.
 - **Fica no computador** quando ele é entregue a alguém ou devolvido: a peça está dentro da
   máquina.
-- **Sai pelo Retirar**, que é a devolução: quantas e o dia, na linha de **Em quais computadores**
-  (o "Com quem está" do componente, com busca pela etiqueta ou pelo nome do computador). Serve à
+- **Sai pelo Retirar**, que é a devolução: quantas e o dia, na linha da aba **Computadores**
+  (a aba do componente, com busca pela etiqueta ou pelo nome do computador). Serve à
   troca de peça, à máquina que vai ser descartada e à entrega lançada errado. Se a peça queimou ou
   saiu junto com a máquina, retire e depois diminua o total do item.
 - **O computador com componente instalado não recebe baixa nem vai para a lixeira** — a regra da
@@ -195,7 +195,7 @@ resto do estoque.
 
 - **O Entregar** é o do estoque: colaborador ou posto, quantas, o dia e a observação. A entrega
   **tira do total** na hora e não fica "em uso" com ninguém. O formulário diz isso embaixo.
-- **Não volta**: não tem Devolver, e a ficha do item não tem "Com quem está", só Histórico. O histórico do item
+- **Não volta**: não tem Devolver, e a ficha do item não tem a aba Responsáveis, só Histórico. O histórico do item
   e o do colaborador mostram a entrega, e só ela.
 - **Não prende ninguém**: o colaborador que recebeu toner se desativa, e o posto se exclui. A ficha
   do colaborador e a do posto não mostram o consumível.
@@ -219,7 +219,8 @@ e de posse sem que nenhuma dessas contas mude.
 
 | Onde | O quê |
 |---|---|
-| **ficha do posto** | o estoque **da mesa**, por entrega, com quantas e desde quando; o nome leva à ficha do item com "Com quem está" já filtrado pelo posto (`/estoque/<id>?quem=Mesa 1`), onde está o Devolver. O item desativado aparece marcado. Não conta como ativo do posto |
+| **ficha do posto** | o estoque **da mesa**, por entrega, com quantas e desde quando; o nome leva à ficha do item com a aba Responsáveis já filtrada pelo posto (`/estoque/<id>?quem=Mesa 1`), onde está o Devolver. O item desativado aparece marcado. Não conta como ativo do posto |
+| **histórico do posto** | entregas e devoluções de estoque **à mesa**, por entrega ("Recebeu: Mouse USB · 2 unidades") |
 | **ficha do colaborador** | o estoque **no nome dela**, com o mesmo link, filtrado pelo nome dela; o título conta as unidades, como a ficha do posto e o 409 da desativação |
 | **histórico do colaborador** | entregas e devoluções de estoque **a ela**, por entrega ("Recebeu: Mouse USB · 2 unidades") |
 | **aba Componentes do computador** | os componentes instalados **nele**, por entrega, com categoria, quantas e desde quando; o nome leva à ficha do item já filtrada pela etiqueta, onde está o Retirar |
@@ -230,8 +231,8 @@ e de posse sem que nenhuma dessas contas mude.
 
 **É posse** (invariante 6): o colaborador com unidade no nome não se desativa nem se exclui, e o
 posto com unidade não se exclui. **A recusa diz quais itens precisam voltar**, pelo nome e com
-quantas — `… está com 3 unidades de estoque (Mouse USB ×2 e Teclado) …`, `Este posto ainda tem 1
-ativo, 3 unidades de estoque (Cabo HDMI ×3) e 1 ocupante. Tire o que está nele agora …` — e manda
+quantas — `… responde por 3 unidades de estoque (Mouse USB ×2 e Teclado) …`, `Este posto ainda tem 1
+ativo, 3 unidades de estoque (Cabo HDMI ×3) e 1 responsável. Tire o que está nele agora …` — e manda
 cada item como `refs` ao lado da frase: a notificação põe um link para a ficha de cada um. Nada
 fecha sozinho.
 
@@ -283,7 +284,7 @@ listagens. As ordens terminam em `id`, para a mesma linha não aparecer em duas 
 
 | Assunto | Arquivo |
 |---|---|
-| a lista (conta, busca, o desativado na mesma lista), "Com quem está" por entrega, a devolução parcial, o histórico por entrega (duas devoluções no mesmo dia são duas), os dias, as fichas e o histórico do colaborador | `tests/estoque/operacoes.test.ts` |
+| a lista (conta, busca, o desativado na mesma lista), a aba Responsáveis por entrega, a devolução parcial, o histórico por entrega (duas devoluções no mesmo dia são duas), os dias, as fichas e o histórico do colaborador | `tests/estoque/operacoes.test.ts` |
 | o saldo calculado, as frases sem unidade, o posto que não multiplica, os CHECKs, o total na edição e na auditoria, a quantidade que é número de verdade, o nome único sem diferença de maiúscula, a categoria, desativar só sem unidade em uso e excluir (a regra do posto, com o nome por escrito), a invariante 6 e o 409 do posto com os itens, as rotas | `tests/estoque/invariantes.test.ts` |
 | o componente: a categoria que decide o alvo, o computador baixado e na lixeira, as datas contra a compra, o componente que fica quando o computador muda de mãos, o Retirar, os dois históricos, a busca pela etiqueta, a baixa e a lixeira recusadas, a troca de categoria, o seletor com os dois tipos e o CHECK | `tests/estoque/componente.test.ts` |
 | o consumível: a entrega que tira do total, o posto e o dia passado, o computador recusado, o 0 e as frases, sem devolução, não prende ninguém, a exclusão, o histórico só com a entrega e a troca de categoria | `tests/estoque/consumivel.test.ts` |

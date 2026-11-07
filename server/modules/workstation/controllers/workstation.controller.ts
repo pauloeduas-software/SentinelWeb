@@ -1,10 +1,12 @@
 import type { FastifyRequest } from 'fastify';
 import { parseListQuery } from '../../../infra/http/list-query';
+import { historyQuerySchema } from '../../shared/history.schema';
 import { idParamSchema } from '../../shared/params.schema';
 import { temCargo } from '../../access/helpers/require-permission';
 import { workstationViewQuerySchema } from '../schemas/workstation.schema';
 import { listWorkstations } from '../use-cases/list-workstations.usecase';
 import { getWorkstation } from '../use-cases/get-workstation.usecase';
+import { getWorkstationHistory } from '../use-cases/workstation-history.usecase';
 import { getWorkstationStats } from '../use-cases/workstation-stats.usecase';
 
 // Só HTTP. Sem try/catch: o `parse` do schema rejeita e a rejeição cai no
@@ -44,5 +46,11 @@ export const workstationController = {
     // uma terceira porta, não por decisão: quem lê filtra, e esta é a leitura
     // que faltava. Quem sabe quem está pedindo é a borda.
     return getWorkstation(id, temCargo(request, 'SUPERVISOR'));
+  },
+
+  async history(request: FastifyRequest) {
+    const { id } = idParamSchema.parse(request.params);
+    const { limit, page } = historyQuerySchema.parse(request.query ?? {});
+    return getWorkstationHistory(id, limit, page);
   },
 };

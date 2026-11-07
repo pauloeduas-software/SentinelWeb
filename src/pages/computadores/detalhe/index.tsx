@@ -1,4 +1,5 @@
 import { Copy, PackageX, Pencil, Trash2, Undo2, UserPlus } from 'lucide-react';
+import { useParams } from 'react-router-dom';
 import AssetFormModal from '../components/AssetFormModal';
 import CheckoutModal from '../components/CheckoutModal';
 import AssetTabs from './components/AssetTabs';
@@ -6,6 +7,7 @@ import { seloDaSaida } from '../helpers/baixa.helper';
 import IdentificacaoCard from './components/IdentificacaoCard';
 import LicensesTab from './components/LicensesTab';
 import ComponentesTab from './components/ComponentesTab';
+import DevolucaoModal from './components/DevolucaoModal';
 import MaquinaTab from './components/MaquinaTab';
 import DetalhesTab from './components/DetalhesTab';
 import HistoryTab from './components/HistoryTab';
@@ -13,11 +15,13 @@ import PosseTab from './components/PosseTab';
 import RetireModal from './components/RetireModal';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
 import { FichaIndisponivel } from '../../../components/CartaoDaFicha';
+import ListToolbar from '../../../components/ListToolbar';
 import PaginaCabecalho from '../../../components/PaginaCabecalho';
 import { Button } from '../../../components/ui/button';
 import { TabsContent } from '../../../components/ui/tabs';
+import { POR_PAGINA } from '../../../hooks/useListaNaUrl';
 import { rotuloDaVolta } from '../../../hooks/useVoltaComFiltros';
-import { bloqueioDaEntrega, rotuloDaOperacao } from '../helpers/posse.helper';
+import { bloqueioDaEntrega } from '../helpers/posse.helper';
 import { useAssetDetail } from './hooks/useAssetDetail';
 import { usePode } from '../../../stores/auth.store';
 
@@ -31,15 +35,21 @@ import { usePode } from '../../../stores/auth.store';
 // (docs/referencia/arquitetura.md).
 
 export default function AssetDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  // Outro computador é outra ficha, e o Clonar abre uma sem sair daqui: a busca e as
+  // páginas não passam de um para o outro.
+  return <FichaDoComputador key={id} />;
+}
+
+function FichaDoComputador() {
   const {
     asset, carregando, erro, voltar,
-    aba, setAba, contagens,
+    aba, setAba, contagens, responsaveis,
     eventos, totalDeEventos, paginaDoHistorico, setPaginaDoHistorico, historicoPendente, erroDoHistorico,
-    assignments, possePendente, erroDaPosse,
     licencas, licencasPendentes, erroDasLicencas,
     componentes, componentesPendentes, erroDosComponentes,
     maquina, maquinaPendente, erroDaMaquina, desvinculando, handleDesvincular,
-    modal, abrirEdicao, abrirClone, abrirPosse, abrirBaixa, fecharModal, statusPadraoId,
+    modal, abrirEdicao, abrirClone, abrirEntrega, abrirDevolucao, abrirBaixa, fecharModal, statusPadraoId,
     handleSubmit, handleEntregar, handleDevolver, handleDarBaixa, handleReverterSaida,
     handleDelete,
   } = useAssetDetail();
@@ -54,7 +64,7 @@ export default function AssetDetailPage() {
     return <FichaIndisponivel lista="Computadores" rotuloDaVolta={rotulo} voltar={voltar} carregando={carregando} erro={erro ?? 'Ativo não encontrado.'} />;
   }
 
-  // A MESMA trava da listagem: só `DEPLOYABLE` se entrega, e o motivo vai no `title`.
+  // A MESMA trava da listagem: só `DEPLOYABLE` sem posse se entrega, e o motivo vai no `title`.
   const bloqueio = bloqueioDaEntrega(asset);
   const baixado = seloDaSaida(asset) !== null;
 
@@ -70,8 +80,8 @@ export default function AssetDetailPage() {
           asset={asset}
           acoes={
             <>
-              <Button size="sm" onClick={abrirPosse} disabled={bloqueio !== null} title={bloqueio ?? undefined}>
-                {asset.posse?.assignmentId ? <Undo2 /> : <UserPlus />} {rotuloDaOperacao(asset.posse)}
+              <Button size="sm" onClick={abrirEntrega} disabled={bloqueio !== null} title={bloqueio ?? undefined}>
+                <UserPlus /> Entregar
               </Button>
               <Button variant="outline" size="sm" onClick={abrirEdicao}><Pencil /> Editar</Button>
               <AcoesDaLinha
@@ -94,12 +104,20 @@ export default function AssetDetailPage() {
             <DetalhesTab asset={asset} />
           </TabsContent>
 
-          <TabsContent value="posse" className="mt-4">
+          <TabsContent value="responsaveis" className="mt-4 space-y-4">
+            <ListToolbar
+              search={responsaveis.busca}
+              onSearchChange={responsaveis.mudarBusca}
+              placeholder="Buscar por responsável ou posto…"
+              page={responsaveis.page}
+              perPage={POR_PAGINA}
+              total={responsaveis.total}
+              onPageChange={responsaveis.setPage}
+            />
             <PosseTab
-              posse={asset.posse}
-              assignments={assignments}
-              carregando={possePendente}
-              erro={erroDaPosse}
+              posse={responsaveis.visiveis[0]}
+              vazio={responsaveis.buscaAdiada ? `Nenhum responsável com "${responsaveis.buscaAdiada}" neste computador.` : undefined}
+              onDevolver={abrirDevolucao}
             />
           </TabsContent>
 
@@ -152,14 +170,9 @@ export default function AssetDetailPage() {
         />
       )}
 
-      {modal === 'posse' && (
-        <CheckoutModal
-          asset={asset}
-          onClose={fecharModal}
-          onEntregar={handleEntregar}
-          onDevolver={handleDevolver}
-        />
-      )}
+      {modal === 'entregar' && <CheckoutModal asset={asset} onClose={fecharModal} onEntregar={handleEntregar} />}
+
+      {modal === 'devolver' && <DevolucaoModal asset={asset} onClose={fecharModal} onDevolver={handleDevolver} />}
 
       {modal === 'baixa' && (
         <RetireModal asset={asset} onClose={fecharModal} onConfirmar={handleDarBaixa} />

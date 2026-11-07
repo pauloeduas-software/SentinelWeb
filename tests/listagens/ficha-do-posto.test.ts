@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '../../server/infra/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { conectarAgente, esperarPor } from '../helpers/agente';
-import { criarAtivo, criarFabricante, criarModelo, criarPosto, idsDoSeed } from '../helpers/fixtures';
+import { criarAtivo, criarFabricante, criarModelo, criarPosto, diasAFrente, idsDoSeed } from '../helpers/fixtures';
 
 // O QUE A FICHA DO POSTO PRECISA SABER, e que a listagem de ativos não manda.
 //
@@ -10,11 +10,11 @@ import { criarAtivo, criarFabricante, criarModelo, criarPosto, idsDoSeed } from 
 // volta à ficha de cada ativo. Para isso ela pergunta duas coisas que são de
 // rotas diferentes:
 //
-//   `GET /api/workstations/:id`        — se o ativo da mesa tem MÁQUINA
-//                                        vinculada, e qual máquina consultar;
-//   `GET /api/assets/:id/assignments`  — o POSTO da posse aberta, com id,
-//                                        porque é pelo id que o link leva à
-//                                        ficha dele.
+//   `GET /api/workstations/:id`  — se o ativo da mesa tem MÁQUINA vinculada, e
+//                                  qual máquina consultar;
+//   `GET /api/assets/:id`        — o POSTO da posse aberta, com id, porque é pelo
+//                                  id que o card leva à ficha dele, e o dia
+//                                  previsto para a devolução.
 //
 // Arquivo próprio, e não dentro de `ativo-em-posto.test.ts`: aquele prova que o
 // ativo entregue SAI da listagem, e é `inject` puro. Estes dois abrem uma porta
@@ -114,15 +114,45 @@ describe('o que a ficha do posto lê', () => {
   });
 
   it('a posse aberta traz o POSTO com id, e não só o nome dele', async () => {
-    // É o que faz a aba Posse do ativo poder LEVAR até a mesa: `PosseResolvida`
-    // carrega o rótulo do alvo e não o id, então o link sai da posse aberta.
+    // É o que faz o card do ativo poder LEVAR até a mesa: `PosseResolvida` carrega o
+    // rótulo do alvo e não o id, então o link sai do `postoAtual`.
     const naMesa = await ativo('Desktop do alvo', 'SN-FICHA-30');
     await entregarA(naMesa.id, posto);
 
-    const daMesa = await api.get<{ targetWorkstation: { id: string; name: string } | null }[]>(
-      `/api/assets/${naMesa.id}/assignments`,
-    );
-    expect(daMesa.body[0].targetWorkstation).toEqual({ id: posto, name: 'Mesa da Ficha' });
+    const daMesa = await api.get<{
+      postoAtual: { id: string; name: string } | null;
+      posse: { targetLabel: string | null; expectedCheckinAt: string | null };
+    }>(`/api/assets/${naMesa.id}`);
+    expect(daMesa.body.postoAtual).toMatchObject({ id: posto, name: 'Mesa da Ficha' });
+    expect(daMesa.body.posse).toMatchObject({ targetLabel: 'Mesa da Ficha', expectedCheckinAt: null });
+  });
+
+  it('a posse aberta traz o dia previsto para a devolução', async () => {
+    const mesa = await criarPosto(api, { name: 'Mesa com Prazo' });
+    const naMesa = await ativo('Desktop com prazo', 'SN-FICHA-31');
+    const previsto = diasAFrente(30);
+    expect((await api.post(`/api/assets/${naMesa.id}/checkout`, {
+      targetType: 'WORKSTATION', targetWorkstationId: mesa, expectedCheckinAt: previsto,
+    })).status).toBe(201);
+
+    const lido = await api.get<{ posse: { expectedCheckinAt: string | null } }>(`/api/assets/${naMesa.id}`);
+    expect(lido.body.posse.expectedCheckinAt?.slice(0, 10)).toBe(previsto.slice(0, 10));
+  });
+
+  it('a posse aberta traz a observação da entrega, e sem posse ela é nula', async () => {
+    const mesa = await criarPosto(api, { name: 'Mesa com Observação' });
+    const naMesa = await ativo('Desktop com observação', 'SN-FICHA-32');
+    const lerObservacao = async () => (
+      await api.get<{ posse: { checkoutNotes: string | null } }>(`/api/assets/${naMesa.id}`)
+    ).body.posse.checkoutNotes;
+
+    expect(await lerObservacao()).toBeNull();
+
+    expect((await api.post(`/api/assets/${naMesa.id}/checkout`, {
+      targetType: 'WORKSTATION', targetWorkstationId: mesa, checkoutNotes: 'Monitor extra junto',
+    })).status).toBe(201);
+
+    expect(await lerObservacao()).toBe('Monitor extra junto');
   });
 
   // O "Devolvido em" da ficha não vem antes da entrega (AM): o mínimo do campo

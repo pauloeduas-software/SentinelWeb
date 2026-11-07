@@ -104,6 +104,12 @@ function quantos(total: number, singular: string, plural: string): string {
   return `${total} ${total === 1 ? singular : plural}`;
 }
 
+/** "A", "A e B", "A, B e C". */
+function emSequencia(partes: readonly string[]): string {
+  if (partes.length === 1) return partes[0];
+  return `${partes.slice(0, -1).join(', ')} e ${partes[partes.length - 1]}`;
+}
+
 /** A recusa: a frase, e as licenças que ela cita, para a tela pôr link. */
 export interface RecusaDaPessoa {
   mensagem: string;
@@ -118,9 +124,9 @@ export interface RecusaDaPessoa {
  * qual das duas camadas manda o operador procurar no lugar errado — e a camada
  * do posto é justamente a que ninguém lembra.
  *
- * AS QUATRO PONTAS VÊM PELO NOME — "responde por 1 ativo (ATV-00012)", "tem 3
- * licenças (AutoCAD, Office e VPN)", "está com 3 unidades de estoque (Mouse USB
- * ×2 e Teclado)", "ocupa 1 posto (Mesa 1)" — e como `refs`: o Devolver mora na
+ * AS QUATRO PONTAS VÊM PELO NOME — "responde por 1 ativo (ATV-00012), 3 licenças
+ * (AutoCAD, Office e VPN), 3 unidades de estoque (Mouse USB ×2 e Teclado) e 1
+ * posto (Mesa 1)" — e como `refs`: o Devolver mora na
  * ficha do computador, na da licença e na do item, e o Encerrar na
  * ficha do posto; quem desliga um funcionário que sai vai direto a cada um
  * pelo link.
@@ -132,37 +138,35 @@ export function motivoParaRecusar(
   posse: PosseAbertaDaPessoa,
   operacao: 'excluir' | 'desativar',
 ): RecusaDaPessoa | null {
-  const partes: string[] = [];
+  // Tudo cabe num "responde por" (BM), e o posto vem por último, como nos links.
+  const entregas: string[] = [];
   if (posse.ativos.length > 0) {
-    partes.push(`responde por ${quantos(posse.ativos.length, 'ativo', 'ativos')} (${emLista(posse.ativos)})`);
+    entregas.push(`${quantos(posse.ativos.length, 'ativo', 'ativos')} (${emLista(posse.ativos)})`);
   }
   if (posse.licencas.length > 0) {
-    partes.push(`tem ${quantos(posse.licencas.length, 'licença', 'licenças')} (${nomesDasLicencas(posse.licencas)})`);
+    entregas.push(`${quantos(posse.licencas.length, 'licença', 'licenças')} (${nomesDasLicencas(posse.licencas)})`);
   }
   if (posse.itens.length > 0) {
     const unidades = totalDeUnidades(posse.itens);
-    partes.push(`está com ${quantos(unidades, 'unidade de estoque', 'unidades de estoque')} (${nomesDosItens(posse.itens)})`);
+    entregas.push(`${quantos(unidades, 'unidade de estoque', 'unidades de estoque')} (${nomesDosItens(posse.itens)})`);
   }
+
+  const partes = [...entregas];
   if (posse.postos.length > 0) {
-    partes.push(`ocupa ${quantos(posse.postos.length, 'posto', 'postos')} (${emLista(posse.postos)})`);
+    partes.push(`${quantos(posse.postos.length, 'posto', 'postos')} (${emLista(posse.postos)})`);
   }
 
   if (partes.length === 0) return null;
 
-  const frase = partes.length === 1
-    ? partes[0]
-    : `${partes.slice(0, -1).join(', ')} e ${partes[partes.length - 1]}`;
-
   // O pedido cita só o que existe: quem não ocupa posto não tem ocupação a encerrar.
-  const temEntrega = posse.ativos.length + posse.licencas.length + posse.itens.length > 0;
-  const ocupacoes = posse.postos.length === 1 ? 'a ocupação' : 'as ocupações';
-  let pedido = 'Devolva o que está com ele';
-  if (!temEntrega) pedido = `Encerre ${ocupacoes}`;
-  else if (posse.postos.length > 0) pedido = `Devolva o que está com ele e encerre ${ocupacoes}`;
+  const ocupacoes = posse.postos.length === 1 ? 'a responsabilidade pelo posto' : 'as responsabilidades pelos postos';
+  let pedido = 'Devolva o que foi entregue a ele';
+  if (entregas.length === 0) pedido = `Encerre ${ocupacoes}`;
+  else if (posse.postos.length > 0) pedido = `Devolva o que foi entregue a ele e encerre ${ocupacoes}`;
 
   // Os links na ordem da frase.
   return {
-    mensagem: `Este colaborador ainda ${frase}. ${pedido} antes de ${operacao}.`,
+    mensagem: `Este colaborador ainda responde por ${emSequencia(partes)}. ${pedido} antes de ${operacao}.`,
     refs: [
       ...posse.ativos.map((ativo) => ({ tipo: 'ativo' as const, ...ativo })),
       ...comoReferencias(posse.licencas),

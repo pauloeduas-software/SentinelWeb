@@ -1,6 +1,6 @@
 import { prisma } from '../../../infra/database/prismaClient';
 import { SEM_BAIXA } from '../../asset/helpers/asset-filters.helper';
-import { resolverResponsaveisEmLote } from '../../assignment/use-cases/resolve-responsibles.usecase';
+import { resolverResponsaveisEmLote, type AlvoPosse } from '../../assignment/use-cases/resolve-responsibles.usecase';
 
 // ═════════════════════════════════════════════════════════════════════════════
 // "NINGUÉM USA" × "NINGUÉM RESPONDE" — duas conversas diferentes, com duas
@@ -24,7 +24,9 @@ export interface AtivoOcioso {
   ultimoUso: string | null;
   diasSemUso: number | null;
   postoVago: boolean;
-  responsaveis: { id: string; name: string; via: string }[];
+  /** O alvo da entrega: é o que a lista mostra, e quem ocupa o posto fica na ficha (BL). */
+  targetType: AlvoPosse | null;
+  targetLabel: string | null;
 }
 
 /**
@@ -76,7 +78,8 @@ export async function listarAtivosOciosos(dias = 30): Promise<AtivoOcioso[]> {
       ultimoUso: ultimo ? ultimo.toISOString().slice(0, 10) : null,
       diasSemUso: ultimo ? Math.floor((agora - ultimo.getTime()) / (24 * 60 * 60 * 1000)) : null,
       postoVago: posse?.postoVago ?? false,
-      responsaveis: (posse?.responsaveis ?? []).map((pessoa) => ({ id: pessoa.id, name: pessoa.name, via: pessoa.via })),
+      targetType: posse?.targetType ?? null,
+      targetLabel: posse?.targetLabel ?? null,
     };
   });
 }

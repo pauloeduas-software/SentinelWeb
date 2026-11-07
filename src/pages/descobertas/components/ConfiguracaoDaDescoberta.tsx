@@ -52,7 +52,7 @@ const MODOS: { valor: DiscoveryMode; rotulo: string; explicacao: string; tom: 'n
   {
     valor: 'ON',
     rotulo: 'Vincular sozinho',
-    explicacao: 'Série ou UUID batendo com UM único ativo vira vínculo sem perguntar. Continua não criando ativo nem mexendo em posse sozinho.',
+    explicacao: 'Série ou UUID batendo com UM único ativo vira vínculo sem perguntar. Continua não criando ativo nem mexendo nos responsáveis sozinho.',
     tom: 'aviso',
   },
 ];
