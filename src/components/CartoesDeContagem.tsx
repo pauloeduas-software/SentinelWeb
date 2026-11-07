@@ -3,7 +3,7 @@ import { PontoDeStatus } from './ui/badge';
 import { cn } from '../helpers/cn.helper';
 
 // OS CARTÕES DE CONTAGEM DE UMA LISTA: o primeiro é o Total, e depois um por
-// situação. O número filtra: clicar liga o recorte, clicar de novo desliga, e o
+// status. O número filtra: clicar liga o recorte, clicar de novo desliga, e o
 // Total limpa.
 
 export interface Contagem<T> {
@@ -32,7 +32,7 @@ export default function CartoesDeContagem<T extends string | undefined>({
 
         return (
           <button
-            key={rotulo}
+            key={valor ?? 'total'}
             type="button"
             onClick={() => onEscolher(valor)}
             title={ehTotal ? 'Ver todos' : `Filtrar por ${rotulo}`}

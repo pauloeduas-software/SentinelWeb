@@ -27,7 +27,7 @@ export const ASSET_SELECT = {
   purchaseCost: true,
 
   // BAIXA. Sai na resposta porque a tela precisa mostrar o selo
-  // "baixado" na linha e na aba Detalhes — e porque, sem ele, a
+  // "baixado" na linha e na ficha — e porque, sem ele, a
   // listagem `?view=retired` devolveria linhas indistinguíveis das outras.
   //
   // NÃO é `deletedAt`: as duas colunas respondem perguntas diferentes (D19,

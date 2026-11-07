@@ -1,4 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { temCargo } from '../../access/helpers/require-permission';
 import { SEM_PARAMETROS } from '../../../infra/http/sem-parametros';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
@@ -73,7 +74,7 @@ export const reconciliationController = {
 
   async assetMachine(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return obterMaquinaDoAtivo(id);
+    return obterMaquinaDoAtivo(id, temCargo(request, 'SUPERVISOR'));
   },
 
   async review(request: FastifyRequest) {

@@ -29,7 +29,7 @@ export default function AlertasLicenca({ alertas, total }: AlertasLicencaProps) 
   return (
     <Aviso tom="aviso" className="mb-4">
       <div className="mb-2 flex items-center gap-2 font-medium">
-        <CalendarClock className="size-4 shrink-0" /> Vencendo e vencidas ({total})
+        <CalendarClock className="size-4 shrink-0" /> Vencendo e vencidos ({total})
       </div>
       {/* O nome fica fora da cor do aviso: a cor é do alerta, não do dado. */}
       <ul className="space-y-1">

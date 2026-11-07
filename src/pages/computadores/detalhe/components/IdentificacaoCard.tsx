@@ -5,7 +5,7 @@ import { PontoDeStatus } from '../../../../components/ui/badge';
 import { Dado, GrupoDeDados } from '../../../../components/ui/dado';
 import { formatarData, formatarDiaDoInstante, formatarMoeda } from '../../../../helpers/format.helper';
 import type { Asset } from '../../../../types/asset.types';
-import { seloDaSaida } from '../../helpers/baixa.helper';
+import { motivoDaSaida } from '../../helpers/baixa.helper';
 import { tomDoStatus } from '../../../../helpers/status.helper';
 import { nomeDoResponsavel } from '../../../../helpers/responsavel.helper';
 import { canaisDeSuporte, type CanalDeSuporte } from '../helpers/suporte.helper';
@@ -16,16 +16,16 @@ import { canaisDeSuporte, type CanalDeSuporte } from '../helpers/suporte.helper'
 
 export default function IdentificacaoCard({ asset, acoes }: { asset: Asset; acoes: ReactNode }) {
   // Cálculo fora do JSX (docs/referencia/arquitetura.md).
-  const selo = seloDaSaida(asset);
+  const motivo = motivoDaSaida(asset);
   const canais = canaisDeSuporte(asset.model.manufacturer);
 
   return (
     <CartaoDaFicha marca={<IconeDaFicha><Monitor /></IconeDaFicha>} acoes={acoes}>
       <GrupoDeDados>
         <Dado rotulo="Status">
-          {/* O baixado diz quando saiu, como na lista. */}
-          {selo
-            ? <PontoDeStatus tom="aviso">{selo}</PontoDeStatus>
+          {/* O baixado mostra o motivo, como na lista. O dia fica no aviso, embaixo. */}
+          {motivo
+            ? <PontoDeStatus tom="perigo">{motivo}</PontoDeStatus>
             : <PontoDeStatus tom={tomDoStatus(asset.status.type)}>{asset.status.name}</PontoDeStatus>}
         </Dado>
         <Dado rotulo="Número de série">

@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCreateStockItem, useStockQuery } from '../../../queries/stock.queries';
+import { useCreateStockItem, useStockQuery, useStockStatsQuery } from '../../../queries/stock.queries';
 import type { ItemDeEstoque, ItemDeEstoqueInput } from '../../../types/stock.types';
 import { caminhoDoItem } from '../../../helpers/estoque.helper';
+import { ativoDoStatus, contagensDoStatusAtivo, statusAtivoDaUrl, type StatusAtivo } from '../../../helpers/status.helper';
 import { useListaNaUrl, usePaginaQueExiste } from '../../../hooks/useListaNaUrl';
 import { useNotificacao } from '../../../hooks/useNotificacao';
 import { comFiltros } from '../../../hooks/useVoltaComFiltros';
 import { useAcoesDoItem } from './useAcoesDoItem';
 
-// Estado da tela de Estoque: página, busca e categoria, na URL (`useListaNaUrl`). É o
+// Estado da tela de Estoque: página, busca, categoria e status, na URL (`useListaNaUrl`). É o
 // `useLicencas` com quantidade (AE). A linha abre a ficha, e as ações do `⋯` são as
 // dela (`useAcoesDoItem`).
 export function useEstoque() {
@@ -17,13 +18,15 @@ export function useEstoque() {
   const lista = useListaNaUrl();
   const { page, perPage, setPage, search, debouncedSearch, changeSearch, parametros, filtrar } = lista;
   const categoryId = parametros.get('categoria') ?? undefined;
+  const status = statusAtivoDaUrl(parametros.get('status'));
 
   const params = useMemo(
-    () => ({ page, perPage, q: debouncedSearch || undefined, categoryId }),
-    [page, perPage, debouncedSearch, categoryId],
+    () => ({ page, perPage, q: debouncedSearch || undefined, categoryId, isActive: ativoDoStatus(status) }),
+    [page, perPage, debouncedSearch, categoryId, status],
   );
 
   const { data, isPending, error } = useStockQuery(params);
+  const { data: stats } = useStockStatsQuery();
   const itens = data?.rows ?? [];
 
   usePaginaQueExiste(page, data?.total, setPage);
@@ -56,6 +59,10 @@ export function useEstoque() {
     changeSearch,
     categoryId,
     changeCategoria: (id: string | undefined) => filtrar('categoria', id),
+    status,
+    // Clicar liga o recorte, clicar de novo desliga, e o Total limpa.
+    escolherStatus: (proximo: StatusAtivo | undefined) => filtrar('status', proximo === status ? undefined : proximo),
+    contagens: contagensDoStatusAtivo(stats),
 
     abrirFicha: (item: ItemDeEstoque) => navigate(caminhoDoItem(item.id), comFiltros(parametros)),
 

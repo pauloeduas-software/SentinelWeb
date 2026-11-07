@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   useAssetHistoryQuery, useAssetQuery, useCreateAsset, useDeleteAsset,
-  useRetireAsset, useUnretireAsset, useUpdateAsset, type AssetInput,
+  useRestoreAsset, useRetireAsset, useUpdateAsset, type AssetInput,
 } from '../../../../queries/asset.queries';
 import {
   useCheckinAsset, useCheckoutAsset, type CheckinInput, type CheckoutInput,
@@ -24,6 +24,7 @@ import { useVoltaComFiltros, useVoltaParaEstaFicha } from '../../../../hooks/use
 import { useNotificacao } from '../../../../hooks/useNotificacao';
 import { erroDaFicha, linksDoErro } from '../../../../helpers/erro.helper';
 import { textoDaPosse } from '../../helpers/posse.helper';
+import { useReverterBaixa } from '../../hooks/useReverterBaixa';
 
 // Estado da TELA DE DETALHE. Aba, modais e o ativo em edição são de uma tela
 // só: ficam aqui, em `useState`, e não em store (docs/referencia/arquitetura.md).
@@ -66,7 +67,8 @@ export function useAssetDetail() {
   const editar = useUpdateAsset();
   const excluir = useDeleteAsset();
   const darBaixa = useRetireAsset();
-  const reverterSaida = useUnretireAsset();
+  const reverterBaixa = useReverterBaixa();
+  const restaurar = useRestoreAsset();
   const entregar = useCheckoutAsset();
   const devolver = useCheckinAsset();
 
@@ -137,30 +139,26 @@ export function useAssetDetail() {
     notificar.sucesso('Baixa registrada.');
   };
 
-  // Reverter apaga a data, o motivo e a observação da saída num clique só, e o
-  // botão fica ao lado do selo, onde se clica por engano — por isso a confirmação,
-  // como na lixeira. O que se perde é o registro no ativo; a auditoria, no
-  // banco, guarda a baixa e a reversão (AB).
   const handleReverterSaida = async () => {
+    if (asset) await reverterBaixa(asset);
+  };
+
+  /**
+   * Mandar para a lixeira volta para a LISTAGEM: a ficha de lá é só consulta
+   * (BW), e quem excluiu terminou o que vinha fazer.
+   */
+  // Restaurar fica na ficha: é o que devolve as ações, e ela continua aberta.
+  const handleRestaurar = async () => {
     if (!asset) return;
-    if (!(await confirmar({
-      titulo: `Reverter a baixa de "${asset.assetTag}"?`,
-      descricao: 'A data, o motivo e as notas da saída são apagados.',
-      acao: 'Reverter',
-      perigo: true,
-    }))) return;
     try {
-      await reverterSaida.mutateAsync(asset.id);
-      notificar.sucesso('Baixa revertida.');
+      await restaurar.mutateAsync(asset.id);
+      notificar.sucesso('Ativo restaurado.');
     } catch (falha) {
+      // É aqui que aparece o 409 de etiqueta reaproveitada, como na lista.
       notificar.erro((falha as Error).message);
     }
   };
 
-  /**
-   * Mandar para a lixeira volta para a LISTAGEM: a tela de detalhe responde 404
-   * para ativo apagado, então continuar aqui deixaria a tela sem dado nenhum.
-   */
   const handleDelete = async () => {
     if (!asset) return;
     if (!(await confirmar({
@@ -258,5 +256,6 @@ export function useAssetDetail() {
     handleDarBaixa,
     handleReverterSaida,
     handleDelete,
+    handleRestaurar,
   };
 }

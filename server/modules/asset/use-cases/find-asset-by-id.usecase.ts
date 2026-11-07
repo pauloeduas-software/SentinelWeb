@@ -1,18 +1,19 @@
 import { prisma } from '../../../infra/database/prismaClient';
+import { INCLUINDO_LIXEIRA } from '../../../infra/database/soft-delete.extension';
 import { AppError } from '../../../infra/errors/app-error';
 import { resolverResponsaveis, type PosseResolvida } from '../../assignment/use-cases/resolve-responsibles.usecase';
 import { assetDetailSelect, ASSET_SELECT } from '../helpers/asset-select.helper';
 import { listCurrentWorkstations, type PostoAtual } from './list-current-workstations.usecase';
 
 // `findFirst`, nunca `findUnique`: o escopo da lixeira não alcança o
-// `findUnique` (infra/database/soft-delete.extension.ts), e um ativo apagado não
-// deve abrir tela de detalhe — ele volta pela restauração, não pela URL.
-function buscarAtivo(id: string, podeVerCusto: boolean) {
+// `findUnique` (infra/database/soft-delete.extension.ts). O ativo apagado só abre
+// para quem vê a Lixeira, e só para consulta (BW): nenhuma escrita o alcança.
+function buscarAtivo(id: string, podeVerCusto: boolean, podeVerLixeira: boolean) {
   return prisma.asset.findFirst({
     // O select DEPENDE DA SESSÃO (D77). Quem não é `SUPERVISOR` não recebe a coluna
     // de custo — ver `assetDetailSelect`.
-    where: { id },
-    select: assetDetailSelect(podeVerCusto) as typeof ASSET_SELECT,
+    where: { id, ...(podeVerLixeira ? INCLUINDO_LIXEIRA : {}) },
+    select: { ...assetDetailSelect(podeVerCusto), deletedAt: true } as typeof ASSET_SELECT & { deletedAt: true },
   });
 }
 
@@ -37,11 +38,11 @@ type AssetDetail = NonNullable<Awaited<ReturnType<typeof buscarAtivo>>> & {
  * a Camada 3 aqui com outra consulta seria uma segunda implementação da mesma
  * regra, e as duas divergiriam no primeiro ajuste.
  *
- * 404 fora da lixeira: "esse id não existe" e "esse ativo está apagado" são a
- * mesma resposta para quem chegou pela URL.
+ * Para quem não vê a Lixeira, o ativo apagado é 404: "esse id não existe" e
+ * "esse ativo está apagado" são a mesma resposta para quem chegou pela URL.
  */
-export async function findAssetById(id: string, podeVerCusto: boolean): Promise<AssetDetail> {
-  const ativo = await buscarAtivo(id, podeVerCusto);
+export async function findAssetById(id: string, podeVerCusto: boolean, podeVerLixeira: boolean): Promise<AssetDetail> {
+  const ativo = await buscarAtivo(id, podeVerCusto, podeVerLixeira);
   if (!ativo) throw new AppError('Ativo não encontrado.', 404);
 
   const [posse, postos] = await Promise.all([resolverResponsaveis(prisma, id), listCurrentWorkstations([id])]);

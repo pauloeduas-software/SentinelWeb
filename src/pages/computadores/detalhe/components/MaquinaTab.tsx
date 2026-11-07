@@ -47,7 +47,8 @@ interface MaquinaTabProps {
   carregando: boolean;
   erro: string | null;
   desvinculando: boolean;
-  onDesvincular: () => void;
+  /** Sem ele, a ficha é só consulta: a do computador na lixeira (BW). */
+  onDesvincular?: () => void;
 }
 
 /**
@@ -186,9 +187,11 @@ export default function MaquinaTab({ maquina, carregando, erro, desvinculando, o
             gravado no ativo em {dataHora(maquina.ultimoContatoNoAtivo)} · a varredura atualiza de hora em hora
           </p>
         </div>
-        <Button variant="outline" size="sm" disabled={desvinculando} onClick={onDesvincular} title="Este ativo não é esta máquina">
-          <Unlink /> Desvincular
-        </Button>
+        {onDesvincular && (
+          <Button variant="outline" size="sm" disabled={desvinculando} onClick={onDesvincular} title="Este ativo não é esta máquina">
+            <Unlink /> Desvincular
+          </Button>
+        )}
       </Card>
 
       <section className="space-y-3">

@@ -36,10 +36,10 @@ de alvo `WORKSTATION`) e é ele que as pessoas ocupam, por turno
 
 | | |
 |---|---|
-| **a lista** | Posto, Localização, Responsáveis (só os nomes, sem turno: os dois primeiros e quantos faltam, "Ana Souza, Bruno Lima +2", com todos ao passar o mouse; sem ninguém, o traço), Ativos e Situação — *Posto vago* (tem ativo e ninguém responde), *Ocupado* ou *Sem uso*. Em cima, os cartões Total, Ocupados, Vagos e Sem uso: as três situações somam o total, e clicar filtra; busca por nome, nota e pela etiqueta ou série do computador entregue ao posto ([BI](../decisoes/posse.md#bi--a-busca-de-postos-acha-o-computador-pela-etiqueta-e-pela-série)) |
-| **a ficha** (`/postos/:id`) | página própria, no molde da do computador: o card com situação, localização, computador e notas, com o **Adicionar ao posto**, e as abas com quem está nele agora — a busca por nome ou turno, e na linha de cada um corrigir o turno e encerrar com o dia em que saiu ([BQ](../decisoes/posse.md#bq--entregar-e-devolver-são-dois-botões-e-a-aba-responsáveis-é-uma-só)) —, o computador da mesa, com a telemetria ao vivo quando tem máquina vinculada, o estoque da mesa, por entrega, e o **Histórico** ([BP](../decisoes/posse.md#bp--o-que-já-foi-mora-na-aba-histórico)): quem entrou e saiu, com o turno, o computador entregue e devolvido e o estoque entregue à mesa, 15 por página, do mais recente para o mais antigo. **A ficha não devolve nada** ([BN](../decisoes/posse.md#bn--o-devolver-mora-só-na-ficha-do-que-foi-entregue)): a linha abre a ficha do computador ou a do item, onde está o Devolver ([`estoque.md`](estoque.md)) |
+| **a lista** | Posto, Localização, Responsáveis (só os nomes, sem turno: os dois primeiros e quantos faltam, "Ana Souza, Bruno Lima +2", com todos ao passar o mouse; sem ninguém, o traço), Ativos e Status — *Posto vago* (tem ativo e ninguém responde), *Ocupado* ou *Sem uso*. Em cima, os cartões Total, Ocupados, Vagos e Sem uso: os três status somam o total, e clicar filtra; busca por nome, nota e pela etiqueta ou série do computador entregue ao posto ([BI](../decisoes/posse.md#bi--a-busca-de-postos-acha-o-computador-pela-etiqueta-e-pela-série)) |
+| **a ficha** (`/postos/:id`) | página própria, no molde da do computador: o card com status, localização, computador e notas, com o **Adicionar ao posto**, e as abas com quem está nele agora — a busca por nome ou turno, e na linha de cada um corrigir o turno e encerrar com o dia em que saiu ([BQ](../decisoes/posse.md#bq--entregar-e-devolver-são-dois-botões-e-a-aba-responsáveis-é-uma-só)) —, o computador da mesa, com a telemetria ao vivo quando tem máquina vinculada, o estoque da mesa, por entrega, e o **Histórico** ([BP](../decisoes/posse.md#bp--o-que-já-foi-mora-na-aba-histórico)): quem entrou e saiu, com o turno, o computador entregue e devolvido e o estoque entregue à mesa, 15 por página, do mais recente para o mais antigo. **A ficha não devolve nada** ([BN](../decisoes/posse.md#bn--o-devolver-mora-só-na-ficha-do-que-foi-entregue)): a linha abre a ficha do computador ou a do item, onde está o Devolver ([`estoque.md`](estoque.md)) |
 | **o cadastro** | **Novo posto** e, em cada linha e na ficha, ✏️ Editar e 🗑️ Excluir, sem Desativar ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)) — `SUPERVISOR`; ver o posto e colocar ou tirar ocupante é `TECNICO` ([AV](../decisoes/acesso.md#av--três-cargos-técnico-supervisor-e-administrador)). O Editar leva a versão lida: se outra pessoa salvou no meio, é 409 (AF) |
-| **a volta** | situação, página e busca moram na URL da lista (`?situacao=vagos&pagina=2&busca=mesa`): o voltar do navegador e a seta da ficha trazem a lista como estava |
+| **a volta** | status, página e busca moram na URL da lista (`?status=vagos&pagina=2&busca=mesa`): o voltar do navegador e a seta da ficha trazem a lista como estava |
 
 Excluir pede confirmação, com a frase de Configurações, e a recusa aparece numa
 notificação do sistema.
@@ -54,8 +54,8 @@ notificação do sistema.
 - **a lista de Computadores** mostra o computador do posto como qualquer outro
   ([BJ](../decisoes/catalogo-e-ativo.md#bj--o-computador-entregue-a-um-posto-continua-na-lista-de-computadores)):
   a Localização é a do posto, e Responsáveis traz só "Posto Mesa 1", sem quem o ocupa
-  ([BO](../decisoes/posse.md#bo--em-responsáveis-vai-só-o-nome)): que o posto está vago é a
-  Situação dele, aqui em Postos. O cartão da ficha, a janela de devolução e os Ociosos de
+  ([BO](../decisoes/posse.md#bo--em-responsáveis-vai-só-o-nome)): que o posto está vago é o
+  Status dele, aqui em Postos. O cartão da ficha, a janela de devolução e os Ociosos de
   Descobertas dizem o mesmo
   ([BL](../decisoes/catalogo-e-ativo.md#bl--o-computador-no-posto-mostra-o-posto-antes-de-quem-o-ocupa)).
   Quem abre o computador pelo posto volta ao posto pela seta, na aba em que estava;

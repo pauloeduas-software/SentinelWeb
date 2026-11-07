@@ -44,6 +44,8 @@ export const personSpec: CatalogSpec = {
   // Restaurar devolve a MESMA pessoa, com o histórico inteiro.
   lixeira: true,
 
+  cartoesDeStatus: true,
+
   // O que ela tem AGORA — as quatro pontas da invariante 6. O passado não
   // segura: ele fica com a linha na lixeira.
   countUsages: async (client, id) => {

@@ -48,7 +48,7 @@ export default function UsersPage() {
             <TableRow>
               <TableHead>Usuário</TableHead>
               <TableHead className="w-[20%]">Cargo</TableHead>
-              <TableHead className="w-36">Situação</TableHead>
+              <TableHead className="w-36">Status</TableHead>
               <TableHeadAcoes />
             </TableRow>
           </TableHeader>

@@ -168,7 +168,7 @@ describe('o que a ficha do posto lê', () => {
     expect(ficha.body.ativos).toEqual([expect.objectContaining({ id: item.id, entregueEm: posse.checkoutAt.toISOString() })]);
   });
 
-  // A situação no card da ficha sai deste número. Se saísse da lista de ocupantes,
+  // O status no card da ficha sai deste número. Se saísse da lista de ocupantes,
   // uma consulta que falhasse viraria "Sem uso".
   it('conta quem ocupa o posto agora, sem quem já saiu', async () => {
     const mesa = await criarPosto(api, { name: 'Mesa da Contagem' });

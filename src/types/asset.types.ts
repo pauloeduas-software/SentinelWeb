@@ -84,6 +84,8 @@ export interface Asset {
   retiredReason: Referencia | null;
   /** A observação da baixa, enquanto ela vale. Desfazer a baixa a limpa. */
   retiredNotes: string | null;
+  /** Quando foi para a lixeira. Só a ficha traz, e só quem vê a Lixeira a encontra (BW). */
+  deletedAt?: string | null;
 
   createdAt: string;
   updatedAt: string;
@@ -130,14 +132,12 @@ type TipoDeStatus = 'DEPLOYABLE' | 'IN_USE' | 'PENDING' | 'UNDEPLOYABLE';
 export interface AssetStats {
   /** O que a listagem PADRÃO mostra: sem o baixado e sem a lixeira. */
   total: number;
-  byStatus: {
-    id: string;
-    name: string;
-    type: TipoDeStatus;
-    total: number;
-  }[];
+  /** Quantos em cada tipo de status: é o tipo que vira cartão (BT). */
+  byType: Record<TipoDeStatus, number>;
   /** Quantos saíram do PATRIMÔNIO (`retiredAt`) — vendido, descartado, roubado. */
   retired: number;
+  /** Quantos em cada motivo de baixa: são os cartões da vista Baixados (BV). */
+  byRetiredReason: { id: string; name: string; total: number }[];
 }
 
 /**
@@ -161,7 +161,8 @@ export type AssetView = 'active' | 'trashed' | 'retired';
  */
 export type AssetListParams = Omit<ListParams, 'view'> & {
   view?: AssetView;
-  statusId?: string;
+  statusType?: TipoDeStatus;
+  retiredReasonId?: string;
   categoryId?: string;
 };
 

@@ -10,7 +10,7 @@ import type {
 
 export const TRACO = '—';
 
-/** Os cartões da tela: o Total e uma situação por cartão, na cor do selo da tabela. */
+/** Os cartões da tela: o Total e um status por cartão, na cor do selo da tabela. */
 export function contagensDosPostos(stats: PostoStats | undefined): Contagem<PostoView>[] {
   return [
     { valor: 'todos', rotulo: 'Total', total: stats?.total },
@@ -22,7 +22,7 @@ export function contagensDosPostos(stats: PostoStats | undefined): Contagem<Post
 
 const RECORTES: readonly PostoView[] = ['todos', 'ocupados', 'vagos', 'sem-uso'];
 
-/** `?situacao=` da lista. O que não é recorte vale `todos`: o servidor recusaria com 422. */
+/** `?status=` da lista. O que não é recorte vale `todos`: o servidor recusaria com 422. */
 export function recorteDaUrl(valor: string | null): PostoView {
   return RECORTES.find((recorte) => recorte === valor) ?? 'todos';
 }
@@ -37,7 +37,7 @@ export function nomesDoPosto(posto: Pick<Posto, 'ocupantes'>): string[] {
 
 /**
  * A coluna Responsáveis: só os nomes (BO), os dois primeiros e quantos faltam, "Ana, Bruno
- * +3". O turno fica na ficha do posto, e o posto vago, na Situação.
+ * +3". O turno fica na ficha do posto, e o posto vago, no Status.
  */
 export function quemEstaNoPosto(posto: Pick<Posto, 'ocupantes'>): string {
   const nomes = nomesDoPosto(posto);

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Prisma } from '@prisma/client';
+import { $Enums, type Prisma } from '@prisma/client';
 import { contemTexto } from '../../shared/busca.helper';
 
 // Sem diferença de maiúscula — buscar "latitude" acha "Latitude" — e com os
@@ -41,7 +41,8 @@ export type AssetView = (typeof ASSET_VIEWS)[number];
 
 export interface AssetFilters {
   view: AssetView;
-  statusId?: string;
+  statusType?: $Enums.StatusLabelType;
+  retiredReasonId?: string;
   categoryId?: string;
 }
 
@@ -57,7 +58,10 @@ export const SEM_BAIXA: Prisma.AssetWhereInput = { retiredAt: null };
 // estrito e continua recusando typo em chave dele.
 const assetFiltersSchema = z.object({
   view: z.enum(ASSET_VIEWS, `vista inválida: use ${ASSET_VIEWS.join(', ')}`).default('active'),
-  statusId: z.uuid('status: identificador inválido').optional(),
+  // O TIPO, e não o status: é ele que o cartão conta, e cadastrar um status novo não cria cartão (BT).
+  statusType: z.enum($Enums.StatusLabelType, 'tipo de status inválido').optional(),
+  // O cartão da vista Baixados (BV).
+  retiredReasonId: z.uuid('motivo da baixa: identificador inválido').optional(),
   categoryId: z.uuid('categoria: identificador inválido').optional(),
 });
 
@@ -69,7 +73,7 @@ const CHAVES_DO_DOMINIO = Object.keys(assetFiltersSchema.shape);
  * genérico do `core` entende.
  *
  * Precisa acontecer ANTES do `parseListQuery`: ele valida com `strictObject` e
- * responderia 422 a `?statusId=` — a mesma proteção que pega `?pag=2`.
+ * responderia 422 a `?statusType=` — a mesma proteção que pega `?pag=2`.
  */
 export function separarFiltrosDeAtivo(raw: unknown): {
   filtros: AssetFilters;
@@ -120,7 +124,8 @@ function whereDaVista(view: AssetView): Prisma.AssetWhereInput {
 export function buildAssetFilterWhere(filtros: AssetFilters): Prisma.AssetWhereInput {
   return {
     ...whereDaVista(filtros.view),
-    ...(filtros.statusId ? { statusId: filtros.statusId } : {}),
+    ...(filtros.statusType ? { status: { type: filtros.statusType } } : {}),
+    ...(filtros.retiredReasonId ? { retiredReasonId: filtros.retiredReasonId } : {}),
     // Pelo MODELO: o ativo não tem `categoryId`, a categoria dele é a do modelo.
     ...(filtros.categoryId ? { model: { categoryId: filtros.categoryId } } : {}),
   };

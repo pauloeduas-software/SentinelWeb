@@ -3,7 +3,7 @@ import { apiClient } from '../api/apiClient';
 import { assetKeys } from './asset.queries';
 import { personKeys } from './person.queries';
 import { workstationKeys } from './workstation.queries';
-import type { ListEnvelope, ListParams } from '../types/list.types';
+import type { ListEnvelope, ListParams, StatusAtivoStats } from '../types/list.types';
 import type {
   AlvoDaEntregaDeEstoque, EventoDoItem, ItemDeEstoque, ItemDeEstoqueInput,
   ResultadoDaDevolucao, EntregaAberta, EntregaNaFicha,
@@ -18,9 +18,10 @@ import type {
 // unidade no nome de alguém trava a desativação dele), POSTOS (a ficha mostra o
 // estoque da mesa) e COMPUTADORES (o histórico mostra o componente, AI).
 
-/** A listagem: o que toda lista aceita, sem lixeira e sem abas, e a categoria. */
+/** A listagem: o que toda lista aceita, sem lixeira e sem abas, a categoria e o status. */
 export type ParamsDoEstoque = Omit<ListParams, 'view'> & {
   categoryId?: string;
+  isActive?: boolean;
 };
 
 /** As duas listas da ficha: a página e, na de quem está com o item, a busca pelo nome. */
@@ -33,6 +34,7 @@ export interface ParamsDoDetalhe {
 const stockKeys = {
   all: ['stock'] as const,
   list: (params: ParamsDoEstoque) => ['stock', 'list', params] as const,
+  stats: () => ['stock', 'stats'] as const,
   item: (id: string) => ['stock', 'item', id] as const,
   entregas: (id: string, params: ParamsDoDetalhe) => ['stock', 'entregas', id, params] as const,
   historico: (id: string, params: ParamsDoDetalhe) => ['stock', 'historico', id, params] as const,
@@ -45,6 +47,13 @@ export function useStockQuery(params: ParamsDoEstoque) {
     queryFn: async () => (await apiClient.get<ListEnvelope<ItemDeEstoque>>('/stock/items', { params })).data,
     // Sem isto a tabela pisca em branco a cada troca de página, de filtro ou tecla da busca.
     placeholderData: keepPreviousData,
+  });
+}
+
+export function useStockStatsQuery() {
+  return useQuery({
+    queryKey: stockKeys.stats(),
+    queryFn: async () => (await apiClient.get<StatusAtivoStats>('/stock/items/stats')).data,
   });
 }
 

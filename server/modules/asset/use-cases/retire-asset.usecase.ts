@@ -32,7 +32,7 @@ interface RetireAssetData {
   retiredReasonId: string;
   /** Ausente = agora. A saída pode ter acontecido antes de alguém registrar. */
   retiredAt?: Date | null;
-  /** A justificativa. Vai para `retiredNotes`, que a aba Detalhes mostra (AB). */
+  /** A justificativa. Vai para `retiredNotes`, que o aviso da ficha mostra (AB). */
   notes?: string | null;
 }
 

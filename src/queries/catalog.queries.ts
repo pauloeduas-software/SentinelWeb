@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api/apiClient';
 import type { CatalogOption, CatalogRow } from '../types/catalog.types';
-import type { ListEnvelope, ListParams } from '../types/list.types';
+import type { ListEnvelope, ListParams, StatusAtivoStats } from '../types/list.types';
 
 // Um conjunto de hooks para as SETE tabelas de catálogo — o espelho, no
 // frontend, do CRUD genérico do servidor. O `slug` é o que muda.
@@ -14,6 +14,7 @@ import type { ListEnvelope, ListParams } from '../types/list.types';
 export const catalogKeys = {
   tabela: (slug: string) => ['catalog', slug] as const,
   list: (slug: string, params: CatalogListParams) => ['catalog', slug, 'list', params] as const,
+  stats: (slug: string) => ['catalog', slug, 'stats'] as const,
   // O TERMO DE BUSCA ENTRA NA CHAVE. Sem ele, a primeira
   // resposta ficaria no cache sob a mesma chave de toda busca seguinte: digitar
   // no campo devolveria a lista inteira, do cache, sem nenhuma requisição —
@@ -43,6 +44,15 @@ export function useCatalogQuery(slug: string, params: CatalogListParams) {
     // Entre abas não há o que manter: a aba nova começa em "Carregando…".
     placeholderData: (anterior, consultaAnterior) =>
       consultaAnterior?.queryKey[1] === slug ? anterior : undefined,
+  });
+}
+
+/** Os cartões da tabela que os tem (`cartoesDeStatus`): nas outras, a rota não existe. */
+export function useCatalogStatsQuery(slug: string, ligada: boolean) {
+  return useQuery({
+    queryKey: catalogKeys.stats(slug),
+    queryFn: async () => (await apiClient.get<StatusAtivoStats>(`/${slug}/stats`)).data,
+    enabled: ligada,
   });
 }
 

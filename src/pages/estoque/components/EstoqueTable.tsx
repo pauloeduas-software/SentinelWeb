@@ -14,7 +14,7 @@ import { classeDaConta, ehConsumivel, motivoParaNaoEntregar } from '../helpers/e
 //
 // A LINHA INTEIRA ABRE O DETALHE, e o `⋯` guarda as ações (AY). O CADASTRO É O DAS
 // CONFIGURAÇÕES (`CatalogTable`): Editar, Desativar/Ativar e Excluir, nessa ordem;
-// o desativado fica na lista, esmaecido, com a Situação dizendo; e Excluir sempre clica — o item
+// o desativado fica na lista, esmaecido, com o Status dizendo; e Excluir sempre clica — o item
 // em uso recebe o 409 do servidor, que diz com quem está e manda devolver (AG).
 
 interface EstoqueTableProps {
@@ -43,7 +43,7 @@ export default function EstoqueTable({
             <TableHead className="w-[16%]">Categoria</TableHead>
             <TableHead className="hidden w-[16%] md:table-cell">Localização</TableHead>
             <TableHead className="w-[18%]">Quantidade</TableHead>
-            <TableHead className="w-36">Situação</TableHead>
+            <TableHead className="w-36">Status</TableHead>
             <TableHeadAcoes />
           </TableRow>
         </TableHeader>

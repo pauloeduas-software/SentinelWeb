@@ -1,4 +1,5 @@
 import { prisma } from '../../../infra/database/prismaClient';
+import { INCLUINDO_LIXEIRA } from '../../../infra/database/soft-delete.extension';
 import { AppError } from '../../../infra/errors/app-error';
 import { CHECKOUT_SELECT } from '../helpers/license-select.helper';
 import { diasParaVencer, statusDaLicenca } from '../helpers/license-status.helper';
@@ -50,8 +51,8 @@ export function comStatus(entregas: EntregaDoAlvo[]) {
 }
 
 /** A aba Licenças do ativo: o que está nesta máquina agora. */
-export async function listAssetLicenses(assetId: string) {
-  const ativo = await prisma.asset.findFirst({ where: { id: assetId }, select: { id: true } });
+export async function listAssetLicenses(assetId: string, podeVerLixeira = false) {
+  const ativo = await prisma.asset.findFirst({ where: { id: assetId, ...(podeVerLixeira ? INCLUINDO_LIXEIRA : {}) }, select: { id: true } });
   if (!ativo) throw new AppError('Ativo não encontrado.', 404);
 
   return comStatus(await buscarEntregasDoAtivo(assetId, { abertas: true }));

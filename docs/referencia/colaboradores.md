@@ -21,8 +21,10 @@ O cadastro **é o mesmo componente** das abas de Configurações
 (`src/components/catalogo/CadastroDoCatalogo.tsx`), com a spec do
 colaborador (`src/pages/colaboradores/specs/index.ts`): a busca por nome ou
 e-mail, a paginação, Editar, Desativar/Ativar e Excluir na ordem e
-com as frases do sistema inteiro, e a aba Lixeira. A API não mudou: é o CRUD do
-catálogo em `/api/people`.
+com as frases do sistema inteiro, e a aba Lixeira. Em cima, os cartões Total, Ativos
+e Desativados, sem contar a lixeira: clicar filtra
+([BT](../decisoes/plataforma.md#bt--estoque-e-colaboradores-têm-cartões-e-computadores-conta-o-tipo)). A API é o CRUD do catálogo em
+`/api/people`, com `?isActive=` na lista e `GET /api/people/stats` nos cartões.
 
 Os endereços antigos da ficha — `/configuracoes/colaboradores/:id` e, antes,
 `/users/:id` — redirecionam para `/colaboradores/:id`, com o mesmo id.

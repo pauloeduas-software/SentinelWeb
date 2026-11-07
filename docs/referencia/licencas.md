@@ -71,10 +71,10 @@ Calculado das datas e do dia de hoje **em Brasília** (`hojeNoBrasil`), nunca gr
 
 | Status | Quando |
 |---|---|
-| **Encerrada** | o dia do encerramento chegou (hoje ou antes). Ganha de tudo |
-| **Vencida** (`EXPIRADA`) | o vencimento já passou — o dia do vencimento ainda vale |
+| **Encerrado** | o dia do encerramento chegou (hoje ou antes). Ganha de tudo |
+| **Vencido** (`EXPIRADA`) | o vencimento já passou — o dia do vencimento ainda vale |
 | **Vencendo** | vence nos próximos 30 dias, hoje incluído |
-| **Ativa** | o resto, inclusive sem vencimento |
+| **Ativo** | o resto, inclusive sem vencimento |
 
 O **vencimento** é até quando a licença pode ser usada, e se renova editando a data: quem está
 com ela continua, e o pedido e o valor podem passar a ser os da renovação — o de antes fica na
@@ -88,8 +88,8 @@ vencida.
 
 | | |
 |---|---|
-| **a lista** | **uma só**, por nome, como nas Configurações ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)): a encerrada fica junto, esmaecida e com a marca "encerrada". Busca por nome, licenciado, e-mail, pedido, categoria e fabricante — o texto ao pé da letra, `%` e `_` não são curinga; filtro de categoria. Em cima, os cartões Total, Ativas, Vencendo, Vencidas e Encerradas (esta pela mais recente): clicar filtra |
-| **a linha** | nome, categoria, "3 livres" com "10 compradas · 7 em uso" embaixo, prazo (ou "encerrada em" e a data) e situação. Fabricante e custo ficam só na ficha |
+| **a lista** | **uma só**, por nome, como nas Configurações ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)): a encerrada fica junto, esmaecida e com o status Encerrado. Busca por nome, licenciado, e-mail, pedido, categoria e fabricante — o texto ao pé da letra, `%` e `_` não são curinga; filtro de categoria. Em cima, os cartões Total, Ativos, Vencendo, Vencidos e Encerrados (este pela mais recente): clicar filtra |
+| **a linha** | nome, categoria, "3 livres" com "10 compradas · 7 em uso" embaixo, prazo (ou "encerrada em" e a data) e status. Fabricante e custo ficam só na ficha |
 | **as ações** | ficam no `⋯` da linha, como nas Configurações (AY): Entregar (some na encerrada; desabilitado sem livre ou vencida, com o motivo no `title`), Editar, Encerrar/Reabrir (os ícones do Desativar/Ativar) e Excluir. O Excluir é o das Configurações: sempre clica, e a que está em uso recebe o 409, que diz com quem está |
 | **a ficha** (`/licencas/:id`) | no card, o status, a conta ("10 compradas · 7 em uso · 3 livres"), todos os campos do cadastro — o valor da compra é o total, com o preço de cada licença ao lado: "R$ 5.000,00 (R$ 500,00 por licença)" — e as ações da lista, com as mesmas regras (Entregar e Editar abrem o painel por cima da ficha; excluída, volta para a lista). **Responsáveis** (a primeira aba): as entregas abertas, da mais recente para a mais antiga, 15 por página, com busca pelo nome do colaborador ou do computador, a chave de cada uma (com o número dela na lista, ou "sem chave" na entrega feita antes de a licença ter chaves), e Chave — quando a licença tem chaves — e Devolver em cada linha. **Chaves**, só quando a licença tem chave: as **chaves do produto**, numeradas, cada uma com quanto está tomado ("livre", "em uso", "cobre 10 · 3 livres"). **Histórico**: só entregas e devoluções, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
 | **o alerta** | só nesta tela, numa caixa só, do mais urgente para o menos: vencida (a mais recente primeiro; fica até alguém renovar ou encerrar, mesmo sem ninguém usando — é decisão pendente) e vencendo em 30 dias (a mais próxima primeiro). A encerrada não entra: com entrega aberta ela não se encerra ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)). Cada linha diz quantas estão em uso, na mesma frase nos dois motivos — "venceu há 3 dias, ainda em uso (7)"; sem ninguém usando, só o prazo. Quantas são de cada motivo está nos cartões logo acima, que filtram a lista. Não existe alerta de mínimo |
@@ -219,7 +219,7 @@ e o que as protege é a tela escondê-las e só o detalhe devolvê-las.
 
 | Onde | O quê |
 |---|---|
-| **aba Licenças do ativo** | as entregas abertas **àquele computador**: licença, categoria, vencimento, situação e desde quando, com a nota embaixo do nome; o nome leva à ficha da licença com a aba Responsáveis já filtrada pela etiqueta (`/licencas/<id>?quem=ATV-00012`), onde está o Devolver |
+| **aba Licenças do ativo** | as entregas abertas **àquele computador**: licença, categoria, vencimento, status e desde quando, com a nota embaixo do nome; o nome leva à ficha da licença com a aba Responsáveis já filtrada pela etiqueta (`/licencas/<id>?quem=ATV-00012`), onde está o Devolver |
 | **ficha do colaborador** | as entregas abertas **a ela**, com as mesmas colunas e o mesmo link, filtrado pelo nome dela |
 | **histórico do ativo** | entregas e devoluções de licença **ao ativo** |
 | **histórico do colaborador** | entregas e devoluções de licença **a ela** |

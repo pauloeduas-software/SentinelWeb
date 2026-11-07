@@ -51,6 +51,12 @@ export const urlOpcional = (rotulo: string) => z
 
 export const booleano = (rotulo: string) => z.boolean(`${rotulo} deve ser verdadeiro ou falso`);
 
+/** O `?isActive=` da lista com os cartões Ativos e Desativados (BT): texto na query, booleano no `where`. */
+export const filtroDeAtivo = z
+  .enum(['true', 'false'], 'status inválido: use true ou false')
+  .transform((valor) => valor === 'true')
+  .optional();
+
 // Ausente ou vazio é o select que ficou sem escolha, e a frase diz isso; o
 // "identificador inválido" fica para o valor que veio e não é um uuid.
 export const uuidObrigatorio = (rotulo: string) => z.uuid({

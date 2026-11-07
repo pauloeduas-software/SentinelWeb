@@ -937,6 +937,8 @@ velha sai junto, porque ela existia para aquele botão: quem devolve em Computad
 
 ## BO — Em Responsáveis vai só o nome
 
+> **Superada em parte por [BU](./plataforma.md#bu--o-nome-é-status-em-toda-tela-e-o-valor-vai-no-masculino):** o posto vago é o Status do posto, e não mais a Situação.
+
 **Decidido** (2026-11-07, olhando as listas de Computadores e Postos):
 
 - **Onde se lê Responsáveis, vai só quem responde:** o nome do posto, nunca o de quem o ocupa; o do colaborador; ou o

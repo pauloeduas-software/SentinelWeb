@@ -27,7 +27,7 @@ Cadastro novo copia `src/components/catalogo/` (`CatalogTable` + `useCatalog`), 
 
 - **Tema claro e escuro.** Cor só pelos tokens de `src/index.css`.
 - **Sem cor por dado** (nome, categoria, tipo de evento). Cor só por token do tema, em botão, aviso e
-  na situação: ativo, desativado, vencida, online (`Badge`, `PontoDeStatus`; AY). O lint recusa cor
+  no status: ativo, desativado, vencido, online (`Badge`, `PontoDeStatus`; AY). O lint recusa cor
   fixa em `src/`.
 - **Texto de 12px para cima (BH).** A escala de `src/index.css` vale para `text-xs` a `text-xl`; tamanho
   fixo em `px` não entra.
@@ -69,7 +69,7 @@ mostram a senha no painel aberto, e a troca obrigatória de senha, que já leva 
 - **O detalhe de um registro é página, nunca janela (BK).** Os campos moram no card, sem aba Detalhes (BR), e cada aba
   é o que está com o registro. Formulário é painel lateral, por cima da ficha.
 - **O card é um só (BS).** Grade de até cinco colunas com a coluna das ações fixa, e o que é da mesma família em
-  `GrupoDeDados`: situação e identificação, catálogo, compra e, por último, Notas na largura toda. Cadastrado em em toda
+  `GrupoDeDados`: status e identificação, catálogo, compra e, por último, Notas na largura toda. Cadastrado em em toda
   ficha. O card é só leitura: quem abre outro registro é a linha da aba, e o único link é o site de suporte.
 - **O que já foi mora na aba Histórico, a última (BP).** As outras abas dizem o que está agora, e nenhuma repete o
   passado. Toda ficha tem a sua, em `LinhaDoTempo`.
@@ -89,9 +89,11 @@ mostram a senha no painel aberto, e a troca obrigatória de senha, que já leva 
 
 - **Toda lista é igual (BB).** Cartões, vistas (`VistasDaLista`), barra e `Card > Table`, com o vazio
   em `ListaVazia`. O botão fica no fim do `ListToolbar`. Linha de 48px com no máximo duas linhas de
-  texto, coluna Situação (Status em Computadores e Licenças) com `PontoDeStatus`, 15 por página
-  (`POR_PAGINA`, também em aba de ficha e histórico) e tudo na URL (`useListaNaUrl`): situação é
+  texto, coluna Status com `PontoDeStatus` e o valor no masculino (BU), 15 por página
+  (`POR_PAGINA`, também em aba de ficha e histórico) e tudo na URL (`useListaNaUrl`): status é
   cartão, categoria e tipo são `FiltroDaLista`.
+- **O cartão conta linhas da lista, e cada linha cai em um só (BT).** Tipo de status em Computadores, status em Postos e
+  Licenças, Ativos e Desativados em Estoque e Colaboradores. O número é o total da lista que ele abre, sem a busca.
 - **As colunas não se mexem.** `Table` é `table-fixed`: filtrar, paginar ou esvaziar a lista não
   desloca nada. A largura vem do `TableHead`, o `⋯` é `TableHeadAcoes` e o aviso de lista vazia é
   `TableVazia`, debaixo do cabeçalho (BA).

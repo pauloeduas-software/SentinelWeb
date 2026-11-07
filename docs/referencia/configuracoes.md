@@ -86,7 +86,7 @@ Nesta ordem — o destrutivo na ponta:
 | 🗑️ Excluir | todas | confirma e apaga; com uso, a notificação diz por quê |
 
 Desativar é **botão da linha**, nunca caixa no formulário. A linha desativada
-aparece esmaecida, com **Desativado** na coluna Situação, e
+aparece esmaecida, com **Desativado** na coluna Status, e
 continua na mesma lista — sem aba à parte. As ações ficam no `⋯` da linha (AY).
 
 **É o padrão do cadastro no sistema inteiro** ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)): Postos, Usuários,

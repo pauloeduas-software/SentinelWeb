@@ -1,9 +1,10 @@
 import {
-  Copy, Monitor, PackageX, Pencil, Plus, RotateCcw, Trash2, UserPlus,
+  Copy, Monitor, PackageX, Pencil, Plus, RotateCcw, Trash2, Undo2, UserPlus,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AssetFormModal from './components/AssetFormModal';
 import CheckoutModal from './components/CheckoutModal';
+import RetireModal from './components/RetireModal';
 import AcoesDaLinha from '../../components/AcoesDaLinha';
 import CartoesDeContagem from '../../components/CartoesDeContagem';
 import CategoriaFiltro from '../../components/CategoriaFiltro';
@@ -17,7 +18,7 @@ import { Card } from '../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableLinha, TableNome, TableRow, TableSublinha } from '../../components/ui/table';
 import { usePode } from '../../stores/auth.store';
 import { formatarData, formatarMoeda } from '../../helpers/format.helper';
-import { seloDaSaida } from './helpers/baixa.helper';
+import { motivoDaSaida } from './helpers/baixa.helper';
 import { tomDoStatus } from '../../helpers/status.helper';
 import { nomeDoResponsavel } from '../../helpers/responsavel.helper';
 import { TRACO, bloqueioDaEntrega } from './helpers/posse.helper';
@@ -25,14 +26,15 @@ import { useAssets } from './hooks/useAssets';
 
 export default function ComputadoresPage() {
   const {
-    assets, total, contagens,
+    assets, total, contagens, contagensDosMotivos,
     baixados, page, perPage, setPage,
     search, buscaFeita, changeSearch, view, changeView,
-    statusId, escolherStatus,
+    statusType, escolherStatus, retiredReasonId, escolherMotivo,
     categoryId, changeCategoria, loading, erro,
     modalAberto, emEdicao, clonando, statusPadraoId, openCreate, openEdit, openClone, closeModal, abrirDetalhe,
     handleSubmit, handleDelete, handleRestore,
     emPosse, openPosse, closePosse, handleEntregar,
+    emBaixa, openBaixa, closeBaixa, handleDarBaixa, handleReverterSaida,
   } = useAssets();
   // Mandar para a lixeira, tirar de lá e Configurações são `SUPERVISOR` no
   // servidor (AV). Sem isto, quem não é veria a lixeira, o restaurar e o link de
@@ -44,7 +46,10 @@ export default function ComputadoresPage() {
 
       <PaginaCabecalho titulo="Computadores" />
 
-      <CartoesDeContagem contagens={contagens} escolhido={statusId} onEscolher={escolherStatus} />
+      {/* Baixado não está Em uso nem Disponível: os cartões da vista são os motivos (BV). */}
+      {view === 'retired'
+        ? <CartoesDeContagem contagens={contagensDosMotivos} escolhido={retiredReasonId} onEscolher={escolherMotivo} />
+        : <CartoesDeContagem contagens={contagens} escolhido={statusType} onEscolher={escolherStatus} />}
 
       <VistasDaLista
         valor={view}
@@ -88,13 +93,13 @@ export default function ComputadoresPage() {
             {assets.map((asset) => {
               // O cálculo da posse fica no helper, nunca no JSX
               // (docs/referencia/arquitetura.md). Aqui só se escolhe o que mostrar.
-              const selo = seloDaSaida(asset);
+              const motivo = motivoDaSaida(asset);
               const bloqueio = bloqueioDaEntrega(asset);
 
               return (
-                // A LINHA ABRE O DETALHE, e o `⋯` guarda as ações (AY). Na lixeira não há o
-                // que abrir: o servidor responde 404, e a linha só restaura.
-                <TableRow key={asset.id} onClick={view === 'trashed' ? undefined : () => abrirDetalhe(asset)}>
+                // A LINHA ABRE O DETALHE, e o `⋯` guarda as ações (AY). Na lixeira
+                // também: a ficha de lá é só consulta (BW).
+                <TableRow key={asset.id} onClick={() => abrirDetalhe(asset)}>
                   <TableCell>
                     <TableNome className="font-mono">{asset.assetTag}</TableNome>
                     {asset.serial && <TableSublinha className="font-mono">SN {asset.serial}</TableSublinha>}
@@ -116,10 +121,10 @@ export default function ComputadoresPage() {
                       ? <TableSublinha>{formatarData(asset.purchaseDate)}</TableSublinha>
                       : <TableLinha>{formatarData(asset.purchaseDate)}</TableLinha>}
                   </TableCell>
-                  {/* O baixado diz quando saiu: é a situação dele agora. */}
-                  <TableCell title={selo ?? asset.status.name}>
-                    {selo
-                      ? <PontoDeStatus tom="aviso">{selo}</PontoDeStatus>
+                  {/* O motivo é o status do baixado (BV). */}
+                  <TableCell title={motivo ?? asset.status.name}>
+                    {motivo
+                      ? <PontoDeStatus tom="perigo">{motivo}</PontoDeStatus>
                       : <PontoDeStatus tom={tomDoStatus(asset.status.type)}>{asset.status.name}</PontoDeStatus>}
                   </TableCell>
 
@@ -144,6 +149,13 @@ export default function ComputadoresPage() {
                           // Clonar: o formulário abre em modo criação com os
                           // valores deste ativo, sem etiqueta e sem série.
                           { rotulo: 'Clonar', icone: Copy, onClick: () => openClone(asset) },
+                          // Dar baixa e Reverter, como no `⋯` da ficha (BV).
+                          podeDecidir && !motivo && { rotulo: 'Dar baixa', icone: PackageX, onClick: () => openBaixa(asset) },
+                          podeDecidir && motivo !== null && {
+                            rotulo: 'Reverter baixa',
+                            icone: Undo2,
+                            onClick: () => void handleReverterSaida(asset),
+                          },
                           podeDecidir && {
                             rotulo: 'Excluir',
                             icone: Trash2,
@@ -166,7 +178,7 @@ export default function ComputadoresPage() {
             nome="ativo"
             busca={buscaFeita}
             frase={view === 'trashed' ? 'A lixeira está vazia.' : view === 'retired' ? 'Nenhum ativo baixado.' : undefined}
-            filtrada={Boolean(statusId || categoryId)}
+            filtrada={Boolean(statusType || retiredReasonId || categoryId)}
           >
             {/* Um ativo exige um modelo, e o modelo exige fabricante e categoria — é a
                 ordem do Snipe-IT. Sem esta dica, o primeiro cadastro esbarra num seletor
@@ -203,6 +215,8 @@ export default function ComputadoresPage() {
           onEntregar={handleEntregar}
         />
       )}
+
+      {emBaixa && <RetireModal asset={emBaixa} onClose={closeBaixa} onConfirmar={handleDarBaixa} />}
     </div>
   );
 }

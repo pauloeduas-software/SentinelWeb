@@ -114,6 +114,6 @@ export const licenseController = {
   /** A aba Licenças da tela do ativo. O `:id` é o do ATIVO. */
   async doAtivo(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return listAssetLicenses(id);
+    return listAssetLicenses(id, temCargo(request, 'SUPERVISOR'));
   },
 };

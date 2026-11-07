@@ -16,7 +16,7 @@ import type { CatalogRow } from '../../types/catalog.types';
 function classeDaColuna(coluna: ColunaSpec): string {
   return cn(
     coluna.render === 'contagem' && 'w-24 text-right',
-    coluna.render === 'situacao' && 'w-36',
+    coluna.render === 'ativo' && 'w-36',
     coluna.soNoDesktop && 'hidden md:table-cell',
   );
 }
@@ -118,7 +118,7 @@ function Celula({ coluna, registro }: { coluna: ColunaSpec; registro: CatalogRow
     case 'status':
       return <PontoDeStatus tom={tomDoStatus(valor as TipoDeStatus)}>{rotuloDoEnum(valor, coluna.opcoes)}</PontoDeStatus>;
 
-    case 'situacao':
+    case 'ativo':
       return <PontoDeStatus tom={valor === false ? 'aviso' : 'sucesso'}>{valor === false ? 'Desativado' : 'Ativo'}</PontoDeStatus>;
 
     case 'relacao':

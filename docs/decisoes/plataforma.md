@@ -455,6 +455,8 @@ usuário: não mover nada).
 
 ## BA — O título volta ao cabeçalho, a lista não se mexe e o posto tem ficha em página
 
+> **Superada em parte por [BT](#bt--estoque-e-colaboradores-têm-cartões-e-computadores-conta-o-tipo):** Computadores abre com um cartão por tipo de status, e não por status.
+>
 > **Superada em parte por [BK](#bk--estoque-e-licenças-têm-ficha-em-página):** item e licença deixam a janela, e o que a BA deixou de fora está feito.
 >
 > **Superada em parte por [BB](#bb--toda-lista-ficha-e-formulário-seguem-o-mesmo-molde):** na página não sobra ação nenhuma no topo, e os filtros de toda lista moram na URL.
@@ -481,6 +483,10 @@ Estoque e Licenças para ficha em página.
 
 ## BB — Toda lista, ficha e formulário seguem o mesmo molde
 
+> **Superada em parte por [BU](#bu--o-nome-é-status-em-toda-tela-e-o-valor-vai-no-masculino):** a coluna se chama Status em toda lista.
+>
+> **Superada em parte por [BT](#bt--estoque-e-colaboradores-têm-cartões-e-computadores-conta-o-tipo):** Estoque e Colaboradores também abrem com cartões.
+>
 > **Superada em parte por [BR](#br--a-ficha-do-computador-não-tem-aba-detalhes):** a primeira aba não é mais Detalhes, que sai da
 > ficha do computador como saiu das outras.
 
@@ -686,6 +692,8 @@ não foi preenchido. O tamanho final está na [BS](#bs--o-card-da-ficha-tem-um-m
 
 ## BS — O card da ficha tem um molde só
 
+> **Superada em parte por [BU](#bu--o-nome-é-status-em-toda-tela-e-o-valor-vai-no-masculino):** o nome no card é Status em toda ficha.
+
 **Decisão.** Os cinco cards passam a ter a mesma grade e a mesma ordem. A diferença não estava no `CartaoDaFicha`, que já era
 um só, e sim no que cada ficha punha nele e na largura que os botões deixavam. As regras de negócio não mudaram, e nenhuma
 rota é nova.
@@ -710,3 +718,48 @@ menor que 1536px a grade cai para quatro colunas, e valor longo quebra dentro da
 
 **O que ficou de fora.** A ficha do colaborador continua sem ações (BB). A coluna reservada fica vazia, para a grade ser a
 mesma.
+
+## BT — Estoque e Colaboradores têm cartões, e Computadores conta o tipo
+
+**Decisão.** As cinco listas de operação abrem igual: Computadores, Postos, Estoque, Licenças e Colaboradores. Corrige a BB, que
+deixou os cartões só onde havia status além de ativo e desativado, e a BA, que abria um cartão por status. As regras de
+negócio não mudaram.
+
+- **Estoque e Colaboradores: Total, Ativos e Desativados.** É a coluna Status deles, na mesma cor, e o número filtra:
+  `?status=` na tela, `?isActive=` na API.
+- **O cartão do Estoque conta itens, e não unidades.** Clicar abre a lista de itens, e o Mouse USB tem unidade em uso e
+  unidade disponível ao mesmo tempo: cartões Em uso e Disponível não somariam o total nem bateriam com a lista que abrem.
+- **O cartão de Colaboradores não conta a lixeira.** Escolher um cartão volta da Lixeira para a lista, como em Computadores.
+- **Computadores: um cartão por tipo de status, e não por status.** O status é cadastro livre, e cada um novo era mais um
+  cartão, com Aguardando ao lado de Pendente. O tipo são quatro, fixos: Em uso, Disponível, Inutilizável e Pendente, sempre
+  nessa ordem e com os zerados. Aguardando soma em Pendente, e a coluna Status continua dizendo o nome do status.
+- **`?statusId=` sai da lista e `byStatus` sai do `/stats`,** que eram só do cartão. Entram `?statusType=` e `byType`.
+
+**O custo:** duas rotas novas, `GET /api/stock/items/stats` e `GET /api/people/stats`, e Computadores deixa de filtrar por um
+status só: quem quer ver só Aguardando busca em Pendente.
+
+**O que ficou de fora.** Usuários e Configurações continuam sem cartões.
+
+## BU — O nome é Status em toda tela, e o valor vai no masculino
+
+**Decisão.** Situação sai da tela: coluna, campo de ficha e cartão dizem Status em todas as telas. Corrige a BB e a BS, que
+mantinham Status em Computadores e Licenças e Situação nas outras, e a BO, que falava em Situação do posto. As regras de
+negócio não mudaram.
+
+- **Um nome só.** Postos, Estoque, Colaboradores, Usuários, Descobertas e as abas de licença do computador e do colaborador
+  passam a dizer Status, como Computadores e Licenças já diziam. A origem do valor continua diferente: só o do computador é
+  um cadastro que alguém escolhe num campo.
+- **O valor vai no masculino,** como Ativo e Desativado em Estoque e Colaboradores. Licença: Ativo, Vencendo, Vencido e
+  Encerrado, e nos cartões Ativos, Vencidos e Encerrados. Descobertas: Conhecido e Não autorizado.
+- **Frase inteira concorda com o que diz:** "Licença encerrada.", "encerrada em 10/03/2026" e a ajuda do formulário ficam
+  como estão, porque falam da licença e não são o status.
+- **`?situacao=` vira `?status=`** na URL das listas, e os nomes do código acompanham. `ATIVA`, `EXPIRADA`, `ativas` e
+  `vencidas`, na API, continuam: são nomes internos, como ocupante e posse.
+
+**Por quê:** quem lê entende as duas palavras do mesmo jeito, e o mesmo dado aparecia com nomes diferentes: a licença era
+Status na lista e Situação na aba do computador.
+
+**O custo:** um link guardado com `?situacao=` abre a lista sem o recorte.
+
+**O que ficou de fora.** A "situação que continua valendo" da BF é um aviso na tela, e não o status. A aba Vinculadas de
+Descobertas é nome de lista, e não valor de status.

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { criarAtivo, criarColaborador, tituloDaPagina, vigiarConsole } from './helpers';
+import { criarAtivo, criarColaborador, criarItem, tituloDaPagina, vigiarConsole } from './helpers';
 
 // TODA LISTA GUARDA O ESTADO NA URL (BB). Cada tela lê o mesmo `useListaNaUrl`, então o
 // que se prova aqui é o caminho: o menu recomeça, a ficha volta como estava.
@@ -124,6 +124,46 @@ test('o cartão sem resposta mostra traço, e não zero', async ({ page }) => {
   const principal = page.getByRole('main');
   await expect(principal.getByRole('button', { name: /Total/ })).toContainText('—');
   await expect(principal.getByText('Não foi possível conferir os prazos')).toBeVisible();
+});
+
+// OS CARTÕES (BT): Estoque e Colaboradores contam Ativos e Desativados, e clicar filtra a
+// lista pelo endereço; clicar de novo desliga.
+for (const { caminho, criar } of [
+  { caminho: '/estoque', criar: criarItem },
+  { caminho: '/colaboradores', criar: criarColaborador },
+]) {
+  test(`${caminho} abre com Total, Ativos e Desativados, e o cartão filtra`, async ({ page, request }) => {
+    const conferirConsole = vigiarConsole(page);
+    const nome = `Registro do cartão ${Date.now()}`;
+    await criar(request, nome);
+
+    await page.goto(caminho);
+    const principal = page.getByRole('main');
+    const desativados = principal.getByRole('button', { name: /Desativados/ });
+    await expect(principal.getByRole('button', { name: /Total/ })).toBeVisible();
+    await expect(principal.getByRole('button', { name: /Ativos/ })).toBeVisible();
+
+    await desativados.click();
+    await expect(page).toHaveURL(/status=desativados/);
+    await expect(desativados).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('row', { name: new RegExp(nome) })).toHaveCount(0);
+
+    await desativados.click();
+    await expect(page).not.toHaveURL(/status=/);
+
+    conferirConsole();
+  });
+}
+
+test('Computadores abre com um cartão por tipo de status, e um status novo não vira cartão', async ({ page, request }) => {
+  const nome = `Aguardando ${Date.now()}`;
+  const status = await request.post('/api/status-labels', { data: { name: nome, type: 'PENDING' } });
+  expect(status.status()).toBe(201);
+
+  await page.goto('/computadores');
+  const cartoes = page.getByRole('main').getByRole('button', { name: /^(Total|Em uso|Disponível|Inutilizável|Pendente)/ });
+  await expect(cartoes).toHaveCount(5);
+  await expect(page.getByRole('main').getByRole('button', { name: new RegExp(nome) })).toHaveCount(0);
 });
 
 test('Descobertas guarda a busca no endereço, e trocar de aba começa outra lista', async ({ page }) => {

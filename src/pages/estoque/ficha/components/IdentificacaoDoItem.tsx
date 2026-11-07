@@ -18,7 +18,7 @@ interface Props {
 export default function IdentificacaoDoItem({ item, acoes }: Props) {
   return (
     <CartaoDaFicha marca={<IconeDaFicha><Package /></IconeDaFicha>} acoes={acoes}>
-      <Dado rotulo="Situação">
+      <Dado rotulo="Status">
         <PontoDeStatus tom={item.isActive ? 'sucesso' : 'aviso'}>{item.isActive ? 'Ativo' : 'Desativado'}</PontoDeStatus>
       </Dado>
       <Dado rotulo="Quantidade">

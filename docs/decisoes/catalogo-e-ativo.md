@@ -601,3 +601,39 @@ os ocupantes em cima e "no posto Mesa 1" embaixo.
 que a posse era da pessoa. A posse é do posto, e quem o ocupa responde por estar nele
 ([modelo de posse](../referencia/modelo-de-posse.md)). A tela diz o alvo da entrega, e a aba Responsáveis
 mostra a ordem real: primeiro para quem foi entregue, depois quem responde por isso.
+
+## BV — A vista Baixados conta por motivo, e o status do baixado é o motivo
+
+**Decisão.** A vista Baixados de Computadores deixa de mostrar os cartões da vista Ativos, e o Status do baixado passa a ser só
+o motivo. A baixa continua separada do status (D19), e nenhuma regra de negócio mudou.
+
+- **Os cartões da vista são o Total e um por motivo, os zerados inclusive.** Em uso, Disponível, Inutilizável e Pendente não
+  dizem nada de quem saiu do patrimônio, e o número não batia com a lista embaixo. O cartão filtra: `?motivo=` na tela,
+  `?retiredReasonId=` na API, e o `/stats` ganha `byRetiredReason`. Clicar continua em Baixados.
+- **Na ordem do nome, e fixos.** O motivo é cadastro livre como o status (BT), mas nasce com seis e raramente muda, e sem o
+  cartão por motivo não haveria como separar o vendido do roubado.
+- **A Lixeira continua com os cartões da lista.**
+- **O Status é "Vendido", sem o dia, e todo baixado é vermelho.** Na lista, no card e nos cartões da vista, em qualquer
+  motivo. O dia cortava o texto na coluna, e o estado do ativo é o motivo. A data fica no aviso "Fora do patrimônio", na ficha.
+- **A linha dá baixa e reverte,** com o mesmo formulário e a mesma pergunta da ficha. Só a ficha fazia, e quem via o ativo na
+  lista precisava abrir para isso. Como na ficha, é do Supervisor, e o ativo entregue é recusado no formulário.
+
+**O custo:** a coluna Status não diz mais quando saiu: para ver o dia, abre-se a ficha.
+
+## BW — A linha da Lixeira abre a ficha, só para consulta
+
+**Decisão.** Em Computadores, a linha da Lixeira abre a ficha, com as mesmas abas, e a única ação é Restaurar. Antes, ver o
+histórico de um ativo excluído exigia restaurá-lo: uma escrita, que devolvia o ativo às listas e ia para a auditoria só para
+alguém olhar. É o que o Snipe-IT faz: a rota do ativo inclui os excluídos.
+
+- **É do Supervisor, como a Lixeira (AV).** A ficha, o histórico, as licenças, os componentes e a máquina alcançam o ativo
+  excluído só para quem tem o cargo. Para o Técnico ele continua sem existir: 404, e a aba Máquina vazia.
+- **Nenhuma escrita o alcança.** Editar, entregar e dar baixa continuam em 404, e a tela nem oferece: somem Entregar, Editar e
+  o `⋯` do card, e o Desvincular da aba Máquina.
+- **O aviso "Na lixeira" diz quando foi excluído,** entre o card e as abas, como o da baixa. Restaurar fica no card, e a ficha
+  continua aberta, com as ações de volta.
+- **Colaboradores não muda.** A tela está fechada, e a linha da lixeira de lá continua só restaurando.
+
+**O custo:** o link para um computador excluído, no histórico de um colaborador, passa a abrir para o Supervisor, e continua
+dizendo "Ativo não encontrado." para o Técnico.
+

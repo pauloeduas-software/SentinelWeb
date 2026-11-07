@@ -81,9 +81,11 @@ bancos de teste a apagar depois estão lá.
 - **Responsável** é o nome de quem responde por computador, item, licença ou posto em toda tela, e o
   título vai no plural: Responsáveis. "Ocupante" e "posse" são nomes do código e do banco e não aparecem
   para quem usa (BM). Entregue a um posto, o responsável que aparece é o posto; a pessoa fica pendurada
-  nele, na aba Responsáveis (BL). Em Responsáveis vai só o nome: turno não entra, e Posto vago é só a
-  Situação do posto (BO). A exceção é o item do tipo componente: a aba dele é Computadores, porque a
+  nele, na aba Responsáveis (BL). Em Responsáveis vai só o nome: turno não entra, e Posto vago é só o
+  Status do posto (BO). A exceção é o item do tipo componente: a aba dele é Computadores, porque a
   peça está instalada na máquina (BM).
+- **Status** é o nome em toda tela, nunca "situação", e o valor vai no masculino: Ativo, Vencido,
+  Encerrado, Conhecido. Frase inteira concorda com o que diz: "Licença encerrada." (BU).
 - **Colaborador** recebe equipamento e não entra no sistema; **usuário** opera (U, P). O termo da
   tela é **cargo**, não papel (S).
 - A página leva o nome do que lista, no plural (`computadores`, `postos`, `licencas`), nunca a

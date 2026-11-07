@@ -19,7 +19,7 @@ export const vinculoComEntregaSchema = z.strictObject({
 });
 
 export const triagemSchema = z.strictObject({
-  reviewState: z.enum(['UNREVIEWED', 'ALLOWED', 'BLOCKED'], 'situação inválida'),
+  reviewState: z.enum(['UNREVIEWED', 'ALLOWED', 'BLOCKED'], 'status inválido'),
 });
 
 /** `?dias=` da lista de ociosos. Não é `strictObject` — ver o filtro de máquinas. */

@@ -13,13 +13,19 @@ import { formatarData } from '../../../helpers/format.helper';
 // telas que a mostram (listagem, detalhe e modal) dizerem a mesma coisa.
 
 /**
- * "Vendido em 10/09/2026" — o selo da linha e do cabeçalho do detalhe.
+ * "Vendido" — o status do baixado, na lista e no card (BV). O dia fica no aviso da ficha.
  *
- * `null` quando o ativo continua no patrimônio: quem chama esconde o selo em
- * vez de mostrar um traço, porque a ausência aqui é o caso NORMAL e não uma
+ * `null` quando o ativo continua no patrimônio: quem chama mostra o status de
+ * sempre em vez de um traço, porque a ausência aqui é o caso NORMAL e não uma
  * informação faltando.
  */
-export function seloDaSaida(asset: Pick<Asset, 'retiredAt' | 'retiredReason'>): string | null {
+export function motivoDaSaida(asset: Pick<Asset, 'retiredAt' | 'retiredReason'>): string | null {
   if (!asset.retiredAt) return null;
-  return `${asset.retiredReason?.name ?? '—'} em ${formatarData(asset.retiredAt)}`;
+  return asset.retiredReason?.name ?? '—';
+}
+
+/** "Vendido em 10/09/2026" — o aviso da ficha. */
+export function seloDaSaida(asset: Pick<Asset, 'retiredAt' | 'retiredReason'>): string | null {
+  const motivo = motivoDaSaida(asset);
+  return motivo && `${motivo} em ${formatarData(asset.retiredAt)}`;
 }

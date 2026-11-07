@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import FormularioLateral from '../../../../components/FormularioLateral';
-import ReferenceSelect from '../../../../components/ReferenceSelect';
-import { Campo } from '../../../../components/ui/campo';
-import { Input, Textarea } from '../../../../components/ui/input';
-import type { Asset, RetireInput } from '../../../../types/asset.types';
-import { hojeNoCampoDeData } from '../../../../helpers/format.helper';
-import type { LinkDaNotificacao } from '../../../../hooks/useNotificacao';
-import { linksDoErro } from '../../../../helpers/erro.helper';
+import FormularioLateral from '../../../components/FormularioLateral';
+import ReferenceSelect from '../../../components/ReferenceSelect';
+import { Campo } from '../../../components/ui/campo';
+import { Input, Textarea } from '../../../components/ui/input';
+import type { Asset, RetireInput } from '../../../types/asset.types';
+import { hojeNoCampoDeData } from '../../../helpers/format.helper';
+import type { LinkDaNotificacao } from '../../../hooks/useNotificacao';
+import { linksDoErro } from '../../../helpers/erro.helper';
 
 // DAR BAIXA — registrar que o ativo saiu do PATRIMÔNIO.
 //
@@ -68,7 +68,7 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
   return (
     <FormularioLateral
       titulo="Dar baixa no ativo"
-      descricao={`${asset.assetTag} sai do patrimônio e das listagens, e fica na vista Baixados com a data e o motivo. Cadastro errado vai para a lixeira.`}
+      descricao={`${asset.assetTag} sai do patrimônio e das listagens, e fica na vista Baixados com o motivo. Cadastro errado vai para a lixeira.`}
       onClose={onClose}
       onSubmit={enviar}
       salvando={salvando}
