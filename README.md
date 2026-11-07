@@ -57,14 +57,14 @@ Na ordem do menu, que se agrupa por assunto ([AH](./docs/decisoes/acesso.md#ah--
 | Seção do menu | Rota | O que é | Cargo mínimo |
 | --- | --- | --- | --- |
 | **Ativos** | `/computadores` | Listagem de ativos (computadores) — filtros, busca por etiqueta/série, ações de ciclo de vida | TECNICO |
-|  | `/computadores/:id` | Ficha do ativo — abas **Responsáveis** (com a devolução), **Licenças**, **Componentes**, **Máquina** (telemetria e comando, quando há agente) e **Histórico** | TECNICO |
+|  | `/computadores/:id` | Ficha do ativo — abas **Responsáveis** (com a devolução), **Licenças**, **Componentes**, **Máquina** (link para Descobertas, telemetria e comando, quando há agente) e **Histórico** | TECNICO |
 |  | `/postos` | Postos de trabalho (mesas), cada um numa localização — quem está, quantos ativos, se está vago; criar, editar e excluir posto | TECNICO |
-|  | `/postos/:id` | Ficha do posto — abas **Responsáveis** (corrigir o turno, encerrar), **Computador** (com telemetria), **Estoque** e **Histórico** | TECNICO |
+|  | `/postos/:id` | Ficha do posto — abas **Responsáveis** (corrigir o turno, encerrar), **Computador**, **Máquina** (link para Descobertas, telemetria e comandos), **Estoque** e **Histórico** | TECNICO |
 | **Recursos** | `/estoque` | O que tem quantidade em vez de patrimônio — o total, quantos em uso e com quem; entrega e devolução a colaborador ou posto, com o dia | TECNICO |
 |  | `/estoque/:id` | Ficha do item — a conta e o cadastro no card, abas **Responsáveis** (com a devolução) e **Histórico** | TECNICO |
 |  | `/licencas` | Contratos de software: quantidade comprada, chaves, entregas a colaborador ou computador; a encerrada fica na lista, com Reabrir | TECNICO |
 |  | `/licencas/:id` | Ficha da licença — a conta e o cadastro no card, abas **Responsáveis** (com a devolução), **Chaves** e **Histórico** | TECNICO |
-| **Convergência** | `/descobertas` | O que o agente vê e o cadastro não sabe — máquinas sem vínculo, vínculo manual, fila de sugestões e "Reconciliar agora" | TECNICO |
+| **Convergência** | `/descobertas` | O que o agente vê e o cadastro não sabe — máquinas sem vínculo, vincular e desvincular, fila de sugestões e "Reconciliar agora" | TECNICO |
 | **Pessoas** | `/colaboradores` | Quem recebe equipamento — criar, editar, desativar, excluir para a lixeira e restaurar. Não entra no sistema: quem opera é usuário | TECNICO |
 |  | `/colaboradores/:id` | Ficha do colaborador — as notas, os computadores entregues a ele, os postos ocupados, o estoque e as licenças no nome dele, e o histórico | TECNICO |
 | **Sistema** | `/configuracoes` | As seis abas de referência — categorias, fabricantes, modelos, localizações, status e motivos de baixa. A configuração da descoberta fica em `/descobertas` | SUPERVISOR |

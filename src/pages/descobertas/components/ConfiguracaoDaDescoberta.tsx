@@ -175,7 +175,7 @@ export default function ConfiguracaoDaDescoberta({ configuracao, erro, podeEdita
               <Aviso tom="aviso" className="max-w-2xl">
                 Em “vincular sozinho”, um vínculo errado entra no cadastro sem ninguém revisar,
                 e quem abrir a tela do ativo vai ler o vínculo como fato. Desfazer é o botão
-                “Desvincular” na aba Máquina.
+                “Desvincular” na lista Vinculadas.
               </Aviso>
             )}
           </div>

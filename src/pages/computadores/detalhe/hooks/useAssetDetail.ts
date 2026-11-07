@@ -11,9 +11,7 @@ import { useCatalogOptionsQuery } from '../../../../queries/catalog.queries';
 import { useAssetLicensesQuery } from '../../../../queries/license.queries';
 import { POR_PAGINA } from '../../../../hooks/useListaNaUrl';
 import { useAssetComponentsQuery } from '../../../../queries/stock.queries';
-import {
-  useDesvincularMaquina, useMaquinaDoAtivoQuery,
-} from '../../../../queries/reconciliation.queries';
+import { useMaquinaDoAtivoQuery } from '../../../../queries/reconciliation.queries';
 import type { RetireInput } from '../../../../types/asset.types';
 import { IDS_DAS_ABAS, type AbaId } from '../helpers/abas.helper';
 import { useAbaNaUrl } from '../../../../hooks/useAbaNaUrl';
@@ -84,12 +82,9 @@ export function useAssetDetail() {
     data: componentes, isPending: componentesPendentes, error: erroDosComponentes,
   } = useAssetComponentsQuery(id ?? null);
 
-  // A MÁQUINA: especificações coletadas, último contato e as trocas de peça
-  // que o agente percebeu — tudo do endpoint vinculado. E desvincular, que é a
-  // correção de um vínculo errado — o pior resultado possível, e
-  // não pode depender de mexer no banco à mão.
+  // A MÁQUINA: qual está vinculada. O resto quem lê é o painel da aba, e o vínculo
+  // mora em Descobertas (BZ).
   const { data: maquina, isPending: maquinaPendente, error: erroDaMaquina } = useMaquinaDoAtivoQuery(id ?? null);
-  const desvincular = useDesvincularMaquina();
 
   const fecharModal = () => setModal('nenhum');
 
@@ -222,24 +217,6 @@ export function useAssetDetail() {
     maquina,
     maquinaPendente,
     erroDaMaquina: erroDaMaquina?.message ?? null,
-    desvinculando: desvincular.isPending,
-    handleDesvincular: async () => {
-      if (!maquina?.endpointId) return;
-      if (!(await confirmar({
-        titulo: `Desvincular esta máquina de "${asset?.assetTag}"?`,
-        descricao: 'O ativo deixa de mostrar esta máquina, que volta para Descobertas e pode ser vinculada de novo.',
-        acao: 'Desvincular',
-      }))) return;
-      // A recusa do servidor (vínculo já desfeito, máquina sumiu) vai para a
-      // notificação, como nas outras ações da ficha — sem ela o clique falhava
-      // em silêncio.
-      try {
-        await desvincular.mutateAsync(maquina.endpointId);
-        notificar.sucesso('Máquina desvinculada.');
-      } catch (falha) {
-        notificar.erro((falha as Error).message);
-      }
-    },
 
     modal,
     statusPadraoId,

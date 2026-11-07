@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext } from '@playwright/test';
 import { criarAtivo, criarColaborador, criarPosto, tituloDaPagina, vigiarConsole } from './helpers';
+import { prisma } from '../../server/infra/database/prismaClient';
 
 // A FICHA DO POSTO É PÁGINA, e a lista continua como estava na volta: o recorte, a
 // página e a busca moram na URL dela (`usePostos`). O servidor não entra aqui: o
@@ -391,6 +392,54 @@ test('a aba Responsáveis do posto busca, corrige o turno e encerra na própria 
   await principal.getByRole('tab', { name: /Histórico/ }).click();
   await principal.getByRole('button', { name: 'Adicionar ao posto' }).click();
   await expect(page.locator('[data-painel-lateral]')).toContainText('Adicionar ao posto');
+
+  conferirConsole();
+});
+
+test('a Máquina é a mesma no posto e no computador, e quem desvincula é Descobertas', async ({ page, request }) => {
+  const conferirConsole = vigiarConsole(page);
+  const { posto, ativo, assetTag } = await computadorNoPosto(request, `Mesa da máquina ${Date.now()}`);
+  const hostname = `NB-${ativo.slice(0, 8)}`;
+  const principal = page.getByRole('main');
+  const aba = principal.getByRole('tabpanel');
+
+  await page.goto(`/postos/${posto}?aba=maquina`);
+  await expect(aba.getByText('Nenhuma máquina vinculada a este posto.')).toBeVisible();
+
+  // A máquina nasce do handshake do agente, que o navegador não faz: vai direto ao banco.
+  await prisma.endpoint.create({
+    data: { hwid: `hw-${ativo}`, hostname, osVersion: 'Windows 11', status: 'OFFLINE', assetId: ativo },
+  });
+
+  for (const caminho of [`/postos/${posto}?aba=maquina`, `/computadores/${ativo}?aba=maquina`]) {
+    await page.goto(caminho);
+    await expect(aba.getByRole('row', { name: new RegExp(hostname) })).toBeVisible();
+    await expect(aba.getByText('Como está agora')).toBeVisible();
+    await expect(aba.getByText(`hw-${ativo}`)).toBeVisible();
+    await expect(aba.getByText(assetTag)).toHaveCount(0);
+    await expect(aba.getByRole('button', { name: 'Desvincular' })).toHaveCount(0);
+    await expect(aba.getByText('Especificações coletadas pelo agente')).toHaveCount(0);
+    await expect(aba.getByText('Mudanças detectadas')).toHaveCount(0);
+  }
+
+  await page.goto(`/postos/${posto}?aba=computador`);
+  await expect(aba.getByRole('row', { name: new RegExp(assetTag) })).toBeVisible();
+  await expect(aba.getByText(`hw-${ativo}`)).toHaveCount(0);
+
+  await page.goto(`/computadores/${ativo}?aba=maquina`);
+  await aba.getByRole('row', { name: new RegExp(hostname) }).click();
+  await expect(page).toHaveURL(new RegExp(`/descobertas\\?aba=com&busca=${hostname}$`));
+  const linha = page.getByRole('row', { name: new RegExp(hostname) });
+  await expect(linha).toContainText(assetTag);
+
+  await page.getByRole('button', { name: `Ações de ${hostname}` }).click();
+  await page.getByRole('menuitem', { name: 'Desvincular' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Desvincular' }).click();
+  await expect(page.getByText('Máquina desvinculada.')).toBeVisible();
+  await expect(linha).toHaveCount(0);
+
+  await page.goto(`/computadores/${ativo}?aba=maquina`);
+  await expect(aba.getByText('Nenhuma máquina vinculada a este ativo.')).toBeVisible();
 
   conferirConsole();
 });

@@ -606,6 +606,10 @@ recusado com motivo).
 ## D115 — A rota da aba chama `/machine`, e devolve o que a aba mostra
 
 > **Superada por [D](#d--a-telemetria-e-o-comando-vão-para-a-ficha-do-ativo-e-a-do-posto):** a telemetria e o comando vão para a ficha do ativo e a do posto.
+>
+> **Superada em parte por [BY](#by--a-aba-máquina-mostra-o-que-o-agente-manda):** a rota não devolve mais as especificações nem as mudanças de hardware.
+>
+> **Superada em parte por [BZ](#bz--vincular-e-desvincular-moram-em-descobertas):** a rota não devolve mais os dois carimbos de último contato.
 
 **Decidido:** `GET /api/assets/:id/machine` devolve especificações, os **dois** carimbos de
 último contato, as mudanças de hardware detectadas e a lista de software.
@@ -827,6 +831,8 @@ havia necessidade — o campo chegando e sendo ignorado é mais simples que rene
 
 ## H — A fusão de máquinas sai
 
+> **Superada em parte por [BZ](#bz--vincular-e-desvincular-moram-em-descobertas):** o 409 de vínculo aponta para Descobertas, não para a aba Máquina.
+
 **Decidido:** saem `merge-endpoints`, a cascata máquina↔máquina, o sinal `MAC` e
 `normalizeMac`. `SuggestionKind` fica só com `LINK`; `MatchSignal` fica com `SERIAL`, `UUID` e
 `HOSTNAME`. `Endpoint.mergedIntoId` e `ReconciliationSuggestion.mergeIntoEndpointId` saem do
@@ -921,3 +927,57 @@ andamento responde 409 — o job de hora em hora passa pelo mesmo guarda. Rodar 
 vezes ao mesmo tempo não dá resultado errado, mas dá trabalho em dobro sobre a mesma frota sem
 nenhum ganho, e a segunda rodada terminando depois da primeira poderia reabrir sugestões que a
 primeira já tinha fechado.
+
+---
+
+## BY — A aba Máquina mostra o que o agente manda
+
+**Decidido** (2026-11-07, comparando a aba Máquina do computador com o `HandshakePacket` do SentinelAgente):
+
+- **Saem da aba as Especificações coletadas pelo agente e as Mudanças detectadas.** O handshake do agente real traz
+  `hostname`, `osVersion`, `macAddress`, `localIp` e `cpuModel`. Fabricante, modelo, chassi, série da BIOS, UUID e os
+  totais de memória e disco não vêm nele: quem manda esses campos é o agente falso do repositório.
+- **`GET /api/assets/:id/machine` deixa de devolver `especificacoes` e `mudancas`.**
+- **O título Como está agora passa para o `TelemetriaDaMaquina`,** para a ficha do computador e a do posto mostrarem o
+  painel igual ([BX](./posse.md#bx--a-máquina-do-posto-tem-aba-própria)).
+- **A coleta fica no servidor:** o handshake continua guardando os campos que chegarem, a cascata de matching continua
+  lendo-os e a comparação continua gravando em `AssetChange`. A tabela fica sem leitor na tela até o agente ser revisto.
+
+**Supera em parte:** [D115](#d115--a-rota-da-aba-chama-machine-e-devolve-o-que-a-aba-mostra) (as especificações e as
+mudanças de hardware na rota da aba).
+
+**Por quê:** o bloco prometia o que o agente real não coleta. Numa máquina de verdade, a maior parte da grade ficaria
+em branco, e a lista de mudanças nunca falaria da troca de um pente de memória ou de um disco.
+
+**O que fica de fora, declarado:** processador, sistema operacional, MAC e IP local o agente manda de verdade, e saem
+junto com o bloco. Reavaliar quando o agente, Colaboradores e Computadores forem revistos.
+
+---
+
+## BZ — Vincular e desvincular moram em Descobertas
+
+**Decidido** (2026-11-07, olhando o card Máquina vinculada na ficha do computador):
+
+- **O vínculo tem uma tela só.** Descobertas vincula, em Sugestões e Sem vínculo, e desvincula, no `⋯` da lista
+  Vinculadas, com a mesma pergunta sem vermelho. O botão Desvincular sai da ficha do computador, e nenhuma ficha mexe no
+  vínculo. O cargo não muda: é `TECNICO`.
+- **A aba Máquina é igual no computador e no posto:** o link, a telemetria e os comandos, tudo no
+  `TelemetriaDaMaquina`. O card Máquina vinculada sai, com a data gravada no ativo.
+- **O link segue o molde da ficha:** a `TabelaDaFicha`, com o nome da máquina e o último contato, e a linha inteira
+  abre a máquina em Descobertas. Descobertas não tem ficha de máquina, então a linha abre a lista Vinculadas já
+  buscada pelo nome (`/descobertas?aba=com&busca=`).
+- **`GET /api/assets/:id/machine` diz só qual é a máquina:** `endpointId` e `hostname`. O resto o painel lê em
+  `GET /api/endpoints/:id`, revalidando, e os dois carimbos de último contato saem.
+- **A recusa do vínculo repetido aponta para Descobertas,** não mais para a aba Máquina.
+
+**Supera em parte:** [D115](#d115--a-rota-da-aba-chama-machine-e-devolve-o-que-a-aba-mostra) (os dois carimbos de último
+contato), [H](#h--a-fusão-de-máquinas-sai) (o 409 que aponta a aba Máquina) e
+[BW](./catalogo-e-ativo.md#bw--a-linha-da-lixeira-abre-a-ficha-só-para-consulta) (o Desvincular que some na lixeira).
+
+**Completa:** [BX](./posse.md#bx--a-máquina-do-posto-tem-aba-própria) e [BY](#by--a-aba-máquina-mostra-o-que-o-agente-manda).
+
+**Por quê:** o mesmo vínculo tinha duas telas: nascia em Descobertas e se desfazia na ficha do computador. A aba Máquina
+serve para olhar e comandar; quem decide se a máquina é aquele computador é Descobertas.
+
+**O que fica de fora, declarado:** desvincular pede sair da ficha, e Descobertas não tem seta: volta-se pelo navegador. A
+máquina de um computador na lixeira continua na lista Vinculadas e pode ser desvinculada, o que a rota sempre aceitou.

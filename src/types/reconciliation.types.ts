@@ -69,55 +69,9 @@ export interface AtivoOcioso {
   targetLabel: string | null;
 }
 
-/**
- * As especificações que o AGENTE coletou.
- *
- * `ramTotalBytes` e `diskTotalBytes` chegam como **string**, e não number: são
- * `BigInt` no banco e `JSON.stringify` não os serializa. Tipá-los como `number`
- * aqui faria o front fazer aritmética sobre um texto e acertar por acaso até o
- * primeiro disco de 4 TB.
- */
-export interface EspecificacoesDaMaquina {
-  manufacturer: string | null;
-  hardwareModel: string | null;
-  chassisType: string | null;
-  biosSerial: string | null;
-  systemUuid: string | null;
-  cpuModel: string | null;
-  osVersion: string | null;
-  ramTotalBytes: string | null;
-  diskTotalBytes: string | null;
-  macAddress: string | null;
-  localIp: string | null;
-}
-
-/** Uma troca de peça que o agente percebeu — a `AssetChange`. */
-export interface MudancaDeHardware {
-  id: string;
-  field: string;
-  oldValue: string | null;
-  newValue: string;
-  detectedAt: string;
-}
-
-/** Tudo o que a aba Máquina mostra, numa resposta. */
+/** Qual máquina está vinculada ao ativo: o painel da aba Máquina lê o resto. */
 export interface MaquinaDoAtivo {
   /** Null quando o ativo não tem máquina vinculada. */
   endpointId: string | null;
   hostname: string | null;
-  status: 'ONLINE' | 'OFFLINE' | null;
-  reviewState: ReviewState | null;
-  /** O batimento real da máquina. */
-  ultimoContato: string | null;
-  /**
-   * O carimbo no ATIVO (`lastSeenByAgentAt`), propagado pelo job (D95).
-   *
-   * Vem ao lado do `ultimoContato` de propósito: são duas datas com significados
-   * diferentes e até uma hora de diferença entre si, e quem lê a tela precisa
-   * poder ver que a coluna do patrimônio está atrás do batimento sem que isso
-   * pareça defeito.
-   */
-  ultimoContatoNoAtivo: string | null;
-  especificacoes: EspecificacoesDaMaquina | null;
-  mudancas: MudancaDeHardware[];
 }

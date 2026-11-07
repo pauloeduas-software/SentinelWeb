@@ -1,12 +1,14 @@
 import {
   useAceitarSugestao, useCoberturaQuery, useConfiguracaoDaDescobertaQuery,
-  useOciososQuery, useReconciliarAgora, useRecusarSugestao, useSalvarConfiguracaoDaDescoberta,
+  useDesvincularMaquina, useOciososQuery, useReconciliarAgora, useRecusarSugestao, useSalvarConfiguracaoDaDescoberta,
   useSugestoesQuery, useTriarMaquina, useVincularEEntregar, useVincularMaquina,
 } from '../../../queries/reconciliation.queries';
 import { useEndpointsQuery } from '../../../queries/endpoint.queries';
 import { useAbaNaUrl } from '../../../hooks/useAbaNaUrl';
+import { confirmar } from '../../../hooks/useConfirmacao';
 import { useNotificacao } from '../../../hooks/useNotificacao';
 import { usePode } from '../../../stores/auth.store';
+import type { Endpoint } from '../../../types/endpoint.types';
 import type {
   ConfiguracaoDaDescoberta, ResultadoDaVarredura, ReviewState,
 } from '../../../types/reconciliation.types';
@@ -48,6 +50,7 @@ export function useDescobertas() {
   const triar = useTriarMaquina();
   const vincular = useVincularMaquina();
   const vincularEEntregar = useVincularEEntregar();
+  const desvincular = useDesvincularMaquina();
   const salvarConfiguracao = useSalvarConfiguracaoDaDescoberta();
 
   // RECONCILIAR AGORA: só `SUPERVISOR` vê o botão (a rota recusa os outros com 403;
@@ -100,7 +103,7 @@ export function useDescobertas() {
     erroDasMaquinas: semVinculo.error?.message ?? vinculadas.error?.message ?? null,
 
     ocupado: aceitar.isPending || recusar.isPending || triar.isPending
-      || vincular.isPending || vincularEEntregar.isPending || reconciliar.isPending,
+      || vincular.isPending || vincularEEntregar.isPending || desvincular.isPending || reconciliar.isPending,
 
     podeReconciliar,
     // Mudar o modo e os prazos (`PUT /api/settings/discovery`) também é `SUPERVISOR`.
@@ -139,6 +142,24 @@ export function useDescobertas() {
       } else {
         await vincular.mutateAsync({ endpointId, assetId });
       }
+    },
+
+    /**
+     * DESVINCULAR é a correção de um vínculo errado — o pior resultado possível, e
+     * não pode depender de mexer no banco à mão. Tem volta, então pergunta sem
+     * vermelho.
+     */
+    handleDesvincular: async (maquina: Endpoint) => {
+      if (!(await confirmar({
+        titulo: `Desvincular esta máquina de "${maquina.asset?.assetTag}"?`,
+        descricao: 'O ativo deixa de mostrar esta máquina, que volta para Sem vínculo e pode ser vinculada de novo.',
+        acao: 'Desvincular',
+      }))) return;
+
+      await comErro(async () => {
+        await desvincular.mutateAsync(maquina.id);
+        notificar.sucesso('Máquina desvinculada.');
+      });
     },
 
     /**

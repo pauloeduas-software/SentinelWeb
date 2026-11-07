@@ -75,16 +75,3 @@ export async function registrarMudancasDeHardware(
     return 0;
   }
 }
-
-/** Quantas mudanças a aba Máquina mostra. */
-const MUDANCAS_NA_TELA = 50;
-
-/** As mudanças detectadas num ativo, da mais recente para a mais antiga. */
-export async function listarMudancasDoAtivo(assetId: string) {
-  return prisma.assetChange.findMany({
-    where: { assetId },
-    orderBy: { detectedAt: 'desc' },
-    take: MUDANCAS_NA_TELA,
-    select: { id: true, field: true, oldValue: true, newValue: true, detectedAt: true },
-  });
-}

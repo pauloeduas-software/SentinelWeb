@@ -62,7 +62,7 @@ export function useConfiguracaoDaDescobertaQuery() {
   });
 }
 
-/** Tudo o que a aba Máquina mostra: specs, último contato e mudanças de peça. */
+/** Qual máquina está vinculada ao ativo: o painel da aba Máquina lê o resto. */
 export function useMaquinaDoAtivoQuery(assetId: string | null) {
   return useQuery({
     queryKey: reconciliationKeys.maquinaDoAtivo(assetId ?? ''),

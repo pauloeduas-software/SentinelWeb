@@ -298,7 +298,7 @@ describe('ativo que já tem máquina', () => {
 
     // 409 do `endpoints.assetId @unique`, traduzido. A mensagem mandava "usar a
     // fusão" — uma rota que não existe mais. O caminho que ela cita agora é o
-    // botão Desvincular da aba Máquina, e é o que o operador pode fazer.
+    // Desvincular de Descobertas, e é o que o operador pode fazer.
     expect(status).toBe(409);
     expect(body.error).toMatch(/já está vinculado a outra máquina/i);
     expect(body.error).not.toMatch(/fus[ãa]o/i);

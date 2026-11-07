@@ -1,5 +1,5 @@
 import {
-  History, Monitor, Package, Pencil, Trash2, UserPlus, Users,
+  Cpu, History, Monitor, Package, Pencil, Trash2, UserPlus, Users,
 } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import OcupanteFormModal from '../components/OcupanteFormModal';
@@ -9,6 +9,7 @@ import ComputadorTab from './components/ComputadorTab';
 import EstoqueTab from './components/EstoqueTab';
 import HistoricoTab from './components/HistoricoTab';
 import IdentificacaoDoPosto from './components/IdentificacaoDoPosto';
+import MaquinaTab from './components/MaquinaTab';
 import { useFichaDoPosto } from './hooks/useFichaDoPosto';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
 import { FichaIndisponivel } from '../../../components/CartaoDaFicha';
@@ -40,7 +41,7 @@ import { usePode } from '../../../stores/auth.store';
 // Markup e mais nada: estado e chamadas ficam no `useFichaDoPosto`
 // (docs/referencia/arquitetura.md).
 
-const ABAS = ['responsaveis', 'computador', 'estoque', 'historico'] as const;
+const ABAS = ['responsaveis', 'computador', 'maquina', 'estoque', 'historico'] as const;
 
 export default function PostoFichaPage() {
   const { id } = useParams<{ id: string }>();
@@ -94,6 +95,7 @@ function FichaDoPosto() {
           <TabsList>
             <TabsTrigger value="responsaveis"><Users /> Responsáveis <ContagemDaAba>{posto.totalOcupantes}</ContagemDaAba></TabsTrigger>
             <TabsTrigger value="computador"><Monitor /> Computador <ContagemDaAba>{posto.totalAtivos}</ContagemDaAba></TabsTrigger>
+            <TabsTrigger value="maquina"><Cpu /> Máquina</TabsTrigger>
             <TabsTrigger value="estoque"><Package /> Estoque <ContagemDaAba>{totalDeUnidades}</ContagemDaAba></TabsTrigger>
             <TabsTrigger value="historico"><History /> Histórico <ContagemDaAba>{totalDoHistorico}</ContagemDaAba></TabsTrigger>
           </TabsList>
@@ -120,6 +122,10 @@ function FichaDoPosto() {
 
           <TabsContent value="computador" className="mt-4 space-y-4">
             <ComputadorTab ativos={posto.ativos} />
+          </TabsContent>
+
+          <TabsContent value="maquina" className="mt-4 space-y-4">
+            <MaquinaTab ativos={posto.ativos} />
           </TabsContent>
 
           <TabsContent value="estoque" className="mt-4 space-y-4">

@@ -1,14 +1,15 @@
 import {
-  Activity, Copy, Cpu, HardDrive, Lock, MemoryStick, Power, RefreshCw,
+  Activity, Copy, Cpu, HardDrive, Lock, MemoryStick, Monitor, Power, RefreshCw,
   type LucideIcon,
 } from 'lucide-react';
+import TabelaDaFicha from './TabelaDaFicha';
 import { Aviso } from './ui/aviso';
 import { PontoDeStatus } from './ui/badge';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Table, TableBody, TableCell, TableRow } from './ui/table';
 import { cn } from '../helpers/cn.helper';
-import { FUSO_DO_NEGOCIO } from '../helpers/format.helper';
+import { FUSO_DO_NEGOCIO, formatarDataHora } from '../helpers/format.helper';
 import {
   formatarTaxa, formatarVolume, readSnapshot, usagePercent, volumeDeRede,
 } from '../helpers/metrics.helper';
@@ -34,11 +35,11 @@ import { usePode } from '../stores/auth.store';
 // bem?", e a ficha do POSTO, que responde "o computador desta mesa está bem?".
 // É a ponte da convergência vista de perto.
 //
-// ELE NÃO REPETE O NOME DA MÁQUINA. Nenhum hostname, nenhuma etiqueta: as duas
-// telas que o usam já identificaram o equipamento acima dele, e repetir aqui
-// faria o painel competir com o cabeçalho da ficha. A exceção é o HWID, que
-// aparece no rodapé com um botão de copiar — ele não é nome, é o que se cola num
-// chamado e o que se procura no log do agente, e não tem outra tela.
+// O NOME DA MÁQUINA É A LINHA QUE ABRE DESCOBERTAS (BZ): é lá que ela se vincula e
+// se desvincula, e aqui ela só se olha e se comanda. Nenhuma etiqueta: as duas telas
+// que o usam já identificaram o equipamento acima dele. O HWID aparece no rodapé
+// com um botão de copiar — ele não é nome, é o que se cola num chamado e o que se
+// procura no log do agente, e não tem outra tela.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // E ELE FALA HTTP, que é EXCEÇÃO DECLARADA à regra de componente.
@@ -220,6 +221,22 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
 
   return (
     <div className="space-y-4">
+      {/* A linha da ficha (`TabelaDaFicha`), como a do computador no posto. Descobertas
+          não tem ficha de máquina: abre a lista Vinculadas já buscada pelo nome. */}
+      <TabelaDaFicha
+        colunas={[{ rotulo: 'Máquina vinculada' }, { rotulo: 'Último contato', className: 'w-48' }]}
+        icone={Monitor}
+        vazio=""
+        linhas={[{
+          id: maquina.id,
+          para: `/descobertas?aba=com&busca=${encodeURIComponent(maquina.hostname)}`,
+          nome: maquina.hostname,
+          celulas: [formatarDataHora(maquina.lastSeen)],
+        }]}
+      />
+
+      <h3 className="text-sm font-medium text-text-primary">Como está agora</h3>
+
       <div className="flex flex-wrap items-center gap-2">
         <PontoDeStatus tom={online ? 'sucesso' : 'neutro'}>{online ? 'Online' : 'Offline'}</PontoDeStatus>
         <span className="text-xs text-text-tertiary">
@@ -325,10 +342,9 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
       )}
 
       {/* O HWID, com o COPIAR que ele tinha na tela antiga.
-          É a identidade de hardware que o agente derivou, e o único lugar do
-          painel onde a máquina se identifica — de propósito: ela não é nome, é o
-          que se cola num chamado e o que se procura no log do agente. Ela saiu da
-          URL do comando, e não tem outra tela. */}
+          É a identidade de hardware que o agente derivou: ela não é nome, é o que
+          se cola num chamado e o que se procura no log do agente. Ela saiu da URL
+          do comando, e não tem outra tela. */}
       <div className="flex flex-wrap items-center gap-2 border-t border-border-sutil pt-4">
         <span className={ROTULO}>HWID</span>
         <code className="break-all font-mono text-sm text-text-secondary">{maquina.hwid}</code>
