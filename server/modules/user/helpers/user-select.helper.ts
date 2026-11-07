@@ -63,4 +63,8 @@ export const USER_LIST_SELECT = {
   // `isActive` porque é ele que decide o botão da linha — Desativar ou Ativar —
   // e esmaece quem saiu.
   isActive: true,
+
+  // A marca da senha temporária (AR), para a lista avisar quem ainda não escolheu a
+  // sua (CB). A senha mesmo não sai: o servidor só guarda o hash.
+  mustChangePassword: true,
 } as const;

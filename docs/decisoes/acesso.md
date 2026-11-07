@@ -1125,3 +1125,28 @@ decide por quanto tempo vale um token vazado ou um navegador deixado aberto, e �
 **O que muda para quem usa:** o vencimento cai na hora em que se entrou, dois dias depois. Quem entrou
 às 14h cai às 14h, às vezes no meio do expediente, o que as 12 horas evitavam; o login devolve a
 pessoa à tela onde estava.
+
+## CB — Usuários avisa quem está com a senha temporária
+
+**Decisão.** A linha da conta que ainda está com a senha temporária mostra o selo **Senha temporária** ao lado do nome,
+até a pessoa escolher a sua. A regra da [AR](#ar--a-senha-temporária-e-minha-conta-voltam) não mudou: a senha continua
+saindo uma vez só.
+
+- **O selo segue a marca que já existia** (`mustChangePassword`): aparece na conta nova, que nasce com a temporária
+  ([AU](#au--ninguém-escolhe-a-senha-de-outra-pessoa)), e depois de Gerar senha temporária; some quando a pessoa troca.
+- **Não é status.** A conta com a temporária entra no sistema, então o Status continua Ativo, e os cartões da
+  [CA](./plataforma.md#ca--usuários-também-abre-com-cartões) não mudam. Na conta desativada o selo não aparece: ela não
+  entra de qualquer jeito.
+- **Gerar a temporária atualiza a lista,** porque a linha passou a mostrar a marca.
+
+**Por quê:** pedido ao rever Usuários: quem administra não sabia quem ainda não tinha trocado a senha. O IntraChat faz o
+mesmo, com o selo "Troca de senha" ao lado do status.
+
+**O custo:** a marca passa a vir na listagem de usuários, que é só do Administrador.
+
+**O que ficou de fora.**
+- **Um status e um cartão próprios,** como o Vencendo da licença: o pedido era só avisar.
+- **Guardar a temporária para mostrar de novo.** O servidor guarda só o hash, e é isso que faz a AR valer: com a senha
+  legível guardada, quem administra ou quem lesse um backup poderia entrar antes da pessoa e escolher a senha da conta.
+  IntraChat, Okta, Google e Microsoft também mostram uma vez só. Quem fechou o painel sem copiar gera outra: a que se
+  perdeu ninguém recebeu.

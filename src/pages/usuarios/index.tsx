@@ -1,11 +1,12 @@
 import { KeyRound, Pencil, Plus, Power, PowerOff, Trash2, Users } from 'lucide-react';
 import UserFormModal from './components/UserFormModal';
 import AcoesDaLinha from '../../components/AcoesDaLinha';
+import CartoesDeContagem from '../../components/CartoesDeContagem';
 import ListaVazia from '../../components/ListaVazia';
 import ListToolbar from '../../components/ListToolbar';
 import PaginaCabecalho from '../../components/PaginaCabecalho';
 import { Avatar } from '../../components/ui/avatar';
-import { PontoDeStatus } from '../../components/ui/badge';
+import { Badge, PontoDeStatus } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableNome, TableRow, TableSublinha } from '../../components/ui/table';
@@ -16,6 +17,7 @@ import { useAuthStore } from '../../stores/auth.store';
 export default function UsersPage() {
   const {
     users, total, loading, erro, page, perPage, setPage, search, buscaFeita, changeSearch,
+    status, escolherStatus, contagens,
     modalOpen, editing, senhaGerada, openCreate, openEdit, closeModal, handleSubmit, handleDelete,
     handleAlternarAtivo, handleGerarSenhaTemporaria, handleGerarSenhaDaLinha,
   } = useUsers();
@@ -30,6 +32,8 @@ export default function UsersPage() {
     <div className="motion-safe:animate-fade-in flex flex-col pb-6">
 
       <PaginaCabecalho titulo="Usuários" />
+
+      <CartoesDeContagem contagens={contagens} escolhido={status} onEscolher={escolherStatus} />
 
       <ListToolbar
         search={search}
@@ -62,7 +66,14 @@ export default function UsersPage() {
                     <div className="flex items-center gap-3">
                       <Avatar nome={user.name} />
                       <div className="min-w-0">
-                        <TableNome>{user.name}</TableNome>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <TableNome className="min-w-0">{user.name}</TableNome>
+                          {/* Quem ainda não escolheu a sua senha (CB). Não é status: a conta está
+                              ativa, e no desativado o aviso some, porque ele não entra mesmo. */}
+                          {user.isActive && user.mustChangePassword && (
+                            <Badge tom="aviso" className="shrink-0">Senha temporária</Badge>
+                          )}
+                        </div>
                         <TableSublinha>{user.email}</TableSublinha>
                       </div>
                     </div>
@@ -85,8 +96,9 @@ export default function UsersPage() {
                       nome={user.name}
                       acoes={[
                         { rotulo: 'Editar', icone: Pencil, onClick: () => openEdit(user) },
-                        // A própria senha se troca em Minha conta (AR).
-                        !propria && {
+                        // A própria senha se troca em Minha conta (AR), e a conta desativada
+                        // não entra: a temporária não serviria para nada.
+                        !propria && user.isActive && {
                           rotulo: 'Gerar senha temporária',
                           icone: KeyRound,
                           onClick: () => void handleGerarSenhaDaLinha(user),
@@ -115,7 +127,15 @@ export default function UsersPage() {
           </TableBody>
         </Table>
         {users.length === 0 && (
-          <ListaVazia icone={Users} carregando={loading} erro={erro} nome="usuário" busca={buscaFeita} onCadastrar={openCreate} />
+          <ListaVazia
+            icone={Users}
+            carregando={loading}
+            erro={erro}
+            nome="usuário"
+            busca={buscaFeita}
+            filtrada={Boolean(status)}
+            onCadastrar={openCreate}
+          />
         )}
       </Card>
 
@@ -125,7 +145,7 @@ export default function UsersPage() {
           senhaGerada={senhaGerada}
           onClose={closeModal}
           onSubmit={handleSubmit}
-          onGerarSenhaTemporaria={editing && editing.id !== meuId ? () => handleGerarSenhaTemporaria(editing) : undefined}
+          onGerarSenhaTemporaria={editing && editing.id !== meuId && editing.isActive ? () => handleGerarSenhaTemporaria(editing) : undefined}
         />
       )}
     </div>

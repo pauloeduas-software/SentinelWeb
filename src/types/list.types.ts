@@ -10,7 +10,7 @@ export interface ListEnvelope<T> {
   rows: T[];
 }
 
-/** Os cartões Total, Ativos e Desativados (BT): `GET /stock/items/stats` e `GET /people/stats`. */
+/** Os cartões Total, Ativos e Desativados (BT): `GET /stock/items/stats`, `GET /people/stats` e `GET /users/stats`. */
 export interface StatusAtivoStats {
   total: number;
   ativos: number;

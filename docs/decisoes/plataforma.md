@@ -721,6 +721,8 @@ mesma.
 
 ## BT — Estoque e Colaboradores têm cartões, e Computadores conta o tipo
 
+> **Superada em parte por [CA](#ca--usuários-também-abre-com-cartões):** Usuários também abre com Total, Ativos e Desativados.
+
 **Decisão.** As cinco listas de operação abrem igual: Computadores, Postos, Estoque, Licenças e Colaboradores. Corrige a BB, que
 deixou os cartões só onde havia status além de ativo e desativado, e a BA, que abria um cartão por status. As regras de
 negócio não mudaram.
@@ -763,3 +765,18 @@ Status na lista e Situação na aba do computador.
 
 **O que ficou de fora.** A "situação que continua valendo" da BF é um aviso na tela, e não o status. A aba Vinculadas de
 Descobertas é nome de lista, e não valor de status.
+
+## CA — Usuários também abre com cartões
+
+**Decisão.** Usuários abre como Estoque e Colaboradores: Total, Ativos e Desativados, antes da barra da lista. Corrige o
+que a BT deixou de fora. As regras de negócio não mudaram.
+
+- **Os mesmos três cartões, na cor da coluna Status,** e o número filtra: `?status=` na tela, `?isActive=` na API. Cada
+  conta cai em um cartão só, e a de quem está olhando conta junto.
+
+**Por quê:** pedido na revisão visual de Usuários. A lista tem o mesmo Status Ativo e Desativado de Estoque e Colaboradores,
+e era a única das três que abria sem os cartões.
+
+**O custo:** uma rota nova, `GET /api/users/stats`, do Administrador como toda rota de Usuários.
+
+**O que ficou de fora.** Configurações continua sem cartões.

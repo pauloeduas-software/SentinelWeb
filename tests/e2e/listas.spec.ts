@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { criarAtivo, criarColaborador, criarItem, tituloDaPagina, vigiarConsole } from './helpers';
+import { criarAtivo, criarColaborador, criarItem, criarUsuario, tituloDaPagina, vigiarConsole } from './helpers';
 
 // TODA LISTA GUARDA O ESTADO NA URL (BB). Cada tela lê o mesmo `useListaNaUrl`, então o
 // que se prova aqui é o caminho: o menu recomeça, a ficha volta como estava.
@@ -126,11 +126,12 @@ test('o cartão sem resposta mostra traço, e não zero', async ({ page }) => {
   await expect(principal.getByText('Não foi possível conferir os prazos')).toBeVisible();
 });
 
-// OS CARTÕES (BT): Estoque e Colaboradores contam Ativos e Desativados, e clicar filtra a
-// lista pelo endereço; clicar de novo desliga.
+// OS CARTÕES (BT, CA): Estoque, Colaboradores e Usuários contam Ativos e Desativados, e
+// clicar filtra a lista pelo endereço; clicar de novo desliga.
 for (const { caminho, criar } of [
   { caminho: '/estoque', criar: criarItem },
   { caminho: '/colaboradores', criar: criarColaborador },
+  { caminho: '/usuarios', criar: criarUsuario },
 ]) {
   test(`${caminho} abre com Total, Ativos e Desativados, e o cartão filtra`, async ({ page, request }) => {
     const conferirConsole = vigiarConsole(page);
@@ -154,6 +155,18 @@ for (const { caminho, criar } of [
     conferirConsole();
   });
 }
+
+// A SENHA TEMPORÁRIA (CB): a conta nova nasce com ela, e a linha avisa até a pessoa escolher a sua.
+test('Usuários avisa na linha quem está com a senha temporária', async ({ page, request }) => {
+  const conferirConsole = vigiarConsole(page);
+  const nome = `Conta temporária ${Date.now()}`;
+  await criarUsuario(request, nome);
+
+  await page.goto(`/usuarios?busca=${encodeURIComponent(nome)}`);
+  await expect(page.getByRole('row', { name: new RegExp(nome) })).toContainText('Senha temporária');
+
+  conferirConsole();
+});
 
 test('Computadores abre com um cartão por tipo de status, e um status novo não vira cartão', async ({ page, request }) => {
   const nome = `Aguardando ${Date.now()}`;

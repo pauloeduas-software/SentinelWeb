@@ -127,6 +127,7 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   'GET /api/people/:id/history': 'TECNICO',
   // Quem opera o sistema.
   'GET /api/users': 'ADMIN',
+  'GET /api/users/stats': 'ADMIN',
   'POST /api/users': 'ADMIN',
   'PUT /api/users/:id': 'ADMIN',
   'DELETE /api/users/:id': 'ADMIN',

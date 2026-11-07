@@ -44,6 +44,13 @@ export async function criarColaborador(request: APIRequestContext, nome: string)
   return ((await pessoa.json()) as { id: string }).id;
 }
 
+/** Uma conta de Técnico, com um e-mail que não se repete. Devolve o id. */
+export async function criarUsuario(request: APIRequestContext, nome: string): Promise<string> {
+  const conta = await request.post('/api/users', { data: { name: nome, email: `conta.${Date.now()}@teste.local`, role: 'TECNICO' } });
+  expect(conta.status()).toBe(201);
+  return ((await conta.json()) as { id: string }).id;
+}
+
 /** Um item de estoque, com a categoria que diz o tipo dele. Devolve o id. */
 export async function criarItem(
   request: APIRequestContext,

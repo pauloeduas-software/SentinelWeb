@@ -19,6 +19,7 @@ export class UserMaestro {
     // QUEM OPERA O SISTEMA — Técnico, Supervisor ou Administrador (AV). Quem recebe
     // equipamento é colaborador, catálogo (`/api/people`).
     server.get('/api/users', userController.list);
+    server.get('/api/users/stats', userController.stats);
     server.post('/api/users', ESCRITA_COM_SENHA, userController.create);
     server.put('/api/users/:id', ESCRITA_COM_SENHA, userController.update);
     server.delete('/api/users/:id', WRITE_RATE_LIMIT, userController.remove);

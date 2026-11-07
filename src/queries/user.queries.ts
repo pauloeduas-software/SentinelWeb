@@ -1,13 +1,19 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api/apiClient';
 import type { Cargo, User } from '../types/user.types';
-import type { ListEnvelope, ListParams } from '../types/list.types';
+import type { ListEnvelope, ListParams, StatusAtivoStats } from '../types/list.types';
 
 // QUEM OPERA O SISTEMA — Técnico, Supervisor ou Administrador (AV). Quem recebe equipamento é
 // colaborador (`person.queries.ts`, e o cadastro na página Colaboradores).
 export const userKeys = {
   all: ['users'] as const,
-  list: (params: ListParams) => ['users', 'list', params] as const,
+  list: (params: ParamsDosUsuarios) => ['users', 'list', params] as const,
+  stats: () => ['users', 'stats'] as const,
+};
+
+/** A listagem: o que toda lista aceita, sem lixeira (W), e o status. */
+export type ParamsDosUsuarios = Omit<ListParams, 'view'> & {
+  isActive?: boolean;
 };
 
 export interface UserInput {
@@ -24,11 +30,18 @@ export interface UserInput {
   // de quem esqueceu é o botão Gerar senha temporária.
 }
 
-export function useUsersQuery(params: ListParams) {
+export function useUsersQuery(params: ParamsDosUsuarios) {
   return useQuery({
     queryKey: userKeys.list(params),
     queryFn: async () => (await apiClient.get<ListEnvelope<User>>('/users', { params })).data,
     placeholderData: keepPreviousData,
+  });
+}
+
+export function useUserStatsQuery() {
+  return useQuery({
+    queryKey: userKeys.stats(),
+    queryFn: async () => (await apiClient.get<StatusAtivoStats>('/users/stats')).data,
   });
 }
 
@@ -62,11 +75,13 @@ export function useDeleteUser() {
 
 /**
  * A senha temporária de outra conta (AR). Sai UMA vez, na resposta: o servidor só
- * guarda o hash, então a tela a mostra e mais nada. Não invalida a lista: nenhuma
- * coluna dela mudou.
+ * guarda o hash, então a tela a mostra e mais nada. Invalida a lista, que passa a
+ * avisar a senha temporária na linha (CB).
  */
 export function useResetUserPassword() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => (await apiClient.post<{ temporaryPassword: string }>(`/users/${id}/temporary-password`)).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: userKeys.all }),
   });
 }

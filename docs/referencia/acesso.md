@@ -321,6 +321,13 @@ Quem esqueceu a senha não precisa de um administrador que a escolha: ele **gera
 
 - **Para a própria conta é 409:** a sua você troca em Minha conta. Gerar uma temporária para si
   mesmo só o jogaria para fora.
+- **Para a conta desativada também é 409:** o login a recusa, então a temporária não serviria, e
+  ainda apagaria a senha da pessoa. A tela nem oferece: ative antes.
+- **Gerada, a senha tranca o painel:** os campos travam e o rodapé vira só Fechar, como no cadastro.
+  O Salvar fechava o painel sem perguntar, e a senha ia junto.
+- **A lista de Usuários avisa** ([CB](../decisoes/acesso.md#cb--usuários-avisa-quem-está-com-a-senha-temporária)): a
+  conta com a marca leva o selo Senha temporária ao lado do nome, da conta nova até a troca. A senha não
+  volta: quem a perdeu gera outra.
 - **Minha conta** (`/conta`, aberta pelo menu do usuário, no cabeçalho) tem o **nome** (`PATCH /api/auth/me`)
   e a **senha** (`PUT /api/auth/password`). O e-mail é o login e o cargo é dado de administrador:
   os dois ficam em Usuários. As duas rotas são `null` no mapa — a sessão basta, e o id vem dela,

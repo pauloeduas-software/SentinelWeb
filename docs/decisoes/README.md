@@ -70,6 +70,7 @@ que corrigem algo anterior:
 | **AW** (em parte: quem ocupou em cada entrega e o id do posto excluído), **BL** (em parte: a forma da aba Responsáveis) | **BP** | o que já foi mora na aba Histórico: o posto ganha a dele, e a aba Responsáveis mostra só o que está agora |
 | **AB** (em parte: a observação da baixa numa aba), **AZ** (em parte: o modelo numa aba), **BB** (em parte: a primeira aba) | **BR** | a ficha do computador não tem aba Detalhes: os campos sobem para o card, e a primeira aba é Responsáveis |
 | **BA** (em parte: um cartão por status), **BB** (em parte: cartão só em Computadores, Postos e Licenças) | **BT** | Estoque e Colaboradores abrem com Total, Ativos e Desativados, e o cartão de Computadores conta o tipo de status |
+| **BT** (em parte: Usuários sem cartões) | **CA** | Usuários abre com Total, Ativos e Desativados, como Estoque e Colaboradores |
 | **BB** e **BS** (em parte: Situação fora de Computadores e Licenças), **BO** (em parte: a Situação do posto) | **BU** | o nome é Status em toda tela, e o valor vai no masculino |
 | **D115** (em parte: as especificações e as mudanças de hardware na aba) | **BY** | a aba Máquina mostra o que o agente manda: saem as especificações e as mudanças detectadas, e a coleta continua no servidor |
 | **D115** (em parte: os dois carimbos de último contato), **H** (em parte: o 409 que aponta a aba Máquina), **BW** (em parte: o Desvincular que some na lixeira) | **BZ** | vincular e desvincular moram em Descobertas; a aba Máquina é a mesma no computador e no posto, com a linha que abre a máquina lá |

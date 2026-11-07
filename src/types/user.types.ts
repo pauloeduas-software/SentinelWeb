@@ -17,6 +17,8 @@ export interface User {
    * campo: desativar e ativar são só o botão (ver `UserFormModal`).
    */
   isActive: boolean;
+  /** Ainda com a senha temporária (AR): a lista avisa até a pessoa escolher a sua (CB). */
+  mustChangePassword: boolean;
   id: string;
   name: string;
   email: string;
