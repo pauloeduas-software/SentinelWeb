@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { erroDaFicha } from '../../../../helpers/erro.helper';
 import { POR_PAGINA } from '../../../../hooks/useListaNaUrl';
 import { usePersonHistoryQuery, usePersonQuery } from '../../../../queries/person.queries';
 import { usePersonOccupanciesQuery } from '../../../../queries/occupancy.queries';
@@ -47,6 +48,6 @@ export function useColaborador() {
     carregandoHistorico,
     erroDoHistorico: erroDoHistorico?.message ?? null,
     carregando: carregandoPessoa,
-    erro: error ? (error as Error).message : null,
+    erro: erroDaFicha(error, pessoa != null, 'o colaborador'),
   };
 }

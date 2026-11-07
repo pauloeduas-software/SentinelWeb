@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { useDebouncedValue } from './useDebouncedValue';
 
-/** Quantas linhas por página, em toda lista e em toda janela (BB). */
+/** Quantas linhas por página, em toda lista e em toda aba de ficha (BB). */
 export const POR_PAGINA = 15;
 
 /** A marca das trocas feitas pela própria lista: o resto veio de fora (`useListaNaUrl`). */

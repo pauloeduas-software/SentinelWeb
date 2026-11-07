@@ -11,12 +11,12 @@ import { caminhoDoItem, textoDeUnidades } from '../../../../helpers/estoque.help
 // SÓ AS ENTREGAS ABERTAS: as já retiradas estão na aba Histórico. O componente
 // fica no computador mesmo quando ele muda de mãos — a peça está dentro dele.
 //
-// SEM RETIRAR: ele mora no detalhe do item, como a devolução de licença mora na
-// tela de Licenças. A linha do item leva até lá, já filtrada por este computador.
+// SEM RETIRAR: ele mora na ficha do item, como a devolução de licença mora na
+// ficha dela. A linha do item leva até lá, já filtrada por este computador.
 
 interface ComponentesTabProps {
   componentes: EntregaNaFicha[];
-  /** A etiqueta do computador: o link leva ao detalhe do item já filtrado por ela. */
+  /** A etiqueta do computador: o link leva à ficha do item já filtrada por ela. */
   assetTag: string;
   carregando: boolean;
   erro: string | null;

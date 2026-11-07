@@ -17,7 +17,7 @@ import { caminhoDaLicenca, prazoDaEntrega } from '../../../../helpers/licenca.he
 
 interface LicensesTabProps {
   licencas: EntregaDoAlvo[];
-  /** A etiqueta do computador: o link leva ao detalhe da licença já filtrado por ela. */
+  /** A etiqueta do computador: o link leva à ficha da licença já filtrada por ela. */
   assetTag: string;
   carregando: boolean;
   erro: string | null;

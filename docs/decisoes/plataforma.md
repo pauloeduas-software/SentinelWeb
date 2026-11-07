@@ -375,6 +375,8 @@ tecnologias e boas práticas, não mais funcionalidades*):
 
 ## AY — O visual vem da IntraNet, em tema claro e escuro, e a linha inteira abre o registro
 
+> **Superada em parte por [BK](#bk--estoque-e-licenças-têm-ficha-em-página):** item e licença também têm ficha em página, e a janela de detalhe sai.
+>
 > **Superada em parte por [BH](#bh--o-texto-tem-piso-de-12px-e-cor-de-texto-e-cor-de-fundo-são-tokens-separados):** a densidade compacta fica no espaçamento, e o texto tem escala própria.
 >
 > **Superada em parte por [BA](#ba--o-título-volta-ao-cabeçalho-a-lista-não-se-mexe-e-o-posto-tem-ficha-em-página):** o título da página volta ao cabeçalho, e o posto tem ficha em página.
@@ -451,6 +453,8 @@ usuário: não mover nada).
 
 ## BA — O título volta ao cabeçalho, a lista não se mexe e o posto tem ficha em página
 
+> **Superada em parte por [BK](#bk--estoque-e-licenças-têm-ficha-em-página):** item e licença deixam a janela, e o que a BA deixou de fora está feito.
+>
 > **Superada em parte por [BB](#bb--toda-lista-ficha-e-formulário-seguem-o-mesmo-molde):** na página não sobra ação nenhuma no topo, e os filtros de toda lista moram na URL.
 
 **Decisão.** Os ajustes feitos olhando as telas depois da AY. As regras de negócio não mudaram.
@@ -540,6 +544,8 @@ o que vale, a receita de um sistema que já mudou. O que importava já estava em
 
 ## BF — A resposta a um clique vai para o cartão do canto inferior direito
 
+> **Superada em parte por [BK](#bk--estoque-e-licenças-têm-ficha-em-página):** o link que não abre deixa de ir para o cartão: sem janela, é falha ao carregar, no lugar da ficha.
+
 **Decisão.** A mesma recusa aparecia em três lugares: no cartão do alto, numa faixa no topo da tela e num texto ao lado do
 botão. Quem clicava no fim de uma lista comprida às vezes nem via a faixa, e nada dizia que a ação tinha dado certo. Agora a
 resposta a um clique tem um lugar só: o cartão de `useNotificacao`, no canto inferior direito, como no IntraChat.
@@ -614,3 +620,33 @@ tela inteira, e ela tem os mesmos 9,6px. Por isso o piso entra aqui, e o resto d
 **Por quê tokens separados:** é como o Primer faz, com `fgColor.danger` para texto e `bgColor.danger.emphasis` para fundo.
 
 **Descartado: voltar a raiz para 100%.** Devolveria o texto, mas levaria junto a densidade que a AY escolheu.
+
+## BK — Estoque e Licenças têm ficha em página
+
+**Decisão.** O item de estoque e a licença saem da janela e ganham ficha em página, em `/estoque/:id` e `/licencas/:id`,
+no molde do posto. Todo registro abre do mesmo jeito: detalhe é página, formulário é painel lateral e a pergunta é
+`confirmar()`. As regras de negócio não mudaram, e nenhuma rota de API é nova. A lista continua como estava.
+
+- **Os campos sobem para o card, e a aba Detalhes sai.** O card mostra a situação, a conta e o cadastro; o `Dado` esconde
+  o vazio. Sem a aba, o item com dois campos não vira uma página em branco.
+- **Com quem está é a primeira aba.** É onde mora a devolução, e é para lá que vão todos os links. Com a aba inicial sempre
+  a mesma, o link só precisa do `?quem=`, que é a própria busca da aba e fica no endereço, como a da lista (BB). O consumível
+  fica só com Histórico, porque não fica com ninguém (AJ).
+- **Chaves é aba, só com chave.** A lista pode ser longa, e no card empurraria as abas para baixo.
+- **O link antigo redireciona.** `/estoque?item=<id>&quem=…` e `/licencas?licenca=<id>` levam à ficha, com a busca.
+- **A seta volta para quem abriu.** A `TabelaDaFicha` passa `useVoltaParaEstaFicha` em toda linha, como a BJ pede, e o nome
+  na seta vem de `rotuloDaVolta`. Vale também para o computador e o posto abertos da ficha do colaborador.
+- **O registro que não abre diz no lugar da ficha.** Corrige o "link que não abre" da BF, que ia para o cartão: sem janela, é
+  a falha ao carregar da BB, e o id fica no endereço para o F5 tentar de novo. `useRecusaDoLink` sai.
+- **A atualização que falha não tira a ficha da tela.** Só o 404 tira (`erroDaFicha`). Valia só para o posto; agora vale para
+  as cinco fichas, e o formulário aberto não se perde quando a volta para a aba falha.
+- **Lista e ficha dividem as ações.** Editar, Entregar, Desativar ou Encerrar e Excluir moram em `useAcoesDoItem` e
+  `useAcoesDaLicenca`, com as mesmas frases nos dois lugares.
+
+**Por quê:** a janela existia para não perder a lista (BA), e a BB pôs o estado de toda lista na URL. Sobrou só o custo: quem
+vinha de uma ficha para devolver caía na lista ao fechar, o F5 fechava a janela, não havia link para colar no chamado, e o
+código reabria a janela depois de Entregar e Editar. No Snipe-IT, acessório, consumível, componente e licença têm página
+própria, e o modal fica para a ação pequena. No GLPI, licença e consumível são formulário com abas. A Nielsen Norman Group
+recomenda evitar modal quando a pessoa precisa consultar outra informação: ele interrompe e cobre o que está atrás.
+
+**O que ficou de fora.** "Com quem está" continua lista com a devolução na linha, e não `Card > Table`.

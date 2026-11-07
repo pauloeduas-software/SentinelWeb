@@ -6,7 +6,6 @@ import PaginaCabecalho from '../../components/PaginaCabecalho';
 import { Button } from '../../components/ui/button';
 import EntregaModal from './components/EntregaModal';
 import EstoqueTable from './components/EstoqueTable';
-import ItemDetalheModal from './components/ItemDetalheModal';
 import ItemFormModal from './components/ItemFormModal';
 import { useEstoque } from './hooks/useEstoque';
 import { usePode } from '../../stores/auth.store';
@@ -23,8 +22,9 @@ export default function EstoquePage() {
   const {
     itens, total, carregando, erro, page, perPage, setPage, search, buscaFeita, changeSearch,
     categoryId, changeCategoria,
-    modal, itemAberto, buscaDoLink, veioDoLink, abrir, fechar, ocupado,
-    handleCriar, handleEditar, handleEntregar, handleDevolver, handleAlternarAtivo, handleExcluir,
+    criando, abrirCriacao, fecharCriacao, abrirFicha,
+    formulario, itemAberto, abrir, fechar, ocupado,
+    handleCriar, handleEditar, handleEntregar, handleAlternarAtivo, handleExcluir,
   } = useEstoque();
   // Desativar e excluir são `SUPERVISOR` no servidor (AV). O Técnico cadastra,
   // edita, entrega e devolve.
@@ -40,7 +40,7 @@ export default function EstoquePage() {
         onSearchChange={changeSearch}
         placeholder="Buscar por nome, categoria ou localização…"
         filtros={<CategoriaFiltro tipo="STOCK,COMPONENT,CONSUMABLE" valor={categoryId} onChange={changeCategoria} />}
-        acao={<Button onClick={() => abrir('criar')}><Plus /> Novo item</Button>}
+        acao={<Button onClick={abrirCriacao}><Plus /> Novo item</Button>}
         page={page}
         perPage={perPage}
         total={total}
@@ -50,7 +50,7 @@ export default function EstoquePage() {
       <EstoqueTable
         itens={itens}
         ocupado={ocupado}
-        onAbrir={(item) => abrir('detalhe', item)}
+        onAbrir={abrirFicha}
         onEntregar={(item) => abrir('entregar', item)}
         onEditar={(item) => abrir('editar', item)}
         onAlternarAtivo={podeDecidir ? (item) => void handleAlternarAtivo(item) : undefined}
@@ -63,38 +63,21 @@ export default function EstoquePage() {
             nome="item"
             busca={buscaFeita}
             filtrada={Boolean(categoryId)}
-            onCadastrar={() => abrir('criar')}
+            onCadastrar={abrirCriacao}
           />
         }
       />
 
-      {modal === 'criar' && (
-        <ItemFormModal item={null} onClose={fechar} onSubmit={handleCriar} />
+      {criando && (
+        <ItemFormModal item={null} onClose={fecharCriacao} onSubmit={handleCriar} />
       )}
 
-      {modal === 'editar' && itemAberto && (
+      {formulario === 'editar' && itemAberto && (
         <ItemFormModal item={itemAberto} onClose={fechar} onSubmit={handleEditar} />
       )}
 
-      {modal === 'entregar' && itemAberto && (
+      {formulario === 'entregar' && itemAberto && (
         <EntregaModal item={itemAberto} onClose={fechar} onSubmit={handleEntregar} />
-      )}
-
-      {modal === 'detalhe' && itemAberto && (
-        <ItemDetalheModal
-          // Outro item é outra janela: página e busca não passam de um para o outro.
-          key={itemAberto.id}
-          item={itemAberto}
-          buscaInicial={buscaDoLink}
-          veioDoLink={veioDoLink}
-          ocupado={ocupado}
-          onClose={fechar}
-          onEntregar={(item) => abrir('entregar', item)}
-          onEditar={(item) => abrir('editar', item)}
-          onAlternarAtivo={podeDecidir ? (item) => void handleAlternarAtivo(item) : undefined}
-          onExcluir={podeDecidir ? (item) => void handleExcluir(item) : undefined}
-          onDevolver={handleDevolver}
-        />
       )}
     </div>
   );

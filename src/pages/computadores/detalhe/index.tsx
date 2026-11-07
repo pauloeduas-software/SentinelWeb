@@ -16,6 +16,7 @@ import { FichaIndisponivel } from '../../../components/CartaoDaFicha';
 import PaginaCabecalho from '../../../components/PaginaCabecalho';
 import { Button } from '../../../components/ui/button';
 import { TabsContent } from '../../../components/ui/tabs';
+import { rotuloDaVolta } from '../../../hooks/useVoltaComFiltros';
 import { bloqueioDaEntrega, rotuloDaOperacao } from '../helpers/posse.helper';
 import { useAssetDetail } from './hooks/useAssetDetail';
 import { usePode } from '../../../stores/auth.store';
@@ -28,12 +29,6 @@ import { usePode } from '../../../stores/auth.store';
 //
 // Markup e mais nada: estado e chamadas ficam no `useAssetDetail`
 // (docs/referencia/arquitetura.md).
-
-/** Quem abriu a ficha: a seta diz para onde volta. */
-function rotuloDaVoltaDaFicha(voltar: string): string {
-  if (voltar.startsWith('/descobertas')) return 'Descobertas';
-  return voltar.startsWith('/postos') ? 'Posto' : 'Computadores';
-}
 
 export default function AssetDetailPage() {
   const {
@@ -53,10 +48,10 @@ export default function AssetDetailPage() {
   // condicional é o que as regras do React proíbem.
   const podeExcluir = usePode('SUPERVISOR');
 
-  const rotuloDaVolta = rotuloDaVoltaDaFicha(voltar.para);
+  const rotulo = rotuloDaVolta(voltar.para, 'Computadores');
 
   if (carregando || erro || !asset) {
-    return <FichaIndisponivel lista="Computadores" rotuloDaVolta={rotuloDaVolta} voltar={voltar} carregando={carregando} erro={erro ?? 'Ativo não encontrado.'} />;
+    return <FichaIndisponivel lista="Computadores" rotuloDaVolta={rotulo} voltar={voltar} carregando={carregando} erro={erro ?? 'Ativo não encontrado.'} />;
   }
 
   // A MESMA trava da listagem: só `DEPLOYABLE` se entrega, e o motivo vai no `title`.
@@ -66,7 +61,7 @@ export default function AssetDetailPage() {
   return (
     <div className="motion-safe:animate-fade-in pb-6">
       <PaginaCabecalho
-        voltar={{ ...voltar, rotulo: rotuloDaVolta }}
+        voltar={{ ...voltar, rotulo }}
         titulo={<span className="font-mono">{asset.assetTag}</span>}
       />
 

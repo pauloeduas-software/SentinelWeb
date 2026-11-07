@@ -14,6 +14,14 @@ const CAMINHO: Record<ReferenciaDoErro['tipo'], (id: string) => string> = {
   posto: (id) => `/postos/${id}`,
 };
 
+/** Só o 404 diz que o registro não existe: um 500 ou a rede caída dizem que não deu para abrir. */
+export function erroDaFicha(error: Error | null, temFicha: boolean, nome: string): string | null {
+  if (!error) return null;
+  if ((error as { status?: number }).status === 404) return error.message;
+  // Atualização que falha com a ficha já na tela não a fecha; o 404 fecha.
+  return temFicha ? null : `Não foi possível abrir ${nome}: ${error.message}`;
+}
+
 /** Só as referências bem formadas: o corpo do erro vem de fora. */
 function ehReferencia(valor: unknown): valor is ReferenciaDoErro {
   const ref = valor as ReferenciaDoErro | null;

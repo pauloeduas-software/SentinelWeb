@@ -38,9 +38,34 @@ export async function criarPosto(request: APIRequestContext, nome: string): Prom
   return ((await posto.json()) as { id: string }).id;
 }
 
-export async function criarColaborador(request: APIRequestContext, nome: string): Promise<void> {
+export async function criarColaborador(request: APIRequestContext, nome: string): Promise<string> {
   const pessoa = await request.post('/api/people', { data: { name: nome } });
   expect(pessoa.status()).toBe(201);
+  return ((await pessoa.json()) as { id: string }).id;
+}
+
+/** Um item de estoque, com a categoria que diz o tipo dele. Devolve o id. */
+export async function criarItem(
+  request: APIRequestContext,
+  nome: string,
+  tipo: 'STOCK' | 'COMPONENT' | 'CONSUMABLE' = 'STOCK',
+): Promise<string> {
+  const categoria = await request.post('/api/categories', { data: { name: `Categoria de ${nome}`, type: tipo } });
+  const { id: categoryId } = (await categoria.json()) as { id: string };
+  const item = await request.post('/api/stock/items', { data: { name: nome, categoryId, qty: 5 } });
+  expect(item.status()).toBe(201);
+  return ((await item.json()) as { id: string }).id;
+}
+
+/** Uma licença de três, com as chaves pedidas. Devolve o id. */
+export async function criarLicenca(request: APIRequestContext, nome: string, chaves: readonly string[] = []): Promise<string> {
+  const categoria = await request.post('/api/categories', { data: { name: `Categoria de ${nome}`, type: 'LICENSE' } });
+  const { id: categoryId } = (await categoria.json()) as { id: string };
+  const licenca = await request.post('/api/licenses', {
+    data: { name: nome, categoryId, seatsTotal: 3, keys: chaves.map((productKey) => ({ productKey, seats: 1 })) },
+  });
+  expect(licenca.status()).toBe(201);
+  return ((await licenca.json()) as { id: string }).id;
 }
 
 /** Um ativo de verdade, com o modelo que ele exige. Devolve o id. */

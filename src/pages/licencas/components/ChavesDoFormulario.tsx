@@ -21,7 +21,7 @@ import { cobertasPelas, linhaNova, type LinhaDeChave } from '../helpers/licenca.
 // COLAR UMA LISTA com várias linhas num campo cria uma chave para cada linha:
 // ninguém digita cinquenta chaves uma a uma. As novas vão para o FIM da lista,
 // que é onde o servidor as grava (depois das que já existem): o número que a
-// chave tem aqui é o que ela tem no detalhe e na entrega.
+// chave tem aqui é o que ela tem na ficha e na entrega.
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface ChavesDoFormularioProps {

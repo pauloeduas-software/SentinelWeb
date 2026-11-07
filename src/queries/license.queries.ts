@@ -20,7 +20,7 @@ export type ParamsDaLicenca = Omit<ListParams, 'view'> & {
   status?: StatusDoFiltro;
 };
 
-/** As duas listas do detalhe: a página e, na de entregas, a busca pelo nome. */
+/** As duas listas da ficha: a página e, na de entregas, a busca pelo nome. */
 export interface ParamsDoDetalhe {
   page: number;
   perPage: number;
@@ -120,8 +120,8 @@ export function useAssetLicensesQuery(assetId: string | null) {
  * novo, a linha continuava oferecendo o que o servidor acabou de recusar.
  *
  * `excluida`: a licença que acabou de ser apagada. As consultas DELA ficam de
- * fora — buscá-las de novo é um 404 garantido, que a janela do detalhe ainda
- * aberta mostrava antes de fechar.
+ * fora — buscá-las de novo é um 404 garantido, que a ficha ainda aberta mostraria
+ * antes de sair.
  */
 function invalidarLicencaEPosse(queryClient: ReturnType<typeof useQueryClient>, excluida?: string) {
   return Promise.all([
@@ -191,7 +191,7 @@ export function useCheckinLicense() {
   });
 }
 
-/** Troca só a chave de uma entrega aberta, por outra da lista — o "Com quem está" do detalhe. */
+/** Troca só a chave de uma entrega aberta, por outra da lista — o "Com quem está" da ficha. */
 export function useUpdateCheckoutKey() {
   const queryClient = useQueryClient();
   return useMutation({
