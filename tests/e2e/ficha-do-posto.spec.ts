@@ -227,14 +227,31 @@ test('depois de passar pelo computador, a seta do posto ainda volta à lista com
   await page.goto(`/postos?busca=${encodeURIComponent(nome)}`);
   await page.getByRole('row', { name: new RegExp(nome) }).click();
   await expect(page).toHaveURL(new RegExp(`/postos/${posto}$`));
-  await page.getByRole('main').getByRole('link', { name: assetTag }).click();
+  await page.getByRole('tab', { name: /Computador/ }).click();
+  await page.getByRole('row', { name: new RegExp(assetTag) }).click();
 
   await page.getByRole('link', { name: 'Voltar para Posto' }).click();
-  await expect(page).toHaveURL(new RegExp(`/postos/${posto}$`));
+  await expect(page).toHaveURL(new RegExp(`/postos/${posto}\\?aba=computador$`));
 
   await page.getByRole('link', { name: 'Voltar para Postos' }).click();
   await expect(page).toHaveURL(/\/postos\?busca=/);
   await expect(page.getByRole('searchbox')).toHaveValue(nome);
+});
+
+test('o card não tem link: no computador, a linha do posto abre o posto, e a seta volta', async ({ page, request }) => {
+  const nome = `Mesa da linha ${Date.now()}`;
+  const { posto, ativo } = await computadorNoPosto(request, nome);
+
+  await page.goto(`/computadores/${ativo}`);
+  const principal = page.getByRole('main');
+  await expect(principal.locator('dl').getByRole('link')).toHaveCount(0);
+
+  await principal.getByRole('listitem').getByText(nome).click();
+  await expect(page).toHaveURL(new RegExp(`/postos/${posto}$`));
+  await expect(principal.locator('dl').getByRole('link')).toHaveCount(0);
+
+  await page.getByRole('link', { name: 'Voltar para Computador' }).click();
+  await expect(page).toHaveURL(new RegExp(`/computadores/${ativo}$`));
 });
 
 test('o computador que não abre oferece voltar ao posto de onde se veio', async ({ page, request }) => {
@@ -304,9 +321,10 @@ test('no computador, o Entregar trava quando já foi entregue, e a aba Responsá
   await expect(entregar).toBeDisabled();
   // Desabilitado, o botão não recebe o ponteiro: o motivo mora na caixa em volta dele.
   await expect(principal.getByTitle('Já entregue: devolva antes de entregar de novo')).toContainText('Entregar');
-  await expect(principal.getByRole('button', { name: 'Devolver' })).toHaveCount(0);
+  // O card só entrega: o Devolver é um só, na linha da aba em que a ficha abre.
+  await expect(principal.getByRole('button', { name: 'Devolver' })).toHaveCount(1);
+  await expect(principal.getByRole('listitem').getByRole('button', { name: 'Devolver' })).toBeVisible();
 
-  await page.getByRole('tab', { name: 'Responsáveis 1' }).click();
   await expect(principal.getByText('1–1 de 1')).toBeVisible();
   const busca = principal.getByRole('searchbox');
   await busca.pressSequentially('ninguém assim');

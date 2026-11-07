@@ -114,8 +114,8 @@ describe('o que a ficha do posto lê', () => {
   });
 
   it('a posse aberta traz o POSTO com id, e não só o nome dele', async () => {
-    // É o que faz o card do ativo poder LEVAR até a mesa: `PosseResolvida` carrega o
-    // rótulo do alvo e não o id, então o link sai do `postoAtual`.
+    // É o que faz a linha da aba Responsáveis LEVAR até a mesa: `PosseResolvida` carrega
+    // o rótulo do alvo e não o id, então o caminho sai do `postoAtual`.
     const naMesa = await ativo('Desktop do alvo', 'SN-FICHA-30');
     await entregarA(naMesa.id, posto);
 

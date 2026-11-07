@@ -199,9 +199,10 @@ O nome é seu; o tipo é uma de quatro caixas que o sistema entende:
 - **Site:** só endereço completo com `http://` ou `https://` — `dell.com` e
   `javascript:…` são 422 com a mensagem que nomeia o campo. O cadastro pede, de
   preferência, a página de suporte (onde se abre chamado de garantia).
-- **Os canais aparecem na ficha do ativo** (aba Detalhes, seção "Suporte ·
-  fabricante"): site como link, telefone como `tel:`, e-mail como `mailto:`.
-  Campo vazio não aparece; sem nenhum, a seção some.
+- **Os canais aparecem no card da ficha do ativo,** como Site, Telefone e E-mail
+  de suporte. O site é link; telefone e e-mail são texto
+  ([BS](../decisoes/plataforma.md#bs--o-card-da-ficha-tem-um-molde-só)). Campo vazio
+  não aparece.
 - **Em uso:** modelos e licenças (a encerrada inclusive). A licença tem
   fabricante **opcional**; o modelo, obrigatório.
 

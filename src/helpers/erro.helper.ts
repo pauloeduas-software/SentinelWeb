@@ -8,8 +8,7 @@ import { caminhoDaLicenca } from './licenca.helper';
 // erro da API guarda o corpo como veio (`corpo`); a leitura dele mora aqui.
 
 const CAMINHO: Record<ReferenciaDoErro['tipo'], (id: string) => string> = {
-  // Na aba Responsáveis, como os outros: a recusa cita o ativo para ele ser devolvido.
-  ativo: (id) => `/computadores/${id}?aba=responsaveis`,
+  ativo: (id) => `/computadores/${id}`,
   licenca: caminhoDaLicenca,
   estoque: caminhoDoItem,
   posto: (id) => `/postos/${id}`,

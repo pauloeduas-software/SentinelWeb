@@ -66,8 +66,11 @@ mostram a senha no painel aberto, e a troca obrigatória de senha, que já leva 
 
 ## A ficha
 
-- **O detalhe de um registro é página, nunca janela (BK).** Os campos moram no card, e cada aba é o que
-  está com o registro. Formulário é painel lateral, por cima da ficha.
+- **O detalhe de um registro é página, nunca janela (BK).** Os campos moram no card, sem aba Detalhes (BR), e cada aba
+  é o que está com o registro. Formulário é painel lateral, por cima da ficha.
+- **O card é um só (BS).** Grade de até cinco colunas com a coluna das ações fixa, e o que é da mesma família em
+  `GrupoDeDados`: situação e identificação, catálogo, compra e, por último, Notas na largura toda. Cadastrado em em toda
+  ficha. O card é só leitura: quem abre outro registro é a linha da aba, e o único link é o site de suporte.
 - **O que já foi mora na aba Histórico, a última (BP).** As outras abas dizem o que está agora, e nenhuma repete o
   passado. Toda ficha tem a sua, em `LinhaDoTempo`.
 - **A ação da ficha fica no card (`CartaoDaFicha`), e nenhuma aba repete botão (BB).**

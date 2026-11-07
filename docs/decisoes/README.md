@@ -68,6 +68,7 @@ que corrigem algo anterior:
 | **BL** (em parte: o selo embaixo do posto), **BF** (em parte: o posto vago em `Aviso`) | **BO** | em Responsáveis vai só o nome, sem turno; posto vago é só a Situação do posto |
 | **BB** (em parte: Entregar ou Devolver no card do computador) | **BQ** | Entregar e Devolver são dois botões, como em Estoque e Licenças, e a aba Responsáveis é uma só em toda ficha |
 | **AW** (em parte: quem ocupou em cada entrega e o id do posto excluído), **BL** (em parte: a forma da aba Responsáveis) | **BP** | o que já foi mora na aba Histórico: o posto ganha a dele, e a aba Responsáveis mostra só o que está agora |
+| **AB** (em parte: a observação da baixa numa aba), **AZ** (em parte: o modelo numa aba), **BB** (em parte: a primeira aba) | **BR** | a ficha do computador não tem aba Detalhes: os campos sobem para o card, e a primeira aba é Responsáveis |
 
 **O de-escopo (D143–D156) supera por subtração**, e é o maior grupo de supersessões do projeto:
 a decisão antiga não estava errada, o que ela governava deixou de existir. Está inteiro em

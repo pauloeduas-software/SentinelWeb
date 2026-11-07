@@ -1,6 +1,6 @@
-import { Cpu, History, Info, KeyRound, Monitor, Users } from 'lucide-react';
+import { Cpu, History, KeyRound, Monitor, Users, type LucideIcon } from 'lucide-react';
 
-// AS SEIS ABAS DA TELA DE DETALHE — dado, não componente.
+// AS CINCO ABAS DA TELA DE DETALHE — dado, não componente.
 //
 // Fica em `helpers/` porque é a lista que a tela percorre, e porque um arquivo
 // que exporta componente E constante quebra o fast refresh do Vite (o lint
@@ -10,17 +10,16 @@ import { Cpu, History, Info, KeyRound, Monitor, Users } from 'lucide-react';
 // aqui: aba vazia é indistinguível de defeito para quem usa o sistema.
 
 export type AbaId =
-  | 'detalhes' | 'responsaveis' | 'historico'
+  | 'responsaveis' | 'historico'
   | 'licencas' | 'componentes' | 'maquina';
 
 export interface Aba {
   id: AbaId;
   rotulo: string;
-  icone: typeof Info;
+  icone: LucideIcon;
 }
 
 export const ABAS: readonly Aba[] = [
-  { id: 'detalhes', rotulo: 'Detalhes', icone: Info },
   { id: 'responsaveis', rotulo: 'Responsáveis', icone: Users },
   { id: 'licencas', rotulo: 'Licenças', icone: KeyRound },
   { id: 'componentes', rotulo: 'Componentes', icone: Cpu },

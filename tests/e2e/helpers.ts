@@ -69,7 +69,7 @@ export async function criarLicenca(request: APIRequestContext, nome: string, cha
 }
 
 /** Um ativo de verdade, com o modelo que ele exige. Devolve o id. */
-export async function criarAtivo(request: APIRequestContext): Promise<string> {
+export async function criarAtivo(request: APIRequestContext, dados: Record<string, unknown> = {}): Promise<string> {
   const sufixo = Date.now();
   const categoria = await request.post('/api/categories', { data: { name: `Categoria ${sufixo}`, type: 'ASSET' } });
   const { id: categoryId } = (await categoria.json()) as { id: string };
@@ -81,7 +81,7 @@ export async function criarAtivo(request: APIRequestContext): Promise<string> {
   const situacoes = await request.get('/api/status-labels/options?type=DEPLOYABLE');
   const [disponivel] = (await situacoes.json()) as { id: string }[];
 
-  const ativo = await request.post('/api/assets', { data: { modelId, statusId: disponivel.id } });
+  const ativo = await request.post('/api/assets', { data: { modelId, statusId: disponivel.id, ...dados } });
   expect(ativo.status()).toBe(201);
   return ((await ativo.json()) as { id: string }).id;
 }

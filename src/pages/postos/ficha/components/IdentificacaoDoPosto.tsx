@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { MapPin } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import SeloDoPosto from '../../components/SeloDoPosto';
 import CartaoDaFicha, { IconeDaFicha } from '../../../../components/CartaoDaFicha';
 import { Dado } from '../../../../components/ui/dado';
@@ -12,29 +11,23 @@ import type { PostoDetalhe } from '../../../../types/workstation.types';
 
 interface Props {
   posto: PostoDetalhe;
-  /** O `state` do link: a seta da ficha do computador volta para este posto. */
-  voltaDoComputador: object;
   acoes?: ReactNode;
 }
 
-export default function IdentificacaoDoPosto({ posto, voltaDoComputador, acoes }: Props) {
+export default function IdentificacaoDoPosto({ posto, acoes }: Props) {
   // A lista tem no máximo um ativo: é a invariante 19.
   const computador = posto.ativos[0];
 
   return (
     <CartaoDaFicha marca={<IconeDaFicha><MapPin /></IconeDaFicha>} acoes={acoes}>
-        <Dado rotulo="Situação"><SeloDoPosto posto={posto} /></Dado>
-        <Dado rotulo="Localização">{posto.location.name}</Dado>
-        <Dado rotulo="Computador">
-          {computador && (
-            <Link to={`/computadores/${computador.id}`} state={voltaDoComputador} className="font-mono text-link hover:underline">
-              {computador.assetTag}
-            </Link>
-          )}
-        </Dado>
-        {/* `createdAt` é instante: o dia sai no fuso de Brasília, não em UTC. */}
-        <Dado rotulo="Cadastrado em">{formatarDiaDoInstante(posto.createdAt)}</Dado>
-        <Dado rotulo="Notas" largo>{posto.notes}</Dado>
+      <Dado rotulo="Situação"><SeloDoPosto posto={posto} /></Dado>
+      <Dado rotulo="Localização">{posto.location.name}</Dado>
+      <Dado rotulo="Computador">
+        {computador && <span className="font-mono">{computador.assetTag}</span>}
+      </Dado>
+      {/* `createdAt` é instante: o dia sai no fuso de Brasília, não em UTC. */}
+      <Dado rotulo="Cadastrado em">{formatarDiaDoInstante(posto.createdAt)}</Dado>
+      <Dado rotulo="Notas" largo>{posto.notes}</Dado>
     </CartaoDaFicha>
   );
 }

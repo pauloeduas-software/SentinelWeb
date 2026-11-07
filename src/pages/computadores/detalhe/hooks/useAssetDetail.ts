@@ -20,7 +20,7 @@ import { useAbaNaUrl } from '../../../../hooks/useAbaNaUrl';
 import { BUSCA_DA_FICHA } from '../../../../hooks/useBuscaDaFicha';
 import { confirmar } from '../../../../hooks/useConfirmacao';
 import { useBuscaLocalDaFicha } from '../../../../hooks/usePaginaLocal';
-import { useVoltaComFiltros } from '../../../../hooks/useVoltaComFiltros';
+import { useVoltaComFiltros, useVoltaParaEstaFicha } from '../../../../hooks/useVoltaComFiltros';
 import { useNotificacao } from '../../../../hooks/useNotificacao';
 import { erroDaFicha, linksDoErro } from '../../../../helpers/erro.helper';
 import { textoDaPosse } from '../../helpers/posse.helper';
@@ -41,6 +41,7 @@ export function useAssetDetail() {
 
   const [aba, setAba] = useAbaNaUrl<AbaId>(IDS_DAS_ABAS, BUSCA_DA_FICHA);
   const voltar = useVoltaComFiltros('/computadores');
+  const voltaParaEstaFicha = useVoltaParaEstaFicha();
   const [modal, setModal] = useState<ModalAberto>('nenhum');
 
   const { data: asset, isPending, error } = useAssetQuery(id);
@@ -48,6 +49,7 @@ export function useAssetDetail() {
   // A aba Responsáveis, com a busca da de Estoque e Licenças. A posse chega com o
   // ativo: a lista tem uma linha só, ou nenhuma, e se filtra aqui.
   const responsaveis = useBuscaLocalDaFicha(asset?.posse?.assignmentId ? [asset.posse] : [], textoDaPosse);
+  const postoAtual = asset?.postoAtual;
 
   const [paginaDoHistorico, setPaginaDoHistorico] = useState(1);
   const {
@@ -190,6 +192,8 @@ export function useAssetDetail() {
     aba,
     setAba,
     responsaveis,
+    // A linha do posto abre a ficha dele (BS), e a seta volta para cá.
+    abrirPosto: postoAtual ? () => navigate(`/postos/${postoAtual.id}`, { state: voltaParaEstaFicha }) : undefined,
     // Sem resposta, sem número: `undefined`, e a aba fica sem contagem.
     contagens: {
       // Quem responde hoje, como em Estoque e Licenças: o posto conta um, tenha quantos ocupantes tiver.

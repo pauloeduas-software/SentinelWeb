@@ -31,7 +31,7 @@ export function Badge({ className, tom = 'neutro', ...props }: BadgeProps) {
 export function PontoDeStatus({ tom, children }: { tom: 'sucesso' | 'aviso' | 'perigo' | 'info' | 'neutro'; children: React.ReactNode }) {
   const cor = { sucesso: 'bg-status-success', aviso: 'bg-status-warning', perigo: 'bg-status-danger', info: 'bg-status-info', neutro: 'bg-text-tertiary' }[tom];
   return (
-    <span className="inline-flex max-w-full items-center gap-1.5 text-sm">
+    <span className="inline-flex max-w-full items-center gap-1.5 align-top text-sm">
       <span aria-hidden="true" className={cn('size-2 shrink-0 rounded-full', cor)} />
       <span className="truncate">{children}</span>
     </span>

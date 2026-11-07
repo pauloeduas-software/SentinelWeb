@@ -97,7 +97,7 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
         <Input type="date" required max={hoje} value={data} onChange={(event) => setData(event.target.value)} />
       </Campo>
 
-      <Campo rotulo="Notas" ajuda="Aparece na aba Detalhes enquanto a baixa valer.">
+      <Campo rotulo="Notas" ajuda="Aparece na ficha enquanto a baixa valer.">
         <Textarea value={observacoes} onChange={(event) => setObservacoes(event.target.value)} />
       </Campo>
     </FormularioLateral>

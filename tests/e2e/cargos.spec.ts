@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext, type Browser } from '@playwright/test';
-import { criarItem, criarLicenca, criarPosto, tituloDaPagina, vigiarConsole } from './helpers';
+import { criarAtivo, criarItem, criarLicenca, criarPosto, tituloDaPagina, vigiarConsole } from './helpers';
 
 // OS CARGOS NA TELA (AV): o menu mostra o que o cargo alcança, e a URL digitada
 // do que ele não alcança volta para a raiz. Quem autoriza é o servidor
@@ -62,6 +62,17 @@ test('o Supervisor vê Configurações, e não Usuários', async ({ browser, req
   await expect(page).toHaveURL(/\/computadores$/);
 
   conferirConsole();
+  await fechar();
+});
+
+test('no card do computador, o valor da compra não aparece para o Técnico', async ({ browser, request }) => {
+  const id = await criarAtivo(request, { orderNumber: 'PC-DO-CARGO', purchaseCost: '1500.00' });
+  const { page, fechar } = await entrarComo(browser, request, 'TECNICO');
+
+  await page.goto(`/computadores/${id}`);
+  await expect(page.getByText('PC-DO-CARGO')).toBeVisible();
+  await expect(page.getByText('Valor da compra')).toHaveCount(0);
+
   await fechar();
 });
 
