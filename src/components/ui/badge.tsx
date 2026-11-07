@@ -26,7 +26,7 @@ export function Badge({ className, tom = 'neutro', ...props }: BadgeProps) {
 
 /**
  * O ponto com o texto ao lado: a SITUAÇÃO do registro, a mesma peça na tabela, no
- * cartão, na ficha e na janela (BB). O `Badge` fica para o selo que não é situação.
+ * cartão e na ficha (BB). O `Badge` fica para o selo que não é situação.
  */
 export function PontoDeStatus({ tom, children }: { tom: 'sucesso' | 'aviso' | 'perigo' | 'info' | 'neutro'; children: React.ReactNode }) {
   const cor = { sucesso: 'bg-status-success', aviso: 'bg-status-warning', perigo: 'bg-status-danger', info: 'bg-status-info', neutro: 'bg-text-tertiary' }[tom];

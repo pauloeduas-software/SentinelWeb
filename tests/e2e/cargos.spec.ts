@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext, type Browser } from '@playwright/test';
-import { tituloDaPagina, vigiarConsole } from './helpers';
+import { criarItem, criarLicenca, tituloDaPagina, vigiarConsole } from './helpers';
 
 // OS CARGOS NA TELA (AV): o menu mostra o que o cargo alcança, e a URL digitada
 // do que ele não alcança volta para a raiz. Quem autoriza é o servidor
@@ -62,5 +62,48 @@ test('o Supervisor vê Configurações, e não Usuários', async ({ browser, req
   await expect(page).toHaveURL(/\/computadores$/);
 
   conferirConsole();
+  await fechar();
+});
+
+test('na ficha, o Técnico opera, e o que é do Supervisor não aparece', async ({ browser, request }) => {
+  const nomeDoItem = `Item do cargo ${Date.now()}`;
+  const nomeDaLicenca = `Licença do cargo ${Date.now()}`;
+  const item = await criarItem(request, nomeDoItem);
+  const licenca = await criarLicenca(request, nomeDaLicenca);
+  const { page, fechar } = await entrarComo(browser, request, 'TECNICO');
+  const principal = page.getByRole('main');
+
+  await page.goto(`/estoque/${item}`);
+  await expect(principal.getByRole('button', { name: 'Entregar' })).toBeVisible();
+  await expect(principal.getByRole('button', { name: 'Editar' })).toBeVisible();
+  await expect(principal.getByRole('button', { name: `Ações de ${nomeDoItem}` })).toHaveCount(0);
+
+  // Licença é contrato e dinheiro: o Técnico entrega, e não edita.
+  await page.goto(`/licencas/${licenca}`);
+  await expect(principal.getByRole('button', { name: 'Entregar' })).toBeVisible();
+  await expect(principal.getByRole('button', { name: 'Editar' })).toHaveCount(0);
+  await expect(principal.getByRole('button', { name: `Ações de ${nomeDaLicenca}` })).toHaveCount(0);
+
+  await fechar();
+});
+
+test('na ficha, o Supervisor desativa, encerra e exclui', async ({ browser, request }) => {
+  const nomeDoItem = `Item do Supervisor ${Date.now()}`;
+  const nomeDaLicenca = `Licença do Supervisor ${Date.now()}`;
+  const item = await criarItem(request, nomeDoItem);
+  const licenca = await criarLicenca(request, nomeDaLicenca);
+  const { page, fechar } = await entrarComo(browser, request, 'SUPERVISOR');
+
+  await page.goto(`/estoque/${item}`);
+  await page.getByRole('button', { name: `Ações de ${nomeDoItem}` }).click();
+  await expect(page.getByRole('menuitem', { name: 'Desativar' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Excluir' })).toBeVisible();
+
+  await page.goto(`/licencas/${licenca}`);
+  await expect(page.getByRole('main').getByRole('button', { name: 'Editar' })).toBeVisible();
+  await page.getByRole('button', { name: `Ações de ${nomeDaLicenca}` }).click();
+  await expect(page.getByRole('menuitem', { name: 'Encerrar' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Excluir' })).toBeVisible();
+
   await fechar();
 });

@@ -7,20 +7,12 @@ import { useCheckinAsset } from '../../../../queries/assignment.queries';
 import { confirmar } from '../../../../hooks/useConfirmacao';
 import { useNotificacao } from '../../../../hooks/useNotificacao';
 import { useVoltaComFiltros, useVoltaParaEstaFicha } from '../../../../hooks/useVoltaComFiltros';
-import { linksDoErro } from '../../../../helpers/erro.helper';
+import { erroDaFicha, linksDoErro } from '../../../../helpers/erro.helper';
 import type { AtivoDoPosto } from '../../../../types/workstation.types';
 import { useOcupantes } from '../../hooks/useOcupantes';
 
 // Estado da FICHA DO POSTO: o formulário aberto, a devolução e o caminho de volta.
 // Quem busca dado é a query do domínio; nenhum componente da pasta fala HTTP.
-
-/** Só o 404 diz que o posto não existe: um 500 ou a rede caída dizem que não deu para abrir. */
-function mensagemDoErro(error: Error | null, temFicha: boolean): string | null {
-  if (!error) return null;
-  if ((error as { status?: number }).status === 404) return error.message;
-  // Atualização que falha com a ficha já na tela não a fecha; o 404 fecha.
-  return temFicha ? null : `Não foi possível abrir o posto: ${error.message}`;
-}
 
 export function useFichaDoPosto() {
   const notificar = useNotificacao();
@@ -96,7 +88,7 @@ export function useFichaDoPosto() {
     // O 404 de `/postos/<id-que-não-existe>`. Sem isto a ficha abriria com zero
     // ativos e zero ocupantes, que é indistinguível de um posto novo e vazio — a
     // tela mentiria em vez de dizer que o link está morto.
-    erro: mensagemDoErro(error, posto != null),
+    erro: erroDaFicha(error, posto != null, 'o posto'),
     voltar,
     voltaDoComputador,
     ocupantes,

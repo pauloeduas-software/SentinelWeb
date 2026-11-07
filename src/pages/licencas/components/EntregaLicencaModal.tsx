@@ -139,7 +139,7 @@ export default function EntregaLicencaModal({ licenca, onClose, onSubmit }: Entr
               placeholderDaBusca="Buscar chave…"
               opcoesMono
               className={licenseKeyId ? 'font-mono' : undefined}
-              // A posição vem da lista inteira: é o mesmo número do detalhe.
+              // A posição vem da lista inteira: é o mesmo número da ficha.
               opcoes={chaves.flatMap((chave, indice) => (comLugar.includes(chave)
                 ? [{ value: chave.id, label: rotuloDaChave(chave, indice + 1), detalhe: lugarDaChave(chave) }]
                 : []))}

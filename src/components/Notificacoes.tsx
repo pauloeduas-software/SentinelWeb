@@ -51,8 +51,8 @@ function Cartao({ notificacao, onFechar }: { notificacao: Notificacao; onFechar:
           identificador comprido sem espaço — sem isso, o cartão estoura. */}
       <div className="flex-1 min-w-0 space-y-1.5">
         <p className="break-words leading-relaxed">{notificacao.mensagem}</p>
-        {/* Os links da recusa — cada licença que precisa voltar, até o
-            detalhe dela, onde mora o Devolver. Clicar fecha o cartão. */}
+        {/* Os links da recusa — cada licença que precisa voltar, até a
+            ficha dela, onde mora o Devolver. Clicar fecha o cartão. */}
         {notificacao.links && (
           <div className="flex flex-wrap gap-x-3 gap-y-1">
             {notificacao.links.map((link) => (

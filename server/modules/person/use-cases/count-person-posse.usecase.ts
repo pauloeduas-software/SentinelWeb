@@ -121,7 +121,7 @@ export interface RecusaDaPessoa {
  * AS QUATRO PONTAS VÊM PELO NOME — "responde por 1 ativo (ATV-00012)", "tem 3
  * licenças (AutoCAD, Office e VPN)", "está com 3 unidades de estoque (Mouse USB
  * ×2 e Teclado)", "ocupa 1 posto (Mesa 1)" — e como `refs`: o Devolver mora na
- * ficha do computador, no detalhe da licença e no do item, e o Encerrar na
+ * ficha do computador, na da licença e na do item, e o Encerrar na
  * ficha do posto; quem desliga um funcionário que sai vai direto a cada um
  * pelo link.
  *

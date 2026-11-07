@@ -22,7 +22,7 @@ export function statusDaUrl(valor: string | null): StatusDoFiltro | undefined {
 /**
  * Por que esta licença não pode ser entregue agora — `null` quando pode.
  *
- * A mesma regra na tabela e no detalhe: o servidor recusa vencida, encerrada e
+ * A mesma regra na tabela e na ficha: o servidor recusa vencida, encerrada e
  * sem livre, e o botão não convida ao 409. O texto vai no `title` do botão.
  */
 export function motivoParaNaoEntregar(licenca: Pick<Licenca, 'status' | 'livres'>): string | null {
@@ -63,7 +63,7 @@ export function esconderChave(chave: string): string {
 /**
  * Uma chave como as listas a nomeiam: a posição na licença e o começo, escondido
  * — "3. ABCDE-FGHIJ-•••••-•••••-•••••". A posição separa duas chaves que começam
- * igual, e é o mesmo número no detalhe, no "Com quem está" e na entrega.
+ * igual, e é o mesmo número na aba Chaves, no "Com quem está" e na entrega.
  */
 export function rotuloDaChave(chave: Pick<ChaveDaLicenca, 'productKey'>, posicao: number): string {
   return `${posicao}. ${esconderChave(chave.productKey)}`;

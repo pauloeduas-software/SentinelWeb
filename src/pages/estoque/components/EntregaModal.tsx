@@ -141,10 +141,10 @@ export default function EntregaModal({ item, onClose, onSubmit }: EntregaModalPr
 
       <p className="text-sm leading-relaxed text-text-secondary">
         {componente
-          ? 'Fica no computador, mesmo quando ele muda de mãos. Para tirar, use o Retirar no detalhe do item.'
+          ? 'Fica no computador, mesmo quando ele muda de mãos. Para tirar, use o Retirar na ficha do item.'
           : ehConsumivel(item)
             ? 'Consumível não volta: a entrega tira do total. Lançou errado? Some de volta pelo Editar.'
-            : 'No posto, vale pela mesa: qualquer ocupante responde. A devolução é feita no detalhe do item.'}
+            : 'No posto, vale pela mesa: qualquer ocupante responde. A devolução é feita na ficha do item.'}
       </p>
     </FormularioLateral>
   );

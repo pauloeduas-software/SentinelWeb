@@ -4,7 +4,7 @@ import { agruparPorLote } from '../helpers/stock-lote.helper';
 
 // O ESTOQUE NUMA FICHA — a do posto, a do colaborador e a aba Componentes do
 // computador (AI): o que está com ele AGORA, uma linha por ENTREGA ("Mouse USB · 3 unidades"), com o item e desde
-// quando. A devolução mora no detalhe do item, como a da licença: a ficha
+// quando. A devolução mora na ficha do item, como a da licença: a ficha
 // mostra e aponta para lá.
 //
 // Consulta nas entregas, e não no item, de propósito: a pergunta é "o que está
@@ -61,8 +61,7 @@ export function listPersonStock(personId: string) {
 
 /**
  * Os COMPONENTES instalados neste computador (AI) — a aba Componentes. O
- * Retirar mora no detalhe do item, como a devolução de licença mora na tela de
- * Licenças.
+ * Retirar mora na ficha do item, como a devolução de licença mora na ficha dela.
  *
  * O computador na lixeira é 404, como a aba Licenças.
  */

@@ -14,8 +14,8 @@ import { travarLicencaOuFalhar } from './lock-license.usecase';
  * que já foi entregue e voltou se exclui: as entregas devolvidas perdem a
  * ligação e guardam o nome por escrito, e o histórico do computador e o do
  * colaborador continuam dizendo "Office 2021". As chaves vão junto com a
- * licença — a entrega devolvida perde também a dela: nenhuma tela fora do
- * detalhe da licença a mostrava, e chave é dado sensível, que não se copia.
+ * licença — a entrega devolvida perde também a dela: nenhuma tela fora da
+ * ficha da licença a mostrava, e chave é dado sensível, que não se copia.
  * O histórico da própria licença vai junto; o contrato que se quer guardar se
  * ENCERRA.
  *

@@ -15,8 +15,7 @@ O visual vem da IntraNet (AY). Tela nova usa os primitivos de `src/components/ui
 | `PaginaCabecalho` | só o título e o voltar: nenhum botão no cabeçalho (BB) |
 | `CartoesDeContagem` | o número que filtra |
 | `FormularioLateral` | todo formulário |
-| `JanelaDeDetalhe` | detalhe de item e licença, em abas |
-| `CartaoDaFicha` e `TabelaDaFicha` | a ficha em página: computador, colaborador e posto |
+| `CartaoDaFicha` e `TabelaDaFicha` | a ficha em página: computador, colaborador, posto, item e licença |
 | `AcoesDaLinha` | o `⋯` |
 | `confirmar()` (`hooks/useConfirmacao`) | a pergunta, nunca `confirm()` |
 | `useNotificacao` | o cartão da resposta a um clique, nunca `alert()` |
@@ -42,7 +41,7 @@ Cadastro novo copia `src/components/catalogo/` (`CatalogTable` + `useCatalog`), 
 
 ## O registro
 
-- **O CRUD é um só.** A linha inteira abre o registro (detalhe, ficha ou Editar). Editar,
+- **O CRUD é um só.** A linha inteira abre o registro (a ficha ou, no cadastro sem ficha, o Editar). Editar,
   Desativar/Ativar e Excluir, nessa ordem, no `⋯` (AY).
 - **Excluir sempre clica, e quem recusa é o 409.** A exceção é a própria conta, em Usuários: ali
   Excluir e Desativar ficam desligados, porque ninguém age sobre si mesmo.
@@ -67,10 +66,12 @@ mostram a senha no painel aberto, e a troca obrigatória de senha, que já leva 
 
 ## A ficha
 
+- **O detalhe de um registro é página, nunca janela (BK).** Os campos moram no card, e cada aba é o que
+  está com o registro. Formulário é painel lateral, por cima da ficha.
 - **A ação da ficha fica no card (`CartaoDaFicha`), e nenhuma aba repete botão (BB).**
 - **A seta volta para onde a ficha foi aberta, como estava (BB, BJ).** `useVoltaComFiltros` lê o caminho no
   `state` da navegação; sem ele, como no link colado, vai para a lista. A ficha que abre outra passa
-  `useVoltaParaEstaFicha`.
+  `useVoltaParaEstaFicha`, e a `TabelaDaFicha` faz isso em toda linha. O nome na seta vem de `rotuloDaVolta`.
 - **A pergunta segue o risco.** Sem volta: pergunta e vermelho. Com volta: pergunta sem vermelho.
   Rotina: sem pergunta.
 

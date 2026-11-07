@@ -29,15 +29,15 @@ interface PessoaDaFicha {
 
   /**
    * O estoque no NOME dela, uma linha por ENTREGA ("Mouse USB · 2 unidades"),
-   * cada uma com o link para o detalhe do item, onde está o Devolver — como as
+   * cada uma com o link para a ficha do item, onde está o Devolver — como as
    * licenças abaixo, e como a ficha do posto faz com `itens`
    * (`get-workstation.usecase.ts`).
    */
   itens: Awaited<ReturnType<typeof listPersonStock>>;
 
   /**
-   * As licenças entregues A ELA e ainda abertas, cada uma com o link para o
-   * detalhe da licença, onde está o Devolver. É o que o 409 da desativação manda
+   * As licenças entregues A ELA e ainda abertas, cada uma com o link para a
+   * ficha da licença, onde está o Devolver. É o que o 409 da desativação manda
    * devolver — e a ficha é o único lugar que as mostra pela pessoa.
    */
   licencas: ReturnType<typeof comStatus>;

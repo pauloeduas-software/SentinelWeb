@@ -58,7 +58,7 @@ export default function ListaVazia({
   );
 }
 
-/** O mesmo vazio fora de tabela: a aba da ficha, a janela, a lista de cartões. */
+/** O mesmo vazio fora de tabela: a aba da ficha e a lista de cartões. */
 export function CartaoVazio(props: ListaVaziaProps) {
   return <Card className="overflow-hidden"><ListaVazia {...props} /></Card>;
 }

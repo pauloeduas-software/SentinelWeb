@@ -221,8 +221,8 @@ Regras práticas:
 
 - **Componente não faz `fetch`.** A escrita sobe por prop (`onSubmit`, `onComando`,
   `onDelete`) até o hook da página. Ler pode, pelas queries de `src/queries/`: os
-  seletores (`ReferenceSelect`, `CategoriaFiltro`), os formulários e as janelas de
-  detalhe buscam as próprias opções e o registro que abrem. Uma exceção escreve:
+  seletores (`ReferenceSelect`, `CategoriaFiltro`), e os formulários
+  buscam as próprias opções e o registro que abrem. Uma exceção escreve:
   `components/TelemetriaDaMaquina` (consulta e revalida uma máquina, e manda comando
   nela), um widget AUTOCONTIDO usado por telas sem relação entre si, onde passar
   tudo por prop duplicaria a mesma ligação em cada chamador. Exceção se declara no
@@ -304,7 +304,7 @@ responde por ela, e ela impede o cadastro de sumir. Então `count-person-posse`
 (o 409 da exclusão e da desativação da pessoa) e o 409 da baixa e da exclusão do
 ativo contam as licenças abertas, em vez de o domínio de licença ganhar versões
 próprias. Nada fecha sozinho: o 409 manda devolver, com um link para cada
-licença, e a ficha do colaborador e a aba Licenças do ativo levam ao detalhe da
+licença, e a ficha do colaborador e a aba Licenças do ativo levam à ficha da
 licença, o único lugar com o Devolver. A licença do computador não é da pessoa
 que responde por ele.
 
@@ -365,8 +365,8 @@ linha 460 de um documento chamado "Arquitetura". Elas viraram guias:
 
 `src/components/ui/` são os primitivos (Radix por baixo): botão, campo, seletor, tabela, abas, janela. Em cima
 deles, as peças que as telas repetem: `PaginaCabecalho`, `ListToolbar`, `FiltroDaLista`, `VistasDaLista`,
-`ListaVazia`, `AcoesDaLinha`, `FormularioLateral`, `CartaoDaFicha`, `TabelaDaFicha`, `LinhaDoTempo`,
-`JanelaDeDetalhe` e `DialogoDeConfirmacao`. A cor mora em `src/index.css`, com um valor por tema; a classe `dark`
+`ListaVazia`, `AcoesDaLinha`, `FormularioLateral`, `CartaoDaFicha`, `TabelaDaFicha`, `LinhaDoTempo`
+e `DialogoDeConfirmacao`. A cor mora em `src/index.css`, com um valor por tema; a classe `dark`
 no `<html>` decide qual vale, e o `index.html` a aplica antes do primeiro quadro para o F5 não piscar
 (`hooks/useTema`). O porquê está na [AY](../decisoes/plataforma.md#ay--o-visual-vem-da-intranet-em-tema-claro-e-escuro-e-a-linha-inteira-abre-o-registro).
 

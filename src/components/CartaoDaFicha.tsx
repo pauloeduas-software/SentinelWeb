@@ -36,15 +36,15 @@ export function IconeDaFicha({ children }: { children: ReactNode }) {
 interface FichaIndisponivelProps {
   /** O nome da lista, no título e no link: "Computadores". */
   lista: string;
-  /** O nome no link, quando a ficha foi aberta de outra tela. */
-  rotuloDaVolta?: string;
+  /** O nome no link: a lista, ou a ficha que abriu esta (`rotuloDaVolta`). */
+  rotuloDaVolta: string;
   voltar: Volta;
   carregando: boolean;
   erro: string | null;
 }
 
 /** A ficha que ainda não chegou ou não existe: o cabeçalho não fica sem título. */
-export function FichaIndisponivel({ lista, rotuloDaVolta = lista, voltar, carregando, erro }: FichaIndisponivelProps) {
+export function FichaIndisponivel({ lista, rotuloDaVolta, voltar, carregando, erro }: FichaIndisponivelProps) {
   return (
     <div className="space-y-4">
       <PaginaCabecalho titulo={lista} voltar={{ ...voltar, rotulo: rotuloDaVolta }} />

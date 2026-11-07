@@ -7,14 +7,14 @@ import { formatarMoeda } from './format.helper';
 // mesma frase.
 
 /**
- * O endereço do detalhe de uma licença: a tela de Licenças abre a janela dela.
- * É por ele que o ativo e a ficha do colaborador apontam para a licença — a
- * devolução mora lá. `busca` é quem está com ela — o nome do colaborador ou a
- * etiqueta do computador —, e "Com quem está" já abre filtrado.
+ * O endereço da ficha de uma licença. É por ele que o ativo e a ficha do
+ * colaborador apontam para a licença — a devolução mora lá. `busca` é quem está
+ * com ela — o nome do colaborador ou a etiqueta do computador —, e "Com quem está"
+ * já abre filtrado.
  */
 export function caminhoDaLicenca(licenseId: string, busca?: string): string {
-  const parametros = new URLSearchParams({ licenca: licenseId, ...(busca ? { quem: busca } : {}) });
-  return `/licencas?${parametros.toString()}`;
+  const parametros = busca ? `?${new URLSearchParams({ quem: busca }).toString()}` : '';
+  return `/licencas/${licenseId}${parametros}`;
 }
 
 /** O status no vocabulário da tela: `EXPIRADA` é a que a tela chama de vencida. */

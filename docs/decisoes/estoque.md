@@ -203,6 +203,8 @@ que mostrá-la. A cor do saldo na tela usa `<= 0`, não `=== 0`, por este motivo
 
 ## AE — O estoque segue a lógica da licença: total na edição, entrega com dia, desativar em vez de lixeira
 
+> **Superada em parte por [BK](./plataforma.md#bk--estoque-e-licenças-têm-ficha-em-página):** a devolução mora na ficha do item, em `/estoque/:id`, e o link leva a ela.
+>
 > **Superada em parte por [AG](#ag--a-regra-do-posto-vale-para-o-estoque-e-a-licença-só-o-que-está-em-uso-impede-a-exclusão):** o item e a licença excluem pela regra do posto: só o que está em uso recusa, e o passado fica com o nome por escrito; as chaves vão junto com a licença.
 
 > **Superada em parte por [AN](./licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura):**
