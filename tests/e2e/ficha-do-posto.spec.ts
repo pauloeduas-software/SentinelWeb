@@ -396,6 +396,31 @@ test('a aba Responsáveis do posto busca, corrige o turno e encerra na própria 
   conferirConsole();
 });
 
+test('o Adicionar do ⋯ da lista abre o painel sem sair dela, e a linha já traz a pessoa', async ({ page, request }) => {
+  const conferirConsole = vigiarConsole(page);
+  const nome = `Mesa do menu ${Date.now()}`;
+  const pessoa = `Pessoa de ${nome}`;
+  await criarPosto(request, nome);
+  await criarColaborador(request, pessoa);
+
+  await page.goto(`/postos?busca=${encodeURIComponent(nome)}`);
+  await page.getByRole('button', { name: `Ações de ${nome}` }).click();
+  await page.getByRole('menuitem', { name: 'Adicionar ao posto', exact: true }).click();
+
+  const painel = page.locator('[data-painel-lateral]');
+  await expect(painel).toContainText(nome);
+  await painel.getByRole('combobox').click();
+  await page.getByRole('option', { name: pessoa }).click();
+  await painel.getByRole('button', { name: 'Adicionar', exact: true }).click();
+
+  await expect(page.getByText('Responsável adicionado.')).toBeVisible();
+  await expect(painel).toHaveCount(0);
+  await expect(page).toHaveURL(/\/postos\?busca=/);
+  await expect(page.getByRole('row', { name: new RegExp(nome) })).toContainText(pessoa);
+
+  conferirConsole();
+});
+
 test('a Máquina é a mesma no posto e no computador, e quem desvincula é Descobertas', async ({ page, request }) => {
   const conferirConsole = vigiarConsole(page);
   const { posto, ativo, assetTag } = await computadorNoPosto(request, `Mesa da máquina ${Date.now()}`);
