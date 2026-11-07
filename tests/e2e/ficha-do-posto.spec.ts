@@ -25,7 +25,7 @@ test('a linha abre a página do posto, e a seta volta com o cartão escolhido', 
   await page.goto('/postos');
   const semUso = page.getByRole('main').getByRole('button', { name: /Sem uso/ });
   await semUso.click();
-  await expect(page).toHaveURL(/\?situacao=sem-uso$/);
+  await expect(page).toHaveURL(/\?status=sem-uso$/);
 
   await page.getByRole('row', { name: new RegExp(nome) }).click();
   await expect(page).toHaveURL(/\/postos\/[^/?]+$/);
@@ -35,7 +35,7 @@ test('a linha abre a página do posto, e a seta volta com o cartão escolhido', 
   await expect(page.getByRole('dialog')).toHaveCount(0);
 
   await page.getByRole('link', { name: 'Voltar para Postos' }).click();
-  await expect(page).toHaveURL(/\/postos\?situacao=sem-uso$/);
+  await expect(page).toHaveURL(/\/postos\?status=sem-uso$/);
   await expect(semUso).toHaveAttribute('aria-pressed', 'true');
 
   conferirConsole();
@@ -59,7 +59,7 @@ test('a busca volta no campo depois de abrir um posto', async ({ page, request }
 });
 
 test('duas trocas seguidas na lista valem as duas', async ({ page }) => {
-  await page.goto('/postos?situacao=ocupados&busca=mesa');
+  await page.goto('/postos?status=ocupados&busca=mesa');
   const principal = page.getByRole('main');
   await expect(principal.getByRole('button', { name: /Ocupados/ })).toHaveAttribute('aria-pressed', 'true');
 
@@ -73,7 +73,7 @@ test('duas trocas seguidas na lista valem as duas', async ({ page }) => {
   })()`);
 
   await expect(principal.getByRole('button', { name: /Ocupados/ })).toHaveAttribute('aria-pressed', 'false');
-  await expect(page).not.toHaveURL(/situacao|busca/);
+  await expect(page).not.toHaveURL(/status|busca/);
 });
 
 test('Editar na ficha salva e continua na ficha, com a nota no card', async ({ page, request }) => {
@@ -184,7 +184,7 @@ test('na lista, Responsáveis mostra o posto sem quem o ocupa, que fica pendurad
   await expect(comAPessoa.getByText(/Posto /)).toHaveCount(0);
 });
 
-test('em Postos, Responsáveis traz só o nome, e o posto vago fica na Situação', async ({ page, request }) => {
+test('em Postos, Responsáveis traz só o nome, e o posto vago fica no Status', async ({ page, request }) => {
   const vago = `Mesa vaga ${Date.now()}`;
   await computadorNoPosto(request, vago);
   const ocupado = `Mesa com turno ${Date.now()}`;

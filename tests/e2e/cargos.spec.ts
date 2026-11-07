@@ -65,6 +65,19 @@ test('o Supervisor vê Configurações, e não Usuários', async ({ browser, req
   await fechar();
 });
 
+test('na linha do computador, o Técnico não vê Dar baixa', async ({ browser, request }) => {
+  const id = await criarAtivo(request);
+  const { assetTag } = await (await request.get(`/api/assets/${id}`)).json() as { assetTag: string };
+  const { page, fechar } = await entrarComo(browser, request, 'TECNICO');
+
+  await page.goto(`/computadores?busca=${assetTag}`);
+  await page.getByRole('button', { name: `Ações de ${assetTag}` }).click();
+  await expect(page.getByRole('menuitem', { name: 'Clonar' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Dar baixa' })).toHaveCount(0);
+
+  await fechar();
+});
+
 test('no card do computador, o valor da compra não aparece para o Técnico', async ({ browser, request }) => {
   const id = await criarAtivo(request, { orderNumber: 'PC-DO-CARGO', purchaseCost: '1500.00' });
   const { page, fechar } = await entrarComo(browser, request, 'TECNICO');

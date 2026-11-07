@@ -17,15 +17,15 @@ export function caminhoDaLicenca(licenseId: string, busca?: string): string {
   return `/licencas/${licenseId}${parametros}`;
 }
 
-/** O status no vocabulário da tela: `EXPIRADA` é a que a tela chama de vencida. */
+/** O status no vocabulário da tela: `EXPIRADA` é o que a tela chama de Vencido. */
 export const ROTULO_DO_STATUS: Record<StatusDaLicenca, string> = {
-  ATIVA: 'Ativa',
+  ATIVA: 'Ativo',
   VENCENDO: 'Vencendo',
-  EXPIRADA: 'Vencida',
-  ENCERRADA: 'Encerrada',
+  EXPIRADA: 'Vencido',
+  ENCERRADA: 'Encerrado',
 };
 
-/** O tom da situação, a única cor que o dado pode ter (AY): a encerrada já acabou, não pede nada. */
+/** O tom do status, a única cor que o dado pode ter (AY): a encerrada já acabou, não pede nada. */
 export const TOM_DO_STATUS: Record<StatusDaLicenca, 'sucesso' | 'aviso' | 'perigo' | 'neutro'> = {
   ATIVA: 'sucesso',
   VENCENDO: 'aviso',

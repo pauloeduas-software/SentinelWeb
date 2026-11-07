@@ -23,6 +23,7 @@ export class CatalogMaestro {
       // Rota estática antes da paramétrica não é exigência do find-my-way (ele
       // resolve por especificidade), mas deixa a intenção explícita na leitura.
       server.get(`${base}/options`, controller.options);
+      if (spec.cartoesDeStatus) server.get(`${base}/stats`, controller.stats);
       server.post(base, WRITE_RATE_LIMIT, controller.create);
       server.put(`${base}/:id`, WRITE_RATE_LIMIT, controller.update);
       server.delete(`${base}/:id`, WRITE_RATE_LIMIT, controller.remove);

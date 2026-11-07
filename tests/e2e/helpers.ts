@@ -51,6 +51,7 @@ export async function criarItem(
   tipo: 'STOCK' | 'COMPONENT' | 'CONSUMABLE' = 'STOCK',
 ): Promise<string> {
   const categoria = await request.post('/api/categories', { data: { name: `Categoria de ${nome}`, type: tipo } });
+  expect(categoria.status()).toBe(201);
   const { id: categoryId } = (await categoria.json()) as { id: string };
   const item = await request.post('/api/stock/items', { data: { name: nome, categoryId, qty: 5 } });
   expect(item.status()).toBe(201);
@@ -60,6 +61,7 @@ export async function criarItem(
 /** Uma licença de três, com as chaves pedidas. Devolve o id. */
 export async function criarLicenca(request: APIRequestContext, nome: string, chaves: readonly string[] = []): Promise<string> {
   const categoria = await request.post('/api/categories', { data: { name: `Categoria de ${nome}`, type: 'LICENSE' } });
+  expect(categoria.status()).toBe(201);
   const { id: categoryId } = (await categoria.json()) as { id: string };
   const licenca = await request.post('/api/licenses', {
     data: { name: nome, categoryId, seatsTotal: 3, keys: chaves.map((productKey) => ({ productKey, seats: 1 })) },
@@ -68,18 +70,33 @@ export async function criarLicenca(request: APIRequestContext, nome: string, cha
   return ((await licenca.json()) as { id: string }).id;
 }
 
-/** Um ativo de verdade, com o modelo que ele exige. Devolve o id. */
-export async function criarAtivo(request: APIRequestContext, dados: Record<string, unknown> = {}): Promise<string> {
+/**
+ * O modelo dos computadores de teste, UM por execução. O e2e roda com o teto de escrita
+ * ligado (40 por minuto, por rota, `write-rate-limit.ts`), e criar categoria, fabricante e
+ * modelo a cada ativo estourava `POST /api/categories` no meio da suíte.
+ */
+let modeloDoAtivo: Promise<string> | undefined;
+
+async function criarModeloDoAtivo(request: APIRequestContext): Promise<string> {
   const sufixo = Date.now();
   const categoria = await request.post('/api/categories', { data: { name: `Categoria ${sufixo}`, type: 'ASSET' } });
+  expect(categoria.status()).toBe(201);
   const { id: categoryId } = (await categoria.json()) as { id: string };
   const fabricante = await request.post('/api/manufacturers', { data: { name: `Fabricante ${sufixo}` } });
+  expect(fabricante.status()).toBe(201);
   const { id: manufacturerId } = (await fabricante.json()) as { id: string };
   const modelo = await request.post('/api/asset-models', { data: { name: `Modelo ${sufixo}`, manufacturerId, categoryId } });
-  const { id: modelId } = (await modelo.json()) as { id: string };
+  expect(modelo.status()).toBe(201);
+  return ((await modelo.json()) as { id: string }).id;
+}
 
-  const situacoes = await request.get('/api/status-labels/options?type=DEPLOYABLE');
-  const [disponivel] = (await situacoes.json()) as { id: string }[];
+/** Um ativo de verdade, com o modelo que ele exige. Devolve o id. */
+export async function criarAtivo(request: APIRequestContext, dados: Record<string, unknown> = {}): Promise<string> {
+  modeloDoAtivo ??= criarModeloDoAtivo(request);
+  const modelId = await modeloDoAtivo;
+
+  const opcoes = await request.get('/api/status-labels/options?type=DEPLOYABLE');
+  const [disponivel] = (await opcoes.json()) as { id: string }[];
 
   const ativo = await request.post('/api/assets', { data: { modelId, statusId: disponivel.id, ...dados } });
   expect(ativo.status()).toBe(201);

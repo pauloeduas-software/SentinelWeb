@@ -5,7 +5,7 @@ import HistoryPanel from './components/HistoryPanel';
 import { useColaborador } from './hooks/useColaborador';
 import CartaoDaFicha, { FichaIndisponivel } from '../../../components/CartaoDaFicha';
 import PaginaCabecalho from '../../../components/PaginaCabecalho';
-import SituacaoDaEntrega from '../../../components/SituacaoDaEntrega';
+import StatusDaEntrega from '../../../components/StatusDaEntrega';
 import TabelaDaFicha from '../../../components/TabelaDaFicha';
 import { Avatar } from '../../../components/ui/avatar';
 import { PontoDeStatus } from '../../../components/ui/badge';
@@ -60,7 +60,7 @@ export default function ColaboradorPage() {
           {/* Estar desativado é a primeira coisa que a tela precisa dizer: todo número
               embaixo tem que ser lido como histórico. Quando e por quem foi desativado
               fica na auditoria, no banco (AB). */}
-          <Dado rotulo="Situação">
+          <Dado rotulo="Status">
             <PontoDeStatus tom={pessoa.isActive ? 'sucesso' : 'aviso'}>{pessoa.isActive ? 'Ativo' : 'Desativado'}</PontoDeStatus>
           </Dado>
           <Dado rotulo="E-mail">{pessoa.email}</Dado>
@@ -135,7 +135,7 @@ export default function ColaboradorPage() {
           {/* As entregues a ELA, nunca as do computador que ela usa. */}
           <TabsContent value="licencas">
             <TabelaDaFicha
-              colunas={[{ rotulo: 'Licença' }, { rotulo: 'Categoria', className: 'w-[24%]' }, { rotulo: 'Vencimento', className: 'w-44' }, { rotulo: 'Situação', className: 'w-36' }, DESDE]}
+              colunas={[{ rotulo: 'Licença' }, { rotulo: 'Categoria', className: 'w-[24%]' }, { rotulo: 'Vencimento', className: 'w-44' }, { rotulo: 'Status', className: 'w-36' }, DESDE]}
               icone={KeyRound}
               vazio="Não é responsável por nenhuma licença."
               linhas={pessoa.licencas.map((entrega) => ({
@@ -143,7 +143,7 @@ export default function ColaboradorPage() {
                 para: caminhoDaLicenca(entrega.license.id, pessoa.name),
                 nome: entrega.license.name,
                 nota: entrega.checkoutNotes,
-                celulas: [entrega.license.category?.name ?? '—', prazoDaEntrega(entrega), <SituacaoDaEntrega status={entrega.status} />, formatarDiaDoInstante(entrega.checkoutAt)],
+                celulas: [entrega.license.category?.name ?? '—', prazoDaEntrega(entrega), <StatusDaEntrega status={entrega.status} />, formatarDiaDoInstante(entrega.checkoutAt)],
               }))}
             />
           </TabsContent>

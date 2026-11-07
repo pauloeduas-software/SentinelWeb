@@ -39,7 +39,7 @@ export default function PostosTable({
             <TableHead className="hidden w-[16%] md:table-cell">Localização</TableHead>
             <TableHead>Responsáveis</TableHead>
             <TableHead className="hidden w-28 md:table-cell">Ativos</TableHead>
-            <TableHead className="w-36">Situação</TableHead>
+            <TableHead className="w-36">Status</TableHead>
             {podeEditar && <TableHeadAcoes />}
           </TableRow>
         </TableHeader>

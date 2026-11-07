@@ -1,9 +1,11 @@
-import { Copy, PackageX, Pencil, Trash2, Undo2, UserPlus } from 'lucide-react';
+import { Copy, PackageX, Pencil, RotateCcw, Trash2, Undo2, UserPlus } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import AssetFormModal from '../components/AssetFormModal';
 import CheckoutModal from '../components/CheckoutModal';
+import RetireModal from '../components/RetireModal';
 import AssetTabs from './components/AssetTabs';
 import AvisoDaBaixa from './components/AvisoDaBaixa';
+import AvisoDaLixeira from './components/AvisoDaLixeira';
 import { seloDaSaida } from '../helpers/baixa.helper';
 import IdentificacaoCard from './components/IdentificacaoCard';
 import LicensesTab from './components/LicensesTab';
@@ -12,7 +14,6 @@ import DevolucaoModal from './components/DevolucaoModal';
 import MaquinaTab from './components/MaquinaTab';
 import HistoryTab from './components/HistoryTab';
 import PosseTab from './components/PosseTab';
-import RetireModal from './components/RetireModal';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
 import { FichaIndisponivel } from '../../../components/CartaoDaFicha';
 import ListToolbar from '../../../components/ListToolbar';
@@ -51,7 +52,7 @@ function FichaDoComputador() {
     maquina, maquinaPendente, erroDaMaquina, desvinculando, handleDesvincular,
     modal, abrirEdicao, abrirClone, abrirEntrega, abrirDevolucao, abrirBaixa, fecharModal, statusPadraoId,
     handleSubmit, handleEntregar, handleDevolver, handleDarBaixa, handleReverterSaida,
-    handleDelete,
+    handleDelete, handleRestaurar,
   } = useAssetDetail();
   // A lixeira e a baixa são `SUPERVISOR` no servidor (`DELETE /api/assets/:id`,
   // `retire`, `unretire`); para quem não é, o botão só levaria 403. Antes dos `return` abaixo: hook depois de retorno
@@ -67,6 +68,7 @@ function FichaDoComputador() {
   // A MESMA trava da listagem: só `DEPLOYABLE` sem posse se entrega, e o motivo vai no `title`.
   const bloqueio = bloqueioDaEntrega(asset);
   const baixado = seloDaSaida(asset) !== null;
+  const naLixeira = Boolean(asset.deletedAt);
 
   return (
     <div className="motion-safe:animate-fade-in pb-6">
@@ -78,7 +80,9 @@ function FichaDoComputador() {
       <div className="space-y-6">
         <IdentificacaoCard
           asset={asset}
-          acoes={
+          acoes={naLixeira ? (
+            <Button size="sm" onClick={() => void handleRestaurar()}><RotateCcw /> Restaurar</Button>
+          ) : (
             <>
               <Button size="sm" onClick={abrirEntrega} disabled={bloqueio !== null} title={bloqueio ?? undefined}>
                 <UserPlus /> Entregar
@@ -96,9 +100,10 @@ function FichaDoComputador() {
                 ]}
               />
             </>
-          }
+          )}
         />
 
+        {asset.deletedAt && <AvisoDaLixeira excluidoEm={asset.deletedAt} />}
         <AvisoDaBaixa asset={asset} />
 
         <AssetTabs ativa={aba} onChange={setAba} contagens={contagens}>
@@ -153,7 +158,7 @@ function FichaDoComputador() {
               carregando={maquinaPendente}
               erro={erroDaMaquina}
               desvinculando={desvinculando}
-              onDesvincular={() => void handleDesvincular()}
+              onDesvincular={naLixeira ? undefined : () => void handleDesvincular()}
             />
           </TabsContent>
         </AssetTabs>

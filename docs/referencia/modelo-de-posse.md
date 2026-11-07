@@ -165,7 +165,7 @@ entregue a um posto, o responsável que aparece é o posto, em toda tela. A pess
 só aparece pendurada nele, na aba Responsáveis da ficha do computador. "Ocupante" e
 "posse" são nomes do modelo: na tela, tudo é Responsável
 ([BM](../decisoes/posse.md#bm--o-nome-é-responsável-em-toda-tela)). Em Responsáveis vai só
-o nome: nem turno, nem posto vago, que é a Situação do posto
+o nome: nem turno, nem posto vago, que é o Status do posto
 ([BO](../decisoes/posse.md#bo--em-responsáveis-vai-só-o-nome)).
 
 **E no passado** ([BP](../decisoes/posse.md#bp--o-que-já-foi-mora-na-aba-histórico)): quem entrou e saiu de um posto, e o

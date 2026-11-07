@@ -1,6 +1,6 @@
 import { KeyRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import SituacaoDaEntrega from '../../../../components/SituacaoDaEntrega';
+import StatusDaEntrega from '../../../../components/StatusDaEntrega';
 import TabelaDaFicha from '../../../../components/TabelaDaFicha';
 import type { EntregaDoAlvo } from '../../../../types/license.types';
 import { formatarDiaDoInstante } from '../../../../helpers/format.helper';
@@ -26,7 +26,7 @@ interface LicensesTabProps {
 export default function LicensesTab({ licencas, assetTag, carregando, erro }: LicensesTabProps) {
   return (
     <TabelaDaFicha
-      colunas={[{ rotulo: 'Licença' }, { rotulo: 'Categoria', className: 'w-[24%]' }, { rotulo: 'Vencimento', className: 'w-44' }, { rotulo: 'Situação', className: 'w-36' }, { rotulo: 'Desde', className: 'w-32' }]}
+      colunas={[{ rotulo: 'Licença' }, { rotulo: 'Categoria', className: 'w-[24%]' }, { rotulo: 'Vencimento', className: 'w-44' }, { rotulo: 'Status', className: 'w-36' }, { rotulo: 'Desde', className: 'w-32' }]}
       icone={KeyRound}
       carregando={carregando}
       erro={erro}
@@ -36,7 +36,7 @@ export default function LicensesTab({ licencas, assetTag, carregando, erro }: Li
         para: caminhoDaLicenca(entrega.license.id, assetTag),
         nome: entrega.license.name,
         nota: entrega.checkoutNotes,
-        celulas: [entrega.license.category?.name ?? '—', prazoDaEntrega(entrega), <SituacaoDaEntrega status={entrega.status} />, formatarDiaDoInstante(entrega.checkoutAt)],
+        celulas: [entrega.license.category?.name ?? '—', prazoDaEntrega(entrega), <StatusDaEntrega status={entrega.status} />, formatarDiaDoInstante(entrega.checkoutAt)],
       }))}
     >
       <span className="max-w-md text-center text-xs leading-relaxed">

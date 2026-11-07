@@ -22,6 +22,7 @@ export class StockMaestro {
     server.post('/api/stock/checkouts/:id/checkin', WRITE_RATE_LIMIT, stockController.checkin);
 
     server.get('/api/stock/items', stockController.list);
+    server.get('/api/stock/items/stats', stockController.stats);
     server.get('/api/stock/items/:id', stockController.byId);
     server.get('/api/stock/items/:id/checkouts', stockController.checkouts);
     server.get('/api/stock/items/:id/history', stockController.history);

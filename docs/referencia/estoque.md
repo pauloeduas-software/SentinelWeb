@@ -67,10 +67,10 @@ criada por fora da trava (o `psql` à mão), e esconder a inconsistência seria 
 
 | | |
 |---|---|
-| **a lista** | **uma só**, pelo nome, com os desativados — sem abas, como em Colaboradores. Busca por nome, categoria e localização — o texto ao pé da letra, `%` e `_` não são curinga; filtro de categoria |
-| **a linha** | nome (e as notas), categoria, localização, "3 disponíveis" com "10 no total · 7 em uso" embaixo (no consumível, só "3 disponíveis") e situação. Sem cor pelo valor. A do desativado fica esmaecida |
+| **a lista** | **uma só**, pelo nome, com os desativados — sem abas, como em Colaboradores. Busca por nome, categoria e localização — o texto ao pé da letra, `%` e `_` não são curinga; filtro de categoria. Em cima, os cartões Total, Ativos e Desativados, que contam itens e não unidades: clicar filtra ([BT](../decisoes/plataforma.md#bt--estoque-e-colaboradores-têm-cartões-e-computadores-conta-o-tipo)) |
+| **a linha** | nome (e as notas), categoria, localização, "3 disponíveis" com "10 no total · 7 em uso" embaixo (no consumível, só "3 disponíveis") e status. Sem cor pelo valor. A do desativado fica esmaecida |
 | **as ações** | as do cadastro (AF), no `⋯` da linha (AY): Entregar (desabilitado sem disponível, com o motivo no `title`; some no desativado), Editar, Desativar/Ativar e Excluir — com confirmação no Desativar e no Excluir |
-| **a ficha** (`/estoque/:id`) | no card, a situação, a conta ("10 no total · 7 em uso · 3 disponíveis"), todos os campos do cadastro e as ações da lista, com as mesmas regras (Entregar e Editar abrem o painel por cima da ficha; excluído, volta para a lista). **Responsáveis** (a primeira aba): as entregas abertas, da mais recente para a mais antiga, 15 por página, com busca pelo nome do colaborador ou do posto — "Mesa 1 · 5 unidades · desde 12/10/2026", com a observação —, e Devolver em cada linha. **Histórico**: só entregas e devoluções, por entrega, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
+| **a ficha** (`/estoque/:id`) | no card, o status, a conta ("10 no total · 7 em uso · 3 disponíveis"), todos os campos do cadastro e as ações da lista, com as mesmas regras (Entregar e Editar abrem o painel por cima da ficha; excluído, volta para a lista). **Responsáveis** (a primeira aba): as entregas abertas, da mais recente para a mais antiga, 15 por página, com busca pelo nome do colaborador ou do posto — "Mesa 1 · 5 unidades · desde 12/10/2026", com a observação —, e Devolver em cada linha. **Histórico**: só entregas e devoluções, por entrega, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
 
 A edição mostra o **total** e manda **o formulário inteiro**, como em todas as telas
 ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)), com o `updatedAt` que leu ao abrir: se outra pessoa salvou no meio, é 409
@@ -244,7 +244,8 @@ lista é derivada
 
 | Rota | O que é |
 |---|---|
-| `GET /api/stock/items` | a lista, com os desativados (`?categoryId=`, `?q=`; `view` e `emUso` são 422) |
+| `GET /api/stock/items` | a lista, com os desativados (`?categoryId=`, `?isActive=`, `?q=`; `view` e `emUso` são 422) |
+| `GET /api/stock/items/stats` | os cartões: `{ total, ativos, desativados }` |
 | `GET /api/stock/items/:id` | o item, com a conta |
 | `GET /api/stock/items/:id/checkouts` | quem está com ele, por entrega (`?page=`, `?q=` pelo nome; 15 por página) |
 | `GET /api/stock/items/:id/history` | o histórico, por entrega (`?page=`; 15 por página, sem busca — `?q=` é 422) |

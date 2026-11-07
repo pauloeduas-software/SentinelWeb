@@ -7,10 +7,12 @@ export async function listCatalog(
   spec: CatalogSpec,
   query: ListQuery,
   filtro?: string,
+  ativo?: boolean,
 ): Promise<ListEnvelope<Record<string, unknown>>> {
   const where = {
     ...buildCatalogWhere(spec.searchable, query.q),
     ...(filtro && spec.optionFilter ? { [spec.optionFilter.campo]: filtro } : {}),
+    ...(ativo === undefined ? {} : { isActive: ativo }),
     // A lixeira, na tabela que a tem: `deletedAt` explícito faz a extension de
     // soft delete sair do caminho. Sem `?view=trashed`, a extension esconde.
     ...(spec.lixeira && query.view === 'trashed' ? { deletedAt: { not: null } } : {}),

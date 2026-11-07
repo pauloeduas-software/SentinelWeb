@@ -1,7 +1,7 @@
 import { PontoDeStatus } from '../../../components/ui/badge';
 import type { Posto } from '../../../types/workstation.types';
 
-// A SITUAÇÃO DO POSTO, a mesma na linha da lista e no card da ficha.
+// O STATUS DO POSTO, o mesmo na linha da lista e no card da ficha.
 
 export default function SeloDoPosto({ posto }: { posto: Pick<Posto, 'vago' | 'totalOcupantes'> }) {
   if (posto.vago) return <PontoDeStatus tom="aviso">Posto vago</PontoDeStatus>;

@@ -3,7 +3,9 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { parseListQuery } from '../../../infra/http/list-query';
 import { exigirPermissao } from '../../access/helpers/require-permission';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
+import { filtroDeAtivo } from '../../shared/fields.schema';
 import { idParamSchema } from '../../shared/params.schema';
+import { getCatalogStats } from '../use-cases/catalog-stats.usecase';
 import { listCatalog } from '../use-cases/list-catalog.usecase';
 import { listCatalogOptions } from '../use-cases/list-catalog-options.usecase';
 import { createCatalog } from '../use-cases/create-catalog.usecase';
@@ -65,13 +67,24 @@ export function createCatalogController(spec: CatalogSpec) {
         delete paginacao[filtroDaLista.campo];
       }
 
+      // `?isActive=`, só na tabela com os cartões: nas outras, a chave é 422.
+      let ativo: boolean | undefined;
+      if (spec.cartoesDeStatus) {
+        ativo = filtroDeAtivo.parse(paginacao.isActive);
+        delete paginacao.isActive;
+      }
+
       // Sem `trashable` — aqui não há lixeira (D8).
       // `?view=trashed` só existe na tabela com lixeira: nas outras, a chave é 422.
       const query = parseListQuery(paginacao, { trashable: spec.lixeira === true });
       // A LIXEIRA é `SUPERVISOR` (AV): a listagem do colaborador é do Técnico, e
       // a vista dela não se separa no mapa de rotas.
       if (query.view === 'trashed') exigirPermissao(request, 'SUPERVISOR');
-      return listCatalog(spec, query, filtro);
+      return listCatalog(spec, query, filtro, ativo);
+    },
+
+    async stats() {
+      return getCatalogStats(spec);
     },
 
     async options(request: FastifyRequest) {

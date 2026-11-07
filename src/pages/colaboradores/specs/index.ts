@@ -19,7 +19,7 @@ export const colaborador: CatalogUiSpec = {
   colunas: [
     { key: 'name', label: 'Nome' },
     { key: 'email', label: 'E-mail' },
-    { key: 'isActive', label: 'Situação', render: 'situacao' },
+    { key: 'isActive', label: 'Status', render: 'ativo' },
   ],
   campos: [
     { key: 'name', label: 'Nome completo', tipo: 'text', obrigatorio: true, largura: 'inteira' },
@@ -32,4 +32,5 @@ export const colaborador: CatalogUiSpec = {
     { id: 'ficha', titulo: 'Ficha do colaborador' },
   ],
   lixeira: true,
+  cartoesDeStatus: true,
 };

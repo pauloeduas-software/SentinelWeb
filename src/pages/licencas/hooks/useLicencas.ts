@@ -21,7 +21,7 @@ export function useLicencas() {
   const lista = useListaNaUrl();
   const { page, perPage, setPage, search, debouncedSearch, changeSearch, parametros, filtrar } = lista;
   const categoryId = parametros.get('categoria') ?? undefined;
-  const status = statusDaUrl(parametros.get('situacao'));
+  const status = statusDaUrl(parametros.get('status'));
 
   const params = useMemo(
     () => ({
@@ -67,7 +67,7 @@ export function useLicencas() {
     changeCategoria: (id: string | undefined) => filtrar('categoria', id),
     status,
     // Clicar no cartão escolhido, ou no Total, volta para todas.
-    changeStatus: (proximo: StatusDoFiltro | undefined) => filtrar('situacao', proximo === status ? undefined : proximo),
+    changeStatus: (proximo: StatusDoFiltro | undefined) => filtrar('status', proximo === status ? undefined : proximo),
     contagens: contagensDasLicencas(stats),
 
     alertas: alertas ?? { total: 0, contagem: { VENCIDA: 0, VENCENDO: 0 }, rows: [] },

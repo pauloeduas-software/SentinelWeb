@@ -20,7 +20,7 @@ export default function IdentificacaoDoPosto({ posto, acoes }: Props) {
 
   return (
     <CartaoDaFicha marca={<IconeDaFicha><MapPin /></IconeDaFicha>} acoes={acoes}>
-      <Dado rotulo="Situação"><SeloDoPosto posto={posto} /></Dado>
+      <Dado rotulo="Status"><SeloDoPosto posto={posto} /></Dado>
       <Dado rotulo="Localização">{posto.location.name}</Dado>
       <Dado rotulo="Computador">
         {computador && <span className="font-mono">{computador.assetTag}</span>}

@@ -12,11 +12,11 @@ export const ACOES_DA_LICENCA: Record<EventoDaLicenca['action'], string> = {
   CHECKIN: 'Devolvida',
 };
 
-const SITUACOES: readonly StatusDoFiltro[] = ['ATIVA', 'VENCENDO', 'EXPIRADA', 'ENCERRADA'];
+const STATUS_DA_LISTA: readonly StatusDoFiltro[] = ['ATIVA', 'VENCENDO', 'EXPIRADA', 'ENCERRADA'];
 
-/** `?situacao=` da lista. O que não é situação vale "todas": o servidor recusaria com 422. */
+/** `?status=` da lista. O que não é status vale todas: o servidor recusaria com 422. */
 export function statusDaUrl(valor: string | null): StatusDoFiltro | undefined {
-  return SITUACOES.find((situacao) => situacao === valor);
+  return STATUS_DA_LISTA.find((status) => status === valor);
 }
 
 /**
@@ -26,8 +26,8 @@ export function statusDaUrl(valor: string | null): StatusDoFiltro | undefined {
  * sem livre, e o botão não convida ao 409. O texto vai no `title` do botão.
  */
 export function motivoParaNaoEntregar(licenca: Pick<Licenca, 'status' | 'livres'>): string | null {
-  if (licenca.status === 'ENCERRADA') return 'Encerrada';
-  if (licenca.status === 'EXPIRADA') return 'Vencida: renove a data de vencimento para entregar';
+  if (licenca.status === 'ENCERRADA') return 'Encerrado';
+  if (licenca.status === 'EXPIRADA') return 'Vencido: renove a data de vencimento para entregar';
   if (licenca.livres <= 0) return 'Sem licença livre';
   return null;
 }

@@ -1,4 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { temCargo } from '../../access/helpers/require-permission';
 import { parseListQuery } from '../../../infra/http/list-query';
 import { exigirPermissao } from '../../access/helpers/require-permission';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
@@ -16,6 +17,7 @@ import { listStock } from '../use-cases/list-stock.usecase';
 import { listStockCheckouts } from '../use-cases/list-stock-checkouts.usecase';
 import { listAssetComponents } from '../use-cases/list-workstation-stock.usecase';
 import { listStockHistory } from '../use-cases/stock-history.usecase';
+import { getStockStats } from '../use-cases/stock-stats.usecase';
 import { updateStockItem } from '../use-cases/update-stock-item.usecase';
 
 // Só HTTP. Sem try/catch: o `parse` do schema rejeita e a rejeição cai no
@@ -28,14 +30,18 @@ const POR_PAGINA_NO_DETALHE = 15;
 export const stockController = {
   async list(request: FastifyRequest) {
     // A query tem DOIS donos e é separada antes de qualquer `parse`, como no
-    // `license.controller.ts`: `categoryId` é nosso, o resto é do
+    // `license.controller.ts`: `categoryId` e `isActive` são nossos, o resto é do
     // `parseListQuery`, que é estrito e responderia 422 a uma chave que não
     // conhece. Sem `trashable` — o item não tem lixeira (AE) —, e sem abas: o
     // desativado fica na mesma lista, como em Colaboradores.
-    const { categoryId, ...paginacao } = (request.query ?? {}) as Record<string, unknown>;
-    const filtros = stockFiltersSchema.parse(categoryId === undefined ? {} : { categoryId });
+    const { categoryId, isActive, ...paginacao } = (request.query ?? {}) as Record<string, unknown>;
+    const filtros = stockFiltersSchema.parse({ categoryId, isActive });
 
     return listStock(parseListQuery(paginacao), filtros);
+  },
+
+  async stats() {
+    return getStockStats();
   },
 
   async byId(request: FastifyRequest) {
@@ -90,7 +96,7 @@ export const stockController = {
   /** Os componentes instalados num computador — a aba Componentes (AI). */
   async doAtivo(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return listAssetComponents(id);
+    return listAssetComponents(id, temCargo(request, 'SUPERVISOR'));
   },
 
   async checkin(request: FastifyRequest) {

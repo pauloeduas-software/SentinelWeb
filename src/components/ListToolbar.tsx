@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { cn } from '../helpers/cn.helper';
 
 // Busca, filtros, paginação e o botão da tela, nessa ordem e iguais em toda lista
-// (BB). As vistas moram em `VistasDaLista` e a situação, em `CartoesDeContagem`.
+// (BB). As vistas moram em `VistasDaLista` e o status, em `CartoesDeContagem`.
 // Apresentacional puro: recebe valor e callback, não conhece query nem HTTP.
 
 interface ListToolbarProps {

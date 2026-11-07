@@ -21,8 +21,8 @@ test('o card traz todo o cadastro, e a ficha abre em Responsáveis', async ({ pa
   const { id: manufacturerId } = (await fabricante.json()) as { id: string };
   const modelo = await request.post('/api/asset-models', { data: { name: `Modelo ${sufixo}`, manufacturerId, categoryId } });
   const { id: modelId } = (await modelo.json()) as { id: string };
-  const situacoes = await request.get('/api/status-labels/options?type=DEPLOYABLE');
-  const [disponivel] = (await situacoes.json()) as { id: string }[];
+  const opcoes = await request.get('/api/status-labels/options?type=DEPLOYABLE');
+  const [disponivel] = (await opcoes.json()) as { id: string }[];
   const ativo = await request.post('/api/assets', {
     data: {
       modelId,

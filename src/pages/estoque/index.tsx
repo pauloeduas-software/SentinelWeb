@@ -1,4 +1,5 @@
 import { Package, Plus } from 'lucide-react';
+import CartoesDeContagem from '../../components/CartoesDeContagem';
 import CategoriaFiltro from '../../components/CategoriaFiltro';
 import ListaVazia from '../../components/ListaVazia';
 import ListToolbar from '../../components/ListToolbar';
@@ -21,7 +22,7 @@ import { usePode } from '../../stores/auth.store';
 export default function EstoquePage() {
   const {
     itens, total, carregando, erro, page, perPage, setPage, search, buscaFeita, changeSearch,
-    categoryId, changeCategoria,
+    categoryId, changeCategoria, status, escolherStatus, contagens,
     criando, abrirCriacao, fecharCriacao, abrirFicha,
     formulario, itemAberto, abrir, fechar, ocupado,
     handleCriar, handleEditar, handleEntregar, handleAlternarAtivo, handleExcluir,
@@ -34,6 +35,8 @@ export default function EstoquePage() {
     <div className="motion-safe:animate-fade-in flex flex-col pb-6">
 
       <PaginaCabecalho titulo="Estoque" />
+
+      <CartoesDeContagem contagens={contagens} escolhido={status} onEscolher={escolherStatus} />
 
       <ListToolbar
         search={search}
@@ -62,7 +65,7 @@ export default function EstoquePage() {
             erro={erro}
             nome="item"
             busca={buscaFeita}
-            filtrada={Boolean(categoryId)}
+            filtrada={Boolean(categoryId || status)}
             onCadastrar={abrirCriacao}
           />
         }

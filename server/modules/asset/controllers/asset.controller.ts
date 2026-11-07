@@ -40,7 +40,7 @@ const optionsQuerySchema = z.strictObject({
 export const assetController = {
   async list(request: FastifyRequest) {
     // A vista e os filtros do ITAM saem PRIMEIRO. O parser do `core` valida com
-    // `strictObject` e responderia 422 a `?statusId=` ou
+    // `strictObject` e responderia 422 a `?statusType=` ou
     // `?view=retired` — que ele, por decisão de camada, não conhece (D20).
     const { filtros, paraOCore } = separarFiltrosDeAtivo(request.query);
     // A LIXEIRA é `SUPERVISOR` (AV): a rota da listagem é do Técnico, e a vista
@@ -60,13 +60,15 @@ export const assetController = {
 
   async byId(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
-    return findAssetById(id, temCargo(request, 'SUPERVISOR'));
+    // O custo e a lixeira são os dois do Supervisor (D77, AV).
+    const supervisor = temCargo(request, 'SUPERVISOR');
+    return findAssetById(id, supervisor, supervisor);
   },
 
   async history(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     const { limit, page } = historyQuerySchema.parse(request.query ?? {});
-    return getAssetHistory(id, limit, page);
+    return getAssetHistory(id, limit, page, temCargo(request, 'SUPERVISOR'));
   },
 
   async stats() {

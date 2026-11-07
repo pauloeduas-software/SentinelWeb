@@ -5,7 +5,7 @@ import { criarAtivo, criarFabricante, criarModelo, idsDoSeed } from '../helpers/
 
 // OS CARTÕES DA TELA DE POSTOS — `GET /api/workstations/stats` e `?view=sem-uso`.
 //
-// Cada posto cai em uma situação só, e o número do cartão é o total da lista que
+// Cada posto cai em um status só, e o número do cartão é o total da lista que
 // ele abre. Um número que não bate com a lista é pior que número nenhum.
 
 interface Stats {
@@ -52,7 +52,7 @@ beforeAll(async () => {
   await entregar('CARTAO-001', 'SN-CARTAO-001', ocupadaComComputador);
   await ocupar(ocupadaComComputador);
 
-  // Gente sem equipamento é Ocupado: quem decide a situação é a ocupação.
+  // Gente sem equipamento é Ocupado: quem decide o status é a ocupação.
   await ocupar(await mesa('Ocupada sem computador'));
 
   await entregar('CARTAO-002', 'SN-CARTAO-002', await mesa('Vaga'));
@@ -77,7 +77,7 @@ async function listar(view: string): Promise<Envelope> {
 }
 
 describe('GET /api/workstations/stats', () => {
-  it('conta cada posto em uma situação, e as três somam o total', async () => {
+  it('conta cada posto em um status, e os três somam o total', async () => {
     const stats = await contagem();
 
     expect(stats).toEqual({ total: 4, ocupados: 2, vagos: 1, semUso: 1 });

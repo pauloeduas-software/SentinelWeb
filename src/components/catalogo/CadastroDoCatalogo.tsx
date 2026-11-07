@@ -5,6 +5,7 @@ import CatalogTable from './CatalogTable';
 import TipoFiltro from './TipoFiltro';
 import { tituloDoNovo, type CatalogUiSpec } from './catalog-ui.types';
 import { useCatalog } from './useCatalog';
+import CartoesDeContagem from '../CartoesDeContagem';
 import ListaVazia from '../ListaVazia';
 import ListToolbar from '../ListToolbar';
 import PaginaCabecalho from '../PaginaCabecalho';
@@ -30,7 +31,8 @@ interface CadastroDoCatalogoProps {
 export default function CadastroDoCatalogo({ titulo, specs, caminhoDaFicha }: CadastroDoCatalogoProps) {
   const {
     spec, changeTab, registros, total, page, perPage, setPage, parametros,
-    search, buscaFeita, changeSearch, tipo, changeTipo, view, changeView, loading, erro, padroesDoNovo, modalAberto, emEdicao,
+    search, buscaFeita, changeSearch, tipo, changeTipo, view, changeView, status, escolherStatus, contagens,
+    loading, erro, padroesDoNovo, modalAberto, emEdicao,
     openCreate, openEdit, closeModal, handleSubmit, handleDelete, handleRestore,
     openAcao,
   } = useCatalog(specs);
@@ -56,6 +58,10 @@ export default function CadastroDoCatalogo({ titulo, specs, caminhoDaFicha }: Ca
 
   const lista = (
     <>
+      {spec.cartoesDeStatus && (
+        <CartoesDeContagem contagens={contagens} escolhido={status} onEscolher={escolherStatus} />
+      )}
+
       {comLixeira && (
         <VistasDaLista
           valor={view}
@@ -98,7 +104,7 @@ export default function CadastroDoCatalogo({ titulo, specs, caminhoDaFicha }: Ca
             genero={spec.genero}
             busca={buscaFeita}
             frase={spec.lixeira && view === 'trashed' ? 'A lixeira está vazia.' : undefined}
-            filtrada={Boolean(tipo)}
+            filtrada={Boolean(tipo || status)}
             onCadastrar={openCreate}
           />
         }

@@ -1,4 +1,5 @@
 import { prisma } from '../../../infra/database/prismaClient';
+import { INCLUINDO_LIXEIRA } from '../../../infra/database/soft-delete.extension';
 import { listarMudancasDoAtivo } from './record-hardware-changes.usecase';
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -66,12 +67,12 @@ const SELECT_MAQUINA = {
  * a tela precisa poder ver que a coluna do patrimônio está atrás do batimento
  * real sem que isso pareça defeito.
  */
-export async function obterMaquinaDoAtivo(assetId: string) {
+export async function obterMaquinaDoAtivo(assetId: string, podeVerLixeira = false) {
   const [endpoint, ativo] = await Promise.all([
     prisma.endpoint.findFirst({ where: { assetId }, select: SELECT_MAQUINA }),
     // `findFirst` e não `findUnique`: é ele que recebe o escopo da lixeira da
-    // extension, então ativo excluído não devolve máquina por esta porta.
-    prisma.asset.findFirst({ where: { id: assetId }, select: { id: true, lastSeenByAgentAt: true } }),
+    // extension, então ativo excluído só devolve máquina a quem vê a Lixeira (BW).
+    prisma.asset.findFirst({ where: { id: assetId, ...(podeVerLixeira ? INCLUINDO_LIXEIRA : {}) }, select: { id: true, lastSeenByAgentAt: true } }),
   ]);
 
   const vazio = {

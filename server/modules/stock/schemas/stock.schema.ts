@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import {
-  diaNaoFuturo, nomeObrigatorio, textoOpcional, uuidObrigatorio, uuidOpcional, versaoLida, milhar,
+  diaNaoFuturo, filtroDeAtivo, nomeObrigatorio, textoOpcional, uuidObrigatorio, uuidOpcional, versaoLida, milhar,
 } from '../../shared/fields.schema';
 
 // Contrato de entrada do ESTOQUE — a mesma forma do da licença
@@ -103,6 +103,7 @@ export const checkinStockSchema = z.strictObject({
  */
 export const stockFiltersSchema = z.strictObject({
   categoryId: z.uuid('categoria: identificador inválido').optional(),
+  isActive: filtroDeAtivo,
 });
 
 export type CreateStockItemInput = z.infer<typeof createStockItemSchema>;

@@ -157,7 +157,7 @@ describe('o ativo entregue a um posto continua na listagem', () => {
     const item = await ativo('Desktop do status', 'SN-LISTA-5');
     await entregarA(item.id, (await mesa('Mesa da Listagem 5')).id);
 
-    const porStatus = await listar(`?perPage=100&statusId=${seed.statusEmUsoId}`);
+    const porStatus = await listar('?perPage=100&statusType=IN_USE');
     expect(porStatus.rows.map((l) => l.id)).toContain(item.id);
   });
 

@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react';
 import { cn } from '../../helpers/cn.helper';
 
-// A marca de SITUAÇÃO — ativo, desativado, vencida, online. A cor sai só dos
+// A marca de STATUS — ativo, desativado, vencido, online. A cor sai só dos
 // tokens de status, e nunca de nome, categoria ou tipo de evento (AY).
 const TONS = {
   neutro: 'border-border-sutil bg-surface-muted text-text-secondary',
@@ -25,8 +25,8 @@ export function Badge({ className, tom = 'neutro', ...props }: BadgeProps) {
 }
 
 /**
- * O ponto com o texto ao lado: a SITUAÇÃO do registro, a mesma peça na tabela, no
- * cartão e na ficha (BB). O `Badge` fica para o selo que não é situação.
+ * O ponto com o texto ao lado: o STATUS do registro, a mesma peça na tabela, no
+ * cartão e na ficha (BB). O `Badge` fica para o selo que não é status.
  */
 export function PontoDeStatus({ tom, children }: { tom: 'sucesso' | 'aviso' | 'perigo' | 'info' | 'neutro'; children: React.ReactNode }) {
   const cor = { sucesso: 'bg-status-success', aviso: 'bg-status-warning', perigo: 'bg-status-danger', info: 'bg-status-info', neutro: 'bg-text-tertiary' }[tom];

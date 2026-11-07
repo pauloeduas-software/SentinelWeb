@@ -1,4 +1,5 @@
 import { prisma } from '../../../infra/database/prismaClient';
+import { INCLUINDO_LIXEIRA } from '../../../infra/database/soft-delete.extension';
 import { AppError } from '../../../infra/errors/app-error';
 import { agruparPorLote } from '../helpers/stock-lote.helper';
 
@@ -63,10 +64,10 @@ export function listPersonStock(personId: string) {
  * Os COMPONENTES instalados neste computador (AI) — a aba Componentes. O
  * Retirar mora na ficha do item, como a devolução de licença mora na ficha dela.
  *
- * O computador na lixeira é 404, como a aba Licenças.
+ * O computador na lixeira é 404 para quem não a vê, como a aba Licenças.
  */
-export async function listAssetComponents(assetId: string) {
-  const ativo = await prisma.asset.findFirst({ where: { id: assetId }, select: { id: true } });
+export async function listAssetComponents(assetId: string, podeVerLixeira = false) {
+  const ativo = await prisma.asset.findFirst({ where: { id: assetId, ...(podeVerLixeira ? INCLUINDO_LIXEIRA : {}) }, select: { id: true } });
   if (!ativo) throw new AppError('Ativo não encontrado.', 404);
   return entregasAbertas({ targetAssetId: assetId });
 }

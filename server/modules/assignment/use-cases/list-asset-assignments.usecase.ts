@@ -1,4 +1,5 @@
 import { prisma } from '../../../infra/database/prismaClient';
+import { INCLUINDO_LIXEIRA } from '../../../infra/database/soft-delete.extension';
 import { AppError } from '../../../infra/errors/app-error';
 import { ASSIGNMENT_SELECT } from '../helpers/assignment-select.helper';
 
@@ -14,10 +15,10 @@ import { ASSIGNMENT_SELECT } from '../helpers/assignment-select.helper';
  * diferentes — "nunca foi entregue" e "esse id não existe" — e quem chama
  * precisa distinguir as duas.
  */
-export async function listAssetAssignments(assetId: string) {
-  // `findFirst` pelo escopo da lixeira: o histórico do ativo apagado só volta
-  // com ele, pela restauração.
-  const ativo = await prisma.asset.findFirst({ where: { id: assetId }, select: { id: true } });
+export async function listAssetAssignments(assetId: string, podeVerLixeira = false) {
+  // `findFirst` pelo escopo da lixeira: o histórico do ativo apagado é de quem
+  // vê a Lixeira (BW).
+  const ativo = await prisma.asset.findFirst({ where: { id: assetId, ...(podeVerLixeira ? INCLUINDO_LIXEIRA : {}) }, select: { id: true } });
   if (!ativo) throw new AppError('Ativo não encontrado.', 404);
 
   return prisma.assignment.findMany({

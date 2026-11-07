@@ -82,7 +82,7 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
   // ── Postos ────────────────────────────────────────────────────────────
   'GET /api/workstations': { tag: 'Postos', resumo: 'Lista os postos (?view=todos|vagos|ocupados|sem-uso)', query: 'lista' },
   'GET /api/workstations/options': { tag: 'Postos', resumo: 'Opções para um seletor de posto' },
-  'GET /api/workstations/stats': { tag: 'Postos', resumo: 'Quantos postos em cada situação' },
+  'GET /api/workstations/stats': { tag: 'Postos', resumo: 'Quantos postos em cada status' },
   'GET /api/workstations/:id': { tag: 'Postos', resumo: 'A ficha do posto' },
   'GET /api/workstations/:id/history': { tag: 'Postos', resumo: 'O histórico do posto' },
   'POST /api/workstations': { tag: 'Postos', resumo: 'Cadastra um posto', body: createWorkstationSchema, status: 201 },
@@ -95,6 +95,7 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
 
   // ── Estoque ───────────────────────────────────────────────────────────
   'GET /api/stock/items': { tag: 'Estoque', resumo: 'Lista os itens de estoque', query: 'lista' },
+  'GET /api/stock/items/stats': { tag: 'Estoque', resumo: 'Quantos itens ativos e desativados' },
   'GET /api/stock/items/:id': { tag: 'Estoque', resumo: 'O item de estoque' },
   'GET /api/stock/items/:id/checkouts': { tag: 'Estoque', resumo: 'As entregas do item', query: 'lista' },
   'GET /api/stock/items/:id/history': { tag: 'Estoque', resumo: 'O histórico do item', query: 'lista' },
@@ -107,7 +108,7 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
   // ── Licenças ──────────────────────────────────────────────────────────
   'GET /api/licenses': { tag: 'Licenças', resumo: 'Lista as licenças', query: 'lista' },
   'GET /api/licenses/alerts': { tag: 'Licenças', resumo: 'Os alertas de prazo' },
-  'GET /api/licenses/stats': { tag: 'Licenças', resumo: 'Quantas licenças em cada situação' },
+  'GET /api/licenses/stats': { tag: 'Licenças', resumo: 'Quantas licenças em cada status' },
   'GET /api/licenses/:id': { tag: 'Licenças', resumo: 'A licença' },
   'GET /api/licenses/:id/checkouts': { tag: 'Licenças', resumo: 'As entregas da licença', query: 'lista' },
   'GET /api/licenses/:id/history': { tag: 'Licenças', resumo: 'O histórico da licença', query: 'lista' },
@@ -153,6 +154,7 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
     return [
       [`GET ${base}`, { tag, resumo: `Lista (${spec.slug})`, query: 'lista' }],
       [`GET ${base}/options`, { tag, resumo: `Opções para um seletor (${spec.slug})` }],
+      ...(spec.cartoesDeStatus ? [[`GET ${base}/stats`, { tag, resumo: `Quantos ativos e desativados (${spec.slug})` }]] : []),
       [`POST ${base}`, { tag, resumo: `Cadastra (${spec.slug})`, body: spec.createSchema, status: 201 }],
       [`PUT ${base}/:id`, { tag, resumo: `Edita (${spec.slug}), formulário inteiro`, body: spec.updateSchema }],
       [`DELETE ${base}/:id`, { tag, resumo: `Exclui (${spec.slug}); em uso, 409` }],

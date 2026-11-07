@@ -97,6 +97,7 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   'DELETE /api/workstations/:id': 'SUPERVISOR',
   // O ESTOQUE.
   'GET /api/stock/items': 'TECNICO',
+  'GET /api/stock/items/stats': 'TECNICO',
   'GET /api/stock/items/:id': 'TECNICO',
   'GET /api/stock/items/:id/checkouts': 'TECNICO',
   'GET /api/stock/items/:id/history': 'TECNICO',
@@ -167,6 +168,8 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
       return [
         [`GET /api/${spec.slug}`, 'TECNICO' as const],
         [`GET /api/${spec.slug}/options`, 'TECNICO' as const],
+        // Os cartões, só na tabela que os tem — o colaborador.
+        ...(spec.cartoesDeStatus ? [[`GET /api/${spec.slug}/stats`, 'TECNICO' as const] as const] : []),
         [`POST /api/${spec.slug}`, escrita],
         [`PUT /api/${spec.slug}/:id`, escrita],
         [`DELETE /api/${spec.slug}/:id`, 'SUPERVISOR' as const],

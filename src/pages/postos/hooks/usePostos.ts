@@ -17,11 +17,11 @@ import { contagensDosPostos, recorteDaUrl } from '../helpers/postos.helper';
 export function usePostos() {
   const lista = useListaNaUrl();
   const { page, perPage, setPage, search, debouncedSearch, changeSearch, parametros, filtrar } = lista;
-  const view = recorteDaUrl(parametros.get('situacao'));
+  const view = recorteDaUrl(parametros.get('status'));
 
   // Clicar no cartão escolhido volta para `todos`, como em Computadores.
   const escolherView = (proxima: PostoView) => {
-    filtrar('situacao', proxima === view || proxima === 'todos' ? undefined : proxima);
+    filtrar('status', proxima === view || proxima === 'todos' ? undefined : proxima);
   };
 
   const params = useMemo(

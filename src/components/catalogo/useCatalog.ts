@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
-  useCatalogQuery, useCreateCatalogRow, useDeleteCatalogRow, useRestoreCatalogRow, useUpdateCatalogRow,
+  useCatalogQuery, useCatalogStatsQuery, useCreateCatalogRow, useDeleteCatalogRow, useRestoreCatalogRow, useUpdateCatalogRow,
 } from '../../queries/catalog.queries';
 import type { ListView } from '../../types/list.types';
 import type { CatalogRow } from '../../types/catalog.types';
@@ -9,6 +9,7 @@ import { confirmar } from '../../hooks/useConfirmacao';
 import { useNotificacao } from '../../hooks/useNotificacao';
 import type { AcaoLinhaId, CatalogUiSpec } from './catalog-ui.types';
 import { linksDoErro } from '../../helpers/erro.helper';
+import { ativoDoStatus, contagensDoStatusAtivo, statusAtivoDaUrl, type StatusAtivo } from '../../helpers/status.helper';
 
 // Estado de uma tela de catálogo — Configurações, com as seis abas, ou
 // Colaboradores, com uma só: qual aba, que página, o que está no campo de busca, na
@@ -37,7 +38,16 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
   };
 
   const changeTipo = (valor: string | undefined) => filtrar('tipo', valor);
-  const changeView = (proxima: ListView) => filtrar('vista', proxima === 'active' ? undefined : proxima);
+  const status = spec.cartoesDeStatus ? statusAtivoDaUrl(parametros.get('status')) : undefined;
+
+  // Os cartões contam a lista, e não a lixeira: trocar de vista desfaz o recorte, e
+  // escolher um cartão volta para a lista, como em Computadores.
+  const changeView = (proxima: ListView) => lista.trocar({
+    vista: proxima === 'active' ? undefined : proxima, status: undefined, pagina: undefined,
+  });
+  const escolherStatus = (proximo: StatusAtivo | undefined) => lista.trocar({
+    vista: undefined, status: proximo === status ? undefined : proximo, pagina: undefined,
+  });
 
   const campoDoFiltro = spec.filtroPorTipo?.campo;
   const params = useMemo(
@@ -48,11 +58,13 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
       ...(campoDoFiltro && tipo ? { [campoDoFiltro]: tipo } : {}),
       // Só a aba com lixeira manda `view`: nas outras o servidor recusa a chave.
       ...(spec.lixeira ? { view } : {}),
+      isActive: ativoDoStatus(status),
     }),
-    [page, perPage, debouncedSearch, campoDoFiltro, tipo, spec.lixeira, view],
+    [page, perPage, debouncedSearch, campoDoFiltro, tipo, spec.lixeira, view, status],
   );
 
   const { data, isPending, error } = useCatalogQuery(spec.slug, params);
+  const { data: stats } = useCatalogStatsQuery(spec.slug, spec.cartoesDeStatus === true);
   const criar = useCreateCatalogRow(spec.slug);
   const editar = useUpdateCatalogRow(spec.slug);
   const excluir = useDeleteCatalogRow(spec.slug);
@@ -176,6 +188,9 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
     changeTipo,
     view,
     changeView,
+    status,
+    escolherStatus,
+    contagens: contagensDoStatusAtivo(stats),
     loading: isPending,
     // A mensagem do erro da listagem, para a tabela não dizer "nenhum registro"
     // quando o que houve foi uma recusa (`EstadoDaLista`).

@@ -25,6 +25,7 @@ export async function listStock(
     AND: [
       buildBuscaWhere(query.q),
       filtros.categoryId ? { categoryId: filtros.categoryId } : {},
+      filtros.isActive === undefined ? {} : { isActive: filtros.isActive },
     ],
   };
 

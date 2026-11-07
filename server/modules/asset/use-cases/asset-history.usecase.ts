@@ -12,7 +12,7 @@ import { buscarUnidadesDoAlvo, eventosDasUnidades, type EventoDeEstoque } from '
 // licenças entregues a ele e os componentes instalados e retirados (AI). Cadastro, edição, lixeira, baixa e vínculo de
 // máquina ficam na auditoria (`audit_logs`, AB), que tela nenhuma lê: ela é do
 // administrador, no banco. O estado atual da baixa e da máquina a tela já
-// mostra nas abas Detalhes e Máquina.
+// mostra no card e na aba Máquina.
 
 /** De onde o evento veio. A tela usa para escolher o ícone e o título. */
 type FonteDoEvento = 'POSSE' | 'LICENCA' | 'COMPONENTE';
@@ -101,12 +101,13 @@ export async function getAssetHistory(
   assetId: string,
   limite = LIMITE_PADRAO,
   pagina = 1,
+  podeVerLixeira = false,
 ): Promise<ListEnvelope<EventoDoAtivo>> {
   // `listAssetAssignments` é quem confere se o ativo existe (404) — o mesmo
   // 404 da tela de detalhe, escrito uma vez só. Importado do domínio de posse,
   // nunca recopiado: a leitura da posse é de lá.
   const [assignments, entregasDeLicenca, componentes] = await Promise.all([
-    listAssetAssignments(assetId),
+    listAssetAssignments(assetId, podeVerLixeira),
     buscarEntregasDoAtivo(assetId, { abertas: false }),
     buscarUnidadesDoAlvo({ targetAssetId: assetId }),
   ]);

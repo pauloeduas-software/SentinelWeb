@@ -126,6 +126,12 @@ export interface CatalogSpec {
    */
   lixeira?: boolean;
 
+  /**
+   * A tela abre com os cartões Total, Ativos e Desativados (BT): a listagem aceita
+   * `?isActive=` e existe `GET /stats`. O model precisa da coluna `isActive`.
+   */
+  cartoesDeStatus?: boolean;
+
   /** Regra que roda antes de RESTAURAR — a unicidade que a lixeira libera. */
   beforeRestore?: (client: ClienteCatalogo, id: string) => Promise<void>;
 

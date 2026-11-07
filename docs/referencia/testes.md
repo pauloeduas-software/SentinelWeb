@@ -130,8 +130,8 @@ licença e os seus alvos quando vai mudá-los: rodado sozinho com `-t`, ele pass
   status, com as mesmas fronteiras: a encerrada só no `ENCERRADA`, e junto das outras na lista
   sem filtro; o `view` das abas que saíram é 422. A busca da lista por licenciado, e-mail,
   pedido, categoria e fabricante, com `_` como texto, e a ordem das encerradas.
-- **`contagem.test.ts`** — os cartões de `GET /api/licenses/stats`: cada licença conta em uma
-  situação só, e o número do cartão é o total da lista que ele abre.
+- **`contagem.test.ts`** — os cartões de `GET /api/licenses/stats`: cada licença conta em um
+  status só, e o número do cartão é o total da lista que ele abre.
 - **`detalhe.test.ts`** — com quem está e o histórico de 15 em 15, e a busca pelo nome do
   colaborador ou do computador; o histórico recusa `?q=`, e a página além do fim vem vazia.
 - **`ciclo.test.ts`** — Encerrar (com entrega aberta é 409, pelo botão e pelo formulário;

@@ -48,7 +48,7 @@ export interface CampoSpec {
   travaEmUso?: boolean;
 }
 
-type RenderColuna = 'texto' | 'enum' | 'status' | 'situacao' | 'relacao' | 'contagem' | 'link';
+type RenderColuna = 'texto' | 'enum' | 'status' | 'ativo' | 'relacao' | 'contagem' | 'link';
 
 export interface ColunaSpec {
   key: string;
@@ -90,7 +90,7 @@ export interface AcaoLinhaSpec {
   /**
    * Ação que ALTERNA um booleano da linha — Desativar/Ativar. O `titulo` vale
    * com o campo ligado; `tituloSeDesligado`, com ele desligado. A linha com o
-   * campo desligado aparece esmaecida, com a coluna Situação, para o estado não depender de
+   * campo desligado aparece esmaecida, com a coluna Status, para o estado não depender de
    * abrir o menu.
    */
   alterna?: { campo: string; tituloSeDesligado: string };
@@ -129,6 +129,11 @@ export interface CatalogUiSpec {
    * `optionFilter`; aqui ficam os rótulos.
    */
   filtroPorTipo?: { campo: string; opcoes: readonly OpcaoFixa[] };
+  /**
+   * A tela abre com os cartões Total, Ativos e Desativados (BT). Bate com
+   * `cartoesDeStatus` da spec do servidor — hoje só colaboradores.
+   */
+  cartoesDeStatus?: boolean;
 }
 
 // O BOTÃO DESATIVAR/ATIVAR do colaborador (e o mesmo desenho em Usuários): grava

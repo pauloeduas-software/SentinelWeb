@@ -6,7 +6,7 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 
 // OS CARTÕES DA TELA DE LICENÇAS — `GET /api/licenses/stats`.
 //
-// Cada licença cai em uma situação só, e o número do cartão é o total da lista que ele
+// Cada licença cai em um status só, e o número do cartão é o total da lista que ele
 // abre. Um número que não bate com a lista é pior que número nenhum.
 
 interface Stats {
@@ -38,7 +38,7 @@ afterAll(async () => {
 });
 
 describe('os cartões de Licenças', () => {
-  it('cada licença conta em uma situação só, e o cartão bate com a lista que abre', async () => {
+  it('cada licença conta em um status só, e o cartão bate com a lista que abre', async () => {
     const hoje = hojeNoBrasil();
     const antes = await contagem();
 

@@ -30,14 +30,14 @@ E **não é excluir**:
 |---|---|---|
 | quando | o ativo foi cadastrado **por engano** | o ativo **saiu do patrimônio** |
 | pede | a confirmação, e a devolução antes, se ele está entregue ([AL](../decisoes/posse.md#al--o-computador-entregue-não-vai-para-a-lixeira)) | **motivo**, data e observação, e a devolução antes |
-| depois | some do inventário; restaura-se da lixeira | continua no histórico e na vista **Baixados**; desfaz-se com **Reverter** |
+| depois | some do inventário; a ficha abre [só para consulta](../decisoes/catalogo-e-ativo.md#bw--a-linha-da-lixeira-abre-a-ficha-só-para-consulta); restaura-se da lixeira | continua no histórico e na vista **Baixados**; desfaz-se com **Reverter** |
 | é | erro de digitação | fato contábil, datado |
 
 ---
 
 ## Como se faz
 
-**Ficha do ativo › `⋯` do card › "Dar baixa"**. Abre um
+**Ficha do ativo › `⋯` do card › "Dar baixa"**, ou o `⋯` da linha em Computadores. Abre um
 formulário próprio — é uma operação, não um campo do cadastro:
 
 | Campo | Regra |
@@ -51,11 +51,13 @@ permitida a partir de `SUPERVISOR` ([AV](../decisoes/acesso.md#av--três-cargos-
 
 ### Depois da baixa
 
-- **Na ficha:** o selo "Vendido em 15/10/2026" no card e, entre o card e as abas,
-  o aviso com a observação, à vista em todas ([BR](../decisoes/plataforma.md#br--a-ficha-do-computador-não-tem-aba-detalhes)).
-  **Reverter baixa** fica no `⋯` do card.
+- **Na ficha:** o Status do card é o motivo, "Vendido", e entre o card e as abas fica
+  o aviso com o dia e a observação, à vista em todas ([BR](../decisoes/plataforma.md#br--a-ficha-do-computador-não-tem-aba-detalhes)).
+  **Reverter baixa** fica no `⋯` do card e no da linha.
 - **Na lista de Computadores:** o ativo sai da vista **Ativos** e passa a aparecer só na
-  vista **Baixados**, que tem contador próprio. A **Lixeira** não olha a baixa.
+  vista **Baixados**, que tem contador próprio. Lá, os cartões são o Total e um por
+  motivo, e o Status é o motivo, sem o dia ([BV](../decisoes/catalogo-e-ativo.md#bv--a-vista-baixados-conta-por-motivo-e-o-status-do-baixado-é-o-motivo)).
+  A **Lixeira** não olha a baixa.
 - **Na auditoria, no banco:** a linha `RETIRE`, com quem fez, quando, o nome do motivo
   por escrito e a observação. A aba Histórico é só movimentação e não a mostra ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)).
 - **O status não muda.** Trocar o status é uma segunda decisão, com linha
@@ -134,5 +136,5 @@ pedir:
 | reverter | `unretire-asset.usecase.ts` |
 | a recusa na entrega | `assignment/use-cases/checkout-asset.usecase.ts`; na licença, `license/use-cases/checkout-license.usecase.ts` |
 | as vistas Ativos / Baixados | `asset/helpers/asset-filters.helper.ts` |
-| a tela | `src/pages/computadores/detalhe/components/{RetireModal,AvisoDaBaixa}.tsx`, `src/pages/computadores/helpers/baixa.helper.ts` |
+| a tela | `src/pages/computadores/components/RetireModal.tsx`, `src/pages/computadores/detalhe/components/AvisoDaBaixa.tsx`, `src/pages/computadores/helpers/baixa.helper.ts` |
 | testes | `tests/invariantes/motivo-da-baixa.test.ts` (o cadastro, o motivo em uso e o nome por escrito), `tests/e2e/baixa.spec.ts` (o motivo novo, pela tela), `tests/invariantes/posse.test.ts` (a baixa recusa entregue, licença, data futura e repetição; baixado não é entregue; reverter libera), `tests/invariantes/dia-da-posse.test.ts` (o dia da baixa contra a última devolução), `tests/corridas/posse.test.ts` (baixa × entrega, baixa × excluir o motivo), `tests/listagens/vistas-do-ativo.test.ts` (as vistas) |

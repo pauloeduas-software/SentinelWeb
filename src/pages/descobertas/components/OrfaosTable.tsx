@@ -18,7 +18,7 @@ import type { ReviewState } from '../../../types/reconciliation.types';
 // DUAS AÇÕES por linha, e são conversas diferentes. A TRIAGEM não mexe na
 // máquina: `ALLOWED` é "eu sei o que é isso", `BLOCKED` é "isto não deveria
 // estar na rede"; o valor dela é tirar da fila o que já foi olhado, senão a
-// mesma máquina conhecida reaparece como "não autorizada" toda semana. O
+// mesma máquina conhecida reaparece como "não autorizado" toda semana. O
 // VÍNCULO é o contrário: é dizer que esta máquina É um ativo — e, se quiser,
 // entregá-la ao posto na mesma ida. A fila de sugestões só alcança a máquina
 // que a cascata casou com alguma coisa; a que chegou com serial em branco e um
@@ -39,10 +39,10 @@ interface Props {
   onVincular: (endpointId: string, assetId: string, targetWorkstationId: string | null) => Promise<void>;
 }
 
-const SITUACAO: Record<ReviewState, { rotulo: string; tom: 'aviso' | 'sucesso' | 'perigo' }> = {
+const STATUS: Record<ReviewState, { rotulo: string; tom: 'aviso' | 'sucesso' | 'perigo' }> = {
   UNREVIEWED: { rotulo: 'Sem triagem', tom: 'aviso' },
-  ALLOWED: { rotulo: 'Conhecida', tom: 'sucesso' },
-  BLOCKED: { rotulo: 'Não autorizada', tom: 'perigo' },
+  ALLOWED: { rotulo: 'Conhecido', tom: 'sucesso' },
+  BLOCKED: { rotulo: 'Não autorizado', tom: 'perigo' },
 };
 
 export default function OrfaosTable({ orfaos, carregando, erro, ocupado, acao, onTriar, onVincular }: Props) {
@@ -73,20 +73,20 @@ export default function OrfaosTable({ orfaos, carregando, erro, ocupado, acao, o
               <TableHead>Sistema operacional</TableHead>
               <TableHead className="w-44">Série da BIOS</TableHead>
               <TableHead className="w-48">Último contato</TableHead>
-              <TableHead className="w-36">Situação</TableHead>
+              <TableHead className="w-36">Status</TableHead>
               <TableHeadAcoes />
             </TableRow>
           </TableHeader>
           <TableBody>
             {lista.visiveis.map((orfao) => {
-              const situacao = SITUACAO[orfao.reviewState ?? 'UNREVIEWED'];
+              const status = STATUS[orfao.reviewState ?? 'UNREVIEWED'];
               return (
                 <TableRow key={orfao.id}>
                   <TableCell className="font-medium text-text-primary">{orfao.hostname}</TableCell>
                   <TableCell>{orfao.osVersion}</TableCell>
                   <TableCell className="font-mono text-text-tertiary">{orfao.biosSerial ?? '—'}</TableCell>
                   <TableCell>{formatarDataHora(orfao.lastSeen)}</TableCell>
-                  <TableCell><PontoDeStatus tom={situacao.tom}>{situacao.rotulo}</PontoDeStatus></TableCell>
+                  <TableCell><PontoDeStatus tom={status.tom}>{status.rotulo}</PontoDeStatus></TableCell>
                   <TableCell>
                     <AcoesDaLinha
                       nome={orfao.hostname}
