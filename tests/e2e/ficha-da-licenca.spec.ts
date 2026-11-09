@@ -81,6 +81,26 @@ test('da ficha do colaborador, abre filtrado por ele, devolve e volta', async ({
   await expect(page.getByRole('tab', { name: /Licenças/ })).toHaveAttribute('aria-selected', 'true');
 });
 
+test('a linha do responsável abre a ficha dele, e o Devolver fica na linha (CJ)', async ({ page, request }) => {
+  const nomeDaLicenca = `Licença da linha ${Date.now()}`;
+  const nome = `Pessoa da linha ${Date.now()}`;
+  const licenca = await criarLicenca(request, nomeDaLicenca);
+  const pessoa = await criarColaborador(request, nome);
+  expect((await request.post(`/api/licenses/${licenca}/checkout`, { data: { assignedPersonId: pessoa } })).status()).toBe(201);
+
+  await page.goto(`/licencas/${licenca}`);
+  const linha = page.getByRole('main').getByRole('listitem').filter({ hasText: nome });
+  await linha.getByRole('button', { name: 'Devolver' }).click();
+  await expect(linha.getByRole('button', { name: 'Confirmar' })).toBeVisible();
+  await linha.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(page).toHaveURL(new RegExp(`/licencas/${licenca}$`));
+
+  await linha.click();
+  await expect(page).toHaveURL(new RegExp(`/colaboradores/${pessoa}$`));
+  await page.getByRole('link', { name: 'Voltar para Licença' }).click();
+  await expect(page).toHaveURL(new RegExp(`/licencas/${licenca}$`));
+});
+
 test('o link antigo leva à ficha, com a busca', async ({ page, request }) => {
   const nome = `Licença do link antigo ${Date.now()}`;
   const id = await criarLicenca(request, nome);

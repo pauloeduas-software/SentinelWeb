@@ -886,6 +886,7 @@ formulário e outro na recusa, o computador se chamava também ativo, e o mesmo 
 só, e "licença livre" é o jeito comum de dizer. As datas já seguem um nome por papel: "Data da entrega" e "Data da
 entrada" no formulário, "Desde" na coluna e "Devolvida em", "Retirada em" e "Saiu em" na linha. E "equipamento" na
 recusa de quem está desativado, que vale para ativo e para item.
+
 ---
 
 ## CI — A série vai embaixo da etiqueta em toda tela
@@ -914,3 +915,31 @@ na lista, e quem procura o valor abre a ficha.
 **O que ficou de fora.** O seletor de computador dos formulários continua "ATV-00012 — Dell Latitude", numa linha só:
 o seletor não tem segunda linha. O card do posto, o título da ficha e as frases de recusa continuam só com a etiqueta
 ou com o nome por escrito.
+
+---
+
+## CJ — A linha do responsável abre a ficha dele
+
+**Decisão.** Na aba Responsáveis do computador, do item, da licença e do posto, a linha abre a ficha de quem está com o
+registro: o colaborador, o posto ou o computador, e a seta de lá volta para cá. As regras de negócio não mudaram, e
+nenhuma rota é nova.
+
+- **Uma peça para as quatro abas:** `LinhaDoResponsavel`. O clique num botão, num campo ou numa opção da linha é dele
+  (Devolver, Chave, Corrigir turno, Registrar saída), e com um pedido aberto a linha não abre nada.
+- **Sem cor de link,** como toda linha de lista e de aba: o ponteiro e o fundo ao passar o mouse dizem que ela abre.
+- **A seta diz de onde veio:** "Voltar para Item" e "Voltar para Licença" se juntam a Posto, Colaborador e Computador.
+- **O posto excluído não abre:** a entrega guarda só o nome dele (AW), e não há ficha para onde ir.
+
+**Completa:** [BQ](./posse.md#bq--entregar-e-devolver-são-dois-botões-e-a-aba-responsáveis-é-uma-só), que fez a aba
+Responsáveis uma só, e [BS](#bs--o-card-da-ficha-tem-um-molde-só), que já abria o posto pela linha do computador.
+
+**Por quê:** pergunta direta, todas ou nenhuma. Antes, só a linha do posto no computador abria, e a do colaborador, ao
+lado, não. Toda outra linha de aba já abre o registro que mostra (`TabelaDaFicha`), e o Snipe-IT faz o mesmo com quem
+está com o equipamento: "Checked out to" leva à pessoa, ao local ou ao computador na lista de ativos, e a pessoa e o
+computador de cada entrega levam às fichas deles na licença. Sem o clique, da licença não se chegava à pessoa que está
+com ela.
+
+**O custo:** um clique fora do botão abre outra ficha. A seta volta para a mesma aba, com a busca.
+
+**O que ficou de fora.** As pessoas embaixo do posto não abrem sozinhas: seria um link dentro de uma linha que já abre o
+posto, e quem está no posto fica na aba Responsáveis dele.

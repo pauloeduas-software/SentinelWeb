@@ -38,6 +38,8 @@ export function rotuloDaVolta(para: string, lista: string): string {
   if (para.startsWith('/postos/')) return 'Posto';
   if (para.startsWith('/colaboradores/')) return 'Colaborador';
   if (para.startsWith('/computadores/')) return 'Computador';
+  if (para.startsWith('/estoque/')) return 'Item';
+  if (para.startsWith('/licencas/')) return 'Licença';
   return lista;
 }
 

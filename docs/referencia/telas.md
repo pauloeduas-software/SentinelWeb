@@ -19,6 +19,7 @@ O visual vem da IntraNet (AY). Tela nova usa os primitivos de `src/components/ui
 | `AcoesDaLinha` | o `⋯` |
 | `PessoaNaLinha` | a pessoa na lista: o avatar, o nome e o e-mail embaixo |
 | `ComputadoresNaFicha` | o computador numa aba de ficha: no posto e no colaborador |
+| `LinhaDoResponsavel` | a linha da aba Responsáveis, que abre a ficha do responsável |
 | `AvisoDaLixeira` | a ficha aberta da Lixeira: computador e colaborador |
 | `confirmar()` (`hooks/useConfirmacao`) | a pergunta, nunca `confirm()` |
 | `useNotificacao` | o cartão da resposta a um clique, nunca `alert()` |
@@ -86,8 +87,10 @@ mostram a senha no painel aberto, e a troca obrigatória de senha, que já leva 
   lista de Computadores e as duas datas da entrega.
 - **A aba Responsáveis é uma só (BQ):** a `ListToolbar` com a busca (`?quem=`) e o box com uma linha por responsável e a
   ação à direita. Entregue a um posto, a linha é o posto, com quem está nele embaixo (BL), e a busca acha também por
-  essas pessoas. O botão do card só entrega, e sem poder entregar ele trava com o motivo; o Devolver fica na linha. No
-  computador, ele abre o painel, porque a devolução pede o status de volta e as notas.
+  essas pessoas. A linha abre a ficha do responsável, o colaborador, o posto ou o computador, menos quando o clique é
+  num botão ou campo dela ou há um pedido aberto nela (`LinhaDoResponsavel`, [CJ](../decisoes/plataforma.md#cj--a-linha-do-responsável-abre-a-ficha-dele)).
+  O botão do card só entrega, e sem poder entregar ele trava com o motivo; o Devolver fica na linha. No
+  computador, ele abre o painel, porque a devolução pede o status e as notas.
 - **O Devolver mora só na ficha do que foi entregue (BN):** o computador, o item e a licença. A ficha do posto e a do
   colaborador mostram o que está com eles em `TabelaDaFicha`, e a linha abre o registro.
 - **A seta volta para onde a ficha foi aberta, como estava (BB, BJ).** `useVoltaComFiltros` lê o caminho no
