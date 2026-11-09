@@ -2,10 +2,12 @@ import { useState, type KeyboardEvent } from 'react';
 import {
   LogOut, Pencil, User, Users,
 } from 'lucide-react';
+import LinhaDoResponsavel from '../../../components/LinhaDoResponsavel';
 import { CartaoVazio } from '../../../components/ListaVazia';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { diaDoInstante, hojeNoCampoDeData } from '../../../helpers/format.helper';
+import { caminhoDoResponsavel } from '../../../helpers/responsavel.helper';
 import { useNotificacao } from '../../../hooks/useNotificacao';
 import { nomeDoOcupante, periodoDaOcupacao } from '../helpers/ocupantes.helper';
 import type { WorkstationOccupant } from '../../../types/posse.types';
@@ -103,7 +105,12 @@ export default function OccupantsPanel({
         const meu = pedido?.id === ocupante.id ? pedido : null;
 
         return (
-          <li key={ocupante.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <LinhaDoResponsavel
+            key={ocupante.id}
+            // A linha abre a ficha do colaborador (CJ); com o turno ou a saída aberta, não.
+            para={meu ? null : caminhoDoResponsavel({ colaborador: ocupante.personId })}
+            className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+          >
             <div className="min-w-0 space-y-0.5">
               <div className="flex items-center gap-2 text-text-primary">
                 <User className="size-4 shrink-0 text-text-tertiary" />
@@ -185,7 +192,7 @@ export default function OccupantsPanel({
                 </Button>
               </div>
             )}
-          </li>
+          </LinhaDoResponsavel>
         );
       })}
     </ul>

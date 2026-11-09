@@ -122,7 +122,7 @@ test('devolver acontece na ficha, e ela acompanha a conta', async ({ page, reque
   await expect(principal.getByRole('tab', { name: /Histórico/ })).toContainText('2');
 });
 
-test('a linha do posto diz quem está nele, e não é link', async ({ page, request }) => {
+test('a linha do posto diz quem está nele, e abre o posto (CJ)', async ({ page, request }) => {
   const nomeDoPosto = `Mesa do item ${Date.now()}`;
   const nomeDaPessoa = `Pessoa da mesa ${Date.now()}`;
   const [id, posto, pessoa] = await Promise.all([
@@ -139,9 +139,16 @@ test('a linha do posto diz quem está nele, e não é link', async ({ page, requ
   await page.goto(`/estoque/${id}`);
   const linha = page.getByRole('main').getByRole('listitem').filter({ hasText: nomeDoPosto });
   await expect(linha).toContainText(nomeDaPessoa);
-  await expect(linha.getByRole('link')).toHaveCount(0);
+
+  // O Devolver é da linha, e não abre o posto.
+  await linha.getByRole('button', { name: 'Devolver' }).click();
+  await expect(linha.getByRole('button', { name: 'Confirmar' })).toBeVisible();
+  await linha.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(page).toHaveURL(new RegExp(`/estoque/${id}$`));
 
   await linha.click();
+  await expect(page).toHaveURL(new RegExp(`/postos/${posto}$`));
+  await page.getByRole('link', { name: 'Voltar para Item' }).click();
   await expect(page).toHaveURL(new RegExp(`/estoque/${id}$`));
 });
 

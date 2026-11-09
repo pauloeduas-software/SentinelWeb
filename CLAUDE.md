@@ -62,7 +62,7 @@ bancos de teste a apagar depois estão lá.
   compra (AN).
 - **Devolver só na origem:** o computador em Computadores, o item em Estoque, a licença em Licenças, sempre na linha
   do responsável, e o botão do card só entrega (BQ). Posto e
-  colaborador não devolvem: a linha abre o registro (BN).
+  colaborador não devolvem: a linha abre o registro (BN). Na aba Responsáveis, a linha abre a ficha do responsável (CJ).
 - **Lixeira só onde o histórico é do próprio registro:** colaborador e computador. O resto exclui de
   verdade, e o histórico guarda o nome por escrito (V, AG).
 - **Só pt-BR, e a moeda é o real (BRL).** Nenhuma frase em inglês chega a quem usa: a recusa da API

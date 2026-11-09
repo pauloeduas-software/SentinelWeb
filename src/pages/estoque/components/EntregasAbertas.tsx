@@ -2,19 +2,21 @@ import { useState, type KeyboardEvent } from 'react';
 import {
   MapPin, Monitor, Undo2, User, Users,
 } from 'lucide-react';
+import LinhaDoResponsavel from '../../../components/LinhaDoResponsavel';
 import { CartaoVazio } from '../../../components/ListaVazia';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import type { EntregaAberta } from '../../../types/stock.types';
 import { diaDoInstante, formatarDiaDoInstante, hojeNoCampoDeData } from '../../../helpers/format.helper';
 import { textoDeUnidades } from '../../../helpers/estoque.helper';
+import { caminhoDoResponsavel } from '../../../helpers/responsavel.helper';
 
 // QUEM ESTÁ COM O ITEM AGORA — uma linha por ENTREGA ("Mesa 1 · 5 unidades ·
 // desde…"), com o botão de devolver. É a aba Responsáveis da licença
 // (`EntregasAbertas.tsx`), com quantidade.
 //
 // NO POSTO, QUEM ESTÁ NELE APARECE EMBAIXO (BL), só o nome: responde pelo que foi
-// entregue à mesa (D33). A linha não é link.
+// entregue ao posto (D33). A linha abre a ficha de quem recebeu (CJ).
 //
 // DEVOLVER PERGUNTA QUANTAS E O DIA, na própria linha: vem com todas e com
 // hoje; voltam menos quando só parte voltou, e o dia pode voltar até o da
@@ -80,7 +82,14 @@ export default function EntregasAbertas({ entregas, carregando, erro, vazio, ocu
           && quantas >= 1 && quantas <= entrega.unidades;
 
         return (
-          <li key={entrega.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <LinhaDoResponsavel
+            key={entrega.id}
+            // Com o Devolver aberto, a linha é do pedido e não abre nada.
+            para={meu ? null : caminhoDoResponsavel({
+              colaborador: entrega.targetPersonId, posto: entrega.targetWorkstationId, computador: entrega.targetAssetId,
+            })}
+            className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+          >
             <div className="min-w-0 space-y-0.5">
               <div className="flex items-center gap-2 text-text-primary">
                 <Icone className="size-4 shrink-0 text-text-tertiary" />
@@ -147,7 +156,7 @@ export default function EntregasAbertas({ entregas, carregando, erro, vazio, ocu
                 <Undo2 /> {componente ? 'Retirar' : 'Devolver'}
               </Button>
             )}
-          </li>
+          </LinhaDoResponsavel>
         );
       })}
     </ul>

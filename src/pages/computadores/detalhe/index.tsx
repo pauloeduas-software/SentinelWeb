@@ -45,7 +45,7 @@ export default function AssetDetailPage() {
 function FichaDoComputador() {
   const {
     asset, carregando, erro, voltar,
-    aba, setAba, contagens, responsaveis, abrirPosto,
+    aba, setAba, contagens, responsaveis, caminhoDoResponsavel,
     eventos, totalDeEventos, paginaDoHistorico, setPaginaDoHistorico, historicoPendente, erroDoHistorico,
     licencas, licencasPendentes, erroDasLicencas,
     componentes, componentesPendentes, erroDosComponentes,
@@ -120,7 +120,7 @@ function FichaDoComputador() {
             <PosseTab
               posse={responsaveis.visiveis[0]}
               vazio={responsaveis.buscaAdiada ? `Nenhum responsável com "${responsaveis.buscaAdiada}" neste computador.` : undefined}
-              onAbrirPosto={abrirPosto}
+              para={caminhoDoResponsavel}
               onDevolver={abrirDevolucao}
             />
           </TabsContent>

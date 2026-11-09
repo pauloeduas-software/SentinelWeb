@@ -3,12 +3,14 @@ import {
   KeyRound, Monitor, Undo2, User, Users,
 } from 'lucide-react';
 import ChaveEscondida from './ChaveEscondida';
+import LinhaDoResponsavel from '../../../components/LinhaDoResponsavel';
 import { CartaoVazio } from '../../../components/ListaVazia';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Seletor } from '../../../components/ui/seletor';
 import type { ChaveDaLicenca, EntregaComChave } from '../../../types/license.types';
 import { diaDoInstante, formatarDiaDoInstante, hojeNoCampoDeData } from '../../../helpers/format.helper';
+import { caminhoDoResponsavel } from '../../../helpers/responsavel.helper';
 import { chavesComLugar, lugarDaChave, rotuloDaChave } from '../helpers/licenca.helper';
 
 // QUEM ESTÁ COM A LICENÇA AGORA — uma linha por entrega aberta, com a chave
@@ -83,7 +85,12 @@ export default function EntregasAbertas({ entregas, carregando, erro, chaves, va
         const Icone = entrega.assignedPerson ? User : Monitor;
         const meu = pedido?.id === entrega.id ? pedido : null;
         return (
-          <li key={entrega.id} className="space-y-2 px-4 py-3">
+          <LinhaDoResponsavel
+            key={entrega.id}
+            // A linha abre quem recebeu (CJ); com um pedido aberto nela, não.
+            para={meu ? null : caminhoDoResponsavel({ colaborador: entrega.assignedPerson?.id, computador: entrega.assignedAsset?.id })}
+            className="space-y-2 px-4 py-3"
+          >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0 space-y-0.5">
                 <div className="flex items-center gap-2 text-text-primary">
@@ -187,7 +194,7 @@ export default function EntregasAbertas({ entregas, carregando, erro, chaves, va
                 <KeyRound className="size-4 shrink-0" /> sem chave: use Chave para escolher uma
               </div>
             )}
-          </li>
+          </LinhaDoResponsavel>
         );
       })}
     </ul>

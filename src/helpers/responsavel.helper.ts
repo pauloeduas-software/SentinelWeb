@@ -10,3 +10,18 @@ export function nomeDoResponsavel(posse: Pick<PosseResolvida, 'targetType' | 'ta
   const alvo = posse?.targetLabel ?? '';
   return alvo && posse?.targetType === 'WORKSTATION' ? `Posto ${alvo}` : alvo;
 }
+
+/**
+ * A ficha de quem recebeu (CJ): o colaborador, o posto ou o computador do componente e da
+ * licença. Sem nenhum, como o posto excluído, a linha não abre nada.
+ */
+export function caminhoDoResponsavel(alvo: {
+  colaborador?: string | null;
+  posto?: string | null;
+  computador?: string | null;
+}): string | null {
+  if (alvo.colaborador) return `/colaboradores/${alvo.colaborador}`;
+  if (alvo.posto) return `/postos/${alvo.posto}`;
+  if (alvo.computador) return `/computadores/${alvo.computador}`;
+  return null;
+}

@@ -1,6 +1,7 @@
 import type { CheckinInput, CheckoutInput } from '../../../queries/assignment.queries';
 import type { Asset } from '../../../types/asset.types';
 import type { AlvoDaPosse, PosseResolvida } from '../../../types/posse.types';
+import { caminhoDoResponsavel } from '../../../helpers/responsavel.helper';
 
 // Leitura da posse para a tela — funções puras, fora do JSX
 // (docs/referencia/arquitetura.md: "cálculo sai do JSX").
@@ -37,6 +38,16 @@ export function textoDaPosse(posse: PosseResolvida): string {
  * patrimônio, e a baixa não mexe no status — um vendido pode estar
  * "Disponível". O servidor recusa com 409; o botão não oferece.
  */
+/**
+ * Para onde a linha do responsável leva (CJ): a ficha do posto, ou a do colaborador que
+ * recebeu direto. Sem posse aberta, nada.
+ */
+export function caminhoDaPosse(asset: Pick<Asset, 'posse' | 'postoAtual'>): string | null {
+  const noPosto = asset.posse?.targetType === 'WORKSTATION';
+  const pessoa = asset.posse?.responsaveis.find((responsavel) => responsavel.via === 'DIRETO');
+  return caminhoDoResponsavel({ posto: noPosto ? asset.postoAtual?.id : null, colaborador: noPosto ? null : pessoa?.id });
+}
+
 export function bloqueioDaEntrega(asset: Pick<Asset, 'posse' | 'status' | 'retiredAt'>): string | null {
   if (asset.posse?.assignmentId != null) return 'Já entregue: devolva antes de entregar de novo';
   if (asset.retiredAt) return 'Computador baixado não pode ser entregue — desfaça a baixa antes.';

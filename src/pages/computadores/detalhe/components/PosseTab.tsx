@@ -1,9 +1,9 @@
 import {
   MapPin, Undo2, User, Users,
 } from 'lucide-react';
+import LinhaDoResponsavel from '../../../../components/LinhaDoResponsavel';
 import { CartaoVazio } from '../../../../components/ListaVazia';
 import { Button } from '../../../../components/ui/button';
-import { cn } from '../../../../helpers/cn.helper';
 import { formatarData, formatarDiaDoInstante } from '../../../../helpers/format.helper';
 import type { PosseResolvida } from '../../../../types/posse.types';
 
@@ -12,8 +12,8 @@ import type { PosseResolvida } from '../../../../types/posse.types';
 // O que já foi mora na aba Histórico (BP).
 //
 // O DEVOLVER MORA NESTA LINHA (BQ), e abre o painel: a devolução do computador pede
-// o status de volta e as notas, que não cabem nela (BN). Entregue a um posto, a linha
-// abre a ficha dele (BS): é o caminho do computador até a mesa.
+// o status de volta e as notas, que não cabem nela (BN). A linha abre a ficha do
+// responsável, o colaborador ou o posto, como em Estoque e Licenças (CJ).
 
 const ICONE_DO_ALVO = { PERSON: User, WORKSTATION: MapPin } as const;
 
@@ -21,11 +21,12 @@ interface PosseTabProps {
   posse: PosseResolvida | undefined;
   /** A frase da lista vazia quando ela é vazia por causa da busca. */
   vazio?: string;
-  onAbrirPosto?: () => void;
+  /** A ficha do responsável, que a linha abre; nula, a linha não clica. */
+  para: string | null;
   onDevolver: () => void;
 }
 
-export default function PosseTab({ posse, vazio, onAbrirPosto, onDevolver }: PosseTabProps) {
+export default function PosseTab({ posse, vazio, para, onDevolver }: PosseTabProps) {
   if (!posse?.targetType) {
     return <CartaoVazio icone={Users} carregando={false} erro={null} frase={vazio ?? 'Nenhum responsável por este computador agora.'} />;
   }
@@ -40,13 +41,7 @@ export default function PosseTab({ posse, vazio, onAbrirPosto, onDevolver }: Pos
 
   return (
     <ul className="divide-y divide-border-sutil overflow-hidden rounded-lg border border-border-sutil text-sm">
-      <li
-        className={cn(
-          'flex flex-wrap items-center justify-between gap-3 px-4 py-3',
-          onAbrirPosto && 'cursor-pointer transition-colors hover:bg-surface-muted/50',
-        )}
-        onClick={onAbrirPosto}
-      >
+      <LinhaDoResponsavel para={para} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
         <div className="min-w-0 space-y-0.5">
           <div className="flex items-center gap-2 text-text-primary">
             <Icone className="size-4 shrink-0 text-text-tertiary" />
@@ -61,17 +56,10 @@ export default function PosseTab({ posse, vazio, onAbrirPosto, onDevolver }: Pos
           </div>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={(evento) => {
-            evento.stopPropagation();
-            onDevolver();
-          }}
-        >
+        <Button variant="outline" size="sm" onClick={onDevolver}>
           <Undo2 /> Devolver
         </Button>
-      </li>
+      </LinhaDoResponsavel>
     </ul>
   );
 }
