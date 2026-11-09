@@ -16,7 +16,7 @@ import { linksDoErro } from '../../../helpers/erro.helper';
 // não sai do patrimônio). Como campo, viraria um seletor que alguém muda sem
 // perceber ao editar o número de série.
 //
-// As duas saídas são diferentes (D19) e o texto abaixo diz isso na hora da
+// As duas saídas são diferentes (D19) e a ajuda do Motivo diz isso na hora da
 // decisão, que é quando a dúvida existe: a lixeira é para cadastro errado, e
 // isto aqui é o fato contábil de que o bem saiu.
 
@@ -68,7 +68,12 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
   return (
     <FormularioLateral
       titulo="Dar baixa no computador"
-      descricao={`${asset.assetTag} sai do patrimônio e das listagens, e fica na vista Baixados com o motivo. Cadastro errado vai para a lixeira.`}
+      descricao={
+        <>
+          <span className="font-mono">{asset.assetTag}</span> · {asset.model.manufacturer.name} {asset.model.name}
+          {asset.serial && <> · <span className="font-mono">{asset.serial}</span></>}
+        </>
+      }
       onClose={onClose}
       onSubmit={enviar}
       salvando={salvando}
@@ -87,13 +92,13 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
         </span>
       )}
     >
-      <Campo rotulo="Motivo" obrigatorio ajuda="A lista vem de Configurações › Motivos de baixa.">
+      <Campo rotulo="Motivo" obrigatorio ajuda="Cadastro errado vai para a lixeira, pelo Excluir. A lista vem de Configurações › Motivos de baixa.">
         <ReferenceSelect rota="retire-reasons" valor={motivo} onChange={setMotivo} obrigatorio />
       </Campo>
 
       {/* `max` = hoje porque o servidor recusa data futura (422): uma saída
           que ainda não aconteceu não é fato a registrar. */}
-      <Campo rotulo="Data da saída" obrigatorio ajuda="Vem com hoje: troque pela data em que o computador saiu.">
+      <Campo rotulo="Data da saída" obrigatorio>
         <Input type="date" required max={hoje} value={data} onChange={(event) => setData(event.target.value)} />
       </Campo>
 

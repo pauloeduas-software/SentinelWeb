@@ -4,8 +4,7 @@ import ReferenceSelect from '../../../../components/ReferenceSelect';
 import { Campo } from '../../../../components/ui/campo';
 import { Input, Textarea } from '../../../../components/ui/input';
 import { diaDoInstante, hojeNoCampoDeData } from '../../../../helpers/format.helper';
-import { nomeDoResponsavel } from '../../../../helpers/responsavel.helper';
-import { TRACO, montarDevolucao } from '../../helpers/posse.helper';
+import { montarDevolucao } from '../../helpers/posse.helper';
 import type { CheckinInput } from '../../../../queries/assignment.queries';
 import type { Asset } from '../../../../types/asset.types';
 
@@ -66,13 +65,7 @@ export default function DevolucaoModal({ asset, onClose, onDevolver }: Devolucao
       rotuloDoEnvio="Devolver"
       rotuloEnviando="Devolvendo…"
     >
-      {/* Com quem ele está: sem isto, "devolver" seria um botão sem contexto. */}
-      <div className="space-y-2 rounded-lg border border-border-sutil p-4">
-        <div className="text-xs font-medium text-text-tertiary">Responsáveis</div>
-        <div className="text-sm text-text-primary">{nomeDoResponsavel(asset.posse) || TRACO}</div>
-      </div>
-
-      <Campo rotulo="Status de volta" ajuda="Como o computador volta: disponível, em conserto, inutilizável. Em branco, volta disponível.">
+      <Campo rotulo="Status após a devolução" ajuda="Em branco, volta disponível.">
         <ReferenceSelect rota="status-labels" valor={statusId} onChange={setStatusId} />
       </Campo>
 

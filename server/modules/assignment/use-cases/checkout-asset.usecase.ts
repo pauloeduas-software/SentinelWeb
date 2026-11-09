@@ -288,7 +288,7 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, ator: A
     // corrida com a baixa simultânea.
     if (ativo.retiredAt) {
       throw new AppError(
-        `${ativo.assetTag} teve baixa em ${diaEmPortugues(ativo.retiredAt)} e não pode ser entregue. Desfaça a baixa antes.`,
+        `${ativo.assetTag} teve baixa em ${diaEmPortugues(ativo.retiredAt)} e não pode ser entregue. Reverta a baixa antes.`,
         409,
       );
     }

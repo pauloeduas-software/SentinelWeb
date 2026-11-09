@@ -35,7 +35,7 @@ export default function PostosPage() {
       <ListToolbar
         search={search}
         onSearchChange={changeSearch}
-        placeholder="Buscar por nome, nota, etiqueta ou série…"
+        placeholder="Buscar por nome, notas, etiqueta ou série…"
         // O cadastro do posto é `SUPERVISOR`.
         acao={podeCriar && <Button onClick={openCreate}><Plus /> Novo posto</Button>}
         page={page}

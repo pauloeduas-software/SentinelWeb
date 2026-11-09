@@ -92,7 +92,7 @@ bancos de teste a apagar depois estão lá.
   sigla do assunto. Rota renomeada deixa a antiga redirecionando. O menu é por seções (AH).
 - **Computador** é o nome do item em toda tela e recusa, nunca "ativo" (CH): ativo e computador são a mesma coisa.
   "Ativo" fica só como status (Ativo, Desativado) e no código (`Asset`).
-- **Um nome para cada coisa (CH):** Notas, nunca "observações"; a série vai sem rótulo, nunca "SN", e embaixo da etiqueta em toda linha (CI); posto, nunca "mesa", fora do
+- **Um nome para cada coisa (CH):** Notas, nunca "observações"; a série vai sem rótulo, nunca "SN", e embaixo da etiqueta em toda linha (CI); a baixa se reverte, nunca se desfaz (CK); posto, nunca "mesa", fora do
   exemplo de nome; valor da compra, nunca "custo". Quem sai do posto tem **Registrar saída**; Encerrar é só da licença.
 
 ## Não volta

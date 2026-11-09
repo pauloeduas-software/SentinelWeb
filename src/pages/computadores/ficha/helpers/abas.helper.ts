@@ -4,7 +4,7 @@ import { Cpu, History, KeyRound, Monitor, Users, type LucideIcon } from 'lucide-
 //
 // Fica em `helpers/` porque é a lista que a tela percorre, e porque um arquivo
 // que exporta componente E constante quebra o fast refresh do Vite (o lint
-// reprova). O componente que as desenha é `components/AssetTabs.tsx`.
+// reprova). O componente que as desenha é `components/AbasDoComputador.tsx`.
 //
 // Toda aba desta lista existe e tem conteúdo. Aba que não tivesse não entraria
 // aqui: aba vazia é indistinguível de defeito para quem usa o sistema.

@@ -13,7 +13,7 @@ import { tituloDoEvento } from '../helpers/historico.helper';
 // componentes instalados e retirados (AI). Cadastro, edição e baixa ficam na
 // auditoria, no banco (AB).
 
-interface HistoryTabProps {
+interface HistoricoTabProps {
   eventos: EventoDoAtivo[];
   pagina: BarraDaFichaProps;
   carregando: boolean;
@@ -22,7 +22,7 @@ interface HistoryTabProps {
 
 const ICONE = { POSSE: ArrowRightLeft, LICENCA: KeyRound, COMPONENTE: Cpu } as const;
 
-export default function HistoryTab({ eventos, pagina, carregando, erro }: HistoryTabProps) {
+export default function HistoricoTab({ eventos, pagina, carregando, erro }: HistoricoTabProps) {
   return (
     <LinhaDoTempo
       icone={History}
