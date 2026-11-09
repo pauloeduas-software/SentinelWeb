@@ -40,7 +40,7 @@ export const WORKSTATION_SELECT = {
 
   assignments: {
     where: POSSE_ABERTA,
-    select: { asset: { select: { assetTag: true } } },
+    select: { asset: { select: { assetTag: true, serial: true } } },
     orderBy: { checkoutAt: 'asc' },
   },
 } as const;

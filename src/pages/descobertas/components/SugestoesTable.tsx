@@ -67,7 +67,7 @@ export default function SugestoesTable({ sugestoes, carregando, erro, ocupado, a
                     {asset ? (
                       <>
                         <TableLinha className="font-mono text-text-primary">{asset.assetTag}</TableLinha>
-                        {asset.name && <TableSublinha>{asset.name}</TableSublinha>}
+                        {asset.serial && <TableSublinha className="font-mono">{asset.serial}</TableSublinha>}
                       </>
                     ) : '—'}
                   </TableCell>

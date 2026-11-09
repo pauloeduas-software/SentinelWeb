@@ -2,7 +2,7 @@ import { Pencil, Trash2, UserPlus } from 'lucide-react';
 import SeloDoPosto from './SeloDoPosto';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
 import { Card } from '../../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableNome, TableRow } from '../../../components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableLinha, TableNome, TableRow, TableSublinha } from '../../../components/ui/table';
 import { TRACO, nomesDoPosto, quemEstaNoPosto } from '../helpers/postos.helper';
 import type { Posto } from '../../../types/workstation.types';
 
@@ -42,7 +42,7 @@ export default function PostosTable({
             <TableHead>Posto</TableHead>
             <TableHead className="hidden w-[16%] md:table-cell">Localização</TableHead>
             <TableHead>Responsáveis</TableHead>
-            <TableHead className="hidden w-32 md:table-cell">Etiqueta</TableHead>
+            <TableHead className="hidden w-44 md:table-cell">Etiqueta</TableHead>
             <TableHead className="w-36">Status</TableHead>
             <TableHeadAcoes />
           </TableRow>
@@ -55,9 +55,14 @@ export default function PostosTable({
                 <TableCell className="hidden md:table-cell">{posto.location.name}</TableCell>
                 <TableCell title={nomesDoPosto(posto).join(', ')}>{quemEstaNoPosto(posto)}</TableCell>
                 <TableCell className="hidden md:table-cell">
-                  {/* Em mono e na cor do texto, como a etiqueta em Descobertas. */}
+                  {/* Em mono e na cor do texto, com a série embaixo, como a etiqueta em Descobertas (CH). */}
                   {posto.computadores.length > 0
-                    ? <span className="font-mono text-text-primary">{posto.computadores.join(', ')}</span>
+                    ? posto.computadores.map((computador) => (
+                      <div key={computador.assetTag}>
+                        <TableLinha className="font-mono text-text-primary">{computador.assetTag}</TableLinha>
+                        {computador.serial && <TableSublinha className="font-mono">{computador.serial}</TableSublinha>}
+                      </div>
+                    ))
                     : TRACO}
                 </TableCell>
                 <TableCell><SeloDoPosto posto={posto} /></TableCell>

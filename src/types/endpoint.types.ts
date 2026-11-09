@@ -42,7 +42,7 @@ export interface Endpoint {
    * O ativo do vínculo, identificado: é a coluna da lista de máquinas
    * vinculadas, e a etiqueta leva à ficha. `null` quando não há vínculo.
    */
-  asset: { id: string; assetTag: string; name: string | null } | null;
+  asset: { id: string; assetTag: string; name: string | null; serial: string | null } | null;
   reviewState?: ReviewState;
 }
 

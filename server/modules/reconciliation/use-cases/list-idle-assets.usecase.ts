@@ -19,6 +19,7 @@ export interface AtivoOcioso {
   assetId: string;
   assetTag: string;
   name: string | null;
+  serial: string | null;
   hostname: string | null;
   /** Último dia com QUALQUER sinal de uso. Null = nunca houve. */
   ultimoUso: string | null;
@@ -45,6 +46,7 @@ export async function listarAtivosOciosos(dias = 30): Promise<AtivoOcioso[]> {
       id: true,
       assetTag: true,
       name: true,
+      serial: true,
       endpoint: { select: { hostname: true } },
       usageDays: {
         where: { activeMinutes: { gt: 0 } },
@@ -74,6 +76,7 @@ export async function listarAtivosOciosos(dias = 30): Promise<AtivoOcioso[]> {
       assetId: ativo.id,
       assetTag: ativo.assetTag,
       name: ativo.name,
+      serial: ativo.serial,
       hostname: ativo.endpoint?.hostname ?? null,
       ultimoUso: ultimo ? ultimo.toISOString().slice(0, 10) : null,
       diasSemUso: ultimo ? Math.floor((agora - ultimo.getTime()) / (24 * 60 * 60 * 1000)) : null,

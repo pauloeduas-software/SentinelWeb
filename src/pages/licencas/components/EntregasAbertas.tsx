@@ -48,12 +48,7 @@ function Alvo({ entrega }: { entrega: EntregaComChave }) {
   if (entrega.assignedPerson) return <>{entrega.assignedPerson.name}</>;
   const ativo = entrega.assignedAsset;
   if (!ativo) return <>—</>;
-  return (
-    <>
-      <span className="font-mono">{ativo.assetTag}</span>
-      {ativo.name && ` — ${ativo.name}`}
-    </>
-  );
+  return <span className="font-mono">{ativo.assetTag}</span>;
 }
 
 export default function EntregasAbertas({ entregas, carregando, erro, chaves, vazio, ocupado, onDevolver, onTrocarChave }: EntregasAbertasProps) {
@@ -95,6 +90,10 @@ export default function EntregasAbertas({ entregas, carregando, erro, chaves, va
                   <Icone className="size-4 shrink-0 text-text-tertiary" />
                   <span className="truncate font-medium"><Alvo entrega={entrega} /></span>
                 </div>
+                {/* A série embaixo da etiqueta, como na lista de Computadores (CH). */}
+                {entrega.assignedAsset?.serial && (
+                  <div className="truncate font-mono text-xs text-text-secondary">{entrega.assignedAsset.serial}</div>
+                )}
                 <div className="text-xs text-text-tertiary">
                   desde {formatarDiaDoInstante(entrega.checkoutAt)}
                   {entrega.checkoutNotes && <span className="text-text-secondary"> · {entrega.checkoutNotes}</span>}

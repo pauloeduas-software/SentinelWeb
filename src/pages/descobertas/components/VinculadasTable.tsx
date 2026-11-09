@@ -32,7 +32,7 @@ export default function VinculadasTable({ maquinas, carregando, erro, acao, ocup
   const navigate = useNavigate();
   const lista = useListaLocalNaUrl(
     maquinas,
-    (maquina) => `${maquina.hostname} ${maquina.osVersion} ${maquina.asset?.assetTag ?? ''} ${maquina.asset?.name ?? ''}`,
+    (maquina) => `${maquina.hostname} ${maquina.osVersion} ${maquina.asset?.assetTag ?? ''} ${maquina.asset?.serial ?? ''} ${maquina.asset?.name ?? ''}`,
   );
 
   return (
@@ -40,7 +40,7 @@ export default function VinculadasTable({ maquinas, carregando, erro, acao, ocup
       <ListToolbar
         search={lista.search}
         onSearchChange={lista.changeSearch}
-        placeholder="Buscar por máquina, etiqueta ou sistema…"
+        placeholder="Buscar por máquina, etiqueta, série ou sistema…"
         acao={acao}
         page={lista.page}
         perPage={lista.perPage}
@@ -74,7 +74,7 @@ export default function VinculadasTable({ maquinas, carregando, erro, acao, ocup
                     {asset ? (
                       <>
                         <TableLinha className="font-mono text-text-primary">{asset.assetTag}</TableLinha>
-                        {asset.name && <TableSublinha>{asset.name}</TableSublinha>}
+                        {asset.serial && <TableSublinha className="font-mono">{asset.serial}</TableSublinha>}
                       </>
                     ) : '—'}
                   </TableCell>

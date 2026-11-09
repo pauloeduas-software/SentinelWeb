@@ -886,3 +886,31 @@ formulário e outro na recusa, o computador se chamava também ativo, e o mesmo 
 só, e "licença livre" é o jeito comum de dizer. As datas já seguem um nome por papel: "Data da entrega" e "Data da
 entrada" no formulário, "Desde" na coluna e "Devolvida em", "Retirada em" e "Saiu em" na linha. E "equipamento" na
 recusa de quem está desativado, que vale para ativo e para item.
+---
+
+## CI — A série vai embaixo da etiqueta em toda tela
+
+**Decisão.** Onde aparece a etiqueta de um computador numa linha, a série vem embaixo, só o número, em mono, como a
+[CH](#ch--um-nome-para-cada-coisa) deixou na lista de Computadores. As regras de negócio não mudaram, e nenhuma rota é
+nova.
+
+- **Descobertas:** nas listas Sugestões, Vinculadas e Ociosos, a série entra no lugar do nome do computador, que
+  quase sempre vinha vazio. A busca das três acha também pela série.
+- **Estoque e Licenças:** na aba Responsáveis, a linha do computador era "ATV-00012 — Dell do financeiro". Fica a
+  etiqueta, e a série embaixo, onde o posto põe quem está nele. A busca acha também pela série.
+- **Postos:** a coluna Etiqueta da lista ganha a série embaixo, na largura da coluna Etiqueta das outras tabelas.
+- **A lista de Computadores sai sem a coluna Compra.** O valor e a data da compra ficam no card da ficha, com o número
+  do pedido.
+
+**Completa:** [CH](#ch--um-nome-para-cada-coisa), que pôs a série sem rótulo na lista de Computadores, nas abas das
+fichas e nos painéis de Entregar e Devolver.
+
+**Por quê:** pedido para a etiqueta ter o mesmo desenho em todo lugar. O nome embaixo da etiqueta repetia um campo
+opcional, e a série é o que se confere na etiqueta colada na máquina. A coluna Compra não ajuda a achar o computador
+na lista, e quem procura o valor abre a ficha.
+
+**O custo:** a lista, as entregas e Descobertas passam a mandar a série do computador.
+
+**O que ficou de fora.** O seletor de computador dos formulários continua "ATV-00012 — Dell Latitude", numa linha só:
+o seletor não tem segunda linha. O card do posto, o título da ficha e as frases de recusa continuam só com a etiqueta
+ou com o nome por escrito.

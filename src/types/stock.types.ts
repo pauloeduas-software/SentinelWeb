@@ -73,7 +73,7 @@ export interface EntregaAberta {
   targetAssetId: string | null;
   targetLabel: string;
   /** O computador do componente, para a etiqueta sair em mono; nulo nos outros alvos. */
-  targetAsset: { id: string; assetTag: string; name: string | null } | null;
+  targetAsset: { id: string; assetTag: string; name: string | null; serial: string | null } | null;
   /** Quem está no posto agora (BL), só o nome; vazio fora do posto. */
   responsaveis: { id: string; name: string }[];
   checkoutAt: string;

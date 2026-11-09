@@ -123,7 +123,7 @@ function FichaDoItem({ id }: { id: string }) {
               <ListToolbar
                 search={busca}
                 onSearchChange={mudarBusca}
-                placeholder={componente ? 'Buscar por etiqueta ou nome do computador…' : 'Buscar por responsável ou posto…'}
+                placeholder={componente ? 'Buscar por etiqueta, série ou nome…' : 'Buscar por responsável ou posto…'}
                 page={paginaDasEntregas}
                 perPage={POR_PAGINA}
                 total={entregas.data?.total ?? 0}

@@ -61,6 +61,7 @@ export interface AtivoOcioso {
   assetId: string;
   assetTag: string;
   name: string | null;
+  serial: string | null;
   hostname: string | null;
   ultimoUso: string | null;
   diasSemUso: number | null;
