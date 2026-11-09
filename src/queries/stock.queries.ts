@@ -5,7 +5,7 @@ import { personKeys } from './person.queries';
 import { workstationKeys } from './workstation.queries';
 import type { ListEnvelope, ListParams, StatusAtivoStats } from '../types/list.types';
 import type {
-  AlvoDaEntregaDeEstoque, EventoDoItem, ItemDeEstoque, ItemDeEstoqueInput,
+  AlvoDaEntregaDeEstoque, EventoDoItem, ItemDeEstoque, ItemDeEstoqueDetalhe, ItemDeEstoqueInput,
   ResultadoDaDevolucao, EntregaAberta, EntregaNaFicha,
 } from '../types/stock.types';
 
@@ -60,7 +60,7 @@ export function useStockStatsQuery() {
 export function useStockItemQuery(id: string | null) {
   return useQuery({
     queryKey: stockKeys.item(id ?? ''),
-    queryFn: async () => (await apiClient.get<ItemDeEstoque>(`/stock/items/${id}`)).data,
+    queryFn: async () => (await apiClient.get<ItemDeEstoqueDetalhe>(`/stock/items/${id}`)).data,
     enabled: id != null,
   });
 }

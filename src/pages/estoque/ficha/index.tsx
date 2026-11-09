@@ -111,11 +111,11 @@ function FichaDoItem({ id }: { id: string }) {
             {!ehConsumivel(item) && (
               <TabsTrigger value="responsaveis">
                 {componente ? <Monitor /> : <Users />} {componente ? 'Computadores' : 'Responsáveis'}
-                {/* Sem o número durante a busca: ele conta a lista filtrada, não as entregas do item. */}
-                {!buscaAdiada && <ContagemDaAba>{entregas.data?.total}</ContagemDaAba>}
+                {/* Do item, e não da lista: com a busca do link, a lista diz só o que ela achou. */}
+                <ContagemDaAba>{item.entregasAbertas}</ContagemDaAba>
               </TabsTrigger>
             )}
-            <TabsTrigger value="historico"><History /> Histórico</TabsTrigger>
+            <TabsTrigger value="historico"><History /> Histórico <ContagemDaAba>{historico.data?.total}</ContagemDaAba></TabsTrigger>
           </TabsList>
 
           {!ehConsumivel(item) && (

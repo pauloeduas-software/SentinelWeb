@@ -8,6 +8,12 @@ import { rotuloDoAlvo, STOCK_MOVEMENT_SELECT } from '../helpers/stock-select.hel
 
 type Unidade = Prisma.StockMovementGetPayload<{ select: typeof STOCK_MOVEMENT_SELECT }>;
 
+/** Quem está no posto agora: só o nome, sem o turno (BO). */
+interface PessoaNoPosto {
+  id: string;
+  name: string;
+}
+
 /** Uma linha da aba Responsáveis: uma entrega, com quantas unidades dela ainda estão fora. */
 export interface EntregaAberta {
   /** Uma unidade da entrega — o `:id` da devolução. */
@@ -18,6 +24,10 @@ export interface EntregaAberta {
   targetAssetId: string | null;
   /** "Laura Souza", "Mesa 1", "ATV-00012 — Dell do financeiro". */
   targetLabel: string;
+  /** O computador do componente, para a etiqueta sair em mono; nulo nos outros alvos. */
+  targetAsset: Unidade['targetAsset'];
+  /** Quem está no posto agora (BL); vazio fora do posto. */
+  responsaveis: PessoaNoPosto[];
   checkoutAt: Date;
   notes: string | null;
   /** Quantas desta entrega ainda estão com o alvo. */
@@ -30,8 +40,9 @@ export interface EntregaAberta {
  * da licença, com uma diferença que é do estoque: a linha é a ENTREGA ("Mesa 1 ·
  * 5 unidades"), não a unidade.
  *
- * Paginada e com busca pelo nome de quem recebeu — o colaborador, o posto, ou a
- * etiqueta e o nome do computador.
+ * Paginada e com busca pelo nome de quem recebeu — o colaborador, o posto ou quem
+ * está nele agora, ou a etiqueta e o nome do computador. A busca acha o que a linha
+ * mostra, como a do computador (`textoDaPosse`).
  *
  * AS ENTREGAS SÃO MONTADAS EM MEMÓRIA, e é barato: são só as unidades ABERTAS
  * deste item, e o total limita quantas existem.
@@ -49,6 +60,7 @@ export async function listStockCheckouts(itemId: string, query: ListQuery): Prom
         OR: [
           { targetPerson: { name: contem } },
           { targetWorkstation: { name: contem } },
+          { targetWorkstation: { occupants: { some: { endedAt: null, person: { name: contem } } } } },
           { targetAsset: { assetTag: contem } },
           { targetAsset: { name: contem } },
         ],
@@ -61,17 +73,45 @@ export async function listStockCheckouts(itemId: string, query: ListQuery): Prom
     orderBy: [{ checkoutAt: 'desc' }, { createdAt: 'desc' }, { id: 'asc' }],
   });
 
-  const entregas = agruparPorLote(unidades).map(({ primeira, unidades: quantas }): EntregaAberta => ({
+  const entregas = agruparPorLote(unidades);
+  const pagina = entregas.slice(query.skip, query.skip + query.take);
+  const ocupantes = await quemEstaNosPostos(pagina.flatMap(({ primeira }) => primeira.targetWorkstationId ?? []));
+
+  const rows = pagina.map(({ primeira, unidades: quantas }): EntregaAberta => ({
     id: primeira.id,
     targetType: primeira.targetType,
     targetPersonId: primeira.targetPersonId,
     targetWorkstationId: primeira.targetWorkstationId,
     targetAssetId: primeira.targetAssetId,
     targetLabel: rotuloDoAlvo(primeira),
+    targetAsset: primeira.targetAsset,
+    responsaveis: primeira.targetWorkstationId ? ocupantes.get(primeira.targetWorkstationId) ?? [] : [],
     checkoutAt: primeira.checkoutAt,
     notes: primeira.notes,
     unidades: quantas,
   }));
 
-  return { total: entregas.length, rows: entregas.slice(query.skip, query.skip + query.take) };
+  return { total: entregas.length, rows };
+}
+
+/**
+ * Quem ocupa cada posto agora, numa consulta só para as linhas da página. Turno e
+ * depois antiguidade, a ordem do computador (`resolverResponsaveisEmLote`): a lista
+ * sai igual a cada chamada.
+ */
+async function quemEstaNosPostos(idsDePosto: string[]): Promise<Map<string, PessoaNoPosto[]>> {
+  const porPosto = new Map<string, PessoaNoPosto[]>();
+  if (idsDePosto.length === 0) return porPosto;
+
+  const ocupacoes = await prisma.workstationOccupant.findMany({
+    where: { workstationId: { in: [...new Set(idsDePosto)] }, endedAt: null },
+    select: { workstationId: true, person: { select: { id: true, name: true } } },
+    orderBy: [{ shift: 'asc' }, { startedAt: 'asc' }],
+  });
+  for (const { workstationId, person } of ocupacoes) {
+    // A ocupação aberta aponta sempre para o posto: o `if` é para o tipo.
+    if (!workstationId) continue;
+    porPosto.set(workstationId, [...(porPosto.get(workstationId) ?? []), person]);
+  }
+  return porPosto;
 }

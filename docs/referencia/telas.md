@@ -78,12 +78,15 @@ mostram a senha no painel aberto, e a troca obrigatória de senha, que já leva 
   ficha. O card é só leitura: quem abre outro registro é a linha da aba, e o único link é o site de suporte.
 - **O que já foi mora na aba Histórico, a última (BP).** As outras abas dizem o que está agora, e nenhuma repete o
   passado. Toda ficha tem a sua, em `LinhaDoTempo`.
+- **A aba que lista diz quantas linhas tem (`ContagemDaAba`),** o Histórico também: no estoque, as entregas, e não as
+  unidades. A Máquina, que não é lista, fica sem número.
 - **A ação da ficha fica no card (`CartaoDaFicha`), e nenhuma aba repete botão (BB, CD).** As cinco fichas têm as ações
   da linha da lista, com as mesmas frases.
 - **O computador numa aba é uma tabela só (CE):** `ComputadoresNaFicha`, no posto e no colaborador, com as colunas da
   lista de Computadores e as duas datas da entrega.
 - **A aba Responsáveis é uma só (BQ):** a `ListToolbar` com a busca (`?quem=`) e o box com uma linha por responsável e a
-  ação à direita. O botão do card só entrega, e sem poder entregar ele trava com o motivo; o Devolver fica na linha. No
+  ação à direita. Entregue a um posto, a linha é o posto, com quem está nele embaixo (BL), e a busca acha também por
+  essas pessoas. O botão do card só entrega, e sem poder entregar ele trava com o motivo; o Devolver fica na linha. No
   computador, ele abre o painel, porque a devolução pede o status de volta e as notas.
 - **O Devolver mora só na ficha do que foi entregue (BN):** o computador, o item e a licença. A ficha do posto e a do
   colaborador mostram o que está com eles em `TabelaDaFicha`, e a linha abre o registro.

@@ -13,6 +13,9 @@ import { textoDeUnidades } from '../../../helpers/estoque.helper';
 // desde…"), com o botão de devolver. É a aba Responsáveis da licença
 // (`EntregasAbertas.tsx`), com quantidade.
 //
+// NO POSTO, QUEM ESTÁ NELE APARECE EMBAIXO (BL), só o nome: responde pelo que foi
+// entregue à mesa (D33). A linha não é link.
+//
 // DEVOLVER PERGUNTA QUANTAS E O DIA, na própria linha: vem com todas e com
 // hoje; voltam menos quando só parte voltou, e o dia pode voltar até o da
 // entrega — o registro da devolução que já aconteceu. É o único lugar do
@@ -39,6 +42,18 @@ interface EntregasAbertasProps {
 type Pedido = { id: string; qty: string; dia: string } | null;
 
 const ICONE_DO_ALVO = { PERSON: User, WORKSTATION: MapPin, ASSET: Monitor } as const;
+
+/** Quem recebeu: o computador com a etiqueta em mono, como a licença o escreve. */
+function Alvo({ entrega }: { entrega: EntregaAberta }) {
+  const ativo = entrega.targetAsset;
+  if (!ativo) return <>{entrega.targetLabel}</>;
+  return (
+    <>
+      <span className="font-mono">{ativo.assetTag}</span>
+      {ativo.name && ` — ${ativo.name}`}
+    </>
+  );
+}
 
 export default function EntregasAbertas({ entregas, carregando, erro, vazio, ocupado, onDevolver }: EntregasAbertasProps) {
   // Um pedido aberto de cada vez, na linha que o abriu.
@@ -74,9 +89,12 @@ export default function EntregasAbertas({ entregas, carregando, erro, vazio, ocu
             <div className="min-w-0 space-y-0.5">
               <div className="flex items-center gap-2 text-text-primary">
                 <Icone className="size-4 shrink-0 text-text-tertiary" />
-                <span className="truncate font-medium">{entrega.targetLabel}</span>
+                <span className="truncate font-medium"><Alvo entrega={entrega} /></span>
                 <span className="text-text-secondary shrink-0">· {textoDeUnidades(entrega.unidades)}</span>
               </div>
+              {entrega.responsaveis.map((pessoa) => (
+                <div key={pessoa.id} className="truncate text-xs text-text-secondary">{pessoa.name}</div>
+              ))}
               <div className="text-xs text-text-tertiary">
                 desde {formatarDiaDoInstante(entrega.checkoutAt)}
                 {entrega.notes && <span className="text-text-secondary"> · {entrega.notes}</span>}
