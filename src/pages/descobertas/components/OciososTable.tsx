@@ -32,7 +32,7 @@ export default function OciososTable({ ociosos, carregando, erro, acao }: Props)
       <ListToolbar
         search={lista.search}
         onSearchChange={lista.changeSearch}
-        placeholder="Buscar por ativo ou máquina…"
+        placeholder="Buscar por etiqueta, nome ou máquina…"
         acao={acao}
         page={lista.page}
         perPage={lista.perPage}
@@ -44,7 +44,7 @@ export default function OciososTable({ ociosos, carregando, erro, acao }: Props)
         <Table className="min-w-[52rem]">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-44">Ativo</TableHead>
+              <TableHead className="w-44">Etiqueta</TableHead>
               <TableHead>Máquina</TableHead>
               <TableHead>Responsáveis</TableHead>
               <TableHead className="w-36">Último uso</TableHead>

@@ -35,7 +35,7 @@ interface Props {
   erro: string | null;
   ocupado: boolean;
   acao: ReactNode;
-  onTriar: (id: string, reviewState: ReviewState) => void;
+  onTriar: (id: string, reviewState: Exclude<ReviewState, 'UNREVIEWED'>) => void;
   onVincular: (endpointId: string, assetId: string, targetWorkstationId: string | null) => Promise<void>;
 }
 
@@ -84,7 +84,7 @@ export default function OrfaosTable({ orfaos, carregando, erro, ocupado, acao, o
                 <TableRow key={orfao.id}>
                   <TableCell className="font-medium text-text-primary">{orfao.hostname}</TableCell>
                   <TableCell>{orfao.osVersion}</TableCell>
-                  <TableCell className="font-mono text-text-tertiary">{orfao.biosSerial ?? '—'}</TableCell>
+                  <TableCell className="font-mono">{orfao.biosSerial ?? '—'}</TableCell>
                   <TableCell>{formatarDataHora(orfao.lastSeen)}</TableCell>
                   <TableCell><PontoDeStatus tom={status.tom}>{status.rotulo}</PontoDeStatus></TableCell>
                   <TableCell>
@@ -97,14 +97,15 @@ export default function OrfaosTable({ orfaos, carregando, erro, ocupado, acao, o
                           onClick: () => setVinculando(orfao),
                           disabled: ocupado,
                         },
-                        {
-                          rotulo: 'Conheço esta máquina',
+                        // A triagem alterna, como Desativar e Ativar: só aparece o Status que ela ainda não tem.
+                        orfao.reviewState !== 'ALLOWED' && {
+                          rotulo: 'Marcar como conhecida',
                           icone: Check,
                           onClick: () => onTriar(orfao.id, 'ALLOWED'),
                           disabled: ocupado,
                         },
-                        {
-                          rotulo: 'Não deveria estar na rede',
+                        orfao.reviewState !== 'BLOCKED' && {
+                          rotulo: 'Marcar como não autorizada',
                           icone: Ban,
                           onClick: () => onTriar(orfao.id, 'BLOCKED'),
                           disabled: ocupado,

@@ -1,14 +1,14 @@
 import {
-  BatteryWarning, HelpCircle, Inbox, MonitorCheck, RefreshCw, type LucideIcon,
+  BatteryWarning, HelpCircle, Inbox, MonitorCheck, RefreshCw, Settings2, type LucideIcon,
 } from 'lucide-react';
 import PaginaCabecalho from '../../components/PaginaCabecalho';
 import { Button } from '../../components/ui/button';
 import { ContagemDaAba, Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import ConfiguracaoDaDescoberta from './components/ConfiguracaoDaDescoberta';
+import ConfigurarDescobertaForm from './components/ConfigurarDescobertaForm';
 import OciososTable from './components/OciososTable';
 import OrfaosTable from './components/OrfaosTable';
 import PainelDeCobertura from './components/PainelDeCobertura';
-import SugestoesLista from './components/SugestoesLista';
+import SugestoesTable from './components/SugestoesTable';
 import VinculadasTable from './components/VinculadasTable';
 import { useDescobertas, type AbaDaTela } from './hooks/useDescobertas';
 
@@ -40,22 +40,32 @@ const ABAS: { id: AbaDaTela; rotulo: string; icone: LucideIcon }[] = [
 export default function DescobertasPage() {
   const {
     aba, setAba,
-    sugestoes, contagem, carregandoSugestoes, erroDasSugestoes, cobertura, carregandoCobertura, erroDaCobertura,
+    sugestoes, contagem, carregandoSugestoes, erroDasSugestoes, cobertura, erroDaCobertura,
     ociosos, carregandoOciosos, erroDosOciosos, semVinculo, vinculadas, carregandoMaquinas, erroDasMaquinas, ocupado,
-    configuracao, erroDaConfiguracao, salvandoConfiguracao, podeConfigurar,
+    configuracao, erroDaConfiguracao, configurando, abrirConfiguracao, fecharConfiguracao,
     podeReconciliar, reconciliando, handleReconciliar,
     handleAceitar, handleRecusar, handleTriar, handleVincular, handleDesvincular, handleSalvarConfiguracao,
   } = useDescobertas();
 
-  // O número ao lado do nome da aba.
-  // RECONCILIAR AGORA (SUPERVISOR), na barra de cada lista. A varredura roda de hora em
-  // hora e toma a janela da hora; quem cadastrou o ativo e quer ver a proposta nascer
-  // não deveria esperar a hora virar.
-  const reconciliar = podeReconciliar && (
-    <Button variant="outline" disabled={reconciliando} onClick={handleReconciliar}>
-      <RefreshCw className={reconciliando ? 'animate-spin' : undefined} />
-      {reconciliando ? 'Varrendo…' : 'Reconciliar agora'}
-    </Button>
+  // OS BOTÕES DA TELA (SUPERVISOR), no fim da barra de cada lista. A varredura roda de
+  // hora em hora e toma a janela da hora; quem cadastrou o ativo e quer ver a sugestão
+  // nascer não deveria esperar a hora virar. A configuração fica ao lado (D118): os
+  // prazos dela explicam os números do topo.
+  const acao = podeReconciliar && (
+    <>
+      <Button
+        variant="outline"
+        disabled={!configuracao}
+        title={erroDaConfiguracao ? `Não foi possível carregar a configuração: ${erroDaConfiguracao}` : undefined}
+        onClick={abrirConfiguracao}
+      >
+        <Settings2 /> Configurar
+      </Button>
+      <Button variant="outline" disabled={reconciliando} onClick={handleReconciliar}>
+        <RefreshCw className={reconciliando ? 'animate-spin' : undefined} />
+        {reconciliando ? 'Varrendo…' : 'Reconciliar agora'}
+      </Button>
+    </>
   );
 
   return (
@@ -63,19 +73,7 @@ export default function DescobertasPage() {
 
       <PaginaCabecalho titulo="Descobertas" />
 
-      <PainelDeCobertura cobertura={cobertura} carregando={carregandoCobertura} erro={erroDaCobertura} horasDeShadow={configuracao?.shadowHours} />
-
-      {/* A CONFIGURAÇÃO logo abaixo do painel, e não numa tela de ajustes: os
-          botões explicam os números que acabaram de ser lidos. "Por que tenho
-          12 fantasmas?" se responde mexendo em `ghostDays`, e separar as duas
-          coisas em telas diferentes esconderia a resposta da pergunta. */}
-      <ConfiguracaoDaDescoberta
-        configuracao={configuracao}
-        erro={erroDaConfiguracao}
-        podeEditar={podeConfigurar}
-        salvando={salvandoConfiguracao}
-        onSalvar={handleSalvarConfiguracao}
-      />
+      <PainelDeCobertura cobertura={cobertura} erro={erroDaCobertura} horasDeShadow={configuracao?.shadowHours} />
 
       <Tabs value={aba} onValueChange={(valor) => setAba(valor as AbaDaTela)}>
         <TabsList className="mb-4">
@@ -86,45 +84,50 @@ export default function DescobertasPage() {
           ))}
         </TabsList>
 
-        <TabsContent value="fila">
-          <SugestoesLista
+        {/* O `tabIndex` tira a parada invisível antes da busca, como em Configurações. */}
+        <TabsContent value="fila" tabIndex={-1}>
+          <SugestoesTable
             sugestoes={sugestoes}
             carregando={carregandoSugestoes}
             erro={erroDasSugestoes}
             ocupado={ocupado}
-            acao={reconciliar}
+            acao={acao}
             onAceitar={handleAceitar}
             onRecusar={handleRecusar}
           />
         </TabsContent>
 
-        <TabsContent value="sem">
+        <TabsContent value="sem" tabIndex={-1}>
           <OrfaosTable
             orfaos={semVinculo}
             carregando={carregandoMaquinas}
             erro={erroDasMaquinas}
             ocupado={ocupado}
-            acao={reconciliar}
+            acao={acao}
             onTriar={handleTriar}
             onVincular={handleVincular}
           />
         </TabsContent>
 
-        <TabsContent value="com">
+        <TabsContent value="com" tabIndex={-1}>
           <VinculadasTable
             maquinas={vinculadas}
             carregando={carregandoMaquinas}
             erro={erroDasMaquinas}
-            acao={reconciliar}
+            acao={acao}
             ocupado={ocupado}
             onDesvincular={(maquina) => void handleDesvincular(maquina)}
           />
         </TabsContent>
 
-        <TabsContent value="ociosos">
-          <OciososTable ociosos={ociosos} carregando={carregandoOciosos} erro={erroDosOciosos} acao={reconciliar} />
+        <TabsContent value="ociosos" tabIndex={-1}>
+          <OciososTable ociosos={ociosos} carregando={carregandoOciosos} erro={erroDosOciosos} acao={acao} />
         </TabsContent>
       </Tabs>
+
+      {configurando && configuracao && (
+        <ConfigurarDescobertaForm configuracao={configuracao} onSalvar={handleSalvarConfiguracao} onClose={fecharConfiguracao} />
+      )}
     </div>
   );
 }

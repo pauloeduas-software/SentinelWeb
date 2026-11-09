@@ -14,7 +14,7 @@ export type ReviewState = 'UNREVIEWED' | 'ALLOWED' | 'BLOCKED';
  * diferentes (qual sinal casou, qual valor, qual hostname). Tipá-la como união
  * fechada obrigaria o front a conhecer o formato de cada uma — e a quebrar
  * quando o servidor acrescentasse um campo. Quem a desenha é
- * `linhasDaEvidencia`, que trata pares chave/valor.
+ * `valorDoSinal`, que lê só o valor que casou.
  */
 export type Evidencia = Record<string, unknown>;
 
