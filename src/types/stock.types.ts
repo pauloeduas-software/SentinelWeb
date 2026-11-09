@@ -52,6 +52,15 @@ export interface ItemDeEstoque {
 }
 
 /**
+ * O item como a ficha o lê — `GET /api/stock/items/:id`: o da lista e o número da aba
+ * Responsáveis, que não muda com a busca dela.
+ */
+export interface ItemDeEstoqueDetalhe extends ItemDeEstoque {
+  /** Quantas entregas estão abertas: as linhas da aba Responsáveis sem busca. */
+  entregasAbertas: number;
+}
+
+/**
  * Uma linha da aba Responsáveis — `GET /api/stock/items/:id/checkouts`. É a
  * ENTREGA ("Mesa 1 · 5 unidades"), não a unidade; `id` é o de uma unidade dela,
  * e é por ele que a devolução vai.
@@ -63,6 +72,10 @@ export interface EntregaAberta {
   targetWorkstationId: string | null;
   targetAssetId: string | null;
   targetLabel: string;
+  /** O computador do componente, para a etiqueta sair em mono; nulo nos outros alvos. */
+  targetAsset: { id: string; assetTag: string; name: string | null } | null;
+  /** Quem está no posto agora (BL), só o nome; vazio fora do posto. */
+  responsaveis: { id: string; name: string }[];
   checkoutAt: string;
   notes: string | null;
   /** Quantas desta entrega ainda estão com o alvo. */

@@ -115,7 +115,7 @@ function FichaDaLicenca({ id }: { id: string }) {
             {licenca.keys.length > 0 && (
               <TabsTrigger value="chaves"><KeyRound /> Chaves <ContagemDaAba>{licenca.keys.length}</ContagemDaAba></TabsTrigger>
             )}
-            <TabsTrigger value="historico"><History /> Histórico</TabsTrigger>
+            <TabsTrigger value="historico"><History /> Histórico <ContagemDaAba>{historico.data?.total}</ContagemDaAba></TabsTrigger>
           </TabsList>
 
           <TabsContent value="responsaveis" className="mt-4 space-y-4">
@@ -141,7 +141,7 @@ function FichaDaLicenca({ id }: { id: string }) {
           </TabsContent>
 
           {licenca.keys.length > 0 && (
-            <TabsContent value="chaves" className="mt-4">
+            <TabsContent value="chaves" className="mt-4 space-y-4">
               <ChavesTab chaves={licenca.keys} />
             </TabsContent>
           )}

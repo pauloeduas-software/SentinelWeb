@@ -9,11 +9,12 @@ import { BUSCA_DA_FICHA, useBuscaDaFicha } from '../../../../hooks/useBuscaDaFic
 import { POR_PAGINA, usePaginaQueExiste } from '../../../../hooks/useListaNaUrl';
 import { useNotificacao } from '../../../../hooks/useNotificacao';
 import { useVoltaComFiltros } from '../../../../hooks/useVoltaComFiltros';
-import { ehConsumivel } from '../../helpers/estoque.helper';
+import { ehComponente, ehConsumivel } from '../../helpers/estoque.helper';
 import { useAcoesDoItem } from '../../hooks/useAcoesDoItem';
 
 // Estado da FICHA DO ITEM: as duas listas de 15 em 15, a aba e a devolução. A busca é
-// a do `useBuscaDaFicha`, e o rótulo da aba conta as entregas.
+// a do `useBuscaDaFicha`, e o número da aba vem do item (`entregasAbertas`), que a busca
+// não filtra.
 
 const ABAS = ['responsaveis', 'historico'] as const;
 // O consumível (AJ) não fica com ninguém: a entrega tira do total, e o histórico é o
@@ -53,7 +54,8 @@ export function useFichaDoItem(id: string) {
   const handleDevolver = async (entregaId: string, qty: number, checkinAt: string): Promise<boolean> => {
     try {
       await devolver.mutateAsync({ entregaId, qty, checkinAt });
-      notificar.sucesso('Devolução registrada.');
+      // No componente a devolução é o Retirar (AI), e a frase acompanha o botão.
+      notificar.sucesso(item && ehComponente(item) ? 'Item retirado.' : 'Item devolvido.');
       return true;
     } catch (erro) {
       // O 409 da entrega já devolvida (duas abas abertas no mesmo item), o de

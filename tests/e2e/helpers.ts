@@ -71,7 +71,8 @@ export async function criarLicenca(request: APIRequestContext, nome: string, cha
   expect(categoria.status()).toBe(201);
   const { id: categoryId } = (await categoria.json()) as { id: string };
   const licenca = await request.post('/api/licenses', {
-    data: { name: nome, categoryId, seatsTotal: 3, keys: chaves.map((productKey) => ({ productKey, seats: 1 })) },
+    // Três compradas, ou uma por chave quando são mais: as chaves não cobrem além do comprado.
+    data: { name: nome, categoryId, seatsTotal: Math.max(3, chaves.length), keys: chaves.map((productKey) => ({ productKey, seats: 1 })) },
   });
   expect(licenca.status()).toBe(201);
   return ((await licenca.json()) as { id: string }).id;

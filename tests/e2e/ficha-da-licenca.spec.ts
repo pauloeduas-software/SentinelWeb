@@ -41,6 +41,21 @@ test('a aba Chaves só existe com chave, e sem ela o endereço cai na primeira',
   await expect(page.getByRole('tab', { name: /Chaves/ })).toHaveCount(0);
 });
 
+test('a aba Chaves vai de 15 em 15, com o número da lista inteira', async ({ page, request }) => {
+  const chaves = Array.from({ length: 16 }, (_, indice) => `K${String(indice + 1).padStart(2, '0')}-AAAAA-BBBBBBBBBB`);
+  const id = await criarLicenca(request, `Licença de muitas chaves ${Date.now()}`, chaves);
+
+  await page.goto(`/licencas/${id}?aba=chaves`);
+  const aba = page.getByRole('tabpanel');
+  await expect(aba.getByRole('listitem')).toHaveCount(15);
+  await expect(aba).toContainText('K01-AAAAA-');
+
+  await aba.getByRole('button', { name: 'Próxima página' }).click();
+  await expect(aba.getByRole('listitem')).toHaveCount(1);
+  await expect(aba.getByRole('listitem')).toContainText('16.');
+  await expect(aba).toContainText('K16-AAAAA-');
+});
+
 test('da ficha do colaborador, abre filtrado por ele, devolve e volta', async ({ page, request }) => {
   const nomeDaLicenca = `Licença do colaborador ${Date.now()}`;
   const nome = `Pessoa da licença ${Date.now()}`;
@@ -58,6 +73,8 @@ test('da ficha do colaborador, abre filtrado por ele, devolve e volta', async ({
   await principal.getByRole('button', { name: 'Devolver' }).click();
   await principal.getByRole('button', { name: 'Confirmar' }).click();
   await expect(principal.getByText('3 compradas · 0 em uso · 3 livres')).toBeVisible();
+  // A entrega e a devolução.
+  await expect(principal.getByRole('tab', { name: /Histórico/ })).toContainText('2');
 
   await page.getByRole('link', { name: 'Voltar para Colaborador' }).click();
   await expect(page).toHaveURL(new RegExp(`/colaboradores/${pessoa}\\?aba=licencas$`));

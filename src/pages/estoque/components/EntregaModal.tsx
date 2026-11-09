@@ -118,7 +118,7 @@ export default function EntregaModal({ item, onClose, onSubmit }: EntregaModalPr
               <ReferenceSelect rota="people" valor={personId} obrigatorio comDetalhe onChange={setPersonId} />
             </Campo>
           ) : (
-            <Campo rotulo="Posto" obrigatorio>
+            <Campo rotulo="Posto" obrigatorio ajuda="O posto é o responsável, e quem está nele responde pelo item.">
               <ReferenceSelect rota="workstations" valor={workstationId} obrigatorio onChange={setWorkstationId} />
             </Campo>
           )}
@@ -126,7 +126,11 @@ export default function EntregaModal({ item, onClose, onSubmit }: EntregaModalPr
       )}
 
       <div className="grid sm:grid-cols-2 gap-4">
-        <Campo rotulo="Quantidade" obrigatorio>
+        <Campo
+          rotulo="Quantidade"
+          obrigatorio
+          ajuda={ehConsumivel(item) ? 'Consumível não volta: a entrega tira do total. Lançou errado? Some de volta pelo Editar.' : undefined}
+        >
           <Input required type="number" min={1} max={100} value={qty} onChange={(e) => setQty(e.target.value)} />
         </Campo>
 

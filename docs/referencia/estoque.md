@@ -68,7 +68,7 @@ criada por fora da trava (o `psql` à mão), e esconder a inconsistência seria 
 | | |
 |---|---|
 | **a lista** | **uma só**, pelo nome, com os desativados — sem abas, como em Colaboradores. Busca por nome, categoria e localização — o texto ao pé da letra, `%` e `_` não são curinga; filtro de categoria. Em cima, os cartões Total, Ativos e Desativados, que contam itens e não unidades: clicar filtra ([BT](../decisoes/plataforma.md#bt--estoque-e-colaboradores-têm-cartões-e-computadores-conta-o-tipo)) |
-| **a linha** | nome (e as notas), categoria, localização, "3 disponíveis" com "10 no total · 7 em uso" embaixo (no consumível, só "3 disponíveis") e status. Sem cor pelo valor. A do desativado fica esmaecida |
+| **a linha** | nome, categoria, localização, "3 disponíveis" com "10 no total · 7 em uso" embaixo (no consumível, só "3 disponíveis") e status. Sem cor pelo valor. A do desativado fica esmaecida |
 | **as ações** | as do cadastro (AF), no `⋯` da linha (AY): Entregar (desabilitado sem disponível, com o motivo no `title`; some no desativado), Editar, Desativar/Ativar e Excluir — com confirmação no Desativar e no Excluir |
 | **a ficha** (`/estoque/:id`) | no card, o status, a conta ("10 no total · 7 em uso · 3 disponíveis"), todos os campos do cadastro e as ações da lista, com as mesmas regras (Entregar e Editar abrem o painel por cima da ficha; excluído, volta para a lista). **Responsáveis** (a primeira aba): as entregas abertas, da mais recente para a mais antiga, 15 por página, com busca pelo nome do colaborador ou do posto — "Mesa 1 · 5 unidades · desde 12/10/2026", com a observação —, e Devolver em cada linha. **Histórico**: só entregas e devoluções, por entrega, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
 
@@ -246,8 +246,8 @@ lista é derivada
 |---|---|
 | `GET /api/stock/items` | a lista, com os desativados (`?categoryId=`, `?isActive=`, `?q=`; `view` e `emUso` são 422) |
 | `GET /api/stock/items/stats` | os cartões: `{ total, ativos, desativados }` |
-| `GET /api/stock/items/:id` | o item, com a conta |
-| `GET /api/stock/items/:id/checkouts` | quem está com ele, por entrega (`?page=`, `?q=` pelo nome; 15 por página) |
+| `GET /api/stock/items/:id` | o item, com a conta e `entregasAbertas`, o número da aba Responsáveis |
+| `GET /api/stock/items/:id/checkouts` | quem está com ele, por entrega, com quem está no posto (`responsaveis`) e o computador do componente (`targetAsset`) (`?page=`, `?q=` pelo nome, também de quem está no posto; 15 por página) |
 | `GET /api/stock/items/:id/history` | o histórico, por entrega (`?page=`; 15 por página, sem busca — `?q=` é 422) |
 | `POST`, `PUT /:id`, `DELETE /:id` | o cadastro; a edição muda também o total e o `isActive` (Desativar e Ativar); excluir o que não está em uso (204), soltando as entregas devolvidas com o nome por escrito |
 | `POST /api/stock/items/:id/checkout` | entregar (`targetType`, um só de `targetPersonId`, `targetWorkstationId` e `targetAssetId` — este, só no componente —, `qty`, `notes`, `checkoutAt` — o dia) |
@@ -285,7 +285,7 @@ listagens. As ordens terminam em `id`, para a mesma linha não aparecer em duas 
 
 | Assunto | Arquivo |
 |---|---|
-| a lista (conta, busca, o desativado na mesma lista), a aba Responsáveis por entrega, a devolução parcial, o histórico por entrega (duas devoluções no mesmo dia são duas), os dias, as fichas e o histórico do colaborador | `tests/estoque/operacoes.test.ts` |
+| a lista (conta, busca, o desativado na mesma lista), a aba Responsáveis por entrega, o número dela, quem está no posto e a busca por essa pessoa, a devolução parcial, o histórico por entrega (duas devoluções no mesmo dia são duas), os dias, as fichas e o histórico do colaborador | `tests/estoque/operacoes.test.ts` |
 | o saldo calculado, as frases sem unidade, o posto que não multiplica, os CHECKs, o total na edição e na auditoria, a quantidade que é número de verdade, o nome único sem diferença de maiúscula, a categoria, desativar só sem unidade em uso e excluir (a regra do posto, com o nome por escrito), a invariante 6 e o 409 do posto com os itens, as rotas | `tests/estoque/invariantes.test.ts` |
 | o componente: a categoria que decide o alvo, o computador baixado e na lixeira, as datas contra a compra, o componente que fica quando o computador muda de mãos, o Retirar, os dois históricos, a busca pela etiqueta, a baixa e a lixeira recusadas, a troca de categoria, o seletor com os dois tipos e o CHECK | `tests/estoque/componente.test.ts` |
 | o consumível: a entrega que tira do total, o posto e o dia passado, o computador recusado, o 0 e as frases, sem devolução, não prende ninguém, a exclusão, o histórico só com a entrega e a troca de categoria | `tests/estoque/consumivel.test.ts` |

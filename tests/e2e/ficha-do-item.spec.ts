@@ -1,6 +1,6 @@
 import { test, expect, type APIRequestContext } from '@playwright/test';
 import {
-  criarColaborador, criarItem, tituloDaPagina, vigiarConsole,
+  criarColaborador, criarItem, criarPosto, tituloDaPagina, vigiarConsole,
 } from './helpers';
 
 // A FICHA DO ITEM É PÁGINA (BK), como a do posto: a lista continua como estava na volta,
@@ -58,6 +58,8 @@ test('da ficha do colaborador, abre filtrado por ele, e a seta volta para a mesm
   await expect(page).toHaveURL(new RegExp(`/estoque/${id}\\?quem=`));
   await expect(page.getByRole('main').getByRole('searchbox')).toHaveValue(nome);
   await expect(page.getByRole('main').getByRole('listitem').filter({ hasText: nome })).toBeVisible();
+  // O número é o do item, e não o que a busca achou: aparece também com o `?quem=`.
+  await expect(page.getByRole('tab', { name: /Responsáveis/ })).toContainText('1');
 
   await page.getByRole('link', { name: 'Voltar para Colaborador' }).click();
   await expect(page).toHaveURL(new RegExp(`/colaboradores/${pessoa}\\?aba=estoque$`));
@@ -115,6 +117,32 @@ test('devolver acontece na ficha, e ela acompanha a conta', async ({ page, reque
 
   await expect(principal.getByText('Nenhum responsável por este item agora.')).toBeVisible();
   await expect(principal.getByText('5 no total · 0 em uso · 5 disponíveis')).toBeVisible();
+  await expect(page.locator('[data-notificacao]')).toContainText('Item devolvido.');
+  // A entrega e a devolução.
+  await expect(principal.getByRole('tab', { name: /Histórico/ })).toContainText('2');
+});
+
+test('a linha do posto diz quem está nele, e não é link', async ({ page, request }) => {
+  const nomeDoPosto = `Mesa do item ${Date.now()}`;
+  const nomeDaPessoa = `Pessoa da mesa ${Date.now()}`;
+  const [id, posto, pessoa] = await Promise.all([
+    criarItem(request, `Item da mesa ${Date.now()}`),
+    criarPosto(request, nomeDoPosto),
+    criarColaborador(request, nomeDaPessoa),
+  ]);
+  expect((await request.post(`/api/workstations/${posto}/occupants`, { data: { personId: pessoa } })).status()).toBe(201);
+  const entrega = await request.post(`/api/stock/items/${id}/checkout`, {
+    data: { targetType: 'WORKSTATION', targetWorkstationId: posto, qty: 2 },
+  });
+  expect(entrega.status()).toBe(201);
+
+  await page.goto(`/estoque/${id}`);
+  const linha = page.getByRole('main').getByRole('listitem').filter({ hasText: nomeDoPosto });
+  await expect(linha).toContainText(nomeDaPessoa);
+  await expect(linha.getByRole('link')).toHaveCount(0);
+
+  await linha.click();
+  await expect(page).toHaveURL(new RegExp(`/estoque/${id}$`));
 });
 
 test('fechar o painel deixa na ficha, e o que se salvou aparece nela', async ({ page, request }) => {

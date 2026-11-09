@@ -53,10 +53,7 @@ export default function EstoqueTable({
 
             return (
               <TableRow key={item.id} onClick={() => onAbrir(item)} apagada={!item.isActive}>
-                <TableCell>
-                  <TableNome>{item.name}</TableNome>
-                  {item.notes && <TableSublinha>{item.notes}</TableSublinha>}
-                </TableCell>
+                <TableCell><TableNome>{item.name}</TableNome></TableCell>
 
                 <TableCell>{item.category.name}</TableCell>
 

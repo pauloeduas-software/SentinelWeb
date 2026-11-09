@@ -173,6 +173,55 @@ describe('com quem está', () => {
     const depois = await api.get<{ rows: Entrega[] }>(`/api/stock/items/${cabo.id}/checkouts`);
     expect(depois.body.rows.map((entrega) => [entrega.id, entrega.unidades])).toEqual([[linha.id, 1]]);
   });
+
+  it('o número da aba vem do item: conta as entregas, e só baixa quando uma volta inteira', async () => {
+    const mouse = await item('Mouse do número da aba', 10);
+    await entregar(mouse.id, { targetType: 'WORKSTATION', targetWorkstationId: cenario.mesa1, qty: 3 });
+    await entregar(mouse.id, { targetType: 'PERSON', targetPersonId: cenario.laura, qty: 2 });
+    await entregar(mouse.id, { targetType: 'PERSON', targetPersonId: cenario.ana });
+    const numero = async () =>
+      (await api.get<{ entregasAbertas: number }>(`/api/stock/items/${mouse.id}`)).body.entregasAbertas;
+    // Três entregas e seis unidades: o número é o das linhas, e não o das unidades.
+    expect(await numero()).toBe(3);
+
+    const linhas = (await api.get<{ rows: Entrega[] }>(`/api/stock/items/${mouse.id}/checkouts`)).body.rows;
+    const daLaura = linhas.find((linha) => linha.targetLabel === 'Laura Souza');
+    expect((await devolver(daLaura!.id, { qty: 1 })).status).toBe(200);
+    expect(await numero()).toBe(3);
+    expect((await devolver(daLaura!.id)).status).toBe(200);
+    expect(await numero()).toBe(2);
+  });
+
+  it('a linha do posto traz quem está nele agora, e a busca acha o posto por essas pessoas', async () => {
+    // Posto e pessoas próprios: entrar e sair do posto mudaria o `cenario` dos outros testes.
+    const mesa = await criarPosto(api, { name: 'Mesa do teclado compartilhado' });
+    const [bruno, carla, davi] = await Promise.all([
+      criarColaborador(api, { name: 'Bruno no posto', email: 'bruno.posto@teste.local' }),
+      criarColaborador(api, { name: 'Carla que saiu', email: 'carla.saiu@teste.local' }),
+      criarColaborador(api, { name: 'Davi direto', email: 'davi.direto@teste.local' }),
+    ]);
+    expect((await api.post(`/api/workstations/${mesa}/occupants`, { personId: bruno })).status).toBe(201);
+    const saiu = await api.post<{ id: string }>(`/api/workstations/${mesa}/occupants`, { personId: carla });
+    expect(saiu.status).toBe(201);
+    expect((await api.delete(`/api/workstations/${mesa}/occupants/${saiu.body.id}`, {})).status).toBe(200);
+
+    const teclado = await item('Teclado do posto com gente', 5);
+    await entregar(teclado.id, { targetType: 'WORKSTATION', targetWorkstationId: mesa, qty: 2 });
+    await entregar(teclado.id, { targetType: 'PERSON', targetPersonId: davi });
+
+    type ComGente = Entrega & { responsaveis: { id: string; name: string }[] };
+    const linhas = (await api.get<{ rows: ComGente[] }>(`/api/stock/items/${teclado.id}/checkouts`)).body.rows;
+    const gente = new Map(linhas.map((linha) => [linha.targetLabel, linha.responsaveis.map((pessoa) => pessoa.name)]));
+    expect(gente.get('Mesa do teclado compartilhado')).toEqual(['Bruno no posto']);
+    expect(gente.get('Davi direto')).toEqual([]);
+
+    const busca = async (q: string) => (await api.get<{ rows: Entrega[] }>(
+      `/api/stock/items/${teclado.id}/checkouts?q=${encodeURIComponent(q)}`,
+    )).body.rows.map((linha) => linha.targetLabel);
+    expect(await busca('bruno no posto')).toEqual(['Mesa do teclado compartilhado']);
+    // Quem já saiu do posto não responde mais por ele: a busca não acha a mesa.
+    expect(await busca('carla que saiu')).toEqual([]);
+  });
 });
 
 describe('o histórico', () => {

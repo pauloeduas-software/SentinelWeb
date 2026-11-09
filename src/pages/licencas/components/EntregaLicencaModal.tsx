@@ -17,8 +17,8 @@ import { chavesComLugar, lugarDaChave, rotuloDaChave } from '../helpers/licenca.
 // ═════════════════════════════════════════════════════════════════════════════
 // SÃO DOIS ALVOS, E NÃO TRÊS — posto de trabalho NÃO recebe licença (D39).
 //
-// A ausência é a decisão, e a frase do rodapé existe para quem for procurar o
-// botão que falta: o desktop fixo da Mesa 1 é um ATIVO, e a licença vai para
+// A ausência é a decisão, e a ajuda do campo Ativo existe para quem for procurar
+// o botão que falta: o desktop fixo da Mesa 1 é um ATIVO, e a licença vai para
 // ele. Licença por assinatura de pessoa (Microsoft 365, Adobe) vai para o
 // colaborador.
 // ═════════════════════════════════════════════════════════════════════════════
@@ -87,7 +87,6 @@ export default function EntregaLicencaModal({ licenca, onClose, onSubmit }: Entr
     <FormularioLateral
       titulo="Entregar licença"
       descricao={`${atual.name} · ${atual.livres} de ${atual.seatsTotal} ${atual.livres === 1 ? 'livre' : 'livres'}`}
-      // Mais largo que a entrega de estoque: a lista de chaves leva a chave e o quanto ela cobre.
       onClose={onClose}
       onSubmit={enviar}
       erro={erro}
@@ -106,7 +105,7 @@ export default function EntregaLicencaModal({ licenca, onClose, onSubmit }: Entr
       />
 
       {alvo === 'PERSON' ? (
-        <Campo rotulo="Colaborador" obrigatorio>
+        <Campo rotulo="Colaborador" obrigatorio ajuda="Assinatura de pessoa, como Microsoft 365 e Adobe.">
           <ReferenceSelect rota="people" valor={personId} obrigatorio comDetalhe onChange={setPersonId} />
         </Campo>
       ) : (
