@@ -50,7 +50,7 @@ async function inicioDaOcupacao(
   const terminouEm = anterior?.endedAt;
   if (terminouEm && dia < hojeNoBrasil(terminouEm)) {
     throw new AppError(
-      `A responsabilidade (${diaEmPortugues(dia)}) não pode começar antes do fim da anterior de ${nome} neste posto `
+      `A entrada (${diaEmPortugues(dia)}) não pode ser antes da última saída de ${nome} deste posto `
       + `(${diaEmPortugues(hojeNoBrasil(terminouEm))}).`,
       422,
     );

@@ -39,9 +39,9 @@ export function textoDaPosse(posse: PosseResolvida): string {
  */
 export function bloqueioDaEntrega(asset: Pick<Asset, 'posse' | 'status' | 'retiredAt'>): string | null {
   if (asset.posse?.assignmentId != null) return 'Já entregue: devolva antes de entregar de novo';
-  if (asset.retiredAt) return 'Ativo baixado não pode ser entregue — desfaça a baixa antes.';
+  if (asset.retiredAt) return 'Computador baixado não pode ser entregue — desfaça a baixa antes.';
   if (asset.status.type === 'DEPLOYABLE') return null;
-  return `Só ativo disponível pode ser entregue — este está como ${asset.status.name}.`;
+  return `Só computador disponível pode ser entregue — este está como ${asset.status.name}.`;
 }
 
 /**

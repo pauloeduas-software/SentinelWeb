@@ -62,7 +62,7 @@ function FichaDoComputador() {
   const rotulo = rotuloDaVolta(voltar.para, 'Computadores');
 
   if (carregando || erro || !asset) {
-    return <FichaIndisponivel lista="Computadores" rotuloDaVolta={rotulo} voltar={voltar} carregando={carregando} erro={erro ?? 'Ativo não encontrado.'} />;
+    return <FichaIndisponivel lista="Computadores" rotuloDaVolta={rotulo} voltar={voltar} carregando={carregando} erro={erro ?? 'Computador não encontrado.'} />;
   }
 
   // A MESMA trava da listagem: só `DEPLOYABLE` sem posse se entrega, e o motivo vai no `title`.

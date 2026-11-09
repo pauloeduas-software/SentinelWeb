@@ -30,7 +30,7 @@ export const assetModelSpec: CatalogSpec = {
   ],
 
   // Sem Desativar (AO): o modelo em uso fica, e sai quando nenhum ativo o usa.
-  dicaEmUso: 'Troque o modelo desses ativos e exclua de novo.',
+  dicaEmUso: 'Troque o modelo desses computadores e exclua de novo.',
 
   // Conta a lixeira também: a FK é `Restrict` e o banco recusaria de todo jeito,
   // mas sem isto a contagem dá 0 e o usuário recebe o P2003 genérico no lugar da
@@ -68,7 +68,7 @@ export const assetModelSpec: CatalogSpec = {
       const categoria = await lerCategoriaTravada(client, data.categoryId);
       if (!categoria) throw new AppError('Categoria não encontrada.', 404);
       if (categoria.type !== 'ASSET') {
-        throw new AppError(`"${categoria.name}" não é uma categoria de ativo.`, 422);
+        throw new AppError(`"${categoria.name}" não é uma categoria de computador.`, 422);
       }
     }
 

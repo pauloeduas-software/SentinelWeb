@@ -849,3 +849,40 @@ ativo. São seis colunas: em tela estreita, a tabela rola.
 
 **O que ficou de fora.** Ícone, ação ou aviso novo na aba: no posto, o aviso de mais de um computador e a dica da aba
 vazia continuam como estavam.
+
+## CH — Um nome para cada coisa
+
+**Decisão.** Como o Status ([BU](#bu--o-nome-é-status-em-toda-tela-e-o-valor-vai-no-masculino)) e o Responsável
+([BM](./posse.md#bm--o-nome-é-responsável-em-toda-tela)), cada coisa tem um nome só, na tela e na recusa do servidor. As
+regras de negócio não mudaram, e nenhuma rota é nova.
+
+- **Notas, nunca "observações".** A tela já dizia Notas; as recusas da entrega de licença e de estoque, da baixa e da
+  entrega e devolução do computador diziam "observações".
+- **A série vai sem rótulo.** Embaixo da etiqueta, na lista de Computadores, na aba das fichas e nos painéis de
+  Entregar e Devolver, é só o número, em mono. O "SN" que vinha antes sai: é sigla em inglês.
+- **Posto, nunca "mesa", no texto da tela.** As ajudas e a recusa da licença no posto chamavam o posto de mesa. "Mesa"
+  fica só no exemplo de nome ("MesaEscritório").
+- **Quem sai do posto tem Registrar saída, e Encerrar é só da licença.** O botão da linha, a confirmação, o cartão
+  ("Saída registrada.") e as recusas que pediam para "encerrar a responsabilidade" passam a falar da saída, que é a
+  palavra que o vocabulário guarda para quem sai de um posto e a que a linha já usava ("Saiu em").
+- **Computador, nunca "ativo".** Ativo e computador são a mesma coisa (I), e a tela usava os dois: "Novo ativo" na
+  página Computadores, "Nenhum ativo entregue" na aba Computador, "Ativo" no Entregar da licença e do estoque, e "1
+  ativo" nas recusas. Agora é computador em todo título, botão, campo, cartão, frase de lista vazia e recusa do
+  servidor, e o Vincular de Descobertas diz "o computador escolhido", e não "o patrimônio". A seção do menu, que se
+  chamava Ativos, também vira Computadores. "Ativo" fica só como status (Ativo, Desativado) e no código (`Asset`).
+- **Valor da compra, nunca "custo",** na descrição dos cargos, como o campo se chama.
+- **Chaves, como a aba,** e não "Chaves do produto", no formulário da licença.
+
+**Supera em parte:** [AH](./acesso.md#ah--o-menu-por-assunto-o-colaborador-ganha-página-própria-e-ativos-vira-computadores)
+(a palavra ativo para o item e a seção Ativos do menu) e [BQ](./posse.md#bq--entregar-e-devolver-são-dois-botões-e-a-aba-responsáveis-é-uma-só)
+(o Encerrar da linha do posto).
+
+**Por quê:** pedido para padronizar os nomes, com o mapa de tudo que tinha mais de um. O mesmo campo tinha um nome no
+formulário e outro na recusa, o computador se chamava também ativo, e o mesmo botão, Encerrar, fazia duas coisas diferentes na licença e no posto.
+
+**O custo:** as frases de recusa mudam, e quem as compara por texto (os testes) acompanha.
+
+**O que ficou de fora.** "Disponível" no Estoque e "livre" na Licença: são parecidos, não iguais, cada módulo usa um
+só, e "licença livre" é o jeito comum de dizer. As datas já seguem um nome por papel: "Data da entrega" e "Data da
+entrada" no formulário, "Desde" na coluna e "Devolvida em", "Retirada em" e "Saiu em" na linha. E "equipamento" na
+recusa de quem está desativado, que vale para ativo e para item.

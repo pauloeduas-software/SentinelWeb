@@ -227,7 +227,7 @@ describe('as outras datas do computador e do posto', () => {
     const antes = await encerrar({ endedAt: diaNoBrasil(-11) });
     expect(antes.status).toBe(422);
     expect(antes.body.error).toBe(
-      `O fim da responsabilidade (${naFrase(diaNoBrasil(-11))}) não pode ser antes do início (${naFrase(diaNoBrasil(-10))}).`,
+      `A saída (${naFrase(diaNoBrasil(-11))}) não pode ser antes da entrada (${naFrase(diaNoBrasil(-10))}).`,
     );
 
     const fim = await encerrar({ endedAt: diaNoBrasil(-3) });

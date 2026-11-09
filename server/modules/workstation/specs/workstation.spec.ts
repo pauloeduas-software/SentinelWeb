@@ -5,7 +5,7 @@ import {
   itensAbertosNo, itensComoReferencias, nomesDosItens, totalDeUnidades,
 } from '../../stock/use-cases/count-person-stock.usecase';
 
-const DICA_DO_POSTO_EM_USO = 'Tire o que está nele agora: devolva o que foi entregue e encerre as responsabilidades.';
+const DICA_DO_POSTO_EM_USO = 'Tire o que está nele agora: devolva o que foi entregue e registre a saída de quem está nele.';
 
 function quantos(total: number, singular: string, plural: string): string {
   return `${total} ${total === 1 ? singular : plural}`;
@@ -76,7 +76,7 @@ export const workstationSpec: CatalogSpec = {
     ]);
 
     const partes: string[] = [];
-    if (ativos.length > 0) partes.push(quantos(ativos.length, 'ativo', 'ativos'));
+    if (ativos.length > 0) partes.push(quantos(ativos.length, 'computador', 'computadores'));
     if (itens.length > 0) {
       partes.push(`${quantos(totalDeUnidades(itens), 'unidade de estoque', 'unidades de estoque')} (${nomesDosItens(itens)})`);
     }
@@ -88,7 +88,7 @@ export const workstationSpec: CatalogSpec = {
     // O pedido cita só o que existe: posto só com ocupante não tem entrega a devolver.
     const pedidos: string[] = [];
     if (ativos.length > 0 || itens.length > 0) pedidos.push('devolva o que foi entregue');
-    if (ocupantes > 0) pedidos.push(`encerre ${ocupantes === 1 ? 'a responsabilidade' : 'as responsabilidades'}`);
+    if (ocupantes > 0) pedidos.push('registre a saída de quem está nele');
     return {
       mensagem: `Este posto ainda tem ${frase}. Tire o que está nele agora: ${pedidos.join(' e ')}.`,
       refs: [

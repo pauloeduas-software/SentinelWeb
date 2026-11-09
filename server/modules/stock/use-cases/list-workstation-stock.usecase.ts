@@ -68,6 +68,6 @@ export function listPersonStock(personId: string) {
  */
 export async function listAssetComponents(assetId: string, podeVerLixeira = false) {
   const ativo = await prisma.asset.findFirst({ where: { id: assetId, ...(podeVerLixeira ? INCLUINDO_LIXEIRA : {}) }, select: { id: true } });
-  if (!ativo) throw new AppError('Ativo não encontrado.', 404);
+  if (!ativo) throw new AppError('Computador não encontrado.', 404);
   return entregasAbertas({ targetAssetId: assetId });
 }

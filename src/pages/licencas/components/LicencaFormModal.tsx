@@ -255,7 +255,7 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
 
         {/* Sem `Campo`: ele daria o mesmo id a todas as linhas. Cada uma tem o seu `aria-label`. */}
         <div className="space-y-1.5 sm:col-span-2">
-          <span className="block text-sm font-medium text-text-primary">Chaves do produto</span>
+          <span className="block text-sm font-medium text-text-primary">Chaves</span>
           <ChavesDoFormulario
             linhas={chaves}
             compradas={Number.isInteger(Number(seatsTotal)) && seatsTotal.trim() !== '' ? Number(seatsTotal) : null}

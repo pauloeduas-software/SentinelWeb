@@ -10,8 +10,9 @@ import type { Posto } from '../../../types/workstation.types';
 // clique — não conhece query nem HTTP (docs/referencia/arquitetura.md).
 //
 // O que cada linha responde, e que nenhuma tela de ITAM de prateleira responde:
-// QUEM está na mesa, QUANTO equipamento ela segura, e se está VAGA — equipamento
-// parado sem ninguém respondendo (docs/referencia/modelo-de-posse.md).
+// QUEM está na mesa, QUAL computador está nela, pela etiqueta, como no card da
+// ficha, e se está VAGA — equipamento parado sem ninguém respondendo
+// (docs/referencia/modelo-de-posse.md).
 //
 // A LINHA INTEIRA ABRE A FICHA, e o `⋯` começa pela operação, como o Entregar de
 // Computadores, Estoque e Licenças: Adicionar ao posto, que o Técnico também faz.
@@ -41,7 +42,7 @@ export default function PostosTable({
             <TableHead>Posto</TableHead>
             <TableHead className="hidden w-[16%] md:table-cell">Localização</TableHead>
             <TableHead>Responsáveis</TableHead>
-            <TableHead className="hidden w-28 md:table-cell">Ativos</TableHead>
+            <TableHead className="hidden w-32 md:table-cell">Etiqueta</TableHead>
             <TableHead className="w-36">Status</TableHead>
             <TableHeadAcoes />
           </TableRow>

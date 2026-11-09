@@ -18,7 +18,7 @@ export async function restoreAsset(id: string, ator: Ator) {
       select: { assetTag: true, serial: true },
     });
 
-    if (!naLixeira) throw new AppError('Ativo não está na lixeira.', 404);
+    if (!naLixeira) throw new AppError('Computador não está na lixeira.', 404);
 
     // O índice único é PARCIAL (só entre os vivos), então a etiqueta pode ter
     // sido reaproveitada enquanto este ativo estava na lixeira. Restaurar às
@@ -32,7 +32,7 @@ export async function restoreAsset(id: string, ator: Ator) {
     // Sem porta de posto: o ativo entregue não vai para a lixeira (AL), então
     // o que volta dela não aponta para mesa nem pessoa nenhuma.
     const { count } = await tx.asset.updateMany({ where: { id, deletedAt: { not: null } }, data: { deletedAt: null } });
-    if (count === 0) throw new AppError('Ativo não está na lixeira.', 404);
+    if (count === 0) throw new AppError('Computador não está na lixeira.', 404);
     await recordAudit(tx, { entityType: 'Asset', entityId: id, entityLabel: naLixeira.assetTag, action: 'RESTORE' }, ator);
 
     return tx.asset.findFirstOrThrow({ where: { id }, select: ASSET_WRITE_SELECT });

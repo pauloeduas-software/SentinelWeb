@@ -122,7 +122,7 @@ export default function AssetFormModal({
 
   return (
     <FormularioLateral
-      titulo={clonar ? 'Clonar ativo' : asset ? 'Editar ativo' : 'Novo ativo'}
+      titulo={clonar ? 'Clonar computador' : asset ? 'Editar computador' : 'Novo computador'}
       descricao={clonar ? `Cópia de ${asset?.assetTag}. Etiqueta e número de série nascem em branco porque são únicos. A cópia nasce sem responsáveis.` : asset?.assetTag}
       onClose={onClose}
       onSubmit={enviar}
@@ -164,7 +164,7 @@ export default function AssetFormModal({
           className="sm:col-span-2"
           ajuda={asset?.postoAtual && !clonar
             ? `Entregue ao posto ${asset.postoAtual.name} (${asset.postoAtual.location.name}). Este campo é para onde ele volta na devolução.`
-            : 'Onde o ativo está. O responsável muda pelo Entregar, não aqui.'}
+            : 'Onde o computador está. O responsável muda pelo Entregar, não aqui.'}
         >
           <ReferenceSelect rota="locations" valor={valores.locationId} atual={asset?.location} onChange={(v) => definir('locationId', v)} />
         </Campo>

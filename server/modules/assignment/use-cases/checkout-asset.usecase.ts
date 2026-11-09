@@ -39,7 +39,7 @@ interface CheckoutData {
  * explícita e o índice único parcial do banco. Texto duplicado aqui seria a
  * mesma recusa dita de dois jeitos, dependendo de quem chegou primeiro.
  */
-const JA_ENTREGUE = 'Este ativo já está entregue. Faça a devolução antes.';
+const JA_ENTREGUE = 'Este computador já está entregue. Faça a devolução antes.';
 
 /**
  * O DIA DA ENTREGA contra o passado do computador — e o instante a gravar (AM),
@@ -277,7 +277,7 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, ator: A
         status: { select: { name: true, type: true } },
       },
     });
-    if (!ativo) throw new AppError('Ativo não encontrado.', 404);
+    if (!ativo) throw new AppError('Computador não encontrado.', 404);
 
     // ATIVO BAIXADO NÃO SAI PARA NINGUÉM. Ele não é mais da empresa — foi
     // vendido, doado, roubado —, e o status dele pode muito bem ser
@@ -306,7 +306,7 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, ator: A
     // contradição do rótulo "Em Uso" tipado `DEPLOYABLE`, que criou o `IN_USE`.
     if (ativo.status.type !== 'DEPLOYABLE') {
       throw new AppError(
-        `Só ativo disponível pode ser entregue, e este está como "${ativo.status.name}".`,
+        `Só computador disponível pode ser entregue, e este está como "${ativo.status.name}".`,
         409,
       );
     }
@@ -329,7 +329,7 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, ator: A
       const escolhido = await lerStatusTravado(tx, data.statusId);
       if (escolhido.type === 'DEPLOYABLE') {
         throw new AppError(
-          `"${escolhido.name}" é um status de estoque e não serve para um ativo entregue. Escolha outro.`,
+          `"${escolhido.name}" é um status de estoque e não serve para um computador entregue. Escolha outro.`,
           422,
         );
       }
@@ -371,7 +371,7 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, ator: A
       if (errorCode(erro) === 'P2002') {
         const campos = errorProp(errorProp(erro, 'meta'), 'target');
         if (Array.isArray(campos) && campos.includes('targetWorkstationId')) {
-          throw new AppError('Este posto de trabalho já tem um ativo. Faça a devolução dele antes.', 409);
+          throw new AppError('Este posto de trabalho já tem um computador. Faça a devolução dele antes.', 409);
         }
         throw new AppError(JA_ENTREGUE, 409);
       }

@@ -4,8 +4,8 @@ import type { Cargo } from '../types/user.types';
 // formulário de Usuários. A frase diz o que cada um pode, para quem escolhe não
 // precisar adivinhar pelo nome.
 export const CARGOS_NA_TELA: readonly { valor: Cargo; nome: string; alcance: string }[] = [
-  { valor: 'TECNICO', nome: 'Técnico', alcance: 'Cadastra, edita, entrega e devolve. Não exclui, não vê custo nem Configurações.' },
-  { valor: 'SUPERVISOR', nome: 'Supervisor', alcance: 'Tudo do Técnico, mais excluir, baixa, licenças, custo, comandos e Configurações.' },
+  { valor: 'TECNICO', nome: 'Técnico', alcance: 'Cadastra, edita, entrega e devolve. Não exclui, não vê o valor da compra nem Configurações.' },
+  { valor: 'SUPERVISOR', nome: 'Supervisor', alcance: 'Tudo do Técnico, mais excluir, baixa, licenças, valor da compra, comandos e Configurações.' },
   { valor: 'ADMIN', nome: 'Administrador', alcance: 'Tudo, e o único que mexe em Usuários.' },
 ];
 

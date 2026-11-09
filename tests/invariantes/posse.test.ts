@@ -261,7 +261,7 @@ describe('quem não está ativo na empresa não recebe equipamento', () => {
 
     const recusa = await api.put<{ error: string }>(`/api/people/${pessoa}`, { isActive: false });
     expect(recusa.status).toBe(409);
-    expect(recusa.body.error).toMatch(/responde por 1 ativo/);
+    expect(recusa.body.error).toMatch(/responde por 1 computador/);
     expect(recusa.body.error).toMatch(/antes de desativar/);
     expect((await prisma.person.findUniqueOrThrow({ where: { id: pessoa } })).isActive).toBe(true);
 

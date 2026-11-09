@@ -79,7 +79,7 @@ describe('invariante 19 — no máximo um ativo por posto', () => {
     // A mensagem NOMEIA o ativo que já está no posto: sem isso, quem está na
     // tela não sabe o que devolver.
     expect(body.error).toContain(primeiro.assetTag);
-    expect(body.error).toMatch(/j[áa] tem um ativo/i);
+    expect(body.error).toMatch(/j[áa] tem um computador/i);
   });
 
   it('recusa o segundo desktop mesmo SEM agente: a regra é sobre o ATIVO', async () => {
@@ -128,7 +128,7 @@ describe('invariante 19 — o que libera a vaga do posto', () => {
 
     const recusa = await api.delete<{ error: string }>(`/api/assets/${unico.id}`);
     expect(recusa.status).toBe(409);
-    expect(recusa.body.error).toBe('Este ativo está entregue e não pode ir para a lixeira. Faça a devolução antes.');
+    expect(recusa.body.error).toBe('Este computador está entregue e não pode ir para a lixeira. Faça a devolução antes.');
     const linha = await prisma.asset.findUnique({ where: { id: unico.id }, select: { deletedAt: true } });
     expect(linha?.deletedAt).toBeNull();
 

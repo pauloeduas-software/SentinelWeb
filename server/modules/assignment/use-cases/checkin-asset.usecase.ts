@@ -42,7 +42,7 @@ export async function checkinAsset(assetId: string, data: CheckinData, ator: Ato
       where: { id: assetId },
       select: { id: true, statusId: true },
     });
-    if (!ativo) throw new AppError('Ativo não encontrado.', 404);
+    if (!ativo) throw new AppError('Computador não encontrado.', 404);
 
     const aberta = await tx.assignment.findFirst({
       where: { assetId, checkinAt: null },
@@ -50,7 +50,7 @@ export async function checkinAsset(assetId: string, data: CheckinData, ator: Ato
     });
     // 409 e não 404: o ativo existe, quem não existe é a posse — é conflito de
     // estado, e a mesma família do "já está entregue" da outra ponta.
-    if (!aberta) throw new AppError('Este ativo não está entregue.', 409);
+    if (!aberta) throw new AppError('Este computador não está entregue.', 409);
 
     // O status escolhido à mão existe? Lido travado: a troca de tipo dele espera.
     if (data.statusId) await lerStatusTravado(tx, data.statusId);

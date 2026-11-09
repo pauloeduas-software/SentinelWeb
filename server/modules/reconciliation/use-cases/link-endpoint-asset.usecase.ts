@@ -13,7 +13,7 @@ import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase
 // aplicação. O que este arquivo acrescenta é a MENSAGEM (o P2002 cru viraria
 // "Registro já existe.", que não diz nada a quem está na tela) e o AuditLog.
 
-const JA_TEM_MAQUINA = 'Este ativo já está vinculado a outra máquina. Desfaça aquele vínculo antes, em Descobertas.';
+const JA_TEM_MAQUINA = 'Este computador já está vinculado a outra máquina. Desfaça aquele vínculo antes, em Descobertas.';
 
 interface OrigemDoVinculo {
   automatico?: boolean;
@@ -69,7 +69,7 @@ export async function vincularEndpointAoAtivo(
       });
       if (!endpoint) throw new AppError('Máquina não encontrada.', 404);
       if (endpoint.assetId && endpoint.assetId !== assetId) {
-        throw new AppError('Esta máquina já está vinculada a outro ativo.', 409);
+        throw new AppError('Esta máquina já está vinculada a outro computador.', 409);
       }
 
       // `findFirst`, e não `findUnique`: é ele que recebe o escopo da lixeira da
@@ -79,7 +79,7 @@ export async function vincularEndpointAoAtivo(
         where: { id: assetId },
         select: { id: true, assetTag: true, name: true, retiredAt: true },
       });
-      if (!ativo) throw new AppError('Ativo não encontrado.', 404);
+      if (!ativo) throw new AppError('Computador não encontrado.', 404);
 
       // Ativo BAIXADO não recebe máquina: ele saiu do patrimônio, e o vínculo
       // o traria de volta à cobertura e à telemetria como se fosse da empresa.
@@ -157,7 +157,7 @@ export async function desvincularEndpoint(endpointId: string, ator: Ator) {
       select: { id: true, hwid: true, hostname: true, assetId: true },
     });
     if (!endpoint) throw new AppError('Máquina não encontrada.', 404);
-    if (!endpoint.assetId) throw new AppError('Esta máquina não está vinculada a nenhum ativo.', 409);
+    if (!endpoint.assetId) throw new AppError('Esta máquina não está vinculada a nenhum computador.', 409);
 
     const desvinculado = await tx.endpoint.update({
       where: { id: endpointId },

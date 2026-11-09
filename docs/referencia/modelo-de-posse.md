@@ -108,7 +108,7 @@ a conta de quem opera o sistema, que é `User` e não recebe equipamento
   computador não é futura (422).
 - **O computador entregue não vai para a lixeira**
   ([AL](../decisoes/posse.md#al--o-computador-entregue-não-vai-para-a-lixeira)):
-  409 `Este ativo está entregue e não pode ir para a lixeira. Faça a devolução
+  409 `Este computador está entregue e não pode ir para a lixeira. Faça a devolução
   antes.`, como a baixa. O que está na lixeira nunca aponta para ninguém.
 
 ### Camada 2 — `WorkstationOccupant`: quem ocupa o posto

@@ -22,7 +22,7 @@ export default function ComputadorTab({ ativos }: ComputadorTabProps) {
       {ativos.length > 1 && (
         <Aviso tom="aviso">
           Este posto tem {ativos.length} ativos, e um posto de trabalho tem no máximo um.
-          Devolva, na ficha de cada um, os que não ficam nesta mesa. A aba Máquina é a do
+          Devolva, na ficha de cada um, os que não ficam neste posto. A aba Máquina é a do
           primeiro com máquina; a telemetria de cada um está na ficha dele.
         </Aviso>
       )}
@@ -31,7 +31,7 @@ export default function ComputadorTab({ ativos }: ComputadorTabProps) {
         computadores={ativos.map((ativo) => ({
           id: ativo.id, ativo, devolucaoPrevista: ativo.devolucaoPrevista, entregueEm: ativo.entregueEm,
         }))}
-        vazio="Nenhum ativo entregue a este posto."
+        vazio="Nenhum computador entregue a este posto."
       >
         <span className="max-w-md text-xs leading-relaxed">
           A entrega é feita em{' '}

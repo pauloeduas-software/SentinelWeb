@@ -102,7 +102,7 @@ export default function VinculadasTable({ maquinas, carregando, erro, acao, ocup
             nome="máquina"
             genero="f"
             busca={lista.search}
-            frase="Nenhuma máquina vinculada a um ativo ainda."
+            frase="Nenhuma máquina vinculada a um computador ainda."
           />
         )}
       </Card>

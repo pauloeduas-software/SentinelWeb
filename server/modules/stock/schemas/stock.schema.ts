@@ -80,7 +80,7 @@ export const checkoutStockSchema = z.strictObject({
   targetWorkstationId: uuidOpcional('posto'),
   targetAssetId: uuidOpcional('computador'),
   qty: quantidade('quantidade', 100).default(1),
-  notes: textoOpcional('observações', 2_000),
+  notes: textoOpcional('notas', 2_000),
   /** Ausente é hoje. Passado é o caso real: registrar a entrega que já aconteceu. */
   checkoutAt: diaNaoFuturo('data da entrega'),
 });

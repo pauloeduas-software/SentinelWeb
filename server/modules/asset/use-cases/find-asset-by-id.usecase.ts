@@ -43,7 +43,7 @@ type AssetDetail = NonNullable<Awaited<ReturnType<typeof buscarAtivo>>> & {
  */
 export async function findAssetById(id: string, podeVerCusto: boolean, podeVerLixeira: boolean): Promise<AssetDetail> {
   const ativo = await buscarAtivo(id, podeVerCusto, podeVerLixeira);
-  if (!ativo) throw new AppError('Ativo não encontrado.', 404);
+  if (!ativo) throw new AppError('Computador não encontrado.', 404);
 
   const [posse, postos] = await Promise.all([resolverResponsaveis(prisma, id), listCurrentWorkstations([id])]);
 

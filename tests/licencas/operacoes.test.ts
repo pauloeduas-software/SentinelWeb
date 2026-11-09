@@ -365,7 +365,7 @@ describe('a entrega recusa', () => {
     expect((await api.post(`/api/licenses/${licenca.id}/checkout`, { assignedPersonId: apagado })).status).toBe(404);
   });
 
-  it('o alvo vem antes da licença: na lixeira é 404 mesmo com a licença vencida, e o ativo inexistente diz "Ativo"', async () => {
+  it('o alvo vem antes da licença: na lixeira é 404 mesmo com a licença vencida, e o computador inexistente diz "Computador"', async () => {
     const vencida = await criarLicenca(api, {
       name: 'Vencida da lixeira', categoryId: cenario.categoriaLicencaId, seatsTotal: 5, expirationDate: diaNoBrasil(-1),
     });
@@ -377,7 +377,7 @@ describe('a entrega recusa', () => {
       assignedAssetId: '00000000-0000-4000-8000-000000000000',
     });
     expect(inexistente.status).toBe(404);
-    expect(inexistente.body.error).toBe('Ativo não encontrado.');
+    expect(inexistente.body.error).toBe('Computador não encontrado.');
   });
 });
 

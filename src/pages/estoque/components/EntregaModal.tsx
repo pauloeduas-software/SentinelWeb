@@ -99,7 +99,7 @@ export default function EntregaModal({ item, onClose, onSubmit }: EntregaModalPr
       rotuloEnviando="Entregando…"
     >
       {componente ? (
-        <Campo rotulo="Ativo" obrigatorio>
+        <Campo rotulo="Computador" obrigatorio ajuda="Fica no computador, mesmo quando os responsáveis dele mudam. Para tirar, use o Retirar na ficha do item.">
           <ReferenceSelect rota="assets" valor={assetId} obrigatorio onChange={setAssetId} />
         </Campo>
       ) : (
@@ -142,14 +142,6 @@ export default function EntregaModal({ item, onClose, onSubmit }: EntregaModalPr
       <Campo rotulo="Notas">
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
       </Campo>
-
-      <p className="text-sm leading-relaxed text-text-secondary">
-        {componente
-          ? 'Fica no computador, mesmo quando os responsáveis dele mudam. Para tirar, use o Retirar na ficha do item.'
-          : ehConsumivel(item)
-            ? 'Consumível não volta: a entrega tira do total. Lançou errado? Some de volta pelo Editar.'
-            : 'No posto, vale pela mesa: o posto é o responsável. A devolução é feita na ficha do item.'}
-      </p>
     </FormularioLateral>
   );
 }

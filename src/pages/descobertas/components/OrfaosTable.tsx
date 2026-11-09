@@ -92,7 +92,7 @@ export default function OrfaosTable({ orfaos, carregando, erro, ocupado, acao, o
                       nome={orfao.hostname}
                       acoes={[
                         {
-                          rotulo: 'Vincular a um ativo',
+                          rotulo: 'Vincular a um computador',
                           icone: Link2,
                           onClick: () => setVinculando(orfao),
                           disabled: ocupado,

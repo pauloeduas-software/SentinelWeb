@@ -102,8 +102,8 @@ export const updateLicenseSchema = z.strictObject({
  */
 export const checkoutLicenseSchema = z.strictObject({
   assignedPersonId: uuidObrigatorio('colaborador').optional(),
-  assignedAssetId: uuidObrigatorio('ativo').optional(),
-  notes: textoOpcional('observações', 2_000),
+  assignedAssetId: uuidObrigatorio('computador').optional(),
+  notes: textoOpcional('notas', 2_000),
   /** Ausente é hoje. Passado é o caso real: registrar a entrega que já aconteceu. */
   checkoutAt: diaNaoFuturo('data da entrega'),
   /**

@@ -378,8 +378,8 @@ test('a recusa na ficha do posto sai no cartão, e a linha continua aberta', asy
   await page.reload();
 
   await recusar(page, `**/api/workstations/${workstationId}/occupants/*`);
-  await page.getByRole('main').getByRole('listitem').getByRole('button', { name: 'Encerrar' }).click();
-  const confirmar = page.getByRole('button', { name: `Confirmar o encerramento da responsabilidade de ${pessoa}` });
+  await page.getByRole('main').getByRole('listitem').getByRole('button', { name: 'Registrar saída' }).click();
+  const confirmar = page.getByRole('button', { name: `Confirmar a saída de ${pessoa}` });
   await confirmar.click();
 
   const cartao = page.getByRole('alert');

@@ -46,7 +46,7 @@ export async function aceitarSugestao(id: string, ator: Ator) {
   // UM TIPO SÓ, então nenhum `switch`: a fila propõe vínculo, e é isso. O dia
   // que `SuggestionKind` crescer por migração, é aqui que o tipo novo entra — e
   // o `vincularEndpointAoAtivo` continua sendo quem grava.
-  if (!sugestao.assetId) throw new AppError('Sugestão de vínculo sem ativo.', 422);
+  if (!sugestao.assetId) throw new AppError('Sugestão de vínculo sem computador.', 422);
   await vincularEndpointAoAtivo(sugestao.endpointId, sugestao.assetId, ator, { sugestaoId: id });
 
   return prisma.reconciliationSuggestion.findUniqueOrThrow({ where: { id }, select: SUGGESTION_SELECT });

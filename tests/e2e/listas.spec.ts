@@ -113,7 +113,7 @@ test('na ficha do computador, a consulta que falha avisa e não diz que não há
 
   await page.getByRole('tab', { name: 'Máquina' }).click();
   await expect(page.getByRole('alert')).toContainText('Não foi possível carregar');
-  await expect(page.getByText('Nenhuma máquina vinculada a este ativo.')).toHaveCount(0);
+  await expect(page.getByText('Nenhuma máquina vinculada a este computador.')).toHaveCount(0);
 });
 
 test('o cartão sem resposta mostra traço, e não zero', async ({ page }) => {

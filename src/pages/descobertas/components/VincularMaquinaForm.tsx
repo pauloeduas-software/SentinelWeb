@@ -46,7 +46,7 @@ export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCa
       // Fecha só no sucesso. Na entrega recusada o vínculo fica e a linha some da
       // lista "Sem vínculo", e o painel continua aberto com a frase que diz isso.
       onCancelar();
-      notificar.sucesso(workstationId ? 'Máquina vinculada e ativo entregue.' : 'Máquina vinculada.');
+      notificar.sucesso(workstationId ? 'Máquina vinculada e computador entregue.' : 'Máquina vinculada.');
     } catch (falha) {
       setErro((falha as Error).message);
     } finally {
@@ -57,7 +57,7 @@ export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCa
   return (
     <FormularioLateral
       titulo="Vincular máquina"
-      descricao={`${maquina.hostname} passa a ser o patrimônio escolhido abaixo. Nada muda na máquina.`}
+      descricao={`${maquina.hostname} passa a ser o computador escolhido abaixo. Nada muda na máquina.`}
       onClose={onCancelar}
       onSubmit={enviar}
       erro={erro}
@@ -72,9 +72,9 @@ export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCa
       </GradeDeDados>
 
       <Campo
-        rotulo="Ativo"
+        rotulo="Computador"
         obrigatorio
-        ajuda="Só ativos ainda sem máquina. Cadastre o ativo em Computadores se ele não existe."
+        ajuda="Só computadores ainda sem máquina. Cadastre o computador em Computadores se ele não existe."
       >
         <ReferenceSelect
           rota="assets"
@@ -87,7 +87,7 @@ export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCa
 
       <Campo
         rotulo="E entregar ao posto"
-        ajuda="Opcional. Com posto, o ativo é entregue à mesa na mesma operação, e um posto que já tem ativo recusa."
+        ajuda="Opcional. Com posto, o computador é entregue a ele na mesma operação, e um posto que já tem computador recusa."
       >
         <ReferenceSelect rota="workstations" valor={workstationId} onChange={setWorkstationId} />
       </Campo>

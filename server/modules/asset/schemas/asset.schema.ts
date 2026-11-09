@@ -83,6 +83,6 @@ export const retireAssetSchema = z.strictObject({
   retiredAt: diaNaoFuturo('data da saída'),
   // A justificativa do evento. Vai para `retiredNotes`, e desfazer a baixa a
   // limpa (retire-asset.usecase.ts).
-  notes: textoOpcional('observações', 2_000),
+  notes: textoOpcional('notas', 2_000),
 });
 

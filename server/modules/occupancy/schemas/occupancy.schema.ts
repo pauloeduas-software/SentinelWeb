@@ -25,7 +25,7 @@ import { diaNaoFuturo, textoOpcional, uuidObrigatorio } from '../../shared/field
  * limite do modelo: escala com data futura é agenda, e agenda está declarada
  * fora dele (docs/referencia/modelo-de-posse.md, "O que este modelo NÃO resolve").
  */
-const inicioOpcional = diaNaoFuturo('início da responsabilidade');
+const inicioOpcional = diaNaoFuturo('data da entrada');
 
 export const addOccupantSchema = z.strictObject({
   personId: uuidObrigatorio('colaborador'),
@@ -48,7 +48,7 @@ export const addOccupantSchema = z.strictObject({
  * a devolução (AM). Ausente é agora; passado pode, futuro não.
  */
 export const endOccupancySchema = z.strictObject({
-  endedAt: diaNaoFuturo('fim da responsabilidade'),
+  endedAt: diaNaoFuturo('data da saída'),
 });
 
 /**

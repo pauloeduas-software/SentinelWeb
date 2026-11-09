@@ -67,7 +67,7 @@ export default function ComputadoresPage() {
         onSearchChange={changeSearch}
         placeholder="Buscar por etiqueta, série, nome ou modelo…"
         filtros={<CategoriaFiltro tipo="ASSET" valor={categoryId} onChange={changeCategoria} />}
-        acao={<Button onClick={openCreate}><Plus /> Novo ativo</Button>}
+        acao={<Button onClick={openCreate}><Plus /> Novo computador</Button>}
         page={page}
         perPage={perPage}
         total={total}
@@ -102,7 +102,7 @@ export default function ComputadoresPage() {
                 <TableRow key={asset.id} onClick={() => abrirDetalhe(asset)}>
                   <TableCell>
                     <TableNome className="font-mono">{asset.assetTag}</TableNome>
-                    {asset.serial && <TableSublinha className="font-mono">SN {asset.serial}</TableSublinha>}
+                    {asset.serial && <TableSublinha className="font-mono">{asset.serial}</TableSublinha>}
                   </TableCell>
                   <TableCell>
                     <TableLinha>{asset.model.name}</TableLinha>
@@ -175,9 +175,9 @@ export default function ComputadoresPage() {
             icone={Monitor}
             carregando={loading}
             erro={erro}
-            nome="ativo"
+            nome="computador"
             busca={buscaFeita}
-            frase={view === 'trashed' ? 'A lixeira está vazia.' : view === 'retired' ? 'Nenhum ativo baixado.' : undefined}
+            frase={view === 'trashed' ? 'A lixeira está vazia.' : view === 'retired' ? 'Nenhum computador baixado.' : undefined}
             filtrada={Boolean(statusType || retiredReasonId || categoryId)}
           >
             {/* Um ativo exige um modelo, e o modelo exige fabricante e categoria — é a
@@ -191,7 +191,7 @@ export default function ComputadoresPage() {
                   {' '}antes do primeiro ativo.
                 </>
               ) : (
-                'Todo ativo pertence a um modelo. Peça a um supervisor que cadastre o fabricante e o modelo em Configurações antes do primeiro ativo.'
+                'Todo computador pertence a um modelo. Peça a um supervisor que cadastre o fabricante e o modelo em Configurações antes do primeiro computador.'
               )}
             </span>}
           </ListaVazia>

@@ -69,5 +69,5 @@ export async function ativoDoPosto(
 /** A frase das portas que recusam o segundo ativo. */
 export function jaTemAtivo(ativo: AtivoDoPosto): string {
   const qual = ativo.name ? `${ativo.assetTag} (${ativo.name})` : ativo.assetTag;
-  return `Este posto de trabalho já tem um ativo: ${qual}. Faça a devolução dele antes.`;
+  return `Este posto de trabalho já tem um computador: ${qual}. Faça a devolução dele antes.`;
 }

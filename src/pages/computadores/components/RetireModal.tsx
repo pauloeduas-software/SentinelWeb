@@ -67,7 +67,7 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
 
   return (
     <FormularioLateral
-      titulo="Dar baixa no ativo"
+      titulo="Dar baixa no computador"
       descricao={`${asset.assetTag} sai do patrimônio e das listagens, e fica na vista Baixados com o motivo. Cadastro errado vai para a lixeira.`}
       onClose={onClose}
       onSubmit={enviar}
@@ -93,7 +93,7 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
 
       {/* `max` = hoje porque o servidor recusa data futura (422): uma saída
           que ainda não aconteceu não é fato a registrar. */}
-      <Campo rotulo="Data da saída" obrigatorio ajuda="Vem com hoje: troque pela data em que o ativo saiu.">
+      <Campo rotulo="Data da saída" obrigatorio ajuda="Vem com hoje: troque pela data em que o computador saiu.">
         <Input type="date" required max={hoje} value={data} onChange={(event) => setData(event.target.value)} />
       </Campo>
 

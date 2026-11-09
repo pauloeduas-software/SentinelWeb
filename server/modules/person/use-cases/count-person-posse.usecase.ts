@@ -141,7 +141,7 @@ export function motivoParaRecusar(
   // Tudo cabe num "responde por" (BM), e o posto vem por último, como nos links.
   const entregas: string[] = [];
   if (posse.ativos.length > 0) {
-    entregas.push(`${quantos(posse.ativos.length, 'ativo', 'ativos')} (${emLista(posse.ativos)})`);
+    entregas.push(`${quantos(posse.ativos.length, 'computador', 'computadores')} (${emLista(posse.ativos)})`);
   }
   if (posse.licencas.length > 0) {
     entregas.push(`${quantos(posse.licencas.length, 'licença', 'licenças')} (${nomesDasLicencas(posse.licencas)})`);
@@ -158,11 +158,11 @@ export function motivoParaRecusar(
 
   if (partes.length === 0) return null;
 
-  // O pedido cita só o que existe: quem não ocupa posto não tem ocupação a encerrar.
-  const ocupacoes = posse.postos.length === 1 ? 'a responsabilidade pelo posto' : 'as responsabilidades pelos postos';
+  // O pedido cita só o que existe: quem não está em posto não tem saída a registrar.
+  const saida = posse.postos.length === 1 ? 'a saída dele do posto' : 'a saída dele dos postos';
   let pedido = 'Devolva o que foi entregue a ele';
-  if (entregas.length === 0) pedido = `Encerre ${ocupacoes}`;
-  else if (posse.postos.length > 0) pedido = `Devolva o que foi entregue a ele e encerre ${ocupacoes}`;
+  if (entregas.length === 0) pedido = `Registre ${saida}`;
+  else if (posse.postos.length > 0) pedido = `Devolva o que foi entregue a ele e registre ${saida}`;
 
   // Os links na ordem da frase.
   return {

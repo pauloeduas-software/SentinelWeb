@@ -117,7 +117,7 @@ describe('a mesma pessoa no mesmo posto, um período depois do outro', () => {
     // Ocupação 1 início · ocupação 2 · fim 1: não existe.
     const porCima = await ocupar(mesa, joana, diaNoBrasil(-30));
     expect(porCima.status).toBe(422);
-    expect(porCima.body.error).toContain('antes do fim da anterior de Joana da Volta');
+    expect(porCima.body.error).toContain('antes da última saída de Joana da Volta');
 
     const noDia = await ocupar(mesa, joana, diaNoBrasil(-10));
     expect(noDia.status).toBe(201);

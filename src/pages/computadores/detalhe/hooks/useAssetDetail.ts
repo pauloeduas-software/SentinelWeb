@@ -101,14 +101,14 @@ export function useAssetDetail() {
       const novo = await criar.mutateAsync(valores);
       fecharModal();
       navigate(`/computadores/${novo.id}`);
-      notificar.sucesso('Ativo cadastrado.');
+      notificar.sucesso('Computador cadastrado.');
       return;
     }
 
     if (!asset) return;
     await editar.mutateAsync({ id: asset.id, data: valores });
     fecharModal();
-    notificar.sucesso('Ativo salvo.');
+    notificar.sucesso('Computador salvo.');
   };
 
   // O erro SOBE para o modal mostrar a mensagem do servidor: é aqui que aparece
@@ -117,14 +117,14 @@ export function useAssetDetail() {
     if (!asset) return;
     await entregar.mutateAsync({ id: asset.id, data: dados });
     fecharModal();
-    notificar.sucesso('Ativo entregue.');
+    notificar.sucesso('Computador entregue.');
   };
 
   const handleDevolver = async (dados: CheckinInput) => {
     if (!asset) return;
     await devolver.mutateAsync({ id: asset.id, data: dados });
     fecharModal();
-    notificar.sucesso('Ativo devolvido.');
+    notificar.sucesso('Computador devolvido.');
   };
 
   const handleDarBaixa = async (dados: RetireInput) => {
@@ -147,7 +147,7 @@ export function useAssetDetail() {
     if (!asset) return;
     try {
       await restaurar.mutateAsync(asset.id);
-      notificar.sucesso('Ativo restaurado.');
+      notificar.sucesso('Computador restaurado.');
     } catch (falha) {
       // É aqui que aparece o 409 de etiqueta reaproveitada, como na lista.
       notificar.erro((falha as Error).message);
@@ -180,7 +180,7 @@ export function useAssetDetail() {
     // A busca engole o erro na listagem, mas aqui ele é a tela inteira: um
     // 404 de URL colada precisa dizer que o ativo não existe, não ficar
     // carregando para sempre.
-    erro: erroDaFicha(error, asset != null, 'o ativo'),
+    erro: erroDaFicha(error, asset != null, 'o computador'),
 
     aba,
     setAba,
