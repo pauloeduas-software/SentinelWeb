@@ -20,7 +20,7 @@ const categoria: CatalogUiSpec = {
   icone: Tag,
   singular: 'Categoria',
   genero: 'f',
-  placeholderBusca: 'Buscar categoria…',
+  placeholderBusca: 'Buscar por nome…',
   colunas: [
     { key: 'name', label: 'Nome' },
     { key: 'type', label: 'Tipo', render: 'enum', opcoes: TIPOS_CATEGORIA },
@@ -40,7 +40,7 @@ const status: CatalogUiSpec = {
   icone: CircleDot,
   singular: 'Status',
   genero: 'm',
-  placeholderBusca: 'Buscar status…',
+  placeholderBusca: 'Buscar por nome…',
   colunas: [
     { key: 'name', label: 'Nome' },
     { key: 'type', label: 'Tipo', render: 'status', opcoes: TIPOS_STATUS },
@@ -60,7 +60,7 @@ const fabricante: CatalogUiSpec = {
   icone: Factory,
   singular: 'Fabricante',
   genero: 'm',
-  placeholderBusca: 'Buscar fabricante…',
+  placeholderBusca: 'Buscar por nome…',
   colunas: [
     { key: 'name', label: 'Nome' },
     { key: 'supportPhone', label: 'Telefone de suporte', soNoDesktop: true },
@@ -87,7 +87,7 @@ const modelo: CatalogUiSpec = {
   icone: Laptop,
   singular: 'Modelo',
   genero: 'm',
-  placeholderBusca: 'Buscar modelo ou número…',
+  placeholderBusca: 'Buscar por nome ou número…',
   colunas: [
     { key: 'name', label: 'Modelo' },
     { key: 'modelNumber', label: 'Número', soNoDesktop: true },
@@ -114,7 +114,7 @@ const localizacao: CatalogUiSpec = {
   icone: Building2,
   singular: 'Localização',
   genero: 'f',
-  placeholderBusca: 'Buscar localização, cidade ou endereço…',
+  placeholderBusca: 'Buscar por nome, cidade ou endereço…',
   colunas: [
     { key: 'name', label: 'Nome' },
     { key: 'city', label: 'Cidade' },
@@ -143,7 +143,7 @@ const motivoDaBaixa: CatalogUiSpec = {
   icone: PackageX,
   singular: 'Motivo de baixa',
   genero: 'm',
-  placeholderBusca: 'Buscar motivo…',
+  placeholderBusca: 'Buscar por nome…',
   colunas: [
     { key: 'name', label: 'Nome' },
     EM_USO,
