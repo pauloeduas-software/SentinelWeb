@@ -63,8 +63,6 @@ export default function ColaboradorPage() {
     return <FichaIndisponivel lista="Colaboradores" rotuloDaVolta={rotulo} voltar={voltar} carregando={carregando} erro={erro ?? 'Colaborador não encontrado.'} />;
   }
 
-  const unidades = pessoa.itens.reduce((soma, entrega) => soma + entrega.unidades, 0);
-
   return (
     <div className="space-y-4 pb-6 motion-safe:animate-fade-in">
       <PaginaCabecalho titulo={pessoa.name} voltar={{ ...voltar, rotulo }} />
@@ -109,7 +107,7 @@ export default function ColaboradorPage() {
           <TabsList>
             <TabsTrigger value="computadores"><Monitor /> Computadores <ContagemDaAba>{pessoa.ativos.length}</ContagemDaAba></TabsTrigger>
             <TabsTrigger value="postos"><MapPin /> Postos <ContagemDaAba>{totalDeOcupacoes}</ContagemDaAba></TabsTrigger>
-            <TabsTrigger value="estoque"><Package /> Estoque <ContagemDaAba>{unidades}</ContagemDaAba></TabsTrigger>
+            <TabsTrigger value="estoque"><Package /> Estoque <ContagemDaAba>{pessoa.itens.length}</ContagemDaAba></TabsTrigger>
             <TabsTrigger value="licencas"><KeyRound /> Licenças <ContagemDaAba>{pessoa.licencas.length}</ContagemDaAba></TabsTrigger>
             <TabsTrigger value="historico"><History /> Histórico <ContagemDaAba>{totalDoHistorico}</ContagemDaAba></TabsTrigger>
           </TabsList>

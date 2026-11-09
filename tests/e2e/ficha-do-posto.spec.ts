@@ -187,9 +187,9 @@ test('na lista, Responsáveis mostra o posto sem quem o ocupa, que fica pendurad
   await expect(comAPessoa.getByText(/Posto /)).toHaveCount(0);
 });
 
-test('em Postos, Responsáveis traz só o nome, e o posto vago fica no Status', async ({ page, request }) => {
+test('em Postos, Responsáveis traz só o nome, Etiqueta a do computador, e o posto vago fica no Status', async ({ page, request }) => {
   const vago = `Mesa vaga ${Date.now()}`;
-  await computadorNoPosto(request, vago);
+  const { assetTag } = await computadorNoPosto(request, vago);
   const ocupado = `Mesa com turno ${Date.now()}`;
   const { posto } = await computadorNoPosto(request, ocupado);
   const pessoas = ['Primeira', 'Segunda', 'Terceira', 'Quarta'].map((quem) => `${quem} de ${ocupado}`);
@@ -217,6 +217,7 @@ test('em Postos, Responsáveis traz só o nome, e o posto vago fica no Status', 
   await page.goto(`/postos?busca=${encodeURIComponent(vago)}`);
   const linha = page.getByRole('row', { name: new RegExp(vago) });
   await expect(linha.getByRole('cell').nth(2)).toHaveText('—');
+  await expect(linha.getByRole('cell').nth(3)).toHaveText(assetTag);
   await expect(linha.getByRole('cell').nth(4)).toHaveText('Posto vago');
 
   await linha.click();
@@ -411,6 +412,8 @@ test('o Adicionar do ⋯ da lista abre o painel sem sair dela, e a linha já tra
 
   const painel = page.locator('[data-painel-lateral]');
   await expect(painel).toContainText(nome);
+  // A data da entrada vem com hoje, como a da entrega.
+  await expect(painel.locator('input[type="date"]')).not.toHaveValue('');
   await painel.getByRole('combobox').click();
   await page.getByRole('option', { name: pessoa }).click();
   await painel.getByRole('button', { name: 'Adicionar', exact: true }).click();

@@ -31,7 +31,7 @@ interface PostoLido {
   updatedAt: Date;
   locationId: string;
   location: { id: string; name: string };
-  _count: { assignments: number };
+  assignments: { asset: { assetTag: string } }[];
 }
 
 export interface WorkstationRow {
@@ -45,6 +45,8 @@ export interface WorkstationRow {
   location: { id: string; name: string };
   ocupantes: OcupanteDoPosto[];
   totalOcupantes: number;
+  /** A etiqueta do computador entregue ao posto: um só, pela invariante 19. */
+  computadores: string[];
   totalAtivos: number;
   vago: boolean;
 }
@@ -104,7 +106,8 @@ export function montarLinhaDePosto(
   ocupantesPorPosto: Map<string, OcupanteDoPosto[]>,
 ): WorkstationRow {
   const ocupantes = ocupantesPorPosto.get(posto.id) ?? [];
-  const totalAtivos = posto._count.assignments;
+  const computadores = posto.assignments.map((posse) => posse.asset.assetTag);
+  const totalAtivos = computadores.length;
 
   return {
     id: posto.id,
@@ -119,6 +122,7 @@ export function montarLinhaDePosto(
     // duas contagens do mesmo fato podem divergir, e a que o usuário confere
     // contando os nomes na tela é esta.
     totalOcupantes: ocupantes.length,
+    computadores,
     totalAtivos,
     vago: ehPostoVago(ocupantes.length, totalAtivos),
   };

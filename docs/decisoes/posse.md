@@ -1055,3 +1055,34 @@ da linha, a consulta começava só de abrir a aba para ver a etiqueta.
 
 **O que fica de fora, declarado:** a aba Computador tem no máximo uma linha, porque o posto tem um computador por vez
 (invariante 19). São duas abas para um computador só, e a clareza paga o clique a mais.
+
+## CG — Postos no molde das outras telas
+
+**Decisão.** Postos passa a fazer o que as outras telas já fazem. As regras de negócio não mudaram, e nenhuma rota é
+nova.
+
+- **A linha de quem está no posto não leva o e-mail.** Na aba Responsáveis, é o nome, o turno ao lado e, embaixo, desde
+  quando e as notas, como em Estoque e Licenças.
+- **A coluna Ativos da lista vira Etiqueta:** a do computador do posto, em mono, como no card da ficha; sem computador,
+  o traço. A busca já achava o posto pela etiqueta
+  ([BI](#bi--a-busca-de-postos-acha-o-computador-pela-etiqueta-e-pela-série)), e agora a linha mostra o que ela achou.
+- **Adicionar ao posto é como a entrega:** a descrição diz só o posto, a frase de que a pessoa passa a responder vira a
+  ajuda do campo Colaborador, e a Data da entrada vem com hoje e é obrigatória, no lugar do Desde em branco.
+- **O Novo posto não tem descrição,** como os outros cadastros.
+- **A aba Estoque perde o parágrafo de cima,** como a do colaborador: a linha já abre o item, onde está o Devolver
+  ([BN](#bn--o-devolver-mora-só-na-ficha-do-que-foi-entregue)).
+- **A aba Estoque conta as entregas, não as unidades,** no posto e no colaborador: o número é o de linhas, como em toda
+  aba, e a coluna Quantidade diz as unidades.
+
+**Supera em parte:** [BQ](#bq--entregar-e-devolver-são-dois-botões-e-a-aba-responsáveis-é-uma-só) (o e-mail embaixo,
+junto do desde quando).
+
+**Por quê:** pedido para padronizar Postos, que está fechada. O e-mail não ajudava a decidir nada na aba, e colado no
+"desde" a data parecia ser dele. O resto era o mesmo gesto com outro desenho: a entrega vem com hoje e diz a regra no
+campo, e a aba diz quantas linhas tem.
+
+**O custo:** `GET /api/workstations` traz a etiqueta do computador de cada posto (`computadores`), na mesma consulta da
+página.
+
+**O que ficou de fora.** A dica da aba Computador vazia, que a CE manteve. O posto só com estoque e sem ninguém continua
+Sem uso, e não Posto vago: vago é ter computador sem ninguém. E o e-mail continua na ficha do colaborador.

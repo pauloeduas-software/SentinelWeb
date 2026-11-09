@@ -51,7 +51,7 @@ export default function PostoFormModal({ posto, onClose, onSubmit }: PostoFormMo
   return (
     <FormularioLateral
       titulo={posto ? 'Editar posto' : 'Novo posto'}
-      descricao={posto?.name ?? 'Os responsáveis se definem na ficha do posto, com o turno de cada um.'}
+      descricao={posto?.name}
       onClose={onClose}
       onSubmit={enviar}
       erro={erro}

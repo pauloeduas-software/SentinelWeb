@@ -101,9 +101,6 @@ export default function OccupantsPanel({
       {ocupantes.map((ocupante) => {
         const nome = nomeDoOcupante(ocupante);
         const meu = pedido?.id === ocupante.id ? pedido : null;
-        // A nota de quem colocou a pessoa aqui, lida onde foi escrita — como a da
-        // entrega de estoque, na mesma ficha.
-        const detalhe = [ocupante.person?.email, ocupante.notes].filter(Boolean).join(' · ');
 
         return (
           <li key={ocupante.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
@@ -115,7 +112,9 @@ export default function OccupantsPanel({
               </div>
               <div className="text-xs text-text-tertiary">
                 {periodoDaOcupacao(ocupante)}
-                {detalhe && <span className="text-text-secondary"> · {detalhe}</span>}
+                {/* A nota de quem colocou a pessoa aqui, como a da entrega em Estoque e Licenças. O e-mail
+                    fica na ficha do colaborador (CG). */}
+                {ocupante.notes && <span className="text-text-secondary"> · {ocupante.notes}</span>}
               </div>
             </div>
 
