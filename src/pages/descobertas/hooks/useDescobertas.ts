@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   useAceitarSugestao, useCoberturaQuery, useConfiguracaoDaDescobertaQuery,
   useDesvincularMaquina, useOciososQuery, useReconciliarAgora, useRecusarSugestao, useSalvarConfiguracaoDaDescoberta,
@@ -24,6 +25,12 @@ import type {
 const ABAS = ['fila', 'sem', 'com', 'ociosos'] as const;
 export type AbaDaTela = typeof ABAS[number];
 
+/** A frase do cartão depois da triagem, no masculino do Status concordando com a máquina (BU). */
+const TRIAGEM_SALVA: Record<Exclude<ReviewState, 'UNREVIEWED'>, string> = {
+  ALLOWED: 'Máquina marcada como conhecida.',
+  BLOCKED: 'Máquina marcada como não autorizada.',
+};
+
 /** O placar da rodada: "3 sugestões · 1 vínculo" é a resposta à pergunta de quem clicou. */
 function placarDaVarredura({ endpoints, sugeridas, vinculadas, encerradas }: ResultadoDaVarredura): string {
   return [
@@ -37,6 +44,7 @@ function placarDaVarredura({ endpoints, sugeridas, vinculadas, encerradas }: Res
 export function useDescobertas() {
   const notificar = useNotificacao();
   const [aba, setAba] = useAbaNaUrl(ABAS);
+  const [configurando, setConfigurando] = useState(false);
 
   const sugestoes = useSugestoesQuery();
   const cobertura = useCoberturaQuery();
@@ -106,10 +114,6 @@ export function useDescobertas() {
       || vincular.isPending || vincularEEntregar.isPending || desvincular.isPending || reconciliar.isPending,
 
     podeReconciliar,
-    // Mudar o modo e os prazos (`PUT /api/settings/discovery`) também é `SUPERVISOR`.
-    // Mesmo cargo do reconciliar, nome próprio para quem lê a página não ter
-    // que saber disso.
-    podeConfigurar: podeReconciliar,
     reconciliando: reconciliar.isPending,
     handleReconciliar: () => void comErro(async () => {
       notificar.info(placarDaVarredura(await reconciliar.mutateAsync()));
@@ -123,9 +127,9 @@ export function useDescobertas() {
       await recusar.mutateAsync(id);
       notificar.sucesso('Sugestão recusada.');
     }),
-    handleTriar: (id: string, reviewState: ReviewState) => void comErro(async () => {
+    handleTriar: (id: string, reviewState: Exclude<ReviewState, 'UNREVIEWED'>) => void comErro(async () => {
       await triar.mutateAsync({ id, reviewState });
-      notificar.sucesso('Triagem salva.');
+      notificar.sucesso(TRIAGEM_SALVA[reviewState]);
     }),
 
     /**
@@ -162,18 +166,13 @@ export function useDescobertas() {
       });
     },
 
-    /**
-     * Salva um pedaço da configuração — e o corpo é PARCIAL de propósito.
-     *
-     * A rota é `PUT` com todos os campos opcionais, então a tela pode mandar só
-     * o que mexeu. Obrigá-la a mandar os três para trocar um seria pedir ao
-     * cliente que conhecesse os outros dois — e a primeira vez que alguém
-     * abrisse a tela com um cache velho, salvar o modo reverteria os limiares.
-     */
-    salvandoConfiguracao: salvarConfiguracao.isPending,
-    handleSalvarConfiguracao: (dados: Partial<ConfiguracaoDaDescoberta>) => void comErro(async () => {
+    // CONFIGURAR (`PUT /api/settings/discovery`) também é `SUPERVISOR`, e abre o painel
+    // lateral, como todo formulário. Propaga como o vincular: a recusa fica no painel.
+    configurando,
+    abrirConfiguracao: () => setConfigurando(true),
+    fecharConfiguracao: () => setConfigurando(false),
+    handleSalvarConfiguracao: async (dados: ConfiguracaoDaDescoberta) => {
       await salvarConfiguracao.mutateAsync(dados);
-      notificar.sucesso('Configuração salva.');
-    }),
+    },
   };
 }
