@@ -11,10 +11,14 @@ import { cenarioDePosse, criarAtivo, criarColaborador, criarPosto } from '../hel
 // a MESMA pessoa. Só recusa quem responde por algo AGORA (invariante 6).
 
 let api: ApiDeTeste;
+let tecnico: Awaited<ReturnType<ApiDeTeste['comoUsuario']>>;
+let supervisor: Awaited<ReturnType<ApiDeTeste['comoUsuario']>>;
 let cenario: Awaited<ReturnType<typeof cenarioDePosse>>;
 
 beforeAll(async () => {
   api = await criarApi();
+  tecnico = await api.comoUsuario('TECNICO');
+  supervisor = await api.comoUsuario('SUPERVISOR');
   cenario = await cenarioDePosse(api);
 });
 
@@ -103,8 +107,8 @@ describe('excluir colaborador', () => {
     const linha = await prisma.person.findFirst({ where: { id: pessoa, deletedAt: { not: null } } });
     expect(linha).not.toBeNull();
 
-    // Some de toda leitura: ficha, seletor, listagem.
-    expect((await api.get(`/api/people/${pessoa}`)).status).toBe(404);
+    // Some de toda leitura: seletor, listagem e, para quem não vê a Lixeira, a ficha (CF).
+    expect((await tecnico.get(`/api/people/${pessoa}`)).status).toBe(404);
     const opcoes = await api.get<{ id: string }[]>(`/api/people/options?q=${encodeURIComponent('Já Teve')}`);
     expect(opcoes.body.map((opcao) => opcao.id)).not.toContain(pessoa);
 
@@ -146,6 +150,21 @@ describe('a ficha do colaborador', () => {
     // Devolvido, sai da lista de cima e fica só no histórico.
     expect((await api.post(`/api/assets/${notebook.id}/checkin`, {})).status).toBe(200);
     expect((await api.get<Ficha>(`/api/people/${pessoa}`)).body.ativos).toEqual([]);
+  });
+
+  it('o computador vem com o que a aba mostra no posto (CE)', async () => {
+    const pessoa = await criarColaborador(api, { name: 'Caio da Aba de Computadores', email: 'caio.aba@teste.local' });
+    const notebook = await entregarNotebook(pessoa);
+
+    type Ficha = { ativos: { asset: Record<string, unknown> }[] };
+    const ficha = await api.get<Ficha>(`/api/people/${pessoa}`);
+    const computador = ficha.body.ativos[0]?.asset;
+    expect(computador).toMatchObject({
+      id: notebook.id,
+      model: { name: expect.any(String), manufacturer: { name: expect.any(String) }, category: { name: expect.any(String) } },
+      status: { name: expect.any(String), type: expect.any(String) },
+    });
+    expect(computador).toHaveProperty('serial');
   });
 
   it('mostra as notas do cadastro', async () => {
@@ -192,6 +211,33 @@ describe('a lixeira de colaboradores', () => {
     const restauracao = await api.post<{ error: string }>(`/api/people/${antiga}/restore`);
     expect(restauracao.status).toBe(409);
     expect(restauracao.body.error).toMatch(/e-mail/i);
+  });
+
+  // Ver o histórico de quem foi excluído não custa uma restauração, como no computador (BW).
+  it('a ficha abre da lixeira para o Supervisor, só para consulta, e o Técnico não a vê (CF)', async () => {
+    const pessoa = await criarColaborador(api, { name: 'Consulta na Lixeira', email: 'consulta.lixeira@teste.local' });
+    const notebook = await entregarNotebook(pessoa);
+    expect((await api.post(`/api/assets/${notebook.id}/checkin`, {})).status).toBe(200);
+    expect((await api.delete(`/api/people/${pessoa}`)).status).toBe(200);
+
+    const ficha = await supervisor.get<{ deletedAt: string | null }>(`/api/people/${pessoa}`);
+    expect(ficha.status).toBe(200);
+    expect(ficha.body.deletedAt).toEqual(expect.any(String));
+    const historico = await supervisor.get<{ total: number }>(`/api/people/${pessoa}/history`);
+    expect(historico.body.total).toBe(2);
+    expect((await supervisor.get(`/api/people/${pessoa}/occupancies`)).status).toBe(200);
+
+    // Abrir não é restaurar: nenhuma escrita o alcança.
+    const edicao = await supervisor.put(`/api/people/${pessoa}`, { name: 'Editada na Lixeira' });
+    expect(edicao.status).toBe(404);
+
+    expect((await tecnico.get(`/api/people/${pessoa}`)).status).toBe(404);
+    expect((await tecnico.get(`/api/people/${pessoa}/history`)).status).toBe(404);
+    expect((await tecnico.get(`/api/people/${pessoa}/occupancies`)).status).toBe(404);
+
+    // Fora da lixeira, a ficha diz que não está nela.
+    expect((await supervisor.post(`/api/people/${pessoa}/restore`)).status).toBe(200);
+    expect((await tecnico.get<{ deletedAt: string | null }>(`/api/people/${pessoa}`)).body.deletedAt).toBeNull();
   });
 
   it('restaurar quem não está na lixeira é 404', async () => {

@@ -1,23 +1,30 @@
 import {
-  History, KeyRound, MapPin, Monitor, Package,
+  History, KeyRound, MapPin, Monitor, Package, Pencil, Power, PowerOff, RotateCcw, Trash2,
 } from 'lucide-react';
 import HistoryPanel from './components/HistoryPanel';
 import { useColaborador } from './hooks/useColaborador';
+import { colaborador } from '../specs';
+import AcoesDaLinha from '../../../components/AcoesDaLinha';
+import AvisoDaLixeira from '../../../components/AvisoDaLixeira';
 import CartaoDaFicha, { FichaIndisponivel } from '../../../components/CartaoDaFicha';
+import CatalogFormModal from '../../../components/catalogo/CatalogFormModal';
+import ComputadoresNaFicha from '../../../components/ComputadoresNaFicha';
 import PaginaCabecalho from '../../../components/PaginaCabecalho';
 import StatusDaEntrega from '../../../components/StatusDaEntrega';
 import TabelaDaFicha from '../../../components/TabelaDaFicha';
 import { Avatar } from '../../../components/ui/avatar';
 import { PontoDeStatus } from '../../../components/ui/badge';
+import { Button } from '../../../components/ui/button';
 import { Dado } from '../../../components/ui/dado';
 import {
   ContagemDaAba, Tabs, TabsContent, TabsList, TabsTrigger,
 } from '../../../components/ui/tabs';
-import { formatarData, formatarDiaDoInstante } from '../../../helpers/format.helper';
+import { formatarDiaDoInstante } from '../../../helpers/format.helper';
 import { caminhoDoItem, textoDeUnidades } from '../../../helpers/estoque.helper';
 import { caminhoDaLicenca, prazoDaEntrega } from '../../../helpers/licenca.helper';
 import { useAbaNaUrl } from '../../../hooks/useAbaNaUrl';
 import { rotuloDaVolta, useVoltaComFiltros } from '../../../hooks/useVoltaComFiltros';
+import { usePode } from '../../../stores/auth.store';
 
 // FICHA DO COLABORADOR — quem é a pessoa, os COMPUTADORES entregues a ela, os
 // POSTOS que ela ocupa, o estoque e as licenças no nome dela, e o HISTÓRICO
@@ -28,10 +35,13 @@ import { rotuloDaVolta, useVoltaComFiltros } from '../../../hooks/useVoltaComFil
 // Os postos aparecem inclusive quando não têm ativo nenhum entregue: é uma
 // ocupação aberta, e é ela que a desativação cobra.
 //
-// Quem é a pessoa fica no card de cima; embaixo, uma aba para cada coisa que está com
-// ela e, por último, o histórico: as abas dizem o que ESTÁ, o histórico diz o que FOI.
-// Um ativo devolvido mês passado não aparece nas de cima, e é ele que responde "já teve
-// um notebook antes?". Cada linha abre o registro, onde mora o Devolver ou o Encerrar.
+// Quem é a pessoa fica no card de cima, com as ações da linha da lista (CD); embaixo,
+// uma aba para cada coisa que está com ela e, por último, o histórico: as abas dizem o
+// que ESTÁ, o histórico diz o que FOI. Um ativo devolvido mês passado não aparece nas de
+// cima, e é ele que responde "já teve um notebook antes?". Cada linha abre o registro,
+// onde mora o Devolver ou o Encerrar.
+//
+// Aberta da Lixeira, pelo Supervisor, a ficha é só consulta, e a única ação é Restaurar (CF).
 
 const ABAS = ['computadores', 'postos', 'estoque', 'licencas', 'historico'] as const;
 const DESDE = { rotulo: 'Desde', className: 'w-32' };
@@ -40,10 +50,14 @@ export default function ColaboradorPage() {
   const {
     pessoa, ocupacoes, totalDeOcupacoes, carregandoOcupacoes, erroDasOcupacoes, carregando, erro,
     historico, totalDoHistorico, paginaDoHistorico, setPaginaDoHistorico, carregandoHistorico, erroDoHistorico,
+    registro, editando, abrirEdicao, fecharEdicao, handleSalvar, handleAlternarAtivo, handleExcluir, handleRestaurar,
   } = useColaborador();
   const voltar = useVoltaComFiltros('/colaboradores');
   const [aba, setAba] = useAbaNaUrl(ABAS);
   const rotulo = rotuloDaVolta(voltar.para, 'Colaboradores');
+  // Desativar e Excluir são `SUPERVISOR` no servidor (AV), como na lista: o Técnico
+  // cadastra e edita. Antes dos `return`: hook depois de retorno condicional é proibido.
+  const podeDecidir = usePode('SUPERVISOR');
 
   if (carregando || erro || !pessoa) {
     return <FichaIndisponivel lista="Colaboradores" rotuloDaVolta={rotulo} voltar={voltar} carregando={carregando} erro={erro ?? 'Colaborador não encontrado.'} />;
@@ -56,7 +70,27 @@ export default function ColaboradorPage() {
       <PaginaCabecalho titulo={pessoa.name} voltar={{ ...voltar, rotulo }} />
 
       <div className="space-y-6">
-        <CartaoDaFicha marca={<Avatar nome={pessoa.name} className="size-10 text-sm" />}>
+        <CartaoDaFicha
+          marca={<Avatar nome={pessoa.name} className="size-10 text-sm" />}
+          acoes={pessoa.deletedAt ? (
+            <Button size="sm" onClick={handleRestaurar}><RotateCcw /> Restaurar</Button>
+          ) : (
+            <>
+              <Button variant="outline" size="sm" onClick={abrirEdicao}><Pencil /> Editar</Button>
+              <AcoesDaLinha
+                nome={pessoa.name}
+                acoes={[
+                  podeDecidir && {
+                    rotulo: pessoa.isActive ? 'Desativar' : 'Ativar',
+                    icone: pessoa.isActive ? PowerOff : Power,
+                    onClick: handleAlternarAtivo,
+                  },
+                  podeDecidir && { rotulo: 'Excluir', icone: Trash2, onClick: () => void handleExcluir(), perigo: true },
+                ]}
+              />
+            </>
+          )}
+        >
           {/* Estar desativado é a primeira coisa que a tela precisa dizer: todo número
               embaixo tem que ser lido como histórico. Quando e por quem foi desativado
               fica na auditoria, no banco (AB). */}
@@ -69,6 +103,8 @@ export default function ColaboradorPage() {
           <Dado rotulo="Notas" largo>{pessoa.notes}</Dado>
         </CartaoDaFicha>
 
+        {pessoa.deletedAt && <AvisoDaLixeira excluidoEm={pessoa.deletedAt} restaurePara="editar ou desativar" />}
+
         <Tabs value={aba} onValueChange={(valor) => setAba(valor as typeof aba)} className="space-y-4">
           <TabsList>
             <TabsTrigger value="computadores"><Monitor /> Computadores <ContagemDaAba>{pessoa.ativos.length}</ContagemDaAba></TabsTrigger>
@@ -78,24 +114,14 @@ export default function ColaboradorPage() {
             <TabsTrigger value="historico"><History /> Histórico <ContagemDaAba>{totalDoHistorico}</ContagemDaAba></TabsTrigger>
           </TabsList>
 
-          {/* Só os entregues a ELA: o computador do posto que ocupa fica na ficha do posto. */}
+          {/* Só os entregues a ELA: o computador do posto que ocupa fica na ficha do posto.
+              A tabela é a mesma da aba Computador do posto (CE). */}
           <TabsContent value="computadores">
-            <TabelaDaFicha
-              colunas={[{ rotulo: 'Computador' }, { rotulo: 'Modelo', className: 'w-[24%]' }, { rotulo: 'Devolução prevista', className: 'w-48' }, DESDE]}
-              icone={Monitor}
-              vazio="Não é responsável por nenhum computador."
-              linhas={pessoa.ativos.map((posse) => ({
-                id: posse.id,
-                para: `/computadores/${posse.asset.id}`,
-                nome: (
-                  <>
-                    <span className="font-mono">{posse.asset.assetTag}</span>
-                    {posse.asset.name && ` · ${posse.asset.name}`}
-                  </>
-                ),
-                nota: posse.checkoutNotes,
-                celulas: [posse.asset.model.name, formatarData(posse.expectedCheckinAt), formatarDiaDoInstante(posse.checkoutAt)],
+            <ComputadoresNaFicha
+              computadores={pessoa.ativos.map((posse) => ({
+                id: posse.id, ativo: posse.asset, devolucaoPrevista: posse.expectedCheckinAt, entregueEm: posse.checkoutAt,
               }))}
+              vazio="Não é responsável por nenhum computador."
             />
           </TabsContent>
 
@@ -158,6 +184,10 @@ export default function ColaboradorPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {editando && registro && (
+        <CatalogFormModal spec={colaborador} registro={registro} onClose={fecharEdicao} onSubmit={handleSalvar} />
+      )}
     </div>
   );
 }

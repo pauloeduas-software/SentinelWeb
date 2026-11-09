@@ -622,6 +622,9 @@ o motivo. A baixa continua separada do status (D19), e nenhuma regra de negócio
 
 ## BW — A linha da Lixeira abre a ficha, só para consulta
 
+> **Superada em parte por [CF](#cf--a-linha-da-lixeira-de-colaboradores-também-abre-a-ficha):** a linha da Lixeira de
+> Colaboradores também abre a ficha.
+
 > **Superada em parte por [BZ](./reconciliacao.md#bz--vincular-e-desvincular-moram-em-descobertas):** a aba Máquina não tem mais Desvincular, em nenhuma ficha.
 
 **Decisão.** Em Computadores, a linha da Lixeira abre a ficha, com as mesmas abas, e a única ação é Restaurar. Antes, ver o
@@ -639,3 +642,22 @@ alguém olhar. É o que o Snipe-IT faz: a rota do ativo inclui os excluídos.
 **O custo:** o link para um computador excluído, no histórico de um colaborador, passa a abrir para o Supervisor, e continua
 dizendo "Ativo não encontrado." para o Técnico.
 
+
+## CF — A linha da Lixeira de Colaboradores também abre a ficha
+
+**Decisão.** Como em Computadores ([BW](#bw--a-linha-da-lixeira-abre-a-ficha-só-para-consulta)), a linha da Lixeira de
+Colaboradores abre a ficha, com as mesmas abas, e a única ação é Restaurar. Corrige o "Colaboradores não muda" da BW.
+
+- **É do Supervisor, como a Lixeira (AV).** A ficha, o histórico e os postos alcançam o colaborador excluído só para quem
+  tem o cargo. Para o Técnico ele continua sem existir: 404.
+- **Nenhuma escrita o alcança.** Editar, desativar e entregar a ele continuam em 404, e a tela nem oferece: somem o Editar
+  e o `⋯` do card ([CD](./plataforma.md#cd--a-ficha-do-colaborador-tem-as-ações-no-card)).
+- **O aviso "Na lixeira" diz quando foi excluído,** entre o card e as abas, o mesmo do computador (`AvisoDaLixeira`).
+  Restaurar fica no card, e a ficha continua aberta, com as ações de volta.
+- **A seta volta para a Lixeira,** como estava.
+
+**Por quê:** pedido para padronizar Colaboradores, e o motivo da BW vale aqui também: ver o histórico de quem foi
+excluído exigia restaurá-lo, uma escrita que o devolvia às listas e ia para a auditoria só para alguém olhar.
+
+**O custo:** o link para um colaborador excluído passa a abrir para o Supervisor, e continua dizendo "Colaborador não
+encontrado." para o Técnico.

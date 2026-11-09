@@ -1,12 +1,12 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ParamsDoHistorico } from './asset.queries';
 import { apiClient } from '../api/apiClient';
 import type { EventoDaPessoa, PessoaDaFicha } from '../types/person.types';
 import type { ListEnvelope } from '../types/list.types';
 
-// A FICHA DO COLABORADOR — só leitura. O cadastro (listar, criar, editar,
-// desativar, excluir) é a página Colaboradores, pelo catálogo
-// genérico (`catalog.queries.ts`, slug `people`).
+// A FICHA DO COLABORADOR. As escritas (criar, editar, desativar, excluir,
+// restaurar) são as do catálogo genérico (`catalog.queries.ts`, slug `people`),
+// da lista e do card da ficha (CD).
 export const personKeys = {
   all: ['people'] as const,
   um: (id: string) => ['people', 'detail', id] as const,
@@ -43,4 +43,13 @@ export function usePersonHistoryQuery(id: string | null, params: ParamsDoHistori
     enabled: id != null,
     placeholderData: keepPreviousData,
   });
+}
+
+/**
+ * Relê a ficha depois de uma escrita pelo catálogo: as mutações de lá recarregam a
+ * tabela, e a ficha mora em outra chave.
+ */
+export function useRecarregarColaborador() {
+  const queryClient = useQueryClient();
+  return () => void queryClient.invalidateQueries({ queryKey: personKeys.all });
 }

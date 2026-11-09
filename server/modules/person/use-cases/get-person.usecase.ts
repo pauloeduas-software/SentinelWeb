@@ -1,4 +1,5 @@
 import { prisma } from '../../../infra/database/prismaClient';
+import { INCLUINDO_LIXEIRA } from '../../../infra/database/soft-delete.extension';
 import { AppError } from '../../../infra/errors/app-error';
 import { listPersonStock } from '../../stock/use-cases/list-workstation-stock.usecase';
 import { buscarEntregasDaPessoa, comStatus } from '../../license/use-cases/list-target-checkouts.usecase';
@@ -16,6 +17,9 @@ interface PessoaDaFicha {
   name: string;
   email: string | null;
   createdAt: Date;
+  updatedAt: Date;
+  /** Preenchido só na ficha aberta da Lixeira, pelo Supervisor (CF). */
+  deletedAt: Date | null;
   isActive: boolean;
   notes: string | null;
 
@@ -46,6 +50,9 @@ interface PessoaDaFicha {
 /**
  * As posses ABERTAS de alvo PERSON, com o computador embutido.
  *
+ * O computador vem com o que a aba mostra no posto também (CE): a série, o modelo
+ * com o fabricante e a categoria, e o status.
+ *
  * Sem filtro de lixeira: o computador entregue não vai para ela (AL).
  */
 function computadoresDaPessoa(personId: string) {
@@ -55,19 +62,29 @@ function computadoresDaPessoa(personId: string) {
       id: true,
       checkoutAt: true,
       expectedCheckinAt: true,
-      checkoutNotes: true,
-      asset: { select: { id: true, assetTag: true, name: true, model: { select: { name: true } } } },
+      asset: {
+        select: {
+          id: true,
+          assetTag: true,
+          serial: true,
+          model: { select: { name: true, manufacturer: { select: { name: true } }, category: { select: { name: true } } } },
+          status: { select: { name: true, type: true } },
+        },
+      },
     },
     // A ordem da recusa (`contarPosseAberta`): pela etiqueta.
     orderBy: { asset: { assetTag: 'asc' } },
   });
 }
 
-export async function getPerson(id: string): Promise<PessoaDaFicha> {
-  // `findFirst` pelo escopo da lixeira: colaborador excluído responde 404 aqui,
-  // como em toda leitura do sistema. Ele volta pela restauração, não por uma
-  // URL que alguém guardou.
-  const pessoa = await prisma.person.findFirst({ where: { id }, select: PERSON_DETAIL_SELECT });
+export async function getPerson(id: string, podeVerLixeira = false): Promise<PessoaDaFicha> {
+  // `findFirst` pelo escopo da lixeira: o colaborador excluído só abre para quem
+  // vê a Lixeira, e só para consulta (CF), como o computador (BW). Para os outros
+  // ele é 404, e nenhuma escrita o alcança: ele volta pela restauração.
+  const pessoa = await prisma.person.findFirst({
+    where: { id, ...(podeVerLixeira ? INCLUINDO_LIXEIRA : {}) },
+    select: PERSON_DETAIL_SELECT,
+  });
   if (!pessoa) throw new AppError('Colaborador não encontrado.', 404);
 
   const [ativos, itens, licencas] = await Promise.all([

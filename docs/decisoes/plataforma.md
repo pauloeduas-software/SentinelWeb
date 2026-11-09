@@ -483,6 +483,9 @@ Estoque e Licenças para ficha em página.
 
 ## BB — Toda lista, ficha e formulário seguem o mesmo molde
 
+> **Superada em parte por [CD](#cd--a-ficha-do-colaborador-tem-as-ações-no-card):** a ficha do colaborador tem Editar,
+> Desativar e Excluir no card.
+
 > **Superada em parte por [BU](#bu--o-nome-é-status-em-toda-tela-e-o-valor-vai-no-masculino):** a coluna se chama Status em toda lista.
 >
 > **Superada em parte por [BT](#bt--estoque-e-colaboradores-têm-cartões-e-computadores-conta-o-tipo):** Estoque e Colaboradores também abrem com cartões.
@@ -692,6 +695,9 @@ não foi preenchido. O tamanho final está na [BS](#bs--o-card-da-ficha-tem-um-m
 
 ## BS — O card da ficha tem um molde só
 
+> **Superada em parte por [CD](#cd--a-ficha-do-colaborador-tem-as-ações-no-card):** a ficha do colaborador tem ações no
+> card, e a coluna delas deixa de ficar vazia.
+
 > **Superada em parte por [BU](#bu--o-nome-é-status-em-toda-tela-e-o-valor-vai-no-masculino):** o nome no card é Status em toda ficha.
 
 **Decisão.** Os cinco cards passam a ter a mesma grade e a mesma ordem. A diferença não estava no `CartaoDaFicha`, que já era
@@ -780,3 +786,66 @@ e era a única das três que abria sem os cartões.
 **O custo:** uma rota nova, `GET /api/users/stats`, do Administrador como toda rota de Usuários.
 
 **O que ficou de fora.** Configurações continua sem cartões.
+
+## CC — Colaboradores lista a pessoa como Usuários
+
+**Decisão.** A lista de Colaboradores passa a ter a primeira coluna Colaborador: o avatar, o nome e o e-mail embaixo,
+numa coluna só, como Usuários já fazia. Sai a coluna E-mail. As regras de negócio não mudaram, e nenhuma rota é nova.
+
+- **Uma peça só, `PessoaNaLinha`,** nas duas listas de gente. Em Usuários, o selo Senha temporária
+  ([CB](./acesso.md#cb--usuários-avisa-quem-está-com-a-senha-temporária)) continua ao lado do nome.
+- **Sem e-mail, a linha fica só com o nome.** O e-mail do colaborador é opcional.
+- **Pessoa leva avatar, e coisa leva o ícone do assunto.** O card da ficha do colaborador já mostrava o mesmo avatar, e
+  continua.
+- **No catálogo, é a coluna `pessoa` da spec,** com o campo da segunda linha em `sublinha`. As abas de Configurações
+  não a usam.
+
+**Por quê:** pedido para padronizar Colaboradores, que está fechada. As duas listas de pessoas se liam diferente: Usuários
+com o avatar e o e-mail embaixo, Colaboradores com Nome e E-mail em colunas, como as abas de Configurações, porque usa o
+mesmo componente. As listas de operação dão à primeira coluna o nome do que listam: Posto, Item, Licença, Usuário.
+
+**O custo:** o e-mail deixa de ter coluna própria, e o texto longo termina em `…`, com o inteiro ao passar o mouse.
+
+**O que ficou de fora.** As abas de Configurações continuam com Nome na primeira coluna.
+
+## CD — A ficha do colaborador tem as ações no card
+
+**Decisão.** O card da ficha do colaborador ganha Editar e, no `⋯`, Desativar ou Ativar e Excluir, como o do item de
+estoque. Corrige o que a BB e a BS deixaram de fora. As regras de negócio não mudaram, e nenhuma rota é nova.
+
+- **As mesmas perguntas e frases da linha da lista.** As escritas saem do `useCatalog` para o `useAcoesDoCatalogo`, que a
+  lista e a ficha usam. O Editar abre o mesmo formulário do catálogo, com a versão lida ao abrir (AF), e a ficha continua
+  aberta, com o que mudou.
+- **O cargo é o da lista (AV):** o Técnico vê o Editar, e Desativar e Excluir são do Supervisor.
+- **Excluir manda para a lixeira e volta para a lista,** como no computador.
+- **O `⋯` da linha da lista continua igual.**
+
+**Por quê:** pedido para padronizar Colaboradores, que está fechada. Era a única das cinco fichas sem ação no card, e quem
+abria a pessoa para corrigir uma nota tinha de voltar à lista.
+
+**O custo:** `GET /api/people/:id` passa a mandar `updatedAt`, que o Editar devolve.
+
+**O que ficou de fora.** Um botão de entregar no card: a entrega começa no que se entrega, e o botão do card só entrega o
+próprio registro (BQ).
+
+## CE — O computador numa aba de ficha tem um molde só
+
+**Decisão.** A aba Computadores do colaborador e a aba Computador do posto passam a ser a mesma tabela,
+`ComputadoresNaFicha`: Etiqueta, com a série embaixo; Modelo, com o fabricante embaixo; Categoria; Status; Devolução
+prevista; e Desde. As regras de negócio não mudaram, e nenhuma rota é nova.
+
+- **As colunas vêm da lista de Computadores,** como a aba do posto já fazia. O colaborador ganha a série, o fabricante, a
+  categoria e o status, e perde o nome do computador ao lado da etiqueta, que a lista também não mostra.
+- **A Devolução prevista entra no posto também.** Ela é da entrega, e o empréstimo com prazo vale para os dois.
+- **Embaixo da etiqueta vai a série, como na lista.** A observação da entrega sai da linha do colaborador, e continua na
+  aba Responsáveis e no Histórico do computador.
+
+**Completa:** [BN](./posse.md#bn--o-devolver-mora-só-na-ficha-do-que-foi-entregue), que deixou as duas abas só mostrando.
+
+**Por quê:** pedido para padronizar Colaboradores. O mesmo computador aparecia com colunas diferentes nas duas fichas.
+
+**O custo:** `GET /api/people/:id` traz mais do computador, e `GET /api/workstations/:id` traz `devolucaoPrevista` em cada
+ativo. São seis colunas: em tela estreita, a tabela rola.
+
+**O que ficou de fora.** Ícone, ação ou aviso novo na aba: no posto, o aviso de mais de um computador e a dica da aba
+vazia continuam como estavam.

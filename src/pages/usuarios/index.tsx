@@ -5,11 +5,11 @@ import CartoesDeContagem from '../../components/CartoesDeContagem';
 import ListaVazia from '../../components/ListaVazia';
 import ListToolbar from '../../components/ListToolbar';
 import PaginaCabecalho from '../../components/PaginaCabecalho';
-import { Avatar } from '../../components/ui/avatar';
+import PessoaNaLinha from '../../components/PessoaNaLinha';
 import { Badge, PontoDeStatus } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableNome, TableRow, TableSublinha } from '../../components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableRow } from '../../components/ui/table';
 import { useUsers } from './hooks/useUsers';
 import { nomeDoCargo } from '../../helpers/cargo.helper';
 import { useAuthStore } from '../../stores/auth.store';
@@ -63,20 +63,15 @@ export default function UsersPage() {
               return (
                 <TableRow key={user.id} onClick={() => openEdit(user)} apagada={!user.isActive}>
                   <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar nome={user.name} />
-                      <div className="min-w-0">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <TableNome className="min-w-0">{user.name}</TableNome>
-                          {/* Quem ainda não escolheu a sua senha (CB). Não é status: a conta está
-                              ativa, e no desativado o aviso some, porque ele não entra mesmo. */}
-                          {user.isActive && user.mustChangePassword && (
-                            <Badge tom="aviso" className="shrink-0">Senha temporária</Badge>
-                          )}
-                        </div>
-                        <TableSublinha>{user.email}</TableSublinha>
-                      </div>
-                    </div>
+                    <PessoaNaLinha
+                      nome={user.name}
+                      email={user.email}
+                      // Quem ainda não escolheu a sua senha (CB). Não é status: a conta está
+                      // ativa, e no desativado o aviso some, porque ele não entra mesmo.
+                      selo={user.isActive && user.mustChangePassword && (
+                        <Badge tom="aviso" className="shrink-0">Senha temporária</Badge>
+                      )}
+                    />
                   </TableCell>
 
                   <TableCell>{nomeDoCargo(user.role)}</TableCell>

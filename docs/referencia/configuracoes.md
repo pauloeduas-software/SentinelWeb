@@ -43,7 +43,7 @@ de Configurações e a página Colaboradores
 |---|---|---|
 | a spec de cada tabela | `server/modules/catalog/specs/*.spec.ts` | `src/pages/configuracoes/specs/index.ts` (as seis) e `src/pages/colaboradores/specs/index.ts` |
 | o contrato da spec | `catalog-spec.types.ts` | `src/components/catalogo/catalog-ui.types.ts` |
-| o CRUD | `use-cases/{list,create,update,delete}-catalog.usecase.ts` | `src/components/catalogo/` — `useCatalog.ts`, `Catalog*.tsx` e `CadastroDoCatalogo.tsx`, a tela com as abas |
+| o CRUD | `use-cases/{list,create,update,delete}-catalog.usecase.ts` | `src/components/catalogo/` — `useCatalog.ts`, `useAcoesDoCatalogo.ts` (as escritas, também da ficha do colaborador), `Catalog*.tsx` e `CadastroDoCatalogo.tsx`, a tela com as abas |
 | as rotas | `catalog.maestro.ts`, cinco por tabela, em laço | — |
 | a ficha do colaborador | `server/modules/person/` (só leitura) | `src/pages/colaboradores/ficha/` — `/colaboradores/:id` |
 

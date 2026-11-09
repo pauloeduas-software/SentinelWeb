@@ -43,11 +43,12 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
       select: {
         ...(assetSelect(podeVerCusto) as typeof ASSET_SELECT),
         endpoint: { select: { id: true } },
-        // O DIA DA ENTREGA a esta mesa: é o mínimo do "Devolvido em" da ficha.
+        // O DIA DA ENTREGA a esta mesa: é o mínimo do "Devolvido em" da ficha. E a
+        // devolução prevista, que a aba mostra como a do colaborador (CE).
         // A posse aberta é uma só por ativo (índice parcial).
         assignments: {
           where: { targetWorkstationId: id, checkinAt: null },
-          select: { checkoutAt: true },
+          select: { checkoutAt: true, expectedCheckinAt: true },
           take: 1,
         },
       },
@@ -67,6 +68,7 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
     ...ativo,
     endpointId: endpoint?.id ?? null,
     entregueEm: assignments[0]?.checkoutAt ?? null,
+    devolucaoPrevista: assignments[0]?.expectedCheckinAt ?? null,
   }));
 
   const { _count, ...posto } = lido;

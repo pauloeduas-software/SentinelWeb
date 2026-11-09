@@ -168,6 +168,19 @@ describe('o que a ficha do posto lê', () => {
     expect(ficha.body.ativos).toEqual([expect.objectContaining({ id: item.id, entregueEm: posse.checkoutAt.toISOString() })]);
   });
 
+  // A aba Computador mostra a devolução prevista, como a aba do colaborador (CE).
+  it('cada ativo da mesa traz o dia previsto para a devolução', async () => {
+    const mesa = await criarPosto(api, { name: 'Mesa da Devolução Prevista' });
+    const naMesa = await ativo('Desktop da devolução prevista', 'SN-FICHA-41');
+    const previsto = diasAFrente(15);
+    expect((await api.post(`/api/assets/${naMesa.id}/checkout`, {
+      targetType: 'WORKSTATION', targetWorkstationId: mesa, expectedCheckinAt: previsto,
+    })).status).toBe(201);
+
+    const ficha = await api.get<{ ativos: { devolucaoPrevista: string | null }[] }>(`/api/workstations/${mesa}`);
+    expect(ficha.body.ativos[0]?.devolucaoPrevista?.slice(0, 10)).toBe(previsto.slice(0, 10));
+  });
+
   // O status no card da ficha sai deste número. Se saísse da lista de ocupantes,
   // uma consulta que falhasse viraria "Sem uso".
   it('conta quem ocupa o posto agora, sem quem já saiu', async () => {

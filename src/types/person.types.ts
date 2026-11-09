@@ -1,3 +1,4 @@
+import type { Asset } from './asset.types';
 import type { EntregaDoAlvo, EventoDeLicencaDoAlvo } from './license.types';
 import type { EntregaNaFicha } from './stock.types';
 
@@ -19,6 +20,10 @@ export interface PessoaDaFicha {
   email: string | null;
   notes: string | null;
   createdAt: string;
+  /** A versão que o Editar da ficha manda de volta (AF). */
+  updatedAt: string;
+  /** Preenchido só na ficha aberta da Lixeira, pelo Supervisor (CF). */
+  deletedAt: string | null;
   isActive: boolean;
   /** Os computadores entregues A ELA e ainda com ela — não o do posto que ela ocupa. */
   ativos: ComputadorDaPessoa[];
@@ -34,8 +39,14 @@ export interface ComputadorDaPessoa {
   id: string;
   checkoutAt: string;
   expectedCheckinAt: string | null;
-  checkoutNotes: string | null;
-  asset: { id: string; assetTag: string; name: string | null; model: { name: string } };
+  /** O que a aba mostra no posto também (CE). */
+  asset: {
+    id: string;
+    assetTag: string;
+    serial: string | null;
+    model: { name: string; manufacturer: { name: string }; category: { name: string } };
+    status: { name: string; type: Asset['status']['type'] };
+  };
 }
 
 /**

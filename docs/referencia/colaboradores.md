@@ -21,7 +21,9 @@ O cadastro **é o mesmo componente** das abas de Configurações
 (`src/components/catalogo/CadastroDoCatalogo.tsx`), com a spec do
 colaborador (`src/pages/colaboradores/specs/index.ts`): a busca por nome ou
 e-mail, a paginação, Editar, Desativar/Ativar e Excluir na ordem e
-com as frases do sistema inteiro, e a aba Lixeira. Em cima, os cartões Total, Ativos
+com as frases do sistema inteiro, e a aba Lixeira. A linha lê a pessoa como
+Usuários: a coluna Colaborador com o avatar, o nome e o e-mail embaixo, e o
+Status ([CC](../decisoes/plataforma.md#cc--colaboradores-lista-a-pessoa-como-usuários)). Em cima, os cartões Total, Ativos
 e Desativados, sem contar a lixeira: clicar filtra
 ([BT](../decisoes/plataforma.md#bt--estoque-e-colaboradores-têm-cartões-e-computadores-conta-o-tipo)). A API é o CRUD do catálogo em
 `/api/people`, com `?isActive=` na lista e `GET /api/people/stats` nos cartões.
@@ -52,10 +54,18 @@ aqui à parte, à mão — nada cria colaborador a partir de usuário.
 ## A ficha
 
 A linha abre `/colaboradores/:id`: o nome, o e-mail e as notas; os
-**computadores** entregues a ela (com o modelo, a devolução prevista e desde
-quando), os **postos** que ela ocupa (com o turno), os **itens de estoque** e as
+**computadores** entregues a ela, na mesma tabela da aba Computador do posto
+(a etiqueta com a série, o modelo com o fabricante, a categoria, o status, a
+devolução prevista e desde quando,
+[CE](../decisoes/plataforma.md#ce--o-computador-numa-aba-de-ficha-tem-um-molde-só)),
+os **postos** que ela ocupa (com o turno), os **itens de estoque** e as
 **licenças** no nome dela — e o **histórico**, que é só movimentação: entregas e
 devoluções de computador, licença e estoque, entradas e saídas de posto.
+
+O card tem as ações da linha da lista, com as mesmas perguntas e frases: Editar
+e, no `⋯`, Desativar ou Ativar e Excluir, que são do Supervisor. Excluir volta
+para a lista
+([CD](../decisoes/plataforma.md#cd--a-ficha-do-colaborador-tem-as-ações-no-card)).
 
 São as quatro coisas que a desativação e a exclusão cobram, e cada linha leva
 para onde ela se resolve: o computador, à ficha dele, onde está o Devolver; o
@@ -64,7 +74,8 @@ deles, já filtrada pelo nome dela, onde está o Devolver.
 
 Só o que foi entregue a ELA: o computador do posto que ela ocupa e o estoque da
 mesa ficam na ficha do posto, e as licenças do computador que ela usa, na aba
-Licenças do computador. Só leitura.
+Licenças do computador. As abas só mostram: o Devolver e o Encerrar moram no
+registro que a linha abre.
 
 ## Exclusão, lixeira e desativação
 
@@ -72,8 +83,11 @@ Licenças do computador. Só leitura.
 **próprio** — "o que já esteve com a Laura" —, e recadastrá-lo depois de excluir
 o partiria em dois: os equipamentos antigos ficariam presos a um cadastro que
 ninguém abre. Na lixeira a linha fica: o histórico dos ativos, do estoque e das
-licenças continua com o nome dele, e ele some das listas, dos seletores e da
-ficha (404).
+licenças continua com o nome dele, e ele some das listas e dos seletores. A
+ficha dele abre só para o Supervisor, pela linha da Lixeira, e só para consulta:
+o aviso Na lixeira, com o dia da exclusão, e o Restaurar no card. Para o Técnico
+ela é 404
+([CF](../decisoes/catalogo-e-ativo.md#cf--a-linha-da-lixeira-de-colaboradores-também-abre-a-ficha)).
 
 Só não se exclui quem responde por algo **agora** (invariante 6) — 409 com a
 conta, a mesma da desativação, e cada coisa pelo nome:
@@ -106,6 +120,7 @@ desfaz.
 | Assunto | Arquivo |
 |---|---|
 | lixeira, restaurar, a recusa que diz o quê (com os links), desativação, `/options` | `tests/invariantes/colaborador.test.ts`, `tests/invariantes/posse.test.ts` |
-| a ficha: o computador dela e não o do posto, as notas | `tests/invariantes/colaborador.test.ts` |
+| a ficha: o computador dela e não o do posto, as notas, e a ficha da lixeira só para o Supervisor | `tests/invariantes/colaborador.test.ts` |
+| as ações do card, a ficha aberta da Lixeira e o Restaurar | `tests/e2e/ficha-do-colaborador.spec.ts`, `tests/e2e/cargos.spec.ts` |
 | o corpo literal do formulário (e-mail e notas em branco viram nulo; e-mail único e em minúsculas) | `tests/formularios/corpo-literal.test.ts` |
 | o histórico da ficha, com as quatro fontes | `tests/listagens/historico-da-pessoa.test.ts`, `tests/licencas/historico.test.ts`, `tests/estoque/operacoes.test.ts` |

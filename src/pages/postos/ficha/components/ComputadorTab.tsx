@@ -1,16 +1,11 @@
-import { Monitor } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import TabelaDaFicha from '../../../../components/TabelaDaFicha';
+import ComputadoresNaFicha from '../../../../components/ComputadoresNaFicha';
 import { Aviso } from '../../../../components/ui/aviso';
-import { PontoDeStatus } from '../../../../components/ui/badge';
-import { TableLinha, TableSublinha } from '../../../../components/ui/table';
-import { formatarDiaDoInstante } from '../../../../helpers/format.helper';
-import { tomDoStatus } from '../../../../helpers/status.helper';
 import type { AtivoDoPosto } from '../../../../types/workstation.types';
-import { TRACO } from '../../helpers/postos.helper';
 
 // O COMPUTADOR DA MESA: o ativo entregue ao posto. Esta aba diz o que está aqui, e
-// a do lado, a Máquina, como ele está agora (BX).
+// a do lado, a Máquina, como ele está agora (BX). A tabela é a mesma da aba
+// Computadores do colaborador (CE).
 //
 // SEM DEVOLVER (BN): a linha abre a ficha do computador, onde ele mora.
 
@@ -32,32 +27,18 @@ export default function ComputadorTab({ ativos }: ComputadorTabProps) {
         </Aviso>
       )}
 
-      <TabelaDaFicha
-        colunas={[{ rotulo: 'Etiqueta', className: 'w-44' }, { rotulo: 'Modelo' }, { rotulo: 'Categoria', className: 'w-[18%]' }, { rotulo: 'Status', className: 'w-36' }, { rotulo: 'Desde', className: 'w-32' }]}
-        icone={Monitor}
-        vazio="Nenhum ativo entregue a este posto."
-        linhas={ativos.map((ativo) => ({
-          id: ativo.id,
-          para: `/computadores/${ativo.id}`,
-          nome: <span className="font-mono">{ativo.assetTag}</span>,
-          nota: ativo.serial && <span className="font-mono">SN {ativo.serial}</span>,
-          celulas: [
-            <>
-              <TableLinha>{ativo.model.name}</TableLinha>
-              <TableSublinha>{ativo.model.manufacturer.name}</TableSublinha>
-            </>,
-            ativo.model.category.name,
-            <span title={ativo.status.name}><PontoDeStatus tom={tomDoStatus(ativo.status.type)}>{ativo.status.name}</PontoDeStatus></span>,
-            ativo.entregueEm ? formatarDiaDoInstante(ativo.entregueEm) : TRACO,
-          ],
+      <ComputadoresNaFicha
+        computadores={ativos.map((ativo) => ({
+          id: ativo.id, ativo, devolucaoPrevista: ativo.devolucaoPrevista, entregueEm: ativo.entregueEm,
         }))}
+        vazio="Nenhum ativo entregue a este posto."
       >
         <span className="max-w-md text-xs leading-relaxed">
           A entrega é feita em{' '}
           <Link to="/computadores" className="text-link hover:underline">Computadores</Link>
           , escolhendo este posto como destino.
         </span>
-      </TabelaDaFicha>
+      </ComputadoresNaFicha>
     </>
   );
 }

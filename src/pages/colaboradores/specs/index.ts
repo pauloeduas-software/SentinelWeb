@@ -16,9 +16,9 @@ export const colaborador: CatalogUiSpec = {
   singular: 'Colaborador',
   genero: 'm',
   placeholderBusca: 'Buscar por nome ou e-mail…',
+  // A pessoa se lê como em Usuários: o avatar, o nome e o e-mail embaixo (CC).
   colunas: [
-    { key: 'name', label: 'Nome' },
-    { key: 'email', label: 'E-mail' },
+    { key: 'name', label: 'Colaborador', render: 'pessoa', sublinha: 'email' },
     { key: 'isActive', label: 'Status', render: 'ativo' },
   ],
   campos: [

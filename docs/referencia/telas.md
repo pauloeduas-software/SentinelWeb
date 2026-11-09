@@ -17,6 +17,9 @@ O visual vem da IntraNet (AY). Tela nova usa os primitivos de `src/components/ui
 | `FormularioLateral` | todo formulário |
 | `CartaoDaFicha` e `TabelaDaFicha` | a ficha em página: computador, colaborador, posto, item e licença |
 | `AcoesDaLinha` | o `⋯` |
+| `PessoaNaLinha` | a pessoa na lista: o avatar, o nome e o e-mail embaixo |
+| `ComputadoresNaFicha` | o computador numa aba de ficha: no posto e no colaborador |
+| `AvisoDaLixeira` | a ficha aberta da Lixeira: computador e colaborador |
 | `confirmar()` (`hooks/useConfirmacao`) | a pergunta, nunca `confirm()` |
 | `useNotificacao` | o cartão da resposta a um clique, nunca `alert()` |
 | `useCopiar` | o botão de copiar: quem diz que copiou é ele |
@@ -43,6 +46,8 @@ Cadastro novo copia `src/components/catalogo/` (`CatalogTable` + `useCatalog`), 
 
 - **O CRUD é um só.** A linha inteira abre o registro (a ficha ou, no cadastro sem ficha, o Editar). Editar,
   Desativar/Ativar e Excluir, nessa ordem, no `⋯` (AY).
+- **Na Lixeira, a linha abre a ficha só para consulta (BW, CF).** O `AvisoDaLixeira` fica entre o card e as abas, e a
+  única ação é Restaurar, no card.
 - **Excluir sempre clica, e quem recusa é o 409.** A exceção é a própria conta, em Usuários: ali
   Excluir e Desativar ficam desligados, porque ninguém age sobre si mesmo.
 - **Desativar existe só em colaborador, conta e item de estoque;** a licença tem Encerrar; catálogo e
@@ -73,7 +78,10 @@ mostram a senha no painel aberto, e a troca obrigatória de senha, que já leva 
   ficha. O card é só leitura: quem abre outro registro é a linha da aba, e o único link é o site de suporte.
 - **O que já foi mora na aba Histórico, a última (BP).** As outras abas dizem o que está agora, e nenhuma repete o
   passado. Toda ficha tem a sua, em `LinhaDoTempo`.
-- **A ação da ficha fica no card (`CartaoDaFicha`), e nenhuma aba repete botão (BB).**
+- **A ação da ficha fica no card (`CartaoDaFicha`), e nenhuma aba repete botão (BB, CD).** As cinco fichas têm as ações
+  da linha da lista, com as mesmas frases.
+- **O computador numa aba é uma tabela só (CE):** `ComputadoresNaFicha`, no posto e no colaborador, com as colunas da
+  lista de Computadores e as duas datas da entrega.
 - **A aba Responsáveis é uma só (BQ):** a `ListToolbar` com a busca (`?quem=`) e o box com uma linha por responsável e a
   ação à direita. O botão do card só entrega, e sem poder entregar ele trava com o motivo; o Devolver fica na linha. No
   computador, ele abre o painel, porque a devolução pede o status de volta e as notas.
@@ -92,6 +100,9 @@ mostram a senha no painel aberto, e a troca obrigatória de senha, que já leva 
   texto, coluna Status com `PontoDeStatus` e o valor no masculino (BU), 15 por página
   (`POR_PAGINA`, também em aba de ficha e histórico) e tudo na URL (`useListaNaUrl`): status é
   cartão, categoria e tipo são `FiltroDaLista`.
+- **Pessoa leva avatar, e coisa leva o ícone do assunto (CC).** Em Usuários e Colaboradores, a primeira coluna é
+  `PessoaNaLinha`, com o nome da lista: Usuário, Colaborador. O card da ficha do colaborador leva o mesmo avatar, e as
+  outras fichas, o `IconeDaFicha`.
 - **O cartão conta linhas da lista, e cada linha cai em um só (BT, CA).** Tipo de status em Computadores, status em Postos
   e Licenças, Ativos e Desativados em Estoque, Colaboradores e Usuários. O número é o total da lista que ele abre, sem a
   busca.
