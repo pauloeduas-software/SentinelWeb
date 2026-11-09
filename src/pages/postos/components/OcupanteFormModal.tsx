@@ -23,7 +23,9 @@ interface OcupanteFormModalProps {
 export default function OcupanteFormModal({ nomeDoPosto, onClose, onSubmit }: OcupanteFormModalProps) {
   const [personId, setPersonId] = useState('');
   const [shift, setShift] = useState('');
-  const [startedAt, setStartedAt] = useState('');
+  // Vem com hoje, como a data da entrega; pode voltar para registrar quem já estava.
+  const hoje = hojeNoCampoDeData();
+  const [startedAt, setStartedAt] = useState(hoje);
   const [notes, setNotes] = useState('');
   const notificar = useNotificacao();
   const [salvando, setSalvando] = useState(false);
@@ -50,16 +52,16 @@ export default function OcupanteFormModal({ nomeDoPosto, onClose, onSubmit }: Oc
   return (
     <FormularioLateral
       titulo="Adicionar ao posto"
-      descricao={`${nomeDoPosto}: passa a responder por tudo que foi entregue ao posto.`}
+      descricao={nomeDoPosto}
       onClose={onClose}
       onSubmit={enviar}
       erro={erro}
       salvando={salvando}
-      bloqueado={!personId}
+      bloqueado={!personId || !startedAt}
       rotuloDoEnvio="Adicionar"
       rotuloEnviando="Adicionando…"
     >
-      <Campo rotulo="Colaborador" obrigatorio>
+      <Campo rotulo="Colaborador" obrigatorio ajuda="Passa a responder por tudo que foi entregue ao posto.">
         {/* `people` é o slug real de `/options` (GET /api/people/options). */}
         <ReferenceSelect rota="people" valor={personId} obrigatorio comDetalhe onChange={setPersonId} />
       </Campo>
@@ -68,10 +70,11 @@ export default function OcupanteFormModal({ nomeDoPosto, onClose, onSubmit }: Oc
         <Input value={shift} onChange={(event) => setShift(event.target.value)} />
       </Campo>
 
-      <Campo rotulo="Desde" ajuda="Em branco, vale a partir de agora.">
+      <Campo rotulo="Data da entrada" obrigatorio>
         <Input
           type="date"
-          max={hojeNoCampoDeData()}
+          required
+          max={hoje}
           value={startedAt}
           onChange={(event) => setStartedAt(event.target.value)}
         />

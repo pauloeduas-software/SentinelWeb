@@ -40,7 +40,11 @@ export const WORKSTATION_SELECT = {
   locationId: true,
   location: { select: { id: true, name: true } },
 
-  _count: { select: { assignments: { where: POSSE_ABERTA } } },
+  assignments: {
+    where: POSSE_ABERTA,
+    select: { asset: { select: { assetTag: true } } },
+    orderBy: { checkoutAt: 'asc' },
+  },
 } as const;
 
 /**

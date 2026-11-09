@@ -66,8 +66,6 @@ function FichaDoPosto() {
     return <FichaIndisponivel lista="Postos" rotuloDaVolta={rotulo} voltar={voltar} carregando={carregando} erro={erro ?? 'Posto não encontrado.'} />;
   }
 
-  const totalDeUnidades = posto.itens.reduce((soma, entrega) => soma + entrega.unidades, 0);
-
   return (
     <div className="motion-safe:animate-fade-in pb-6">
       <PaginaCabecalho voltar={{ ...voltar, rotulo }} titulo={posto.name} />
@@ -96,7 +94,7 @@ function FichaDoPosto() {
             <TabsTrigger value="responsaveis"><Users /> Responsáveis <ContagemDaAba>{posto.totalOcupantes}</ContagemDaAba></TabsTrigger>
             <TabsTrigger value="computador"><Monitor /> Computador <ContagemDaAba>{posto.totalAtivos}</ContagemDaAba></TabsTrigger>
             <TabsTrigger value="maquina"><Cpu /> Máquina</TabsTrigger>
-            <TabsTrigger value="estoque"><Package /> Estoque <ContagemDaAba>{totalDeUnidades}</ContagemDaAba></TabsTrigger>
+            <TabsTrigger value="estoque"><Package /> Estoque <ContagemDaAba>{posto.itens.length}</ContagemDaAba></TabsTrigger>
             <TabsTrigger value="historico"><History /> Histórico <ContagemDaAba>{totalDoHistorico}</ContagemDaAba></TabsTrigger>
           </TabsList>
 

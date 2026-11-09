@@ -89,6 +89,8 @@ export interface Posto {
 
   ocupantes: PostoOcupante[];
   totalOcupantes: number;
+  /** A etiqueta do computador entregue ao posto: um só, pela invariante 19. Só na lista. */
+  computadores: string[];
   /** Ativos com posse ABERTA apontando para este posto. */
   totalAtivos: number;
 

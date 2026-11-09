@@ -3,7 +3,7 @@ import SeloDoPosto from './SeloDoPosto';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
 import { Card } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableNome, TableRow } from '../../../components/ui/table';
-import { TRACO, nomesDoPosto, quemEstaNoPosto, resumoDeAtivos } from '../helpers/postos.helper';
+import { TRACO, nomesDoPosto, quemEstaNoPosto } from '../helpers/postos.helper';
 import type { Posto } from '../../../types/workstation.types';
 
 // A lista de postos. Apresentacional: recebe as linhas prontas e devolve o
@@ -54,7 +54,10 @@ export default function PostosTable({
                 <TableCell className="hidden md:table-cell">{posto.location.name}</TableCell>
                 <TableCell title={nomesDoPosto(posto).join(', ')}>{quemEstaNoPosto(posto)}</TableCell>
                 <TableCell className="hidden md:table-cell">
-                  {posto.totalAtivos > 0 ? resumoDeAtivos(posto.totalAtivos) : TRACO}
+                  {/* Em mono e na cor do texto, como a etiqueta em Descobertas. */}
+                  {posto.computadores.length > 0
+                    ? <span className="font-mono text-text-primary">{posto.computadores.join(', ')}</span>
+                    : TRACO}
                 </TableCell>
                 <TableCell><SeloDoPosto posto={posto} /></TableCell>
 

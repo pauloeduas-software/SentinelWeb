@@ -177,6 +177,23 @@ describe('o ativo entregue a um posto continua na listagem', () => {
     expect(await buscar(computador.assetTag)).toEqual([]);
   });
 
+  it('a linha do posto traz a etiqueta do computador, e só enquanto ele está lá (CG)', async () => {
+    const posto = await mesa('Mesa da etiqueta');
+    const computador = await ativo('Na mesa da etiqueta', 'SERIE-DA-ETIQUETA');
+    await entregarA(computador.id, posto.id);
+
+    const linhaDoPosto = async () => {
+      const { body } = await api.get<{ rows: { id: string; computadores: string[]; totalAtivos: number }[] }>(
+        `/api/workstations?q=${encodeURIComponent('Mesa da etiqueta')}`,
+      );
+      return body.rows.find((linha) => linha.id === posto.id);
+    };
+    expect(await linhaDoPosto()).toMatchObject({ computadores: [computador.assetTag], totalAtivos: 1 });
+
+    expect((await api.post(`/api/assets/${computador.id}/checkin`, {})).status).toBe(200);
+    expect(await linhaDoPosto()).toMatchObject({ computadores: [], totalAtivos: 0 });
+  });
+
   it('e a ficha do posto mostra o mesmo computador', async () => {
     const item = await ativo('Desktop da ficha', 'SN-LISTA-7');
     const posto = await mesa('Mesa da Listagem 7');

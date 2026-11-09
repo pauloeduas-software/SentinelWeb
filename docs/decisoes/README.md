@@ -76,6 +76,7 @@ que corrigem algo anterior:
 | **D115** (em parte: os dois carimbos de último contato), **H** (em parte: o 409 que aponta a aba Máquina), **BW** (em parte: o Desvincular que some na lixeira) | **BZ** | vincular e desvincular moram em Descobertas; a aba Máquina é a mesma no computador e no posto, com a linha que abre a máquina lá |
 | **BB** e **BS** (em parte: a ficha do colaborador sem ações) | **CD** | a ficha do colaborador tem Editar, Desativar e Excluir no card, como as outras |
 | **BW** (em parte: a Lixeira de Colaboradores só restaura) | **CF** | a linha da Lixeira de Colaboradores também abre a ficha, só para consulta |
+| **BQ** (em parte: o e-mail na linha do posto) | **CG** | Postos no molde das outras telas: a linha de quem está no posto diz desde quando e as notas, sem o e-mail |
 
 **O de-escopo (D143–D156) supera por subtração**, e é o maior grupo de supersessões do projeto:
 a decisão antiga não estava errada, o que ela governava deixou de existir. Está inteiro em
