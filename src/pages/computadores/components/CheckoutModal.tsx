@@ -39,7 +39,7 @@ const ABAS: readonly {
   icone: typeof User;
   rota: string;
   rotuloAlvo: string;
-  ajuda: string;
+  ajuda?: string;
 }[] = [
   {
     tipo: 'PERSON',
@@ -47,7 +47,6 @@ const ABAS: readonly {
     icone: User,
     rota: 'people',
     rotuloAlvo: 'Colaborador',
-    ajuda: 'O colaborador passa a ser o responsável direto.',
   },
   {
     tipo: 'WORKSTATION',
@@ -55,7 +54,7 @@ const ABAS: readonly {
     icone: MapPin,
     rota: 'workstations',
     rotuloAlvo: 'Posto',
-    ajuda: 'O computador fica no posto, e o posto é o responsável. Os responsáveis pelo posto, um ou vários, por turno, se definem na ficha dele.',
+    ajuda: 'O posto é o responsável, e quem está nele responde pelo computador.',
   },
 ];
 

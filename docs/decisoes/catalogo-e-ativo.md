@@ -604,6 +604,9 @@ mostra a ordem real: primeiro para quem foi entregue, depois quem responde por i
 
 ## BV — A vista Baixados conta por motivo, e o status do baixado é o motivo
 
+> **Superada em parte por [CK](#ck--computadores-no-molde-das-outras-telas):** o aviso da ficha se chama Baixado, e não
+> "Fora do patrimônio".
+
 **Decisão.** A vista Baixados de Computadores deixa de mostrar os cartões da vista Ativos, e o Status do baixado passa a ser só
 o motivo. A baixa continua separada do status (D19), e nenhuma regra de negócio mudou.
 
@@ -661,3 +664,40 @@ excluído exigia restaurá-lo, uma escrita que o devolvia às listas e ia para a
 
 **O custo:** o link para um colaborador excluído passa a abrir para o Supervisor, e continua dizendo "Colaborador não
 encontrado." para o Técnico.
+
+---
+
+## CK — Computadores no molde das outras telas
+
+**Decisão.** A lista, a ficha e os painéis de Computadores passam a seguir o que Estoque, Licenças e Postos já fazem. As
+regras de negócio não mudaram, e nenhuma rota é nova.
+
+- **O baixado não mostra o Entregar,** no `⋯` da lista e no card, como a licença encerrada e o item desativado. O que
+  trava por um momento continua travado com o motivo, e a frase é curta como nas outras telas: "Já entregue: devolva
+  antes de entregar de novo", "Em conserto: só computador disponível é entregue".
+- **Reverter, e não desfazer, a baixa:** o botão é Reverter baixa, e as recusas de entregar e de vincular o baixado
+  dizem "Reverta a baixa antes.".
+- **O aviso da ficha se chama Baixado,** como a vista Baixados, e não "Fora do patrimônio". O motivo e o dia continuam
+  embaixo.
+- **A descrição do painel diz qual é o computador, e a regra vai para a ajuda do campo (AZ):** o Clonar diz "Cópia de
+  ATV-00012"; o Dar baixa traz a etiqueta, o modelo e a série, como o Entregar e o Devolver, e a frase da lixeira vai
+  para a ajuda do Motivo. A Data da saída perde a ajuda, como as outras datas.
+- **As ajudas do Entregar são as do Estoque:** o Colaborador sem ajuda, e o Posto com "O posto é o responsável, e quem
+  está nele responde pelo computador."
+- **Devolver:** "Status após a devolução", par do "Status após a entrega", com "Em branco, volta disponível." O quadro de
+  Responsáveis sai do painel: ele abre da linha do responsável.
+- **Nome, e não "Nome / apelido",** no formulário e no card, como a busca diz.
+- **No código, a ficha mora em `computadores/ficha/`,** como a das outras telas, com `useFichaDoComputador` e os
+  componentes em português.
+
+**Supera em parte:** [BV](#bv--a-vista-baixados-conta-por-motivo-e-o-status-do-baixado-é-o-motivo) (o nome do aviso da
+ficha).
+
+**Por quê:** era a tela que faltava na revisão do molde, depois de Licenças, Estoque e Postos, e o padrão vem de
+`telas.md`: o título é ação e tipo, a descrição diz qual registro, a regra mora na ajuda do campo, e cada coisa tem um
+nome só (CH).
+
+**O custo:** as frases de recusa mudam, e os testes que as comparam acompanham.
+
+**O que ficou de fora.** O card com Responsáveis, Volta para e os canais de suporte (BS, AW), a ordem dos campos do
+Entregar, que também difere entre Estoque e Licenças, e a lixeira dos baixados, adiada.

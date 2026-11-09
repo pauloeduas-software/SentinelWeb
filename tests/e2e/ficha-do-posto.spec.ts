@@ -162,8 +162,9 @@ test('na lista, Responsáveis mostra o posto sem quem o ocupa, que fica pendurad
 
   await page.getByRole('tab', { name: 'Responsáveis 1' }).click();
   await page.getByRole('button', { name: 'Devolver' }).click();
+  // O painel diz qual computador; quem responde é a linha de onde ele abriu (CK).
   const devolucao = page.getByRole('dialog');
-  await expect(devolucao.getByText(`Posto ${nome}`)).toBeVisible();
+  await expect(devolucao.getByText(assetTag)).toBeVisible();
   await expect(devolucao.getByText(pessoa)).toHaveCount(0);
   await page.keyboard.press('Escape');
 

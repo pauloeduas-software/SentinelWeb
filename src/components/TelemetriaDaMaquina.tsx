@@ -49,7 +49,7 @@ import { usePode } from '../stores/auth.store';
 // mesmo do `ReferenceSelect`, a outra exceção: este painel é um widget
 // autocontido — ele tem ciclo de vida próprio (um `refetchInterval` que começa
 // ao montar e para ao desmontar) e é usado por duas telas sem relação entre si.
-// Passá-lo por prop obrigaria `useAssetDetail` e `usePostos` a escrever a MESMA
+// Passá-lo por prop obrigaria `useFichaDoComputador` e `usePostos` a escrever a MESMA
 // ligação de seis props, cada um, e a conhecer telemetria sem ter nada a ver com
 // ela. As duas exceções estão nomeadas na regra, lá; a terceira que aparecer sem
 // motivo escrito é a regra virando sugestão.

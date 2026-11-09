@@ -50,9 +50,9 @@ export function caminhoDaPosse(asset: Pick<Asset, 'posse' | 'postoAtual'>): stri
 
 export function bloqueioDaEntrega(asset: Pick<Asset, 'posse' | 'status' | 'retiredAt'>): string | null {
   if (asset.posse?.assignmentId != null) return 'Já entregue: devolva antes de entregar de novo';
-  if (asset.retiredAt) return 'Computador baixado não pode ser entregue — desfaça a baixa antes.';
+  if (asset.retiredAt) return 'Baixado: reverta a baixa para entregar';
   if (asset.status.type === 'DEPLOYABLE') return null;
-  return `Só computador disponível pode ser entregue — este está como ${asset.status.name}.`;
+  return `${asset.status.name}: só computador disponível é entregue`;
 }
 
 /**

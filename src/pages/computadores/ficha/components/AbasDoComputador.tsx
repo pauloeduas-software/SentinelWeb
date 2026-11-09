@@ -5,14 +5,14 @@ import { ABAS, type AbaId } from '../helpers/abas.helper';
 // A barra de abas. A LISTA está em `helpers/abas.helper.ts` — aqui só se desenha.
 // Quem chama passa um `TabsContent` por aba em `children`.
 
-interface AssetTabsProps {
+interface AbasDoComputadorProps {
   ativa: AbaId;
   onChange: (aba: AbaId) => void;
   contagens: Partial<Record<AbaId, number | undefined>>;
   children: ReactNode;
 }
 
-export default function AssetTabs({ ativa, onChange, contagens, children }: AssetTabsProps) {
+export default function AbasDoComputador({ ativa, onChange, contagens, children }: AbasDoComputadorProps) {
   return (
     <Tabs value={ativa} onValueChange={(valor) => onChange(valor as AbaId)}>
       <TabsList>

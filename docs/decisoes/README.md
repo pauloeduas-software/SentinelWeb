@@ -78,6 +78,7 @@ que corrigem algo anterior:
 | **BW** (em parte: a Lixeira de Colaboradores só restaura) | **CF** | a linha da Lixeira de Colaboradores também abre a ficha, só para consulta |
 | **BQ** (em parte: o e-mail na linha do posto) | **CG** | Postos no molde das outras telas: a linha de quem está no posto diz desde quando e as notas, sem o e-mail |
 | **AH** (em parte: ativo como nome do item e a seção Ativos do menu), **BQ** (em parte: o Encerrar da linha do posto) | **CH** | um nome para cada coisa: computador, nunca ativo; quem sai do posto tem Registrar saída, e Encerrar é só da licença |
+| **BV** (em parte: o nome do aviso da ficha) | **CK** | Computadores no molde das outras telas: o baixado sem Entregar, Reverter a baixa, o aviso Baixado e os painéis com a regra na ajuda |
 
 **O de-escopo (D143–D156) supera por subtração**, e é o maior grupo de supersessões do projeto:
 a decisão antiga não estava errada, o que ela governava deixou de existir. Está inteiro em

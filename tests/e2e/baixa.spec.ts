@@ -77,7 +77,7 @@ test('o aviso da baixa e a observação ficam à vista em todas as abas', async 
   await page.goto(`/computadores/${id}`);
   for (const aba of ['Responsáveis', 'Licenças', 'Componentes', 'Máquina', 'Histórico']) {
     await page.getByRole('tab', { name: aba }).click();
-    await expect(page.getByText('Fora do patrimônio')).toBeVisible();
+    await expect(page.getByText('Baixado', { exact: true })).toBeVisible();
     await expect(page.getByText('Lote 2026/03')).toBeVisible();
   }
 });

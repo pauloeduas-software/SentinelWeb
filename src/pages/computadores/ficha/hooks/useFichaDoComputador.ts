@@ -33,7 +33,7 @@ import { useReverterBaixa } from '../../hooks/useReverterBaixa';
 /** Qual modal está aberto. UM de cada vez, por construção: são cinco portas para o mesmo ativo. */
 type ModalAberto = 'nenhum' | 'editar' | 'clonar' | 'entregar' | 'devolver' | 'baixa';
 
-export function useAssetDetail() {
+export function useFichaDoComputador() {
   const notificar = useNotificacao();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();

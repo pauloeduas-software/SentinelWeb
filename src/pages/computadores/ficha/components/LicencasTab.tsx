@@ -15,7 +15,7 @@ import { caminhoDaLicenca, prazoDaEntrega } from '../../../../helpers/licenca.he
 // SEM DEVOLVER: a devolução mora só na tela de Licenças, e a linha de cada
 // licença leva até o detalhe dela, onde está o botão.
 
-interface LicensesTabProps {
+interface LicencasTabProps {
   licencas: EntregaDoAlvo[];
   /** A etiqueta do computador: o link leva à ficha da licença já filtrada por ela. */
   assetTag: string;
@@ -23,7 +23,7 @@ interface LicensesTabProps {
   erro: string | null;
 }
 
-export default function LicensesTab({ licencas, assetTag, carregando, erro }: LicensesTabProps) {
+export default function LicencasTab({ licencas, assetTag, carregando, erro }: LicencasTabProps) {
   return (
     <TabelaDaFicha
       colunas={[{ rotulo: 'Licença' }, { rotulo: 'Categoria', className: 'w-[24%]' }, { rotulo: 'Vencimento', className: 'w-44' }, { rotulo: 'Status', className: 'w-36' }, { rotulo: 'Desde', className: 'w-32' }]}
@@ -40,7 +40,7 @@ export default function LicensesTab({ licencas, assetTag, carregando, erro }: Li
       }))}
     >
       <span className="max-w-md text-center text-xs leading-relaxed">
-        Licença por computador vai para o ativo, pela tela de{' '}
+        Licença por computador é entregue a ele pela tela de{' '}
         <Link to="/licencas" className="text-link hover:underline">Licenças</Link>.
         A de assinatura de uma pessoa vai para o colaborador, e aparece na ficha dele.
       </span>

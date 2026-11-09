@@ -87,7 +87,7 @@ export async function vincularEndpointAoAtivo(
       // um vínculo — ela fica sem cadastro, que é onde a tela de descobertas a
       // mostra.
       if (ativo.retiredAt) {
-        throw new AppError(`${ativo.assetTag} teve baixa e não recebe máquina. Desfaça a baixa antes.`, 409);
+        throw new AppError(`${ativo.assetTag} teve baixa e não recebe máquina. Reverta a baixa antes.`, 409);
       }
 
       // JÁ É ESTE O VÍNCULO: nada muda, e nada se grava. A entrega que falhou e

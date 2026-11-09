@@ -3,16 +3,16 @@ import { useParams } from 'react-router-dom';
 import AssetFormModal from '../components/AssetFormModal';
 import CheckoutModal from '../components/CheckoutModal';
 import RetireModal from '../components/RetireModal';
-import AssetTabs from './components/AssetTabs';
+import AbasDoComputador from './components/AbasDoComputador';
 import AvisoDaBaixa from './components/AvisoDaBaixa';
 import { seloDaSaida } from '../helpers/baixa.helper';
-import IdentificacaoCard from './components/IdentificacaoCard';
-import LicensesTab from './components/LicensesTab';
+import IdentificacaoDoComputador from './components/IdentificacaoDoComputador';
+import LicencasTab from './components/LicencasTab';
 import ComponentesTab from './components/ComponentesTab';
 import DevolucaoModal from './components/DevolucaoModal';
 import MaquinaTab from './components/MaquinaTab';
-import HistoryTab from './components/HistoryTab';
-import PosseTab from './components/PosseTab';
+import HistoricoTab from './components/HistoricoTab';
+import ResponsaveisTab from './components/ResponsaveisTab';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
 import AvisoDaLixeira from '../../../components/AvisoDaLixeira';
 import { FichaIndisponivel } from '../../../components/CartaoDaFicha';
@@ -23,7 +23,7 @@ import { TabsContent } from '../../../components/ui/tabs';
 import { POR_PAGINA } from '../../../hooks/useListaNaUrl';
 import { rotuloDaVolta } from '../../../hooks/useVoltaComFiltros';
 import { bloqueioDaEntrega } from '../helpers/posse.helper';
-import { useAssetDetail } from './hooks/useAssetDetail';
+import { useFichaDoComputador } from './hooks/useFichaDoComputador';
 import { usePode } from '../../../stores/auth.store';
 
 // A TELA DO ATIVO — `/computadores/:id`.
@@ -32,10 +32,10 @@ import { usePode } from '../../../stores/auth.store';
 // tinha em memória: antes o modal recebia o ativo já carregado pela tabela, e
 // não havia como abrir um ativo direto. Ela começa por `GET /api/assets/:id`.
 //
-// Markup e mais nada: estado e chamadas ficam no `useAssetDetail`
+// Markup e mais nada: estado e chamadas ficam no `useFichaDoComputador`
 // (docs/referencia/arquitetura.md).
 
-export default function AssetDetailPage() {
+export default function ComputadorFichaPage() {
   const { id } = useParams<{ id: string }>();
   // Outro computador é outra ficha, e o Clonar abre uma sem sair daqui: a busca e as
   // páginas não passam de um para o outro.
@@ -53,7 +53,7 @@ function FichaDoComputador() {
     modal, abrirEdicao, abrirClone, abrirEntrega, abrirDevolucao, abrirBaixa, fecharModal, statusPadraoId,
     handleSubmit, handleEntregar, handleDevolver, handleDarBaixa, handleReverterSaida,
     handleDelete, handleRestaurar,
-  } = useAssetDetail();
+  } = useFichaDoComputador();
   // A lixeira e a baixa são `SUPERVISOR` no servidor (`DELETE /api/assets/:id`,
   // `retire`, `unretire`); para quem não é, o botão só levaria 403. Antes dos `return` abaixo: hook depois de retorno
   // condicional é o que as regras do React proíbem.
@@ -78,15 +78,18 @@ function FichaDoComputador() {
       />
 
       <div className="space-y-6">
-        <IdentificacaoCard
+        <IdentificacaoDoComputador
           asset={asset}
           acoes={naLixeira ? (
             <Button size="sm" onClick={() => void handleRestaurar()}><RotateCcw /> Restaurar</Button>
           ) : (
             <>
-              <Button size="sm" onClick={abrirEntrega} disabled={bloqueio !== null} title={bloqueio ?? undefined}>
-                <UserPlus /> Entregar
-              </Button>
+              {/* O baixado não entrega, como na lista (CK). */}
+              {!baixado && (
+                <Button size="sm" onClick={abrirEntrega} disabled={bloqueio !== null} title={bloqueio ?? undefined}>
+                  <UserPlus /> Entregar
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={abrirEdicao}><Pencil /> Editar</Button>
               <AcoesDaLinha
                 nome={asset.assetTag}
@@ -106,7 +109,7 @@ function FichaDoComputador() {
         {asset.deletedAt && <AvisoDaLixeira excluidoEm={asset.deletedAt} restaurePara="editar, entregar ou dar baixa" />}
         <AvisoDaBaixa asset={asset} />
 
-        <AssetTabs ativa={aba} onChange={setAba} contagens={contagens}>
+        <AbasDoComputador ativa={aba} onChange={setAba} contagens={contagens}>
           <TabsContent value="responsaveis" className="mt-4 space-y-4">
             <ListToolbar
               search={responsaveis.busca}
@@ -117,7 +120,7 @@ function FichaDoComputador() {
               total={responsaveis.total}
               onPageChange={responsaveis.setPage}
             />
-            <PosseTab
+            <ResponsaveisTab
               posse={responsaveis.visiveis[0]}
               vazio={responsaveis.buscaAdiada ? `Nenhum responsável com "${responsaveis.buscaAdiada}" neste computador.` : undefined}
               para={caminhoDoResponsavel}
@@ -126,7 +129,7 @@ function FichaDoComputador() {
           </TabsContent>
 
           <TabsContent value="historico" className="mt-4">
-            <HistoryTab
+            <HistoricoTab
               eventos={eventos}
               pagina={{ page: paginaDoHistorico, total: totalDeEventos, onPageChange: setPaginaDoHistorico }}
               carregando={historicoPendente}
@@ -135,7 +138,7 @@ function FichaDoComputador() {
           </TabsContent>
 
           <TabsContent value="licencas" className="mt-4">
-            <LicensesTab
+            <LicencasTab
               licencas={licencas}
               assetTag={asset.assetTag}
               carregando={licencasPendentes}
@@ -159,7 +162,7 @@ function FichaDoComputador() {
               erro={erroDaMaquina}
             />
           </TabsContent>
-        </AssetTabs>
+        </AbasDoComputador>
       </div>
 
       {(modal === 'editar' || modal === 'clonar') && (

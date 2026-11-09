@@ -123,7 +123,7 @@ export default function AssetFormModal({
   return (
     <FormularioLateral
       titulo={clonar ? 'Clonar computador' : asset ? 'Editar computador' : 'Novo computador'}
-      descricao={clonar ? `Cópia de ${asset?.assetTag}. Etiqueta e número de série nascem em branco porque são únicos. A cópia nasce sem responsáveis.` : asset?.assetTag}
+      descricao={clonar ? `Cópia de ${asset?.assetTag}` : asset?.assetTag}
       onClose={onClose}
       onSubmit={enviar}
       erro={erro}
@@ -142,7 +142,7 @@ export default function AssetFormModal({
         <Campo rotulo="Número de série">
           <Input value={valores.serial} onChange={(e) => definir('serial', e.target.value)} className="font-mono" />
         </Campo>
-        <Campo rotulo="Nome / apelido" className="sm:col-span-2">
+        <Campo rotulo="Nome" className="sm:col-span-2">
           <Input value={valores.name} onChange={(e) => definir('name', e.target.value)} />
         </Campo>
       </Secao>

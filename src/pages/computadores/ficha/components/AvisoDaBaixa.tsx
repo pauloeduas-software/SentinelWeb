@@ -14,7 +14,7 @@ export default function AvisoDaBaixa({ asset }: { asset: Asset }) {
     <Aviso tom="aviso">
       <div className="space-y-1">
         <div className="flex items-center gap-2 font-medium">
-          <PackageX className="size-4" /> Fora do patrimônio
+          <PackageX className="size-4" /> Baixado
         </div>
         <div className="text-text-primary">{selo}</div>
         {asset.retiredNotes && <div className="text-text-secondary">{asset.retiredNotes}</div>}

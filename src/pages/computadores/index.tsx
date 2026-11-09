@@ -128,8 +128,9 @@ export default function ComputadoresPage() {
                           // Entregar é OPERAÇÃO, não campo: mora aqui, ao lado do
                           // ativo, e não dentro do formulário. Travado, o `titulo`
                           // diz POR QUÊ — um botão apagado sem explicação parece
-                          // defeito. O Devolver mora na ficha, como em Estoque (BN, BQ).
-                          {
+                          // defeito. O Devolver mora na ficha, como em Estoque (BN, BQ). O
+                          // baixado não entrega, como a licença encerrada (CK).
+                          !motivo && {
                             rotulo: 'Entregar',
                             icone: UserPlus,
                             onClick: () => openPosse(asset),
@@ -177,9 +178,9 @@ export default function ComputadoresPage() {
             {view === 'active' && <span className="max-w-md text-center text-xs leading-relaxed">
               {podeDecidir ? (
                 <>
-                  Todo ativo pertence a um modelo. Cadastre o fabricante e o modelo em{' '}
+                  Todo computador pertence a um modelo. Cadastre o fabricante e o modelo em{' '}
                   <Link to="/configuracoes?aba=modelos" className="text-link hover:underline">Configurações</Link>
-                  {' '}antes do primeiro ativo.
+                  {' '}antes do primeiro computador.
                 </>
               ) : (
                 'Todo computador pertence a um modelo. Peça a um supervisor que cadastre o fabricante e o modelo em Configurações antes do primeiro computador.'

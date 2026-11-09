@@ -14,7 +14,7 @@ import { canaisDeSuporte, type CanalDeSuporte } from '../helpers/suporte.helper'
 // está" antes de qualquer aba, com todos os campos do cadastro. Só leitura: editar é
 // o formulário que já existe. O vazio não aparece (`Dado`).
 
-export default function IdentificacaoCard({ asset, acoes }: { asset: Asset; acoes: ReactNode }) {
+export default function IdentificacaoDoComputador({ asset, acoes }: { asset: Asset; acoes: ReactNode }) {
   // Cálculo fora do JSX (docs/referencia/arquitetura.md).
   const motivo = motivoDaSaida(asset);
   const canais = canaisDeSuporte(asset.model.manufacturer);
@@ -31,7 +31,7 @@ export default function IdentificacaoCard({ asset, acoes }: { asset: Asset; acoe
         <Dado rotulo="Número de série">
           {asset.serial && <span className="font-mono">{asset.serial}</span>}
         </Dado>
-        <Dado rotulo="Nome / apelido">{asset.name}</Dado>
+        <Dado rotulo="Nome">{asset.name}</Dado>
         <Dado rotulo="Responsáveis">{nomeDoResponsavel(asset.posse)}</Dado>
         {/* NUM POSTO, o computador está onde o posto fica (AW). */}
         <Dado rotulo="Localização">

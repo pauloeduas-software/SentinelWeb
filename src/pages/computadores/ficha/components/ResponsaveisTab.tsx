@@ -17,7 +17,7 @@ import type { PosseResolvida } from '../../../../types/posse.types';
 
 const ICONE_DO_ALVO = { PERSON: User, WORKSTATION: MapPin } as const;
 
-interface PosseTabProps {
+interface ResponsaveisTabProps {
   posse: PosseResolvida | undefined;
   /** A frase da lista vazia quando ela é vazia por causa da busca. */
   vazio?: string;
@@ -26,7 +26,7 @@ interface PosseTabProps {
   onDevolver: () => void;
 }
 
-export default function PosseTab({ posse, vazio, para, onDevolver }: PosseTabProps) {
+export default function ResponsaveisTab({ posse, vazio, para, onDevolver }: ResponsaveisTabProps) {
   if (!posse?.targetType) {
     return <CartaoVazio icone={Users} carregando={false} erro={null} frase={vazio ?? 'Nenhum responsável por este computador agora.'} />;
   }

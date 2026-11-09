@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams, useSear
 import AppHeader from './components/AppHeader';
 import AppSidebar from './components/AppSidebar';
 import ComputadoresPage from './pages/computadores';
-import AssetDetailPage from './pages/computadores/detalhe';
+import ComputadorFichaPage from './pages/computadores/ficha';
 import PostosPage from './pages/postos';
 import PostoFichaPage from './pages/postos/ficha';
 import EstoquePage from './pages/estoque';
@@ -129,7 +129,7 @@ function Layout() {
               <Route path="/computadores" element={<ComputadoresPage />} />
               {/* A tela do ativo. Rota própria, e não modal: é uma URL que se cola
                   no chamado, se abre em outra aba e se guarda nos favoritos. */}
-              <Route path="/computadores/:id" element={<AssetDetailPage />} />
+              <Route path="/computadores/:id" element={<ComputadorFichaPage />} />
               {/* AS ROTAS ANTIGAS, redirecionando. `/itam` era o nome da tela; ele
                   saiu porque "ITAM" é o nome do ASSUNTO do sistema inteiro,
                   não desta tela. `/ativos` veio depois, e saiu quando "Ativos" virou
