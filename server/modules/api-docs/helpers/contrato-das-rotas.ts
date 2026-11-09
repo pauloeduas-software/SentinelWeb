@@ -91,7 +91,7 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
   'DELETE /api/workstations/:id': { tag: 'Postos', resumo: 'Exclui o posto (em uso, 409)' },
   'GET /api/workstations/:id/occupants': { tag: 'Postos', resumo: 'Os responsáveis pelo posto agora' },
   'POST /api/workstations/:id/occupants': { tag: 'Postos', resumo: 'Põe um colaborador no posto', body: addOccupantSchema, status: 201 },
-  'DELETE /api/workstations/:id/occupants/:occupantId': { tag: 'Postos', resumo: 'Encerra a responsabilidade', body: endOccupancySchema },
+  'DELETE /api/workstations/:id/occupants/:occupantId': { tag: 'Postos', resumo: 'Registra a saída de quem está no posto', body: endOccupancySchema },
   'PATCH /api/workstations/:id/occupants/:occupantId': { tag: 'Postos', resumo: 'Troca o turno do responsável', body: updateOccupantShiftSchema },
 
   // ── Estoque ───────────────────────────────────────────────────────────

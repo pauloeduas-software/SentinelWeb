@@ -51,7 +51,7 @@ export async function endWorkstationOccupancy(
         const inicio = hojeNoBrasil(aberta.startedAt);
         if (dia < inicio) {
           throw new AppError(
-            `O fim da responsabilidade (${diaEmPortugues(dia)}) não pode ser antes do início (${diaEmPortugues(inicio)}).`,
+            `A saída (${diaEmPortugues(dia)}) não pode ser antes da entrada (${diaEmPortugues(inicio)}).`,
             422,
           );
         }
@@ -79,8 +79,8 @@ export async function endWorkstationOccupancy(
       });
 
       throw existe
-        ? new AppError('Esta responsabilidade já foi encerrada.', 409)
-        : new AppError('Responsabilidade não encontrada.', 404);
+        ? new AppError('A saída desta pessoa já foi registrada.', 409)
+        : new AppError('Responsável não encontrado neste posto.', 404);
     }
 
     const encerrada = await tx.workstationOccupant.findFirstOrThrow({

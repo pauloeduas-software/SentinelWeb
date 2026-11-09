@@ -76,11 +76,11 @@ export default function OciososTable({ ociosos, carregando, erro, acao }: Props)
             icone={BatteryWarning}
             carregando={carregando}
             erro={erro}
-            nome="ativo"
+            nome="computador"
             busca={lista.search}
-            frase="Nenhum ativo ocioso nos últimos 30 dias."
+            frase="Nenhum computador ocioso nos últimos 30 dias."
           >
-            <span className="text-xs">Só entram aqui ativos com agente.</span>
+            <span className="text-xs">Só entram aqui computadores com agente.</span>
           </ListaVazia>
         )}
       </Card>

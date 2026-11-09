@@ -65,14 +65,14 @@ interface GrupoDeMenu {
 // conta e se distribui, o que o agente vê, e quem recebe.
 export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
   {
-    titulo: 'Ativos',
+    titulo: 'Computadores',
     itens: [
       // COMPUTADORES É O PRIMEIRO ITEM, e antes dele havia Telemetria em `/`. A
       // tela da frota saiu: ela media as máquinas sem saber de quem são, e a
       // medida foi para a ficha do ativo e a do posto, onde a máquina tem nome.
       // A raiz passou a redirecionar para cá (src/App.tsx), então nenhum item
-      // aponta mais para `/`. Chamava-se Ativos, e virou o nome da seção: o que
-      // a tela lista são computadores — ativo é computador (decisão I).
+      // aponta mais para `/`. A seção também se chama Computadores: ativo é
+      // computador (decisão I), e a tela diz um nome só (CH).
       { to: '/computadores', label: 'Computadores', icon: Monitor, cargo: 'TECNICO' },
       // Logo depois: é a mesma operação vista do outro lado — o computador
       // está na mesa, e a mesa é de quem a ocupa (docs/referencia/modelo-de-posse.md).

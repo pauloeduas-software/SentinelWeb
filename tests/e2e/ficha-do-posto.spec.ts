@@ -261,7 +261,7 @@ test('o card não tem link: no computador, a linha do posto abre o posto, e a se
 test('o computador que não abre oferece voltar ao posto de onde se veio', async ({ page, request }) => {
   const nome = `Mesa da ficha que falha ${Date.now()}`;
   const { posto, ativo, assetTag } = await computadorNoPosto(request, nome);
-  await page.route(`**/api/assets/${ativo}`, (rota) => rota.fulfill({ status: 404, json: { error: 'Ativo não encontrado.' } }));
+  await page.route(`**/api/assets/${ativo}`, (rota) => rota.fulfill({ status: 404, json: { error: 'Computador não encontrado.' } }));
 
   await page.goto(`/postos/${posto}?aba=computador`);
   await page.getByRole('row', { name: new RegExp(assetTag) }).click();
@@ -288,7 +288,7 @@ test('o ⋯ da linha do computador no posto: Editar avisa, Excluir recusa, Entre
   await acoes.click();
   await page.getByRole('menuitem', { name: 'Excluir' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Excluir' }).click();
-  await expect(page.getByRole('alert')).toHaveText('Este ativo está entregue e não pode ir para a lixeira. Faça a devolução antes.');
+  await expect(page.getByRole('alert')).toHaveText('Este computador está entregue e não pode ir para a lixeira. Faça a devolução antes.');
   await expect(linha).toBeVisible();
 
   await acoes.click();
@@ -386,9 +386,9 @@ test('a aba Responsáveis do posto busca, corrige o turno e encerra na própria 
   await turno.press('Enter');
   await expect(daTarde).toContainText('· Noite');
 
-  await daTarde.getByRole('button', { name: 'Encerrar' }).click();
+  await daTarde.getByRole('button', { name: 'Registrar saída' }).click();
   await daTarde.getByRole('button', { name: 'Cancelar' }).click();
-  await daTarde.getByRole('button', { name: 'Encerrar' }).click();
+  await daTarde.getByRole('button', { name: 'Registrar saída' }).click();
   await daTarde.getByRole('button', { name: /^Confirmar/ }).click();
   await expect(linhas).toHaveCount(1);
 
@@ -469,7 +469,7 @@ test('a Máquina é a mesma no posto e no computador, e quem desvincula é Desco
   await expect(linha).toHaveCount(0);
 
   await page.goto(`/computadores/${ativo}?aba=maquina`);
-  await expect(aba.getByText('Nenhuma máquina vinculada a este ativo.')).toBeVisible();
+  await expect(aba.getByText('Nenhuma máquina vinculada a este computador.')).toBeVisible();
 
   conferirConsole();
 });

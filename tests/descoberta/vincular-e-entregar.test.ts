@@ -96,7 +96,7 @@ describe('POST /api/endpoints/:id/link-and-checkout', () => {
     const { status, body } = await vincularEEntregar(endpointId, emUso.id, mesa);
 
     expect(status).toBe(409);
-    expect(body.error).toMatch(/vinculada ao ativo, mas a entrega/i);
+    expect(body.error).toMatch(/vinculada ao computador, mas a entrega/i);
     expect(body.error).toMatch(/dispon[íi]vel/i);
 
     expect((await prisma.endpoint.findUniqueOrThrow({ where: { id: endpointId } })).assetId).toBe(emUso.id);
@@ -113,7 +113,7 @@ describe('POST /api/endpoints/:id/link-and-checkout', () => {
 
     expect(status).toBe(409);
     expect(body.error).toContain(primeiro.assetTag);
-    expect(body.error).toMatch(/j[áa] tem um ativo/i);
+    expect(body.error).toMatch(/j[áa] tem um computador/i);
     // O vínculo do segundo ficou: a máquina é dele. O que não entrou foi na mesa.
     expect(await prisma.assignment.count({ where: { assetId: segundo.id, checkinAt: null } })).toBe(0);
   });

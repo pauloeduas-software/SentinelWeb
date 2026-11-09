@@ -51,7 +51,7 @@ export default function ComputadoresNaFicha({ computadores, vazio, children }: C
         id,
         para: `/computadores/${ativo.id}`,
         nome: <span className="font-mono">{ativo.assetTag}</span>,
-        nota: ativo.serial && <span className="font-mono">SN {ativo.serial}</span>,
+        nota: ativo.serial && <span className="font-mono">{ativo.serial}</span>,
         celulas: [
           <>
             <TableLinha>{ativo.model.name}</TableLinha>

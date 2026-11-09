@@ -90,7 +90,10 @@ bancos de teste a apagar depois estão lá.
   tela é **cargo**, não papel (S).
 - A página leva o nome do que lista, no plural (`computadores`, `postos`, `licencas`), nunca a
   sigla do assunto. Rota renomeada deixa a antiga redirecionando. O menu é por seções (AH).
-- **Ativo** é o item (etiqueta, ficha do ativo); a página é Computadores.
+- **Computador** é o nome do item em toda tela e recusa, nunca "ativo" (CH): ativo e computador são a mesma coisa.
+  "Ativo" fica só como status (Ativo, Desativado) e no código (`Asset`).
+- **Um nome para cada coisa (CH):** Notas, nunca "observações"; a série vai sem rótulo, nunca "SN"; posto, nunca "mesa", fora do
+  exemplo de nome; valor da compra, nunca "custo". Quem sai do posto tem **Registrar saída**; Encerrar é só da licença.
 
 ## Não volta
 

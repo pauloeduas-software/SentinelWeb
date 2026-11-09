@@ -83,7 +83,7 @@ test('a categoria em uso mostra o número e trava o tipo', async ({ page, reques
   await expect(linha.getByRole('cell').nth(2)).toHaveText('1');
 
   await linha.click();
-  await expect(formulario(page).getByRole('radio', { name: 'Ativo', exact: true })).toBeDisabled();
+  await expect(formulario(page).getByRole('radio', { name: 'Computador', exact: true })).toBeDisabled();
   await expect(formulario(page)).toContainText('Em uso por 1 registro: o tipo não muda.');
 });
 

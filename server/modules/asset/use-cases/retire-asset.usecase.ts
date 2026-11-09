@@ -54,7 +54,7 @@ export async function retireAsset(id: string, data: RetireAssetData, ator: Ator)
         retiredReason: { select: { name: true } }, retiredNotes: true,
       },
     });
-    if (!antes) throw new AppError('Ativo não encontrado.', 404);
+    if (!antes) throw new AppError('Computador não encontrado.', 404);
 
     // Dar baixa duas vezes reescreveria a data da primeira saída — e é a
     // data em que o ativo parou de ser patrimônio.

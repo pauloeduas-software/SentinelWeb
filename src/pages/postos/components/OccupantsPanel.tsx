@@ -88,7 +88,7 @@ export default function OccupantsPanel({
     try {
       await onEncerrar(ocupante, dia);
       setPedido(null);
-      notificar.sucesso('Responsabilidade encerrada.');
+      notificar.sucesso('Saída registrada.');
     } catch (falha) {
       notificar.erro((falha as Error).message);
     } finally {
@@ -157,7 +157,7 @@ export default function OccupantsPanel({
                   size="sm"
                   onClick={() => void encerrar(ocupante, meu.valor)}
                   disabled={ocupado || meu.valor === ''}
-                  aria-label={`Confirmar o encerramento da responsabilidade de ${nome}`}
+                  aria-label={`Confirmar a saída de ${nome}`}
                 >
                   Confirmar
                 </Button>
@@ -179,9 +179,9 @@ export default function OccupantsPanel({
                   size="sm"
                   onClick={() => setPedido({ id: ocupante.id, tipo: 'encerrar', valor: hoje })}
                   disabled={ocupado}
-                  title="Sair do posto não apaga nada: a responsabilidade é encerrada e fica no histórico."
+                  title="A saída não apaga nada: a pessoa deixa de responder pelo posto, e fica no histórico."
                 >
-                  <LogOut /> Encerrar
+                  <LogOut /> Registrar saída
                 </Button>
               </div>
             )}

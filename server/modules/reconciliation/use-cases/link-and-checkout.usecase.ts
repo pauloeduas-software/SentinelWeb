@@ -45,7 +45,7 @@ export async function vincularEEntregar(
   } catch (erro) {
     if (erro instanceof AppError) {
       throw new AppError(
-        `A máquina foi vinculada ao ativo, mas a entrega ao posto não aconteceu: ${erro.message}`,
+        `A máquina foi vinculada ao computador, mas a entrega ao posto não aconteceu: ${erro.message}`,
         erro.status,
       );
     }

@@ -169,8 +169,8 @@ lixeira é 404 mesmo com a licença vencida. As duas últimas linhas são da dev
 |---|---|
 | entrega ou devolução num dia futuro | 422 `data da entrega não pode ser uma data futura` / `data da devolução não pode ser uma data futura` |
 | dois alvos, nenhum, ou posto | 422 — com dois: `Uma entrega tem um alvo só: informe o colaborador ou o ativo, nunca os dois.`; o posto nem é campo |
-| ativo ou colaborador que não existe, ou na lixeira | 404 `Ativo não encontrado.` / `Colaborador não encontrado.` |
-| ativo baixado / colaborador desativado | 409 `O ativo ATV-00042 teve baixa e não pode receber licença.` / `Laura Souza está desativado(a) e não pode receber licença.` |
+| ativo ou colaborador que não existe, ou na lixeira | 404 `Computador não encontrado.` / `Colaborador não encontrado.` |
+| ativo baixado / colaborador desativado | 409 `O computador ATV-00042 teve baixa e não pode receber licença.` / `Laura Souza está desativado(a) e não pode receber licença.` |
 | licença encerrada ou vencida | 409 `A licença "Office 2021" está encerrada e não recebe entrega. Se o contrato voltou, reabra-a antes.` / `A licença "Office 2021" venceu há 3 dias e não recebe entrega: renove o contrato e atualize a data de vencimento antes.` — a vencendo entrega normalmente |
 | o mesmo alvo de novo | 409 `"Office 2021" já está entregue a Laura Souza. Uma licença vai uma vez para cada computador ou colaborador.` |
 | entrega antes da data da compra | 422 `A entrega (05/03/2026) não pode ser antes da data da compra (10/03/2026).` — e, para um computador, antes da compra dele: `A entrega (05/03/2026) não pode ser antes da compra de ATV-00042 (10/03/2026).` O outro lado também: a data de compra do computador não muda para depois da primeira licença entregue a ele (422) |

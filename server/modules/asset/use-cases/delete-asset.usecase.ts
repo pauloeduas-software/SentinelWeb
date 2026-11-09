@@ -39,7 +39,7 @@ export async function deleteAsset(id: string, ator: Ator): Promise<void> {
     // computador. Sem ele, o ativo ia para a lixeira ainda no nome da pessoa —
     // que se desativava, porque a contagem dela não vê a lixeira — e voltava
     // restaurado para quem não pode ter posse.
-    await assertSemPosse(tx, id, 'Este ativo', 'ir para a lixeira');
+    await assertSemPosse(tx, id, 'Este computador', 'ir para a lixeira');
 
     // O 409 pela licença: ela continuaria descontada do contrato, e a empresa
     // pagaria por uma licença presa a uma máquina que saiu do inventário.
@@ -48,7 +48,7 @@ export async function deleteAsset(id: string, ator: Ator): Promise<void> {
     const licencas = await licencasDoAtivo(tx, id);
     if (licencas.length > 0) {
       throw new AppError(
-        `Este ativo ainda tem ${licencas.length === 1 ? 'a licença' : 'as licenças'} ${nomesDasLicencas(licencas)}. `
+        `Este computador ainda tem ${licencas.length === 1 ? 'a licença' : 'as licenças'} ${nomesDasLicencas(licencas)}. `
         + 'Devolva pela tela de Licenças antes de excluir.',
         409,
         comoReferencias(licencas),
@@ -57,7 +57,7 @@ export async function deleteAsset(id: string, ator: Ator): Promise<void> {
 
     // E o COMPONENTE (AI), pelo mesmo motivo: a peça ficaria "em uso" numa
     // máquina que saiu do inventário, e nenhuma tela a retiraria.
-    await componentesDoAtivo(tx, id, 'Este ativo', 'excluir');
+    await componentesDoAtivo(tx, id, 'Este computador', 'excluir');
 
     // O RETRATO, antes de a linha sair de vista: é ele que diz, na auditoria, o
     // que foi para a lixeira — o ativo pode ser restaurado ou não, a linha não.
@@ -72,7 +72,7 @@ export async function deleteAsset(id: string, ator: Ator): Promise<void> {
     // Zero linhas aqui só pode ser UMA coisa: o ativo já estava na lixeira. O id
     // inexistente foi separado pela trava lá em cima, que responde 404 antes de
     // chegar neste ponto.
-    if (count === 0 || !antes) throw new AppError('Este ativo já está na lixeira.', 409);
+    if (count === 0 || !antes) throw new AppError('Este computador já está na lixeira.', 409);
 
     await recordAudit(tx, {
       entityType: 'Asset',

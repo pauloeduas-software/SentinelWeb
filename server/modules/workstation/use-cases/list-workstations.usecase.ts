@@ -17,7 +17,7 @@ import { agruparOcupantes, montarLinhaDePosto, type WorkstationRow } from '../he
  * por linha, quem está nele e quantos ativos tem.
  *
  * NÚMERO FIXO DE CONSULTAS, venham 1 ou 100 postos:
- *   1. a contagem e 2. a página (na mesma transação, com o `_count` dos ativos)
+ *   1. a contagem e 2. a página (na mesma transação, com a etiqueta dos ativos)
  *   3. os ocupantes abertos de TODOS os postos da página, de uma vez
  *
  * O caminho ingênuo — perguntar os ocupantes por linha — seria N+1 sobre

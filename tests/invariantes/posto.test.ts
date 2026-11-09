@@ -75,7 +75,7 @@ describe('excluir posto — só o presente segura', () => {
 
     const { status, body } = await api.delete<{ error: string; refs: unknown[] }>(`/api/workstations/${mesa}`);
     expect(status).toBe(409);
-    expect(body.error).toMatch(/^Este posto ainda tem 1 ativo\. /);
+    expect(body.error).toMatch(/^Este posto ainda tem 1 computador\. /);
     expect(body.error).toContain('Tire o que está nele agora');
     expect(body.error).toMatch(/: devolva o que foi entregue\.$/);
     // O Devolver mora na ficha do computador (BN): a recusa leva até ela.

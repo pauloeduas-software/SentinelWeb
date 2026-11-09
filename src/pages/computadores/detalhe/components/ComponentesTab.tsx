@@ -29,7 +29,7 @@ export default function ComponentesTab({ componentes, assetTag, carregando, erro
       icone={Cpu}
       carregando={carregando}
       erro={erro}
-      vazio="Nenhum componente instalado neste ativo."
+      vazio="Nenhum componente instalado neste computador."
       linhas={componentes.map((entrega) => ({
         id: entrega.id,
         para: caminhoDoItem(entrega.item.id, assetTag),

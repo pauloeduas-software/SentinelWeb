@@ -34,7 +34,7 @@ export const checkoutSchema = z.strictObject({
   // O espelho é o dia da entrega, logo abaixo, que recusa o FUTURO pelo motivo
   // oposto (shared/fields.schema.ts).
   expectedCheckinAt: dataNaoPassada('devolução prevista'),
-  checkoutNotes: textoOpcional('observações da entrega', 2_000),
+  checkoutNotes: textoOpcional('notas da entrega', 2_000),
 
   // O DIA da entrega (AM), como na licença e no estoque: hoje por padrão, o
   // passado para registrar a que já aconteceu — a carga inicial da D17.
@@ -47,7 +47,7 @@ export const checkinSchema = z.strictObject({
   // anormal (voltou quebrado, voltou para a assistência) é que merece escolha
   // explícita.
   statusId: uuidOpcional('status'),
-  checkinNotes: textoOpcional('observações da devolução', 2_000),
+  checkinNotes: textoOpcional('notas da devolução', 2_000),
   // O DIA da devolução (AM): hoje por padrão; nem futuro, nem antes da entrega.
   checkinAt: diaNaoFuturo('data da devolução'),
 });

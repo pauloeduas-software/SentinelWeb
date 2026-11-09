@@ -92,7 +92,7 @@ export const statusLabelSpec: CatalogSpec = {
   mostraUso: true,
   countUsages: contarUsos,
   // Sem Desativar (AO): o status em uso fica, e sai quando nenhum ativo o usa.
-  dicaEmUso: 'Troque o status desses ativos e exclua de novo.',
+  dicaEmUso: 'Troque o status desses computadores e exclua de novo.',
 
   nomeUnicoPor: [],
 

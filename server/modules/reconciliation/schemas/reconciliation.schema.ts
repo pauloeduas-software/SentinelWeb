@@ -9,12 +9,12 @@ import { uuidObrigatorio } from '../../shared/fields.schema';
 // que ela propõe. O aceite não tem corpo: a sugestão já diz tudo que ela afirma.
 
 export const vinculoSchema = z.strictObject({
-  assetId: uuidObrigatorio('ativo'),
+  assetId: uuidObrigatorio('computador'),
 });
 
 /** Vincular e entregar ao posto numa operação (`link-and-checkout.usecase.ts`). */
 export const vinculoComEntregaSchema = z.strictObject({
-  assetId: uuidObrigatorio('ativo'),
+  assetId: uuidObrigatorio('computador'),
   targetWorkstationId: uuidObrigatorio('posto'),
 });
 

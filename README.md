@@ -4,7 +4,7 @@
 ![React](https://img.shields.io/badge/React-19.x-61DAFB?logo=react)
 ![Tailwind](https://img.shields.io/badge/Tailwind-4.x-38B2AC?logo=tailwind-css)
 
-O **Sentinel Web** fornece a interface visual para o gerenciamento de ativos. É focado em densidade de informação e baixa latência de resposta.
+O **Sentinel Web** fornece a interface visual para o inventário de TI. É focado em densidade de informação e baixa latência de resposta.
 
 ## 📁 Arquitetura
 
@@ -56,10 +56,10 @@ Na ordem do menu, que se agrupa por assunto ([AH](./docs/decisoes/acesso.md#ah--
 
 | Seção do menu | Rota | O que é | Cargo mínimo |
 | --- | --- | --- | --- |
-| **Ativos** | `/computadores` | Listagem de ativos (computadores) — filtros, busca por etiqueta/série, ações de ciclo de vida | TECNICO |
-|  | `/computadores/:id` | Ficha do ativo — abas **Responsáveis** (com a devolução), **Licenças**, **Componentes**, **Máquina** (link para Descobertas, telemetria e comando, quando há agente) e **Histórico** | TECNICO |
-|  | `/postos` | Postos de trabalho (mesas), cada um numa localização — quem está, quantos ativos, se está vago; criar, editar e excluir posto | TECNICO |
-|  | `/postos/:id` | Ficha do posto — abas **Responsáveis** (corrigir o turno, encerrar), **Computador**, **Máquina** (link para Descobertas, telemetria e comandos), **Estoque** e **Histórico** | TECNICO |
+| **Computadores** | `/computadores` | Listagem de computadores — filtros, busca por etiqueta/série, ações de ciclo de vida | TECNICO |
+|  | `/computadores/:id` | Ficha do computador — abas **Responsáveis** (com a devolução), **Licenças**, **Componentes**, **Máquina** (link para Descobertas, telemetria e comando, quando há agente) e **Histórico** | TECNICO |
+|  | `/postos` | Postos de trabalho (mesas), cada um numa localização — quem está, a etiqueta do computador, se está vago; criar, editar e excluir posto | TECNICO |
+|  | `/postos/:id` | Ficha do posto — abas **Responsáveis** (corrigir o turno, registrar a saída), **Computador**, **Máquina** (link para Descobertas, telemetria e comandos), **Estoque** e **Histórico** | TECNICO |
 | **Recursos** | `/estoque` | O que tem quantidade em vez de patrimônio — o total, quantos em uso e com quem; entrega e devolução a colaborador ou posto, com o dia | TECNICO |
 |  | `/estoque/:id` | Ficha do item — a conta e o cadastro no card, abas **Responsáveis** (com a devolução) e **Histórico** | TECNICO |
 |  | `/licencas` | Contratos de software: quantidade comprada, chaves, entregas a colaborador ou computador; a encerrada fica na lista, com Reabrir | TECNICO |

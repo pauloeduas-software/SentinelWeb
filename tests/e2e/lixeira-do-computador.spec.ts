@@ -29,7 +29,7 @@ test('a linha da Lixeira abre a ficha com o histórico, e só Restaurar age', as
   await expect(page.getByRole('tabpanel').getByText(/Histórico da Lixeira/).first()).toBeVisible();
 
   await page.getByRole('button', { name: 'Restaurar' }).click();
-  await expect(page.getByText('Ativo restaurado.')).toBeVisible();
+  await expect(page.getByText('Computador restaurado.')).toBeVisible();
   await expect(page.getByText('Na lixeira', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Editar' })).toBeVisible();
 

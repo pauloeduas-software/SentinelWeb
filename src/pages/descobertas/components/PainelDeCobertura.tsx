@@ -30,7 +30,7 @@ function numeros(cobertura: Cobertura | undefined, horasDeShadow: number | undef
     {
       rotulo: 'Com agente',
       valor: cobertura?.comAgente,
-      ajuda: cobertura ? `de ${cobertura.cadastrados} ativos cadastrados` : 'dos ativos cadastrados',
+      ajuda: cobertura ? `de ${cobertura.cadastrados} computadores cadastrados` : 'dos computadores cadastrados',
     },
     {
       rotulo: 'Sem agente',

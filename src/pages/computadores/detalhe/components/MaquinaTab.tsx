@@ -29,9 +29,9 @@ interface MaquinaTabProps {
 export default function MaquinaTab({ maquina, carregando, erro }: MaquinaTabProps) {
   if (!maquina?.endpointId) {
     return (
-      <CartaoVazio icone={Monitor} carregando={carregando} erro={erro} frase="Nenhuma máquina vinculada a este ativo.">
+      <CartaoVazio icone={Monitor} carregando={carregando} erro={erro} frase="Nenhuma máquina vinculada a este computador.">
         <span className="max-w-md text-xs leading-relaxed">
-          Se este ativo deveria ter agente, a máquina aparece em Descobertas assim que ele mandar o
+          Se este computador deveria ter agente, a máquina aparece em Descobertas assim que ele mandar o
           primeiro sinal.
         </span>
       </CartaoVazio>

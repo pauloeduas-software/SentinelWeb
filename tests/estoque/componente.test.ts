@@ -78,7 +78,7 @@ describe('a categoria decide para onde o item vai', () => {
     expect((await api.post(`/api/assets/${baixado.id}/retire`, { retiredReasonId: await motivoDaBaixa() })).status).toBe(200);
     const recusa = await noComputador(ssd.id, baixado.id);
     expect(recusa.status).toBe(409);
-    expect(recusa.body.error).toBe(`O ativo ${baixado.assetTag} teve baixa e não pode receber componente.`);
+    expect(recusa.body.error).toBe(`O computador ${baixado.assetTag} teve baixa e não pode receber componente.`);
 
     const naLixeira = await maquina('Na lixeira');
     expect((await api.delete(`/api/assets/${naLixeira.id}`)).status).toBe(200);
@@ -190,7 +190,7 @@ describe('o computador com componente não sai do inventário', () => {
     const lixeira = await api.delete<Recusa>(`/api/assets/${pc.id}`);
     expect(lixeira.status).toBe(409);
     expect(lixeira.body.error).toBe(
-      'Este ativo ainda tem os componentes RAM que segura a baixa ×2. Retire pela tela de Estoque antes de excluir.',
+      'Este computador ainda tem os componentes RAM que segura a baixa ×2. Retire pela tela de Estoque antes de excluir.',
     );
 
     expect((await retirar(instalada.body.unidades[0].id)).status).toBe(200);

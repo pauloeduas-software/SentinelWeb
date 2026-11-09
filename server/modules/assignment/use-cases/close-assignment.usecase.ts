@@ -64,7 +64,7 @@ export async function fecharPosse(
       checkinNotes: dados.checkinNotes ?? null,
     },
   });
-  if (count === 0) throw new AppError('Este ativo não está entregue.', 409);
+  if (count === 0) throw new AppError('Este computador não está entregue.', 409);
 
   const assignment = await client.assignment.findUniqueOrThrow({
     where: { id: posse.id },

@@ -156,7 +156,7 @@ export function useDescobertas() {
     handleDesvincular: async (maquina: Endpoint) => {
       if (!(await confirmar({
         titulo: `Desvincular esta máquina de "${maquina.asset?.assetTag}"?`,
-        descricao: 'O ativo deixa de mostrar esta máquina, que volta para Sem vínculo e pode ser vinculada de novo.',
+        descricao: 'O computador deixa de mostrar esta máquina, que volta para Sem vínculo e pode ser vinculada de novo.',
         acao: 'Desvincular',
       }))) return;
 

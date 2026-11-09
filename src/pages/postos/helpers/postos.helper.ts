@@ -46,12 +46,6 @@ export function quemEstaNoPosto(posto: Pick<Posto, 'ocupantes'>): string {
   return resto > 0 ? `${primeiros} +${resto}` : primeiros || TRACO;
 }
 
-/** "3 ativos" / "1 ativo" / "nenhum". */
-export function resumoDeAtivos(total: number): string {
-  if (total === 0) return 'nenhum';
-  return `${total} ${total === 1 ? 'ativo' : 'ativos'}`;
-}
-
 /**
  * Os ativos deste posto que TÊM MÁQUINA VINCULADA — os que têm telemetria.
  *

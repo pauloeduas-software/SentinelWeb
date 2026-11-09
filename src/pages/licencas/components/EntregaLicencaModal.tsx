@@ -17,7 +17,7 @@ import { chavesComLugar, lugarDaChave, rotuloDaChave } from '../helpers/licenca.
 // ═════════════════════════════════════════════════════════════════════════════
 // SÃO DOIS ALVOS, E NÃO TRÊS — posto de trabalho NÃO recebe licença (D39).
 //
-// A ausência é a decisão, e a ajuda do campo Ativo existe para quem for procurar
+// A ausência é a decisão, e a ajuda do campo Computador existe para quem for procurar
 // o botão que falta: o desktop fixo da Mesa 1 é um ATIVO, e a licença vai para
 // ele. Licença por assinatura de pessoa (Microsoft 365, Adobe) vai para o
 // colaborador.
@@ -98,7 +98,7 @@ export default function EntregaLicencaModal({ licenca, onClose, onSubmit }: Entr
       <Segmentado
         opcoes={[
           { valor: 'PERSON', rotulo: <><User /> Colaborador</> },
-          { valor: 'ASSET', rotulo: <><Monitor /> Ativo</> },
+          { valor: 'ASSET', rotulo: <><Monitor /> Computador</> },
         ]}
         valor={alvo}
         onChange={setAlvo}
@@ -109,7 +109,11 @@ export default function EntregaLicencaModal({ licenca, onClose, onSubmit }: Entr
           <ReferenceSelect rota="people" valor={personId} obrigatorio comDetalhe onChange={setPersonId} />
         </Campo>
       ) : (
-        <Campo rotulo="Ativo" obrigatorio>
+        <Campo
+          rotulo="Computador"
+          obrigatorio
+          ajuda="Licença por computador, como Windows e Office avulso. O posto não recebe licença: o computador do posto recebe."
+        >
           <ReferenceSelect rota="assets" valor={assetId} obrigatorio onChange={setAssetId} />
         </Campo>
       )}
@@ -150,12 +154,6 @@ export default function EntregaLicencaModal({ licenca, onClose, onSubmit }: Entr
       <Campo rotulo="Notas">
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
       </Campo>
-
-      <p className="text-sm leading-relaxed text-text-secondary">
-        Licença por computador (Windows, Office avulso) vai para o ativo; por assinatura de pessoa
-        (Microsoft 365, Adobe), para o colaborador. Posto de trabalho não recebe licença: o
-        computador da mesa recebe.
-      </p>
     </FormularioLateral>
   );
 }

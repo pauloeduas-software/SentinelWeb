@@ -70,7 +70,7 @@ export default function PostoFormModal({ posto, onClose, onSubmit }: PostoFormMo
       <Campo
         rotulo="Localização"
         obrigatorio
-        ajuda="Onde a mesa fica: a Matriz, a Filial. Cadastrada em Configurações › Localizações."
+        ajuda="Onde o posto fica: a Matriz, a Filial. Cadastrada em Configurações › Localizações."
       >
         <ReferenceSelect
           rota="locations"

@@ -133,7 +133,7 @@ export function useAssets() {
     if (!emPosse) return;
     await entregar.mutateAsync({ id: emPosse.id, data: dados });
     closePosse();
-    notificar.sucesso('Ativo entregue.');
+    notificar.sucesso('Computador entregue.');
   };
 
   // O erro sobe para o formulário: é lá que aparece o ativo entregue, que não sai do patrimônio.
@@ -150,7 +150,7 @@ export function useAssets() {
     if (editando) await editar.mutateAsync({ id: emEdicao.id, data: valores });
     else await criar.mutateAsync(valores);
     closeModal();
-    notificar.sucesso(editando ? 'Ativo salvo.' : 'Ativo cadastrado.');
+    notificar.sucesso(editando ? 'Computador salvo.' : 'Computador cadastrado.');
   };
 
   const handleDelete = async (asset: Asset) => {
@@ -174,7 +174,7 @@ export function useAssets() {
     try {
       await restaurar.mutateAsync(asset.id);
       if (assets.length === 1 && page > 1) setPage(page - 1);
-      notificar.sucesso('Ativo restaurado.');
+      notificar.sucesso('Computador restaurado.');
     } catch (erro) {
       // É aqui que aparece o 409 de etiqueta reaproveitada enquanto o ativo
       // estava na lixeira — o índice único é parcial, só entre os vivos.

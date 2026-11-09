@@ -41,7 +41,7 @@ describe('excluir colaborador', () => {
 
     const recusa = await api.delete<{ error: string }>(`/api/people/${pessoa}`);
     expect(recusa.status).toBe(409);
-    expect(recusa.body.error).toContain('responde por 1 ativo');
+    expect(recusa.body.error).toContain('responde por 1 computador');
     expect(recusa.body.error).toContain('antes de excluir');
     expect(recusa.body.error).toContain('Devolva o que foi entregue a ele antes de excluir.');
   });
@@ -54,7 +54,7 @@ describe('excluir colaborador', () => {
     const recusa = await api.delete<{ error: string }>(`/api/people/${pessoa}`);
     expect(recusa.status).toBe(409);
     expect(recusa.body.error).toBe(
-      'Este colaborador ainda responde por 1 posto (Mesa Sem Entrega). Encerre a responsabilidade pelo posto antes de excluir.',
+      'Este colaborador ainda responde por 1 posto (Mesa Sem Entrega). Registre a saída dele do posto antes de excluir.',
     );
   });
 
@@ -68,8 +68,8 @@ describe('excluir colaborador', () => {
     const recusa = await api.put<Recusa>(`/api/people/${pessoa}`, { isActive: false });
     expect(recusa.status).toBe(409);
     expect(recusa.body.error).toBe(
-      `Este colaborador ainda responde por 1 ativo (${notebook.assetTag}) e 1 posto (Mesa da Recusa). `
-      + 'Devolva o que foi entregue a ele e encerre a responsabilidade pelo posto antes de desativar.',
+      `Este colaborador ainda responde por 1 computador (${notebook.assetTag}) e 1 posto (Mesa da Recusa). `
+      + 'Devolva o que foi entregue a ele e registre a saída dele do posto antes de desativar.',
     );
     expect(recusa.body.refs).toEqual([
       { tipo: 'ativo', id: notebook.id, nome: notebook.assetTag },
@@ -83,7 +83,7 @@ describe('excluir colaborador', () => {
 
     const recusa = await api.delete<{ error: string }>(`/api/assets/${notebook.id}`);
     expect(recusa.status).toBe(409);
-    expect(recusa.body.error).toBe('Este ativo está entregue e não pode ir para a lixeira. Faça a devolução antes.');
+    expect(recusa.body.error).toBe('Este computador está entregue e não pode ir para a lixeira. Faça a devolução antes.');
 
     // O notebook continua no nome dela, e a desativação continua vendo.
     expect((await api.put(`/api/people/${pessoa}`, { isActive: false })).status).toBe(409);

@@ -19,7 +19,7 @@ export async function listAssetAssignments(assetId: string, podeVerLixeira = fal
   // `findFirst` pelo escopo da lixeira: o histórico do ativo apagado é de quem
   // vê a Lixeira (BW).
   const ativo = await prisma.asset.findFirst({ where: { id: assetId, ...(podeVerLixeira ? INCLUINDO_LIXEIRA : {}) }, select: { id: true } });
-  if (!ativo) throw new AppError('Ativo não encontrado.', 404);
+  if (!ativo) throw new AppError('Computador não encontrado.', 404);
 
   return prisma.assignment.findMany({
     where: { assetId },

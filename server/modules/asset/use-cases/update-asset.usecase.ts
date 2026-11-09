@@ -31,7 +31,7 @@ export async function updateAsset(id: string, data: UpdateAssetData, ator: Ator)
     await travarAtivoOuFalhar(tx, id);
 
     const antes = await tx.asset.findFirst({ where: { id }, select: ASSET_SELECT });
-    if (!antes) throw new AppError('Ativo não encontrado.', 404);
+    if (!antes) throw new AppError('Computador não encontrado.', 404);
     // O formulário aberto antes de uma entrega, devolução ou edição de outra
     // pessoa: o status que ele reenvia desfaria a da entrega (AF).
     assertVersaoLida(antes.updatedAt, data.updatedAt, antes.assetTag);

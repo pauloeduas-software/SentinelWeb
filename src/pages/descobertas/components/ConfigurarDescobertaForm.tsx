@@ -36,7 +36,7 @@ const MODOS: { value: DiscoveryMode; label: string; ajuda: string }[] = [
   {
     value: 'ON',
     label: 'Vincular sozinho',
-    ajuda: 'Série ou UUID batendo com um único ativo vira vínculo sem perguntar. Continua sem criar ativo e sem mexer nos responsáveis.',
+    ajuda: 'Série ou UUID batendo com um único computador vira vínculo sem perguntar. Continua sem criar computador e sem mexer nos responsáveis.',
   },
 ];
 
@@ -88,7 +88,7 @@ export default function ConfigurarDescobertaForm({ configuracao, onSalvar, onClo
         </Aviso>
       )}
 
-      <Campo rotulo="Dias para virar fantasma" obrigatorio ajuda="Ativo cujo agente não dá sinal há mais que isso entra na conta de Fantasmas.">
+      <Campo rotulo="Dias para virar fantasma" obrigatorio ajuda="Computador cujo agente não dá sinal há mais que isso entra na conta de Fantasmas.">
         <Input type="number" required min={1} max={365} value={ghostDays} onChange={(evento) => setGhostDays(evento.target.value)} />
       </Campo>
 

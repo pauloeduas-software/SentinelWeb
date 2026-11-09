@@ -22,11 +22,9 @@ export const WORKSTATION_OCCUPANT_SELECT = {
 /**
  * A linha da listagem.
  *
- * `_count` com `where` é o que evita o N+1 dos ativos: a contagem de posses
- * abertas apontando para cada posto sai na MESMA consulta da página, em vez de
- * uma consulta por linha. Os ocupantes não vêm por `_count` porque a tela
- * mostra os NOMES — eles saem numa segunda consulta, única para a página
- * inteira.
+ * As posses abertas vêm na MESMA consulta da página, só com a etiqueta: é a coluna
+ * Etiqueta, e o tamanho da lista é o `totalAtivos`. Uma consulta por linha seria
+ * N+1. Os ocupantes saem numa segunda consulta, única para a página inteira.
  */
 export const WORKSTATION_SELECT = {
   id: true,

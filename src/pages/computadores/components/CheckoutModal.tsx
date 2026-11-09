@@ -55,7 +55,7 @@ const ABAS: readonly {
     icone: MapPin,
     rota: 'workstations',
     rotuloAlvo: 'Posto',
-    ajuda: 'O ativo fica no posto, e o posto é o responsável. Os responsáveis pelo posto, um ou vários, por turno, se definem na ficha dele.',
+    ajuda: 'O computador fica no posto, e o posto é o responsável. Os responsáveis pelo posto, um ou vários, por turno, se definem na ficha dele.',
   },
 ];
 
@@ -117,11 +117,11 @@ export default function CheckoutModal({ asset, onClose, onEntregar }: CheckoutMo
 
   return (
     <FormularioLateral
-      titulo="Entregar ativo"
+      titulo="Entregar computador"
       descricao={
         <>
           <span className="font-mono">{asset.assetTag}</span> · {asset.model.manufacturer.name} {asset.model.name}
-          {asset.serial && <> · SN <span className="font-mono">{asset.serial}</span></>}
+          {asset.serial && <> · <span className="font-mono">{asset.serial}</span></>}
         </>
       }
       onClose={onClose}

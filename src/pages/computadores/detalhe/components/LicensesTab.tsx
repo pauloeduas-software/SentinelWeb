@@ -30,7 +30,7 @@ export default function LicensesTab({ licencas, assetTag, carregando, erro }: Li
       icone={KeyRound}
       carregando={carregando}
       erro={erro}
-      vazio="Nenhuma licença entregue a este ativo."
+      vazio="Nenhuma licença entregue a este computador."
       linhas={licencas.map((entrega) => ({
         id: entrega.id,
         para: caminhoDaLicenca(entrega.license.id, assetTag),

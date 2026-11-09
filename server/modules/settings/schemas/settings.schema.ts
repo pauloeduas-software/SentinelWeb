@@ -15,6 +15,6 @@ const inteiroEntre = (rotulo: string, min: number, max: number) =>
 
 export const configuracaoDaDescobertaSchema = z.strictObject({
   discoveryMode: z.enum(['OFF', 'SUGGEST', 'ON'], 'modo de descoberta inválido').optional(),
-  ghostDays: inteiroEntre('dias para ativo fantasma', 1, 365).optional(),
+  ghostDays: inteiroEntre('dias para computador fantasma', 1, 365).optional(),
   shadowHours: inteiroEntre('horas para Shadow IT', 1, 720).optional(),
 });

@@ -20,7 +20,7 @@ test('o motivo criado em Configurações aparece ao dar baixa, e vira o selo da 
   await page.goto(`/computadores/${id}`);
   await page.getByRole('button', { name: /^Ações de / }).first().click();
   await page.getByRole('menuitem', { name: 'Dar baixa' }).click();
-  await expect(page.getByRole('heading', { name: 'Dar baixa no ativo' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Dar baixa no computador' })).toBeVisible();
 
   // Sem motivo o formulário não sai: o campo nasce vazio, e não com o primeiro da lista.
   const seletor = page.getByRole('combobox');
@@ -29,7 +29,7 @@ test('o motivo criado em Configurações aparece ao dar baixa, e vira o selo da 
   await page.getByRole('option', { name: motivo }).click();
   await page.getByRole('button', { name: 'Dar baixa', exact: true }).click();
 
-  await expect(page.getByRole('heading', { name: 'Dar baixa no ativo' })).toBeHidden();
+  await expect(page.getByRole('heading', { name: 'Dar baixa no computador' })).toBeHidden();
   await expect(page.getByText(`${motivo} em`).first()).toBeVisible();
 
   conferirConsole();

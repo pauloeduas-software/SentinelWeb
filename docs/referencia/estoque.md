@@ -70,7 +70,7 @@ criada por fora da trava (o `psql` à mão), e esconder a inconsistência seria 
 | **a lista** | **uma só**, pelo nome, com os desativados — sem abas, como em Colaboradores. Busca por nome, categoria e localização — o texto ao pé da letra, `%` e `_` não são curinga; filtro de categoria. Em cima, os cartões Total, Ativos e Desativados, que contam itens e não unidades: clicar filtra ([BT](../decisoes/plataforma.md#bt--estoque-e-colaboradores-têm-cartões-e-computadores-conta-o-tipo)) |
 | **a linha** | nome, categoria, localização, "3 disponíveis" com "10 no total · 7 em uso" embaixo (no consumível, só "3 disponíveis") e status. Sem cor pelo valor. A do desativado fica esmaecida |
 | **as ações** | as do cadastro (AF), no `⋯` da linha (AY): Entregar (desabilitado sem disponível, com o motivo no `title`; some no desativado), Editar, Desativar/Ativar e Excluir — com confirmação no Desativar e no Excluir |
-| **a ficha** (`/estoque/:id`) | no card, o status, a conta ("10 no total · 7 em uso · 3 disponíveis"), todos os campos do cadastro e as ações da lista, com as mesmas regras (Entregar e Editar abrem o painel por cima da ficha; excluído, volta para a lista). **Responsáveis** (a primeira aba): as entregas abertas, da mais recente para a mais antiga, 15 por página, com busca pelo nome do colaborador ou do posto — "Mesa 1 · 5 unidades · desde 12/10/2026", com a observação —, e Devolver em cada linha. **Histórico**: só entregas e devoluções, por entrega, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
+| **a ficha** (`/estoque/:id`) | no card, o status, a conta ("10 no total · 7 em uso · 3 disponíveis"), todos os campos do cadastro e as ações da lista, com as mesmas regras (Entregar e Editar abrem o painel por cima da ficha; excluído, volta para a lista). **Responsáveis** (a primeira aba): as entregas abertas, da mais recente para a mais antiga, 15 por página — "Mesa 1 · 5 unidades · desde 12/10/2026", com a observação —, e Devolver em cada linha. O número da aba é o de entregas abertas, e a busca não o muda. Na entrega a um posto, quem está nele agora aparece embaixo, só o nome; a linha não é link. A busca acha pelo nome do colaborador, do posto ou de quem está nele, e pela etiqueta ou pelo nome do computador, que sai com a etiqueta em mono. **Histórico**, com o número na aba: só entregas e devoluções, por entrega, 15 por página, do mais recente para o mais antigo — no mesmo instante, a devolução vem antes da entrega |
 
 A edição mostra o **total** e manda **o formulário inteiro**, como em todas as telas
 ([AF](../decisoes/licencas.md#af--a-licença-entra-no-cadastro-das-configurações-e-o-editar-manda-o-formulário-inteiro)), com o `updatedAt` que leu ao abrir: se outra pessoa salvou no meio, é 409
@@ -178,11 +178,11 @@ mesmos do resto do estoque.
 |---|---|
 | componente para colaborador ou posto | 422 `"Memória RAM 8 GB" é componente e vai só para um computador.` |
 | item de estoque para computador | 422 `"Mouse USB" não é componente: vai para um colaborador ou um posto, não para um computador.` |
-| computador inexistente ou na lixeira | 404 `Ativo não encontrado.` |
-| computador baixado | 409 `O ativo ATV-00012 teve baixa e não pode receber componente.` |
+| computador inexistente ou na lixeira | 404 `Computador não encontrado.` |
+| computador baixado | 409 `O computador ATV-00012 teve baixa e não pode receber componente.` |
 | entrega antes da compra do computador | 422 `A entrega (09/03/2026) não pode ser antes da compra de ATV-00012 — Dell do financeiro (10/03/2026).` |
 | retirar antes do dia da entrega, ou de novo | 422 `A retirada (…) não pode ser antes da entrega (…).` / 409 `Esta entrega de "Memória RAM 8 GB" para ATV-00012 já foi retirada.` |
-| baixa ou lixeira do computador com componente | 409 `ATV-00012 ainda tem os componentes Memória RAM 8 GB ×2. Retire pela tela de Estoque antes de dar baixa.` (na lixeira, `Este ativo ainda tem … antes de excluir.`) |
+| baixa ou lixeira do computador com componente | 409 `ATV-00012 ainda tem os componentes Memória RAM 8 GB ×2. Retire pela tela de Estoque antes de dar baixa.` (na lixeira, `Este computador ainda tem … antes de excluir.`) |
 | compra do computador depois do primeiro componente | 422 `A data de compra (…) não pode ser depois do primeiro componente instalado em ATV-00012 (…).` |
 | trocar a categoria com unidade em uso | 409 `"Memória RAM 8 GB" tem 2 unidades em uso e não pode passar de componente para estoque. Retire antes de trocar a categoria.` |
 

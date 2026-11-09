@@ -136,9 +136,9 @@ async function assertAlvoApto(
       where: { id: alvoId },
       select: { assetTag: true, name: true, retiredAt: true, purchaseDate: true },
     });
-    if (!ativo) throw new AppError('Ativo não encontrado.', 404);
+    if (!ativo) throw new AppError('Computador não encontrado.', 404);
     if (ativo.retiredAt) {
-      throw new AppError(`O ativo ${ativo.assetTag} teve baixa e não pode receber componente.`, 409);
+      throw new AppError(`O computador ${ativo.assetTag} teve baixa e não pode receber componente.`, 409);
     }
     return { nome: rotuloDoComputador(ativo), compra: ativo.purchaseDate };
   }
@@ -164,7 +164,7 @@ export async function checkoutStock(itemId: string, data: CheckoutStockInput, at
     // lixeira dele travam a linha e contam os componentes (AI).
     if (data.targetType === 'PERSON') await travarPessoaOuFalhar(tx, alvoId);
     else if (data.targetType === 'ASSET' && !(await travarAtivo(tx, alvoId))) {
-      throw new AppError('Ativo não encontrado.', 404);
+      throw new AppError('Computador não encontrado.', 404);
     }
 
     // A TRAVA DA LINHA DO ITEM — o mutex do saldo. Contar não é travar: duas

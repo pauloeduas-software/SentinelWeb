@@ -138,7 +138,7 @@ describe('PATCH /api/workstations/:id/occupants/:occupantId', () => {
     expect(status).toBe(422);
   });
 
-  it('recusa ocupação ENCERRADA com 409: histórico não se edita', async () => {
+  it('recusa a ocupação com a saída registrada com 409: histórico não se edita', async () => {
     const { postoId, ocupacao: aberta } = await postoComOcupacao('Manhã');
     await api.delete(`/api/workstations/${postoId}/occupants/${aberta.id}`);
 
@@ -148,7 +148,7 @@ describe('PATCH /api/workstations/:id/occupants/:occupantId', () => {
     );
 
     expect(status).toBe(409);
-    expect(body.error).toMatch(/encerrada/i);
+    expect(body.error).toMatch(/saída desta pessoa já foi registrada/i);
   });
 
   it('é ESCOPADA PELO POSTO: o id de outro posto na URL dá 404 e nada muda', async () => {

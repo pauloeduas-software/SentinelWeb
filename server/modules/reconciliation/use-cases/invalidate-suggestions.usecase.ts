@@ -46,7 +46,7 @@ type Pendente = {
 function motivoDeInvalidar(pendente: Pendente): string | null {
   // A MÁQUINA foi vinculada — a este ativo ou a outro. Nos dois casos a proposta
   // acabou: uma máquina é no máximo um ativo (invariante 12).
-  if (pendente.endpoint.assetId) return 'a máquina já foi vinculada a um ativo';
+  if (pendente.endpoint.assetId) return 'a máquina já foi vinculada a um computador';
 
   // O ATIVO foi vinculado a OUTRA máquina, e este é o lado que faltava.
   //
@@ -55,7 +55,7 @@ function motivoDeInvalidar(pendente: Pendente): string | null {
   // aceitar devolvia o P2002 do `endpoints.assetId @unique` traduzido em 409.
   // Era literalmente o botão que a fila oferece e o banco nega, do outro lado do
   // 1:1 que a geração passou a respeitar.
-  if (pendente.asset?.endpoint) return 'o ativo já tem outra máquina';
+  if (pendente.asset?.endpoint) return 'o computador já tem outra máquina';
 
   return null;
 }

@@ -31,11 +31,11 @@ export async function assertEtiquetaESerieLivres(
 
   if (assetTag) {
     const emUso = await client.asset.findFirst({ where: { assetTag, ...foraEsta }, select: { id: true } });
-    if (emUso) throw new AppError(`A etiqueta ${assetTag} já está em uso por outro ativo.`, 409);
+    if (emUso) throw new AppError(`A etiqueta ${assetTag} já está em uso por outro computador.`, 409);
   }
 
   if (serial) {
     const emUso = await client.asset.findFirst({ where: { serial, ...foraEsta }, select: { id: true } });
-    if (emUso) throw new AppError(`O número de série ${serial} já está em uso por outro ativo.`, 409);
+    if (emUso) throw new AppError(`O número de série ${serial} já está em uso por outro computador.`, 409);
   }
 }

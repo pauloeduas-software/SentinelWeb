@@ -44,7 +44,7 @@ function assertAlvoCoerente(data: CheckoutLicenseData): AlvoDaEntrega {
 
   if (assignedPersonId && assignedAssetId) {
     throw new AppError(
-      'Uma entrega tem um alvo só: informe o colaborador ou o ativo, nunca os dois.',
+      'Uma entrega tem um alvo só: informe o colaborador ou o computador, nunca os dois.',
       422,
     );
   }
@@ -53,8 +53,8 @@ function assertAlvoCoerente(data: CheckoutLicenseData): AlvoDaEntrega {
   if (assignedAssetId) return { tipo: 'ASSET', id: assignedAssetId };
 
   throw new AppError(
-    'A entrega de uma licença precisa de um colaborador ou de um ativo. '
-    + 'Posto não recebe licença: entregue ao ativo que está na mesa.',
+    'A entrega de uma licença precisa de um colaborador ou de um computador. '
+    + 'Posto não recebe licença: entregue ao computador que está no posto.',
     422,
   );
 }
@@ -76,12 +76,12 @@ async function assertAlvoApto(
       where: { id: alvo.id },
       select: { id: true, assetTag: true, name: true, retiredAt: true, purchaseDate: true },
     });
-    if (!ativo) throw new AppError('Ativo não encontrado.', 404);
+    if (!ativo) throw new AppError('Computador não encontrado.', 404);
 
     // BAIXADO é diferente de APAGADO, e os dois são recusados: licença numa
     // máquina que saiu do inventário é licença paga para ninguém.
     if (ativo.retiredAt) {
-      throw new AppError(`O ativo ${ativo.assetTag} teve baixa e não pode receber licença.`, 409);
+      throw new AppError(`O computador ${ativo.assetTag} teve baixa e não pode receber licença.`, 409);
     }
     return { nome: ativo.name ? `${ativo.assetTag} — ${ativo.name}` : ativo.assetTag, compra: ativo.purchaseDate };
   }
@@ -219,7 +219,7 @@ export async function checkoutLicense(licenseId: string, data: CheckoutLicenseDa
     // baixa do ativo leem; a da licença, a conta de livres.
     // O ativo inexistente diz "Ativo", como o colaborador diz "Colaborador".
     if (alvo.tipo === 'PERSON') await travarPessoaOuFalhar(tx, alvo.id);
-    else if (!(await travarAtivo(tx, alvo.id))) throw new AppError('Ativo não encontrado.', 404);
+    else if (!(await travarAtivo(tx, alvo.id))) throw new AppError('Computador não encontrado.', 404);
 
     await travarLicencaOuFalhar(tx, licenseId);
     const licenca = await tx.license.findUniqueOrThrow({

@@ -157,7 +157,7 @@ export function tituloDoNovo({ singular, genero }: CatalogUiSpec): string {
 // O tipo da categoria diz a que MÓDULO ela pertence: uma categoria de Ativo não
 // agrupa licenças.
 export const TIPOS_CATEGORIA: readonly OpcaoFixa[] = [
-  { value: 'ASSET', label: 'Ativo',
+  { value: 'ASSET', label: 'Computador',
     ajuda: 'Computador, com etiqueta e número de série. Uma linha por máquina.' },
   { value: 'STOCK', label: 'Estoque',
     ajuda: 'Item por quantidade, sem patrimônio individual: monitor, teclado, mouse, cabo. '

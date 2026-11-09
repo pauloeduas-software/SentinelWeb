@@ -78,8 +78,8 @@ permitida a partir de `SUPERVISOR` ([AV](../decisoes/acesso.md#av--três-cargos-
 | data da saída **antes da compra** | 422 `A baixa (01/03/2026) não pode ser antes da compra de ATV-00042 (10/03/2026).` | nada acontece com o computador antes de ele ser comprado; e a compra editada também não vai para depois da baixa |
 | data da saída **antes da última devolução** — do computador, de uma licença entregue a ele ou de um componente retirado dele | 422 `A baixa (01/03/2026) não pode ser antes da última devolução de ATV-00042 (10/03/2026).` (`… da última licença devolvida de …`, `… do último componente retirado de …`) | o histórico diria "devolvido em 10/03" de um computador que saiu do patrimônio em 01/03 |
 | **entregar** ativo baixado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Desfaça a baixa antes.` | ele não é mais da empresa — vale com **qualquer** status, inclusive "Disponível" |
-| entregar **licença** a ativo baixado | 409 `O ativo ATV-00042 teve baixa e não pode receber licença.` | a licença ficaria presa a uma máquina que não existe mais |
-| entregar **componente** a ativo baixado | 409 `O ativo ATV-00042 teve baixa e não pode receber componente.` | pelo mesmo motivo |
+| entregar **licença** a ativo baixado | 409 `O computador ATV-00042 teve baixa e não pode receber licença.` | a licença ficaria presa a uma máquina que não existe mais |
+| entregar **componente** a ativo baixado | 409 `O computador ATV-00042 teve baixa e não pode receber componente.` | pelo mesmo motivo |
 | **vincular máquina** descoberta a ativo baixado | 409 `ATV-00042 teve baixa e não recebe máquina. Desfaça a baixa antes.` | o vínculo o traria de volta à cobertura e à telemetria. A descoberta automática também não o propõe nem o vincula — ele só conta para detectar ambiguidade |
 | **Reverter** um ativo que não teve baixa | 409 `ATV-00042 não teve baixa.` | |
 

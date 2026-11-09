@@ -77,7 +77,7 @@ export async function assertStatusCoerenteComPosse(
   if (!motivo) return;
 
   throw new AppError(
-    `"${status.name}" ${motivo}, e este ativo está entregue. Faça a devolução antes de mudar o status.`,
+    `"${status.name}" ${motivo}, e este computador está entregue. Faça a devolução antes de mudar o status.`,
     409,
   );
 }

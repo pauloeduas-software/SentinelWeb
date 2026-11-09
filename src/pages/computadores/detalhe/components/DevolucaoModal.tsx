@@ -51,11 +51,11 @@ export default function DevolucaoModal({ asset, onClose, onDevolver }: Devolucao
 
   return (
     <FormularioLateral
-      titulo="Devolver ativo"
+      titulo="Devolver computador"
       descricao={
         <>
           <span className="font-mono">{asset.assetTag}</span> · {asset.model.manufacturer.name} {asset.model.name}
-          {asset.serial && <> · SN <span className="font-mono">{asset.serial}</span></>}
+          {asset.serial && <> · <span className="font-mono">{asset.serial}</span></>}
         </>
       }
       onClose={onClose}
@@ -72,7 +72,7 @@ export default function DevolucaoModal({ asset, onClose, onDevolver }: Devolucao
         <div className="text-sm text-text-primary">{nomeDoResponsavel(asset.posse) || TRACO}</div>
       </div>
 
-      <Campo rotulo="Status de volta" ajuda="Como o ativo volta: disponível, em conserto, inutilizável. Em branco, volta disponível.">
+      <Campo rotulo="Status de volta" ajuda="Como o computador volta: disponível, em conserto, inutilizável. Em branco, volta disponível.">
         <ReferenceSelect rota="status-labels" valor={statusId} onChange={setStatusId} />
       </Campo>
 
