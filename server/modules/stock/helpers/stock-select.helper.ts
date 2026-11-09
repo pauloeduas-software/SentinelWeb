@@ -53,7 +53,7 @@ export const STOCK_MOVEMENT_SELECT = {
   targetWorkstation: { select: { id: true, name: true } },
   // O computador na lixeira continua com etiqueta: a leitura aninhada não
   // passa pelo escopo da lixeira.
-  targetAsset: { select: { id: true, assetTag: true, name: true } },
+  targetAsset: { select: { id: true, assetTag: true, name: true, serial: true } },
 } as const;
 
 /** "ATV-00012 — Dell do financeiro", ou só a etiqueta — como a licença escreve o computador. */

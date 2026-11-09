@@ -156,19 +156,25 @@ describe('o componente fica no computador até o Retirar', () => {
     ]);
   });
 
-  it('a aba Computadores acha pela etiqueta, e não mostra o de outro computador', async () => {
+  it('a aba Computadores acha pela etiqueta e pela série, e não mostra o de outro computador', async () => {
     const ram = await componente('RAM da busca', 2);
-    const [um, outro] = await Promise.all([maquina('Primeiro'), maquina('Segundo')]);
+    const [um, outro] = await Promise.all([
+      criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId, name: 'Primeiro', serial: 'RAM-BUSCA-SERIE-01' }),
+      maquina('Segundo'),
+    ]);
     await noComputador(ram.id, um.id);
     await noComputador(ram.id, outro.id);
 
-    type Linha = { targetAssetId: string; targetAsset: { assetTag: string; name: string | null } | null };
+    type Linha = { targetAssetId: string; targetAsset: { assetTag: string; name: string | null; serial: string | null } | null };
     const busca = await api.get<{ rows: Linha[] }>(
       `/api/stock/items/${ram.id}/checkouts?q=${encodeURIComponent(um.assetTag)}`,
     );
     expect(busca.body.rows.map((linha) => linha.targetAssetId)).toEqual([um.id]);
-    // A etiqueta vem à parte, para a tela escrevê-la em mono.
-    expect(busca.body.rows[0].targetAsset).toMatchObject({ assetTag: um.assetTag, name: 'Primeiro' });
+    // A etiqueta vem à parte, para a tela escrevê-la em mono, com a série embaixo (CI).
+    expect(busca.body.rows[0].targetAsset).toMatchObject({ assetTag: um.assetTag, name: 'Primeiro', serial: 'RAM-BUSCA-SERIE-01' });
+
+    const pelaSerie = await api.get<{ rows: Linha[] }>(`/api/stock/items/${ram.id}/checkouts?q=ram-busca-serie`);
+    expect(pelaSerie.body.rows.map((linha) => linha.targetAssetId)).toEqual([um.id]);
   });
 });
 

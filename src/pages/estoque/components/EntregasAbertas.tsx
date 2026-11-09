@@ -43,16 +43,11 @@ type Pedido = { id: string; qty: string; dia: string } | null;
 
 const ICONE_DO_ALVO = { PERSON: User, WORKSTATION: MapPin, ASSET: Monitor } as const;
 
-/** Quem recebeu: o computador com a etiqueta em mono, como a licença o escreve. */
+/** Quem recebeu: o computador pela etiqueta em mono, como a licença o escreve. */
 function Alvo({ entrega }: { entrega: EntregaAberta }) {
   const ativo = entrega.targetAsset;
   if (!ativo) return <>{entrega.targetLabel}</>;
-  return (
-    <>
-      <span className="font-mono">{ativo.assetTag}</span>
-      {ativo.name && ` — ${ativo.name}`}
-    </>
-  );
+  return <span className="font-mono">{ativo.assetTag}</span>;
 }
 
 export default function EntregasAbertas({ entregas, carregando, erro, vazio, ocupado, onDevolver }: EntregasAbertasProps) {
@@ -92,6 +87,10 @@ export default function EntregasAbertas({ entregas, carregando, erro, vazio, ocu
                 <span className="truncate font-medium"><Alvo entrega={entrega} /></span>
                 <span className="text-text-secondary shrink-0">· {textoDeUnidades(entrega.unidades)}</span>
               </div>
+              {/* A série embaixo da etiqueta, como na lista de Computadores (CH). */}
+              {entrega.targetAsset?.serial && (
+                <div className="truncate font-mono text-xs text-text-secondary">{entrega.targetAsset.serial}</div>
+              )}
               {entrega.responsaveis.map((pessoa) => (
                 <div key={pessoa.id} className="truncate text-xs text-text-secondary">{pessoa.name}</div>
               ))}

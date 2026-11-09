@@ -10,7 +10,7 @@ let cenario: Awaited<ReturnType<typeof cenarioDePosse>>;
 let licencaId: string;
 
 interface Pagina<T> { total: number; rows: T[] }
-interface Entrega { id: string; assignedPerson: { name: string } | null; assignedAsset: { assetTag: string } | null }
+interface Entrega { id: string; assignedPerson: { name: string } | null; assignedAsset: { assetTag: string; serial: string | null } | null }
 interface Evento { action: string; at: string; entrega: { alvoLabel: string } }
 
 beforeAll(async () => {
@@ -24,7 +24,9 @@ beforeAll(async () => {
     const pessoa = await criarColaborador(api, { name: nome, email: `pessoa${i}@detalhe.local` });
     await entregarLicenca(api, licencaId, { assignedPersonId: pessoa });
   }
-  const pc = await criarAtivo(api, { statusId: cenario.statusDeployableId, modelId: cenario.modelId, name: 'Estação de render' });
+  const pc = await criarAtivo(api, {
+    statusId: cenario.statusDeployableId, modelId: cenario.modelId, name: 'Estação de render', serial: 'RENDER-DETALHE-01',
+  });
   await entregarLicenca(api, licencaId, { assignedAssetId: pc.id });
 });
 
@@ -45,13 +47,17 @@ describe('com quem está', () => {
     expect(ids.size).toBe(18);
   });
 
-  it('a busca acha pelo nome do colaborador e pelo nome ou etiqueta do computador', async () => {
+  it('a busca acha pelo nome do colaborador e pelo nome, etiqueta ou série do computador', async () => {
     const pessoa = await api.get<Pagina<Entrega>>(`/api/licenses/${licencaId}/checkouts?q=pessoa 07`);
     expect(pessoa.body.rows.map((e) => e.assignedPerson?.name)).toEqual(['Pessoa 07']);
 
     const computador = await api.get<Pagina<Entrega>>(`/api/licenses/${licencaId}/checkouts?q=render`);
     expect(computador.body.total).toBe(1);
     expect(computador.body.rows[0].assignedAsset).not.toBeNull();
+
+    // A série vem com a etiqueta, para a tela escrevê-la embaixo (CI), e a busca acha por ela.
+    const pelaSerie = await api.get<Pagina<Entrega>>(`/api/licenses/${licencaId}/checkouts?q=render-detalhe`);
+    expect(pelaSerie.body.rows.map((e) => e.assignedAsset?.serial)).toEqual(['RENDER-DETALHE-01']);
 
     const ninguem = await api.get<Pagina<Entrega>>(`/api/licenses/${licencaId}/checkouts?q=ninguém assim`);
     expect(ninguem.body).toEqual({ total: 0, rows: [] });

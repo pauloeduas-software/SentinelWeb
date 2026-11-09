@@ -25,14 +25,14 @@ interface Props {
 
 export default function OciososTable({ ociosos, carregando, erro, acao }: Props) {
   const navigate = useNavigate();
-  const lista = useListaLocalNaUrl(ociosos, (ativo) => `${ativo.assetTag} ${ativo.name ?? ''} ${ativo.hostname ?? ''}`);
+  const lista = useListaLocalNaUrl(ociosos, (ativo) => `${ativo.assetTag} ${ativo.serial ?? ''} ${ativo.name ?? ''} ${ativo.hostname ?? ''}`);
 
   return (
     <>
       <ListToolbar
         search={lista.search}
         onSearchChange={lista.changeSearch}
-        placeholder="Buscar por etiqueta, nome ou máquina…"
+        placeholder="Buscar por etiqueta, série, nome ou máquina…"
         acao={acao}
         page={lista.page}
         perPage={lista.perPage}
@@ -55,7 +55,7 @@ export default function OciososTable({ ociosos, carregando, erro, acao }: Props)
               <TableRow key={ativo.assetId} onClick={() => navigate(`/computadores/${ativo.assetId}`, comFiltros(lista.parametros, '/descobertas'))}>
                 <TableCell>
                   <TableNome className="font-mono">{ativo.assetTag}</TableNome>
-                  {ativo.name && <TableSublinha>{ativo.name}</TableSublinha>}
+                  {ativo.serial && <TableSublinha className="font-mono">{ativo.serial}</TableSublinha>}
                 </TableCell>
                 <TableCell>{ativo.hostname ?? '—'}</TableCell>
                 <TableCell>{nomeDoResponsavel(ativo) || '—'}</TableCell>

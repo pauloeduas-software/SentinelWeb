@@ -77,7 +77,7 @@ const PESSOA_DA_ENTREGA = { id: true, name: true, email: true } as const;
 
 /** O ativo embutido. `assetTag` porque é por ela que se procura na tela. */
 const ATIVO_DA_ENTREGA = {
-  id: true, assetTag: true, name: true,
+  id: true, assetTag: true, name: true, serial: true,
   model: { select: { name: true } },
 } as const;
 

@@ -7,9 +7,9 @@ import { prisma } from '../../server/infra/database/prismaClient';
 // que se prova é o caminho de ida e volta.
 
 /** Um computador entregue a um posto novo, sem ninguém nele. */
-async function computadorNoPosto(request: APIRequestContext, nome: string, checkoutNotes?: string) {
+async function computadorNoPosto(request: APIRequestContext, nome: string, checkoutNotes?: string, serial?: string) {
   const posto = await criarPosto(request, nome);
-  const ativo = await criarAtivo(request);
+  const ativo = await criarAtivo(request, serial ? { serial } : {});
   const { assetTag } = await (await request.get(`/api/assets/${ativo}`)).json() as { assetTag: string };
   const entrega = await request.post(`/api/assets/${ativo}/checkout`, {
     data: { targetType: 'WORKSTATION', targetWorkstationId: posto, checkoutNotes },
@@ -187,9 +187,10 @@ test('na lista, Responsáveis mostra o posto sem quem o ocupa, que fica pendurad
   await expect(comAPessoa.getByText(/Posto /)).toHaveCount(0);
 });
 
-test('em Postos, Responsáveis traz só o nome, Etiqueta a do computador, e o posto vago fica no Status', async ({ page, request }) => {
+test('em Postos, Responsáveis traz só o nome, Etiqueta a do computador com a série, e o posto vago fica no Status', async ({ page, request }) => {
   const vago = `Mesa vaga ${Date.now()}`;
-  const { assetTag } = await computadorNoPosto(request, vago);
+  const serial = `SERIE-${Date.now()}`;
+  const { assetTag } = await computadorNoPosto(request, vago, undefined, serial);
   const ocupado = `Mesa com turno ${Date.now()}`;
   const { posto } = await computadorNoPosto(request, ocupado);
   const pessoas = ['Primeira', 'Segunda', 'Terceira', 'Quarta'].map((quem) => `${quem} de ${ocupado}`);
@@ -217,7 +218,9 @@ test('em Postos, Responsáveis traz só o nome, Etiqueta a do computador, e o po
   await page.goto(`/postos?busca=${encodeURIComponent(vago)}`);
   const linha = page.getByRole('row', { name: new RegExp(vago) });
   await expect(linha.getByRole('cell').nth(2)).toHaveText('—');
-  await expect(linha.getByRole('cell').nth(3)).toHaveText(assetTag);
+  // A série embaixo da etiqueta, como na lista de Computadores (CI).
+  await expect(linha.getByRole('cell').nth(3).getByText(assetTag)).toBeVisible();
+  await expect(linha.getByRole('cell').nth(3).getByText(serial)).toHaveClass(/font-mono/);
   await expect(linha.getByRole('cell').nth(4)).toHaveText('Posto vago');
 
   await linha.click();

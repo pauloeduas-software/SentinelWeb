@@ -63,6 +63,7 @@ export async function listStockCheckouts(itemId: string, query: ListQuery): Prom
           { targetWorkstation: { occupants: { some: { endedAt: null, person: { name: contem } } } } },
           { targetAsset: { assetTag: contem } },
           { targetAsset: { name: contem } },
+          { targetAsset: { serial: contem } },
         ],
       } : {}),
     },

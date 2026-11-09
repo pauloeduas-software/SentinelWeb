@@ -46,11 +46,12 @@ interface AtivoDaMaquina {
   id: string;
   assetTag: string;
   name: string | null;
+  serial: string | null;
 }
 
 /** O `include` do ativo, igual na listagem e na rota de uma máquina. */
 export const ATIVO_DA_MAQUINA_SELECT = {
-  select: { id: true, assetTag: true, name: true },
+  select: { id: true, assetTag: true, name: true, serial: true },
 } as const;
 
 function presentTelemetry(telemetry: Telemetry): PresentedTelemetry {

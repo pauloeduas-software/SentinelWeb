@@ -100,6 +100,7 @@ interface AtivoDaEntrega {
   id: string;
   assetTag: string;
   name: string | null;
+  serial: string | null;
   model: { name: string } | null;
 }
 

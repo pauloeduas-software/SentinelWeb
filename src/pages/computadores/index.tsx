@@ -17,7 +17,6 @@ import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableLinha, TableNome, TableRow, TableSublinha } from '../../components/ui/table';
 import { usePode } from '../../stores/auth.store';
-import { formatarData, formatarMoeda } from '../../helpers/format.helper';
 import { motivoDaSaida } from './helpers/baixa.helper';
 import { tomDoStatus } from '../../helpers/status.helper';
 import { nomeDoResponsavel } from '../../helpers/responsavel.helper';
@@ -75,7 +74,7 @@ export default function ComputadoresPage() {
       />
 
       <Card className="overflow-hidden">
-        <Table className="min-w-[52rem] md:min-w-[62rem]">
+        <Table className="min-w-[43rem] md:min-w-[53rem]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-44">Etiqueta</TableHead>
@@ -83,7 +82,6 @@ export default function ComputadoresPage() {
               <TableHead className="hidden w-[12%] md:table-cell">Categoria</TableHead>
               <TableHead className="hidden w-[12%] md:table-cell">Localização</TableHead>
               <TableHead>Responsáveis</TableHead>
-              <TableHead className="w-36">Compra</TableHead>
               <TableHead className="w-36">Status</TableHead>
               <TableHeadAcoes />
             </TableRow>
@@ -114,13 +112,6 @@ export default function ComputadoresPage() {
                   {/* RESPONSÁVEL — derivado (docs/referencia/modelo-de-posse.md, Camada 3).
                       Ou o posto ou a pessoa direta: quem ocupa o posto fica na aba Responsáveis (BL). */}
                   <TableCell>{nomeDoResponsavel(asset.posse) || TRACO}</TableCell>
-                  <TableCell>
-                    {/* O valor só para quem vê o custo (D77, AV); a data, para todos. */}
-                    {asset.purchaseCost != null && <TableLinha>{formatarMoeda(asset.purchaseCost)}</TableLinha>}
-                    {asset.purchaseCost != null
-                      ? <TableSublinha>{formatarData(asset.purchaseDate)}</TableSublinha>
-                      : <TableLinha>{formatarData(asset.purchaseDate)}</TableLinha>}
-                  </TableCell>
                   {/* O motivo é o status do baixado (BV). */}
                   <TableCell title={motivo ?? asset.status.name}>
                     {motivo

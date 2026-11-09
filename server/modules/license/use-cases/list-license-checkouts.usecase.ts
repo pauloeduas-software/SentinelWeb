@@ -12,7 +12,7 @@ type Entrega = Prisma.LicenseCheckoutGetPayload<{ select: typeof CHECKOUT_COM_CH
  * devolver em cada linha. O que já foi devolvido mora no histórico.
  *
  * Paginada e com busca: um contrato de 500 licenças tem 500 linhas aqui. A
- * busca é pelo nome de quem recebeu — o do colaborador, ou a etiqueta e o nome
+ * busca é pelo nome de quem recebeu — o do colaborador, ou a etiqueta, a série e o nome
  * do computador.
  *
  * É a única lista que devolve a CHAVE de cada entrega: é a do detalhe, onde a
@@ -31,6 +31,7 @@ export async function listLicenseCheckouts(licenseId: string, query: ListQuery):
         { assignedPerson: { name: contem } },
         { assignedAsset: { assetTag: contem } },
         { assignedAsset: { name: contem } },
+        { assignedAsset: { serial: contem } },
       ],
     } : {}),
   };
