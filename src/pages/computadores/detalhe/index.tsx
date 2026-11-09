@@ -5,7 +5,6 @@ import CheckoutModal from '../components/CheckoutModal';
 import RetireModal from '../components/RetireModal';
 import AssetTabs from './components/AssetTabs';
 import AvisoDaBaixa from './components/AvisoDaBaixa';
-import AvisoDaLixeira from './components/AvisoDaLixeira';
 import { seloDaSaida } from '../helpers/baixa.helper';
 import IdentificacaoCard from './components/IdentificacaoCard';
 import LicensesTab from './components/LicensesTab';
@@ -15,6 +14,7 @@ import MaquinaTab from './components/MaquinaTab';
 import HistoryTab from './components/HistoryTab';
 import PosseTab from './components/PosseTab';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
+import AvisoDaLixeira from '../../../components/AvisoDaLixeira';
 import { FichaIndisponivel } from '../../../components/CartaoDaFicha';
 import ListToolbar from '../../../components/ListToolbar';
 import PaginaCabecalho from '../../../components/PaginaCabecalho';
@@ -103,7 +103,7 @@ function FichaDoComputador() {
           )}
         />
 
-        {asset.deletedAt && <AvisoDaLixeira excluidoEm={asset.deletedAt} />}
+        {asset.deletedAt && <AvisoDaLixeira excluidoEm={asset.deletedAt} restaurePara="editar, entregar ou dar baixa" />}
         <AvisoDaBaixa asset={asset} />
 
         <AssetTabs ativa={aba} onChange={setAba} contagens={contagens}>

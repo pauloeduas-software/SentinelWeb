@@ -191,12 +191,13 @@ export async function getPersonHistory(
   personId: string,
   limite = LIMITE_PADRAO,
   pagina = 1,
+  podeVerLixeira = false,
 ): Promise<ListEnvelope<EventoDaPessoa>> {
   // `listPersonOccupancies` é quem confere se a pessoa existe (404) — o mesmo
-  // 404 da ficha, escrito uma vez só. Importado do domínio de ocupação, nunca
-  // recopiado: a leitura da Camada 2 é de lá.
+  // 404 da ficha, escrito uma vez só, e a mesma Lixeira do Supervisor (CF).
+  // Importado do domínio de ocupação, nunca recopiado: a leitura da Camada 2 é de lá.
   const [ocupacoes, posses, entregasDeLicenca, unidades] = await Promise.all([
-    listPersonOccupancies(personId, 'all'),
+    listPersonOccupancies(personId, 'all', podeVerLixeira),
     buscarPosses(personId),
     buscarEntregasDaPessoa(personId, { abertas: false }),
     buscarUnidadesDoAlvo({ targetPersonId: personId }),

@@ -48,7 +48,7 @@ export interface CampoSpec {
   travaEmUso?: boolean;
 }
 
-type RenderColuna = 'texto' | 'enum' | 'status' | 'ativo' | 'relacao' | 'contagem' | 'link';
+type RenderColuna = 'texto' | 'enum' | 'status' | 'ativo' | 'relacao' | 'contagem' | 'link' | 'pessoa';
 
 export interface ColunaSpec {
   key: string;
@@ -56,6 +56,8 @@ export interface ColunaSpec {
   render?: RenderColuna;
   /** `enum` e `status`: para traduzir o valor do banco no rótulo em português */
   opcoes?: readonly OpcaoFixa[];
+  /** `pessoa`: o campo que vai embaixo do nome, como em Usuários (CC). */
+  sublinha?: string;
   /** Some abaixo de `lg`: na tela estreita ficam o nome, a coluna principal e o `⋯`. */
   soNoDesktop?: boolean;
 }

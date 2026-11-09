@@ -12,7 +12,8 @@ export const PERSON_PUBLIC_SELECT = {
 } as const;
 
 // O MESMO colaborador, mais o estado do vínculo com a empresa e as notas — para
-// a FICHA.
+// a FICHA. A versão vai porque o Editar da ficha a manda de volta (AF), e o
+// `deletedAt` diz à ficha que ela está aberta da Lixeira (CF).
 //
 // Separado do de cima porque o de cima vai embutido em toda posse e toda
 // ocupação, e `isActive` e as notas viajariam em cada linha de histórico de todo
@@ -21,4 +22,6 @@ export const PERSON_DETAIL_SELECT = {
   ...PERSON_PUBLIC_SELECT,
   isActive: true,
   notes: true,
+  updatedAt: true,
+  deletedAt: true,
 } as const;

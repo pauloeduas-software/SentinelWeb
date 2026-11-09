@@ -118,6 +118,8 @@ export interface AtivoDoPosto extends Omit<Asset, 'posse'> {
   endpointId: string | null;
   /** O instante da entrega a esta mesa — o mínimo da devolução pela ficha (AM). */
   entregueEm: string | null;
+  /** O dia previsto para a devolução, da mesma entrega (CE). */
+  devolucaoPrevista: string | null;
 }
 
 /**

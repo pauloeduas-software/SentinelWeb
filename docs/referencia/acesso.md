@@ -234,7 +234,7 @@ lista de cargos aceitos por rota. A conta nova nasce `TECNICO`.
 **Desativar vai pelo `PUT` da edição** (colaborador e item de estoque), que é do Técnico: o mapa
 não separa os dois, e o controller exige Supervisor quando o corpo traz `isActive`. A lixeira
 (`?view=trashed` em computadores e colaboradores) é recusada do mesmo jeito, e a ficha do
-computador excluído só abre para o Supervisor: para o Técnico é 404. O 403 nomeia o
+computador e a do colaborador excluídos só abrem para o Supervisor: para o Técnico é 404. O 403 nomeia o
 cargo que falta: "Esta ação exige o cargo de Supervisor ou acima." A tela esconde o que o cargo
 não alcança — item do menu, URL digitada (volta para a raiz, `SoCargo` em `App.tsx`), botões e a
 aba Lixeira —, e isso é interface: quem autoriza é o servidor.

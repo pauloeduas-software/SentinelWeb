@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext, type Browser } from '@playwright/test';
-import { criarAtivo, criarItem, criarLicenca, criarPosto, tituloDaPagina, vigiarConsole } from './helpers';
+import { criarAtivo, criarColaborador, criarItem, criarLicenca, criarPosto, tituloDaPagina, vigiarConsole } from './helpers';
 
 // OS CARGOS NA TELA (AV): o menu mostra o que o cargo alcança, e a URL digitada
 // do que ele não alcança volta para a raiz. Quem autoriza é o servidor
@@ -109,6 +109,8 @@ test('na ficha, o Técnico opera, e o que é do Supervisor não aparece', async 
   const item = await criarItem(request, nomeDoItem);
   const licenca = await criarLicenca(request, nomeDaLicenca);
   const posto = await criarPosto(request, `Posto do cargo ${Date.now()}`);
+  const nomeDaPessoa = `Pessoa do cargo ${Date.now()}`;
+  const pessoa = await criarColaborador(request, nomeDaPessoa);
   const { page, fechar } = await entrarComo(browser, request, 'TECNICO');
   const principal = page.getByRole('main');
 
@@ -127,6 +129,11 @@ test('na ficha, o Técnico opera, e o que é do Supervisor não aparece', async 
   await page.goto(`/postos/${posto}`);
   await expect(principal.getByRole('button', { name: 'Adicionar ao posto' })).toBeVisible();
   await expect(principal.getByRole('button', { name: 'Editar' })).toHaveCount(0);
+
+  // O colaborador: o Técnico cadastra e edita, e desativar e excluir são do Supervisor (CD).
+  await page.goto(`/colaboradores/${pessoa}`);
+  await expect(principal.getByRole('button', { name: 'Editar' })).toBeVisible();
+  await expect(principal.getByRole('button', { name: `Ações de ${nomeDaPessoa}` })).toHaveCount(0);
 
   await fechar();
 });

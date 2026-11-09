@@ -1,4 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { temCargo } from '../../access/helpers/require-permission';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { SEM_PARAMETROS } from '../../../infra/http/sem-parametros';
@@ -52,6 +53,7 @@ export const occupancyController = {
   async listByPerson(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     SEM_PARAMETROS.parse(request.query ?? {});
-    return listPersonOccupancies(id, 'current');
+    // A ficha aberta da Lixeira lê daqui também, só para quem a vê (CF).
+    return listPersonOccupancies(id, 'current', temCargo(request, 'SUPERVISOR'));
   },
 };

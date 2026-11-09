@@ -1,5 +1,6 @@
 import { Pencil, Power, PowerOff, RotateCcw, Trash2 } from 'lucide-react';
 import AcoesDaLinha from '../AcoesDaLinha';
+import PessoaNaLinha from '../PessoaNaLinha';
 import { PontoDeStatus } from '../ui/badge';
 import { Card } from '../ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableNome, TableRow } from '../ui/table';
@@ -32,9 +33,9 @@ interface CatalogTableProps {
   onDelete?: (registro: CatalogRow) => void;
   onAcao?: (id: AcaoLinhaId, registro: CatalogRow) => void;
   /**
-   * A LIXEIRA está na tela: a linha oferece só Restaurar. Editar, desativar e
+   * A LIXEIRA está na tela: o `⋯` oferece só Restaurar. Editar, desativar e
    * excluir um registro que está na lixeira não existem — o servidor responde
-   * 404 —, então o botão nem aparece.
+   * 404 —, então o botão nem aparece. A linha ainda abre a ficha, para consulta (CF).
    */
   onRestore?: (registro: CatalogRow) => void;
 }
@@ -57,8 +58,9 @@ export default function CatalogTable({
           {registros.map((registro) => {
             const comFicha = acoes?.some((acao) => acao.id === 'ficha');
             const nome = String(registro.name ?? '');
-            // Na lixeira não há o que abrir: o servidor responde 404, e a linha só restaura.
-            const abrir = onRestore
+            // Na lixeira, a linha abre a ficha só para consulta, onde houver uma (CF, como
+            // a BW em Computadores). Sem ficha não há o que abrir: a linha só restaura.
+            const abrir = onRestore && !comFicha
               ? undefined
               : () => (comFicha ? onAcao?.('ficha', registro) : onEdit(registro));
 
@@ -66,7 +68,8 @@ export default function CatalogTable({
               <TableRow key={registro.id} onClick={abrir} apagada={registro.isActive === false}>
                 {colunas.map((coluna, indice) => (
                   <TableCell key={coluna.key} className={classeDaColuna(coluna)}>
-                    {indice === 0 ? (
+                    {/* A `pessoa` já traz o nome dela, ao lado do avatar. */}
+                    {indice === 0 && coluna.render !== 'pessoa' ? (
                       <TableNome><Celula coluna={coluna} registro={registro} /></TableNome>
                     ) : (
                       <Celula coluna={coluna} registro={registro} />
@@ -126,6 +129,9 @@ function Celula({ coluna, registro }: { coluna: ColunaSpec; registro: CatalogRow
 
     case 'contagem':
       return <span>{Number(valor ?? 0)}</span>;
+
+    case 'pessoa':
+      return <PessoaNaLinha nome={String(valor ?? '')} email={coluna.sublinha ? String(registro[coluna.sublinha] ?? '') : undefined} />;
 
     case 'link':
       if (!valor) return <span>—</span>;

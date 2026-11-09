@@ -74,6 +74,8 @@ que corrigem algo anterior:
 | **BB** e **BS** (em parte: Situação fora de Computadores e Licenças), **BO** (em parte: a Situação do posto) | **BU** | o nome é Status em toda tela, e o valor vai no masculino |
 | **D115** (em parte: as especificações e as mudanças de hardware na aba) | **BY** | a aba Máquina mostra o que o agente manda: saem as especificações e as mudanças detectadas, e a coleta continua no servidor |
 | **D115** (em parte: os dois carimbos de último contato), **H** (em parte: o 409 que aponta a aba Máquina), **BW** (em parte: o Desvincular que some na lixeira) | **BZ** | vincular e desvincular moram em Descobertas; a aba Máquina é a mesma no computador e no posto, com a linha que abre a máquina lá |
+| **BB** e **BS** (em parte: a ficha do colaborador sem ações) | **CD** | a ficha do colaborador tem Editar, Desativar e Excluir no card, como as outras |
+| **BW** (em parte: a Lixeira de Colaboradores só restaura) | **CF** | a linha da Lixeira de Colaboradores também abre a ficha, só para consulta |
 
 **O de-escopo (D143–D156) supera por subtração**, e é o maior grupo de supersessões do projeto:
 a decisão antiga não estava errada, o que ela governava deixou de existir. Está inteiro em

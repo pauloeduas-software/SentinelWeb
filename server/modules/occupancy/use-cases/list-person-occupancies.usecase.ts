@@ -1,4 +1,5 @@
 import { prisma } from '../../../infra/database/prismaClient';
+import { INCLUINDO_LIXEIRA } from '../../../infra/database/soft-delete.extension';
 import { AppError } from '../../../infra/errors/app-error';
 import { OCCUPANT_ORDER_BY, buildViewWhere, type OccupancyView } from '../helpers/occupancy-filters.helper';
 import { OCCUPANT_SELECT } from '../helpers/occupant-select.helper';
@@ -15,12 +16,15 @@ import { OCCUPANT_SELECT } from '../helpers/occupant-select.helper';
  * O índice `("personId", "endedAt")` existe exatamente para este acesso: sem ele
  * a pergunta vira varredura da tabela de ocupações inteira.
  */
-export async function listPersonOccupancies(personId: string, view: OccupancyView) {
+export async function listPersonOccupancies(personId: string, view: OccupancyView, podeVerLixeira = false) {
   // `findFirst`, não `findUnique`: só o primeiro recebe o escopo da lixeira da
   // extension (infra/database/soft-delete.extension.ts). Colaborador na lixeira
-  // responde 404 — as ocupações dele continuam gravadas, mas ninguém as
-  // consulta por um cadastro excluído.
-  const pessoa = await prisma.person.findFirst({ where: { id: personId }, select: { id: true } });
+  // responde 404, menos para quem vê a Lixeira: a ficha dele abre só para
+  // consulta (CF).
+  const pessoa = await prisma.person.findFirst({
+    where: { id: personId, ...(podeVerLixeira ? INCLUINDO_LIXEIRA : {}) },
+    select: { id: true },
+  });
   if (!pessoa) throw new AppError('Colaborador não encontrado.', 404);
 
   return prisma.workstationOccupant.findMany({

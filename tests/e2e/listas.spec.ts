@@ -168,6 +168,21 @@ test('Usuários avisa na linha quem está com a senha temporária', async ({ pag
   conferirConsole();
 });
 
+// A PESSOA NA LISTA (CC): Colaboradores lê a pessoa como Usuários, com o e-mail embaixo do nome.
+test('Colaboradores mostra o e-mail embaixo do nome, numa coluna Colaborador', async ({ page, request }) => {
+  const conferirConsole = vigiarConsole(page);
+  const nome = `Pessoa da coluna ${Date.now()}`;
+  const email = `pessoa.${Date.now()}@teste.local`;
+  const pessoa = await request.post('/api/people', { data: { name: nome, email } });
+  expect(pessoa.status()).toBe(201);
+
+  await page.goto(`/colaboradores?busca=${encodeURIComponent(nome)}`);
+  await expect(page.getByRole('columnheader')).toHaveText(['Colaborador', 'Status', 'Ações']);
+  await expect(page.getByRole('row', { name: new RegExp(nome) })).toContainText(email);
+
+  conferirConsole();
+});
+
 test('Computadores abre com um cartão por tipo de status, e um status novo não vira cartão', async ({ page, request }) => {
   const nome = `Aguardando ${Date.now()}`;
   const status = await request.post('/api/status-labels', { data: { name: nome, type: 'PENDING' } });

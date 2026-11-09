@@ -1,14 +1,10 @@
 import { useMemo, useState } from 'react';
-import {
-  useCatalogQuery, useCatalogStatsQuery, useCreateCatalogRow, useDeleteCatalogRow, useRestoreCatalogRow, useUpdateCatalogRow,
-} from '../../queries/catalog.queries';
+import { useCatalogQuery, useCatalogStatsQuery } from '../../queries/catalog.queries';
 import type { ListView } from '../../types/list.types';
 import type { CatalogRow } from '../../types/catalog.types';
 import { useListaNaUrl, usePaginaQueExiste } from '../../hooks/useListaNaUrl';
-import { confirmar } from '../../hooks/useConfirmacao';
-import { useNotificacao } from '../../hooks/useNotificacao';
 import type { AcaoLinhaId, CatalogUiSpec } from './catalog-ui.types';
-import { linksDoErro } from '../../helpers/erro.helper';
+import { useAcoesDoCatalogo } from './useAcoesDoCatalogo';
 import { ativoDoStatus, contagensDoStatusAtivo, statusAtivoDaUrl, type StatusAtivo } from '../../helpers/status.helper';
 
 // Estado de uma tela de catálogo — Configurações, com as seis abas, ou
@@ -16,7 +12,6 @@ import { ativoDoStatus, contagensDoStatusAtivo, statusAtivoDaUrl, type StatusAti
 // URL (`useListaNaUrl`), e qual registro está no modal. `?aba=modelos`: o F5 não volta
 // para a primeira, e um link leva direto a ela (AZ).
 export function useCatalog(specs: readonly CatalogUiSpec[]) {
-  const notificar = useNotificacao();
   const lista = useListaNaUrl();
   const { page, perPage, setPage, search, debouncedSearch, changeSearch, parametros, filtrar } = lista;
   const chave = parametros.get('aba');
@@ -65,10 +60,7 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
 
   const { data, isPending, error } = useCatalogQuery(spec.slug, params);
   const { data: stats } = useCatalogStatsQuery(spec.slug, spec.cartoesDeStatus === true);
-  const criar = useCreateCatalogRow(spec.slug);
-  const editar = useUpdateCatalogRow(spec.slug);
-  const excluir = useDeleteCatalogRow(spec.slug);
-  const restaurar = useRestoreCatalogRow(spec.slug);
+  const acoes = useAcoesDoCatalogo(spec);
 
   const registros = data?.rows ?? [];
   const total = data?.total ?? 0;
@@ -86,11 +78,6 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
 
   const [modalAberto, setModalAberto] = useState(false);
   const [emEdicao, setEmEdicao] = useState<CatalogRow | null>(null);
-
-  // "Categoria cadastrada.", "Status salvo.": o particípio concorda com a aba.
-  const feito = (participio: string) => (
-    `${spec.singular} ${spec.genero === 'f' ? participio.replace(/o$/, 'a') : participio}.`
-  );
 
   const openCreate = () => {
     setEmEdicao(null);
@@ -111,65 +98,12 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
   // Ficha é navegação, e quem a trata é a tela.
   const openAcao = (id: AcaoLinhaId, registro: CatalogRow) => {
     const alterna = spec.acoes?.find((acao) => acao.id === id)?.alterna;
-    if (alterna) void handleAlternar(registro, alterna.campo);
+    if (alterna) void acoes.alternar(registro, alterna.campo);
   };
 
-  // O erro sobe para o formulário mostrar a mensagem do servidor.
-  const handleSubmit = async (valores: Record<string, unknown>) => {
-    if (emEdicao) await editar.mutateAsync({ id: emEdicao.id, data: valores });
-    else await criar.mutateAsync(valores);
-    closeModal();
-    notificar.sucesso(feito(emEdicao ? 'salvo' : 'cadastrado'));
-  };
-
-  // DESATIVAR É UMA AÇÃO DA LINHA, não uma caixa no formulário — o mesmo
-  // padrão de Usuários. Grava só o campo alternado. Confirma só na ida:
-  // desativar tira o registro das escolhas; reativar não tem o que perder.
-  const handleAlternar = async (registro: CatalogRow, campo: string) => {
-    const ligado = registro[campo] !== false;
-    if (ligado && !(await confirmar({
-      titulo: `Desativar "${registro.name}"?`,
-      descricao: 'Continua no histórico, mas some das escolhas e não recebe nada novo.',
-      acao: 'Desativar',
-    }))) return;
-
-    try {
-      await editar.mutateAsync({ id: registro.id, data: { [campo]: !ligado } });
-      notificar.sucesso(feito(ligado ? 'desativado' : 'ativado'));
-    } catch (erro) {
-      // A desativação do colaborador recusada traz as licenças dele, com link.
-      notificar.erro((erro as Error).message, linksDoErro(erro));
-    }
-  };
-
-  const handleDelete = async (registro: CatalogRow) => {
-    if (!(await confirmar({
-      titulo: `Excluir "${registro.name}"?`,
-      descricao: spec.lixeira ? 'Se não estiver em uso, vai para a lixeira e pode ser restaurado.' : 'Esta ação não tem lixeira.',
-      acao: 'Excluir',
-      perigo: true,
-    }))) return;
-
-    try {
-      await excluir.mutateAsync(registro.id);
-      notificar.sucesso(spec.lixeira ? `"${registro.name}" foi para a lixeira.` : feito('excluído'));
-    } catch (erro) {
-      // É aqui que aparece o 409 de "em uso por N registros" — a regra que
-      // impede apagar uma categoria que alguém está usando — e o do
-      // colaborador, com as licenças dele em link.
-      notificar.erro((erro as Error).message, linksDoErro(erro));
-    }
-  };
-
-  const handleRestore = async (registro: CatalogRow) => {
-    try {
-      await restaurar.mutateAsync(registro.id);
-      notificar.sucesso(feito('restaurado'));
-    } catch (erro) {
-      // O 409 do e-mail que foi reaproveitado enquanto ele estava na lixeira.
-      notificar.erro((erro as Error).message);
-    }
-  };
+  const handleSubmit = (valores: Record<string, unknown>) => acoes.salvar(emEdicao, valores, closeModal);
+  const handleDelete = async (registro: CatalogRow) => { await acoes.excluir(registro); };
+  const handleRestore = (registro: CatalogRow) => acoes.restaurar(registro);
 
   return {
     specs,
