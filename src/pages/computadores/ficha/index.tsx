@@ -99,7 +99,8 @@ function FichaDoComputador() {
                   { rotulo: 'Clonar', icone: Copy, onClick: abrirClone },
                   podeExcluir && !baixado && { rotulo: 'Dar baixa', icone: PackageX, onClick: abrirBaixa },
                   podeExcluir && baixado && { rotulo: 'Reverter baixa', icone: Undo2, onClick: () => void handleReverterSaida() },
-                  podeExcluir && { rotulo: 'Excluir', icone: Trash2, onClick: () => void handleDelete(), perigo: true },
+                  // O baixado não vai para a lixeira, como na lista (CL).
+                  podeExcluir && !baixado && { rotulo: 'Excluir', icone: Trash2, onClick: () => void handleDelete(), perigo: true },
                 ]}
               />
             </>

@@ -588,7 +588,9 @@ model Asset {
   //   `retiredAt` — saiu do PATRIMÔNIO: vendido, descartado, roubado
   //   `deletedAt` — foi cadastrado errado e está na lixeira
   // Um ativo vendido é um fato contábil e continua nos relatórios; um ativo na
-  // lixeira é um erro de digitação e não deveria ter existido.
+  // lixeira é um erro de digitação e não deveria ter existido. Por isso as duas
+  // nunca valem juntas: o CHECK `assets_baixado_fora_da_lixeira` (CL), à mão na
+  // migration.
   retiredAt       DateTime?
   retiredReasonId String?   @db.Uuid
   // A observação da baixa, enquanto ela vale: a ficha a mostra ao lado

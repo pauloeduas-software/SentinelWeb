@@ -84,7 +84,7 @@ Se você está escrevendo a mesma frase na segunda zona, uma das duas está no l
 2. **Auditoria e revisão não ganham arquivo.** Elas atualizam o documento que revisaram: a
    correção de uma referência substitui o parágrafo errado.
    Documento de referência não carrega a lista das suas próprias correções — isso é o `git log`.
-3. **Decisão nova continua a letra** (a próxima é a `CL`; a numeração `D` parou no `D164`, pelo
+3. **Decisão nova continua a letra** (a próxima é a `CM`; a numeração `D` parou no `D164`, pelo
    motivo escrito em [*A segunda rodada*](./decisoes/README.md#a-segunda-rodada-ap)), entra no
    arquivo do assunto que ela governa. Se ela corrige uma anterior, a antiga ganha `> **Superada por…**`
    logo abaixo do título, e a tabela de supersessões cresce.

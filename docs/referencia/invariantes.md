@@ -23,7 +23,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 
 ---
 
-## As dezesseis
+## As dezessete
 
 > **A numeração salta de propósito.** Invariante que saiu não volta, e as que ficaram não se
 > renumeram: o código cita os números, e um número que muda de significado é pior que um número
@@ -42,11 +42,12 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 13 | A mesma sugestão não empilha na fila | **banco** — índice único parcial `sugestao_pendente_por_alvo` | nada: o job trata o `P2002` como "outro já criou" |
 | 17 | Sempre existe alguém ativo que é `ADMIN` | **aplicação** — `assertSobraAdministrador()`, DEPOIS da escrita e dentro da transação, na edição e na exclusão de usuário | 409 `Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. Mantenha outra conta de Administrador ativa antes de seguir.` |
 | 19 | No máximo um ativo por posto de trabalho, também no passado | **aplicação** — a porta da entrega (`ativoDoPosto()`, com `FOR UPDATE` na linha do posto), que também não começa antes da última devolução no posto; **banco** — índice único parcial `assignments_um_aberto_por_posto` | 409 `Este posto de trabalho já tem um computador: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.`; 422 `A entrega (01/03/2026) não pode ser antes da última devolução no posto Mesa 1: ATV-00042 saiu dele em 10/06/2026, e o posto tem um computador por vez.` |
-| 20 | Ativo baixado ou na lixeira não tem posse aberta, licença nem componente | **aplicação** — três portas: a baixa e a lixeira (`assertSemPosse` e as contagens de licenças e de componentes) e a entrega (`checkout-asset`, `checkout-license`, `checkout-stock`), as duas com o ativo travado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Reverta a baixa antes.` |
+| 20 | Ativo baixado ou na lixeira não tem posse aberta, licença, componente nem máquina | **aplicação** — quatro portas: a baixa e a lixeira (`assertSemPosse`, as contagens de licenças e de componentes e `assertSemMaquina`), a entrega (`checkout-asset`, `checkout-license`, `checkout-stock`) e o vínculo (`link-endpoint-asset`), todas com o ativo travado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Reverta a baixa antes.` |
 | 22 | O que está em uso nunca passa da quantidade comprada | **aplicação** — a entrega e a edição contam com a linha da licença travada (`lock-license.usecase.ts`) | 409 `Sem licença livre em "Office 2024": 5 compradas, 5 em uso. Devolva uma entrega ou aumente a quantidade comprada.` |
 | 23 | Uma entrega aberta por alvo e licença | **banco** — dois índices únicos parciais, um por alvo. No passado, a entrega que se sobrepõe à última devolução do mesmo alvo é só da **aplicação** (422) | 409 `"Office 2024" já está entregue a Laura Souza.` (a API confere antes) |
 | 24 | A chave da entrega é uma das chaves da licença; nenhuma chave vai para mais entregas abertas do que cobre; e as chaves cobrem no máximo o que foi comprado | **banco** — a FK composta (chave, licença) e os `CHECK`s da chave. A conta de cada chave e a soma contra o comprado são da **aplicação**, com a licença travada | 409 `Esta chave já está em outra entrega aberta de "Office 2024". Escolha outra.` / 422 `As chaves cobrem 12, mais do que 10 compradas em "Office 2024". …` |
 | 25 | A forma da entrega de estoque, e o que está em uso nunca passa do total | **banco** — o CHECK do total (`stock_items_qty_nao_negativa`), os cinco `CHECK` da linha e a FK `Restrict` para o item. A conta contra o total é da **aplicação**, com a linha do item travada | 409 `Sem unidade disponível de "Mouse USB": 10 no total, 10 em uso. Devolva uma unidade ou aumente o total.` / `Não é possível reduzir "Mouse USB" para 1: 2 estão em uso. Devolva para liberar.` |
+| 26 | O baixado não vai para a lixeira | **banco** — o `CHECK` `assets_baixado_fora_da_lixeira`; a **aplicação** confere antes, com o ativo travado (`delete-asset`) | 409 `ATV-00042 teve baixa e não vai para a lixeira. Reverta a baixa antes.` |
 
 ---
 
@@ -436,17 +437,22 @@ registra em que estado ele voltou e quem recebeu — não aconteceria.
 
 Na lixeira é o mesmo: restaurá-lo o devolveria a quem talvez não possa mais ter posse (invariante 6).
 
-**São três portas:**
+**São quatro portas:**
 
 | porta | o que ela impede |
 | --- | --- |
-| `delete-asset.usecase.ts` | mandar para a lixeira o ativo **entregue** — `Este computador está entregue e não pode ir para a lixeira. Faça a devolução antes.` —, com **licença** ou com **componente** ([AL](../decisoes/posse.md#al--o-computador-entregue-não-vai-para-a-lixeira)) |
-| `retire-asset.usecase.ts` | dar baixa em ativo **entregue** — `Faça a devolução antes.` —, que **tem licença** — `Devolva pela tela de Licenças antes de dar baixa.` — ou que **tem componente** instalado — `Retire pela tela de Estoque antes de dar baixa.` ([AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar)) |
+| `delete-asset.usecase.ts` | mandar para a lixeira o ativo **entregue** — `Este computador está entregue e não pode ir para a lixeira. Faça a devolução antes.` —, com **licença**, com **componente** ([AL](../decisoes/posse.md#al--o-computador-entregue-não-vai-para-a-lixeira)) ou com **máquina** vinculada ([CL](../decisoes/catalogo-e-ativo.md#cl--o-baixado-não-vai-para-a-lixeira-e-a-máquina-sai-antes-da-baixa-e-da-lixeira)) |
+| `retire-asset.usecase.ts` | dar baixa em ativo **entregue** — `Faça a devolução antes.` —, que **tem licença** — `Devolva pela tela de Licenças antes de dar baixa.` —, que **tem componente** instalado — `Retire pela tela de Estoque antes de dar baixa.` ([AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar)) — ou que **tem máquina** vinculada — `Desvincule pela tela de Descobertas antes de dar baixa.` (CL) |
 | `checkout-asset.usecase.ts` | **entregar** ativo baixado — e isso vale com **qualquer** status, porque a baixa não mexe no status: um vendido pode estar "Disponível" |
+| `link-endpoint-asset.usecase.ts` | **vincular máquina** a ativo baixado (409) ou na lixeira (404) |
 
 A entrega de **licença** a ativo (`checkout-license.usecase.ts`) e a de
 **componente** (`checkout-stock.usecase.ts`) recusam o baixado pelo mesmo motivo:
 a licença ou a peça ficaria presa a uma máquina que não existe mais.
+
+**A máquina** seguiria na cobertura de quem saiu, com a telemetria e os comandos de
+reiniciar e desligar. A recusa da baixa e da lixeira leva a Descobertas, onde mora o
+Desvincular (`assertSemMaquina`, em `get-asset-machine.usecase.ts`).
 
 **Bloqueia, nunca fecha a posse sozinha** — o mesmo argumento da invariante 4.
 
@@ -460,8 +466,10 @@ volta ao patrimônio não contradiz nada. O que é a baixa e como ela aparece na
 tela está em [`baixa.md`](baixa.md).
 
 > **Testado:** `tests/invariantes/posse.test.ts` (o baixado não é entregue;
-> desfeita a baixa, volta a poder) e `tests/corridas/posse.test.ts` (baixa ×
-> entrega do mesmo ativo, várias rodadas, nunca os dois).
+> desfeita a baixa, volta a poder), `tests/corridas/posse.test.ts` (baixa ×
+> entrega do mesmo ativo, várias rodadas, nunca os dois) e
+> `tests/invariantes/baixa-e-lixeira.test.ts` (a máquina vinculada segura a baixa e
+> a lixeira, com o link; desvinculada, passa).
 
 ---
 
@@ -594,6 +602,32 @@ mostra em vermelho em vez de zerá-lo: esconder seria apagar o sintoma.
 
 ---
 
+### 26 — `assets_baixado_fora_da_lixeira`
+
+```sql
+ALTER TABLE "assets" ADD CONSTRAINT "assets_baixado_fora_da_lixeira" CHECK (
+  "retiredAt" IS NULL OR "deletedAt" IS NULL
+);
+```
+
+A baixa e a lixeira respondem perguntas diferentes ([`baixa.md`](baixa.md)): *ainda é da
+empresa?* e *foi cadastrado de verdade?*. As duas juntas não descrevem computador nenhum: um
+que saiu do patrimônio e que nunca devia ter existido.
+
+**O que ele protege de verdade é a série.** A etiqueta e a série só são únicas fora da lixeira
+(`assets_serial_unique_undeleted`), e o baixado na lixeira soltava as duas: a mesma máquina
+vendida podia voltar como cadastro novo, e a venda saía de Baixados.
+
+**No banco, com a frase na aplicação:** é a forma de uma tabela só. A exclusão confere antes,
+com o ativo travado, para dar o caminho — reverter a baixa e então excluir ([CL](../decisoes/catalogo-e-ativo.md#cl--o-baixado-não-vai-para-a-lixeira-e-a-máquina-sai-antes-da-baixa-e-da-lixeira)) —, e a
+tela nem mostra o Excluir no `⋯` do baixado.
+
+> **Provado em** `tests/invariantes/baixa-e-lixeira.test.ts`: o 409 da API, os dois caminhos
+> que continuam (reverter e excluir; restaurar e dar baixa) e o `UPDATE` cru que leva o erro do
+> `CHECK`.
+
+---
+
 ## O que **não** é invariante, e por isso não está aqui
 
 - **"Quem responde" numa coluna do ativo bate com a `Assignment` aberta.** Não
@@ -621,7 +655,8 @@ mostra em vermelho em vez de zerá-lo: esconder seria apagar o sintoma.
 - **A fila de sugestões não fala de gente.** Ela só propõe vínculo entre máquina e ativo (`SuggestionKind` tem só `LINK`):
   não há sugestão sobre pessoa desativada para recusar nem para invalidar. O que
   `invalidate-suggestions.usecase.ts` encerra como `SUPERSEDED` é a pendente cuja
-  máquina, ou cujo ativo, ganhou vínculo por outro caminho — e isso é regra de
+  máquina, ou cujo ativo, ganhou vínculo por outro caminho, e a do ativo que teve baixa
+  ou foi para a lixeira — que já encerram as suas na mesma transação (CL) — e isso é regra de
   PROPOSTA, não fato sobre linhas gravadas: entre duas rodadas do job, a pendente
   obsoleta existe no banco.
 

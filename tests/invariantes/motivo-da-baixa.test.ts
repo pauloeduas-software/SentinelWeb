@@ -113,17 +113,15 @@ describe('a baixa', () => {
 });
 
 describe('o motivo em uso', () => {
-  it('não sai, conta o baixado na lixeira, e sai depois de reverter a baixa', async () => {
+  it('não sai, e sai depois de reverter a baixa', async () => {
     const ativo = await novoComputador();
     const id = await novoMotivo('Motivo em uso');
     expect((await api.post(`/api/assets/${ativo.id}/retire`, { retiredReasonId: id })).status).toBe(200);
-    expect((await api.delete(`/api/assets/${ativo.id}`)).status).toBeLessThan(300);
 
     const recusa = await api.delete<{ error: string }>(`/api/retire-reasons/${id}`);
     expect(recusa.status).toBe(409);
     expect(recusa.body.error).toMatch(/1 registro/);
 
-    expect((await api.post(`/api/assets/${ativo.id}/restore`)).status).toBe(200);
     expect((await api.post(`/api/assets/${ativo.id}/unretire`, {})).status).toBe(200);
     expect((await api.delete(`/api/retire-reasons/${id}`)).status).toBe(200);
   });
@@ -156,7 +154,7 @@ describe('o histórico', () => {
     expect(linha.changes).toMatchObject({ retiredReason: { de: null, para: 'Nome antigo do motivo' } });
   });
 
-  it('reverter guarda de que motivo ele voltou, e excluir o baixado guarda o motivo no retrato', async () => {
+  it('reverter guarda de que motivo ele voltou', async () => {
     const ativo = await novoComputador();
     const retiredReasonId = await motivoDaBaixa('Doado');
     await api.post(`/api/assets/${ativo.id}/retire`, { retiredReasonId });
@@ -167,13 +165,5 @@ describe('o histórico', () => {
       select: { changes: true },
     });
     expect(volta.changes).toMatchObject({ retiredReason: { de: 'Doado', para: null } });
-
-    await api.post(`/api/assets/${ativo.id}/retire`, { retiredReasonId });
-    await api.delete(`/api/assets/${ativo.id}`);
-    const retrato = await prisma.auditLog.findFirstOrThrow({
-      where: { entityId: ativo.id, action: 'DELETE' },
-      select: { changes: true },
-    });
-    expect(JSON.stringify(retrato.changes)).toContain('Doado');
   });
 });

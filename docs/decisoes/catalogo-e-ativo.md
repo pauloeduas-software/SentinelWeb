@@ -701,3 +701,36 @@ nome só (CH).
 
 **O que ficou de fora.** O card com Responsáveis, Volta para e os canais de suporte (BS, AW), a ordem dos campos do
 Entregar, que também difere entre Estoque e Licenças, e a lixeira dos baixados, adiada.
+
+---
+
+## CL — O baixado não vai para a lixeira, e a máquina sai antes da baixa e da lixeira
+
+**Decisão.** A baixa e a lixeira deixam de se somar, e o computador com máquina vinculada não sai por nenhuma das duas.
+Retoma a lixeira dos baixados, que a [CK](#ck--computadores-no-molde-das-outras-telas) adiou.
+
+- **O baixado não vai para a lixeira.** Excluir é 409, `ATV-00042 teve baixa e não vai para a lixeira. Reverta a baixa
+  antes.`, e o Excluir some do `⋯` do baixado, na lista e na ficha, como o Entregar (CK). O banco recusa o par também: o
+  `CHECK` `assets_baixado_fora_da_lixeira` é a invariante 26.
+- **Os dois caminhos continuam:** a baixa feita por engano se reverte, e o computador se exclui; o excluído que foi
+  vendido se restaura e recebe a baixa. Dar baixa direto da Lixeira não: a ficha de lá é só consulta
+  ([BW](#bw--a-linha-da-lixeira-abre-a-ficha-só-para-consulta)).
+- **A máquina vinculada segura a baixa e a lixeira,** como a posse, a licença e o componente: 409, `ATV-00042 ainda tem a
+  máquina PC-FIN-07 vinculada. Desvincule pela tela de Descobertas antes de dar baixa.`, com a máquina em link para a
+  lista Vinculadas, onde mora o Desvincular. A invariante 20 passa a incluir a máquina; na outra ponta, o vínculo já
+  recusava o baixado, e o da lixeira não era encontrado. A aba Máquina do computador na Lixeira fica vazia.
+- **A baixa e a lixeira encerram as sugestões de vínculo do computador** na mesma transação, como o vínculo encerra as
+  da máquina, e a rodada do job encerra a que ela propôs no meio. Antes, elas ficavam em Sugestões para sempre, e o
+  Aceitar dava 409 ou 404.
+
+**Por quê:** a lixeira é o cadastro feito por engano, e a baixa é fato: o computador existiu e saiu do patrimônio.
+Excluir o baixado o tirava de Baixados e soltava a etiqueta e a série, que só são únicas fora da lixeira: a mesma máquina
+vendida podia voltar como cadastro novo. E a máquina de um computador que saiu seguia na cobertura, com a telemetria e os
+comandos de reiniciar e desligar.
+
+**As referências:** Snipe-IT, GLPI, ServiceNow, Shelf.nu, NinjaOne e Lansweeper não bloqueiam excluir o aposentado, mas
+em nenhum deles excluir é "cadastrado por engano": é a limpeza definitiva do dado vencido, e o ServiceNow exige aposentar
+antes de excluir. Aqui a lixeira se restaura, e não limpa nada.
+
+**O custo:** a baixa feita por engano pede dois passos até a lixeira, e a máquina de um computador vendido se desvincula
+antes da baixa.

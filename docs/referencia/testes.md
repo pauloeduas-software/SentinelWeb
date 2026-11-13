@@ -189,8 +189,8 @@ o que resta é o vínculo entre máquina e ativo, por evidência de hardware:
   achar a conexão no mapa ([D](../decisoes/reconciliacao.md#d--a-telemetria-e-o-comando-vão-para-a-ficha-do-ativo-e-a-do-posto)).
 - **`fila.test.ts` e `ciclo-de-vida-da-fila.test.ts`** provam que a mesma sugestão não empilha
   (invariante 13), que a recusa fica lembrada até surgir evidência nova e que a fila acompanha o
-  mundo: vincular a máquina à mão a outro ativo encerra a sugestão como `SUPERSEDED`, e
-  `discoveryMode = OFF` desliga a descoberta. E que o painel de cobertura fecha a conta.
+  mundo: vincular a máquina à mão a outro ativo, dar baixa no computador ou mandá-lo para a
+  lixeira encerra a sugestão como `SUPERSEDED`, e `discoveryMode = OFF` desliga a descoberta. E que o painel de cobertura fecha a conta.
 - **`uso-agregado.test.ts`** roda a mesma agregação com duas janelas, porque a pergunta é se
   "idempotente" quer dizer que a segunda passada escreve o **mesmo** valor (D111).
 

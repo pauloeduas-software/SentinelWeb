@@ -50,7 +50,8 @@ Cadastro novo copia `src/components/catalogo/` (`CatalogTable` + `useCatalog`), 
 - **Na Lixeira, a linha abre a ficha só para consulta (BW, CF).** O `AvisoDaLixeira` fica entre o card e as abas, e a
   única ação é Restaurar, no card.
 - **Excluir sempre clica, e quem recusa é o 409.** A exceção é a própria conta, em Usuários: ali
-  Excluir e Desativar ficam desligados, porque ninguém age sobre si mesmo.
+  Excluir e Desativar ficam desligados, porque ninguém age sobre si mesmo. E o computador baixado
+  não tem Excluir, como não tem Entregar: ele não vai para a lixeira ([CL](../decisoes/catalogo-e-ativo.md#cl--o-baixado-não-vai-para-a-lixeira-e-a-máquina-sai-antes-da-baixa-e-da-lixeira)).
 - **Desativar existe só em colaborador, conta e item de estoque;** a licença tem Encerrar; catálogo e
   posto só excluem (AF, AN, AO).
 

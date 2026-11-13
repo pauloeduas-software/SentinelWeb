@@ -132,6 +132,8 @@ test('a linha dá baixa e reverte, e a vista Baixados troca os cartões pelos mo
   await page.goto(`/computadores?vista=retired&busca=${assetTag}`);
   await acoes.click();
   await expect(page.getByRole('menuitem', { name: 'Dar baixa' })).toHaveCount(0);
+  // O baixado não vai para a lixeira (CL).
+  await expect(page.getByRole('menuitem', { name: 'Excluir' })).toHaveCount(0);
   await page.getByRole('menuitem', { name: 'Reverter baixa' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Reverter' }).click();
   await expect(page.getByText('Baixa revertida.')).toBeVisible();

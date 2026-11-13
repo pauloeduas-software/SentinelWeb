@@ -56,4 +56,13 @@ SELECT a."assetTag", a."retiredNotes"
 FROM assets a
 WHERE a."retiredAt" IS NULL AND a."retiredNotes" IS NOT NULL;
 
+\echo ''
+\echo '### 5. Ativo baixado ou na lixeira COM maquina vinculada  -> esperado: 0 linhas'
+-- A maquina continuaria mandando telemetria e recebendo comando de um
+-- computador que saiu do patrimonio, ou que nem devia ter sido cadastrado (CL).
+SELECT a."assetTag", a."retiredAt", a."deletedAt", e.hostname
+FROM assets a
+JOIN endpoints e ON e."assetId" = a.id
+WHERE a."retiredAt" IS NOT NULL OR a."deletedAt" IS NOT NULL;
+
 ROLLBACK;

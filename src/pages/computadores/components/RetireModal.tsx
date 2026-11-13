@@ -38,7 +38,7 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
   const [observacoes, setObservacoes] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
-  // A baixa recusada por licença ou componente traz cada um em link, até o detalhe dele.
+  // A baixa recusada por licença, componente ou máquina traz cada um em link, até onde ele se resolve.
   const [links, setLinks] = useState<LinkDaNotificacao[]>([]);
 
   const enviar = async (event: React.FormEvent) => {
@@ -56,8 +56,8 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
         ...(observacoes.trim() ? { notes: observacoes.trim() } : {}),
       });
     } catch (falha) {
-      // É aqui que aparece o 409 de ativo entregue, o de ativo com licença e o
-      // 422 de data futura, já traduzidos pelo apiClient.
+      // É aqui que aparece o 409 de ativo entregue, com licença, componente ou
+      // máquina, e o 422 de data futura, já traduzidos pelo apiClient.
       setErro((falha as Error).message);
       setLinks(linksDoErro(falha) ?? []);
     } finally {

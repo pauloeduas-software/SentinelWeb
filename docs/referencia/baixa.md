@@ -29,7 +29,7 @@ E **não é excluir**:
 | | Excluir (lixeira) | Dar baixa |
 |---|---|---|
 | quando | o ativo foi cadastrado **por engano** | o ativo **saiu do patrimônio** |
-| pede | a confirmação, e a devolução antes, se ele está entregue ([AL](../decisoes/posse.md#al--o-computador-entregue-não-vai-para-a-lixeira)) | **motivo**, data e observação, e a devolução antes |
+| pede | a confirmação, e a devolução antes, se ele está entregue ([AL](../decisoes/posse.md#al--o-computador-entregue-não-vai-para-a-lixeira)); o baixado não vai: a baixa se reverte antes ([CL](../decisoes/catalogo-e-ativo.md#cl--o-baixado-não-vai-para-a-lixeira-e-a-máquina-sai-antes-da-baixa-e-da-lixeira)) | **motivo**, data e observação, e a devolução antes |
 | depois | some do inventário; a ficha abre [só para consulta](../decisoes/catalogo-e-ativo.md#bw--a-linha-da-lixeira-abre-a-ficha-só-para-consulta); restaura-se da lixeira | continua no histórico e na vista **Baixados**; desfaz-se com **Reverter** |
 | é | erro de digitação | fato contábil, datado |
 
@@ -57,7 +57,9 @@ permitida a partir de `SUPERVISOR` ([AV](../decisoes/acesso.md#av--três-cargos-
 - **Na lista de Computadores:** o ativo sai da vista **Ativos** e passa a aparecer só na
   vista **Baixados**, que tem contador próprio. Lá, os cartões são o Total e um por
   motivo, e o Status é o motivo, sem o dia ([BV](../decisoes/catalogo-e-ativo.md#bv--a-vista-baixados-conta-por-motivo-e-o-status-do-baixado-é-o-motivo)).
-  A **Lixeira** não olha a baixa.
+  O baixado **não vai para a Lixeira**: o `⋯` dele não tem Excluir, e a baixa feita por
+  engano se reverte antes ([CL](../decisoes/catalogo-e-ativo.md#cl--o-baixado-não-vai-para-a-lixeira-e-a-máquina-sai-antes-da-baixa-e-da-lixeira)).
+- **Em Descobertas:** as sugestões de vínculo dele saem da fila na mesma hora (CL).
 - **Na auditoria, no banco:** a linha `RETIRE`, com quem fez, quando, o nome do motivo
   por escrito e a observação. A aba Histórico é só movimentação e não a mostra ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)).
 - **O status não muda.** Trocar o status é uma segunda decisão, com linha
@@ -72,6 +74,7 @@ permitida a partir de `SUPERVISOR` ([AV](../decisoes/acesso.md#av--três-cargos-
 | dar baixa em ativo **entregue** (a pessoa ou a posto) | 409 `ATV-00042 está entregue e não pode receber baixa. Faça a devolução antes.` | "vendido" e "na mão da Laura" não podem ser verdade juntos. O sistema **não devolve sozinho**: apagaria quem estava com o equipamento e em que estado voltou |
 | dar baixa em ativo que **tem licença** | 409 `ATV-00042 ainda tem a licença SolidWorks. Devolva pela tela de Licenças antes de dar baixa.` | a licença ficaria descontada do contrato, presa a uma máquina vendida. A recusa traz um link para a ficha de cada licença, onde está o Devolver |
 | dar baixa em ativo que **tem componente** | 409 `ATV-00042 ainda tem os componentes Memória RAM 8 GB ×2. Retire pela tela de Estoque antes de dar baixa.` | a peça continuaria "em uso" numa máquina vendida. A recusa traz um link para a ficha de cada item, onde está o Retirar; se a peça foi junto, retire e diminua o total do item ([AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar)) |
+| dar baixa em ativo com **máquina vinculada** | 409 `ATV-00042 ainda tem a máquina PC-FIN-07 vinculada. Desvincule pela tela de Descobertas antes de dar baixa.` | a máquina seguiria na cobertura, com a telemetria e os comandos, como se o computador ainda fosse da empresa. A recusa traz um link para a lista Vinculadas de Descobertas, onde está o Desvincular ([CL](../decisoes/catalogo-e-ativo.md#cl--o-baixado-não-vai-para-a-lixeira-e-a-máquina-sai-antes-da-baixa-e-da-lixeira)) |
 | motivo que **não existe** | 404 `Motivo da baixa não encontrado.` | o motivo pode ter sido excluído depois de o formulário abrir |
 | dar baixa **duas vezes** | 409 `ATV-00042 já teve baixa em 15/10/2026.` | reescreveria a data em que ele deixou de ser patrimônio |
 | data da saída **futura** | 422 | a baixa tiraria o ativo do inventário hoje por um fato que não aconteceu |
@@ -81,10 +84,11 @@ permitida a partir de `SUPERVISOR` ([AV](../decisoes/acesso.md#av--três-cargos-
 | entregar **licença** a ativo baixado | 409 `O computador ATV-00042 teve baixa e não pode receber licença.` | a licença ficaria presa a uma máquina que não existe mais |
 | entregar **componente** a ativo baixado | 409 `O computador ATV-00042 teve baixa e não pode receber componente.` | pelo mesmo motivo |
 | **vincular máquina** descoberta a ativo baixado | 409 `ATV-00042 teve baixa e não recebe máquina. Reverta a baixa antes.` | o vínculo o traria de volta à cobertura e à telemetria. A descoberta automática também não o propõe nem o vincula — ele só conta para detectar ambiguidade |
+| **excluir** ativo baixado | 409 `ATV-00042 teve baixa e não vai para a lixeira. Reverta a baixa antes.` | a lixeira é cadastro errado, e a baixa é fato. E excluir soltaria a etiqueta e a série, que só são únicas fora da lixeira. O banco recusa o par também ([invariante 26](invariantes.md#26--assets_baixado_fora_da_lixeira)) |
 | **Reverter** um ativo que não teve baixa | 409 `ATV-00042 não teve baixa.` | |
 
-Na tela, o botão **Entregar** já vem desabilitado no ativo baixado, com o motivo
-no `title` — na lista e no card da ficha —, e os seletores de
+Na tela, o ativo baixado não tem **Entregar** nem **Excluir**, na lista e no card da ficha
+([CK](../decisoes/catalogo-e-ativo.md#ck--computadores-no-molde-das-outras-telas), CL), e os seletores de
 ativo (entrega de licença, entrega de componente, vínculo de máquina) não oferecem baixados.
 
 **A baixa e a entrega do mesmo ativo, ao mesmo tempo,** não terminam com ele
@@ -133,8 +137,9 @@ pedir:
 |---|---|
 | dar baixa | `server/modules/asset/use-cases/retire-asset.usecase.ts` |
 | a guarda da posse (a baixa e a lixeira) | `assert-sem-posse.usecase.ts` |
+| a guarda da máquina (a baixa e a lixeira) | `reconciliation/use-cases/get-asset-machine.usecase.ts` (`assertSemMaquina`) |
 | reverter | `unretire-asset.usecase.ts` |
 | a recusa na entrega | `assignment/use-cases/checkout-asset.usecase.ts`; na licença, `license/use-cases/checkout-license.usecase.ts` |
 | as vistas Ativos / Baixados | `asset/helpers/asset-filters.helper.ts` |
 | a tela | `src/pages/computadores/components/RetireModal.tsx`, `src/pages/computadores/ficha/components/AvisoDaBaixa.tsx`, `src/pages/computadores/helpers/baixa.helper.ts` |
-| testes | `tests/invariantes/motivo-da-baixa.test.ts` (o cadastro, o motivo em uso e o nome por escrito), `tests/e2e/baixa.spec.ts` (o motivo novo, pela tela), `tests/invariantes/posse.test.ts` (a baixa recusa entregue, licença, data futura e repetição; baixado não é entregue; reverter libera), `tests/invariantes/dia-da-posse.test.ts` (o dia da baixa contra a última devolução), `tests/corridas/posse.test.ts` (baixa × entrega, baixa × excluir o motivo), `tests/listagens/vistas-do-ativo.test.ts` (as vistas) |
+| testes | `tests/invariantes/motivo-da-baixa.test.ts` (o cadastro, o motivo em uso e o nome por escrito), `tests/e2e/baixa.spec.ts` (o motivo novo, pela tela), `tests/invariantes/posse.test.ts` (a baixa recusa entregue, licença, data futura e repetição; baixado não é entregue; reverter libera), `tests/invariantes/dia-da-posse.test.ts` (o dia da baixa contra a última devolução), `tests/corridas/posse.test.ts` (baixa × entrega, baixa × excluir o motivo), `tests/listagens/vistas-do-ativo.test.ts` (as vistas), `tests/invariantes/baixa-e-lixeira.test.ts` (o baixado não vai para a lixeira; a máquina segura a baixa e a lixeira) |

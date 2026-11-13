@@ -736,6 +736,16 @@ CREATE UNIQUE INDEX "assets_assetTag_unique_undeleted"
 CREATE UNIQUE INDEX "assets_serial_unique_undeleted"
   ON "assets"("serial") WHERE "deletedAt" IS NULL;
 
+-- ── INVARIANTE 26: O BAIXADO NÃO VAI PARA A LIXEIRA (CL) ──────────────────
+--
+-- A baixa é fato (saiu do patrimônio) e a lixeira é engano (não devia ter sido
+-- cadastrado): as duas juntas não descrevem computador nenhum. E o par soltaria
+-- a etiqueta e a série do baixado, que os dois índices acima só seguram fora da
+-- lixeira. A baixa feita por engano se reverte antes de excluir.
+ALTER TABLE "assets" ADD CONSTRAINT "assets_baixado_fora_da_lixeira" CHECK (
+  "retiredAt" IS NULL OR "deletedAt" IS NULL
+);
+
 -- ── INVARIANTE 1: UMA POSSE ABERTA POR ATIVO (D14) ────────────────────────
 --
 -- O duplo checkout é P2002 do banco traduzido em 409 pelo error-handler, e não

@@ -1,6 +1,4 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { randomUUID } from 'node:crypto';
-import { prisma } from '../../server/infra/database/prismaClient';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { cenarioDePosse, motivoDaBaixa } from '../helpers/fixtures';
 
@@ -24,11 +22,6 @@ beforeAll(async () => {
   expect(entrega.status).toBe(201);
   expect((await api.post(`/api/assets/${id}/checkin`, {})).status).toBe(200);
 
-  const maquina = await prisma.endpoint.create({
-    data: { hwid: randomUUID(), hostname: 'PC-DA-LIXEIRA', osVersion: 'Windows 11' },
-  });
-  expect((await api.post(`/api/endpoints/${maquina.id}/link`, { assetId: id })).status).toBe(201);
-
   expect((await api.delete(`/api/assets/${id}`)).status).toBe(200);
 });
 
@@ -51,12 +44,13 @@ describe('para quem vê a Lixeira', () => {
     expect(body.total).toBe(2);
   });
 
-  it('as abas respondem, e a Máquina não finge que não há máquina', async () => {
+  it('as abas respondem, e a Máquina vem vazia: ele vai para a lixeira sem ela (CL)', async () => {
     expect((await supervisor.get(`/api/assets/${id}/licenses`)).status).toBe(200);
     expect((await supervisor.get(`/api/assets/${id}/components`)).status).toBe(200);
 
-    const { body } = await supervisor.get<{ hostname: string | null }>(`/api/assets/${id}/machine`);
-    expect(body.hostname).toBe('PC-DA-LIXEIRA');
+    const { status, body } = await supervisor.get<{ hostname: string | null }>(`/api/assets/${id}/machine`);
+    expect(status).toBe(200);
+    expect(body.hostname).toBeNull();
   });
 
   it('nenhuma escrita alcança o ativo: abrir não é restaurar', async () => {

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { conectarAgente, esperarPor } from '../helpers/agente';
-import { cenarioDePosse, criarAtivo } from '../helpers/fixtures';
+import { cenarioDePosse, criarAtivo, motivoDaBaixa } from '../helpers/fixtures';
 import { rodarReconciliacao } from '../../server/modules/reconciliation/jobs/reconcile.job';
 import { prisma } from '../../server/infra/database/prismaClient';
 
@@ -95,6 +95,60 @@ describe('o mundo muda sozinho e a fila acompanha (D110)', () => {
     // vínculo só nasce para quem não tem.
     await rodarReconciliacao();
     expect(await pendentesDe(endpointId)).toBe(0);
+  });
+
+  it('a baixa e a lixeira encerram a sugestão do computador na hora (CL)', async () => {
+    const vendido = await novoAtivo('pc-vendido', 'SN-SUP-201');
+    const apagado = await novoAtivo('pc-apagado', 'SN-SUP-202');
+    const maquinaDoVendido = await maquinaDescoberta('sup-2', 'pc-vendido', 'SN-SUP-201');
+    const maquinaDoApagado = await maquinaDescoberta('sup-3', 'pc-apagado', 'SN-SUP-202');
+    await rodarReconciliacao();
+    expect(await pendentesDe(maquinaDoVendido)).toBe(1);
+    expect(await pendentesDe(maquinaDoApagado)).toBe(1);
+
+    expect((await api.post(`/api/assets/${vendido.id}/retire`, { retiredReasonId: await motivoDaBaixa() })).status).toBe(200);
+    expect((await api.delete(`/api/assets/${apagado.id}`)).status).toBe(200);
+
+    // SEM RODAR O JOB, como no vínculo: o Aceitar que sobrasse seria 409 (o
+    // baixado não recebe máquina) ou 404 (o da lixeira não é encontrado).
+    const encerradas = await prisma.reconciliationSuggestion.findMany({
+      where: { assetId: { in: [vendido.id, apagado.id] } },
+      select: { state: true, resolvedAt: true },
+    });
+    expect(encerradas).toHaveLength(2);
+    for (const sugestao of encerradas) {
+      expect(sugestao.state).toBe('SUPERSEDED');
+      expect(sugestao.resolvedAt).not.toBeNull();
+    }
+
+    // E a rodada seguinte não as ressuscita: o baixado sai antes de virar
+    // sugestão, e o da lixeira nem entra na cascata.
+    await rodarReconciliacao();
+    expect(await pendentesDe(maquinaDoVendido)).toBe(0);
+    expect(await pendentesDe(maquinaDoApagado)).toBe(0);
+  });
+
+  it('a sugestão que a rodada propôs enquanto a baixa gravava sai na rodada seguinte (CL)', async () => {
+    const vendido = await novoAtivo('pc-da-corrida', 'SN-SUP-301');
+    const apagado = await novoAtivo('pc-da-outra-corrida', 'SN-SUP-302');
+    const maquinaDoVendido = await maquinaDescoberta('sup-4', 'pc-da-corrida', 'SN-SUP-301');
+    const maquinaDoApagado = await maquinaDescoberta('sup-5', 'pc-da-outra-corrida', 'SN-SUP-302');
+    await rodarReconciliacao();
+
+    // A CORRIDA, à mão: a baixa e a lixeira gravadas sem a transação que encerra a
+    // fila. É o que fica quando a rodada lê o computador antes da baixa e
+    // propõe depois dela.
+    await prisma.asset.update({
+      where: { id: vendido.id },
+      data: { retiredAt: new Date(), retiredReasonId: await motivoDaBaixa() },
+    });
+    await prisma.asset.update({ where: { id: apagado.id }, data: { deletedAt: new Date() } });
+    expect(await pendentesDe(maquinaDoVendido)).toBe(1);
+    expect(await pendentesDe(maquinaDoApagado)).toBe(1);
+
+    await rodarReconciliacao();
+    expect(await pendentesDe(maquinaDoVendido)).toBe(0);
+    expect(await pendentesDe(maquinaDoApagado)).toBe(0);
   });
 });
 
