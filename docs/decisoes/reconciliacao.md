@@ -932,6 +932,8 @@ primeira já tinha fechado.
 
 ## BY — A aba Máquina mostra o que o agente manda
 
+> **Superada em parte por [CP](#cp--a-aba-máquina-mostra-o-sistema-o-processador-o-ip-e-o-mac):** o sistema operacional, o processador, o IP e o MAC voltam para a aba.
+
 **Decidido** (2026-11-07, comparando a aba Máquina do computador com o `HandshakePacket` do SentinelAgente):
 
 - **Saem da aba as Especificações coletadas pelo agente e as Mudanças detectadas.** O handshake do agente real traz
@@ -981,3 +983,26 @@ serve para olhar e comandar; quem decide se a máquina é aquele computador é D
 
 **O que fica de fora, declarado:** desvincular pede sair da ficha, e Descobertas não tem seta: volta-se pelo navegador. A
 máquina de um computador na lixeira continua na lista Vinculadas e pode ser desvinculada, o que a rota sempre aceitou.
+
+---
+
+## CP — A aba Máquina mostra o sistema, o processador, o IP e o MAC
+
+**Decisão.** Embaixo da máquina vinculada, a aba Máquina mostra o que o agente real manda no handshake: **Sistema
+operacional**, **Processador**, **Endereço IP** e **Endereço MAC**, o IP e o MAC em fonte monoespaçada. O campo que a
+máquina não mandou não aparece. É o mesmo `TelemetriaDaMaquina`, então vale para a ficha do computador e a do posto.
+
+- **Só a tela muda:** `GET /api/endpoints/:id` já devolvia os quatro campos, e o handshake já os guardava.
+- **O resto da identidade continua fora:** fabricante, modelo, chassi, série da BIOS, UUID e os totais de memória e
+  disco, que o agente real não coleta (BY).
+
+**Supera em parte:** [BY](#by--a-aba-máquina-mostra-o-que-o-agente-manda), que tirou os quatro junto com as
+Especificações coletadas e deixou a volta para a revisão de Computadores.
+
+**Por quê:** são as perguntas do atendimento: qual Windows está ali, em que IP a máquina responde para o acesso remoto,
+qual MAC liberar na rede. O GLPI mostra o sistema, o processador, o MAC e o IP que o agente dele coleta na ficha do
+computador, e o Snipe-IT, com as integrações de RMM, o MAC, o IP e o sistema.
+
+**O custo:** quatro linhas no painel, acima das medidas.
+
+**O que ficou de fora:** histórico de IP, mais de uma placa de rede e o que o agente não manda.

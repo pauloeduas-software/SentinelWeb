@@ -442,13 +442,27 @@ test('a Máquina é a mesma no posto e no computador, e quem desvincula é Desco
 
   // A máquina nasce do handshake do agente, que o navegador não faz: vai direto ao banco.
   await prisma.endpoint.create({
-    data: { hwid: `hw-${ativo}`, hostname, osVersion: 'Windows 11', status: 'OFFLINE', assetId: ativo },
+    data: {
+      hwid: `hw-${ativo}`, hostname, osVersion: 'Windows 11', status: 'OFFLINE', assetId: ativo,
+      cpuModel: 'Intel Core i5-1235U', localIp: '10.0.0.15', macAddress: '00:1A:2B:3C:4D:5E',
+    },
   });
+  // O que o agente real manda no handshake (CP), igual nas duas fichas.
+  const doHandshake = [
+    ['Sistema operacional', 'Windows 11'],
+    ['Processador', 'Intel Core i5-1235U'],
+    ['Endereço IP', '10.0.0.15'],
+    ['Endereço MAC', '00:1A:2B:3C:4D:5E'],
+  ];
 
   for (const caminho of [`/postos/${posto}?aba=maquina`, `/computadores/${ativo}?aba=maquina`]) {
     await page.goto(caminho);
     await expect(aba.getByRole('row', { name: new RegExp(hostname) })).toBeVisible();
     await expect(aba.getByText('Como está agora')).toBeVisible();
+    for (const [rotulo, valor] of doHandshake) {
+      await expect(aba.getByRole('term').filter({ hasText: new RegExp(`^${rotulo}$`) })
+        .locator('xpath=following-sibling::dd')).toHaveText(valor);
+    }
     await expect(aba.getByText(`hw-${ativo}`)).toBeVisible();
     await expect(aba.getByText(assetTag)).toHaveCount(0);
     await expect(aba.getByRole('button', { name: 'Desvincular' })).toHaveCount(0);
