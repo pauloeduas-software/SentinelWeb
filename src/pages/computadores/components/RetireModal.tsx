@@ -5,7 +5,7 @@ import ReferenceSelect from '../../../components/ReferenceSelect';
 import { Campo } from '../../../components/ui/campo';
 import { Input, Textarea } from '../../../components/ui/input';
 import type { Asset, RetireInput } from '../../../types/asset.types';
-import { hojeNoCampoDeData } from '../../../helpers/format.helper';
+import { hojeNoCampoDeData, paraCampoDeData } from '../../../helpers/format.helper';
 import type { LinkDaNotificacao } from '../../../hooks/useNotificacao';
 import { linksDoErro } from '../../../helpers/erro.helper';
 
@@ -97,9 +97,13 @@ export default function RetireModal({ asset, onClose, onConfirmar }: RetireModal
       </Campo>
 
       {/* `max` = hoje porque o servidor recusa data futura (422): uma saída
-          que ainda não aconteceu não é fato a registrar. */}
+          que ainda não aconteceu não é fato a registrar. E `min` = a compra, que a
+          saída não antecede (AN). */}
       <Campo rotulo="Data da saída" obrigatorio>
-        <Input type="date" required max={hoje} value={data} onChange={(event) => setData(event.target.value)} />
+        <Input
+          type="date" required min={paraCampoDeData(asset.purchaseDate) || undefined} max={hoje} value={data}
+          onChange={(event) => setData(event.target.value)}
+        />
       </Campo>
 
       <Campo rotulo="Notas" ajuda="Aparece na ficha enquanto a baixa valer.">

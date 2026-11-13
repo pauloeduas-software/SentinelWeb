@@ -96,18 +96,22 @@ export function useNextAssetTagQuery(habilitado: boolean) {
  * Devolve a promessa e roda também no erro, como `invalidarLicencaEPosse`: o botão só
  * destrava com a tela relida, e o 409 de quem viu a tela velha traz a tela nova.
  *
- * `excluido`: o ativo que acabou de ir para a lixeira. A ficha e o histórico dele ficam
- * de fora: buscá-los de novo é um 404 garantido, que a ficha aberta mostraria antes de
- * sair dali.
+ * `excluido`: o ativo que acabou de ir para a lixeira. A ficha e o histórico dele não
+ * são buscados de novo: a ficha aberta, que está saindo dali, mostraria a da Lixeira por
+ * um instante. E SAEM do cache, depois: a ficha da Lixeira (BW) abre do zero, e não com o
+ * computador de antes da exclusão até a resposta chegar. Depois, e não antes, porque
+ * sem o cache a ficha aberta que redesenhasse no meio buscaria tudo de novo.
  */
-function invalidarAtivos(queryClient: ReturnType<typeof useQueryClient>, excluido?: string) {
-  return Promise.all([
+async function invalidarAtivos(queryClient: ReturnType<typeof useQueryClient>, excluido?: string) {
+  const doExcluido = (consulta: { queryKey: readonly unknown[] }) => consulta.queryKey[2] === excluido;
+  await Promise.all([
     queryClient.invalidateQueries({
       queryKey: assetKeys.all,
-      predicate: (consulta) => excluido === undefined || consulta.queryKey[2] !== excluido,
+      predicate: (consulta) => excluido === undefined || !doExcluido(consulta),
     }),
     queryClient.invalidateQueries({ queryKey: catalogKeys.tabela('assets') }),
   ]);
+  if (excluido !== undefined) queryClient.removeQueries({ queryKey: assetKeys.all, predicate: doExcluido });
 }
 
 /**

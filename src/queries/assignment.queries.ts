@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api/apiClient';
 import { assetKeys } from './asset.queries';
+import { catalogKeys } from './catalog.queries';
 // Quem PERGUNTA importa; o dono do dado é quem responde (docs/referencia/arquitetura.md).
 // A posse precisa dizer ao posto que algo mudou nele, e a chave é do posto.
 import { workstationKeys } from './workstation.queries';
@@ -49,7 +50,10 @@ export interface CheckinInput {
  *   ativos  — as colunas Responsáveis e Localização e o status são consequência
  *             da operação;
  *   postos  — a ficha do posto lista os ativos entregues a ele, conta quantos
- *             são e deriva o selo de POSTO VAGO desses dois números;
+ *             são e deriva o selo de POSTO VAGO desses dois números; e as OPÇÕES
+ *             de posto, porque o Entregar só oferece o posto sem computador
+ *             (`?computador=sem`), e o `staleTime` de um minuto delas seguiria
+ *             oferecendo o que acabou de receber um;
  *   pessoas — a ficha do colaborador lista os computadores entregues a ele e
  *             conta a entrega e a devolução no histórico, como a licença e o
  *             estoque já faziam (`invalidarLicencaEPosse`, `invalidarEstoqueEPosse`).
@@ -75,6 +79,7 @@ function invalidarAlvosDaPosse(queryClient: ReturnType<typeof useQueryClient>) {
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: assetKeys.all }),
     queryClient.invalidateQueries({ queryKey: workstationKeys.all }),
+    queryClient.invalidateQueries({ queryKey: catalogKeys.tabela('workstations') }),
     queryClient.invalidateQueries({ queryKey: personKeys.all }),
   ]);
 }

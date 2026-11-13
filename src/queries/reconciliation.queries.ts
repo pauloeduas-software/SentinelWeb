@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api/apiClient';
 import { assetKeys } from './asset.queries';
+import { catalogKeys } from './catalog.queries';
 import { endpointKeys } from './endpoint.queries';
 // Vincular E ENTREGAR muda a ficha do posto: a chave é do posto, quem pergunta
 // importa (docs/referencia/arquitetura.md).
@@ -71,12 +72,18 @@ export function useMaquinaDoAtivoQuery(assetId: string | null) {
   });
 }
 
-/** Tudo que a resolução de uma sugestão pode ter mudado. */
+/**
+ * Tudo que a resolução de uma sugestão pode ter mudado. Com as OPÇÕES de
+ * computador: o seletor do vínculo só oferece o computador sem máquina
+ * (`?maquina=sem`), e o `staleTime` de um minuto delas seguiria oferecendo o que
+ * acabou de ganhar uma.
+ */
 function useInvalidarTudo() {
   const queryClient = useQueryClient();
   return () => Promise.all([
     queryClient.invalidateQueries({ queryKey: reconciliationKeys.all }),
     queryClient.invalidateQueries({ queryKey: assetKeys.all }),
+    queryClient.invalidateQueries({ queryKey: catalogKeys.tabela('assets') }),
     queryClient.invalidateQueries({ queryKey: endpointKeys.all }),
   ]);
 }
@@ -137,9 +144,9 @@ export function useVincularMaquina() {
  * VINCULAR E ENTREGAR AO POSTO — `POST /api/endpoints/:id/link-and-checkout`.
  *
  * O cadastro do computador novo de ponta a ponta. Invalida também o posto,
- * porque a entrega muda a ficha dele; e invalida NO ERRO também: a rota
- * encadeia duas operações e o vínculo pode ter ficado quando a entrega falha —
- * a resposta diz isso, e a lista precisa refletir.
+ * porque a entrega muda a ficha dele e as opções de posto sem computador; e
+ * invalida NO ERRO também: a rota encadeia duas operações e o vínculo pode ter
+ * ficado quando a entrega falha — a resposta diz isso, e a lista precisa refletir.
  */
 export function useVincularEEntregar() {
   const queryClient = useQueryClient();
@@ -147,6 +154,7 @@ export function useVincularEEntregar() {
   const invalidarComPosto = () => Promise.all([
     invalidar(),
     queryClient.invalidateQueries({ queryKey: workstationKeys.all }),
+    queryClient.invalidateQueries({ queryKey: catalogKeys.tabela('workstations') }),
   ]);
   return useMutation({
     mutationFn: async ({ endpointId, assetId, targetWorkstationId }: {

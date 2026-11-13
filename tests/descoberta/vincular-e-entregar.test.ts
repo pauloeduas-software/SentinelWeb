@@ -11,9 +11,10 @@ import { criarAtivo, criarFabricante, criarModelo, idsDoSeed } from '../helpers/
 // Duas operações do sistema encadeadas em SEQUÊNCIA, sem transação em volta
 // (o Prisma não aninha), e a ordem é o que este arquivo fixa: vincular primeiro.
 //
-// E o seletor que a tela usa para escolher o ativo: `/api/assets/options`
-// com `?maquina=sem`, que deixa de fora quem já tem máquina — a opção que o
-// `endpoints.assetId @unique` recusaria no clique.
+// E os seletores que a tela usa: `/api/assets/options` com `?maquina=sem`, que
+// deixa de fora quem já tem máquina — a opção que o `endpoints.assetId @unique`
+// recusaria no clique —, e `/api/workstations/options` com `?computador=sem`,
+// que deixa de fora o posto que já tem computador, que a entrega recusaria.
 
 let api: ApiDeTeste;
 let seed: Awaited<ReturnType<typeof idsDoSeed>>;
@@ -169,5 +170,32 @@ describe('GET /api/assets/options?maquina=sem', () => {
     expect(todos.body.map((opcao) => opcao.id)).toEqual(expect.arrayContaining([comMaquina.id, semMaquina.id]));
 
     expect((await api.get('/api/assets/options?maquina=com')).status).toBe(422);
+  });
+});
+
+describe('GET /api/workstations/options?computador=sem', () => {
+  it('deixa de fora o posto que já tem computador, e volta com a devolução', async () => {
+    const ocupado = await posto('Mesa com computador');
+    const livre = await posto('Mesa sem computador');
+    const desktop = await ativo('Desktop da mesa ocupada');
+    const entrega = await api.post(`/api/assets/${desktop.id}/checkout`, { targetType: 'WORKSTATION', targetWorkstationId: ocupado });
+    expect(entrega.status, JSON.stringify(entrega.body)).toBe(201);
+
+    const semComputador = async () => {
+      const { status, body } = await api.get<{ id: string }[]>('/api/workstations/options?computador=sem');
+      expect(status).toBe(200);
+      return body.map((opcao) => opcao.id);
+    };
+    expect(await semComputador()).toContain(livre);
+    expect(await semComputador()).not.toContain(ocupado);
+
+    // Sem o filtro os dois vêm: é o seletor da entrega de estoque e da ocupação.
+    const todos = await api.get<{ id: string }[]>('/api/workstations/options');
+    expect(todos.body.map((opcao) => opcao.id)).toEqual(expect.arrayContaining([ocupado, livre]));
+
+    expect((await api.post(`/api/assets/${desktop.id}/checkin`, {})).status).toBe(200);
+    expect(await semComputador()).toContain(ocupado);
+
+    expect((await api.get('/api/workstations/options?computador=com')).status).toBe(422);
   });
 });

@@ -6,6 +6,7 @@ import { Campo } from '../../../components/ui/campo';
 import { Input, Textarea } from '../../../components/ui/input';
 import { hojeNoCampoDeData, paraCampoDeData } from '../../../helpers/format.helper';
 import { useNextAssetTagQuery, type AssetInput } from '../../../queries/asset.queries';
+import { useCatalogOptionsQuery } from '../../../queries/catalog.queries';
 import { usePode } from '../../../stores/auth.store';
 import type { Asset } from '../../../types/asset.types';
 
@@ -100,7 +101,15 @@ export default function AssetFormModal({
   // Só quando vai CRIAR — inclusive clonando —, e é *peek*: o servidor NÃO
   // consome o número aqui. Se consumisse, abrir e cancelar o modal duas vezes
   // furaria a sequência de etiquetas.
-  const { data: proxima } = useNextAssetTagQuery(!asset || clonar);
+  const editando = asset != null && !clonar;
+  const { data: proxima } = useNextAssetTagQuery(!editando);
+
+  // O ENTREGUE NÃO VÊ OS STATUS "DISPONÍVEL", como o destino do Entregar: o
+  // servidor recusa o status de estoque com a entrega aberta, e ele volta a
+  // disponível pela devolução. É a mesma consulta (e a mesma chave de cache) do
+  // status padrão do cadastro, já pronta na página.
+  const entregue = editando && asset.posse?.assignmentId != null;
+  const { data: disponiveis } = useCatalogOptionsQuery('status-labels', 'DEPLOYABLE');
 
   const definir = (campo: string, valor: unknown) =>
     setValores((atual) => ({ ...atual, [campo]: valor }));
@@ -130,12 +139,14 @@ export default function AssetFormModal({
       salvando={salvando}
     >
       <Secao titulo="Identificação">
-        <Campo rotulo="Etiqueta">
+        {/* Em branco, o servidor gera a etiqueta a partir do contador, mas só no
+            cadastro e no clone: na edição, ele manteria a antiga sem avisar. */}
+        <Campo rotulo="Etiqueta" obrigatorio={editando}>
           <Input
             value={valores.assetTag}
             onChange={(e) => definir('assetTag', e.target.value)}
-            // Em branco, o servidor gera a etiqueta a partir do contador.
-            placeholder={proxima ? `${proxima.assetTag} (automática)` : 'automática'}
+            required={editando}
+            placeholder={editando ? undefined : proxima ? `${proxima.assetTag} (automática)` : 'automática'}
             className="font-mono"
           />
         </Campo>
@@ -153,8 +164,12 @@ export default function AssetFormModal({
         <Campo rotulo="Modelo" obrigatorio>
           <ReferenceSelect rota="asset-models" valor={valores.modelId} obrigatorio atual={asset?.model} onChange={(v) => definir('modelId', v)} />
         </Campo>
-        <Campo rotulo="Status" obrigatorio>
-          <ReferenceSelect rota="status-labels" valor={valores.statusId} obrigatorio atual={asset?.status} onChange={(v) => definir('statusId', v)} />
+        <Campo rotulo="Status" obrigatorio ajuda={entregue ? 'Entregue: só volta a disponível pela devolução.' : undefined}>
+          <ReferenceSelect
+            rota="status-labels" valor={valores.statusId} obrigatorio atual={asset?.status}
+            excluirIds={entregue ? (disponiveis ?? []).map((opcao) => opcao.id) : undefined}
+            onChange={(v) => definir('statusId', v)}
+          />
         </Campo>
         {/* Num posto, o computador está onde o posto fica, e este campo
             é para onde ele volta na devolução (AW). O clone nasce fora
