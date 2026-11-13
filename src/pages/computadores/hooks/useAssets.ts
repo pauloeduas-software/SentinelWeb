@@ -165,7 +165,7 @@ export function useAssets() {
       if (assets.length === 1 && page > 1) setPage(page - 1);
       notificar.sucesso(`"${asset.assetTag}" foi para a lixeira.`);
     } catch (erro) {
-      // O 409 do ativo com licença ou componente traz cada um em link.
+      // O 409 do ativo com licença, componente ou máquina traz cada um em link.
       notificar.erro((erro as Error).message, linksDoErro(erro));
     }
   };

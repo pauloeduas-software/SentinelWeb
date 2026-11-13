@@ -13,6 +13,8 @@ import {
   comoReferencias, licencasDoAtivo, nomesDasLicencas,
 } from '../../license/use-cases/count-license-checkouts.usecase';
 import { componentesDoAtivo } from '../../stock/use-cases/count-person-stock.usecase';
+import { assertSemMaquina } from '../../reconciliation/use-cases/get-asset-machine.usecase';
+import { encerrarSugestoesDoAtivo } from '../../reconciliation/use-cases/invalidate-suggestions.usecase';
 
 // DAR BAIXA — o ativo saiu do PATRIMÔNIO: foi vendido, descartado, doado,
 // extraviado, roubado ou trocado em garantia.
@@ -88,6 +90,11 @@ export async function retireAsset(id: string, data: RetireAssetData, ator: Ator)
     // honesto — a peça saiu do estoque, e não ficou instalada em nada.
     await componentesDoAtivo(tx, id, antes.assetTag, 'dar baixa');
 
+    // E a MÁQUINA (CL): a vendida continuaria na cobertura, com telemetria e
+    // comando, como se fosse da empresa. O vínculo já recusa o baixado; esta é a
+    // outra ponta, e a recusa leva a Descobertas, onde mora o Desvincular.
+    await assertSemMaquina(tx, id, antes.assetTag, 'dar baixa');
+
     // O DIA da baixa, no calendário de Brasília, como a data da compra: é fato
     // contábil, e "agora" às 22h já seria amanhã em UTC. Não antecede a compra,
     // nem a última devolução do computador, da licença entregue a ele ou do
@@ -133,6 +140,9 @@ export async function retireAsset(id: string, data: RetireAssetData, ator: Ator)
       data: { retiredAt, retiredReasonId: data.retiredReasonId, retiredNotes: data.notes ?? null },
       select: ASSET_WRITE_SELECT,
     });
+
+    // As sugestões de vínculo dele saem da fila junto (CL): o baixado não recebe máquina.
+    await encerrarSugestoesDoAtivo(tx, id);
 
     await recordAudit(tx, {
       entityType: 'Asset',

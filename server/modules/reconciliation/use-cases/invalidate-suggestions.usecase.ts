@@ -26,14 +26,16 @@ const SELECT_PENDENTE = {
   id: true,
   endpoint: { select: { assetId: true } },
   // O OUTRO LADO DO MESMO 1:1. A máquina pode continuar sem ativo e o ATIVO ter
-  // ganhado outra máquina no meio — e aí a proposta também morreu.
-  asset: { select: { endpoint: { select: { id: true } } } },
+  // ganhado outra máquina no meio — e aí a proposta também morreu. A baixa e a
+  // lixeira vêm junto: a relação não passa pelo escopo da lixeira, e o ativo
+  // excluído chega aqui com o `deletedAt`.
+  asset: { select: { retiredAt: true, deletedAt: true, endpoint: { select: { id: true } } } },
 } as const;
 
 type Pendente = {
   id: string;
   endpoint: { assetId: string | null };
-  asset: { endpoint: { id: string } | null } | null;
+  asset: { retiredAt: Date | null; deletedAt: Date | null; endpoint: { id: string } | null } | null;
 };
 
 /**
@@ -56,6 +58,12 @@ function motivoDeInvalidar(pendente: Pendente): string | null {
   // Era literalmente o botão que a fila oferece e o banco nega, do outro lado do
   // 1:1 que a geração passou a respeitar.
   if (pendente.asset?.endpoint) return 'o computador já tem outra máquina';
+
+  // O COMPUTADOR SAIU (CL): o baixado não recebe máquina, e o da lixeira não é
+  // encontrado. A baixa e a lixeira já encerram as pendentes dele na mesma
+  // transação; aqui sai a que a rodada do job propôs enquanto elas gravavam.
+  if (pendente.asset?.retiredAt) return 'o computador teve baixa';
+  if (pendente.asset?.deletedAt) return 'o computador foi para a lixeira';
 
   return null;
 }
@@ -93,6 +101,21 @@ export async function encerrarSugestoesObsoletas(): Promise<number> {
 
   for (const { motivo } of obsoletas) logger.info(`[Fila] Sugestão encerrada: ${motivo}.`);
   return count;
+}
+
+/** Prisma global ou o `tx` da transação de quem chama. */
+type ClienteDaFila = Omit<typeof prisma, `$${string}`>;
+
+/**
+ * Encerra as pendentes de UM computador, na transação da baixa ou da lixeira
+ * (CL), como o vínculo encerra as da máquina. Esperar a rodada do job deixava
+ * por até uma hora, em Sugestões, um Aceitar que o vínculo recusaria.
+ */
+export async function encerrarSugestoesDoAtivo(client: ClienteDaFila, assetId: string): Promise<void> {
+  await client.reconciliationSuggestion.updateMany({
+    where: { assetId, state: 'PENDING' },
+    data: { state: 'SUPERSEDED', resolvedAt: new Date() },
+  });
 }
 
 /**

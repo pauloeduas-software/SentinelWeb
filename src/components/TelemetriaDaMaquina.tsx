@@ -10,6 +10,7 @@ import { Card } from './ui/card';
 import { Table, TableBody, TableCell, TableRow } from './ui/table';
 import { cn } from '../helpers/cn.helper';
 import { FUSO_DO_NEGOCIO, formatarDataHora } from '../helpers/format.helper';
+import { caminhoDaMaquina } from '../helpers/maquina.helper';
 import {
   formatarTaxa, formatarVolume, readSnapshot, usagePercent, volumeDeRede,
 } from '../helpers/metrics.helper';
@@ -229,7 +230,7 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
         vazio=""
         linhas={[{
           id: maquina.id,
-          para: `/descobertas?aba=com&busca=${encodeURIComponent(maquina.hostname)}`,
+          para: caminhoDaMaquina(maquina.hostname),
           nome: maquina.hostname,
           celulas: [formatarDataHora(maquina.lastSeen)],
         }]}

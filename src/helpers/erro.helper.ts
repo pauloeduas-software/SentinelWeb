@@ -2,16 +2,19 @@ import type { ReferenciaDoErro } from '../types/erro.types';
 import type { LinkDaNotificacao } from '../hooks/useNotificacao';
 import { caminhoDoItem } from './estoque.helper';
 import { caminhoDaLicenca } from './licenca.helper';
+import { caminhoDaMaquina } from './maquina.helper';
 
 // OS LINKS DE UMA RECUSA — as `refs` que o servidor manda ao lado da frase
 // (`src/types/erro.types.ts`), como links para a tela de cada uma. O
 // erro da API guarda o corpo como veio (`corpo`); a leitura dele mora aqui.
 
-const CAMINHO: Record<ReferenciaDoErro['tipo'], (id: string) => string> = {
-  ativo: (id) => `/computadores/${id}`,
-  licenca: caminhoDaLicenca,
-  estoque: caminhoDoItem,
-  posto: (id) => `/postos/${id}`,
+// A máquina não tem ficha, e o caminho dela é o nome: cada um recebe a referência inteira.
+const CAMINHO: Record<ReferenciaDoErro['tipo'], (ref: ReferenciaDoErro) => string> = {
+  ativo: ({ id }) => `/computadores/${id}`,
+  licenca: ({ id }) => caminhoDaLicenca(id),
+  estoque: ({ id }) => caminhoDoItem(id),
+  posto: ({ id }) => `/postos/${id}`,
+  maquina: ({ nome }) => caminhoDaMaquina(nome),
 };
 
 /** Só o 404 diz que o registro não existe: um 500 ou a rede caída dizem que não deu para abrir. */
@@ -35,5 +38,5 @@ export function linksDoErro(erro: unknown): LinkDaNotificacao[] | undefined {
   if (!Array.isArray(refs)) return undefined;
   const validas = refs.filter(ehReferencia);
   if (validas.length === 0) return undefined;
-  return validas.map((ref) => ({ rotulo: ref.nome, para: CAMINHO[ref.tipo](ref.id) }));
+  return validas.map((ref) => ({ rotulo: ref.nome, para: CAMINHO[ref.tipo](ref) }));
 }

@@ -3,11 +3,13 @@ import { AppError } from '../../../infra/errors/app-error';
 import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
 import { buildSnapshot } from '../../shared/diff.helper';
-import { ASSET_SELECT, CAMPOS_AUDITADOS_DO_ATIVO, comMotivoPorEscrito } from '../helpers/asset-select.helper';
+import { ASSET_SELECT, CAMPOS_AUDITADOS_DO_ATIVO } from '../helpers/asset-select.helper';
 import {
   comoReferencias, licencasDoAtivo, nomesDasLicencas,
 } from '../../license/use-cases/count-license-checkouts.usecase';
 import { componentesDoAtivo } from '../../stock/use-cases/count-person-stock.usecase';
+import { assertSemMaquina } from '../../reconciliation/use-cases/get-asset-machine.usecase';
+import { encerrarSugestoesDoAtivo } from '../../reconciliation/use-cases/invalidate-suggestions.usecase';
 import { assertSemPosse } from './assert-sem-posse.usecase';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
 
@@ -35,6 +37,22 @@ export async function deleteAsset(id: string, ator: Ator): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await travarAtivoOuFalhar(tx, id);
 
+    // O RETRATO, antes de a linha sair de vista: é ele que diz, na auditoria, o
+    // que foi para a lixeira — o ativo pode ser restaurado ou não, a linha não.
+    // Sem ele, o ativo já está na lixeira: o id inexistente a trava separou, com 404.
+    const antes = await tx.asset.findFirst({ where: { id }, select: ASSET_SELECT });
+    if (!antes) throw new AppError('Este computador já está na lixeira.', 409);
+
+    // O BAIXADO NÃO VAI PARA A LIXEIRA (CL). A lixeira é o cadastro feito por
+    // engano, e a baixa é fato: o computador existiu e saiu do patrimônio.
+    // Excluí-lo o tiraria de Baixados e liberaria a etiqueta e a série, que só
+    // são únicas fora da lixeira — a mesma máquina vendida voltaria como cadastro
+    // novo. A baixa feita por engano se reverte antes. O banco recusa o par
+    // também (`assets_baixado_fora_da_lixeira`).
+    if (antes.retiredAt) {
+      throw new AppError(`${antes.assetTag} teve baixa e não vai para a lixeira. Reverta a baixa antes.`, 409);
+    }
+
     // O 409 PELA POSSE (AL), antes da licença: a devolução é na própria tela do
     // computador. Sem ele, o ativo ia para a lixeira ainda no nome da pessoa —
     // que se desativava, porque a contagem dela não vê a lixeira — e voltava
@@ -59,27 +77,22 @@ export async function deleteAsset(id: string, ator: Ator): Promise<void> {
     // máquina que saiu do inventário, e nenhuma tela a retiraria.
     await componentesDoAtivo(tx, id, 'Este computador', 'excluir');
 
-    // O RETRATO, antes de a linha sair de vista: é ele que diz, na auditoria, o
-    // que foi para a lixeira — o ativo pode ser restaurado ou não, a linha não.
-    // Com a BAIXA junto: excluir um ativo baixado precisa dizer que ele estava.
-    const antes = await tx.asset.findFirst({ where: { id }, select: ASSET_SELECT });
+    // E a MÁQUINA (CL): ela sumiria da tela junto com o computador e seguiria
+    // vinculada a ele, mandando telemetria e recebendo comando. A recusa leva a
+    // Descobertas, onde mora o Desvincular.
+    await assertSemMaquina(tx, id, 'Este computador', 'excluir');
 
-    const { count } = await tx.asset.updateMany({
-      where: { id, deletedAt: null },
-      data: { deletedAt: new Date() },
-    });
+    await tx.asset.update({ where: { id }, data: { deletedAt: new Date() } });
 
-    // Zero linhas aqui só pode ser UMA coisa: o ativo já estava na lixeira. O id
-    // inexistente foi separado pela trava lá em cima, que responde 404 antes de
-    // chegar neste ponto.
-    if (count === 0 || !antes) throw new AppError('Este computador já está na lixeira.', 409);
+    // As sugestões de vínculo dele saem da fila junto (CL): na lixeira, ele não é encontrado.
+    await encerrarSugestoesDoAtivo(tx, id);
 
     await recordAudit(tx, {
       entityType: 'Asset',
       entityId: id,
       entityLabel: antes.assetTag,
       action: 'DELETE',
-      changes: buildSnapshot(comMotivoPorEscrito(antes), [...CAMPOS_AUDITADOS_DO_ATIVO, 'retiredAt', 'retiredReason', 'retiredNotes']),
+      changes: buildSnapshot(antes, CAMPOS_AUDITADOS_DO_ATIVO),
     }, ator);
   });
 }

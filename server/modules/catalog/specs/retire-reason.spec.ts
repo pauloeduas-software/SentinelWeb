@@ -3,8 +3,8 @@ import { createRetireReasonSchema, updateRetireReasonSchema } from '../schemas/c
 import type { CatalogDelegate, CatalogSpec } from './catalog-spec.types';
 
 // O motivo da baixa (BE). A baixa não se edita: quem usa o motivo só o solta ao
-// ser revertido. O computador baixado na lixeira conta porque continua apontando
-// para cá e ainda pode ser restaurado.
+// ser revertido. A lixeira entra na conta, como em todo cadastro, e não tem
+// baixado: a baixa se reverte antes de excluir (CL).
 export const retireReasonSpec: CatalogSpec = {
   slug: 'retire-reasons',
   entityType: 'RetireReason',

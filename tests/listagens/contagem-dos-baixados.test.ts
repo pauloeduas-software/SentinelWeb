@@ -67,13 +67,10 @@ describe('GET /api/assets/stats: os motivos', () => {
     expect(stats.byRetiredReason.reduce((soma, motivo) => soma + motivo.total, 0)).toBe(stats.retired);
   });
 
-  it('o que foi para a lixeira ou teve a baixa revertida sai da conta, como sai da lista', async () => {
+  it('o que teve a baixa revertida sai da conta, como sai da lista', async () => {
     const antes = totalDe(await contagem(), 'Extraviado');
-    const extraviado = await motivoDaBaixa('Extraviado');
-    const apagado = await baixado(extraviado);
-    const revertido = await baixado(extraviado);
+    const revertido = await baixado(await motivoDaBaixa('Extraviado'));
 
-    expect((await api.delete(`/api/assets/${apagado}`)).status).toBe(200);
     expect((await api.post(`/api/assets/${revertido}/unretire`)).status).toBe(200);
 
     expect(totalDe(await contagem(), 'Extraviado')).toBe(antes);

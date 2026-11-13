@@ -148,7 +148,8 @@ export default function ComputadoresPage() {
                             icone: Undo2,
                             onClick: () => void handleReverterSaida(asset),
                           },
-                          podeDecidir && {
+                          // O baixado não vai para a lixeira: reverte-se a baixa antes (CL).
+                          podeDecidir && !motivo && {
                             rotulo: 'Excluir',
                             icone: Trash2,
                             onClick: () => void handleDelete(asset),

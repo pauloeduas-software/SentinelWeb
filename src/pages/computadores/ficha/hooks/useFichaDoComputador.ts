@@ -167,7 +167,7 @@ export function useFichaDoComputador() {
       navigate('/computadores');
       notificar.sucesso(`"${asset.assetTag}" foi para a lixeira.`);
     } catch (falha) {
-      // O 409 do ativo com licença ou componente traz cada um em link.
+      // O 409 do ativo com licença, componente ou máquina traz cada um em link.
       notificar.erro((falha as Error).message, linksDoErro(falha));
     }
   };

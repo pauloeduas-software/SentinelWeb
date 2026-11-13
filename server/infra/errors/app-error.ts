@@ -1,10 +1,11 @@
 /**
  * Um registro que a frase do erro cita e que a tela pode abrir — o computador,
  * a licença ou o item de estoque que precisa voltar, ou o posto que precisa ser
- * encerrado, antes de desativar quem está com ele (AA, AE).
+ * encerrado, antes de desativar quem está com ele (AA, AE); ou a máquina que
+ * precisa ser desvinculada antes da baixa ou da lixeira do computador (CL).
  */
 export interface ReferenciaDoErro {
-  tipo: 'ativo' | 'licenca' | 'estoque' | 'posto';
+  tipo: 'ativo' | 'licenca' | 'estoque' | 'posto' | 'maquina';
   id: string;
   nome: string;
 }
