@@ -21,6 +21,8 @@ const logger = createLogger('workstation.maestro');
 //   a TELA       a listagem com quem está em cada mesa e quantos ativos ela
 //                tem, a ficha de um posto e o histórico dele — leituras próprias,
 //                porque juntam posse, ocupação e estoque, e nenhuma spec expressa isso.
+//                E as opções do seletor, que são as do catálogo com o recorte
+//                `?computador=sem` (`list-workstation-options.usecase.ts`).
 //
 // Os OCUPANTES não estão aqui: são do domínio `occupancy`, que pendura
 // `/api/workstations/:id/occupants`.
@@ -29,7 +31,7 @@ export class WorkstationMaestro {
     const cadastro = createCatalogController(workstationSpec);
 
     server.get('/api/workstations', workstationController.list);
-    server.get('/api/workstations/options', cadastro.options);
+    server.get('/api/workstations/options', workstationController.options);
     server.get('/api/workstations/stats', workstationController.stats);
     server.get('/api/workstations/:id', workstationController.detail);
     server.get('/api/workstations/:id/history', workstationController.history);

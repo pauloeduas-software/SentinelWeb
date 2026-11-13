@@ -5,7 +5,7 @@ import ReferenceSelect from '../../../components/ReferenceSelect';
 import { Campo } from '../../../components/ui/campo';
 import { Input, Textarea } from '../../../components/ui/input';
 import { Segmentado } from '../../../components/ui/segmentado';
-import { hojeNoCampoDeData } from '../../../helpers/format.helper';
+import { hojeNoCampoDeData, paraCampoDeData } from '../../../helpers/format.helper';
 import { useCatalogOptionsQuery } from '../../../queries/catalog.queries';
 import { montarEntrega } from '../helpers/posse.helper';
 import type { CheckoutInput } from '../../../queries/assignment.queries';
@@ -38,6 +38,8 @@ const ABAS: readonly {
   rotulo: string;
   icone: typeof User;
   rota: string;
+  /** O recorte da rota: o posto que já tem computador recusa a entrega, e a lista nem o oferece. */
+  parametros?: Record<string, string>;
   rotuloAlvo: string;
   ajuda?: string;
 }[] = [
@@ -53,8 +55,9 @@ const ABAS: readonly {
     rotulo: 'Posto',
     icone: MapPin,
     rota: 'workstations',
+    parametros: { computador: 'sem' },
     rotuloAlvo: 'Posto',
-    ajuda: 'O posto é o responsável, e quem está nele responde pelo computador.',
+    ajuda: 'Só postos ainda sem computador. O posto é o responsável, e quem está nele responde pelo computador.',
   },
 ];
 
@@ -74,6 +77,9 @@ export default function CheckoutModal({ asset, onClose, onEntregar }: CheckoutMo
   // voltar para registrar a que já aconteceu.
   const hoje = hojeNoCampoDeData();
   const [dia, setDia] = useState(hoje);
+  // E o calendário não oferece o que o servidor recusa: a entrega antes da compra
+  // (AN) e a devolução prevista no passado, que nasceria vencida.
+  const compra = paraCampoDeData(asset.purchaseDate) || undefined;
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -144,6 +150,7 @@ export default function CheckoutModal({ asset, onClose, onEntregar }: CheckoutMo
           // apareça por um quadro com as opções velhas.
           key={abaAtual.tipo}
           rota={abaAtual.rota}
+          parametros={abaAtual.parametros}
           valor={alvoId}
           obrigatorio
           comDetalhe
@@ -163,6 +170,7 @@ export default function CheckoutModal({ asset, onClose, onEntregar }: CheckoutMo
         <Campo rotulo="Devolução prevista" ajuda="Só para empréstimo com prazo.">
           <Input
             type="date"
+            min={hoje}
             value={expectedCheckinAt}
             onChange={(event) => setExpectedCheckinAt(event.target.value)}
           />
@@ -171,7 +179,7 @@ export default function CheckoutModal({ asset, onClose, onEntregar }: CheckoutMo
 
       <Campo rotulo="Data da entrega" obrigatorio>
         <Input
-          type="date" required max={hoje} value={dia}
+          type="date" required min={compra} max={hoje} value={dia}
           onChange={(event) => setDia(event.target.value)}
         />
       </Campo>

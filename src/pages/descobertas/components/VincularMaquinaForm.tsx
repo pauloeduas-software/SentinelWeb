@@ -16,8 +16,8 @@ import type { Endpoint } from '../../../types/endpoint.types';
 //
 // O seletor de ativos pede `?maquina=sem`: ativo que já tem máquina é opção
 // que o `endpoints.assetId @unique` recusaria no clique, então a lista nem
-// oferece. O de posto é o `/workstations/options`, como na entrega da tela de
-// Ativos: só posto recebe entrega.
+// oferece. O de posto pede `?computador=sem` pelo mesmo motivo, como o Entregar
+// de Computadores: o posto que já tem computador recusa a entrega.
 //
 // Não fala HTTP: recebe `onVincular` e mostra o que ele rejeitar. O erro mora
 // AQUI porque é aqui que a pessoa decide — "este posto já tem um ativo"
@@ -87,9 +87,9 @@ export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCa
 
       <Campo
         rotulo="E entregar ao posto"
-        ajuda="Opcional. Com posto, o computador é entregue a ele na mesma operação, e um posto que já tem computador recusa."
+        ajuda="Opcional. Só postos ainda sem computador. Com posto, o computador é entregue a ele na mesma operação."
       >
-        <ReferenceSelect rota="workstations" valor={workstationId} onChange={setWorkstationId} />
+        <ReferenceSelect rota="workstations" parametros={{ computador: 'sem' }} valor={workstationId} onChange={setWorkstationId} />
       </Campo>
     </FormularioLateral>
   );

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { criarAtivo, vigiarConsole } from './helpers';
+import { criarAtivo, criarPosto, vigiarConsole } from './helpers';
 
 // A FICHA DO COMPUTADOR (BR): os campos moram no card, como em toda ficha, e cada aba é
 // o que está com ele. O cadastro já está provado em `tests/invariantes`; aqui é a tela.
@@ -69,4 +69,54 @@ test('o link antigo da aba Detalhes abre a ficha em Responsáveis', async ({ pag
 
   await page.goto(`/computadores/${id}?aba=detalhes`);
   await expect(page.getByRole('tab', { name: /^Responsáveis/ })).toHaveAttribute('aria-selected', 'true');
+});
+
+// O QUE O SERVIDOR SEMPRE RECUSA NÃO É OFERECIDO: o posto que já tem computador, a data
+// antes da compra, o prazo no passado, o status de estoque ao entregue e a etiqueta em
+// branco na edição, que o servidor manteria sem avisar. As recusas estão provadas em
+// `tests/`; aqui é o formulário.
+test('os formulários do computador não oferecem o que o servidor recusa', async ({ page, request }) => {
+  const conferirConsole = vigiarConsole(page);
+  const sufixo = Date.now();
+  const ocupado = `Mesa ocupada ${sufixo}`;
+  const livre = `Mesa livre ${sufixo}`;
+  const entregue = await criarAtivo(request);
+  const entrega = await request.post(`/api/assets/${entregue}/checkout`, {
+    data: { targetType: 'WORKSTATION', targetWorkstationId: await criarPosto(request, ocupado) },
+  });
+  expect(entrega.status()).toBe(201);
+  await criarPosto(request, livre);
+  const id = await criarAtivo(request, { purchaseDate: '2025-06-10' });
+  const painel = page.locator('[data-painel-lateral]');
+
+  await page.goto(`/computadores/${id}`);
+  await page.getByRole('main').getByRole('button', { name: 'Entregar' }).click();
+  await expect(painel.getByLabel('Data da entrega')).toHaveAttribute('min', '2025-06-10');
+  const hoje = await painel.getByLabel('Data da entrega').getAttribute('max');
+  await expect(painel.getByLabel('Devolução prevista')).toHaveAttribute('min', hoje ?? 'sem hoje');
+  await painel.getByRole('button', { name: 'Posto', exact: true }).click();
+  await painel.getByRole('combobox', { name: 'Posto' }).click();
+  await page.getByPlaceholder('Buscar…').fill(String(sufixo));
+  await expect(page.getByRole('option', { name: livre })).toBeVisible();
+  await expect(page.getByRole('option', { name: ocupado })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await painel.getByRole('button', { name: 'Cancelar' }).click();
+
+  await page.getByRole('button', { name: /^Ações de / }).first().click();
+  await page.getByRole('menuitem', { name: 'Dar baixa' }).click();
+  await expect(painel.getByLabel('Data da saída')).toHaveAttribute('min', '2025-06-10');
+  await painel.getByRole('button', { name: 'Cancelar' }).click();
+
+  const { status } = await (await request.get(`/api/assets/${entregue}`)).json() as { status: { name: string } };
+  const disponiveis = await (await request.get('/api/status-labels/options?type=DEPLOYABLE')).json() as { name: string }[];
+  await page.goto(`/computadores/${entregue}`);
+  await page.getByRole('main').getByRole('button', { name: 'Editar', exact: true }).click();
+  await expect(painel.getByLabel('Etiqueta')).toHaveAttribute('required', '');
+  await expect(painel.getByLabel('Etiqueta')).not.toHaveAttribute('placeholder', /automática/);
+  await expect(painel.getByText('Entregue: só volta a disponível pela devolução.')).toBeVisible();
+  await painel.getByRole('combobox', { name: 'Status' }).click();
+  await expect(page.getByRole('option', { name: status.name, exact: true })).toBeVisible();
+  for (const { name } of disponiveis) await expect(page.getByRole('option', { name, exact: true })).toHaveCount(0);
+
+  conferirConsole();
 });

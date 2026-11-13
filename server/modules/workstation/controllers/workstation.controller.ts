@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import type { FastifyRequest } from 'fastify';
 import { parseListQuery } from '../../../infra/http/list-query';
 import { historyQuerySchema } from '../../shared/history.schema';
@@ -8,6 +9,17 @@ import { listWorkstations } from '../use-cases/list-workstations.usecase';
 import { getWorkstation } from '../use-cases/get-workstation.usecase';
 import { getWorkstationHistory } from '../use-cases/workstation-history.usecase';
 import { getWorkstationStats } from '../use-cases/workstation-stats.usecase';
+import { listWorkstationOptions } from '../use-cases/list-workstation-options.usecase';
+
+// O `/options` do posto é o do catálogo com um recorte a mais, e por isso tem
+// schema próprio, como o dos computadores (`asset.controller.ts`).
+const optionsQuerySchema = z.strictObject({
+  q: z.string().trim().max(200, 'busca: máximo de 200 caracteres').optional()
+    .transform((valor) => valor || undefined),
+  // `?computador=sem`: só posto SEM computador entregue. Enum de um valor, como o
+  // `?maquina=` dos computadores: valor errado é 422, não filtro ignorado.
+  computador: z.enum(['sem'], 'computador: use sem').optional(),
+});
 
 // Só HTTP. Sem try/catch: o `parse` do schema rejeita e a rejeição cai no
 // errorHandler, que devolve 422 com o campo que falhou — e o `AppError` do
@@ -32,6 +44,11 @@ export const workstationController = {
 
   async stats() {
     return getWorkstationStats();
+  },
+
+  async options(request: FastifyRequest) {
+    const { q, computador } = optionsQuerySchema.parse(request.query ?? {});
+    return listWorkstationOptions(q, { semComputador: computador === 'sem' });
   },
 
   async detail(request: FastifyRequest) {

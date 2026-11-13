@@ -133,3 +133,8 @@ mostram a senha no painel aberto, e a troca obrigatória de senha, que já leva 
 - **Editar manda o formulário inteiro** com o `updatedAt` lido ao abrir; se a linha mudou, o servidor
   responde 409 (`server/modules/shared/versao.helper.ts`, AF). Menos Usuários: o login grava na linha
   da conta.
+- **O formulário não oferece o que o servidor sempre recusa.** O seletor tira a opção: o status de
+  estoque do computador entregue, o posto que já tem computador (`?computador=sem`) e o computador que
+  já tem máquina (`?maquina=sem`). O calendário limita a data: nada antes da compra, prazo no passado
+  ou dia futuro. E o campo que o servidor não deixa em branco é obrigatório na tela: a etiqueta é
+  automática só no cadastro e no clone.

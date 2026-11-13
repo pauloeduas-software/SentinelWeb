@@ -27,12 +27,15 @@ export async function listCatalogOptions(
   q?: string,
   /** Os valores aceitos no campo do `optionFilter` — um ou vários. */
   filtro?: readonly string[],
+  /** Recorte próprio da rota, além do da spec: só posto sem computador (`?computador=sem`). */
+  recorte?: Record<string, unknown>,
 ): Promise<CatalogOption[]> {
   const rows = await spec.delegate(prisma).findMany({
     where: {
       ...buildCatalogWhere(spec.searchable, q),
       ...spec.optionsWhere,
       ...(filtro && spec.optionFilter ? { [spec.optionFilter.campo]: { in: filtro } } : {}),
+      ...recorte,
     },
     select: { id: true, name: true, ...(spec.optionDetail ? { [spec.optionDetail]: true } : {}) },
     orderBy: { name: 'asc' },
