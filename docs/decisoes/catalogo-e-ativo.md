@@ -734,3 +734,25 @@ antes de excluir. Aqui a lixeira se restaura, e não limpa nada.
 
 **O custo:** a baixa feita por engano pede dois passos até a lixeira, e a máquina de um computador vendido se desvincula
 antes da baixa.
+
+## CN — A etiqueta e a série não se repetem com outra caixa
+
+**Decisão.** A etiqueta e a série do computador continuam únicas fora da lixeira, e agora sem diferença de maiúscula:
+"ABC123" e "abc123" são a mesma série. Antes, só a grafia exata colidia.
+
+- **No banco:** os dois índices parciais passam a ser sobre `lower()`, e viram a invariante 27, com teste próprio.
+- **Na aplicação,** antes do banco, no cadastro, na edição e ao restaurar, para dizer qual campo colidiu: `A etiqueta
+  ATV-00042 já está em uso por outro computador.` e `O número de série 5CD1234XYZ já está em uso por ATV-00042.` A
+  série diz quem a tem, que pode ser um baixado: a baixa não a solta.
+- **O curinga não colide:** o `equals` sem caixa do Prisma vira `ILIKE`, e `_` e `%` vão escapados, como no nome do
+  catálogo.
+
+**Por quê:** o vínculo com o agente já comparava a série em minúsculas. Dois cadastros com a mesma série em caixas
+diferentes passavam os dois, casavam com a mesma máquina, e o vínculo travava por ambiguidade. E nenhum teste provava a
+recusa da repetida.
+
+**As referências:** o Snipe-IT recusa a etiqueta repetida fora da lixeira (`unique_undeleted`), e a série também, com a
+opção de série única ligada; a comparação é a do MySQL, que não diferencia maiúscula.
+
+**O custo:** o computador antigo cadastrado com a mesma série em outra caixa precisa ser corrigido antes de a migração
+subir. No banco de desenvolvimento não havia nenhum.
