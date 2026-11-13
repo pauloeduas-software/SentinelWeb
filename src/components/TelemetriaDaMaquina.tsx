@@ -7,6 +7,7 @@ import { Aviso } from './ui/aviso';
 import { PontoDeStatus } from './ui/badge';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
+import { Dado, GradeDeDados } from './ui/dado';
 import { Table, TableBody, TableCell, TableRow } from './ui/table';
 import { cn } from '../helpers/cn.helper';
 import { FUSO_DO_NEGOCIO, formatarDataHora } from '../helpers/format.helper';
@@ -235,6 +236,16 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
           celulas: [formatarDataHora(maquina.lastSeen)],
         }]}
       />
+
+      {/* O QUE O AGENTE REAL MANDA no handshake (CP). O resto da identidade, como o
+          fabricante e a série da BIOS, ficou de fora porque ele não o coleta (BY). O
+          vazio não aparece (`Dado`). */}
+      <GradeDeDados className="md:grid-cols-4">
+        <Dado rotulo="Sistema operacional">{maquina.osVersion}</Dado>
+        <Dado rotulo="Processador">{maquina.cpuModel}</Dado>
+        <Dado rotulo="Endereço IP">{maquina.localIp && <span className="font-mono">{maquina.localIp}</span>}</Dado>
+        <Dado rotulo="Endereço MAC">{maquina.macAddress && <span className="font-mono">{maquina.macAddress}</span>}</Dado>
+      </GradeDeDados>
 
       <h3 className="text-sm font-medium text-text-primary">Como está agora</h3>
 
