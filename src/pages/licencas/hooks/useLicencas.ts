@@ -34,7 +34,7 @@ export function useLicencas() {
   const licencas = data?.rows ?? [];
 
   usePaginaQueExiste(page, data?.total, setPage);
-  const { data: stats } = useLicenseStatsQuery();
+  const { data: stats } = useLicenseStatsQuery(categoryId);
   const { data: alertas, error: erroDosAlertas } = useLicenseAlertsQuery();
 
   const criar = useCreateLicense();

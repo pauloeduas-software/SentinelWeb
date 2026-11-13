@@ -4,6 +4,7 @@ import { parseListQuery } from '../../../infra/http/list-query';
 import { exigirPermissao } from '../../access/helpers/require-permission';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
+import { statsQuerySchema } from '../../shared/stats.schema';
 import {
   checkinStockSchema, checkoutStockSchema, createStockItemSchema, stockFiltersSchema,
   updateStockItemSchema,
@@ -40,8 +41,9 @@ export const stockController = {
     return listStock(parseListQuery(paginacao), filtros);
   },
 
-  async stats() {
-    return getStockStats();
+  async stats(request: FastifyRequest) {
+    const { categoryId } = statsQuerySchema.parse(request.query ?? {});
+    return getStockStats(categoryId);
   },
 
   async byId(request: FastifyRequest) {

@@ -34,7 +34,7 @@ export interface ParamsDoDetalhe {
 const stockKeys = {
   all: ['stock'] as const,
   list: (params: ParamsDoEstoque) => ['stock', 'list', params] as const,
-  stats: () => ['stock', 'stats'] as const,
+  stats: (categoryId?: string) => ['stock', 'stats', categoryId ?? null] as const,
   item: (id: string) => ['stock', 'item', id] as const,
   entregas: (id: string, params: ParamsDoDetalhe) => ['stock', 'entregas', id, params] as const,
   historico: (id: string, params: ParamsDoDetalhe) => ['stock', 'historico', id, params] as const,
@@ -50,10 +50,14 @@ export function useStockQuery(params: ParamsDoEstoque) {
   });
 }
 
-export function useStockStatsQuery() {
+/** Os cartões contam a lista que abrem: com a categoria escolhida, e sem a busca (CM). */
+export function useStockStatsQuery(categoryId?: string) {
   return useQuery({
-    queryKey: stockKeys.stats(),
-    queryFn: async () => (await apiClient.get<StatusAtivoStats>('/stock/items/stats')).data,
+    queryKey: stockKeys.stats(categoryId),
+    queryFn: async () =>
+      (await apiClient.get<StatusAtivoStats>('/stock/items/stats', { params: categoryId ? { categoryId } : {} })).data,
+    // Sem isto os cartões piscam em "—" a cada troca de categoria, como a tabela.
+    placeholderData: keepPreviousData,
   });
 }
 

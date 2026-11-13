@@ -943,3 +943,27 @@ com ela.
 
 **O que ficou de fora.** As pessoas embaixo do posto não abrem sozinhas: seria um link dentro de uma linha que já abre o
 posto, e quem está no posto fica na aba Responsáveis dele.
+
+## CM — Os cartões seguem a categoria
+
+**Decisão.** Em Computadores, Estoque e Licenças, as três listas com filtro de Categoria, os cartões contam só a
+categoria escolhida. O número é o total da lista que o cartão abre (BT), e essa lista vem recortada pela categoria:
+com Categoria = Notebook, o "Em uso: 40" abria uma lista de 12. As regras de negócio não mudaram.
+
+- **`?categoryId=` no `/stats` das três:** `GET /api/assets/stats`, `GET /api/stock/items/stats` e
+  `GET /api/licenses/stats`, com o recorte da lista. Em Computadores, é a categoria do modelo, e vale também para os
+  cartões e o contador da vista Baixados.
+- **A borda é estrita:** a categoria que não é identificador e o parâmetro que não é dela respondem 422, como na
+  lista.
+- **Os cartões não piscam** ao trocar de categoria: o número anterior fica até o novo chegar, como a tabela.
+
+**Completa:** [BT](#bt--estoque-e-colaboradores-têm-cartões-e-computadores-conta-o-tipo), que fez o número ser o
+total da lista que o cartão abre.
+
+**Por quê:** pela regra da `telas.md`, era bug nas três telas que têm o filtro, e por isso entra também em Estoque e
+Licenças, que estão fechadas.
+
+**O custo:** um parâmetro novo em três rotas, e uma consulta de cartões por categoria escolhida.
+
+**O que ficou de fora.** A busca continua fora do cartão: digitar não muda os números. Postos, Colaboradores e
+Usuários não têm filtro de categoria.

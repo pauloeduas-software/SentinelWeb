@@ -245,7 +245,7 @@ lista é derivada
 | Rota | O que é |
 |---|---|
 | `GET /api/stock/items` | a lista, com os desativados (`?categoryId=`, `?isActive=`, `?q=`; `view` e `emUso` são 422) |
-| `GET /api/stock/items/stats` | os cartões: `{ total, ativos, desativados }` |
+| `GET /api/stock/items/stats` | os cartões: `{ total, ativos, desativados }`, e com `?categoryId=` a categoria escolhida na lista ([CM](../decisoes/plataforma.md#cm--os-cartões-seguem-a-categoria)) |
 | `GET /api/stock/items/:id` | o item, com a conta e `entregasAbertas`, o número da aba Responsáveis |
 | `GET /api/stock/items/:id/checkouts` | quem está com ele, por entrega, com quem está no posto (`responsaveis`) e o computador do componente (`targetAsset`) (`?page=`, `?q=` pelo nome, também de quem está no posto; 15 por página) |
 | `GET /api/stock/items/:id/history` | o histórico, por entrega (`?page=`; 15 por página, sem busca — `?q=` é 422) |

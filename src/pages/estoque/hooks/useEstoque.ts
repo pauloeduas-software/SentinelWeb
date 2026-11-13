@@ -26,7 +26,7 @@ export function useEstoque() {
   );
 
   const { data, isPending, error } = useStockQuery(params);
-  const { data: stats } = useStockStatsQuery();
+  const { data: stats } = useStockStatsQuery(categoryId);
   const itens = data?.rows ?? [];
 
   usePaginaQueExiste(page, data?.total, setPage);

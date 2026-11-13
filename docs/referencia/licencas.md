@@ -244,7 +244,7 @@ da lista é derivada.
 | Rota | O que é |
 |---|---|
 | `GET /api/licenses` | a lista, uma só (`?status=ATIVA\|VENCENDO\|EXPIRADA\|ENCERRADA`, `?categoryId=`, `?q=`; `?view=` e `?emUso=` são 422) — sem a chave |
-| `GET /api/licenses/stats` | os cartões: `{ total, ativas, vencendo, vencidas, encerradas }`, pelo mesmo `where` do filtro de status |
+| `GET /api/licenses/stats` | os cartões: `{ total, ativas, vencendo, vencidas, encerradas }`, pelo mesmo `where` do filtro de status, e com `?categoryId=` a categoria escolhida na lista ([CM](../decisoes/plataforma.md#cm--os-cartões-seguem-a-categoria)) |
 | `GET /api/licenses/alerts` | o alerta: `{ total, contagem, rows }` — a contagem por motivo, e em `rows` só as seis primeiras na ordem de urgência, as que a caixa lista, cada uma com o seu `motivo` |
 | `GET /api/licenses/:id` | o detalhe — a única leitura da licença com as chaves (`keys`, cada uma com `seats` e `emUso`) |
 | `GET /api/licenses/:id/checkouts` | quem está com ela, com a chave de cada entrega (`?page=`, `?q=` pelo nome; 15 por página) |

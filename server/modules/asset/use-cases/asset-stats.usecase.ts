@@ -1,4 +1,4 @@
-import { $Enums } from '@prisma/client';
+import { $Enums, type Prisma } from '@prisma/client';
 import { prisma } from '../../../infra/database/prismaClient';
 import { SEM_BAIXA } from '../helpers/asset-filters.helper';
 
@@ -27,13 +27,18 @@ export interface AssetStats {
  * seria mais um cartão. O tipo são quatro, sempre, e um zerado é informação: "não há nada
  * inutilizável" vale tanto quanto o número.
  */
-export async function getAssetStats(): Promise<AssetStats> {
+export async function getAssetStats(categoryId?: string): Promise<AssetStats> {
+  // A CATEGORIA escolhida na lista, pelo modelo, como na listagem (CM): o cartão
+  // conta a lista que ele abre.
+  const daCategoria: Prisma.AssetWhereInput = categoryId ? { model: { categoryId } } : {};
+
   // `SEM_BAIXA`, porque a listagem padrão o exclui: o contador do cabeçalho é o
   // cabeçalho DAQUELA lista, e contar aqui o notebook vendido faria o badge
   // prometer uma linha que a tabela não mostra.
-  const porTipo = (type: $Enums.StatusLabelType) => prisma.asset.count({ where: { ...SEM_BAIXA, status: { type } } });
+  const porTipo = (type: $Enums.StatusLabelType) =>
+    prisma.asset.count({ where: { ...SEM_BAIXA, ...daCategoria, status: { type } } });
 
-  const baixados = { retiredAt: { not: null } };
+  const baixados: Prisma.AssetWhereInput = { retiredAt: { not: null }, ...daCategoria };
 
   const [DEPLOYABLE, IN_USE, PENDING, UNDEPLOYABLE, retired, grupos, motivos] = await Promise.all([
     porTipo('DEPLOYABLE'),
