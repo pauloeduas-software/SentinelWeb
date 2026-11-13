@@ -730,11 +730,13 @@ ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_targetAssetId_fkey
 CREATE UNIQUE INDEX "people_email_unique_undeleted"
   ON "people"("email") WHERE "deletedAt" IS NULL;
 
+-- A etiqueta e a série, sem diferença de maiúscula (CN): "ABC123" e "abc123" são
+-- a mesma máquina, e o vínculo com o agente compara a série em minúsculas.
 CREATE UNIQUE INDEX "assets_assetTag_unique_undeleted"
-  ON "assets"("assetTag") WHERE "deletedAt" IS NULL;
+  ON "assets"(lower("assetTag")) WHERE "deletedAt" IS NULL;
 
 CREATE UNIQUE INDEX "assets_serial_unique_undeleted"
-  ON "assets"("serial") WHERE "deletedAt" IS NULL;
+  ON "assets"(lower("serial")) WHERE "deletedAt" IS NULL;
 
 -- ── INVARIANTE 26: O BAIXADO NÃO VAI PARA A LIXEIRA (CL) ──────────────────
 --

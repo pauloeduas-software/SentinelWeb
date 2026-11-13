@@ -23,7 +23,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 
 ---
 
-## As dezessete
+## As dezoito
 
 > **A numeração salta de propósito.** Invariante que saiu não volta, e as que ficaram não se
 > renumeram: o código cita os números, e um número que muda de significado é pior que um número
@@ -48,6 +48,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 24 | A chave da entrega é uma das chaves da licença; nenhuma chave vai para mais entregas abertas do que cobre; e as chaves cobrem no máximo o que foi comprado | **banco** — a FK composta (chave, licença) e os `CHECK`s da chave. A conta de cada chave e a soma contra o comprado são da **aplicação**, com a licença travada | 409 `Esta chave já está em outra entrega aberta de "Office 2024". Escolha outra.` / 422 `As chaves cobrem 12, mais do que 10 compradas em "Office 2024". …` |
 | 25 | A forma da entrega de estoque, e o que está em uso nunca passa do total | **banco** — o CHECK do total (`stock_items_qty_nao_negativa`), os cinco `CHECK` da linha e a FK `Restrict` para o item. A conta contra o total é da **aplicação**, com a linha do item travada | 409 `Sem unidade disponível de "Mouse USB": 10 no total, 10 em uso. Devolva uma unidade ou aumente o total.` / `Não é possível reduzir "Mouse USB" para 1: 2 estão em uso. Devolva para liberar.` |
 | 26 | O baixado não vai para a lixeira | **banco** — o `CHECK` `assets_baixado_fora_da_lixeira`; a **aplicação** confere antes, com o ativo travado (`delete-asset`) | 409 `ATV-00042 teve baixa e não vai para a lixeira. Reverta a baixa antes.` |
+| 27 | A etiqueta e a série são únicas fora da lixeira, sem diferença de maiúscula | **banco** — dois índices únicos parciais sobre `lower()`; a **aplicação** confere antes, para a frase (`assert-unique-asset.usecase.ts`) | 409 `O número de série 5CD1234XYZ já está em uso por ATV-00042.` |
 
 ---
 
@@ -625,6 +626,38 @@ tela nem mostra o Excluir no `⋯` do baixado.
 > **Provado em** `tests/invariantes/baixa-e-lixeira.test.ts`: o 409 da API, os dois caminhos
 > que continuam (reverter e excluir; restaurar e dar baixa) e o `UPDATE` cru que leva o erro do
 > `CHECK`.
+
+---
+
+### 27 — `assets_assetTag_unique_undeleted` e `assets_serial_unique_undeleted`
+
+```sql
+CREATE UNIQUE INDEX "assets_assetTag_unique_undeleted"
+  ON "assets"(lower("assetTag")) WHERE "deletedAt" IS NULL;
+
+CREATE UNIQUE INDEX "assets_serial_unique_undeleted"
+  ON "assets"(lower("serial")) WHERE "deletedAt" IS NULL;
+```
+
+A etiqueta é como a empresa acha o computador, e a série é como o agente o acha. Repetidas,
+as duas apontam para dois cadastros: a busca traz os dois, e o vínculo com a máquina fica sem
+dono.
+
+**Sem diferença de maiúscula** ([CN](../decisoes/catalogo-e-ativo.md#cn--a-etiqueta-e-a-série-não-se-repetem-com-outra-caixa)): "ABC123" e "abc123" são a mesma máquina, e
+o vínculo compara a série em minúsculas (`normalizeSerial`). Com a comparação exata, os dois
+cadastros passavam, casavam com a mesma máquina e o vínculo travava por ambiguidade.
+
+**Fora da lixeira, e o baixado conta:** a lixeira é cadastro errado e solta as duas, e restaurar
+confere de novo. O baixado continua com elas, porque não vai para a lixeira (26).
+
+**No banco, com a frase na aplicação:** é unicidade de uma tabela só, e precisa valer contra a
+corrida de dois cadastros. A aplicação confere antes, no cadastro, na edição e ao restaurar,
+para dizer qual campo e com quem está; o `equals` sem caixa do Prisma é `ILIKE`, e os curingas
+vão escapados.
+
+> **Provado em** `tests/invariantes/etiqueta-e-serie.test.ts`: a repetida no cadastro, na edição
+> e ao restaurar, com a mesma e com outra caixa; o baixado que segura a série; a lixeira que a
+> solta; o curinga que não colide; e o `UPDATE` cru que leva o erro do índice.
 
 ---
 

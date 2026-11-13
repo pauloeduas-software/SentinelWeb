@@ -563,7 +563,8 @@ model Asset {
   // Unicidade de `assetTag` e `serial` é índice PARCIAL (`WHERE "deletedAt" IS
   // NULL`), criado à mão na migration — NÃO `@unique`. Com unique comum, um
   // ativo na lixeira travaria para sempre o recadastro da mesma etiqueta. É o
-  // `unique_undeleted` do Snipe-IT.
+  // `unique_undeleted` do Snipe-IT, e sobre `lower()`: sem diferença de
+  // maiúscula (CN).
   assetTag String
   serial   String?
 
