@@ -1086,3 +1086,24 @@ página.
 
 **O que ficou de fora.** A dica da aba Computador vazia, que a CE manteve. O posto só com estoque e sem ninguém continua
 Sem uso, e não Posto vago: vago é ter computador sem ninguém. E o e-mail continua na ficha do colaborador.
+
+## CQ — A devolução atrasada aparece na ficha do computador
+
+**Decisão.** Na aba Responsáveis do computador, a entrega cuja devolução prevista já passou diz o atraso em vermelho,
+ao lado do prazo: `desde 01/11/2026 · devolução prevista para 10/11/2026 · atrasada há 3 dias`. As regras de negócio não
+mudaram.
+
+- **A conta é do servidor,** no dia de Brasília: `GET /api/assets/:id` traz `diasParaDevolver`, negativo quando
+  atrasou, pela mesma conta do vencimento da licença. O dia do prazo ainda não é atraso: "devolve hoje" é prazo
+  legítimo.
+- **Só na tela do assunto,** como o prazo da licença: nenhuma lista, cartão, filtro ou aviso fora da ficha.
+
+**Por quê:** a devolução prevista continuava "prevista" depois de passar, e nada na tela distinguia o empréstimo
+vencido do que ainda está no prazo. O Snipe-IT separa o que tem devolução atrasada numa vista própria, e o Shelf.nu
+dá à reserva vencida o status Atrasada.
+
+**O custo:** um número a mais na ficha do computador.
+
+**O que ficou de fora:** o lembrete por e-mail e a lista de atrasados, que saíram com o correio e os relatórios
+([O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai)). A coluna Devolução
+prevista das fichas do colaborador e do posto continua só com a data: as duas telas estão fechadas.

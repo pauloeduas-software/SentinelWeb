@@ -123,6 +123,7 @@ function FichaDoComputador() {
             />
             <ResponsaveisTab
               posse={responsaveis.visiveis[0]}
+              diasParaDevolver={asset.diasParaDevolver}
               vazio={responsaveis.buscaAdiada ? `Nenhum responsável com "${responsaveis.buscaAdiada}" neste computador.` : undefined}
               para={caminhoDoResponsavel}
               onDevolver={abrirDevolucao}

@@ -29,6 +29,8 @@ type AssetDetail = NonNullable<Awaited<ReturnType<typeof buscarAtivo>>> & {
   postoAtual: PostoAtual | null;
   /** Quantos dias faltam para a garantia acabar, negativo depois (CO). A tela não recalcula: o "hoje" é o de Brasília. */
   diasDeGarantia: number | null;
+  /** Quantos dias faltam para a devolução prevista, negativo quando atrasou (CQ). Pela mesma conta. */
+  diasParaDevolver: number | null;
 };
 
 /**
@@ -51,6 +53,10 @@ export async function findAssetById(id: string, podeVerCusto: boolean, podeVerLi
   const [posse, postos] = await Promise.all([resolverResponsaveis(prisma, id), listCurrentWorkstations([id])]);
 
   return {
-    ...ativo, posse, postoAtual: postos.get(id) ?? null, diasDeGarantia: diasParaVencer(ativo.warrantyExpiresAt),
+    ...ativo,
+    posse,
+    postoAtual: postos.get(id) ?? null,
+    diasDeGarantia: diasParaVencer(ativo.warrantyExpiresAt),
+    diasParaDevolver: diasParaVencer(posse.expectedCheckinAt),
   };
 }

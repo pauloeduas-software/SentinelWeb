@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { criarAtivo, criarPosto, vigiarConsole } from './helpers';
+import { criarAtivo, criarColaborador, criarPosto, vigiarConsole } from './helpers';
+import { prisma } from '../../server/infra/database/prismaClient';
 
 // A FICHA DO COMPUTADOR (BR): os campos moram no card, como em toda ficha, e cada aba é
 // o que está com ele. O cadastro já está provado em `tests/invariantes`; aqui é a tela.
@@ -147,6 +148,34 @@ test('a garantia vai do formulário ao card, com o prazo', async ({ page, reques
   expect((await request.post(`/api/assets/${id}/retire`, { data: { retiredReasonId } })).ok()).toBe(true);
   await page.reload();
   await expect(garantia).toHaveText('10/06/2030');
+
+  conferirConsole();
+});
+
+// A DEVOLUÇÃO ATRASADA (CQ): a aba Responsáveis diz o atraso em vermelho, ao lado do
+// prazo. A entrega não aceita prazo no passado, então o prazo é mexido no banco.
+test('a devolução atrasada aparece na aba Responsáveis', async ({ page, request }) => {
+  const conferirConsole = vigiarConsole(page);
+  const id = await criarAtivo(request);
+  const pessoa = await criarColaborador(request, `Laura Atrasada ${Date.now()}`);
+  const entrega = await request.post(`/api/assets/${id}/checkout`, { data: { targetType: 'PERSON', targetPersonId: pessoa } });
+  expect(entrega.status()).toBe(201);
+  const aba = page.getByRole('main').getByRole('tabpanel');
+  const prazo = (dia: string) => prisma.assignment.updateMany({
+    where: { assetId: id, checkinAt: null }, data: { expectedCheckinAt: new Date(`${dia}T00:00:00.000Z`) },
+  });
+
+  await prazo('2099-01-10');
+  await page.goto(`/computadores/${id}`);
+  await expect(aba.getByText(/devolução prevista para 10\/01\/2099/)).toBeVisible();
+  await expect(aba.getByText(/atrasada/)).toHaveCount(0);
+
+  const passado = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  await prazo(passado);
+  const { diasParaDevolver } = await (await request.get(`/api/assets/${id}`)).json() as { diasParaDevolver: number };
+  await page.reload();
+  await expect(aba.getByText(`devolução prevista para ${passado.split('-').reverse().join('/')}`)).toBeVisible();
+  await expect(aba.getByText(`atrasada há ${-diasParaDevolver} dias`)).toHaveClass(/text-status-danger/);
 
   conferirConsole();
 });
