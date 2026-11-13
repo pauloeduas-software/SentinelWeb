@@ -25,6 +25,7 @@ export const ASSET_SELECT = {
   purchaseDate: true,
   // Decimal: sai no JSON como STRING.
   purchaseCost: true,
+  warrantyExpiresAt: true,
 
   // BAIXA. Sai na resposta porque a tela precisa mostrar o selo
   // "baixado" na linha e na ficha — e porque, sem ele, a
@@ -106,7 +107,7 @@ export function semCusto<T extends Record<string, unknown>>(select: T): Omit<T, 
 export const CAMPOS_AUDITADOS_DO_ATIVO = [
   'assetTag', 'serial', 'name', 'notes',
   'statusId', 'modelId', 'locationId',
-  'orderNumber', 'purchaseDate', 'purchaseCost',
+  'orderNumber', 'purchaseDate', 'purchaseCost', 'warrantyExpiresAt',
 ] as const;
 
 /**

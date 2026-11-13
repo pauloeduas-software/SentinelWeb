@@ -245,6 +245,7 @@ CREATE TABLE "assets" (
     "orderNumber" TEXT,
     "purchaseDate" TIMESTAMP(3),
     "purchaseCost" DECIMAL(12,2),
+    "warrantyExpiresAt" TIMESTAMP(3),
     "retiredAt" TIMESTAMP(3),
     "retiredReasonId" UUID,
     "retiredNotes" TEXT,
@@ -746,6 +747,14 @@ CREATE UNIQUE INDEX "assets_serial_unique_undeleted"
 -- lixeira. A baixa feita por engano se reverte antes de excluir.
 ALTER TABLE "assets" ADD CONSTRAINT "assets_baixado_fora_da_lixeira" CHECK (
   "retiredAt" IS NULL OR "deletedAt" IS NULL
+);
+
+-- ── A GARANTIA NÃO ANTECEDE A COMPRA (CO) ─────────────────────────────────
+--
+-- Como o vencimento da licença: só se compara com as duas preenchidas, e a
+-- garantia pode ser futura.
+ALTER TABLE "assets" ADD CONSTRAINT "assets_garantia_nao_antecede_compra" CHECK (
+  "purchaseDate" IS NULL OR "warrantyExpiresAt" IS NULL OR "warrantyExpiresAt" >= "purchaseDate"
 );
 
 -- ── INVARIANTE 1: UMA POSSE ABERTA POR ATIVO (D14) ────────────────────────

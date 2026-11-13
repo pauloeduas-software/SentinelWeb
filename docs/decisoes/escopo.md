@@ -511,6 +511,8 @@ quando a coluna governa acesso, é uma escrita em massa que se tranca para fora.
 ## O — O segundo de-escopo: o que a primeira rodada manteve, ou não enxergou, sai
 
 > **Superada em parte pelo commit `ff34364`:** `parentId` e `managerId` saem: a lista é plana, e o nome único diz onde o lugar fica.
+>
+> **E pela [CO](./catalogo-e-ativo.md#co--a-garantia-do-computador-volta-só-a-data):** a data da garantia volta ao computador; os meses, o fim de vida e o cálculo continuam fora.
 
 **Decidido:** mais uma leva de corte, pelo MESMO critério do D143, aplicado sem a folga que a
 primeira rodada deu a alguns itens. Saem, numa leva de 49 arquivos (331 testes passando depois

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import {
-  diaNaoFuturo, nomeObrigatorio, textoOpcional,
+  dataOpcional, diaNaoFuturo, nomeObrigatorio, textoOpcional,
   uuidObrigatorio, uuidOpcional, valorMonetarioOpcional, versaoLida
 } from '../../shared/fields.schema';
 
@@ -47,6 +47,8 @@ const camposComuns = {
   orderNumber: textoOpcional('número do pedido', 100),
   purchaseDate: diaNaoFuturo('data de compra'),
   purchaseCost: valorMonetarioOpcional('valor de compra'),
+  // Pode ser futura, como o vencimento da licença: é um prazo (AN, CO).
+  warrantyExpiresAt: dataOpcional('fim da garantia'),
 };
 
 export const createAssetSchema = z.strictObject({

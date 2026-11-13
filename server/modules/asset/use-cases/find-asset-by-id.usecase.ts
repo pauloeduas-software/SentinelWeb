@@ -2,6 +2,7 @@ import { prisma } from '../../../infra/database/prismaClient';
 import { INCLUINDO_LIXEIRA } from '../../../infra/database/soft-delete.extension';
 import { AppError } from '../../../infra/errors/app-error';
 import { resolverResponsaveis, type PosseResolvida } from '../../assignment/use-cases/resolve-responsibles.usecase';
+import { diasParaVencer } from '../../license/helpers/license-status.helper';
 import { assetDetailSelect, ASSET_SELECT } from '../helpers/asset-select.helper';
 import { listCurrentWorkstations, type PostoAtual } from './list-current-workstations.usecase';
 
@@ -26,6 +27,8 @@ function buscarAtivo(id: string, podeVerCusto: boolean, podeVerLixeira: boolean)
 type AssetDetail = NonNullable<Awaited<ReturnType<typeof buscarAtivo>>> & {
   posse: PosseResolvida;
   postoAtual: PostoAtual | null;
+  /** Quantos dias faltam para a garantia acabar, negativo depois (CO). A tela não recalcula: o "hoje" é o de Brasília. */
+  diasDeGarantia: number | null;
 };
 
 /**
@@ -47,5 +50,7 @@ export async function findAssetById(id: string, podeVerCusto: boolean, podeVerLi
 
   const [posse, postos] = await Promise.all([resolverResponsaveis(prisma, id), listCurrentWorkstations([id])]);
 
-  return { ...ativo, posse, postoAtual: postos.get(id) ?? null };
+  return {
+    ...ativo, posse, postoAtual: postos.get(id) ?? null, diasDeGarantia: diasParaVencer(ativo.warrantyExpiresAt),
+  };
 }

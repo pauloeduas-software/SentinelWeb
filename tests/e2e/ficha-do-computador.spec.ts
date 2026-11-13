@@ -120,3 +120,33 @@ test('os formulários do computador não oferecem o que o servidor recusa', asyn
 
   conferirConsole();
 });
+
+// A GARANTIA (CO): o formulário não oferece dia antes da compra, e o card diz o prazo na
+// frase do vencimento da licença, com os dias que o servidor contou. O baixado mostra só
+// a data: a garantia dele não corre mais.
+test('a garantia vai do formulário ao card, com o prazo', async ({ page, request }) => {
+  const conferirConsole = vigiarConsole(page);
+  const id = await criarAtivo(request, { purchaseDate: '2025-06-10' });
+  const painel = page.locator('[data-painel-lateral]');
+  const garantia = page.getByRole('term').filter({ hasText: /^Garantia até$/ }).locator('xpath=following-sibling::dd');
+
+  await page.goto(`/computadores/${id}`);
+  await expect(page.getByRole('term').filter({ hasText: /^Data da compra$/ })).toBeVisible();
+  await expect(garantia).toHaveCount(0);
+  await page.getByRole('main').getByRole('button', { name: 'Editar', exact: true }).click();
+  await expect(painel.getByLabel('Garantia até')).toHaveAttribute('min', '2025-06-10');
+  await painel.getByLabel('Garantia até').fill('2030-06-10');
+  await painel.getByRole('button', { name: /^Salvar/ }).click();
+  await expect(painel).toHaveCount(0);
+
+  const { diasDeGarantia } = await (await request.get(`/api/assets/${id}`)).json() as { diasDeGarantia: number };
+  await expect(garantia).toHaveText(`10/06/2030 · vence em ${diasDeGarantia} dias`);
+
+  const criado = await request.post('/api/retire-reasons', { data: { name: `Vendido ${Date.now()}` } });
+  const { id: retiredReasonId } = await criado.json() as { id: string };
+  expect((await request.post(`/api/assets/${id}/retire`, { data: { retiredReasonId } })).ok()).toBe(true);
+  await page.reload();
+  await expect(garantia).toHaveText('10/06/2030');
+
+  conferirConsole();
+});

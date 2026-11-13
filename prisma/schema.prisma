@@ -582,6 +582,9 @@ model Asset {
   purchaseDate DateTime?
   // Decimal, nunca Float. Sai no JSON como string.
   purchaseCost Decimal?  @db.Decimal(12, 2)
+  // O último dia da garantia do fabricante (CO). Pode ser futuro, e não antecede
+  // a compra: o CHECK `assets_garantia_nao_antecede_compra`, à mão na migration.
+  warrantyExpiresAt DateTime?
 
   // BAIXA — o ativo saiu do parque, e por quê.
   //
