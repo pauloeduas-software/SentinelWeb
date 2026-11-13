@@ -14,11 +14,16 @@ import type { PosseResolvida } from '../../../../types/posse.types';
 // O DEVOLVER MORA NESTA LINHA (BQ), e abre o painel: a devolução do computador pede
 // o status de volta e as notas, que não cabem nela (BN). A linha abre a ficha do
 // responsável, o colaborador ou o posto, como em Estoque e Licenças (CJ).
+//
+// A DEVOLUÇÃO ATRASADA (CQ) aparece aqui, em vermelho, ao lado do prazo: é a tela do
+// assunto, sem lista nem aviso fora dela. O dia do prazo ainda não é atraso.
 
 const ICONE_DO_ALVO = { PERSON: User, WORKSTATION: MapPin } as const;
 
 interface ResponsaveisTabProps {
   posse: PosseResolvida | undefined;
+  /** Os dias até a devolução prevista, contados pelo servidor; negativo, ela atrasou. */
+  diasParaDevolver?: number | null;
   /** A frase da lista vazia quando ela é vazia por causa da busca. */
   vazio?: string;
   /** A ficha do responsável, que a linha abre; nula, a linha não clica. */
@@ -26,7 +31,7 @@ interface ResponsaveisTabProps {
   onDevolver: () => void;
 }
 
-export default function ResponsaveisTab({ posse, vazio, para, onDevolver }: ResponsaveisTabProps) {
+export default function ResponsaveisTab({ posse, diasParaDevolver, vazio, para, onDevolver }: ResponsaveisTabProps) {
   if (!posse?.targetType) {
     return <CartaoVazio icone={Users} carregando={false} erro={null} frase={vazio ?? 'Nenhum responsável por este computador agora.'} />;
   }
@@ -38,6 +43,7 @@ export default function ResponsaveisTab({ posse, vazio, para, onDevolver }: Resp
     posse.checkoutAt && `desde ${formatarDiaDoInstante(posse.checkoutAt)}`,
     posse.expectedCheckinAt && `devolução prevista para ${formatarData(posse.expectedCheckinAt)}`,
   ].filter(Boolean).join(' · ');
+  const atraso = diasParaDevolver != null && diasParaDevolver < 0 ? -diasParaDevolver : null;
 
   return (
     <ul className="divide-y divide-border-sutil overflow-hidden rounded-lg border border-border-sutil text-sm">
@@ -52,6 +58,7 @@ export default function ResponsaveisTab({ posse, vazio, para, onDevolver }: Resp
           ))}
           <div className="text-xs text-text-tertiary">
             {periodo}
+            {atraso && <span className="text-status-danger"> · atrasada há {atraso} {atraso === 1 ? 'dia' : 'dias'}</span>}
             {posse.checkoutNotes && <span className="text-text-secondary"> · {posse.checkoutNotes}</span>}
           </div>
         </div>

@@ -79,6 +79,11 @@ export interface Asset {
    * conta é do servidor: o "hoje" do navegador pode não ser o de Brasília.
    */
   diasDeGarantia?: number | null;
+  /**
+   * Quantos dias faltam para a devolução prevista da entrega aberta, negativo quando ela
+   * atrasou (CQ). Só a ficha traz, pela mesma conta do servidor.
+   */
+  diasParaDevolver?: number | null;
 
   /**
    * BAIXA — o ativo saiu do PATRIMÔNIO.
