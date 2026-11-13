@@ -141,7 +141,7 @@ está na mão de alguém.
 | Tipo do status | Sem posse aberta — *estoque* | Com posse aberta — *entregue* |
 |---|---|---|
 | `DEPLOYABLE` | ✅ o caso normal do estoque | ❌ **proibido** — não está no estoque |
-| `IN_USE` | ✅ posto vago: sinal operacional, candidato à devolução | ✅ o caso normal |
+| `IN_USE` | ✅ em uso sem responsável: o computador guardado na sala de reunião ([Y](../decisoes/posse.md#y--o-posto-sai-de-location-localização-guarda-posto-recebe)) | ✅ o caso normal |
 | `PENDING` | ✅ aguardando, em trânsito | ✅ foi ao conserto e **volta para a mesma pessoa** |
 | `UNDEPLOYABLE` | ✅ quebrado, no depósito | ✅ notebook quebrado **ainda na gaveta dela** |
 

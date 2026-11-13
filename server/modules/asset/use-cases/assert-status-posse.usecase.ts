@@ -39,7 +39,9 @@ const TIPOS_PROIBIDOS_COM_POSSE: Partial<Record<$Enums.StatusLabelType, string>>
  *   gaveta dela, aguardando descarte. Continua sendo responsabilidade de
  *   alguém, e é exatamente isso que o relatório precisa mostrar.
  * - `IN_USE` COM responsável é o caso normal, e `IN_USE` SEM responsável é o
- *   sinal operacional (ver docs/referencia/modelo-de-posse.md, "posto vago").
+ *   uso sem ninguém que responda: o computador guardado na sala de reunião
+ *   (decisão Y). O posto vago é outra coisa: a posse está aberta, para o posto,
+ *   e ninguém o ocupa.
  *
  * BLOQUEIA, NUNCA LIMPA SOZINHO. A alternativa "tudo bem, fecho a assignment
  * junto" é perda de dado silenciosa: quem mandou o status para `DEPLOYABLE`
