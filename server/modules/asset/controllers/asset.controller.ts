@@ -4,6 +4,7 @@ import { parseListQuery } from '../../../infra/http/list-query';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { historyQuerySchema } from '../../shared/history.schema';
+import { statsQuerySchema } from '../../shared/stats.schema';
 import { separarFiltrosDeAtivo } from '../helpers/asset-filters.helper';
 import { custoSoDoSupervisor } from '../helpers/asset-select.helper';
 import { createAssetSchema, retireAssetSchema, updateAssetSchema } from '../schemas/asset.schema';
@@ -71,8 +72,9 @@ export const assetController = {
     return getAssetHistory(id, limit, page, temCargo(request, 'SUPERVISOR'));
   },
 
-  async stats() {
-    return getAssetStats();
+  async stats(request: FastifyRequest) {
+    const { categoryId } = statsQuerySchema.parse(request.query ?? {});
+    return getAssetStats(categoryId);
   },
 
   async options(request: FastifyRequest) {

@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { SEM_PARAMETROS } from '../../infra/http/sem-parametros';
+import { statsQuerySchema } from '../shared/stats.schema';
 import { createLogger } from '../../infra/logger/logger';
 import { WRITE_RATE_LIMIT } from '../../infra/http/write-rate-limit';
 import { licenseController } from './controllers/license.controller';
@@ -29,8 +30,8 @@ export class LicenseMaestro {
 
     // OS CARTÕES DA TELA. ANTES de `/:id`, como o alerta.
     server.get('/api/licenses/stats', async (request: FastifyRequest) => {
-      SEM_PARAMETROS.parse(request.query ?? {});
-      return getLicenseStats();
+      const { categoryId } = statsQuerySchema.parse(request.query ?? {});
+      return getLicenseStats(categoryId);
     });
 
     // ── A DEVOLUÇÃO E A CHAVE DA ENTREGA ───────────────────────────────────

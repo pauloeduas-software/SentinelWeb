@@ -39,7 +39,7 @@ export function useAssets() {
   );
 
   const { data, isPending, error } = useAssetsQuery(params);
-  const { data: stats } = useAssetStatsQuery();
+  const { data: stats } = useAssetStatsQuery(categoryId);
   const criar = useCreateAsset();
   const editar = useUpdateAsset();
   const excluir = useDeleteAsset();

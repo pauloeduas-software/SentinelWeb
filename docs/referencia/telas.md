@@ -111,8 +111,8 @@ mostram a senha no painel aberto, e a troca obrigatória de senha, que já leva 
   `PessoaNaLinha`, com o nome da lista: Usuário, Colaborador. O card da ficha do colaborador leva o mesmo avatar, e as
   outras fichas, o `IconeDaFicha`.
 - **O cartão conta linhas da lista, e cada linha cai em um só (BT, CA).** Tipo de status em Computadores, status em Postos
-  e Licenças, Ativos e Desativados em Estoque, Colaboradores e Usuários. O número é o total da lista que ele abre, sem a
-  busca.
+  e Licenças, Ativos e Desativados em Estoque, Colaboradores e Usuários. O número é o total da lista que ele abre: segue a
+  categoria escolhida, e não a busca ([CM](../decisoes/plataforma.md#cm--os-cartões-seguem-a-categoria)).
 - **As colunas não se mexem.** `Table` é `table-fixed`: filtrar, paginar ou esvaziar a lista não
   desloca nada. A largura vem do `TableHead`, o `⋯` é `TableHeadAcoes` e o aviso de lista vazia é
   `TableVazia`, debaixo do cabeçalho (BA).

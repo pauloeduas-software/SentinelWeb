@@ -23,7 +23,7 @@ export const assetKeys = {
   // listagem, sem cada mutação precisar saber que telas estão abertas.
   detail: (id: string) => ['assets', 'detail', id] as const,
   history: (id: string, params: ParamsDoHistorico) => ['assets', 'history', id, params] as const,
-  stats: () => ['assets', 'stats'] as const,
+  stats: (categoryId?: string) => ['assets', 'stats', categoryId ?? null] as const,
   nextTag: () => ['assets', 'next-tag'] as const,
 };
 
@@ -63,10 +63,14 @@ export function useAssetHistoryQuery(id: string | undefined, params: ParamsDoHis
   });
 }
 
-export function useAssetStatsQuery() {
+/** Os cartões contam a lista que abrem: com a categoria escolhida, e sem a busca (CM). */
+export function useAssetStatsQuery(categoryId?: string) {
   return useQuery({
-    queryKey: assetKeys.stats(),
-    queryFn: async () => (await apiClient.get<AssetStats>('/assets/stats')).data,
+    queryKey: assetKeys.stats(categoryId),
+    queryFn: async () =>
+      (await apiClient.get<AssetStats>('/assets/stats', { params: categoryId ? { categoryId } : {} })).data,
+    // Sem isto os cartões piscam em "—" a cada troca de categoria, como a tabela.
+    placeholderData: keepPreviousData,
   });
 }
 
