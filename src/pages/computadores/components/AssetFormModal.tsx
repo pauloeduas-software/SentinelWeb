@@ -59,6 +59,7 @@ function valoresIniciais(asset: Asset | null, clonar: boolean, statusPadraoId: s
     orderNumber: asset?.orderNumber ?? '',
     purchaseDate: paraCampoDeData(asset?.purchaseDate),
     purchaseCost: asset?.purchaseCost ?? '',
+    warrantyExpiresAt: paraCampoDeData(asset?.warrantyExpiresAt),
     notes: asset?.notes ?? '',
   };
 }
@@ -191,6 +192,13 @@ export default function AssetFormModal({
         </Campo>
         <Campo rotulo="Data da compra">
           <Input type="date" max={hojeNoCampoDeData()} value={valores.purchaseDate} onChange={(e) => definir('purchaseDate', e.target.value)} />
+        </Campo>
+        {/* Um prazo: pode ser futuro, e não antecede a compra (CO). */}
+        <Campo rotulo="Garantia até">
+          <Input
+            type="date" min={valores.purchaseDate || undefined} value={valores.warrantyExpiresAt}
+            onChange={(e) => definir('warrantyExpiresAt', e.target.value)}
+          />
         </Campo>
         {veCusto && (
           <Campo rotulo="Valor da compra">

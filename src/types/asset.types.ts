@@ -72,6 +72,13 @@ export interface Asset {
   purchaseDate: string | null;
   /** Ausente para quem não é `SUPERVISOR`: o servidor nem lê a coluna (D77). */
   purchaseCost?: string | null;
+  /** O último dia da garantia do fabricante (CO). */
+  warrantyExpiresAt: string | null;
+  /**
+   * Quantos dias faltam para a garantia acabar, negativo depois. Só a ficha traz, e a
+   * conta é do servidor: o "hoje" do navegador pode não ser o de Brasília.
+   */
+  diasDeGarantia?: number | null;
 
   /**
    * BAIXA — o ativo saiu do PATRIMÔNIO.

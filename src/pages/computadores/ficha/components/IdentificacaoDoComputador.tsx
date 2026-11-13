@@ -4,6 +4,7 @@ import CartaoDaFicha, { IconeDaFicha } from '../../../../components/CartaoDaFich
 import { PontoDeStatus } from '../../../../components/ui/badge';
 import { Dado, GrupoDeDados } from '../../../../components/ui/dado';
 import { formatarData, formatarDiaDoInstante, formatarMoeda } from '../../../../helpers/format.helper';
+import { textoDoPrazo } from '../../../../helpers/licenca.helper';
 import type { Asset } from '../../../../types/asset.types';
 import { motivoDaSaida } from '../../helpers/baixa.helper';
 import { tomDoStatus } from '../../../../helpers/status.helper';
@@ -52,6 +53,18 @@ export default function IdentificacaoDoComputador({ asset, acoes }: { asset: Ass
       <GrupoDeDados>
         <Dado rotulo="Número do pedido">{asset.orderNumber}</Dado>
         <Dado rotulo="Data da compra">{formatarData(asset.purchaseDate)}</Dado>
+        {/* O prazo na frase do vencimento da licença (CO). O baixado saiu da empresa, e
+            a garantia dele não corre mais. */}
+        <Dado rotulo="Garantia até">
+          {asset.warrantyExpiresAt && (
+            <>
+              {formatarData(asset.warrantyExpiresAt)}
+              {!asset.retiredAt && asset.diasDeGarantia != null && (
+                <span className="text-text-tertiary"> · {textoDoPrazo(asset.diasDeGarantia)}</span>
+              )}
+            </>
+          )}
+        </Dado>
         {/* Ausente para quem não vê o custo (D77): o campo some, e não diz "sem valor". */}
         <Dado rotulo="Valor da compra">{formatarMoeda(asset.purchaseCost)}</Dado>
         {canais.map((canal) => <CampoDeCanal key={canal.rotulo} canal={canal} />)}

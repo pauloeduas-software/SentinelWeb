@@ -756,3 +756,29 @@ opção de série única ligada; a comparação é a do MySQL, que não diferenc
 
 **O custo:** o computador antigo cadastrado com a mesma série em outra caixa precisa ser corrigido antes de a migração
 subir. No banco de desenvolvimento não havia nenhum.
+
+## CO — A garantia do computador volta, só a data
+
+**Decisão.** O computador ganha **Garantia até**, o último dia da garantia do fabricante: no formulário, na seção Compra,
+e no card da ficha, ao lado da data da compra.
+
+- **É um prazo,** como o vencimento da licença: pode ser futuro, e não antecede a compra. A recusa é 422, `O fim da
+  garantia (05/03/2026) não pode ser antes da data da compra (10/03/2026).`, também quando a edição muda só a compra. O
+  calendário do formulário não oferece o dia antes dela, e o banco recusa por baixo (`assets_garantia_nao_antecede_compra`).
+- **O card diz o prazo** na frase do vencimento: `10/06/2030 · vence em 120 dias`, ou `venceu há 3 dias`. A conta é do
+  servidor, no dia de Brasília (`diasDeGarantia`, só na ficha). O baixado mostra só a data: a garantia dele não corre
+  mais.
+- **O clone copia a garantia,** como a compra: é o mesmo lote.
+
+**Supera, em parte:** o corte do [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai),
+que levou a garantia e o fim de vida junto com os relatórios. Volta só a data digitada.
+
+**Por quê:** "ainda está na garantia?" é a pergunta antes de abrir chamado com o fabricante, e a ficha já tinha o site e o
+telefone de suporte, mas não a data. Todos os sistemas pesquisados guardam a garantia: o GLPI e o Snipe-IT em meses
+contados da compra; o ServiceNow, o iTop, o Lansweeper e o NinjaOne como data, no próprio computador.
+
+**O custo:** uma coluna e um `CHECK`, e a data digitada à mão: a busca automática no fabricante, do Lansweeper e do
+NinjaOne, pediria a integração com cada um.
+
+**O que ficou de fora:** os meses e o cálculo a partir da compra, o fim de vida, e a coluna, o filtro, a vista, o cartão
+ou o alerta de garantia vencendo. O prazo aparece só na ficha, como o da licença na tela dela.

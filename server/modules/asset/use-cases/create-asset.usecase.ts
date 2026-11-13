@@ -6,6 +6,7 @@ import type { Ator } from '../../audit/audit.types';
 import { nextAssetTag } from '../../settings/use-cases/app-settings.usecase';
 import { assertLocalExiste, lerModeloTravado, lerStatusTravado } from '../../catalog/helpers/catalog-lock.helper';
 import { buildSnapshot } from '../../shared/diff.helper';
+import { assertGarantiaNaoAntecedeACompra } from '../helpers/asset-dates.helper';
 import { ASSET_SELECT, CAMPOS_AUDITADOS_DO_ATIVO, semCusto } from '../helpers/asset-select.helper';
 import { assertEtiquetaESerieLivres } from './assert-unique-asset.usecase';
 
@@ -20,12 +21,18 @@ export interface CreateAssetData {
   orderNumber?: string | null;
   purchaseDate?: Date | null;
   purchaseCost?: string | null;
+  warrantyExpiresAt?: Date | null;
 }
 
 export async function createAsset(data: CreateAssetData, ator: Ator) {
   // Tudo numa transação: a etiqueta é consumida de um contador global, e se a
   // criação falhar depois disso o número precisa voltar — senão a sequência
   // ganha um buraco a cada erro de validação.
+  assertGarantiaNaoAntecedeACompra({
+    purchaseDate: data.purchaseDate ?? null,
+    warrantyExpiresAt: data.warrantyExpiresAt ?? null,
+  });
+
   return prisma.$transaction(async (tx) => {
     // O modelo, o status e o local pelas portas do catálogo: 404 com nome no
     // lugar do P2003 genérico. Nenhum deles se desativa (AO).
@@ -63,6 +70,7 @@ export async function createAsset(data: CreateAssetData, ator: Ator) {
         orderNumber: data.orderNumber ?? null,
         purchaseDate: data.purchaseDate ?? null,
         purchaseCost: data.purchaseCost ?? null,
+        warrantyExpiresAt: data.warrantyExpiresAt ?? null,
       },
       select: ASSET_SELECT,
     });

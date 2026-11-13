@@ -59,6 +59,7 @@ function corpoDoFormularioDeAtivo(sobrescrever: Record<string, unknown> = {}) {
     orderNumber: '',
     purchaseDate: '',
     purchaseCost: '',
+    warrantyExpiresAt: '',
     notes: '',
     ...sobrescrever,
   };
@@ -97,6 +98,7 @@ describe('POST /api/assets com o corpo literal do AssetFormModal', () => {
     const gravado = await prisma.asset.findUniqueOrThrow({ where: { id: String(body.id) }, select: { purchaseCost: true } });
     expect(gravado.purchaseCost).toBeNull();
     expect(body.purchaseDate).toBeNull();
+    expect(body.warrantyExpiresAt).toBeNull();
   });
 
   it('não confunde FK vazia com FK inválida', async () => {

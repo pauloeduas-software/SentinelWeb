@@ -3,7 +3,7 @@ import { AppError } from '../../../infra/errors/app-error';
 import { buildChanges } from '../../shared/diff.helper';
 import { hojeNoBrasil } from '../../shared/hoje.helper';
 import { assertVersaoLida } from '../../shared/versao.helper';
-import { diaEmPortugues } from '../helpers/asset-dates.helper';
+import { assertGarantiaNaoAntecedeACompra, diaEmPortugues } from '../helpers/asset-dates.helper';
 import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
 import { assertLocalExiste, lerModeloTravado, lerStatusTravado } from '../../catalog/helpers/catalog-lock.helper';
@@ -69,6 +69,12 @@ export async function updateAsset(id: string, data: UpdateAssetData, ator: Ator)
       await assertLocalExiste(tx, data.locationId);
     }
 
+    // As datas como ficarão: a que não veio no corpo é a que já está gravada.
+    assertGarantiaNaoAntecedeACompra({
+      purchaseDate: valorFinal(data.purchaseDate, antes.purchaseDate),
+      warrantyExpiresAt: valorFinal(data.warrantyExpiresAt, antes.warrantyExpiresAt),
+    });
+
     // A COMPRA não fica depois da primeira entrega deste computador (AM), da
     // primeira licença entregue a ele, do primeiro componente instalado nele
     // (AI) nem da baixa — as quatro já recusam o dia antes dela. Só quando a
@@ -122,6 +128,7 @@ export async function updateAsset(id: string, data: UpdateAssetData, ator: Ator)
         orderNumber: data.orderNumber,
         purchaseDate: data.purchaseDate,
         purchaseCost: data.purchaseCost,
+        warrantyExpiresAt: data.warrantyExpiresAt,
       },
       select: ASSET_SELECT,
     });
