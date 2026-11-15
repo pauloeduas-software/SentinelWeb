@@ -65,17 +65,18 @@ describe('o /agent-hub aceita só o token da máquina', () => {
     await expect(abrirConexao(api, SEGREDO)).rejects.toThrow('HTTP 401');
   });
 
-  it('descarta a mensagem que diz ser de outra máquina', async () => {
+  it('fecha com 1008 a conexão que diz ser de outra máquina, sem tocar nela', async () => {
     const vitima = await conectarAgente(api, 'hwid-da-vitima');
     await vitima.handshake({ Hostname: 'pc-da-vitima' });
     await esperarPor('a vítima conectada', async () => isAgentConnected('hwid-da-vitima') || null);
 
-    // Com o token de UMA máquina, o handshake se apresenta como a vítima.
+    // Com o token de UMA máquina, o handshake se apresenta como a vítima (CU).
     const intruso = await abrirConexao(api, await cadastrarAgente(api, 'hwid-do-intruso'));
+    const fechamento = new Promise<{ codigo: number; motivo: string }>((resolve) => {
+      intruso.once('close', (codigo, motivo) => resolve({ codigo, motivo: motivo.toString() }));
+    });
     intruso.send(JSON.stringify({ Type: 'Handshake', Payload: { Hwid: 'hwid-da-vitima', Hostname: 'pc-falso' } }));
-    intruso.send(JSON.stringify({ Type: 'Handshake', Payload: { Hwid: 'hwid-do-intruso', Hostname: 'pc-do-intruso' } }));
-    await esperarPor('o handshake legítimo do intruso', () =>
-      prisma.endpoint.findUnique({ where: { hwid: 'hwid-do-intruso' } }));
+    expect(await fechamento).toEqual({ codigo: 1008, motivo: 'HWID diferente do token' });
 
     // A mensagem com o HWID alheio não mudou a vítima, e o comando continua indo
     // para a conexão dela.
@@ -86,7 +87,6 @@ describe('o /agent-hub aceita só o token da máquina', () => {
     expect(comando.status).toBe(200);
     expect(await vitima.receber('o comando da vítima')).toMatchObject({ Payload: { CommandId: comando.body.commandId } });
 
-    intruso.close();
     await vitima.fechar();
   });
 });

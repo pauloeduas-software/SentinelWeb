@@ -61,10 +61,16 @@ export class AgentMaestro {
         // O HWID do payload tem de ser o do token. Sem esta conferência, quem tem
         // o token de uma máquina se apresentaria como outra e tomaria o lugar
         // dela no registro — e os comandos dela.
+        //
+        // E A CONEXÃO FECHA, com 1008 (CU): aberta, ela não serve para nada, e o
+        // agente cujo HWID mudou depois do cadastro (placa trocada, BIOS
+        // atualizada, token copiado numa imagem) ficaria mandando para o vazio sem
+        // saber. Com o código, ele diz no log dele por que não entra.
         if (message.hwid !== hwid) {
           logger.warn(
-            `[Agent] Mensagem descartada: o token é de ${shortHwid(hwid)} e o payload diz ${shortHwid(message.hwid)}.`,
+            `[Agent] Conexão fechada: o token é de ${shortHwid(hwid)} e o payload diz ${shortHwid(message.hwid)}.`,
           );
+          socket.close(1008, 'HWID diferente do token');
           return;
         }
 

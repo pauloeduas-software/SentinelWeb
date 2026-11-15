@@ -1186,3 +1186,25 @@ novo já nasce cadastrando. Não há frota para derrubar.
 - **A conexão aberta não cai na revogação.** O hub confere o token na abertura, e o comando roda fora do processo do
   servidor. Para cortar na hora, reinicia-se o servidor depois de revogar.
 - **Revogar pelo painel.** Um botão na aba Máquina pede tela, cargo e rota; o comando resolve o caso raro sem isso.
+
+---
+
+## CU — A conexão com o HWID de outra máquina fecha com 1008
+
+> **Supera em parte:** [CR](#cr--cada-máquina-tem-o-seu-token-e-o-segredo-único-só-cadastra) (a mensagem com outro
+> HWID, que era só descartada).
+
+**Decisão.** Quando o HWID do payload não é o do token, o `/agent-hub` registra no log e **fecha a conexão com o código
+1008** ("HWID diferente do token"), sem processar a mensagem. A máquina dona do HWID não é tocada, como antes.
+
+**Por quê:** a mensagem descartada deixava a conexão aberta, e o agente não tinha como saber. O HWID muda depois do
+cadastro quando a placa-mãe é trocada, quando a BIOS passa a preencher o serial, ou quando o token vai junto numa
+imagem clonada: a máquina conectava, mandava `Ping` para o vazio e ficava OFFLINE no painel para sempre, com o
+journal dizendo "Conectado". Com o 1008 o SentinelAgente para de insistir e diz no log que precisa de recadastro (a
+A11 de lá: ele não se recadastra sozinho).
+
+**O que ficou de fora.**
+- **O socket meio aberto.** Quando a rede cai sem fechar, o `isAgentConnected` continua vendo a conexão velha `OPEN`
+  até o sistema operacional desistir dela, e o recadastro dessa máquina responde 409. O SentinelAgente contorna: com
+  token gravado, ele conecta com o token, e a conexão nova substitui a velha. Pingar os sockets daqui resolveria na
+  raiz, e fica para quando aparecer o caso.
