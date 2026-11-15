@@ -15,6 +15,7 @@
  * o sistema diria que está certo, com 100 pontos.
  */
 const SERIAIS_DE_FABRICA = new Set([
+  // Os do D46.
   'to be filled by o.e.m.',
   'to be filled by oem',
   'system serial number',
@@ -33,7 +34,26 @@ const SERIAIS_DE_FABRICA = new Set([
   '0123456789',
   '123456789',
   '00000000',
-]);
+  // Os que o Fleet (`IsPlaceholderHardwareSerial`, em `server/fleet/hosts.go`) e o
+  // GLPI Agent (`isInvalidBiosValue`, em `lib/GLPI/Agent/Tools/Generic.pm`) já
+  // reconhecem (CT).
+  'default',
+  'base board serial number',
+  'baseboard serial number',
+  'not available',
+  'not present',
+  '1234567890',
+  '1234567',
+].map(compactar));
+
+/**
+ * O serial sem separadores, só para reconhecer o lixo: `System Serial Number`,
+ * `SystemSerialNumber` e `0000-0000` são o mesmo preenchimento de fábrica (CT).
+ * A mesma conta que o SentinelAgente faz antes do hash do HWID.
+ */
+function compactar(valor: string): string {
+  return valor.toLowerCase().replace(/[-:\s]/g, '');
+}
 
 /**
  * UUIDs que não identificam nada.
@@ -47,6 +67,13 @@ const UUIDS_INUTEIS = new Set([
   '00000000-0000-0000-0000-000000000000',
   'ffffffff-ffff-ffff-ffff-ffffffffffff',
   '03000200-0400-0500-0006-000700080009',
+  // Os dois que o osquery acrescenta (`kPlaceholderHardwareUUIDList`, em
+  // `osquery/core/system.cpp`), e os de fábrica da AMI na outra ordem de bytes,
+  // que o kernel usa no SMBIOS anterior ao 2.6 (`dmi_scan.c`, `dmi_save_uuid`) (CT).
+  '03020100-0504-0706-0809-0a0b0c0d0e0f',
+  '10000000-0000-8000-0040-000000000000',
+  '00020003-0004-0005-0006-000700080009',
+  '00010203-0405-0607-0809-0a0b0c0d0e0f',
 ]);
 
 function limpar(valor: string | null | undefined): string | null {
@@ -66,11 +93,13 @@ export function normalizeSerial(valor: string | null | undefined): string | null
   const limpo = limpar(valor);
   if (!limpo) return null;
 
+  // O lixo se reconhece no valor sem separadores; o que volta é o valor como veio.
   const minusculo = limpo.toLowerCase();
-  if (SERIAIS_DE_FABRICA.has(minusculo)) return null;
-  if (minusculo.length < 4) return null;
+  const compacto = compactar(limpo);
+  if (SERIAIS_DE_FABRICA.has(compacto)) return null;
+  if (compacto.length < 4) return null;
   // Só zeros, só uns, só o mesmo caractere: é preenchimento, não identidade.
-  if (/^(.)\1+$/.test(minusculo)) return null;
+  if (/^(.)\1+$/.test(compacto)) return null;
 
   return minusculo;
 }

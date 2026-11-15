@@ -94,6 +94,7 @@ ponte ITAM×RMM.
 | **D76**, **D78**, **D136** (permissão, LDAP, OIDC) | **D148** | matriz vira `User.role`; o D137 (cobertura no boot) fica |
 | **D80**, **D89**, **D142** (`ApiToken`) | **D149** | o prazo do D89 expira sem ser cumprido, e por escrito |
 | **D149** (na parte do agente) | **CR** | cada máquina tem o seu token, trocado no cadastro pelo `AGENT_ENROLL_SECRET`; o hub aceita só ele, preso ao HWID |
+| **D46** (as listas de fábrica) | **CT** | o serial se confere sem separadores, e as listas de seriais e UUIDs ganham os do Fleet, do GLPI e do osquery |
 | **D27**, **D29**, **D30**, **D87**, **D88** (aceite) | **D150** | o termo sai; o `resolverEscalonamento()` (D73) fica |
 | **D57**, **D125**–**D128** (alertas) | **D151** | os sinais continuam consultáveis; empurrá-los sai. O D79 **não** sai |
 | **D55** (valor contábil) | **D152** | `purchaseCost` fica; a amortização sai |

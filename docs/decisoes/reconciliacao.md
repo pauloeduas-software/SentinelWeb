@@ -1036,3 +1036,30 @@ jeito, e só deixaria o painel mostrar ONLINE uma máquina sem energia.
   e-mail ou SMS, e aqui não há alerta de máquina. O sumido de longo prazo já é o fantasma do painel de cobertura
   (`ghostDays`, 30 dias), o mesmo papel do `missing` do Fleet.
 - **As checagens** do Tactical RMM (CPU, disco e serviço a cada 120 s, com alerta): o SentinelAgente não as terá.
+
+---
+
+## CT — O lixo de fábrica se reconhece sem separadores, e a lista cresce
+
+> **Completa:** [D46](#d46--evidência-ambígua-é-evidência-zero) (as listas de seriais e UUIDs de fábrica).
+
+**Decisão.** Em `normalize-identity.helper.ts`:
+
+- **O serial de fábrica se confere sem `-`, `:` e espaço**, em minúsculas: a lista, o corte de 4 caracteres e o
+  caractere repetido olham o valor compactado. `0000-0000`, `00 00 00 00` e `SystemSerialNumber` passam a ser lixo. O
+  serial que serve continua voltando como veio, em minúsculas e com os separadores.
+- **A lista de seriais ganha sete**, os que o Fleet (`IsPlaceholderHardwareSerial`, em `server/fleet/hosts.go`) e o
+  GLPI Agent (`isInvalidBiosValue`, em `lib/GLPI/Agent/Tools/Generic.pm`) já reconhecem: `default`, `base board serial
+  number`, `baseboard serial number`, `not available`, `not present`, `1234567890` e `1234567`.
+- **A lista de UUIDs ganha quatro:** os dois que o osquery acrescenta (`kPlaceholderHardwareUUIDList`, em
+  `osquery/core/system.cpp`) e os dois de fábrica da AMI na outra ordem de bytes. No SMBIOS anterior ao 2.6, o kernel
+  imprime o `product_uuid` com os primeiros campos invertidos (`drivers/firmware/dmi_scan.c`, `dmi_save_uuid`), e o
+  `03000200-0400-0500-0006-000700080009` da AMI aparece como `00020003-0004-0005-0006-000700080009`.
+
+**Por quê:** o SentinelAgente faz o HWID com o serial sem `-`, `:` e espaço, e usa esta mesma lista (a A13 de lá).
+Com a limpeza olhando o valor com separadores, `0000-0000` passava nos dois lados: toda máquina com ele ganhava o
+mesmo HWID e casava com o mesmo computador por 100 pontos. Nenhuma máquina tem ainda token do agente novo, então
+esta é a hora de fechar a lista: depois, mudá-la muda o HWID de máquina cadastrada.
+
+**O que ficou de fora.** A comparação do serial em si continua com os separadores: `ABC-123` e `ABC123` não casam.
+Juntar os dois mudaria o vínculo de computador que já existe, e não há caso que peça.
