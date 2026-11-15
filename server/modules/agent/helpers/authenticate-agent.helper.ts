@@ -1,18 +1,20 @@
-import { timingSafeEqual } from 'crypto';
-import { getAgentToken } from '../../../infra/config/env';
+import { createHash, randomBytes, timingSafeEqual } from 'crypto';
+import { prisma } from '../../../infra/database/prismaClient';
+import { getAgentEnrollSecret } from '../../../infra/config/env';
 
-// Autenticação do Agente Sentinel no /agent-hub.
+// Autenticação do Agente Sentinel (CR). Dois segredos, cada um numa porta:
 //
-// O token vai no header `Authorization: Bearer <token>`, não na query string:
-// header é o que o `infra/logger` já oculta (logger.ts, `redact`), e todo cliente
+//   o SEGREDO DE INSTALAÇÃO (`AGENT_ENROLL_SECRET`), um só para a frota, vale
+//   só em `POST /agent-hub/enroll`. Quem instala o agente o entrega, e o agente o
+//   apaga depois de usar.
+//
+//   o TOKEN DA MÁQUINA, que o cadastro devolve, é o único que o `/agent-hub`
+//   aceita. Ele diz QUAL máquina está do outro lado: a conexão fica presa ao HWID
+//   dele, e a mensagem com outro HWID é descartada.
+//
+// Os dois vão no header `Authorization: Bearer <…>`, não na query string: header
+// é o que o `infra/logger` já oculta (logger.ts, `redact`), e todo cliente
 // WebSocket sabe mandar header na abertura da conexão.
-//
-// UM CAMINHO SÓ: o `AGENT_TOKEN` compartilhado, do `.env`.
-//
-// O QUE ISSO CUSTA, declarado: o segredo é o mesmo para todas as máquinas, e
-// trocá-lo exige reconfigurar o agente em cada uma — aceitável porque revogar
-// token por agente só importa numa frota de verdade, e aqui o agente da
-// demonstração é um.
 
 function equalsSeguro(a: string, b: string): boolean {
   const bufferA = Buffer.from(a);
@@ -22,17 +24,9 @@ function equalsSeguro(a: string, b: string): boolean {
   if (bufferA.length !== bufferB.length) return false;
 
   // Comparação em tempo constante: `===` sai no primeiro byte diferente, o que
-  // permite descobrir o token byte a byte medindo o tempo de resposta.
+  // permite descobrir o segredo byte a byte medindo o tempo de resposta.
   return timingSafeEqual(bufferA, bufferB);
 }
-
-/**
- * Como a conexão se autenticou.
- *
- * Continua sendo um objeto, e não um booleano, porque o `agent.maestro` ramifica
- * sobre ele — e porque um dia pode voltar a ter mais de uma forma.
- */
-type FormaDeAutenticacao = { via: 'COMPARTILHADO' } | null;
 
 function extrairBearer(header: string | undefined): string | null {
   const prefixo = 'Bearer ';
@@ -42,18 +36,49 @@ function extrairBearer(header: string | undefined): string | null {
   return token || null;
 }
 
-/** Autentica a conexão do agente pelo `AGENT_TOKEN`. */
-export async function autenticarAgente(
-  authorizationHeader: string | undefined,
-): Promise<FormaDeAutenticacao> {
+/**
+ * O hash que o banco guarda no lugar do token.
+ *
+ * SHA-256 puro, sem sal nem argon2: o token tem 256 bits aleatórios, então não
+ * há dicionário para atacar — o argon2 existe para senha de gente, que é curta e
+ * previsível. E o hash puro é o que permite achar a máquina pelo índice único.
+ */
+export function hashDoToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
+
+/** Um token novo de máquina: 32 bytes aleatórios, em hexadecimal. */
+export function gerarTokenDaMaquina(): string {
+  return randomBytes(32).toString('hex');
+}
+
+/**
+ * Confere o segredo de instalação do cadastro.
+ *
+ * Sem `AGENT_ENROLL_SECRET` configurado, libera — situação que `validateEnv()` só
+ * tolera fora de produção, onde ela derruba o boot.
+ */
+export function conferirSegredoDeCadastro(authorizationHeader: string | undefined): boolean {
+  const segredo = getAgentEnrollSecret();
+  if (!segredo) return true;
+
   const bruto = extrairBearer(authorizationHeader);
-  const compartilhado = getAgentToken();
+  return bruto !== null && equalsSeguro(bruto, segredo);
+}
 
-  // Sem AGENT_TOKEN configurado, libera — situação que `validateEnv()` só
-  // tolera fora de produção, onde ela derruba o boot.
-  if (!compartilhado) return { via: 'COMPARTILHADO' };
+/**
+ * Autentica a conexão do `/agent-hub` pelo token da máquina e devolve o HWID
+ * dela, ou `null`. Não há atalho: nem o segredo de instalação nem a falta dele
+ * em desenvolvimento abrem o hub.
+ */
+export async function autenticarAgente(authorizationHeader: string | undefined): Promise<{ hwid: string } | null> {
+  const token = extrairBearer(authorizationHeader);
+  if (!token) return null;
 
-  if (bruto && equalsSeguro(bruto, compartilhado)) return { via: 'COMPARTILHADO' };
-
-  return null;
+  // A busca é pelo hash, num índice único: não há comparação de segredo em
+  // JavaScript para medir o tempo, e o banco nunca vê o token.
+  return prisma.agentCredential.findUnique({
+    where: { tokenHash: hashDoToken(token) },
+    select: { hwid: true },
+  });
 }

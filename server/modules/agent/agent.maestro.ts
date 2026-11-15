@@ -4,68 +4,91 @@ import { registerAgent, unregisterAgent } from './agent.registry';
 import { handleAgentMessage } from './use-cases/handle-agent-message.usecase';
 import { markEndpointOffline } from '../endpoint/use-cases/mark-endpoint-offline.usecase';
 import { autenticarAgente } from './helpers/authenticate-agent.helper';
+import { agentController } from './controllers/agent.controller';
 import { shortHwid } from '../endpoint/helpers/hwid.helper';
 import { createLogger } from '../../infra/logger/logger';
+import { ENROLL_RATE_LIMIT } from '../../infra/http/write-rate-limit';
 
 const logger = createLogger('agent.maestro');
 
 // Porta de entrada do Agente Sentinel. Aqui só mora transporte: aceitar a
 // conexão, traduzir o que chegou e encaminhar. Regra de negócio nenhuma.
 //
-// A rota exige `Authorization: Bearer <token>`, conferido contra o
-// `AGENT_TOKEN` do `.env` — um segredo fixo, sem vínculo por máquina.
+// DUAS ROTAS, com um segredo cada (CR):
+//   `POST /agent-hub/enroll` troca o segredo de instalação (`AGENT_ENROLL_SECRET`)
+//   pelo token da máquina;
+//   `GET /agent-hub` (WebSocket) só aceita o token da máquina, e a conexão fica
+//   presa ao HWID dele.
 export class AgentMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
-    const exigirToken = async (request: FastifyRequest, reply: FastifyReply) => {
-      const ip = request.socket.remoteAddress ?? 'desconhecido';
-      const forma = await autenticarAgente(request.headers.authorization);
+    // O HWID que o token provou, de cada requisição de upgrade até o handler do
+    // socket. WeakMap e não campo novo no `request`: vive o tempo da requisição e
+    // não precisa de declaração de tipo no Fastify inteiro.
+    const hwidDaConexao = new WeakMap<FastifyRequest, string>();
 
-      if (forma) return;
+    const exigirToken = async (request: FastifyRequest, reply: FastifyReply) => {
+      const credencial = await autenticarAgente(request.headers.authorization);
+
+      if (credencial) {
+        hwidDaConexao.set(request, credencial.hwid);
+        return;
+      }
 
       // `preHandler` roda ANTES do upgrade: quem não tem token leva 401 e o
       // WebSocket nem chega a existir — melhor do que aceitar o socket e fechar.
       request.log.warn(
-        { ip },
-        '[Agent] Conexão recusada: token ausente ou inválido.',
+        { ip: request.socket.remoteAddress ?? 'desconhecido' },
+        '[Agent] Conexão recusada: token ausente, inválido ou revogado.',
       );
       await reply.status(401).send({ error: 'Token de agente inválido.' });
     };
 
+    // O teto é o do login: a repetição aqui É o ataque (adivinhar o segredo).
+    server.post('/agent-hub/enroll', ENROLL_RATE_LIMIT, agentController.enroll);
+
     server.get('/agent-hub', { websocket: true, preHandler: exigirToken }, (socket, request) => {
-      const remote = request.socket.remoteAddress ?? 'desconhecido';
-      // Só é conhecido a partir da primeira mensagem válida
-      let hwid: string | null = null;
+      // O token já disse quem é: toda mensagem desta conexão é desta máquina.
+      const hwid = hwidDaConexao.get(request)!;
+      hwidDaConexao.delete(request);
 
       socket.on('message', async (raw) => {
         const message = parseAgentMessage(raw.toString());
         if (!message) {
-          logger.warn(`[Agent] Mensagem descartada (${remote}): formato não reconhecido.`);
+          logger.warn(`[Agent] Mensagem descartada (${shortHwid(hwid)}): formato não reconhecido.`);
           return;
         }
 
-        hwid = message.hwid;
+        // O HWID do payload tem de ser o do token. Sem esta conferência, quem tem
+        // o token de uma máquina se apresentaria como outra e tomaria o lugar
+        // dela no registro — e os comandos dela.
+        if (message.hwid !== hwid) {
+          logger.warn(
+            `[Agent] Mensagem descartada: o token é de ${shortHwid(hwid)} e o payload diz ${shortHwid(message.hwid)}.`,
+          );
+          return;
+        }
+
         // O Handshake é o que vincula ESTA conexão ao HWID: é ele que habilita
         // o envio de comandos para a máquina.
-        if (message.type === 'Handshake') registerAgent(message.hwid, socket);
+        if (message.type === 'Handshake') registerAgent(hwid, socket);
 
         try {
           await handleAgentMessage(message);
 
         } catch (error) {
-          logger.error(`[Agent] Falha ao processar ${message.type} de ${shortHwid(message.hwid)}:`, error);
+          logger.error(`[Agent] Falha ao processar ${message.type} de ${shortHwid(hwid)}:`, error);
         }
       });
 
       socket.on('close', () => {
-        if (!hwid) return;
         // `unregisterAgent` devolve false quando esta conexão já foi substituída
-        // por uma reconexão: nesse caso a máquina continua online, não mexe.
+        // por uma reconexão, ou nunca mandou handshake: nos dois casos não mexe.
         if (unregisterAgent(hwid, socket)) void markEndpointOffline(hwid);
       });
 
       // Sem este handler, um erro de socket derruba o processo inteiro
       socket.on('error', (error) => {
-        logger.error(`[Agent] Erro na conexão de ${hwid ? shortHwid(hwid) : remote}:`, error);
+        logger.error(`[Agent] Erro na conexão de ${shortHwid(hwid)}:`, error);
       });
     });
 

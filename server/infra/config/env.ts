@@ -64,7 +64,7 @@ export function validateEnv(): string[] {
 
   // `isProduction` é uma igualdade com 'production': um erro de digitação
   // (`producao`, `Production`) desligaria em silêncio o cookie Secure, a recusa do
-  // segredo fraco e a exigência do AGENT_TOKEN. Valor fora da lista para o boot.
+  // segredo fraco e a exigência do AGENT_ENROLL_SECRET. Valor fora da lista para o boot.
   // Ausente vale: é o `npm run dev`.
   const nodeEnv = process.env.NODE_ENV?.trim();
   if (nodeEnv && !NODE_ENVS.includes(nodeEnv)) {
@@ -79,23 +79,24 @@ export function validateEnv(): string[] {
   const jwtFraco = validateJwtSecret();
   if (jwtFraco) avisos.push(jwtFraco);
 
-  // O /agent-hub exige AGENT_TOKEN. Em produção, sem token o boot PARA: um aviso
-  // no log não protege porta nenhuma, e era exatamente esse o buraco anterior.
-  // Em desenvolvimento (localhost) o hub segue aberto, com aviso — exigir
-  // configuração para rodar local é atrito sem ganho de segurança.
-  if (!getAgentToken()) {
+  // O cadastro do agente exige AGENT_ENROLL_SECRET (CR). Em produção, sem ele o
+  // boot PARA: qualquer um cadastraria uma máquina e ganharia um token do hub.
+  // Em desenvolvimento (localhost) o cadastro segue aberto, com aviso — exigir
+  // configuração para rodar local é atrito sem ganho de segurança. O hub em si
+  // nunca abre: ele só aceita o token que o cadastro deu.
+  if (!getAgentEnrollSecret()) {
     if (isProduction) {
       throw new Error(
-        'AGENT_TOKEN não configurado. O /agent-hub aceitaria qualquer WebSocket em produção. ' +
-          'Gere um token forte (ex.: `openssl rand -hex 32`) e defina AGENT_TOKEN no .env.',
+        'AGENT_ENROLL_SECRET não configurado. Qualquer um cadastraria um agente em produção. ' +
+          'Gere um segredo forte (ex.: `openssl rand -hex 32`) e defina AGENT_ENROLL_SECRET no .env.',
       );
     }
-    avisos.push('[Env] AGENT_TOKEN vazio: /agent-hub aceita qualquer WebSocket. Só faça isso em desenvolvimento.');
+    avisos.push('[Env] AGENT_ENROLL_SECRET vazio: qualquer um cadastra um agente. Só faça isso em desenvolvimento.');
   }
   return avisos;
 }
 
-// Segredo fraco é a mesma família do AGENT_TOKEN vazio: em produção derruba o
+// Segredo fraco é a mesma família do AGENT_ENROLL_SECRET vazio: em produção derruba o
 // boot, em desenvolvimento passa com aviso. Um `JWT_SECRET=dev` publicado deixa
 // qualquer um assinar um cookie de administrador — e nada na tela denuncia isso,
 // porque o sistema continua funcionando perfeitamente.
@@ -122,10 +123,11 @@ export function getJwtSecret(): string {
   return (process.env.JWT_SECRET ?? '').replace(/^"|"$/g, '').trim();
 }
 
-// Segredo compartilhado com o Agente Sentinel. Vazio = sem autenticação,
-// aceito apenas fora de produção (ver validateEnv).
-export function getAgentToken(): string {
-  return (process.env.AGENT_TOKEN ?? '').replace(/^"|"$/g, '').trim();
+// O segredo de instalação do Agente Sentinel: vale só no cadastro, que o troca
+// pelo token da máquina (CR). Vazio = cadastro aberto, aceito apenas fora de
+// produção (ver validateEnv).
+export function getAgentEnrollSecret(): string {
+  return (process.env.AGENT_ENROLL_SECRET ?? '').replace(/^"|"$/g, '').trim();
 }
 
 export function getPort(): number {

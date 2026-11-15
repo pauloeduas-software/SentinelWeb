@@ -1006,3 +1006,33 @@ computador, e o Snipe-IT, com as integrações de RMM, o MAC, o IP e o sistema.
 **O custo:** quatro linhas no painel, acima das medidas.
 
 **O que ficou de fora:** histórico de IP, mais de uma placa de rede e o que o agente não manda.
+
+---
+
+## CS — A máquina calada vira OFFLINE em 2 minutos
+
+**Decisão.** Os tempos do agente e do servidor, tirados do Tactical RMM e do Fleet:
+
+| | Valor | De onde |
+|---|---|---|
+| `Ping` do agente | sorteado entre 30 e 60 s | Tactical RMM: o `checkin_hello` de 30 a 60 s (`api/tacticalrmm/apiv3/utils.py`) |
+| OFFLINE sem mensagem | **2 minutos**: o maior intervalo do `Ping` mais 60 s | Fleet: o intervalo de check-in mais `OnlineIntervalBuffer = 60` (`server/fleet/hosts.go`) |
+| OFFLINE quando a conexão fecha | na hora (continua) | Remotely: `OnDisconnectedAsync` em `Server/Hubs/AgentHub.cs` |
+| Telemetria | de hora em hora | Fleet: `detail_update_interval` de 1 h (`server/config/config.go`) |
+
+- **Só o `STALE_AFTER_MS` muda aqui**, de 4 para 2 minutos (`mark-stale-endpoints-offline.usecase.ts`). O job
+  continua a cada 60 s, então a máquina que caiu sem fechar a conexão aparece OFFLINE entre 2 e 3 minutos depois.
+- **O ritmo é do agente:** o `Ping` e a telemetria estão no SentinelAgente. O servidor não impõe nenhum dos dois.
+
+**Por quê:** os dois separam o sinal de vida, leve e frequente, da coleta pesada, que vai de vez em quando. Com a
+telemetria de hora em hora, é o `Ping` que mantém a máquina ONLINE, e o limite segue a regra do Fleet: o intervalo
+mais uma folga contra a rede lenta. Um limite maior não economiza nada, porque o job roda a cada 60 s de qualquer
+jeito, e só deixaria o painel mostrar ONLINE uma máquina sem energia.
+
+**O custo:** o número. Cada `Ping` é uma escrita de `lastSeen` (`touchEndpoint`), como toda mensagem do agente.
+
+**O que ficou de fora.**
+- **Um estado de "sumido"**, como o `overdue` de 30 minutos do Tactical RMM. Lá ele existe para mandar alerta por
+  e-mail ou SMS, e aqui não há alerta de máquina. O sumido de longo prazo já é o fantasma do painel de cobertura
+  (`ghostDays`, 30 dias), o mesmo papel do `missing` do Fleet.
+- **As checagens** do Tactical RMM (CPU, disco e serviço a cada 120 s, com alerta): o SentinelAgente não as terá.

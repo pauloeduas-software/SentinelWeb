@@ -136,7 +136,8 @@ bun run dev
 | `db:seed` | O seed principal: categorias, status e configuração. Não cria conta ([T](./docs/decisoes/acesso.md#t--não-há-conta-semeada)): o primeiro administrador nasce pelo `acesso:administrador` ([AP](./docs/decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it)). Roda em todo banco |
 | `db:seed:demo` | O principal mais dados de exemplo — a conta `admin@sentinel.com` (senha `admin`), fabricantes, modelos, localizações, cinco colaboradores, licenças e itens de estoque. Só para desenvolvimento e demonstração. Ver [`docs/referencia/configuracoes.md`](./docs/referencia/configuracoes.md#o-que-vem-semeado) |
 | `acesso:administrador` | Cria um administrador: `--nome "Nome Completo" --email "e-mail" --senha "senha"`. É a primeira conta da instalação nova e a saída de quem perdeu a senha — o novo entra e gera a senha temporária da conta antiga em Usuários. Roda no servidor, fora da API — ver [AP](./docs/decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it) e a invariante 17 em [`docs/referencia/invariantes.md`](./docs/referencia/invariantes.md) |
-| `agente:falso` | Um agente de mentira no `/agent-hub` (`scripts/agente-falso.ts`): handshake e telemetria a cada 3 s, para ver a aba Máquina e a ficha do posto sem o agente real. Lê `PORT` e `AGENT_TOKEN` do `.env`; `-- <hwid> <hostname>` para uma segunda máquina |
+| `agente:falso` | Um agente de mentira no `/agent-hub` (`scripts/agente-falso.ts`): handshake e telemetria a cada 3 s, para ver a aba Máquina e a ficha do posto sem o agente real. Cadastra a máquina com o `AGENT_ENROLL_SECRET` e conecta com o token que recebeu; lê `PORT` e o segredo do `.env`; `-- <hwid> <hostname>` para uma segunda máquina |
+| `agente:revogar` | Revoga o token de uma máquina (`-- <hwid>`): o `/agent-hub` passa a recusá-lo na próxima conexão |
 
 ### Migrations
 

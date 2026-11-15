@@ -138,6 +138,9 @@ a decisão fica visível na revisão, e `route-permissions.ts` encolhe de 415 li
 
 ## D149 — O `ApiToken` sai, e o agente volta ao `AGENT_TOKEN`
 
+> **Superada por [CR](./acesso.md#cr--cada-máquina-tem-o-seu-token-e-o-segredo-único-só-cadastra), na parte do agente:** cada máquina tem o seu token,
+> e o `AGENT_TOKEN` virou `AGENT_ENROLL_SECRET`, que só cadastra. O `ApiToken` e o token pessoal continuam fora.
+
 **Decidido:** saem o modelo `ApiToken`, o enum `ApiTokenOwner`, a tela `/tokens` e o token
 pessoal. O `/agent-hub` autentica por `AGENT_TOKEN` do `.env`.
 **Supera:** [D80](./acesso.md#d80--um-apitoken-só-com-dono-polimórfico),

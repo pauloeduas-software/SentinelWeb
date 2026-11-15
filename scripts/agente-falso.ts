@@ -12,9 +12,9 @@ import WebSocket from 'ws';
 //   npm run agente:falso                       # uma máquina de demonstração
 //   npm run agente:falso -- <hwid> <hostname>  # outra identidade, para ter duas
 //
-// Lê `PORT` e `AGENT_TOKEN` do `.env` da raiz, como o servidor. Deixe rodando
-// enquanto confere a tela; Ctrl-C encerra, e a máquina passa a OFFLINE (o
-// `close` derruba na hora; sem ele, o job de zumbis derruba em até 4 minutos).
+// Lê `PORT` e `AGENT_ENROLL_SECRET` do `.env` da raiz, como o servidor. Deixe
+// rodando enquanto confere a tela; Ctrl-C encerra, e a máquina passa a OFFLINE (o
+// `close` derruba na hora; sem ele, o job de zumbis derruba em 2 a 3 minutos).
 //
 // É ferramenta de DESENVOLVIMENTO: não entra no build, não roda em produção e
 // não é a suíte — quem prova o protocolo é `tests/helpers/agente.ts`.
@@ -28,12 +28,28 @@ try {
 const hwid = process.argv[2] ?? 'maquina-de-demonstracao';
 const hostname = process.argv[3] ?? 'pc-demo-01';
 const porta = process.env.PORT ?? '3001';
-const token = process.env.AGENT_TOKEN ?? '';
+const segredo = process.env.AGENT_ENROLL_SECRET ?? '';
+
+// O cadastro primeiro, como o agente de verdade (CR): o segredo de instalação vira
+// o token desta máquina, o único que o hub aceita. A cada execução o token é novo:
+// o da execução anterior deixa de valer, e ninguém precisa guardá-lo.
+const cadastro = await fetch(`http://localhost:${porta}/agent-hub/enroll`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', ...(segredo ? { Authorization: `Bearer ${segredo}` } : {}) },
+  body: JSON.stringify({ Hwid: hwid }),
+});
+if (cadastro.status !== 201) {
+  const { error } = await cadastro.json().catch(() => ({ error: '' })) as { error?: string };
+  console.error(`[agente-falso] o cadastro foi recusado: HTTP ${cadastro.status}. ${error ?? ''}`);
+  console.error('[agente-falso] (AGENT_ENROLL_SECRET confere com o .env? Outro agente falso com este HWID está rodando?)');
+  process.exit(1);
+}
+const { Token: token } = await cadastro.json() as { Token: string };
 
 const socket = new WebSocket(`ws://localhost:${porta}/agent-hub`, {
   // O hub exige o token no header (`agent.maestro.ts`): sem ele é 401 antes do
   // upgrade, e a conexão nem chega a existir.
-  headers: token ? { Authorization: `Bearer ${token}` } : {},
+  headers: { Authorization: `Bearer ${token}` },
 });
 
 // O agente serializa em PascalCase, e é o caminho que o normalizador do
@@ -94,7 +110,7 @@ socket.on('open', () => {
 // Aqui ele só é mostrado — é o que se quer ver ao clicar no botão da ficha.
 socket.on('message', (bruto) => console.log('[agente-falso] recebeu:', bruto.toString()));
 socket.on('unexpected-response', (_req, res) => {
-  console.error(`[agente-falso] o servidor recusou a conexão: HTTP ${res.statusCode} (AGENT_TOKEN confere com o .env?)`);
+  console.error(`[agente-falso] o servidor recusou a conexão: HTTP ${res.statusCode} (o token foi revogado?)`);
   process.exit(1);
 });
 socket.on('error', (erro) => console.error('[agente-falso] erro:', erro.message));

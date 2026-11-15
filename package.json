@@ -24,6 +24,7 @@
     "db:studio": "prisma studio",
     "acesso:administrador": "tsx server/modules/access/cli/criar-administrador.cli.ts",
     "agente:falso": "tsx scripts/agente-falso.ts",
+    "agente:revogar": "tsx server/modules/agent/cli/revogar-agente.cli.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {

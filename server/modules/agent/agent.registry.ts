@@ -28,6 +28,12 @@ export function unregisterAgent(hwid: string, socket: WebSocket): boolean {
   return true;
 }
 
+/** Se a máquina tem conexão aberta, com handshake, neste processo. */
+export function isAgentConnected(hwid: string): boolean {
+  const socket = activeAgents.get(sanitizeHwid(hwid));
+  return socket !== undefined && socket.readyState === socket.OPEN;
+}
+
 export function countAgentsOnline(): number {
   return activeAgents.size;
 }

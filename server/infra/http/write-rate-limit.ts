@@ -30,3 +30,11 @@ export const DESTRUCTIVE_RATE_LIMIT: RouteShorthandOptions = {
 export const LOGIN_RATE_LIMIT: RouteShorthandOptions = {
   config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
 };
+
+// O cadastro do agente (`POST /agent-hub/enroll`) é a outra rota onde a
+// repetição é o ataque: quem testa segredos de instalação em sequência. Uma
+// instalação manda UM pedido, e o agente que falha espera minutos para tentar
+// de novo — 20 por minuto só aperta quem está adivinhando.
+export const ENROLL_RATE_LIMIT: RouteShorthandOptions = {
+  config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
+};

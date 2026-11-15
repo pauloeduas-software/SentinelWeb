@@ -58,8 +58,10 @@ E em **toda** requisição seguinte:
         │   └─ daqui sai a decisão do permission-guard
 ```
 
-**Não há segundo fator, SSO nem token de API** ([D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem), [D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token)). O agente conversa por `AGENT_TOKEN` fixo no `.env`,
-fora deste fluxo inteiramente (`/agent-hub`, autenticação própria).
+**Não há segundo fator, SSO nem token de API** ([D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem), [D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token)). O agente fica fora deste fluxo inteiramente, com autenticação própria
+([CR](../decisoes/acesso.md#cr--cada-máquina-tem-o-seu-token-e-o-segredo-único-só-cadastra)): `POST /agent-hub/enroll` troca o
+`AGENT_ENROLL_SECRET` do `.env` por um token da máquina, e o `/agent-hub` só aceita esse token, preso ao HWID dele.
+Revogar é `bun run agente:revogar <hwid>`.
 
 ---
 
@@ -69,7 +71,7 @@ fora deste fluxo inteiramente (`/agent-hub`, autenticação própria).
 
 O `preHandler` global exige sessão em **toda** rota, e a exceção é escrita à mão
 em `ROTAS_PUBLICAS` (`server/app.ts`): os dois health checks, o login e o
-`/agent-hub` (que tem autenticação própria) — quatro linhas, cada uma com o motivo ao lado, mais as duas do Swagger fora de produção.
+`/agent-hub` e o cadastro do agente (`POST /agent-hub/enroll`), que têm autenticação própria — cinco linhas, cada uma com o motivo ao lado, mais as duas do Swagger fora de produção.
 
 **E há uma segunda porta fechada por padrão, do lado da AUTORIZAÇÃO:**
 `infra/http/permission-guard.ts` exige que toda rota declare o **cargo mínimo** que pede — e

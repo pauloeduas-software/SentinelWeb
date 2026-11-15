@@ -121,6 +121,25 @@ model Telemetry {
   @@map("telemetries")
 }
 
+/// A credencial de cada máquina no `/agent-hub` (CR): nasce no cadastro
+/// (`POST /agent-hub/enroll`), que troca o `AGENT_ENROLL_SECRET` por um token só
+/// dela, e é a única coisa que o hub aceita.
+///
+/// PELO HWID, E NÃO PELO `Endpoint`: a credencial nasce ANTES do handshake, e o
+/// endpoint nasce do handshake. Ligar os dois por FK obrigaria a criar a máquina
+/// sem nome e sem sistema só para pendurar o token.
+///
+/// SÓ O HASH. O token é aleatório de 256 bits, então SHA-256 basta (não é senha
+/// de gente, que pede argon2): quem lê o banco não consegue se passar pela
+/// máquina. Revogar é apagar a linha (`bun run agente:revogar <hwid>`).
+model AgentCredential {
+  hwid      String   @id
+  tokenHash String   @unique
+  createdAt DateTime @default(now())
+
+  @@map("agent_credentials")
+}
+
 /// Os cargos da autorização (D148), do menor para o maior (AV): Técnico opera,
 /// Supervisor decide o ciclo de vida e o dinheiro, Administrador cuida das
 /// contas. A ordem do enum é a hierarquia, e a comparação mora em

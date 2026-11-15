@@ -1149,3 +1149,40 @@ saindo uma vez só.
   legível guardada, quem administra ou quem lesse um backup poderia entrar antes da pessoa e escolher a senha da conta.
   Okta, Google e Microsoft também mostram uma vez só. Quem fechou o painel sem copiar gera outra: a que se
   perdeu ninguém recebeu.
+
+## CR — Cada máquina tem o seu token, e o segredo único só cadastra
+
+> **Supera:** [D149](./escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token), na parte do agente.
+
+**Decisão.** O agente entra em dois passos, como o Fleet, o osquery, o Elastic Agent, o Tactical RMM e o Wazuh:
+
+- **O cadastro.** `POST /agent-hub/enroll`, com `Authorization: Bearer <AGENT_ENROLL_SECRET>` e `{ "Hwid": "…" }`,
+  devolve `201 { "Token": "…" }`: 32 bytes aleatórios, só daquela máquina. O banco guarda o SHA-256 do token
+  (`agent_credentials`, uma linha por HWID), nunca o token. O `AGENT_TOKEN` virou `AGENT_ENROLL_SECRET`, e vale só aqui.
+- **A conexão.** O `/agent-hub` aceita só o token da máquina; o segredo de instalação dá 401. A conexão fica presa ao
+  HWID do token, e mensagem com outro HWID no payload é descartada com aviso no log.
+- **O recadastro troca o token**, e o antigo para de valer: é a reinstalação. **Com a máquina conectada, é 409**, e a
+  conexão dela continua — a regra do Wazuh (`src/os_auth/auth.c`: "can't be replaced since it is not disconnected").
+- **Revogar é apagar a credencial:** `bun run agente:revogar <hwid>`. Quando a máquina existe no painel, a revogação
+  vai para a auditoria dela, assinada pelo comando.
+- **O cadastro tem o teto do login,** 20 por minuto por IP: a repetição ali é alguém adivinhando o segredo.
+
+**Por quê:** com um token só para a frota, quem o tinha se apresentava como qualquer máquina. O registro de conexões
+é por HWID, e a conexão nova substitui a velha: bastava mandar o handshake com o HWID de outra para tomar o lugar
+dela, receber os comandos dela e gravar telemetria no nome dela. Agora o token diz qual máquina está do outro lado, e
+uma máquina comprometida não fala por nenhuma outra. O segredo único continua existindo, mas sai da conversa do dia a
+dia: trafega uma vez por máquina, e o agente o apaga depois de usar.
+
+A pesquisa que levou a isto foi feita no código de cada agente e está na decisão A11 do repositório do agente
+(`docs/decisoes/protocolo.md` do SentinelAgente), com o arquivo de cada projeto.
+
+**O custo:** uma tabela (`agent_credentials`), uma rota, um comando de linha e o cadastro no agente. Não há
+convivência com o token antigo, ao contrário do que o D89 pedia: o agente antigo não mandava token nenhum, e o
+novo já nasce cadastrando. Não há frota para derrubar.
+
+**O que ficou de fora.**
+- **A máquina desligada pode ser recadastrada** por quem tem o segredo de instalação. É o preço de a reinstalação não
+  pedir ninguém no painel, e é por isso que o segredo continua sendo tratado como senha.
+- **A conexão aberta não cai na revogação.** O hub confere o token na abertura, e o comando roda fora do processo do
+  servidor. Para cortar na hora, reinicia-se o servidor depois de revogar.
+- **Revogar pelo painel.** Um botão na aba Máquina pede tela, cargo e rota; o comando resolve o caso raro sem isso.

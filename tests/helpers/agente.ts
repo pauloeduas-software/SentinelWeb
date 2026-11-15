@@ -22,7 +22,7 @@ import type { ApiDeTeste } from './app';
 // `inject` e continua sendo o MESMO Fastify de produção.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const AGENT_TOKEN = process.env.AGENT_TOKEN ?? '';
+const AGENT_ENROLL_SECRET = process.env.AGENT_ENROLL_SECRET ?? '';
 
 export interface AgenteDeTeste {
   hwid: string;
@@ -75,23 +75,46 @@ export async function esperarPor<T>(
 }
 
 /**
- * Conecta um agente.
+ * Cadastra a máquina e devolve o token dela, como o agente faz na instalação
+ * (CR). Pelo `inject`: o cadastro é HTTP comum, sem socket.
+ */
+export async function cadastrarAgente(api: ApiDeTeste, hwid: string): Promise<string> {
+  const resposta = await api.anonimo.post<{ Token: string }>(
+    '/agent-hub/enroll',
+    { Hwid: hwid },
+    { headers: { authorization: `Bearer ${AGENT_ENROLL_SECRET}` } },
+  );
+  if (resposta.status !== 201) throw new Error(`O cadastro de ${hwid} respondeu ${resposta.status}.`);
+  return resposta.body.Token;
+}
+
+/**
+ * Abre o WebSocket com o token dado, sem cadastrar nada. Rejeita com o status
+ * HTTP quando o hub recusa o upgrade — é o que os testes da autenticação leem.
+ */
+export async function abrirConexao(api: ApiDeTeste, token: string): Promise<WebSocket> {
+  const porta = await ouvir(api);
+  const socket = new WebSocket(`ws://127.0.0.1:${porta}/agent-hub`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    socket.once('open', () => resolve());
+    socket.once('unexpected-response', (_req, res) => reject(new Error(`HTTP ${res.statusCode}`)));
+    socket.once('error', reject);
+  });
+  return socket;
+}
+
+/**
+ * Conecta um agente: cadastra a máquina e abre a conexão com o token dela.
  *
  * O payload sai em PascalCase porque é assim que o agente serializa — e é o
  * caminho que o `normalize-payload.helper` tem que resolver. Um teste escrito em
  * camelCase provaria o caminho mais fácil.
  */
 export async function conectarAgente(api: ApiDeTeste, hwid: string): Promise<AgenteDeTeste> {
-  const porta = await ouvir(api);
-
-  const socket = new WebSocket(`ws://127.0.0.1:${porta}/agent-hub`, {
-    headers: { Authorization: `Bearer ${AGENT_TOKEN}` },
-  });
-
-  await new Promise<void>((resolve, reject) => {
-    socket.once('open', () => resolve());
-    socket.once('error', reject);
-  });
+  const socket = await abrirConexao(api, await cadastrarAgente(api, hwid));
 
   const mandar = async (Type: string, Payload: Record<string, unknown>) => {
     socket.send(JSON.stringify({ Type, Payload: { Hwid: hwid, ...Payload } }));

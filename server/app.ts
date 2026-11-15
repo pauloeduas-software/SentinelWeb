@@ -77,7 +77,8 @@ const ROTAS_PUBLICAS: readonly RotaPublica[] = [
   { method: 'GET', path: '/health', motivo: 'liveness do container, que não tem sessão' },
   { method: 'GET', path: '/health/ready', motivo: 'readiness do monitoramento, que também não tem' },
   { method: 'POST', path: '/api/auth/login', motivo: 'é por onde a sessão nasce' },
-  { method: 'GET', path: '/agent-hub', motivo: 'autenticação própria (AGENT_TOKEN)' },
+  { method: 'GET', path: '/agent-hub', motivo: 'autenticação própria (o token da máquina, CR)' },
+  { method: 'POST', path: '/agent-hub/enroll', motivo: 'autenticação própria (AGENT_ENROLL_SECRET, CR)' },
   // O Swagger só existe fora de produção (`ApiDocsMaestro`): é a planta da API, e a
   // rota dele não tem sessão nem cargo. Em produção a lista não o inclui — e a rota
   // nem é registrada.

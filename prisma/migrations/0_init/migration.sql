@@ -94,6 +94,15 @@ CREATE TABLE "telemetries" (
 );
 
 -- CreateTable
+CREATE TABLE "agent_credentials" (
+    "hwid" TEXT NOT NULL,
+    "tokenHash" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "agent_credentials_pkey" PRIMARY KEY ("hwid")
+);
+
+-- CreateTable
 CREATE TABLE "users" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
@@ -455,6 +464,9 @@ CREATE INDEX "telemetries_endpointId_timestamp_idx" ON "telemetries"("endpointId
 
 -- CreateIndex
 CREATE INDEX "telemetries_timestamp_idx" ON "telemetries"("timestamp");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "agent_credentials_tokenHash_key" ON "agent_credentials"("tokenHash");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
