@@ -1,4 +1,4 @@
-// O HWID é a identidade da máquina e chega do agente com grafia instável
+// O HWID é o id da instalação do agente (CV) e chega com grafia instável
 // (maiúsculas, espaço em volta). Toda leitura e toda escrita passam por aqui —
 // senão a mesma máquina vira dois registros no banco.
 export function sanitizeHwid(hwid: string): string {

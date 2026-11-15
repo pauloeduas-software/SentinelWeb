@@ -69,12 +69,17 @@ describe('serial legítimo repetido em duas máquinas também vale zero', () => 
   it('o parque desmente o serial, mesmo fora da lista de lixo', async () => {
     await ativoComSerial('SN-CLONE-77', 'Ativo clonado');
 
+    // AS DUAS LIGADAS AO MESMO TEMPO, que é o clone. Uma depois da outra, com a
+    // primeira desligada, é a máquina reinstalada, e a segunda herda a linha da
+    // primeira (CV).
+    const agentes = [];
     for (const hwid of ['clone-a', 'clone-b']) {
       const agente = await conectarAgente(api, hwid);
       await agente.handshake({ BiosSerial: 'SN-CLONE-77', Hostname: hwid });
       await esperarPor(`${hwid} aparecer`, () => prisma.endpoint.findUnique({ where: { hwid } }));
-      await agente.fechar();
+      agentes.push(agente);
     }
+    for (const agente of agentes) await agente.fechar();
 
     await rodarReconciliacao();
 

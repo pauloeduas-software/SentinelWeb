@@ -6,7 +6,7 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D45–D51, D95–D122, e A/D/E/H da segunda rodada (ver
+> Decisões neste arquivo: D45–D51, D95–D122, e A/D/E/H/CV da segunda rodada (ver
 > [`README.md`](./README.md#a-segunda-rodada-ap)).
 
 ---
@@ -831,6 +831,10 @@ havia necessidade — o campo chegando e sendo ignorado é mais simples que rene
 
 ## H — A fusão de máquinas sai
 
+> **Superada em parte por [CV](#cv--a-máquina-reinstalada-herda-a-própria-linha-como-no-glpi):** o `hwid` deixa de ser
+> estável entre reinstalações. A segunda linha para a mesma máquina continua não existindo, mas porque o handshake
+> reconhece a máquina reinstalada pelo firmware, e não porque o `hwid` nunca muda.
+
 > **Superada em parte por [BZ](#bz--vincular-e-desvincular-moram-em-descobertas):** o 409 de vínculo aponta para Descobertas, não para a aba Máquina.
 
 **Decidido:** saem `merge-endpoints`, a cascata máquina↔máquina, o sinal `MAC` e
@@ -1063,3 +1067,49 @@ esta é a hora de fechar a lista: depois, mudá-la muda o HWID de máquina cadas
 
 **O que ficou de fora.** A comparação do serial em si continua com os separadores: `ABC-123` e `ABC123` não casam.
 Juntar os dois mudaria o vínculo de computador que já existe, e não há caso que peça.
+
+---
+
+## CV — A máquina reinstalada herda a própria linha, como no GLPI
+
+> **Supera em parte:** [H](#h--a-fusão-de-máquinas-sai) (a premissa de que o `hwid` é estável entre reinstalações).
+
+**Decisão.** O `hwid` passa a ser **o id da instalação do agente**, e não da máquina: o SentinelAgente o sorteia no
+primeiro arranque e o perde quando o disco é formatado ou o pacote é purgado (a A20 de lá). Quem diz que a máquina é a
+mesma é o firmware do handshake. Quando chega um `hwid` que o servidor nunca viu, `herdarMaquinaReinstalada`
+(`server/modules/endpoint/use-cases/adopt-reinstalled-endpoint.usecase.ts`) procura a máquina conhecida com as regras
+de importação do GLPI, na mesma ordem (`RuleImportAsset.xml`):
+
+1. serial e UUID iguais (a regra 11 de lá);
+2. serial igual, e a linha antiga sem UUID (a 12);
+3. os dois vieram e nada casou com os dois: máquina nova (a 13);
+4. só o serial veio: serial igual (a 14).
+
+Achando, a linha antiga ganha o `hwid` novo, o token da instalação velha é apagado, e a auditoria grava `REINSTALL`
+com o `hwid` de antes e o de depois. O vínculo com o ativo, a telemetria e as sugestões continuam na mesma linha, e o
+handshake segue como atualização: a mudança de hardware compara com o que a máquina tinha antes de formatar.
+
+**Duas travas que o GLPI não tem**, porque lá o erro custa um inventário e aqui custa os comandos de outra máquina:
+- **Um candidato só.** Dois endpoints com o mesmo serial são evidência zero
+  ([D46](#d46--evidência-ambígua-é-evidência-zero)): a máquina entra como nova, e o log diz por quê.
+- **O candidato desligado.** A máquina que continua ONLINE não foi reinstalada: o outro agente com o mesmo serial é
+  um clone, ou um serial repetido que a lista de fábrica não conhece. A herança tomaria o lugar de uma máquina viva.
+
+**Fica de fora, como no GLPI:**
+- **O UUID sozinho** (a regra 15 de lá vem desligada): é o valor que a VM clonada e o firmware genérico repetem.
+- **O nome**, que é renomeável e se repete; o D46 já lhe dava 60 pontos, e não o vínculo automático.
+- **A troca de placa-mãe.** O serial e o UUID mudam juntos, e a máquina entra como nova; a antiga fica OFFLINE e vira
+  fantasma no painel de cobertura. Nenhum dos sistemas olhados resolve isso sozinho (o Jamf e o Intune pedem que alguém
+  apague o registro antigo).
+
+**Por quê:** um `hwid` derivado do firmware não era imutável de verdade: ele muda com a placa-mãe, com o serial que a
+BIOS passa a preencher e com cada revisão da regra (a A15 do agente já o fez uma vez), e cada mudança deixava duas
+linhas para a mesma máquina sem ferramenta para juntá-las, porque a H tinha tirado a fusão. Os sistemas de inventário
+olhados separam as duas perguntas. O agente do GLPI se identifica com um id sorteado e guardado em disco (`agentid`,
+`deviceid`, em `lib/GLPI/Agent.pm`), e o servidor decide qual computador é pelas regras de importação, apontando o
+agente novo para o computador antigo e apagando o agente velho (`MainAsset::rulepassed`). Fazendo o mesmo, o servidor
+decide com o parque inteiro à vista, que é o que a lista de fábrica e os valores repetidos precisam, e a máquina sem
+serial de produto deixa de não ter identidade.
+
+**O que o fio não muda:** o campo continua `Hwid`, e o servidor nunca leu o que havia dentro dele.
+

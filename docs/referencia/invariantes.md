@@ -305,11 +305,14 @@ alternativa não é "duas máquinas no mesmo ativo": é **duas verdades sobre a 
 máquina** — dois `hostname`, dois inventários de software, duas datas de último
 contato, e nenhuma forma de saber qual vale.
 
-O caso que ele pega de verdade é a **reimagem**: a máquina volta com `hwid` novo e
-o serial casando com um ativo que já tem endpoint. Sem o índice, o segundo vínculo
+O caso que ele pega de verdade é a **reimagem que não foi reconhecida**: a máquina
+volta com `hwid` novo, o handshake não a reconhece como a antiga (outro UUID, o
+serial em duas máquinas, a antiga ainda ligada — [CV](../decisoes/reconciliacao.md#cv--a-máquina-reinstalada-herda-a-própria-linha-como-no-glpi))
+e o serial casa com um ativo que já tem endpoint. Sem o índice, o segundo vínculo
 entraria e a tela do ativo passaria a mostrar a máquina errada, escolhida por
 ordem de consulta. Com ele, a tentativa é recusada com 409, apontando para
-"Desvincular" da lista Vinculadas, em Descobertas.
+"Desvincular" da lista Vinculadas, em Descobertas. A reimagem reconhecida não
+chega aqui: ela herda a própria linha, com o vínculo dentro.
 
 > `onDelete: SetNull` é o outro lado: apagar um ativo de verdade **não** leva
 > junto a telemetria da máquina. O preço é que o vínculo se desfaz em silêncio, e

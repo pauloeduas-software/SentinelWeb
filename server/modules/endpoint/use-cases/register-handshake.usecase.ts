@@ -2,6 +2,7 @@ import { prisma } from '../../../infra/database/prismaClient';
 import type { HandshakeData } from '../../shared/agent-protocol.types';
 import type { EspecificacoesColetadas } from '../../reconciliation/helpers/hardware-diff.helper';
 import { shortHwid } from '../helpers/hwid.helper';
+import { herdarMaquinaReinstalada } from './adopt-reinstalled-endpoint.usecase';
 import { createLogger } from '../../../infra/logger/logger';
 
 const logger = createLogger('endpoint.handshake');
@@ -67,10 +68,16 @@ export async function registerHandshake(data: HandshakeData): Promise<HandshakeR
   // é busca por índice. Handshake acontece quando o agente sobe ou
   // ressincroniza, não a cada amostra de telemetria: o caminho quente continua
   // sendo o `touchEndpoint`, que não passa por aqui.
-  const anterior = await prisma.endpoint.findUnique({
+  const lerAnterior = () => prisma.endpoint.findUnique({
     where: { hwid: data.hwid },
     select: SELECT_ESPECIFICACOES,
   });
+  let anterior = await lerAnterior();
+
+  // HWID NUNCA VISTO PODE SER UMA MÁQUINA CONHECIDA, REINSTALADA (CV): o HWID é
+  // da instalação do agente, e o firmware diz se a máquina é outra. Herdando,
+  // a linha antiga passa a ter este HWID, e o "antes" é o dela.
+  if (!anterior && (await herdarMaquinaReinstalada(data))) anterior = await lerAnterior();
 
   // Devolve o `id` porque quem roteia a mensagem (modules/agent) precisa dele
   // para as mudanças de hardware — sem isso, ela faria um `findUnique` pelo

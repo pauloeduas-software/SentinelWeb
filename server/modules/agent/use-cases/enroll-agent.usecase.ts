@@ -14,9 +14,10 @@ const logger = createLogger('agent.enroll');
  * ═══════════════════════════════════════════════════════════════════════════
  * O RECADASTRO TROCA O TOKEN, MENOS COM A MÁQUINA CONECTADA.
  *
- * Reinstalar o agente apaga o token dele, e a máquina precisa entrar de novo
- * pelo mesmo HWID: por isso o cadastro de um HWID conhecido substitui o token
- * antigo, que para de valer na hora.
+ * O agente que perdeu o token (revogado, recusado com 401) volta com o mesmo
+ * HWID e o segredo de instalação: por isso o cadastro de um HWID conhecido
+ * substitui o token antigo, que para de valer na hora. A máquina formatada vem
+ * com HWID novo, e quem a reconhece é o handshake (CV).
  *
  * Mas quem tem o segredo de instalação poderia, assim, tomar o lugar de uma
  * máquina que está funcionando: cadastrar o HWID dela e passar a receber os
