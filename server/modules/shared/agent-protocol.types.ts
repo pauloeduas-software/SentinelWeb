@@ -34,11 +34,19 @@ export interface AgentCommandPacket {
  *
  * Quem não manda serial simplesmente não pontua por serial na cascata de
  * reconciliação (docs/decisoes/reconciliacao.md, D46).
+ *
+ * O QUE O SENTINELAGENTE MANDA, e em que forma, está na A14 de lá
+ * (docs/decisoes/protocolo.md no repositório do agente): cada campo vai na forma
+ * que só muda quando a máquina muda, porque a comparação do `AssetChange` é
+ * exata. Valor de fábrica ele manda nulo; `chassisType` e `diskTotalBytes` ele
+ * não manda.
  */
 export interface HandshakeData {
   hwid: string;
   hostname: string;
+  /** `NAME VERSION_ID` do os-release ("Ubuntu 24.04"), sem a versão pontual. O agente manda sempre. */
   osVersion: string;
+  /** O da placa da rota padrão, como o sysfs dá: `aa:bb:cc:dd:ee:ff`, em minúsculas. */
   macAddress: string | null;
   localIp: string | null;
   cpuModel: string | null;
@@ -67,9 +75,22 @@ export interface HandshakeData {
    * o compilador não ajudaria se o campo existisse com esse nome.
    */
   hardwareModel: string | null;
-  /** O código do gabinete, como o firmware o declara: notebook, desktop, VM. */
+  /**
+   * O código do gabinete, como o firmware o declara: notebook, desktop, VM.
+   *
+   * O FORMATO NÃO ESTÁ FIXADO: o teste do handshake manda `'10'`, o código
+   * SMBIOS, e o agente falso manda `'Desktop'`. Por isso o SentinelAgente não
+   * manda o campo (A14) até ele ser decidido aqui.
+   */
   chassisType: string | null;
-  /** Specs COLETADAS: moram no lado que descobre, não em `assets` (D16). */
+  /**
+   * Specs COLETADAS: moram no lado que descobre, não em `assets` (D16).
+   *
+   * A RAM o SentinelAgente manda arredondada para cima em GiB, porque o
+   * `MemTotal` cru varia alguns kB com o kernel. O disco ele não manda (A14):
+   * somar os discos oscila com pendrive e HD USB, e a telemetria já traz os
+   * discos um a um.
+   */
   ramTotalBytes: bigint | null;
   diskTotalBytes: bigint | null;
   /**
