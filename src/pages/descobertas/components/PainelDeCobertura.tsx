@@ -3,7 +3,7 @@ import type { Cobertura } from '../../../types/reconciliation.types';
 
 // O PAINEL DE COBERTURA — *quanto do parque o sistema realmente enxerga?*
 //
-// Antes não havia como responder: o ITAM sabia o que foi cadastrado, o RMM
+// Antes não havia como responder: o cadastro sabia o que foi comprado, o agente
 // sabia o que está ligado, e ninguém sabia o tamanho da diferença.
 //
 // O desenho é o dos cartões de contagem das listas, sem o clique: o número conta o
@@ -13,8 +13,8 @@ import type { Cobertura } from '../../../types/reconciliation.types';
 interface Props {
   cobertura: Cobertura | undefined;
   erro: string | null;
-  /** O `shadowHours` da configuração, que a frase do Shadow IT cita. */
-  horasDeShadow?: number;
+  /** O `ghostDays` da configuração, que a frase do Sumidos cita. */
+  diasSemContato?: number;
 }
 
 interface Numero {
@@ -25,7 +25,7 @@ interface Numero {
   ajuda: string;
 }
 
-function numeros(cobertura: Cobertura | undefined, horasDeShadow: number | undefined): Numero[] {
+function numeros(cobertura: Cobertura | undefined, diasSemContato: number | undefined): Numero[] {
   return [
     {
       rotulo: 'Com agente',
@@ -38,38 +38,23 @@ function numeros(cobertura: Cobertura | undefined, horasDeShadow: number | undef
       ajuda: 'cadastrados sem máquina vinculada',
     },
     {
-      rotulo: 'Nunca vistos',
-      valor: cobertura?.nuncaVistos,
-      ajuda: 'cadastrados e nenhum agente jamais os viu',
-    },
-    {
-      rotulo: 'Fantasmas',
-      valor: cobertura?.fantasmas,
-      ajuda: 'já foram vistos e sumiram: confira se ainda existem',
-    },
-    {
-      rotulo: 'Sem vínculo',
-      valor: cobertura?.orfaos,
-      ajuda: 'máquinas que o agente vê e o cadastro não conhece',
-    },
-    {
-      rotulo: 'Shadow IT',
-      valor: cobertura?.shadowIt,
+      rotulo: 'Sumidos',
+      valor: cobertura?.sumidos,
       // Sem a configuração não há prazo a citar: o número seria inventado.
-      ajuda: horasDeShadow === undefined
-        ? 'sem vínculo há tempo e ainda sem triagem'
-        : `sem vínculo há mais de ${horasDeShadow}h e ainda sem triagem`,
+      ajuda: diasSemContato === undefined
+        ? 'já foram vistos e pararam de dar sinal: confira se ainda existem'
+        : `sem contato há mais de ${diasSemContato} dias: confira se ainda existem`,
     },
   ];
 }
 
-export default function PainelDeCobertura({ cobertura, erro, horasDeShadow }: Props) {
+export default function PainelDeCobertura({ cobertura, erro, diasSemContato }: Props) {
   // Sem isto, a consulta que falhou mostraria "—" para sempre, como se ainda viesse.
   if (!cobertura && erro) return <Aviso className="mb-4">Não foi possível carregar os números: {erro}</Aviso>;
 
   return (
     <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(9rem,1fr))]">
-      {numeros(cobertura, horasDeShadow).map(({ rotulo, valor, ajuda }) => (
+      {numeros(cobertura, diasSemContato).map(({ rotulo, valor, ajuda }) => (
         <div key={rotulo} className="rounded-lg border border-border-sutil bg-surface-card px-4 py-3 shadow-sm">
           <span className="block truncate text-sm text-text-tertiary">{rotulo}</span>
           <span className="mt-1 block text-2xl font-bold tabular-nums text-text-primary">{valor ?? '—'}</span>

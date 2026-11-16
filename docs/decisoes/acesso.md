@@ -761,6 +761,8 @@ direto no `exigirPermissao`, e o que o `ADMIN` vê continua provado pela API.
 
 > **Superada em parte por [BR](./plataforma.md#br--a-ficha-do-computador-não-tem-aba-detalhes):** a observação da baixa aparece no aviso
 > entre o card e as abas, à vista em todas.
+>
+> **Superada em parte por [CW](./reconciliacao.md#cw--descobertas-perde-a-triagem-os-ociosos-e-os-números-repetidos):** a triagem e o uso agregado saem.
 
 > **Superada em parte por [AC](./licencas.md#ac--a-chave-vira-lista-cada-uma-cobre-uma-quantidade-e-a-entrega-escolhe-uma):**
 > a chave de licença deixa de ir como `chave: 'informada' | 'alterada' | 'removida'`. A auditoria

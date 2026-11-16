@@ -6,7 +6,7 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D45–D51, D95–D122, e A/D/E/H/CV da segunda rodada (ver
+> Decisões neste arquivo: D45–D51, D95–D122, e A/D/E/H/CV/CW/CX/CY/CZ/DA/DB da segunda rodada (ver
 > [`README.md`](./README.md#a-segunda-rodada-ap)).
 
 ---
@@ -184,6 +184,8 @@ igual — e é por isso que a propagação por job não é um atalho, é o desen
 
 ## D96 — **Uma** tabela de sugestão, com discriminante
 
+> **Superada em parte por [CZ](#cz--a-fila-de-sugestões-perde-o-kind-e-a-resposta-o-que-a-tela-não-lê):** o `kind` sai; a fila só propõe vínculo.
+
 **Decidido:** `ReconciliationSuggestion` com `kind SuggestionKind` e FKs de alvo nuláveis
 (`assetId`, `targetUserId`, `targetLocationId`, `mergeIntoEndpointId`), no padrão que a
 `Assignment` já usa.
@@ -241,6 +243,8 @@ O enum descreve o **agente**; fantasma é fato do **patrimônio**. São eixos di
 ---
 
 ## D99 — O teste do agente entra por **WebSocket de verdade**
+
+> **Superada em parte por [CY](#cy--o-servidor-lê-o-que-o-sentinelagente-manda-e-só-isso):** o parser lê só PascalCase, sem sinônimos.
 
 **Decidido:** os testes do agente abrem `app.listen({ port: 0 })` e falam com `/agent-hub`
 por um cliente `ws` real, num helper `tests/helpers/agente.ts`. `ws` entra como
@@ -514,6 +518,8 @@ que amanhã pode valer de novo seria inventar uma recusa que não houve.
 
 ## D111 — A janela da agregação corta na **meia-noite**, não em "há N×24 horas"
 
+> **Superada por [CW](#cw--descobertas-perde-a-triagem-os-ociosos-e-os-números-repetidos):** a agregação do uso diário sai com a aba Ociosos.
+
 **Decidido:** `agregarUsoDosAtivos` calcula `desde` como a meia-noite UTC do dia
 mais antigo da janela.
 **Descartado:** `Date.now() - dias × 24h`, que era o que estava escrito.
@@ -636,6 +642,8 @@ batimento falhou.
 
 ## D116 — A `AssetChange` ganha escritor, e ele mora no handshake
 
+> **Superada por [DA](#da--o-que-o-agente-manda-vai-para-a-aba-máquina-e-o-que-ninguém-lê-sai):** a `AssetChange` sai, com o escritor e a memória total, que só ela lia.
+
 **Decidido:** o `registerHandshake` devolve a fotografia das specs que ele estava por
 sobrescrever, e o roteador do agente compara e grava — ao lado de onde já grava a observação
 de usuário.
@@ -694,6 +702,8 @@ runtime, cada driver, cada atualização), e em ordem alfabética as primeiras c
 ---
 
 ## D118 — A configuração da descoberta ganha tela, e a allowlist com ela
+
+> **Superada em parte por [CW](#cw--descobertas-perde-a-triagem-os-ociosos-e-os-números-repetidos):** o `shadowHours` sai com a triagem; ficam o modo e o `ghostDays`.
 
 **Decidido:** o painel de `/descobertas` ganha os cinco controles — modo, `ghostDays`,
 `shadowHours`, `userDailyRetentionDays` e `ignoredUserKeys`.
@@ -791,6 +801,8 @@ próxima vez.
 
 ## A — A reconciliação deixa de inferir pessoa pela conta do sistema operacional
 
+> **Superada em parte por [CY](#cy--o-servidor-lê-o-que-o-sentinelagente-manda-e-só-isso):** o `loggedOnUser` sai do tipo e do parser.
+
 **Decidido:** saem a observação de usuário logado (`EndpointUserDaily`), a sugestão de
 ocupação de posto por inferência (`OCCUPANCY`) e a de posto compartilhado por dois usuários na
 mesma máquina. `SuggestionKind` fica só com `LINK` e `MERGE` (e, depois de
@@ -871,6 +883,8 @@ sai da lista **depois** de pontuar, como o ativo já ocupado — tirá-lo antes 
 ## D — A telemetria e o comando vão para a ficha do ativo e a do posto
 
 > **Superada em parte por [BN](./posse.md#bn--o-devolver-mora-só-na-ficha-do-que-foi-entregue):** a ficha do posto não devolve mais, e a devolução presa ao posto sai da API.
+>
+> **Superada em parte por [DB](#db--a-telemetria-é-cpu-memória-e-discos):** a rede e os processos saem do painel.
 
 **Decidido:** a tela de frota (`/`) sai — `/` redireciona para `/ativos` e o item Telemetria
 deixa o menu. `GET /api/endpoints/:id` nasce: a telemetria passa a ser consultada por máquina,
@@ -937,6 +951,10 @@ primeira já tinha fechado.
 ## BY — A aba Máquina mostra o que o agente manda
 
 > **Superada em parte por [CP](#cp--a-aba-máquina-mostra-o-sistema-o-processador-o-ip-e-o-mac):** o sistema operacional, o processador, o IP e o MAC voltam para a aba.
+>
+> **Superada em parte por [CY](#cy--o-servidor-lê-o-que-o-sentinelagente-manda-e-só-isso):** o chassi e o total de disco saem do handshake.
+>
+> **Superada em parte por [DA](#da--o-que-o-agente-manda-vai-para-a-aba-máquina-e-o-que-ninguém-lê-sai):** a comparação e a `AssetChange` saem; o servidor deixa de guardar a memória total.
 
 **Decidido** (2026-11-07, comparando a aba Máquina do computador com o `HandshakePacket` do SentinelAgente):
 
@@ -1113,3 +1131,193 @@ serial de produto deixa de não ter identidade.
 
 **O que o fio não muda:** o campo continua `Hwid`, e o servidor nunca leu o que havia dentro dele.
 
+
+---
+
+## CW — Descobertas perde a triagem, os Ociosos e os números repetidos
+
+> **Superada em parte por [DA](#da--o-que-o-agente-manda-vai-para-a-aba-máquina-e-o-que-ninguém-lê-sai):** a série, o fabricante e o modelo voltam para a aba Máquina, com as placas de vídeo.
+
+> **Supera:** [D111](#d111--a-janela-da-agregação-corta-na-meia-noite-não-em-há-n24-horas) (a agregação do uso diário)
+> e [D118](#d118--a-configuração-da-descoberta-ganha-tela-e-a-allowlist-com-ela) (em parte: o `shadowHours`);
+> [BU](./plataforma.md#bu--o-nome-é-status-em-toda-tela-e-o-valor-vai-no-masculino) (em parte: o Conhecido e o Não autorizado).
+
+**Decisão** (2026-11-15, olhando a tela contra o SentinelAgente depois da A20 de lá):
+
+- **A triagem sai.** Saem os itens "Marcar como conhecida" e "Marcar como não autorizada", a coluna Status de Sem
+  vínculo, o card Shadow IT, o campo `shadowHours`, a coluna `endpoints.reviewState` com o enum `ReviewState` e a
+  rota `PATCH /api/endpoints/:id/review`.
+- **A aba Ociosos sai**, com a rota `GET /api/reconciliation/idle`, a agregação `agregarUsoDosAtivos` e a tabela
+  `asset_usage_daily`. O expurgo da telemetria crua continua, uma vez por dia.
+- **O painel de cima fica com três números:** Com agente (de N cadastrados), Sem agente e Sumidos. Saem Nunca vistos
+  e Sem vínculo, e `GET /api/reconciliation/coverage` devolve `cadastrados`, `comAgente`, `semAgente` e `sumidos`.
+- **A coluna Pontos sai de Sugestões.** A pontuação continua no servidor, que é quem a usa.
+
+**Por quê:**
+- **A triagem pressupunha a máquina estranha na rede.** Desde a [CR](./acesso.md#cr--cada-máquina-tem-o-seu-token-e-o-segredo-único-só-cadastra),
+  só tem agente a máquina em que a TI pôs o segredo de instalação. A que aparece em Sem vínculo é um computador que
+  falta cadastrar, e "Não autorizado" não bloqueava nada, só pintava o ponto de vermelho. A máquina que não é da
+  empresa sai revogando o token (`bun run agente:revogar`). Nem o GLPI nem o Snipe-IT triam máquina com agente. O
+  "não gerenciado" do GLPI é o que a varredura de rede acha sem agente.
+- **Ociosos repetia os Sumidos com outro nome.** O uso era contado pela telemetria que chega, e o SentinelAgente
+  manda uma amostra por hora ([A12](https://github.com/pauloeduas-software/SentinelAgente/blob/main/docs/decisoes/protocolo.md#a12--os-tempos-telemetria-de-hora-em-hora-e-ping-de-30-a-60-s))
+  sem o usuário logado (A8 de lá). "Ocioso" virava "não ligou em 30 dias", que é o Sumidos com o mesmo prazo, e o
+  "Último uso" mostrava a última leitura, não o último uso.
+- **Os números repetidos:** Sem vínculo é a contagem da aba logo embaixo, e Nunca vistos dá quase sempre o mesmo que
+  Sem agente, porque o computador que nenhum agente viu é o que não tem máquina.
+
+**O que ficou de fora.**
+- **A aba Máquina** continua mostrando o que a [CP](#cp--a-aba-máquina-mostra-o-sistema-o-processador-o-ip-e-o-mac)
+  escolheu. Desde a A20 o agente também manda série, UUID, fabricante, modelo e memória, mas mostrá-los é regra nova
+  em Computadores, que está fechada.
+- **Uso de verdade** (horas com alguém na máquina) pede o usuário logado ou a atividade de teclado, que o agente não
+  manda.
+
+---
+
+## CX — Os nomes de Descobertas
+
+**Decisão.** Os textos da tela passam para o vocabulário do sistema:
+
+| Antes | Depois |
+|---|---|
+| Online / Offline (Vinculadas e aba Máquina) | **Conectado / Desconectado** |
+| Reconciliar agora, Varrendo… | **Procurar agora**, Procurando… |
+| Fantasmas, "Dias para virar fantasma" | **Sumidos**, "Dias sem contato" |
+| Série da BIOS (coluna de Sem vínculo) | a série **sem rótulo, embaixo do nome da máquina** ([CI](./plataforma.md#ci--a-série-vai-embaixo-da-etiqueta-em-toda-tela)) |
+| Série da BIOS, UUID do sistema (sinal da sugestão, painel Vincular) | **Série**, **UUID** |
+
+**Por quê:** nenhuma frase em inglês chega a quem usa, e o Status vai no masculino ([BU](./plataforma.md#bu--o-nome-é-status-em-toda-tela-e-o-valor-vai-no-masculino)).
+"Reconciliar" é o nome do processo, que a tela já tinha evitado no título. "Fantasma" é gíria de ferramenta, não
+Status. E desde a A20 o `BiosSerial` pode vir do serial da placa, então "da BIOS" deixou de ser verdade.
+
+**O que não muda:** os valores da API (`ONLINE`, `OFFLINE`), as rotas e o `ghostDays`.
+
+---
+
+## CY — O servidor lê o que o SentinelAgente manda, e só isso
+
+> **Superada em parte por [DB](#db--a-telemetria-é-cpu-memória-e-discos):** a telemetria não traz rede, e o teste do campo ignorado sai.
+>
+> **Supera em parte:** [D99](#d99--o-teste-do-agente-entra-por-websocket-de-verdade) (os sinônimos PascalCase/camelCase),
+> [A](#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional) (o `loggedOnUser` no tipo e no parser),
+> [G](./licencas.md#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples) (o `installedSoftware` no tipo e no parser),
+> [Q](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai) (o protocolo que ficou a conferir) e
+> [BY](#by--a-aba-máquina-mostra-o-que-o-agente-manda) (o chassi e o total de disco que o handshake guardava).
+
+**Decisão** (2026-11-15, conferindo o `HandshakePayload` e o `TelemetryPayload` do SentinelAgente):
+
+- **Saem as colunas `endpoints.chassisType` e `endpoints.diskTotalBytes`,** com o lugar delas no handshake, na
+  comparação de hardware (`AssetChange`) e na resposta de `/api/endpoints`.
+- **O parser lê só PascalCase e só os nomes do SentinelAgente.** Saem o envelope em minúsculas (`type`, `payload`), a
+  leitura em camelCase e os nomes antigos `serialNumber`, `uuid`, `model`, `chassis`, `totalPhysicalMemory`, `userName`,
+  `cpuUsage`, `ramTotal`, `ramUsed` e `diskUsageBytes`.
+- **A aba Máquina lê a telemetria do mesmo jeito** (`src/helpers/metrics.helper.ts`): só PascalCase, as listas como
+  lista e a rede pelos bytes. Saem o texto JSON no lugar do objeto, o mapa de discos por nome e o `TotalRxGb`/`TotalTxGb`,
+  que o `NetworkPayload` não tem. Nada muda na tela.
+- **`installedSoftware` e `loggedOnUser` saem do tipo e do parser.** O campo que o servidor não lê é ignorado sem
+  erro, como já era com o `Gpus`; o teste do handshake continua mandando `InstalledSoftware` e `Gpus` para provar isso.
+
+**Por quê:**
+- **O SentinelAgente não manda `ChassisType` nem `DiskTotalBytes`** (A14 de lá), e nenhuma tela mostrava os dois.
+- **O agente que mandava camelCase e os nomes antigos não conecta mais:** desde a
+  [CR](./acesso.md#cr--cada-máquina-tem-o-seu-token-e-o-segredo-único-só-cadastra) o hub pede o token da máquina, que
+  ele não tem. O "agente em campo" que o A, o G e o Q protegiam deixou de existir.
+- **Ler e descartar é igual a não ler.** O `installedSoftware` e o `loggedOnUser` entravam no `HandshakeData` e
+  ninguém os lia depois.
+
+---
+
+## CZ — A fila de sugestões perde o `kind`, e a resposta, o que a tela não lê
+
+> **Supera em parte:** [D96](#d96--uma-tabela-de-sugestão-com-discriminante) (o discriminante).
+
+**Decisão** (2026-11-15):
+
+- **Saem a coluna `reconciliation_suggestions.kind` e o enum `SuggestionKind`.** O índice
+  `sugestao_pendente_por_alvo` passa a ser só `endpointId` e `assetId`, e o `(state, kind)` vira `(state)`.
+- **`GET /api/reconciliation/suggestions` e as respostas do aceite e da recusa** devolvem o `id`, o sinal, a
+  evidência, a máquina (`id`, `hostname` e série) e o computador. Saem `kind`, `score`, `state`, `createdAt`,
+  `resolvedAt`, `endpoint.hwid` e `endpoint.lastSeen`.
+- **O `score` e o `state` ficam no banco:** a cascata decide o vínculo automático pelo `score`, e a recusa o grava na
+  auditoria. **O `resolvedAt` também fica:** o expurgo das substituídas conta os 180 dias por ele.
+
+**Por quê:** o `kind` só tinha `LINK` desde que a fusão (H) e a ocupação (A) saíram, e o D96 o guardava para um tipo
+novo que não veio. Voltar a ter um custa uma coluna. Os campos da resposta, a tela não lia: a coluna Pontos saiu
+na [CW](#cw--descobertas-perde-a-triagem-os-ociosos-e-os-números-repetidos), e a fila só lista as pendentes.
+
+---
+
+## DA — O que o agente manda vai para a aba Máquina, e o que ninguém lê sai
+
+> **Superada em parte por [DB](#db--a-telemetria-é-cpu-memória-e-discos):** a telemetria não traz processos, e o handshake não traz `RamTotalBytes` nem `InstalledSoftware`.
+>
+> **Supera:** [D116](#d116--a-assetchange-ganha-escritor-e-ele-mora-no-handshake);
+> [BY](#by--a-aba-máquina-mostra-o-que-o-agente-manda) (em parte: a comparação que continuava gravando);
+> [CW](#cw--descobertas-perde-a-triagem-os-ociosos-e-os-números-repetidos) (em parte: a série, o fabricante e o modelo fora da aba).
+
+**Decisão** (2026-11-15, revendo Descobertas e a aba Máquina contra o SentinelAgente depois da CW, da CY e da CZ):
+
+- **A aba Máquina mostra o que a máquina diz de si:** fabricante, modelo, série, sistema, processador, IP, MAC,
+  as placas de vídeo e o HWID, num quadro só. As placas (`Gpus`, A22 do agente) passam a ser guardadas em
+  `endpoints.gpus`, a lista como veio, e aparecem com o nome e a memória. O UUID fica de fora da tela: só a
+  reconciliação o usa.
+- **Saem a tabela `asset_changes`, a comparação do handshake e a coluna `endpoints.ramTotalBytes`.** A memória total
+  já vem na telemetria, no medidor de Memória. O agente continua mandando `RamTotalBytes` e `InstalledSoftware`, e o
+  servidor os ignora sem erro.
+- **O fabricante, o modelo e as placas que não vieram num handshake ficam como estavam,** como a série.
+- **O expurgo guarda só a última amostra de telemetria de cada máquina**, uma vez por dia, em vez de 3 dias.
+  Sai o índice em `telemetries.timestamp`, que só servia ao corte por data.
+- **`GET /api/endpoints` devolve o que as listas leem** (`id`, `hostname`, `osVersion`, `biosSerial`, `status`,
+  `lastSeen` e o computador), e **`GET /api/endpoints/:id`, o que a aba Máquina mostra.** O `Pid` dos processos sai
+  da leitura.
+- **As listas e a aba Máquina se releem a cada 30 s**, e não a cada 5.
+- **A aba tem a linha da máquina e dois blocos embaixo:** o que a máquina é e como está, e os Comandos, por último.
+  A hora da leitura só aparece quando é de um minuto ou mais antes do último contato.
+
+**Por quê:**
+- **O agente revisto manda o inventário de verdade** (A14, A20 e A22 de lá), e a CW deixou de mostrá-lo só porque
+  Computadores estava fechada. No posto, a aba é o único lugar em que o fabricante e o modelo da máquina aparecem;
+  no computador, eles se conferem com o cadastro. O GLPI mostra os mesmos campos, com as placas de vídeo.
+- **A `AssetChange` não tinha leitor.** A BY tirou as mudanças da aba e deixou a tabela "sem leitor na tela até o
+  agente ser revisto"; o agente foi revisto e ela continuou sem.
+- **A série da telemetria não tinha leitor** desde que a agregação de uso saiu com os Ociosos (CW): as duas telas
+  mostram só a última amostra.
+- **A resposta das máquinas mandava a linha inteira**, e a tela lia metade. É o critério da CZ.
+- **O que muda mais depressa é o último contato**, a cada Ping de 30 a 60 s
+  ([A12](https://github.com/pauloeduas-software/SentinelAgente/blob/main/docs/decisoes/protocolo.md#a12--os-tempos-telemetria-de-hora-em-hora-e-ping-de-30-a-60-s)
+  de lá); a telemetria chega de hora em hora, e o Desconectado leva uns 3 minutos
+  ([CS](#cs--a-máquina-calada-vira-offline-em-2-minutos)). Reler a cada 5 s trazia o mesmo dado.
+- **A hora da leitura repetia o último contato** quando a leitura foi a última coisa que a máquina mandou, que é o
+  caso da máquina desconectada.
+
+**O que fica de fora, declarado:** o histórico de troca de peça, que o GLPI mostra no computador, e os programas
+instalados, que pedem uma lista própria. Voltam só com a tela que os leia.
+
+---
+
+## DB — A telemetria é CPU, memória e discos
+
+> **Supera em parte:** [D](#d--a-telemetria-e-o-comando-vão-para-a-ficha-do-ativo-e-a-do-posto) (a rede e os processos
+> no painel), [CY](#cy--o-servidor-lê-o-que-o-sentinelagente-manda-e-só-isso) (a rede pelos bytes) e
+> [DA](#da--o-que-o-agente-manda-vai-para-a-aba-máquina-e-o-que-ninguém-lê-sai) (o `Pid` dos processos e o
+> `RamTotalBytes` e o `InstalledSoftware` do handshake).
+
+**Decisão** (2026-11-15, conferindo de novo o que o SentinelAgente manda):
+
+- **Saem as colunas `telemetries.network` e `telemetries.topProcesses`,** com a leitura de `Network` e `TopProcesses`
+  no parser e na resposta de `GET /api/endpoints/:id`.
+- **A aba Máquina perde os quadros Rede e "O que está consumindo memória".** Ficam os medidores de CPU, memória e
+  disco, e o Armazenamento quando há mais de um disco.
+- **A placa de vídeo perde o fabricante.** O `Gpus` traz só `Name` e `MemoryBytes`.
+- **O `Gpus` e o `Disks` se montam item por item antes de gravar:** `{ Name, MemoryBytes }` e
+  `{ Name, TotalGb, UsedGb }`. O item sem `Name` sai, e a lista para em 16 placas e 64 discos. Antes as duas iam para
+  a coluna Json como vinham, com o que o agente antigo mandava e do tamanho que fosse.
+- **A mensagem do agente tem teto de 1 MiB** (`maxPayload` do `/agent-hub`, era o padrão de 100 MiB do `ws`). A
+  acima dele fecha a conexão com 1009 antes de ser lida.
+- **Sai o teste do handshake com `RamTotalBytes` e `InstalledSoftware`,** que provava que o servidor ignora os dois.
+
+**Por quê:** o SentinelAgente manda na telemetria só `CpuUsagePercentage`, `RamTotalBytes`, `RamUsedBytes` e `Disks`,
+e a A24 de lá tirou do handshake os programas instalados e a RAM. Os dois quadros mostravam zero e "A leitura não trouxe
+processos." em toda máquina, e o teste provava um caso que o agente não produz mais. É o critério da CY: o servidor lê o
+que o agente manda, e só isso.

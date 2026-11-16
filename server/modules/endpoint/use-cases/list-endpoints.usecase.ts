@@ -1,8 +1,6 @@
 import { prisma } from '../../../infra/database/prismaClient';
 import type { ListEnvelope, ListQuery } from '../../../infra/http/list-query';
-import {
-  ATIVO_DA_MAQUINA_SELECT, presentEndpoint, type PresentedEndpoint,
-} from '../helpers/present-endpoint.helper';
+import { MAQUINA_DA_LISTA_SELECT, type MaquinaDaLista } from '../helpers/present-endpoint.helper';
 import { buildEndpointWhere, type FiltrosDeEndpoint } from '../helpers/endpoint-filters.helper';
 
 // Máquinas descobertas pelo agente. SEM telemetria: as tabelas de
@@ -12,26 +10,21 @@ import { buildEndpointWhere, type FiltrosDeEndpoint } from '../helpers/endpoint-
 export async function listEndpoints(
   query: ListQuery,
   filtros: Omit<FiltrosDeEndpoint, 'q'> = {},
-): Promise<ListEnvelope<PresentedEndpoint>> {
+): Promise<ListEnvelope<MaquinaDaLista>> {
   const where = buildEndpointWhere({ ...filtros, q: query.q });
 
   const [total, endpoints] = await prisma.$transaction([
     prisma.endpoint.count({ where }),
     prisma.endpoint.findMany({
       where,
-      // `include` aqui é intencional: o model `Endpoint` não recebe campo
-      // sensível (o `select` obrigatório vale para `User`, que tem
-      // `passwordHash`).
-      include: {
-        // O patrimônio de quem tem: é o que separa a lista de máquinas
-        // VINCULADAS de uma lista de hostnames, em `/descobertas`.
-        asset: ATIVO_DA_MAQUINA_SELECT,
-      },
+      // O patrimônio vai junto: é o que separa a lista de máquinas VINCULADAS
+      // de uma lista de hostnames, em `/descobertas`.
+      select: MAQUINA_DA_LISTA_SELECT,
       orderBy: { hostname: 'asc' },
       skip: query.skip,
       take: query.take,
     }),
   ]);
 
-  return { total, rows: endpoints.map(presentEndpoint) };
+  return { total, rows: endpoints };
 }

@@ -1,7 +1,7 @@
 import { prisma } from '../../../infra/database/prismaClient';
 import { AppError } from '../../../infra/errors/app-error';
 import {
-  ATIVO_DA_MAQUINA_SELECT, presentEndpointComTelemetria, type EndpointComTelemetria,
+  MAQUINA_DA_FICHA_SELECT, presentMaquinaDaFicha, type MaquinaDaFichaApresentada,
 } from '../helpers/present-endpoint.helper';
 
 /**
@@ -11,7 +11,7 @@ import {
  * POR QUE UMA ROTA PRÓPRIA, e não a listagem filtrada.
  *
  * A telemetria existia em um lugar só — `GET /api/endpoints`, a frota inteira em
- * uma resposta, consultada a cada 5 segundos. Isso servia a uma tela que mostrava
+ * uma resposta, consultada a cada poucos segundos. Isso servia a uma tela que mostrava
  * a frota em cards. Ela saiu: a telemetria agora aparece onde a máquina tem nome,
  * que é a ficha do ATIVO (aba Máquina) e a do POSTO.
  *
@@ -20,7 +20,7 @@ import {
  * SQL quando há mais de um pai: o Prisma empurra o limite para o banco só no
  * caso de um pai só, e no plural emite uma consulta `endpointId IN (…)` SEM
  * limite nenhum, carregando a série inteira dos 500 endpoints da página para
- * cortar em memória, no query engine. A cada 5 segundos, para desenhar uma.
+ * cortar em memória, no query engine. A cada consulta, para desenhar uma.
  *
  * Com um pai, o limite desce para o SQL — é o caso desta consulta, e é por isso
  * que ela é barata.
@@ -30,23 +30,10 @@ import {
  * responde "como está esta máquina".
  * ═══════════════════════════════════════════════════════════════════════════
  */
-export async function getEndpoint(id: string): Promise<EndpointComTelemetria> {
+export async function getEndpoint(id: string): Promise<MaquinaDaFichaApresentada> {
   const endpoint = await prisma.endpoint.findUnique({
     where: { id },
-    include: {
-      // `include` aqui pelo mesmo motivo da listagem: `Endpoint` não tem campo
-      // sensível, e a telemetria é o conteúdo da tela.
-      //
-      // `take: 1` porque é a amostra ATUAL que a tela mostra. A série histórica
-      // tem UM leitor, e ele não é tela: é o agregado de uso
-      // (`reconciliation/use-cases/aggregate-usage.usecase.ts`), que varre uma
-      // janela de três dias de hora em hora e grava em `asset_usage_daily` — é
-      // dali que a ociosidade sai. Os dois caminhos são o motivo do índice
-      // `(endpointId, timestamp DESC)`: sem ele, cada poll de cada tela aberta
-      // era uma varredura sequencial desta tabela.
-      telemetries: { orderBy: { timestamp: 'desc' }, take: 1 },
-      asset: ATIVO_DA_MAQUINA_SELECT,
-    },
+    select: MAQUINA_DA_FICHA_SELECT,
   });
 
   // 404 aqui é o id que não existe, e só isso. "Existe mas está offline" é outra
@@ -54,5 +41,5 @@ export async function getEndpoint(id: string): Promise<EndpointComTelemetria> {
   // comando ter deixado de usar 404 para os dois casos (ver send-command).
   if (!endpoint) throw new AppError('Máquina não encontrada.', 404);
 
-  return presentEndpointComTelemetria(endpoint);
+  return presentMaquinaDaFicha(endpoint);
 }

@@ -26,8 +26,6 @@ export async function saveTelemetry(data: TelemetryData): Promise<void> {
       ramTotal: data.ramTotal,
       ramUsed: data.ramUsed,
       disks: data.disks as Prisma.InputJsonValue,
-      network: data.network as Prisma.InputJsonValue,
-      topProcesses: data.topProcesses as Prisma.InputJsonValue,
     },
   });
 }

@@ -14,19 +14,8 @@ export interface Cobertura {
   /** Desses, quantos têm máquina vinculada. */
   comAgente: number;
   semAgente: number;
-  /**
-   * Cadastrado e NUNCA visto por agente nenhum. É a resposta do D98: o
-   * "NEVER_SEEN" não é estado do endpoint — uma linha de endpoint nasce de um
-   * handshake —, é esta contagem, do lado do patrimônio.
-   */
-  nuncaVistos: number;
-  /** FANTASMA: já foi visto, e sumiu há mais de `ghostDays`. */
-  fantasmas: number;
-
-  /** Máquinas que o agente descobriu e não têm cadastro: os órfãos. */
-  orfaos: number;
-  /** SHADOW IT: órfão visto há mais de `shadowHours` e ainda sem triagem. */
-  shadowIt: number;
+  /** SUMIDO: já foi visto por um agente, e não dá sinal há mais de `ghostDays`. */
+  sumidos: number;
 }
 
 /**
@@ -40,37 +29,18 @@ export interface Cobertura {
 export async function calcularCobertura(): Promise<Cobertura> {
   const configuracao = await lerConfiguracaoDaDescoberta();
 
-  const limiteFantasma = new Date(Date.now() - configuracao.ghostDays * 24 * 60 * 60 * 1000);
-  const limiteShadow = new Date(Date.now() - configuracao.shadowHours * 60 * 60 * 1000);
+  const limiteSumido = new Date(Date.now() - configuracao.ghostDays * 24 * 60 * 60 * 1000);
 
-  // `SEM_BAIXA` porque ativo VENDIDO não é fantasma: ele saiu do
+  // `SEM_BAIXA` porque ativo VENDIDO não está sumido: ele saiu do
   // patrimônio de propósito, e contá-lo como falha de cobertura encheria o
   // painel de acertos contábeis (D19).
   const vivos = SEM_BAIXA;
 
-  const [cadastrados, comAgente, nuncaVistos, fantasmas, orfaos, shadowIt] = await prisma.$transaction([
+  const [cadastrados, comAgente, sumidos] = await prisma.$transaction([
     prisma.asset.count({ where: vivos }),
     prisma.asset.count({ where: { ...vivos, endpoint: { isNot: null } } }),
-    prisma.asset.count({ where: { ...vivos, lastSeenByAgentAt: null } }),
-    prisma.asset.count({ where: { ...vivos, lastSeenByAgentAt: { lt: limiteFantasma } } }),
-
-    prisma.endpoint.count({ where: { assetId: null } }),
-    prisma.endpoint.count({
-      where: {
-        assetId: null,
-        reviewState: 'UNREVIEWED',
-        lastSeen: { lt: limiteShadow },
-      },
-    }),
+    prisma.asset.count({ where: { ...vivos, lastSeenByAgentAt: { lt: limiteSumido } } }),
   ]);
 
-  return {
-    cadastrados,
-    comAgente,
-    semAgente: cadastrados - comAgente,
-    nuncaVistos,
-    fantasmas,
-    orfaos,
-    shadowIt,
-  };
+  return { cadastrados, comAgente, semAgente: cadastrados - comAgente, sumidos };
 }

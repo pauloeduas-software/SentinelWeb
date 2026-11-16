@@ -14,9 +14,10 @@ export const endpointKeys = {
 /** O recorte de `GET /api/endpoints?vinculo=`: `com` ativo, ou `sem`. */
 type Vinculo = 'com' | 'sem';
 
-// Ritmo da revalidação. O agente manda amostra a cada poucos segundos; abaixo
-// disso só geraria requisição sem dado novo.
-const POLL_INTERVAL_MS = 5_000;
+// Ritmo da revalidação (DA). O que muda mais depressa é o último contato, a cada
+// Ping do agente (30 a 60 s); a telemetria chega de hora em hora, e o Desconectado
+// leva uns 3 minutos. Abaixo disso, a requisição volta com o mesmo dado.
+const POLL_INTERVAL_MS = 30_000;
 
 /**
  * Máquinas descobertas pelo agente — sem telemetria: a amostra de UMA máquina

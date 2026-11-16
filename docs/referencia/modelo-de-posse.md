@@ -207,19 +207,16 @@ Nada disso dá erro de compilação — por isso está escrito:
 ### Por que o vazio não tem `else`
 
 A tentação é escrever, dentro da Camada 3: *"se o posto está vago, devolve
-alguém"*. Isso destrói o sinal mais útil do modelo, porque três leitores
+alguém"*. Isso destrói o sinal mais útil do modelo, porque dois leitores
 dependem de o vazio **continuar vazio**:
 
 | Leitor | O que ele perde com o `else` |
 |---|---|
 | `PosseResolvida.postoVago` | o sinal nunca mais acende na resposta do ativo |
 | `GET /api/workstations?view=vagos` | a lista de posto sem ocupante fica vazia |
-| `GET /api/reconciliation/idle` | o ativo parado em posto vago deixa de ser achável — e é ele que a reconciliação cruza com a telemetria |
 
 *Quem está com isto?* **admite vazio.** O equipamento pode não estar entregue a
-ninguém, ou estar numa mesa que ninguém ocupa. O vazio **é** o fato, e é o que a
-ponte ITAM × RMM lê: máquina ligada todo dia num posto sem ocupante é a pergunta
-que nenhum ITAM de prateleira formula.
+ninguém, ou estar numa mesa que ninguém ocupa. O vazio **é** o fato.
 
 Se um dia alguém precisar responder pelo posto vazio, a forma já existe: ele vira
 **ocupante** do posto, com turno — a Camada 2 expressa isso sem coluna nova.
@@ -255,9 +252,7 @@ responsável resolvido não pode ter status de tipo `DEPLOYABLE` (estoque).
 
 **3. Posto vago vira sinal operacional.** Ativo `IN_USE` cuja assignment aponta
 para um posto **sem ocupantes abertos** = equipamento parado em posto vazio.
-Candidato a ser recolhido, e é o `postoVago` que a reconciliação cruza com o uso
-observado pelo agente (`GET /api/reconciliation/idle`). Nenhum ITAM de
-prateleira responde isso.
+Candidato a ser recolhido. Nenhum ITAM de prateleira responde isso.
 
 **4. "Quais ativos a Laura responde?"** passa a existir: assignments PERSON dela
 **+** ativos das assignments WORKSTATION dos postos que ela ocupa.

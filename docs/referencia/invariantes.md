@@ -322,7 +322,7 @@ chega aqui: ela herda a própria linha, com o vínculo dentro.
 
 ```sql
 CREATE UNIQUE INDEX "sugestao_pendente_por_alvo"
-  ON "reconciliation_suggestions" ("kind", "endpointId",
+  ON "reconciliation_suggestions" ("endpointId",
     COALESCE("assetId", '00000000-0000-0000-0000-000000000000'::uuid))
   WHERE "state" = 'PENDING';
 ```
@@ -331,7 +331,7 @@ CREATE UNIQUE INDEX "sugestao_pendente_por_alvo"
 recusada em março, substituída em abril e aceita em maio, e as três linhas contam
 essa história. O que não pode repetir é o que está **esperando decisão**.
 
-**Um alvo só, `assetId`:** `SuggestionKind` só tem `LINK`.
+**Um alvo só, `assetId`:** a sugestão só propõe vínculo.
 
 **`COALESCE` continua, mesmo com um alvo só** — e não é cerimônia: a coluna
 segue nulável, e em Postgres dois `NULL` nunca colidem num índice único. Uma
@@ -688,7 +688,7 @@ vão escapados.
   que divergir. É o D16 aplicado ao acesso: guardar o cargo no token exigiria
   reemitir a sessão a cada troca, e no dia em que a reemissão falhasse alguém
   continuaria alcançando o que já lhe foi tirado.
-- **A fila de sugestões não fala de gente.** Ela só propõe vínculo entre máquina e ativo (`SuggestionKind` tem só `LINK`):
+- **A fila de sugestões não fala de gente.** Ela só propõe vínculo entre máquina e ativo:
   não há sugestão sobre pessoa desativada para recusar nem para invalidar. O que
   `invalidate-suggestions.usecase.ts` encerra como `SUPERSEDED` é a pendente cuja
   máquina, ou cujo ativo, ganhou vínculo por outro caminho, e a do ativo que teve baixa

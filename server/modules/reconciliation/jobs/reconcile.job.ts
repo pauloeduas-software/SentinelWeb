@@ -4,7 +4,6 @@ import { AppError } from '../../../infra/errors/app-error';
 import { createLogger } from '../../../infra/logger/logger';
 import { reconciliarEndpoint, valoresRepetidosNoParque } from '../use-cases/match-endpoint.usecase';
 import { carimbarUltimoContatoNosAtivos } from '../use-cases/stamp-last-seen.usecase';
-import { agregarUsoDosAtivos } from '../use-cases/aggregate-usage.usecase';
 import { expurgarTelemetriaAntiga } from '../../endpoint/use-cases/purge-telemetry.usecase';
 import {
   encerrarSugestoesObsoletas, expurgarSugestoesSubstituidas,
@@ -64,7 +63,7 @@ export interface ResultadoDaVarredura {
  * tomada, e a varredura que estava rodando já cobre a hora.
  *
  * A ORDEM IMPORTA: o carimbo do último contato vem primeiro porque ele é o que
- * alimenta a consulta de fantasma, e ele é barato (uma instrução para a frota
+ * alimenta a contagem de sumidos, e ele é barato (uma instrução para a frota
  * inteira). A reconciliação vem depois, máquina a máquina.
  */
 export async function rodarReconciliacao(): Promise<ResultadoDaVarredura> {
@@ -123,13 +122,7 @@ async function executarVarredura(): Promise<ResultadoDaVarredura> {
     }
   }
 
-  // O USO AGREGADO dos últimos dias: uma instrução para a frota
-  // inteira, e é ela que faz a pergunta do ativo ocioso caber numa consulta.
-  await agregarUsoDosAtivos();
-
-  // O EXPURGO da telemetria crua, DEPOIS da agregação: o dia já está somado em
-  // `asset_usage_daily` quando as amostras que o compuseram saem. Uma vez por
-  // DIA, e não a cada rodada: a janela diária é tomada no banco, então o botão
+  // O EXPURGO da telemetria crua. Uma vez por DIA, e não a cada rodada: a janela diária é tomada no banco, então o botão
   // "Reconciliar agora" e os reinícios do servidor não o repetem.
   await executarUmaVezPorJanela('expurgo-da-telemetria', inicioDoDia(), async () => {
     await expurgarTelemetriaAntiga();

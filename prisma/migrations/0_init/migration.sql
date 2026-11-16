@@ -19,9 +19,6 @@
 CREATE TYPE "AgentStatus" AS ENUM ('ONLINE', 'OFFLINE');
 
 -- CreateEnum
-CREATE TYPE "ReviewState" AS ENUM ('UNREVIEWED', 'ALLOWED', 'BLOCKED');
-
--- CreateEnum
 CREATE TYPE "Cargo" AS ENUM ('TECNICO', 'SUPERVISOR', 'ADMIN');
 
 -- CreateEnum
@@ -41,9 +38,6 @@ CREATE TYPE "DiscoveryMode" AS ENUM ('OFF', 'SUGGEST', 'ON');
 
 -- CreateEnum
 CREATE TYPE "MatchSignal" AS ENUM ('SERIAL', 'UUID', 'HOSTNAME');
-
--- CreateEnum
-CREATE TYPE "SuggestionKind" AS ENUM ('LINK');
 
 -- CreateEnum
 CREATE TYPE "SuggestionState" AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED', 'SUPERSEDED');
@@ -69,10 +63,7 @@ CREATE TABLE "endpoints" (
     "systemUuid" TEXT,
     "manufacturer" TEXT,
     "hardwareModel" TEXT,
-    "chassisType" TEXT,
-    "ramTotalBytes" BIGINT,
-    "diskTotalBytes" BIGINT,
-    "reviewState" "ReviewState" NOT NULL DEFAULT 'UNREVIEWED',
+    "gpus" JSONB,
     "assetId" UUID,
 
     CONSTRAINT "endpoints_pkey" PRIMARY KEY ("id")
@@ -87,8 +78,6 @@ CREATE TABLE "telemetries" (
     "ramUsed" BIGINT NOT NULL,
     "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "disks" JSONB,
-    "network" JSONB,
-    "topProcesses" JSONB,
 
     CONSTRAINT "telemetries_pkey" PRIMARY KEY ("id")
 );
@@ -318,7 +307,6 @@ CREATE TABLE "app_settings" (
     "assetTagNext" INTEGER NOT NULL DEFAULT 1,
     "discoveryMode" "DiscoveryMode" NOT NULL DEFAULT 'SUGGEST',
     "ghostDays" INTEGER NOT NULL DEFAULT 30,
-    "shadowHours" INTEGER NOT NULL DEFAULT 24,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -378,7 +366,6 @@ CREATE TABLE "license_checkouts" (
 -- CreateTable
 CREATE TABLE "reconciliation_suggestions" (
     "id" UUID NOT NULL,
-    "kind" "SuggestionKind" NOT NULL,
     "endpointId" UUID NOT NULL,
     "assetId" UUID,
     "score" INTEGER NOT NULL,
@@ -391,28 +378,6 @@ CREATE TABLE "reconciliation_suggestions" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "reconciliation_suggestions_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "asset_changes" (
-    "id" UUID NOT NULL,
-    "assetId" UUID NOT NULL,
-    "field" TEXT NOT NULL,
-    "oldValue" TEXT,
-    "newValue" TEXT NOT NULL,
-    "detectedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "asset_changes_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "asset_usage_daily" (
-    "id" UUID NOT NULL,
-    "assetId" UUID NOT NULL,
-    "day" DATE NOT NULL,
-    "activeMinutes" INTEGER NOT NULL DEFAULT 0,
-
-    CONSTRAINT "asset_usage_daily_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -457,13 +422,7 @@ CREATE UNIQUE INDEX "endpoints_hwid_key" ON "endpoints"("hwid");
 CREATE UNIQUE INDEX "endpoints_assetId_key" ON "endpoints"("assetId");
 
 -- CreateIndex
-CREATE INDEX "endpoints_reviewState_idx" ON "endpoints"("reviewState");
-
--- CreateIndex
 CREATE INDEX "telemetries_endpointId_timestamp_idx" ON "telemetries"("endpointId", "timestamp" DESC);
-
--- CreateIndex
-CREATE INDEX "telemetries_timestamp_idx" ON "telemetries"("timestamp");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "agent_credentials_tokenHash_key" ON "agent_credentials"("tokenHash");
@@ -586,19 +545,13 @@ CREATE INDEX "license_checkouts_assignedPersonId_checkinAt_idx" ON "license_chec
 CREATE INDEX "license_checkouts_assignedAssetId_checkinAt_idx" ON "license_checkouts"("assignedAssetId", "checkinAt");
 
 -- CreateIndex
-CREATE INDEX "reconciliation_suggestions_state_kind_idx" ON "reconciliation_suggestions"("state", "kind");
+CREATE INDEX "reconciliation_suggestions_state_idx" ON "reconciliation_suggestions"("state");
 
 -- CreateIndex
 CREATE INDEX "reconciliation_suggestions_endpointId_state_idx" ON "reconciliation_suggestions"("endpointId", "state");
 
 -- CreateIndex
 CREATE INDEX "reconciliation_suggestions_assetId_idx" ON "reconciliation_suggestions"("assetId");
-
--- CreateIndex
-CREATE INDEX "asset_changes_assetId_detectedAt_idx" ON "asset_changes"("assetId", "detectedAt");
-
--- CreateIndex
-CREATE UNIQUE INDEX "asset_usage_daily_assetId_day_key" ON "asset_usage_daily"("assetId", "day");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "stock_items_name_key" ON "stock_items"("name");
@@ -695,12 +648,6 @@ ALTER TABLE "reconciliation_suggestions" ADD CONSTRAINT "reconciliation_suggesti
 
 -- AddForeignKey
 ALTER TABLE "reconciliation_suggestions" ADD CONSTRAINT "reconciliation_suggestions_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "assets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "asset_changes" ADD CONSTRAINT "asset_changes_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "assets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "asset_usage_daily" ADD CONSTRAINT "asset_usage_daily_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "assets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -809,7 +756,6 @@ ALTER TABLE "workstation_occupants" ADD CONSTRAINT "workstation_occupants_fim_na
 -- `PENDING` com `assetId` nulo voltaria a poder empilhar sem limite.
 CREATE UNIQUE INDEX "sugestao_pendente_por_alvo"
   ON "reconciliation_suggestions" (
-    "kind",
     "endpointId",
     COALESCE("assetId", '00000000-0000-0000-0000-000000000000'::uuid)
   )

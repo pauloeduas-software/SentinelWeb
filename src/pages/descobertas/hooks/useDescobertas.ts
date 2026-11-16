@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import {
   useAceitarSugestao, useCoberturaQuery, useConfiguracaoDaDescobertaQuery,
-  useDesvincularMaquina, useOciososQuery, useReconciliarAgora, useRecusarSugestao, useSalvarConfiguracaoDaDescoberta,
-  useSugestoesQuery, useTriarMaquina, useVincularEEntregar, useVincularMaquina,
+  useDesvincularMaquina, useReconciliarAgora, useRecusarSugestao, useSalvarConfiguracaoDaDescoberta,
+  useSugestoesQuery, useVincularEEntregar, useVincularMaquina,
 } from '../../../queries/reconciliation.queries';
 import { useEndpointsQuery } from '../../../queries/endpoint.queries';
 import { useAbaNaUrl } from '../../../hooks/useAbaNaUrl';
@@ -10,26 +10,18 @@ import { confirmar } from '../../../hooks/useConfirmacao';
 import { useNotificacao } from '../../../hooks/useNotificacao';
 import { usePode } from '../../../stores/auth.store';
 import type { Endpoint } from '../../../types/endpoint.types';
-import type {
-  ConfiguracaoDaDescoberta, ResultadoDaVarredura, ReviewState,
-} from '../../../types/reconciliation.types';
+import type { ConfiguracaoDaDescoberta, ResultadoDaVarredura } from '../../../types/reconciliation.types';
 
 // O ESTADO DA TELA DE DESCOBERTAS. A página é markup e mais nada
 // (docs/referencia/arquitetura.md).
 
 /**
- * As quatro abas. `sem` e `com` são as DUAS LISTAS de máquinas — o que o agente
+ * As três abas. `sem` e `com` são as DUAS LISTAS de máquinas — o que o agente
  * vê e o cadastro não sabe, e o que já é patrimônio —, e são o recorte do
  * servidor (`?vinculo=`), não um `filter` sobre a frota inteira.
  */
-const ABAS = ['fila', 'sem', 'com', 'ociosos'] as const;
+const ABAS = ['fila', 'sem', 'com'] as const;
 export type AbaDaTela = typeof ABAS[number];
-
-/** A frase do cartão depois da triagem, no masculino do Status concordando com a máquina (BU). */
-const TRIAGEM_SALVA: Record<Exclude<ReviewState, 'UNREVIEWED'>, string> = {
-  ALLOWED: 'Máquina marcada como conhecida.',
-  BLOCKED: 'Máquina marcada como não autorizada.',
-};
 
 /** O placar da rodada: "3 sugestões · 1 vínculo" é a resposta à pergunta de quem clicou. */
 function placarDaVarredura({ endpoints, sugeridas, vinculadas, encerradas }: ResultadoDaVarredura): string {
@@ -48,20 +40,18 @@ export function useDescobertas() {
 
   const sugestoes = useSugestoesQuery();
   const cobertura = useCoberturaQuery();
-  const ociosos = useOciososQuery(30);
   const configuracao = useConfiguracaoDaDescobertaQuery();
   const semVinculo = useEndpointsQuery('sem');
   const vinculadas = useEndpointsQuery('com');
 
   const aceitar = useAceitarSugestao();
   const recusar = useRecusarSugestao();
-  const triar = useTriarMaquina();
   const vincular = useVincularMaquina();
   const vincularEEntregar = useVincularEEntregar();
   const desvincular = useDesvincularMaquina();
   const salvarConfiguracao = useSalvarConfiguracaoDaDescoberta();
 
-  // RECONCILIAR AGORA: só `SUPERVISOR` vê o botão (a rota recusa os outros com 403;
+  // PROCURAR AGORA: só `SUPERVISOR` vê o botão (a rota recusa os outros com 403;
   // aqui é interface, não segurança).
   const reconciliar = useReconciliarAgora();
   const podeReconciliar = usePode('SUPERVISOR');
@@ -92,16 +82,12 @@ export function useDescobertas() {
       fila: sugestoes.data?.rows.length,
       sem: semVinculo.data?.length,
       com: vinculadas.data?.length,
-      ociosos: ociosos.data?.rows.length,
     } as Record<AbaDaTela, number | undefined>,
     carregandoSugestoes: sugestoes.isLoading,
     erroDasSugestoes: sugestoes.error?.message ?? null,
     cobertura: cobertura.data,
     carregandoCobertura: cobertura.isLoading,
     erroDaCobertura: cobertura.error?.message ?? null,
-    ociosos: ociosos.data?.rows ?? [],
-    carregandoOciosos: ociosos.isLoading,
-    erroDosOciosos: ociosos.error?.message ?? null,
     configuracao: configuracao.data,
     erroDaConfiguracao: configuracao.error?.message ?? null,
 
@@ -110,7 +96,7 @@ export function useDescobertas() {
     carregandoMaquinas: semVinculo.isLoading || vinculadas.isLoading,
     erroDasMaquinas: semVinculo.error?.message ?? vinculadas.error?.message ?? null,
 
-    ocupado: aceitar.isPending || recusar.isPending || triar.isPending
+    ocupado: aceitar.isPending || recusar.isPending
       || vincular.isPending || vincularEEntregar.isPending || desvincular.isPending || reconciliar.isPending,
 
     podeReconciliar,
@@ -126,10 +112,6 @@ export function useDescobertas() {
     handleRecusar: (id: string) => void comErro(async () => {
       await recusar.mutateAsync(id);
       notificar.sucesso('Sugestão recusada.');
-    }),
-    handleTriar: (id: string, reviewState: Exclude<ReviewState, 'UNREVIEWED'>) => void comErro(async () => {
-      await triar.mutateAsync({ id, reviewState });
-      notificar.sucesso(TRIAGEM_SALVA[reviewState]);
     }),
 
     /**

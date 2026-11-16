@@ -1,5 +1,6 @@
+import type { ReactNode } from 'react';
 import {
-  Activity, Copy, Cpu, HardDrive, Lock, MemoryStick, Monitor, Power, RefreshCw,
+  Copy, Cpu, Gauge, HardDrive, Lock, MemoryStick, Monitor, Power, RefreshCw,
   type LucideIcon,
 } from 'lucide-react';
 import TabelaDaFicha from './TabelaDaFicha';
@@ -8,13 +9,10 @@ import { PontoDeStatus } from './ui/badge';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Dado, GradeDeDados } from './ui/dado';
-import { Table, TableBody, TableCell, TableRow } from './ui/table';
 import { cn } from '../helpers/cn.helper';
 import { FUSO_DO_NEGOCIO, formatarDataHora } from '../helpers/format.helper';
-import { caminhoDaMaquina } from '../helpers/maquina.helper';
-import {
-  formatarTaxa, formatarVolume, readSnapshot, usagePercent, volumeDeRede,
-} from '../helpers/metrics.helper';
+import { caminhoDaMaquina, formatarMemoriaDaPlaca, lerPlacasDeVideo } from '../helpers/maquina.helper';
+import { readSnapshot, usagePercent } from '../helpers/metrics.helper';
 import { useCopiar } from '../hooks/useCopiar';
 import { useMaquinaAoVivo, type ComandoDaMaquina } from '../hooks/useMaquinaAoVivo';
 import { usePode } from '../stores/auth.store';
@@ -37,10 +35,13 @@ import { usePode } from '../stores/auth.store';
 // bem?", e a ficha do POSTO, que responde "o computador desta mesa está bem?".
 // É a ponte da convergência vista de perto.
 //
+// A LINHA DA MÁQUINA E DOIS BLOCOS EMBAIXO DELA: o que a máquina é e como está, e
+// os comandos, que agem nela, por último.
+//
 // O NOME DA MÁQUINA É A LINHA QUE ABRE DESCOBERTAS (BZ): é lá que ela se vincula e
 // se desvincula, e aqui ela só se olha e se comanda. Nenhuma etiqueta: as duas telas
-// que o usam já identificaram o equipamento acima dele. O HWID aparece no rodapé
-// com um botão de copiar — ele não é nome, é o que se cola num chamado e o que se
+// que o usam já identificaram o equipamento acima dele. O HWID vai com o sistema e a
+// rede, com um botão de copiar — ele não é nome, é o que se cola num chamado e o que se
 // procura no log do agente, e não tem outra tela.
 //
 // ─────────────────────────────────────────────────────────────────────────────
@@ -61,8 +62,6 @@ import { usePode } from '../stores/auth.store';
 interface TelemetriaDaMaquinaProps {
   endpointId: string;
 }
-
-const ROTULO = 'text-xs text-text-tertiary';
 
 /**
  * Os três comandos, com o verbo e a CONSEQUÊNCIA de cada um.
@@ -103,9 +102,9 @@ function comVirgula(numero: string): string {
   return numero.replace('.', ',');
 }
 
-/** A hora da amostra, em Brasília. Só a hora: o dia é hoje em toda máquina que responde. */
+/** A hora da amostra, em Brasília, sem os segundos: a leitura é de hora em hora. */
 function hora(valor: string): string {
-  return new Date(valor).toLocaleTimeString('pt-BR', { timeZone: FUSO_DO_NEGOCIO, timeStyle: 'medium' });
+  return new Date(valor).toLocaleTimeString('pt-BR', { timeZone: FUSO_DO_NEGOCIO, timeStyle: 'short' });
 }
 
 /**
@@ -134,7 +133,19 @@ function Trilho({ valor, cor }: { valor: number; cor: string }) {
   );
 }
 
-/** O número grande com a barra embaixo. */
+/** Um painel dentro do bloco: o título com o ícone e o conteúdo. */
+function Painel({ icone: Icone, titulo, children }: { icone: LucideIcon; titulo: string; children: ReactNode }) {
+  return (
+    <section className="min-w-0 space-y-4 rounded-lg border border-border-sutil p-4">
+      <h4 className="flex items-center gap-2 text-sm font-medium text-text-primary">
+        <Icone className="size-4 text-text-tertiary" /> {titulo}
+      </h4>
+      {children}
+    </section>
+  );
+}
+
+/** O número grande com a barra embaixo, num quadro dentro do bloco. */
 function Medidor({ icone: Icone, rotulo, valor, detalhe, online }: {
   icone: LucideIcon;
   rotulo: string;
@@ -145,15 +156,17 @@ function Medidor({ icone: Icone, rotulo, valor, detalhe, online }: {
   const cor = corDoUso(valor, online);
 
   return (
-    <Card className="min-w-0 space-y-2 p-4">
-      <div className="flex items-center gap-2">
-        <Icone className={cn('size-4 shrink-0', cor.texto)} />
-        <span className="text-sm font-medium text-text-primary">{rotulo}</span>
+    <div className="min-w-0 space-y-3 rounded-lg border border-border-sutil bg-surface-muted/30 p-4">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium text-text-secondary">{rotulo}</span>
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-surface-muted">
+          <Icone className={cn('size-4', cor.texto)} />
+        </span>
       </div>
-      <div className={cn('text-3xl font-bold tabular-nums', cor.texto)}>{comVirgula(valor.toFixed(1))}%</div>
+      <div className={cn('text-3xl font-bold leading-none tabular-nums', cor.texto)}>{comVirgula(valor.toFixed(1))}%</div>
       <Trilho valor={valor} cor={cor.barra} />
-      {detalhe && <p className="truncate text-xs text-text-tertiary" title={detalhe}>{detalhe}</p>}
-    </Card>
+      <p className="h-4 truncate text-xs text-text-tertiary" title={detalhe}>{detalhe}</p>
+    </div>
   );
 }
 
@@ -162,8 +175,8 @@ function Barra({ rotulo, valor, detalhe, online }: { rotulo: string; valor: numb
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between gap-2 text-sm">
-        <span className="text-text-secondary">{rotulo}</span>
-        <span className="tabular-nums text-text-primary">
+        <span className="truncate text-text-secondary" title={rotulo}>{rotulo}</span>
+        <span className="shrink-0 tabular-nums text-text-primary">
           {Math.round(valor)}%<span className="text-xs text-text-tertiary"> · {detalhe}</span>
         </span>
       </div>
@@ -172,31 +185,19 @@ function Barra({ rotulo, valor, detalhe, online }: { rotulo: string; valor: numb
   );
 }
 
-function Numero({ rotulo, valor, unidade }: { rotulo: string; valor: string; unidade: string }) {
-  return (
-    <div className="space-y-1">
-      <span className={ROTULO}>{rotulo}</span>
-      <p className="text-sm tabular-nums text-text-primary">
-        {comVirgula(valor)}
-        <span className="text-xs text-text-tertiary"> {unidade}</span>
-      </p>
-    </div>
-  );
-}
-
 export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaProps) {
   const { maquina, carregando, erro, enviando, handleComando } = useMaquinaAoVivo(endpointId);
   // O comando age na máquina de verdade, e é `SUPERVISOR` no servidor (AV). Para
-  // quem não é, a seção some — o botão só levaria 403.
+  // quem não é, o bloco some — o botão só levaria 403.
   const podeComandar = usePode('SUPERVISOR');
   const { copiado, copiar } = useCopiar(maquina?.hwid ?? '', 'Não foi possível copiar o HWID. Selecione e copie à mão.');
 
   if (carregando) return <p className="text-sm text-text-tertiary">Carregando…</p>;
 
-  // BUSCA ENGOLE ERRO (docs/referencia/arquitetura.md): esta consulta revalida a
-  // cada poucos segundos, e um 500 passageiro, um reinício do servidor ou um
+  // BUSCA ENGOLE ERRO (docs/referencia/arquitetura.md): esta consulta revalida
+  // sozinha, e um 500 passageiro, um reinício do servidor ou um
   // tempo esgotado não podem limpar a tela. Trocar o painel por uma linha
-  // vermelha tirava as barras, os processos E OS TRÊS BOTÕES DE COMANDO — num
+  // vermelha tirava as barras, os discos E OS TRÊS BOTÕES DE COMANDO — num
   // momento em que a pessoa provavelmente está tentando desligar a máquina
   // justamente porque algo está errado. Com dado em mão, o erro é um aviso ao
   // lado; sem dado nenhum, aí sim ele é a tela toda.
@@ -204,17 +205,13 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
   if (!maquina) return null;
 
   const amostra = maquina.telemetries[0];
+  const placas = lerPlacasDeVideo(maquina.gpus);
+  const leituraAtrasada = !!amostra
+    && new Date(maquina.lastSeen).getTime() - new Date(amostra.timestamp).getTime() >= 60_000;
   const online = maquina.status === 'ONLINE';
-  const { cpuUsage, ramTotalGb, ramUsedGb, ramPercent, disks, network, processes } = readSnapshot(amostra);
-  // A rede numa base só, em byte (metrics.helper.ts): o agente mede a
-  // velocidade em kbit/s e o total em byte, e os dois saíam lado a lado com
-  // "Kbps" e "Gb" — bit e byte na mesma linha, sem ninguém avisar.
-  const recebendo = formatarTaxa(network.rxSpeedKbps);
-  const taxaDeEnvio = formatarTaxa(network.txSpeedKbps);
-  const totalRecebido = formatarVolume(volumeDeRede(network.bytesReceived, network.totalRxGb));
-  const totalEnviado = formatarVolume(volumeDeRede(network.bytesSent, network.totalTxGb));
+  const { cpuUsage, ramTotalGb, ramUsedGb, ramPercent, disks } = readSnapshot(amostra);
   // O disco do medidor é o MAIS CHEIO, que é o que pede atenção. Com mais de um,
-  // a lista embaixo mostra todos.
+  // a seção Armazenamento mostra todos.
   const discos = disks.map((disco) => ({ ...disco, uso: usagePercent(disco.usedGb, disco.totalGb) }));
   const maisCheio = discos.reduce<(typeof discos)[number] | null>(
     (maior, disco) => (maior && maior.uso >= disco.uso ? maior : disco),
@@ -237,166 +234,144 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
         }]}
       />
 
-      {/* O QUE O AGENTE REAL MANDA no handshake (CP). O resto da identidade, como o
-          fabricante e a série da BIOS, ficou de fora porque ele não o coleta (BY). O
-          vazio não aparece (`Dado`). */}
-      <GradeDeDados className="md:grid-cols-4">
-        <Dado rotulo="Sistema operacional">{maquina.osVersion}</Dado>
-        <Dado rotulo="Processador">{maquina.cpuModel}</Dado>
-        <Dado rotulo="Endereço IP">{maquina.localIp && <span className="font-mono">{maquina.localIp}</span>}</Dado>
-        <Dado rotulo="Endereço MAC">{maquina.macAddress && <span className="font-mono">{maquina.macAddress}</span>}</Dado>
-      </GradeDeDados>
-
-      <h3 className="text-sm font-medium text-text-primary">Como está agora</h3>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <PontoDeStatus tom={online ? 'sucesso' : 'neutro'}>{online ? 'Online' : 'Offline'}</PontoDeStatus>
-        <span className="text-xs text-text-tertiary">
-          {/* A FRASE MUDA COM O ESTADO, e isso importa mais que o número: uma
-              máquina OFFLINE tem telemetria na tela, e ela é a última que chegou.
-              Sem dizer isso, 12% de CPU de ontem se lê como 12% agora.
-              A HORA DA AMOSTRA vai junto porque "online" e "a medida é de agora"
-              são coisas diferentes: um agente vivo com a coleta travada mantém o
-              selo verde sobre um número de dez minutos atrás, e só a hora denuncia. */}
-          {amostra
-            ? `Leitura de ${hora(amostra.timestamp)}${online ? ', atualiza sozinho' : ', de antes de ela cair'}`
-            : 'Nenhuma amostra ainda: o agente conectou e não mandou leitura'}
-        </span>
-      </div>
-
-      {/* A FALHA DO CICLO, quando há dado em mão: a tela continua, com o aviso. */}
-      {erro && (
-        <Aviso tom="aviso" aria-live="polite">
-          Não foi possível reler a máquina agora ({erro}). Os números abaixo são do último ciclo.
-        </Aviso>
-      )}
-
-      {!amostra ? (
-        <Card className="px-4 py-6 text-center text-sm text-text-tertiary">
-          Sem leitura de telemetria. A máquina já se apresentou ao sistema; as medidas chegam
-          na primeira leitura.
-        </Card>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Medidor icone={Cpu} rotulo="CPU" valor={cpuUsage} online={online} />
-            <Medidor
-              icone={MemoryStick}
-              rotulo="Memória"
-              valor={ramPercent}
-              detalhe={`${comVirgula(ramUsedGb.toFixed(1))} de ${comVirgula(ramTotalGb.toFixed(1))} GB`}
-              online={online}
-            />
-            {maisCheio && (
-              <Medidor
-                icone={HardDrive}
-                rotulo="Disco"
-                valor={maisCheio.uso}
-                detalhe={`${maisCheio.name} · ${maisCheio.usedGb.toFixed(0)} de ${maisCheio.totalGb.toFixed(0)} GB`}
-                online={online}
-              />
-            )}
+      <Card className="overflow-hidden">
+        {/* O CABEÇALHO DO BLOCO: o título, de quando é a leitura e o status. */}
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border-sutil px-5 py-3.5">
+          <h3 className="flex items-center gap-2 text-sm font-medium text-text-primary">
+            <Gauge className="size-4 text-text-tertiary" /> Como está agora
+          </h3>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs text-text-tertiary">
+              {/* A HORA DA AMOSTRA, só quando ela não é o último contato da linha de
+                  cima: a máquina conectada pinga a cada minuto, e a leitura vem de hora
+                  em hora. Sem ela, 66% de CPU de 50 minutos atrás se lê como 66% agora.
+                  Quando a leitura foi a última coisa que a máquina mandou, as duas
+                  horas são a mesma, e a frase repetiria a linha. */}
+              {!amostra ? 'Nenhuma leitura ainda' : leituraAtrasada && `Leitura de ${hora(amostra.timestamp)}`}
+            </span>
+            <PontoDeStatus tom={online ? 'sucesso' : 'neutro'}>{online ? 'Conectado' : 'Desconectado'}</PontoDeStatus>
           </div>
+        </div>
 
-          {discos.length > 1 && (
-            <Card className="space-y-3 p-4">
-              <h4 className="flex items-center gap-2 text-sm font-medium text-text-primary">
-                <HardDrive className="size-4 text-text-tertiary" /> Armazenamento
-              </h4>
-              {discos.map((disco, indice) => (
-                <Barra
-                  key={`${disco.name}-${indice}`}
-                  rotulo={disco.name}
-                  valor={disco.uso}
-                  detalhe={`${disco.usedGb.toFixed(0)} de ${disco.totalGb.toFixed(0)} GB`}
+        <div className="space-y-4 p-5">
+          {/* A FALHA DO CICLO, quando há dado em mão: a tela continua, com o aviso. */}
+          {erro && (
+            <Aviso tom="aviso" aria-live="polite">
+              Não foi possível reler a máquina agora ({erro}). Os números abaixo são do último ciclo.
+            </Aviso>
+          )}
+
+          {/* O QUE A MÁQUINA DIZ DE SI, do handshake (CP, DA): como ela se declara,
+              que no computador se confere com o cadastro, e no posto é o único lugar
+              em que aparece. O UUID fica de fora: só a reconciliação o usa. O vazio
+              não aparece (`Dado`). */}
+          <GradeDeDados className="rounded-lg border border-border-sutil bg-surface-muted/30 p-4 md:grid-cols-4">
+            <Dado rotulo="Fabricante">{maquina.manufacturer}</Dado>
+            <Dado rotulo="Modelo">{maquina.hardwareModel}</Dado>
+            <Dado rotulo="Série">{maquina.biosSerial && <span className="font-mono">{maquina.biosSerial}</span>}</Dado>
+            <Dado rotulo="Sistema operacional">{maquina.osVersion}</Dado>
+            <Dado rotulo="Processador">{maquina.cpuModel}</Dado>
+            <Dado rotulo="Endereço IP">{maquina.localIp && <span className="font-mono">{maquina.localIp}</span>}</Dado>
+            <Dado rotulo="Endereço MAC">{maquina.macAddress && <span className="font-mono">{maquina.macAddress}</span>}</Dado>
+            <Dado rotulo={placas.length > 1 ? 'Placas de vídeo' : 'Placa de vídeo'} largo>
+              {placas.length > 0 && (
+                <span className="flex flex-col gap-1">
+                  {placas.map((placa, indice) => (
+                    <span key={`${placa.nome}-${indice}`}>
+                      {placa.nome}
+                      {placa.memoria && <span className="text-text-tertiary"> · {formatarMemoriaDaPlaca(placa.memoria)}</span>}
+                    </span>
+                  ))}
+                </span>
+              )}
+            </Dado>
+            {/* O HWID, com o COPIAR: ele não é nome, é o que se cola num chamado e o
+                que se procura no log do agente. */}
+            <Dado rotulo="HWID" largo>
+              <span className="flex flex-wrap items-center gap-2">
+                <code className="break-all font-mono text-text-primary">{maquina.hwid}</code>
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => void copiar()}>
+                  <Copy /> {copiado ? 'Copiado' : 'Copiar'}
+                </Button>
+              </span>
+            </Dado>
+          </GradeDeDados>
+
+          {!amostra ? (
+            <p className="rounded-lg border border-dashed border-border-sutil px-4 py-6 text-center text-sm text-text-tertiary">
+              Sem leitura de telemetria. A máquina já se apresentou ao sistema; as medidas chegam
+              na primeira leitura.
+            </p>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <Medidor icone={Cpu} rotulo="CPU" valor={cpuUsage} online={online} />
+                <Medidor
+                  icone={MemoryStick}
+                  rotulo="Memória"
+                  valor={ramPercent}
+                  detalhe={`${comVirgula(ramUsedGb.toFixed(1))} de ${comVirgula(ramTotalGb.toFixed(1))} GB`}
                   online={online}
                 />
-              ))}
-            </Card>
-          )}
+                {maisCheio && (
+                  <Medidor
+                    icone={HardDrive}
+                    rotulo="Disco"
+                    valor={maisCheio.uso}
+                    detalhe={`${maisCheio.name} · ${maisCheio.usedGb.toFixed(0)} de ${maisCheio.totalGb.toFixed(0)} GB`}
+                    online={online}
+                  />
+                )}
+              </div>
 
-          <Card className="space-y-3 p-4">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <Numero rotulo="Recebendo" valor={recebendo.valor} unidade={recebendo.unidade} />
-              <Numero rotulo="Enviando" valor={taxaDeEnvio.valor} unidade={taxaDeEnvio.unidade} />
-              <Numero rotulo="Total recebido" valor={totalRecebido.valor} unidade={totalRecebido.unidade} />
-              <Numero rotulo="Total enviado" valor={totalEnviado.valor} unidade={totalEnviado.unidade} />
-            </div>
-            {/* A BASE, escrita: a unidade ao lado do número diz "kB/s" e "GB",
-                e esta linha diz que as quatro são a mesma coisa. Sem ela, quem
-                conhece o agente procura o "Kbps" que ele manda e desconfia do
-                número menor. */}
-            <p className="text-xs leading-relaxed text-text-tertiary">
-              Rede em bytes: velocidade em kB/s ou MB/s, totais em MB ou GB desde que o agente ligou.
-            </p>
-          </Card>
-
-          {processes.length > 0 && (
-            <Card className="overflow-hidden">
-              <h4 className="flex items-center gap-2 border-b border-border-sutil px-4 py-3 text-sm font-medium text-text-primary">
-                <Activity className="size-4 text-text-tertiary" /> O que está consumindo memória
-              </h4>
-              <Table className="min-w-0">
-                <TableBody>
-                  {processes.map((processo, indice) => (
-                    <TableRow key={`${processo.name}-${indice}`} className="h-auto">
-                      <TableCell className="truncate py-2">{processo.name}</TableCell>
-                      <TableCell className="w-28 whitespace-nowrap py-2 text-right tabular-nums text-text-primary">
-                        {processo.ramMb.toFixed(0)} <span className="text-xs text-text-tertiary">MB</span>
-                      </TableCell>
-                    </TableRow>
+              {discos.length > 1 && (
+                <Painel icone={HardDrive} titulo="Armazenamento">
+                  {discos.map((disco, indice) => (
+                    <Barra
+                      key={`${disco.name}-${indice}`}
+                      rotulo={disco.name}
+                      valor={disco.uso}
+                      detalhe={`${disco.usedGb.toFixed(0)} de ${disco.totalGb.toFixed(0)} GB`}
+                      online={online}
+                    />
                   ))}
-                </TableBody>
-              </Table>
-            </Card>
+                </Painel>
+              )}
+            </>
           )}
-        </>
-      )}
-
-      {/* O HWID, com o COPIAR que ele tinha na tela antiga.
-          É a identidade de hardware que o agente derivou: ela não é nome, é o que
-          se cola num chamado e o que se procura no log do agente. Ela saiu da URL
-          do comando, e não tem outra tela. */}
-      <div className="flex flex-wrap items-center gap-2 border-t border-border-sutil pt-4">
-        <span className={ROTULO}>HWID</span>
-        <code className="break-all font-mono text-sm text-text-secondary">{maquina.hwid}</code>
-        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => void copiar()}>
-          <Copy /> {copiado ? 'Copiado' : 'Copiar'}
-        </Button>
-      </div>
+        </div>
+      </Card>
 
       {podeComandar && (
-        <div className="space-y-3 border-t border-border-sutil pt-4">
-          <h4 className="flex items-center gap-2 text-sm font-medium text-text-primary">
-            <Cpu className="size-4 text-text-tertiary" /> Comandos
-          </h4>
-
-          <div className="flex flex-wrap gap-2">
-            {COMANDOS.map((comando) => (
-              <Button
-                key={comando.action}
-                variant="outline"
-                size="sm"
-                // O BOTÃO NÃO É DESABILITADO QUANDO A MÁQUINA ESTÁ OFFLINE, e isso
-                // é decisão: o `status` da tela atrasa até cerca de CINCO minutos —
-                // quatro de tolerância (`mark-stale-endpoints-offline`) mais a
-                // rodada de um minuto do job de zumbis —, então um botão cinza
-                // mentiria nos dois sentidos. Quem decide é o servidor, na hora, e
-                // a resposta dele vem na notificação, dizendo qual máquina não
-                // respondeu.
-                disabled={enviando}
-                onClick={() => void handleComando(comando)}
-                className={comando.cor}
-              >
-                <comando.icone /> {comando.rotulo}
-              </Button>
-            ))}
+        <Card className="overflow-hidden">
+          <div className="border-b border-border-sutil px-5 py-3.5">
+            <h3 className="flex items-center gap-2 text-sm font-medium text-text-primary">
+              <Power className="size-4 text-text-tertiary" /> Comandos
+            </h3>
           </div>
 
-          <p className="text-xs leading-relaxed text-text-tertiary">
-            O comando não fica em fila: com a máquina fora do ar, ele é recusado na hora.
-          </p>
-        </div>
+          <ul className="grid gap-4 p-5 sm:grid-cols-3">
+            {COMANDOS.map((comando) => (
+              <li key={comando.action}>
+                <Button
+                  variant="outline"
+                  // O BOTÃO NÃO É DESABILITADO QUANDO A MÁQUINA ESTÁ DESCONECTADA, e
+                  // isso é decisão: o `status` da tela atrasa até uns três minutos —
+                  // os dois de tolerância (`mark-stale-endpoints-offline`, CS) mais a
+                  // rodada de um minuto do job de zumbis —, então um botão cinza
+                  // mentiria nos dois sentidos. Quem decide é o servidor, na hora, e
+                  // a resposta dele vem na notificação, dizendo qual máquina não
+                  // respondeu.
+                  disabled={enviando}
+                  onClick={() => void handleComando(comando)}
+                  className={cn('w-full', comando.cor)}
+                >
+                  <comando.icone /> {comando.rotulo}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </Card>
       )}
     </div>
   );

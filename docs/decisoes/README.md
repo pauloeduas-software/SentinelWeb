@@ -97,6 +97,11 @@ ponte ITAM×RMM.
 | **H** (em parte: o `hwid` estável entre reinstalações) | **CV** | o `hwid` é da instalação do agente; a máquina reinstalada herda a própria linha pelo serial e UUID, com as regras do GLPI |
 | **CR** (a mensagem com outro HWID) | **CU** | a conexão fecha com 1008 em vez de seguir aberta, para o agente saber que precisa de recadastro |
 | **D46** (as listas de fábrica) | **CT** | o serial se confere sem separadores, e as listas de seriais e UUIDs ganham os do Fleet, do GLPI e do osquery |
+| **D111** (a agregação do uso diário), **D118** (em parte: o `shadowHours`), **BU** (em parte: o Conhecido e o Não autorizado); **D159**, **Q**, **BL**, **BO**, **AB** e **CI** (em parte: o que citavam dos Ociosos e da triagem) | **CW** | Descobertas perde a triagem, o Shadow IT, os Ociosos e os números repetidos; o painel fica com Com agente, Sem agente e Sumidos |
+| **D99**, **A**, **G**, **Q** e **BY** (em parte: os sinônimos do parser, o `loggedOnUser`, o `installedSoftware`, o chassi e o disco) | **CY** | o servidor lê só o que o SentinelAgente manda, em PascalCase; saem `chassisType` e `diskTotalBytes` |
+| **D96** (em parte: o discriminante) | **CZ** | a fila perde o `kind`, e a resposta, os campos que a tela não lê; `score`, `state` e `resolvedAt` ficam no banco |
+| **D116**, **BY** (em parte: a comparação que seguia gravando), **CW** (em parte: o inventário fora da aba) | **DA** | a aba Máquina mostra fabricante, modelo, série e placas de vídeo; saem a `AssetChange` e a memória total da máquina; a telemetria guarda só a última amostra, e as rotas das máquinas devolvem o que a tela lê |
+| **D**, **CY** e **DA** (em parte: a rede, os processos e o que a A24 do agente tirou do handshake) | **DB** | a telemetria é CPU, memória e discos; saem `telemetries.network` e `telemetries.topProcesses`, os dois quadros da aba Máquina e o fabricante da placa de vídeo |
 | **D27**, **D29**, **D30**, **D87**, **D88** (aceite) | **D150** | o termo sai; o `resolverEscalonamento()` (D73) fica |
 | **D57**, **D125**–**D128** (alertas) | **D151** | os sinais continuam consultáveis; empurrá-los sai. O D79 **não** sai |
 | **D55** (valor contábil) | **D152** | `purchaseCost` fica; a amortização sai |

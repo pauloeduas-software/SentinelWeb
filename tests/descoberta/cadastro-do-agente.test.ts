@@ -3,6 +3,7 @@ import { createHash } from 'crypto';
 import { prisma } from '../../server/infra/database/prismaClient';
 import { isAgentConnected } from '../../server/modules/agent/agent.registry';
 import { revogarAgente } from '../../server/modules/agent/cli/revogar-agente.cli';
+import { TETO_DA_MENSAGEM_DO_AGENTE } from '../../server/app';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { abrirConexao, cadastrarAgente, conectarAgente, esperarPor } from '../helpers/agente';
 
@@ -88,6 +89,19 @@ describe('o /agent-hub aceita só o token da máquina', () => {
     expect(await vitima.receber('o comando da vítima')).toMatchObject({ Payload: { CommandId: comando.body.commandId } });
 
     await vitima.fechar();
+  });
+
+  it('fecha com 1009 a mensagem acima do teto, sem ler nada dela', async () => {
+    const socket = await abrirConexao(api, await cadastrarAgente(api, 'hwid-da-mensagem-enorme'));
+    const fechamento = new Promise<number>((resolve) => socket.once('close', (codigo) => resolve(codigo)));
+
+    socket.send(JSON.stringify({
+      Type: 'Handshake',
+      Payload: { Hwid: 'hwid-da-mensagem-enorme', Hostname: 'x'.repeat(TETO_DA_MENSAGEM_DO_AGENTE) },
+    }));
+
+    expect(await fechamento).toBe(1009);
+    expect(await prisma.endpoint.findUnique({ where: { hwid: 'hwid-da-mensagem-enorme' } })).toBeNull();
   });
 });
 

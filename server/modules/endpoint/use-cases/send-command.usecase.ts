@@ -34,7 +34,7 @@ interface SentCommand {
  * hwid —, e acrescentar o hwid àquela resposta só para formar a URL seria
  * acrescentar campo a uma rota de leitura para servir uma de escrita. O id
  * resolve, e é a chave que todo o resto do sistema já usa para falar de uma
- * máquina (`:id/link`, `:id/review`).
+ * máquina (`:id/link`).
  *
  * Isto NÃO é esconder o hwid: ele continua saindo na listagem e na rota de uma
  * máquina, porque é coluna do `Endpoint`, e a aba Máquina do ativo o mostra com

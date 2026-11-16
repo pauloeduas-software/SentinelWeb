@@ -101,25 +101,23 @@ export async function peekNextAssetTag(): Promise<{ assetTag: string }> {
 /**
  * Salva os botões da convergência RMM × ITAM.
  *
- * `discoveryMode` é o mais perigoso dos três e por isso vale reler o D51 antes
+ * `discoveryMode` é o mais perigoso dos dois e por isso vale reler o D51 antes
  * de mexer: em `ON`, a varredura VINCULA sozinha a máquina ao ativo quando há um
  * único candidato de 100 pontos (`match-endpoint.usecase.ts`), sem ninguém
  * conferir. Não cria ativo nem consome etiqueta — máquina sem candidato segue
- * sem cadastro —, mas um vínculo errado põe o último contato e o uso da máquina
- * no ativo errado até alguém desvincular.
+ * sem cadastro —, mas um vínculo errado põe o último contato e a telemetria da
+ * máquina no ativo errado até alguém desvincular.
  *
- * A validação dos limites é do schema, não daqui: `ghostDays: 0` transformaria
- * a frota inteira em fantasma no dia seguinte, e `shadowHours: 0` faria toda
- * máquina nova nascer como Shadow IT antes do primeiro handshake terminar.
+ * A validação dos limites é do schema, não daqui: `ghostDays: 0` faria a frota
+ * inteira contar como sumida no dia seguinte.
  */
-const CAMPOS_DA_DESCOBERTA = ['discoveryMode', 'ghostDays', 'shadowHours'] as const;
-const SELECT_DA_DESCOBERTA = { discoveryMode: true, ghostDays: true, shadowHours: true } as const;
+const CAMPOS_DA_DESCOBERTA = ['discoveryMode', 'ghostDays'] as const;
+const SELECT_DA_DESCOBERTA = { discoveryMode: true, ghostDays: true } as const;
 
 export async function salvarConfiguracaoDaDescoberta(
   dados: {
     discoveryMode?: DiscoveryMode;
     ghostDays?: number;
-    shadowHours?: number;
   },
   ator: Ator,
 ) {

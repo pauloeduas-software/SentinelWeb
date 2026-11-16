@@ -18,7 +18,6 @@ bun run check          # lint + typecheck + test + test:e2e (a CI roda o mesmo, 
 bun run test           # Vitest contra o sentineldb_test; precisa do Postgres de pé
 bun run test:e2e       # Playwright: build de produção na 4173, banco sentineldb_e2e_test
 bun run db:generate    # depois de mudar o schema.prisma
-bun run agente:falso   # agente de mentira, para ver a aba Máquina sem o real
 ```
 
 **Antes de dizer que terminou: `bun run check` passando.** Teste que fala com o banco é a regra: não
@@ -85,7 +84,7 @@ bancos de teste a apagar depois estão lá.
   Status do posto (BO). A exceção é o item do tipo componente: a aba dele é Computadores, porque a
   peça está instalada na máquina (BM).
 - **Status** é o nome em toda tela, nunca "situação", e o valor vai no masculino: Ativo, Vencido,
-  Encerrado, Conhecido. Frase inteira concorda com o que diz: "Licença encerrada." (BU).
+  Encerrado, Conectado. Frase inteira concorda com o que diz: "Licença encerrada." (BU).
 - **Colaborador** recebe equipamento e não entra no sistema; **usuário** opera (U, P). O termo da
   tela é **cargo**, não papel (S).
 - A página leva o nome do que lista, no plural (`computadores`, `postos`, `licencas`), nunca a

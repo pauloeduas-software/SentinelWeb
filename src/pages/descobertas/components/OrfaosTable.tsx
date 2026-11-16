@@ -1,33 +1,25 @@
 import { useState, type ReactNode } from 'react';
-import { Check, Ban, HelpCircle, Link2 } from 'lucide-react';
+import { HelpCircle, Link2 } from 'lucide-react';
 import VincularMaquinaForm from './VincularMaquinaForm';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
 import ListaVazia from '../../../components/ListaVazia';
 import ListToolbar from '../../../components/ListToolbar';
-import { PontoDeStatus } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableRow } from '../../../components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableNome, TableRow, TableSublinha } from '../../../components/ui/table';
 import { formatarDataHora } from '../../../helpers/format.helper';
 import { useListaLocalNaUrl } from '../../../hooks/usePaginaLocal';
 import type { Endpoint } from '../../../types/endpoint.types';
-import type { ReviewState } from '../../../types/reconciliation.types';
 
-// AS MÁQUINAS QUE O AGENTE VÊ E O CADASTRO NÃO CONHECE — o Shadow IT, e o
-// computador novo que ainda não virou patrimônio.
+// AS MÁQUINAS QUE O AGENTE VÊ E O CADASTRO NÃO CONHECE: o computador que já
+// tem o agente e ainda não virou patrimônio. Só tem agente a máquina em que a TI
+// pôs o segredo de instalação (CR); a que não é da empresa sai revogando o token.
 //
-// DUAS AÇÕES por linha, e são conversas diferentes. A TRIAGEM não mexe na
-// máquina: `ALLOWED` é "eu sei o que é isso", `BLOCKED` é "isto não deveria
-// estar na rede"; o valor dela é tirar da fila o que já foi olhado, senão a
-// mesma máquina conhecida reaparece como "não autorizado" toda semana. O
-// VÍNCULO é o contrário: é dizer que esta máquina É um ativo — e, se quiser,
-// entregá-la ao posto na mesma ida. A fila de sugestões só alcança a máquina
-// que a cascata casou com alguma coisa; a que chegou com serial em branco e um
-// nome que não bate só sai daqui por este botão.
+// O VÍNCULO é a ação da linha: dizer que esta máquina É um computador — e, se
+// quiser, entregá-lo ao posto na mesma ida. A fila de sugestões só alcança a
+// máquina que a cascata casou com alguma coisa; a que chegou com serial em
+// branco e um nome que não bate só sai daqui por este botão.
 //
-// Nenhuma das duas desliga ninguém remotamente — o comando remoto mora na ficha
-// do ativo a que a máquina está vinculada, e numa máquina desta lista, por
-// definição, não está. Pelo mesmo motivo a linha não clica: sem ativo, não há
-// ficha para abrir, e as ações ficam no `⋯`.
+// A linha não clica: sem computador, não há ficha para abrir, e a ação fica no `⋯`.
 
 interface Props {
   orfaos: Endpoint[];
@@ -35,17 +27,10 @@ interface Props {
   erro: string | null;
   ocupado: boolean;
   acao: ReactNode;
-  onTriar: (id: string, reviewState: Exclude<ReviewState, 'UNREVIEWED'>) => void;
   onVincular: (endpointId: string, assetId: string, targetWorkstationId: string | null) => Promise<void>;
 }
 
-const STATUS: Record<ReviewState, { rotulo: string; tom: 'aviso' | 'sucesso' | 'perigo' }> = {
-  UNREVIEWED: { rotulo: 'Sem triagem', tom: 'aviso' },
-  ALLOWED: { rotulo: 'Conhecido', tom: 'sucesso' },
-  BLOCKED: { rotulo: 'Não autorizado', tom: 'perigo' },
-};
-
-export default function OrfaosTable({ orfaos, carregando, erro, ocupado, acao, onTriar, onVincular }: Props) {
+export default function OrfaosTable({ orfaos, carregando, erro, ocupado, acao, onVincular }: Props) {
   // A MÁQUINA NO PAINEL DE VÍNCULO: a linha, e não o id. Quando a entrega é recusada
   // o vínculo fica, e a máquina sai desta lista na revalidação; o painel precisa
   // sobreviver a isso para dizer que só metade aconteceu.
@@ -66,56 +51,37 @@ export default function OrfaosTable({ orfaos, carregando, erro, ocupado, acao, o
       />
 
       <Card className="overflow-hidden">
-        <Table className="min-w-[56rem]">
+        <Table className="min-w-[52rem]">
           <TableHeader>
             <TableRow>
               <TableHead>Máquina</TableHead>
               <TableHead>Sistema operacional</TableHead>
-              <TableHead className="w-44">Série da BIOS</TableHead>
               <TableHead className="w-48">Último contato</TableHead>
-              <TableHead className="w-36">Status</TableHead>
               <TableHeadAcoes />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {lista.visiveis.map((orfao) => {
-              const status = STATUS[orfao.reviewState ?? 'UNREVIEWED'];
-              return (
-                <TableRow key={orfao.id}>
-                  <TableCell className="font-medium text-text-primary">{orfao.hostname}</TableCell>
-                  <TableCell>{orfao.osVersion}</TableCell>
-                  <TableCell className="font-mono">{orfao.biosSerial ?? '—'}</TableCell>
-                  <TableCell>{formatarDataHora(orfao.lastSeen)}</TableCell>
-                  <TableCell><PontoDeStatus tom={status.tom}>{status.rotulo}</PontoDeStatus></TableCell>
-                  <TableCell>
-                    <AcoesDaLinha
-                      nome={orfao.hostname}
-                      acoes={[
-                        {
-                          rotulo: 'Vincular a um computador',
-                          icone: Link2,
-                          onClick: () => setVinculando(orfao),
-                          disabled: ocupado,
-                        },
-                        // A triagem alterna, como Desativar e Ativar: só aparece o Status que ela ainda não tem.
-                        orfao.reviewState !== 'ALLOWED' && {
-                          rotulo: 'Marcar como conhecida',
-                          icone: Check,
-                          onClick: () => onTriar(orfao.id, 'ALLOWED'),
-                          disabled: ocupado,
-                        },
-                        orfao.reviewState !== 'BLOCKED' && {
-                          rotulo: 'Marcar como não autorizada',
-                          icone: Ban,
-                          onClick: () => onTriar(orfao.id, 'BLOCKED'),
-                          disabled: ocupado,
-                        },
-                      ]}
-                    />
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {lista.visiveis.map((orfao) => (
+              <TableRow key={orfao.id}>
+                <TableCell>
+                  <TableNome>{orfao.hostname}</TableNome>
+                  {orfao.biosSerial && <TableSublinha className="font-mono">{orfao.biosSerial}</TableSublinha>}
+                </TableCell>
+                <TableCell>{orfao.osVersion}</TableCell>
+                <TableCell>{formatarDataHora(orfao.lastSeen)}</TableCell>
+                <TableCell>
+                  <AcoesDaLinha
+                    nome={orfao.hostname}
+                    acoes={[{
+                      rotulo: 'Vincular a um computador',
+                      icone: Link2,
+                      onClick: () => setVinculando(orfao),
+                      disabled: ocupado,
+                    }]}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
         {lista.total === 0 && (

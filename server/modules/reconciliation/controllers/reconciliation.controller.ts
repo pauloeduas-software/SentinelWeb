@@ -3,17 +3,13 @@ import { temCargo } from '../../access/helpers/require-permission';
 import { SEM_PARAMETROS } from '../../../infra/http/sem-parametros';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
-import {
-  janelaDeOciosidadeSchema, triagemSchema, vinculoComEntregaSchema, vinculoSchema,
-} from '../schemas/reconciliation.schema';
+import { vinculoComEntregaSchema, vinculoSchema } from '../schemas/reconciliation.schema';
 import { listarSugestoes } from '../use-cases/list-suggestions.usecase';
 import { aceitarSugestao } from '../use-cases/accept-suggestion.usecase';
 import { recusarSugestao } from '../use-cases/reject-suggestion.usecase';
 import { calcularCobertura } from '../use-cases/coverage-stats.usecase';
 import { desvincularEndpoint, vincularEndpointAoAtivo } from '../use-cases/link-endpoint-asset.usecase';
 import { vincularEEntregar } from '../use-cases/link-and-checkout.usecase';
-import { triarEndpoint } from '../use-cases/review-endpoint.usecase';
-import { listarAtivosOciosos } from '../use-cases/list-idle-assets.usecase';
 import { obterMaquinaDoAtivo } from '../use-cases/get-asset-machine.usecase';
 import { reconciliarAgora } from '../use-cases/run-reconciliation.usecase';
 
@@ -66,20 +62,8 @@ export const reconciliationController = {
     return desvincularEndpoint(id, atorDaRequisicao(request));
   },
 
-  async idle(request: FastifyRequest) {
-    const { dias } = janelaDeOciosidadeSchema.parse(request.query ?? {});
-    const rows = await listarAtivosOciosos(dias);
-    return { total: rows.length, rows };
-  },
-
   async assetMachine(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     return obterMaquinaDoAtivo(id, temCargo(request, 'SUPERVISOR'));
-  },
-
-  async review(request: FastifyRequest) {
-    const { id } = idParamSchema.parse(request.params);
-    const { reviewState } = triagemSchema.parse(request.body ?? {});
-    return triarEndpoint(id, reviewState, atorDaRequisicao(request));
   },
 };

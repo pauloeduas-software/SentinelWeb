@@ -14,15 +14,14 @@ import { AppError } from '../../../infra/errors/app-error';
 /** A máquina vinculada a um ativo, ou a resposta vazia. */
 export async function obterMaquinaDoAtivo(assetId: string, podeVerLixeira = false) {
   const [endpoint, ativo] = await Promise.all([
-    prisma.endpoint.findFirst({ where: { assetId }, select: { id: true, hostname: true } }),
+    prisma.endpoint.findFirst({ where: { assetId }, select: { id: true } }),
     // `findFirst` e não `findUnique`: é ele que recebe o escopo da lixeira da
     // extension, então ativo excluído só devolve máquina a quem vê a Lixeira (BW).
     prisma.asset.findFirst({ where: { id: assetId, ...(podeVerLixeira ? INCLUINDO_LIXEIRA : {}) }, select: { id: true } }),
   ]);
 
-  if (!ativo || !endpoint) return { endpointId: null, hostname: null };
-
-  return { endpointId: endpoint.id, hostname: endpoint.hostname };
+  // Só o id: o resto, o painel lê em `GET /api/endpoints/:id` (DA).
+  return { endpointId: ativo && endpoint ? endpoint.id : null };
 }
 
 /** Prisma global ou o `tx` da transação de quem chama. */

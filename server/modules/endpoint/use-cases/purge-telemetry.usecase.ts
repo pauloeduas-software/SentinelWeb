@@ -4,47 +4,28 @@ import { createLogger } from '../../../infra/logger/logger';
 const logger = createLogger('endpoint.expurgo');
 
 /**
- * Quanto tempo a telemetria CRUA fica no banco: 3 dias, contados em horas.
+ * Apaga toda amostra de telemetria que tem outra MAIS NOVA da mesma máquina (DA).
  *
- * Cada máquina manda uma amostra a cada poucos segundos, e sem expurgo a tabela
- * só cresce. Quem lê a amostra crua são as telas (só a última) e a agregação do
- * uso diário (`aggregate-usage.usecase.ts`), que recalcula a janela que começa
- * à meia-noite UTC de dois dias atrás. O corte de 72 horas cai sempre ANTES
- * dessa meia-noite, então a agregação nunca recalcula um dia já expurgado. O
- * que responde pergunta de inventário depois disso é o uso diário agregado
- * (`asset_usage_daily`), que fica para sempre.
+ * Quem lê a telemetria são a aba Máquina do computador e a ficha do posto, e as
+ * duas mostram só a última amostra. A série não tem leitor desde que a
+ * agregação de uso saiu (CW), então guardá-la seria tabela crescendo para ninguém.
  *
- * Constante e não coluna de `AppSetting`, como o histórico da fila
- * (`DIAS_DE_HISTORICO_DA_FILA`): é retenção de dado técnico, não uma política
- * que alguém precise negociar.
- */
-const DIAS_DE_TELEMETRIA = 3;
-
-/**
- * Apaga a telemetria mais velha que a retenção — MENOS a última de cada máquina.
+ * A última amostra fica mesmo velha: a de uma máquina desligada há uma semana
+ * continua sendo a verdade sobre ela. Sem isso, a tela diria "o agente conectou
+ * e não mandou leitura" sobre uma máquina que mandou. O índice
+ * `(endpointId, timestamp DESC)` responde o `EXISTS`.
  *
- * A última amostra é o que a aba Máquina e a ficha do posto mostram, e a de uma
- * máquina desligada há uma semana continua sendo a verdade sobre ela. Sem esta
- * exceção, a tela diria "o agente conectou e não mandou leitura" sobre uma
- * máquina que mandou, e cuja leitura foi expurgada. Por isso o `NOT EXISTS`
- * só apaga a amostra que tem outra MAIS NOVA da mesma máquina — o índice
- * `(endpointId, timestamp DESC)` responde essa pergunta.
- *
- * UMA VEZ POR DIA, pela janela diária do `reconcile.job.ts`, e depois da
- * agregação de uso: a ordem garante que o dia agregado já foi gravado quando a
- * amostra que o compôs sai. O índice em `timestamp` faz do corte uma faixa,
- * não uma varredura da tabela.
+ * UMA VEZ POR DIA, pela janela diária do `reconcile.job.ts`: com uma amostra por
+ * hora, ficam no máximo umas 24 por máquina entre um expurgo e outro.
  */
 export async function expurgarTelemetriaAntiga(): Promise<number> {
-  const limite = new Date(Date.now() - DIAS_DE_TELEMETRIA * 24 * 60 * 60 * 1000);
   const count = await prisma.$executeRaw`
     DELETE FROM "telemetries" t
-    WHERE t."timestamp" < ${limite}
-      AND EXISTS (
-        SELECT 1 FROM "telemetries" n
-        WHERE n."endpointId" = t."endpointId" AND n."timestamp" > t."timestamp"
-      )
+    WHERE EXISTS (
+      SELECT 1 FROM "telemetries" n
+      WHERE n."endpointId" = t."endpointId" AND n."timestamp" > t."timestamp"
+    )
   `;
-  if (count > 0) logger.info(`[Telemetria] ${count} amostra(s) com mais de ${DIAS_DE_TELEMETRIA} dias expurgada(s).`);
+  if (count > 0) logger.info(`[Telemetria] ${count} amostra(s) substituída(s) por outra mais nova expurgada(s).`);
   return count;
 }

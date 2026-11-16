@@ -1,4 +1,4 @@
-import type { MatchSignal, Prisma, SuggestionKind } from '@prisma/client';
+import type { MatchSignal, Prisma } from '@prisma/client';
 import { prisma } from '../../../infra/database/prismaClient';
 import { errorCode } from '../../../infra/errors/error-shape';
 import { hashDaAfirmacao, type Afirmacao, type Evidencia } from '../helpers/evidence.helper';
@@ -11,7 +11,6 @@ import { hashDaAfirmacao, type Afirmacao, type Evidencia } from '../helpers/evid
 // vira uma lista que ninguém abre duas vezes.
 
 interface SugestaoProposta {
-  kind: SuggestionKind;
   endpointId: string;
   assetId?: string | null;
   score: number;
@@ -85,7 +84,7 @@ function alvoDaProposta(proposta: SugestaoProposta) {
 export async function proporSugestao(proposta: SugestaoProposta): Promise<ResultadoDaProposta> {
   const alvo = alvoDaProposta(proposta);
   const evidenceHash = hashDaAfirmacao(proposta.afirmacao);
-  const par = { kind: proposta.kind, endpointId: proposta.endpointId, ...alvo };
+  const par = { endpointId: proposta.endpointId, ...alvo };
 
   const dados = {
     ...par,

@@ -3,7 +3,6 @@ import { toHandshakeData, toTelemetryData } from '../helpers/normalize-payload.h
 import { registerHandshake } from '../../endpoint/use-cases/register-handshake.usecase';
 import { saveTelemetry } from '../../endpoint/use-cases/save-telemetry.usecase';
 import { touchEndpoint } from '../../endpoint/use-cases/touch-endpoint.usecase';
-import { registrarMudancasDeHardware } from '../../reconciliation/use-cases/record-hardware-changes.usecase';
 import { shortHwid } from '../../endpoint/helpers/hwid.helper';
 import { createLogger } from '../../../infra/logger/logger';
 
@@ -18,21 +17,9 @@ export async function handleAgentMessage(message: ParsedAgentMessage): Promise<v
   await touchEndpoint(message.hwid);
 
   switch (message.type) {
-    case 'Handshake': {
-      const dados = toHandshakeData(message);
-      const endpoint = await registerHandshake(dados);
-
-      // TROCOU DE PEÇA? (A `AssetChange`.) Fica aqui, no
-      // roteador, e não dentro do `registerHandshake`: inventário é assunto do
-      // domínio `endpoint`, e comparar o que o agente trouxe com o que estava
-      // gravado é inferência sobre o patrimônio. E é o `registerHandshake` que
-      // entrega os dois lados da comparação, porque depois do `upsert` o valor
-      // velho não existe mais em lugar nenhum.
-      await registrarMudancasDeHardware(
-        endpoint.id, endpoint.assetId, endpoint.anterior, endpoint.atual,
-      );
+    case 'Handshake':
+      await registerHandshake(toHandshakeData(message));
       break;
-    }
 
     case 'Telemetry':
       await saveTelemetry(toTelemetryData(message));

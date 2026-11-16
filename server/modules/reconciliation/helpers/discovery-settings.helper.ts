@@ -6,18 +6,16 @@ import { APP_SETTING_ID } from '../../settings/helpers/app-setting.helper';
 //
 // Não é helper puro — ele consulta —, e fica em `helpers/` pelo mesmo motivo do
 // `app-setting.helper.ts`: é leitura de configuração, não operação de negócio.
-// Um `use-cases/` para "ler três colunas de uma linha fixa" seria cerimônia.
+// Um `use-cases/` para "ler duas colunas de uma linha fixa" seria cerimônia.
 
 export interface ConfiguracaoDaDescoberta {
   discoveryMode: DiscoveryMode;
   ghostDays: number;
-  shadowHours: number;
 }
 
 const CAMPOS = {
   discoveryMode: true,
   ghostDays: true,
-  shadowHours: true,
 } as const;
 
 /**

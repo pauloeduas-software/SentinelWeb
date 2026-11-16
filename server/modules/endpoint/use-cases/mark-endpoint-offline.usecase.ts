@@ -6,7 +6,7 @@ import { createLogger } from '../../../infra/logger/logger';
 const logger = createLogger('endpoint.offline');
 
 // Desconexão formal: o WebSocket do agente caiu. Diferente do job de zumbis,
-// aqui a saída é imediata e sabida — não esperamos os 4 minutos de tolerância.
+// aqui a saída é imediata e sabida — não esperamos os 2 minutos de tolerância (CS).
 export async function markEndpointOffline(hwid: string): Promise<void> {
   const clean = sanitizeHwid(hwid);
   try {

@@ -3,12 +3,8 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { conectarAgente, esperarPor } from '../helpers/agente';
 import { prisma } from '../../server/infra/database/prismaClient';
 
-// A BORDA DO AGENTE — o que o rollout vai exercitar por semanas.
-//
-// Enquanto o binário novo não chega em toda a frota, o servidor atende os dois
-// formatos ao mesmo tempo. Este arquivo é o que garante que isso continue
-// verdade: o payload ANTIGO tem que seguir válido, e o NOVO não pode depender
-// de nenhum campo estar presente.
+// A BORDA DO AGENTE: o handshake do SentinelAgente, com e sem os campos que a
+// máquina nem sempre consegue coletar. Nenhum deles pode ser obrigatório.
 
 let api: ApiDeTeste;
 
@@ -22,7 +18,7 @@ afterAll(async () => {
 
 const buscar = (hwid: string) => prisma.endpoint.findUnique({ where: { hwid } });
 
-describe('o handshake antigo continua valendo', () => {
+describe('o handshake sem identidade', () => {
   it('cria a máquina sem nenhum campo de identidade', async () => {
     const agente = await conectarAgente(api, 'hwid-agente-antigo');
     await agente.handshake();
@@ -32,54 +28,19 @@ describe('o handshake antigo continua valendo', () => {
     expect(endpoint.hostname).toBe('maquina-de-teste');
     expect(endpoint.status).toBe('ONLINE');
     expect(endpoint.biosSerial).toBeNull();
-
-    // O QUE IMPORTA AQUI: `null`, e não `0`. Gravar zero seria afirmar que a
-    // máquina tem zero bytes de RAM — diferente de "esta versão do agente não
-    // coleta isso", e é a diferença que o `readOptionalBigInt` existe para
-    // manter. A primeira soma do painel de cobertura veria a mentira.
-    expect(endpoint.ramTotalBytes).toBeNull();
-    expect(endpoint.diskTotalBytes).toBeNull();
-
-    await agente.fechar();
-  });
-});
-
-describe('o que o servidor deixou de guardar continua passando no fio', () => {
-  it('aceita os campos que o servidor não guarda mais, e os ignora', async () => {
-    // O PROTOCOLO NÃO MUDOU quando a observação de usuário e o inventário de
-    // software saíram: o agente em campo continua mandando `LoggedOnUser` e
-    // `InstalledSoftware`, e o servidor apenas deixou de gravá-los. Sem este
-    // caso, um campo esquecido no `upsert` viraria `Unknown argument` no
-    // PRIMEIRO handshake de produção e passaria pela suíte inteira — o
-    // compilador não pega, porque o objeto entra por spread.
-    const agente = await conectarAgente(api, 'hwid-campo-ignorado');
-    await agente.handshake({
-      Hostname: 'pc-ignora',
-      LoggedOnUser: 'EMPRESA\\ana.lima',
-      InstalledSoftware: [{ Name: 'Office', Version: '16.0', Publisher: 'Microsoft' }],
-    });
-
-    const endpoint = await esperarPor('a máquina com campo ignorado', () => buscar('hwid-campo-ignorado'));
-
-    expect(endpoint.hostname).toBe('pc-ignora');
-    expect(endpoint.status).toBe('ONLINE');
+    expect(endpoint.systemUuid).toBeNull();
 
     await agente.fechar();
   });
 });
 
 describe('o handshake novo traz identidade', () => {
-  it('grava os sete campos vindos em PascalCase', async () => {
+  it('grava a identidade vinda em PascalCase', async () => {
     const agente = await conectarAgente(api, 'hwid-agente-novo');
     await agente.handshake({
       Hostname: 'PC-ANA',
       BiosSerial: 'SN-ABC-123',
       SystemUuid: '4c4c4544-0031-4a10-8051-b7c04f584d32',
-      Manufacturer: 'Dell Inc.',
-      Model: 'Latitude 5440',
-      ChassisType: '10',
-      RamTotalBytes: 17179869184,
-      DiskTotalBytes: 512110190592,
       MacAddress: '00-1A-2B-3C-4D-5E',
     });
 
@@ -90,83 +51,37 @@ describe('o handshake novo traz identidade', () => {
 
     expect(endpoint.biosSerial).toBe('SN-ABC-123');
     expect(endpoint.systemUuid).toBe('4c4c4544-0031-4a10-8051-b7c04f584d32');
-    expect(endpoint.manufacturer).toBe('Dell Inc.');
-    // `Model` no fio vira `hardwareModel` na coluna (D13): `endpoint.model` se
-    // confundiria com a relação de catálogo do ativo.
-    expect(endpoint.hardwareModel).toBe('Latitude 5440');
-    expect(endpoint.ramTotalBytes).toBe(17179869184n);
 
-    await agente.fechar();
-  });
-
-  it('aceita camelCase, que é o que as versões antigas mandam', async () => {
-    const agente = await conectarAgente(api, 'hwid-camel');
-    await agente.handshake({ biosSerial: 'SN-CAMEL-9', hostname: 'pc-camel' } as Record<string, unknown>);
-
-    const endpoint = await esperarPor('a máquina em camelCase', async () => {
-      const achado = await buscar('hwid-camel');
-      return achado?.biosSerial ? achado : null;
-    });
-
-    expect(endpoint.biosSerial).toBe('SN-CAMEL-9');
     await agente.fechar();
   });
 });
 
-describe('o que o agente manda vazio é "não sei", nunca zero', () => {
-  it('string vazia em RamTotalBytes não vira "esta máquina tem zero bytes"', async () => {
-    const agente = await conectarAgente(api, 'vazio-1');
-    // O agente serializa `null` como string vazia em algumas versões, e
-    // `Number('')` é `0` — finito e não negativo. Sem a guarda do
-    // `readOptionalBigInt`, isto gravava uma AFIRMAÇÃO sobre a máquina: que ela
-    // tem zero bytes de RAM. É diferente de "esta versão do agente não coleta
-    // isso", e a diferença aparece na primeira soma do painel de cobertura.
-    await agente.handshake({ Hostname: 'pc-vazio', RamTotalBytes: '', DiskTotalBytes: '   ' });
-    const endpoint = await esperarPor(
-      'a máquina de campos vazios',
-      () => prisma.endpoint.findUnique({ where: { hwid: 'vazio-1' } }),
-    );
-    await agente.fechar();
+describe('o inventário que a aba Máquina mostra (DA)', () => {
+  const placa = { Name: 'UHD Graphics 630', MemoryBytes: null };
 
-    expect(endpoint.ramTotalBytes).toBeNull();
-    expect(endpoint.diskTotalBytes).toBeNull();
-  });
-
-  it('e o número de verdade continua entrando', async () => {
-    const agente = await conectarAgente(api, 'vazio-2');
-    await agente.handshake({ Hostname: 'pc-cheio', RamTotalBytes: 8589934592 });
-    const endpoint = await esperarPor('a máquina com RAM', async () => {
-      const achado = await prisma.endpoint.findUnique({ where: { hwid: 'vazio-2' } });
-      return achado?.ramTotalBytes ? achado : null;
-    });
-    await agente.fechar();
-
-    expect(endpoint.ramTotalBytes).toBe(8589934592n);
-  });
-});
-
-describe('a rota do painel não estoura com os BigInt novos', () => {
-  it('devolve ramTotalBytes como string', async () => {
-    const agente = await conectarAgente(api, 'hwid-bigint');
-    await agente.handshake({ RamTotalBytes: 34359738368, DiskTotalBytes: 1024209543168 });
-
-    await esperarPor('a máquina com specs', async () => {
-      const achado = await buscar('hwid-bigint');
-      return achado?.ramTotalBytes ? achado : null;
+  it('grava o fabricante, o modelo e as placas de vídeo', async () => {
+    const agente = await conectarAgente(api, 'hwid-inventario');
+    await agente.handshake({
+      Hostname: 'pc-inventario', Manufacturer: 'Dell Inc.', HardwareModel: 'OptiPlex 7080', Gpus: [placa],
     });
 
-    // ESTE É O TESTE QUE PEGA A REGRESSÃO MAIS SILENCIOSA. O
-    // `present-endpoint.helper.ts` devolvia `{ ...endpoint }` inteiro; com
-    // colunas BigInt no model, o `JSON.stringify` do Fastify morre com "Do not
-    // know how to serialize a BigInt" — e morre na rota que o painel consulta a
-    // cada 5 segundos, ou seja, a tela inteira fica em branco.
-    const { status, body } = await api.get<{ rows: { hwid: string; ramTotalBytes: string | null }[] }>(
-      '/api/endpoints?perPage=500',
-    );
+    const endpoint = await esperarPor('o inventário gravado', async () => {
+      const achado = await buscar('hwid-inventario');
+      return achado?.manufacturer ? achado : null;
+    });
 
-    expect(status).toBe(200);
-    const linha = body.rows.find((row) => row.hwid === 'hwid-bigint');
-    expect(linha?.ramTotalBytes).toBe('34359738368');
+    expect(endpoint.hardwareModel).toBe('OptiPlex 7080');
+    expect(endpoint.gpus).toEqual([placa]);
+
+    // O HANDSHAKE QUE NÃO TRAZ A LISTA NÃO A APAGA, como a série: a leitura que
+    // falhou numa conexão não é a placa que saiu da máquina.
+    await agente.handshake({ Hostname: 'pc-inventario-2' });
+    const depois = await esperarPor('o segundo handshake', async () => {
+      const achado = await buscar('hwid-inventario');
+      return achado?.hostname === 'pc-inventario-2' ? achado : null;
+    });
+    expect(depois.gpus).toEqual([placa]);
+    expect(depois.manufacturer).toBe('Dell Inc.');
 
     await agente.fechar();
   });

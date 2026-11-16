@@ -169,7 +169,6 @@ export async function reconciliarEndpoint(
   } else {
     for (const casamento of casamentos) {
       await proporSugestao({
-        kind: 'LINK',
         endpointId: endpoint.id,
         assetId: casamento.alvoId,
         score: casamento.score,

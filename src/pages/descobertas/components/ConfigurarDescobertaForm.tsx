@@ -10,7 +10,7 @@ import type {
 } from '../../../types/reconciliation.types';
 
 // OS BOTÕES DA DESCOBERTA (D118), no painel lateral de todo formulário: o modo e
-// os dois prazos que os números do topo da tela citam.
+// o prazo que o Sumidos do topo da tela cita.
 //
 // Abre com o que o servidor respondeu e só existe aberto, então semear o estado no
 // `useState` basta: cada abertura lê a configuração de agora (D119).
@@ -44,7 +44,6 @@ export default function ConfigurarDescobertaForm({ configuracao, onSalvar, onClo
   const notificar = useNotificacao();
   const [modo, setModo] = useState(configuracao.discoveryMode);
   const [ghostDays, setGhostDays] = useState(() => String(configuracao.ghostDays));
-  const [shadowHours, setShadowHours] = useState(() => String(configuracao.shadowHours));
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -53,7 +52,7 @@ export default function ConfigurarDescobertaForm({ configuracao, onSalvar, onClo
     setSalvando(true);
     setErro('');
     try {
-      await onSalvar({ discoveryMode: modo, ghostDays: Number(ghostDays), shadowHours: Number(shadowHours) });
+      await onSalvar({ discoveryMode: modo, ghostDays: Number(ghostDays) });
       onClose();
       notificar.sucesso('Configuração salva.');
     } catch (falha) {
@@ -88,12 +87,8 @@ export default function ConfigurarDescobertaForm({ configuracao, onSalvar, onClo
         </Aviso>
       )}
 
-      <Campo rotulo="Dias para virar fantasma" obrigatorio ajuda="Computador cujo agente não dá sinal há mais que isso entra na conta de Fantasmas.">
+      <Campo rotulo="Dias sem contato" obrigatorio ajuda="Computador cujo agente não dá sinal há mais que isso entra na conta de Sumidos.">
         <Input type="number" required min={1} max={365} value={ghostDays} onChange={(evento) => setGhostDays(evento.target.value)} />
-      </Campo>
-
-      <Campo rotulo="Horas para virar Shadow IT" obrigatorio ajuda="Máquina sem vínculo vista há mais que isso e ainda sem triagem.">
-        <Input type="number" required min={1} max={720} value={shadowHours} onChange={(evento) => setShadowHours(evento.target.value)} />
       </Campo>
     </FormularioLateral>
   );

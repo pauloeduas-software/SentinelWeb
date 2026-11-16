@@ -15,13 +15,13 @@ export function parseAgentMessage(raw: string): ParsedAgentMessage | null {
     return null;
   }
 
-  const type = (envelope.Type ?? envelope.type) as AgentMessageType;
+  const type = envelope.Type as AgentMessageType;
   if (!KNOWN_TYPES.includes(type)) return null;
 
-  const payload = envelope.Payload ?? envelope.payload;
+  const payload = envelope.Payload;
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
 
-  const hwid = readString(payload as Record<string, unknown>, 'hwid');
+  const hwid = readString(payload as Record<string, unknown>, 'Hwid');
   if (!hwid) return null;
 
   return { type, hwid: sanitizeHwid(hwid), payload: payload as Record<string, unknown> };

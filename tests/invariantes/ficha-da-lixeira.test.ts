@@ -48,9 +48,9 @@ describe('para quem vê a Lixeira', () => {
     expect((await supervisor.get(`/api/assets/${id}/licenses`)).status).toBe(200);
     expect((await supervisor.get(`/api/assets/${id}/components`)).status).toBe(200);
 
-    const { status, body } = await supervisor.get<{ hostname: string | null }>(`/api/assets/${id}/machine`);
+    const { status, body } = await supervisor.get<{ endpointId: string | null }>(`/api/assets/${id}/machine`);
     expect(status).toBe(200);
-    expect(body.hostname).toBeNull();
+    expect(body.endpointId).toBeNull();
   });
 
   it('nenhuma escrita alcança o ativo: abrir não é restaurar', async () => {
@@ -69,8 +69,8 @@ describe('para o Técnico, que não vê a Lixeira (AV)', () => {
     expect((await tecnico.get(`/api/assets/${id}/licenses`)).status).toBe(404);
     expect((await tecnico.get(`/api/assets/${id}/components`)).status).toBe(404);
 
-    const { body } = await tecnico.get<{ hostname: string | null }>(`/api/assets/${id}/machine`);
-    expect(body.hostname).toBeNull();
+    const { body } = await tecnico.get<{ endpointId: string | null }>(`/api/assets/${id}/machine`);
+    expect(body.endpointId).toBeNull();
   });
 });
 

@@ -749,6 +749,8 @@ status só: quem quer ver só Aguardando busca em Pendente.
 
 ## BU — O nome é Status em toda tela, e o valor vai no masculino
 
+> **Superada em parte por [CW](./reconciliacao.md#cw--descobertas-perde-a-triagem-os-ociosos-e-os-números-repetidos):** o Conhecido e o Não autorizado de Descobertas saem com a triagem.
+
 **Decisão.** Situação sai da tela: coluna, campo de ficha e cartão dizem Status em todas as telas. Corrige a BB e a BS, que
 mantinham Status em Computadores e Licenças e Situação nas outras, e a BO, que falava em Situação do posto. As regras de
 negócio não mudaram.
@@ -889,6 +891,8 @@ recusa de quem está desativado, que vale para ativo e para item.
 ---
 
 ## CI — A série vai embaixo da etiqueta em toda tela
+
+> **Superada em parte por [CW](./reconciliacao.md#cw--descobertas-perde-a-triagem-os-ociosos-e-os-números-repetidos):** a aba Ociosos de Descobertas sai.
 
 **Decisão.** Onde aparece a etiqueta de um computador numa linha, a série vem embaixo, só o número, em mono, como a
 [CH](#ch--um-nome-para-cada-coisa) deixou na lista de Computadores. As regras de negócio não mudaram, e nenhuma rota é

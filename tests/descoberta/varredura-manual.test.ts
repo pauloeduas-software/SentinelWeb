@@ -53,7 +53,7 @@ describe('POST /api/reconciliation/run', () => {
     expect(body.sugeridas).toBeGreaterThanOrEqual(1);
 
     const sugestao = await prisma.reconciliationSuggestion.findFirst({
-      where: { endpointId: maquina.id, kind: 'LINK', state: 'PENDING' },
+      where: { endpointId: maquina.id, state: 'PENDING' },
     });
     expect(sugestao?.assetId).toBe(ativo.id);
   });

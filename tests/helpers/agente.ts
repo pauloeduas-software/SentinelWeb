@@ -12,10 +12,9 @@ import type { ApiDeTeste } from './app';
 // Antes isso não incomodava: nenhum teste precisava de um agente conectado.
 //
 // Agora o que está em jogo é outro: a borda do agente (parse → normalização →
-// upsert) é justamente onde o agente VELHO e o NOVO se distinguem, e é o risco
-// número um do rollout. Chamar `handleAgentMessage()` direto pularia o parser,
-// a tabela de sinônimos PascalCase/camelCase e o `readOptionalBigInt` — ou seja,
-// pularia tudo que este teste existe para exercitar. É o mesmo princípio que
+// upsert) é onde o fio vira dado. Chamar `handleAgentMessage()` direto pularia o
+// parser e a normalização — ou seja, pularia tudo que este teste existe
+// para exercitar. É o mesmo princípio que
 // faz os fixtures criarem cenário pela API e não por `prisma.create`.
 //
 // O preço é abrir uma porta efêmera (`port: 0`) por arquivo. É mais lento que
@@ -109,9 +108,8 @@ export async function abrirConexao(api: ApiDeTeste, token: string): Promise<WebS
 /**
  * Conecta um agente: cadastra a máquina e abre a conexão com o token dela.
  *
- * O payload sai em PascalCase porque é assim que o agente serializa — e é o
- * caminho que o `normalize-payload.helper` tem que resolver. Um teste escrito em
- * camelCase provaria o caminho mais fácil.
+ * O payload sai em PascalCase porque é assim que o SentinelAgente serializa, e
+ * é a única grafia que o `normalize-payload.helper` lê.
  */
 export async function conectarAgente(api: ApiDeTeste, hwid: string): Promise<AgenteDeTeste> {
   const socket = await abrirConexao(api, await cadastrarAgente(api, hwid));

@@ -42,25 +42,15 @@ model Endpoint {
   // semanas. Máquina que não manda serial não pontua por serial — não vira erro.
   biosSerial    String?
   systemUuid    String?
+  // O fabricante e o modelo como a própria máquina se declara: a aba Máquina os
+  // mostra ao lado do sistema (DA). O do cadastro é o do catálogo, no computador.
   manufacturer  String?
   /// `hardwareModel`, nunca `model`: `endpoint.model` lê-se como a relação de
   /// catálogo do ativo, e o compilador não pegaria a confusão (D13).
   hardwareModel String?
-  chassisType   String?
-
-  // SPECS COLETADAS — e elas moram AQUI, não em `assets`.
-  //
-  // Pedia-se "specs de hardware como atributo do ativo". O que se queria de
-  // verdade era que o dado parasse de sumir no expurgo da telemetria,
-  // e coluna nesta tabela resolve isso. Copiá-las para `assets` criaria uma
-  // segunda fonte de verdade sobre a MESMA máquina, com um detalhe que a torna
-  // pior que as outras: as duas podem divergir com razão (o pente foi trocado) e
-  // ninguém saberia qual está certa. É o D16 uma camada abaixo.
-  ramTotalBytes  BigInt?
-  diskTotalBytes BigInt?
-
-  /// Triagem do Shadow IT: máquina vista pelo agente e sem cadastro.
-  reviewState ReviewState @default(UNREVIEWED)
+  /// As placas de vídeo, como o SentinelAgente as manda (`Gpus`, A22 de lá): a
+  /// lista em PascalCase, lida pelo front como os discos da telemetria.
+  gpus          Json?
 
   // ── O VÍNCULO COM O PATRIMÔNIO (D45) ─────────────────────────────────────
   //
@@ -78,7 +68,6 @@ model Endpoint {
   telemetries Telemetry[]
   suggestions ReconciliationSuggestion[] @relation("SugestaoDoEndpoint")
 
-  @@index([reviewState])
   @@map("endpoints")
 }
 
@@ -89,14 +78,6 @@ enum AgentStatus {
   OFFLINE
 }
 
-// A triagem do Shadow IT: máquina que o agente vê e o cadastro não conhece.
-// `UNREVIEWED` é o estado de quem acabou de aparecer — a fila de trabalho.
-enum ReviewState {
-  UNREVIEWED
-  ALLOWED
-  BLOCKED
-}
-
 model Telemetry {
   id           String   @id @default(uuid()) @db.Uuid
   endpointId   String   @db.Uuid
@@ -105,19 +86,13 @@ model Telemetry {
   ramUsed      BigInt
   timestamp    DateTime @default(now())
   disks        Json?
-  network      Json?
-  topProcesses Json?
   endpoint     Endpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
 
   /// As duas perguntas que se fazem a esta tabela fixam a máquina e ordenam pelo
-  /// tempo: a amostra ATUAL de uma máquina (a ficha do ativo e a do posto, de
-  /// poucos em poucos segundos) e a JANELA de três dias do agregado de uso, que
-  /// é o único leitor da série histórica. Sem este índice as duas eram varredura
-  /// sequencial da tabela inteira — ver a migration que o criou.
+  /// tempo: a amostra ATUAL de uma máquina (a ficha do computador e a do posto) e
+  /// a mais nova que o expurgo poupa. Sem este índice as duas eram varredura
+  /// sequencial da tabela inteira.
   @@index([endpointId, timestamp(sort: Desc)])
-  // O expurgo diário (`purge-telemetry.usecase.ts`) apaga por faixa de
-  // data; sem este índice, cada rodada varreria a tabela inteira.
-  @@index([timestamp])
   @@map("telemetries")
 }
 
@@ -597,10 +572,10 @@ model Asset {
   // EM um lugar sem ser DO lugar.
   locationId String? @db.Uuid
 
-  orderNumber  String?
-  purchaseDate DateTime?
+  orderNumber       String?
+  purchaseDate      DateTime?
   // Decimal, nunca Float. Sai no JSON como string.
-  purchaseCost Decimal?  @db.Decimal(12, 2)
+  purchaseCost      Decimal?  @db.Decimal(12, 2)
   // O último dia da garantia do fabricante (CO). Pode ser futuro, e não antecede
   // a compra: o CHECK `assets_garantia_nao_antecede_compra`, à mão na migration.
   warrantyExpiresAt DateTime?
@@ -661,9 +636,6 @@ model Asset {
 
   /// A máquina descoberta que É este ativo. Lado fraco do 1:1 — a FK mora lá (D45).
   endpoint Endpoint?
-
-  changes   AssetChange[]
-  usageDays AssetUsageDaily[]
 
   // `suggestions`, e não o `ReconciliationSuggestion` que o `prisma format`
   // escreveu sozinho: o nome gerado não é convenção nenhuma e destoa do outro
@@ -821,18 +793,16 @@ model AppSetting {
   // ── OS BOTÕES DA DESCOBERTA ──────────────────────────────────────────────
   //
   // Moram no singleton que já existe, e não numa tabela de configuração nova:
-  // são três valores, não um domínio.
+  // são dois valores, não um domínio.
   //
   // `SUGGEST` é o padrão e isso é o D51: em `ON`, a varredura vincula sozinha
   // a máquina ao ativo quando há um único candidato de 100 pontos, sem ninguém
-  // conferir — e um vínculo errado põe o último contato e o uso da máquina no
+  // conferir — e um vínculo errado põe o último contato e a telemetria da máquina no
   // ativo errado até alguém desvincular.
   discoveryMode DiscoveryMode @default(SUGGEST)
 
-  /// Ativo sem contato de agente há mais que isto é FANTASMA.
-  ghostDays   Int @default(30)
-  /// Máquina sem cadastro vista há mais que isto é SHADOW IT.
-  shadowHours Int @default(24)
+  /// Ativo sem contato de agente há mais que isto está SUMIDO.
+  ghostDays Int @default(30)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1009,15 +979,6 @@ enum MatchSignal {
   HOSTNAME
 }
 
-/// O QUE a sugestão propõe. Um valor só hoje, e o enum fica: a fila é construída
-/// em volta do que dá trabalho (nascer de um job idempotente, não duplicar,
-/// guardar evidência, ser aceita ou recusada, lembrar da recusa), e isso não
-/// depende de quantas formas existem.
-enum SuggestionKind {
-  /// Este endpoint é este ativo.
-  LINK
-}
-
 enum SuggestionState {
   PENDING
   ACCEPTED
@@ -1027,19 +988,10 @@ enum SuggestionState {
   SUPERSEDED
 }
 
-// A FILA DE RECONCILIAÇÃO — uma tabela, e não uma por forma de sugestão (D96).
-//
-// POR QUE UMA SÓ: o que é caro é a fila (idempotência, deduplicação, evidência,
-// aceite, memória da recusa), e uma tabela por forma seria uma cópia dessa
-// máquina para variar o que é barato — qual é o alvo. Invariante copiada é
-// invariante que um dia diverge.
-//
-// O `kind` continua existindo com um valor só porque é a fila que carrega o
-// desenho, não a contagem de formas: o dia que nascer a segunda, ela entra aqui
-// sem tabela nova.
+// A FILA DE RECONCILIAÇÃO. A sugestão é sempre a mesma afirmação: esta máquina
+// É aquele ativo.
 model ReconciliationSuggestion {
-  id   String         @id @default(uuid()) @db.Uuid
-  kind SuggestionKind
+  id String @id @default(uuid()) @db.Uuid
 
   endpointId String @db.Uuid
 
@@ -1071,51 +1023,10 @@ model ReconciliationSuggestion {
 
   // O índice que impede a fila de empilhar (`sugestao_pendente_por_alvo`, com
   // COALESCE na FK nulável) é PARCIAL e nasce na migration escrita à mão.
-  @@index([state, kind])
+  @@index([state])
   @@index([endpointId, state])
   @@index([assetId])
   @@map("reconciliation_suggestions")
-}
-
-// MUDANÇA DE HARDWARE DETECTADA — trocou o HD, tiraram pente de RAM.
-//
-// Detectada, não digitada: a diferença com o `AuditLog` é essa. Lá a linha
-// diz o que alguém FEZ no sistema; aqui, o que o mundo mudou sem avisar.
-model AssetChange {
-  id      String @id @default(uuid()) @db.Uuid
-  assetId String @db.Uuid
-
-  /// O nome do campo como o usuário o vê: "RAM total", "Disco", "Modelo".
-  field    String
-  oldValue String?
-  newValue String
-
-  detectedAt DateTime @default(now())
-
-  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
-
-  @@index([assetId, detectedAt])
-  @@map("asset_changes")
-}
-
-// ATIVO OCIOSO — quanto a máquina foi realmente usada, agregado por dia.
-//
-// Mesmo motivo do D49: sem agregação, "quem não usa este notebook há 30 dias"
-// varre milhões de linhas de telemetria. E cruzado com o `postoVago` que o
-// `resolverResponsaveis()` já devolve, isto separa "ninguém USA" de "ninguém
-// RESPONDE" — duas conversas diferentes, com duas pessoas diferentes.
-model AssetUsageDaily {
-  id      String   @id @default(uuid()) @db.Uuid
-  assetId String   @db.Uuid
-  day     DateTime @db.Date
-
-  /// Minutos com sinal de uso no dia, estimados pelas amostras de telemetria.
-  activeMinutes Int @default(0)
-
-  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
-
-  @@unique([assetId, day])
-  @@map("asset_usage_daily")
 }
 
 // ============================================================================

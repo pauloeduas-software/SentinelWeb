@@ -40,6 +40,9 @@ import { LicenseMaestro } from './modules/license/license.maestro';
 import { buildReadinessReport, checkDependencies } from './infra/lifecycle/health';
 import { countAgentsOnline } from './modules/agent/agent.registry';
 
+/** O tamanho máximo de uma mensagem do agente pelo `/agent-hub`, em bytes. */
+export const TETO_DA_MENSAGEM_DO_AGENTE = 1024 * 1024;
+
 const logger = createLogger('app');
 
 // A MONTAGEM da aplicação, separada de SUBIR o servidor (server.ts).
@@ -190,7 +193,10 @@ export async function buildApp(
     });
   }
 
-  await server.register(websocket);
+  // O TETO DA MENSAGEM DO AGENTE: 1 MiB, e não os 100 MiB do padrão do `ws`. O
+  // handshake e a telemetria do SentinelAgente têm poucos KB, e a mensagem acima
+  // do teto fecha a conexão com 1009 antes de entrar na memória inteira (DB).
+  await server.register(websocket, { options: { maxPayload: TETO_DA_MENSAGEM_DO_AGENTE } });
 
   // O cookie vem ANTES do jwt: é o @fastify/cookie que faz `request.cookies`
   // existir, e sem ele o `cookie:` abaixo não encontraria token nenhum.

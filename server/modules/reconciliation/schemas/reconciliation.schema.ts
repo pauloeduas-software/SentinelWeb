@@ -17,12 +17,3 @@ export const vinculoComEntregaSchema = z.strictObject({
   assetId: uuidObrigatorio('computador'),
   targetWorkstationId: uuidObrigatorio('posto'),
 });
-
-export const triagemSchema = z.strictObject({
-  reviewState: z.enum(['UNREVIEWED', 'ALLOWED', 'BLOCKED'], 'status inválido'),
-});
-
-/** `?dias=` da lista de ociosos. Não é `strictObject` — ver o filtro de máquinas. */
-export const janelaDeOciosidadeSchema = z.object({
-  dias: z.coerce.number().int().min(1, 'dias: mínimo de 1').max(365, 'dias: máximo de 365').default(30),
-});

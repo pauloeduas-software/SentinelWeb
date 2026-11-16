@@ -28,10 +28,6 @@ export class ReconciliationMaestro {
     // vez (409 com outra em andamento). Teto de escrita: varredura é cara.
     server.post('/api/reconciliation/run', WRITE_RATE_LIMIT, reconciliationController.runNow);
 
-    // OCIOSOS. Rota da reconciliação e não do ativo porque a resposta depende
-    // dos dois lados: o uso vem da telemetria, o `postoVago` vem da posse.
-    server.get('/api/reconciliation/idle', reconciliationController.idle);
-
     // ACEITAR afirma que esta máquina é aquele patrimônio, e o vínculo é
     // `@unique`: errar aqui exige o `DELETE` para corrigir. Teto de destrutiva.
     server.post(
@@ -65,14 +61,12 @@ export class ReconciliationMaestro {
       reconciliationController.linkAndCheckout,
     );
 
-    server.patch('/api/endpoints/:id/review', WRITE_RATE_LIMIT, reconciliationController.review);
-
     // A ABA MÁQUINA. Pendura em `/api/assets/:id` como as rotas de ocupação
     // fazem com `/api/locations`: a pergunta "o que é esta máquina" é do ativo,
     // mas a resposta só existe porque os dois lados se falam.
     //
-    // `/machine` e não o nome de um dos conteúdos: ela devolve especificação
-    // coletada, os dois últimos contatos e a mudança de hardware detectada.
+    // `/machine` e não o nome de um dos conteúdos: ela devolve qual máquina está
+    // vinculada, e a aba lê o resto em `GET /api/endpoints/:id` (BY).
     server.get('/api/assets/:id/machine', reconciliationController.assetMachine);
 
     logger.debug('[Maestro] Rotas de Reconciliação (RMM × ITAM) inicializadas.');

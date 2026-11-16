@@ -320,6 +320,8 @@ já entram — a *referência* ao documento existe, o arquivo é que não.
 > **Superada em parte por [AA](#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas):**
 > a chave de produto volta — a da licença e a de cada entrega —, em texto, sem a cifra que saiu
 > aqui. O que a protege é só o detalhe devolvê-la e a tela mostrá-la escondida.
+>
+> **Superada em parte por [CY](./reconciliacao.md#cy--o-servidor-lê-o-que-o-sentinelagente-manda-e-só-isso):** o `installedSoftware` sai do tipo e do parser.
 
 **Decidido:** saem `license-compliance`, `normalize-software`, `list-software-packages` e
 `software-key.helper`; `SoftwarePackage`, `SoftwareInstallation` e `LicenseSoftware` saem do

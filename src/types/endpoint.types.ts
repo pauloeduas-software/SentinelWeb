@@ -11,46 +11,45 @@ import type { Telemetry } from './telemetry.types';
  */
 type AgentStatus = 'ONLINE' | 'OFFLINE';
 
-/** Triagem do Shadow IT — máquina vista pelo agente e sem cadastro. */
-export type ReviewState = 'UNREVIEWED' | 'ALLOWED' | 'BLOCKED';
-
-/** Máquina descoberta pelo Agente Sentinel — o lado RMM. */
+/**
+ * Máquina descoberta pelo Agente Sentinel, como as listas de `/descobertas` a
+ * leem — `GET /api/endpoints`. A API devolve só estes campos (DA).
+ */
 export interface Endpoint {
   id: string;
-  hwid: string;
   hostname: string;
   osVersion: string;
-  macAddress?: string | null;
-  localIp?: string | null;
-  cpuModel?: string | null;
+  /** A série do firmware, embaixo do nome da máquina. Nula quando o agente não coletou. */
+  biosSerial: string | null;
   status: AgentStatus;
   lastSeen: string;
-
-  /** A identidade coletada. Tudo nulável: agente velho não manda. */
-  biosSerial?: string | null;
-  systemUuid?: string | null;
-  manufacturer?: string | null;
-  hardwareModel?: string | null;
-  chassisType?: string | null;
-  /** Vem como STRING: é `BigInt` no banco, e BigInt não tem JSON. */
-  ramTotalBytes?: string | null;
-  diskTotalBytes?: string | null;
-
-  /** O vínculo com o patrimônio (D45). Nulo = máquina sem cadastro. */
-  assetId?: string | null;
   /**
    * O ativo do vínculo, identificado: é a coluna da lista de máquinas
    * vinculadas, e a etiqueta leva à ficha. `null` quando não há vínculo.
    */
   asset: { id: string; assetTag: string; name: string | null; serial: string | null } | null;
-  reviewState?: ReviewState;
 }
 
 /**
- * UMA máquina com a amostra de telemetria atual — `GET /api/endpoints/:id`.
- * A listagem não traz a telemetria: as tabelas de `/descobertas` não a mostram.
+ * UMA máquina com a amostra de telemetria atual — `GET /api/endpoints/:id`, a
+ * aba Máquina do computador e do posto.
  */
-export interface EndpointComTelemetria extends Endpoint {
+export interface EndpointComTelemetria {
+  id: string;
+  hwid: string;
+  hostname: string;
+  osVersion: string;
+  /** A série, o fabricante e o modelo como a própria máquina se declara. */
+  biosSerial: string | null;
+  manufacturer: string | null;
+  hardwareModel: string | null;
+  /** As placas de vídeo, como o agente as manda: lidas por `lerPlacasDeVideo`. */
+  gpus: unknown;
+  cpuModel: string | null;
+  localIp: string | null;
+  macAddress: string | null;
+  status: AgentStatus;
+  lastSeen: string;
   /** Só a amostra mais recente: a API devolve `take: 1`. */
   telemetries: Telemetry[];
 }

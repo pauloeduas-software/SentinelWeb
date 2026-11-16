@@ -8,7 +8,7 @@ import { contemTexto } from '../../shared/busca.helper';
 /** O que a listagem aceita filtrar além da busca por texto. */
 export interface FiltrosDeEndpoint {
   q?: string;
-  /** `com` = já é um ativo; `sem` = órfão, o candidato a Shadow IT. */
+  /** `com` = já é um ativo; `sem` = a máquina que o cadastro ainda não conhece. */
   vinculo?: 'com' | 'sem';
 }
 

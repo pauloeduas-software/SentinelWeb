@@ -52,7 +52,7 @@ async function maquinaDescoberta(hwid: string, hostname: string, serial?: string
 
 const pendentesDe = (endpointId: string) =>
   prisma.reconciliationSuggestion.count({
-    where: { endpointId, kind: 'LINK', state: 'PENDING' },
+    where: { endpointId, state: 'PENDING' },
   });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -67,7 +67,7 @@ describe('o mundo muda sozinho e a fila acompanha (D110)', () => {
     await rodarReconciliacao();
 
     const nascida = await prisma.reconciliationSuggestion.findFirstOrThrow({
-      where: { endpointId, kind: 'LINK', state: 'PENDING' },
+      where: { endpointId, state: 'PENDING' },
     });
     expect(nascida.assetId).toBe(sugerido.id);
 
@@ -171,7 +171,7 @@ describe('discoveryMode = OFF desliga a descoberta (D112)', () => {
     await rodarReconciliacao();
 
     const sugestao = await prisma.reconciliationSuggestion.findFirstOrThrow({
-      where: { endpointId, kind: 'LINK', state: 'PENDING' },
+      where: { endpointId, state: 'PENDING' },
     });
     expect(sugestao.assetId).toBe(ativo.id);
     expect(sugestao.signal).toBe('SERIAL');

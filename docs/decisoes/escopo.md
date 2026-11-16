@@ -352,6 +352,8 @@ um `AssetLog` próprio exatamente para não ter dois lugares contando a mesma co
 
 ## D159 — A tela da convergência fica, e é a única das cinco que fica
 
+> **Superada em parte por [CW](./reconciliacao.md#cw--descobertas-perde-a-triagem-os-ociosos-e-os-números-repetidos):** a aba Ociosos sai.
+
 **Decidido:** `/descobertas` e o domínio `reconciliation` permanecem inteiros. Saem as outras
 quatro telas que entraram em dúvida junto com ela — manutenções (D158), conferência (D157),
 importação (D146) e portal do colaborador (D156).
@@ -589,6 +591,8 @@ embora.
 > **Superada em parte por [AA](./licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas):**
 > o corpo de erro deixa de ser só `{ error }` — a recusa que cita licenças manda `refs` ao lado,
 > e agora há leitor: a tela põe um link em cada uma. A frase continua completa sem ele.
+>
+> **Superada em parte por [CW](./reconciliacao.md#cw--descobertas-perde-a-triagem-os-ociosos-e-os-números-repetidos):** o `AssetUsageDaily` e a pergunta do ativo ocioso saem; e por [CY](./reconciliacao.md#cy--o-servidor-lê-o-que-o-sentinelagente-manda-e-só-isso): o protocolo do agente que ficou a conferir.
 
 **Decidido:** uma passada pelo que as duas rodadas deixaram de pé, com uma pergunta por item —
 *quem lê isto?* Sem leitor, sai:

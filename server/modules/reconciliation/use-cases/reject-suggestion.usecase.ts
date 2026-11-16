@@ -38,9 +38,12 @@ export async function recusarSugestao(id: string, ator: Ator) {
     });
     if (count === 0) throw new AppError('Esta sugestão já foi resolvida.', 409);
 
-    const recusada = await tx.reconciliationSuggestion.findUniqueOrThrow({ where: { id }, select: SUGGESTION_SELECT });
+    const { score, ...recusada } = await tx.reconciliationSuggestion.findUniqueOrThrow({
+      where: { id },
+      select: { ...SUGGESTION_SELECT, score: true },
+    });
 
-    // Na MÁQUINA, como a triagem: é dela que a sugestão falava (AB).
+    // Na MÁQUINA: é dela que a sugestão falava (AB).
     await recordAudit(tx, {
       entityType: 'Endpoint',
       entityId: recusada.endpoint.id,
@@ -51,7 +54,7 @@ export async function recusarSugestao(id: string, ator: Ator) {
         assetId: recusada.asset?.id ?? null,
         assetTag: recusada.asset?.assetTag ?? null,
         sinal: recusada.signal,
-        pontos: recusada.score,
+        pontos: score,
       },
     }, ator);
 

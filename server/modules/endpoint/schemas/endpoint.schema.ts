@@ -3,8 +3,8 @@ import { z } from 'zod';
 // O HWID NÃO É MAIS PARÂMETRO DE ROTA NENHUMA, e por isso não há schema para
 // ele aqui. Era do comando (`:hwid/command`), que passou a ser `:id/command` e
 // resolve o hwid no use-case — a identidade de hardware deixou de atravessar a
-// URL. Quem fala de uma máquina por HTTP usa o uuid, como `:id/link` e
-// `:id/review` já usavam, e o `idParamSchema` compartilhado cobre todos.
+// URL. Quem fala de uma máquina por HTTP usa o uuid, como `:id/link` já usava,
+// e o `idParamSchema` compartilhado cobre todos.
 
 // Só os três comandos que a tela oferece. Texto livre ia direto ao agente, que
 // roda como root: o servidor não repassa ação que ninguém previu.

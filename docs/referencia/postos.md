@@ -55,8 +55,7 @@ notificação do sistema.
   ([BJ](../decisoes/catalogo-e-ativo.md#bj--o-computador-entregue-a-um-posto-continua-na-lista-de-computadores)):
   a Localização é a do posto, e Responsáveis traz só "Posto Mesa 1", sem quem o ocupa
   ([BO](../decisoes/posse.md#bo--em-responsáveis-vai-só-o-nome)): que o posto está vago é o
-  Status dele, aqui em Postos. O cartão da ficha, a janela de devolução e os Ociosos de
-  Descobertas dizem o mesmo
+  Status dele, aqui em Postos. O cartão da ficha e a janela de devolução dizem o mesmo
   ([BL](../decisoes/catalogo-e-ativo.md#bl--o-computador-no-posto-mostra-o-posto-antes-de-quem-o-ocupa)).
   Quem abre o computador pelo posto volta ao posto pela seta, na aba em que estava;
 - **a aba Responsáveis do computador** é um item só: o posto, com quem está nele, um

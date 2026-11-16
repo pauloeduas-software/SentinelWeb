@@ -8,8 +8,7 @@ import { endpointKeys } from './endpoint.queries';
 import { workstationKeys } from './workstation.queries';
 import type { ListEnvelope } from '../types/list.types';
 import type {
-  AtivoOcioso, Cobertura, ConfiguracaoDaDescoberta, MaquinaDoAtivo,
-  ResultadoDaVarredura, ReviewState, Sugestao,
+  Cobertura, ConfiguracaoDaDescoberta, MaquinaDoAtivo, ResultadoDaVarredura, Sugestao,
 } from '../types/reconciliation.types';
 
 // A CONVERGÊNCIA RMM × ITAM (docs/decisoes/reconciliacao.md).
@@ -26,7 +25,6 @@ const reconciliationKeys = {
   all: ['reconciliation'] as const,
   sugestoes: () => ['reconciliation', 'sugestoes'] as const,
   cobertura: () => ['reconciliation', 'cobertura'] as const,
-  ociosos: (dias: number) => ['reconciliation', 'ociosos', dias] as const,
   configuracao: () => ['reconciliation', 'configuracao'] as const,
   maquinaDoAtivo: (assetId: string) => ['reconciliation', 'maquina', assetId] as const,
 };
@@ -44,15 +42,6 @@ export function useCoberturaQuery() {
   return useQuery({
     queryKey: reconciliationKeys.cobertura(),
     queryFn: async () => (await apiClient.get<Cobertura>('/reconciliation/coverage')).data,
-  });
-}
-
-export function useOciososQuery(dias = 30) {
-  return useQuery({
-    queryKey: reconciliationKeys.ociosos(dias),
-    queryFn: async () => (
-      await apiClient.get<{ total: number; rows: AtivoOcioso[] }>('/reconciliation/idle', { params: { dias } })
-    ).data,
   });
 }
 
@@ -102,15 +91,6 @@ export function useRecusarSugestao() {
   return useMutation({
     mutationFn: async (id: string) =>
       (await apiClient.post<Sugestao>(`/reconciliation/suggestions/${id}/reject`)).data,
-    onSettled: invalidar,
-  });
-}
-
-export function useTriarMaquina() {
-  const invalidar = useInvalidarTudo();
-  return useMutation({
-    mutationFn: async ({ id, reviewState }: { id: string; reviewState: ReviewState }) =>
-      (await apiClient.patch(`/endpoints/${id}/review`, { reviewState })).data,
     onSettled: invalidar,
   });
 }
@@ -165,7 +145,7 @@ export function useVincularEEntregar() {
 }
 
 /**
- * RECONCILIAR AGORA — `POST /api/reconciliation/run`.
+ * PROCURAR AGORA — `POST /api/reconciliation/run`.
  *
  * A varredura inteira, fora da janela do job. Invalida tudo o que uma rodada
  * muda: a fila e a cobertura, as máquinas (vínculo automático em `ON`) e os

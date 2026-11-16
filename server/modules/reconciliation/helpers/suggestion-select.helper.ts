@@ -8,16 +8,11 @@ import type { Prisma } from '@prisma/client';
 // que alguém consiga responder, e a fila existe para ser respondida por gente.
 export const SUGGESTION_SELECT = {
   id: true,
-  kind: true,
-  score: true,
   signal: true,
   evidence: true,
-  state: true,
-  createdAt: true,
-  resolvedAt: true,
 
   endpoint: {
-    select: { id: true, hwid: true, hostname: true, lastSeen: true, biosSerial: true },
+    select: { id: true, hostname: true, biosSerial: true },
   },
   asset: {
     select: { id: true, assetTag: true, name: true, serial: true },

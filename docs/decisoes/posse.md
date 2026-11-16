@@ -938,6 +938,8 @@ velha sai junto, porque ela existia para aquele botão: quem devolve em Computad
 ## BO — Em Responsáveis vai só o nome
 
 > **Superada em parte por [BU](./plataforma.md#bu--o-nome-é-status-em-toda-tela-e-o-valor-vai-no-masculino):** o posto vago é o Status do posto, e não mais a Situação.
+>
+> **Superada em parte por [CW](./reconciliacao.md#cw--descobertas-perde-a-triagem-os-ociosos-e-os-números-repetidos):** a aba Ociosos de Descobertas sai.
 
 **Decidido** (2026-11-07, olhando as listas de Computadores e Postos):
 

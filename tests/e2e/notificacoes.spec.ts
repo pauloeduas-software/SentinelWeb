@@ -352,9 +352,9 @@ test('copiar de novo não encurta o retorno do botão', async ({ page, request }
   await expect(page.getByRole('button', { name: 'Copiada', exact: true })).toBeVisible();
 });
 
-test('o Reconciliar agora responde com o placar no cartão', async ({ page }) => {
+test('o Procurar agora responde com o placar no cartão', async ({ page }) => {
   await page.goto('/descobertas');
-  await page.getByRole('button', { name: 'Reconciliar agora' }).first().click();
+  await page.getByRole('button', { name: 'Procurar agora' }).first().click();
 
   const cartao = page.getByRole('status');
   await expect(cartao).toContainText('sem vínculo');

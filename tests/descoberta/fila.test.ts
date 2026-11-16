@@ -71,7 +71,7 @@ describe('memória da recusa', () => {
 
     const endpoint = await prisma.endpoint.findUniqueOrThrow({ where: { hwid: 'recusa-1' } });
     const sugestao = await prisma.reconciliationSuggestion.findFirstOrThrow({
-      where: { endpointId: endpoint.id, kind: 'LINK', state: 'PENDING' },
+      where: { endpointId: endpoint.id, state: 'PENDING' },
     });
 
     const recusa = await api.post(`/api/reconciliation/suggestions/${sugestao.id}/reject`);
@@ -81,7 +81,7 @@ describe('memória da recusa', () => {
     await rodarReconciliacao();
 
     expect(await prisma.reconciliationSuggestion.count({
-      where: { endpointId: endpoint.id, kind: 'LINK', state: 'PENDING' },
+      where: { endpointId: endpoint.id, state: 'PENDING' },
     })).toBe(0);
 
     // A LINHA FICA. É ela que o `proporSugestao` consulta — apagá-la seria

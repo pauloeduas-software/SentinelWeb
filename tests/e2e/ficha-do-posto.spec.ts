@@ -445,10 +445,15 @@ test('a Máquina é a mesma no posto e no computador, e quem desvincula é Desco
     data: {
       hwid: `hw-${ativo}`, hostname, osVersion: 'Windows 11', status: 'OFFLINE', assetId: ativo,
       cpuModel: 'Intel Core i5-1235U', localIp: '10.0.0.15', macAddress: '00:1A:2B:3C:4D:5E',
+      manufacturer: 'Dell Inc.', hardwareModel: 'OptiPlex 7080', biosSerial: 'SN-E2E-0001',
+      gpus: [{ Name: 'UHD Graphics 630', MemoryBytes: null }],
     },
   });
-  // O que o agente real manda no handshake (CP), igual nas duas fichas.
+  // O que o agente real manda no handshake (CP, DA), igual nas duas fichas.
   const doHandshake = [
+    ['Fabricante', 'Dell Inc.'],
+    ['Modelo', 'OptiPlex 7080'],
+    ['Série', 'SN-E2E-0001'],
     ['Sistema operacional', 'Windows 11'],
     ['Processador', 'Intel Core i5-1235U'],
     ['Endereço IP', '10.0.0.15'],
@@ -463,6 +468,7 @@ test('a Máquina é a mesma no posto e no computador, e quem desvincula é Desco
       await expect(aba.getByRole('term').filter({ hasText: new RegExp(`^${rotulo}$`) })
         .locator('xpath=following-sibling::dd')).toHaveText(valor);
     }
+    await expect(aba.getByText('UHD Graphics 630')).toBeVisible();
     await expect(aba.getByText(`hw-${ativo}`)).toBeVisible();
     await expect(aba.getByText(assetTag)).toHaveCount(0);
     await expect(aba.getByRole('button', { name: 'Desvincular' })).toHaveCount(0);

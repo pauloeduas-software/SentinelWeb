@@ -178,12 +178,11 @@ o que resta é o vínculo entre máquina e ativo, por evidência de hardware:
   Quando a entrega falha (o posto já tem um ativo — invariante 19), o vínculo FICA; a resposta
   diz isso. E desvincular a máquina depois **não libera a vaga** — o ativo continua sendo o da
   mesa, porque a invariante 19 é sobre o ativo, não sobre a máquina vinculada ([B](../decisoes/posse.md#b--invariante-19-na-forma-final-um-ativo-por-posto-de-trabalho)).
-- **`varredura-manual.test.ts` › "Reconciliar agora" é serializado.** Duas chamadas ao mesmo
+- **`varredura-manual.test.ts` › "Procurar agora" é serializado.** Duas chamadas ao mesmo
   tempo: uma varre, a outra é 409 — o mesmo guarda que o job de hora em hora usa.
-- **`hardware.test.ts` › primeira coleta NÃO é troca de peça.** O rollout do agente faz 500
-  máquinas ganharem `biosSerial` no mesmo dia. Sem esta asserção, cada uma entra com nove linhas
-  de "mudança de hardware" e o histórico de todo ativo do parque vira um relatório de deploy
-  (D116).
+- **`expurgo-da-telemetria.test.ts` › o expurgo guarda a última amostra de cada máquina**, mesmo
+  a de uma máquina desligada há uma semana, e apaga o resto
+  ([DA](../decisoes/reconciliacao.md#da--o-que-o-agente-manda-vai-para-a-aba-máquina-e-o-que-ninguém-lê-sai)).
 - **`maquina-e-comando.test.ts` › "máquina não existe" e "agente desconectado" são 404 e 409
   distintos**, e o comando só responde sucesso com o envio confirmado pelo socket — não por
   achar a conexão no mapa ([D](../decisoes/reconciliacao.md#d--a-telemetria-e-o-comando-vão-para-a-ficha-do-ativo-e-a-do-posto)).
@@ -191,21 +190,17 @@ o que resta é o vínculo entre máquina e ativo, por evidência de hardware:
   (invariante 13), que a recusa fica lembrada até surgir evidência nova e que a fila acompanha o
   mundo: vincular a máquina à mão a outro ativo, dar baixa no computador ou mandá-lo para a
   lixeira encerra a sugestão como `SUPERSEDED`, e `discoveryMode = OFF` desliga a descoberta. E que o painel de cobertura fecha a conta.
-- **`uso-agregado.test.ts`** roda a mesma agregação com duas janelas, porque a pergunta é se
-  "idempotente" quer dizer que a segunda passada escreve o **mesmo** valor (D111).
 
-E o `handshake.test.ts` guarda a regressão mais silenciosa que a borda do agente podia
-introduzir: `ramTotalBytes` tem que sair como **string** em `/api/endpoints`. Com
-`BigInt` cru, o `JSON.stringify` do Fastify morre com *"Do not know how to
-serialize a BigInt"* — na rota que a ficha do ativo e a do posto consultam.
+O `maquina-e-comando.test.ts` guarda a regressão mais silenciosa da borda: os bytes de RAM da
+telemetria saem como **string** em `/api/endpoints/:id`. Com `BigInt` cru, o `JSON.stringify` do Fastify morre com
+*"Do not know how to serialize a BigInt"* — na rota que a ficha do computador e a do posto consultam.
 
 **Aqui o `inject` não serve, e é a única exceção da suíte** (D99). O `/agent-hub` é
 WebSocket, e `inject` não faz upgrade: `tests/helpers/agente.ts` sobe a aplicação
 numa porta efêmera (`port: 0`) e fala com ela por um cliente `ws` de verdade. A
-alternativa — chamar `handleAgentMessage()` direto — pularia o parser, a tabela de
-sinônimos PascalCase/camelCase e o `readOptionalBigInt`, ou seja, pularia
-exatamente onde o agente velho e o novo se distinguem. É o mesmo princípio que faz
-os fixtures criarem cenário pela API.
+alternativa — chamar `handleAgentMessage()` direto — pularia o parser e a
+normalização, ou seja, pularia exatamente onde o fio vira dado. É o mesmo
+princípio que faz os fixtures criarem cenário pela API.
 
 ### `formularios/` — o corpo literal
 

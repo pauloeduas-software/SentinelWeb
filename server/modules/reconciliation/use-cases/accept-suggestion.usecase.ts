@@ -43,9 +43,7 @@ async function carregarPendente(id: string): Promise<Sugestao> {
 export async function aceitarSugestao(id: string, ator: Ator) {
   const sugestao = await carregarPendente(id);
 
-  // UM TIPO SÓ, então nenhum `switch`: a fila propõe vínculo, e é isso. O dia
-  // que `SuggestionKind` crescer por migração, é aqui que o tipo novo entra — e
-  // o `vincularEndpointAoAtivo` continua sendo quem grava.
+  // A fila só propõe vínculo, e quem grava é o `vincularEndpointAoAtivo`.
   if (!sugestao.assetId) throw new AppError('Sugestão de vínculo sem computador.', 422);
   await vincularEndpointAoAtivo(sugestao.endpointId, sugestao.assetId, ator, { sugestaoId: id });
 

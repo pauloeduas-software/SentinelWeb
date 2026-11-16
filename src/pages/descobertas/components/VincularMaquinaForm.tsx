@@ -68,7 +68,7 @@ export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCa
     >
       <GradeDeDados className="md:grid-cols-2">
         <Dado rotulo="Sistema operacional">{maquina.osVersion}</Dado>
-        <Dado rotulo="Série da BIOS">{maquina.biosSerial && <span className="font-mono">{maquina.biosSerial}</span>}</Dado>
+        <Dado rotulo="Série">{maquina.biosSerial && <span className="font-mono">{maquina.biosSerial}</span>}</Dado>
       </GradeDeDados>
 
       <Campo

@@ -12,7 +12,8 @@ import type { Sugestao } from '../../../types/reconciliation.types';
 import { ROTULO_DO_SINAL, textoDaSugestao, valorDoSinal } from '../helpers/sugestao.helper';
 
 // A FILA DE SUGESTÕES, no molde de toda lista: a evidência fica na linha, com o
-// sinal que casou e o valor dele, e a decisão no `⋯`. Sugestão sem evidência visível é
+// sinal que casou e o valor dele, e a decisão no `⋯`. A pontuação da cascata
+// fica no servidor: o sinal já diz o que casou, e o número não ajuda a decidir. Sugestão sem evidência visível é
 // palpite, e ninguém deveria aceitar um palpite que reescreve o inventário.
 //
 // A LINHA INTEIRA LEVA À FICHA DO COMPUTADOR sugerido, como na lista Vinculadas.
@@ -51,7 +52,6 @@ export default function SugestoesTable({ sugestoes, carregando, erro, ocupado, a
               <TableHead>Máquina</TableHead>
               <TableHead className="w-44">Etiqueta</TableHead>
               <TableHead>Sinal</TableHead>
-              <TableHead className="w-24">Pontos</TableHead>
               <TableHeadAcoes />
             </TableRow>
           </TableHeader>
@@ -79,7 +79,6 @@ export default function SugestoesTable({ sugestoes, carregando, erro, ocupado, a
                       </>
                     ) : '—'}
                   </TableCell>
-                  <TableCell className="tabular-nums">{sugestao.score}</TableCell>
                   <TableCell>
                     <AcoesDaLinha
                       nome={sugestao.endpoint.hostname}

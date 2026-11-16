@@ -94,7 +94,7 @@ describe('GET /api/endpoints/:id', () => {
     expect(body.telemetries).toHaveLength(1);
     expect(body.telemetries[0].cpuUsage).toBe(77.25);
 
-    // Os BigInt saem como STRING: sem o `presentEndpoint`, o `JSON.stringify`
+    // Os BigInt saem como STRING: sem o `presentMaquinaDaFicha`, o `JSON.stringify`
     // morre com "Do not know how to serialize a BigInt" — na rota que a ficha
     // consulta a cada poucos segundos.
     expect(typeof body.telemetries[0].ramTotal).toBe('string');

@@ -227,10 +227,10 @@ lista de cargos aceitos por rota. A conta nova nasce `TECNICO`.
 | Ler tudo da operação, e o catálogo (os formulários escolhem categoria, modelo, localização) | ✅ | ✅ | ✅ |
 | Entregar, devolver, ocupar posto, trocar a chave da entrega | ✅ | ✅ | ✅ |
 | Cadastrar e editar computador, item de estoque e colaborador | ✅ | ✅ | ✅ |
-| Vincular máquina, aceitar ou recusar sugestão, marcar revisão | ✅ | ✅ | ✅ |
+| Vincular máquina, aceitar ou recusar sugestão | ✅ | ✅ | ✅ |
 | Excluir, desativar, lixeira, baixa, encerrar e reabrir licença | — | ✅ | ✅ |
 | Cadastrar e editar posto, licença e o catálogo (Configurações) | — | ✅ | ✅ |
-| Ver o custo, comando remoto, Reconciliar agora, configurar a descoberta | — | ✅ | ✅ |
+| Ver o custo, comando remoto, Procurar agora, configurar a descoberta | — | ✅ | ✅ |
 | Usuários | — | — | ✅ |
 
 **Desativar vai pelo `PUT` da edição** (colaborador e item de estoque), que é do Técnico: o mapa

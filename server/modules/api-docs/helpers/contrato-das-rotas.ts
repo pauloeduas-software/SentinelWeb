@@ -11,9 +11,7 @@ import {
 import {
   addOccupantSchema, endOccupancySchema, updateOccupantShiftSchema,
 } from '../../occupancy/schemas/occupancy.schema';
-import {
-  triagemSchema, vinculoComEntregaSchema, vinculoSchema,
-} from '../../reconciliation/schemas/reconciliation.schema';
+import { vinculoComEntregaSchema, vinculoSchema } from '../../reconciliation/schemas/reconciliation.schema';
 import { configuracaoDaDescobertaSchema } from '../../settings/schemas/settings.schema';
 import {
   checkinStockSchema, checkoutStockSchema, createStockItemSchema, updateStockItemSchema,
@@ -128,11 +126,9 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
   'POST /api/endpoints/:id/link': { tag: 'Descobertas', resumo: 'Vincula a máquina a um computador', body: vinculoSchema, status: 201 },
   'DELETE /api/endpoints/:id/link': { tag: 'Descobertas', resumo: 'Desfaz o vínculo' },
   'POST /api/endpoints/:id/link-and-checkout': { tag: 'Descobertas', resumo: 'Vincula e entrega ao posto', body: vinculoComEntregaSchema, status: 201 },
-  'PATCH /api/endpoints/:id/review': { tag: 'Descobertas', resumo: 'Triagem da máquina', body: triagemSchema },
   'GET /api/reconciliation/suggestions': { tag: 'Descobertas', resumo: 'A fila de sugestões de vínculo' },
   'GET /api/reconciliation/coverage': { tag: 'Descobertas', resumo: 'A cobertura: quanto do inventário o agente enxerga' },
-  'GET /api/reconciliation/idle': { tag: 'Descobertas', resumo: 'Computadores sem sinal do agente (?dias=)' },
-  'POST /api/reconciliation/run': { tag: 'Descobertas', resumo: 'Roda a conciliação agora' },
+  'POST /api/reconciliation/run': { tag: 'Descobertas', resumo: 'Procura agora as máquinas sem vínculo' },
   'POST /api/reconciliation/suggestions/:id/accept': { tag: 'Descobertas', resumo: 'Aceita a sugestão' },
   'POST /api/reconciliation/suggestions/:id/reject': { tag: 'Descobertas', resumo: 'Recusa a sugestão' },
 

@@ -196,7 +196,7 @@ describe('toda escrita do painel deixa rastro com a conta da sessão', () => {
 
   it('a configuração salva no banco sem a linha diz só o que a conta mandou', async () => {
     // O banco restaurado sem a linha: o "de" são os padrões que a tela mostrava,
-    // e o modo e as horas, que a conta não mandou, não aparecem como escolha dela.
+    // e o modo, que a conta não mandou, não aparecem como escolha dela.
     await prisma.appSetting.deleteMany();
     const salvo = await auditada(api.put('/api/settings/discovery', { ghostDays: 10 }));
 
@@ -204,7 +204,7 @@ describe('toda escrita do painel deixa rastro com a conta da sessão', () => {
     expect(linha.changes).toEqual({ ghostDays: { de: 30, para: 10 } });
   });
 
-  it('conciliação: rodada, aceite, recusa, desvínculo, triagem e vínculo com entrega', async () => {
+  it('conciliação: rodada, aceite, recusa, desvínculo e vínculo com entrega', async () => {
     const par = async () => {
       const serial = `SN-AUD-${proximo()}`;
       const ativo = await criarAtivo(api, { statusId: seed.statusDeployableId, modelId, serial, assetTag: `AUD-${proximo()}` });
@@ -233,7 +233,6 @@ describe('toda escrita do painel deixa rastro com a conta da sessão', () => {
     await auditada(api.delete(`/api/endpoints/${aceito.maquina.id}/link`));
 
     const { maquina, ativo } = recusado;
-    await auditada(api.patch(`/api/endpoints/${maquina.id}/review`, { reviewState: 'ALLOWED' }));
     await auditada(api.post(`/api/endpoints/${maquina.id}/link`, { assetId: ativo.id }));
     // O mesmo vínculo de novo não muda nada, e nada se grava: uma linha LINK
     // afirmaria um vínculo novo que já existia.

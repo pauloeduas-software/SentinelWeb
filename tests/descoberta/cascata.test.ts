@@ -37,11 +37,8 @@ async function ativoComSerial(serial: string, nome: string) {
 
 async function sugestoesDe(hwid: string) {
   const endpoint = await prisma.endpoint.findUniqueOrThrow({ where: { hwid }, select: { id: true } });
-  // A fila não filtra por máquina: o recorte é daqui, sobre as pendentes.
-  const { body } = await api.get<{
-    rows: { kind: string; signal: string | null; score: number; endpoint: { id: string } }[];
-  }>('/api/reconciliation/suggestions');
-  return body.rows.filter((linha) => linha.endpoint.id === endpoint.id);
+  // Do banco, e não da rota: a pontuação é do servidor, e a tela não a recebe.
+  return prisma.reconciliationSuggestion.findMany({ where: { endpointId: endpoint.id, state: 'PENDING' } });
 }
 
 describe('serial de fábrica em branco não casa com nada', () => {
@@ -87,7 +84,7 @@ describe('serial legítimo repetido em duas máquinas também vale zero', () => 
     // quem descobre o resto é o próprio parque. Um serial que aparece em duas
     // MÁQUINAS não identifica nenhuma delas, esteja escrito o que estiver.
     const sugestoes = await sugestoesDe('clone-a');
-    expect(sugestoes.filter((row) => row.kind === 'LINK' && row.signal === 'SERIAL')).toHaveLength(0);
+    expect(sugestoes.filter((row) => row.signal === 'SERIAL')).toHaveLength(0);
   });
 });
 
@@ -103,7 +100,7 @@ describe('serial único casa, e casa com 100', () => {
     await rodarReconciliacao();
 
     const sugestoes = await sugestoesDe('unico-1');
-    const vinculo = sugestoes.find((row) => row.kind === 'LINK');
+    const [vinculo] = sugestoes;
     expect(vinculo).toMatchObject({ signal: 'SERIAL', score: 100 });
 
     // E O VÍNCULO NÃO ACONTECEU SOZINHO: `discoveryMode` nasce em `SUGGEST`
@@ -114,7 +111,7 @@ describe('serial único casa, e casa com 100', () => {
 
     // Aceitar é o que vincula.
     const pendente = await prisma.reconciliationSuggestion.findFirstOrThrow({
-      where: { endpointId: endpoint.id, kind: 'LINK', state: 'PENDING' },
+      where: { endpointId: endpoint.id, state: 'PENDING' },
     });
     const aceite = await api.post(`/api/reconciliation/suggestions/${pendente.id}/accept`);
     expect(aceite.status).toBe(200);
@@ -246,7 +243,7 @@ describe('ativo que já tem máquina', () => {
     await rodarReconciliacao();
 
     // NADA. Propor o vínculo aqui seria oferecer um botão que o `@unique`
-    // recusa — a máquina fica como órfã na triagem, que é a conversa certa.
+    // recusa — a máquina fica em Sem vínculo, que é a conversa certa.
     expect(await sugestoesDe('ocupa-segunda')).toHaveLength(0);
   });
 

@@ -14,8 +14,8 @@ import type { Endpoint } from '../../../types/endpoint.types';
 
 // AS MÁQUINAS QUE JÁ SÃO PATRIMÔNIO — o outro lado da lista "Sem vínculo".
 //
-// Existe para a pergunta "esta máquina é qual ativo?" ter resposta sem abrir
-// ativo por ativo: a etiqueta está na linha, e a linha leva à ficha, onde moram a
+// Existe para a pergunta "esta máquina é qual computador?" ter resposta sem abrir
+// computador por computador: a etiqueta está na linha, e a linha leva à ficha, onde moram a
 // telemetria e o comando. O vínculo mora nesta tela (BZ): vincular é em Sem vínculo
 // e em Sugestões, e desvincular é o `⋯` desta lista.
 
@@ -81,7 +81,7 @@ export default function VinculadasTable({ maquinas, carregando, erro, acao, ocup
                   <TableCell>{maquina.osVersion}</TableCell>
                   <TableCell>{formatarDataHora(maquina.lastSeen)}</TableCell>
                   <TableCell>
-                    <PontoDeStatus tom={online ? 'sucesso' : 'neutro'}>{online ? 'Online' : 'Offline'}</PontoDeStatus>
+                    <PontoDeStatus tom={online ? 'sucesso' : 'neutro'}>{online ? 'Conectado' : 'Desconectado'}</PontoDeStatus>
                   </TableCell>
                   <TableCell>
                     <AcoesDaLinha

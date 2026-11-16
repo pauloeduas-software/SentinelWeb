@@ -4,8 +4,7 @@ import { z } from 'zod';
 //
 // Os tetos e os pisos não são decoração: são o que impede uma configuração de
 // transformar o painel inteiro em alarme. `ghostDays: 0` faria toda a frota
-// virar fantasma no dia seguinte; `shadowHours: 0` faria cada máquina nova
-// nascer como Shadow IT antes de o primeiro handshake terminar de chegar.
+// contar como sumida no dia seguinte.
 const inteiroEntre = (rotulo: string, min: number, max: number) =>
   z
     .number(`${rotulo} deve ser um número`)
@@ -15,6 +14,5 @@ const inteiroEntre = (rotulo: string, min: number, max: number) =>
 
 export const configuracaoDaDescobertaSchema = z.strictObject({
   discoveryMode: z.enum(['OFF', 'SUGGEST', 'ON'], 'modo de descoberta inválido').optional(),
-  ghostDays: inteiroEntre('dias para computador fantasma', 1, 365).optional(),
-  shadowHours: inteiroEntre('horas para Shadow IT', 1, 720).optional(),
+  ghostDays: inteiroEntre('dias sem contato', 1, 365).optional(),
 });

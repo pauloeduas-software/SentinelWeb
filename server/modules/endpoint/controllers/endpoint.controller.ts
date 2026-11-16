@@ -36,7 +36,7 @@ export const endpointController = {
     });
 
     // Os filtros saem do `parseListQuery` de propósito: ele é do `core` e
-    // não conhece vínculo nem triagem. Quem valida o que é do domínio é o schema
+    // não conhece o vínculo. Quem valida o que é do domínio é o schema
     // do domínio — e agora ele recebe SÓ o que é dele, então pode voltar a ser
     // estrito e pegar `?vinculo=nenhum` em vez de ignorar em silêncio.
     const filtros = endpointFilterSchema.parse(vinculo === undefined ? {} : { vinculo });

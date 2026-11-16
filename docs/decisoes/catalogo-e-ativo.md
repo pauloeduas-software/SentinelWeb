@@ -582,6 +582,8 @@ na sessão, porque o menu recomeça a lista limpa (BB).
 > **Superada em parte por [BO](./posse.md#bo--em-responsáveis-vai-só-o-nome):** o selo Posto vago sai de embaixo do nome do posto.
 >
 > **E por [BP](./posse.md#bp--o-que-já-foi-mora-na-aba-histórico):** a aba Responsáveis passa ao box de Estoque e Licenças, e sai o histórico dela.
+>
+> **Superada em parte por [CW](./reconciliacao.md#cw--descobertas-perde-a-triagem-os-ociosos-e-os-números-repetidos):** a aba Ociosos de Descobertas sai.
 
 **Decidido** (2026-11-06, na revisão de Computadores):
 

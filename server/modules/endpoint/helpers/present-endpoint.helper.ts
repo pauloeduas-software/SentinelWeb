@@ -1,74 +1,78 @@
-import type { Endpoint, Telemetry } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 
-// Os bytes de RAM são BigInt no banco, e BigInt não tem representação em JSON:
-// `JSON.stringify` estoura. A conversão acontece AQUI, na saída do domínio, e
-// não com um `BigInt.prototype.toJSON` global — remendo que mudava o
-// comportamento de toda a aplicação para resolver um campo.
+// O QUE CADA ROTA DA MÁQUINA DEVOLVE, e só isso (DA): a lista de `/descobertas`
+// e a aba Máquina leem campos diferentes, e o resto da linha fica no banco.
 //
-// O formato do fio continua o mesmo de antes (string), então o frontend não muda.
-
-type PresentedTelemetry = Omit<Telemetry, 'ramTotal' | 'ramUsed'> & {
-  ramTotal: string;
-  ramUsed: string;
-};
-
-/**
- * O `Endpoint` na saída do domínio: os dois `BigInt` coletados viram string.
- *
- * ISTO NÃO É DETALHE. O `presentEndpoint` devolvia `{ ...endpoint }` inteiro, e
- * `ramTotalBytes` e `diskTotalBytes` entraram na tabela: sem a conversão, os
- * dois iam crus para o `JSON.stringify` e a rota morria com *"Do not know how to
- * serialize a BigInt"* — na tela que o painel consulta a cada 5 segundos. O tipo
- * acima é o que faz o compilador cobrar a conversão de qualquer BigInt novo.
- */
-export type PresentedEndpoint = Omit<Endpoint, 'ramTotalBytes' | 'diskTotalBytes'> & {
-  ramTotalBytes: string | null;
-  diskTotalBytes: string | null;
-  asset: AtivoDaMaquina | null;
-};
-
-/**
- * A máquina com a amostra de telemetria ATUAL — só na rota de UMA máquina
- * (`get-endpoint.usecase.ts`). A listagem não leva: as tabelas de
- * `/descobertas` não mostram telemetria, e no plural o `take: 1` nem vira
- * `LIMIT` no SQL.
- */
-export type EndpointComTelemetria = PresentedEndpoint & { telemetries: PresentedTelemetry[] };
+// Os bytes de RAM da telemetria são BigInt no banco, e BigInt não tem
+// representação em JSON: `JSON.stringify` estoura. A conversão acontece AQUI, na
+// saída do domínio, e não com um `BigInt.prototype.toJSON` global — remendo que
+// mudava o comportamento de toda a aplicação para resolver um campo.
 
 /**
  * O ATIVO a que a máquina está vinculada — o que a lista de máquinas vinculadas
- * mostra na coluna do patrimônio.
- *
- * Só o que identifica: `assetId` cru já saía, e um uuid não é uma coluna que
- * alguém leia. O resto do ativo é da ficha dele, para onde a etiqueta leva.
+ * mostra na coluna do patrimônio. O resto do ativo é da ficha dele, para onde a
+ * etiqueta leva.
  */
-interface AtivoDaMaquina {
-  id: string;
-  assetTag: string;
-  name: string | null;
-  serial: string | null;
-}
-
-/** O `include` do ativo, igual na listagem e na rota de uma máquina. */
-export const ATIVO_DA_MAQUINA_SELECT = {
+const ATIVO_DA_MAQUINA_SELECT = {
   select: { id: true, assetTag: true, name: true, serial: true },
 } as const;
 
-function presentTelemetry(telemetry: Telemetry): PresentedTelemetry {
-  return { ...telemetry, ramTotal: telemetry.ramTotal.toString(), ramUsed: telemetry.ramUsed.toString() };
-}
+/** A linha das listas Sem vínculo e Vinculadas, e o painel de vincular. */
+export const MAQUINA_DA_LISTA_SELECT = {
+  id: true,
+  hostname: true,
+  osVersion: true,
+  biosSerial: true,
+  status: true,
+  lastSeen: true,
+  asset: ATIVO_DA_MAQUINA_SELECT,
+} as const satisfies Prisma.EndpointSelect;
 
-export function presentEndpoint(endpoint: Endpoint & { asset: AtivoDaMaquina | null }): PresentedEndpoint {
+export type MaquinaDaLista = Prisma.EndpointGetPayload<{ select: typeof MAQUINA_DA_LISTA_SELECT }>;
+
+/**
+ * A aba Máquina do computador e do posto: o inventário do handshake e a amostra
+ * ATUAL de telemetria.
+ *
+ * `take: 1` porque é a amostra atual que a tela mostra. É o motivo do índice
+ * `(endpointId, timestamp DESC)`: sem ele, cada poll de cada tela aberta era uma
+ * varredura sequencial desta tabela.
+ */
+export const MAQUINA_DA_FICHA_SELECT = {
+  id: true,
+  hwid: true,
+  hostname: true,
+  osVersion: true,
+  biosSerial: true,
+  manufacturer: true,
+  hardwareModel: true,
+  gpus: true,
+  cpuModel: true,
+  localIp: true,
+  macAddress: true,
+  status: true,
+  lastSeen: true,
+  telemetries: {
+    orderBy: { timestamp: 'desc' },
+    take: 1,
+    select: {
+      cpuUsage: true, ramTotal: true, ramUsed: true, disks: true, timestamp: true,
+    },
+  },
+} as const satisfies Prisma.EndpointSelect;
+
+type MaquinaDaFicha = Prisma.EndpointGetPayload<{ select: typeof MAQUINA_DA_FICHA_SELECT }>;
+type AmostraLida = MaquinaDaFicha['telemetries'][number];
+
+type AmostraApresentada = Omit<AmostraLida, 'ramTotal' | 'ramUsed'> & { ramTotal: string; ramUsed: string };
+
+export type MaquinaDaFichaApresentada = Omit<MaquinaDaFicha, 'telemetries'> & { telemetries: AmostraApresentada[] };
+
+export function presentMaquinaDaFicha(maquina: MaquinaDaFicha): MaquinaDaFichaApresentada {
   return {
-    ...endpoint,
-    ramTotalBytes: endpoint.ramTotalBytes?.toString() ?? null,
-    diskTotalBytes: endpoint.diskTotalBytes?.toString() ?? null,
+    ...maquina,
+    telemetries: maquina.telemetries.map((amostra) => ({
+      ...amostra, ramTotal: amostra.ramTotal.toString(), ramUsed: amostra.ramUsed.toString(),
+    })),
   };
-}
-
-export function presentEndpointComTelemetria(
-  endpoint: Endpoint & { telemetries: Telemetry[]; asset: AtivoDaMaquina | null },
-): EndpointComTelemetria {
-  const { telemetries, ...maquina } = endpoint;
-  return { ...presentEndpoint(maquina), telemetries: telemetries.map(presentTelemetry) };
 }

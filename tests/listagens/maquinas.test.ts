@@ -8,9 +8,8 @@ import { prisma } from '../../server/infra/database/prismaClient';
 // ⚠️ OS FILTROS DA LISTAGEM DE MÁQUINAS, PELO CAMINHO DO HTTP.
 //
 // Este arquivo nasceu de um 422 em requisição válida: `GET /api/endpoints?vinculo=sem`
-// respondia *campo não reconhecido: "vinculo"*. Os dois filtros — vínculo e
-// triagem — existiam no `buildEndpointWhere`, estavam
-// tipados no use-case e eram INALCANÇÁVEIS pela borda.
+// respondia *campo não reconhecido: "vinculo"*. O filtro de vínculo existia no
+// `buildEndpointWhere`, estava tipado no use-case e era INALCANÇÁVEL pela borda.
 //
 // A causa: a query tem dois donos. `parseListQuery` (do `core`) é `strictObject`
 // e recusa toda chave que não conhece; o schema do domínio lê a mesma query. Os
@@ -43,9 +42,7 @@ afterAll(async () => {
 interface Maquina {
   id: string;
   hostname: string;
-  assetId: string | null;
   asset: { id: string; assetTag: string; name: string | null } | null;
-  reviewState: string;
 }
 
 const listar = (query: string) => api.get<{ total: number; rows: Maquina[] }>(`/api/endpoints${query}`);
@@ -102,7 +99,7 @@ describe('o filtro de vínculo', () => {
     // de outro, dependendo de qual parse rodasse primeiro.
     const { status, body } = await listar('?vinculo=sem&page=1&perPage=10&q=lista');
     expect(status).toBe(200);
-    expect(body.rows.every((linha) => linha.assetId === null)).toBe(true);
+    expect(body.rows.every((linha) => linha.asset === null)).toBe(true);
   });
 });
 
