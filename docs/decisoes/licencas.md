@@ -317,6 +317,9 @@ já entram — a *referência* ao documento existe, o arquivo é que não.
 
 ## G — Software instalado e conformidade de licença saem; licença vira cadastro simples
 
+> **Superada em parte por [DG](#dg--a-coleta-de-software-e-a-conformidade-de-licença-voltam-como-trabalho-futuro):**
+> a coleta do software instalado e a conformidade de licença voltam como trabalho futuro declarado.
+>
 > **Superada em parte por [AA](#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas):**
 > a chave de produto volta — a da licença e a de cada entrega —, em texto, sem a cifra que saiu
 > aqui. O que a protege é só o detalhe devolvê-la e a tela mostrá-la escondida.
@@ -773,3 +776,28 @@ limita, pelo padrão do sistema.
 **O que fica de fora, declarado:** o catálogo (categoria, status, fabricante, modelo, localização),
 o colaborador e a conta mantêm o Desativar, que o Snipe-IT não tem; e o item de estoque não ganha
 data de compra, porque um item junta unidades compradas em dias diferentes.
+
+---
+
+## DG — A coleta de software e a conformidade de licença voltam como trabalho futuro
+
+> **Supera em parte:** [G](#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples)
+> (o corte sem volta prevista).
+
+**Decisão** (2026-11-16, revendo o artigo do TCC): a coleta do software instalado e a conformidade de
+licença deixam de ser corte definitivo e passam a trabalho futuro declarado. Nada muda no código agora:
+a licença continua cadastro com quantidade e entregas ([AA](#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)),
+o servidor não guarda programas e o agente não os manda
+([A24](https://github.com/pauloeduas-software/SentinelAgente/blob/main/docs/decisoes/protocolo.md#a24--o-agente-manda-só-o-que-o-sentinelweb-lê-os-programas-a-rede-e-os-processos-saem) de lá).
+
+- **A volta começa no SentinelWeb**, como a A24 pede: o servidor guarda e mostra os programas da
+  máquina, e só então o agente passa a mandá-los.
+- **A licença liga ao programa por vínculo explícito**, nunca por casamento de nome, a regra do
+  [D102](./reconciliacao.md#d102--licença--pacote-é-vínculo-explícito-nunca-casamento-por-nome).
+
+**Por quê:** a conformidade é a pergunta que o ITAM mais faz ao RMM ("o que está instalado bate com o
+que foi comprado?"), e o G a tirou pelo custo da cadeia inteira, não por ela não servir. Declarada como
+futura, o artigo e esta pasta dizem a mesma coisa.
+
+**O que não muda:** o G continua valendo para o presente: sem catálogo de pacotes, sem tela de
+conformidade e sem `installedSoftware` no parser ([CY](./reconciliacao.md#cy--o-servidor-lê-o-que-o-sentinelagente-manda-e-só-isso)).

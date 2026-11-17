@@ -105,6 +105,7 @@ ponte ITAM×RMM.
 | **D51**, **D96**, **D97**, **D107**, **D109**, **D110**, **D112**, **D118**, **D120**, **D121**, **D122** e **CZ**; **D95**, **E**, **BZ** e **CX** (em parte: o job que reconcilia, o Procurar agora e o nome da tela) | **DC** | Descobertas vira Agentes: a série única liga a máquina ao computador no handshake e quando o computador é salvo; saem a fila de sugestões, o modo, o Configurar e o Procurar agora, e o Desvincular desliga o automático da máquina |
 | **CR** (o `agente:revogar`), **DC** (as duas vistas), **CW** (os Sumidos nos computadores), **D95** | **DD** | Agentes ganha a vista Sumidos e o Excluir do Supervisor, que apaga a máquina, revoga o token e fecha a conexão; sai `assets.lastSeenByAgentAt` |
 | **BZ** (em parte: Agentes sem ficha de máquina), **DD** (em parte: o `?maquina=`), **CE** (em parte: a tabela sem as datas da entrega) | **DF** | a máquina tem ficha em `/agentes/:id`, com o card, a aba Computador e a aba Máquina; a linha da lista e a da aba Máquina abrem a ficha |
+| **G** (em parte: o corte sem volta prevista) | **DG** | a coleta do software instalado e a conformidade de licença voltam como trabalho futuro; nada muda no código agora |
 | **D27**, **D29**, **D30**, **D87**, **D88** (aceite) | **D150** | o termo sai; o `resolverEscalonamento()` (D73) fica |
 | **D57**, **D125**–**D128** (alertas) | **D151** | os sinais continuam consultáveis; empurrá-los sai. O D79 **não** sai |
 | **D55** (valor contábil) | **D152** | `purchaseCost` fica; a amortização sai |
