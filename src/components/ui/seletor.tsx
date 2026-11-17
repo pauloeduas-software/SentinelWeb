@@ -57,10 +57,17 @@ export function Seletor({
   const idDoCampo = useIdDoCampo(id);
   const selecionada = opcoes.find((opcao) => opcao.value === value);
 
+  // Fechou, a busca some: guardada, ela deixava o campo fechado dizendo "(fora desta
+  // lista)" de quem está na lista, só porque o termo não o acha.
+  const abrirOuFechar = (abrir: boolean) => {
+    setAberto(abrir);
+    if (!abrir && busca) onBusca?.('');
+  };
+
   const escolher = (valor: string) => {
     if (valor !== value) marcarAlteracao();
     onChange(valor);
-    setAberto(false);
+    abrirOuFechar(false);
   };
 
   return (
@@ -78,7 +85,7 @@ export function Seletor({
           {value && <option value={value} />}
         </select>
       )}
-      <Popover open={aberto} onOpenChange={setAberto} modal>
+      <Popover open={aberto} onOpenChange={abrirOuFechar} modal>
         <PopoverTrigger asChild>
           <button
             id={idDoCampo}

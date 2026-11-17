@@ -1,5 +1,5 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
-import { criarAtivo } from './helpers';
+import { criarAtivo, criarColaborador } from './helpers';
 
 // COMO SE SAI DO PAINEL DOS FORMULÁRIOS (BG): clicar fora, Esc e o X fecham, e
 // perguntam antes se a pessoa mexeu em algo. O painel é um só: o que vale em
@@ -109,6 +109,28 @@ test('no seletor aberto, o clique fora fecha só ele, e só escolher conta como 
   await expect(busca).toBeHidden();
   await clicarFora(page);
   await expect(pergunta(page)).toContainText('Descartar as alterações?');
+});
+
+test('fechar o seletor esquece a busca, e o escolhido não fica "fora desta lista"', async ({ page, request }) => {
+  const ativo = await criarAtivo(request);
+  const nome = `Pessoa do Seletor ${Date.now()}`;
+  await criarColaborador(request, nome);
+  await page.goto(`/computadores/${ativo}`);
+  await page.getByRole('button', { name: 'Entregar' }).click();
+  const colaborador = painel(page).getByRole('combobox', { name: /Colaborador/ });
+  const busca = page.getByPlaceholder('Buscar…');
+
+  await colaborador.click();
+  await busca.fill(nome);
+  await page.getByRole('option', { name: new RegExp(nome) }).click();
+
+  await colaborador.click();
+  await busca.fill('nenhum colaborador tem este nome');
+  await page.keyboard.press('Escape');
+  await expect(colaborador).toHaveText(nome);
+
+  await colaborador.click();
+  await expect(busca).toHaveValue('');
 });
 
 test('trocar a opção do Segmentado conta como alteração', async ({ page, request }) => {
