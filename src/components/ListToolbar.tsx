@@ -48,9 +48,11 @@ export default function ListToolbar({
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
       {/* Busca e filtros num grupo só: soltos, o `justify-between` da barra
-          espalharia o filtro no meio do caminho entre a busca e a paginação. */}
+          espalharia o filtro no meio do caminho entre a busca e a paginação. Sem
+          `min-w-0`: o grupo não encolhe abaixo da busca, e quem desce de linha é a
+          paginação, em vez de ficar por cima do filtro. */}
       {(onSearchChange || filtros) && (
-        <div className="flex min-w-0 grow basis-full flex-wrap items-center gap-2 sm:basis-0">
+        <div className="flex grow basis-full flex-wrap items-center gap-2 sm:basis-0">
           {onSearchChange && (
             <div className="relative min-w-[14rem] max-w-md flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-tertiary" />
@@ -69,8 +71,8 @@ export default function ListToolbar({
 
       {/* `invisible`, e não fora da árvore: o que não tem o que mostrar some, mas guarda
           o lugar, e filtrar não faz a busca nem o botão andarem. */}
-      <div className="ml-auto flex items-center gap-3 text-sm">
-        <span className={cn('tabular-nums text-text-tertiary', total === 0 && 'invisible')}>
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-3 text-sm">
+        <span className={cn('whitespace-nowrap tabular-nums text-text-tertiary', total === 0 && 'invisible')}>
           {primeiro}–{ultimo} de {total}
         </span>
 

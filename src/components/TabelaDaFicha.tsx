@@ -8,6 +8,7 @@ import { useVoltaParaEstaFicha } from '../hooks/useVoltaComFiltros';
 import { Card } from './ui/card';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableLinha, TableNome, TableRow, TableSublinha,
+  type ApareceEm, type TipoDeColuna,
 } from './ui/table';
 
 // A TABELA DE UMA ABA DA FICHA: o que está com o registro, e a linha inteira abre o que
@@ -15,8 +16,10 @@ import {
 
 export interface ColunaDaFicha {
   rotulo: string;
-  /** A largura, como no `TableHead`. Sem ela, a coluna divide o que sobrou. */
-  className?: string;
+  /** O tipo, que dá a largura, como no `TableHead`. Sem ele, a coluna divide o que sobrou. */
+  coluna?: TipoDeColuna;
+  /** A partir de que largura da moldura ela aparece, como nas listas (DH). */
+  aparece?: ApareceEm;
 }
 
 export interface LinhaDaFicha {
@@ -50,20 +53,22 @@ export default function TabelaDaFicha({
     <>
       <BarraDaFicha page={pagina.page} total={pagina.total} onPageChange={pagina.setPage} />
       <Card className="overflow-hidden">
-        <Table className={colunas.length > 4 ? 'min-w-[52rem]' : 'min-w-[40rem]'}>
+        <Table>
           <TableHeader>
             <TableRow>
-              {colunas.map(({ rotulo, className }) => <TableHead key={rotulo} className={className}>{rotulo}</TableHead>)}
+              {colunas.map(({ rotulo, coluna, aparece }) => <TableHead key={rotulo} coluna={coluna} aparece={aparece}>{rotulo}</TableHead>)}
             </TableRow>
           </TableHeader>
           <TableBody>
             {pagina.visiveis.map(({ id, para, nome, nota, celulas }) => (
               <TableRow key={id} onClick={para ? () => navigate(para, { state: volta }) : undefined}>
-                <TableCell>
+                <TableCell coluna={colunas[0]?.coluna} aparece={colunas[0]?.aparece}>
                   {para ? <TableNome>{nome}</TableNome> : <TableLinha className="font-medium text-text-primary">{nome}</TableLinha>}
                   {nota && <TableSublinha>{nota}</TableSublinha>}
                 </TableCell>
-                {celulas.map((celula, indice) => <TableCell key={indice}>{celula}</TableCell>)}
+                {celulas.map((celula, indice) => (
+                  <TableCell key={indice} coluna={colunas[indice + 1]?.coluna} aparece={colunas[indice + 1]?.aparece}>{celula}</TableCell>
+                ))}
               </TableRow>
             ))}
           </TableBody>

@@ -455,6 +455,8 @@ usuário: não mover nada).
 
 ## BA — O título volta ao cabeçalho, a lista não se mexe e o posto tem ficha em página
 
+> **Superada em parte por [DH](#dh--a-coluna-aparece-quando-cabe):** a largura vem do tipo da coluna, e não de `%` em cada tela.
+
 > **Superada em parte por [BT](#bt--estoque-e-colaboradores-têm-cartões-e-computadores-conta-o-tipo):** Computadores abre com um cartão por tipo de status, e não por status.
 >
 > **Superada em parte por [BK](#bk--estoque-e-licenças-têm-ficha-em-página):** item e licença deixam a janela, e o que a BA deixou de fora está feito.
@@ -972,3 +974,30 @@ Licenças, que estão fechadas.
 
 **O que ficou de fora.** A busca continua fora do cartão: digitar não muda os números. Postos, Colaboradores e
 Usuários não têm filtro de categoria.
+
+## DH — A coluna aparece quando cabe
+
+**Decisão.** O levantamento das listas em celular, tablet e desktop achou a tabela rolando de lado em quase toda tela
+estreita, e o tablet era o pior caso: a coluna escondida voltava a partir de 768px de tela, quando o menu aberto
+deixa uns 460px para a lista. A Barra também cobria a busca com a contagem, e Configurações cortava o cabeçalho. As
+regras de negócio e as colunas de cada lista não mudaram.
+
+- **A largura vem do tipo da coluna** (`coluna` no `TableHead`, no `TableCell` e na `TabelaDaFicha`): etiqueta, relação,
+  rótulo, quantidade, prazo, data, data e hora, curta, status e contagem. A Categoria tem a mesma largura na lista e na
+  ficha, que antes eram 12, 16 e 24%. Supera o "em `%` para acompanhar a tela" da [BA](#ba--o-título-volta-ao-cabeçalho-a-lista-não-se-mexe-e-o-posto-tem-ficha-em-página).
+- **A coluna aparece pela largura da moldura** (`aparece`, container query do Tailwind), e não pela da tela. Na
+  estreita ficam o nome, o Status e o `⋯`; a coluna principal da tela vem a seguir, e as de relação por último. A
+  largura mínima de cada tabela saiu, e nenhuma lista rola de lado. Em Configurações, o `soNoDesktop` da spec virou
+  `aparece`.
+- **O `⋯` tem a largura do botão**, e o título Ações fica só para o leitor de tela, como no Primer.
+- **A barra da lista:** a contagem não quebra de linha, e o grupo da busca não encolhe abaixo dela: quem desce de
+  linha é a paginação.
+
+**Por quê:** prioridade por coluna é o padrão de tabela responsiva (Filament Group, DataTables), e container query é o
+recomendado para componente, porque a largura que importa é a do lugar onde ele está.
+
+**O custo:** em 1024px, o desktop mais estreito, cabem todas as colunas, mas o nome fica mais curto que antes em
+Licenças; e em Agentes a Versão só aparece em moldura larga.
+
+**O que ficou de fora.** "Etiqueta" em Postos e "Computador" em Agentes para a mesma informação, a primeira coluna de
+Configurações, o nome do computador fora da linha e "livres" × "disponíveis": são texto ou dado novo em tela fechada.

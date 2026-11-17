@@ -2,7 +2,7 @@ import { Pencil, Trash2, UserPlus } from 'lucide-react';
 import SeloDoPosto from './SeloDoPosto';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
 import { Card } from '../../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableLinha, TableNome, TableRow, TableSublinha } from '../../../components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableCellAcoes, TableHeadAcoes, TableHeader, TableLinha, TableNome, TableRow, TableSublinha } from '../../../components/ui/table';
 import { TRACO, nomesDoPosto, quemEstaNoPosto } from '../helpers/postos.helper';
 import type { Posto } from '../../../types/workstation.types';
 
@@ -36,14 +36,14 @@ export default function PostosTable({
 }: PostosTableProps) {
   return (
     <Card className="overflow-hidden">
-      <Table className="min-w-[29rem] md:min-w-[50rem]">
+      <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Posto</TableHead>
-            <TableHead className="hidden w-[16%] md:table-cell">Localização</TableHead>
-            <TableHead>Responsáveis</TableHead>
-            <TableHead className="hidden w-44 md:table-cell">Etiqueta</TableHead>
-            <TableHead className="w-36">Status</TableHead>
+            <TableHead coluna="relacao" aparece="4xl">Localização</TableHead>
+            <TableHead aparece="md">Responsáveis</TableHead>
+            <TableHead coluna="etiqueta" aparece="2xl">Etiqueta</TableHead>
+            <TableHead coluna="status">Status</TableHead>
             <TableHeadAcoes />
           </TableRow>
         </TableHeader>
@@ -52,9 +52,9 @@ export default function PostosTable({
           {postos.map((posto) => (
               <TableRow key={posto.id} onClick={() => onAbrir(posto)}>
                 <TableCell><TableNome>{posto.name}</TableNome></TableCell>
-                <TableCell className="hidden md:table-cell">{posto.location.name}</TableCell>
-                <TableCell title={nomesDoPosto(posto).join(', ')}>{quemEstaNoPosto(posto)}</TableCell>
-                <TableCell className="hidden md:table-cell">
+                <TableCell aparece="4xl">{posto.location.name}</TableCell>
+                <TableCell aparece="md" title={nomesDoPosto(posto).join(', ')}>{quemEstaNoPosto(posto)}</TableCell>
+                <TableCell aparece="2xl">
                   {/* Em mono e na cor do texto, com a série embaixo, como a etiqueta em Agentes (CH). */}
                   {posto.computadores.length > 0
                     ? posto.computadores.map((computador) => (
@@ -67,7 +67,7 @@ export default function PostosTable({
                 </TableCell>
                 <TableCell><SeloDoPosto posto={posto} /></TableCell>
 
-                <TableCell>
+                <TableCellAcoes>
                   <AcoesDaLinha
                     nome={posto.name}
                     acoes={[
@@ -76,7 +76,7 @@ export default function PostosTable({
                       podeEditar && { rotulo: 'Excluir', icone: Trash2, onClick: () => onExcluir(posto), perigo: true },
                     ]}
                   />
-                </TableCell>
+                </TableCellAcoes>
               </TableRow>
           ))}
         </TableBody>

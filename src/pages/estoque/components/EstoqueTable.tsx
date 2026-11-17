@@ -2,7 +2,7 @@ import { Pencil, Power, PowerOff, Trash2, UserPlus } from 'lucide-react';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
 import { PontoDeStatus } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableLinha, TableNome, TableRow, TableSublinha } from '../../../components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableCellAcoes, TableHeadAcoes, TableHeader, TableLinha, TableNome, TableRow, TableSublinha } from '../../../components/ui/table';
 import type { ItemDeEstoque } from '../../../types/stock.types';
 import { classeDaConta, ehConsumivel, motivoParaNaoEntregar } from '../helpers/estoque.helper';
 
@@ -36,14 +36,14 @@ export default function EstoqueTable({
 }: EstoqueTableProps) {
   return (
     <Card className="overflow-hidden">
-      <Table className="min-w-[44rem] md:min-w-[52rem]">
+      <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Item</TableHead>
-            <TableHead className="w-[16%]">Categoria</TableHead>
-            <TableHead className="hidden w-[16%] md:table-cell">Localização</TableHead>
-            <TableHead className="w-[18%]">Quantidade</TableHead>
-            <TableHead className="w-36">Status</TableHead>
+            <TableHead coluna="relacao" aparece="3xl">Categoria</TableHead>
+            <TableHead coluna="relacao" aparece="4xl">Localização</TableHead>
+            <TableHead coluna="quantidade" aparece="2xl">Quantidade</TableHead>
+            <TableHead coluna="status">Status</TableHead>
             <TableHeadAcoes />
           </TableRow>
         </TableHeader>
@@ -55,11 +55,11 @@ export default function EstoqueTable({
               <TableRow key={item.id} onClick={() => onAbrir(item)} apagada={!item.isActive}>
                 <TableCell><TableNome>{item.name}</TableNome></TableCell>
 
-                <TableCell>{item.category.name}</TableCell>
+                <TableCell aparece="3xl">{item.category.name}</TableCell>
 
-                <TableCell className="hidden md:table-cell">{item.location?.name ?? '—'}</TableCell>
+                <TableCell aparece="4xl">{item.location?.name ?? '—'}</TableCell>
 
-                <TableCell>
+                <TableCell aparece="2xl">
                   <TableLinha className={classeDaConta(item)}>
                     {item.disponivel} {item.disponivel === 1 ? 'disponível' : 'disponíveis'}
                   </TableLinha>
@@ -70,7 +70,7 @@ export default function EstoqueTable({
                   <PontoDeStatus tom={item.isActive ? 'sucesso' : 'aviso'}>{item.isActive ? 'Ativo' : 'Desativado'}</PontoDeStatus>
                 </TableCell>
 
-                <TableCell>
+                <TableCellAcoes>
                   <AcoesDaLinha
                     nome={item.name}
                     acoes={[
@@ -97,7 +97,7 @@ export default function EstoqueTable({
                       },
                     ]}
                   />
-                </TableCell>
+                </TableCellAcoes>
               </TableRow>
             );
           })}

@@ -2,10 +2,12 @@ import type { ComponentProps, ReactNode } from 'react';
 import { cn } from '../../helpers/cn.helper';
 
 // AS COLUNAS NÃO SE MEXEM (BA). `table-fixed` tira a largura do conteúdo: filtrar ou trocar
-// de página não desloca nada. A largura vem do `TableHead`, em `%` para acompanhar a tela, e
-// em `rem` só no que tem tamanho certo (valor, data, o `⋯`); o nome fica sem largura, com o
-// que sobra. A largura mínima faz a tabela rolar dentro da moldura em vez de espremer as
-// colunas, e sobe em quem tem muita coluna ou `hidden md:`.
+// de página não desloca nada. A largura vem do TIPO da coluna (`coluna`), a mesma na lista e
+// na aba da ficha, e o nome fica sem largura, com o que sobra (DH).
+//
+// A COLUNA APARECE QUANDO CABE (DH): `aparece` diz a partir de que largura da MOLDURA ela
+// entra, e não da tela, porque com o menu aberto o tablet tem menos espaço que o celular
+// deitado. Na moldura estreita ficam o nome, o Status e o `⋯`, sem rolar de lado.
 //
 // TODA LINHA TEM A MESMA ALTURA (BB): duas linhas de texto no máximo, a segunda em
 // `TableSublinha`, e o que não cabe vira `…`, com o texto inteiro no `title`. Quebrar
@@ -16,10 +18,47 @@ function tituloDe(conteudo: ReactNode): string | undefined {
   return typeof conteudo === 'string' ? conteudo : undefined;
 }
 
+/** O tipo da coluna, que dá a largura. A do nome não tem tipo: fica com o que sobra. */
+export type TipoDeColuna = 'etiqueta' | 'relacao' | 'rotulo' | 'quantidade' | 'prazo' | 'data' | 'dataHora' | 'curta' | 'status' | 'contagem';
+
+const LARGURA: Record<TipoDeColuna, string> = {
+  etiqueta: 'w-36 @lg:w-44',
+  relacao: 'w-[16%]',
+  rotulo: 'w-36',
+  quantidade: 'w-60',
+  prazo: 'w-48',
+  data: 'w-32',
+  dataHora: 'w-40',
+  curta: 'w-24',
+  status: 'w-36',
+  contagem: 'w-24 text-right',
+};
+
+/** A partir de que largura da moldura a coluna aparece. Sem ela, aparece sempre. */
+export type ApareceEm = 'md' | 'lg' | '2xl' | '3xl' | '4xl' | '5xl';
+
+const APARECE: Record<ApareceEm, string> = {
+  md: 'hidden @md:table-cell',
+  lg: 'hidden @lg:table-cell',
+  '2xl': 'hidden @2xl:table-cell',
+  '3xl': 'hidden @3xl:table-cell',
+  '4xl': 'hidden @4xl:table-cell',
+  '5xl': 'hidden @5xl:table-cell',
+};
+
+interface ColunaProps {
+  coluna?: TipoDeColuna;
+  aparece?: ApareceEm;
+}
+
+function classeDaColuna({ coluna, aparece }: ColunaProps): string | undefined {
+  return cn(coluna && LARGURA[coluna], aparece && APARECE[aparece]) || undefined;
+}
+
 export function Table({ className, ...props }: ComponentProps<'table'>) {
   return (
-    <div className="relative w-full overflow-x-auto">
-      <table className={cn('w-full min-w-[36rem] table-fixed text-sm tabular-nums', className)} {...props} />
+    <div className="@container relative w-full overflow-x-auto">
+      <table className={cn('w-full table-fixed text-sm tabular-nums', className)} {...props} />
     </div>
   );
 }
@@ -57,17 +96,33 @@ export function TableRow({ className, apagada = false, ...props }: TableRowProps
   );
 }
 
-export function TableHead({ className, ...props }: ComponentProps<'th'>) {
-  return <th className={cn('h-11 truncate px-4 text-left align-middle font-medium text-text-tertiary', className)} {...props} />;
+export function TableHead({ className, coluna, aparece, ...props }: ComponentProps<'th'> & ColunaProps) {
+  return (
+    <th
+      className={cn('h-11 truncate px-4 text-left align-middle font-medium text-text-tertiary', classeDaColuna({ coluna, aparece }), className)}
+      {...props}
+    />
+  );
 }
 
-/** A coluna do `⋯`, igual em toda lista. */
+/** A coluna do `⋯`, igual em toda lista: da largura do botão, e o título só para o leitor de tela. */
 export function TableHeadAcoes() {
-  return <TableHead className="w-24 text-right">Ações</TableHead>;
+  return <TableHead className="w-12 px-2"><span className="sr-only">Ações</span></TableHead>;
 }
 
-export function TableCell({ className, ...props }: ComponentProps<'td'>) {
-  return <td title={tituloDe(props.children)} className={cn('truncate px-4 py-1.5 align-middle text-text-secondary', className)} {...props} />;
+export function TableCell({ className, coluna, aparece, ...props }: ComponentProps<'td'> & ColunaProps) {
+  return (
+    <td
+      title={tituloDe(props.children)}
+      className={cn('truncate px-4 py-1.5 align-middle text-text-secondary', classeDaColuna({ coluna, aparece }), className)}
+      {...props}
+    />
+  );
+}
+
+/** A célula do `⋯`, na largura de `TableHeadAcoes`. */
+export function TableCellAcoes({ className, ...props }: ComponentProps<'td'>) {
+  return <TableCell className={cn('px-2', className)} {...props} />;
 }
 
 /** O nome na primeira coluna. O botão é o caminho do teclado: o clique sobe para a linha. */

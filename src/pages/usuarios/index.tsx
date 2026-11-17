@@ -9,7 +9,7 @@ import PessoaNaLinha from '../../components/PessoaNaLinha';
 import { Badge, PontoDeStatus } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableRow } from '../../components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableCellAcoes, TableHeadAcoes, TableHeader, TableRow } from '../../components/ui/table';
 import { useUsers } from './hooks/useUsers';
 import { nomeDoCargo } from '../../helpers/cargo.helper';
 import { useAuthStore } from '../../stores/auth.store';
@@ -47,12 +47,12 @@ export default function UsersPage() {
       />
 
       <Card className="overflow-hidden">
-        <Table className="min-w-[44rem]">
+        <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Usuário</TableHead>
-              <TableHead className="w-[20%]">Cargo</TableHead>
-              <TableHead className="w-36">Status</TableHead>
+              <TableHead coluna="rotulo" aparece="lg">Cargo</TableHead>
+              <TableHead coluna="status">Status</TableHead>
               <TableHeadAcoes />
             </TableRow>
           </TableHeader>
@@ -74,7 +74,7 @@ export default function UsersPage() {
                     />
                   </TableCell>
 
-                  <TableCell>{nomeDoCargo(user.role)}</TableCell>
+                  <TableCell aparece="lg">{nomeDoCargo(user.role)}</TableCell>
 
                   <TableCell>
                     {/* Sem esta marca, quem foi desativado pelo botão some de vista:
@@ -86,7 +86,7 @@ export default function UsersPage() {
                     </PontoDeStatus>
                   </TableCell>
 
-                  <TableCell>
+                  <TableCellAcoes>
                     <AcoesDaLinha
                       nome={user.name}
                       acoes={[
@@ -115,7 +115,7 @@ export default function UsersPage() {
                         },
                       ]}
                     />
-                  </TableCell>
+                  </TableCellAcoes>
                 </TableRow>
               );
             })}

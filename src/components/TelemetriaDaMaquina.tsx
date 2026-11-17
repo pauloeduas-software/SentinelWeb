@@ -227,7 +227,7 @@ export default function TelemetriaDaMaquina({ endpointId, naFichaDaMaquina = fal
           ficha da máquina (DF). */}
       {!naFichaDaMaquina && (
         <TabelaDaFicha
-          colunas={[{ rotulo: 'Máquina vinculada' }, { rotulo: 'Último contato', className: 'w-48' }]}
+          colunas={[{ rotulo: 'Máquina vinculada' }, { rotulo: 'Último contato', coluna: 'dataHora' }]}
           icone={Monitor}
           vazio=""
           linhas={[{

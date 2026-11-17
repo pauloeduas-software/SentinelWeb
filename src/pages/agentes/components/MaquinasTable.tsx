@@ -7,7 +7,7 @@ import ListaVazia from '../../../components/ListaVazia';
 import ListToolbar from '../../../components/ListToolbar';
 import { PontoDeStatus } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableLinha, TableNome, TableRow, TableSublinha } from '../../../components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableCellAcoes, TableHeadAcoes, TableHeader, TableLinha, TableNome, TableRow, TableSublinha } from '../../../components/ui/table';
 import { formatarDataHora } from '../../../helpers/format.helper';
 import { caminhoDaMaquina } from '../../../helpers/maquina.helper';
 import { comFiltros } from '../../../hooks/useVoltaComFiltros';
@@ -81,15 +81,15 @@ export default function MaquinasTable({
       />
 
       <Card className="overflow-hidden">
-        <Table className="min-w-[44rem] md:min-w-[56rem]">
+        <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Máquina</TableHead>
-              <TableHead className="w-[20%]">Computador</TableHead>
-              <TableHead className="hidden w-[16%] md:table-cell">Sistema operacional</TableHead>
-              <TableHead className="hidden w-[9%] md:table-cell">Versão</TableHead>
-              <TableHead className="w-[16%]">Último contato</TableHead>
-              <TableHead className="w-40">Status</TableHead>
+              <TableHead coluna="etiqueta" aparece="lg">Computador</TableHead>
+              <TableHead aparece="4xl">Sistema operacional</TableHead>
+              <TableHead coluna="curta" aparece="5xl">Versão</TableHead>
+              <TableHead coluna="dataHora" aparece="2xl">Último contato</TableHead>
+              <TableHead coluna="status">Status</TableHead>
               <TableHeadAcoes />
             </TableRow>
           </TableHeader>
@@ -110,17 +110,17 @@ export default function MaquinasTable({
                     <TableNome>{maquina.hostname}</TableNome>
                     {maquina.biosSerial && <TableSublinha className="font-mono">{maquina.biosSerial}</TableSublinha>}
                   </TableCell>
-                  <TableCell>
+                  <TableCell aparece="lg">
                     <TableLinha className={asset ? 'font-mono text-text-primary' : undefined}>{asset ? asset.assetTag : '—'}</TableLinha>
                     {sublinha && <TableSublinha className={asset ? 'font-mono' : undefined}>{sublinha}</TableSublinha>}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">{maquina.osVersion}</TableCell>
-                  <TableCell className="hidden font-mono md:table-cell">{maquina.agentVersion ?? '—'}</TableCell>
-                  <TableCell>{formatarDataHora(maquina.lastSeen)}</TableCell>
+                  <TableCell aparece="4xl">{maquina.osVersion}</TableCell>
+                  <TableCell aparece="5xl" className="font-mono">{maquina.agentVersion ?? '—'}</TableCell>
+                  <TableCell aparece="2xl">{formatarDataHora(maquina.lastSeen)}</TableCell>
                   <TableCell>
                     <PontoDeStatus tom={online ? 'sucesso' : 'neutro'}>{online ? 'Conectado' : 'Desconectado'}</PontoDeStatus>
                   </TableCell>
-                  <TableCell>
+                  <TableCellAcoes>
                     <AcoesDaLinha
                       nome={maquina.hostname}
                       acoes={asset
@@ -132,7 +132,7 @@ export default function MaquinasTable({
                           },
                         ]}
                     />
-                  </TableCell>
+                  </TableCellAcoes>
                 </TableRow>
               );
             })}

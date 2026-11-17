@@ -26,7 +26,7 @@ interface LicencasTabProps {
 export default function LicencasTab({ licencas, assetTag, carregando, erro }: LicencasTabProps) {
   return (
     <TabelaDaFicha
-      colunas={[{ rotulo: 'Licença' }, { rotulo: 'Categoria', className: 'w-[24%]' }, { rotulo: 'Vencimento', className: 'w-44' }, { rotulo: 'Status', className: 'w-36' }, { rotulo: 'Desde', className: 'w-32' }]}
+      colunas={[{ rotulo: 'Licença' }, { rotulo: 'Categoria', coluna: 'relacao', aparece: '4xl' }, { rotulo: 'Vencimento', coluna: 'prazo', aparece: '2xl' }, { rotulo: 'Status', coluna: 'status' }, { rotulo: 'Desde', coluna: 'data', aparece: 'lg' }]}
       icone={KeyRound}
       carregando={carregando}
       erro={erro}

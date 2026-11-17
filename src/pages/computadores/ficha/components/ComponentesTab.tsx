@@ -25,7 +25,7 @@ interface ComponentesTabProps {
 export default function ComponentesTab({ componentes, assetTag, carregando, erro }: ComponentesTabProps) {
   return (
     <TabelaDaFicha
-      colunas={[{ rotulo: 'Componente' }, { rotulo: 'Categoria', className: 'w-[24%]' }, { rotulo: 'Quantidade', className: 'w-40' }, { rotulo: 'Desde', className: 'w-32' }]}
+      colunas={[{ rotulo: 'Componente' }, { rotulo: 'Categoria', coluna: 'relacao', aparece: '3xl' }, { rotulo: 'Quantidade', coluna: 'rotulo' }, { rotulo: 'Desde', coluna: 'data', aparece: 'lg' }]}
       icone={Cpu}
       carregando={carregando}
       erro={erro}

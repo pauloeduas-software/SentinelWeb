@@ -11,7 +11,7 @@ import CatalogFormModal from '../../../components/catalogo/CatalogFormModal';
 import ComputadoresNaFicha from '../../../components/ComputadoresNaFicha';
 import PaginaCabecalho from '../../../components/PaginaCabecalho';
 import StatusDaEntrega from '../../../components/StatusDaEntrega';
-import TabelaDaFicha from '../../../components/TabelaDaFicha';
+import TabelaDaFicha, { type ColunaDaFicha } from '../../../components/TabelaDaFicha';
 import { Avatar } from '../../../components/ui/avatar';
 import { PontoDeStatus } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
@@ -44,7 +44,7 @@ import { usePode } from '../../../stores/auth.store';
 // Aberta da Lixeira, pelo Supervisor, a ficha é só consulta, e a única ação é Restaurar (CF).
 
 const ABAS = ['computadores', 'postos', 'estoque', 'licencas', 'historico'] as const;
-const DESDE = { rotulo: 'Desde', className: 'w-32' };
+const DESDE: ColunaDaFicha = { rotulo: 'Desde', coluna: 'data', aparece: 'lg' };
 
 export default function ColaboradorPage() {
   const {
@@ -126,7 +126,7 @@ export default function ColaboradorPage() {
           {/* Inclusive os postos sem ativo nenhum: ocupar também é responder por ele. */}
           <TabsContent value="postos">
             <TabelaDaFicha
-              colunas={[{ rotulo: 'Posto' }, { rotulo: 'Turno', className: 'w-64' }, DESDE]}
+              colunas={[{ rotulo: 'Posto' }, { rotulo: 'Turno', coluna: 'relacao', aparece: '2xl' }, DESDE]}
               icone={MapPin}
               carregando={carregandoOcupacoes}
               erro={erroDasOcupacoes}
@@ -143,7 +143,7 @@ export default function ColaboradorPage() {
           {/* As unidades no NOME dela, nunca as do posto que ocupa. */}
           <TabsContent value="estoque">
             <TabelaDaFicha
-              colunas={[{ rotulo: 'Item' }, { rotulo: 'Categoria', className: 'w-[24%]' }, { rotulo: 'Quantidade', className: 'w-40' }, DESDE]}
+              colunas={[{ rotulo: 'Item' }, { rotulo: 'Categoria', coluna: 'relacao', aparece: '3xl' }, { rotulo: 'Quantidade', coluna: 'rotulo' }, DESDE]}
               icone={Package}
               vazio="Não é responsável por nenhum item de estoque."
               linhas={pessoa.itens.map((entrega) => ({
@@ -159,7 +159,7 @@ export default function ColaboradorPage() {
           {/* As entregues a ELA, nunca as do computador que ela usa. */}
           <TabsContent value="licencas">
             <TabelaDaFicha
-              colunas={[{ rotulo: 'Licença' }, { rotulo: 'Categoria', className: 'w-[24%]' }, { rotulo: 'Vencimento', className: 'w-44' }, { rotulo: 'Status', className: 'w-36' }, DESDE]}
+              colunas={[{ rotulo: 'Licença' }, { rotulo: 'Categoria', coluna: 'relacao', aparece: '4xl' }, { rotulo: 'Vencimento', coluna: 'prazo', aparece: '2xl' }, { rotulo: 'Status', coluna: 'status' }, DESDE]}
               icone={KeyRound}
               vazio="Não é responsável por nenhuma licença."
               linhas={pessoa.licencas.map((entrega) => ({

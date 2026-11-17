@@ -32,3 +32,21 @@ test('filtrar não desloca as colunas, nem quando a lista fica vazia', async ({ 
   await expect(page.locator('tbody tr').first()).toBeVisible();
   expect(await posicaoDasColunas(page)).toEqual(comLinha);
 });
+
+// A COLUNA APARECE QUANDO CABE (DH): na moldura estreita, as de menos prioridade somem e
+// nenhuma lista rola de lado. O tablet com o menu aberto é o caso que rolava.
+const LISTAS = ['/computadores', '/postos', '/estoque', '/licencas', '/colaboradores', '/usuarios', '/agentes', '/configuracoes?aba=fabricantes'];
+
+for (const largura of [375, 768]) {
+  test(`com ${largura}px, nenhuma lista rola de lado`, async ({ page, request }) => {
+    await criarPosto(request, `Posto de nome comprido para a moldura estreita ${Date.now()}`);
+    await page.setViewportSize({ width: largura, height: 900 });
+
+    for (const lista of LISTAS) {
+      await page.goto(lista);
+      const moldura = page.locator('table').first().locator('..');
+      await expect(page.getByRole('columnheader').first()).toBeVisible();
+      expect(await moldura.evaluate((elemento) => elemento.scrollWidth - elemento.clientWidth), lista).toBeLessThanOrEqual(1);
+    }
+  });
+}

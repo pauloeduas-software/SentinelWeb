@@ -114,8 +114,12 @@ mostram a senha no painel aberto, e a troca obrigatória de senha, que já leva 
   e Licenças, Ativos e Desativados em Estoque, Colaboradores e Usuários. O número é o total da lista que ele abre: segue a
   categoria escolhida, e não a busca ([CM](../decisoes/plataforma.md#cm--os-cartões-seguem-a-categoria)).
 - **As colunas não se mexem.** `Table` é `table-fixed`: filtrar, paginar ou esvaziar a lista não
-  desloca nada. A largura vem do `TableHead`, o `⋯` é `TableHeadAcoes` e o aviso de lista vazia é
-  `TableVazia`, debaixo do cabeçalho (BA).
+  desloca nada. O aviso de lista vazia é `TableVazia`, debaixo do cabeçalho (BA).
+- **A largura vem do tipo da coluna, e a coluna aparece quando cabe ([DH](../decisoes/plataforma.md#dh--a-coluna-aparece-quando-cabe)).**
+  `coluna` dá a largura (etiqueta, relação, quantidade, status…), a mesma na lista e na aba da ficha, e o nome fica com o
+  que sobra. `aparece` diz a partir de que largura da moldura ela entra, e não da tela: na estreita ficam o nome, o Status
+  e o `⋯`, e nenhuma lista rola de lado. O `⋯` é `TableHeadAcoes` e `TableCellAcoes`, da largura do botão, com o título
+  só para o leitor de tela.
 - **A barra da lista não anda.** Com uma página só as setas somem, mas guardam o lugar (`invisible` no
   `ListToolbar`): filtrar não desloca a busca nem o botão (AZ).
 - **A consulta que falha não diz "nenhum" (BB).** Aba, histórico, cartão e contagem mostram o erro ou

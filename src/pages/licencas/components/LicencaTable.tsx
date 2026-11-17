@@ -2,7 +2,7 @@ import { Pencil, Power, PowerOff, Trash2, UserPlus } from 'lucide-react';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
 import { PontoDeStatus } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableLinha, TableNome, TableRow, TableSublinha } from '../../../components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableCellAcoes, TableHeadAcoes, TableHeader, TableLinha, TableNome, TableRow, TableSublinha } from '../../../components/ui/table';
 import type { Licenca } from '../../../types/license.types';
 import { ROTULO_DO_STATUS, TOM_DO_STATUS, textoDoPrazo } from '../../../helpers/licenca.helper';
 import { motivoParaNaoEntregar } from '../helpers/licenca.helper';
@@ -41,14 +41,14 @@ export default function LicencaTable({
 }: LicencaTableProps) {
   return (
     <Card className="overflow-hidden">
-      <Table className="min-w-[46rem] md:min-w-[56rem]">
+      <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Licença</TableHead>
-            <TableHead className="hidden w-[16%] md:table-cell">Categoria</TableHead>
-            <TableHead className="w-[18%]">Quantidade</TableHead>
-            <TableHead className="w-[20%]">Vencimento</TableHead>
-            <TableHead className="w-36">Status</TableHead>
+            <TableHead coluna="relacao" aparece="4xl">Categoria</TableHead>
+            <TableHead coluna="quantidade" aparece="3xl">Quantidade</TableHead>
+            <TableHead coluna="prazo" aparece="2xl">Vencimento</TableHead>
+            <TableHead coluna="status">Status</TableHead>
             <TableHeadAcoes />
           </TableRow>
         </TableHeader>
@@ -61,14 +61,14 @@ export default function LicencaTable({
               <TableRow key={licenca.id} onClick={() => onAbrir(licenca)} apagada={encerrada}>
                 <TableCell><TableNome>{licenca.name}</TableNome></TableCell>
 
-                <TableCell className="hidden md:table-cell">{licenca.category?.name ?? '—'}</TableCell>
+                <TableCell aparece="4xl">{licenca.category?.name ?? '—'}</TableCell>
 
-                <TableCell>
+                <TableCell aparece="3xl">
                   <TableLinha>{licenca.livres} {licenca.livres === 1 ? 'livre' : 'livres'}</TableLinha>
                   <TableSublinha>{licenca.seatsTotal} {licenca.seatsTotal === 1 ? 'comprada' : 'compradas'} · {licenca.emUso} em uso</TableSublinha>
                 </TableCell>
 
-                <TableCell>
+                <TableCell aparece="2xl">
                   {encerrada ? `encerrada em ${formatarData(licenca.terminationDate)}` : textoDoPrazo(licenca.diasParaVencer)}
                 </TableCell>
 
@@ -76,7 +76,7 @@ export default function LicencaTable({
                   <PontoDeStatus tom={TOM_DO_STATUS[licenca.status]}>{ROTULO_DO_STATUS[licenca.status]}</PontoDeStatus>
                 </TableCell>
 
-                <TableCell>
+                <TableCellAcoes>
                   <AcoesDaLinha
                     nome={licenca.name}
                     acoes={[
@@ -103,7 +103,7 @@ export default function LicencaTable({
                       },
                     ]}
                   />
-                </TableCell>
+                </TableCellAcoes>
               </TableRow>
             );
           })}

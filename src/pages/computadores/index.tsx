@@ -15,7 +15,7 @@ import VistasDaLista from '../../components/VistasDaLista';
 import { PontoDeStatus } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableLinha, TableNome, TableRow, TableSublinha } from '../../components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableCellAcoes, TableHeadAcoes, TableHeader, TableLinha, TableNome, TableRow, TableSublinha } from '../../components/ui/table';
 import { usePode } from '../../stores/auth.store';
 import { motivoDaSaida } from './helpers/baixa.helper';
 import { tomDoStatus } from '../../helpers/status.helper';
@@ -74,15 +74,15 @@ export default function ComputadoresPage() {
       />
 
       <Card className="overflow-hidden">
-        <Table className="min-w-[43rem] md:min-w-[53rem]">
+        <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-44">Etiqueta</TableHead>
-              <TableHead>Modelo</TableHead>
-              <TableHead className="hidden w-[12%] md:table-cell">Categoria</TableHead>
-              <TableHead className="hidden w-[12%] md:table-cell">Localização</TableHead>
-              <TableHead>Responsáveis</TableHead>
-              <TableHead className="w-36">Status</TableHead>
+              <TableHead coluna="etiqueta">Etiqueta</TableHead>
+              <TableHead aparece="2xl">Modelo</TableHead>
+              <TableHead coluna="relacao" aparece="4xl">Categoria</TableHead>
+              <TableHead coluna="relacao" aparece="4xl">Localização</TableHead>
+              <TableHead aparece="md">Responsáveis</TableHead>
+              <TableHead coluna="status">Status</TableHead>
               <TableHeadAcoes />
             </TableRow>
           </TableHeader>
@@ -102,16 +102,16 @@ export default function ComputadoresPage() {
                     <TableNome className="font-mono">{asset.assetTag}</TableNome>
                     {asset.serial && <TableSublinha className="font-mono">{asset.serial}</TableSublinha>}
                   </TableCell>
-                  <TableCell>
+                  <TableCell aparece="2xl">
                     <TableLinha>{asset.model.name}</TableLinha>
                     <TableSublinha>{asset.model.manufacturer.name}</TableSublinha>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">{asset.model.category.name}</TableCell>
+                  <TableCell aparece="4xl">{asset.model.category.name}</TableCell>
                   {/* No posto, ele está onde o posto fica (AW); `location` é para onde ele volta. */}
-                  <TableCell className="hidden md:table-cell">{asset.postoAtual?.location.name ?? asset.location?.name ?? TRACO}</TableCell>
+                  <TableCell aparece="4xl">{asset.postoAtual?.location.name ?? asset.location?.name ?? TRACO}</TableCell>
                   {/* RESPONSÁVEL — derivado (docs/referencia/modelo-de-posse.md, Camada 3).
                       Ou o posto ou a pessoa direta: quem ocupa o posto fica na aba Responsáveis (BL). */}
-                  <TableCell>{nomeDoResponsavel(asset.posse) || TRACO}</TableCell>
+                  <TableCell aparece="md">{nomeDoResponsavel(asset.posse) || TRACO}</TableCell>
                   {/* O motivo é o status do baixado (BV). */}
                   <TableCell title={motivo ?? asset.status.name}>
                     {motivo
@@ -119,7 +119,7 @@ export default function ComputadoresPage() {
                       : <PontoDeStatus tom={tomDoStatus(asset.status.type)}>{asset.status.name}</PontoDeStatus>}
                   </TableCell>
 
-                  <TableCell>
+                  <TableCellAcoes>
                     <AcoesDaLinha
                       nome={asset.assetTag}
                       acoes={view === 'trashed'
@@ -157,7 +157,7 @@ export default function ComputadoresPage() {
                           },
                         ]}
                     />
-                  </TableCell>
+                  </TableCellAcoes>
                 </TableRow>
               );
             })}

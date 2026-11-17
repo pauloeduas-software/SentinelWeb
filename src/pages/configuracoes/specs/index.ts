@@ -11,7 +11,7 @@ import {
 // (`src/pages/colaboradores`, decisão AH).
 
 // O mesmo número que recusaria o Excluir (`mostraUso` da spec do servidor, AZ).
-const EM_USO: ColunaSpec = { key: 'usos', label: 'Em uso', render: 'contagem', soNoDesktop: true };
+const EM_USO: ColunaSpec = { key: 'usos', label: 'Em uso', render: 'contagem', aparece: '3xl' };
 
 const categoria: CatalogUiSpec = {
   slug: 'categories',
@@ -63,8 +63,8 @@ const fabricante: CatalogUiSpec = {
   placeholderBusca: 'Buscar por nome…',
   colunas: [
     { key: 'name', label: 'Nome' },
-    { key: 'supportPhone', label: 'Telefone de suporte', soNoDesktop: true },
-    { key: 'supportEmail', label: 'E-mail de suporte', soNoDesktop: true },
+    { key: 'supportPhone', label: 'Telefone de suporte', aparece: '3xl' },
+    { key: 'supportEmail', label: 'E-mail de suporte', aparece: '3xl' },
     { key: 'url', label: 'Site', render: 'link' },
     EM_USO,
   ],
@@ -90,9 +90,9 @@ const modelo: CatalogUiSpec = {
   placeholderBusca: 'Buscar por nome ou número…',
   colunas: [
     { key: 'name', label: 'Modelo' },
-    { key: 'modelNumber', label: 'Número', soNoDesktop: true },
+    { key: 'modelNumber', label: 'Número', aparece: '3xl' },
     { key: 'manufacturer', label: 'Fabricante', render: 'relacao' },
-    { key: 'category', label: 'Categoria', render: 'relacao', soNoDesktop: true },
+    { key: 'category', label: 'Categoria', render: 'relacao', aparece: '3xl' },
     EM_USO,
   ],
   campos: [
@@ -118,8 +118,8 @@ const localizacao: CatalogUiSpec = {
   colunas: [
     { key: 'name', label: 'Nome' },
     { key: 'city', label: 'Cidade' },
-    { key: 'state', label: 'Estado', soNoDesktop: true },
-    { key: 'phone', label: 'Telefone', soNoDesktop: true },
+    { key: 'state', label: 'Estado', aparece: '3xl' },
+    { key: 'phone', label: 'Telefone', aparece: '3xl' },
     EM_USO,
   ],
   campos: [

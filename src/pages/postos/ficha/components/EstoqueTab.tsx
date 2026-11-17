@@ -16,7 +16,7 @@ interface EstoqueTabProps {
 export default function EstoqueTab({ itens, nomeDoPosto }: EstoqueTabProps) {
   return (
     <TabelaDaFicha
-      colunas={[{ rotulo: 'Item' }, { rotulo: 'Categoria', className: 'w-[24%]' }, { rotulo: 'Quantidade', className: 'w-40' }, { rotulo: 'Desde', className: 'w-32' }]}
+      colunas={[{ rotulo: 'Item' }, { rotulo: 'Categoria', coluna: 'relacao', aparece: '3xl' }, { rotulo: 'Quantidade', coluna: 'rotulo' }, { rotulo: 'Desde', coluna: 'data', aparece: 'lg' }]}
       icone={Package}
       vazio="Nenhum item de estoque entregue a este posto."
       linhas={itens.map((entrega) => ({

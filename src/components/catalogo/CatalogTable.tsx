@@ -3,24 +3,24 @@ import AcoesDaLinha from '../AcoesDaLinha';
 import PessoaNaLinha from '../PessoaNaLinha';
 import { PontoDeStatus } from '../ui/badge';
 import { Card } from '../ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableNome, TableRow } from '../ui/table';
-import { cn } from '../../helpers/cn.helper';
+import {
+  Table, TableBody, TableCell, TableCellAcoes, TableHead, TableHeadAcoes, TableHeader, TableNome, TableRow, type TipoDeColuna,
+} from '../ui/table';
 import { nomeDaRelacao, rotuloDoEnum } from '../../helpers/format.helper';
 import { tomDoStatus, type TipoDeStatus } from '../../helpers/status.helper';
-import type { AcaoLinhaId, AcaoLinhaSpec, ColunaSpec } from './catalog-ui.types';
+import type { AcaoLinhaId, AcaoLinhaSpec, ColunaSpec, RenderColuna } from './catalog-ui.types';
 import type { CatalogRow } from '../../types/catalog.types';
 
 // A LINHA INTEIRA CLICA (AY): abre a ficha, onde a spec declara uma, e o Editar
 // nas outras. O `⋯` guarda Editar, Desativar/Ativar e Excluir, nessa ordem.
 
-/** A largura e o alinhamento da coluna, iguais no cabeçalho e nas células. */
-function classeDaColuna(coluna: ColunaSpec): string {
-  return cn(
-    coluna.render === 'contagem' && 'w-24 text-right',
-    coluna.render === 'ativo' && 'w-36',
-    coluna.soNoDesktop && 'hidden md:table-cell',
-  );
-}
+/** O tipo da coluna, que dá a largura no cabeçalho e nas células (DH). O texto livre divide o que sobra. */
+const TIPO_DO_RENDER: Partial<Record<RenderColuna, TipoDeColuna>> = {
+  contagem: 'contagem',
+  ativo: 'status',
+  status: 'status',
+  enum: 'rotulo',
+};
 
 interface CatalogTableProps {
   colunas: readonly ColunaSpec[];
@@ -45,11 +45,12 @@ export default function CatalogTable({
 }: CatalogTableProps) {
   return (
     <Card className="overflow-hidden">
-      {/* Com `soNoDesktop`, o que sobra na tela estreita cabe sem rolar. Sem ela, vale a largura mínima do `Table`. */}
-      <Table className={cn(colunas.some((coluna) => coluna.soNoDesktop) && 'min-w-0 lg:min-w-[36rem]')}>
+      <Table>
         <TableHeader>
           <TableRow>
-            {colunas.map((coluna) => <TableHead key={coluna.key} className={classeDaColuna(coluna)}>{coluna.label}</TableHead>)}
+            {colunas.map((coluna) => (
+              <TableHead key={coluna.key} coluna={coluna.render && TIPO_DO_RENDER[coluna.render]} aparece={coluna.aparece}>{coluna.label}</TableHead>
+            ))}
             <TableHeadAcoes />
           </TableRow>
         </TableHeader>
@@ -67,7 +68,7 @@ export default function CatalogTable({
             return (
               <TableRow key={registro.id} onClick={abrir} apagada={registro.isActive === false}>
                 {colunas.map((coluna, indice) => (
-                  <TableCell key={coluna.key} className={classeDaColuna(coluna)}>
+                  <TableCell key={coluna.key} coluna={coluna.render && TIPO_DO_RENDER[coluna.render]} aparece={coluna.aparece}>
                     {/* A `pessoa` já traz o nome dela, ao lado do avatar. */}
                     {indice === 0 && coluna.render !== 'pessoa' ? (
                       <TableNome><Celula coluna={coluna} registro={registro} /></TableNome>
@@ -76,7 +77,7 @@ export default function CatalogTable({
                     )}
                   </TableCell>
                 ))}
-                <TableCell>
+                <TableCellAcoes>
                   <AcoesDaLinha
                     nome={nome}
                     acoes={onRestore
@@ -100,7 +101,7 @@ export default function CatalogTable({
                         },
                       ]}
                   />
-                </TableCell>
+                </TableCellAcoes>
               </TableRow>
             );
           })}

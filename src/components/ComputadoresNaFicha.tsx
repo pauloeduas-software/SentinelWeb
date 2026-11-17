@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Monitor } from 'lucide-react';
-import TabelaDaFicha from './TabelaDaFicha';
+import TabelaDaFicha, { type ColunaDaFicha } from './TabelaDaFicha';
 import { PontoDeStatus } from './ui/badge';
 import { TableLinha, TableSublinha } from './ui/table';
 import { formatarData, formatarDiaDoInstante } from '../helpers/format.helper';
@@ -37,16 +37,16 @@ interface ComputadoresNaFichaProps {
   semEntrega?: boolean;
 }
 
-const COLUNAS = [
-  { rotulo: 'Etiqueta', className: 'w-44' },
-  { rotulo: 'Modelo' },
-  { rotulo: 'Categoria', className: 'w-[16%]' },
-  { rotulo: 'Status', className: 'w-36' },
+const COLUNAS: readonly ColunaDaFicha[] = [
+  { rotulo: 'Etiqueta', coluna: 'etiqueta' },
+  { rotulo: 'Modelo', aparece: 'lg' },
+  { rotulo: 'Categoria', coluna: 'relacao', aparece: '4xl' },
+  { rotulo: 'Status', coluna: 'status' },
 ];
 
-const COLUNAS_DA_ENTREGA = [
-  { rotulo: 'Devolução prevista', className: 'w-48' },
-  { rotulo: 'Desde', className: 'w-32' },
+const COLUNAS_DA_ENTREGA: readonly ColunaDaFicha[] = [
+  { rotulo: 'Devolução prevista', coluna: 'prazo', aparece: '3xl' },
+  { rotulo: 'Desde', coluna: 'data', aparece: '2xl' },
 ];
 
 export default function ComputadoresNaFicha({

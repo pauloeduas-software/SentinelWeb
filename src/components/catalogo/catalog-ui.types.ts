@@ -7,6 +7,7 @@
 // nada de `src/api` (o lint recusa).
 
 import type { LucideIcon } from 'lucide-react';
+import type { ApareceEm } from '../ui/table';
 
 type TipoCampo =
   | 'text' | 'textarea'
@@ -48,7 +49,7 @@ export interface CampoSpec {
   travaEmUso?: boolean;
 }
 
-type RenderColuna = 'texto' | 'enum' | 'status' | 'ativo' | 'relacao' | 'contagem' | 'link' | 'pessoa';
+export type RenderColuna = 'texto' | 'enum' | 'status' | 'ativo' | 'relacao' | 'contagem' | 'link' | 'pessoa';
 
 export interface ColunaSpec {
   key: string;
@@ -58,8 +59,8 @@ export interface ColunaSpec {
   opcoes?: readonly OpcaoFixa[];
   /** `pessoa`: o campo que vai embaixo do nome, como em Usuários (CC). */
   sublinha?: string;
-  /** Some abaixo de `lg`: na tela estreita ficam o nome, a coluna principal e o `⋯`. */
-  soNoDesktop?: boolean;
+  /** A partir de que largura da moldura ela aparece (DH): na estreita ficam o nome, a coluna principal e o `⋯`. */
+  aparece?: ApareceEm;
 }
 
 /**
