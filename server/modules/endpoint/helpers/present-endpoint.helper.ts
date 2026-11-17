@@ -23,6 +23,8 @@ export const MAQUINA_DA_LISTA_SELECT = {
   hostname: true,
   osVersion: true,
   biosSerial: true,
+  // O chamado que chega só com o IP acha a máquina pela busca da lista (DJ).
+  localIp: true,
   status: true,
   lastSeen: true,
   agentVersion: true,

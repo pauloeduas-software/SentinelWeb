@@ -6,7 +6,7 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D45–D51, D95–D122, e A/D/E/H/CV/CW/CX/CY/CZ/DA/DB/DC/DD/DE/DF/DI da segunda rodada (ver
+> Decisões neste arquivo: D45–D51, D95–D122, e A/D/E/H/CV/CW/CX/CY/CZ/DA/DB/DC/DD/DE/DF/DI/DJ/DK da segunda rodada (ver
 > [`README.md`](./README.md#a-segunda-rodada-ap)).
 
 ---
@@ -1290,6 +1290,8 @@ na [CW](#cw--descobertas-perde-a-triagem-os-ociosos-e-os-números-repetidos), e 
 
 ## DA — O que o agente manda vai para a aba Máquina, e o que ninguém lê sai
 
+> **Superada em parte por [DJ](#dj--a-lista-de-agentes-mostra-o-ip-e-a-busca-o-acha):** `GET /api/endpoints` devolve também o IP.
+>
 > **Superada em parte por [DB](#db--a-telemetria-é-cpu-memória-e-discos):** a telemetria não traz processos, e o handshake não traz `RamTotalBytes` nem `InstalledSoftware`.
 >
 > **Supera:** [D116](#d116--a-assetchange-ganha-escritor-e-ele-mora-no-handshake);
@@ -1567,3 +1569,52 @@ frases dos cartões dizem o que cada um conta.
 
 **A tela fecha:** a lista, a ficha, o vínculo, o Excluir e as vistas foram conferidos no código e nos testes, e
 `tests/e2e/agentes.spec.ts` cobre pela tela o Vincular, o Vincular e entregar, os Sumidos e o link morto.
+
+---
+
+## DJ — A lista de Agentes mostra o IP, e a busca o acha
+
+> **Supera em parte:** [DA](#da--o-que-o-agente-manda-vai-para-a-aba-máquina-e-o-que-ninguém-lê-sai) (o IP fora da
+> resposta da lista).
+
+**Decisão** (2026-11-17, pedida comparando Agentes com o GLPI, o Fleet, o NinjaOne, o Intune, o Lansweeper e o
+ServiceNow):
+
+- **`GET /api/endpoints` devolve o `localIp`,** e a lista ganha a coluna Endereço IP, que aparece em moldura larga,
+  antes do Sistema operacional (DH). A coluna tem tipo próprio, `ip`, com a largura do IPv4 mais largo
+  (`255.255.255.255`) em mono: o agente só manda IPv4, e o IP cortado no `…` não serve a quem busca por ele.
+- **A busca da lista acha a máquina pelo IP.** A do servidor já achava; a da tela, que procura nas linhas que chegaram,
+  não.
+
+**Por quê:** o chamado que chega só com o IP não achava a máquina, que só mostrava o IP na ficha. O Fleet mostra o IP
+na lista de hosts.
+
+---
+
+## DK — Atualizar agora: a máquina manda o inventário e a telemetria na hora
+
+**Decisão** (2026-11-17, pedida comparando Agentes com o GLPI, o Fleet, o Intune e o Lansweeper):
+
+- **O `⋯` da ficha da máquina e o da linha de Agentes ganham Atualizar agora.** O servidor manda o comando
+  `REFRESH`, e o SentinelAgente 0.2.0 responde com o handshake e uma amostra de telemetria
+  ([A26](https://github.com/pauloeduas-software/SentinelAgente/blob/main/docs/decisoes/protocolo.md#a26--o-refresh-manda-o-inventário-e-a-telemetria-na-hora-a-pedido-do-painel) de lá).
+- **`POST /api/endpoints/:id/refresh` espera a resposta,** e não só o envio: volta quando o handshake e a telemetria
+  que o pedido provocou estão gravados, ou com 504 depois de 15 s. A ficha relida já mostra o dado novo. Dois pedidos
+  juntos para a mesma máquina esperam a mesma resposta, e só um sai.
+- **O agente anterior à 0.2.0 é 409,** com a frase que manda atualizá-lo, e o pedido não sai: ele o recusaria no log, e
+  a rota esperaria os 15 s à toa. A máquina desconectada é 409, como o comando.
+- **É do Técnico,** porque só lê a máquina; os comandos de energia continuam do Supervisor (AV). A auditoria grava quem
+  pediu, como `COMMAND` com o comando `REFRESH`.
+- **O item fica no `⋯`, e não num botão do card:** com o Vincular, o card passava da largura do celular, e a ação
+  secundária mora no `⋯` em toda ficha, como o Clonar do computador. A espera vai no cartão do canto ("Atualizando
+  NB-01…"), que a resposta substitui.
+- **Habilitado também na máquina desconectada,** como os comandos: o status da tela atrasa até uns 3 minutos, e quem
+  responde é o servidor.
+
+**Por quê:** a peça trocada e o IP novo só chegavam no próximo handshake ou no reenvio diário (A25 de lá). O GLPI tem o
+"Request inventory", o Fleet o "Refetch", o Intune o "Sync", e o Lansweeper reescaneia o ativo. Esperar a resposta é o
+que o Fleet faz com o "Fetching…" da página do host, e é o que a A23 de lá cobrava de toda ação nova: sem resposta, o
+painel não saberia se ela rodou.
+
+**O que fica de fora, declarado:** atualizar várias máquinas de uma vez (O).
+

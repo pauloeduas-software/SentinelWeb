@@ -242,6 +242,23 @@ describe('toda escrita do painel deixa rastro com a conta da sessão', () => {
     await auditada(api.post(`/api/endpoints/${maquina.id}/command`, { action: 'reboot' }));
     await agente.fechar();
   });
+
+  it('o Atualizar agora (DK)', async () => {
+    const hwid = `atualizar-${proximo()}`;
+    const agente = await conectarAgente(api, hwid);
+    await agente.handshake({ Hostname: `pc-do-atualizar-${proximo()}`, AgentVersion: '0.2.0' });
+    const maquina = await esperarPor('a máquina do handshake', () => prisma.endpoint.findUnique({ where: { hwid } }));
+
+    // O agente responde ao pedido: sem isso a rota esperaria os 15 s e daria 504.
+    const responder = (async () => {
+      await agente.receber('o pedido de atualização');
+      await agente.handshake({ AgentVersion: '0.2.0' });
+      await agente.telemetria();
+    })();
+    await auditada(api.post(`/api/endpoints/${maquina.id}/refresh`, {}));
+    await responder;
+    await agente.fechar();
+  });
 });
 
 describe('o autor vem da sessão, nunca do corpo', () => {

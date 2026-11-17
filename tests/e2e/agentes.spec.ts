@@ -7,7 +7,7 @@ import { prisma } from '../../server/infra/database/prismaClient';
 // se prova que a tela leva a pessoa até elas.
 
 /** Uma máquina sem computador, como o handshake a deixaria. Devolve o id. */
-async function criarMaquina(hostname: string, dados: { lastSeen?: Date } = {}): Promise<string> {
+async function criarMaquina(hostname: string, dados: { lastSeen?: Date; localIp?: string } = {}): Promise<string> {
   // A máquina nasce do handshake do agente, que o navegador não faz: vai direto ao banco.
   const { id } = await prisma.endpoint.create({
     data: { hwid: `hw-${hostname}`, hostname, osVersion: 'Windows 11', status: 'OFFLINE', ...dados },
@@ -85,6 +85,26 @@ test('na ficha, o Vincular e entregar liga a máquina e põe o computador no pos
   conferirConsole();
 });
 
+test('a busca acha a máquina pelo IP, o chamado que chega só com ele (DJ)', async ({ page }) => {
+  const conferirConsole = vigiarConsole(page);
+  const hostname = `NB-IP-${Date.now()}`;
+  await criarMaquina(hostname, { localIp: '10.77.88.99' });
+  const principal = page.getByRole('main');
+
+  await page.goto('/agentes?vista=sem&busca=10.77.88.99');
+  await expect(principal.getByRole('row', { name: new RegExp(hostname) })).toBeVisible();
+
+  // O IP mais largo cabe inteiro na coluna, sem o `…`.
+  const maisLargo = `NB-IP-LARGO-${Date.now()}`;
+  await criarMaquina(maisLargo, { localIp: '255.255.255.255' });
+  await page.goto(`/agentes?vista=sem&busca=${maisLargo}`);
+  const celula = principal.getByRole('cell', { name: '255.255.255.255' });
+  await expect(celula).toBeVisible();
+  expect(await celula.evaluate((td) => td.scrollWidth <= td.clientWidth)).toBe(true);
+
+  conferirConsole();
+});
+
 test('a máquina sem contato há mais de 30 dias fica só em Sumidos, com o Excluir', async ({ page }) => {
   const conferirConsole = vigiarConsole(page);
   const hostname = `NB-SUMIDA-${Date.now()}`;
@@ -101,6 +121,19 @@ test('a máquina sem contato há mais de 30 dias fica só em Sumidos, com o Excl
   await expect(page.getByRole('menuitem', { name: 'Excluir' })).toBeVisible();
 
   conferirConsole();
+});
+
+test('o Atualizar agora da ficha responde no cartão, e a máquina sem agente diz que não está conectada (DK)', async ({ page }) => {
+  const hostname = `NB-ATUALIZAR-${Date.now()}`;
+  // Sem agente de verdade: a máquina do banco nunca está conectada a este processo.
+  const maquina = await criarMaquina(hostname);
+  const principal = page.getByRole('main');
+
+  await page.goto(`/agentes/${maquina}`);
+  await principal.getByRole('button', { name: `Ações de ${hostname}` }).click();
+  await page.getByRole('menuitem', { name: 'Atualizar agora' }).click();
+
+  await expect(page.getByText(`O agente de ${hostname} não está conectado agora.`)).toBeVisible();
 });
 
 test('o link de uma máquina que não existe avisa e leva de volta à lista', async ({ page }) => {

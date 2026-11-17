@@ -7,6 +7,7 @@ import { listEndpoints } from '../use-cases/list-endpoints.usecase';
 import { getEndpoint } from '../use-cases/get-endpoint.usecase';
 import { sendCommand } from '../use-cases/send-command.usecase';
 import { excluirMaquina } from '../use-cases/delete-endpoint.usecase';
+import { atualizarMaquina } from '../use-cases/refresh-endpoint.usecase';
 
 // Só HTTP: lê a requisição, chama o use-case, devolve a resposta. Sem
 // try/catch — no Fastify o handler async que rejeita cai no errorHandler
@@ -56,6 +57,12 @@ export const endpointController = {
 
     const { commandId } = await sendCommand(id, action, atorDaRequisicao(request));
     return reply.status(200).send({ message: 'Comando enviado.', commandId });
+  },
+
+  async refresh(request: FastifyRequest) {
+    const { id } = idParamSchema.parse(request.params);
+    await atualizarMaquina(id, atorDaRequisicao(request));
+    return { message: 'Máquina atualizada.' };
   },
 
   async remove(request: FastifyRequest) {

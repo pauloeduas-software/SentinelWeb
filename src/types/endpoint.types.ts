@@ -22,6 +22,8 @@ export interface Endpoint {
   osVersion: string;
   /** A série do firmware, embaixo do nome da máquina. Nula quando o agente não coletou. */
   biosSerial: string | null;
+  /** O IP da rede local, do último handshake: a coluna e a busca da lista (DJ). */
+  localIp: string | null;
   status: AgentStatus;
   lastSeen: string;
   /** A versão do SentinelAgente, do último handshake. Nula no agente anterior à A25. */

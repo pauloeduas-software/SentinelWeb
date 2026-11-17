@@ -122,6 +122,7 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
   'GET /api/endpoints': { tag: 'Agentes', resumo: 'As máquinas que o agente descobriu (?vista=com|sem|sumidos)', query: 'lista' },
   'GET /api/endpoints/:id': { tag: 'Agentes', resumo: 'A máquina descoberta' },
   'POST /api/endpoints/:id/command': { tag: 'Agentes', resumo: 'Manda um comando à máquina (desligar, reiniciar)', body: sendCommandSchema },
+  'POST /api/endpoints/:id/refresh': { tag: 'Agentes', resumo: 'Pede o inventário e a telemetria agora, e espera a resposta do agente' },
   'DELETE /api/endpoints/:id': { tag: 'Agentes', resumo: 'Exclui a máquina e revoga o token do agente dela' },
   'POST /api/endpoints/:id/link': { tag: 'Agentes', resumo: 'Vincula a máquina a um computador', body: vinculoSchema, status: 201 },
   'DELETE /api/endpoints/:id/link': { tag: 'Agentes', resumo: 'Desfaz o vínculo' },

@@ -19,7 +19,7 @@ import { usePode } from '../../stores/auth.store';
 export default function AgentesPage() {
   const {
     vista, trocarVista, contagem, maquinas, carregando, erro,
-    cobertura, erroDaCobertura, ocupado, handleVincular, handleDesvincular, handleExcluir,
+    cobertura, erroDaCobertura, ocupado, handleVincular, handleDesvincular, handleAtualizar, handleExcluir,
   } = useAgentes();
   // Excluir é `SUPERVISOR` no servidor (AV), como todo excluir: o Técnico vincula
   // e desvincula, e não vê o item.
@@ -50,6 +50,7 @@ export default function AgentesPage() {
         ocupado={ocupado}
         onVincular={handleVincular}
         onDesvincular={(maquina) => void handleDesvincular(maquina)}
+        onAtualizar={(maquina) => void handleAtualizar(maquina)}
         onExcluir={podeExcluir ? (maquina) => void handleExcluir(maquina) : undefined}
       />
     </div>

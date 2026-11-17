@@ -27,6 +27,7 @@ export function useFichaDaMaquina() {
     voltar,
 
     ocupado: acoes.ocupado,
+    handleAtualizar: () => (maquina ? acoes.handleAtualizar(maquina) : Promise.resolve()),
     handleVincular: acoes.handleVincular,
     vinculando,
     abrirVinculo: () => setVinculando(true),

@@ -175,7 +175,10 @@ test('na máquina sem computador, o Técnico vincula, e o Excluir não aparece',
 
   await page.goto(`/agentes/${id}`);
   await expect(principal.getByRole('button', { name: 'Vincular a um computador' }).first()).toBeVisible();
-  await expect(principal.getByRole('button', { name: `Ações de ${hostname}` })).toHaveCount(0);
+  // O `⋯` da ficha tem o Atualizar agora, que o Técnico faz (DK), e não o Excluir.
+  await principal.getByRole('button', { name: `Ações de ${hostname}` }).click();
+  await expect(page.getByRole('menuitem', { name: 'Atualizar agora' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Excluir' })).toHaveCount(0);
 
   await fechar();
 });

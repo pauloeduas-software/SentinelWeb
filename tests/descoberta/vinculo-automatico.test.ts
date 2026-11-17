@@ -117,8 +117,11 @@ describe('a série que não prova nada não liga', () => {
     const a = await maquina('repetido-a', {
       BiosSerial: 'ABC123456', SystemUuid: '4c4c4544-0000-1000-8000-00000000000a', Hostname: 'pc-repetido-a',
     });
-    // A primeira pode ter ligado antes de a segunda chegar: o parque só desmente o
-    // serial quando vê a repetição. Desliga, para medir a regra com as duas à vista.
+    // A primeira liga sozinha antes de a segunda chegar: o parque só desmente o serial
+    // quando vê a repetição. Espera o vínculo do handshake terminar, que roda depois de a
+    // máquina ser gravada, e desliga, para medir a regra com as duas à vista. Desligado
+    // antes, o vínculo em curso religava e o teste reprovava de vez em quando.
+    await esperarPor('o vínculo da primeira', () => prisma.endpoint.findFirst({ where: { id: a.id, assetId: { not: null } } }));
     await prisma.endpoint.update({ where: { id: a.id }, data: { assetId: null } });
     const b = await maquina('repetido-b', {
       BiosSerial: 'ABC123456', SystemUuid: '4c4c4544-0000-1000-8000-00000000000b', Hostname: 'pc-repetido-b',

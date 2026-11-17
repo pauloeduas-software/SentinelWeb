@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Link2, MonitorCheck, Trash2, Unlink } from 'lucide-react';
+import { Link2, MonitorCheck, RefreshCw, Trash2, Unlink } from 'lucide-react';
 import VincularMaquinaForm from './VincularMaquinaForm';
 import AcoesDaLinha from '../../../components/AcoesDaLinha';
 import ListaVazia from '../../../components/ListaVazia';
@@ -23,7 +23,8 @@ import type { VistaDosAgentes } from '../hooks/useAgentes';
 // si, o computador que ela é e como ela está agora. O `⋯` faz o mesmo que a ficha,
 // sem abrir — o vínculo mora nesta tela (BZ).
 //
-// COM COMPUTADOR: o `⋯` desvincula.
+// COM COMPUTADOR: o `⋯` desvincula. Nas três vistas, ele também atualiza a
+// máquina agora (DK).
 //
 // SEM COMPUTADOR: a série não a ligou sozinha, e a coluna Computador fica com o
 // traço. Qual computador ela parece ser, ou por que não ligou, está na ficha (DI),
@@ -43,6 +44,7 @@ interface Props {
   ocupado: boolean;
   onVincular: (endpointId: string, assetId: string, targetWorkstationId: string | null) => Promise<void>;
   onDesvincular: (maquina: Endpoint) => void;
+  onAtualizar: (maquina: Endpoint) => void;
   /** Só para o Supervisor: sem ele, o item não aparece. */
   onExcluir?: (maquina: Endpoint) => void;
 }
@@ -55,7 +57,7 @@ const FRASE_DA_LISTA_VAZIA: Record<VistaDosAgentes, string> = {
 
 
 export default function MaquinasTable({
-  vista, lista, carregando, erro, ocupado, onVincular, onDesvincular, onExcluir,
+  vista, lista, carregando, erro, ocupado, onVincular, onDesvincular, onAtualizar, onExcluir,
 }: Props) {
   const navigate = useNavigate();
   // A MÁQUINA NO PAINEL DE VÍNCULO: a linha, e não o id. Quando a entrega é recusada
@@ -68,7 +70,7 @@ export default function MaquinasTable({
       <ListToolbar
         search={lista.search}
         onSearchChange={lista.changeSearch}
-        placeholder="Buscar por máquina, computador ou série…"
+        placeholder="Buscar por máquina, computador, série ou IP…"
         page={lista.page}
         perPage={lista.perPage}
         total={lista.total}
@@ -81,6 +83,7 @@ export default function MaquinasTable({
             <TableRow>
               <TableHead>Máquina</TableHead>
               <TableHead coluna="etiqueta" aparece="lg">Computador</TableHead>
+              <TableHead coluna="ip" aparece="3xl">Endereço IP</TableHead>
               <TableHead aparece="4xl">Sistema operacional</TableHead>
               <TableHead coluna="curta" aparece="5xl">Versão</TableHead>
               <TableHead coluna="dataHora" aparece="2xl">Último contato</TableHead>
@@ -114,6 +117,7 @@ export default function MaquinasTable({
                       <TableLinha>—</TableLinha>
                     )}
                   </TableCell>
+                  <TableCell aparece="3xl" className="font-mono">{maquina.localIp ?? '—'}</TableCell>
                   <TableCell aparece="4xl">{maquina.osVersion}</TableCell>
                   <TableCell aparece="5xl" className="font-mono">{maquina.agentVersion ?? '—'}</TableCell>
                   <TableCell aparece="2xl">{formatarDataHora(maquina.lastSeen)}</TableCell>
@@ -123,14 +127,15 @@ export default function MaquinasTable({
                   <TableCellAcoes>
                     <AcoesDaLinha
                       nome={maquina.hostname}
-                      acoes={asset
-                        ? [{ rotulo: 'Desvincular', icone: Unlink, onClick: () => onDesvincular(maquina), disabled: ocupado }]
-                        : [
-                          { rotulo: 'Vincular a um computador', icone: Link2, onClick: () => setVinculando(maquina), disabled: ocupado },
-                          onExcluir && {
-                            rotulo: 'Excluir', icone: Trash2, onClick: () => onExcluir(maquina), disabled: ocupado, perigo: true,
-                          },
-                        ]}
+                      acoes={[
+                        asset
+                          ? { rotulo: 'Desvincular', icone: Unlink, onClick: () => onDesvincular(maquina), disabled: ocupado }
+                          : { rotulo: 'Vincular a um computador', icone: Link2, onClick: () => setVinculando(maquina), disabled: ocupado },
+                        { rotulo: 'Atualizar agora', icone: RefreshCw, onClick: () => onAtualizar(maquina), disabled: ocupado },
+                        !asset && onExcluir && {
+                          rotulo: 'Excluir', icone: Trash2, onClick: () => onExcluir(maquina), disabled: ocupado, perigo: true,
+                        },
+                      ]}
                     />
                   </TableCellAcoes>
                 </TableRow>

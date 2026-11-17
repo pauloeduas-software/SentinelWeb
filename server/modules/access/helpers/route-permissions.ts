@@ -140,6 +140,8 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   'POST /api/endpoints/:id/link-and-checkout': 'TECNICO',
   'DELETE /api/endpoints/:id/link': 'TECNICO',
   'POST /api/endpoints/:id/command': 'SUPERVISOR',
+  // Só lê a máquina (DK): o Técnico atualiza, como vê.
+  'POST /api/endpoints/:id/refresh': 'TECNICO',
   'DELETE /api/endpoints/:id': 'SUPERVISOR',
   'GET /api/settings/next-asset-tag': 'TECNICO',
 

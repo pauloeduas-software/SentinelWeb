@@ -21,7 +21,7 @@ export type VistaDosAgentes = typeof VISTAS[number];
 /** Onde a busca procura: a máquina e o computador, e nunca id. */
 function textoDaMaquina(maquina: Endpoint): string {
   return [
-    maquina.hostname, maquina.osVersion, maquina.biosSerial, maquina.agentVersion,
+    maquina.hostname, maquina.osVersion, maquina.biosSerial, maquina.localIp, maquina.agentVersion,
     maquina.asset?.assetTag, maquina.asset?.name, maquina.asset?.serial,
   ].filter(Boolean).join(' ');
 }

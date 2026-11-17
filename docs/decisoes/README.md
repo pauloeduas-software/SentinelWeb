@@ -107,6 +107,7 @@ ponte ITAM×RMM.
 | **BZ** (em parte: Agentes sem ficha de máquina), **DD** (em parte: o `?maquina=`), **CE** (em parte: a tabela sem as datas da entrega) | **DF** | a máquina tem ficha em `/agentes/:id`, com o card, a aba Computador e a aba Máquina; a linha da lista e a da aba Máquina abrem a ficha |
 | **G** (em parte: o corte sem volta prevista) | **DG** | a coleta do software instalado e a conformidade de licença voltam como trabalho futuro; nada muda no código agora |
 | **CW** (em parte: o Sem agente só como o computador sem máquina), **DC** (em parte: o aviso na lista) | **DI** | Com agente conta o computador com máquina que deu sinal em 30 dias, o número da vista Com computador; Sem agente é o resto, e Agentes fecha |
+| **DA** (em parte: o IP fora da lista) | **DJ** | a lista de Agentes mostra o IP, e a busca da tela o acha |
 | **D27**, **D29**, **D30**, **D87**, **D88** (aceite) | **D150** | o termo sai; o `resolverEscalonamento()` (D73) fica |
 | **D57**, **D125**–**D128** (alertas) | **D151** | os sinais continuam consultáveis; empurrá-los sai. O D79 **não** sai |
 | **D55** (valor contábil) | **D152** | `purchaseCost` fica; a amortização sai |

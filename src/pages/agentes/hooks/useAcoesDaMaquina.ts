@@ -1,12 +1,12 @@
 import {
-  useDesvincularMaquina, useExcluirMaquina, useVincularEEntregar, useVincularMaquina,
+  useAtualizarMaquina, useDesvincularMaquina, useExcluirMaquina, useVincularEEntregar, useVincularMaquina,
 } from '../../../queries/reconciliation.queries';
 import { linksDoErro } from '../../../helpers/erro.helper';
 import { confirmar } from '../../../hooks/useConfirmacao';
 import { useNotificacao } from '../../../hooks/useNotificacao';
 
-// O QUE SE FAZ COM UMA MÁQUINA: vincular, desvincular e excluir, com a pergunta e o
-// cartão de cada um. A linha da lista e a ficha da máquina (DF) usam o mesmo.
+// O QUE SE FAZ COM UMA MÁQUINA: vincular, desvincular, excluir e atualizar, com a
+// pergunta e o cartão de cada um. A linha da lista e a ficha da máquina (DF) usam o mesmo.
 
 /** O que as perguntas precisam da máquina: a linha da lista e a ficha têm. */
 interface MaquinaDaAcao {
@@ -21,9 +21,28 @@ export function useAcoesDaMaquina() {
   const vincularEEntregar = useVincularEEntregar();
   const desvincular = useDesvincularMaquina();
   const excluir = useExcluirMaquina();
+  const atualizar = useAtualizarMaquina();
 
   return {
+    // Sem o Atualizar agora: ele espera a máquina por até 15 s, e não conflita com o
+    // resto. O servidor trava o vínculo e junta os pedidos repetidos da mesma máquina (DK).
     ocupado: vincular.isPending || vincularEEntregar.isPending || desvincular.isPending || excluir.isPending,
+
+    /**
+     * ATUALIZAR AGORA (DK): o inventário e a telemetria na hora. Sem pergunta, porque
+     * só lê a máquina. A máquina desconectada, o agente antigo e a que não respondeu
+     * voltam na frase do servidor, como o comando: o status da tela atrasa. A espera
+     * fica no cartão, que a resposta substitui: o item do `⋯` não tem onde mostrá-la.
+     */
+    handleAtualizar: async (maquina: MaquinaDaAcao) => {
+      notificar.info(`Atualizando ${maquina.hostname}…`);
+      try {
+        await atualizar.mutateAsync(maquina.id);
+        notificar.sucesso('Máquina atualizada.');
+      } catch (falha) {
+        notificar.erro((falha as Error).message || 'Não foi possível atualizar a máquina.');
+      }
+    },
 
     /**
      * VINCULAR À MÃO, e opcionalmente ENTREGAR ao posto na mesma ida.

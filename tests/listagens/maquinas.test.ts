@@ -42,6 +42,7 @@ afterAll(async () => {
 interface Maquina {
   id: string;
   hostname: string;
+  localIp: string | null;
   asset: { id: string; assetTag: string; name: string | null } | null;
 }
 
@@ -139,6 +140,17 @@ describe('as vistas', () => {
     const { status, body } = await listar('?vista=sem&page=1&perPage=10&q=lista');
     expect(status).toBe(200);
     expect(body.rows.every((linha) => linha.asset === null)).toBe(true);
+  });
+
+  it('a linha traz o IP do handshake, que a coluna e a busca da tela leem (DJ)', async () => {
+    const hwid = 'lista-com-ip';
+    const agente = await conectarAgente(api, hwid);
+    await agente.handshake({ Hostname: hwid, LocalIp: '10.20.30.40' });
+    await esperarPor(hwid, () => prisma.endpoint.findUnique({ where: { hwid } }));
+    await agente.fechar();
+
+    const { body } = await listar('?vista=sem');
+    expect(body.rows.find((linha) => linha.hostname === hwid)?.localIp).toBe('10.20.30.40');
   });
 });
 

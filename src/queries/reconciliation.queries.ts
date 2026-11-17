@@ -91,6 +91,20 @@ export function useExcluirMaquina() {
 }
 
 /**
+ * ATUALIZAR AGORA — `POST /api/endpoints/:id/refresh` (DK). A rota volta quando a
+ * máquina respondeu com o inventário e a telemetria, então a releitura já traz o
+ * dado novo. Invalida o mesmo que o vínculo: o handshake novo pode ligar a máquina
+ * pela série, como qualquer handshake.
+ */
+export function useAtualizarMaquina() {
+  const invalidar = useInvalidarTudo();
+  return useMutation({
+    mutationFn: async (endpointId: string) => (await apiClient.post(`/endpoints/${endpointId}/refresh`, {})).data,
+    onSettled: () => invalidar(),
+  });
+}
+
+/**
  * VINCULAR À MÃO — `POST /api/endpoints/:id/link`.
  *
  * A máquina que a série não ligou sozinha (série da placa, nome que não bate,

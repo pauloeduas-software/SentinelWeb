@@ -1,4 +1,4 @@
-import { Cpu, Link2, Monitor, Trash2, Unlink } from 'lucide-react';
+import { Cpu, Link2, Monitor, RefreshCw, Trash2, Unlink } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import AvisoDoVinculo from './components/AvisoDoVinculo';
 import ComputadorTab from './components/ComputadorTab';
@@ -36,7 +36,7 @@ export default function MaquinaFichaPage() {
 
 function FichaDaMaquina() {
   const {
-    maquina, carregando, erro, voltar, ocupado, handleVincular,
+    maquina, carregando, erro, voltar, ocupado, handleAtualizar, handleVincular,
     vinculando, abrirVinculo, fecharVinculo, handleDesvincular, handleExcluir,
   } = useFichaDaMaquina();
   // Excluir é `SUPERVISOR` no servidor (AV); vincular e desvincular, o Técnico faz.
@@ -57,18 +57,25 @@ function FichaDaMaquina() {
       <div className="space-y-6">
         <IdentificacaoDaMaquina
           maquina={maquina}
-          acoes={maquina.asset ? (
-            <Button variant="outline" size="sm" disabled={ocupado} onClick={() => void handleDesvincular()}><Unlink /> Desvincular</Button>
-          ) : (
+          acoes={(
             <>
-              <Button size="sm" disabled={ocupado} onClick={abrirVinculo}><Link2 /> Vincular a um computador</Button>
-              {/* A máquina com computador desvincula antes de excluir (DD): o item nem aparece. */}
-              {podeExcluir && (
-                <AcoesDaLinha
-                  nome={maquina.hostname}
-                  acoes={[{ rotulo: 'Excluir', icone: Trash2, onClick: () => void handleExcluir(), disabled: ocupado, perigo: true }]}
-                />
+              {maquina.asset ? (
+                <Button variant="outline" size="sm" disabled={ocupado} onClick={() => void handleDesvincular()}><Unlink /> Desvincular</Button>
+              ) : (
+                <Button size="sm" disabled={ocupado} onClick={abrirVinculo}><Link2 /> Vincular a um computador</Button>
               )}
+              <AcoesDaLinha
+                nome={maquina.hostname}
+                acoes={[
+                  // Habilitado também na desconectada, como os comandos: o status da
+                  // tela atrasa, e quem responde é o servidor (DK).
+                  { rotulo: 'Atualizar agora', icone: RefreshCw, onClick: () => void handleAtualizar(), disabled: ocupado },
+                  // A máquina com computador desvincula antes de excluir (DD): o item nem aparece.
+                  podeExcluir && !maquina.asset && {
+                    rotulo: 'Excluir', icone: Trash2, onClick: () => void handleExcluir(), disabled: ocupado, perigo: true,
+                  },
+                ]}
+              />
             </>
           )}
         />

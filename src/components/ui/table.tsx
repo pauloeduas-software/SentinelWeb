@@ -19,7 +19,7 @@ function tituloDe(conteudo: ReactNode): string | undefined {
 }
 
 /** O tipo da coluna, que dá a largura. A do nome não tem tipo: fica com o que sobra. */
-export type TipoDeColuna = 'etiqueta' | 'relacao' | 'rotulo' | 'quantidade' | 'prazo' | 'data' | 'dataHora' | 'curta' | 'status' | 'contagem';
+export type TipoDeColuna = 'etiqueta' | 'relacao' | 'rotulo' | 'quantidade' | 'prazo' | 'data' | 'dataHora' | 'curta' | 'status' | 'contagem' | 'ip';
 
 const LARGURA: Record<TipoDeColuna, string> = {
   etiqueta: 'w-36 @lg:w-44',
@@ -32,6 +32,8 @@ const LARGURA: Record<TipoDeColuna, string> = {
   curta: 'w-24',
   status: 'w-36 @md:w-44',
   contagem: 'w-24 text-right',
+  // O IPv4 mais largo, `255.255.255.255` em mono, sem o `…` (DJ).
+  ip: 'w-52',
 };
 
 /** A partir de que largura da moldura a coluna aparece. Sem ela, aparece sempre. */

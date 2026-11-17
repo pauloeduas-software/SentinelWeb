@@ -64,8 +64,8 @@ Na ordem do menu, que se agrupa por assunto ([AH](./docs/decisoes/acesso.md#ah--
 |  | `/estoque/:id` | Ficha do item — a conta e o cadastro no card, abas **Responsáveis** (com a devolução) e **Histórico** | TECNICO |
 |  | `/licencas` | Contratos de software: quantidade comprada, chaves, entregas a colaborador ou computador; a encerrada fica na lista, com Reabrir | TECNICO |
 |  | `/licencas/:id` | Ficha da licença — a conta e o cadastro no card, abas **Responsáveis** (com a devolução), **Chaves** e **Histórico** | TECNICO |
-| **Convergência** | `/agentes` | As máquinas com o SentinelAgente — a série única liga a máquina ao computador sozinha; a vista Com computador desvincula, a Sem computador vincula à mão, e a Sumidos mostra quem parou de dar sinal. Excluir a máquina é do Supervisor | TECNICO |
-|  | `/agentes/:id` | Ficha da máquina — o que ela diz de si no card, com Vincular, Desvincular e Excluir, e as abas **Computador** (o vinculado, ou a dica e o Vincular) e **Máquina** (telemetria e comandos) | TECNICO |
+| **Convergência** | `/agentes` | As máquinas com o SentinelAgente — a série única liga a máquina ao computador sozinha; a vista Com computador desvincula, a Sem computador vincula à mão, e a Sumidos mostra quem parou de dar sinal. A busca acha a máquina pelo IP, e o `⋯` atualiza a máquina agora. Excluir a máquina é do Supervisor | TECNICO |
+|  | `/agentes/:id` | Ficha da máquina — o que ela diz de si no card, com Vincular ou Desvincular, e no `⋯` o Atualizar agora e o Excluir; o aviso de qual computador ela parece ser; e as abas **Computador** (o vinculado, ou o Vincular) e **Máquina** (telemetria e comandos) | TECNICO |
 | **Pessoas** | `/colaboradores` | Quem recebe equipamento — criar, editar, desativar, excluir para a lixeira e restaurar. Não entra no sistema: quem opera é usuário | TECNICO |
 |  | `/colaboradores/:id` | Ficha do colaborador — as notas, os computadores entregues a ele, os postos ocupados, o estoque e as licenças no nome dele, e o histórico | TECNICO |
 | **Sistema** | `/configuracoes` | As seis abas de referência — categorias, fabricantes, modelos, localizações, status e motivos de baixa | SUPERVISOR |

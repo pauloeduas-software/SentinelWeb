@@ -3,6 +3,7 @@ import { toHandshakeData, toTelemetryData } from '../helpers/normalize-payload.h
 import { registerHandshake } from '../../endpoint/use-cases/register-handshake.usecase';
 import { saveTelemetry } from '../../endpoint/use-cases/save-telemetry.usecase';
 import { touchEndpoint } from '../../endpoint/use-cases/touch-endpoint.usecase';
+import { registrarRespostaDoAgente } from '../../endpoint/use-cases/refresh-endpoint.usecase';
 import { vincularPelaSerie } from '../../reconciliation/use-cases/auto-link-endpoint.usecase';
 import { shortHwid } from '../../endpoint/helpers/hwid.helper';
 import { desconectarAgente } from '../agent.registry';
@@ -30,11 +31,14 @@ export async function handleAgentMessage(message: ParsedAgentMessage): Promise<v
         break;
       }
       await vincularPelaSerie(endpointId);
+      // Depois de gravar e vincular: o Atualizar agora (DK) volta com a ficha já relida.
+      registrarRespostaDoAgente(message.hwid, 'Handshake');
       break;
     }
 
     case 'Telemetry':
       await saveTelemetry(toTelemetryData(message));
+      registrarRespostaDoAgente(message.hwid, 'Telemetry');
       break;
 
     case 'Ping':
