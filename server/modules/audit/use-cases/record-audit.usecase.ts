@@ -22,6 +22,9 @@ const logger = createLogger('auditoria');
 // tabela, só ganha `endedAt`. Ter as duas palavras é o que deixa o histórico
 // distinguir "a Laura saiu da Mesa 1" de "o vínculo foi cadastrado errado e
 // removido" — dois eventos diferentes que um `DELETE` para ambos apagaria.
+// `PURGE` é a exclusão de vez da lixeira (DL): `DELETE` manda o colaborador e
+// o computador para a lixeira, de onde `RESTORE` os traz; depois do `PURGE` a
+// linha não existe mais, e esta é a última testemunha dela.
 // `CHECKOUT` e `CHECKIN` são a ENTREGA e a DEVOLUÇÃO de um ativo
 // (`Assignment`). Separadas de `UPDATE` porque não são uma edição de campo:
 // são as duas únicas operações que escrevem posse, e quem audita quer lê-las
@@ -46,7 +49,7 @@ const logger = createLogger('auditoria');
 // banco, então encurtá-la não pede migração — e as linhas antigas de ações que
 // não existem mais continuam legíveis, com o valor cru no lugar do rótulo.
 type AuditAction =
-  | 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE' | 'END'
+  | 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE' | 'PURGE' | 'END'
   | 'CHECKOUT' | 'CHECKIN' | 'RETIRE' | 'UNRETIRE'
   | 'LINK' | 'UNLINK'
   | 'LOGIN' | 'LOGOUT' | 'LOGIN_FAILED'

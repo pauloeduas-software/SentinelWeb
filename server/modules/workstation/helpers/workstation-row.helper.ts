@@ -31,7 +31,7 @@ interface PostoLido {
   updatedAt: Date;
   locationId: string;
   location: { id: string; name: string };
-  assignments: { asset: { assetTag: string; serial: string | null } }[];
+  assignments: { asset: { assetTag: string; serial: string | null } | null }[];
 }
 
 export interface WorkstationRow {
@@ -74,14 +74,15 @@ export function ehPostoVago(totalOcupantes: number, totalAtivos: number): boolea
  * junção em memória — o mesmo desenho do `resolverResponsaveisEmLote`.
  */
 export function agruparOcupantes(
-  ocupacoes: readonly (OcupanteDoPosto & { workstationId: string | null })[],
+  ocupacoes: readonly (Omit<OcupanteDoPosto, 'personId'> & { workstationId: string | null; personId: string | null })[],
 ): Map<string, OcupanteDoPosto[]> {
   const porPosto = new Map<string, OcupanteDoPosto[]>();
 
   for (const ocupacao of ocupacoes) {
-    // Aberta aponta sempre para o posto (CHECK `workstation_occupants_posto_presente`);
-    // nulo só na encerrada de um posto excluído, que quem chama nem consulta.
-    if (!ocupacao.workstationId) continue;
+    // Aberta aponta sempre para o posto e para a pessoa (CHECKs
+    // `workstation_occupants_posto_presente` e `_pessoa_presente`); nulos só na
+    // encerrada de um posto ou colaborador excluído, que quem chama nem consulta.
+    if (!ocupacao.workstationId || !ocupacao.personId) continue;
 
     // `workstationId` fica FORA da linha devolvida: ele é a chave do agrupamento,
     // e repetido dentro de cada ocupante de um posto que já se sabe qual é
@@ -106,7 +107,8 @@ export function montarLinhaDePosto(
   ocupantesPorPosto: Map<string, OcupanteDoPosto[]>,
 ): WorkstationRow {
   const ocupantes = ocupantesPorPosto.get(posto.id) ?? [];
-  const computadores = posto.assignments.map((posse) => posse.asset);
+  // A posse aberta sempre tem o computador (CHECK `assignments_ativo_presente`).
+  const computadores = posto.assignments.flatMap((posse) => (posse.asset ? [posse.asset] : []));
   const totalAtivos = computadores.length;
 
   return {

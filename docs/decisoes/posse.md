@@ -561,6 +561,10 @@ saiu porque, na forma final, vincular máquina não decide a vaga; a vaga é dec
 
 ## V — Excluir não apaga o passado: localização por referência, colaborador pela lixeira
 
+> **Superada em parte por [DL](#dl--da-lixeira-o-colaborador-e-o-computador-se-excluem-de-vez-e-o-histórico-dos-outros-guarda-o-nome):** da lixeira, o colaborador
+> e o computador se excluem de vez, e o histórico dos outros guarda o nome por escrito, como o do
+> posto. O "não há apagar de vez" sai.
+
 > **Superada em parte por [Y](#y--o-posto-sai-de-location-localização-guarda-posto-recebe):** o posto sai de `Location` e vira `Workstation`: a localização só guarda, com a regra do status; o posto recebe entrega, estoque e ocupante.
 
 > **Superada em parte por [AE](./estoque.md#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira):**
@@ -1109,3 +1113,58 @@ dá à reserva vencida o status Atrasada.
 **O que ficou de fora:** o lembrete por e-mail e a lista de atrasados, que saíram com o correio e os relatórios
 ([O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai)). A coluna Devolução
 prevista das fichas do colaborador e do posto continua só com a data: as duas telas estão fechadas.
+
+---
+
+## DL — Da lixeira, o colaborador e o computador se excluem de vez, e o histórico dos outros guarda o nome
+
+**Decidido** (2026-11-17, a pedido do usuário: o colaborador ou o computador cadastrado por engano
+ficava na lixeira para sempre. Dada a comparação com o GLPI, o Snipe-IT, o ServiceNow, o
+Lansweeper e o Shelf.nu, ele escolheu excluir de vez mesmo com histórico, como no GLPI):
+
+- **Dois passos, como o GLPI.** Excluir continua mandando para a lixeira, com Restaurar. Na
+  Lixeira, a linha e a ficha ganham **Excluir de vez**, no `⋯`, só para o Supervisor
+  (`DELETE /api/people/:id/permanent`, `DELETE /api/assets/:id/permanent`). Fora da lixeira é
+  404 `Colaborador não está na lixeira.` / `Computador não está na lixeira.`
+- **Com histórico também, na regra do posto.** As linhas já fechadas que apontam para o excluído
+  — a posse, a ocupação, a entrega de licença e a de estoque — perdem a ligação e guardam o nome
+  por escrito: `targetPersonName`, `personName`, `assignedPersonName` para o colaborador;
+  `assetLabel`, `assignedAssetLabel`, `targetAssetLabel` ("ATV-00042 — Dell Latitude") para o
+  computador. O histórico do computador, do posto, da licença e do item continua dizendo
+  "Laura Souza", e o do colaborador e do posto, "ATV-00042 — Dell Latitude". **Some a ficha** do
+  excluído, com o histórico dela.
+- **A pergunta diz o que se perde e o que fica:** `Excluir "Laura Souza" de vez? A ficha e o
+  histórico somem, e não há como restaurar. O histórico dos computadores, postos, licenças e
+  itens continua com o nome por escrito.` A notificação: `Colaborador excluído de vez.`,
+  `Computador excluído de vez.`
+- **No banco, a rede:** os CHECKs da forma (`assignments_alvo_coerente`,
+  `license_checkouts_alvo_xor`, `stock_movements_forma`) aceitam a linha sem a FK do alvo só
+  fechada e com o nome; dois novos (`assignments_ativo_presente`,
+  `workstation_occupants_pessoa_presente`) fazem o mesmo para o computador da posse e a pessoa da
+  ocupação. A posse perde o `Cascade` no computador e fica `Restrict`, como as outras: a linha
+  aberta segura o `DELETE`.
+- **A auditoria** grava `PURGE` com o retrato da linha: é o que sobra dela.
+- **As travas na ordem do id:** a exclusão de vez, a do posto, a do item e a da licença desligam
+  algumas das mesmas linhas, e todas travam na ordem do id antes de desligar.
+
+**Supera:** em parte [V](#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira)
+(não há "apagar de vez") e em parte [AI](./estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar)
+(o componente sem nome por escrito do computador).
+**Mantém:** a lixeira e o Restaurar dos dois (V), o computador entregue fora da lixeira
+([AL](#al--o-computador-entregue-não-vai-para-a-lixeira)), o baixado fora da lixeira
+([CL](./catalogo-e-ativo.md#cl--o-baixado-não-vai-para-a-lixeira-e-a-máquina-sai-antes-da-baixa-e-da-lixeira)),
+e a regra do posto para o posto, o item e a licença (AG).
+
+**Por quê:** a lixeira protegia o histórico, mas não deixava sair nem o cadastro errado, e
+acumulava. Os outros sistemas todos têm a saída: o GLPI exclui de vez da lixeira, um a um; o
+Snipe-IT apaga todos os excluídos de uma vez; o ServiceNow e o Lansweeper excluem sem volta; o
+Shelf.nu exige arquivar antes. Nenhum exige "sem histórico". Aqui o nome por escrito, que o posto,
+o item e a licença já usavam, faz a exclusão de vez não apagar o histórico de ninguém além do
+próprio excluído — e as cinco exclusões passam a seguir a mesma regra.
+
+**Por que não "só sem histórico":** resolveria o cadastro feito por engano, mas deixaria preso para
+sempre quem teve um empréstimo e saiu da empresa, e o usuário preferiu poder excluir.
+
+**O custo:** sete colunas de nome por escrito e os CHECKs reescritos; cada leitura de histórico
+cai no nome quando a ligação vem vazia.
+

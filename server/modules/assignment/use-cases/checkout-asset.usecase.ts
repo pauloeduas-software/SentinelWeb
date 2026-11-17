@@ -92,13 +92,14 @@ async function instanteDaEntrega(
   const doPosto = posto ? await client.assignment.findFirst({
     where: { targetWorkstationId: posto.id, checkinAt: { not: null } },
     orderBy: { checkinAt: 'desc' },
-    select: { checkinAt: true, asset: { select: { assetTag: true } } },
+    // O computador excluído de vez deixou o rótulo por escrito (DL).
+    select: { checkinAt: true, assetLabel: true, asset: { select: { assetTag: true } } },
   }) : null;
   const postoLiberadoEm = doPosto?.checkinAt;
   if (postoLiberadoEm && dia < hojeNoBrasil(postoLiberadoEm)) {
     throw new AppError(
       `A entrega (${diaEmPortugues(dia)}) não pode ser antes da última devolução no posto ${posto?.nome}: `
-      + `${doPosto.asset.assetTag} saiu dele em ${diaEmPortugues(hojeNoBrasil(postoLiberadoEm))}, `
+      + `${doPosto.asset?.assetTag ?? doPosto.assetLabel} saiu dele em ${diaEmPortugues(hojeNoBrasil(postoLiberadoEm))}, `
       + 'e o posto tem um computador por vez.',
       422,
     );

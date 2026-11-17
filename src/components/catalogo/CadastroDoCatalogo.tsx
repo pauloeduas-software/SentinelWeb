@@ -33,7 +33,7 @@ export default function CadastroDoCatalogo({ titulo, specs, caminhoDaFicha }: Ca
     spec, changeTab, registros, total, page, perPage, setPage, parametros,
     search, buscaFeita, changeSearch, tipo, changeTipo, view, changeView, status, escolherStatus, contagens,
     loading, erro, padroesDoNovo, modalAberto, emEdicao,
-    openCreate, openEdit, closeModal, handleSubmit, handleDelete, handleRestore,
+    openCreate, openEdit, closeModal, handleSubmit, handleDelete, handleRestore, handlePurge,
     openAcao,
   } = useCatalog(specs);
 
@@ -95,6 +95,7 @@ export default function CadastroDoCatalogo({ titulo, specs, caminhoDaFicha }: Ca
         onDelete={podeDecidir ? handleDelete : undefined}
         onAcao={abrirAcao}
         onRestore={comLixeira && view === 'trashed' ? handleRestore : undefined}
+        onPurge={comLixeira && view === 'trashed' ? handlePurge : undefined}
         vazio={
           <ListaVazia
             icone={spec.icone}

@@ -22,6 +22,8 @@ export const ASSIGNMENT_SELECT = {
   // O nome por escrito do posto que foi excluído: sem ele, o histórico do ativo
   // diria "Entregue:" e nada.
   targetWorkstationName: true,
+  // E o do colaborador excluído de vez da lixeira (DL).
+  targetPersonName: true,
 
   checkoutAt: true,
   expectedCheckinAt: true,

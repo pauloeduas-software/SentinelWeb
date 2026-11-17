@@ -311,7 +311,7 @@ Dois seeds, com regras diferentes:
 | | `bun run db:seed` — o principal | `bun run db:seed:demo` — demonstração |
 |---|---|---|
 | onde roda | todo banco, produção incluída, e antes de cada arquivo de teste | só quando alguém pede: ambiente de desenvolvimento e demonstração |
-| o que cria | o que é do SOFTWARE: as 12 categorias, os 4 status (Disponível, Em uso, Pendente, Inutilizável), os 6 motivos de baixa e a configuração — nenhuma conta ([T](../decisoes/acesso.md#t--não-há-conta-semeada)) | o que é da EMPRESA, como exemplo: fabricantes, modelos, localizações, colaboradores, licenças e itens de estoque (abaixo), e a conta de entrar. Roda o principal antes |
+| o que cria | o que é do SOFTWARE: as 12 categorias, os 4 status (Disponível, Em uso, Pendente, Inutilizável), os 6 motivos de baixa e a configuração — nenhuma conta ([T](../decisoes/acesso.md#t--não-há-conta-semeada)) | o que é da EMPRESA, como exemplo: fabricantes, modelos, localizações, postos, colaboradores, licenças, itens de estoque e computadores (abaixo), e a conta de entrar. Roda o principal antes |
 | arquivos | `prisma/seeds/*.seed.ts`, ordem em `prisma/seeds/index.ts` | `prisma/seeds/demo/*.seed.ts`, ordem em `prisma/seeds/demo/index.ts` |
 
 Fabricante, modelo e localização ficam **fora** do principal de propósito:
@@ -324,9 +324,11 @@ cadastram os próprios.
 |---|---|
 | **Modelos** | um por fabricante, a linha mais popular — Inspiron 15, IdeaPad 3, Vivobook 15, Aspire 5, MacBook Air, Galaxy Book —, a Microsoft sem modelo, e Desktop montado e Servidor montado. Sem número de modelo: cada linha tem dezenas de variações, e um número inventado seria dado errado |
 | **Localizações** | Matriz, Filial (exemplo), Depósito de TI (onde fica o estoque) e Home office (uma só para todo mundo de casa, sem endereço) |
-| **Colaboradores** | PESSOA1 a PESSOA5, com e-mail `pessoa1@gmail.com` a `pessoa5@gmail.com` |
+| **Postos** | MesaRecepção, MesaFinanceiro, MesaRH e MesaTI na Matriz, e MesaFilial na Filial. Vagos: sem computador e sem ninguém |
+| **Colaboradores** | Ana Souza, Bruno Lima, Carla Mendes, Diego Rocha e Fernanda Alves, com e-mail `nome.sobrenome@example.com` |
 | **Licenças** | duas por categoria: Windows 11 Pro e Windows 10 Pro, Microsoft 365 e WinRAR (uma licença só, para a empresa inteira), Norton 360 e McAfee Total Protection, Adobe Photoshop e Canva Pro (só as da Microsoft com fabricante). Como recém-cadastradas: sem data, por isso sempre ativas, sem chave e sem entrega |
 | **Estoque** | Mouse USB, Teclado USB, Headset, Webcam, Monitor 24", Cabo HDMI, Adaptador USB-C para HDMI, Memória RAM 8 GB, SSD 480 GB, Pilha AA e Toner para impressora (consumíveis), no Depósito de TI. Todos ativos e sem entrega |
+| **Computadores** | um de cada: Inspiron 15, IdeaPad 3, Vivobook 15, Aspire 5 e Desktop montado. Disponíveis, no Depósito de TI, com a etiqueta automática, sem série e sem entrega |
 | **Conta** | Administrador, `admin@sentinel.com`, senha `admin` — só aqui, nunca no principal ([T](../decisoes/acesso.md#t--não-há-conta-semeada)) |
 
 Os dois são **idempotentes**: rodar de novo não duplica nem desfaz o que foi

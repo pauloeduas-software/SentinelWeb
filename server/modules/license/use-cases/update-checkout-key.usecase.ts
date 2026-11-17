@@ -22,6 +22,8 @@ import { travarLicenca } from './lock-license.usecase';
 const ALVO_SELECT = {
   assignedPerson: { select: { name: true } },
   assignedAsset: { select: { assetTag: true, name: true } },
+  assignedPersonName: true,
+  assignedAssetLabel: true,
 } as const;
 
 /** O 409 da entrega que já voltou, com quem ela estava — como o do estoque. */

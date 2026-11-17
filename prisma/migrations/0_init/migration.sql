@@ -250,11 +250,13 @@ CREATE TABLE "assets" (
 -- CreateTable
 CREATE TABLE "assignments" (
     "id" UUID NOT NULL,
-    "assetId" UUID NOT NULL,
+    "assetId" UUID,
+    "assetLabel" TEXT,
     "targetType" "AssignmentTarget" NOT NULL,
     "targetPersonId" UUID,
     "targetWorkstationId" UUID,
     "targetWorkstationName" TEXT,
+    "targetPersonName" TEXT,
     "checkoutAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "expectedCheckinAt" TIMESTAMP(3),
     "checkinAt" TIMESTAMP(3),
@@ -270,8 +272,9 @@ CREATE TABLE "assignments" (
 CREATE TABLE "workstation_occupants" (
     "id" UUID NOT NULL,
     "workstationId" UUID,
-    "personId" UUID NOT NULL,
+    "personId" UUID,
     "workstationName" TEXT,
+    "personName" TEXT,
     "shift" TEXT,
     "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "endedAt" TIMESTAMP(3),
@@ -343,6 +346,8 @@ CREATE TABLE "license_checkouts" (
     "licenseName" TEXT,
     "assignedPersonId" UUID,
     "assignedAssetId" UUID,
+    "assignedPersonName" TEXT,
+    "assignedAssetLabel" TEXT,
     "checkoutAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "checkinAt" TIMESTAMP(3),
     "checkoutNotes" TEXT,
@@ -377,7 +382,9 @@ CREATE TABLE "stock_movements" (
     "targetPersonId" UUID,
     "targetWorkstationId" UUID,
     "targetWorkstationName" TEXT,
+    "targetPersonName" TEXT,
     "targetAssetId" UUID,
+    "targetAssetLabel" TEXT,
     "checkoutAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "returnedAt" TIMESTAMP(3),
     "returnRecordedAt" TIMESTAMP(3),
@@ -569,7 +576,7 @@ ALTER TABLE "assets" ADD CONSTRAINT "assets_locationId_fkey" FOREIGN KEY ("locat
 ALTER TABLE "assets" ADD CONSTRAINT "assets_retiredReasonId_fkey" FOREIGN KEY ("retiredReasonId") REFERENCES "retire_reasons"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "assignments" ADD CONSTRAINT "assignments_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "assets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "assignments" ADD CONSTRAINT "assignments_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "assets"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "assignments" ADD CONSTRAINT "assignments_targetPersonId_fkey" FOREIGN KEY ("targetPersonId") REFERENCES "people"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -697,6 +704,12 @@ ALTER TABLE "workstation_occupants" ADD CONSTRAINT "workstation_occupants_posto_
   "workstationId" IS NOT NULL OR ("endedAt" IS NOT NULL AND "workstationName" IS NOT NULL)
 );
 
+-- E para a pessoa, a mesma regra (DL): só a ocupação encerrada de um
+-- colaborador excluído de vez fica sem ele, com o nome em `personName`.
+ALTER TABLE "workstation_occupants" ADD CONSTRAINT "workstation_occupants_pessoa_presente" CHECK (
+  "personId" IS NOT NULL OR ("endedAt" IS NOT NULL AND "personName" IS NOT NULL)
+);
+
 -- A SAÍDA NÃO ANTECEDE A ENTRADA, como a devolução da posse. `>=`: entrar e
 -- sair no mesmo instante é o mesmo dia, e o encerramento iguala os dois.
 ALTER TABLE "workstation_occupants" ADD CONSTRAINT "workstation_occupants_fim_nao_antecede_inicio" CHECK (
@@ -710,16 +723,25 @@ ALTER TABLE "workstation_occupants" ADD CONSTRAINT "workstation_occupants_fim_na
 -- está vazia: sem isso, `PERSON` com duas FKs, ou `PERSON` com só
 -- `targetWorkstationId`, passariam.
 --
--- O POSTO EXCLUÍDO é a única posse sem FK nenhuma: o posto segue a regra do
--- status e sai quando nada está nele agora. A posse JÁ DEVOLVIDA perde a
--- ligação e guarda o nome por escrito (`targetWorkstationName`) — e só ela: a
--- aberta aponta sempre para o posto.
+-- O ALVO EXCLUÍDO — o posto, ou o colaborador excluído de vez da lixeira (DL) —
+-- é a única posse sem a FK do alvo. A posse JÁ DEVOLVIDA perde a ligação e
+-- guarda o nome por escrito (`targetWorkstationName`, `targetPersonName`) — e
+-- só ela: a aberta aponta sempre para o alvo.
 ALTER TABLE "assignments" ADD CONSTRAINT "assignments_alvo_coerente" CHECK (
-     ("targetType" = 'PERSON' AND "targetPersonId" IS NOT NULL AND "targetWorkstationId" IS NULL)
+     ("targetType" = 'PERSON' AND "targetWorkstationId" IS NULL AND (
+          "targetPersonId" IS NOT NULL
+       OR ("checkinAt" IS NOT NULL AND "targetPersonName" IS NOT NULL)
+     ))
   OR ("targetType" = 'WORKSTATION' AND "targetPersonId" IS NULL AND (
           "targetWorkstationId" IS NOT NULL
        OR ("checkinAt" IS NOT NULL AND "targetWorkstationName" IS NOT NULL)
      ))
+);
+
+-- O COMPUTADOR EXCLUÍDO DE VEZ (DL): só a posse JÁ DEVOLVIDA fica sem ele, com
+-- o rótulo por escrito. A aberta aponta sempre para o computador.
+ALTER TABLE "assignments" ADD CONSTRAINT "assignments_ativo_presente" CHECK (
+  "assetId" IS NOT NULL OR ("checkinAt" IS NOT NULL AND "assetLabel" IS NOT NULL)
 );
 
 -- A DEVOLUÇÃO NÃO ANTECEDE A ENTREGA. `>=` e não `>`: entrega e devolução no
@@ -730,9 +752,14 @@ ALTER TABLE "assignments" ADD CONSTRAINT "assignments_devolucao_nao_antecede_ent
 
 -- ── INVARIANTE 9: A FORMA DA ENTREGA DE LICENÇA (D39, AA) ─────────────────
 --
--- O alvo é UM, pessoa XOR ativo — nunca posto.
-ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_alvo_xor"
-  CHECK (num_nonnulls("assignedPersonId", "assignedAssetId") = 1);
+-- O alvo é UM, pessoa XOR ativo — nunca posto. A entrega JÁ DEVOLVIDA de um
+-- alvo excluído de vez (DL) fica sem as duas FKs, e o nome por escrito diz
+-- qual era: um nome só, o do alvo que ela teve.
+ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_alvo_xor" CHECK (
+     num_nonnulls("assignedPersonId", "assignedAssetId") = 1
+  OR ("checkinAt" IS NOT NULL AND "assignedPersonId" IS NULL AND "assignedAssetId" IS NULL
+      AND num_nonnulls("assignedPersonName", "assignedAssetLabel") = 1)
+);
 
 -- A DEVOLUÇÃO NÃO ANTECEDE A ENTREGA. `>=` e não `>`, como na posse.
 ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_devolucao_nao_antecede"
@@ -793,18 +820,22 @@ ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_qty_nao_negativa"
   CHECK ("qty" >= 0);
 
 -- Cada linha é UMA unidade com exatamente UM alvo, o que o discriminante diz.
--- A entrega JÁ DEVOLVIDA para um posto excluído fica sem FK, com o nome por
--- escrito — como na `Assignment`. O computador (o componente, AI) não tem
--- essa saída: ele não se exclui, vai para a lixeira.
+-- A entrega JÁ DEVOLVIDA para um posto excluído, ou para um colaborador ou
+-- computador excluído de vez (DL), fica sem a FK do alvo, com o nome por
+-- escrito — como na `Assignment`.
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_forma" CHECK (
-     ("targetType" = 'PERSON' AND "targetPersonId" IS NOT NULL AND "targetWorkstationId" IS NULL
-      AND "targetAssetId" IS NULL)
+     ("targetType" = 'PERSON' AND "targetWorkstationId" IS NULL AND "targetAssetId" IS NULL AND (
+          "targetPersonId" IS NOT NULL
+       OR ("returnedAt" IS NOT NULL AND "targetPersonName" IS NOT NULL)
+     ))
   OR ("targetType" = 'WORKSTATION' AND "targetPersonId" IS NULL AND "targetAssetId" IS NULL AND (
           "targetWorkstationId" IS NOT NULL
        OR ("returnedAt" IS NOT NULL AND "targetWorkstationName" IS NOT NULL)
      ))
-  OR ("targetType" = 'ASSET' AND "targetAssetId" IS NOT NULL AND "targetPersonId" IS NULL
-      AND "targetWorkstationId" IS NULL)
+  OR ("targetType" = 'ASSET' AND "targetPersonId" IS NULL AND "targetWorkstationId" IS NULL AND (
+          "targetAssetId" IS NOT NULL
+       OR ("returnedAt" IS NOT NULL AND "targetAssetLabel" IS NOT NULL)
+     ))
 );
 
 -- O ITEM EXCLUÍDO (AG): só a entrega JÁ DEVOLVIDA fica sem ele, com o nome por

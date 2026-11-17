@@ -351,6 +351,9 @@ nascem nulos, e os dois CHECKs entram. Nenhuma linha existente fica sem dono, en
 
 ## AI — O componente é uma categoria: vai só para computador, e sai pelo Retirar
 
+> **Superada em parte por [DL](./posse.md#dl--da-lixeira-o-colaborador-e-o-computador-se-excluem-de-vez-e-o-histórico-dos-outros-guarda-o-nome):** o computador se exclui de vez da lixeira, e
+> a entrega devolvida guarda o rótulo dele por escrito (`targetAssetLabel`).
+
 **Decidido** (na conversa sobre a memória e o SSD, em 2026-10-27 — primeiro o usuário disse que
 estoque não vai para computador, só para colaborador e posto; depois, que um item "não volta"
 poderia ir para o computador; e propôs ele mesmo chamar de **componente** e mandar só para o

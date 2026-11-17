@@ -104,6 +104,7 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
   const handleSubmit = (valores: Record<string, unknown>) => acoes.salvar(emEdicao, valores, closeModal);
   const handleDelete = async (registro: CatalogRow) => { await acoes.excluir(registro); };
   const handleRestore = (registro: CatalogRow) => acoes.restaurar(registro);
+  const handlePurge = async (registro: CatalogRow) => { await acoes.excluirDeVez(registro); };
 
   return {
     specs,
@@ -138,6 +139,7 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
     handleSubmit,
     handleDelete,
     handleRestore,
+    handlePurge,
     openAcao,
   };
 }

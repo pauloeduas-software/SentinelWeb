@@ -85,7 +85,7 @@ o partiria em dois: os equipamentos antigos ficariam presos a um cadastro que
 ninguém abre. Na lixeira a linha fica: o histórico dos ativos, do estoque e das
 licenças continua com o nome dele, e ele some das listas e dos seletores. A
 ficha dele abre só para o Supervisor, pela linha da Lixeira, e só para consulta:
-o aviso Na lixeira, com o dia da exclusão, e o Restaurar no card. Para o Técnico
+o aviso Na lixeira, com o dia da exclusão, o Restaurar no card e, no `⋯`, o Excluir de vez. Para o Técnico
 ela é 404
 ([CF](../decisoes/catalogo-e-ativo.md#cf--a-linha-da-lixeira-de-colaboradores-também-abre-a-ficha)).
 
@@ -99,8 +99,15 @@ aviso põe um link em cada um, na ordem da frase.
 **A aba Lixeira** fica na própria página, ao lado da lista. **Restaurar** devolve a mesma
 pessoa, com o histórico inteiro; se o e-mail dela foi reaproveitado por outro
 cadastro enquanto ela estava lá, é 409 `O e-mail deste colaborador já está em uso por outro cadastro.`
-Não há "apagar de vez": seria apagar o histórico que a lixeira existe para
-guardar.
+
+**Excluir de vez** sai da lixeira, e só dela ([DL](../decisoes/posse.md#dl--da-lixeira-o-colaborador-e-o-computador-se-excluem-de-vez-e-o-histórico-dos-outros-guarda-o-nome)): no `⋯` da linha da Lixeira e
+no da ficha aberta de lá, para o Supervisor. Pergunta antes:
+`Excluir "Laura Souza" de vez? A ficha e o histórico somem, e não há como restaurar. O histórico dos computadores, postos, licenças e itens continua com o nome por escrito.`
+A linha sai do banco, e o passado dela fica com os outros, na regra do posto: a posse, a
+ocupação, a entrega de licença e a de estoque já fechadas perdem a ligação e guardam o nome por
+escrito, e o histórico do computador, do posto, da licença e do item continua dizendo "Laura
+Souza", sem link. Some a ficha dela. Fora da lixeira é 404 `Colaborador não está na lixeira.`; a
+ficha volta para a Lixeira, com a notificação `Colaborador excluído de vez.`
 
 **Desativar** é para quem continua na lista — o afastado que volta —, e tem a
 mesma regra: só desativa quem não responde por nada agora. Desativado, ele some
@@ -120,7 +127,8 @@ desfaz.
 | Assunto | Arquivo |
 |---|---|
 | lixeira, restaurar, a recusa que diz o quê (com os links), desativação, `/options` | `tests/invariantes/colaborador.test.ts`, `tests/invariantes/posse.test.ts` |
+| excluir de vez: só da lixeira, só o Supervisor, e o nome por escrito nos históricos dos outros | `tests/invariantes/exclusao-de-vez.test.ts` |
 | a ficha: o computador dela e não o do posto, as notas, e a ficha da lixeira só para o Supervisor | `tests/invariantes/colaborador.test.ts` |
-| as ações do card, a ficha aberta da Lixeira e o Restaurar | `tests/e2e/ficha-do-colaborador.spec.ts`, `tests/e2e/cargos.spec.ts` |
+| as ações do card, a ficha aberta da Lixeira, o Restaurar e o Excluir de vez | `tests/e2e/ficha-do-colaborador.spec.ts`, `tests/e2e/cargos.spec.ts` |
 | o corpo literal do formulário (e-mail e notas em branco viram nulo; e-mail único e em minúsculas) | `tests/formularios/corpo-literal.test.ts` |
 | o histórico da ficha, com as quatro fontes | `tests/listagens/historico-da-pessoa.test.ts`, `tests/licencas/historico.test.ts`, `tests/estoque/operacoes.test.ts` |

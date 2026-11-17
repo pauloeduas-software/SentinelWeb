@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  useAssetStatsQuery, useAssetsQuery, useCreateAsset, useDeleteAsset,
+  useAssetStatsQuery, useAssetsQuery, useCreateAsset, useDeleteAsset, usePurgeAsset,
   useRestoreAsset, useRetireAsset, useUpdateAsset, type AssetInput,
 } from '../../../queries/asset.queries';
 import { useCheckoutAsset, type CheckoutInput } from '../../../queries/assignment.queries';
@@ -44,6 +44,7 @@ export function useAssets() {
   const editar = useUpdateAsset();
   const excluir = useDeleteAsset();
   const restaurar = useRestoreAsset();
+  const excluirDeVez = usePurgeAsset();
   const entregar = useCheckoutAsset();
   const darBaixa = useRetireAsset();
   const handleReverterSaida = useReverterBaixa();
@@ -182,6 +183,24 @@ export function useAssets() {
     }
   };
 
+  // EXCLUIR DE VEZ, da lixeira (DL): a pergunta diz o que se perde e o que fica.
+  const handlePurge = async (asset: Asset) => {
+    if (!(await confirmar({
+      titulo: `Excluir "${asset.assetTag}" de vez?`,
+      descricao: 'A ficha e o histórico somem, e não há como restaurar. O histórico dos colaboradores '
+        + 'e postos continua com a etiqueta por escrito.',
+      acao: 'Excluir de vez',
+      perigo: true,
+    }))) return;
+    try {
+      await excluirDeVez.mutateAsync(asset.id);
+      if (assets.length === 1 && page > 1) setPage(page - 1);
+      notificar.sucesso('Computador excluído de vez.');
+    } catch (erro) {
+      notificar.erro((erro as Error).message, linksDoErro(erro));
+    }
+  };
+
   return {
     assets,
     total,
@@ -220,6 +239,7 @@ export function useAssets() {
     handleSubmit,
     handleDelete,
     handleRestore,
+    handlePurge,
     emPosse,
     openPosse,
     closePosse,

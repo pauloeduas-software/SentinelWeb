@@ -110,8 +110,8 @@ async function quemEstaNosPostos(idsDePosto: string[]): Promise<Map<string, Pess
     orderBy: [{ shift: 'asc' }, { startedAt: 'asc' }],
   });
   for (const { workstationId, person } of ocupacoes) {
-    // A ocupação aberta aponta sempre para o posto: o `if` é para o tipo.
-    if (!workstationId) continue;
+    // A ocupação aberta aponta sempre para o posto e para a pessoa: o `if` é para o tipo.
+    if (!workstationId || !person) continue;
     porPosto.set(workstationId, [...(porPosto.get(workstationId) ?? []), person]);
   }
   return porPosto;

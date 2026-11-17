@@ -129,3 +129,12 @@ export function useRestoreCatalogRow(slug: string) {
     onSettled: () => queryClient.invalidateQueries({ queryKey: catalogKeys.tabela(slug) }),
   });
 }
+
+/** Exclui de vez, da lixeira (DL) — só na tabela que a tem. */
+export function usePurgeCatalogRow(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/${slug}/${id}/permanent`),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: catalogKeys.tabela(slug) }),
+  });
+}

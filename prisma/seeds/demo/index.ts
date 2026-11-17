@@ -16,22 +16,27 @@ import { semearBanco } from '../index';
 import { logger, type Seeder } from '../seeder';
 import { administradorDemo } from './administrador.seed';
 import { colaboradoresDemo } from './colaboradores.seed';
+import { computadoresDemo } from './computadores.seed';
 import { estoqueDemo } from './estoque.seed';
 import { fabricantesDemo } from './fabricantes.seed';
 import { licencasDemo } from './licencas.seed';
 import { localizacoesDemo } from './localizacoes.seed';
 import { modelosDemo } from './modelos.seed';
+import { postosDemo } from './postos.seed';
 
-// Os modelos e as licenças DEPOIS dos fabricantes, e o estoque DEPOIS das
-// localizações: cada um aponta para o anterior.
+// Os modelos e as licenças DEPOIS dos fabricantes, e os postos, o estoque e os
+// computadores DEPOIS das localizações (e os computadores, dos modelos): cada um
+// aponta para o anterior.
 const seeders: Seeder[] = [
   administradorDemo,
   fabricantesDemo,
   modelosDemo,
   localizacoesDemo,
+  postosDemo,
   colaboradoresDemo,
   licencasDemo,
   estoqueDemo,
+  computadoresDemo,
 ];
 
 async function semearDemonstracao(): Promise<void> {

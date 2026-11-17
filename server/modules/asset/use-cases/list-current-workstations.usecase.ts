@@ -31,7 +31,9 @@ export async function listCurrentWorkstations(assetIds: string[]): Promise<Map<s
 
   const postos = new Map<string, PostoAtual>();
   for (const posse of posses) {
-    if (posse.targetWorkstation) postos.set(posse.assetId, posse.targetWorkstation);
+    // A posse aberta sempre tem o computador (CHECK `assignments_ativo_presente`);
+    // o `if` é para o tipo, que é o da coluna.
+    if (posse.assetId && posse.targetWorkstation) postos.set(posse.assetId, posse.targetWorkstation);
   }
   return postos;
 }

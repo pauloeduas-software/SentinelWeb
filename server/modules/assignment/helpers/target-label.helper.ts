@@ -6,6 +6,8 @@ interface AlvoDaPosse {
   targetWorkstation: { name: string } | null;
   /** O nome por escrito do posto excluído — ver `Assignment.targetWorkstationName`. */
   targetWorkstationName?: string | null;
+  /** O nome por escrito do colaborador excluído de vez (DL). */
+  targetPersonName?: string | null;
 }
 
 /**
@@ -21,10 +23,10 @@ interface AlvoDaPosse {
  * "Entregue para colaborador" no lugar de "Entregue" — uma frase que parece
  * dado e não é.
  *
- * O alvo só vem nulo quando o `select` de quem chamou não o trouxe: as duas FKs
- * são garantidas pelo CHECK de coerência no banco.
+ * O alvo só vem nulo quando o `select` de quem chamou não o trouxe: a FK, ou o
+ * nome por escrito do alvo excluído, é garantida pelo CHECK de coerência no banco.
  */
 export function rotuloDoAlvo(assignment: AlvoDaPosse): string | null {
-  if (assignment.targetType === 'PERSON') return assignment.targetPerson?.name ?? null;
+  if (assignment.targetType === 'PERSON') return assignment.targetPerson?.name ?? assignment.targetPersonName ?? null;
   return assignment.targetWorkstation?.name ?? assignment.targetWorkstationName ?? null;
 }

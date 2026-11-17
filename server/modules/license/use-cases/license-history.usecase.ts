@@ -18,7 +18,8 @@ export interface EventoDaLicenca {
   entrega: {
     checkoutId: string;
     alvo: 'PERSON' | 'ASSET';
-    alvoId: string;
+    /** Nulo quando o alvo foi excluído de vez (DL): o nome continua em `alvoLabel`. */
+    alvoId: string | null;
     /** "Laura Souza", ou "ATV-00012 — Dell Latitude". */
     alvoLabel: string;
     notes: string | null;
@@ -42,8 +43,9 @@ function eventoDaEntrega(entrega: Entrega, action: EventoDaLicenca['action']): E
     at: devolucao ? entrega.checkinAt as Date : entrega.checkoutAt,
     entrega: {
       checkoutId: entrega.id,
-      alvo: entrega.assignedPersonId ? 'PERSON' : 'ASSET',
-      alvoId: (entrega.assignedPersonId ?? entrega.assignedAssetId) as string,
+      // O alvo excluído de vez (DL) não tem id, e o nome por escrito diz qual era.
+      alvo: entrega.assignedPersonId || entrega.assignedPersonName ? 'PERSON' : 'ASSET',
+      alvoId: entrega.assignedPersonId ?? entrega.assignedAssetId,
       alvoLabel: rotuloDoAlvoDaEntrega(entrega),
       // A observação é da entrega; a devolução não tem a sua.
       notes: devolucao ? null : entrega.checkoutNotes,

@@ -196,7 +196,9 @@ model User {
 // Uma tabela de catálogo (a sexta aba de Configurações) e a ÚNICA dele com
 // lixeira: o colaborador tem histórico de posse PRÓPRIO — "o que já esteve com a
 // Laura" —, e recadastrá-lo depois de excluir o partiria em dois. Excluir manda
-// para a lixeira, e só recusa quem responde por algo AGORA (invariante 6).
+// para a lixeira, e só recusa quem responde por algo AGORA (invariante 6). Da
+// lixeira, Excluir de vez apaga a linha, e o histórico dos outros guarda o nome
+// por escrito (DL).
 model Person {
   id   String @id @default(uuid()) @db.Uuid
   name String
@@ -674,8 +676,13 @@ enum AssignmentTarget {
 // Esse índice é também a alavanca da decisão: o dia que N detentores simultâneos
 // for necessário, derrubar o índice é a mudança — não reescrever a camada.
 model Assignment {
-  id      String @id @default(uuid()) @db.Uuid
-  assetId String @db.Uuid
+  id      String  @id @default(uuid()) @db.Uuid
+  // Nulo só na posse DEVOLVIDA de um computador excluído de vez da lixeira — o
+  // rótulo dele fica em `assetLabel`, a regra do posto (DL). Aberta, aponta
+  // sempre para o computador (CHECK `assignments_ativo_presente`).
+  assetId String? @db.Uuid
+  /// O computador por escrito ("ATV-00042 — Dell Latitude"), quando ele foi excluído de vez.
+  assetLabel String?
 
   // Discriminante + duas FKs nuláveis. A coerência entre o tipo e qual FK está
   // preenchida é validada no use-case (`assertAlvoCoerente`) e pelo CHECK
@@ -692,6 +699,8 @@ model Assignment {
   // guarda aqui o nome que o posto tinha, para o histórico do ativo continuar
   // dizendo "Entregue: Mesa 7" (`workstationSpec.beforeDelete`).
   targetWorkstationName String?
+  /// O nome do colaborador, por escrito, quando ele foi excluído de vez (DL).
+  targetPersonName      String?
 
   checkoutAt        DateTime  @default(now())
   expectedCheckinAt DateTime?
@@ -703,11 +712,11 @@ model Assignment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Cascade no ativo dono da posse: apagar o ativo de verdade leva o histórico
-  // dele junto. Restrict nos ALVOS: é a rede embaixo do 409 por uso. A exclusão
-  // do posto desliga ANTES as posses já devolvidas (`targetWorkstationName`),
-  // então o que a FK ainda pega é a posse aberta — e essa o 409 já recusou.
-  asset             Asset        @relation("AssignmentAsset", fields: [assetId], references: [id], onDelete: Cascade)
+  // Restrict nos três: é a rede embaixo do 409 por uso. A exclusão do posto e
+  // a exclusão de vez do colaborador e do computador desligam ANTES as posses
+  // já devolvidas, com o nome por escrito (DL), então o que a FK ainda pega é a
+  // posse aberta — e essa o 409 já recusou.
+  asset             Asset?       @relation("AssignmentAsset", fields: [assetId], references: [id], onDelete: Restrict)
   targetPerson      Person?      @relation(fields: [targetPersonId], references: [id], onDelete: Restrict)
   targetWorkstation Workstation? @relation(fields: [targetWorkstationId], references: [id], onDelete: Restrict)
 
@@ -723,10 +732,14 @@ model WorkstationOccupant {
   // fica em `workstationName`, pelo mesmo motivo da `Assignment`. Aberta, aponta
   // sempre para o posto (CHECK `workstation_occupants_posto_presente`).
   workstationId String? @db.Uuid
-  personId      String  @db.Uuid
+  // Nulo só na ocupação ENCERRADA de um colaborador excluído de vez — o nome
+  // dele fica em `personName` (DL, CHECK `workstation_occupants_pessoa_presente`).
+  personId      String? @db.Uuid
 
   /// O nome do posto, por escrito, quando ele foi excluído.
   workstationName String?
+  /// O nome do colaborador, por escrito, quando ele foi excluído de vez.
+  personName      String?
 
   // Texto livre de propósito: "Manhã", "Tarde", "12x36 A". Enum engessaria
   // escalas reais e faixa de horário seria agenda, não inventário (D15).
@@ -742,9 +755,10 @@ model WorkstationOccupant {
   // Restrict, não Cascade: quem ocupou a Mesa 1 e em que turno é histórico de
   // responsabilidade, e apagar o posto não pode apagá-lo junto. Com ocupante
   // AGORA, o posto não se exclui; as ocupações encerradas são desligadas antes,
-  // com o nome em `workstationName` (`workstationSpec.beforeDelete`).
+  // com o nome em `workstationName` (`workstationSpec.beforeDelete`). A do
+  // colaborador excluído de vez, com o nome em `personName` (DL).
   workstation Workstation? @relation(fields: [workstationId], references: [id], onDelete: Restrict)
-  person      Person       @relation(fields: [personId], references: [id], onDelete: Restrict)
+  person      Person?      @relation(fields: [personId], references: [id], onDelete: Restrict)
 
   // A mesma pessoa não ocupa o mesmo posto duas vezes ao mesmo tempo: índice
   // único PARCIAL (`WHERE "endedAt" IS NULL`) criado na migration.
@@ -881,9 +895,14 @@ model LicenseCheckout {
   licenseName String?
 
   // XOR garantido por CHECK na migration (`license_checkouts_alvo_xor`). Sem
-  // discriminante: com dois alvos, a FK preenchida já diz qual é.
+  // discriminante: com dois alvos, a FK preenchida já diz qual é — e, na
+  // entrega devolvida de um alvo excluído de vez (DL), o nome por escrito.
   assignedPersonId String? @db.Uuid
   assignedAssetId  String? @db.Uuid
+  /// O nome do colaborador, por escrito, quando ele foi excluído de vez.
+  assignedPersonName String?
+  /// O computador por escrito, quando ele foi excluído de vez.
+  assignedAssetLabel String?
 
   checkoutAt DateTime  @default(now())
   /// Nulo = EM USO. É o que a conta de livres desconta.
@@ -900,8 +919,9 @@ model LicenseCheckout {
 
   // Restrict nos quatro. A licença em uso não se exclui (o 409 vem antes), e a
   // devolvida é desligada antes, com o nome em `licenseName` e sem a chave — as
-  // chaves vão junto com a licença (AG); pessoa e ativo não se apagam de verdade
-  // enquanto têm histórico; a chave já entregue não sai da lista.
+  // chaves vão junto com a licença (AG); pessoa e ativo excluídos de vez também
+  // desligam antes a devolvida, com o nome por escrito (DL); a chave já
+  // entregue não sai da lista.
   license        License?    @relation(fields: [licenseId], references: [id], onDelete: Restrict)
   assignedPerson Person?     @relation(fields: [assignedPersonId], references: [id], onDelete: Restrict)
   assignedAsset  Asset?      @relation(fields: [assignedAssetId], references: [id], onDelete: Restrict)
@@ -1018,9 +1038,12 @@ model StockMovement {
   targetWorkstationId   String?     @db.Uuid
   /// O nome do posto, por escrito, quando ele foi excluído — como na `Assignment`.
   targetWorkstationName String?
-  /// O computador que recebeu o COMPONENTE (AI). Sem nome por escrito: o
-  /// computador não se exclui de verdade, vai para a lixeira.
+  /// O nome do colaborador, por escrito, quando ele foi excluído de vez (DL).
+  targetPersonName      String?
+  /// O computador que recebeu o COMPONENTE (AI).
   targetAssetId         String?     @db.Uuid
+  /// O computador por escrito, quando ele foi excluído de vez (DL).
+  targetAssetLabel      String?
 
   /// O DIA da entrega, como o `checkoutAt` da licença: hoje é a hora real, um dia
   /// passado é o meio-dia de Brasília (`instanteDoDia`).
@@ -1046,9 +1069,9 @@ model StockMovement {
 
   // Restrict nos quatro: item, posto e pessoa com unidade em uso não se excluem
   // (o 409 de cada um vem antes, e conta as unidades). A entrega já devolvida de
-  // um item ou de um posto excluído é desligada antes, com o nome por escrito
-  // em `itemName` ou em `targetWorkstationName`. O computador não tem DELETE:
-  // a baixa e a lixeira dele recusam o componente instalado (AI).
+  // um item, de um posto, ou de um colaborador ou computador excluído de vez
+  // (DL), é desligada antes, com o nome por escrito. A baixa e a lixeira do
+  // computador recusam o componente instalado (AI).
   item              StockItem?   @relation(fields: [itemId], references: [id], onDelete: Restrict)
   targetPerson      Person?      @relation(fields: [targetPersonId], references: [id], onDelete: Restrict)
   targetWorkstation Workstation? @relation(fields: [targetWorkstationId], references: [id], onDelete: Restrict)

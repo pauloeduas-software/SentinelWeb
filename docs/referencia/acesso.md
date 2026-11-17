@@ -229,7 +229,7 @@ lista de cargos aceitos por rota. A conta nova nasce `TECNICO`.
 | Entregar, devolver, ocupar posto, trocar a chave da entrega | ✅ | ✅ | ✅ |
 | Cadastrar e editar computador, item de estoque e colaborador | ✅ | ✅ | ✅ |
 | Vincular, desvincular e atualizar máquina agora ([DK](../decisoes/reconciliacao.md#dk--atualizar-agora-a-máquina-manda-o-inventário-e-a-telemetria-na-hora)) | ✅ | ✅ | ✅ |
-| Excluir, desativar, lixeira, baixa, encerrar e reabrir licença, e excluir máquina | — | ✅ | ✅ |
+| Excluir, desativar, lixeira e excluir de vez, baixa, encerrar e reabrir licença, e excluir máquina | — | ✅ | ✅ |
 | Cadastrar e editar posto, licença e o catálogo (Configurações) | — | ✅ | ✅ |
 | Ver o custo, comando remoto (desligar, reiniciar, suspender) | — | ✅ | ✅ |
 | Usuários | — | — | ✅ |

@@ -36,7 +36,8 @@ export interface EventoDoPosto {
   /** Preenchido só quando `fonte === 'OCUPACAO'`. */
   ocupacao: {
     occupantId: string;
-    personId: string;
+    /** Nulo quando o colaborador foi excluído de vez (DL). */
+    personId: string | null;
     personLabel: string;
     shift: string | null;
     notes: string | null;
@@ -44,7 +45,8 @@ export interface EventoDoPosto {
   /** Preenchido só quando `fonte === 'POSSE'`. */
   posse: {
     assignmentId: string;
-    assetId: string;
+    /** Nulo quando o computador foi excluído de vez (DL). */
+    assetId: string | null;
     /** "ATV-00012 — Dell Latitude". */
     assetLabel: string;
     notes: string | null;

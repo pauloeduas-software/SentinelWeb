@@ -38,6 +38,9 @@ export class AssetMaestro {
     // Restaurar da lixeira: POST porque muda estado e cada restauração vira uma
     // linha no AuditLog.
     server.post('/api/assets/:id/restore', WRITE_RATE_LIMIT, assetController.restore);
+    // Excluir de vez, da lixeira (DL): a linha sai, e o histórico dos outros
+    // guarda a etiqueta por escrito.
+    server.delete('/api/assets/:id/permanent', WRITE_RATE_LIMIT, assetController.purge);
 
     // DAR BAIXA: o ativo saiu do PATRIMÔNIO (vendido, descartado,
     // roubado). Não é apagar (`deletedAt`) — são duas colunas com dois

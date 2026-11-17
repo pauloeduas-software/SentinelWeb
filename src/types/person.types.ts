@@ -65,7 +65,8 @@ export interface EventoDaPessoa {
   /** Preenchido só quando `fonte === 'POSSE'`. */
   posse: {
     assignmentId: string;
-    assetId: string;
+    /** Nulo quando o computador foi excluído de vez (DL). */
+    assetId: string | null;
     /** "ATV-00012 — Dell Latitude". */
     assetLabel: string;
     notes: string | null;

@@ -15,6 +15,7 @@ import { createAsset } from '../use-cases/create-asset.usecase';
 import { updateAsset } from '../use-cases/update-asset.usecase';
 import { deleteAsset } from '../use-cases/delete-asset.usecase';
 import { restoreAsset } from '../use-cases/restore-asset.usecase';
+import { purgeAsset } from '../use-cases/purge-asset.usecase';
 import { findAssetById } from '../use-cases/find-asset-by-id.usecase';
 // A BORDA é quem sabe quem está pedindo: o use-case recebe um booleano e não
 // conhece `request`.
@@ -104,6 +105,12 @@ export const assetController = {
   async restore(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     return restoreAsset(id, atorDaRequisicao(request));
+  },
+
+  async purge(request: FastifyRequest) {
+    const { id } = idParamSchema.parse(request.params);
+    await purgeAsset(id, atorDaRequisicao(request));
+    return { success: true };
   },
 
   async retire(request: FastifyRequest) {

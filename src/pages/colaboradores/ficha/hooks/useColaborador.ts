@@ -4,6 +4,7 @@ import { colaborador } from '../../specs';
 import { useAcoesDoCatalogo } from '../../../../components/catalogo/useAcoesDoCatalogo';
 import { erroDaFicha } from '../../../../helpers/erro.helper';
 import { POR_PAGINA } from '../../../../hooks/useListaNaUrl';
+import { useVoltaComFiltros } from '../../../../hooks/useVoltaComFiltros';
 import { usePersonHistoryQuery, usePersonQuery, useRecarregarColaborador } from '../../../../queries/person.queries';
 import { usePersonOccupanciesQuery } from '../../../../queries/occupancy.queries';
 import type { CatalogRow } from '../../../../types/catalog.types';
@@ -41,6 +42,7 @@ export function useColaborador() {
   const recarregar = useRecarregarColaborador();
   const acoes = useAcoesDoCatalogo(colaborador, recarregar);
   const navigate = useNavigate();
+  const voltar = useVoltaComFiltros('/colaboradores');
   const [editando, setEditando] = useState(false);
   const registro: CatalogRow | null = pessoa ? {
     id: pessoa.id,
@@ -65,6 +67,10 @@ export function useColaborador() {
     },
     // Restaurar fica na ficha aberta da Lixeira (CF): ela continua aberta, com as ações de volta.
     handleRestaurar: () => { if (registro) void acoes.restaurar(registro); },
+    // Excluída de vez (DL), a ficha não existe mais: volta para a lista de onde veio, a Lixeira.
+    handleExcluirDeVez: async () => {
+      if (registro && await acoes.excluirDeVez(registro)) navigate(voltar.para, { state: voltar.state });
+    },
     // Só as ABERTAS: é o que a rota da pessoa devolve.
     ocupacoes: ocupacoes ?? [],
     totalDeOcupacoes: ocupacoes?.length,

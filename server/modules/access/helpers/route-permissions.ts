@@ -76,6 +76,7 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   'PUT /api/assets/:id': 'TECNICO',
   'DELETE /api/assets/:id': 'SUPERVISOR',
   'POST /api/assets/:id/restore': 'SUPERVISOR',
+  'DELETE /api/assets/:id/permanent': 'SUPERVISOR',
   'POST /api/assets/:id/retire': 'SUPERVISOR',
   'POST /api/assets/:id/unretire': 'SUPERVISOR',
   'POST /api/assets/:id/checkout': 'TECNICO',
@@ -169,8 +170,11 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
         [`POST /api/${spec.slug}`, escrita],
         [`PUT /api/${spec.slug}/:id`, escrita],
         [`DELETE /api/${spec.slug}/:id`, 'SUPERVISOR' as const],
-        // Restaurar, só na tabela com lixeira — o colaborador.
-        ...(spec.lixeira ? [[`POST /api/${spec.slug}/:id/restore`, 'SUPERVISOR' as const] as const] : []),
+        // Restaurar e excluir de vez (DL), só na tabela com lixeira — o colaborador.
+        ...(spec.lixeira ? [
+          [`POST /api/${spec.slug}/:id/restore`, 'SUPERVISOR' as const] as const,
+          [`DELETE /api/${spec.slug}/:id/permanent`, 'SUPERVISOR' as const] as const,
+        ] : []),
       ];
     }),
   ),

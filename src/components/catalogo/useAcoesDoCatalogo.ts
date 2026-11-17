@@ -1,5 +1,5 @@
 import {
-  useCreateCatalogRow, useDeleteCatalogRow, useRestoreCatalogRow, useUpdateCatalogRow,
+  useCreateCatalogRow, useDeleteCatalogRow, usePurgeCatalogRow, useRestoreCatalogRow, useUpdateCatalogRow,
 } from '../../queries/catalog.queries';
 import type { CatalogRow } from '../../types/catalog.types';
 import { confirmar } from '../../hooks/useConfirmacao';
@@ -19,6 +19,7 @@ export function useAcoesDoCatalogo(spec: CatalogUiSpec, aposGravar?: () => void)
   const editar = useUpdateCatalogRow(spec.slug);
   const excluir = useDeleteCatalogRow(spec.slug);
   const restaurar = useRestoreCatalogRow(spec.slug);
+  const excluirDeVez = usePurgeCatalogRow(spec.slug);
 
   // "Categoria cadastrada.", "Status salvo.": o particípio concorda com a aba.
   const feito = (participio: string) => (
@@ -95,7 +96,33 @@ export function useAcoesDoCatalogo(spec: CatalogUiSpec, aposGravar?: () => void)
     }
   };
 
+  /**
+   * EXCLUIR DE VEZ, da lixeira (DL). Devolve se excluiu: a ficha sai para a lista.
+   * A pergunta diz o que se perde e o que fica — o histórico dos outros guarda o nome.
+   */
+  const excluirRegistroDeVez = async (registro: CatalogRow): Promise<boolean> => {
+    if (!(await confirmar({
+      titulo: `Excluir "${registro.name}" de vez?`,
+      descricao: 'A ficha e o histórico somem, e não há como restaurar. O histórico dos computadores, '
+        + 'postos, licenças e itens continua com o nome por escrito.',
+      acao: 'Excluir de vez',
+      perigo: true,
+    }))) return false;
+
+    try {
+      await excluirDeVez.mutateAsync(registro.id);
+      notificar.sucesso(`${spec.singular} ${spec.genero === 'f' ? 'excluída' : 'excluído'} de vez.`);
+      return true;
+    } catch (erro) {
+      notificar.erro((erro as Error).message, linksDoErro(erro));
+      // Só na recusa: excluído de vez, quem tem o que reler (a ficha) está saindo,
+      // e a releitura pediria um registro que não existe mais.
+      aposGravar?.();
+      return false;
+    }
+  };
+
   return {
-    salvar, alternar, excluir: excluirRegistro, restaurar: restaurarRegistro,
+    salvar, alternar, excluir: excluirRegistro, restaurar: restaurarRegistro, excluirDeVez: excluirRegistroDeVez,
   };
 }

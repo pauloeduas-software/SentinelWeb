@@ -63,7 +63,8 @@ bancos de teste a apagar depois estão lá.
   do responsável, e o botão do card só entrega (BQ). Posto e
   colaborador não devolvem: a linha abre o registro (BN). Na aba Responsáveis, a linha abre a ficha do responsável (CJ).
 - **Lixeira só onde o histórico é do próprio registro:** colaborador e computador. O resto exclui de
-  verdade, e o histórico guarda o nome por escrito (V, AG).
+  verdade, e o histórico guarda o nome por escrito (V, AG). Da lixeira, os dois também se excluem de
+  vez, pela mesma regra: some a ficha, e o histórico dos outros guarda o nome (DL).
 - **Só pt-BR, e a moeda é o real (BRL).** Nenhuma frase em inglês chega a quem usa: a recusa da API
   passa pelo locale pt-BR da zod (`server/infra/errors/zod-error.ts`) e o balão do navegador, por
   `src/helpers/validacao.helper.ts`. Campo novo de schema leva a frase com o rótulo.

@@ -3,8 +3,8 @@ import { criarColaborador, tituloDaPagina, vigiarConsole } from './helpers';
 
 // A FICHA DO COLABORADOR AGE COMO AS OUTRAS (CD): Editar no card e, no `⋯`, Desativar e
 // Excluir, com as perguntas e as frases da linha da lista. Aberta da Lixeira, ela é só
-// consulta, e a única ação é Restaurar (CF). O servidor está provado em
-// `tests/invariantes/colaborador.test.ts`.
+// consulta, e as ações são Restaurar e, no `⋯`, Excluir de vez (CF, DL). O servidor está
+// provado em `tests/invariantes/colaborador.test.ts` e `exclusao-de-vez.test.ts`.
 
 /** O formulário lateral: o único da página com o botão Salvar. */
 function formulario(page: Page) {
@@ -68,7 +68,9 @@ test('a linha da Lixeira abre a ficha só para consulta, e Restaurar devolve as 
   const principal = page.getByRole('main');
   await expect(page.getByText('Na lixeira', { exact: true })).toBeVisible();
   await expect(principal.getByRole('button', { name: 'Editar' })).toHaveCount(0);
-  await expect(principal.getByRole('button', { name: `Ações de ${nome}` })).toHaveCount(0);
+  await principal.getByRole('button', { name: `Ações de ${nome}` }).click();
+  await expect(page.getByRole('menuitem')).toHaveText(['Excluir de vez']);
+  await page.keyboard.press('Escape');
 
   // A seta volta para a Lixeira, como estava.
   await expect(page.getByRole('link', { name: 'Voltar para Colaboradores' })).toHaveAttribute('href', /vista=trashed/);
@@ -77,6 +79,28 @@ test('a linha da Lixeira abre a ficha só para consulta, e Restaurar devolve as 
   await expect(page.getByText('Colaborador restaurado.')).toBeVisible();
   await expect(page.getByText('Na lixeira', { exact: true })).toHaveCount(0);
   await expect(principal.getByRole('button', { name: 'Editar' })).toBeVisible();
+
+  conferirConsole();
+});
+
+test('Excluir de vez, da ficha da Lixeira, volta para a Lixeira e o colaborador some', async ({ page, request }) => {
+  const conferirConsole = vigiarConsole(page);
+  const nome = `Pessoa de Vez ${Date.now()}`;
+  const id = await criarColaborador(request, nome);
+  expect((await request.delete(`/api/people/${id}`)).status()).toBe(200);
+
+  await page.goto(`/colaboradores?vista=trashed&busca=${encodeURIComponent(nome)}`);
+  await page.getByRole('row', { name: new RegExp(nome) }).getByText(nome).click();
+  await expect(page).toHaveURL(new RegExp(`/colaboradores/${id}`));
+
+  await page.getByRole('main').getByRole('button', { name: `Ações de ${nome}` }).click();
+  await page.getByRole('menuitem', { name: 'Excluir de vez' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Excluir de vez' }).click();
+
+  await expect(page.locator('[data-notificacao]')).toContainText('Colaborador excluído de vez.');
+  await expect(page).toHaveURL(/\/colaboradores\?.*vista=trashed/);
+  await expect(page.getByRole('row', { name: new RegExp(nome) })).toHaveCount(0);
+  expect((await request.get(`/api/people/${id}`)).status()).toBe(404);
 
   conferirConsole();
 });

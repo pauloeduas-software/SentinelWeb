@@ -39,7 +39,10 @@ export const STOCK_MOVEMENT_SELECT = {
   // O nome por escrito do posto excluído — o histórico do item o lê quando
   // `targetWorkstation` vem nulo.
   targetWorkstationName: true,
+  // E o do colaborador ou do computador excluído de vez da lixeira (DL).
+  targetPersonName: true,
   targetAssetId: true,
+  targetAssetLabel: true,
 
   checkoutAt: true,
   returnedAt: true,
@@ -61,13 +64,16 @@ export function rotuloDoComputador(ativo: { assetTag: string; name: string | nul
   return ativo.name ? `${ativo.assetTag} — ${ativo.name}` : ativo.assetTag;
 }
 
-/** Quem recebeu, por escrito — o colaborador, o posto, o computador, ou o nome que o posto excluído deixou. */
+/** Quem recebeu, por escrito — o colaborador, o posto, o computador, ou o nome que o excluído deixou. */
 export function rotuloDoAlvo(unidade: {
   targetPerson: { name: string } | null;
+  targetPersonName?: string | null;
   targetWorkstation: { name: string } | null;
   targetWorkstationName: string | null;
   targetAsset?: { assetTag: string; name: string | null } | null;
+  targetAssetLabel?: string | null;
 }): string {
   if (unidade.targetAsset) return rotuloDoComputador(unidade.targetAsset);
-  return unidade.targetPerson?.name ?? unidade.targetWorkstation?.name ?? unidade.targetWorkstationName ?? '—';
+  return unidade.targetPerson?.name ?? unidade.targetPersonName ?? unidade.targetWorkstation?.name
+    ?? unidade.targetWorkstationName ?? unidade.targetAssetLabel ?? '—';
 }

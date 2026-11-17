@@ -33,15 +33,16 @@ interface CatalogTableProps {
   onDelete?: (registro: CatalogRow) => void;
   onAcao?: (id: AcaoLinhaId, registro: CatalogRow) => void;
   /**
-   * A LIXEIRA está na tela: o `⋯` oferece só Restaurar. Editar, desativar e
-   * excluir um registro que está na lixeira não existem — o servidor responde
-   * 404 —, então o botão nem aparece. A linha ainda abre a ficha, para consulta (CF).
+   * A LIXEIRA está na tela: o `⋯` oferece Restaurar e Excluir de vez (DL). Editar,
+   * desativar e excluir um registro que está na lixeira não existem — o servidor
+   * responde 404 —, então o botão nem aparece. A linha ainda abre a ficha, para consulta (CF).
    */
   onRestore?: (registro: CatalogRow) => void;
+  onPurge?: (registro: CatalogRow) => void;
 }
 
 export default function CatalogTable({
-  colunas, registros, vazio, acoes, onEdit, onDelete, onAcao, onRestore,
+  colunas, registros, vazio, acoes, onEdit, onDelete, onAcao, onRestore, onPurge,
 }: CatalogTableProps) {
   return (
     <Card className="overflow-hidden">
@@ -81,7 +82,10 @@ export default function CatalogTable({
                   <AcoesDaLinha
                     nome={nome}
                     acoes={onRestore
-                      ? [{ rotulo: 'Restaurar', icone: RotateCcw, onClick: () => onRestore(registro) }]
+                      ? [
+                        { rotulo: 'Restaurar', icone: RotateCcw, onClick: () => onRestore(registro) },
+                        onPurge && { rotulo: 'Excluir de vez', icone: Trash2, onClick: () => onPurge(registro), perigo: true },
+                      ]
                       : [
                         { rotulo: 'Editar', icone: Pencil, onClick: () => onEdit(registro) },
                         // A ficha é o clique na linha: não repete no menu.

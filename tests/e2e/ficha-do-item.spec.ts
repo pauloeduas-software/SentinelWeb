@@ -72,6 +72,8 @@ test('a busca fica no endereço: trocar de aba não a perde, limpar a tira, e a 
   await criarItem(request, nome);
   await page.goto(`/estoque?busca=${encodeURIComponent(nome)}`);
   await page.getByRole('row', { name: new RegExp(nome) }).click();
+  // A busca da lista também é `searchbox` na `main`: sem esperar a ficha, o `fill` cai nela.
+  await expect(page).toHaveURL(/\/estoque\/[^/?]+$/);
 
   const busca = page.getByRole('main').getByRole('searchbox');
   await busca.fill('Laura');

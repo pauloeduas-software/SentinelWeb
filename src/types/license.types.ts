@@ -164,7 +164,8 @@ export interface EventoDaLicenca {
   entrega: {
     checkoutId: string;
     alvo: 'PERSON' | 'ASSET';
-    alvoId: string;
+    /** Nulo quando o alvo foi excluído de vez (DL). */
+    alvoId: string | null;
     alvoLabel: string;
     notes: string | null;
   };

@@ -31,7 +31,7 @@ export default function ComputadoresPage() {
     statusType, escolherStatus, retiredReasonId, escolherMotivo,
     categoryId, changeCategoria, loading, erro,
     modalAberto, emEdicao, clonando, statusPadraoId, openCreate, openEdit, openClone, closeModal, abrirDetalhe,
-    handleSubmit, handleDelete, handleRestore,
+    handleSubmit, handleDelete, handleRestore, handlePurge,
     emPosse, openPosse, closePosse, handleEntregar,
     emBaixa, openBaixa, closeBaixa, handleDarBaixa, handleReverterSaida,
   } = useAssets();
@@ -123,7 +123,10 @@ export default function ComputadoresPage() {
                     <AcoesDaLinha
                       nome={asset.assetTag}
                       acoes={view === 'trashed'
-                        ? [podeDecidir && { rotulo: 'Restaurar', icone: RotateCcw, onClick: () => void handleRestore(asset) }]
+                        ? [
+                          podeDecidir && { rotulo: 'Restaurar', icone: RotateCcw, onClick: () => void handleRestore(asset) },
+                          podeDecidir && { rotulo: 'Excluir de vez', icone: Trash2, onClick: () => void handlePurge(asset), perigo: true },
+                        ]
                         : [
                           // Entregar é OPERAÇÃO, não campo: mora aqui, ao lado do
                           // ativo, e não dentro do formulário. Travado, o `titulo`

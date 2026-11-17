@@ -1,6 +1,7 @@
 import { AppError } from '../../../infra/errors/app-error';
 import { contarPosseAberta, motivoParaRecusar } from '../../person/use-cases/count-person-posse.usecase';
 import { travarPessoa } from '../../person/use-cases/lock-person.usecase';
+import { desligarPassadoDaPessoa } from '../../person/use-cases/unlink-person-history.usecase';
 import { createPersonSchema, updatePersonSchema } from '../schemas/catalog-entities.schema';
 import type { CatalogDelegate, CatalogSpec } from './catalog-spec.types';
 
@@ -41,7 +42,8 @@ export const personSpec: CatalogSpec = {
 
   // EXCLUIR VAI PARA A LIXEIRA: a linha fica, e o histórico de posse — o dos
   // ativos e o da ficha dela — continua apontando para ela e mostrando o nome.
-  // Restaurar devolve a MESMA pessoa, com o histórico inteiro.
+  // Restaurar devolve a MESMA pessoa, com o histórico inteiro. Da lixeira,
+  // Excluir de vez apaga a linha e a ficha (DL).
   lixeira: true,
 
   cartoesDeStatus: true,
@@ -62,6 +64,11 @@ export const personSpec: CatalogSpec = {
     await travarPessoa(client, id);
     return motivoParaRecusar(await contarPosseAberta(client, id), 'excluir');
   },
+
+  // EXCLUIR DE VEZ (DL): o passado solta a pessoa e guarda o nome por escrito,
+  // e o histórico do computador, do posto, da licença e do item continua
+  // dizendo quem foi.
+  beforePurge: desligarPassadoDaPessoa,
 
   // O e-mail fica livre enquanto ela está na lixeira (índice parcial), então
   // pode ter sido recadastrado. Restaurar às cegas estouraria a unicidade crua.

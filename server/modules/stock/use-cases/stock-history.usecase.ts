@@ -30,7 +30,7 @@ export interface EventoDoItem {
   targetPersonId: string | null;
   targetWorkstationId: string | null;
   targetAssetId: string | null;
-  /** "Laura Souza", "Mesa 1", "ATV-00012" — o nome por escrito, quando o posto foi excluído. */
+  /** "Laura Souza", "Mesa 1", "ATV-00012" — o nome por escrito, quando o alvo foi excluído. */
   targetLabel: string;
   /** A observação é da entrega; a devolução não tem a sua. */
   notes: string | null;
@@ -47,7 +47,10 @@ interface EventoNaPagina {
   targetPersonId: string | null;
   targetWorkstationId: string | null;
   targetWorkstationName: string | null;
+  /** Os nomes por escrito do colaborador e do computador excluídos de vez (DL). */
+  targetPersonName: string | null;
   targetAssetId: string | null;
+  targetAssetLabel: string | null;
   notes: string | null;
   unidades: number;
 }
@@ -76,32 +79,32 @@ export async function listStockHistory(
       SELECT (
         (SELECT count(*) FROM (
           SELECT 1 FROM stock_movements WHERE "itemId" = ${itemId}::uuid
-           GROUP BY "createdAt", "targetType", "targetPersonId", "targetWorkstationId", "targetWorkstationName", "targetAssetId"
+           GROUP BY "createdAt", "targetType", "targetPersonId", "targetWorkstationId", "targetWorkstationName", "targetPersonName", "targetAssetId", "targetAssetLabel"
         ) AS entregas)
         + (SELECT count(*) FROM (
           SELECT 1 FROM stock_movements WHERE "itemId" = ${itemId}::uuid AND "returnedAt" IS NOT NULL AND "returnKind" <> 'CONSUMED'
-           GROUP BY "createdAt", "targetType", "targetPersonId", "targetWorkstationId", "targetWorkstationName", "targetAssetId", "returnRecordedAt"
+           GROUP BY "createdAt", "targetType", "targetPersonId", "targetWorkstationId", "targetWorkstationName", "targetPersonName", "targetAssetId", "targetAssetLabel", "returnRecordedAt"
         ) AS devolucoes)
       )::int AS total
     `,
     prisma.$queryRaw<EventoNaPagina[]>`
       SELECT * FROM (
         SELECT 'CHECKOUT' AS action, min("checkoutAt") AS at, "createdAt" AS lote, "createdAt" AS registro,
-               "targetType", "targetPersonId", "targetWorkstationId", "targetWorkstationName", "targetAssetId",
+               "targetType", "targetPersonId", "targetWorkstationId", "targetWorkstationName", "targetPersonName", "targetAssetId", "targetAssetLabel",
                min(notes) AS notes, count(*)::int AS unidades
           FROM stock_movements
          WHERE "itemId" = ${itemId}::uuid
-         GROUP BY "createdAt", "targetType", "targetPersonId", "targetWorkstationId", "targetWorkstationName", "targetAssetId"
+         GROUP BY "createdAt", "targetType", "targetPersonId", "targetWorkstationId", "targetWorkstationName", "targetPersonName", "targetAssetId", "targetAssetLabel"
         UNION ALL
         SELECT 'CHECKIN', min("returnedAt"), "createdAt", "returnRecordedAt",
-               "targetType", "targetPersonId", "targetWorkstationId", "targetWorkstationName", "targetAssetId",
+               "targetType", "targetPersonId", "targetWorkstationId", "targetWorkstationName", "targetPersonName", "targetAssetId", "targetAssetLabel",
                NULL, count(*)::int
           FROM stock_movements
          WHERE "itemId" = ${itemId}::uuid AND "returnedAt" IS NOT NULL AND "returnKind" <> 'CONSUMED'
-         GROUP BY "createdAt", "targetType", "targetPersonId", "targetWorkstationId", "targetWorkstationName", "targetAssetId", "returnRecordedAt"
+         GROUP BY "createdAt", "targetType", "targetPersonId", "targetWorkstationId", "targetWorkstationName", "targetPersonName", "targetAssetId", "targetAssetLabel", "returnRecordedAt"
       ) AS eventos
       ORDER BY at DESC, action ASC, registro DESC, lote DESC, "targetPersonId", "targetWorkstationId", "targetWorkstationName",
-               "targetAssetId"
+               "targetPersonName", "targetAssetId", "targetAssetLabel"
       LIMIT ${query.take}::int OFFSET ${query.skip}::bigint
     `,
   ]);
@@ -128,7 +131,8 @@ export async function listStockHistory(
     rows: pagina.map((evento) => ({
       id: [
         evento.action, evento.lote.getTime(), evento.targetPersonId ?? evento.targetWorkstationId
-          ?? evento.targetAssetId ?? evento.targetWorkstationName, evento.registro.getTime(),
+          ?? evento.targetAssetId ?? evento.targetWorkstationName ?? evento.targetPersonName ?? evento.targetAssetLabel,
+        evento.registro.getTime(),
       ].join(':'),
       action: evento.action,
       at: evento.at,
@@ -138,7 +142,7 @@ export async function listStockHistory(
       targetWorkstationId: evento.targetWorkstationId,
       targetAssetId: evento.targetAssetId,
       targetLabel: nomes.get(evento.targetPersonId ?? evento.targetWorkstationId ?? evento.targetAssetId ?? '')
-        ?? evento.targetWorkstationName ?? '—',
+        ?? evento.targetWorkstationName ?? evento.targetPersonName ?? evento.targetAssetLabel ?? '—',
       notes: evento.notes,
     })),
   };

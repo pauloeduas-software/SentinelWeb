@@ -41,7 +41,8 @@ import { usePode } from '../../../stores/auth.store';
 // cima, e é ele que responde "já teve um notebook antes?". Cada linha abre o registro,
 // onde mora o Devolver ou o Encerrar.
 //
-// Aberta da Lixeira, pelo Supervisor, a ficha é só consulta, e a única ação é Restaurar (CF).
+// Aberta da Lixeira, pelo Supervisor, a ficha é só consulta, e as ações são Restaurar e
+// Excluir de vez (CF, DL).
 
 const ABAS = ['computadores', 'postos', 'estoque', 'licencas', 'historico'] as const;
 const DESDE: ColunaDaFicha = { rotulo: 'Desde', coluna: 'data', aparece: 'lg' };
@@ -51,6 +52,7 @@ export default function ColaboradorPage() {
     pessoa, ocupacoes, totalDeOcupacoes, carregandoOcupacoes, erroDasOcupacoes, carregando, erro,
     historico, totalDoHistorico, paginaDoHistorico, setPaginaDoHistorico, carregandoHistorico, erroDoHistorico,
     registro, editando, abrirEdicao, fecharEdicao, handleSalvar, handleAlternarAtivo, handleExcluir, handleRestaurar,
+    handleExcluirDeVez,
   } = useColaborador();
   const voltar = useVoltaComFiltros('/colaboradores');
   const [aba, setAba] = useAbaNaUrl(ABAS);
@@ -71,7 +73,18 @@ export default function ColaboradorPage() {
         <CartaoDaFicha
           marca={<Avatar nome={pessoa.name} className="size-10 text-sm" />}
           acoes={pessoa.deletedAt ? (
-            <Button size="sm" onClick={handleRestaurar}><RotateCcw /> Restaurar</Button>
+            <>
+              <Button size="sm" onClick={handleRestaurar}><RotateCcw /> Restaurar</Button>
+              <AcoesDaLinha
+                nome={pessoa.name}
+                acoes={[{
+                  rotulo: 'Excluir de vez',
+                  icone: Trash2,
+                  onClick: () => void handleExcluirDeVez(),
+                  perigo: true,
+                }]}
+              />
+            </>
           ) : (
             <>
               <Button variant="outline" size="sm" onClick={abrirEdicao}><Pencil /> Editar</Button>

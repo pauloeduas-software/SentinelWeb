@@ -87,7 +87,8 @@ const SELECT_POSSE = {
 
 interface PosseAberta {
   id: string;
-  assetId: string;
+  /** Nulo só na posse devolvida de um computador excluído de vez (DL), que a aberta nunca é. */
+  assetId: string | null;
   targetType: AlvoPosse;
   targetPersonId: string | null;
   targetWorkstationId: string | null;
@@ -217,12 +218,13 @@ export async function resolverResponsaveisEmLote(
   });
 
   const ocupantesPorPosto = new Map<string, OcupanteAberto[]>();
-  for (const { workstationId, ...ocupacao } of ocupacoes) {
-    // Aberta aponta sempre para o posto (CHECK `workstation_occupants_posto_presente`);
-    // `workstationId` só é nulo na encerrada de um posto excluído, que esta
-    // consulta nem traz. O `if` é para o tipo, não para o dado.
-    if (!workstationId) continue;
-    const ocupante = { ...ocupacao, workstationId };
+  for (const { workstationId, person, ...ocupacao } of ocupacoes) {
+    // Aberta aponta sempre para o posto e para a pessoa (CHECKs
+    // `workstation_occupants_posto_presente` e `_pessoa_presente`); os dois só
+    // são nulos na encerrada de um posto excluído ou de um colaborador excluído
+    // de vez, que esta consulta nem traz. O `if` é para o tipo, não para o dado.
+    if (!workstationId || !person) continue;
+    const ocupante = { ...ocupacao, workstationId, person };
     const lista = ocupantesPorPosto.get(workstationId);
     if (lista) lista.push(ocupante);
     else ocupantesPorPosto.set(workstationId, [ocupante]);
@@ -234,7 +236,9 @@ export async function resolverResponsaveisEmLote(
     ocupantesPorPosto,
   };
 
-  for (const posse of abertas) resultado.set(posse.assetId, montar(posse, dicionarios));
+  for (const posse of abertas) {
+    if (posse.assetId) resultado.set(posse.assetId, montar(posse, dicionarios));
+  }
 
   return resultado;
 }

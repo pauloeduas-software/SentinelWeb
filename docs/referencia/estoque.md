@@ -101,9 +101,9 @@ O cadastro é o das Configurações — os mesmos botões, a mesma ordem e as me
   não tem lixeira.` Com unidade com alguém, a notificação diz com quem: `"Mouse USB" ainda tem 3
   unidades em uso (Laura Souza ×2 e Mesa 1). Devolva antes de excluir.` O que já foi entregue e
   voltou se exclui: as entregas devolvidas perdem a ligação e guardam o nome por escrito
-  (`itemName`), e o histórico do colaborador continua dizendo "Recebeu: Mouse USB". O histórico do
-  **próprio item** vai junto com ele — e com ele a única tela que mostrava as entregas devolvidas de
-  um posto, que só mostra o que está nele agora. É o preço da exclusão; por isso o que pode voltar a ser
+  (`itemName`): o histórico do colaborador continua dizendo "Recebeu: Mouse USB", e o do posto, o
+  nome do item ([BP](../decisoes/posse.md#bp--o-que-já-foi-mora-na-aba-histórico)). O histórico do
+  **próprio item** vai junto com ele. É o preço da exclusão; por isso o que pode voltar a ser
   comprado se desativa. A FK `Restrict` de `stock_movements` é a rede, e o CHECK
   `stock_movements_item_presente` não deixa a entrega em uso sem item. O excluído solta a categoria e
   a localização; o desativado continua segurando.

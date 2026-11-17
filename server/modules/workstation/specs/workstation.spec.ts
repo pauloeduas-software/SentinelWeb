@@ -92,7 +92,8 @@ export const workstationSpec: CatalogSpec = {
     return {
       mensagem: `Este posto ainda tem ${frase}. Tire o que está nele agora: ${pedidos.join(' e ')}.`,
       refs: [
-        ...ativos.map(({ asset }) => ({ tipo: 'ativo' as const, id: asset.id, nome: asset.assetTag })),
+        // A posse aberta sempre tem o computador (CHECK `assignments_ativo_presente`).
+        ...ativos.flatMap(({ asset }) => (asset ? [{ tipo: 'ativo' as const, id: asset.id, nome: asset.assetTag }] : [])),
         ...itensComoReferencias(itens),
       ],
     };
@@ -110,13 +111,19 @@ export const workstationSpec: CatalogSpec = {
     const posto = await client.workstation.findUnique({ where: { id }, select: { name: true } });
     if (!posto) return;
 
+    // Na ordem do id, as três tabelas: a exclusão de vez do colaborador e a do
+    // computador (DL) desligam algumas das mesmas linhas, e a do item, as do
+    // estoque. Os dois ao mesmo tempo se esperam, sem deadlock.
+    await client.$queryRaw`
+      SELECT id FROM assignments
+       WHERE "targetWorkstationId" = ${id}::uuid AND "checkinAt" IS NOT NULL
+       ORDER BY id
+       FOR UPDATE
+    `;
     await client.assignment.updateMany({
       where: { targetWorkstationId: id, checkinAt: { not: null } },
       data: { targetWorkstationId: null, targetWorkstationName: posto.name },
     });
-    // Na ordem do id, como a exclusão do item (`delete-stock-item.usecase.ts`),
-    // que desliga as mesmas linhas: os dois ao mesmo tempo se esperam, sem
-    // deadlock.
     await client.$queryRaw`
       SELECT id FROM stock_movements
        WHERE "targetWorkstationId" = ${id}::uuid AND "returnedAt" IS NOT NULL
@@ -127,6 +134,12 @@ export const workstationSpec: CatalogSpec = {
       where: { targetWorkstationId: id, returnedAt: { not: null } },
       data: { targetWorkstationId: null, targetWorkstationName: posto.name },
     });
+    await client.$queryRaw`
+      SELECT id FROM workstation_occupants
+       WHERE "workstationId" = ${id}::uuid AND "endedAt" IS NOT NULL
+       ORDER BY id
+       FOR UPDATE
+    `;
     await client.workstationOccupant.updateMany({
       where: { workstationId: id, endedAt: { not: null } },
       data: { workstationId: null, workstationName: posto.name },

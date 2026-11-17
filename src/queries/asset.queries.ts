@@ -105,8 +105,13 @@ export function useNextAssetTagQuery(habilitado: boolean) {
  * um instante. E SAEM do cache, depois: a ficha da Lixeira (BW) abre do zero, e não com o
  * computador de antes da exclusão até a resposta chegar. Depois, e não antes, porque
  * sem o cache a ficha aberta que redesenhasse no meio buscaria tudo de novo.
+ *
+ * `deVez`: o excluído de vez (DL) não tem mais ficha. A que ainda está montada, saindo
+ * dali, recriaria a consulta removida e pediria um 404; então sai do cache só a que
+ * ninguém mais olha, e a outra fica marcada como velha, para quem voltar a ela buscar
+ * de novo, sem buscar agora.
  */
-async function invalidarAtivos(queryClient: ReturnType<typeof useQueryClient>, excluido?: string) {
+async function invalidarAtivos(queryClient: ReturnType<typeof useQueryClient>, excluido?: string, deVez = false) {
   const doExcluido = (consulta: { queryKey: readonly unknown[] }) => consulta.queryKey[2] === excluido;
   await Promise.all([
     queryClient.invalidateQueries({
@@ -115,7 +120,13 @@ async function invalidarAtivos(queryClient: ReturnType<typeof useQueryClient>, e
     }),
     queryClient.invalidateQueries({ queryKey: catalogKeys.tabela('assets') }),
   ]);
-  if (excluido !== undefined) queryClient.removeQueries({ queryKey: assetKeys.all, predicate: doExcluido });
+  if (excluido === undefined) return;
+  if (!deVez) {
+    queryClient.removeQueries({ queryKey: assetKeys.all, predicate: doExcluido });
+    return;
+  }
+  queryClient.removeQueries({ queryKey: assetKeys.all, predicate: doExcluido, type: 'inactive' });
+  await queryClient.invalidateQueries({ queryKey: assetKeys.all, predicate: doExcluido, refetchType: 'none' });
 }
 
 /**
@@ -155,6 +166,21 @@ export function useRestoreAsset() {
   return useMutation({
     mutationFn: (id: string) => apiClient.post(`/assets/${id}/restore`),
     onSettled: () => invalidarAtivos(queryClient),
+  });
+}
+
+/**
+ * Exclui de vez, da lixeira (DL): o histórico dos outros guarda a etiqueta por escrito.
+ *
+ * `aposExcluir` é a ficha saindo; o cache do computador fica como `invalidarAtivos` diz
+ * para o excluído de vez.
+ */
+export function usePurgeAsset(aposExcluir?: () => void) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/assets/${id}/permanent`),
+    onSuccess: () => aposExcluir?.(),
+    onSettled: (_resposta, erro, id) => invalidarAtivos(queryClient, erro ? undefined : id, true),
   });
 }
 

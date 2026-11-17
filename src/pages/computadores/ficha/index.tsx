@@ -52,7 +52,7 @@ function FichaDoComputador() {
     maquina, maquinaPendente, erroDaMaquina,
     modal, abrirEdicao, abrirClone, abrirEntrega, abrirDevolucao, abrirBaixa, fecharModal, statusPadraoId,
     handleSubmit, handleEntregar, handleDevolver, handleDarBaixa, handleReverterSaida,
-    handleDelete, handleRestaurar,
+    handleDelete, handleRestaurar, handleExcluirDeVez,
   } = useFichaDoComputador();
   // A lixeira e a baixa são `SUPERVISOR` no servidor (`DELETE /api/assets/:id`,
   // `retire`, `unretire`); para quem não é, o botão só levaria 403. Antes dos `return` abaixo: hook depois de retorno
@@ -81,7 +81,13 @@ function FichaDoComputador() {
         <IdentificacaoDoComputador
           asset={asset}
           acoes={naLixeira ? (
-            <Button size="sm" onClick={() => void handleRestaurar()}><RotateCcw /> Restaurar</Button>
+            <>
+              <Button size="sm" onClick={() => void handleRestaurar()}><RotateCcw /> Restaurar</Button>
+              <AcoesDaLinha
+                nome={asset.assetTag}
+                acoes={[{ rotulo: 'Excluir de vez', icone: Trash2, onClick: () => void handleExcluirDeVez(), perigo: true }]}
+              />
+            </>
           ) : (
             <>
               {/* O baixado não entrega, como na lista (CK). */}

@@ -2,11 +2,15 @@ import { prisma } from '../../../server/infra/database/prismaClient';
 import { logger, type Seeder } from '../seeder';
 
 // COLABORADORES DE EXEMPLO, para a entrega e o posto terem a quem apontar.
-// Nome genérico de propósito: um nome de gente inventado parece cadastro real.
-const COLABORADORES = Array.from({ length: 5 }, (_, i) => ({
-  name: `PESSOA${i + 1}`,
-  email: `pessoa${i + 1}@gmail.com`,
-}));
+// Nomes inventados, e o e-mail no domínio reservado para exemplo (example.com),
+// que não chega a caixa de ninguém.
+const COLABORADORES = [
+  { name: 'Ana Souza', email: 'ana.souza@example.com' },
+  { name: 'Bruno Lima', email: 'bruno.lima@example.com' },
+  { name: 'Carla Mendes', email: 'carla.mendes@example.com' },
+  { name: 'Diego Rocha', email: 'diego.rocha@example.com' },
+  { name: 'Fernanda Alves', email: 'fernanda.alves@example.com' },
+];
 
 export const colaboradoresDemo: Seeder = {
   name: 'Colaboradores (demonstração)',

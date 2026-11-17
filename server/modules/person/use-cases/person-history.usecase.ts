@@ -22,7 +22,8 @@ type FonteDoEventoDaPessoa = 'POSSE' | 'POSTO' | 'LICENCA' | 'ESTOQUE';
 /** O que um evento de posse acrescenta: QUAL equipamento ela recebeu. */
 interface EventoDePosseDaPessoa {
   assignmentId: string;
-  assetId: string;
+  /** Nulo quando o computador foi excluído de vez (DL): o rótulo continua em `assetLabel`. */
+  assetId: string | null;
   /** "ATV-00012 — Dell Latitude", ou só a etiqueta quando o ativo não tem nome. */
   assetLabel: string;
   /** As observações da entrega ou da devolução, conforme o evento. */
@@ -70,7 +71,8 @@ function eventosDaPosse(posse: PosseDaPessoa): EventoDaPessoa[] {
   const base = {
     assignmentId: posse.id,
     assetId: posse.assetId,
-    assetLabel: rotuloDoAtivo(posse.asset),
+    // O computador excluído de vez deixou o rótulo por escrito (DL).
+    assetLabel: posse.asset ? rotuloDoAtivo(posse.asset) : posse.assetLabel ?? '—',
     expectedCheckinAt: posse.expectedCheckinAt,
   };
 
@@ -168,6 +170,7 @@ function buscarPosses(personId: string) {
       expectedCheckinAt: true,
       checkoutNotes: true,
       checkinNotes: true,
+      assetLabel: true,
       asset: { select: { assetTag: true, name: true } },
     },
     // `createdAt` como desempate, pelo mesmo motivo de `listAssetAssignments`:

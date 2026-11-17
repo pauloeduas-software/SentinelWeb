@@ -10,7 +10,8 @@ const logger = createLogger('catalog.maestro');
 // tabela, registradas em laço sobre `CATALOG_SPECS`: acrescentar uma tabela é
 // escrever a spec, não copiar um maestro.
 //
-// Só a tabela com `lixeira` na spec, o colaborador, tem `POST /:id/restore` (V).
+// Só a tabela com `lixeira` na spec, o colaborador, tem `POST /:id/restore` (V)
+// e, da lixeira, `DELETE /:id/permanent` (DL).
 // Nas outras a exclusão é definitiva (docs/decisoes/catalogo-e-ativo.md, D8), e a
 // proteção é o 409 por uso, no delete.
 export class CatalogMaestro {
@@ -27,7 +28,10 @@ export class CatalogMaestro {
       server.post(base, WRITE_RATE_LIMIT, controller.create);
       server.put(`${base}/:id`, WRITE_RATE_LIMIT, controller.update);
       server.delete(`${base}/:id`, WRITE_RATE_LIMIT, controller.remove);
-      if (spec.lixeira) server.post(`${base}/:id/restore`, WRITE_RATE_LIMIT, controller.restore);
+      if (spec.lixeira) {
+        server.post(`${base}/:id/restore`, WRITE_RATE_LIMIT, controller.restore);
+        server.delete(`${base}/:id/permanent`, WRITE_RATE_LIMIT, controller.purge);
+      }
     }
 
     logger.debug(`[Maestro] Rotas de Catálogo inicializadas (${CATALOG_SPECS.length} tabelas).`);

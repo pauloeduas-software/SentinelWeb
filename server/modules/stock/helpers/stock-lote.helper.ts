@@ -18,6 +18,9 @@ interface UnidadeDoLote {
   targetWorkstationId: string | null;
   targetWorkstationName: string | null;
   targetAssetId: string | null;
+  /** Os nomes por escrito do colaborador e do computador excluídos de vez (DL). */
+  targetPersonName?: string | null;
+  targetAssetLabel?: string | null;
 }
 
 /** A chave do lote: o mesmo INSERT, o mesmo item, o mesmo alvo. */
@@ -25,6 +28,7 @@ export function chaveDoLote(unidade: UnidadeDoLote): string {
   return [
     unidade.itemId, unidade.itemName, unidade.createdAt.getTime(), unidade.targetType,
     unidade.targetPersonId, unidade.targetWorkstationId, unidade.targetWorkstationName, unidade.targetAssetId,
+    unidade.targetPersonName, unidade.targetAssetLabel,
   ].join('|');
 }
 

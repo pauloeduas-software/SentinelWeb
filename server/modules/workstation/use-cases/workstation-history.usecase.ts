@@ -20,7 +20,8 @@ type FonteDoEventoDoPosto = 'OCUPACAO' | 'POSSE' | 'ESTOQUE';
 /** O que um evento de ocupação acrescenta: QUEM entrou ou saiu, e em que turno. */
 interface EventoDeOcupacaoDoPosto {
   occupantId: string;
-  personId: string;
+  /** Nulo quando o colaborador foi excluído de vez (DL): o nome continua em `personLabel`. */
+  personId: string | null;
   personLabel: string;
   shift: string | null;
   notes: string | null;
@@ -29,7 +30,8 @@ interface EventoDeOcupacaoDoPosto {
 /** O que um evento de posse acrescenta: QUAL computador. */
 interface EventoDePosseDoPosto {
   assignmentId: string;
-  assetId: string;
+  /** Nulo quando o computador foi excluído de vez (DL): o rótulo continua em `assetLabel`. */
+  assetId: string | null;
   /** "ATV-00012 — Dell Latitude", ou só a etiqueta quando o ativo não tem nome. */
   assetLabel: string;
   /** As observações da entrega ou da devolução, conforme o evento. */
@@ -59,7 +61,8 @@ function eventosDaOcupacao(ocupacao: OcupacaoDoPosto): EventoDoPosto[] {
   const base = {
     occupantId: ocupacao.id,
     personId: ocupacao.personId,
-    personLabel: ocupacao.person.name,
+    // O colaborador excluído de vez deixou o nome por escrito (DL).
+    personLabel: ocupacao.person?.name ?? ocupacao.personName ?? '—',
     shift: ocupacao.shift,
     notes: ocupacao.notes,
   };
@@ -97,7 +100,8 @@ function eventosDaPosse(posse: PosseDoPosto): EventoDoPosto[] {
   const base = {
     assignmentId: posse.id,
     assetId: posse.assetId,
-    assetLabel: rotuloDoComputador(posse.asset),
+    // O computador excluído de vez deixou o rótulo por escrito (DL).
+    assetLabel: posse.asset ? rotuloDoComputador(posse.asset) : posse.assetLabel ?? '—',
   };
 
   const entrega: EventoDoPosto = {
@@ -140,6 +144,7 @@ function buscarPosses(workstationId: string) {
       checkinAt: true,
       checkoutNotes: true,
       checkinNotes: true,
+      assetLabel: true,
       asset: { select: { assetTag: true, name: true } },
     },
     orderBy: [{ checkoutAt: 'desc' }, { createdAt: 'desc' }],

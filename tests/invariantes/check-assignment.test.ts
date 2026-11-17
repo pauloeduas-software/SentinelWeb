@@ -3,7 +3,7 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { cenarioDePosse } from '../helpers/fixtures';
 import { prisma } from '../../server/infra/database/prismaClient';
 
-// INVARIANTE 5 — os dois CHECKs da `assignments`.
+// INVARIANTE 5 — os CHECKs da `assignments`.
 //
 // Este arquivo é o ÚNICO da suíte que escreve no banco por SQL cru, e a exceção
 // é o assunto: um CHECK existe justamente para quem NÃO passa pela API. A
@@ -139,6 +139,7 @@ describe('as constraints existem no banco', () => {
 
     expect(constraints.map((c) => c.conname).sort()).toEqual([
       'assignments_alvo_coerente',
+      'assignments_ativo_presente',
       'assignments_devolucao_nao_antecede_entrega',
     ]);
   });

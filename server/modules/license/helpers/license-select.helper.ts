@@ -100,6 +100,9 @@ export const CHECKOUT_SELECT = {
   licenseName: true,
   assignedPersonId: true,
   assignedAssetId: true,
+  // O alvo por escrito, quando o colaborador ou o computador foi excluído de vez (DL).
+  assignedPersonName: true,
+  assignedAssetLabel: true,
   checkoutAt: true,
   checkinAt: true,
   checkoutNotes: true,
@@ -122,13 +125,15 @@ export const CHECKOUT_COM_CHAVE_SELECT = {
 interface EntregaComRotulos {
   assignedPerson: { name: string } | null;
   assignedAsset: { assetTag: string; name: string | null } | null;
+  assignedPersonName?: string | null;
+  assignedAssetLabel?: string | null;
 }
 
-/** "Laura Souza", ou "ATV-00012 — Dell Latitude". */
+/** "Laura Souza", ou "ATV-00012 — Dell Latitude" — ou o que o excluído de vez deixou por escrito (DL). */
 export function rotuloDoAlvoDaEntrega(entrega: EntregaComRotulos): string {
   if (entrega.assignedPerson) return entrega.assignedPerson.name;
   const ativo = entrega.assignedAsset;
-  if (!ativo) return '—';
+  if (!ativo) return entrega.assignedPersonName ?? entrega.assignedAssetLabel ?? '—';
   return ativo.name ? `${ativo.assetTag} — ${ativo.name}` : ativo.assetTag;
 }
 

@@ -12,6 +12,7 @@ import { createCatalog } from '../use-cases/create-catalog.usecase';
 import { updateCatalog } from '../use-cases/update-catalog.usecase';
 import { deleteCatalog } from '../use-cases/delete-catalog.usecase';
 import { restoreCatalog } from '../use-cases/restore-catalog.usecase';
+import { purgeCatalog } from '../use-cases/purge-catalog.usecase';
 import type { CatalogSpec } from '../specs/catalog-spec.types';
 
 // O schema do /options é montado a partir da spec: a tabela que não declara
@@ -118,6 +119,12 @@ export function createCatalogController(spec: CatalogSpec) {
     async restore(request: FastifyRequest) {
       const { id } = idParamSchema.parse(request.params);
       return restoreCatalog(spec, id, atorDaRequisicao(request));
+    },
+
+    async purge(request: FastifyRequest) {
+      const { id } = idParamSchema.parse(request.params);
+      await purgeCatalog(spec, id, atorDaRequisicao(request));
+      return { success: true };
     },
   };
 }

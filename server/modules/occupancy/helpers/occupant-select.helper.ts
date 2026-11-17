@@ -25,6 +25,9 @@ export const OCCUPANT_SELECT = {
   // O nome do posto por escrito, quando ele foi excluído — o histórico da
   // pessoa o lê no lugar de `workstation`, que vem nulo.
   workstationName: true,
+  // E o da pessoa, quando ela foi excluída de vez da lixeira (DL) — o
+  // histórico do posto o lê no lugar de `person`.
+  personName: true,
 
   // Texto livre: "Manhã", "Tarde", "12x36 A" (docs/referencia/modelo-de-posse.md, Camada 2).
   shift: true,
@@ -40,13 +43,16 @@ export const OCCUPANT_SELECT = {
 } as const;
 
 /**
- * A ocupação por escrito, para a auditoria: "Laura Souza — Mesa 1". O posto
- * pelo nome guardado quando ele foi excluído (`workstationName`).
+ * A ocupação por escrito, para a auditoria: "Laura Souza — Mesa 1". O posto e
+ * a pessoa pelo nome guardado quando foram excluídos (`workstationName`,
+ * `personName`).
  */
 export function rotuloDaOcupacao(ocupacao: {
-  person: { name: string };
+  person: { name: string } | null;
+  personName: string | null;
   workstation: { name: string } | null;
   workstationName: string | null;
 }): string {
-  return `${ocupacao.person.name} — ${ocupacao.workstation?.name ?? ocupacao.workstationName ?? ''}`;
+  const pessoa = ocupacao.person?.name ?? ocupacao.personName ?? '';
+  return `${pessoa} — ${ocupacao.workstation?.name ?? ocupacao.workstationName ?? ''}`;
 }

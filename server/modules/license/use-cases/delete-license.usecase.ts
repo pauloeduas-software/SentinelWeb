@@ -45,7 +45,10 @@ export async function deleteLicense(id: string, ator: Ator): Promise<void> {
 
     // O PASSADO SOLTA A LICENÇA, como no posto: as entregas devolvidas guardam
     // o nome e perdem a chave, e a FK deixa o DELETE passar — as chaves vão
-    // junto, pela `Cascade` de `license_keys`.
+    // junto, pela `Cascade` de `license_keys`. Na ordem do id: a exclusão de
+    // vez do colaborador e a do computador (DL) desligam algumas das mesmas
+    // linhas, e as duas se esperam, sem deadlock.
+    await tx.$queryRaw`SELECT id FROM license_checkouts WHERE "licenseId" = ${id}::uuid ORDER BY id FOR UPDATE`;
     await tx.licenseCheckout.updateMany({
       where: { licenseId: id },
       data: { licenseId: null, licenseName: licenca.name, licenseKeyId: null },

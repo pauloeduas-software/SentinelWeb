@@ -35,7 +35,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 2 | Uma ocupação aberta por (posto, pessoa), e as passadas da mesma pessoa no mesmo posto não se sobrepõem | **banco** — índice único parcial; o passado, **aplicação** — o início não antecede o último fim (`add-workstation-occupant`, com a pessoa travada) | 409 `Este colaborador já é responsável por este posto.` (idem); 422 `A entrada (10/02/2026) não pode ser antes da última saída de Laura deste posto (10/03/2026).` |
 | 3 | O tipo de um status ou de uma categoria em uso não muda | **aplicação** — `status-label.spec.ts`, `category.spec.ts`, com a linha travada | 409 `Não é possível mudar o tipo: status em uso por 200 registros.` |
 | 4 | Estado × posse: ativo entregue não fica `DEPLOYABLE` | **aplicação** — `assert-status-posse.usecase.ts` | 409 `"Disponível" é um status de estoque, e este computador está entregue. Faça a devolução antes de mudar o status.` |
-| 5 | A forma da posse: um alvo coerente, devolução depois da entrega — e só a posse **devolvida** de um posto excluído fica sem FK, com o nome por escrito | **banco** — dois `CHECK` | 422 com frase própria, porque a API recusa antes; quem escreve direto no banco (seed, `psql`) recebe o erro do `CHECK` |
+| 5 | A forma da posse: um alvo coerente, devolução depois da entrega — e só a posse **devolvida** de um posto excluído, ou de um colaborador ou computador excluído de vez, fica sem a FK, com o nome por escrito | **banco** — três `CHECK` | 422 com frase própria, porque a API recusa antes; quem escreve direto no banco (seed, `psql`) recebe o erro do `CHECK` |
 | 6 | Colaborador desativado ou na lixeira não tem posse direta, **licença**, **unidade de estoque** nem ocupação aberta | **aplicação** — 409 na desativação (`personSpec.beforeWrite`), na exclusão (`personSpec.motivoParaNaoExcluir`), no `checkout` e no cadastro de ocupante + trava de linha | 409 `Este colaborador ainda responde por 2 computadores (ATV-00012 e ATV-00013), 1 licença (Office), 3 unidades de estoque (Mouse USB ×2 e Teclado) e 1 posto (Mesa 1). Devolva o que foi entregue a ele e registre a saída dele do posto antes de excluir.` (ou *antes de desativar*), com os computadores, as licenças, os itens e os postos como `refs` — a tela põe um link em cada um |
 | 9 | A forma da entrega de licença: o alvo é UM (pessoa **ou** ativo), a devolução vem depois da entrega, e toda entrega em uso aponta para a licença | **banco** — três `CHECK` em `license_checkouts`, com a FK `Restrict` | 422 com o campo que falta (a API recusa antes, com frase própria) |
 | 12 | Uma máquina é no máximo um ativo, e um ativo no máximo uma máquina | **banco** — `@unique` em `Endpoint.assetId` | 409 `Este computador já está vinculado a outra máquina. Desvincule a outra máquina antes, em Agentes.` |
@@ -172,8 +172,9 @@ posse errada nem gravam "Disponível" num ativo entregue.
 
 ### 5 — A forma da `Assignment`
 
-`assignments_alvo_coerente` e `assignments_devolucao_nao_antecede_entrega`, no
-bloco escrito à mão de `prisma/migrations/0_init/migration.sql`.
+`assignments_alvo_coerente`, `assignments_ativo_presente` e
+`assignments_devolucao_nao_antecede_entrega`, no bloco escrito à mão de
+`prisma/migrations/0_init/migration.sql`.
 
 Duas afirmações sobre a mesma linha: o alvo polimórfico é **coerente** (uma FK
 preenchida, e é a que casa com o `targetType`), e a posse **não fecha antes de
@@ -186,6 +187,13 @@ guarda o nome por escrito em `targetWorkstationName` — e só a devolvida: a ab
 aponta sempre para o posto. A entrega de estoque (`stock_movements_forma`) e a
 ocupação (`workstation_occupants_posto_presente`) têm a mesma exceção, com a mesma
 condição.
+
+**E o colaborador e o computador excluídos de vez da lixeira** ([DL](../decisoes/posse.md#dl--da-lixeira-o-colaborador-e-o-computador-se-excluem-de-vez-e-o-histórico-dos-outros-guarda-o-nome)), pela mesma
+regra: a posse devolvida perde a FK do colaborador e guarda `targetPersonName`, ou a do
+computador (`assignments_ativo_presente`) e guarda `assetLabel`. A FK do computador é
+`Restrict`, como as dos alvos: a posse aberta segura o `DELETE`. A ocupação encerrada do
+colaborador (`workstation_occupants_pessoa_presente`), a entrega de licença
+(`license_checkouts_alvo_xor`) e a de estoque (`stock_movements_forma`) têm a mesma exceção.
 
 **E a ocupação não termina antes de começar**
 (`workstation_occupants_fim_nao_antecede_inicio`), como a posse e a entrega de
@@ -228,7 +236,8 @@ não teria mais quem a devolvesse pela tela.
 
 **Excluir manda para a lixeira** ([V](../decisoes/posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira)): o histórico — o que já foi devolvido —
 não segura, porque a linha da pessoa fica e continua sendo o que o histórico
-dos ativos aponta.
+dos ativos aponta. Excluída de vez de lá ([DL](../decisoes/posse.md#dl--da-lixeira-o-colaborador-e-o-computador-se-excluem-de-vez-e-o-histórico-dos-outros-guarda-o-nome)), as linhas fechadas guardam o nome
+dela por escrito.
 
 **As três guardas de leitura são furáveis por corrida**, e a trava é a metade que
 faltava:
@@ -271,7 +280,9 @@ a FK `Restrict` de `licenseId`, na `0_init`.
 
 Duas colunas de alvo nuláveis admitem quatro estados, e **dois são mentira**: as duas
 preenchidas ("esta licença está com a Laura E com o notebook") e nenhuma preenchida
-("está em uso por ninguém"). Nenhum dos dois dá erro sozinho — a licença sai da conta de
+("está em uso por ninguém"). A única sem as duas é a entrega **devolvida** de um alvo excluído
+de vez ([DL](../decisoes/posse.md#dl--da-lixeira-o-colaborador-e-o-computador-se-excluem-de-vez-e-o-histórico-dos-outros-guarda-o-nome)), e então com um nome por escrito só, o do alvo que ela teve
+(`assignedPersonName` ou `assignedAssetLabel`). Nenhum dos dois dá erro sozinho — a licença sai da conta de
 livres sem aparecer em lista nenhuma: paga, indisponível e invisível.
 
 É o irmão da forma da posse (#5), com uma diferença: aqui **não há discriminante** para
@@ -554,7 +565,8 @@ consumida —, e a em uso, nada. A linha tem UM alvo,
 o que o `targetType` diz — o computador (`ASSET`) é só do componente, e quem confere a categoria
 é a aplicação ([AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar)) —, e a devolução não fica antes da entrega e tem o dia e o instante do
 registro juntos — o instante é o que separa duas devoluções no mesmo dia; a entrega devolvida de um posto
-excluído fica sem FK, com o nome por escrito, como a `Assignment` (5). E a do **item** excluído
+excluído, ou de um colaborador ou computador excluído de vez, fica sem a FK do alvo, com o nome por
+escrito, como a `Assignment` (5). E a do **item** excluído
 também (AG): toda entrega em uso aponta para o item (CHECK `stock_movements_item_presente`), e a FK
 `Restrict` não deixa apagar o item com unidade em uso; a devolvida é desligada antes, com o nome em
 `itemName`.

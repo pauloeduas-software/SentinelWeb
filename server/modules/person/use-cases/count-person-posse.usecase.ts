@@ -84,7 +84,8 @@ export async function contarPosseAberta(
   ]);
 
   return {
-    ativos: posses.map(({ asset }) => ({ id: asset.id, nome: asset.assetTag })),
+    // A posse aberta sempre tem o computador (CHECK `assignments_ativo_presente`).
+    ativos: posses.flatMap(({ asset }) => (asset ? [{ id: asset.id, nome: asset.assetTag }] : [])),
     // A ocupação aberta sempre tem posto (CHECK `workstation_occupants_posto_presente`);
     // o filtro é para o tipo, que é o da coluna.
     postos: ocupacoes.flatMap(({ workstation }) => (workstation ? [{ id: workstation.id, nome: workstation.name }] : [])),

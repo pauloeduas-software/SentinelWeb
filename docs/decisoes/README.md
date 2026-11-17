@@ -149,6 +149,7 @@ registram o "Supera:" do mesmo jeito, e o log só fica completo com elas na tabe
 | **AA**, **AF** (em parte: encerrar em uso e o alerta dele), **AE** (em parte: desativar com unidade fora), **Y** (em parte: o posto com desativar), **AM** (em parte: o que ficava de fora) | **AN** | o que está em uso bloqueia o Encerrar e o Desativar; o posto perde o Desativar; compra e encerramento não são futuros; o fim da ocupação e a devolução pelo posto ganham o dia |
 | o Desativar do catálogo (commit `ff34364`, com a invariante 21), **AF** (em parte: o Desativar em todas as telas), **AN** (em parte: o catálogo que ficava de fora), **Y** (em parte: a localização desativada) | **AO** | categoria, status, fabricante, modelo e localização perdem o Desativar, como no Snipe-IT; a exclusão continua bloqueada pelo uso, e o 409 diz o que tirar |
 | o `conceder-administrador` (sem número), **T** (em parte: o "criado à mão") | **AP** | o administrador nasce por comando, como no Snipe-IT: nome, e-mail e senha como parâmetro; serve à instalação nova e a quem perdeu a senha |
+| **V** (em parte: não há "apagar de vez"), **AI** (em parte: o componente sem o computador por escrito) | **DL** | da lixeira, o colaborador e o computador se excluem de vez; as linhas fechadas guardam o nome por escrito, e some só a ficha do excluído |
 
 Quatro decisões nasceram para resolver **um conflito**:
 **D79** (cada job tem a própria linha), **D80** (um `ApiToken` com dono polimórfico), **D81** (uma

@@ -72,6 +72,7 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
   'PUT /api/assets/:id': { tag: 'Computadores', resumo: 'Edita o computador (formulário inteiro)', body: updateAssetSchema },
   'DELETE /api/assets/:id': { tag: 'Computadores', resumo: 'Manda o computador para a lixeira' },
   'POST /api/assets/:id/restore': { tag: 'Computadores', resumo: 'Restaura o computador da lixeira' },
+  'DELETE /api/assets/:id/permanent': { tag: 'Computadores', resumo: 'Exclui o computador de vez, da lixeira; o histórico guarda a etiqueta' },
   'POST /api/assets/:id/retire': { tag: 'Computadores', resumo: 'Dá baixa no computador', body: retireAssetSchema },
   'POST /api/assets/:id/unretire': { tag: 'Computadores', resumo: 'Desfaz a baixa' },
   'POST /api/assets/:id/checkout': { tag: 'Computadores', resumo: 'Entrega o computador a um colaborador ou posto', body: checkoutSchema, status: 201 },
@@ -150,7 +151,10 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
       [`POST ${base}`, { tag, resumo: `Cadastra (${spec.slug})`, body: spec.createSchema, status: 201 }],
       [`PUT ${base}/:id`, { tag, resumo: `Edita (${spec.slug}), formulário inteiro`, body: spec.updateSchema }],
       [`DELETE ${base}/:id`, { tag, resumo: `Exclui (${spec.slug}); em uso, 409` }],
-      ...(spec.lixeira ? [[`POST ${base}/:id/restore`, { tag, resumo: `Restaura da lixeira (${spec.slug})` }]] : []),
+      ...(spec.lixeira ? [
+        [`POST ${base}/:id/restore`, { tag, resumo: `Restaura da lixeira (${spec.slug})` }],
+        [`DELETE ${base}/:id/permanent`, { tag, resumo: `Exclui de vez, da lixeira (${spec.slug}); o histórico guarda o nome` }],
+      ] : []),
     ] as [string, ContratoDaRota][];
   })),
 };

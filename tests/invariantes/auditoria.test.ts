@@ -110,6 +110,10 @@ describe('toda escrita do painel deixa rastro com a conta da sessão', () => {
 
     await auditada(api.delete(`/api/workstations/${posto.body.id}`));
     await auditada(api.delete(`/api/locations/${local.body.id}`));
+
+    // A exclusão de vez, da lixeira (DL), depois de a pessoa ter ocupado o posto.
+    await auditada(api.delete(`/api/people/${pessoa.body.id}`));
+    await auditada(api.delete(`/api/people/${pessoa.body.id}/permanent`));
   });
 
   it('ativo: cadastro, edição, posse, baixa e lixeira', async () => {
@@ -129,6 +133,8 @@ describe('toda escrita do painel deixa rastro com a conta da sessão', () => {
     await auditada(api.post(`/api/assets/${id}/unretire`, {}));
     await auditada(api.delete(`/api/assets/${id}`));
     await auditada(api.post(`/api/assets/${id}/restore`));
+    await auditada(api.delete(`/api/assets/${id}`));
+    await auditada(api.delete(`/api/assets/${id}/permanent`));
   });
 
   it('estoque: cadastro, edição do total, entrega, devolução, desativação e exclusão', async () => {

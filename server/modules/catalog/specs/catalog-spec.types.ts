@@ -118,7 +118,8 @@ export interface CatalogSpec {
 
   /**
    * A tabela tem LIXEIRA: excluir grava `deletedAt` em vez de apagar, a
-   * listagem aceita `?view=trashed` e existe `POST /:id/restore`.
+   * listagem aceita `?view=trashed`, e existem `POST /:id/restore` e, da
+   * lixeira, `DELETE /:id/permanent` — a exclusão de vez (DL).
    *
    * Só o colaborador — o único do catálogo com histórico de posse PRÓPRIO, que
    * recadastrar partiria em dois. O model precisa da coluna `deletedAt`, e é a
@@ -134,6 +135,13 @@ export interface CatalogSpec {
 
   /** Regra que roda antes de RESTAURAR — a unicidade que a lixeira libera. */
   beforeRestore?: (client: ClienteCatalogo, id: string) => Promise<void>;
+
+  /**
+   * Regra que roda antes de EXCLUIR DE VEZ da lixeira (DL), depois da recusa
+   * pelo que está em uso: o passado que aponta para a linha a solta e guarda o
+   * nome por escrito, como o `beforeDelete` do posto.
+   */
+  beforePurge?: (client: ClienteCatalogo, id: string, nome: string) => Promise<void>;
 
   /**
    * O nome é único SEM diferença de maiúscula, dentro destes campos.
